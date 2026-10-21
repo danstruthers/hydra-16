@@ -172,7 +172,7 @@ function createRecorder() {
       case 'E_TRAP': e.tk = name('TK_PIT', w & 15); e.tt = name('TT_PLATE', w >> 4 & 15); e.to = name('TO_SPRUNG', w >> 8); break;
       case 'E_TAKEN': e.ir = name('IR_OK', w & 0xFF); break;
       case 'E_TASK': e.te = name('TE_STOPPED', w & 0xFF); e.task = name('LT_NONE', w >> 8);
-        if (e.te === 'TE_ENGAGED' || e.te === 'TE_FAR') { e.by = (e.b & 0x7F) - 1; e.still = !!(e.b & 0x80); } else e.named = name('LT_NONE', e.b);
+        if (e.te === 'TE_ENGAGED' || e.te === 'TE_FAR' || e.te === 'TE_AWAY') { e.by = (e.b & 0x7F) - 1; e.still = !!(e.b & 0x80); } else e.named = name('LT_NONE', e.b);
         break;
       case 'E_BEAT': e.beat = name('WB_QUIET', w & 0xFF); e.side = name('WS_AHEAD', w >> 8); break;
       case 'E_DEN': e.de = name('DE_MOVED', e.a); e.sn = e.x[0]; e.seen = !!e.x[2]; break;

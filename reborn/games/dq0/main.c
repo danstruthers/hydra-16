@@ -10,7 +10,8 @@
 ** ruleset's character generator (its referee names it: hmchar) is run to make one (in this window, the screen as it
 ** is outside the game while it runs), into /ram/dq0.hm; a ruleset with none makes its own.  The rules: the ruleset's
 ** name (RULESETS.md: harn, HarnMaster's, if none's given; null, flat odds), its referee libdir/dq0NAME (the save's: a
-** game carried on keeps its own).
+** game carried on keeps its own).  The tests' own: -C, -a, -T, and -I (no engage initiative test, nor a grope's test
+** while engaged: HOUSE.md's, the user's way to keep the tests' fights as they were).
 **
 ** The game is tasks that meet in the hub (hub.h): this one, the UI, makes it and starts the others (the world,
 ** libdir/dq0w; the referee, libdir/dq0harn: the rules, asked in rs.h's terms; the maker, libdir/dq0m: the
@@ -50,6 +51,7 @@ static unsigned char asking;                    /* (A long task's soft question 
 static const char* cl;                          /* (The command's line, s_command's: chores' words of it) */
 unsigned char harm_told;                        /* (The states a harm's words told in this answer: intro.c's) */
 static unsigned char autogo;                    /* (dq0 -a: every soft question answered yes, unasked: the tests') */
+static unsigned char noinit;                    /* (dq0 -I: no engage initiative test, no grope's: the tests') */
 static unsigned char asked;                     /* (A sound's question put in this command's long task) */
 static unsigned bar_done;                       /* (The long task's part done as the bar was last drawn) */
 static unsigned char busy = 1;                  /* The character's doing something: no command till it's free (nor
@@ -569,7 +571,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     HUB->wreq.kind = WQ_START;                  /* (Its clock's round and pace, the character's pace and watchfulness:
                                                 **   a game carried on, its save's, the world's) */
     HUB->wreq.x = round;
-    HUB->wreq.y = pace;
+    HUB->wreq.y = noinit ? pace | WY_NO_INIT : pace;
     HUB->wreq.a = pc_gait;
     HUB->wreq.b = pc_watch;
     hub_call (&HUB->wreq, T_WORLD);
@@ -1132,6 +1134,11 @@ void __fastcall__ s_took_up (unsigned r)
 {
     if ((unsigned char) r == IR_FIXED) {
         strcpy (pending, taking);
+        return;
+    }
+    if ((unsigned char) r == IR_FUMBLED) {      /* (Engaged, a grope failed: the things' words, the round wasted) */
+        msg (tt ());
+        intend2 (I_WAIT, HUB->round, 1);
         return;
     }
     if ((unsigned char) r != IR_NOT_HERE) {     /* (Out of reach still: the walk's words told why) */
@@ -1826,6 +1833,8 @@ void __fastcall__ s_args (int argc, char* argv[])
             small = 1;                          /* (For the tests: the caches small, paged to the save folder soon) */
         } else if (!strcmp (argv[i], "-a")) {
             autogo = 1;                         /* (For the tests: a long task goes on at every soft question) */
+        } else if (!strcmp (argv[i], "-I")) {
+            noinit = 1;                         /* (For the tests: no engage initiative test, no grope's) */
         } else if (!strcmp (argv[i], "-T")) {
             ++test_start;                       /* (For the tests: the character begins at a way down; -T twice, by
                                                 **   the theme's first piece; three times, four strata down) */
@@ -1838,7 +1847,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C] [-a]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C] [-a] [-I]");
         }
     }
 }

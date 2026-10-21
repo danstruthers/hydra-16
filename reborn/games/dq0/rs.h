@@ -68,6 +68,10 @@ enum {
                                                 **   reply's result 2 if the character doesn't speak it) */
     P_THROW,                                    /* A thing thrown at a mark (its range band in the steps: Throwing,
                                                 **   the book's missile ranges) */
+    P_INITIATIVE,                               /* Quickness in a fight: who acts first as two are newly engaged
+                                                **   (RS_CONTEST's, the engage initiative test) */
+    P_GROPE,                                    /* A thing handled in a fight, engaged (taken up, drawn, put away:
+                                                **   the book's grope, an attribute's test) */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 
@@ -226,7 +230,13 @@ enum {
     RS_DROP_ACTOR,
     RS_TEST,                                    /* An actor, a purpose, steps -> a grade */
     RS_TEST_MANY,                               /* The same for several (perception) */
-    RS_CONTEST,                                 /* Two actors, two purposes -> who won */
+    RS_CONTEST,                                 /* Two actors' tests (actor and other: 0 the character, else an
+                                                **   actor's entry plus 1), each its purpose (a the actor's, b the
+                                                **   other's), steps the actor's circumstances, c the other's (a
+                                                **   signed char) -> grade the actor's, c the other's (signed),
+                                                **   result 1 if the actor did better, 2 if the other did, 0 alike
+                                                **   (the engage initiative test: P_INITIATIVE each, the actor the
+                                                **   one whose move engaged them) */
     RS_ATTACK,                                  /* Attacker, defender, weapon, mode, range, steps -> the outcome */
     RS_HARM,                                    /* A cause (fall, fire, poison ...) and its dice -> effects */
     RS_TIME,                                    /* Minutes passed (w1): bleeding, fatigue -> effects (b its health,

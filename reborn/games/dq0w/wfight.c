@@ -99,7 +99,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     r->kind = RS_ATTACK;
     r->actor = att;
     r->other = def;
-    r->a = z;
+    r->a = z & ~FW_FIRST;                       /* (Its aim; FW_FIRST, the engage initiative test's: its words') */
     r->b = AS_BEST;
     r->c = 0;
     r->steps = 0;
@@ -133,7 +133,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     hub_map (DEN_BANK);
     memset (f, 0, sizeof *f);
     f->out = w2;
-    f->which = wh;
+    f->which = wh | (z & FW_FIRST);
     if (att) {
         to_ring (f->att, HUB->actor[(att - 1) & 7].name, sizeof f->att);
     }

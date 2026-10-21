@@ -32,7 +32,7 @@ The two so far:
 ## What a ruleset must answer
 
 Each request the game makes today, who makes it, and what of the reply it reads.  A referee may answer more (rs.h
-has requests no one makes yet: RS_TEST_MANY, RS_CONTEST, RS_REST, RS_TREAT, RS_INITIATIVE, RS_EXPERIENCE, RS_POWER,
+has requests no one makes yet: RS_TEST_MANY, RS_REST, RS_TREAT, RS_INITIATIVE, RS_EXPERIENCE, RS_POWER,
 RS_EXPORT, RS_IMPORT, RS_RESTORE, RS_QUIT), and RS_DICE is the referee's unit tests' alone (tests/ram/t_rules: the
 next dice's faces fixed, the dice rolled since said back; dq0harn answers it, a ruleset needn't); one it doesn't know
 it answers with result 0xFF.
@@ -45,6 +45,7 @@ it answers with result 0xFF.
 | RS_EQUIP | the UI (a 2: every key to hand, each after its mark and with its quality, w1 the load in quarter pounds) | nothing (pcsum anew: load, step) |
 | RS_TEST | the world, the UI, the denizens' task | grade (G_CF ... G_CS); result 1 can't (no tool, magic only), 2 a tongue it doesn't speak; P_DIG's text the tool's key ("hands": bare), w1 the half-feet, w2 the wear |
 | RS_EXERT | the world (w1 tenths at pace a, or GA_REST) | nothing (pcsum anew) |
+| RS_CONTEST | the world (the engage initiative test: actor the engager, other the defender, a and b P_INITIATIVE) | result (2: the other did better, its tactical advantage; 1 the actor, 0 alike), grade and c the two grades |
 | RS_HARM | the world (a cause, HC_*, and its numbers) | x the effects (rs.h's struct rs_effect, X_NONE after the last); b the worst wound's band (0 none); w2 the tenths it's senseless (0); result 1 a fall stopped by a hold; the text its words; pcsum anew (cond: C_DEAD ends the game) |
 | RS_ATTACK | the world (a blow: actor at other, a its aim, b AS_BEST, w2 shy and prone bits) | result O_* (0xFF: none struck), a whose fumble or stumble, c AF_* (AF_CAUTIOUS, AF_BLEEDING), grade hub.h's FF_* (senseless, dead, flees, fallen), w2 the tenths one's out for, x the effects (X_COND_ON C_PRONE: fallen), the text its four lines (below); at RS_THING (other): w1 the harm the thing takes, c, w2 and result's bit 0 the striker's own hurt (bit 1: a part of it struck) |
 | RS_TIME | the world (actor 0xFF: the bleeders, w2's bits) | w1 the bits of those dead of it |

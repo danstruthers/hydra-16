@@ -1984,8 +1984,8 @@ function dq0Turns(m) {
   const r = m.dq0 || { games: [], lines: [], final: () => null }, all = { events: [], dens: [], replies: [], snaps: [] };   // (None: sim/dl's)
   r.games.forEach((g, gi) => { for (const k of Object.keys(all)) for (const e of g[k]) all[k].push(Object.assign({ game: gi }, e)); });
   const fin = r.final(), of = (list, k) => list.filter(e => e.line === k + 1);
-  // (A dq0 line as the test wrote it: sim/test.js's -a, and RULES=NAME's -r NAME, taken off)
-  const T = r.lines.map(l => l.replace(/^(dq0(?: .*)?) -a$/, '$1').replace(/^(dq0(?: .*)?) -r \S+$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1')).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
+  // (A dq0 line as the test wrote it: sim/test.js's -I and -a, and RULES=NAME's -r NAME, taken off)
+  const T = r.lines.map(l => l.replace(/^(dq0(?: .*)?) -I$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1').replace(/^(dq0(?: .*)?) -r \S+$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1')).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
     at: all.snaps.find(s => s.line === k + 1) || null }));
   T.forEach((t, k) => {
     t.after = k + 1 < T.length ? T[k + 1].at || fin : fin;
@@ -4074,6 +4074,78 @@ module.exports = {
         if (!mine(p[2]).some(e => e.def === rat && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the one down not finished');
         if (mine(p[3]).length) f.push('a blow struck at the rat fled out of reach');
         if (p[3].after && p[3].after.sight && p[3].after.sight.dens.some(d => d.doing === 'DO_FIGHT')) f.push('a rat seen fighting still');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0engage', initiative: true, what: 'Dingus Quest Zero\'s engage initiative test and a grope while engaged (the user\'s, 2026-10-20; HOUSE.md\'s, as built: the book\'s optional rule, the referee\'s RS_CONTEST of P_INITIATIVE, and P_GROPE), on (initiative: true: the runner gives the other dq0 tests -I), by the referee\'s requests, the hub\'s events and the words (HarnMaster\'s dice at these seeds): at seed 7, in a gambeson and a mail hauberk, the walk toward the far side stopped by the ghoul\'s zone, both tested, the ghoul the quicker: its blow first ("Quicker, the ghoul bites at you"), and the walk on, engaged still, no test; the ghoul closed with (attack, a walk), the ghoul the quicker, its blow first, then the character\'s; the sword dropped beside the ghoul and taken up, a grope: fumbled ("You fumble for the sword.", the round wasted, the sword where it lay), and held at last; then a quick character (Initiative 80, no armour) the ghoul comes up to, the character the quicker: its blow first ("Quicker, you strike at the ghoul with your sword"); at seed 21 a wary giant rat closed with, the rat the quicker, backing away (TE_AWAY: "Quicker, the giant rat backs away from you."); and at seed 7 again with dq0 -I, no test at all',
+      init: 't_rc', cycles: 3200e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -c hunter -o /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm',
+        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'go to the far side',
+        'go to the far side', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'attack the ghoul', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait', 'wait',
+        'drop the sword', 'take the sword', 'take the sword', 'take the sword', 'hold the sword', 'quit',
+        'echo ml ini 80 >> /ram/c.hm', 'dq0 -p t -s 7 -c /ram/c.hm -k sword -T', 'd', 'wait', 'quit',
+        'hmchar -q -s 5 -c hunter -o /ram/d.hm', 'dq0 -p t -s 21 -c /ram/d.hm -T', 'attack the rat', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -k sword -T -I', 'd', 'wait', 'wait', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), C = require('../sim/lib/dq0meaning.js').constants().names, f = [];
+        const contests = t => t.replies.filter(r => r.req === 'slot0' && r.kind === C.RS_CONTEST);
+        const gropes = t => t.replies.filter(r => r.req === 'slot0' && r.kind === C.RS_TEST && r.a === C.P_GROPE);
+        const ans = dq0Answers(out), said = (t, w) => { const n = T.filter(u => u.k < t.k && u.line === t.line).length, x = ans.filter(y => y.cmd === t.line)[n]; if (!x || !x.text.includes(w)) f.push(t.line + ': not "' + w + '" (' + (x ? x.text.slice(0, 160) : 'no answer') + ')'); };
+        const actor = (t, n) => t.at && t.at.actors.find(x => x.name === n);
+        // (The walk into the ghoul's zone: tested, the ghoul the quicker, its blow first; the walk on engaged, none)
+        const g = T.filter(t => t.line === 'go to the far side'), gh = g.length && actor(g[0], 'ghoul');
+        if (g.length !== 2 || !gh) return [...f, 'the walks not typed, or no ghoul'];
+        dq0Need(f, g[0], 'E_TASK', { te: 'TE_ENGAGED', still: false }, 'the walk not stopped by the ghoul\'s zone');
+        const c0 = contests(g[0]);
+        if (c0.length !== 1 || c0[0].actor !== 0 || c0[0].other !== gh.k + 1 || c0[0].a !== C.P_INITIATIVE || c0[0].result !== 2)
+          f.push('the walk into its zone not one test, the ghoul the quicker: ' + JSON.stringify(c0));
+        dq0Need(f, g[0], 'E_FIGHT', { who: gh.k + 1, def: 0 }, 'the ghoul\'s blow first not struck');
+        said(g[0], 'Quicker, the ghoul bites at you');
+        dq0Need(f, g[1], 'E_TASK', { te: 'TE_ENGAGED', still: true }, 'the walk begun engaged not stopped after a square');
+        if (contests(g[1]).length) f.push('a test as the walk begun engaged went on');
+        // (The close-in: the ghoul the quicker, its blow first, then the character's)
+        const a = T.of('attack the ghoul'), ag = actor(a, 'ghoul'), ac = contests(a);
+        if (!ag || ac.length !== 1 || ac[0].actor !== 0 || ac[0].other !== ag.k + 1 || ac[0].result !== 2)
+          f.push('the close-in not one test, the ghoul the quicker: ' + JSON.stringify(ac));
+        const blows = a.dens.filter(e => e.kind === 'E_FIGHT');
+        if (blows.length < 2 || !ag || blows[0].who !== ag.k + 1 || !blows.slice(1).some(e => e.who === 0)) f.push('the ghoul\'s blow not before the character\'s (' + dq0Evs(a) + ')');
+        said(a, 'Quicker, the ghoul bites at you');
+        // (The gropes beside the ghoul: the sword taken up fumbled, the round wasted, the sword where it lay; held at last)
+        const tk = T.filter(t => t.line === 'take the sword'), h = T.of('hold the sword');
+        if (tk.length !== 3) return [...f, 'the takes not typed'];
+        for (const t of tk) {
+          if (gropes(t).length !== 1 || gropes(t)[0].grade > 0) f.push(t.line + ' (' + t.k + '): not a grope failed: ' + JSON.stringify(gropes(t)));
+          if (!dq0Rep(t, 'ireq', { result: 'IR_FUMBLED' }).length) f.push(t.line + ': not IR_FUMBLED');
+          const sw = dq0Thing(t.after, 'sword');
+          if (!sw || sw.where !== 'IW_SQUARE') f.push(t.line + ': the sword not where it lay: ' + (sw && sw.where));
+          if (!t.at || !t.after || t.after.now - t.at.now < 100) f.push(t.line + ': no round wasted (' + (t.at && t.after && t.after.now - t.at.now) + ' tenths)');
+        }
+        said(tk[0], 'You fumble for the sword.');
+        if (gropes(h).length !== 1 || gropes(h)[0].grade <= 0) f.push('the hold not a grope that went: ' + JSON.stringify(gropes(h)));
+        const hs = dq0Thing(h.after, 'sword');
+        if (!hs || !(hs.flags & DQ0_I.HELD)) f.push('the sword not held at last');
+        if (contests(T.of('drop the sword')).length || gropes(T.of('drop the sword')).length) f.push('a drop tested');
+        // (A quick character the ghoul comes up to: the character the quicker, its blow first)
+        const w = T.filter(t => t.line === 'wait'), q = w[2], qg = q && actor(q, 'ghoul'), qc = q ? contests(q) : [];
+        if (w.length !== 5 || !qg) return [...f, 'the waits not typed, or no ghoul'];
+        if (!qc.length || qc[0].actor !== qg.k + 1 || qc[0].other !== 0 || qc[0].result !== 2)
+          f.push('the ghoul coming up not tested, the character the quicker: ' + JSON.stringify(qc));
+        const qb = q.dens.filter(e => e.kind === 'E_FIGHT');
+        if (!qb.length || qb[0].who !== 0 || qb[0].def !== qg.k + 1) f.push('the character\'s blow not first (' + dq0Evs(q) + ')');
+        said(q, 'Quicker, you strike at the ghoul with your sword');
+        // (A wary rat closed with: the rat the quicker, backing away)
+        const r = T.of('attack the rat'), rc = contests(r);
+        if (!rc.length || rc[0].actor !== 0 || rc[0].result !== 2) f.push('the close-in on the rat not tested, the rat the quicker: ' + JSON.stringify(rc));
+        dq0Need(f, r, 'E_TASK', { te: 'TE_AWAY' }, 'the rat not backing away');
+        said(r, 'Quicker, the giant rat backs away from you.');
+        // (dq0 -I: none tested, the ghoul's blows as they come)
+        for (const t of w.slice(3)) if (contests(t).length) f.push('dq0 -I, a test all the same (' + t.k + ')');
+        if (!w.slice(3).some(t => dq0Ev(t, 'E_FIGHT', { def: 0 }).length)) f.push('dq0 -I: the ghoul not come up and striking');
         return f;
       },
       sdcard: true

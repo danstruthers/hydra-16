@@ -1,6 +1,7 @@
 /*
 ** fight.c - (overlay 2, the referee's: called through bank.s's stubs) fights, by HarnMaster's melee (Combat 7-14,
-** 18): the creatures' sheets, a blow struck and its defence, morale, bleeding.  A request's read and answered in a
+** 18): the creatures' sheets, a blow struck and its defence, morale, bleeding, two actors' tests (the engage
+** initiative test's: a creature's by its sheet).  A request's read and answered in a
 ** copy of it in the main RAM (the hub's not in the window while the overlay is), its words put into its text.
 **
 ** A creature's sheet comes from its kind's key (the denizens' kinds', kinds.txt's) in the referee's bestiary: the
@@ -103,7 +104,7 @@ static const char* const wound_word[4][3] = {
 
 static harn_char cr;                            /* (The creature in the fight) */
 static unsigned char crn;                       /*   and its sheet's number */
-static unsigned long pc_out;                    /* (The character senseless till then: it can't defend) */
+unsigned long pc_out;                           /* (The character senseless till then: it can't defend; dq0harn.h's) */
 static unsigned char prones;                    /* (The request's: the attacker prone, RS_PRONE_A; the defender,
                                                 **   RS_PRONE_D: their bodies' positions, the world's) */
 
@@ -563,6 +564,17 @@ static void bleed (void)
     R->w1 = dead;
 }
 
+/* A creature's side of two actors' tests (RS_CONTEST's, dq0harn.c's: the actor's test of purpose a, at the steps): by
+** its sheet, Initiative its bestiary's, anything else its Dexterity times 5 (a grope's), its injuries' penalty off it
+** (one senseless, or in shock, tests nothing: a critical failure); the grade in the reply */
+static void tested (void)
+{
+    const struct bkind* b = unpack (R->actor);
+
+    R->grade = cr.state != HARN_CONSCIOUS ? G_CF : grade (harn_test ((R->a == P_INITIATIVE ? b->ini :
+        5 * cr.att[HARN_DEX]) - 5 * harn_get_pp (&cr) + STEP_PCT * (signed char) R->steps));
+}
+
 /* What a blow left them in, for the world (rs.h's AF_*: the reply's grade as hub.h's FF_*: it keeps it), and the
 ** creature's courage if it was wounded and stands (shy, w2's bit 0 in the request: a cautious one flees too) */
 static void __fastcall__ left (unsigned char shy)
@@ -663,6 +675,9 @@ void __fastcall__ o_fight (struct req* r)
         return;
     case RS_TIME:
         bleed ();
+        return;
+    case RS_CONTEST:
+        tested ();
         return;
     }
     if (r->other == RS_THING) {

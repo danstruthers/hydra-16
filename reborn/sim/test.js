@@ -158,6 +158,17 @@ function asksOf(t) {
   } });
 }
 for (const t of tests) if (/^dq0/.test(t.name) && !t.asks) asksOf(t);
+// And with -I (no engage initiative test, nor a grope's test while engaged: HOUSE.md's, the user's way to keep the
+// tests' fights' dice as they were), but in the tests of them, those with initiative: true
+function initiativeOf(t) {
+  const d = Object.getOwnPropertyDescriptor(t, 'machine');
+  Object.defineProperty(t, 'machine', { configurable: true, enumerable: true, get() {
+    const m = d ? (d.get ? d.get.call(this) : d.value) : {};
+    if (typeof m.input !== 'string') return m;
+    return Object.assign({}, m, { input: m.input.replace(/(\u0101dq0(?: [^\r]*)?)\r/g, '$1 -I\r') });
+  } });
+}
+for (const t of tests) if (/^dq0/.test(t.name) && !t.initiative) initiativeOf(t);
 function meaningArgs(argv) {
   if (!RULES) return argv;
   for (let i = 0; i < argv.length; i++) {

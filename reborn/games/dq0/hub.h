@@ -71,9 +71,11 @@
 struct fight {
     char            att[12], def[12];           /* The attacker's name and the defender's ("": the character) */
     unsigned        out;                        /* The tenths one knocked senseless is out for */
-    unsigned char   which;                      /* Whose a fumble or a stumble was (RS_ATTACK's a) */
+    unsigned char   which;                      /* Whose a fumble or a stumble was (RS_ATTACK's a), | FW_FIRST */
     char            text[DTEXT - 27];           /* The referee's words (RS_ATTACK's four lines) */
 };
+#define FW_FIRST        0x80                    /* (which's: a tactical advantage's blow, struck first: the engage
+                                                **   initiative test's, the striker the quicker) */
 
 /* A name the character's given (the UI's, dq0/names.c: DUNGEON.md's names), in the theme bank (NAMES_AT): a thing
 ** ("name my sword Linda": by its id, struct item's, never another's), a room ("call this room the Mausoleum": by
@@ -278,7 +280,7 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8 };    /* E_VIEW's
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN };  /* E_DIG's how (D_AGAIN: begun on
                                                 **   a hole dug part way before, the world's DUG record's) */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
-       TE_ENGAGED, TE_FAR };                    /* E_TASK's: stopped as
+       TE_ENGAGED, TE_FAR, TE_AWAY };           /* E_TASK's: stopped as
                                                 **   the player asked; stopped hard, by a wound or a blow (HOUSE.md:
                                                 **   all wounds), by a hostile in sight within 30 feet; asking, soft
                                                 **   (something new seen, tiring); carried on, the answer yes; not
@@ -287,7 +289,9 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
                                                 **   sound heard (the UI's, I_ASK); stopped hard, come into an enemy's
                                                 **   zone (HOUSE.md's engagement: b the enemy plus 1, | TE_STILL if it
                                                 **   was engaged with it already, or a close-in refused, engaged); a
-                                                **   close-in's target out of reach still (b it plus 1) */
+                                                **   close-in's target out of reach still (b it plus 1); an enemy
+                                                **   newly engaged the quicker, backing away (b it plus 1: the engage
+                                                **   initiative test's tactical advantage, a disengage) */
 #define TE_STILL        0x80
 enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN };   /* E_BEAT's: a quiet stretch (HOUSE.md:
                                                 **   every 30 feet), the way turns, a side passage, a door passed, it
@@ -306,6 +310,8 @@ enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: wha
        PA_BAR, PA_BEND };                       /*   a door barred again (a bar carried, or in reach, set in its
                                                 **   brackets); bars bent (a portcullis's; a window's, forced) */
 enum { WQ_SAVE, WQ_EXAMINE, WQ_START, WQ_SET }; /* The hub's wreq's kinds */
+#define WY_NO_INIT      0x100                   /* (WQ_START's y: dq0 -I, the tests', no engage initiative test nor
+                                                **   a grope's test while engaged: their fights' dice as they were) */
 enum { WS_PACE, WS_STANCE, WS_PAUSE };          /* WQ_SET's what: the character's pace (x, GA_*: 0xFF as it is) and its
                                                 **   watchfulness (y, WA_*); its stance (x, rs.h's D_*); the game
                                                 **   paused (x 1) or going on (x 0) */
@@ -578,9 +584,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** to the world (the UI's: WQ_*): the game kept (WQ_SAVE: the change records, and the world's own, world.dat,
     ** written to the save folder); a portal looked at closely (WQ_EXAMINE: x, y its square on the character's stratum,
     ** its record into pview; res 1 if there's none there); the game begun (WQ_START, before the UI's things: x the
-    ** ruleset's round, y the pace, a and b a new game's pace and watchfulness, the character's file's: the world
-    ** sets the clock's, and a game carried on, the hub's resume, is the save's world.dat's); the character's state
-    ** or the game's set (WQ_SET: a what, WS_*, x and y its values) */
+    ** ruleset's round, y the pace, | WY_NO_INIT dq0 -I's, a and b a new game's pace and watchfulness, the
+    ** character's file's: the world sets the clock's, and a game carried on, the hub's resume, is the save's
+    ** world.dat's); the character's state or the game's set (WQ_SET: a what, WS_*, x and y its values) */
     unsigned char   change_lock;
     struct {
         RQH;

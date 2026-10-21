@@ -517,6 +517,12 @@ static void __fastcall__ answer (struct req* r)
         g = r->grade = flat (r->steps);
         r->result = g == G_CF ? M_BROKEN : g == G_MF ? M_CAUTIOUS : M_STEADY;
         break;
+    case RS_CONTEST:                            /* (Two flat tests, the actor's first: who did better) */
+        g = r->grade = flat (r->steps);
+        r->c = flat ((signed char) r->c);
+        r->result = g > (signed char) r->c ? 1 : g < (signed char) r->c ? 2 : 0;
+        *tp = 0;
+        break;
     case RS_TIME:                               /* (No bleeding: none dies of it) */
         r->w1 = 0;
         r->b = health (wounds, TOUGH);

@@ -182,7 +182,8 @@ unsigned char s_take_up (void)
         r = IR_NOT_HERE;
     } else {
         hub_map (CAT_BANK);
-        r = w == IW_PORTAL || (CATALOGUE[k].keeps & KF_FIXED) ? IR_FIXED : carry (n, 0) ? IR_OK : IR_FULL;
+        r = w == IW_PORTAL || (CATALOGUE[k].keeps & KF_FIXED) ? IR_FIXED : !noinit && fumbled (k) ? IR_FUMBLED :
+            carry (n, 0) ? IR_OK : IR_FULL;     /* (Engaged, a grope failed: the round wasted, its words) */
         light_now ();                           /* (Its light: what it holds lit) */
     }
     take_n = 0;
@@ -193,7 +194,7 @@ unsigned char s_take_up (void)
     wk.m.w2 = was;
     wk.m.t = HUB->now;
     hub_event (&wk.m);
-    return r == IR_OK;
+    return r == IR_OK || r == IR_FUMBLED;      /* (A fumble's round the UI's to wait, as a thing taken's time) */
 }
 
 /* I_TAKE's walk begun (its intent: the square the thing lies on, its item) */
@@ -303,6 +304,7 @@ void s_pc_asked (void)
         HUB->round = x;
         HUB->pace = HUB->wreq.y;
         HUB->tpr = tprs[HUB->wreq.y & 3];
+        noinit = (HUB->wreq.y & WY_NO_INIT) != 0;   /* (dq0 -I: the tests') */
         HUB->gait = HUB->wreq.a;
         HUB->watch = HUB->wreq.b;
         if (HUB->resume) {

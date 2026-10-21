@@ -99,8 +99,7 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
     }
     aw = line[0];
     if (out == FO_GONE) {
-        add (dname ? "The " : "It");
-        add (dname ? dname : "");
+        who (dname, 1);                         /* ("The giant rat", or "Something" if it isn't seen) */
         add (" is out of reach.");
         return 0;
     }
@@ -119,7 +118,11 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
         who (dname, 0);
         add (" where it lies.");
     } else {
-        who (aname, 1);                         /* (The blow: "You strike at the giant rat with your sword", "The
+        if (f->which & FW_FIRST) {
+            add ("Quicker, ");                  /* (A tactical advantage's blow, struck first: the engage initiative
+                                                **   test's, "Quicker, the giant rat bites at you") */
+        }
+        who (aname, !(f->which & FW_FIRST));    /* (The blow: "You strike at the giant rat with your sword", "The
                                                 **   ghoul claws at you", "The kobold strikes at you with its spear") */
         if (pc && !strcmp (aw, "foot")) {
             add (" kick at ");                  /* ("You kick at the giant rat") */
@@ -160,7 +163,8 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
             struck (2, pc);
             break;
         case O_COUNTER_HIT:
-            add (pc ? "; it strikes first" : "; you strike first");
+            add (pc ? "; it strikes back" : "; you strike back");   /* (A counterstrike: "back", not "first", for a
+                                                **   blow struck first, the engage initiative test's, may meet one) */
             struck (3, !pc);
             break;
         case O_BOTH_HIT:

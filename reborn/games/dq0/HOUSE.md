@@ -366,11 +366,28 @@ climb's test to hold on).
   engaged.  A blow's close-in ends in its target's zone, beside it, and the blow is struck; engaged by another first,
   no blow, and the player says what next.  Engaged already, a blow at one out of reach isn't closed with (the
   user's).  The denizens move by the same rule: one coming at the character stops in its zone.  Not used: the book's
-  long-reach weapons' two squares (with the missiles, slice 4.7), its reaction zones (the game's 30 feet stands for
-  them: a hostile seen that near stops a long task) and its engage initiative test.  As built: a close-in's target
+  long-reach weapons' two squares (with the missiles, slice 4.7) and its reaction zones (the game's 30 feet stands for
+  them: a hostile seen that near stops a long task).  As built: a close-in's target
   struck at the character as it comes beside it is no stop (it's the fight it went for: the character's blow follows);
   "attack the rat" with several in sight and none beside the character closes with the nearest; a bare "attack" with
   no target, nothing beside it, is refused, as before.
+- **The engage initiative test, as built** (the user's, 2026-10-20; the book's optional rule): as two are newly
+  engaged both test their quickness (the referee's RS_CONTEST, P_INITIATIVE: HarnMaster's Initiative, a creature's its
+  bestiary's), and the defender, if it does better, gains a tactical advantage, an action more at once.  Newly
+  engaged: the character's walk coming into an enemy's zone (it stops there, as before), a close-in coming beside its
+  target, an enemy stepping up beside the character; the one whose move did it the engager.  A denizen's advantage:
+  a hostile one strikes first ("Quicker, the giant rat bites at you: ..."), one that isn't (an unfriendly one, a wary
+  one closed with) backs a square away, out of reach, if it can ("Quicker, the giant rat backs away from you."), else
+  strikes; the close-in's own blow after it.  The character's: its blow first at the one that came up to it, with
+  what it holds, at the middle ("Quicker, you strike at the giant rat with your sword: ..."), which stops its long
+  task as a blow at it does.  None while the character climbs.  dq0 -I turns it off, and a grope's test with it (the
+  user's, for the tests: the runner gives every dq0 test -I but those about it, initiative: true, so their fights'
+  dice stay as they were; the soak plays it).
+- **A grope while engaged, as built** (the user's, 2026-10-20; the book's grope): taking a thing up (within reach, or
+  walked over to), holding one (drawing, wielding, swapping a weapon), stowing it, putting it in or on another, or
+  taking it out of one, while the character's in an enemy's zone, is a test of its hands (the referee's P_GROPE:
+  HarnMaster's Dexterity times 5); failed, nothing's done and the round's wasted ("You fumble for the sword.").
+  Wearing and taking off, dropping, lighting and putting out aren't gropes.
 - **Going places, as built:** the place's square worked out from the room's floor as the character faces (the floor
   in thirds for the centre, its edge rows for a side or a corner, the nearer end of each when a corner's not said);
   where it's rock (a cave's), the nearest square the way reaches; "You're there already." if it is.  The search's
@@ -441,12 +458,6 @@ climb's test to hold on).
 - **Strenuous work tires** (the user's, 2026-10-20: "swimming, climbing, running, battering down a door"): running
   as now, climbing, battering and digging as a run does, swimming as it comes (slice 4.9); a long one asking.  Today
   only the pace tires.
-- **The engage initiative test** (the user's, 2026-10-20; the book's optional rule): as a character engages an
-  enemy (its walk into the zone, a close-in, an enemy coming at it), both test Initiative, and a defender that
-  does better gains a tactical advantage: it strikes first, or disengages; a dq0 flag turns it off (the tests', so
-  their fights stay the same: the user's).  Today the close-in strikes at once.
-- **A grope while engaged** (the user's, 2026-10-20): taking a thing up, drawing or swapping a weapon, engaged, is a
-  Dexterity test; a failure wastes the round.  Today it never fails.
 - **A search cut short covers the part done** (the user's, 2026-10-20): the squares nearest first, each at the full
   chance, as far as its time went.  Today every square at a harder chance (up to 20 for the part not done).
 - **Battering heard every blow** (the user's, 2026-10-20).  Today its noise is made once, as it begins.

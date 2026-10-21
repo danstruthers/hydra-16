@@ -11,7 +11,8 @@
 ** short lines, for the map's panel, each 15 characters at most; b 2: the last harm's words), RS_SAVE (the sheet,
 ** its injuries and all, and the creatures' sheets), RS_NEW_ACTOR (a creature's sheet, by its kind's key: made the
 ** first time, kept in a bank after), RS_ATTACK (a blow struck, HarnMaster's melee: by the character, or at it),
-** RS_MORALE, RS_TIME (bleeding), RS_EXERT (fatigue, by the pace moved at, and rest); RS_DESCRIBE b 3 (its state,
+** RS_MORALE, RS_TIME (bleeding), RS_CONTEST (two actors' tests: the engage initiative test's, a creature's by its
+** sheet), RS_EXERT (fatigue, by the pace moved at, and rest); RS_DESCRIBE b 3 (its state,
 ** the status command's, the hub's pace and watchfulness).  Its summary gives each pace's step, and the notice
 ** tests go by the character's pace and state.  The sheet's words and the harm are overlay 1's (sheet.c), the
 ** fights overlay 2's (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's
@@ -186,6 +187,8 @@ static const unsigned char purpose[P_THEME] = {
     HARN_LCK,                                                           /* A mechanism made out: Lockcraft (traps) */
     HARN_NTR,                                                           /* Guile: Intrigue */
     HARN_THR,                                                           /* A thing thrown: Throwing */
+    HARN_INI,                                                           /* Quickness, engaging: Initiative */
+    ATTR | HARN_DEX,                                                    /* A grope: Dexterity */
 };
 
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
@@ -196,7 +199,7 @@ static const unsigned char appraiser[NAP] = {
     HARN_MSN, HARN_GLA
 };
 
-static signed char __fastcall__ grade (unsigned char level)
+signed char __fastcall__ grade (unsigned char level)
 {
     static const signed char g[4] = { G_CF, G_MF, G_MS, G_CS };
 
@@ -544,9 +547,28 @@ static void sheets_in (void)
     }
 }
 
+/* One side of two actors' tests (RS_CONTEST): who's test of purpose p, at the steps: the character's here (one
+** senseless, or in shock, tests nothing: a critical failure), a creature's by its sheet (overlay 2's, in a copy) */
+static signed char __fastcall__ side (unsigned char who, unsigned char p, signed char steps)
+{
+    struct req* q = (struct req*) rq;
+
+    tnow = HUB->now;
+    if (!who) {
+        return pc.state != HARN_CONSCIOUS || pc_out > tnow ? G_CF : test (&pc, p, steps);
+    }
+    q->kind = RS_CONTEST;
+    q->actor = who;
+    q->a = p;
+    q->steps = steps;
+    fight (q);
+    return q->grade;
+}
+
 static void __fastcall__ answer (struct req* r)
 {
     unsigned char k, m, t;
+    signed char g;
 
     tp = r->text;
     tend = r->text + tlim - 1;
@@ -664,6 +686,13 @@ static void __fastcall__ answer (struct req* r)
         break;
     case RS_DICE:                               /* (A test's: its dice fixed) */
         dice_set (r);
+        break;
+    case RS_CONTEST:                            /* (Each one's test, the actor's first: who did better) */
+        g = side (r->actor, r->a, r->steps);
+        k = side (r->other, r->b, r->c);
+        r->grade = g;
+        r->c = k;
+        r->result = g > (signed char) k ? 1 : g < (signed char) k ? 2 : 0;
         break;
     default:
         r->result = 0xFF;                       /* (Not yet) */

@@ -18,6 +18,7 @@ unsigned __fastcall__ cond_of (const harn_char* c);        /* Its conditions (rs
 #define conditions()    cond_of (&pc)           /* The character's */
 unsigned char __fastcall__ health_of (const harn_char* c); /* Its health (rs.h's H_*) */
 unsigned char __fastcall__ has (const char* key);   /* A tool to hand, by its key ("pick") */
+signed char __fastcall__ grade (unsigned char level);   /* A level of success (harn.h's) as rs.h's grade */
 struct pstate {                                 /* (The character's state's words need, the hub's: copied) */
     unsigned char   gait, watch;                /* Its pace, its watchfulness (rs.h's GA_*, hub.h's WA_*) */
     unsigned char   light, dark;                /* Its light's reach (squares), its square unlit (by feel) */
@@ -70,7 +71,9 @@ void __fastcall__ spent (unsigned t);           /* Time spent (t tenths) at spen
 void __fastcall__ harm (struct req* r);         /* A harm (r a copy, in the main RAM, but its text) */
 
 /* fight.c (overlay 2) */
-void __fastcall__ fight (struct req* r);        /* RS_NEW_ACTOR, RS_ATTACK, RS_MORALE, RS_TIME (r a copy, as harm's) */
+void __fastcall__ fight (struct req* r);        /* RS_NEW_ACTOR, RS_ATTACK, RS_MORALE, RS_TIME, RS_CONTEST (a
+                                                **   creature's side: r a copy, as harm's) */
+extern unsigned long pc_out;                    /* (The character senseless till then, the clock's tenths) */
 
 /* A side of a fight, as a blow wants it (fight.c's; gear.c's for the character) */
 struct bkind;

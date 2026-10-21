@@ -1800,6 +1800,63 @@ dice 100:16
 ask TEST a=P_APPRAISE b=AP_STONE
 want grade=G_MF
 
+# ---- Engaging (HOUSE.md: the engage initiative test, the user's, 2026-10-20, the book's optional rule; and a grope
+# while engaged): as two are newly engaged each tests its quickness (P_INITIATIVE: the character's Initiative, a
+# creature's its bestiary's, Combat 18's), in one request (RS_CONTEST: the actor's die first, then the other's; who
+# did better), the world's to give the better a tactical advantage; a thing handled engaged is a test of the hands
+# (P_GROPE: Dexterity times 5)
+
+char
+ml ini 55
+end
+case quickness: Initiative 55, 55 a critical success, 56 a marginal failure, a step worse (50) 51 one too
+dice 100:55
+ask TEST a=P_INITIATIVE
+want grade=G_CS
+dice 100:56
+ask TEST a=P_INITIATIVE
+want grade=G_MF
+dice 100:51
+ask TEST a=P_INITIATIVE steps=-1
+want grade=G_MF
+
+case a grope: Dexterity 12 times 5 (60), 60 a critical success, 59 marginal, 61 a marginal failure
+dice 100:60
+ask TEST a=P_GROPE
+want grade=G_CS
+dice 100:59
+ask TEST a=P_GROPE
+want grade=G_MS
+dice 100:61
+ask TEST a=P_GROPE
+want grade=G_MF
+
+case a giant rat's sheet (its record 9), made with no die of the referee's
+dice
+ask NEW_ACTOR actor=1 w1=9 text="rat"
+want result=0
+
+case she engages the rat: her 56 (a marginal failure) against its Initiative 30's 30 (critical): the rat the quicker (2)
+dice 100:56 100:30
+ask CONTEST actor=0 other=1 a=P_INITIATIVE b=P_INITIATIVE
+want result=2 grade=G_MF c=G_CS
+
+case her 1 (a marginal success) against its 31 (a marginal failure): she the quicker (1); both 2 and 3 (marginal) alike (0)
+dice 100:1 100:31
+ask CONTEST actor=0 other=1 a=P_INITIATIVE b=P_INITIATIVE
+want result=1 grade=G_MS
+dice 100:2 100:3
+ask CONTEST actor=0 other=1 a=P_INITIATIVE b=P_INITIATIVE
+want result=0 grade=G_MS c=G_MS
+
+case the rat engages her: its 31 (MF) against her 50 (CS): she the quicker (2); her steps c, two worse (45): 46 alike (0)
+dice 100:31 100:50
+ask CONTEST actor=1 other=0 a=P_INITIATIVE b=P_INITIATIVE
+want result=2 grade=G_MF c=G_CS
+dice 100:31 100:46
+ask CONTEST actor=1 other=0 a=P_INITIATIVE b=P_INITIATIVE c=-2
+want result=0 grade=G_MF
+
 # ---- The tongues last: a file's "language" lines are kept for good once read (the referee reads one file a game)
 
 char
