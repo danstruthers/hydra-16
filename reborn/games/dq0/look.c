@@ -50,11 +50,11 @@ const char* tt (void)
 }
 
 /* What the character perceives (first: the first time there; 2, a close look, the room's figures with it; | 4, as a
-** run or a sprint ends: briefly; 8, a look one way's: what it sees that way, way.c's): the senses' record copied,
-** worded (overlay 2) */
+** run or a sprint ends: briefly; 8, a look one way's: what it sees that way, way.c's; 16, the traces read, the world's
+** reply, words.c's): the senses' record copied, worded (overlay 2) */
 void __fastcall__ look (unsigned char first)
 {
-    sight_close = first & 10;                   /* (The theme's words for a place's first sight: later) */
+    sight_close = first & 26;                   /* (The theme's words for a place's first sight: later) */
     sight_get ();
     sight_copy.first |= first & 4 ? SIGHT_HURRY : 0;
     sight_light = HUB->pc_light;

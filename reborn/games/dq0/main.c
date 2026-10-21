@@ -841,7 +841,8 @@ static unsigned char events (void)          /* (How many there were) */
                     t_flush ();
                     break;
                 }
-                look ((unsigned char) m.w1 & V_LOOKED);     /* (A look one way's own words: way.c's) */
+                look ((unsigned char) m.w1 & (V_LOOKED | V_TRACED));  /* (A look one way's own words: way.c's;
+                                                **   the traces read, words.c's) */
             }
             break;
         case E_NOWAY:

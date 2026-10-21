@@ -18,6 +18,7 @@
 #include "../dq0/hub.h"
 #include "world.h"
 #include "wbody.h"
+#include "trace.h"
 
 #pragma local-strings (on)
 
@@ -93,6 +94,24 @@ static unsigned char between (void)
     return solid | doors << 4;
 }
 
+/* Body bd's passing journalled as it leaves its square (the traces': trod.inc's): its kind's (0 none: not kept), the
+** way h it went from there (| TS_NOWAY: a coarse move's, none known: its square come to) */
+#include "trod.inc"
+
+static void __fastcall__ den_trod (unsigned char h)
+{
+    struct tstep s;
+
+    if (bd.kind) {
+        s.kind = bd.kind;
+        s.sn = bd.sn;
+        s.head = h;
+        s.x = bd.x;
+        s.y = bd.y;
+        trod (&s);
+    }
+}
+
 /* Body bd did what (DE_*), how loud (0-9): told (E_DEN), where it is, whether the character sees its square now (the
 ** senses' marks), what lies between, if it's heard; the hub's header in the window after */
 static void __fastcall__ told_den (unsigned char what, unsigned char loud)
@@ -128,6 +147,7 @@ unsigned char __fastcall__ s_den_first (unsigned char k, unsigned char away)
         x = bd.x + dir_x[d];
         y = bd.y + dir_y[d];
         if (apart (x - bpx, y - bpy) > 1 && !taken (x, y) && step_ok (bd.sn, bd.x, bd.y, d)) {
+            den_trod (H_OF (d));
             bd.x = x;
             bd.y = y;
             told_den (DE_MOVED, 1);
@@ -163,6 +183,15 @@ void s_den_intents (void)
             continue;
         }
         any = 1;
+        if (m.kind == I_TROD || m.kind == I_SWEPT) {   /* (One out but not an actor: its passing; a chunk kept
+                                                **   swept, its keepers' lair placed: the traces') */
+            bd.kind = m.kind == I_SWEPT ? TK_SWEPT : m.x[1];    /* (Body bd but a copy: none put back) */
+            bd.sn = m.x[2];
+            bd.x = m.w1;
+            bd.y = m.w2;
+            den_trod (m.kind == I_SWEPT ? 0 : (m.a & 7) | TS_NOWAY);
+            continue;
+        }
         BD_GET ((m.who - 1) & 7);
         was = bd.doing;
         if (m.x[0] != 0xFF) {
@@ -194,6 +223,11 @@ void s_den_intents (void)
             was = bd.doing;
             break;
         case I_STEP:                            /* (A square, by the character's rules: refused, it waits a moment) */
+            if ((m.w1 & STEP_SCENT) && (m.w1 = tr_scent (m.x[2])) > H_NW) {
+                bd.doing = DO_ROAM;             /* (No scent its nose can follow: the trail lost) */
+                bd.ready += 10;
+                break;
+            }
             d = (m.w1 & 7) >> 1;
             x = bd.x + dir_x[d];
             y = bd.y + dir_y[d];
@@ -221,6 +255,7 @@ void s_den_intents (void)
                 eng = bk + 1;                   /* (An enemy come up beside the character: it engages it, the
                                                 **   engage initiative test's, once its body's put back) */
             }
+            den_trod (m.w1 & 7);
             bd.x = x;
             bd.y = y;
             bd.face = m.w1 & 7;
@@ -233,6 +268,7 @@ void s_den_intents (void)
                 bd.ready += 10;
                 break;
             }
+            den_trod (bearing ((int) (m.w1 - bd.x), (int) (m.w2 - bd.y)));
             bd.x = m.w1;
             bd.y = m.w2;
             bd.ready += 2 * bd.step;
