@@ -30,7 +30,7 @@ static char wb[32];                             /* (A blow's words on their way 
 #pragma rodata-name ("SW15RODATA")
 
 extern unsigned char pc_hit;                    /* (dq0w.c's: a blow at the character stops its long task, hard) */
-extern unsigned char fwant, flast;              /* (dq0w.c's fighting on: a blow at it looked at as it's free, by whom) */
+extern unsigned char fwant, flast;              /* (dq0w.c's fighting on: a blow at it, looked at as it's free; whose) */
 
 /* A blow told (E_FIGHT): attacker att, defender def (0 the character, else an actor's entry plus 1; body bd the one in
 ** it), how it came out (O_*, FO_BLED), what it left them in (FF_*); its words the ring's, fring; the ring on */
@@ -39,7 +39,7 @@ static void __fastcall__ told (unsigned char att, unsigned char def, unsigned ch
     hub_map (0);
     if (!def) {
         pc_hit = 1;
-        fwant = 1;                              /* (A hostile one fought, fighting on's, as the character's free) */
+        fwant |= 1;                             /* (A hostile one fought, fighting on's, as the character's free) */
         flast = att;
     }
     bev.kind = E_FIGHT;

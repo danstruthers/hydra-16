@@ -187,8 +187,8 @@ static unsigned char seen_now (void)
 ** its own units; what disturbs it from now on (a blow, a wound: pc_hit; a denizen not seen till now: pseen) */
 unsigned char pc_hit;                           /* (A blow at the character, or a wound: wfight.c's too) */
 unsigned char fwant;                            /* (Fighting on's, part 24's: an enemy may engage the character, looked
-                                                **   at as it's free; 1 a blow at it, wfight.c's, or its walk stopped
-                                                **   in a zone; 2 a command taking over a fight, looked at after it) */
+                                                **   at as it's free: | 1 a blow at it, wfight.c's, or its walk stopped
+                                                **   in a zone, looked at at once; 2 a command taking over a fight) */
 unsigned char flast;                            /* (The last to strike at the character, plus 1: wfight.c's) */
 static unsigned char fheld;                     /* (The enemies the player stopped fighting, a bit each: part 24's) */
 static unsigned char pseen;                     /* (The denizens seen as it began, and since) */
@@ -2375,7 +2375,7 @@ void s_step_on (void)
             if (e != 0xFF) {
                 evb = e;                        /* (Come into an enemy's zone, or a square on in one: stopped; a
                                                 **   hostile one fought, part 24's fighting on) */
-                fwant = 1;
+                fwant |= 1;
             }
             halt (e == 0xFF ? 0xFF : TE_ENGAGED);   /* (0xFF: a close-in beside its target, the blow as it arrives) */
             engaged (0, e);                     /* (Newly engaged by its walk: the engage initiative test, part 25's) */
@@ -2446,7 +2446,11 @@ void __fastcall__ s_task_word (const struct msg* m)
         }
     } else {
         if (k == LT_FIGHT) {                    /* (A command taking over: fought on after it, if an enemy engages
-                                                **   it still; the player's stop: those engaging it now left be) */
+                                                **   it still; the player's stop: those engaging it now left be.  The
+                                                **   round's blow posted, the turns pace's, struck first: told first) */
+            if (HUB->pc_foe) {
+                pc_blow ();
+            }
             if (m->w1) {
                 fwant = 2;
             } else {
@@ -2763,8 +2767,8 @@ void __fastcall__ s_fight_go (const struct msg* m)
 /* Fighting on as the character's free (the main loop's, while its long task's LT_FIGHT, or as an enemy may engage it,
 ** fwant; idle 1, it wasn't busy: the UI at its prompt): fighting, a blow at its target if it's within reach and able
 ** (or the player's own, at one within reach), else at the next foe, turned to; none, the fight over, told.  Not
-** fighting, a hostile engaging it begins it, told (a command taking over, fwant 2, looked at after it).  2 if it's
-** striking (or asking), 0 if it's done (E_READY), 3 if it was idle and still is */
+** fighting, a hostile engaging it begins it, told (after a command that took a fight over, fwant 2, turned to).
+** 2 if it's striking (or asking), 0 if it's done (E_READY), 3 if it was idle and still is */
 unsigned char __fastcall__ s_fight_on (unsigned char idle)
 {
     struct msg q;                               /* (Not static: a part's statics the main RAM's) */
@@ -2775,6 +2779,13 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
         if (pc_cut) {
             HUB->pc_task.foe = 0;               /* (Stopped, the player's or a command's: its round out, told as it
                                                 **   stopped) */
+            return 0;
+        }
+        if (HUB->pcsum.cond & C_STUNNED) {      /* (In shock, come round: in no state to fight, the referee's; the
+                                                **   fight over, told) */
+            evb = 1;
+            event (E_TASK, 0, TE_NO_FOE | LT_FIGHT << 8);
+            HUB->pc_task.foe = 0;
             return 0;
         }
         h = fight_reach (k = HUB->pc_task.foe);
@@ -2807,15 +2818,15 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
         fight_blow (k);                         /* (A missile weapon's, to come: its next missile taken first) */
         return 2;
     }
-    if (fwant == 2 && idle) {
+    if (!((h = fwant) & 1) && idle) {
         return 3;
     }
     fwant = 0;
-    if (!(k = fight_foe ())) {
-        return idle ? 3 : 0;
+    if (!(k = fight_foe ()) || (HUB->pcsum.cond & C_STUNNED)) {
+        return idle ? 3 : 0;                    /* (None; or it's in shock, in no state to fight) */
     }
-    fight_begin (k);                            /* (A hostile engaging it: fought back, at the middle, with what it
-                                                **   holds) */
+    fight_begin (h & 2 ? k | TE_STILL : k);    /* (A hostile engaging it: fought back, at the middle, with what it
+                                                **   holds; after a command that took a fight over, turned to) */
     HUB->pc_aim = Z_MID;
     HUB->pc_strike = SK_BEST;
     fight_blow (k);
@@ -2892,7 +2903,7 @@ unsigned char __fastcall__ s_engaged (unsigned char eng, unsigned char def)
     HUB->pc_foe = f;
     HUB->pc_aim = z;
     pc_hit = 1;
-    fwant = 1;                                  /* (And fought on, a hostile one: part 24's) */
+    fwant |= 1;                                 /* (And fought on, a hostile one: part 24's) */
     return 1;
 }
 
@@ -3171,7 +3182,7 @@ int main (int argc, char* argv[])
         if (move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             arrive ();
         }
-        if ((was_busy || fwant == 1) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
+        if ((was_busy || (fwant & 1)) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             if (pc_waited) {
                 pc_waited = 0;
                 ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */

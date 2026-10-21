@@ -1996,6 +1996,10 @@ const DQ0_REPEATS = [
   { what: /^You hear /, why: 'a sound heard each time it\'s made (main.c\'s heard: half a minute apart the same way, five seconds any; a search\'s or a wait\'s minute hears several)' },
   { what: /^(The passage turns (left|right)|You go through a doorway|You go on down the passage|The way (rises|falls away))\.$/,
     why: 'a walk\'s beats as it goes (slice 4.0): a winding passage turns the same way more than once, has more than one doorway, goes on quietly every 30 feet' },
+  { what: /^(?:It falls senseless|It flees|The .+ falls dead|The .+ gets to its feet|You get to your feet|You turn to the .+|You fight back against the .+)\.$/,
+    why: 'fighting on (the user\'s, 2026-10-20): one attack fights its foes in turn, each falling, fleeing, getting up, fought back or turned to told as it comes (two of a name, the same words)' },
+  { what: /^(?:You stop fighting|You fumble for the .+)\.$/,
+    why: 'commands typed ahead as the character fights, each taking the fight over in turn, fought on between them (fighting on), their answers one' },
   { what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
 ];
 function dq0Answers(out) {
@@ -3382,14 +3386,14 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0reach', meaning: true, what: 'Dingus Quest Zero\'s things out of reach walked to first, places in a room, a blow\'s close-in and engagement (slice 4.0; HOUSE.md: out of reach, walked to first, going places, engagement; the user\'s, 2026-10-20), by the hub\'s events, the world\'s replies and where the character ends (the referee\'s dice at these seeds): at seed 3 the pick put down and walked away from, then "stow the pick" walks over to it (the things\' IR_NOT_HERE, I_TAKE\'s walk alone) and stows it as it gets there (the command carried out again: IR_OK); the room\'s centre, its far left corner, its near side and, walking forward, its other side gone to by the facing (I_GOTO: each square the room\'s own); at seed 7 the ghoul down the stairway attacked from two squares off: closed with (I_CLOSE: a walk), its blow back as the character comes beside it not a stop, and the character\'s blow struck; in another game the walk toward the far side stopped as it comes into the ghoul\'s zone (TE_ENGAGED) and, begun in it, after a square (TE_ENGAGED, engaged still)',
+      name: 'dq0reach', meaning: true, what: 'Dingus Quest Zero\'s things out of reach walked to first, places in a room, a blow\'s close-in and engagement (slice 4.0; HOUSE.md: out of reach, walked to first, going places, engagement; the user\'s, 2026-10-20), by the hub\'s events, the world\'s replies and where the character ends (the referee\'s dice at these seeds): at seed 3 the pick put down and walked away from, then "stow the pick" walks over to it (the things\' IR_NOT_HERE, I_TAKE\'s walk alone) and stows it as it gets there (the command carried out again: IR_OK); the room\'s centre, its far left corner, its near side and, walking forward, its other side gone to by the facing (I_GOTO: each square the room\'s own); at seed 7 the ghoul down the stairway attacked from two squares off: closed with (I_CLOSE: a walk), its blow back as the character comes beside it not a stop, and the character\'s blow struck; in another game (no sword: its torch to hand) the walk toward the far side stopped as it comes into the ghoul\'s zone (TE_ENGAGED), the ghoul fought back (HOUSE.md\'s fighting on), and the walk again, typed as it fights, taking the fight over: begun in the zone, after a square (TE_ENGAGED, engaged still)',
       init: 't_rc', cycles: 1800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T',
         'drop pick', 'walk to the door ahead', 'turn around', 'stow the pick', 'go to the centre of the room', 'go to the far left corner',
         'go to the near side', 'walk forward to the other side', 'quit', 'echo ml swd 80 >> /ram/c.hm',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'attack the ghoul', 'quit',
-        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'go to the far side',
-        'go to the far side', 'quit', 'echo $status']) },
+        'dq0 -p t -s 7 -c /ram/c.hm -k \'gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'go to the far side']) +
+        '\u0100go to the far side\r' + dq0Typed(['quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [];
@@ -3416,7 +3420,11 @@ module.exports = {
         const g = T.filter(t => t.line === 'go to the far side');
         if (g.length !== 2) return [...f, 'the walks not typed'];
         if (!dq0Ev(g[0], 'E_TASK', { te: 'TE_ENGAGED', still: false }).length) f.push('the walk not stopped by the ghoul\'s zone (' + dq0Evs(g[0]) + ')');
-        if (!dq0Ev(g[1], 'E_TASK', { te: 'TE_ENGAGED', still: true }).length) f.push('the walk begun engaged not stopped after a square (' + dq0Evs(g[1]) + ')');
+        // (The second walk typed as the ghoul's fought: the two turns' events as one, the fight then taken over)
+        const te = [...g[0].events, ...g[1].events].filter(e => e.kind === 'E_TASK');
+        const fi = te.findIndex(e => e.te === 'TE_FIGHT'), si = te.findIndex((e, i) => i > fi && e.te === 'TE_STOPPED' && e.task === 'LT_FIGHT');
+        if (fi < 0 || si < 0) f.push('the ghoul not fought back, the walk again taking it over (' + dq0Evs(g[1]) + ')');
+        else if (!te.slice(si).some(e => e.te === 'TE_ENGAGED' && e.still)) f.push('the walk begun engaged not stopped after a square (' + dq0Evs(g[1]) + ')');
         const p0 = g[0].after && g[0].after.pc, p1 = g[1].after && g[1].after.pc;
         if (p0 && p1 && Math.max(Math.abs(p1.x - p0.x), Math.abs(p1.y - p0.y)) > 1) f.push('more than a square walked engaged');
         return f;
@@ -4061,29 +4069,30 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s melee, RS_ATTACK, dq0harn/fight.c), by the blows told (the denizens\' events, E_FIGHT: who struck whom, how it came out, what it left them in; the referee\'s dice the commands\', in their order, at the turns pace: HarnMaster\'s at this seed): a fight with seed 5\'s giant rats won (down its ladder, a sword in hand, dq0 -k sword; the character\'s Sword 80, hmchar\'s file): the rat struck at, and its lair\'s kin, turn on the character, both striking at it; three blows dodged, the fourth knocking the rat senseless; then the other struck at by the way it lies (the rat ahead to the right) and knocked senseless too; each finished where it lies, their bodies left (seen as the world looks about again); the character hurt by their blows',
+      name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s melee, RS_ATTACK, dq0harn/fight.c), by the blows told (the denizens\' events, E_FIGHT: who struck whom, how it came out, what it left them in; the referee\'s dice the commands\', in their order, at the turns pace: HarnMaster\'s at this seed): a fight with seed 5\'s giant rats won (down its ladder, a sword in hand, dq0 -k sword; the character\'s Sword 80, hmchar\'s file), one attack fought on (HOUSE.md\'s fighting on, the user\'s, 2026-10-20): the rat struck at, and its lair\'s kin, turn on the character, both striking at it; three blows dodged, the fourth knocking the rat senseless; then the other turned to and knocked senseless too, the fight over; each finished where it lies, an attack each, their bodies left (seen as the world looks about again); the character hurt by their blows (since fighting on, the blows typed one by one before)',
       init: 't_rc', cycles: 900e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -k sword -T',
-        'd', 'wait', 'go right', ...Array(4).fill('attack the rat'), 'attack the rat ahead right', 'attack the rat ahead right', 'attack the rat', 'look', 'quit',
-        'echo $status']) },
+        'd', 'wait', 'go right', 'attack the rat', 'attack the rat', 'attack the rat', 'look', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], FF_D_DOWN = 4, FF_D_DEAD = 8;
         const mine = t => dq0Ev(t, 'E_FIGHT', { who: 0 }), theirs = t => dq0Ev(t, 'E_FIGHT', { def: 0, who: w => w > 0 });
-        const a = T.filter(t => t.line === 'attack the rat'), r = T.filter(t => t.line === 'attack the rat ahead right');
-        if (a.length !== 5 || r.length !== 2) return ['the attacks not typed'];
-        const first = mine(a[0])[0];
-        if (!first) return ['no blow struck at the rat (' + dq0Evs(a[0]) + ')'];
-        if (new Set(a.slice(0, 3).flatMap(theirs).map(e => e.who)).size < 2) f.push('the rat and its kin not both striking at the character');
-        // (Which rat "the rat" is, as each blow's struck, the one in front then: since slice 4.0's walks a square at a
-        // time, the first blow may fall on its kin; the rat the fourth knocks senseless the one finished last)
-        for (const t of a.slice(0, 3)) if (!mine(t).some(e => e.out === 'O_DODGED')) f.push(t.k + ': the blow not dodged (' + dq0Evs(t) + ')');
-        const down = mine(a[3]).find(e => e.out === 'O_HIT' && (e.ff & FF_D_DOWN));
-        if (!down) f.push('the fourth blow didn\'t knock a rat senseless (' + dq0Evs(a[3]) + ')');
-        const other = mine(r[0])[0];
-        if (!other || (down && other.def === down.def) || other.out !== 'O_HIT' || !(other.ff & FF_D_DOWN)) f.push('the rat ahead to the right not struck senseless (' + dq0Evs(r[0]) + ')');
-        if (!mine(r[1]).some(e => other && e.def === other.def && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the rat ahead to the right not finished');
-        if (!mine(a[4]).some(e => down && e.def === down.def && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the first rat down not finished');
+        const a = T.filter(t => t.line === 'attack the rat');
+        if (a.length !== 3) return ['the attacks not typed'];
+        const b = mine(a[0]);
+        if (b.length < 5) return ['the attack not fought on (' + dq0Evs(a[0]) + ')'];
+        if (new Set(theirs(a[0]).map(e => e.who)).size < 2) f.push('the rat and its kin not both striking at the character');
+        // (Its first four blows at the rat in front, the fourth knocking it senseless; the other turned to and felled)
+        for (const e of b.slice(0, 3)) if (e.out !== 'O_DODGED' || e.def !== b[0].def) f.push('a first blow not dodged (' + dq0Evs(a[0]) + ')');
+        const down = b[3];
+        if (!down || down.def !== b[0].def || down.out !== 'O_HIT' || !(down.ff & FF_D_DOWN)) f.push('the fourth blow didn\'t knock the rat senseless (' + dq0Evs(a[0]) + ')');
+        const turned = dq0Ev(a[0], 'E_TASK', { te: 'TE_FIGHT', still: true });
+        const other = b.slice(4).find(e => e.def !== b[0].def && e.out === 'O_HIT' && (e.ff & FF_D_DOWN));
+        if (turned.length !== 1 || !other || turned[0].by + 1 !== other.def) f.push('the other rat not turned to and knocked senseless (' + dq0Evs(a[0]) + ')');
+        dq0Need(f, a[0], 'E_TASK', { te: 'TE_NO_FOE' }, 'the fight not over');
+        if (b.some(e => e.out === 'O_DISPATCH')) f.push('a rat finished unasked');
+        const fin = [a[1], a[2]].map(t => mine(t).find(e => e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD)));
+        if (!fin[0] || !fin[1] || fin[0].def === fin[1].def || !other || ![b[0].def, other.def].every(d => fin.some(e => e.def === d))) f.push('each rat not finished where it lies (' + dq0Evs(a[1]) + '; ' + dq0Evs(a[2]) + ')');
         const lk = T.of('look');
         if (!lk.after || !lk.after.sight || lk.after.sight.items.filter(i => i.name === 'body').length < 2) f.push('their bodies not seen');
         if (!lk.after || !(lk.after.sum.health > 0)) f.push('the character not hurt by their blows');
@@ -4092,62 +4101,69 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0armour', what: 'Dingus Quest Zero\'s denizens fighting and armour (DENIZENS.md: fights; the catalogue\'s armour kinds, worn: the things tell the referee what\'s worn and how well made, RS_EQUIP\'s marks; HarnMaster\'s protection by location, the layers summed, Combat 4-5), by the blows told and the character\'s state (the referee\'s dice at this seed): a gambeson under a mail hauberk (dq0 -k) worn; down the stairway at seed 7 a ghoul (its faction hostile to the character) seen as the character comes down, coming up to it and clawing at it a round at a time as it waits (its own turns: the referee\'s round); the character dodging (defend dodge: its stance), a claw dodged, one turned by the armour; then standing undefended (defend none), wounded, worse, knocked down, then clawed till it\'s killed: the character\'s death, the game\'s end (dq0ghoul\'s, in it)',
-      init: 't_rc', cycles: 1000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 7 -c /ram/c.hm -k \'gambeson,mail hauberk\' -T',
-        'wear the gambeson', 'wear the mail hauberk', 'd', 'defend dodge', 'wait', 'wait', 'defend none', ...Array(18).fill('wait'), 'echo $status']) },
+      name: 'dq0armour', what: 'Dingus Quest Zero\'s denizens fighting and armour (DENIZENS.md: fights; the catalogue\'s armour kinds, worn: the things tell the referee what\'s worn and how well made, RS_EQUIP\'s marks; HarnMaster\'s protection by location, the layers summed, Combat 4-5), by the blows told and the character\'s state (the referee\'s dice at this seed): a gambeson under a mail hauberk (dq0 -k) worn, the character a poor fighter (Unarmed 5, its torch put down: the room\'s lit); down the stairway at seed 7 a ghoul (its faction hostile to the character) seen as the character comes down, coming up to it and clawing at it as it waits, fought back with bare fists (HOUSE.md\'s fighting on, the user\'s, 2026-10-20); dodging (defend dodge: its stance), a claw dodged, one turned by the armour; then a game standing undefended (defend none), wounded, worse, knocked senseless, then clawed till it\'s killed: the character\'s death, the game\'s end (dq0ghoul\'s, in it; since fighting on, two games, the stance set before each, and the character fighting back)',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
+        ...['dodge', 'none'].flatMap(d => ['dq0 -p t -s 7 -c /ram/c.hm -k \'gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'drop the torch', 'd',
+          'defend ' + d, 'wait', 'quit']), 'echo $status']) },
       expect: ['% echo $status'],
-      check(m) {
-        const T = dq0Turns(m), f = [], FF_D_DOWN = 4, FF_D_DEAD = 8, FF_STOPPED = 0x40;
+      check(m, out) {
+        const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_A_DEAD = 2, FF_D_DOWN = 4, FF_D_DEAD = 8, FF_STOPPED = 0x40;
         const worn = (t, n) => { const i = dq0Thing(t.after, n); if (!i || !(i.flags & DQ0_I.WORN)) f.push(n + ' not worn'); };
         worn(T.of('wear the gambeson'), 'gambeson');
         worn(T.of('wear the mail hauberk'), 'mail hauberk');
         const d = T.of('d'), ghoul = d.after && d.after.actors.find(a => a.name === 'ghoul');
         if (!d.after || !d.after.sight || !d.after.sight.dens.some(x => x.name === 'ghoul')) f.push('the ghoul not seen as the character came down');
-        const claws = t => dq0Ev(t, 'E_FIGHT', { def: 0, who: w => ghoul && w === ghoul.k + 1 });
         if (!ghoul) return [...f, 'no ghoul'];
-        const dd = T.of('defend dodge'), dn = T.of('defend none'), w = T.filter(t => t.line === 'wait');
+        const claws = t => dq0Ev(t, 'E_FIGHT', { def: 0, who: w => w === ghoul.k + 1 });
+        const dd = T.of('defend dodge'), dn = T.of('defend none'), w1 = T.after(dd, 'wait'), w2 = T.after(dn, 'wait');
         if (!dd.after || dd.after.pc.stance !== 'D_DODGE') f.push('the stance not dodging: ' + (dd.after && dd.after.pc.stance));
         if (!dn.after || dn.after.pc.stance !== 'D_NONE') f.push('the stance not none: ' + (dn.after && dn.after.pc.stance));
-        if (w.length !== 20) return [...f, 'the waits not typed'];
-        if (!claws(w[0]).some(e => e.out === 'O_DODGED')) f.push('the first claw not dodged (' + dq0Evs(w[0]) + ')');
-        if (!claws(w[1]).some(e => e.ff & FF_STOPPED)) f.push('the second claw not turned by the armour (' + dq0Evs(w[1]) + ')');
-        const h = t => t.after ? t.after.sum.health : -1;
-        if (!(claws(w[2]).some(e => e.out === 'O_HIT') && h(w[2]) > h(w[1]))) f.push('undefended, not wounded');
-        if (!(claws(w[3]).some(e => e.out === 'O_HIT') && h(w[3]) > h(w[2]))) f.push('undefended, not wounded worse');
-        if (!claws(w[4]).some(e => e.ff & FF_D_DOWN)) f.push('the third undefended claw not knocking the character down (' + dq0Evs(w[4]) + ')');
-        // (Then down, senseless, clawed a round at a time while it's out, till a blow kills it: the referee's, some
-        // fifteen rounds at this seed; since slice 4.0 the character busy till it comes round, so the death comes in the
-        // knock's own turn, the waits after it the shell's)
-        const k = w.slice(4).find(t => dq0Ev(t, 'E_FIGHT', { ff: x => x & FF_D_DEAD }).length);
+        if (w2.k < 0) return [...f, 'the waits not typed'];
+        // (Dodging: a claw dodged, one turned by the armour, the ghoul fought back)
+        dq0Need(f, w1, 'E_TASK', { te: 'TE_FIGHT', by: ghoul.k }, 'the ghoul not fought back');
+        if (!claws(w1).some(e => e.out === 'O_DODGED')) f.push('no claw dodged (' + dq0Evs(w1) + ')');
+        if (!claws(w1).some(e => e.ff & FF_STOPPED)) f.push('no claw turned by the armour (' + dq0Evs(w1) + ')');
+        // (Undefended: wounded, worse, knocked senseless (a claw, or its counterstrike at the character's blow), then
+        // clawed as it lies till it's killed: since slice 4.0 the character busy till it comes round, its death in the
+        // wait's own turn)
+        const all = dq0Ev(w2, 'E_FIGHT', {}), hurt = all.filter(e => e.def === 0 && e.who === ghoul.k + 1 && e.out === 'O_HIT' && !(e.ff & FF_STOPPED));
+        if (claws(w2).some(e => e.out === 'O_DODGED' || e.out === 'O_BLOCKED')) f.push('undefended, a claw dodged or blocked');
+        if (hurt.length < 2) f.push('undefended, not wounded, then worse (' + dq0Evs(w2) + ')');
+        const down = all.findIndex(e => (e.def === 0 && (e.ff & FF_D_DOWN)) || (e.who === 0 && (e.ff & FF_A_DOWN)));
+        const dead = all.findIndex(e => (e.def === 0 && (e.ff & FF_D_DEAD)) || (e.who === 0 && (e.ff & FF_A_DEAD)));
+        if (down < 0) f.push('undefended, the character not knocked senseless (' + dq0Evs(w2) + ')');
+        if (dead < 0 || dead < down) f.push('the character, down, not killed by the ghoul\'s claws');
+        else {
+          if (!w2.after || !(w2.after.sum.cond & 4)) f.push('the character not dead (C_DEAD)');
+          dq0Need(f, w2, 'E_BYE', {}, 'the game not ended by the death');
+        }
         // (Its black-out told once, and the ghoul's blows fumbled at it as it lies misses: the Ignore table's tactical
         // advantage none it can take, 2026-10-20; it was "you see an opening")
-        const said = m.out.replace(/\s+/g, ' '), down = said.indexOf('Everything goes black.');
-        if (down < 0 || said.indexOf('Everything goes black.', down + 1) >= 0) f.push('the black-out not told once');
-        else if (said.slice(down).includes('you see an opening')) f.push('the character, senseless, seeing an opening');
-        if (!k) f.push('the character, down, not killed by the ghoul\'s claws');
-        else {
-          if (!k.after || !(k.after.sum.cond & 4)) f.push('the character not dead (C_DEAD)');
-          dq0Need(f, k, 'E_BYE', {}, 'the game not ended by the death');
-        }
+        const said = dq0Story(out), g2 = said.slice(said.lastIndexOf('> defend none')), black = g2.indexOf('Everything goes black.');
+        if (black < 0 || g2.indexOf('Everything goes black.', black + 1) >= 0) f.push('the black-out not told once');
+        else if (g2.slice(black).includes('you see an opening')) f.push('the character, senseless, seeing an opening');
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0senseless', initiative: true, what: "Dingus Quest Zero's character knocked senseless and struck again as it lies (the faults the engage work found, fixed 2026-10-20): dq0armour's game (seed 7's ghoul, the character in armour, then undefended) with the engage initiative test on, whose dice bring them: its black-out told once however often it's struck while it's out (the referee's AF_AGAIN, the fight ring's FW_AGAIN), a blow fumbled at it as it lies a miss (the Ignore table's tactical advantage none it can take: it was 'you see an opening'), every wound's injury level in digits (ten and more two of them: it was \"(G:)\")",
+      name: 'dq0senseless', initiative: true, what: "Dingus Quest Zero's character knocked senseless and struck again as it lies (the faults the engage work found, fixed 2026-10-20): the hand-written theme's hostile rats (inhabit.txt, seed 3), the character a poor fighter (Unarmed 5) undefended (defend none) fighting back (HOUSE.md's fighting on), with the engage initiative test on: knocked senseless, its black-out told once however often it's struck while it's out (the referee's AF_AGAIN, the fight ring's FW_AGAIN: since fighting on, at this seed bitten as it lies, not knocked again; come round in shock, in no state to fight on, bitten as it waits), a blow fumbled at it as it lies a miss (the Ignore table's tactical advantage none it can take: it was 'you see an opening'), every wound's injury level in digits (ten and more two of them: it was \"(G:)\")",
       init: 't_rc', cycles: 1000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 7 -c /ram/c.hm -k 'gambeson,mail hauberk' -T",
-        'wear the gambeson', 'wear the mail hauberk', 'd', 'defend dodge', 'wait', 'wait', 'defend none', ...Array(18).fill('wait'), 'echo $status']) },
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml una 5 >> /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'defend none', ...Array(12).fill('wait'), 'quit',
+        'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
-        const T = dq0Turns(m), f = [], FF_D_DOWN = 4;
-        const downs = T.reduce((n, t) => n + dq0Ev(t, 'E_FIGHT', { def: 0, ff: x => x & FF_D_DOWN }).length, 0);
+        const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4;
+        const all = T.flatMap(t => dq0Ev(t, 'E_FIGHT', {})), down = e => (e.def === 0 && (e.ff & FF_D_DOWN)) || (e.who === 0 && (e.ff & FF_A_DOWN));
+        const first = all.findIndex(down), lain = first < 0 ? [] : all.slice(first + 1).filter(e => e.def === 0 && e.out !== 'O_MISS');
         const out = m.out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').replace(/\s+/g, ' ');
         const black = (out.match(/Everything goes black\./g) || []).length;
         const levels = [...out.matchAll(/a (?:minor|serious|grievous) [a-z ]+ to (?:your|its) [a-z ]+ \(([^)]*)\)/g)].map(x => x[1]);
-        if (downs < 2) f.push('the character not struck senseless again as it lay (' + downs + ' knocks)');
-        if (black !== 1) f.push('"Everything goes black." told ' + black + ' times (knocked senseless ' + downs + ' times, never come round)');
+        if (first < 0) f.push('the character not knocked senseless');
+        if (lain.length < 2) f.push('the character not struck again as it lay (' + lain.length + ' blows)');
+        if (black !== 1) f.push('"Everything goes black." told ' + black + ' times (knocked senseless ' + all.filter(down).length + ' times, struck ' + lain.length + ' times as it lay)');
         const bad = levels.filter(l => !/^[MSG][0-9]+$/.test(l));
         if (bad.length) f.push('injury levels not in digits: ' + bad.join(', '));
         if (!levels.some(l => +l.slice(1) >= 10)) f.push('no injury level of ten or more (' + levels.join(' ') + ')');
@@ -4157,42 +4173,40 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0flee', what: 'Dingus Quest Zero\'s unarmed blows and morale (the user\'s, 2026-10-16: punching, kicking, head butts, the referee\'s gear.c, by Unarmed; RS_MORALE, HarnMaster\'s Initiative test, Combat 18), by the blows told and the denizens\' state (the referee\'s dice at this seed): at seed 5\'s giant rats (bare fists: the character\'s Unarmed 80) a kick, a head butt and a punch (the hub\'s pc_strike each), the rat and its kin turning on the character, a punch felling it; its lair\'s kin seeing it fall (the book\'s friend slain: a bad situation) shaken and, shy, fleeing (fighting no more), the one down finished; the other gone out of reach, a blow at it not struck (dq0unarmed\'s, in it)',
+      name: 'dq0flee', what: 'Dingus Quest Zero\'s unarmed blows and morale (the user\'s, 2026-10-16: punching, kicking, head butts, the referee\'s gear.c, by Unarmed; RS_MORALE, HarnMaster\'s Initiative test, Combat 18), by the blows told and the denizens\' state (the referee\'s dice at this seed): at seed 5\'s giant rats (bare fists: the character\'s Unarmed 80) a punch fought on (HOUSE.md\'s fighting on, the user\'s, 2026-10-20: every blow of it a punch, the hub\'s pc_strike), the rat and its kin turning on the character, a punch felling one; its kin shaken and, shy, fleeing (fighting no more, no foe left beside it); the one down finished with a kick; the other gone out of reach, a head butt at it not struck (dq0unarmed\'s, in it; a kick, a head butt and punches typed one by one before fighting on)',
       init: 't_rc', cycles: 900e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml una 80 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -T', 'd',
-        'wait', 'go right', 'kick the rat', 'head butt the rat', 'punch the rat', 'punch the rat', 'punch the rat', 'punch the rat', 'quit', 'echo $status']) },
+        'wait', 'go right', 'punch the rat', 'kick the rat', 'head butt the rat', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], FF_D_DOWN = 4, FF_D_DEAD = 8, mine = t => dq0Ev(t, 'E_FIGHT', { who: 0 });
-        const k = T.of('kick the rat'), b = T.of('head butt the rat'), p = T.filter(t => t.line === 'punch the rat');
-        if (p.length !== 4) return ['the punches not typed'];
-        for (const [t, sk] of [[k, 'SK_KICK'], [b, 'SK_HEAD'], [p[0], 'SK_PUNCH']]) {
-          if (!mine(t).length) f.push(t.line + ': no blow struck (' + dq0Evs(t) + ')');
-          if (!t.after || t.after.pc.strike !== sk) f.push(t.line + ': struck with ' + (t.after && t.after.pc.strike) + ', not ' + sk);
-        }
-        // (The rat the second punch fells: "the rat" the one in front as each blow's struck, since slice 4.0's walks a
-        // square at a time the kick's maybe its kin)
-        const felled = mine(p[1]).find(e => e.ff & FF_D_DOWN), rat = felled ? felled.def : (mine(k)[0] || {}).def;
-        if (!k.after || k.after.actors.filter(a => a.doing === 'DO_FIGHT').length < 2) f.push('the rat and its kin not turned on the character');
-        if (!felled) f.push('the second punch didn\'t fell a rat (' + dq0Evs(p[1]) + ')');
-        const kin = p[1].after ? p[1].after.actors.filter(a => a.k + 1 !== rat) : [];
+        const p = T.of('punch the rat'), k = T.of('kick the rat'), h = T.of('head butt the rat');
+        if (h.k < 0) return ['the blows not typed'];
+        if (mine(p).length < 2) f.push('the punch not fought on (' + dq0Evs(p) + ')');
+        if (!p.after || p.after.pc.strike !== 'SK_PUNCH') f.push('the fight not struck with the fists: ' + (p.after && p.after.pc.strike));
+        if (new Set(dq0Ev(p, 'E_FIGHT', { def: 0, who: w => w > 0 }).map(e => e.who)).size < 2) f.push('the rat and its kin not both striking at the character');
+        const felled = mine(p).find(e => e.out === 'O_HIT' && (e.ff & FF_D_DOWN)), rat = felled && felled.def;
+        if (!felled) f.push('no punch felled a rat (' + dq0Evs(p) + ')');
+        const kin = p.after ? p.after.actors.filter(a => a.k + 1 !== rat) : [];
         if (!kin.length || kin.some(a => a.doing !== 'DO_FLEE')) f.push('its kin not fleeing: ' + kin.map(a => a.doing).join(', '));
-        if (!mine(p[2]).some(e => e.def === rat && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the one down not finished');
-        if (mine(p[3]).length) f.push('a blow struck at the rat fled out of reach');
-        if (p[3].after && p[3].after.sight && p[3].after.sight.dens.some(d => d.doing === 'DO_FIGHT')) f.push('a rat seen fighting still');
+        dq0Need(f, p, 'E_TASK', { te: 'TE_NO_FOE' }, 'the fight not over, no foe left');
+        if (!mine(k).some(e => e.def === rat && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the one down not finished (' + dq0Evs(k) + ')');
+        if (!k.after || k.after.pc.strike !== 'SK_KICK') f.push('not finished with a kick: ' + (k.after && k.after.pc.strike));
+        if (mine(h).length) f.push('a blow struck at the rat fled out of reach');
+        if (h.after && h.after.sight && h.after.sight.dens.some(d => d.doing === 'DO_FIGHT')) f.push('a rat seen fighting still');
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0engage', initiative: true, what: 'Dingus Quest Zero\'s engage initiative test and a grope while engaged (the user\'s, 2026-10-20; HOUSE.md\'s, as built: the book\'s optional rule, the referee\'s RS_CONTEST of P_INITIATIVE, and P_GROPE), on (initiative: true: the runner gives the other dq0 tests -I), by the referee\'s requests, the hub\'s events and the words (HarnMaster\'s dice at these seeds): at seed 7, in a gambeson and a mail hauberk, the walk toward the far side stopped by the ghoul\'s zone, both tested, the ghoul the quicker: its blow first ("Quicker, the ghoul bites at you"), and the walk on, engaged still, no test; the ghoul closed with (attack, a walk), the ghoul the quicker, its blow first, then the character\'s; the sword dropped beside the ghoul and taken up, a grope: fumbled ("You fumble for the sword.", the round wasted, the sword where it lay), and held at last; then a quick character (Initiative 80, no armour) the ghoul comes up to, the character the quicker: its blow first ("Quicker, you strike at the ghoul with your sword"); at seed 21 a wary giant rat closed with, the rat the quicker, backing away (TE_AWAY: "Quicker, the giant rat backs away from you."); and at seed 7 again with dq0 -I, no test at all',
-      init: 't_rc', cycles: 3200e6,
+      name: 'dq0engage', initiative: true, what: 'Dingus Quest Zero\'s engage initiative test and a grope while engaged (the user\'s, 2026-10-20; HOUSE.md\'s, as built: the book\'s optional rule, the referee\'s RS_CONTEST of P_INITIATIVE, and P_GROPE), on (initiative: true: the runner gives the other dq0 tests -I), by the referee\'s requests, the hub\'s events and the words (HarnMaster\'s dice at these seeds): at seed 7, in a gambeson and a mail hauberk, the walk toward the far side stopped by the ghoul\'s zone, both tested, the ghoul the quicker: its blow first ("Quicker, the ghoul bites at you"), the ghoul fought back (HOUSE.md\'s fighting on), and the walk again taking the fight over, engaged still, a square, no test; the ghoul closed with (attack, a walk), the ghoul the quicker, its blow first, then the character\'s; the sword dropped beside the ghoul as it fights (the commands typed ahead taking the fight over, one by one) and taken up, a grope: fumbled ("You fumble for the sword.", the sword where it lay), and held at last; then a quick character (Initiative 80, no armour) the ghoul comes up to, the character the quicker: its blow first ("Quicker, you strike at the ghoul with your sword"); at seed 21 a wary giant rat closed with, the rat the quicker, backing away (TE_AWAY: "Quicker, the giant rat backs away from you."); and at seed 7 again with dq0 -I, no test at all (since fighting on, the walk again and the gropes typed as the character fights)',
+      init: 't_rc', cycles: 3600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm',
-        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'go to the far side',
-        'go to the far side', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'go to the far side']) +
+        'Āgo to the far side\r' + dq0Typed(['quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'attack the ghoul', 'quit',
-        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait', 'wait',
-        'drop the sword', 'take the sword', 'take the sword', 'take the sword', 'hold the sword', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait']) +
+        'drop the sword\rtake the sword\rtake the sword\rtake the sword\rhold the sword\r' + dq0Typed(['quit',
         'echo ml ini 80 >> /ram/c.hm', 'dq0 -p t -s 7 -c /ram/c.hm -k sword -T', 'd', 'wait', 'quit',
         'hmchar -q -s 5 -u feudal -c hunter -o /ram/d.hm', 'dq0 -p t -s 21 -c /ram/d.hm -T', 'attack the rat', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k sword -T -I', 'd', 'wait', 'wait', 'quit', 'echo $status']) },
@@ -4200,20 +4214,25 @@ module.exports = {
       check(m, out) {
         const T = dq0Turns(m), C = require('../sim/lib/dq0meaning.js').constants().names, f = [];
         const contests = t => t.replies.filter(r => r.req === 'slot0' && r.kind === C.RS_CONTEST);
-        const gropes = t => t.replies.filter(r => r.req === 'slot0' && r.kind === C.RS_TEST && r.a === C.P_GROPE);
         const ans = dq0Answers(out), said = (t, w) => { const n = T.filter(u => u.k < t.k && u.line === t.line).length, x = ans.filter(y => y.cmd === t.line)[n]; if (!x || !x.text.includes(w)) f.push(t.line + ': not "' + w + '" (' + (x ? x.text.slice(0, 160) : 'no answer') + ')'); };
         const actor = (t, n) => t.at && t.at.actors.find(x => x.name === n);
-        // (The walk into the ghoul's zone: tested, the ghoul the quicker, its blow first; the walk on engaged, none)
+        // (The walk into the ghoul's zone: tested, the ghoul the quicker, its blow first, fought back; the walk again,
+        // typed as it fights, taking it over: begun engaged, a square, no test.  The two lines' turns as one: the
+        // second typed before the first's done)
         const g = T.filter(t => t.line === 'go to the far side'), gh = g.length && actor(g[0], 'ghoul');
         if (g.length !== 2 || !gh) return [...f, 'the walks not typed, or no ghoul'];
-        dq0Need(f, g[0], 'E_TASK', { te: 'TE_ENGAGED', still: false }, 'the walk not stopped by the ghoul\'s zone');
-        const c0 = contests(g[0]);
+        const gg = { k: g[1].k, line: g[1].line, events: [...g[0].events, ...g[1].events], dens: [...g[0].dens, ...g[1].dens], replies: [...g[0].replies, ...g[1].replies] };
+        const te = gg.events.filter(e => e.kind === 'E_TASK'), at = (want, from = 0) => te.findIndex((e, i) => i >= from && Object.entries(want).every(([k, v]) => e[k] === v));
+        const eng = at({ te: 'TE_ENGAGED', still: false }), fight = at({ te: 'TE_FIGHT', by: gh.k }, eng + 1), stop = at({ te: 'TE_STOPPED', task: 'LT_FIGHT' }, fight + 1);
+        if (eng < 0) f.push('the walk not stopped by the ghoul\'s zone (' + dq0Evs(g[0]) + ')');
+        else if (fight < 0) f.push('the ghoul not fought back (' + dq0Evs(g[1]) + ')');
+        else if (stop < 0) f.push('the walk typed as it fought not taking it over (' + dq0Evs(g[1]) + ')');
+        else if (at({ te: 'TE_ENGAGED', still: true }, stop + 1) < 0) f.push('the walk begun engaged not stopped after a square (' + dq0Evs(g[1]) + ')');
+        const c0 = contests(gg);
         if (c0.length !== 1 || c0[0].actor !== 0 || c0[0].other !== gh.k + 1 || c0[0].a !== C.P_INITIATIVE || c0[0].result !== 2)
-          f.push('the walk into its zone not one test, the ghoul the quicker: ' + JSON.stringify(c0));
-        dq0Need(f, g[0], 'E_FIGHT', { who: gh.k + 1, def: 0 }, 'the ghoul\'s blow first not struck');
+          f.push('the walk into its zone not one test, the ghoul the quicker (and none as the walk begun engaged went on): ' + JSON.stringify(c0));
+        dq0Need(f, gg, 'E_FIGHT', { who: gh.k + 1, def: 0 }, 'the ghoul\'s blow first not struck');
         said(g[0], 'Quicker, the ghoul bites at you');
-        dq0Need(f, g[1], 'E_TASK', { te: 'TE_ENGAGED', still: true }, 'the walk begun engaged not stopped after a square');
-        if (contests(g[1]).length) f.push('a test as the walk begun engaged went on');
         // (The close-in: the ghoul the quicker, its blow first, then the character's)
         const a = T.of('attack the ghoul'), ag = actor(a, 'ghoul'), ac = contests(a);
         if (!ag || ac.length !== 1 || ac[0].actor !== 0 || ac[0].other !== ag.k + 1 || ac[0].result !== 2)
@@ -4221,37 +4240,107 @@ module.exports = {
         const blows = a.dens.filter(e => e.kind === 'E_FIGHT');
         if (blows.length < 2 || !ag || blows[0].who !== ag.k + 1 || !blows.slice(1).some(e => e.who === 0)) f.push('the ghoul\'s blow not before the character\'s (' + dq0Evs(a) + ')');
         said(a, 'Quicker, the ghoul bites at you');
-        // (The gropes beside the ghoul: the sword taken up fumbled, the round wasted, the sword where it lay; held at last)
-        const tk = T.filter(t => t.line === 'take the sword'), h = T.of('hold the sword');
-        if (tk.length !== 3) return [...f, 'the takes not typed'];
-        for (const t of tk) {
-          if (gropes(t).length !== 1 || gropes(t)[0].grade > 0) f.push(t.line + ' (' + t.k + '): not a grope failed: ' + JSON.stringify(gropes(t)));
-          if (!dq0Rep(t, 'ireq', { result: 'IR_FUMBLED' }).length) f.push(t.line + ': not IR_FUMBLED');
-          const sw = dq0Thing(t.after, 'sword');
-          if (!sw || sw.where !== 'IW_SQUARE') f.push(t.line + ': the sword not where it lay: ' + (sw && sw.where));
-          if (!t.at || !t.after || t.after.now - t.at.now < 100) f.push(t.line + ': no round wasted (' + (t.at && t.after && t.after.now - t.at.now) + ' tenths)');
-        }
-        said(tk[0], 'You fumble for the sword.');
-        if (gropes(h).length !== 1 || gropes(h)[0].grade <= 0) f.push('the hold not a grope that went: ' + JSON.stringify(gropes(h)));
+        // (The gropes as it fights the ghoul: the commands typed ahead, each taking the fight over in turn (their turns
+        // one, the last line's); the drop no test; a take a grope, fumbled ("You fumble for the sword.": the sword where
+        // it lay, not taken), and the sword held at last)
+        const h = T.of('hold the sword'), w0 = T.of('wait', T.of('dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', a.k).k);
+        const run = T.filter(t => t.k >= w0.k && t.k <= h.k), reps = run.flatMap(t => t.replies);
+        if (h.k < 0 || w0.k < 0) return [...f, 'the gropes not typed'];
+        const seq = reps.filter(r => (r.req === 'slot0' && r.kind === C.RS_TEST && r.a === C.P_GROPE) || (r.req === 'ireq' && /^IO_(DROP|GET|HOLD)$/.test(r.kind)));
+        const di = seq.findIndex(r => r.kind === 'IO_DROP');
+        if (di < 0 || seq[di].result !== 'IR_OK') f.push('the sword not dropped: ' + JSON.stringify(seq));
+        else if (di > 0 && seq[di - 1].req === 'slot0') f.push('a drop tested');
+        const fumbles = seq.filter((r, i) => r.req === 'ireq' && r.kind === 'IO_GET' && r.result === 'IR_FUMBLED' && i > 0 && seq[i - 1].req === 'slot0' && seq[i - 1].grade <= 0);
+        if (!fumbles.length) f.push('no take a grope fumbled: ' + JSON.stringify(seq));
+        if (seq.some((r, i) => r.req === 'ireq' && r.result === 'IR_FUMBLED' && !(i > 0 && seq[i - 1].req === 'slot0' && seq[i - 1].grade <= 0))) f.push('a fumble not a grope failed');
+        if (!/You fumble for the sword\./.test(dq0Story(out))) f.push('not "You fumble for the sword."');
+        if (run.flatMap(t => t.events).filter(e => e.kind === 'E_TASK' && e.te === 'TE_STOPPED' && e.task === 'LT_FIGHT').length < 2) f.push('the commands typed ahead not taking the fight over');
         const hs = dq0Thing(h.after, 'sword');
-        if (!hs || !(hs.flags & DQ0_I.HELD)) f.push('the sword not held at last');
-        if (contests(T.of('drop the sword')).length || gropes(T.of('drop the sword')).length) f.push('a drop tested');
+        if (!seq.some(r => r.kind === 'IO_GET' && r.result === 'IR_OK') || !dq0Carried(h.after).some(i => i.name === 'sword')) f.push('the sword not taken up at last: ' + (hs && hs.where));
+        const hi = seq.findIndex(r => r.kind === 'IO_HOLD');
+        if (hi < 1 || seq[hi - 1].req !== 'slot0') f.push('the hold not a grope: ' + JSON.stringify(seq));
         // (A quick character the ghoul comes up to: the character the quicker, its blow first)
-        const w = T.filter(t => t.line === 'wait'), q = w[2], qg = q && actor(q, 'ghoul'), qc = q ? contests(q) : [];
-        if (w.length !== 5 || !qg) return [...f, 'the waits not typed, or no ghoul'];
+        const w = T.filter(t => t.line === 'wait'), q = w[1], qg = q && actor(q, 'ghoul'), qc = q ? contests(q) : [];
+        if (w.length !== 4 || !qg) return [...f, 'the waits not typed, or no ghoul'];
         if (!qc.length || qc[0].actor !== qg.k + 1 || qc[0].other !== 0 || qc[0].result !== 2)
           f.push('the ghoul coming up not tested, the character the quicker: ' + JSON.stringify(qc));
         const qb = q.dens.filter(e => e.kind === 'E_FIGHT');
         if (!qb.length || qb[0].who !== 0 || qb[0].def !== qg.k + 1) f.push('the character\'s blow not first (' + dq0Evs(q) + ')');
-        said(q, 'Quicker, you strike at the ghoul with your sword');
+        const qs = dq0Story(out), qa = qs.indexOf('> wait', qs.indexOf('echo ml ini 80'));     // (Its answer: the story's, the lines
+        if (qa < 0 || !qs.slice(qa, qa + 400).includes('Quicker, you strike at the ghoul with your sword')) f.push('wait: not "Quicker, you strike at the ghoul with your sword" (' + qs.slice(qa, qa + 160) + ')');   //   typed ahead before it one answer)
         // (A wary rat closed with: the rat the quicker, backing away)
         const r = T.of('attack the rat'), rc = contests(r);
         if (!rc.length || rc[0].actor !== 0 || rc[0].result !== 2) f.push('the close-in on the rat not tested, the rat the quicker: ' + JSON.stringify(rc));
         dq0Need(f, r, 'E_TASK', { te: 'TE_AWAY' }, 'the rat not backing away');
         said(r, 'Quicker, the giant rat backs away from you.');
         // (dq0 -I: none tested, the ghoul's blows as they come)
-        for (const t of w.slice(3)) if (contests(t).length) f.push('dq0 -I, a test all the same (' + t.k + ')');
-        if (!w.slice(3).some(t => dq0Ev(t, 'E_FIGHT', { def: 0 }).length)) f.push('dq0 -I: the ghoul not come up and striking');
+        for (const t of w.slice(2)) if (contests(t).length) f.push('dq0 -I, a test all the same (' + t.k + ')');
+        if (!w.slice(2).some(t => dq0Ev(t, 'E_FIGHT', { def: 0 }).length)) f.push('dq0 -I: the ghoul not come up and striking');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0fighton', asks: true, what: 'Dingus Quest Zero\'s fighting on (the user\'s, 2026-10-20: "once engaged in combat, you should continue to attack your target as you can, without actively having to say "attack" each time"; HOUSE.md\'s, as built: the world\'s long task LT_FIGHT, a blow each round as the character\'s free), by the hub\'s events and the long task\'s record (the referee\'s dice at these seeds): at seed 5 one attack at the giant rats fought on, blow after blow, till its target falls senseless, then turned to the other rat engaging it ("You turn to the giant rat.") and fought till it falls too, then ended ("No foe is left beside you."), the senseless left lying and "attack the rat" finishing one, a blow alone; the status line\'s "Fighting the giant rat" as it fights; at seed 7 the hostile ghoul coming up and striking at the character as it waits fought back ("You fight back against the ghoul."), no attack typed; at seed 5 again a look typed as it fights carried out at once, the fight going on, then a walk taking it over (its round out, "You stop fighting.", the walk), fought on after it while a rat engages it still; and at seed 7 in armour but undefended (defend none), badly hurt as it fights, asked ("You\'re badly hurt.  Keep fighting?", the clock still at the turns pace), "yes" fighting on, "no" stopping it',
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm',
+        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T -a', 'd', 'wait', 'go right', 'attack the rat', 'attack the rat', 'look', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T -a', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T -a', 'd', 'wait', 'go right', 'attack the rat']) + 'Ālook\rĀgo left\r' +
+        dq0Typed(['quit', ...['yes', 'no'].flatMap(ans => ['dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson',
+          'wear the mail hauberk', 'defend none', 'd', 'wait', ans, 'quit']), 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], FF_D_DOWN = 4, FF_D_DEAD = 8;
+        const mine = t => dq0Ev(t, 'E_FIGHT', { who: 0 }), tasks = t => dq0Ev(t, 'E_TASK', {});
+        // (One attack fought on: its target senseless, the other rat turned to and felled, the fight's end told)
+        const a = T.of('attack the rat'), fin = T.after(a, 'attack the rat');
+        const b = mine(a), first = b[0];
+        if (b.length < 3 || !first) return [...f, 'the attack not fought on (' + dq0Evs(a) + ')'];
+        dq0Need(f, a, 'E_TASK', { te: 'TE_FIGHT', quiet: true, by: first.def - 1 }, 'fighting on not begun by the attack');
+        const down1 = b.find(e => e.def === first.def && (e.ff & FF_D_DOWN));
+        if (!down1) f.push('its target not fought till it fell senseless (' + dq0Evs(a) + ')');
+        const turned = dq0Ev(a, 'E_TASK', { te: 'TE_FIGHT', still: true });
+        if (turned.length !== 1 || turned[0].by + 1 === first.def) f.push('not turned to the other rat (' + dq0Evs(a) + ')');
+        else if (!b.some(e => e.def === turned[0].by + 1 && (e.ff & FF_D_DOWN))) f.push('the other rat not fought till it fell');
+        if (b.some(e => e.ff & FF_D_DEAD)) f.push('a senseless rat finished, unasked');
+        dq0Need(f, a, 'E_TASK', { te: 'TE_NO_FOE', task: 'LT_FIGHT' }, 'the fight\'s end not told');
+        if (!a.after || a.after.pc.task.kind !== 'LT_NONE') f.push('the fight not over: ' + (a.after && a.after.pc.task.kind));
+        if (!mine(fin).some(e => e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('"attack the rat" not finishing one (' + dq0Evs(fin) + ')');
+        if (mine(fin).length !== 1 || dq0Ev(fin, 'E_TASK', { te: 'TE_NO_FOE' }).length) f.push('the finishing blow not alone, untold (' + dq0Evs(fin) + ')');
+        if (!/Fighting the giant rat/.test(out)) f.push('no "Fighting the giant rat" on the status line');
+        // (The ghoul coming up and striking, fought back: no attack typed)
+        const w = T.of('wait', T.of('dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T').k), gh = w.at && w.at.actors.find(x => x.name === 'ghoul');
+        if (!gh) return [...f, 'no ghoul'];
+        dq0Need(f, w, 'E_FIGHT', { who: gh.k + 1, def: 0 }, 'the ghoul not striking at the character');
+        dq0Need(f, w, 'E_TASK', { te: 'TE_FIGHT', quiet: false, still: false, by: gh.k }, 'the ghoul not fought back');
+        if (!mine(w).some(e => e.def === gh.k + 1)) f.push('no blow struck back at the ghoul (' + dq0Evs(w) + ')');
+        // (A look as it fights, at once; a walk taking it over, then fought on)
+        const g3 = T.of('dq0 -p t -s 5 -c /ram/c.hm -k sword -T', w.k), a3 = T.after(g3, 'attack the rat'), lk = T.after(a3, 'look'), gl = T.after(a3, 'go left');
+        const run = [a3, lk, gl].filter(t => t.k >= 0), evs = run.flatMap(tasks);
+        if (gl.k < 0) return [...f, 'the look and the walk not typed'];
+        const stops = evs.filter(e => e.te === 'TE_STOPPED');
+        if (stops.length !== 1 || stops[0].task !== 'LT_FIGHT') f.push('the fight not stopped once, by the walk: ' + evs.map(e => e.te + ':' + e.task).join(', '));
+        const story = dq0Story(out), at3 = story.indexOf('> attack the rat', story.indexOf('> go right', story.lastIndexOf('dq0 -p t -s 5')));
+        const said = story.slice(at3), seen = said.indexOf('You can see'), stop = said.indexOf('You stop fighting.');
+        if (seen < 0 || stop < 0 || seen > stop || said.slice(0, seen).indexOf('You strike at') < 0) f.push('the look not carried out as it fought, before the walk took it over');
+        else if (!/You strike at|bites at you/.test(said.slice(seen, stop))) f.push('the fight not going on after the look');
+        const after = run.flatMap(t => [...t.events, ...t.dens]).filter(e => e.kind === 'E_TASK' || e.kind === 'E_ARRIVE' || e.kind === 'E_FIGHT');
+        const si = after.findIndex(e => e.kind === 'E_TASK' && e.te === 'TE_STOPPED');
+        if (si < 0 || !after.slice(si).some(e => e.kind === 'E_ARRIVE' || (e.kind === 'E_TASK' && e.te === 'TE_ENGAGED'))) f.push('the walk not carried out after the stop');
+        if (si < 0 || !after.slice(si).some(e => e.kind === 'E_TASK' && e.te === 'TE_FIGHT')) f.push('not fought on after the walk, a rat engaging it still');
+        // (Badly hurt as it fights, undefended: asked, the clock still; yes on, no stopped)
+        for (const ans of ['yes', 'no']) {
+          const t = T.of(ans), q = T.of('wait', T.of('defend none', ans === 'yes' ? 0 : T.of('yes').k).k);
+          const ask = dq0Ev(q, 'E_TASK', { te: 'TE_ASK_HURT', task: 'LT_FIGHT' });
+          if (!ask.length || ask[0].health !== 'H_BADLY') { f.push(ans + ': badly hurt as it fought, not asked (' + dq0Evs(q) + ')'); continue; }
+          if (!t.at || t.at.now !== ask[0].t) f.push(ans + ': the clock not still as it asked (' + (t.at && t.at.now) + ', asked at ' + ask[0].t + ')');
+          if (ans === 'yes' && !mine(t).length) f.push('"yes" not fighting on (' + dq0Evs(t) + ')');
+          if (ans === 'no') {
+            dq0Need(f, t, 'E_TASK', { te: 'TE_STOPPED', task: 'LT_FIGHT' }, '"no" not stopping the fight');
+            if (mine(t).length) f.push('"no": fought on (' + dq0Evs(t) + ')');
+          }
+        }
         return f;
       },
       sdcard: true

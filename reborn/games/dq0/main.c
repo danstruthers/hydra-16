@@ -56,7 +56,8 @@ static unsigned char asked;                     /* (A sound's question put in th
 static unsigned bar_done;                       /* (The long task's part done as the bar was last drawn) */
 static unsigned char busy = 1;                  /* The character's doing something: no command till it's free (nor
                                                 **   till the world's started, and says so: E_READY) */
-static unsigned char held;                      /* (A line typed as it's busy, held till it's free) */
+static unsigned char held;                      /* (A line typed as it's busy, held till it's free; */
+static unsigned char took;                      /*   and the fight it was in stopped for it, once) */
 static unsigned place;                          /* Where this task is in the world's events */
 static int task_[NTASKS];                       /* Each task's number, as it was started (0: not) */
 static unsigned char test_start;
@@ -669,7 +670,8 @@ unsigned char untarget;                         /* (The target let go at the nex
 
 void status (void)
 {
-    static char left[48], right[56];
+    static char left[48], right[72];            /* (Its right side's longest: paused, a fight's words, the state, the
+                                                **   facing, the minutes) */
     char n[6];
 
     strcpy (left, P.name[0] ? P.name : "Dingus Quest Zero");
@@ -864,7 +866,8 @@ static unsigned char events (void)          /* (How many there were) */
                     busy = 1;                   /* (Fighting on begun by the world: busy till it's done, E_READY; a
                                                 **   line held taking it over) */
                     t_prompt (0);
-                    if (held) {
+                    if (held && !took) {
+                        took = 1;
                         intend2 (I_STOP, 1, 0);
                     }
                 }
@@ -1993,7 +1996,7 @@ int main (int argc, char* argv[])
                 intend2 (k == 1 ? I_GO_ON : I_STOP, !k, 0);     /* (A command's stop: a fight fought on after it) */
             }
             if (l && busy && (held = !k || (k = at_once (l)) != 1)) {
-                if (k == 2) {
+                if ((took = k == 2) != 0) {
                     intend2 (I_STOP, 1, 0);     /* (A fight taken over: its round out, then the command) */
                 }
                 HUB->ui_cmd = 0;                /* (Held: the next waits for the character, not parsed again) */

@@ -112,8 +112,8 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
             sayf ("\nYou fight back against %s.", foe (named, 0));
         }
         return 4;
-    case TE_NO_FOE:
-        msg ("No foe is left beside you.");
+    case TE_NO_FOE:                             /* (b 1: in shock, in no state to fight on) */
+        msg (named ? "You're in no state to fight." : "No foe is left beside you.");
         break;
     }
     return k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT;    /* (1: a question put) */
