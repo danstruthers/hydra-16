@@ -3329,15 +3329,16 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0traces', meaning: true, what: 'Dingus Quest Zero\'s traces on the floor (slice 4.1, DUNGEON.md\'s traces on the floor, HOUSE.md\'s light and traces; the user\'s, 2026-10-16 and 21), by the world\'s reply (the UI bank\'s tread), its words and the denizens\' bodies: at seed 3 by the way down (a flagged cell, the stratum\'s dust deep), the floor examined (no test), the character\'s own prints read back after a walk across the room and back (its trodden dust; Tracking 80, its own bare feet), the giant rats\' tracks a while on (small clawed feet), their musky smell sniffed, the smoke its torch left on its trail smelt once it\'s put out and gone three hours on (a scent fading with time: its strength halving as its age doubles); a step\'s cost within its budget; at seed 4 with a cult in the theme, its lair\'s floor swept clean, no tracks there (dq0scent: the denizens following a scent)',
+      name: 'dq0traces', meaning: true, what: 'Dingus Quest Zero\'s traces on the floor (slice 4.1, DUNGEON.md\'s traces on the floor, HOUSE.md\'s light and traces; the user\'s, 2026-10-16 and 21), by the world\'s reply (the UI bank\'s tread), its words and the denizens\' bodies: at seed 3 by the way down (a flagged cell, the stratum\'s dust deep), the floor examined (no test), the character\'s own prints read back after a walk across the room and back (its trodden dust; Tracking 80, its own bare feet), the giant rats\' tracks a while on (small clawed feet), their musky smell sniffed, the smoke its torch left on its trail smelt once it\'s put out and gone three hours on (a scent fading with time: its strength halving as its age doubles); a game kept (dq0 -d), its prints in the save folder\'s region file (trSXXYY.dat) and read back as it\'s carried on; a step\'s cost within its budget; at seed 4 with a cult in the theme, its lair\'s floor swept clean, no tracks there (dq0scent: the denizens following a scent)',
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml trk 80 >> /ram/c.hm', 'echo ml awa 80 >> /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'examine the floor', 'e', 'w', 'examine the floor', 'track', 'wait 5 minutes', 'track', 'sniff',
-        'douse the torch', 'sniff', 'wait 3 hours', 'sniff', 'quit',
+        'douse the torch', 'sniff', 'wait 3 hours', 'sniff', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept', 'e', 'w', 'quit',
+        'ls /ram/kept', 'dq0 -d /ram/kept', 'examine the floor', 'quit',
         'mkdir /ram/g', "echo 'faction | Cult | cultist | 0-0 | 90 | priest | 0 | i | -' > /ram/g/theme.txt", 'dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/g',
         'examine the floor', 'track', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
-      check(m) {
+      check(m, out) {
         const T = dq0Turns(m), f = [], rd = t => (t.after && t.after.tread) || {};
         const has = (t, k) => (rd(t).trails || []).some(e => e.kind === k);
         const x0 = T.of('examine the floor'), r0 = rd(x0);
@@ -3359,6 +3360,9 @@ module.exports = {
         const e = T.of('w'), sq = e.at && e.after ? Math.abs(e.after.pc.x - e.at.pc.x) + Math.abs(e.after.pc.y - e.at.pc.y) : 0;
         const per = sq ? (e.after.cyc - e.at.cyc) / sq : Infinity;
         if (!(per <= TRACE_STEP)) f.push('a step\'s cost ' + Math.round(per) + ' cycles (' + sq + ' squares walked, budget ' + TRACE_STEP + ')');
+        const k0 = T.of('dq0 -d /ram/kept'), kx = T.after(k0, 'examine the floor');
+        if (!/tr0[0-9a-f]{4}\.da[t12]/.test(out)) f.push('no traces\' region file in the save folder');
+        if (!rd(kx).trod) f.push('the game carried on, its walk\'s prints not read back from the save: ' + JSON.stringify(rd(kx)));
         const c0 = T.of('dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/g'), cx = T.after(c0, 'examine the floor'), ct = T.after(cx, 'track');
         if (rd(cx).dust !== 7 || !/swept clean/.test(rd(cx).text || '')) f.push('the cult\'s lair\'s floor not swept clean: ' + JSON.stringify(rd(cx)));
         if ((rd(ct).trails || []).length) f.push('tracks read on a swept floor: ' + JSON.stringify(rd(ct)));
