@@ -238,9 +238,11 @@ The plan has it whole; in short:
   hold their global value; a scope is a frame, its symbol-value pairs side by side.  Mark and sweep: a
   mark stack of 255 (a list's spine followed in place, so it costs none), every marked cell scanned again if it
   fills; a free list per kind; the blobs nothing owns dropped and the rest slid down.  Banks are taken as they're
-  needed (up to 16 for cells, 16 for blobs, 4 for the stack; a cell bank more after a collection while fewer pages
-  are free than used, so a collection's cost, which is what's live, is shared by as many cells made), and a
-  collection while the prompt waits too.  The collector's code is in the sixth bank, entered by a far call.
+  needed (up to 16 for cells, 16 for blobs, 4 for the stack; after a collection, cell banks more till as many
+  pages are free as are used, and after one a blob made, blob banks more till as much of their room is free as is
+  used, so a collection's cost, which is what's live, is shared by as many cells and bytes made; each of those
+  banks taken only while 8 more are left free, for what must be had: the machine's arenas, the stack's spills, a
+  program's banks, the heap's own when it's full), and a collection while the prompt waits too.  The collector's code is in the sixth bank, entered by a far call.
 * **The snapshot** (`tools/hysnap.js`, `hylang.s`'s `snap_restore`): what hylang keeps between collections (the
   heap's tables, the symbols, the evaluator's own: `hylang.cfg`'s PSTATE segment) and the pages and blobs in use,
   as they are once `globals.hl` is loaded, in the module `hysnap` (a library of data, two banks).  The build makes
@@ -253,8 +255,10 @@ The plan has it whole; in short:
   tokens: a level for each bracket open (its closer, its list so far and its last cons, the levels' lists marked
   as roots), each item made as it's read and put at its level's end; the first error ends it, as the first token in
   error is danlang's, with danlang's message.  At the REPL, the text so far is read again with each line while a
-  bracket or a here string is open.  The printer is a loop too, over a stack of the lists it's in.  `hylang -g`
-  collects before every allocation: a test of what's kept as a root.
+  bracket or a here string is open.  A comment's bytes and a word's are passed with an index register, to the byte
+  that ends them or the 0 at the text's end (a file's text refilled there); the others a byte at a time, a file's
+  text refilled only when what's left is down to a byte (`rd_lim`).  The printer is a loop too, over a stack of the
+  lists it's in.  `hylang -g` collects before every allocation: a test of what's kept as a root.
 * **The evaluator** (`eval.inc`, `forms.inc`) is a machine: the expression or its value, its scope, and a stack
   of frames (6K in the task's RAM, spilled to banks in 2K blocks), never the 65C02's stack.  A frame is its words
   and its code on top, all values or fixnums, so the collector marks the stack whole.  A call in tail position (a

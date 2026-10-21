@@ -336,10 +336,10 @@ y_readfile:
             lda         #O_READ
             jsr         y_open
             bcs         @rts
+            jsr         y_hold
             jsr         y_slurp
             pha
-            lda         y_fd
-            jsr         CLOSE
+            jsr         y_unhold
             pla
             cmp         #0
             bne         :+
@@ -350,68 +350,112 @@ y_readfile:
 @rts:
             rts
 
-; (read-lines p): the file's lines (LF, or CR LF; a last one with no LF too), a list of strings
+; (read-lines p): the file's lines (LF, or CR LF; a last one with no LF too), a list of strings.  Read a chunk at a
+; time (y_buf's 256 bytes), each line a capture of its own, so the file may be as long as the memory has room for
+; its lines; a line longer than a string can be (8184 bytes) is the error "Too long ..."
 bi_read_lines:
             jsr         y_enter
             ldy         #0
             ldx         #0
             jsr         y_patharg
             bcs         y_sdone
-            jsr         y_readfile
-            bcc         :+
+            jsr         y_stat
+            bcs         @fail
+            jsr         y_isdir
+            beq         :+
+            lda         #E_ISDIR
+@fail:
             jmp         y_syserr0
 :
-            lda         ex                                  ; (The bytes, kept; y_i the place, y_n the length)
-            ldx         ex + 1
-            sta         y_v
-            stx         y_v + 1
-            jsr         y_rpush
-            lda         y_v
-            ldx         y_v + 1
-            ldy         #0
-            jsr         cell_get
-            sta         y_n
-            stx         y_n + 1
-            stz         y_i
-            stz         y_i + 1
-            stz         cf
+            lda         #O_READ
+            jsr         y_open
+            bcs         @fail
+            jsr         y_hold                              ; (No room: closed by y_nomem)
+            stz         cf                                  ; (The list: cf, cr)
             stz         cf + 1
-@line:
-            lda         y_i                                 ; (At the end: done)
-            cmp         y_n
-            lda         y_i + 1
-            sbc         y_n + 1
-            bcs         @done
+            stz         y_cr                                ; (A CR held: dropped if a LF comes next)
+            stz         y_c                                 ; (<> 0: some of a line read)
             jsr         y_begin
-            jsr         y_at                                ; (nb: its bytes from y_i)
+            bra         @chunk
+@rfail:
+            pha
+            lda         y_start
+            ldx         y_start + 1
+            jsr         cap_drop
+            jsr         y_unhold
+            pla
+            jmp         y_syserr0
+@chunk:
+            LDR         r0, y_buf
+            LDR         r1, 256
+            lda         y_fd
+            jsr         READ
+            bcs         @rfail
+            sta         y_n                                 ; (y_n: how many, 0 for 256; y_i the next)
+            stz         y_i
+            txa
+            ora         y_n
+            bne         @byte
+            jmp         @eof
 @byte:
-            lda         y_i
-            cmp         y_n
-            lda         y_i + 1
-            sbc         y_n + 1
-            bcs         @end
-            lda         (nb)
-            jsr         y_next
-            cmp         #LF
-            beq         @end
-            cmp         #CR                                 ; (CR LF: the line's end)
-            bne         @out
-            lda         y_i
-            cmp         y_n
-            lda         y_i + 1
-            sbc         y_n + 1
-            bcs         @cr
-            lda         (nb)
-            cmp         #LF
-            bne         @cr
-            jsr         y_next
-            bra         @end
-@cr:
+            ldx         y_i
+            lda         y_buf,x
+            inc         y_i
+            ldx         y_cr
+            beq         @plain
+            stz         y_cr
+            cmp         #LF                                 ; (CR LF: the line's end)
+            beq         @line
+            pha
             lda         #CR
+            jsr         out_byte
+            pla
+@plain:
+            ldx         #1
+            stx         y_c
+            cmp         #LF
+            beq         @line
+            cmp         #CR
+            bne         @out
+            sta         y_cr
+            bra         @next
 @out:
             jsr         out_byte
-            bra         @byte
-@end:
+@next:
+            lda         y_i
+            cmp         y_n
+            bne         @byte
+            bra         @chunk
+@line:
+            jsr         @made
+            bcc         @next
+@long:
+            jsr         y_unhold                            ; (A line too long: its error)
+            MOVW        ex, hv
+            clc
+            rts
+@eof:
+            lda         y_cr                                ; (A CR at the end: the last line's)
+            beq         :+
+            lda         #CR
+            jsr         out_byte
+            sta         y_c
+:
+            lda         y_c
+            beq         :+
+            jsr         @made
+            bcs         @long
+:
+            lda         y_start                             ; (The capture begun last, ended)
+            ldx         y_start + 1
+            jsr         cap_drop
+            jsr         y_unhold
+            MOVW        ex, cf
+            clc
+            rts
+; The line captured made a string, put at the end of the list, and the next one's capture begun.  OUT: C = 1, hv
+; the error, if it's too long
+@made:
             lda         y_start
             ldx         y_start + 1
             jsr         cap_end
@@ -420,12 +464,17 @@ bi_read_lines:
 :
             lda         hv
             ldx         hv + 1
+            jsr         kind_of
+            cmp         #PK_ERROR
+            sec
+            beq         :+
+            lda         hv
+            ldx         hv + 1
             jsr         y_append
-            bra         @line
-@done:
-            dec         rsp
-            MOVW        ex, cf
+            jsr         y_begin
+            stz         y_c
             clc
+:
             rts
 
 ; nb = the address of y_v's (a string's) byte y_i, in the window

@@ -25,6 +25,8 @@ y_w:        .res        2
 y_nc:       .res        2                                   ; (y_append's: the cons made)
 y_c:        .res        1                                   ; (A byte; a built-in's own)
 y_slot:     .res        1                                   ; (y_patharg's)
+y_held:     .res        1                                   ; A file held open (its fd + 1; 0: none): closed if there's
+                                                            ;   no room
 
 .segment "CODE5"
 
@@ -46,12 +48,14 @@ y_enter:
             sta         y_clen + 1
             stz         y_code
             stz         y_code + 1
+            stz         y_held
             rts
 
-; No room: back from the entry, C = 1, the root stack and the captures as they were
+; No room: back from the entry, C = 1, the root stack and the captures as they were, a file held closed
 y_nomem:
             ldx         y_sp
             txs
+            jsr         y_unhold
             lda         y_rsp
             sta         rsp
             lda         y_cap
@@ -61,6 +65,22 @@ y_nomem:
             lda         y_clen + 1
             sta         cap_len + 1
             sec
+            rts
+
+; The file y_fd held (y_hold) till it's closed (y_unhold), so that no room closes it too
+y_hold:
+            ldx         y_fd
+            inx
+            stx         y_held
+            rts
+y_unhold:
+            ldx         y_held
+            beq         :+
+            stz         y_held
+            dex
+            txa
+            jmp         CLOSE
+:
             rts
 
 ; make2 (y_make2), root_push (y_rpush), cell_alloc (y_alloc): no room, back from the entry
