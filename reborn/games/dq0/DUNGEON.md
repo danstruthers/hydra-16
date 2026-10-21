@@ -565,8 +565,8 @@ candle", taken from it, taken up from it); and a container says what it keeps in
 small things (a sack keeps coins, a basket doesn't keep sand), liquids (a skin, a bottle, a bowl, not a basket or a
 sack), gases (a bladder, a balloon, not a cloth sack); each kind has its own form.  A thing put where it won't stay is
 refused (a basket and a heap of sand; a waterskin keeps only liquids); a lit thing isn't put in a container (put it
-out first).  Liquids and gases aren't things of their own yet (a skin's water, a flask's oil, lamp fuel: slices 4.1
-and 4.9).
+out first).  Liquids and gases aren't things of their own yet (a skin's water: slice 4.9); a light's fuel is a
+measure, the thing's own (a flask's oil: light, below).
 
 **Light** (the character's): from the lit things it carries, the brightest's reach (a torch 20 feet, a candle 10, a
 lantern 30: the kinds'), in a hand, worn or hung from the belt; lit (light X, or the first unlit) with a tinderbox
@@ -574,7 +574,23 @@ carried or another flame (one carried, or lit within reach), put out (douse X); 
 hand first.  Put down lit, it lights the squares round it it has a clear line to (the senses' light layer: perception
 as layers, below), seen from where the character stands, and its own glow is seen much further off in the dark; the
 room's words name what gives its light ("by the light of your candle").  The world keeps it in the hub (pc_light,
-pc_lamp), its item store's; it takes the time and looks again (I_LIGHT).  A light burns for ever, as yet (slice 4.1).
+pc_lamp), its item store's; it takes the time and looks again (I_LIGHT).
+
+**Fuel** (slice 4.1; the user's "lights burning down at their own rates", D5; HOUSE.md's light and traces): every
+light lit burns down by the clock wherever it is (carried, put down, set in a sconce), but one its keepers tend (a
+kept room's sconce's: items.h's I_TENDED, the keepers' to set, gone as the thing's moved) and one that never burns
+down (a glow, the theme's).  Its fuel is the thing's own (struct item's fuel: minutes of burning left; a fuel's, a
+flask of oil's, what's in it, in the same minutes), decided as it's made its own (its kind's whole life, the
+catalogue's burns: a torch an hour, a lantern's fill of oil six hours, a candle by its make, its thickness and its
+wax; a found one part used, by its stratum's age), and taken off a game minute at a time by the world (dq0w.c's part
+27: one pass of the store's lit records a game minute, off every hot path; a chunk's things paged out caught up as
+they're read in).  In its last ten minutes the character's told it's burning low; at none it goes out, told (the
+character's own, or one it sees lying there: E_TASK's TE_LOW, TE_OUT, the UI's words), the light layer about it made
+again (E_LIGHT) and the look with it.  A candle burns away; a lantern's dry and a torch spent till they're renewed: a
+lantern filled from a flask of oil, a torch dipped in oil or pitch (IO_FILL: "fill the lantern", "dip the torch in
+the oil").  Left in the dark by it, the character stops its long task (a climb part way, a fight, go on).  The kit
+has a spare torch and a flask of oil (D5); the status line shows the minutes left of the light carried (the hub's
+pc_fuel, its words pc_left).
 
 An item is **found** through the character's senses, as everything else is: only on a square it sees now, lit;
 noticed by the referee's test of its sight (rs.h: P_NOTICE_SIGHT, or P_SEARCH when it searches), the steps from the

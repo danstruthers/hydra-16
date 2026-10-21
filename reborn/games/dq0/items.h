@@ -14,8 +14,8 @@
 /* What a thing's made of: its resistance to each kind of harm (0 none ... 9 all but proof: the referee's impact, not a
 ** difficulty), and its toughness (the durability a quarter pound of it gives, at middling quality) */
 enum { MT_NONE, MT_WOOD, MT_IRON, MT_STEEL, MT_BRONZE, MT_LEATHER, MT_CLOTH, MT_BONE, MT_CLAY, MT_STONE, MT_GLASS,
-    MT_SILVER, MT_OTHER, NMATS };
-#define MAT_TOUGH       { 1, 3, 6, 8, 5, 3, 1, 2, 1, 8, 1, 4, 1 }
+    MT_SILVER, MT_OTHER, MT_WAX, MT_TALLOW, NMATS };    /* (Beeswax and tallow: a candle's, slice 4.1's) */
+#define MAT_TOUGH       { 1, 3, 6, 8, 5, 3, 1, 2, 1, 8, 1, 4, 1, 1, 1 }
 enum { DM_BLUNT, DM_EDGE, DM_POINT, DM_FIRE, DM_COLD, DM_ACID, NDMG };  /* Kinds of harm (the referee's, by aspect) */
 struct material {
     char            name[8];
@@ -24,7 +24,7 @@ struct material {
 };
 
 /* A kind of thing (the catalogue's: a stand-in for the theme's data), in rs.h's units */
-#define NKINDS          64
+#define NKINDS          68
 struct kind {
     char            name[14];                   /* "torch", "backpack" ... */
     unsigned char   flags;                      /* K_* */
@@ -72,6 +72,8 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_MACE, KI_SPEAR, KI_SHIELD,               /* Weapons (the referee's by their keys) */
     KI_POT, KI_STRAW, KI_STUBS, KI_WELL,        /* What a room's use left (dq0m/uses.c): a kitchen's pot, a barracks'
                                                 **   straw, a chapel's candle stubs; a well, fixed */
+    KI_OIL, KI_PITCH,                           /* A light's fuel (slice 4.1's): a flask of oil (a lantern's, a
+                                                **   torch's), a pot of pitch (a torch's) */
     KI_COUNT };
 
 /* An item */
@@ -98,6 +100,10 @@ struct item {
     unsigned char   size;                       /* Its measure, where it matters (a portal's part's: its portal's
                                                 **   opening, world.h's: feet, its width the low four bits; or 0) */
     unsigned char   thick;                      /*   and its thickness, in eighths of an inch (or 0) */
+    unsigned        fuel;                       /* A light's burning left, minutes (0: burnt out; or not its own yet,
+                                                **   its life decided as it's made its own), the world's as it burns
+                                                **   (DUNGEON.md: light; HOUSE.md's burning); a fuel's (a flask of
+                                                **   oil, a pot of pitch), what's in it, in the same minutes */
 };
 #define I_LIT           0x01                    /* A light, lit */
 #define I_HELD          0x02                    /* In a hand */
@@ -107,6 +113,10 @@ struct item {
 #define I_KNOWN         0x20                    /* Known to the character (seen, or found) */
 #define I_NAMED         0x40                    /* Named by the character (the UI's names: hub.h's struct tname, by
                                                 **   its id; marked in what's carried, worded: "#id a sword") */
+#define I_TENDED        0x80                    /* A light its keepers tend (a kept room's sconce's torch: the keepers'
+                                                **   to set, slice 4.1's): it never burns down while it's tended;
+                                                **   moved by the item store (taken up, put down, handled) it's tended
+                                                **   no longer, and burns as any light does */
 enum { IW_SQUARE, IW_ACTOR, IW_ITEM,
     IW_PORTAL };                                /* A portal's part (a door's bar, a window's pane or bars: the maker's,
                                                 **   as it stocks a chunk), in it: sn, x, y its square (a bar's, the
@@ -167,6 +177,11 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
                                                 **   it went back in qty (TH_*), where it lies in x, y (the world's
                                                 **   throw: the catalogue's throws, its reach; the referee's test) */
 enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark, missed it, fell short of it) */
+#define IO_FILL         (IO_BAR + 6)            /* A light renewed (name: a lantern filled, a torch dipped) from a fuel
+                                                **   (into: a flask of oil, a pot of pitch; "": the first carried that
+                                                **   it takes), as much as it has room for: the things' words of it in
+                                                **   things_text, the time it took back in x (tenths); IR_NO refused,
+                                                **   the words why */
 #define IO_PUZZLE       (IO_BAR + 4)            /* A command of the theme's puzzle's (theme.h), judged by its rules
                                                 **   (the world's): to its verb (TR_*), name the thing (into the other:
                                                 **   combine name with into, put name on into; read name; use name on

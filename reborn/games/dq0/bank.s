@@ -154,8 +154,8 @@ ovl_out:
             OVFN        dig_words, 1
             OVFN        task_words, 3
             OVFN        beat_words, 3
-            OVFN        stop_kind, 3
-            OVFN        answer_of, 3
+            OVFN        stop_kind, 8
+            OVFN        answer_of, 8
             OVFN        bar_text, 3
             OVFN        wait_of, 3
             OVFN        state_words, 3

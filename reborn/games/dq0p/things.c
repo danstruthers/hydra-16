@@ -23,7 +23,7 @@ unsigned char piece[256];                       /* (A look's rows (view.c): a bu
 static struct item rec;
 
 /* (item_at and items are items.s's, in assembly: its store's layout as here) */
-typedef char store_fits[sizeof (struct item) == 22 && ITEM_BANK (0) == 14 && ITEM_BANKS == 2 ? 1 : -1];
+typedef char store_fits[sizeof (struct item) == 24 && ITEM_BANK (0) == 14 && ITEM_BANKS == 2 ? 1 : -1];
 
 /* A kind's record, copied out of the catalogue's bank (into one of two, in turn): the catalogue's bank left in the
 ** window */

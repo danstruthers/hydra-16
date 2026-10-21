@@ -34,7 +34,7 @@ function stream(seed) {
 
 const strip = s => s.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/[\x00-\x09\x0b-\x1f]/g, '');
 const DIRS = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw', 'north', 'south', 'east', 'west', 'f', 'b', 'l', 'r', 'u', 'd'];
-const KIT = ['dagger', 'torch', 'rations', 'waterskin', 'pouch', 'backpack', 'flint'];
+const KIT = ['dagger', 'torch', 'rations', 'waterskin', 'pouch', 'backpack', 'flint', 'flask'];
 
 // The next command: from the game's words since the last (seen: the things lying, the denizens in sight)
 function choose(r, seen, fight) {
@@ -58,7 +58,8 @@ function choose(r, seen, fight) {
     'look around', 'look at the ' + thing, 'examine the ' + thing]);
   if (k < 80) return r.pick(['inventory', 'i', 'get the ' + thing, 'take the ' + thing, 'drop the ' + thing, 'pick up the ' + thing,
     'light the torch', 'put out the torch', 'hold the dagger', 'put the ' + thing + ' in the backpack', 'eat the rations', 'drink the waterskin',
-    'take', 'take all', 'take it', 'drop', 'drop it', 'take the closest', 'clear target']);
+    'take', 'take all', 'take it', 'drop', 'drop it', 'take the closest', 'clear target', 'dip the torch in the oil', 'fill the lantern',
+    'light the torch', 'light the candle']);
   if (k < 90) return r.pick(['open the door', 'close the door', 'unlock the door', 'force the door', 'kick the door', 'break the window',
     'raise the portcullis', 'lower the portcullis', 'disarm the trap', 'bar the door', 'climb through the window']);
   return r.pick(['wait', 'wait', 'wait 5 minutes', 'wait 30 minutes', 'map', 'status', 'sheet', 'rest', 'hide', 'sneak ' + r.pick(['n', 's', 'e', 'w']),

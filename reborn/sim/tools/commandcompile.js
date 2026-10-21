@@ -754,9 +754,15 @@ function phraseSem(spec, env, ctx) {
       const o = objOf(0);
       if (o.stop) return o.stop;
       const from = kidsOf(spec, 'from-phrase')[0];
-      const s = from ? objRole(findFirst(from, 'object'), env, ctx) : { value: undefined };
+      const s = from ? objRole(findFirst(from, 'object'), env, ctx) : direct[1] ? objOf(1) : { value: undefined };   // (Or "with" it)
       if (s.stop) return s.stop;
       return act('VB_FILL_OBJECT', { object: o.value, source: s.value });
+    }
+    case 'dip': {                               // ("dip the torch in the oil": a light renewed from a fuel, slice 4.1's)
+      const a = objOf(0), b = objOf(1);
+      if (a.stop) return a.stop;
+      if (b.stop) return b.stop;
+      return act('VB_FILL_OBJECT', { object: a.value, source: b.value });
     }
     case 'defend': { const w = wordsOf(spec, env); return act('VB_DEFEND', { defence: w[0] === 'defend' ? w[1] || 'defend' : w[0] }); }
     case 'where': return act('VB_WHERE', {});

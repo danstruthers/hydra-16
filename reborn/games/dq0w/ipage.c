@@ -346,6 +346,8 @@ unsigned char __fastcall__ s_it_out (unsigned char sn, unsigned cx, unsigned cy)
         if (m) {
             g.at = hat;
             g.n = m;
+            hub_map (0);
+            g.m = CLOCK_256;                    /* (When it's put out: its lights caught up as it's read in) */
             write (out, &g, sizeof g);
             for (k = 0; k < m; ++k) {
                 memcpy (&q, item_at (mget (OUT (k))), sizeof q);
@@ -394,7 +396,7 @@ static unsigned __fastcall__ free_after (unsigned i)
                                                 **   out and in again, its own data as its image has it) */
 unsigned char __fastcall__ s_it_in (unsigned char sn, unsigned cx, unsigned cy)
 {
-    unsigned k, i, n;
+    unsigned k, i, n, gone;
     unsigned char ok = 1;
     int f;
 
@@ -404,6 +406,10 @@ unsigned char __fastcall__ s_it_in (unsigned char sn, unsigned cx, unsigned cy)
     out = -1;
     if (others ()) {
         n = g.n;
+        hub_map (0);
+        gone = CLOCK_256 - g.m;                 /* (The minutes it was out: g's, before another's put out; 25.6
+                                                **   seconds a unit, 32 / 75 of a minute; past fourteen hours, all) */
+        gone = gone > 2000 ? 0xFFFF : gone * 32 / 75;
         f = in;
         while (frees () < n && it_room ()) {    /* (Another's file read and written meanwhile: its own fds) */
         }
@@ -415,6 +421,13 @@ unsigned char __fastcall__ s_it_in (unsigned char sn, unsigned cx, unsigned cy)
             for (k = 0, i = 0; k < n; ++k) {
                 i = free_after (i);
                 read (in, &q, sizeof q);
+                if ((q.flags & (I_LIT | I_TENDED)) == I_LIT) {     /* (A light lit, burnt down by the minutes it was
+                                                **   out: its last, out quietly, unseen) */
+                    q.fuel = q.fuel > gone ? q.fuel - gone : 0;
+                    if (!q.fuel && q.id) {
+                        q.flags &= ~I_LIT;
+                    }
+                }
                 memcpy (item_at (i), &q, sizeof q);
                 mput (k, i);
             }
