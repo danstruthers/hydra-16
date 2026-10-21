@@ -103,12 +103,14 @@ go:
             SWPART      23, 6               ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 9               ; Engagement, a blow's close-in, fighting on (dq0w.c's)
             SWPART      25, 7               ; The engage initiative test, a grope's (dq0w.c's)
+            SWPART      26, 9               ; Disengaging (dq0w.c's)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
             SWFN        climb, 2
             SWFN        climb_on, 2
             SWFN        begin, 3
+            SWFN        toward_middle, 3
             SWFN        grow_below, 3
             SWFN        start, 3
             SWFN        store_in, 18
@@ -171,6 +173,8 @@ go:
             SWFN        zone_step, 24
             SWFN        fight_go, 24
             SWFN        fight_on, 24
+            SWFN        disengage_go, 26
+            SWFN        flee_on, 26
             SWFN        engaged, 25
             SWFN        fumbled, 25
             SWFN        den_first, 14

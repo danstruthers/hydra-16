@@ -177,6 +177,8 @@ function createRecorder() {
         if (e.te === 'TE_ENGAGED' || e.te === 'TE_FAR' || e.te === 'TE_AWAY' || e.te === 'TE_FIGHT') { e.by = (e.b & 0x3F) - 1; e.still = !!(e.b & 0x80); e.quiet = !!(e.b & 0x40); }
         else if (e.te === 'TE_ASK_HURT') e.health = name('H_FINE', e.b);   // (Fighting on's: the band it's come to;
         else if (e.te === 'TE_NO_FOE') e.shock = !!e.b;                    //   its end, in shock or none left)
+        else if (e.te === 'TE_BREAK') { e.by = (e.b & 0x3F) - 1; e.how = ['back', 'flight', 'run'][w >> 8]; delete e.task; }   // (A disengage's)
+        else if (e.te === 'TE_FREE') e.none = ['engaged', 'near', 'way'][e.b];   // (None: not engaged, nothing near to flee, no way back)
         else e.named = name('LT_NONE', e.b);
         break;
       case 'E_BEAT': e.beat = name('WB_QUIET', w & 0xFF); e.side = name('WS_AHEAD', w >> 8); break;

@@ -4175,6 +4175,45 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0disengage', what: "Dingus Quest Zero's disengaging and a fight's tiring (the user's, 2026-10-21: \"For disengaging, try to have it follow the book\"; \"Tiring for combat should happen at the standard strenous work rate\"; HOUSE.md's, the book's Combat 7): seed 7's ghoul, the character weak with its sword (20) in a gambeson and a mail hauberk; disengage and flee before anything engages it refused, told (not engaged; nothing near to flee); the ghoul fought, a disengage typed as it fights taking the fight over (its round out), the character backing away a square and more, no blow of its own after it, the fight not fought on; pass a round given up, no blow of its own; a flight as the ghoul engages it again, a square back and still engaged (stopped there, told once: \"You stop walking.\"), fought on; a flight at its prompt breaking away into a corner, no run on into the wall; every blow it struck charged to the referee as a round of strenuous work (RS_EXERT GA_WORK, 100 tenths)",
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 20 >> /ram/c.hm',
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T", 'wear the gambeson', 'wear the mail hauberk', 'disengage', 'flee',
+        'd', 'wait']) + 'Ādisengage\r' + dq0Typed(['wait']) + 'Āpass\r' + dq0Typed(['wait']) + 'Āflee\r' + dq0Typed(['wait', 'look', 'flee', 'look', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], K = m.dq0.layout().K;
+        const mine = t => dq0Ev(t, 'E_FIGHT', { who: 0 }), brk = t => dq0Ev(t, 'E_TASK', { te: 'TE_BREAK' });
+        const d1 = T.of('disengage'), fl1 = T.of('flee');
+        dq0Need(f, d1, 'E_TASK', { te: 'TE_FREE', none: 'engaged' }, 'a disengage not engaged not refused');
+        dq0Need(f, fl1, 'E_TASK', { te: 'TE_FREE', none: 'near' }, 'a flight with nothing near not refused');
+        const d2 = T.of('disengage', d1.k + 1), b2 = brk(d2);
+        if (b2.length !== 1 || b2[0].how !== 'back') return [...f, 'the disengage as it fought not begun (' + dq0Evs(d2) + ')'];
+        dq0Need(f, d2, 'E_TASK', { te: 'TE_STOPPED', task: 'LT_FIGHT' }, 'the fight not taken over by the disengage');
+        if (mine(d2).some(e => e.t > b2[0].t)) f.push('a blow struck as it backed away');
+        if (dq0Ev(d2, 'E_TASK', { te: 'TE_FIGHT' }).some(e => e.t > b2[0].t)) f.push('fought on after the disengage');
+        if (!d2.after || !d2.at || (d2.after.pc.x === d2.at.pc.x && d2.after.pc.y === d2.at.pc.y)) f.push('the disengage moved it nowhere');
+        const ps = T.of('pass');
+        if (ps.k < 0 || mine(ps).length) f.push('pass not a round given up (' + (ps.k < 0 ? 'not typed' : dq0Evs(ps)) + ')');
+        const fl2 = T.of('flee', fl1.k + 1), b3 = brk(fl2);
+        if (b3.length !== 1 || b3[0].how !== 'flight') f.push('the flight as it fought not begun (' + dq0Evs(fl2) + ')');
+        else {
+          dq0Need(f, fl2, 'E_TASK', { te: 'TE_ENGAGED' }, 'the flight not stopped, engaged still');
+          if (!dq0Ev(fl2, 'E_TASK', { te: 'TE_FIGHT' }).some(e => e.t >= b3[0].t)) f.push('not fought on, engaged still after the flight');
+        }
+        const story = dq0Story(out), at2 = story.indexOf('You break away from the ghoul.'), at3 = story.indexOf('You turn to the ghoul.', at2);
+        if (at2 < 0 || at3 < 0 || (story.slice(at2, at3).match(/stop walking[.]/gi) || []).length !== 1) f.push('the flight\'s stop not told once: ' + JSON.stringify(story.slice(at2, at3 < 0 ? at2 + 200 : at3)));
+        const fl3 = T.of('flee', fl2.k + 1), b4 = brk(fl3);
+        if (b4.length !== 1) f.push('the flight at its prompt not begun (' + dq0Evs(fl3) + ')');
+        if (dq0Ev(fl3, 'E_NOWAY', {}).length) f.push('a flight cornered run on into the wall (' + dq0Evs(fl3) + ')');
+        const blows = T.reduce((n, t) => n + mine(t).length, 0);
+        const work = T.reduce((n, t) => n + t.replies.filter(r => /^slot/.test(r.req) && r.kind === K.RS_EXERT && r.a === K.GA_WORK && r.w1 === 100).length, 0);
+        if (!blows || work !== blows) f.push('a fight\'s rounds not charged as strenuous work: ' + work + ' charged, ' + blows + ' blows struck');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0flee', what: 'Dingus Quest Zero\'s unarmed blows and morale (the user\'s, 2026-10-16: punching, kicking, head butts, the referee\'s gear.c, by Unarmed; RS_MORALE, HarnMaster\'s Initiative test, Combat 18), by the blows told and the denizens\' state (the referee\'s dice at this seed): at seed 5\'s giant rats (bare fists: the character\'s Unarmed 80) a punch fought on (HOUSE.md\'s fighting on, the user\'s, 2026-10-20: every blow of it a punch, the hub\'s pc_strike), the rat and its kin turning on the character, a punch felling one; its kin shaken and, shy, fleeing (fighting no more, no foe left beside it); the one down finished with a kick; the other gone out of reach, a head butt at it not struck (dq0unarmed\'s, in it; a kick, a head butt and punches typed one by one before fighting on)',
       init: 't_rc', cycles: 900e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml una 80 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -T', 'd',

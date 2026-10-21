@@ -188,6 +188,10 @@ enum {
     I_LOOK,                                     /* A look one way (HOUSE.md's, slice 4.0: "look north", "look at the
                                                 **   door"): ahead, as the character faces (the UI turns it first),
                                                 **   w1 tenths; the senses asked (LK_WAY), E_VIEW V_LOOKED */
+    I_DISENGAGE,                                /* Away from the foes engaging the character (HOUSE.md's, the book's
+                                                **   disengage): w1 the way (H_*; 0xFF, away from them), w2 1 a
+                                                **   flight (run on, once free of them; not engaged, a run from the
+                                                **   nearest foe); E_TASK TE_BREAK, or TE_FREE */
     NINTENTS
 };
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
@@ -293,7 +297,7 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8 };    /* E_VIEW's
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN };  /* E_DIG's how (D_AGAIN: begun on
                                                 **   a hole dug part way before, the world's DUG record's) */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
-       TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE };
+       TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE };
                                                 /* E_TASK's: stopped as
                                                 **   the player asked; stopped hard, by a wound or a blow (HOUSE.md:
                                                 **   all wounds), by a hostile in sight within 30 feet; asking, soft
@@ -310,7 +314,10 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
                                                 **   hurt.  Keep fighting?"); fighting on begun (b the foe plus 1, a
                                                 **   hostile engaging it; | TE_STILL, turned to it, its target beaten;
                                                 **   | TE_QUIET, begun by the player's blow, unworded); a fight's end,
-                                                **   no foe left (b 1: in shock, in no state to fight) */
+                                                **   no foe left (b 1: in shock, in no state to fight); a disengage
+                                                **   begun (b the foe plus 1; w's high byte 0 backing away, 1 a
+                                                **   flight, 2 a run from one not engaging it); none (b 0 not
+                                                **   engaged, 1 nothing near to flee, 2 no way back open) */
 #define TE_STILL        0x80
 #define TE_QUIET        0x40
 enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN };   /* E_BEAT's: a quiet stretch (HOUSE.md:

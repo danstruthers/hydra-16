@@ -160,6 +160,7 @@ ovl_out:
             OVFN        wait_of, 3
             OVFN        state_words, 3
             OVFN        free_cmd, 3
+            OVFN        meta, 3
             OVFN        climb_words, 1
             OVFN        entered, 1
             OVFN        portal_words, 1

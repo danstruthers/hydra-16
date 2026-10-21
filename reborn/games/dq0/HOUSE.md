@@ -258,10 +258,28 @@ silent on all of it.
   changes its target, struck at the next round.  Its soft question: badly hurt as it fights, then critically ("You're
   badly hurt.  Keep fighting?"), the blows going on as it asks at the real paces, the clock still at the turns pace
   till it's answered; the other soft questions (something seen or heard) don't ask it, nor do a blow, a wound or a
-  hostile near stop it.  Tiring as it fights isn't decided: none yet.  To come, the same task: a missile weapon's (in
+  hostile near stop it.  It tires as strenuous work does (the user's, 2026-10-21: the book's second variant of combat
+  fatigue, a level each five minutes of it): each round it strikes charged so; a level more asked as a hurt is
+  ("You're tiring.  Keep fighting?").  To come, the same task: a missile weapon's (in
   range, seen, a clear line; its next missile each shot, none left the end; an enemy engaging the character ending it,
   the melee's fighting on taking over), a setting widening where it begins ("autoengage with sword at close range"),
   an ally's.  (dq0w.c's part 24.)
+- **Disengaging, the book's** (the user's, 2026-10-21: "try to have it follow the book"; Combat 7): an engaged
+  character moves a square, and then, if it's no longer engaged, a half-move more (its walk's squares a round),
+  straight on, stopped by a wall, a ledge, a denizen, or another enemy's zone (still engaged after the square, it
+  stops there: "You're engaged with the ghoul: you stop walking."), with no blow that round, and the fight's over
+  (fought on again if one engages it again).  "disengage", "withdraw", "retreat", "back away", "back off",
+  "break off", a way or none: none, away from the foe engaging it (straight away, then half left or right, then
+  aside, the first open; a passage's four ways alone).  "flee" ("escape", "run away") the same, facing the way
+  it goes, then, free of them, a run on that way (none if the way's shut: the disengage enough); not engaged, a run
+  from the nearest foe within a dozen squares.  Neither engaged: told ("You aren't engaged.", "There's nothing to
+  flee from.").  "pass" a round given up, defending.  A walk as it's engaged goes as a disengage does: its first
+  square stopping it if it's still in the zone, then on.  As it fights, either takes the fight over, its round out
+  first.  Not yet: rising first if it's prone (the book's), a foe's free blow (the book has none).  (dq0w.c's part
+  26.)
+- **The fatigue rates** (the user's, 2026-10-21: running more than strenuous work, sprinting more again): a sprint a
+  level a minute, a run each two minutes, strenuous work and a jog each five, a walk a day (the book's, Combat 6 and
+  Skills 6).  (sheet.c's o_spent.)
 - **Aiming high or low** is two steps worse (10); **a prone defender** four steps easier to strike (20);
   **outnumbered,** two steps worse for each enemy more.  (fight.c.)
 - **Armour's quality:** a poor piece a point less protection, a fine one a point more.  (fight.c.)

@@ -79,6 +79,9 @@ unsigned char close_on (void);
 unsigned char __fastcall__ zone_step (unsigned ox, unsigned oy, unsigned x, unsigned y);
 void __fastcall__ fight_go (const struct msg* m);
 unsigned char __fastcall__ fight_on (unsigned char idle);
+void __fastcall__ disengage_go (const struct msg* m);    /* Part 26 */
+unsigned char flee_on (void);                   /* Part 26 */
+unsigned char toward_middle (void);            /* Part 3 */
 struct work wk;
 extern char _SWAP_START__[];
 unsigned char den_done;                         /* (wbody.h's) */
@@ -292,6 +295,7 @@ static void here (void)
 static unsigned char pace_, mul_ = 1, searching;
 static unsigned char lim_ = 250;                /* (A walk's squares at most: a small move's, I_STEP's, fewer) */
 static unsigned char pst = 10;
+static unsigned char runs;                      /* (A flight's: at a run, whatever the player's pace: part 24's) */
 
 static unsigned char dark (void);
 
@@ -300,7 +304,7 @@ static void paced (void)
     unsigned char dk = dark (), g, w;
 
     hub_map (0);
-    g = HUB->gait;
+    g = runs ? GA_RUN : HUB->gait;
     w = HUB->watch;
     searching = w & WA_TRAPS;
     if ((dk || (w & (WA_TRAPS | WA_MAP))) && g > GA_SLOW) {
@@ -1377,8 +1381,12 @@ void __fastcall__ s_climb (unsigned char d)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The heading from (mx, my) to the middle of its room (as the character comes into a stratum: it looks in) */
-static unsigned char toward_middle (void)
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
+
+/* The heading from (mx, my) to the middle of its room (as the character comes into a stratum: it looks in; part 3's,
+** the main RAM's room) */
+unsigned char s_toward_middle (void)
 {
     unsigned char r = room_of (sn_, mx, my);
     int dx, dy;
@@ -1390,6 +1398,9 @@ static unsigned char toward_middle (void)
     dy = (int) (C->room[r].y + C->room[r].h / 2) - cy_;
     return dx || dy ? bearing (dx, dy) : H_S;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 
 /* Time spent (RS_EXERT: the referee's fatigue, by the pace; GA_WORK, at strenuous work; GA_REST, standing still), t
@@ -2210,6 +2221,7 @@ static void __fastcall__ halt (unsigned char why)
                                                 **   thing to take up, a blow's close-in) */
         pfoe = 0;
         event (E_TASK, 0, why | HUB->pc_task.kind << 8);
+        HUB->pc_task.kind = LT_NONE;            /* (Its task over, told: a blow after it no second stop) */
     }
 }
 
@@ -2743,9 +2755,15 @@ static void __fastcall__ fight_begin (unsigned char k)
 
 /* Its blow at k: the character busy its round, the blow posted (the hub's pc_foe) and struck, at the real paces at
 ** once, at the turns pace as the clock moves on (turns_run's); its record's (the hub in the window) */
+static unsigned char ftired;                    /* (A level more tired by its fighting: asked, fight_on's) */
+
 static void __fastcall__ fight_blow (unsigned char k)
 {
     busy (HUB->round);
+    spend (GA_WORK, HUB->round);                /* (A round of fighting strenuous work: the user's, 2026-10-21, the
+                                                **   book's second variant, a level each five minutes of it) */
+    ftired |= wres;
+    hub_map (0);
     HUB->pc_task.foe = k;
     ++HUB->pc_task.done;
     HUB->pc_foe = k;
@@ -2770,6 +2788,9 @@ void __fastcall__ s_fight_go (const struct msg* m)
     fight_begin (m->a | TE_QUIET);
     fight_blow (m->a);
 }
+
+#define FW_RUN          0x80                    /* (fwant's: a flight's run on, as it's free: disengage_go's) */
+static unsigned char fleeh;                     /* (Its way) */
 
 /* Fighting on as the character's free (the main loop's, while its long task's LT_FIGHT, or as an enemy may engage it,
 ** fwant; idle 1, it wasn't busy: the UI at its prompt): fighting, a blow at its target if it's within reach and able
@@ -2822,8 +2843,24 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
             }
             event (E_TASK, 0, TE_ASK_HURT | LT_FIGHT << 8);     /* (The blows on as it asks) */
         }
+        if (ftired) {                           /* (A level more tired: asked as a hurt's is, the blows on as it
+            ftired = 0;                         **   asks; the clock still at the turns pace) */
+            if (!HUB->tpr) {
+                q.kind = I_ASK;
+                q.w1 = TE_ASK_TIRED;
+                task_word (&q);
+                return 2;
+            }
+            event (E_TASK, 0, TE_ASK_TIRED | LT_FIGHT << 8);
+        }
         fight_blow (k);                         /* (A missile weapon's, to come: its next missile taken first) */
         return 2;
+    }
+    if (fwant & FW_RUN) {                       /* (A flight disengaged, free of them: a run on that way, part 26's) */
+        fwant &= ~FW_RUN;
+        if (!engager (HUB->pc_x, HUB->pc_y) && flee_on ()) {
+            return 2;
+        }
     }
     if (!((h = fwant) & 1) && idle) {
         return 3;
@@ -2954,6 +2991,125 @@ unsigned char __fastcall__ s_fumbled (unsigned char k)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* ==== Part 26: disengaging */
+#pragma code-name (push, "SW26CODE")
+#pragma rodata-name (push, "SW26RODATA")
+
+/* ---- Disengaging (HOUSE.md's, the user's, 2026-10-21: the book's, Combat 7): an engaged character moves a square,
+** then, if it's no longer engaged, a half-move more (its walk's squares a round), straight on (step_to's: a wall, a
+** ledge, a denizen stops it; another enemy's zone, step_on's), with no blow that round; the only way an engaged one
+** moves.  The way the player's, else away from the foe engaging it (the nearest way open to that: straight away, half
+** left or right, then aside; a passage's four alone).  A flight the same, then, free of them, a run on that way
+** (fight_on's, FW_RUN); not engaged, a run from the nearest foe near.  Engaged still after it, fought on (fwant's) */
+
+/* The nearest foe within a dozen squares of the character (hostile or unfriendly, on its feet), plus 1; or 0 */
+static unsigned char near_foe12 (void)
+{
+    unsigned char k, f, d, best;                /* (Not static: a part's statics the main RAM's) */
+    struct actor* a;
+    unsigned dx, dy;
+
+    for (k = f = 0, best = 13; k < NACTORS; ++k) {
+        hub_map (0);
+        a = &HUB->actor[k];
+        if (!a->state || a->sn != HUB->pc_stratum || a->pos == POS_PRONE || a->doing == DO_DOWN ||
+            a->attitude > AT_UNFRIENDLY) {
+            continue;
+        }
+        dx = a->x > HUB->pc_x ? a->x - HUB->pc_x : HUB->pc_x - a->x;
+        dy = a->y > HUB->pc_y ? a->y - HUB->pc_y : HUB->pc_y - a->y;
+        d = dx > dy ? (dx > 12 ? 13 : (unsigned char) dx) : (dy > 12 ? 13 : (unsigned char) dy);
+        if (d < best) {
+            best = d;
+            f = k + 1;
+        }
+    }
+    hub_map (0);
+    return f;
+}
+
+/* The square beside the character on heading h open to step onto (its floor passable, no denizen on it; in a
+** passage, the four ways alone): 1 (dens_where's first) */
+static unsigned char __fastcall__ open_to (unsigned char h)
+{
+    unsigned x, y;
+    unsigned char* p;
+    unsigned char sn;
+
+    hub_map (0);
+    sn = HUB->pc_stratum;
+    x = HUB->pc_x + head_x[h];
+    y = HUB->pc_y + head_y[h];
+    return ((h & 1) == 0 || room_of (sn, HUB->pc_x, HUB->pc_y) != 0xFF) && (p = at (sn, x, y)) != 0 && T_PASS (*p) &&
+        !den_on (x, y);
+}
+
+/* A flight's run on, free of the foes after its disengage (fight_on's): the way on open, a run that way, 1 */
+unsigned char s_flee_on (void)
+{
+    dens_where ();
+    if (!open_to (fleeh)) {
+        return 0;                               /* (Cornered: the disengage enough) */
+    }
+    fwant = 0;
+    runs = 1;
+    step_to (fleeh, 250, 0);
+    runs = 0;
+    hub_map (0);
+    return move.on;
+}
+
+/* I_DISENGAGE (w1 the way, H_*, 0xFF away; w2 1 a flight): begun, told (E_TASK TE_BREAK), or none (TE_FREE) */
+void __fastcall__ s_disengage_go (const struct msg* m)
+{
+    static const unsigned char off[5] = { 0, 1, 7, 2, 6 };
+    unsigned char e, h, k, n, f;
+    unsigned x, y;
+
+    dens_where ();
+    hub_map (0);
+    x = HUB->pc_x;
+    y = HUB->pc_y;
+    f = m->w2 != 0;
+    e = zone_step (x, y, x, y);                 /* (The enemy engaging it, part 24's: a close-in's target beside it,
+                                                **   that one) */
+    if (!(e = e == 0xFF ? pfoe : e & 0x3F)) {
+        if (!f || !(e = near_foe12 ())) {
+            evb = f;                            /* (Not engaged; or a flight with none near to flee) */
+            event (E_TASK, 0, TE_FREE);
+            return;
+        }
+        f = 2;                                  /* (A run from one not engaging it) */
+    }
+    h = m->w1;
+    if (h > H_NW) {                             /* (Away from it: the nearest way open) */
+        hub_map (0);
+        h = bearing ((int) x - HUB->actor[(e - 1) & 7].x, (int) y - HUB->actor[(e - 1) & 7].y);
+        for (k = 0; k < sizeof off && !open_to (n = (h + off[k]) & 7); ++k) {
+        }
+        if (k == sizeof off) {
+            evb = 2;                            /* (No way back open) */
+            event (E_TASK, 0, TE_FREE);
+            return;
+        }
+        h = n;
+    }
+    hub_map (0);
+    n = HUB->pcsum.gstep[GA_WALK];
+    n = f == 2 ? 250 : 1 + HUB->round / (n ? n : 10);    /* (A square, a half-move more: the walk's squares a round) */
+    evb = e;
+    event (E_TASK, 0, TE_BREAK | (unsigned) f << 8);
+    fleeh = h;
+    fwant |= f == 1 ? FW_RUN | 1 : 1;           /* (Free of them, a flight's run on: fight_on's; engaged still,
+                                                **   fought on) */
+    runs = f == 2;
+    step_to (h, n, !f);                         /* (Backing away facing the foe; a flight turned to run) */
+    runs = 0;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 static unsigned char pc_waited;
 static void __fastcall__ intent (struct msg* m)
 {
@@ -3033,6 +3189,9 @@ static void __fastcall__ intent (struct msg* m)
                                                 **   moves on, the denizens' slice's first: turns_run; then fought on,
                                                 **   part 24's) */
         fight_go (m);
+        break;
+    case I_DISENGAGE:
+        disengage_go (m);                       /* (The book's disengage: part 26's) */
         break;
     }
 }

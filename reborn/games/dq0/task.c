@@ -8,6 +8,7 @@
 #include <string.h>
 #include "dq0.h"
 #include "hub.h"
+#include "tell.h"
 
 #pragma code-name ("OV3CODE")
 #pragma rodata-name ("OV3RODATA")
@@ -112,6 +113,14 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
             sayf ("\nYou fight back against %s.", foe (named, 0));
         }
         return 4;
+    case TE_BREAK:                              /* (A disengage, the book's: w's high byte 0 backing away, 1 a flight,
+                                                **   2 a run from one not engaging it) */
+        sayf ("\nYou %s %s.", !(w >> 8) ? "back away from" : w >> 8 == 1 ? "break away from" : "run from",
+            foe (named, 0));
+        break;
+    case TE_FREE:                               /* (None: b 0 not engaged, 1 nothing near to flee, 2 no way back) */
+        msg (named == 2 ? "There's no way back." : named ? "There's nothing to flee from." : "You aren't engaged.");
+        break;
     case TE_NO_FOE:                             /* (b 1: in shock, in no state to fight on) */
         msg (named ? "You're in no state to fight." : "No foe is left beside you.");
         break;
@@ -260,4 +269,19 @@ unsigned char __fastcall__ o_free_cmd (const char* l)
     }
     hub_mem (0, &i, &HUB->pc_task.kind, 1);
     return i != LT_FIGHT ? 0 : a == VB_ATTACK_OBJECT && !cmd.obj.kind ? 1 : 2;
+}
+
+/* The game paused, or kept (VB_META_PAUSE, VB_META_SAVE: main.c's chores) */
+void __fastcall__ o_meta (unsigned char action)
+{
+    if (action == VB_META_PAUSE) {
+        wset (WS_PAUSE, paused = 1, 0);
+        tell (T_PAUSED);
+        status ();
+    } else if (!savedir) {
+        tell (T_NOT_KEPT);
+    } else {
+        save_game ();
+        tell (T_KEPT);
+    }
 }

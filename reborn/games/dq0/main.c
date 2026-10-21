@@ -65,7 +65,7 @@ static unsigned char small;                     /* (dq0 -C: the caches small, th
 static const char* kit;                         /* (dq0 -k: things more, as the game starts: a tool, ...) */
 static const char* tfile;                       /* (dq0 -t: a theme written by hand) */
 static unsigned char made;                      /* (The theme to read: 0xFF the game's own, themegen's; theme.h) */
-static const char* savedir;                     /* (dq0 -d: the save's folder) */
+const char* savedir;                            /* (dq0 -d: the save's folder; task.c's meta too) */
 static unsigned char __fastcall__ things (unsigned char op, const char* name);
 static void to_hand (void);
 static void __fastcall__ dig_used (unsigned char n);
@@ -1305,8 +1305,13 @@ static unsigned char __fastcall__ chores (unsigned char action)
     case VB_META_MAP:
         show_map ();
         break;
-    case VB_WAIT:                               /* (A round, or as long as it says: "wait 10 minutes") */
+    case VB_WAIT:                               /* (A round, or as long as it says: "wait 10 minutes"; engaged, */
+    case VB_PASS:                               /*   "pass": a round given up, defending) */
         intend2 (I_WAIT, wait_of (cl, cmd.n), 0);
+        break;
+    case VB_DISENGAGE:                          /* (Away from the foes engaging it, the book's disengage; a flight */
+    case VB_FLEE:                               /*   at a run once free: the world's) */
+        intend2 (I_DISENGAGE, cmd.dir, action == VB_FLEE);
         break;
     case VB_STOP:                               /* (The long task: "stop", "stop digging") */
         intend (I_STOP, stop_kind (cmd.obj.word));
@@ -1315,23 +1320,14 @@ static unsigned char __fastcall__ chores (unsigned char action)
         sheet ();
         break;
     case VB_META_PAUSE:
-        wset (WS_PAUSE, paused = 1, 0);
-        tell (T_PAUSED);
-        status ();
+    case VB_META_SAVE:
+        meta (action);                          /* (Paused, or kept: overlay 3's) */
         break;
     case VB_META_HELP:
         help ();
         break;
     case VB_META_QUIT:
         quit = 1;
-        break;
-    case VB_META_SAVE:
-        if (!savedir) {
-            tell (T_NOT_KEPT);
-        } else {
-            save_game ();
-            tell (T_KEPT);
-        }
         break;
     default:
         return 0;

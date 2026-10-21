@@ -79,6 +79,9 @@ void __fastcall__ ask_line (char* b, unsigned char max);  /* A line typed, waiti
 #define PACE_TURNS      3                       /* The world moves only as the character does (a turn game) */
 extern unsigned long now;                       /* The game's time */
 extern unsigned char pace, paused;
+extern const char* savedir;                     /* (main.c's: dq0 -d's, the save's folder) */
+void __fastcall__ meta (unsigned char action);  /* Overlay 3 (task.c's): VB_META_PAUSE, the game paused; VB_META_SAVE,
+                                                **   kept, if it's kept (-d) */
 extern const char* const pacename[4];
 
 /* ---- The character, as the referee names it (its sheet is the referee's) */
