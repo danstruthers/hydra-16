@@ -774,3 +774,21 @@ weapons tables."  So a setting, later: a weapon and a range at which a hostile b
 close-in at the engagement zone and a square more; a missile weapon's at the book's bands, short to extreme).
 
 **Design:** HOUSE.md, decided, not yet built.
+
+### Disengaging, and tiring in a fight
+
+Asked how a character gets away from a fight (none built: a walk away went a square, then the fight went on), whether
+fighting tires, and the strenuous work rate, the user (2026-10-21): "1. For disengaging, try to have it follow the
+book.  2.  Tiring for combat should happen at the standard strenous work rate.  3.  Fatigue rates for running should
+be higher than for strenuous work, and sprinting should be higher still."  So:
+
+- **Disengaging, the book's** (Combat 7): an engaged character moves a square, and then, if no longer engaged, a
+  half-move more, stopped by another enemy's zone, with no attack that round; the only way an engaged character
+  moves.  "disengage", "withdraw", "back away" (a way, or away from the foes engaging it); "flee" engaged the same at a
+  run (the grammar's already), not engaged a run away from the nearest foe; "pass" a round given up, defending.
+- **A fight tires** at the strenuous work rate, a level each five minutes of it (the book's second variant of combat
+  fatigue, Combat 7).
+- **The rates:** running tires more than strenuous work, sprinting more again: as built (a sprint a level a minute,
+  a run one each two minutes, strenuous work and a jog one each five; the book's, Combat 6 and Skills 6).
+
+**Design:** HOUSE.md's fights and long tasks.
