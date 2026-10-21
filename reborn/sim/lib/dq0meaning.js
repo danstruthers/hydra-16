@@ -96,6 +96,7 @@ const EXPRS = {
   chSize: 'sizeof (struct change)', chSn: F('struct change', 'sn'), chX: F('struct change', 'x'), chY: F('struct change', 'y'),
   chTile: F('struct change', 'tile'), chElev: F('struct change', 'elev'), chLink: F('struct change', 'link'),
   pcTask: F('struct hub', 'pc_task'), ltKind: F('struct ltask', 'kind'), ltLen: F('struct ltask', 'len'), ltDone: F('struct ltask', 'done'),
+  ltFoe: F('struct ltask', 'foe'),
 };
 
 // The headers' enums and #defines with a number: { names: { NAME: value }, blocks: [[NAME ...] an enum's members] }
@@ -172,7 +173,9 @@ function createRecorder() {
       case 'E_TRAP': e.tk = name('TK_PIT', w & 15); e.tt = name('TT_PLATE', w >> 4 & 15); e.to = name('TO_SPRUNG', w >> 8); break;
       case 'E_TAKEN': e.ir = name('IR_OK', w & 0xFF); break;
       case 'E_TASK': e.te = name('TE_STOPPED', w & 0xFF); e.task = name('LT_NONE', w >> 8);
-        if (e.te === 'TE_ENGAGED' || e.te === 'TE_FAR' || e.te === 'TE_AWAY') { e.by = (e.b & 0x7F) - 1; e.still = !!(e.b & 0x80); } else e.named = name('LT_NONE', e.b);
+        if (e.te === 'TE_ENGAGED' || e.te === 'TE_FAR' || e.te === 'TE_AWAY' || e.te === 'TE_FIGHT') { e.by = (e.b & 0x3F) - 1; e.still = !!(e.b & 0x80); e.quiet = !!(e.b & 0x40); }
+        else if (e.te === 'TE_ASK_HURT') e.health = name('H_FINE', e.b);   // (Fighting on's: the band it's come to)
+        else e.named = name('LT_NONE', e.b);
         break;
       case 'E_BEAT': e.beat = name('WB_QUIET', w & 0xFF); e.side = name('WS_AHEAD', w >> 8); break;
       case 'E_DEN': e.de = name('DE_MOVED', e.a); e.sn = e.x[0]; e.seen = !!e.x[2]; break;
@@ -189,7 +192,7 @@ function createRecorder() {
       status: str(h, L.pcstatus, 16), digTool: [0, 1, 2, 3].map(i => str(h, L.digTool + i * 8, 8)),
       pc: { sn: h[L.pcSn], x: w16(h, L.pcX), y: w16(h, L.pcY), face: h[L.pcFace], light: h[L.pcLight], lamp: str(h, L.pcLamp, 14),
         pos: h[L.pcPos], gait: h[L.gait], watch: h[L.watch], going: h[L.pcGoing], stance: name('D_NONE', h[L.pcStance]), strike: name('SK_BEST', h[L.pcStrike]),
-        task: { kind: name('LT_NONE', h[L.pcTask]), asking: h[L.pcTask + 1], len: w16(h, L.pcTask + 2), done: w16(h, L.pcTask + 4) },
+        task: { kind: name('LT_NONE', h[L.pcTask]), asking: h[L.pcTask + 1], len: w16(h, L.pcTask + 2), done: w16(h, L.pcTask + 4), foe: h[L.pcTask + L.ltFoe] - 1 },
         ready: w16(h, L.pcReady) + w16(h, L.pcReady + 2) * 65536, now: w16(h, L.hubNow) + w16(h, L.hubNow + 2) * 65536 },
       sum: { cond: w16(h, L.pcsum + L.sCond), health: h[L.pcsum + L.sHealth], load: h[L.pcsum + L.sLoad], sight: h[L.pcsum + L.sSight],
         step: h[L.pcsum + L.sStep], gstep: Array.from(h.subarray(L.pcsum + L.sGstep, L.pcsum + L.sGstep + L.ngaits)) },
@@ -220,7 +223,7 @@ function createRecorder() {
           kind: str(th, o + L.nmKind, 14), name: str(th, o + L.nmName, 20) });
       }
     }
-    s.task = { kind: name('LT_NONE', h[L.pcTask + L.ltKind]), len: w16(h, L.pcTask + L.ltLen), done: w16(h, L.pcTask + L.ltDone) };
+    s.task = { kind: name('LT_NONE', h[L.pcTask + L.ltKind]), len: w16(h, L.pcTask + L.ltLen), done: w16(h, L.pcTask + L.ltDone), foe: h[L.pcTask + L.ltFoe] - 1 };
     s.changes = [];                                              // (The change records in the cache's pages: world.h's,
     const wb = bank(L.worldBank), cper = Math.floor(0x2000 / L.chPage);  //   the world's, by page)
     if (wb) for (let p = 0; p < L.ncpages; p++) {

@@ -77,6 +77,8 @@ void __fastcall__ path_ways (unsigned char tx, unsigned char ty);
 void __fastcall__ close_go (const struct msg* m);
 unsigned char close_on (void);
 unsigned char __fastcall__ zone_step (unsigned ox, unsigned oy, unsigned x, unsigned y);
+void __fastcall__ fight_go (const struct msg* m);
+unsigned char __fastcall__ fight_on (unsigned char idle);
 struct work wk;
 extern char _SWAP_START__[];
 unsigned char den_done;                         /* (wbody.h's) */
@@ -184,6 +186,11 @@ static unsigned char seen_now (void)
 /* The character's long task begun (HOUSE.md's long tasks: the hub's pc_task, the UI's bar): its kind, its length in
 ** its own units; what disturbs it from now on (a blow, a wound: pc_hit; a denizen not seen till now: pseen) */
 unsigned char pc_hit;                           /* (A blow at the character, or a wound: wfight.c's too) */
+unsigned char fwant;                            /* (Fighting on's, part 24's: an enemy may engage the character, looked
+                                                **   at as it's free; 1 a blow at it, wfight.c's, or its walk stopped
+                                                **   in a zone; 2 a command taking over a fight, looked at after it) */
+unsigned char flast;                            /* (The last to strike at the character, plus 1: wfight.c's) */
+static unsigned char fheld;                     /* (The enemies the player stopped fighting, a bit each: part 24's) */
 static unsigned char pseen;                     /* (The denizens seen as it began, and since) */
 static unsigned char pc_tired;                  /* (Strenuous work done tired it a level more: asked, the main loop's) */
 static void __fastcall__ task (unsigned char kind, unsigned len)
@@ -193,6 +200,7 @@ static void __fastcall__ task (unsigned char kind, unsigned len)
     HUB->pc_task.asking = 0;
     HUB->pc_task.len = len;
     HUB->pc_task.done = 0;
+    HUB->pc_task.foe = 0;
     pc_hit = 0;
     pt0 = HUB->now;
 }
@@ -2219,7 +2227,9 @@ static void __fastcall__ stop (unsigned char why)
         spend (GA_WORK, went - ((unsigned) free_at - (unsigned) HUB->now));
     }
     move.on = 0;                                /* (A spell of digging given up, or a wait cut short) */
-    HUB->pc_ready = HUB->now;
+    if (HUB->pc_task.kind != LT_FIGHT) {
+        HUB->pc_ready = HUB->now;               /* (A fight's blow struck: its round out first) */
+    }
     HUB->pc_task.asking = 0;
     event (E_TASK, 0, why | HUB->pc_task.kind << 8);
 }
@@ -2243,8 +2253,8 @@ static unsigned char news (void)
 
     n &= ~pseen;
     pseen |= n;
-    if (!n || !HUB->pc_task.kind) {
-        return 0;
+    if (!n || !HUB->pc_task.kind || HUB->pc_task.kind == LT_FIGHT) {
+        return 0;                               /* (A fight's not stopped by one come into sight, nor asked) */
     }
     for (k = 0, a = HUB->actor; k < NACTORS; ++k, ++a) {
         if (n & 1 << k) {
@@ -2320,8 +2330,8 @@ void s_step_on (void)
             if (move.on && move.how == A_CLIMBING) {
                 cl_hold = 1;                    /* (Its grip tested at once: the round's end now) */
                 HUB->pc_ready = HUB->now;
-            } else {
-                stop (TE_HIT);
+            } else if (HUB->pc_task.kind != LT_FIGHT) {
+                stop (TE_HIT);                  /* (A fight's blows at it no stop) */
             }
         }
         return;
@@ -2363,7 +2373,9 @@ void s_step_on (void)
         HUB->pc_task.done = ++pnext;
         if ((e = zone_step (ox, oy, x, y)) != 0) {    /* (HOUSE.md's engagement, part 24's) */
             if (e != 0xFF) {
-                evb = e;                        /* (Come into an enemy's zone, or a square on in one: stopped) */
+                evb = e;                        /* (Come into an enemy's zone, or a square on in one: stopped; a
+                                                **   hostile one fought, part 24's fighting on) */
+                fwant = 1;
             }
             halt (e == 0xFF ? 0xFF : TE_ENGAGED);   /* (0xFF: a close-in beside its target, the blow as it arrives) */
             engaged (0, e);                     /* (Newly engaged by its walk: the engage initiative test, part 25's) */
@@ -2408,8 +2420,9 @@ void __fastcall__ s_task_word (const struct msg* m)
 
     hub_map (0);
     k = HUB->pc_task.kind;
-    if (m->kind == I_ASK) {                     /* (A sound the UI heard: asked, if there's a task going) */
-        if (k && !HUB->pc_task.asking) {
+    if (m->kind == I_ASK) {                     /* (A sound the UI heard: asked, if there's a task going; a fight only
+                                                **   its own, badly hurt, part 24's) */
+        if (k && !HUB->pc_task.asking && (k != LT_FIGHT || m->w1 == TE_ASK_HURT)) {
             ask ((unsigned char) m->w1);
         }
         return;
@@ -2432,6 +2445,14 @@ void __fastcall__ s_task_word (const struct msg* m)
             go_on ();
         }
     } else {
+        if (k == LT_FIGHT) {                    /* (A command taking over: fought on after it, if an enemy engages
+                                                **   it still; the player's stop: those engaging it now left be) */
+            if (m->w1) {
+                fwant = 2;
+            } else {
+                fheld = 0xFF;
+            }
+        }
         stop (TE_STOPPED);
     }
 }
@@ -2548,6 +2569,8 @@ unsigned char __fastcall__ s_zone_step (unsigned ox, unsigned oy, unsigned x, un
 }
 
 unsigned char s_close_on (void);
+static void __fastcall__ fight_begin (unsigned char k);
+static void __fastcall__ fight_blow (unsigned char k);
 
 /* A blow's close-in begun (I_CLOSE: walked up to its target, then struck; engaged already, refused, the user's) */
 void __fastcall__ s_close_go (const struct msg* m)
@@ -2587,14 +2610,11 @@ unsigned char s_close_on (void)
         if (beside (px, py, x, y)) {
             hub_map (0);
             pfoe = 0;
-            HUB->pc_task.kind = LT_NONE;        /* (The walk over: the blow's round) */
-            busy (HUB->round);
             HUB->pc_strike = pstrike;
             HUB->pc_aim = paim;
-            HUB->pc_foe = k + 1;
-            if (HUB->tpr) {
-                pc_blow ();
-            }
+            fheld = 0;
+            fight_begin (++k | TE_QUIET);       /* (The walk over: the blow's round, and fighting on after it) */
+            fight_blow (k);
             return 2;
         }
         dx = x > px ? x - px : px - x;
@@ -2615,6 +2635,191 @@ unsigned char s_close_on (void)
     evb = k + 1;
     event (E_TASK, 0, TE_FAR);
     return 0;
+}
+
+/* ---- Fighting on (HOUSE.md's, the user's, 2026-10-20: "once engaged in combat, you should continue to attack your
+** target as you can, without actively having to say "attack" each time"): a long task of its own (LT_FIGHT, the
+** hub's pc_task: its foe the target plus 1, its done the blows struck), begun as the character attacks (I_ATTACK, a
+** close-in come beside its target) and as a hostile enemy engages it (one striking at it, or one whose zone stops
+** its walk: fwant, looked at as it's free; not one that isn't hostile, a wary rat keeping its distance; not while
+** it's senseless, but as it comes round, if it's engaged still).  As it's free, a blow at its target with what it
+** holds, while the target's within reach and able; its target beaten (dead, senseless, out of reach), the next
+** enemy engaging it, turned to (fight_foe: the one that struck at it last, else the first); none, the task over,
+** told ("No foe is left beside you.": a senseless one left lying, "attack the rat" finishes it).  A command that
+** takes time takes over (the UI's I_STOP, w1 1: its round out, then the command; fought on after it if an enemy
+** engages it still), the player's stop ends it (the enemies engaging it then left be, fheld, till they've left it or
+** it attacks); the free commands are the UI's, and an attack as it fights its target changed (fight_go).  Badly hurt
+** as it fights (its health's band worse: rs.h's H_BADLY, H_CRITICAL), asked ("You're badly hurt.  Keep fighting?"),
+** the blows going on at the real paces (a pause in a real-time fight would only cost it), the clock still at the
+** turns pace till it's answered.  Tiring as it fights isn't decided: none yet.
+**
+** The forms to come (the user's, 2026-10-20) the same task: a missile weapon's, its target within range, seen, a
+** clear line (fight_reach's), its next missile taken before each shot, none left the task over (fight_on's, by the
+** blow), the next foe one in range (fight_foe's), an enemy engaging the character ending it, the melee's taking over
+** (fight_on's, as it begins one); a setting of the player's widening where it begins ("autoengage with sword at close
+** range": the zone and a square more, closed with; a missile weapon's bands), fight_foe's; an ally's, by its actor */
+static unsigned char fhurt;                     /* (Its health's band as it began, or as it was last asked of) */
+static unsigned char fsaid;                     /* (The next blow the player's: at its target whatever its state, if
+                                                **   it's within reach, "attack the rat": one senseless finished) */
+
+/* Its target k (the actor plus 1) within reach (beside the character, round no corner; a missile weapon's, to
+** come: within range, seen, a clear line): 2, and able (on its stratum, conscious); 1, senseless; 0 neither (the hub
+** in the window after) */
+static unsigned char __fastcall__ fight_reach (unsigned char k)
+{
+    struct actor* a;
+    unsigned ax, ay;
+    unsigned char d;
+
+    hub_map (0);
+    a = &HUB->actor[(k - 1) & 7];
+    if (!k || !a->state || a->sn != HUB->pc_stratum) {
+        return 0;
+    }
+    d = a->doing == DO_DOWN ? 1 : 2;
+    ax = a->x;
+    ay = a->y;
+    if (!beside (HUB->pc_x, HUB->pc_y, ax, ay)) {
+        d = 0;
+    }
+    hub_map (0);
+    return d;
+}
+
+/* The foe it turns to, or begins on: a hostile enemy engaging the character (in its zone: on its feet, conscious,
+** beside it round no corner; sensing it, not fleeing), not one the player's stopped fighting (fheld's, its bit let go
+** once it isn't one); the one that struck at it last, else the first.  It plus 1, or 0 (the hub in the window after).
+** (A setting of the player's, to come, widens it: a hostile within its range) */
+static unsigned char fight_foe (void)
+{
+    static unsigned char k, f, b;
+    struct actor* a;
+    unsigned ax, ay;
+
+    for (k = f = 0; k < NACTORS; ++k) {
+        hub_map (0);
+        a = &HUB->actor[k];
+        b = 1 << k;
+        if (a->state && a->sn == HUB->pc_stratum && a->attitude == AT_HOSTILE && a->pos != POS_PRONE &&
+            a->doing != DO_ROAM && a->doing < DO_FLEE) {
+            ax = a->x;
+            ay = a->y;
+            if (beside (HUB->pc_x, HUB->pc_y, ax, ay)) {
+                if (!(fheld & b) && (!f || k + 1 == flast)) {
+                    f = k + 1;
+                }
+                continue;
+            }
+        }
+        fheld &= ~b;
+    }
+    hub_map (0);
+    return f;
+}
+
+/* Fighting on begun at k (the actor plus 1, | TE_QUIET: begun by the player's blow, not worded): the long task, its
+** target, told (the UI busy till it's done, a line it holds taking it over: TE_FIGHT); the hub in the window */
+static void __fastcall__ fight_begin (unsigned char k)
+{
+    task (LT_FIGHT, 0);
+    HUB->pc_task.foe = k & 0x0F;
+    fhurt = HUB->pcsum.health;
+    fsaid = 0;
+    pc_cut = 0;
+    evb = k;
+    event (E_TASK, 0, TE_FIGHT | LT_FIGHT << 8);
+}
+
+/* Its blow at k: the character busy its round, the blow posted (the hub's pc_foe) and struck, at the real paces at
+** once, at the turns pace as the clock moves on (turns_run's); its record's (the hub in the window) */
+static void __fastcall__ fight_blow (unsigned char k)
+{
+    busy (HUB->round);
+    HUB->pc_task.foe = k;
+    ++HUB->pc_task.done;
+    HUB->pc_foe = k;
+    if (HUB->tpr) {
+        pc_blow ();
+    }
+}
+
+/* The player's blow (I_ATTACK: a the one struck at, b the aim, x[1] what it strikes with): while it fights, its target
+** changed, struck at as the character's next free; else struck now, a round of its time, and fought on after it */
+void __fastcall__ s_fight_go (const struct msg* m)
+{
+    hub_map (0);
+    HUB->pc_strike = m->x[1];
+    HUB->pc_aim = m->b;
+    fheld = 0;
+    if (HUB->pc_task.kind == LT_FIGHT && !pc_cut) {
+        HUB->pc_task.foe = m->a;
+        fsaid = 1;
+        return;
+    }
+    fight_begin (m->a | TE_QUIET);
+    fight_blow (m->a);
+}
+
+/* Fighting on as the character's free (the main loop's, while its long task's LT_FIGHT, or as an enemy may engage it,
+** fwant; idle 1, it wasn't busy: the UI at its prompt): fighting, a blow at its target if it's within reach and able
+** (or the player's own, at one within reach), else at the next foe, turned to; none, the fight over, told.  Not
+** fighting, a hostile engaging it begins it, told (a command taking over, fwant 2, looked at after it).  2 if it's
+** striking (or asking), 0 if it's done (E_READY), 3 if it was idle and still is */
+unsigned char __fastcall__ s_fight_on (unsigned char idle)
+{
+    struct msg q;                               /* (Not static: a part's statics the main RAM's) */
+    static unsigned char k, h;
+
+    hub_map (0);
+    if (HUB->pc_task.kind == LT_FIGHT) {
+        if (pc_cut) {
+            HUB->pc_task.foe = 0;               /* (Stopped, the player's or a command's: its round out, told as it
+                                                **   stopped) */
+            return 0;
+        }
+        h = fight_reach (k = HUB->pc_task.foe);
+        if (h != 2 && (!h || !fsaid)) {
+            if (!(k = fight_foe ())) {          /* (Its target beaten: the next, or none: told, but after a blow alone,
+                                                **   its words enough, "You finish the giant rat where it lies.") */
+                if (HUB->pc_task.done > 1) {
+                    event (E_TASK, 0, TE_NO_FOE | LT_FIGHT << 8);
+                }
+                HUB->pc_task.foe = 0;
+                fwant = 0;
+                return 0;
+            }
+            evb = k | TE_STILL;
+            event (E_TASK, 0, TE_FIGHT | LT_FIGHT << 8);
+        }
+        fsaid = 0;
+        if ((h = HUB->pcsum.health) > fhurt && h >= H_BADLY && h <= H_CRITICAL) {
+            fhurt = h;                          /* (Badly hurt as it fights: asked) */
+            evb = h;
+            if (!HUB->tpr) {
+                q.kind = I_ASK;                 /* (The clock still at the turns pace till it's answered: then the
+                                                **   blow) */
+                q.w1 = TE_ASK_HURT;
+                task_word (&q);
+                return 2;
+            }
+            event (E_TASK, 0, TE_ASK_HURT | LT_FIGHT << 8);     /* (The blows on as it asks) */
+        }
+        fight_blow (k);                         /* (A missile weapon's, to come: its next missile taken first) */
+        return 2;
+    }
+    if (fwant == 2 && idle) {
+        return 3;
+    }
+    fwant = 0;
+    if (!(k = fight_foe ())) {
+        return idle ? 3 : 0;
+    }
+    fight_begin (k);                            /* (A hostile engaging it: fought back, at the middle, with what it
+                                                **   holds) */
+    HUB->pc_aim = Z_MID;
+    HUB->pc_strike = SK_BEST;
+    fight_blow (k);
+    return 2;
 }
 
 #pragma code-name (pop)
@@ -2687,6 +2892,7 @@ unsigned char __fastcall__ s_engaged (unsigned char eng, unsigned char def)
     HUB->pc_foe = f;
     HUB->pc_aim = z;
     pc_hit = 1;
+    fwant = 1;                                  /* (And fought on, a hostile one: part 24's) */
     return 1;
 }
 
@@ -2806,14 +3012,9 @@ static void __fastcall__ intent (struct msg* m)
         HUB->quit = 1;
         break;
     case I_ATTACK:                              /* (A round's blow, struck: at once; at the turns pace, as the clock
-                                                **   moves on, the denizens' slice's first: turns_run) */
-        busy (HUB->round);
-        HUB->pc_strike = m->x[1];
-        HUB->pc_aim = m->b;
-        HUB->pc_foe = m->a;
-        if (HUB->tpr) {
-            pc_blow ();
-        }
+                                                **   moves on, the denizens' slice's first: turns_run; then fought on,
+                                                **   part 24's) */
+        fight_go (m);
         break;
     }
 }
@@ -2914,10 +3115,15 @@ static int __fastcall__ ovl_load (const char* dir)
     for (k = 0, first = n; k < OVBANKS + 2; ++k) {
         ovbank[k] = first + k;
     }
-    for (off = 0; (n = read (fd, b, 512)) > 0; off += n) {    /* (The file the build made: OVBANKS banks at most,
-                                                **   64K at most, off back at 0 only as it ends) */
-        hy_bank (ovbank[off >> 13]);
-        memcpy ((void*) (0x8000 + (off & 0x1FFF)), b, n);
+    for (k = off = 0; (n = read (fd, b, 512)) > 0; ) {   /* (The file the build made: OVBANKS banks at most, 8K
+                                                **   each, read 512 bytes at a time; first + k, not ovbank[k]: cc65's
+                                                **   optimizer dropped hy_bank's index here, hydra.h's) */
+        hy_bank (first + k);
+        memcpy ((void*) (0x8000 + off), b, n);
+        if ((off += n) >= 0x2000) {
+            off = 0;
+            ++k;
+        }
     }
     close (fd);
     return 0;
@@ -2965,7 +3171,7 @@ int main (int argc, char* argv[])
         if (move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             arrive ();
         }
-        if (was_busy && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
+        if ((was_busy || fwant == 1) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             if (pc_waited) {
                 pc_waited = 0;
                 ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */
@@ -2974,6 +3180,9 @@ int main (int argc, char* argv[])
                                                 **   to; a blow's close-in: struck, or walked on) */
             if (!took && HUB->pc_task.kind == LT_BATTER) {
                 took = batter_on ();            /* (A battering's next blow, or what came of it told) */
+            }
+            if (!took && (HUB->pc_task.kind == LT_FIGHT || fwant)) {
+                took = fight_on (!was_busy);    /* (Fighting on's next blow, or begun: part 24's; 3, idle still) */
             }
             if (took == 1) {
                 see (0);

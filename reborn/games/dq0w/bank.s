@@ -23,7 +23,7 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
-_ovbank:    .res        10          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+_ovbank:    .res        11          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
                                     ;   world's own banks (its paging's tables: ipage.c's; the ways across a room)
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
@@ -101,7 +101,7 @@ go:
             SWPART      21, 5               ; The ways across a room worked out (dq0w.c's ways)
             SWPART      22, 8               ; The strata's records out of the hub, back (sfile.c)
             SWPART      23, 6               ; The long task as it goes: a walk a square at a time (dq0w.c's)
-            SWPART      24, 2               ; Engagement, a blow's close-in (dq0w.c's)
+            SWPART      24, 9               ; Engagement, a blow's close-in, fighting on (dq0w.c's)
             SWPART      25, 7               ; The engage initiative test, a grope's (dq0w.c's)
 
             SWFN        start_dig, 1
@@ -169,6 +169,8 @@ go:
             SWFN        close_go, 24
             SWFN        close_on, 24
             SWFN        zone_step, 24
+            SWFN        fight_go, 24
+            SWFN        fight_on, 24
             SWFN        engaged, 25
             SWFN        fumbled, 25
             SWFN        den_first, 14

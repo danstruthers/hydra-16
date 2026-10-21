@@ -1,7 +1,8 @@
 /*
 ** task.c - (dq0) the long tasks' words (HOUSE.md's long tasks, slice 4.0: the world keeps them, the hub's pc_task the
 ** character's): what came of one (E_TASK: stopped, asked, carried on, refused), a walk's beats as it goes (E_BEAT),
-** the task a stop names ("stop digging": its LT_*), and a question's answer read.  Overlay 3's.
+** the task a stop names ("stop digging": its LT_*), a question's answer read, and a line typed as the character's
+** busy carried out at once or held (fighting on's: a command taking over).  Overlay 3's.
 */
 
 #include <string.h>
@@ -12,7 +13,8 @@
 #pragma rodata-name ("OV3RODATA")
 
 static const char* const doing[] = {           /* (By LT_*) */
-    "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering"
+    "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering",
+    "fighting"
 };
 #define NDOING          (sizeof doing / sizeof doing[0])
 
@@ -42,7 +44,9 @@ static const char* __fastcall__ foe (unsigned char b, unsigned char cap)
     return fn;
 }
 
-/* What came of the character's long task: E_TASK's w (TE_*, its kind times 256); named, the kind its stop named (b) */
+/* What came of the character's long task: E_TASK's w (TE_*, its kind times 256); named, the kind its stop named (b),
+** or the foe (TE_FIGHT's), or the health (TE_ASK_HURT's).  1 if a question's put; 2 one answered yes unasked (dq0
+** -a's, the tests': not put); 4 fighting on begun (the character busy) */
 unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
 {
     unsigned char k = w >> 8;
@@ -51,7 +55,11 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     if ((unsigned char) w <= TE_NEAR || (unsigned char) w == TE_ENGAGED) {
         reach = 0;                              /* (A walk over to a thing stopped: its command dropped) */
     }
-    switch ((unsigned char) w) {
+    k = (unsigned char) w;
+    if (autogo && (k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT)) {
+        return 2;
+    }
+    switch (k) {
     case TE_STOPPED:
     case TE_HIT:
     case TE_NEAR:
@@ -93,9 +101,22 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
                                                 **   its tactical advantage a disengage) */
         sayf ("\nQuicker, %s backs away from you.", foe (named, 0));
         break;
+    case TE_ASK_HURT:                           /* (Fighting on's: its health's band worse, H_BADLY, H_CRITICAL) */
+        sayf ("\nYou're %s hurt.  Keep fighting?", named == H_BADLY ? "badly" : "critically");
+        break;
+    case TE_FIGHT:                              /* (Fighting on: begun on a hostile engaging it, or by an attack, its
+                                                **   blow's words enough; turned to the next) */
+        if (named & TE_STILL) {
+            sayf ("\nYou turn to %s.", foe (named, 0));
+        } else if (!(named & TE_QUIET)) {
+            sayf ("\nYou fight back against %s.", foe (named, 0));
+        }
+        return 4;
+    case TE_NO_FOE:
+        msg ("No foe is left beside you.");
+        break;
     }
-    k = (unsigned char) w;
-    return k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD;     /* (1: a question put) */
+    return k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT;    /* (1: a question put) */
 }
 
 /* The character's state after a harm, its words (shock, bleeding, a leg or an arm useless: rs.h's C_*, the low
@@ -117,11 +138,20 @@ void __fastcall__ o_state_words (unsigned char cond)
     harm_told |= cond;
 }
 
-/* The bar of a long task's part done, ten cells, put after the status line's right side so far (s) */
+/* The bar of a long task's part done, ten cells, put after the status line's right side so far (s); a task of no
+** length its words (a fight's, its foe: "Fighting the giant rat") */
 void __fastcall__ o_bar_text (char* s, unsigned done, unsigned len)
 {
-    unsigned char i, b = done >= len ? 10 : (unsigned char) ((unsigned long) done * 10 / len);
+    unsigned char i, b;
 
+    if (!len) {
+        hub_mem (0, &b, &HUB->pc_task.foe, 1);
+        strcat (s, "Fighting ");
+        strcat (s, foe (b, 0));
+        strcat (s, "  ");
+        return;
+    }
+    b = done >= len ? 10 : (unsigned char) ((unsigned long) done * 10 / len);
     s += strlen (s);
     *s++ = '[';
     for (i = 0; i < 10; ++i) {
@@ -173,9 +203,10 @@ unsigned char __fastcall__ o_stop_kind (const char* word)
 {
     static const char* const word_[] = { "walking", "going", "moving", "climbing", "digging", "working", "searching",
                                          "waiting", "resting", "sleeping", "talking", "battering", "breaking",
-                                         "smashing" };
+                                         "smashing", "fighting", "attacking" };
     static const unsigned char kind_[] = { LT_WALK, LT_WALK, LT_WALK, LT_CLIMB, LT_DIG, LT_DIG, LT_SEARCH, LT_WAIT,
-                                           LT_WAIT, LT_SLEEP, LT_TALK, LT_BATTER, LT_BATTER, LT_BATTER };
+                                           LT_WAIT, LT_SLEEP, LT_TALK, LT_BATTER, LT_BATTER, LT_BATTER, LT_FIGHT,
+                                           LT_FIGHT };
     unsigned char i;
 
     for (i = 0; i < sizeof kind_; ++i) {
@@ -191,7 +222,7 @@ unsigned char __fastcall__ o_answer_of (const char* l)
 {
     static const char* const yes[] = { "y", "yes", "yeah", "ok", "sure", "go on", "keep going", "carry on",
                                        "continue", "keep walking", "keep digging", "keep waiting", "keep searching",
-                                       "keep battering" };
+                                       "keep battering", "keep fighting" };
     static const char* const no[] = { "n", "no", "nope", "stop", "halt" };
     unsigned char i;
 
@@ -206,4 +237,27 @@ unsigned char __fastcall__ o_answer_of (const char* l)
         }
     }
     return 0;
+}
+
+/* A line typed as the character's busy (main.c's at_once: its command the parser's, cmd): 1 if it's carried out at
+** once, taking no time (what it carries, its sheet, the map, the help, a stop, its state, a look about, a stance),
+** or the fight's own as it fights (an attack at a denizen: its target changed, the world's); else 0, held till the
+** character's free, or 2, held and the fight it's in stopped for it (HOUSE.md's fighting on: a command that takes
+** time takes over, its round out first) */
+unsigned char __fastcall__ o_free_cmd (const char* l)
+{
+    static const unsigned char now_[] = { VB_META_INVENTORY, VB_META_SHEET, VB_META_MAP, VB_META_HELP, VB_STOP,
+                                          VB_OBSERVE_LOCALE, VB_OBSERVE_AROUND, VB_FIND_OBJECT, VB_DEFEND };
+    unsigned char a = cmd.action, i;
+
+    for (i = 0; i < sizeof now_; ++i) {
+        if (a == now_[i]) {
+            return 1;
+        }
+    }
+    if (!strcmp (l, "status")) {
+        return 1;
+    }
+    hub_mem (0, &i, &HUB->pc_task.kind, 1);
+    return i != LT_FIGHT ? 0 : a == VB_ATTACK_OBJECT && !cmd.obj.kind ? 1 : 2;
 }
