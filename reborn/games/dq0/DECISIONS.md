@@ -813,3 +813,14 @@ layers will need to interact in those kinds of ways.  Please make sure the plan 
   place rain or water speeds its fading.
 
 **Design:** DUNGEON.md, perception as layers; the plan's slices 4.1, 4.5, 4.9.
+
+### Hunger and thirst
+
+The user (2026-10-21): "When do we get hunger, eating, and drinking?"  Nothing planned then (the kit's rations and
+waterskin carried, eat and drink refused; HarnMaster's core rules have none).  Asked where, the user chose with water
+(slice 4.9): hunger and thirst over time (house rules: faster at hard work, levels of penalty, then starving or dying
+of thirst), eating the kit's rations and drinking from the waterskin, refilled at wells and streams; the cheap way to
+manage it a standing order to eat and drink when needed, warnings ("You're getting hungry."), and the status line
+showing them once they matter.
+
+**Design:** the plan's slice 4.9 (to be drafted with it).
