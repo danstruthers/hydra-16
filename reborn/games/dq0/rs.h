@@ -119,7 +119,8 @@ enum { H_FINE, H_HURT, H_BADLY, H_CRITICAL, H_DOWN, H_DEAD };
 enum { O_MISS, O_DODGED, O_BLOCKED, O_HIT, O_BOTH_HIT, O_COUNTER_HIT, O_FUMBLE, O_STUMBLE, O_ADVANTAGE, O_CRIT,
     O_DISPATCH, O_RISE };
 
-/* ---- Defences: the stance the player sets (the ruleset decides what each means; auto: its best) */
+/* ---- Defences: the stance the player sets (the ruleset decides what each means; auto: its best; HarnMaster's: a
+** round's defences, a block or a dodge each once a round, a counterstrike only on D_COUNTER: HOUSE.md) */
 enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 
 /* ---- An attack (RS_ATTACK): actor strikes at other (0 the character, else an actor's entry plus 1) with what it has

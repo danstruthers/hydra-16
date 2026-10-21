@@ -235,7 +235,9 @@ static const struct sym syms[] = {
     S (BP_FOOT), S (BP_RIGHT),
     S (HC_FALL), S (HC_STRIKE), S (HC_FIRE), S (HC_STRUCK),
     S (AS_BLUNT), S (AS_EDGE), S (AS_POINT), S (AS_FIRE),
-    S (Z_MID), S (Z_HIGH), S (Z_LOW),
+    S (Z_MID), S (Z_HIGH), S (Z_LOW), S (AS_BEST),
+    S (D_AUTO), S (D_BLOCK), S (D_DODGE), S (D_COUNTER), S (D_NONE),
+    S (O_MISS), S (O_DODGED), S (O_BLOCKED), S (O_HIT), S (O_ADVANTAGE), S (O_COUNTER_HIT),
     S (GR_FLOOR), S (GR_DEEP_WATER), S (GR_SHALLOW_WATER), S (GR_SOFT), S (GR_HARD), S (GR_ROCKY),
     S (HF_CLEAR), S (HF_HOLDS),
     S (WA_TRAPS), S (WA_LISTEN), S (WA_MAP), S (GOING_DARK),
@@ -359,6 +361,8 @@ static void set (void)
             HUB->pc_stance = n;
         } else if (!strcmp (tok[k], "strike")) {
             HUB->pc_strike = n;
+        } else if (!strcmp (tok[k], "now")) {
+            HUB->now = n;
         } else {
             bads ("set: no %s", tok[k]);
         }

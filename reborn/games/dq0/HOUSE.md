@@ -231,6 +231,15 @@ silent on all of it.
   first six keep their numbers till the tests are cut to meaning (the ghoul is the book's grave-wight, the cave bear
   its black bear: Bestiary pp48, 13).
 - **A creature defends** by dodging, or by counterstriking if it's better at that, as the book advises for animals.
+- **The character's defences are chosen for it, a round's at a time** (the user's, 2026-10-20: the game is real
+  time): against each blow the better of a block and a dodge it has left that round; each thing it holds that
+  blocks blocks one foe a round (a sword one, a shield another), a bare arm if it holds none, and the dodge one
+  foe; a foe met again in the round meets the same defence; none left, none.  A bare arm's block against a weapon
+  (struck, H2) is the last chosen.  A counterstrike only on command (defend counter), what it strikes with then
+  spent for the round as a block would be; defend block or defend dodge puts that first, defend none drops them
+  all.  The round runs ten seconds from the first blow at it after the last one ended.  Why: a player can't choose
+  a defence each blow in real time, and the book's defender meets each attack with something it has free.
+  (gear.c's pc_defence.)
 - **Aiming high or low** is two steps worse (10); **a prone defender** four steps easier to strike (20);
   **outnumbered,** two steps worse for each enemy more.  (fight.c.)
 - **Armour's quality:** a poor piece a point less protection, a fine one a point more.  (fight.c.)
@@ -500,10 +509,6 @@ climb's test to hold on).
   engaged it), a blow each round as it can, a long task, without "attack" again; any command takes over; its target
   beaten (dead, senseless, fled out of reach), the next enemy engaging it; none left, it stops and says so.  Today
   each attack is one blow.
-- **A round's defences** (the user's, 2026-10-20): automatic, a block or a dodge, the better against the blow, each
-  once a round (a block once for each weapon or shield that blocks: two attackers, the shield blocks one and the
-  sword the other; a dodge once); a counterstrike only on command (defend counter), its weapon used for the round;
-  none left, no defence.  Today the better of block and dodge for every blow.
 
 ## Open
 
