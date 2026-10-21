@@ -20,7 +20,8 @@ void owned (void);                              /* The things a look saw (the se
 
 /* ---- The item store's paging (ipage.c, part 17's: bank.s's stubs): the chunks whose things are in the store, a
 ** table in the world's own bank (ovbank[OVBANKS]), and a chunk's things' records as they're read in or written out
-** (the map); a chunk's things in its region's file, a group (its place in the region: x, and y times 8; its count) */
+** (the map); a chunk's things in its region's file, a group (its place in the region: x, and y times 8; its count; the
+** clock as it was written, CLOCK_256's: its lights caught up, burnt down by the minutes since, as it's read in) */
 #define NIRES           64
 #define NNONE           16
 struct ires {
@@ -47,6 +48,7 @@ struct ipg {
 struct igroup {
     unsigned char   at;
     unsigned        n;
+    unsigned        m;
 };
 unsigned char it_room (void);                   /* A record made free (a chunk's things put out): 1, or 0 */
 unsigned char __fastcall__ it_need (unsigned char sn, unsigned cx, unsigned cy);    /* A chunk's things in the store
@@ -67,7 +69,7 @@ void __fastcall__ start (const char* dir);      /* (Part 3's: dq0w.c) The world'
 void __fastcall__ keep (unsigned char back);    /* The store kept (items.dat), or read back */
 extern unsigned ilim;                           /* (things.c's: the records used, at most) */
 extern unsigned irs;                            /* (things.c's: a thing's own numbers, made) */
-#define OVBANKS         11                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
+#define OVBANKS         12                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
                                                 **   own: ipage.c's, ovbank[OVBANKS]; the ways across a room's,
                                                 **   dq0w.c's, ovbank[OVBANKS + 1]; the traces' store's, wtrace.c's,
                                                 **   ovbank[OVBANKS + 2] and [OVBANKS + 3]) */
@@ -103,6 +105,29 @@ enum {
     SA_NO_SLOT, SA_NO_BELT, SA_NOT_HOLDER, SA_RUN_OUT, SA_WONT_GO, SA_ITSELF, SA_PUT_OUT, SA_NO_ROOM, SA_TOO_HEAVY,
     SA_TAKE, SA_NOT_IN, SA_DON, SA_WORN, SA_WEAR_ONE, SA_NO_WEAR, SA_DOFF, SA_NOT_WORN, SA_LIGHT, SA_LIT,
     SA_NO_FLAME, SA_NO_LIGHT, SA_DOUSE, SA_NOT_LIT, SA_NONE_TO_LIGHT, SA_NONE_LIT, SA_NO_SUCH, SA_NO_OTHER, SA_REACH,
-    SA_WHERE, SA_WHAT, SA_IN_HAND, SA_IN_PACK, SA_FIXED, SA_COUNT
+    SA_WHERE, SA_WHAT, SA_IN_HAND, SA_IN_PACK, SA_FIXED, SA_BURNT, SA_NO_OIL, SA_COUNT
 };
 extern const char* const said[SA_COUNT];
+
+/* ---- The lights burning (slice 4.1's: DUNGEON.md's light, HOUSE.md's burning): how each kind burns, and what renews
+** it (kinds.c's burns, in the catalogue's bank: a light's whole life and its fuels; a fuel's measure and what it is) */
+struct burn {
+    unsigned char   kind;                       /* (KI_*) */
+    unsigned char   life;                       /* A light's whole life (a fuel's, what a whole one holds): tens of
+                                                **   minutes of burning */
+    unsigned char   fuels;                      /* FU_*: a light's, those that renew it (0: none, it burns away); a
+                                                **   fuel's, what it is */
+};
+#define NBURNS          6
+#define FU_OIL          0x01
+#define FU_PITCH        0x02
+#define BURN_LOW        10                      /* Burning low: its last ten minutes (the house rule's) */
+extern const struct burn burns[NBURNS];
+const struct burn* __fastcall__ burn_of (unsigned char k);  /* How kind k burns (a copy), or 0: never (a glow), or no
+                                                **   fuel; the catalogue's bank left in the window */
+unsigned char fill (void);                      /* (Part 27, its room) The hub's ireq, IO_FILL's: a light renewed */
+void burns_now (void);                          /* (Part 27: dq0w.c) The lights burnt down by the minutes gone */
+extern unsigned long burn_due;                  /*   (when the next minute's due: the main loop's) */
+extern unsigned char burn_ask;                  /*   (or at once: a light's change) */
+#define CLOCK_256       (*(unsigned*) ((unsigned char*) &HUB->now + 1))   /* (The clock in 25.6 seconds, 16 bits: its
+                                                **   tenths' middle bytes, no long division: ipage.c's stamps) */

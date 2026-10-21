@@ -1,5 +1,5 @@
 /*
-** tput.inc - (dq0w) the traces' store's records put (wtrace.c's): parts 27's and 29's, each its own copy (a swapped
+** tput.inc - (dq0w) the traces' store's records put (wtrace.c's): parts 28's and 30's, each its own copy (a swapped
 ** part's code calls no other part's but through a stub: ../dq0/swap.inc's), included in each one's segments.
 */
 

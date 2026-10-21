@@ -1,6 +1,6 @@
 /*
 ** wtrscent.c - (dq0w) the way the character's scent goes (wtrace.c's store, read: a hunter by smell's step,
-** STEP_SCENT, wbody.c's part 14 asking).  Swapped part 31's (../dq0/swap.inc, bank.s's stub tr_scent).
+** STEP_SCENT, wbody.c's part 14 asking).  Swapped part 32's (../dq0/swap.inc, bank.s's stub tr_scent).
 */
 
 #include <string.h>
@@ -14,9 +14,9 @@
 
 #pragma static-locals (on)
 
-#pragma code-name (push, "SW31CODE")
-#pragma rodata-name (push, "SW31RODATA")
-#pragma bss-name (push, "SW31RODATA")
+#pragma code-name (push, "SW32CODE")
+#pragma rodata-name (push, "SW32RODATA")
+#pragma bss-name (push, "SW32RODATA")
 
 static unsigned char rsn;
 static unsigned rcx, rcy;

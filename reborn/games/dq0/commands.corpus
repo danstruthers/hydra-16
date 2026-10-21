@@ -285,6 +285,10 @@ lock the door	VB_LOCK_OBJECT	object=door	near=door	lock
 unlock the door with the key	VB_UNLOCK_OBJECT	object=door;instrument=key	near=door,key	unlock with a key
 fill the waterskin	VB_FILL_OBJECT	object=waterskin	near=waterskin	fill
 fill the waterskin from the chest	VB_FILL_OBJECT	object=waterskin;source=chest	near=waterskin,chest	fill from a source
+fill the lantern with oil	VB_FILL_OBJECT	object=lantern;source=oil	near=lantern,oil	fill with a fuel (slice 4.1)
+dip the torch in the oil	VB_FILL_OBJECT	object=torch;source=oil	near=torch,oil	a torch renewed (slice 4.1)
+soak the torch in pitch	VB_FILL_OBJECT	object=torch;source=pitch	near=torch,pitch	soak is dip
+refill the lantern	VB_FILL_OBJECT	object=lantern	near=lantern	refill is fill
 read the sign	VB_READ_OBJECT	object=sign	near=sign	read
 taste the potion	VB_TASTE_OBJECT	object=potion	near=potion	taste
 touch the wall	VB_TOUCH_OBJECT	object=wall	near=wall	touch

@@ -32,8 +32,8 @@
 ** (the world's, as the things' are), E_VIEW V_TRACED.  Each kind's numbers and words are the denizens' data's
 ** (kinds.txt's tread, marks, smell, scent: dq0d/make.js's dq0tr.dat, its first record the character's own).
 **
-** Swapped part 27's (the store: wtrace.c), 28's (the reading: wtrace.c), 29's (its files: wtrfile.c), 30's (its words:
-** wtrword.c) and 31's (a hunter's way along the character's trail: wtrscent.c; ../dq0/swap.inc, bank.s's stubs); each
+** Swapped part 28's (the store: wtrace.c), 29's (the reading: wtrace.c), 30's (its files: wtrfile.c), 31's (its words:
+** wtrword.c) and 32's (a hunter's way along the character's trail: wtrscent.c; ../dq0/swap.inc, bank.s's stubs); each
 ** passing journalled in the part that makes it (trod.inc's trod: dq0w.c's part 23, wbody.c's part 14).
 */
 
@@ -56,14 +56,14 @@
 
 unsigned char tr_n;                             /* (The journalling parts' own: trod.inc) */
 
-/* ==== Part 27: the store, the journal taken in */
-#pragma code-name (push, "SW27CODE")
-#pragma rodata-name (push, "SW27RODATA")
-#pragma bss-name (push, "SW27RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
+/* ==== Part 28: the store, the journal taken in */
+#pragma code-name (push, "SW28CODE")
+#pragma rodata-name (push, "SW28RODATA")
+#pragma bss-name (push, "SW28RODATA")           /* (Its own data, what's wanted only while it runs: the main RAM's room) */
 
 #include "tput.inc"
 
-/* (What's wanted through a call of part 29's, tr_file: the main RAM's, or the C stack's, this part's own data its
+/* (What's wanted through a call of part 30's, tr_file: the main RAM's, or the C stack's, this part's own data its
 ** image's again after it, as ../dq0/swap.inc has it) */
 #pragma bss-name (push, "BSS")
 static unsigned char rsn, lim, pcs, smoke;      /* (The chunk at hand: its stratum, its place; the chunks the store
@@ -94,7 +94,7 @@ static unsigned char find (void)
 }
 
 /* The chunk at hand's entry plus 1: found, or made (a place for it: a free one, or the one least lately wanted that
-** isn't round the character put out, its records written to its region's file; its own read in from it: part 29's);
+** isn't round the character put out, its records written to its region's file; its own read in from it: part 30's);
 ** 0 if it can't be */
 static unsigned char need (void)
 {
@@ -120,7 +120,7 @@ static unsigned char need (void)
     }
     own ();
     if (THD->ch[best - 1].used) {
-        tr_file (best, TF_OUT);                 /* (Its records out, freed: part 29's) */
+        tr_file (best, TF_OUT);                 /* (Its records out, freed: part 30's) */
         own ();
     }
     e = &THD->ch[best - 1];
@@ -273,10 +273,10 @@ void __fastcall__ s_tr_flush (unsigned char keep)
 #pragma rodata-name (pop)
 #pragma bss-name (pop)
 
-/* ==== Part 28: the traces read (I_TRACE's, the UI's: HOUSE.md's light and traces) */
-#pragma code-name (push, "SW28CODE")
-#pragma rodata-name (push, "SW28RODATA")
-#pragma bss-name (push, "SW28RODATA")
+/* ==== Part 29: the traces read (I_TRACE's, the UI's: HOUSE.md's light and traces) */
+#pragma code-name (push, "SW29CODE")
+#pragma rodata-name (push, "SW29RODATA")
+#pragma bss-name (push, "SW29RODATA")
 
 #define NFOUND          6                       /* (The kinds read about the character, at most) */
 #define SR              6                       /* (A smell's reach one way, squares) */
@@ -392,7 +392,7 @@ static void __fastcall__ found (unsigned x, unsigned y, unsigned char d)
             }
             continue;
         }
-        hy_bank (ovbank[OVBANKS]);              /* (Its kind's numbers: part 27's) */
+        hy_bank (ovbank[OVBANKS]);              /* (Its kind's numbers: part 28's) */
         if (k >= TKN->n || (how == TRC_SMELL && !k)) {
             continue;                           /* (Its own sweat the character doesn't smell) */
         }
@@ -553,7 +553,7 @@ unsigned __fastcall__ s_traced (const struct msg* m)
         nf = smk = 0;                           /* (Nothing noticed) */
     }
     while (R.ntr < NTRAILS) {                   /* (The clearest first: whose, its words, its passings, how long since,
-                                                **   its way, part 30's to word) */
+                                                **   its way, part 31's to word) */
         for (best = 0, k = 0xFF, j = 0; j < nf; ++j) {
             if (fc[j] > best && fc[j] >= clear[how]) {
                 best = fc[j];
@@ -578,7 +578,7 @@ unsigned __fastcall__ s_traced (const struct msg* m)
     }
 done:
     hub_map (UI_BANK);
-    memcpy (&UIREC->tread, &R, sizeof R);       /* (The reply, its words to come: part 30's, then the event) */
+    memcpy (&UIREC->tread, &R, sizeof R);       /* (The reply, its words to come: part 31's, then the event) */
     hub_map (0);
     return tr_words (w);
 }

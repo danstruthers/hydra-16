@@ -130,7 +130,8 @@ unsigned char __fastcall__ pacing (const char* l);     /* Overlay 9 (pace.c): 0 
 struct req;
 struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned char b);   /* (main.c's) The referee
                                                 **   asked, the UI's slot */
-void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2);   /* (main.c's) An intent to the world */
+void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2);   /* (main.c's) An intent to the world (an
+                                                **   overlay's too) */
 void __fastcall__ wset (unsigned char what, unsigned char x, unsigned char y);  /* (main.c's) The character's state, or
                                                 **   the game's, set (the world's: the hub's wreq, WQ_SET, WS_*), from
                                                 **   anywhere (the window put back) */
@@ -207,8 +208,8 @@ void __fastcall__ sway_words (const struct sway* s);   /* Overlay 6: the charact
 void __fastcall__ dig_words (unsigned char how, unsigned char feet);   /* Overlay 1: digging's, how it goes */
 unsigned char __fastcall__ task_words (unsigned w, unsigned char named);   /* Overlay 3: a long task's (task.c) */
 void __fastcall__ beat_words (unsigned w);
-unsigned char __fastcall__ stop_kind (const char* word);
-unsigned char __fastcall__ answer_of (const char* l);
+unsigned char __fastcall__ stop_kind (const char* word);  /* Overlay 8 (task.c's): the task a stop names */
+unsigned char __fastcall__ answer_of (const char* l);     /*   and a question's answer */
 void __fastcall__ bar_text (char* s, unsigned done, unsigned len);
 unsigned __fastcall__ wait_of (const char* l, unsigned char n);
 void __fastcall__ state_words (unsigned char cond);

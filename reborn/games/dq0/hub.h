@@ -33,8 +33,10 @@
                                                 **   I_TAKE's walk alone, TE_ENGAGED, TE_FAR; 8: I_LOOK, V_LOOKED,
                                                 **   LK_WAY, a look one way's record, WAY_SEEN; 9: fighting on,
                                                 **   LT_FIGHT, the long task's foe, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE,
-                                                **   I_STOP's w1; 10: the traces, I_TRACE, I_TROD, I_SWEPT, V_TRACED,
-                                                **   the traces' journal, TJ_AT, the UI bank's tread) */
+                                                **   I_STOP's w1; 10: the lights burning, pc_fuel, pc_left, TE_LOW,
+                                                **   TE_OUT; the items' records' fuel; the traces, I_TRACE, I_TROD,
+                                                **   I_SWEPT, V_TRACED, the traces' journal, TJ_AT, the UI bank's
+                                                **   tread, dsense's nose) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -388,7 +390,7 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8, V_TRACED = 16 };
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN };  /* E_DIG's how (D_AGAIN: begun on
                                                 **   a hole dug part way before, the world's DUG record's) */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
-       TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE };
+       TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE, TE_LOW, TE_OUT };
                                                 /* E_TASK's: stopped as
                                                 **   the player asked; stopped hard, by a wound or a blow (HOUSE.md:
                                                 **   all wounds), by a hostile in sight within 30 feet; asking, soft
@@ -408,7 +410,12 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
                                                 **   no foe left (b 1: in shock, in no state to fight); a disengage
                                                 **   begun (b the foe plus 1; w's high byte 0 backing away, 1 a
                                                 **   flight, 2 a run from one not engaging it); none (b 0 not
-                                                **   engaged, 1 nothing near to flee, 2 no way back open) */
+                                                **   engaged, 1 nothing near to flee, 2 no way back open); a light
+                                                **   the character carries burning low, its last ten minutes (b its
+                                                **   kind; slice 4.1's: told, no question); a light gone out, its
+                                                **   fuel burnt (b its kind, | 0x80 one it sees lying there; its own,
+                                                **   its only light, its long task stopped hard with it, w's high
+                                                **   byte the task's kind: a climb's and a fight's go on) */
 #define TE_STILL        0x80
 #define TE_QUIET        0x40
 enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN };   /* E_BEAT's: a quiet stretch (HOUSE.md:
@@ -673,7 +680,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char pc_face;             /*   the way it faces (a heading: H_N ... H_NW), */
     volatile unsigned char pc_light;            /*   the light it carries: how far it reaches, in tiles (0: none:
                                                 **   the world's, from the lit things it holds: its item store's), */
-    char            pc_lamp[14];                /*   and the brightest of them, named */
+    char            pc_lamp[14];                /*   and the brightest of them, named (its minutes left: pc_fuel) */
     struct rs_summary pcsum;                    /* The character's summary (the referee's: its senses ...) */
     /* A look about asked of the senses (dq0p: the world asks, as the character's moved, turned, lit a light; kind
     ** LK_*): the squares it sees marked, what it perceives recorded in the senses' bank's sight, the denizens it sees
@@ -804,6 +811,10 @@ struct hub {                                    /* Bank 0, at $8000 */
         unsigned char foe;                      /* A fight's target, the actor plus 1 (the status line's "Fighting
                                                 **   the giant rat"; 0 none) */
     }               pc_task;
+    volatile unsigned pc_fuel;                  /* The character's light's minutes left (pc_lamp's: 0xFFFF, it never
+                                                **   burns down; the world's as its lights burn, slice 4.1's), */
+    char            pc_left[20];                /*   in words, for the status line ("torch 40m"; "" none, or one
+                                                **   that never burns down: the world's, as the referee's are its) */
 };
 #define SN_SEEN         0x01                    /* (dsense's res: the character seen, */
 #define SN_HEARD        0x02                    /*   heard, */
@@ -927,6 +938,8 @@ struct wsave {
 **   own hub.pc_face world
 **   own hub.pc_light world
 **   own hub.pc_lamp world
+**   own hub.pc_fuel world                                      (Its light's minutes left: slice 4.1's)
+**   own hub.pc_left world
 **   own hub.pcsum referee
 **   own hub.look senses +world                                 (The world's look asked)
 **   own hub.mapq maker +ui

@@ -1,7 +1,7 @@
 /*
 ** wtrfile.c - (dq0w) the traces' store's files (wtrace.c's: the store): a chunk's records written to its region's
 ** file in the save folder (trSXXYY.dat, a version of it each time: ../dq0/vfile.inc's; each chunk a group of its own
-** there), and read back.  Swapped part 29's (../dq0/swap.inc, bank.s's stub tr_file).
+** there), and read back.  Swapped part 30's (../dq0/swap.inc, bank.s's stub tr_file).
 */
 
 #include <fcntl.h>
@@ -19,10 +19,10 @@
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 #pragma static-locals (on)
 
-/* ==== Part 29: the store's files (its chunks' records written to their regions' files, read back) */
-#pragma code-name (push, "SW29CODE")
-#pragma rodata-name (push, "SW29RODATA")
-#pragma bss-name (push, "SW29RODATA")
+/* ==== Part 30: the store's files (its chunks' records written to their regions' files, read back) */
+#pragma code-name (push, "SW30CODE")
+#pragma rodata-name (push, "SW30RODATA")
+#pragma bss-name (push, "SW30RODATA")
 
 #include "tput.inc"
 

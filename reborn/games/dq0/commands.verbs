@@ -123,6 +123,7 @@ push        thing=VB_PUSH_OBJECT unsaid=front skill=P_FORCE
 pull        thing=VB_PULL_OBJECT unsaid=front skill=P_FORCE
 give        thing=VB_GIVE_OBJECT unsaid=last
 fill        thing=VB_FILL_OBJECT unsaid=last
+dip         thing=VB_FILL_OBJECT unsaid=last
 taste       thing=VB_TASTE_OBJECT unsaid=last
 touch       thing=VB_TOUCH_OBJECT unsaid=front
 flee        alone=VB_FLEE way=VB_FLEE task=LT_WALK
@@ -432,6 +433,8 @@ pull = pull
 give = give
 g = give
 fill = fill
+dip = dip
+soak = dip
 taste = taste
 touch = touch
 feel = touch

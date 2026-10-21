@@ -368,7 +368,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    13                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    14                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -387,7 +387,9 @@ static void sheet (void)
                                                 **   version is carried on; 11, the ruleset's referee: a game carried
                                                 **   on with the ruleset it was made with; 12, a thing's concealment
                                                 **   in steps, rs.h's scale; 13, each denizen's record its faction:
-                                                **   the theme's inhabitants) */
+                                                **   the theme's inhabitants; 14, the items' records their fuel,
+                                                **   the region files' groups the minute they were put out: the
+                                                **   lights burning, slice 4.1's) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -676,11 +678,9 @@ void status (void)
 
     strcpy (left, P.name[0] ? P.name : "Dingus Quest Zero");
     strcpy (right, paused ? "PAUSED  " : "");
-    if (task_[T_WORLD] > 0 && HUB->pc_task.kind && (HUB->pc_task.len || HUB->pc_task.foe)) {   /* (A long task's
-                                                **   bar, its part done; a fight's foe: task.c's) */
-        bar_text (right, bar_done = HUB->pc_task.done, HUB->pc_task.len);
-    }
     if (task_[T_WORLD] > 0) {
+        bar_text (right, bar_done = HUB->pc_task.done, HUB->pc_task.len);   /* (A long task's bar, its part done;
+                                                **   a fight's foe; the light's minutes left: task.c's) */
         strcat (right, HUB->pcstatus);          /* (The referee's words: "UP 0" ...) */
         strcat (right, "  facing ");
         strcat (right, head_abbr[HUB->pc_face & 7]);
@@ -962,16 +962,20 @@ static unsigned char events (void)          /* (How many there were) */
 void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2)
 {
     static struct msg m;
+    unsigned b = hub_here ();                   /* (An overlay's too: the hub's header put in the window for it, then
+                                                **   the overlay back; slice 4.1's, words.c's more) */
 
     m.kind = kind;
     m.who = 0;
     m.a = 0;
     m.w1 = w1;
     m.w2 = w2;
+    hub_map (0);
     if (hub_send (&m)) {
         busy = 1;
         t_prompt (0);
     }
+    hub_back (b);
 }
 
 #pragma code-name (push, "SW2CODE")

@@ -439,6 +439,14 @@ void o_words (void)
 unsigned char __fastcall__ o_more (unsigned char action)
 {
     switch (action) {
+    case VB_FILL_OBJECT:                        /* (A light renewed, slice 4.1's: "fill the lantern", "dip the torch in
+                                                **   the oil", the things' IO_FILL; its time, quietly) */
+        action = othings (IO_FILL, cmd.obj.word, cmd.other.word, 0);
+        msg (lb);
+        if (action == IR_OK) {
+            intend2 (I_WAIT, othings_x, 1);
+        }
+        break;
     default:
         return 0;
     }

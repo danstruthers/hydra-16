@@ -3,7 +3,7 @@
 ** are, the UI's to say (the UI bank's trtext).  "The floor here is flagged, grey with dust. It's been trodden: there
 ** are the marks of feet."  "Several small clawed feet have crossed the dust here, recently, leading ahead to your
 ** left: giant rats, by the look of them."  "A rank animal smell hangs here, fresh: something large passed not long
-** ago."  Each way by the character's facing, never the compass (HOUSE.md's).  Swapped part 30's (../dq0/swap.inc,
+** ago."  Each way by the character's facing, never the compass (HOUSE.md's).  Swapped part 31's (../dq0/swap.inc,
 ** bank.s's stub tr_words).
 */
 
@@ -21,9 +21,9 @@
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 #pragma static-locals (on)
 
-#pragma code-name (push, "SW30CODE")
-#pragma rodata-name (push, "SW30RODATA")
-#pragma bss-name (push, "SW30RODATA")
+#pragma code-name (push, "SW31CODE")
+#pragma rodata-name (push, "SW31RODATA")
+#pragma bss-name (push, "SW31RODATA")
 
 static struct tread R;
 static unsigned n;                              /* (The words so far: their length) */

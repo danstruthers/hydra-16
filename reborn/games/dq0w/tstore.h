@@ -48,7 +48,7 @@ struct thead {
 #define THD             ((struct thead*) 0x9800)
 #define NK              32                      /* (The kinds' numbers: dq0tr.dat's, the first the character's) */
 #define TREC            64                      /* (dq0tr.dat's record: dq0d/make.js's) */
-struct tkinds {                                 /* The kinds' numbers (read in as the store begins: part 27's) */
+struct tkinds {                                 /* The kinds' numbers (read in as the store begins: part 28's) */
     unsigned char   n;
     unsigned char   tread[NK], smell[NK], size[NK];
 };
