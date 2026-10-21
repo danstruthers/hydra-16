@@ -110,6 +110,10 @@ struct dkind {
 #define K_WAYS          0x04                    /* Its lairs are by the stratum's ways in and out */
 #define K_BOLD          0x08                    /* It comes towards the character */
 #define K_BONES         0x10                    /* It leaves its bones, dead (else its body) */
+#define K_LIGHTS        0x20                    /* It keeps lights: a mind that uses fire, needing light (its lair's
+                                                **   rooms kept lit: DUNGEON.md's light kept, slice 4.1) */
+#define K_SWEEPS        0x40                    /* It keeps its lair's floors swept (no dust there, its traces
+                                                **   scattered: DUNGEON.md's traces, slice 4.1) */
 enum { M_MINDLESS, M_BEAST, M_LOW, M_AVERAGE, M_CUNNING };   /* Its mind: nothing sways it; P_ANIMALS only; easily
                                                 **   fooled, hard to reason with; neither; hard to fool */
 #define KINDS           ((struct dkind*) 0x8000)

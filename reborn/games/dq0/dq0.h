@@ -80,6 +80,8 @@ void __fastcall__ ask_line (char* b, unsigned char max);  /* A line typed, waiti
 extern unsigned long now;                       /* The game's time */
 extern unsigned char pace, paused;
 extern const char* savedir;                     /* (main.c's: dq0 -d's, the save's folder) */
+unsigned char __fastcall__ more (unsigned char action);  /* Overlay 2 (words.c's): the commands chores hasn't, as
+                                                **   they come (slice 4.1's on): 1 if it was one, carried out */
 void __fastcall__ meta (unsigned char action);  /* Overlay 3 (task.c's): VB_META_PAUSE, the game paused; VB_META_SAVE,
                                                 **   kept, if it's kept (-d) */
 extern const char* const pacename[4];

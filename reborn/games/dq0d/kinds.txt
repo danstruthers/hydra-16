@@ -10,7 +10,9 @@
 #   name      what the character sees it as (11 letters at most)
 #   key       the referee's creature (7 at most)
 #   ways      letters: s shy (it keeps its distance from the character), a bold (it comes towards it), l it keeps
-#             to its lair, w its lairs are by the stratum's ways in and out (where everyone passes), or - none
+#             to its lair, w its lairs are by the stratum's ways in and out (where everyone passes), f it keeps
+#             lights (a mind that uses fire, needing light: its lair's rooms kept lit, DUNGEON.md), t it keeps its
+#             lair's floors swept (no dust there, its traces scattered), or - none
 #   styles    the strata's styles it lives in: b built, n natural, m mine, x mixed
 #   strata    the strata it lives in, from the top (0) down: first-last
 #   group     how many in a lair: least-most
@@ -54,15 +56,15 @@ cave spider | spider  | l    | nx     | 1-7    | 1-2   | 2     | 15    | 20-20 |
 ghoul       | ghoul   | a    | bx     | 1-7    | 2-4   | 2     | 120   | 50-40 | 40      | 10   | dead     | l    | -4   | 0    | 4    | *      | *       | d     | d      | claws bite        | body
 skeleton    | skel    | l    | b      | 0-7    | 2-5   | 1     | 20    | 40-40 | 20      | 12   | dead     | m    | 0    | 0    | 4    | *      | *       | *     | d      | weapon            | bones
 cave bear   | bear    | a    | n      | 1-7    | 1-1   | 1     | 100   | 30-10 | 40      | 9    | beasts   | b    | -2   | 12   | 5    | mhf    | ct      | *     | a      | claws bite        | body
-kobold      | kobold  | -    | m      | 1-7    | 3-6   | 2     | 150   | 50-30 | 40      | 10   | kobolds  | c    | 0    | 6    | 3    | mh     | *       | *     | f      | weapon            | body
+kobold      | kobold  | f    | m      | 1-7    | 3-6   | 2     | 150   | 50-30 | 40      | 10   | kobolds  | c    | 0    | 6    | 3    | mh     | *       | *     | f      | weapon            | body
 bat         | bat     | s    | nx     | 0-5    | 3-8   | 2     | 100   | 10-30 | 60      | 3    | vermin   | b    | 0    | 0    | 1    | *      | tw      | d     | a      | bite              | body
 cave adder  | adder   | l    | nmx    | 0-4    | 1-2   | 3     | 15    | 30-10 | 15      | 10   | crawlers | b    | -2   | 6    | 2    | mhs    | tw      | *     | a      | bite              | body
 basilisk    | basilsk | la   | bn     | 2-7    | 1-1   | 1     | 40    | 40-30 | 15      | 8    | beasts   | b    | -4   | 8    | 5    | mh     | tw      | d     | m      | bite              | body
 lindworm    | lindwrm | la   | nx     | 3-7    | 1-1   | 1     | 60    | 60-20 | 50      | 6    | beasts   | b    | -4   | 8    | 6    | fsc    | ct      | *     | m      | claws bite crush  | body
 wight       | wight   | la   | bx     | 2-7    | 2-6   | 2     | 30    | 40-40 | 30      | 11   | dead     | m    | 0    | 0    | 4    | *      | *       | d     | d      | touch claws       | body
 shade       | shade   | -    | b      | 3-7    | 1-1   | 1     | 50    | 50-50 | 40      | 10   | dead     | c    | -2   | 0    | 4    | *      | *       | d     | d      | weapon touch      | body
-kobold lord | koblord | -    | m      | 1-7    | 1-1   | 1     | 100   | 50-30 | 40      | 10   | kobolds  | c    | -1   | 6    | 3    | mh     | *       | *     | f      | weapon            | body
-bandit      | bandit  | -    | bx     | 0-2    | 2-5   | 2     | 100   | 50-10 | 40      | 10   | outlaws  | a    | 0    | 19   | 4    | *      | *       | l     | f      | weapon            | body
-bandit lord | banlord | -    | bx     | 0-2    | 1-1   | 1     | 60    | 50-10 | 40      | 10   | outlaws  | c    | -1   | 19   | 4    | *      | *       | l     | f      | weapon            | body
-cultist     | cultist | -    | b      | 1-5    | 2-4   | 2     | 60    | 50-10 | 40      | 10   | cult     | a    | -1   | 19   | 4    | *      | *       | l     | f      | weapon            | body
-high priest | priest  | -    | b      | 1-5    | 1-1   | 1     | 40    | 50-10 | 40      | 10   | cult     | c    | -2   | 19   | 4    | *      | *       | l     | f      | weapon            | body
+kobold lord | koblord | f    | m      | 1-7    | 1-1   | 1     | 100   | 50-30 | 40      | 10   | kobolds  | c    | -1   | 6    | 3    | mh     | *       | *     | f      | weapon            | body
+bandit      | bandit  | f    | bx     | 0-2    | 2-5   | 2     | 100   | 50-10 | 40      | 10   | outlaws  | a    | 0    | 19   | 4    | *      | *       | l     | f      | weapon            | body
+bandit lord | banlord | f    | bx     | 0-2    | 1-1   | 1     | 60    | 50-10 | 40      | 10   | outlaws  | c    | -1   | 19   | 4    | *      | *       | l     | f      | weapon            | body
+cultist     | cultist | ft   | b      | 1-5    | 2-4   | 2     | 60    | 50-10 | 40      | 10   | cult     | a    | -1   | 19   | 4    | *      | *       | l     | f      | weapon            | body
+high priest | priest  | ft   | b      | 1-5    | 1-1   | 1     | 40    | 50-10 | 40      | 10   | cult     | c    | -2   | 19   | 4    | *      | *       | l     | f      | weapon            | body

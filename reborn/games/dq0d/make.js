@@ -8,7 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const WAYS = { s: 0x01, l: 0x02, w: 0x04, a: 0x08 };   // dq0d.c's K_SHY, K_LAIR, K_WAYS, K_BOLD
+const WAYS = { s: 0x01, l: 0x02, w: 0x04, a: 0x08, f: 0x20, t: 0x40 };   // dq0d.c's K_SHY, K_LAIR, K_WAYS, K_BOLD, K_LIGHTS, K_SWEEPS
 const K_BONES = 0x10;                           //   and K_BONES
 const STYLES = { b: 0, n: 1, m: 2, x: 3 };      // level.h's ST_*: a bit each
 const MINDS = { m: 0, b: 1, l: 2, a: 3, c: 4 }; // dq0d.c's M_*

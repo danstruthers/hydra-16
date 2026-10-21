@@ -168,6 +168,7 @@ ovl_out:
             OVFN        appraise, 1
             OVFN        tell, 1
             OVFN        words, 2
+            OVFN        more, 2
             OVFN        stir_words, 9
             OVFN        heard_words, 9
             OVFN        den_words, 9

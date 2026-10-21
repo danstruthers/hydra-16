@@ -424,3 +424,14 @@ void o_words (void)
         lb_out ();                              /* (The last of it said) */
     }
 }
+
+/* The commands that want nothing but their action, past main.c's chores (its default's: part 2 has no room): 1 if
+** it was one of them, carried out; each slice's own cases here, its work in its own part or overlay */
+unsigned char __fastcall__ o_more (unsigned char action)
+{
+    switch (action) {
+    default:
+        return 0;
+    }
+    return 1;
+}

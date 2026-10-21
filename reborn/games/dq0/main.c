@@ -1330,7 +1330,7 @@ static unsigned char __fastcall__ chores (unsigned char action)
         quit = 1;
         break;
     default:
-        return 0;
+        return more (action);                   /* (The rest: overlay 2's, slice 4.1's on: the light's, the traces') */
     }
     return 1;
 }
