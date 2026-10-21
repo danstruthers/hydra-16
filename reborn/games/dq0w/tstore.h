@@ -1,6 +1,6 @@
 /*
-** tstore.h - (dq0w) the traces' store (wtrace.c, wtrfile.c, wtrword.c): its records, its directory, its files'
-** groups
+** tstore.h - (dq0w) the traces' store (wtrace.c, wtrfile.c, wtrscent.c): its records, its directory, its files'
+** groups, the kinds' numbers
 */
 
 #ifndef _TSTORE_H

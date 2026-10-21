@@ -1,9 +1,10 @@
 /*
 ** trace.h - (dq0w) the traces on the floor (slice 4.1, DUNGEON.md's traces on the floor): what the world's main code
 ** (dq0w.c), its walk's part (step_on, part 23) and the bodies' (wbody.c, part 14) share with the traces' store
-** (wtrace.c): a passing journalled (trod, in the main RAM: the hub's traces' journal, TJ_AT), the journal taken into
-** the store (part 27's tr_flush, the main loop's, as it fills; and the save's, the store kept), its chunks' files
-** (part 29's), and the traces read (part 28's traced: I_TRACE's), in words (part 30's).
+** (wtrace.c): a passing journalled (trod.inc's trod, in the part that makes it: the hub's traces' journal, TJ_AT),
+** the journal taken into the store (part 27's tr_flush, the main loop's, as it fills; and the save's, the store kept),
+** its chunks' files (part 29's), the traces read (part 28's traced: I_TRACE's), in words (part 30's), and a hunter's
+** way along the character's trail (part 31's tr_scent).
 */
 
 #ifndef _TRACE_H

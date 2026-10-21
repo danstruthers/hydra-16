@@ -32,8 +32,9 @@
 ** (the world's, as the things' are), E_VIEW V_TRACED.  Each kind's numbers and words are the denizens' data's
 ** (kinds.txt's tread, marks, smell, scent: dq0d/make.js's dq0tr.dat, its first record the character's own).
 **
-** Swapped part 27's (the store), 29's (its files), 28's (the reading) and 30's (its words: ../dq0/swap.inc, bank.s's
-** stubs); trod the main RAM's.
+** Swapped part 27's (the store: wtrace.c), 28's (the reading: wtrace.c), 29's (its files: wtrfile.c), 30's (its words:
+** wtrword.c) and 31's (a hunter's way along the character's trail: wtrscent.c; ../dq0/swap.inc, bank.s's stubs); each
+** passing journalled in the part that makes it (trod.inc's trod: dq0w.c's part 23, wbody.c's part 14).
 */
 
 #include <fcntl.h>
