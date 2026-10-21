@@ -171,7 +171,9 @@ ovl_out:
 
             SWPART      1, 6                ; The map (map.c)
             SWPART      2, 6                ; The seen maps' save (changes.c)
+            SWPART      3, 6                ; The rooms' sconces (sconce.c)
 
             SWFN        draw_map, 1
             SWFN        changes_save, 2
             SWFN        changes_restore, 2
+            SWFN        sconces, 3

@@ -78,7 +78,8 @@ static void __fastcall__ put_room (unsigned char x, unsigned char y, unsigned ch
     r->y = y;
     r->w = w;
     r->h = h;
-    r->flags = random (8) + STRATUM (L->sn).n < SP->lit ? R_LIT : 0;
+    r->flags = random (8) + STRATUM (L->sn).n < SP->lit ? R_SCONCE : 0;    /* (Sconces on its walls: lit only if
+                                                **   it's kept, fixtures.c's) */
     r->kind = random (8);
     for (j = y - 1; j <= y + h; ++j) {
         for (i = x - 1; i <= x + w; ++i) {

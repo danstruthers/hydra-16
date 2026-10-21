@@ -98,6 +98,12 @@ const EXPRS = {
   dsenseAt: F('struct hub', 'dsense'), dsenseSize: S('struct hub', 'dsense'),
   pcTask: F('struct hub', 'pc_task'), ltKind: F('struct ltask', 'kind'), ltLen: F('struct ltask', 'len'), ltDone: F('struct ltask', 'done'),
   ltFoe: F('struct ltask', 'foe'),
+  keptAt: '(unsigned) KEPT_AT - 0x8000', kpN: F('struct kept', 'n'), kpGen: F('struct kept', 'gen'), kpAt: F('struct kept', 'at'),
+  keepSize: 'sizeof (struct keep)', kpSn: F('struct keep', 'sn'), kpRange: F('struct keep', 'range'), kpLive: F('struct keep', 'live'),
+  kpCx: F('struct keep', 'cx'), kpCy: F('struct keep', 'cy'), kpLid: F('struct keep', 'lid'),
+  wStrata: F('struct wrec', 'strata'), stSize: 'sizeof (struct stratum)', maxstrata: 'MAXSTRATA', stMade: F('struct stratum', 'made'),
+  stN: F('struct stratum', 'n'), stX0: F('struct stratum', 'x0'), stY0: F('struct stratum', 'y0'), stW: F('struct stratum', 'w'),
+  stH: F('struct stratum', 'h'),
 };
 
 // The headers' enums and #defines with a number: { names: { NAME: value }, blocks: [[NAME ...] an enum's members] }
@@ -235,8 +241,20 @@ function createRecorder() {
       for (let i = 0; b && i < wb[q + L.cpN]; i++) {
         const o = (p % cper) * L.chPage + i * L.chSize, link = b[o + L.chLink];
         s.changes.push({ sn: b[o + L.chSn], x: w16(b, o + L.chX), y: w16(b, o + L.chY), tile: b[o + L.chTile], elev: s8(b[o + L.chElev]), link,
-          what: ['PORTAL_STATE', 'PORTAL_HARM', 'TRAP_STATE', 'STOCKED', 'DUG'].find(n => K[n] === link) || (link === 0xFF ? 'SQUARE' : 'OPENING') });
+          what: ['PORTAL_STATE', 'PORTAL_HARM', 'TRAP_STATE', 'STOCKED', 'DUG', 'ROOM_LIT'].find(n => K[n] === link) || (link === 0xFF ? 'SQUARE' : 'OPENING') });
       }
+    }
+    s.slots = [];                                                // (The strata's records in the hub's slots, the world's:
+    if (wb) for (let k = 0; k < L.maxstrata; k++) {              //   their bounds, as made)
+      const o = L.wStrata + k * L.stSize;
+      if (wb[o + L.stMade]) s.slots.push({ n: wb[o + L.stN], x0: w16(wb, o + L.stX0), y0: w16(wb, o + L.stY0), w: w16(wb, o + L.stW), h: w16(wb, o + L.stH) });
+    }
+    const db = bank(L.denBank);                                  // (The places kept lit, the denizens': hub.h's KEPT_AT)
+    if (db) {
+      const o = L.keptAt;
+      s.kept = { done: Array.from(db.subarray(o, o + 32)), n: db[o + L.kpN], gen: db[o + L.kpGen],
+        at: Array.from({ length: Math.min(db[o + L.kpN], 64) }, (_, i) => { const q = o + L.kpAt + i * L.keepSize;
+          return { sn: db[q + L.kpSn], range: db[q + L.kpRange], live: db[q + L.kpLive], cx: db[q + L.kpCx], cy: db[q + L.kpCy], lid: w16(db, q + L.kpLid) }; }) };
     }
     const ui = bank(L.uiBank);                                   // (The map's rows, as the maker last drew them)
     if (ui) for (let r = 0; r < L.mapH; r++) s.map.push(str(ui, L.uMap + r * (L.mapW + 1), L.mapW));

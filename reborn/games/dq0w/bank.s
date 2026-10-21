@@ -104,6 +104,7 @@ go:
             SWPART      24, 9               ; Engagement, a blow's close-in, fighting on (dq0w.c's)
             SWPART      25, 7               ; The engage initiative test, a grope's (dq0w.c's)
             SWPART      26, 9               ; Disengaging (dq0w.c's)
+            SWPART      27, 9               ; The rooms' lights by their sconces (wkept.c)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
@@ -175,6 +176,9 @@ go:
             SWFN        fight_on, 24
             SWFN        disengage_go, 26
             SWFN        flee_on, 26
+            SWFN        sconce_lights, 27
+            SWFN        sconce_chunk, 27
+            SWFN        kept_wait, 27
             SWFN        engaged, 25
             SWFN        fumbled, 25
             SWFN        den_first, 14

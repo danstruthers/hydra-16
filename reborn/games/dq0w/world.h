@@ -86,8 +86,10 @@ struct room {
     unsigned char   z0, nz;                     /* Its zones */
 };
 #define R_VISITED       0x01
-#define R_LIT           0x02
+#define R_LIT           0x02                    /* (Its own light: a glow, the style's; or its sconce's torch lit, the
+                                                **   world's, ROOM_LIT: DUNGEON.md, light kept) */
 #define R_MURDER        0x04                    /* (A gatehouse's: murder holes in its vault) */
+#define R_SCONCE        0x08                    /* (Built with sconces on its walls: the style's odds, stock.c's) */
 /* A room's use, its kind (the theme's words: its rooms' eight, then its uses'); a cave's chamber U_CAVE (kept in 8
 ** bytes, struct room: the tasks index their rooms by a shift) */
 enum { U_CHAMBER, U_HALL, U_CELL, U_VAULT, U_CRYPT, U_GALLERY, U_CAVE, U_STORE, U_KITCHEN, U_PANTRY, U_BARRACKS,
@@ -156,7 +158,9 @@ enum { PM_WOOD, PM_IRONBOUND, PM_IRON, PM_STONE };
 #define DUG             0xFA                    /* (And a hole dug part way, its square's: tile its half-feet dug,
                                                 **   elev the way, DIR_DOWN or the heading into the wall or the rock;
                                                 **   the world's to read, nothing in the chunk) */
-#define CH_TILE(l)      ((l) < DUG || (l) == 0xFF)  /* (A square's record: its kind, its floor, its link) */
+#define ROOM_LIT        0xF9                    /* (And a room's light, its sconce's, on its square: tile R_LIT or 0,
+                                                **   the room it's in its own light or not) */
+#define CH_TILE(l)      ((l) < ROOM_LIT || (l) == 0xFF)    /* (A square's record: its kind, its floor, its link) */
 /* A window (T_WINDOW, PK_WINDOW) and an arrow slit (T_WINDOW, PK_SLIT, always open) are seen through (the senses'),
 ** but a window's closed shutters; a portcullis (T_DOOR, PK_PORTCULLIS) is seen through, up or down.  A window's glass
 ** and bars are items of their own (a pane, bars: items.h's IW_PORTAL, on its square), as a door's bar is (on the

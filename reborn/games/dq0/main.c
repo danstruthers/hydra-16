@@ -368,7 +368,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    13                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    14                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -387,7 +387,8 @@ static void sheet (void)
                                                 **   version is carried on; 11, the ruleset's referee: a game carried
                                                 **   on with the ruleset it was made with; 12, a thing's concealment
                                                 **   in steps, rs.h's scale; 13, each denizen's record its faction:
-                                                **   the theme's inhabitants) */
+                                                **   the theme's inhabitants; 14, the places kept lit after
+                                                **   the denizens' dens.dat) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -542,8 +543,10 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     HUB->seed = seed;
     HUB->test_start = test_start;
     HUB->small = small;
-    hub_map (DEN_BANK);                         /* (The sounds' words: none till the sound task's put them there) */
+    hub_map (DEN_BANK);                         /* (The sounds' words: none till the sound task's put them there; the
+                                                **   places kept lit, the denizens' as they decide its populations) */
     memset (SND_AT, 0, (2 * SND_KINDS + SND_WORLD) * SND_REC);
+    memset (KEPT_AT, 0, sizeof (struct kept));
     hub_map (0);
     start ("dq0c", T_COMMANDS, libdir);         /* (Its command parser: its tables read as the others start) */
     start ("dq0s", T_SOUND, libdir);            /* (Its sound: SOUND.md) */

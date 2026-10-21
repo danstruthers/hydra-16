@@ -520,6 +520,39 @@ climb's test to hold on).
   listening) is told after what's plain at a glance, as its own line, saying how it was found: "You arrive at a
   closed door.", "Searching about...", "You find a gas trap, set to go off when the door is opened."
 
+## Light and traces (slice 4.1)
+
+Every ruleset's (the book gives no figures for any of it).  As built, for the user to review.
+
+**Kept light** (DUNGEON.md's light kept; the user's, 2026-10-16: lights are somebody's):
+
+- **Who keeps lights:** the kinds with kinds.txt's f (kobolds, the kobold lord, bandits, the bandit lord, cultists,
+  the high priest).  The dead, the beasts, the vermin and the things that see in the dark keep none.
+- **How far:** a lair keeps lit every room whose sconce stands within its kind's range (kinds.txt's: a kobold's 150
+  feet, 30 squares) either way of the middle of the lair's chunk (its home isn't known till it's placed).  Passages
+  have no sconces, so they stay dark.
+- **Sconces:** the style's old odds of a room lit by its own light are now the odds of a room built with sconces:
+  built 5 in 8, mixed 4, mine 2 (a natural stratum's caves have none), one fewer each stratum down; and every room its
+  keepers keep lit has one, their own.  A glowing cave chamber never has one (its light is nobody's).  One sconce a
+  room, standing for its sconces, on a square of its floor beside a wall.  An unkept room's holds a cold torch, part
+  burnt, three times in four; else nothing (burnt away, or taken, long ago).
+- **The sconce:** iron, a pound and a half, worth 4 pennies, fixed to the wall (never taken up); it holds 3 pints
+  and bears 2 pounds (a torch, a candle; not a lantern); made out 10 squares past a speck.
+- **A lit thing in a sconce lights its room** throughout, as a room's own light does (level 6), whoever lit it: its
+  keepers, or the character lighting the cold torch where it is or putting a lit one in.  Put out, taken, or burnt
+  away, the room is dark again.  It is never a lamp of its own besides.  (The design's first thought was that a torch
+  the character lights in a sconce lights only round it, as a torch put down does; one item stands for the room's
+  sconces, so it lights the room as the keepers' does, the same rule for everyone.)
+- **Tended:** a kept room's torch is tended (renewed by its keepers: it never burns down while they live).  Taken
+  from its sconce it is the character's, an ordinary torch (the item store's moves end its tending: the lights').
+- **Keepers gone:** as a lair's last keeper dies, its torches are tended no longer and burn down from then; seen to
+  each game minute round the character, so a torch whose chunk was away from the character begins to burn as it comes
+  near again.  Keepers that leave a stratum: none do yet.
+- **Commands:** take the torch from the sconce, light the torch in the sconce, put out the torch in the sconce (each
+  walked over to first, if it's out of reach); put the torch in the sconce (within reach: "go over to it first").
+- **The same dungeon each game:** a stratum's populations are decided before its first chunk is made (the world waits
+  for them, ten seconds at most), so the same seed stocks the same sconces and lights the same rooms.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

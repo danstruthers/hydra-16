@@ -630,6 +630,9 @@ unsigned char s_serve (void)
         s_light_now ();                         /* (Its light: what it holds lit) */
         changed |= iq.result == IR_OK;
     }
+    if (iq.result == IR_OK && (iq.kind == IO_GET || (iq.kind >= IO_HOLD && iq.kind <= IO_DOUSE))) {
+        sconce_lights (1);                      /* (A sconce's torch taken, put in, lit, put out: its room's light) */
+    }
     hub_map (0);
     HUB->ireq.result = iq.result;
     return changed && iq.kind != IO_KIT;
@@ -1182,14 +1185,15 @@ void s_kit (void)
 }
 
 /* Cache slot k's chunk's things put down, as the maker listed them stocking it (the world bank's stock: a thing on a
-** square of the chunk, concealed or not; a portal's part, in its portal or by it, its make the portal's), in the
-** list's order (the hub's header in the window after) */
+** square of the chunk, concealed or not; a portal's part, in its portal or by it, its make the portal's; a sconce's
+** torch in it, a kept room's lit and tended: DUNGEON.md, light kept), in the list's order (the hub's header in the
+** window after) */
 void __fastcall__ s_stock_down (unsigned char k)
 {
     struct sthing e;
     struct item* p;
-    unsigned x0, y0, i;
-    unsigned char sn, n, j, m;
+    unsigned x0, y0, i, prev = 0;
+    unsigned char sn, n, j, m, w;
 
     hub_map (WORLD_BANK);
     sn = WREC->cslot[k].sn;
@@ -1203,13 +1207,18 @@ void __fastcall__ s_stock_down (unsigned char k)
     for (j = 0; j < n; ++j) {
         hub_map (WORLD_BANK);
         memcpy (&e, &WREC->stock[k].e[j], sizeof e);
-        if (!(i = put_down (e.kind, e.hide == ST_PORTAL ? IW_PORTAL : IW_SQUARE, sn, x0 + e.x, y0 + e.y, e.qty))) {
+        w = e.hide == ST_PORTAL ? IW_PORTAL : e.hide == ST_IN || e.hide == ST_LIT ? IW_ITEM : IW_SQUARE;
+        if (!(i = put_down (e.kind, w, sn, w == IW_ITEM ? prev : x0 + e.x, y0 + e.y, e.qty))) {
             break;                              /* (The store full: no more) */
         }
+        prev = i;
         p = item_at (i);
-        if (e.hide < ST_PORTAL) {
+        if (e.hide < ST_LIT) {
             p->flags = I_HIDDEN;
             p->hide = e.hide;
+        }
+        if (e.hide == ST_LIT) {                 /* (A kept room's sconce's torch: the room lit by it, store.c's) */
+            p->flags = I_LIT | I_TENDED;
         }
         if (e.make) {                           /* (A portal's part's make: the portal's) */
             p->mat = m = e.make >> 4;
@@ -1443,18 +1452,20 @@ static unsigned char __fastcall__ stow (unsigned n, unsigned char put)
     cf = KIND (c)->flags;
     r = KIND (c)->keeps;
     o_place (n, IW_ITEM, c, 0);
-    return yes (cf & K_BELT ? SA_HANG : r & KF_ON ? SA_PUT_ON : c == pack ? SA_STOW : SA_PUT_IN, 20);
+    return yes (cf & K_BELT ? SA_HANG : (r & KF_ON) && B (m1 (item_kind, c)) != KI_SCONCE ? SA_PUT_ON : c == pack ?
+        SA_STOW : SA_PUT_IN, 20);               /* (A sconce's: in it) */
 }
 
-/* Taken from the other thing: into the pack, else a hand (from what's on the character: into a hand) */
-static unsigned char take_from (void)
+/* The thing named (iq's name) in the other thing (iq's into: other's, in c), or on it: its number, named in xn; else
+** 0, its words why */
+static unsigned c;
+static unsigned in_other (void)
 {
-    static unsigned c, n, id;
-    static unsigned char r;
+    static unsigned n, id;
     static const char* w;
 
     if (!(c = other ())) {
-        return IR_NO;
+        return 0;
     }
     id = 0;
     if (*(w = iq.name) == '#') {                /* (A name the character gave it: the UI's "#" and its id) */
@@ -1469,9 +1480,22 @@ static unsigned char take_from (void)
         }
     }
     if (n >= NITEMS) {
-        return no (SA_NOT_IN);
+        no (SA_NOT_IN);
+        return 0;
     }
     name_of (n, 1);
+    return n;
+}
+
+/* Taken from the other thing: into the pack, else a hand (from what's on the character: into a hand) */
+static unsigned char take_from (void)
+{
+    static unsigned n;
+    static unsigned char r;
+
+    if (!(n = in_other ())) {
+        return IR_NO;
+    }
     if (B (m1 (on_pc, c))) {
         return hold (n);
     }
@@ -1551,6 +1575,10 @@ static unsigned char __fastcall__ light (unsigned char on)
         }
         if (n >= NITEMS) {
             return no (on ? SA_NONE_TO_LIGHT : SA_NONE_LIT);
+        }
+    } else if (*iq.into) {                     /* (The one in the other, or on it: a sconce's torch) */
+        if (!(n = in_other ())) {
+            return IR_NO;
         }
     } else if (!(n = m1 (at_hand, (unsigned) iq.name))) {
         return no (afar ? SA_REACH : SA_NO_SUCH);

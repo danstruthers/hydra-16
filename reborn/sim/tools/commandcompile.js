@@ -702,6 +702,13 @@ function phraseSem(spec, env, ctx) {
     case 'light': case 'extinguish': {
       const action = r === 'light' ? 'VB_LIGHT_OBJECT' : 'VB_EXTINGUISH_OBJECT';
       if (!direct[0]) return act(action, { object: 'fire' });
+      const inp = kidsOf(spec, 'in-phrase')[0];        // (The one in another, or on it: a sconce's torch)
+      if (inp) {
+        const o = objOf(0), c = objRole(findFirst(inp, 'object'), env, ctx);
+        if (o.stop) return o.stop;
+        if (c.stop) return c.stop;
+        return act(action, { object: o.value, container: c.value });
+      }
       return withObj(action, null, true);
     }
     case 'enter': return direct[0] ? withObj('VB_ENTER') : act('VB_ENTER', {});

@@ -1149,13 +1149,15 @@ void __fastcall__ s_step_to (unsigned char h, unsigned char n, unsigned char kee
 #pragma rodata-name (push, "SW3RODATA")
 
 /* Stratum n's plan grown by the maker (its record set in the world bank's strata first), and its record as grown
-** (the maker's wrec.grown) written into the strata's, the world's (the hub's header in the window after) */
+** (the maker's wrec.grown) written into the strata's, the world's; then its populations waited for (the hub's header
+** in the window after) */
 static void __fastcall__ planned (unsigned char n)
 {
     ask_maker (M_PLAN, n, 0, 0);
     hub_map (WORLD_BANK);
     memcpy (&WREC->strata[SLOT (n)], &WREC->grown, sizeof WREC->grown);
     sync_strata ();
+    kept_wait (n);                              /* (Its populations, wkept.c's) */
 }
 
 static unsigned char vast;                      /* (dq0 -T -T -T -T's: the strata below vast) */
@@ -1530,6 +1532,7 @@ void s_begin (void)
         sync_strata ();
         store_begin (1);
         ask_maker (M_RESTORE, 0, 0, 0);
+        kept_wait (move.sn);                    /* (The places kept read back, the denizens') */
         return;
     }
     store_begin (0);                            /* (A new game's generation: the folder's files of another not read) */

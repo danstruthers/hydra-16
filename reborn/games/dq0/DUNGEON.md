@@ -68,7 +68,8 @@ by a request or an intent.
   raised, climbed through; set off, found, disarmed; a search: dq0w/wdoor.c, wblow.c, wwin.c, wtrap.c, swapped parts,
   a command's work all in one of them), asks the referee for its judgements itself (its own slot), and writes the
   **change records** (dq0w/store.c), the only one to: each a record (a stratum, a square, what it became: its kind,
-  its floor, the link it is; or a portal's state, its harm, a trap's state; a chunk stocked), a square's record of a
+  its floor, the link it is; or a portal's state, its harm, a trap's state, a room's light, its sconce's; a chunk
+  stocked), a square's record of a
   kind replacing the one before it, kept by **region** (256 squares each way, the plan's) in the 64 pages of the
   hub's two change banks, under the hub's change_lock (the maker reads them meanwhile), and paged to the save folder
   (no fixed size).
@@ -97,7 +98,8 @@ by a request or an intent.
   pc_foe) and a denizen's alike: the **referee** asked in the world's slot, what the blow did kept by the world
   (senseless, fleeing, bleeding, dead: the remains an item), its words put by the world in the fights' ring.  The
   referee writes nothing of the hub's but its own replies and records (the sheets, pcstatus, pcsum).  The denizens
-  take each blow to heart as they read it (their courage, RS_MORALE in their own slot; their attitudes).  At the
+  take each blow to heart as they read it (their courage, RS_MORALE in their own slot; their attitudes), and keep
+  the places kept lit (the hub's KEPT_AT: light kept, below), as they decide a stratum's populations.  At the
   **turns pace** the world gives the denizens their turn (den_go) at each slice of the clock and after its own work
   at the same clock, and waits for their I_DONE, carrying out their intents meanwhile: the same game whatever the
   tasks' timing, the referee's one stream of dice seeing the same requests in the same order.
@@ -604,6 +606,51 @@ critical success right, a marginal success near (its make a step off, its worth 
 off, a critical failure wild (said as surely).  The judgement isn't remembered with the thing; the theme's things
 have no values of their own yet.
 
+### Light kept: somebody's
+
+The user (2026-10-16): "If I am in an old dungeon, why would all of the torches in the wall sconces be lit if no one
+is there to light them?  If the denizens of the dungeon do not need the lights, would they be on?  Would they be
+wasting torches if the rooms were never in use?"
+
+**A room is lit only if someone keeps it lit** (slice 4.1).  A population whose kind keeps lights (kinds.txt's f: a
+mind that uses fire and needs light; DENIZENS.md, their lights) keeps lit the rooms about its lair, as far as its
+range takes it; the dead, the beasts, the vermin and the things that see in the dark keep none, and an old place
+nobody tends is dark.  A light that's nobody's (a cave's glow, magic) stays as the style has it.
+
+- **Sconces.**  The style's old odds of a room lit by its own light are now the odds of a room built with sconces
+  (R_SCONCE, the maker's: one fewer in 8 each stratum down, as before), and every room its keepers keep lit has one
+  too (their own brackets), but a glowing one.  A room's sconce (one item, standing for its sconces) is a fixture on a
+  square of its floor beside a wall (the catalogue's: iron, fixed, never taken up; a surface a torch goes in, not a
+  container), placed as the chunk's first stocked, each room's own dice (dq0m/sconce.c, the maker's part 3, after
+  stock.c's: nothing else moves for them).  A kept room's holds a torch lit and tended (I_TENDED: its keepers renew
+  it, so it never burns down while they live); another's a cold one, part burnt (the lights' found lights), or none
+  (one in four: burnt away, or taken, long ago).
+- **A sconce's light is its room's own** (R_LIT, the light layer's: its floor and walls lit throughout), whoever lit
+  it: its keepers, or the character lighting the cold torch where it is (light the torch in the sconce), or putting a
+  lit one in it.  Put out, taken away, burnt away: the room's dark again.  So a lit thing in a sconce is never a lamp
+  of its own (the senses' lamps leave it out: dq0p/things.c), and the room's light is a change in the world's change
+  records (ROOM_LIT, on a square of the room: R_LIT or 0), the world's to keep as the sconce's lights change (dq0w/
+  wkept.c, its part 27: after a thing's handled within reach, and each game minute for the chunks round the
+  character, a torch burnt out; each sconce keeping its room's light as the world last made it, so a pass changes only
+  what's changed), written as its kept room's first stocked too, so a chunk made again has it.
+- **Who decides.**  The denizens' task, as it decides a stratum's populations, writes the places kept in the hub
+  (KEPT_AT, in DEN_BANK after the fights' words: each lair of a kind that keeps lights, its chunk, its keepers' range,
+  how many of them live) and marks the stratum done there; the world, as it grows a stratum's plan (and as a game's
+  carried on), waits for that before its first chunk is made (ten seconds at most, the denizens' intents carried out
+  meanwhile), so the maker stocks every chunk by them from the first: a chunk's always stocked the same.  A room's
+  kept if its sconce's square is within the range of a keeping whose keepers live, either way from the middle of its
+  lair's chunk (the lair's home isn't known till it's placed).  The places kept are kept with the game (the denizens'
+  dens.dat, after their bank).
+- **Keepers gone.**  As a lair's last keeper dies its keeping's gone (kept no longer); the world, each game minute,
+  finds the tended torches in sconces no live keeping reaches and tends them no longer: they burn down from then (the
+  lights' burning), and as each goes out its room goes dark.  A torch in a chunk that's out of the item store is seen
+  to as its chunk comes back near the character (it burns from then: no one saw it meanwhile).  None flee a stratum
+  yet.
+- **Seen**: a sconce is told as a thing on the wall, what's in it with it: "On the wall to your left is a sconce, a
+  lit torch in it." (the way it lies, the nearest of the four; "beside you" on its square); a room lit by its sconce
+  says the theme's light ("lit by smoky tallow lamps": the people's), a dark one by the character's own light ("by the
+  light of your torch"), its sconce's torch cold ("a torch in it").
+
 ### Hidden things, and seeing in the dark
 
 - **Searching** is one ability for every hidden thing: an item (above), an exit (a secret door: a square that looks
@@ -732,11 +779,12 @@ threshold; what it reads becomes the circumstances (the steps) of the referee's 
   square (0 dark ... 15), 512 bytes a chunk, worked out as it's first wanted and again only near a change
   (dq0p/light.c: 16 chunks' grids in a bank of the senses' own).  Light is the only layer built; sound, smell and the
   rest are still to come (below).
-- **The light layer.**  Its emitters: a lit room's own light (R_LIT: its floor and walls, 6) and the lit things lying
-  about (a lamp of reach r, its kind's light: the squares within r each way it has a clear line to from two feet above
-  its floor, 2 (r - d) + 1 at d squares off: a torch 9 by it, 1 at its reach).  A chunk's grid is worked out again
-  only as something changes near it: a lamp lit, put out, put down or taken up (each look's lamps against the last's),
-  a door opened or shut or a square dug (the world's E_LIGHT, from its change records), the stratum left.  The look
+- **The light layer.**  Its emitters: a lit room's own light (R_LIT: its floor and walls, 6; a glow's, or its sconce's
+  light: light kept, above) and the lit things lying about, but those in a sconce (a lamp of reach r, its kind's
+  light: the squares within r each way it has a clear line to from two feet above its floor, 2 (r - d) + 1 at d
+  squares off: a torch 9 by it, 1 at its reach).  A chunk's grid is worked out again only as something changes near
+  it: a lamp lit, put out, put down or taken up (each look's lamps against the last's), a door opened or shut, a square
+  dug or a room's light changed (the world's E_LIGHT, from its change records), the stratum left.  The look
   takes what's lit from it (the character's own light folded in as it carries it), and seeing a square is still a line
   from the eyes to a lit square (cast.s).
 - **Seeing a light isn't being lit by it.**  A light far off is its source in view, whose reach is far greater than

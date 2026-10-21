@@ -72,6 +72,8 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_MACE, KI_SPEAR, KI_SHIELD,               /* Weapons (the referee's by their keys) */
     KI_POT, KI_STRAW, KI_STUBS, KI_WELL,        /* What a room's use left (dq0m/uses.c): a kitchen's pot, a barracks'
                                                 **   straw, a chapel's candle stubs; a well, fixed */
+    KI_SCONCE,                                  /* A room's sconce, on its wall (slice 4.1's: the maker's, fixed): a
+                                                **   torch in it, lit and tended where the room's kept, else cold */
     KI_COUNT };
 
 /* An item */
@@ -88,7 +90,9 @@ struct item {
     unsigned char   wear;                       /* Its wear, 0 new ... 255 (a blade dug with, dulled) */
     unsigned char   hide;                       /* Concealed on purpose (I_HIDDEN): how hard to find, the steps worse
                                                 **   a search for it goes (rs.h's: the method's and the concealer's
-                                                **   skill's; 0 a floor's dust and corners only) */
+                                                **   skill's; 0 a floor's dust and corners only); a sconce's (never
+                                                **   hidden): its room's light as the world last made it (SC_LIT; and
+                                                **   SC_NOW, a pass's mark: a light in it lit), DUNGEON.md's light kept */
     /* Its own (no two alike: the world's, as it first comes to it, a look's; id 0 till then) */
     unsigned        id;                         /* Its number, never another's (record 0's x the last given) */
     unsigned char   quality;                    /* How well it's made: 0 crude ... 9 a master's */
@@ -99,6 +103,8 @@ struct item {
                                                 **   opening, world.h's: feet, its width the low four bits; or 0) */
     unsigned char   thick;                      /*   and its thickness, in eighths of an inch (or 0) */
 };
+#define SC_LIT          0x01                    /* (A sconce's hide: its room lit by it, as the world last made it; */
+#define SC_NOW          0x02                    /*   a light in it lit now, the world's pass's mark) */
 #define I_LIT           0x01                    /* A light, lit */
 #define I_HELD          0x02                    /* In a hand */
 #define I_WORN          0x04                    /* Worn (a belt, a pack, armour) */
@@ -107,6 +113,10 @@ struct item {
 #define I_KNOWN         0x20                    /* Known to the character (seen, or found) */
 #define I_NAMED         0x40                    /* Named by the character (the UI's names: hub.h's struct tname, by
                                                 **   its id; marked in what's carried, worded: "#id a sword") */
+#define I_TENDED        0x80                    /* A light its keepers tend (a kept room's sconce's torch: the keepers'
+                                                **   to set, slice 4.1's): it never burns down while it's tended;
+                                                **   moved by the item store (taken up, put down, handled) it's tended
+                                                **   no longer, and burns as any light does */
 enum { IW_SQUARE, IW_ACTOR, IW_ITEM,
     IW_PORTAL };                                /* A portal's part (a door's bar, a window's pane or bars: the maker's,
                                                 **   as it stocks a chunk), in it: sn, x, y its square (a bar's, the
@@ -210,6 +220,8 @@ struct sthing {
 };
 #define ST_SHOWN        0xFF
 #define ST_PORTAL       0xFE
+#define ST_IN           0xFD                    /* (In the thing listed before it, on it: a sconce's torch, cold; */
+#define ST_LIT          0xFC                    /*   lit and tended, a kept room's: DUNGEON.md, light kept) */
 struct stock {
     unsigned        seq;                        /* The chunks the maker's stocked, counted, as it stocked this one */
     unsigned char   n;

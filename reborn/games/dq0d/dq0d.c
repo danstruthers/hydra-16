@@ -26,6 +26,11 @@
 ** ally follows it and takes its requests; factions hostile to one another keep off one another.  (Their own exploring
 ** comes later.)
 **
+** As it decides a stratum's populations it says which places are kept lit (DUNGEON.md: light kept): each lair of a
+** kind that keeps lights (kinds.txt's f), its chunk and its keepers' range, in the hub's places kept (KEPT_AT), the
+** stratum marked done there (the world waits for that before its first chunk's made, the maker stocks by it); and as
+** a lair's last keeper dies, its keeping's gone (its torches burn down from then: the world's).
+**
 ** Its records (the lairs, the denizens) are in a bank of its own, a record at a time copied out, a cache (move 2.8:
 ** no fixed count of them): each region's (the frame's, 256 squares each way: a lair's by its chunk's first square, a
 ** denizen's by its square, or, not placed yet, its lair's; no stratum's record wanted to find it) all in it or none, those round the character's always (one each way), the rest in
@@ -347,6 +352,7 @@ static unsigned char lf, ln, ll, lspill;
 static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, unsigned char j)
 {
     struct stratum* s = &STRATUM (n);
+    struct keep* q;
     unsigned char i, rx = 0, ry = 0, t, u;
     unsigned w = (s->w + CW - 1) / CW, h = (s->h + CW - 1) / CW;
 
@@ -401,6 +407,20 @@ static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, un
     }
     L.n = i;
     lair_put (t);
+    if ((K.flags & K_LIGHTS) && i) {            /* (Its keepers' lights: the places kept, the hub's) */
+        hub_map (DEN_BANK);
+        if ((u = KEPT_AT->n) < NKEPT) {
+            q = &KEPT_AT->at[u];
+            q->sn = n;
+            q->range = K.range;
+            q->live = i;
+            q->cx = L.cx;
+            q->cy = L.cy;
+            q->lid = L.id;
+            KEPT_AT->n = u + 1;
+        }
+        hub_map (0);
+    }
     return 1;
 }
 
@@ -451,25 +471,32 @@ void __fastcall__ s_populate (unsigned char n)
         }
     }
     hd.done[n >> 3] |= 1 << (n & 7);
+    hub_map (DEN_BANK);                         /* (Its places kept whole: so said, the world's to go on) */
+    KEPT_AT->done[n >> 3] |= 1 << (n & 7);
+    hub_map (0);
 }
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
 /* The strata grown since the last look, populated (none while the world's asking the maker: a plan may be half
-** copied into the world bank) */
+** copied into the world bank), whatever the pace (the world waits for them: KEPT_AT) */
 static void grow (void)
 {
-    unsigned char n, m, k;
+    static unsigned char ms[MAXSTRATA], ns[MAXSTRATA];
+    unsigned char k;
 
-    for (k = 0; k < MAXSTRATA; ++k) {           /* (The hub's slots: each one's stratum, its own number) */
-        hub_map (WORLD_BANK);
-        m = WREC->strata[k].made;
-        n = WREC->strata[k].n;
-        hub_map (0);
-        if (m && !DONE (n) && !hub_posted (&HUB->mreq[ASK_WORLD])) {
+    hub_map (WORLD_BANK);                       /* (The hub's slots: each one's stratum, its own number; at once, as
+                                                **   it's looked at every time round) */
+    for (k = 0; k < MAXSTRATA; ++k) {
+        ms[k] = WREC->strata[k].made;
+        ns[k] = WREC->strata[k].n;
+    }
+    hub_map (0);
+    for (k = 0; k < MAXSTRATA; ++k) {
+        if (ms[k] && !DONE (ns[k]) && !hub_posted (&HUB->mreq[ASK_WORLD])) {
             sync_strata ();
-            populate (n);
+            populate (ns[k]);
         }
     }
 }
@@ -1021,13 +1048,24 @@ static void hear (void)
 #pragma code-name (push, "SW4CODE")
 #pragma rodata-name (push, "SW4RODATA")
 
-/* Actor k dead (the hub's entry as it is: its body the world's, gone): its record so, the entry free */
+/* Actor k dead (the hub's entry as it is: its body the world's, gone): its record so, the entry free; its lair's
+** keeping one keeper the fewer (none left: gone, kept no longer, the world's to see to its torches) */
 void __fastcall__ s_killed (unsigned char k)
 {
+    struct keep* q;
+    unsigned char i;
+
     write_back (k);
     D.flags = (D.flags & ~(D_ACTOR | D_OUT)) | D_DEAD;
     den_put (a.den);
     HUB->actor[k].name[0] = 0;
+    hub_map (DEN_BANK);
+    for (i = KEPT_AT->n, q = KEPT_AT->at; i; --i, ++q) {
+        if (q->lid == D.lid && q->live && !--q->live) {
+            ++KEPT_AT->gen;
+        }
+    }
+    hub_map (0);
 }
 
 /* Actor k fallen (dead, senseless): its kin among the actors test their courage (RS_MORALE, a bad situation, two
@@ -1925,8 +1963,8 @@ int main (int argc, char* argv[])
         if (hub_posted (&HUB->sway)) {          /* (The UI's: the character's way with a denizen) */
             sway ();
         }
+        grow ();                                /* (In its turn or not: the world waits for a new stratum's) */
         if (act) {
-            grow ();
             struck |= fought ();                /* (The character's blows: the slice's first, the world's) */
             if (DONE (pcs)) {
                 hear ();
@@ -2217,8 +2255,33 @@ void s_dneed (void)
     }
 }
 
+/* (The main RAM's: part 4's room) The places kept lit (the hub's KEPT_AT) written to the save's dens.dat, after the
+** records' bank (fd), a piece at a time through the main RAM; or read back (back: nothing there, none) */
+#pragma code-name (push, "CODE")
+static void __fastcall__ kept_file (int fd, unsigned char back)
+{
+    unsigned off, n;
+
+    for (off = 0; off < sizeof (struct kept); off += n) {
+        n = sizeof (struct kept) - off < sizeof piece ? sizeof (struct kept) - off : sizeof piece;
+        if (back && read (fd, piece, n) != n) {
+            memset (piece, 0, n);
+        }
+        hub_map (DEN_BANK);
+        if (back) {
+            memcpy ((char*) KEPT_AT + off, piece, n);
+        } else {
+            memcpy (piece, (char*) KEPT_AT + off, n);
+            write (fd, piece, n);
+        }
+    }
+    hub_map (0);
+}
+#pragma code-name (pop)
+
 /* ---- The records kept (back: read again), the save folder's dens.dat: the bank a piece at a time, through the
-** main RAM (the actors' places written back first; read back, none an actor yet; none read but this version's) */
+** main RAM (the actors' places written back first; read back, none an actor yet; none read but this version's); and
+** after it the places kept lit (the hub's KEPT_AT) */
 void __fastcall__ s_keep (unsigned char back)
 {
     unsigned off;
@@ -2263,6 +2326,7 @@ void __fastcall__ s_keep (unsigned char back)
             write (fd, piece, sizeof piece);
         }
     }
+    kept_file (fd, back);
     close (fd);
     if (back) {
         hy_bank (pb);

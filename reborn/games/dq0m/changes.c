@@ -75,6 +75,7 @@ static struct seen* __fastcall__ seen_at (unsigned char i)
 static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned char ly, unsigned char tile,
     signed char elev, unsigned char link)
 {
+    struct room* r;
     unsigned char i;
 
     if (link == STOCKED || link == DUG) {       /* (Its things put down: the record only a mark; a hole dug part way:
@@ -99,6 +100,15 @@ static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned
         for (i = 0; i < k->ntraps; ++i) {
             if (k->trap[i].x == lx && k->trap[i].y == ly) {
                 k->trap[i].state = tile;
+            }
+        }
+        return;
+    }
+    if (link == ROOM_LIT) {                     /* (A room's light, its sconce's, on a square of its floor: tile R_LIT
+                                                **   or 0) */
+        for (i = k->nrooms, r = k->room; i; --i, ++r) {
+            if ((unsigned char) (lx - r->x) < r->w && (unsigned char) (ly - r->y) < r->h) {
+                r->flags = (r->flags & ~R_LIT) | tile;
             }
         }
         return;

@@ -101,10 +101,18 @@ in (the top stratum's first: where the character begins).
   their range about their lairs (in a chunk that's made: none is made for them), so the dungeon goes on where the
   character isn't; a patrol met at a crossroads was walking its round, the rats in the cellar were there all along,
   and a lair cleared stays cleared.
+- **Their lights** (slice 4.1; DUNGEON.md, light kept): a kind that keeps lights (kinds.txt's f: kobolds and their
+  lord, bandits and theirs, cultists and their priest) keeps lit the rooms about its lair, as far as its range takes
+  it (its range either way from its lair's chunk's middle).  As a stratum's populations are decided, each such lair
+  is written to the hub's places kept (KEPT_AT: its stratum, its chunk, its range, its keepers living) and the
+  stratum marked done there: the world waits for that before its first chunk is made, and the maker lights the rooms
+  by it as it first stocks them (their sconces' torches lit and tended).  As one of its keepers dies the keeping's one
+  fewer; the last, and it's gone (the world tends its torches no longer: they burn down).  The dead, the beasts and
+  the vermin keep none.  (Sweeping its floors, kinds.txt's t, is the traces'.)
 - **Kept:** the records are a cache by region in a bank of the task's own (240 denizens, 64 lairs: those of the
   regions round the character's always), the rest in the save folder by region (DUNGEON.md, no fixed size: each
   denizen and each lair a number of its own); the bank as it is in dens.dat, with its head (the factions' attitudes
-  now, the allies' names, which strata are populated, which regions are in the cache).
+  now, the allies' names, which strata are populated, which regions are in the cache), the places kept lit after it.
 
 ### Attitudes
 

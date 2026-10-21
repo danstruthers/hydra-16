@@ -76,6 +76,8 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "candle stubs", K_PLURAL, 1, 1, 0, 0, 0, 0, 1, "", MT_OTHER, AP_FOOD, 0 },
     { "well", 0, 255, 255, 0, 0, 0, 0, 8, "", MT_STONE, AP_STONE, 0, KF_FIXED },   /* (Its stone curb: never taken
                                                 **   up; its water the water's work's, to come) */
+    { "sconce", 0, 6, 2, 3, 8, 0, 0, 12, "", MT_IRON, AP_METAL, 4, KF_ON | KF_FIXED },  /* (On a room's wall, fixed: a
+                                                **   torch in it, the maker's: DUNGEON.md, light kept) */
 };
 
 /* What a kind of thing affords (the plan's affordances, in the kinds' data): thrown, its reach (the short band of
@@ -91,7 +93,8 @@ const unsigned char throws[KI_COUNT] = {
     1, 1, 1, 1, 0, 2, 0,                        /* quiver, arrows, bar, pane, bars, shards, body */
     1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,            /* leather cap ... hobnail boots: armour (a helm, boots, a cap) */
     1, 4, 1,                                    /* mace, spear (a javelin's), shield */
-    1, 0, 2, 0                                  /* pot, straw, stubs, well */
+    1, 0, 2, 0,                                 /* pot, straw, stubs, well */
+    0                                           /* sconce */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 

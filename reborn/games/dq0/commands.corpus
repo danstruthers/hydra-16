@@ -236,6 +236,8 @@ start the torch	VB_LIGHT_OBJECT	object=torch	near=torch	start
 start a fire	VB_LIGHT_OBJECT	object=fire	-	start a fire
 light a fire	VB_LIGHT_OBJECT	object=fire	-	light a fire
 put out the torch	VB_EXTINGUISH_OBJECT	object=torch	near=torch	put out
+light the torch in the sconce	VB_LIGHT_OBJECT	object=torch;container=sconce	near=torch,sconce	the one in another: a sconce's torch
+put out the torch in the sconce	VB_EXTINGUISH_OBJECT	object=torch;container=sconce	near=torch,sconce	the one in another
 quench the fire	VB_EXTINGUISH_OBJECT	object=fire	-	quench
 target	VB_TARGET_SHOW	target=goblin	target=goblin	alone: echoes the current target
 target	VB_TARGET_SHOW	target=none	-	alone with no target: says there is none
