@@ -1503,6 +1503,69 @@ const HYBUDGET_LINES = [['(list :t0 (tl 100))', '{:t0 :done}'], ['(list :t1 (tl 
   ['(list :m0 (zero? (len (map id l10))))', '{:m0 NIL}'], ['(list :m1 (zero? (len (map id l1k))))', '{:m1 NIL}']];
 const hyBudget = (what, k0, k1, per, max) => ({ what, from: HYBUDGET_LINES[k1][0], to: '=> ' + HYBUDGET_LINES[k1][1],
   minus: [HYBUDGET_LINES[k0][0], '=> ' + HYBUDGET_LINES[k0][1]], per, max });
+// The hyread test's card files: big9.txt (CR LF lines, over 8K, its last line with no end), big20.txt (LF lines, over
+// 16K: some empty, some with a CR inside, its last ended by a CR alone), long.txt (a line past a string's 8,184
+// bytes); big.hl, a large source (100 definitions, each with a comment, a long name, a long string: 32K, so the
+// reader's text, 4K, is refilled in all of them), and comm.hl (16K of comments); rl.hl, the script
+function hyReadFiles() {
+  let a = '', b = '', i = 0;
+  while (a.length < 9500) { a += 'Line ' + i + ' of the first file, CR LF ended: ' + 'abcdefghij'.repeat(i % 5) + '\r\n'; i++; }
+  a += 'the last, no end';
+  for (i = 0; b.length < 20000; i++) b += (i % 7 === 3 ? '' : 'second ' + i + (i % 11 === 5 ? ' a lone \r CR inside' : '') + ' ' + 'xyz'.repeat(i % 13)) + '\n';
+  b += 'ends with a CR\r';
+  let s = '; big.hl - the hyread test\'s large source (tests.js: hyReadFiles), read and defined; its check at its end\n';
+  for (i = 0; i < 100; i++) {
+    s += '; ' + ('Function ' + i + ' of the large source, its comment long enough to cross a refill now and then. ').repeat(1 + i % 3) + '\n';
+    s += '(def {' + HYREAD_NAME(i) + '} (fn {a} {list a ' + i + ' "' + HYREAD_TEXT(i) + '" :k' + i + ' ' + (i * 37 % 1000) + '.5}))\n';
+  }
+  s += '(def {big-check} (list ' + HYREAD_CALLS.map(k => '(' + HYREAD_NAME(k) + ' 7)').join(' ') + '))\n';
+  let c = '';
+  while (c.length < 16000) c += '; A comment line of about sixty characters, every one of them read.\n';
+  return {
+    'big9.txt': a, 'big20.txt': b, 'long.txt': 'short\n' + 'L'.repeat(9000) + '\nafter\n', 'big.hl': s, 'comm.hl': c + '(def {comm-check} :read)\n',
+    'rl.hl': ['(def {show} (fn {p} {do =(ls (read-lines p)) (print "==" p (len ls)) (each (fn {l} {print (len l) l}) ls) (print "==end")}))',
+      '(show "big9.txt")', '(show "big20.txt")',
+      '(print "==long" (try (read-lines "long.txt") (list "caught" &err)))',
+      '(dotimes {i 20} (try (read-lines "long.txt") NIL))',
+      '(print "==after" (len (read-lines "big9.txt")))',
+      '(print "==file" (try (read-file "big9.txt") (list "caught" &err)))',
+      '(write-file "e.txt" "")', '(print "==empty" (read-lines "e.txt"))',
+      '(print "==dir" (try (read-lines "/sd/0") (list "caught" &err)))',
+      '(print "==none" (try (read-lines "nothere.txt") (list "caught" &err)))',
+      '(print-to stderr "<big")', '(load "big.hl")', '(print-to stderr "big>")', '(print "==big" big-check)',
+      '(print-to stderr "<comm")', '(load "comm.hl")', '(print-to stderr "comm>")', '(print "==comm" comm-check)', '(print "==done")',
+      ''].join('\n'),
+  };
+}
+const HYREAD_NAME = i => 'big-' + 'x'.repeat(i * 7 % 90) + '-' + i;
+const HYREAD_TEXT = i => ('text ' + i + ' ').repeat(1 + i % 12);
+const HYREAD_CALLS = [0, 1, 57, 98, 99];
+// Its output checked: each file's lines as read-lines gave them (the count, then each line's length and text) against
+// the file's own (LF or CR LF ends, a CR before a LF dropped; the console's output has no CRs)
+function hyReadCheck(out, files) {
+  const f = [];
+  for (const n of ['big9.txt', 'big20.txt']) {
+    const t = files[n], want = t.split('\n');
+    if (want[want.length - 1] === '') want.pop();
+    want.forEach((l, k) => { if (l.endsWith('\r') && (k < want.length - 1 || t.endsWith('\n'))) want[k] = l.slice(0, -1); });
+    const lines = out.split('\n'), at = lines.findIndex(l => l.startsWith('== ' + n + ' '));
+    if (at < 0) { f.push(n + ': not read'); continue; }
+    const count = +lines[at].split(' ')[2];
+    if (count !== want.length) f.push(n + ': ' + count + ' lines, not ' + want.length);
+    let bad = 0;
+    for (let k = 0; k < want.length; k++) {
+      const got = lines[at + 1 + k] || '', sp = got.indexOf(' ');
+      if (+got.slice(0, sp) !== want[k].length || got.slice(sp + 1) !== want[k].replace(/\r/g, '')) {
+        if (bad++ < 3) f.push(n + ': line ' + (k + 1) + ': ' + JSON.stringify(got) + ', not ' + want[k].length + ' ' + JSON.stringify(want[k]));
+      }
+    }
+    if (bad > 3) f.push(n + ': ' + bad + ' lines wrong');
+    if (lines[at + 1 + want.length] !== '==end') f.push(n + ': more lines than the file has');
+  }
+  const big = '==big {' + HYREAD_CALLS.map(k => '{7 ' + k + ' "' + HYREAD_TEXT(k) + '" :k' + k + ' ' + (k * 37 % 1000) + '.5}').join(' ') + '}\n';
+  if (!out.includes(big)) f.push('big.hl\'s check not ' + JSON.stringify(big));
+  return f;
+}
 // hyhydra's lines with a collection before every allocation (hylang -g): each Hydra built-in that makes values, and
 // sys- functions (bound as they're looked up, their values made); a third item, what's written before the value
 const HYHYDRA_G = [
@@ -5478,6 +5541,18 @@ module.exports = {
       expect: [HYBUDGET_LINES.map(l => 'hylang> ' + l[0] + '\n=> ' + l[1] + '\n').join('') + 'hylang> exit\n=> exit\n%'],
       budgets: [hyBudget('hylang, a parameter looked up', 5, 6, 5000, 300), hyBudget('hylang, a call of a function of two arguments', 3, 4, 500, 4000),
         hyBudget('hylang, a tail loop\'s step', 0, 1, 1000, 6500), hyBudget('hylang, map with a function of one argument, an item', 8, 9, 990, 4000)],
+    },
+    {
+      name: 'hyread', what: 'hylang reading files and source: read-lines on a file past 8K (CR LF lines, its last with no end) and one past 16K (LF lines, empty ones, a CR inside, its last ended by a CR alone), every line as the file has it (it read a file past 8K as heap memory); a line past a string\'s 8,184 bytes an error, the file closed (twenty times, then another read), read-file\'s past 8K an error, an empty file NIL, a directory and a file not there errors; a large source loaded (32K: comments, long names, long strings, the reader\'s text refilled in each), its definitions right, and 16K of comments, each timed a byte',
+      init: 't_rc', cycles: 600e6,
+      get machine() { return { sd: hylangCard(this.name, hyReadFiles()), input: '\u0101cd /sd/0; hylang rl.hl; echo status $status\r' }; },
+      expect: ['==long {"caught" "Too long: a string of more than 8184 bytes"}\n==after 155\n' +
+        '==file {"caught" "Too long: a string of more than 8184 bytes"}\n==empty NIL\n==dir {"caught" "/sd/0: is a directory"}\n' +
+        '==none {"caught" "nothere.txt: not found"}\n', '==comm :read\n==done\nstatus\n%'],
+      check(m, out) { return hyReadCheck(out, hyReadFiles()); },
+      // (At 31021b54, before the reader's scans and the heap's growth, the script without its read-lines: 727 and 383)
+      budgets: [{ what: 'hylang, a large source loaded from a card (32K), a byte', from: '<big', to: 'big>', per: hyReadFiles()['big.hl'].length, max: 560 },
+        { what: 'hylang, 16K of comments loaded from a card, a byte', from: '<comm', to: 'comm>', per: hyReadFiles()['comm.hl'].length, max: 330 }],
     },
     {
       name: 'hyhydra', what: 'hylang\'s Hydra built-ins and system calls (the plan\'s phases 9 and 10): hydra.hl as a script (sysinfo, mods, errstr; ps, task-info, yield, sleep-until; peek and poke, the task\'s banks, a shared segment, free; bind, mount, unmount, ns, newns; note, on-note; hold; key?; sys- functions of each group of calls, and their errors), and again with a collection before every allocation (sys- names bound, the calls\' values made, puts and putc); at the prompt, raw keys (key: a character, the terminal\'s up key; key?) and Ctrl-C given to on-note\'s function',

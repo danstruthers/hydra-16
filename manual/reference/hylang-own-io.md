@@ -706,8 +706,10 @@ with no line end still counts. An empty file is `""`, and `NIL`.
 
 #### Description
 
-The file is opened, read and closed in the one call. The whole of it must fit in hylang's memory: for a
-large file, `open` it and read it a line at a time.
+The file is opened, read and closed in the one call. `read-file`'s string can be 8,184 bytes long at most,
+as any string can. `read-lines` reads the file a piece at a time, so the file can be as long as hylang's
+memory has room for its lines, each of them 8,184 bytes at most. For a file too large for that, `open` it and
+read it a line at a time.
 
 Devices are files, so these read them too: `(read-file "/dev/time")` is the date and time.
 
@@ -717,6 +719,7 @@ Devices are files, so these read them too: `(read-file "/dev/time")` is the date
 |---|---|
 | *path*`: not found` | There is no such file (and the system's other messages, for its other errors) |
 | `'read-file' expects a path` | *path* is not a string |
+| `Too long: a string of more than 8184 bytes` | `read-file`: the file is longer than that; `read-lines`: one of its lines is |
 
 #### See also
 

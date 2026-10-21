@@ -56,6 +56,7 @@ rd_total:   .res        2
 rd_one:     .res        1                                   ;   <> 0: an item at a time (read_item's) ...
 rd_inword:  .res        1                                   ;   <> 0: a word being read (from rw: kept as it refills)
 rd_owner:   .res        1                                   ; Whose text it is: a load's fd ($FF: the REPL's, or none)
+rd_lim:     .res        2                                   ;   and where rp wants it refilled (re less 1; $FFFF: never)
 rf_keep:    .res        2                                   ; (rd_fill's: where what's kept begins, the bytes dropped)
 rf_drop:    .res        2
 
@@ -90,6 +91,8 @@ read_text:
             lda         #$FF                                ; (The text as it is: no file)
             sta         rd_fd
             sta         rd_owner
+            sta         rd_lim
+            sta         rd_lim + 1
             stz         rd_one
             lda         #<text
             sta         rp
@@ -192,8 +195,8 @@ rd_start:
 @ascii:
             jmp         rd_e_ascii
 
-; rp to the next byte (a file's text refilled if less than 2 bytes are left), past a LF the next line.  Keeps .A, .X,
-; .Y
+; rp to the next byte (a file's text refilled if less than 2 bytes are left), past a LF the next line (rd_adv); past
+; a byte that isn't a LF (rd_step).  Keeps .A, .X, .Y
 rd_adv:
             pha
             lda         (rp)
@@ -204,14 +207,39 @@ rd_adv:
             inc         rd_line + 1
 :
             pla
+rd_step:
             inc         rp
-            bne         :+
+            bne         rd_near
+            inc         rp + 1
+; A file's text refilled if less than 2 bytes are left at rp (rp at rd_lim or past it).  Keeps .A, .X, .Y
+rd_near:
+            pha
+            lda         rp + 1
+            cmp         rd_lim + 1
+            bcc         @ok
+            bne         @fill
+            lda         rp
+            cmp         rd_lim
+            bcc         @ok
+@fill:
+            pla
+            jmp         rd_fill
+@ok:
+            pla
+            rts
+
+; rp on by .Y (a scan's: the bytes it passed, none of them a LF), .Y 0.  Keeps .A, .X
+rd_sync:
+            pha
+            tya
+            clc
+            adc         rp
+            sta         rp
+            bcc         :+
             inc         rp + 1
 :
-            bit         rd_fd
-            bmi         :+
-            jmp         rd_fill
-:
+            ldy         #0
+            pla
             rts
 
 ; Less than 2 bytes left of a file's text (and not its end): what's left (from rw, if a word's being read) moved to
@@ -357,6 +385,21 @@ rd_fill:
             lda         #0                                  ; (The text's end: a 0)
             sta         (re)
 @done:
+            lda         rd_eof                              ; (Where it's wanted next: never, at the file's end; else
+            beq         :+                                  ;   with a byte left)
+            lda         #$FF
+            sta         rd_lim
+            sta         rd_lim + 1
+            bra         @out
+:
+            lda         re
+            sec
+            sbc         #1
+            sta         rd_lim
+            lda         re + 1
+            sbc         #0
+            sta         rd_lim + 1
+@out:
             ply
             plx
             pla
@@ -574,21 +617,42 @@ rd_closers:
 
 ; ---- Comments, strings
 
-; A comment, from ; to the line's end
+; A comment, from ; to the line's end (rp at its LF or CR): its bytes passed with .Y to one of them or a 0 (the text's
+; end, refilled, or a 0 in the comment, its)
 rd_comment:
-            jsr         rd_adv
+            ldy         #1
+@scan:
+            lda         (rp),y
+            cmp         #CR + 1
+            bcc         @low
+@on:
+            iny
+            bne         @scan
+            inc         rp + 1
+            bra         @scan
+@low:
+            cmp         #LF
+            beq         @stop
+            cmp         #CR
+            beq         @stop
+            cmp         #0
+            bne         @on
+@stop:
+            jsr         rd_sync
+            jsr         rd_near
             lda         (rp)
             beq         @nul
             cmp         #LF
             beq         @done
             cmp         #CR
-            bne         rd_comment
+            bne         @scan                               ; (Refilled: on from rp)
 @done:
             rts
 @nul:
             jsr         rd_at_end
-            bcc         rd_comment                          ; (A 0 in a comment: its)
-            rts
+            bcs         @done
+            iny
+            bra         @scan
 
 ; A string ("text", with escapes) or a here string ("""text""": as many quotes close it as open it, its text as it
 ; is, a CR LF in it an LF)
@@ -627,7 +691,14 @@ rd_string:
             dex
             beq         @escape                             ; (A here string's: as it is)
 @keep:
-            jsr         rd_adv
+            inc         rp                                  ; (Past it: not a LF)
+            bne         :+
+            inc         rp + 1
+:
+            ldx         rp + 1
+            cpx         rd_lim + 1
+            bcc         @store
+            jsr         rd_near
 @store:
             sta         (rs)
             inc         rs
@@ -650,7 +721,9 @@ rd_string:
 @lf:
             ldx         rq
             dex
-            bne         @keep
+            beq         @newline
+            jsr         rd_adv                              ; (A here string's LF: the next line)
+            bra         @store
 @newline:
             jmp         rd_e_newline
 @cr:
@@ -694,7 +767,7 @@ rd_string:
             jmp         rd_e_escape
 @found:
             lda         esc_to,x
-            bra         @keep
+            jmp         @keep
 @hex:
             jsr         rd_adv                              ; (\x and one or two hex digits)
             jsr         rd_hex
@@ -872,10 +945,13 @@ rd_item:
 @symbol:
             jmp         rd_symbol
 
-; rp past the word at rp: to a space, a bracket or the end (with a digit set of its own, #[...], in it).  A control
-; character or a byte past ASCII in it: an error
+; rp past the word at rp: to a space, a bracket or the end (with a digit set of its own, #[...], in it), its bytes
+; passed with .Y (none of them a LF; the text's end, its 0, refilled).  A control character or a byte past ASCII in
+; it: an error
 rd_scan:
-            lda         (rp)
+            ldy         #0
+@byte:
+            lda         (rp),y
             cmp         #' ' + 1
             bcc         @low
             cmp         #127
@@ -892,9 +968,10 @@ rd_scan:
             beq         @end
             cmp         #'['
             beq         @set
-@next:
-            jsr         rd_adv
-            bra         rd_scan
+            iny
+            bne         @byte
+            inc         rp + 1
+            bra         @byte
 @low:
             cmp         #' '
             beq         @end
@@ -903,32 +980,44 @@ rd_scan:
             cmp         #CR + 1
             bcc         @end
 @control:
+            jsr         rd_sync
             jmp         rd_e_control
 @nul:
             cmp         #0
             bne         @control
+            jsr         rd_sync                             ; (The text's end, refilled; or a 0 in the word)
+            jsr         rd_near
+            lda         (rp)
+            bne         @byte
             jsr         rd_at_end
             bcc         @control
-@end:
             rts
+@end:
+            jsr         rd_sync
+            jmp         rd_near
 @high:
+            jsr         rd_sync
+            cmp         #127
             beq         @control
-@ascii:
             jmp         rd_e_ascii
 @set:
+            jsr         rd_sync
             jsr         rd_own_digits
             bcs         @end
 @inset:
             jsr         rd_adv                              ; (To its ], and past it)
             lda         (rp)
             cmp         #']'
-            beq         @next
+            beq         @close
             cmp         #' '
             bcc         @setlow
             cmp         #127
             bcc         @inset
             beq         @control
-            bra         @ascii
+            jmp         rd_e_ascii
+@close:
+            jsr         rd_adv
+            jmp         rd_scan
 @setlow:
             cmp         #0
             bne         @control

@@ -336,19 +336,15 @@ symbols:
             sec
             rts
 
-; fa_flags |= FN_EXTRAS if the body eu names &_ or &1, &2 ... anywhere in it (its lists walked, what's left to
-; look at on the stack: fe_n values)
+; fa_flags |= FN_EXTRAS if the body eu names &_ or &1, &2 ... anywhere in it (its lists walked: each list's spine
+; followed, a car that's a symbol looked at as it's met, one that's another cell left on the stack to look at
+; after, fe_n values)
 takes_extras:
             stz         fe_n
             stz         fe_n + 1
             lda         eu
             ldx         eu + 1
-            jsr         te_push
-@next:
-            lda         fe_n
-            ora         fe_n + 1
-            beq         @rts
-            jsr         te_pop
+@walk:
             sta         te_v
             stx         te_v + 1
             jsr         list_kind
@@ -369,7 +365,14 @@ takes_extras:
             bne         @next
             lda         te_v
             jsr         amp_name_p
-            bcc         @next
+            bcs         @yes
+@next:
+            lda         fe_n
+            ora         fe_n + 1
+            beq         @rts
+            jsr         te_pop
+            bra         @walk
+@yes:
             lda         fa_flags                            ; (It takes extras: what's left dropped)
             ora         #FN_EXTRAS
             sta         fa_flags
@@ -386,20 +389,30 @@ takes_extras:
             ldx         te_v + 1
             ldy         #0
             jsr         cell_get
-            jsr         te_push
-            bra         @next
+            bra         @walk
 @cons:
-            lda         te_v                                ; (Its cdr, then its car, to look at)
-            ldx         te_v + 1
-            ldy         #1
-            jsr         cell_get
-            jsr         te_push
-            lda         te_v
+            lda         te_v                                ; (Its car: a symbol looked at, another cell kept)
             ldx         te_v + 1
             ldy         #0
             jsr         cell_get
+            cpx         #IMM_PAGES
+            bcc         @rest                               ; (An immediate, or a fixnum)
+            bit         #1
+            bne         @rest
+            ldy         pk,x
+            cpy         #PK_SYMBOL
+            bne         @keep
+            jsr         amp_name_p
+            bcs         @yes
+            bra         @rest
+@keep:
             jsr         te_push
-            bra         @next
+@rest:
+            lda         te_v                                ; (Its cdr, now)
+            ldx         te_v + 1
+            ldy         #1
+            jsr         cell_get
+            jmp         @walk
 
 te_push:
             jsr         push

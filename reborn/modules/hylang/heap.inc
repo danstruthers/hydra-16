@@ -24,6 +24,7 @@
 ; scratch registers (hp to ht) as they were.
 
 ROOTS           = 64            ; The root stack's size
+SPARE           = 8             ; The banks the heap's growth ahead of its need leaves free (bank_spare's)
 
 .zeropage
 vr:         .res        16                                  ; VR0-VR7: values kept (roots)
@@ -205,14 +206,21 @@ heap_tables:
             rts
 
 ; Another bank for the cells: its 16 pages free (the first bank's first IMM_PAGES the immediates').  OUT: C = 1,
-; .A the error (E_NOMEM: 16 already, or no bank left)
+; .A the error (E_NOMEM: 16 already, or no bank left).  (spare_cell_bank: one only if SPARE more are left free)
 take_cell_bank:
-            lda         cell_banks
-            cmp         #16
-            bcs         @full
+            jsr         cell_room
+            bcs         tc_rts
             lda         #1
             jsr         BANKS_ALLOC
-            bcs         @rts
+            bcc         tc_add
+tc_rts:
+            rts
+spare_cell_bank:
+            jsr         cell_room
+            bcs         tc_rts
+            jsr         bank_spare
+            bcs         tc_rts
+tc_add:
             ldx         cell_banks
             sta         cell_bank,x
             sta         ht
@@ -238,21 +246,30 @@ take_cell_bank:
             bne         @page
             inc         cell_banks
             clc
-@rts:
             rts
-@full:
+; OUT: C = 1, .A = E_NOMEM if there are 16 banks of cells
+cell_room:
+            lda         cell_banks
+            cmp         #16
             lda         #E_NOMEM
-            sec
             rts
 
-; Another bank for the blobs, empty (filled from byte 4, so no blob's reference is 0).  OUT: C = 1, .A the error
+; Another bank for the blobs, empty (filled from byte 4, so no blob's reference is 0).  OUT: C = 1, .A the error.
+; (spare_blob_bank: one only if SPARE more are left free)
 take_blob_bank:
-            lda         blob_banks
-            cmp         #16
-            bcs         @full
+            jsr         blob_room
+            bcs         tb_rts
             lda         #1
             jsr         BANKS_ALLOC
-            bcs         @rts
+            bcc         tb_add
+tb_rts:
+            rts
+spare_blob_bank:
+            jsr         blob_room
+            bcs         tb_rts
+            jsr         bank_spare
+            bcs         tb_rts
+tb_add:
             ldx         blob_banks
             sta         blob_bank,x
             lda         #4
@@ -260,11 +277,29 @@ take_blob_bank:
             stz         blob_thi,x
             inc         blob_banks
             clc
-@rts:
             rts
-@full:
+; OUT: C = 1, .A = E_NOMEM if there are 16 banks of blobs
+blob_room:
+            lda         blob_banks
+            cmp         #16
             lda         #E_NOMEM
-            sec
+            rts
+
+; A bank for the heap's growth that can wait (maybe_grow's, blob_grow's), taken only if SPARE more are free after
+; it: else the heap, growing ahead of its need, would leave none for what must be had (the machine's arenas, the
+; stack's spills, a program's banks, the heap's own when it's full).  OUT: C = 0, .A = it; C = 1 if there aren't
+; so many
+bank_spare:
+            lda         #SPARE + 1
+            jsr         BANKS_ALLOC
+            bcs         @rts
+            pha
+            inc         a
+            ldx         #SPARE
+            jsr         BANKS_FREE
+            pla
+            clc
+@rts:
             rts
 
 ; ---- Values
@@ -379,9 +414,9 @@ cell_alloc:
             sec
             rts
 
-; After a collection, a bank more if fewer of the cell heap's pages are free than are used: a collection's work is
-; what's live, so with as much free again it costs each cell made about the same, however much is live (the
-; library's, as hylang starts, half its first two banks).  Its failure doesn't matter
+; After a collection, banks more while fewer of the cell heap's pages are free than are used: a collection's work
+; is what's live, so with as much free again it costs each cell made about the same, however much is live (the
+; library's, as hylang starts, half its first two banks; a big program's, many banks).  Its failure doesn't matter
 maybe_grow:
             lda         cell_banks
             cmp         #16
@@ -396,7 +431,8 @@ maybe_grow:
             sbc         free_pages                          ; (The pages used)
             cmp         free_pages
             bcc         @rts
-            jsr         take_cell_bank
+            jsr         spare_cell_bank
+            bcc         maybe_grow
 @rts:
             rts
 
@@ -572,6 +608,7 @@ blob_alloc:
             bne         @grow
             inc         b_tried
             GC_CALL
+            jsr         blob_grow
             bra         @try
 @grow:
             jsr         take_blob_bank
@@ -619,6 +656,40 @@ blob_alloc:
             adc         ht + 1
             sta         blob_thi,x
             clc
+            rts
+
+; After a collection blob_alloc made, banks more for the blobs while less of their banks' room is free than is used
+; (as maybe_grow's cells: else a program whose strings are many collects each time a few more are made).  Its
+; failure doesn't matter.  Keeps hp to ht
+blob_grow:
+            ldx         blob_banks
+            cpx         #16
+            bcs         @rts
+            lda         #0                                  ; (The pages used: each bank's top's, summed; .Y high)
+            tay
+@sum:
+            dex
+            bmi         @summed
+            clc
+            adc         blob_thi,x
+            bcc         @sum
+            iny
+            bra         @sum
+@summed:
+            cpy         #0                                  ; (256 or more: more than half 15 banks' 480)
+            bne         @grow
+            sta         g_size
+            lda         blob_banks                          ; (Half the room: 16 pages a bank)
+            asl
+            asl
+            asl
+            asl
+            cmp         g_size
+            bcs         @rts
+@grow:
+            jsr         spare_blob_bank
+            bcc         blob_grow
+@rts:
             rts
 
 ; IN: .A, .X = a blob's reference.  OUT: hp = its header's address, its bank in the window.  Keeps .Y

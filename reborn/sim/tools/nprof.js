@@ -57,7 +57,7 @@ function profile(o) {
   const LBL = new Map();
   const modLabels = name => {
     if (LBL.has(name)) return LBL.get(name);
-    const r = { banks: [], ram: [] };
+    const r = { banks: [], ram: [], ramAt: [] };                // (ramAt: its RAM code's places: DATA's, DATA4's ...)
     LBL.set(name, r);
     const od = path.join(tree, 'obj', 'modules', name), md = path.join(tree, 'modules', name);
     if (!LABELS || !fs.existsSync(od) || !fs.existsSync(md)) return r;
@@ -76,7 +76,10 @@ function profile(o) {
     const segs = new Map(), syms = new Map();
     for (const l of t) {
       const m = /^seg\tid=(\d+),name="(\w+)",start=0x([0-9A-F]+)/.exec(l);
-      if (m) { const off = /,ooffs=(\d+)/.exec(l); segs.set(+m[1], { name: m[2], bank: off ? Math.floor(+off[1] / 16384) : -1 }); }
+      if (!m) continue;
+      const off = /,ooffs=(\d+)/.exec(l), size = /,size=0x([0-9A-F]+)/.exec(l);
+      segs.set(+m[1], { name: m[2], bank: off ? Math.floor(+off[1] / 16384) : -1 });
+      if (/^DATA\d*$/.test(m[2]) && size) r.ramAt.push([parseInt(m[3], 16), parseInt(m[3], 16) + parseInt(size[1], 16)]);
     }
     for (const l of t) {
       const m = /^sym\tid=(\d+),name="([^"]+)",.*val=0x([0-9A-F]+),seg=(\d+),type=lab/.exec(l);
@@ -88,7 +91,7 @@ function profile(o) {
       let n = s.name;
       if (n.startsWith('@')) { if (!LOCAL) continue; const p = syms.get(s.parent); n = (p ? p.name : '?') + n; }
       if (n.startsWith('__')) continue;
-      if (sg.name === 'DATA') r.ram.push([s.val, n]);
+      if (/^DATA\d*$/.test(sg.name)) r.ram.push([s.val, n]);
       else if (s.val >= 0xA000 && s.val < 0xE000 && sg.bank >= 0) (r.banks[sg.bank] = r.banks[sg.bank] || []).push([s.val, n]);
     }
     for (const L of [r.ram, ...r.banks]) if (L) L.sort((a, b) => a[0] - b[0]);
@@ -147,7 +150,7 @@ function profile(o) {
       const [n, kk] = mb, L = modLabels(n);
       return n + (L.banks.length > 1 ? '#' + (kk + 1) : '') + (LABELS ? ' ' + near(L.banks[kk], pc) : '');
     }
-    if (pc >= 0x0400 && pc < 0x0800 && T === progTask) return prog + '#ram' + (LABELS ? ' ' + near(modLabels(prog).ram, pc) : '');
+    if (T === progTask && pc >= 0x0400 && (pc < 0x0800 || LABELS && modLabels(prog).ramAt.some(([a, b]) => pc >= a && pc < b))) return prog + '#ram' + (LABELS ? ' ' + near(modLabels(prog).ram, pc) : '');
     return 'RAM ' + (pc < 0x8000 ? 'task' : 'bank');
   };
   const xstack = [], jstack = [], jcount = new Map();
