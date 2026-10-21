@@ -2038,3 +2038,27 @@ set stance=D_AUTO
 dice
 ask EQUIP a=2 text=""
 want result=0
+
+# ---- Struck senseless again as she lies (HOUSE.md's knocked senseless: out till the later of the two, the black-out
+# told once, the reply's c AF_AGAIN, 32): a fresh rat's bite (45: 41 a marginal success), undefended (defend none:
+# the Ignore table, three dice), at her thorax (50), a minor wound; her shock roll over Endurance (vol 3: UP 4, then
+# 5).  The first time every roll after over Endurance too, an hour out; the second a moment later, its own rolls
+# waking her at once (a round: 100), but the first's hour stands
+
+char
+vol 3 0 0 0 0
+end
+dice
+ask NEW_ACTOR actor=5 w1=13 text="rat"
+want result=0
+set now=10000 stance=D_NONE
+case bitten undefended, the shock roll over Endurance: senseless, an hour out (every roll after over too)
+dice 100:41 6:2 6:2 6:2 100:50 6:6*
+ask ATTACK actor=5 other=0 a=Z_MID b=AS_BEST
+want result=O_HIT b=D_NONE w2=36000 c=0 status="UP 4"
+set now=10010
+case bitten again a second later as she lies: down again, its own rolls a round, but out till the first hour's end (35990), AF_AGAIN
+dice 100:41 6:2 6:2 6:2 100:50 6:6 6:6 6:6 6:6 6:6 6:1*
+ask ATTACK actor=5 other=0 a=Z_MID b=AS_BEST
+want result=O_HIT w2=35990 c&32=32 status="UP 5"
+set stance=D_AUTO

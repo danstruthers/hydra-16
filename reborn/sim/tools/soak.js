@@ -7,8 +7,10 @@
 //   cause, the turns lived), a start never left (no other room come into), the lines the grammar refused.
 // The player: commands drawn from the game's verbs, weighted toward moving and looking, its things and denizens the
 // ones the game's words have named (a thing seen lying, a denizen in sight), by a random stream of the seed's own.
-//   [RULES=NAME] node sim/tools/soak.js [-n SEEDS] [-from FIRST] [-seeds A,B,...] [-turns N] [-j N] [-v]
+//   [RULES=NAME] node sim/tools/soak.js [-n SEEDS] [-from FIRST] [-seeds A,B,...] [-turns N] [-fight P] [-j N] [-v]
 //     -n 20, -from 1: seeds FIRST to FIRST + SEEDS - 1; -turns 60: the commands a game is given before it's quit;
+//     -fight P: a denizen in sight attacked with chance P (0-1) each turn, the fights soaked (fighting on, a round's
+//     defences: the random player otherwise seldom fights), the cycles a turn may take twice as many;
 //     -j the cores; -v every game's transcript in obj/soak/SEED.txt (else only the ones that went wrong); RULES, the
 //     games with that ruleset's referee (dq0 -r NAME: games/dq0/RULESETS.md)
 // Exit status 0 if every game soaked clean.  Each game is a process of its own (--one SEED), the reports in order.
@@ -35,10 +37,11 @@ const DIRS = ['n', 's', 'e', 'w', 'ne', 'nw', 'se', 'sw', 'north', 'south', 'eas
 const KIT = ['dagger', 'torch', 'rations', 'waterskin', 'pouch', 'backpack', 'flint'];
 
 // The next command: from the game's words since the last (seen: the things lying, the denizens in sight)
-function choose(r, seen) {
+function choose(r, seen, fight) {
   const thing = seen.things.length && r.chance(0.7) ? r.pick(seen.things) : r.pick(KIT);
   const den = seen.dens.length ? r.pick(seen.dens) : null;
   const fixture = r.pick(['door', 'window', 'portcullis', 'stairs', 'ladder', 'passage', 'wall', 'trap']);
+  if (den && fight && r.chance(fight)) return r.pick(['attack the ' + den, 'attack the ' + den, 'kick the ' + den, 'attack']);
   const k = r.int(100);
   if (seen.ways.length && k < 30) {             // (A way the words named: through it, to it, up or down it)
     const w = r.pick(seen.ways);
@@ -74,14 +77,14 @@ function noticed(text) {
 }
 
 // One game (seed s), played and judged.  OUT: its report { seed, ok, problems: [...], end, turns, refused: [...], left }
-function one(s, turns, verbose) {
+function one(s, turns, verbose, fight) {
   const { runTest } = require('../test.js');
   const { sdcardOf } = require('../../tests/tests.js');
   const r = stream(s);
   const typed = [];
   let quitting = false, pushed = 0;
   const t = {
-    name: 'dq0soak-' + s, what: 'a soak', init: 't_rc', cycles: 400e6 + turns * TURN_CYCLES,
+    name: 'dq0soak-' + s, what: 'a soak', init: 't_rc', cycles: 400e6 + turns * TURN_CYCLES * (fight ? 2 : 1),
     machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s ' + s + ' -o /ram/c.hm\rādq0 -p t -s ' + s + ' -c /ram/c.hm' +
       (process.env.RULES ? ' -r ' + process.env.RULES : '') + '\r' },
     expect: ['% echo soaked'],
@@ -99,7 +102,7 @@ function one(s, turns, verbose) {
         pushed++;
         const now = noticed(since);           // (What the last words named, else what was named before: a new
         for (const k of ['things', 'dens', 'ways']) if (now[k].length || /You come into|You go /.test(since)) seen[k] = now[k];   //   place forgets it)
-        push(/Keep [a-z]+\?/.test(since) && r.chance(0.7) ? r.pick(['yes', 'yes', 'no', 'go on']) : choose(r, seen));   // (A long task's
+        push(/Keep [a-z]+\?/.test(since) && r.chance(0.7) ? r.pick(['yes', 'yes', 'no', 'go on']) : choose(r, seen, fight));   // (A long task's
                                               //   question answered, mostly: else a command, which stops it)
       } });
     }
@@ -135,8 +138,8 @@ function one(s, turns, verbose) {
 
 function main(argv) {
   const opt = (k, d) => { const i = argv.indexOf(k); return i >= 0 ? +argv[i + 1] : d; };
-  const turns = opt('-turns', 60), verbose = argv.includes('-v');
-  if (argv.includes('--one')) { process.stdout.write(JSON.stringify(one(opt('--one', 1), turns, verbose)) + '\n'); return; }
+  const turns = opt('-turns', 60), verbose = argv.includes('-v'), fight = opt('-fight', 0);
+  if (argv.includes('--one')) { process.stdout.write(JSON.stringify(one(opt('--one', 1), turns, verbose, fight)) + '\n'); return; }
   const list = argv.includes('-seeds') ? argv[argv.indexOf('-seeds') + 1].split(',').map(Number) : null;
   const n = list ? list.length : opt('-n', 20), first = opt('-from', 1), j = opt('-j', os.cpus().length);
   const seeds = list || Array.from({ length: n }, (_, i) => first + i), results = new Array(n);
@@ -154,7 +157,7 @@ function main(argv) {
       while (running < j && next < n) {
         const i = next++, s = seeds[i];
         running++;
-        const args = [__filename, '--one', String(s), '-turns', String(turns), ...(verbose ? ['-v'] : [])];
+        const args = [__filename, '--one', String(s), '-turns', String(turns), ...(fight ? ['-fight', String(fight)] : []), ...(verbose ? ['-v'] : [])];
         cp.execFile(process.execPath, args, { cwd: ROOT, maxBuffer: 1 << 26 }, (err, stdout, stderr) => {
           running--;
           let x;
