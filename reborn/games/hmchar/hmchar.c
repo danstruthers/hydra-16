@@ -2,7 +2,7 @@
 ** hmchar.c - a HârnMaster character made, as the book's Character article makes one (harn.h), and written to a file
 ** (harn_write's text) for a game, Dingus Quest Zero's or any other, to read.  Standalone or run by a game.
 **
-** hmchar [-s seed] [-o file] [-q] [-p species] [-c occupation]
+** hmchar [-s seed] [-o file] [-q] [-p species] [-c occupation] [-u culture]
 **   -s seed    the same character each time
 **   -o file    where it's written (default: NAME.hm, in the current directory, NAME the character's)
 **   -q         no questions: the first roll kept, an occupation (one of the book's), weapons and option points chosen
@@ -11,22 +11,30 @@
 **              dwarf (Khuzdul), by its first letter (h, e or s, d or k); the book's changes to its attributes, its
 **              culture and the rest made by harn_create
 **   -c occupation  the occupation, by its name (case ignored, a beginning enough), not asked or drawn (-q's draw made
-**              all the same: the rest of the character as it would be)
+**              all the same: the rest of the character as it would be), any the character's culture has (not held to
+**              its class or its sex: a game's or a test's choice)
+**   -u culture a human's culture, not rolled (a test's, so its character is the same each time): feudal, imperial,
+**              viking or tribal (a beginning enough); an elf's and a dwarf's their own
 **
-** The steps (Character 1): the attributes rolled (kept, or rolled again); an occupation, any of the book's that
-** occupations.txt has (the Occupational Skills table, Character 15; a soldier's unit by the character's culture,
-** Character 27; a cleric's church by its deity, Character 23, a church making its deity the character's if it has
-** none; not yet a mage's, Character 25, whose skills come with magic), its skills opened as the book has them (the
-** weapons or crafts it gives chosen); or the player's own occupation (the user's, 2026-10-20): 11 points (the book's
-** occupations' median, a point opening a skill at its OML and a point for each SB more), two in a skill at most and
-** three in one, its primary; then the five option points spent (Character 16: a skill opened at its OML for one, or
-** improved by its SB for one; but no more than two points in one skill, the user's: so improved once at most; ? lists
-** the skills, the open ones' ML and the others' OML); a name.  Not here: the family's occupation and its skills,
-** contacts, the veterans' points.
+** The steps (Character 1): the attributes rolled, a human's culture too (Character 3: mostly Feudal, the user's,
+** 2026-10-20), kept, or rolled again; a deity, the player's choice (Character 12: one of the ten or none, the book's
+** Morality for each a guide; -q's none); an occupation, any of the book's that occupations.txt has that the
+** character's class and sex allow it (the user's, 2026-10-20, the book's limits: a slave's, a serf's or an unguilded
+** character's the unguilded occupations, a guilded one's those and the guilded, a noble's all; the soldiers and
+** clerics any class's, but a knight a noble; a Lady a woman), the Occupational Skills table's (Character 15), a
+** soldier's unit by the character's culture (Character 27), a cleric's church by its deity (Character 23, a church
+** making its deity the character's if it has none; not yet a mage's, Character 25, whose skills come with magic), its
+** skills opened as the book has them (the weapons or crafts it gives chosen); or the player's own occupation (open to
+** any; the user's, 2026-10-20): 11 points (the book's occupations' median, a point opening a skill at its OML and a
+** point for each SB more), two in a skill at most and three in one, its primary; then the five option points spent
+** (Character 16: a skill opened at its OML for one, or improved by its SB for one; but no more than two points in one
+** skill, the user's: so improved once at most; ? lists the skills, the open ones' ML and the others' OML); a name.
+** Not here: the family's occupation and its skills, contacts, the veterans' points.
 **
 ** Its lib/hmchar (in its own directory, as rc's $prog has it, else the card's /sd/0/games/lib/hmchar): the
-** occupations (occupations.txt), and the occupation's step, a bank program (hmocc.bp: bank/hmocc, bankprog.h; this
-** main RAM hasn't the room for it, harn.h's tables taking most of it), with hmchar's exports for it (hmchar.exp).
+** occupations (occupations.txt), and the culture's, the deity's and the occupation's steps, a bank program (hmocc.bp:
+** bank/hmocc, bankprog.h; this main RAM hasn't the room for them, harn.h's tables taking most of it), with hmchar's
+** exports for it (hmchar.exp).
 */
 
 #include <stdlib.h>
@@ -42,6 +50,7 @@ static char name[24];
 char ab[40], occname[20], libdir[48];
 unsigned char quiet;
 const char* cname;
+const char* uname;
 
 /* ---- Output and input, through fds 0 and 1 (no stdio: harn.h's tables and stdio leave too little room) */
 
@@ -310,7 +319,13 @@ static void profile (void)
     }
     named ("Endurance", harn_end (&h), ", ");
     named ("Move", harn_move (&h), ", ");
-    named ("Piety", h.att[HARN_PTY], "; medical:");
+    named ("Piety", h.att[HARN_PTY], "");
+    if (h.att[HARN_DTY] != HARN_NODEITY) {      /* (The deity worshipped) */
+        s (" (");
+        s (harn_deity_name (h.att[HARN_DTY]));
+        s (")");
+    }
+    s ("; medical:");
     for (k = 0; k < HARN_MEDMAX && h.med[k]; ++k) {
         s (" ");
         s (harn_medical_name (h.med[k]));
@@ -358,10 +373,16 @@ static unsigned char __fastcall__ species (const char* w)
 }
 
 /* ---- The program: its lib/hmchar (its directory's, as rc's $prog has it, if it's there; else the card's), its bank
-** program (the occupation, bank/hmocc's) loaded; the character made; its file written (the occupation by name, a line
-** of hmchar's own) */
+** program (the culture, the deity and the occupation, bank/hmocc's) loaded; the character made; its file written (the
+** occupation by name, a line of hmchar's own) */
 
 static char exppath[56], bppath[56];
+
+static int usage (void)
+{
+    err ("usage: hmchar [-s seed] [-o file] [-q] [-p species] [-c occupation] [-u culture]\n");
+    return 1;
+}
 
 static char* __fastcall__ in (char* p, const char* name)
 {
@@ -373,7 +394,7 @@ int main (int argc, char* argv[])
     static char path[64], line[48];
     const char* out = 0;
     unsigned char i, sp = 0xFF;
-    struct bank_fn* occ;
+    struct bank_fn *occ, *cul;
     char* e;
     int fd;
 
@@ -386,10 +407,11 @@ int main (int argc, char* argv[])
             quiet = 1;
         } else if (!strcmp (argv[i], "-c") && i + 1 < argc) {
             cname = argv[++i];
+        } else if (!strcmp (argv[i], "-u") && i + 1 < argc) {
+            uname = argv[++i];                  /* (hmocc's culture: one of the four, or the usage) */
         } else if (!strcmp (argv[i], "-p") && i + 1 < argc && (sp = species (argv[++i])) != 0xFF) {
         } else {
-            err ("usage: hmchar [-s seed] [-o file] [-q] [-p species] [-c occupation]\n");
-            return 1;
+            return usage ();
         }
     }
     fd = open ("/env/prog", O_RDONLY);
@@ -407,7 +429,7 @@ int main (int argc, char* argv[])
         close (fd);
     }
     bank_setup (in (exppath, "hmchar.exp"), 0x60, 16);
-    if (!(occ = bank_fn (in (bppath, "hmocc.bp"), "occupation"))) {
+    if (!(occ = bank_fn (in (bppath, "hmocc.bp"), "occupation")) || !(cul = bank_fn (bppath, "culture"))) {
         err ("hmchar: its bank program (lib/hmchar/hmocc.bp) can't be loaded\n");
         return 1;
     }
@@ -415,6 +437,9 @@ int main (int argc, char* argv[])
     t.att[HARN_SP] = sp != 0xFF ? sp : HARN_ANY;
     for (;;) {
         harn_create (&h, &t);
+        if (bank_call (cul, unsigned char (*)(void))) {
+            return usage ();
+        }
         if (quiet) {
             break;
         }

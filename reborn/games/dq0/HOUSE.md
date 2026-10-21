@@ -264,18 +264,18 @@ silent on all of it.
 ## Characters *(hmchar: HarnMaster's character generator)*
 
 - **Every occupation the book lists, and one of the player's own** (the user's, 2026-10-20).  hmchar offers the
-  Occupational Skills table whole (Character 15: its 55 occupations, unguilded, guilded and noble); the soldiers of
-  the character's culture, by unit (Character 27: the Feudal's with the fighting orders', the Imperial's, the
-  Vikings', the Khuzdul's, the Sindarin's; the Tribal have none); and the clerics, by church (Character 23: a
-  character with a deity its own church's; one with none any of the ten, the church making its deity the
-  character's, its ritual skill opened).  Not yet the mages (Character 25): their skills come with magic.  A
-  soldier has every soldier's skills too, a cleric every cleric's; a skill both list, the higher.  The book's
-  specialties are their skills (Ratcraft and Dogcraft Animalcraft, a lance Polearm, a falchion or a longknife Sword,
-  a hartbow Bow); a second language and more scripts are left out (harn.h has one Language and one Script).  The
-  table is games/hmchar/occupations.txt (on the card in games/lib/hmchar, beside hmchar), read a line at a time as
-  it's wanted.  An occupation is chosen by its number or a beginning of its name (a group listed by its first
-  letter, ? and one its skills shown); -c NAME picks one and -q draws one, the one draw either way, so the rest of
-  the character comes out the same.  (hmchar's bank program, bank/hmocc; hmchar.fs and hmchar.hl the same.)
+  Occupational Skills table (Character 15: its 55 occupations, unguilded, guilded and noble; those the character's
+  class and sex allow it, below); the soldiers of the character's culture, by unit (Character 27: the Feudal's with
+  the fighting orders', the Imperial's, the Vikings', the Khuzdul's, the Sindarin's; the Tribal have none); and the
+  clerics, by church (Character 23: a character with a deity its own church's; one with none any of the ten, the
+  church making its deity the character's, its ritual skill opened).  Not yet the mages (Character 25): their skills
+  come with magic.  A soldier has every soldier's skills too, a cleric every cleric's; a skill both list, the higher.
+  The book's specialties are their skills (Ratcraft and Dogcraft Animalcraft, a lance Polearm, a falchion or a
+  longknife Sword, a hartbow Bow); a second language and more scripts are left out (harn.h has one Language and one
+  Script).  The table is games/hmchar/occupations.txt (on the card in games/lib/hmchar, beside hmchar), read a line at
+  a time as it's wanted.  An occupation is chosen by its number or a beginning of its name (a group listed by its
+  first letter, ? and one its skills shown); -c NAME picks one and -q draws one, the one draw either way, so the rest
+  of the character comes out the same.  (hmchar's bank program, bank/hmocc; hmchar.fs and hmchar.hl the same.)
 - **The player's own occupation is 11 points** (the user's: the book's 55 are worth 1 to 21 points, 11 their median
   and their mean, a point opening a skill at its OML and a point for each SB more).  A point opens a skill at its
   OML, or improves an open one (an automatic one too) by its SB; two points in a skill at most, and three in one
@@ -286,6 +286,30 @@ silent on all of it.
   listed twice, the higher.  The weapons an occupation gives to choose open at their OML plus its number of SBs (the
   Gladiator's three at OML + 2 SB, the Mercantyler's one at its OML), its crafts at SB times its number (the
   Chandler's three at SB x 3).
+- **Occupations by class and sex: the book's limits** (the user's, 2026-10-20; Character 13 and 15).  A slave's, a
+  serf's or an unguilded character's choice is the unguilded occupations, a guilded one's those and the guilded, a
+  noble's all of them.  The soldiers and the clerics are any class's, as the book lists them among the unguilded (a
+  church takes the devout of humble birth too, Character 23), but a knight is a noble (Character 13: knights
+  and heralds the high-born's; Character 27's units for nobles: here the Feudal knights, the fighting orders', the
+  Imperial Patrician and the Sindarin Knight).  The Lady is a woman's; nothing else is held to a sex.  The player's
+  own occupation is open to all.  -q draws within the limits (still one draw, so a fixed -c keeps a test's
+  character); -c names any the character's culture has, not held to its class or sex (a game's or a test's choice:
+  dq0traps' thief is seed 1's slave).  occupations.txt's headers say it, a group's class or sex beside its culture or
+  deity ([noble Female], [soldier Feudal Noble]); hmchar.fs and hmchar.hl read them as C's hmchar does.
+- **A human's culture is rolled, mostly Feudal** (the user's, 2026-10-20; Character 3: by birthplace, most of Harn's
+  Feudal, the common exceptions Imperial, Viking and Tribal): 01-70 Feudal, 71-80 Imperial, 81-90 Viking, 91-00
+  Tribal (our odds: the book leaves birthplaces to the regional modules).  An elf is Sindarin and a dwarf Khuzan, as
+  harn_create has them.  A culture not Feudal has its social class rolled on its own column of the book's table (and
+  the native tongue's OML follows the class).  hmchar -u CULTURE fixes it (feudal, imperial, viking or tribal, a
+  beginning enough: the user's, "fixing culture the same way (with flag)"): the tests make their characters with -u
+  feudal, so each is the same every time; -q rolls it (the soak's characters too).  (hmocc's culture: after
+  harn_create, which stays as it is, the SDK's and the danlang harn.dl's.)
+- **A deity is the player's choice** (the user's, 2026-10-20; Character 12): one of the ten or none, asked once the
+  roll is kept, before the occupation, the book's Morality range for each shown as a guide beside the character's
+  own (nothing refused; the book's lower Piety for a deity that doesn't suit, 4d6 or 3d6 at the GM's discretion, not
+  taken); its Ritual opened at its OML, as harn_create opens a religious character's; -q none.  The profile names it
+  after the Piety.  A cleric's church is its deity's: a character with a deity is offered its own church alone, one
+  with none any of the ten, the church making its deity the character's (as before).  (hmocc's deity.)
 
 ## The null ruleset (dq0null)
 
@@ -430,14 +454,6 @@ climb's test to hold on).
   once the maker gives faces a grade.  Today it's 10 feet a round at a marginal success and 20 at a critical,
   everywhere.
 
-- **Occupations by class and sex** (the user's, 2026-10-20): a serf's or an unguilded character's choice is the
-  unguilded occupations, a guilded one's those and the guilded, a noble's all; Lady for women; -q within them.
-  Today any occupation for anyone.
-- **A human's culture rolled, mostly Feudal** (the user's, 2026-10-20), the book's exceptions Imperial, Viking and
-  Tribal (elves Sindarin, dwarves Khuzan), -q too; an hmchar flag fixes it (the tests', so their characters keep
-  theirs: the user's).  Today every human is Feudal.
-- **A deity the player's choice** (the user's, 2026-10-20): one of the ten or none, the morality ranges a guide;
-  its Ritual opened, as the book has it; -q none.  Today none but a cleric's.
 - **Strenuous work tires** (the user's, 2026-10-20: "swimming, climbing, running, battering down a door"): running
   as now, climbing, battering and digging as a run does, swimming as it comes (slice 4.9); a long one asking.  Today
   only the pace tires.

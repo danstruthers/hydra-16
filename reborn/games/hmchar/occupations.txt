@@ -2,10 +2,15 @@
 ; time, as they need it; on the card in games/lib/hmchar, beside them): the book's Occupational Skills table
 ; (Character 15), its military units by culture (Character 27) and its churches (Character 23), in harn.h's skill names.
 ;
-; A group of occupations follows its header, [KIND] or [KIND QUALIFIER], then its title (said as the group's listed).
-; Each kind begins with its own letter (the menu's: u lists the unguilded).  A qualifier is a culture's name (the
-; group offered to that culture's characters: the soldiers by their units) or a deity's (offered to its followers, or
-; to a character who has none, the church making its deity theirs: the clerics).  An occupation is its name (19
+; A group of occupations follows its header, [KIND] or [KIND QUALIFIER ...], then its title, if it has one (said as
+; the group's listed).  Each kind begins with its own letter (the menu's: u lists the unguilded).  The group's offered
+; to a character every word of its header admits: a culture's name, that culture's characters (the soldiers by their
+; units); a deity's, its followers, or a character who has none, the church making its deity theirs (the clerics); a
+; class's, Guilded or Noble, a character of that class or a higher (a slave's, a serf's and an unguilded character's
+; the unguilded occupations: the book's limits, the user's, 2026-10-20; the soldiers and the clerics any class's, as
+; the book has them among the unguilded, but a knight a noble, Character 13 and 27); a sex's, Female or Male, a
+; character of that sex (a Lady a woman); any other word (the kind's: soldier), any character.  hmchar -c names any
+; occupation the character's culture and deity have, not held to its class or sex.  An occupation is its name (19
 ; letters at most: the game keeps no more), its years, and its skills, a | between.  A kind's line named "all" is
 ; every one of its occupations' skills too (Character 23, 27: a skill both list, the higher OML).
 ;
@@ -79,6 +84,7 @@ Woodcrafter         | 7 | Woodcraft/5, Metalcraft/2, Hidework/3
 
 [noble] Noble (Character 15; a knight is a soldier):
 Herald              | 5 | Heraldry/4, Oratory/4, Rhetoric/4, Intrigue/5, Drawing/4, Script, Riding, Polearm, Sword, Axe, Dagger, Shield, Dancing
+[noble Female]
 Lady                | 7 | Intrigue/5, Folklore/4, Textilecraft/3, Dancing/3, Heraldry/3, Astrology/2, Drawing/3
 
 [soldier] Soldiers (Character 27): UF unarmoured foot, LF light foot, MF medium foot, HF heavy foot, LH light horse, MH medium horse, HH heavy horse, SB shortbow, LB longbow
@@ -90,12 +96,15 @@ Guardsman LF        | 4 | Spear/6, Sword/5, Dagger/5, Shield/5
 Guardsman MF        | 4 | Spear/6, Sword/5, Dagger/5, Shield/5
 Yeoman SB           | 4 | Bow/5, Sword/5, Dagger/5, Shield/5
 Yeoman LB           | 4 | Bow/5, Sword/5, Dagger/5, Shield/5
+[soldier Feudal Noble]
 Knight MH           | 7 | Riding/6, Initiative/6, Polearm/6, Sword/5, Axe/5, Dagger/5, Shield/6, Dancing/3
 Knight HH           | 7 | Riding/6, Initiative/6, Polearm/6, Sword/5, Axe/5, Dagger/5, Shield/6, Dancing/3
 Knight/Bailiff      | 7 | Riding/6, Initiative/6, Polearm/6, Sword/5, Axe/5, Dagger/5, Shield/6, Dancing/3, Law/3, Agriculture/2
+[soldier Feudal]
 Order infantry LF   | 4 | Spear/6, Sword/5, Dagger/5, Shield/5
 Order infantry MF   | 4 | Spear/6, Sword/5, Dagger/5, Shield/5
 Order archer SB     | 4 | Bow/5, Sword/5, Dagger/5, Shield/5
+[soldier Feudal Noble]
 Order knight MH     | 7 | Riding/6, Initiative/6, Polearm/6, Sword/5, Club/5, Dagger/5, Shield/6, Dancing/3
 Order knight HH     | 7 | Riding/6, Initiative/6, Polearm/6, Sword/5, Club/5, Dagger/5, Shield/6, Dancing/3
 [soldier Imperial] Imperial:
@@ -103,6 +112,7 @@ Militia UF          | 4 | Spear/4, Shield/4
 Legionnaire LF      | 4 | Spear/5, Sword/4, Dagger/4, Shield/5
 Legionnaire MF      | 4 | Spear/6, Sword/5, Dagger/4, Shield/5
 Legionnaire SB      | 4 | Bow/6, Sword/5, Dagger/5, Shield/5
+[soldier Imperial Noble]
 Patrician MH        | 7 | Riding/6, Initiative/6, Polearm/6, Sword/5, Axe/5, Dagger/5, Shield/6, Dancing/3
 [soldier Viking] Viking:
 Clansman UF         | 4 | Spear/5, Shield/5, Axe/4, Seamanship/3
@@ -118,6 +128,7 @@ Ranger UF           | 4 | Bow/6, Sword/5, Dagger/5, Shield/5
 Ranger LF           | 4 | Bow/6, Sword/5, Dagger/5, Shield/5
 Guardian MF         | 4 | Spear/7, Sword/6, Dagger/5, Shield/6
 Horsebow LH         | 4 | Riding/6, Bow/6, Polearm/5, Sword/5, Shield/6, Dancing/3, Musician/2
+[soldier Sindarin Noble]
 Knight MH           | 7 | Riding/7, Initiative/6, Polearm/7, Sword/6, Shield/6, Dancing/3, Musician/2
 
 [cleric] Clerics (Character 23; a church makes its deity the character's, if it has none):
