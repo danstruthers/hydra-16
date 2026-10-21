@@ -231,6 +231,37 @@ silent on all of it.
   first six keep their numbers till the tests are cut to meaning (the ghoul is the book's grave-wight, the cave bear
   its black bear: Bestiary pp48, 13).
 - **A creature defends** by dodging, or by counterstriking if it's better at that, as the book advises for animals.
+- **The character's defences are chosen for it, a round's at a time** (the user's, 2026-10-20: the game is real
+  time): against each blow the better of a block and a dodge it has left that round; each thing it holds that
+  blocks blocks one foe a round (a sword one, a shield another), a bare arm if it holds none, and the dodge one
+  foe; a foe met again in the round meets the same defence; none left, none.  A bare arm's block against a weapon
+  (struck, H2) is the last chosen.  A counterstrike only on command (defend counter), what it strikes with then
+  spent for the round as a block would be; defend block or defend dodge puts that first, defend none drops them
+  all.  The round runs ten seconds from the first blow at it after the last one ended.  Why: a player can't choose
+  a defence each blow in real time, and the book's defender meets each attack with something it has free.
+  (gear.c's pc_defence.)
+- **Fighting on, as built** (the user's, 2026-10-20: "once engaged in combat, you should continue to attack your
+  target as you can, without actively having to say "attack" each time"): a long task of its own (LT_FIGHT: no bar,
+  its words on the status line, "Fighting the giant rat"), begun as the character attacks (or a close-in comes beside
+  its target) and as a hostile enemy engages it: one that strikes at it, or whose zone stops its walk, on its feet,
+  sensing it, not fleeing (not one that isn't hostile, a wary rat keeping its distance; not while the character's
+  senseless, but as it comes round, if one engages it still).  A blow each round as it's free, with what it holds (an
+  attack's own weapon and aim kept; the middle, else), while its target's within reach and able.  Its target beaten
+  (dead, senseless, out of reach), it turns to the next hostile engaging it, the one that struck at it last, else the
+  first ("You turn to the giant rat."); none, it stops ("No foe is left beside you.", but after a blow alone, whose
+  words say it).  A senseless one's left lying; "attack the rat" finishes it.  Come round in shock, it's in no state
+  to fight, and stops ("You're in no state to fight.").  A command that takes time takes over: the round out ("You
+  stop fighting."), then the command, and fought on after it if a hostile engages it still ("You turn to the ghoul.");
+  commands typed ahead take it over each in turn, a round fought between them.  "stop" (or "no" to its question) ends
+  it, those engaging it then left be till they've left it or it attacks.  The free commands don't stop it (a look
+  about, what it carries, the sheet, the map, the help, its state, a stance: "defend dodge"); an attack as it fights
+  changes its target, struck at the next round.  Its soft question: badly hurt as it fights, then critically ("You're
+  badly hurt.  Keep fighting?"), the blows going on as it asks at the real paces, the clock still at the turns pace
+  till it's answered; the other soft questions (something seen or heard) don't ask it, nor do a blow, a wound or a
+  hostile near stop it.  Tiring as it fights isn't decided: none yet.  To come, the same task: a missile weapon's (in
+  range, seen, a clear line; its next missile each shot, none left the end; an enemy engaging the character ending it,
+  the melee's fighting on taking over), a setting widening where it begins ("autoengage with sword at close range"),
+  an ally's.  (dq0w.c's part 24.)
 - **Aiming high or low** is two steps worse (10); **a prone defender** four steps easier to strike (20);
   **outnumbered,** two steps worse for each enemy more.  (fight.c.)
 - **Armour's quality:** a poor piece a point less protection, a fine one a point more.  (fight.c.)
@@ -411,8 +442,9 @@ climb's test to hold on).
   hard stop ("The giant rat engages you."), and one begun in a zone goes a single square and stops there if it's
   still in one (the book's one square a turn within them): a walk over to a thing, or past a hostile, stops where it's
   engaged.  A blow's close-in ends in its target's zone, beside it, and the blow is struck; engaged by another first,
-  no blow, and the player says what next.  Engaged already, a blow at one out of reach isn't closed with (the
-  user's).  The denizens move by the same rule: one coming at the character stops in its zone.  Not used: the book's
+  no blow, and the player says what next (a hostile one fought: Fights' fighting on).  Engaged already, a blow at
+  one out of reach isn't closed with (the user's).  The denizens move by the same rule: one coming at the character
+  stops in its zone.  Not used: the book's
   long-reach weapons' two squares (with the missiles, slice 4.7) and its reaction zones (the game's 30 feet stands for
   them: a hostile seen that near stops a long task).  As built: a close-in's target
   struck at the character as it comes beside it is no stop (it's the fight it went for: the character's blow follows);
@@ -496,10 +528,6 @@ climb's test to hold on).
 
 - **Swimming tires** (the user's, 2026-10-20: "swimming, climbing, running, battering down a door"), strenuous work
   as climbing, digging and battering are (built: Moving and tiring), once there's water (slice 4.9).
-- **Fighting on** (the user's, 2026-10-20): once engaged, either way (the character attacked, or a hostile enemy
-  engaged it), a blow each round as it can, a long task, without "attack" again; any command takes over; its target
-  beaten (dead, senseless, fled out of reach), the next enemy engaging it; none left, it stops and says so.  Today
-  each attack is one blow.
 - **Fighting on with missiles** (the user's, 2026-10-20; slice 4.7, with the missiles): a bow's arrows, a brace of
   throwing daggers, the same way: shot or thrown at the target while it's in range, the next taken each time, the
   next foe in range after it, till none is left, the missiles run out, or an enemy engages the character (then
@@ -508,10 +536,6 @@ climb's test to hold on).
   close range", "autotarget with bow at medium range": a hostile coming within it begins fighting on (melee's
   close range the engagement zone and a square more, closed in on; a missile weapon's the book's bands).  Today
   only an enemy engaging the character, or one attacked, is fought.
-- **A round's defences** (the user's, 2026-10-20): automatic, a block or a dodge, the better against the blow, each
-  once a round (a block once for each weapon or shield that blocks: two attackers, the shield blocks one and the
-  sword the other; a dodge once); a counterstrike only on command (defend counter), its weapon used for the round;
-  none left, no defence.  Today the better of block and dodge for every blow.
 
 ## Open
 

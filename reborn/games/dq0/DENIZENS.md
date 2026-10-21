@@ -287,11 +287,12 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   runs); an unfriendly one only when the character is beside it; a hostile one comes towards it.  The character
   strikes at one beside it ("attack the rat", "hit", "fight": a round of its time, the world's I_ATTACK, the blow
   posted, pc_foe) with the best weapon it holds (else its fists; or a fist, a foot, its head as it says: punch, kick,
-  head butt the rat, by Unarmed, the book's hand, foot and head), defending by its stance ("defend dodge", "block",
-  "counter", "none", "best"); its armour is what it wears (the things tell the referee what's held and worn, and how
-  well made: RS_EQUIP's marks).  Each blow is told (E_FIGHT in the denizens' queue, its words in a ring in their
-  bank: the referee's for the wounds and the armour, the UI's for the rest), heard by the others (they turn to it)
-  and played (the sound task's *hit, *swish).
+  head butt the rat, by Unarmed, the book's hand, foot and head), defending as the referee chooses each blow (a
+  round's defences, HOUSE.md's: a block or a dodge, each once a round; its stance, "defend dodge", "block", "counter",
+  "none", "best", puts one first, a counterstrike only so); its armour is what it wears (the things tell the referee
+  what's held and worn, and how well made: RS_EQUIP's marks).  Each blow is told (E_FIGHT in the denizens' queue, its
+  words in a ring in their bank: the referee's for the wounds and the armour, the UI's for the rest), heard by the
+  others (they turn to it) and played (the sound task's *hit, *swish).
 - **After:** a denizen wounded tests its morale (RS_MORALE: HOUSE.md's fights): broken (or a shy one cautious) it
   flees a minute; cautious, it holds back a round.  One knocked senseless lies there till it comes round, and is
   finished if it's struck meanwhile; one bleeding loses blood a minute at a time (RS_TIME) and may die of it; one dead

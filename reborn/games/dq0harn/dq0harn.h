@@ -78,6 +78,8 @@ extern unsigned long pc_out;                    /* (The character senseless till
 
 /* A side of a fight, as a blow wants it (fight.c's; gear.c's for the character) */
 struct bkind;
+#define SIDE_BLK        4
+#define BARE_ARM        NTOOLS
 struct side {
     harn_char*      c;
     unsigned char   who;                        /* 0 the character, else an actor's entry plus 1 */
@@ -86,6 +88,11 @@ struct side {
     signed char     imp[3];                     /* Its weapon's impacts */
     unsigned char   part;                       /* (Its weapon a part of it: the part it strikes with; else 0xFF) */
     unsigned char   bare;                       /* (Its block a bare arm's) */
+    unsigned char   nblk;                       /* (The character's: what blocks, each thing it holds that can, else a
+                                                **   bare arm: up to SIDE_BLK; each one's */
+    unsigned char   bslot[SIDE_BLK];            /*   slot in tools, BARE_ARM a bare arm's, */
+    int             bml[SIDE_BLK];              /*   block's EML) */
+    unsigned char   aslot;                      /* (And the slot of what it strikes with: BARE_ARM a part of it) */
     const struct bkind* b;                      /* (A creature's entry; 0: the character) */
     char            word[8];                    /* Its weapon, in a word */
 };
@@ -93,6 +100,8 @@ struct side {
 /* gear.c (overlay 3): the character's weapons and armour */
 void __fastcall__ pc_side (struct side* s);     /* Its side of a fight: what it strikes with (pc_way's), blocks with,
                                                 **   dodges */
+unsigned char __fastcall__ pc_defence (struct side* d, unsigned char f, unsigned char armed);  /* Its defence (HARN_*)
+                                                **   against foe f this round (a round's defences, the user's) */
 unsigned char __fastcall__ pc_armour (unsigned char loc, unsigned char aspect);    /* Its armour at loc against an
                                                 **   aspect (HARN_*), all its worn pieces', the last named in arm
                                                 **   (""); loc SOLE: its soles' (a kick at a thing) */

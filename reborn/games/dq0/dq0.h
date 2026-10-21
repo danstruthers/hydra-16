@@ -207,6 +207,10 @@ unsigned char __fastcall__ answer_of (const char* l);
 void __fastcall__ bar_text (char* s, unsigned done, unsigned len);
 unsigned __fastcall__ wait_of (const char* l, unsigned char n);
 void __fastcall__ state_words (unsigned char cond);
+unsigned char __fastcall__ free_cmd (const char* l);   /* Overlay 3: a line typed as the character's busy, carried
+                                                **   out at once (1), held (0), or held and its fight stopped for it
+                                                **   (2) */
+extern unsigned char autogo;                    /* (main.c's: dq0 -a, every soft question answered yes, unasked) */
 extern unsigned char harm_told;                 /* (The states a harm's words told this answer: main.c's) */
 char* __fastcall__ env (const char* name, char* buf, unsigned char size);  /* The environment's (main.c) */
 void __fastcall__ appraise (const struct ireq* q, signed char g);       /* Overlay 1: a thing judged */

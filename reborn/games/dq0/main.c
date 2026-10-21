@@ -50,12 +50,14 @@ const char* const pacename[4] = { "relaxed", "normal", "menacing", "turns" };
 static unsigned char asking;                    /* (A long task's soft question put, the answer awaited) */
 static const char* cl;                          /* (The command's line, s_command's: chores' words of it) */
 unsigned char harm_told;                        /* (The states a harm's words told in this answer: intro.c's) */
-static unsigned char autogo;                    /* (dq0 -a: every soft question answered yes, unasked: the tests') */
+unsigned char autogo;                           /* (dq0 -a: every soft question answered yes, unasked: the tests') */
 static unsigned char noinit;                    /* (dq0 -I: no engage initiative test, no grope's: the tests') */
 static unsigned char asked;                     /* (A sound's question put in this command's long task) */
 static unsigned bar_done;                       /* (The long task's part done as the bar was last drawn) */
 static unsigned char busy = 1;                  /* The character's doing something: no command till it's free (nor
                                                 **   till the world's started, and says so: E_READY) */
+static unsigned char held;                      /* (A line typed as it's busy, held till it's free; */
+static unsigned char took;                      /*   and the fight it was in stopped for it, once) */
 static unsigned place;                          /* Where this task is in the world's events */
 static int task_[NTASKS];                       /* Each task's number, as it was started (0: not) */
 static unsigned char test_start;
@@ -668,13 +670,14 @@ unsigned char untarget;                         /* (The target let go at the nex
 
 void status (void)
 {
-    static char left[48], right[56];
+    static char left[48], right[72];            /* (Its right side's longest: paused, a fight's words, the state, the
+                                                **   facing, the minutes) */
     char n[6];
 
     strcpy (left, P.name[0] ? P.name : "Dingus Quest Zero");
     strcpy (right, paused ? "PAUSED  " : "");
-    if (task_[T_WORLD] > 0 && HUB->pc_task.kind && HUB->pc_task.len) {     /* (A long task's bar: its part done,
-                                                **   task.c's) */
+    if (task_[T_WORLD] > 0 && HUB->pc_task.kind && (HUB->pc_task.len || HUB->pc_task.foe)) {   /* (A long task's
+                                                **   bar, its part done; a fight's foe: task.c's) */
         bar_text (right, bar_done = HUB->pc_task.done, HUB->pc_task.len);
     }
     if (task_[T_WORLD] > 0) {
@@ -784,6 +787,7 @@ static unsigned char events (void)          /* (How many there were) */
         case E_READY:
             if (m.who == 0) {
                 busy = 0;
+                asking = 0;                     /* (A fight's question, its fight over as it asked: let go) */
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;
                                                 **   knocked senseless by one, busy again; dead of one, the
                                                 **   game's end: no prompt, however the tasks' timing falls) */
@@ -852,11 +856,20 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_TASK:                            /* (The long task's: stopped, asked, refused; slice 4.0's) */
             if (m.who == 0) {
-                k = (unsigned char) m.w1;
-                if (autogo && (k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD)) {
+                k = task_words (m.w1, m.b);
+                if (k & 2) {
                     intend2 (I_GO_ON, 0, 0);    /* (dq0 -a's: on, unasked) */
-                } else if ((asking = task_words (m.w1, m.b)) != 0) {
+                } else if ((asking = k & 1) != 0) {
                     t_prompt (1);               /* (Its answer's prompt: the character still busy) */
+                }
+                if (k & 4) {
+                    busy = 1;                   /* (Fighting on begun by the world: busy till it's done, E_READY; a
+                                                **   line held taking it over) */
+                    t_prompt (0);
+                    if (held && !took) {
+                        took = 1;
+                        intend2 (I_STOP, 1, 0);
+                    }
                 }
             }
             break;
@@ -1332,8 +1345,7 @@ static unsigned char __fastcall__ chores (unsigned char action)
 static unsigned char __fastcall__ at_once (const char* l)
 {
     cq_cmd (l);                                 /* (Its command: the command parser's, the line's) */
-    return cmd.action == VB_META_INVENTORY || cmd.action == VB_META_SHEET || cmd.action == VB_META_MAP ||
-        cmd.action == VB_META_HELP || cmd.action == VB_STOP || !strcmp (l, "status");
+    return free_cmd (l);                        /* (1 at once; 0 held; 2 held, its fight stopped for it: task.c's) */
 }
 
 #pragma code-name (push, "SW2CODE")
@@ -1906,7 +1918,7 @@ int main (int argc, char* argv[])
 {
     unsigned shown = 0, t;
     unsigned long next = 0;
-    unsigned char held = 0, quick = 0;
+    unsigned char quick = 0;
     unsigned char k, f;
     char* l;
 
@@ -1971,6 +1983,7 @@ int main (int argc, char* argv[])
             HUB->ui_cmd = 1;                    /* (A command in hand: the senses' look gives way meanwhile, from
                                                 **   its first look, at_once's, on: a line typed as a look began
                                                 **   waited for it, its parsing a third of the CPU) */
+            k = 0xFF;
             if (asking) {                       /* (A soft question's answer: yes goes on, no stops it; a command
                                                 **   stops it, then is carried out as the character's free) */
                 asking = 0;
@@ -1980,9 +1993,12 @@ int main (int argc, char* argv[])
                     HUB->ui_cmd = 0;
                     l = 0;
                 }
-                intend2 (k == 1 ? I_GO_ON : I_STOP, 0, 0);
+                intend2 (k == 1 ? I_GO_ON : I_STOP, !k, 0);     /* (A command's stop: a fight fought on after it) */
             }
-            if (l && busy && (held = !at_once (l))) {
+            if (l && busy && (held = !k || (k = at_once (l)) != 1)) {
+                if ((took = k == 2) != 0) {
+                    intend2 (I_STOP, 1, 0);     /* (A fight taken over: its round out, then the command) */
+                }
                 HUB->ui_cmd = 0;                /* (Held: the next waits for the character, not parsed again) */
                 l = 0;
             }

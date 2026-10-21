@@ -335,9 +335,8 @@ static void __fastcall__ mishap (struct side* s, unsigned char stumble, unsigned
     }
 }
 
-/* The defender's defence (HARN_BLOCK ...): the character's by its stance (auto: the better of its block and its
-** dodge), a creature's by its nature (a counterstrike if it's the better at it, else a dodge); in shock, or
-** senseless, none */
+/* The defender's defence (HARN_BLOCK ...): the character's, its round's (gear.c's pc_defence); a creature's by its
+** nature (a counterstrike if it's the better at it, else a dodge); in shock, or senseless, none */
 static unsigned char defence (void)
 {
     if (D.c->state != HARN_CONSCIOUS || (!D.who && pc_out > tnow)) {
@@ -346,17 +345,7 @@ static unsigned char defence (void)
     if (D.who) {
         return D.aml >= D.dodge ? HARN_COUNTER : HARN_DODGE;
     }
-    switch (stance) {
-    case D_BLOCK:
-        return HARN_BLOCK;
-    case D_DODGE:
-        return HARN_DODGE;
-    case D_COUNTER:
-        return HARN_COUNTER;
-    case D_NONE:
-        return HARN_IGNORE;
-    }
-    return D.dml > D.dodge ? HARN_BLOCK : HARN_DODGE;
+    return pc_defence (&D, A.who, A.part == 0xFF);
 }
 
 static void attack (void)

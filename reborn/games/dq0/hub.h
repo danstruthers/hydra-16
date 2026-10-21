@@ -26,12 +26,14 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     8                       /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     9                       /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
                                                 **   I_TAKE's walk alone, TE_ENGAGED, TE_FAR; 8: I_LOOK, V_LOOKED,
-                                                **   LK_WAY, a look one way's record, WAY_SEEN) */
+                                                **   LK_WAY, a look one way's record, WAY_SEEN; 9: fighting on,
+                                                **   LT_FIGHT, the long task's foe, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE,
+                                                **   I_STOP's w1) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -156,7 +158,9 @@ enum {
                                                 **   task ends, the world first) */
     I_ATTACK,                                   /* a: the actor struck at (its entry plus 1), b: the aim (Z_*): a
                                                 **   round's (the world's: the character busy for it, the blow posted
-                                                **   in the hub's pc_foe, and struck: the referee asked, E_FIGHT); x[1]
+                                                **   in the hub's pc_foe, and struck: the referee asked, E_FIGHT), and
+                                                **   fighting on (LT_FIGHT: a blow each round after it); while it
+                                                **   fights, its target changed, struck at as it's next free; x[1]
                                                 **   what it strikes with (SK_*: the hub's pc_strike) */
     I_ENTER,                                    /* (The denizens' own, below) A body come into the world's keeping */
     I_LEAVE,                                    /*   gone from it (no longer an actor) */
@@ -170,7 +174,9 @@ enum {
                                                 **   thing is out of reach, IR_NOT_HERE: the UI's to carry it out
                                                 **   again, as the character's free; no E_TAKEN) */
     I_STOP,                                     /* The character's long task stopped (the player's "stop"): a its kind
-                                                **   named (LT_*: "stop digging"; LT_NONE whatever it is); E_TASK */
+                                                **   named (LT_*: "stop digging"; LT_NONE whatever it is); w1 1, a
+                                                **   command taking over (a fight's: fought on after it, if an enemy
+                                                **   engages it still); E_TASK */
     I_GO_ON,                                    /* A soft interruption answered: go on (E_TASK's TE_ASK*: "yes") */
     I_ASK,                                      /* A soft interruption the UI perceived itself (a sound heard): w1 its
                                                 **   kind (TE_ASK_HEARD); the long task paused, asked (E_TASK) */
@@ -287,7 +293,8 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8 };    /* E_VIEW's
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN };  /* E_DIG's how (D_AGAIN: begun on
                                                 **   a hole dug part way before, the world's DUG record's) */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
-       TE_ENGAGED, TE_FAR, TE_AWAY };           /* E_TASK's: stopped as
+       TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE };
+                                                /* E_TASK's: stopped as
                                                 **   the player asked; stopped hard, by a wound or a blow (HOUSE.md:
                                                 **   all wounds), by a hostile in sight within 30 feet; asking, soft
                                                 **   (something new seen, tiring); carried on, the answer yes; not
@@ -298,8 +305,14 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
                                                 **   was engaged with it already, or a close-in refused, engaged); a
                                                 **   close-in's target out of reach still (b it plus 1); an enemy
                                                 **   newly engaged the quicker, backing away (b it plus 1: the engage
-                                                **   initiative test's tactical advantage, a disengage) */
+                                                **   initiative test's tactical advantage, a disengage); asking, a
+                                                **   fight's, badly hurt (b its health, rs.h's H_*: "You're badly
+                                                **   hurt.  Keep fighting?"); fighting on begun (b the foe plus 1, a
+                                                **   hostile engaging it; | TE_STILL, turned to it, its target beaten;
+                                                **   | TE_QUIET, begun by the player's blow, unworded); a fight's end,
+                                                **   no foe left (b 1: in shock, in no state to fight) */
 #define TE_STILL        0x80
+#define TE_QUIET        0x40
 enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN };   /* E_BEAT's: a quiet stretch (HOUSE.md:
                                                 **   every 30 feet), the way turns, a side passage, a door passed, it
                                                 **   opens out, it rises, it falls */
@@ -410,8 +423,9 @@ enum { DF_NONE, DF_PLACE, DF_LAST, DF_NEAR, DF_FRONT, DF_TARGET, DF_HAND };   /*
                                                 **   character is, the last thing named, that or else what's near
                                                 **   (which, asked), what's in front, the target (else the nearest
                                                 **   foe), what's in hand */
-enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK, LT_BATTER };  /* A long task's kind
-                                                **   (a verb's: commands.verbs' task) */
+enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK, LT_BATTER, LT_FIGHT };  /* A long
+                                                **   task's kind (a verb's: commands.verbs' task); LT_FIGHT fighting
+                                                **   on, the world's (HOUSE.md's) */
 #define MN_CAREFUL      0x01                    /* (struct cmd's manner: carefully, slowly, quickly, quietly, hard, */
 #define MN_SLOW         0x02                    /*   gently, firmly) */
 #define MN_QUICK        0x04
@@ -681,11 +695,14 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** to keep for every actor alike, the character's here for the UI: its bar on the status line, its words; the
     ** player's stop and a soft interruption's answer the world's intents (I_STOP, I_GO_ON) */
     struct ltask {
-        unsigned char kind;                     /* LT_*: none, a walk, a climb, a dig, a search, a wait, a battering */
+        unsigned char kind;                     /* LT_*: none, a walk, a climb, a dig, a search, a wait, a battering,
+                                                **   a fight */
         unsigned char asking;                   /* A soft interruption put to the player (E_TASK's TE_ASK*): 1 */
         unsigned    len, done;                  /* Its length and its part done, its own units (a walk's squares, a
                                                 **   dig's half-feet, a climb's feet, a wait's tenths, a battering's
-                                                **   blows) */
+                                                **   blows; a fight's none, its blows struck so far) */
+        unsigned char foe;                      /* A fight's target, the actor plus 1 (the status line's "Fighting
+                                                **   the giant rat"; 0 none) */
     }               pc_task;
 };
 #define SN_SEEN         0x01                    /* (dsense's res: the character seen, */

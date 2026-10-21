@@ -145,7 +145,8 @@ unsigned char __fastcall__ o_pc_armour (unsigned char loc, unsigned char aspect)
 }
 
 /* Its side of a fight: what it strikes with (pc_way's: SK_BEST, the best weapon it holds, else its fists; else that
-** part of it), its block (the best of what it holds, its weapon or its shield; else a bare arm), its dodge */
+** part of it), its block (the best of what it holds, its weapon or its shield; else a bare arm) and each thing that
+** blocks (a round's defences, fight.c's: each blocks one foe a round), its dodge */
 void __fastcall__ o_pc_side (struct side* s)
 {
     const struct weapon* w;
@@ -156,6 +157,8 @@ void __fastcall__ o_pc_side (struct side* s)
     s->size = 4;
     s->b = 0;
     s->dodge = eml (&pc, HARN_DGE);
+    s->nblk = 0;
+    s->aslot = BARE_ARM;
     for (k = 0; k < NTOOLS; ++k) {              /* (What it holds that's a weapon: its best to strike with, its best
                                                 **   to block with) */
         if (!tools[k][0] || !(tflag[k] & T_HELD)) {
@@ -171,9 +174,14 @@ void __fastcall__ o_pc_side (struct side* s)
         if (v + w->wdc > blk) {
             blk = v + w->wdc;
         }
+        if (s->nblk < SIDE_BLK) {
+            s->bslot[s->nblk] = k;
+            s->bml[s->nblk++] = v + w->wdc;
+        }
         if (j != SHIELD && v + w->wac > att) {
             att = v + w->wac;
             best = j;
+            s->aslot = k;
         }
     }
     if (at_thing && pc_way == SK_BEST) {        /* (At a thing: the tool to hand that hits it hardest) */
@@ -189,6 +197,7 @@ void __fastcall__ o_pc_side (struct side* s)
         att = best ? eml (&pc, weapons[best].sk) + weapons[best].wac : 0;
     }
     if (pc_way != SK_BEST || !best) {           /* (A part of it: by Unarmed) */
+        s->aslot = BARE_ARM;
         best = pc_way == SK_KICK ? 1 : pc_way == SK_HEAD ? 2 : 0;
         att = eml (&pc, HARN_UNA) + weapons[best].wac;
     }
@@ -197,10 +206,75 @@ void __fastcall__ o_pc_side (struct side* s)
     s->part = w->part == TOOL ? 0xFF : w->part;
     s->bare = !blk;
     s->dml = blk ? blk : eml (&pc, HARN_UNA) + weapons[0].wdc;
+    if (!blk) {                                 /* (Nothing held that blocks: a bare arm) */
+        s->bslot[0] = BARE_ARM;
+        s->bml[0] = s->dml;
+        s->nblk = 1;
+    }
     memcpy (s->imp, w->imp, sizeof s->imp);
     if (s->part != 0xFF) {                      /* (Gauntlets on a punch, hobnailed boots on a kick) */
         bit = 1u << w->part;
         s->imp[0] += worn (more);
     }
     strcpy (s->word, w->word);
+}
+
+/* The character's defences in a round (the user's, 2026-10-20; HOUSE.md's): each thing that blocks blocks one foe a
+** round (a shield one, a sword another), a bare arm's too, the dodge one; a counterstrike only on command (its stance,
+** D_COUNTER), what it strikes with then spent for the round as a block would be; a foe met this round meets the
+** same again.  To whom each went (the foe's who, 0 none yet), by the slot in tools of what blocked (BARE_ARM a bare
+** arm's), the dodge last; and how (HARN_*).  The round from the first blow at it after the last one ended */
+#define DODGED          (BARE_ARM + 1)
+#define ROUND_T         100                     /* (A round's tenths: RS_HELLO's) */
+static unsigned char used[DODGED + 1], uhow[DODGED + 1];
+static unsigned long rnd_at;
+
+/* The character's defence (its side d) against foe f (its who) this round, armed if f strikes with a weapon: its
+** stance's, D_AUTO the better of a block and the dodge left (a bare arm's block against a weapon the last: struck,
+** H2), D_BLOCK or D_DODGE that first; none left, none.  A block's EML in d->dml, d->bare if it's a bare arm's */
+unsigned char __fastcall__ o_pc_defence (struct side* d, unsigned char f, unsigned char armed)
+{
+    unsigned char k, s, how = HARN_IGNORE;
+    int v = -0x7FFF, w;
+
+    if (tnow >= rnd_at + ROUND_T) {            /* (A round on: its defences all free again) */
+        rnd_at = tnow;
+        memset (used, 0, sizeof used);
+    }
+    if (stance == D_NONE) {
+        return HARN_IGNORE;
+    }
+    for (s = 0; s <= DODGED && used[s] != f; ++s) {
+    }
+    if (s > DODGED) {                           /* (A foe not met yet this round) */
+        if (stance == D_COUNTER && !used[d->aslot]) {
+            s = d->aslot;
+            how = HARN_COUNTER;
+        } else {
+            for (s = 0xFF, k = 0; k < d->nblk; ++k) {
+                w = d->bml[k] - (d->bslot[k] == BARE_ARM && armed ? 1000 : 0);
+                if (!used[d->bslot[k]] && w > v) {
+                    v = w;
+                    s = d->bslot[k];
+                    how = HARN_BLOCK;
+                }
+            }
+            if (!used[DODGED] && (s == 0xFF || stance == D_DODGE || (stance != D_BLOCK && d->dodge > v))) {
+                s = DODGED;
+                how = HARN_DODGE;
+            }
+            if (s == 0xFF) {
+                return HARN_IGNORE;             /* (Every defence spent this round) */
+            }
+        }
+        used[s] = f;
+        uhow[s] = how;
+    }
+    for (k = 0; k < d->nblk && d->bslot[k] != s; ++k) {
+    }
+    if (k < d->nblk) {
+        d->dml = d->bml[k];
+        d->bare = s == BARE_ARM;
+    }
+    return uhow[s];
 }
