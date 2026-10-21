@@ -249,17 +249,19 @@ silent on all of it.
   attack's own weapon and aim kept; the middle, else), while its target's within reach and able.  Its target beaten
   (dead, senseless, out of reach), it turns to the next hostile engaging it, the one that struck at it last, else the
   first ("You turn to the giant rat."); none, it stops ("No foe is left beside you.", but after a blow alone, whose
-  words say it).  A senseless one's left lying; "attack the rat" finishes it.  A command that takes time takes over:
-  the round out ("You stop fighting."), then the command, and fought on after it if a hostile engages it still;
-  "stop" (or "no" to its question) ends it, those engaging it then left be till they've left it or it attacks.  The
-  free commands don't stop it (a look about, what it carries, the sheet, the map, the help, its state, a stance:
-  "defend dodge"); an attack as it fights changes its target, struck at the next round.  Its soft question: badly
-  hurt as it fights, then critically ("You're badly hurt.  Keep fighting?"), the blows going on as it asks at the
-  real paces, the clock still at the turns pace till it's answered; the other soft questions (something seen or heard)
-  don't ask it, nor do a blow, a wound or a hostile near stop it.  Tiring as it fights isn't decided: none yet.  To
-  come, the same task: a missile weapon's (in range, seen, a clear line; its next missile each shot, none left the end;
-  an enemy engaging the character ending it, the melee's fighting on taking over), a setting widening where it begins
-  ("autoengage with sword at close range"), an ally's.  (dq0w.c's part 24.)
+  words say it).  A senseless one's left lying; "attack the rat" finishes it.  Come round in shock, it's in no state
+  to fight, and stops ("You're in no state to fight.").  A command that takes time takes over: the round out ("You
+  stop fighting."), then the command, and fought on after it if a hostile engages it still ("You turn to the ghoul.");
+  commands typed ahead take it over each in turn, a round fought between them.  "stop" (or "no" to its question) ends
+  it, those engaging it then left be till they've left it or it attacks.  The free commands don't stop it (a look
+  about, what it carries, the sheet, the map, the help, its state, a stance: "defend dodge"); an attack as it fights
+  changes its target, struck at the next round.  Its soft question: badly hurt as it fights, then critically ("You're
+  badly hurt.  Keep fighting?"), the blows going on as it asks at the real paces, the clock still at the turns pace
+  till it's answered; the other soft questions (something seen or heard) don't ask it, nor do a blow, a wound or a
+  hostile near stop it.  Tiring as it fights isn't decided: none yet.  To come, the same task: a missile weapon's (in
+  range, seen, a clear line; its next missile each shot, none left the end; an enemy engaging the character ending it,
+  the melee's fighting on taking over), a setting widening where it begins ("autoengage with sword at close range"),
+  an ally's.  (dq0w.c's part 24.)
 - **Aiming high or low** is two steps worse (10); **a prone defender** four steps easier to strike (20);
   **outnumbered,** two steps worse for each enemy more.  (fight.c.)
 - **Armour's quality:** a poor piece a point less protection, a fine one a point more.  (fight.c.)
