@@ -1888,7 +1888,8 @@ int main (int argc, char* argv[])
         act = !turns || g != gone;              /* (At the turns pace, only in its turn: the world's word, den_go) */
         if (!turns && HUB->ui_cmd && gw < GIVE_WAY) {
             ++gw;                               /* (At the real paces, the UI's command in hand answered first: the
-            act = 0;                            **   minds wait, as the senses' look does, a second at most) */
+                                                **   minds wait, as the senses' look does, a second at most) */
+            act = 0;
         } else if (!HUB->ui_cmd) {
             gw = 0;
         }

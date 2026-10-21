@@ -4120,11 +4120,38 @@ module.exports = {
         // fifteen rounds at this seed; since slice 4.0 the character busy till it comes round, so the death comes in the
         // knock's own turn, the waits after it the shell's)
         const k = w.slice(4).find(t => dq0Ev(t, 'E_FIGHT', { ff: x => x & FF_D_DEAD }).length);
+        // (Its black-out told once, and the ghoul's blows fumbled at it as it lies misses: the Ignore table's tactical
+        // advantage none it can take, 2026-10-20; it was "you see an opening")
+        const said = m.out.replace(/\s+/g, ' '), down = said.indexOf('Everything goes black.');
+        if (down < 0 || said.indexOf('Everything goes black.', down + 1) >= 0) f.push('the black-out not told once');
+        else if (said.slice(down).includes('you see an opening')) f.push('the character, senseless, seeing an opening');
         if (!k) f.push('the character, down, not killed by the ghoul\'s claws');
         else {
           if (!k.after || !(k.after.sum.cond & 4)) f.push('the character not dead (C_DEAD)');
           dq0Need(f, k, 'E_BYE', {}, 'the game not ended by the death');
         }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0senseless', initiative: true, what: "Dingus Quest Zero's character knocked senseless and struck again as it lies (the faults the engage work found, fixed 2026-10-20): dq0armour's game (seed 7's ghoul, the character in armour, then undefended) with the engage initiative test on, whose dice bring them: its black-out told once however often it's struck while it's out (the referee's AF_AGAIN, the fight ring's FW_AGAIN), a blow fumbled at it as it lies a miss (the Ignore table's tactical advantage none it can take: it was 'you see an opening'), every wound's injury level in digits (ten and more two of them: it was \"(G:)\")",
+      init: 't_rc', cycles: 1000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 7 -c /ram/c.hm -k 'gambeson,mail hauberk' -T",
+        'wear the gambeson', 'wear the mail hauberk', 'd', 'defend dodge', 'wait', 'wait', 'defend none', ...Array(18).fill('wait'), 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], FF_D_DOWN = 4;
+        const downs = T.reduce((n, t) => n + dq0Ev(t, 'E_FIGHT', { def: 0, ff: x => x & FF_D_DOWN }).length, 0);
+        const out = m.out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').replace(/\s+/g, ' ');
+        const black = (out.match(/Everything goes black\./g) || []).length;
+        const levels = [...out.matchAll(/a (?:minor|serious|grievous) [a-z ]+ to (?:your|its) [a-z ]+ \(([^)]*)\)/g)].map(x => x[1]);
+        if (downs < 2) f.push('the character not struck senseless again as it lay (' + downs + ' knocks)');
+        if (black !== 1) f.push('"Everything goes black." told ' + black + ' times (knocked senseless ' + downs + ' times, never come round)');
+        const bad = levels.filter(l => !/^[MSG][0-9]+$/.test(l));
+        if (bad.length) f.push('injury levels not in digits: ' + bad.join(', '));
+        if (!levels.some(l => +l.slice(1) >= 10)) f.push('no injury level of ten or more (' + levels.join(' ') + ')');
+        if (out.slice(out.indexOf('Everything goes black.')).includes('you see an opening')) f.push("the character, senseless, seeing an opening (the Ignore table's advantage)");
         return f;
       },
       sdcard: true

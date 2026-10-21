@@ -76,6 +76,8 @@ struct fight {
 };
 #define FW_FIRST        0x80                    /* (which's: a tactical advantage's blow, struck first: the engage
                                                 **   initiative test's, the striker the quicker) */
+#define FW_AGAIN        0x40                    /* (which's: the one knocked senseless out already, struck as it
+                                                **   lay: rs.h's AF_AGAIN, no new black-out told) */
 
 /* A name the character's given (the UI's, dq0/names.c: DUNGEON.md's names), in the theme bank (NAMES_AT): a thing
 ** ("name my sword Linda": by its id, struct item's, never another's), a room ("call this room the Mausoleum": by
