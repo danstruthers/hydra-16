@@ -34,7 +34,7 @@
                                                 **   OB_WINDOW, OB_PORTC: pick's) */
 
 /* ==== Part 6: the command (main.c's chores: the parser's VB_OBSERVE_DIRECTION, VB_OBSERVE_OBJECT,
-** VB_OBSERVE_THROUGH, VB_LISTEN, VB_SMELL) */
+** VB_OBSERVE_THROUGH, VB_LISTEN, VB_SMELL; and VB_TRACK, the traces read, slice 4.1's) */
 
 #pragma code-name (push, "SW6CODE")
 #pragma rodata-name (push, "SW6RODATA")
@@ -49,6 +49,11 @@ void __fastcall__ s_look_way (unsigned char action)
             msg ("You hear nothing.");          /* (Nothing told as it listened: main.c's heard) */
         }
         lsn = 0;
+        return;
+    }
+    if (action == VB_TRACK) {
+        intend2 (I_TRACE, cmd.aux, 0);          /* (The traces read, the world's: the floor looked at, the Tracking
+                                                **   test; worded as its E_VIEW comes, V_TRACED) */
         return;
     }
     k = action == VB_LISTEN ? 1 : action == VB_SMELL ? 4 : 0;

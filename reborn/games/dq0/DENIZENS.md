@@ -271,6 +271,18 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   on the chips (SOUND.md).  A denizen hears the others' events and the world's (the character's noises: E_NOISE,
   digging), within its kind's hearing times the loudness over two: it turns to face the noise, stands a while, and
   looks for the character again at once (and so may see it).
+- **Smelt** (slice 4.1): a kind with a nose (kinds.txt's nose, 0-9) smells the character in still air within a third
+  of it (squares: a rat's 2, a bear's 2, a man's none), along a line the air passes (no rock, wall nor shut door): the
+  senses answer it with what's seen and heard (the hub's dsense: its nose's reach asked, SN_SMELT told), and it's
+  sensed as if seen.  Downwind further, upwind less, with the air layer (slice 4.5).
+- **A scent followed** (slice 4.1; the user's, 2026-10-21: keen noses follow a scent far longer than an hour): a kind
+  with a keen nose (6 or more, K_NOSE: giant rats, ghouls, cave bears, cave adders, lindworms), hostile, that doesn't
+  sense the character follows its trail, coming after it: the world's journal of the character's last 64 squares,
+  the freshest beside it that its nose can still smell (hub.h's SCENT_LIFE: the character's sweat's smell, by its
+  nose: a rat's most of a day, a bear's a day and a half), and on to the next; past them, the world's store's older
+  trail (its intent STEP_SCENT: the world finds the way the character went from its square, or the freshest square
+  beside it; none, it stands a moment and goes about its business, and sniffs again ten seconds on).  So a rat that
+  lost the character round a corner comes on after it.
 - **In the way:** the character can't walk onto a denizen's square: a walk along a passage, across a room or up to
   a square stops short of one (the way across a room found round them), and one in the very next square is told ("A
   giant rat is in the way.": E_NOWAY's N_DEN, the actor's).

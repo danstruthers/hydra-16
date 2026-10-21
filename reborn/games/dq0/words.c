@@ -439,10 +439,6 @@ void o_words (void)
 unsigned char __fastcall__ o_more (unsigned char action)
 {
     switch (action) {
-    case VB_TRACK:                              /* (The traces read, the world's: the floor looked at, the Tracking
-                                                **   test; worded as its E_VIEW comes, V_TRACED) */
-        intend2 (I_TRACE, cmd.aux, 0);
-        break;
     default:
         return 0;
     }

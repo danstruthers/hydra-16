@@ -129,7 +129,10 @@ static unsigned char need (void)
     e->cy = rcy;
     e->flags = 0;
     e->stamp = ++THD->stamp;
-    tr_file (best, TF_IN);                      /* (Its own read in, if it has any) */
+    hub_map (0);
+    if (HUB->savedir[0]) {
+        tr_file (best, TF_IN);                  /* (Its own read in, if it has any: no folder, none) */
+    }
     return best;
 }
 
@@ -243,8 +246,8 @@ void __fastcall__ s_tr_flush (unsigned char keep)
         THD->lsn = pcs + 1;
         THD->lcx = pcx;
         THD->lcy = pcy;
-        for (y = -1; y <= 1; ++y) {
-            for (x = -1; x <= 1; ++x) {
+        for (h = lim < 9, y = -1 + h; y <= 1 - h; ++y) {    /* (dq0 -C: its own alone) */
+            for (x = -1 + h; x <= 1 - h; ++x) {
                 rsn = pcs;
                 rcx = pcx + x;
                 rcy = pcy + y;
@@ -486,9 +489,8 @@ unsigned __fastcall__ s_traced (const struct msg* m)
     static signed char st, dx, dy;
     static unsigned char i, j, k, best;
 
-    tr_flush (0);                               /* (The journal in, the chunks round the character too: first, before
-                                                **   this part's own data's set, its image put back after) */
-    how = (unsigned char) m->w1;
+    how = (unsigned char) m->w1;                /* (The journal taken in first, the chunks round the character too:
+                                                **   the caller's, tr_flush) */
     way = m->w1 >> 8;
     w = m->w2 ? m->w2 : took[how];
     hub_map (0);

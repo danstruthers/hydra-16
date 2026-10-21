@@ -3215,7 +3215,9 @@ static void __fastcall__ intent (struct msg* m)
         disengage_go (m);                       /* (The book's disengage: part 26's) */
         break;
     case I_TRACE:
-        busy (traced (m));                      /* (The traces read, then the time it takes: part 28's) */
+        tr_flush (0);                           /* (The traces read, the journal taken in first, then the time it
+                                                **   takes: parts 27's, 28's) */
+        busy (traced (m));
         break;
     }
 }

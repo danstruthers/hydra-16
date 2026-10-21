@@ -91,6 +91,12 @@ const EXPRS = {
   wNitems: F('struct wayseen', 'nitems'), wItem: F('struct wayseen', 'item'), wNdens: F('struct wayseen', 'ndens'),
   wDen: F('struct wayseen', 'den'), wNglows: F('struct wayseen', 'nglows'), wGlow: F('struct wayseen', 'glow'),
   uiBank: 'UI_BANK', uMap: F('struct uirec', 'map'), mapH: 'MAP_H', mapW: 'MAP_W',
+  uTread: F('struct uirec', 'tread'), uTrtext: F('struct uirec', 'trtext'), trText: 'TR_TEXT', trHow: F('struct tread', 'how'),
+  trResult: F('struct tread', 'result'), trGrade: F('struct tread', 'grade'), trFloor: F('struct tread', 'floor'), trDust: F('struct tread', 'dust'),
+  trTrod: F('struct tread', 'trod'), trSmoke: F('struct tread', 'smoke'), trNtr: F('struct tread', 'ntr'), trTr: F('struct tread', 'tr'),
+  trailSize: 'sizeof (struct trail)', tlName: F('struct trail', 'name'), tlWhat: F('struct trail', 'what'), tlN: F('struct trail', 'n'),
+  tlAgo: F('struct trail', 'ago'), tlHead: F('struct trail', 'head'), tlKind: F('struct trail', 'kind'), tlAge: F('struct trail', 'age'),
+  tjAt: '(unsigned) TJ_AT - 0x8000', tjN: F('struct tjournal', 'n'), tjPn: F('struct tjournal', 'pn'),
   worldBank: 'WORLD_BANK', wCpage: F('struct wrec', 'cpage'), cpSize: 'sizeof (struct cpage)', ncpages: 'NCPAGES',
   cpUsed: F('struct cpage', 'used'), cpN: F('struct cpage', 'n'), chBank0: 'CHANGE_BANK (0)', chPage: 'CH_PAGE',
   chSize: 'sizeof (struct change)', chSn: F('struct change', 'sn'), chX: F('struct change', 'x'), chY: F('struct change', 'y'),
@@ -240,6 +246,17 @@ function createRecorder() {
     }
     const ui = bank(L.uiBank);                                   // (The map's rows, as the maker last drew them)
     if (ui) for (let r = 0; r < L.mapH; r++) s.map.push(str(ui, L.uMap + r * (L.mapW + 1), L.mapW));
+    if (ui) {                                                   // (The traces read last: the world's reply, its words;
+      const o = L.uTread;                                       //   slice 4.1's)
+      s.tread = { how: name('TRC_FLOOR', ui[o + L.trHow]), result: name('TRR_OK', ui[o + L.trResult]), grade: s8(ui[o + L.trGrade]),
+        floor: name('MAT_EARTH', ui[o + L.trFloor]), dust: ui[o + L.trDust], trod: ui[o + L.trTrod], smoke: ui[o + L.trSmoke],
+        trails: Array.from({ length: Math.min(ui[o + L.trNtr], 3) }, (_, i) => { const q = o + L.trTr + i * L.trailSize;
+          return { name: str(ui, q + L.tlName, 12), what: str(ui, q + L.tlWhat, 24), n: name('TP_ONE', ui[q + L.tlN]), ago: name('TA_NOW', ui[q + L.tlAgo]),
+            head: ui[q + L.tlHead], kind: ui[q + L.tlKind], age: w16(ui, q + L.tlAge) }; }),
+        text: str(ui, L.uTrtext, L.trText) };
+    }
+    const jb = bank(L.denBank);                                 // (The traces' journal's counts: the passings so far)
+    if (jb) s.journal = { n: w16(jb, L.tjAt + L.tjN), pn: w16(jb, L.tjAt + L.tjPn) };
     const t = bank(L.sightBank);
     if (t) {
       const list = (n, max, at, size, f) => Array.from({ length: Math.min(t[n], max) }, (_, i) => f(at + i * size - at, i));
