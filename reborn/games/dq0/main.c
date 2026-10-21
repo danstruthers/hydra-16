@@ -778,6 +778,9 @@ static unsigned char events (void)          /* (How many there were) */
 
     while (!quit && hub_next (&place, &m)) {
         ++n;
+        if (!m.who) {
+            HUB->ui_cmd = 0;                    /* (The character's news: a command's answer begun) */
+        }
         switch (m.kind) {
         case E_TIME:
             if (m.who == 0) {
@@ -2035,7 +2038,8 @@ int main (int argc, char* argv[])
             quick = 25;                         /* (Its answer looked for twice as often, a quarter second) */
             status ();
             hub_map (0);
-            HUB->ui_cmd = 0;
+            HUB->ui_cmd = busy;                 /* (Its answer the world's, not yet said: the look and the minds
+                                                **   give way till the character's news comes, events') */
         } else {
             ready ();                           /* (The commands' part back, if another's in) */
         }

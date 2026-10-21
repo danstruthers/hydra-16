@@ -95,6 +95,7 @@ const EXPRS = {
   cpUsed: F('struct cpage', 'used'), cpN: F('struct cpage', 'n'), chBank0: 'CHANGE_BANK (0)', chPage: 'CH_PAGE',
   chSize: 'sizeof (struct change)', chSn: F('struct change', 'sn'), chX: F('struct change', 'x'), chY: F('struct change', 'y'),
   chTile: F('struct change', 'tile'), chElev: F('struct change', 'elev'), chLink: F('struct change', 'link'),
+  dsenseAt: F('struct hub', 'dsense'), dsenseSize: S('struct hub', 'dsense'),
   pcTask: F('struct hub', 'pc_task'), ltKind: F('struct ltask', 'kind'), ltLen: F('struct ltask', 'len'), ltDone: F('struct ltask', 'done'),
   ltFoe: F('struct ltask', 'foe'),
 };

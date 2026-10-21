@@ -2330,8 +2330,9 @@ void s_step_on (void)
             if (move.on && move.how == A_CLIMBING) {
                 cl_hold = 1;                    /* (Its grip tested at once: the round's end now) */
                 HUB->pc_ready = HUB->now;
-            } else if (HUB->pc_task.kind != LT_FIGHT) {
-                stop (TE_HIT);                  /* (A fight's blows at it no stop) */
+            } else if (HUB->pc_task.kind != LT_FIGHT && (HUB->pc_task.kind != LT_WALK || npath > pnext)) {
+                stop (TE_HIT);                  /* (A fight's blows at it no stop; nor a walk's stopped already,
+                                                **   come into a zone: told once) */
             }
         }
         return;
@@ -2628,7 +2629,10 @@ unsigned char s_close_on (void)
         }
         if (dx < pfd) {
             pfd = dx > 0xFE ? 0xFE : (unsigned char) dx;
-            go_to (x, y);                       /* (No way: told, the walk's words) */
+            go_near = 1;                        /* (The nearest square it can reach, if the way can't reach its
+                                                **   target's: out of reach still, TE_FAR, as it gets there) */
+            go_to (x, y);                       /* (No way at all: told, the walk's words) */
+            go_near = 0;
             if (!move.on) {
                 pfoe = 0;
             }

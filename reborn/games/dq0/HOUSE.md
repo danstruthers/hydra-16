@@ -449,7 +449,9 @@ climb's test to hold on).
   them: a hostile seen that near stops a long task).  As built: a close-in's target
   struck at the character as it comes beside it is no stop (it's the fight it went for: the character's blow follows);
   "attack the rat" with several in sight and none beside the character closes with the nearest; a bare "attack" with
-  no target, nothing beside it, is refused, as before.
+  no target, nothing beside it, is refused, as before.  A target on a square the character's way can't reach is
+  walked to as near as it can, then "You can't get near enough to the giant rat." if it's no nearer (2026-10-20:
+  it was "You can't go that way.").
 - **The engage initiative test, as built** (the user's, 2026-10-20; the book's optional rule): as two are newly
   engaged both test their quickness (the referee's RS_CONTEST, P_INITIATIVE: HarnMaster's Initiative, a creature's its
   bestiary's), and the defender, if it does better, gains a tactical advantage, an action more at once.  Newly

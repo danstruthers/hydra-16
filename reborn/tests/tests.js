@@ -1964,7 +1964,9 @@ function lookSnap(m, ptr, game) {
     for (let r = 0; r < 6; r++) t[1024 + r] = b[o + CK_ROOM + r * 8 + 4] & 1;
     if (t.some(v => v)) ch.push(w[s + 1] + ':' + (w[s + 2] | w[s + 3] << 8) + ',' + (w[s + 4] | w[s + 5] << 8) + '=' + lookHash(t));
   }
-  return [game, ptr.toString(16), lookHash(banks[hub].subarray(ptr - 0x8000, ptr - 0x8000 + 16)), lookHash(banks[hub + 19].subarray(0, 0x800)),
+  const { L } = require('../sim/lib/dq0meaning.js').layout(), n = ptr - 0x8000 === L.dsenseAt ? L.dsenseSize : 16;   // (The
+  // denizens' senses' request its own bytes: the hub's ui_cmd after it, 2026-10-20)
+  return [game, ptr.toString(16), lookHash(banks[hub].subarray(ptr - 0x8000, ptr - 0x8000 + n)), lookHash(banks[hub + 19].subarray(0, 0x800)),
     ...ch.sort()].join(' ');
 }
 
