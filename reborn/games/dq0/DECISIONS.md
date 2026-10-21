@@ -824,3 +824,23 @@ manage it a standing order to eat and drink when needed, warnings ("You're getti
 showing them once they matter.
 
 **Design:** the plan's slice 4.9 (to be drafted with it).
+
+### Hands and limbs
+
+The user (2026-10-21): "Also, if you have a limb injury, it should affect that limbs usefulness.  A serious fracture
+to the leg should make it more difficult to walk, same idea with arm wounds and using a shield or weapon in that
+hand.  Also, is there handedness (right handed versus left versus ambidextrous) in the character profile?  I think
+the HM rules account for it, and ambidextrous is a rollable physical trait.  There should be a penalty for using a
+weapon in your off hand unless ambidextrous of course, and the HM fumble rules should be followed for hand and arm
+wounds and dropping anything held in the hand on that side."  As built then: handedness only as the sheet's medical
+traits (Character 9: left-handed, ambidextrous), the hands counted but not told apart, the referee's fumble and
+stumble rolls made and a grievous limb useless, but nothing done with them (a fumble's drop not even made: a fault).
+Asked when, the user: "Right after 4.1, but don't forget stumbles and falling prone with leg wounds.  If prone isn't
+a thing until later, make sure failed stumble rolls are added to that work."  So a slice of its own after 4.1
+(the plan's 4.1b): two hands, the off-hand penalty of the book (10, not a shield's, none if ambidextrous: Combat
+3), an arm's injuries hindering what its hand uses and its fumble rolls dropping what that hand holds, a leg's
+slowing the walk and its failed stumble rolls laying the character prone (prone is the fights' already: getting up a
+round), a useless limb a hand that holds nothing, a leg that hobbles or crawls; 4.6's body positions keep failed
+stumbles too.
+
+**Design:** the plan's slice 4.1b (to be drafted with it).
