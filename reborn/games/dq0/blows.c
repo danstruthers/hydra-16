@@ -198,7 +198,7 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
         add (" ");
         who (fl & FF_A_DEAD ? aname : dname, 1);
         add ((fl & FF_A_DEAD ? pc : !pc) ? " are dead." : " falls dead.");
-    } else if (fl & (FF_A_DOWN | FF_D_DOWN)) {
+    } else if ((fl & (FF_A_DOWN | FF_D_DOWN)) && !(f->which & FW_AGAIN)) {
         add ((fl & FF_A_DOWN ? pc : !pc) ? " Everything goes black." : " It falls senseless.");
     }
     if (fl & FF_FLEES) {

@@ -155,6 +155,8 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define AF_TA           0x04                    /* The defender's tactical advantage: an action more, at once */
 #define AF_CAUTIOUS     0x08                    /* The creature in it, wounded, holds back a round (its courage) */
 #define AF_BLEEDING     0x10                    /*   bleeding (the referee's RS_TIME a minute at a time) */
+#define AF_AGAIN        0x20                    /* The one knocked senseless out already, struck again as it lies (the
+                                                **   reply's w2 the longer of the two: its black-out told once) */
 
 /* ---- Morale (RS_MORALE): an actor's courage tested (steps: how its fight goes): the grade, and result its state */
 enum { M_STEADY, M_CAUTIOUS, M_BROKEN, M_DESPERATE, M_BERSERK };

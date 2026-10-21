@@ -117,7 +117,8 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     for (i = 0, e = (const struct rs_effect*) r->x; i < RS_EFFECTS && e->kind; ++i, ++e) {
         if (e->kind == X_COND_ON && (e->cond & C_PRONE)) {
             if (e->target == att) {             /* (Fallen: a stumble, a leg's.  An if, not *(c ? &pa : &pd): 13
-                pa = POS_PRONE;                 /*   bytes the less) */
+                                                **   bytes the less) */
+                pa = POS_PRONE;
             } else {
                 pd = POS_PRONE;
             }
@@ -133,7 +134,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     hub_map (DEN_BANK);
     memset (f, 0, sizeof *f);
     f->out = w2;
-    f->which = wh | (z & FW_FIRST);
+    f->which = wh | (z & FW_FIRST) | (c & AF_AGAIN ? FW_AGAIN : 0);
     if (att) {
         to_ring (f->att, HUB->actor[(att - 1) & 7].name, sizeof f->att);
     }

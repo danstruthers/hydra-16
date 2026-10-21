@@ -31,6 +31,7 @@
 #pragma rodata-name ("OV2RODATA")
 
 #include <stddef.h>
+#include <stdlib.h>
 #include <string.h>
 #include <dice.h>
 #include <harn.h>
@@ -199,7 +200,7 @@ static void __fastcall__ effect (unsigned char target, unsigned char kind, unsig
 static void __fastcall__ wound_words (char* w, unsigned char sev, unsigned char loc, unsigned char aspect,
     unsigned char il, unsigned char its)
 {
-    char n[2];
+    char n[4];
 
     strcpy (w, "a ");
     strcat (w, harn_severity_name (sev));
@@ -212,9 +213,7 @@ static void __fastcall__ wound_words (char* w, unsigned char sev, unsigned char 
     strcat (w, harn_location_name (loc));
     if (sev <= HARN_GRIEVOUS) {
         strcat (w, sev == HARN_MINOR ? " (M" : sev == HARN_SERIOUS ? " (S" : " (G");
-        n[0] = '0' + il;
-        n[1] = 0;
-        strcat (w, n);
+        strcat (w, utoa (il, n, 10));           /* (Ten or more two digits) */
         strcat (w, ")");
     }
 }
@@ -234,25 +233,33 @@ static unsigned char __fastcall__ is_prone (const struct side* s)
 
 /* Side t senseless (its shock roll failed): the rounds till it comes round (the book's shock rolls, a round each,
 ** within an hour), the tenths in the reply's w2; the character then (it comes round as the UI waits it out: it
-** can't defend meanwhile), a creature as the clock passes it (it lies there till then) */
+** can't defend meanwhile), a creature as the clock passes it (it lies there till then).  In the main RAM (the
+** overlay's full): strike's alone, its overlay in */
+#pragma code-name (push, "CODE")
 static void __fastcall__ senseless (const struct side* t)
 {
+    unsigned long* o = t->who ? &bs.out : &pc_out;
     unsigned k;
 
     for (k = 1; k < 360 && harn_wake (t->c) == HARN_UNCONSCIOUS; ++k) {
     }
     R->w2 = k * 100;
+    if (*o > tnow) {                            /* (Out already, struck again as it lies: out till the later, its
+                                                **   black-out told once: AF_AGAIN) */
+        R->c |= AF_AGAIN;
+        if (*o - tnow > R->w2) {
+            R->w2 = (unsigned) (*o - tnow);
+        }
+    }
+    *o = tnow + R->w2;
     if (t->who) {
         t->c->state = HARN_UNCONSCIOUS;
-        bs.out = tnow + R->w2;
-    } else {
-        if (pc.state == HARN_UNCONSCIOUS) {
-            pc.state = HARN_CONSCIOUS;          /* (Within the hour, anyway) */
-        }
-        pc_out = tnow + R->w2;
+    } else if (pc.state == HARN_UNCONSCIOUS) {
+        pc.state = HARN_CONSCIOUS;              /* (Within the hour, anyway) */
     }
     effect (t->who, X_COND_ON, C_UNCONSCIOUS, 0, 0, 0);
 }
+#pragma code-name (pop)
 
 /* Side s strikes side t with n dice at zone z (or part, not 0xFF: a block's strike on what struck or blocked): the
 ** impact, the armour there off it, the wound; its words into w (or the armour that stopped it: stop, AF_*, in the
@@ -389,6 +396,9 @@ static void attack (void)
     res = harn_melee_result (def, al, dl);
     n = HARN_R_DICE (res);
     k = HARN_R_KIND (res);
+    if (k == HARN_R_DTA && (D.c->state != HARN_CONSCIOUS || (!D.who && pc_out > tnow))) {
+        k = HARN_R_MISS;                        /* (Senseless, or in shock: no advantage it can take, a miss) */
+    }
     switch (k) {
     case HARN_R_BLOCK:
         R->result = O_BLOCKED;

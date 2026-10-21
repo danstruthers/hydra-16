@@ -102,7 +102,10 @@ plays them as HarnMaster's referee does.
   book's falling dice and grabbing a hold (Skills 8) otherwise.  (sheet.c's o_harm.)  Why: armour doesn't soften
   the ground.
 - **Knocked senseless, the character comes round by the book's shock rolls,** a round each, and wakes anyway after
-  an hour.  (sheet.c's o_harm.)  Why: no game should stall on a run of failed rolls.
+  an hour.  (sheet.c's o_harm.)  Why: no game should stall on a run of failed rolls.  Struck senseless again as it
+  lies, it's out till the later of the two, and its black-out is told once (fight.c's senseless, AF_AGAIN).  A blow
+  fumbled at one senseless or in shock is a miss, not the Ignore table's tactical advantage: it can't take one.
+  (fight.c's attack.)  Why: the advantage is an action, and it has none.
 - **A window's sill is climbed through** with a Climbing test; a critical failure is a slip and a fall.  (wwin.c.)
 - **A pit is climbed out of** as a ledge is.  (wtrap.c, dq0w.c.)  See D13: a slip is to end the climb.
 
