@@ -1936,3 +1936,105 @@ case a climb's round more of it: no level more
 dice
 ask EXERT a=GA_WORK w1=100
 want result=0
+
+# ---- A round's defences (HOUSE.md: the user's, 2026-10-20): the character's defence chosen for each blow at it, a
+# block once a round for each thing that blocks (a bare arm's if it holds none), the dodge once, a counterstrike only
+# on command (its stance, D_COUNTER), what it strikes with then spent for the round; a foe met this round meets the
+# same again; none left, none (the reply's b the defence, D_*).  The round from the first blow after the last ended,
+# ten seconds (the hub's now in tenths).  Each blow's first die the rat's bite (45: 61 a marginal failure, 65 a
+# critical one), its second the defence's; the rest the generator's (b doesn't hang on them).  Her Shield 30.
+
+char
+ml shd 30
+end
+case four giant rats' sheets (records 9 to 12), made with no die of the referee's
+dice
+ask NEW_ACTOR actor=1 w1=9 text="rat"
+want result=0
+dice
+ask NEW_ACTOR actor=2 w1=10 text="rat"
+want result=0
+dice
+ask NEW_ACTOR actor=3 w1=11 text="rat"
+want result=0
+dice
+ask NEW_ACTOR actor=4 w1=12 text="rat"
+want result=0
+set now=1000 stance=D_AUTO
+case holding nothing, a rat's bite: dodged (her Dodge 60 the better of it and a bare arm's 55)
+dice 100:61 100:2 ...
+ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
+want b=D_DODGE result=O_MISS
+case a second rat the same round: the dodge spent, a bare arm's block (both failing: blocked)
+dice 100:61 100:61 ...
+ask ATTACK actor=2 other=0 a=Z_MID b=AS_BEST
+want b=D_BLOCK result=O_BLOCKED
+case a third: nothing left, no defence (its bite a critical failure: her advantage)
+dice 100:65 ...
+ask ATTACK actor=3 other=0 a=Z_MID b=AS_BEST
+want b=D_NONE result=O_ADVANTAGE
+set now=1050
+case the first rat again in the round: dodged again, the defence it met
+dice 100:61 100:2 ...
+ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
+want b=D_DODGE
+set now=1100
+case the round over: the third rat dodged, the dodge free again
+dice 100:61 100:2 ...
+ask ATTACK actor=3 other=0 a=Z_MID b=AS_BEST
+want b=D_DODGE
+dice
+ask EQUIP a=2 text="*blade5*shield5"
+want result=0
+set now=2000
+case a sword and a shield held: the first rat blocked by the sword (Sword 80, its defence 10: 90)
+dice 100:61 100:2 ...
+ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
+want b=D_BLOCK
+case the second dodged (60, the better of it and the shield's 50)
+dice 100:61 100:2 ...
+ask ATTACK actor=2 other=0 a=Z_MID b=AS_BEST
+want b=D_DODGE
+case the third blocked by the shield
+dice 100:61 100:2 ...
+ask ATTACK actor=3 other=0 a=Z_MID b=AS_BEST
+want b=D_BLOCK
+case a fourth: all spent, none
+dice 100:65 ...
+ask ATTACK actor=4 other=0 a=Z_MID b=AS_BEST
+want b=D_NONE
+set now=3000 stance=D_BLOCK
+case defend block: the first rat the sword's
+dice 100:61 100:2 ...
+ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
+want b=D_BLOCK
+case the second the shield's (the user's: two foes blocked, one with each)
+dice 100:61 100:2 ...
+ask ATTACK actor=2 other=0 a=Z_MID b=AS_BEST
+want b=D_BLOCK
+case the third dodged, no block left
+dice 100:61 100:2 ...
+ask ATTACK actor=3 other=0 a=Z_MID b=AS_BEST
+want b=D_DODGE
+set now=4000 stance=D_COUNTER
+case defend counter: the first rat counterstruck with the sword
+dice 100:61 100:2 ...
+ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
+want b=D_COUNTER
+case the second: the sword spent, the better of the dodge and the shield
+dice 100:61 100:2 ...
+ask ATTACK actor=2 other=0 a=Z_MID b=AS_BEST
+want b=D_DODGE
+case the third the shield's
+dice 100:61 100:2 ...
+ask ATTACK actor=3 other=0 a=Z_MID b=AS_BEST
+want b=D_BLOCK
+set now=5000 stance=D_NONE
+case defend none: no defence
+dice 100:65 ...
+ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
+want b=D_NONE
+set stance=D_AUTO
+dice
+ask EQUIP a=2 text=""
+want result=0
