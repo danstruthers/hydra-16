@@ -80,6 +80,8 @@ struct work wk;
 extern char _SWAP_START__[];
 unsigned char den_done;                         /* (wbody.h's) */
 unsigned char den_saw;
+unsigned char noinit;                           /* (dq0 -I: no engage initiative test, nor a grope's; the UI's
+                                                **   WQ_START, wgame.c's) */
 
 static unsigned last;                           /* The tick count at the last look */
 static unsigned acc;                            /* Real ticks times round, not yet game time */
@@ -2356,6 +2358,7 @@ void s_step_on (void)
                 evb = e;                        /* (Come into an enemy's zone, or a square on in one: stopped) */
             }
             halt (e == 0xFF ? 0xFF : TE_ENGAGED);   /* (0xFF: a close-in beside its target, the blow as it arrives) */
+            engaged (0, e);                     /* (Newly engaged by its walk: the engage initiative test, part 25's) */
             return;
         }
         b = beat (x, y, h);
@@ -2595,6 +2598,116 @@ unsigned char s_close_on (void)
     evb = k + 1;
     event (E_TASK, 0, TE_FAR);
     return 0;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 25: the engage initiative test, and a grope's */
+#pragma code-name (push, "SW25CODE")
+#pragma rodata-name (push, "SW25RODATA")
+
+/* ---- The engage initiative test (HOUSE.md's, the user's, 2026-10-20; the book's optional rule): as one engages
+** another (eng the one whose move did it, def the other: 0 the character, else an actor's entry plus 1, the actor
+** beside the character, on its feet), both test their quickness (the referee's RS_CONTEST, P_INITIATIVE each), and a
+** defender that does better gains a tactical advantage, an action more at once: it strikes first (a blow before the
+** engager's, told so: FW_FIRST), or an actor that would rather, one not hostile, disengages (a square back out of
+** reach, wbody.c's: told, TE_AWAY; cornered, it strikes).  The character's blow first stops its long task, as a blow
+** at it does.  Its callers': a walk come into an enemy's zone, a close-in come beside its target (step_on's), an enemy
+** come up beside the character (wbody.c's: def 0); none under dq0 -I (the tests'), nor while the character climbs.
+** The walk's (eng 0) def is zone_step's: an enemy plus 1 (| TE_STILL, engaged with it already: none), 0xFF the
+** close-in's target.  1 if the defender struck first, 2 if it backed away, 0 neither */
+unsigned char __fastcall__ s_engaged (unsigned char eng, unsigned char def)
+{
+    struct req* r;
+    struct actor* a;
+    unsigned char k, f, z;
+
+    if (def == 0xFF) {
+        def = pfoe;
+    }
+    if (def & TE_STILL) {
+        return 0;
+    }
+    k = ((eng ? eng : def) - 1) & 7;
+    hub_map (0);
+    a = &HUB->actor[k];
+    if (noinit || (move.on && move.how == A_CLIMBING) || !a->state || a->sn != HUB->pc_stratum ||
+        a->pos == POS_PRONE || a->doing == DO_DOWN || (unsigned) (a->x - HUB->pc_x + 1) > 2 ||
+        (unsigned) (a->y - HUB->pc_y + 1) > 2) {
+        return 0;
+    }
+    r = &HUB->slot[SLOT_WORLD];
+    r->kind = RS_CONTEST;
+    r->actor = eng;
+    r->other = def;
+    r->a = r->b = P_INITIATIVE;
+    r->steps = 0;
+    r->c = 0;
+    r = hub_ask (SLOT_WORLD);
+    f = r->result;
+    r->state = REQ_FREE;
+    if (f != 2) {
+        return 0;                               /* (The engager as quick, or quicker: as it was) */
+    }
+    if (def) {
+        if ((f = den_first (k, HUB->actor[k].attitude > AT_HOSTILE)) == 2) {
+            pfoe = 0;                           /* (Backed away: a close-in on it given up, the player's to say
+                                                **   what next) */
+            evb = def;
+            event (E_TASK, 0, TE_AWAY);
+        }
+        pc_hit = 0;                             /* (Its walk stopped already: a blow at it first no stop more) */
+        return f;
+    }
+    f = HUB->pc_foe;                            /* (The character's blow first, at the middle: one it had posted
+                                                **   kept) */
+    z = HUB->pc_aim;
+    HUB->pc_foe = eng;
+    HUB->pc_aim = Z_MID | FW_FIRST;
+    pc_blow ();
+    hub_map (0);
+    HUB->pc_foe = f;
+    HUB->pc_aim = z;
+    pc_hit = 1;
+    return 1;
+}
+
+/* ---- A grope (HOUSE.md's, the user's, 2026-10-20; the book's: a thing handled in a fight): a thing of kind k taken
+** up, drawn or put away while the character's engaged (part 24's zone) is a test of its hands (the referee's
+** P_GROPE); 1 if it failed, its words in the hub's text ("You fumble for the sword.": the round wasted, the caller's),
+** 0 if it went, or the character isn't engaged (dq0 -I: never tested); the hub in the window after */
+unsigned char __fastcall__ s_fumbled (unsigned char k)
+{
+    char w[16];
+    struct req* r;
+    signed char g;
+
+    hub_map (0);
+    if (noinit || !zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
+        return 0;
+    }
+    hub_map (0);
+    r = &HUB->slot[SLOT_WORLD];
+    r->kind = RS_TEST;
+    r->actor = 0;
+    r->a = P_GROPE;
+    r->b = 0;
+    r->steps = 0;
+    r = hub_ask (SLOT_WORLD);
+    g = r->grade;
+    r->state = REQ_FREE;
+    if (G_OK (g)) {
+        return 0;
+    }
+    hub_map (CAT_BANK);
+    strcpy (w, CATALOGUE[k].name);
+    hub_map (UI_BANK);
+    strcpy (UIREC->things_text, "You fumble for the ");
+    strcat (UIREC->things_text, w);
+    strcat (UIREC->things_text, ".");
+    hub_map (0);
+    return 1;
 }
 
 #pragma code-name (pop)

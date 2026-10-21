@@ -31,5 +31,11 @@ void pc_blow (void);                            /* (Part 15) The character's blo
                                                 **   pc_foe) */
 void __fastcall__ den_blow (unsigned char def, unsigned char z);  /* (Part 15) Body bd's blow at def (I_ATTACK's) */
 void bled (void);                               /* (Part 15) The bleeding's bloodloss, a minute at a time */
+unsigned char __fastcall__ den_first (unsigned char k, unsigned char away);    /* (Part 14) Body k's tactical
+                                                **   advantage: backed away (away 1), 2; or its blow first, 1 */
+unsigned char __fastcall__ engaged (unsigned char eng, unsigned char def);  /* (dq0w.c's part 25) The engage
+                                                **   initiative test: eng engaging def (0 the character, else an
+                                                **   actor's entry plus 1) */
+extern unsigned char noinit;                    /* (dq0 -I: no engage initiative test: the tests') */
 
 #endif

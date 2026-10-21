@@ -88,6 +88,9 @@ void __fastcall__ take_go (const struct msg* m);    /* (Part 16) I_TAKE's walk b
 unsigned char take_up (void);                   /* (Part 16) Its thing taken up, the walk done: 0 not (E_READY to
                                                 **   tell), 1 taken (the UI's to go on), 2 walking on to it */
 extern unsigned take_n;                         /* (I_TAKE's thing, its item: 0 none) */
+unsigned char __fastcall__ fumbled (unsigned char k);  /* (dq0w.c's part 25) A grope while engaged, a thing of kind
+                                                **   k handled: 1 if it failed (its words in the hub's text) */
+extern unsigned char noinit;                    /* (dq0 -I: no grope's test while engaged: the tests') */
 unsigned char __fastcall__ in_reach (unsigned n);
 unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);
 void light_now (void);

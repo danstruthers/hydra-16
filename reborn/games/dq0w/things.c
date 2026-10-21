@@ -496,9 +496,10 @@ static unsigned char __fastcall__ get (const char* name)
     if (s->x - x + 1 > 2 || s->y - y + 1 > 2) {
         return IR_NOT_HERE;
     }
-    return rec.where == IW_PORTAL ? IR_FIXED : kind_of (rec.kind)->keeps & KF_FIXED ? IR_NO : s_carry (n, 0) ?
-        IR_OK : IR_FULL;                        /* (A portal's part: lifted out first, the world's; a theme's altar,
-                                                **   never: its words the handling's) */
+    return rec.where == IW_PORTAL ? IR_FIXED : kind_of (rec.kind)->keeps & KF_FIXED ? IR_NO :
+        !noinit && fumbled (rec.kind) ? IR_FUMBLED : s_carry (n, 0) ? IR_OK : IR_FULL;  /* (A portal's part: lifted
+                                                **   out first, the world's; a theme's altar, never: its words the
+                                                **   handling's; engaged, a grope failed: the round wasted) */
 }
 
 /* Put down where the character stands (what's in it with it) */
@@ -557,7 +558,8 @@ void s_light_now (void)
 static unsigned char o_handle (void);
 unsigned char s_serve (void)
 {
-    unsigned char changed = 0;
+    unsigned char changed = 0, k;
+    unsigned n;
 
     hub_map (0);
     memcpy (&iq, &HUB->ireq, sizeof iq);
@@ -603,8 +605,15 @@ unsigned char s_serve (void)
         break;
     default:                                    /* (A thing handled: IO_HOLD ...) */
         afar = 0;
-        cat_map ();
-        iq.result = o_handle ();
+        k = iq.kind;
+        if (!noinit && k >= IO_HOLD && k <= IO_TAKE && (n = s_at_hand (iq.name)) != 0 && fumbled (item_kind (n))) {
+            hub_map (0);                        /* (Held, stowed, put or taken out engaged, a grope failed: the round
+                                                **   wasted, nothing done, its words) */
+            took = HUB->round;
+        } else {
+            cat_map ();
+            iq.result = o_handle ();
+        }
         hub_map (0);
         HUB->ireq.x = took;
         if (iq.result == IR_NO && afar) {       /* (Its thing out of reach: where it lies, the UI's to walk over to

@@ -102,6 +102,7 @@ go:
             SWPART      22, 8               ; The strata's records out of the hub, back (sfile.c)
             SWPART      23, 1               ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 2               ; Engagement, a blow's close-in (dq0w.c's)
+            SWPART      25, 8               ; The engage initiative test, a grope's (dq0w.c's)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
@@ -168,6 +169,9 @@ go:
             SWFN        close_go, 24
             SWFN        close_on, 24
             SWFN        zone_step, 24
+            SWFN        engaged, 25
+            SWFN        fumbled, 25
+            SWFN        den_first, 14
             SWFN        ways_near, 21
             SWFN        it_flush, 17
             SWFN        st_out, 22

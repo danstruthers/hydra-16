@@ -176,8 +176,10 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   (a thing not found, put: "" none) */
 enum { PZ_DONE, PZ_NONE, PZ_NO, PZ_FAR };       /* (IO_PUZZLE's: a rule done; none for those kinds; not done, the
                                                 **   things' words why; the way out out of reach) */
-enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED };    /* (IR_NO: refused, the things' words
-                                                **   why; IR_FIXED: a portal's part, in it) */
+enum { IR_OK, IR_NONE, IR_FULL, IR_HEAVY, IR_NOT_HERE, IR_NO, IR_FIXED, IR_FUMBLED };    /* (IR_NO: refused, the
+                                                **   things' words why; IR_FIXED: a portal's part, in it; IR_FUMBLED:
+                                                **   IO_GET's, I_TAKE's, engaged, a grope failed: the round wasted,
+                                                **   the things' words) */
 
 /* What the character carries, for the UI to word (IO_LIST's): each thing, how deep it's in others, its state */
 #define NCARRY          16

@@ -645,6 +645,9 @@ or a shaft can be jumped down (jump down: a fall of its height).
 - **Engagement** (HOUSE.md's, the book's engagement zones): a hostile or unfriendly denizen on its feet and conscious
   has a zone, its square and the eight round it (not round a corner); any walk stops as it comes into one ("The
   giant rat engages you: you stop walking."), and one begun in one goes a square and stops if it's still in one.
+  As two are newly engaged both test their quickness, the defender doing better gaining a tactical advantage (it
+  strikes first, or backs away: HOUSE.md's engage initiative test); a thing taken up, held or put away engaged is a
+  grope, a test of the hands (failed, the round's wasted: "You fumble for the sword.").  (dq0 -I, the tests': neither.)
 - **Out of reach, walked to first**: a command whose thing is out of reach (take, hold, wear, put in or on, take
   from, light; the way out's puzzle) walks over to it first, a walk like any other (stopped by what it meets), and is
   carried out as the character gets there; a blow at a denizen out of reach ("attack the goblin", "attack" with a

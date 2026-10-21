@@ -89,6 +89,10 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     case TE_FAR:
         sayf ("\nYou can't get near enough to %s.", foe (named, 0));
         break;
+    case TE_AWAY:                               /* (The engage initiative test's: an enemy newly engaged the quicker,
+                                                **   its tactical advantage a disengage) */
+        sayf ("\nQuicker, %s backs away from you.", foe (named, 0));
+        break;
     }
     k = (unsigned char) w;
     return k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD;     /* (1: a question put) */

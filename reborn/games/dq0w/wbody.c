@@ -115,12 +115,40 @@ static void __fastcall__ told_den (unsigned char what, unsigned char loud)
     hub_devent (&bev);
 }
 
+/* Body k's tactical advantage (the engage initiative test's, dq0w.c's part 25): backing away from the character (away
+** 1: one not hostile), to the first square a step off out of its reach that it can walk (told as a step is), 2; else
+** (or cornered) its blow first, an action more (its own round's time as it was), 1 */
+unsigned char __fastcall__ s_den_first (unsigned char k, unsigned char away)
+{
+    static unsigned char d, r;
+    static unsigned x, y;
+
+    BD_GET (k);
+    for (d = 0, r = 1; away && d < 4; ++d) {
+        x = bd.x + dir_x[d];
+        y = bd.y + dir_y[d];
+        if (apart (x - bpx, y - bpy) > 1 && !taken (x, y) && step_ok (bd.sn, bd.x, bd.y, d)) {
+            bd.x = x;
+            bd.y = y;
+            told_den (DE_MOVED, 1);
+            r = 2;
+            break;
+        }
+    }
+    if (r == 1) {
+        den_blow (0, Z_MID | FW_FIRST);
+    }
+    BD_PUT ();
+    ++HUB->den_seq;
+    return r;
+}
+
 /* The denizens' intents carried out, in turn, each taken from the ring once it's done (the bleeding seen to first:
 ** wfight.c's); the denizens rung after (they wait for them), unless all there was was their turn's end */
 void s_den_intents (void)
 {
     static struct msg m;
-    static unsigned char t, was, d, any;
+    static unsigned char t, was, d, any, eng;
     static unsigned x, y, c;
     static unsigned char* p;
     static int z;
@@ -188,6 +216,11 @@ void s_den_intents (void)
                 }
                 bd.ready += c;
             }
+            if (!noinit && bd.attitude <= AT_UNFRIENDLY && bd.sn == bps && apart (bd.x - bpx, bd.y - bpy) > 1 &&
+                apart (x - bpx, y - bpy) == 1) {
+                eng = bk + 1;                   /* (An enemy come up beside the character: it engages it, the
+                                                **   engage initiative test's, once its body's put back) */
+            }
             bd.x = x;
             bd.y = y;
             bd.face = m.w1 & 7;
@@ -232,6 +265,12 @@ void s_den_intents (void)
         BD_PUT ();
         if (m.kind != I_WAIT || bd.doing != was) {
             ++HUB->den_seq;                     /* (Changed: the world looks again at what the character sees) */
+        }
+        if (eng) {
+            d = eng;                            /* (dq0w.c's part 25: the character's blow first, if it's the
+                                                **   quicker) */
+            eng = 0;
+            engaged (d, 0);
         }
     }
     if (any) {
