@@ -1,0 +1,5 @@
+cc65 for the Hydra-16: upstream master 6bd01e8a5 (2026-10-17) plus branch hydra-optfix (0b7049883: four
+code-generator and optimizer fixes, with their tests in test/val).  Built with MSBuild (Visual Studio 2022,
+src/cc65.sln, Release x64, PlatformToolset v143); lib/none.lib, sim6502.lib and sim65c02.lib built from
+libsrc by that compiler (cc65 -Or, ca65 -g).  cc65 --version says only "V2.19": the MSBuild build has no
+git hash.

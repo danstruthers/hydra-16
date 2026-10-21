@@ -15,8 +15,8 @@ The rules every source here follows: [conventions](../docs/design/conventions.md
 ## Build, run, test
 
 Node.js 18 or later, and cc65 (`ca65`, `ld65`, and for the C programs `cc65`, `ar65` and its `include`, `asminc` and
-`lib`): `$CC65_BIN`, `$CC65_HOME/bin`, `C:\source\cc65\win64_hydra\bin` (../base/build.js's `CC65_DIR`: cc65 upstream with
-the fixes in ../base/tools/cc65), or the PATH.
+`lib`): `$CC65_BIN`, `$CC65_HOME/bin`, on Windows `../base/tools/cc65/win64_hydra/bin` in the repository (../base/build.js's
+`CC65_DIR`: cc65 upstream with the fixes in ../base/tools/cc65, whose README says how to build it elsewhere), or the PATH.
 
 ```
 node build.js                       the BIOS ROM (bin/bios_rockwell.bin, bios_wdc.bin), the paged ROM (bin/prom0.bin, prom1.bin ...: a 512K

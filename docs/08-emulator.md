@@ -198,8 +198,9 @@ $ node build.js
 builds the base first, then HydraOS: the BIOS ROM, one for each serial chip (`bin/bios_rockwell.bin` and
 `bin/bios_wdc.bin`: the kernel is built twice), the paged ROM's chips (`bin/prom0.bin` ...: the same for both), the ROM
 disk, the SD card's image (`bin/sdcard.img`), the SDKs (`bin/sdk`), and a report of each part's size and room left.  It
-needs cc65's `ca65` and `ld65` (and `cc65` and `ar65` for the C programs), found in `$CC65_BIN`, `$CC65_HOME/bin`, or on
-the PATH.
+needs cc65's `ca65` and `ld65` (and `cc65` and `ar65` for the C programs), found in `$CC65_BIN`, `$CC65_HOME/bin`, on
+Windows in the repository (`base/tools/cc65/win64_hydra`: cc65 with the project's four fixes; its README says how to
+build it elsewhere), or on the PATH.
 
 | Command | What it builds |
 | :------ | :------------- |

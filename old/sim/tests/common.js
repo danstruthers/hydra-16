@@ -13,6 +13,8 @@ const CARDS = path.join(__dirname, '..', 'cards');                    // Fixture
 const W = n => '\\w'.repeat(n);                                 // Wait n * ~2M cycles before the next key
 const P = '\\p';                                                 // Wait for a prompt (a new one: "> ", or WOZMON's ">")
 const C_SAMPLES = ['hello', 'ctest', 'upper', 'code', 'keys', 'tones', 'jukebox'];         // programs/c/bin's (make.bat builds them)
+// A C sample's size as built (programs/c/bin/NAME.hyx): what a listing shows, whichever cc65 compiled it
+const cSize = name => fs.statSync(path.join(__dirname, '../../programs/c/bin', name + '.hyx')).size;
 
 // A ZSM song (the player's format: sound/player.s) for the tests: channel 0, a sine (algorithm 7), an intro note
 // (C4) and a loop of one note (E4), each 30 ticks on and 6 off at 60 Hz; a PSG write and an extension to skip
@@ -88,4 +90,4 @@ function cycleTestRom() {
 }
 
 
-module.exports = { fs, os, path, hydrafs, hyx, CARDS, W, P, C_SAMPLES, zsmSong, BOOT, TO_MON, romSym, num, SPARSE_WRITES, SPARSE_SCRIPT, cycleTestRom };
+module.exports = { fs, os, path, hydrafs, hyx, CARDS, W, P, C_SAMPLES, cSize, zsmSong, BOOT, TO_MON, romSym, num, SPARSE_WRITES, SPARSE_SCRIPT, cycleTestRom };

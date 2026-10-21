@@ -53,8 +53,9 @@ files and more: windows), adds its own drivers, and starts `init` instead of the
 | `base/tests/` | The base's tests and their modules |
 | `base/bin/` | The images, in Git: `bios_rockwell.bin` and `bios_wdc.bin` (one for each serial chip), `prom0.bin` |
 
-**Building it** needs Node.js 18 or later and cc65 (`ca65` and `ld65`), found in `$CC65_BIN`, `$CC65_HOME/bin`, or on
-the PATH:
+**Building it** needs Node.js 18 or later and cc65 (`ca65` and `ld65`), found in `$CC65_BIN`, `$CC65_HOME/bin`, on Windows
+in the repository (`base/tools/cc65/win64_hydra`: cc65 with the project's four fixes; its README says how to build it
+elsewhere), or on the PATH:
 
 ```
 $ cd base

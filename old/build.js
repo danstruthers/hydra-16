@@ -16,9 +16,11 @@
 //                   7.16 MHz; SER_ACIA_WDC: a WDC W65C51N ACIA)
 //   test            then the regression tests (sim/regress.js), and the variants'
 //
-// cc65 is found in CC65_HOME (its bin, include, asminc and lib folders), or on the PATH (its home is then the
-// folder above the one ca65 is in), or in C:\source\cc65\win64_snapshot.  The .bat files (os_rom/makeC02.bat,
-// programs/c/make.bat and hyc.bat, programs/asm/make.bat) run this.
+// cc65 is found in CC65_HOME (its bin, include, asminc and lib folders), or on Windows in the repository's
+// base/tools/cc65/win64_hydra (cc65 as the new build has it: upstream with four fixes, base/build.js says more), or on
+// the PATH (its home is then the folder above the one ca65 is in): a cc65 that knows the W65C02 (the assembler's
+// CPU here, for WAI; the compiler's is the 65C02).  The .bat files (os_rom/makeC02.bat, programs/c/make.bat and
+// hyc.bat, programs/asm/make.bat) run this.
 // ****************************************************************************
 'use strict';
 const fs = require('fs');
@@ -37,11 +39,11 @@ function findCc65() {
     if (!has(process.env.CC65_HOME)) fail('CC65_HOME (' + process.env.CC65_HOME + ') has no bin/ca65' + EXE);
     return process.env.CC65_HOME;
   }
+  const repo = path.join(ROOT, '..', 'base', 'tools', 'cc65', 'win64_hydra');
+  if (process.platform === 'win32' && has(repo)) return repo;
   for (const dir of (process.env.PATH || '').split(path.delimiter)) {
     if (dir && fs.existsSync(path.join(dir, 'ca65' + EXE))) return path.dirname(dir);
   }
-  const snapshot = 'C:\\source\\cc65\\win64_snapshot';
-  if (process.platform === 'win32' && has(snapshot)) return snapshot;
   fail('cc65 not found: set CC65_HOME to its folder, or put its bin folder on the PATH');
 }
 let cc65Home = null;
@@ -69,7 +71,7 @@ function rom() {
     '; Made by build.js from os_rom/VERSION: don\'t edit\r\n.define HY_VERSION "' + version + '"\r\n');
   // The test song (sndtest's: /rom/songs/test.zsm, on the ROM disk), from its score
   node(path.join(ROOT, 'sim', 'tools', 'hysong.js'), ['songs/test.mml', 'songs/test.zsm', '--quiet'], OS_ROM);
-  run(tool('ca65'), ['-g', '-o', 'obj/all_C02.o', '-l', 'obj/all_C02.txt', '--cpu', '65C02', 'all.s'], OS_ROM);
+  run(tool('ca65'), ['-g', '-o', 'obj/all_C02.o', '-l', 'obj/all_C02.txt', '--cpu', 'W65C02', 'all.s'], OS_ROM);
   run(tool('ld65'), ['-C', 'os_rom_C02.cfg', 'obj/all_C02.o', '-Ln', 'obj/os_rom_C02.lbl', '-m', 'obj/os_rom_C02.map',
     '--dbgfile', 'obj/os_rom_C02.dbg'], OS_ROM);
   // The ROM disk (/rom: a HydraFS volume, from romfs.txt) into the paged ROM image from bank 2; then the checksums for the
@@ -94,7 +96,7 @@ function variants(test) {
     const out = 'obj/variants/' + v.name;
     mkdir(path.join(OS_ROM, out));
     console.log('-- ROM variant ' + v.name + ': ' + v.defines.join(' '));
-    run(tool('ca65'), ['-g', '-o', out + '/all_C02.o', '--cpu', '65C02', ...v.defines.flatMap(d => ['-D', d]), 'all.s'], OS_ROM);
+    run(tool('ca65'), ['-g', '-o', out + '/all_C02.o', '--cpu', 'W65C02', ...v.defines.flatMap(d => ['-D', d]), 'all.s'], OS_ROM);
     // The link config, with its images in the variant's folder
     const cfg = fs.readFileSync(path.join(OS_ROM, 'os_rom_C02.cfg'), 'utf8').replace(/file = "bin\//g, 'file = "' + out + '/');
     fs.writeFileSync(path.join(OS_ROM, out, 'os_rom_C02.cfg'), cfg);
@@ -109,7 +111,7 @@ function variants(test) {
 function cOpts() {
   return {
     cc: ['-g', '-t', 'none', '--cpu', '65C02', '-O', '-I', path.join(CPROG, 'include'), '-I', path.join(cc65(), 'include')],
-    as: ['-g', '--cpu', '65C02', '-I', path.join(CPROG, 'lib'), '-I', path.join(cc65(), 'asminc')],
+    as: ['-g', '--cpu', 'W65C02', '-I', path.join(CPROG, 'lib'), '-I', path.join(cc65(), 'asminc')],
   };
 }
 // One .c or .s: obj/NAME.o.  (A module named as one of cc65's, e.g. getenv, takes its place in the library)
@@ -159,7 +161,7 @@ function asm() {
   mkdir(path.join(dir, 'bin'));
   for (const f of sorted(fs.readdirSync(path.join(dir, 'samples')).filter(f => f.endsWith('.s')))) {
     const name = f.slice(0, -2);
-    run(tool('ca65'), ['-g', '--cpu', '65C02', '-I', '.', '-o', 'obj/' + name + '.o', 'samples/' + f], dir);
+    run(tool('ca65'), ['-g', '--cpu', 'W65C02', '-I', '.', '-o', 'obj/' + name + '.o', 'samples/' + f], dir);
     run(tool('ld65'), ['-C', 'hyx.cfg', '-o', 'bin/' + name + '.hyx', 'obj/' + name + '.o'], dir);
   }
 }

@@ -46,6 +46,8 @@ reborn/tests/dq0/v7save/** binary
 reborn/tests/dq0/v8save/** binary
 # cc65's fixes the build's cc65 has (base/tools/cc65, applied by the CI to upstream's source): cc65's own LF bytes
 base/tools/cc65/*.patch binary
+# The patched cc65 the build uses on Windows (base/tools/cc65/README.md): its files exactly as built, not converted
+base/tools/cc65/win64_hydra/** -text
 # Dingus Quest Zero's text files the SD card has byte for byte (the stand-in themes, the inhabitants written by hand, hmchar in
 # hylang and in HyForth): CR LF on every checkout, as on Windows, where reborn/bin's images are made (a checkout with
 # LF line ends, Linux's, made another card)

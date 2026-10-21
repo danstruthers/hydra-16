@@ -42,9 +42,9 @@
 //        node build.js prog DIR
 //   a RAM program from DIR/*.s (with the SDK: sdk/asm/README.md), or DIR/*.c and *.s (a C program: sdk/c/README.md),
 //   into DIR/NAME.hyx, NAME the folder's
-// The cc65 tools: the base's (../base/build.js's tool (): $CC65_BIN, else $CC65_HOME/bin, else its CC65_DIR's bin,
-// C:/source/cc65/win64_hydra/bin, else the PATH); cc65's own folders (include, asminc, lib): $CC65_HOME, else the
-// folder above its tools'.  The assembler's CPU is the W65C02 (WAI, STP), the compiler's the 65C02.
+// The cc65 tools: the base's (../base/build.js's tool (): $CC65_BIN, else $CC65_HOME/bin, else its CC65_DIR's bin on
+// Windows, ../base/tools/cc65/win64_hydra/bin in the repository, else the PATH); cc65's own folders (include, asminc,
+// lib): $CC65_HOME, else the folder above its tools'.  The assembler's CPU is the W65C02 (WAI, STP), the compiler's the 65C02.
 // From Node: require('./build.js').buildBoth(opts) does the same, and gives what the last build made; build(opts)
 // builds for opts.acia alone, its images bin/bios.bin, prom0.bin ... (buildBoth names them).
 'use strict';

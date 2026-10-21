@@ -3,7 +3,7 @@
 // emulator plays the PC tool's part: hydrasim.js --pc-dir).  A test's fields are described at the top of regress.js.
 // ****************************************************************************
 'use strict';
-const { fs, path, W, BOOT, num, P, zsmSong } = require('./common.js');
+const { fs, path, W, BOOT, num, P, zsmSong, cSize } = require('./common.js');
 
 const README = () => fs.readFileSync(path.join(__dirname, '../../os_rom/romfs/README'));
 const STAMP = '\\d{4}-\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d';
@@ -21,7 +21,7 @@ module.exports = [
       new RegExp('/ram> ls -l /pc/sub\ndeep/ ' + STAMP + '\nx 1 ' + STAMP + '\n'), '/ram> cat /pc/new.txt\nhi\n', '/ram> /pc/c 5\n\n/ram> status .\n' + num(5) + '\n',
       '/ram> hi a b\nHello from C on the Hydra-16!\n2 arguments: [a] [b]\n', '/pc/sub> pwd\n/pc/sub\n', '/pc/sub> cat ../hello.txt | wc . . .\n 001D ',
       '/pc/sub> cat /pc/nope\n\n !IO ERR! not found\n', '/pc/sub> rm /pc/nope\n\n !IO ERR! not found\n',
-      '/pc/sub> ls /pc\nbin/\nc.hyx 2158\nhello.txt 29\nnew.txt 4\nrr 984\nsub/\n'],
+      '/pc/sub> ls /pc\nbin/\nc.hyx ' + cSize('code') + '\nhello.txt 29\nnew.txt 4\nrr 984\nsub/\n'],
     forbid: ['no answer'],
     check: (out, report, files) => {
       const f = n => path.join(files.pc, n);

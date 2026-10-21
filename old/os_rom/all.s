@@ -1,6 +1,5 @@
 .debuginfo
-.macpack        cpu
-.pc02
+.pwc02
 
 ; The OS ROM, as one assembly.  Folders: include/ (constants and macros), kernel/, io/ (the IO layer:
 ; fds, namespaces, pipes), servers/ (the devices' file servers), fs/ (HydraFS), drivers/, sound/, shell/,

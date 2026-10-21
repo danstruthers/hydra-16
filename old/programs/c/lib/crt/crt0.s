@@ -37,9 +37,9 @@ start:
         sta         hy_argp                             ; The arguments (in the stack page, at HYX_ARGS:
         sty         hy_argp + 1                         ;   mainargs.s copies them before they're needed)
         lda         #<__RAMTOP__                        ; The C stack, down from the top of its RAM
-        sta         sp
+        sta         c_sp
         lda         #>__RAMTOP__
-        sta         sp + 1
+        sta         c_sp + 1
         jsr         initlib                             ; The constructors: argc and argv, the current
         jsr         callmain                            ;   directory ...; then main (argc, argv)
 

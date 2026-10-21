@@ -27,7 +27,7 @@ How to write programs for the Hydra-16 in C: setting up cc65, building and runni
 
 | Tool | For | Where |
 | :--- | :-- | :---- |
-| cc65 (V2.19 or later) | The C compiler, assembler and linker | [cc65.github.io](https://cc65.github.io/): the Windows snapshot zip, or build it from source.  The build looks in `CC65_HOME`, then on the `PATH`, then in `C:\source\cc65\win64_snapshot` |
+| cc65 (the project's: upstream with four fixes) | The C compiler, assembler and linker | On Windows, in the repository (`base/tools/cc65/win64_hydra`); elsewhere, build it from source with the patches in `base/tools/cc65` (its README shows how).  The build looks in `CC65_HOME`, then in the repository (on Windows), then on the `PATH` |
 | Node.js | The emulator and the card image tool | [nodejs.org](https://nodejs.org) (no packages needed) |
 | The ROM images | The emulator runs them | Built already in `os_rom/bin`, or build them ([getting started](../getting-started.md)) |
 

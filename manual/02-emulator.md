@@ -333,9 +333,10 @@ asks you to confirm, before it writes anything.
 ## 2.7 Building HydraOS yourself
 
 You never *need* to build HydraOS, because the ROM images come ready-made. But if you want to change HydraOS itself,
-or to build programs in C, you'll need the **cc65** compiler and assembler (from **cc65.github.io**). Install it,
-put its `bin` folder on your PATH (or set `CC65_HOME` to the folder you unpacked it in), then in the project's
-folder type:
+or to build programs in C, you'll need the **cc65** compiler and assembler. On Windows it's already in the project,
+in `base/tools/cc65/win64_hydra`, with four fixes the Hydra needs, so there's nothing to install. On Linux or a Mac,
+build cc65 from its source with those fixes (`base/tools/cc65/README.md` shows how) and set `CC65_HOME` to its
+folder. Then, in the project's folder, type:
 
 ```text
 node reborn/build.js

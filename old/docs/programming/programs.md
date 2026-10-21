@@ -68,7 +68,7 @@ programs\c\make.bat                            build the library (lib\hydra.lib)
 programs\c\hyc.bat prog.c [more.c] [more.s]    build a program of your own: bin\prog.hyx
 ```
 
-They run `build.js` (`node build.js c`, `node build.js prog prog.c ...` on any OS), which finds cc65 in `CC65_HOME`, on the `PATH`, or in `C:\source\cc65\win64_snapshot`.  `hyc.bat` compiles with `cc65 -t none --cpu 65C02 -O` and links with `hydra.cfg` and `lib\hydra.lib`.
+They run `build.js` (`node build.js c`, `node build.js prog prog.c ...` on any OS), which finds cc65 in `CC65_HOME`, on Windows in the repository (`base/tools/cc65/win64_hydra`), or on the `PATH`.  `hyc.bat` compiles with `cc65 -t none --cpu 65C02 -O` and links with `hydra.cfg` and `lib\hydra.lib`.
 
 | File | What |
 | :--- | :--- |

@@ -1,11 +1,8 @@
 # Build everything and run the regression tests in the emulator, on every push and pull request.
-# cc65 is built from its source as the project builds with it (C:\source\cc65\win64_hydra, base/build.js's CC65_DIR):
-# upstream's 6bd01e8a5 (October 2026) with the fixes in base/tools/cc65 (four of its code generator and optimizer's),
-# so the images in Git are the build's; build.js finds it through CC65_HOME.  (Its ca65 has WAI and STP as the
-# W65C02's, which the build names.)
-# The old system (old/, frozen at HydraOS 1.0) is built with the cc65 it was frozen with, as on the PC (old/build.js:
-# C:\source\cc65\win64_snapshot, ca65 V2.19, Git 1d1dd42): its sources use WAI with --cpu 65C02, which later ca65
-# doesn't take, and its images in Git are that cc65's.
+# cc65 is built from its source as the project builds with it on Windows (base/tools/cc65/win64_hydra, in the
+# repository): upstream's 6bd01e8a5 (October 2026) with the fixes in base/tools/cc65 (four of its code generator and
+# optimizer's), so the images in Git are the build's; every build (base, reborn, old) finds it through CC65_HOME.  (Its
+# ca65 has WAI and STP as the W65C02's, which the builds name.)
 # The runner is pinned (ubuntu-24.04, not ubuntu-latest, which moves to 26.04 in late 2026), and the actions are the
 # ones that run on Node 24 (v7: GitHub's Node 20 is gone).
 name: build
@@ -18,12 +15,6 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: cc65 for the old system (the snapshot it was frozen with; first, CC65_HOME not set yet)
-        run: |
-          git init -q "$RUNNER_TEMP/cc65-old"
-          git -C "$RUNNER_TEMP/cc65-old" fetch -q --depth 1 https://github.com/cc65/cc65.git 1d1dd425c1148e02dbe0af72b9d11959e20101fb
-          git -C "$RUNNER_TEMP/cc65-old" checkout -q FETCH_HEAD
-          make -C "$RUNNER_TEMP/cc65-old" -j4
       - name: cc65
         run: |
           git init -q "$RUNNER_TEMP/cc65"
@@ -40,7 +31,7 @@ jobs:
         run: node reborn/sim/web.js --check
       - name: The book's call reference, as the specification has it (docs/build/callref.js)
         run: node docs/build/callref.js --check
-      - name: The old system (frozen in old/), build and test, with its own cc65
-        run: CC65_HOME="$RUNNER_TEMP/cc65-old" node old/build.js test
+      - name: The old system (old/, frozen at HydraOS 1.0, built with the same cc65), build and test
+        run: node old/build.js test
       - name: The images and the SDK's generated files, if they changed (the ones in Git should be the build's)
         run: git status --short -- base/bin base/sdk reborn/bin reborn/sdk old/os_rom/bin old/programs

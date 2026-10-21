@@ -3,7 +3,7 @@
 // the top of regress.js.
 // ****************************************************************************
 'use strict';
-const { fs, path, hydrafs, hyx, W, zsmSong, BOOT, num, P } = require('./common.js');
+const { fs, path, hydrafs, hyx, W, zsmSong, BOOT, num, P, cSize } = require('./common.js');
 
 // The files in /rom: romfs.txt's lines, { path, src, data }
 function romFiles() {
@@ -147,7 +147,7 @@ module.exports = [
     args: ['--cycles', '90000000', '--input', BOOT + ['ls /rom\\r', 'hello a b\\r' + W(2), 'cd /rom/bin\\rpwd\\rls -l\\r', 'code 3\\r' + P + 'status .\\r',
       'cat /rom/nope\\r', 'rm /rom/README\\r', 'echo x > /rom/x\\r', 'cd /\\rcd /rom/README\\r', 'ns\\r', 'ls /sd/x\\r', 'cat /dev/sd/x/ctl\\r', 'ls /sd/8\\r'].join(P)],
     expect: ['No card: /ram keeps your files until a reset.', '/ram> ls /rom\nREADME 984\nbin/\nboot.hys 83\nlib/\nsongs/\n', '/ram> hello a b\nHello from C on the Hydra-16!\n2 arguments: [a] [b]\n',
-      '/ram> cd /rom/bin\n\n/rom/bin> pwd\n/rom/bin\n/rom/bin> ls -l\ncode.hyx 2158 2000-01-01 00:00:00\n', 'scom.zsm 838 2000-01-01 00:00:00\n',
+      '/ram> cd /rom/bin\n\n/rom/bin> pwd\n/rom/bin\n/rom/bin> ls -l\ncode.hyx ' + cSize('code') + ' 2000-01-01 00:00:00\n', 'scom.zsm 838 2000-01-01 00:00:00\n',
       '/rom/bin> code 3\n\n/rom/bin> status .\n' + num(3) + '\n', '/rom/bin> cat /rom/nope\n\n !IO ERR! not found\n', '/rom/bin> rm /rom/README\n\n !IO ERR! not opened for that\n',
       '/rom/bin> echo x > /rom/x\n\n !IO ERR! not opened for that\n', '/> cd /rom/README\n\n !IO ERR! ', '/> ns\nmount -s hfs /sd\nmount -s env /env\nmount -s proc /proc\nmount -s hfs /rom x\nmount -s hfs /sram s\nbind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /rom/bin /bin\nbind -cs /ram/lib /lib\nbind -as /sram/lib /lib\nbind -as /rom/lib /lib\nmount -s pc /pc\nmount hfs /ram r/1\n', '/> ls /sd/x\n\n !IO ERR! not found\n',
       '/> cat /dev/sd/x/ctl\nrom 4 MB 8192 blocks\nhydrafs label=ROM\n', '/> ls /sd/8\n\n !IO ERR! not found\n'],
@@ -164,7 +164,7 @@ module.exports = [
     args: ['--cycles', '150000000', '--input', BOOT + 'mount hfs /a r\\r' + 'echo one > /ram/f\\r' + W(1) + 'shell\\r' + W(2) + '\\x1dB' + W(1) + ['\\rcat /proc/b/ns | wc . . .\\r', 'echo two > /ram/f\\r',
       'cp /rom/bin/code.hyx /bin/cb.hyx\\r', 'ls /a/b/bin\\r', 'cat /a/1/f\\r', 'cb 6\\r' + P + 'status .\\r'].join(W(1)) + W(1) + '\\x1d1' + W(1) +
       ['\\r11 kill\\r' + W(2), 'cat /ram/f\\r', 'ls /ram/bin\\r', 'ls /a\\r', 'ls /sram\\r'].join(W(1)) + W(1)],
-    expect: ['> cat /proc/b/ns | wc . . .\n', '> ls /a/b/bin\ncb.hyx 2158\n', '> cat /a/1/f\none\n', '> status .\n' + num(6) + '\n',
+    expect: ['> cat /proc/b/ns | wc . . .\n', '> ls /a/b/bin\ncb.hyx ' + cSize('code') + '\n', '> cat /a/1/f\none\n', '> status .\n' + num(6) + '\n',
       '/ram> cat /ram/f\none\n', '/ram> ls /ram/bin\n\n', '/ram> ls /a\n1/\n\n', '/ram> ls /sram\nbin/\nlib/\n'],
     forbid: ['!UNK WORD!', '!IO ERR!'],
   },
@@ -269,7 +269,7 @@ module.exports = [
     } }],
     args: ['--cycles', '150000000', '--input', BOOT + ['ns\\r', 'seven\\r', 'cp /rom/bin/code.hyx /bin/c5.hyx\\r', 'ls /ram/bin\\r', 'c5 4\\r' + P + 'status .\\r', 'ls /bin\\r'].join(P) + P],
     expect: ['bind -cs /ram/bin /bin\nbind -as /sram/bin /bin\nbind -as /sd/0/bin /bin\nbind -as /rom/bin /bin\nbind -as /sd/0/tools /bin\nbind -cs /ram/lib /lib\n',
-      '0:/> seven\n' + num(7) + '\n', '0:/> ls /ram/bin\nc5.hyx 2158\n', '0:/> status .\n' + num(4) + '\n', '0:/> ls /bin\nc5.hyx 2158\ncode.hyx 2158\n', 'upper.hyx 1819\nseven.hys 5\n'],
+      '0:/> seven\n' + num(7) + '\n', '0:/> ls /ram/bin\nc5.hyx ' + cSize('code') + '\n', '0:/> status .\n' + num(4) + '\n', '0:/> ls /bin\nc5.hyx ' + cSize('code') + '\ncode.hyx ' + cSize('code') + '\n', 'upper.hyx ' + cSize('upper') + '\nseven.hys 5\n'],
     forbid: ['!UNK WORD!', '!IO ERR!'],
   },
   {

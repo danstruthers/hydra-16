@@ -23,7 +23,7 @@ How to build the ROMs, program the chips, connect a terminal and boot the Hydra-
 
 ### **Building**
 
-The build is `build.js`, at the top of the repository, on Windows, Linux or macOS.  It needs Node.js and cc65, which it finds in `CC65_HOME` (cc65's folder), or on the `PATH`, or in `C:\source\cc65\win64_snapshot`:
+The build is `build.js`, at the top of the repository, on Windows, Linux or macOS.  It needs Node.js and cc65, which it finds in `CC65_HOME` (cc65's folder), or on Windows in the repository (`base/tools/cc65/win64_hydra`), or on the `PATH`:
 
 ```
 node build.js            everything: the C library and samples, the assembly sample, the ROM images
