@@ -496,6 +496,14 @@ climb's test to hold on).
 
 - **Swimming tires** (the user's, 2026-10-20: "swimming, climbing, running, battering down a door"), strenuous work
   as climbing, digging and battering are (built: Moving and tiring), once there's water (slice 4.9).
+- **Fighting on** (the user's, 2026-10-20): once engaged, either way (the character attacked, or a hostile enemy
+  engaged it), a blow each round as it can, a long task, without "attack" again; any command takes over; its target
+  beaten (dead, senseless, fled out of reach), the next enemy engaging it; none left, it stops and says so.  Today
+  each attack is one blow.
+- **A round's defences** (the user's, 2026-10-20): automatic, a block or a dodge, the better against the blow, each
+  once a round (a block once for each weapon or shield that blocks: two attackers, the shield blocks one and the
+  sword the other; a dodge once); a counterstrike only on command (defend counter), its weapon used for the round;
+  none left, no defence.  Today the better of block and dodge for every blow.
 
 ## Open
 

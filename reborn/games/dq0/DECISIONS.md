@@ -736,3 +736,26 @@ adds -a, a test of it asking for it on), and an hmchar flag fixes the culture (t
 swimming tires when there's water (slice 4.9).
 
 **Design:** HOUSE.md, decided, not yet built (and Open: sight's detail by distance).
+
+### Fighting on, and the defences chosen for you
+
+The user, 2026-10-20: "Because the games is somewhat realtime, defenses should be automatic, based on what should be
+best for the situation normally.  Also, once engaged in combat, you should continue to attack your target as you can,
+without actively having to say "attack" each time."  As built then: the character's defence the better of its block
+and its dodge (a creature counterstrikes if it's the better at it, else dodges), and each attack one blow.  The
+user chose:
+
+- **Fighting on, once engaged either way:** after the character attacks something, and when a hostile enemy engages
+  it, it strikes a blow each round as it can, without "attack" again; any command takes over; the usual soft
+  questions apply.
+- **The next foe:** its target beaten (dead, senseless, fled out of reach) and others still engaging it, it turns to
+  the next; none left, it stops and says so.
+- **Defences:** "Counterstrike should only be used sparingly, on command.  Dodge or block should be preferred, with
+  block allowed for only one foe per round, per blocking weapon (if I have a shield and a sword and there are two
+  attackers, I should be able to use block against both, one with the sword, and one with the shield, but not both
+  with the shield).  Likewise, dodge should only be able to be applied to one foe per round as well."  So the
+  automatic defence is a block or a dodge, whichever is the better against that blow, of those not yet used that
+  round; a counterstrike only when the player says (defend counter), its weapon used for the round as a block's
+  is (the lead's reading); none left, no defence.
+
+**Design:** HOUSE.md, decided, not yet built.
