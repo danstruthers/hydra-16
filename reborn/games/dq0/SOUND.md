@@ -42,10 +42,11 @@ DUNGEON.md's.
 ### The environment, mixed
 
 Everything the character could hear is a **source**: a denizen's events (each actor's steps and noises, on the
-character's stratum) and the world's events (the character's own: its digging, E_NOISE; a door it opens, shuts or
-batters, glass it breaks, a portcullis's chains, E_PORTAL; a trap sprung, E_TRAP).  The **sound task** (dq0s, the
-hub's T_SOUND) reads both queues as they come, by its own place in each (nobody waits for it, nor it for anyone), and
-for each source it hears works out:
+character's stratum) and the world's events (the character's own: its digging, E_NOISE, and each blow as it batters
+something, E_NOISE's NZ_BLOW, the user's, 2026-10-20; a door it opens or shuts, one it batters down, glass it breaks,
+a portcullis's chains, E_PORTAL; a trap sprung, E_TRAP).  The **sound task** (dq0s, the hub's T_SOUND) reads both
+queues as they come, by its own place in each (nobody waits for it, nor it for anyone), and for each source it hears
+works out:
 
 - **How far it carries**, by the character's hearing: heard within L times (hearing + 3) / 2 squares (as the UI
   tells it: DENIZENS.md's seen and heard), counted as the sound goes: each square of wall or rock on the line between

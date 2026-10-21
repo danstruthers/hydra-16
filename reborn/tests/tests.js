@@ -2876,8 +2876,8 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0dig', meaning: true, what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, through to the stratum below, and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 1\'s hard-packed earth floor (untested: the tool\'s rate, a foot and a half a spell) till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all (only a pick lifts flags); bare hands (the dagger in the kit, a knife that would dig it, put down first) make no progress in seed 1\'s hard-packed earth (the user\'s, 2026-10-20: hands only in soft soil) (dq0earth\'s and dq0tools\' digs, these together)',
-      init: 't_rc', cycles: 2400e6,
+      name: 'dq0dig', meaning: true, what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, through to the stratum below (tiring as it goes, strenuous work: two fatigue levels a spell, the referee\'s, its Mining tests the harder for them, so more spells), and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 1\'s hard-packed earth floor (untested: the tool\'s rate, a foot and a half a spell) till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all (only a pick lifts flags); bare hands (the dagger in the kit, a knife that would dig it, put down first) make no progress in seed 1\'s hard-packed earth (the user\'s, 2026-10-20: hands only in soft soil) (dq0earth\'s and dq0tools\' digs, these together)',
+      init: 't_rc', cycles: 3600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm',
         'dq0 -p t -s 3 -c /ram/m.hm -k pick -T', 'dig down', 'd', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -k shovel -T', 'dig down', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'dig down', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'drop the dagger', 'dig down', 'quit', 'echo $status']) },
@@ -4455,6 +4455,60 @@ module.exports = {
         if (!(up(t0.after) === 1 && up(te.after) === 2)) f.push('running not tiring a level more: UP ' + up(t0.after) + ', then ' + up(te.after));
         const r0 = T.of('dq0 -p t -s 16 -c /ram/r.hm -T'), rz = T.of('quit', r0.k + 1);
         if (!(up(r0.after) === 2 && up(rz.at) === 1)) f.push('resting ten minutes not a level less tired: UP ' + up(r0.after) + ', then ' + up(rz.at));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0tiring', asks: true, what: 'Dingus Quest Zero\'s strenuous work tiring the character (the user\'s, 2026-10-20: "Tiring work includes swimming, climbing, running, battering down a door"; HOUSE.md\'s moving and tiring: the world\'s RS_EXERT at GA_WORK, the referee\'s rate the book\'s for strenuous activity, a level each five minutes) and a search cut short (the user\'s: the part done, the nearest squares first, each at the full chance), by the world\'s events and the referee\'s replies and summary (HarnMaster\'s, at these seeds): at seed 3 a pick\'s shaft (dq0 -T), each ten-minute spell two fatigue levels, a level more asked of ("You\'re tiring.  Keep digging?"), yes going on, no stopping it (nothing more charged), and a spell stopped part way tiring for the part of it done; one nearly a level tired (pc.hm\'s pace line) climbing seed 517\'s ledge (dq0harm\'s: a round without a hold first), its first round tiring it a level more, asked of, no refused part way up and the climb on up; the same battering seed 14\'s door (dq0battering\'s), its first blow tiring it a level more, asked of, and each blow heard (a noise a blow, E_NOISE\'s NZ_BLOW); then (seed 7\'s thief by the door with a hidden dart trap, dq0traps\', at the menacing pace) two whole searches reaching every square (E_PORTAL\'s reach, 19), a third stopped at once reaching only the character\'s own square (the trap beside it not found), and in the same game again a third stopped part way reaching the door, the trap found (at the full chance: the third search\'s, as dq0traps\' whole one finds it), each search\'s reach its part done\'s',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/t.hm', 'echo pace 2 0 5990 >> /ram/t.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', 'dig down', 'yes', 'no', 'dig down', '!' + 'Ā'.repeat(3) + 'stop', 'quit',
+        'dq0 -p t -s 517 -c /ram/t.hm', 'ne', 'e', 'u', 'no', 'quit', 'dq0 -p t -s 14 -c /ram/t.hm -k pick -a', 'break the door', 'quit',
+        'hmchar -q -s 1 -u feudal -c thief -o /ram/th.hm', 'echo ml lck 95 >> /ram/th.hm',
+        ...['!stop', '!' + 'Ā'.repeat(6) + 'stop'].flatMap(st => ['dq0 -p m -s 7 -c /ram/th.hm -a', 'search', 'search', 'search', st, 'quit']), 'echo $status']
+        .map(l => (l[0] === '!' ? l.slice(1) : 'ā' + l) + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], K = m.dq0.layout().K;
+        const up = x => x ? +((x.status.match(/UP (\d+)/) || [])[1]) : NaN, ups = (t, u = t) => 'UP ' + up(t.at) + ', then ' + up(u.after);
+        const work = t => t.replies.filter(r => /^slot/.test(r.req) && r.kind === K.RS_EXERT && r.a === K.GA_WORK).map(r => r.w1);
+        // (A dig: each spell its ten minutes' strenuous work, two levels; a level more asked of, as it goes on)
+        const d = T.after(T.of('dq0 -p t -s 3 -c /ram/c.hm -k pick -T'), 'dig down'), y = T.after(d, 'yes'), n = T.after(y, 'no');
+        dq0Need(f, d, 'E_TASK', { te: 'TE_ASK_TIRED', task: 'LT_DIG' }, 'the first spell\'s fatigue not asked of');
+        if (!(up(d.at) === 0 && up(d.after) === 2) || work(d).join() !== '6000') f.push('a spell of digging not ten minutes\' work, two levels: ' + ups(d) + ' (' + work(d) + ')');
+        dq0Need(f, y, 'E_TASK', { te: 'TE_ON', task: 'LT_DIG' }, 'the dig not gone on at yes');
+        dq0Need(f, y, 'E_TASK', { te: 'TE_ASK_TIRED', task: 'LT_DIG' }, 'the second spell\'s fatigue not asked of');
+        if (up(y.after) !== 4) f.push('the second spell not two levels more: ' + ups(y));
+        dq0Need(f, n, 'E_TASK', { te: 'TE_STOPPED', task: 'LT_DIG' }, 'the dig not stopped at no');
+        if (up(n.after) !== 4 || work(n).some(w => w)) f.push('tired more by the spell stopped as it began: ' + ups(n) + ' (' + work(n) + ')');
+        const s = T.after(T.after(n, 'dig down'), 'stop'), w = work(s);
+        dq0Need(f, s, 'E_TASK', { te: 'TE_STOPPED', task: 'LT_DIG' }, 'the dig again not stopped');
+        if (w.length !== 1 || !(w[0] > 0 && w[0] < 6000)) f.push('the spell stopped part way not tiring for the part of it done (' + w + ')');
+        // (A climb's round and a battering's blow tiring one nearly a level tired a level more, asked of, going on)
+        const c = T.after(T.of('dq0 -p t -s 517 -c /ram/t.hm'), 'u'), cn = T.after(c, 'no'), cw = [...work(c), ...work(cn)];
+        dq0Need(f, c, 'E_TASK', { te: 'TE_ASK_TIRED', task: 'LT_CLIMB' }, 'the climb\'s first round tiring a level more not asked of');
+        dq0Need(f, cn, 'E_TASK', { te: 'TE_CANT', task: 'LT_CLIMB' }, 'no not refused part way up the climb');
+        dq0Need(f, cn, 'E_CLIMB', { how: 'K_UP' }, 'the climb not gone on up, no for an answer');
+        if (!(up(c.at) === 0 && up(cn.after) === 1) || !cw.length || cw.some(w => w !== 100)) f.push('the climb\'s rounds not strenuous work, a level more: ' + ups(c, cn) + ' (' + cw + ')');
+        const b = T.after(T.of('dq0 -p t -s 14 -c /ram/t.hm -k pick'), 'break the door'), blows = work(b);
+        dq0Need(f, b, 'E_TASK', { te: 'TE_ASK_TIRED', task: 'LT_BATTER' }, 'the first blow tiring a level more not asked of');
+        if (!(up(b.at) === 0 && up(b.after) === 1) || blows.length !== 12 || blows.some(w => w !== 30)) f.push('the dozen blows not strenuous work, three seconds each, a level more: ' + ups(b) + ' (' + blows + ')');
+        const heard = dq0Ev(b, 'E_NOISE', {});
+        if (heard.length !== blows.length || heard.some(e => e.b !== K.NZ_BLOW)) f.push('each blow not heard, a blow\'s noise: ' + heard.map(e => e.b + ':' + e.a).join(' ') + ' for ' + blows.length + ' blows');
+        // (Searches: whole, every square; cut short, the nearest as far as its part done reached, its reach told)
+        const reach = t => t.after ? Math.min(19, (t.after.pc.task.done + 31) >> 5) : -1, cut = g => T.after(T.after(T.after(T.after(g, 'search'), 'search'), 'search'), 'stop');
+        const g1 = T.of('dq0 -p m -s 7 -c /ram/th.hm'), g2 = T.of('dq0 -p m -s 7 -c /ram/th.hm', g1.k + 1), x1 = cut(g1), x2 = cut(g2);
+        for (const [g, x, how] of [[g1, x1, 'at once'], [g2, x2, 'part way']]) {
+          const s1 = T.after(g, 'search'), s2 = T.after(s1, 'search');
+          for (const t of [s1, s2]) dq0Need(f, t, 'E_PORTAL', { po: 'PO_NOTHING', a: 19 }, 'a whole search (' + how + ') not reaching every square, nothing found');
+          dq0Need(f, x, 'E_TASK', { te: 'TE_STOPPED', task: 'LT_SEARCH' }, 'the third search not stopped ' + how);
+          dq0Need(f, x, 'E_PORTAL', { a: reach(x) }, 'the search stopped ' + how + ' not reaching as far as its part done (' + reach(x) + ')');
+        }
+        dq0Need(f, x1, 'E_PORTAL', { po: 'PO_NOTHING', a: a => a < 2 }, 'the search stopped at once not its own square only');
+        dq0Never(f, x1, 'E_TRAP', { to: 'TO_FOUND' }, 'the trap beside it found by a search that didn\'t reach it');
+        dq0Need(f, x2, 'E_PORTAL', { po: 'PO_FOUND_TRAP', a: a => a >= 2 && a < 19 }, 'the search stopped part way, reaching the door, not finding its trap');
+        dq0Need(f, x2, 'E_TRAP', { tk: 'TK_DARTS', tt: 'TT_DOOR', to: 'TO_FOUND' }, 'the dart trap not found by the search stopped part way');
         return f;
       },
       sdcard: true

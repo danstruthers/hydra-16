@@ -20,8 +20,9 @@
 ** theirs at it (the referee asked, in the world's slot).
 **
 ** The pace (DUNGEON.md: moving): the player's (the hub's gait), held to a slow walk while it searches as it goes or
-** in the dark, a walk while it listens; a square's time that pace's step (the referee's), the time moved at it and
-** the time stood still the referee's to tire the character by and rest it (RS_EXERT).  Searching as it goes, it
+** in the dark, a walk while it listens; a square's time that pace's step (the referee's), the time moved at it, the
+** time at strenuous work (a climb's rounds, a dig's spells, a battering's blows: GA_WORK) and the time stood still
+** the referee's to tire the character by and rest it (RS_EXERT).  Searching as it goes, it
 ** searches about each place it stops (a search's, quietly, in no more time); a trap underfoot noticed, by the
 ** referee's chance (a search's).  A small move (I_STEP): a square at a time, by the heading, as far
 ** as it's told or its pace takes it.
@@ -184,6 +185,7 @@ static unsigned char seen_now (void)
 ** its own units; what disturbs it from now on (a blow, a wound: pc_hit; a denizen not seen till now: pseen) */
 unsigned char pc_hit;                           /* (A blow at the character, or a wound: wfight.c's too) */
 static unsigned char pseen;                     /* (The denizens seen as it began, and since) */
+static unsigned char pc_tired;                  /* (Strenuous work done tired it a level more: asked, the main loop's) */
 static void __fastcall__ task (unsigned char kind, unsigned len)
 {
     pseen = seen_now ();
@@ -1382,7 +1384,8 @@ static unsigned char toward_middle (void)
 }
 
 
-/* Time spent (RS_EXERT: the referee's fatigue, by the pace; GA_REST, standing still), t tenths */
+/* Time spent (RS_EXERT: the referee's fatigue, by the pace; GA_WORK, at strenuous work; GA_REST, standing still), t
+** tenths: wres 1 if it tired the character a level more */
 static void __fastcall__ spend (unsigned char a, unsigned long t)
 {
     ww1 = t > 60000UL ? 60000U : (unsigned) t;
@@ -1403,14 +1406,19 @@ static void turn (void);
 static void arrive (void)
 {
     unsigned char first, how = move.how;
+    unsigned t = went;
 
     move.on = 0;
-    if (how == A_DIGGING) {                     /* (A spell of digging done) */
-        dig_on ();
-        return;
-    }
-    if (how == A_CLIMBING) {                    /* (A round of climbing done) */
-        climb_on ();
+    if (how == A_DIGGING || how == A_CLIMBING) {    /* (A spell of digging done, a round of climbing: its test, then
+                                                **   its time the referee's, strenuous work, HOUSE.md's tiring; a
+                                                **   fatigue level more asked of if the next is begun) */
+        if (how == A_DIGGING) {
+            dig_on ();
+        } else {
+            climb_on ();
+        }
+        spend (GA_WORK, t);
+        pc_tired = wres && move.on;
         return;
     }
     spend (pace_, went > pspent ? went - pspent : 0);    /* (As it begins, or carries on: none; a walk's, what's
@@ -2047,23 +2055,15 @@ static void __fastcall__ worked (unsigned long t)
     }
 }
 
-/* A search's end (the long task's: its time done, or stopped): the walls about it searched, its tests harder by the
-** part not done (HOUSE.md: a search cut short finds for the part done), told (E_PORTAL: the UI's things' search after
-** it, as hard); 0, done */
+/* A search's end (the long task's: its time done, or stopped): the walls about it searched, the nearest first as far
+** as its time went (HOUSE.md: a search cut short covers the part done, wtrap.c's), told (E_PORTAL: the UI's things'
+** search after it, as far); 0, done */
 static unsigned char srch;
-unsigned char srch_pen;
 static unsigned char searched (void)
 {
-    unsigned l, d;
-
     srch = 0;
-    hub_map (0);
-    l = HUB->pc_task.len;
-    d = HUB->pc_task.done;
-    srch_pen = d >= l ? 0 : (unsigned char) ((unsigned long) (l - d) * 4 / l);
     here ();
     work (PA_SEARCH, NO_SQ, NO_SQ, 0);
-    srch_pen = 0;
     wk.tt = 0;                                  /* (Its minute spent already, the long task's) */
     worked (0);
     return 0;
@@ -2119,6 +2119,10 @@ unsigned char s_batter_on (void)
     if (wk.what != W_BLOW && wk.what != W_GONE) {
         HUB->pc_task.kind = LT_NONE;
         see (0);
+    } else {                                    /* (A blow struck: strenuous work, HOUSE.md's tiring; a fatigue level
+                                                **   more asked of if more are to come) */
+        spend (GA_WORK, BLOW_T);
+        pc_tired = wres && wk.what == W_BLOW;
     }
     if (!wk.tt) {
         return 0;
@@ -2210,6 +2214,10 @@ static void __fastcall__ stop (unsigned char why)
         return;
     }
     hub_map (0);
+    if (move.on) {                              /* (Work in place given up, a spell of digging: the part of it done
+                                                **   strenuous work all the same, the referee's; free_at its end) */
+        spend (GA_WORK, went - ((unsigned) free_at - (unsigned) HUB->now));
+    }
     move.on = 0;                                /* (A spell of digging given up, or a wait cut short) */
     HUB->pc_ready = HUB->now;
     HUB->pc_task.asking = 0;
@@ -2385,6 +2393,14 @@ unsigned char s_task_news (void)
     return news ();
 }
 
+/* A soft question answered: the task on as it was */
+static void go_on (void)
+{
+    HUB->pc_task.asking = 0;
+    pt0 += HUB->now - pask;
+    HUB->pc_ready = HUB->now + prem;
+}
+
 /* The player's stop (I_STOP: a its kind named, or none) and a soft question's answer (I_GO_ON) */
 void __fastcall__ s_task_word (const struct msg* m)
 {
@@ -2400,9 +2416,7 @@ void __fastcall__ s_task_word (const struct msg* m)
     }
     if (m->kind == I_GO_ON) {
         if (HUB->pc_task.asking) {
-            HUB->pc_task.asking = 0;
-            pt0 += HUB->now - pask;
-            HUB->pc_ready = HUB->now + prem;
+            go_on ();
             event (E_TASK, 0, TE_ON | k << 8);
         }
         return;
@@ -2413,7 +2427,10 @@ void __fastcall__ s_task_word (const struct msg* m)
         evb = m->a;                             /* (The one named: its b) */
         event (E_TASK, 0, TE_NOT | k << 8);
     } else if (k == LT_CLIMB) {
-        event (E_TASK, 0, TE_CANT | k << 8);   /* (Part way up: no stopping) */
+        event (E_TASK, 0, TE_CANT | k << 8);   /* (Part way up: no stopping; asked, "no", it goes on all the same) */
+        if (HUB->pc_task.asking) {
+            go_on ();
+        }
     } else {
         stop (TE_STOPPED);
     }
@@ -2965,6 +2982,13 @@ int main (int argc, char* argv[])
                 event (E_READY, 0, 0);          /* (The character free again: the UI takes its next line) */
             }
             was_busy = took == 2;
+        }
+        if (pc_tired) {                         /* (Tired a level more by strenuous work: asked, soft, as it goes on,
+                                                **   "You're tiring.  Keep digging?", part 23's) */
+            pc_tired = 0;
+            m.kind = I_ASK;
+            m.w1 = TE_ASK_TIRED;
+            task_word (&m);
         }
         if (hub_posted (&HUB->ireq)) {
             things ();                          /* (The UI's: the things; after the clock's moved on for an intent,

@@ -12,7 +12,7 @@
 ** its injuries and all, and the creatures' sheets), RS_NEW_ACTOR (a creature's sheet, by its kind's key: made the
 ** first time, kept in a bank after), RS_ATTACK (a blow struck, HarnMaster's melee: by the character, or at it),
 ** RS_MORALE, RS_TIME (bleeding), RS_CONTEST (two actors' tests: the engage initiative test's, a creature's by its
-** sheet), RS_EXERT (fatigue, by the pace moved at, and rest); RS_DESCRIBE b 3 (its state,
+** sheet), RS_EXERT (fatigue, by the pace moved at or strenuous work, and rest); RS_DESCRIBE b 3 (its state,
 ** the status command's, the hub's pace and watchfulness).  Its summary gives each pace's step, and the notice
 ** tests go by the character's pace and state.  The sheet's words and the harm are overlay 1's (sheet.c), the
 ** fights overlay 2's (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's
@@ -244,7 +244,7 @@ static unsigned char __fastcall__ sense (unsigned char a)
 /* ---- Fatigue (sheet.c's spent: the book's movement fatigue) */
 
 unsigned tired, rested;                         /* Exertion toward the next level, rest toward the next gone */
-unsigned char spent_at;                         /* (The pace the time went at: spent's) */
+unsigned char spent_at;                         /* (The pace the time went at, or GA_WORK, GA_REST: spent's) */
 
 /* Its conditions (rs.h's C_*), as its sheet has them (the character's, or a creature's): its state (senseless, in
 ** shock, dead), bleeders, limbs made useless; tired, or tiring */

@@ -343,8 +343,8 @@ static unsigned char __fastcall__ world_sound (const struct msg* m)
         return 0xFF;
     }
     switch (m->kind) {
-    case E_NOISE:
-        return WORLD (WS_DIG);
+    case E_NOISE:                               /* (Work's, a dig's; or a blow's, a battering's: each heard) */
+        return WORLD (m->b == NZ_BLOW ? WS_BLOW : WS_DIG);
     case E_TRAP:
         return m->w1 >> 8 == TO_SPRUNG ? WORLD (WS_TRAP) : 0xFF;
     case E_PORTAL:
@@ -353,9 +353,6 @@ static unsigned char __fastcall__ world_sound (const struct msg* m)
         }
         if (o == PO_CLOSED || o == PO_LOWERED) {
             return o == PO_CLOSED ? WORLD (WS_SHUT) : WORLD (WS_CHAINS);
-        }
-        if (o == PO_GIVING || o == PO_HOLDING || o == PO_NO_MARK) {
-            return WORLD (WS_BLOW);
         }
         if (o == PO_BROKE_DOWN || o == PO_SHATTERED || o == PO_SMASHED || o == PO_WRECKED) {
             return WORLD (WS_SMASH);

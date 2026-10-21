@@ -889,15 +889,17 @@ void s_list (void)
     put (" lb.");
 }
 
-/* ---- A search for what's concealed about the character (on the squares it sees, within SEARCH_R): the referee's
-** test for each (its search, at the concealment's difficulty: its steps worse), the ones found no longer hidden,
-** and named in the hub's text; but what's hidden by magic (found by magical means only) */
+/* ---- A search for what's concealed about the character (on the squares it sees, within SEARCH_R, as far as the
+** search reached: the request's to, the world's, wtrap.c's, a square's distance off squared less than it): the
+** referee's test for each (its search, at the concealment's difficulty: its steps worse), the ones found no longer
+** hidden, and named in the hub's text; but what's hidden by magic (found by magical means only) */
 #define SEARCH_R        3
 unsigned char s_search (void)
 {
+    static const unsigned char sq_[] = { 9, 4, 1, 0, 1, 4, 9 };    /* (A square's distance off, squared) */
     struct req* r;
     unsigned char* p;
-    unsigned i = 0, x, y;
+    unsigned i = 0, x, y, dx, dy;
     unsigned char sn, found = 0;
     signed char g;
 
@@ -910,8 +912,8 @@ unsigned char s_search (void)
         fetch (&rec, i);
         if (rec.sn != sn ||
             (rec.flags & (I_HIDDEN | I_MAGIC | I_KNOWN)) != I_HIDDEN ||
-            rec.x - x + SEARCH_R > 2 * SEARCH_R || rec.y - y + SEARCH_R > 2 * SEARCH_R || !(p = at (sn, rec.x, rec.y)) ||
-            !(*p & T_VIS)) {
+            (dx = rec.x - x + SEARCH_R) > 2 * SEARCH_R || (dy = rec.y - y + SEARCH_R) > 2 * SEARCH_R ||
+            sq_[dx] + sq_[dy] >= iq.to || !(p = at (sn, rec.x, rec.y)) || !(*p & T_VIS)) {
             continue;
         }
         make_own (i);
@@ -922,7 +924,7 @@ unsigned char s_search (void)
         r->actor = 0;
         r->a = P_SEARCH;
         r->b = HIDE_MECHANICAL;
-        r->steps = -(signed char) (rec.hide + iq.to);   /* (A search cut short: harder, the UI's) */
+        r->steps = -(signed char) rec.hide;
         r = hub_ask (SLOT_UI);
         g = r->grade;
         r->state = REQ_FREE;

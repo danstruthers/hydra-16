@@ -205,11 +205,14 @@ enum {
     E_VIEW,                                     /* What who sees has changed: w1 why (V_*) */
     E_DIG,                                      /* who's digging: w1 how it goes (D_*) times 256, and the feet to go
                                                 **   (D_NO_TOOL: what it's into, MAT_* + 1) */
-    E_NOISE,                                    /* A noise: a how loud (0-9), w1 w2 its square (the denizens') */
+    E_NOISE,                                    /* A noise: a how loud (0-9), b what made it (NZ_*), w1 w2 its square
+                                                **   (the denizens') */
     E_LEDGE,                                    /* who's come to a ledge: w1 its rise (a signed char: a fall less) */
     E_CLIMB,                                    /* who's climbing: w1 how it goes (K_*) times 256, and the feet to go */
     E_PORTAL,                                   /* who's worked a door: w1 what came of it (PO_*), and the
-                                                **   portal's kind (PK_*) times 256 */
+                                                **   portal's kind (PK_*) times 256; a search's a its reach (the
+                                                **   squares searched those nearer than it, squared: the UI's things'
+                                                **   search the same, IO_SEARCH's to) */
     E_HARM,                                     /* who's been harmed (the referee's RS_HARM): w1 its cause (HC_*),
                                                 **   its worst wound's band times 256 (0: unhurt), E_OUT, E_CAUGHT */
     E_TRAP,                                     /* A trap and who: w1 its kind (TK_*) and its trigger (TT_*) times
@@ -246,6 +249,8 @@ enum {
 };
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
                                                 **   growl), the character sensed, lost (its senses' own) */
+enum { NZ_WORK, NZ_BLOW };                      /* E_NOISE's b: work's (a dig's, a door forced ...), a blow at a thing
+                                                **   (a battering's, each blow: the sound task's) */
 enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best to hand (the
                                                 **   best weapon held at a denizen, the tool that hits hardest at a
                                                 **   thing; else the fists), a fist, a foot, the head */

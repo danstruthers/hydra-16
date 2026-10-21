@@ -90,19 +90,19 @@ go:
             SWPART      10, 5               ; The things: the requests answered, a thing handled (things.c)
             SWPART      11, 5               ; The things listed, searched for, described, hidden
             SWPART      12, 4               ; A door's work begun (dq0w.c's door_work)
-            SWPART      13, 6               ; The item store's rarer work: begun, kept, the kit, a chunk's things
+            SWPART      13, 8               ; The item store's rarer work: begun, kept, the kit, a chunk's things
             SWPART      14, 6               ; The denizens' bodies: their intents carried out (wbody.c)
             SWPART      15, 2               ; The blows, the bleeding (wfight.c)
-            SWPART      16, 6               ; The game's own rules: the puzzle judged, a thing walked to (wgame.c)
-            SWPART      17, 8               ; The things' files: their chunks paged (ipage.c)
+            SWPART      16, 1               ; The game's own rules: the puzzle judged, a thing walked to (wgame.c)
+            SWPART      17, 6               ; The things' files: their chunks paged (ipage.c)
             SWPART      18, 7               ; The change records' files, the save's stamps (wfile.c)
             SWPART      19, 8               ; The game's files begun, the item store kept (wfile.c); a hole dug kept
             SWPART      20, 7               ; The things' files: a chunk's put out, read in (ipage.c)
             SWPART      21, 5               ; The ways across a room worked out (dq0w.c's ways)
             SWPART      22, 8               ; The strata's records out of the hub, back (sfile.c)
-            SWPART      23, 1               ; The long task as it goes: a walk a square at a time (dq0w.c's)
+            SWPART      23, 6               ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 2               ; Engagement, a blow's close-in (dq0w.c's)
-            SWPART      25, 8               ; The engage initiative test, a grope's (dq0w.c's)
+            SWPART      25, 7               ; The engage initiative test, a grope's (dq0w.c's)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1

@@ -86,6 +86,17 @@ plays them as HarnMaster's referee does.
   each five minutes), a walk one each 144 tenths (a level a day); a slow walk or a creep tires as a walk does.
   Standing still wears exertion off first, a unit a tenth, then takes a level off each ten minutes.  (sheet.c's
   o_spent.)  Why: the book's movement fatigue, made continuous so short dashes add up.
+- **Strenuous work tires** (the user's, 2026-10-20: "Tiring work includes swimming, climbing, running, battering down
+  a door"; digging too): a climb's rounds, a dig's spells and a battering's blows are strenuous work, their time the
+  referee's as the paces' is (RS_EXERT's GA_WORK), added up with them; HarnMaster's at the book's rate for strenuous
+  activity, a level each five minutes (Skills 6; a swimmer's the same), 2 units a tenth as a jog's: a ten-minute
+  spell of digging two levels, a climb's round a thirtieth of one, a blow a hundredth.  Each is charged as it's done
+  (after its own test: a spell's Mining, a round's Climbing, a blow), a spell given up part way for the part of it
+  done; a level more is asked of as the work goes on, soft ("You're tiring.  Keep digging?"), as a walk's is (a
+  climb's, answered no, goes on: there's no stopping part way up).  Swimming the same, when there's water (slice
+  4.9).  The null ruleset tires nothing.  (dq0w.c's arrive, stop and s_batter_on; sheet.c's o_spent, WORK.)  Why:
+  the book's rate; a run's (a level each two minutes) would leave one spell of digging five levels down, every
+  physical test 25 the worse.
 - **Encumbrance** is the book's (the load over Endurance, rounded), told in words: none, a little burdened (1-2), heavily
   burdened (3-4), overloaded (5 or more).  (harn.c's harn_get_ep; dq0harn.c's status.)  See D13 below: free pounds
   by Strength are decided, not built.
@@ -123,6 +134,8 @@ failure.  Feet a spell (kept in half-feet), and the wear a spell does the tool:
 | shovel, spade    | 3    | 1½                | -     | -     | -       | none                   |
 | mattock          | 3    | 1½                | -     | -     | -       | none                   |
 
+Each spell is strenuous work: two fatigue levels at HarnMaster's rate (Moving and tiring, above), so a long dig wants
+rests between its spells.
 A natural cave's earthen floors are soft soil; a built, mined or mixed stratum's are trodden hard (dq0m/fixtures.c).
 A floor's flags are lifted, not cut (the user: a material of their own).  The user's, 2026-10-20: "a sword digs
 earth too, poorly, and dulls"; bare hands "should only work in soft soil.  Hard-packed soil or harder should result
@@ -150,8 +163,9 @@ P_DIG.)  *(Every ruleset's.)*
   impact for the aspect that does it most harm, less the material's resistance, worn off the portal's body (its
   material, size, thickness and state), the harm kept.  A door broken down stays open for good; a portcullis
   broken through is a way through for good, jammed.  A blow every 3 seconds as the clock goes, a dozen at most (four
-  that make no mark at all: given up), a long task (below), the harm kept as each lands.  (wblow.c; fight.c's
-  thing.)
+  that make no mark at all: given up), a long task (below), the harm kept as each lands; each blow heard (the user's,
+  2026-10-20: a noise of 8 for the denizens, a window's shutters or bars 7, and a blow's sound), and strenuous work
+  (Moving and tiring).  (wblow.c; fight.c's thing.)
 - **A part that strikes a thing is hurt by a blow gone wrong:** a marginal failure a d6, a critical failure 2d6, and
   half the thing's blunt resistance, less the part's armour (gauntlets, boots' soles, a helm): a blunt hit on that
   part.  The character stops when it's hurt enough: a serious injury, three levels or more to that part, shock or
@@ -163,6 +177,12 @@ P_DIG.)  *(Every ruleset's.)*
 - **A trap stepped on, if noticed** (see Noticing), stops the character short.  (wtrap.c.)
 - **A search** looks over every square within 3 that the character can see: a hidden trap or thing is found by
   Awareness at its hiding's steps worse, a hidden door at no steps.  (wtrap.c; things.c.)
+- **A search cut short covers the part done** (the user's, 2026-10-20): the squares nearest first, as far as its time
+  went, each at the full chance.  Its reach grows by one each 3.2 seconds of its minute (a square's searched if its
+  distance off, squared, is less: about as many squares as that part of the 49), all of them once the minute's done;
+  the world's search of the walls and floor, and the things' after it, the same (E_PORTAL's reach, IO_SEARCH's).
+  (wtrap.c's search; things.c's s_search.)  Why: the squares as near searched together, the nearest first; a step of
+  the reach each 32 tenths puts the whole minute's at 19, every square.
 - **What the dungeon hides:** a trap hidden 2 to 8 steps, a covered pit 1 to 5 if not hidden so (fixtures.c); a
   thing lying concealed, by the stratum's style, from 2 steps in twos to 12 in built and mixed strata, from 0 to 6
   in caves, from 2 to 8 in mines (uses.c's styles, stock.c); a theme's piece as its file says (the themes': 2 to 6).
@@ -415,9 +435,8 @@ climb's test to hold on).
 - **Going places, as built:** the place's square worked out from the room's floor as the character faces (the floor
   in thirds for the centre, its edge rows for a side or a corner, the nearer end of each when a corner's not said);
   where it's rock (a cave's), the nearest square the way reaches; "You're there already." if it is.  The search's
-  minute a long task, its tests at its end, cut short four steps (20) the harder at the most, for the part not done.
-  Tiring asked of a walk only, for now (the referee tires the character by its pace; digging and climbing don't tire
-  it yet).
+  minute a long task, its tests at its end, cut short only the squares nearest as far as it went (Traps, searching
+  and hiding).  Tiring asked of a walk, a dig, a climb and a battering (Moving and tiring: strenuous work).
 - **A long task** is anything the character does that takes more than a round (10 seconds): a walk, a dig, a climb, a
   search, battering a door, a wait.  Its progress is a bar on the status line, ten cells, its part done of its length
   (a walk's squares, a dig's feet, a climb's feet, a wait's time, a battering's blows), redrawn at most once a real
@@ -434,9 +453,10 @@ climb's test to hold on).
   names it, and a name that isn't the task's is refused ("You aren't digging.").  What's imposed can't be stopped:
   senseless, a fall under way.
 - **What stopping costs**: a walk stops where the character is; a dig keeps the feet dug (the change record: a hole
-  half dug stays half dug); battering keeps the harm done; a search or a wait cut short finds and rests for the part
-  done; a climb, disturbed hard, is a Climbing test to keep the grip (the plan's holding on), a fall from where it is
-  if it fails.
+  half dug stays half dug), and the part of its spell done tires; battering keeps the harm done; a search cut short
+  covers the squares nearest first as far as it went, each at the full chance, and a wait rests for the part done; a
+  climb, disturbed hard, is a Climbing test to keep the grip (the plan's holding on), a fall from where it is if it
+  fails.
 - **Looking one way** ("look north", "look left", "look at the door"): a focused look that way, 3 seconds, twice as far
   as a glance about, as far as the light and the eyes allow (the light layer, distant lights, the dark's adapting);
   through what lets sight through (a doorway, a window, a grating, bars, a slit, a hole), what lies beyond.  Listening
@@ -471,12 +491,8 @@ climb's test to hold on).
   once the maker gives faces a grade.  Today it's 10 feet a round at a marginal success and 20 at a critical,
   everywhere.
 
-- **Strenuous work tires** (the user's, 2026-10-20: "swimming, climbing, running, battering down a door"): running
-  as now, climbing, battering and digging as a run does, swimming as it comes (slice 4.9); a long one asking.  Today
-  only the pace tires.
-- **A search cut short covers the part done** (the user's, 2026-10-20): the squares nearest first, each at the full
-  chance, as far as its time went.  Today every square at a harder chance (up to 20 for the part not done).
-- **Battering heard every blow** (the user's, 2026-10-20).  Today its noise is made once, as it begins.
+- **Swimming tires** (the user's, 2026-10-20: "swimming, climbing, running, battering down a door"), strenuous work
+  as climbing, digging and battering are (built: Moving and tiring), once there's water (slice 4.9).
 
 ## Open
 

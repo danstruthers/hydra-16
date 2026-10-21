@@ -134,7 +134,8 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
                                                 **   referee: a skill used, the right tool to hand takes itself) */
     IO_WEAR,                                    /* The tool with the key (name) worn by to: its name back in name */
     IO_SEARCH,                                  /* The things concealed about it searched for (the referee's tests,
-                                                **   each at its difficulty): the result the number found, worded in
+                                                **   each at its difficulty), as far as to reaches (the search's,
+                                                **   E_PORTAL's a): the result the number found, worded in
                                                 **   things_text */
     IO_DESCRIBE,                                /* A thing (carried, or seen) looked at closely: what it truly is,
                                                 **   in the request (for the appraiser's judgement: the UI's) */

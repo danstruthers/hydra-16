@@ -639,9 +639,9 @@ or a shaft can be jumped down (jump down: a fall of its height).
   "stop" stops it, and "stop digging" (walking, waiting ...) names it, a task that isn't the one refused ("You aren't
   walking: you're digging"); a climb can't be stopped part way, and struck or hurt it's a test to keep the grip, a
   fall if it fails.  (dq0 -a, the tests': every question answered yes, unasked.)  A search is one too, a minute,
-  "Searching about..." as it begins and what it finds told as it ends (cut short, its tests the harder for the part
-  not done); a walk's exertion is the referee's as it goes, and a fatigue level more asks ("You're tiring.  Keep
-  walking?").
+  "Searching about..." as it begins and what it finds told as it ends (cut short, only the squares nearest as far as
+  it went, each at the full chance); a walk's exertion is the referee's as it goes, and a climb's, a dig's and a
+  battering's (strenuous work), and a fatigue level more asks ("You're tiring.  Keep walking?", "Keep digging?").
 - **Engagement** (HOUSE.md's, the book's engagement zones): a hostile or unfriendly denizen on its feet and conscious
   has a zone, its square and the eight round it (not round a corner); any walk stops as it comes into one ("The
   giant rat engages you: you stop walking."), and one begun in one goes a square and stops if it's still in one.
@@ -670,10 +670,12 @@ or a shaft can be jumped down (jump down: a fall of its height).
 - **Fatigue** is the referee's (the book's movement fatigue: HOUSE.md's moving and tiring): walking (or slower) a
   fatigue level a day, jogging one each five minutes, running one each two, sprinting one each minute, the time at
   each pace added up across moves; standing still (waiting, the time between moves) is rest, a level gone each ten
-  minutes of it.  The world tells the referee the time moved at each pace, and the rest (RS_EXERT), and the referee
-  keeps the levels on the sheet: the book's fatigue penalty, part of the universal penalty every test pays and of the
-  physical (so a tired character's Move, and every pace, slows); kept with the sheet (pc.hm's "pace" line: the pace,
-  the watchfulness, the exertion).  Digging's and climbing's work doesn't tire it, nor does it faint worn out.
+  minutes of it; strenuous work (a climb's rounds, a dig's spells, a battering's blows; swimming, slice 4.9) the
+  book's rate for it, a level each five minutes, as a jog.  The world tells the referee the time moved at each pace,
+  at strenuous work, and the rest (RS_EXERT), and the referee keeps the levels on the sheet: the book's fatigue
+  penalty, part of the universal penalty every test pays and of the physical (so a tired character's Move, and every
+  pace, slows); kept with the sheet (pc.hm's "pace" line: the pace, the watchfulness, the exertion).  It doesn't
+  faint worn out.
 - **Watchfulness** (the hub's watch, WA_*, the player's too): **searching as it goes** ("search for traps as I go",
   "watch for traps", "move carefully"; "stop searching"), a slow walk at most, and searching as a search would: a
   trap on its way (the walk stops on the first it would set off, as always) tested by the search's chance (P_SEARCH's:
@@ -879,7 +881,7 @@ Designed, but in no slice of the plans yet (DECISIONS.md has the user's words fo
   a blow at a thing struck with the weapon in hand.
 - **More traps**: a flooding chamber, a ceiling brought down, a rune or a glyph; the denizens knowing their own
   faction's traps and going round them.
-- **Tiring work**: digging's and climbing's strenuous work tiring the character, a level each five minutes of it,
-  and fainting worn out past its endurance.
+- **Fainting worn out** past its endurance (strenuous work tires it now, a level each five minutes of it: HOUSE.md's
+  moving and tiring).
 - **An appraisal remembered** with the thing appraised.
 - **A zoomed-out map** (a character for each 4 by 4 squares) for the large strata.

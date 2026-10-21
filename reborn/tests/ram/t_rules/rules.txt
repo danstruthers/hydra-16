@@ -679,8 +679,8 @@ dice
 ask EQUIP a=2 w1=0
 
 # ---- Fatigue (Combat 6: a level a day walking, each five minutes jogging, each two running, each minute
-# sprinting; Skills 6: one off each ten minutes resting; HOUSE.md: the times at each pace added up, 6000 units a
-# level, rest wearing the units off first)
+# sprinting; Skills 6: one off each ten minutes resting, one each five minutes of strenuous work; HOUSE.md: the
+# times at each pace and at work added up, 6000 units a level, rest wearing the units off first)
 
 char
 end
@@ -717,6 +717,48 @@ ask EXERT a=GA_JOG w1=2999
 want status="UP 0"
 dice
 ask EXERT a=GA_JOG w1=1
+want status="UP 1"
+
+char
+end
+case strenuous work a level each five minutes, as a jog (Skills 6; 299.9 seconds not)
+dice
+ask EXERT a=GA_WORK w1=2999
+want status="UP 0" sum.cond&C_FATIGUED=C_FATIGUED
+dice
+ask EXERT a=GA_WORK w1=1
+want status="UP 1"
+
+char
+end
+case a spell of digging (ten minutes' work) two levels
+dice
+ask EXERT a=GA_WORK w1=6000
+want status="UP 2" result=1
+
+char
+end
+case work and running add up: two and a half minutes' work and a minute's run a level
+dice
+ask EXERT a=GA_WORK w1=1500
+want status="UP 0"
+dice
+ask EXERT a=GA_RUN w1=600
+want status="UP 1"
+
+char
+vol 2 0 0 0 0
+end
+case rest broken by work starts again (a blow's three seconds)
+dice
+ask EXERT a=GA_REST w1=5000
+dice
+ask EXERT a=GA_WORK w1=30
+dice
+ask EXERT a=GA_REST w1=6000
+want status="UP 2"
+dice
+ask EXERT a=GA_REST w1=60
 want status="UP 1"
 
 char
@@ -1882,4 +1924,15 @@ want result=1 sum.cond&C_FATIGUED=C_FATIGUED
 case five seconds more of it: no level more
 dice
 ask EXERT a=GA_SPRINT w1=50
+want result=0
+
+char
+end
+case five minutes' strenuous work (a dig's, a climb's, a battering's): a level more, the reply says so
+dice
+ask EXERT a=GA_WORK w1=3000
+want result=1 sum.cond&C_FATIGUED=C_FATIGUED
+case a climb's round more of it: no level more
+dice
+ask EXERT a=GA_WORK w1=100
 want result=0

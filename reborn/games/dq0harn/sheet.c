@@ -288,9 +288,11 @@ signed char __fastcall__ o_noticing (const struct req* r)
 ** minutes jogging, each two running, each minute sprinting; ten minutes' rest a level gone, Skills 6).  The game's
 ** own: slower than a walk tires as a walk does; the time at each pace added up across moves (exertion toward the next
 ** level, 6000 a level: a sprint's 10 a tenth, a run's 5, a jog's 2, a walk's a 144th), and rest wears that off (1 a
-** tenth) before it takes a level off */
+** tenth) before it takes a level off.  Strenuous work (GA_WORK: HOUSE.md's tiring, a climb, a dig, a battering;
+** swimming to come) the book's for it, a level each five minutes (Skills 6; a swimmer's the same), as a jog's */
 
 #define LEVEL   6000
+#define WORK    2                               /* (Strenuous work's exertion a tenth: a level each five minutes) */
 
 void __fastcall__ o_spent (unsigned t)
 {
@@ -319,7 +321,7 @@ void __fastcall__ o_spent (unsigned t)
             continue;
         }
         rested = 0;
-        k = a < NGAITS ? rate[a] : 0;
+        k = a < NGAITS ? rate[a] : a == GA_WORK ? WORK : 0;
         if (!k) {
             walkt += n;
             n = walkt / 144;

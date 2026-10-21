@@ -56,7 +56,7 @@ static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
         return 0;
     }
     HUB->pc_task.done = n + 1;
-    wk.tt = 30;
+    wk.tt = BLOW_T;
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_ATTACK;
     r->actor = 0;
@@ -87,11 +87,11 @@ static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
     return 1;
 }
 
-/* A portal's blows: begun (work ()'s, PA_BREAK: noisily, the first as the character's free), the next of them struck
-** (W_BLOW: its time tt), or what came of them told as they're done (wk.what PA_BREAK after): a door battered down
-** (its body gone, it's open for good); a portcullis's bars, down, broken through (a gap for good); a window's
-** shutters, closed, else its glass, else its bars; else how it stands (PO_GIVING, PO_HOLDING, PO_NO_MARK), unless
-** it was stopped before a blow was struck */
+/* A portal's blows: begun (work ()'s, PA_BREAK: the first as the character's free), the next of them struck (W_BLOW:
+** its time tt; each heard, a noise for the denizens and a blow's sound, the user's), or what came of them told as
+** they're done (wk.what PA_BREAK after): a door battered down (its body gone, it's open for good); a portcullis's
+** bars, down, broken through (a gap for good); a window's shutters, closed, else its glass, else its bars; else how
+** it stands (PO_GIVING, PO_HOLDING, PO_NO_MARK), unless it was stopped before a blow was struck */
 void s_blows (void)
 {
     unsigned char out = 0, part = 0, mat, body, h;
@@ -152,13 +152,15 @@ void s_blows (void)
         }
     } else if (!out) {
         if (wk.what < W_BLOW) {                 /* (Begun: the blows as it's free, a long task, dq0w.c's) */
-            noise (part && part != PP_GLASS ? 7 : 8);
             wk.was = h;
             wk.what = W_BLOW;
             pc_cut = 0;
             return;
         }
         if (batter (mat, body)) {
+            wk.m.b = NZ_BLOW;                   /* (Its noise a blow's: the sound task's) */
+            noise (part && part != PP_GLASS ? 7 : 8);
+            wk.m.b = 0;
             return;
         }
         wk.what = PA_BREAK;
