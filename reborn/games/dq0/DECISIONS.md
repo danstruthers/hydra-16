@@ -844,3 +844,18 @@ round), a useless limb a hand that holds nothing, a leg that hobbles or crawls; 
 stumbles too.
 
 **Design:** the plan's slice 4.1b (to be drafted with it).
+
+### A helpless character, and poison
+
+The user's playtest (2026-10-21): a cave adder bit the character in shock again and again ("For some reason the
+wounds just kept getting worse and worse"; and "the adder attacks were "stabs" instead of bites").  Found: past the
+record's 12 injuries each new wound was added into the last, its words the running total (S12 ... S37); a character
+in shock made no shock roll when wounded again (the book: one with every injury), so it never went senseless; by the
+book only a grievous wound bleeds and only a mortal one kills, so small bites never ended it; and a bite was worded a
+stab (the point aspect's words).  The faults fixed as faults.  Asked what a creature does to a helpless character
+(senseless, or in shock): the user chose **by its nature**: a killer or a predator finishes it (as the character
+finishes a senseless creature), one that only defends itself (the adder) stops once the threat is down and goes, a
+cunning foe may rob it or leave it; each kind's way in kinds.txt.  And **poison** (the adder's venom, stings, resisting
+them, their effects over time, antidotes) with slice 4.3, wounds over time.
+
+**Design:** HOUSE.md's fights; DENIZENS.md; the plan's 4.3.
