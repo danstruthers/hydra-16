@@ -875,3 +875,21 @@ freed in the UI, the world and the senses, and a command not kept waiting while 
 denizens (the world's stir).
 
 **Design:** HOUSE.md's light and traces (the smells) and fights (a helpless character); the plan's slice 4.1.
+
+### A look one way's rooms, and a timed action's outcome at its end
+
+The user's playtest (2026-10-22): "When looking though, the text is duplicated, but in different words: You peer
+ahead. Through the open door ahead you see into the nave. Down the passage ahead you see into the nave, 10 feet on."
+So two ways ahead into the same room tell the room once, the second way with it ("...; the passage ahead leads there
+too"), as two alike openings the same way are told once already ("the open doors").
+
+And: "When you attempt some task and it has a two-part reply, both come out almost immediately, but the UI input is
+paused.  It would be better if the first half (for example "You study the mechanism a while") coms out first,
+followed by, as the task timer expires, the second part (i,e, "but can't figure out how it works").  Makes it seem
+like there is actually a delay in studying the mechanism before the outcome happens."  Built as the general kind:
+every action that spends time and has a test (a trap studied or disarmed, a lock picked, a door forced, a
+portcullis heaved, Tracking ...) a long task of the one system, its first words at once, its outcome decided and
+told as its time's done; stopped first (a blow, a wound, the player's stop), no outcome, the stop told (the lead's
+reading: the user's words say nothing of a stop).
+
+**Design:** HOUSE.md's long tasks.
