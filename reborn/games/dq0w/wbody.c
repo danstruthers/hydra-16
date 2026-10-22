@@ -168,13 +168,15 @@ unsigned char __fastcall__ s_den_first (unsigned char k, unsigned char away)
 void s_den_intents (void)
 {
     static struct msg m;
-    static unsigned char t, was, d, any, eng;
+    static unsigned char t, was, d, any, eng, help;
     static unsigned x, y, c;
     static unsigned char* p;
     static int z;
 
     for (any = 0, hub_map (0); (t = HUB->di_tail) != HUB->di_head; hub_map (0), HUB->di_tail = (t + 1) % DI_SIZE) {
         memcpy (&m, &HUB->di[t], sizeof m);
+        help = HUB->pcsum.cond & (C_STUNNED | C_UNCONSCIOUS);   /* (The character helpless: no one engages it, the
+                                                **   minds' to say what's done to it) */
         if (bleeds && (unsigned) HUB->now - bled_at >= 600) {
             bled ();
         }
@@ -250,8 +252,8 @@ void s_den_intents (void)
                 }
                 bd.ready += c;
             }
-            if (!noinit && bd.attitude <= AT_UNFRIENDLY && bd.sn == bps && apart (bd.x - bpx, bd.y - bpy) > 1 &&
-                apart (x - bpx, y - bpy) == 1) {
+            if (!noinit && !help && bd.attitude <= AT_UNFRIENDLY && bd.sn == bps &&
+                apart (bd.x - bpx, bd.y - bpy) > 1 && apart (x - bpx, y - bpy) == 1) {
                 eng = bk + 1;                   /* (An enemy come up beside the character: it engages it, the
                                                 **   engage initiative test's, once its body's put back) */
             }
@@ -290,9 +292,14 @@ void s_den_intents (void)
                 bd.ready = HUB->now + m.w1;
             }
             break;
-        case I_ATTACK:                          /* (A round's blow) */
+        case I_ATTACK:                          /* (A round's blow; a robbery, a round's work) */
+        case I_ROB:
             bd.ready += HUB->round;
-            den_blow (m.a, m.b);
+            if (m.kind == I_ROB) {
+                den_rob (m.w1, m.w2);
+            } else {
+                den_blow (m.a, m.b);
+            }
             break;
         }
         if (bd.doing != was && (!was || !bd.doing)) {

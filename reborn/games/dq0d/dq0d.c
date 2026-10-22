@@ -121,6 +121,12 @@ struct dkind {
                                                 **   scattered: DUNGEON.md's traces, slice 4.1) */
 #define K_NOSE          0x80                    /* A hunter by smell (its nose keen, kinds.txt's 6 or more): hostile,
                                                 **   it follows the character's scent where it can't sense it (scent) */
+#define K_HELP(k)       ((k).styles >> 4)       /* Its way with a foe it's brought down (the character helpless:
+                                                **   senseless, or in shock), by its nature (kinds.txt's ways k and r,
+                                                **   make.js's, in its styles' high bits: the flags are full): */
+#define H_KILLS         0x01                    /*   it finishes it (the referee's dispatch); */
+#define H_ROBS          0x02                    /*   it robs it (I_ROB: the world's), and leaves it; neither, it only
+                                                **   defended itself, and goes */
 enum { M_MINDLESS, M_BEAST, M_LOW, M_AVERAGE, M_CUNNING };   /* Its mind: nothing sways it; P_ANIMALS only; easily
                                                 **   fooled, hard to reason with; neither; hard to fool */
 #define KINDS           ((struct dkind*) 0x8000)
@@ -305,6 +311,8 @@ static int __fastcall__ kinds_load (const char* dir)
 static unsigned long now;
 static unsigned pcx, pcy;
 static unsigned char pcs, pclit, pcbusy, pcdead;
+static unsigned char pchelp;                    /* (Helpless: in shock, or senseless as it lies, busy till it comes
+                                                **   round; the referee's conditions) */
 
 unsigned __fastcall__ apart (int dx, int dy);  /* |dx| or |dy|, the more (apart.s: in assembly, asked of every
                                                 **   square the minds weigh) */
@@ -841,7 +849,7 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     strcpy (a.name, (i = name_of (D.id)) < NNAMES ? hd.names[i].name : K.name);
     a.kind = D.kind;
     a.remains = K.flags & K_BONES ? KI_BONES : KI_BODY;
-    a.timid = (K.flags & K_SHY) != 0;
+    a.timid = (K.flags & K_SHY) | (K_HELP (K) & H_KILLS ? RS_KILLER : 0);   /* (K_SHY the referee's 1) */
     hub_map (0);
     memcpy (HUB->actor[k].name, a.name, sizeof a - offsetof (struct actor, name));
     im.x[0] = 0;
@@ -1343,10 +1351,27 @@ static unsigned char __fastcall__ decide (unsigned char k)
         feel (k);
     }
     anear[k] = a.sn == pcs && dist <= 3;
+    if (foe && pchelp && !(K_HELP (K) & H_KILLS)) {
+        foe = 0;                                /* (Its foe down, helpless: by its nature (the user's, 2026-10-21), a
+                                                **   killer strikes on (the referee finishes one senseless); a robber
+                                                **   comes up to it and robs it, then goes; one that only defended
+                                                **   itself goes, unfriendly after: kinds.txt's ways) */
+        if (sres[k] && !fled[k] && (!(K_HELP (K) & H_ROBS) || dist <= 1)) {
+            if (K_HELP (K) & H_ROBS) {
+                a.doing = DO_FLEE;              /* (Off with what it takes, to its lair: the world's) */
+                im.w1 = ahx[k];
+                im.w2 = ahy[k];
+                act (I_ROB, k);
+            }
+            a.attitude = AT_UNFRIENDLY;
+            fled[k] = FLEE_T;
+        }
+    }
     if (fled[k]) {
         --fled[k];
-        a.doing = DO_FLEE;                      /* (Fleeing: away; cornered beside the character, it fights) */
-        if ((d = step_for (k, 4 * K.range + 8, S_AWAY)) == 0xFF && dist == 1 && sres[k] && !pcdead) {
+        a.doing = DO_FLEE;                      /* (Fleeing: away; cornered beside the character, it fights, unless
+                                                **   it's helpless) */
+        if ((d = step_for (k, 4 * K.range + 8, S_AWAY)) == 0xFF && dist == 1 && sres[k] && !pcdead && !pchelp) {
             d = 0xFC;
         }
     } else if (sres[k] && foe && dist == 1) {
@@ -2035,6 +2060,7 @@ int main (int argc, char* argv[])
             }
             pcbusy = HUB->pc_ready > now;
             pcdead = (HUB->pcsum.cond & C_DEAD) != 0;
+            pchelp = (HUB->pcsum.cond & C_STUNNED) || ((HUB->pcsum.cond & C_UNCONSCIOUS) && pcbusy);
             if (!(pclit = HUB->pc_light != 0) && DONE (pcs) && (p = at (pcs, pcx, pcy)) != 0) {
                 pclit = (*p & T_VIS) != 0;      /* (Lit where it stands: a room's light, a lamp put down) */
             }

@@ -2007,6 +2007,10 @@ const DQ0_REPEATS = [
   { what: /^A giant rat is .+, keeping its distance\.$/, tests: /^dq0traces$/,
     why: 'a walk across the rats\' cell: a shy rat told keeping its distance as the walk\'s look stirs, then again where it is as the look on arriving has it (the tellings two, the stir not first in the second)' },
   { what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
+  { what: /^An? (?:cave adder|bandit) is ahead(?: to your (?:left|right))?, \d+ feet away\.$/, tests: /^dq0(?:helpless|robbed)$/,
+    why: 'a walk stopped by a hostile seen: told as the walk\'s look stirs, then again in the look as it stops (the stir and that look one telling, as dq0traces\' rats\')' },
+  { what: /^Everything goes black\.$/, tests: /^dq0finished$/,
+    why: 'knocked senseless, come round in shock a round later, struck senseless again, all in one wait\'s answer (the UI waiting it out): two black-outs, each told' },
 ];
 function dq0Answers(out) {
   const s = out.replace(/\r/g, '').replace(/\x1b\[7m[\s\S]*?\x1b\[0m/g, '')
@@ -4227,7 +4231,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0senseless', initiative: true, what: "Dingus Quest Zero's character knocked senseless and struck again as it lies (the faults the engage work found, fixed 2026-10-20): the hand-written theme's hostile rats (inhabit.txt, seed 3), the character a poor fighter (Unarmed 5) undefended (defend none) fighting back (HOUSE.md's fighting on), with the engage initiative test on: knocked senseless, its black-out told once however often it's struck while it's out (the referee's AF_AGAIN, the fight ring's FW_AGAIN: since fighting on, at this seed bitten as it lies, not knocked again; come round in shock, in no state to fight on, bitten as it waits), a blow fumbled at it as it lies a miss (the Ignore table's tactical advantage none it can take: it was 'you see an opening'), every wound's injury level in digits (ten and more two of them: it was \"(G:)\")",
+      name: 'dq0senseless', initiative: true, what: "Dingus Quest Zero's character knocked senseless (the faults the engage work found, fixed 2026-10-20; since 2026-10-21 a helpless character's foes by their nature, the user's): the hand-written theme's hostile rats (inhabit.txt, seed 3), the character a poor fighter (Unarmed 5) undefended (defend none) fighting back (HOUSE.md's fighting on), with the engage initiative test on: knocked senseless, its black-out told once; the rats then leaving it be (giant rats only defend themselves: kinds.txt's ways), not a blow at it as it lies, nor as it comes round in shock, in no state to fight on, and waits (it was bitten as it lay, and as it waited); no blow at it as it lies seen as an opening (the Ignore table's tactical advantage none it can take: it was 'you see an opening'); every wound's level in digits, its own (the book's M1 to G5: it was \"(G:)\", and past the record's twelve the running total), the rats' worded bites",
       init: 't_rc', cycles: 1000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml una 5 >> /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
         'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'defend none', ...Array(12).fill('wait'), 'quit',
@@ -4240,23 +4244,120 @@ module.exports = {
         const out = m.out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').replace(/\s+/g, ' ');
         const black = (out.match(/Everything goes black\./g) || []).length;
         const levels = [...out.matchAll(/a (?:minor|serious|grievous) [a-z ]+ to (?:your|its) [a-z ]+ \(([^)]*)\)/g)].map(x => x[1]);
+        const bites = [...out.matchAll(/(?:The giant rat|Something) bites at you: a (?:minor|serious|grievous) ([a-z ]+?) to your/g)].map(x => x[1]);
         if (first < 0) f.push('the character not knocked senseless');
-        if (lain.length < 2) f.push('the character not struck again as it lay (' + lain.length + ' blows)');
+        if (lain.length) f.push('struck at as it lay, or in shock after (' + lain.length + ' blows): the rats only defend themselves');
         if (black !== 1) f.push('"Everything goes black." told ' + black + ' times (knocked senseless ' + all.filter(down).length + ' times, struck ' + lain.length + ' times as it lay)');
         const bad = levels.filter(l => !/^[MSG][0-9]+$/.test(l));
         if (bad.length) f.push('injury levels not in digits: ' + bad.join(', '));
-        if (!levels.some(l => +l.slice(1) >= 10)) f.push('no injury level of ten or more (' + levels.join(' ') + ')');
+        const own = { M: [1], S: [2, 3], G: [4, 5] }, odd = levels.filter(l => !own[l[0]] || !own[l[0]].includes(+l.slice(1)));
+        if (odd.length) f.push('a wound not at its own level (the book\'s M1 to G5): ' + odd.join(', '));
+        if (!bites.length || bites.some(b => !/^(?:deep )?bite$/.test(b))) f.push('the rats\' wounds not worded bites: ' + bites.join(', '));
         if (out.slice(out.indexOf('Everything goes black.')).includes('you see an opening')) f.push("the character, senseless, seeing an opening (the Ignore table's advantage)");
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0disengage', what: "Dingus Quest Zero's disengaging and a fight's tiring (the user's, 2026-10-21: \"For disengaging, try to have it follow the book\"; \"Tiring for combat should happen at the standard strenous work rate\"; HOUSE.md's, the book's Combat 7): seed 7's ghoul, the character weak with its sword (20) in a gambeson and a mail hauberk; disengage and flee before anything engages it refused, told (not engaged; nothing near to flee); the ghoul fought, a disengage typed as it fights taking the fight over (its round out), the character backing away a square and more, no blow of its own after it, the fight not fought on; pass a round given up, no blow of its own; a flight as the ghoul engages it again, a square back and still engaged (stopped there, told once: \"You stop walking.\"), fought on; a flight at its prompt breaking away into a corner, no run on into the wall; every blow it struck charged to the referee as a round of strenuous work (RS_EXERT GA_WORK, 100 tenths)",
+      name: 'dq0helpless', what: "Dingus Quest Zero's wounds and a foe that only defends itself (the user's adder playtest, 2026-10-21: \"For some reason the wounds just kept getting worse and worse\", and its bites worded stabs; DECISIONS.md's a helpless character): a theme's hostile cave adders (written by hand: a faction of them on the top stratum; seed 1, a room of them south of the start), the character tough (STR, STA and WIL 99: Endurance 99, its shock rolls holding long) and undefended (defend none, Dodge 5, Unarmed 5), its torch put down, walking in among them: each bite worded a bite, never a stab (a creature's own part: HOUSE.md's wounds), each wound's own level (M1 to G5, the book's: it was the running total past the record's twelve, S12 ... S37), more than twelve of them, every level of them in the universal penalty; its shock roll failed at last, senseless (\"Everything goes black.\", OUT on the status line); the adders then going, fleeing, with not another blow (one that only defends itself: kinds.txt's ways, the user's by its nature), one posted as it fell held (the referee's: no killer, RS_KILLER); come round in shock, in no state to fight, left be; its state's words the record's real injuries, the lesser hurts never named the worst (\"in shock: 11 injuries and lesser hurts, the worst a serious bite to ...\"), the same as the game's carried on (what dealt each injury kept with its sheet)",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
+        'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'defend none', 'open the door', 'south', 'drop the torch', 'south', ...Array(24).fill('wait'), 'status', 'quit', 'dq0 -d /ram/g', 'status', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4, s = dq0Story(out);
+        const all = T.flatMap(t => dq0Ev(t, 'E_FIGHT', {}));
+        const down = all.findIndex(e => (e.def === 0 && (e.ff & FF_D_DOWN)) || (e.who === 0 && (e.ff & FF_A_DOWN)));
+        const bites = [...s.matchAll(/(?:The cave adder|Something) bites at you: a (minor|serious|grievous) ([a-z ]+?) to your [a-z ]+? \(([MSG])(\d+)\)/g)];
+        if (bites.length < 13) f.push('not more than twelve wounds (' + bites.length + ')');
+        const odd = bites.filter(b => !/^(?:deep )?bite$/.test(b[2]) || b[1][0].toUpperCase() !== b[3] ||
+          !({ M: [1], S: [2, 3], G: [4, 5] })[b[3]].includes(+b[4]));
+        if (odd.length) f.push('wounds not worded a bite, at their own levels: ' + odd.map(b => b[0]).join('; '));
+        if (/ stab /.test(s)) f.push('a stab told: ' + s.match(/[^.]* stab [^.]*\./)[0]);
+        const up = bites.reduce((n, b) => n + +b[4], 0), pen = s.match(/Condition: in shock: (\d+) injuries and lesser hurts, the worst a (serious|grievous) ((?:deep )?bite) to your [a-z ]+? \(([SG])(\d)\)[^.]*penalties: universal (\d+)/);
+        if (!pen) f.push('the state not "in shock: N injuries and lesser hurts, the worst a ... bite ...": ' + JSON.stringify((s.match(/Condition: [^.]*\./) || [''])[0]));
+        else {
+          if (+pen[1] !== 11) f.push('the real injuries not eleven beside the lesser hurts: ' + pen[1]);
+          if (+pen[6] !== up) f.push('the universal penalty not every level told (' + up + '): ' + pen[6]);
+        }
+        if (down < 0) return [...f, 'the character never knocked senseless'];
+        if (!/Everything goes black\..*UP \d+ OUT/.test(s)) f.push('OUT not on the status line as it lay senseless');
+        const after = all.slice(down + 1).filter(e => e.def === 0);
+        if (after.length) f.push('struck at after it fell: ' + after.map(e => e.out).join(', '));
+        if (!/Everything goes black\..*cave adder[^.]*, fleeing\./.test(s)) f.push('the adders not seen fleeing once it was down');
+        if (!/You're in no state to fight\./.test(s)) f.push('not in shock after (no state to fight)');
+        if (s.indexOf('Everything goes black.') !== s.lastIndexOf('Everything goes black.')) f.push('knocked senseless again');
+        const cond = [...s.matchAll(/Condition: [^.]*\./g)].map(x => x[0]);   // (Kept: the game carried on, its words the same, a bite a bite)
+        if (cond.length !== 2 || cond[0] !== cond[1]) f.push('its state not the same carried on (what dealt each injury kept): ' + JSON.stringify(cond));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0finished', what: "Dingus Quest Zero's helpless character and a killer (the user's, 2026-10-21: by its nature, a killer or a predator finishes it, as the character finishes a senseless creature): seed 7's ghoul (down the way at the start), the character poor (Dodge 5, Unarmed 5) and undefended (defend none): the ghoul's claws worded a rake (a creature's own part: HOUSE.md's wounds), its bite a bite, never a gash or a stab; the character knocked senseless, then finished where it lies (the referee's dispatch for a killer, RS_KILLER: \"a mortal deep rake to your neck. You are dead.\"), dead, the game's end",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
+        'dq0 -p t -s 7 -c /ram/c.hm -T', 'defend none', 'd', ...Array(12).fill('wait'), 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4, FF_D_DEAD = 8, s = dq0Story(out);
+        const all = T.flatMap(t => dq0Ev(t, 'E_FIGHT', {}));
+        const blows = [...s.matchAll(/The ghoul (claws|bites) at you: a (minor|serious|grievous|mortal) ([a-z ]+?) to your/g)];
+        if (!blows.length) return ['the ghoul struck no wound'];
+        const odd = blows.filter(b => !(b[1] === 'claws' ? /^(?:scratch|rake|deep rake)$/ : /^(?:bite|deep bite)$/).test(b[3]));
+        if (odd.length) f.push('the ghoul\'s wounds not worded by its part: ' + odd.map(b => b[0]).join('; '));
+        const down = all.findIndex(e => (e.def === 0 && (e.ff & FF_D_DOWN)) || (e.who === 0 && (e.ff & FF_A_DOWN)));
+        const dead = all.findIndex(e => e.def === 0 && (e.ff & FF_D_DEAD));
+        if (down < 0) f.push('the character never knocked senseless');
+        if (dead < 0 || dead < down) return [...f, 'the character, senseless, not finished'];
+        if (all[dead].out !== 'O_HIT' || !/The ghoul (?:claws|bites) at you: a mortal deep (?:rake|bite) to your (?:neck|skull)\. You are dead\./.test(s))
+          f.push('not finished where it lay (a mortal wound to its neck): ' + all[dead].out + ' ' + JSON.stringify((s.match(/[^.]*mortal[^.]*\./) || [''])[0]));
+        const t = T.find(t => dq0Ev(t, 'E_FIGHT', { def: 0 }).some(e => e.ff & FF_D_DEAD));
+        if (t) dq0Need(f, t, 'E_BYE', {}, 'the game not ended by the death');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
+        'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        'defend none', 'hold the dagger', 'open the door', 'south', ...Array(12).fill('wait'), 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4, s = dq0Story(out), I = DQ0_I;
+        const h = T.of('hold the dagger'), q = T.of('quit');
+        if (!h.after || !q.at) return ['the game not played'];
+        const before = dq0Carried(h.after), dag = dq0Named(before, 'dagger')[0], pen = dq0Named(before, 'pennies')[0];
+        if (!dag || !(dag.flags & I.HELD) || !pen) return ['no dagger in hand, or no pennies, to begin with'];
+        const all = T.flatMap(t => dq0Ev(t, 'E_FIGHT', {})), robs = T.flatMap(t => dq0Ev(t, 'E_TASK', { te: 'TE_ROBBED' }));
+        const down = all.findIndex(e => (e.def === 0 && (e.ff & FF_D_DOWN)) || (e.who === 0 && (e.ff & FF_A_DOWN)));
+        if (down < 0) return ['the character never knocked senseless'];
+        if (robs.length !== 1) f.push('not robbed once: ' + robs.length);
+        else if (!q.at.actors.some(a => a.k === robs[0].by && a.name === 'bandit')) f.push('robbed by no bandit: ' + robs[0].by);
+        if (!/The bandit goes through your things as you lie helpless, and takes what it finds\./.test(s)) f.push('the robbery not told');
+        const now = dq0Carried(q.at), torch = now.find(i => i.name === 'torch' && (i.flags & I.HELD));
+        if (dq0Named(now, 'dagger').length || dq0Named(now, 'pennies').length) f.push('the dagger or the pennies still carried');
+        if (!torch || !(torch.flags & I.LIT)) f.push('its torch not in hand, lit');
+        const lay = q.at.items.filter(i => i.where === 'IW_SQUARE' && (i.n === dag.n || i.n === pen.n));
+        if (lay.length !== 2 || lay[0].x !== lay[1].x || lay[0].y !== lay[1].y || (lay[0].x === q.at.pc.x && lay[0].y === q.at.pc.y))
+          f.push('the dagger and the pennies not put down together off its square: ' + JSON.stringify(lay.map(i => [i.name, i.x - q.at.pc.x, i.y - q.at.pc.y])));
+        if (all.slice(down + 1).some(e => e.def === 0)) f.push('struck at after it fell');
+        if (/You are dead\./.test(s)) f.push('the character killed');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0disengage', what: "Dingus Quest Zero's disengaging and a fight's tiring (the user's, 2026-10-21: \"For disengaging, try to have it follow the book\"; \"Tiring for combat should happen at the standard strenous work rate\"; HOUSE.md's, the book's Combat 7): seed 7's ghoul, the character weak with its sword (20) in a gambeson and a mail hauberk; disengage and flee before anything engages it refused, told (not engaged; nothing near to flee); the ghoul fought, a disengage typed as it fights taking the fight over (its round out), the character backing away a square and more, no blow of its own after it, the fight not fought on; pass a round given up, no blow of its own; a flight as the ghoul engages it again, a square back and still engaged (stopped there, told once: \"You stop walking.\"), fought on; a flight at its prompt breaking away into a corner, no run on into the wall (since 2026-10-21 a second game's, the character in shock from the start, as the first's was when it fled: in the first, knocked senseless as it fights on after the flight, it's now finished, the ghoul a killer, the user's helpless character; it came round in shock and fled); every blow it struck charged to the referee as a round of strenuous work (RS_EXERT GA_WORK, 100 tenths)",
       init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 20 >> /ram/c.hm',
         "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T", 'wear the gambeson', 'wear the mail hauberk', 'disengage', 'flee',
-        'd', 'wait']) + 'Ādisengage\r' + dq0Typed(['wait']) + 'Āpass\r' + dq0Typed(['wait']) + 'Āflee\r' + dq0Typed(['wait', 'look', 'flee', 'look', 'quit', 'echo $status']) },
+        'd', 'wait']) + 'Ādisengage\r' + dq0Typed(['wait']) + 'Āpass\r' + dq0Typed(['wait']) + 'Āflee\r' +
+        dq0Typed(['quit', 'cp /ram/c.hm /ram/s.hm', 'echo vol 0 0 0 2 0 >> /ram/s.hm', "dq0 -p t -s 7 -c /ram/s.hm -k 'sword,gambeson,mail hauberk' -T",
+          'wear the gambeson', 'wear the mail hauberk', 'd', 'wait', 'flee', 'look', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], K = m.dq0.layout().K;

@@ -288,9 +288,18 @@ static void status (void)
     strcpy (HUB->pcstatus, "UP ");
     strcat (HUB->pcstatus, utoa (harn_get_up (&pc), b, 10));
     s->cond = conditions ();
-    strcat (HUB->pcstatus, pc.state ? word[pc.state & 3] : s->cond & C_BLEEDING ? " BLEEDING" : "");
+    if (pc_out > (tnow = HUB->now)) {
+        s->cond |= C_UNCONSCIOUS;               /* (Senseless till it comes round: the minds' to know it helpless) */
+    }
+    strcat (HUB->pcstatus, s->cond & C_UNCONSCIOUS ? word[1] : pc.state ? word[pc.state & 3] : s->cond & C_BLEEDING ?
+        " BLEEDING" : "");
     s->health = health_of (&pc);
-    k = harn_move (&pc);                       /* (Walking: half its Move, squares a round: Combat 6) */
+    k = harn_move (&pc);                       /* (Walking: half its Move, squares a round: Combat 6; in shock, half
+                                                **   that, and no faster: Skills 22's walk or crawl at half move) */
+    if (pc.state == HARN_SHOCK) {
+        ++k;
+        k >>= 1;
+    }
     s->step = w = k < 4 ? 50 : 200 / k;
     s->gstep[GA_CREEP] = w + (w << 1);          /* (The game's: a sixth of its Move, a quarter; the book's: a jog its
                                                 **   Move, a run twice, a sprint three times) */
@@ -298,7 +307,7 @@ static void status (void)
     s->gstep[GA_WALK] = w;
     for (g = GA_JOG; g < NGAITS; ++g) {
         v = rate[g - GA_JOG] / k;
-        s->gstep[g] = !v ? 1 : v < w ? v : w;
+        s->gstep[g] = pc.state == HARN_SHOCK ? w : !v ? 1 : v < w ? v : w;
     }
     s->attacks = 1;
     s->sight = sense (HARN_EYE);
@@ -321,13 +330,20 @@ static void status (void)
 
 /* ---- hmchar's file: its own lines, the name and the occupation (and the game's: its pace, its watchfulness and its
 ** exertion toward the next fatigue level, "pace 2 1 1200": the pace and the watchfulness the world's, said in the reply
-** to RS_LOAD_PC and written back as the hub has them, the exertion the referee's own) */
+** to RS_LOAD_PC and written back as the hub has them, the exertion the referee's own; and what dealt each injury,
+** a digit each in order, "dealt 0100": pc_by's, sheet.c's BY_*) */
 
 static unsigned char gait = GA_WALK, watch;
 
 static void __fastcall__ own_line (char* l)
 {
-    if (!strncmp (l, "pace ", 5) && strlen (l) >= 10) {
+    unsigned char k;
+
+    if (!strncmp (l, "dealt ", 6)) {
+        for (k = 0; k < HARN_INJMAX && l[k + 6]; ++k) {
+            pc_by[k] = l[k + 6] & 7;            /* (A digit: BY_* are 0-4) */
+        }
+    } else if (!strncmp (l, "pace ", 5) && strlen (l) >= 10) {
         gait = l[5] - '0' < NGAITS ? l[5] - '0' : GA_WALK;
         watch = l[7] - '0';
         tired = atoi (l + 9);
@@ -384,6 +400,12 @@ void __fastcall__ s_save_pc (struct req* r)
     line[5] += g;
     line[7] += w;
     strcat (line, utoa (tired, b, 10));
+    harn_write_line (fd, line);
+    strcpy (line, "dealt ");                    /* (What dealt each injury: its words') */
+    for (g = 0; g < pc.ninj; ++g) {
+        line[g + 6] = '0' | pc_by[g];
+    }
+    line[g + 6] = 0;
     harn_write_line (fd, line);
     for (p = tongues + 7; *p; p = e) {             /* (Its tongues but its own: "language" lines) */
         e = strchr (p + 1, ' ');

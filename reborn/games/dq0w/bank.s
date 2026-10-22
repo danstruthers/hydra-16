@@ -112,7 +112,7 @@ go:
             SWPART      31, 11              ; The traces read, in words (wtrword.c)
             SWPART      32, 9               ; The way the character's scent goes, a hunter's (wtrscent.c)
             SWPART      33, 12              ; A walk across a room (dq0w.c's across: the main RAM's room)
-            SWPART      34, 2               ; The rooms' lights by their sconces (wkept.c)
+            SWPART      34, 12              ; The rooms' lights by their sconces (wkept.c)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
@@ -199,6 +199,7 @@ go:
             SWFN        den_intents, 14
             SWFN        pc_blow, 15
             SWFN        den_blow, 15
+            SWFN        den_rob, 15
             SWFN        bled, 15
             SWFN        puzzle, 16
             SWFN        take_go, 16

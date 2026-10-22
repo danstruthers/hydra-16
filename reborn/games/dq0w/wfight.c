@@ -6,7 +6,8 @@
 ** the body in kept (senseless a while, fleeing, holding back a round, bleeding, dead: its remains put down, the item
 ** store's), and the blow told (E_FIGHT, the denizens' events: the denizens take it to heart, their minds' courage and
 ** attitudes; the UI words it; the sound task plays it).  The bleeding's blood lost a minute at a time (RS_TIME), and
-** those dead of it told.
+** those dead of it told.  And a robber's way with the character helpless beside it (I_ROB: what it holds and its
+** pennies taken off to its lair).
 **
 ** All of it swapped part 15's (../dq0/swap.inc: dq0w.cfg's SW15), called through its stubs (bank.s's).
 */
@@ -214,6 +215,67 @@ void s_bled (void)
 void __fastcall__ s_den_blow (unsigned char def, unsigned char z)
 {
     blow (bk + 1, def, z);
+}
+
+/* The character robbed by body bd (its intent, I_ROB: part 14's; a robber's, kinds.txt's ways r, the character
+** helpless beside it): what it holds (but a light lit: the robber leaves it its light) and its pennies (wherever it
+** keeps them), taken off to x, y (the robber's lair's home square, on its stratum; or, that square not to be had,
+** where the robber stands) and put down there, a stash to be found; the referee told what's no longer to hand (RS_EQUIP,
+** each held tool's key: what it struck with gone; its load, its next things' handling's), the UI the robbery (E_TASK
+** TE_ROBBED, b the robber plus 1), if anything was taken */
+void __fastcall__ s_den_rob (unsigned x, unsigned y)
+{
+    static struct msg m;
+    static struct req* r;
+    static struct item* p;
+    static unsigned i, n;
+    static unsigned char kind, f;
+    static char key[sizeof CATALOGUE[0].tool];
+    unsigned char* s;
+
+    s = at (bd.sn, x, y);
+    if (!s || !(TILE (*s) == T_FLOOR || TILE (*s) == T_CORR) ||
+        !it_need (bd.sn, (x - STRATUM (bd.sn).x0) >> CW_BITS, (y - STRATUM (bd.sn).y0) >> CW_BITS)) {
+        x = bd.x;
+        y = bd.y;
+    }
+    for (n = 0, i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
+        kind = ip->kind;
+        f = ip->flags;
+        for (p = ip; p->where == IW_ITEM; p = item_at (p->x)) {     /* (On the character, however deep) */
+        }
+        if (p->where != IW_ACTOR || p->x || (kind != KI_PENNIES && ((f & (I_HELD | I_LIT)) != I_HELD))) {
+            continue;
+        }
+        p = item_at (i);
+        p->where = IW_SQUARE;
+        p->sn = bd.sn;
+        p->x = x;
+        p->y = y;
+        p->flags &= ~(I_HELD | I_WORN);
+        ++n;
+        hub_map (CAT_BANK);
+        memcpy (key, CATALOGUE[kind].tool, sizeof key);
+        if (key[0] && (f & I_HELD)) {
+            hub_map (0);
+            r = &HUB->slot[SLOT_WORLD];
+            r->kind = RS_EQUIP;
+            r->actor = 0;
+            r->a = 0;
+            strcpy (r->text, key);
+            hub_ask (SLOT_WORLD)->state = REQ_FREE;
+        }
+    }
+    hub_map (0);
+    if (n) {
+        m.kind = E_TASK;
+        m.who = 0;
+        m.b = bk + 1;
+        m.w1 = TE_ROBBED;
+        m.t = HUB->now;
+        hub_event (&m);
+        ++HUB->den_seq;
+    }
 }
 
 /* The character's blow at the actor it's posted (the hub's pc_foe, I_ATTACK's: a round of its time), struck if the

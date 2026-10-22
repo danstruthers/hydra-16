@@ -295,6 +295,10 @@ enum {
     I_SWEPT,                                    /* (The denizens', who 0) A chunk kept swept (a lair of a kind that
                                                 **   sweeps its floors, K_SWEEPS, placed): w1 w2 a square in it, x[2]
                                                 **   its stratum */
+    I_ROB,                                      /* (The denizens', a robber's: kinds.txt's ways r) The character,
+                                                **   helpless beside it, robbed: what it holds (but a light lit) and
+                                                **   its pennies taken off to w1 w2 (its lair's home square, on its
+                                                **   stratum: or where it stands), a round's work; E_TASK TE_ROBBED */
     NINTENTS
 };
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
@@ -415,7 +419,7 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8, V_TRACED = 16 };
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN };  /* E_DIG's how (D_AGAIN: begun on
                                                 **   a hole dug part way before, the world's DUG record's) */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
-       TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE, TE_LOW, TE_OUT };
+       TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE, TE_LOW, TE_OUT, TE_ROBBED };
                                                 /* E_TASK's: stopped as
                                                 **   the player asked; stopped hard, by a wound or a blow (HOUSE.md:
                                                 **   all wounds), by a hostile in sight within 30 feet; asking, soft
@@ -440,7 +444,9 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
                                                 **   kind; slice 4.1's: told, no question); a light gone out, its
                                                 **   fuel burnt (b its kind, | 0x80 one it sees lying there; its own,
                                                 **   its only light, its long task stopped hard with it, w's high
-                                                **   byte the task's kind: a climb's and a fight's go on) */
+                                                **   byte the task's kind: a climb's and a fight's go on); robbed as
+                                                **   it lay helpless (I_ROB's: b the robber plus 1; told only if
+                                                **   something was taken) */
 #define TE_STILL        0x80
 #define TE_QUIET        0x40
 enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN };   /* E_BEAT's: a quiet stretch (HOUSE.md:
@@ -637,7 +643,8 @@ struct actor {
                                                 **   plus 1, or 0 (till they fight, they keep off one another) */
     unsigned char   kind;                       /* Its kind (kinds.txt's, by number: the sounds' table's, SND_AT) */
     unsigned char   remains;                    /* What it leaves dead (items.h's KI_BODY, KI_BONES) */
-    unsigned char   timid;                      /* 1: a shy kind (the referee's: shaken, it flees) */
+    unsigned char   timid;                      /* 1: a shy kind (the referee's: shaken, it flees); | RS_KILLER, a killer
+                                                **   (the referee's: it finishes one senseless; kinds.txt's ways k) */
 };
 enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIED };   /* An attitude, the worst
                                                 **   first (DENIZENS.md): attacks on sight; threatens, keeps off;

@@ -197,6 +197,7 @@ function createRecorder() {
         else if (e.te === 'TE_BREAK') { e.by = (e.b & 0x3F) - 1; e.how = ['back', 'flight', 'run'][w >> 8]; delete e.task; }   // (A disengage's)
         else if (e.te === 'TE_FREE') e.none = ['engaged', 'near', 'way'][e.b];   // (None: not engaged, nothing near to flee, no way back)
         else if (e.te === 'TE_LOW' || e.te === 'TE_OUT') { e.lamp = e.b & 0x7F; e.seen = !!(e.b & 0x80); }   // (A light's kind; one lying there seen)
+        else if (e.te === 'TE_ROBBED') e.by = e.b - 1;                     // (The robber: its entry)
         else e.named = name('LT_NONE', e.b);
         break;
       case 'E_BEAT': e.beat = name('WB_QUIET', w & 0xFF); e.side = name('WS_AHEAD', w >> 8); break;

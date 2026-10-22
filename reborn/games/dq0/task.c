@@ -3,7 +3,7 @@
 ** character's): what came of one (E_TASK: stopped, asked, carried on, refused), a walk's beats as it goes (E_BEAT),
 ** the task a stop names ("stop digging": its LT_*), a question's answer read, and a line typed as the character's
 ** busy carried out at once or held (fighting on's: a command taking over); a light burning low and going out (E_TASK's
-** too), and the status line's light left (slice 4.1's).  Overlay 3's (the stop's word and a question's answer overlay
+** too), and the status line's light left (slice 4.1's); robbed as it lay helpless (E_TASK's too).  Overlay 3's (the stop's word and a question's answer overlay
 ** 8's).
 */
 
@@ -150,6 +150,9 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         } else {
             say (".");
         }
+        break;
+    case TE_ROBBED:                             /* (Helpless, robbed: a robber's way, the denizens') */
+        sayf ("\n%s goes through your things as you lie helpless, and takes what it finds.", foe (named, 1));
         break;
     }
     return k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT;    /* (1: a question put) */

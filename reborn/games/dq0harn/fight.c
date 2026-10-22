@@ -21,10 +21,13 @@
 ** bite blocked by a weapon struck by it, a bare arm blocking a weapon struck: H2, Combat 12), a strike (the dice,
 ** the weapon's impact for its aspect, the sizes' difference a point a die, the book's bestiary's; the location by the
 ** aim; the armour there off it: the character's worn pieces, Combat 4-5, a poor piece a point less, a fine one a point
-** more; a creature's hide), the wound (harn_wound: Combat 13-14), fumbles and stumbles (a fallen one's next turn
-** spent getting up: the world's bodies' positions, the request's), the defender's tactical advantage.  One senseless
-** is finished where it lies (the book's dispatch, a grope).  Bones that move (BF_MINDLESS) feel no shock, bleed
-** nothing, fear nothing, and fall apart as their injuries reach their endurance (the game's).
+** more; a creature's hide), the wound (sheet.c's wound: harn_wound, Combat 13-14, and the shock roll of one in shock;
+** worded by what dealt it, a creature's own part by what it is: a bite, claws' rake), fumbles and stumbles (a fallen
+** one's next turn spent getting up: the world's bodies' positions, the request's), the defender's tactical
+** advantage.  One senseless is finished where it lies (the book's dispatch, a grope): a creature by the character,
+** and the character by a killer (the request's RS_KILLER, its kind's nature: a mortal wound to its neck, or its
+** skull by a blunt weapon; any other holds its blow).  Bones that move (BF_MINDLESS) feel no shock, bleed nothing,
+** fear nothing, and fall apart as their injuries reach their endurance (the game's).
 */
 
 #pragma code-name ("OV2CODE")
@@ -95,11 +98,9 @@ static const struct bkind {
 };
 #define NBEASTS         (sizeof bestiary / sizeof bestiary[0])
 
-/* An injury's words, by its aspect and severity (minor, serious, grievous or worse: sheet.c's) */
-static const char* const wound_word[4][3] = {
-    { "bruise", "fracture", "crush" }, { "cut", "gash", "deep gash" }, { "stab", "stab", "deep stab" },
-    { "burn", "burn", "burn" }
-};
+/* A creature's own parts that word its wounds by what they are (sheet.c's wound_words: BY_*, in order; talons
+** claws'): a weapon's word one of these */
+static const char natural[][8] = { "", "bite", "claws", "sting", "horns", "talons" };
 
 /* ---- A creature's sheet, unpacked (into a HarnMaster character, for the book's functions) and packed again */
 
@@ -196,26 +197,32 @@ static void __fastcall__ effect (unsigned char target, unsigned char kind, unsig
     }
 }
 
-/* A wound's words into w: "a serious cut to its left thigh (S2)" */
-static void __fastcall__ wound_words (char* w, unsigned char sev, unsigned char loc, unsigned char aspect,
-    unsigned char il, unsigned char its)
+/* What side s's strike deals (BY_*, sheet.c's wound_words): a creature's own part by its word (a bite, claws); a
+** weapon, the character's fists and feet, by the aspect */
+static unsigned char __fastcall__ dealt (const struct side* s)
 {
-    char n[4];
+    unsigned char k = sizeof natural / sizeof natural[0];
 
-    strcpy (w, "a ");
-    strcat (w, harn_severity_name (sev));
-    strcat (w, " ");
-    strcat (w, wound_word[aspect & 3][sev > HARN_GRIEVOUS ? 2 : sev - 1]);
-    strcat (w, its ? " to its " : " to your ");
-    if (harn_is_limb (loc)) {
-        strcat (w, loc & HARN_RIGHT ? "right " : "left ");
+    if (s->b && s->part != 0xFF) {
+        while (--k && strcmp (s->word, natural[k])) {
+        }
+    } else {
+        k = 0;
     }
-    strcat (w, harn_location_name (loc));
-    if (sev <= HARN_GRIEVOUS) {
-        strcat (w, sev == HARN_MINOR ? " (M" : sev == HARN_SERIOUS ? " (S" : " (G");
-        strcat (w, utoa (il, n, 10));           /* (Ten or more two digits) */
-        strcat (w, ")");
+    return k > BY_HORNS ? BY_CLAWS : k;
+}
+
+/* The best aspect side s strikes with (its weapon's greatest impact), or want if it can */
+static unsigned char __fastcall__ aspect_of (const struct side* s, unsigned char want)
+{
+    unsigned char k;
+
+    if (want > HARN_POINT || s->imp[want] < 0) {
+        for (want = HARN_BLUNT, k = 1; k < 3; ++k) {
+            want = s->imp[k] > s->imp[want] ? k : want;
+        }
     }
+    return want;
 }
 
 /* Side s fallen (a stumble: an effect, the world's to lay it down), or got up (O_RISE's: the world's to stand it up) */
@@ -231,52 +238,17 @@ static unsigned char __fastcall__ is_prone (const struct side* s)
     return (prones & (s == &A ? RS_PRONE_A : RS_PRONE_D)) != 0;
 }
 
-/* Side t senseless (its shock roll failed): the rounds till it comes round (the book's shock rolls, a round each,
-** within an hour), the tenths in the reply's w2; the character then (it comes round as the UI waits it out: it
-** can't defend meanwhile), a creature as the clock passes it (it lies there till then).  In the main RAM (the
-** overlay's full): strike's alone, its overlay in */
-#pragma code-name (push, "CODE")
-static void __fastcall__ senseless (const struct side* t)
-{
-    unsigned long* o = t->who ? &bs.out : &pc_out;
-    unsigned k;
-
-    for (k = 1; k < 360 && harn_wake (t->c) == HARN_UNCONSCIOUS; ++k) {
-    }
-    R->w2 = k * 100;
-    if (*o > tnow) {                            /* (Out already, struck again as it lies: out till the later, its
-                                                **   black-out told once: AF_AGAIN) */
-        R->c |= AF_AGAIN;
-        if (*o - tnow > R->w2) {
-            R->w2 = (unsigned) (*o - tnow);
-        }
-    }
-    *o = tnow + R->w2;
-    if (t->who) {
-        t->c->state = HARN_UNCONSCIOUS;
-    } else if (pc.state == HARN_UNCONSCIOUS) {
-        pc.state = HARN_CONSCIOUS;              /* (Within the hour, anyway) */
-    }
-    effect (t->who, X_COND_ON, C_UNCONSCIOUS, 0, 0, 0);
-}
-#pragma code-name (pop)
-
 /* Side s strikes side t with n dice at zone z (or part, not 0xFF: a block's strike on what struck or blocked): the
 ** impact, the armour there off it, the wound; its words into w (or the armour that stopped it: stop, AF_*, in the
 ** reply's c) */
 static void __fastcall__ strike (struct side* s, struct side* t, unsigned char n, unsigned char z, unsigned char part,
     char* w, unsigned char stop)
 {
-    unsigned char aspect = s == &A ? R->b : AS_BEST, loc, f, p, sev, il, k;
+    unsigned char aspect = aspect_of (s, s == &A ? R->b : AS_BEST), by = dealt (s), loc, f, p, sev, il;
     harn_char* c = t->c;
     harn_injury* j;
     int impact;
 
-    if (aspect > HARN_POINT || s->imp[aspect] < 0) {
-        for (aspect = HARN_BLUNT, k = 1; k < 3; ++k) {    /* (Its best) */
-            aspect = s->imp[k] > s->imp[aspect] ? k : aspect;
-        }
-    }
     impact = dice (n, 6) + (int) n * ((int) s->size - (int) t->size) + s->imp[aspect];
     loc = part != 0xFF ? (harn_is_limb (part) && random (2) ? part | HARN_RIGHT : part) : harn_strike_location (z);
     p = guard (t, loc, aspect);
@@ -288,14 +260,14 @@ static void __fastcall__ strike (struct side* s, struct side* t, unsigned char n
         }
         return;
     }
-    if (!(f = harn_wound (c, loc, aspect, impact - p))) {
+    if (!(f = wound (c, loc, aspect, impact - p, by))) {
         return;
     }
     if (f & HARN_W_DEAD) {                      /* (A mortal wound's kill roll: dead, no injury kept) */
         sev = HARN_KILL;
         il = 0;
     } else {
-        j = &c->inj[c->ninj - 1];
+        j = &c->inj[c->ninj - 1];               /* (Its own: the record's room made first, wound's) */
         sev = j->sev;
         il = j->il;
         if (t->b && (t->b->flags & BF_MINDLESS)) {  /* (Bones: no blood, no shock; apart at its endurance) */
@@ -305,7 +277,7 @@ static void __fastcall__ strike (struct side* s, struct side* t, unsigned char n
             f |= c->state == HARN_DEAD ? HARN_W_DEAD : 0;
         }
     }
-    wound_words (w, sev, loc, aspect, il, t->who);
+    wound_words (w, sev, loc, aspect, il, t->who ? by | BY_ITS : by);
     if (f & HARN_W_DEAD) {
         effect (t->who, X_DEATH, C_DEAD, HARN_KILL, loc, aspect);
         return;
@@ -318,7 +290,9 @@ static void __fastcall__ strike (struct side* s, struct side* t, unsigned char n
         effect (t->who, X_DROP, 0, 0, 0, 0);    /* (An arm's: what it held dropped) */
     }
     if (f & HARN_W_DOWN) {
-        senseless (t);
+        R->w2 = knocked_out (c, t->who ? &bs.out : &pc_out, &R->c);    /* (Senseless: the tenths till it comes
+                                                **   round, sheet.c's) */
+        effect (t->who, X_COND_ON, C_UNCONSCIOUS, 0, 0, 0);
     }
 }
 
@@ -369,6 +343,25 @@ static void attack (void)
         D.c->state = HARN_DEAD;                 /* (Senseless: finished where it lies) */
         effect (D.who, X_DEATH, C_DEAD, HARN_KILL, 0, 0);
         R->result = O_DISPATCH;
+        R->b = D_NONE;
+        return;
+    }
+    if (!D.who && pc_out > tnow) {              /* (The character senseless: a killer finishes it where it lies
+                                                **   (RS_KILLER: its kind's nature), a mortal wound, its words a
+                                                **   blow's: "The ghoul bites at you: a mortal deep bite to your
+                                                **   neck."; any other holds its blow, the minds' to say: one posted
+                                                **   as it fell) */
+        if (!(prones & RS_KILLER)) {
+            R->result = 0xFF;
+            return;
+        }
+        k = aspect_of (&A, AS_BEST);
+        z = k == HARN_BLUNT ? HARN_SKULL : HARN_NECK;
+        pc.state = HARN_DEAD;
+        pc_out = 0;
+        effect (0, X_DEATH, C_DEAD, HARN_KILL, z, k);
+        wound_words (line[0], HARN_KILL, z, k, 0, dealt (&A));
+        R->result = O_HIT;
         R->b = D_NONE;
         return;
     }

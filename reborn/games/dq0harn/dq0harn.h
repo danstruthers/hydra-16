@@ -70,6 +70,24 @@ signed char __fastcall__ noticing (const struct req* r);  /* A notice's steps by
 void __fastcall__ spent (unsigned t);           /* Time spent (t tenths) at spent_at's pace (or GA_WORK, GA_REST):
                                                 **   fatigue */
 void __fastcall__ harm (struct req* r);         /* A harm (r a copy, in the main RAM, but its text) */
+unsigned char __fastcall__ wound (harn_char* c, unsigned char loc, unsigned char aspect, int impact,
+    unsigned char by);                          /* A wound taken (harn_wound's, HARN_W_*), the game's ways round it:
+                                                **   the record's room, the shock roll of one in shock; by what dealt
+                                                **   it (BY_*: the character's, kept in pc_by) */
+void __fastcall__ wound_words (char* w, unsigned char sev, unsigned char loc, unsigned char aspect, unsigned char il,
+    unsigned char by);                          /* A wound's words into w, the main RAM's ("a serious bite to your
+                                                **   right elbow (S2)"; by | BY_ITS, "to its"; sev HARN_KILL, a death's) */
+unsigned __fastcall__ knocked_out (harn_char* c, unsigned long* o, unsigned char* f);  /* Knocked senseless: the
+                                                **   tenths till it comes round, *o its time out (AF_AGAIN in *f) */
+
+/* What dealt an injury, for its words (the character's: pc_by, each injury's, kept with its sheet): BY_ASPECT its
+** aspect's (a weapon's, a fall's, a trap's); else a creature's own part (the referee's bestiary's weapons, by their
+** words: claws and talons alike) */
+enum { BY_ASPECT, BY_BITE, BY_CLAWS, BY_STING, BY_HORNS };
+#define BY_ITS          0x80                    /* (wound_words's: to a creature, "to its") */
+extern unsigned char pc_by[HARN_INJMAX];
+#define IF_POOL         0x80                    /* (An injury's flags, the referee's own, the library's never: the
+                                                **   lesser hurts past the record's room, folded together: wound's) */
 
 /* fight.c (overlay 2) */
 void __fastcall__ fight (struct req* r);        /* RS_NEW_ACTOR, RS_ATTACK, RS_MORALE, RS_TIME, RS_CONTEST (a

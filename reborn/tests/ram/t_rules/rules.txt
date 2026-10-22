@@ -537,6 +537,13 @@ want grade=G_MF
 dice 100:60
 ask TEST a=P_SEARCH
 want grade=G_CS
+case in shock: a walk or a crawl at half her Move (Skills 22: 6 of 12, 33 tenths a square), no faster pace
+want sum.step=33 sum.g0=99 sum.g2=33 sum.g3=33 sum.g5=33
+set gait=GA_RUN
+dice
+ask DESCRIBE b=3
+want text~"a run (15 feet a round)"
+set gait=GA_CREEP
 
 # ---- The senses (HOUSE.md: 0-9 from the attribute, (attribute - 3) times 3 / 5; 3 or less none, 18 or more 9)
 
@@ -1526,7 +1533,7 @@ ask HARM a=HC_STRIKE b=AS_BLUNT w1=17
 want text="a grievous crush to your left forearm (G4)"
 
 # Shock (Combat 14, Skills 22): over Endurance senseless; a shock roll each round to come round, then one more
-# (over: in shock); HOUSE.md: awake after an hour whatever the rolls
+# (over: in shock); HOUSE.md: awake after an hour whatever the rolls, then that last roll
 
 char
 vol 3 0 0 0 0
@@ -1563,10 +1570,65 @@ want w2=100 status="UP 5 SHOCK" sum.health=H_DOWN sum.cond&C_STUNNED=C_STUNNED
 char
 vol 3 0 0 0 0
 end
-case every roll over Endurance: awake after an hour (359 rounds' rolls)
+case every roll over Endurance: awake after an hour (359 rounds' rolls), the last roll over too: in shock
 dice 100:50 6:6*
 ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
-want w2=36000 status="UP 5" dice=1801
+want w2=36000 status="UP 5 SHOCK" dice=1806
+
+# One in shock wounded again (Combat 14: a shock roll with every injury; the library's harn_wound makes one only for
+# one conscious, so the character in shock was struck on and on and never fell: the user's adder, 2026-10-21)
+
+char
+vol 0 0 0 2 0
+end
+case in shock, wounded again: its shock roll (a d6), not over Endurance: still in shock
+dice 100:50 6:6
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
+want b=1 w2=0 text="a minor bruise to your thorax (M1)" status="UP 1 SHOCK" dice=2
+
+char
+vol 0 0 0 2 0
+inj 9 0 2 2 0 0
+end
+case in shock with an S2, wounded again (UP 3): 3d6 of 18 over 12, senseless; come round the next round, in shock
+dice 100:50 6:6 6:6 6:6 6:1 6:1 6:1 6:6 6:6 6:6
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
+want b=1 w2=100 e0.cond&C_UNCONSCIOUS=C_UNCONSCIOUS status="UP 3 SHOCK" dice=10
+
+# The record's room (HOUSE.md's wounds: the library keeps twelve injuries, and past them added each new wound's
+# levels into the last, its words the running total, "a serious stab (S37)"): the least two folded into the lesser
+# hurts, each wound its own words, every level still counted; the worst named a real one
+
+char
+inj 8 0 1 1 0 0
+inj 8 0 1 1 0 0
+inj 8 0 1 1 0 0
+inj 8 0 1 1 0 0
+inj 8 0 1 1 0 0
+inj 8 0 1 1 0 0
+inj 8 0 1 1 0 0
+inj 8 0 1 1 0 0
+inj 8 0 1 1 0 0
+inj 12 1 2 3 0 0
+inj 8 0 1 1 0 0
+inj 8 0 1 1 0 0
+end
+case twelve injuries (UP 14), a thirteenth: its own words (M1), the universal penalty all of them (15)
+dice 100:50 6:1*
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=1
+want b=1 text="a minor bruise to your thorax (M1)" w2=36000 status="UP 15 SHOCK"
+dice
+ask DESCRIBE b=3
+want text~"in shock: 11 injuries and lesser hurts, the worst a serious gash to your left thigh (S3); penalties: universal 15"
+dice
+ask DESCRIBE
+want text~"Injuries: lesser hurts (2 levels); thorax M1 (bruise);" text~"left thigh S3 (gash)" text~"universal penalty 15"
+dice 100:50 6:1*
+ask HARM a=HC_STRIKE b=AS_BLUNT w1=5
+want b=2 text="a serious fracture to your thorax (S2)" status="UP 17 SHOCK"
+dice
+ask DESCRIBE
+want text~"lesser hurts (3 levels)" text~"thorax S2 (fracture)" text!"thorax S3" text!"M2"
 
 # Stumbles (Combat 14): a leg's wound (the table's u) a stumble roll, 3d6 and the physical penalty over AGL prone
 # (Skills 22); a grievous one to a limb an automatic stumble, the limb useless
@@ -2039,11 +2101,13 @@ dice
 ask EQUIP a=2 text=""
 want result=0
 
-# ---- Struck senseless again as she lies (HOUSE.md's knocked senseless: out till the later of the two, the black-out
-# told once, the reply's c AF_AGAIN, 32): a fresh rat's bite (45: 41 a marginal success), undefended (defend none:
-# the Ignore table, three dice), at her thorax (50), a minor wound; her shock roll over Endurance (vol 3: UP 4, then
-# 5).  The first time every roll after over Endurance too, an hour out; the second a moment later, its own rolls
-# waking her at once (a round: 100), but the first's hour stands
+# ---- Knocked senseless, then struck at as she lies (HOUSE.md's knocked senseless; a helpless character, the user's,
+# 2026-10-21: finished where she lies, as she finishes a creature, the book's dispatch; the denizens' minds strike at
+# one down only by a killer's nature): a fresh rat's bite (45: 41 a marginal success), undefended (defend none: the
+# Ignore table, three dice), at her thorax (50), a minor wound, worded a bite (a creature's own part, not the point
+# aspect's stab); her shock roll over Endurance (vol 3: UP 4), every roll after over Endurance too, an hour out (OUT
+# on the status line: the minds' to know her helpless).  Struck at again a second later: by a killer (the request's
+# RS_KILLER) finished, a mortal deep bite to her neck, no dice; by any other the blow held
 
 char
 vol 3 0 0 0 0
@@ -2052,13 +2116,37 @@ dice
 ask NEW_ACTOR actor=5 w1=13 text="rat"
 want result=0
 set now=10000 stance=D_NONE
-case bitten undefended, the shock roll over Endurance: senseless, an hour out (every roll after over too)
+case bitten undefended, a minor bite, the shock roll over Endurance: senseless, an hour out (every roll after over too)
 dice 100:41 6:2 6:2 6:2 100:50 6:6*
 ask ATTACK actor=5 other=0 a=Z_MID b=AS_BEST
-want result=O_HIT b=D_NONE w2=36000 c=0 status="UP 4"
+want result=O_HIT b=D_NONE w2=36000 c=0 text~"a minor bite to your thorax (M1)" status="UP 4 OUT" sum.cond&C_UNCONSCIOUS=C_UNCONSCIOUS
 set now=10010
-case bitten again a second later as she lies: down again, its own rolls a round, but out till the first hour's end (35990), AF_AGAIN
-dice 100:41 6:2 6:2 6:2 100:50 6:6 6:6 6:6 6:6 6:6 6:1*
+case a second later, a blow at her as she lies senseless by one no killer: held (none struck, no dice)
+dice
 ask ATTACK actor=5 other=0 a=Z_MID b=AS_BEST
-want result=O_HIT w2=35990 c&32=32 status="UP 5"
+want result=255 e0.kind=X_NONE status="UP 4 OUT" dice=0
+case by a killer (RS_KILLER, 8): finished where she lies, a mortal deep bite to her neck
+dice
+ask ATTACK actor=5 other=0 a=Z_MID b=AS_BEST w2=8
+want result=O_HIT e0.kind=X_DEATH e0.loc=BP_NECK text~"a mortal deep bite to your neck" status="UP 4 DEAD" sum.cond&C_DEAD=C_DEAD dice=0
+
+# In shock (the book: she ignores any attack, Combat 14), bitten: no defence, and her shock roll with the wound (UP
+# 3: an S2 before it): over Endurance, senseless (come round the next round, in shock again; OUT till then)
+
+char
+vol 0 0 0 2 0
+inj 9 0 2 2 0 0
+end
+dice
+ask NEW_ACTOR actor=5 w1=14 text="rat"
+want result=0
+set now=20000 stance=D_AUTO
+case in shock, bitten: no defence, a minor bite; its shock roll over Endurance: senseless a round
+dice 100:41 6:2 6:2 6:2 100:50 6:6 6:6 6:6 6:1 6:1 6:1 6:6 6:6 6:6
+ask ATTACK actor=5 other=0 a=Z_MID b=AS_BEST
+want result=O_HIT b=D_NONE w2=100 text~"a minor bite to your thorax (M1)" status="UP 3 OUT" dice=14
+set now=20100
+dice
+ask EQUIP a=2 text=""
+want status="UP 3 SHOCK" sum.cond&C_UNCONSCIOUS=0 sum.cond&C_STUNNED=C_STUNNED
 set stance=D_AUTO
