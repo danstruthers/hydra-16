@@ -159,6 +159,7 @@ help fighting	VB_META_HELP	topic=fighting	-	help by topic
 inventory	VB_META_INVENTORY	-	-	inventory
 i	VB_META_INVENTORY	-	-	short inventory
 map	VB_META_MAP	-	-	map
+m	VB_META_MAP	-	-	the map's short form (the user's, 2026-10-21: not a thing's, the mail hauberk)
 save	VB_META_SAVE	-	-	save
 quit	VB_META_QUIT	-	-	quit
 

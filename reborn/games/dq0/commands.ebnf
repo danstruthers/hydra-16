@@ -150,7 +150,7 @@
 (* ---- Lexicon: the classes. Each is one abstract meaning; the words are its synonyms. ---- *)
 <LOOK>       ::= "look" | "take a gander" | "take a look"
 <DETAIL>     ::= "close" | "in detail"
-<MOVE>       ::= "m" | "walk" | "go"
+<MOVE>       ::= "walk" | "go"
 <TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of" | "into" | "onto" | "past" | "through"
 <ALONG>      ::= "up" | "down" | "along" | "across"   (* up or down a stairway or a ladder; along a passage *)
 <GET>        ::= "get" | "take" | "pick up" | "pick"
@@ -187,7 +187,7 @@
 <NAME>       ::= "name" | "call"
 <ALIAS>      ::= "alias"
 <UNALIAS>    ::= "unalias" | "forget alias"
-<META-WORD>  ::= "status" | "help" | "i" | "map" | "save" | "q" | "sheet" | "pause"
+<META-WORD>  ::= "status" | "help" | "i" | "map" | "m" | "save" | "q" | "sheet" | "pause"
 
 (* ---- Fire (added 2026-10-19) ---- *)
 <light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object> | "turn" <object> "on"   (* "light the torch", "start a fire", "turn it on" *)
