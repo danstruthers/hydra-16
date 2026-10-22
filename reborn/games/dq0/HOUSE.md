@@ -411,6 +411,19 @@ silent on all of it.
   it's dropped or thrown away; as it's out of sight; as the character's made to turn: a denizen it didn't see before
   comes into sight, a blow comes from one it doesn't see, a trap is set off.  (resolve.c; blows.c, fixt.c:
   untarget.)
+- **Shortcuts** (the user's, 2026-10-22: "alias should be for shortcuts, and name for naming things"): "alias x is
+  north then dig down" (or "alias x = ...") makes a word stand for a line; a line typed that begins with it is that
+  line, the words typed after it put after it ("ex the torch": "examine the torch"), made once, as it's entered, before
+  its parts, so a shortcut may hold several commands.  A shortcut whose line begins with another's is given that one's
+  line as it's made (as the grammar's reference has it).  Its word already a shortcut, the player's asked first ("yes"
+  replaces it; anything else keeps it).  Refused: a word the commands need ("look", "north", a number: as for a name),
+  the shortcuts' own words, a definition inside one; "alias the sword as Linda" is sent to name.  "alias x" shows one,
+  "alias" lists them and then the game's own words (commands.aliases, the parser's: on the card as aliases.txt);
+  "unalias x" or "forget alias x" removes one.  **The game's own words can't be removed** ("unalias peer" says so):
+  they're the parser's tables, the same for every game; but the player may make one a shortcut ("alias peer is
+  status"), which then takes its place as a line's first word, and removing that brings the game's back.  Sixteen
+  shortcuts, each a word of 15 letters and a line of 95, kept in the theme bank (hub.h's ALIAS_AT) and the save.
+  (alias.c, part 9, a bank of its own; term.c's enter.)
 
 ## Characters *(hmchar: HarnMaster's character generator)*
 

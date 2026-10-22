@@ -30,6 +30,7 @@ games/dq0           ../obj/games/dq0.hyx        ; The games (games/: not in the 
 games/lib/dq0/dq0.ovl ../obj/games/dq0.hyx.ovl  ;   have the reader make): Dingus Quest Zero, its overlays, and its
 games/lib/dq0/dq0t.dat ../obj/games/dq0t.dat
 games/lib/dq0/help.txt ../games/dq0/help.txt ;   the help's words (help, "?")
+games/lib/dq0/aliases.txt ../games/dq0/commands.aliases ;   the game's own shortcut words (alias)
 games/lib/dq0/dq0w  ../obj/games/dq0w.hyx       ;   tasks: its world, its rules (HarnMaster's referee) and its maker
 games/lib/dq0/dq0w.ovl ../obj/games/dq0w.hyx.ovl
 games/lib/dq0/dq0w.cat ../obj/games/dq0w.hyx.cat

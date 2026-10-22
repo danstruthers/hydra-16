@@ -1,7 +1,7 @@
 /*
 ** names.c - (parts 5, 6) the names the character gives (the user, 2026-10-16: "I would like to be able to reference
 ** items by aliases, as long as the alias doesn't clash with something else"): a thing it carries or sees ("name my
-** sword Linda", "alias the sword as Linda", "call the dagger Sting"), the room it's in ("call this room the Mausoleum",
+** sword Linda", "name the sword as Linda", "call the dagger Sting"), the room it's in ("call this room the Mausoleum",
 ** "name this room "The Mausoleum""), an ally (the denizens' task's: "name the rat Grub", recorded here too); and a
 ** name forgotten ("forget the name Linda", "unname Linda", "unname this room").  The names are a table in the hub's
 ** theme bank (hub.h's struct tname, NAMES_AT), kept in the save.  A name's refused if it clashes: with another name
@@ -111,7 +111,7 @@ static struct tname* __fastcall__ find (unsigned char what, const char* k)
 
 /* A word's hash (its letters' case aside, up to a space or a mark at_key ends a name at): a bit of names_bits */
 static unsigned char names_bits[32];            /* (The things' names' first words, hashed: names_in's) */
-static unsigned char __fastcall__ hash (const char* s)
+unsigned char __fastcall__ names_hash (const char* s)
 {
     static unsigned char h, c;
 
@@ -131,7 +131,7 @@ static void count (void)
         ent ();
         names_n += e.what != NM_NONE;
         if (e.what == NM_ITEM) {
-            h = hash (key (e.name));
+            h = names_hash (key (e.name));
             names_bits[h >> 3] |= 1 << (h & 7);
         }
     }
@@ -149,7 +149,7 @@ static unsigned char __fastcall__ at_key (const char* t, const char* k)
 #pragma rodata-name (push, "OV10RODATA")
 
 /* A line's first look (main.c's, before the parts are called: each copied in only for a line that may be its):
-** NI_LINE, a line that names (its first word name, call, alias, rename, dub, forget or unname: s_names_line's);
+** NI_LINE, a line that names (its first word name, call, rename, dub, forget or unname: s_names_line's);
 ** NI_THING, one that may say a thing's name (a "#", or a word where one of the things' names' first words could
 ** be, by names_bits: s_names_subst's, which finds none in a line without them).  Overlay code: the main RAM's
 ** data only (names_bits; not the hub's table) */
@@ -159,7 +159,7 @@ unsigned char __fastcall__ o_names_in (const char* l)
     static unsigned char n, r, h;
 
     r = 0;
-    for (v = "name\0call\0alias\0rename\0dub\0forget\0unname\0"; *v; v += n + 1) {
+    for (v = "name\0call\0rename\0dub\0forget\0unname\0"; *v; v += n + 1) {
         n = strlen (v);
         if (!strnicmp (l, v, n) && (!l[n] || l[n] == ' ')) {
             r = NI_LINE;
@@ -170,7 +170,7 @@ unsigned char __fastcall__ o_names_in (const char* l)
         return r | NI_THING;
     }
     for (v = l; *v; ++v) {
-        if ((v == l || v[-1] == ' ') && (names_bits[(h = hash (v)) >> 3] & 1 << (h & 7))) {
+        if ((v == l || v[-1] == ' ') && (names_bits[(h = names_hash (v)) >> 3] & 1 << (h & 7))) {
             return r | NI_THING;
         }
     }
@@ -388,7 +388,7 @@ static unsigned char denizen (void)
     return 0;
 }
 
-/* A name given ("name my sword Linda", "alias the sword as Linda", "call this room the Mausoleum", "name the rat
+/* A name given ("name my sword Linda", "name the sword as Linda", "call this room the Mausoleum", "name the rat
 ** Grub"), the line in nb's words */
 static unsigned char __fastcall__ give (char* l)
 {
@@ -408,7 +408,7 @@ static unsigned char __fastcall__ give (char* l)
     } else {
         for (a = 1; a < nw && stricmp (wd[a], "as"); ++a) {
         }
-        if (a < nw) {                           /* ("alias the sword as Linda") */
+        if (a < nw) {                           /* ("name the sword as Linda") */
             join (nm, a + 1, nw);
         } else {
             for (i = 1; i < nw && LITTLE (wd[i]); ++i) {
@@ -475,8 +475,7 @@ static void forget (void)
 {
     static unsigned char i;
 
-    for (i = 1; i < nw && (LITTLE (wd[i]) || !stricmp (wd[i], "name") || !stricmp (wd[i], "names") ||
-        !stricmp (wd[i], "alias")); ++i) {
+    for (i = 1; i < nw && (LITTLE (wd[i]) || !stricmp (wd[i], "name") || !stricmp (wd[i], "names")); ++i) {
     }
     join (thw, i, nw);
     if (!thw[0]) {
@@ -502,7 +501,7 @@ static void forget (void)
     count ();
 }
 
-/* A line typed that names (main.c's naming: name, call, alias, rename, dub; forget, unname): a name given or
+/* A line typed that names (main.c's naming: name, call, rename, dub; forget, unname): a name given or
 ** forgotten (NL_DONE: done here); a denizen's to be named (NL_DEN: names_den after the command) */
 unsigned char __fastcall__ s_names_line (char* l)
 {
@@ -510,7 +509,7 @@ unsigned char __fastcall__ s_names_line (char* l)
     if (!nw) {
         return NL_NONE;
     }
-    if (one_of (wd[0], "name\0\0\0call\0\0\0alias\0\0rename\0dub\0\0\0\0", 7)) {
+    if (one_of (wd[0], "name\0\0\0call\0\0\0rename\0dub\0\0\0\0", 7)) {
         if (nw < 2) {
             msg ("Name what?");
             return NL_DONE;

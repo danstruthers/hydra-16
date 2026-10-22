@@ -503,15 +503,21 @@ void t_done (void)
 ** (parts.c's: "north then east"; no room: the line stays on the line typed, and Enter must be pressed again) */
 static void enter (void)
 {
-    if (!parts_in ()) {
-        return;
-    }
     if (inn) {
         strcpy (last, inl);
+        if (aliases_n && alias_hit (inl)) {
+            alias_expand ();                    /* (A shortcut's word first: its line, the rest after it) */
+        }
+    }
+    if (!parts_in ()) {
+        if (inn) {
+            strcpy (inl, last);                 /* (The line as it was typed, left there) */
+        }
+        return;
     }
     blank ();
     say ("> ");
-    say (inl);
+    say (inn ? last : inl);
     inn = 0;
     inl[0] = 0;
     shown = 0;                                  /* (The line typed drawn again by t_done, once the command's done:

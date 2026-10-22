@@ -57,3 +57,5 @@ reborn/games/hmchar/hmchar.hl text eol=crlf
 reborn/games/hmchar/hmchar.fs text eol=crlf
 # Dingus Quest Zero's help, copied to the card as it is: CR LF everywhere
 reborn/games/dq0/help.txt text eol=crlf
+# And its own shortcut words (the parser's commands.aliases), on the card as aliases.txt
+reborn/games/dq0/commands.aliases text eol=crlf

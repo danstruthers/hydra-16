@@ -369,7 +369,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    15                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    16                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -392,7 +392,8 @@ static void sheet (void)
                                                 **   the region files' groups the minute they were put out: the
                                                 **   lights burning, slice 4.1's; the places kept lit after the
                                                 **   denizens' dens.dat; 15, the items' records their shut, a
-                                                **   thing's lid, its tie, its stopper, its lock) */
+                                                **   thing's lid, its tie, its stopper, its lock; 16, the player's
+                                                **   shortcuts after the names: alias.c's) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -468,6 +469,7 @@ void s_save_game (void)
     if ((fd = open (save_path ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
         write (fd, &sv, sizeof sv);
         names_keep (fd, 0);                     /* (The names given: the theme bank's) */
+        alias_keep (fd, 0);                     /* (The shortcuts: the theme bank's too) */
         close (fd);
     }
 }
@@ -481,6 +483,7 @@ static void __fastcall__ load_names (void)
         read (fd, &sv, sizeof sv);
     }
     names_keep (fd, 1);
+    alias_keep (fd, 1);
     if (fd >= 0) {
         close (fd);
     }
@@ -570,6 +573,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
         HUB->resume = 1;
     } else {
         names_keep (-1, 1);                     /* (No names given yet) */
+        alias_keep (-1, 1);                     /* (No shortcuts) */
     }
     start ("dq0m", T_MAKER, libdir);            /* (Its maker, its senses, its world: the world's item store first,
                                                 **   the things asked as the game starts, till it's begun) */
@@ -2003,7 +2007,8 @@ int main (int argc, char* argv[])
             f = names_in (l = t_line ());       /* (The line's first look, in the overlays' banks: a part's
                                                 **   copied in only for a line that may be its; an ordinary
                                                 **   command's only part 2, the commands') */
-            k = f & NI_LINE ? names_line (l) : NL_NONE;     /* (A name given or forgotten: the names') */
+            k = (alias_wait || alias_said (l)) && alias_line (l) ? NL_DONE :    /* (The shortcuts': alias.c's) */
+                f & NI_LINE ? names_line (l) : NL_NONE;     /* (A name given or forgotten: the names') */
             if (k == NL_NONE && pacing (l) && pace_cmd (l)) {
                 k = NL_DONE;                    /* (The pace's, the state's, a small move's: pace.c's) */
             }

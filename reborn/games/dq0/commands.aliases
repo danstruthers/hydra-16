@@ -1,5 +1,6 @@
-# Dingus Quest Zero: the default aliases, added to every player's list when a game starts (the player may change or
-# remove them). Each line: the word, then the verb it means. Only single words that no other rule uses, and whose
+# Dingus Quest Zero: the default aliases, the game's own words (the parser's; on the card as aliases.txt, which the
+# alias command lists).  The player can't remove them, but a shortcut of the player's with the same word (alias.c's)
+# takes its place as a line's first word. Each line: the word, then the verb it means. Only single words that no other rule uses, and whose
 # verb's meaning does not depend on the word itself (manner, blow, maneuver, defence are read from the word, so they
 # stay in the grammar). Multi-word synonyms ("take off", "put away", "pick up") stay in the grammar.
 peer look

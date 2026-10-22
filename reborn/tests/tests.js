@@ -3100,6 +3100,40 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0alias', what: 'Dingus Quest Zero\'s shortcuts (the user, 2026-10-22: "alias should be for shortcuts, and name for naming things"; alias.c): none made, and the game\'s own words listed; one made ("alias st is status"), used, shown; its replacement asked about (no: kept; yes: replaced); a command\'s word refused ("alias look is ..."), "alias the sword as Linda" sent to name; a game\'s own word made the player\'s ("peer"), then removed, the game\'s own left (can\'t be removed); a shortcut of a shortcut given its line; one of several commands ("status; i"), the words typed after one put after its line; them all listed; the game kept and carried on, the shortcuts with it; one forgotten ("forget alias st")',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept',
+        'alias', 'alias st is status', 'st', 'alias st', 'alias st is i', 'no', 'st', 'alias look is status', 'alias the sword as Linda',
+        'alias peer = status', 'peer', 'alias s2 is st', 'alias both2 is status; i', 'both2', 'alias ex is examine', 'ex the torch', 'alias',
+        'unalias peer', 'unalias peer', 'alias st is i', 'yes', 'quit', 'dq0 -d /ram/kept', 'st', 'alias st', 'forget alias st', 'alias st',
+        'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      // (Its words checked with the screen's codes and the lines' wrapping taken out, each in its turn)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['> alias You\'ve made no shortcuts (alias x is dig down makes one).', 'The game\'s own words: peer (look), gaze (look),',
+          '> alias st is status st now stands for: status', '> st Pace: a walk', '> alias st st stands for: status',
+          '> alias st is i st stands for: status. Replace it? (yes or no)', '> no It stands as it was.', '> st Pace: a walk',
+          '> alias look is status look is one of the game\'s own command words: choose another.',
+          '> alias the sword as Linda To name a thing, use name: name the sword Linda.', '> alias peer = status peer now stands for: status',
+          '> peer Pace: a walk', '> alias s2 is st s2 now stands for: status', '> alias both2 is status; i both2 now stands for: status; i',
+          '> both2 Pace: a walk', 'You carry', '> alias ex is examine ex now stands for: examine', '> ex the torch',
+          '> alias Your shortcuts: st: status; peer: status; s2: status; both2: status; i; ex: examine.', 'The game\'s own words: peer (look)',
+          '> unalias peer peer isn\'t a shortcut now.', '> unalias peer peer is the game\'s own word (for look): it can\'t be removed',
+          '> alias st is i st stands for: status. Replace it? (yes or no)', '> yes st now stands for: i', '> st You carry',
+          '> alias st st stands for: i', '> forget alias st st isn\'t a shortcut now.', '> alias st st isn\'t a shortcut.', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        if (/> ex the torch[^>]*I don't/.test(o)) f.push('"ex the torch" not made "examine the torch"');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0talk', meaning: true, what: 'Dingus Quest Zero understanding the player (the command parser, dq0c: the grammar and the game\'s words, after the user\'s Language.txt), by what each command did: synonyms (take a gander: a look, no time), several words to a verb, turns as the character faces (half left) and two directions together (north and east), a door behind walked up to (asked which: the second), the little words passed over (off the verb\'s in "take off my coat": nothing worn refused; a filler in "saunter off to the left": a move to its left), a thing not there refused, a word it doesn\'t know doing nothing (their words: dq0wordsthings)',
       init: 't_rc', cycles: 600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'take a gander', 'turn half left',
@@ -3351,7 +3385,7 @@ module.exports = {
       name: 'dq0names', meaning: true, what: 'Dingus Quest Zero\'s names (the user, 2026-10-16: "I would like to be able to reference items by aliases, as long as the alias doesn\'t clash with something else"; names.c), by the names table (hub.h\'s struct tname, NAMES_AT) and the things\' records: a sword named Linda (dq0 -k sword: its record marked named), names that clash refused (another name, a kind of thing\'s, a kind of creature\'s, a word the parser needs: no name made), Linda used in commands (dropped, seen lying there, taken up, examined, taken in hand to strike a rat with), the room named the Mausoleum; the game kept and carried on, the names with it; then a name forgotten (its record no longer named) (the names\' words: dq0wordsthings)',
       init: 't_rc', cycles: 1000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k sword -d /ram/kept',
-        'name my sword Linda', 'alias the dagger as linda', 'name the dagger Torch', 'name the dagger kobold', 'name the dagger north', 'drop Linda',
+        'name my sword Linda', 'name the dagger as linda', 'name the dagger Torch', 'name the dagger kobold', 'name the dagger north', 'drop Linda',
         'look', 'take Linda', 'examine Linda', 'attack the rat with Linda', 'call this room the mausoleum', 'quit', 'dq0 -d /ram/kept',
         'forget the name Linda', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -3362,7 +3396,7 @@ module.exports = {
         const n1 = T.of('name my sword Linda');
         if (names(n1) !== 'NM_ITEM Linda') f.push('the sword not named Linda: ' + names(n1));
         if (!sword(n1) || !(sword(n1).flags & NAMED)) f.push('the sword\'s record not marked named');
-        for (const l of ['alias the dagger as linda', 'name the dagger Torch', 'name the dagger kobold', 'name the dagger north'])
+        for (const l of ['name the dagger as linda', 'name the dagger Torch', 'name the dagger kobold', 'name the dagger north'])
           if (names(T.of(l)) !== 'NM_ITEM Linda') f.push(l + ': a name that clashes made: ' + names(T.of(l)));
         const d = T.of('drop Linda');
         if (!dq0Here(d.after).some(i => i.name === 'sword')) f.push('Linda not put down');
@@ -3997,7 +4031,7 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k table,basket,sand,cloak,candle,quiver,arrows,sword',
         'face north and east', 'walk to the door behind me', '1', 'i', 'drop table', 'put the candle on the table', 'look', 'take the candle from the table',
         'wear cloak', 'hold basket', 'put sand in basket', 'put the dagger in the waterskin', 'hang the quiver on my belt', 'put arrows in quiver', 'hang the candle',
-        'wield the dagger', 'stow basket', 'put the backpack in the basket', 'take the cloak off', 'stow cloak', 'name my sword Linda', 'alias the dagger as linda',
+        'wield the dagger', 'stow basket', 'put the backpack in the basket', 'take the cloak off', 'stow cloak', 'name my sword Linda', 'name the dagger as linda',
         'name the dagger Torch', 'name the dagger kobold', 'name the dagger north', 'i', 'examine the moon', 'take off my coat', 'foo', 'status', 'jog',
         'search for traps as I go', 'stop searching', 'run north', 'run south', 'help', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -4013,7 +4047,7 @@ module.exports = {
           '> put arrows in quiver', 'You put the arrows in the quiver.', '> hang the candle', 'The candle won\'t hang from a belt.', '> wield the dagger',
           'Your hands are full: stow something, or put it down.', '> stow basket', 'You stow the basket in your backpack.', '> put the backpack in the basket',
           'The backpack won\'t go inside itself.', '> take the cloak off', 'You take off the cloak. It\'s in your hand.', '> stow cloak',
-          'You stow the cloak in your backpack.', '> name my sword Linda', 'You name your sword Linda.', '> alias the dagger as linda', 'That name is taken by your sword.',
+          'You stow the cloak in your backpack.', '> name my sword Linda', 'You name your sword Linda.', '> name the dagger as linda', 'That name is taken by your sword.',
           '> name the dagger Torch', 'That name is taken by a kind of thing (torch).', '> name the dagger kobold', 'That name is taken by a kind of creature (kobold).',
           '> name the dagger north', 'That name is taken: it\'s a word your commands need.', '> i', 'a candle, Linda, your sword, a torch, a flask of oil);',
           'a waterskin, a quiver (in it: an arrow)). In all, 20 lb.', '> examine the moon', 'You see no moon here.', '> take off my coat', 'You aren\'t wearing any coat.',

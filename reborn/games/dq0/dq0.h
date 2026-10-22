@@ -304,7 +304,7 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[12];
+extern unsigned char ovbank[13];
 
 /* ---- The swapped parts (bank.s's stubs: swap.inc), run in the main RAM's top (dq0.cfg's SWAP), a part at a time */
 
@@ -337,7 +337,7 @@ enum { NL_NONE, NL_DONE, NL_DEN };
 #define NI_THING    2                           /*   one that may say a thing's name, names_subst's) */
 unsigned char __fastcall__ names_in (const char* l);    /* Overlay 10 (names.c): line l's first look, NI_LINE and
                                                 **   NI_THING (0: neither part's, not copied in) */
-unsigned char __fastcall__ names_line (char* l);    /* Part 5 (names.c): a line that names (name, call, alias ...;
+unsigned char __fastcall__ names_line (char* l);    /* Part 5 (names.c): a line that names (name, call, rename ...;
                                                 **   forget, unname), before it's a command: a name given or
                                                 **   forgotten (NL_DONE); a denizen's to name (NL_DEN: names_den
                                                 **   after the command) */
@@ -355,6 +355,15 @@ unsigned char __fastcall__ room_named (const char* text);  /* Part 6: a room who
 struct tname;
 extern struct tname named_room;
 extern unsigned char names_n;                   /* (names.c's: the names given, 0 none) */
+unsigned char __fastcall__ names_hash (const char* s);  /* A word's hash (names.c's: up to a space, its case aside) */
+unsigned char __fastcall__ alias_hit (const char* l);   /* (alias.c's) A line's first word maybe a shortcut's, */
+unsigned char __fastcall__ alias_said (const char* l);  /* Overlay 4: a line the shortcuts' own ("alias ...") */
+unsigned char __fastcall__ alias_line (char* l);    /* Part 9: a line the shortcuts' (or the answer to a replacement
+                                                **   asked about): 1 done there */
+void alias_expand (void);                       /* Part 9: the line typed (inl) made its shortcut's line */
+void __fastcall__ alias_keep (int fd, unsigned char back);  /* Part 9: the shortcuts written to the save (back 0), read
+                                                **   from it (1; fd -1: none) */
+extern unsigned char aliases_n, alias_wait;     /* (The shortcuts made, 0 none; a replacement asked about) */
 extern char _SWAP_START__[];                    /* (The area: the overlays read in through it, as the game starts) */
 
 #endif
