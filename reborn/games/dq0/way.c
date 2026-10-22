@@ -189,16 +189,16 @@ void __fastcall__ s_look_way (unsigned char action)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Overlay 11: a look one way's words (words.c's o_words, as its look's E_VIEW is V_LOOKED: look.c's look (8)),
-** from the senses' record (sight_copy) and their look one way's own (WAY_SEEN, copied into lb's end, words.c's not
-** begun yet): the place it's in not told again; its own sentences said as they're made (none a glance says), the
-** things' and the denizens' (those ahead, the record's then) in the glance's words, streamed (lbsaid.s's: none said
-** twice in an answer) */
+/* ==== Overlay 7 (beside choose.c): a look one way's words (words.c's o_words, as its look's E_VIEW is V_LOOKED:
+** look.c's look (8)), from the senses' record (sight_copy) and their look one way's own (WAY_SEEN, copied into lb's
+** end, words.c's not begun yet): the place it's in not told again; its own sentences said as they're made (none a
+** glance says), the things' and the denizens' (those ahead, the record's then) in the glance's words, streamed
+** (lbsaid.s's: none said twice in an answer) */
 
-#pragma code-name (push, "OV11CODE")
-#pragma rodata-name (push, "OV11RODATA")
-#pragma data-name (push, "OV11RODATA")
-#pragma bss-name (push, "OV11RODATA")
+#pragma code-name (push, "OV7CODE")
+#pragma rodata-name (push, "OV7RODATA")
+#pragma data-name (push, "OV7RODATA")
+#pragma bss-name (push, "OV7RODATA")
 #pragma static-locals (push, on)              /* (Its locals static, in its bank: the code the less) */
 
 #define S           sight_copy
@@ -220,7 +220,8 @@ static unsigned char __fastcall__ twin (const struct beyond* b)
 void o_focus_words (void)
 {
     struct beyond* b;
-    unsigned char i, k, n, sk = 0xFF, sr = 0xFF;
+    struct beyond* c;
+    unsigned char i, j, k, n, sk = 0xFF, sr = 0xFF, told = 0;
 
     hub_mem (SIGHT_BANK, &W, WAY_SEEN, sizeof W);
     if (W.seq != S.seq) {
@@ -235,6 +236,9 @@ void o_focus_words (void)
                                                 **   kitchen, lit by torches."; "Down the passage ahead you see into
                                                 **   the hall, 30 feet on." */
         k = b->noun;
+        if (told & 1 << i) {
+            continue;                           /* (A way into a room told already, with the first) */
+        }
         if (b->what == WB_SHUT) {
             if (k == sk && b->rel == sr) {
                 continue;                       /* (Two doors the same way, shut: said once) */
@@ -264,6 +268,13 @@ void o_focus_words (void)
                 *lb = 0;
                 theme_named (TN_LIGHT, 0);
                 sayf (", %s", lb);
+            }
+            for (j = i + 1, c = b + 1; j < W.nbeyond; ++j, ++c) {  /* (Another way ahead into the same room: told
+                                                **   with it, not the room again, the user's, 2026-10-22) */
+                if (c->what == WB_ROOM && c->kind == b->kind) {
+                    told |= 1 << j;
+                    sayf ("; the %s %s leads there too", noun[c->noun], rel_w[(c->rel + 1) & 3]);
+                }
             }
         }
         say (".");

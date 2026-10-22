@@ -194,7 +194,7 @@ ovl_out:
             OVFN        fight_target, 6
             OVFN        pacing, 9
             OVFN        names_in, 10
-            OVFN        focus_words, 11
+            OVFN        focus_words, 7
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)
 
