@@ -911,4 +911,7 @@ chest, a bag tells what it reveals (a look in, a look through), in the open's ow
 
 And (the same day): "Look at should also tell you if a light source is lit or out."
 
+Asked for the words (the lead's options, the same day), the user chose: a bare examine a closer look, no
+appraisal; assess the value; appraise both value and quality; judge, "quality of", "how well made" the quality; and
+the other aspects now too: heft and weigh (its weight), study the lock, check it for traps, its condition.
 **Design:** HOUSE.md's commands; the command grammar's words.
