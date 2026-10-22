@@ -7,11 +7,15 @@
 ** for it moves every body: the character's walk a square at a time (dq0w.c's step_on), the actors' steps (wbody.c's:
 ** their intents, a coarse move's too), the denizens out of the character's way (their task's roam: I_TROD), each
 ** journalled as it's made (the hub's traces' journal, TJ_AT: trod, the main RAM's, all a step costs) and taken into
-** the store as the journal fills (tr_flush, the main loop's: a part's swap for many passings).
+** the store as the journal fills (tr_flush, the main loop's: a part's swap for many passings).  A stay counts as
+** passings, a passing each TQ on the square (the user's, 2026-10-22): a denizen's standing and a lair's keepers' where
+** they live, the minds' (I_TROD's stays); the character's found as its passings are taken in, the TQs since the one
+** before (the one that brought it there).
 **
 ** The store: two banks of the world's own, records of eight bytes, four to a bucket, a square's by a hash of its
-** chunk and its place in it: on a square, whose (a kind, 0 the character; smoke on the air), how many passings, when
-** the last went (in fours of minutes: TQ) and its way.  A passing of one already there is counted in its record, a
+** chunk and its place in it: on a square, whose (a kind, 0 the character; smoke on the air), how many passings (and
+** its scent's count: those and the stays there, hub.h's TR_MORE), when the last went (in fours of minutes: TQ) and its
+** way.  A passing of one already there is counted in its record, a
 ** new one goes in a free place or over the oldest in its bucket (trodden out: old traces go as the place is busy, and
 ** the store never fills).  Its chunks in a directory (the world's own paging bank's, after ipage.c's table): those it
 ** holds, each wanted as a passing's or a reading's chunk (the nine round the character's always, as it comes into
@@ -138,13 +142,14 @@ static unsigned char need (void)
 }
 
 /* A passing (s) taken into the store: its chunk wanted (read in, if it isn't: not for a coarse move's), its record
-** counted; a lit flame's smoke with it; a chunk kept swept marked so */
+** counted, its stay with it (its scent's: hub.h's TR_MORE); a lit flame's smoke with it; a chunk kept swept marked
+** so */
 static struct tstep s;
 static void take (void)
 {
     struct stratum* t = &STRATUM (s.sn);
-    unsigned char h, k = s.kind, w = s.head;
-    unsigned q, m;
+    unsigned char h, k = s.kind, w = s.head, n = !(w & TS_STAY), sc = s.stay > 254 ? 255 : s.stay + n;
+    unsigned q, m, st;
 
     if (t->n != s.sn || !t->made || s.x - t->x0 >= t->w || s.y - t->y0 >= t->h) {
         return;                                 /* (Its stratum's record out of its slot: let go) */
@@ -155,6 +160,14 @@ static void take (void)
     q = ((s.x - t->x0) & (CW - 1)) | ((s.y - t->y0) & (CW - 1)) << CW_BITS;
     m = (unsigned) (s.t / TQ);                  /* (All s wants first: a part's call puts this part's own data back as
                                                 **   its image has it) */
+    if (!k) {
+        own ();                                 /* (The character's: its stay there, the TQs since the passing before,
+                                                **   the one that brought it there, on its stratum) */
+        st = THD->psn == s.sn + 1 ? m - THD->pq : 0;
+        THD->psn = s.sn + 1;
+        THD->pq = m;
+        sc = st > 254 ? 255 : st + 1;
+    }
     if (!(h = (w & TS_NOWAY) ? find () : need ())) {
         return;
     }
@@ -162,7 +175,8 @@ static void take (void)
     THD->ch[h - 1].flags |= k == TK_SWEPT ? TC_SWEPT | TC_DIRTY : TC_DIRTY;
     pc = h;
     pk = k;
-    pn = 1;
+    pn = n;                                     /* (A stay's no passing: its TQs there its scent's) */
+    psc = sc;
     pt = m;
     if (k < TK_SMOKE) {
         psq = q | (w & TS_NOWAY ? 0 : (unsigned) (w & 7) << 10 | TW_WAY);
@@ -240,8 +254,6 @@ void __fastcall__ s_tr_flush (unsigned char keep)
     pcx = (HUB->pc_x - STRATUM (pcs).x0) >> CW_BITS;
     pcy = (HUB->pc_y - STRATUM (pcs).y0) >> CW_BITS;
     smoke = memcmp (HUB->pc_lamp, "torch", 5) ? 2 : 5;     /* (A torch smokes; a lantern, a candle a little) */
-    ring (0);
-    ring (1);
     own ();
     if (THD->lsn != pcs + 1 || THD->lcx != pcx || THD->lcy != pcy) {
         THD->lsn = pcs + 1;
@@ -258,6 +270,8 @@ void __fastcall__ s_tr_flush (unsigned char keep)
             }
         }
     }
+    ring (0);                                   /* (The nine first: a lair's scent, its keepers', in one of them) */
+    ring (1);
     for (h = 1; keep && h <= NTCH; ++h) {
         own ();
         if (THD->ch[h - 1].used && (THD->ch[h - 1].flags & TC_DIRTY)) {
@@ -366,11 +380,12 @@ static unsigned char __fastcall__ faded (unsigned a)
 /* Square x, y's records taken in (its floor's hold and life; a smell's distance d): each kind's passings, the last's
 ** time and way, how clearly they show (a print's: its hold, its tread, its passings, less as it weathers) or how
 ** strongly they smell (its smell and the character's nose, hub.h's SCENT_LOG, less a point as its age doubles, faded's,
-** and half a point a square off); the smoke on the air, the strongest (smk) */
+** and half a point a square off); each the stronger by its passings (a scent's, its stays too: hub.h's TR_MORE); the
+** smoke on the air, the strongest (smk) */
 static void __fastcall__ found (unsigned x, unsigned y, unsigned char d)
 {
     static unsigned b, a;
-    static unsigned char h, i, j, k, c, tr, sm;
+    static unsigned char h, i, j, k, c, tr, sm, mo;
 
     if (!(h = chunk_of (x, y))) {
         return;
@@ -385,8 +400,10 @@ static void __fastcall__ found (unsigned x, unsigned y, unsigned char d)
         k = rr.k;
         a = now - rr.t;
         c = faded (a) + d / 2;
+        j = how == TRC_SMELL ? rr.sc : rr.n;
+        mo = TR_MORE (j);
         if (k == TK_SMOKE) {                    /* (Smoke on the air: its strength, less as it fades) */
-            j = rr.sq >> 10 & 7;
+            j = (rr.sq >> 10 & 7) + mo;
             if (how == TRC_SMELL && c < j && j - c > smk) {
                 smk = j - c;
             }
@@ -397,12 +414,12 @@ static void __fastcall__ found (unsigned x, unsigned y, unsigned char d)
             continue;                           /* (Its own sweat the character doesn't smell) */
         }
         tr = TKN->tread[k];
-        sm = TKN->smell[k];
+        sm = TKN->smell[k] + mo;
         if (how == TRC_SMELL) {
             sm = SCENT_LOG (sm, pnose) + 1;
             c = c >= sm ? 0 : sm - c;
         } else {
-            c = hold + tr / 3 + (rr.n >= 4) + (rr.n >= 12);
+            c = hold + tr / 3 + mo;
             j = a >= life ? c : a / (life / 4 + 1);
             c = !tr || j >= c ? 0 : c - j;
         }
@@ -565,6 +582,7 @@ unsigned __fastcall__ s_traced (const struct msg* m)
         }
         fc[k] = 0;
         t = &R.tr[R.ntr++];
+        t->strength = best;
         t->kind = i = fk[k];
         t->n = fn[k];
         t->age = fa[k];

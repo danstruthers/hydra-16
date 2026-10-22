@@ -116,6 +116,7 @@ void __fastcall__ s_tr_file (unsigned char h, unsigned char what)
                     pk = t.k;
                     psq = t.sq;
                     pn = t.n;
+                    psc = t.sc;
                     pt = t.t;
                     put ();
                 }

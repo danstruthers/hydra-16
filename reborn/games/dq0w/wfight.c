@@ -32,6 +32,8 @@ static char wb[32];                             /* (A blow's words on their way 
 
 extern unsigned char pc_hit;                    /* (dq0w.c's: a blow at the character stops its long task, hard) */
 extern unsigned char fwant, flast;              /* (dq0w.c's fighting on: a blow at it, looked at as it's free; whose) */
+unsigned __fastcall__ weight_in (unsigned where, unsigned x);  /* (Part 10's, things.c's: what's on the character
+                                                **   weighs, quarter pounds) */
 
 /* A blow told (E_FIGHT): attacker att, defender def (0 the character, else an actor's entry plus 1; body bd the one in
 ** it), how it came out (O_*, FO_BLED), what it left them in (FF_*); its words the ring's, fring; the ring on */
@@ -217,17 +219,28 @@ void __fastcall__ s_den_blow (unsigned char def, unsigned char z)
     blow (bk + 1, def, z);
 }
 
+static struct item* p;
+
+/* The thing at hand (ip) on the character, however deep (p, what holds it at the last) */
+static unsigned char mine (void)
+{
+    for (p = ip; p->where == IW_ITEM; p = item_at (p->x)) {
+    }
+    return p->where == IW_ACTOR && !p->x;
+}
+
 /* The character robbed by body bd (its intent, I_ROB: part 14's; a robber's, kinds.txt's ways r, the character
 ** helpless beside it): what it holds (but a light lit: the robber leaves it its light) and its pennies (wherever it
 ** keeps them), taken off to x, y (the robber's lair's home square, on its stratum; or, that square not to be had,
-** where the robber stands) and put down there, a stash to be found; the referee told what's no longer to hand (RS_EQUIP,
-** each held tool's key: what it struck with gone; its load, its next things' handling's), the UI the robbery (E_TASK
-** TE_ROBBED, b the robber plus 1), if anything was taken */
+** where the robber stands) and put down there, a stash to be found; the referee told at once what's to hand now and
+** the load left (RS_EQUIP 2, as the UI's to_hand tells it a thing handled: the keys of the tools it still carries, each
+** after its mark and with its quality, things.c's tools; their weight, weight_in's: the user's, 2026-10-22, "Weight
+** should be recounted immediately after a robbery"), the UI the robbery (E_TASK TE_ROBBED, b the robber plus 1), if
+** anything was taken */
+#define WSLOT           (HUB->slot[SLOT_WORLD])
 void __fastcall__ s_den_rob (unsigned x, unsigned y)
 {
     static struct msg m;
-    static struct req* r;
-    static struct item* p;
     static unsigned i, n;
     static unsigned char kind, f;
     static char key[sizeof CATALOGUE[0].tool];
@@ -242,9 +255,7 @@ void __fastcall__ s_den_rob (unsigned x, unsigned y)
     for (n = 0, i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
         kind = ip->kind;
         f = ip->flags;
-        for (p = ip; p->where == IW_ITEM; p = item_at (p->x)) {     /* (On the character, however deep) */
-        }
-        if (p->where != IW_ACTOR || p->x || (kind != KI_PENNIES && ((f & (I_HELD | I_LIT)) != I_HELD))) {
+        if (!mine () || (kind != KI_PENNIES && ((f & (I_HELD | I_LIT)) != I_HELD))) {
             continue;
         }
         p = item_at (i);
@@ -254,20 +265,36 @@ void __fastcall__ s_den_rob (unsigned x, unsigned y)
         p->y = y;
         p->flags &= ~(I_HELD | I_WORN);
         ++n;
-        hub_map (CAT_BANK);
-        memcpy (key, CATALOGUE[kind].tool, sizeof key);
-        if (key[0] && (f & I_HELD)) {
-            hub_map (0);
-            r = &HUB->slot[SLOT_WORLD];
-            r->kind = RS_EQUIP;
-            r->actor = 0;
-            r->a = 0;
-            strcpy (r->text, key);
-            hub_ask (SLOT_WORLD)->state = REQ_FREE;
-        }
     }
     hub_map (0);
     if (n) {
+        WSLOT.text[0] = 0;                      /* (What's to hand now: each tool still on it, however deep) */
+        for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
+            kind = ip->kind;
+            f = ip->flags;
+            n = ip->quality;
+            if (!mine ()) {
+                continue;
+            }
+            hub_map (CAT_BANK);                 /* (Its key after its mark, its quality after it: wb's, the blows'
+                                                **   words' room, a moment) */
+            memcpy (wb + 1, CATALOGUE[kind].tool, sizeof key);
+            hub_map (0);
+            if (wb[1] && strlen (WSLOT.text) < REQ_TEXT - sizeof wb) {
+                wb[0] = f & I_HELD ? '*' : f & I_WORN ? '+' : ' ';
+                key[0] = '0' + n;
+                key[1] = 0;
+                strcat (wb, key);
+                strcat (WSLOT.text, wb);
+            }
+        }
+        i = weight_in (IW_ACTOR, 0);            /* (And its load: its encumbrance the referee's, at once) */
+        hub_map (0);
+        WSLOT.kind = RS_EQUIP;
+        WSLOT.actor = 0;
+        WSLOT.a = 2;
+        WSLOT.w1 = i;
+        hub_ask (SLOT_WORLD)->state = REQ_FREE;
         m.kind = E_TASK;
         m.who = 0;
         m.b = bk + 1;

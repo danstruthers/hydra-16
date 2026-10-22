@@ -313,6 +313,11 @@ static unsigned pcx, pcy;
 static unsigned char pcs, pclit, pcbusy, pcdead;
 static unsigned char pchelp;                    /* (Helpless: in shock, or senseless as it lies, busy till it comes
                                                 **   round; the referee's conditions) */
+static unsigned char pcstay;                    /* (Its stay where it stands, since it came onto the square: its
+                                                **   scent's points more, hub.h's TR_MORE of a passing each TQ) */
+static unsigned char nowq, pcq;                 /* (The TQs gone by, the traces' clock: its low byte; and as the
+                                                **   character came onto its square) */
+static unsigned long nextq;                     /* (When the next TQ's gone by) */
 
 unsigned __fastcall__ apart (int dx, int dy);  /* |dx| or |dy|, the more (apart.s: in assembly, asked of every
                                                 **   square the minds weigh) */
@@ -537,6 +542,7 @@ static unsigned char __fastcall__ open_sq (unsigned char* p)
 
 static struct msg im;                           /* (Its intents: below) */
 static void __fastcall__ post (unsigned char kind, unsigned char who);
+static void trodden (void);
 
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
@@ -600,6 +606,14 @@ void __fastcall__ s_place (unsigned char i)
             D.ready = now + random (50);
         }
         den_put (k);
+        im.x[1] = kd;                           /* (Its scent where it lives, at its lair's home: a passing, its comings
+                                                **   and goings, and its stays, the most: the world's traces told) */
+        im.x[2] = L.sn;
+        im.w1 = L.hx;
+        im.w2 = L.hy;
+        im.a = 0;
+        im.b = 255;
+        trodden ();
     }
     if (kd && (kind_get (kd), K.flags & K_SWEEPS)) {
         im.x[2] = L.sn;                         /* (A kind that sweeps its floors: the lair's chunk kept swept, the
@@ -673,6 +687,8 @@ static unsigned char sgen[NACTORS], sres[NACTORS];  /* (Each actor's senses as t
 static unsigned sax[NACTORS], say[NACTORS];
 static unsigned long alert[NACTORS];            /* (Each actor still and facing a noise it heard till then) */
 static unsigned char steps[NACTORS];            /* (Each one's steps: a noise of its own every eighth) */
+static unsigned char stq[NACTORS], stn[NACTORS];   /* (Each one's square, its x and 16 times its y (a step's
+                                                **   always another), and the TQ its stay there last journalled) */
 static unsigned char fled[NACTORS];             /* (Each one fleeing the character: its turns of it left) */
 static unsigned wt;                             /* (The wait an actor's decided on, tenths) */
 static unsigned dsx, dsy;                       /* (The square a cornered one darts to) */
@@ -728,6 +744,15 @@ static void __fastcall__ post (unsigned char kind, unsigned char who)
     if (kind == I_DONE) {
         hub_ring (T_WORLD);
     }
+}
+
+/* A passing posted (im's: I_TROD, the world's traces), not waited for: nothing an actor's decision reads */
+static void trodden (void)
+{
+    unsigned char st = stirs;
+
+    post (I_TROD, 0);
+    stirs = st;
 }
 
 static void settle (void)
@@ -824,6 +849,7 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     den_put (i);
     kind_get (D.kind);
     akind[k] = D.kind;
+    stn[k] = nowq;                              /* (Its stay from now, if it's the square the entry's last was on) */
     ahx[k] = D.hx;
     ahy[k] = D.hy;
     memset (&a, 0, sizeof a);
@@ -929,8 +955,8 @@ static unsigned char __fastcall__ senses (unsigned char k)
     HUB->dsense.dark = K.dark;
     HUB->dsense.hear = K.hear;
     HUB->dsense.eyes = K.eyes;
-    HUB->dsense.nose = knose[akind[k] % SND_KINDS] / 3;    /* (Its smell's reach in still air: a third of its
-                                                **   nose, squares) */
+    HUB->dsense.nose = (knose[akind[k] % SND_KINDS] + pcstay) / 3;  /* (Its smell's reach in still air: a third of
+                                                **   its nose, squares, the character's stay a point or two more) */
     hub_call (&HUB->dsense, T_SENSES);
     HUB->dsense.state = REQ_FREE;
     slk[k] = HUB->dsense.slack;
@@ -1280,8 +1306,9 @@ static unsigned char __fastcall__ meets (unsigned char k, unsigned char was)
 ** journal, TJ_AT: its last NTRAIL squares), the freshest square of it beside the actor (or under it) its nose can
 ** still smell (hub.h's SCENT_LIFE, of the character's smell, by its nose: a hound's days, a rat's most of a day), and
 ** on along it to the next: the step toward that (step_for's); or, an older trail, the world's to find (STEP_SCENT:
-** the traces' store, which keeps it all), 0xFB, at once if the last one led it on, else once each ten seconds (sniffed:
-** till then); 0xFF, neither */
+** the traces' store, which keeps it all, each square's scent the longer for its passings and the character's stays
+** there: hub.h's TR_MORE), 0xFB, at once if the last one led it on, else once each ten seconds (sniffed: till then);
+** 0xFF, neither */
 static unsigned long sniffed[NACTORS];
 static unsigned char __fastcall__ scent (unsigned char k)
 {
@@ -1318,6 +1345,28 @@ static unsigned char __fastcall__ scent (unsigned char k)
     return d;
 }
 
+/* Actor k's stay where it stands (the copy a): a passing for each TQ on its square, journalled as each goes by (the
+** world's traces, I_TROD's TS_STAY: its scent the stronger there, hub.h's TR_MORE), not waited for */
+static void __fastcall__ stayed (unsigned char k)
+{
+    unsigned char q, c;
+
+    q = (unsigned char) a.x + ((unsigned char) a.y << 4);
+    if (stq[k] != q) {
+        stq[k] = q;                             /* (Come onto it: its stay begun) */
+        stn[k] = nowq;
+    } else if ((c = nowq - stn[k]) != 0) {
+        stn[k] = nowq;
+        im.x[1] = akind[k];
+        im.x[2] = a.sn;
+        im.w1 = a.x;
+        im.w2 = a.y;
+        im.a = TS_STAY;
+        im.b = c;
+        trodden ();
+    }
+}
+
 /* What actor k means to do, by its kind, its attitude and what it senses, said (its intent: the world does it, by the
 ** character's rules, or strikes its blow) and waited for, and the blows struck taken to heart (fought): kept off a
 ** foe; an ally's way; as it senses the character, meets's (a foe beside it: a blow); a noise heard, still a while;
@@ -1329,6 +1378,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
 
     kind_get (akind[k]);
     memcpy (&a, &HUB->actor[k], sizeof a);
+    stayed (k);
     wt = 0;
     refx = pcx;
     refy = pcy;
@@ -1468,7 +1518,7 @@ static unsigned long roam_at;                   /* (The soonest one's due) */
 static unsigned char roam (void)
 {
     struct den* q = POP->den;
-    unsigned char i, lim, st, n = 0;
+    unsigned char i, lim, n = 0;
     unsigned x, y;
 
     if (now < roam_at) {
@@ -1506,9 +1556,8 @@ static unsigned char roam (void)
             im.w1 = x;
             im.w2 = y;
             im.a = D.face;
-            st = stirs;
-            post (I_TROD, 0);
-            stirs = st;                        /* (Nothing an actor's decision reads: not waited for) */
+            im.b = 0;                           /* (A passing, no stay) */
+            trodden ();
         }
         D.ready = now + ROAM_T + random (ROAM_T);
         if (D.ready < roam_at) {
@@ -2066,10 +2115,23 @@ int main (int argc, char* argv[])
             }
             hub_map (0);
         }
-        if (act && (pcx != lpx || pcy != lpy || (pclit | pcbusy << 1) != lpl)) {
-            lpx = pcx;                          /* (The character changed: each actor senses it again) */
+        if (act) {
+            if (now >= nextq) {                 /* (The traces' clock: a TQ gone by) */
+                nextq = now + TQ;
+                ++nowq;
+            }
+            if (pcx != lpx || pcy != lpy) {
+                pcq = nowq;                     /* (Come onto a square: its stay there begun) */
+                pcstay = 0;
+            } else if (pcstay < 2) {
+                pcstay = TR_MORE ((unsigned char) (nowq - pcq + 1));
+            }
+        }
+        if (act && (pcx != lpx || pcy != lpy || (pclit | pcbusy << 1 | pcstay << 2) != lpl)) {
+            lpx = pcx;                          /* (The character changed: each actor senses it again; its stay's
+                                                **   scent too) */
             lpy = pcy;
-            lpl = pclit | pcbusy << 1;
+            lpl = pclit | pcbusy << 1 | pcstay << 2;
             if (!++sense_gen) {
                 sense_gen = 1;
             }

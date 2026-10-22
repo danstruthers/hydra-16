@@ -96,7 +96,11 @@ in (the top stratum's first: where the character begins).
 
 - **Placing:** a lair's denizens are put on squares of their own as the character comes into its chunk or one beside
   it (round the way, or in a room of the chunk), by the lair's own numbers, so it's the same whenever it happens: none
-  on the way or beside it, nor beside the character (it comes out there, and isn't boxed in).
+  on the way or beside it, nor beside the character (it comes out there, and isn't boxed in).  Each one's scent is
+  left at the lair's home as it's placed (the user's, 2026-10-22: "repeated passage or occupancy should enhance prior
+  smells"): a passing and the most stays there are (I_TROD to the world's traces: DUNGEON.md's a stay counts as
+  passings), so a lair smells strongly of its keepers from the first ("A musky smell hangs heavy here: giant rats, by
+  the smell of it."), and their comings and goings about it keep it fresh.
 - **Away:** the denizens placed but not actors move coarsely, every half minute to a minute or so, to a square of
   their range about their lairs (in a chunk that's made: none is made for them), so the dungeon goes on where the
   character isn't; a patrol met at a crossroads was walking its round, the rats in the cellar were there all along,
@@ -282,15 +286,22 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
 - **Smelt** (slice 4.1): a kind with a nose (kinds.txt's nose, 0-9) smells the character in still air within a third
   of it (squares: a rat's 2, a bear's 2, a man's none), along a line the air passes (no rock, wall nor shut door): the
   senses answer it with what's seen and heard (the hub's dsense: its nose's reach asked, SN_SMELT told), and it's
-  sensed as if seen.  Downwind further, upwind less, with the air layer (slice 4.5).
+  sensed as if seen.  The character's scent the stronger as it stays where it is (hub.h's TR_MORE, of a passing each
+  four minutes there: the minds' own count, pcstay), the nose's reach a third of the nose and those points more (a
+  rat's 3 squares once the character's been on its square some three quarters of an hour, a man's 1).  Downwind
+  further, upwind less, with the air layer (slice 4.5).
+- **A stay** (the user's, 2026-10-22): an actor standing, resting or fighting where it is leaves its scent the
+  stronger there, a passing each four minutes on its square (dq0d.c's stayed, as each goes by: I_TROD's TS_STAY, the
+  world's traces).
 - **A scent followed** (slice 4.1; the user's, 2026-10-21: keen noses follow a scent far longer than an hour): a kind
   with a keen nose (6 or more, K_NOSE: giant rats, ghouls, cave bears, cave adders, lindworms), hostile, that doesn't
   sense the character follows its trail, coming after it: the world's journal of the character's last 64 squares,
   the freshest beside it that its nose can still smell (hub.h's SCENT_LIFE: the character's sweat's smell, by its
   nose: a rat's most of a day, a bear's a day and a half), and on to the next; past them, the world's store's older
   trail (its intent STEP_SCENT: the world finds the way the character went from its square, or the freshest square
-  beside it; none, it stands a moment and goes about its business, and sniffs again ten seconds on).  So a rat that
-  lost the character round a corner comes on after it.
+  beside it, each square's scent lasting the longer for the passings and the character's stays there: hub.h's
+  TR_MORE; none, it stands a moment and goes about its business, and sniffs again ten seconds on).  So a rat that
+  lost the character round a corner comes on after it, and a trail where it waited lasts the longer.
 - **In the way:** the character can't walk onto a denizen's square: a walk along a passage, across a room or up to
   a square stops short of one (the way across a room found round them), and one in the very next square is told ("A
   giant rat is in the way.": E_NOWAY's N_DEN, the actor's).
