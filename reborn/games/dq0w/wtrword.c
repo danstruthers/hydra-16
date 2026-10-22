@@ -3,8 +3,9 @@
 ** are, the UI's to say (the UI bank's trtext).  "The floor here is flagged, grey with dust. It's been trodden: there
 ** are the marks of feet."  "Several small clawed feet have crossed the dust here, recently, leading ahead to your
 ** left: giant rats, by the look of them."  "A rank animal smell hangs here, fresh: something large passed not long
-** ago."  Each way by the character's facing, never the compass (HOUSE.md's).  Swapped part 31's (../dq0/swap.inc,
-** bank.s's stub tr_words).
+** ago."  "A musky smell hangs heavy here: giant rats, by the smell of it." (a scent strong, its passings and stays
+** many: a lair's).  Each way by the character's facing, never the compass (HOUSE.md's).  Swapped part 31's
+** (../dq0/swap.inc, bank.s's stub tr_words).
 */
 
 #include <fcntl.h>
@@ -71,7 +72,8 @@ static unsigned char feet (void)
 }
 
 /* The words of the traces read (the UI bank's tread: each trail's passings and age made TP_*, TA_*; a critical
-** failure's misread), into its trtext; the UI told (E_VIEW V_TRACED): w back (the tenths the reading took) */
+** failure's misread; a scent by its strength, heavy at TR_HEAVY, else by its age), into its trtext; the UI told
+** (E_VIEW V_TRACED): w back (the tenths the reading took) */
 unsigned __fastcall__ s_tr_words (unsigned w)
 {
     static const char* const ground[5] = { "bare earth", "rough stone", "paved", "flagged", "soft earth" };    /* (MAT_*) */
@@ -167,8 +169,8 @@ unsigned __fastcall__ s_tr_words (unsigned w)
             t->what[0] -= e >= 'a' && e <= 'z' ? 'a' - 'A' : 0;
             add (t->what);
             t->what[0] = e;
-            add (t->ago <= TA_RECENT ? " hangs here, fresh" : t->ago == TA_HOURS ? " hangs here, faint" :
-                " lingers here, stale");
+            add (t->strength >= TR_HEAVY ? " hangs heavy here" : t->ago <= TA_RECENT ? " hangs here, fresh" :
+                t->ago == TA_HOURS ? " hangs here, faint" : " lingers here, stale");
             if (G_OK (R.grade)) {
                 maker (t, 1);
             } else {

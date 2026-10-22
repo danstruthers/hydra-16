@@ -4,9 +4,10 @@
 */
 
 /* The record at hand (pc, pk, psq, pt: its chunk, whose, its square and way, when) put in its bucket: one of its
-** square and kind counted (pn more), its time and way the newest's; a new one in a free place, or over the oldest
-** (older than the one at hand: one read in from a file may not be) */
-static unsigned char pc, pk, pn;
+** square and kind counted (pn passings more, psc its scent's: its passings and stays), its time the newest's, its way
+** too (but a stay's, no passing: the way the last went from there kept); a new one in a free place, or over the
+** oldest (older than the one at hand: one read in from a file may not be) */
+static unsigned char pc, pk, pn, psc;
 static unsigned psq, pt;
 static void put (void)
 {
@@ -31,7 +32,12 @@ static void put (void)
                 return;
             }
             p->n = p->n + pn > 255 ? 255 : p->n + pn;
-            p->sq = psq;
+            if ((p->sc += psc) < psc) {
+                p->sc = 255;                    /* (Its most) */
+            }
+            if (pn) {
+                p->sq = psq;
+            }
             p->t = pt;
             return;
         }
@@ -45,6 +51,7 @@ static void put (void)
         q->c = pc;
         q->k = pk;
         q->n = pn;
+        q->sc = psc;
         q->sq = psq;
         q->t = pt;
     }

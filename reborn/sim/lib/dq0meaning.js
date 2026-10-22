@@ -97,8 +97,11 @@ const EXPRS = {
   trResult: F('struct tread', 'result'), trGrade: F('struct tread', 'grade'), trFloor: F('struct tread', 'floor'), trDust: F('struct tread', 'dust'),
   trTrod: F('struct tread', 'trod'), trSmoke: F('struct tread', 'smoke'), trNtr: F('struct tread', 'ntr'), trTr: F('struct tread', 'tr'),
   trailSize: 'sizeof (struct trail)', tlName: F('struct trail', 'name'), tlWhat: F('struct trail', 'what'), tlN: F('struct trail', 'n'),
-  tlAgo: F('struct trail', 'ago'), tlHead: F('struct trail', 'head'), tlKind: F('struct trail', 'kind'), tlAge: F('struct trail', 'age'),
+  tlAgo: F('struct trail', 'ago'), tlHead: F('struct trail', 'head'), tlKind: F('struct trail', 'kind'), tlAge: F('struct trail', 'age'), tlStrength: F('struct trail', 'strength'),
   tjAt: '(unsigned) TJ_AT - 0x8000', tjN: F('struct tjournal', 'n'), tjPn: F('struct tjournal', 'pn'),
+  tjE: F('struct tjournal', 'e'), tjP: F('struct tjournal', 'p'), tsSize: 'sizeof (struct tstep)', njournal: 'NJOURNAL', ntrail: 'NTRAIL',
+  tsKind: F('struct tstep', 'kind'), tsSn: F('struct tstep', 'sn'), tsHead: F('struct tstep', 'head'), tsStay: F('struct tstep', 'stay'),
+  tsX: F('struct tstep', 'x'), tsY: F('struct tstep', 'y'), tsT: F('struct tstep', 't'),
   worldBank: 'WORLD_BANK', wCpage: F('struct wrec', 'cpage'), cpSize: 'sizeof (struct cpage)', ncpages: 'NCPAGES',
   cpUsed: F('struct cpage', 'used'), cpN: F('struct cpage', 'n'), chBank0: 'CHANGE_BANK (0)', chPage: 'CH_PAGE',
   chSize: 'sizeof (struct change)', chSn: F('struct change', 'sn'), chX: F('struct change', 'x'), chY: F('struct change', 'y'),
@@ -279,11 +282,19 @@ function createRecorder() {
         floor: name('MAT_EARTH', ui[o + L.trFloor]), dust: ui[o + L.trDust], trod: ui[o + L.trTrod], smoke: ui[o + L.trSmoke],
         trails: Array.from({ length: Math.min(ui[o + L.trNtr], 3) }, (_, i) => { const q = o + L.trTr + i * L.trailSize;
           return { name: str(ui, q + L.tlName, 12), what: str(ui, q + L.tlWhat, 24), n: name('TP_ONE', ui[q + L.tlN]), ago: name('TA_NOW', ui[q + L.tlAgo]),
-            head: ui[q + L.tlHead], kind: ui[q + L.tlKind], age: w16(ui, q + L.tlAge) }; }),
+            head: ui[q + L.tlHead], kind: ui[q + L.tlKind], age: w16(ui, q + L.tlAge), strength: ui[q + L.tlStrength] }; }),
         text: str(ui, L.uTrtext, L.trText) };
     }
     const jb = bank(L.denBank);                                 // (The traces' journal's counts: the passings so far)
-    if (jb) s.journal = { n: w16(jb, L.tjAt + L.tjN), pn: w16(jb, L.tjAt + L.tjPn) };
+    if (jb) {                                                   // (And the passings in its rings, the oldest first: the
+      const ring = (at, size, n) => Array.from({ length: Math.min(n, size) }, (_, i) => {   //   denizens', the character's)
+        const o = L.tjAt + at + ((n - Math.min(n, size) + i) % size) * L.tsSize, h = jb[o + L.tsHead];
+        return { kind: jb[o + L.tsKind], sn: jb[o + L.tsSn], head: h & 7, noway: !!(h & K.TS_NOWAY), lit: !!(h & K.TS_LIT), stay: !!(h & K.TS_STAY),
+          stays: jb[o + L.tsStay], x: w16(jb, o + L.tsX), y: w16(jb, o + L.tsY), t: w32(jb, o + L.tsT) }; });
+      s.journal = { n: w16(jb, L.tjAt + L.tjN), pn: w16(jb, L.tjAt + L.tjPn) };
+      s.journal.e = ring(L.tjE, L.njournal, s.journal.n);
+      s.journal.p = ring(L.tjP, L.ntrail, s.journal.pn);
+    }
     const t = bank(L.sightBank);
     if (t) {
       const list = (n, max, at, size, f) => Array.from({ length: Math.min(t[n], max) }, (_, i) => f(at + i * size - at, i));

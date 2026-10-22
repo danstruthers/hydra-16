@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     11                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     12                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -39,7 +39,8 @@
                                                 **   tread, dsense's nose; the places kept lit, KEPT_AT; 11: the
                                                 **   things' requests' selectors and count, IO_SHUT, IO_INSIDE,
                                                 **   PA_LOCK, the selectors SL_OTHER ... SL_EMPTY, the items'
-                                                **   records' shut, WB_CROSS) */
+                                                **   records' shut, WB_CROSS; 12: the traces' stays, TS_STAY, a
+                                                **   trail's strength) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -91,7 +92,10 @@ struct fight {
 ** world's (a square of the character's walk, an actor's step, a coarse move's), in the denizens' events' bank after
 ** the fights' words, in two rings, the denizens' and the character's own, each passing written whole, then its count.
 ** The world's traces' store (dq0w/wtrace.c, in banks of its own) takes them in as it can; the denizens read the
-** character's, to follow its scent (dq0d.c's: a hunter by smell) */
+** character's, to follow its scent (dq0d.c's: a hunter by smell).  A stay is journalled as passings (TR_MORE's): a
+** denizen's as it stands or rests (I_TROD's TS_STAY: no passing, its TQs there in stay), and a lair's keepers' where
+** they live (each a passing and the most stays), the minds'; the character's is its time on a square, from the
+** passing in its ring before (the one that brought it there) to the one that took it off, as the store takes it in */
 #define NJOURNAL        64                      /* (The denizens' passings in the ring) */
 #define NTRAIL          64                      /* (The character's) */
 struct tstep {
@@ -99,11 +103,14 @@ struct tstep {
                                                 **   character */
     unsigned char   sn;
     unsigned char   head;                       /* The way it went (H_*), | TS_NOWAY: none known (a coarse move's,
-                                                **   come from somewhere else), | TS_LIT: a flame carried (its smoke) */
-    unsigned char   spare;
+                                                **   come from somewhere else), | TS_LIT: a flame carried (its smoke),
+                                                **   | TS_STAY: a stay only, no passing */
+    unsigned char   stay;                       /* A denizen's stay there, in TQs (the denizens' ring's; the
+                                                **   character's ring's not kept: found as the store takes it in) */
     unsigned        x, y;
     unsigned long   t;                          /* When it passed */
 };
+#define TS_STAY         0x20
 #define TS_NOWAY        0x40
 #define TS_LIT          0x80
 struct tjournal {
@@ -129,8 +136,11 @@ struct trail {
     unsigned char   head;                       /* The way the last went (H_*; 0xFF not known) */
     unsigned char   big;                        /* 1: its kind large (a heavy tread, a strong smell) */
     unsigned char   kind;                       /* Whose (the denizens' kinds' number: 0 the character) */
+    unsigned char   strength;                   /* How clearly it shows, or how strongly it smells, now (its
+                                                **   clearest square's, as it's read: TR_MORE's passings in it) */
     unsigned        age;                        /* (The world's: how long since, in its TQs, four minutes) */
 };
+#define TR_HEAVY        6                       /* (A scent's strength that hangs heavy, the words') */
 enum { TRC_FLOOR, TRC_TRACK, TRC_SMELL };      /* I_TRACE's how: the floor looked at (sight, no test), the Tracking
                                                 **   test, a smell (a notice test of smell) */
 enum { TRR_OK, TRR_DARK, TRR_NOSE, TRR_NONE };  /* Its result: read; too dark to see the floor; no sense of smell;
@@ -292,9 +302,12 @@ enum {
                                                 **   test, a smell), and a sniff's way times 256 (H_*; 0xFF about
                                                 **   it), w2 the tenths it takes (0: the world's own); the UI bank's
                                                 **   tread, E_VIEW V_TRACED, then the time */
-    I_TROD,                                     /* (The denizens', for one out but not an actor: who 0) A passing
-                                                **   kept, a coarse move's (roam's): w1 w2 its square, x[2] its
-                                                **   stratum, x[1] its kind, a the way it faces */
+    I_TROD,                                     /* (The denizens', who 0: for one out but not an actor, or an
+                                                **   actor's stay) A passing kept, a coarse move's (roam's): w1 w2
+                                                **   its square, x[2] its stratum, x[1] its kind, a the way it
+                                                **   faces; b the TQs it stayed there (a lair's keepers' where they
+                                                **   live); a | TS_STAY, a stay alone, no passing (an actor's,
+                                                **   standing or resting) */
     I_SWEPT,                                    /* (The denizens', who 0) A chunk kept swept (a lair of a kind that
                                                 **   sweeps its floors, K_SWEEPS, placed): w1 w2 a square in it, x[2]
                                                 **   its stratum */
@@ -327,8 +340,18 @@ enum {
 ** wtrace.c's faded) and the minds' (a hunter's trail, dq0d.c's scent), and the place rain and running water will speed
 ** it (slice 4.9) */
 #define TQ              2400                    /* (Four minutes, in tenths: the traces' time) */
-#define SCENT_LOG(s, n) ((s) + (n) < 3 ? 1 : (s) + (n) > 16 ? 14 : (s) + (n) - 2)
+#define SCENT_LOG(s, n) ((unsigned char) ((s) + (n)) < 3 ? 1 : (unsigned char) ((s) + (n)) > 16 ? 14 : (s) + (n) - 2)
 #define SCENT_LIFE(s, n) (1U << SCENT_LOG (s, n))
+
+/* A trace strengthened by its passings (the user's, 2026-10-22: "repeated passage or occupancy should enhance prior
+** smells"; the numbers the user's to think about): a point more at 4, another at 12.  A print's clearness by the
+** passings over its square; a scent's strength (s above, each point its life doubled) by its passings and its stays
+** there, a passing each TQ spent on the square (the character's time there, a denizen standing or resting, a lair's
+** keepers where they live: the traces' journal's).  One rule, wherever a trace is reckoned: the world's reading
+** (wtrace.c's found, and its words by the strength: TR_HEAVY), a hunter's way on the store's trail (wtrscent.c; the
+** minds' on the journal's, dq0d.c's scent, the fresh part of it, the store's older trail the rest), and the
+** character smelt in still air (its reach the further by its stay where it stands: dq0d.c's senses) */
+#define TR_MORE(n)      (((n) >= 4) + ((n) >= 12))
 
 /* Events: what's happened, in the world's terms (the UI words them; the denizens and the sound hear them) */
 enum {
@@ -824,7 +847,8 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   unlit; it hears it; its eyes' adapting to the dark (tenths to a
                                                 **   16th of a level darker; 0: at once) */
         unsigned char nose;                     /*   and how far it smells it in still air (squares: its kind's nose
-                                                **   over 3, slice 4.1's; the air layer's to carry further downwind) */
+                                                **   over 3, slice 4.1's, and the character's stay's points, TR_MORE's;
+                                                **   the air layer's to carry further downwind) */
         unsigned char res;                      /* (The reply's) SN_* */
         unsigned char slack;                    /* (The reply's) squares it may go, the answer standing (0: none) */
     }               dsense;

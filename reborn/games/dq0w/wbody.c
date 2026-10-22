@@ -95,10 +95,11 @@ static unsigned char between (void)
 }
 
 /* Body bd's passing journalled as it leaves its square (the traces': trod.inc's): its kind's (0 none: not kept), the
-** way h it went from there (| TS_NOWAY: a coarse move's, none known: its square come to) */
+** way h it went from there (| TS_NOWAY: a coarse move's, none known: its square come to; | TS_STAY, a stay there, no
+** passing: its TQs h's high byte, the minds') */
 #include "trod.inc"
 
-static void __fastcall__ den_trod (unsigned char h)
+static void __fastcall__ den_trod (unsigned h)
 {
     struct tstep s;
 
@@ -106,6 +107,7 @@ static void __fastcall__ den_trod (unsigned char h)
         s.kind = bd.kind;
         s.sn = bd.sn;
         s.head = h;
+        s.stay = h >> 8;
         s.x = bd.x;
         s.y = bd.y;
         trod (&s);
@@ -191,7 +193,7 @@ void s_den_intents (void)
             bd.sn = m.x[2];
             bd.x = m.w1;
             bd.y = m.w2;
-            den_trod (m.kind == I_SWEPT ? 0 : (m.a & 7) | TS_NOWAY);
+            den_trod (m.kind == I_SWEPT ? 0 : (m.a & (7 | TS_STAY)) | TS_NOWAY | (unsigned) m.b << 8);
             continue;
         }
         BD_GET ((m.who - 1) & 7);

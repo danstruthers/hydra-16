@@ -3406,6 +3406,36 @@ module.exports = {
     },
 
     {
+      name: 'dq0stay', meaning: true, what: 'Dingus Quest Zero\'s scents strengthened by passing and by staying (the user\'s, 2026-10-22: "repeated passage or occupancy should enhance prior smells"; HOUSE.md\'s light and traces, DUNGEON.md\'s a stay counts as passings), by the world\'s reply (the UI bank\'s tread), its words and the traces\' journal: at seed 3 the giant rats\' lair by the way down where the character starts, its keepers\' scent journalled where they live as it\'s placed (each rat a passing at its home square, with the most stays: the denizens\' ring), sniffed at once and heavy ("A musky smell hangs heavy here: giant rats, by the smell of it.": its strength 6, TR_HEAVY); the rats standing about as the character waits 50 minutes a step off, their stays journalled where each stood (I_TROD\'s TS_STAY, a TQ each); and the character\'s own stay there, its torch lit: once it\'s stepped back (and looked for tracks: the journal taken in as its torch burns, the store\'s smoke a torch\'s) and put its torch out, its smoke still smelt three hours on (faint), where a passing\'s is gone by then (dq0traces)',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml awa 80 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'sniff', 'step forward', 'wait 50 minutes', 'step back', 'track', 'douse the torch', 'wait 3 hours', 'sniff', 'sniff', 'sniff', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], rd = t => (t.after && t.after.tread) || {}, RAT = 1;
+        const s0 = T.of('sniff'), r0 = rd(s0), j0 = s0.after && s0.after.journal, pc0 = s0.after && s0.after.pc;
+        if (!j0 || !pc0) return ['the game not played'];
+        const lair = j0.e.filter(e => e.kind === RAT && !e.stay && e.stays === 255);
+        if (lair.length < 2 || lair.some(e => e.x !== pc0.x || e.y !== pc0.y))
+          f.push('the rats\' lair\'s scent not journalled where they live, at the way down (' + pc0.x + ',' + pc0.y + '): ' + JSON.stringify(j0.e.filter(e => e.stays)));
+        const musk = (r0.trails || []).find(e => e.kind === RAT);
+        if (r0.grade !== -2 && (!musk || musk.strength < 6 || !/^A musky smell hangs heavy here/.test(r0.text || '') || (r0.grade > 0 && !/giant rats, by the smell of it/.test(r0.text || ''))))
+          f.push('the rats\' lair not smelt heavy at once: ' + JSON.stringify(r0));
+        const w = T.of('wait 50 minutes'), jw = w.after && w.after.journal, t0 = w.at ? w.at.now : 0;
+        const stays = jw ? jw.e.filter(e => e.kind === RAT && e.stay && e.stays >= 1 && e.t >= t0) : [];
+        if (stays.length < 6) f.push('the rats standing about, their stays not journalled: ' + JSON.stringify(jw ? jw.e.slice(-12) : null));
+        const b = T.of('step back'), jb = b.after && b.after.journal, last = jb && jb.p[jb.p.length - 1], before = jb && jb.p[jb.p.length - 2];
+        if (!last || !before || !last.lit || last.x !== pc0.x - 1 || last.t - before.t < 11 * 2400)
+          f.push('its stay a step off with its torch lit not in its ring: ' + JSON.stringify(jb ? jb.p.slice(-2) : null));
+        const ends = T.filter(t => t.line === 'sniff' && t.k > b.k).map(rd), told = ends.filter(r => r.grade !== -2);
+        if (!told.length) f.push('no sniff three hours on but a critical failure: ' + JSON.stringify(ends.map(r => r.grade)));
+        for (const r of told) if (!r.smoke || !/A faint smell of smoke/.test(r.text || '')) f.push('its torch\'s smoke where it stayed not smelt three hours on: ' + JSON.stringify(r));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0denizens', meaning: true, what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt), by the actors\' records, their events and what the character perceives (their kinds\' records the referee\'s, HarnMaster\'s): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding): at the turns pace through all the time a minute\'s search takes (the clock on a slice at a time as they keep up), their stirring told (the world\'s E_VIEW) as what the character sees of them changes (gone out of sight), not again when nothing has; then (seed 5, down its ladder) the rats there seen, cornered, and in the character\'s way: the world stops it short of them, and won\'t let it walk or step onto a rat\'s square (dq0steps\' rat in the way, a step, in it)',
       init: 't_rc', cycles: 900e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'search', 'search', 'quit',
@@ -4323,11 +4353,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives",
+      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again; and its encumbrance the referee's the same)",
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
         'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
-        'defend none', 'hold the dagger', 'open the door', 'south', ...Array(12).fill('wait'), 'quit', 'echo $status']) },
+        'defend none', 'hold the dagger', 'open the door', 'south', ...Array(12).fill('wait'), 'drop the torch', 'take the torch', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4, s = dq0Story(out), I = DQ0_I;
@@ -4349,6 +4379,13 @@ module.exports = {
           f.push('the dagger and the pennies not put down together off its square: ' + JSON.stringify(lay.map(i => [i.name, i.x - q.at.pc.x, i.y - q.at.pc.y])));
         if (all.slice(down + 1).some(e => e.def === 0)) f.push('struck at after it fell');
         if (/You are dead\./.test(s)) f.push('the character killed');
+        const RSE = m.dq0.layout().K.RS_EQUIP, eq = (t, slot) => t.replies.filter(r => r.kind === RSE && r.a === 2 && r.req === slot);
+        const rt = T.find(t => dq0Ev(t, 'E_TASK', { te: 'TE_ROBBED' }).length), tk = T.of('take the torch');
+        const was = eq(h, 'slot1').pop(), told = rt ? eq(rt, 'slot0') : [], again = eq(tk, 'slot1').pop();
+        if (told.length !== 1) f.push('the robbed load not told the referee as it was robbed (the world\'s RS_EQUIP 2): ' + told.length);
+        else if (!was || !again || told[0].w1 >= was.w1 || told[0].w1 !== again.w1)
+          f.push('the load told as it was robbed not what was left: before ' + (was && was.w1) + ', robbed ' + told[0].w1 + ', its torch put down and taken up again ' + (again && again.w1));
+        if (rt && tk.after && rt.after && rt.after.sum.load !== tk.after.sum.load) f.push('the referee\'s encumbrance after the robbery ' + rt.after.sum.load + ', not ' + tk.after.sum.load);
         return f;
       },
       sdcard: true

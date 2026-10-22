@@ -15,7 +15,8 @@ struct trace {
                                                 **   | TW_WAY (one known); smoke's, its strength times 1024 */
     unsigned        t;                          /* When the last went: the clock's TQs (its low 16 bits) */
     unsigned char   n;                          /* Passings (255 at most) */
-    unsigned char   spare;
+    unsigned char   sc;                         /* Its scent's: the passings and the stays there, a passing each TQ
+                                                **   (255 at most: hub.h's TR_MORE) */
 };
 #define TK_SMOKE        0x7E
 #define TW_WAY          0x2000
@@ -43,6 +44,9 @@ struct thead {
     unsigned char   lsn;                        /* (The chunk the character was in as the store last looked: its
                                                 **   stratum plus 1, 0 none yet) */
     unsigned        lcx, lcy;
+    unsigned char   psn;                        /* (The character's last passing taken in: its stratum plus 1, 0 none
+                                                **   yet; and when, in TQs: its next one's stay from then) */
+    unsigned        pq;
     struct tch      ch[NTCH];
 };
 #define THD             ((struct thead*) 0x9800)

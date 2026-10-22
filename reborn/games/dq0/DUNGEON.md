@@ -874,11 +874,21 @@ alert those with particularly good sense of smell long before sound or light mig
   come to, no way), and a lair of sweepers placed (I_SWEPT: its chunk kept swept).  The cost of a step is the
   journal's entry (trod.inc, in the part that makes it: no main RAM), and a part's swap each 24 passings as the
   world's main loop takes the journal into the store (tr_flush, part 28).
+- **A stay counts as passings** (the user's, 2026-10-22: "repeated passage or occupancy should enhance prior
+  smells"): a passing for each four minutes (a TQ) spent on a square, whoever spends it.  An actor's, the minds'
+  (dq0d.c's stayed, as each TQ goes by while it stands, rests or fights where it is: I_TROD's TS_STAY, a stay alone,
+  its TQs in the journal's entry); a lair's keepers' where they live, the minds' as they place the lair (each keeper a
+  passing at its home square, with the most stays there are: a lair smells strongly of its keepers from the first);
+  the character's found from its own ring as the store takes it in (its time on a square, from the passing before,
+  the one that brought it there, to its own: so a long wait is one entry in the ring, not many, and the ring's 64
+  squares stay the trail a hunter follows).  The store takes the nine chunks round the character in first, then the
+  journal, so a lair placed as the character comes near it is kept.
 - **The store** (dq0w/wtrace.c, in two banks of the world's own): records of eight bytes, four to a bucket, a square's
-  found by a hash of its chunk and place; a passing of one there already counted in it, a new one over the bucket's
-  oldest (so a busy place treads old traces out, and the store never fills).  Its chunks in a directory (32; dq0 -C's
-  3): the nine round the character always, a passing's chunk read in as it's wanted (not a coarse move's: kept only
-  where it's held); the one least lately wanted put out to its region's file in the save folder (trSXXYY.dat: a
+  found by a hash of its chunk and place; a passing of one there already counted in it (its passings, and its scent's
+  count: the passings and the stays, each 255 at most; a stay alone keeps the way the last went), a new one over the
+  bucket's oldest (so a busy place treads old traces out, and the store never fills).  Its chunks in a directory (32;
+  dq0 -C's 3): the nine round the character always, a passing's chunk read in as it's wanted (not a coarse move's: kept
+  only where it's held); the one least lately wanted put out to its region's file in the save folder (trSXXYY.dat: a
   version each time, vfile.inc's, each chunk a group of its own, its flags with it: swept), read back as it's wanted,
   every chunk changed written by the save (tr_flush's keep, WQ_SAVE's).  A game carried on reads them as they're
   wanted.  The kinds' numbers (tread, smell, nose, size) are read in as it begins (dq0tr.dat: dq0d/make.js's, from
@@ -886,8 +896,10 @@ alert those with particularly good sense of smell long before sound or light mig
 - **What shows of them** goes by the floor where each square is (the maker's material: earth, soil, rough stone,
   flags, paving), the stratum's age's dust, swept or not, how heavily the kind treads, how many passed, and their age
   against the print's life on that floor; how strongly a scent smells by its kind's smell and its reader's nose
-  (hub.h's SCENT_LIFE: its strength halving each doubling of its age), and how far it's carried.  HOUSE.md's light and
-  traces has the numbers.
+  (hub.h's SCENT_LIFE: its strength halving each doubling of its age), and how far it's carried.  Each the stronger
+  for the passings over its square, a scent for the stays on it too (hub.h's TR_MORE: one rule, wherever a trace is
+  reckoned; a print by its passings alone: a stay makes no new marks), and the words by the strength (a scent strong
+  enough "hangs heavy here").  HOUSE.md's light and traces has the numbers.
 - **Read** (I_TRACE, the UI's: the floor looked at, the Tracking test, a smell; dq0w/wtrace.c's part 29, its words
   part 31's, wtrword.c): the floor where the character stands and the squares round it, two each way (a smell's
   carried further, through what lets the air through: the world's, as the dungeon is), each kind's traces together,
@@ -899,7 +911,9 @@ alert those with particularly good sense of smell long before sound or light mig
   third of it, squares (the senses', dq0p/sense.c: dsense's SN_SMELT, its mind asking); a hostile hunter by smell
   (nose 6 or more) that doesn't sense it follows its trail: the journal's (its last 64 squares, as the nose's life of
   the scent allows: dq0d.c's scent), then the store's older trail (I_STEP's STEP_SCENT: wtrscent.c, part 32, the way
-  the character went from the square it's on, or the freshest beside it).
+  the character went from the square it's on, or the freshest beside it, each square's life the longer for its
+  passings and the character's stays there).  The character is smelt in still air the further for its stay where it
+  stands (the minds' own count of it, dq0d.c's pcstay: the nose's reach the more).
 - **The air and the rain to come** plug in at one place each: a draft widens a scent's reach downwind and narrows it
   upwind (wtrace.c's sniff, wtrscent.c's trail, sense.c's smelt), and carries a scent to a denizen far downwind (the
   air layer, slice 4.5, with sound); rain and running water fade scents and prints faster (wtrace.c's faded, hub.h's

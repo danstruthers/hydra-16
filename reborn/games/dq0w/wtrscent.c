@@ -39,7 +39,8 @@ static unsigned char chunk (void)
 /* The way the character's scent goes from body bd's square (a hunter by smell's, STEP_SCENT: wbody.c's), read by its
 ** nose: the character's trace on its square younger than the nose's life of its scent (hub.h's SCENT_LIFE), the way it
 ** went from there; else the freshest beside it, the way there; 0xFF, none (the journal not taken in first: the
-** trail's newest the minds' own, dq0d.c's scent).  The one place the air layer will turn a trail downwind (slice
+** trail's newest the minds' own, dq0d.c's scent).  Each square's life its own, the longer by its passings and the
+** character's stays there (hub.h's TR_MORE).  The one place the air layer will turn a trail downwind (slice
 ** 4.5) */
 unsigned char __fastcall__ s_tr_scent (unsigned char nose)
 {
@@ -47,10 +48,10 @@ unsigned char __fastcall__ s_tr_scent (unsigned char nose)
     static struct stratum* t;
     static unsigned life, a, best, b, q, now;
     static signed char dx, dy;
-    static unsigned char h, i, way;
+    static unsigned char h, i, way, sm;
 
     hy_bank (ovbank[OVBANKS]);
-    life = SCENT_LIFE (TKN->smell[0], nose);
+    sm = TKN->smell[0];
     hub_map (0);
     now = (unsigned) (HUB->now / TQ);
     t = &STRATUM (bd.sn);
@@ -66,8 +67,11 @@ unsigned char __fastcall__ s_tr_scent (unsigned char nose)
             b = BUCKET (h, q);
             hy_bank (TR_BANK (b));
             for (i = 0, p = TR_AT (b); i < 4; ++i, ++p) {
-                if (p->c == h && !p->k && SQ_OF (p->sq) == q && (a = now - p->t) < life &&
-                    (dx | dy ? way > H_NW || a < best : p->sq & TW_WAY)) {
+                if (p->c != h || p->k || SQ_OF (p->sq) != q) {
+                    continue;
+                }
+                life = SCENT_LIFE (sm + TR_MORE (p->sc), nose);
+                if ((a = now - p->t) < life && (dx | dy ? way > H_NW || a < best : p->sq & TW_WAY)) {
                     best = dx | dy ? a : 0;     /* (Its own square's first: the way the character went on) */
                     way = dx | dy ? bearing (dx, dy) : p->sq >> 10 & 7;
                     if (!(dx | dy)) {

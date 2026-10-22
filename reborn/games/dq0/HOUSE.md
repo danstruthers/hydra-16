@@ -325,10 +325,11 @@ silent on all of it.
   a while (24 of its turns) and unfriendly after: it keeps a few squares off, and strikes only if the character,
   itself again, comes beside it.  Nobody engages a helpless character (no engage initiative test): what's done to it
   is each one's mind's; a blow at it senseless from any but a killer is held (one posted as it fell: the referee's,
-  RS_KILLER).  (dq0d.c's decide, K_HELP; dq0w's wfight.c, s_den_rob; fight.c's attack.)  Not yet: being led away
-  (by an ally, or a captor), a captive's fate, the robbers' stash hidden, the robbed character's load told the
-  referee at once (what it held is told: its load as it next handles a thing; the user's, 2026-10-22: at once), a
-  defender cornered fighting back (the user's, 2026-10-22: "Rats should attack if cornered": defence only for now).
+  RS_KILLER).  The referee is told what's to hand and the load left at once, as it's robbed (the user's, 2026-10-22:
+  "Weight should be recounted immediately after a robbery": its encumbrance the less as the robber goes).  (dq0d.c's
+  decide, K_HELP; dq0w's wfight.c, s_den_rob; fight.c's attack.)  Not yet: being led away (by an ally, or a captor),
+  a captive's fate, the robbers' stash hidden, a defender cornered fighting back (the user's, 2026-10-22: "Rats
+  should attack if cornered": defence only for now).
 - **Health in words,** for every ruleset: fine with no injuries; hurt while the injury points are under a third of
   the Endurance; badly hurt under two thirds; critical past that; down when senseless or in shock.  (dq0harn.c's
   health_of.)
@@ -616,10 +617,11 @@ and 2026-10-21: keen noses follow a scent far longer than an hour, a hound's esp
   at 3, 6 and 12 centuries (6 the most: "deep in dust").  **Swept** (a chunk that's a lair of a kind that keeps its
   floors swept, kinds.txt's t: the cultists and their priest, as their lair is placed): no dust at all ("swept
   clean"), and every hold a point less, the marks scattered.
-- **How clearly a trail shows**: the floor's hold, a third of its kind's tread, a point more for 4 passings, another
-  for 12; less a point for each quarter of the print's life gone, none at its end; a tread of 0 (a bat, a shade)
-  leaves no print.  Each kind's tread, marks, smell, scent and nose are kinds.txt's (the character's own: its sweat's
-  smell 3, its prints by what it wears on its feet, bare feet 2, sandals or shoes 3, boots 4, hobnailed boots 5).
+- **How clearly a trail shows**: the floor's hold, a third of its kind's tread, a point more for 4 passings, another for
+  12 (the scents' rule too, below: hub.h's TR_MORE); less a point for each quarter of the print's life gone, none at its
+  end; a tread of 0 (a bat, a shade) leaves no print.  Each kind's tread, marks, smell, scent and nose are kinds.txt's
+  (the character's own: its sweat's smell 3, its prints by what it wears on its feet, bare feet 2, sandals or shoes 3,
+  boots 4, hobnailed boots 5).
 - **Examine the floor** ("look at the ground"): sight alone, no test, 5 seconds, the floor where it stands and the
   squares two each way: its material, its dust, and "It's been trodden" if any trail there shows 4 or more.  In the
   dark it can't be done.
@@ -629,17 +631,20 @@ and 2026-10-21: keen noses follow a scent far longer than an hour, a hound's esp
   under two days, long ago; the way it led, by the facing; whose, "plainly"); a marginal success the same, "by the look
   of them"; a marginal failure only that the floor's been trodden; a critical failure a misreading, told as if it were
   read: the way reversed, the time two steps off.  Three trails at most, the clearest first.
-- **A scent fades by its reader's nose**: a scent of strength s (kinds.txt's smell) read by a nose n (kinds.txt's nose;
-  the character's a quarter of its smell sense, the referee's: 1 for most) lasts 2^(s + n - 2) fours of minutes, its strength s + n - 1 losing a
-  point each time its age doubles, and half a point a square away.  So a hound's nose (9) follows the character's
-  scent (3) some three days old, a rat's or a ghoul's (7) the most of a day, a bear's (8) a day and a half; the
-  character (1) smells a rat's (4) for half an hour, a bear's (8) for eight hours.
+- **A scent fades by its reader's nose**: a scent of strength s (kinds.txt's smell, and its passings' and stays' points:
+  below) read by a nose n (kinds.txt's nose; the character's a quarter of its smell sense, the referee's: 1 for most)
+  lasts 2^(s + n - 2) fours of minutes, its strength s + n - 1 losing a point each time its age doubles, and half a
+  point a square away.  So a hound's nose (9) follows the character's scent (3) some three days old, a rat's or a
+  ghoul's (7) the most of a day, a bear's (8) a day and a half; the character (1) smells a rat's (4) for half an hour,
+  a bear's (8) for eight hours.
 - **Smell** ("sniff", "smell the air", "sniff at the grating"): a notice test of smell, 3 seconds, at steps twice the
   strongest scent less 6; about the character it reaches two squares each of the eight ways, one way six that way and
   three the two ways beside it, through what the air passes (an open or broken door, a portcullis, a grating, an arrow
   slit, a window open with no glass), not rock, a wall, a shut door.  A success tells the two strongest scents and
   whose ("by the smell of it"); a marginal failure the scent but not whose ("something passed not long ago"); a
-  critical failure nothing.  The character doesn't smell its own sweat.
+  critical failure nothing.  A scent told hangs here fresh (under an hour old), faint (ten hours) or lingers stale, but
+  one of strength 6 or more as it's smelt hangs heavy ("A musky smell hangs heavy here: giant rats, by the smell of
+  it.": a lair, a bear just gone by).  The character doesn't smell its own sweat.
 - **Smoke**: a flame the character carries leaves smoke on the squares it walks (a torch's strength 5, a lantern's or
   a candle's 2, by its name); a light lying lit (a sconce's torch, a fire) smokes 4 where the air reaches; a light of
   its own lit, the character smells no other smoke.  Smoke fades as a scent does, with no nose to read it longer.
@@ -647,10 +652,23 @@ and 2026-10-21: keen noses follow a scent far longer than an hour, a hound's esp
   that's hostile and doesn't sense the character follows its trail: its last 64 squares (the world's journal) as long
   as its nose can still smell them, then the store's older trail (sniffed once each ten seconds, at once again while
   it leads on).  Any kind with a nose smells the character in still air within a third of its nose (squares: a
-  hound's 3, a rat's 2, a man's none), along a line the air passes: sensed, as seen or heard.
-- **Decided, to build** (the user's, 2026-10-22: "repeated passage or occupancy should enhance prior smells"; these
-  numbers the user's to think about): a scent strengthened by its passings and by a stay where it is (a lair's
-  keepers, a denizen resting, the character waiting), as a print's clearness is by its passings.
+  hound's 3, a rat's 2, a man's none), along a line the air passes: sensed, as seen or heard; and the further as the
+  character stays where it is (its stay's points, below, added to the nose: a rat's 3 squares once the character's been
+  on its square some three quarters of an hour, a kobold's 2 after ten minutes or so, a man's 1).
+- **Strengthened by passing and by staying** (the user's, 2026-10-22: "repeated passage or occupancy should enhance
+  prior smells"; built 2026-10-22, these numbers drafts for the user to review): a scent is the stronger by the
+  passings over its square and the stays on it, as a print's clearness is by its passings: a point more at 4, another
+  at 12, each point doubling how long it lasts.  So the character smells a rat that passed once for half an hour, one
+  that passed four times for an hour, twelve times for two; a rat follows the character's scent the most of a day
+  after one passing, nearly three days after twelve.  A stay counts a passing for each four minutes spent on the
+  square: the character's (waiting, resting, searching, digging, fighting where it stands: its time there, from the
+  step that brought it to the one that takes it off, counted as it leaves; the square it begins on, none), a
+  denizen's standing, resting or fighting where it is (each four minutes as they go by), and a lair's keepers' where
+  they live (each keeper a passing at the lair's home as the lair is first placed, and the most stays there are: so
+  a lair smells strongly of its keepers from the first, and their comings and goings about it keep it fresh).  One
+  record a square and kind, its counts rising (255 the most), so a busy square or a long wait floods nothing.  Smoke
+  the same (a torch kept lit where the character waits the most of an hour leaves smoke there four hours, not one).
+  A stay makes no prints: the Tracking test's how many and how clearly go by the passings alone.
 - **Still to come**: the air layer (slice 4.5, with sound) carries a scent further downwind and less upwind, and a
   denizen downwind smells the character from far off; rain and running water (slice 4.9) wash scents and prints away
   faster.  Each has its one place to come in: a scent's fading (wtrace.c's faded, hub.h's SCENT_LIFE), its carrying
