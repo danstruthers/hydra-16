@@ -2004,6 +2004,8 @@ const DQ0_REPEATS = [
     why: 'fighting on (the user\'s, 2026-10-20): one attack fights its foes in turn, each falling, fleeing, getting up, fought back or turned to told as it comes (two of a name, the same words)' },
   { what: /^(?:You stop fighting|You fumble for the .+)\.$/,
     why: 'commands typed ahead as the character fights, each taking the fight over in turn, fought on between them (fighting on), their answers one' },
+  { what: /^A giant rat is .+, keeping its distance\.$/, tests: /^dq0traces$/,
+    why: 'a walk across the rats\' cell: a shy rat told keeping its distance as the walk\'s look stirs, then again where it is as the look on arriving has it (the tellings two, the stir not first in the second)' },
   { what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
 ];
 function dq0Answers(out) {
