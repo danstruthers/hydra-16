@@ -2012,6 +2012,8 @@ const DQ0_REPEATS = [
   { what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
   { what: /^An? (?:cave adder|bandit) is ahead(?: to your (?:left|right))?, \d+ feet away\.$/, tests: /^dq0(?:helpless|robbed)$/,
     why: 'a walk stopped by a hostile seen: told as the walk\'s look stirs, then again in the look as it stops (the stir and that look one telling, as dq0traces\' rats\')' },
+  { what: /^You keep at it\.$/,
+    why: 'a battering\'s beat every fourth blow once its blows tell (the user\'s, 2026-10-22: told as it goes), twice or more in a dozen' },
   { what: /^Everything goes black\.$/, tests: /^dq0finished$/,
     why: 'knocked senseless, come round in shock a round later, struck senseless again, all in one wait\'s answer (the UI waiting it out): two black-outs, each told' },
 ];
@@ -3908,9 +3910,10 @@ module.exports = {
           'A window, 2 feet wide and 3 high; its shutters of wood, 2 inches thick. It\'s glazed', 'There is a glazed window ahead (its shutters open).', '> x glass',
           'It\'s 2 by 3 feet, a quarter inch thick.', '> climb through window', 'You can\'t climb through: it\'s shut, glazed or barred.', '> break window',
           'The glass shatters with a crash.', '> look', 'There is a shuttered window ahead (its shutters open). At your feet lie some glass shards.',
-          '> climb through window', 'You climb up onto the sill, and through. You are in a passage.', '> turn around', 'There is a shuttered window ahead (its shutters open).',
+          '> climb through window', 'You set to climbing through the window.', 'You get up onto the sill, and through. You are in a passage.', '> turn around',
+          'There is a shuttered window ahead (its shutters open).',
           '% dq0 -p t -s 15', '> examine the door ahead to my left', 'Brackets for a bar are fixed on this side, the bar in them.', '> examine bar',
-          'It\'s 4 feet long, 3 inches thick.', '> break the door ahead to my left', 'You batter at it till it gives way, and it crashes open.', '> look',
+          'It\'s 4 feet long, 3 inches thick.', '> break the door ahead to my left', 'You set to battering the door.', 'It gives way, and crashes open.', '> look',
           'There is a door ahead (broken down).', '> close', 'It\'s broken: it won\'t shut.', '% echo $status'], f);
         return f;
       },
@@ -4093,21 +4096,27 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0batter', what: 'Dingus Quest Zero\'s doors battered (the user\'s, 2026-10-15 and 16: "model it after unarmed combat": a blow at a thing an attack it ignores, by Unarmed, its impact less the door\'s resistance off its body; the striker hurt as a blow goes wrong, less with skill and armour; boots for a kick, a helm for a head butt; the tool to hand that hits hardest), by the world\'s events (the referee\'s, HarnMaster\'s, at these seeds; each game\'s first blow the same roll): at seed 14\'s sound iron-bound door, bare fists making no mark, the hand hurt seriously, the blows stopped as the character\'s too hurt; a kick in knee boots and a head butt in an iron helm hurt only a little; at seed 19\'s rotten door one of Unarmed 95 (hmchar\'s file) breaking it down unhurt; at seed 15 a pick battering a door till it gives way, broken down for good: it won\'t shut (dq0hands\' and dq0kick\'s, and dq0doors\' blows, these together; the injuries\' words the referee\'s)',
+      name: 'dq0batter', what: 'Dingus Quest Zero\'s doors battered (the user\'s, 2026-10-15 and 16: "model it after unarmed combat": a blow at a thing an attack it ignores, by Unarmed, its impact less the door\'s resistance off its body; the striker hurt as a blow goes wrong, less with skill and armour; boots for a kick, a helm for a head butt; the tool to hand that hits hardest; the user\'s, 2026-10-22: a part\'s blow the house\'s Unarmed test, a marginal failure harming neither, a critical failure the part, and a bare part\'s first hurt at a door stopped short, asked), by the world\'s events (the referee\'s, HarnMaster\'s, at these seeds; each game\'s first blow the same roll): at seed 14\'s sound iron-bound door, bare fists making no mark, the first blow that would hurt them stopped short (asked: "Keep at it?", dq0 -a\'s yes), unhurt; punched again, not asked again at that door, and by the third the hand hurt seriously, the blows stopped as the character\'s too hurt; a kick in knee boots and a head butt in an iron helm not stopped short (not bare), hurt by their blows gone wrong; at seed 19\'s rotten door one of Unarmed 95 (hmchar\'s file) breaking it down unhurt; at seed 15 a pick battering a door till it gives way, broken down for good: it won\'t shut (dq0hands\' and dq0kick\'s, and dq0doors\' blows, these together; the injuries\' words the referee\'s)',
       init: 't_rc', cycles: 1400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/u.hm', 'echo ml una 95 >> /ram/u.hm',
-        'dq0 -p t -s 14 -c /ram/c.hm', 'punch the door', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'', 'wear the knee boots', 'kick the door', 'quit',
+        'dq0 -p t -s 14 -c /ram/c.hm', 'punch the door', 'punch the door', 'punch the door', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'', 'wear the knee boots', 'kick the door', 'quit',
         'dq0 -p t -s 14 -c /ram/c.hm -k \'iron helm\'', 'wear the iron helm', 'head butt the door', 'quit', 'dq0 -p t -s 19 -c /ram/u.hm', 'punch the door', 'quit',
         'dq0 -p t -s 15 -c /ram/c.hm -k pick', 'break the door ahead to my left', 'close', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], hurt = t => Math.max(0, ...dq0Ev(t, 'E_HARM', { hc: 'HC_STRUCK' }).map(e => e.band));
-        const p = T.of('punch the door'), k = T.of('kick the door'), h = T.of('head butt the door'), u = T.after(p, 'punch the door');
+        const p = T.of('punch the door'), p2 = T.after(p, 'punch the door'), p3 = T.after(p2, 'punch the door'), k = T.of('kick the door');
+        const h = T.of('head butt the door'), u = T.after(p3, 'punch the door'), short = { te: 'TE_ASK_SHORT', task: 'LT_BATTER' };
         dq0Need(f, p, 'E_PORTAL', { po: 'PO_NO_MARK' }, 'bare fists marked the sound door');
-        if (hurt(p) < 2) f.push('the bare hand not hurt seriously (' + dq0Evs(p) + ')');
-        dq0Need(f, p, 'E_HARM', { hc: 'HC_STRUCK', stopped: true }, 'the blows not stopped, the character too hurt');
-        if (!(hurt(k) >= 1 && hurt(k) < hurt(p))) f.push('the booted foot not spared (' + dq0Evs(k) + ')');
-        if (!(hurt(h) >= 1 && hurt(h) < hurt(p))) f.push('the helmed head not spared (' + dq0Evs(h) + ')');
+        dq0Need(f, p, 'E_TASK', short, 'the bare fists\' blow that would hurt them not stopped short, asked');
+        if (hurt(p)) f.push('the bare hand hurt, stopped short of it (' + dq0Evs(p) + ')');
+        for (const t of [p2, p3]) dq0Never(f, t, 'E_TASK', short, 'asked again at the same door');
+        if (hurt(p3) < 2) f.push('the bare hand not hurt seriously by the third (' + dq0Evs(p3) + ')');
+        dq0Need(f, p3, 'E_HARM', { hc: 'HC_STRUCK', stopped: true }, 'the blows not stopped, the character too hurt');
+        for (const [t, w] of [[k, 'the booted foot'], [h, 'the helmed head']]) {
+          dq0Never(f, t, 'E_TASK', short, w + ' stopped short (it isn\'t bare)');
+          if (hurt(t) < 1) f.push(w + ' not hurt by its blow gone wrong (' + dq0Evs(t) + ')');
+        }
         dq0Need(f, u, 'E_PORTAL', { po: 'PO_BROKE_DOWN' }, 'the skilled fists didn\'t break the rotten door down');
         if (hurt(u)) f.push('the skilled fists hurt');
         const b = T.of('break the door ahead to my left');
@@ -4118,12 +4127,13 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0battering', what: 'Dingus Quest Zero\'s battering a long task (slice 4.0, HOUSE.md\'s long tasks: a blow at a time as the clock goes, its bar the blows struck, stopped by the player or hard, the harm done kept), by the world\'s events and the long task\'s part done as it went (the hub\'s pc_task: the referee\'s, HarnMaster\'s, at these seeds): at seed 14 a pick battering the sound door a dozen blows, one at a time (LT_BATTER, its length a dozen), leaving it giving, and battered again, broken down; then the same door battered and "stop digging" refused as it goes (it\'s a battering), "stop battering" stopping it part way, how the door stands told, and battered again, broken down in as many blows in all as without the stop (the harm done kept, each blow its own roll as before); with the hand-written theme\'s hostile rats (inhabit.txt) a battering stopped hard by a rat\'s blow',
-      init: 't_rc', cycles: 1000e6,
+      name: 'dq0battering', what: 'Dingus Quest Zero\'s battering a long task (slice 4.0, HOUSE.md\'s long tasks: a blow at a time as the clock goes, its bar the blows struck, stopped by the player or hard, the harm done kept), by the world\'s events and the long task\'s part done as it went (the hub\'s pc_task: the referee\'s, HarnMaster\'s, at these seeds): at seed 14 a pick battering the sound door a dozen blows, one at a time (LT_BATTER, its length a dozen), leaving it giving, and battered again, broken down; then the same door battered and "stop digging" refused as it goes (it\'s a battering), "stop battering" stopping it part way, how the door stands told, and battered again, broken down in as many blows in all as without the stop (the harm done kept, each blow its own roll as before); with the hand-written theme\'s hostile rats (inhabit.txt) a battering stopped hard by a rat\'s blow; told as it goes (the user\'s, 2026-10-22: "nothing is written to the output until after it is resolved"): its first words at once (E_TASK TE_BEGUN, its what the door and what strikes it), a beat as its blows first tell (WB_TELLS) and as they leave it giving (WB_GIVES); both its ends (the user\'s: "doesn\'t seem to stop kicking a door once started"): the dozenth blow (above), and the fourth that makes no mark (seed 14\'s door punched bare-handed: four blows, no more, its bare fist stopped short once and not again at that door, and punched again, four more); a kick in knee boots ending of itself (no question: not bare), and a bare-footed kick at seed 15\'s door stopped short once and breaking it down',
+      init: 't_rc', cycles: 1800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
         'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'break the door', 'break', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'break the door']) +
         'ĀĀstop digging\rstop battering\r' + dq0Typed(['break', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick', 'break the door ahead', 'quit',
-        'echo $status']) },
+        'dq0 -p t -s 14 -c /ram/c.hm', 'punch the door', 'punch the door', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'', 'wear the knee boots',
+        'kick the door', 'quit', 'dq0 -p t -s 15 -c /ram/c.hm', 'kick the door ahead to my left', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], tasks = m.dq0.games.flatMap(g => g.tasks);
@@ -4136,6 +4146,9 @@ module.exports = {
         const g1 = T.of('dq0 -p t -s 14 -c /ram/c.hm -k pick'), b1 = T.after(g1, 'break the door'), r1 = T.after(b1, 'break'), q1 = T.after(r1, 'quit');
         const n1 = run(b1, r1, 'the whole run'), m1 = run(r1, q1, 'the run after it');
         if (n1 !== 12) f.push('the whole run not a dozen blows: ' + n1);
+        const first = dq0Ev(b1, 'E_TASK', { te: 'TE_BEGUN', task: 'LT_BATTER' })[0];
+        if (!first || first !== b1.events.find(e => e.kind !== 'E_VIEW') || first.what !== 1) f.push('the battering\'s first words not at once, at the door, the best to hand (' + dq0Evs(b1) + ')');
+        for (const beat of ['WB_TELLS', 'WB_GIVES']) dq0Need(f, b1, 'E_BEAT', { beat }, 'no ' + beat + ' as it went');
         if (!tasks.some(e => e.kind === 'LT_BATTER' && e.len === 12)) f.push('the long task\'s length not a dozen blows');
         dq0Need(f, b1, 'E_PORTAL', { po: 'PO_GIVING' }, 'the pick\'s dozen blows didn\'t leave the door giving');
         dq0Need(f, r1, 'E_PORTAL', { po: 'PO_BROKE_DOWN' }, 'battered again, the door not broken down');
@@ -4150,6 +4163,76 @@ module.exports = {
         if (n2 + m2 !== n1 + m1) f.push('the harm done before the stop not kept: ' + n2 + ' blows, then ' + m2 + ', not ' + (n1 + m1) + ' in all as without it');
         const b3 = T.after(T.of('dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick'), 'break the door ahead');
         dq0Need(f, b3, 'E_TASK', { te: 'TE_HIT', task: 'LT_BATTER' }, 'the battering not stopped hard by the rat\'s blow');
+        // (Both ends, and each kick ending of itself: the user's, 2026-10-22)
+        const short = { te: 'TE_ASK_SHORT', task: 'LT_BATTER' }, g4 = T.of('dq0 -p t -s 14 -c /ram/c.hm'), p1 = T.after(g4, 'punch the door');
+        const p2 = T.after(p1, 'punch the door'), q4 = T.after(p2, 'quit');
+        for (const [a, b, w] of [[p1, p2, 'the first punching'], [p2, q4, 'the second']]) {
+          const n = run(a, b, w);
+          if (n !== 4) f.push(w + ': given up not at the fourth blow with no mark: ' + n);
+          dq0Need(f, a, 'E_PORTAL', { po: 'PO_NO_MARK' }, w + ': its blows\' marks not told as none');
+          dq0Need(f, a, 'E_READY', {}, w + ': the character not free again');
+        }
+        dq0Need(f, p1, 'E_TASK', short, 'the bare fist\'s blow that would hurt it not stopped short');
+        dq0Never(f, p2, 'E_TASK', short, 'asked again at the same door');
+        if (!dq0Ev(p1, 'E_TASK', { te: 'TE_BEGUN' }).some(e => (e.what >> 4 & 3) === 1)) f.push('the punching\'s first words not the fist\'s');
+        const k1 = T.after(T.of('dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\''), 'kick the door'), k2 = T.after(T.of('dq0 -p t -s 15 -c /ram/c.hm'), 'kick the door ahead to my left');
+        const nk1 = run(k1, T.after(k1, 'quit'), 'the booted kicking');
+        if (!(nk1 >= 1 && nk1 <= 12)) f.push('the booted kicking not ended of itself: ' + nk1 + ' blows');
+        dq0Need(f, k1, 'E_PORTAL', { po: p => /^PO_(NO_MARK|HOLDING|GIVING|BROKE_DOWN)$/.test(p) }, 'how the door stood not told as the kicking ended');
+        dq0Never(f, k1, 'E_TASK', short, 'a booted foot stopped short');
+        dq0Need(f, k2, 'E_TASK', short, 'the bare foot\'s blow that would hurt it not stopped short');
+        dq0Need(f, k2, 'E_PORTAL', { po: 'PO_BROKE_DOWN' }, 'the bare-footed kicking didn\'t break seed 15\'s door down');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0timed', meaning: true, what: 'Dingus Quest Zero\'s timed work (the user\'s playtest, 2026-10-22: "It would be better if the first half (for example "You study the mechanism a while") comes out first, followed by, as the task timer expires, the second part"; HOUSE.md\'s long tasks): whatever spends time and whose outcome is a test a long task of its own, its first words at once (E_TASK TE_BEGUN, the clock where the command found it), its test made and its outcome told as its time\'s done (the clock its time on), stopped first, nothing: at seed 7 a thief (Lockcraft 95) finds a dart trap on a door (three searches), sets to making out its mechanism and is stopped at once (TE_STOPPED, no outcome: nothing made out), makes it out (LT_STUDY, TO_ASSESSED its minute on), disarms it (LT_DISARM, TO_DISARMED its minute on), the door opened and nothing set off; at seed 16 a door forced (LT_FORCE, its outcome its ten seconds on, the walk up to it with them); at seed 3 a track read (LT_TRACK, the reading, V_TRACED, its minute on), and another stopped at once (none read); at seed 17 a found chest walked over to and its lock picked (the things\' own: a long task of the UI\'s, LT_PICK, a minute, the things asked as it\'s begun and as it\'s done), a dagger hidden (LT_HIDE, a minute, hidden at its end); the words in order, each first half before its second',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'hmchar -q -s 1 -u feudal -c thief -o /ram/t.hm',
+        'echo ml lck 95 >> /ram/t.hm', 'dq0 -p t -s 7 -c /ram/t.hm', 'search', 'search', 'search', 'face south', 'disarm']) + 'stop\r' +
+        dq0Typed(['disarm', 'disarm', 'open', 'quit', 'dq0 -p t -s 16 -c /ram/c.hm -T', 'face east', 'force', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'track',
+        'track']) + 'stop tracking\r' + dq0Typed(['quit', 'dq0 -p t -s 17 -c /ram/c.hm -T -k lockpicks', 'wait', 'wait', 'wait', 'open the chest',
+        'pick the lock of the chest', 'hide the dagger', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out), tasks = m.dq0.games.flatMap(g => g.tasks);
+        const begun = (t, task) => dq0Ev(t, 'E_TASK', { te: 'TE_BEGUN', task })[0];
+        // (A timed work's turn: begun at once, the clock where the command found it; its outcome its time on, then free)
+        const timed = (t, task, kind, want, len, what) => {
+          const b = begun(t, task), e = dq0Ev(t, kind, want)[0];
+          if (!b || !e) return f.push(what + ': ' + (b ? 'no outcome' : 'not begun') + ' (' + dq0Evs(t) + ')');
+          if (t.at && b.t !== t.at.now) f.push(what + ': begun at ' + b.t + ', not at once (' + t.at.now + ')');
+          if (e.t - b.t < len) f.push(what + ': its outcome ' + (e.t - b.t) + ' tenths after its first words, not ' + len);
+          if (t.events.indexOf(b) > t.events.indexOf(e)) f.push(what + ': its outcome before its first words');
+          if (!dq0Ev(t, 'E_READY', {}).some(r => r.t >= e.t)) f.push(what + ': not free again after its outcome');
+        };
+        const g1 = T.of('dq0 -p t -s 7 -c /ram/t.hm'), d0 = T.after(g1, 'disarm'), st = T.after(d0, 'stop'), d1 = T.after(st, 'disarm');
+        const d2 = T.after(d1, 'disarm'), op = T.after(d2, 'open'), both = T.and(d0);
+        if (!begun(both, 'LT_STUDY')) f.push('the stopped study not begun (' + dq0Evs(both) + ')');
+        dq0Need(f, both, 'E_TASK', { te: 'TE_STOPPED', task: 'LT_STUDY' }, 'the study not stopped');
+        dq0Never(f, both, 'E_TRAP', {}, 'an outcome of the study stopped first');
+        timed(d1, 'LT_STUDY', 'E_TRAP', { to: 'TO_ASSESSED' }, 600, 'the mechanism made out (nothing made out by the one stopped)');
+        timed(d2, 'LT_DISARM', 'E_TRAP', { to: 'TO_DISARMED' }, 600, 'the trap disarmed');
+        dq0Need(f, op, 'E_PORTAL', { po: 'PO_OPENED' }, 'the door not opened, disarmed');
+        dq0Never(f, op, 'E_TRAP', {}, 'the trap went off, disarmed');
+        timed(T.after(T.of('dq0 -p t -s 16 -c /ram/c.hm -T'), 'force'), 'LT_FORCE', 'E_PORTAL', { po: p => p === 'PO_FORCED' || p === 'PO_HELD' }, 100, 'the door forced');
+        const g3 = T.of('dq0 -p t -s 3 -c /ram/c.hm -T'), t1 = T.after(g3, 'track'), t2 = T.after(t1, 'track'), both2 = T.and(t2);
+        timed(t1, 'LT_TRACK', 'E_VIEW', { why: 'V_TRACED' }, 600, 'the track read');
+        dq0Need(f, both2, 'E_TASK', { te: 'TE_STOPPED', task: 'LT_TRACK' }, 'the second track not stopped');
+        dq0Never(f, both2, 'E_VIEW', { why: 'V_TRACED' }, 'a track read, stopped first');
+        const pk = T.of('pick the lock of the chest'), hd = T.of('hide the dagger');
+        for (const [t, kind, io, what] of [[pk, 'LT_PICK', 'IO_SHUT', 'the chest\'s lock picked'], [hd, 'LT_HIDE', 'IO_HIDE', 'the dagger hidden']]) {
+          if (!tasks.some(e => e.kind === kind && e.len === 600 && e.line === t.k + 1)) f.push(what + ': not a minute\'s long task, ' + kind);
+          if (dq0Rep(t, 'ireq', { kind: io }).length < 2) f.push(what + ': the things not asked as it was begun and as it was done');
+        }
+        const dg = dq0Thing(hd.after, 'dagger');
+        if (!dg || !(dg.flags & DQ0_I.HIDDEN)) f.push('the dagger not hidden at its minute\'s end');
+        inTurn(o, ['> disarm', 'You study the mechanism.', 'You stop studying the mechanism.', '> disarm', 'You study the mechanism.',
+          'You make out how it works: now to disarm it.', '> disarm', 'You set to disarming the trap.', 'You have it: the trap is disarmed.', '> open',
+          'You open the door.', '> force', 'You set to forcing the door.', '> track', 'You cast about for tracks.', 'set of small clawed feet',
+          '> track', 'You cast about for tracks.', 'You stop tracking.', '> pick the lock of the chest', 'You set to picking the lock.', 'the lock of the chest.',
+          '> hide the dagger', 'You set to hiding the dagger.', 'You hide it'], f);
         return f;
       },
       sdcard: true

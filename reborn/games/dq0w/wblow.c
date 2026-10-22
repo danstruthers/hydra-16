@@ -11,7 +11,10 @@
 ** broken glass is left in shards at the character's feet; a door's trap set off as it gives way.  A long task
 ** (HOUSE.md's: a battering, LT_BATTER, its bar the blows struck): begun by work (), then a blow at a time as the
 ** character's free (dq0w.c's batter_on), the harm kept as each lands, what came of them told as they end; stopped,
-** hard or by the player (pc_cut), the harm done so far stays.
+** hard or by the player (pc_cut), the harm done so far stays.  Told as it goes (the user's, 2026-10-22: its first
+** words dq0w.c's, as it's begun): the first blow that marks it, the one that leaves it giving, every fourth else
+** (E_BEAT); a bare part's first blow that would hurt it stopped short of it, asked (RS_SHORT, the referee's: "Keep at
+** it?"), once a door.
 **
 ** All of it swapped part 6's (../dq0/swap.inc: dq0w.cfg's SW6), blows () called through its stub (bank.s's).
 */
@@ -62,6 +65,8 @@ static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
     r->actor = 0;
     r->other = RS_THING;
     r->c = n;
+    r->w2 = wk.qs == wk.sn + 1 && wk.qx == wk.px && wk.qy == wk.py ? 0 : RS_SHORT;  /* (A bare part's hurt stopped
+                                                **   short of, but at the door it was warned at) */
     for (k = 0; k < 4; ++k) {
         i = resist[mat][k];
         r->x[k] = i - (i && wk.pq.qual <= 3 ? (wk.pq.qual <= 1 && i > 1 ? 2 : 1) : 0);
@@ -71,6 +76,12 @@ static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
     wk.tt += r->w2;
     wk.hb = r->c > wk.hb ? r->c : wk.hb;
     wk.hw |= (r->w2 ? E_OUT : 0) | (r->result & 1 ? E_STOPPED : 0);
+    if (r->result & 4) {
+        wk.ask = 1;                             /* (Stopped short: asked, the door warned at kept) */
+        wk.qs = wk.sn + 1;
+        wk.qx = wk.px;
+        wk.qy = wk.py;
+    }
     r->state = REQ_FREE;
     if (i) {
         if ((unsigned) h + i >= body) {
@@ -161,6 +172,14 @@ void s_blows (void)
             wk.m.b = NZ_BLOW;                   /* (Its noise a blow's: the sound task's) */
             noise (part && part != PP_GLASS ? 7 : 8);
             wk.m.b = 0;
+            if (wk.what == W_BLOW) {            /* (Told as it goes: the first mark, giving, every fourth blow else) */
+                part = wk.pq.harm >> wk.hs & wk.hm;
+                out = h == wk.was && part != h ? WB_TELLS : h * 2 < body && part * 2 >= body ? WB_GIVES :
+                    !(HUB->pc_task.done & 3) && HUB->pc_task.done < BLOWS && part != wk.was && !wk.ask ? WB_ON : 0xFF;
+                if (out != 0xFF) {
+                    told (E_BEAT, out, 0);
+                }
+            }
             return;
         }
         wk.what = PA_BREAK;

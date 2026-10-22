@@ -6,7 +6,8 @@
 ** open it) and set down at the character's feet, or set in its brackets again (bar the door: shut, from its side, a
 ** bar to hand that spans it: the things' to put back, an IW_PORTAL part again).  A door's trap (one it doesn't know
 ** of) set off as it opens.  The world walked the character up to it (dq0w.c's door_ahead) and takes what came of it
-** from wk.
+** from wk.  Picking and forcing timed work (HOUSE.md's long tasks): begun (wk.plan: the means asked, the time and the
+** long task's kind given, nothing told), then done at its time's end (dq0w.c's work_done: the test made then).
 **
 ** All of it swapped part 5's (../dq0/swap.inc: dq0w.cfg's SW5), doors () called through its stub (bank.s's).
 */
@@ -104,7 +105,11 @@ void s_doors (void)
                 out = PO_NO_PICKS;
                 break;
             }
-            wk.tt += 600;                       /* (A minute a try) */
+            if (wk.plan) {                      /* (Begun, the means to hand (the referee's): a minute a try, the
+                                                **   test made again at its end, its outcome then) */
+                timed (LT_PICK, 600);
+                return;
+            }
             if (g > 0) {
                 out = PO_PICKED;
                 door_state (wk.pq.state & ~PS_LOCKED);
@@ -117,11 +122,14 @@ void s_doors (void)
                 out = PO_IS_OPEN;
                 break;
             }
+            if (wk.plan) {                      /* (Begun: ten seconds' straining, loud, its test at their end) */
+                noise (7);
+                timed (LT_FORCE, 100);
+                return;
+            }
             g = test (P_FORCE, wk.pq.mat, (wk.pq.mat == PM_WOOD ? 0 : wk.pq.mat == PM_IRONBOUND ? -2 : -4) -
                 ((wk.pq.state & (PS_LOCKED | PS_BARRED)) ? 1 : 0) + (wk.pq.qual <= 1 ? 2 : wk.pq.qual <= 3 ? 1 : 0) -
                 (wk.pq.qual >= 8));             /* (A rotten door easier, a new one harder) */
-            wk.tt += 100;
-            noise (7);
             if (g > 0) {
                 out = PO_FORCED;                /* (Its lock or bar burst, the door open) */
                 door_state ((wk.pq.state & (PS_LOCKED | PS_BARRED) ? PS_BROKEN : 0) | PS_OPEN);

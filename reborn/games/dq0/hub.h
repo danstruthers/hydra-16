@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     11                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     12                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -39,7 +39,9 @@
                                                 **   tread, dsense's nose; the places kept lit, KEPT_AT; 11: the
                                                 **   things' requests' selectors and count, IO_SHUT, IO_INSIDE,
                                                 **   PA_LOCK, the selectors SL_OTHER ... SL_EMPTY, the items'
-                                                **   records' shut, WB_CROSS) */
+                                                **   records' shut, WB_CROSS; 12: the timed work's long tasks, LT_STUDY
+                                                **   ... LT_HIDE, the long task's what, TE_BEGUN, TE_ASK_SHORT, I_WAIT's
+                                                **   kind, a battering's beats, WB_TELLS ...) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -232,7 +234,12 @@ struct msg {
 
 /* Intents: what an actor means to do (the UI's for the character, the denizens' for theirs) */
 enum {
-    I_NONE, I_WAIT,                             /* w1: tenths (0: a round); w2: 1, quietly (a thing's handling) */
+    I_NONE, I_WAIT,                             /* w1: tenths (0: a round); w2: 1, quietly (a thing's handling);
+                                                **   | a long task's kind times 256, a timed work's (LT_*: the
+                                                **   things', HOUSE.md's long tasks, its words begun the UI's, its
+                                                **   end the UI's again as the character's free, not stopped), and
+                                                **   its thing's kind times 2 (the catalogue's: the long task's
+                                                **   what, 0x80 | it) */
     I_GO,                                       /* a: a heading (level.h's H_N ... H_NW); w1, w2: the door or the
                                                 **   passage's mouth that way meant (a square it sees: 0, any) */
     I_CLIMB,                                    /* a: DIR_UP or DIR_DOWN (the stairway or ladder in the room);
@@ -380,7 +387,7 @@ enum {
     E_TASK,                                     /* who's long task (the hub's pc_task): w1 what came of it (TE_*), its
                                                 **   kind (LT_*) times 256; b (TE_NOT's) the kind the stop named */
     E_BEAT,                                     /* who's walk, as it goes (DUNGEON.md: moving): w1 the beat (WB_*), its
-                                                **   side (WS_*) times 256 */
+                                                **   side (WS_*) times 256; or its battering's (WB_TELLS ...) */
     NEVENTS
 };
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
@@ -422,7 +429,8 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8, V_TRACED = 16 };
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN };  /* E_DIG's how (D_AGAIN: begun on
                                                 **   a hole dug part way before, the world's DUG record's) */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
-       TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE, TE_LOW, TE_OUT, TE_ROBBED };
+       TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE, TE_LOW, TE_OUT, TE_ROBBED,
+       TE_BEGUN, TE_ASK_SHORT };
                                                 /* E_TASK's: stopped as
                                                 **   the player asked; stopped hard, by a wound or a blow (HOUSE.md:
                                                 **   all wounds), by a hostile in sight within 30 feet; asking, soft
@@ -449,13 +457,22 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
                                                 **   its only light, its long task stopped hard with it, w's high
                                                 **   byte the task's kind: a climb's and a fight's go on); robbed as
                                                 **   it lay helpless (I_ROB's: b the robber plus 1; told only if
-                                                **   something was taken) */
+                                                **   something was taken); a timed work begun, a battering (HOUSE.md's
+                                                **   long tasks: its first words at once, its outcome as its time's
+                                                **   done: the world's), b its what (the long task's: so b of a stop
+                                                **   or a question of a task with one, TE_STOPPED ... TE_NEAR,
+                                                **   TE_ASK_SEEN, TE_ASK_TIRED, TE_ASK_HEARD, TE_ASK_SHORT); asking,
+                                                **   a battering's, a bare part's blow that would hurt it stopped
+                                                **   short (once a door: "Keep at it?") */
 #define TE_STILL        0x80
 #define TE_QUIET        0x40
-enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS };   /* E_BEAT's: a quiet stretch
+enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS,     /* E_BEAT's: a quiet stretch
                                                 **   (HOUSE.md: every 30 feet), the way turns, a side passage, a door
                                                 **   passed, it opens out, it rises, it falls; a room crossed, as the
-                                                **   walk leaves it (to a door, a passage's mouth: the user's) */
+                                                **   walk leaves it (to a door, a passage's mouth: the user's); */
+       WB_TELLS, WB_GIVES, WB_ON };             /*   a battering's as it goes (the user's, 2026-10-22): the first blow
+                                                **   that marks it, the one that leaves it giving, every fourth blow
+                                                **   else */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
 enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD, K_HELD };    /* E_CLIMB's how: begun, on, slipped
                                                 **   back, fallen, up, down; jumped down (a ledge, a shaft); no hold
@@ -567,9 +584,19 @@ enum { DF_NONE, DF_PLACE, DF_LAST, DF_NEAR, DF_FRONT, DF_TARGET, DF_HAND };   /*
                                                 **   character is, the last thing named, that or else what's near
                                                 **   (which, asked), what's in front, the target (else the nearest
                                                 **   foe), what's in hand */
-enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK, LT_BATTER, LT_FIGHT };  /* A long
+enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK, LT_BATTER, LT_FIGHT,  /* A long
                                                 **   task's kind (a verb's: commands.verbs' task); LT_FIGHT fighting
-                                                **   on, the world's (HOUSE.md's) */
+                                                **   on, the world's (HOUSE.md's); */
+       LT_STUDY, LT_DISARM, LT_PICK, LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_PRISE, LT_TRACK, LT_SNIFF, LT_FILL,
+       LT_HIDE };
+                                                /*   the timed work (HOUSE.md's long tasks, the user's, 2026-10-22:
+                                                **   its first words at once, its outcome as its time's done, decided
+                                                **   then): a trap's mechanism made out, a trap disarmed, a lock
+                                                **   picked, a door forced (or a chest, a window's shutters), a
+                                                **   portcullis heaved up, bars bent, a winch wound, a window's pane
+                                                **   worked free, a track read, a smell, a light filled, a thing
+                                                **   hidden; a window climbed through LT_CLIMB's (no stopping it part
+                                                **   way) */
 #define MN_CAREFUL      0x01                    /* (struct cmd's manner: carefully, slowly, quickly, quietly, hard, */
 #define MN_SLOW         0x02                    /*   gently, firmly) */
 #define MN_QUICK        0x04
@@ -850,6 +877,10 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   blows; a fight's none, its blows struck so far) */
         unsigned char foe;                      /* A fight's target, the actor plus 1 (the status line's "Fighting
                                                 **   the giant rat"; 0 none) */
+        unsigned char what;                     /* What it's done to, for its words (the world's, as it's begun: a
+                                                **   timed work's, a battering's): a portal's kind plus 1 (world.h's
+                                                **   PK_*), and a battering's striker (SK_*) times 16; 0x80 | a thing's
+                                                **   kind (the catalogue's); 0 none (a trap's, the place's) */
     }               pc_task;
     volatile unsigned pc_fuel;                  /* The character's light's minutes left (pc_lamp's: 0xFFFF, it never
                                                 **   burns down; the world's as its lights burn, slice 4.1's), */

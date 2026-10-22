@@ -164,6 +164,8 @@ stop	VB_STOP	task=current	-	stop, any task (question 9)
 stop digging	VB_STOP	task=digging	-	stop, named (question 9)
 stop walking	VB_STOP	task=walking	-	stop, named: a walk (slice 4.0's long tasks)
 stop battering	VB_STOP	task=battering	-	stop, named: a door battered (slice 4.0's long tasks)
+stop picking	VB_STOP	task=picking	-	stop, named: a lock picked (the timed work's long tasks, 2026-10-22)
+stop kicking	VB_STOP	task=kicking	-	stop, named: a door kicked (a battering's striker)
 
 # --- naming and meta-commands (question 15) ---
 name the sword Linda	VB_NAME_OBJECT	object=sword;name=Linda	near=sword	name a thing

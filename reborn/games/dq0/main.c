@@ -668,7 +668,9 @@ unsigned char cq_again;                         /* The line changed since it was
 struct cmd cmd;                                 /* The command being carried out (the parser's, cq_cmd's) */
 unsigned char reach;                            /* (1: walking over, the command kept (the UI bank's) to carry out
                                                 **   again as it's free; 2: carried out again; 0 again as a long task's
-                                                **   stopped, task.c's) */
+                                                **   stopped, task.c's, or a line's command begun; 3: a thing's timed
+                                                **   work under way, words.c's, the command kept the same, 4: carried
+                                                **   out again, its end) */
 static unsigned char placing;                   /* (A place in the room walked to: place_go's, its arrival not "over
                                                 **   to it") */
 unsigned char untarget;                         /* (The target let go at the next command: resolve.c's) */
@@ -1227,11 +1229,15 @@ static void __fastcall__ hide (const char* w)
 
     if (!*w) {
         tell (T_HIDE_WHAT_HIDING);
-    } else if (things (IO_HIDE, w) == IR_OK) {
+    } else if ((HUB->ireq.to = reach == 4 ? IO_DONE : 0, things (IO_HIDE, w)) == IR_OK) {
+        if (reach != 4) {
+            more (VB_HIDE);                     /* (Begun: a minute's work, a timed work, the things' IO_DONE at its
+                                                **   end, words.c's) */
+            return;
+        }
         d = HUB->ireq.qty;
         tell (d >= 10 ? T_HID_CUNNINGLY : d >= 4 ? T_HID_WELL : T_HID_POORLY);
         to_hand ();
-        intend2 (I_WAIT, 600, 1);
     } else {
         tell (T_YOU_CARRY_NONE);
     }
@@ -1417,12 +1423,17 @@ void __fastcall__ s_command (char* l)
     signed char ok;
 
     cl = l;
-    if (!l) {                                   /* (A command kept, its thing walked over to first: reach_go's) */
+    if (!l) {                                   /* (A command kept, its thing walked over to first: reach_go's; or
+                                                **   its timed work done, words.c's) */
         hub_mem (UI_BANK, &cmd, &UIREC->kept, sizeof cmd);
         pc_face = HUB->pc_face;
         tx = 0;
         cl = "";
         goto again;
+    }
+    if (!busy) {
+        reach = 0;                              /* (A line's own, the character free: none kept; one carried out at
+                                                **   once as it's busy, the kept left be) */
     }
     ok = s_cq_cmd (l);                          /* (The command the parser made: dq0c's, the grammar's verdict with
                                                 **   it) */
@@ -1943,10 +1954,10 @@ int main (int argc, char* argv[])
             take (pending);
             pending[0] = 0;
         }
-        if (!busy && reach == 1) {
-            reach = 2;                          /* (Walked over to its thing: the command kept carried out again) */
+        if (!busy && (reach & 1)) {
+            ++reach;                            /* (Walked over to its thing, or its timed work's time up: the command
+                                                **   kept carried out again, its end; till the next's, s_command's) */
             command (0);
-            reach = 0;
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
             cq_post (l);                        /* (The command parser at work on it meanwhile) */

@@ -14,7 +14,8 @@
 #include "dq0.h"
 #include "hub.h"
 
-/* What a trap did, or what came of it (w: an E_TRAP's) */
+/* What a trap did, or what came of it (w: an E_TRAP's; a timed work's outcome, as its time's done, worded to read
+** alone after its first words: the user's, 2026-10-22) */
 void __fastcall__ o_trap_words (unsigned w)
 {
     static const char* const set_off[4] = {
@@ -57,19 +58,19 @@ void __fastcall__ o_trap_words (unsigned w)
         strcat (lb, ".");
         break;
     case TO_DISARMED:
-        strcpy (lb, "You work at the trap a while, and disarm it.");
+        strcpy (lb, "You have it: the trap is disarmed.");
         break;
     case TO_NOT_YET:
-        strcpy (lb, "You work at the trap a while, but it defeats you, for now.");
+        strcpy (lb, "The trap defeats you, for now.");
         break;
     case TO_FUMBLED:
         strcpy (lb, "Your hand slips: the trap goes off!");
         break;
     case TO_ASSESSED:
-        strcpy (lb, "You study the mechanism a while, and make out how it works: now to disarm it.");
+        strcpy (lb, "You make out how it works: now to disarm it.");
         break;
     case TO_PUZZLED:
-        strcpy (lb, "You study the mechanism a while, but can't make out how it works.");
+        strcpy (lb, "You can't make out how it works.");
         break;
     case TO_CANT:
         strcpy (lb, "It's set by magic: you've no means to undo it.");
@@ -96,22 +97,21 @@ void o_den_way (void)
 }
 
 /* What came of working a portal (w: an E_PORTAL's, its kind times 256): a portcullis's, a window's or a slit's
-** words, or a door's (intro.c's) */
+** words, or a door's (intro.c's); a timed work's, a battering's, worded to read alone after its first words */
 void __fastcall__ o_fixt_words (unsigned w)
 {
     static const char* const said[PO_FOUND_TRAP - PO_RAISED] = {
-        "You wind the winch beside it, and the portcullis grinds up.",
-        "You heave the portcullis up by its bars, and it catches, raised.",
+        "The portcullis grinds up, and catches, raised.", "The portcullis rises, and catches, raised.",
         "You loose the winch: the portcullis crashes down.",
         "The portcullis is raised already.", "The portcullis is down already.",
         "Its winch is on the other side: you can't lower it from here.",
-        "You heave at the portcullis, but it won't rise.", "That isn't a thing raised or lowered.",
-        "It has no shutters to open or close.",
-        "You strain at the bars, and bend them apart: there's room to get through.", "The bars won't give.",
+        "The portcullis won't rise.", "That isn't a thing raised or lowered.",
+        "It has no shutters to open or close.", "The bars bend apart: there's room to get through.",
+        "The bars won't give.",
         "The glass shatters with a crash.", "The shutters splinter and give way.", "There's nothing in it to break.",
         "You can't climb through: it's shut, glazed or barred.",
         "An arrow slit: only light and arrows pass it, and it's too narrow to climb through.",
-        "You climb up onto the sill, and through.", "You can't get up onto the sill.",
+        "You get up onto the sill, and through.", "You can't get up onto the sill.",
         "You slip from the sill, and fall.", "That isn't a window: walk through it.",
         "There's a trap on that door you know of: disarm it before you open it.",
     };
@@ -122,12 +122,12 @@ void __fastcall__ o_fixt_words (unsigned w)
         "There's no lock on them to pick.", "With a crack the shutters burst open.", "It holds."
     };
     static const char* const blows[PO_JAMMED + 1 - PO_BROKE_DOWN] = {
-        "You batter at it till it gives way, and it crashes open.", "You batter at it a while: it's starting to give.",
-        "You batter at it a while: it's marked, but it holds.", "Your blows make no mark on it.",
+        "It gives way, and crashes open.", "It's giving, but it holds yet.", "It's marked, but it holds.",
+        "Your blows make no mark on it.",
         "It's broken: it won't shut.", "You lift the bar out of its brackets, and set it down.",
         "The bar's on the far side: you can't get at it from here.", "There's nothing there to lift out.",
         "The bars are set fast in the stone: bend them, or break them, first.",
-        "You work the pane free of its frame, and lift it out whole.", "You work the bent bars free, and lift them out.",
+        "The pane comes free of its frame, and you lift it out whole.", "You work the bent bars free, and lift them out.",
         "The bars break out of the stone with a clang.",
         "You set the bar in its brackets: the door is barred.", "There are no brackets for a bar on this side.",
         "It's barred already.", "It stands open: shut it first, then bar it.",

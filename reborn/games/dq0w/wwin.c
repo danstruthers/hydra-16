@@ -5,7 +5,9 @@
 ** apart (P_FORCE, harder than a window's), and it's a way through for good, jammed (PS_WRECKED).  A window's bars bent
 ** (P_FORCE, hard, loud); its glass worked out whole, its bent bars lifted out (items, IW_PORTAL: set down at the
 ** character's feet); an open window climbed through (its sill a climb, P_CLIMB: a fall on a critical failure).  A
-** slit's only seen and shot through.  What passes them is the senses' (dq0p's view).
+** slit's only seen and shot through.  What passes them is the senses' (dq0p's view).  Bending, heaving, winding, a
+** pane worked out and a window climbed through timed work (HOUSE.md's long tasks): begun (wk.plan: the time and the
+** long task's kind given, nothing told), then done at its time's end (dq0w.c's work_done: the test made then).
 **
 ** All of it swapped part 7's (../dq0/swap.inc: dq0w.cfg's SW7), portals () called through its stub (bank.s's).
 */
@@ -38,8 +40,11 @@ static unsigned char __fastcall__ portcullis (unsigned char what)
         if (wk.pq.state & PS_OPEN) {
             return PO_IS_UP;
         }
-        noise (7);
-        wk.tt += 100;
+        if (wk.plan) {                          /* (Begun: ten seconds' straining, loud, its test at their end) */
+            noise (7);
+            timed (LT_BEND, 100);
+            return 0;
+        }
         if (!G_OK (test (P_FORCE, PM_IRON, -6 - (signed char) (wk.pq.thick / TH_IN)))) {
             return PO_BARS_HOLD;
         }
@@ -52,13 +57,25 @@ static unsigned char __fastcall__ portcullis (unsigned char what)
     if (up == (wk.pq.state & PS_OPEN)) {
         return up ? PO_IS_UP : PO_IS_DOWN;
     }
-    if (mine) {                                 /* (Its winch: cranked up, or loosed) */
-        wk.tt += up ? 300 : 20;
-        noise (up ? 5 : 8);
+    if (mine) {                                 /* (Its winch: cranked up, half a minute's winding, loud, a long task
+                                                **   it's up at the end of; or loosed, at once) */
+        if (up && wk.plan) {
+            noise (5);
+            timed (LT_WIND, 300);
+            return 0;
+        }
+        if (!up) {
+            wk.tt += 20;
+            noise (8);
+        }
     } else if (!up) {
         return PO_NO_WINCH;
     } else {
-        wk.tt += 100;                           /* (By hand, from the far side: a round's heaving) */
+        if (wk.plan) {                          /* (By hand, from the far side: a round's heaving, its test at its
+                                                **   end) */
+            timed (LT_HEAVE, 100);
+            return 0;
+        }
         if (!G_OK (test (P_LIFT, 0, -6))) {
             return PO_TOO_HEAVY;
         }
@@ -73,9 +90,13 @@ static unsigned char __fastcall__ window (unsigned char what)
     unsigned char shut = (wk.pq.parts & PP_SHUTTERS) && !(wk.pq.state & PS_OPEN);
     signed char g;
 
-    if (what == PA_FORCE) {                     /* (Its bars bent: the world sends only a barred window's here) */
-        wk.tt += 100;
-        noise (7);
+    if (what == PA_FORCE) {                     /* (Its bars bent: the world sends only a barred window's here; ten
+                                                **   seconds' straining, loud, its test at their end) */
+        if (wk.plan) {
+            noise (7);
+            timed (LT_BEND, 100);
+            return 0;
+        }
         if (!G_OK (test (P_FORCE, PM_IRON, -6))) {
             return PO_BARS_HOLD;
         }
@@ -88,7 +109,10 @@ static unsigned char __fastcall__ window (unsigned char what)
             return PO_IN_WAY;
         }
         if (wk.pq.parts & PP_GLASS) {
-            wk.tt += 300;
+            if (wk.plan) {                      /* (Half a minute's work, a long task: out at its end) */
+                timed (LT_PRISE, 300);
+                return 0;
+            }
             wk.pq.parts &= ~PP_GLASS;
             door_state (wk.pq.state);
             part_moved (KI_PANE, wk.px, wk.py, KI_PANE, AT_PC);
@@ -106,7 +130,11 @@ static unsigned char __fastcall__ window (unsigned char what)
     if (shut || (wk.pq.parts & (PP_GLASS | PP_BARS))) {
         return PO_IN_WAY;
     }
-    wk.tt += 100;
+    if (wk.plan) {                              /* (A round's climb, a long task: its test at its end, no stopping
+                                                **   it part way, a climb's) */
+        timed (LT_CLIMB, 100);
+        return 0;
+    }
     g = test (P_CLIMB, 0, 0);
     wk.through = G_OK (g);
     wk.res = wk.through << 1;                   /* (Somewhere new: the world tells it as arrived) */
@@ -120,6 +148,9 @@ void s_portals (void)
     front ();
     out = wk.pq.kind == PK_PORTCULLIS ? portcullis (what == PA_OPEN || what == PA_FORCE ? PA_RAISE : what == PA_CLOSE ?
         PA_LOWER : what) : window (what);
+    if (wk.task) {
+        return;                                 /* (A timed work begun: nothing told yet) */
+    }
     tail (out);
     if (wk.through) {                           /* (On the far side) */
         wk.fx = wk.px + dir_x[wk.pd];

@@ -86,12 +86,12 @@ go:
                                             ;   several, things moved by the count, what closes worked (things.c)
             SWPART      5, 2                ; Doors (wdoor.c)
             SWPART      6, 3                ; Blows (wblow.c)
-            SWPART      7, 3                ; Portcullises and windows (wwin.c)
+            SWPART      7, 14               ; Portcullises and windows (wwin.c)
             SWPART      8, 4                ; Traps and searches (wtrap.c)
             SWPART      9, 4                ; The walks (dq0w.c's go, go_to, step_to)
             SWPART      10, 5               ; The things: the requests answered, a thing handled (things.c)
             SWPART      11, 5               ; The things listed, searched for, described, hidden
-            SWPART      12, 4               ; A door's work begun (dq0w.c's door_work)
+            SWPART      12, 3               ; A door's work begun (dq0w.c's door_work)
             SWPART      13, 8               ; The item store's rarer work: begun, kept, the kit, a chunk's things
             SWPART      14, 6               ; The denizens' bodies: their intents carried out (wbody.c)
             SWPART      15, 14              ; The blows, the bleeding (wfight.c)
@@ -104,7 +104,7 @@ go:
             SWPART      22, 14              ; The strata's records out of the hub, back (sfile.c)
             SWPART      23, 11              ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 9               ; Engagement, a blow's close-in, fighting on (dq0w.c's)
-            SWPART      25, 14              ; The engage initiative test, a grope's (dq0w.c's)
+            SWPART      25, 6               ; The engage initiative test, a grope's (dq0w.c's)
             SWPART      26, 9               ; Disengaging (dq0w.c's)
             SWPART      27, 9               ; The lights burning down (dq0w.c's: slice 4.1's)
             SWPART      28, 12              ; The traces' store: the journal taken in, kept (wtrace.c)
@@ -176,6 +176,7 @@ go:
             SWFN        hide, 13
             SWFN        door_work, 12
             SWFN        batter_on, 12
+            SWFN        work_done, 12
             SWFN        keep, 19
             SWFN        kit, 13
             SWFN        theme_kinds, 13

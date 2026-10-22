@@ -118,7 +118,9 @@ const ADJ = new Set(['right', 'far', 'wooden', 'iron', 'large', 'small', 'closed
 const NUMWORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
 const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth'];
 const TASKS = ['digging', 'crawling', 'waiting', 'searching', 'climbing', 'sleeping', 'resting', 'working', 'pretending', 'walking',
-  'going', 'moving', 'battering', 'breaking', 'smashing'];
+  'going', 'moving', 'battering', 'breaking', 'smashing', 'fighting', 'kicking', 'punching', 'butting', 'studying', 'disarming',
+  'picking', 'forcing', 'heaving', 'bending', 'winding', 'tracking', 'sniffing', 'filling', 'soaking', 'hiding'];   // (The timed
+                                    // work's too, HOUSE.md's long tasks: the user's, 2026-10-22)
 // Words no object may be: the player is "me", never "you" (question 14).
 const NOT_OBJECT = new Set(['you', 'character', 'yourself']);
 const SPELL_STOP = new Set(['at', 'toward', 'towards', 'to', 'spell', 'the', 'a', 'an', 'my', 'this', 'that', 'these', 'those']);
