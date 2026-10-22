@@ -3112,8 +3112,8 @@ module.exports = {
         if (!torch || (torch.flags & (I.LIT | I.HELD)) !== (I.LIT | I.HELD)) f.push('the torch not lit in hand');
         for (const n of ['backpack', 'belt']) { const i = dq0Thing(s0, n); if (!i || !(i.flags & I.WORN)) f.push('the ' + n + ' not worn'); }
         rep('inventory', 'IO_LIST', 'IR_OK');
-        rep('examine the dagger', 'IO_DESCRIBE', 'IR_OK');
-        rep('examine the moon', 'IO_DESCRIBE', 'IR_NONE');
+        rep('examine the dagger', 'IO_LOOK', 'IR_OK');     // (A closer look, no appraisal: 2026-10-22)
+        rep('examine the moon', 'IO_LOOK', 'IR_NONE');
         const d = rep('drop the dagger', 'IO_DROP', 'IR_OK');
         if (!here(d.after, 'dagger') || mine(d.after, 'dagger')) f.push('the dagger not put down where it stands');
         const lk = T.after(d, 'look');
@@ -3337,7 +3337,7 @@ module.exports = {
         const lk = T.after(d, 'look');
         if (!lk.after || !lk.after.sight || !lk.after.sight.items.some(i => i.name === 'sword' && i.rel === 255)) f.push('Linda not seen lying there');
         if (!dq0Carried(T.of('take Linda').after).some(i => i.name === 'sword')) f.push('Linda not taken up');
-        if (!dq0Rep(T.of('examine Linda'), 'ireq', { kind: 'IO_DESCRIBE', result: 'IR_OK', name: 'sword' }).length) f.push('Linda not examined');
+        if (!dq0Rep(T.of('examine Linda'), 'ireq', { kind: 'IO_LOOK', result: 'IR_OK' }).length) f.push('Linda not examined');
         const a = T.of('attack the rat with Linda');
         if (!sword(a) || !(sword(a).flags & DQ0_I.HELD)) f.push('Linda not taken in hand to strike with');
         const r = T.of('call this room the mausoleum');
@@ -3944,15 +3944,15 @@ module.exports = {
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         inTurn(o, ['% dq0 -p t -s 4', '> open door Which door: 1. the door ahead to your right (open), 2. the one to your right (closed), or 3. the one behind you to your right (closed)?',
-          '> 3', 'You turn to face north.', 'You open the door.', '> look You are on the right side of a long, narrow bedchamber',
+          '> 3', 'You turn to face north.', 'You open the door, revealing a passage, 15 feet of it.', '> look You are on the right side of a long, narrow bedchamber',
           'There is a door ahead (open), one to your left (open) and one ahead to your left (closed).', '> take the bar',
           'You lift the bar out of its brackets, and set it down.', 'Taken.', '> i', 'a tinderbox, a torch, a flask of oil, a bar)', '% dq0 -p t -s 12', '> examine the window',
           'A window, 2 feet wide and 3 high; its shutters of wood, 2 inches thick. It\'s glazed', 'There is a glazed window ahead (its shutters open).', '> x glass',
-          'It\'s 2 by 3 feet, a quarter inch thick.', '> climb through window', 'You can\'t climb through: it\'s shut, glazed or barred.', '> break window',
+          'It\'s made of glass, 2 by 3 feet, a quarter inch thick', '> climb through window', 'You can\'t climb through: it\'s shut, glazed or barred.', '> break window',
           'The glass shatters with a crash.', '> look', 'There is a shuttered window ahead (its shutters open). At your feet lie some glass shards.',
           '> climb through window', 'You climb up onto the sill, and through. You are in a passage.', '> turn around', 'There is a shuttered window ahead (its shutters open).',
           '% dq0 -p t -s 15', '> examine the door ahead to my left', 'Brackets for a bar are fixed on this side, the bar in them.', '> examine bar',
-          'It\'s 4 feet long, 3 inches thick.', '> break the door ahead to my left', 'You batter at it till it gives way, and it crashes open.', '> look',
+          '4 feet long, 3 inches thick', '> break the door ahead to my left', 'You batter at it till it gives way, and it crashes open.', '> look',
           'There is a door ahead (broken down).', '> close', 'It\'s broken: it won\'t shut.', '% echo $status'], f);
         return f;
       },
@@ -4514,7 +4514,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0inside', what: 'Dingus Quest Zero\'s things looked into and opened (the user\'s playtest, 2026-10-21: "look in the sack", "look on the table", "open the chest"): at seed 3 (dq0 -T, a kit of things more: a table, two chisels, a sack, a chest, an iron pot) two chisels put on a table told together ("On the table lie two chisels.", seen.c\'s alike: they were one sentence twice, said once); a look on the table, a look at it (the thing examined: its appraisal, then "On it lie two chisels."), into the sack (the rations put in it), inside the pouch, into the pot (empty), the world\'s IO_INSIDE; the sack tied shut (the catalogue\'s KF_TIE, struct item\'s shut: IS_CLOSED), nothing seen in it, put in or taken out ("The sack is closed."), its contents not listed in what\'s carried, untied; those on one square in one sentence ("At your feet lie a table, a sack and a chest."); the kit\'s chest open, closed, examined closed ("It\'s closed."), its lock no key to, not locked to pick ("pick the lock of the chest"), forced open (one not locked, forced, opened); the flask of oil unstoppered (shown so in what\'s carried) and stoppered; a torch that doesn\'t open; then at seed 3\'s start (the kitchen) its well looked into and its iron pot (found closed, its lid: walked over to first) opened and looked into',
+      name: 'dq0inside', what: 'Dingus Quest Zero\'s things looked into and opened (the user\'s playtest, 2026-10-21: "look in the sack", "look on the table", "open the chest"): at seed 3 (dq0 -T, a kit of things more: a table, two chisels, a sack, a chest, an iron pot) two chisels put on a table told together ("On the table lie two chisels.", seen.c\'s alike: they were one sentence twice, said once); a look on the table, a look at it (what anyone sees of it, no appraisal: "The table is at your feet.", then "On it lie two chisels."), into the sack (the rations put in it), inside the pouch, into the pot (empty), the world\'s IO_INSIDE; the sack tied shut (the catalogue\'s KF_TIE, struct item\'s shut: IS_CLOSED), nothing seen in it, put in or taken out ("The sack is closed."), its contents not listed in what\'s carried, untied; those on one square in one sentence ("At your feet lie a table, a sack and a chest."); the kit\'s chest open, closed, examined closed ("It\'s closed."), its lock no key to, not locked to pick ("pick the lock of the chest"), forced open (one not locked, forced, opened); the flask of oil unstoppered (shown so in what\'s carried) and stoppered; a torch that doesn\'t open; then at seed 3\'s start (the kitchen) its well looked into and its iron pot (found closed, its lid: walked over to first) opened and looked into',
       init: 't_rc', cycles: 2200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k \'table,chisel,chisel,sack,chest,iron pot\'', 'drop table', 'put the chisel on the table',
@@ -4556,13 +4556,14 @@ module.exports = {
         const r1 = rations(T.of('take the rations from the sack').after), sack1 = thing(T.of('take the rations from the sack').after, 'sack');
         if (!r1 || !sack1 || r1.where !== 'IW_ITEM' || r1.x !== sack1.n) f.push('the rations taken out of the closed sack');
         inTurn(s, ['> look', 'At your feet lies a table. On the table lie two chisels.', '> look on the table', 'On the table lie two chisels.',
-          '> look at the table', 'You judge it', 'table', 'On it lie two chisels.', '> look in the sack', 'In the sack lie 3 rations.',
+          '> look at the table', 'The table is at your feet.', 'On it lie two chisels.', '> look in the sack', 'In the sack lie 3 rations.',
           '> look inside the pouch', 'In the pouch lie 12 pennies.', '> look in the pot', 'The iron pot is empty.', '> close the sack',
           'You tie the sack shut.', '> look in the sack', 'The sack is closed.', '> put the dagger in the sack', 'The sack is closed.',
-          '> take the rations from the sack', 'The sack is closed.', '> i', 'a sack (closed)', '> open the sack', 'You untie the sack.', '> look',
+          '> take the rations from the sack', 'The sack is closed.', '> i', 'a sack (closed)', '> open the sack', 'You untie the sack, revealing 3 rations.', '> look',
           'At your feet lie a table, a sack and a chest. On the table lie two chisels.', '> close the chest', 'You close the chest.',
-          '> examine the chest', 'You judge it', 'It\'s closed.', '> lock the chest', 'The chest has a lock, but you have no key to it.',
-          '> pick the lock of the chest', 'The chest isn\'t locked.', '> force the chest', 'You open the chest.', '> open the flask of oil', 'You unstopper the flask of oil.', '> i', 'a flask of oil (unstoppered)',
+          '> examine the chest', 'It\'s closed.', 'It\'s made of wood', '> lock the chest', 'The chest has a lock, but you have no key to it.',
+          '> pick the lock of the chest', 'The chest isn\'t locked.', '> force the chest', 'You open the chest: it\'s empty.', '> open the flask of oil',
+          'You unstopper the flask of oil: it\'s full.', '> i', 'a flask of oil (unstoppered)',
           '> close the flask', 'You stopper the flask of oil.', '> open the torch', 'You can\'t open the torch.'], f, 'the words: ');
         const inv = s.slice(s.indexOf('> i', s.indexOf('> take the rations from the sack')), s.indexOf('> open the sack'));
         if (/sack \(closed\) \(in it/.test(inv) || /in it: 3 rations/.test(inv)) f.push('what\'s in the closed sack listed: ' + inv);
@@ -4574,7 +4575,56 @@ module.exports = {
         if (!lp.after || !lp.after.items.find(i => i.name === 'iron pot' && i.sn === 0 && (i.shut & IS_CLOSED))) f.push('the kitchen\'s pot not found closed');
         if (!pot1 || (pot1.shut & IS_CLOSED)) f.push('the kitchen\'s pot not opened');
         inTurn(s, ['> look into the well', 'The well\'s shaft drops away into the dark.', '> look in the pot', 'The iron pot is closed.', '> open the pot',
-          'You open the iron pot.', '> look in the pot', 'The iron pot is empty.'], f, 'the kitchen\'s words: ');
+          'You open the iron pot: it\'s empty.', '> look in the pot', 'The iron pot is empty.'], f, 'the kitchen\'s words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0examine', what: 'Dingus Quest Zero\'s things looked at and examined, their aspects asked for, what opening shows, and what a command\'s done with (the user\'s, 2026-10-22: "When examining an item, I want to know about its state ... look [at] item instead of examine should give these things.  Examine gives too many unimportant details (like value)"; "examine value [of] item", "quality [of] item"; "if I open a chest, I should get a \'You open the chest, revealing a pile of gold coins\'"; "hit door with bar hits the door, even if I don\'t have a bar"): at seed 3 (dq0 -T, a kit of a table, two chisels, a sack and a chest more) a look at the table (where, what\'s on it, no appraisal), at the torch (lit), the torch examined (what it\'s made of, its wear, how burnt: no test), the dagger\'s value, its quality, both (the referee\'s appraisal test each, IO_DESCRIBE, only what\'s asked), the backpack hefted (its weight with what\'s in it), the chest looked at closed (with a lock), its lock examined (its make), gone over for traps (none), its condition (the last thing named: "its"); the chest opened (": it\'s empty."), the sack untied (what\'s in it told), the flask unstoppered (how full); a blow with a hammer it hasn\'t got refused ("You have no hammer to hand.", no blow); the door ahead opened (what it shows beyond told with it, the world\'s look after it: "revealing a passage, 30 feet of it"), gone over for traps (the world\'s PA_CHECK: 10 seconds), examined (its plain features, no judgement), judged (its state, the appraisal test), its lock, its condition, its value',
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k \'table,chisel,chisel,sack,chest\'', 'drop table', 'put the chisel on the table',
+        'put the chisel on the table', 'look at the table', 'look at the torch', 'examine the torch', 'assess the dagger', 'judge the dagger',
+        'appraise the dagger', 'heft the backpack', 'drop chest', 'close the chest', 'look at the chest', 'examine the lock of the chest',
+        'check the chest for traps', 'check its condition', 'open the chest', 'put the rations in the sack', 'close the sack', 'look at the sack',
+        'look at the rations', 'open the sack', 'open the flask of oil', 'hit the door with the hammer', 'open the door', 'check the door for traps',
+        'examine the door', 'judge the door', 'examine the lock of the door', 'condition of the door', 'assess the door', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        for (const l of ['look at the table', 'look at the torch', 'examine the torch', 'heft the backpack', 'look at the chest',
+          'examine the lock of the chest', 'check the chest for traps', 'check its condition', 'look at the sack']) {
+          if (!dq0Rep(T.of(l), 'ireq', { kind: 'IO_LOOK', result: 'IR_OK' }).length) f.push(l + ': no IO_LOOK done');
+          if (dq0Rep(T.of(l), 'ireq', { kind: 'IO_DESCRIBE' }).length) f.push(l + ': appraised (IO_DESCRIBE), no test wanted');
+        }
+        for (const l of ['assess the dagger', 'judge the dagger', 'appraise the dagger']) {
+          if (!dq0Rep(T.of(l), 'ireq', { kind: 'IO_DESCRIBE', result: 'IR_OK' }).length) f.push(l + ': no appraisal (IO_DESCRIBE)');
+        }
+        for (const l of ['open the chest', 'open the sack', 'open the flask of oil']) {
+          if (!dq0Rep(T.of(l), 'ireq', { kind: 'IO_SHUT', result: 'IR_OK' }).length) f.push(l + ': no IO_SHUT done');
+        }
+        dq0Need(f, T.of('open the door'), 'E_PORTAL', { po: 'PO_OPENED', shows: true }, 'the door not opened, what it shows with it');
+        dq0Never(f, T.of('hit the door with the hammer'), 'E_PORTAL', {}, 'a blow struck with a hammer it hasn\'t got');
+        dq0Need(f, T.of('check the door for traps'), 'E_TRAP', { to: 'TO_CLEAN' }, 'the door not gone over for traps');
+        inTurn(s, ['> look at the table', 'The table is at your feet.', 'On it lie two chisels.', '> look at the torch',
+          'Your torch is in your hand. It\'s lit.', '> examine the torch', 'Your torch is in your hand. It\'s lit. It\'s made of wood; it\'s',
+          '> assess the dagger', 'You judge it worth about', '> judge the dagger', 'You judge it a', 'dagger.', '> appraise the dagger',
+          'You judge it', 'it would fetch about', '> heft the backpack', 'Your backpack weighs about', 'with what\'s in it.',
+          '> look at the chest', 'The chest is at your feet. It\'s closed, with a lock.', '> examine the lock of the chest', 'The chest has a',
+          'lock', '> check the chest for traps', 'The chest shows no sign of a trap', '> check its condition', 'The chest is',
+          '> open the chest', 'You open the chest: it\'s empty.', '> look at the sack', 'It\'s tied shut.', '> look at the rations',
+          'The sack is closed.', '> open the sack', 'You untie the sack, revealing 3 rations.', '> open the flask of oil',
+          'You unstopper the flask of oil: it\'s full.', '> hit the door with the hammer', 'You have no hammer to hand.', '> open the door',
+          'You open the door, revealing a passage, 30 feet of it.', '> check the door for traps', 'You go over it carefully, and find no trap.',
+          '> examine the door', 'A door of', '> judge the door', 'You judge it', '> examine the lock of the door', '> condition of the door',
+          'It shows no damage.', '> assess the door', 'There\'s no price to put on it'], f, 'the words: ');
+        for (const l of ['look at the table', 'look at the chest', 'examine the torch', 'examine the door']) {
+          const a = s.indexOf('> ' + l), b = s.indexOf('> ', a + 2), w = s.slice(a, b);
+          if (/You judge|fetch about|pennies/.test(w)) f.push(l + ': an appraisal in its words: ' + w);
+        }
+        const od = s.slice(s.indexOf('> open the door'), s.indexOf('> check the door for traps'));
+        if ((od.match(/passage, 30 feet/g) || []).length !== 1) f.push('what the door shows told other than once: ' + od);
         return f;
       },
       sdcard: true

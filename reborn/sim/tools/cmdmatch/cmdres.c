@@ -37,9 +37,30 @@ static struct sight seen;                       /* (The case's: what hub_mem cop
 
 void __fastcall__ hub_mem(unsigned char bank, void *to, const void *from, unsigned n)
 {
-  (void) bank;
   (void) from;
+  if (bank == 0) {
+    return;                                     /* (The hub's header written: which of several, the things' to choose) */
+  }
   memcpy(to, &seen, n);
+}
+
+/* (main.c's) The things asked: what a command's done with always to hand here, never taken in hand (resolve.c's
+   tool_ok); and an intent, none */
+unsigned othings_x;
+unsigned char __fastcall__ othings(unsigned char op, const char *name, const char *into, unsigned char to)
+{
+  (void) name;
+  (void) into;
+  (void) to;
+  lb[0] = 0;
+  return op == IO_FIND ? IR_OK : IR_NONE;
+}
+
+void __fastcall__ intend2(unsigned char kind, unsigned w1, unsigned w2)
+{
+  (void) kind;
+  (void) w1;
+  (void) w2;
 }
 
 void __fastcall__ msg(const char *s)

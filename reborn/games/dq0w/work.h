@@ -44,6 +44,8 @@ struct work {
     unsigned        hw;                         /*   once they're done; hw's E_OUT, E_STOPPED) */
     unsigned char   hm, hs;                     /* (The part battered's harm: its mask, its shift in the portal's; */
     unsigned char   was;                        /*   its harm as the battering began) */
+    unsigned char   open;                       /* (An opening's words, PO_*, held till the look after it: told with what
+                                                **   it shows, dq0w.c's revealed; 0 none) */
     struct portal   pq;                         /* (The portal worked, as it was) */
     struct trap     tq;                         /* (The trap) */
     struct msg      m;                          /* (An event told) */
@@ -61,6 +63,7 @@ void doors (void);                              /* (Part 5's) A door worked, or 
 void blows (void);                              /* (Part 6's) A portal broken by blows: begun, or its next blow */
 void portals (void);                            /* (Part 7's) A portcullis or a window worked */
 void traps (void);                              /* (Part 8's) A trap stepped onto, disarmed; a search */
+void revealed (void);                           /* (Part 41's: dq0w.c) An opening told, with what it shows beyond */
 
 /* dq0w.c's: the referee asked (kind, a, b; its w1 ww1, its steps wsteps, 0 after): its grade, wres its result */
 signed char __fastcall__ ask_w (unsigned char kind, unsigned char a, unsigned char b);

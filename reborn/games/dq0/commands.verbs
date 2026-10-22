@@ -20,6 +20,8 @@
 #                  denizens' sway (SW_*), what a blow strikes with (SK_*), an ally's request (OR_*)
 #   skill=         the skill it tests (rs.h's P_*: the referee's)
 #   task=          a long task, of its kind (hub.h's LT_*: interruptible, "stop" ends it)
+#   aspects=1      a thing's aspects said after it are its aux (commands.words' [aspects]: "examine the value of the
+#                  sword", "search the chest for traps"), the verb's own aux if none is
 #
 # [words]: a word (or words: a verb of several, matched before one of one) = the verb it says, as a line's first;
 # each also as the root its alias gives (commands.aliases: "peer" is look's, "attack" fight's).  A line that begins
@@ -30,8 +32,13 @@ move        way=VB_MOVE_DIRECTION thing=VB_MOVE_TOWARD alone=VB_MOVE_DIRECTION u
 enter       thing=VB_ENTER unsaid=front
 approach    thing=VB_APPROACH_OBJECT unsaid=none task=LT_WALK
 look        alone=VB_OBSERVE_LOCALE thing=VB_OBSERVE_OBJECT way=VB_OBSERVE_DIRECTION through=VB_OBSERVE_THROUGH around=VB_OBSERVE_AROUND for=VB_FIND_OBJECT in=VB_OBSERVE_IN into=VB_OBSERVE_IN inside=VB_OBSERVE_IN on=VB_OBSERVE_IN unsaid=place skill=P_NOTICE_SIGHT
-examine     alone=VB_EXAMINE_LOCALE thing=VB_EXAMINE_OBJECT unsaid=place skill=P_APPRAISE
-search      thing=VB_SEARCH unsaid=place skill=P_SEARCH task=LT_SEARCH
+examine     alone=VB_EXAMINE_LOCALE thing=VB_EXAMINE_OBJECT unsaid=place aspects=1
+assess      thing=VB_EXAMINE_OBJECT unsaid=last aux=EX_VALUE skill=P_APPRAISE aspects=1    # (new, 2026-10-22: a thing's
+judge       thing=VB_EXAMINE_OBJECT unsaid=last aux=EX_QUALITY skill=P_APPRAISE aspects=1  #   value judged, its quality,
+appraise    thing=VB_EXAMINE_OBJECT unsaid=last aux=EX_BOTH skill=P_APPRAISE aspects=1     #   both; its weight felt, its
+heft        thing=VB_EXAMINE_OBJECT unsaid=last aux=EX_WEIGHT aspects=1                    #   condition looked over)
+condition   thing=VB_EXAMINE_OBJECT unsaid=last aux=EX_COND aspects=1
+search      thing=VB_SEARCH unsaid=place skill=P_SEARCH task=LT_SEARCH aspects=1
 turn        way=VB_FACE_DIRECTION unsaid=none
 face        way=VB_FACE_DIRECTION unsaid=none
 climb       thing=VB_CLIMB way=VB_CLIMB alone=VB_CLIMB unsaid=front skill=P_CLIMB task=LT_CLIMB
@@ -138,7 +145,7 @@ dispel      thing=VB_DISPEL unsaid=none
 release     thing=VB_RELEASE_PRINCIPLE unsaid=none
 memorize    thing=VB_MEMORIZE unsaid=none
 possess     thing=VB_POSSESS unsaid=none
-judge       thing=VB_JUDGE_SINCERITY unsaid=none
+sincerity   thing=VB_JUDGE_SINCERITY unsaid=none                     # ("sense a lie from the goblin": judge's till 2026-10-22)
 taunt       thing=VB_TAUNT unsaid=none
 negotiate   alone=VB_NEGOTIATE thing=VB_NEGOTIATE
 untarget    alone=VB_TARGET_CLEAR
@@ -176,7 +183,7 @@ back off = disengage
 break off = disengage
 pass the time = wait
 call on = intervene
-sense a lie = judge
+sense a lie = sincerity
 mental bolt = talent
 turn on = light
 turn off = douse
@@ -220,6 +227,21 @@ gander = look
 examine = examine
 inspect = examine
 x = examine
+check = examine                             # (new, 2026-10-22: a closer look, and a thing's aspects: "check its condition")
+study = examine
+determine = examine
+assess = assess
+value = assess
+price = assess
+worth = assess
+what is = assess
+appraise = appraise
+heft = heft
+weigh = heft
+weight = heft
+quality = judge
+how well made is = judge
+condition = condition
 search = search
 turn = turn
 face = face
@@ -291,6 +313,7 @@ winch = raise
 lower = lower
 break = break
 smash = break
+batter = break
 bend = bend
 disarm = disarm
 disable = disarm

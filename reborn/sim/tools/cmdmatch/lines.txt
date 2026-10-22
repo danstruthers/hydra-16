@@ -309,3 +309,20 @@ approach the door
 walk north
 north
 examine the way out
+# A thing looked over, its aspects judged (2026-10-22): an aspect said after a verb that takes them, the verb's own else
+examine the lock
+check the chest for traps
+search the door for traps
+assess the value of the sword
+what is the sword worth
+how well made is the sword
+check its condition
+appraise the second sack
+weigh the sack
+pick the lock of the chest
+# What it's done with: a part after "with" the other thing's, not the door's
+hit the rat with the bar
+hit the door with the bar
+attack the goblin using my sword
+dig down with the dagger
+break the window with the bars

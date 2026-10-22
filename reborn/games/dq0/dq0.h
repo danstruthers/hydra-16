@@ -113,6 +113,13 @@ enum { PR_NONE, PR_IN, PR_ON, PR_FROM, PR_WITH, PR_AT, PR_TO };    /* (The other
                                                 **   it, at it, to it) */
 #define GO_UP       8                           /* (A direction: up, down; else a heading, H_N ...) */
 #define GO_DOWN     9
+#define EX_VALUE    0x01                        /* (A thing's aspects judged, an examine's aux, all said: commands.words' */
+#define EX_QUALITY  0x02                        /*   [aspects], commands.verbs' own; 0 a closer look, 2026-10-22: its */
+#define EX_BOTH     0x03                        /*   value, its quality, both (the referee's appraisal); its weight, its */
+#define EX_WEIGHT   0x04                        /*   lock, a search of it for traps, its condition: no test but the */
+#define EX_LOCK     0x08                        /*   search's) */
+#define EX_TRAPS    0x10
+#define EX_COND     0x20
 struct cmd;
 extern struct cmd cmd;                          /* (main.c's: the command being carried out, cq_cmd's) */
 extern unsigned char pc_face;                   /* (The hub's, copied for the overlays) */
@@ -219,16 +226,17 @@ unsigned char __fastcall__ free_cmd (const char* l);   /* Overlay 3: a line type
 extern unsigned char autogo;                    /* (main.c's: dq0 -a, every soft question answered yes, unasked) */
 extern unsigned char harm_told;                 /* (The states a harm's words told this answer: main.c's) */
 char* __fastcall__ env (const char* name, char* buf, unsigned char size);  /* The environment's (main.c) */
-void __fastcall__ appraise (const struct ireq* q, signed char g);       /* Overlay 1: a thing judged */
+void __fastcall__ appraise (const struct ireq* q, signed char g, unsigned char ex);   /* Overlay 1: a thing judged
+                                                **   (its value, its quality, both: ex's EX_*) */
 extern char dig_with[16];                       /* The tool a dig's taken up, to name (then ""): main.c's */
 void __fastcall__ climb_words (unsigned char how, unsigned char feet); /* Overlay 1: climbing's (a ledge's:
                                                                         **   CW_*) */
 enum { CW_RISES = 0x40, CW_FALLS };
-void __fastcall__ portal_words (unsigned char out);                     /* Overlay 1: a door worked's */
+void __fastcall__ portal_words (unsigned char out);                     /* Overlay 1: a door worked's, into lb */
 void __fastcall__ harm_words (unsigned w, unsigned cond);               /* Overlay 1: harm's (an E_HARM's w1,
                                                                         **   the conditions; the wounds in lb) */
-void __fastcall__ fixt_words (unsigned w);      /* Overlay 4: a portal worked's (an E_PORTAL's w1: a door's,
-                                                **   portal_words) */
+void __fastcall__ fixt_words (const struct msg* m);    /* Overlay 4: a portal worked's (an E_PORTAL: a door's,
+                                                **   portal_words; an opening's with what it shows) */
 void __fastcall__ trap_words (unsigned w);      /* Overlay 4: a trap's (an E_TRAP's w1) */
 void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned char state);  /* Overlay 10: a
                                                 **   trap's name, added to lb */
@@ -253,9 +261,10 @@ extern char heard_what[20];                     /* Its sound's words (SOUND.md: 
                                                 **   none), main.c's */
 struct portal;
 extern unsigned tx, ty;                         /* (main.c's: the square of the thing its find found) */
-void __fastcall__ portal_look (const struct portal* p, signed char g);  /* Overlay 4: a portal looked at closely
-                                                **   (the world's record of it, the hub's pview, copied), judged at
-                                                **   the appraiser's grade g, into lb */
+void __fastcall__ portal_look (const struct portal* p, signed char g, unsigned char ex);  /* Overlay 4: a portal
+                                                **   looked at closely (the world's record of it, the hub's pview,
+                                                **   copied), its aspects ex (EX_*: its quality judged at the
+                                                **   appraiser's grade g), into lb */
 void words (void);                              /* Overlay 2: what the character perceives, into lb */
 void seen_words (void);                         /* Overlay 12: the things and the denizens it sees, added to lb */
 void stir_words (void);                         /* Overlay 9: the denizens it sees, moving, into lb: what's
@@ -274,9 +283,10 @@ extern char sight_lamp[14];                     /* (What gives its light, named:
 extern unsigned char sight_close;               /* (A close look: the room's figures, its size and its ceiling's; 8,
                                                 **   a look one way's words) */
 /* ---- way.c: looking one way, listening and sniffing one way (HOUSE.md's slice 4.0) */
-void __fastcall__ look_way (unsigned char action);  /* Part 6: "look north", "look at the door", "listen at the door",
-                                                **   "sniff" (the command's action, VB_*); VB_NONE: a listen's or a
-                                                **   sniff's end (main.c's E_READY) */
+unsigned char __fastcall__ look_way (unsigned char action);  /* Part 6: "look north", "look at the door", "listen at
+                                                **   the door", "sniff" (the command's action, VB_*); VB_NONE: a
+                                                **   listen's or a sniff's end (main.c's E_READY); a thing examined,
+                                                **   its aspects: 0, or a door's work to do (PA_CHECK) */
 void focus_words (void);                        /* Overlay 7: a look one way's words, into lb (words.c's) */
 extern unsigned char lsn;                       /* (main.c's: a listen, 1 one way, 2 about; 0, none) */
 extern unsigned long heard_at;                  /* (main.c's: when a sound was last told) */

@@ -17,9 +17,14 @@
 **   a sniff           the world's (I_TRACE, slice 4.1's traces: the smell carried from that way, or about it), told
 **                     at once (words.c's), the time after
 **
-** A thing looked at ("look at the table", slice 4.1's) is a close look at it, examine's (its appraisal, what's in it,
-** on it: the user's, 2026-10-21; examine's own work part 6's too, part 2's room); a denizen ("look at the rat") a
-** look about, as before.
+** A thing looked at ("look at the table") is what anyone sees of it, no test: what it is, where, its state, what's in
+** it or on it (the world's IO_LOOK, LM_AT: the user's, 2026-10-22); examined ("examine the sword"), a closer look, no
+** test either (LM_CLOSE: what it's made of, its wear, a lock's make); the aspects asked for (the command's aux, EX_*:
+** "assess the sword", "judge the quality of the chest", "appraise it", "heft the sack", "examine the lock of the
+** chest", "check its condition", "check the chest for traps"), each its own: an appraisal the referee's test of the
+** craft that knows it (value, quality, both), the rest no test but a door gone over for traps (the world's PA_CHECK,
+** main.c's door work).  A denizen ("look at the rat") a look about, as before; a portal examined, its plain features,
+** judged only if its quality's asked.
 */
 
 #include <stdlib.h>
@@ -57,13 +62,13 @@ static void __fastcall__ turn_to (unsigned char h)
 }
 
 /* A portal it sees looked at closely (the parser's thing, the way it lies): the world's record of it (the hub's
-** wreq, WQ_EXAMINE: a doorway has none), judged by the craft that knows its material (the referee's test,
-** P_APPRAISE: AP_WOOD, AP_METAL, AP_STONE), in words (overlay 4); a few seconds' looking (main.c's part 2's once,
-** its room) */
-static void __fastcall__ inspect (unsigned char obj, unsigned char orel)
+** wreq, WQ_EXAMINE: a doorway has none), in words (overlay 4), its aspects as ex asks (EX_*: 0 its plain features;
+** its quality, judged by the craft that knows its material, the referee's test, P_APPRAISE: AP_WOOD, AP_METAL,
+** AP_STONE; its lock, its condition, plain); a few seconds' looking (main.c's part 2's once, its room) */
+static void __fastcall__ inspect (unsigned char obj, unsigned char orel, unsigned char ex)
 {
     struct req* r;
-    signed char g;
+    signed char g = 0;
 
     if (pick (obj | PICK_TELL, orel) != 1) {
         return;
@@ -81,19 +86,45 @@ static void __fastcall__ inspect (unsigned char obj, unsigned char orel)
         return;
     }
     memcpy (&viewed, &HUB->pview, sizeof viewed);
-    r = ask_b (RS_TEST, P_APPRAISE, viewed.mat == PM_STONE ? AP_STONE : viewed.mat == PM_IRON ? AP_METAL : AP_WOOD);
-    g = r->grade;
-    r->state = REQ_FREE;
-    portal_look (&viewed, g);
+    if (ex & EX_QUALITY) {                      /* (Its quality judged: the appraiser's test) */
+        r = ask_b (RS_TEST, P_APPRAISE, viewed.mat == PM_STONE ? AP_STONE : viewed.mat == PM_IRON ? AP_METAL : AP_WOOD);
+        g = r->grade;
+        r->state = REQ_FREE;
+    }
+    portal_look (&viewed, g, ex);
     msg (lb);
-    intend2 (I_WAIT, 50, 1);
+    if (!(ex & (EX_VALUE | EX_WEIGHT)) || (ex & EX_QUALITY)) {
+        intend2 (I_WAIT, ex & (EX_LOCK | EX_COND) ? 20 : 50, 1);
+    }
 }
 
-/* A thing looked at closely (examine's; and one looked at, "look at the table": the user's, 2026-10-21): what it truly
-** is (the world's IO_DESCRIBE, the one of several the command says), judged by the craft that knows it (the referee's
-** P_APPRAISE), in words (overlay 1's appraise); and what's in it, on it, as anyone sees (the world's IO_INSIDE: "On
-** it lie two chisels.", "It's closed."): 1; 0 if there's no such thing it carries or sees */
-static unsigned char described (void)
+/* A thing (carried, or seen) looked at as anyone sees it, no test (the world's IO_LOOK, mode LM_*: "Your torch is in
+** your hand. It's lit.", "The chest is beside you. It's closed, with a lock."), its time t tenths: 1; 0 if there's no
+** such thing it carries or sees (out of reach, its weight felt or it gone over for traps: walked over to first, 1) */
+static unsigned char __fastcall__ looked (unsigned char mode, unsigned char t)
+{
+    unsigned char r;
+
+    if (!cmd.obj.word[0]) {
+        return 0;
+    }
+    HUB->ireq.to = mode;
+    if ((r = things (IO_LOOK, cmd.obj.word)) == IR_NOT_HERE) {
+        reach_go ();
+        return 1;
+    }
+    if (r != IR_OK) {
+        return 0;
+    }
+    msg (tt ());
+    intend2 (I_WAIT, t, 1);
+    return 1;
+}
+
+/* A thing appraised (its value, its quality, both: ex's, EX_*): what it truly is (the world's IO_DESCRIBE, the one
+** of several the command says), judged by the craft that knows it (the referee's P_APPRAISE), the aspects asked in
+** words (overlay 1's appraise): 1; 0 if there's no such thing it carries or sees */
+static unsigned char __fastcall__ judged_as (unsigned char ex)
 {
     struct req* r;
     signed char g;
@@ -105,67 +136,78 @@ static unsigned char described (void)
     r = ask_b (RS_TEST, P_APPRAISE, judged.craft);
     g = r->grade;
     r->state = REQ_FREE;
-    appraise (&judged, g);
+    appraise (&judged, g, ex);
     msg (lb);
-    HUB->ireq.to = 1;                           /* (As it's examined: none for a thing that holds nothing) */
-    if (things (IO_INSIDE, cmd.obj.word) == IR_OK && *tt ()) {
-        say (" ");
-        say (lb);
-    }
     return 1;
 }
 
-/* A thing, a portal, the room looked at closely (main.c's VB_EXAMINE_OBJECT, VB_EXAMINE_LOCALE: a denizen's its
-** own) */
-static void examine (void)
+/* A thing, a portal, the room looked at closely, or the aspects asked of it (main.c's VB_EXAMINE_OBJECT,
+** VB_EXAMINE_LOCALE: a denizen's its own; a portal gone over for traps, main.c's door work): 0, or that door work,
+** PA_CHECK */
+static unsigned char examine (void)
 {
-    if (described ()) {
-        return;
+    unsigned char ex = cmd.aux, k = cmd.obj.kind;
+
+    if (cmd.obj.word[0]) {
+        if (ex & EX_BOTH ? judged_as (ex) : looked (ex & EX_TRAPS ? LM_TRAPS : ex & EX_WEIGHT ? LM_WEIGHT : ex & EX_LOCK ?
+            LM_LOCK : ex & EX_COND ? LM_COND : LM_CLOSE, ex & EX_TRAPS ? 100 : ex ? 10 : 30)) {
+            return 0;
+        }
+        if (!k) {
+            sayf ("\nYou see no %s here.", cmd.obj.word);
+            return 0;
+        }
     }
-    if (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_WINDOW || cmd.obj.kind == OB_PORTC) {
-        inspect (cmd.obj.kind, cmd.obj.lies);
-    } else if (cmd.obj.word[0]) {
-        sayf ("\nYou see no %s here.", cmd.obj.word);
+    if (!k && (ex & (EX_LOCK | EX_TRAPS))) {
+        cmd.obj.kind = k = OB_DOOR;             /* (A lock, a trap, nothing named: the door in front) */
+    }
+    if (k == OB_DOOR || k == OB_WINDOW || k == OB_PORTC) {
+        if (ex & EX_TRAPS) {
+            return PA_CHECK;                    /* (Gone over for traps: the world's, main.c's door work) */
+        }
+        inspect (k, cmd.obj.lies, ex);
+    } else if (ex) {
+        msg ("Which thing? Name it (assess the sword, check the chest for traps ...).");
     } else {
         look (2);                               /* (A close look about: the room's figures) */
     }
+    return 0;
 }
 
-void __fastcall__ s_look_way (unsigned char action)
+unsigned char __fastcall__ s_look_way (unsigned char action)
 {
     unsigned char h, k;
 
     if (action == VB_EXAMINE_OBJECT) {
-        examine ();
-        return;
+        return examine ();
     }
     if (action == VB_NONE) {                    /* (A listen's or a sniff's end: what came of it) */
         if (!heard_at) {
             msg ("You hear nothing.");          /* (Nothing told as it listened: main.c's heard) */
         }
         lsn = 0;
-        return;
+        return 0;
     }
     if (action == VB_TRACK) {
         intend2 (I_TRACE, cmd.aux, 0);          /* (The traces read, the world's: the floor looked at, the Tracking
                                                 **   test; worded as its E_VIEW comes, V_TRACED) */
-        return;
+        return 0;
     }
     k = action == VB_LISTEN ? 1 : action == VB_SMELL ? 4 : 0;
     h = cmd.dir;                                /* (A way: "look north", "listen left") */
     if (h > H_NW) {
         if ((WAY_OBJ >> (cmd.obj.kind & 15)) & 1) {     /* (The one it sees) */
             if (pick (cmd.obj.kind | PICK_TELL, cmd.obj.lies) != 1) {
-                return;                         /* (None, told; or which, asked) */
+                return 0;                       /* (None, told; or which, asked) */
             }
             h = bearing ((int) (tx - HUB->pc_x), (int) (ty - HUB->pc_y));
         } else if (k && h == 0xFF && (k == 4 || !cmd.obj.word[0])) {
             k += k & 1;                         /* ("listen", "sniff", "smell the air": about it) */
         } else {
-            if (k || !described ()) {           /* ("look at the table": the thing examined, the user's) */
+            if (k || !looked (LM_AT, 10)) {     /* ("look at the table": what anyone sees of it, the user's) */
                 look (0);                       /* ("look up", "look at the rat": a look about, as ever) */
             }
-            return;
+            return 0;
         }
     }
     if (h <= H_NW && h != HUB->pc_face) {       /* (Turned to it first: the turn's look) */
@@ -173,17 +215,18 @@ void __fastcall__ s_look_way (unsigned char action)
     }
     if (!k) {
         intend2 (I_LOOK, WAY_T, 0);             /* (The world's: the senses' look one way, E_VIEW V_LOOKED) */
-        return;
+        return 0;
     }
     if (k == 4) {
         intend2 (I_TRACE, TRC_SMELL | (unsigned) h << 8, WAY_T);   /* (The world's: the smell read, worded, then
                                                 **   its time) */
-        return;
+        return 0;
     }
     heard_at = 0;                               /* (What it hears told, however soon after the last, and noted:
                                                 **   main.c's heard) */
     lsn = k;
     intend2 (I_WAIT, WAY_T, 1);
+    return 0;
 }
 
 #pragma code-name (pop)

@@ -20,6 +20,8 @@ look left	VB_OBSERVE_DIRECTION	direction=L	facing=N	relative to facing
 look ahead	VB_OBSERVE_DIRECTION	direction=F	facing=N	relative
 look down	VB_OBSERVE_DIRECTION	direction=D	-	vertical
 look at the wall	VB_OBSERVE_OBJECT	object=wall	near=wall	question 3: a glance
+look the torch over	VB_OBSERVE_OBJECT	object=torch	near=torch	a look at it, over (2026-10-22)
+look over the torch	VB_OBSERVE_OBJECT	object=torch	near=torch	over first
 look at me	VB_OBSERVE_OBJECT	object=me	-	'me' only
 look through the window	VB_OBSERVE_THROUGH	object=window	near=window	through an opening
 look around the corner	VB_OBSERVE_AROUND	object=corner	near=corner	orientation point
@@ -42,6 +44,45 @@ examine	VB_EXAMINE_LOCALE	place=here	-	examine the place
 look closely	VB_EXAMINE_LOCALE	place=here	-	close look, the place
 examine me	VB_EXAMINE_OBJECT	object=me	-	self
 examine you	ERROR:NOT_UNDERSTOOD	-	-	question 14
+
+# --- a thing judged, the aspect asked for (2026-10-22, the user's: "examine value [of] item", "quality [of] item") ---
+check the chest	VB_EXAMINE_OBJECT	object=chest	near=chest	check: a closer look
+study the chest	VB_EXAMINE_OBJECT	object=chest	near=chest	study: a closer look
+assess the sword	VB_EXAMINE_OBJECT	object=sword;aspect=value	near=sword	assess: its value
+value the sword	VB_EXAMINE_OBJECT	object=sword;aspect=value	near=sword	value: its value
+price the sword	VB_EXAMINE_OBJECT	object=sword;aspect=value	near=sword	price: its value
+what is the sword worth	VB_EXAMINE_OBJECT	object=sword;aspect=value	near=sword	what it is worth
+value of the sword	VB_EXAMINE_OBJECT	object=sword;aspect=value	near=sword	the aspect first
+assess the value of the sword	VB_EXAMINE_OBJECT	object=sword;aspect=value	near=sword	the aspect said
+determine the value of the sword	VB_EXAMINE_OBJECT	object=sword;aspect=value	near=sword	determine: the aspect said
+examine the value of the sword	VB_EXAMINE_OBJECT	object=sword;aspect=value	near=sword	examine: the aspect said
+judge the sword	VB_EXAMINE_OBJECT	object=sword;aspect=quality	near=sword	judge: its quality
+judge the quality of the sword	VB_EXAMINE_OBJECT	object=sword;aspect=quality	near=sword	the aspect said
+quality of the sword	VB_EXAMINE_OBJECT	object=sword;aspect=quality	near=sword	the aspect first
+how well made is the sword	VB_EXAMINE_OBJECT	object=sword;aspect=quality	near=sword	how well made
+appraise the sword	VB_EXAMINE_OBJECT	object=sword;aspect=both	near=sword	appraise: its value and its quality
+heft the sack	VB_EXAMINE_OBJECT	object=sack;aspect=weight	near=sack	heft: its weight
+weigh the sack	VB_EXAMINE_OBJECT	object=sack;aspect=weight	near=sack	weigh: its weight
+examine the lock of the chest	VB_EXAMINE_OBJECT	object=chest;aspect=lock	near=chest	a lock looked at
+study the lock of the door	VB_EXAMINE_OBJECT	object=door;aspect=lock	near=door	a door's
+examine the lock	VB_EXAMINE_LOCALE	aspect=lock	-	a lock: what's in front
+check the chest for traps	VB_EXAMINE_OBJECT	object=chest;aspect=traps	near=chest	a thing searched for traps
+check the condition of the sword	VB_EXAMINE_OBJECT	object=sword;aspect=condition	near=sword	its condition
+condition of the sword	VB_EXAMINE_OBJECT	object=sword;aspect=condition	near=sword	the aspect first
+check its condition	VB_EXAMINE_LOCALE	aspect=condition	-	its: the last thing named
+search the chest for traps	VB_SEARCH	object=chest;aspect=traps	near=chest	that thing alone, for traps
+search for traps	VB_SEARCH	aspect=traps	-	about it, for traps
+
+# --- what a command is done with (2026-10-22: refused when it isn't to hand) ---
+hit the door with the bar	VB_ATTACK_OBJECT	object=door;instrument=bar	near=door,bar	a blow with a thing
+strike the rat using the sword	VB_ATTACK_OBJECT	object=rat;instrument=sword	near=rat,sword	using
+break the door with the bar	VB_BREAK_OBJECT	object=door;instrument=bar	near=door,bar	break with
+batter the door	VB_BREAK_OBJECT	object=door	near=door	batter: break
+force the door with the bar	VB_FORCE_OBJECT	object=door;instrument=bar	near=door,bar	force with
+dig down with the shovel	VB_DIG	direction=D;instrument=shovel	near=shovel	dig with
+light the torch with the tinderbox	VB_LIGHT_OBJECT	object=torch;instrument=tinderbox	near=torch,tinderbox	light with
+pick the lock of the chest with the lockpicks	VB_UNLOCK_OBJECT	object=chest;instrument=lockpicks	near=chest,lockpicks	a lock picked with
+open the chest with the bar	VB_OPEN_OBJECT	object=chest;instrument=bar	near=chest,bar	open with
 
 # --- handling (question 2: close and open) ---
 get the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword	the core case
@@ -412,7 +453,7 @@ bluff the goblin	VB_FAST_TALK	target=goblin	near=goblin	bluff is fast-talk
 lie to the goblin about the key	VB_FAST_TALK	target=goblin;topic=the key	near=goblin	a lie is fast-talk
 taunt the goblin	VB_TAUNT	target=goblin	near=goblin	Rhetoric: persuade them to attack
 taunt the goblin to attack	VB_TAUNT	target=goblin;topic=attack	near=goblin	the same, with the words
-judge the goblin	VB_JUDGE_SINCERITY	target=goblin	near=goblin	Diplomacy: is it bluffing?
+sense a lie from the goblin	VB_JUDGE_SINCERITY	target=goblin	near=goblin	Diplomacy: is it bluffing? (judge: a quality judged now)
 sense a lie from the goblin	VB_JUDGE_SINCERITY	target=goblin	near=goblin	the same, another word
 call on peoni for help	ERROR:NOT_UNDERSTOOD	-	-	no deity in this world: no call
 take and stow the sword	VB_SEQUENCE	steps=VB_RETRIEVE_OBJECT,VB_UNEQUIP_OBJECT;1.object=sword;2.object=sword	near=sword	two verbs, one object, in order

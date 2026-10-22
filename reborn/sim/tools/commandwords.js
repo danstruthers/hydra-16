@@ -15,7 +15,8 @@ const path = require('path');
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
 const REL = 0x10, PART = 0x80, NONE = 0xFF;
 const CF_NOVERB = 1, CF_HALF = 2, CF_UNSAID = 4;              // (hub.h's struct cmd's flags)
-const RF_ORDER = 1;                                           // (A verb's own flags: an ally's request, its order read)
+const RF_ORDER = 1, RF_ASPECTS = 2;                           // (A verb's own flags: an ally's request, its order read;
+                                                              //   a thing's aspects taken, commands.words' [aspects])
 
 // The names' values: each enum's names in order (dq0.h, hub.h, level.h, items.h, rs.h, actions.h), and the #defines
 // that are numbers
@@ -75,7 +76,8 @@ function load(file = path.join(GAME, 'commands.words'), vfile = path.join(GAME, 
     return n === undefined ? s : n | flag;
   };
   const w = { verbs: [], rows: [null], rowOf: new Map(), orders: new Map(), dirs: new Map(), things: new Map(),
-    preps: new Map(), how: new Map(), special: new Map(), selectors: new Map(), numbers: new Map(), manners: new Map(), little: new Set(), V };
+    preps: new Map(), how: new Map(), special: new Map(), selectors: new Map(), numbers: new Map(), manners: new Map(),
+    aspects: new Map(), little: new Set(), V };
   let sec = null;
   for (const raw of fs.readFileSync(file, 'utf8').split(/\r?\n/)) {
     const l = raw.replace(/#.*$/, '').trim();
@@ -101,6 +103,7 @@ function load(file = path.join(GAME, 'commands.words'), vfile = path.join(GAME, 
         const [k, x] = f.split('=');
         if (x === undefined) throw new Error('commands.verbs: ' + name + ': ' + f);
         if (k === 'unsaid') { if (!UNSAID[x]) throw new Error('commands.verbs: ' + name + ': unsaid=' + x); r.unsaid = num(UNSAID[x], 'commands.verbs'); }
+        else if (k === 'aspects') r.flags |= RF_ASPECTS;     // (A thing's aspects said after it: "examine the value of")
         else if (k === 'skill') r.skill = num(x, 'commands.verbs') + 1;
         else if (FIELDS.has(k)) r[k] = num(x, 'commands.verbs');
         else r.preps.set(k, num(x, 'commands.verbs'));          // (A preposition's own action for it)
@@ -202,11 +205,16 @@ function scan(toks, w, face = 0) {
   if (verb) c.order = order() ? get(ws[0], w.orders) || 0 : 0;
   else { verb = R.get('move'); c.flags |= CF_NOVERB; }   // (A way, or a thing, alone: going there)
   const first = i;                             // (The word straight after the verb)
+  let aspect = 0;                              // (A thing's aspects said: EX_*, the verb's own if none)
   for (; i < ws.length; ++i) {
     const t = ws[i];
     const th = word && c.prep ? c.other : c.obj;   // (The thing being said: the other, after its preposition)
     const said = word || c.obj.sel;              // (A thing said: a word, or one chosen, "it")
+    const other = () => {                        // (A word for the other thing: a name given the last)
+      if (verb === R.get('name') || ((c.prep || order() || verb === R.get('combine')) && !word2)) word2 = t.typed.slice(0, 15);
+    };
     if (order() && (k = get(t, w.orders))) c.order = c.order || k;
+    if ((w.rows[verb].flags & RF_ASPECTS) && (k = get(t, w.aspects)) !== undefined) { aspect |= k; continue; }
     if (sp(i, 'WITH')) { c.prep = V.PR_WITH; continue; }
     if (two(i, w.special) === 'WAY_OUT') { c.obj.kind = V.OB_WAY_OUT; ++i; continue; }
     if (said && !c.prep && (k = get(t, w.preps)) !== undefined) { c.prep = k; continue; }
@@ -232,6 +240,8 @@ function scan(toks, w, face = 0) {
       continue;
     }
     if ((k = get(t, w.things)) !== undefined) {
+      if ((k & PART) && c.prep === V.PR_WITH) { other(); continue; }   // (A part after "with": what it's done with, "hit the
+                                                //   door with the bar", not the door's)
       c.obj.kind = k & ~PART;
       if ((k & PART) && (!word || head())) word = t.typed.slice(0, 15);
       continue;
@@ -239,7 +249,7 @@ function scan(toks, w, face = 0) {
     if (c.prep !== V.PR_WITH && (word ? head() : !c.prep || !c.obj.sel)) word = t.typed.slice(0, 15);   // (A word not
                                                 // understood: the thing's, its last before a preposition its head;
                                                 // after "it" and one, the other's)
-    else if (verb === R.get('name') || ((c.prep || order() || verb === R.get('combine')) && !word2)) word2 = t.typed.slice(0, 15);
+    else other();
   }
   // The old parser's rules, on what the words made
   if (c.obj.kind) c.obj.lies = dir; else c.dir = dir;   // (With a thing, its way is where it lies)
@@ -270,7 +280,7 @@ function scan(toks, w, face = 0) {
   if (me && !c.obj.word && !c.obj.kind && !c.obj.sel && c.dir === NONE) c.obj.sel = V.SL_ME;   // ("examine me")
   // The action its verb makes of the shape: a thing said (a preposition straight after the verb its own), a way, none
   const r = w.rows[verb];
-  c.aux = r.aux;
+  c.aux = aspect || r.aux;                     // (The aspects said, else the verb's own)
   c.skill = r.skill;
   c.task = r.task;
   c.dflt = r.unsaid;
@@ -289,7 +299,7 @@ function scan(toks, w, face = 0) {
 }
 
 // The tables dq0c's meaning reads (cmdmean.s), its part of dq0c.dat (in a bank of dq0c's own): magic "DQ0W", version
-// 2; the constants it needs (CONSTANTS' values, a byte each: a verb's its number); the dictionary's entry count (the
+// 3; the constants it needs (CONSTANTS' values, a byte each: a verb's its number); the dictionary's entry count (the
 // index's, u16), and a byte an entry: its record (0: none, no word of the game's); the records' count (record 0 the
 // none's among them), and their fields, a column each, a byte a record (COLUMNS: 0 in each the none's; the way's
 // + 1, so $FF's none is 0 too); the verbs of several words, in their order (a count, the entries, the verb), all
@@ -300,7 +310,7 @@ const CONSTANTS = ['move', 'put', 'stow', 'doff', 'hang', 'drop', 'bar', 'get', 
   'name', 'combine', 'PR_WITH', 'PR_ON', 'PR_FROM', 'OB_WAY_OUT', 'OB_DOOR', 'GO_UP', 'GO_DOWN', 'SL_ME', 'VB_SAY', 'OB_STAIRS',
   'OB_LADDER', 'OB_SHAFT', 'throw', 'HOW_TO', 'PR_AT'];
 const SPECIAL = { WITH: 1, AWAY: 2, BACK: 3, HALF: 4, AROUND: 5, BAR: 6, WAY_OUT: 7 };   // (cmdmean.s's S_*)
-const COLUMNS = ['verb', 'dir', 'thing', 'prep', 'how', 'special', 'order', 'sel', 'num', 'manner', 'little'];   // (cmdmean.s's C_*)
+const COLUMNS = ['verb', 'dir', 'thing', 'prep', 'how', 'special', 'order', 'sel', 'num', 'manner', 'little', 'aspect'];   // (cmdmean.s's C_*)
 const ROW = ['alone', 'thing', 'way', 'unsaid', 'aux', 'skill', 'task', 'flags'];            // (cmdmean.s's R_*)
 const tokenWord = x => /^[a-z0-9][a-z0-9'-]*$/.test(x);     // (A word dq0c's tokenizer can make: not "?")
 
@@ -310,7 +320,7 @@ function gameWords(w) {
   const add = k => k.split(' ').filter(tokenWord).forEach(x => out.add(x));
   w.verbs.forEach(e => e.words.forEach(add));
   w.rows.slice(1).forEach(r => [...r.preps.keys()].forEach(add));
-  for (const m of [w.orders, w.dirs, w.things, w.preps, w.how, w.special, w.selectors, w.numbers, w.manners]) for (const k of m.keys()) add(k);
+  for (const m of [w.orders, w.dirs, w.things, w.preps, w.how, w.special, w.selectors, w.numbers, w.manners, w.aspects]) for (const k of m.keys()) add(k);
   w.little.forEach(add);
   return [...out];
 }
@@ -321,7 +331,7 @@ function encode(w, entries) {
   const u16 = n => [n & 255, n >> 8];
   const byte = (n, max, what) => { if (!(n >= 0 && n <= max)) throw new Error('dq0c.dat: ' + what + ' ' + n + ' out of range'); return n; };
   const rec = new Map();
-  const r = x => { if (!rec.has(x)) rec.set(x, { verb: 0, dir: NONE, thing: 0, prep: 0, how: 0, little: 0, special: 0, order: 0, sel: 0, num: 0, manner: 0 }); return rec.get(x); };
+  const r = x => { if (!rec.has(x)) rec.set(x, { verb: 0, dir: NONE, thing: 0, prep: 0, how: 0, little: 0, special: 0, order: 0, sel: 0, num: 0, manner: 0, aspect: 0 }); return rec.get(x); };
   const multi = [], two = [];
   let single = false;
   for (const e of w.verbs) {
@@ -352,6 +362,7 @@ function encode(w, entries) {
   each(w.selectors, (x, v) => { x.sel = byte(v, 255, 'selector'); });
   each(w.numbers, (x, v) => { x.num = byte(v, 255, 'number'); });
   each(w.manners, (x, v) => { x.manner = byte(v, 255, 'manner'); });
+  each(w.aspects, (x, v) => { x.aspect = byte(v, 255, 'aspect'); });
   for (const k of w.little) if (tokenWord(k)) r(k).little = 1;
   const none = COLUMNS.map(() => 0), recs = [none], recOf = new Map([[none.join(','), 0]]), gwi = new Array(entries.length).fill(0);
   for (const [k, x] of rec) {
@@ -370,7 +381,7 @@ function encode(w, entries) {
   const preps = [];
   w.rows.forEach((x, n) => { if (x) for (const [p, a] of x.preps) preps.push([n, ...u16(ent(p)), byte(a, 255, 'action')]); });
   if (preps.length > 63) throw new Error("dq0c.dat: too many of the verbs' prepositions");
-  return Buffer.from([0x44, 0x51, 0x30, 0x57, 2, ...k, ...u16(entries.length), ...gwi,
+  return Buffer.from([0x44, 0x51, 0x30, 0x57, 3, ...k, ...u16(entries.length), ...gwi,
     recs.length, ...COLUMNS.flatMap((c, i) => recs.map(b => b[i])), multi.length, ...multi.flat(), two.length, ...two.flat(),
     w.rows.length - 1, ...rows.flat(), preps.length, ...preps.flat()]);
 }

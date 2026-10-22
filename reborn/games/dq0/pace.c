@@ -162,7 +162,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
         g = g == 0xFF ? 0xFF : GA_WALK;
     } else {
         k = any ("go\0move\0moving\0walk\0walking\0going\0travel\0as\0while\0proceed\0");
-        if ((any ("trap\0traps\0") && any ("for\0") && (k || !any ("search\0examine\0disarm\0"))) ||
+        if ((any ("trap\0traps\0") && any ("for\0") && (k || !any ("search\0examine\0disarm\0check\0x\0inspect\0study\0"))) ||
             any ("carefully\0careful\0warily\0")) {
             wa |= WA_TRAPS;
         }

@@ -52,7 +52,6 @@ void about (void);
 void list (void);                               /* Part 11 */
 void __fastcall__ wear (const char* key, unsigned char by);
 unsigned char search (void);
-unsigned char __fastcall__ describe (const char* name);
 unsigned char __fastcall__ hide (const char* name);
 void __fastcall__ make_own (unsigned i);         /* Part 13 */
 void seen_owned (void);
@@ -65,6 +64,8 @@ unsigned __fastcall__ seen_named (const char* name);
 unsigned char __fastcall__ moved (unsigned char op);
 unsigned char shut_work (void);
 unsigned char inside (void);                    /* Part 36 */
+unsigned char look_at (void);                   /* Part 39 */
+unsigned char __fastcall__ describe (const char* name);    /* Part 40 */
 unsigned __fastcall__ shut_in (unsigned n);     /* Part 35 */
 unsigned __fastcall__ s_shut_in (unsigned n);
 void __fastcall__ many (char* b, unsigned n, unsigned char k);    /* Part 35 */
@@ -544,6 +545,9 @@ unsigned char s_serve (void)
         break;
     case IO_DESCRIBE:
         iq.result = describe (iq.name);
+        break;
+    case IO_LOOK:                               /* (A thing looked at, as anyone sees it: part 39's) */
+        iq.result = look_at ();
         break;
     case IO_HIDE:
         iq.result = hide (iq.name);
@@ -1199,12 +1203,43 @@ unsigned char s_take_rest (void)
 ** tie, a stopper): the thing named (to hand: carried, or within reach; seen but out of reach, IR_NOT_HERE: the UI walks
 ** over to it first) opened, closed; its lock (a chest's: IS_LOCK) picked (the referee's P_PICKLOCK, the tools to hand,
 ** a minute a try, harder the better made: HOUSE.md's), forced (P_FORCE: its lock burst, loud), locked (no key to it
-** yet).  Its words in the hub's text, its time in the request's x (tenths); IR_NONE if there's no such thing */
+** yet).  Opened, what it shows told in the same sentence (the user's, 2026-10-22: "You open the chest, revealing a
+** pile of gold coins"): what's in it, alike told together ("..., revealing a candle and two chisels."; ": it's
+** empty."); a stopper's, how full it is (a flask of oil's: ": it's half full.").  Its words in the hub's text, its
+** time in the request's x (tenths); IR_NONE if there's no such thing */
 static void __fastcall__ say3 (const char* a, const char* b, const char* c)
 {
     put (a);
     put (b);
     put (c);
+}
+
+static void __fastcall__ and_last (char* from);
+static void __fastcall__ reveal (unsigned n)
+{
+    static const char* const full[6] = { ": it's empty.", ": it's nearly empty.", ": it's a quarter full.",
+        ": it's half full.", ": it's three-quarters full.", ": it's full." };
+    const struct burn* b;
+    char* t0;
+    unsigned w;
+
+    if ((b = burn_of (item_at (n)->kind)) != 0) {
+        w = b->life * 10;                       /* (A fuel's measure, a whole one's minutes: its quarters left) */
+        fetch (&rec, n);
+        put (full[!rec.fuel ? 0 : rec.fuel >= w ? 5 : 1 + rec.fuel * 4 / w]);
+        return;
+    }
+    if (!items (0, IN_X | IN_ITEM, n)) {
+        put (": it's empty.");
+        return;
+    }
+    put (", revealing ");
+    hub_map (UI_BANK);
+    t0 = tp;
+    hub_map (0);
+    listed (n);
+    and_last (t0);
+    put (".");
 }
 
 static signed char __fastcall__ tested (unsigned char p, signed char steps)
@@ -1317,14 +1352,16 @@ unsigned char s_shut_work (void)
         hub_event (&m);
         if (g > 0) {
             s = (s & ~(IS_LOCKED | IS_CLOSED)) | IS_BURST;
-            say3 ("You force the ", nm, ": its lock bursts, and it's open.");
+            say3 ("You force the ", nm, ", and its lock bursts open");
+            reveal (n);
         } else {
             say3 ("The ", nm, " holds: its lock doesn't give.");
         }
         ok = IR_OK;
     } else {
-        s &= ~IS_CLOSED;                        /* (Opened; forced open, one not locked) */
-        say3 (opened[c], nm, ".");
+        s &= ~IS_CLOSED;                        /* (Opened; forced open, one not locked: what it shows told) */
+        say3 (opened[c], nm, "");
+        reveal (n);
         ok = IR_OK;
     }
     item_at (n)->shut = s;
@@ -1340,7 +1377,8 @@ unsigned char s_shut_work (void)
 ** walks over to it first), what's in it, on it, hanging from it, in words, alike told together: "In the sack lie a
 ** candle and two chisels."; "The sack is empty."; "The chest is closed." (nothing in it seen); a well's shaft; a
 ** thing that holds nothing, "You can't see into the sword."  The request's to 1: as it's examined (it's named
-** already: "In it lie ..."; a thing that holds nothing, no words) */
+** already: "In it lie ..."; a thing that holds nothing, no words); | 2, after the words there already (a look at it:
+** part 39's) */
 static void __fastcall__ and_last (char* from)
 {
     char* p;
@@ -1373,7 +1411,10 @@ unsigned char s_inside (void)
     char nm[20];
     char* t0;
 
-    text_new ();
+    if (!(to & 2)) {
+        text_new ();
+    }
+    to &= 1;
     if (!(n = at_hand (iq.name))) {
         if (afar) {
             hub_map (0);
@@ -1469,6 +1510,195 @@ void __fastcall__ s_wear (const char* key, unsigned char by)
     strcpy (HUB->ireq.name, name);
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 39 (its own, 2026-10-22, the user's: "look at the chest", "examine the sword", "check its condition"): a
+** thing looked at as anyone sees it, no test (IO_LOOK); its weight, its lock, it gone over for traps, part 40's, and a
+** thing described for the appraiser there too (IO_DESCRIBE: part 36's once, its room) */
+#pragma code-name (push, "SW39CODE")
+#pragma rodata-name (push, "SW39RODATA")
+#pragma static-locals (push, on)
+
+/* ---- A thing looked at (IO_LOOK: the request's to, LM_*), its words in the hub's text, as anyone sees it, no test:
+**   LM_AT     what it is and where ("Your torch is in your hand."), its state ("It's lit, burning low.", "It's
+**             closed, with a lock."), and what's in it or on it, within reach (look in's words: "In it lie two
+**             chisels.")
+**   LM_CLOSE  that, and what a closer look shows besides: what it's made of, how thick, how worn, how much of a light
+**             or a fuel is left ("It's made of wood; it's little worn, half burnt down."), a lock's make ("Its lock is
+**             a simple one.")
+**   LM_COND   its wear and its damage alone ("Your sword is battered, its edge dulled.")
+**   LM_WEIGHT how heavy it is, felt in the hand or lifted where it lies ("The chest weighs about 30 pounds, with what's
+**             in it."), part 40's: out of reach, IR_NOT_HERE (walked over to first)
+**   LM_LOCK   its lock, its make, how hard it looks to pick (the picking is the test), part 40's
+**   LM_TRAPS  gone over for traps (a thing has none yet: "The chest shows no sign of a trap ..."), part 40's: out of
+**             reach, IR_NOT_HERE
+** Too far off to make out (1 + sight / 2 + its kind's seen squares: HOUSE.md's noticing), its size alone; further
+** off than NEAR_SQ, a look at it only (no closer look), and nothing in it */
+struct kind lk;                                 /* (The thing's kind, copied: its fields reached quickly, part 40's too) */
+unsigned char lpl, ld;                          /* (Its name a plural; how far off it is, in squares) */
+unsigned char lnw;                              /* (The words of a list said: part 42's too) */
+
+/* A word of a list ("lit, burning low": ", " before all but the first) */
+static void __fastcall__ word (const char* s)
+{
+    if (lnw++) {
+        put (", ");
+    }
+    put (s);
+}
+
+unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);    /* (Part 40's) */
+void __fastcall__ closer (unsigned char mode);  /* (Part 42's) */
+
+unsigned char s_look_at (void)
+{
+    static const char* const where[4] = { "in your hand", "in both hands", "worn", "on you" };
+    static const char* const shut[3][2] = { { "open", "closed" }, { "untied", "tied shut" },
+        { "unstoppered", "stoppered" } };
+    const struct kind* q;
+    struct item* p;
+    unsigned n, c, px, py;
+    unsigned char mode = iq.to, sh, cl, k, mine;
+    char b[6];
+
+    text_new ();
+    if (!(n = pick (iq.name, HW_ANY))) {        /* (Carried, or seen: the one most to hand, of several) */
+        return IR_NONE;
+    }
+    ld = seen_d > 99 ? 99 : seen_d;
+    for (c = n, cl = 0; (p = item_at (c))->where == IW_ITEM; ) {
+        if (item_at (c = p->x)->shut & IS_CLOSED) {
+            cl = 1;                             /* (In a thing closed: not seen) */
+            px = c;
+        }
+    }                                           /* (Whose: the character's, on it or in what it carries; where it lies) */
+    if (cl) {
+        put ("The ");
+        put (kind_of (item_at (px)->kind)->name);
+        put (" is closed.");
+        return IR_OK;
+    }
+    mine = p->where == IW_ACTOR && !p->x;
+    px = p->x;
+    py = p->y;
+    if (ld > 1 && (mode == LM_WEIGHT || mode == LM_TRAPS)) {
+        hub_map (0);                            /* (Out of reach: walked over to first, where it lies, the UI's) */
+        HUB->ireq.x = px;
+        HUB->ireq.y = py;
+        HUB->ireq.item = n;
+        return IR_NOT_HERE;
+    }
+    make_own (n);                               /* (Its make its own: its lid, its lock, its fuel decided) */
+    fetch (&rec, n);
+    memcpy (&lk, kind_of (rec.kind), sizeof lk);
+    hub_map (0);
+    if ((k = ld > 1 + HUB->pcsum.sight / 2 + lk.seen) != 0) {    /* (Too far off to make out: its size alone) */
+        put (lk.seen <= 2 ? "Something small" : lk.seen >= 5 ? "Something large" : "Something");
+        goto off;
+    }
+    lpl = (lk.flags & K_PLURAL) || rec.qty > 1;
+    put (mine ? "Your " : "The ");              /* What it is, and where */
+    if (rec.qty > 1) {
+        put (utoa (rec.qty, b, 10));
+        put (" ");
+    }
+    put (lk.name);
+    if (mode >= LM_WEIGHT) {
+        return look_more (n, mode);             /* (Its weight, its lock, it gone over for traps: part 40's) */
+    }
+    put (lpl ? " are " : " is ");
+    if (mode == LM_COND) {
+        closer (LM_COND);                       /* (Its condition alone: part 42's) */
+        return IR_OK;
+    }
+    if (rec.where == IW_ACTOR) {
+        put (where[rec.flags & I_HELD ? (lk.flags & K_TWO || lk.bulk >= 20) : rec.flags & I_WORN ? 2 : 3]);
+    } else if (rec.where == IW_ITEM) {
+        q = kind_of (item_at (rec.x)->kind);     /* (What it's in, or on) */
+        put (q->keeps & KF_ON || q->flags & K_BELT ? "on " : "in ");
+        put (mine ? "your " : "the ");
+        put (q->name);
+    } else if (rec.where == IW_PORTAL) {
+        put (rec.kind == KI_BAR ? "set in its door" : "set in its window");
+    } else if (ld > 1) {
+off:
+        put (" is some ");
+        put (utoa (SQ_FT * ld, b, 10));
+        put (" feet off");
+    } else {
+        put (ld ? "beside you" : "at your feet");
+    }
+    put (".");
+    if (k) {
+        return IR_OK;                           /* (Something, too far off to make out) */
+    }
+    if (ld > NEAR_SQ && mode) {                 /* (Seen from afar: no closer look) */
+        put (" You'd have to go closer to make out more.");
+        return IR_OK;
+    }
+    tq = tbuf;                                  /* Its state, at a glance: the words gathered first (none, none said) */
+    tqe = tbuf + sizeof tbuf - 1;
+    *tq = 0;
+    lnw = 0;
+    sh = rec.shut;
+    if (lk.flags & K_LIGHT) {
+        word (rec.flags & I_LIT ? "lit" : !rec.id || rec.fuel || !burn_of (rec.kind) ? "unlit" : rec.kind == KI_LANTERN ?
+            "out of oil" : "burnt out");
+        if ((rec.flags & I_LIT) && rec.id && rec.fuel <= BURN_LOW && burn_of (rec.kind)) {
+            word ("burning low");
+        }
+    } else if (rec.id && !rec.fuel && burn_of (rec.kind)) {
+        word ("empty");                         /* (A fuel used up: a flask of oil) */
+    }
+    if ((cl = (lk.keeps & KF_CLOSES) >> 5) != 0) {
+        word (shut[cl - 1][(sh & IS_CLOSED) != 0]);
+    }
+    if (!mode) {                                /* (Its damage, its wear, its lock, plain to see) */
+        if (rec.dur_max && rec.dur * 10 < rec.dur_max) {
+            word ("nearly broken");
+        } else if (rec.dur_max && rec.dur * 3 < rec.dur_max) {
+            word ("battered");
+        }
+        if (rec.wear >= 32) {
+            word (lk.tool[1] == 'l' || lk.tool[1] == 'n' ? (rec.wear >= 128 ? "dull" : "dulled") : "worn");
+        }
+        if (sh & IS_LOCK) {
+            word (sh & IS_BURST ? "its lock broken" : "with a lock");
+        }
+    }
+    c = (lk.flags & (K_CONTAINER | K_BELT) || lk.keeps & KF_ON) && !(sh & IS_CLOSED) && ld <= 1;
+    if (c && !items (0, IN_X | IN_ITEM, n)) {
+        word (lk.keeps & KF_ON ? "bare" : "empty");
+        c = 0;
+    }
+    tq = 0;
+    if (lnw) {
+        put (lpl ? " They're " : " It's ");
+        put (tbuf);
+        put (".");
+    }
+    if (mode) {
+        closer (LM_CLOSE);                      /* (What a closer look shows besides: part 42's) */
+    }
+    if (c) {                                    /* What's in it, on it, within reach (look in's words) */
+        put (" ");
+        iq.to = 3;
+        inside ();
+    }
+    return IR_OK;
+}
+
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 40 (its own, 2026-10-22): a thing's weight, its lock, it gone over for traps (part 39's look_at's: its
+** name said already), and a thing described for the appraiser */
+#pragma code-name (push, "SW40CODE")
+#pragma rodata-name (push, "SW40RODATA")
+#pragma static-locals (push, on)
+
 /* ---- A thing looked at closely (carried, or seen): what it truly is, in the request, for the appraiser's judgement
 ** (the UI's, by the referee's test of the craft that knows it); and how far off it is, in squares (0 carried), its
 ** kind's seen above it (how far off it's made out: the request's to, the UI's, what it makes out at a distance) */
@@ -1502,6 +1732,145 @@ unsigned char __fastcall__ s_describe (const char* name)
     return IR_OK;
 }
 
+/* Its weight, its lock, it gone over for traps (thing n, rec its record, lk its kind; its name said) */
+unsigned char __fastcall__ s_look_more (unsigned n, unsigned char mode)
+{
+    unsigned w;
+    unsigned char sh = rec.shut, k;
+    char b[6];
+
+    if (mode == LM_LOCK) {
+        k = 1 + rec.quality / 3;
+        put (!(sh & IS_LOCK) ? (lpl ? " have no lock." : " has no lock.") : sh & IS_BURST ?
+            "'s lock is broken: it won't lock again." : ld > NEAR_SQ ?
+            " has a lock, but you'd have to go closer to make out more." : k <= 2 ?
+            " has a simple lock: easy to pick, by the look of it." : k == 3 ?
+            " has a sound lock: a fair test of a lockpick." : " has a good lock: a hard one to pick.");
+        return IR_OK;
+    }
+    if (mode == LM_TRAPS) {
+        put (lpl ? " show no sign of a trap: you go over them carefully, and find none." :
+            " shows no sign of a trap: you go over it carefully, and find none.");
+        return IR_OK;
+    }
+    if (lk.keeps & KF_FIXED) {
+        put (lpl ? " are fixed where they stand." : " is fixed where it stands.");
+        return IR_OK;
+    }
+    w = weight_of (n);                          /* (Quarter pounds, with what's in it) */
+    put (lpl ? " weigh " : " weighs ");
+    if (w < WT_LB) {
+        put ("less than a pound");
+    } else if (w < WT_LB * 3 / 2) {
+        put ("about a pound");
+    } else {
+        put ("about ");
+        put (utoa ((w + WT_LB / 2) / WT_LB, b, 10));
+        put (" pounds");
+    }
+    put (items (0, IN_X | IN_ITEM, n) ? ", with what's in it." : ".");
+    return IR_OK;
+}
+
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 42 (its own, 2026-10-22): what a closer look at a thing shows (part 39's look_at's: its name said, its
+** state told): what it's made of, its thickness, its wear, what's left of a light, a fuel, a lock's make; and its
+** condition alone */
+#pragma code-name (push, "SW42CODE")
+#pragma rodata-name (push, "SW42RODATA")
+#pragma static-locals (push, on)
+
+static const char matname[NMATS][8] = { "", "wood", "iron", "steel", "bronze", "leather", "cloth", "bone", "clay",
+    "stone", "glass", "silver", "", "beeswax", "tallow" };
+
+/* A word of a list (part 39's word, its own copy) */
+#define word            word42
+static void __fastcall__ word (const char* s)
+{
+    if (lnw++) {
+        put (", ");
+    }
+    put (s);
+}
+
+/* Its wear, its damage, how much of a light or a fuel is left: each a word of the list (rec's, lk its kind) */
+static void worn_words (void)
+{
+    static const char* const life[5] = { "close to breaking", "battered", "well worn", "little worn", "as good as new" };
+    static const char* const left[3][6] = {
+        { "burnt out", "nearly burnt out", "mostly burnt down", "half burnt down", "a quarter burnt down", "hardly burnt" },
+        { "out of oil", "nearly out of oil", "low on oil", "half full of oil", "three-quarters full of oil", "full of oil" },
+        { "empty", "nearly empty", "a quarter full", "half full", "three-quarters full", "full" } };
+    const struct burn* b;
+    unsigned w;
+
+    if (rec.dur_max) {
+        w = rec.dur / (rec.dur_max / 10 + 1);   /* (Its life left, in tenths) */
+        word (life[w >= 10 ? 4 : w >= 7 ? 3 : w >= 4 ? 2 : w >= 2 ? 1 : 0]);
+    }
+    if (rec.wear >= 32) {                       /* (A blade dug with, dulled; a tool worn) */
+        word (lk.tool[1] == 'l' || lk.tool[1] == 'n' ? (rec.wear >= 128 ? "its edge dull" : "its edge dulled") :
+            "worn with use");
+    }
+    if (rec.id && (b = burn_of (rec.kind)) != 0) {
+        w = b->life * 10;                       /* (A whole one's minutes: the quarters left) */
+        word (left[!(lk.flags & K_LIGHT) ? 2 : rec.kind == KI_LANTERN][!rec.fuel ? 0 : rec.fuel >= w ? 5 :
+            1 + rec.fuel * 4 / w]);
+    }
+}
+
+/* What a closer look shows (mode LM_CLOSE: "It's made of wood; it's little worn, half burnt down. Its lock is a simple
+** one."; a portal's part's measure, "It's made of glass, 2 by 3 feet, a quarter inch thick"); its condition alone
+** (LM_COND: after its name, "... is battered, its edge dulled.") */
+void __fastcall__ s_closer (unsigned char mode)
+{
+    unsigned char k;
+    char b[6];
+
+    lnw = 0;
+    if (mode == LM_COND) {
+        worn_words ();
+        put (lnw ? "." : "as good as ever.");
+        return;
+    }
+    put (lpl ? " They're made of " : " It's made of ");
+    put (*matname[rec.mat] ? matname[rec.mat] : "something you can't name");
+    if ((k = rec.size) != 0) {                  /* (Its measure: a portal's part's, its opening's) */
+        put (", ");
+        put (utoa (k & 15, b, 10));
+        if (k >> 4) {
+            put (" by ");
+            put (utoa (k >> 4, b, 10));
+            put (" feet");
+        } else {
+            put (" feet long");
+        }
+    }
+    if ((k = rec.thick) != 0) {
+        put (", ");
+        put (k >= 8 ? utoa (k >> 3, b, 10) : k >= 4 ? "half an" : k >= 2 ? "a quarter" : "an eighth of an");
+        put (k >= 16 ? " inches thick" : " inch thick");
+    }
+    tq = tbuf;
+    *tq = 0;
+    worn_words ();
+    tq = 0;
+    if (lnw) {
+        put (lpl ? "; they're " : "; it's ");
+        put (tbuf);
+    }
+    put (".");
+    if ((rec.shut & (IS_LOCK | IS_BURST)) == IS_LOCK) {
+        k = 1 + rec.quality / 3;
+        put (k <= 2 ? " Its lock is a simple one." : k == 3 ? " Its lock is a sound one." : " Its lock is a good one.");
+    }
+}
+#undef word
+
+#pragma static-locals (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 

@@ -32,15 +32,29 @@
                    | <sit-on>
                    | <intimidate> | <order> | <persuade> | <orate> | <negotiate> | <fast-talk> | <taunt> | <judge>
                    | <break> | <raise> | <lower> | <bend> | <force> | <disarm> | <rebar> | <hang> | <combine>
+                   | <appraise>
                    | <deceive> | <threaten> | <calm> | <befriend> | <approach> | <ally>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
-<look>           ::= <LOOK> [ <look-target> ]
+<look>           ::= <LOOK> [ <look-target> ] | <LOOK> <object> "over" | <LOOK> "over" <object>   (* "look the torch over":
+                                                 a look at it, 2026-10-22 *)
 <look-target>    ::= <direction> | <locale-ref> | [ <look-prep> ] <object>
 <locale-ref>     ::= "around" [ <here-ref> ] | "about" | "here" | "this place"
 <look-prep>      ::= "at" | "through" | "toward" | "towards" | "around" | "in" | "into" | "inside" | "under" | "behind" | "beside" | "near" | "to" | "on" | "for"   (* "look in the sack", "look on the table": into it, onto it *)
-<examine>        ::= <EXAMINE> [ [ "at" ] <thing> ]
-<EXAMINE>        ::= "x" | [ "take a" ] <DETAIL> <LOOK>   (* "look closely" is an alias of examine: commands.aliases *)
+<examine>        ::= <EXAMINE> [ [ "at" ] <thing> [ <for-traps> ] ] | <EXAMINE> <aspect> [ "of" <thing> ]   (* "check the
+                                                 chest for traps", "examine the value of the sword", "check its
+                                                 condition" (2026-10-22) *)
+<EXAMINE>        ::= "x" | [ "take a" ] <DETAIL> <LOOK>   (* "look closely" is an alias of examine: commands.aliases; so are
+                                                 check, study and determine *)
+<for-traps>      ::= "for" "traps"
+(* ---- A thing's aspects judged (added 2026-10-22, the user's: "examine value [of] item", "quality [of] item"): the aspect
+   said, or the verb's own (assess its value, judge its quality, appraise both, heft its weight) ---- *)
+<appraise>       ::= <APPRAISE> [ <thing> ] | <APPRAISE> <aspect> [ "of" <thing> ] | <JUDGED> "of" <thing>
+                   | "what" "is" <thing> "worth" | "how" "well" "made" "is" <thing>
+<APPRAISE>       ::= "assess" | "appraise" | "judge" | "heft" | "weigh" | "value" | "price"
+<aspect>         ::= [ "the" | "its" ] <ASPECT>
+<ASPECT>         ::= "value" | "worth" | "price" | "quality" | "make" | "condition" | "damage" | "weight" | "lock" | "traps"
+<JUDGED>         ::= "value" | "worth" | "price" | "quality" | "condition" | "weight"   (* "value of the sword" *)
 
 (* ---- Moving and facing ---- *)
 <move>           ::= [ <pace-word> ] [ <MOVE> ] <move-dir> [ <number> [ "space" | "spaces" | "square" | "squares" ] ]   (* "run north": this move at run; "walk north": the verb *)
@@ -55,13 +69,14 @@
 <use>            ::= <USE> <object> [ ( "on" | "with" ) <object> ]
 <equip>          ::= <EQUIP> [ <object> ]   (* bare: the last thing named *)
 <unequip>        ::= <UNEQUIP> [ <object> ] | "put" <object> "away" | "take" <object> "off"   (* "put away the sword", "put the sword away", "take the helm off" *)
-<open>           ::= "o" [ <thing> ] [ <manner> ]                (* "open" alone: what's in front *)
+<open>           ::= "o" [ <thing> [ <USING> <object> ] ] [ <manner> ]   (* "open" alone: what's in front *)
 <close>          ::= "close" [ <thing> ] [ <manner> ]           (* "close look" is <DETAIL> <LOOK>, not this *)
 <from-phrase>    ::= "from" <object> | "out" "of" <object>
 <off-phrase>     ::= "off" <object>
 
 (* ---- Fighting ---- *)
-<attack>         ::= <ATTACK> [ <thing> [ "with" <object> ] ]   (* bare: the target, else the nearest foe *)
+<attack>         ::= <ATTACK> [ <thing> [ <USING> <object> ] ]   (* bare: the target, else the nearest foe *)
+<USING>          ::= "with" | "using"                (* what it's done with: an instrument, to hand (2026-10-22) *)
 <grapple>        ::= <GRAPPLE> <object> | <THROW> <object> | "put" <object> "in" [ "a" ] ( "head" "lock" | "headlock" )   (* a grapple maneuver: the object is engaged; "toss" and "throw" a creature are grapples too *)
 <throw>          ::= <THROW> [ <throwing> ] <at-phrase>          (* at something: a target *)
                    | <THROW> [ <throwing> ] <throw-dir>
@@ -81,7 +96,9 @@
 <drink>          ::= <DRINK> [ "from" <object> | <object> ]
 <swim>           ::= <SWIM> [ <move-dir> ]
 <find>           ::= <FIND> <object>                            (* question 10: FIND locates a known thing *)
-<search>         ::= <SEARCH> [ "for" ] [ <object> ]   (* question 10: SEARCH looks for hidden things; a long task *)
+<search>         ::= <SEARCH> [ "for" ] [ <object> ] | <SEARCH> [ <object> ] "for" "traps"
+                                                (* question 10: SEARCH looks for hidden things; a long task; "search the
+                                                   chest for traps": that thing alone, 2026-10-22 *)
 <listen>         ::= <LISTEN> [ <look-target> ]
 <smell>          ::= <SMELL> [ <look-target> ]
 <track>          ::= <TRACK> [ "for" ] [ <object> ]
@@ -191,7 +208,7 @@
 <META-WORD>  ::= "status" | "help" | "i" | "map" | "m" | "save" | "q" | "sheet" | "pause"
 
 (* ---- Fire (added 2026-10-19) ---- *)
-<light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object> [ <in-phrase> ] | "turn" <object> "on"   (* "light the torch", "start a fire", "turn it on", "light the torch in the sconce" *)
+<light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object> [ <in-phrase> ] [ <USING> <object> ] | "turn" <object> "on"   (* "light the torch", "start a fire", "turn it on", "light the torch in the sconce" *)
 <extinguish>     ::= <EXTINGUISH> [ "the" ] "fire" | <EXTINGUISH> <object> [ <in-phrase> ] | "put" <object> "out" | "turn" <object> "off"   (* "quench the fire", "put out the torch", "put the torch out", "turn it off", "put out the torch in the sconce" *)
 <in-phrase>      ::= ( "in" | "on" ) <object>   (* the thing it's in, or on: a sconce's torch *)
 (* ---- Posture and pretence (added 2026-10-19) ---- *)
@@ -210,7 +227,8 @@
 <LEAVE>          ::= "exit"
 <climb>          ::= <CLIMB> [ <direction> ] [ <object> ] | <CLIMB> ( "over" | "onto" | "into" | "through" ) <object>
 <CLIMB>          ::= "climb"
-<dig>            ::= <DIG> [ <direction> | "for" <object> | <object> ]   (* "dig down", "dig the wall", "dig for treasure" *)
+<dig>            ::= <DIG> [ <direction> | "for" <object> | <object> ] [ <USING> <object> ]   (* "dig down", "dig the wall",
+                                                   "dig for treasure", "dig down with the pick" *)
 <DIG>            ::= "dig"
 <wake>           ::= <WAKE> [ <object> ] | "wake" <object> "up"   (* "wake the goblin", "wake the goblin up" *)
 <WAKE>           ::= "wake" [ "up" ] | "rouse" | "awaken"
@@ -228,8 +246,10 @@
 <give>           ::= <GIVE> <object> ( "to" | "for" ) <object>
 <GIVE>           ::= "g"
 <grab>           ::= ( "grab" | "hold" ) <object> [ <from-phrase> ]   (* a grapple when the object is engaged; else a get, or a carry for hold *)
-<lock>           ::= "lock" <thing>
-<unlock>         ::= "unlock" <thing> [ "with" <object> ] | ( "unlock" | "pick" ) ( "the" | "its" ) "lock" ( "of" | "on" ) <thing>   (* "pick the lock of the chest", slice 4.1's *)
+<lock>           ::= "lock" <thing> [ <USING> <object> ]
+<unlock>         ::= "unlock" <thing> [ <USING> <object> ]
+                   | ( "unlock" | "pick" ) ( "the" | "its" ) "lock" ( "of" | "on" ) <thing> [ <USING> <object> ]   (* "pick
+                                                   the lock of the chest", slice 4.1's; "... with the lockpicks" *)
 <fill>           ::= "fill" <object> [ <from-phrase> | "with" <object> ]   (* "fill the lantern", "fill the lantern with oil" (a light renewed, slice 4.1's) *)
 <dip>            ::= ( "dip" | "soak" ) <object> ( "in" | "into" ) <object>   (* "dip the torch in the oil", "soak the torch in pitch" *)
 <read>           ::= "read" [ <object> ]   (* bare: the last thing named *)
@@ -280,12 +300,12 @@
 <release>         ::= "release" <object>                           (* a principle stored in a jorum, let out into the mundane world *)
 (* ---- The game's own (added 2026-10-19: the old parser's commands, games/dq0/parse.c, now dq0c's: what the game does
    with each is commands.words's, the verb as typed) ---- *)
-<break>           ::= "break" [ <thing> ]                     (* "break the window", "break" alone: what's in front *)
+<break>           ::= "break" [ <thing> [ <USING> <object> ] ]   (* "break the window", "break" alone: what's in front *)
 <raise>           ::= "raise" [ <thing> ]                     (* a portcullis raised *)
 <lower>           ::= "lower" [ <thing> ]
-<bend>            ::= "bend" [ <thing> ]                      (* a window's bars bent *)
-<force>           ::= "force" [ <thing> ]                     (* a door forced *)
-<disarm>          ::= "disarm" [ <thing> ]                    (* a trap disarmed *)
+<bend>            ::= "bend" [ <thing> [ <USING> <object> ] ]    (* a window's bars bent *)
+<force>           ::= "force" [ <thing> [ <USING> <object> ] ]   (* a door forced *)
+<disarm>          ::= "disarm" [ <thing> [ <USING> <object> ] ]  (* a trap disarmed *)
 <rebar>           ::= "rebar" [ <thing> ]                     (* a door barred: "bar the door" (bar an alias) *)
 <hang>            ::= "hang" <object> [ ( "on" | "from" ) <object> ]   (* "hang the quiver on my belt" *)
 <combine>         ::= "combine" <object> [ "with" <object> ]   (* the theme's pieces put together: "combine the sunstone with the moonstone", "join the pieces" *)
@@ -314,4 +334,5 @@
 <negotiate>       ::= "negotiate" [ "with" <object> ]            (* Diplomacy *)
 <fast-talk>       ::= ( "fast" "talk" | "bluff" | "lie" [ "to" ] ) <object> [ "about" <text> { <text> } ]   (* Rhetoric: persuade them to believe you *)
 <taunt>           ::= "taunt" <object> [ "to" <text> { <text> } ]   (* Rhetoric: persuade them to attack *)
-<judge>           ::= "judge" <object> | "sense" "a" "lie" "from" <object>   (* Diplomacy: is the speaker bluffing *)
+<judge>           ::= "sense" "a" "lie" "from" <object>   (* Diplomacy: is the speaker bluffing (a thing judged, its
+                                                   quality: <appraise>, 2026-10-22) *)

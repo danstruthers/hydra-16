@@ -223,6 +223,12 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   well: its shaft), in words into things_text (shut: "The chest is
                                                 **   closed."); to 1: as it's looked at ("look at": the thing, then
                                                 **   what's in it) */
+#define IO_LOOK         (IO_BAR + 9)            /* A thing (carried, or seen: the one most to hand, of several) looked at
+                                                **   as anyone sees it, no test (to: LM_*), in words into things_text:
+                                                **   IR_NONE no such thing; IR_NOT_HERE (its weight felt, it gone over for
+                                                **   traps: out of reach) where it lies in x, y (2026-10-22) */
+enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS };   /* (IO_LOOK's: a look at it; a closer look; its
+                                                **   condition; its weight; its lock; gone over for traps) */
 #define IO_PUZZLE       (IO_BAR + 4)           /* A command of the theme's puzzle's (theme.h), judged by its rules
                                                 **   (the world's): to its verb (TR_*), name the thing (into the other:
                                                 **   combine name with into, put name on into; read name; use name on

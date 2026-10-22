@@ -2,7 +2,9 @@
 ** fixt.c - (overlay 4) the words of the dungeon's fixtures (DUNGEON.md: portals; traps, pits and other nasty
 ** surprises): what came of working a portcullis, a window or a slit (an E_PORTAL's: a door's are intro.c's), what a
 ** trap did, or what came of finding or disarming one (an E_TRAP's: a trap's name is words.c's); what came of blows
-** at a portal, of a part lifted out of one; and a portal looked at closely, judged (or from afar, only seen)
+** at a portal, of a part lifted out of one, an opening told with what it shows beyond (the user's, 2026-10-22: "You
+** open the door, revealing ..."); and a portal looked at closely, judged if its quality's asked (or from afar, only
+** seen)
 */
 
 #pragma code-name ("OV4CODE")
@@ -13,6 +15,12 @@
 #include <dice.h>
 #include "dq0.h"
 #include "hub.h"
+#include "level.h"
+
+/* ==== Overlay 10 (this one's room, 2026-10-22): what a trap did */
+#pragma code-name (push, "OV10CODE")
+#pragma rodata-name (push, "OV10RODATA")
+#pragma local-strings (push, on)
 
 /* What a trap did, or what came of it (w: an E_TRAP's) */
 void __fastcall__ o_trap_words (unsigned w)
@@ -77,12 +85,24 @@ void __fastcall__ o_trap_words (unsigned w)
     case TO_PIT:
         strcpy (lb, "There's no disarming a pit: you'll have to go round it.");
         break;
+    case TO_CLEAN:                              /* (A door gone over for traps, PA_CHECK's: none found) */
+        strcpy (lb, "You go over it carefully, and find no trap.");
+        break;
+    case TO_KNOWN:
+        strcpy (lb, "You know of a trap on it already: ");
+        trap_name (kind, trigger, 0);
+        strcat (lb, ".");
+        break;
     default:
         strcpy (lb, "There's no trap you know of within reach.");
         break;
     }
     msg (lb);
 }
+
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* A denizen in the character's way (an E_NOWAY's N_DEN: its name in lb): "A giant rat is in the way." */
 void o_den_way (void)
@@ -95,9 +115,55 @@ void o_den_way (void)
     msg (b);
 }
 
-/* What came of working a portal (w: an E_PORTAL's, its kind times 256): a portcullis's, a window's or a slit's
-** words, or a door's (intro.c's) */
-void __fastcall__ o_fixt_words (unsigned w)
+/* ---- Words added to lb */
+
+static void __fastcall__ add (const char* s)
+{
+    strcat (lb, s);
+}
+
+static void __fastcall__ addn (unsigned v)
+{
+    char b[6];
+
+    add (utoa (v, b, 10));
+}
+
+/* An opening's words (in lb) with what it shows beyond it (m: its E_PORTAL, | PO_SHOWS: the world's look after it,
+** a what, WB_*, | 4 lit; b the room's kind; w2 the squares it's seen): ", revealing a passage, 30 feet of it."; "...
+** only darkness beyond."; "... a kitchen, lit by torches." (the look one way's words, way.c's focus_words, the
+** model; the room's and its light's the theme's) */
+static void __fastcall__ shows (const struct msg* m)
+{
+    unsigned n;
+
+    lb[strlen (lb) - 1] = 0;                    /* (Its period: the sentence goes on) */
+    add (", revealing ");
+    if ((m->a & 3) == WB_DARK) {
+        add ("only darkness beyond");
+    } else if ((m->a & 3) == WB_PASSAGE) {
+        add ("a passage, ");
+        addn (SQ_FT * m->w2);
+        add (" feet of it");
+    } else {
+        n = strlen (lb);
+        add ("a ");
+        theme_named (TN_ROOM, m->b);            /* (The theme's, added to lb: "an ossuary") */
+        if (strchr ("aeiou", lb[n + 2])) {
+            memmove (lb + n + 2, lb + n + 1, strlen (lb + n + 1) + 1);
+            lb[n + 1] = 'n';
+        }
+        if (m->a & 4) {
+            add (", ");
+            theme_named (TN_LIGHT, 0);
+        }
+    }
+    add (".");
+}
+
+/* What came of working a portal (m: an E_PORTAL, its w1 what came of it and the portal's kind times 256, | PO_SHOWS
+** an opening's, what it shows told with it): a portcullis's, a window's or a slit's words, or a door's (intro.c's) */
+void __fastcall__ o_fixt_words (const struct msg* m)
 {
     static const char* const said[PO_FOUND_TRAP - PO_RAISED] = {
         "You wind the winch beside it, and the portcullis grinds up.",
@@ -137,38 +203,26 @@ void __fastcall__ o_fixt_words (unsigned w)
         "The bars buckle and break under your blows: there's a gap to get through.",
         "Its bars are forced apart, and it's jammed where it is: there's a gap to get through."
     };
-    unsigned char out = w & 0xFF, kind = w >> 8;
+    unsigned w = m->w1;
+    unsigned char out = w & 0xFF, kind = w >> 8 & 7;
 
     if (out > PO_FOUND_TRAP) {
-        msg (blows[out - PO_BROKE_DOWN]);
-        return;
-    }
-    if (out >= PO_RAISED) {
-        if (out < PO_FOUND_TRAP) {
-            msg (out == PO_NOT_PORTC && kind == PK_PORTCULLIS ? "It's a portcullis: it's raised or lowered." :
-                said[out - PO_RAISED]);
+        strcpy (lb, blows[out - PO_BROKE_DOWN]);
+    } else if (out >= PO_RAISED) {
+        if (out == PO_FOUND_TRAP) {
+            return;
         }
-        return;
+        strcpy (lb, out == PO_NOT_PORTC && kind == PK_PORTCULLIS ? "It's a portcullis: it's raised or lowered." :
+            said[out - PO_RAISED]);
+    } else if ((kind == PK_WINDOW || kind == PK_SLIT) && out <= PO_HELD && shutters[out]) {
+        strcpy (lb, shutters[out]);
+    } else {
+        portal_words (out);                     /* (A door's, into lb) */
     }
-    if ((kind == PK_WINDOW || kind == PK_SLIT) && out <= PO_HELD && shutters[out]) {
-        msg (shutters[out]);
-        return;
+    if (w & PO_SHOWS) {
+        shows (m);
     }
-    portal_words (out);
-}
-
-/* ---- Words added to lb */
-
-static void __fastcall__ add (const char* s)
-{
-    strcat (lb, s);
-}
-
-static void __fastcall__ addn (unsigned v)
-{
-    char b[6];
-
-    add (utoa (v, b, 10));
+    msg (lb);
 }
 
 static const char* const matname[4] = { "wood", "iron-bound wood", "iron", "stone" };
@@ -204,13 +258,14 @@ static void __fastcall__ portal_far (const struct portal* p, unsigned char d)
 }
 
 /* ---- A portal looked at closely (p: the world's record of it, copied, its bar 1 if the character's on its bar's
-** side), judged at the appraiser's grade g (the referee's test of the craft that knows its material): its kind, its
-** size, its material, its thickness and its features (a grille, a spy-hole, studs, its hinges, a bar's brackets on
-** this side, a lock) plain to see; its state (rotten ... new) and how stout it is (its body left), judged: a critical
-** success right, a marginal one near, a marginal failure well off, a critical failure wild (and said as surely).
-** Further off than NEAR_SQ (from the character's square at its last look to main.c's find's), only its look from
-** afar */
-void __fastcall__ o_portal_look (const struct portal* p, signed char g)
+** side): its kind, its size, its material, its thickness and its features (a grille, a spy-hole, studs, its hinges, a
+** bar's brackets on this side, a lock, its make) plain to see; and, its quality asked (ex's EX_QUALITY, the
+** appraiser's grade g: the referee's test of the craft that knows its material), its state (rotten ... new) and how
+** stout it is (its body left), judged: a critical success right, a marginal one near, a marginal failure well off, a
+** critical failure wild (and said as surely).  Its other aspects alone (ex, EX_*, 2026-10-22): its lock, its
+** condition (the blows' marks), its value and its weight (none: it's part of the place).  Further off than NEAR_SQ
+** (from the character's square at its last look to main.c's find's), only its look from afar */
+void __fastcall__ o_portal_look (const struct portal* p, signed char g, unsigned char ex)
 {
     static const char* const low[3][4] = {      /* (Its state, the worse half: wood's, iron's, stone's) */
         { "rotten", "rotting", "decayed", "worn" }, { "rusted through", "rusting away", "badly rusted", "rusty" },
@@ -227,6 +282,23 @@ void __fastcall__ o_portal_look (const struct portal* p, signed char g)
     dy = (int) dy < 0 ? -dy : dy;
     if ((dx = dx > dy ? dx : dy) > NEAR_SQ) {
         portal_far (p, dx > 99 ? 99 : dx);
+        return;
+    }
+    if (ex & (EX_VALUE | EX_WEIGHT) && !(ex & EX_QUALITY)) {
+        add (ex & EX_VALUE ? "There's no price to put on it: it's part of the place." :
+            "It's part of the place: there's no hefting it.");
+        return;
+    }
+    if (ex & EX_LOCK) {                         /* (Its lock alone: its make, how hard it looks to pick) */
+        add (!(p->lock || (p->state & PS_LOCKED)) ? "It has no lock." : p->state & PS_BROKEN ?
+            "Its lock is broken: it was forced once." : p->lock <= 4 ?
+            "It has a simple lock: easy to pick, by the look of it." : p->lock <= 10 ?
+            "It has a sound lock: a fair test of a lockpick." : "It has an intricate lock: a hard one to pick.");
+        return;
+    }
+    if (ex & EX_COND) {                         /* (Its condition alone: the blows' marks) */
+        add (p->state & PS_WRECKED ? "It's been broken down." : !p->harm ? "It shows no damage." : m == PM_IRON ||
+            k == PK_PORTCULLIS ? "It's dented with blows." : "It's splintered with blows.");
         return;
     }
     add (k == PK_PORTCULLIS ? "A portcullis of iron bars, " : k == PK_SLIT ? "An arrow slit, a hand's breadth wide" :
@@ -266,8 +338,7 @@ void __fastcall__ o_portal_look (const struct portal* p, signed char g)
         }
         if (p->lock || (p->state & PS_LOCKED)) {
             add (" It has a lock: ");
-            add (g < G_MS ? "of what sort, you can't tell." : p->lock <= 4 ? "a simple one." : p->lock <= 10 ?
-                 "a sound one." : "an intricate one.");
+            add (p->lock <= 4 ? "a simple one." : p->lock <= 10 ? "a sound one." : "an intricate one.");
         }
         add (p->state & PS_WRECKED ? " It's been broken down, and hangs in pieces." : p->state & PS_OPEN ?
              " It stands open." : "");
@@ -277,6 +348,9 @@ void __fastcall__ o_portal_look (const struct portal* p, signed char g)
     }
     if (p->harm && !(p->state & PS_WRECKED)) {
         add (m == PM_IRON || k == PK_PORTCULLIS ? " It's dented with blows." : " It's splintered with blows.");
+    }
+    if (!(ex & EX_QUALITY)) {
+        return;                                 /* (A closer look: no judgement, no test) */
     }
     switch (g) {
     case G_CS:
