@@ -603,12 +603,14 @@ static void __fastcall__ left (unsigned char shy)
 ** attack mastery, or Unarmed's), the Ignore table's strike (Combat 12: a critical failure none), its impact (the
 ** dice, the weapon's for the aspect that does the thing most harm), the thing's resistance off it; and a part that
 ** struck it hurt if the blow went wrong (rs.h's: the book's H2 on a bare part meeting something hard, the game's
-** numbers), HC_STRUCK's harm (sheet.c's) */
+** numbers), HC_STRUCK's harm (sheet.c's).  A part's blow the house's Unarmed test (HOUSE.md's battering, the user's,
+** 2026-10-22): a marginal failure harms neither, a critical failure the part alone; a bare part's hurt stopped short
+** (RS_SHORT: none, result | 4) */
 static void thing (void)
 {
     static unsigned char hq[offsetof (struct req, text)];   /* (The harm's request: but its text) */
 #define h   (*(struct req*) hq)
-    unsigned char res[4], k, lv, n, asp = 0, run = R->c;
+    unsigned char res[4], k, lv, n, asp = 0, run = R->c, a, pull = R->w2 & RS_SHORT;
     int imp, v, top = -100;
 
     memcpy (res, R->x, sizeof res);
@@ -623,7 +625,7 @@ static void thing (void)
         }
     }
     lv = harn_test (A.aml);
-    n = HARN_R_DICE (harn_melee_result (HARN_IGNORE, lv, 0));
+    n = A.part != 0xFF && lv <= HARN_MF ? 0 : HARN_R_DICE (harn_melee_result (HARN_IGNORE, lv, 0));
     imp = n ? dice (n, 6) + A.imp[asp] : 0;
     R->w1 = imp > res[asp] ? imp - res[asp] : 0;
     R->b = asp;
@@ -631,10 +633,12 @@ static void thing (void)
     R->w2 = 0;
     R->result = A.part != 0xFF ? 2 : 0;
     put (A.word);
-    if (A.part != 0xFF && lv <= HARN_MF) {      /* (Gone wrong: the part hurt) */
-        v = dice (lv == HARN_CF ? 2 : 1, 6) + res[0] / 2 -
-            (A.part == HARN_FOOT ? pc_armour (SOLE, 0) : pc_armour (A.part, HARN_BLUNT));
-        if (v > 0) {
+    if (A.part != 0xFF && lv == HARN_CF) {      /* (Gone wrong: the part hurt; a bare one stopped short of it, asked) */
+        a = A.part == HARN_FOOT ? pc_armour (SOLE, 0) : pc_armour (A.part, HARN_BLUNT);
+        v = dice (2, 6) + res[0] / 2 - a;
+        if (v > 0 && pull && !a) {
+            R->result |= 4;
+        } else if (v > 0) {
             memset (hq, 0, sizeof hq);
             h.kind = RS_HARM;
             h.a = HC_STRUCK;

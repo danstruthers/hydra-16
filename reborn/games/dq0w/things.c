@@ -1206,7 +1206,9 @@ unsigned char s_take_rest (void)
 ** yet).  Opened, what it shows told in the same sentence (the user's, 2026-10-22: "You open the chest, revealing a
 ** pile of gold coins"): what's in it, alike told together ("..., revealing a candle and two chisels."; ": it's
 ** empty."); a stopper's, how full it is (a flask of oil's: ": it's half full.").  Its words in the hub's text, its
-** time in the request's x (tenths); IR_NONE if there's no such thing */
+** time in the request's x (tenths); IR_NONE if there's no such thing.  Picking and forcing timed work (HOUSE.md's long
+** tasks): begun (its long task's kind in qty, its thing's in item: its first words the UI's), its test made and its
+** outcome told as it's done (IO_DONE, the UI's as its time's up) */
 static void __fastcall__ say3 (const char* a, const char* b, const char* c)
 {
     put (a);
@@ -1269,8 +1271,9 @@ unsigned char s_shut_work (void)
     static const char* const closed[3] = { "You close the ", "You tie the ", "You stopper the " };
     struct msg m;
     const struct kind* k;
-    unsigned n;
-    unsigned char w = iq.to, s, c, t = 20, ok = IR_NO;
+    unsigned n, t = 20;                         /* (Its time: a minute's picking, 600, past a char's 255: it was 88
+                                                **   tenths, a char's, till 2026-10-22) */
+    unsigned char w = iq.to & ~IO_DONE, s, c, ok = IR_NO, d = iq.to & IO_DONE, lt = 0;
     signed char g;
     char nm[14];
 
@@ -1326,8 +1329,11 @@ unsigned char s_shut_work (void)
             put ("You have nothing to pick its lock with.");
             return IR_NO;
         }
-        t = 600;                                /* (A minute a try, as a door's) */
-        if (g > 0) {
+        if (!d) {
+            t = 600;                            /* (The means to hand: a minute a try, as a door's, a long task, its
+                                                **   test made again at its end) */
+            lt = LT_PICK;
+        } else if (g > 0) {
             s &= ~IS_LOCKED;
             say3 ("You pick the lock of the ", nm, ".");
         } else {
@@ -1339,18 +1345,20 @@ unsigned char s_shut_work (void)
             say3 ("The ", nm, " is locked.");
             return IR_NO;
         }
-        g = tested (P_FORCE, (rec.mat == MT_WOOD ? 0 : -2) - (signed char) (rec.quality / 3));
-        t = 100;
-        hub_map (0);
-        m.kind = E_NOISE;                       /* (Loud: a lock burst, or a lid wrenched at) */
-        m.who = 0;
-        m.a = 6;
-        m.b = NZ_WORK;
-        m.w1 = HUB->pc_x;
-        m.w2 = HUB->pc_y;
-        m.t = HUB->now;
-        hub_event (&m);
-        if (g > 0) {
+        if (!d) {
+            hub_map (0);
+            m.kind = E_NOISE;                   /* (Loud: a lock burst, or a lid wrenched at, ten seconds' of it, its
+                                                **   test at its end) */
+            m.who = 0;
+            m.a = 6;
+            m.b = NZ_WORK;
+            m.w1 = HUB->pc_x;
+            m.w2 = HUB->pc_y;
+            m.t = HUB->now;
+            hub_event (&m);
+            t = 100;
+            lt = LT_FORCE;
+        } else if (tested (P_FORCE, (rec.mat == MT_WOOD ? 0 : -2) - (signed char) (rec.quality / 3)) > 0) {
             s = (s & ~(IS_LOCKED | IS_CLOSED)) | IS_BURST;
             say3 ("You force the ", nm, ", and its lock bursts open");
             reveal (n);
@@ -1366,7 +1374,9 @@ unsigned char s_shut_work (void)
     }
     item_at (n)->shut = s;
     hub_map (0);
-    HUB->ireq.x = t;
+    HUB->ireq.x = d ? 0 : t;                    /* (Done: its time spent already) */
+    HUB->ireq.qty = lt;                         /* (Begun: its first words the UI's) */
+    HUB->ireq.item = rec.kind;
     return ok;
 }
 
@@ -1477,7 +1487,10 @@ unsigned char s_inside (void)
     return IR_OK;
 }
 
-/* (Part 11's once: its room) */
+/* (Part 40's, its room: part 36's once, part 11's before it) */
+#pragma code-name (push, "SW40CODE")
+#pragma rodata-name (push, "SW40RODATA")
+
 /* The character's (on it, or in what it carries): part 10's on_pc, here too (wear's: a dig's every spell's, the
 ** parts not swapped for it) */
 static unsigned char __fastcall__ on_me (unsigned i)
@@ -1509,6 +1522,9 @@ void __fastcall__ s_wear (const char* key, unsigned char by)
     hub_map (0);
     strcpy (HUB->ireq.name, name);
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -2203,7 +2219,8 @@ static void __fastcall__ put3 (const char* a, const char* b, const char* c)
 ** (carried, or within reach) from the fuel named (into: carried, or within reach; "": the first carried that it
 ** takes), as much as it has room for, its whole life less what it has left, the fuel's measure the less by what it
 ** gave (a flask of oil a lantern's whole fill); one that burns away (a candle) takes none.  Its words in the hub's text,
-** its time in the request's x (a lantern filled, 20 seconds; a torch dipped, 10) */
+** its time in the request's x (a lantern filled, 20 seconds; a torch dipped, 10): timed work (HOUSE.md's long tasks),
+** begun (LT_FILL in qty, its thing's kind in item: its first words the UI's), the fuel moved as it's done (IO_DONE) */
 unsigned char s_fill (void)
 {
     struct item l, f;                           /* (On the C stack: the main RAM's room) */
@@ -2273,13 +2290,19 @@ unsigned char s_fill (void)
         put3 ("The ", ln, " has all it can take.");
         return IR_NO;
     }
+    hub_map (0);
+    HUB->ireq.x = takes == FU_OIL ? 200 : 100;
+    if (!(iq.to & IO_DONE)) {
+        HUB->ireq.qty = LT_FILL;                /* (Begun: its first words the UI's) */
+        HUB->ireq.item = l.kind;
+        return IR_OK;
+    }
+    HUB->ireq.x = HUB->ireq.qty = 0;            /* (Done: its time spent already) */
     give = room < f.fuel ? room : f.fuel;
     item_at (n)->fuel = l.fuel + give;
     item_at (c)->fuel = f.fuel - give;
     put3 (takes == FU_OIL ? "You fill the " : "You soak the ", ln, takes == FU_OIL ? " from the " : " in the ");
     put3 (fn, give == f.fuel ? ", and it's empty now" : "", ".");
-    hub_map (0);
-    HUB->ireq.x = takes == FU_OIL ? 200 : 100;
     return IR_OK;
 }
 
@@ -2592,7 +2615,20 @@ unsigned char __fastcall__ s_hide (const char* name)
     struct req* r;
     signed char g;
     unsigned char d;
+    unsigned n;
 
+    if (!(iq.to & IO_DONE)) {                   /* (Begun: a minute's work, a timed work, HOUSE.md's long tasks: hidden,
+                                                **   the test made, at its end, IO_DONE, the UI's) */
+        if (!(n = carried_named (name))) {
+            return IR_NONE;
+        }
+        n = item_kind (n);
+        hub_map (0);
+        HUB->ireq.item = n;
+        HUB->ireq.qty = LT_HIDE;
+        HUB->ireq.x = 600;
+        return IR_OK;
+    }
     if (drop (name) != IR_OK) {
         return IR_NONE;
     }

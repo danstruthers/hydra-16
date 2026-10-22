@@ -153,17 +153,19 @@ P_DIG.)  *(Every ruleset's.)*
 ## Portals
 
 - **Picking a lock:** Lockcraft, at the lock's difficulty, a minute a try: 2 to 10 steps worse, two a grade of its
-  make (the maker's dice: a simple lock 2 or 4, a sound one 6 to 10; the closer look tells which).  (pass.c;
-  wdoor.c.)
+  make (the maker's dice: a simple lock 2 or 4, a sound one 6 to 10; the closer look tells which).  A timed work (the
+  long tasks', below): begun with the picks to hand, the test made at the minute's end.  (pass.c; wdoor.c.)
 - **Forcing a door:** Strength, by its material: wood as it is, iron-bound two steps worse, iron four; one worse
   locked or barred; a rotten door (quality 0-1) two better, a worn one (2-3) one better, a new one (8-9) one worse.
-  Its lock or bar bursts; it's loud, and takes 10 seconds.  (wdoor.c.)  Why: the book's Strength test, scaled by
-  what the door is made of and how it's kept.
+  Its lock or bar bursts; it's loud (heard as it's begun), and takes 10 seconds, a timed work, its test at their end.
+  (wdoor.c.)  Why: the book's Strength test, scaled by what the door is made of and how it's kept.
 - **Bending a window's bars:** Strength, six steps worse; loud, 10 seconds.  **A portcullis's bars,** down: six
   worse and one more for each inch of their thickness (a portcullis's two), and it's a way through for good,
   jammed.  **Heaving a
   portcullis up** from the far side: six worse, a round.  A portcullis is never opened: raised by its winch on its
-  own side (30 seconds' cranking, loud), lowered by it only (2 seconds, louder).  (wwin.c.)
+  own side (30 seconds' cranking, loud), lowered by it only (2 seconds, louder).  Bending, heaving and winding each a
+  timed work, the test made (or the portcullis up) at its end; wound part way and stopped, it stays down.
+  (wwin.c.)
 - **Battering a thing** (the user, 2026-10-16: "model it after unarmed combat"): a blow the thing ignores (the
   book's Ignore defence), struck with what hits it hardest to hand (a tool, else a fist, a foot, the head); its
   impact for the aspect that does it most harm, less the material's resistance, worn off the portal's body (its
@@ -171,12 +173,32 @@ P_DIG.)  *(Every ruleset's.)*
   broken through is a way through for good, jammed.  A blow every 3 seconds as the clock goes, a dozen at most (four
   that make no mark at all: given up), a long task (below), the harm kept as each lands; each blow heard (the user's,
   2026-10-20: a noise of 8 for the denizens, a window's shutters or bars 7, and a blow's sound), and strenuous work
-  (Moving and tiring).  (wblow.c; fight.c's thing.)
-- **A part that strikes a thing is hurt by a blow gone wrong:** a marginal failure a d6, a critical failure 2d6, and
-  half the thing's blunt resistance, less the part's armour (gauntlets, boots' soles, a helm): a blunt hit on that
-  part.  The character stops when it's hurt enough: a serious injury, three levels or more to that part, shock or
-  senselessness.  (fight.c's thing; sheet.c's o_harm, HC_STRUCK.)  Why: the book's H2 for a bare part meeting
-  something hard, with the game's numbers.
+  (Moving and tiring).  Told as it goes (the user's playtest, 2026-10-22: "nothing is written to the output until
+  after it is resolved instead of something like "You start beating on the door..." followed by progress"): its
+  first words at once, by what strikes ("You set to battering the door.", "You set to kicking the door.", punching,
+  butting), then a line as the first blow marks it ("Your blows begin to tell on it."), as one leaves it giving ("It's
+  starting to give."), and every fourth blow else once it's marked ("You keep at it."); how it stands as it ends ("It
+  gives way, and crashes open.", "It's giving, but it holds yet.", "It's marked, but it holds.", "Your blows make no
+  mark on it.").  (wblow.c; fight.c's thing.)  Why nothing was told before: a battering's blows were only noises
+  (the denizens', the sound task's) till its end's words.
+- **A part of the body that strikes a thing** (a fist, a foot, the head: Unarmed's) is the house's Unarmed test (the
+  user's, 2026-10-22: "you should be able to avoid injury with a critical success or marginal success (or possibly
+  even a marginal failure) test against unarmed skill.  MF only results in no damage, and CF results in damage to
+  self?": the lead's reading, *for the user to confirm*): a critical or a marginal success a blow that tells on the
+  thing (the Ignore table's strike, its impact) and no hurt; a marginal failure no harm to either; a critical failure
+  no harm to the thing, but the part's: 2d6 and half the thing's blunt resistance, less the part's armour (gauntlets,
+  boots' soles, a helm), a blunt hit on that part.  The character stops when it's hurt enough: a serious injury,
+  three levels or more to that part, shock or senselessness.  A tool's blow (a pick's) as the book's, never the
+  striker hurt.  (fight.c's thing; sheet.c's o_harm, HC_STRUCK.)  Why: the book's H2 for a bare part meeting
+  something hard, with the game's numbers; the marginal failure's d6 gone (the user's).
+- **Bare, it stops short once a door** (the user's, 2026-10-22: "it stopping short of injury the first time you would
+  injure yourself ... After being warned of injury, continuing should only apply for that door, being reset on the
+  next door you try to batter down with bare hands/feet"): a bare part (no armour on it: no gloves or gauntlets, no
+  boots, no helm) whose blow would hurt it (that critical failure) stops short of it the first time at a door,
+  unhurt, the blow struck for nothing, and asks, soft: "You punch the door with your bare hands, but stop short of
+  hurting yourself.  Keep at it?" (kicking, "with your bare feet"; a head butt, "your bare head").  Kept at, it isn't
+  asked again at that door (its square the world's to keep), and the next such blow hurts; at the next door battered
+  it's asked again.  (fight.c's thing, rs.h's RS_SHORT; wblow.c's batter.)
 
 ## Traps, searching and hiding
 
@@ -195,10 +217,12 @@ P_DIG.)  *(Every ruleset's.)*
 - **Hiding a thing** where the character stands (the user: hiding is a skill, Concealment; the game's Stealth): its
   hiding, in steps, by the test: a critical success 12, a marginal success 6, a marginal failure 2, a critical
   failure 0 (a floor's dust and corners only).  Told: 10 or more cunningly, 4 or more well, less after a fashion.  The
-  character knows where it hid it.  (things.c's s_hide; main.c's hide.)
+  character knows where it hid it.  A minute's timed work (the long tasks'), the thing put down and the test made at
+  its end.  (things.c's s_hide; main.c's hide.)
 - **Disarming:** first the mechanism is made out (Lockcraft, half its power in steps worse: never deadly, however
   it goes), then disarmed (Lockcraft, half its power worse, two better if it's a keen one known well); magic only
-  by magical means; a pit not at all.  (wtrap.c.)
+  by magical means; a pit not at all.  Each a minute's timed work (the long tasks'), its test at its end; one set by
+  magic, with no magic to undo it, told at once.  (wtrap.c.)
 - **A trap's strike, a burn,** have the armour where they strike taken off them.  (sheet.c's o_harm.)
 
 ## Who lives where
@@ -548,9 +572,52 @@ climb's test to hold on).
   minute a long task, its tests at its end, cut short only the squares nearest as far as it went (Traps, searching
   and hiding).  Tiring asked of a walk, a dig, a climb and a battering (Moving and tiring: strenuous work).
 - **A long task** is anything the character does that takes more than a round (10 seconds): a walk, a dig, a climb, a
-  search, battering a door, a wait.  Its progress is a bar on the status line, ten cells, its part done of its length
-  (a walk's squares, a dig's feet, a climb's feet, a wait's time, a battering's blows), redrawn at most once a real
-  second; and words as it goes (the user's: both).
+  search, battering a door, a wait; and the timed work, however short (below).  Its progress is a bar on the status
+  line, ten cells, its part done of its length (a walk's squares, a dig's feet, a climb's feet, a wait's time, a
+  battering's blows, a timed work's time), redrawn at most once a real second; and words as it goes (the user's:
+  both).
+- **The timed work** *(the user's playtest, 2026-10-22: "it would be better if the first half (for example "You study
+  the mechanism a while") comes out first, followed by, as the task timer expires, the second part ... Makes it seem
+  like there is actually a delay")*: whatever the character does that spends time and whose outcome is a test, or
+  comes of the work, is a long task of its own kind: its first words at once, its bar its time, and its outcome told
+  as its time's done, the test made then (the referee's, the same request made later) and the world changed then (a
+  lock picked, a trap disarmed, a door forced open, a portcullis up).  It's interrupted as any long task is (hard,
+  soft, the player's "stop"), and stopped first there's no outcome and nothing changed, the stop told ("You stop
+  studying the mechanism."), the time spent spent.  What can't be tried is told at once, in no time: no lockpicks to
+  hand (the referee's, asked as it's begun), a trap set by magic with no magic to undo it, a pit, no lock, a door open
+  already.  As built (its first words / its outcomes):
+  - a trap's mechanism made out, a minute: "You study the mechanism." / "You make out how it works: now to disarm
+    it.", "You can't make out how it works.";
+  - a trap disarmed, a minute: "You set to disarming the trap." / "You have it: the trap is disarmed.", "The trap
+    defeats you, for now.", "Your hand slips: the trap goes off!";
+  - a lock picked (a door's, a window's shutters', a chest's), a minute a try: "You set to picking the lock." / "The
+    lock gives with a click.", "The lock defeats you, for now." (a chest's: "You pick the lock of the chest.", "You
+    fail to pick the lock of the chest.");
+  - forced (a door, shutters, a chest), 10 seconds, loud as it's begun: "You set to forcing the door." / "With a crack
+    the door bursts open.", "The door holds." ("The chest holds: its lock doesn't give.");
+  - bars bent (a portcullis's, a window's), 10 seconds, loud: "You set to bending the bars." / "The bars bend apart:
+    there's room to get through.", "The bars won't give."; a portcullis heaved up from the far side, a round: "You set
+    to heaving at the portcullis." / "The portcullis rises, and catches, raised.", "The portcullis won't rise."; wound
+    up by its winch, 30 seconds, loud: "You set to winding the winch." / "The portcullis grinds up, and catches,
+    raised." (stopped part way, it stays down);
+  - a window's pane worked free, 30 seconds: "You set to working the pane free." / "The pane comes free of its frame,
+    and you lift it out whole."; a window climbed through, a round: "You set to climbing through the window." / "You
+    get up onto the sill, and through.", "You can't get up onto the sill.", "You slip from the sill, and fall." (a
+    climb's: no stopping it part way);
+  - the traces read: a track, a minute: "You cast about for tracks." / what it reads; a sniff, 3 seconds: "You sniff
+    the air." / what it smells (too dark to see the floor, no nose: told at once);
+  - a light filled, 20 seconds (a torch dipped, 10): "You set to filling the lantern." / "You fill the lantern from
+    the flask of oil.";
+  - a thing hidden, a minute: "You set to hiding the dagger." / "You hide it well enough." (cunningly, after a
+    fashion);
+  - battering (Portals): its first words at once, its beats as it goes, how it stands at its end.
+  The outcomes worded to read alone after the first words.  Left as they were, told at once: what takes a few seconds
+  and has no test (a door opened or closed, a bar lifted out or set in its brackets, a portcullis loosed, a lid, a
+  tie, a look in a thing); a look one way and a listen (their sights and sounds told as they come); a search (a long
+  task already, its finds at its end); a throw (its round: the throw's flight is the moment it's told); words to a
+  denizen (its answer is the denizens', as it's said: a conversation answers at once); a close look at a thing (its
+  appraisal).  (dq0w.c's door_work, work_done, the parts' wk.plan; the things' IO_DONE and the UI's reach, words.c's
+  worked.)
 - **A walk's words**: a beat at each change (the way turns, a side passage or a door is passed, it widens or opens
   into a room, the light changes, a sound is heard), and on a quiet stretch a short line every 6 squares (30 feet) of
   none ("You go on down the passage."; the user's: about every 30 feet).
@@ -559,14 +626,17 @@ climb's test to hold on).
   **Soft** (it asks, "A rat comes into the light.  Keep digging?"; yes carries on, anything else stops it, and a new
   command typed instead stops it and runs): something new seen, heard or smelled (a denizen not hostile, a hostile
   one farther off than 30 feet, a sound), a fatigue level more.
-- **Stopping**: "stop" stops what can be stopped; "stop digging" (battering, climbing, searching, walking, waiting)
-  names it, and a name that isn't the task's is refused ("You aren't digging.").  What's imposed can't be stopped:
-  senseless, a fall under way.
+- **Stopping**: "stop" stops what can be stopped; "stop digging" (battering, kicking, punching, climbing, searching,
+  walking, waiting, and the timed work's: studying, disarming, picking, forcing, heaving, bending, winding, tracking,
+  sniffing, filling, hiding) names it, and a name that isn't the task's is refused ("You aren't digging.").  What's
+  imposed can't be stopped: senseless, a fall under way.  A question's answered yes by "y", "yes", "go on", "carry
+  on", "continue", or "keep" and anything ("keep at it", "keep kicking").
 - **What stopping costs**: a walk stops where the character is; a dig keeps the feet dug (the change record: a hole
   half dug stays half dug), and the part of its spell done tires; battering keeps the harm done; a search cut short
   covers the squares nearest first as far as it went, each at the full chance, and a wait rests for the part done; a
   climb, disturbed hard, is a Climbing test to keep the grip (the plan's holding on), a fall from where it is if it
-  fails.
+  fails; a timed work, nothing: no test made, no outcome, the time spent (a lock not picked, a mechanism not made
+  out, a winch's portcullis still down).
 - **Looking one way** ("look north", "look left", "look at the door"): a focused look that way, 3 seconds, twice as far
   as a glance about, as far as the light and the eyes allow (the light layer, distant lights, the dark's adapting);
   through what lets sight through (a doorway, a window, a grating, bars, a slit, a hole), what lies beyond.  Listening
@@ -601,7 +671,8 @@ The lights (lights burning down, renewed; the kit's spare; the status line's lig
 - **Renewing:** a lantern filled from a flask of oil ("fill the lantern", "refill the lantern"), as much as it has
   room for, the flask the less by it (20 seconds); a torch dipped in oil or pitch ("dip the torch in the oil", "soak
   the torch in pitch"), back to its hour, the oil the less by the minutes it gained (a minute's burning a minute's
-  oil: 10 seconds); a candle takes nothing.  Without a fuel named, the first carried that the light takes.
+  oil: 10 seconds); a candle takes nothing.  Without a fuel named, the first carried that the light takes.  A timed
+  work (Where you are ...'s long tasks), the fuel moved at its end.
 - **Fuels:** a flask of oil holds a pint, a lantern's fill (six hours' burning; a torch's hour six times over); a pot
   of pitch four hours' (a torch renewed four times).  Neither is in the maker's stock yet: the kit's flask, and dq0
   -k's.
@@ -645,7 +716,8 @@ and 2026-10-21: keen noses follow a scent far longer than an hour, a hound's esp
   to 11, many; how long since: only just under eight minutes, recently under an hour, some hours under ten, a day or so
   under two days, long ago; the way it led, by the facing; whose, "plainly"); a marginal success the same, "by the look
   of them"; a marginal failure only that the floor's been trodden; a critical failure a misreading, told as if it were
-  read: the way reversed, the time two steps off.  Three trails at most, the clearest first.
+  read: the way reversed, the time two steps off.  Three trails at most, the clearest first.  A timed work ("You cast
+  about for tracks.", the reading at its minute's end: the long tasks').
 - **A scent fades by its reader's nose**: a scent of strength s (kinds.txt's smell, and its passings' and stays' points:
   below) read by a nose n (kinds.txt's nose; the character's a quarter of its smell sense, the referee's: 1 for most)
   lasts 2^(s + n - 2) fours of minutes, its strength s + n - 1 losing a point each time its age doubles, and half a
@@ -660,6 +732,7 @@ and 2026-10-21: keen noses follow a scent far longer than an hour, a hound's esp
   critical failure nothing.  A scent told hangs here fresh (under an hour old), faint (ten hours) or lingers stale, but
   one of strength 6 or more as it's smelt hangs heavy ("A musky smell hangs heavy here: giant rats, by the smell of
   it.": a lair, a bear just gone by).  The character doesn't smell its own sweat.
+  A timed work ("You sniff the air.", the smell told at its 3 seconds' end: the long tasks').
 - **Smoke**: a flame the character carries leaves smoke on the squares it walks (a torch's strength 5, a lantern's or
   a candle's 2, by its name); a light lying lit (a sconce's torch, a fire) smokes 4 where the air reaches; a light of
   its own lit, the character smells no other smoke.  Smoke fades as a scent does, with no nose to read it longer.
@@ -739,8 +812,8 @@ words):
   with lockpicks to hand (P_PICKLOCK, as a door's lock: a minute a try, 1 step harder and 1 more for every 3 of its
   make; no picks, refused), or forced (P_FORCE: a wooden one at no steps, another 2 harder, and 1 more for every 3 of
   its make; 10 seconds, loud, a noise of 6 the denizens hear): its lock burst, it's open and never locks again; held,
-  "The chest holds".  Forcing one that isn't locked opens it.  Locking: no keys to things' locks yet ("you have no key
-  to it").
+  "The chest holds".  Picking and forcing each a timed work (the long tasks'), the test made at its end.  Forcing one
+  that isn't locked opens it.  Locking: no keys to things' locks yet ("you have no key to it").
 - **A thing of several** (the one a command means, the world's to choose; never asked which): the one most to hand:
   held, then worn or hanging from the belt, then in what's carried (the shallower first), then lying within reach
   (the nearer first, a surface's too), then further off.  A command naming two of a name takes different ones: the

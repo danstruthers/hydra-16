@@ -149,14 +149,18 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** number in a run of them; the character's best to hand the tool that hits a thing hardest (not a weapon), else its
 ** fists.  The reply: w1 the harm the thing takes (the impact past its resistance, its aspect the best against it: b),
 ** result 2 if a part of the striker struck it (its words in the text, the striker's weapon), and its own hurt if the
-** blow went wrong (a part only: the attack's marginal failure a d6, its critical failure 2d6, the book's H2 for a part
-** that meets something hard, Combat 12; and half the thing's blunt resistance; less the part's armour, a kick's the
-** soles'): HC_STRUCK's, c its worst band, w2 the tenths it's out for, result | 1 if it's hurt enough to stop, its words
-** RS_DESCRIBE b 2's */
+** blow went wrong (a part only, the house's Unarmed test, HOUSE.md's battering: a marginal failure harms neither, a
+** critical failure no harm to the thing, but the part's 2d6, the book's H2 for a part that meets something hard,
+** Combat 12; and half the thing's blunt resistance; less the part's armour, a kick's the soles'): HC_STRUCK's, c its
+** worst band, w2 the tenths it's out for, result | 1 if it's hurt enough to stop, its words RS_DESCRIBE b 2's; w2
+** RS_SHORT, a bare part's hurt stopped short (none: result | 4, the world's to ask) */
 #define RS_PRONE_A      0x02                    /* (RS_ATTACK's w2: the attacker lies prone, */
 #define RS_PRONE_D      0x04                    /*   the defender) */
 #define RS_KILLER       0x08                    /* (RS_ATTACK's w2: the attacker a killer, the character senseless finished
                                                 **   where it lies; else the blow held: the minds', by its nature) */
+#define RS_SHORT        0x10                    /* (RS_ATTACK at RS_THING's w2: a bare part (no armour on it: the
+                                                **   fists, the feet, the head) that would be hurt stopped short of it,
+                                                **   unhurt, result | 4: the first time at a door, HOUSE.md's) */
 #define AF_STOPPED      0x01                    /* The attacker's strike stopped by armour (its line the armour's) */
 #define AF_STOPPED_D    0x02                    /*   the defender's */
 #define AF_TA           0x04                    /* The defender's tactical advantage: an action more, at once */

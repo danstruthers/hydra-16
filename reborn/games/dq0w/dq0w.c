@@ -72,6 +72,7 @@ void __fastcall__ go_to (unsigned x, unsigned y);
 void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep);
 void __fastcall__ door_work (unsigned char what);   /* Part 12 */
 unsigned char batter_on (void);
+unsigned char work_done (void);
 void step_on (void);                            /* Part 23 */
 unsigned char task_news (void);
 void __fastcall__ task_word (const struct msg* m);
@@ -199,7 +200,8 @@ unsigned char fwant;                            /* (Fighting on's, part 24's: an
 unsigned char flast;                            /* (The last to strike at the character, plus 1: wfight.c's) */
 static unsigned char fheld;                     /* (The enemies the player stopped fighting, a bit each: part 24's) */
 static unsigned char pseen;                     /* (The denizens seen as it began, and since) */
-static unsigned char pc_tired;                  /* (Strenuous work done tired it a level more: asked, the main loop's) */
+static unsigned char pc_tired;                  /* (Strenuous work done tired it a level more: asked, the main loop's,
+                                                **   TE_ASK_TIRED; or TE_ASK_SHORT, a battering's) */
 static void __fastcall__ task (unsigned char kind, unsigned len)
 {
     pseen = seen_now ();
@@ -208,6 +210,7 @@ static void __fastcall__ task (unsigned char kind, unsigned len)
     HUB->pc_task.len = len;
     HUB->pc_task.done = 0;
     HUB->pc_task.foe = 0;
+    HUB->pc_task.what = 0;
     pc_hit = 0;
     pt0 = HUB->now;
 }
@@ -1453,7 +1456,7 @@ static void arrive (void)
             climb_on ();
         }
         spend (GA_WORK, t);
-        pc_tired = wres && move.on;
+        pc_tired = wres && move.on ? TE_ASK_TIRED : 0;
         return;
     }
     spend (pace_, went > pspent ? went - pspent : 0);    /* (As it begins, or carries on: none; a walk's, what's
@@ -2037,6 +2040,8 @@ static unsigned char __fastcall__ work (unsigned char what, unsigned x, unsigned
     wk.tt = 0;
     wk.climb = 0;
     wk.res = 0;
+    wk.task = 0;
+    wk.open = 0;                                /* (No opening held: a timed work's begun shows nothing) */
     if (x == NO_SQ || what == W_STEP || what == PA_SEARCH || what == PA_DISARM || what == PA_CHECK) {
         wk.what = what;
         traps ();
@@ -2110,6 +2115,31 @@ static unsigned char searched (void)
     return 0;
 }
 
+/* ---- The timed work (HOUSE.md's long tasks, the user's, 2026-10-22: "it would be better if the first half ... comes
+** out first, followed by, as the task timer expires, the second part"): work that spends time and whose outcome is a
+** test, or comes of the work (a trap's mechanism made out, a trap disarmed, a lock picked, a door forced, a
+** portcullis heaved up or wound up, bars bent, a pane worked free, a window climbed through; the traces read, a track
+** or a smell), begun by its part with no test made (wk.plan) and a long task of its kind (LT_*: its first words at
+** once, TE_BEGUN, its bar its time), done as its time's up (work_done: the test made then, the world changed then,
+** its outcome told then), or stopped first (pc_cut: no outcome, the stop told).  The things' own (a chest's lock, a
+** light filled) the UI's (I_WAIT's kind) */
+static unsigned char lwork;                     /* (What's to be done at its end: PA_*, or LW_TRACE; 0 none) */
+#define LW_TRACE        0xFF
+static unsigned char lw_d;                      /* (Its portal's way from the character, its square: NO_SQ, about it; */
+static unsigned lw_x, lw_y;                     /*   a trace's I_TRACE w1 and w2) */
+static struct msg lw_m;
+
+/* The timed work (or a battering) begun: its long task of kind k (the time the character's busy for, its length), its
+** thing's words (what: the long task's), its first words told; its end what x, y, d say (lwork's) */
+static void __fastcall__ begun (unsigned char k, unsigned char what)
+{
+    task (k, k == LT_BATTER ? BLOWS : went);
+    HUB->pc_task.what = what;
+    pc_cut = 0;
+    evb = what;
+    event (E_TASK, 0, TE_BEGUN | k << 8);
+}
+
 /* A door (or a portcullis, a window, a slit) the character faces worked, walked up to first; or about it: a search,
 ** a trap in reach disarmed (else the door ahead's) (part 12's) */
 #pragma code-name (push, "SW12CODE")
@@ -2118,6 +2148,7 @@ static unsigned char searched (void)
 void __fastcall__ s_door_work (unsigned char what)
 {
     unsigned long t;
+    unsigned char p;
 
     here ();
     if (what == PA_SEARCH) {                    /* (A long task: a minute's, what it finds told as it ends) */
@@ -2126,8 +2157,14 @@ void __fastcall__ s_door_work (unsigned char what)
         srch = 1;
         return;
     }
-    if (what == PA_DISARM && !work (what, NO_SQ, NO_SQ, 0)) {
+    wk.plan = what == PA_DISARM;                /* (Its test, if it's timed work, at its end: work_done's) */
+    if (wk.plan && (p = work (what, NO_SQ, NO_SQ, 0), wk.plan = 0, !p)) {
         worked (0);
+        if (wk.task) {                          /* (A trap in reach: its mechanism made out, or disarmed) */
+            lwork = what;
+            lw_x = NO_SQ;
+            begun (wk.task, 0);
+        }
         return;
     }
     if (!door_ahead (&t)) {
@@ -2141,11 +2178,21 @@ void __fastcall__ s_door_work (unsigned char what)
         on_way ();                              /* (A trap on its way up to it) */
         return;
     }
+    wk.plan = 1;
     work (what, px_, py_, pd_);
+    wk.plan = 0;
     HUB->pc_face = H_OF (pd_);
     worked (t);
+    p = wk.pq.kind + 1;                         /* (Its words: a door's, a portcullis's, a window's) */
     if (wk.what == W_BLOW) {
-        task (LT_BATTER, BLOWS);                /* (Battering: a long task, a blow at a time as it's free) */
+        begun (LT_BATTER, p | HUB->pc_strike << 4);     /* (Battering: a long task, a blow at a time as it's free,
+                                                **   its first words at once, the user's: the striker's) */
+    } else if (wk.task) {
+        lwork = what;                           /* (The timed work: done as its time's up, work_done) */
+        lw_x = px_;
+        lw_y = py_;
+        lw_d = pd_;
+        begun (wk.task, what == PA_DISARM ? 0 : p);
     }
 }
 
@@ -2222,6 +2269,33 @@ void s_revealed (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* The timed work's end, its time up (the main loop's, as the character's free, lwork's): its test made and its
+** outcome told now, what it changes changed now (the work's part again, wk.plan 0: no time more but what came of it,
+** a trap's gas); the traces read now; stopped first (pc_cut), nothing.  The long task over: 2 while it's busy still,
+** 0 once it's free */
+unsigned char s_work_done (void)
+{
+    unsigned char w = lwork;
+
+    lwork = 0;
+    if (pc_cut) {
+        return 0;                               /* (Stopped first: no outcome, the stop told) */
+    }
+    here ();
+    HUB->pc_task.kind = LT_NONE;
+    if (w == LW_TRACE) {
+        lw_m.w1 = lw_x;
+        lw_m.w2 = lw_y;
+        tr_flush (0);
+        traced (&lw_m);                         /* (Its time spent already: the reading now) */
+        return 0;
+    }
+    work (w, lw_x, lw_y, lw_d);
+    w = wk.tt != 0;
+    worked (0);
+    return w << 1;
+}
+
 /* A battering's next blow as the character's free (the main loop's, while its long task's LT_BATTER: part 6's
 ** blows), the character busy its time; or, done, what came of the blows told and seen, the long task over, and the
 ** character busy for the time a trap it set off took: 2 while it's busy, 0 once it's free */
@@ -2237,9 +2311,11 @@ unsigned char s_batter_on (void)
             revealed ();                        /* (Broken down: told with what it shows beyond, part 41's) */
         }
     } else {                                    /* (A blow struck: strenuous work, HOUSE.md's tiring; a fatigue level
-                                                **   more asked of if more are to come) */
+                                                **   more asked of if more are to come; a bare part's blow stopped
+                                                **   short of hurting it asked of first, once a door) */
         spend (GA_WORK, BLOW_T);
-        pc_tired = wres && wk.what == W_BLOW;
+        pc_tired = wk.ask ? TE_ASK_SHORT : wres && wk.what == W_BLOW ? TE_ASK_TIRED : 0;
+        wk.ask = 0;
     }
     if (!wk.tt) {
         return 0;
@@ -2289,8 +2365,8 @@ static void stepping (void)
     if (!HUB->pc_task.kind || HUB->pc_task.asking) {
         return;
     }
-    if (HUB->pc_task.kind == LT_WAIT || HUB->pc_task.kind == LT_SEARCH) {
-        HUB->pc_task.done = (unsigned) (HUB->now - pt0);
+    if (HUB->pc_task.kind == LT_WAIT || HUB->pc_task.kind == LT_SEARCH || HUB->pc_task.kind >= LT_STUDY || lwork) {
+        HUB->pc_task.done = (unsigned) (HUB->now - pt0);    /* (A timed work's its time, a window's climb's) */
     }
     if (pc_hit || (pon && pnext < npath && HUB->now >= pdue)) {
         step_on ();
@@ -2342,6 +2418,9 @@ static void __fastcall__ stop (unsigned char why)
     }
     HUB->pc_task.asking = 0;
     pc_hit = 0;                                 /* (A blow taken as it was asked: no second stop after the answer's) */
+    if (why != TE_OUT) {
+        evb = HUB->pc_task.what;                /* (Its words: what it was done to; a light's its kind) */
+    }
     event (E_TASK, 0, why | HUB->pc_task.kind << 8);
 }
 
@@ -2352,6 +2431,9 @@ static void __fastcall__ ask (unsigned char why)
     pask = HUB->now;
     prem = HUB->pc_ready > HUB->now ? (unsigned) (HUB->pc_ready - HUB->now) : 0;
     HUB->pc_ready = HUB->now;                   /* (The clock still at the turns pace till it's answered) */
+    if (!evb) {
+        evb = HUB->pc_task.what;                /* (Its words: what it's done to; a fight's its health) */
+    }
     event (E_TASK, 0, why | HUB->pc_task.kind << 8);
 }
 
@@ -3270,8 +3352,14 @@ static void __fastcall__ intent (struct msg* m)
     free_at = HUB->now;
     switch (m->kind) {
     case I_WAIT:
-        pc_waited = 1;                             /* (Its eyes looked to as it ends: the senses') */
         busy (m->w1 ? m->w1 : HUB->round);
+        if (m->w2 >> 8) {                       /* (A timed work of the UI's, the things': its long task, its end
+                                                **   the UI's as the character's free, not stopped) */
+            task (m->w2 >> 8, m->w1);
+            HUB->pc_task.what = 0x80 | (m->w2 >> 1 & 0x7F);
+            break;
+        }
+        pc_waited = 1;                          /* (Its eyes looked to as it ends: the senses') */
         if (!m->w2 && m->w1 > HUB->round) {
             task (LT_WAIT, m->w1);              /* (A wait longer than a round: a long task) */
         }
@@ -3318,6 +3406,8 @@ static void __fastcall__ intent (struct msg* m)
 
 void __fastcall__ s_intent_more (struct msg* m)
 {
+    unsigned char k, d;
+
     switch (m->kind) {
     case I_DIG:
         start_dig (m->a);
@@ -3356,6 +3446,21 @@ void __fastcall__ s_intent_more (struct msg* m)
     case I_TRACE:
         tr_flush (0);                           /* (The traces read, the journal taken in first, then the time it
                                                 **   takes: parts 28's, 29's) */
+        k = (unsigned char) m->w1;
+        hub_map (SIGHT_BANK);
+        d = SIGHT->dark;
+        hub_map (0);
+        if (k != TRC_FLOOR && (k == TRC_SMELL ? HUB->pcsum.smell != 0 : !d)) {
+            busy (m->w2 ? m->w2 : k == TRC_SMELL ? 30 : 600);   /* (A track's minute, a sniff's three seconds: a
+                                                **   timed work, its test, the reading, at its end: work_done's;
+                                                **   too dark to see the floor, no nose, told at once) */
+            lwork = LW_TRACE;
+            lw_x = m->w1;
+            lw_y = m->w2;
+            lw_m.kind = I_TRACE;
+            begun (k == TRC_SMELL ? LT_SNIFF : LT_TRACK, 0);
+            break;
+        }
         busy (traced (m));
         break;
     }
@@ -3529,8 +3634,9 @@ int main (int argc, char* argv[])
                 pc_waited = 0;
                 ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */
             }
-            took = take_n ? take_up () : pfoe ? close_on () : srch ? searched () : 0;  /* (A thing walked over to: taken up, or walked on
-                                                **   to; a blow's close-in: struck, or walked on) */
+            took = take_n ? take_up () : pfoe ? close_on () : srch ? searched () : lwork ? work_done () : 0;
+                                                /* (A thing walked over to: taken up, or walked on to; a blow's
+                                                **   close-in: struck, or walked on; a timed work's end) */
             if (!took && HUB->pc_task.kind == LT_BATTER) {
                 took = batter_on ();            /* (A battering's next blow, or what came of it told) */
             }
@@ -3546,10 +3652,11 @@ int main (int argc, char* argv[])
             was_busy = took == 2;
         }
         if (pc_tired) {                         /* (Tired a level more by strenuous work: asked, soft, as it goes on,
-                                                **   "You're tiring.  Keep digging?", part 23's) */
-            pc_tired = 0;
+                                                **   "You're tiring.  Keep digging?", part 23's; a battering's bare
+                                                **   part stopped short of hurting it, its question) */
             m.kind = I_ASK;
-            m.w1 = TE_ASK_TIRED;
+            m.w1 = pc_tired;
+            pc_tired = 0;
             task_word (&m);
         }
         if (hub_posted (&HUB->ireq)) {

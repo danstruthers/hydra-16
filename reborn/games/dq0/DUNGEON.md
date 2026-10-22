@@ -732,6 +732,17 @@ or a shaft can be jumped down (jump down: a fall of its height).
   "Searching about..." as it begins and what it finds told as it ends (cut short, only the squares nearest as far as
   it went, each at the full chance); a walk's exertion is the referee's as it goes, and a climb's, a dig's and a
   battering's (strenuous work), and a fatigue level more asks ("You're tiring.  Keep walking?", "Keep digging?").
+  The timed work (the user's, 2026-10-22: HOUSE.md's long tasks) is one too, whatever its length: a trap's mechanism
+  made out, a trap disarmed, a lock picked (a door's, a chest's), a door or a chest forced, bars bent, a portcullis
+  heaved up or wound up, a pane worked free, a window climbed through, a track or a smell read, a light filled, a thing
+  hidden.  Its first words at once ("You study the mechanism."), its outcome as its time's done, the test made and the
+  world changed then ("You make out how it works: now to disarm it."); stopped first, nothing ("You stop studying the
+  mechanism.").  The world's portals' and traps' work begun by its part with no test made (work.h's plan) and done
+  as the character's free again (dq0w.c's work_done); the things' (a chest's lock, a light, a thing hidden) begun and
+  done by the UI's asking twice (items.h's IO_DONE), a long task of the UI's between (I_WAIT's kind).  A battering is
+  told as it goes too: its first words at once, a beat as the blows tell ("Your blows begin to tell on it.", "It's
+  starting to give.", "You keep at it."), and a bare fist or foot stops short of hurting itself once a door, asked
+  ("...but stop short of hurting yourself.  Keep at it?": HOUSE.md's portals).
 - **Engagement** (HOUSE.md's, the book's engagement zones): a hostile or unfriendly denizen on its feet and conscious
   has a zone, its square and the eight round it (not round a corner); any walk stops as it comes into one ("The
   giant rat engages you: you stop walking."), and one begun in one goes a square and stops if it's still in one.

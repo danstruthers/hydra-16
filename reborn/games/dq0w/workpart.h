@@ -12,6 +12,9 @@
 #define test(p, b, s)   (wsteps = (s), ask_w (RS_TEST, (p), (b)))   /* (The referee's test of the character's: its
                                                 **   grade, wres its result) */
 #define AT_BAR          wk.px + dir_x[wk.pq.bar], wk.py + dir_y[wk.pq.bar]     /* (A door's bar's square) */
+#define timed(k, t)     (wk.task = (k), wk.tt += (t))  /* (A timed work begun, wk.plan's: its long task's kind and its
+                                                **   time, nothing told; its test and its outcome at its end, dq0w.c's
+                                                **   work_done: HOUSE.md's long tasks) */
 #define AT_PC           wk.fx, wk.fy
 
 /* A portal's state kept (handled: a walk may open it again, the user's) */

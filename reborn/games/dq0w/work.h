@@ -46,6 +46,15 @@ struct work {
     unsigned char   was;                        /*   its harm as the battering began) */
     unsigned char   open;                       /* (An opening's words, PO_*, held till the look after it: told with what
                                                 **   it shows, dq0w.c's revealed; 0 none) */
+    unsigned char   plan;                       /* (1: begun, dq0w.c's door_work: a timed work's test not made, its
+                                                **   time and its long task's kind given, task (LT_*: 0 none, done at
+                                                **   once); 0: done, a timed work's at its time's end, the test made
+                                                **   then, no time more but what came of it (HOUSE.md's long tasks) */
+    unsigned char   task;
+    unsigned char   ask;                        /* (A battering's: a bare part's blow stopped short of hurting it, to
+                                                **   be asked; */
+    unsigned char   qs;                         /*   the door it was, warned once: its stratum plus 1, its square) */
+    unsigned        qx, qy;
     struct portal   pq;                         /* (The portal worked, as it was) */
     struct trap     tq;                         /* (The trap) */
     struct msg      m;                          /* (An event told) */

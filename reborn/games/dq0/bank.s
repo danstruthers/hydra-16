@@ -153,14 +153,14 @@ ovl_out:
             OVFN        sway_words, 6
             OVFN        dig_words, 1
             OVFN        task_words, 3
-            OVFN        beat_words, 3
-            OVFN        stop_kind, 8
-            OVFN        answer_of, 8
+            OVFN        beat_words, 8
+            OVFN        stop_kind, 7
+            OVFN        answer_of, 7
             OVFN        bar_text, 3
-            OVFN        wait_of, 3
-            OVFN        state_words, 3
-            OVFN        free_cmd, 3
-            OVFN        meta, 3
+            OVFN        wait_of, 7
+            OVFN        state_words, 7
+            OVFN        free_cmd, 7
+            OVFN        meta, 7
             OVFN        climb_words, 1
             OVFN        entered, 1
             OVFN        portal_words, 10

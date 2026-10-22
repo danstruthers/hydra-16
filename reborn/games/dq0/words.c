@@ -459,18 +459,42 @@ void o_words (void)
     }
 }
 
+/* A thing worked (the things' IO_FILL, IO_SHUT, IO_HIDE: its words said), its time (the request's x): quietly; a
+** timed work's (HOUSE.md's long tasks: the reply's qty its long task's kind, item its thing's kind), its first words (a
+** long task's begun, task.c's) and a long task of the UI's (I_WAIT's kind), its command kept (the UI bank's) and
+** carried out again as its time's up (main.c's reach 3: its end, 4, the things' IO_DONE, the test made then); done,
+** nothing more */
+static void __fastcall__ worked (unsigned char action)
+{
+    unsigned char k, n;
+    unsigned t;
+
+    hub_mem (0, &k, &HUB->ireq.qty, 1);
+    hub_mem (0, &n, &HUB->ireq.item, 1);
+    hub_mem (0, &t, &HUB->ireq.x, 2);
+    if (action != IR_OK || !k || reach == 4) {
+        msg (lb);
+        if (action == IR_OK && reach != 4) {
+            intend2 (I_WAIT, t, 1);
+        }
+        return;
+    }
+    task_words (TE_BEGUN | k << 8, n |= 0x80);
+    hub_mem (UI_BANK, &UIREC->kept, &cmd, sizeof cmd);
+    reach = 3;
+    intend2 (I_WAIT, t, k << 8 | (n & 0x7F) << 1 | 1);
+}
+
 /* The commands that want nothing but their action, past main.c's chores (its default's: part 2 has no room): 1 if
 ** it was one of them, carried out; each slice's own cases here, its work in its own part or overlay */
 unsigned char __fastcall__ o_more (unsigned char action)
 {
+    unsigned char d = reach == 4 ? IO_DONE : 0;    /* (A timed work's end: main.c's reach) */
+
     switch (action) {
     case VB_FILL_OBJECT:                        /* (A light renewed, slice 4.1's: "fill the lantern", "dip the torch in
-                                                **   the oil", the things' IO_FILL; its time, quietly) */
-        action = othings (IO_FILL, cmd.obj.word, cmd.other.word, 0);
-        msg (lb);
-        if (action == IR_OK) {
-            intend2 (I_WAIT, othings_x, 1);
-        }
+                                                **   the oil", the things' IO_FILL; its time, quietly: a timed work) */
+        worked (othings (IO_FILL, cmd.obj.word, cmd.other.word, d));
         break;
     case VB_OBSERVE_IN:                         /* (Looked into a thing, onto it: "look in the sack", "look on the */
                                                 /*   table", "look into the well", the user's, 2026-10-21; the */
@@ -498,7 +522,7 @@ unsigned char __fastcall__ o_more (unsigned char action)
         if (!cmd.obj.word[0] || cmd.obj.kind) {
             return 0;
         }
-        action = othings (IO_SHUT, cmd.obj.word, "", action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux);
+        action = othings (IO_SHUT, cmd.obj.word, "", (action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux) | d);
         if (action == IR_NONE) {
             if (cmd.action != VB_LOCK_OBJECT) {
                 return 0;
@@ -507,11 +531,11 @@ unsigned char __fastcall__ o_more (unsigned char action)
         } else if (action == IR_NOT_HERE) {
             reach_go ();
         } else {
-            msg (lb);
-            if (action == IR_OK) {
-                intend2 (I_WAIT, othings_x, 1);
-            }
+            worked (action);                    /* (Its lock picked, it forced: a timed work) */
         }
+        break;
+    case VB_HIDE:                               /* (A thing hidden, begun: main.c's hide, the things' IO_HIDE) */
+        worked (IR_OK);
         break;
     default:
         return 0;

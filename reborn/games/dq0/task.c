@@ -3,8 +3,10 @@
 ** character's): what came of one (E_TASK: stopped, asked, carried on, refused), a walk's beats as it goes (E_BEAT),
 ** the task a stop names ("stop digging": its LT_*), a question's answer read, and a line typed as the character's
 ** busy carried out at once or held (fighting on's: a command taking over); a light burning low and going out (E_TASK's
-** too), and the status line's light left (slice 4.1's); robbed as it lay helpless (E_TASK's too).  Overlay 3's (the stop's word and a question's answer overlay
-** 8's).
+** too), and the status line's light left (slice 4.1's); robbed as it lay helpless (E_TASK's too); a timed work's first
+** words, a battering's as it goes, a bare part stopped short of hurting itself (the user's, 2026-10-22).  Overlay 3's
+** (the stop's word, a question's answer, the state's words, a wait's length, a line typed as it's busy and the
+** game paused or kept overlay 7's).
 */
 
 #include <string.h>
@@ -17,7 +19,9 @@
 
 static const char* const doing[] = {           /* (By LT_*) */
     "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering",
-    "fighting"
+    "fighting", "studying the mechanism", "disarming the trap", "picking the lock", "forcing", "heaving at",
+    "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
+    "hiding"
 };
 #define NDOING          (sizeof doing / sizeof doing[0])
 
@@ -58,19 +62,64 @@ static unsigned char __fastcall__ lamp (unsigned char b)
     return f & K_PLURAL;
 }
 
+#pragma data-name (push, "OV3RODATA")          /* (Its words made in the overlay's bank: the main RAM's none) */
+static char nb[20] = "", dn[36] = "";
+#pragma data-name (pop)
+
+/* What a long task's done to (the long task's what, n: hub.h's), its words: "the door", "the chest"; "it" */
+static const char* __fastcall__ noun (unsigned char n)
+{
+    static const char* const pk[3] = { "the door", "the window", "the portcullis" };    /* (By PK_*) */
+
+    if (n & 0x80) {
+        lamp (n);                               /* (A thing's kind's name: the catalogue's) */
+        strcpy (nb, "the ");
+        strcat (nb, fn);
+        return nb;
+    }
+    n = (n & 15) - 1;
+    return n < 3 ? pk[n] : "it";
+}
+
+/* A long task of kind k as it's said ("picking the lock", "kicking the door"), n its what (the striker, its thing) */
+static const char* __fastcall__ doing_of (unsigned char k, unsigned char n)
+{
+    static const char* const struck[4] = { "battering", "punching", "kicking", "butting" };    /* (By SK_*) */
+
+    strcpy (dn, k == LT_BATTER ? struck[n >> 4 & 3] : doing[k < NDOING ? k : 0]);
+    if (n && (k == LT_BATTER || k == LT_FORCE || k == LT_HEAVE || k == LT_FILL || k == LT_HIDE)) {
+        strcat (dn, " ");
+        strcat (dn, noun (n));
+    }
+    return dn;
+}
+
 /* What came of the character's long task: E_TASK's w (TE_*, its kind times 256); named, the kind its stop named (b),
-** or the foe (TE_FIGHT's), or the health (TE_ASK_HURT's), or a light's kind (TE_LOW's, TE_OUT's).  1 if a question's
-** put; 2 one answered yes unasked (dq0 -a's, the tests': not put); 4 fighting on begun (the character busy) */
+** or the foe (TE_FIGHT's), or the health (TE_ASK_HURT's), or a light's kind (TE_LOW's, TE_OUT's), or what it was done
+** to (a stop's, a question's, a timed work begun: the long task's what).  1 if a question's put; 2 one answered yes
+** unasked (dq0 -a's, the tests': not put); 4 fighting on begun (the character busy) */
 unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
 {
-    unsigned char k = w >> 8, p;
-    const char* d = doing[k < NDOING ? k : 0];
+    unsigned char k = w >> 8, p = (unsigned char) w, n = named;
+    const char* d;
 
-    if ((unsigned char) w <= TE_NEAR || (unsigned char) w == TE_ENGAGED || ((unsigned char) w == TE_OUT && k)) {
-        reach = 0;                              /* (A walk over to a thing stopped: its command dropped) */
+    if (p == TE_NOT || p == TE_ENGAGED || p == TE_OUT) {
+        hub_mem (0, &n, &HUB->pc_task.what, 1);     /* (Its b another's: what it's done to the hub's) */
     }
-    k = (unsigned char) w;
-    if (autogo && (k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT)) {
+    d = doing_of (k, n);
+    if (p <= TE_NEAR || p == TE_ENGAGED || (p == TE_OUT && k)) {
+        reach = 0;                              /* (A walk over to a thing stopped: its command dropped; a thing's
+                                                **   timed work stopped: its end dropped, words.c's) */
+    }
+    k = p;
+    if (k == TE_ASK_SHORT) {                    /* (A battering's: a bare part's blow that would hurt it stopped short
+                                                **   of it, once a door; told, dq0 -a's too, then asked) */
+        p = named >> 4 & 3;
+        sayf ("\nYou %s ", p == SK_KICK ? "kick" : p == SK_HEAD ? "butt" : "punch");
+        sayf ("%s with your bare %s, but stop short of hurting yourself.", noun (named),
+              p == SK_KICK ? "feet" : p == SK_HEAD ? "head" : "hands");
+    }
+    if (autogo && (k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT || k == TE_ASK_SHORT)) {
         return 2;
     }
     switch (k) {
@@ -154,9 +203,27 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     case TE_ROBBED:                             /* (Helpless, robbed: a robber's way, the denizens') */
         sayf ("\n%s goes through your things as you lie helpless, and takes what it finds.", foe (named, 1));
         break;
+    case TE_BEGUN:                              /* (A timed work, a battering, begun: its first words at once, its
+                                                **   outcome as its time's done, HOUSE.md's long tasks; the user's,
+                                                **   2026-10-22) */
+        p = w >> 8;
+        sayf (p == LT_STUDY ? "\nYou study the mechanism." : p == LT_TRACK ? "\nYou cast about for tracks." :
+              p == LT_SNIFF ? "\nYou sniff the air." : p == LT_CLIMB ? "\nYou set to climbing through the window." :
+              "\nYou set to %s.", d);
+        break;
+    case TE_ASK_SHORT:
+        say ("  Keep at it?");
+        break;
     }
-    return k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT;    /* (1: a question put) */
+    return k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT || k == TE_ASK_SHORT;
+                                                /* (1: a question put) */
 }
+
+/* (Overlay 7's, overlay 3's room the timed work's: the state's words, a wait's length, the stop's word, a question's
+** answer, a line typed as it's busy, the game paused or kept) */
+#pragma code-name (push, "OV7CODE")
+#pragma rodata-name (push, "OV7RODATA")
+#pragma local-strings (push, on)               /* (Their words with them) */
 
 /* The character's state after a harm, its words (shock, bleeding, a leg or an arm useless: rs.h's C_*, the low
 ** byte): each once an answer, then "still" (a second harm's: a door battered, its trap after) */
@@ -176,6 +243,10 @@ void __fastcall__ o_state_words (unsigned char cond)
     }
     harm_told |= cond;
 }
+
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The status line's right side so far (s), and after it: the bar of a long task's part done, ten cells; a task of
 ** no length its words (a fight's, its foe: "Fighting the giant rat"); then the light the character carries, its
@@ -210,6 +281,10 @@ void __fastcall__ o_bar_text (char* s, unsigned done, unsigned len)
     }
 }
 
+#pragma code-name (push, "OV8CODE")       /* (Overlay 8's: a walk's beats, a battering's; overlay 3's room) */
+#pragma rodata-name (push, "OV8RODATA")
+#pragma local-strings (push, on)
+
 /* A walk's beat as it goes (E_BEAT's w: WB_*, its side times 256) */
 void __fastcall__ o_beat_words (unsigned w)
 {
@@ -232,8 +307,25 @@ void __fastcall__ o_beat_words (unsigned w)
     case WB_CROSS:
         tell (T_YOU_CROSS_THE);                 /* (A room crossed to a door, a passage: "You cross the room.") */
         break;
+    case WB_TELLS:                              /* (A battering's as it goes: the user's, 2026-10-22) */
+        msg ("Your blows begin to tell on it.");
+        break;
+    case WB_GIVES:
+        msg ("It's starting to give.");
+        break;
+    case WB_ON:
+        msg ("You keep at it.");
+        break;
     }
 }
+
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+#pragma code-name (push, "OV7CODE")
+#pragma rodata-name (push, "OV7RODATA")
+#pragma local-strings (push, on)
 
 /* A wait's length, tenths (I_WAIT's w1): line l's duration, n minutes or hours ("wait 10 minutes", "an hour"); 0 a
 ** round (nothing said); 100 minutes at most, the world's sixteen bits' */
@@ -251,21 +343,19 @@ unsigned __fastcall__ o_wait_of (const char* l, unsigned char n)
     return t > 60000UL ? 60000U : (unsigned) t;
 }
 
-/* (Overlay 8's, its bank's room after parts 1 and 7: the stop's word and a question's answer, overlay 3's room the
-** lights' words', slice 4.1's) */
-#pragma code-name (push, "OV8CODE")
-#pragma rodata-name (push, "OV8RODATA")
-#pragma local-strings (push, on)               /* (Their words with them) */
-
 /* The task a stop names, by its word ("digging"; "": none, LT_NONE) */
 unsigned char __fastcall__ o_stop_kind (const char* word)
 {
     static const char* const word_[] = { "walking", "going", "moving", "climbing", "digging", "working", "searching",
                                          "waiting", "resting", "sleeping", "talking", "battering", "breaking",
-                                         "smashing", "fighting", "attacking" };
+                                         "smashing", "fighting", "attacking", "kicking", "punching", "butting",
+                                         "studying", "disarming", "picking", "forcing", "heaving", "bending",
+                                         "winding", "tracking", "sniffing", "filling", "soaking", "hiding" };
     static const unsigned char kind_[] = { LT_WALK, LT_WALK, LT_WALK, LT_CLIMB, LT_DIG, LT_DIG, LT_SEARCH, LT_WAIT,
                                            LT_WAIT, LT_SLEEP, LT_TALK, LT_BATTER, LT_BATTER, LT_BATTER, LT_FIGHT,
-                                           LT_FIGHT };
+                                           LT_FIGHT, LT_BATTER, LT_BATTER, LT_BATTER, LT_STUDY, LT_DISARM, LT_PICK,
+                                           LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_TRACK, LT_SNIFF, LT_FILL,
+                                           LT_FILL, LT_HIDE };
     unsigned char i;
 
     for (i = 0; i < sizeof kind_; ++i) {
@@ -279,12 +369,13 @@ unsigned char __fastcall__ o_stop_kind (const char* word)
 /* A question's answer (a soft interruption's, "Keep walking?"): 1 yes, go on; 2 no, stop; 0 neither (a command) */
 unsigned char __fastcall__ o_answer_of (const char* l)
 {
-    static const char* const yes[] = { "y", "yes", "yeah", "ok", "sure", "go on", "keep going", "carry on",
-                                       "continue", "keep walking", "keep digging", "keep waiting", "keep searching",
-                                       "keep battering", "keep fighting" };
+    static const char* const yes[] = { "y", "yes", "yeah", "ok", "sure", "go on", "carry on", "continue" };
     static const char* const no[] = { "n", "no", "nope", "stop", "halt" };
     unsigned char i;
 
+    if (!strnicmp (l, "keep ", 5)) {
+        return 1;                               /* ("Keep at it", "keep going", "keep kicking": whatever it's doing) */
+    }
     for (i = 0; i < sizeof yes / sizeof yes[0]; ++i) {
         if (!stricmp (l, yes[i])) {
             return 1;
@@ -297,10 +388,6 @@ unsigned char __fastcall__ o_answer_of (const char* l)
     }
     return 0;
 }
-
-#pragma local-strings (pop)
-#pragma code-name (pop)
-#pragma rodata-name (pop)
 
 /* A line typed as the character's busy (main.c's at_once: its command the parser's, cmd): 1 if it's carried out at
 ** once, taking no time (what it carries, its sheet, the map, the help, a stop, its state, a look about, a stance),
@@ -339,3 +426,7 @@ void __fastcall__ o_meta (unsigned char action)
         tell (T_KEPT);
     }
 }
+
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)

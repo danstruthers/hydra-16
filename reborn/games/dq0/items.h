@@ -212,13 +212,23 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   (into: a flask of oil, a pot of pitch; "": the first carried that
                                                 **   it takes), as much as it has room for: the things' words of it in
                                                 **   things_text, the time it took back in x (tenths); IR_NO refused,
-                                                **   the words why */
+                                                **   the words why.  A timed work (HOUSE.md's long tasks), as IO_SHUT's
+                                                **   picking and forcing are: begun (no words, x its time, qty its long
+                                                **   task's kind, LT_FILL, item its thing's kind: its first words the
+                                                **   UI's), and done (to | IO_DONE: as its time's up, the UI's again) */
 #define IO_SHUT         (IO_BAR + 7)            /* A thing worked that closes (name, carried or within reach: a chest,
                                                 **   a sack, a flask), as to says (PA_OPEN, PA_CLOSE, PA_UNLOCK: its
                                                 **   lock picked, the referee's P_PICKLOCK; PA_FORCE: forced, P_FORCE;
                                                 **   PA_LOCK): its words in things_text, its time in x (tenths); IR_NONE
                                                 **   no such thing (the UI's door work then), IR_NO refused (the words
-                                                **   why) */
+                                                **   why).  Its lock picked, it forced, a timed work (HOUSE.md's long
+                                                **   tasks: the user's, 2026-10-22): begun (the means asked, no words,
+                                                **   x its time, qty its long task's kind, LT_PICK, LT_FORCE, item its
+                                                **   thing's kind: the UI's to word and wait as a long task), then its
+                                                **   test made and its outcome told as it's done (to | IO_DONE: the
+                                                **   UI's again as its time's up, not stopped) */
+#define IO_DONE         0x80                    /* (IO_HIDE's too: a thing hidden a minute's work, begun, x its time,
+                                                **   qty LT_HIDE, item its kind; done, its hiding in qty) */
 #define IO_INSIDE       (IO_BAR + 8)            /* What's in a thing, or on it (name: carried, or seen within reach; a
                                                 **   well: its shaft), in words into things_text (shut: "The chest is
                                                 **   closed."); to 1: as it's looked at ("look at": the thing, then

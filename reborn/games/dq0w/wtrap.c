@@ -46,17 +46,24 @@ static void step (void)
 
 /* The trap tq (tx, ty) disarmed, a minute's work a try, in two checks (the user's): its mechanism made out first
 ** (P_ASSESS: never deadly; a critical success makes the disarm easier), then the disarm (P_DISARM: a critical failure
-** sets it off) */
+** sets it off).  Each a long task (HOUSE.md's), begun (wk.plan: its test not made yet, nothing told), its test made
+** and its outcome told at its minute's end; magic's means asked as it's begun (none: told at once) */
 static void disarm (void)
 {
     unsigned char o = TO_PIT;
     signed char g;
 
     if (wk.tq.kind > TK_SPIKED) {
-        wk.tt += 600;
         if (wk.tq.state & TS_MAGIC) {
             test (P_DISARM, HIDE_MAGICAL, 0);   /* (By magic only: the referee's means, or none) */
             o = wres ? TO_CANT : TO_NOT_YET;
+            if (!wres && wk.plan) {
+                timed (LT_DISARM, 600);
+                return;
+            }
+        } else if (wk.plan) {
+            timed (wk.tq.state & TS_ASSESSED ? LT_DISARM : LT_STUDY, 600);
+            return;
         } else if (!(wk.tq.state & TS_ASSESSED)) {
             g = test (P_ASSESS, 0, -(signed char) (wk.tq.power >> 1));
             o = G_OK (g) ? TO_ASSESSED : TO_PUZZLED;

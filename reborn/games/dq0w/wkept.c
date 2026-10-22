@@ -11,7 +11,7 @@
 ** changed.  And a stratum's populations waited for as its plan's grown, so its chunks are stocked by them from the
 ** first.
 **
-** All of it swapped part 34's (../dq0/swap.inc: dq0w.cfg's SW34, its image in overlay 12's bank, the blows' filling
+** All of it swapped part 34's (../dq0/swap.inc: dq0w.cfg's SW34, its image in overlay 11's bank, the blows' filling
 ** overlay 2's), called through its stubs (bank.s's), its locals the C stack's (not the main RAM's).
 */
 
