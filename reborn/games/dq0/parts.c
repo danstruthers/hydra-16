@@ -54,7 +54,11 @@ static void parts (void)
     static unsigned char i, a, w;
 
     np = 0;
-    for (i = a = 0; inl[i]; ++i) {
+    i = a = 0;
+    if (alias_said (inl)) {
+        i = strlen (inl);                       /* (A shortcut's own line whole: "alias x is north then dig") */
+    }
+    for (; inl[i]; ++i) {
         if (inl[i] == ';') {
             part (a, i);
             a = i + 1;

@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     13                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     14                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -41,7 +41,8 @@
                                                 **   PA_LOCK, the selectors SL_OTHER ... SL_EMPTY, the items'
                                                 **   records' shut, WB_CROSS; 12: the traces' stays, TS_STAY, a
                                                 **   trail's strength; 13: the timed work's long tasks, LT_STUDY ... LT_HIDE, the long
-                                                **   task's what, TE_BEGUN, TE_ASK_SHORT, I_WAIT's kind, a battering's beats, WB_TELLS ...) */
+                                                **   task's what, TE_BEGUN, TE_ASK_SHORT, I_WAIT's kind, a battering's beats, WB_TELLS ...;
+                                                **   14: the player's shortcuts, ALIAS_AT) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -67,7 +68,9 @@
 #define LOOK_BANK       (DEN_BANK + 1)  /* The senses' own (dq0p/view.c): the squares round the character as a look
                                                 **   about works them out, a grid of them (cast.s's): no other task's */
 #define THEME_BANK      (LOOK_BANK + 1)  /* The game's theme (theme.h: the UI's, read in as it starts), and its pieces'
-                                                **   places (the maker's), and the names given (NAMES_AT) */
+                                                **   places (the maker's), the player's shortcuts (ALIAS_AT) and the names given (NAMES_AT) */
+#define ALIAS_AT        ((struct talias*) 0x9080)   /* The player's shortcuts (the UI's: struct talias, TALIASES of
+                                                **   them and one more), in the theme bank after its pieces' places */
 #define NAMES_AT        ((struct tname*) 0x9800)    /* The names the character's given (the UI's: struct tname, TNAMES
                                                 **   of them), in the theme bank after its pieces' places */
 #define SND_REC         32
@@ -192,6 +195,15 @@ struct kept {
 ** its floor), an ally (the denizens' task's own name, "name the rat Grub", recorded here too, so no other name takes
 ** it).  Kept in the save (game.dat's end).  Any task may read it (the theme bank in the window): a room's name the
 ** way to it (the UI's room_named finds one in a line's words) */
+/* A shortcut the player's made (the UI's, dq0/alias.c: "alias x is dig down"), in the theme bank (ALIAS_AT): a word
+** standing for a line; TALIASES of them, then one more, a replacement asked about.  Kept in the save */
+#define TALIASES        16
+struct talias {
+    char            word[16];                   /* The word ("x"; "": a free entry) */
+    char            line[96];                   /* The line it stands for ("dig down") */
+};
+typedef char talias_fit[(char*) (ALIAS_AT + TALIASES + 1) <= (char*) NAMES_AT ? 1 : -1];
+
 #define TNAMES          48
 #define NAME_LEN        20
 struct tname {
@@ -1122,8 +1134,8 @@ struct wsave {
 **   own bank(DEN_BANK,TJ_AT,TJ_AT+1) world                     (The traces' journal: the passings, slice 4.1's)
 **   own bank(DEN_BANK,KEPT_AT,KEPT_AT+1) denizens +ui           (The places kept lit: the UI clears them)
 **   own bank(LOOK_BANK) senses
-**   own bank(THEME_BANK) ui                                    (The theme, and the names given)
-**   own bank(THEME_BANK,THEME_PLACE,NAMES_AT) maker            (The pieces' places)
+**   own bank(THEME_BANK) ui                                    (The theme, the shortcuts and the names given)
+**   own bank(THEME_BANK,THEME_PLACE,ALIAS_AT) maker            (The pieces' places)
 **   own bank(SIGHT_BANK) senses                                (What the character perceives, the denizens seen too;
 **                                                                a look one way's own, WAY_SEEN)
 **   own bank(UI_BANK) ui

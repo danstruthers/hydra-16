@@ -958,7 +958,7 @@ could be the one meant and it must be one (a bare take, a throw's mark, a target
 One table of the names the character gives (dq0/names.c), in the hub's theme bank (hub.h's `struct tname`,
 `NAMES_AT`, 48 of them, at $9800 there), kept in the save (game.dat's end):
 
-- **a thing** ("name my sword Linda", "alias the sword as Linda", "call the dagger Sting"), carried or seen, by its
+- **a thing** ("name my sword Linda", "name the sword as Linda", "call the dagger Sting"), carried or seen, by its
   item's id (never another's), its kind's name kept beside the name;
 - **a room** ("call this room the Mausoleum", "name this room "The Mausoleum""), the one the character's in, by its
   stratum and its floor's northwest square (the senses put it in what the character perceives: `struct sight`'s
