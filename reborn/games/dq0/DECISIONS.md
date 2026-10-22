@@ -915,3 +915,21 @@ Asked for the words (the lead's options, the same day), the user chose: a bare e
 appraisal; assess the value; appraise both value and quality; judge, "quality of", "how well made" the quality; and
 the other aspects now too: heft and weigh (its weight), study the lock, check it for traps, its condition.
 **Design:** HOUSE.md's commands; the command grammar's words.
+
+### Battering told as it goes, and bare hands stopping short
+
+The user's playtest (2026-10-22): "when battering or kicking a door, nothing is written to the output until after it
+is resolved instead of something like "You start beating on the door..." followed by progress.  If you kick or hit
+the door with your bare hands or feet, you should be told, with it stopping short of injury the first time you would
+injure yourself ("You punch the door with bare hands, but you stop short of injuring yourself.  Continue?"  Same for
+kicking without foot protection.  As always, you should be able to avoid injury with a critical success or marginal
+success (or possibly even a marginal failure) test against unarmed skill.  MF only results in no damage, and CF
+results in damage to self?"  And: "After being warned of injury, continuing should only apply for that door, being
+reset on the next door you try to batter down with bare hands/feet."  So: a battering's first words at once ("You
+start battering the door.") and its progress as it goes; with bare hands or bare feet (no gauntlets, no boots), the
+first blow that would hurt the character stops short of it, asked ("...but you stop short of hurting yourself. Keep
+at it?"), and kept at, not asked again at that door (asked again at the next); each such blow the Unarmed test: a
+critical or marginal success a blow that tells on the door and no hurt, a marginal failure no harm done to either,
+a critical failure the hurt (the lead's reading of the user's question; theirs to confirm).
+
+**Design:** HOUSE.md's portals (battering) and long tasks.
