@@ -4212,10 +4212,14 @@ module.exports = {
         if (!begun(both, 'LT_STUDY')) f.push('the stopped study not begun (' + dq0Evs(both) + ')');
         dq0Need(f, both, 'E_TASK', { te: 'TE_STOPPED', task: 'LT_STUDY' }, 'the study not stopped');
         dq0Never(f, both, 'E_TRAP', {}, 'an outcome of the study stopped first');
-        timed(d1, 'LT_STUDY', 'E_TRAP', { to: 'TO_ASSESSED' }, 600, 'the mechanism made out (nothing made out by the one stopped)');
-        timed(d2, 'LT_DISARM', 'E_TRAP', { to: 'TO_DISARMED' }, 600, 'the trap disarmed');
-        dq0Need(f, op, 'E_PORTAL', { po: 'PO_OPENED' }, 'the door not opened, disarmed');
-        dq0Never(f, op, 'E_TRAP', {}, 'the trap went off, disarmed');
+        // (The referee's dice its own: HarnMaster's at this seed makes it out and disarms it, the null referee's may not)
+        timed(d1, 'LT_STUDY', 'E_TRAP', { to: x => x === 'TO_ASSESSED' || x === 'TO_PUZZLED' }, 600, 'the mechanism studied (nothing made out by the one stopped)');
+        const made = dq0Ev(d1, 'E_TRAP', { to: 'TO_ASSESSED' }).length > 0;
+        timed(d2, made ? 'LT_DISARM' : 'LT_STUDY', 'E_TRAP', {}, 600, made ? 'the trap disarmed' : 'the mechanism studied again');
+        if (dq0Ev(d2, 'E_TRAP', { to: 'TO_DISARMED' }).length) {
+          dq0Need(f, op, 'E_PORTAL', { po: 'PO_OPENED' }, 'the door not opened, disarmed');
+          dq0Never(f, op, 'E_TRAP', {}, 'the trap went off, disarmed');
+        }
         timed(T.after(T.of('dq0 -p t -s 16 -c /ram/c.hm -T'), 'force'), 'LT_FORCE', 'E_PORTAL', { po: p => p === 'PO_FORCED' || p === 'PO_HELD' }, 100, 'the door forced');
         const g3 = T.of('dq0 -p t -s 3 -c /ram/c.hm -T'), t1 = T.after(g3, 'track'), t2 = T.after(t1, 'track'), both2 = T.and(t2);
         timed(t1, 'LT_TRACK', 'E_VIEW', { why: 'V_TRACED' }, 600, 'the track read');
@@ -4228,11 +4232,12 @@ module.exports = {
         }
         const dg = dq0Thing(hd.after, 'dagger');
         if (!dg || !(dg.flags & DQ0_I.HIDDEN)) f.push('the dagger not hidden at its minute\'s end');
-        inTurn(o, ['> disarm', 'You study the mechanism.', 'You stop studying the mechanism.', '> disarm', 'You study the mechanism.',
-          'You make out how it works: now to disarm it.', '> disarm', 'You set to disarming the trap.', 'You have it: the trap is disarmed.', '> open',
-          'You open the door.', '> force', 'You set to forcing the door.', '> track', 'You cast about for tracks.', 'set of small clawed feet',
-          '> track', 'You cast about for tracks.', 'You stop tracking.', '> pick the lock of the chest', 'You set to picking the lock.', 'the lock of the chest.',
-          '> hide the dagger', 'You set to hiding the dagger.', 'You hide it'], f);
+        inTurn(o, ['> disarm', 'You study the mechanism.', 'You stop studying the mechanism.', '> disarm', 'You study the mechanism.', '> disarm', '> open',
+          '> force', 'You set to forcing the door.', '> track', 'You cast about for tracks.', '> track', 'You cast about for tracks.', 'You stop tracking.',
+          '> pick the lock of the chest', 'You set to picking the lock.', 'the lock of the chest.', '> hide the dagger', 'You set to hiding the dagger.',
+          'You hide it'], f);
+        if (made) inTurn(o, ['You study the mechanism.', 'You stop studying the mechanism.', 'You study the mechanism.',
+          'You make out how it works: now to disarm it.', 'You set to disarming the trap.'], f, 'its halves in order: ');
         return f;
       },
       sdcard: true
