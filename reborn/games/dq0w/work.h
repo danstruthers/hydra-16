@@ -21,7 +21,7 @@ void answer (void);                             /* The hub's wreq answered (part
 void world_keep (void);                         /* (Part 16's: wgame.c) The world's part of the save, world.dat */
 void pc_asked (void);                           /* (Part 16's) The hub's wreq, WQ_START's or WQ_SET's, answered */
 void __fastcall__ store_begin (unsigned char resume);   /* The game's generation, its stamps (part 18's: wfile.c) */
-void store_put (void);                          /* (The record in rec kept) */
+void store_put (void);                          /* (The record in rec kept: part 38's, as change is) */
 
 /* ---- The work: what's to be done (dq0w.c's work () sets it), and what came of it (the parts') */
 struct work {

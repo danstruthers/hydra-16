@@ -117,6 +117,7 @@ go:
             SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
             SWPART      37, 12              ; The rest of the UI's intents carried out (dq0w.c's intent_more)
+            SWPART      38, 6               ; A change record kept and made (store.c's store_put, change)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
@@ -229,3 +230,5 @@ go:
             SWFN        tr_scent, 32
             SWFN        across, 33
             SWFN        intent_more, 37
+            SWFN        store_put, 38
+            SWFN        change, 38

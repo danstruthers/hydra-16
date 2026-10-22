@@ -44,6 +44,11 @@ struct change buf[8];                           /* (Records to or from a file, a
                                                 **   RAM; wfile.c's too) */
 char path[56];
 
+/* ==== Part 38 (its own, the main RAM's room: 2026-10-22): a change record kept and made, store_put and change
+** through their stubs (the work's parts', a dig's, a door's, the kept rooms' lights', part 4's) */
+#pragma code-name (push, "SW38CODE")
+#pragma rodata-name (push, "SW38RODATA")
+
 /* Page p's entry in the table (the world bank in the window) */
 static struct cpage* __fastcall__ page (unsigned char p)
 {
@@ -57,7 +62,7 @@ static struct cpage* __fastcall__ page (unsigned char p)
 /* The record (rec) kept: in its region's pages (read in, if they're in its file), over the one of its square it
 ** replaces (its kind and floor, a portal's state, its harm, a trap's state), or after the rest (a page made room
 ** for) */
-void store_put (void)
+void s_store_put (void)
 {
     struct cpage* q;
     struct change* c;
@@ -121,7 +126,7 @@ done:
 ** kept, hasn't this one yet), and told (E_LIGHT: a square's, or a portal's state, may change the light about it,
 ** the senses'); the hub's header in the window after */
 static struct msg lm;
-void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
+void __fastcall__ s_change (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
     unsigned char link)
 {
     unsigned char* p;
@@ -137,7 +142,7 @@ void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned cha
     rec.tile = tile;
     rec.elev = elev;
     rec.link = link;
-    store_put ();
+    s_store_put ();
     if ((p = at (sn, x, y)) != 0) {
         if (link == PORTAL_STATE || link == PORTAL_HARM) {     /* (A portal's state: tile it, elev its parts; or the
                                                 **   harm it's taken: tile it) */
@@ -178,6 +183,9 @@ void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned cha
         hub_event (&lm);
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The chunks the maker stocked as it made them (their slots CS_FRESH), if there are any, their things put down and
 ** marked so (part 4's) */

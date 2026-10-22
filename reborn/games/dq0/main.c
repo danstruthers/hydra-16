@@ -1919,12 +1919,13 @@ int main (int argc, char* argv[])
         k = events ();
         heard ();
         now = hub_now ();
-        if (k || ((now >= next || now < next - 600 || (HUB->pc_task.kind && HUB->pc_task.done != bar_done)) &&
+        if ((k && !HUB->ui_cmd) || ((now >= next || now < next - 600 || (HUB->pc_task.kind && HUB->pc_task.done != bar_done)) &&
             hy_ticks () - shown >= (inn ? 1000 : 200))) {
             next = (now / 600 + 1) * 600;       /* (The status line as the events change it, and its clock as a
                                                 **   game minute goes, a real second apart at most, five while a
                                                 **   line's being typed: only what's changed drawn, t_status; the
-                                                **   minute's end kept, not divided for each time round) */
+                                                **   minute's end kept, not divided for each time round; not as
+                                                **   events come while a command's in hand: its answer first) */
             shown = hy_ticks ();
             status ();
         }
@@ -2010,7 +2011,9 @@ int main (int argc, char* argv[])
                                                 **   left there) */
             held = 0;
             quick = 25;                         /* (Its answer looked for twice as often, a quarter second) */
-            status ();
+            if (!busy) {
+                status ();                      /* (A world's answer to come: the status line after it, events') */
+            }
             hub_map (0);
             HUB->ui_cmd = busy;                 /* (Its answer the world's, not yet said: the look and the minds
                                                 **   give way till the character's news comes, events') */
