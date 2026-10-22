@@ -14,7 +14,7 @@ const path = require('path');
 
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
 const REL = 0x10, PART = 0x80, NONE = 0xFF;
-const CF_NOVERB = 1, CF_HALF = 2, CF_UNSAID = 4;              // (hub.h's struct cmd's flags)
+const CF_NOVERB = 1, CF_HALF = 2, CF_UNSAID = 4, CF_STRANGE = 8;              // (hub.h's struct cmd's flags)
 const RF_ORDER = 1;                                           // (A verb's own flags: an ally's request, its order read)
 
 // The names' values: each enum's names in order (dq0.h, hub.h, level.h, items.h, rs.h, actions.h), and the #defines
@@ -236,6 +236,7 @@ function scan(toks, w, face = 0) {
       if ((k & PART) && (!word || head())) word = t.typed.slice(0, 15);
       continue;
     }
+    if (i === 0 && (c.flags & CF_NOVERB)) c.flags |= CF_STRANGE;   // (The line's first, with no verb: a verb unknown)
     if (c.prep !== V.PR_WITH && (word ? head() : !c.prep || !c.obj.sel)) word = t.typed.slice(0, 15);   // (A word not
                                                 // understood: the thing's, its last before a preposition its head;
                                                 // after "it" and one, the other's)
@@ -254,7 +255,7 @@ function scan(toks, w, face = 0) {
   if (verb === R.get('turn') && said && !word2 && c.prep === V.PR_ON) { verb = R.get('light'); c.prep = 0; }
   else if (verb === R.get('turn') && said && !word2 && c.prep === V.PR_FROM) { verb = R.get('douse'); c.prep = 0; }
   if (verb === R.get('put') && said && !word2 && c.prep === V.PR_FROM) { verb = R.get('douse'); c.prep = 0; }
-  if (verb === R.get('unlock') && said && c.dir === V.GO_UP) { verb = R.get('get'); c.dir = NONE; }
+  if (verb === R.get('get') && said && c.dir === V.GO_UP) { verb = R.get('get'); c.dir = NONE; }   // ("pick it up")
   if ((verb === R.get('turn') || verb === R.get('face')) && around && dir === NONE) c.dir = REL | 4;
   if (verb === R.get('name') && !word2) { word2 = word; word = ''; }    // ("call it Grub")
   if (verb === R.get('move') && (c.obj.lies === V.GO_UP || c.obj.lies === V.GO_DOWN) &&   // ("go down the stairs": a way
@@ -401,7 +402,7 @@ function show(c) {
 }
 
 module.exports = { load, tokens, scan, finish, between, meaning, names, gameWords, encode, actionName, show, CONSTANTS, SPECIAL,
-  COLUMNS, ROW, REL, PART, NONE, CF_NOVERB, CF_HALF, CF_UNSAID };
+  COLUMNS, ROW, REL, PART, NONE, CF_NOVERB, CF_HALF, CF_UNSAID, CF_STRANGE };
 
 if (require.main === module) {
   const w = load();

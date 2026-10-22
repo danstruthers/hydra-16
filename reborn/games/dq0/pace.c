@@ -182,6 +182,26 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
         return 0;                               /* (None of its words: the command's) */
     }
     cq_cmd (l);                                 /* (The direction the command parser's) */
+    switch (cmd.action) {                       /* (A command of another kind, said with a manner: the command's,
+                                                **   the pace as it was: "open the chest carefully", "close the door
+                                                **   quietly", "run away" a flight) */
+    case VB_NONE:
+    case VB_MOVE_DIRECTION:
+    case VB_MOVE_TOWARD:
+    case VB_ENTER:
+    case VB_APPROACH_OBJECT:
+    case VB_STEP_DIRECTION:
+    case VB_SET_PACE:
+    case VB_SNEAK:
+    case VB_PUT_OBJECT:                         /* ("set pace to jog") */
+    case VB_SEARCH:
+    case VB_LISTEN:
+    case VB_META_MAP:
+    case VB_STOP:
+        break;
+    default:
+        return 0;
+    }
     k = (cmd.action == VB_MOVE_DIRECTION || cmd.action == VB_MOVE_TOWARD || cmd.action == VB_ENTER ||
         cmd.action == VB_APPROACH_OBJECT) && (cmd.dir != 0xFF || cmd.obj.kind);
     st = st && (!k || n || g != HUB->gait || wa != HUB->watch);    /* (Said, unless it goes on as it was) */

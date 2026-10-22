@@ -48,7 +48,7 @@ unsigned char pace = 0xFF, paused;
 const char* const pacename[4] = { "relaxed", "normal", "menacing", "turns" };
 
 static unsigned char asking;                    /* (A long task's soft question put, the answer awaited) */
-static const char* cl;                          /* (The command's line, s_command's: chores' words of it) */
+const char* cl;                                 /* (The command's line, s_command's: chores' words of it; help.c's) */
 unsigned char harm_told;                        /* (The states a harm's words told in this answer: intro.c's) */
 unsigned char autogo;                           /* (dq0 -a: every soft question answered yes, unasked: the tests') */
 static unsigned char noinit;                    /* (dq0 -I: no engage initiative test, no grope's: the tests') */
@@ -1430,6 +1430,11 @@ void __fastcall__ s_command (char* l)
     d = choose (&cmd);                          /* (A choice asked for: this line's, the command again; a fixture's, */
     d |= answer (d);                            /*   or a thing's) */
     tx = 0;
+    if (!d && (cmd.flags & CF_STRANGE) && *l != '#') {   /* (A verb the game doesn't know: the grammar's, not done
+                                                **   yet ("grapple"); or none of its ("bribe") */
+        unknown (ok);
+        return;
+    }
     if ((cmd.obj.word[0] || cmd.n) && (cmd.action == VB_MOVE_TOWARD || cmd.action == VB_MOVE_DIRECTION) &&
         cmd.dir == 0xFF && !cmd.obj.kind) {     /* (A word alone, or a number, that's no way: "foo", "1") */
         sayf ("\nI don't know how to %s.", cmd.obj.word[0] ? cmd.obj.word : l);
@@ -1493,7 +1498,8 @@ again:
             pa = PA_THROUGH;
             goto portal;
         }
-        intend (I_CLIMB, cmd.dir == GO_DOWN ? DIR_DOWN : DIR_UP);
+        intend (I_CLIMB, cmd.dir == GO_DOWN || (cmd.dir == 0xFF && cmd.obj.lies == GO_DOWN) ? DIR_DOWN : DIR_UP);
+                                                /* ("climb down the ladder": the way where the thing lies) */
         return;
     case VB_FACE_DIRECTION:
         if (cmd.dir > H_NW) {
@@ -1662,11 +1668,7 @@ portal:
     default:                                    /* (The rest that want nothing but their action; and those the game
                                                 **   doesn't do yet: its verb, as typed) */
         if (!chores (cmd.action)) {
-            for (d = 0; l[d] && l[d] != ' ' && d < 15; ++d) {
-                lb[d] = l[d];
-            }
-            lb[d] = 0;
-            sayf ("\nI don't know how to %s.", lb);
+            unknown (1);
         }
         return;
     }

@@ -14,7 +14,7 @@
                                                  w"Psst" whispers, y"Here!" yells; a quote ending in ! (inside it, or after it) is yelled *)
 <quoted-text>    ::= '"' <text> '"'
                                                                 (* only while a question is pending (question 13) *)
-<command>        ::= <phrase>
+<command>        ::= <phrase> [ <manner> ]   (* "open the chest carefully", "drop the pick quietly": how, after any command *)
 <phrase>         ::= <look> | <examine> | <move> | <face> | <get> | <grab> | <drop> | <put> | <use>
                    | <equip> | <unequip> | <open> | <close> | <attack> | <grapple>
                    | <throw> | <shoot> | <load> | <jump> | <say> | <tell> | <cast> | <eat>
@@ -55,8 +55,8 @@
 <use>            ::= <USE> <object> [ ( "on" | "with" ) <object> ]
 <equip>          ::= <EQUIP> [ <object> ]   (* bare: the last thing named *)
 <unequip>        ::= <UNEQUIP> [ <object> ] | "put" <object> "away" | "take" <object> "off"   (* "put away the sword", "put the sword away", "take the helm off" *)
-<open>           ::= "o" [ <thing> ] [ <manner> ]                (* "open" alone: what's in front *)
-<close>          ::= "close" [ <thing> ] [ <manner> ]           (* "close look" is <DETAIL> <LOOK>, not this *)
+<open>           ::= "o" [ <thing> ]                (* "open" alone: what's in front *)
+<close>          ::= "close" [ <thing> ]           (* "close look" is <DETAIL> <LOOK>, not this *)
 <from-phrase>    ::= "from" <object> | "out" "of" <object>
 <off-phrase>     ::= "off" <object>
 
@@ -127,7 +127,7 @@
                    | "closest" | "nearest" | "largest" | "biggest" | "smallest" | "lead"
 <head>           ::= { <noun> } <name>                (* every word a thing can be called: "the mail hauberk" (a noun: no adjective, number or ordinal) *)
 <pronoun>        ::= "it" | "them" | "that" | "this" | "one" | "he" | "she" | "him" | "her"   (* "it": the last thing of any kind (question 7); he, she, him, her: the last person named (context "person=") *)
-<me-phrase>      ::= <here-ref> | "my" <np>
+<me-phrase>      ::= <here-ref> | ( "my" | "your" ) <np>
 <everything>     ::= "everything" [ "near" | "here" ] | "all"
 
 (* ---- Directions (question 5: the single letters are commands) ---- *)
@@ -195,7 +195,7 @@
 <extinguish>     ::= <EXTINGUISH> [ "the" ] "fire" | <EXTINGUISH> <object> [ <in-phrase> ] | "put" <object> "out" | "turn" <object> "off"   (* "quench the fire", "put out the torch", "put the torch out", "turn it off", "put out the torch in the sconce" *)
 <in-phrase>      ::= ( "in" | "on" ) <object>   (* the thing it's in, or on: a sconce's torch *)
 (* ---- Posture and pretence (added 2026-10-19) ---- *)
-<posture>        ::= <SIT> | <STAND> | <LIE-DOWN> | <CROUCH>          (* a change of the standing state; no object *)
+<posture>        ::= <SIT> | <STAND> | <LIE-DOWN> | <CROUCH> | ( "lie" | "lay" ) [ "down" ] ( "on" | "in" ) <object>          (* a change of the standing state; no object *)
 <SIT>            ::= "sit" [ "down" ]
 <sit-on>        ::= "sit" [ "down" ] "on" <object>   (* sitting on a surface: VB_SIT *)
 <STAND>          ::= "stand" [ "up" ] | "get" "up"          (* "get up" is a stand, not a get with a direction *)
@@ -236,7 +236,7 @@
 <taste>          ::= "taste" <object>
 <touch>          ::= ( "touch" | "feel" ) <object>
 (* ---- Defence, fleeing and following ---- *)
-<defend>         ::= <DEFEND> | "defend" [ <DEFEND> | "none" ]   (* a stance for the next blow: dodge, block, parry, duck *)
+<defend>         ::= <DEFEND> | "defend" [ <DEFEND> | "none" | "counter" | "best" ]   (* a stance for the next blow: dodge, block, parry, duck *)
 <DEFEND>         ::= "dodge" | "block" | "parry" | "duck"
 <flee>           ::= ( "flee" | "escape" | "run" "away" ) [ <direction> ]
 <follow>         ::= ( "follow" | "tail" ) <object>

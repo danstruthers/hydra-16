@@ -227,7 +227,8 @@ static void __fastcall__ stance (const char* w, unsigned char d)
 {
     if (*w) {
         d = *w;
-        d = d == 'd' ? D_DODGE : d == 'b' && w[1] == 'l' ? D_BLOCK : d == 'c' ? D_COUNTER : d == 'n' ? D_NONE : D_AUTO;
+        d = d == 'd' ? D_DODGE : (d == 'b' && w[1] == 'l') || d == 'p' ? D_BLOCK : d == 'c' ? D_COUNTER : d == 'n' ?
+            D_NONE : D_AUTO;                    /* (dodge, duck; block, parry; counter; none; best, else) */
     }
     wset (WS_STANCE, d, 0);
     note (d);

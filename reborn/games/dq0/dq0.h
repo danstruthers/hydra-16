@@ -201,7 +201,14 @@ void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsig
 
 void title (void);                              /* Overlay 1: the title, the pace asked */
 void __fastcall__ entered (unsigned char resumed);  /* Overlay 1: the character come into the dungeon */
-void help (void);                               /* Overlay 6: the commands, listed */
+void help (void);                               /* Overlay 6 (help.c's): the commands, listed (help.txt) */
+void __fastcall__ unknown (unsigned char f);    /* Overlay 6: a verb the game doesn't know (f 0), or doesn't do yet
+                                                **   (f 1), said back from the command's line (cl) */
+extern const char* cl;                          /* The command's line (main.c's) */
+unsigned char parts_in (void);                  /* Overlay 6 (parts.c's): the line typed queued in its parts, 0 no room */
+#define QMAX        256                         /* The lines typed ahead (term.c's queue, qlen) */
+extern char queue[QMAX];
+extern unsigned qlen;
 struct sway;
 void __fastcall__ sway_words (const struct sway* s);   /* Overlay 6: the character's way with a denizen, the
                                                 **   denizens' task's answer (the hub's sway, copied), into lb */

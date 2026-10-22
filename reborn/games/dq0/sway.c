@@ -2,7 +2,7 @@
 ** sway.c - (overlay 6) the character's ways with the denizens, in words: what the denizens' task answered (the hub's
 ** sway, copied into the main RAM: main.c's deal) to words that would sway one (talk, persuade, deceive, threaten,
 ** calm, befriend: the referee's grade, its attitude before and after), a request to an ally, a name given, a look
-** at how one seems, a blow; and the commands listed (help), with the serial port's rates for playing over it
+** at how one seems, a blow (the commands listed: help.c's)
 */
 
 #pragma code-name ("OV6CODE")
@@ -138,30 +138,4 @@ void __fastcall__ o_sway_words (const struct sway* s)
     } else {
         seeming ("It goes badly: it seems ", " now.");
     }
-}
-
-/* The commands, listed */
-void o_help (void)
-{
-    msg ("Commands: north, northeast, east ... northwest (n, ne, e, se, s, sw, w, nw, or go north ...); forward, "
-         "back, left, right (f, b: as you face); up and down (u, d: the stairs); turn left, right, half left, half "
-         "right or around; face north ...; light and douse (a torch, a candle, a lantern); dig north ... or down (a "
-         "wall, the rock, a shaft); jump down (a ledge, a shaft); open, close, unlock, force (the door ahead), raise, "
-         "lower (a portcullis), break (a door, a window's glass, a portcullis's bars), bend (bars), lift (a bar), bar "
-         "(a door: its bar put back), climb through (a window), disarm (a trap), search; get, "
-         "drop, hold (wield), stow, put the dagger in the sack (or on the table), take the rope from the pack, hang "
-         "the pouch (on your belt), wear, take off, inventory (i), examine (a thing, a door, the room: look closely), hide; look (l), map (m), sheet (the "
-         "character), status (your pace, what you watch for, your condition), wait (z), pause (or Escape), quit (q).  The puzzle's pieces: read (a tablet), combine the one with "
-         "the other, put the one on the other, use the key on the way out (or open the way out with it).");
-    msg ("Pace: creep (sneak), walk slowly, walk, jog, run, sprint (set pace to jog; run north); search for traps as "
-         "you go (move carefully), listen as you go, map as you go; stop searching (listening, mapping, running).  "
-         "Small moves: step forward, move left one space, go north 20 feet, back up two squares (a square 5 feet).  "
-         "Places: go to the centre, the far left corner, the other side.  Look north, listen at the door; stop.");
-    msg ("Fights: attack the rat (hit, fight), with what you hold; defend (dodge, block, counter, none, best).");
-    msg ("Names: name my sword Linda (alias the sword as Linda), then drop Linda, attack the rat with Linda; call this "
-         "room the Mausoleum; forget the name Linda.");
-    msg ("With the denizens: talk to the kobold, persuade, deceive, threaten; calm, befriend (an animal); examine one "
-         "(how it seems); an ally's requests: follow me, stay here, tell Grub to wait, dismiss it; name the rat Grub.");
-    msg ("Played over the serial port, the game answers quickest at 19200 or 115200 baud (echo b115200 "
-         ">/dev/serctl, then the terminal set to match); on the Vera X's screen and keyboard it needs neither.");
 }
