@@ -986,3 +986,9 @@ bar a club, a pole a staff), and "I think it should try and use whatever you req
 piece of clothing, a noodle, string, rope, etc.) it should reply with something like `You attempt to batter the door
 with the noodle, but it seems ineffectual`": so nothing refused, a soft thing's attempt made and told ineffectual,
 no harm done.
+
+And with nothing named: "I don't think it should auto-fallback to something better unless you have nothing at hand,
+and then it should ask for confirmation.  If your hands are empty, but you have an axe at your belt, then something
+like `You can try battering it with your hands, but would you rather use your axe?` or some equivalent saying."  So
+a blow with nothing named strikes with what's in hand; with empty hands and something better carried, it asks first
+(yes takes that in hand, else the bare hands); with nothing better carried, the bare hands, unasked.
