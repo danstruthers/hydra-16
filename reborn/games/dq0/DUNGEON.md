@@ -960,18 +960,27 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   sniffing one way the trace layer's (slice 4.1).
 - **Light and traces** (slice 4.1): lights burning down and refilled (fuel), a spare torch and oil in the kit (D5);
   rooms lit only where denizens keep lights; the deposit layer: tracks in the dust, smells, smoke, fading with age;
-  Tracking.
+  Tracking; a scent's age the reader's nose's (a hound follows a trail days old), the smell layer open to the air
+  (slice 4.5) and to rain (slice 4.9).
+- **Hands and limbs** (slice 4.1b, straight after 4.1): two hands, handedness (the medical traits': ambidextrous
+  rolled), the off hand's penalty unless ambidextrous; an arm's injuries hindering that hand, the book's fumble rolls
+  dropping what it holds; a leg's slowing a walk, a stumble roll failed laying the character prone; a limb made
+  useless.
 - **Bearings, the map and travel** (slice 4.2): the character's believed north, by Awareness or Mining; the map clear
   only where it sees, remembered by its bearings, mapping as it goes keeping it true with materials to hand; a mental
   map that fades; travel to a named place ("go back to the mausoleum").
-- **Wounds over time** (slice 4.3): bleeding as time passes, first aid and bandages, healing (D6).
+- **Wounds over time** (slice 4.3): bleeding as time passes, first aid and bandages, healing (D6); poison, a venom's
+  wounds over time (an adder's bite).
 - **The sound layer and the denizens' hearing by pace** (slice 4.5): pulses over the rooms and openings, a background
-  level that masks; the character's steps heard by its pace.
+  level that masks; the character's steps heard by its pace; the air layer with it: draughts through the rooms and
+  openings carrying smells, the character's scent among them, downwind with the sound, so a keen nose downwind knows
+  of it long before a sound or a light reaches it (why hunters keep downwind of their prey).
 - **Body position and moving quietly** (slice 4.6): crouched, kneeling, sitting; low-walking, crawling; moving quietly
   by Stealth (D15); eye height by position.
 - **Fights complete** (slice 4.7): missiles and ammunition as items (through slits and windows; a quiver's arrows).
 - **Water** (slice 4.9): the plan's rivers, falls and lakes, water levels, swimming and drowning, a well's water from
-  the plan.
+  the plan; rain where the surface reaches (shafts, the open), washing scents and prints away; hunger and thirst,
+  eating and drinking.
 - **Rock and old places** (slice 4.10): the rock's own kinds and hardness across a stratum, mines and mixed strata
   grown by their own rules, age's collapse and rubble, explosives and sills; caverns across many chunks (the plan's
   features bigger than a chunk, a room followed from chunk to chunk).
