@@ -327,7 +327,8 @@ silent on all of it.
   is each one's mind's; a blow at it senseless from any but a killer is held (one posted as it fell: the referee's,
   RS_KILLER).  (dq0d.c's decide, K_HELP; dq0w's wfight.c, s_den_rob; fight.c's attack.)  Not yet: being led away
   (by an ally, or a captor), a captive's fate, the robbers' stash hidden, the robbed character's load told the
-  referee at once (what it held is told: its load as it next handles a thing).
+  referee at once (what it held is told: its load as it next handles a thing; the user's, 2026-10-22: at once), a
+  defender cornered fighting back (the user's, 2026-10-22: "Rats should attack if cornered": defence only for now).
 - **Health in words,** for every ruleset: fine with no injuries; hurt while the injury points are under a third of
   the Endurance; badly hurt under two thirds; critical past that; down when senseless or in shock.  (dq0harn.c's
   health_of.)
@@ -647,6 +648,9 @@ and 2026-10-21: keen noses follow a scent far longer than an hour, a hound's esp
   as its nose can still smell them, then the store's older trail (sniffed once each ten seconds, at once again while
   it leads on).  Any kind with a nose smells the character in still air within a third of its nose (squares: a
   hound's 3, a rat's 2, a man's none), along a line the air passes: sensed, as seen or heard.
+- **Decided, to build** (the user's, 2026-10-22: "repeated passage or occupancy should enhance prior smells"; these
+  numbers the user's to think about): a scent strengthened by its passings and by a stay where it is (a lair's
+  keepers, a denizen resting, the character waiting), as a print's clearness is by its passings.
 - **Still to come**: the air layer (slice 4.5, with sound) carries a scent further downwind and less upwind, and a
   denizen downwind smells the character from far off; rain and running water (slice 4.9) wash scents and prints away
   faster.  Each has its one place to come in: a scent's fading (wtrace.c's faded, hub.h's SCENT_LIFE), its carrying

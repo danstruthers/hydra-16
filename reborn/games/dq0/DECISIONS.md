@@ -859,3 +859,19 @@ cunning foe may rob it or leave it; each kind's way in kinds.txt.  And **poison*
 them, their effects over time, antidotes) with slice 4.3, wounds over time.
 
 **Design:** HOUSE.md's fights; DENIZENS.md; the plan's 4.3.
+
+### Slice 4.1 reviewed
+
+The user's answers on slice 4.1 (2026-10-22), after it was built: "1. push, then work on the speed,  2.  Rats should
+attack if cornered, but that might be difficult to determine, so defense only is okay for now.  Bears and Cultists
+are fine.  Weight should be recounted immediately after a robbery. 3.  Your suggestions here sound good.  4.  The
+only numbers I need to think about are the smells (repeated passage or occupancy should enhance prior smells)."  So:
+pushed (dab6cc15); the giant rat a defender only for now (one cornered, no way off but past the character, to fight
+back: later, its test to be found); the cave bear a killer, the cultists and their priest killers, as built; a
+robbed character's load told the referee at once; HOUSE.md's 4.1 numbers stand but the smells', the user's to think
+about, and a scent strengthened by repeated passing and by a stay (a lair's keepers, a denizen resting, the
+character waiting: its time there counted as passings); and before 4.1b a pass for speed and room: the main RAM
+freed in the UI, the world and the senses, and a command not kept waiting while the senses look again at the
+denizens (the world's stir).
+
+**Design:** HOUSE.md's light and traces (the smells) and fights (a helpless character); the plan's slice 4.1.
