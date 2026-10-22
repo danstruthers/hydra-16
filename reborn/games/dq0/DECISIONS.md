@@ -980,3 +980,9 @@ book's rule if it has one, else the house's, by the thing's size, weight and mat
 refused.
 
 **Design:** HOUSE.md's fights and portals.
+
+Then the user (the same day): "A bar should just be treated as a club or stick, no?" (so the book's nearest weapon: a
+bar a club, a pole a staff), and "I think it should try and use whatever you request, but if it is something soft (a
+piece of clothing, a noodle, string, rope, etc.) it should reply with something like `You attempt to batter the door
+with the noodle, but it seems ineffectual`": so nothing refused, a soft thing's attempt made and told ineffectual,
+no harm done.
