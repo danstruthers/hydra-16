@@ -554,3 +554,12 @@ go to the far left corner	VB_MOVE_TOWARD	object=corner	near=corner	a corner, by 
 walk forward to the other side	VB_MOVE_TOWARD	object=side;direction=F	near=side	straight ahead to the far wall
 go to the near side	VB_MOVE_TOWARD	object=side	near=side	near: the side behind
 go to the far end of the hall	VB_MOVE_TOWARD	object=end	near=end	the far end: the far side
+
+# --- the parser's fixes (2026-10-22: a review of the commands) ---
+defend counter	VB_DEFEND	defence=counter	-	the help's stance: a counterstrike
+defend best	VB_DEFEND	defence=best	-	the help's stance: the best each time
+hang the pouch on your belt	VB_HANG_OBJECT	object=pouch;support=belt	near=pouch,belt	your as my (the game says "your belt")
+pick the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword	pick alone is pick up, not a lock picked
+ignite the torch	VB_LIGHT_OBJECT	object=torch	near=torch	ignite lights it
+bolt the door	VB_BAR_OBJECT	object=door	near=door	bolt bars it
+lie on the bed	VB_LIE_DOWN	object=bed	near=bed	lying on a thing, not a lie told

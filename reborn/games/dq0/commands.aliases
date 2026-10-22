@@ -102,7 +102,6 @@ bar rebar
 sheathe hang
 join combine
 fit combine
-mend combine
 trick deceive
 fool deceive
 scare threaten
@@ -127,7 +126,7 @@ mine dig
 acquire get
 grip hold
 grasp hold
-brandish hold
+brandish equip
 pack doff
 unequip doff
 apply use

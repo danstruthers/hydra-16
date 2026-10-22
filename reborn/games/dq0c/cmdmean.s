@@ -51,6 +51,7 @@ WORDMAX     = 15                    ; A word's letters kept (its field's, less t
 CF_NOVERB   = $01                   ; (struct cmd's flags: hub.h's CF_*)
 CF_HALF     = $02
 CF_UNSAID   = $04
+CF_STRANGE  = $08
 
 REL         = $10                   ; A way as the character faces (commandwords.js's REL, PART, NONE)
 PART        = $80                   ; A thing's part ("the bars": the window's)
@@ -935,7 +936,14 @@ thing:      ldy         #C_THING        ; A thing (a part of one: its word too, 
             beq         next
 wset:       jsr         setword
             bra         next
-word:       lda         cm_cmd + CM_PREP   ; A word not understood: the thing's (its last before a prep its head); the
+word:       lda         wi              ; A word not understood: the line's first, with no verb, a verb the game
+            bne         :+              ;   doesn't know (CF_STRANGE: the UI says so)
+            lda         cm_cmd + CM_FLAGS
+            and         #CF_NOVERB
+            beq         :+
+            lda         #CF_STRANGE
+            tsb         cm_cmd + CM_FLAGS
+:           lda         cm_cmd + CM_PREP   ; The thing's (its last before a prep its head); the
             cmp         v_WITH          ;   other thing's after a prep (after "it" and a prep, too)
             beq         word2
             lda         cm_cmd + CM_OBJ + T_WORD
@@ -1070,8 +1078,8 @@ putout:     lda         verb
             lda         v_DOUSE
             sta         verb
             stz         cm_cmd + CM_PREP
-unlock:     lda         verb            ; "pick it up": taken
-            cmp         v_UNLOCK
+unlock:     lda         verb            ; "pick it up": taken, the "up" no way
+            cmp         v_GET
             bne         :+
             lda         cm_cmd + CM_OBJ + T_WORD
             ora         cm_cmd + CM_OBJ + T_SEL

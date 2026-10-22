@@ -32,9 +32,8 @@ static unsigned char away;                      /* The cursor isn't at the end o
 static unsigned char shown;                     /* How much of the line typed is shown */
 static unsigned char soon;                      /* The next words said the first since t_done: their first few out
                                                 **   at once, if more follow (the console's a letter at a time) */
-#define QMAX        256                         /* Lines entered and not yet taken (typed ahead): */
-static char queue[QMAX];                        /*   each ends with a 0, */
-static unsigned qlen;                           /*   so many bytes of them */
+char queue[QMAX];                               /* Lines entered and not yet taken (typed ahead), each ends with a 0 */
+unsigned qlen;                                  /*   (parts.c's too), so many bytes of them */
 static char last[INMAX + 1];                    /* The last line entered (cursor up brings it back) */
 static char sl[128], sn[128];                   /* The status line as it's shown, and as it's to be */
 
@@ -500,15 +499,13 @@ void t_done (void)
     soon = 1;
 }
 
-/* A line entered: into the story as the player typed it, then queued for t_line (no room: the line stays on the
-** line typed, and Enter must be pressed again) */
+/* A line entered: into the story as the player typed it, then queued for t_line, a line for each of its parts
+** (parts.c's: "north then east"; no room: the line stays on the line typed, and Enter must be pressed again) */
 static void enter (void)
 {
-    if (qlen + inn + 1 > QMAX) {
+    if (!parts_in ()) {
         return;
     }
-    memcpy (queue + qlen, inl, inn + 1);
-    qlen += inn + 1;
     if (inn) {
         strcpy (last, inl);
     }

@@ -3070,6 +3070,36 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple", "give": you can\'t, yet); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T',
+        'bribe the rat', 'grapple the rat', 'give the torch to the rat', '?', 'examine the torch carefully', 'status', 'drop pick then take it',
+        'drop pick; take it', 'drop the pick', 'take the bones and the pick', 'i', 'drop the bones', 'pick the bones', 'drop the pick carefully',
+        'status', 'defend counter', 'defend best', 'run away', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      // (Its words checked with the screen's codes and the lines' wrapping taken out, each in its turn)
+      check(m, out) {
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
+        const want = ['> bribe the rat I don\'t know how to bribe.', '> grapple the rat You can\'t grapple in this game yet.',
+          '> give the torch to the rat You can\'t give in this game yet.', '> ? Moving: north,', 'Several at once: north then east;',
+          '> examine the torch carefully', '> status Pace: a walk', 'Watching: nothing in particular.',
+          '> drop pick then take it Put down.', 'Taken.', '> drop pick; take it Put down. Taken.',
+          '> take the bones and the pick Taken. Taken.', 'a pick', 'bones', '> pick the bones Taken.',
+          '> drop the pick carefully Put down.', '> status Pace: a walk', 'Watching: nothing in particular.',
+          '> defend counter You will strike back first.', '> defend best You will defend yourself as best you can.',
+          '> run away There\'s nothing to flee from.', '% echo $status'];
+        let at = 0;
+        for (const w of want) {
+          const i = o.indexOf(w, at);
+          if (i < 0) { f.push('not found (in its turn): ' + w); break; }
+          at = i + w.length;
+        }
+        if (/examine the torch carefully[^>]*I don't understand that/.test(o)) f.push('"examine the torch carefully" not understood');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0talk', meaning: true, what: 'Dingus Quest Zero understanding the player (the command parser, dq0c: the grammar and the game\'s words, after the user\'s Language.txt), by what each command did: synonyms (take a gander: a look, no time), several words to a verb, turns as the character faces (half left) and two directions together (north and east), a door behind walked up to (asked which: the second), the little words passed over (off the verb\'s in "take off my coat": nothing worn refused; a filler in "saunter off to the left": a move to its left), a thing not there refused, a word it doesn\'t know doing nothing (their words: dq0wordsthings)',
       init: 't_rc', cycles: 600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'take a gander', 'turn half left',
@@ -3991,7 +4021,7 @@ module.exports = {
           '> jog', 'Pace: a jog (75 feet a round). Watching: nothing in particular.', '> search for traps as I go',
           'Pace: a jog, held to a slow walk while you search as you go (18 feet a round). Watching: for traps and hidden doors as you go.', '> stop searching',
           'Pace: a jog (75 feet a round).', '> run north', 'Pace: a run (150 feet a round).', 'You cross the room. You are in the middle of a long, narrow cell, by the light of your torch.',
-          '> run south', '> help', 'Commands: north, northeast, east', 'Pace: creep (sneak), walk slowly, walk, jog, run, sprint', '19200 or 115200 baud', '% echo $status'], f);
+          '> run south', '> help', 'Moving: north, northeast, east', 'Pace: creep (sneak), walk slowly, walk, jog, run, sprint', '19200 or 115200 baud', '% echo $status'], f);
         if (/#\d/.test(o)) f.push('a thing\'s mark ("#12") said');
         const rn = o.slice(o.indexOf('> run north'), o.indexOf('> run south')), rs = o.slice(o.indexOf('> run south'), o.indexOf('> help'));
         if (/ceiling|vault/.test(rn.slice(rn.indexOf('You cross')))) f.push('the look as the run ended not brief: ' + rn);

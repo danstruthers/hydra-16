@@ -635,7 +635,9 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
 #define MN_FIRM         0x40
 #define CF_NOVERB       0x01                    /* (struct cmd's flags: no verb said: a way, or a thing, alone; */
 #define CF_HALF         0x02                    /*   a half turn, "turn half left": an eighth; */
-#define CF_UNSAID       0x04                    /*   its thing not said: its verb's (dflt) to fill) */
+#define CF_UNSAID       0x04                    /*   its thing not said: its verb's (dflt) to fill; */
+#define CF_STRANGE      0x08                    /*   no verb, and the line's first word one the game doesn't know:
+                                                **   "bribe the goblin", a verb it hasn't) */
 struct cmd {
     unsigned char   action;                     /* VB_* */
     unsigned char   actor;                      /* Whose: 0 the character, an actor's entry plus 1 */
