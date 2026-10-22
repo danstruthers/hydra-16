@@ -263,9 +263,16 @@ void o_stir_words (void)
                 was_m[k] = 1;
             }
         }
-        for (k = 0, w = was; k < nwas; ++k, ++w) {  /* (Gone from sight: those told before not taken) */
+        for (k = 0, w = was; k < nwas; ++k, ++w) {  /* (Gone from sight: those told before not taken; alike the
+                                                **   same way told together, "The two giant rats to your right") */
             if (was_m[k]) {
                 continue;
+            }
+            for (i = k + 1; i < nwas; ++i) {
+                if (!was_m[i] && was[i].rel == w->rel && !strcmp (was[i].name, w->name)) {
+                    w->n += was[i].n;           /* (was's own: now_ kept over it after) */
+                    was_m[i] = 1;
+                }
             }
             stirred ();
             named (w, 1);                       /* ("The giant rat to your left is gone from sight."; "Grub is ...") */

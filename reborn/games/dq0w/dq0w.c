@@ -2262,6 +2262,7 @@ static void __fastcall__ stop (unsigned char why)
         HUB->pc_ready = HUB->now;               /* (A fight's blow struck: its round out first) */
     }
     HUB->pc_task.asking = 0;
+    pc_hit = 0;                                 /* (A blow taken as it was asked: no second stop after the answer's) */
     event (E_TASK, 0, why | HUB->pc_task.kind << 8);
 }
 
@@ -2492,7 +2493,9 @@ void __fastcall__ s_task_word (const struct msg* m)
         return;
     }
     if (!k) {
-        event (E_TASK, 0, TE_IDLE);
+        if (!m->w1) {
+            event (E_TASK, 0, TE_IDLE);         /* (The player's stop, nothing to stop; a command's, nothing said) */
+        }
     } else if (m->a && m->a != k) {
         evb = m->a;                             /* (The one named: its b) */
         event (E_TASK, 0, TE_NOT | k << 8);
@@ -3670,7 +3673,7 @@ void s_burns_now (void)
     struct item* p;
     unsigned char* sq;
     unsigned i, j, d, left, bf, wx, wy;
-    unsigned char mine, r, best, out, seen, ww, ws;
+    unsigned char mine, r, best, out, seen, ww, ws, low = 0, more = 0;
 
     hub_map (0);
     burn_ask = 0;
@@ -3696,6 +3699,7 @@ void s_burns_now (void)
         hub_map (CAT_BANK);
         r = mine ? CATALOGUE[q.kind].light : 0;
         if (!q.id || (q.flags & I_TENDED) || !(b = burn_of (q.kind))) {
+            more |= mine;                       /* (A light of its own lit that lasts: no other's burning low told) */
             if (r > best) {                     /* (The brightest it carries: never burning down) */
                 best = r;
                 bf = 0xFFFF;
@@ -3709,10 +3713,10 @@ void s_burns_now (void)
             bf = left;
         }
         if (left) {
-            if (mine && q.fuel > BURN_LOW && left <= BURN_LOW) {
-                hub_map (0);
-                evb = q.kind;
-                event (E_TASK, 0, TE_LOW);      /* ("Your torch is burning low.") */
+            if (mine && left > BURN_LOW) {
+                more = 1;                       /* (Another of its lights lit with more left) */
+            } else if (mine && q.fuel > BURN_LOW) {
+                low = q.kind;                   /* (Burning low now: told below, if it's the last of them) */
             }
             continue;
         }
@@ -3742,6 +3746,12 @@ void s_burns_now (void)
             event (E_TASK, 0, TE_OUT);
             seen = 1;
         }
+    }
+    if (low && !more) {
+        hub_map (0);
+        evb = low;
+        event (E_TASK, 0, TE_LOW);              /* ("Your torch is burning low.": the last lit it carries; one of two,
+                                                **   once the other is too, or out) */
     }
     if (d) {
         sconce_lights (0xFF);                   /* (The rooms' lights by their sconces, a minute's: one burnt out, its

@@ -1632,6 +1632,9 @@ static unsigned char __fastcall__ alike (unsigned a, unsigned b)
 }
 #pragma static-locals (pop)
 
+static struct got* gp;                          /* (contents's, its alike's search: static, none of it live as it
+                                                **   goes on into what's in a thing) */
+static unsigned char gm;
 static void __fastcall__ contents (unsigned char where, unsigned x, unsigned char depth)
 {
     const struct kind* k;
@@ -1653,11 +1656,28 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
         if (n < nt) {
             continue;                           /* (Told with one alike before it: nothing in it, nothing more) */
         }
-        for (n = 1, j = i; (j = next_in (j, where, x)) != 0; ) {
-            if (alike (i, j)) {                 /* (Those alike after it: "two sacks", the user's) */
-                ++n;
-                if (nt < 8) {
-                    told[nt++] = j;
+        n = 1;
+        if (q.qty == 1 && !(q.flags & (I_NAMED | I_HELD))) {     /* (One that may have others alike: alike's) */
+            if (ngot != 0xFF) {
+                for (gp = got, gm = ngot; gp->n != i; ++gp, --gm) {
+                }                               /* (Those after it in the list gathered, from its place: not the
+                                                **   list again for each, next_in's) */
+                while (--gm) {
+                    if ((++gp)->where == where && gp->x == x && alike (i, gp->n)) {
+                        ++n;
+                        if (nt < 8) {
+                            told[nt++] = gp->n;
+                        }
+                    }
+                }
+            } else {
+                for (j = i; (j = next_in (j, where, x)) != 0; ) {
+                    if (alike (i, j)) {         /* (Those alike after it: "two sacks", the user's) */
+                        ++n;
+                        if (nt < 8) {
+                            told[nt++] = j;
+                        }
+                    }
                 }
             }
         }

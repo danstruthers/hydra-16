@@ -209,10 +209,18 @@ static const char noun[8][12] = { "passage", "doorway", "open door", "broken doo
     "arrow slit" };
 typedef char w_fits[sizeof (struct wayseen) <= 300 ? 1 : -1];   /* (In lb's end: its first 100 bytes the theme's names) */
 
+/* Openings b and the next alike, the same way, and the same beyond them: told once ("Through the open doors ahead you
+** see only darkness.", not the open door's twice) */
+static unsigned char __fastcall__ twin (const struct beyond* b)
+{
+    return b[1].what == b->what && b[1].noun == b->noun && b[1].rel == b->rel && (b->what == WB_DARK ||
+        (b[1].dist == b->dist && b[1].kind == b->kind && b[1].lit == b->lit));
+}
+
 void o_focus_words (void)
 {
     struct beyond* b;
-    unsigned char i, k, sk = 0xFF, sr = 0xFF;
+    unsigned char i, k, n, sk = 0xFF, sr = 0xFF;
 
     hub_mem (SIGHT_BANK, &W, WAY_SEEN, sizeof W);
     if (W.seq != S.seq) {
@@ -237,11 +245,14 @@ void o_focus_words (void)
                 "its shutters are closed" : "it's closed");
             continue;
         }
-        sayf (" %s the %s %s you see ", k ? "Through" : "Down", noun[k], rel_w[(b->rel + 1) & 3]);
+        for (n = 0; i + 1 < W.nbeyond && twin (b); ++n, ++i, ++b) {
+        }                                       /* (Alike the same way: told once, "the open doors") */
+        sayf (" %s the %s%s %s you see ", k ? "Through" : "Down", noun[k], !n ? "" : k == BN_PORTCULLIS ? "es" : "s",
+            rel_w[(b->rel + 1) & 3]);
         if (b->what == WB_DARK) {
             say ("only darkness");
         } else if (b->what == WB_PASSAGE) {
-            sayf (k ? "a passage, %u feet of it" : "%u feet of it", SQ_FT * b->dist);
+            sayf (k ? "a passage, %u feet of it" : n ? "%u feet of them" : "%u feet of it", SQ_FT * b->dist);
         } else {
             *lb = 0;
             theme_named (TN_ROOM, b->kind);     /* (The theme's, into lb) */

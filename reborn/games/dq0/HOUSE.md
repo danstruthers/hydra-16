@@ -573,7 +573,8 @@ The lights (lights burning down, renewed; the kit's spare; the status line's lig
   thickness (half an inch to an inch and a quarter, in proportion), half as long again of beeswax (a fine one,
   make 6 or better, is beeswax), and by its make, (15 + make) / 19 (a crude one four-fifths as long, a master's a
   quarter longer); candle stubs half an hour on the same terms.
-- **Burning low:** its last ten minutes, told once for a light the character carries ("Your torch is burning low.");
+- **Burning low:** its last ten minutes, told once for a light the character carries ("Your torch is burning low."),
+  when no other light it carries lit has more left (two torches lit: told once, as the last of them burns low);
   nothing's asked.
 - **Going out:** at none left, told ("Your torch gutters and goes out."), and for one lying where the character sees
   it ("The candle stubs gutter and go out."); a candle burns away, gone; a lantern's dry, a torch spent, kept to be
