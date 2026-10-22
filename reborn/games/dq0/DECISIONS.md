@@ -955,3 +955,13 @@ as touch; a search qualified: nearby, a wall, for a thing, on the floor or on a 
 traps).
 
 **Design:** DUNGEON.md's moving, hidden things and seeing in the dark; HOUSE.md's moving and searching.
+
+### alias for shortcuts, name for naming
+
+The parser's review (the session hydra-2-89's, 2026-10-22) found "alias" taken as naming ("alias the sword as Linda",
+names.c), against the command grammar's answer 15 and DUNGEON.md (text aliases: "alias x is dig down").  Asked, the
+user: "alias should be for shortcuts, and name for naming things".  So "alias" defines, shows, lists and removes the
+player's shortcuts (a line's first word standing for a line: "alias x is dig down", "alias x", "alias", "unalias
+x"), kept with the game; naming is "name" and "call" (and rename, dub; forget, unname) alone.
+
+**Design:** the command grammar (commands.ebnf's alias-cmd); DUNGEON.md's names.
