@@ -232,16 +232,16 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Overlay 7 (beside choose.c): a look one way's words (words.c's o_words, as its look's E_VIEW is V_LOOKED:
+/* ==== Overlay 13 (after part 9's image): a look one way's words (words.c's o_words, as its look's E_VIEW is V_LOOKED:
 ** look.c's look (8)), from the senses' record (sight_copy) and their look one way's own (WAY_SEEN, copied into lb's
 ** end, words.c's not begun yet): the place it's in not told again; its own sentences said as they're made (none a
 ** glance says), the things' and the denizens' (those ahead, the record's then) in the glance's words, streamed
 ** (lbsaid.s's: none said twice in an answer) */
 
-#pragma code-name (push, "OV7CODE")
-#pragma rodata-name (push, "OV7RODATA")
-#pragma data-name (push, "OV7RODATA")
-#pragma bss-name (push, "OV7RODATA")
+#pragma code-name (push, "OV13CODE")
+#pragma rodata-name (push, "OV13RODATA")
+#pragma data-name (push, "OV13RODATA")
+#pragma bss-name (push, "OV13RODATA")
 #pragma static-locals (push, on)              /* (Its locals static, in its bank: the code the less) */
 
 #define S           sight_copy

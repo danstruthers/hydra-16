@@ -39,6 +39,8 @@ appraise    thing=VB_EXAMINE_OBJECT unsaid=last aux=EX_BOTH skill=P_APPRAISE asp
 heft        thing=VB_EXAMINE_OBJECT unsaid=last aux=EX_WEIGHT aspects=1                    #   condition looked over)
 condition   thing=VB_EXAMINE_OBJECT unsaid=last aux=EX_COND aspects=1
 search      thing=VB_SEARCH unsaid=place skill=P_SEARCH task=LT_SEARCH aspects=1
+seek        thing=VB_SEARCH unsaid=place aux=SR_FOR skill=P_SEARCH task=LT_SEARCH aspects=1     # (new, 2026-10-22: a search
+grope       thing=VB_SEARCH unsaid=place aux=SR_NEAR skill=P_SEARCH task=LT_SEARCH aspects=1    #   for a thing; within reach)
 turn        way=VB_FACE_DIRECTION unsaid=none
 face        way=VB_FACE_DIRECTION unsaid=none
 climb       thing=VB_CLIMB way=VB_CLIMB alone=VB_CLIMB unsaid=front skill=P_CLIMB task=LT_CLIMB
@@ -248,6 +250,7 @@ quality = judge
 how well made is = judge
 condition = condition
 search = search
+grope = grope
 turn = turn
 face = face
 climb = climb
@@ -433,6 +436,20 @@ look for tracks = track
 look for prints = track
 look for footprints = track
 search for tracks = track
+search around for = seek                    # (new, 2026-10-22: a search for a thing, within reach; by touch in the dark)
+search about for = seek
+search for = seek
+feel around for = seek
+feel about for = seek
+grope around for = seek
+grope about for = seek
+grope for = seek
+search around = grope
+search about = grope
+feel around = grope
+feel about = grope
+grope around = grope
+grope about = grope
 examine the tracks = track
 examine tracks = track
 look at the tracks = track
@@ -489,6 +506,7 @@ pace = pace
 trot = move
 jog = move
 sprint = move
+dash = move                                 # (new, 2026-10-22: a sprint, "dash north": pace.c's)
 prone = liedown
 beseech = intervene
 invoke = invoke

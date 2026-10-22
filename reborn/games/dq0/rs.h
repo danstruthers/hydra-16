@@ -72,6 +72,8 @@ enum {
                                                 **   (RS_CONTEST's, the engage initiative test) */
     P_GROPE,                                    /* A thing handled in a fight, engaged (taken up, drawn, put away:
                                                 **   the book's grope, an attribute's test) */
+    P_STUMBLE,                                  /* Keeping one's feet, over a thing in the way (the book's stumble
+                                                **   roll: its steps the darkness, the thing, the pace, 2026-10-22) */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 

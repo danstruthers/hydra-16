@@ -51,7 +51,9 @@ unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);
 void about (void);
 void list (void);                               /* Part 11 */
 void __fastcall__ wear (const char* key, unsigned char by);
-unsigned char search (void);
+unsigned char search (void);                    /* Part 46 */
+unsigned char seek (void);
+void __fastcall__ thing_words (const struct item* q);   /* (Part 11's) */
 unsigned char __fastcall__ hide (const char* name);
 void __fastcall__ make_own (unsigned i);         /* Part 13 */
 void seen_owned (void);
@@ -542,6 +544,9 @@ unsigned char s_serve (void)
         break;
     case IO_SEARCH:
         changed = iq.result = search ();
+        break;
+    case IO_SEEK:                               /* (A search's thing, for or on: part 46's) */
+        iq.result = seek ();
         break;
     case IO_DESCRIBE:
         iq.result = describe (iq.name);
@@ -2129,58 +2134,6 @@ void s_list (void)
     put (" lb.");
 }
 
-/* ---- A search for what's concealed about the character (on the squares it sees, within SEARCH_R, as far as the
-** search reached: the request's to, the world's, wtrap.c's, a square's distance off squared less than it): the
-** referee's test for each (its search, at the concealment's difficulty: its steps worse), the ones found no longer
-** hidden, and named in the hub's text; but what's hidden by magic (found by magical means only) */
-#define SEARCH_R        3
-unsigned char s_search (void)
-{
-    static const unsigned char sq_[] = { 9, 4, 1, 0, 1, 4, 9 };    /* (A square's distance off, squared) */
-    struct req* r;
-    unsigned char* p;
-    unsigned i = 0, x, y, dx, dy;
-    unsigned char sn, found = 0;
-    signed char g;
-
-    hub_map (0);
-    sn = HUB->pc_stratum;
-    x = HUB->pc_x;
-    y = HUB->pc_y;
-    text_new ();
-    while ((i = items (i, IN_SQUARE, 0)) != 0) {
-        fetch (&rec, i);
-        if (rec.sn != sn ||
-            (rec.flags & (I_HIDDEN | I_MAGIC | I_KNOWN)) != I_HIDDEN ||
-            (dx = rec.x - x + SEARCH_R) > 2 * SEARCH_R || (dy = rec.y - y + SEARCH_R) > 2 * SEARCH_R ||
-            sq_[dx] + sq_[dy] >= iq.to || !(p = at (sn, rec.x, rec.y)) || !(*p & T_VIS)) {
-            continue;
-        }
-        make_own (i);
-        fetch (&rec, i);
-        hub_map (0);
-        r = &HUB->slot[SLOT_UI];                /* (The UI's: it waits on this request meanwhile) */
-        r->kind = RS_TEST;
-        r->actor = 0;
-        r->a = P_SEARCH;
-        r->b = HIDE_MECHANICAL;
-        r->steps = -(signed char) rec.hide;
-        r = hub_ask (SLOT_UI);
-        g = r->grade;
-        r->state = REQ_FREE;
-        if (g >= G_MS) {
-            item_at (i)->flags = (rec.flags & ~I_HIDDEN) | I_KNOWN;
-            put (found ? ", and " : "You turn up ");
-            s_thing_words (&rec);
-            ++found;
-        }
-    }
-    if (found) {
-        put (".");
-    }
-    return found;
-}
-
 /* What's in thing n (or on it, hanging from it) worded as a list, alike told together ("a candle, two chisels":
 ** part 36's inside, its words in a sentence) */
 void __fastcall__ s_listed (unsigned n)
@@ -3089,3 +3042,203 @@ static unsigned char o_handle (void)
 
 #pragma rodata-name (pop)
 #pragma code-name (pop)
+
+/* ==== Part 46 (its own, 2026-10-22, the user's: "search around for a dagger", "search the table", a search in the
+** dark by touch): the thing a search is for or on (IO_SEEK), and what a search turns up (IO_SEARCH, part 11's once), by
+** its form (the world's srch_form: SF_*, | SF_TOUCH in the dark: HOUSE.md's searching); what's on a thing or in it,
+** part 47's */
+#pragma code-name (push, "SW46CODE")
+#pragma rodata-name (push, "SW46RODATA")
+#pragma static-locals (push, on)
+
+extern unsigned char srch_form;                 /* (dq0w.c's: the search under way's form) */
+static char sname[16];                          /* (The thing's name, IO_SEEK's) */
+static unsigned sitem;                          /* (The thing searched on, or the one the search will find: 0 none) */
+static unsigned char sd2;                       /*   (how far off, squared) */
+static const unsigned char d2_[7] = { 9, 4, 1, 0, 1, 4, 9 };   /* (A square's distance off, squared, by its offset) */
+#define SEARCH_R        3
+unsigned char __fastcall__ on_it (unsigned n, unsigned char touch);   /* (Part 47's) */
+
+/* The referee's search test of the thing in rec, its hiding the steps worse (2 more by touch): 1 if it's found */
+static unsigned char __fastcall__ turned_up (unsigned char touch)
+{
+    struct req* r;
+    signed char g;
+
+    hub_map (0);
+    r = &HUB->slot[SLOT_UI];                    /* (The UI's: it waits on this request meanwhile) */
+    r->kind = RS_TEST;
+    r->actor = 0;
+    r->a = P_SEARCH;
+    r->b = HIDE_MECHANICAL;
+    r->steps = -(signed char) rec.hide - (touch ? 2 : 0);
+    r = hub_ask (SLOT_UI);
+    g = r->grade;
+    r->state = REQ_FREE;
+    return g >= G_MS;
+}
+
+/* The things lying on the squares within the search's reach (a square's distance off, squared, less than r) that the
+** character sees (by touch, all of them), but what's hidden by magic: seek, the nearest named sname that it would find
+** (in plain sight, or hidden and found by the referee's test, made now), sitem, sd2 its distance off squared; else each
+** it finds (in the light, what's hidden alone, by the test; by touch, everything there, what's hidden by the test, the
+** rest felt plainly), made known and worded ("You turn up a dagger", "Your hands find a sack, and a chisel"): how many */
+static unsigned char __fastcall__ scan (unsigned char seek, unsigned char r, unsigned char touch)
+{
+    unsigned i = 0, x, y, dx, dy;
+    unsigned char sn, d, n = 0;
+    unsigned char* t;
+
+    hub_map (0);
+    sn = HUB->pc_stratum;
+    x = HUB->pc_x;
+    y = HUB->pc_y;
+    while ((i = items (i, IN_SQUARE, 0)) != 0) {
+        fetch (&rec, i);
+        if (rec.sn != sn || (rec.flags & I_MAGIC) || (dx = rec.x - x + SEARCH_R) > 2 * SEARCH_R ||
+            (dy = rec.y - y + SEARCH_R) > 2 * SEARCH_R || (d = d2_[dx] + d2_[dy]) >= r ||
+            (!touch && (!(t = at (sn, rec.x, rec.y)) || !(*t & T_VIS))) ||
+            (seek ? d >= sd2 || !named (kind_of (rec.kind)->name, sname) :
+            !touch && (rec.flags & (I_HIDDEN | I_KNOWN)) != I_HIDDEN)) {
+            continue;
+        }
+        make_own (i);
+        fetch (&rec, i);
+        if ((rec.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN && !turned_up (touch)) {
+            continue;                           /* (Hidden, and the search passes it by) */
+        }
+        if (seek) {
+            sitem = i;
+            sd2 = d;
+            continue;
+        }
+        item_at (i)->flags = (rec.flags & I_KNOWN ? rec.flags : rec.flags & ~I_HIDDEN) | I_KNOWN;  /* (Found: known; one
+                                                **   it hid, felt there, hidden still) */
+        put (n++ ? ", and " : touch ? "Your hands find " : "You turn up ");
+        thing_words (&rec);
+    }
+    return n;
+}
+
+/* A search's thing (IO_SEEK: the request's name, to its form, | SF_TOUCH by touch): on or in one (SF_ON), the one most
+** to hand that it sees (in the dark, the nearest within reach it feels: its own square's or the eight round it's),
+** IR_NONE, none; IR_NOT_HERE, seen out of reach (where it lies in x, y: the UI's to walk over to); for one (SF_FOR),
+** the nearest of that name the search would come to and find, as far as it reaches (in the light the squares it sees
+** within 3, by touch within reach): the time to find it back in x (3 seconds, and 3.2 more a square's distance off,
+** squared, as a search's reach grows: wtrap.c's), or 0 (none: a whole search), told as the search ends */
+unsigned char s_seek (void)
+{
+    unsigned char f = iq.to & 7, touch = iq.to & SF_TOUCH;
+
+    strcpy (sname, iq.name);
+    sitem = 0;
+    sd2 = 0xFF;
+    hub_map (0);
+    HUB->ireq.x = 0;
+    if (f == SF_ON && !touch) {
+        if ((sitem = pick (sname, HW_HAND)) != 0) {
+            return IR_OK;                       /* (Carried, or within reach) */
+        }
+        if (!afar) {
+            return IR_NONE;
+        }
+        hub_map (0);                            /* (Seen out of reach: walked over to first, the UI's) */
+        HUB->ireq.x = far_x;
+        HUB->ireq.y = far_y;
+        HUB->ireq.item = far_n;
+        return IR_NOT_HERE;
+    }
+    scan (1, touch || f == SF_ON ? 3 : 19, touch);
+    hub_map (0);
+    if (f == SF_ON) {
+        return sitem ? IR_OK : IR_NONE;
+    }
+    HUB->ireq.x = sitem ? 30 + 32 * sd2 : 0;
+    return IR_OK;
+}
+
+/* A search's end (IO_SEARCH: the request's to its reach, the world's, wtrap.c's: a square searched if its distance off,
+** squared, is less): what it turns up, in the hub's text, by its form; the number found (or 1: words, found or not).
+** About the character, nearby, on the floor: scan's.  For a thing: the one IO_SEEK found, if the search's reach came to
+** it ("You find a dagger.", "You find no dagger here."); on or in one, part 47's on_it; a wall's, none (the walls'
+** alone) */
+unsigned char s_search (void)
+{
+    unsigned char f = srch_form & 7, touch = srch_form & SF_TOUCH, n;
+
+    text_new ();
+    if (f == SF_WALL) {
+        return 0;
+    }
+    if (f == SF_ON) {
+        return sitem ? on_it (sitem, touch) : 0;
+    }
+    if (f != SF_FOR) {
+        if ((n = scan (0, iq.to, touch)) != 0) {
+            put (".");
+        }
+        return n;
+    }
+    if (sitem && sd2 < iq.to) {                 /* (Come to it as the search went: found) */
+        fetch (&rec, sitem);
+        item_at (sitem)->flags = (rec.flags & I_KNOWN ? rec.flags : rec.flags & ~I_HIDDEN) | I_KNOWN;
+        put (touch ? "Your hands find " : "You find ");
+        thing_words (&rec);
+        put (".");
+    } else {
+        put (touch ? "Your hands find no " : "You find no ");
+        put (sname);
+        put (" here.");
+    }
+    return 1;
+}
+
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 47 (its own, 2026-10-22): what's on a thing, or in it, searched (part 46's search's SF_ON: thing n): its
+** things listed; closed, not looked into; then it gone over for traps (examine's, part 40's look_more: "The chest shows
+** no sign of a trap ..."), one rule for it; 1 (its words) */
+#pragma code-name (push, "SW47CODE")
+#pragma rodata-name (push, "SW47RODATA")
+#pragma static-locals (push, on)
+
+unsigned char __fastcall__ s_on_it (unsigned n, unsigned char touch)
+{
+    unsigned char on;
+
+    make_own (n);
+    fetch (&rec, n);
+    memcpy (&lk, kind_of (rec.kind), sizeof lk);
+    lpl = (lk.flags & K_PLURAL) || rec.qty > 1;
+    on = (lk.keeps & KF_ON) != 0;
+    if (rec.shut & IS_CLOSED) {
+        put (lpl ? "They're closed: you go over the outside of them. " : "It's closed: you go over the outside of it. ");
+    } else if (items (0, IN_X | IN_ITEM, n)) {
+        put (touch ? "Your hands find " : on ? "On the " : "In the ");
+        if (!touch) {
+            put (lk.name);
+            put (" you find ");
+        }
+        listed (n);
+        if (touch) {
+            put (on ? " on the " : " in the ");
+            put (lk.name);
+        }
+        put (". ");
+    } else {
+        put (on ? "There's nothing on the " : "There's nothing in the ");
+        put (lk.name);
+        put (". ");
+    }
+    put ("The ");
+    put (lk.name);
+    fetch (&rec, n);
+    look_more (n, LM_TRAPS);                    /* (Its trap: examine's check, part 40's) */
+    return 1;
+}
+
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)

@@ -3727,7 +3727,7 @@ module.exports = {
     ...(process.env.DQ0ANS96 ? [dq0AnswerTest(9600)] : []),
     {
       name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken and climbed through, a weak-eyed character), every reply the senses give (a look\'s, the denizens\' senses\') with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, the old code\'s (DQ0LOOKS=write: written afresh from this run)',
-      init: 't_rc', cycles: 2500e6,
+      init: 't_rc', cycles: 3000e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm\rācp /ram/c.hm /ram/w.hm\rāecho att eye 4 >> /ram/w.hm\r' +
         [['dq0 -p t -s 3 -c /ram/c.hm -T -k sword',['look','turn left','turn right','walk to the door ahead to my left','2','look','turn around','turn left','turn right','map','d','look','sw','look']],['dq0 -p t -s 5 -c /ram/c.hm -T',['d','wait','go right','turn left','look','turn around','wait','look']],['dq0 -p t -s 7 -c /ram/w.hm',['open the door behind me','s','move south 4 squares','face north','look','douse the torch','z','z','z','look','light the torch','z','look','turn around','n']],['dq0 -p t -s 3 -c /ram/c.hm -T',['drop the torch','turn around','step forward','look','turn around','step forward','get torch','look']],['dq0 -p t -s 12 -c /ram/c.hm -T',['e','wait','e','wait','e','turn around','lower portcullis','w','look','raise portcullis','w','turn left']],['dq0 -p t -s 12 -c /ram/c.hm',['n','turn around','break window','climb through window','turn around','look','turn right']],['dq0 -p t -s 4 -c /ram/c.hm',['open door','3','look','go through the door','look','turn left']],['dq0 -p t -s 517 -c /ram/c.hm',['look','turn left','turn right','turn around','look']]].map(([g, c]) => 'ā' + g + '\r' + c.concat('quit').map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
       expect: ['% echo $status'],
@@ -4850,6 +4850,127 @@ module.exports = {
         const dx = e3.after.pc.x - e2.after.pc.x, dy = e3.after.pc.y - e2.after.pc.y, n = Math.max(Math.abs(dx), Math.abs(dy));
         if (dx < 2 || n < 3) f.push('the walk east from the wide fork not across it: ' + dx + ',' + dy + ' (it was a square)');
         dq0Never(f, e3, 'E_NOWAY', {}, 'the walk east from the fork refused');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      // (Seed 7, dq0glow's dungeon: the kitchen the character begins in, its torch put out (nobody keeps the kitchen lit:
+      // its sconce's torch cold), the kitchen's south door seen by the torch as the game began, then down the straight
+      // passage into the dark hall (its doorway square 32785,32851; its floor 32781-32786 by 32851-32855; a table at
+      // 32784,32853; its east door, closed, at 32787,32855); seed 517's kobold gatehouse, its ledge 10 feet up, dark
+      // with the torch out (dq0harm's); seed 3's passage east from the first room, its bend (dq0tasks' walk east))
+      name: 'dq0dark', meaning: true, what: 'Dingus Quest Zero\'s walking in the dark (the user\'s playtest, 2026-10-22: "you should not auto-adjust your movement direction toward an opening you cannot see ... half-walk speed; anything faster can be explicitly stated, but stumbles over large objects in your path, or running headlong into a pit, a wall, a door, or off a cliff are real dangers"; HOUSE.md\'s walking and searching in the dark), by the world\'s events and where the character ends: at seed 7 the kitchen\'s south door opened (its dart trap set off) and its torch put out, south through the door it saw (a walk to a door it knows of: "You feel your way south.", WB_FEEL at the cautious pace) into the dark hall; east, not turned toward the hall\'s east door it hasn\'t seen, but straight across to the wall (WB_FELT, FA_WALL: "Your hands meet a wall."); two steps west and south, its foot finding the table it didn\'t know of a square short of it (WB_THING, the table known after: "Your foot finds something on the floor: a table."); south again past it, known (gone round, as in the light), to the far wall; east along the far side to the closed east door (FA_DOOR: "You feel a door before you."); the status line "by feel", no "You cross the room." in the dark; then another game the same way to the table, and "run south" (said outright in the dark: WB_FEEL at a run, the status line "blind", the status command\'s pace a run, not held to a slow walk): the stumble roll over the table (the referee\'s P_STUMBLE), kept its feet and on into the far wall (WB_HIT, a blow, HC_STRIKE), or fallen short of it (WB_TRIP); at seed 517 the ledge up felt, not walked into (FA_RISE), climbed, and run back off it: stopped short at the edge (WB_SHORT) or over it (WB_OFF, a fall of its 10 feet, the character at its foot); at seed 3 the passage east walked in the dark straight on to its bend, unknown, and stopped there (FA_WALL, no WB_TURN), where the lit walk (dq0tasks\') goes round it',
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 7 -c /ram/c.hm', 'face north', 'open the door behind me', 'douse the torch', 's', 'e', 'step west', 'step west', 's', 's', 'e',
+        'quit', 'dq0 -p t -s 7 -c /ram/c.hm', 'face north', 'open the door behind me', 'douse the torch', 's', 'step west', 'run south', 'status', 'quit',
+        'dq0 -p t -s 517 -c /ram/c.hm', 'ne', 'douse the torch', 'e', 'u', 'step east', 'step east', 'turn around', 'run west', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm', 'douse the torch', 'e', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const beats = (t, b) => dq0Ev(t, 'E_BEAT', { beat: b });
+        const at = (t, x, y, what) => { if (!t.after || t.after.pc.x !== x || t.after.pc.y !== y) f.push(what + ': at ' + (t.after ? t.after.pc.x + ',' + t.after.pc.y : '?') + ', not ' + x + ',' + y); };
+        const g1 = T.of('dq0 -p t -s 7 -c /ram/c.hm'), s1 = T.after(g1, 's'), e1 = T.after(s1, 'e'), w2 = T.after(T.after(e1, 'step west'), 'step west');
+        const s2 = T.after(w2, 's'), s3 = T.after(s2, 's'), e2 = T.after(s3, 'e');
+        if (!beats(s1, 'WB_FEEL').some(e => e.head === 4 && !e.gait)) f.push('the walk south not set out on feeling its way (' + dq0Evs(s1) + ')');
+        dq0Need(f, s1, 'E_BEAT', { beat: 'WB_DOOR' }, 'the walk south not through the door it knew of');
+        at(s1, 32785, 32851, 'the walk south into the dark hall');
+        if (!beats(e1, 'WB_FELT').some(e => e.fa === 'FA_WALL')) f.push('the walk east not stopped by the wall, felt (' + dq0Evs(e1) + ')');
+        at(e1, 32786, 32851, 'the walk east: straight across, not to the east door it hadn\'t seen');
+        if (!beats(s2, 'WB_THING').some(e => e.thing === K.KI_TABLE)) f.push('the table in the way not found by its foot (' + dq0Evs(s2) + ')');
+        at(s2, 32784, 32852, 'the walk south stopped short of the table');
+        const table = s2.after && s2.after.items.find(i => i.name === 'table' && i.x === 32784 && i.y === 32853);
+        if (!table || !(table.flags & 0x20)) f.push('the table not known after its foot found it: ' + JSON.stringify(table));
+        if (!beats(s3, 'WB_FELT').some(e => e.fa === 'FA_WALL') || beats(s3, 'WB_THING').length) f.push('the walk south past the known table not to the far wall (' + dq0Evs(s3) + ')');
+        at(s3, 32784, 32855, 'the walk south past the table');
+        if (!beats(e2, 'WB_FELT').some(e => e.fa === 'FA_DOOR')) f.push('the closed east door not felt (' + dq0Evs(e2) + ')');
+        at(e2, 32786, 32855, 'the walk east to the closed door');
+        for (const t of [e1, s2, s3, e2]) if (dq0Ev(t, 'E_ARRIVE', { how: 'A_CROSSED' }).length) f.push('"' + t.line + '" told as a room crossed, in the dark');
+        const g = s.slice(s.indexOf('-s 7 -c /ram/c.hm'), s.indexOf('> quit'));
+        inTurn(g, ['You feel your way south.', 'Your hands meet a wall.', 'Your foot finds something on the floor: a table.', 'Your hands meet a wall.',
+          'You feel a door before you.'], f, 'the dark walk\'s words: ');
+        if (/You cross the room\./.test(g.slice(g.indexOf('> e')))) f.push('"You cross the room." said in the dark');
+        if (!/by feel \[/.test(out)) f.push('the status line not "by feel" as it felt its way');
+        const g2 = T.after(e2, 'dq0 -p t -s 7 -c /ram/c.hm'), r = T.after(g2, 'run south'), st = T.after(r, 'status');
+        if (!beats(r, 'WB_FEEL').some(e => e.head === 4 && e.gait === K.GA_RUN)) f.push('"run south" in the dark not at a run (' + dq0Evs(r) + ')');
+        if (!r.replies.some(q => /^slot/.test(q.req) && q.kind === K.RS_TEST && q.a === K.P_STUMBLE)) f.push('no stumble roll over the table (P_STUMBLE)');
+        const kept = beats(r, 'WB_STUMBLE').length, fell = beats(r, 'WB_TRIP').length;
+        if (kept + fell !== 1) f.push('not stumbled over the table once, kept or fallen (' + dq0Evs(r) + ')');
+        if (kept && (!beats(r, 'WB_HIT').some(e => e.fa === 'FA_WALL' && e.gait === K.GA_RUN) || !dq0Ev(r, 'E_HARM', { hc: 'HC_STRIKE' }).length)) f.push('kept its feet, but not run into the far wall, a blow (' + dq0Evs(r) + ')');
+        if (kept) at(r, 32784, 32855, 'the run on to the far wall');
+        if (fell) at(r, 32784, 32852, 'fallen short of the table');
+        if (!/blind \[/.test(out)) f.push('the status line not "blind" as it ran');
+        const sw = s.slice(s.indexOf('> status', s.indexOf('> run south')));
+        if (!/Pace: a run/.test(sw) || /held to a slow walk in the dark/.test(sw.slice(0, 200))) f.push('the status not a run, said outright in the dark: ' + sw.slice(0, 160));
+        const g3 = T.of('dq0 -p t -s 517 -c /ram/c.hm'), e3 = T.after(g3, 'e'), rw = T.after(g3, 'run west');
+        if (!beats(e3, 'WB_FELT').some(e => e.fa === 'FA_RISE')) f.push('the ledge up not felt in the dark (' + dq0Evs(e3) + ')');
+        if (e3.at && e3.after && (e3.at.pc.x !== e3.after.pc.x || e3.at.pc.y !== e3.after.pc.y)) f.push('moved, the ledge up met in the dark');
+        dq0Never(f, e3, 'E_LEDGE', {}, 'the ledge\'s height told, unseen');
+        const short = beats(rw, 'WB_SHORT').some(e => e.fa === 'FA_DROP'), over = beats(rw, 'WB_OFF').some(e => e.fa === 'FA_DROP');
+        if (short === over) f.push('the run west at the ledge\'s edge not stopped short of it, nor over it (' + dq0Evs(rw) + ')');
+        if (!rw.replies.some(q => /^slot/.test(q.req) && q.kind === K.RS_TEST && q.a === K.P_DODGE_HAZARD)) f.push('no dodge at the edge (P_DODGE_HAZARD)');
+        if (over && !dq0Ev(rw, 'E_HARM', { hc: 'HC_FALL' }).length) f.push('over the edge, no fall');
+        if (rw.at && rw.after && over && rw.after.pc.x >= rw.at.pc.x - 2) f.push('over the edge, not at its foot');
+        const g4 = T.of('dq0 -p t -s 3 -c /ram/c.hm'), e4 = T.after(g4, 'e');
+        if (beats(e4, 'WB_TURN').length) f.push('the walk east in the dark turned round the unknown bend (' + dq0Evs(e4) + ')');
+        if (!beats(e4, 'WB_FELT').some(e => e.fa === 'FA_WALL')) f.push('the walk east in the dark not stopped at the bend, its wall felt (' + dq0Evs(e4) + ')');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      // (Seed 7's kitchen, as dq0dark's, its torch put out: two iron pots beside the character, at 32785,32839 and 32784,32839,
+      // the south door's dart trap; the hall's table at 32784,32853, walked over to in the light)
+      name: 'dq0darksearch', meaning: true, what: 'Dingus Quest Zero\'s searching in the dark and the search\'s forms (the user\'s playtest, 2026-10-22: "search around in the dark with your hands ... search nearby or search the east wall, or search around for a/an item ... You fumble around in the dark and find nothing ... search around on the floor/table"; HOUSE.md\'s walking and searching in the dark), by the world\'s events, the things\' replies and the words: at seed 7 in the dark kitchen a search by touch, nearby (its reach 3, E_PORTAL\'s b 1: "You feel about you in the dark...", the iron pots within reach felt and known: "Your hands find an iron pot"); a search for the sack not within reach ("Your hands find no sack here.", a minute); the floor nearby; the north wall out of reach (no search: "Your hands find no wall within reach that way."); a search for the iron pot, stopped as it comes to it (the things\' IO_SEEK: 3 seconds and 3.2 more for its distance squared, 6.4 seconds, "Your hands find an iron pot"); the pot searched, closed, gone over for traps by examine\'s check ("It\'s closed", "shows no sign of a trap"); then in the light the hall\'s table searched (walked over to first: IO_SEEK\'s IR_NOT_HERE, "There\'s nothing on the table.", its trap examine\'s check), "search the table for traps" examine\'s alone (IO_LOOK, LM_TRAPS), the east wall searched (a wall\'s, its reach), nearby (reach 3); the pouch hidden where it stands, the torch put out, a step away, and a search by touch finding it (known, hidden still), and a search for it by touch found as it comes to it',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 7 -c /ram/c.hm', 'douse the torch', 'search', 'search for the sack', 'search the floor', 'search the north wall',
+        'search around for the iron pot', 'search the pot', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm', 'face north', 'open the door behind me', 's', 'step west', 'search the table', 'search the table for traps',
+        'search the east wall', 'search nearby', 'hide the pouch', 'step east', 'douse the torch', 'search', 'search for the pouch', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const portal = t => dq0Ev(t, 'E_PORTAL', {}).filter(e => ['PO_NOTHING', 'PO_FOUND', 'PO_FOUND_TRAP'].includes(e.po));
+        const took = t => t.at && t.after ? t.after.now - t.at.now : -1;
+        const g1 = T.of('dq0 -p t -s 7 -c /ram/c.hm'), se = T.after(g1, 'search'), sk = T.after(se, 'search for the sack'), fl = T.after(sk, 'search the floor');
+        const nw = T.after(fl, 'search the north wall'), fp = T.after(nw, 'search around for the iron pot'), sp = T.after(fp, 'search the pot');
+        for (const [t, what] of [[se, 'search'], [fl, 'the floor']]) {
+          const p = portal(t);
+          if (p.length !== 1 || p[0].a !== 3 || p[0].b !== 1) f.push(what + ' in the dark not by touch, within reach (E_PORTAL a 3, b 1): ' + JSON.stringify(p.map(e => [e.po, e.a, e.b])));
+        }
+        const pots = se.after ? se.after.items.filter(i => i.name === 'iron pot' && i.y === 32839 && (i.x === 32785 || i.x === 32784)) : [];
+        if (pots.length !== 2 || !pots.every(i => i.flags & 0x20)) f.push('the iron pots within reach not felt and known: ' + JSON.stringify(pots));
+        if (took(sk) !== 600) f.push('the search for the sack not a whole minute: ' + took(sk));
+        if (!dq0Rep(sk, 'ireq', { kind: 'IO_SEEK' }).length) f.push('the sack not sought (IO_SEEK)');
+        if (portal(nw).length || !dq0Ev(nw, 'E_BEAT', { beat: 'WB_FELT', fa: 'FA_NONE' }).length) f.push('the north wall out of reach searched (' + dq0Evs(nw) + ')');
+        if (took(fp) !== 62) f.push('the search for the iron pot not stopped as it came to it (6.2 seconds): ' + took(fp));
+        if (took(sp) !== 600) f.push('the pot\'s search not a minute: ' + took(sp));
+        const g = s.slice(s.indexOf('> search'), s.indexOf('> quit'));
+        inTurn(g, ['You feel about you in the dark...', 'Your hands find an iron pot', 'You feel about in the dark for the sack...', 'Your hands find no sack here.',
+          'You feel over the floor about you in the dark...', 'Your hands find no wall within reach that way.', 'Your hands find an iron pot',
+          'It\'s closed: you go over the outside of it.', 'The iron pot shows no sign of a trap'], f, 'the dark search\'s words: ');
+        const g2 = T.after(sp, 'dq0 -p t -s 7 -c /ram/c.hm'), tb = T.after(g2, 'search the table'), tt = T.after(tb, 'search the table for traps');
+        const ew = T.after(tt, 'search the east wall'), nb = T.after(ew, 'search nearby'), sd = T.after(nb, 'search'), sf = T.after(sd, 'search for the pouch');
+        if (!dq0Rep(tb, 'ireq', { kind: 'IO_SEEK', result: 'IR_NOT_HERE' }).length || !dq0Ev(tb, 'E_ARRIVE', { how: 'A_WENT_TO' }).length) f.push('the table out of reach not walked over to first (' + dq0Evs(tb) + ')');
+        if (!dq0Rep(tt, 'ireq', { kind: 'IO_LOOK' }).length || portal(tt).length) f.push('"search the table for traps" not examine\'s check alone');
+        const pe = portal(ew), pn = portal(nb);
+        if (pe.length !== 1 || pe[0].b) f.push('the east wall not searched, in the light: ' + JSON.stringify(pe));
+        if (pn.length !== 1 || pn[0].a !== 3 || pn[0].b) f.push('nearby not searched within reach (a 3), in the light: ' + JSON.stringify(pn));
+        const pouch = st => st && st.items.find(i => i.name === 'pouch' && i.where === 'IW_SQUARE');
+        const p1 = pouch(sd.after);
+        if (!p1 || !(p1.flags & 0x08)) f.push('the pouch not hidden where it was: ' + JSON.stringify(p1));
+        if (portal(sd).length !== 1 || portal(sd)[0].b !== 1) f.push('the search after the torch went out not by touch');
+        if (took(sf) !== 62) f.push('the search for the pouch by touch not stopped as it came to it (6.2 seconds): ' + took(sf));
+        const p2 = pouch(sf.after);
+        if (!p2 || !(p2.flags & 0x08) || !(p2.flags & 0x20)) f.push('the pouch it hid, felt, not hidden still: ' + JSON.stringify(p2));
+        if (!/Your hands find [^.]*\bpouch\b/.test(s.slice(s.indexOf('> step east')))) f.push('the search by touch not finding the pouch it hid, in words');
+        const g3 = s.slice(s.indexOf('> search the table'));
+        inTurn(g3, ['You search the table...', 'There\'s nothing on the table.', 'The table shows no sign of a trap', 'You search the east wall...',
+          'You search about you, within reach...', 'You feel about you in the dark...', 'You feel about in the dark for the pouch...',
+          'Your hands find a pouch.'], f, 'the searches\' words: ');
         return f;
       },
       sdcard: true

@@ -65,12 +65,15 @@ static unsigned char __fastcall__ any (const char* list)
     return 0;
 }
 
-/* The paces' words (the last said goes: "walk slowly") */
+/* The paces' words (the last said goes: "walk slowly"); GA_SAID, a pace said outright, a faster one than feeling
+** the way: in the dark, gone at there (the world's, its dangers: HOUSE.md's walking in the dark), as a jog, a run and a
+** sprint are; "walk" alone, there, the cautious walk */
 static const struct { char w[11]; unsigned char g; } paces[] = {
     { "creep", GA_CREEP }, { "creeping", GA_CREEP }, { "sneak", GA_CREEP }, { "sneaking", GA_CREEP },
     { "tiptoe", GA_CREEP }, { "crawl", GA_CREEP }, { "quietly", GA_CREEP }, { "stealthily", GA_CREEP },
-    { "slowly", GA_SLOW }, { "slow", GA_SLOW }, { "walk", GA_WALK }, { "walking", GA_WALK }, { "normal", GA_WALK },
-    { "normally", GA_WALK }, { "jog", GA_JOG }, { "jogging", GA_JOG }, { "trot", GA_JOG }, { "briskly", GA_JOG },
+    { "slowly", GA_SLOW }, { "slow", GA_SLOW }, { "walk", GA_WALK }, { "walking", GA_WALK },
+    { "normal", GA_WALK | GA_SAID }, { "normally", GA_WALK | GA_SAID }, { "quickly", GA_WALK | GA_SAID },
+    { "jog", GA_JOG }, { "jogging", GA_JOG }, { "trot", GA_JOG }, { "briskly", GA_JOG },
     { "run", GA_RUN }, { "running", GA_RUN }, { "hurry", GA_RUN }, { "sprint", GA_SPRINT }, { "sprinting", GA_SPRINT },
     { "dash", GA_SPRINT },
 };
@@ -114,7 +117,7 @@ static void __fastcall__ described (unsigned char a)
 ** command's; but its pace, said with a move, set first: "run north") */
 unsigned char __fastcall__ s_pace_cmd (const char* l)
 {
-    unsigned char i, k, g = 0xFF, wa, st, n = 0, keep, d;
+    unsigned char i, k, g = 0xFF, wa, st, n = 0, keep, d, said;
 
     strncpy (b, l, INMAX);
     split ();
@@ -144,6 +147,8 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
             n = (3 * d + 2) / 5;
         }
     }
+    said = g != 0xFF && g > GA_WALK ? GA_SAID : 0;   /* (Outright, GA_SAID's or faster than a walk: for the dark) */
+    g = g == 0xFF ? g : g & ~GA_SAID;
     wa = HUB->watch;
     if (any ("stop\0")) {                       /* (Stopped: what it names; a pace's, back to a walk) */
         if (g == GA_WALK) {
@@ -160,6 +165,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
             return 0;
         }
         g = g == 0xFF ? 0xFF : GA_WALK;
+        said = 0;
     } else {
         k = any ("go\0move\0moving\0walk\0walking\0going\0travel\0as\0while\0proceed\0");
         if ((any ("trap\0traps\0") && any ("for\0") && (k || !any ("search\0examine\0disarm\0check\0x\0inspect\0study\0"))) ||
@@ -205,7 +211,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     k = (cmd.action == VB_MOVE_DIRECTION || cmd.action == VB_MOVE_TOWARD || cmd.action == VB_ENTER ||
         cmd.action == VB_APPROACH_OBJECT) && (cmd.dir != 0xFF || cmd.obj.kind);
     st = st && (!k || n || g != HUB->gait || wa != HUB->watch);    /* (Said, unless it goes on as it was) */
-    wset (WS_PACE, g, wa);                      /* (The world's, set: its request) */
+    wset (WS_PACE, g == 0xFF ? g : g | said, wa);   /* (The world's, set: its request) */
     if (st) {
         described (1);
     }
@@ -240,7 +246,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
 ** to match must be here too */
 static const char pace_words[] =
     "creep\0creeping\0sneak\0sneaking\0tiptoe\0crawl\0quietly\0stealthily\0slowly\0slow\0walk\0walking\0normal\0"
-    "normally\0jog\0jogging\0trot\0briskly\0run\0running\0hurry\0sprint\0sprinting\0dash\0"
+    "normally\0quickly\0jog\0jogging\0trot\0briskly\0run\0running\0hurry\0sprint\0sprinting\0dash\0"
     "status\0stop\0trap\0traps\0carefully\0careful\0warily\0listen\0listening\0mapping\0map\0"
     "step\0sidestep\0shuffle\0back\0"
     "space\0spaces\0square\0squares\0steps\0pace\0paces\0foot\0feet\0ft\0yard\0yards\0";

@@ -120,6 +120,10 @@ enum { PR_NONE, PR_IN, PR_ON, PR_FROM, PR_WITH, PR_AT, PR_TO };    /* (The other
 #define EX_LOCK     0x08                        /*   search's) */
 #define EX_TRAPS    0x10
 #define EX_COND     0x20
+#define SR_FOR      0x40                        /* (A search's aux, its verb's, commands.verbs': "search for the key",
+                                                **   "search around for a dagger"; "search nearby", "search around",
+                                                **   "feel around": search.c's, 2026-10-22) */
+#define SR_NEAR     0x80
 struct cmd;
 extern struct cmd cmd;                          /* (main.c's: the command being carried out, cq_cmd's) */
 extern unsigned char pc_face;                   /* (The hub's, copied for the overlays) */
@@ -222,6 +226,7 @@ void __fastcall__ sway_words (const struct sway* s);   /* Overlay 6: the charact
 void __fastcall__ dig_words (unsigned char how, unsigned char feet);   /* Overlay 1: digging's, how it goes */
 unsigned char __fastcall__ task_words (unsigned w, unsigned char named);   /* Overlay 3: a long task's (task.c) */
 void __fastcall__ beat_words (unsigned w);
+void __fastcall__ felt_words (unsigned w);      /* (Overlay 7's) A walk in the dark's beat (task.c's) */
 unsigned char __fastcall__ stop_kind (const char* word);  /* Overlay 7 (task.c's): the task a stop names */
 unsigned char __fastcall__ answer_of (const char* l);     /*   and a question's answer */
 void __fastcall__ bar_text (char* s, unsigned done, unsigned len);  /* (Overlay 3) */
@@ -294,7 +299,7 @@ unsigned char __fastcall__ look_way (unsigned char action);  /* Part 6: "look no
                                                 **   the door", "sniff" (the command's action, VB_*); VB_NONE: a
                                                 **   listen's or a sniff's end (main.c's E_READY); a thing examined,
                                                 **   its aspects: 0, or a door's work to do (PA_CHECK) */
-void focus_words (void);                        /* Overlay 7: a look one way's words, into lb (words.c's) */
+void focus_words (void);                        /* Overlay 13: a look one way's words, into lb (words.c's) */
 extern unsigned char lsn;                       /* (main.c's: a listen, 1 one way, 2 about; 0, none) */
 extern unsigned long heard_at;                  /* (main.c's: when a sound was last told) */
 
@@ -329,6 +334,7 @@ unsigned char room_where (void);
 unsigned char __fastcall__ den_seen (unsigned x, unsigned y);   /* Part 8: an actor's square in sight */                /* Part 8: the character's place in the room, and the room's size */
 unsigned char __fastcall__ lie_words (unsigned char i);   /* Part 8: a thing's place in the room (its sight_copy's) */
 unsigned char reach_go (void);
+unsigned char search_go (void);                 /* (Part 10's) A search begun, by its form (search.c) */
 unsigned char __fastcall__ place_go (const struct cmd* c);   /* Part 7: a place in the room walked to */                  /* Part 7: a command's thing out of reach walked over to first */
 void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the
                                                 **   light before times 256) */

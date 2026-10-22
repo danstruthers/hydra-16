@@ -61,6 +61,15 @@ void __fastcall__ o_trap_words (unsigned w)
         break;
     case TO_NOTICED:
     case TO_FOUND:
+        if (w & 0x80) {                         /* (By touch, in the dark: what the fingers find, 2026-10-22) */
+            strcpy (lb, kind <= TK_SPIKED ? "Your fingers find the edge of a cover in the floor: " :
+                trigger == TT_PLATE ? "Your fingers find the edges of a plate set in the floor: " :
+                trigger == TT_WIRE ? "Your fingers find a wire stretched across the floor: " :
+                "Your fingers find a wire that runs to the door: ");
+            trap_name (kind, trigger, 0);
+            strcat (lb, ".");
+            break;
+        }
         strcpy (lb, o == TO_NOTICED ? "You stop short: just ahead is a trap, " : "You find a trap: ");
         trap_name (kind, trigger, 0);
         strcat (lb, ".");
@@ -217,6 +226,9 @@ void __fastcall__ o_fixt_words (const struct msg* m)
             said[out - PO_RAISED]);
     } else if ((kind == PK_WINDOW || kind == PK_SLIT) && out <= PO_HELD && shutters[out]) {
         strcpy (lb, shutters[out]);
+    } else if (m->b && (out == PO_NOTHING || out == PO_FOUND)) {
+        strcpy (lb, out == PO_FOUND ? "Your hands find a door hidden in the wall." :
+            "You fumble around in the dark and find nothing.");   /* (A search by touch's, 2026-10-22) */
     } else {
         portal_words (out);                     /* (A door's, into lb) */
     }

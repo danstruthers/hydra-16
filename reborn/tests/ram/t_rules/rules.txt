@@ -1630,6 +1630,20 @@ dice
 ask DESCRIBE
 want text~"lesser hurts (3 levels)" text~"thorax S2 (fracture)" text!"thorax S3" text!"M2"
 
+# Keeping one's feet over a thing in the way, in the dark at a pace said outright (P_STUMBLE, 2026-10-22: HOUSE.md's
+# walking in the dark): the book's stumble roll (Skills 22), 3d6, the physical penalty and the circumstances over AGL a
+# fall, two of the world's steps a point (the darkness 4, a heavy thing 4: the book's +2 and +2)
+
+char
+end
+case a heavy thing in the dark (8 steps: 4 points): a roll of 8 and 4, 12, not over AGL 12: kept
+dice 6:3 6:3 6:2
+ask TEST a=P_STUMBLE steps=-8
+want grade=G_MS
+dice 6:3 6:3 6:3
+ask TEST a=P_STUMBLE steps=-8
+want grade=G_MF
+
 # Stumbles (Combat 14): a leg's wound (the table's u) a stumble roll, 3d6 and the physical penalty over AGL prone
 # (Skills 22); a grievous one to a limb an automatic stumble, the limb useless
 

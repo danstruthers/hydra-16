@@ -23,7 +23,7 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
-_ovbank:    .res        18          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+_ovbank:    .res        19          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
                                     ;   world's own banks (its paging's tables: ipage.c's; the ways across a room;
                                     ;   the traces' store, two: wtrace.c's)
 ova:        .res        1           ; (.A and .X kept through a stub)
@@ -91,7 +91,7 @@ go:
             SWPART      9, 4                ; The walks (dq0w.c's go, go_to, step_to)
             SWPART      10, 5               ; The things: the requests answered, a thing handled (things.c)
             SWPART      11, 5               ; The things listed, searched for, described, hidden
-            SWPART      12, 3               ; A door's work begun (dq0w.c's door_work)
+            SWPART      12, 15              ; A door's work begun (dq0w.c's door_work)
             SWPART      13, 8               ; The item store's rarer work: begun, kept, the kit, a chunk's things
             SWPART      14, 6               ; The denizens' bodies: their intents carried out (wbody.c)
             SWPART      15, 14              ; The blows, the bleeding (wfight.c)
@@ -113,7 +113,7 @@ go:
             SWPART      31, 11              ; The traces read, in words (wtrword.c)
             SWPART      32, 9               ; The way the character's scent goes, a hunter's (wtrscent.c)
             SWPART      33, 12              ; A walk across a room (dq0w.c's across: the main RAM's room)
-            SWPART      34, 11              ; The rooms' lights by their sconces (wkept.c)
+            SWPART      34, 15              ; The rooms' lights by their sconces (wkept.c)
             SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
             SWPART      37, 4               ; The rest of the UI's intents carried out (dq0w.c's intent_more)
@@ -122,11 +122,24 @@ go:
             SWPART      40, 12              ; Its weight, its lock, traps; a thing described (things.c)
             SWPART      41, 8               ; An opening told with what it shows beyond (dq0w.c's revealed)
             SWPART      42, 2               ; What a closer look at a thing shows; its condition (things.c)
+            SWPART      43, 10              ; A walk in the dark set out on: its way felt, a thing stumbled over
+            SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
+            SWPART      45, 5               ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
+            SWPART      46, 7               ; A search's thing, for or on; what a search turns up (things.c)
+            SWPART      47, 13              ; What's on a thing or in it, searched (things.c)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
             SWFN        climb, 2
             SWFN        climb_on, 2
+            SWFN        fall, 2
+            SWFN        dark_way, 43
+            SWFN        dark_end, 44
+            SWFN        tripped, 43
+            SWFN        ahead, 45
+            SWFN        felt_stop, 45
+            SWFN        no_exit, 45
+            SWFN        unlit_at, 45
             SWFN        begin, 3
             SWFN        toward_middle, 3
             SWFN        grow_below, 3
@@ -172,7 +185,10 @@ go:
             SWFN        wear, 40
             SWFN        make_own, 13
             SWFN        seen_owned, 13
-            SWFN        search, 11
+            SWFN        search, 46
+            SWFN        seek, 46
+            SWFN        on_it, 47
+            SWFN        thing_words, 11
             SWFN        describe, 40
             SWFN        look_at, 39
             SWFN        look_more, 40

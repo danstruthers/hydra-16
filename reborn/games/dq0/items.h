@@ -237,6 +237,11 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   as anyone sees it, no test (to: LM_*), in words into things_text:
                                                 **   IR_NONE no such thing; IR_NOT_HERE (its weight felt, it gone over for
                                                 **   traps: out of reach) where it lies in x, y (2026-10-22) */
+#define IO_SEEK         (IO_BAR + 10)           /* A search's thing (2026-10-22: name, to its form, SF_*): for one
+                                                **   (SF_FOR: the time to find it back in x, tenths, 0 a whole search's;
+                                                **   the world's tests made now, told as it ends), on or in one (SF_ON:
+                                                **   carried, or within reach: IR_NONE, none; IR_NOT_HERE, seen out of
+                                                **   reach, where it lies in x, y), the name kept for IO_SEARCH's */
 enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS };   /* (IO_LOOK's: a look at it; a closer look; its
                                                 **   condition; its weight; its lock; gone over for traps) */
 #define IO_PUZZLE       (IO_BAR + 4)           /* A command of the theme's puzzle's (theme.h), judged by its rules

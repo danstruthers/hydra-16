@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     14                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     15                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -42,7 +42,9 @@
                                                 **   records' shut, WB_CROSS; 12: the traces' stays, TS_STAY, a
                                                 **   trail's strength; 13: the timed work's long tasks, LT_STUDY ... LT_HIDE, the long
                                                 **   task's what, TE_BEGUN, TE_ASK_SHORT, I_WAIT's kind, a battering's beats, WB_TELLS ...;
-                                                **   14: the player's shortcuts, ALIAS_AT) */
+                                                **   14: the player's shortcuts, ALIAS_AT; 15: the dark's walks and the search's forms, WB_FEEL ...
+                                                **   WB_SHORT, FA_*, GA_SAID, GOING_BOLD, SF_*, PA_SEARCH's b and w1, IO_SEEK, STEP_FEELS, rs.h's
+                                                **   P_STUMBLE) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -338,7 +340,8 @@ enum {
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
 ** by the character's rules): who the actor's entry plus 1; x[0] what it's doing now (DO_*: the world keeps it, and
 ** tells as one notices the character or loses it), x[1] the heading it faces (0xFF: either, as it is).  I_STEP: a
-** square (w1 the heading, H_*, | STEP_COARSE: no time, nothing heard, a coarse move's; w2 1), a what it's heard as
+** square (w1 the heading, H_*, | STEP_COARSE: no time, nothing heard, a coarse move's; w2 1, | STEP_FEELS its kind
+** with no darkvision: in the dark it feels its way, its step's time twice, the world's, 2026-10-22), a what it's heard as
 ** (DE_MOVED, DE_NOISE), b how loud; I_GOTO: a dash, to w1 w2 (two squares off at most: past the character), a and b
 ** as I_STEP's; I_CLIMB: come along with the character up or down, to w1 w2 beside it, x[2] its stratum; I_WAIT: w1
 ** tenths; I_ATTACK: a the one struck at (0 the character), b the aim (Z_*); I_ENTER: w1 w2 its square, x[2] its
@@ -346,6 +349,7 @@ enum {
 ** whenever it was free; 0: if it was later); I_DONE (who 0): w1 the turn it's done (the hub's den_go: the turns
 ** pace's, the world going on once it's in), t the clock then */
 #define STEP_COARSE     0x200
+#define STEP_FEELS      2                       /* (I_STEP's w2: a kind that can't see in the dark, HOUSE.md's) */
 #define STEP_SCENT      0x400                   /* (I_STEP's w1, the heading none: the way the character's scent goes,
                                                 **   the world's to find, x[2] the hunter's nose; none found, a wait, its
                                                 **   doing DO_ROAM) */
@@ -504,9 +508,19 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   (HOUSE.md: every 30 feet), the way turns, a side passage, a door
                                                 **   passed, it opens out, it rises, it falls; a room crossed, as the
                                                 **   walk leaves it (to a door, a passage's mouth: the user's); */
-       WB_TELLS, WB_GIVES, WB_ON };             /*   a battering's as it goes (the user's, 2026-10-22): the first blow
+       WB_TELLS, WB_GIVES, WB_ON,                /*   a battering's as it goes (the user's, 2026-10-22): the first blow
                                                 **   that marks it, the one that leaves it giving, every fourth blow
-                                                **   else */
+                                                **   else; */
+       WB_FEEL, WB_FELT, WB_THING, WB_TRIP, WB_STUMBLE, WB_HIT, WB_OFF, WB_SHORT };   /* (The dark's, 2026-10-22:
+                                                **   HOUSE.md's walking in the dark: a walk set out on, its heading
+                                                **   times 256 and its gait faster than feeling its way times 4096 (0:
+                                                **   feeling its way); what its hands met, FA_* times 256; its foot on a
+                                                **   thing in its way, its kind times 256 (the catalogue's); fallen over
+                                                **   it, stumbled over it and on; run into what's there, FA_* times
+                                                **   256, its gait times 4096; gone over an edge, a drop's or a pit's
+                                                **   (FA_*), the fall after; stopped short at it) */
+enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT };   /* (What stops a walk in the dark, met: the
+                                                **   world's ahead) */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
 enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD, K_HELD };    /* E_CLIMB's how: begun, on, slipped
                                                 **   back, fallen, up, down; jumped down (a ledge, a shaft); no hold
@@ -526,10 +540,20 @@ enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: wha
 enum { WQ_SAVE, WQ_EXAMINE, WQ_START, WQ_SET }; /* The hub's wreq's kinds */
 #define WY_NO_INIT      0x100                   /* (WQ_START's y: dq0 -I, the tests', no engage initiative test nor
                                                 **   a grope's test while engaged: their fights' dice as they were) */
-enum { WS_PACE, WS_STANCE, WS_PAUSE };          /* WQ_SET's what: the character's pace (x, GA_*: 0xFF as it is) and its
-                                                **   watchfulness (y, WA_*); its stance (x, rs.h's D_*); the game
-                                                **   paused (x 1) or going on (x 0) */
+enum { WS_PACE, WS_STANCE, WS_PAUSE };          /* WQ_SET's what: the character's pace (x, GA_*: 0xFF as it is; |
+                                                **   GA_SAID, said outright) and its watchfulness (y, WA_*); its stance
+                                                **   (x, rs.h's D_*); the game paused (x 1) or going on (x 0) */
+#define GA_SAID         0x80                    /* (A pace said outright, faster than feeling the way: a jog, a run, a
+                                                **   sprint, "walk quickly"; said in the dark, the walk goes at it there,
+                                                **   its dangers, 2026-10-22) */
 enum { PW_ANY, PW_DOOR, PW_WINDOW };            /* I_PORTAL's b: a door or a portcullis, a window or a slit */
+enum { SF_ABOUT, SF_NEAR, SF_WALL, SF_FLOOR, SF_FOR, SF_ON };   /* (PA_SEARCH's b, 2026-10-22: the search's form,
+                                                **   HOUSE.md's searching: about it, as far as it sees; within reach, nearby; a
+                                                **   wall's, the heading it's on times 16; the floor nearby; for a
+                                                **   thing (the things' IO_SEEK's name, the time to find it I_PORTAL's
+                                                **   w1); on or in a thing (IO_SEEK's): the world's, | SF_TOUCH in the
+                                                **   dark, by touch) */
+#define SF_TOUCH        0x08
 enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARRED, PO_UNBARRED, PO_PICKED,
        PO_NOT_PICKED, PO_NO_PICKS, PO_NO_LOCK, PO_FORCED, PO_HELD, PO_FOUND, PO_NOTHING,   /* E_PORTAL's (a door's, */
        PO_RAISED, PO_HEAVED, PO_LOWERED, PO_IS_UP, PO_IS_DOWN, PO_NO_WINCH, PO_TOO_HEAVY, PO_NOT_PORTC,   /* a
@@ -866,7 +890,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   watch;                      /* WA_* */
     unsigned char   pc_pos;                     /* POS_* */
     volatile unsigned char pc_going;            /* The pace it's going at plus 1 (0: not moving), | GOING_DARK: by
-                                                **   feel */
+                                                **   feel; not moving, GOING_BOLD, a pace said outright in the dark */
     /* A fight: the character's blow, posted by the world (I_ATTACK) as it takes the round for it, and struck (the
     ** referee asked, E_FIGHT told), and the character's stance (rs.h's D_*: the referee's defence for it) */
     volatile unsigned char pc_foe;              /* The actor struck at, plus 1 (0: none posted) */
@@ -939,6 +963,8 @@ struct hub {                                    /* Bank 0, at $8000 */
 #define WA_MAP          0x04                    /* Mapping as it goes (the map's side the orientation's: its
                                                 **   materials to hand) */
 #define GOING_DARK      0x80
+#define GOING_BOLD      0x40                    /* (Not moving: its pace said outright in the dark, held to nothing
+                                                **   there: the world's bold_, the referees' words of the pace) */
 enum { POS_STANDING, POS_PRONE, POS_CROUCHED, POS_KNEELING, POS_SITTING };   /* A body's position (the hub's pc_pos,
                                                 **   an actor's pos: the world's; the referee's to judge by, and to
                                                 **   say it's fallen, rs.h's RS_ATTACK; crouched, kneeling and

@@ -65,7 +65,7 @@ const EXPRS = {
   iWhere: F('struct item', 'where'), iSn: F('struct item', 'sn'), iX: F('struct item', 'x'), iY: F('struct item', 'y'),
   iQty: F('struct item', 'qty'), iId: F('struct item', 'id'), iFuel: F('struct item', 'fuel'), iShut: F('struct item', 'shut'), iThick: F('struct item', 'thick'),
   iMat: F('struct item', 'mat'), iQuality: F('struct item', 'quality'), pcFuel: F('struct hub', 'pc_fuel'), pcLeft: F('struct hub', 'pc_left'),
-  ioName: 'IO_NAME', ioTheme: 'IO_THEME', ioBegin: 'IO_BEGIN', ioPuzzle: 'IO_PUZZLE', ioThrow: 'IO_THROW', ioFill: 'IO_FILL', ioShut: 'IO_SHUT', ioInside: 'IO_INSIDE', ioLook: 'IO_LOOK',
+  ioName: 'IO_NAME', ioTheme: 'IO_THEME', ioBegin: 'IO_BEGIN', ioPuzzle: 'IO_PUZZLE', ioThrow: 'IO_THROW', ioFill: 'IO_FILL', ioShut: 'IO_SHUT', ioInside: 'IO_INSIDE', ioLook: 'IO_LOOK', ioSeek: 'IO_SEEK',
   sightBank: 'SIGHT_BANK', tSeq: F('struct sight', 'seq'), tWhere: F('struct sight', 'where'), tDark: F('struct sight', 'dark'),
   tKind: F('struct sight', 'kind'), tSize: F('struct sight', 'size'), tRw: F('struct sight', 'rw'), tRh: F('struct sight', 'rh'), tRx: F('struct sight', 'rx'), tRy: F('struct sight', 'ry'),
   tLit: F('struct sight', 'lit'), tCeil: F('struct sight', 'ceil'), tFirst: F('struct sight', 'first'), tZ: F('struct sight', 'z'),
@@ -163,7 +163,7 @@ function layout() {
   const name = (member, v) => { const b = blockOf[member] || []; const n = b.find(x => byName[x] === v); return n === undefined ? v : n; };
   // (A things' request's kind: items.h's IO_*, the enum's or those #defined after it, IO_NAME ... IO_FILL)
   const D = j.L, ioDefs = { [D.ioName]: 'IO_NAME', [D.ioTheme]: 'IO_THEME', [D.ioBegin]: 'IO_BEGIN', [D.ioPuzzle]: 'IO_PUZZLE', [D.ioThrow]: 'IO_THROW', [D.ioFill]: 'IO_FILL',
-    [D.ioShut]: 'IO_SHUT', [D.ioInside]: 'IO_INSIDE', [D.ioLook]: 'IO_LOOK' };
+    [D.ioShut]: 'IO_SHUT', [D.ioInside]: 'IO_INSIDE', [D.ioLook]: 'IO_LOOK', [D.ioSeek]: 'IO_SEEK' };
   const ioName = v => { const n = name('IO_KIT', v); return typeof n === 'number' && ioDefs[v] ? ioDefs[v] : n; };
   return (LAYOUT = { L: j.L, K: byName, name, ioName });
 }
@@ -192,7 +192,8 @@ function createRecorder() {
       case 'E_PORTAL': e.po = name('PO_NONE', w & 0xFF); e.pk = name('PK_DOOR', w >> 8 & 0x7F); if (w & 0x8000) e.shows = true; break;
       case 'E_HARM': e.hc = name('HC_FALL', w & 0xFF); e.band = w >> 8 & 7; e.out = !!(w & 0x4000); e.caught = !!(w & 0x8000);
         e.stopped = e.hc === 'HC_STRUCK' && e.caught; break;          // (E_CAUGHT a fall's, E_STOPPED a blow's)
-      case 'E_TRAP': e.tk = name('TK_PIT', w & 15); e.tt = name('TT_PLATE', w >> 4 & 15); e.to = name('TO_SPRUNG', w >> 8); break;
+      case 'E_TRAP': e.tk = name('TK_PIT', w & 15); e.tt = name('TT_PLATE', w >> 4 & 3); e.to = name('TO_SPRUNG', w >> 8);
+        e.touch = !!(w & 0x80); break;                               // (Found by touch, in the dark: 2026-10-22)
       case 'E_TAKEN': e.ir = name('IR_OK', w & 0xFF); break;
       case 'E_TASK': e.te = name('TE_STOPPED', w & 0xFF); e.task = name('LT_NONE', w >> 8);
         if (e.te === 'TE_ENGAGED' || e.te === 'TE_FAR' || e.te === 'TE_AWAY' || e.te === 'TE_FIGHT') { e.by = (e.b & 0x3F) - 1; e.still = !!(e.b & 0x80); e.quiet = !!(e.b & 0x40); }
@@ -205,7 +206,11 @@ function createRecorder() {
         else if (e.te === 'TE_BEGUN' || e.te === 'TE_ASK_SHORT') e.what = e.b;   // (A timed work's, a battering's: what it's done to)
         else e.named = name('LT_NONE', e.b);
         break;
-      case 'E_BEAT': e.beat = name('WB_QUIET', w & 0xFF); e.side = name('WS_AHEAD', w >> 8); break;
+      case 'E_BEAT': e.beat = name('WB_QUIET', w & 0xFF); e.side = name('WS_AHEAD', w >> 8);
+        if ((w & 0xFF) >= K.WB_FEEL) {                         // (The dark's, 2026-10-22: what's met, FA_*, a thing's
+          e.fa = name('FA_NONE', w >> 8 & 7); e.thing = w >> 8; e.head = w >> 8 & 7; e.gait = w >> 12;   //   kind, a heading
+        }                                                          //   and its gait faster than feeling its way)
+        break;
       case 'E_DEN': e.de = name('DE_MOVED', e.a); e.sn = e.x[0]; e.seen = !!e.x[2]; break;
       case 'E_FIGHT': e.def = e.a; e.sn = e.x[0]; e.out = e.x[1] === 0xFF ? 'FO_GONE' : e.x[1] === 0xFE ? 'FO_BLED' : name('O_MISS', e.x[1]);
         e.ff = e.x[2]; break;

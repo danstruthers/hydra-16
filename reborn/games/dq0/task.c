@@ -265,6 +265,11 @@ void __fastcall__ o_bar_text (char* s, unsigned done, unsigned len)
         strcat (s, foe (i, 0));
         strcat (s, "  ");
     } else if (b && len) {
+        hub_mem (0, &i, &HUB->pc_going, 1);
+        if (b == LT_WALK && (i & GOING_DARK)) {
+            strcat (s, (i & 0x7F) <= GA_SLOW + 1 ? "by feel " : "blind ");   /* (In the dark: feeling its way, or
+                                                **   not, said outright) */
+        }
         b = done >= len ? 10 : (unsigned char) ((unsigned long) done * 10 / len);
         e = s + strlen (s);
         *e++ = '[';
@@ -316,6 +321,9 @@ void __fastcall__ o_beat_words (unsigned w)
     case WB_ON:
         msg ("You keep at it.");
         break;
+    default:
+        felt_words (w);                         /* (The dark's: overlay 7's) */
+        break;
     }
 }
 
@@ -323,10 +331,60 @@ void __fastcall__ o_beat_words (unsigned w)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* (Overlay 7's, its room: the dark's words, 2026-10-22) */
 #pragma code-name (push, "OV7CODE")
 #pragma rodata-name (push, "OV7RODATA")
 #pragma local-strings (push, on)
 
+/* A walk in the dark's beat (E_BEAT's w, WB_FEEL ... WB_SHORT: HOUSE.md's walking in the dark): set out on, feeling
+** its way or at a pace said outright; what its hands met; its foot on a thing in its way (the catalogue's kind), over
+** it fallen or stumbling; what it ran into; an edge gone over, stopped short at */
+void __fastcall__ o_felt_words (unsigned w)
+{
+    static const char* const met[FA_PIT + 1] = {
+        "Your hands find no wall within reach that way.", "Your hands meet a wall.", "You feel a door before you.",
+        "Your hands meet iron bars.",
+        "The floor falls away before you.", "The floor rises steeply before you.",
+        "The floor falls away before you: the edge of a pit."
+    };
+    static const char* const into[FA_PIT + 1] = { "", "a wall", "a door", "iron bars", "", "a rise in the floor", "" };
+    static const char* const gait[4] = { "walk", "jog", "run", "sprint" };
+    unsigned char b = w >> 8, k = b & 7, g = (b >> 4) - GA_WALK & 3;
+
+    switch ((unsigned char) w) {
+    case WB_FEEL:
+        if (b >> 4) {
+            sayf ("\nYou %s %s into the dark.", gait[g], head_name[k]);
+        } else {
+            sayf ("\nYou feel your way %s.", head_name[k]);
+        }
+        return;
+    case WB_FELT:
+        msg (met[k]);
+        return;
+    case WB_THING:
+    case WB_TRIP:
+    case WB_STUMBLE:
+        hub_mem (CAT_BANK, lb, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
+        hub_mem (CAT_BANK, &k, &CATALOGUE[b].flags, 1);
+        sayf ((unsigned char) w == WB_THING ? "\nYour foot finds something on the floor: %s %s." :
+            (unsigned char) w == WB_TRIP ?
+            "\nYou trip over something on the floor (%s %s), and go sprawling; you pick yourself up." :
+            "\nYou stumble over something on the floor (%s %s), but keep your feet.",
+            k & K_PLURAL ? "some" : *lb == 'a' || *lb == 'e' || *lb == 'i' || *lb == 'o' || *lb == 'u' ? "an" : "a", lb);
+        return;
+    case WB_HIT:
+        sayf (g ? "\nYou %s headlong into %s!" : "\nYou %s into %s.", gait[g], into[k]);
+        return;
+    case WB_OFF:
+        msg (k == FA_PIT ? "The floor drops away under your feet: a pit!" : "You blunder over the edge of a drop!");
+        return;
+    case WB_SHORT:
+        msg (k == FA_PIT ? "You stop short, teetering, at the edge of a pit." :
+            "You stop short, teetering, at the edge of a drop.");
+        return;
+    }
+}
 /* A wait's length, tenths (I_WAIT's w1): line l's duration, n minutes or hours ("wait 10 minutes", "an hour"); 0 a
 ** round (nothing said); 100 minutes at most, the world's sixteen bits' */
 unsigned __fastcall__ o_wait_of (const char* l, unsigned char n)
