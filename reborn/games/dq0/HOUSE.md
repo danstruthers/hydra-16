@@ -184,7 +184,7 @@ P_DIG.)  *(Every ruleset's.)*
 - **A part of the body that strikes a thing** (a fist, a foot, the head: Unarmed's) is the house's Unarmed test (the
   user's, 2026-10-22: "you should be able to avoid injury with a critical success or marginal success (or possibly
   even a marginal failure) test against unarmed skill.  MF only results in no damage, and CF results in damage to
-  self?": the lead's reading, *for the user to confirm*): a critical or a marginal success a blow that tells on the
+  self?": the lead's reading, the user's as it is, 2026-10-22): a critical or a marginal success a blow that tells on the
   thing (the Ignore table's strike, its impact) and no hurt; a marginal failure no harm to either; a critical failure
   no harm to the thing, but the part's: 2d6 and half the thing's blunt resistance, less the part's armour (gauntlets,
   boots' soles, a helm), a blunt hit on that part.  The character stops when it's hurt enough: a serious injury,
@@ -660,7 +660,7 @@ climb's test to hold on).
   listening) is told after what's plain at a glance, as its own line, saying how it was found: "You arrive at a
   closed door.", "Searching about...", "You find a gas trap, set to go off when the door is opened."
 
-## Light and traces *(slice 4.1: drafted for the user to review, 2026-10-21)*
+## Light and traces *(slice 4.1: drafted 2026-10-21; reviewed by the user, 2026-10-22: as it is for now)*
 
 Every ruleset's.  The book gives no burning times: these are the house's (the stopped design's hour for a torch).  Nor
 any numbers for the traces (its Tracking and a notice test of smell are its tests): the house's too.
@@ -759,7 +759,7 @@ and 2026-10-21: keen noses follow a scent far longer than an hour, a hound's esp
   character stays where it is (its stay's points, below, added to the nose: a rat's 3 squares once the character's been
   on its square some three quarters of an hour, a kobold's 2 after ten minutes or so, a man's 1).
 - **Strengthened by passing and by staying** (the user's, 2026-10-22: "repeated passage or occupancy should enhance
-  prior smells"; built 2026-10-22, these numbers drafts for the user to review): a scent is the stronger by the
+  prior smells"; built 2026-10-22, these numbers the user's as they are for now, 2026-10-22): a scent is the stronger by the
   passings over its square and the stays on it, as a print's clearness is by its passings: a point more at 4, another
   at 12, each point doubling how long it lasts.  So the character smells a rat that passed once for half an hour, one
   that passed four times for an hour, twelve times for two; a rat follows the character's scent the most of a day
@@ -940,12 +940,12 @@ something tells what it reveals.
   the door." as it goes) is a walk's beat, nothing revealed: the walk goes through.  (things.c's reveal; the world's
   tail and revealed, dq0w.c; fixt.c's shows.)
 
-## Walking and searching in the dark *(2026-10-22: drafted for the user to review)*
+## Walking and searching in the dark *(2026-10-22: drafted; the user's as it is for now, the same day)*
 
 Every ruleset's (the stumble's roll and the harm the referee's).  The user's playtest (DECISIONS.md's walking and
 searching in the dark): no walk turned toward an opening the character can't see; a cautious half-pace in the dark,
 anything faster said outright and dangerous; a search in the dark by touch, nearby; the search's forms.  The numbers
-are drafts, for the user to review.
+are drafts, the user's as they are for now (2026-10-22).
 
 - **In the dark** is where the character sees nothing by: its own square unseen (no light of its own, no room's own
   light, no lamp lying near lighting it), or blind (the referee's summary, C_BLINDED: the one place a blindness, however

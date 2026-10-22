@@ -965,3 +965,7 @@ player's shortcuts (a line's first word standing for a line: "alias x is dig dow
 x"), kept with the game; naming is "name" and "call" (and rename, dub; forget, unname) alone.
 
 **Design:** the command grammar (commands.ebnf's alias-cmd); DUNGEON.md's names.
+
+The user (2026-10-22), of what was left to settle (the Unarmed rule for a bare hand's battering, a marginal failure
+harming neither and a critical failure the part; the smells' numbers; walking in the dark's numbers): "The things to
+settle are fine as they are for now".
