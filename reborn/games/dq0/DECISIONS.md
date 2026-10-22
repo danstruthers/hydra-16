@@ -893,3 +893,20 @@ told as its time's done; stopped first (a blow, a wound, the player's stop), no 
 reading: the user's words say nothing of a stop).
 
 **Design:** HOUSE.md's long tasks.
+
+### Looking at a thing, its appraisal asked for, and what opening reveals
+
+The user (2026-10-22): "When examining an item, I want to know about its state, and for containers if they are open
+or closed, and what is on/in them.  `look [at] item` instead of examine should give these things.  Examine gives too
+many unimportant details (like value).  I think there needs to be a way to specify what aspect you are evaluating,
+maybe with `examine value [of] item` or `determine value [of] item` and `examine quality [of] item` or `determine
+quality [of] item` or maybe just `quality [of] item` or `value [of] item`.  When opening something (a door, a bag, a
+chest) there should be an automatic `look in` or `look through` that happens, for instance if I open a chest, I
+should get a "You open the chest, revealing a pile of gold coins", and if I open a door, I should receive text like
+"You open the door, revealing a dark corridor running away from you into the darkness" or some such."  So: looking at
+a thing tells what anyone sees of it (its state: open or closed, lit, worn, battered; what's in it or on it), no
+appraisal; examining it a closer look, still no appraisal; its value or its quality only when asked ("examine the
+value of", "determine the quality of", "value", "quality": the referee's appraisal as before); and opening a door, a
+chest, a bag tells what it reveals (a look in, a look through), in the open's own sentence.
+
+**Design:** HOUSE.md's commands; the command grammar's words.
