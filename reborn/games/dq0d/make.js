@@ -1,7 +1,9 @@
 // make.js - (dq0d) the denizens' data files, after its build (build.js calls build): kinds.txt (the game's bestiary)
 // made obj/games/dq0d.dat, 40 bytes a kind (dq0d.c's struct dkind), the first none (its flags the kinds' count, the
 // first too, its styles the factions'); then factions.txt's factions, 32 bytes each (struct faction), the first none.
-// And the world's lore (lore.h): peoples.txt made obj/games/dq0f.dat, deities.txt obj/games/dq0g.dat, 64 bytes a
+// And the kinds' traces (slice 4.1: their tread, marks, smell, scent and nose) made obj/games/dq0tr.dat, 64 bytes a
+// kind (the world's traces' store, dq0w/wtrace.c's struct tkind), the first the character's own.  And the world's lore
+// (lore.h): peoples.txt made obj/games/dq0f.dat, deities.txt obj/games/dq0g.dat, 64 bytes a
 // record (struct people, struct deity), the first none (its first byte the records' count), their words after; and
 // the deities' names, spaces between, obj/games/dq0g.txt (the UI's: the commands' words for them).
 'use strict';
@@ -9,7 +11,8 @@ const fs = require('fs');
 const path = require('path');
 
 const WAYS = { s: 0x01, l: 0x02, w: 0x04, a: 0x08, f: 0x20, t: 0x40 };   // dq0d.c's K_SHY, K_LAIR, K_WAYS, K_BOLD, K_LIGHTS, K_SWEEPS
-const K_BONES = 0x10;                           //   and K_BONES
+const K_BONES = 0x10, K_NOSE = 0x80;            //   and K_BONES, K_NOSE (a hunter by smell: its nose 6 or more)
+const TREC = 64, NOSE_HUNTS = 6;                // (wtrace.c's struct tkind: a kind's traces)
 const STYLES = { b: 0, n: 1, m: 2, x: 3 };      // level.h's ST_*: a bit each
 const MINDS = { m: 0, b: 1, l: 2, a: 3, c: 4 }; // dq0d.c's M_*
 const AT = { h: 0, u: 1, w: 2, i: 3, f: 4 };    // hub.h's AT_*
@@ -93,7 +96,8 @@ function build({ dir, objdir, say = () => {} }) {
   kinds.forEach((f, i) => {
     const at = KREC * (i + 1), pair = s => s.split('-').map(Number), fac = names.indexOf(f[11]) + 1;
     const bad = () => { throw new Error(`dq0d/kinds.txt: line ${i + 1}: ${f.join(' | ')}`); };
-    if (f.length !== 22 || f[0].length > 11 || f[1].length > 7 || !fac || !(f[12] in MINDS) || !(f[18] in LIGHTS) ||
+    if (f.length !== 27 || !/^[0-9]$/.test(f[22]) || !/^[0-9]$/.test(f[24]) || !/^[0-9]$/.test(f[26]) ||
+        f[23].length > 23 || f[25].length > 23 || f[0].length > 11 || f[1].length > 7 || !fac || !(f[12] in MINDS) || !(f[18] in LIGHTS) ||
         !(f[19] in NATURES) || !/^[1-6]$/.test(f[15]) || !/^(body|bones)$/.test(f[21])) bad();
     out.write(f[0], at, 'latin1');
     out.write(f[1], at + 12, 'latin1');
@@ -103,7 +107,8 @@ function build({ dir, objdir, say = () => {} }) {
       return +ft / SQ_FT;
     };
     const [d0, d1] = pair(f[4]), [n0, n1] = pair(f[5]), [sl, sd] = f[8].split('-').map(sq);
-    const flags = [...f[2]].reduce((a, c) => a | (WAYS[c] || 0), 0) | (f[21] === 'bones' ? K_BONES : 0);
+    const flags = [...f[2]].reduce((a, c) => a | (WAYS[c] || 0), 0) | (f[21] === 'bones' ? K_BONES : 0) |
+      (+f[26] >= NOSE_HUNTS ? K_NOSE : 0);
     const styles = [...f[3]].reduce((a, c) => a | (1 << STYLES[c]), 0);
     const arms = f[20].split(/\s+/).reduce((a, w) => {
       if (ARMS.indexOf(w) < 0) bad();
@@ -133,6 +138,20 @@ function build({ dir, objdir, say = () => {} }) {
     out[at + 21] = AT.i;                         // (To none: indifferent)
   });
   fs.writeFileSync(path.join(objdir, '..', 'dq0d.dat'), out);
+
+  // The kinds' traces (dq0tr.dat): each one's name, tread, smell, nose and size, its marks' words and its scent's (each
+  // 0-ended, "" none); the first the character's own (its marks booted feet, as its footwear doesn't say otherwise: the
+  // world's)
+  const tout = Buffer.alloc(TREC * (kinds.length + 1));
+  const trace = (at, name, tread, smell, nose, size, marks, scent) => {
+    tout.write(name, at, 'latin1');
+    [tread, smell, nose, size].forEach((v, k) => { tout[at + 12 + k] = v; });
+    if (marks !== '-') tout.write(marks, at + 16, 'latin1');
+    if (scent !== '-') tout.write(scent, at + 40, 'latin1');
+  };
+  trace(0, '', 4, 3, 2, 4, 'booted feet', 'a smell of sweat');
+  kinds.forEach((f, i) => trace(TREC * (i + 1), f[0], +f[22], +f[24], +f[26], +f[15], f[23], f[25]));
+  fs.writeFileSync(path.join(objdir, '..', 'dq0tr.dat'), tout);
 
   // The deities (dq0g.dat), first: the peoples name them
   const ds = blocks(path.join(dir, 'deities.txt'), 'deity'), dnames = ds.map(d => d.f.deity[0]);

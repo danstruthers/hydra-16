@@ -746,8 +746,9 @@ threshold; what it reads becomes the circumstances (the steps) of the referee's 
   (the character's look, the denizens' asking); the referee judges.
 - **Kept by how each spreads, none on a clock.**  **Light** (instant, in straight lines) is a grid, half a byte a
   square (0 dark ... 15), 512 bytes a chunk, worked out as it's first wanted and again only near a change
-  (dq0p/light.c: 16 chunks' grids in a bank of the senses' own).  Light is the only layer built; sound, smell and the
-  rest are still to come (below).
+  (dq0p/light.c: 16 chunks' grids in a bank of the senses' own).  Light is the only layer built as a grid; the
+  traces on the floor and their smells are the world's records (below: the traces on the floor), sound and the air
+  still to come.
 - **The light layer.**  Its emitters: a lit room's own light (R_LIT: its floor and walls, 6) and the lit things lying
   about (a lamp of reach r, its kind's light: the squares within r each way it has a clear line to from two feet above
   its floor, 2 (r - d) + 1 at d squares off: a torch 9 by it, 1 at its reach).  A chunk's grid is worked out again
@@ -777,6 +778,57 @@ threshold; what it reads becomes the circumstances (the steps) of the referee's 
   answer**, beyond all of them, no line cast, till it's gone further or the character changes.  Its eyes adapt to the
   light it stands in (the layer's, and the character's light near it).  A mind does nothing yet with a light it sees
   far off.
+
+### The traces on the floor, smells and smoke (slice 4.1)
+
+The user (2026-10-16): "Dust and dirt on the floor may or may not be disturbed, depending on current movements of
+denizens or the player, and tracking ability can use that to understand how many creatures and how recently (and
+their types, possibly) have traveled the area.  This is a whole other layer of the dungeon that would need to be
+tracked, and some surfaces (rough stone) would not show tracks well, whereas dirt or smooth stone (for different
+reasons) would.  Regularly cleaned hard floors would help conceal that sort of information."  And: "Traces of passage
+include smells as well, which dissipate with time (more quickly than fresh dust accumulates to cover tracks)."  And
+(2026-10-21): "some denizens have rather keen sense of smell, and may be able to follow a scent for much longer than
+an hour ... Rain and wind would act to reduce those further.  Wind/air movement toward a potential foe could also
+alert those with particularly good sense of smell long before sound or light might reach them."
+
+- **A layer of records, the world's** (it moves every body).  Each passing is journalled as it's made (the hub's
+  traces' journal, TJ_AT, in the denizens' events' bank: two rings of 64, the character's squares and the denizens'):
+  the square left, whose (a kind, 0 the character), when, and the way it went from there; a flame carried, its smoke
+  too.  Its writers: the character's walk (dq0w.c's step_on, part 23), the actors' bodies (wbody.c's I_STEP, a dash,
+  a step back; a coarse move's too), the denizens out of the character's way (their task's roam: I_TROD, the square
+  come to, no way), and a lair of sweepers placed (I_SWEPT: its chunk kept swept).  The cost of a step is the
+  journal's entry (trod.inc, in the part that makes it: no main RAM), and a part's swap each 24 passings as the
+  world's main loop takes the journal into the store (tr_flush, part 28).
+- **The store** (dq0w/wtrace.c, in two banks of the world's own): records of eight bytes, four to a bucket, a square's
+  found by a hash of its chunk and place; a passing of one there already counted in it, a new one over the bucket's
+  oldest (so a busy place treads old traces out, and the store never fills).  Its chunks in a directory (32; dq0 -C's
+  3): the nine round the character always, a passing's chunk read in as it's wanted (not a coarse move's: kept only
+  where it's held); the one least lately wanted put out to its region's file in the save folder (trSXXYY.dat: a
+  version each time, vfile.inc's, each chunk a group of its own, its flags with it: swept), read back as it's wanted,
+  every chunk changed written by the save (tr_flush's keep, WQ_SAVE's).  A game carried on reads them as they're
+  wanted.  The kinds' numbers (tread, smell, nose, size) are read in as it begins (dq0tr.dat: dq0d/make.js's, from
+  kinds.txt).
+- **What shows of them** goes by the floor where each square is (the maker's material: earth, soil, rough stone,
+  flags, paving), the stratum's age's dust, swept or not, how heavily the kind treads, how many passed, and their age
+  against the print's life on that floor; how strongly a scent smells by its kind's smell and its reader's nose
+  (hub.h's SCENT_LIFE: its strength halving each doubling of its age), and how far it's carried.  HOUSE.md's light and
+  traces has the numbers.
+- **Read** (I_TRACE, the UI's: the floor looked at, the Tracking test, a smell; dq0w/wtrace.c's part 29, its words
+  part 31's, wtrword.c): the floor where the character stands and the squares round it, two each way (a smell's
+  carried further, through what lets the air through: the world's, as the dungeon is), each kind's traces together,
+  the clearest first, the referee's test at steps by the clearest (the world's slot: P_TRACK, P_NOTICE_SMELL), and as
+  much as its grade reads, in the UI bank's tread and its words (the world's, as the things' are: the UI's overlays
+  have no room), said as E_VIEW V_TRACED comes (look (16), words.c's).  Looking or listening one way's sniff ("sniff
+  at the grating", way.c's) is the same read, one way.
+- **Smelt and followed by the denizens**: a kind's nose (kinds.txt's) smells the character in still air within a
+  third of it, squares (the senses', dq0p/sense.c: dsense's SN_SMELT, its mind asking); a hostile hunter by smell
+  (nose 6 or more) that doesn't sense it follows its trail: the journal's (its last 64 squares, as the nose's life of
+  the scent allows: dq0d.c's scent), then the store's older trail (I_STEP's STEP_SCENT: wtrscent.c, part 32, the way
+  the character went from the square it's on, or the freshest beside it).
+- **The air and the rain to come** plug in at one place each: a draft widens a scent's reach downwind and narrows it
+  upwind (wtrace.c's sniff, wtrscent.c's trail, sense.c's smelt), and carries a scent to a denizen far downwind (the
+  air layer, slice 4.5, with sound); rain and running water fade scents and prints faster (wtrace.c's faded, hub.h's
+  SCENT_LIFE: slice 4.9, with water).
 
 ### Seeing, and the map
 

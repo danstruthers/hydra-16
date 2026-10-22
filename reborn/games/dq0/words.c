@@ -408,6 +408,15 @@ void o_words (void)
     *(lbe = lb) = 0;
     lbn = 0;
     S = &sight_copy;
+    if (sight_close & 16) {                     /* (The traces read: the world's words, I_TRACE's, the UI bank's
+                                                **   tread) */
+        hub_mem (UI_BANK, lb, UIREC->trtext, sizeof UIREC->trtext);
+        lbe = lb + strlen (lb);
+        if (lb_stream) {
+            lb_out ();
+        }
+        return;
+    }
     if (sight_close & 8) {
         focus_words ();                         /* (A look one way's: what it sees that way, overlay 11's) */
         return;

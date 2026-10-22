@@ -279,7 +279,7 @@ void __fastcall__ look_way (unsigned char action);  /* Part 6: "look north", "lo
                                                 **   "sniff" (the command's action, VB_*); VB_NONE: a listen's or a
                                                 **   sniff's end (main.c's E_READY) */
 void focus_words (void);                        /* Overlay 11: a look one way's words, into lb (words.c's) */
-extern unsigned char lsn;                       /* (main.c's: a listen, 1 one way, 2 about; 4, a sniff; 0, none) */
+extern unsigned char lsn;                       /* (main.c's: a listen, 1 one way, 2 about; 0, none) */
 extern unsigned long heard_at;                  /* (main.c's: when a sound was last told) */
 
 /* ---- bank.s */

@@ -7,7 +7,9 @@
 ** used to more light than is there; a line clear between (no rock, wall nor shut door: eyes.c's clear_line, the
 ** chunks made for it as they were for the denizens' own).  Heard: within the kind's hearing as it works (busy: the
 ** sounds' layer later, slice 4.5).  Its light seen far off: carried, in line, within the kind's eyes' reach of it
-** (eyes.c's glow_reach).  No smell yet (slice 4.1).  A far one (beyond all of them) is answered coarsely, no line
+** (eyes.c's glow_reach).  Smelt (slice 4.1): in still air, within a third of its nose's keenness (squares: a hound's
+** three), along a line the air passes (clear_line's: no rock, wall nor shut door); the one place the air layer will
+** carry it further downwind, less upwind (slice 4.5).  A far one (beyond all of them) is answered coarsely, no line
 ** cast: how far it may go with the answer standing (slack).
 */
 
@@ -31,7 +33,7 @@ static unsigned __fastcall__ apart (int dx, int dy)
 
 void sense_actor (void)
 {
-    static unsigned char k, sight, dark, hear, eyes, pcs, own, lv, lit, res, m, ex;
+    static unsigned char k, sight, dark, hear, eyes, nose, pcs, own, lv, lit, res, m, ex;
     static unsigned pcx, pcy, dist;
     static int dx, dy;
     static struct eyes* e;
@@ -42,6 +44,7 @@ void sense_actor (void)
     dark = HUB->dsense.dark;
     hear = HUB->dsense.hear;
     eyes = HUB->dsense.eyes;
+    nose = HUB->dsense.nose;                    /* (Its smell's reach in still air, squares) */
     memcpy (&a, &HUB->actor[k], sizeof a);
     pcs = HUB->pc_stratum;
     pcx = HUB->pc_x;
@@ -74,14 +77,17 @@ void sense_actor (void)
     if (!lit && (ex = (e->a >> 4) - lv) < 16) {
         m = m * 4 / (4 + ex);                   /* (Darkvision the less, its eyes used to more light) */
     }
-    if (!res && dist <= m && clear_line (a.sn, a.x, a.y, dx, dy, dist, 1)) {
-        res = SN_SEEN;
+    if (!res && (dist <= m || dist <= nose) && clear_line (a.sn, a.x, a.y, dx, dy, dist, 1)) {
+        res = dist <= m ? SN_SEEN : SN_SMELT;
     }
     hub_map (0);
     HUB->dsense.res = res;
     m = lit ? sight : dark;                     /* (Far beyond all of them: the coarse answer, no line cast) */
     if (hear > m) {
         m = hear;
+    }
+    if (nose > m) {
+        m = nose;
     }
     HUB->dsense.slack = dist > m + 1 ? (dist - m - 1 > 0xFF ? 0xFF : dist - m - 1) : 0;
 }

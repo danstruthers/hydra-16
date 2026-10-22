@@ -42,6 +42,7 @@ games/lib/dq0/dq0p.ovl ../obj/games/dq0p.hyx.ovl
 games/lib/dq0/dq0d  ../obj/games/dq0d.hyx
 games/lib/dq0/dq0d.ovl ../obj/games/dq0d.hyx.ovl
 games/lib/dq0/dq0d.dat ../obj/games/dq0d.dat
+games/lib/dq0/dq0tr.dat ../obj/games/dq0tr.dat ;   the kinds' traces (their marks, their smells: the world's)
 games/lib/dq0/dq0d.exp ../obj/games/dq0d.exp ;   its exports, for its bank program: popgen, its
 games/lib/dq0/popgen.bp ../obj/bank/popgen.bp ;   populations from a theme's inhabitants
 games/lib/dq0/dq0g.dat ../obj/games/dq0g.dat ;   the world's deities, and its peoples (lore.h)

@@ -114,6 +114,8 @@ struct dkind {
                                                 **   rooms kept lit: DUNGEON.md's light kept, slice 4.1) */
 #define K_SWEEPS        0x40                    /* It keeps its lair's floors swept (no dust there, its traces
                                                 **   scattered: DUNGEON.md's traces, slice 4.1) */
+#define K_NOSE          0x80                    /* A hunter by smell (its nose keen, kinds.txt's 6 or more): hostile,
+                                                **   it follows the character's scent where it can't sense it (scent) */
 enum { M_MINDLESS, M_BEAST, M_LOW, M_AVERAGE, M_CUNNING };   /* Its mind: nothing sways it; P_ANIMALS only; easily
                                                 **   fooled, hard to reason with; neither; hard to fool */
 #define KINDS           ((struct dkind*) 0x8000)
@@ -196,6 +198,9 @@ struct pop {
 typedef char pop_fits[sizeof (struct pop) <= 0x2000 ? 1 : -1];
 
 static unsigned char kb, pb;                    /* Its banks: the kinds', the records' */
+static unsigned char knose[SND_KINDS];          /* Each kind's nose (kinds.txt's, dq0tr.dat's: the traces'), and the
+                                                **   character's smell (its sweat's: the scent a hunter follows) */
+static unsigned char pcsmell = 3;
 static unsigned char nkinds;
 static unsigned long tdens;                     /* The kinds that live in the game's theme's dungeon (theme.h's: a bit
                                                 **   each, by kinds.txt's order): only those are populated */
@@ -262,6 +267,15 @@ static int __fastcall__ kinds_load (const char* dir)
         memcpy ((char*) 0x8000 + off, piece, n);
     }
     close (fd);
+    strcpy (path, dir);                         /* (The kinds' noses, the character's smell: the traces' file) */
+    strcat (path, "/dq0tr.dat");
+    if ((fd = open (path, O_RDONLY)) >= 0) {
+        for (n = 0; n < SND_KINDS && read (fd, piece, 64) == 64; ++n) {
+            knose[n] = piece[14];
+            pcsmell = n ? pcsmell : piece[13];
+        }
+        close (fd);
+    }
     hy_bank (kb);                               /* (The first record's the counts; the factions after the kinds) */
     nkinds = KINDS[0].flags;
     nfacts = KINDS[0].styles < NFACT ? KINDS[0].styles : NFACT;
@@ -486,6 +500,9 @@ static unsigned char __fastcall__ open_sq (unsigned char* p)
     return p && (TILE (*p) == T_FLOOR || TILE (*p) == T_CORR || TILE (*p) == T_STEPS);
 }
 
+static struct msg im;                           /* (Its intents: below) */
+static void __fastcall__ post (unsigned char kind, unsigned char who);
+
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
@@ -494,7 +511,7 @@ void __fastcall__ s_place (unsigned char i)
     struct stratum* s;
     struct room* q;
     unsigned x0, y0, x, y, ox, oy;
-    unsigned char w = 7, h = 7, j, t, k;
+    unsigned char w = 7, h = 7, j, t, k, kd = 0;
 
     lair_get (i);
     s = &STRATUM (L.sn);
@@ -537,6 +554,7 @@ void __fastcall__ s_place (unsigned char i)
             break;
         }
         den_get (k);
+        kd = D.kind;
         D.hx = L.hx;                            /* (Its home, its record's own: its lair's may be out of the cache) */
         D.hy = L.hy;
         if (t < 32) {
@@ -547,6 +565,13 @@ void __fastcall__ s_place (unsigned char i)
             D.ready = now + random (50);
         }
         den_put (k);
+    }
+    if (kd && (kind_get (kd), K.flags & K_SWEEPS)) {
+        im.x[2] = L.sn;                         /* (A kind that sweeps its floors: the lair's chunk kept swept, the
+                                                **   world's traces told) */
+        im.w1 = L.hx;
+        im.w2 = L.hy;
+        post (I_SWEPT, 0);
     }
     L.flags |= L_PLACED;
     lair_put (i);
@@ -869,10 +894,12 @@ static unsigned char __fastcall__ senses (unsigned char k)
     HUB->dsense.dark = K.dark;
     HUB->dsense.hear = K.hear;
     HUB->dsense.eyes = K.eyes;
+    HUB->dsense.nose = knose[akind[k] % SND_KINDS] / 3;    /* (Its smell's reach in still air: a third of its
+                                                **   nose, squares) */
     hub_call (&HUB->dsense, T_SENSES);
     HUB->dsense.state = REQ_FREE;
     slk[k] = HUB->dsense.slack;
-    return (HUB->dsense.res & (SN_SEEN | SN_HEARD)) != 0;
+    return (HUB->dsense.res & (SN_SEEN | SN_HEARD | SN_SMELT)) != 0;
 }
 
 /* A step for actor k (the copy): a way it can walk to a square no one's on, within lim squares of its home; how:
@@ -1202,6 +1229,49 @@ static unsigned char __fastcall__ meets (unsigned char k, unsigned char was)
     return d;
 }
 
+/* The way actor k (the copy a, its kind K's) follows the character's scent where it doesn't sense it (a hunter by
+** smell, K_NOSE: DUNGEON.md's traces): the character's trail, the world's journal of its passings (the hub's traces'
+** journal, TJ_AT: its last NTRAIL squares), the freshest square of it beside the actor (or under it) its nose can
+** still smell (hub.h's SCENT_LIFE, of the character's smell, by its nose: a hound's days, a rat's most of a day), and
+** on along it to the next: the step toward that (step_for's); or, an older trail, the world's to find (STEP_SCENT:
+** the traces' store, which keeps it all), 0xFB, at once if the last one led it on, else once each ten seconds (sniffed:
+** till then); 0xFF, neither */
+static unsigned long sniffed[NACTORS];
+static unsigned char __fastcall__ scent (unsigned char k)
+{
+    struct tstep* e;
+    unsigned n, i;
+    unsigned long life;
+    unsigned char d = 0xFF;
+
+    life = (unsigned long) SCENT_LIFE (pcsmell, knose[akind[k] % SND_KINDS]) * TQ;
+    hub_map (DEN_BANK);
+    n = TJ_AT->pn;
+    for (i = 0; i < NTRAIL && i < n; ++i) {     /* (The newest first) */
+        e = &TJ_AT->p[(n - 1 - i) % NTRAIL];
+        if (now - e->t > life) {
+            break;
+        }
+        if (e->sn == a.sn && apart (e->x - a.x, e->y - a.y) <= 1) {
+            if (i) {
+                e = &TJ_AT->p[(n - i) % NTRAIL];   /* (The next it went to) */
+                refx = e->x;
+                refy = e->y;
+                d = step_for (k, 2 * K.range + 8, S_TOWARD);
+                refx = pcx;
+                refy = pcy;
+            }
+            break;
+        }
+    }
+    hub_map (0);
+    if (d == 0xFF && (now >= sniffed[k] || (HUB->actor[k].doing == DO_COMING && !sres[k]))) {
+        sniffed[k] = now + 100;
+        d = 0xFB;                               /* (The store sniffed: an older trail, if there's one) */
+    }
+    return d;
+}
+
 /* What actor k means to do, by its kind, its attitude and what it senses, said (its intent: the world does it, by the
 ** character's rules, or strikes its blow) and waited for, and the blows struck taken to heart (fought): kept off a
 ** foe; an ally's way; as it senses the character, meets's (a foe beside it: a blow); a noise heard, still a while;
@@ -1250,6 +1320,9 @@ static unsigned char __fastcall__ decide (unsigned char k)
         d = ally (k);
     } else if (sres[k]) {
         d = meets (k, was);
+    } else if (foe && (K.flags & K_NOSE) && (d = scent (k)) != 0xFF) {
+        a.doing = DO_COMING;                    /* (Its nose to the character's trail: after it, the way the scent
+                                                **   goes; the world's, an older trail: DO_ROAM, if there's none) */
     } else if (alert[k] > now) {
         d = 0xFE;                               /* (A noise heard: still, facing the way it came, a while) */
         wt = 10 + random (20);
@@ -1268,6 +1341,13 @@ static unsigned char __fastcall__ decide (unsigned char k)
     if (d < 4) {                                /* (A step, now and then a noise of its own) */
         im.w1 = H_OF (d);
         im.w2 = 1;
+        im.a = ++steps[k] & 7 ? DE_MOVED : DE_NOISE;
+        im.b = steps[k] & 7 ? 1 : 3;
+        act (I_STEP, k);
+    } else if (d == 0xFB) {                     /* (The way the scent goes, the world's to find) */
+        im.w1 = STEP_SCENT;
+        im.w2 = 1;
+        im.x[2] = knose[akind[k] % SND_KINDS];
         im.a = ++steps[k] & 7 ? DE_MOVED : DE_NOISE;
         im.b = steps[k] & 7 ? 1 : 3;
         act (I_STEP, k);
@@ -1325,7 +1405,7 @@ static unsigned long roam_at;                   /* (The soonest one's due) */
 static unsigned char roam (void)
 {
     struct den* q = POP->den;
-    unsigned char i, lim, n = 0;
+    unsigned char i, lim, st, n = 0;
     unsigned x, y;
 
     if (now < roam_at) {
@@ -1358,6 +1438,14 @@ static unsigned char roam (void)
             D.y = y;
             D.face = random (4) * 2;
             n |= D.sn == pcs && apart (x - pcx, y - pcy) <= ACT_R + 16;    /* (Near the character now) */
+            im.x[1] = D.kind;                   /* (Its passing: the world's traces, kept where it holds the chunk) */
+            im.x[2] = D.sn;
+            im.w1 = x;
+            im.w2 = y;
+            im.a = D.face;
+            st = stirs;
+            post (I_TROD, 0);
+            stirs = st;                        /* (Nothing an actor's decision reads: not waited for) */
         }
         D.ready = now + ROAM_T + random (ROAM_T);
         if (D.ready < roam_at) {

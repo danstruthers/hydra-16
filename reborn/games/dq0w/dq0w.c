@@ -55,6 +55,7 @@
 #include "work.h"
 #include "things.h"
 #include "wbody.h"
+#include "trace.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
@@ -83,6 +84,7 @@ unsigned char __fastcall__ fight_on (unsigned char idle);
 void __fastcall__ disengage_go (const struct msg* m);    /* Part 26 */
 unsigned char flee_on (void);                   /* Part 26 */
 unsigned char toward_middle (void);            /* Part 3 */
+void __fastcall__ across (unsigned char h, unsigned char r);   /* Part 33 */
 struct work wk;
 extern char _SWAP_START__[];
 unsigned char den_done;                         /* (wbody.h's) */
@@ -614,9 +616,12 @@ static void __fastcall__ see (unsigned char first)
 }
 
 /* Across room r on heading h (no door that way): as far as its floor can be walked, a ledge stopping it (told); a
-** small move's (I_STEP's) no more than lim_ squares, and not on along a passage */
+** small move's (I_STEP's) no more than lim_ squares, and not on along a passage (part 33's: the main RAM's room, the
+** traces', slice 4.1; part 9's walks calling it, once a move) */
+#pragma code-name (push, "SW33CODE")
+#pragma rodata-name (push, "SW33RODATA")
 
-static void __fastcall__ across (unsigned char h, unsigned char r)
+void __fastcall__ s_across (unsigned char h, unsigned char r)
 {
     unsigned long t = 0;
     unsigned char n = 0, st;
@@ -712,6 +717,9 @@ static void __fastcall__ across (unsigned char h, unsigned char r)
     set_off (t);
     bound_for (mx, my);
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (push, "SW9CODE")
 #pragma rodata-name (push, "SW9RODATA")
@@ -1607,6 +1615,8 @@ void __fastcall__ s_start (const char* dir)
 
     chunks_init (ASK_WORLD);
     items_begin (dir);                          /* (The item store: the catalogue, a game carried on its things) */
+    hy_bank (ovbank[OVBANKS]);
+    strcpy (TR_DIR, dir);                       /* (The traces' kinds' words, the lib folder's: wtrace.c's) */
     for (k = 0; hub_map (0), !HUB->quit && k != IO_BEGIN; ) {
         hy_sem_wait (HUB->sem[T_WORLD], 4);
         hub_map (0);
@@ -2285,6 +2295,23 @@ static unsigned char news (void)
     return 1;
 }
 
+/* The character's passing journalled as it leaves its square heading h (the traces': trod.inc's; the way it went from
+** there, a tracker's; a flame it carries, its smoke) */
+#include "trod.inc"
+
+static void __fastcall__ pc_trod (unsigned char h)
+{
+    struct tstep s;
+
+    hub_map (0);
+    s.kind = 0;
+    s.sn = HUB->pc_stratum;
+    s.head = h | (HUB->pc_light ? TS_LIT : 0);
+    s.x = HUB->pc_x;
+    s.y = HUB->pc_y;
+    trod (&s);
+}
+
 /* A walk's beat as it comes onto square x, y heading h (in a passage: E_BEAT): it turns, goes through a doorway,
 ** rises or falls, or a quiet stretch (6 squares, 30 feet); 1 if one's told */
 static signed char pz;
@@ -2378,7 +2405,8 @@ void s_step_on (void)
         if (!pnext) {
             pz = elev_at (sn_, HUB->pc_x, HUB->pc_y);
         }
-        hub_map (0);
+        pc_trod (h);                            /* (The square it leaves journalled: the traces', the way it went
+                                                **   from it) */
         ox = HUB->pc_x;
         oy = HUB->pc_y;
         HUB->pc_x = x;
@@ -3212,6 +3240,11 @@ static void __fastcall__ intent (struct msg* m)
     case I_DISENGAGE:
         disengage_go (m);                       /* (The book's disengage: part 26's) */
         break;
+    case I_TRACE:
+        tr_flush (0);                           /* (The traces read, the journal taken in first, then the time it
+                                                **   takes: parts 28's, 29's) */
+        busy (traced (m));
+        break;
     }
 }
 
@@ -3305,10 +3338,10 @@ static int __fastcall__ ovl_load (const char* dir)
 
     strcpy ((char*) b, dir);
     strcat ((char*) b, "/dq0w.ovl");
-    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (OVBANKS + 2)) < 0) {
+    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (OVBANKS + 4)) < 0) {
         return -1;
     }
-    for (k = 0, first = n; k < OVBANKS + 2; ++k) {
+    for (k = 0, first = n; k < OVBANKS + 4; ++k) {
         ovbank[k] = first + k;
     }
     for (k = off = 0; (n = read (fd, b, 512)) > 0; ) {   /* (The file the build made: OVBANKS banks at most, 8K
@@ -3339,6 +3372,9 @@ int main (int argc, char* argv[])
         while (hy_sem_try (HUB->sem[T_WORLD]) == 0) {
         }
         stocks ();                              /* (The chunks the maker stocked: their things put down, marked so) */
+        if (tr_n >= TR_FLUSH) {
+            tr_flush (0);                       /* (The passings journalled taken into the traces' store: part 28's) */
+        }
         if (DEN_INTENTS ()) {
             den_intents ();                     /* (The denizens' intents carried out) */
         }

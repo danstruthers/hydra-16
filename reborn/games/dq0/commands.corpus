@@ -137,6 +137,8 @@ sniff at the grating	VB_SMELL	object=grating	near=grating	sniff at
 smell the smoke	VB_SMELL	object=smoke	-	smell
 track	VB_TRACK	-	-	track
 track the rats	VB_TRACK	object=rats	-	track things
+examine the floor	VB_TRACK	-	-	the floor looked at, its traces (slice 4.1)
+look for tracks	VB_TRACK	-	-	tracking as a phrase
 target the goblin	VB_TARGET_SET	object=goblin	near=goblin	target
 aim at the goblin	VB_TARGET_SET	object=goblin	near=goblin	aim at
 clear target	VB_TARGET_CLEAR	-	-	clear

@@ -25,6 +25,7 @@
 #include "world.h"
 #include "work.h"
 #include "things.h"
+#include "trace.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 #pragma static-locals (on)                      /* (Smaller: none of it's called again before it returns) */
@@ -266,6 +267,7 @@ void s_answer (void)
         store_save ();                          /* (The change records, */
         keep (0);                               /*   the things, items.dat, */
         world_keep ();                          /*   the world's own, world.dat, */
+        tr_flush (1);                           /*   the traces' chunks changed, trSXXYY.dat, */
         store_commit ();                        /*   and the versions written the save's: the last step) */
     } else if (HUB->wreq.kind == WQ_EXAMINE) {
         look_at ();

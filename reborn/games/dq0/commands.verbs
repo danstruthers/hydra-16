@@ -108,7 +108,8 @@ find        thing=VB_FIND_OBJECT unsaid=none
 where       alone=VB_WHERE
 listen      alone=VB_LISTEN thing=VB_LISTEN way=VB_LISTEN skill=P_NOTICE_SOUND
 smell       alone=VB_SMELL thing=VB_SMELL way=VB_SMELL skill=P_NOTICE_SMELL
-track       alone=VB_TRACK thing=VB_TRACK skill=P_TRACK task=LT_WALK
+track       alone=VB_TRACK thing=VB_TRACK skill=P_TRACK task=LT_WALK aux=TRC_TRACK
+floorlook   alone=VB_TRACK thing=VB_TRACK aux=TRC_FLOOR    # (new, slice 4.1: the floor looked at, its traces seen)
 sleep       alone=VB_SLEEP thing=VB_SLEEP task=LT_SLEEP
 sit         alone=VB_SIT thing=VB_SIT
 stand       alone=VB_STAND
@@ -387,6 +388,32 @@ listen = listen
 smell = smell
 sniff = smell
 track = track
+examine the floor = floorlook
+examine floor = floorlook
+x the floor = floorlook
+x floor = floorlook
+examine the ground = floorlook
+examine ground = floorlook
+examine the dust = floorlook
+inspect the floor = floorlook
+look at the floor = floorlook
+look at floor = floorlook
+look at the ground = floorlook
+look at ground = floorlook
+look at the dust = floorlook
+study the floor = floorlook
+look for tracks = track
+look for prints = track
+look for footprints = track
+search for tracks = track
+examine the tracks = track
+examine tracks = track
+look at the tracks = track
+study the tracks = track
+read the tracks = track
+follow the tracks = track
+follow tracks = track
+follow the trail = track
 sleep = sleep
 rest = sleep
 sit = sit

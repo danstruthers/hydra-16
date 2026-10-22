@@ -841,7 +841,8 @@ static unsigned char events (void)          /* (How many there were) */
                     t_flush ();
                     break;
                 }
-                look ((unsigned char) m.w1 & V_LOOKED);     /* (A look one way's own words: way.c's) */
+                look ((unsigned char) m.w1 & (V_LOOKED | V_TRACED));  /* (A look one way's own words: way.c's;
+                                                **   the traces read, words.c's) */
             }
             break;
         case E_NOWAY:
@@ -1295,10 +1296,11 @@ static unsigned char __fastcall__ chores (unsigned char action)
 {
     switch (action) {
     case VB_OBSERVE_DIRECTION:                  /* (Looked, listened, sniffed one way, or at a thing, through it: */
-    case VB_OBSERVE_OBJECT:                     /*   way.c's, part 6) */
+    case VB_OBSERVE_OBJECT:                     /*   way.c's, part 6; */
     case VB_OBSERVE_THROUGH:
     case VB_LISTEN:
     case VB_SMELL:
+    case VB_TRACK:                              /*   the traces read, slice 4.1's: the floor looked at, a track) */
         look_way (action);
         break;
     case VB_OBSERVE_LOCALE:

@@ -291,11 +291,11 @@ void s_store_commit (void)
     }
 }
 
-/* A new game's folder rid of an old game's region files (rg, it, dn, sm ...: preSXXYY.da?), read a stat record at a
+/* A new game's folder rid of an old game's region files (rg, it, dn, sm, tr ...: preSXXYY.da?), read a stat record at a
 ** time (through buf: 64 bytes), till a pass finds none */
 static void tidy (void)
 {
-    static const char pre[] = "rgitdnsmstpl";
+    static const char pre[] = "rgitdnsmstpltr";
     struct hy_regs r;
     unsigned char k, n, h, gone;
     char* e;

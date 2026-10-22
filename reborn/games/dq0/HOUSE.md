@@ -522,7 +522,8 @@ climb's test to hold on).
 
 ## Light and traces *(slice 4.1: drafted for the user to review, 2026-10-21)*
 
-Every ruleset's.  The book gives no burning times: these are the house's (the stopped design's hour for a torch).
+Every ruleset's.  The book gives no burning times: these are the house's (the stopped design's hour for a torch).  Nor
+any numbers for the traces (its Tracking and a notice test of smell are its tests): the house's too.
 
 The lights (lights burning down, renewed; the kit's spare; the status line's light left):
 
@@ -556,6 +557,61 @@ The lights (lights burning down, renewed; the kit's spare; the status line's lig
   "lantern 5h59m"), when there's room for it beside the referee's words, the facing and the clock.
 - **Far off, lights burn on:** a chunk's things paged out to the save folder are caught up as they're read in again,
   by the minutes since (the clock's 25.6 seconds a unit; after fourteen hours, all of it).
+
+**The traces on the floor** (the user's, 2026-10-16: dust and dirt disturbed or not, by whom, how many, how recently;
+rough stone shows little, earth and smooth stone more; swept floors hide it; smells fade faster than dust settles;
+and 2026-10-21: keen noses follow a scent far longer than an hour, a hound's especially):
+
+- **Every passing is kept**, the world's: each square the character walks off, each step an actor takes (a coarse
+  move's too, out of sight), each coarse move of a denizen away from the character to the square it comes to: whose
+  (its kind), how many passings, when the last went (in fours of minutes), and the way it went from there.  A square
+  keeps its own records among the four of its bucket (a hash of its chunk and place, 2,048 records in all); a new
+  one goes over the bucket's oldest, so traces are trodden out where the place is busy.  The store holds 32 chunks'
+  (the nine round the character's always); one put out goes to its region's file in the save folder, read back as
+  it's wanted, and the save keeps them all.
+- **What the floor shows**, by the maker's material where each square is: **earth** holds a print well (6; soft soil
+  7) for three days; **rough stone** little (2, and a point for each three of dust), a scrape lasting an hour;
+  **flags and paving** nothing of themselves, their **dust** every mark (3 and a point for each of dust; none, 1):
+  dust two deep or more keeps them three months, a skin a day.  The dust is the stratum's age's: 3, and a level more
+  at 3, 6 and 12 centuries (6 the most: "deep in dust").  **Swept** (a chunk that's a lair of a kind that keeps its
+  floors swept, kinds.txt's t: the cultists and their priest, as their lair is placed): no dust at all ("swept
+  clean"), and every hold a point less, the marks scattered.
+- **How clearly a trail shows**: the floor's hold, a third of its kind's tread, a point more for 4 passings, another
+  for 12; less a point for each quarter of the print's life gone, none at its end; a tread of 0 (a bat, a shade)
+  leaves no print.  Each kind's tread, marks, smell, scent and nose are kinds.txt's (the character's own: its sweat's
+  smell 3, its prints by what it wears on its feet, bare feet 2, sandals or shoes 3, boots 4, hobnailed boots 5).
+- **Examine the floor** ("look at the ground"): sight alone, no test, 5 seconds, the floor where it stands and the
+  squares two each way: its material, its dust, and "It's been trodden" if any trail there shows 4 or more.  In the
+  dark it can't be done.
+- **Track** ("look for tracks", "follow the tracks"): the Tracking test, a minute's study of the same squares, at steps
+  the clearest trail's clearness less 4 (-8 to +6).  A critical success tells all (how many: one set, a few to 3, several
+  to 11, many; how long since: only just under eight minutes, recently under an hour, some hours under ten, a day or so
+  under two days, long ago; the way it led, by the facing; whose, "plainly"); a marginal success the same, "by the look
+  of them"; a marginal failure only that the floor's been trodden; a critical failure a misreading, told as if it were
+  read: the way reversed, the time two steps off.  Three trails at most, the clearest first.
+- **A scent fades by its reader's nose**: a scent of strength s (kinds.txt's smell) read by a nose n (kinds.txt's nose;
+  the character's a quarter of its smell sense, the referee's: 1 for most) lasts 2^(s + n - 2) fours of minutes, its strength s + n - 1 losing a
+  point each time its age doubles, and half a point a square away.  So a hound's nose (9) follows the character's
+  scent (3) some three days old, a rat's or a ghoul's (7) the most of a day, a bear's (8) a day and a half; the
+  character (1) smells a rat's (4) for half an hour, a bear's (8) for eight hours.
+- **Smell** ("sniff", "smell the air", "sniff at the grating"): a notice test of smell, 3 seconds, at steps twice the
+  strongest scent less 6; about the character it reaches two squares each of the eight ways, one way six that way and
+  three the two ways beside it, through what the air passes (an open or broken door, a portcullis, a grating, an arrow
+  slit, a window open with no glass), not rock, a wall, a shut door.  A success tells the two strongest scents and
+  whose ("by the smell of it"); a marginal failure the scent but not whose ("something passed not long ago"); a
+  critical failure nothing.  The character doesn't smell its own sweat.
+- **Smoke**: a flame the character carries leaves smoke on the squares it walks (a torch's strength 5, a lantern's or
+  a candle's 2, by its name); a light lying lit (a sconce's torch, a fire) smokes 4 where the air reaches; a light of
+  its own lit, the character smells no other smoke.  Smoke fades as a scent does, with no nose to read it longer.
+- **Denizens by smell**: a kind with a keen nose (6 or more: giant rats, ghouls, cave bears, cave adders, lindworms)
+  that's hostile and doesn't sense the character follows its trail: its last 64 squares (the world's journal) as long
+  as its nose can still smell them, then the store's older trail (sniffed once each ten seconds, at once again while
+  it leads on).  Any kind with a nose smells the character in still air within a third of its nose (squares: a
+  hound's 3, a rat's 2, a man's none), along a line the air passes: sensed, as seen or heard.
+- **Still to come**: the air layer (slice 4.5, with sound) carries a scent further downwind and less upwind, and a
+  denizen downwind smells the character from far off; rain and running water (slice 4.9) wash scents and prints away
+  faster.  Each has its one place to come in: a scent's fading (wtrace.c's faded, hub.h's SCENT_LIFE), its carrying
+  (wtrace.c's sniff, the trail's way, wtrscent.c), the smelling in still air (dq0p/sense.c).
 
 ## Decided, not yet built
 

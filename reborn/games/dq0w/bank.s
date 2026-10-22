@@ -23,8 +23,9 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
-_ovbank:    .res        11          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
-                                    ;   world's own banks (its paging's tables: ipage.c's; the ways across a room)
+_ovbank:    .res        16          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+                                    ;   world's own banks (its paging's tables: ipage.c's; the ways across a room;
+                                    ;   the traces' store, two: wtrace.c's)
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
 fn:         .res        2           ; (m0 ...: the function called,
@@ -100,11 +101,17 @@ go:
             SWPART      20, 7               ; The things' files: a chunk's put out, read in (ipage.c)
             SWPART      21, 5               ; The ways across a room worked out (dq0w.c's ways)
             SWPART      22, 8               ; The strata's records out of the hub, back (sfile.c)
-            SWPART      23, 6               ; The long task as it goes: a walk a square at a time (dq0w.c's)
+            SWPART      23, 11              ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 9               ; Engagement, a blow's close-in, fighting on (dq0w.c's)
             SWPART      25, 7               ; The engage initiative test, a grope's (dq0w.c's)
             SWPART      26, 9               ; Disengaging (dq0w.c's)
             SWPART      27, 9               ; The lights burning down (dq0w.c's: slice 4.1's)
+            SWPART      28, 12              ; The traces' store: the journal taken in, kept (wtrace.c)
+            SWPART      29, 10              ; The traces read: the floor, a track, a smell (wtrace.c)
+            SWPART      30, 10              ; The traces' store's files: a chunk's records put out, read in (wtrfile.c)
+            SWPART      31, 11              ; The traces read, in words (wtrword.c)
+            SWPART      32, 9               ; The way the character's scent goes, a hunter's (wtrscent.c)
+            SWPART      33, 12              ; A walk across a room (dq0w.c's across: the main RAM's room)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
@@ -198,3 +205,9 @@ go:
             SWFN        burns_now, 27
             SWFN        task_out, 23
             SWFN        fill, 27
+            SWFN        tr_flush, 28
+            SWFN        tr_file, 30
+            SWFN        traced, 29
+            SWFN        tr_words, 31
+            SWFN        tr_scent, 32
+            SWFN        across, 33

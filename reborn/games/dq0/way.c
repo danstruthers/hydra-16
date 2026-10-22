@@ -14,7 +14,8 @@
 **   a listen          main.c's heard: what's heard that way twice as far (through a shut door muffled, its squares
 **                     counted, the world's), as the time goes; "listen" alone, about it, as far as ever; nothing
 **                     heard, told as it ends
-**   a sniff           no smell to read yet (the trace layer's, slice 4.1): nothing out of the ordinary, as it ends
+**   a sniff           the world's (I_TRACE, slice 4.1's traces: the smell carried from that way, or about it), told
+**                     at once (words.c's), the time after
 **
 ** A thing or a denizen looked at ("look at the rat") is a look about, as before.
 */
@@ -33,7 +34,7 @@
                                                 **   OB_WINDOW, OB_PORTC: pick's) */
 
 /* ==== Part 6: the command (main.c's chores: the parser's VB_OBSERVE_DIRECTION, VB_OBSERVE_OBJECT,
-** VB_OBSERVE_THROUGH, VB_LISTEN, VB_SMELL) */
+** VB_OBSERVE_THROUGH, VB_LISTEN, VB_SMELL; and VB_TRACK, the traces read, slice 4.1's) */
 
 #pragma code-name (push, "SW6CODE")
 #pragma rodata-name (push, "SW6RODATA")
@@ -44,12 +45,15 @@ void __fastcall__ s_look_way (unsigned char action)
     unsigned char h, k;
 
     if (action == VB_NONE) {                    /* (A listen's or a sniff's end: what came of it) */
-        if (lsn & 4) {
-            msg ("You smell nothing out of the ordinary.");
-        } else if (!heard_at) {
+        if (!heard_at) {
             msg ("You hear nothing.");          /* (Nothing told as it listened: main.c's heard) */
         }
         lsn = 0;
+        return;
+    }
+    if (action == VB_TRACK) {
+        intend2 (I_TRACE, cmd.aux, 0);          /* (The traces read, the world's: the floor looked at, the Tracking
+                                                **   test; worded as its E_VIEW comes, V_TRACED) */
         return;
     }
     k = action == VB_LISTEN ? 1 : action == VB_SMELL ? 4 : 0;
@@ -60,8 +64,8 @@ void __fastcall__ s_look_way (unsigned char action)
                 return;                         /* (None, told; or which, asked) */
             }
             h = bearing ((int) (tx - HUB->pc_x), (int) (ty - HUB->pc_y));
-        } else if (k && h == 0xFF && !cmd.obj.word[0]) {
-            k += k & 1;                         /* ("listen", "sniff": about it) */
+        } else if (k && h == 0xFF && (k == 4 || !cmd.obj.word[0])) {
+            k += k & 1;                         /* ("listen", "sniff", "smell the air": about it) */
         } else {
             look (0);                           /* ("look up", "look at the rat": a look about, as ever) */
             return;
@@ -75,6 +79,11 @@ void __fastcall__ s_look_way (unsigned char action)
     }
     if (!k) {
         intend2 (I_LOOK, WAY_T, 0);             /* (The world's: the senses' look one way, E_VIEW V_LOOKED) */
+        return;
+    }
+    if (k == 4) {
+        intend2 (I_TRACE, TRC_SMELL | (unsigned) h << 8, WAY_T);   /* (The world's: the smell read, worded, then
+                                                **   its time) */
         return;
     }
     heard_at = 0;                               /* (What it hears told, however soon after the last, and noted:

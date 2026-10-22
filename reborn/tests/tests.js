@@ -1995,8 +1995,8 @@ const DQ0_REPEATS = [
     why: 'a dig\'s spells, each told as it ends (a long dig: hours of spells between one stir and the next, some the same)' },
   { what: /^You (?:climb on|slip back a little|find no hold yet) \(\d+ feet to go\)\.$/,
     why: 'a climb\'s rounds, each told as it ends (a long climb: many rounds to an answer, some the same)' },
-  { what: /^(The|A) .* (bites|claws|strikes|swings|lunges|thrusts)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge)\b/,
-    why: 'a fight\'s rounds, each blow told as it falls (attack: the rounds till it ends, the same words some of them)' },
+  { what: /^(?:(The|A) .* |Something )(bites|claws|strikes|swings|lunges|thrusts)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge)\b/,
+    why: 'a fight\'s rounds, each blow told as it falls (attack: the rounds till it ends, the same words some of them; in the dark "Something", unseen: dq0traces\' rats)' },
   { what: /^You hear /, why: 'a sound heard each time it\'s made (main.c\'s heard: half a minute apart the same way, five seconds any; a search\'s or a wait\'s minute hears several)' },
   { what: /^(The passage turns (left|right)|You go through a doorway|You go on down the passage|The way (rises|falls away))\.$/,
     why: 'a walk\'s beats as it goes (slice 4.0): a winding passage turns the same way more than once, has more than one doorway, goes on quietly every 30 feet' },
@@ -2004,6 +2004,8 @@ const DQ0_REPEATS = [
     why: 'fighting on (the user\'s, 2026-10-20): one attack fights its foes in turn, each falling, fleeing, getting up, fought back or turned to told as it comes (two of a name, the same words)' },
   { what: /^(?:You stop fighting|You fumble for the .+)\.$/,
     why: 'commands typed ahead as the character fights, each taking the fight over in turn, fought on between them (fighting on), their answers one' },
+  { what: /^A giant rat is .+, keeping its distance\.$/, tests: /^dq0traces$/,
+    why: 'a walk across the rats\' cell: a shy rat told keeping its distance as the walk\'s look stirs, then again where it is as the look on arriving has it (the tellings two, the stir not first in the second)' },
   { what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
 ];
 function dq0Answers(out) {
@@ -2058,6 +2060,12 @@ function dq0Check(name, m) {
   return [...dq0Repeats(name, m.out).map(r => 'told ' + r.n + ' times in one answer (> ' + r.cmd + '): ' + JSON.stringify(r.sentence)),
     ...dq0Doubled(m).map(s => 'a chunk\'s fixtures doubled: ' + s)];
 }
+
+// (dq0traces' budget: a square of a walk at the turns pace, its look every third square, the denizens' turn at each
+// slice, the world's journal and its store's taking it in: cycles; measured 1,460,275 a square on its walk back across the
+// cell, 5 squares; the same walks at seed 3 with no traces, the slice before, within 0.2-0.6% of them: the journal's
+// entry a step, the store's taking 24 in a part's swap)
+const TRACE_STEP = 1700000;
 
 // What a dq0 test's lines did, by their meaning (Phase 3A: tests cut to meaning, not words): sim/lib/dq0meaning.js's
 // record (m.dq0, in every dq0 test: the world's events, the denizens', the requests' replies, the state each line
@@ -3327,6 +3335,69 @@ module.exports = {
       },
       sdcard: true
     },
+    {
+      name: 'dq0traces', meaning: true, what: 'Dingus Quest Zero\'s traces on the floor (slice 4.1, DUNGEON.md\'s traces on the floor, HOUSE.md\'s light and traces; the user\'s, 2026-10-16 and 21), by the world\'s reply (the UI bank\'s tread), its words and the denizens\' bodies: at seed 3 by the way down (a flagged cell, the stratum\'s dust deep), the floor examined (no test), the character\'s own prints read back after a walk across the room and back (its trodden dust; Tracking 80, its own bare feet), the giant rats\' tracks a while on (small clawed feet), their musky smell sniffed, the smoke its torch left on its trail smelt once it\'s put out and gone three hours on (a scent fading with time: its strength halving as its age doubles); a game kept (dq0 -d), its prints in the save folder\'s region file (trSXXYY.dat) and read back as it\'s carried on; a step\'s cost within its budget; at seed 4 with a cult in the theme, its lair\'s floor swept clean, no tracks there (dq0scent: the denizens following a scent)',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml trk 80 >> /ram/c.hm', 'echo ml awa 80 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'examine the floor', 'e', 'w', 'examine the floor', 'track', 'wait 5 minutes', 'track', 'sniff',
+        'douse the torch', 'sniff', 'wait 3 hours', 'sniff', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept', 'e', 'w', 'quit',
+        'ls /ram/kept', 'dq0 -d /ram/kept', 'examine the floor', 'quit',
+        'mkdir /ram/g', "echo 'faction | Cult | cultist | 0-0 | 90 | priest | 0 | i | -' > /ram/g/theme.txt", 'dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/g',
+        'examine the floor', 'track', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], rd = t => (t.after && t.after.tread) || {};
+        const has = (t, k) => (rd(t).trails || []).some(e => e.kind === k);
+        const x0 = T.of('examine the floor'), r0 = rd(x0);
+        if (r0.how !== 'TRC_FLOOR' || r0.result !== 'TRR_OK' || r0.floor !== 'MAT_FLAGS' || r0.dust < 3 || !/^The floor here is flagged, (grey|deep) /.test(r0.text || ''))
+          f.push('the floor examined: ' + JSON.stringify(r0));
+        if (x0.after && x0.at && x0.after.now - x0.at.now !== 50) f.push('the floor examined in ' + (x0.after.now - x0.at.now) + ' tenths, not 50');
+        const x1 = T.of('examine the floor', x0.k + 1), tr1 = T.after(x1, 'track'), r1 = rd(tr1);
+        if (!rd(x1).trod || !/It's been trodden/.test(rd(x1).text || '')) f.push('its own walk not seen in the dust: ' + JSON.stringify(rd(x1)));
+        if (!has(tr1, 0) || (r1.grade > 0 && !/your own/.test(r1.text || ''))) f.push('its own prints not read back: ' + JSON.stringify(r1));
+        if (!tr1.replies.some(r => /^slot/.test(r.req) && r.a === m.dq0.layout().K.P_TRACK)) f.push('no Tracking test asked: ' + JSON.stringify(tr1.replies.map(r => [r.req, r.kind, r.a])));
+        if (tr1.after && tr1.at && tr1.after.now - tr1.at.now !== 600) f.push('a track in ' + (tr1.after.now - tr1.at.now) + ' tenths, not a minute');
+        const tr2 = T.after(tr1, 'track'), r2 = rd(tr2), rat = (rd(tr2).trails || []).find(e => e.kind === 1);
+        if (!rat || rat.name !== 'giant rat' || rat.what !== 'small clawed feet' || (r2.grade > 0 && !/giant rat/.test(r2.text || ''))) f.push('the rats\' tracks not read: ' + JSON.stringify(r2));
+        const sn = T.after(tr2, 'sniff'), rs = rd(sn), musk = (rs.trails || []).find(e => e.kind === 1);
+        if (rs.how !== 'TRC_SMELL' || (rs.grade !== -2 && (!musk || musk.what !== 'a musky smell' || !/musky smell/i.test(rs.text || '')))) f.push('the rats\' smell not smelt: ' + JSON.stringify(rs));
+        const s1 = T.after(sn, 'sniff'), s2 = T.after(s1, 'sniff');
+        if (rd(s1).grade !== -2 && (!rd(s1).smoke || !/smoke/.test(rd(s1).text || ''))) f.push('its torch\'s smoke not smelt on its trail, put out: ' + JSON.stringify(rd(s1)));
+        if (rd(s2).smoke) f.push('its torch\'s smoke still smelt three hours on: ' + JSON.stringify(rd(s2)));
+        const e = T.of('w'), sq = e.at && e.after ? Math.abs(e.after.pc.x - e.at.pc.x) + Math.abs(e.after.pc.y - e.at.pc.y) : 0;
+        const per = sq ? (e.after.cyc - e.at.cyc) / sq : Infinity;
+        if (!(per <= TRACE_STEP)) f.push('a step\'s cost ' + Math.round(per) + ' cycles (' + sq + ' squares walked, budget ' + TRACE_STEP + ')');
+        const k0 = T.of('dq0 -d /ram/kept'), kx = T.after(k0, 'examine the floor');
+        if (!/tr0[0-9a-f]{4}\.da[t12]/.test(out)) f.push('no traces\' region file in the save folder');
+        if (!rd(kx).trod) f.push('the game carried on, its walk\'s prints not read back from the save: ' + JSON.stringify(rd(kx)));
+        const c0 = T.of('dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/g'), cx = T.after(c0, 'examine the floor'), ct = T.after(cx, 'track');
+        if (rd(cx).dust !== 7 || !/swept clean/.test(rd(cx).text || '')) f.push('the cult\'s lair\'s floor not swept clean: ' + JSON.stringify(rd(cx)));
+        if ((rd(ct).trails || []).length) f.push('tracks read on a swept floor: ' + JSON.stringify(rd(ct)));
+        return f;
+      },
+      sdcard: true
+    },    {
+      name: 'dq0scent', what: 'Dingus Quest Zero\'s denizens following a scent (slice 4.1, DENIZENS.md\'s a scent followed; the user\'s, 2026-10-21: keen noses follow a scent far longer than an hour), by their bodies: at seed 3 with the hand-written theme\'s hostile giant rats (a keen nose, 7: K_NOSE), the first of them fought off by the way down, the character gone out of the room in the dark, through its doorway and round the corner into the passage west, and still there five minutes: the rats come after it along the squares it walked, round the corner (the world\'s journal of its squares, its store\'s older trail: from the room none of them can see it in the dark, nor go straight at it through the wall), two of them on its trail within four squares of it at the end (before the traces, they went back to the room and their lair)',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'go south', 'douse the torch', 'go south', 'go west', 'go west', 'wait 1 minute',
+        'wait 1 minute', 'wait 1 minute', 'wait 1 minute', 'wait 1 minute', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [];
+        const h0 = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g'), w = T.filter(t => t.k > h0.k && t.line === 'wait 1 minute'), end = w.length ? w[w.length - 1].after : null;
+        const trail = new Set(T.filter(t => t.k > h0.k && t.k < (w[0] || {}).k && t.after && t.at).flatMap(t => [t.at.pc.x + ',' + t.at.pc.y, t.after.pc.x + ',' + t.after.pc.y]));
+        if (!end) return f.concat(['the hostile rats\' game not played']);
+        const near = end.actors.filter(a => a.state && a.name === 'giant rat' && a.attitude === 'AT_HOSTILE' && a.doing !== 'DO_DOWN' &&
+          Math.max(Math.abs(a.x - end.pc.x), Math.abs(a.y - end.pc.y)) <= 4 && a.y === end.pc.y && a.x > end.pc.x && a.x < 32722);
+        if (end.pc.light) f.push('the character not in the dark');
+        if (near.length < 2) f.push('the rats not come after it along the passage: the character at ' + end.pc.x + ',' + end.pc.y + ', the rats ' +
+          JSON.stringify(end.actors.map(a => [a.x, a.y, a.doing])) + ' (its squares walked ' + [...trail].join(' ') + ')');
+        return f;
+      },
+      sdcard: true
+    },
+
     {
       name: 'dq0denizens', meaning: true, what: 'Dingus Quest Zero\'s denizens (dq0d: the populations decided as a stratum is grown, from a stand-in theme\'s kinds, kinds.txt), by the actors\' records, their events and what the character perceives (their kinds\' records the referee\'s, HarnMaster\'s): the giant rats that lair by the top stratum\'s ways placed round the way down as the character starts there (dq0 -T), seen (the world\'s actors, in what it perceives), and moving about as time passes (their own task deciding): at the turns pace through all the time a minute\'s search takes (the clock on a slice at a time as they keep up), their stirring told (the world\'s E_VIEW) as what the character sees of them changes (gone out of sight), not again when nothing has; then (seed 5, down its ladder) the rats there seen, cornered, and in the character\'s way: the world stops it short of them, and won\'t let it walk or step onto a rat\'s square (dq0steps\' rat in the way, a step, in it)',
       init: 't_rc', cycles: 900e6,

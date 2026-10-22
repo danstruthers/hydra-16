@@ -34,7 +34,9 @@
                                                 **   LK_WAY, a look one way's record, WAY_SEEN; 9: fighting on,
                                                 **   LT_FIGHT, the long task's foe, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE,
                                                 **   I_STOP's w1; 10: the lights burning, pc_fuel, pc_left, TE_LOW,
-                                                **   TE_OUT; the items' records' fuel) */
+                                                **   TE_OUT; the items' records' fuel; the traces, I_TRACE, I_TROD,
+                                                **   I_SWEPT, V_TRACED, the traces' journal, TJ_AT, the UI bank's
+                                                **   tread, dsense's nose) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -81,6 +83,70 @@ struct fight {
                                                 **   initiative test's, the striker the quicker) */
 #define FW_AGAIN        0x40                    /* (which's: the one knocked senseless out already, struck as it
                                                 **   lay: rs.h's AF_AGAIN, no new black-out told) */
+
+/* The traces' journal (slice 4.1, DUNGEON.md's traces on the floor): each passing over a square as it's made, the
+** world's (a square of the character's walk, an actor's step, a coarse move's), in the denizens' events' bank after
+** the fights' words, in two rings, the denizens' and the character's own, each passing written whole, then its count.
+** The world's traces' store (dq0w/wtrace.c, in banks of its own) takes them in as it can; the denizens read the
+** character's, to follow its scent (dq0d.c's: a hunter by smell) */
+#define NJOURNAL        64                      /* (The denizens' passings in the ring) */
+#define NTRAIL          64                      /* (The character's) */
+struct tstep {
+    unsigned char   kind;                       /* Whose: the denizens' task's kind (kinds.txt's, by number); 0 the
+                                                **   character */
+    unsigned char   sn;
+    unsigned char   head;                       /* The way it went (H_*), | TS_NOWAY: none known (a coarse move's,
+                                                **   come from somewhere else), | TS_LIT: a flame carried (its smoke) */
+    unsigned char   spare;
+    unsigned        x, y;
+    unsigned long   t;                          /* When it passed */
+};
+#define TS_NOWAY        0x40
+#define TS_LIT          0x80
+struct tjournal {
+    volatile unsigned n, pn;                    /* The passings written so far: the denizens', the character's (each
+                                                **   at its count's place in its ring) */
+    struct tstep    e[NJOURNAL];
+    struct tstep    p[NTRAIL];
+};
+#define TJ_AT           ((struct tjournal*) (FIGHT_AT + NFIGHTS))
+
+/* The traces read (I_TRACE's reply: the world's, the UI bank's tread, struct uirec's): the floor where the character
+** stands, and the kinds' traces about it, the clearest first, as much of them as the referee's grade reads; and its
+** words (the world's, as the things' are: the UI's overlays have no room for them), said by the UI as E_VIEW's V_TRACED
+** comes (words.c's, overlay 2: look (16)) */
+#define NTRAILS         3
+#define TR_TEXT         400
+struct trail {
+    char            name[12];                   /* Its kind's name ("": the character's own) */
+    char            what[24];                   /* Its marks' words ("small clawed feet"), or its scent's ("a musky
+                                                **   smell") */
+    unsigned char   n;                          /* How many passings: TP_* (the world's own, as it's read: its count) */
+    unsigned char   ago;                        /* How long since the last: TA_* */
+    unsigned char   head;                       /* The way the last went (H_*; 0xFF not known) */
+    unsigned char   big;                        /* 1: its kind large (a heavy tread, a strong smell) */
+    unsigned char   kind;                       /* Whose (the denizens' kinds' number: 0 the character) */
+    unsigned        age;                        /* (The world's: how long since, in its TQs, four minutes) */
+};
+enum { TRC_FLOOR, TRC_TRACK, TRC_SMELL };      /* I_TRACE's how: the floor looked at (sight, no test), the Tracking
+                                                **   test, a smell (a notice test of smell) */
+enum { TRR_OK, TRR_DARK, TRR_NOSE, TRR_NONE };  /* Its result: read; too dark to see the floor; no sense of smell;
+                                                **   nothing found */
+enum { TP_ONE, TP_FEW, TP_SEVERAL, TP_MANY };   /* (A trail's passings: one, two or three, up to eleven, more) */
+enum { TA_NOW, TA_RECENT, TA_HOURS, TA_DAY, TA_LONG };  /* (Since the last: under five minutes, an hour, ten hours,
+                                                **   two days; longer) */
+#define TD_SWEPT        7                       /* (The floor's dust: swept clean) */
+struct tread {
+    unsigned char   how;                        /* TRC_* */
+    unsigned char   result;                     /* TRR_* */
+    signed char     grade;                      /* The referee's (G_*: 0, no test) */
+    unsigned char   floor;                      /* The floor's material (rs.h's MAT_*) */
+    unsigned char   dust;                       /* Its dust: 0 none ... 6 deep; TD_SWEPT, swept clean */
+    unsigned char   trod;                       /* 1: its dust or its earth disturbed (marks the eye sees) */
+    unsigned char   smoke;                      /* Smoke on the air (a smell's): 0 none, 1 faint, 2 strong */
+    unsigned char   ntr;
+    struct trail    tr[NTRAILS];
+};
 
 /* A name the character's given (the UI's, dq0/names.c: DUNGEON.md's names), in the theme bank (NAMES_AT): a thing
 ** ("name my sword Linda": by its id, struct item's, never another's), a room ("call this room the Mausoleum": by
@@ -193,6 +259,17 @@ enum {
                                                 **   disengage): w1 the way (H_*; 0xFF, away from them), w2 1 a
                                                 **   flight (run on, once free of them; not engaged, a run from the
                                                 **   nearest foe); E_TASK TE_BREAK, or TE_FREE */
+    I_TRACE,                                    /* The traces about the character read (slice 4.1, DUNGEON.md's traces
+                                                **   on the floor): w1 how (TRC_*: the floor looked at, the Tracking
+                                                **   test, a smell), and a sniff's way times 256 (H_*; 0xFF about
+                                                **   it), w2 the tenths it takes (0: the world's own); the UI bank's
+                                                **   tread, E_VIEW V_TRACED, then the time */
+    I_TROD,                                     /* (The denizens', for one out but not an actor: who 0) A passing
+                                                **   kept, a coarse move's (roam's): w1 w2 its square, x[2] its
+                                                **   stratum, x[1] its kind, a the way it faces */
+    I_SWEPT,                                    /* (The denizens', who 0) A chunk kept swept (a lair of a kind that
+                                                **   sweeps its floors, K_SWEEPS, placed): w1 w2 a square in it, x[2]
+                                                **   its stratum */
     NINTENTS
 };
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
@@ -206,6 +283,20 @@ enum {
 ** whenever it was free; 0: if it was later); I_DONE (who 0): w1 the turn it's done (the hub's den_go: the turns
 ** pace's, the world going on once it's in), t the clock then */
 #define STEP_COARSE     0x200
+#define STEP_SCENT      0x400                   /* (I_STEP's w1, the heading none: the way the character's scent goes,
+                                                **   the world's to find, x[2] the hunter's nose; none found, a wait, its
+                                                **   doing DO_ROAM) */
+
+/* A scent (slice 4.1, HOUSE.md's traces: the user's, 2026-10-21, "some denizens have rather keen sense of smell, and
+** may be able to follow a scent for much longer than an hour"): left by a kind of its smell's strength s (kinds.txt's
+** smell, 0-9: the character's own its sweat's), read by a nose n (kinds.txt's nose; the character's, its smell sense
+** over 3), it lasts SCENT_LIFE TQs (four minutes each: a hound's of the character's days, a rat's most of a day, a
+** man's of a rat's an hour), its strength halving each doubling of its age; one rule, the world's (its reading,
+** wtrace.c's faded) and the minds' (a hunter's trail, dq0d.c's scent), and the place rain and running water will speed
+** it (slice 4.9) */
+#define TQ              2400                    /* (Four minutes, in tenths: the traces' time) */
+#define SCENT_LOG(s, n) ((s) + (n) < 3 ? 1 : (s) + (n) > 16 ? 14 : (s) + (n) - 2)
+#define SCENT_LIFE(s, n) (1U << SCENT_LOG (s, n))
 
 /* Events: what's happened, in the world's terms (the UI words them; the denizens and the sound hear them) */
 enum {
@@ -291,10 +382,11 @@ enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIM
 enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG, N_CLOSED, N_DEN, N_DOOR };    /* E_NOWAY's why: no way that way, the way out
                                                 **   shut, no stairs, nothing to dig there, the portcullis that way
                                                 **   down, a denizen in the way (the actor times 256) */
-enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8 };    /* E_VIEW's why (V_STIR: a denizen come
-                                                **   into sight, gone from it, or doing something else; V_FACING: a
-                                                **   turn begun, its look to come, V_TURNED; V_LOOKED: a look one
-                                                **   way's, I_LOOK's: 8, look.c's look (8)) */
+enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8, V_TRACED = 16 };   /* E_VIEW's why (V_STIR: a
+                                                **   denizen come into sight, gone from it, or doing something else;
+                                                **   V_FACING: a turn begun, its look to come, V_TURNED; V_LOOKED: a
+                                                **   look one way's, I_LOOK's: 8, look.c's look (8); V_TRACED: the
+                                                **   traces read, I_TRACE's, the UI bank's tread: look (16)) */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN };  /* E_DIG's how (D_AGAIN: begun on
                                                 **   a hole dug part way before, the world's DUG record's) */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
@@ -691,6 +783,8 @@ struct hub {                                    /* Bank 0, at $8000 */
         unsigned char sight, dark, hear, eyes;  /* Its kind's (kinds.txt's): squares it sees the character lit, and
                                                 **   unlit; it hears it; its eyes' adapting to the dark (tenths to a
                                                 **   16th of a level darker; 0: at once) */
+        unsigned char nose;                     /*   and how far it smells it in still air (squares: its kind's nose
+                                                **   over 3, slice 4.1's; the air layer's to carry further downwind) */
         unsigned char res;                      /* (The reply's) SN_* */
         unsigned char slack;                    /* (The reply's) squares it may go, the answer standing (0: none) */
     }               dsense;
@@ -723,7 +817,8 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   that never burns down: the world's, as the referee's are its) */
 };
 #define SN_SEEN         0x01                    /* (dsense's res: the character seen, */
-#define SN_HEARD        0x02                    /*   heard) */
+#define SN_HEARD        0x02                    /*   heard, */
+#define SN_SMELT        0x04                    /*   smelt: slice 4.1's, still air, within its nose's reach) */
 #define WA_TRAPS        0x01                    /* Searching as it goes: traps underfoot, hidden doors beside */
 #define WA_LISTEN       0x02                    /* Listening as it goes */
 #define WA_MAP          0x04                    /* Mapping as it goes (the map's side the orientation's: its
@@ -747,6 +842,9 @@ struct uirec {
                                                 **   the UI's to the things (dq0 -k's: the things more) */
     struct cmd      kept;                       /* A command whose thing was out of reach, kept while the character
                                                 **   walks over to it (the UI's reach_go) */
+    struct tread    tread;                      /* The traces read (I_TRACE's reply: the world's), */
+    char            trtext[TR_TEXT];            /*   and its words, for the UI to say ("The floor here is flagged, grey
+                                                **   with dust. ...") */
 };
 
 /* The world's bank's records (WORLD_BANK): the dungeon's (world.h) */
@@ -917,6 +1015,7 @@ struct wsave {
 **   own bank(DEN_BANK) world                                   (The denizens' events)
 **   own bank(DEN_BANK,SND_AT,FIGHT_AT) sound +ui               (The sounds: the UI clears them)
 **   own bank(DEN_BANK,FIGHT_AT,FIGHT_AT+NFIGHTS) world         (The fights' words)
+**   own bank(DEN_BANK,TJ_AT,TJ_AT+1) world                     (The traces' journal: the passings, slice 4.1's)
 **   own bank(LOOK_BANK) senses
 **   own bank(THEME_BANK) ui                                    (The theme, and the names given)
 **   own bank(THEME_BANK,THEME_PLACE,NAMES_AT) maker            (The pieces' places)
@@ -925,6 +1024,8 @@ struct wsave {
 **   own bank(UI_BANK) ui
 **   own uirec.map maker +ui
 **   own uirec.things_text world +ui
+**   own uirec.tread world                                      (The traces read: I_TRACE's reply)
+**   own uirec.trtext world                                     (Their words)
 **   own bank(WORLD_BANK) maker                                 (The cache's table)
 **   own wrec.strata world                                    (The strata's records: the world's dungeon)
 **   own wrec.grown maker                                       (A stratum's record as its plan's grown: M_PLAN's)
@@ -966,7 +1067,8 @@ typedef char dq0c_fits[offsetof (struct hub, sem) == HUBO_SEM && offsetof (struc
                        offsetof (struct cq, face) == CQO_FACE && NTASKS == 8 ? 1 : -1];
 typedef char recs_fit[sizeof (struct sight) <= 0x1000 && sizeof (struct uirec) <= 0x2000 &&
                       sizeof (struct wrec) <= 0x2000 ? 1 : -1];
-typedef char snd_fits[(char*) (FIGHT_AT + NFIGHTS) - (char*) 0x8000 <= 0x2000 ? 1 : -1];   /* (DEN_BANK's) */
+typedef char snd_fits[(char*) (TJ_AT + 1) - (char*) 0x8000 <= 0x2000 ? 1 : -1];   /* (DEN_BANK's: the traces'
+                                                **   journal last) */
 
 /* hub.c */
 int __fastcall__ hub_create (unsigned char banks);      /* The UI's: the segment, its doorbells: 0, or -1 */
