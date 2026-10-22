@@ -69,7 +69,8 @@ C_SEL       = 7
 C_NUM       = 8
 C_MANNER    = 9
 C_LITTLE    = 10
-NCOL        = 11
+C_ASPECT    = 11                    ; (A thing's aspect judged: EX_*, 2026-10-22)
+NCOL        = 12
 
 ; A verb's fields (commandwords.js's ROW), and its flags
 R_ALONE     = 0
@@ -82,6 +83,7 @@ R_TASK      = 6
 R_FLAGS     = 7
 ROWSIZE     = 8
 RF_ORDER    = 1                     ; (An ally's request: its order read)
+RF_ASPECTS  = 2                     ; (A thing's aspects taken after it: "examine the value of the sword")
 
 ; The special words (commandwords.js's SPECIAL), and a pair's kind
 S_WITH      = 1
@@ -167,6 +169,7 @@ wrec:       .res        1           ; The record of the word kept in the thing's
 thoff:      .res        1           ; The thing being said (CM_OBJ, or CM_OTHER after its preposition)
 around:     .res        1           ; "around" said
 me:         .res        1           ; "me" said
+aspect:     .res        1           ; A thing's aspects said (EX_*: all of them)
 kk:         .res        1           ; A value for the moment
 cnt:        .res        1
 nn:         .res        1
@@ -185,7 +188,7 @@ wl:         .res        1
             sta         mp
             lda         cm_w+1
             sta         mp+1
-            ldy         #0              ; "DQ0W", version 2
+            ldy         #0              ; "DQ0W", version 3
 :           lda         (mp),y
             cmp         magic,y
             jne         bad
@@ -699,6 +702,7 @@ mid:        ina
             stz         wrec
             stz         around
             stz         me
+            stz         aspect
             lda         ntok            ; (Quoted text first: said aloud)
             beq         :+
             lda         tokq
@@ -796,6 +800,16 @@ each:       ldx         wi              ; Each word after the verb
             ldy         cm_cmd + CM_ORDER
             bne         :+
             sta         cm_cmd + CM_ORDER
+:           jsr         rowp            ; A thing's aspect, the verb taking them ("examine the value of the sword",
+            ldy         #R_FLAGS        ;   "check the chest for traps"): all said, the command's own value
+            lda         (rp),y
+            and         #RF_ASPECTS
+            beq         :+
+            ldy         #C_ASPECT
+            jsr         get
+            beq         :+
+            tsb         aspect
+            jmp         next
 :           ldy         #C_SPECIAL
             jsr         get
             sta         spc
@@ -906,6 +920,11 @@ thing:      ldy         #C_THING        ; A thing (a part of one: its word too, 
             jsr         get
             beq         word
             sta         kk
+            bpl         :+              ; (A part after "with": what it's done with, the other thing's word: "hit the
+            lda         cm_cmd + CM_PREP   ;   door with the bar", not the door's)
+            cmp         v_WITH
+            beq         word2
+:           lda         kk
             and         #$FF ^ PART
             sta         cm_cmd + CM_OBJ + T_KIND
             lda         kk
@@ -1146,7 +1165,10 @@ action:     jsr         rowp            ; The verb's own, and the action it make
             ldy         #R_AUX
             lda         (rp),y
             sta         cm_cmd + CM_AUX
-            ldy         #R_SKILL
+            lda         aspect          ; (The aspects said, else the verb's own)
+            beq         :+
+            sta         cm_cmd + CM_AUX
+:           ldy         #R_SKILL
             lda         (rp),y
             sta         cm_cmd + CM_SKILL
             ldy         #R_TASK
@@ -1258,4 +1280,4 @@ no:         lda         #0
 .endproc
 
             .rodata
-magic:      .byte       "DQ0W", 2
+magic:      .byte       "DQ0W", 3

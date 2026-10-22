@@ -469,7 +469,9 @@ enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: wha
                                                 **   its record copied into the hub's pview); */
        PA_BAR, PA_BEND,                         /*   a door barred again (a bar carried, or in reach, set in its
                                                 **   brackets); bars bent (a portcullis's; a window's, forced); */
-       PA_LOCK };                               /*   a thing's lock locked (IO_SHUT's) */
+       PA_LOCK,                                 /*   a thing's lock locked (IO_SHUT's); */
+       PA_CHECK };                              /*   a door gone over for traps, its own (2026-10-22: a search's test,
+                                                **   10 seconds) */
 enum { WQ_SAVE, WQ_EXAMINE, WQ_START, WQ_SET }; /* The hub's wreq's kinds */
 #define WY_NO_INIT      0x100                   /* (WQ_START's y: dq0 -I, the tests', no engage initiative test nor
                                                 **   a grope's test while engaged: their fights' dice as they were) */
@@ -497,8 +499,13 @@ enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARR
                                                 **   short to span it; */
        PO_GAP, PO_JAMMED };                     /*   a portcullis's bars broken through, its bars forced apart (it
                                                 **   won't move) */
+#define PO_SHOWS        0x8000                  /* (E_PORTAL's w1, an opening's: what it shows beyond told with it, as
+                                                **   the look after it found it, 2026-10-22: a what, WB_*, | 4 lit; b
+                                                **   the room's kind; w2 how far it's seen, squares: the world's
+                                                **   revealed) */
 enum { TO_SPRUNG, TO_DODGED, TO_RESISTED, TO_CHOKED, TO_OPENED, TO_NOTICED, TO_FOUND, TO_DISARMED, TO_NOT_YET,
-       TO_FUMBLED, TO_CANT, TO_PIT, TO_NONE, TO_ASSESSED, TO_PUZZLED };  /* E_TRAP's: set off, dodged, its gas resisted or choked on, a pit's
+       TO_FUMBLED, TO_CANT, TO_PIT, TO_NONE, TO_ASSESSED, TO_PUZZLED, TO_CLEAN, TO_KNOWN };   /* (TO_CLEAN, TO_KNOWN:
+                                                **   PA_CHECK's, 2026-10-22: none found on the door, one known of) */  /* E_TRAP's: set off, dodged, its gas resisted or choked on, a pit's
                                                 **   cover fallen in (no one on it); noticed in passing, found by a
                                                 **   search; disarmed, not yet, set off disarming it, no means to
                                                 **   (magic), a pit (gone round, not disarmed), none in reach */

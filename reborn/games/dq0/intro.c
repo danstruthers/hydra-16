@@ -109,7 +109,11 @@ void __fastcall__ o_harm_words (unsigned w, unsigned cond)
     state_words ((unsigned char) cond);         /* (Its state: task.c's) */
 }
 
-/* What came of working a door */
+/* What came of working a door, into lb (fixt.c's, to say: what it shows told with it, an opening's; overlay 10's,
+** 2026-10-22: this one's room) */
+#pragma code-name (push, "OV10CODE")
+#pragma rodata-name (push, "OV10RODATA")
+#pragma local-strings (push, on)
 void __fastcall__ o_portal_words (unsigned char out)
 {
     static const char* const said[] = {
@@ -122,8 +126,11 @@ void __fastcall__ o_portal_words (unsigned char out)
                                                 **   about..." as it began, HOUSE.md's things told as found) */
     };
 
-    msg (said[out]);
+    strcpy (lb, said[out]);
 }
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- Digging's words: how a spell of work went, and the feet to go */
 

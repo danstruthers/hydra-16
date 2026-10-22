@@ -14,7 +14,12 @@
 **     target"; as it's down while others fight on; as it's dropped or thrown away; as it's out of sight; as the world's
 **     events make the character turn: a denizen come into sight, a blow from one it doesn't see, a trap set off,
 **     main.c's untarget);
-**   - "take all": each thing it sees lying about, taken in turn (taken_next).
+**   - "take all": each thing it sees lying about, taken in turn (taken_next);
+**   - a thing's aspect asked, its thing unsaid ("check its condition", "examine the lock"): the last thing named;
+**   - what it's done with ("with the bar", "using the pick": the instrument, the user's, 2026-10-22): to hand
+**     (carried, or lying within reach: the things' IO_FIND, as a fill's fuel and a door's bar are), else refused,
+**     the things' words ("You have no bar to hand."), never done with bare hands or another thing instead; a blow's
+**     taken in hand first, as a named weapon is (names.c's).
 ** A thing found has its square (struct cthing's x, y) and its name as its word.  Its own state (the last thing named,
 ** the target, the question, the things to take) is kept in its overlay's bank (its data there: the code's only).
 ** The fixtures (doors, windows, stairs ...) are choose.c's to find and to ask about (overlay 7: pick, choose).
@@ -330,6 +335,54 @@ static unsigned char __fastcall__ find_thing (struct cthing* t, unsigned char wh
     return 0;
 }
 
+/* The actions done with a thing ("with the bar"): what it's done with must be to hand */
+static const unsigned char tooled[] = { VB_ATTACK_OBJECT, VB_BREAK_OBJECT, VB_FORCE_OBJECT, VB_BEND_OBJECT,
+    VB_RAISE_OBJECT, VB_LOWER_OBJECT, VB_DISARM_OBJECT, VB_DIG, VB_LIGHT_OBJECT, VB_EXTINGUISH_OBJECT, VB_OPEN_OBJECT,
+    VB_CLOSE_OBJECT, VB_UNLOCK_OBJECT, VB_LOCK_OBJECT, VB_FILL_OBJECT, VB_KNOCK_OBJECT, VB_PUSH_OBJECT, VB_PULL_OBJECT,
+    VB_TOUCH_OBJECT, VB_BAR_OBJECT, VB_CLIMB, VB_SEARCH, VB_EXAMINE_OBJECT, VB_JUMP };
+
+/* What the command's done with (its "with": the other thing's word, or, nothing else said, the thing's), to hand?
+** 1, it the other thing now (the thing unsaid, if that was it), a blow's in hand; 0, refused (the things' words) */
+static unsigned char tool_ok (void)
+{
+    char* w = cmd.other.word[0] ? cmd.other.word : cmd.obj.word;
+    unsigned char k, a = cmd.action;
+
+    for (k = 0; k < sizeof tooled && tooled[k] != a; ++k) {
+    }
+    if (k == sizeof tooled || !*w || cmd.obj.kind == OB_WAY_OUT) {
+        return 1;                               /* (Not done with a thing; the way out's own, the puzzle's) */
+    }
+    k = w == cmd.obj.word ? cmd.obj.sel | cmd.obj.n << 4 : cmd.other.sel | cmd.other.n << 4;
+    hub_mem (0, &HUB->ireq.sel, &k, 1);         /* (Which of several: the world's to choose) */
+    if (othings (IO_FIND, w, "", 0) != IR_OK) {
+        msg (lb);                               /* ("You have no bar to hand.", "The bar is out of reach: ...") */
+        return 0;
+    }
+    if (w == cmd.obj.word) {                    /* ("Attack with the sword": what it's done with, the thing unsaid) */
+        strcpy (cmd.other.word, w);
+        *w = 0;
+        if (!cmd.obj.kind && !cmd.obj.sel) {
+            cmd.flags |= CF_UNSAID;
+        }
+    }
+    if (a == VB_ATTACK_OBJECT || a == VB_BREAK_OBJECT) {
+        if (othings (IO_HOLD, cmd.other.word, "", 0) == IR_OK) {
+            msg (lb);                           /* (In hand first, a blow's: "You take the bar in both hands.") */
+            intend2 (I_WAIT, othings_x, 1);
+        } else if (!strstr (lb, "already")) {
+            msg (lb);                           /* (No hand free for it: "Your hands are full ...", not struck with
+                                                **   another instead) */
+            return 0;
+        }
+    }
+    if (a != VB_FILL_OBJECT) {
+        cmd.other.word[0] = 0;                  /* (Checked: the action's own rules use what's to hand; a fill's fuel
+                                                **   its own, named) */
+    }
+    return 1;
+}
+
 /* The target, if it's still one (let go as it's out of sight, or down while others are up): its entry among those
 ** found plus 1 (its square now the target's), or 0 */
 static unsigned char has_target (void)
@@ -395,6 +448,16 @@ unsigned char o_resolve (void)
     }
     if (cmd.other.sel == SL_IT && !cmd.other.word[0]) {
         memcpy (&cmd.other, &last, sizeof last);
+    }
+    if (cmd.prep == PR_WITH && !tool_ok ()) {   /* (What it's done with: to hand, else refused) */
+        return RV_DONE;
+    }
+    if (cmd.aux && (a == VB_EXAMINE_LOCALE || (a == VB_EXAMINE_OBJECT && (cmd.flags & CF_UNSAID))) && !cmd.obj.kind &&
+        last.word[0] && !last.kind) {           /* (An aspect asked, nothing named: "check its condition", the last
+                                                **   thing named) */
+        memcpy (&cmd.obj, &last, sizeof last);
+        cmd.action = a = VB_EXAMINE_OBJECT;
+        cmd.flags &= ~CF_UNSAID;
     }
     switch (a) {
     case VB_TARGET_SHOW:

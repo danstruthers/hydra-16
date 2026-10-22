@@ -928,7 +928,7 @@ static unsigned char events (void)          /* (How many there were) */
                     finds = things (IO_SEARCH, "");
                 }
                 if (!finds || m.w1 != PO_NOTHING) {
-                    fixt_words (m.w1);
+                    fixt_words (&m);
                 }
                 k = m.w1;                       /* (A part lifted out: now taken up) */
                 if (lifting[0] && (k == PO_LIFTED || k == PO_PANE_OUT || k == PO_BARS_OUT)) {
@@ -1546,9 +1546,16 @@ portal:
         if (cmd.obj.word[0] && !cmd.obj.kind && deal (SW_LOOK | SW_QUIET) != SR_NONE) {
             return;                             /* (A denizen it sees: how it seems) */
         }
-        look_way (VB_EXAMINE_OBJECT);           /* (A thing, a portal, the room: part 6's, way.c) */
+examined:
+        if ((pa = look_way (VB_EXAMINE_OBJECT)) != 0) {
+            goto portal;                        /* (A thing, a portal, the room, its aspects: part 6's, way.c; a door
+                                                **   gone over for traps, the world's) */
+        }
         return;
     case VB_SEARCH:
+        if ((cmd.aux & EX_TRAPS) && (cmd.obj.word[0] || (cmd.obj.kind && cmd.obj.kind < OB_ROOM))) {
+            goto examined;                      /* ("Search the chest for traps": that thing alone) */
+        }
         finds = 0xFF;                           /* (A search, a long task: what it finds told as it ends, the walls'
                                                 **   and the things concealed about it, E_PORTAL's) */
         msg ("Searching about...");

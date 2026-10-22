@@ -2037,7 +2037,7 @@ static unsigned char __fastcall__ work (unsigned char what, unsigned x, unsigned
     wk.tt = 0;
     wk.climb = 0;
     wk.res = 0;
-    if (x == NO_SQ || what == W_STEP || what == PA_SEARCH || what == PA_DISARM) {
+    if (x == NO_SQ || what == W_STEP || what == PA_SEARCH || what == PA_DISARM || what == PA_CHECK) {
         wk.what = what;
         traps ();
     } else {
@@ -2088,6 +2088,9 @@ static void __fastcall__ worked (unsigned long t)
     }
     t = wk.res;
     see (0);
+    if (wk.open) {
+        revealed ();                            /* (An opening told, with what the look found beyond it: part 12's) */
+    }
     if (t) {
         event (E_ARRIVE, 0, A_CLIMBED);         /* (Through a window: somewhere new) */
     }
@@ -2146,6 +2149,79 @@ void __fastcall__ s_door_work (unsigned char what)
     }
 }
 
+/* An opening the character's made told (wk's open, its PO_*: a door opened, unbarred, forced, broken down; a window's
+** shutters opened, burst, smashed; a portcullis raised), with what the look after it shows beyond it (the user's,
+** 2026-10-22: "You open the door, revealing a dark corridor ..."; the look one way's words, dq0p's way_seen, the
+** model): from the portal's square on, the way from the character through it, along the squares the eye sees past
+** (no rock, no wall, no shut door), straight on through the dark, round a bend only where it sees the square, as far
+** as a look one way reaches; how far it sees (the last square it sees now, T_VIS); the first square of a room but the
+** character's own ends it, the room's kind and its light noted.  E_PORTAL, the opening's | PO_SHOWS: a what (WB_*) |
+** 4 lit, b the room's kind, w2 the squares seen (part 41's, its own: the main RAM's room) */
+#pragma code-name (push, "SW41CODE")
+#pragma rodata-name (push, "SW41RODATA")
+#pragma static-locals (push, on)
+void s_revealed (void)
+{
+    struct portal* o;
+    struct room* q;
+    unsigned char* p;
+    unsigned x = px_, y = py_, rx, ry;
+    unsigned char d = pd_, n = 0, k, w, r, what = WB_DARK, dist = 0, kind = 0, lit = 0;
+
+    hub_map (0);
+    rx = HUB->pc_x;                             /* (The character's room: its floor's first square) */
+    ry = HUB->pc_y;
+    if ((r = room_of (sn_, rx, ry)) != 0xFF) {
+        q = &C->room[r];
+        rx = rx - cx_ + q->x;
+        ry = ry - cy_ + q->y;
+    } else {
+        rx = ry = 0xFFFF;
+    }
+    while (n < 31) {
+        for (k = 0, w = 0xFF; k < 4; ++k) {     /* (Straight on, else the first way seen that isn't back) */
+            if (k != ((d + 2) & 3) && (w == 0xFF || k == d) && (p = at (sn_, x + dir_x[k], y + dir_y[k])) != 0 &&
+                T_CLEAR (*p) && !((TILE (*p) == T_DOOR || TILE (*p) == T_WINDOW) && (o = portal_at (cx_, cy_)) != 0 &&
+                !(o->state & PS_OPEN) && o->kind != PK_PORTCULLIS) && (k == d || (*p & T_VIS))) {
+                w = k;
+            }
+        }
+        if (w == 0xFF) {
+            break;
+        }
+        x += dir_x[d = w];
+        y += dir_y[d];
+        ++n;
+        if (!(*at (sn_, x, y) & T_VIS)) {
+            continue;                           /* (Dark: on, as the eye goes) */
+        }
+        dist = n;
+        what = WB_PASSAGE;
+        if ((r = room_of (sn_, x, y)) != 0xFF) {
+            q = &C->room[r];
+            if (x - cx_ + q->x != rx || y - cy_ + q->y != ry) {    /* (Not the character's own) */
+                what = WB_ROOM;
+                kind = q->kind;
+                lit = (q->flags & R_LIT) != 0;
+                break;
+            }
+        }
+    }
+    hub_map (0);
+    wk.m.kind = E_PORTAL;
+    wk.m.who = 0;
+    wk.m.a = what | lit << 2;
+    wk.m.b = kind;
+    wk.m.w1 = wk.open | wk.pq.kind << 8 | PO_SHOWS;
+    wk.m.w2 = dist;
+    wk.m.t = HUB->now;
+    hub_event (&wk.m);
+    wk.open = 0;
+}
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* A battering's next blow as the character's free (the main loop's, while its long task's LT_BATTER: part 6's
 ** blows), the character busy its time; or, done, what came of the blows told and seen, the long task over, and the
 ** character busy for the time a trap it set off took: 2 while it's busy, 0 once it's free */
@@ -2157,6 +2233,9 @@ unsigned char s_batter_on (void)
     if (wk.what != W_BLOW && wk.what != W_GONE) {
         HUB->pc_task.kind = LT_NONE;
         see (0);
+        if (wk.open) {
+            revealed ();                        /* (Broken down: told with what it shows beyond, part 41's) */
+        }
     } else {                                    /* (A blow struck: strenuous work, HOUSE.md's tiring; a fatigue level
                                                 **   more asked of if more are to come) */
         spend (GA_WORK, BLOW_T);

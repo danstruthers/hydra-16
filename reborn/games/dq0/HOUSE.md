@@ -42,7 +42,8 @@ plays them as HarnMaster's referee does.
   (dq0harn.c's test.)
 - **Appraising a thing** uses the craft that knows it: weapons and armour Weaponcraft, metal Metalcraft, wood
   Timbercraft, hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food
-  Cookery, stone Masonry, glass Glassworking.  (dq0harn.c's appraiser table.)
+  Cookery, stone Masonry, glass Glassworking.  (dq0harn.c's appraiser table.)  It's asked for by name, and tells only
+  what's asked: its value, its quality, or both (Looking at things, below).
 - **Words reach a creature only in a tongue the character speaks:** its own, common, and any its file's "language"
   lines give.  Persuading, intimidating and deceiving in another tongue does nothing (the reply's result 2).
   (dq0harn.c's speaks.)
@@ -359,6 +360,20 @@ silent on all of it.
   front; look and examine the place.  (resolve.c; main.c.)
 - **"Take all"** takes each thing it sees lying about, the nearest first (those in reach before those walked to),
   in turn; one it can't take, or no longer sees, ends it.  (resolve.c's taken_next.)
+- **What it's done with** ("hit the door with the bar", "strike the rat using my sword", "dig down with the shovel",
+  "light the torch with the tinderbox", "pick the lock of the chest with the lockpicks"; the user's playtest, 2026-10-22:
+  "`hit door with bar` hits the door, even if I don't have a bar"): every command done with a thing (a blow, breaking,
+  forcing, bending, raising or lowering, disarming, digging, lighting or putting out, opening, closing, locking or
+  unlocking, filling, knocking, pushing, pulling, touching, barring, climbing, searching, examining) takes it only if it's
+  to hand, carried or lying within reach (the things' IO_FIND: the rule a fill's fuel and a door's bar already had, used
+  where it lies); else it's refused, the things' words ("You have no bar to hand.", "The bar is out of reach: go over
+  to it first."), never done with bare hands or another thing instead.  A blow's thing is taken in hand first ("You take
+  the bar in both hands.", its time), as a named weapon was (names.c's); no hand free for it, refused, the things' words
+  ("Your hands are full: stow something, or put it down."); what strikes is then the referee's to choose, as ever, from
+  what's held (a weapon held; at a door, the best tool to hand).  A part after "with"
+  is what it's done with, not the door's ("hit the rat with the bar" no longer batters a door).  (resolve.c's tool_ok;
+  cmdmean.s.)  Not yet: a thing the referee has no weapon for (a bar, a rope) struck with as itself (it strikes with its
+  fists); a named tool chosen over a better one for a dig or a blow at a door.
 - **Which of several:** the closest by squares (and the lead, as yet, the closest); the largest and the smallest by
   a thing's size (how easily it's seen); the second as they lie from the character's left round to its right; any,
   the closest.  Several of a name and none said: the one the world's services choose, as ever (the nearest thing,
@@ -694,9 +709,8 @@ words):
   a well, its shaft ("The well's shaft drops away into the dark."); a thing that holds nothing ("You can't see into
   the sword."); carried, or lying within reach and seen (out of reach, walked over to first); 3 seconds.  Into a way
   ("look into the passage") a look that way, as "look through" is.
-- **Looking at a thing** ("look at the table") is an examine of it: its appraisal by the craft that knows it (the
-  referee's test, no time, as examine's), then what's in it or on it ("On it lie two chisels.", "It's closed.").  At a
-  denizen, a look about as before; at a way, a look that way, as before.
+- **Looking at a thing** ("look at the table"): what anyone sees of it, no test, its appraisal taken out (the user's,
+  2026-10-22: Looking at things, below).  At a denizen, a look about as before; at a way, a look that way, as before.
 - **What closes:** a lid (a chest, an iron pot, a pot of pitch, a backpack's flap), a tie (a sack, a pouch), a stopper
   (a waterskin, a flask of oil); a basket, a quiver, nothing.  Found closed; the character's kit open, but the
   waterskin and the flask, stoppered.  Opened or closed in 2 seconds ("You open the chest.", "You untie the sack.",
@@ -739,6 +753,84 @@ words):
   ("You are in a passage.", not "The passage forks here."); the openings into one room beside a passage are one way
   into it (a walk along a cave's side); a walk set out from a fork (a wide one's squares, each a fork of its own)
   goes three squares the way said before a fork stops it again.
+
+## Looking at things, and what opening shows *(2026-10-22: drafted for the user to review)*
+
+Every ruleset's.  The user's, 2026-10-22: "When examining an item, I want to know about its state, and for containers
+if they are open or closed, and what is on/in them.  `look [at] item` instead of examine should give these things.
+Examine gives too many unimportant details (like value)"; the aspects asked by name, as the user chose them; and opening
+something tells what it reveals.
+
+- **Looking at a thing** ("look at the chest", "look the torch over"; LM_AT, the world's IO_LOOK): a second, no test.
+  What it is and where: "Your torch is in your hand.", "The chest is beside you.", "Your dagger is on your belt.", "The
+  torch is in the sconce.", "The sword is some 20 feet off."; its state, as anyone sees it: lit or unlit, burning low,
+  burnt out (a lantern out of oil); open or closed, tied shut or untied, stoppered or unstoppered; a fuel empty;
+  battered, nearly broken, dulled, dull, worn; with a lock (its lock broken, once forced); a container or a surface
+  empty, bare ("It's lit, burning low.", "It's closed, with a lock.", "It's untied, empty."); and what's in it or on
+  it, within reach, look in's words, alike told together ("In it lie a tinderbox, a bar and two torches.").  Whether a
+  lock is locked doesn't show: trying it tells.  Too far off to make out (1 + sight / 2 + its kind's seen squares, as
+  a glance's), only its size ("Something small is some 40 feet off."); further off than NEAR_SQ (2 squares), nothing in
+  it.  Of several of a name, the one most to hand (A thing of several, above).  A thing of a kind with no words of its
+  state says where it is only ("The bones are beside you.").
+- **Examining a thing** ("examine the sword", "x", "inspect", "check", "study", "look closely at"; LM_CLOSE): a closer
+  look, three seconds, no test, no value nor quality: what looking at it tells, and what a closer look shows besides:
+  what it's made of, how thick (a candle's), its wear (as good as new, little worn, well worn, battered, close to
+  breaking: its durability left, in tenths, 10, 7, 4, 2 and less), a blade's edge dulled or dull, how much of a light
+  or a fuel is left (a torch's or a candle's hardly burnt ... half burnt down ... burnt out; a lantern's full of oil ...
+  out of oil; a flask's full ... empty: by quarters of a whole one's life), and a lock's make ("Its lock is a simple
+  one.": a chest's 1 + make / 3 steps to pick, 2 or less simple, 3 sound, 4 good).  ("It's made of wood; it's little
+  worn, half burnt down.")  Further off than NEAR_SQ: "You'd have to go closer to make out more."  A portal examined
+  (a door, a window, a portcullis) tells its plain features as before (its kind, size, material, thickness, a grille,
+  a spy-hole, studs, its hinges, a bar's brackets, its lock's make: simple 4 steps or less, sound to 10, intricate),
+  and the blows' marks, but no judgement of its state: that's its quality, asked for.
+- **The aspects asked for** (the user's choices, 2026-10-22), each a word of the command's (commands.words' [aspects],
+  the verb's own: struct cmd's aux, EX_*):
+  - **Value:** `assess X`, "value X", "price X", "what is X worth", "the value of X", "assess / determine / examine
+    the value (the worth, the price) of X": the referee's appraisal test as before (its craft's), its value alone ("You
+    judge it worth about 115 pennies."), no time.
+  - **Quality** (how well made): `judge X`, "how well made is X", "the quality (the make) of X", "judge the quality
+    of X": the same test, its make alone ("You judge it a fine chest."); a portal's, its state and how stout it is
+    judged, as the old examine did ("You judge it rotting, and stout: ...").
+  - **Both:** `appraise X`: the whole appraisal as it was (its make, its material and what it stands up to, its size,
+    its life left, its worth).
+  - **Weight:** `heft X`, "weigh X", "the weight of X": in hand, or lifted where it lies (out of reach, walked over to
+    first), a second, no test: "The chest weighs about 30 pounds, with what's in it.", less than a pound, about a pound,
+    else to the nearest pound; a thing fixed where it stands, not lifted; a portal, part of the place.
+  - **A lock:** "examine the lock of the chest", "study the lock of the door", "examine the lock" (nothing named: the
+    last thing named, else the door in front): its make and how hard it looks, a second, no test (the picking is the
+    test): "The chest has a simple lock: easy to pick, by the look of it.", "... a sound lock: a fair test of a
+    lockpick.", "... a good lock: a hard one to pick."; broken, once forced; none.
+  - **Traps:** "check the chest for traps", "search the chest for traps", "examine the door for traps": the
+    search's test on that one thing, ten seconds (a search's minute is the 49 squares about it; one
+    thing, a sixth of it).  A door (or a window, a portcullis), walked up to: its trap, if it has one hidden, found by
+    Awareness at its hiding's steps worse (by magic, never: told as none); found, told as a search's find ("You find a
+    trap: a gas trap, set to go off as its door opens."); known already, said so; none, or missed, "You go over it
+    carefully, and find no trap."  A thing (a chest), within reach (walked over to first): things have no traps yet,
+    so none is found ("The chest shows no sign of a trap: you go over it carefully, and find none.").  "Search for
+    traps" with nothing named is the search about it, as ever.  (wtrap.c's PA_CHECK; things.c's LM_TRAPS.)
+  - **Condition:** "check its condition", "examine the condition (the damage) of X", "the condition of X": its wear and
+    damage alone, the closer look's words ("Your sword is battered, its edge dulled.", "Your torch is half burnt down."),
+    a second, no test; a portal's, the blows' marks ("It's splintered with blows.", "It's been broken down.", "It shows
+    no damage.").
+  - The general form "examine / determine / assess / judge / check / study the ASPECT of X" for every aspect, the
+    aspect said overriding the verb's own ("assess the quality of the sword" is its quality): a later aspect is a word
+    in commands.words' [aspects] and an EX_ bit.  "Its" and nothing named: the last thing named ("check its
+    condition"; the resolver's).  A denizen judged ("judge the goblin"): how it seems, a look at it, as an examine of a
+    denizen was.  "Sense a lie from the goblin" is the old "judge" (Diplomacy), not yet built.
+- **What opening shows** (the user's: "if I open a chest, I should get a 'You open the chest, revealing a pile of gold
+  coins'"): told in the open's own sentence.  A thing that closes: its lid lifted, its tie untied, its lock forced open:
+  what's in it, alike told together ("You open the chest, revealing a candle and two chisels.", "You untie the sack,
+  revealing 3 rations.", "You force the chest: its lock bursts open, revealing ..."); nothing in it, ": it's empty."; a
+  stopper drawn, how full it is, by quarters (a flask of oil: ": it's half full."; a waterskin, what's in it).  A door
+  opened, unbarred, forced or battered down, a window's shutters opened, burst or smashed, a portcullis raised or
+  heaved up: what the look after it sees beyond it, the look one way's words ("You open the door, revealing a passage,
+  30 feet of it.", "..., revealing a kitchen, lit by torches.", "..., revealing only darkness beyond."): from the
+  portal on, the way through it, along what the eye sees past, straight on through the dark, round a bend only where
+  it sees the square, a room seen (not its own) ending it; as far as a look one way reaches (31 squares).  The look
+  after the open (the senses', its view changed) tells nothing of it again.  An opening that sets off a trap, or hurts
+  the one battering, is told at once as before, nothing revealed.  A walk's own opening of a door it knows ("You open
+  the door." as it goes) is a walk's beat, nothing revealed: the walk goes through.  (things.c's reveal; the world's
+  tail and revealed, dq0w.c; fixt.c's shows.)
 
 ## Decided, not yet built
 

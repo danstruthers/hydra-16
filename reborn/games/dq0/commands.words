@@ -19,6 +19,8 @@
 #   [selectors] which of several things the thing is (SL_*: the closest, the second, all of them; it, the last thing
 #              named) (new)
 #   [manners]  how it's done (MN_*: carefully, hard ...) (new)
+#   [aspects]  what's judged of a thing, after a verb that takes them (commands.verbs' aspects): the command's aux,
+#              EX_*, dq0.h's ("examine the value of the sword", "check the chest for traps") (new, 2026-10-22)
 #   [numbers]  a number in words ("move left one space") (new)
 #   [little]   passed over
 
@@ -177,6 +179,7 @@ thru = HOW_THROUGH
 
 [special]
 with = WITH
+using = WITH                                # (new, 2026-10-22: "strike the rat using the sword")
 way out = WAY_OUT
 away = AWAY
 back = BACK
@@ -230,6 +233,18 @@ hard = MN_HARD
 gently = MN_GENTLE
 lightly = MN_GENTLE
 firmly = MN_FIRM
+
+[aspects]
+value = EX_VALUE
+worth = EX_VALUE
+price = EX_VALUE
+quality = EX_QUALITY
+make = EX_QUALITY
+weight = EX_WEIGHT
+lock = EX_LOCK
+traps = EX_TRAPS
+condition = EX_COND
+damage = EX_COND
 
 [numbers]
 one = 1
