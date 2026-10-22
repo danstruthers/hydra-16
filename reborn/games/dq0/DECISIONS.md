@@ -843,6 +843,12 @@ slowing the walk and its failed stumble rolls laying the character prone (prone 
 round), a useless limb a hand that holds nothing, a leg that hobbles or crawls; 4.6's body positions keep failed
 stumbles too.
 
+The user (2026-10-22), on a useless limb: "According to the rules, at some point of injury a limb is useless.  For an
+arm or hand, that means no picking things up with that hand.  For a leg or hip, that means no walking, but crawling
+may still be possible if one arm and one leg still work."  So a useless arm's hand takes nothing up and holds nothing;
+a useless leg walks no more: the character crawls if an arm and a leg still work, else it can't move (the book's
+staff or crutch left out for now).
+
 **Design:** the plan's slice 4.1b (to be drafted with it).
 
 ### A helpless character, and poison
