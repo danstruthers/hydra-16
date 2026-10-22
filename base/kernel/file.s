@@ -170,8 +170,11 @@ f_release:                                                  ; (Channel F_CH: one
             php
             sei
             stz         T_REGISTER
-            dec         K_CH_REFS,X
             lda         K_CH_REFS,X
+            dec         a
+            beq         :+                                  ; (The last fd: the count stays 1 till the clunk's
+            sta         K_CH_REFS,X                         ;   done, below)
+:
             sty         T_REGISTER
             plp
             cmp         #0
@@ -182,6 +185,11 @@ f_release:                                                  ; (Channel F_CH: one
             jsr         f_send
             lda         F_CH                                ; (A union directory's namespace: one user fewer)
             KCALL_FAR   K_NS_UREL_K
+            jsr         f_chfree                            ; Free only now.  (A count of 0 is a free channel,
+                                                            ;   K_CH_NEW_K's for another task's OPEN, and this
+                                                            ;   task may be switched out before f_chload: the
+                                                            ;   clunk was that channel's then, and this one's
+                                                            ;   never sent, a pipe's reader waiting for ever)
 @kept:
             clc
             rts

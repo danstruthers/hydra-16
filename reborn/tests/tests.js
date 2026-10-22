@@ -126,6 +126,12 @@ const DBOVER_S = ['.include "hydra.inc"', '.include "hyx2.inc"', '', '          
   'down:       pha', "            ora #'0'", '            jsr PUTC', '            pla', '            dec a', '            beq @end',
   '            jsr down', '@end:       rts', ''].join('\n');
 
+// The kernel's bring-up console's test's program (kputc): fd 1 closed, so its PUTC is the kernel's, straight to the
+// serial port, polled (as the boot's last line is, the console driver up): 1,024 dots
+const KPUT_S = ['.include "hydra.inc"', '.include "hyx2.inc"', '', '            HYX2_PROGRAM "kput", main', '', '.code',
+  'main:       lda #1', '            jsr CLOSE', '            ldy #4', '            ldx #0', "@dot:       lda #'.'", '            jsr PUTC',
+  '            dex', '            bne @dot', '            dey', '            bne @dot', '            rts', ''].join('\n');
+
 // The step test's card: in bin, t_steppee (tests/ram), the program t_step steps
 function stepCard() {
   fs.mkdirSync(CARD_DIR, { recursive: true });
@@ -2780,12 +2786,16 @@ module.exports = {
         return [{ what: 'a RAM program loaded from a card (t_big, ' + n + ' bytes: SPAWN to its first instruction), a byte', from: '<big', to: 'big>',
           per: n, max: o => o.clock === 2 ? 320 + 64 : 320 },
         { what: 'the same from the RAM disk, a byte', from: '<rbig', to: 'rbig>', per: n, max: 90 },
-        // (A mark is seen as its text goes out on the line, at the boot's 9600: so a time here moves in steps of a
-        // character's, some 3,700 cycles, as the work before it shifts by a few.  SPAWN's own: about 45,000.  It grows
-        // with the ROM's modules, a hundred cycles or more each (October 2026: basic 169, as 106; the PSG's bigger snd,
-        // vid and play 27, from reborn's 48,991 to 49,018), so 50,000)
+        // (A mark is seen as its text goes out on the line, at the boot's 9600, from the kernel's console (t_load has no
+        // fds).  That waits a character's time after each byte, 5,120 cycles, once the console driver has the ACIA's
+        // receive interrupt on (as the W65C51N's build always did: kernel/cons.s), so a time here is the work's own,
+        // and one such wait more for each character its end mark has past the baseline's (msp> four, b0> three).  Till
+        // 2026-10-22 the Rockwell's waited on the line itself, and a time moved in steps of a character's, some 3,700
+        // cycles, as the work before it shifted (the W65C51N's build measured 50,028 here then).  SPAWN's own: about
+        // 45,000, growing with the ROM's modules, a hundred cycles or more each (October 2026: basic 169, as 106; the
+        // PSG's bigger snd, vid and play 27).  With the wait: 50,107 (2026-10-22), so 51,000)
         { what: 'SPAWN of a module in place (#m/t_child), the caller\'s time', from: '<msp', to: 'msp>', minus: ['<b0', 'b0>'],
-          per: 1, max: 50000 },
+          per: 1, max: 51000 },
         { what: 'the same by /bin/t_child (the card\'s bin first, then #m/bin)', from: '<sp', to: 'sp>', minus: ['<b0', 'b0>'], per: 1,
           max: 110000 }];
       },
@@ -3599,7 +3609,7 @@ module.exports = {
       // dq0answer's)
       budgets: [{ what: 'inventory answered (Enter to the answer)', from: '> inv', to: 'You carry', per: 1, max: 2000000 },
         { what: 'a step that can\'t be taken answered (the world\'s: from the line told into the story)', from: '\n> go up',
-          to: 'There\'s no way up or down here.', per: 1, max: 600000 }],
+          to: 'There\'s no way up or down here.', per: 1, max: 700000 }],
       // (Each a mark in what the serial line sends: the inventory's from the line typed at the bottom, a fifth of a
       // second, the user's; the step's from the line entered, as it's told into the story (on a line of its own: the
       // line typed's row, 24, after it, or the status line's clock first, as the second falls): about 285,000 cycles to "go up"'s answer since the world sleeps on its
@@ -3628,7 +3638,9 @@ module.exports = {
       // before), a budget of 1,450,000; and the line entered told into the story as it's entered, not with the answer,
       // so from it the step's answer has the UI's parse and the world's climb in it: 456,000, a budget of 600,000 (from
       // Enter it's quicker: dq0answer96's go up, some 560,000, 575,000 before).  What it carries is still told before
-      // the turn's look, its words after its first)
+      // the turn's look, its words after its first.  Since slice 4.1 (2026-10-22) 531,000 to 635,000 as the boot's
+      // timing moves where the rats' words fall at 9,600 baud (the kernel's polled console timed, the step's own path the
+      // same): a budget of 700,000, a guard against a large slowdown, as the inventory's; the user's targets dq0answer's)
       check(m, out) {
         const a = out.indexOf('There\'s no way up or down here.'), b = out.indexOf('> quit', a), seg = a < 0 || b < 0 ? '' : out.slice(a, b);
         const top = (seg.match(/\x1b\[1;\d+H/g) || []).length, f = [];
@@ -6301,6 +6313,17 @@ module.exports = {
         this.notes = ['XOFF ' + m.acia.xoffs + ' times, XON ' + m.acia.xons];
         return f;
       },
+    },
+    {
+      name: 'kputc', what: 'the kernel\'s bring-up console written to with the console driver up (PUTC with fd 1 closed: the serial port, polled, as the boot\'s last line is) while keys come at the line\'s rate: none of its waits reads the ACIA\'s status register, which would clear a receive interrupt the CPU hadn\'t taken yet (the byte left unread, and no interrupt again: the console deaf till a reset, the browser page\'s fault of 2026-10-22), so the line typed meanwhile is read and run after it, and the next',
+      init: 't_rc', cycles: 160e6,
+      pc: { files: () => ({ 'kput.s': KPUT_S }) },
+      machine: {
+        paste: true,
+        input: 'āas /pc/kput.s /ram/kput\r' + 'ā/ram/kput\rĀ' + 'echo typed while the kernel wrote\r' + 'āecho after\r',
+      },
+      expect: ['.'.repeat(1024), 'echo typed while the kernel wrote\ntyped while the kernel wrote\n% echo after\nafter\n% '],
+      check(m) { return m.acia.rxLost ? [m.acia.rxLost + ' byte(s) came while the last was unread (its receive interrupt lost: the console deaf)'] : []; },
     },
     {
       name: 'dbover', what: 'the debugger\'s steps over a subroutine (n): a breakpoint in the subroutine stepped over, then a step and a continue from it (no step of the kernel\'s is out); a subroutine that calls itself stepped over at its second level, and returned from (u); Ctrl-C in a call of the kernel\'s stepped over, then continue runs on past the call\'s end; and stopped in the next, a step is refused',

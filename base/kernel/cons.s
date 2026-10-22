@@ -4,7 +4,11 @@
 ; boot and the kernel's own messages until the console driver owns the ACIA.  The ACIA's own interrupts stay off
 ; here.
 ;   Rockwell R65C51: wait for TDRE before each byte.  WDC W65C51N (ACIA_CHIP): its TDRE always reads 1, so wait a
-;   character's time after each byte instead.
+;   character's time after each byte instead.  And the Rockwell's too, once a driver has the ACIA's receive interrupt
+;   on (the console driver's, as the boot's last line is written): its status register is the driver's then, as
+;   reading it clears the interrupt, and one that has come but not been taken yet (in the moment after the wait's
+;   SEI) would be lost: the byte left unread, RDRF set, and no interrupt again (an overrun makes none), the console
+;   deaf till a reset.
 ; Every routine keeps the caller's I flag (the boot prints with IRQs off).
 
 .include "kdefs.inc"
@@ -36,6 +40,10 @@ K_PUTC:
 .if ACIA_CHIP = ACIA_ROCKWELL
 @wait:
             sei
+            lda         ACIA_CMD                            ; A driver's receive interrupt on (the chip on, and the
+            and         #ACIA_CMD_DTR | ACIA_CMD_NO_RXIRQ   ;   interrupt not off): timed, as the W65C51N's (its
+            cmp         #ACIA_CMD_DTR                       ;   status register isn't for reading: the comment at
+            beq         @timed                              ;   the top)
             lda         ACIA_STATUS
             and         #ACIA_ST_TDRE
             bne         @ready
@@ -49,7 +57,11 @@ K_PUTC:
             pla
             sta         ACIA_DATA
             plp
-.else
+            clc
+            rts
+
+@timed:
+.endif
             sei
             pla
             sta         ACIA_DATA
@@ -65,7 +77,6 @@ K_PUTC:
             bne         :-
             ply
             plx
-.endif
             clc
             rts
 
