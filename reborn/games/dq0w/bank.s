@@ -91,7 +91,7 @@ go:
             SWPART      9, 4                ; The walks (dq0w.c's go, go_to, step_to)
             SWPART      10, 5               ; The things: the requests answered, a thing handled (things.c)
             SWPART      11, 5               ; The things listed, searched for, described, hidden
-            SWPART      12, 4               ; A door's work begun (dq0w.c's door_work)
+            SWPART      12, 2               ; A door's work begun (dq0w.c's door_work)
             SWPART      13, 8               ; The item store's rarer work: begun, kept, the kit, a chunk's things
             SWPART      14, 6               ; The denizens' bodies: their intents carried out (wbody.c)
             SWPART      15, 14              ; The blows, the bleeding (wfight.c)
@@ -118,6 +118,10 @@ go:
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
             SWPART      37, 12              ; The rest of the UI's intents carried out (dq0w.c's intent_more)
             SWPART      38, 6               ; A change record kept and made (store.c's store_put, change)
+            SWPART      39, 14              ; A thing looked at (things.c: 2026-10-22)
+            SWPART      40, 12              ; Its weight, its lock, traps; a thing described (things.c)
+            SWPART      41, 8               ; An opening told with what it shows beyond (dq0w.c's revealed)
+            SWPART      42, 4               ; What a closer look at a thing shows; its condition (things.c)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
@@ -169,13 +173,17 @@ go:
             SWFN        make_own, 13
             SWFN        seen_owned, 13
             SWFN        search, 11
-            SWFN        describe, 36
+            SWFN        describe, 40
+            SWFN        look_at, 39
+            SWFN        look_more, 40
+            SWFN        closer, 42
             SWFN        inside, 36
             SWFN        listed, 11
             SWFN        many, 35
             SWFN        hide, 13
             SWFN        door_work, 12
             SWFN        batter_on, 12
+            SWFN        revealed, 41
             SWFN        keep, 19
             SWFN        kit, 13
             SWFN        theme_kinds, 13

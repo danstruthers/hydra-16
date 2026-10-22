@@ -178,6 +178,12 @@ static void __fastcall__ spring (unsigned char on)
 ** opened */
 static void __fastcall__ tail (unsigned char out)
 {
+    if ((out == PO_OPENED || out == PO_UNBARRED || out == PO_FORCED || out == PO_BROKE_DOWN || out == PO_SMASHED ||
+        out == PO_RAISED || out == PO_HEAVED) && !wk.armed && !wk.hb && !wk.hw) {
+        wk.open = out;                          /* (An opening: told with what it shows, as the look after it's made:
+                                                **   dq0w.c's revealed, the user's, 2026-10-22) */
+        return;
+    }
     told (E_PORTAL, out | wk.pq.kind << 8, 0);
     if (wk.hb || wk.hw) {
         told (E_HARM, HC_STRUCK | wk.hb << 8 | wk.hw, 0);

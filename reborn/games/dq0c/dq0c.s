@@ -24,7 +24,7 @@
 
             HYX2_PROGRAM "dq0c", main
 
-TABLES_MAX  = 14336                 ; dq0c.dat's room in the RAM: its header, then the tables there; and in the banks,
+TABLES_MAX  = 14848                 ; dq0c.dat's room in the RAM: its header, then the tables there; and in the banks,
 RULES_MAX   = 8192                  ;   the rules, the words and verbs (make.js holds the file to them)
 WORDS_MAX   = 8192
 DAT_HEAD    = 15                    ; Its header: "DQ0C", version 3, the lengths of the grammar's counts and words, the

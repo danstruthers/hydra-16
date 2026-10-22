@@ -7,7 +7,9 @@
 ** surely).
 ** A thing further off than NEAR_SQ isn't judged: only what's seen of it from there (the item store's distance and
 ** its size, the request's to; the character's sight, the referee's, sight_copy's eye), its kind, or if it's too far
-** to make that out, its size.
+** to make that out, its size.  Only what's asked is told (the user's, 2026-10-22: "examine value [of] item"): its
+** value ("You judge it worth about 115 pennies."), its quality ("You judge it a fine chest."), or both, the whole
+** appraisal (its make, its material and what it stands up to, its size, its life left, its worth).
 */
 
 #pragma code-name ("OV1CODE")
@@ -64,7 +66,7 @@ static unsigned char __fastcall__ resists (const unsigned char* r, unsigned char
     return n + k;
 }
 
-void __fastcall__ o_appraise (const struct ireq* q, signed char g)
+void __fastcall__ o_appraise (const struct ireq* q, signed char g, unsigned char ex)
 {
     signed char qual = q->quality;
     unsigned char mat = q->mat, life;
@@ -119,11 +121,26 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g)
     lb[0] = 0;
     add ("You judge ");
     add (q->qty > 1 || q->plural ? "them" : "it");
+    if (!(ex & EX_QUALITY)) {                   /* (Its value alone) */
+        add (" worth ");
+        if (val) {
+            add ("about ");
+            add (utoa (val >= 20 ? (val + 2) / 5 * 5 : val, b, 10));
+            add (val == 1 ? " penny." : " pennies.");
+        } else {
+            add ("nothing to anyone.");
+        }
+        return;
+    }
     add (q->qty > 1 || q->plural ? " of " : " ");
     add (q->qty > 1 || q->plural ? make[qual] + 2 : make[qual]);
     add (q->qty > 1 || q->plural ? " make" : " ");
     if (!(q->qty > 1 || q->plural)) {
         add (q->name);
+    }
+    if (!(ex & EX_VALUE)) {
+        add (".");                              /* (Its quality alone) */
+        return;
     }
     if (*mats[mat].name) {
         if (!strstr (q->name, mats[mat].name)) {    /* (Not "a pane of glass, of glass") */

@@ -174,6 +174,20 @@ void s_traps (void)
     case PA_SEARCH:
         search ();
         break;
+    case PA_CHECK:                              /* (The door ahead gone over for traps, alone: the search's test of its
+                                                **   trap, at its hiding, 10 seconds, 2026-10-22) */
+        wk.tt += 100;
+        if (!sq (wk.px, wk.py) || !trap_on (wk.px, wk.py, 1)) {
+            trap_told (TO_CLEAN);
+        } else if (!(wk.tq.state & TS_HIDDEN)) {
+            trap_told (TO_KNOWN);
+        } else if (!(wk.tq.state & TS_MAGIC) && test (P_SEARCH, HIDE_MECHANICAL, -(signed char) wk.tq.hide) > 0 && !wres) {
+            trap_state (wk.tq.state & ~TS_HIDDEN);
+            trap_told (TO_FOUND);
+        } else {
+            trap_told (TO_CLEAN);               /* (Missed: told as if there were none) */
+        }
+        break;
     default:                                    /* (PA_DISARM) */
         if (wk.px != NO_SQ) {
             sq (wk.px, wk.py);

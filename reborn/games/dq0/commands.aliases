@@ -139,3 +139,8 @@ set put
 order command
 refill fill
 refuel fill
+# A thing looked over and judged (added 2026-10-22, the user's: "examine value [of] item", "determine value [of] item")
+check x
+study x
+determine x
+batter break

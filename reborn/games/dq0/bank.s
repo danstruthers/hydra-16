@@ -163,7 +163,7 @@ ovl_out:
             OVFN        meta, 3
             OVFN        climb_words, 1
             OVFN        entered, 1
-            OVFN        portal_words, 1
+            OVFN        portal_words, 10
             OVFN        harm_words, 1
             OVFN        appraise, 1
             OVFN        tell, 1
@@ -180,7 +180,7 @@ ovl_out:
             OVFN        taken_next, 11
             OVFN        throw_words, 10
             OVFN        fixt_words, 4
-            OVFN        trap_words, 4
+            OVFN        trap_words, 10
             OVFN        trap_name, 10
             OVFN        den_way, 4
             OVFN        portal_look, 4

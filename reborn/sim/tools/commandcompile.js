@@ -416,6 +416,12 @@ function targetOf(tgt, env, ctx, remote) {
 }
 
 const lookAction = prep => own(LOOK_PREP_ACTION, prep) || 'VB_OBSERVE_OBJECT';
+// A thing's aspects (2026-10-22): the words that name one, and the verbs' own (the game's: commands.words' [aspects],
+// commands.verbs' aux)
+const ASPECT_WORD = { value: 'value', worth: 'value', price: 'value', quality: 'quality', make: 'quality',
+  condition: 'condition', damage: 'condition', weight: 'weight', lock: 'lock', traps: 'traps' };
+const APPRAISE_WORD = { assess: 'value', value: 'value', price: 'value', what: 'value', judge: 'quality', how: 'quality',
+  appraise: 'both', heft: 'weight', weigh: 'weight' };
 
 // The adjuncts of a command (manner, with, from, at, locative, direction) fill roles the phrase left empty.
 function withAdjuncts(res, cmd, env, ctx) {
@@ -483,16 +489,40 @@ function phraseSem(spec, env, ctx) {
     return act(action, { target: o.value });
   };
   const manner = (node, e) => (kidsOf(node, 'manner')[0] ? wordsOf(kidsOf(node, 'manner')[0], e)[0] : undefined);
+  // What it's done with (2026-10-22): the object after "with" or "using" (<USING>), out of the phrase's own objects
+  const ui = spec.kids.findIndex(k => k.rule === 'USING');
+  const toolNode = ui >= 0 ? spec.kids.slice(ui + 1).find(k => k.rule === 'object') : null;
+  if (toolNode) direct.splice(direct.indexOf(toolNode), 1);
+  const toolOf = () => (toolNode ? objRole(toolNode, env, ctx) : { value: undefined });
+  const withTool = (action, extra, remote) => {   // (The thing, if it's said, and what it's done with)
+    const t = toolOf();
+    if (t.stop) return t.stop;
+    if (!direct[0]) return act(action, Object.assign({ instrument: t.value }, extra || {}));
+    return withObj(action, Object.assign({ instrument: t.value }, extra || {}), remote);
+  };
+  // A thing's aspect judged (2026-10-22): the aspect word said ("the value of"), or the verb's own; "for traps"
+  const aspectOf = () => {
+    const a = findFirst(spec, 'ASPECT') || findFirst(spec, 'JUDGED'), w = wordsOf(spec, env);
+    if (a) return own(ASPECT_WORD, wordsOf(a, env)[0]);
+    if (w.includes('traps')) return 'traps';
+    return own(APPRAISE_WORD, w[0]);
+  };
   const adjOf = () => (findFirst(spec, 'adj') ? wordsOf(findFirst(spec, 'adj'), env)[0] : undefined);
   switch (r) {
     case 'look': {
+      if (!kidsOf(spec, 'look-target')[0] && direct[0]) return withObj('VB_OBSERVE_OBJECT');   // ("look the torch over")
       const t = targetOf(kidsOf(spec, 'look-target')[0], env, ctx, false);
       if (t.stop) return t.stop;
       if (t.kind === 'locale') return act('VB_OBSERVE_LOCALE', { place: 'here' });
       if (t.kind === 'direction') return act('VB_OBSERVE_DIRECTION', { direction: t.direction });
       return act(lookAction(t.prep), { object: t.object });
     }
-    case 'examine': return direct[0] ? withObj('VB_EXAMINE_OBJECT') : act('VB_EXAMINE_LOCALE', { place: 'here' });
+    case 'examine': return direct[0] ? withObj('VB_EXAMINE_OBJECT', { aspect: aspectOf() }) :
+      act('VB_EXAMINE_LOCALE', { place: 'here', aspect: aspectOf() });
+    case 'appraise': {                          // ("assess the sword", "the value of the sword", "what is it worth")
+      if (direct[0]) return withObj('VB_EXAMINE_OBJECT', { aspect: aspectOf() });
+      return act('VB_EXAMINE_OBJECT', { object: ctx.last[0], aspect: aspectOf() });
+    }
     case 'move': {
       const md = kidsOf(spec, 'move-dir')[0];
       const pw = kidsOf(spec, 'pace-word')[0];
@@ -555,17 +585,14 @@ function phraseSem(spec, env, ctx) {
     }
     case 'equip': return withObj('VB_EQUIP_OBJECT');
     case 'unequip': return withObj('VB_UNEQUIP_OBJECT', null, true);
-    case 'open': return direct[0] ? withObj('VB_OPEN_OBJECT', { adj: adjOf(), manner: manner(spec, env) }) : act('VB_OPEN_OBJECT', { manner: manner(spec, env) });
+    case 'open': return direct[0] ? withTool('VB_OPEN_OBJECT', { adj: adjOf(), manner: manner(spec, env) }) : act('VB_OPEN_OBJECT', { manner: manner(spec, env) });
     case 'close': return direct[0] ? withObj('VB_CLOSE_OBJECT', { adj: adjOf(), manner: manner(spec, env) }) : act('VB_CLOSE_OBJECT', { manner: manner(spec, env) });
     case 'attack': {
       const a = objOf(0);
       if (a.stop) return a.stop;
-      let instrument;
-      if (direct[1]) {
-        const b = objOf(1);
-        if (b.stop) return b.stop;
-        instrument = b.value;
-      }
+      const t = toolOf();
+      if (t.stop) return t.stop;
+      const instrument = t.value;
       const verb = wordsOf(spec, env)[0];
       return act('VB_ATTACK_OBJECT', { object: a.value, instrument, manner: own(ATTACK_MANNER, verb),
         blow: own(ATTACK_MANNER, verb) === 'unarmed' ? verb : undefined, engage: engageFlag(a.value, ctx) });
@@ -648,7 +675,7 @@ function phraseSem(spec, env, ctx) {
       return act('VB_SWIM', { direction: dirCode(findFirst(md, 'direction') || md, env) });
     }
     case 'find': return withObj('VB_FIND_OBJECT', null, true);
-    case 'search': return direct[0] ? withObj('VB_SEARCH') : act('VB_SEARCH', {});
+    case 'search': return direct[0] ? withObj('VB_SEARCH', { aspect: aspectOf() }) : act('VB_SEARCH', { aspect: aspectOf() });
     case 'listen': case 'smell': {
       const t = targetOf(kidsOf(spec, 'look-target')[0], env, ctx, r === 'smell');
       if (t.stop) return t.stop;
@@ -711,7 +738,7 @@ function phraseSem(spec, env, ctx) {
         if (c.stop) return c.stop;
         return act(action, { object: o.value, container: c.value });
       }
-      return withObj(action, null, true);
+      return withTool(action, null, true);
     }
     case 'enter': return direct[0] ? withObj('VB_ENTER') : act('VB_ENTER', {});
     case 'leave': {
@@ -722,8 +749,7 @@ function phraseSem(spec, env, ctx) {
     case 'climb': case 'dig': {
       const d = kidsOf(spec, 'direction')[0];
       const action = r === 'climb' ? 'VB_CLIMB' : 'VB_DIG';
-      if (!direct[0]) return act(action, { direction: d ? dirCode(d, env) : undefined });
-      return withObj(action, { direction: d ? dirCode(d, env) : undefined });
+      return withTool(action, { direction: d ? dirCode(d, env) : undefined });
     }
     case 'wake': return direct[0] ? withObj('VB_WAKE') : act('VB_WAKE', {});
     case 'hide': {
@@ -742,7 +768,7 @@ function phraseSem(spec, env, ctx) {
     case 'knock': return withObj('VB_KNOCK_OBJECT');
     case 'push': return withObj('VB_PUSH_OBJECT');
     case 'pull': return withObj('VB_PULL_OBJECT');
-    case 'lock': return withObj('VB_LOCK_OBJECT');
+    case 'lock': return withTool('VB_LOCK_OBJECT');
     case 'read': return withObj('VB_READ_OBJECT');
     case 'taste': return withObj('VB_TASTE_OBJECT');
     case 'touch': return withObj('VB_TOUCH_OBJECT');
@@ -753,12 +779,7 @@ function phraseSem(spec, env, ctx) {
       if (b.stop) return b.stop;
       return act('VB_GIVE_OBJECT', { object: a.value, target: b.value });
     }
-    case 'unlock': {
-      const a = objOf(0), b = objOf(1);
-      if (a.stop) return a.stop;
-      if (b.stop) return b.stop;
-      return act('VB_UNLOCK_OBJECT', { object: a.value, instrument: b.value });
-    }
+    case 'unlock': return withTool('VB_UNLOCK_OBJECT');
     case 'fill': {
       const o = objOf(0);
       if (o.stop) return o.stop;
@@ -881,7 +902,7 @@ function phraseSem(spec, env, ctx) {
       if (o.stop) return o.stop;
       return act('VB_TAUNT', { target: o.value, topic: topicAfter(spec, env, ['to']) });
     }
-    case 'judge': return onTarget('VB_JUDGE_SINCERITY');
+    case 'judge': return onTarget('VB_JUDGE_SINCERITY');   // ("sense a lie from the goblin"; "judge" a thing's quality now)
     case 'talk': {
       const o = objOf(0);
       if (o.stop) return o.stop;
@@ -890,12 +911,12 @@ function phraseSem(spec, env, ctx) {
     case 'sit-on': return act('VB_SIT', {});
     case 'posture': return act(own(POSTURE, spec.kids[0].rule), {});
     // The game's own (the old parser's commands: commands.words says what the game does with each)
-    case 'break': return optObj('VB_BREAK_OBJECT');
+    case 'break': return direct[0] ? withTool('VB_BREAK_OBJECT') : act('VB_BREAK_OBJECT', {});
     case 'raise': return optObj('VB_RAISE_OBJECT');
     case 'lower': return optObj('VB_LOWER_OBJECT');
-    case 'bend': return optObj('VB_BEND_OBJECT');
-    case 'force': return optObj('VB_FORCE_OBJECT');
-    case 'disarm': return optObj('VB_DISARM_OBJECT');
+    case 'bend': return direct[0] ? withTool('VB_BEND_OBJECT') : act('VB_BEND_OBJECT', {});
+    case 'force': return direct[0] ? withTool('VB_FORCE_OBJECT') : act('VB_FORCE_OBJECT', {});
+    case 'disarm': return direct[0] ? withTool('VB_DISARM_OBJECT') : act('VB_DISARM_OBJECT', {});
     case 'rebar': return optObj('VB_BAR_OBJECT');
     case 'approach': return withObj('VB_APPROACH_OBJECT');
     case 'hang': case 'combine': {

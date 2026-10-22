@@ -9,15 +9,15 @@ VB_OBSERVE_DIRECTION    direction
 VB_OBSERVE_OBJECT       object
 VB_OBSERVE_THROUGH      object
 VB_OBSERVE_AROUND       object
-VB_EXAMINE_OBJECT       object
-VB_EXAMINE_LOCALE       place
+VB_EXAMINE_OBJECT       object aspect (* aspect: what's judged of it, its value, its quality, both, its weight, its lock, traps, its condition (2026-10-22); none, a closer look *)
+VB_EXAMINE_LOCALE       place aspect
 VB_RETRIEVE_OBJECT      object source
 VB_DROP_OBJECT          object
 VB_PUT_OBJECT           object container
 VB_USE_OBJECT           object target
 VB_EQUIP_OBJECT         object
 VB_UNEQUIP_OBJECT       object
-VB_OPEN_OBJECT          object
+VB_OPEN_OBJECT          object instrument
 VB_CLOSE_OBJECT         object
 VB_MOVE_DIRECTION       direction pace distance
 VB_MOVE_TOWARD          object
@@ -39,10 +39,10 @@ VB_TELL_OBJECT          object text topic
 VB_CAST_SPELL           spell target
 VB_EAT_OBJECT           object
 VB_DRINK
-VB_LIGHT_OBJECT            object container
+VB_LIGHT_OBJECT            object container instrument
 VB_EXTINGUISH_OBJECT       object container      object
 VB_FIND_OBJECT          object
-VB_SEARCH               object
+VB_SEARCH               object aspect
 VB_LISTEN               object direction
 VB_SMELL                object direction
 VB_TRACK                object
@@ -67,7 +67,7 @@ VB_META_QUIT
 VB_ENTER                object
 VB_LEAVE                object direction
 VB_CLIMB                object direction
-VB_DIG                  direction object
+VB_DIG                  direction object instrument
 VB_WAKE                 object
 VB_CROUCH               
 VB_HIDE                 object container
@@ -77,7 +77,7 @@ VB_PUSH_OBJECT          object
 VB_PULL_OBJECT          object
 VB_GIVE_OBJECT          object target
 VB_HOLD_OBJECT          object
-VB_LOCK_OBJECT          object
+VB_LOCK_OBJECT          object instrument
 VB_UNLOCK_OBJECT        object instrument
 VB_FILL_OBJECT          object source
 VB_READ_OBJECT          object
@@ -119,12 +119,12 @@ VB_FAST_TALK            target topic
 VB_TAUNT                target topic
 VB_JUDGE_SINCERITY      target
 # The game's own (the old parser's commands): a verb alone works on what is in front
-VB_BREAK_OBJECT         object lies
+VB_BREAK_OBJECT         object lies instrument
 VB_RAISE_OBJECT         object lies
 VB_LOWER_OBJECT         object lies
-VB_BEND_OBJECT          object lies
-VB_FORCE_OBJECT         object lies
-VB_DISARM_OBJECT        object lies
+VB_BEND_OBJECT          object lies instrument
+VB_FORCE_OBJECT         object lies instrument
+VB_DISARM_OBJECT        object lies instrument
 VB_BAR_OBJECT           object lies
 VB_HANG_OBJECT          object support
 VB_COMBINE_OBJECT       object other
