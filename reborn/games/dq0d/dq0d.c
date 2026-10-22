@@ -1451,15 +1451,16 @@ static unsigned char __fastcall__ decide (unsigned char k)
     hub_map (0);
     HUB->actor[k].attitude = a.attitude;        /* (Its mind's own, as it decides) */
     HUB->actor[k].foe = a.foe;
-    if (d < 4) {                                /* (A step, now and then a noise of its own) */
+    if (d < 4) {                                /* (A step, now and then a noise of its own; its kind with no darkvision,
+                                                **   feeling its way in the dark: the world's, STEP_FEELS) */
         im.w1 = H_OF (d);
-        im.w2 = 1;
+        im.w2 = K.dark ? 1 : 1 | STEP_FEELS;
         im.a = ++steps[k] & 7 ? DE_MOVED : DE_NOISE;
         im.b = steps[k] & 7 ? 1 : 3;
         act (I_STEP, k);
     } else if (d == 0xFB) {                     /* (The way the scent goes, the world's to find) */
         im.w1 = STEP_SCENT;
-        im.w2 = 1;
+        im.w2 = K.dark ? 1 : 1 | STEP_FEELS;
         im.x[2] = knose[akind[k] % SND_KINDS];
         im.a = ++steps[k] & 7 ? DE_MOVED : DE_NOISE;
         im.b = steps[k] & 7 ? 1 : 3;

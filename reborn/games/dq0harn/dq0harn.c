@@ -189,6 +189,8 @@ static const unsigned char purpose[P_THEME] = {
     HARN_THR,                                                           /* A thing thrown: Throwing */
     HARN_INI,                                                           /* Quickness, engaging: Initiative */
     ATTR | HARN_DEX,                                                    /* A grope: Dexterity */
+    ATTR | HARN_AGL,                                                    /* Keeping one's feet: Agility (the
+                                                                        **   book's stumble roll: test's) */
 };
 
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
@@ -225,6 +227,11 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
 {
     if (p >= P_THEME) {
         return grade (harn_test (50 + STEP_PCT * steps));   /* (A theme's own: till themes say, an even chance) */
+    }
+    if (p == P_STUMBLE) {                       /* (The book's stumble roll, Skills 22: 3d6, the physical penalty and
+                                                **   the circumstances, over Agility a fall; a point of the roll two
+                                                **   steps, the book's darkness 2 points, a heavy obstruction's 2) */
+        return harn_stumble_roll (c, -(int) steps / 2) ? G_MF : G_MS;
     }
     return test_sk (c, purpose[p], steps);
 }
@@ -505,8 +512,9 @@ static void __fastcall__ pace_set (unsigned char a)
     ps.light = HUB->pc_light;
     ps.full = !a;
     memcpy (ps.lamp, HUB->pc_lamp, sizeof ps.lamp);
+    a = HUB->pc_going & GOING_BOLD;             /* (A pace said outright in the dark: held to nothing there) */
     hub_map (SIGHT_BANK);                       /* (The senses' record's, in their bank) */
-    ps.dark = SIGHT->dark;
+    ps.dark = SIGHT->dark ? 1 + (a != 0) : 0;   /* (2: dark, but its pace held to nothing there) */
     hub_map (0);
     state ();
 }

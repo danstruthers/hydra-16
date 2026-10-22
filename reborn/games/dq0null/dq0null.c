@@ -422,7 +422,8 @@ static void __fastcall__ state (unsigned char a)
     hub_map (SIGHT_BANK);
     dark = SIGHT->dark;
     hub_map (0);
-    h = house_pace (HUB->gait, HUB->watch, dark);
+    h = house_pace (HUB->gait, HUB->watch, dark && !(HUB->pc_going & GOING_BOLD));   /* (Said outright in the dark:
+                                                **   held to nothing there) */
     put (" (");
     putn (SQ_FT * HUB->round / step[h]);
     put (" feet a round)");

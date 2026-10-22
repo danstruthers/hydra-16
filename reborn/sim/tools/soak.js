@@ -53,13 +53,19 @@ function choose(r, seen, fight) {
     'target the ' + den, 'throw the dagger at the ' + den, 'throw the ' + thing + ' hard at the closest ' + den, 'attack', 'target']);
   if (k < 45) return r.pick([...DIRS, ...DIRS, 'go ' + r.pick(DIRS), 'run ' + r.pick(DIRS), 'walk ' + r.pick(DIRS), 'go through the door',
     'go to the door', 'enter the door', 'climb the stairs', 'go down the stairs', 'go up', 'turn ' + r.pick(['left', 'right', 'around']),
-    'face ' + r.pick(['north', 'south', 'east', 'west']), 'approach the ' + fixture, 'step ' + r.pick(['left', 'right', 'back'])]);
+    'face ' + r.pick(['north', 'south', 'east', 'west']), 'approach the ' + fixture, 'step ' + r.pick(['left', 'right', 'back']),
+    'put out the torch', 'walk quickly ' + r.pick(DIRS), 'sprint ' + r.pick(DIRS), 'jog ' + r.pick(DIRS), 'walk ' + r.pick(DIRS)]);   // (The dark's
+                                                //   walks, 2026-10-22: feeling the way, or said outright)
   if (k < 65) return r.pick(['look', 'look', 'l', 'look ' + r.pick(DIRS), 'x room', 'examine the ' + fixture, 'search', 'listen',
     'look around', 'look at the ' + thing, 'examine the ' + thing, 'assess the ' + thing, 'judge the ' + thing,   // (A thing's
     'appraise the ' + thing, 'heft the ' + thing, 'what is the ' + thing + ' worth', 'check its condition',      //   aspects:
     'examine the lock of the ' + thing, 'examine the lock', 'check the ' + thing + ' for traps',                 //   2026-10-22)
     'check the door for traps', 'judge the door', 'condition of the ' + thing,
-    'hit the door with the ' + thing, 'attack the rat using the dagger', 'dig down with the ' + thing]);
+    'hit the door with the ' + thing, 'attack the rat using the dagger', 'dig down with the ' + thing,
+    'search nearby', 'search around', 'search the ' + r.pick(['north', 'south', 'east', 'west']) + ' wall', 'search the wall ahead',   // (The
+    'search the wall to my left', 'search around for the ' + thing, 'search for the ' + thing, 'search the floor',   //   search's
+    'search around on the floor', 'search on the ' + thing, 'search the ' + thing, 'feel around', 'feel about for the ' + thing,   //   forms,
+    'grope about', 'search the ' + thing + ' for traps', 'search for traps', 'search the door']);   //   2026-10-22)
   if (k < 80) return r.pick(['inventory', 'i', 'get the ' + thing, 'take the ' + thing, 'drop the ' + thing, 'pick up the ' + thing,
     'light the torch', 'put out the torch', 'hold the dagger', 'put the ' + thing + ' in the backpack', 'eat the rations', 'drink the waterskin',
     'take', 'take all', 'take it', 'drop', 'drop it', 'take the closest', 'clear target', 'dip the torch in the oil', 'fill the lantern',

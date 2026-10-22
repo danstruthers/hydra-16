@@ -252,6 +252,10 @@ void s_den_intents (void)
                 if (TILE (*p) == T_STEPS) {
                     c += bd.step / 2;
                 }
+                if ((m.w2 & STEP_FEELS) && unlit_at (bd.sn, x, y)) {
+                    c <<= 1;                    /* (Its kind no darkvision, a square unlit: it feels its way, at
+                                                **   half its pace, HOUSE.md's walking in the dark) */
+                }
                 bd.ready += c;
             }
             if (!noinit && !help && bd.attitude <= AT_UNFRIENDLY && bd.sn == bps &&

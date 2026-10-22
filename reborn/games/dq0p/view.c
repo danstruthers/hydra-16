@@ -69,16 +69,19 @@ void give_way (void);                           /* (dq0p.c's: the look giving wa
 
 /* The squares a walk went (the world's: from x, y its first way d, n squares; the look's walk), felt in the dark,
 ** remembered (T_SEEN): as dq0w.c's walk goes them, along a passage (a wide one's breadth beside it no way on), on at
-** its bends, through a door, into a room (part 2's: its breadth, chunk.c's, there) */
+** its bends, through a door, into a room (part 2's: its breadth, chunk.c's, there); a walk in the dark (d | 0x80) as it
+** goes there, by what the character knew: straight on, round a bend only where the way ahead's closed */
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 void __fastcall__ s_felt (unsigned char sn, unsigned x, unsigned y, unsigned char d, unsigned char n)
 {
     unsigned char* p;
-    unsigned char h0 = d, cross;
+    unsigned char h0 = d, cross;                /* (h0: in the dark, | 0x80) */
 
+    d &= 3;
     way_room = 0xFF;
-    cross = room_of (sn, x, y) == 0xFF && ways_from (sn, x, y, d) > 1 ? 3 : 0;   /* (As the walk does: dq0w.c's) */
+    cross = !(h0 & 0x80) && room_of (sn, x, y) == 0xFF && ways_from (sn, x, y, d) > 1 ? 3 : 0;   /* (As the walk does:
+                                                **   dq0w.c's) */
     while (n--) {
         x += dir_x[d];
         y += dir_y[d];
@@ -86,7 +89,7 @@ void __fastcall__ s_felt (unsigned char sn, unsigned x, unsigned y, unsigned cha
             return;
         }
         *p |= T_SEEN;
-        if (!n || TILE (*p) == T_DOOR) {
+        if (!n || TILE (*p) == T_DOOR || ((h0 & 0x80) && step_ok (sn, x, y, d))) {
             continue;
         }
         if (cross && (--cross, step_ok (sn, x, y, h0))) {

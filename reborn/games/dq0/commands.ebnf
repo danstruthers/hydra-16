@@ -57,7 +57,9 @@
 <JUDGED>         ::= "value" | "worth" | "price" | "quality" | "condition" | "weight"   (* "value of the sword" *)
 
 (* ---- Moving and facing ---- *)
-<move>           ::= [ <pace-word> ] [ <MOVE> ] <move-dir> [ <number> [ "space" | "spaces" | "square" | "squares" ] ]   (* "run north": this move at run; "walk north": the verb *)
+<move>           ::= [ <pace-word> ] [ <MOVE> ] [ <manner> ] <move-dir> [ <number> [ "space" | "spaces" | "square" | "squares" ] ]
+                   [ <manner> ]   (* "run north": this move at run; "walk north": the verb; "walk quickly north", "walk
+                                     slowly north": a pace said with it, pace.c's (2026-10-22: outright, the dark's) *)
 <move-dir>       ::= <direction> [ <TOWARD> <thing> ] | <TOWARD> <thing> | <ALONG> <thing>   (* "go down the stairs", "walk down the corridor", "walk forward to the other side" *)
 <face>           ::= [ "change" ] ( "face" | "facing" | "turn" ) [ "half" ] [ "to" ] <direction> | "turn" "around"   (* "turn around" is a half turn: facing back; "turn half left": an eighth *)
 
@@ -96,9 +98,17 @@
 <drink>          ::= <DRINK> [ "from" <object> | <object> ]
 <swim>           ::= <SWIM> [ <move-dir> ]
 <find>           ::= <FIND> <object>                            (* question 10: FIND locates a known thing *)
-<search>         ::= <SEARCH> [ "for" ] [ <object> ] | <SEARCH> [ <object> ] "for" "traps"
+<search>         ::= <SEARCH> [ <around> ] [ "for" ] [ <thing> ] | <SEARCH> [ <thing> ] "for" "traps"
+                   | <SEARCH> [ <around> ] ( "on" | "in" ) <thing> | <SEARCH> [ "the" ] ( <compass> | <LR> ) "wall"
+                   | <GROPE> [ <around> ] [ "for" <thing> | ( "on" | "in" ) <thing> ]
                                                 (* question 10: SEARCH looks for hidden things; a long task; "search the
-                                                   chest for traps": that thing alone, 2026-10-22 *)
+                                                   chest for traps": that thing alone, 2026-10-22; its forms, the same day
+                                                   (search.c): "search nearby", "search around", "search the east wall",
+                                                   "search the wall to my left", "search around for a dagger", "search
+                                                   around on the floor", "search on the table"; by feel, "feel around",
+                                                   "feel about for the key", "grope around" *)
+<around>         ::= "around" | "about"
+<GROPE>          ::= "grope" | "feel"
 <listen>         ::= <LISTEN> [ <look-target> ]
 <smell>          ::= <SMELL> [ <look-target> ]
 <track>          ::= <TRACK> [ "for" ] [ <object> ]
@@ -109,7 +119,7 @@
 <stop>           ::= <STOP> [ <task-name> ]                     (* question 9: "stop" alone, or "stop digging" *)
 <step>           ::= "step" <direction>                 (* one square; facing unchanged: "step r" *)
 <pace-set>       ::= "pace" [ <pace-word> | "walk" ] | "double time" [ "!" ]  (* sets the default pace; "double time!" is a run *)
-<pace-word>      ::= "crawl" | "slow walk" | "trot" | "run" | "sprint"
+<pace-word>      ::= "crawl" | "slow walk" | "trot" | "jog" | "run" | "sprint" | "dash"
 <charge>         ::= [ "fast" ] "charge" [ "!" ]        (* run at the closest enemy ahead, attack it, shout "Charge!"; fast: a sprint *)
 
 (* ---- Naming and meta-commands (question 15: naming things is "name" or "call") ---- *)

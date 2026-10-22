@@ -195,6 +195,7 @@ ovl_out:
             OVFN        pacing, 9
             OVFN        names_in, 10
             OVFN        focus_words, 7
+            OVFN        felt_words, 7
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)
 
@@ -209,6 +210,7 @@ ovl_out:
             SWPART      6, 12               ; The names said (names.c); looking one way, a close look (way.c)
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
             SWPART      8, 5                ; Where in its room the character is, and the things (look.c)
+            SWPART      9, 11               ; A search, by its form (search.c)
 
             SWFN        begin, 1
             SWFN        size, 1
@@ -238,3 +240,4 @@ ovl_out:
             SWFN        reach_go, 7
             SWFN        place_go, 7
             SWFN        look_way, 6
+            SWFN        search_go, 9

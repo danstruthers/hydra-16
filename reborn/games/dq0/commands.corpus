@@ -476,6 +476,19 @@ cast light on the goblin	VB_CAST_SPELL	spell=light;target=goblin	near=goblin	cas
 listen to the door	VB_LISTEN	object=door	near=door	listen to
 look for the key	VB_FIND_OBJECT	object=key	near=key	look for is find
 search for the key	VB_SEARCH	object=key	near=key	search for
+search nearby	VB_SEARCH	object=nearby	near=nearby	within reach (2026-10-22: the search's forms, search.c)
+search around	VB_SEARCH	-	-	within reach, "around" alone
+search the east wall	VB_SEARCH	-	-	a wall's squares, by the compass
+search the left wall	VB_SEARCH	-	-	a wall by the facing
+search the wall to my left	VB_SEARCH	object=wall	near=wall	a wall where it lies
+search around for a dagger	VB_SEARCH	object=dagger	near=dagger	for a thing, till it's found
+search around on the floor	VB_SEARCH	object=floor	near=floor	the floor nearby
+search on the table	VB_SEARCH	object=table	near=table	on a surface: what's on it, its trap
+feel around	VB_SEARCH	-	-	by feel: within reach
+feel about for the key	VB_SEARCH	object=key	near=key	by feel, for a thing
+grope about	VB_SEARCH	-	-	by feel
+walk quickly north	VB_MOVE_DIRECTION	direction=N	-	a pace said outright with the move (the dark's, 2026-10-22)
+jog north	VB_MOVE_DIRECTION	direction=N	-	a jog with the move, as a run is
 wait for 10 minutes	VB_WAIT	duration=10min	-	wait for a duration
 rest for an hour	VB_SLEEP	short=no;duration=60min	-	rest for a duration
 sit on the bed	VB_SIT	-	near=bed	sit on a surface

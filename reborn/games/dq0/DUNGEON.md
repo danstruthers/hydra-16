@@ -695,7 +695,10 @@ nobody tends is dark.  A light that's nobody's (a cave's glow, magic) stays as t
   like wall till it's found), a trap.  Each hidden thing has its hiding (how well, and how: mechanical, magical), and
   a search (rs.h: P_SEARCH) of the squares round the character it can see (within three), a spell of time, tests each
   one (HOUSE.md's traps, searching and hiding); a passing glance (P_NOTICE_SIGHT) has a smaller chance, as the
-  character moves.  What's found is known (the change records keep a found exit or trap as what it is).  A denizen
+  character moves.  In the dark a search is by touch, of the squares within reach, seen or not (what's lying there
+  felt plainly, what's hidden by the test, a little harder); and a search has its forms, light or dark: nearby, a wall,
+  the floor, for a thing (till it's found), on or in a thing (what's on it, its trap) (HOUSE.md's walking and searching
+  in the dark).  What's found is known (the change records keep a found exit or trap as what it is).  A denizen
   that hides is still to come.
 - **Seeing in the dark** goes by the referee's summary, whatever the ruleset calls it: **night vision** (the faintest
   light carries further: a torch's reach, or a glow's, multiplied), and **ultravision** (sight with no light at all,
@@ -755,8 +758,17 @@ or a shaft can be jumped down (jump down: a fall of its height).
   fatigue and the load all slow it), a walk half of it in squares a round, a jog all of it, a run twice, a sprint
   three times; and the game's two slower, a slow walk a quarter of Move (twice the walk's time) and a creep a sixth
   (three times).  What the character goes at is the pace held to what it's doing: a slow walk at most while it
-  searches or maps as it goes, or in the dark (no light of its own or the room's: by feel); the world takes that
-  pace's step for every square.
+  searches or maps as it goes, or in the dark (no light of its own or the room's: by feel; or blind), unless a faster
+  pace is said outright there (its dangers: stumbling over what's in the way, running into a wall or a door, over an
+  edge); the world takes that pace's step for every square.
+- **In the dark** (the user's playtest, 2026-10-22: HOUSE.md's walking and searching in the dark) a walk goes by what
+  the character knows (the squares it's seen and those it's felt walking: the senses' memory), never turned toward an
+  opening it hasn't seen or felt: from a room by a door it knows of, else straight on the way said; along a passage
+  straight on, round a bend only where it knows the way, a fork it knows of stopping it.  Its cautious walk feels
+  ahead and stops short of what it meets, told by touch (a wall, a door, a drop, a rise, a thing in the way, known
+  after); a faster one blunders into it, the world's to judge by what's really there (the stumble the referee's, the
+  book's stumble roll; a blow, a fall).  A denizen whose kind has no darkvision feels its way on a dark square too, at
+  half its pace.
 - **Fatigue** is the referee's (the book's movement fatigue: HOUSE.md's moving and tiring): walking (or slower) a
   fatigue level a day, jogging one each five minutes, running one each two, sprinting one each minute, the time at
   each pace added up across moves; standing still (waiting, the time between moves) is rest, a level gone each ten

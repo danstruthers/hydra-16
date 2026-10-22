@@ -182,7 +182,8 @@ P_DIG.)  *(Every ruleset's.)*
 
 - **A trap stepped on, if noticed** (see Noticing), stops the character short.  (wtrap.c.)
 - **A search** looks over every square within 3 that the character can see: a hidden trap or thing is found by
-  Awareness at its hiding's steps worse, a hidden door at no steps.  (wtrap.c; things.c.)
+  Awareness at its hiding's steps worse, a hidden door at no steps.  (wtrap.c; things.c.)  In the dark, by touch,
+  nearby; and its forms, nearby, a wall, the floor, for a thing, on a thing: Walking and searching in the dark, below.
 - **A search cut short covers the part done** (the user's, 2026-10-20): the squares nearest first, as far as its time
   went, each at the full chance.  Its reach grows by one each 3.2 seconds of its minute (a square's searched if its
   distance off, squared, is less: about as many squares as that part of the 49), all of them once the minute's done;
@@ -445,7 +446,8 @@ requests; the house's rules above marked *(every ruleset's)* it plays as HarnMas
 
 - **A test** succeeds on a d100 of at most 60 and 5 a step (5 to 95); the lowest fifth of the success band is a
   critical success, the highest fifth of the failure band a critical failure.  No skills, no attributes, no
-  penalties.  Why: flat odds, the steps the only difficulty.
+  penalties.  Why: flat odds, the steps the only difficulty.  Keeping its feet over a thing in the dark (P_STUMBLE)
+  the same, its steps the darkness's, the thing's and the pace's (Walking and searching in the dark): seldom kept.
 - **The character takes 10 wounds** (dead at 10), **a creature 6.**  A fall does a wound each 10 feet, a trap's
   strike or a burn 2.  Health: hurt under a third, badly hurt under two thirds, critical past that.
 - **A blow** is a flat test (a prone defender four steps easier, two harder for each other foe); a hit 2 wounds, a
@@ -851,6 +853,93 @@ something tells what it reveals.
   the one battering, is told at once as before, nothing revealed.  A walk's own opening of a door it knows ("You open
   the door." as it goes) is a walk's beat, nothing revealed: the walk goes through.  (things.c's reveal; the world's
   tail and revealed, dq0w.c; fixt.c's shows.)
+
+## Walking and searching in the dark *(2026-10-22: drafted for the user to review)*
+
+Every ruleset's (the stumble's roll and the harm the referee's).  The user's playtest (DECISIONS.md's walking and
+searching in the dark): no walk turned toward an opening the character can't see; a cautious half-pace in the dark,
+anything faster said outright and dangerous; a search in the dark by touch, nearby; the search's forms.  The numbers
+are drafts, for the user to review.
+
+- **In the dark** is where the character sees nothing by: its own square unseen (no light of its own, no room's own
+  light, no lamp lying near lighting it), or blind (the referee's summary, C_BLINDED: the one place a blindness, however
+  it comes, will take it).  (dq0w.c's dark.)
+- **The walk goes by what it knows** (the squares seen now or before, and those walked in the dark, felt: the senses'
+  T_SEEN, the map's): from a room, by a door or a passage's mouth that way only if it knows of it, else straight across
+  the way said till something stops it; along a passage, straight on, stopped by a way off it it knows of (a fork it
+  knows), round a bend only where it knows the way on, else meeting the wall ahead.  It never turns toward an opening
+  it hasn't seen or felt.  A walk to a place or a thing it names, or to a door it knows of, goes there as in the light
+  (the way's the room's; what's in it found as it's met).  (dq0w.c's walk, go; the senses' felt goes the same way.)
+- **Its pace is a cautious walk** (the slow walk's: twice a walk's time a square, half its speed), feeling ahead, arms
+  out (or what it holds probing), whatever pace was set in the light; the status line shows it "by feel".  It finds
+  what stops it before it blunders into it, and stops there, told by touch: "Your hands meet a wall.", "You feel a door
+  before you.", "Your hands meet iron bars.", "The floor falls away before you." (a drop, a ledge down; a pit's edge),
+  "The floor rises steeply before you." (a ledge up).  A thing in its way that it doesn't know of, of 20 pints' bulk or
+  more (a chair, a backpack, a table, a chest, a body, a well's curb), stops it a square short: "Your foot finds
+  something on the floor: a chest."; known from then on, it's gone round as in the light.  Smaller things are stepped
+  over unremarked.  "You feel your way north." as it sets out.  (Parts 43, 44, 45: dark_way, dark_end, ahead.)
+- **Faster, said outright:** a pace said in the dark faster than the cautious walk (a jog, a run, a sprint: "run
+  north", "set pace to run"; "walk quickly", "walk normally": a walk) goes at that pace there, till a walk begins in
+  the light (a pace set in the light doesn't carry into the dark: there the walk's cautious again).  "You run north into
+  the dark.", "blind" on the status line.  Its dangers, by what's really there (the world's squares, the item store's
+  things, the traps' records), the greater the faster:
+  - **a thing in the way** (20 pints or more, not known of): the book's stumble roll (Skills 22: the referee's
+    P_STUMBLE; HarnMaster's 3d6, the physical penalty and the circumstances against Agility, two steps a point), its
+    steps the darkness's 4 worse, a light obstruction's 2 (under 60 pints: a chair, a backpack), a heavy one's 4 (60
+    or more: a table, a chest, a body), a run's 2 more, a sprint's 4: so the book's darkness +2, heavy obstruction +2,
+    running +1.  Kept its feet: "You stumble over something on the floor (a table), but keep your feet.", and on.
+    Fallen: "You trip over something on the floor (a table), and go sprawling; you pick yourself up.": the walk
+    stopped short of it, a round lost rising.  The book gives a stumble no harm, and nor does the game.  The thing's
+    known after, either way.
+  - **a wall, a door, bars, a rise run into** (where the walk ends against it): a walk's a bump, no harm ("You walk
+    into a wall."); a jog's a blunt blow of a die, a run's two, a sprint's three, to the head or shoulders (HC_STRIKE,
+    high: the armour there counts), "You run headlong into a wall!"; a door or bars a thump the denizens hear (as loud
+    as 2 and the pace's number: a walk 4, a jog 5, a run 6, a sprint 7).
+  - **an edge** (a drop, a pit's): a dodge (the referee's P_DODGE_HAZARD) to stop short, a walk's 4 steps the easier, a
+    jog's at no steps, a run's 4 the harder, a sprint's 8: "You stop short, teetering, at the edge of a drop."; failed,
+    over it: "You blunder over the edge of a drop!", a fall of its height (not a clear fall: no landing on its feet),
+    or into the pit ("The floor drops away under your feet: a pit!"), a fall of its depth (a spiked one's spikes too,
+    as its trap's) and the climb out, as a pit's.
+  A small move ("step forward", "move north 2 squares") in the dark is the same walk, unannounced.  (Parts 43, 44.)
+- **Every actor:** a denizen's kind with no darkvision (kinds.txt's sight, its second figure 0), stepping onto a square
+  that's dark (not seen lit by the character, nor in a room's own light), feels its way, its step twice its time.  All
+  of today's kinds see a little with no light (10 feet at the least: bandits, cultists), so none is slowed yet; a theme's
+  kind may be.  (dq0d.c's STEP_FEELS, wbody.c.)
+- **Searching in the dark is by touch** (SF_TOUCH): "search" there searches nearby, its own square and the eight round
+  it (a reach of 3, a square's distance off squared less than it), whether it sees them or not.  Everything lying there
+  is felt: what's in plain sight to the hands found and known with no test ("Your hands find a sack, and a chisel."),
+  what's hidden found by the search's test (the referee's P_SEARCH, at its hiding's steps worse) 2 steps the harder (the
+  eye not there to help the hands: a draft), and the same for the hidden doors in the walls within reach and the traps
+  there ("Your fingers find a wire stretched across the floor: a dart trap, set off by a tripwire.", "Your fingers find
+  the edge of a cover in the floor: a covered pit."); nothing: "You fumble around in the dark and find nothing."  Its
+  time a minute, as a search's, its reach growing as it goes (cut short, the nearest first).  Searching as it goes in
+  the dark searches by touch where it stops.  (wtrap.c's search, things.c's part 46.)
+- **The search's forms** (light or dark; search.c, its words as it begins: "You feel along the east wall in the
+  dark..."):
+  - **"search"**: in the light, about the character as far as it sees within 3 (as before); in the dark, nearby.
+  - **"search nearby", "search around", "feel around", "grope about"**: within reach (a reach of 3), seen or felt.
+  - **"search the east wall", "search the wall ahead", "search the wall to my left", "search the left wall"**: that
+    side's walls and doors (the squares past the character that way that are wall, rock, a door or a window) within
+    the search's reach (3 in the light, as far as it sees; by touch, those within reach: none there, "Your hands find no
+    wall within reach that way.", no search), for what's hidden in them: a hidden door, a door's trap; 2 steps the
+    easier (the whole search on one wall: a draft).  No floor's traps.
+  - **"search the floor", "search around on the floor"**: the floor nearby: the things lying there and the traps in the
+    floor (plates, wires, pits), no doors.
+  - **"search for the key", "search around for a dagger", "feel about for the key"**: that thing, the nearest of the
+    name it would find within the search's reach (in plain sight; or hidden, and found by the referee's test, made as
+    it begins): the search lasts till it comes to it (3 seconds, and 3.2 more for each of its distance off, squared: at
+    its feet 3 seconds, beside it 6.4, a corner 9.6, two squares off 16), "You find a dagger.", "Your hands find an
+    iron key."; none, a minute, "You find no dagger here."  Cut short before it comes to it, not found.
+  - **"search the table", "search on the table", "search the chest"**: a thing within reach (in the light, out of reach,
+    walked over to first; in the dark, one within reach, felt: "You feel about you, but there's no table within
+    reach."): what's on it or in it ("On the table you find two chisels.", "Your hands find two chisels on the
+    table.", "There's nothing in the chest."; closed, not looked into: "It's closed: you go over the outside of it."),
+    then it gone over for traps, examine's check, one rule for it ("The chest shows no sign of a trap: you go over it
+    carefully, and find none.": things have no traps yet).  A minute.
+  - **"search the chest for traps"**: in the light, examine's check alone (ten seconds: Looking at things, above); in
+    the dark, the search on it by touch.  **"search the door"**, "search the door for traps": the door gone over for
+    traps (the world's PA_CHECK, examine's).  **"search for traps", "search for hidden things"**: a search, as "search"
+    is.
 
 ## Decided, not yet built
 

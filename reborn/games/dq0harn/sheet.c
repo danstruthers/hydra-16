@@ -502,7 +502,8 @@ void o_state (void)
     const harn_injury* j;
     char b[56];
 
-    h = house_pace (ps.gait, ps.watch, ps.dark);    /* (The pace's words, every referee's: rshouse.h) */
+    h = house_pace (ps.gait, ps.watch, ps.dark == 1);   /* (The pace's words, every referee's: rshouse.h; its
+                                                **   pace said outright in the dark, held to nothing there) */
     put (" (");
     k = harn_move (&pc);
     if (pc.state == HARN_SHOCK) {

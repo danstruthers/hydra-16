@@ -21,7 +21,8 @@ unsigned char __fastcall__ has (const char* key);   /* A tool to hand, by its ke
 signed char __fastcall__ grade (unsigned char level);   /* A level of success (harn.h's) as rs.h's grade */
 struct pstate {                                 /* (The character's state's words need, the hub's: copied) */
     unsigned char   gait, watch;                /* Its pace, its watchfulness (rs.h's GA_*, hub.h's WA_*) */
-    unsigned char   light, dark;                /* Its light's reach (squares), its square unlit (by feel) */
+    unsigned char   light, dark;                /* Its light's reach (squares), its square unlit (by feel; 2, its pace
+                                                **   said outright there, held to nothing) */
     unsigned char   full;                       /* 1 all of it; 0 the pace and watchfulness only (changed) */
     char            lamp[14];                   /* What gives its light */
     unsigned char   go;                         /* (The pace it's going at: the hub's pc_going, for noticing) */

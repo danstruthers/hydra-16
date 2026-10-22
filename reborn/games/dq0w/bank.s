@@ -120,13 +120,26 @@ go:
             SWPART      38, 6               ; A change record kept and made (store.c's store_put, change)
             SWPART      39, 14              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 12              ; Its weight, its lock, traps; a thing described (things.c)
-            SWPART      41, 8               ; An opening told with what it shows beyond (dq0w.c's revealed)
-            SWPART      42, 4               ; What a closer look at a thing shows; its condition (things.c)
+            SWPART      41, 6               ; An opening told with what it shows beyond (dq0w.c's revealed)
+            SWPART      42, 8               ; What a closer look at a thing shows; its condition (things.c)
+            SWPART      43, 10              ; A walk in the dark set out on: its way felt, a thing stumbled over
+            SWPART      44, 11              ; A walk in the dark ended: what it met, felt or blundered into
+            SWPART      45, 5               ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
+            SWPART      46, 7               ; A search's thing, for or on; what a search turns up (things.c)
+            SWPART      47, 13              ; What's on a thing or in it, searched (things.c)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
             SWFN        climb, 2
             SWFN        climb_on, 2
+            SWFN        fall, 2
+            SWFN        dark_way, 43
+            SWFN        dark_end, 44
+            SWFN        tripped, 43
+            SWFN        ahead, 45
+            SWFN        felt_stop, 45
+            SWFN        no_exit, 45
+            SWFN        unlit_at, 45
             SWFN        begin, 3
             SWFN        toward_middle, 3
             SWFN        grow_below, 3
@@ -172,7 +185,10 @@ go:
             SWFN        wear, 36
             SWFN        make_own, 13
             SWFN        seen_owned, 13
-            SWFN        search, 11
+            SWFN        search, 46
+            SWFN        seek, 46
+            SWFN        on_it, 47
+            SWFN        thing_words, 11
             SWFN        describe, 40
             SWFN        look_at, 39
             SWFN        look_more, 40

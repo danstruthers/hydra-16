@@ -30,6 +30,7 @@ static unsigned take_x, take_y;                 /*   its square, */
 static unsigned take_fx, take_fy;               /*   and where the walk to it began */
 static unsigned char take_only;                 /*   1: walked over to alone (I_TAKE's a: the UI's command again) */
 static unsigned char done_;                     /* (The rules done, a bit each: the save's, the UI's quest) */
+extern unsigned char bold_;                     /* (dq0w.c's: a pace said outright, for the dark) */
 static char an[16], bn[16];                     /* (The things named) */
 
 #pragma code-name ("SW16CODE")
@@ -318,7 +319,15 @@ void s_pc_asked (void)
     switch (HUB->wreq.a) {
     case WS_PACE:
         if (x != 0xFF) {
-            HUB->gait = x;
+            HUB->gait = x & ~GA_SAID;
+            bold_ = 0;
+            if (x & GA_SAID) {                  /* (Said outright in the dark, or blind: gone at there, its dangers,
+                                                **   dq0w.c's paced; said in the light, the dark's walk cautious) */
+                x = *at (HUB->pc_stratum, HUB->pc_x, HUB->pc_y) & T_VIS;
+                hub_map (0);
+                bold_ = !x || (HUB->pcsum.cond & C_BLINDED) != 0;
+            }
+            HUB->pc_going = bold_ ? GOING_BOLD : 0;
         }
         HUB->watch = HUB->wreq.y;
         break;

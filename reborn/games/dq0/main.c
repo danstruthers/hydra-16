@@ -54,7 +54,7 @@ unsigned char autogo;                           /* (dq0 -a: every soft question 
 static unsigned char noinit;                    /* (dq0 -I: no engage initiative test, no grope's: the tests') */
 static unsigned char asked;                     /* (A sound's question put in this command's long task) */
 static unsigned bar_done;                       /* (The long task's part done as the bar was last drawn) */
-static unsigned char busy = 1;                  /* The character's doing something: no command till it's free (nor
+unsigned char busy = 1;                         /* The character's doing something: no command till it's free (nor
                                                 **   till the world's started, and says so: E_READY) */
 static unsigned char held;                      /* (A line typed as it's busy, held till it's free; */
 static unsigned char took;                      /*   and the fight it was in stopped for it, once) */
@@ -70,7 +70,8 @@ unsigned char __fastcall__ things (unsigned char op, const char* name);   /* (wa
 static void to_hand (void);
 static void __fastcall__ dig_used (unsigned char n);
 static char dug_with[16];                       /* (The tool a dig took, named) */
-static unsigned char finds;                     /* (Things a search turned up, told as it ends: the hub's text) */
+unsigned char finds;                            /* (Things a search turned up, told as it ends: the hub's text;
+                                                **   search.c's too) */
 struct ireq judged;                             /* (A thing looked at closely: what it is, for the appraiser: way.c's,
                                                 **   part 6's, examine) */
 struct portal viewed;                           /* (A portal looked at closely: the world's record of it) */
@@ -1551,11 +1552,12 @@ portal:
                                                 **   gone over for traps, the world's) */
         }
         return;
-    case VB_SEARCH:
-        finds = 0xFF;                           /* (A search, a long task: what it finds told as it ends, the walls'
-                                                **   and the things concealed about it, E_PORTAL's) */
-        msg ("Searching about...");
-        intend (I_PORTAL, PA_SEARCH);
+    case VB_SEARCH:                             /* (A search, a long task, by its form: what it finds told as it ends,
+                                                **   the walls' and the things', E_PORTAL's; search.c's, part 9; a door
+                                                **   gone over for traps, the world's) */
+        if ((pa = search_go ()) != 0) {
+            goto portal;
+        }
         return;
     case VB_DIG:
         d = cmd.dir;
