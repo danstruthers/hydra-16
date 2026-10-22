@@ -358,6 +358,11 @@ extern struct chunk* C;                         /* at ()'s chunk */
 extern unsigned char cx_, cy_;                  /* at ()'s square in it */
 signed char __fastcall__ elev_at (unsigned char sn, unsigned x, unsigned y);
 unsigned char __fastcall__ step_ok (unsigned char sn, unsigned x, unsigned y, unsigned char d);   /* Walkable to d */
+unsigned char __fastcall__ breadth (unsigned char sn, unsigned x, unsigned y, unsigned char d);   /* That step a wide
+                                                **   passage's breadth alone, no way on (the senses' part 2's) */
+unsigned char __fastcall__ ways_from (unsigned char sn, unsigned x, unsigned y, unsigned char d);    /* The ways on
+                                                **   heading d, not back nor breadth: how many, one in way_on */
+extern unsigned char way_on, way_room;
 unsigned char __fastcall__ room_of (unsigned char sn, unsigned x, unsigned y);  /* Its room in C (0xFF: none) */
 unsigned char __fastcall__ zone_of (unsigned char sn, unsigned x, unsigned y);  /* Its zone in C (0xFF: none) */
 struct portal* __fastcall__ portal_at (unsigned char x, unsigned char y);   /* C's portal on its square x, y */

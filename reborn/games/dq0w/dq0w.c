@@ -85,6 +85,7 @@ void __fastcall__ disengage_go (const struct msg* m);    /* Part 26 */
 unsigned char flee_on (void);                   /* Part 26 */
 unsigned char toward_middle (void);            /* Part 3 */
 void __fastcall__ across (unsigned char h, unsigned char r);   /* Part 33 */
+void __fastcall__ intent_more (struct msg* m);  /* Part 37 */
 struct work wk;
 extern char _SWAP_START__[];
 unsigned char den_done;                         /* (wbody.h's) */
@@ -214,6 +215,7 @@ static void __fastcall__ task (unsigned char kind, unsigned len)
 /* A walk set out on, its way the path's: the character busy for t tenths, its long task a walk of the path's
 ** squares, stepped as the clock goes (stepping) */
 static unsigned char pquiet, plast, pfull, pprev; /* (pprev: the square before, stepped from, in a passage) */
+static unsigned char proom;                     /* (The squares of a room walked, as it goes: beat's, a room crossed) */
 static void __fastcall__ set_off (unsigned long t)
 {
     busy (t);
@@ -222,7 +224,7 @@ static void __fastcall__ set_off (unsigned long t)
     pquiet = 0;
     pfull = npath;
     pon = 1;
-    pprev = 0;
+    pprev = proom = 0;
     pdue = 0;                                   /* (Its first square looked for at once) */
     pspent = 0;
     plast = HUB->pc_face;
@@ -346,11 +348,15 @@ static unsigned char walked;
 static unsigned long __fastcall__ walk (unsigned char d)
 {
     unsigned long t = 0;
-    unsigned char n = 0, w, k, nd, inside;
+    unsigned char n = 0, inside, cross, h0 = d, nd;
     unsigned char* p;
     int z;
 
     pwalk0 = npath;
+    way_room = 0xFF;
+    cross = room_of (sn_, mx, my) == 0xFF && ways_from (sn_, mx, my, d) > 1 ? 3 : 0;   /* (Set out from a fork:
+                                                **   three squares the way said, a wide one crossed, not each of its
+                                                **   squares a fork again) */
     while (n < lim_) {
         if (!step_ok (sn_, mx, my, d) || (blocked = den_on (mx + dir_x[d], my + dir_y[d])) != 0) {
             break;
@@ -369,16 +375,16 @@ static unsigned long __fastcall__ walk (unsigned char d)
         if (TILE (*at (sn_, mx, my)) == T_DOOR) {
             continue;
         }
-        for (k = 0, nd = 0, w = 0; k < 4; ++k) {
-            if (k != ((d + 2) & 3) && step_ok (sn_, mx, my, k)) {
-                ++nd;
-                w = k;
-            }
+        if (cross && (--cross, step_ok (sn_, mx, my, h0))) {
+            d = h0;
+            continue;
         }
-        if (nd != 1) {                          /* (A fork, or the passage's end) */
-            break;
+        if ((nd = ways_from (sn_, mx, my, d)) == 1) {
+            d = way_on;                         /* (On: its one way, a wide passage's breadth none) */
+        } else if (nd || !step_ok (sn_, mx, my, d)) {
+            break;                              /* (A fork, or the passage's end: a wide one's last squares on to
+                                                **   it) */
         }
-        d = w;
     }
     mface = d;
     walked = n;
@@ -717,7 +723,6 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
     set_off (t);
     bound_for (mx, my);
 }
-
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -2330,6 +2335,12 @@ static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
     dz = z - pz;
     pz = z;
     if (room_of (sn_, x, y) == 0xFF) {
+        if (proom >= 2) {                       /* (A room crossed, as the walk leaves it, to a door or a passage:
+                                                **   told as it goes, the user's) */
+            hub_map (0);
+            event (E_BEAT, 0, WB_CROSS);
+        }
+        proom = 0;
         if (h != plast && pprev) {         /* (A turn between two squares of the passage walked) */
             b = WB_TURN;
             s = ((h - plast) & 7) < 4 ? WS_RIGHT : WS_LEFT;
@@ -2343,6 +2354,7 @@ static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
         pprev = 1;
     } else {
         pprev = 0;
+        ++proom;
     }
     plast = h;
     hub_map (0);
@@ -3160,6 +3172,9 @@ void __fastcall__ s_disengage_go (const struct msg* m)
 #pragma rodata-name (pop)
 
 static unsigned char pc_waited;
+
+/* An intent carried out, the UI's: a step, a walk, a turn, a climb, a wait, the quit (each answered at once: the
+** main RAM's); the rest part 37's (intent_more) */
 static void __fastcall__ intent (struct msg* m)
 {
     if (m->kind == I_STOP || m->kind == I_GO_ON || m->kind == I_ASK) {
@@ -3198,22 +3213,38 @@ static void __fastcall__ intent (struct msg* m)
         see (0);
         view (V_TURNED);
         break;
-    case I_DIG:
-        start_dig (m->a);
-        break;
     case I_GOTO:
         go_near = m->a;
         go_to (m->w1, m->w2);
         go_near = 0;
+        break;
+    case I_STEP:
+        step_to (m->w1 & 7, m->w2, (m->w1 & STEP_KEEP) != 0);
+        break;
+    case I_QUIT:
+        HUB->quit = 1;
+        break;
+    default:
+        intent_more (m);                        /* (The rest: part 37's) */
+        break;
+    }
+}
+
+/* ==== Part 37: the rest of the UI's intents carried out (intent's; its own part, the main RAM's room: slice 4.1's) */
+#pragma code-name (push, "SW37CODE")
+#pragma rodata-name (push, "SW37RODATA")
+
+void __fastcall__ s_intent_more (struct msg* m)
+{
+    switch (m->kind) {
+    case I_DIG:
+        start_dig (m->a);
         break;
     case I_TAKE:
         take_go (m);                            /* (Walked over to it, then taken up: wgame.c) */
         break;
     case I_CLOSE:
         close_go (m);                           /* (Walked up to it, then struck: part 23's) */
-        break;
-    case I_STEP:
-        step_to (m->w1 & 7, m->w2, (m->w1 & STEP_KEEP) != 0);
         break;
     case I_PORTAL:
         HUB->pc_strike = m->x[1];               /* (What it strikes with: the parser's) */
@@ -3232,9 +3263,6 @@ static void __fastcall__ intent (struct msg* m)
     case I_LOOK:
         look_way (m->w1);                       /* (A look one way: part 3's) */
         break;
-    case I_QUIT:
-        HUB->quit = 1;
-        break;
     case I_ATTACK:                              /* (A round's blow, struck: at once; at the turns pace, as the clock
                                                 **   moves on, the denizens' slice's first: turns_run; then fought on,
                                                 **   part 24's) */
@@ -3250,6 +3278,9 @@ static void __fastcall__ intent (struct msg* m)
         break;
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* At the turns pace, the character busy: the clock moved on to when it's free, TURN_SLICE tenths at a time, the
 ** denizens given their turn at each (the hub's den_go, rung: they act, and say when they've done, I_DONE), and at the

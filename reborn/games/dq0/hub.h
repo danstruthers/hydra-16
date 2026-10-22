@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     10                      /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     11                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -36,7 +36,10 @@
                                                 **   I_STOP's w1; 10: the lights burning, pc_fuel, pc_left, TE_LOW,
                                                 **   TE_OUT; the items' records' fuel; the traces, I_TRACE, I_TROD,
                                                 **   I_SWEPT, V_TRACED, the traces' journal, TJ_AT, the UI bank's
-                                                **   tread, dsense's nose; the places kept lit, KEPT_AT) */
+                                                **   tread, dsense's nose; the places kept lit, KEPT_AT; 11: the
+                                                **   things' requests' selectors and count, IO_SHUT, IO_INSIDE,
+                                                **   PA_LOCK, the selectors SL_OTHER ... SL_EMPTY, the items'
+                                                **   records' shut, WB_CROSS) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -449,9 +452,10 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
                                                 **   something was taken) */
 #define TE_STILL        0x80
 #define TE_QUIET        0x40
-enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN };   /* E_BEAT's: a quiet stretch (HOUSE.md:
-                                                **   every 30 feet), the way turns, a side passage, a door passed, it
-                                                **   opens out, it rises, it falls */
+enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS };   /* E_BEAT's: a quiet stretch
+                                                **   (HOUSE.md: every 30 feet), the way turns, a side passage, a door
+                                                **   passed, it opens out, it rises, it falls; a room crossed, as the
+                                                **   walk leaves it (to a door, a passage's mouth: the user's) */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
 enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD, K_HELD };    /* E_CLIMB's how: begun, on, slipped
                                                 **   back, fallen, up, down; jumped down (a ledge, a shaft); no hold
@@ -463,8 +467,9 @@ enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: wha
        PA_LIFT,                                 /*   a door's bar lifted out, a window's pane or its bent bars; */
        PA_EXAMINE,                              /*   looked at closely: the UI's own (the hub's wreq, WQ_EXAMINE:
                                                 **   its record copied into the hub's pview); */
-       PA_BAR, PA_BEND };                       /*   a door barred again (a bar carried, or in reach, set in its
-                                                **   brackets); bars bent (a portcullis's; a window's, forced) */
+       PA_BAR, PA_BEND,                         /*   a door barred again (a bar carried, or in reach, set in its
+                                                **   brackets); bars bent (a portcullis's; a window's, forced); */
+       PA_LOCK };                               /*   a thing's lock locked (IO_SHUT's) */
 enum { WQ_SAVE, WQ_EXAMINE, WQ_START, WQ_SET }; /* The hub's wreq's kinds */
 #define WY_NO_INIT      0x100                   /* (WQ_START's y: dq0 -I, the tests', no engage initiative test nor
                                                 **   a grope's test while engaged: their fights' dice as they were) */
@@ -550,10 +555,13 @@ struct cthing {
     char            word[16];                   /* Its word as typed ("sword"; "#12", a thing named: names.c's), or
                                                 **   "" */
 };
-enum { SL_THE, SL_ANY, SL_IT, SL_ALL, SL_CLOSEST, SL_LARGEST, SL_SMALLEST, SL_LEAD, SL_NTH, SL_ME };
+enum { SL_THE, SL_ANY, SL_IT, SL_ALL, SL_CLOSEST, SL_LARGEST, SL_SMALLEST, SL_LEAD, SL_NTH, SL_ME,
+    SL_OTHER, SL_LIT, SL_UNLIT, SL_OPEN, SL_SHUT, SL_EMPTY };
                                                 /* (Which: the one there is, or the one meant; any one; it, the last
                                                 **   thing named; all of them; the closest, the largest, the smallest,
-                                                **   the one in the lead; the nth; the character) */
+                                                **   the one in the lead; the nth; the character; the other, one not
+                                                **   the one named first; by its state, lit, not lit, open, closed,
+                                                **   with nothing in it: the things', the world's to choose) */
 enum { DF_NONE, DF_PLACE, DF_LAST, DF_NEAR, DF_FRONT, DF_TARGET, DF_HAND };   /* The thing a verb takes when none's
                                                 **   said (commands.verbs' unsaid): none (it must be said), where the
                                                 **   character is, the last thing named, that or else what's near

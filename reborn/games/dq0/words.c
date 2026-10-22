@@ -5,7 +5,7 @@
 ** ahead, ahead to its right ... ahead to its left), and how far above or below it; nothing behind it (the user's: "you
 ** can't really see" it), though the senses mark the squares beside it there.  A room's size it knows when it's seen
 ** the whole of it; a ceiling when the light reaches it.  At a glance (the user's), in general words: a small hall, a
-** long gallery, a high ceiling, a low, rough one (overlay 7's ceiling_glance); its figures (its size in feet, its
+** long gallery, a high ceiling, a low, rough one (ceiling_glance); its figures (its size in feet, its
 ** ceiling's heights) only on a close look (look closely, examine the room: look's sight_close), and only for what it's
 ** seen (else its far side is lost in the dark).  What's further off is told in less detail, the further it is and the
 ** weaker the character's sight (the referee's: struct sight's eye): a thing too far to make out only by its size
@@ -163,7 +163,10 @@ static void portals (void)
 }
 
 /* A trap's name, added to lb: "a scything blade, set off by a tripwire" (kind, trigger, state: world.h's TK_*,
-** TT_*, TS_*: a pit that's given way an open one) */
+** TT_*, TS_*: a pit that's given way an open one; overlay 10's, this one's room) */
+#pragma code-name (push, "OV10CODE")
+#pragma rodata-name (push, "OV10RODATA")
+#pragma local-strings (push, on)
 void __fastcall__ o_trap_name (unsigned char kind, unsigned char trigger, unsigned char state)
 {
     static const char* const name[8] = {
@@ -180,6 +183,9 @@ void __fastcall__ o_trap_name (unsigned char kind, unsigned char trigger, unsign
     strcat (lb, trigger == TT_PLATE ? ", set off by a plate in the floor" : trigger == TT_WIRE ?
         ", set off by a tripwire" : ", set to go off as its door opens");
 }
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The traps it knows of and sees: "There is a dart trap, set off by a tripwire, ahead to your right." */
 static void traps (void)
@@ -191,7 +197,7 @@ static void traps (void)
             continue;
         }
         add (" There is ");
-        o_trap_name (S->trap[i].kind, S->trap[i].trigger, S->trap[i].state);   /* (Here: its stub's overlay 2) */
+        trap_name (S->trap[i].kind, S->trap[i].trigger, S->trap[i].state);   /* (Its stub's: overlay 10) */
         lbe += strlen (lbe);
         add (S->trap[i].kind <= TK_SPIKED ? " " : ", ");
         add (S->trap[i].rel == 0xFF ? "at your feet" : relname[S->trap[i].rel & 7]);
@@ -242,6 +248,25 @@ static void zones (void)
     }
 }
 
+/* ---- The ceiling in general words (the user's: a high ceiling, a low, rough one), as it's seen at a glance: its kind,
+** and how high it is (low, under 8 feet; high, over 12; lofty, over 20), added to lb (its record sight_copy; seen.c's
+** once, overlay 7's, its room) */
+static void ceiling_glance (void)
+{
+#define S sight_copy
+    static const char* const and[4] = { " and low.", ".", " and high.", " and very high." };
+    static const char* const over[4] = { " low overhead.", " overhead.", " high overhead.", " far overhead." };
+    unsigned char k = S.ceil != C_ROUGH && S.ceil != C_SLOPED && S.cwall >= S.cmid ? C_FLAT : S.ceil, h;
+
+    h = S.cmid < 8 ? 0 : S.cmid <= 12 ? 1 : S.cmid <= 20 ? 2 : 3;
+    add (k == C_FLAT ? " The ceiling is flat" : k == C_BARREL ? " A barrel vault arches" : k == C_DOME ?
+         " The ceiling is a dome," : k == C_CATHEDRAL ? " A pointed vault rises" : k == C_SLOPED ?
+         " The ceiling slopes" : " The ceiling is rough stone");
+    add (k == C_SLOPED ? (S.cmid >= S.cwall + 6 ? " steeply, high on one side and low on the other." :
+         ", higher on one side.") : k == C_FLAT || k == C_ROUGH ? and[h] : over[h]);
+#undef S
+}
+
 /* The ceiling: at a glance, or (a close look) its figures */
 static void ceiling (void)
 {
@@ -252,7 +277,7 @@ static void ceiling (void)
         return;
     }
     if (!sight_close) {
-        ceiling_glance ();                      /* (Overlay 7's: this one's full) */
+        ceiling_glance ();
         return;
     }
     switch (S->ceil != C_ROUGH && S->cwall >= S->cmid ? C_FLAT : S->ceil) {   /* (A vault no higher in the middle: flat) */
@@ -428,7 +453,7 @@ void o_words (void)
     }
     traps ();
     glows ();
-    seen_words ();                              /* (The things and the denizens it sees: overlay 7's) */
+    seen_words ();                              /* (The things and the denizens it sees: overlay 12's) */
     if (lb_stream) {
         lb_out ();                              /* (The last of it said) */
     }
@@ -445,6 +470,47 @@ unsigned char __fastcall__ o_more (unsigned char action)
         msg (lb);
         if (action == IR_OK) {
             intend2 (I_WAIT, othings_x, 1);
+        }
+        break;
+    case VB_OBSERVE_IN:                         /* (Looked into a thing, onto it: "look in the sack", "look on the */
+                                                /*   table", "look into the well", the user's, 2026-10-21; the */
+                                                /*   world's IO_INSIDE; a way, "look into the passage", a look */
+                                                /*   that way, way.c's) */
+        if (cmd.obj.kind) {
+            look_way (VB_OBSERVE_THROUGH);
+            break;
+        }
+        action = othings (IO_INSIDE, cmd.obj.word, "", 0);
+        if (action == IR_NOT_HERE) {
+            reach_go ();                        /* (Out of reach: walked over to first, then again) */
+        } else if (action != IR_OK) {
+            sayf ("\nYou see no %s here.", cmd.obj.word);
+        } else {
+            msg (lb);
+            intend2 (I_WAIT, 30, 1);            /* (A look's three seconds) */
+        }
+        break;
+    case VB_OPEN_OBJECT:                        /* (A thing that closes, worked: "open the chest", "untie the */
+    case VB_CLOSE_OBJECT:                       /*   sack", "pick the chest's lock", "force the chest", the */
+    case VB_UNLOCK_OBJECT:                      /*   user's; the world's IO_SHUT, a lid, a tie, a stopper, a */
+    case VB_FORCE_OBJECT:                       /*   lock; none of that name, a door's work: main.c's, 0) */
+    case VB_LOCK_OBJECT:
+        if (!cmd.obj.word[0] || cmd.obj.kind) {
+            return 0;
+        }
+        action = othings (IO_SHUT, cmd.obj.word, "", action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux);
+        if (action == IR_NONE) {
+            if (cmd.action != VB_LOCK_OBJECT) {
+                return 0;
+            }
+            sayf ("\nYou see no %s here.", cmd.obj.word);
+        } else if (action == IR_NOT_HERE) {
+            reach_go ();
+        } else {
+            msg (lb);
+            if (action == IR_OK) {
+                intend2 (I_WAIT, othings_x, 1);
+            }
         }
         break;
     default:

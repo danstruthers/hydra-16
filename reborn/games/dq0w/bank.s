@@ -23,7 +23,7 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
-_ovbank:    .res        16          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+_ovbank:    .res        18          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
                                     ;   world's own banks (its paging's tables: ipage.c's; the ways across a room;
                                     ;   the traces' store, two: wtrace.c's)
 ova:        .res        1           ; (.A and .X kept through a stub)
@@ -82,7 +82,8 @@ go:
             SWPART      1, 1                ; Digging
             SWPART      2, 3                ; Climbing
             SWPART      3, 1                ; The dungeon begun, the strata below grown
-            SWPART      4, 2                ; The change records' rarer work (store.c), the UI's requests
+            SWPART      4, 2                ; The change records' rarer work (store.c), the UI's requests; a thing of
+                                            ;   several, things moved by the count, what closes worked (things.c)
             SWPART      5, 2                ; Doors (wdoor.c)
             SWPART      6, 3                ; Blows (wblow.c)
             SWPART      7, 3                ; Portcullises and windows (wwin.c)
@@ -93,17 +94,17 @@ go:
             SWPART      12, 4               ; A door's work begun (dq0w.c's door_work)
             SWPART      13, 8               ; The item store's rarer work: begun, kept, the kit, a chunk's things
             SWPART      14, 6               ; The denizens' bodies: their intents carried out (wbody.c)
-            SWPART      15, 2               ; The blows, the bleeding (wfight.c)
+            SWPART      15, 14              ; The blows, the bleeding (wfight.c)
             SWPART      16, 1               ; The game's own rules: the puzzle judged, a thing walked to (wgame.c)
             SWPART      17, 6               ; The things' files: their chunks paged (ipage.c)
             SWPART      18, 7               ; The change records' files, the save's stamps (wfile.c)
             SWPART      19, 8               ; The game's files begun, the item store kept (wfile.c); a hole dug kept
             SWPART      20, 7               ; The things' files: a chunk's put out, read in (ipage.c)
             SWPART      21, 5               ; The ways across a room worked out (dq0w.c's ways)
-            SWPART      22, 8               ; The strata's records out of the hub, back (sfile.c)
+            SWPART      22, 14              ; The strata's records out of the hub, back (sfile.c)
             SWPART      23, 11              ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 9               ; Engagement, a blow's close-in, fighting on (dq0w.c's)
-            SWPART      25, 7               ; The engage initiative test, a grope's (dq0w.c's)
+            SWPART      25, 14              ; The engage initiative test, a grope's (dq0w.c's)
             SWPART      26, 9               ; Disengaging (dq0w.c's)
             SWPART      27, 9               ; The lights burning down (dq0w.c's: slice 4.1's)
             SWPART      28, 12              ; The traces' store: the journal taken in, kept (wtrace.c)
@@ -113,6 +114,9 @@ go:
             SWPART      32, 9               ; The way the character's scent goes, a hunter's (wtrscent.c)
             SWPART      33, 12              ; A walk across a room (dq0w.c's across: the main RAM's room)
             SWPART      34, 12              ; The rooms' lights by their sconces (wkept.c)
+            SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)
+            SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
+            SWPART      37, 12              ; The rest of the UI's intents carried out (dq0w.c's intent_more)
 
             SWFN        start_dig, 1
             SWFN        dig_on, 1
@@ -141,9 +145,15 @@ go:
             SWFN        named, 10
             SWFN        on_pc, 10
             SWFN        light_now, 10
-            SWFN        at_hand, 10
-            SWFN        carried_named, 10
-            SWFN        seen_named, 10
+            SWFN        at_hand, 4
+            SWFN        carried_named, 4
+            SWFN        seen_named, 4
+            SWFN        pick, 4
+            SWFN        moved, 35
+            SWFN        shut_work, 36
+            SWFN        take_rest, 35
+            SWFN        shut_in, 35
+            SWFN        bar_hand, 35
             SWFN        in_reach, 10
             SWFN        weight_in, 10
             SWFN        weight_of, 10
@@ -151,14 +161,17 @@ go:
             SWFN        bulk_of, 10
             SWFN        carry, 10
             SWFN        about, 10
-            SWFN        drop, 10
+            SWFN        drop, 35
             SWFN        throw_at, 4
             SWFN        list, 11
-            SWFN        wear, 11
+            SWFN        wear, 36
             SWFN        make_own, 13
             SWFN        seen_owned, 13
             SWFN        search, 11
-            SWFN        describe, 11
+            SWFN        describe, 36
+            SWFN        inside, 36
+            SWFN        listed, 11
+            SWFN        many, 35
             SWFN        hide, 13
             SWFN        door_work, 12
             SWFN        batter_on, 12
@@ -215,3 +228,4 @@ go:
             SWFN        tr_words, 31
             SWFN        tr_scent, 32
             SWFN        across, 33
+            SWFN        intent_more, 37

@@ -15,7 +15,7 @@
 **   theme.c    (overlay 5) the theme's words (its story, its names, its endings) and its puzzle (theme.h)
 **   sway.c     (overlay 6) the character's ways with the denizens, in words (talk, persuade, an ally's requests:
 **              the denizens' task's answers), and the commands listed
-**   seen.c     (overlay 7) more of what the character perceives, in words: a ceiling at a glance, the things
+**   seen.c     (overlay 12) more of what the character perceives, in words: a ceiling at a glance, the things
 **              and the denizens it sees, those it hears
 **   choose.c   (overlay 7) the thing the player means, of those it perceives: of several, which, asked
 **   resolve.c  (overlay 11) the command's things found among those it perceives, its unsaid filled (it, the
@@ -230,7 +230,7 @@ void __fastcall__ harm_words (unsigned w, unsigned cond);               /* Overl
 void __fastcall__ fixt_words (unsigned w);      /* Overlay 4: a portal worked's (an E_PORTAL's w1: a door's,
                                                 **   portal_words) */
 void __fastcall__ trap_words (unsigned w);      /* Overlay 4: a trap's (an E_TRAP's w1) */
-void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned char state);  /* Overlay 2: a
+void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned char state);  /* Overlay 10: a
                                                 **   trap's name, added to lb */
 void den_way (void);                            /* Overlay 4: a denizen in the way (its name in lb) */
 struct msg;
@@ -256,9 +256,8 @@ extern unsigned tx, ty;                         /* (main.c's: the square of the 
 void __fastcall__ portal_look (const struct portal* p, signed char g);  /* Overlay 4: a portal looked at closely
                                                 **   (the world's record of it, the hub's pview, copied), judged at
                                                 **   the appraiser's grade g, into lb */
-void ceiling_glance (void);                     /* Overlay 7: a ceiling at a glance (sight_copy's), added to lb */
 void words (void);                              /* Overlay 2: what the character perceives, into lb */
-void seen_words (void);                         /* Overlay 7: the things and the denizens it sees, added to lb */
+void seen_words (void);                         /* Overlay 12: the things and the denizens it sees, added to lb */
 void stir_words (void);                         /* Overlay 9: the denizens it sees, moving, into lb: what's
                                                 **   changed since they were told (or "": as they were told last) */
 void den_words (void);                          /* Overlay 9: the denizens it sees, added to lb (seen_words's), and
@@ -288,7 +287,7 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[11];
+extern unsigned char ovbank[12];
 
 /* ---- The swapped parts (bank.s's stubs: swap.inc), run in the main RAM's top (dq0.cfg's SWAP), a part at a time */
 

@@ -41,8 +41,10 @@ struct kind {
     unsigned char   craft;                      /* The craft that knows it (rs.h's AP_*: its appraiser's) */
     unsigned        value;                      /* Its worth, a sound one, new: in pennies */
     unsigned char   keeps;                      /* A container's: the forms it keeps in (KF_*: a basket not sand nor
-                                                **   water, a sack not water); KF_ON: a surface, things lie on it */
-    unsigned char   form;                       /* Its own form (KF_*; 0: KF_SOLID, a thing whole) */
+                                                **   water, a sack not water); KF_ON: a surface, things lie on it;
+                                                **   what closes it (KF_LID, KF_TIE, KF_STOPPER; none, it's open) */
+    unsigned char   form;                       /* Its own form (KF_*; 0: KF_SOLID, a thing whole); KF_COUNT, a lot
+                                                **   counted (its qty how many: rations, pennies, arrows) */
 };
 #define K_CONTAINER     0x01                    /* Holds things inside it */
 #define K_BELT          0x02                    /* Things hang from it, each in a slot */
@@ -58,6 +60,14 @@ struct kind {
 #define KF_GAS          0x08                    /*   a gas */
 #define KF_ON           0x10                    /* (A kind's keeps: a surface, a table's, a chair's) */
 #define KF_FIXED        0x80                    /* (And fixed where it stands, never taken up: a theme's altar) */
+#define KF_LID          0x20                    /* (A kind's keeps: what closes it, the user's, 2026-10-21: a lid, a
+                                                **   chest's, a pot's, a backpack's flap; */
+#define KF_TIE          0x40                    /*   a tie, a sack's, a pouch's; */
+#define KF_STOPPER      0x60                    /*   a stopper, a waterskin's, a flask's; none, a basket, a quiver) */
+#define KF_CLOSES       0x60
+#define KF_FORMS        0x0F                    /* (A kind's form's own: KF_SOLID ... alone) */
+#define KF_COUNT        0x40                    /* (A kind's form: a lot of them counted, its qty how many, split and
+                                                **   joined again as they're moved: rations, pennies, arrows) */
 
 /* The catalogue's kinds, by number (things.c's order: the maker puts them down by these) */
 enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKIN, KI_RATIONS, KI_TINDERBOX, KI_PICK,
@@ -108,9 +118,17 @@ struct item {
                                                 **   its life decided as it's made its own), the world's as it burns
                                                 **   (DUNGEON.md: light; HOUSE.md's burning); a fuel's (a flask of
                                                 **   oil, a pot of pitch), what's in it, in the same minutes */
+    unsigned char   shut;                       /* A thing that closes (its kind's KF_CLOSES): closed, locked (IS_*:
+                                                **   decided as it's made its own, found closed, a chest locked
+                                                **   sometimes; the kit's open, but what's stoppered) */
 };
 #define SC_LIT          0x01                    /* (A sconce's hide: its room lit by it, as the world last made it; */
 #define SC_NOW          0x02                    /*   a light in it lit now, the world's pass's mark) */
+#define IS_CLOSED       0x01                    /* Closed (its lid down, its tie tied, its stopper in): nothing put in
+                                                **   or taken out, nothing in it seen */
+#define IS_LOCKED       0x02                    /* Locked (picked, or forced: P_PICKLOCK, P_FORCE) */
+#define IS_LOCK         0x04                    /* It has a lock (a chest's: its lid's) */
+#define IS_BURST        0x08                    /* Its lock forced, burst: it won't lock again */
 #define I_LIT           0x01                    /* A light, lit */
 #define I_HELD          0x02                    /* In a hand */
 #define I_WORN          0x04                    /* Worn (a belt, a pack, armour) */
@@ -144,7 +162,14 @@ struct ireq {
     unsigned        dur, dur_max, value;
     unsigned char   size, thick;                /*   (and its size, its thickness: the item's) */
     char            into[16];                   /* The other thing's name (IO_PUT's, IO_TAKE's: in it, on it, from it) */
+    unsigned char   sel, osel;                  /* Which of several of that name, the thing's and the other's (the
+                                                **   command's: struct cmd's SL_*, its n times 16; SL_THE none said,
+                                                **   the one most to hand; the world's to choose, things.c's) */
+    unsigned char   count;                      /* How many (the command's: 0 one, unsaid; CT_ALL, CT_HALF): of
+                                                **   several alike, or of a lot (its qty) */
 };
+#define CT_ALL          0xFF
+#define CT_HALF         0xFE
 enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
     IO_TOOLS,                                   /* The tools' keys of all it carries, into things_text (for the
                                                 **   referee: a skill used, the right tool to hand takes itself) */
@@ -188,7 +213,17 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   it takes), as much as it has room for: the things' words of it in
                                                 **   things_text, the time it took back in x (tenths); IR_NO refused,
                                                 **   the words why */
-#define IO_PUZZLE       (IO_BAR + 4)            /* A command of the theme's puzzle's (theme.h), judged by its rules
+#define IO_SHUT         (IO_BAR + 7)            /* A thing worked that closes (name, carried or within reach: a chest,
+                                                **   a sack, a flask), as to says (PA_OPEN, PA_CLOSE, PA_UNLOCK: its
+                                                **   lock picked, the referee's P_PICKLOCK; PA_FORCE: forced, P_FORCE;
+                                                **   PA_LOCK): its words in things_text, its time in x (tenths); IR_NONE
+                                                **   no such thing (the UI's door work then), IR_NO refused (the words
+                                                **   why) */
+#define IO_INSIDE       (IO_BAR + 8)            /* What's in a thing, or on it (name: carried, or seen within reach; a
+                                                **   well: its shaft), in words into things_text (shut: "The chest is
+                                                **   closed."); to 1: as it's looked at ("look at": the thing, then
+                                                **   what's in it) */
+#define IO_PUZZLE       (IO_BAR + 4)           /* A command of the theme's puzzle's (theme.h), judged by its rules
                                                 **   (the world's): to its verb (TR_*), name the thing (into the other:
                                                 **   combine name with into, put name on into; read name; use name on
                                                 **   the way out); each found to hand (IO_FIND's), the rule for their

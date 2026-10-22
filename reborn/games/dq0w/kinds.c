@@ -16,18 +16,19 @@
 
 /* The catalogue, in rs.h's units: name, flags, weight (quarter pounds), bulk (pints), its room (pints; the weight it
 ** bears, quarter pounds), slots, light (squares), how far off it's made out (squares past a speck), tool's key,
-** material, the craft that knows it, its worth (pennies); what it keeps (KF_*: a surface KF_ON), its own form (0 a
-** thing whole) */
+** material, the craft that knows it, its worth (pennies); what it keeps (KF_*: a surface KF_ON) and what closes it (a
+** lid, a tie, a stopper: KF_LID, KF_TIE, KF_STOPPER), its own form (0 a thing whole; KF_COUNT a lot, counted: its
+** weight one's) */
 typedef char kinds_fit[KI_COUNT <= KI_THEME ? 1 : -1];   /* (The theme's after the catalogue's own) */
 const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, theme.h: the UI's, as it starts) */
     { "", 0 },
     { "torch", K_LIGHT | K_HAND, 4, 2, 0, 0, 0, 4, 3, "torch", MT_WOOD, AP_WOOD, 1 },
-    { "backpack", K_CONTAINER | K_WEAR, 8, 20, 32, 160, 0, 0, 5, "", MT_LEATHER, AP_HIDE, 24, SS },
+    { "backpack", K_CONTAINER | K_WEAR, 8, 20, 32, 160, 0, 0, 5, "", MT_LEATHER, AP_HIDE, 24, SS | KF_LID },
     { "belt", K_BELT | K_WEAR, 2, 1, 0, 0, 4, 0, 2, "", MT_LEATHER, AP_HIDE, 6 },
-    { "pouch", K_CONTAINER | K_HANG, 1, 1, 2, 16, 0, 0, 1, "", MT_LEATHER, AP_HIDE, 3, SS },
+    { "pouch", K_CONTAINER | K_HANG, 1, 1, 2, 16, 0, 0, 1, "", MT_LEATHER, AP_HIDE, 3, SS | KF_TIE },
     { "dagger", K_HAND | K_HANG, 4, 1, 0, 0, 0, 0, 2, "knife", MT_IRON, AP_WEAPON, 60 },
-    { "waterskin", K_CONTAINER | K_HANG, 4, 4, 4, 20, 0, 0, 2, "", MT_LEATHER, AP_HIDE, 8, KF_LIQUID },
-    { "rations", K_PLURAL, 4, 2, 0, 0, 0, 0, 2, "", MT_OTHER, AP_FOOD, 4 },
+    { "waterskin", K_CONTAINER | K_HANG, 4, 4, 4, 20, 0, 0, 2, "", MT_LEATHER, AP_HIDE, 8, KF_LIQUID | KF_STOPPER },
+    { "rations", K_PLURAL, 4, 2, 0, 0, 0, 0, 2, "", MT_OTHER, AP_FOOD, 4, 0, KF_COUNT },   /* (A day's: a pound) */
     { "tinderbox", 0, 1, 1, 0, 0, 0, 0, 1, "tinder", MT_IRON, AP_METAL, 6 },
     { "pick", K_HAND | K_TWO, 24, 6, 0, 0, 0, 0, 4, "pick", MT_IRON, AP_METAL, 48 },
     { "shovel", K_HAND | K_TWO, 20, 8, 0, 0, 0, 0, 4, "shovel", MT_IRON, AP_METAL, 36 },
@@ -35,12 +36,12 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "chisel", K_HAND, 2, 1, 0, 0, 0, 0, 1, "chisel", MT_STEEL, AP_METAL, 12 },
     { "rope", 0, 40, 8, 0, 0, 0, 0, 4, "rope", MT_CLOTH, AP_CLOTH, 12 },
     { "bones", K_PLURAL, 8, 4, 0, 0, 0, 0, 4, "", MT_BONE, AP_BONE, 0 },
-    { "pennies", K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "", MT_BRONZE, AP_METAL, 1, 0, KF_SMALL },
+    { "pennies", K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "", MT_BRONZE, AP_METAL, 1, 0, KF_SMALL | KF_COUNT },
     { "iron key", 0, 1, 0, 0, 0, 0, 0, 1, "key", MT_IRON, AP_METAL, 4 },
     { "candle", K_LIGHT | K_HAND, 1, 1, 0, 0, 0, 2, 1, "", MT_TALLOW, AP_FOOD, 1 },   /* (Tallow, a fine one beeswax) */
     { "lantern", K_LIGHT | K_HAND | K_HANG, 8, 4, 0, 0, 0, 6, 3, "", MT_IRON, AP_METAL, 30 },
-    { "sack", K_CONTAINER, 2, 2, 24, 120, 0, 0, 3, "", MT_CLOTH, AP_CLOTH, 3, SS },
-    { "chest", K_CONTAINER, 120, 80, 60, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 80, SS },
+    { "sack", K_CONTAINER, 2, 2, 24, 120, 0, 0, 3, "", MT_CLOTH, AP_CLOTH, 3, SS | KF_TIE },
+    { "chest", K_CONTAINER, 120, 80, 60, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 80, SS | KF_LID },
     { "skull", 0, 4, 2, 0, 0, 0, 0, 3, "", MT_BONE, AP_BONE, 0 },
     { "broken sword", 0, 12, 2, 0, 0, 0, 0, 4, "blade", MT_IRON, AP_WEAPON, 10 },
     { "cloak", K_WEAR, 8, 6, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 24 },
@@ -51,7 +52,7 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "table", 0, 160, 60, 30, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 20, KF_ON },
     { "chair", 0, 40, 20, 8, 120, 0, 0, 5, "", MT_WOOD, AP_WOOD, 8, KF_ON },
     { "quiver", K_CONTAINER | K_HANG, 2, 2, 4, 24, 0, 0, 2, "", MT_LEATHER, AP_HIDE, 4, KF_SOLID },
-    { "arrows", K_PLURAL, 2, 2, 0, 0, 0, 0, 2, "", MT_WOOD, AP_WEAPON, 1 },
+    { "arrows", K_PLURAL, 2, 2, 0, 0, 0, 0, 2, "", MT_WOOD, AP_WEAPON, 1, 0, KF_COUNT },
     { "bar", 0, 40, 12, 0, 0, 0, 0, 5, "", MT_WOOD, AP_WOOD, 4 },        /* (A portal's parts: a door's bar, */
     { "pane of glass", 0, 4, 6, 0, 0, 0, 0, 3, "", MT_GLASS, AP_GLASS, 30 },     /*   a window's glass, */
     { "iron bars", K_PLURAL, 60, 20, 0, 0, 0, 0, 5, "", MT_IRON, AP_METAL, 10 },  /*   its bars; */
@@ -71,16 +72,16 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "mace", K_HAND | K_HANG, 16, 3, 0, 0, 0, 0, 3, "mace", MT_IRON, AP_WEAPON, 84 },     /* (Weapons) */
     { "spear", K_HAND, 20, 6, 0, 0, 0, 0, 5, "spear", MT_WOOD, AP_WEAPON, 60 },
     { "round shield", K_HAND, 24, 12, 0, 0, 0, 0, 4, "shield", MT_WOOD, AP_WEAPON, 42 },
-    { "iron pot", K_CONTAINER, 32, 8, 6, 48, 0, 0, 3, "", MT_IRON, AP_METAL, 10, SS | KF_LIQUID }, /* (A room's use's
+    { "iron pot", K_CONTAINER, 32, 8, 6, 48, 0, 0, 3, "", MT_IRON, AP_METAL, 10, SS | KF_LIQUID | KF_LID }, /* (A room's use's
                                                 **   leavings: the stock's, dq0m/uses.c) */
     { "heap of straw", 0, 4, 8, 0, 0, 0, 0, 3, "", MT_OTHER, AP_WOOD, 0 },
     { "candle stubs", K_LIGHT | K_HAND | K_PLURAL, 1, 1, 0, 0, 0, 1, 1, "", MT_TALLOW, AP_FOOD, 0 },  /* (A light
                                                 **   of a few minutes: slice 4.1's) */
     { "well", 0, 255, 255, 0, 0, 0, 0, 8, "", MT_STONE, AP_STONE, 0, KF_FIXED },   /* (Its stone curb: never taken
                                                 **   up; its water the water's work's, to come) */
-    { "flask of oil", K_HAND, 4, 1, 0, 0, 0, 0, 1, "", MT_CLAY, AP_POTTERY, 3 },   /* (A light's fuel: a lantern's
+    { "flask of oil", K_HAND, 4, 1, 0, 0, 0, 0, 1, "", MT_CLAY, AP_POTTERY, 3, KF_STOPPER },   /* (A light's fuel: a lantern's
                                                 **   fill, a torch's; slice 4.1's, the stopped branch's) */
-    { "pot of pitch", K_HAND, 6, 2, 0, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 2 },   /* (A torch's) */
+    { "pot of pitch", K_HAND, 6, 2, 0, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 2, KF_LID },   /* (A torch's) */
     { "sconce", 0, 6, 2, 3, 8, 0, 0, 12, "", MT_IRON, AP_METAL, 4, KF_ON | KF_FIXED },  /* (On a room's wall, fixed: a
                                                 **   torch in it, the maker's: DUNGEON.md, light kept) */
 };
@@ -163,4 +164,5 @@ const char* const said[SA_COUNT] = {
     "The % is fixed where it stands.",
     "The % is burnt out.",
     "The % is out of oil.",
+    "The # is closed.",                        /* (A lid, a tie, a stopper: opened first, the user's) */
 };

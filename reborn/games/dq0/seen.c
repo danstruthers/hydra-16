@@ -1,14 +1,15 @@
 /*
-** seen.c - (overlay 7) more of what the character perceives, in words (words.c's overlay is full): a ceiling at a
-** glance; the things it sees lying about (words.c's, after the place; then the denizens it sees, dens.c's, overlay
-** 9).  As words.c's: only what it sees now (nothing behind it), and what's further off in less detail, the further
-** it is and the weaker the character's sight (the referee's: struct sight's eye): a thing too far to make out only by
-** its size ("something small").  Things alike told together ("On the floor ahead lie two iron pots."), not each
-** the same words again.
+** seen.c - (overlay 12, after part 6's image: overlay 7 full) more of what the character perceives, in words
+** (words.c's overlay is full): the things it sees lying about (words.c's, after the place; then the denizens it sees,
+** dens.c's, overlay 9).  As words.c's: only what it sees now (nothing behind it), and what's further off in less
+** detail, the further it is and the weaker the character's sight (the referee's: struct sight's eye): a thing too far
+** to make out only by its size ("something small").  Things alike told together ("On the floor ahead lie two iron
+** pots.", "On the table lie two chisels."), not each the same words again; those on one square in one sentence ("At
+** your feet lie a sack and a chest.": the user's, 2026-10-21).
 */
 
-#pragma code-name ("OV7CODE")
-#pragma rodata-name ("OV7RODATA")
+#pragma code-name ("OV12CODE")
+#pragma rodata-name ("OV12RODATA")
 
 #include <stdlib.h>
 #include <string.h>
@@ -63,25 +64,6 @@ static unsigned char __fastcall__ apart (unsigned x, unsigned y)
     return x > 255 ? 255 : x;
 }
 
-/* ---- The ceiling in general words (the user's: a high ceiling, a low, rough one), as it's seen at a glance: its kind,
-** and how high it is (low, under 8 feet; high, over 12; lofty, over 20); words.c's, added to lb (its record
-** sight_copy) */
-void o_ceiling_glance (void)
-{
-#define S sight_copy
-    static const char* const and[4] = { " and low.", ".", " and high.", " and very high." };
-    static const char* const over[4] = { " low overhead.", " overhead.", " high overhead.", " far overhead." };
-    unsigned char k = S.ceil != C_ROUGH && S.ceil != C_SLOPED && S.cwall >= S.cmid ? C_FLAT : S.ceil, h;
-
-    h = S.cmid < 8 ? 0 : S.cmid <= 12 ? 1 : S.cmid <= 20 ? 2 : 3;
-    add (k == C_FLAT ? " The ceiling is flat" : k == C_BARREL ? " A barrel vault arches" : k == C_DOME ?
-         " The ceiling is a dome," : k == C_CATHEDRAL ? " A pointed vault rises" : k == C_SLOPED ?
-         " The ceiling slopes" : " The ceiling is rough stone");
-    add (k == C_SLOPED ? (S.cmid >= S.cwall + 6 ? " steeply, high on one side and low on the other." :
-         ", higher on one side.") : k == C_FLAT || k == C_ROUGH ? and[h] : over[h]);
-#undef S
-}
-
 /* ---- The things and the denizens it sees (words.c's o_words, after the place), into lb */
 
 static const char* const few[SEE_ITEMS + 1] = { "", "one", "two", "three", "four", "five", "six" };
@@ -112,45 +94,96 @@ static unsigned char __fastcall__ afar (unsigned char i)
     return !(S->item[i].hid & 1) && apart (S->item[i].x, S->item[i].y) > 1 + S->eye / 2 + (S->item[i].hid >> 4);
 }
 
-/* Thing k one to be told with thing i (both lying about, nothing on them, not named; the same kind, where they lie,
-** as easily made out, and the same in form: each one thing, "On the floor ahead lie two iron pots."; each some of a
-** plural kind, "some potsherds"; or each a count of them, "5 rations": told once) */
+/* Thing k one to be told with thing i (the same kind, where they lie, as easily made out, and the same in form: each
+** one thing, "On the floor ahead lie two iron pots."; each some of a plural kind, "some potsherds"; or each a count of
+** them, "5 rations": told once); both lying about with nothing on them, or both on the same surface ("On the table lie
+** two chisels.", the user's, 2026-10-21); not named */
 static unsigned char __fastcall__ alike (unsigned char i, unsigned char k)
 {
     const struct sitem* p = &S->item[i];
     const struct sitem* q = &S->item[k];
+    unsigned char j;
 
-    return i != k && !(q->hid & 2) && !(p->hid & 2) && (k + 1 >= S->nitems || !(q[1].hid & 2)) &&
-        (i + 1 >= S->nitems || !(p[1].hid & 2)) && (q->qty > 1) == (p->qty > 1) && q->plural == p->plural &&
-        q->name[0] != '#' && q->rel == p->rel && q->hid == p->hid && !strcmp (q->name, p->name) && afar (i) == afar (k);
+    if (i == k || ((p->hid ^ q->hid) & 2)) {
+        return 0;
+    }
+    if (p->hid & 2) {
+        for (j = i < k ? i : k; j < (i < k ? k : i); ++j) {
+            if (!(S->item[j + 1].hid & 2)) {
+                return 0;                       /* (On different surfaces) */
+            }
+        }
+    } else if ((k + 1 < S->nitems && (q[1].hid & 2)) || (i + 1 < S->nitems && (p[1].hid & 2))) {
+        return 0;                               /* (Things on it: told each) */
+    }
+    return (q->qty > 1) == (p->qty > 1) && q->plural == p->plural && q->name[0] != '#' && q->rel == p->rel &&
+        q->hid == p->hid && !strcmp (q->name, p->name) && afar (i) == afar (k);
 }
 
-/* The things it sees lying about: "On the floor ahead lies a pick." "At your feet lie some bones." "On the table
-** lies a candle." (a surface's things after it, hid 2); "At your feet lies a lit torch." (hid 4); one too far off to
-** make out (by its size, hid's high bits, and the character's sight), only by its size: "On the floor ahead lies
-** something small." (and nothing on it told); none behind it; a sconce on the wall, what's in it with it: "On the wall
-** to your left is a sconce, a lit torch in it." (part 8's words for where it is, its verb with them: lie_words's 2) */
+/* Thing i's alike (those after it it's told with): how many, their count in gq (a lot's); 0 if one before it is
+** alike (told with that one) */
+static unsigned gq;
+static unsigned char __fastcall__ group (unsigned char i)
+{
+    unsigned char k, n = 1;
+
+    gq = S->item[i].qty;
+    for (k = 0; k < S->nitems; ++k) {           /* (Those alike told together: with the first of them) */
+        if (alike (i, k)) {
+            if (k < i) {
+                return 0;
+            }
+            ++n;
+            gq += gq > 1 ? S->item[k].qty : 0;  /* (Counted ones: their counts together) */
+        }
+    }
+    return n;
+}
+
+/* Thing i and its alike, n of them, a count gq, in words: "two chisels", "a lit torch", "some bones", "5 rations";
+** one too far off to make out, by its size, "something small" */
+static void __fastcall__ one (unsigned char i, unsigned char n)
+{
+    const struct sitem* p = &S->item[i];
+    unsigned char sz = p->hid >> 4, b = afar (i);
+
+    if (n > 1 && !p->plural && gq <= 1) {
+        add (few[n]);
+        add (b ? (sz <= 2 ? " small things" : sz >= 5 ? " large things" : " things") : p->hid & 4 ? " lit " : " ");
+        if (!b) {
+            plural (p->name);
+        }
+        return;
+    }
+    if (b) {
+        add (sz <= 2 ? "something small" : sz >= 5 ? "something large" : "something");
+        return;
+    }
+    if (gq > 1) {
+        addn (gq);
+        add (" ");
+    } else {
+        add (p->plural ? "some " : !(p->hid & 4) && strchr ("aeiou", p->name[0]) ? "an " : "a ");
+    }
+    add (p->hid & 4 ? "lit " : "");
+    add (p->name);
+}
+
+/* The things it sees lying about: "On the floor ahead lies a pick." "At your feet lie a sack and a chest." (those on
+** one square told together, the user's: one too far off to make out each), "On the table lies a candle." (a surface's
+** things after it, hid 2); "At your feet lies a lit torch." (hid 4); one too far off to make out (by its size, hid's
+** high bits, and the character's sight), only by its size: "On the floor ahead lies something small." (and nothing
+** on it told); none behind it; a sconce on the wall, what's in it with it: "On the wall to your left is a sconce, a
+** lit torch in it." (part 8's words for where it is, its verb with them: lie_words's 2) */
 static void items (void)
 {
-    unsigned char i, k, n, on = 0, sz, b, skip = 0, w = 0;
-    unsigned q;
+    unsigned char i, j, n, m, on = 0, b, skip = 0, told = 0, now, w = 0, k;
 
     for (i = 0; i < S->nitems; ++i) {
-        sz = S->item[i].hid >> 4;
         b = afar (i);
-        n = 1;
-        q = S->item[i].qty;
         if (S->item[i].hid & 2) {
             if (skip) {
                 continue;                       /* (On a thing behind it, or too far to make out) */
-            }
-            if (w) {
-                --lbe;                          /* (In a sconce: its sentence's, its full stop still in lb) */
-                add (", ");
-            } else {
-                add (" On the ");
-                add (S->item[on].name);
-                add (" ");
             }
         } else {
             on = i;
@@ -159,21 +192,38 @@ static void items (void)
                 continue;
             }
             skip = b;
-            for (k = 0; k < S->nitems; ++k) {   /* (Those alike told together: with the first of them) */
-                if (alike (i, k)) {
-                    if (k < i) {
-                        break;
-                    }
-                    ++n;
-                    q += q > 1 ? S->item[k].qty : 0;   /* (Counted ones: their counts together) */
+            if (told & 1 << i) {
+                continue;                       /* (Told with those where it lies: what's on it after) */
+            }
+        }
+        if (!(n = group (i))) {
+            continue;
+        }
+        m = now = 0;
+        if (S->item[i].hid & 2) {
+            if (w) {
+                --lbe;                          /* (In a sconce: its sentence's, its full stop still in lb) */
+                add (", ");
+            } else {
+                add (" On the ");
+                add (S->item[on].name);
+                add (" ");
+            }
+        } else if ((k = lie_words (i)) == 2) {
+            add (where_w);                      /* (A sconce on the wall, the verb with it: part 8's) */
+            w = 1;
+        } else {
+            for (j = i + 1; !b && j < S->nitems; ++j) {     /* (The others on its square: with it) */
+                if (!(S->item[j].hid & 2) && S->item[j].x == S->item[i].x && S->item[j].y == S->item[i].y &&
+                    !((S->item[j].hid ^ S->item[i].hid) & 1) && !afar (j) && strcmp (S->item[j].name, "sconce") &&
+                    group (j)) {                /* (A sconce on the wall: its own sentence) */
+                    now |= 1 << j;
+                    ++m;
                 }
             }
-            if (k < S->nitems) {
-                continue;
-            }
-            if ((w = lie_words (i)) != 0) {
-                add (where_w);                  /* (In a corner, against a wall, on the wall: part 8's) */
-                w >>= 1;
+            told |= now;
+            if (k) {
+                add (where_w);                  /* (In a corner, against a wall: part 8's) */
             } else {
                 add (S->item[i].hid & 1 ? (S->item[i].rel == 0xFF ? " Hidden at your feet " : " Hidden on the floor ") :
                     S->item[i].rel == 0xFF ? " At your feet " : " On the floor ");
@@ -183,31 +233,17 @@ static void items (void)
                 }
             }
         }
-        if (n > 1 && !S->item[i].plural && q <= 1) {
-            add ("lie ");
-            add (few[n]);
-            add (b ? (sz <= 2 ? " small things." : sz >= 5 ? " large things." : " things.") :
-                S->item[i].hid & 4 ? " lit " : " ");
-            if (!b) {
-                plural (S->item[i].name);
-                add (".");
+        group (i);
+        if (!w) {
+            add (m || n > 1 || S->item[i].plural || gq > 1 ? "lie " : "lies ");
+        }
+        one (i, n);
+        for (j = i + 1; m; ++j) {
+            if (now & 1 << j) {
+                add (--m ? ", " : " and ");
+                one (j, group (j));
             }
-            continue;
         }
-        if (b) {
-            add (sz <= 2 ? "lies something small." : sz >= 5 ? "lies something large." : "lies something.");
-            continue;
-        }
-        add (w ? "" : S->item[i].plural || q > 1 ? "lie " : "lies ");
-        if (q > 1) {
-            addn (q);
-            add (" ");
-        } else {
-            add (S->item[i].plural ? "some " : !(S->item[i].hid & 4) && strchr ("aeiou", S->item[i].name[0]) ? "an " :
-                "a ");
-        }
-        add (S->item[i].hid & 4 ? "lit " : "");
-        add (S->item[i].name);
         add (w && (S->item[i].hid & 2) ? " in it." : ".");
     }
 }

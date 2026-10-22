@@ -24,7 +24,7 @@ ovx:        .res        1
             SWPART      3, 3                ; A look one way's own record (way.c)
 
             SWFN        view, 1
-            SWFN        felt, 1
+            SWFN        felt, 2
             SWFN        things_lamps, 1
             SWFN        lamp_on, 1
             SWFN        perceive, 2
