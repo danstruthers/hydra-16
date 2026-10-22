@@ -5,10 +5,10 @@
 peer look
 gaze look
 gander look
-mv m
-trundle m
-mosey m
-saunter m
+mv walk
+trundle walk
+mosey walk
+saunter walk
 ready equip
 don equip
 wear equip
@@ -55,7 +55,7 @@ closely close
 detailed close
 detail close
 really close
-head m
+head walk
 inventory i
 inspect x
 attack fight
@@ -76,7 +76,7 @@ cast c
 give g
 hide h
 jump j
-move m
+move walk
 open o
 quit q
 throw t
