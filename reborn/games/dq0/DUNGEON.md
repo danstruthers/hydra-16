@@ -592,6 +592,28 @@ the oil").  Left in the dark by it, the character stops its long task (a climb p
 has a spare torch and a flask of oil (D5); the status line shows the minutes left of the light carried (the hub's
 pc_fuel, its words pc_left).
 
+**What closes, and looking in** (slice 4.1, the user's playtest, 2026-10-21: "look in the sack", "open the chest"): a
+kind says what closes it (its keeps: KF_LID a chest's, a pot's, a backpack's flap; KF_TIE a sack's, a pouch's;
+KF_STOPPER a waterskin's, a flask's; a basket, a quiver, none), and a thing's own state says if it's closed or locked
+(struct item's shut, IS_*: decided as it's made its own, a found one closed, a chest locked one time in three; the
+character's kit open, but what's stoppered).  Closed, nothing's put in it or taken out of it, nor out of anything in it
+("The sack is closed."), and nothing in it is seen or listed (but it's weighed).  Opened and closed, a lock picked or
+forced (IO_SHUT: the world's, the referee's P_PICKLOCK, P_FORCE; a lock burst never locks again); looked into, onto,
+what hangs from it (IO_INSIDE: "In the sack lie a candle and two chisels.", "On the table lie two chisels.", "The chest
+is closed."; a well's shaft); "look at" a thing an examine of it, with what's in it.  Out of reach, each is walked
+over to first.
+
+**Of several, and how many** (the user's: "if I have 3 sacks, and I say put the sack in the sack"; "drop two sacks",
+"take 4 rations"): the world chooses the thing a request names (things.c's pick, part 4's): of those the name fits (a
+word of the kind's, or its plural; the name the character gave it), the one most to hand (held, then worn or hanging
+from the belt, then in what it carries, the shallower first, then lying within reach, the nearer first, then further
+off), the request's selector picking among them (struct ireq's sel and osel, the command's: the nth, "the other", or
+by state: lit, unlit, open, closed, empty); the other thing never the first nor one in it.  A count (struct ireq's
+count: a number, all, half) moves several in turn, each its own record; a lot counted (KF_COUNT: rations, pennies,
+arrows; its qty how many, its weight each one's times it) is split for part of it, and a lot moved joins one alike
+where it goes; fewer there than asked, as many as there are, told.  The inventory, the look, a look in, tell things
+alike together ("two sacks"), and those on one square in one sentence.
+
 An item is **found** through the character's senses, as everything else is: only on a square it sees now, lit;
 noticed by the referee's test of its sight (rs.h: P_NOTICE_SIGHT, or P_SEARCH when it searches), the steps from the
 distance, the light, the item's size, and how it's **hidden**: by nothing, or concealed (its hide, in steps: found only by
@@ -647,8 +669,13 @@ or a shaft can be jumped down (jump down: a fall of its height).
   A walk's way is worked out as it starts and walked a square at a time as the clock goes, the character on each
   square in its turn (the denizens see it there, the senses look every third square and at each beat); a dig's
   spells, a climb's rounds and a wait the same task in place.  Its progress is a bar on the status line, ten cells,
-  and words as it goes: a walk's beats (the passage turns, a doorway, it rises or falls, and on a quiet stretch "You
-  go on down the passage" every 30 feet), a dig's spells, a climb's rounds.  It's stopped hard by any wound or blow,
+  and words as it goes: a walk's beats (the passage turns, a doorway, it rises or falls, a room crossed as it leaves
+  it for a door or a passage, "You cross the room.", and on a quiet stretch "You go on down the passage" every 30
+  feet), a dig's spells, a climb's rounds.  A wide passage is one passage (the user's, 2026-10-21): a square beside the
+  way that's only its breadth (it and the square walked going on side by side, nothing out of it the square walked
+  hasn't, nothing past it: two or three squares across, chunk.c's breadth) is no way on, for the walk and the senses alike; the openings into one room beside a
+  passage one way into it; and a walk set out from a fork crosses it, three squares the way said, before a fork stops
+  it again (a wide one's every square no fork of its own).  It's stopped hard by any wound or blow,
   or by a hostile denizen coming into sight within 30 feet ("You stop walking"); anything else new (a denizen seen
   for the first time in the task, the first sound heard) asks, soft: "Keep waiting?", the clock still at the turns
   pace till it's answered, yes going on, no stopping it, and any other command stopping it and then carried out.

@@ -274,8 +274,9 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                 S.door[S.ndoors++].dz = fz (C->elev[cy_][cx_] - myz);
             }
         }
-        for (d = 0; d < 4; ++d) {               /* (The ways it goes on, felt in the dark too) */
-            if (step_ok (sn, x, y, d) && (p = at (sn, x + dir_x[d], y + dir_y[d])) != 0) {
+        for (d = 0; d < 4; ++d) {               /* (The ways it goes on, felt in the dark too; a wide passage's
+                                                **   breadth none: one passage, the user's) */
+            if (step_ok (sn, x, y, d) && !breadth (sn, x, y, d) && (p = at (sn, x + dir_x[d], y + dir_y[d])) != 0) {
                 dz = C->elev[cy_][cx_] - myz;
                 S.way[S.nways].rel = REL8 (H_OF (d), face);
                 S.way[S.nways].dz = fz (dz);

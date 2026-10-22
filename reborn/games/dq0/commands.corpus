@@ -24,6 +24,10 @@ look at me	VB_OBSERVE_OBJECT	object=me	-	'me' only
 look through the window	VB_OBSERVE_THROUGH	object=window	near=window	through an opening
 look around the corner	VB_OBSERVE_AROUND	object=corner	near=corner	orientation point
 look under the table	VB_OBSERVE_OBJECT	object=table	near=table	locative look
+look in the sack	VB_OBSERVE_IN	object=sack	near=sack	into a thing (slice 4.1)
+look inside the pouch	VB_OBSERVE_IN	object=pouch	near=pouch	inside is in
+look into the well	VB_OBSERVE_IN	object=well	near=well	into
+look on the table	VB_OBSERVE_IN	object=table	near=table	onto a surface
 look at the dragon	ERROR:NOT_PERCEIVED	-	near=wall	not in sight
 look at you	ERROR:NOT_UNDERSTOOD	-	-	question 14: 'you' is refused
 
@@ -52,6 +56,16 @@ take all	VB_RETRIEVE_OBJECT	object=all-near	near=sword,rat	take all
 drop the sword	VB_DROP_OBJECT	object=sword	near=sword	drop
 put down the sword	VB_DROP_OBJECT	object=sword	near=sword	put down
 put the sword in the chest	VB_PUT_OBJECT	object=sword;container=chest	near=sword,chest	put in
+put the sack in the other sack	VB_PUT_OBJECT	object=sack;container=sack	near=sack	the other of two alike (slice 4.1)
+put the first sack in the second sack	VB_PUT_OBJECT	object=sack;container=sack	near=sack	ordinals for both things
+drop the lit torch	VB_DROP_OBJECT	object=torch	near=torch	which by its state
+take the empty sack	VB_RETRIEVE_OBJECT	object=sack	near=sack	which by its state: empty
+drop two sacks	VB_DROP_OBJECT	object=sacks	near=sacks	a count of things alike
+take 4 rations	VB_RETRIEVE_OBJECT	object=rations	near=rations	part of a lot
+drop all the sacks	VB_DROP_OBJECT	object=sacks	near=sacks	all of them
+drop half the rations	VB_DROP_OBJECT	object=rations	near=rations	half a lot
+drop two of the sacks	VB_DROP_OBJECT	object=sacks	near=sacks	a count, of the
+drop both sacks	VB_DROP_OBJECT	object=sacks	near=sacks	both: two
 put the apple under the table	VB_PUT_OBJECT	object=apple;container=table	near=apple,table	under as a container
 use the key	VB_USE_OBJECT	object=key	near=key	use
 use the key on the door	VB_USE_OBJECT	object=key;target=door	near=key,door	use on
@@ -281,6 +295,7 @@ give the apple to the goblin	VB_GIVE_OBJECT	object=apple;target=goblin	near=appl
 hold the torch	VB_HOLD_OBJECT	object=torch	near=torch	hold
 lock the door	VB_LOCK_OBJECT	object=door	near=door	lock
 unlock the door with the key	VB_UNLOCK_OBJECT	object=door;instrument=key	near=door,key	unlock with a key
+pick the lock of the chest	VB_UNLOCK_OBJECT	object=chest	near=chest	a thing's lock picked (slice 4.1)
 fill the waterskin	VB_FILL_OBJECT	object=waterskin	near=waterskin	fill
 fill the waterskin from the chest	VB_FILL_OBJECT	object=waterskin;source=chest	near=waterskin,chest	fill from a source
 fill the lantern with oil	VB_FILL_OBJECT	object=lantern;source=oil	near=lantern,oil	fill with a fuel (slice 4.1)

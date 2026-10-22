@@ -226,6 +226,9 @@ void __fastcall__ o_beat_words (unsigned w)
     case WB_DOWN:
         msg ("The way falls away.");
         break;
+    case WB_CROSS:
+        tell (T_YOU_CROSS_THE);                 /* (A room crossed to a door, a passage: "You cross the room.") */
+        break;
     }
 }
 

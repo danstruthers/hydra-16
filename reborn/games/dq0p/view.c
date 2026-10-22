@@ -68,12 +68,17 @@ void give_way (void);                           /* (dq0p.c's: the look giving wa
 
 
 /* The squares a walk went (the world's: from x, y its first way d, n squares; the look's walk), felt in the dark,
-** remembered (T_SEEN): as dq0w.c's walk goes them, along a passage, on at its bends, through a door, into a room */
+** remembered (T_SEEN): as dq0w.c's walk goes them, along a passage (a wide one's breadth beside it no way on), on at
+** its bends, through a door, into a room (part 2's: its breadth, chunk.c's, there) */
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
 void __fastcall__ s_felt (unsigned char sn, unsigned x, unsigned y, unsigned char d, unsigned char n)
 {
     unsigned char* p;
-    unsigned char k, w;
+    unsigned char h0 = d, cross;
 
+    way_room = 0xFF;
+    cross = room_of (sn, x, y) == 0xFF && ways_from (sn, x, y, d) > 1 ? 3 : 0;   /* (As the walk does: dq0w.c's) */
     while (n--) {
         x += dir_x[d];
         y += dir_y[d];
@@ -84,14 +89,15 @@ void __fastcall__ s_felt (unsigned char sn, unsigned x, unsigned y, unsigned cha
         if (!n || TILE (*p) == T_DOOR) {
             continue;
         }
-        for (k = 0, w = d; k < 4; ++k) {        /* (On: the one way that isn't back, the walk's) */
-            if (k != ((d + 2) & 3) && step_ok (sn, x, y, k)) {
-                w = k;
-            }
+        if (cross && (--cross, step_ok (sn, x, y, h0))) {
+            d = h0;                             /* (A fork it set out from crossed the way said) */
+        } else if (ways_from (sn, x, y, d) == 1) {
+            d = way_on;                         /* (On: the one way that isn't back, the walk's) */
         }
-        d = w;
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Stratum sn the view's (and the grid's: v_sn), its bounds and the grid's bank for cast.s */
 static void __fastcall__ stratum (unsigned char sn)

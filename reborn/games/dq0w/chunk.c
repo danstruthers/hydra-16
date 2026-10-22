@@ -155,6 +155,66 @@ unsigned char __fastcall__ step_ok (unsigned char sn, unsigned x, unsigned y, un
     return dz <= (TILE (t) == T_STEPS || TILE (u) == T_STEPS ? STAIR_MAX : STEP_MAX);
 }
 
+#ifndef CHUNK_NO_ROOMS
+/* The step from (x, y) to the square beside it d only its passage's breadth, no way on (the user's, 2026-10-21: a wide
+** passage is one passage, a fork only where a way truly branches off): that square and this one going on side by side
+** (both a way across d), nothing out of it this one hasn't too, and nothing past it that way (two squares across;
+** three, the middle's the same).  (x, y) to d walkable, as step_ok has it */
+#ifdef BREADTH_PART2
+#pragma code-name (push, "SW2CODE")             /* (The senses': part 2's, a look's, sight.c's and felt's) */
+#endif
+#pragma static-locals (push, on)
+unsigned char __fastcall__ breadth (unsigned char sn, unsigned x, unsigned y, unsigned char d)
+{
+    unsigned char n, e, a, b, u, v;
+    unsigned nx, ny;
+
+    for (n = 0; n < 2; ++n) {
+        nx = x + dir_x[d];
+        ny = y + dir_y[d];
+        e = (d + 1) & 3;
+        a = step_ok (sn, x, y, e);
+        b = step_ok (sn, x, y, e ^ 2);
+        u = step_ok (sn, nx, ny, e);
+        v = step_ok (sn, nx, ny, e ^ 2);
+        if (!((a && u) || (b && v)) || (u && !a) || (v && !b)) {
+            return 0;                           /* (Not alongside, or a way out of it this one hasn't: a way off) */
+        }
+        if (!step_ok (sn, nx, ny, d)) {
+            return 1;                           /* (Its far side: the passage's breadth) */
+        }
+        x = nx;
+        y = ny;
+    }
+    return 0;                                   /* (Wider than three: a way) */
+}
+
+/* The ways on from (x, y) heading d (a walk's: of the four, not back, nor a wide passage's breadth, nor an opening
+** into the room the square before opened into, way_room: a passage along a room's side one way into it): how many;
+** one of them in way_on; the room it opens into now in way_room */
+unsigned char way_on, way_room = 0xFF;
+unsigned char __fastcall__ ways_from (unsigned char sn, unsigned x, unsigned y, unsigned char d)
+{
+    unsigned char k, nd = 0, r, rm = 0xFF;
+
+    for (k = 0; k < 4; ++k) {
+        if (k != ((d + 2) & 3) && step_ok (sn, x, y, k) && !breadth (sn, x, y, k)) {
+            if ((r = room_of (sn, x + dir_x[k], y + dir_y[k])) != 0xFF && (rm = r) == way_room) {
+                continue;
+            }
+            ++nd;
+            way_on = k;
+        }
+    }
+    way_room = rm;
+    return nd;
+}
+#pragma static-locals (pop)
+#ifdef BREADTH_PART2
+#pragma code-name (pop)
+#endif
+#endif
+
 struct portal* __fastcall__ portal_at (unsigned char x, unsigned char y)
 {
     struct portal* p = C->portal;

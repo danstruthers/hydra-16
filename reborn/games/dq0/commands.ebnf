@@ -38,7 +38,7 @@
 <look>           ::= <LOOK> [ <look-target> ]
 <look-target>    ::= <direction> | <locale-ref> | [ <look-prep> ] <object>
 <locale-ref>     ::= "around" [ <here-ref> ] | "about" | "here" | "this place"
-<look-prep>      ::= "at" | "through" | "toward" | "towards" | "around" | "in" | "under" | "behind" | "beside" | "near" | "to" | "on" | "for"
+<look-prep>      ::= "at" | "through" | "toward" | "towards" | "around" | "in" | "into" | "inside" | "under" | "behind" | "beside" | "near" | "to" | "on" | "for"   (* "look in the sack", "look on the table": into it, onto it *)
 <examine>        ::= <EXAMINE> [ [ "at" ] <thing> ]
 <EXAMINE>        ::= "x" | [ "take a" ] <DETAIL> <LOOK>   (* "look closely" is an alias of examine: commands.aliases *)
 
@@ -117,12 +117,13 @@
 <object-one>     ::= <np> | <pronoun> | <me-phrase> | <everything> | <way-out>   (* "the sword and the shield": a list, one command for each *)
 <chosen>         ::= ( "closest" | "nearest" | "largest" | "biggest" | "smallest" | "lead" | <ordinal> ) [ "one" ]   (* "the closest", "the second one": of those it perceives *)
 <way-out>        ::= [ "the" ] "way" "out"          (* the theme's way out of the dungeon *)
-<np>             ::= [ <det> ] ( [ <selector> ] { <adj> } <head> | <chosen> )
+<np>             ::= [ <det> ] ( [ <selector> ] { <adj> } <head> | <chosen> ) | <portion> [ "of" ] <det> { <adj> } <head>
+<portion>        ::= "all" | "half" | "both" | <number>   (* "all the sacks", "half the rations", "two of the sacks": how many of them, slice 4.1's *)
 <thing>          ::= <object> [ <of-room> ] [ <lies> ]   (* a thing in the place, and where it lies: "the door ahead to my left" *)
 <of-room>        ::= "of" [ "the" | "this" ] ( "room" | "chamber" | "hall" | "cave" | "cavern" )   (* "the centre of the room" *)
 <lies>           ::= <compass> | <relative>
 <det>            ::= "a" | "an" | "the" | "this" | "that" | "these" | "those" | "its"   (* "my coat": <me-phrase> *)
-<selector>       ::= <number> | "all" | "every" | "each" | "any" | <ordinal>
+<selector>       ::= <number> | "all" | "every" | "each" | "any" | "both" | <ordinal>
                    | "closest" | "nearest" | "largest" | "biggest" | "smallest" | "lead"
 <head>           ::= { <noun> } <name>                (* every word a thing can be called: "the mail hauberk" (a noun: no adjective, number or ordinal) *)
 <pronoun>        ::= "it" | "them" | "that" | "this" | "one" | "he" | "she" | "him" | "her"   (* "it": the last thing of any kind (question 7); he, she, him, her: the last person named (context "person=") *)
@@ -227,7 +228,7 @@
 <GIVE>           ::= "g"
 <grab>           ::= ( "grab" | "hold" ) <object> [ <from-phrase> ]   (* a grapple when the object is engaged; else a get, or a carry for hold *)
 <lock>           ::= "lock" <thing>
-<unlock>         ::= "unlock" <thing> [ "with" <object> ]
+<unlock>         ::= "unlock" <thing> [ "with" <object> ] | ( "unlock" | "pick" ) ( "the" | "its" ) "lock" ( "of" | "on" ) <thing>   (* "pick the lock of the chest", slice 4.1's *)
 <fill>           ::= "fill" <object> [ <from-phrase> | "with" <object> ]   (* "fill the lantern", "fill the lantern with oil" (a light renewed, slice 4.1's) *)
 <dip>            ::= ( "dip" | "soak" ) <object> ( "in" | "into" ) <object>   (* "dip the torch in the oil", "soak the torch in pitch" *)
 <read>           ::= "read" [ <object> ]   (* bare: the last thing named *)

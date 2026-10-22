@@ -210,6 +210,14 @@ her = SL_IT
 me = SL_ME
 myself = SL_ME
 self = SL_ME
+other = SL_OTHER                            # (new, slice 4.1's: the user's, 2026-10-21: "put the sack in the
+lit = SL_LIT                                #   other sack", "drop the lit torch", "take the empty sack": which of
+burning = SL_LIT                            #   several, the world's to choose, by its state)
+unlit = SL_UNLIT
+open = SL_OPEN
+closed = SL_SHUT
+shut = SL_SHUT
+empty = SL_EMPTY
 
 [manners]
 carefully = MN_CAREFUL
@@ -234,6 +242,7 @@ seven = 7
 eight = 8
 nine = 9
 ten = 10
+both = 2                                    # (new, slice 4.1's: "drop both sacks")
 
 [little]
 for

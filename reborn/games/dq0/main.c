@@ -66,13 +66,14 @@ static const char* kit;                         /* (dq0 -k: things more, as the 
 static const char* tfile;                       /* (dq0 -t: a theme written by hand) */
 static unsigned char made;                      /* (The theme to read: 0xFF the game's own, themegen's; theme.h) */
 const char* savedir;                            /* (dq0 -d: the save's folder; task.c's meta too) */
-static unsigned char __fastcall__ things (unsigned char op, const char* name);
+unsigned char __fastcall__ things (unsigned char op, const char* name);   /* (way.c's too, part 6's) */
 static void to_hand (void);
 static void __fastcall__ dig_used (unsigned char n);
 static char dug_with[16];                       /* (The tool a dig took, named) */
 static unsigned char finds;                     /* (Things a search turned up, told as it ends: the hub's text) */
-static struct ireq judged;                      /* (A thing looked at closely: what it is, for the appraiser) */
-static struct portal viewed;                    /* (A portal looked at closely: the world's record of it) */
+struct ireq judged;                             /* (A thing looked at closely: what it is, for the appraiser: way.c's,
+                                                **   part 6's, examine) */
+struct portal viewed;                           /* (A portal looked at closely: the world's record of it) */
 static char pending[16];                        /* A thing to take up as the character's free (a portal's part lifted
                                                 **   out; one the world's walk found fixed: E_TAKEN's) */
 static char taking[16];                         /* (The thing taken up last named) */
@@ -368,7 +369,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    14                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    15                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -389,7 +390,8 @@ static void sheet (void)
                                                 **   in steps, rs.h's scale; 13, each denizen's record its faction:
                                                 **   the theme's inhabitants; 14, the items' records their fuel,
                                                 **   the region files' groups the minute they were put out: the
-                                                **   lights burning, slice 4.1's) */
+                                                **   lights burning, slice 4.1's; 15, the items' records their shut, a
+                                                **   thing's lid, its tie, its stopper, its lock) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -1037,7 +1039,7 @@ void __fastcall__ wset (unsigned char what, unsigned char x, unsigned char y)
 }
 
 /* ---- The things (items.h): a request to the world's item store, waited for: its result */
-static unsigned char __fastcall__ things (unsigned char op, const char* name)
+unsigned char __fastcall__ things (unsigned char op, const char* name)
 {
     struct ireq* q = &HUB->ireq;
 
@@ -1159,7 +1161,9 @@ void __fastcall__ s_took_up (unsigned r)
         intend2 (I_WAIT, HUB->round, 1);
         return;
     }
-    if ((unsigned char) r != IR_NOT_HERE) {     /* (Out of reach still: the walk's words told why) */
+    if ((unsigned char) r == IR_OK && *tt ()) {
+        msg (lb);                               /* (By the count: "You take 4 rations.", the world's) */
+    } else if ((unsigned char) r != IR_NOT_HERE) {  /* (Out of reach still: the walk's words told why) */
         tell ((unsigned char) r == IR_OK ? T_TAKEN : (unsigned char) r == IR_FULL ? T_YOUR_HANDS_ARE : T_YOU_SEE_NONE);
     }
     if ((unsigned char) r == IR_OK) {
@@ -1210,38 +1214,6 @@ static void show_map (void)
 ** was said): 1, its square in tx, ty; 0, none; 2, several and none ahead, which asked (overlay 7's pick) */
 unsigned tx, ty;
 #define find(obj, orel) pick ((obj), (orel))
-
-/* A portal it sees looked at closely (the parser's thing, the way it lies): the world's record of it (the hub's
-** wreq, WQ_EXAMINE: a doorway has none), judged by the craft that knows its material (the referee's test,
-** P_APPRAISE: AP_WOOD, AP_METAL, AP_STONE), in words (overlay 4); a few seconds' looking */
-static void __fastcall__ inspect (unsigned char obj, unsigned char orel)
-{
-    struct req* r;
-    signed char g;
-
-    if (find (obj | PICK_TELL, orel) != 1) {
-        return;
-    }
-    if (REL_BEHIND (REL8 (g = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y), HUB->pc_face))) {
-        intend (I_TURN, g);                     /* (One behind it, that it knows of: turned to, to see it) */
-    }
-    HUB->wreq.kind = WQ_EXAMINE;
-    HUB->wreq.x = tx;
-    HUB->wreq.y = ty;
-    hub_call (&HUB->wreq, T_WORLD);
-    HUB->wreq.state = REQ_FREE;
-    if (HUB->wreq.res) {
-        msg ("An open doorway: there's no door in it.");
-        return;
-    }
-    memcpy (&viewed, &HUB->pview, sizeof viewed);
-    r = ask_b (RS_TEST, P_APPRAISE, viewed.mat == PM_STONE ? AP_STONE : viewed.mat == PM_IRON ? AP_METAL : AP_WOOD);
-    g = r->grade;
-    r->state = REQ_FREE;
-    portal_look (&viewed, g);
-    msg (lb);
-    intend2 (I_WAIT, 50, 1);
-}
 
 /* A thing hidden where the character stands (P_CONCEAL: the referee's test, the things' record), worded by how
 ** well (its difficulty, in steps) */
@@ -1466,6 +1438,9 @@ void __fastcall__ s_command (char* l)
         return;
     }
 again:
+    HUB->ireq.sel = cmd.obj.sel | cmd.obj.n << 4;  /* (Which of several, how many: the things' requests', the */
+    HUB->ireq.osel = cmd.other.sel | cmd.other.n << 4;  /*   world's to choose, slice 4.1's: "the second sack") */
+    HUB->ireq.count = cmd.flags & CF_HALF ? CT_HALF : cmd.obj.sel == SL_ALL ? CT_ALL : cmd.n;
     if ((d = puzzle (&cmd)) != Q_NONE) {        /* (The theme's puzzle's: theme.c) */
         if (d >= Q_DONE) {
             intend2 (I_WAIT, 50, 1);            /* (Its time: the way out opened the world's already) */
@@ -1534,6 +1509,9 @@ again:
     case VB_DISARM_OBJECT:
     case VB_BAR_OBJECT:
     case VB_BEND_OBJECT:
+        if (!cmd.obj.kind && more (cmd.action)) {
+            return;                             /* (A thing that closes: a chest, a sack, a flask: overlay 2's) */
+        }
         pa = cmd.aux;
         if (pa == PA_RAISE && cmd.obj.word[0]) {
             pa = PA_LIFT;                       /* ("Lift the bar": a portal's part lifted out) */
@@ -1551,7 +1529,7 @@ portal:
         if (cmd.obj.kind && d) {
             cmd.obj.lies = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y);    /* (The one it sees: faced) */
         }
-        if (cmd.obj.lies != 0xFF && cmd.obj.lies <= H_NW && cmd.obj.lies != HUB->pc_face) {
+        if (cmd.obj.lies <= H_NW && cmd.obj.lies != HUB->pc_face) {
             intend (I_TURN, cmd.obj.lies);      /* (The door that way: faced first) */
         }
         HUB->ireq.to = 0;
@@ -1563,22 +1541,7 @@ portal:
         if (cmd.obj.word[0] && !cmd.obj.kind && deal (SW_LOOK | SW_QUIET) != SR_NONE) {
             return;                             /* (A denizen it sees: how it seems) */
         }
-        if (!cmd.obj.word[0] || things (IO_DESCRIBE, cmd.obj.word) != IR_OK) {
-            if (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_WINDOW || cmd.obj.kind == OB_PORTC) {
-                inspect (cmd.obj.kind, cmd.obj.lies);
-            } else if (cmd.obj.word[0]) {
-                sayf ("\nYou see no %s here.", cmd.obj.word);
-            } else {
-                look (2);                       /* (A close look about: the room's figures) */
-            }
-            return;
-        }
-        memcpy (&judged, &HUB->ireq, sizeof judged);
-        r = ask_b (RS_TEST, P_APPRAISE, judged.craft);
-        d = r->grade;
-        r->state = REQ_FREE;
-        appraise (&judged, d);
-        msg (lb);
+        look_way (VB_EXAMINE_OBJECT);           /* (A thing, a portal, the room: part 6's, way.c) */
         return;
     case VB_SEARCH:
         finds = 0xFF;                           /* (A search, a long task: what it finds told as it ends, the walls'
@@ -1608,9 +1571,15 @@ portal:
     case VB_DROP_OBJECT:
         if (!cmd.obj.word[0]) {
             tell (T_PUT_DOWN_WHAT);
-        } else if (d = HUB->pc_light, things (IO_DROP, cmd.obj.word) == IR_OK) {
-            tell (T_PUT_DOWN);
+        } else if (d = HUB->pc_light, (pa = things (IO_DROP, cmd.obj.word)) == IR_OK) {
+            if (*tt ()) {
+                msg (lb);                       /* (By the count: "You put down two sacks.", the world's) */
+            } else {
+                tell (T_PUT_DOWN);
+            }
             after (d, 10, IO_DROP);
+        } else if (pa == IR_NO) {
+            msg (tt ());                        /* (Why not: in a thing closed) */
         } else {
             tell (T_YOU_CARRY_NONE);
         }

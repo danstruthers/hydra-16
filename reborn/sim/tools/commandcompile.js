@@ -113,7 +113,8 @@ const LIMIT = 200;
 const OPEN = new Set(['deity-name', 'pretense-word', 'name', 'noun', 'alias', 'adj',
   'number', 'ordinal', 'task-name', 'meta-topic', 'name-word', 'spell-word', 'text', 'quoted-text']);
 const ADJ = new Set(['right', 'far', 'wooden', 'iron', 'large', 'small', 'closed', 'open', 'old', 'rusty',
-  'bottom', 'top', 'heavy', 'near', 'left']);
+  'bottom', 'top', 'heavy', 'near', 'left', 'other', 'lit', 'burning', 'unlit', 'shut', 'empty']);   // (Slice 4.1's:
+                                                // which of several by its state, "the lit torch")
 const NUMWORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
 const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth'];
 const TASKS = ['digging', 'crawling', 'waiting', 'searching', 'climbing', 'sleeping', 'resting', 'working', 'pretending', 'walking',
@@ -137,7 +138,8 @@ const ATTACK_MANNER = { slash: 'edge', slice: 'edge', chop: 'edge', swing: 'edge
 const POSTURE = { SIT: 'VB_SIT', STAND: 'VB_STAND', 'LIE-DOWN': 'VB_LIE_DOWN', CROUCH: 'VB_CROUCH' };
 const GRAPPLE_MANEUVER = { grapple: 'grapple', wrestle: 'wrestle', tackle: 'tackle', pin: 'pin', choke: 'choke',
   hold: 'hold', grab: 'grab', put: 'headlock', toss: 'throw', throw: 'throw', chuck: 'throw', hurl: 'throw', sling: 'throw', t: 'throw' };
-const LOOK_PREP_ACTION = { through: 'VB_OBSERVE_THROUGH', around: 'VB_OBSERVE_AROUND', for: 'VB_FIND_OBJECT' };
+const LOOK_PREP_ACTION = { through: 'VB_OBSERVE_THROUGH', around: 'VB_OBSERVE_AROUND', for: 'VB_FIND_OBJECT',
+  in: 'VB_OBSERVE_IN', into: 'VB_OBSERVE_IN', inside: 'VB_OBSERVE_IN', on: 'VB_OBSERVE_IN' };   // (Into a thing, onto it)
 const numWord = v => own(NUMWORDS, v);
 
 // Default world: the names of things the game knows. A word not here is "no such thing"; one here but not perceived is

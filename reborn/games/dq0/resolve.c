@@ -313,6 +313,12 @@ static unsigned char __fastcall__ find_thing (struct cthing* t, unsigned char wh
         !gather (t->word, what)) {
         return 1;                               /* (A fixture, found already, the character, nothing, none it sees) */
     }
+    for (k = 0; k < nc && !cd[k]; ++k) {
+    }
+    if (k == nc && (t->sel == SL_NTH || t->sel >= SL_OTHER)) {
+        return 1;                               /* (Things alone, the nth, the other, by their state: the world's to
+                                                **   choose, the carried among them, slice 4.1's) */
+    }
     if ((k = choose_one (t->sel, t->n)) != 0xFF) {
         found (t, k);
         return 1;
@@ -459,6 +465,7 @@ unsigned char o_resolve (void)
             }
             iall = 1;
             strcpy (cmd.obj.word, all[0]);
+            cmd.obj.sel = SL_THE;               /* (Each by its name in turn: not all of a name at once) */
         } else if (!find_thing (&cmd.obj, a == VB_ATTACK_OBJECT ? 2 : a == VB_THROW_OBJECT ? 1 : 3, 0, 0)) {
             return RV_DONE;
         }
@@ -497,7 +504,12 @@ void __fastcall__ o_taken_next (char* w)
     }
 }
 
-/* Overlay 11: a throw told (the things' IO_THROW's result r, how it went, TH_*, times 256): "You throw the dagger hard
+#pragma code-name (push, "OV10CODE")           /* (Overlay 10's: this one's room) */
+#pragma rodata-name (push, "OV10RODATA")
+#pragma data-name (push, "OV10RODATA")
+#pragma local-strings (push, on)
+
+/* Overlay 10: a throw told (the things' IO_THROW's result r, how it went, TH_*, times 256): "You throw the dagger hard
 ** at the giant rat: it strikes it." */
 void __fastcall__ o_throw_words (unsigned r)
 {
@@ -523,3 +535,8 @@ void __fastcall__ o_throw_words (unsigned r)
         msg (cmd.obj.word[0] ? "You carry none of those." : "You have nothing in your hands to throw.");
     }
 }
+
+#pragma local-strings (pop)
+#pragma data-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)

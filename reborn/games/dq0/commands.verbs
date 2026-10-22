@@ -29,7 +29,7 @@
 move        way=VB_MOVE_DIRECTION thing=VB_MOVE_TOWARD alone=VB_MOVE_DIRECTION unsaid=none task=LT_WALK
 enter       thing=VB_ENTER unsaid=front
 approach    thing=VB_APPROACH_OBJECT unsaid=none task=LT_WALK
-look        alone=VB_OBSERVE_LOCALE thing=VB_OBSERVE_OBJECT way=VB_OBSERVE_DIRECTION through=VB_OBSERVE_THROUGH around=VB_OBSERVE_AROUND for=VB_FIND_OBJECT unsaid=place skill=P_NOTICE_SIGHT
+look        alone=VB_OBSERVE_LOCALE thing=VB_OBSERVE_OBJECT way=VB_OBSERVE_DIRECTION through=VB_OBSERVE_THROUGH around=VB_OBSERVE_AROUND for=VB_FIND_OBJECT in=VB_OBSERVE_IN into=VB_OBSERVE_IN inside=VB_OBSERVE_IN on=VB_OBSERVE_IN unsaid=place skill=P_NOTICE_SIGHT
 examine     alone=VB_EXAMINE_LOCALE thing=VB_EXAMINE_OBJECT unsaid=place skill=P_APPRAISE
 search      thing=VB_SEARCH unsaid=place skill=P_SEARCH task=LT_SEARCH
 turn        way=VB_FACE_DIRECTION unsaid=none

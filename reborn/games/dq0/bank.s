@@ -14,7 +14,7 @@
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 11                    ; dq0.cfg's overlays
+OVMAX       = 12                    ; dq0.cfg's overlays (the twelfth only a part's image: part 6's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
 
@@ -178,13 +178,12 @@ ovl_out:
             OVFN        answer, 11
             OVFN        resolve, 11
             OVFN        taken_next, 11
-            OVFN        throw_words, 11
+            OVFN        throw_words, 10
             OVFN        fixt_words, 4
             OVFN        trap_words, 4
-            OVFN        trap_name, 2
+            OVFN        trap_name, 10
             OVFN        den_way, 4
             OVFN        portal_look, 4
-            OVFN        ceiling_glance, 7
             OVFN        theme_load, 5
             OVFN        theme_named, 5
             OVFN        story, 5
@@ -207,7 +206,7 @@ ovl_out:
             SWPART      3, 9                ; The map (look.c)
             SWPART      4, 9                ; The pace, the watchfulness, the state, small moves (pace.c)
             SWPART      5, 10               ; The names given (names.c)
-            SWPART      6, 10               ; The names said (names.c)
+            SWPART      6, 12               ; The names said (names.c); looking one way, a close look (way.c)
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
             SWPART      8, 5                ; Where in its room the character is, and the things (look.c)
 

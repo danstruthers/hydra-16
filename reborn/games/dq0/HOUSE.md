@@ -557,6 +557,62 @@ The lights (lights burning down, renewed; the kit's spare; the status line's lig
 - **Far off, lights burn on:** a chunk's things paged out to the save folder are caught up as they're read in again,
   by the minutes since (the clock's 25.6 seconds a unit; after fourteen hours, all of it).
 
+
+The user's playtest's faults (2026-10-21: things looked into and opened, things of several and how many, walking
+words):
+
+- **Looking into a thing:** "look in", "into", "inside" a thing, "look on" one (VB_OBSERVE_IN): what's in a container,
+  on a surface, hanging from a belt, alike told together ("In the sack lie a candle and two chisels.", "On the table
+  lie two chisels."); empty ("The sack is empty.", "There's nothing on the table."); closed ("The chest is closed.");
+  a well, its shaft ("The well's shaft drops away into the dark."); a thing that holds nothing ("You can't see into
+  the sword."); carried, or lying within reach and seen (out of reach, walked over to first); 3 seconds.  Into a way
+  ("look into the passage") a look that way, as "look through" is.
+- **Looking at a thing** ("look at the table") is an examine of it: its appraisal by the craft that knows it (the
+  referee's test, no time, as examine's), then what's in it or on it ("On it lie two chisels.", "It's closed.").  At a
+  denizen, a look about as before; at a way, a look that way, as before.
+- **What closes:** a lid (a chest, an iron pot, a pot of pitch, a backpack's flap), a tie (a sack, a pouch), a stopper
+  (a waterskin, a flask of oil); a basket, a quiver, nothing.  Found closed; the character's kit open, but the
+  waterskin and the flask, stoppered.  Opened or closed in 2 seconds ("You open the chest.", "You untie the sack.",
+  "You unstopper the flask of oil.").  Closed: nothing put in it or taken out, nor out of anything in it ("The sack is
+  closed."); what's in it not seen, nor listed in what's carried ("a sack (closed)"), but weighed with it.  A lantern
+  filled from a stoppered flask: unstoppered as it's poured and stoppered again, nothing asked (the fill's own time).
+- **Locks:** a chest has one (its lid's); a found chest is locked one time in three (by its number, no dice).  Picked
+  with lockpicks to hand (P_PICKLOCK, as a door's lock: a minute a try, 1 step harder and 1 more for every 3 of its
+  make; no picks, refused), or forced (P_FORCE: a wooden one at no steps, another 2 harder, and 1 more for every 3 of
+  its make; 10 seconds, loud, a noise of 6 the denizens hear): its lock burst, it's open and never locks again; held,
+  "The chest holds".  Forcing one that isn't locked opens it.  Locking: no keys to things' locks yet ("you have no key
+  to it").
+- **A thing of several** (the one a command means, the world's to choose; never asked which): the one most to hand:
+  held, then worn or hanging from the belt, then in what's carried (the shallower first), then lying within reach
+  (the nearer first, a surface's too), then further off.  A command naming two of a name takes different ones: the
+  other never the first, nor one in it ("put the sack in the sack").  The ordinals count that order, for both things
+  ("put the first sack in the second sack"; "the second" of them all, so it may be the first itself: refused, it won't
+  go inside itself).  "The other": one not the first; alone, the second.  By state: lit, unlit ("burning" is lit),
+  open, closed ("shut"), empty.  By where ("the sack in my hand"): not built: the grammar reads "in", "on" as the
+  other thing's.  Among those lying about in sight the UI's choosing (closest, largest) is as before; an ordinal or a
+  state among things alone is the world's.
+- **How many:** a number ("drop two sacks", "take 4 rations", "two of the sacks", "both sacks"), all ("drop all the
+  sacks"), half ("drop half the rations": half of all there are, at least one): each thing moved in turn, each its
+  own record; a lot counted (rations, pennies, arrows) split for part of it, the part a lot of its own (its make the
+  lot's), and a lot moved joined to one alike where it goes (the same kind, the same place, held or worn alike,
+  neither named: "put back with others alike").  Fewer than asked: as many as there are, told ("There are only 2
+  rations.", "You have only a sack."); out of reach, walked over to first, then as many as are within reach.  Words by
+  the count ("You take 4 rations.", "You put down two sacks.", "You put the 2 rations in the sack."); the time each
+  handling's own, added (taking up and putting down: as one's).  A counted lot weighs each one's times its count (a
+  day's ration a pound: the kit's three, 3 lb, where they were 1 lb all told).
+- **Alike told together:** in what's carried ("two sacks"; but each thing in a hand, and anything with something in
+  it, told each), in a look in, and on a surface ("On the table lie two chisels."); things on one square in one
+  sentence ("At your feet lie a table, a sack and a chest."), those too far off to make out each on its own.
+- **Crossing a room on a walk:** a walk across a room to a door or a passage's mouth (n, s ... from a room) tells the
+  crossing as it leaves the room ("You cross the room.", after two squares or more of it), then the door's beat
+  ("You go through a doorway.").
+- **A wide passage is one passage:** a square beside the way that's only the passage's breadth (it and the square
+  walked going on side by side, nothing out of it the square walked hasn't, nothing past it: two squares across, or
+  three) is no way on, for a walk and for the look
+  ("You are in a passage.", not "The passage forks here."); the openings into one room beside a passage are one way
+  into it (a walk along a cave's side); a walk set out from a fork (a wide one's squares, each a fork of its own)
+  goes three squares the way said before a fork stops it again.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without
