@@ -58,7 +58,7 @@ function choose(r, seen, fight) {
     'look around', 'look at the ' + thing, 'examine the ' + thing, 'assess the ' + thing, 'judge the ' + thing,   // (A thing's
     'appraise the ' + thing, 'heft the ' + thing, 'what is the ' + thing + ' worth', 'check its condition',      //   aspects:
     'examine the lock of the ' + thing, 'examine the lock', 'check the ' + thing + ' for traps',                 //   2026-10-22)
-    'check the door for traps', 'search the ' + thing + ' for traps', 'judge the door', 'condition of the ' + thing,
+    'check the door for traps', 'judge the door', 'condition of the ' + thing,
     'hit the door with the ' + thing, 'attack the rat using the dagger', 'dig down with the ' + thing]);
   if (k < 80) return r.pick(['inventory', 'i', 'get the ' + thing, 'take the ' + thing, 'drop the ' + thing, 'pick up the ' + thing,
     'light the torch', 'put out the torch', 'hold the dagger', 'put the ' + thing + ' in the backpack', 'eat the rations', 'drink the waterskin',

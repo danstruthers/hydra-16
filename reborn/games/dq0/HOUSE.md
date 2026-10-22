@@ -800,14 +800,16 @@ something tells what it reveals.
     last thing named, else the door in front): its make and how hard it looks, a second, no test (the picking is the
     test): "The chest has a simple lock: easy to pick, by the look of it.", "... a sound lock: a fair test of a
     lockpick.", "... a good lock: a hard one to pick."; broken, once forced; none.
-  - **Traps:** "check the chest for traps", "search the chest for traps", "examine the door for traps": the
+  - **Traps:** "check the chest for traps", "examine the door for traps", "study the door for traps": the
     search's test on that one thing, ten seconds (a search's minute is the 49 squares about it; one
     thing, a sixth of it).  A door (or a window, a portcullis), walked up to: its trap, if it has one hidden, found by
     Awareness at its hiding's steps worse (by magic, never: told as none); found, told as a search's find ("You find a
     trap: a gas trap, set to go off as its door opens."); known already, said so; none, or missed, "You go over it
     carefully, and find no trap."  A thing (a chest), within reach (walked over to first): things have no traps yet,
-    so none is found ("The chest shows no sign of a trap: you go over it carefully, and find none.").  "Search for
-    traps" with nothing named is the search about it, as ever.  (wtrap.c's PA_CHECK; things.c's LM_TRAPS.)
+    so none is found ("The chest shows no sign of a trap: you go over it carefully, and find none.").  The search's
+    own forms ("search the chest for traps", "search the table for a dagger") are the search's (agent dark's,
+    2026-10-22): till they come, a search about it, as ever; "search for traps", the same.  (wtrap.c's PA_CHECK;
+    things.c's LM_TRAPS.)
   - **Condition:** "check its condition", "examine the condition (the damage) of X", "the condition of X": its wear and
     damage alone, the closer look's words ("Your sword is battered, its edge dulled.", "Your torch is half burnt down."),
     a second, no test; a portal's, the blows' marks ("It's splintered with blows.", "It's been broken down.", "It shows
@@ -820,7 +822,7 @@ something tells what it reveals.
 - **What opening shows** (the user's: "if I open a chest, I should get a 'You open the chest, revealing a pile of gold
   coins'"): told in the open's own sentence.  A thing that closes: its lid lifted, its tie untied, its lock forced open:
   what's in it, alike told together ("You open the chest, revealing a candle and two chisels.", "You untie the sack,
-  revealing 3 rations.", "You force the chest: its lock bursts open, revealing ..."); nothing in it, ": it's empty."; a
+  revealing 3 rations.", "You force the chest, and its lock bursts open, revealing ..."); nothing in it, ": it's empty."; a
   stopper drawn, how full it is, by quarters (a flask of oil: ": it's half full."; a waterskin, what's in it).  A door
   opened, unbarred, forced or battered down, a window's shutters opened, burst or smashed, a portcullis raised or
   heaved up: what the look after it sees beyond it, the look one way's words ("You open the door, revealing a passage,

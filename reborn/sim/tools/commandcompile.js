@@ -510,6 +510,7 @@ function phraseSem(spec, env, ctx) {
   const adjOf = () => (findFirst(spec, 'adj') ? wordsOf(findFirst(spec, 'adj'), env)[0] : undefined);
   switch (r) {
     case 'look': {
+      if (!kidsOf(spec, 'look-target')[0] && direct[0]) return withObj('VB_OBSERVE_OBJECT');   // ("look the torch over")
       const t = targetOf(kidsOf(spec, 'look-target')[0], env, ctx, false);
       if (t.stop) return t.stop;
       if (t.kind === 'locale') return act('VB_OBSERVE_LOCALE', { place: 'here' });

@@ -36,7 +36,8 @@
                    | <deceive> | <threaten> | <calm> | <befriend> | <approach> | <ally>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
-<look>           ::= <LOOK> [ <look-target> ]
+<look>           ::= <LOOK> [ <look-target> ] | <LOOK> <object> "over" | <LOOK> "over" <object>   (* "look the torch over":
+                                                 a look at it, 2026-10-22 *)
 <look-target>    ::= <direction> | <locale-ref> | [ <look-prep> ] <object>
 <locale-ref>     ::= "around" [ <here-ref> ] | "about" | "here" | "this place"
 <look-prep>      ::= "at" | "through" | "toward" | "towards" | "around" | "in" | "into" | "inside" | "under" | "behind" | "beside" | "near" | "to" | "on" | "for"   (* "look in the sack", "look on the table": into it, onto it *)

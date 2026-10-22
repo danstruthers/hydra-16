@@ -20,6 +20,8 @@ look left	VB_OBSERVE_DIRECTION	direction=L	facing=N	relative to facing
 look ahead	VB_OBSERVE_DIRECTION	direction=F	facing=N	relative
 look down	VB_OBSERVE_DIRECTION	direction=D	-	vertical
 look at the wall	VB_OBSERVE_OBJECT	object=wall	near=wall	question 3: a glance
+look the torch over	VB_OBSERVE_OBJECT	object=torch	near=torch	a look at it, over (2026-10-22)
+look over the torch	VB_OBSERVE_OBJECT	object=torch	near=torch	over first
 look at me	VB_OBSERVE_OBJECT	object=me	-	'me' only
 look through the window	VB_OBSERVE_THROUGH	object=window	near=window	through an opening
 look around the corner	VB_OBSERVE_AROUND	object=corner	near=corner	orientation point

@@ -1352,7 +1352,7 @@ unsigned char s_shut_work (void)
         hub_event (&m);
         if (g > 0) {
             s = (s & ~(IS_LOCKED | IS_CLOSED)) | IS_BURST;
-            say3 ("You force the ", nm, ": its lock bursts open");
+            say3 ("You force the ", nm, ", and its lock bursts open");
             reveal (n);
         } else {
             say3 ("The ", nm, " holds: its lock doesn't give.");
