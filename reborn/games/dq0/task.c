@@ -100,8 +100,13 @@ static const char* __fastcall__ doing_of (unsigned char k, unsigned char n)
 ** unasked (dq0 -a's, the tests': not put); 4 fighting on begun (the character busy) */
 unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
 {
-    unsigned char k = w >> 8, p = (unsigned char) w, n = named;
+    unsigned char k = w >> 8, p = (unsigned char) w, n = named, one = 0;
     const char* d;
+
+    if (p == TE_OUT) {
+        one = k & 0x80;                         /* (Another of its name burning still: the world's) */
+        k &= 0x7F;
+    }
 
     if (p == TE_NOT || p == TE_ENGAGED || p == TE_OUT) {
         hub_mem (0, &n, &HUB->pc_task.what, 1);     /* (Its b another's: what it's done to the hub's) */
@@ -193,8 +198,13 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     case TE_OUT:                                /* (Its fuel burnt: its own, its only light, its task stopped with
                                                 **   it; or one it sees lying there, | 0x80) */
         p = lamp (named);
-        sayf ("\n%s %s gutter%s and go%s out", named & 0x80 ? "The" : "Your", fn, p ? "" : "s", p ? "" : "es");
-        if (w >> 8) {
+        if (!(named & 0x80) && !p && one) {     /* (Another of its name burning still, the world's: "One of
+                                                **   your torches", not "Your torch" twice) */
+            sayf ("\nOne of your %s%s gutters and goes out", fn, strchr ("sxh", fn[strlen (fn) - 1]) ? "es" : "s");
+        } else {
+            sayf ("\n%s %s gutter%s and go%s out", named & 0x80 ? "The" : "Your", fn, p ? "" : "s", p ? "" : "es");
+        }
+        if (w >> 8 & 0x7F) {                    /* (Its long task stopped with it: k is the code here) */
             sayf (": you stop %s.", d);
         } else {
             say (".");

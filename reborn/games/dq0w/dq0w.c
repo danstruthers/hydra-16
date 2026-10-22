@@ -1606,6 +1606,8 @@ static unsigned char __fastcall__ work (unsigned char what, unsigned x, unsigned
 /* A move done: the character there, what it saw seen, and the UI told; the time it took at its pace the referee's */
 static void turn (void);
 
+static unsigned char went_cut;                 /* (A walk over to a thing stopped short: halt's, its arrival
+                                                **   not "You go over to it.") */
 static void arrive (void)
 {
     unsigned char first, how = move.how, dw = pon && pfeel;
@@ -1681,7 +1683,9 @@ static void arrive (void)
         }
         barw_ = 0;
     }
-    event (E_ARRIVE, 0, how | first << 8 | (how == A_UP || how == A_DOWN ? (unsigned) move.dir << 12 : 0));
+    event (E_ARRIVE, 0, how | first << 8 | (how == A_UP || how == A_DOWN ? (unsigned) move.dir << 12 : 0) |
+        (how == A_WENT_TO && went_cut ? 0x200 : 0));
+    went_cut = 0;
     if ((how == A_CROSSED || how == A_STEPPED) && move.ledge) {
         event (E_LEDGE, 0, (unsigned char) move.ledge);
     }
@@ -2577,6 +2581,7 @@ static void __fastcall__ halt (unsigned char why)
         take_n = 0;                             /* (Stopped, hard or by the player: what it walked for dropped, a
                                                 **   thing to take up, a blow's close-in) */
         pfoe = 0;
+        went_cut = move.how == A_WENT_TO;       /* (Not got there: its arrival not told as over to it) */
         event (E_TASK, 0, why | HUB->pc_task.kind << 8);
         HUB->pc_task.kind = LT_NONE;            /* (Its task over, told: a blow after it no second stop) */
     }
@@ -4315,7 +4320,8 @@ void s_burns_now (void)
     struct item* p;
     unsigned char* sq;
     unsigned i, j, d, left, bf, wx, wy;
-    unsigned char mine, r, best, out, seen, ww, ws, low = 0, more = 0;
+    unsigned char mine, r, best, out, seen, ww, ws, low = 0, more = 0, same = 0;
+    char ln[14];
 
     hub_map (0);
     burn_ask = 0;
@@ -4402,8 +4408,12 @@ void s_burns_now (void)
     if (out || seen) {
         if (out) {
             light_now ();                       /* (Its light made again: another lit still, or none) */
+            hub_map (CAT_BANK);
+            memcpy (ln, CATALOGUE[out].name, sizeof ln);
             hub_map (0);
             HUB->pc_left[0] = 0;                /* (Its words too, the next time round) */
+            same = HUB->pc_light && !strncmp (HUB->pc_lamp, ln, sizeof ln) ? 0x80 : 0;   /* (Another of its name lit
+                                                **   still: "One of your torches ...") */
         }
         see (0);                                /* (Looked about in the new light) */
         hub_map (0);
@@ -4412,7 +4422,7 @@ void s_burns_now (void)
         } else if (out) {
             hub_map (0);
             evb = out;
-            event (E_TASK, 0, TE_OUT);          /* ("Your torch gutters and goes out.": another lit still, or a
+            event (E_TASK, 0, TE_OUT | same << 8);  /* ("Your torch gutters and goes out.": another lit still, or a
                                                 **   room's own light) */
         }
         view (V_DARK);

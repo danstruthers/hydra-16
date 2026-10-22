@@ -264,7 +264,7 @@ void o_focus_words (void)
 {
     struct beyond* b;
     struct beyond* c;
-    unsigned char i, j, k, n, sk = 0xFF, sr = 0xFF, told = 0;
+    unsigned char i, j, k, n, told = 0;
 
     hub_mem (SIGHT_BANK, &W, WAY_SEEN, sizeof W);
     if (W.seq != S.seq) {
@@ -283,13 +283,16 @@ void o_focus_words (void)
             continue;                           /* (A way into a room told already, with the first) */
         }
         if (b->what == WB_SHUT) {
-            if (k == sk && b->rel == sr) {
-                continue;                       /* (Two doors the same way, shut: said once) */
+            for (j = i + 1, c = b + 1, n = 0; j < W.nbeyond; ++j, ++c) {   /* (Alike the same way, shut: told once,
+                                                **   "the doors ahead to your left", wherever they come) */
+                if (c->what == WB_SHUT && c->noun == k && ((c->rel + 1) & 3) == ((b->rel + 1) & 3)) {
+                    told |= 1 << j;
+                    ++n;
+                }
             }
-            sk = k;
-            sr = b->rel;
-            sayf (" You can't see past the %s %s: %s.", noun[k], rel_w[(b->rel + 1) & 3], k == BN_WINDOW ?
-                "its shutters are closed" : "it's closed");
+            sayf (" You can't see past the %s%s %s: %s.", noun[k], !n ? "" : k == BN_PORTCULLIS ? "es" : "s",
+                rel_w[(b->rel + 1) & 3], k == BN_WINDOW ? (n ? "their shutters are closed" : "its shutters are closed") :
+                n ? "they're closed" : "it's closed");
             continue;
         }
         for (n = 0; i + 1 < W.nbeyond && twin (b); ++n, ++i, ++b) {

@@ -831,7 +831,7 @@ static unsigned char events (void)          /* (How many there were) */
                 }
                 if ((m.w1 & 0xFF) == A_CROSSED) {
                     tell (T_YOU_CROSS_THE);
-                } else if ((m.w1 & 0xFF) == A_WENT_TO && !placing) {
+                } else if ((m.w1 & 0xFF) == A_WENT_TO && !placing && !(m.w1 & 0x200)) {   /* (0x200: stopped short) */
                     tell (T_YOU_GO_OVER);
                 }
                 placing = 0;
