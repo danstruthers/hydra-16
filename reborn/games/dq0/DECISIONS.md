@@ -933,3 +933,25 @@ critical or marginal success a blow that tells on the door and no hurt, a margin
 a critical failure the hurt (the lead's reading of the user's question; theirs to confirm).
 
 **Design:** HOUSE.md's portals (battering) and long tasks.
+
+### Walking and searching in the dark
+
+The user's playtest (2026-10-22): "when wandering around in the dark, you should not auto-adjust your movement
+direction toward an opening you cannot see (a door not directly in your path).  Movement should be slowed when in
+complete darkness or temporarily blind (half-walk speed; anything faster can be explicitly stated, but stumbles over
+large objects in your path, or running headlong into a pit, a wall, a door, or off a cliff are real dangers) and you
+cautiously walk forward, arms outstretched or weapon probing so as to not run into anything.  You should also be able
+to search around in the dark with your hands to find nearby items, using `search`.  `search` should also be
+qualifiable as `search nearby` or `search the east wall`, or `search around for a/an item`.  Text output while
+searching in the dark should be qualified as well, such as "You fumble around in the dark and find nothing", and
+searching in the dark should default to searching nearby only.  You should also be able to `search around on the
+floor/table/other flat container` which would search nearby (in the case of the floor) or on that item (in the case
+of a flat container nearby) for items or hidden things or traps."  So: in the dark (no light it can see by, or
+blind) a walk goes by what the character knows and feels, never turned toward an opening it can't see; its gait a
+cautious walk, half a walk's speed, feeling ahead, which finds a wall, a door, a drop or a thing in the way before it
+blunders into it; a faster gait said outright goes faster, at the risk of stumbling over what's in the way and
+running into walls and doors, into pits and off ledges; and a search in the dark by touch, nearby by default, worded
+as touch; a search qualified: nearby, a wall, for a thing, on the floor or on a surface (things on it, hidden things,
+traps).
+
+**Design:** DUNGEON.md's moving, hidden things and seeing in the dark; HOUSE.md's moving and searching.
