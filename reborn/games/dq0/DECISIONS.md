@@ -969,3 +969,14 @@ x"), kept with the game; naming is "name" and "call" (and rename, dub; forget, u
 The user (2026-10-22), of what was left to settle (the Unarmed rule for a bare hand's battering, a marginal failure
 harming neither and a critical failure the part; the smells' numbers; walking in the dark's numbers): "The things to
 settle are fine as they are for now".
+
+### The thing named is what strikes
+
+The user's playtest (2026-10-22): "with the current build, I cannot `hit the door with bar` if I have a `bar` in
+hand.  It still says I am battering it with my bare hands".  The named tool was checked and taken in hand, but the
+referee chose what struck (the best weapon or tool in its tables; a bar in none of them: the fists).  So: the thing
+named is what strikes, at a thing or a denizen; anything that can be swung strikes as an improvised weapon (by the
+book's rule if it has one, else the house's, by the thing's size, weight and material); what's too slight to hurt,
+refused.
+
+**Design:** HOUSE.md's fights and portals.
