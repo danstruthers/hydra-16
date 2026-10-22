@@ -113,10 +113,12 @@ plays them as HarnMaster's referee does.
   book's falling dice and grabbing a hold (Skills 8) otherwise.  (sheet.c's o_harm.)  Why: armour doesn't soften
   the ground.
 - **Knocked senseless, the character comes round by the book's shock rolls,** a round each, and wakes anyway after
-  an hour.  (sheet.c's o_harm.)  Why: no game should stall on a run of failed rolls.  Struck senseless again as it
-  lies, it's out till the later of the two, and its black-out is told once (fight.c's senseless, AF_AGAIN).  A blow
-  fumbled at one senseless or in shock is a miss, not the Ignore table's tactical advantage: it can't take one.
-  (fight.c's attack.)  Why: the advantage is an action, and it has none.
+  an hour, the book's last shock roll then deciding whether it's in shock (2026-10-21: it woke coherent however badly
+  hurt).  (sheet.c's o_harm, fight.c's senseless.)  Why: no game should stall on a run of failed rolls.  Struck at as
+  it lies, it's finished (Fights: a helpless character); a creature struck senseless again as it lies would be out
+  till the later of the two, its black-out told once (fight.c's senseless, AF_AGAIN).  A blow fumbled at one
+  senseless or in shock is a miss, not the Ignore table's tactical advantage: it can't take one.  (fight.c's
+  attack.)  Why: the advantage is an action, and it has none.
 - **A window's sill is climbed through** with a Climbing test; a critical failure is a slip and a fall.  (wwin.c.)
 - **A pit is climbed out of** as a ledge is.  (wtrap.c, dq0w.c.)  See D13: a slip is to end the climb.
 
@@ -290,6 +292,42 @@ silent on all of it.
   A wounded creature still standing is tested; a shy one that holds back flees.  (fight.c's courage, left.)
 - **Bleeding** loses a point of blood a minute for each bleeding wound; past the Endurance, death.  (fight.c's
   bled.)
+- **Wounds, as built** (the user's adder playtest, 2026-10-21: "the wounds just kept getting worse and worse", and
+  its bites were worded stabs; drafted for the user to review).  Each wound is worded with its own level, the
+  book's (M1, S2, S3, G4, G5).  A creature's own part words its wounds by what it is: a bite a bite (minor, serious;
+  grievous a deep bite), claws and talons a scratch, a rake, a deep rake, a sting a sting, horns a gore; a weapon's,
+  the character's own blows (its fists and feet too), a fall's and a trap's by the aspect as before (bruise,
+  fracture, crush; cut, gash; stab; burn).  The character's injuries keep what dealt them, for the sheet and its
+  state.  (sheet.c's wound, wound_words; fight.c's dealt.)
+- **The record's room:** the sheet keeps twelve injuries (the library's, HARN_INJMAX); past them its two least (by
+  severity, then levels) are folded into one, its lesser hurts, and the least of the rest into that as more come:
+  every level still counts in the universal penalty and the shock rolls, but the lesser hurts are never named as an
+  injury, nor as the worst ("in shock: 11 injuries and lesser hurts, the worst a serious bite to your right elbow
+  (S3)"; the sheet: "lesser hurts (7 levels)"); a folded wound's bleeding goes on in them.  (sheet.c's room.)  Why:
+  the book keeps every wound on a line of its own; the game's sheet has twelve, and past them the library added each
+  wound into the last, its words the running total ("a serious stab (S37)").
+- **A shock roll with every injury, in shock too** (the book's, Combat 14; the library rolled only for one
+  conscious, so one in shock was struck on and never fell): over its Endurance, it's senseless.  (sheet.c's wound.)
+- **In shock, the character can only rest, or walk or crawl away at half its Move** (Skills 22; the book's Combat 14
+  asks an Initiative test for the half-move: the game takes Skills 22's, no test): its walk's steps twice as long, no
+  faster pace (a run in shock is that walk); it ignores any blow (no defence) and is in no state to fight.
+  (dq0harn.c's status.)
+- **A helpless character and its foes, by their nature** (the user's choice, 2026-10-21; helpless: senseless, or in
+  shock).  Each kind's way is kinds.txt's (its ways k and r).  A killer (k: the ghoul, the skeleton, the cave bear,
+  the basilisk, the lindworm, the wight, the shade, the cultists and their high priest) strikes on, and one senseless
+  it finishes where it lies, as the character finishes a creature (the book's dispatch: a mortal wound to its neck,
+  to its skull by a blunt weapon; "The ghoul bites at you: a mortal deep bite to your neck. You are dead.": the game's
+  end).  A robber (r: the kobolds and their lord, the bandits and their lord) comes up to it and takes what it holds
+  (but a light lit: it leaves it its light) and every penny it has, a round's work, off to its lair (put down on its
+  lair's home square, a stash to be found; where it stands, if that can't be had), and goes ("The bandit goes through
+  your things as you lie helpless, and takes what it finds."); it doesn't strike at it.  One that only defended itself
+  (neither: the giant rat, the cave spider, the bat, the cave adder) stops once the threat is down and goes, fleeing
+  a while (24 of its turns) and unfriendly after: it keeps a few squares off, and strikes only if the character,
+  itself again, comes beside it.  Nobody engages a helpless character (no engage initiative test): what's done to it
+  is each one's mind's; a blow at it senseless from any but a killer is held (one posted as it fell: the referee's,
+  RS_KILLER).  (dq0d.c's decide, K_HELP; dq0w's wfight.c, s_den_rob; fight.c's attack.)  Not yet: being led away
+  (by an ally, or a captor), a captive's fate, the robbers' stash hidden, the robbed character's load told the
+  referee at once (what it held is told: its load as it next handles a thing).
 - **Health in words,** for every ruleset: fine with no injuries; hurt while the injury points are under a third of
   the Endurance; badly hurt under two thirds; critical past that; down when senseless or in shock.  (dq0harn.c's
   health_of.)

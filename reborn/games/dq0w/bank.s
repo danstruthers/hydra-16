@@ -196,6 +196,7 @@ go:
             SWFN        den_intents, 14
             SWFN        pc_blow, 15
             SWFN        den_blow, 15
+            SWFN        den_rob, 15
             SWFN        bled, 15
             SWFN        puzzle, 16
             SWFN        take_go, 16

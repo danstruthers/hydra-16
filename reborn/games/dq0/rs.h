@@ -127,7 +127,8 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** in hand (the character's: RS_EQUIP's, the best weapon held; else its fists) or its own (a creature's claws, bite
 ** ...): a its aim (Z_*), b its aspect (AS_*, AS_BEST: what it does best), c the others engaged with the defender
 ** besides the attacker (outnumbered), steps the circumstances.  The defence is the ruleset's: the character's by its
-** stance (the hub's pc_stance, D_*), a creature's by its nature; one senseless is finished.  The reply: result how it
+** stance (the hub's pc_stance, D_*), a creature's by its nature; one senseless is finished (the character by a
+** killer alone, RS_KILLER: no blow, result 0xFF, else).  The reply: result how it
 ** came out (O_*; 0xFF: none struck), a whose a fumble or a stumble was (1 the attacker's, 2 the defender's, 3
 ** both's), b the defence (D_*), c AF_*, its effects (x: X_WOUND, X_DEATH, X_COND_ON: C_PRONE, C_UNCONSCIOUS;
 ** X_DROP: a weapon fumbled), w1 the attacker's health (H_*) and the defender's times 256, w2 the tenths one knocked
@@ -154,6 +155,8 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** RS_DESCRIBE b 2's */
 #define RS_PRONE_A      0x02                    /* (RS_ATTACK's w2: the attacker lies prone, */
 #define RS_PRONE_D      0x04                    /*   the defender) */
+#define RS_KILLER       0x08                    /* (RS_ATTACK's w2: the attacker a killer, the character senseless finished
+                                                **   where it lies; else the blow held: the minds', by its nature) */
 #define AF_STOPPED      0x01                    /* The attacker's strike stopped by armour (its line the armour's) */
 #define AF_STOPPED_D    0x02                    /*   the defender's */
 #define AF_TA           0x04                    /* The defender's tactical advantage: an action more, at once */

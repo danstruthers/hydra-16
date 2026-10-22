@@ -1,6 +1,7 @@
 // make.js - (dq0d) the denizens' data files, after its build (build.js calls build): kinds.txt (the game's bestiary)
 // made obj/games/dq0d.dat, 40 bytes a kind (dq0d.c's struct dkind), the first none (its flags the kinds' count, the
-// first too, its styles the factions'); then factions.txt's factions, 32 bytes each (struct faction), the first none.
+// first too, its styles the factions'; a kind's styles' high bits its way with a foe it's brought down); then
+// factions.txt's factions, 32 bytes each (struct faction), the first none.
 // And the kinds' traces (slice 4.1: their tread, marks, smell, scent and nose) made obj/games/dq0tr.dat, 64 bytes a
 // kind (the world's traces' store, dq0w/wtrace.c's struct tkind), the first the character's own.  And the world's lore
 // (lore.h): peoples.txt made obj/games/dq0f.dat, deities.txt obj/games/dq0g.dat, 64 bytes a
@@ -12,6 +13,8 @@ const path = require('path');
 
 const WAYS = { s: 0x01, l: 0x02, w: 0x04, a: 0x08, f: 0x20, t: 0x40 };   // dq0d.c's K_SHY, K_LAIR, K_WAYS, K_BOLD, K_LIGHTS, K_SWEEPS
 const K_BONES = 0x10, K_NOSE = 0x80;            //   and K_BONES, K_NOSE (a hunter by smell: its nose 6 or more)
+const HELP = { k: 0x10, r: 0x20 };              // Its way with a foe it's brought down (dq0d.c's H_KILLS, H_ROBS: in its
+                                                //   styles' byte's high bits, the flags full)
 const TREC = 64, NOSE_HUNTS = 6;                // (wtrace.c's struct tkind: a kind's traces)
 const STYLES = { b: 0, n: 1, m: 2, x: 3 };      // level.h's ST_*: a bit each
 const MINDS = { m: 0, b: 1, l: 2, a: 3, c: 4 }; // dq0d.c's M_*
@@ -109,7 +112,8 @@ function build({ dir, objdir, say = () => {} }) {
     const [d0, d1] = pair(f[4]), [n0, n1] = pair(f[5]), [sl, sd] = f[8].split('-').map(sq);
     const flags = [...f[2]].reduce((a, c) => a | (WAYS[c] || 0), 0) | (f[21] === 'bones' ? K_BONES : 0) |
       (+f[26] >= NOSE_HUNTS ? K_NOSE : 0);
-    const styles = [...f[3]].reduce((a, c) => a | (1 << STYLES[c]), 0);
+    if (![...f[2]].every(c => c in WAYS || c in HELP || c === '-')) bad();
+    const styles = [...f[3]].reduce((a, c) => a | (1 << STYLES[c]), 0) | [...f[2]].reduce((a, c) => a | (HELP[c] || 0), 0);
     const arms = f[20].split(/\s+/).reduce((a, w) => {
       if (ARMS.indexOf(w) < 0) bad();
       return a | 1 << ARMS.indexOf(w);

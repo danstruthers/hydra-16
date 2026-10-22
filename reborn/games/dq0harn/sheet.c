@@ -8,6 +8,7 @@
 #pragma code-name ("OV1CODE")
 #pragma rodata-name ("OV1RODATA")
 
+#include <stdlib.h>
 #include <string.h>
 #include <dice.h>
 #include <harn.h>
@@ -20,7 +21,7 @@
 ** the kill and shock rolls, bleeding, a limb made useless), told back as effects and in words (kept for RS_DESCRIBE
 ** b 2).  The game's own choices in using the book: a fall strikes where a mid strike would (on its feet, a low one),
 ** no armour taken off it; one knocked senseless comes round by the book's shock rolls, a round each, within an
-** hour (then wakes anyway).  A trap's strike and a burn have the armour where they strike taken off them (Combat
+** hour (then wakes anyway, its last shock roll the book's: in shock, or not).  A trap's strike and a burn have the armour where they strike taken off them (Combat
 ** 13: gear.c's pc_armour).
 **
 ** The striker's own part hurt by its blow at a thing (HC_STRUCK: fight.c's, the impact its own, its armour taken
@@ -29,25 +30,162 @@
 
 char hurt[200];                                 /* The last harm's words */
 
-/* An injury's words, by its aspect and severity (minor, serious, grievous or worse) */
-static const char* const wound_word[4][3] = {
+/* ---- A wound (the referee's every one, the fights' too: fight.c's through bank.s's stub) and its words.  By the
+** book (harn_wound, Combat 13-14), and the game's own ways round the library's: its record keeps twelve injuries
+** (HARN_INJMAX), and past them it adds each new wound's levels into the last, whose words then were the running total
+** ("a serious stab (S37)"); so here, before a wound, the record's room made: its least two injuries (by severity, then
+** levels) folded into one, the lesser hurts (IF_POOL: their levels together, so the universal penalty and the shock
+** rolls still count every one; never named as an injury, nor the worst), and the least of the rest into that as more
+** come.  And the book's shock roll with every injury (Combat 14), which the library makes only for one conscious:
+** one in shock wounded again rolls too, and falls senseless if it fails (it was struck on and on, worse and worse,
+** and never fell: the user's playtest, 2026-10-21).  What dealt it (a creature's own part: BY_*) is the character's
+** injury's to keep, for its words: a bite a bite, not a stab */
+
+unsigned char pc_by[HARN_INJMAX];
+
+/* An injury's words, by its aspect and severity (minor, serious, grievous or worse); or by the creature's part that
+** dealt it (BY_BITE ...: a bite, claws' rake, a sting, horns' gore) */
+static const char* const wound_word[4 + BY_HORNS][3] = {
     { "bruise", "fracture", "crush" }, { "cut", "gash", "deep gash" }, { "stab", "stab", "deep stab" },
-    { "burn", "burn", "burn" }
+    { "burn", "burn", "burn" }, { "bite", "bite", "deep bite" }, { "scratch", "rake", "deep rake" },
+    { "sting", "sting", "deep sting" }, { "gore", "gore", "deep gore" }
 };
 
-/* Where it is ("left thigh") */
-static void __fastcall__ put_loc (unsigned char loc)
+static const char* __fastcall__ noun (unsigned char by, unsigned char aspect, unsigned char sev)
+{
+    by &= ~BY_ITS;
+    return wound_word[by && by <= BY_HORNS ? 3 + by : aspect & 3][sev > HARN_GRIEVOUS ? 2 : sev ? sev - 1 : 0];
+}
+
+/* Where it is ("left thigh"), after w */
+static void __fastcall__ cat_loc (char* w, unsigned char loc)
 {
     if (harn_is_limb (loc)) {
-        put (loc & HARN_RIGHT ? "right " : "left ");
+        strcat (w, loc & HARN_RIGHT ? "right " : "left ");
     }
-    put (harn_location_name (loc));
+    strcat (w, harn_location_name (loc));
+}
+
+void __fastcall__ o_wound_words (char* w, unsigned char sev, unsigned char loc, unsigned char aspect, unsigned char il,
+    unsigned char by)
+{
+    char n[4];
+
+    strcpy (w, "a ");
+    strcat (w, harn_severity_name (sev));
+    strcat (w, " ");
+    strcat (w, noun (by, aspect, sev));
+    strcat (w, by & BY_ITS ? " to its " : " to your ");
+    cat_loc (w, loc);
+    if (sev <= HARN_GRIEVOUS) {
+        strcat (w, sev == HARN_MINOR ? " (M" : sev == HARN_SERIOUS ? " (S" : " (G");
+        strcat (w, utoa (il, n, 10));           /* (Ten or more two digits) */
+        strcat (w, ")");
+    }
+}
+
+/* Room in c's record for n injuries more: its least folded into the lesser hurts (made of the least two, the first
+** time), the bleeding kept; the character's pc_by kept in step (the places past its injuries none's) */
+static void __fastcall__ room (harn_char* c, unsigned char n)
+{
+    harn_injury* j;
+    harn_injury* p;
+    unsigned char k, least, pool;
+    unsigned v;
+
+    while (c->ninj + n > HARN_INJMAX) {
+        least = pool = 0xFF;
+        for (k = 0; k < c->ninj; ++k) {
+            j = &c->inj[k];
+            if (j->flags & IF_POOL) {
+                pool = k;
+            } else if (least == 0xFF || j->sev < c->inj[least].sev || (j->sev == c->inj[least].sev &&
+                j->il < c->inj[least].il)) {
+                least = k;
+            }
+        }
+        j = &c->inj[least];
+        if (pool == 0xFF) {
+            j->flags = (j->flags & (HARN_IF_BLEEDER | HARN_IF_INFECTED)) | IF_POOL;    /* (The lesser hurts begun:
+                                                **   the next least folded into it) */
+            continue;
+        }
+        p = &c->inj[pool];
+        v = p->il + j->il;
+        p->il = v > 255 ? 255 : v;
+        p->sev = j->sev > p->sev ? j->sev : p->sev;
+        p->flags |= j->flags & (HARN_IF_BLEEDER | HARN_IF_INFECTED);
+        --c->ninj;                              /* (Its place the last one's) */
+        memcpy (j, &c->inj[c->ninj], sizeof *j);
+        if (c == &pc) {
+            pc_by[least] = pc_by[c->ninj];
+        }
+    }
+    if (c == &pc) {
+        memset (pc_by + c->ninj, 0, HARN_INJMAX - c->ninj);
+    }
+}
+
+unsigned char __fastcall__ o_wound (harn_char* c, unsigned char loc, unsigned char aspect, int impact,
+    unsigned char by)
+{
+    unsigned char w;
+
+    room (c, 1);
+    w = harn_wound (c, loc, aspect, impact);
+    if ((w & HARN_W_INJURED) && !(w & HARN_W_DEAD)) {
+        if (c == &pc) {
+            pc_by[c->ninj - 1] = by;
+        }
+        if (c->state == HARN_SHOCK && harn_shock_roll (c)) {
+            c->state = HARN_UNCONSCIOUS;        /* (In shock, wounded again: its shock roll failed, senseless) */
+            w |= HARN_W_DOWN;
+        }
+    }
+    return w;
+}
+
+/* Knocked senseless (its shock roll failed): the rounds till c comes round, by the book's shock rolls, a round each,
+** within an hour (then anyway: the character's last shock roll the book's, in shock or not), in tenths */
+static unsigned __fastcall__ wake (harn_char* c)
+{
+    unsigned k;
+
+    for (k = 1; k < 360 && harn_wake (c) == HARN_UNCONSCIOUS; ++k) {
+    }
+    if (c == &pc && c->state == HARN_UNCONSCIOUS) {
+        c->state = harn_shock_roll (c) ? HARN_SHOCK : HARN_CONSCIOUS;
+    }
+    return k * 100;
+}
+
+/* A fight's (fight.c's strike, through bank.s's stub): c knocked senseless, its tenths out (wake's); *o its time out
+** (a creature's bs.out, the character's pc_out) the later of its own and that (out already, struck again as it lies:
+** AF_AGAIN in *f, its black-out told once); a creature lies there till then (its sheet's state), the character comes
+** round as the UI waits it out (it can't defend meanwhile) */
+unsigned __fastcall__ o_knocked_out (harn_char* c, unsigned long* o, unsigned char* f)
+{
+    unsigned w = wake (c);
+
+    if (*o > tnow) {
+        *f |= AF_AGAIN;
+        if (*o - tnow > w) {
+            w = (unsigned) (*o - tnow);
+        }
+    }
+    *o = tnow + w;
+    if (c != &pc) {
+        c->state = HARN_UNCONSCIOUS;
+    }
+    return w;
 }
 
 /* An injury told (sev HARN_KILL: a death): its effect, at e, and its words ("a serious fracture to your left thigh
-** (S2)") */
-static void __fastcall__ told (const harn_injury* j, unsigned char sev, struct rs_effect* e)
+** (S2)"), by what dealt it */
+static void __fastcall__ told (const harn_injury* j, unsigned char sev, struct rs_effect* e, unsigned char by)
 {
+    char b[56];
+
     e->target = 0;
     e->kind = sev == HARN_KILL ? X_DEATH : X_WOUND;
     e->band = sev;
@@ -55,17 +193,11 @@ static void __fastcall__ told (const harn_injury* j, unsigned char sev, struct r
     e->cond = conditions ();
     e->x[0] = j->loc;                           /* (rs.h's BP_* and AS_* are the book's order) */
     e->x[1] = j->aspect;
-    put (hurt[0] ? "; a " : "a ");
-    put (harn_severity_name (sev));
-    put (" ");
-    put (wound_word[j->aspect & 3][sev > HARN_GRIEVOUS ? 2 : sev - 1]);
-    put (" to your ");
-    put_loc (j->loc);
-    if (sev <= HARN_GRIEVOUS) {
-        put (sev == HARN_MINOR ? " (M" : sev == HARN_SERIOUS ? " (S" : " (G");
-        putn (j->il);
-        put (")");
+    if (hurt[0]) {
+        put ("; ");
     }
+    o_wound_words (b, sev, j->loc, j->aspect, j->il, by);
+    put (b);
 }
 
 /* The levels of the injuries to a part (a hand, a foot, the skull), all told */
@@ -87,7 +219,6 @@ void __fastcall__ o_harm (struct req* r)
     static harn_injury d;
     struct rs_effect* e = (struct rs_effect*) r->x;
     unsigned char how = 0, aspect, zone = HARN_MID, n = pc.ninj, w, loc = 0xFF;
-    unsigned k;                                 /* (The rounds senseless: up to 360) */
     int impact;
 
     memset (r->x, 0, sizeof r->x);
@@ -104,9 +235,14 @@ void __fastcall__ o_harm (struct req* r)
     }
     switch (r->a) {
     case HC_FALL:
+        room (&pc, 2);                          /* (A wrenched arm's room too: the library's own harn_wound's) */
+        n = pc.ninj;
         impact = harn_fall (&pc, r->w1, r->b, (r->c & HF_CLEAR ? HARN_FALL_CLEAR : 0) |
             (r->c & HF_HOLDS ? HARN_FALL_HOLDS : 0), &how);
         r->result = (how & HARN_FALL_CAUGHT) != 0;
+        if ((how & HARN_FALL_WRENCHED) && pc.state == HARN_SHOCK && harn_shock_roll (&pc)) {
+            pc.state = HARN_UNCONSCIOUS;        /* (In shock, the wrench's shock roll: o_wound's) */
+        }
         if (how & HARN_FALL_FEET) {
             zone = HARN_LOW;
         }
@@ -126,19 +262,19 @@ void __fastcall__ o_harm (struct req* r)
     r->b = 0;
     r->w2 = 0;
     if (how & HARN_FALL_WRENCHED) {             /* (Grabbing a hold: an arm wrenched, its injury taken) */
-        told (&pc.inj[n < HARN_INJMAX ? n : HARN_INJMAX - 1], HARN_MINOR, e++);
+        told (&pc.inj[n], HARN_MINOR, e++, BY_ASPECT);
     }
     d.loc = loc != 0xFF ? loc : harn_strike_location (zone);
     d.aspect = aspect;
     if (r->a == HC_STRIKE || r->a == HC_FIRE) {
         impact -= pc_armour (d.loc, aspect);    /* (The armour there) */
     }
-    w = harn_wound (&pc, d.loc, aspect, impact);
+    w = o_wound (&pc, d.loc, aspect, impact, BY_ASPECT);
     if (w & HARN_W_DEAD) {
-        told (&d, HARN_KILL, e);
+        told (&d, HARN_KILL, e, BY_ASPECT);
         r->b = HARN_KILL;
     } else if (w & HARN_W_INJURED) {
-        told (&pc.inj[pc.ninj - 1], pc.inj[pc.ninj - 1].sev, e);
+        told (&pc.inj[pc.ninj - 1], pc.inj[pc.ninj - 1].sev, e, BY_ASPECT);
         r->b = e->band;
         if ((w & HARN_W_STUMBLE) && ((w & HARN_W_LIMB) || harn_stumble_roll (&pc, 0))) {
             e->cond |= C_PRONE;                 /* (A leg's: fallen; a grievous one at once, Combat 14) */
@@ -147,12 +283,7 @@ void __fastcall__ o_harm (struct req* r)
         r->b = HARN_MINOR;
     }
     if (pc.state == HARN_UNCONSCIOUS) {         /* (Senseless: a shock roll a round to come round) */
-        for (k = 1; k < 360 && harn_wake (&pc) == HARN_UNCONSCIOUS; ++k) {
-        }
-        if (pc.state == HARN_UNCONSCIOUS) {
-            pc.state = HARN_CONSCIOUS;
-        }
-        r->w2 = k * 100;
+        r->w2 = wake (&pc);
     }
     if (r->a == HC_STRUCK) {                    /* (Enough: the referee's say) */
         r->result = pc.state != HARN_CONSCIOUS || r->w2 || r->b >= HARN_SERIOUS || part_levels (HARN_LOC (loc)) >= 3;
@@ -170,6 +301,7 @@ void o_sheet (void)
 {
     unsigned char k;
     const harn_injury* j;
+    char b[20];
 
     put (name);
     put (", ");
@@ -218,14 +350,22 @@ void o_sheet (void)
     } else {
         put ("Injuries:");
     }
-    for (k = 0; k < pc.ninj; ++k) {           /* ("left thigh S2 (fracture), bleeding") */
+    for (k = 0; k < pc.ninj; ++k) {           /* ("left thigh S2 (fracture), bleeding"; "lesser hurts (7 levels)") */
         j = &pc.inj[k];
         put (k ? "; " : " ");
-        put_loc (j->loc);
-        put (j->sev == HARN_MINOR ? " M" : j->sev == HARN_SERIOUS ? " S" : " G");
-        putn (j->il);
-        put (" (");
-        put (wound_word[j->aspect & 3][j->sev > HARN_GRIEVOUS ? 2 : j->sev - 1]);
+        if (j->flags & IF_POOL) {
+            put ("lesser hurts (");
+            putn (j->il);
+            put (" levels");
+        } else {
+            b[0] = 0;
+            cat_loc (b, j->loc);
+            put (b);
+            put (j->sev == HARN_MINOR ? " M" : j->sev == HARN_SERIOUS ? " S" : " G");
+            putn (j->il);
+            put (" (");
+            put (noun (pc_by[k], j->aspect, j->sev));
+        }
         put (j->flags & HARN_IF_BLEEDER ? "), bleeding" : ")");
     }
     if (pc.bl) {
@@ -358,12 +498,18 @@ static void __fastcall__ penalty (unsigned char n, const char* a, const char* b,
 
 void o_state (void)
 {
-    unsigned char h, k, worst = 0, bleed = 0;
+    unsigned char h, k, worst = 0xFF, bleed = 0, n = 0, pool = 0;
     const harn_injury* j;
+    char b[56];
 
     h = house_pace (ps.gait, ps.watch, ps.dark);    /* (The pace's words, every referee's: rshouse.h) */
     put (" (");
-    putn (harn_move (&pc) * feet[h][0] / feet[h][1]);
+    k = harn_move (&pc);
+    if (pc.state == HARN_SHOCK) {
+        k = (k + 1) / 2;                        /* (In shock, half its Move, a walk at most: dq0harn.c's status) */
+        h = h > GA_WALK ? GA_WALK : h;
+    }
+    putn (k * feet[h][0] / feet[h][1]);
     put (" feet a round)");
     house_watching (ps.watch);
     if (!ps.full) {
@@ -372,27 +518,28 @@ void o_state (void)
     put ("\nCondition: ");
     put (pc.state == HARN_DEAD ? "dead" : pc.state == HARN_UNCONSCIOUS ? "senseless" : pc.state == HARN_SHOCK ?
         "in shock" : !pc.ninj ? "unhurt" : "hurt");
-    for (k = 0; k < pc.ninj; ++k) {
+    for (k = 0; k < pc.ninj; ++k) {             /* (The worst a real one, by its severity, then its levels: never
+                                                **   the lesser hurts) */
         j = &pc.inj[k];
-        if (j->sev >= pc.inj[worst].sev) {
+        bleed |= j->flags & HARN_IF_BLEEDER;
+        if (j->flags & IF_POOL) {
+            pool = 1;
+            continue;
+        }
+        ++n;
+        if (worst == 0xFF || j->sev > pc.inj[worst].sev || (j->sev == pc.inj[worst].sev && j->il >= pc.inj[worst].il)) {
             worst = k;
         }
-        bleed |= j->flags & HARN_IF_BLEEDER;
     }
-    if (pc.ninj) {                              /* ("hurt: 2 injuries, the worst a serious gash to your left thigh
-                                                **   (S3), bleeding") */
+    if (n) {                                    /* ("hurt: 2 injuries, the worst a serious gash to your left thigh
+                                                **   (S3), bleeding"; "11 injuries and lesser hurts, the worst ...") */
         put (": ");
-        putn (pc.ninj);
-        put (pc.ninj == 1 ? " injury, a " : " injuries, the worst a ");
+        putn (n);
+        put (n == 1 && !pool ? " injury, " : pool ? " injuries and lesser hurts, the worst " : " injuries, the worst ");
         j = &pc.inj[worst];
-        put (harn_severity_name (j->sev));
-        put (" ");
-        put (wound_word[j->aspect & 3][j->sev > HARN_GRIEVOUS ? 2 : j->sev - 1]);
-        put (" to your ");
-        put_loc (j->loc);
-        put (j->sev == HARN_MINOR ? " (M" : j->sev == HARN_SERIOUS ? " (S" : " (G");
-        putn (j->il);
-        put (bleed ? "), bleeding" : ")");
+        o_wound_words (b, j->sev, j->loc, j->aspect, j->il, pc_by[worst]);
+        put (b);
+        put (bleed ? ", bleeding" : "");
     }
     penalty (pc.fl, "a little tired", "tired", "exhausted", "fatigue ");
     penalty (harn_get_ep (&pc), "a little burdened", "heavily burdened", "overloaded", "encumbrance ");

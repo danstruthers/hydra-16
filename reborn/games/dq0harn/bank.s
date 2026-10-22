@@ -153,6 +153,9 @@ ovl_out:
             OVFN        spent, 1
             OVFN        noticing, 1
             OVFN        harm, 1
+            OVFN        wound, 1
+            OVFN        wound_words, 1
+            OVFN        knocked_out, 1
             OVFN        fight, 2
             OVFN        pc_armour, 3
             OVFN        pc_side, 3

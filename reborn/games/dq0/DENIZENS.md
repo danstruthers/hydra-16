@@ -311,6 +311,14 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   leaves its body (an item: a body, a skeleton's bones: the world's, put down as it dies) and never comes back.  A
   blow is harm done (attitudes, above); one that flees is unfriendly after.  The character knocked senseless waits it
   out (it can't defend meanwhile); dead, the game ends.
+- **The character helpless** (senseless, or in shock: the referee's conditions in the hub's summary, C_UNCONSCIOUS
+  while it lies out, C_STUNNED): what a foe does to it is its mind's, by its kind's nature (the user's, 2026-10-21;
+  kinds.txt's ways k and r, the kind's record's K_HELP; HOUSE.md's fights).  A killer strikes on (the referee finishes
+  one senseless where it lies); a robber comes up to it and robs it (I_ROB: the world takes what it holds and its
+  pennies off to the robber's lair's home square), then flees a while, unfriendly; one that only defended itself
+  flees a while, unfriendly, without another blow.  No foe engages it meanwhile (the world's engage initiative test
+  waits for it to be itself again), and none cornered beside it strikes.  To come: a captor leading it away, an ally
+  standing over it.
 
 ## Still to come
 
