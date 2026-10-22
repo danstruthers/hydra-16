@@ -3,7 +3,8 @@
 ** in the task's RAM but its own file's, dq0w.cat (dq0w.cfg's CAT), which the world reads as it starts into the hub's
 ** catalogue bank (CAT_BANK), where the kinds are at $8000 as they're linked; a kind's record copied out as it's
 ** wanted (things.c; the senses', the UI's too).  Its order is items.h's KI_* (the maker lists things by those).
-** After it, the things' words (things.h's SA_*), in the bank too, each copied out as it's said.
+** After it, how the lights burn (burns: slice 4.1's), what's thrown how far, and the things' words (things.h's SA_*),
+** in the bank too, each copied out as it's wanted.
 */
 
 #pragma rodata-name ("CATRODATA")
@@ -36,7 +37,7 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "bones", K_PLURAL, 8, 4, 0, 0, 0, 0, 4, "", MT_BONE, AP_BONE, 0 },
     { "pennies", K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "", MT_BRONZE, AP_METAL, 1, 0, KF_SMALL },
     { "iron key", 0, 1, 0, 0, 0, 0, 0, 1, "key", MT_IRON, AP_METAL, 4 },
-    { "candle", K_LIGHT | K_HAND, 1, 1, 0, 0, 0, 2, 1, "", MT_OTHER, AP_FOOD, 1 },
+    { "candle", K_LIGHT | K_HAND, 1, 1, 0, 0, 0, 2, 1, "", MT_TALLOW, AP_FOOD, 1 },   /* (Tallow, a fine one beeswax) */
     { "lantern", K_LIGHT | K_HAND | K_HANG, 8, 4, 0, 0, 0, 6, 3, "", MT_IRON, AP_METAL, 30 },
     { "sack", K_CONTAINER, 2, 2, 24, 120, 0, 0, 3, "", MT_CLOTH, AP_CLOTH, 3, SS },
     { "chest", K_CONTAINER, 120, 80, 60, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 80, SS },
@@ -73,11 +74,26 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "iron pot", K_CONTAINER, 32, 8, 6, 48, 0, 0, 3, "", MT_IRON, AP_METAL, 10, SS | KF_LIQUID }, /* (A room's use's
                                                 **   leavings: the stock's, dq0m/uses.c) */
     { "heap of straw", 0, 4, 8, 0, 0, 0, 0, 3, "", MT_OTHER, AP_WOOD, 0 },
-    { "candle stubs", K_PLURAL, 1, 1, 0, 0, 0, 0, 1, "", MT_OTHER, AP_FOOD, 0 },
+    { "candle stubs", K_LIGHT | K_HAND | K_PLURAL, 1, 1, 0, 0, 0, 1, 1, "", MT_TALLOW, AP_FOOD, 0 },  /* (A light
+                                                **   of a few minutes: slice 4.1's) */
     { "well", 0, 255, 255, 0, 0, 0, 0, 8, "", MT_STONE, AP_STONE, 0, KF_FIXED },   /* (Its stone curb: never taken
                                                 **   up; its water the water's work's, to come) */
+    { "flask of oil", K_HAND, 4, 1, 0, 0, 0, 0, 1, "", MT_CLAY, AP_POTTERY, 3 },   /* (A light's fuel: a lantern's
+                                                **   fill, a torch's; slice 4.1's, the stopped branch's) */
+    { "pot of pitch", K_HAND, 6, 2, 0, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 2 },   /* (A torch's) */
     { "sconce", 0, 6, 2, 3, 8, 0, 0, 12, "", MT_IRON, AP_METAL, 4, KF_ON | KF_FIXED },  /* (On a room's wall, fixed: a
                                                 **   torch in it, the maker's: DUNGEON.md, light kept) */
+};
+
+/* How each light burns (DUNGEON.md: light; HOUSE.md's burning, slice 4.1's): its kind; how long a whole one burns
+** at middling make, in tens of minutes (a torch an hour, the house rule's; a tallow candle three-quarters of an inch
+** thick four hours, its make, its thickness and its wax more or less; a lantern's fill of oil, a pint, six hours; a
+** handful of candle stubs half an hour); and the fuels that renew it (FU_*: none, it burns away).  Then each fuel's:
+** its kind, how much a whole one holds, in the same tens of minutes of a light's burning (a flask of oil a lantern's
+** fill), and what it is.  A light that isn't listed (a glow, the theme's) never burns down */
+const struct burn burns[NBURNS] = {
+    { KI_TORCH, 6, FU_OIL | FU_PITCH }, { KI_CANDLE, 24, 0 }, { KI_LANTERN, 36, FU_OIL }, { KI_STUBS, 3, 0 },
+    { KI_OIL, 36, FU_OIL }, { KI_PITCH, 24, FU_PITCH }
 };
 
 /* What a kind of thing affords (the plan's affordances, in the kinds' data): thrown, its reach (the short band of
@@ -94,6 +110,7 @@ const unsigned char throws[KI_COUNT] = {
     1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,            /* leather cap ... hobnail boots: armour (a helm, boots, a cap) */
     1, 4, 1,                                    /* mace, spear (a javelin's), shield */
     1, 0, 2, 0,                                 /* pot, straw, stubs, well */
+    2, 1,                                       /* flask of oil, pot of pitch */
     0                                           /* sconce */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
@@ -144,4 +161,6 @@ const char* const said[SA_COUNT] = {
     " It's in your hand.",
     " It's in your #.",
     "The % is fixed where it stands.",
+    "The % is burnt out.",
+    "The % is out of oil.",
 };

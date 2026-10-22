@@ -5,13 +5,14 @@
 ** chunk made again has it, and told (E_LIGHT: the senses' light layer).  A keepers' torch in one (I_TENDED: never
 ** burning down) is tended only while its keepers live (the denizens' places kept, the hub's KEPT_AT): theirs all
 ** dead, it burns down from then (the lights' burning).  Seen to after a thing's handled within reach (things.c's
-** serve), each game minute for the chunks round the character (wbody.c's den_intents), and as a chunk's first stocked
-** (store.c's stocked: the maker's kept rooms lit, R_LIT, a record each).  And a stratum's populations waited for as its
-** plan's grown, so its chunks are stocked by them from the first.  Each sconce's hide keeps its room's light as
-** the world last made it (SC_LIT), so a pass changes only what's changed.
+** serve), each game minute for the chunks round the character (dq0w.c's burning, burns_now: a torch burnt out, its
+** keepers gone), and as a chunk's first stocked (store.c's stocked: the maker's kept rooms lit, R_LIT, a record
+** each).  Each sconce's hide keeps its room's light as the world last made it (SC_LIT), so a pass changes only what's
+** changed.  And a stratum's populations waited for as its plan's grown, so its chunks are stocked by them from the
+** first.
 **
-** All of it swapped part 27's (../dq0/swap.inc: dq0w.cfg's SW27, overlay 9's bank), called through its stubs
-** (bank.s's), its locals the C stack's (not the main RAM's).
+** All of it swapped part 28's (../dq0/swap.inc: dq0w.cfg's SW28, overlay 2's bank: overlay 9's the burning's and the
+** traces'), called through its stubs (bank.s's), its locals the C stack's (not the main RAM's).
 */
 
 #include <string.h>
@@ -22,8 +23,8 @@
 #include "things.h"
 #include "wbody.h"
 
-#pragma code-name ("SW27CODE")
-#pragma rodata-name ("SW27RODATA")
+#pragma code-name ("SW28CODE")
+#pragma rodata-name ("SW28RODATA")
 #pragma local-strings (on)
 
 extern struct change rec;                       /* (store.c's: the record written) */
@@ -153,19 +154,14 @@ static unsigned char __fastcall__ lights (unsigned char sn, unsigned x0, unsigne
 }
 
 /* The rooms' lights by their sconces': the chunks round the character (reach 0xFF: each minute, a torch burnt out,
-** its keepers gone), or within reach of it (a thing handled: a sconce's torch taken, put in it, lit, put out); 1 if
-** one changed (a look's to see it) */
+** its keepers gone); the chunk the maker's just stocked (SL_STOCKED: its first square rec's, as its things are put
+** down, store.c's: each lit one's room's light kept, a record of it, the maker's R_LIT made so); or those within reach
+** of the character (a thing handled: a sconce's torch taken, put in it, lit, put out).  1 if one changed (a look's to
+** see it) */
 unsigned char __fastcall__ s_sconce_lights (unsigned char reach)
 {
     hub_map (0);
-    return reach == 0xFF ? lights (0xFF, 0, 0, 0, 0) : lights (HUB->pc_stratum, HUB->pc_x - reach, HUB->pc_y - reach,
-        2 * reach + 1, 0);
+    return reach == 0xFF ? lights (0xFF, 0, 0, 0, 0) : reach == SL_STOCKED ? lights (rec.sn, rec.x, rec.y, CW, 1) :
+        lights (HUB->pc_stratum, HUB->pc_x - reach, HUB->pc_y - reach, 2 * reach + 1, 0);
 }
 
-
-/* The kept rooms' lights of the chunk the maker's just stocked (its first square x0, y0 of stratum sn: store.c's, as
-** its things are put down): each lit sconce's room's light kept, a record of it (the maker's R_LIT made so) */
-void __fastcall__ s_sconce_chunk (unsigned char sn, unsigned x0, unsigned y0)
-{
-    lights (sn, x0, y0, CW, 1);
-}

@@ -792,3 +792,35 @@ be higher than for strenuous work, and sprinting should be higher still."  So:
   a run one each two minutes, strenuous work and a jog one each five; the book's, Combat 6 and Skills 6).
 
 **Design:** HOUSE.md's fights and long tasks.
+
+### Scents, the air and rain
+
+The user (2026-10-21), as slice 4.1 began: "For traces, some denizens have rather keen sense of smell, and may be able
+to follow a scent for much longer than an hour.  Blood hounds especially so.  I am not sure how old a scent trail can
+be for them to track a target, but definitely more than 1 hour.  Rain and wind would act to reduce those further.
+Wind/air movement toward a potential foe could also alert those with particularly good sense of smell long before
+sound or light might reach them (thus why hunters try to stay down-wind of their prey).  Smell, rain and air movement
+layers will need to interact in those kinds of ways.  Please make sure the plan has this accounted for."  So:
+
+- **A scent's age is the reader's nose's to judge** (slice 4.1): what can still be followed goes by the kind's smell
+  acuity (a hound's keen nose follows a trail days old; most beasts' hours; a man's hardly beyond the freshest), not
+  a fixed hour; a keen-nosed denizen smells the character in still air within its nose's reach, as it sees and hears.
+- **The air layer** (slice 4.5, with the sound layer: both spread over the rooms and the openings): drafts through the
+  dungeon and the surface's wind, carrying scents (and sounds) downwind and away from upwind, so a keen nose downwind
+  smells a foe long before sound or light reach it, and a hunter keeps downwind of its prey.
+- **Rain and running water** (slice 4.9, with water): washing scents and tracks away sooner.
+- Slice 4.1's smell layer is built open to both: one place a draft widens or narrows how far a scent carries, one
+  place rain or water speeds its fading.
+
+**Design:** DUNGEON.md, perception as layers; the plan's slices 4.1, 4.5, 4.9.
+
+### Hunger and thirst
+
+The user (2026-10-21): "When do we get hunger, eating, and drinking?"  Nothing planned then (the kit's rations and
+waterskin carried, eat and drink refused; HarnMaster's core rules have none).  Asked where, the user chose with water
+(slice 4.9): hunger and thirst over time (house rules: faster at hard work, levels of penalty, then starving or dying
+of thirst), eating the kit's rations and drinking from the waterskin, refilled at wells and streams; the cheap way to
+manage it a standing order to eat and drink when needed, warnings ("You're getting hungry."), and the status line
+showing them once they matter.
+
+**Design:** the plan's slice 4.9 (to be drafted with it).

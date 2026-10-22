@@ -3,7 +3,8 @@
 ** catalogue, read into the hub as the world starts (kinds.c's, from its file: a stand-in for the theme's data), the
 ** theme's kinds after it (the UI's request); the items' records kept, moved as the UI asks (the hub's ireq: the
 ** character's kit, a thing taken up, put down; held in a hand, stowed in the pack, put in a container or on a
-** surface, hung from the belt, taken out again, worn, taken off; lit, put out), listed (what the character carries,
+** surface, hung from the belt, taken out again, worn, taken off; lit, put out; a light renewed, a lantern filled, a
+** torch dipped: slice 4.1's), listed (what the character carries,
 ** worded into the hub's text for the UI to say); the character's light, from the lit things it carries (the hub's
 ** pc_light and pc_lamp); a chunk's things put down as the maker listed them stocking it (the world bank's stock, its
 ** slot CS_FRESH), a denizen's remains as it dies (the world's: wbody.c); the things a look saw made their own.  The
@@ -20,7 +21,7 @@
 ** not through part 10's serve: an inventory's, a dig's every spell's), a search, a thing described; part 13 the
 ** rarer work (the store begun, kept, the kit, the theme's kinds, a chunk's things and the remains put down, a thing
 ** hidden), and a thing made its own (the kit's ten, the things a look saw); part 17 the store's paging (ipage.c:
-** its chunks' things read in, put out; begun, kept).
+** its chunks' things read in, put out; begun, kept); part 27 (dq0w.c's, the lights burning: its room) a light renewed.
 */
 
 #include <fcntl.h>
@@ -75,7 +76,7 @@ static char tbuf[80];
 static struct item rec;
 
 /* (item_at and items are items.s's, in assembly: its store's layout as here) */
-typedef char store_fits[sizeof (struct item) == 22 && ITEM_BANK (0) == 14 && ITEM_BANKS == 2 ? 1 : -1];
+typedef char store_fits[sizeof (struct item) == 24 && ITEM_BANK (0) == 14 && ITEM_BANKS == 2 ? 1 : -1];
 
 /* A kind's record, copied out of the catalogue's bank (into one of four, in turn: an expression may want two at
 ** once): the catalogue's bank left in the window */
@@ -106,6 +107,23 @@ static void __fastcall__ fetch (struct item* q, unsigned i)
 static const struct kind* __fastcall__ kind_at (unsigned i)
 {
     return kind_of (item_at (i)->kind);
+}
+
+/* How kind k burns (kinds.c's burns: a light's life and its fuels, a fuel's measure), copied out: 0 if it's in none
+** (a light that never burns down, a glow; a thing that's no fuel); the catalogue's bank left in the window */
+const struct burn* __fastcall__ burn_of (unsigned char k)
+{
+    static struct burn b;
+    const struct burn* p;
+
+    hub_map (CAT_BANK);
+    for (p = burns; p < burns + NBURNS; ++p) {
+        if (p->kind == k) {
+            b = *p;
+            return &b;
+        }
+    }
+    return 0;
 }
 
 /* The hands a thing wants: both for a two-handed one, or a big one */
@@ -410,14 +428,15 @@ void s_about (void)
     }
 }
 
-/* Thing n put somewhere (where, x: items.h's), as it's flagged (held, worn, or neither), no longer hidden */
+/* Thing n put somewhere (where, x: items.h's), as it's flagged (held, worn, or neither), no longer hidden (nor
+** tended: a light its keepers kept burning, taken up, burns down) */
 static void __fastcall__ place (unsigned n, unsigned char where, unsigned x, unsigned char flags)
 {
     struct item* p = item_at (n);
 
     p->where = where;
     p->x = x;
-    p->flags = (p->flags & ~(I_HELD | I_WORN | I_HIDDEN)) | I_KNOWN | flags;
+    p->flags = (p->flags & ~(I_HELD | I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | flags;
 }
 
 /* Thing n carried: into the pack if it fits, else in a hand (hand first: the other way about): 1 in the pack, 2 in
@@ -529,7 +548,7 @@ unsigned char __fastcall__ s_drop (const char* name)
 }
 
 /* The character's light: the brightest lit thing it carries (in a hand, worn, hung from its belt: one stowed is
-** put out), into the hub, named */
+** put out), into the hub, named (its minutes left the lights' burning's: part 27's) */
 void s_light_now (void)
 {
     char lamp[14];
@@ -597,6 +616,9 @@ unsigned char s_serve (void)
         break;
     case IO_HIDE:
         iq.result = hide (iq.name);
+        break;
+    case IO_FILL:
+        iq.result = fill ();                    /* (A light renewed: its time in the request's x, part 27's) */
         break;
     case IO_THEME:
         theme_kinds ();
@@ -791,6 +813,10 @@ void __fastcall__ s_thing_words (const struct item* q)
     if (q->flags & I_LIT) {
         put (" (lit)");
     }
+    if (q->id && q->fuel <= BURN_LOW && burn_of (q->kind)) {    /* (A light spent or low, a fuel empty: slice
+                                                **   4.1's) */
+        put (!(k->flags & K_LIGHT) ? (q->fuel ? "" : " (empty)") : q->fuel ? " (burning low)" : " (spent)");
+    }
     if (q->wear >= 32) {                        /* (Its wear: a blade dulled, a tool worn) */
         put (!strcmp (k->tool, "blade") || !strcmp (k->tool, "knife") ? (q->wear >= 128 ? " (dull)" : " (dulled)") :
             " (worn)");
@@ -981,6 +1007,98 @@ unsigned char __fastcall__ s_describe (const char* name)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* ==== Part 27 (dq0w.c's, the lights burning; its room): a light renewed */
+#pragma code-name (push, "SW27CODE")
+#pragma rodata-name (push, "SW27RODATA")
+
+/* Thing i the character's (on it, or in what it carries) */
+static unsigned char __fastcall__ carried (unsigned i)
+{
+    for (; item_at (i)->where == IW_ITEM; i = item_at (i)->x) {
+    }
+    return item_at (i)->where == IW_ACTOR && !item_at (i)->x;
+}
+
+static void __fastcall__ put3 (const char* a, const char* b, const char* c)
+{
+    put (a);
+    put (b);
+    put (c);
+}
+
+/* ---- A light renewed (IO_FILL, slice 4.1's: "fill the lantern", "dip the torch in the oil"): the light named
+** (carried, or within reach) from the fuel named (into: carried, or within reach; "": the first carried that it
+** takes), as much as it has room for, its whole life less what it has left, the fuel's measure the less by what it
+** gave (a flask of oil a lantern's whole fill); one that burns away (a candle) takes none.  Its words in the hub's text,
+** its time in the request's x (a lantern filled, 20 seconds; a torch dipped, 10) */
+unsigned char s_fill (void)
+{
+    struct item l, f;                           /* (On the C stack: the main RAM's room) */
+    const struct burn* b;
+    unsigned n, c, room, give;
+    unsigned char takes;
+    char ln[14], fn[14];
+
+    text_new ();
+    if (!(n = at_hand (iq.name))) {
+        put (*iq.name ? "You have no such thing to hand." : "Fill what?");
+        return IR_NO;
+    }
+    make_own (n);
+    fetch (&l, n);
+    strcpy (ln, kind_of (l.kind)->name);
+    if (!(kind_of (l.kind)->flags & K_LIGHT)) {
+        put3 ("You can't fill the ", ln, ".");
+        return IR_NO;
+    }
+    if (!(b = burn_of (l.kind)) || !(takes = b->fuels)) {
+        put3 ("The ", ln, " takes no fuel: it burns away.");
+        return IR_NO;
+    }
+    room = l.fuel < b->life * 10 ? b->life * 10 - l.fuel : 0;
+    if (*iq.into) {
+        c = at_hand (iq.into);
+    } else {
+        for (c = 0; (c = items (c, IN_ACTOR | IN_ITEM, 0)) != 0; ) {    /* (The first carried it takes, not empty) */
+            fetch (&f, c);
+            if (f.fuel && (b = burn_of (f.kind)) != 0 && (b->fuels & takes) && !(kind_of (f.kind)->flags & K_LIGHT) &&
+                carried (c)) {
+                break;
+            }
+        }
+    }
+    if (!c) {
+        put3 ("You have nothing to fill it with: ", takes & FU_PITCH ? "oil, or pitch" : "a flask of oil", ".");
+        return IR_NO;
+    }
+    make_own (c);
+    fetch (&f, c);
+    strcpy (fn, kind_of (f.kind)->name);
+    if ((kind_of (f.kind)->flags & K_LIGHT) || !(b = burn_of (f.kind)) || !(b->fuels & takes)) {
+        put3 ("The ", ln, " won't burn that.");
+        return IR_NO;
+    }
+    if (!f.fuel) {
+        put3 ("The ", fn, " is empty.");
+        return IR_NO;
+    }
+    if (!room) {
+        put3 ("The ", ln, " has all it can take.");
+        return IR_NO;
+    }
+    give = room < f.fuel ? room : f.fuel;
+    item_at (n)->fuel = l.fuel + give;
+    item_at (c)->fuel = f.fuel - give;
+    put3 (takes == FU_OIL ? "You fill the " : "You soak the ", ln, takes == FU_OIL ? " from the " : " in the ");
+    put3 (fn, give == f.fuel ? ", and it's empty now" : "", ".");
+    hub_map (0);
+    HUB->ireq.x = takes == FU_OIL ? 200 : 100;
+    return IR_OK;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* ==== Part 13: the store's rarer work: begun, kept, the kit, the theme's kinds, a chunk's things and the remains
 ** put down */
 #pragma code-name (push, "SW13CODE")
@@ -1008,8 +1126,9 @@ void __fastcall__ s_make_own (unsigned i)
     struct item q;
     struct item* p;
     const struct kind* k;
-    unsigned id;
-    unsigned char m;
+    const struct burn* b;
+    unsigned id, life;
+    unsigned char m, h, a;
 
     fetch (&q, i);
     if (q.id || !q.kind) {
@@ -1028,12 +1147,35 @@ void __fastcall__ s_make_own (unsigned i)
         if (m == MT_IRON && !strcmp (k->tool, "blade")) {
             m = q.quality >= 7 ? MT_STEEL : q.quality <= 1 ? MT_BRONZE : MT_IRON;
         }
+        if (m == MT_TALLOW && q.quality >= 6) {
+            m = MT_WAX;                         /* (A fine candle beeswax, a common one tallow) */
+        }
         q.mat = m;
     }
     q.dur_max = tough[m] * (k->weight + 4) * (5 + q.quality) / 5;
     q.dur = q.where == IW_SQUARE ? q.dur_max - q.dur_max / 10 * rnd (7) : q.dur_max;
     if (!q.dur) {
         q.dur = 1;
+    }
+    if ((b = burn_of (q.kind)) != 0) {          /* (A light's life, a fuel's measure: slice 4.1's, HOUSE.md's burning;
+                                                **   no dice, its number's: the things' numbers, rnd's, as they were) */
+        life = b->life * 10;
+        h = (unsigned char) (id * 37 + (id >> 3));
+        if ((k->flags & K_LIGHT) && !b->fuels) {    /* (One that burns away, a candle: by its thickness, half an inch
+                                                **   to an inch and a quarter, its wax, beeswax half as long again
+                                                **   as tallow, and its make) */
+            q.thick = 4 + 2 * (h & 3);
+            life = life / 6 * q.thick * (m == MT_WAX ? 3 : 2) / 2 * (15 + q.quality) / 19;
+        }
+        if (q.where == IW_SQUARE) {             /* (Found lying: part of it used before it was left, a sixteenth less a
+                                                **   century of its stratum's age; a candle some left still, a
+                                                **   lantern's oil dried, a torch's pitch crumbled) */
+            a = STRATUM (q.sn).age;
+            h = h % 12 + 2;
+            h = h > a ? h - a : !b->fuels;
+            life = life * h / 16;
+        }
+        q.fuel = life;
     }
     memcpy (item_at (i), &q, sizeof q);
 }
@@ -1141,7 +1283,9 @@ static unsigned __fastcall__ item_new (unsigned char kind, unsigned char where, 
 
 /* ---- The character's kit (a stand-in for the theme's and the occupation's): a torch lit in hand, a backpack worn
 ** (rations, a tinderbox in it), a belt (a pouch of pennies, a dagger, a waterskin hanging from it); and things more
-** (dq0 -k, commas between: in the hub's text), each held if there's a hand for it, else in the pack */
+** (dq0 -k, commas between: in the hub's text), each held if there's a hand for it, else in the pack; then a spare
+** torch and a flask of oil in the pack (D5: slice 4.1's) */
+static const unsigned char spare[] = { KI_TORCH, KI_OIL };
 
 /* Each thing: its kind, what it's in (an earlier one's place in the list; 0xFF: on the character), how many, its
 ** flags */
@@ -1181,6 +1325,10 @@ void s_kit (void)
             item_at (i)->x = 0;
             item_at (i)->flags = (item_at (i)->flags & ~(I_WORN | I_HIDDEN)) | I_KNOWN | I_HELD;
         }
+    }
+    for (k = 0; k < sizeof spare; ++k) {        /* (The pack's spare torch and flask of oil, D5's, after the things
+                                                **   more: theirs made as they were) */
+        item_new (spare[k], IW_ITEM, made[1], 1);
     }
 }
 
@@ -1331,14 +1479,14 @@ static void __fastcall__ name_of (unsigned i, unsigned char x)
     strcpy (x ? xn : yn, KIND (i)->name);
 }
 
-/* Thing n put somewhere (where, x: items.h's), as it's flagged (held, worn, or neither), no longer hidden; its
-** flags else (set, and cleared) */
+/* Thing n put somewhere (where, x: items.h's), as it's flagged (held, worn, or neither), no longer hidden (nor
+** tended: a keepers' light, taken, burns down); its flags else (set, and cleared) */
 static void __fastcall__ o_place (unsigned n, unsigned char where, unsigned x, unsigned char flags)
 {
     FETCH (n);
     o.where = where;
     o.x = x;
-    o.flags = (o.flags & ~(I_HELD | I_WORN | I_HIDDEN)) | I_KNOWN | flags;
+    o.flags = (o.flags & ~(I_HELD | I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | flags;
     m2 (store, (unsigned) &o, n);
 }
 
@@ -1560,28 +1708,41 @@ static unsigned char flame (void)
     return 0;
 }
 
-/* Lit, or put out (on 0): the thing named, else the first carried that would be (or one within reach, named) */
+/* A light spent (its fuel all burnt: a lantern dry, a torch burnt out; slice 4.1's): its words why it won't light, or
+** 0 (o's) */
+static unsigned char spent (void)
+{
+    static const struct burn* b;
+
+    return !o.id || o.fuel || !(b = (const struct burn*) m1 (burn_of, o.kind)) ? 0 : b->fuels == FU_OIL ? SA_NO_OIL :
+        SA_BURNT;
+}
+
+/* Lit, or put out (on 0): the thing named, else the first carried that would be (one that would be first, of those
+** named: a spare torch, not the one burnt out; or one within reach, named) */
 static unsigned char __fastcall__ light (unsigned char on)
 {
     static unsigned n;
     static unsigned char r, x;
 
-    if (!*iq.name) {
-        for (n = 1; n < NITEMS; ++n) {
-            FETCH (n);
-            if (o.kind && (kinds[o.kind].flags & K_LIGHT) && !(o.flags & I_LIT) == on && B (m1 (on_pc, n))) {
-                break;
-            }
+    for (n = 1; n < NITEMS && *iq.name != '#' && !*iq.into; ++n) {
+        FETCH (n);
+        if (o.kind && (kinds[o.kind].flags & K_LIGHT) && !(o.flags & I_LIT) == on && (!on || !spent ()) &&
+            (!*iq.name || named (kinds[o.kind].name, iq.name)) && B (m1 (on_pc, n))) {
+            break;
         }
-        if (n >= NITEMS) {
+    }
+    if (n >= NITEMS || *iq.name == '#' || *iq.into) {
+        if (!*iq.name) {
             return no (on ? SA_NONE_TO_LIGHT : SA_NONE_LIT);
         }
-    } else if (*iq.into) {                     /* (The one in the other, or on it: a sconce's torch) */
-        if (!(n = in_other ())) {
-            return IR_NO;
+        if (*iq.into) {                         /* (The one in the other, or on it: a sconce's torch) */
+            if (!(n = in_other ())) {
+                return IR_NO;
+            }
+        } else if (!(n = m1 (at_hand, (unsigned) iq.name))) {
+            return no (afar ? SA_REACH : SA_NO_SUCH);
         }
-    } else if (!(n = m1 (at_hand, (unsigned) iq.name))) {
-        return no (afar ? SA_REACH : SA_NO_SUCH);
     }
     name_of (n, 1);
     FETCH (n);
@@ -1599,6 +1760,9 @@ static unsigned char __fastcall__ light (unsigned char on)
     }
     if (r) {
         return no (SA_LIT);
+    }
+    if ((r = spent ()) != 0) {
+        return no (r);                          /* (Its fuel all burnt: renewed first, a torch, a lantern) */
     }
     if (!flame ()) {
         return no (SA_NO_FLAME);

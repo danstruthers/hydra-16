@@ -35,7 +35,6 @@ unsigned char store_page (void);
 void store_save (void);
 void store_commit (void);                       /* (Part 19's) */
 void stocked (void);                            /* (Part 4's) */
-void __fastcall__ sconce_chunk (unsigned char sn, unsigned x0, unsigned y0);   /* (Part 27's: wkept.c) */
 void __fastcall__ keep (unsigned char back);    /* (The things': items.dat) */
 
 unsigned char rsn, rrx, rry;                    /* (The region wanted) */
@@ -230,7 +229,8 @@ void s_stocked (void)
             rec.elev = 0;
             rec.link = STOCKED;
             store_put ();
-            sconce_chunk (rec.sn, rec.x, rec.y);    /* (Its kept rooms' lights: a record each, wkept.c's) */
+            sconce_lights (SL_STOCKED);             /* (Its kept rooms' lights: a record each, wkept.c's; rec's square
+                                                **   the chunk's first) */
             hub_map (WORLD_BANK);
             WREC->cslot[k].used = 1;
         }

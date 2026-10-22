@@ -22,7 +22,7 @@
                    | <target> | <wait> | <rest> | <sleep> | <stop> | <naming> | <meta>
                    | <step> | <pace-set> | <charge> | <light> | <extinguish> | <posture> | <pretend>
                    | <enter> | <leave> | <climb> | <dig> | <wake> | <hide> | <sneak>
-                   | <knock> | <push> | <pull> | <give> | <lock> | <unlock> | <fill> | <read> | <taste> | <touch>
+                   | <knock> | <push> | <pull> | <give> | <lock> | <unlock> | <fill> | <dip> | <read> | <taste> | <touch>
                    | <defend> | <flee> | <follow> | <where> | <again>
                    | <knock-out> | <engage> | <disengage> | <pass>
                    | <pray> | <intervene> | <invoke> | <learn-invocation> | <fasting>
@@ -229,7 +229,8 @@
 <grab>           ::= ( "grab" | "hold" ) <object> [ <from-phrase> ]   (* a grapple when the object is engaged; else a get, or a carry for hold *)
 <lock>           ::= "lock" <thing>
 <unlock>         ::= "unlock" <thing> [ "with" <object> ]
-<fill>           ::= "fill" <object> [ <from-phrase> ]
+<fill>           ::= "fill" <object> [ <from-phrase> | "with" <object> ]   (* "fill the lantern", "fill the lantern with oil" (a light renewed, slice 4.1's) *)
+<dip>            ::= ( "dip" | "soak" ) <object> ( "in" | "into" ) <object>   (* "dip the torch in the oil", "soak the torch in pitch" *)
 <read>           ::= "read" [ <object> ]   (* bare: the last thing named *)
 <taste>          ::= "taste" <object>
 <touch>          ::= ( "touch" | "feel" ) <object>

@@ -520,9 +520,42 @@ climb's test to hold on).
   listening) is told after what's plain at a glance, as its own line, saying how it was found: "You arrive at a
   closed door.", "Searching about...", "You find a gas trap, set to go off when the door is opened."
 
-## Light and traces (slice 4.1)
+## Light and traces *(slice 4.1: drafted for the user to review, 2026-10-21)*
 
-Every ruleset's (the book gives no figures for any of it).  As built, for the user to review.
+Every ruleset's.  The book gives no burning times: these are the house's (the stopped design's hour for a torch).
+
+The lights (lights burning down, renewed; the kit's spare; the status line's light left):
+
+- **Every light lit burns down by the game clock, wherever it is**: carried, put down, set in a sconce; but not one
+  its keepers tend (a kept room's sconce: the keepers renew it), nor one that never burns down (a glow, the theme's
+  lights).  Its fuel left is the thing's own (minutes of burning), taken off a game minute at a time.
+- **How long a whole one burns:** a torch an hour, whatever its make; a lantern six hours on a fill (a pint of oil);
+  a candle four hours at middling make, of tallow, three-quarters of an inch thick: longer or shorter by its
+  thickness (half an inch to an inch and a quarter, in proportion), half as long again of beeswax (a fine one,
+  make 6 or better, is beeswax), and by its make, (15 + make) / 19 (a crude one four-fifths as long, a master's a
+  quarter longer); candle stubs half an hour on the same terms.
+- **Burning low:** its last ten minutes, told once for a light the character carries ("Your torch is burning low.");
+  nothing's asked.
+- **Going out:** at none left, told ("Your torch gutters and goes out."), and for one lying where the character sees
+  it ("The candle stubs gutter and go out."); a candle burns away, gone; a lantern's dry, a torch spent, kept to be
+  renewed, and neither lights till it is ("The torch is burnt out.", "The lantern is out of oil.").  The character
+  left in the dark by it (its only light, and no light of the room's): its long task stops hard ("...: you stop
+  waiting."), but a climb part way and a fight go on; in a lit room, or with another light, nothing stops.
+- **Renewing:** a lantern filled from a flask of oil ("fill the lantern", "refill the lantern"), as much as it has
+  room for, the flask the less by it (20 seconds); a torch dipped in oil or pitch ("dip the torch in the oil", "soak
+  the torch in pitch"), back to its hour, the oil the less by the minutes it gained (a minute's burning a minute's
+  oil: 10 seconds); a candle takes nothing.  Without a fuel named, the first carried that the light takes.
+- **Fuels:** a flask of oil holds a pint, a lantern's fill (six hours' burning; a torch's hour six times over); a pot
+  of pitch four hours' (a torch renewed four times).  Neither is in the maker's stock yet: the kit's flask, and dq0
+  -k's.
+- **The kit** (D5): a spare torch and a flask of oil in the pack, besides the torch lit in hand.
+- **Found lights have some life left:** part of each used before it was left, 2 to 13 sixteenths of a whole one (by the
+  thing), a sixteenth less for each century of its stratum's age; a candle has always some left (wax keeps); a
+  lantern's oil has dried, or a torch's pitch crumbled, when that leaves none.
+- **The status line** shows the minutes left of the light the character carries, the brightest's ("torch 40m",
+  "lantern 5h59m"), when there's room for it beside the referee's words, the facing and the clock.
+- **Far off, lights burn on:** a chunk's things paged out to the save folder are caught up as they're read in again,
+  by the minutes since (the clock's 25.6 seconds a unit; after fourteen hours, all of it).
 
 **Kept light** (DUNGEON.md's light kept; the user's, 2026-10-16: lights are somebody's):
 
@@ -537,7 +570,7 @@ Every ruleset's (the book gives no figures for any of it).  As built, for the us
   room, standing for its sconces, on a square of its floor beside a wall.  An unkept room's holds a cold torch, part
   burnt, three times in four; else nothing (burnt away, or taken, long ago).
 - **The sconce:** iron, a pound and a half, worth 4 pennies, fixed to the wall (never taken up); it holds 3 pints
-  and bears 2 pounds (a torch, a candle; not a lantern); made out 10 squares past a speck.
+  and bears 2 pounds (a torch, a candle; not a lantern); made out 12 squares past a speck.
 - **A lit thing in a sconce lights its room** throughout, as a room's own light does (level 6), whoever lit it: its
   keepers, or the character lighting the cold torch where it is or putting a lit one in.  Put out, taken, or burnt
   away, the room is dark again.  It is never a lamp of its own besides.  (The design's first thought was that a torch
@@ -563,8 +596,6 @@ Every ruleset's (the book gives no figures for any of it).  As built, for the us
 - **D13, a wrecked door, window or portcullis appraises by its state.**  Today appraisal doesn't see the damage.
 - **D13, the pit climb:** a slip climbing out of a pit ends the climb, and the player chooses what next.  Today a
   slip slides 5 feet back and the climb goes on.
-- **D5, light:** a spare torch and oil in the kit; lights burning down (a torch's, a lantern's oil).  Today lights
-  burn for ever.
 - **D6, bleeding with first aid** (P_FIRST_AID binds a bleeder).  Today nothing stops bleeding.
 - **Bearings and mental maps** (DUNGEON.md: the character's sense of where it is, by Awareness or Mining; a map in
   its head that fades): slices 4.1-4.2.

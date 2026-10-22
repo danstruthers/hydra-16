@@ -18,7 +18,6 @@
 #include "../dq0/hub.h"
 #include "world.h"
 #include "wbody.h"
-#include "work.h"
 
 #pragma local-strings (on)
 
@@ -32,7 +31,6 @@ unsigned char bps;
 struct msg bev;
 unsigned char bleeds;
 unsigned bled_at;
-static unsigned lit_at;                         /* (When the rooms' lights were last seen to: the clock's low word) */
 
 #pragma code-name ("SW14CODE")
 #pragma rodata-name ("SW14RODATA")
@@ -146,8 +144,7 @@ unsigned char __fastcall__ s_den_first (unsigned char k, unsigned char away)
 }
 
 /* The denizens' intents carried out, in turn, each taken from the ring once it's done (the bleeding seen to first:
-** wfight.c's; and each minute the rooms' lights by their sconces, store.c's: a torch burnt out, its keepers gone,
-** looked at again); the denizens rung after (they wait for them), unless all there was was their turn's end */
+** wfight.c's); the denizens rung after (they wait for them), unless all there was was their turn's end */
 void s_den_intents (void)
 {
     static struct msg m;
@@ -155,12 +152,6 @@ void s_den_intents (void)
     static unsigned x, y, c;
     static unsigned char* p;
     static int z;
-
-    hub_map (0);
-    if ((unsigned) HUB->now - lit_at >= 600) {
-        lit_at = (unsigned) HUB->now;
-        den_saw |= sconce_lights (0xFF);
-    }
 
     for (any = 0, hub_map (0); (t = HUB->di_tail) != HUB->di_head; hub_map (0), HUB->di_tail = (t + 1) % DI_SIZE) {
         memcpy (&m, &HUB->di[t], sizeof m);

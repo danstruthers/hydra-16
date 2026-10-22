@@ -1991,6 +1991,8 @@ function inTurn(o, want, f, name = '') {
 // twice, its trap twice: the look told it twice).  sim/test.js's dq0 check, in every dq0 test (HUBOWN=0 too)
 const DQ0_REPEATS = [
   { what: /^\(\d+ feet to go\.\)/, why: 'a dig\'s spells, each told as it ends (dig down: many spells to an answer)' },
+  { what: /^(?:The work goes (?:well|slowly)|Your tool slips and turns; little comes of that spell of work)\.$/,
+    why: 'a dig\'s spells, each told as it ends (a long dig: hours of spells between one stir and the next, some the same)' },
   { what: /^You (?:climb on|slip back a little|find no hold yet) \(\d+ feet to go\)\.$/,
     why: 'a climb\'s rounds, each told as it ends (a long climb: many rounds to an answer, some the same)' },
   { what: /^(The|A) .* (bites|claws|strikes|swings|lunges|thrusts)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge)\b/,
@@ -2882,25 +2884,28 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0dig', meaning: true, what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, through to the stratum below (tiring as it goes, strenuous work: two fatigue levels a spell, the referee\'s, its Mining tests the harder for them, so more spells), and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 1\'s hard-packed earth floor (untested: the tool\'s rate, a foot and a half a spell) till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all (only a pick lifts flags); bare hands (the dagger in the kit, a knife that would dig it, put down first) make no progress in seed 1\'s hard-packed earth (the user\'s, 2026-10-20: hands only in soft soil) (dq0earth\'s and dq0tools\' digs, these together)',
+      name: 'dq0dig', meaning: true, what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, by a lantern\'s light (slice 4.1: its six hours, the shaft longer; the light gone, in the dark, the dig stopped, the lantern filled and lit again, and dug on from where it was left), through to the stratum below (tiring as it goes, strenuous work: two fatigue levels a spell, the referee\'s, its Mining tests the harder for them, so more spells), and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 1\'s hard-packed earth floor (untested: the tool\'s rate, a foot and a half a spell) till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all (only a pick lifts flags); bare hands (the dagger in the kit, a knife that would dig it, put down first) make no progress in seed 1\'s hard-packed earth (the user\'s, 2026-10-20: hands only in soft soil) (dq0earth\'s and dq0tools\' digs, these together)',
       init: 't_rc', cycles: 3600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm',
-        'dq0 -p t -s 3 -c /ram/m.hm -k pick -T', 'dig down', 'd', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -k shovel -T', 'dig down', 'quit',
+        'dq0 -p t -s 3 -c /ram/m.hm -k pick,lantern -T', 'light the lantern', 'dig down', 'fill the lantern', 'light the lantern', 'dig down', 'd', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -k shovel -T', 'dig down', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'dig down', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'drop the dagger', 'dig down', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], digs = T.filter(t => t.line === 'dig down');
-        if (digs.length !== 4) return ['the four digs not typed'];
+        if (digs.length !== 5) return ['the five digs not typed'];
         const spells = t => dq0Ev(t, 'E_DIG', { how: h => ['D_GOOD', 'D_POOR', 'D_SLIP'].includes(h) }), dug = t => spells(t).filter(e => e.how !== 'D_SLIP').length;
         // (The tools the referee took for the dig's spells, the hub's dig_tool: the one carried among them)
         const tool = (t, n) => { if (!t.after || !t.after.digTool.includes(n)) f.push(t.k + ': the referee\'s tools ' + (t.after && JSON.stringify(t.after.digTool)) + ', not the ' + n); };
-        const [p, s1, sw, h1] = digs;
-        dq0Need(f, p, 'E_DIG', { how: 'D_BEGUN' }, 'the pick\'s dig not begun');
-        if (!dug(p)) f.push('the pick dug nothing');
+        const [p0, p, s1, sw, h1] = digs;
+        dq0Need(f, p0, 'E_DIG', { how: 'D_BEGUN' }, 'the pick\'s dig not begun');
+        if (!dug(p0)) f.push('the pick dug nothing');
+        dq0Need(f, p0, 'E_TASK', { te: 'TE_OUT', task: 'LT_DIG' }, 'the dig not stopped as its light went out');
+        dq0Need(f, T.after(p0, 'fill the lantern'), 'E_READY', {}, 'the lantern not filled');
+        dq0Need(f, p, 'E_DIG', { how: 'D_AGAIN' }, 'the shaft not dug on from where it was left');
         dq0Need(f, p, 'E_DIG', { how: 'D_THROUGH' }, 'the shaft not through');
         tool(p, 'pick');
         const rats = s => s ? s.actors.filter(a => a.state && a.name === 'giant rat').length : 0;
-        if (!rats(p.at) || rats(p.after) !== rats(p.at)) f.push('the rats by the stairway not all living through the dig: ' + rats(p.at) + ', then ' + rats(p.after));
+        if (!rats(p0.at) || rats(p.after) !== rats(p0.at)) f.push('the rats by the stairway not all living through the dig: ' + rats(p0.at) + ', then ' + rats(p.after));
         const d = T.after(p, 'd');
         dq0Need(f, d, 'E_ARRIVE', { how: 'A_DOWN', first: true }, 'not down the shaft to the stratum below');
         if (!d.after || d.after.pc.sn !== 1) f.push('not on the stratum below');
@@ -2920,8 +2925,8 @@ module.exports = {
       init: 't_rc', cycles: 1500e6,
       // (A "stop" typed as the dig goes, after a wait: \u0100's 2M cycles each, a spell or so of the wall's, a few of the
       // shaft's, the stratum below grown first)
-      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T -d /ram/dug',
-        'dig south', '!' + '\u0100'.repeat(12) + 'stop', 'dig south', 'dig down', '!' + '\u0100'.repeat(30) + 'stop', 'quit',
+      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick,lantern -T -d /ram/dug',
+        'light the lantern', 'dig south', '!' + '\u0100'.repeat(12) + 'stop', 'dig south', 'dig down', '!' + '\u0100'.repeat(30) + 'stop', 'quit',
         'dq0 -d /ram/dug', 'dig down', '!' + '\u0100'.repeat(15) + 'stop', 'quit', 'echo $status']
         .map(l => (l[0] === '!' ? l.slice(1) : '\u0101' + l) + '\r').join('') },
       expect: ['% echo $status'],
@@ -3025,7 +3030,7 @@ module.exports = {
           'You throw the dagger hard at the giant rat, and miss: it lands beside it.', 'Put down.',
           'Which do you mean: 1. the dagger ahead, 2. the bones ahead to your right, or 3. the pick where you stand?', 'Taken.',
           'Which do you mean: 1. the dagger ahead, or 2. the pick where you stand?', 'Taken.', 'You go over to it.', 'Taken.',
-          'a dagger, a pick, bones', 'Put down.', 'Taken.', 'Throw it at what?', 'It\'s out of reach', 'You have no target now.',
+          'a dagger, a pick, a torch, a flask of oil, bones', 'Put down.', 'Taken.', 'Throw it at what?', 'It\'s out of reach', 'You have no target now.',
           'You have no target.', 'You turn to face north.', 'You cross the room.', '% echo $status'];
         let at = 0;
         for (const w of want) {
@@ -3821,7 +3826,7 @@ module.exports = {
         inTurn(o, ['% dq0 -p t -s 4', '> open door Which door: 1. the door ahead to your right (open), 2. the one to your right (closed), or 3. the one behind you to your right (closed)?',
           '> 3', 'You turn to face north.', 'You open the door.', '> look You are on the right side of a long, narrow bedchamber',
           'There is a door ahead (open), one to your left (open) and one ahead to your left (closed).', '> take the bar',
-          'You lift the bar out of its brackets, and set it down.', 'Taken.', '> i', 'a tinderbox, a bar)', '% dq0 -p t -s 12', '> examine the window',
+          'You lift the bar out of its brackets, and set it down.', 'Taken.', '> i', 'a tinderbox, a torch, a flask of oil, a bar)', '% dq0 -p t -s 12', '> examine the window',
           'A window, 2 feet wide and 3 high; its shutters of wood, 2 inches thick. It\'s glazed', 'There is a glazed window ahead (its shutters open).', '> x glass',
           'It\'s 2 by 3 feet, a quarter inch thick.', '> climb through window', 'You can\'t climb through: it\'s shut, glazed or barred.', '> break window',
           'The glass shatters with a crash.', '> look', 'There is a shuttered window ahead (its shutters open). At your feet lie some glass shards.',
@@ -3847,7 +3852,7 @@ module.exports = {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         inTurn(o, ['> walk to the door behind me Which door: 1. the portcullis behind you, 10 feet off (raised), or 2. the door behind you, 5 feet off (open)?',
           '> 1', 'You go over to it.', '> i', 'You carry a torch (lit), in your hand; a backpack, worn (in it: 3 rations, a tinderbox, a basket, a heap of sand,',
-          'a belt, worn (on it: a pouch (in it: 12 pennies), a dagger, a waterskin); a table, in both hands. In all, 56 lb.', '> drop table', 'Put down.',
+          'a sword, a torch, a flask of oil); a belt, worn (on it: a pouch (in it: 12 pennies), a dagger, a waterskin); a table, in both hands. In all, 58 lb.', '> drop table', 'Put down.',
           '> put the candle on the table', 'You put the candle on the table.', '> look', 'At your feet lies a table. On the table lies a candle.',
           '> take the candle from the table', 'You take the candle from the table. It\'s in your backpack.', '> wear cloak', 'You put on the cloak.',
           '> hold basket', 'You take the basket in your hand.', '> put sand in basket', 'The basket won\'t keep the heap of sand: it would run out.',
@@ -3857,12 +3862,12 @@ module.exports = {
           'The backpack won\'t go inside itself.', '> take the cloak off', 'You take off the cloak. It\'s in your hand.', '> stow cloak',
           'You stow the cloak in your backpack.', '> name my sword Linda', 'You name your sword Linda.', '> alias the dagger as linda', 'That name is taken by your sword.',
           '> name the dagger Torch', 'That name is taken by a kind of thing (torch).', '> name the dagger kobold', 'That name is taken by a kind of creature (kobold).',
-          '> name the dagger north', 'That name is taken: it\'s a word your commands need.', '> i', 'a candle, Linda, your sword);',
-          'a waterskin, a quiver (in it: arrows)). In all, 16 lb.', '> examine the moon', 'You see no moon here.', '> take off my coat', 'You aren\'t wearing any coat.',
-          '> foo', 'I don\'t know how to foo.', '> status', 'Pace: a walk (40 feet a round). Watching: nothing in particular. Condition: unhurt; a little burdened (encumbrance 1); penalties: universal 0, physical 1. Light: your torch (20 feet).',
-          '> jog', 'Pace: a jog (80 feet a round). Watching: nothing in particular.', '> search for traps as I go',
-          'Pace: a jog, held to a slow walk while you search as you go (20 feet a round). Watching: for traps and hidden doors as you go.', '> stop searching',
-          'Pace: a jog (80 feet a round).', '> run north', 'Pace: a run (160 feet a round).', 'You cross the room. You are in the middle of a long, narrow cell, by the light of your torch.',
+          '> name the dagger north', 'That name is taken: it\'s a word your commands need.', '> i', 'a candle, Linda, your sword, a torch, a flask of oil);',
+          'a waterskin, a quiver (in it: arrows)). In all, 18 lb.', '> examine the moon', 'You see no moon here.', '> take off my coat', 'You aren\'t wearing any coat.',
+          '> foo', 'I don\'t know how to foo.', '> status', 'Pace: a walk (37 feet a round). Watching: nothing in particular. Condition: unhurt; a little burdened (encumbrance 2); penalties: universal 0, physical 2. Light: your torch (20 feet).',
+          '> jog', 'Pace: a jog (75 feet a round). Watching: nothing in particular.', '> search for traps as I go',
+          'Pace: a jog, held to a slow walk while you search as you go (18 feet a round). Watching: for traps and hidden doors as you go.', '> stop searching',
+          'Pace: a jog (75 feet a round).', '> run north', 'Pace: a run (150 feet a round).', 'You cross the room. You are in the middle of a long, narrow cell, by the light of your torch.',
           '> run south', '> help', 'Commands: north, northeast, east', 'Pace: creep (sneak), walk slowly, walk, jog, run, sprint', '19200 or 115200 baud', '% echo $status'], f);
         if (/#\d/.test(o)) f.push('a thing\'s mark ("#12") said');
         const rn = o.slice(o.indexOf('> run north'), o.indexOf('> run south')), rs = o.slice(o.indexOf('> run south'), o.indexOf('> help'));
@@ -3923,7 +3928,7 @@ module.exports = {
         const [map, paused, again, help] = s;
         // (The screen alone, as the game made it: the window rows 2-58 below the bar and the header, its footer row 59;
         // the status line its first, the line typed its last)
-        if (!/^ Tordan +UP 0 +facing /.test(row(map, 2))) f.push('the status line (row 2): ' + JSON.stringify(row(map, 2)));
+        if (!/^ Tordan +(?:torch \S+ +)?UP 0 +facing /.test(row(map, 2))) f.push('the status line (row 2): ' + JSON.stringify(row(map, 2)));
         if (!rev(map, 2)) f.push('the status line isn' + Q + 't reversed all the way across');
         if (row(map, 58) !== '>') f.push('the line typed (row 58): ' + JSON.stringify(row(map, 58)));
         if (!map.text.some(l => l.startsWith('The map (you face'))) f.push('no map on the screen');
@@ -3965,7 +3970,7 @@ module.exports = {
         if (/Keep this character|An occupation|Three weapon skills/.test(ser)) f.push('hmchar\'s questions went to the serial port (the terminals both again)');
         if (/UP 0 +facing|> look/.test(ser)) f.push('the game went to the serial port (the terminals both again)');
         // (The game on the screen alone: the window 57 rows, its status line the first, the line typed its last)
-        if (!/^ \S+ +UP 0 +facing /.test(game.text[2] || '')) f.push('the status line (row 2): ' + JSON.stringify(game.text[2]));
+        if (!/^ \S+ +(?:torch \S+ +)?UP 0 +facing /.test(game.text[2] || '')) f.push('the status line (row 2): ' + JSON.stringify(game.text[2]));
         if ((game.text[58] || '') !== '>') f.push('the line typed (row 58), the screen alone: ' + JSON.stringify(game.text[58]));
         // (Put back as it ends: the serial port's terminal painted again, consctl's terminal both)
         if (!out.slice(at).includes('\nterminal both\n')) f.push('the terminals not both after the game');
@@ -4285,6 +4290,71 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0light', what: 'Dingus Quest Zero\'s lights burning down (slice 4.1: the world\'s, a game minute at a time, each its fuel left in the item store, struct item\'s fuel; HOUSE.md\'s light and traces): the kit\'s spare torch and flask of oil (D5), a lantern more (dq0 -k); at seed 3 its torch lit, an hour\'s (the house rule\'s), over three waits: none told at 45 minutes, its minutes left the status line\'s ("torch 15m"); "Your torch is burning low." at its last ten (TE_LOW); "Your torch gutters and goes out: you stop waiting." at the hour (TE_OUT, its only light: the wait stopped hard, at the hour), the character in the dark (the look: "It is dark."), the torch kept, spent; the lantern lit, burnt 20 minutes, filled from the flask (the oil moved: the lantern whole again, the flask the less), its six hours the status line\'s; the spent torch put down, the spare lit (the spent one passed over), the spent one taken up and dipped in the oil (renewed, an hour\'s again, the flask the less); at seed 7 a chapel\'s candle stubs found with some life left (the maker\'s, by the stratum\'s age: less than a whole one\'s), lit, put down, and seen to gutter and go out (TE_OUT, one seen lying there: E_LIGHT at its square, the stubs gone, burnt away; the wait not stopped)',
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k lantern',
+        'wait 45 minutes', 'wait 10 minutes', 'wait 10 minutes', 'look', 'light the lantern', 'wait 20 minutes', 'fill the lantern', 'drop the torch',
+        'light torch', 'get the torch', 'dip the torch in the oil', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -T', 'look', 'wait 2 minutes', 'get the candle stubs', 'light the candle stubs', 'drop the candle stubs', 'wait 10 minutes', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K, I = DQ0_I;
+        const named = (st, n) => dq0Carried(st).filter(i => i.name === n);
+        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k lantern');
+        if (!g.after) return ['the first game not begun'];
+        const kit = g.after, torches = named(kit, 'torch'), flask = named(kit, 'flask of oil')[0], lantern = named(kit, 'lantern')[0];
+        if (torches.length !== 2 || torches.filter(i => i.flags & I.LIT).length !== 1 || !torches.every(i => i.fuel === 60)) f.push('the kit not a torch lit and a spare, an hour each: ' + JSON.stringify(torches.map(i => [i.flags, i.fuel])));
+        if (!flask || flask.fuel !== 360) f.push('the kit\'s flask of oil not a lantern\'s fill (360 minutes): ' + (flask && flask.fuel));
+        if (!lantern || lantern.fuel !== 360) f.push('the lantern not full: ' + (lantern && lantern.fuel));
+        const w1 = T.of('wait 45 minutes'), w2 = T.after(w1, 'wait 10 minutes'), w3 = T.after(w2, 'wait 10 minutes');
+        if (dq0Ev(w1, 'E_TASK', { te: v => v === 'TE_LOW' || v === 'TE_OUT' }).length) f.push('a light told before its last ten minutes (' + dq0Evs(w1) + ')');
+        if (!w1.after || w1.after.pc.fuel !== 15) f.push('the torch\'s minutes left not 15 at 45 minutes: ' + (w1.after && w1.after.pc.fuel));
+        dq0Need(f, w2, 'E_TASK', { te: 'TE_LOW', lamp: K.KI_TORCH, seen: false }, 'the torch not told burning low');
+        dq0Never(f, w2, 'E_TASK', { te: 'TE_OUT' }, 'the torch out before the hour');
+        const out1 = dq0Ev(w3, 'E_TASK', { te: 'TE_OUT', lamp: K.KI_TORCH, task: 'LT_WAIT' });
+        if (out1.length !== 1) f.push('the torch not gone out at the hour, the wait stopped with it (' + dq0Evs(w3) + ')');
+        else if (out1[0].t !== 36000) f.push('the torch out at ' + out1[0].t + ' tenths, not the hour');
+        dq0Need(f, w3, 'E_VIEW', { why: 'V_DARK' }, 'no look in the dark as it went out');
+        const spent = w3.after && named(w3.after, 'torch').find(i => !i.fuel);
+        if (!w3.after || w3.after.pc.light || !w3.after.sight || !w3.after.sight.dark) f.push('the character not in the dark, its only light gone');
+        if (!spent || (spent.flags & I.LIT)) f.push('the torch not kept, spent and out');
+        if (w3.after && w3.after.now >= 36600) f.push('the wait not stopped as the torch went out: the clock at ' + w3.after.now);
+        inTurn(s, ['> wait 10 minutes', 'Your torch is burning low.', '> wait 10 minutes', 'Your torch gutters and goes out: you stop waiting.', 'It is dark.',
+          '> look', 'It is dark.'], f, 'the torch\'s words: ');
+        const lit = T.of('light the lantern'), w4 = T.after(lit, 'wait 20 minutes'), fl = T.of('fill the lantern');
+        const lan = st => st && named(st, 'lantern')[0], fla = st => st && named(st, 'flask of oil')[0];
+        if (!lan(w4.after) || lan(w4.after).fuel !== 340 || !(lan(w4.after).flags & I.LIT)) f.push('the lantern not burnt 20 minutes: ' + JSON.stringify(lan(w4.after)));
+        if (!dq0Rep(fl, 'ireq', { kind: 'IO_FILL', result: 'IR_OK' }).length) f.push('the lantern not filled (' + JSON.stringify(fl.replies.filter(r => r.req === 'ireq').map(r => r.kind + ' ' + r.result)) + ')');
+        if (!lan(fl.after) || lan(fl.after).fuel !== 360 || !fla(fl.after) || fla(fl.after).fuel !== 340) f.push('the oil not moved to the lantern: ' + JSON.stringify([lan(fl.after), fla(fl.after)].map(i => i && i.fuel)));
+        inTurn(s, ['> fill the lantern', 'You fill the lantern from the flask of oil.'], f, 'the fill\'s words: ');
+        if (!/lantern 6h00m/.test(out)) f.push('the status line not the lantern\'s six hours ("lantern 6h00m")');
+        if (!/torch 1h00m/.test(out) || !/torch 15m/.test(out)) f.push('the status line not the torch\'s minutes ("torch 1h00m", "torch 15m")');
+        const dr = T.of('drop the torch'), lt = T.of('light torch'), gt = T.of('get the torch'), dip = T.of('dip the torch in the oil');
+        if (!dq0Here(dr.after).some(i => i.name === 'torch' && !i.fuel)) f.push('the spent torch not put down');
+        const lt2 = lt.after && named(lt.after, 'torch')[0];
+        if (!lt2 || !(lt2.flags & I.LIT) || lt2.fuel !== 60) f.push('the spare torch not lit: ' + JSON.stringify(lt2));
+        if (!dq0Rep(gt, 'ireq', { kind: 'IO_GET', result: 'IR_OK' }).length) f.push('the spent torch not taken up');
+        const both = dip.after ? named(dip.after, 'torch') : [];
+        if (!dq0Rep(dip, 'ireq', { kind: 'IO_FILL', result: 'IR_OK' }).length || both.length !== 2 || !both.every(i => i.fuel === 60) ||
+          !fla(dip.after) || fla(dip.after).fuel !== 280) f.push('the spent torch not renewed from the oil: ' + JSON.stringify([...both, fla(dip.after)].map(i => i && i.fuel)));
+        inTurn(s, ['> dip the torch in the oil', 'You soak the torch in the flask of oil.'], f, 'the dip\'s words: ');
+        const g2 = T.of('dq0 -p t -s 7 -c /ram/c.hm -T'), lk = T.after(g2, 'look'), stub = st => st && st.items.find(i => i.name === 'candle stubs' && i.sn === st.pc.sn);
+        const found = stub(lk.after);
+        if (!found || !found.id || found.where !== 'IW_SQUARE' || !(found.fuel > 0 && found.fuel < 25)) f.push('the chapel\'s candle stubs not found with some life left, less than a whole one\'s: ' + JSON.stringify(found));
+        const ls = T.of('light the candle stubs'), ds = T.of('drop the candle stubs'), w5 = T.after(ds, 'wait 10 minutes');
+        if (!stub(ls.after) || !(stub(ls.after).flags & I.LIT)) f.push('the stubs not lit');
+        if (!dq0Here(ds.after).some(i => i.name === 'candle stubs' && (i.flags & I.LIT))) f.push('the stubs not put down lit');
+        dq0Need(f, w5, 'E_TASK', { te: 'TE_OUT', lamp: K.KI_STUBS, seen: true }, 'the stubs lying there not seen to go out');
+        dq0Need(f, w5, 'E_LIGHT', { w1: ds.after && ds.after.pc.x, w2: ds.after && ds.after.pc.y }, 'no E_LIGHT at their square, the light layer out of date');
+        if (stub(w5.after)) f.push('the stubs not burnt away: ' + JSON.stringify(stub(w5.after)));
+        if (!w5.after || w5.after.now - ds.after.now < 6000) f.push('the wait stopped by a light it doesn\'t carry');
+        inTurn(s, ['> wait 10 minutes', 'The candle stubs gutter and go out.'], f, 'the stubs\' words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0flee', what: 'Dingus Quest Zero\'s unarmed blows and morale (the user\'s, 2026-10-16: punching, kicking, head butts, the referee\'s gear.c, by Unarmed; RS_MORALE, HarnMaster\'s Initiative test, Combat 18), by the blows told and the denizens\' state (the referee\'s dice at this seed): at seed 5\'s giant rats (bare fists: the character\'s Unarmed 80) a punch fought on (HOUSE.md\'s fighting on, the user\'s, 2026-10-20: every blow of it a punch, the hub\'s pc_strike), the rat and its kin turning on the character, a punch felling one; its kin shaken and, shy, fleeing (fighting no more, no foe left beside it); the one down finished with a kick; the other gone out of reach, a head butt at it not struck (dq0unarmed\'s, in it; a kick, a head butt and punches typed one by one before fighting on)',
       init: 't_rc', cycles: 900e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml una 80 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -T', 'd',
@@ -4593,7 +4663,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0load', what: 'Dingus Quest Zero\'s load (the user\'s, 2026-10-16), by the things\' weights (the catalogue\'s, all the character carries) and the referee\'s summary (its load: HarnMaster\'s encumbrance, the load over its endurance, as the game\'s bands): the kit alone 7 lb, a little burdened; with a pick, a shovel, a rope, a sword and bones (dq0 -k) 33 lb, heavily burdened; some put down, 15 lb, a little burdened again (the sheet\'s penalties the referee\'s, its unit tests\'; the words: dq0wordsthings)',
+      name: 'dq0load', what: 'Dingus Quest Zero\'s load (the user\'s, 2026-10-16), by the things\' weights (the catalogue\'s, all the character carries) and the referee\'s summary (its load: HarnMaster\'s encumbrance, the load over its endurance, as the game\'s bands): the kit alone 9 lb (its spare torch and flask of oil, D5\'s, slice 4.1), a little burdened; with a pick, a shovel, a rope, a sword and bones (dq0 -k) 35 lb, heavily burdened; some put down, 17 lb, a little burdened again (the sheet\'s penalties the referee\'s, its unit tests\'; the words: dq0wordsthings)',
       init: 't_rc', cycles: 700e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -k pick,shovel,rope,sword,bones', 'drop rope', 'drop shovel', 'drop sword', 'quit', 'echo $status']) },
@@ -4603,7 +4673,7 @@ module.exports = {
         // the catalogue's, as the things weigh them)
         const T = dq0Turns(m), f = [], lb = s => dq0Carried(s).reduce((w, i) => w + i.weight * (i.kflags & 0x40 ? 1 : Math.max(1, i.qty)), 0) / 4, load = s => s ? s.sum.load : -1;
         const k = T.of('dq0 -p t -s 3 -c /ram/c.hm').after, h = T.of('dq0 -p t -s 3 -c /ram/c.hm -k pick,shovel,rope,sword,bones').after, d = T.of('drop sword').after;
-        for (const [s, w, l, what] of [[k, 7, 1, 'the kit alone'], [h, 33, 2, 'with the things more'], [d, 15, 1, 'some put down']]) {
+        for (const [s, w, l, what] of [[k, 9, 1, 'the kit alone'], [h, 35, 2, 'with the things more'], [d, 17, 1, 'some put down']]) {
           if (!s || lb(s) !== w) f.push(what + ': ' + (s && lb(s)) + ' lb carried, not ' + w);
           if (load(s) !== l) f.push(what + ': load ' + load(s) + ', not ' + l + ' (1 a little burdened, 2 heavily)');
         }

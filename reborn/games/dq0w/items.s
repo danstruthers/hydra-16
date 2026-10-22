@@ -1,6 +1,6 @@
 ; ****************************************************************************
 ; items.s - (dq0w) the item store's records reached quickly (things.c's; the senses' too): item_at (), a record's
-; bank in the window and the record, without cc65's multiplying (22 bytes a record); and items (), the next record
+; bank in the window and the record, without cc65's multiplying (24 bytes a record); and items (), the next record
 ; after one that's in use and where it's asked for (in a thing, on a square ...: a bit of each, IN_*), by the x it's
 ; at (or by its flags), found by going down the banks in assembly (a look about, an inventory, went through every
 ; record in C a few times over: two seconds of an inventory).  hub.h's ITEM_BANK, ITEM_AT and items.h's struct item
@@ -13,9 +13,9 @@
             .import     _hub_map, incsp3
             .importzp   sp, ptr1
 
-REC         = 22                            ; sizeof (struct item)
-PER_BANK    = 372                           ; Records a bank (0x2000 / 22)
-NITEMS      = 744                           ; (ITEM_BANKS of them)
+REC         = 24                            ; sizeof (struct item)
+PER_BANK    = 341                           ; Records a bank (0x2000 / 24)
+NITEMS      = 682                           ; (ITEM_BANKS of them)
 BANK0       = 14                            ; ITEM_BANK (0): CAT_BANK + 1
 LAST_BANK   = BANK0 + 1
 END         = $8000 + PER_BANK * REC      ; (A bank's records' end)
@@ -43,7 +43,7 @@ _item_at:
             ldx         _ip + 1
             rts
 
-; Record at's bank in the window, ip the record (at the bank's own: $8000 + its place there times 22)
+; Record at's bank in the window, ip the record (at the bank's own: $8000 + its place there times 24)
 find:
             ldx         #BANK0
             lda         at
@@ -53,7 +53,7 @@ find:
             lda         at + 1
             sbc         #>PER_BANK
             bcc         @first
-            inx                             ; (The second bank's: at - 372)
+            inx                             ; (The second bank's: at - 341)
             sty         _ip
             sta         _ip + 1
             jmp         @mul
@@ -62,26 +62,19 @@ find:
             lda         at + 1
             sta         _ip + 1
 @mul:       stx         bank
-            asl         _ip                 ; Its place times 2, kept in ptr1,
-            rol         _ip + 1
-            lda         _ip
-            sta         ptr1
-            lda         _ip + 1
-            sta         ptr1 + 1
-            asl         _ip                 ;   times 4, added (6),
-            rol         _ip + 1
-            lda         _ip
-            clc
-            adc         ptr1
-            sta         ptr1
-            lda         _ip + 1
-            adc         ptr1 + 1
-            sta         ptr1 + 1
-            asl         _ip                 ;   times 16,
+            asl         _ip                 ; Its place times 8, kept in ptr1,
             rol         _ip + 1
             asl         _ip
             rol         _ip + 1
-            lda         _ip                 ;   and the two: times 22, from $8000
+            asl         _ip
+            rol         _ip + 1
+            lda         _ip
+            sta         ptr1
+            lda         _ip + 1
+            sta         ptr1 + 1
+            asl         _ip                 ;   times 16,
+            rol         _ip + 1
+            lda         _ip                 ;   and the two: times 24, from $8000
             clc
             adc         ptr1
             sta         _ip
@@ -155,7 +148,7 @@ _items:
             sta         ptr1
             bcc         @left
             inc         ptr1 + 1
-@left:      lda         ptr1 + 1            ;   to the bank's end ($8000 + 372 * 22)
+@left:      lda         ptr1 + 1            ;   to the bank's end ($8000 + 341 * 24)
             cmp         #>END
             bne         @look
             lda         ptr1

@@ -14,8 +14,8 @@
 /* What a thing's made of: its resistance to each kind of harm (0 none ... 9 all but proof: the referee's impact, not a
 ** difficulty), and its toughness (the durability a quarter pound of it gives, at middling quality) */
 enum { MT_NONE, MT_WOOD, MT_IRON, MT_STEEL, MT_BRONZE, MT_LEATHER, MT_CLOTH, MT_BONE, MT_CLAY, MT_STONE, MT_GLASS,
-    MT_SILVER, MT_OTHER, NMATS };
-#define MAT_TOUGH       { 1, 3, 6, 8, 5, 3, 1, 2, 1, 8, 1, 4, 1 }
+    MT_SILVER, MT_OTHER, MT_WAX, MT_TALLOW, NMATS };    /* (Beeswax and tallow: a candle's, slice 4.1's) */
+#define MAT_TOUGH       { 1, 3, 6, 8, 5, 3, 1, 2, 1, 8, 1, 4, 1, 1, 1 }
 enum { DM_BLUNT, DM_EDGE, DM_POINT, DM_FIRE, DM_COLD, DM_ACID, NDMG };  /* Kinds of harm (the referee's, by aspect) */
 struct material {
     char            name[8];
@@ -24,7 +24,7 @@ struct material {
 };
 
 /* A kind of thing (the catalogue's: a stand-in for the theme's data), in rs.h's units */
-#define NKINDS          64
+#define NKINDS          68
 struct kind {
     char            name[14];                   /* "torch", "backpack" ... */
     unsigned char   flags;                      /* K_* */
@@ -72,6 +72,8 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_MACE, KI_SPEAR, KI_SHIELD,               /* Weapons (the referee's by their keys) */
     KI_POT, KI_STRAW, KI_STUBS, KI_WELL,        /* What a room's use left (dq0m/uses.c): a kitchen's pot, a barracks'
                                                 **   straw, a chapel's candle stubs; a well, fixed */
+    KI_OIL, KI_PITCH,                           /* A light's fuel (slice 4.1's): a flask of oil (a lantern's, a
+                                                **   torch's), a pot of pitch (a torch's) */
     KI_SCONCE,                                  /* A room's sconce, on its wall (slice 4.1's: the maker's, fixed): a
                                                 **   torch in it, lit and tended where the room's kept, else cold */
     KI_COUNT };
@@ -102,6 +104,10 @@ struct item {
     unsigned char   size;                       /* Its measure, where it matters (a portal's part's: its portal's
                                                 **   opening, world.h's: feet, its width the low four bits; or 0) */
     unsigned char   thick;                      /*   and its thickness, in eighths of an inch (or 0) */
+    unsigned        fuel;                       /* A light's burning left, minutes (0: burnt out; or not its own yet,
+                                                **   its life decided as it's made its own), the world's as it burns
+                                                **   (DUNGEON.md: light; HOUSE.md's burning); a fuel's (a flask of
+                                                **   oil, a pot of pitch), what's in it, in the same minutes */
 };
 #define SC_LIT          0x01                    /* (A sconce's hide: its room lit by it, as the world last made it; */
 #define SC_NOW          0x02                    /*   a light in it lit now, the world's pass's mark) */
@@ -177,6 +183,11 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
                                                 **   it went back in qty (TH_*), where it lies in x, y (the world's
                                                 **   throw: the catalogue's throws, its reach; the referee's test) */
 enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark, missed it, fell short of it) */
+#define IO_FILL         (IO_BAR + 6)            /* A light renewed (name: a lantern filled, a torch dipped) from a fuel
+                                                **   (into: a flask of oil, a pot of pitch; "": the first carried that
+                                                **   it takes), as much as it has room for: the things' words of it in
+                                                **   things_text, the time it took back in x (tenths); IR_NO refused,
+                                                **   the words why */
 #define IO_PUZZLE       (IO_BAR + 4)            /* A command of the theme's puzzle's (theme.h), judged by its rules
                                                 **   (the world's): to its verb (TR_*), name the thing (into the other:
                                                 **   combine name with into, put name on into; read name; use name on
