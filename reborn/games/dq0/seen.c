@@ -128,10 +128,11 @@ static unsigned char __fastcall__ alike (unsigned char i, unsigned char k)
 /* The things it sees lying about: "On the floor ahead lies a pick." "At your feet lie some bones." "On the table
 ** lies a candle." (a surface's things after it, hid 2); "At your feet lies a lit torch." (hid 4); one too far off to
 ** make out (by its size, hid's high bits, and the character's sight), only by its size: "On the floor ahead lies
-** something small." (and nothing on it told); none behind it */
+** something small." (and nothing on it told); none behind it; a sconce on the wall, what's in it with it: "On the wall
+** to your left is a sconce, a lit torch in it." (part 8's words for where it is, its verb with them: lie_words's 2) */
 static void items (void)
 {
-    unsigned char i, k, n, on = 0, sz, b, skip = 0;
+    unsigned char i, k, n, on = 0, sz, b, skip = 0, w = 0;
     unsigned q;
 
     for (i = 0; i < S->nitems; ++i) {
@@ -143,11 +144,17 @@ static void items (void)
             if (skip) {
                 continue;                       /* (On a thing behind it, or too far to make out) */
             }
-            add (" On the ");
-            add (S->item[on].name);
-            add (" ");
+            if (w) {
+                --lbe;                          /* (In a sconce: its sentence's, its full stop still in lb) */
+                add (", ");
+            } else {
+                add (" On the ");
+                add (S->item[on].name);
+                add (" ");
+            }
         } else {
             on = i;
+            w = 0;
             if ((skip = REL_BEHIND (S->item[i].rel)) != 0) {
                 continue;
             }
@@ -164,8 +171,9 @@ static void items (void)
             if (k < S->nitems) {
                 continue;
             }
-            if (lie_words (i)) {
-                add (where_w);                  /* (In a corner, against a wall: part 8's) */
+            if ((w = lie_words (i)) != 0) {
+                add (where_w);                  /* (In a corner, against a wall, on the wall: part 8's) */
+                w >>= 1;
             } else {
                 add (S->item[i].hid & 1 ? (S->item[i].rel == 0xFF ? " Hidden at your feet " : " Hidden on the floor ") :
                     S->item[i].rel == 0xFF ? " At your feet " : " On the floor ");
@@ -190,7 +198,7 @@ static void items (void)
             add (sz <= 2 ? "lies something small." : sz >= 5 ? "lies something large." : "lies something.");
             continue;
         }
-        add (S->item[i].plural || q > 1 ? "lie " : "lies ");
+        add (w ? "" : S->item[i].plural || q > 1 ? "lie " : "lies ");
         if (q > 1) {
             addn (q);
             add (" ");
@@ -200,7 +208,7 @@ static void items (void)
         }
         add (S->item[i].hid & 4 ? "lit " : "");
         add (S->item[i].name);
-        add (".");
+        add (w && (S->item[i].hid & 2) ? " in it." : ".");
     }
 }
 

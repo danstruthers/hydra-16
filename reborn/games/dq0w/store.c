@@ -11,10 +11,11 @@
 ** stocked twice.  All under the hub's change_lock (the maker reads them meanwhile), never held while the maker's asked
 ** for anything.
 **
-** The rarer work is swapped part 4's (../dq0/swap.inc, bank.s's stubs): the chunks stocked marked, the UI's requests
-** (the save, a portal looked at closely); the files' work part 18's (wfile.c: a region read in, a page made room for,
-** a region written back, a version of its file each time; the save's; the game begun: its generation, its stamps); a
-** square's record of a kind looked up, part 19's (wfile.c's store_get: a hole dug part way, DUG, as a dig begins).
+** The rarer work is swapped part 4's (../dq0/swap.inc, bank.s's stubs): the chunks stocked marked (their kept rooms'
+** lights kept, wkept.c's), the UI's requests (the save, a portal looked at closely); the files' work part 18's
+** (wfile.c: a region read in, a page made room for, a region written back, a version of its file each time; the
+** save's; the game begun: its generation, its stamps); a square's record of a kind looked up, part 19's (wfile.c's
+** store_get: a hole dug part way, DUG, as a dig begins).
 */
 
 #include <fcntl.h>
@@ -198,8 +199,9 @@ void stocks (void)
 #pragma rodata-name (push, "SW4RODATA")
 
 /* The chunks the maker stocked (their slots CS_FRESH), in the order it stocked them (each one's list's seq): their
-** things put down (things.c's), and marked so, a record each (STOCKED, its first square), their slots as any other's
-** (the hub's header in the window after) */
+** things put down (things.c's), and marked so, a record each (STOCKED, its first square), their slots as any other's;
+** their kept rooms' lights kept (their torches lit, the maker's R_LIT: a record of it) (the hub's header in the window
+** after) */
 void s_stocked (void)
 {
     struct cslot* c;
@@ -228,6 +230,8 @@ void s_stocked (void)
             rec.elev = 0;
             rec.link = STOCKED;
             store_put ();
+            sconce_lights (SL_STOCKED);             /* (Its kept rooms' lights: a record each, wkept.c's; rec's square
+                                                **   the chunk's first) */
             hub_map (WORLD_BANK);
             WREC->cslot[k].used = 1;
         }

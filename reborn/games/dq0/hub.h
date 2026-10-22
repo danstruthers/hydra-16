@@ -36,7 +36,7 @@
                                                 **   I_STOP's w1; 10: the lights burning, pc_fuel, pc_left, TE_LOW,
                                                 **   TE_OUT; the items' records' fuel; the traces, I_TRACE, I_TROD,
                                                 **   I_SWEPT, V_TRACED, the traces' journal, TJ_AT, the UI bank's
-                                                **   tread, dsense's nose) */
+                                                **   tread, dsense's nose; the places kept lit, KEPT_AT) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -147,6 +147,31 @@ struct tread {
     unsigned char   ntr;
     struct trail    tr[NTRAILS];
 };
+
+/* The places kept lit (DUNGEON.md: light kept), in DEN_BANK after the traces' journal: the denizens' task's, written as
+** it decides a stratum's populations (each lair of a kind that keeps lights, kinds.txt's f: its chunk, its keepers'
+** range, how many of them live), read by the maker as it first stocks a chunk (a room within a keeping's range has a
+** sconce, its torch lit and tended: stock.c's) and by the world (a keeping gone, its torches no longer tended: they
+** burn down from then).  Each stratum marked as its populations are decided: the world waits for that before a
+** stratum's first chunk is made, so a chunk's always stocked the same.  Kept with the game (the denizens' dens.dat,
+** after their bank) */
+#define NKEPT           64
+struct keep {
+    unsigned char   sn;                         /* Its stratum */
+    unsigned char   range;                      /* The squares about its chunk's middle its keepers keep lit (their
+                                                **   kind's range, kinds.txt's) */
+    unsigned char   live;                       /* Its keepers alive (0: gone, all dead: kept no longer) */
+    unsigned char   cx, cy;                     /* Its lair's chunk */
+    unsigned        lid;                        /* Its lair's number (the denizens' records') */
+};
+struct kept {
+    unsigned char   done[32];                   /* Each stratum's populations decided (a bit each: KEPT_DONE) */
+    unsigned char   n;                          /* The keepings */
+    unsigned char   gen;                        /* Counted on as one's gone */
+    struct keep     at[NKEPT];
+};
+#define KEPT_AT         ((struct kept*) (TJ_AT + 1))
+#define KEPT_DONE(k, n) ((k)->done[(n) >> 3] & 1 << ((n) & 7))
 
 /* A name the character's given (the UI's, dq0/names.c: DUNGEON.md's names), in the theme bank (NAMES_AT): a thing
 ** ("name my sword Linda": by its id, struct item's, never another's), a room ("call this room the Mausoleum": by
@@ -1004,7 +1029,8 @@ struct wsave {
 **   own chunk.tile maker +senses +world                        (Its squares: the senses' memory in them, seen and
 **                                                                seen now; the world's changes, a square dug, a pit
 **                                                                opened, store.c's change, the seen mark kept)
-**   own chunk.room[*].flags maker +senses                      (A room's: R_VISITED, the senses' memory, come into)
+**   own chunk.room[*].flags maker +senses +world               (A room's: R_VISITED, the senses' memory, come into;
+**                                                                R_LIT, its sconce's light, the world's ROOM_LIT)
 **   own chunk.portal maker +world                              (Made from the seed; worked by the world, each change
 **   own chunk.trap maker +world                                (made in the chunk as it keeps its record: a state,
 **   own chunk.elev maker +world                                (a harm, a square dug, an opening: dq0w/store.c)
@@ -1016,6 +1042,7 @@ struct wsave {
 **   own bank(DEN_BANK,SND_AT,FIGHT_AT) sound +ui               (The sounds: the UI clears them)
 **   own bank(DEN_BANK,FIGHT_AT,FIGHT_AT+NFIGHTS) world         (The fights' words)
 **   own bank(DEN_BANK,TJ_AT,TJ_AT+1) world                     (The traces' journal: the passings, slice 4.1's)
+**   own bank(DEN_BANK,KEPT_AT,KEPT_AT+1) denizens +ui           (The places kept lit: the UI clears them)
 **   own bank(LOOK_BANK) senses
 **   own bank(THEME_BANK) ui                                    (The theme, and the names given)
 **   own bank(THEME_BANK,THEME_PLACE,NAMES_AT) maker            (The pieces' places)
@@ -1067,8 +1094,8 @@ typedef char dq0c_fits[offsetof (struct hub, sem) == HUBO_SEM && offsetof (struc
                        offsetof (struct cq, face) == CQO_FACE && NTASKS == 8 ? 1 : -1];
 typedef char recs_fit[sizeof (struct sight) <= 0x1000 && sizeof (struct uirec) <= 0x2000 &&
                       sizeof (struct wrec) <= 0x2000 ? 1 : -1];
-typedef char snd_fits[(char*) (TJ_AT + 1) - (char*) 0x8000 <= 0x2000 ? 1 : -1];   /* (DEN_BANK's: the traces'
-                                                **   journal last) */
+typedef char snd_fits[(char*) (KEPT_AT + 1) - (char*) 0x8000 <= 0x2000 ? 1 : -1];   /* (DEN_BANK's: the places
+                                                **   kept last) */
 
 /* hub.c */
 int __fastcall__ hub_create (unsigned char banks);      /* The UI's: the segment, its doorbells: 0, or -1 */

@@ -23,9 +23,9 @@
 struct stock sk;
 static unsigned sx0, sy0;
 
-/* A thing put down on a square (concealed: hide, its difficulty in steps; else ST_SHOWN), listed: its entry, or 0 (the
-** list full) */
-static struct sthing* __fastcall__ put_down (unsigned char kind, unsigned char sn, unsigned x, unsigned y,
+/* A thing put down on a square (concealed: hide, its difficulty in steps; else ST_SHOWN; or in the one before it,
+** ST_IN, ST_LIT: a sconce's torch), listed: its entry, or 0 (the list full) */
+struct sthing* __fastcall__ put_down (unsigned char kind, unsigned char sn, unsigned x, unsigned y,
     unsigned char qty, unsigned char hide)
 {
     struct sthing* e;

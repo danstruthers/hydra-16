@@ -81,6 +81,8 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "flask of oil", K_HAND, 4, 1, 0, 0, 0, 0, 1, "", MT_CLAY, AP_POTTERY, 3 },   /* (A light's fuel: a lantern's
                                                 **   fill, a torch's; slice 4.1's, the stopped branch's) */
     { "pot of pitch", K_HAND, 6, 2, 0, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 2 },   /* (A torch's) */
+    { "sconce", 0, 6, 2, 3, 8, 0, 0, 12, "", MT_IRON, AP_METAL, 4, KF_ON | KF_FIXED },  /* (On a room's wall, fixed: a
+                                                **   torch in it, the maker's: DUNGEON.md, light kept) */
 };
 
 /* How each light burns (DUNGEON.md: light; HOUSE.md's burning, slice 4.1's): its kind; how long a whole one burns
@@ -108,7 +110,8 @@ const unsigned char throws[KI_COUNT] = {
     1, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1,            /* leather cap ... hobnail boots: armour (a helm, boots, a cap) */
     1, 4, 1,                                    /* mace, spear (a javelin's), shield */
     1, 0, 2, 0,                                 /* pot, straw, stubs, well */
-    2, 1                                        /* flask of oil, pot of pitch */
+    2, 1,                                       /* flask of oil, pot of pitch */
+    0                                           /* sconce */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 

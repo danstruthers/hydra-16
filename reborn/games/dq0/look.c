@@ -268,12 +268,19 @@ unsigned char s_room_where (void)
 
 /* A thing seen lying in the character's room (sight_copy's item i), not hidden nor at its feet: on the floor's edge,
 ** its words for seen.c into where_w (a space before them: "In the far left corner ", "Against the wall to your left "):
-** 1; else 0 */
+** 1; else 0.  A sconce (DUNGEON.md: light kept) on a wall, the way it lies (the nearest of four), the verb with it
+** ("On the wall to your left is ", "On the wall beside you is "): 2 */
 unsigned char __fastcall__ s_lie_words (unsigned char i)
 {
     static const char* const wall_[4] = { "wall ahead ", "wall to your right ", "wall behind you ", "wall to your left " };
     unsigned char dx, dy, q, k;
 
+    if (!strcmp (SC.item[i].name, "sconce")) {
+        strcpy (where_w, " On the wall ");
+        strcat (where_w, SC.item[i].rel == 0xFF ? "beside you " : wall_[((SC.item[i].rel + 1) & 7) >> 1] + 5);
+        strcat (where_w, "is ");
+        return 2;
+    }
     dx = SC.item[i].x - SC.rx;
     dy = SC.item[i].y - SC.ry;
     if ((SC.item[i].hid & 1) || SC.item[i].rel == 0xFF || SC.where != W_ROOM || SC.size == S_PART || SC.rw < 3 || SC.rh < 3 || dx >= SC.rw || dy >= SC.rh) {

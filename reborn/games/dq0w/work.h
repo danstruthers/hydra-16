@@ -11,6 +11,12 @@
 void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
     unsigned char link);                        /* Kept, and made in its chunk (the window moved) */
 void stocks (void);                             /* The chunks the maker stocked marked so (STOCKED) */
+void __fastcall__ kept_wait (unsigned char n);  /* (Part 28's) Stratum n's populations waited for (the denizens') */
+unsigned char __fastcall__ sconce_lights (unsigned char reach);  /* (Part 28's: wkept.c) The rooms' lights by their
+                                                **   sconces' (the chunks round the character, reach 0xFF; the chunk just
+                                                **   stocked, SL_STOCKED, its first square rec's; else those within
+                                                **   reach): 1 if one changed */
+#define SL_STOCKED      0xFE
 void answer (void);                             /* The hub's wreq answered (part 4's) */
 void world_keep (void);                         /* (Part 16's: wgame.c) The world's part of the save, world.dat */
 void pc_asked (void);                           /* (Part 16's) The hub's wreq, WQ_START's or WQ_SET's, answered */

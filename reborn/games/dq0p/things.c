@@ -152,9 +152,10 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
     }
 }
 
-/* The lit things lying about (on squares within LAMP_FAR of (x, y), on surfaces there), the light layer's lamps
-** (light.c's: their squares, their reach); and those within LAMP_R, view.c's (the chunks round them reached); and
-** in the same pass of the store, the records lying on squares near it, for things_seen (nearv) */
+/* The lit things lying about (on squares within LAMP_FAR of (x, y), on surfaces there; but in a sconce: its room's
+** own light), the light layer's lamps (light.c's: their squares, their reach); and those within LAMP_R, view.c's (the
+** chunks round them reached); and in the same pass of the store, the records lying on squares near it, for
+** things_seen (nearv) */
 #define LAMP_R          28
 #pragma code-name (push, "SW1CODE")             /* (Part 1's: once a look, bank.s's stub) */
 #pragma rodata-name (push, "SW1RODATA")
@@ -190,8 +191,8 @@ void __fastcall__ s_things_lamps (unsigned char sn, unsigned x, unsigned y)
         }
         fetch (&rec, i);
         if (!(s = lying (&rec)) || s->sn != sn || s->x - x + LAMP_FAR > 2 * LAMP_FAR ||
-            s->y - y + LAMP_FAR > 2 * LAMP_FAR) {
-            continue;
+            s->y - y + LAMP_FAR > 2 * LAMP_FAR || s->kind == KI_SCONCE) {
+            continue;                           /* (A sconce's torch lit: its room's own light, R_LIT, the world's) */
         }
         r = kind_of (rec.kind)->light;
         light_lamp (s->x, s->y, r);

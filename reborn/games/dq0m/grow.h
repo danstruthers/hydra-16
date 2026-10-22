@@ -6,7 +6,8 @@
 /* A style's proportions (DUNGEON.md): what its growers make, and how often; each a chance in so many (its own die's
 ** sides, as noted), or weights.  The maker's records (uses.c's styles), till the theme's data gives them */
 struct style {
-    unsigned char   lit;                        /* A room lit by its own light: in 8, one fewer each stratum down */
+    unsigned char   lit;                        /* A room built with sconces (lit only if it's kept: fixtures.c's):
+                                                **   in 8, one fewer each stratum down */
     unsigned char   zones, zones3;              /* A long room (6 squares) in zones: in 10; three (9 squares): in 3 */
     unsigned char   slope;                      /* A zone's floor sloping: in 4 */
     unsigned char   ceil[6];                    /* Ceilings by kind (C_FLAT ... C_ROUGH): weights, summing to 20 */
@@ -61,6 +62,10 @@ unsigned char crossings (void);
 void __fastcall__ grow_built (struct chunk* c, const struct edges* e, unsigned long seed);  /* (Overlay 1's) */
 void __fastcall__ grow_caves (struct chunk* c, const struct edges* e, unsigned long seed);  /* (Overlay 3's) */
 void __fastcall__ fixtures (struct chunk* c);   /* Its materials, windows, portcullises, traps (overlay 5's) */
+void __fastcall__ sconces (struct chunk* c, unsigned x0, unsigned y0);  /* Its rooms' sconces, as it's first stocked
+                                                **   (part 3's, sconce.c: after stock's, in its list) */
+struct sthing* __fastcall__ put_down (unsigned char kind, unsigned char sn, unsigned x, unsigned y,
+    unsigned char qty, unsigned char hide);    /* (stock.c's: a thing listed in sk) */
 void __fastcall__ place_pieces (unsigned char n);   /* The theme's pieces in stratum n given their places, as its plan
                                                 **   is grown (overlay 4's: plan.c) */
 

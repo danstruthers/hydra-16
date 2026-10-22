@@ -128,6 +128,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
         stock (c, x, y);                        /* (Its things listed, the first time it's made: the world puts them
                                                 **   down and marks it so, STOCKED, as it finds its slot CS_FRESH, in
                                                 **   the order they were stocked) */
+        sconces (c, x, y);                      /* (Its rooms' sconces, their torches lit where they're kept) */
         sk.seq = ++stocks;
         hub_put (WORLD_BANK, &WREC->stock[k], &sk, sizeof sk - sizeof sk.e + sk.n * sizeof sk.e[0]);
         u = CS_FRESH;

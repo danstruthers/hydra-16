@@ -3674,10 +3674,10 @@ module.exports = {
       // (Seed 7: the kitchen the character begins in lit by its own torches; its south door's dart trap set off as
       // it's opened, then down the passage into a dark hall and to its far side, 14 squares from the kitchen's door,
       // facing back up the passage: a weak-eyed character's look reaches 4)
-      name: 'dq0glow', what: 'Dingus Quest Zero\'s lights seen far off and eyes adapting to the dark (DUNGEON.md: perception as layers; the user\'s, 2026-10-16: "if I am standing in the dark, I should be able to see other light sources from much further away"; eyes take minutes to the dark), by what the character perceives (the senses\' record: the lights far off, the eyes dazzled): at seed 7, a weak-eyed character (Eyesight 4: its look reaches 4 squares) in a dark hall 14 squares from the lit kitchen\'s open door, up a straight passage: holding its torch, no light far off (its eyes used to the torch\'s light); its torch put out: at once nothing far off (its eyes still used to the torch), after 2 minutes still nothing, after 3 minutes and 20 seconds a faint glow far off ahead, after 5 minutes a light (16 b / (4 + a): 19 squares, its eyes used to the dark; the eyes the senses\', a 16th of a light level each 1.9 s darker); its torch lit again, dazzled a moment, and the light lost (dq0dark\'s, in it)',
+      name: 'dq0glow', what: 'Dingus Quest Zero\'s lights seen far off and eyes adapting to the dark (DUNGEON.md: perception as layers; the user\'s, 2026-10-16: "if I am standing in the dark, I should be able to see other light sources from much further away"; eyes take minutes to the dark), by what the character perceives (the senses\' record: the lights far off, the eyes dazzled): at seed 7, a weak-eyed character (Eyesight 4: its look reaches 4 squares) in a dark hall 14 squares from the lit kitchen\'s open door (lit by its sconce\'s torch, the character\'s first: nobody keeps it lit, slice 4.1\'s), up a straight passage: holding its torch, no light far off (its eyes used to the torch\'s light); its torch put out: at once nothing far off (its eyes still used to the torch), after 2 minutes still nothing, after 3 minutes and 20 seconds a faint glow far off ahead, after 5 minutes a light (16 b / (4 + a): 19 squares, its eyes used to the dark; the eyes the senses\', a 16th of a light level each 1.9 s darker); its torch lit again, dazzled a moment, and the light lost (dq0dark\'s, in it)',
       init: 't_rc', cycles: 700e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/w.hm', 'echo att eye 4 >> /ram/w.hm',
-        'dq0 -p t -s 7 -c /ram/w.hm', 'open the door behind me', 's', 'move south 4 squares', 'face north', 'look', 'douse the torch', 'look',
+        'dq0 -p t -s 7 -c /ram/w.hm', 'light the torch in the sconce', 'face north', 'open the door behind me', 's', 'move south 4 squares', 'face north', 'look', 'douse the torch', 'look',
         ...Array(12).fill('z'), 'look', ...Array(8).fill('z'), 'look', ...Array(10).fill('z'), 'look', 'light the torch', 'z', 'look', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
@@ -3697,16 +3697,17 @@ module.exports = {
       sdcard: true
     },
     {
-      // (Seed 7, dq0glow's dungeon: the kitchen the character begins in, lit by its own torches, its south door opened
+      // (Seed 7, dq0glow's dungeon: the kitchen the character begins in, lit by its sconce's torch (lit first: since slice
+      // 4.1 nobody keeps it lit, its torch cold), its south door opened
       // (its dart trap set off) and down the straight passage south to a dark hall; the kitchen's floor ends at row
       // 32840, its door at 32841, the hall's north door at 32850, and an iron pot lies on the kitchen's floor at 32785,
       // 32839, straight up the passage from the hall's doorway square, 32785,32851, and its far side, 32785,32855; the
       // hall's east door, at its far side's 32787,32855, closed.  A character of Eyesight 5: HarnMaster's sight 1, a
       // glance's reach 6 squares, a look one way's 12; the null ruleset's sight 5, 14 and 28)
-      name: 'dq0lookway', meaning: true, what: 'Dingus Quest Zero\'s looking one way, listening and sniffing one way (HOUSE.md\'s slice 4.0, the user\'s: "look north", "look at the door", "listen at the door"; told by the facing alone), by the hub\'s events and the senses\' record (what the character perceives, and a look one way\'s own: WAY_SEEN): at seed 7 in the dark hall below the lit kitchen, a glance and then a look north from its doorway and from its far side: a look one way reaches twice a glance\'s squares (the ruleset\'s sight: 4 + 2 sight) in the quarter ahead, so the kitchen\'s iron pot straight up the passage is in the glance\'s record only within its reach and in the look one way\'s within twice it, and one of the two looks sees it where the glance doesn\'t; the look one way\'s own record what\'s beyond the hall\'s open door, the kitchen, lit (a room\'s kind, U_KITCHEN), or only the dark past the look\'s reach; each look one way the world\'s I_LOOK, E_VIEW V_LOOKED, 3 seconds; looking east at the closed door, turned to it first (V_FACING), not seen past (WB_SHUT); listening at the door, turned to it already, 3 seconds and no look, the watchfulness not set (not "listen as I go"); listening about and sniffing, 3 seconds each',
+      name: 'dq0lookway', meaning: true, what: 'Dingus Quest Zero\'s looking one way, listening and sniffing one way (HOUSE.md\'s slice 4.0, the user\'s: "look north", "look at the door", "listen at the door"; told by the facing alone), by the hub\'s events and the senses\' record (what the character perceives, and a look one way\'s own: WAY_SEEN): at seed 7 in the dark hall below the lit kitchen (lit by its sconce\'s torch, the character\'s first: nobody keeps it lit, slice 4.1\'s), a glance and then a look north from its doorway and from its far side: a look one way reaches twice a glance\'s squares (the ruleset\'s sight: 4 + 2 sight) in the quarter ahead, so the kitchen\'s iron pot straight up the passage is in the glance\'s record only within its reach and in the look one way\'s within twice it, and one of the two looks sees it where the glance doesn\'t; the look one way\'s own record what\'s beyond the hall\'s open door, the kitchen, lit (a room\'s kind, U_KITCHEN), or only the dark past the look\'s reach; each look one way the world\'s I_LOOK, E_VIEW V_LOOKED, 3 seconds; looking east at the closed door, turned to it first (V_FACING), not seen past (WB_SHUT); listening at the door, turned to it already, 3 seconds and no look, the watchfulness not set (not "listen as I go"); listening about and sniffing, 3 seconds each',
       init: 't_rc', cycles: 900e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c clothier -o /ram/c.hm', 'cp /ram/c.hm /ram/e.hm', 'echo att eye 5 >> /ram/e.hm',
-        'dq0 -p t -s 7 -c /ram/e.hm', 'open the door behind me', 's', 'turn around', 'look north', 'move south 4 squares', 'face north',
+        'dq0 -p t -s 7 -c /ram/e.hm', 'light the torch in the sconce', 'face north', 'open the door behind me', 's', 'turn around', 'look north', 'move south 4 squares', 'face north',
         'look north', 'look east', 'listen at the door', 'listen', 'sniff', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
@@ -4179,10 +4180,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0armour', what: 'Dingus Quest Zero\'s denizens fighting and armour (DENIZENS.md: fights; the catalogue\'s armour kinds, worn: the things tell the referee what\'s worn and how well made, RS_EQUIP\'s marks; HarnMaster\'s protection by location, the layers summed, Combat 4-5), by the blows told and the character\'s state (the referee\'s dice at this seed): a gambeson under a mail hauberk (dq0 -k) worn, the character a poor fighter (Unarmed 5, its torch put down: the room\'s lit); down the stairway at seed 7 a ghoul (its faction hostile to the character) seen as the character comes down, coming up to it and clawing at it as it waits, fought back with bare fists (HOUSE.md\'s fighting on, the user\'s, 2026-10-20); dodging (defend dodge: its stance), a claw dodged, one turned by the armour; then a game standing undefended (defend none), wounded, worse, knocked senseless, then clawed till it\'s killed: the character\'s death, the game\'s end (dq0ghoul\'s, in it; since fighting on, two games, the stance set before each, and the character fighting back)',
+      name: 'dq0armour', what: 'Dingus Quest Zero\'s denizens fighting and armour (DENIZENS.md: fights; the catalogue\'s armour kinds, worn: the things tell the referee what\'s worn and how well made, RS_EQUIP\'s marks; HarnMaster\'s protection by location, the layers summed, Combat 4-5), by the blows told and the character\'s state (the referee\'s dice at this seed): a gambeson under a mail hauberk (dq0 -k) worn, the character a poor fighter (Unarmed 5, its torch put down, a lantern lit hung from its belt: the room below dark, nobody keeping it lit since slice 4.1); down the stairway at seed 7 a ghoul (its faction hostile to the character) seen as the character comes down, coming up to it and clawing at it as it waits, fought back with bare fists (HOUSE.md\'s fighting on, the user\'s, 2026-10-20); dodging (defend dodge: its stance), a claw dodged, one turned by the armour; then a game standing undefended (defend none), wounded, worse, knocked senseless, then clawed till it\'s killed: the character\'s death, the game\'s end (dq0ghoul\'s, in it; since fighting on, two games, the stance set before each, and the character fighting back)',
       init: 't_rc', cycles: 1400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
-        ...['dodge', 'none'].flatMap(d => ['dq0 -p t -s 7 -c /ram/c.hm -k \'gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'drop the torch', 'd',
+        ...['dodge', 'none'].flatMap(d => ['dq0 -p t -s 7 -c /ram/c.hm -k \'gambeson,mail hauberk,lantern\' -T', 'wear the gambeson', 'wear the mail hauberk', 'light the lantern', 'hang the lantern', 'drop the torch', 'd',
           'defend ' + d, 'wait', 'quit']), 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -4285,6 +4286,76 @@ module.exports = {
         const blows = T.reduce((n, t) => n + mine(t).length, 0);
         const work = T.reduce((n, t) => n + t.replies.filter(r => /^slot/.test(r.req) && r.kind === K.RS_EXERT && r.a === K.GA_WORK && r.w1 === 100).length, 0);
         if (!blows || work !== blows) f.push('a fight\'s rounds not charged as strenuous work: ' + work + ' charged, ' + blows + ' blows struck');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0kept', meaning: true, what: "Dingus Quest Zero's lights kept (DUNGEON.md: light kept; the user's, 2026-10-16: \"why would all of the torches in the wall sconces be lit if no one is there to light them?\"): the kobold warren's Dung Tunnels (a mine, dq0 -T -T -T: four strata grown, the character on the second) at seed 527, the kobolds' keeping (their lair's chunk and their range, the denizens' places kept, KEPT_AT) lighting the room the character comes in to: lit by its sconce (\"On the wall to your right is a sconce, a lit torch in it.\"), the torch lit and tended (I_TENDED), the room's light kept (ROOM_LIT); the torch taken from it (a step nearer first), the room dark, a torch put back, the room's light as that torch is; at seed 535, a storeroom away from the kobolds dark, its sconce's torch cold, \"a torch in it\", lit there (light the torch in the sconce: the room lit by it, not tended), put out (dark again), lit again, kept in the save (-d) and carried on lit; every sconce in the item store at each lit and tended if and only if a keeping whose keepers live reaches it, each of those rooms' light kept; and the same seed again the same sconces, the same torches, the same places kept (a chunk always stocked the same: the world waits for a stratum's populations)",
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 527 -c /ram/c.hm -T -T -T', 'step forward', 'take the torch from the sconce', 'put the torch in the sconce', 'quit',
+        'dq0 -p t -s 535 -c /ram/c.hm -d /ram/kp -T -T -T', 'light the torch in the sconce', 'put out the torch in the sconce',
+        'light the torch in the sconce', 'quit', 'dq0 -d /ram/kp', 'look', 'quit',
+        'dq0 -p t -s 535 -c /ram/c.hm -T -T -T', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], LIT = 1, TENDED = 0x80;
+        const sconces = s => s ? s.items.filter(i => i.name === 'sconce') : [];
+        const torchIn = (s, c) => s.items.find(i => i.where === 'IW_ITEM' && i.x === c.n) || null;
+        const roomLit = (s, c) => { const r = s.changes.filter(x => x.what === 'ROOM_LIT' && x.sn === c.sn && x.x === c.x && x.y === c.y); return r.length ? r[r.length - 1].tile : -1; };
+        const kept = (s, c) => { const st = s.slots.find(x => x.n === c.sn); return !!st && s.kept.at.some(q => q.sn === c.sn && q.live &&
+          Math.abs(c.x - (st.x0 + q.cx * 32 + 16)) <= q.range && Math.abs(c.y - (st.y0 + q.cy * 32 + 16)) <= q.range); };
+        const near = (s) => sconces(s).filter(c => c.sn === s.pc.sn).sort((a, b) => Math.max(Math.abs(a.x - s.pc.x), Math.abs(a.y - s.pc.y)) - Math.max(Math.abs(b.x - s.pc.x), Math.abs(b.y - s.pc.y)))[0] || null;
+        // (Each sconce: lit and tended where a live keeping reaches it, its room's light kept; else cold or none)
+        const every = (s, what) => {
+          if (!s || !s.kept) return f.push(what + ': no state');
+          if (!s.kept.at.some(q => q.sn === 1 && q.live)) f.push(what + ': no keeping on the Dung Tunnels: ' + JSON.stringify(s.kept));
+          for (const c of sconces(s)) {
+            const t = torchIn(s, c), k = kept(s, c), lit = t && (t.flags & (LIT | TENDED)) === (LIT | TENDED);
+            if (k !== !!lit) f.push(what + ': the sconce at ' + c.x + ',' + c.y + (k ? ' kept, its torch not lit and tended: ' : ' not kept, its torch lit and tended: ') + JSON.stringify(t));
+            if (k && roomLit(s, c) !== 2) f.push(what + ': the kept sconce at ' + c.x + ',' + c.y + ' its room\'s light not kept (ROOM_LIT)');
+          }
+          if (!sconces(s).length) f.push(what + ': no sconces');
+        };
+        const g1 = T.of('dq0 -p t -s 527 -c /ram/c.hm -T -T -T'), a = g1.after;
+        every(a, 'seed 527');
+        const c1 = a && near(a), t1 = c1 && torchIn(a, c1);
+        if (!a || !a.sight || !a.sight.lit) f.push('seed 527: the kept room not lit: ' + JSON.stringify(a && a.sight && { lit: a.sight.lit, dark: a.sight.dark }));
+        if (!c1 || !t1 || (t1.flags & (LIT | TENDED)) !== (LIT | TENDED)) f.push('seed 527: the room\'s sconce\'s torch not lit and tended: ' + JSON.stringify(t1));
+        const story = dq0Story(out), w1 = story.indexOf('lit by smoky tallow lamps'), w2 = story.indexOf('is a sconce, a lit torch in it.');
+        if (w1 < 0 || w2 < 0) f.push('seed 527: the kept room\'s words: ' + JSON.stringify(story.slice(story.indexOf('Type help'), story.indexOf('Type help') + 600)));
+        const tk = T.of('take the torch from the sconce'), b = tk.after;
+        if (!b || !b.sight || b.sight.lit || !c1 || roomLit(b, c1) !== 0) f.push('seed 527: the torch taken, the room still lit: ' + JSON.stringify(b && b.sight && b.sight.lit) + ' ' + (c1 && b ? roomLit(b, c1) : ''));
+        if (!b || !c1 || torchIn(b, c1)) f.push('seed 527: the torch not taken from the sconce');
+        const pt = T.of('put the torch in the sconce'), p = pt.after;
+        const t4 = p && c1 && torchIn(p, c1), l4 = !!t4 && !!(t4.flags & LIT);   // (Whichever torch it put back: lit, the room lit; cold, dark)
+        if (!t4 || !p.sight || !!p.sight.lit !== l4 || roomLit(p, c1) !== (l4 ? 2 : 0)) f.push('seed 527: a torch put back, the room\'s light not as its torch is: ' + JSON.stringify(t4) + ' ' + (p && p.sight && p.sight.lit));
+        const g2 = T.of('dq0 -p t -s 535 -c /ram/c.hm -d /ram/kp -T -T -T'), d = g2.after;
+        every(d, 'seed 535');
+        const c2 = d && near(d), t2 = c2 && torchIn(d, c2);
+        if (!d || !d.sight || d.sight.lit || d.sight.dark) f.push('seed 535: the storeroom away from the kobolds not dark (lit by the character\'s own torch alone): ' + JSON.stringify(d && d.sight && { lit: d.sight.lit, dark: d.sight.dark }));
+        if (!c2 || !t2 || t2.flags & LIT || (d && kept(d, c2))) f.push('seed 535: the storeroom\'s sconce\'s torch not cold: ' + JSON.stringify(t2));
+        if (story.indexOf('by the light of your torch. A barrel vault arches far overhead. There are two doors to your right (a doorway). You stand by a stairway leading up. On the wall to your left is a sconce, a torch in it.') < 0)
+          f.push('seed 535: the storeroom\'s words: not dark, by the character\'s own torch, its sconce\'s torch cold');
+        const l1 = T.of('light the torch in the sconce'), e = l1.after, t3 = e && c2 && torchIn(e, c2);
+        if (!e || !e.sight || !e.sight.lit || !c2 || roomLit(e, c2) !== 2) f.push('seed 535: the sconce\'s torch lit, the room not lit by it');
+        if (!t3 || (t3.flags & (LIT | TENDED)) !== LIT) f.push('seed 535: the torch lit in the sconce not lit, or tended: ' + JSON.stringify(t3));
+        if (story.indexOf('You light the torch. You can see part of a storeroom, lit by smoky tallow lamps. On the wall beside you is a sconce, a lit torch in it.') < 0)
+          f.push('seed 535: the sconce\'s torch lit not told so');
+        const po = T.of('put out the torch in the sconce'), o = po.after;
+        if (!o || !o.sight || o.sight.lit || !c2 || roomLit(o, c2) !== 0) f.push('seed 535: the sconce\'s torch put out, the room still lit');
+        const l2 = T.of('light the torch in the sconce', po.k + 1), q = l2.after;
+        if (!q || !q.sight || !q.sight.lit) f.push('seed 535: lit again, the room not lit');
+        const rs = T.of('dq0 -d /ram/kp'), r = rs.after;
+        dq0Need(f, rs, 'E_ARRIVE', { how: 'A_RESUMED' }, 'seed 535: the game not carried on');
+        if (!r || !r.kept || !d || JSON.stringify(r.kept) !== JSON.stringify(d.kept)) f.push('seed 535: the places kept not kept with the game: ' + JSON.stringify(r && r.kept));
+        const c5 = r && c2 && sconces(r).find(c => c.sn === c2.sn && c.x === c2.x && c.y === c2.y), t5 = c5 && torchIn(r, c5);
+        if (!r || !r.sight || !r.sight.lit || !t5 || (t5.flags & (LIT | TENDED)) !== LIT) f.push('seed 535: carried on, the storeroom lit by its sconce no longer: ' + JSON.stringify(t5));
+        const g3 = T.of('dq0 -p t -s 535 -c /ram/c.hm -T -T -T', rs.k + 1), h = g3.after;
+        const list = s => s ? JSON.stringify(s.items.filter(i => i.name === 'sconce' || (i.name === 'torch' && i.where === 'IW_ITEM')).map(i => [i.name, i.flags, i.sn, i.x, i.y, i.where === 'IW_ITEM' ? 0 : 1])) : '';
+        if (!h || list(h) !== list(d)) f.push('seed 535 again: not the same sconces and torches: ' + list(h) + ' against ' + list(d));
+        if (!h || !h.kept || JSON.stringify(h.kept) !== JSON.stringify(d.kept)) f.push('seed 535 again: not the same places kept: ' + JSON.stringify(h && h.kept));
         return f;
       },
       sdcard: true
@@ -5157,19 +5228,22 @@ module.exports = {
     // their chunks' edges (each start in a room, by the stairs up to the way out, with a way on), a third of them, six
     // a test (the rest left to the soak's 200 seeds: each game's start a game start's cycles, some 195M)
     ...[[1, 30, 66, 93, 111, 122], [138, 152, 161, 171, 189, 197]].map((seeds, k) => ({
-      name: 'dq0start' + k, meaning: true, what: 'Dingus Quest Zero\'s starts (dq0m/plan.c\'s links and the world\'s way out off their chunks\' edges, world.h\'s INSET: room for the room each comes out in, built.c\'s tries all failing else, a fifth of the starts a dead end of a passage), by what the character perceives (the senses\' record): seeds ' + seeds.join(', ') + ' (some of those that began at a dead end), each beginning in a room, by the stairs up to the way out, with a door, a portcullis or a passage on (seen ahead, or turned round)',
+      name: 'dq0start' + k, meaning: true, what: 'Dingus Quest Zero\'s starts (dq0m/plan.c\'s links and the world\'s way out off their chunks\' edges, world.h\'s INSET: room for the room each comes out in, built.c\'s tries all failing else, a fifth of the starts a dead end of a passage), by what the character perceives (the senses\' record): seeds ' + seeds.join(', ') + ' (some of those that began at a dead end), each beginning in a room, by the stairs up to the way out, with a door, a portcullis or a passage on (seen ahead, or turned round, or as it crosses the room and back by its own light: the rooms dark since slice 4.1, nobody keeping their lights)',
       init: 't_rc', cycles: seeds.length * 300e6,      // (A timeout: each game started, turned round and quit)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        ...seeds.flatMap(s => ['dq0 -p t -s ' + s + ' -c /ram/c.hm', 'turn around', 'quit']), 'echo $status']) },
+        ...seeds.flatMap(s => ['dq0 -p t -s ' + s + ' -c /ram/c.hm', 'turn around', 'go forward', 'turn around', 'go forward', 'quit']), 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [];
         for (const s of seeds) {
           const g = T.of('dq0 -p t -s ' + s + ' -c /ram/c.hm'), a = g.after, b = T.after(g, 'turn around').after;
           if (!a || !a.sight || !b || !b.sight) { f.push('seed ' + s + ': not begun'); continue; }
+          // (A way on: a door, a doorway, a passage seen from the stairs or as it crosses the room and back, by its own
+          // light, the rooms dark since slice 4.1, nobody keeping their lights; or the room left by one)
+          const went = [g.k + 1, g.k + 2, g.k + 3, g.k + 4].map(k => T[k] && T[k].after).filter(x => x && x.sight);
           if (a.sight.where !== 0) f.push('seed ' + s + ': not in a room (a dead end of a passage?)');
           else if (!a.sight.open.some(o => o.kind === 'O_WAY_OUT' && o.rel === 255)) f.push('seed ' + s + ': not by the way out');
-          else if (!a.sight.doors.length && !a.sight.nways && !b.sight.doors.length && !b.sight.nways) f.push('seed ' + s + ': no way on seen');
+          else if (![a, ...went].some(x => x.sight.doors.length || x.sight.nways || x.sight.where !== 0)) f.push('seed ' + s + ': no way on seen');
         }
         return f;
       },

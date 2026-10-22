@@ -74,6 +74,8 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
                                                 **   straw, a chapel's candle stubs; a well, fixed */
     KI_OIL, KI_PITCH,                           /* A light's fuel (slice 4.1's): a flask of oil (a lantern's, a
                                                 **   torch's), a pot of pitch (a torch's) */
+    KI_SCONCE,                                  /* A room's sconce, on its wall (slice 4.1's: the maker's, fixed): a
+                                                **   torch in it, lit and tended where the room's kept, else cold */
     KI_COUNT };
 
 /* An item */
@@ -90,7 +92,9 @@ struct item {
     unsigned char   wear;                       /* Its wear, 0 new ... 255 (a blade dug with, dulled) */
     unsigned char   hide;                       /* Concealed on purpose (I_HIDDEN): how hard to find, the steps worse
                                                 **   a search for it goes (rs.h's: the method's and the concealer's
-                                                **   skill's; 0 a floor's dust and corners only) */
+                                                **   skill's; 0 a floor's dust and corners only); a sconce's (never
+                                                **   hidden): its room's light as the world last made it (SC_LIT; and
+                                                **   SC_NOW, a pass's mark: a light in it lit), DUNGEON.md's light kept */
     /* Its own (no two alike: the world's, as it first comes to it, a look's; id 0 till then) */
     unsigned        id;                         /* Its number, never another's (record 0's x the last given) */
     unsigned char   quality;                    /* How well it's made: 0 crude ... 9 a master's */
@@ -105,6 +109,8 @@ struct item {
                                                 **   (DUNGEON.md: light; HOUSE.md's burning); a fuel's (a flask of
                                                 **   oil, a pot of pitch), what's in it, in the same minutes */
 };
+#define SC_LIT          0x01                    /* (A sconce's hide: its room lit by it, as the world last made it; */
+#define SC_NOW          0x02                    /*   a light in it lit now, the world's pass's mark) */
 #define I_LIT           0x01                    /* A light, lit */
 #define I_HELD          0x02                    /* In a hand */
 #define I_WORN          0x04                    /* Worn (a belt, a pack, armour) */
@@ -225,6 +231,8 @@ struct sthing {
 };
 #define ST_SHOWN        0xFF
 #define ST_PORTAL       0xFE
+#define ST_IN           0xFD                    /* (In the thing listed before it, on it: a sconce's torch, cold; */
+#define ST_LIT          0xFC                    /*   lit and tended, a kept room's: DUNGEON.md, light kept) */
 struct stock {
     unsigned        seq;                        /* The chunks the maker's stocked, counted, as it stocked this one */
     unsigned char   n;

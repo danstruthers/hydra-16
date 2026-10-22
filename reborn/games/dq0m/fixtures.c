@@ -8,7 +8,8 @@
 ** style's (no windows, portcullises or set traps in a natural cave: only its pits).  A fortified stratum's (DUNGEON.md:
 ** built to a plan; uses.c's ufort): its gatehouse's doors portcullises (raised, their winches on its side), murder
 ** holes in its vault, arrow slits in its walls and its guardrooms' where a passage runs beside them, covering the
-** way in; its doors stouter (more of them iron-bound, an inch thicker) and fewer of them open.
+** way in; its doors stouter (more of them iron-bound, an inch thicker) and fewer of them open.  (Its rooms' sconces,
+** as it's first stocked, are sconce.c's: their dice these.)
 **
 ** Each with its own dice, from the chunk's place and the fixture's (as pass.c's doors' are), so the grower's layout
 ** never moves for them; and nothing that would part a chunk's ways: an open pit only where the squares round it

@@ -389,7 +389,8 @@ static void sheet (void)
                                                 **   in steps, rs.h's scale; 13, each denizen's record its faction:
                                                 **   the theme's inhabitants; 14, the items' records their fuel,
                                                 **   the region files' groups the minute they were put out: the
-                                                **   lights burning, slice 4.1's) */
+                                                **   lights burning, slice 4.1's; the places kept lit after the
+                                                **   denizens' dens.dat) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -544,8 +545,10 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     HUB->seed = seed;
     HUB->test_start = test_start;
     HUB->small = small;
-    hub_map (DEN_BANK);                         /* (The sounds' words: none till the sound task's put them there) */
+    hub_map (DEN_BANK);                         /* (The sounds' words: none till the sound task's put them there; the
+                                                **   places kept lit, the denizens' as they decide its populations) */
     memset (SND_AT, 0, (2 * SND_KINDS + SND_WORLD) * SND_REC);
+    memset (KEPT_AT, 0, sizeof (struct kept));
     hub_map (0);
     start ("dq0c", T_COMMANDS, libdir);         /* (Its command parser: its tables read as the others start) */
     start ("dq0s", T_SOUND, libdir);            /* (Its sound: SOUND.md) */

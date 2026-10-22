@@ -190,8 +190,9 @@
 <META-WORD>  ::= "status" | "help" | "i" | "map" | "m" | "save" | "q" | "sheet" | "pause"
 
 (* ---- Fire (added 2026-10-19) ---- *)
-<light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object> | "turn" <object> "on"   (* "light the torch", "start a fire", "turn it on" *)
-<extinguish>     ::= <EXTINGUISH> [ "the" ] "fire" | <EXTINGUISH> <object> | "put" <object> "out" | "turn" <object> "off"   (* "quench the fire", "put out the torch", "put the torch out", "turn it off" *)
+<light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object> [ <in-phrase> ] | "turn" <object> "on"   (* "light the torch", "start a fire", "turn it on", "light the torch in the sconce" *)
+<extinguish>     ::= <EXTINGUISH> [ "the" ] "fire" | <EXTINGUISH> <object> [ <in-phrase> ] | "put" <object> "out" | "turn" <object> "off"   (* "quench the fire", "put out the torch", "put the torch out", "turn it off", "put out the torch in the sconce" *)
+<in-phrase>      ::= ( "in" | "on" ) <object>   (* the thing it's in, or on: a sconce's torch *)
 (* ---- Posture and pretence (added 2026-10-19) ---- *)
 <posture>        ::= <SIT> | <STAND> | <LIE-DOWN> | <CROUCH>          (* a change of the standing state; no object *)
 <SIT>            ::= "sit" [ "down" ]
