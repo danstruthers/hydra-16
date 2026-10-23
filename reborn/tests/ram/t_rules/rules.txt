@@ -578,6 +578,28 @@ end
 case a Khuzdul always knows north underground
 want sum.northsense=1
 
+# ---- The map in mind (HOUSE.md's the map kept: five times Intelligence of a hundred, kept mapping as one goes, half
+# that not; a tenth of it lost every twice Intelligence and Will together, minutes)
+
+char
+end
+case her map in mind: INT 11 a mapmind of 55; INT 11 and WIL 12, a tenth of it lost every 46 minutes
+want sum.mapmind=55 sum.mapfade=46
+
+char
+att int 21
+att wil 3
+end
+case INT 21: a mapmind of 100, at most; WIL 3, a tenth lost every 48 minutes
+want sum.mapmind=100 sum.mapfade=48
+
+char
+att int 6
+att wil 16
+end
+case INT 6: a mapmind of 30; WIL 16, a tenth lost every 44 minutes
+want sum.mapmind=30 sum.mapfade=44
+
 # ---- Paces (Combat 6: a walk half the Move a round, a jog the Move, a run twice it, a sprint three times; HOUSE.md:
 # a creep a third of a walk, a slow walk half)
 

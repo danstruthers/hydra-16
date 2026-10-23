@@ -21,7 +21,8 @@
 **                              its reply kept, and the dice it rolled held to the case's (dice)
 **   want FIELD=V ...           the reply: grade result a b c w1 w2, eN.kind eN.band eN.loc eN.aspect eN.cond (its
 **                              effect N), dice (how many it rolled), sum.FIELD (the hub's summary after it: cond
-**                              health step gN (gstep[N]) sight hearing smell load northsense limbs limp),
+**                              health step gN (gstep[N]) sight hearing smell load northsense limbs limp mapmind
+**                              mapfade),
 **                              status="..." (the hub's pcstatus), text="..." (all of it), text~"..." (it has it),
 **                              text!"..." (it hasn't), text=@ (the words of the request before it); FIELD&MASK=V;
 **                              a value a number
@@ -489,10 +490,11 @@ static void request (void)
 static long __fastcall__ field (const char* f, unsigned char* ok)
 {
     static const char* const sf[] = { "cond", "health", "step", "attacks", "sight", "hearing", "smell",
-        "darkvision", "nightvision", "morale", "load", "power", "northsense", "limbs", "limp" };
+        "darkvision", "nightvision", "morale", "load", "power", "northsense", "limbs", "limp", "mapmind", "mapfade" };
 #define SO(m)   offsetof (struct rs_summary, m)
     static const unsigned char so[] = { 0, SO (health), SO (step), SO (attacks), SO (sight), SO (hearing), SO (smell),
-        SO (darkvision), SO (nightvision), SO (morale), SO (load), SO (power), SO (northsense), SO (limbs), SO (limp) };
+        SO (darkvision), SO (nightvision), SO (morale), SO (load), SO (power), SO (northsense), SO (limbs), SO (limp),
+        SO (mapmind), SO (mapfade) };
     const struct rs_effect* e;
     unsigned char k;
 

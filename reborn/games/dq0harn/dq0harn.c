@@ -331,6 +331,10 @@ static void status (void)
     s->power = 10;
     s->northsense = pc.att[HARN_SP] == HARN_KHU;    /* (The species' trait: the Khuzdul live below, and always know
                                                 **   north there) */
+    s->mapmind = pc.att[HARN_INT] >= 20 ? 100 : 5 * pc.att[HARN_INT];  /* (Its map in mind, the house's: five times its
+                                                **   Intelligence, of a hundred; a tenth of it lost every twice its
+                                                **   Intelligence and Will together, minutes) */
+    s->mapfade = 2 * (pc.att[HARN_INT] + pc.att[HARN_WIL]);
 }
 
 #pragma code-name (push, "SW1CODE")
