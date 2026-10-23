@@ -449,7 +449,12 @@ directions they believe are true.  One more piece to ponder is the fact that goi
 reinforce that space in the player's mind, making the map more constant in well-traveled places, similar to how smell
 reinforces with repeated transits."  So a start's bearings by how the character came there (walked in by the way in,
 north known; underground disoriented, a fall's waking, its north off, maybe far off, unknowing); and a place's memory
-strengthened by each passing, kept better and fading slower the more it's crossed, as a scent is.
+strengthened by each passing, kept better and fading slower the more it's crossed, as a scent is.  And: "I would
+really like for the map to have a way to visually distinguish between the area your current vision shows versus your
+memory of what else there is.  I know that is hard with text, but could color be used in some way?"  So the map in
+colour (the console's VT: SGR on the Vera's screen and a serial terminal alike): what's seen now bright, what's
+remembered dim, a drawn map's squares a colour of their own, the character bright; the faint glyphs kept, a setting
+to turn colour off.
 
 **Design:** DUNGEON.md, moving (watchfulness: mapping as it goes); still to come.
 
