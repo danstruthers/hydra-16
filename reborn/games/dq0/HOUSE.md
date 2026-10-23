@@ -1151,12 +1151,13 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
 - **Prone, and getting up** (the book's Rise, Combat 8: a round): fallen in a fight (a stumble), from a harm (a
   trap's), or over a thing in its way in the dark, it's prone.  "get up", "stand", "rise" take a round; a walk, a
   step, a climb, a disengage gets up first (a round the later) unless it's crawling; prone in a fight, its round is
-  getting up, no blow.  The house's test: the book's Rise is free, but for one seriously or grievously wounded, or
-  with no good arm (the user's, 2026-10-22: "getting up with no good arms ... should probably require an agility
-  check"), an Agility test (×5; no good arm four steps the harder, the house's); failed, the round's spent, still
-  down ("You struggle, but can't get up.").  No good leg, it can't ("Your legs won't bear you.").  The hub's pc_pos
-  is the character's position (POS_PRONE; crouching, kneeling and sitting are slice 4.6's).  (dq0w.c's part 50,
-  rise_pc, limbs_go; wfight.c's pc_blow; P_RISE the ruleset's.)
+  getting up, no blow.  The test: the book's Rise is free but for one seriously or grievously wounded (the book leaves
+  a test to the GM: the house takes it, Agility ×5); and the house's, with no good arm (the user's, 2026-10-22:
+  "getting up with no good arms ... should probably require an agility check"), the same test four steps the harder;
+  failed, the round's spent, still down ("You struggle, but can't get up.").  No good leg, it can't ("Your legs won't
+  bear you.").  The hub's pc_pos is the character's position (POS_PRONE; crouching, kneeling and sitting are slice
+  4.6's).  (dq0w.c's part 50, rise_pc, limbs_go; in a fight the referee's, fight.c's attack, O_RISE; gear.c's
+  rise_of, P_RISE's.)
 - **The denizens' limbs are the character's** *(every actor's)*: a creature's weapon fumbled (the melee table's
   fumbles, an arm's wound: the book's, as the character's) falls where the book's die puts it (a d10, as above), seen
   lying there, told ("The kobold drops its spear."), its kind the catalogue's of the weapon's name (a kobold lord's
