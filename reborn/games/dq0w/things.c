@@ -40,6 +40,7 @@
 ** copied there as it's called from their bank) */
 
 void light_now (void);                          /* Part 10 */
+void chart_now (void);                          /* Part 26 */
 unsigned char __fastcall__ named (const char* k, const char* w);
 unsigned char __fastcall__ on_pc (unsigned i);
 unsigned char __fastcall__ in_reach (unsigned n);
@@ -498,7 +499,7 @@ static void hands_held (void)
 }
 
 /* The character's light: the brightest lit thing it carries (in a hand, worn, hung from its belt: one stowed is
-** put out), into the hub, named (its minutes left the lights' burning's: part 27's) */
+** put out), into the hub, named (its minutes left the lights' burning's: part 27's); and its map making with it */
 void s_light_now (void)
 {
     char lamp[14];
@@ -520,6 +521,7 @@ void s_light_now (void)
     hub_map (0);
     HUB->pc_light = best;
     strcpy (HUB->pc_lamp, lamp);
+    chart_now ();
 }
 
 /* ---- A request (the hub's ireq), answered (but for its state, the caller's: done once it's looked again): 1 if
@@ -628,6 +630,69 @@ unsigned char s_serve (void)
     hub_map (0);
     HUB->ireq.result = iq.result;
     return changed && iq.kind != IO_KIT;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 26 (dq0w.c's, its room): the map making, as the light (slice 4.2's; the world's parts are 51 at most,
+** swap.inc's table) */
+#pragma code-name (push, "SW26CODE")
+#pragma rodata-name (push, "SW26RODATA")
+
+/* The character's map making (the hub's pc_chart and pc_map: DUNGEON.md, the map kept; HOUSE.md's), by what it
+** carries (anywhere on it): the things to draw a map with to hand, the catalogue's by their keys (a sheet to draw on,
+** "sheet", or its map, "map"; a point that draws, "draw", or a quill, "quill", and ink, "ink"), and a hand to draw
+** with (free, or holding one of them; its arm not useless); and the first map it carries.  Mapping as it goes with
+** them, and no map, its first sheet is made the map (the kind keyed "map").  Part 26's (its room), called as the
+** light is (s_light_now's) */
+void s_chart_now (void)
+{
+    static const char keys[5][6] = { "sheet", "map", "draw", "quill", "ink" };
+    const struct kind* k;
+    unsigned i = 0, j, sheet = 0, map = 0;
+    unsigned char has = 0, busy, mh, h, f;
+
+    hub_map (0);
+    mh = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
+    busy = (HUB->pcsum.limbs & LB_ARM_L ? IH_LEFT : 0) | (HUB->pcsum.limbs & LB_ARM_R ? IH_RIGHT : 0);
+    while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+        fetch (&rec, i);
+        for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {   /* (On it, or in what it carries) */
+        }
+        if (item_at (j)->where != IW_ACTOR || item_at (j)->x) {
+            continue;
+        }
+        k = kind_of (rec.kind);
+        for (f = 0; f < 5 && strcmp (k->tool, keys[f]); ++f) {
+        }
+        h = (rec.flags & I_HELD) && rec.where == IW_ACTOR ? (rec.sn & IH_BOTH ? rec.sn & IH_BOTH : mh) : 0;
+        if (f == 5) {
+            busy |= h;                          /* (A hand that holds something else) */
+            continue;
+        }
+        has |= 1 << f;
+        if (!f && !sheet) {
+            sheet = i;
+        } else if (f == 1 && !map) {
+            map = i;
+        }
+    }
+    f = (has & 3) && ((has & 4) || (has & 24) == 24) && (busy & IH_BOTH) != IH_BOTH;
+    hub_map (0);
+    if (f && !map && sheet && (HUB->watch & WA_MAP)) {
+        for (h = 1; h < NK && strcmp (kind_of (h)->tool, keys[1]); ++h) {
+        }
+        if (h < NK) {
+            item_at (sheet)->kind = h;          /* (Its first sheet made the map) */
+            make_own (sheet);
+            map = sheet;
+        }
+    }
+    i = map ? item_at (map)->id : 0;
+    hub_map (0);
+    HUB->pc_chart = f ? CH_DRAW : 0;
+    HUB->pc_map = i;
 }
 
 #pragma code-name (pop)

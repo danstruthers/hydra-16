@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     17                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     18                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -47,7 +47,8 @@
                                                 **   P_STUMBLE; 16: the hands and limbs, pc_shand, the blows' x[2],
                                                 **   items.h's IH_*, IO_SWAP, rs.h's summary's limbs and limp, P_RISE,
                                                 **   C_LAME ..., I_RISE, the actors' move, arm and dropped, RS_REARM,
-                                                **   O_REARM; 17: the bearings, pc_skew, pc_lost) */
+                                                **   O_REARM; 17: the bearings, pc_skew, pc_lost; 18: the map making,
+                                                **   pc_chart, pc_map) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -1005,7 +1006,16 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   burns down; the world's as its lights burn, slice 4.1's), */
     char            pc_left[20];                /*   in words, for the status line ("torch 40m"; "" none, or one
                                                 **   that never burns down: the world's, as the referee's are its) */
+    /* The character's map making (slice 4.2's: DUNGEON.md, the map kept), the world's, as what it carries changes
+    ** (s_light_now's): what it can draw with, and the map it carries (the senses draw on it, mapping as it goes; the
+    ** maker shows its squares drawn) */
+    unsigned char   pc_chart;                   /* CH_* */
+    unsigned        pc_map;                     /*   and its map's item's id (the first map it carries; 0 none) */
 };
+#define CH_DRAW         0x01                    /* (pc_chart's: the things to draw a map with to hand, the catalogue's
+                                                **   by their keys: a sheet (paper, parchment) or its map, a pencil or
+                                                **   charcoal or a quill and ink, and a hand free; HOUSE.md's the map
+                                                **   kept) */
 #define SN_SEEN         0x01                    /* (dsense's res: the character seen, */
 #define SN_HEARD        0x02                    /*   heard, */
 #define SN_SMELT        0x04                    /*   smelt: slice 4.1's, still air, within its nose's reach) */
@@ -1132,6 +1142,8 @@ struct wsave {
 **   own hub.pc_lamp world
 **   own hub.pc_fuel world                                      (Its light's minutes left: slice 4.1's)
 **   own hub.pc_left world
+**   own hub.pc_chart world                                     (Its map making, by what it carries: slice 4.2's)
+**   own hub.pc_map world
 **   own hub.pcsum referee
 **   own hub.look senses +world                                 (The world's look asked)
 **   own hub.mapq maker +ui

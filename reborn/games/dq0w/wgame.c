@@ -333,6 +333,10 @@ void s_pc_asked (void)
             HUB->pc_going = bold_ ? GOING_BOLD : 0;
         }
         HUB->watch = HUB->wreq.y;
+        if (HUB->watch & WA_MAP) {
+            light_now ();                       /* (Mapping as it goes: a map begun on its first sheet, if it has the
+                                                **   things to draw one with and no map: things.c's chart_now) */
+        }
         break;
     case WS_STANCE:
         HUB->pc_stance = x;

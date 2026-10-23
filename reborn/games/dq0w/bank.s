@@ -105,7 +105,8 @@ go:
             SWPART      23, 11              ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 9               ; Engagement, a blow's close-in, fighting on (dq0w.c's)
             SWPART      25, 6               ; The engage initiative test, a grope's (dq0w.c's)
-            SWPART      26, 9               ; Disengaging (dq0w.c's)
+            SWPART      26, 9               ; Disengaging (dq0w.c's); the map making, by what the character carries
+                                            ;   (things.c: slice 4.2's)
             SWPART      27, 9               ; The lights burning down (dq0w.c's: slice 4.1's)
             SWPART      28, 12              ; The traces' store: the journal taken in, kept (wtrace.c)
             SWPART      29, 10              ; The traces read: the floor, a track, a smell (wtrace.c)
@@ -187,6 +188,7 @@ go:
             SWFN        named, 10
             SWFN        on_pc, 10
             SWFN        light_now, 10
+            SWFN        chart_now, 26
             SWFN        at_hand, 4
             SWFN        carried_named, 4
             SWFN        seen_named, 4
