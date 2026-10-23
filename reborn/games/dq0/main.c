@@ -764,8 +764,11 @@ static void heard (void)
             continue;
         }
         if (m.kind == E_BEAT) {
-            news (&m);                          /* (A fight's limbs' news, after its blow's words: part 11's, a thing
-                                                **   let go of, a fall) */
+            if (actor_seen (m.b)) {
+                news (&m);                      /* (A fight's limbs' news, after its blow's words: part 11's, a thing
+                                                **   let go of, a fall; another's only if it's seen, not in the dark
+                                                **   or out of sight) */
+            }
             continue;
         }
         if (m.kind != E_DEN || !m.b || m.x[2] || m.x[0] != HUB->pc_stratum) {

@@ -225,6 +225,19 @@ unsigned char __fastcall__ s_den_seen (unsigned x, unsigned y)
     return 0;
 }
 
+/* An event's actor (b: 0 the character, else the actor plus 1) seen, the senses' last look's (heard()'s: another's
+** limbs' news told only then, not in the dark or out of sight); the character always */
+unsigned char __fastcall__ s_actor_seen (unsigned char b)
+{
+    const struct actor* a;
+
+    if (!b) {
+        return 1;
+    }
+    a = &HUB->actor[(b - 1) & 7];
+    return s_den_seen (a->x, a->y);
+}
+
 /* The character's place in its room (the floor in thirds each way, far, middle and near, left, middle and right) and
 ** the room's size and shape (its floor: small under 150 square feet, large to 2,500, vast beyond; long, twice as long
 ** as it's wide, narrow too if 10 feet across or less; wide, 40 feet across or more), into where_w: "You are in the far

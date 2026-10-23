@@ -339,7 +339,8 @@ void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by 
 extern char where_w[34];                        /* (Where in its room a thing lies: part 8's words) */
 extern unsigned char reach;                     /* (main.c's: a command's thing walked over to first) */
 unsigned char room_where (void);
-unsigned char __fastcall__ den_seen (unsigned x, unsigned y);   /* Part 8: an actor's square in sight */                /* Part 8: the character's place in the room, and the room's size */
+unsigned char __fastcall__ den_seen (unsigned x, unsigned y);   /* Part 8: an actor's square in sight */
+unsigned char __fastcall__ actor_seen (unsigned char b);        /* Part 8: an event's actor seen (b: 0 the character) */                /* Part 8: the character's place in the room, and the room's size */
 unsigned char __fastcall__ lie_words (unsigned char i);   /* Part 8: a thing's place in the room (its sight_copy's) */
 unsigned char reach_go (void);
 unsigned char search_go (void);                 /* (Part 10's) A search begun, by its form (search.c) */

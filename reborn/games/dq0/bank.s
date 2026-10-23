@@ -233,6 +233,7 @@ ovl_out:
             SWFN        lie_words, 8
             SWFN        room_where, 8
             SWFN        den_seen, 8
+            SWFN        actor_seen, 8
             SWFN        pace_cmd, 4
             SWFN        names_line, 5
             SWFN        names_den, 6
