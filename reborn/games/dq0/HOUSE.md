@@ -1078,7 +1078,7 @@ are drafts, the user's as they are for now (2026-10-22).
     traps (the world's PA_CHECK, examine's).  **"search for traps", "search for hidden things"**: a search, as "search"
     is.
 
-## Hands and limbs *(slice 4.1b, 2026-10-22: drafted for the user to review)*
+## Hands and limbs *(slice 4.1b, drafted 2026-10-22; reviewed by the user, 2026-10-23: they stand)*
 
 The user's (DECISIONS.md's hands and limbs): two hands, handedness from the character's profile, the off hand's
 penalty unless ambidextrous, the book's fumbles for arm wounds dropping what that hand holds, a leg's wounds slowing
@@ -1134,7 +1134,7 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   once as it walks ("You limp.").  Why: the book slows only by the universal penalty (its Move, Combat 6, is the
   attributes' alone); the user asked that a serious fracture make walking harder.  The numbers the user's to judge.
   A leg missing or deformed (the medical trait, Character 9: the book's half move) is a limp of five levels, twice
-  the time a square; the book's pegleg, its full move, isn't in the game yet.  (dq0harn.c's status; gear.c's
+  the time a square; the book's pegleg, its full move, left out for now (the user's, 2026-10-23).  (dq0harn.c's status; gear.c's
   limbs_of; the summary's limp.)
 - **One leg useless** (a grievous wound, the book's Combat 14: a crutch or a staff to lean on, else a crawl): it hops,
   at a crawl's pace, the house's three times a walk's time a square, tiring as strenuous work does (the user's,

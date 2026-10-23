@@ -855,7 +855,14 @@ then: "No good arms makes crawling impossible, and both arms are required if bot
 up with no good arms would be difficult, should probably require an agility check or something similar."  So a crawl
 needs a good arm with a good leg, or both arms with neither leg; getting up with no good arm takes an Agility test.
 
-**Design:** the plan's slice 4.1b (to be drafted with it).
+Slice 4.1b built (2026-10-23), the user on what was left: "Don't worry about peglegs for now.  Smells are okay as
+they are for now as well...playtesting will help me figure out those numbers.  Cornered beasts can wait too.  The
+house rules look pretty good."  So HOUSE.md's hands and limbs stand as drafted (an arm's injuries a step a level, a
+limp a fifth more time a square a level, a hop or a crawl three times a walk's, the Rise's test, the main hand's thing
+striking when none's named, a disarmed creature's fists); the book's pegleg left out; the smells' numbers and a
+cornered beast fighting back wait (playtesting first).  Then: "Go ahead and push, then start 4.2".
+
+**Design:** HOUSE.md's hands and limbs; the plan's slice 4.1b.
 
 ### A helpless character, and poison
 
