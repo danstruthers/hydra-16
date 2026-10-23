@@ -78,6 +78,11 @@ enum {
                                                 **   ruleset's whether it's a test, HarnMaster's house's for one
                                                 **   seriously or grievously wounded, its summary's LB_HURT, or with no
                                                 **   good arm; never with no leg to stand on: slice 4.1b's) */
+    P_DRAW,                                     /* A map drawn as one goes, a stretch or a room of it (slice 4.2's:
+                                                **   the book's Drawing, its Cartography specialty first): its grade how
+                                                **   true it's drawn (DUNGEON.md, the map kept); the reply's result 1 if
+                                                **   the test opened the skill (the house's, HarnMaster's: Drawing, the
+                                                **   first map drawn) */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 

@@ -45,6 +45,8 @@ void __fastcall__ save_pc (struct req* r);
 void __fastcall__ beasts (unsigned char back);
 unsigned char __fastcall__ dig_tool (unsigned char m);     /* (Part 2's) */
 void __fastcall__ dice_set (struct req* r);
+signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 3's) */
+signed char __fastcall__ draw_test (signed char steps);     /* (Overlay 3's: a map drawn, slice 4.2's) */
 
 harn_char pc;                                   /* The character */
 char name[16], calling[20];
@@ -209,7 +211,18 @@ static const unsigned char purpose[P_THEME] = {
                                                                         **   book's stumble roll: test's) */
     ATTR | HARN_AGL,                                                    /* Getting up, prone: Agility (the
                                                                         **   book's Rise, Combat 8) */
+    HARN_DRA,                                                           /* A map drawn: Drawing (Cartography
+                                                                        **   first, overlay 3's draw_test) */
 };
+
+/* The referee's own skill (harn.h's a program's own, after the book's: its file's "ml 91 N" line): Drawing's
+** specialty Cartography (Skills 14: poetic maps; a specialty chosen at 40 or more, opened at the skill's mastery,
+** Skills 2), Drawing's attributes and sunsigns; opened only as it's taught (overlay 3's draw_learn: none teach it yet) */
+#define HARN_CAR        HARN_NSKILLS
+static const harn_skill own[1] = {
+    { "Cartography", { HARN_DEX, HARN_EYE, HARN_EYE }, { HARN_S_SKO << 4 | 1, HARN_S_TAI << 4 | 1 }, 2, 0, HARN_CRAFT, 1 }
+};
+unsigned char drawn_new;                        /* (A skill opened by a map drawn: draw_test's, RS_TEST's result 1) */
 
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
 ** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery, stone
@@ -226,9 +239,13 @@ signed char __fastcall__ grade (unsigned char level)
     return g[level & 3];
 }
 
+#pragma code-name (push, "OV3CODE")
+#pragma rodata-name (push, "OV3RODATA")
+
 /* A skill's test (or an attribute's: ATTR), at the steps (a skill not learnt: its opening level, less its group's
-** penalty, as a learnt one's: harn_eml's, its level 0, the penalty alone; the user's, 2026-10-20) */
-static signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps)
+** penalty, as a learnt one's: harn_eml's, its level 0, the penalty alone; the user's, 2026-10-20): overlay 3's (the main
+** RAM's room, slice 4.2's: no hub in it), its stub test_sk */
+signed char __fastcall__ o_test_sk (harn_char* c, unsigned char sk, signed char steps)
 {
     int mod = STEP_PCT * steps;
 
@@ -240,6 +257,34 @@ static signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed 
     }
     return grade (harn_test_skill (c, sk, mod));
 }
+
+/* A map drawn as the character goes (RS_TEST's P_DRAW: HOUSE.md's the map kept), its grade: the book's Drawing, its
+** specialty Cartography first (the referee's own skill, HARN_CAR); neither open, Drawing opened at its opening level
+** (the house's, over the book's month of teaching: the first map it draws), drawn_new set */
+signed char __fastcall__ o_draw_test (signed char steps)
+{
+    if (!pc.ml[HARN_CAR] && !pc.ml[HARN_DRA]) {
+        harn_open_skill (&pc, HARN_DRA);
+        drawn_new = 1;
+    }
+    return o_test_sk (&pc, pc.ml[HARN_CAR] ? HARN_CAR : HARN_DRA, steps);
+}
+
+/* Cartography opened as it's taught (a teacher's, a book's: none yet, the hook for them): the book's rule, a specialty
+** of Drawing at 40 or more, opened at Drawing's mastery (Skills 2); 1 opened, 0 not (Drawing under 40) */
+unsigned char o_draw_learn (void)
+{
+    if (pc.ml[HARN_DRA] < 40) {
+        return 0;
+    }
+    if (!pc.ml[HARN_CAR]) {
+        pc.ml[HARN_CAR] = pc.ml[HARN_DRA];
+    }
+    return 1;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char steps)
 {
@@ -681,7 +726,11 @@ static void __fastcall__ answer (struct req* r)
             memcpy (rq, r, sizeof rq);
             r->steps += noticing ((struct req*) rq);
         }
-        r->grade = test (&pc, r->a, r->steps);
+        r->grade = r->a == P_DRAW ? draw_test (r->steps) : test (&pc, r->a, r->steps);
+        if (drawn_new) {
+            r->result = 1;                      /* (Drawing opened by it: the first map drawn) */
+            drawn_new = 0;
+        }
         break;
     case RS_EXERT:                              /* (Its fatigue: its summary anew; result 1, a level more: a long
                                                 **   task's soft question, the world's) */
@@ -794,6 +843,7 @@ int main (int argc, char* argv[])
         return 1;
     }
     rseed (HUB->seed ^ 0x5245);                 /* (Its own dice: the game's seed, and its role) */
+    harn_own_skills (own, 1);                   /* (Its own skill: Cartography) */
     beasts (2);
     for (;;) {
         hy_sem_acquire (HUB->sem[T_REFEREE]);   /* (Waiting costs nothing) */
