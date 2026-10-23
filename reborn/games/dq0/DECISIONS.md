@@ -846,8 +846,11 @@ stumbles too.
 The user (2026-10-22), on a useless limb: "According to the rules, at some point of injury a limb is useless.  For an
 arm or hand, that means no picking things up with that hand.  For a leg or hip, that means no walking, but crawling
 may still be possible if one arm and one leg still work."  So a useless arm's hand takes nothing up and holds nothing;
-a useless leg walks no more: the character crawls if an arm and a leg still work, else it can't move (the book's
-staff or crutch left out for now).
+a useless leg walks no more: the character crawls if an arm and a leg still work, else it can't move.  Then the
+user: "You can stand and hop with one good leg.  Hopping would be quite slow (crawl speed), and would tire you at the
+strenuous work rate.  A crutch could be used to move at walk speed."  So with one good leg the character can stand
+(the book's Rise) and hop, at a crawl's speed and tiring as strenuous work does, or walk at a walk's speed with a
+crutch (a staff, a pole: a thing that serves as one, held); with no good leg it crawls, if an arm still works.
 
 **Design:** the plan's slice 4.1b (to be drafted with it).
 
