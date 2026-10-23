@@ -998,8 +998,8 @@ often the easier.  The numbers are HOUSE.md's (bearings underground).
   its bearings right, told if they were off (E_BEARING BRG_KNOWN).
 - **What disorients.**  How the character came in, the theme's (theme.h's TM_FELL, a theme file's "start | fell"):
   come round below from a fall, its bearings are tested far the harder as the game begins, a failure leaving its
-  north anywhere.  So is being knocked senseless, by whatever (the world sees the referee's summary's
-  C_UNCONSCIOUS); a fall of ten feet or more shakes it (harm_fx's: the harder the further), a failure the walk's
+  north anywhere.  So is being knocked senseless, by whatever (a blow: the world sees the referee's summary's
+  C_UNCONSCIOUS; a harm's time out, a fall's, a trap's); a fall of ten feet or more shakes it (harm_fx's: the harder the further), a failure the walk's
   drift.  Nothing moves the character while it's senseless yet.
 - **What uses the belief.**  The status line, "You turn to face ...", "You face ... already.", the dark's "You feel
   your way north.", "You search the north wall...", and the parser's compass words: "north" means the north the

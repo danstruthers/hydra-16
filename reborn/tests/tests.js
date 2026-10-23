@@ -5013,7 +5013,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0bearing', what: 'Dingus Quest Zero\'s bearings underground (slice 4.2, the user\'s, 2026-10-16: "Dwarves or other denizens that live underground don\'t have this problem, but humans would, so instead of direction heading, a check would need to be made"; 2026-10-23: a start below, come round from a fall, disoriented; HOUSE.md\'s bearings underground), by the hub\'s bearings (pc_skew, pc_lost), the referee\'s P_BEARING tests and the words: at seed 3 a human of little Awareness (hmchar\'s file, its Awareness 5) walks the passage east of the way in, which bends twice: tested, failed, its north drifted an eighth unknown to it (the status line\'s "facing SE", truly east); "turn left" truly north, told as it believes ("You turn to face northeast."); "face north" its believed north (truly northwest), "face northwest" truly west; forward back along the passage into the kitchen it began in, a landmark, its bearings set right ("You know this place: your bearings come back to you.", no test); east again and back twice, the third time east a critical failure: a quarter off and known ("You\'ve lost your bearings ...", "facing S?"), the status command\'s "Facing: south, you think"; kept with the game (dq0 -d) and carried on with it; a dwarf (hmchar -p dwarf, its Awareness as poor) the same way never tested, "You turn to face north."; and a theme whose character comes round below from a fall (a hand-written theme\'s "start | fell", themegen\'s to fill out): the human tested as it begins (ten steps the harder), its north astray, the dwarf not',
+      name: 'dq0bearing', what: 'Dingus Quest Zero\'s bearings underground (slice 4.2, the user\'s, 2026-10-16: "Dwarves or other denizens that live underground don\'t have this problem, but humans would, so instead of direction heading, a check would need to be made"; 2026-10-23: a start below, come round from a fall, disoriented; HOUSE.md\'s bearings underground), by the hub\'s bearings (pc_skew, pc_lost), the referee\'s P_BEARING tests and the words: at seed 3 a human of little Awareness (hmchar\'s file, its Awareness 5) walks the passage east of the way in, which bends twice: tested, failed, its north drifted an eighth unknown to it (the status line\'s "facing SE", truly east); "turn left" truly north, told as it believes ("You turn to face northeast."); "face north" its believed north (truly northwest), "face northwest" truly west; forward back along the passage into the kitchen it began in, a landmark, its bearings set right ("You know this place: your bearings come back to you.", no test); east again and back twice, the third time east a critical failure: a quarter off and known ("You\'ve lost your bearings ...", "facing S?"), the status command\'s "Facing: south, you think"; kept with the game (dq0 -d) and carried on with it; a dwarf (hmchar -p dwarf, its Awareness as poor) the same way never tested, "You turn to face north."; a theme whose character comes round below from a fall (a hand-written theme\'s "start | fell", themegen\'s to fill out): the human tested as it begins (ten steps the harder), its north astray, the dwarf not; knocked senseless by the hand-written theme\'s rats (dq0senseless\'s), tested as it\'s out; and the kobold warren (seed 517: its story\'s fall through a ruin\'s floor, its start fallen in), tested as it begins and again as it jumps down its gatehouse\'s ledge, ten feet',
       bearings: true, init: 't_rc', cycles: 4000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml awa 5 >> /ram/c.hm',
         'hmchar -q -s 5 -p dwarf -o /ram/d.hm', 'echo ml awa 5 >> /ram/d.hm',
@@ -5022,7 +5022,11 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -d /ram/k', 'e', 'quit', 'dq0 -p t -d /ram/k', 'look', 'quit',
         'dq0 -p t -s 3 -c /ram/d.hm', 'e', 'turn left', 'quit',
         'echo \'start    | fell\' > /ram/t.txt', 'dq0 -p t -s 4 -c /ram/c.hm -t /ram/t.txt', 'look', 'quit',
-        'dq0 -p t -s 4 -c /ram/d.hm -t /ram/t.txt', 'look', 'quit', 'echo $status']) },
+        'dq0 -p t -s 4 -c /ram/d.hm -t /ram/t.txt', 'look', 'quit',
+        'cp /ram/c.hm /ram/s.hm', 'echo ml una 5 >> /ram/s.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+        'dq0 -p t -s 3 -c /ram/s.hm -T -d /ram/g', 'defend none', ...Array(12).fill('wait'), 'quit',
+        'dq0 -p t -s 517 -c /ram/c.hm', 'turn half left', 'f', 'turn half right', 'f', 'u', 'u', 'turn around', 'jump down', 'quit',
+        'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
@@ -5064,7 +5068,15 @@ module.exports = {
         if (tests(h).length !== 1) f.push('come round below from a fall: the human not tested as it begins (' + JSON.stringify(tests(h)) + ')');
         if (!h.after || !h.after.pc.skew) f.push('come round below from a fall: the human\'s north not astray (' + (h.after && h.after.pc.skew) + ')');
         if (tests(hd).length || !hd.after || hd.after.pc.skew) f.push('come round below from a fall: the dwarf tested, or astray');
-        this.notes = [e1, e2, e3, e4, h].map(t => t.line + ': ' + JSON.stringify(tests(t).map(q => [q.grade, q.result])) + ' ' + (t.after && [t.after.pc.skew, t.after.pc.lost]));
+        // Knocked senseless (the hand-written theme's rats, seed 3: dq0senseless's): tested as it's out, astray
+        const o = T.of('dq0 -p t -s 3 -c /ram/s.hm -T -d /ram/g'), out1 = T.slice(o.k).find(t => t.after && (t.after.sum.cond & 2));
+        if (!out1) f.push('never knocked senseless');
+        else if (tests(out1).length !== 1) f.push('knocked senseless (' + out1.line + '): not tested as it\'s out (' + JSON.stringify(tests(out1)) + ')');
+        // The kobold warren (seed 517): fallen in, tested as it begins; a jump down its ledge (10 feet), tested
+        const w = T.of('dq0 -p t -s 517 -c /ram/c.hm'), j = T.after(w, 'jump down');
+        if (tests(w).length !== 1) f.push('the warren\'s start, fallen in: not tested (' + JSON.stringify(tests(w)) + ')');
+        if (tests(j).length !== 1) f.push('the jump down 10 feet: not tested (' + JSON.stringify(tests(j)) + ')');
+        this.notes = [e1, e2, e3, e4, h, ...(out1 ? [out1] : []), w, j].map(t => t.line + ': ' + JSON.stringify(tests(t).map(q => [q.grade, q.result])) + ' ' + (t.after && [t.after.pc.skew, t.after.pc.lost]));
         return f;
       },
       sdcard: true

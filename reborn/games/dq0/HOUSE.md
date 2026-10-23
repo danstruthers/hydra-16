@@ -1225,18 +1225,18 @@ the game (world.dat).  Every ruleset's but the test itself (the referee's).  Eac
   another room, another stratum), sets its bearings right, told if they were wrong or it knew itself lost ("You know
   this place: your bearings come back to you."), and tests nothing more.
 - **The start** (theme.h's TM_FELL, a theme file's "start | walked" or "start | fell"): walked in by the way in from
-  the surface (every theme till now, and the default) it knows north; come round below from a fall, its bearings are
-  tested **ten steps the harder**, a failure leaving its north **anywhere** (the d8: any of the eight, the true one by
-  chance), not known to it but on a critical failure.  The tests' starts (dq0 -T ...) count as walked in.  No theme
-  starts with a fall yet: themegen passes a hand-written theme's start line on, and its own themes don't make one.
+  the surface (the default) it knows north; come round below from a fall, its bearings are tested **ten steps the
+  harder**, a failure leaving its north **anywhere** (the d8: any of the eight, the true one by chance), not known to
+  it but on a critical failure.  The kobold warren's stand-in starts so (its story: fallen through a ruin's floor);
+  themegen's own themes walk in, and pass a hand-written theme's start line on.
 - **What disorients it** (the user's, 2026-10-23: any moment the game moves the character without its walking):
-  knocked senseless (by anything: a blow, a fall, a trap, a battering's own hurt; the referee's summary's
-  C_UNCONSCIOUS, as it's seen), its bearings tested as the start's from a fall (ten harder, a failure anywhere); a fall
-  of **ten feet or more** (a pit, a ledge jumped or fallen from, a shaft, over an edge in the dark, a window's sill; a
-  hold caught, none), **a step the harder each five feet** (ten at most), a failure the walk's drift.  Nothing moves
-  the character while it's senseless yet (a robber takes things, it doesn't drag); if one comes, its being knocked
-  out has done it already.  A climb, a window climbed through, stairs and ladders don't disorient.  (main's watch of
-  the summary, harm_fx's, part 49's: part 52's bearings_off.)
+  knocked senseless (by anything: a blow, the referee's summary's C_UNCONSCIOUS as the world sees it; a harm, a fall's,
+  a trap's, a wall run into in the dark, by its time out), its bearings tested as the start's from a fall (ten harder,
+  a failure anywhere); a fall of **ten feet or more** (a pit, a ledge jumped or fallen from, a shaft, over an edge in
+  the dark, a window's sill; a hold caught, none), **a step the harder each five feet** (ten at most), a failure the
+  walk's drift.  Nothing moves the character while it's senseless yet (a robber takes things, it doesn't drag); if
+  one comes, its being knocked out has done it already.  A climb, a window climbed through, stairs and ladders don't
+  disorient.  (main's watch of the summary, harm_fx's, part 49's: part 52's bearings_off.)
 - **What goes by the belief:** the status line's facing, "You turn to face ...", "You face ... already.", the dark's
   "You feel your way north." and "You run north into the dark.", "You search the north wall...", and every compass
   word typed: "go north", "turn east", "face north", "the door to the north", "north and to my left", "search the north

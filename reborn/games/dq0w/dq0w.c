@@ -1832,17 +1832,23 @@ unsigned char __fastcall__ s_bearings (unsigned w)
     return k;
 }
 
-/* What disorients it (main's, harm_fx's, part 49's): BO_OUT knocked senseless, its bearings astray as it comes round
-** (BEAR_OUT steps the harder); else (0) a harm's, the world's slot's request and its reply: a fall of ten feet or more
-** (no hold caught, not knocked senseless: main's), its tumble's drift, a step the harder each five feet (BEAR_OUT at
-** most); told if it knows it's lost them */
+/* What disorients it (main's, harm_fx's, part 49's): BO_OUT knocked senseless (a blow's: the referee's summary, as
+** main sees it), its bearings astray as it comes round (BEAR_OUT steps the harder); else (0) a harm's, the world's
+** slot's request and its reply: one that knocked it senseless (its w2, the time out: a fall's, a trap's, a dark
+** wall's, its time the move's, not the summary's) the same, main's watch told so; a fall of ten feet or more (no hold
+** caught), its tumble's drift, a step the harder each five feet (BEAR_OUT at most); told if it knows it's lost them */
 void __fastcall__ s_bearings_off (unsigned feet)
 {
     static unsigned char k;
 
     hub_map (0);
-    if (!feet && W_SLOT.a == HC_FALL && W_SLOT.result != 1 && !W_SLOT.w2) {
-        feet = W_SLOT.w1;
+    if (!feet) {
+        if (W_SLOT.w2) {
+            feet = BO_OUT;
+            pc_down = 1;                        /* (Not again, as main sees it out, if it does) */
+        } else if (W_SLOT.a == HC_FALL && W_SLOT.result != 1) {
+            feet = W_SLOT.w1;
+        }
     }
     if (KNOWS_NORTH || feet < 10) {
         return;
