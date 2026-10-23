@@ -965,6 +965,50 @@ material within 3 + sight squares), "You'd have to go closer to make out more". 
 command and none is ahead, the UI asks which, in a numbered list (choose.c); and where several things or denizens
 could be the one meant and it must be one (a bare take, a throw's mark, a target set), resolve.c asks the same way.
 
+### Bearings underground (slice 4.2)
+
+The user (2026-10-16): "Also, traveling underground, for many species, is disorienting.  Actual direction of travel
+can be lost pretty quickly, especially if the corridors/tunnels between "rooms" are not straight.  Dwarves or other
+denizens that live underground don't have this problem, but humans would, so instead of direction heading, a check
+would need to be made to determine direction of travel."  And (2026-10-23): a character that starts below, come round
+from a fall, could start disoriented, its north far off; everything else that disorients the same way; ways walked
+often the easier.  The numbers are HOUSE.md's (bearings underground).
+
+- **Who knows north.**  A trait of the species, the referee's (its summary's northsense): those that live below
+  (HarnMaster's Khuzdul; later the denizens' kinds that dwell underground) always know which way north is; the rest
+  (humans, the Sindarin, who are forest folk) keep it only by attention, and can lose it.  The denizens keep the true
+  north.
+- **North a belief.**  The world keeps the true facing (the hub's pc_face), and every task that works the place (the
+  senses, the sound, the maker, the denizens) goes by it.  The character's north is its own: the hub's pc_skew, in
+  eighths of a turn (the heading it believes it faces is the true one and the skew, & 7), and pc_lost (it knows it's
+  unsure), the world's to keep, from the referee's tests and the landmarks, kept with the game (world.dat's struct
+  wsave).  A new game walked into by the way in starts knowing north.
+- **The check.**  The referee's P_BEARING (HarnMaster's: Awareness, or Mining if the character's is the higher), its
+  dice its own (rshouse.h's), so the game's other tests come out as they did.  The world asks at a move's end (part
+  52's s_bearings, from arrive), after a walk along a passage that bent (the walk's beats count its turns: beat's
+  WB_TURN), or a room crossed in the dark (felt across, not seen): one bend four steps the easier, each one more two
+  the harder, a room crossed in the dark as a bend, the dark four the harder.  A straight passage and a lit room ask
+  nothing.  A way walked often is the easier (by the map's count of passings: the hook, part 52's familiar).
+- **What comes of it.**  A success: nothing changes (a belief already wrong stays wrong: only a landmark puts it
+  right).  A marginal failure: the believed north drifts an eighth one way or the other (the referee's result: the
+  bearings' d8), and the character doesn't know it.  A critical failure: a quarter, and it knows it has lost its way
+  (E_BEARING BRG_LOST, told; the status line's "facing NE?").
+- **Landmarks.**  Coming back into a room it has been in before (the senses' R_VISITED: the room by the way in, a
+  stairway's room it came down by, any it has crossed) from elsewhere (a passage, another room, another stratum) sets
+  its bearings right, told if they were off (E_BEARING BRG_KNOWN).
+- **What disorients.**  How the character came in, the theme's (theme.h's TM_FELL, a theme file's "start | fell"):
+  come round below from a fall, its bearings are tested far the harder as the game begins, a failure leaving its
+  north anywhere.  So is being knocked senseless, by whatever (the world sees the referee's summary's
+  C_UNCONSCIOUS); a fall of ten feet or more shakes it (harm_fx's: the harder the further), a failure the walk's
+  drift.  Nothing moves the character while it's senseless yet.
+- **What uses the belief.**  The status line, "You turn to face ...", "You face ... already.", the dark's "You feel
+  your way north.", "You search the north wall...", and the parser's compass words: "north" means the north the
+  character believes in (the parser's compass made as it believes it faces, the UI's cq_cmd making it the true way
+  it means for the world).  The relative words (ahead, left, behind right ...) are always true, the body's own; so
+  are the things the senses word as lying ahead or to the right.  An eighth off, the four ways it believes in are
+  truly diagonals, which a passage won't take.
+- **The map** goes by the belief too (its turning, its compass): the map's, slice 4.2's.
+
 ### Names
 
 One table of the names the character gives (dq0/names.c), in the hub's theme bank (hub.h's `struct tname`,
