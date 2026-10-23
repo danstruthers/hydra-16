@@ -454,7 +454,10 @@ really like for the map to have a way to visually distinguish between the area y
 memory of what else there is.  I know that is hard with text, but could color be used in some way?"  So the map in
 colour (the console's VT: SGR on the Vera's screen and a serial terminal alike): what's seen now bright, what's
 remembered dim, a drawn map's squares a colour of their own, the character bright; the faint glyphs kept, a setting
-to turn colour off.
+to turn colour off.  And: "And just remember that with better intelligence, the map stays clearer longer, but that
+doesn't mean it is bright and shiny when you can't see it."  So only what's seen now is bright; what's remembered is
+dim however well it's kept (a memory's quality says whether a square's shown, how true its place, at most which dim
+shade).
 
 **Design:** DUNGEON.md, moving (watchfulness: mapping as it goes); still to come.
 
