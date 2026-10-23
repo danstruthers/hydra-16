@@ -284,8 +284,8 @@ static void __fastcall__ strike (struct side* s, struct side* t, unsigned char n
     if ((f & HARN_W_STUMBLE) && ((f & HARN_W_LIMB) || harn_stumble_roll (c, 0))) {
         prone (t, 1);                           /* (A leg's: fallen) */
     }
-    if ((f & HARN_W_FUMBLE) && ((f & HARN_W_LIMB) || harn_fumble_roll (c, 0))) {
-        effect (t->who, X_DROP, 0, 0, 0, 0);    /* (An arm's: what it held dropped) */
+    if ((f & HARN_W_FUMBLE) && ((f & HARN_W_LIMB) || harn_fumble_roll (c, 0)) && (p = wound_drops (t, loc)) != 0) {
+        effect (t->who, X_DROP, 0, 0, p, 0);    /* (An arm's: what it held in that hand dropped, the world's) */
     }
     if (f & HARN_W_DOWN) {
         R->w2 = knocked_out (c, t->who ? &bs.out : &pc_out, &R->c);    /* (Senseless: the tenths till it comes
@@ -301,8 +301,8 @@ static void __fastcall__ mishap (struct side* s, unsigned char stumble, unsigned
     if (stumble ? harn_stumble_roll (s->c, 0) : harn_fumble_roll (s->c, 0)) {
         if (stumble) {
             prone (s, 1);
-        } else {
-            effect (s->who, X_DROP, 0, 0, 0, 0);
+        } else if ((stumble = fumbled (s, s == &A)) != 0) {
+            effect (s->who, X_DROP, 0, 0, stumble, 0);  /* (What it struck with, or blocked with, its hand's) */
         }
     }
 }

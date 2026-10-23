@@ -129,12 +129,18 @@ go:
             SWPART      47, 13              ; What's on a thing or in it, searched (things.c)
             SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
                                             ;   (things.c: slice 4.1b's)
+            SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
 
             SWFN        work, 48
             SWFN        worked, 48
             SWFN        hold_in, 48
             SWFN        swap, 48
             SWFN        hand_free, 48
+            SWFN        held_kinds, 48
+            SWFN        shand_of, 48
+            SWFN        equip_now, 49
+            SWFN        drop_held, 49
+            SWFN        harm_fx, 49
             SWFN        start_dig, 1
             SWFN        dig_on, 1
             SWFN        climb, 2

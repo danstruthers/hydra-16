@@ -1118,6 +1118,18 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   Why: the book's universal penalty already counts every injury once; the arm's own levels count again for what that
   hand does, as the user asked ("arm wounds and using a shield or weapon in that hand"), in the book's scale of a
   level's worth.  The numbers the user's to judge.  (gear.c's hand_pen.)
+- **An arm's wound lets go of what its hand holds, the book's** (Combat 14, Skills 21): a wound to the arm (shoulder to
+  hand) its fumble roll, 3d6 and the physical penalty over Dexterity (the Combat Tables' u, on every limb's row), a
+  grievous one at once; and the melee table's fumbles (AF, DF, BF) what struck or blocked.  The house's: a harm's (a
+  trap's, a fall's) roll is made only if that hand holds something (the world tells the referee which do, RS_EQUIP's
+  w2); a fight's is made as before, whatever it holds.  What's let go of falls where the book's die puts it (a d10: 1-6
+  the square that way, north, northeast, southeast, south, southwest, northwest, if it's open floor; 7-10 its own),
+  seen lying there, told after the blow's words ("Your sword falls from your hand."); the referee told what's to hand
+  at once.  A creature's own parts (a bite, claws) are never let go of.  (fight.c's strike, mishap; gear.c's fumbled,
+  wound_drops; sheet.c's harm; wlimbs.c's drop_held, part 49's.)
+- **A useless arm** (a grievous wound, till it heals to M1; an amputation for good): its hand holds nothing ("Your left
+  arm is useless."), no two-handed thing ("You can't hold the pick in one hand."), and a shield or a weapon on it
+  does nothing (no block, no blow).  (things.c's hand_for; gear.c's pc_side.)
 
 ## Decided, not yet built
 

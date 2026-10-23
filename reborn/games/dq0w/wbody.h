@@ -37,6 +37,11 @@ unsigned char __fastcall__ den_first (unsigned char k, unsigned char away);    /
                                                 **   advantage: backed away (away 1), 2; or its blow first, 1 */
 unsigned char __fastcall__ unlit_at (unsigned char sn, unsigned x, unsigned y);  /* (dq0w.c's) A square dark to
                                                 **   a denizen: unseen lit, no room's own light (the chunk in the window) */
+void equip_now (void);                          /* (Part 49: wlimbs.c) What's to hand told the referee at once */
+void __fastcall__ drop_held (unsigned char h, unsigned char ring);   /* (Part 49) What the character holds in hands h
+                                                **   (DH_*) let go of, fumbled: told in the denizens' ring (ring 1) or
+                                                **   the world's */
+void harm_fx (void);                            /* (Part 49) A harm's effects: dropped, prone */
 unsigned char __fastcall__ engaged (unsigned char eng, unsigned char def);  /* (dq0w.c's part 25) The engage
                                                 **   initiative test: eng engaging def (0 the character, else an
                                                 **   actor's entry plus 1) */

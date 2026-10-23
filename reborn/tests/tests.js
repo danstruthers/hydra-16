@@ -4860,7 +4860,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0hands', what: 'Dingus Quest Zero\'s two hands (slice 4.1b, the user\'s, 2026-10-21: "is there handedness (right handed versus left versus ambidextrous) in the character profile?  ... There should be a penalty for using a weapon in your off hand unless ambidextrous"), by where each thing is (the item store\'s records: the hand its sn), the hub\'s pc_shand and the words: at seed 3 (dq0 -T, dq0 -k sword,spear: right-handed) the kit\'s torch in its left hand, its sword in its right (a weapon the main hand, a light the other), the spear in the pack; the hands swapped ("You change hands: ..."); the sword refused its right hand, the torch there; the torch put down, the sword put in its other hand; the spear refused both hands, the sword in one; the sword stowed, the spear taken in both hands, looked at ("Your spear is in both hands."); the torch refused its left hand, the spear in both; the spear moved to its left hand, the lit torch taken up into its right; what it carries by hand; a left-handed character (its file\'s med 15) the torch in its right hand, the sword in its left; at seed 5 (dq0 -T: the rats) a rat attacked with the dagger in its left hand: the dagger taken in its left hand first (its words), struck with (pc_strike the dagger, pc_shand its left hand)',
+      name: 'dq0hands', what: 'Dingus Quest Zero\'s two hands (slice 4.1b, the user\'s, 2026-10-21: "is there handedness (right handed versus left versus ambidextrous) in the character profile?  ... There should be a penalty for using a weapon in your off hand unless ambidextrous"), by where each thing is (the item store\'s records: the hand its sn), the hub\'s pc_shand and the words: at seed 3 (dq0 -T, dq0 -k sword,spear: right-handed) the kit\'s torch in its left hand, its sword in its right (a weapon the main hand, a light the other), the spear in the pack; the hands swapped ("You change hands: ..."); the sword refused its right hand, the torch there; the torch put down, the sword put in its other hand; the spear refused both hands, the sword in one; the sword stowed, the spear taken in both hands, looked at ("Your spear is in both hands."); the torch refused its left hand, the spear in both; the spear moved to its left hand, the lit torch taken up into its right; what it carries by hand; a left-handed character (its file\'s med 15) the torch in its right hand, the sword in its left; at seed 5 (dq0 -T, dq0 -k sword: Sword 80, the rats) a rat attacked with the sword in its left hand: the sword moved to its left hand first (its words), struck with (pc_strike the sword, pc_shand its left hand)',
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sword,spear', 'i', 'swap hands', 'hold the sword in my right hand', 'drop the torch',
@@ -4868,7 +4868,8 @@ module.exports = {
         'look at the spear', 'take the lit torch in my left hand', 'hold the spear in my left hand', 'take the lit torch in my right hand',
         'i', 'quit',
         'cp /ram/c.hm /ram/l.hm', 'echo med 15 >> /ram/l.hm', 'dq0 -p t -s 3 -c /ram/l.hm -T -k sword', 'i', 'quit',
-        'dq0 -p t -s 5 -c /ram/c.hm -T -I', 'd', 'wait', 'go right', 'drop the torch', 'attack the rat with the dagger in my left hand',
+        'cp /ram/c.hm /ram/s.hm', 'echo ml swd 80 >> /ram/s.hm', 'dq0 -p t -s 5 -c /ram/s.hm -T -I -k sword', 'd', 'wait', 'go right',
+        'drop the torch', 'attack the rat with the sword in my left hand',
         'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -4900,10 +4901,9 @@ module.exports = {
         const lg = T.of('dq0 -p t -s 3 -c /ram/l.hm -T -k sword');
         hand(lg, 'torch', H.R, 'left-handed: its off hand the right');
         hand(lg, 'sword', H.L, 'left-handed: its main hand the left');
-        const a = T.of('attack the rat with the dagger in my left hand');
-        hand(a, 'dagger', H.L, 'taken in its left hand to strike with');
-        if (!dq0Ev(a, 'E_FIGHT', { who: 0 }).length) f.push('the rat not struck at with the dagger (' + dq0Evs(a) + ')');
-        if (!a.after || a.after.pc.strike !== (0x80 | K.KI_DAGGER) || a.after.pc.shand !== H.L) f.push('the blow not the dagger in its left hand: pc_strike ' + (a.after && a.after.pc.strike) + ', pc_shand ' + (a.after && a.after.pc.shand));
+        const a = T.of('attack the rat with the sword in my left hand');
+        if (!dq0Ev(a, 'E_FIGHT', { who: 0 }).length) f.push('the rat not struck at with the sword (' + dq0Evs(a) + ')');
+        if (!a.after || a.after.pc.strike !== (0x80 | K.KI_SWORD) || a.after.pc.shand !== H.L) f.push('the blow not the sword in its left hand: pc_strike ' + (a.after && a.after.pc.strike) + ', pc_shand ' + (a.after && a.after.pc.shand));
         inTurn(s, ['> i', 'You carry a torch (lit), in your left hand;', 'a sword, in your right hand.',
           '> swap hands', 'You change hands: the sword in your left, the torch in your right.',
           '> hold the sword in my right hand', 'Your right hand holds the torch.', '> drop the torch', 'Put down.',
@@ -4915,7 +4915,33 @@ module.exports = {
           '> take the lit torch in my right hand', 'You take the torch in your right hand.',
           '> i', 'You carry a torch (lit), in your right hand;', 'a spear, in your left hand',
           '> i', 'You carry a torch (lit), in your right hand;', 'a sword, in your left hand.',
-          '> attack the rat with the dagger in my left hand', 'You take the dagger in your left hand.', 'You strike at the giant rat with your dagger'], f, 'the words: ');
+          '> attack the rat with the sword in my left hand', 'You shift the sword to your left hand.', 'You strike at the giant rat with your sword'], f, 'the words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0limbs', what: 'Dingus Quest Zero\'s limbs (slice 4.1b, the user\'s, 2026-10-21: "if you have a limb injury, it should affect that limbs usefulness"; 2026-10-22: "For an arm or hand, that means no picking things up with that hand"), by where each thing is (the item store\'s), the referee\'s summary (its limbs) and the words: a character with a grievous wound to its left forearm, its limb useless (its file\'s inj line: the book\'s, Combat 14): its summary\'s limbs its left arm useless; at seed 3 (dq0 -T, dq0 -k pick) the kit\'s torch in its right hand (its off hand the useless one), the pick (two-handed) in the pack; the dagger refused its left hand ("Your left arm is useless."), the pick refused ("You can\'t hold the pick in one hand."), the hands not swapped (the torch not into the useless hand)',
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'cp /ram/c.hm /ram/a.hm', 'echo inj 6 2 3 4 0 8 >> /ram/a.hm', 'dq0 -p t -s 3 -c /ram/a.hm -T -k pick', 'i',
+        'hold the dagger in my left hand', 'hold the pick', 'swap hands', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const g = T.of('dq0 -p t -s 3 -c /ram/a.hm -T -k pick');
+        const thing = (t, n) => t && dq0Thing(t.after, n);
+        const tr = thing(g, 'torch'), pk = thing(g, 'pick');
+        if (!tr || !(tr.flags & DQ0_I.HELD) || (tr.sn & 3) !== 2) f.push('the kit\'s torch not in its right hand, its left arm useless (' + JSON.stringify(tr) + ')');
+        if (!pk || (pk.flags & DQ0_I.HELD)) f.push('the pick held, its left arm useless');
+        if (!g.after || !(g.after.sum.limbs & 4)) f.push('the summary\'s limbs not its left arm useless (' + (g.after && g.after.sum.limbs) + ')');
+        const d = thing(T.of('hold the dagger in my left hand'), 'dagger');
+        if (d && (d.flags & DQ0_I.HELD)) f.push('the dagger taken into its useless hand');
+        const sw = thing(T.of('swap hands'), 'torch');
+        if (!sw || (sw.sn & 3) !== 2) f.push('the torch moved into its useless hand');
+        inTurn(s, ['> i', 'You carry a torch (lit), in your right hand;', '> hold the dagger in my left hand', 'Your left arm is useless.',
+          '> hold the pick', 'Your left arm is useless. You can\'t hold the pick in one hand.', '> swap hands', 'Your left arm is useless.'],
+          f, 'the words: ');
         return f;
       },
       sdcard: true

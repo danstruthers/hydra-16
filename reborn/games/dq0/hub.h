@@ -529,10 +529,21 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   it, stumbled over it and on; run into what's there, FA_* times
                                                 **   256, its gait times 4096; gone over an edge, a drop's or a pit's
                                                 **   (FA_*), the fall after; stopped short at it); */
-       WB_SWAT };                               /* (The world's: a blow at a denizen with a soft thing, one attempt, no
+       WB_SWAT,                                 /* (The world's: a blow at a denizen with a soft thing, one attempt, no
                                                 **   harm, the actor plus 1 times 256, the thing the hub's pc_strike's:
                                                 **   "You swat at the rat with the cloak, but it seems ineffectual.",
-                                                **   the user's, 2026-10-22) */
+                                                **   the user's, 2026-10-22); */
+       WB_DROP, WB_PICKS,                       /* (The hands and limbs', slice 4.1b's, every actor's: b whose, 0 the
+                                                **   character, else the actor plus 1: a thing let go of, fumbled, its
+                                                **   kind times 256 (the catalogue's), told after the blow's words (in
+                                                **   the denizens' ring, a fight's) or the harm's; a weapon a denizen
+                                                **   let go of taken up again, its kind times 256; */
+       WB_RISEN, WB_NOT_UP, WB_FALLEN,          /*   got to its feet (the book's Rise), struggling and still down, fallen
+                                                **   prone (a stumble failed, a leg giving way); */
+       WB_LIMP, WB_HOP, WB_CRUTCH, WB_CRAWL, WB_STUCK, WB_NO_RUN };   /* the character's walk: limping, its legs
+                                                **   hurt; hopping on its one good leg; walking with a crutch, its kind
+                                                **   times 256; crawling; not able to move; no faster than a walk on
+                                                **   one leg) */
 enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT };   /* (What stops a walk in the dark, met: the
                                                 **   world's ahead) */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */

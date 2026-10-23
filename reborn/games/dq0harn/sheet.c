@@ -279,6 +279,13 @@ void __fastcall__ o_harm (struct req* r)
         if ((w & HARN_W_STUMBLE) && ((w & HARN_W_LIMB) || harn_stumble_roll (&pc, 0))) {
             e->cond |= C_PRONE;                 /* (A leg's: fallen; a grievous one at once, Combat 14) */
         }
+        n = d.loc & HARN_RIGHT ? DH_RIGHT : DH_LEFT;
+        if ((w & HARN_W_FUMBLE) && (hheld & n) && ((w & HARN_W_LIMB) || harn_fumble_roll (&pc, 0))) {
+            e[1].target = 0;                    /* (An arm's, its hand holding something: let go of, the world's to
+                                                **   drop; Combat 14, slice 4.1b's) */
+            e[1].kind = X_DROP;
+            e[1].x[0] = n;
+        }
     } else if (how & HARN_FALL_WRENCHED) {
         r->b = HARN_MINOR;
     }

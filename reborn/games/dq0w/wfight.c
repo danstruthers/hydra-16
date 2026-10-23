@@ -94,7 +94,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
 {
     static struct req* r;
     static struct fight* f;
-    static unsigned char ff, c, out, me, wh, n, i;
+    static unsigned char ff, c, out, me, wh, n, i, dh;
     static unsigned w2;
     static unsigned char pa, pd;
     static const struct rs_effect* e;
@@ -120,7 +120,10 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     if (out == O_RISE) {                        /* (The attacker got up, its turn spent) */
         pa = POS_STANDING;
     }
-    for (i = 0, e = (const struct rs_effect*) r->x; i < RS_EFFECTS && e->kind; ++i, ++e) {
+    for (dh = i = 0, e = (const struct rs_effect*) r->x; i < RS_EFFECTS && e->kind; ++i, ++e) {
+        if (e->kind == X_DROP && !e->target) {
+            dh |= e->x[0];                      /* (The character's hands' things let go of, fumbled: slice 4.1b's) */
+        }
         if (e->kind == X_COND_ON && (e->cond & C_PRONE)) {
             if (e->target == att) {             /* (Fallen: a stumble, a leg's.  An if, not *(c ? &pa : &pd): 13
                                                 **   bytes the less) */
@@ -172,6 +175,9 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         bleeds |= 1 << bk;
     }
     told (att, def, out, ff);
+    if (dh) {
+        drop_held (dh, 1);                      /* (Told after the blow, in the denizens' ring) */
+    }
     if (ff & (me == att ? FF_A_DEAD : FF_D_DEAD)) {
         died ();
     }
@@ -242,8 +248,7 @@ void __fastcall__ s_den_rob (unsigned x, unsigned y)
 {
     static struct msg m;
     static unsigned i, n;
-    static unsigned char kind, f, hd;
-    static char key[sizeof CATALOGUE[0].tool];
+    static unsigned char kind, f;
     unsigned char* s;
 
     s = at (bd.sn, x, y);
@@ -268,35 +273,8 @@ void __fastcall__ s_den_rob (unsigned x, unsigned y)
     }
     hub_map (0);
     if (n) {
-        WSLOT.text[0] = 0;                      /* (What's to hand now: each tool still on it, however deep) */
-        for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
-            kind = ip->kind;
-            f = ip->flags;
-            n = ip->quality;
-            hd = ip->sn;
-            if (!mine ()) {
-                continue;
-            }
-            hub_map (CAT_BANK);                 /* (Its key after its mark, its quality after it: wb's, the blows'
-                                                **   words' room, a moment) */
-            memcpy (wb + 1, CATALOGUE[kind].tool, sizeof key);
-            hub_map (0);
-            if (wb[1] && strlen (WSLOT.text) < REQ_TEXT - sizeof wb) {
-                wb[0] = f & I_HELD ? " <>*"[hd & IH_BOTH ? hd & IH_BOTH : IH_RIGHT] : f & I_WORN ? '+' : ' ';   /* (Held: its
-                                                **   hand's mark, slice 4.1b's) */
-                key[0] = '0' + n;
-                key[1] = 0;
-                strcat (wb, key);
-                strcat (WSLOT.text, wb);
-            }
-        }
-        i = weight_in (IW_ACTOR, 0);            /* (And its load: its encumbrance the referee's, at once) */
-        hub_map (0);
-        WSLOT.kind = RS_EQUIP;
-        WSLOT.actor = 0;
-        WSLOT.a = 2;
-        WSLOT.w1 = i;
-        hub_ask (SLOT_WORLD)->state = REQ_FREE;
+        equip_now ();                           /* (What's to hand now, and its load: the referee's, at once, part
+                                                **   49's) */
         m.kind = E_TASK;
         m.who = 0;
         m.b = bk + 1;

@@ -140,8 +140,8 @@ unsigned char __fastcall__ o_limbs_of (const harn_char* h)
             j = (j - 1) * 2 + ((p->loc & HARN_RIGHT) != 0);
             v = lhurt[j] + p->il;
             lhurt[j] = v < p->il ? 255 : v;
-            if (p->flags & HARN_IF_LIMB) {
-                l |= LB_ARM_L << j;
+            if (p->flags & (HARN_IF_LIMB | HARN_IF_AMPUTATED)) {
+                l |= LB_ARM_L << j;             /* (Useless, or gone: an amputation's never heals whole) */
             }
         }
     }
@@ -282,6 +282,7 @@ void __fastcall__ o_pc_side (struct side* s)
     s->dodge = eml (&pc, HARN_DGE);
     s->nblk = 0;
     s->aslot = BARE_ARM;
+    s->dslot = 0xFF;
     for (k = 0; k < NTOOLS; ++k) {              /* (What it holds that's a weapon: its best to strike with, its best
                                                 **   to block with, each the worse for its hand; a useless arm's none) */
         if (!tools[k][0] || !(tflag[k] & T_HELD) || ((h = tflag[k] & (T_LEFT | T_RIGHT)) & dead)) {
@@ -380,6 +381,33 @@ void __fastcall__ o_pc_wield (struct req* q)
     put (key ? key : "");                       /* (Its words: "" none, the reply's text cleared) */
 }
 
+/* The hands that let go of what side s fumbled (the melee table's fumble: rs.h's DH_*, the referee's X_DROP's; 0 none):
+** the character's attack's thing (its slot's hand; a thing named, the hub's pc_shand's) or its block's (att 0); a
+** creature's weapon, held, in its right; a part of it (a fist, a bite) none */
+unsigned char __fastcall__ o_fumbled (const struct side* s, unsigned char att)
+{
+    unsigned char k;
+
+    if (s->b) {
+        return s->part == 0xFF ? DH_RIGHT : 0;
+    }
+    k = att ? s->aslot : s->dslot;
+    if (k < NTOOLS) {
+        k = tflag[k];
+        return (k & T_LEFT ? DH_LEFT : 0) | (k & T_RIGHT ? DH_RIGHT : 0);
+    }
+    return att && (pc_way & SK_THING) ? pc_hand & IH_BOTH : 0;
+}
+
+/* The hand a wound at loc (an arm's) lets go of what it holds (side t's: DH_*; 0 none): the character's on that side
+** (the world's to drop what's there); a creature's weapon, held in its right, a wound to its right arm */
+unsigned char __fastcall__ o_wound_drops (const struct side* t, unsigned char loc)
+{
+    unsigned char h = loc & HARN_RIGHT ? DH_RIGHT : DH_LEFT;
+
+    return !t->b ? h : t->part == 0xFF && h == DH_RIGHT ? h : 0;
+}
+
 /* The character's defences in a round (the user's, 2026-10-20; HOUSE.md's): each thing that blocks blocks one foe a
 ** round (a shield one, a sword another), a bare arm's too, the dodge one; a counterstrike only on command (its stance,
 ** D_COUNTER), what it strikes with then spent for the round as a block would be; a foe met this round meets the
@@ -437,5 +465,6 @@ unsigned char __fastcall__ o_pc_defence (struct side* d, unsigned char f, unsign
         d->dml = d->bml[k];
         d->bare = s == BARE_ARM;
     }
+    d->dslot = uhow[s] == HARN_DODGE ? 0xFF : s;   /* (What it defends with: its fumble's, slice 4.1b's) */
     return uhow[s];
 }

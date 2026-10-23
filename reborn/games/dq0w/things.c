@@ -153,37 +153,7 @@ static unsigned char __fastcall__ two (const struct kind* k)
     return k->flags & K_TWO || k->bulk >= 20 ? 2 : 1;
 }
 
-/* What the character holds in its hands (held_kinds: held_k[0] the main hand's kind, or a thing's in both; held_k[1]
-** the other hand's; 0 none), and the hand each is in (held_h, items.h's IH_*): its main hand the summary's, the
-** left if it's left-handed, slice 4.1b's (the hub's header in the window after) */
-unsigned char held_k[2], held_h[2];
-void held_kinds (void)
-{
-    unsigned i = 0;
-    unsigned char m, h, j;
-
-    hub_map (0);
-    m = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
-    held_k[0] = held_k[1] = held_h[0] = held_h[1] = 0;
-    while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
-        if (ip->flags & I_HELD) {
-            h = ip->sn & IH_BOTH ? ip->sn & IH_BOTH : m;
-            j = !(h & m);
-            held_k[j] = ip->kind;
-            held_h[j] = h;
-        }
-    }
-    hub_map (0);
-}
-
-/* The hand that holds the thing that strikes (s, the hub's pc_strike: SK_THING | its kind), for the hub's pc_shand: the
-** main hand's, if it holds one of that kind, else the other's; 0 none (a part of it, or the best it holds: the
-** referee's) */
-unsigned char __fastcall__ shand_of (unsigned char s)
-{
-    held_kinds ();
-    return !(s & SK_THING) ? 0 : held_k[0] == (s & 0x7F) ? held_h[0] : held_k[1] == (s & 0x7F) ? held_h[1] : 0;
-}
+unsigned char held_k[2], held_h[2];             /* (What the character holds: part 48's held_kinds) */
 
 /* The catalogue's bank in the window (bank.s's m0 ... put it back with it) */
 void cat_map (void)
@@ -475,7 +445,8 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 /* ---- The tools: the keys of all the character carries (anywhere on it: a skill used, the one that suits takes
 ** itself out), into the hub's things_text, each after its mark (held: < in the left hand, > the right, * both; + worn;
 ** a space neither: what's held fights, what's worn guards) and its quality after it (a digit: rs.h's RS_EQUIP), and its load (the weight of all it
-** carries, worn or not, in quarter pounds: the referee's encumbrance) in the request's x; and one used, worn (the
+** carries, worn or not, in quarter pounds: the referee's encumbrance) in the request's x, the hands that hold
+** something (DH_*, slice 4.1b's) in y; and one used, worn (the
 ** referee's choice, by its key), its name back in the request (bare hands: "hands") */
 static void tools (void)
 {
@@ -484,7 +455,7 @@ static void tools (void)
     const struct kind* k;
     unsigned i = 0;
     char* t;
-    unsigned char mh;
+    unsigned char mh, hh = 0;
 
     m[1] = 0;
     hub_map (0);
@@ -494,6 +465,9 @@ static void tools (void)
     UIREC->things_text[0] = 0;
     while ((i = items (i, IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {
         fetch (&rec, i);
+        if ((rec.flags & I_HELD) && rec.where == IW_ACTOR && !rec.x) {
+            hh |= rec.sn & IH_BOTH ? rec.sn & IH_BOTH : mh;     /* (Its hands that hold something, any thing) */
+        }
         k = kind_of (rec.kind);                 /* (Copied: the hub's text is in another bank) */
         if (k->tool[0] && s_on_pc (i)) {
             hub_map (UI_BANK);
@@ -511,6 +485,7 @@ static void tools (void)
     i = s_weight_in (IW_ACTOR, 0);
     hub_map (0);
     HUB->ireq.x = i;
+    HUB->ireq.y = hh;
 }
 
 /* What's in the character's hands (IO_HANDS: a blow with nothing named, the UI's), their kinds in the request's x, its
@@ -2537,6 +2512,9 @@ void s_kit (void)
     hub_map (0);
     more[63] = 0;
     off = HUB->pcsum.limbs & LB_LEFT ? IH_RIGHT : IH_LEFT;
+    if (HUB->pcsum.limbs & (off == IH_LEFT ? LB_ARM_L : LB_ARM_R)) {
+        off ^= IH_BOTH;                         /* (Its off arm useless: its torch in the other) */
+    }
     for (k = 0; k < NKIT; ++k) {
         e = kit_list[k];
         made[k] = i = item_new (e[0], e[1] == 0xFF ? IW_ACTOR : IW_ITEM, e[1] == 0xFF ? 0 : made[e[1]], e[2]);
@@ -3309,6 +3287,42 @@ static const char* const hword[4] = { "", "left", "right", "both" };
 static unsigned char hmain, hdead, hused, hcur;  /* (The main hand, the useless ones, those holding something else, its
                                                 **   own: hands_now's) */
 static unsigned char hkind[2];                  /* (What's in the left hand and the right: their kinds, 0 none) */
+
+/* What the character holds in its hands (held_k[0] the main hand's kind, or a thing's in both; held_k[1] the other
+** hand's; 0 none), and the hand each is in (held_h, items.h's IH_*): its main hand the summary's, the left if it's
+** left-handed (the hub's header in the window after) */
+void s_held_kinds (void)
+{
+    unsigned i = 0;
+    unsigned char m, h;
+
+    hub_map (0);
+    m = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
+    held_k[0] = held_k[1] = held_h[0] = held_h[1] = 0;
+    while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
+        if (ip->flags & I_HELD) {
+            h = ip->sn & IH_BOTH;
+            h = h ? h : m;
+            if (h & m) {
+                held_k[0] = ip->kind;
+                held_h[0] = h;
+            } else {
+                held_k[1] = ip->kind;
+                held_h[1] = h;
+            }
+        }
+    }
+    hub_map (0);
+}
+
+/* The hand that holds the thing that strikes (s, the hub's pc_strike: SK_THING | its kind), for the hub's pc_shand: the
+** main hand's, if it holds one of that kind, else the other's; 0 none (a part of it, or the best it holds: the
+** referee's) */
+unsigned char __fastcall__ s_shand_of (unsigned char s)
+{
+    s_held_kinds ();
+    return !(s & SK_THING) ? 0 : held_k[0] == (s & 0x7F) ? held_h[0] : held_k[1] == (s & 0x7F) ? held_h[1] : 0;
+}
 
 /* The character's hands as they are, but for thing n (n held: its own hand, hcur) */
 static void __fastcall__ hands_now (unsigned n)

@@ -19,6 +19,7 @@ unsigned char __fastcall__ limbs_of (const harn_char* c);  /* Its limbs (rs.h's 
 extern unsigned char lhurt[4];                  /* (The injuries' levels on its left arm, its right, its left leg, its
                                                 **   right) */
 extern unsigned char cplan;                     /* (A creature's body, cond_of's: BF_*, the bestiary's) */
+extern unsigned char hheld;                     /* (The character's hands that hold something, RS_EQUIP's: DH_*) */
 #define BF_MINDLESS     0x01                    /* (The bestiary's flags: bones that move, mindless; */
 #define BF_BIPED        0x02                    /*   on two legs, its hands free (folk, the dead); */
 #define BF_QUAD         0x04                    /*   on four (its forelegs the strike table's arms); neither, no legs
@@ -125,6 +126,8 @@ struct side {
     unsigned char   bslot[SIDE_BLK];            /*   slot in tools, BARE_ARM a bare arm's, */
     int             bml[SIDE_BLK];              /*   block's EML) */
     unsigned char   aslot;                      /* (And the slot of what it strikes with: BARE_ARM a part of it) */
+    unsigned char   dslot;                      /* (And of what it defended with last: BARE_ARM a bare arm, 0xFF a
+                                                **   dodge: gear.c's pc_defence) */
     const struct bkind* b;                      /* (A creature's entry; 0: the character) */
     char            word[14];                   /* Its weapon, in a word (a thing named, its kind's name) */
 };
@@ -136,6 +139,10 @@ unsigned char __fastcall__ pc_defence (struct side* d, unsigned char f, unsigned
                                                 **   against foe f this round (a round's defences, the user's) */
 void __fastcall__ pc_wield (struct req* r);     /* RS_WIELD: what it would strike with, of what it holds (r a copy,
                                                 **   its words put); its hands empty, the best it carries */
+unsigned char __fastcall__ fumbled (const struct side* s, unsigned char att);  /* The hands that let go of what side s
+                                                **   fumbled (its attack's, att 1; its block's), rs.h's DH_* */
+unsigned char __fastcall__ wound_drops (const struct side* t, unsigned char loc);  /* The hand an arm's wound at loc
+                                                **   lets go of what it holds (DH_*) */
 unsigned char __fastcall__ pc_armour (unsigned char loc, unsigned char aspect);    /* Its armour at loc against an
                                                 **   aspect (HARN_*), all its worn pieces', the last named in arm
                                                 **   (""); loc SOLE: its soles' (a kick at a thing) */

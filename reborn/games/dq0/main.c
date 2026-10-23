@@ -761,6 +761,11 @@ static void heard (void)
             blow (&m);
             continue;
         }
+        if (m.kind == E_BEAT) {
+            news (&m);                          /* (A fight's limbs' news, after its blow's words: part 11's, a thing
+                                                **   let go of, a fall) */
+            continue;
+        }
         if (m.kind != E_DEN || !m.b || m.x[2] || m.x[0] != HUB->pc_stratum) {
             continue;
         }
@@ -885,9 +890,13 @@ static unsigned char events (void)          /* (How many there were) */
                 }
             }
             break;
-        case E_BEAT:                            /* (A walk's, as it goes) */
+        case E_BEAT:                            /* (A walk's, as it goes; the limbs', part 11's: slice 4.1b's) */
             if (m.who == 0) {
-                beat_words (m.w1);
+                if ((unsigned char) m.w1 >= WB_DROP) {
+                    news (&m);
+                } else {
+                    beat_words (m.w1);
+                }
             }
             break;
         case E_NOWAY:                           /* (A way refused: told at once, the main RAM's) */
@@ -936,12 +945,34 @@ static unsigned char events (void)          /* (How many there were) */
 #pragma code-name (push, "SW11CODE")
 #pragma rodata-name (push, "SW11RODATA")
 
+/* The limbs' news (an E_BEAT's, WB_DROP on: slice 4.1b's), every actor's (b whose: 0 the character, else the actor
+** plus 1), worded */
+static void __fastcall__ limb_words (const struct msg* m)
+{
+    char kn[sizeof CATALOGUE[0].name];
+    const char* who = m->b ? HUB->actor[(m->b - 1) & 7].name : "";
+
+    hub_mem (CAT_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
+    switch ((unsigned char) m->w1) {
+    case WB_DROP:
+        if (m->b) {
+            sayf ("\nThe %s drops its %s.", who, kn);
+        } else {
+            sayf ("\nYour %s falls from your hand.", kn);
+        }
+        break;
+    }
+}
+
 void __fastcall__ s_news (const struct msg* m)
 {
     unsigned char k;
     struct req* r;
 
     switch (m->kind) {
+    case E_BEAT:
+        limb_words (m);
+        break;
     case E_DIG:
         k = m->w1 >> 8;
         if (k == D_BEGUN || k == D_AGAIN) {
@@ -1213,6 +1244,7 @@ static void to_hand (void)
     things (IO_TOOLS, "");
     strcpy (HUB->slot[SLOT_UI].text, tt ());
     HUB->slot[SLOT_UI].w1 = HUB->ireq.x;
+    HUB->slot[SLOT_UI].w2 = HUB->ireq.y;        /* (The hands that hold something: slice 4.1b's) */
     referee (RS_EQUIP, 2)->state = REQ_FREE;
 }
 

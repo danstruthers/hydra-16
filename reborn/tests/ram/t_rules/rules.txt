@@ -2280,3 +2280,59 @@ dice
 ask EQUIP a=2 text=""
 want sum.limbs=LB_ARM_L sum.cond&C_ARM_USELESS=C_ARM_USELESS
 set strike=SK_BEST shand=0
+
+# ---- An arm's wound and what its hand lets go of (slice 4.1b: Combat 14, Skills 21): a serious one's fumble roll
+# (3d6 over DEX), a grievous one's at once and its limb useless; a harm's roll only for a hand that holds something
+# (RS_EQUIP 2's w2, the hands that do: DH_*); X_DROP's x[0] the hand, the world's to drop what it holds there
+
+char
+end
+case a dart's serious stab to her right forearm (mid 38), her right hand holding a sword: the fumble roll 18, let go of
+dice
+ask EQUIP a=2 text=">blade4" w2=DH_RIGHT
+dice 100:38 6:1 6:1 6:6 6:6 6:6
+ask HARM a=HC_STRIKE b=AS_POINT w1=9
+want e0.loc=BP_FOREARM|BP_RIGHT e0.band=2 e1.kind=X_DROP e1.target=0 e1.loc=DH_RIGHT
+char
+end
+case the same, her right hand empty: no fumble roll, nothing let go of
+dice
+ask EQUIP a=2 text="" w2=0
+dice 100:38 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_POINT w1=9
+want e0.loc=BP_FOREARM|BP_RIGHT e1.kind=X_NONE
+char
+end
+case a grievous stab to her left hand (mid 41), a torch in it: let go of at once, no roll; the arm useless
+dice
+ask EQUIP a=2 text="<torch4" w2=DH_LEFT
+dice 100:41 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_POINT w1=13
+want e0.loc=BP_HAND e0.band=3 e1.kind=X_DROP e1.loc=DH_LEFT sum.limbs&LB_ARM_L=LB_ARM_L sum.cond&C_ARM_USELESS=C_ARM_USELESS
+char
+end
+case her left arm whole, the sword in it blocks a kobold's spear (Sword 80, less the off hand's 10, its defence 10: 80)
+dice
+ask EQUIP a=2 text="<blade4" w2=DH_LEFT
+dice
+ask NEW_ACTOR actor=1 w1=20 text="kobold"
+set now=30000 stance=D_BLOCK
+dice 100:21 100:58 ...
+ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
+want b=D_BLOCK result=O_BLOCKED
+case the spear and her sword (her left, her off hand: a block of 80) both fumbled (the table's BF): each let go of
+set now=31000
+dice 100:100 100:95 6:6 6:6 6:6 6:6 6:6 6:6
+ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
+want result=O_FUMBLE a=3 e0.kind=X_DROP e0.target=1 e0.loc=DH_RIGHT e1.kind=X_DROP e1.target=0 e1.loc=DH_LEFT
+char
+inj 7 2 3 4 0 8
+end
+case her left hand useless (a grievous wound, its limb unusable): the sword in it does nothing, her block a bare arm's
+dice
+ask EQUIP a=2 text="<blade4" w2=DH_LEFT
+set now=32000
+dice 100:21 100:58 ...
+ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
+want b=D_BLOCK result=O_HIT sum.limbs=LB_ARM_L
+set stance=D_AUTO

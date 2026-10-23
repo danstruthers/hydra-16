@@ -272,6 +272,7 @@ unsigned char spent_at;                         /* (The pace the time went at, o
 /* (Its limbs and its conditions: gear.c's, overlay 3's, the main RAM's room: limbs_of, cond_of) */
 unsigned char lhurt[4];
 unsigned char cplan = BF_BIPED;
+unsigned char hheld;                            /* (The hands that hold something: RS_EQUIP 2's w2, DH_*) */
 
 /* Its health in words any ruleset can say (the game's: by its injuries' levels against its Endurance; down, in
 ** shock or senseless) */
@@ -694,6 +695,7 @@ static void __fastcall__ answer (struct req* r)
     case RS_EQUIP:
         if (r->a == 2) {
             equip_all (r->text);
+            hheld = r->w2;                      /* (The hands that hold something, any thing: slice 4.1b's) */
             set_load (r->w1);                   /* (And its load: its summary anew) */
             status ();
         } else {
