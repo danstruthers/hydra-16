@@ -158,7 +158,12 @@ unsigned char __fastcall__ pick (unsigned char obj, unsigned char orel);   /* Th
                                                 **   none ahead: they're listed, which asked */
 unsigned char __fastcall__ choose (struct cmd* c);     /* The command (parsed) a choice's answer (its number, its
                                                 **   way)?  Then c is the command asked about again, pick's the one
-                                                **   chosen: 1; else 0 */
+                                                **   chosen: 1; else 0.  A blow's question's answer the same; a blow
+                                                **   with nothing named, what's in its hands named, or asked about */
+unsigned char wield (void);                     /* (Part 9's, choose.c's) A blow with nothing named (cmd): what's in
+                                                **   its hands what strikes, 1; a better thing carried asked about, 2 */
+unsigned char __fastcall__ things (unsigned char op, const char* name);    /* (main.c's) The things asked, from the
+                                                **   main code or a part */
 
 /* ---- resolve.c (overlay 11): the command's things found among those the character perceives, its unsaid filled (it,
 ** the last thing named, the things near, the target), which of several; of several it must be one of, which, asked */

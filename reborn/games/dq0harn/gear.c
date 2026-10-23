@@ -7,8 +7,12 @@
 ** stick; a hand, a foot, a head the book's unarmed rows, by Unarmed), the tools' the game's; the best it holds by its
 ** attack mastery (its skill's EML and the weapon's attack class), its fists if it holds none.  A punch is the better
 ** for gauntlets, a kick for hobnailed boots (a point of impact: the book's "enhanced", Skills 18; the game's
-** numbers).  At a thing (at_thing), asked for its best, it takes out the tool to hand that hits it hardest (not a
-** weapon, which a thing would spoil), else its fists.  Armour (Combat 4-5) by its pieces: each one's material's protection where it covers, a poor piece
+** numbers).  A thing named (the hub's pc_strike, SK_THING: the user's, 2026-10-22, "A bar should just be treated as a
+** club or stick, no?") strikes and no other: a weapon of the table's as itself (by its kind's key), anything else as
+** the book treats a thing swung that isn't a melee weapon (Combat 8: a bow in melee a stick, a staff or a club), by its
+** kind's data (rshouse.h's, the house's): a light thing the book's stick, a hefty one its club; nothing named, what it
+** holds (RS_WIELD's: the UI's, and the world's as it fights back), its hands empty the best it carries asked about
+** (pc_wield's).  Armour (Combat 4-5) by its pieces: each one's material's protection where it covers, a poor piece
 ** (quality 0-2) a point less, a fine one (7-9) a point more; footwear's soles their own (what a kick at a thing does
 ** to the foot: the game's).
 */
@@ -23,9 +27,10 @@
 #include "dq0harn.h"
 
 /* The weapons, by the tools' keys: a word, its skill, its attack and defence classes, its blunt, edge and point
-** impacts (-1: none), the part it is (0xFF: a thing held; TOOL: a tool, the one that hits a thing hardest taken out
-** for it: a weapon a thing would spoil); the unarmed first (SK_PUNCH, SK_KICK, SK_HEAD's: the hand,
-** the foot, the head), the shield last */
+** impacts (-1: none), the part it is (0xFF: a thing held; TOOL: a tool, the one that hits a thing hardest offered for
+** it, its hands empty: a weapon a thing would spoil); the unarmed first (SK_PUNCH, SK_KICK, SK_HEAD's: the hand, the
+** foot, the head); the book's stick, club and staff (Combat 3: their numbers, a point's optional aspect left out) what
+** a thing swung is treated as (a theme's own kinds by these keys too); the shield last */
 #define TOOL            0xFE
 static const struct weapon {
     char            key[8];
@@ -47,11 +52,18 @@ static const struct weapon {
     { "spade", "spade", HARN_SPR, 10, 10, { 2, 3, -1 }, TOOL },
     { "chisel", "chisel", HARN_DAG, 0, 0, { 1, -1, 2 }, TOOL },
     { "torch", "torch", HARN_CLU, 5, 5, { 2, -1, -1 }, 0xFF },
+    { "stick", "stick", HARN_CLU, 5, 5, { 2, -1, -1 }, 0xFF },
+    { "club", "club", HARN_CLU, 15, 5, { 4, -1, -1 }, 0xFF },
+    { "staff", "staff", HARN_SPR, 20, 15, { 4, -1, -1 }, 0xFF },
     { "shield", "shield", HARN_SHD, 5, 20, { 2, -1, -1 }, 0xFF },
 };
 #define NWEAPONS        (sizeof weapons / sizeof weapons[0])
 #define NUNARMED        3
 #define SHIELD          (NWEAPONS - 1)
+#define TORCH           (SHIELD - 4)
+#define STICK           (SHIELD - 3)
+#define CLUB            (SHIELD - 2)
+#define SOFT            NWEAPONS                /* (A soft thing's: none, rshouse.h's IM_SOFT) */
 
 /* The armour, by the tools' keys: its name, its material, the locations it covers (the book's pieces, Combat 4), a
 ** footwear's sole (against what a kick strikes), a punch's or a kick's impact more */
@@ -76,11 +88,39 @@ static const struct piece {
 #define NARMOUR         (sizeof pieces / sizeof pieces[0])
 
 char arm[16];
-unsigned char pc_way, at_thing;
+unsigned char pc_way;
 
 static int __fastcall__ eml (harn_char* c, unsigned char sk)
 {
     return c->ml[sk] ? harn_eml (c, sk) : harn_get_oml (c, sk) - 5 * harn_get_pp (c);
+}
+
+/* What a thing swung does, by its kind's data (rshouse.h's: the house's, every ruleset's) */
+#define RS_HOUSE_SWING  swing
+#include "../dq0/rshouse.h"
+
+/* The weapon a thing is (its kind, wk): the table's by its key; else what the book treats a thing swung as, by the
+** house's (a light one the stick, a hefty one the club); a soft one SOFT */
+static unsigned char row_of (void)
+{
+    unsigned char j;
+
+    for (j = NUNARMED; wk.tool[0] && j < NWEAPONS; ++j) {
+        if (!strcmp (weapons[j].key, wk.tool)) {
+            return j;
+        }
+    }
+    j = swing (&wk);
+    return j == IM_SOFT ? SOFT : j == IM_LIGHT ? STICK : CLUB;
+}
+
+/* What weapon j does for the blow (at a thing: the impact it does; else the attack mastery it strikes with); a soft
+** thing's the least */
+static int __fastcall__ worth (unsigned char j, unsigned char at)
+{
+    const struct weapon* w = &weapons[j];
+
+    return j == SOFT ? -1000 : at ? w->imp[0] + w->imp[1] + w->imp[2] : eml (&pc, w->sk) + w->wac;
 }
 
 /* Its worn pieces: the sum of what fn gives for each (wp the piece, wq its quality) */
@@ -144,13 +184,14 @@ unsigned char __fastcall__ o_pc_armour (unsigned char loc, unsigned char aspect)
     return worn (guards);
 }
 
-/* Its side of a fight: what it strikes with (pc_way's: SK_BEST, the best weapon it holds, else its fists; else that
-** part of it), its block (the best of what it holds, its weapon or its shield; else a bare arm) and each thing that
-** blocks (a round's defences, fight.c's: each blocks one foe a round), its dodge */
+/* Its side of a fight: what it strikes with (pc_way's: SK_BEST, the best weapon it holds, else its fists; SK_THING,
+** the thing named, its kind in wk, and no other, its words its name, a soft one its fists (the world never asks it);
+** else that part of it), its block (the best of what it holds, its weapon or its shield; else a bare arm) and each
+** thing that blocks (a round's defences, fight.c's: each blocks one foe a round), its dodge */
 void __fastcall__ o_pc_side (struct side* s)
 {
     const struct weapon* w;
-    unsigned char k, j, best = 0;
+    unsigned char k, j, best = 0, named = 0;
     int v, att = 0, blk = 0;
 
     s->c = &pc;
@@ -184,26 +225,24 @@ void __fastcall__ o_pc_side (struct side* s)
             s->aslot = k;
         }
     }
-    if (at_thing && pc_way == SK_BEST) {        /* (At a thing: the tool to hand that hits it hardest) */
-        for (best = 0, att = 0, k = 0; k < NTOOLS; ++k) {
-            for (j = NUNARMED; tools[k][0] && j < NWEAPONS; ++j) {
-                w = &weapons[j];
-                if (w->part == TOOL && !strcmp (w->key, tools[k]) && w->imp[0] + w->imp[1] + w->imp[2] > att) {
-                    att = w->imp[0] + w->imp[1] + w->imp[2];
-                    best = j;
-                }
+    if ((pc_way & SK_THING) && (j = row_of ()) != SOFT) {     /* (The thing named: as itself, or as the book treats
+                                                **   it; its slot, if it's one the table knows, its counterstrike's) */
+        named = 1;
+        best = j;
+        att = eml (&pc, weapons[j].sk) + weapons[j].wac;
+        for (s->aslot = BARE_ARM, k = 0; k < NTOOLS; ++k) {
+            if (wk.tool[0] && !strcmp (tools[k], wk.tool)) {
+                s->aslot = k;
             }
         }
-        att = best ? eml (&pc, weapons[best].sk) + weapons[best].wac : 0;
-    }
-    if (pc_way != SK_BEST || !best) {           /* (A part of it: by Unarmed) */
+    } else if (pc_way != SK_BEST || !best) {    /* (A part of it: by Unarmed) */
         s->aslot = BARE_ARM;
         best = pc_way == SK_KICK ? 1 : pc_way == SK_HEAD ? 2 : 0;
         att = eml (&pc, HARN_UNA) + weapons[best].wac;
     }
     w = &weapons[best];
     s->aml = att;
-    s->part = w->part == TOOL ? 0xFF : w->part;
+    s->part = w->part == TOOL || named ? 0xFF : w->part;
     s->bare = !blk;
     s->dml = blk ? blk : eml (&pc, HARN_UNA) + weapons[0].wdc;
     if (!blk) {                                 /* (Nothing held that blocks: a bare arm) */
@@ -216,7 +255,45 @@ void __fastcall__ o_pc_side (struct side* s)
         bit = 1u << w->part;
         s->imp[0] += worn (more);
     }
-    strcpy (s->word, w->word);
+    strcpy (s->word, named ? wk.name : w->word);
+}
+
+/* RS_WIELD (rs.h's): what the character would strike with, nothing named (the user's, 2026-10-22: "I don't think it
+** should auto-fallback to something better unless you have nothing at hand, and then it should ask for
+** confirmation"), at a denizen (q's b 0) or a thing (b 1): of the kinds it holds (x[0], x[1]), the better by the
+** reckoning a blow goes by (worth's), result 1 or 2; its hands empty, result 0, and the key of the best it carries for
+** such a blow, if it does better than its bare hands (at a denizen a weapon, but its shield or a torch, by its attack
+** mastery; at a thing the tool that hits it hardest, not a weapon a thing would spoil), put in the reply's words */
+void __fastcall__ o_pc_wield (struct req* q)
+{
+    unsigned char k, j, at = q->b;
+    int v, top = -0x7FFF;
+    const char* key = 0;
+
+    q->result = 0;
+    for (k = 0; k < 2; ++k) {
+        if (q->x[k]) {
+            kind_in (q->x[k]);
+            if ((v = worth (row_of (), at)) > top) {
+                top = v;
+                q->result = k + 1;
+            }
+        }
+    }
+    if (q->result) {
+        return;
+    }
+    top = worth (0, at);                        /* (Its bare hands': a fist's) */
+    for (k = 0; k < NTOOLS; ++k) {
+        for (j = NUNARMED; tools[k][0] && j < SHIELD; ++j) {
+            if (!strcmp (weapons[j].key, tools[k]) && (at ? weapons[j].part == TOOL : j != TORCH) && (v = worth (j, at)) >
+                top) {                          /* (A torch carried for its light, never offered) */
+                top = v;
+                key = tools[k];
+            }
+        }
+    }
+    put (key ? key : "");                       /* (Its words: "" none, the reply's text cleared) */
 }
 
 /* The character's defences in a round (the user's, 2026-10-20; HOUSE.md's): each thing that blocks blocks one foe a

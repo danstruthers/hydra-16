@@ -242,6 +242,7 @@ ovl_out:
             SWFN        alias_line, 9
             SWFN        alias_expand, 9
             SWFN        alias_keep, 9
+            SWFN        wield, 9
             SWFN        room_named, 6
             SWFN        history, 7
             SWFN        args, 7

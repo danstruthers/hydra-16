@@ -62,6 +62,8 @@ static unsigned char __fastcall__ lamp (unsigned char b)
     return f & K_PLURAL;
 }
 
+#define FW_BATTER       0xFF                    /* (felt_words' own: a battering's first words, struck with the thing
+                                                **   named, its what times 256) */
 #pragma data-name (push, "OV3RODATA")          /* (Its words made in the overlay's bank: the main RAM's none) */
 static char nb[20] = "", dn[36] = "";
 #pragma data-name (pop)
@@ -217,6 +219,10 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
                                                 **   outcome as its time's done, HOUSE.md's long tasks; the user's,
                                                 **   2026-10-22) */
         p = w >> 8;
+        if (p == LT_BATTER && (n & SK_WITH)) {
+            felt_words (FW_BATTER | n << 8);    /* (Struck with the thing named: "with the bar", overlay 7's room) */
+            break;
+        }
         sayf (p == LT_STUDY ? "\nYou study the mechanism." : p == LT_TRACK ? "\nYou cast about for tracks." :
               p == LT_SNIFF ? "\nYou sniff the air." : p == LT_CLIMB ? "\nYou set to climbing through the window." :
               "\nYou set to %s.", d);
@@ -348,7 +354,10 @@ void __fastcall__ o_beat_words (unsigned w)
 
 /* A walk in the dark's beat (E_BEAT's w, WB_FEEL ... WB_SHORT: HOUSE.md's walking in the dark): set out on, feeling
 ** its way or at a pace said outright; what its hands met; its foot on a thing in its way (the catalogue's kind), over
-** it fallen or stumbling; what it ran into; an edge gone over, stopped short at */
+** it fallen or stumbling; what it ran into; an edge gone over, stopped short at.  And a blow at a denizen with a soft
+** thing (WB_SWAT: its actor plus 1, the thing the hub's pc_strike's), one attempt; a battering's first words, struck
+** with the thing named (FW_BATTER, task_words': its what), "You set to battering the door with the bar." (the user's,
+** 2026-10-22) */
 void __fastcall__ o_felt_words (unsigned w)
 {
     static const char* const met[FA_PIT + 1] = {
@@ -392,6 +401,19 @@ void __fastcall__ o_felt_words (unsigned w)
     case WB_SHORT:
         msg (k == FA_PIT ? "You stop short, teetering, at the edge of a pit." :
             "You stop short, teetering, at the edge of a drop.");
+        return;
+    case WB_SWAT:
+    case FW_BATTER:
+        if ((unsigned char) w == WB_SWAT) {
+            hub_mem (0, lb, HUB->actor[(b - 1) & 7].name, sizeof HUB->actor[0].name);
+        } else {
+            k = (b & 15) - 1;                   /* (A portal's kind plus 1: hub.h's long task's what) */
+            strcpy (lb, k == PK_PORTCULLIS ? "portcullis" : k == PK_DOOR ? "door" : "window");
+        }
+        hub_mem (0, &k, &HUB->pc_strike, 1);
+        hub_mem (CAT_BANK, lb + 32, CATALOGUE[k & 0x7F].name, sizeof CATALOGUE[0].name);
+        sayf ((unsigned char) w == WB_SWAT ? "\nYou swat at %s%s with the %s, but it seems ineffectual." :
+            "\nYou set to battering %s%s with the %s.", *lb >= 'a' ? "the " : "", lb, lb + 32);
         return;
     }
 }

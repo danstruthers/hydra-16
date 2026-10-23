@@ -140,14 +140,22 @@ static unsigned char __fastcall__ has (const char* key)
     return k < NTOOLS;
 }
 
-/* What the character strikes with (the hub's pc_strike): its fists, a foot, the head (bare 1), or the first thing it
-** holds (the words the UI knows: RULESETS.md) */
+/* What the character strikes with (the hub's pc_strike): its fists, a foot, the head (bare 1), the thing named
+** (SK_THING: its kind's name, the catalogue's), or the first thing it holds (the words the UI knows: RULESETS.md) */
 static unsigned char bare;
+static char wname[sizeof ((struct kind*) 0)->name];
 
 static const char* weapon (void)
 {
     unsigned char k, s = HUB->pc_strike;
 
+    if (s & SK_THING) {
+        bare = 0;
+        hub_map (CAT_BANK);
+        memcpy (wname, CATALOGUE[s & 0x7F].name, sizeof wname);
+        hub_map (0);
+        return wname;
+    }
     bare = 1;
     if (s == SK_KICK) {
         return "foot";
@@ -513,6 +521,11 @@ static void __fastcall__ answer (struct req* r)
     case RS_ATTACK:
         attack (r);
         status ();
+        break;
+    case RS_WIELD:                              /* (What it would strike with: the first it holds; its hands empty,
+                                                **   none better, asked of, than its bare hands) */
+        r->result = r->x[0] ? 1 : r->x[1] ? 2 : 0;
+        *tp = 0;
         break;
     case RS_MORALE:
         g = r->grade = flat (r->steps);

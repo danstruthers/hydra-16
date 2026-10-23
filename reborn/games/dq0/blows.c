@@ -128,7 +128,7 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
             add (" kick at ");                  /* ("You kick at the giant rat") */
             who (dname, 0);
         } else if (pc) {
-            add (*aw == 'h' ? " butt at " : " strike at ");
+            add (strcmp (aw, "head") ? " strike at " : " butt at ");
             who (dname, 0);
             add (" with your ");
             add (aw);
@@ -251,7 +251,10 @@ unsigned char __fastcall__ o_fight_target (struct cmd* c)
         stance (w, c->aux);
         return 0;
     }
-    strike = c->aux;                            /* (Sent with the blow: I_ATTACK's x[1]) */
+    if (c->aux) {
+        strike = c->aux;                        /* (Sent with the blow, I_ATTACK's x[1]: the verb's part of it; else
+                                                **   the thing named, resolve.c's, or the best it holds) */
+    }
     if (c->obj.kind == OB_DOOR || c->obj.kind == OB_WINDOW || c->obj.kind == OB_PORTC) {
         return FT_THING;
     }

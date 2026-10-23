@@ -2164,3 +2164,59 @@ dice
 ask EQUIP a=2 text=""
 want status="UP 3 SHOCK" sum.cond&C_UNCONSCIOUS=0 sum.cond&C_STUNNED=C_STUNNED
 set stance=D_AUTO
+
+# ---- What strikes (HOUSE.md's fights, the user's, 2026-10-22): a thing named (the hub's pc_strike, SK_THING and its
+# kind, the catalogue's) strikes as itself if it's one of the referee's weapons, else as the book's stick or club by
+# its weight (the house's: rshouse.h's), its words its name; nothing named, what's in its hands (RS_WIELD: the better
+# of two by the blow's reckoning, at a thing the impact, at a denizen the attack mastery; a soft thing the least), its
+# hands empty the best it carries asked about (its key), never a weapon a thing would spoil at a thing
+
+char
+end
+set strike=SK_BEST stance=D_AUTO
+case at a door, a torch and a bar held: the bar (the book's club, blunt 4, over the torch's 2, its stick's)
+dice
+ask WIELD b=1 x0=KI_TORCH x1=KI_BAR
+want result=2 dice=0
+case at a denizen, a torch and a sword held: the sword (Sword 80, its attack class 15)
+dice
+ask WIELD b=0 x0=KI_TORCH x1=KI_SWORD
+want result=2
+case a rope held alone: it strikes, soft as it is (one attempt, the world's)
+dice
+ask WIELD b=1 x0=KI_ROPE
+want result=1
+case a rope and a lantern held, at a denizen: the lantern (a stick), the soft rope the least
+dice
+ask WIELD b=0 x0=KI_ROPE x1=KI_LANTERN
+want result=2
+case its hands empty, a pick in its pack: at a door the pick, to be asked about
+dice
+ask EQUIP a=2 text=" pick4"
+ask WIELD b=1
+want result=0 text="pick"
+case its hands empty, a sword at its belt: at a denizen the sword asked about (Sword 80 over Unarmed 40)
+dice
+ask EQUIP a=2 text=" blade4"
+ask WIELD b=0
+want result=0 text="blade"
+case and at a door nothing (a weapon a thing would spoil): bare hands, unasked
+dice
+ask WIELD b=1
+want result=0 text=""
+case its hands empty, nothing carried: nothing asked about
+dice
+ask EQUIP a=2 text=""
+ask WIELD b=0
+want result=0 text=""
+case a blow at a door with the bar named: the club's blunt 4 past its resistance, no part of her struck, its words "bar"
+set strike=SK_THING+KI_BAR
+dice 100:31 6:3*
+ask ATTACK other=RS_THING x0=1 x1=9 x2=9 x3=9
+want result=0 b=AS_BLUNT text="bar"
+case with the dagger named: its point (5), its words the dagger's
+set strike=SK_THING+KI_DAGGER
+dice 100:31 6:3*
+ask ATTACK other=RS_THING x0=9 x1=9 x2=1 x3=9
+want result=0 b=AS_POINT text="dagger"
+set strike=SK_BEST

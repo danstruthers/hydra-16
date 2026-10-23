@@ -16,7 +16,8 @@
 **                              that face for every die after; ...: more dice after them, not held to anything); no
 **                              words: no dice at all.  Without it, the dice fall as the seed has them
 **   seed N                     the referee's dice seeded anew, as the next request is made
-**   ask KIND FIELD=V ...       a request (rs.h's RS_KIND: HARM, TEST ...): actor other steps a b c w1 w2, text="...";
+**   ask KIND FIELD=V ...       a request (rs.h's RS_KIND: HARM, TEST ...): actor other steps a b c w1 w2, xN (its
+**                              x[N]: RS_WIELD's kinds held, a thing's resistances), text="...";
 **                              its reply kept, and the dice it rolled held to the case's (dice)
 **   want FIELD=V ...           the reply: grade result a b c w1 w2, eN.kind eN.band eN.loc eN.aspect eN.cond (its
 **                              effect N), dice (how many it rolled), sum.FIELD (the hub's summary after it: cond
@@ -25,7 +26,9 @@
 **                              hasn't), text=@ (the words of the request before it); FIELD&MASK=V; a value a number
 **                              or rs.h's names, | and + between (C_PRONE|C_BLEEDING, GA_JOG+1)
 **
-** Then "t_rules: N cases, F failed" and "t_rules: PASS" (or FAIL).
+** Then "t_rules: N cases, F failed" and "t_rules: PASS" (or FAIL).  The catalogue (LIBDIR/dq0w.cat, the world's) is
+** read into the hub's catalogue bank as it starts: a thing named that strikes (set strike=SK_THING+KI_BAR) the
+** referee's to read, as in the game.
 */
 
 #include <fcntl.h>
@@ -214,7 +217,11 @@ struct sym {
 #define S(n)    { #n, n }
 static const struct sym syms[] = {
     S (RS_HELLO), S (RS_LOAD_PC), S (RS_TEST), S (RS_ATTACK), S (RS_HARM), S (RS_TIME), S (RS_EXERT), S (RS_EQUIP),
-    S (RS_DESCRIBE), S (RS_MORALE), S (RS_DICE), S (RS_NEW_ACTOR), S (RS_CONTEST),
+    S (RS_DESCRIBE), S (RS_MORALE), S (RS_DICE), S (RS_NEW_ACTOR), S (RS_CONTEST), S (RS_WIELD),
+    S (SK_BEST), S (SK_PUNCH), S (SK_KICK), S (SK_HEAD), S (SK_THING), S (RS_THING),
+    S (KI_TORCH), S (KI_DAGGER), S (KI_PICK), S (KI_SHOVEL), S (KI_ROPE), S (KI_CANDLE), S (KI_LANTERN), S (KI_SACK),
+    S (KI_CHEST), S (KI_SKULL), S (KI_CLOAK), S (KI_SWORD), S (KI_BASKET), S (KI_CHAIR), S (KI_BAR), S (KI_PANE),
+    S (KI_LEATHER_TUNIC), S (KI_HELM), S (KI_MACE), S (KI_SHIELD), S (KI_POT),
     S (G_CF), S (G_MF), S (G_MS), S (G_CS),
     S (P_NOTICE_SIGHT), S (P_NOTICE_SOUND), S (P_NOTICE_SMELL), S (P_SEARCH), S (P_STEALTH), S (P_CLIMB), S (P_JUMP),
     S (P_SWIM), S (P_BALANCE), S (P_FORCE), S (P_LIFT), S (P_PICKLOCK), S (P_DISARM), S (P_ENDURE),
@@ -432,6 +439,8 @@ static void request (void)
             q.w1 = n;
         } else if (!strcmp (tok[k], "w2")) {
             q.w2 = n;
+        } else if (tok[k][0] == 'x' && tok[k][1] >= '0' && tok[k][1] <= '9' && !tok[k][2]) {
+            q.x[tok[k][1] - '0'] = n;
         } else {
             bads ("ask: no %s", tok[k]);
         }
@@ -597,6 +606,7 @@ int main (int argc, char* argv[])
 {
     static char args[40];
     unsigned char t, n;
+    unsigned off;
     int s;
 
     if (argc < 2 || (sfd = open (argv[1], O_RDONLY)) < 0) {
@@ -620,6 +630,13 @@ int main (int argc, char* argv[])
     }
     map (SIGHT_BANK);                           /* (The senses' record: none) */
     memset (HUB_WINDOW, 0, 0x2000);
+    if ((s = open (LIBDIR "/dq0w.cat", O_RDONLY)) >= 0) {   /* (The catalogue, the world's: wfile.c's) */
+        for (off = 0; off < 0x2000 && (n = read (s, line, sizeof line)) > 0; off += n) {
+            map (CAT_BANK);
+            memcpy (HUB_WINDOW + off, line, n);
+        }
+        close (s);
+    }
     map (0);                                    /* The header as hub_create makes it (its magic last: the writers'
                                                 **   check finds the hub by it), this task the world */
     memset (HUB, 0, sizeof (struct hub));

@@ -1548,7 +1548,6 @@ again:
             !find (OB_WINDOW | PICK_ANY, cmd.obj.lies)) {
             cmd.obj.kind = OB_PORTC;            /* ("Bend the bars": a portcullis's, with no window there) */
         }
-        strike = SK_BEST;                       /* (Broken with the best to hand) */
 portal:
         if (cmd.obj.kind && (d = find (cmd.obj.kind, cmd.obj.lies)) == 2) {
             return;                             /* (Which, asked) */

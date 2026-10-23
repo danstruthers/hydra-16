@@ -167,7 +167,8 @@ P_DIG.)  *(Every ruleset's.)*
   timed work, the test made (or the portcullis up) at its end; wound part way and stopped, it stays down.
   (wwin.c.)
 - **Battering a thing** (the user, 2026-10-16: "model it after unarmed combat"): a blow the thing ignores (the
-  book's Ignore defence), struck with what hits it hardest to hand (a tool, else a fist, a foot, the head); its
+  book's Ignore defence), struck with what strikes (Fights' what strikes: the thing named, else what's in its hands,
+  else a fist, a foot, the head; its hands empty and a tool carried, asked first; a soft thing one attempt); its
   impact for the aspect that does it most harm, less the material's resistance, worn off the portal's body (its
   material, size, thickness and state), the harm kept.  A door broken down stays open for good; a portcullis
   broken through is a way through for good, jammed.  A blow every 3 seconds as the clock goes, a dozen at most (four
@@ -175,9 +176,10 @@ P_DIG.)  *(Every ruleset's.)*
   2026-10-20: a noise of 8 for the denizens, a window's shutters or bars 7, and a blow's sound), and strenuous work
   (Moving and tiring).  Told as it goes (the user's playtest, 2026-10-22: "nothing is written to the output until
   after it is resolved instead of something like "You start beating on the door..." followed by progress"): its
-  first words at once, by what strikes ("You set to battering the door.", "You set to kicking the door.", punching,
-  butting), then a line as the first blow marks it ("Your blows begin to tell on it."), as one leaves it giving ("It's
-  starting to give."), and every fourth blow else once it's marked ("You keep at it."); how it stands as it ends ("It
+  first words at once, by what strikes ("You set to battering the door with the bar.", "You set to battering the
+  door." bare-handed, "You set to kicking the door.", punching, butting), then a line as the first blow marks it
+  ("Your blows begin to tell on it."), as one leaves it giving ("It's starting to give."), and every fourth blow else
+  once it's marked ("You keep at it."); how it stands as it ends ("It
   gives way, and crashes open.", "It's giving, but it holds yet.", "It's marked, but it holds.", "Your blows make no
   mark on it.").  (wblow.c; fight.c's thing.)  Why nothing was told before: a battering's blows were only noises
   (the denizens', the sound task's) till its end's words.
@@ -258,6 +260,53 @@ silent on all of it.
   own world (G3), its creatures modelled on the book's (the user: "for denizens, read the harnmaster bestiary"); the
   first six keep their numbers till the tests are cut to meaning (the ghoul is the book's grave-wight, the cave bear
   its black bear: Bestiary pp48, 13).
+- **What strikes** *(every ruleset's: which thing; the ruleset's: what it does)* (the user's playtest, 2026-10-22: "I
+  cannot `hit the door with bar` if I have a `bar` in hand.  It still says I am battering it with my bare hands";
+  "A bar should just be treated as a club or stick, no?"; "I think it should try and use whatever you request, but if
+  it is something soft (a piece of clothing, a noodle, string, rope, etc.) it should reply with something like `You
+  attempt to batter the door with the noodle, but it seems ineffectual`"; "I don't think it should auto-fallback to
+  something better unless you have nothing at hand, and then it should ask for confirmation"; drafted for the user to
+  review).  At a denizen and at a thing (a door, a window, a portcullis) alike:
+  - *A thing named* ("hit the door with the bar", "attack the rat with the dagger", "strike the rat with my torch")
+    strikes, and no other, whatever else it carries: taken in hand first (its time; refused, the words why, if it
+    isn't to hand or no hand's free for it).  A weapon or a tool of the ruleset's strikes as itself (HarnMaster's: its
+    row of the weapons, by its kind's key: the book's for the weapons, the game's for the tools); anything else as the
+    book treats a thing swung that isn't a melee weapon (Combat 8: a bow used in melee is a stick, a staff or a club),
+    the nearest of the book's own by the thing's data, the house's: *light*, under 2 1/2 pounds, the book's stick
+    (Club, attack 5, defence 5, blunt 2); *hefty*, 2 1/2 pounds and more, its club (Club, 15, 5, blunt 4), held in both
+    hands if it's big (20 pints or more: the things' rule).  The book has no penalty for such a thing used so, and none
+    is taken.  Its words are its name ("You strike at the giant rat with your bar", "You set to battering the door
+    with the bar.").
+  - *A soft thing*: made of something that gives (cloth, leather, wax, tallow, food and the like) or only breaks
+    (glass, pottery); a heap or a lot (sand, pennies, arrows, rations); anything worn (armour, clothes: not made to
+    swing); under half a pound; or lighter than its bulk, a quarter pound a pint (hollow or loose: a basket, a pack,
+    straw).  It's tried, once: a blow's time (a round at a denizen, 3 seconds at a door), no harm, told ("You attempt
+    to batter the door with the rope, but it seems ineffectual.", "You swat at the giant rat with the cloak, but it
+    seems ineffectual."); no battering goes on of it, no fight begins of it (a fight it was in ends with it).
+  - *Nothing named*: what's in its hands strikes (of two, the better by the ruleset's reckoning: HarnMaster's, at a
+    denizen its attack mastery, at a thing the impact it does; a soft thing the least), never a better thing it
+    carries, unasked: a torch in hand, the torch.  Its hands empty and something better carried (by the same
+    reckoning: at a denizen the best weapon, but a shield or a torch, carried for its light; at a thing the tool that
+    hits it hardest, not a weapon a thing would spoil), it's asked first ("You can try battering it with your hands, but would you rather use your
+    pick?", "You can fight it with your fists, but would you rather draw your sword?"): yes takes it in hand and
+    strikes with it, as if it were named; no, or any other answer, bare-handed; a command typed instead, the blow let
+    go.  Its hands empty and nothing better carried, bare-handed, unasked.  A kick, a punch or a head butt said
+    outright is that blow, as it was.  Fighting back unbidden (a hostile engaging it), what's in its hands the same
+    way, but never a soft thing (its fists then); fighting on keeps what its attack struck with.
+  - *The catalogue's kinds, as they come out* (HarnMaster's): as themselves, a dagger, a sword, a broken sword (a
+    sword), a mace, a spear, a round shield (a shield's bash), a torch (the book's stick, its row); the game's tools, a
+    pick, a shovel, a chisel; the club, a door's bar, a chair, a table, a chest, an iron pot, a window's iron bars; the
+    stick, a lantern, a skull, bones; a theme's, a stone tablet and a totem the club, a chalice, a seal, a brass key
+    the stick; soft, a rope, a sack, a cloak, a candle and candle stubs, a backpack, a belt, a pouch, a waterskin, a
+    quiver, a basket, rations, pennies, arrows, a tinderbox, lockpicks, an iron key, potsherds, a pane of glass and its
+    shards, a flask of oil, a pot of pitch, a heap of sand or of straw, a body, every piece of armour and clothing.
+    The book's staff (Spear, 20, 15, blunt 4) is for a theme's pole or staff (its key "staff": its data can't tell a
+    pole from a club, it has no length).
+  - Why: the user's; a ruleset's own weapons as they are, and a thing that isn't one as the book treats one (its
+    bows), the nearest of its own; the rest the house's, from the data every thing has (its material, weight, bulk,
+    form, whether it's worn).  Not yet: the book's weapon damage (a weapon that strikes something hard may break, its
+    quality's test: Combat 12), a thing's own quality and wear in its blow.  (gear.c's row_of, o_pc_side, o_pc_wield;
+    rshouse.h's RS_HOUSE_SWING; choose.c's wield; resolve.c's tool_ok; dq0w.c's door_work, swatted, in_hand.)
 - **A creature defends** by dodging, or by counterstriking if it's better at that, as the book advises for animals.
 - **The character's defences are chosen for it, a round's at a time** (the user's, 2026-10-20: the game is real
   time): against each blow the better of a block and a dodge it has left that round; each thing it holds that
@@ -489,7 +538,9 @@ requests; the house's rules above marked *(every ruleset's)* it plays as HarnMas
   strike or a burn 2.  Health: hurt under a third, badly hurt under two thirds, critical past that.
 - **A blow** is a flat test (a prone defender four steps easier, two harder for each other foe); a hit 2 wounds, a
   critical 4.  A prone attacker gets up instead.  A creature wounded that stands holds on a flat test (a shy one four
-  steps worse), else it flees.  A blow at a thing does 6, less the thing's least resistance.
+  steps worse), else it flees.  A blow at a thing does 6, less the thing's least resistance.  What strikes (Fights')
+  the house's: a thing named strikes, its words its name, whatever it is (a soft one the house's single attempt);
+  nothing named, the first thing in its hands; never a better thing carried asked about (none's better).
 - **No fatigue, no bleeding, no shock, no senselessness, no encumbrance.**  Senses all 5 (hearing 7 listening as it
   goes); a square takes 4.5, 3, 1.5, 0.8, 0.4 and 0.3 seconds at a creep, a slow walk, a walk, a jog, a run and a
   sprint.
