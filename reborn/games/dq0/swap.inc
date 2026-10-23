@@ -16,14 +16,21 @@
 ; data but through a stub (build.js checks it, in the compiler's output).
 ;
 ; Before including it: zeropage.inc, BANKREG, _ovbank (the overlays' banks), ova and ovx (bytes kept), SWDEPTH (and
-; SWFAST, if the parts are copied four pages a pass: a byte some 10 cycles, not 14, for 90 bytes more code); after
-; it, the parts, SWPART n, ov (part n's image in the bank _ovbank[ov - 1]: overlay ov's, as a rule), in order from 1
+; SWFAST, if the parts are copied four pages a pass: a byte some 10 cycles, not 14, for 90 bytes more code; SWMANY,
+; if there are more than 51 parts, past what an index of their records reaches: some 35 bytes more code); after it,
+; the parts, SWPART n, ov (part n's image in the bank _ovbank[ov - 1]: overlay ov's, as a rule), in order from 1
 ; (nothing else in RODATA between them), and the stubs.  The main code reads the overlays in before it calls one.
 
             .bss
 swapped:   .res        1                   ; The part in the area now (0: none)
 swstk:      .res        SWDEPTH             ; The parts the calls found, to put back
 swsp:       .res        1
+.ifdef SWMANY
+swrec:      .res        5                   ; (The part's record, swload's: SWMANY's)
+.define     SWREC(k)    swrec + k
+.else
+.define     SWREC(k)    swtab - 5 + k,x
+.endif
 
             .code
 
@@ -32,20 +39,40 @@ swload:
             sty         swapped
             lda         BANKREG
             pha
+.ifdef SWMANY
+            lda         #<(swtab - 5)       ; (Its record, swtab's .Y - 1 times 5 on, into swrec: 16 bits)
+            sta         @rec + 1
+            lda         #>(swtab - 5)
+            sta         @rec + 2
+@next:      lda         @rec + 1
+            clc
+            adc         #5
+            sta         @rec + 1
+            bcc         :+
+            inc         @rec + 2
+:           dey
+            bne         @next
+            ldy         #4
+@rec:       lda         $FFFF,y
+            sta         swrec,y
+            dey
+            bpl         @rec
+.else
             tya                             ; (Its record: .Y times 5)
             sta         tmp1
             asl         a
             asl         a
             adc         tmp1
             tax
-            lda         swtab - 5,x         ; Its overlay's bank
+.endif
+            lda         SWREC(0)            ; Its overlay's bank
             tay
             lda         _ovbank,y
             sta         BANKREG
-            lda         swtab - 4,x         ; Where its image is, in the window,
+            lda         SWREC(1)            ; Where its image is, in the window,
             sta         @src + 1
             sta         @src2 + 1
-            lda         swtab - 3,x
+            lda         SWREC(2)
             sta         @src + 2
             sta         @src2 + 2
             lda         #<SWSTART           ;   to the area's start
@@ -54,9 +81,9 @@ swload:
             lda         #>SWSTART
             sta         @dst + 2
             sta         @dst2 + 2
-            lda         swtab - 2,x         ; Its bytes past its whole pages
+            lda         SWREC(3)            ; Its bytes past its whole pages
             sta         tmp1
-            lda         swtab - 1,x         ; Its whole pages
+            lda         SWREC(4)            ; Its whole pages
             tax
             ldy         #0
             txa
