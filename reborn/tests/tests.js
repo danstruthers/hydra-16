@@ -2020,8 +2020,10 @@ const DQ0_REPEATS = [
     why: 'a walk stopped by a hostile seen: told as the walk\'s look stirs, then again in the look as it stops (the stir and that look one telling, as dq0traces\' rats\')' },
   { what: /^You keep at it\.$/,
     why: 'a battering\'s beat every fourth blow once its blows tell (the user\'s, 2026-10-22: told as it goes), twice or more in a dozen' },
-  { what: /^Everything goes black\.$/, tests: /^dq0finished$/,
-    why: 'knocked senseless, come round in shock a round later, struck senseless again, all in one wait\'s answer (the UI waiting it out): two black-outs, each told' },
+  { what: /^Everything goes black\.$/, tests: /^dq0(?:finished|strike)$/,
+    why: 'knocked senseless, come round in shock a round later, struck senseless again, all in one wait\'s answer (the UI waiting it out): two black-outs, each told (dq0strike\'s rats, fought with a bar, three)' },
+  { what: /^(?:You struggle|The .+ struggles), but can't get up\.$/,
+    why: 'a fall\'s Rise tried each round and failed (the book\'s test for one seriously or grievously wounded, slice 4.1b\'s), each try told' },
 ];
 function dq0Answers(out) {
   const s = out.replace(/\r/g, '').replace(/\x1b\[7m[\s\S]*?\x1b\[0m/g, '')
@@ -4235,12 +4237,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0battering', what: 'Dingus Quest Zero\'s battering a long task (slice 4.0, HOUSE.md\'s long tasks: a blow at a time as the clock goes, its bar the blows struck, stopped by the player or hard, the harm done kept), by the world\'s events and the long task\'s part done as it went (the hub\'s pc_task: the referee\'s, HarnMaster\'s, at these seeds): at seed 14 a pick battering the sound door (its torch put down and the pick taken in hand first: what\'s in its hands strikes, the user\'s, 2026-10-22) a dozen blows, one at a time (LT_BATTER, its length a dozen), leaving it giving, and battered again, broken down; then the same door battered and "stop digging" refused as it goes (it\'s a battering), "stop battering" stopping it part way, how the door stands told, and battered again, broken down in as many blows in all as without the stop (the harm done kept, each blow its own roll as before); with the hand-written theme\'s hostile rats (inhabit.txt) a battering stopped hard by a rat\'s blow; told as it goes (the user\'s, 2026-10-22: "nothing is written to the output until after it is resolved"): its first words at once (E_TASK TE_BEGUN, its what the door and what strikes it), a beat as its blows first tell (WB_TELLS) and as they leave it giving (WB_GIVES); both its ends (the user\'s: "doesn\'t seem to stop kicking a door once started"): the dozenth blow (above), and the fourth that makes no mark (seed 14\'s door punched bare-handed: four blows, no more, its bare fist stopped short once and not again at that door, and punched again, four more); a kick in knee boots ending of itself (no question: not bare), and a bare-footed kick at seed 15\'s door stopped short once and breaking it down',
+      name: 'dq0battering', what: 'Dingus Quest Zero\'s battering a long task (slice 4.0, HOUSE.md\'s long tasks: a blow at a time as the clock goes, its bar the blows struck, stopped by the player or hard, the harm done kept), by the world\'s events and the long task\'s part done as it went (the hub\'s pc_task: the referee\'s, HarnMaster\'s, at these seeds): at seed 14 a pick battering the sound door (its torch put down and the pick taken in hand first: what\'s in its hands strikes, the user\'s, 2026-10-22) a dozen blows, one at a time (LT_BATTER, its length a dozen), leaving it giving, and battered again, broken down; then the same door battered and "stop digging" refused as it goes (it\'s a battering), "stop battering" stopping it part way, how the door stands told, and battered again, broken down in as many blows in all as without the stop (the harm done kept, each blow its own roll as before); with the hand-written theme\'s hostile rats (inhabit.txt) a battering stopped hard by a rat\'s blow ("break the door ahead with the pick": the pick taken in hand by the battering\'s command, the rats coming as it batters); told as it goes (the user\'s, 2026-10-22: "nothing is written to the output until after it is resolved"): its first words at once (E_TASK TE_BEGUN, its what the door and what strikes it), a beat as its blows first tell (WB_TELLS) and as they leave it giving (WB_GIVES); both its ends (the user\'s: "doesn\'t seem to stop kicking a door once started"): the dozenth blow (above), and the fourth that makes no mark (seed 14\'s door punched bare-handed: four blows, no more, its bare fist stopped short once and not again at that door, and punched again, four more); a kick in knee boots ending of itself (no question: not bare), and a bare-footed kick at seed 15\'s door stopped short once and breaking it down',
       init: 't_rc', cycles: 1800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
         'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'drop the torch', 'hold the pick', 'break the door', 'break', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k pick',
         'drop the torch', 'hold the pick', 'break the door']) +
-        'ĀĀstop digging\rstop battering\r' + dq0Typed(['break', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick', 'drop the torch', 'hold the pick', 'break the door ahead', 'quit',
+        'ĀĀstop digging\rstop battering\r' + dq0Typed(['break', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick', 'drop the torch', 'break the door ahead with the pick', 'quit',
         'dq0 -p t -s 14 -c /ram/c.hm', 'punch the door', 'punch the door', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'', 'wear the knee boots',
         'kick the door', 'quit', 'dq0 -p t -s 15 -c /ram/c.hm', 'kick the door ahead to my left', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -4270,7 +4272,7 @@ module.exports = {
         dq0Need(f, sb, 'E_PORTAL', { po: p => p === 'PO_HOLDING' || p === 'PO_GIVING' }, 'how the door stood not told as it stopped');
         dq0Need(f, r2, 'E_PORTAL', { po: 'PO_BROKE_DOWN' }, 'battered again after the stop, the door not broken down');
         if (n2 + m2 !== n1 + m1) f.push('the harm done before the stop not kept: ' + n2 + ' blows, then ' + m2 + ', not ' + (n1 + m1) + ' in all as without it');
-        const b3 = T.after(T.of('dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick'), 'break the door ahead');
+        const b3 = T.after(T.of('dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick'), 'break the door ahead with the pick');
         dq0Need(f, b3, 'E_TASK', { te: 'TE_HIT', task: 'LT_BATTER' }, 'the battering not stopped hard by the rat\'s blow');
         // (Both ends, and each kick ending of itself: the user's, 2026-10-22)
         const short = { te: 'TE_ASK_SHORT', task: 'LT_BATTER' }, g4 = T.of('dq0 -p t -s 14 -c /ram/c.hm'), p1 = T.after(g4, 'punch the door');
@@ -4379,6 +4381,31 @@ module.exports = {
         const lk = T.of('look');
         if (!lk.after || !lk.after.sight || lk.after.sight.items.filter(i => i.name === 'body').length < 2) f.push('their bodies not seen');
         if (!lk.after || !(lk.after.sum.health > 0)) f.push('the character not hurt by their blows');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0disarm', asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' limbs: a denizen\'s fumble (slice 4.1b, the brief\'s: "The same rules for every actor with hands and legs: a denizen\'s fumble drops its weapon (the world\'s floor, seen and taken up)"), by the denizens\' events, the item store and the words (HarnMaster\'s dice as they fall here: no -a, no -I, asks and initiative, the game as a search found it): the hand-written theme\'s hostile bandits (dq0robbed\'s, seed 1, south of the start), the character (hmchar seed 23, Dodge 90, Sword 60) in a gambeson and a mail hauberk, blocking, waiting for them: a bandit\'s sword fumbled ("The bandit strikes at you with its sword, but fumbles the blow."), let fall (the world\'s E_BEAT WB_DROP in the denizens\' ring, its kind the sword\'s, its b the bandit\'s entry plus 1: "The bandit drops its sword."), taken up again at its next turn (WB_PICKS, the referee\'s RS_REARM and O_REARM: "The bandit snatches up its sword."), gone from the floor (as many swords in the store after as before)',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
+        'echo ml swd 60 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'wear the gambeson', 'wear the mail hauberk', 'defend block',
+        'open the door', ...Array(20).fill('wait'), 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [];
+        const g = T.of("dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'");
+        if (g.k < 0) return ['the game not played'];
+        const beats = T.filter(u => u.k > g.k).flatMap(u => [...u.events, ...u.dens]).filter(e => e.kind === 'E_BEAT');
+        const drop = beats.find(e => e.beat === 'WB_DROP' && e.b > 0), pick = beats.find(e => e.beat === 'WB_PICKS' && e.b > 0);
+        const end = T.of('quit', g.k), w0 = T.after(g, 'wear the gambeson'), sword = w0.after && w0.after.items.find(i => i.name === 'sword');
+        if (!drop || !sword || drop.thing !== sword.kind) f.push('no bandit\'s sword let fall (' + JSON.stringify(drop) + ')');
+        else if (!pick || pick.b !== drop.b || pick.thing !== drop.thing) f.push('the bandit\'s sword not taken up again (' + JSON.stringify(pick) + ')');
+        const swords = s => s ? s.items.filter(i => i.name === 'sword').length : -1;
+        if (swords(end.at) !== swords(w0.after)) f.push('a sword left on the floor, taken up again (' + swords(w0.after) + ' swords before, ' + swords(end.at) + ' after)');
+        inTurn(dq0Story(out), ['The bandit strikes at you with its sword, but fumbles the blow.', 'The bandit drops its sword.', 'The bandit snatches up its sword.'], f,
+          'the bandit\'s fumble\'s words: ');
         return f;
       },
       sdcard: true
@@ -5105,6 +5132,7 @@ module.exports = {
         if (kept && (!beats(r, 'WB_HIT').some(e => e.fa === 'FA_WALL' && e.gait === K.GA_RUN) || !dq0Ev(r, 'E_HARM', { hc: 'HC_STRIKE' }).length)) f.push('kept its feet, but not run into the far wall, a blow (' + dq0Evs(r) + ')');
         if (kept) at(r, 32784, 32855, 'the run on to the far wall');
         if (fell) at(r, 32784, 32852, 'fallen short of the table');
+        if (fell && (!r.after || r.after.pc.pos !== 1)) f.push('fallen over the table, not lying prone (slice 4.1b)');
         if (!/blind \[/.test(out)) f.push('the status line not "blind" as it ran');
         const sw = s.slice(s.indexOf('> status', s.indexOf('> run south')));
         if (!/Pace: a run/.test(sw) || /held to a slow walk in the dark/.test(sw.slice(0, 200))) f.push('the status not a run, said outright in the dark: ' + sw.slice(0, 160));
@@ -5305,7 +5333,8 @@ module.exports = {
         if (c0.length !== 1 || c0[0].actor !== 0 || c0[0].other !== gh.k + 1 || c0[0].a !== C.P_INITIATIVE || c0[0].result !== 2)
           f.push('the walk into its zone not one test, the ghoul the quicker (and none as the walk begun engaged went on): ' + JSON.stringify(c0));
         dq0Need(f, gg, 'E_FIGHT', { who: gh.k + 1, def: 0 }, 'the ghoul\'s blow first not struck');
-        said(g[0], 'Quicker, the ghoul bites at you');
+        if (!ans.filter(y => y.cmd === 'go to the far side').some(y => y.text.includes('Quicker, the ghoul bites at you')))   // (Either
+          f.push('go to the far side: not "Quicker, the ghoul bites at you"');   //   walk's answer: the second typed ahead, the words where the clock puts them)
         // (The close-in: the ghoul the quicker, its blow first, then the character's)
         const a = T.of('attack the ghoul'), ag = actor(a, 'ghoul'), ac = contests(a);
         if (!ag || ac.length !== 1 || ac[0].actor !== 0 || ac[0].other !== ag.k + 1 || ac[0].result !== 2)
@@ -5330,8 +5359,10 @@ module.exports = {
         if (run.flatMap(t => t.events).filter(e => e.kind === 'E_TASK' && e.te === 'TE_STOPPED' && e.task === 'LT_FIGHT').length < 2) f.push('the commands typed ahead not taking the fight over');
         const hs = dq0Thing(h.after, 'sword');
         if (!seq.some(r => r.kind === 'IO_GET' && r.result === 'IR_OK') || !dq0Carried(h.after).some(i => i.name === 'sword')) f.push('the sword not taken up at last: ' + (hs && hs.where));
-        const hi = seq.findIndex(r => r.kind === 'IO_HOLD');
-        if (hi < 1 || seq[hi - 1].req !== 'slot0') f.push('the hold not a grope: ' + JSON.stringify(seq));
+        // (Since slice 4.1b the ghoul, its knee broken by the torch, falls and fails its Rise (the book's test, seriously
+        // wounded) as the commands go on: down, it engages no one, the take after the fumble and the hold no gropes)
+        const hi = seq.findIndex(r => r.kind === 'IO_HOLD'), down = /The ghoul struggles, but can't get up\./.test(dq0Story(out));
+        if (!down && (hi < 1 || seq[hi - 1].req !== 'slot0')) f.push('the hold not a grope, the ghoul up: ' + JSON.stringify(seq));
         // (A quick character the ghoul comes up to: the character the quicker, its blow first)
         const w = T.filter(t => t.line === 'wait'), q = w[1], qg = q && actor(q, 'ghoul'), qc = q ? contests(q) : [];
         if (w.length !== 4 || !qg) return [...f, 'the waits not typed, or no ghoul'];

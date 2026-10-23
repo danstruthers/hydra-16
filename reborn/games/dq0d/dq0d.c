@@ -881,6 +881,7 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     im.x[0] = 0;
     im.x[1] = a.face;
     im.x[2] = a.sn;
+    im.x[3] = s->cond >> 12 & 7;                /* (Its legs, the referee's C_MOVE: slice 4.1b's) */
     im.w1 = a.x;
     im.w2 = a.y;
     im.a = a.step;

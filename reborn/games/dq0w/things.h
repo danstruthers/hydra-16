@@ -83,7 +83,7 @@ void __fastcall__ items_begin (const char* dir);    /* (Part 13) The catalogue i
                                                 **   emptied, a game carried on its read, its light */
 void __fastcall__ stock_down (unsigned char k); /* (Part 13) Cache slot k's chunk's things put down (the maker's
                                                 **   list, the world bank's stock) */
-void __fastcall__ lay_body (unsigned char kind, unsigned char sn, unsigned x, unsigned y);   /* (Part 13) A denizen's
+unsigned __fastcall__ lay_body (unsigned char kind, unsigned char sn, unsigned x, unsigned y);   /* (Part 13) A denizen's
                                                 **   remains put down where it fell (KI_BODY, KI_BONES) */
 unsigned char puzzle (void);                    /* (Part 16: wgame.c) The hub's ireq, IO_PUZZLE's, answered (but its
                                                 **   state): 1 if what lies about has changed */

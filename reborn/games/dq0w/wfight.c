@@ -94,12 +94,13 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
 {
     static struct req* r;
     static struct fight* f;
-    static unsigned char ff, c, out, me, wh, n, i, dh;
+    static unsigned char ff, c, out, me, wh, n, i, dh, cd, ra;
     static unsigned w2;
     static unsigned char pa, pd;
     static const struct rs_effect* e;
 
     me = bk + 1;
+    ra = att && bd.arm && den_reach ();         /* (Its weapon let fall, in its reach: taken up, its turn, part 51's) */
     hub_map (0);
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_ATTACK;
@@ -111,11 +112,16 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     r->steps = 0;
     pa = att ? bd.pos : HUB->pc_pos;           /* (Their bodies' positions, the world's: prone, the easier struck) */
     pd = att ? HUB->pc_pos : bd.pos;
-    r->w2 = bd.timid | (pa == POS_PRONE ? RS_PRONE_A : 0) | (pd == POS_PRONE ? RS_PRONE_D : 0);
+    r->w2 = bd.timid | (pa == POS_PRONE ? RS_PRONE_A : 0) | (pd == POS_PRONE ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0);
     r = hub_ask (SLOT_WORLD);
     if ((out = r->result) == 0xFF) {
         r->state = REQ_FREE;
         return 0xFF;
+    }
+    if (out == O_REARM) {
+        r->state = REQ_FREE;
+        den_took ();                            /* (Its weapon in hand again, told: part 51's) */
+        return 0;
     }
     if (out == O_RISE) {                        /* (The attacker got up, its turn spent; or tried and is still down,
                                                 **   a: the limbs' news, no blow's record, slice 4.1b's) */
@@ -126,9 +132,16 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         }
         pa = POS_STANDING;
     }
-    for (dh = i = 0, e = (const struct rs_effect*) r->x; i < RS_EFFECTS && e->kind; ++i, ++e) {
-        if (e->kind == X_DROP && !e->target) {
-            dh |= e->x[0];                      /* (The character's hands' things let go of, fumbled: slice 4.1b's) */
+    for (cd = dh = i = 0, e = (const struct rs_effect*) r->x; i < RS_EFFECTS && e->kind; ++i, ++e) {
+        if (e->kind == X_DROP) {
+            if (e->target) {
+                cd = 1;                         /* (The creature's weapon let fall: part 51's) */
+            } else {
+                dh |= e->x[0];                  /* (The character's hands' things let go of, fumbled: slice 4.1b's) */
+            }
+        }
+        if (e->kind == X_WOUND && e->target == me) {
+            bd.move = e->cond >> 12 & 7;        /* (How its legs move it now, C_MOVE's: slice 4.1b's) */
         }
         if (e->kind == X_COND_ON && (e->cond & C_PRONE)) {
             if (e->target == att) {             /* (Fallen: a stumble, a leg's.  An if, not *(c ? &pa : &pd): 13
@@ -141,6 +154,9 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     }
     HUB->pc_pos = att ? pd : pa;
     bd.pos = att ? pa : pd;
+    if (cd) {
+        den_word (r->text, !att);               /* (Its weapon's word, the reply's: part 51's) */
+    }
     ff = r->grade;
     c = r->c;
     w2 = r->w2;
@@ -183,6 +199,9 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     told (att, def, out, ff);
     if (dh) {
         drop_held (dh, 1);                      /* (Told after the blow, in the denizens' ring) */
+    }
+    if (cd) {
+        den_drop ();                            /* (Its weapon on the floor, told: part 51's) */
     }
     if (ff & (me == att ? FF_A_DEAD : FF_D_DEAD)) {
         died ();

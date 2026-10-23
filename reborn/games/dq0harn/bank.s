@@ -164,6 +164,8 @@ ovl_out:
             OVFN        limbs_of, 3
             OVFN        cond_of, 3
             OVFN        rise_of, 3
+            OVFN        hit_thing, 3
+            OVFN        health_of, 3
             OVFN        fumbled, 3
             OVFN        wound_drops, 3
 

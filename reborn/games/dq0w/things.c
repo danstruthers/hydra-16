@@ -2589,13 +2589,17 @@ void __fastcall__ s_stock_down (unsigned char k)
     hub_map (0);
 }
 
-/* A denizen's remains put down where it fell (kind: KI_BODY, KI_BONES; the world's, wbody.c's: it died) */
-void __fastcall__ s_lay_body (unsigned char kind, unsigned char sn, unsigned x, unsigned y)
+/* A denizen's remains put down where it fell (kind: KI_BODY, KI_BONES; the world's, wbody.c's: it died), or a thing
+** of its (its weapon let fall: wlimbs.c's): its item's number (0 none) */
+unsigned __fastcall__ s_lay_body (unsigned char kind, unsigned char sn, unsigned x, unsigned y)
 {
+    unsigned i;
+
     it_need (sn, (x - STRATUM (sn).x0) >> CW_BITS, (y - STRATUM (sn).y0) >> CW_BITS);  /* (Its chunk's things in the
                                                 **   store first) */
-    put_down (kind, IW_SQUARE, sn, x, y, 1);
+    i = put_down (kind, IW_SQUARE, sn, x, y, 1);
     hub_map (0);
+    return i;
 }
 
 /* (Part 13's: a rare command's) Hidden where the character stands (the user: hiding is a skill, Concealment; a thing's difficulty to find by the

@@ -380,7 +380,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    16                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    17                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -404,7 +404,9 @@ static void sheet (void)
                                                 **   lights burning, slice 4.1's; the places kept lit after the
                                                 **   denizens' dens.dat; 15, the items' records their shut, a
                                                 **   thing's lid, its tie, its stopper, its lock; 16, the player's
-                                                **   shortcuts after the names: alias.c's) */
+                                                **   shortcuts after the names: alias.c's; 17, the catalogue's axe, the
+                                                **   theme's kinds a number on; the hub's actors' legs and weapons let fall:
+                                                **   slice 4.1b's) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;

@@ -7,7 +7,7 @@
 #ifndef _DQ0HARN_H
 #define _DQ0HARN_H
 
-/* dq0harn.c (and gear.c's, overlay 3's: limbs_of, cond_of) */
+/* dq0harn.c (and gear.c's, overlay 3's: health_of, limbs_of, cond_of, rise_of) */
 extern harn_char pc;                            /* The character */
 extern char name[16], calling[20];
 extern char* tp;                                /* The words into a reply: where the next goes, */
@@ -64,12 +64,14 @@ struct beast {
     unsigned char   kind;                       /* Its bestiary entry plus 1 (0: none yet) */
     unsigned char   att[5];                     /* Strength, Stamina, Dexterity, Agility, Will */
     unsigned char   wt;                         /* Its weight, in 4 lb */
-    unsigned char   state;                      /* HARN_CONSCIOUS ... */
+    unsigned char   state;                      /* HARN_CONSCIOUS ... (| BS_DISARMED) */
     unsigned char   bl;                         /* Bloodloss */
     unsigned char   ninj;
     harn_injury     inj[3];                     /* (More: the last takes their levels) */
     unsigned long   out;                        /* Senseless till then (the clock's tenths) */
 };
+#define BS_DISARMED     0x80                    /* (Its state's: its weapon let fall, its fists till it takes it up:
+                                                **   fight.c's, slice 4.1b's) */
 #define NSHEETS         256
 typedef char beast_fits[sizeof (struct beast) * NSHEETS <= 0x2000 ? 1 : -1];
 extern struct beast bs;                         /* (A sheet, copied out of the bank) */
@@ -135,6 +137,8 @@ struct side {
 };
 
 /* gear.c (overlay 3): the character's weapons and armour */
+void __fastcall__ hit_thing (struct req* q, struct side* s);   /* A blow at a thing (RS_ATTACK at RS_THING: fight.c's,
+                                                **   side s the attacker's) */
 void __fastcall__ pc_side (struct side* s);     /* Its side of a fight: what it strikes with (pc_way's), blocks with,
                                                 **   dodges */
 unsigned char __fastcall__ pc_defence (struct side* d, unsigned char f, unsigned char armed);  /* Its defence (HARN_*)

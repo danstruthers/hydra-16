@@ -46,7 +46,8 @@
                                                 **   WB_SHORT, FA_*, GA_SAID, GOING_BOLD, SF_*, PA_SEARCH's b and w1, IO_SEEK, STEP_FEELS, rs.h's
                                                 **   P_STUMBLE; 16: the hands and limbs, pc_shand, the blows' x[2],
                                                 **   items.h's IH_*, IO_SWAP, rs.h's summary's limbs and limp, P_RISE,
-                                                **   C_LAME ...) */
+                                                **   C_LAME ..., I_RISE, the actors' move, arm and dropped, RS_REARM,
+                                                **   O_REARM) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -766,6 +767,11 @@ struct actor {
     unsigned char   step;                       /* Tenths of a second to go a square */
     unsigned char   pos;                        /* Its body's position (POS_*: standing, prone ...) */
     unsigned char   gait;                       /* The pace it goes at (rs.h's GA_*: a walk, till their paces come) */
+    unsigned char   move;                       /* How its legs move it (rs.h's C_MOVE bits, the referee's, down 12: 1
+                                                **   lame, half its pace; 2 crawling or hopping, a third; 4 stuck: slice
+                                                **   4.1b's) */
+    unsigned char   arm;                        /* Its weapon let fall, its kind (0 none), */
+    unsigned        dropped;                    /*   and where it lies (an item: to take up again) */
     unsigned        x, y;                       /* (These, its doing and its name as struct sight's den: copied whole) */
     unsigned char   doing;                      /* What it's doing (DO_*: watching, coming, keeping off: it senses the
                                                 **   character) */

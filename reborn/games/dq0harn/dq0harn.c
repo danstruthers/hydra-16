@@ -279,16 +279,6 @@ unsigned char lhurt[4];
 unsigned char cplan = BF_BIPED;
 unsigned char hheld;                            /* (The hands that hold something: RS_EQUIP 2's w2, DH_*) */
 
-/* Its health in words any ruleset can say (the game's: by its injuries' levels against its Endurance; down, in
-** shock or senseless) */
-unsigned char __fastcall__ health_of (const harn_char* h)
-{
-    unsigned char ip = harn_get_ip (h), e = harn_end (h);
-
-    return h->state == HARN_DEAD ? H_DEAD : h->state != HARN_CONSCIOUS ? H_DOWN : !ip ? H_FINE : 3 * ip < e ? H_HURT :
-        3 * ip < 2 * e ? H_BADLY : H_CRITICAL;
-}
-
 static void status (void)
 {
     static const char* const word[4] = { "", " OUT", " SHOCK", " DEAD" };

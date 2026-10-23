@@ -24,7 +24,9 @@
 #pragma code-name ("OV3CODE")
 #pragma rodata-name ("OV3RODATA")
 
+#include <stddef.h>
 #include <string.h>
+#include <dice.h>
 #include <harn.h>
 #include "../dq0/hub.h"
 #include "../dq0/rs.h"
@@ -52,6 +54,8 @@ static const struct weapon {
     { "blade", "sword", HARN_SWD, 15, 10, { 3, 5, 3 }, 0xFF },
     { "mace", "mace", HARN_CLU, 15, 5, { 6, -1, -1 }, 0xFF },
     { "spear", "spear", HARN_SPR, 20, 10, { 4, -1, 7 }, 0xFF, 10 },
+    { "axe", "axe", HARN_AXE, 10, 5, { 4, 6, -1 }, 0xFF },  /* (The book's handaxe: a creature's let fall, slice
+                                                **   4.1b's) */
     { "pick", "pick", HARN_AXE, 10, 5, { 2, -1, 5 }, TOOL },
     { "mattock", "mattock", HARN_AXE, 15, 5, { 3, 4, 4 }, TOOL },
     { "shovel", "shovel", HARN_SPR, 10, 10, { 2, 3, -1 }, TOOL },
@@ -116,10 +120,21 @@ static int __fastcall__ eml (harn_char* c, unsigned char sk)
     return c->ml[sk] ? harn_eml (c, sk) : harn_get_oml (c, sk) - 5 * harn_get_pp (c);
 }
 
+/* Its health in words any ruleset can say (the game's: by its injuries' levels against its Endurance; down, in
+** shock or senseless): overlay 3's, the main RAM's room, slice 4.1b's */
+unsigned char __fastcall__ o_health_of (const harn_char* h)
+{
+    unsigned char ip = harn_get_ip (h), e = harn_end (h);
+
+    return h->state == HARN_DEAD ? H_DEAD : h->state != HARN_CONSCIOUS ? H_DOWN : !ip ? H_FINE : 3 * ip < e ? H_HURT :
+        3 * ip < 2 * e ? H_BADLY : H_CRITICAL;
+}
+
 /* Its limbs (rs.h's LB_*, slice 4.1b's), as its sheet has them (the character's, or a creature's): its main hand (the
 ** medical traits', Character 9: left-handed, ambidextrous; an arm missing or deformed, its off arm the one, no
 ** two-handed use), each limb made useless (a grievous wound, till it heals to M1: Combat 14); and each one's hurt, its
-** injuries' levels (lhurt: the left arm's, the right's, the left leg's, the right's) */
+** injuries' levels (lhurt: the left arm's, the right's, the left leg's, the right's; a leg missing or deformed, the
+** medical trait's, five levels, a limp at half its move) */
 unsigned char __fastcall__ o_limbs_of (const harn_char* h)
 {
     unsigned char k, l = 0, j, v = 0;
@@ -130,6 +145,10 @@ unsigned char __fastcall__ o_limbs_of (const harn_char* h)
         j = pc.med[k];
         l |= j == HARN_LEFTHANDED ? LB_LEFT : j == HARN_AMBIDEXTROUS ? LB_AMBI : 0;
         v |= j == HARN_MED_ARM;
+        if (j == HARN_MED_LEG) {
+            lhurt[2] = 5;                       /* (A leg missing or deformed, Character 9: half its move, a limp of five
+                                                **   levels, the house's; the left, its choice) */
+        }
     }
     if (h == &pc && v) {
         l |= l & LB_LEFT ? LB_ARM_R : LB_ARM_L;
@@ -494,4 +513,57 @@ unsigned char __fastcall__ o_pc_defence (struct side* d, unsigned char f, unsign
     }
     d->dslot = uhow[s] == HARN_DODGE ? 0xFF : s;   /* (What it defends with: its fumble's, slice 4.1b's) */
     return uhow[s];
+}
+
+/* A blow at a thing (RS_ATTACK at RS_THING: rs.h's), which ignores it: the character's attack tested (its weapon's
+** attack mastery, or Unarmed's), the Ignore table's strike (Combat 12: a critical failure none), its impact (the
+** dice, the weapon's for the aspect that does the thing most harm), the thing's resistance off it; and a part that
+** struck it hurt if the blow went wrong (rs.h's: the book's H2 on a bare part meeting something hard, the game's
+** numbers), HC_STRUCK's harm (sheet.c's).  A part's blow the house's Unarmed test (HOUSE.md's battering, the user's,
+** 2026-10-22): a marginal failure harms neither, a critical failure the part alone; a bare part's hurt stopped short
+** (RS_SHORT: none, result | 4).  (Fight.c's, its request q, the attacker's side s: here, overlay 2's room) */
+void __fastcall__ o_hit_thing (struct req* q, struct side* s)
+{
+    static unsigned char hq[offsetof (struct req, text)];   /* (The harm's request: but its text) */
+#define h   (*(struct req*) hq)
+    unsigned char res[4], k, lv, n, asp = 0, run = q->c, a, pull = q->w2 & RS_SHORT;
+    int imp, v, top = -100;
+
+    memcpy (res, q->x, sizeof res);
+    memset (q->x, 0, sizeof q->x);
+    o_pc_side (s);
+    for (k = 0; k < 3; ++k) {
+        if (s->imp[k] >= 0 && (v = s->imp[k] - res[k]) > top) {
+            top = v;
+            asp = k;
+        }
+    }
+    lv = harn_test (s->aml);
+    n = s->part != 0xFF && lv <= HARN_MF ? 0 : HARN_R_DICE (harn_melee_result (HARN_IGNORE, lv, 0));
+    imp = n ? dice (n, 6) + s->imp[asp] : 0;
+    q->w1 = imp > res[asp] ? imp - res[asp] : 0;
+    q->b = asp;
+    q->c = 0;
+    q->w2 = 0;
+    q->result = s->part != 0xFF ? 2 : 0;
+    put (s->word);
+    if (s->part != 0xFF && lv == HARN_CF) {     /* (Gone wrong: the part hurt; a bare one stopped short of it, asked) */
+        a = s->part == HARN_FOOT ? o_pc_armour (SOLE, 0) : o_pc_armour (s->part, HARN_BLUNT);
+        v = dice (2, 6) + res[0] / 2 - a;
+        if (v > 0 && pull && !a) {
+            q->result |= 4;
+        } else if (v > 0) {
+            memset (hq, 0, sizeof hq);
+            h.kind = RS_HARM;
+            h.a = HC_STRUCK;
+            h.c = s->part;
+            h.w1 = v;
+            h.w2 = run;
+            harm (&h);
+            q->c = h.b;
+            q->w2 = h.w2;
+            q->result |= h.result;
+        }
+    }
+#undef h
 }

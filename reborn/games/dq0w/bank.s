@@ -131,6 +131,7 @@ go:
                                             ;   (things.c: slice 4.1b's)
             SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
             SWPART      50, 13              ; The legs: getting up, a move's start prone, how fast (dq0w.c's)
+            SWPART      51, 8               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -143,6 +144,11 @@ go:
             SWFN        drop_held, 49
             SWFN        harm_fx, 49
             SWFN        limb_news, 49
+            SWFN        den_reach, 51
+            SWFN        den_took, 51
+            SWFN        den_word, 51
+            SWFN        den_drop, 51
+            SWFN        den_legs, 51
             SWFN        rise_pc, 50
             SWFN        limbs_go, 50
             SWFN        limbs_pace, 50

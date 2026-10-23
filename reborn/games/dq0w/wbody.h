@@ -42,6 +42,11 @@ void __fastcall__ drop_held (unsigned char h, unsigned char ring);   /* (Part 49
                                                 **   (DH_*) let go of, fumbled: told in the denizens' ring (ring 1) or
                                                 **   the world's */
 void harm_fx (void);                            /* (Part 49) A harm's effects: dropped, prone */
+unsigned char den_reach (void);                 /* (Part 51: wlimbs.c) Body bd's weapon let fall, in its reach */
+void den_took (void);                           /* (Part 51) Taken up again, told */
+void __fastcall__ den_word (const char* t, unsigned char n);   /* (Part 51) Its weapon's word: line n of t */
+void den_drop (void);                           /* (Part 51) Its weapon on the floor, told */
+unsigned char den_legs (void);                  /* (Part 51) Its legs at a move's start: 1 no move */
 void __fastcall__ limb_news (unsigned w, unsigned char b);  /* (Part 49) The limbs' news, the denizens' ring's (E_BEAT's
                                                 **   w; b whose: 0 the character, else the actor's entry plus 1) */
 unsigned char __fastcall__ engaged (unsigned char eng, unsigned char def);  /* (dq0w.c's part 25) The engage

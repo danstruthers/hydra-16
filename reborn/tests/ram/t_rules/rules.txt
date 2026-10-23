@@ -2348,6 +2348,13 @@ dice
 ask TEST a=P_RISE
 want grade=G_MS
 char
+med 14
+end
+case a leg missing or deformed (med 14, Character 9): a limp of five levels, the house's, half her move
+dice
+ask EQUIP a=2 text=""
+want sum.limp=5 sum.limbs=0
+char
 inj 12 0 2 3 0 0
 end
 case a serious wound to her left thigh (3 levels): an Agility test, 60 less 15: 7 up, 96 still down
@@ -2389,3 +2396,33 @@ ask NEW_ACTOR actor=1 w1=9 text="rat"
 dice
 ask ATTACK actor=0 other=1 a=Z_MID b=AS_BEST w2=RS_PRONE_A
 want result=O_RISE a=1
+
+# ---- A creature's weapon let fall (slice 4.1b: the book's fumbles, Combat 14, Skills 21; HOUSE.md's denizens'
+# limbs): its fists after it (its weapon's mastery less 10, the house's), nothing more of it to let fall; taken up
+# again (RS_REARM: its turn, O_REARM), its weapon's once more
+
+char
+end
+case a kobold's spear and her sword both fumbled (the table's BF): its spear let fall, the kobold disarmed
+dice
+ask EQUIP a=2 text=">blade4" w2=DH_RIGHT
+set now=950000 stance=D_BLOCK
+dice
+ask NEW_ACTOR actor=2 w1=21 text="kobold"
+dice 100:100 100:95 6:6 6:6 6:6 6:6 6:6 6:6
+ask ATTACK actor=2 other=0 a=Z_MID b=AS_BEST
+want result=O_FUMBLE e0.kind=X_DROP e0.target=2 e0.loc=DH_RIGHT
+case disarmed: its fists (the words' first line), nothing of its to let fall, her sword let go of again
+set now=951000
+dice 100:100 100:95 6:6 6:6 6:6 6:6 6:6 6:6
+ask ATTACK actor=2 other=0 a=Z_MID b=AS_BEST
+want result=O_FUMBLE text~"fists" e0.kind=X_DROP e0.target=0 e1.kind=X_NONE
+case its spear taken up again (RS_REARM): its turn (O_REARM), no blow; its next blow its spear's, let fall again
+set now=952000
+dice
+ask ATTACK actor=2 other=0 a=Z_MID b=AS_BEST w2=RS_REARM
+want result=O_REARM
+set now=953000
+dice 100:100 100:95 6:6 6:6 6:6 6:6 6:6 6:6
+ask ATTACK actor=2 other=0 a=Z_MID b=AS_BEST
+want result=O_FUMBLE text~"spear" e0.kind=X_DROP e0.target=2

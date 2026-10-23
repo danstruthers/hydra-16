@@ -128,9 +128,9 @@ enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
 enum { H_FINE, H_HURT, H_BADLY, H_CRITICAL, H_DOWN, H_DEAD };
 
 /* ---- How an attack came out, for the words (O_DISPATCH: a helpless one finished; O_RISE: the attacker, fallen,
-** only got to its feet) */
+** only got to its feet, or tried, a 1, and is still down; O_REARM: the attacker took up its weapon again, RS_REARM) */
 enum { O_MISS, O_DODGED, O_BLOCKED, O_HIT, O_BOTH_HIT, O_COUNTER_HIT, O_FUMBLE, O_STUMBLE, O_ADVANTAGE, O_CRIT,
-    O_DISPATCH, O_RISE };
+    O_DISPATCH, O_RISE, O_REARM };
 
 /* ---- Defences: the stance the player sets (the ruleset decides what each means; auto: its best; HarnMaster's: a
 ** round's defences, a block or a dodge each once a round, a counterstrike only on D_COUNTER: HOUSE.md) */
@@ -175,6 +175,8 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define RS_PRONE_D      0x04                    /*   the defender) */
 #define RS_KILLER       0x08                    /* (RS_ATTACK's w2: the attacker a killer, the character senseless finished
                                                 **   where it lies; else the blow held: the minds', by its nature) */
+#define RS_REARM        0x20                    /* (RS_ATTACK's w2: the attacker, its weapon let fall, takes it up again,
+                                                **   its turn: O_REARM, slice 4.1b's) */
 #define RS_SHORT        0x10                    /* (RS_ATTACK at RS_THING's w2: a bare part (no armour on it: the
                                                 **   fists, the feet, the head) that would be hurt stopped short of it,
                                                 **   unhurt, result | 4: the first time at a door, HOUSE.md's) */
