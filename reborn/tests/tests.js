@@ -1612,10 +1612,10 @@ function cacheChunks(m, sn) {
   for (const b of Object.values(m.sharedBanks())) {
     for (let k = 0; k < 3; k++) {
       const o = k * CHUNK_SIZE, nrooms = b[o + 5], tile = b.subarray(o + CK_TILE, o + CK_TILE + 1024);
-      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x1F) > 9)) continue;
+      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x0F) > 9)) continue;
       const rooms = [];
       for (let r = 0; r < nrooms; r++) { const p = o + CK_ROOM + r * 8; rooms.push({ x: b[p], y: b[p + 1], w: b[p + 2], h: b[p + 3], kind: b[p + 5] }); }
-      out.set((b[o + 1] | b[o + 2] << 8) + ',' + (b[o + 3] | b[o + 4] << 8), { cx: b[o + 1] | b[o + 2] << 8, cy: b[o + 3] | b[o + 4] << 8, rooms, tile: Array.from(tile, t => t & 0x1F) });
+      out.set((b[o + 1] | b[o + 2] << 8) + ',' + (b[o + 3] | b[o + 4] << 8), { cx: b[o + 1] | b[o + 2] << 8, cy: b[o + 3] | b[o + 4] << 8, rooms, tile: Array.from(tile, t => t & 0x0F) });
     }
   }
   return out;
@@ -1840,7 +1840,7 @@ function builtChunks(m, sn) {
     for (let k = 0; k < 3; k++) {
       const o = k * 0xAA0, nr = b[o + 5], nz = b[o + 6], np = b[o + C.portal - 1];
       const tile = b.subarray(o + C.tile, o + C.tile + 1024);
-      if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x1F) > 9)) continue;
+      if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x0F) > 9)) continue;
       const rooms = [], zones = [], portals = [];
       for (let r = 0; r < nr; r++) {
         const p = o + C.room + r * 8;
@@ -1854,7 +1854,7 @@ function builtChunks(m, sn) {
       }
       for (let i = 0; i < np; i++) { const p = o + C.portal + i * 14; portals.push({ x: b[p], y: b[p + 1], kind: b[p + 2] }); }
       out.push({ cx: b[o + 1] | b[o + 2] << 8, cy: b[o + 3] | b[o + 4] << 8, rooms, zones, portals, pceil: b[o + C.pceil],
-        tile: Array.from(tile, t => t & 0x1F), elev: Array.from(b.subarray(o + C.elev, o + C.elev + 1024), e => e << 24 >> 24) });
+        tile: Array.from(tile, t => t & 0x0F), elev: Array.from(b.subarray(o + C.elev, o + C.elev + 1024), e => e << 24 >> 24) });
     }
   }
   return out;
@@ -1931,20 +1931,20 @@ function dq0Made(t, m) {
 const mainRoom = c => c.rooms.reduce((a, r) => r.w * r.h > a.w * a.h ? r : a, c.rooms[0]);
 // Two chunks' bytes compared (struct chunk's: rooms from 8, 8 bytes each, their flags the 5th; openings 188-217, their
 // count at 7; portals from 219, 14 bytes each, their state, parts, harm the 4th, 9th and 14th; squares from 443, their
-// floors from 1467; traps from 2513, 7 bytes each, their state the 5th): the squares' seen and visible bits (T_SEEN,
-// T_VIS) and the rooms' visited (R_VISITED) aside, each byte that differs by what it is: portal, trap, square,
+// floors from 1467; traps from 2513, 7 bytes each, their state the 5th): the squares' seen, visible and drawn bits
+// (T_SEEN, T_VIS, T_DRAWN) and the rooms' visited (R_VISITED) aside, each byte that differs by what it is: portal, trap, square,
 // opening, or other (none should be: the maker's own)
 function chunkDiff(a, b) {
   const d = { portal: 0, trap: 0, square: 0, opening: 0, other: [] };
   for (let i = 0; i < CHUNK_BYTES; i++) {
     let x = a[i], y = b[i];
-    if (i >= 443 && i < 1467) { x &= 0x3F; y &= 0x3F; }
+    if (i >= 443 && i < 1467) { x &= 0x2F; y &= 0x2F; }
     if (i >= 8 && i < 56 && (i - 8) % 8 === 4) { x &= ~1; y &= ~1; }
     if (x === y) continue;
     if (i >= 219 && i < 443 && [3, 8, 13].includes((i - 219) % 14)) d.portal++;
     else if (i >= 2513 && i < 2555 && (i - 2513) % 7 === 4) d.trap++;
     else if (i >= 443 && i < 1467) d.square++;
-    else if (i >= 1467 && i < 2491 && (a[i - 1024] & 0x1F) !== (b[i - 1024] & 0x1F)) d.square++;   // (A changed square's floor)
+    else if (i >= 1467 && i < 2491 && (a[i - 1024] & 0x0F) !== (b[i - 1024] & 0x0F)) d.square++;   // (A changed square's floor)
     else if (i === 7 || (i >= 188 && i < 218)) d.opening++;
     else d.other.push(i);
   }

@@ -50,14 +50,16 @@ extern unsigned char smask;
 #define CACHE_BANK(k)   (1 + PLAN_BANKS + (k) / 3)
 #define CHUNK_AT(k)     ((struct chunk*) (0x8000 + ((k) % 3) * CHUNK_SIZE))
 
-/* Squares: the low five bits a kind; T_SEEN: the character has seen it; T_VIS: it sees it now; T_HOLE: a shaft in
-** the ceiling above */
+/* Squares: the low four bits a kind; T_SEEN: the character has seen it; T_VIS: it sees it now; T_HOLE: a shaft in
+** the ceiling above; T_DRAWN: on the map it draws (the senses', as it sees it, mapping as it goes on paper: DUNGEON.md,
+** the map kept; the map its chunk's kept.map) */
 enum { T_ROCK, T_FLOOR, T_WALL, T_DOOR, T_CORR, T_STEPS, T_WINDOW, T_UP, T_DOWN, T_PIT };
 #define T_SEEN          0x80
 #define T_VIS           0x40
 #define T_MARK          0x40                    /* (A grower's, the same bit: a square reached) */
 #define T_HOLE          0x20
-#define TILE(t)         ((t) & 0x1F)
+#define T_DRAWN         0x10
+#define TILE(t)         ((t) & 0x0F)
 #define T_PASS(t)       (TILE (t) != T_ROCK && TILE (t) != T_WALL && TILE (t) != T_WINDOW && TILE (t) != T_PIT)
 #define T_INSIDE(t)     (TILE (t) == T_FLOOR || TILE (t) == T_STEPS || TILE (t) == T_UP || TILE (t) == T_DOWN || \
                          TILE (t) == T_PIT)
@@ -213,6 +215,15 @@ struct chunk {
     struct trap     trap[NTRAPS];
     unsigned char   pceil;                      /* Its passages' ceiling, feet above their floor (a built one's: its
                                                 **   small rooms' too, the builders' one height) */
+    struct ckept {                              /* The character's memory of it (DUNGEON.md, the map kept: the senses',
+                                                **   as it looks about; the maker's to keep with its seen squares): */
+        unsigned    m;                          /*   the game minute it last saw any of it (the clock's tenths over
+                                                **   600, 16 bits), */
+        unsigned char q;                        /*   how well it kept it then (0-100: 0 never seen; the referee's
+                                                **   summary's mapmind, mapping as it goes, half that not), */
+        unsigned    map;                        /*   and the map its T_DRAWN squares are on (that map's item's id: 0
+                                                **   none) */
+    }               kept;
 };
 #define CHUNK_SIZE      0x0AA0                  /* Three to a bank */
 typedef char chunk_fits[sizeof (struct chunk) <= CHUNK_SIZE ? 1 : -1];

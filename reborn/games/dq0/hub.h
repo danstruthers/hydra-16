@@ -1195,8 +1195,10 @@ struct wsave {
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)
 **   own chunk.tile maker +senses +world                        (Its squares: the senses' memory in them, seen and
-**                                                                seen now; the world's changes, a square dug, a pit
-**                                                                opened, store.c's change, the seen mark kept)
+**                                                                seen now, drawn; the world's changes, a square dug, a
+**                                                                pit opened, store.c's change, the seen marks kept)
+**   own chunk.kept maker +senses                               (The character's memory of it: the senses', as it
+**                                                                looks about; the maker's, its seen maps')
 **   own chunk.room[*].flags maker +senses +world               (A room's: R_VISITED, the senses' memory, come into;
 **                                                                R_LIT, its sconce's light, the world's ROOM_LIT)
 **   own chunk.portal maker +world                              (Made from the seed; worked by the world, each change

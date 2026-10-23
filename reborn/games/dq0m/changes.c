@@ -3,7 +3,8 @@
 ** the dungeon): the change records (world.h's), the world's to write (dq0w/store.c), read here only: its region's in
 ** the hub's change pages, or, if none of them are there, in its file in the save folder (rgSXXYY.dat, its newest
 ** valid version: ../dq0/vfile.inc's), under the hub's change_lock.  And the squares the character has seen, each
-** chunk's as a map of bits, kept as the cache makes way for the chunk and laid over it when it's made again, in banks
+** chunk's as a map of bits (and those on the map it draws, T_DRAWN, and its memory of the chunk, struct chunk's kept:
+** DUNGEON.md, the map kept), kept as the cache makes way for the chunk and laid over it when it's made again, in banks
 ** of the maker's own, a cache of them by region (move 2.8: no fixed count of them; the plan's region, 8 by 8 chunks,
 ** all its maps in the banks or none, those least lately wanted written to the save folder, smSXXYY.dat, a version
 ** each time, and read back as they're wanted: without a folder, the oldest map made way for), and in the save
@@ -26,7 +27,7 @@
 #define VF_STATIC       static
 #include "../dq0/vfile.inc"
 
-#define SEEN_BANKS      2
+#define SEEN_BANKS      4                       /* (A map 268 bytes: 30 to a bank, 120 in all, as there were) */
 #define SEEN_PER_BANK   (0x2000 / sizeof (struct seen))
 
 struct seen {
@@ -34,6 +35,8 @@ struct seen {
     unsigned        cx, cy;
     unsigned char   rooms;                      /* Its rooms visited (bits) */
     unsigned char   bits[CW * CW / 8];
+    unsigned char   drawn[CW * CW / 8];         /* Its squares on the character's map (T_DRAWN) */
+    struct ckept    kept;                       /* The character's memory of it (struct chunk's) */
 };
 
 #define NSEEN           (SEEN_BANKS * SEEN_PER_BANK)
@@ -113,7 +116,7 @@ static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned
         }
         return;
     }
-    k->tile[ly][lx] = (k->tile[ly][lx] & T_SEEN) | tile;
+    k->tile[ly][lx] = (k->tile[ly][lx] & (T_SEEN | T_DRAWN)) | tile;
     k->elev[ly][lx] = elev;
     if (link != 0xFF && k->nopen < NOPEN) {
         k->open[k->nopen].kind = STRATUM (k->sn).link[link].kind;
@@ -347,7 +350,8 @@ static unsigned char __fastcall__ map_of (unsigned char sn, unsigned cx, unsigne
 void __fastcall__ seen_keep (unsigned char s)
 {
     struct chunk* k;
-    unsigned char i, j, n;
+    unsigned char* t;
+    unsigned char i, j, n, m, v, w;
 
     hub_map (CACHE_BANK (s));
     k = CHUNK_AT (s);
@@ -356,13 +360,22 @@ void __fastcall__ seen_keep (unsigned char s)
     r.sn = k->sn;
     r.cx = k->cx;
     r.cy = k->cy;
-    for (j = 0, n = 0; j < CW; ++j) {
-        for (i = 0; i < CW; ++i) {
-            if (k->tile[j][i] & T_SEEN) {
-                r.bits[(j * CW + i) >> 3] |= 1 << (i & 7);
-                n = 1;
+    memcpy (&r.kept, &k->kept, sizeof r.kept);
+    for (j = 0, n = 0, t = &k->tile[0][0]; j < CW * CW / 8; ++j, t += 8) {  /* (Eight squares a byte, the first its
+                                                **   low bit: seen, drawn) */
+        for (m = 0, v = w = 0; m < 8; ++m) {
+            v >>= 1;
+            w >>= 1;
+            if (t[m] & T_SEEN) {
+                v |= 0x80;
+            }
+            if (t[m] & T_DRAWN) {
+                w |= 0x80;
             }
         }
+        r.bits[j] = v;
+        r.drawn[j] = w;
+        n |= v;
     }
     for (i = 0; i < k->nrooms; ++i) {
         if (k->room[i].flags & R_VISITED) {
@@ -381,18 +394,18 @@ void __fastcall__ seen_keep (unsigned char s)
 
 void __fastcall__ seen_over (struct chunk* k)
 {
-    unsigned char i, j, m;
+    unsigned char* t;
+    unsigned char i, j, m, v, w;
 
     if ((i = map_of (k->sn, k->cx, k->cy, 0)) == 0xFF) {
         return;
     }
     memcpy (&r, seen_at (i), sizeof r);
-    for (j = 0; j < CW * CW / 8; ++j) {
-        if (r.bits[j]) {
-            for (m = 0; m < 8; ++m) {
-                if (r.bits[j] & (1 << m)) {
-                    k->tile[(j * 8 + m) / CW][(j * 8 + m) % CW] |= T_SEEN;
-                }
+    memcpy (&k->kept, &r.kept, sizeof r.kept);
+    for (j = 0, t = &k->tile[0][0]; j < CW * CW / 8; ++j, t += 8) {
+        if ((v = r.bits[j]) | (w = r.drawn[j])) {
+            for (m = 0; m < 8; ++m, v >>= 1, w >>= 1) {
+                t[m] |= (v & 1 ? T_SEEN : 0) | (w & 1 ? T_DRAWN : 0);
             }
         }
     }
