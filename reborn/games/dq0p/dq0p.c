@@ -7,9 +7,10 @@
 ** denizens it sees (dens.c: the world's bodies), the lights it sees far off (eyes.c).  The senses answer for every
 ** actor (DUNGEON.md: perception as layers): the light layer theirs to work out (light.c), each actor's eyes theirs to
 ** keep (eyes.c), each denizen's senses theirs to answer, its mind asking (sense.c: the hub's dsense); and the memory of
-** what the character has seen theirs (the chunks' seen marks, the walk's squares felt, R_VISITED).  A look's own work
-** is in swapped parts (bank.s, LIBDIR/dq0p.ovl), the answers to the denizens in the main RAM.  It waits on its
-** doorbell (costing nothing) between requests.
+** what the character has seen theirs (the chunks' seen marks, the walk's squares felt, R_VISITED; each chunk's memory
+** and what's drawn on its map: view.c's kept, slice 4.2's).  A look's own work is in swapped parts (bank.s,
+** LIBDIR/dq0p.ovl), the answers to the denizens in the main RAM.  It waits on its doorbell (costing nothing) between
+** requests.
 */
 
 #include <fcntl.h>
@@ -65,13 +66,16 @@ static void look (void)
     wd = HUB->look.wd;
     wn = HUB->look.wn;
     sync_strata ();                             /* (The strata's records, the world bank's) */
-    if (wn) {
-        felt (sn, wx, wy, wd, wn);              /* (The squares walked, remembered: felt in the dark) */
-    }
     things_lamps (sn, x, y);                    /* (The lit things lying about: a torch put down) */
     view (sn, x, y, face, light, sight, dark);
+    kept ();                                    /* (What it keeps of it: each chunk's memory, part 4's) */
     glows (sn, x, y, face, range, own);         /* (Its eyes adapted, the lights it sees far off: eyes.c's) */
     give_way ();
+    if (wn) {
+        felt (sn, wx, wy, wd, wn);              /* (The squares walked, remembered: felt in the dark; drawn, mapping
+                                                **   as it goes in the light, the view's run_d: after it, with what
+                                                **   it perceives, part 2's, one copy of the part a look) */
+    }
     first = perceive (sn, x, y, face, own, first);
     sees = dens_seen ();                        /* (The denizens it sees with it: the world's bodies) */
     if (v_way) {

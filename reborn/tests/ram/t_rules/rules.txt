@@ -578,6 +578,64 @@ end
 case a Khuzdul always knows north underground
 want sum.northsense=1
 
+# ---- The map in mind (HOUSE.md's the map kept: five times Intelligence of a hundred, kept mapping as one goes, half
+# that not; a tenth of it lost every twice Intelligence and Will together, minutes)
+
+char
+end
+case her map in mind: INT 11 a mapmind of 55; INT 11 and WIL 12, a tenth of it lost every 46 minutes
+want sum.mapmind=55 sum.mapfade=46
+
+char
+att int 21
+att wil 3
+end
+case INT 21: a mapmind of 100, at most; WIL 3, a tenth lost every 48 minutes
+want sum.mapmind=100 sum.mapfade=48
+
+char
+att int 6
+att wil 16
+end
+case INT 6: a mapmind of 30; WIL 16, a tenth lost every 44 minutes
+want sum.mapmind=30 sum.mapfade=44
+
+# ---- A map drawn as one goes (HOUSE.md's the map kept: the book's Drawing, its Cartography specialty first, Skills 14;
+# neither open, Drawing opened at its opening level, the first map drawn: the house's, over the book's month)
+
+char
+end
+case her first map: Drawing not open, opened at its OML (DEX 12, EYE 13, EYE 13: SB 13, twice it 26), result 1; 21 a marginal success, 27 a marginal failure
+dice 100:21
+ask TEST a=P_DRAW
+want result=1 grade=G_MS
+dice 100:27
+ask TEST a=P_DRAW
+want result=0 grade=G_MF
+dice 100:26
+ask TEST a=P_DRAW
+want result=0 grade=G_MS
+
+char
+ml dra 60
+end
+case Drawing 60 already: no skill opened, tested at it (59 a marginal success, 61 a failure)
+dice 100:59
+ask TEST a=P_DRAW
+want result=0 grade=G_MS
+dice 100:61
+ask TEST a=P_DRAW
+want result=0 grade=G_MF
+
+char
+ml dra 60
+ml 91 70
+end
+case Cartography 70 (the referee's own skill, 91: Drawing's specialty) the one a map's drawn with: 66 a marginal success
+dice 100:66
+ask TEST a=P_DRAW
+want result=0 grade=G_MS
+
 # ---- Paces (Combat 6: a walk half the Move a round, a jog the Move, a run twice it, a sprint three times; HOUSE.md:
 # a creep a third of a walk, a slow walk half)
 

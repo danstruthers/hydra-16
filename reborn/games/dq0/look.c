@@ -10,7 +10,12 @@
 ** The words for the places are the theme's (theme.h: a stratum's name, a room's by its kind, a lit room's light;
 ** theme.c's).
 **
-** The map's code is a swapped part's (part 3: swap.inc), called through its stub (bank.s's map).
+** The map's code is a swapped part's (part 3: swap.inc), called through its stub (bank.s's map): the maker draws it
+** (dq0m/map.c: what the character sees now as it is, the rest as it's kept, turned as it faces for one that doesn't
+** know north), each square's layer beside it, coloured here (the player's colour on: what's seen now bright, what's
+** remembered dim, what's drawn on its map brown, the character bright cyan; colour off, plain letters: pace.c's), the
+** facing the one it believes in (the hub's pc_skew, pc_lost); turned, a compass in its top right corner, the north
+** it believes in marked N (a ? when it knows it's lost its bearings).
 */
 
 #include <stdlib.h>
@@ -119,7 +124,9 @@ static void __fastcall__ num (const char* a, int v, const char* z)
     pline (b);
 }
 
-/* The panel's lines, from the hub's header, and the referee's (rules: its lines, each ended by a new line) */
+/* The panel's lines, from the hub's header, and the referee's (rules: its lines, each ended by a new line): the
+** square only for one that knows north (else its coordinates would give the true north away); the facing the one it
+** believes in, a ? after it when it knows it's lost its bearings */
 static void __fastcall__ make_panel (const char* rules)
 {
     static char b[PANEL + 1];
@@ -132,10 +139,13 @@ static void __fastcall__ make_panel (const char* rules)
     theme_named (TN_STRATUM, w.sname);
     pline (tname);
     num ("Depth ", -w.z, " ft");
-    num ("Sq ", (int) (HUB->pc_x - 32768U), ",");
-    strcat (panel[np - 1], itoa ((int) (HUB->pc_y - 32768U), b, 10));
+    if (HUB->pcsum.northsense) {
+        num ("Sq ", (int) (HUB->pc_x - 32768U), ",");
+        strcat (panel[np - 1], itoa ((int) (HUB->pc_y - 32768U), b, 10));
+    }
     strcpy (b, "Facing ");
-    strcat (b, head_abbr[HUB->pc_face & 7]);
+    strcat (b, head_abbr[(HUB->pc_face + HUB->pc_skew) & 7]);
+    strcat (b, HUB->pc_lost ? "?" : "");
     pline (b);
     if (HUB->pc_light) {
         num ("Light ", HUB->pc_light * SQ_FT, " ft");
@@ -156,17 +166,29 @@ static void __fastcall__ make_panel (const char* rules)
     }
 }
 
+/* The layers' colours (SGR's: ML_*'s), and a row's own put back after it */
+static const char* const sgr[] = { "\x1b[97m", "\x1b[90m", "\x1b[33m", "\x1b[96m", "\x1b[36m" };
+#define LINE        (MAP_W + PANEL + 3 + 160)   /* (A row's line: its letters, its colours' changes, the panel's) */
+
 void __fastcall__ s_map (const char* rules)
 {
-    static char line[MAP_W + PANEL + 3];
-    unsigned char x, y, n, side, k;
+    static unsigned char lays[MAP_W];
+    char line[LINE];                            /* (On the C stack: the main RAM's room) */
+    unsigned char y, n, side, k, at, cur, cn, cq;
+    char* o;
+    char* r = line + LINE - MAP_W - 1;          /* (A row's letters at the line's end, coloured into its start) */
 
     make_panel (rules);
     hub_call (&HUB->mapq, T_MAKER);             /* (The maker draws it into the UI bank) */
     blank ();
-    sayf ("The map (you face %s; heights in tens of feet against yours):", head_name[HUB->pc_face & 7]);
+    sayf ("The map (you face %s%s; heights in tens of feet against yours):", head_name[(HUB->pc_face + HUB->pc_skew) & 7],
+        HUB->pc_lost ? ", or so you think" : "");
+    cq = HUB->pcsum.northsense ? 0 : HUB->pc_lost ? '?' : 'N';   /* (Turned: the compass, its N where the north it
+                                                **   believes in lies, as the map's turned: a quarter for every two
+                                                **   eighths it faces round) */
+    cn = (0 - HUB->pc_skew - ((HUB->pc_face >> 1) << 1)) & 7;
     hub_map (UI_BANK);                          /* (The map's the UI bank's: its rows copied out one by one) */
-    for (n = 0; n < MAP_H - 1 && !UIREC->map[n][0]; ++n) {
+    for (n = 0; !cq && n < MAP_H - 1 && !UIREC->map[n][0]; ++n) {
     }
     for (y = MAP_H - 1; y > n && !UIREC->map[y][0]; --y) {
     }
@@ -174,15 +196,44 @@ void __fastcall__ s_map (const char* rules)
     side = tw > MAP_W + PANEL + 1;
     for (k = 0; n + k <= y || (side && k < np); ++k) {  /* (The rows from the first seen to the last, the panel's
                                                 **   beside them) */
-        line[0] = 0;
+        o = line;
+        at = 0;
         if (n + k <= y && n + k < MAP_H) {
-            hub_mem (UI_BANK, line, UIREC->map[n + k], MAP_W + 1);
-        }
-        if (side && k < np) {
-            for (x = strlen (line); x < MAP_W + 1; ++x) {
-                line[x] = ' ';
+            hub_mem (UI_BANK, r, UIREC->map[n + k], MAP_W + 1);
+            hub_mem (UI_BANK, lays, UIREC->maplay[n + k], MAP_W);
+            if (cq && n + k < 3) {              /* (The compass, its three rows) */
+                for (at = strlen (r); at < MAP_W; ++at) {
+                    r[at] = ' ';
+                }
+                r[MAP_W] = 0;
+                r[MAP_W - 3] = r[MAP_W - 1] = ' ';
+                r[MAP_W - 2] = n + k == 1 ? '+' : ' ';
+                if (1 + head_y[cn] == n + k) {
+                    r[MAP_W - 2 + head_x[cn]] = cq;
+                }
+                lays[MAP_W - 3] = lays[MAP_W - 2] = lays[MAP_W - 1] = ML_COMPASS;
+                at = 0;
             }
-            strcpy (line + MAP_W + 1, panel[k]);
+            for (cur = 0xFF; (*o = r[at]) != 0; ++at) {
+                if (!plain && *o != ' ' && lays[at] != cur && o < line + LINE - MAP_W - 12) {
+                    cur = lays[at];             /* (Its colour as it changes, but between the letters) */
+                    strcpy (o, sgr[cur]);
+                    o += strlen (o);
+                    *o = r[at];
+                }
+                ++o;
+            }
+            if (cur != 0xFF) {
+                strcpy (o, "\x1b[0m");          /* (Its end plain again) */
+                o += 4;
+            }
+        }
+        *o = 0;
+        if (side && k < np) {
+            for (; at < MAP_W + 1; ++at) {
+                *o++ = ' ';
+            }
+            strcpy (o, panel[k]);
         }
         say_raw (line);
     }

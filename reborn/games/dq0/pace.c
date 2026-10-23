@@ -4,7 +4,8 @@
 ** "sneak", "jog", "run", "sprint"; "set pace to jog"; "run north" sets it and goes, the move the command's; and the
 ** way its legs go, "crawl", "hop", "walk": slice 4.1b's), a
 ** watchfulness ("search for traps as I go", "watch for traps", "move carefully", "listen as I go", "map as I go";
-** "stop searching", "stop listening", "stop mapping", "stop running"), "status", and a small move ("move left one
+** "stop searching", "stop listening", "stop mapping", "stop running"), "status", the map's colours ("colour off",
+** "colour on": dq0.h's plain), and a small move ("move left one
 ** space", "step forward", "go north 20 feet", "back up two squares", "sidestep right": a square is 5 feet, a yard 3).
 ** The pace and the watchfulness are the world's to set (the hub's gait and watch: its request, WQ_SET), the
 ** referee's to word (RS_DESCRIBE b 3), the small move the world's (I_STEP).  Its own words matched here; the direction
@@ -120,6 +121,7 @@ static void __fastcall__ described (unsigned char a)
 unsigned char __fastcall__ s_pace_cmd (const char* l)
 {
     unsigned char i, k, g = 0xFF, wa, st, n = 0, keep, d, said;
+    unsigned mw;
 
     strncpy (b, l, INMAX);
     split ();
@@ -128,6 +130,13 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     }
     if (nw == 1 && !strcmp (w[0], "status")) {
         described (0);
+        return 1;
+    }
+    if (nw <= 3 && any ("colour\0color\0colours\0colors\0")) {     /* (The map's colours on or off: "colour off",
+                                                **   "no colours", "colours on", slice 4.2's) */
+        plain = any ("off\0no\0plain\0none\0") != 0;
+        msg (plain ? "The map in plain letters, no colours." : "The map in colours: what you see now bright, what you "
+            "remember dim, what's on your map brown.");
         return 1;
     }
     for (i = 0; i < nw; ++i) {
@@ -214,9 +223,13 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     k = (cmd.action == VB_MOVE_DIRECTION || cmd.action == VB_MOVE_TOWARD || cmd.action == VB_ENTER ||
         cmd.action == VB_APPROACH_OBJECT) && (cmd.dir != 0xFF || cmd.obj.kind);
     st = st && (!k || n || g != HUB->gait || wa != HUB->watch);    /* (Said, unless it goes on as it was) */
+    mw = HUB->pc_map;
     wset (WS_PACE, g == 0xFF ? g : g | said, wa);   /* (The world's, set: its request) */
     if (st) {
         described (1);
+    }
+    if (!mw && HUB->pc_map) {
+        msg ("You begin a map.");               /* (Mapping on paper: its first sheet the map, the world's) */
     }
     d = cmd.dir;
     if (nw > 1 && !strcmp (w[0], "back") && !strcmp (w[1], "up")) {
@@ -244,14 +257,15 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
 
 /* ---- A line's first look (main.c's, in the overlay's bank: the part's copied in only for a line that may be its):
 ** 0 if line l has none of the words s_pace_cmd acts on (split's words, the case aside), nor one begun with a figure.
-** s_pace_cmd's words that matter: a pace's (paces), "status", the watchfulness's (without one, wa is the hub's),
-** a small move's, a count's unit (a count is only a square's with one, or a figure at the end); so a word it comes
+** s_pace_cmd's words that matter: a pace's (paces), "status", the colours', the watchfulness's (without one, wa is the
+** hub's), a small move's, a count's unit (a count is only a square's with one, or a figure at the end); so a word it comes
 ** to match must be here too */
 static const char pace_words[] =
     "creep\0creeping\0sneak\0sneaking\0tiptoe\0crawl\0hop\0quietly\0stealthily\0slowly\0slow\0walk\0"
     "walking\0normal\0"
     "normally\0quickly\0jog\0jogging\0trot\0briskly\0run\0running\0hurry\0sprint\0sprinting\0dash\0"
     "status\0stop\0trap\0traps\0carefully\0careful\0warily\0listen\0listening\0mapping\0map\0"
+    "colour\0color\0colours\0colors\0"
     "step\0sidestep\0shuffle\0back\0"
     "space\0spaces\0square\0squares\0steps\0pace\0paces\0foot\0feet\0ft\0yard\0yards\0";
 

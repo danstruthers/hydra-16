@@ -24,7 +24,7 @@ struct material {
 };
 
 /* A kind of thing (the catalogue's: a stand-in for the theme's data), in rs.h's units */
-#define NKINDS          69
+#define NKINDS          76
 struct kind {
     char            name[14];                   /* "torch", "backpack" ... */
     unsigned char   flags;                      /* K_* */
@@ -89,6 +89,8 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_SCONCE,                                  /* A room's sconce, on its wall (slice 4.1's: the maker's, fixed): a
                                                 **   torch in it, lit and tended where the room's kept, else cold */
     KI_AXE,                                     /* A hand axe (a kobold lord's, let fall: slice 4.1b's) */
+    KI_PAPER, KI_PARCHMENT, KI_CHARCOAL, KI_PENCIL, KI_QUILL, KI_INK, KI_MAP,  /* The things to draw a map with, and
+                                                **   the map (slice 4.2's: by their keys, things.c's chart_now) */
     KI_COUNT };
 
 /* An item */

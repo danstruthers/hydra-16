@@ -107,7 +107,8 @@ by a request or an intent.
   character sees (the look, as the world asks: the hub's look) and what each denizen senses (the denizens ask, for
   their minds, as one decides: the hub's dsense), by the layers below (perception as layers); the squares the
   character has seen and sees now (the chunks' tiles' T_SEEN and T_VIS: the senses' alone to write, the squares a
-  walk went felt and remembered as the senses go them again, the world passing the walk in the look), the rooms it's
+  walk went felt and remembered as the senses go them again, the world passing the walk in the look; and its memory of
+  each chunk and what it's drawn on its map, the chunks' kept and T_DRAWN: the map kept, below), the rooms it's
   come into (R_VISITED: the world asks with LF_ARRIVE and takes the first time from the reply), and which of the
   world's bodies it sees (the look's end, and LK_DENS as the bodies change: the world reports, the senses decide).
   The worked-out layers (the light layer's grids) and each actor's eyes (adapted to the dark) are the senses' cache,
@@ -796,9 +797,10 @@ or a shaft can be jumped down (jump down: a fall of its height).
   stops at every door, fork and end, a small move at every square or few) a search about it (the hidden doors and
   traps within three squares it sees, each the referee's test), quietly and in no more time, found ones told and
   known from then on; **listening** ("listen as I go"), a walk at most, its hearing two better (the summary's: the
-  denizens heard further); **mapping** ("map as I go"; "stop mapping"), a slow walk at most (what it does for the map
-  is still to come: below); **moving quietly** ("sneak", "move quietly") is the creep.  The hub's pc_going says the
-  pace the character's going at; the denizens don't hear the character's steps by it yet.
+  denizens heard further); **mapping** ("map as I go"; "stop mapping"), a slow walk at most, the map kept the better,
+  and drawn on paper with the means to hand (the map kept, below); **moving quietly** ("sneak", "move quietly") is
+  the creep.  The hub's pc_going says the pace the character's going at; the denizens don't hear the character's steps
+  by it yet.
 - **What it notices** goes by its state: every notice test (P_NOTICE_SIGHT, SOUND, SMELL, whoever asks: a trap
   underfoot, the senses' look as it arrives) is the worse the faster it was moving (the steps for each pace, the
   watchfulness and a hazard underfoot are house rules every ruleset plays alike, rshouse.h's), and the worse for its
@@ -952,8 +954,9 @@ sees.  The UI says it a sentence at a time as it's made (a turn's first words, t
 the look); a sentence is told once in an answer (lbsaid.s), and things or denizens alike are told together ("Two giant
 rats are ahead to your right, 10 feet away."; "On the floor ahead lie two iron pots.").  The map (the map command, the
 maker's dq0m/map.c) is a window on the stratum round the character (one square a character, the screen's size), drawn
-into the UI's bank as the UI asks (the hub's mapq): each square the character has seen, a floor's height against its own
-marked (1-9 tens of feet higher, a-i lower), the character an @, its state in a panel beside it.
+into the UI's bank as the UI asks (the hub's mapq): what the character sees now as it is, a floor's height against its
+own marked (1-9 tens of feet higher, a-i lower), the rest as it's kept (the map kept, below), the character an @, its
+state in a panel beside it.
 
 The words tell nothing behind the character (the senses mark the squares beside it there seen, and the UI still
 knows them: "open the door behind me" turns to it), a room's figures only once it's seen the whole of it (else "its
@@ -964,6 +967,45 @@ denizen more than 3 + sight squares off only as something there; a portal or a t
 material within 3 + sight squares), "You'd have to go closer to make out more".  Where several things or doors fit a
 command and none is ahead, the UI asks which, in a numbered list (choose.c); and where several things or denizens
 could be the one meant and it must be one (a bare take, a throw's mark, a target set), resolve.c asks the same way.
+
+### The map kept
+
+The user's (2026-10-16 and 2026-10-23: DECISIONS.md's bearings and the map): only what the character sees now plain on
+the map, the rest obscured, by how well it's kept; a mental map by its Intelligence, fading by its Intelligence and
+Will, the better kept where it's often been; mapping as it goes keeping it the better, on paper with the means to hand,
+as true as its maker draws; a dwarf's map north up, anyone else's the way it faces up; what's seen now told apart
+from what's remembered by colour.  Its numbers are HOUSE.md's (the map kept).
+
+- **What the map shows** (the maker's dq0m/map.c, part 1's, as the UI asks): what the character sees now as it is
+  (T_VIS), the rest only as it's kept, faintly (a floor a comma, no heights): what's drawn on the map it carries, as it
+  was drawn, else as its mind keeps each chunk.  Each square's layer goes beside its row (the UI bank's maplay: ML_*),
+  the UI's to colour as it says the rows (look.c's s_map: seen now bright, everything remembered dim however well
+  kept, the drawn brown, the @ bright cyan; "colour off" plain letters, kept with the game's save).
+- **Memory, a chunk's** (struct chunk's kept: the senses', after each look's view, view.c's kept, part 4's): when the
+  character last saw any of it, how well it kept it then (the referee's summary's mapmind mapping as it goes, half that
+  not; never less than it still remembers), and its passings (each time it's come to see it again, four minutes or
+  more since it last did).  It fades a tenth every mapfade minutes (the summary's), a well-known place's the slower and
+  kept the better as it's seen again (TR_MORE's points of its passings, a trace's rule).  A remembered square's shown
+  or not by its quality, a square at a time, gone once the memory's gone; for one that doesn't know north the
+  chunk's squares are put off where they truly are, the more the more it's faded since, its own way.  The maker keeps
+  the memory with the seen maps as the cache makes way for a chunk, and with them in the save (changes.c's struct
+  seen: the seen squares, the drawn ones, kept).  Another task reads a place's passings by world.h's KEPT_KNOWN.
+- **Mapping as it goes on paper** (the world's chart_now, as what's carried changes: the hub's pc_chart and pc_map):
+  with the means to hand (the catalogue's kinds by their keys: a sheet or its map; a point that draws, or a quill and
+  ink; a hand to draw with), mapping begins a map on its first sheet (an item, "map", the kind keyed map) and draws what
+  it sees while its own square's lit (the senses' T_DRAWN as the look's marks go in, cast.s's run_out; a walk's squares
+  in the light too), each chunk's drawing one map's (its kept.map).  The drawn squares are shown while it carries that
+  map only, and where they were drawn.
+- **How true it's drawn** (the referee's P_DRAW: the book's Drawing, its Cartography specialty first): the world asks
+  as each room's come into and each way's walked while it maps on paper (dq0w.c's draw_test: the hub's pc_drawn); the
+  senses keep the grade with each chunk as it's first drawn on the map, and the north it believed in then (kept's dq,
+  dsk); the maker shows it so, some squares left out, the worse put off, a wrong north further; the map's own make the
+  better or the worse for each test.  Neither skill open, the first test opens Drawing (told: E_TASK's TE_LEARNT).
+- **The map turned**: north up for one that knows north (the summary's northsense: a dwarf), the window kept in the
+  stratum; for the rest the way it faces up (its body's, to the quarter turn), the character in the middle, the rows
+  turned, a compass in the top right corner (the UI's: N where its believed north lies, the hub's pc_skew; a ? when it
+  knows it's lost, pc_lost); the panel's facing and the words above the map the believed one, and no square in the
+  panel (its coordinates would give the true north away).
 
 ### Names
 

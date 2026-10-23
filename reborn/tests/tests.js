@@ -1607,15 +1607,22 @@ function pcReport(m, attaches, naks, repeats) {
 // met by its neighbours' (those in the cache); n chunks of stratum sn at least (CAVEDUMP=1: each one drawn)
 const CHUNK_SIZE = 0xAA0, CK_TILE = 443, CK_ROOM = 8;
 const T_ROCK = 0, T_FLOOR = 1, T_WALL = 2, T_CORR = 4, T_WINDOW = 6;
+// The hub's chunk cache's banks (world.h's CACHE_BANK: 5 on, 8 of them), from its bank 0's (its magic "DQ") on: none
+// of the other banks taken for chunks by their looks (the UI bank's map's layers would pass, slice 4.2's)
+function cacheBanks(m) {
+  const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
+  const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51);
+  return hub === undefined ? [] : [0, 1, 2, 3, 4, 5, 6, 7].map(i => banks[hub + 5 + i]).filter(b => b);
+}
 function cacheChunks(m, sn) {
   const out = new Map();
-  for (const b of Object.values(m.sharedBanks())) {
+  for (const b of cacheBanks(m)) {
     for (let k = 0; k < 3; k++) {
       const o = k * CHUNK_SIZE, nrooms = b[o + 5], tile = b.subarray(o + CK_TILE, o + CK_TILE + 1024);
-      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x1F) > 9)) continue;
+      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x0F) > 9)) continue;
       const rooms = [];
       for (let r = 0; r < nrooms; r++) { const p = o + CK_ROOM + r * 8; rooms.push({ x: b[p], y: b[p + 1], w: b[p + 2], h: b[p + 3], kind: b[p + 5] }); }
-      out.set((b[o + 1] | b[o + 2] << 8) + ',' + (b[o + 3] | b[o + 4] << 8), { cx: b[o + 1] | b[o + 2] << 8, cy: b[o + 3] | b[o + 4] << 8, rooms, tile: Array.from(tile, t => t & 0x1F) });
+      out.set((b[o + 1] | b[o + 2] << 8) + ',' + (b[o + 3] | b[o + 4] << 8), { cx: b[o + 1] | b[o + 2] << 8, cy: b[o + 3] | b[o + 4] << 8, rooms, tile: Array.from(tile, t => t & 0x0F) });
     }
   }
   return out;
@@ -1836,11 +1843,11 @@ const DQ0_BEASTS = () => DQ0_MAKE().bestiary(path.join(__dirname, '..', 'games',
 
 function builtChunks(m, sn) {
   const out = [], C = { room: 8, zone: 56, portal: 219, tile: 443, elev: 1467, pceil: 2555 };
-  for (const b of Object.values(m.sharedBanks())) {
+  for (const b of cacheBanks(m)) {
     for (let k = 0; k < 3; k++) {
       const o = k * 0xAA0, nr = b[o + 5], nz = b[o + 6], np = b[o + C.portal - 1];
       const tile = b.subarray(o + C.tile, o + C.tile + 1024);
-      if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x1F) > 9)) continue;
+      if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x0F) > 9)) continue;
       const rooms = [], zones = [], portals = [];
       for (let r = 0; r < nr; r++) {
         const p = o + C.room + r * 8;
@@ -1854,7 +1861,7 @@ function builtChunks(m, sn) {
       }
       for (let i = 0; i < np; i++) { const p = o + C.portal + i * 14; portals.push({ x: b[p], y: b[p + 1], kind: b[p + 2] }); }
       out.push({ cx: b[o + 1] | b[o + 2] << 8, cy: b[o + 3] | b[o + 4] << 8, rooms, zones, portals, pceil: b[o + C.pceil],
-        tile: Array.from(tile, t => t & 0x1F), elev: Array.from(b.subarray(o + C.elev, o + C.elev + 1024), e => e << 24 >> 24) });
+        tile: Array.from(tile, t => t & 0x0F), elev: Array.from(b.subarray(o + C.elev, o + C.elev + 1024), e => e << 24 >> 24) });
     }
   }
   return out;
@@ -1931,20 +1938,20 @@ function dq0Made(t, m) {
 const mainRoom = c => c.rooms.reduce((a, r) => r.w * r.h > a.w * a.h ? r : a, c.rooms[0]);
 // Two chunks' bytes compared (struct chunk's: rooms from 8, 8 bytes each, their flags the 5th; openings 188-217, their
 // count at 7; portals from 219, 14 bytes each, their state, parts, harm the 4th, 9th and 14th; squares from 443, their
-// floors from 1467; traps from 2513, 7 bytes each, their state the 5th): the squares' seen and visible bits (T_SEEN,
-// T_VIS) and the rooms' visited (R_VISITED) aside, each byte that differs by what it is: portal, trap, square,
+// floors from 1467; traps from 2513, 7 bytes each, their state the 5th): the squares' seen, visible and drawn bits
+// (T_SEEN, T_VIS, T_DRAWN) and the rooms' visited (R_VISITED) aside, each byte that differs by what it is: portal, trap, square,
 // opening, or other (none should be: the maker's own)
 function chunkDiff(a, b) {
   const d = { portal: 0, trap: 0, square: 0, opening: 0, other: [] };
   for (let i = 0; i < CHUNK_BYTES; i++) {
     let x = a[i], y = b[i];
-    if (i >= 443 && i < 1467) { x &= 0x3F; y &= 0x3F; }
+    if (i >= 443 && i < 1467) { x &= 0x2F; y &= 0x2F; }
     if (i >= 8 && i < 56 && (i - 8) % 8 === 4) { x &= ~1; y &= ~1; }
     if (x === y) continue;
     if (i >= 219 && i < 443 && [3, 8, 13].includes((i - 219) % 14)) d.portal++;
     else if (i >= 2513 && i < 2555 && (i - 2513) % 7 === 4) d.trap++;
     else if (i >= 443 && i < 1467) d.square++;
-    else if (i >= 1467 && i < 2491 && (a[i - 1024] & 0x1F) !== (b[i - 1024] & 0x1F)) d.square++;   // (A changed square's floor)
+    else if (i >= 1467 && i < 2491 && (a[i - 1024] & 0x0F) !== (b[i - 1024] & 0x0F)) d.square++;   // (A changed square's floor)
     else if (i === 7 || (i >= 188 && i < 218)) d.opening++;
     else d.other.push(i);
   }
@@ -2148,6 +2155,25 @@ const dq0Holder = (s, i) => s && i && i.where === 'IW_ITEM' ? s.items.find(j => 
 // ways), as one string: the same place seen the same, compared
 const dq0View = s => !s || !s.sight ? '' : JSON.stringify(Object.assign({}, s.sight, { seq: 0, dens: [], first: 0 }));
 const DQ0_I = { LIT: 0x01, HELD: 0x02, WORN: 0x04, HIDDEN: 0x08 };   // (items.h's I_*)
+// The maker's map in a snapshot (slice 4.2's: dq0meaning's map and mapLay): each square shown by its layer (ML_*: seen
+// now, remembered, drawn on the map carried), and the @'s place: { now, kept, drawn, all: [{ r, i, c }], pc: { r, i } }
+const DQ0_ML = ['now', 'kept', 'drawn', 'pc', 'compass'];
+// (MAPDUMP=1: a snapshot's map, each square's layer after its row: n now, k remembered, d drawn, @ the character)
+const dq0MapDump = s => !s || !s.map ? '(no map)' : s.map.map((row, r) => row.padEnd(64) + ' ' + Array.from(row, (c, i) => c === ' ' ? ' ' : 'nkd@c'[s.mapLay[r][i]]).join('')).filter(l => l.trim()).join('\n');
+function dq0MapLayers(s) {
+  const out = { now: [], kept: [], drawn: [], all: [], pc: null, none: !s || !s.map || !s.mapLay };
+  if (out.none) return out;
+  s.map.forEach((row, r) => {
+    for (let i = 0; i < row.length; i++) {
+      if (row[i] === ' ') continue;
+      const q = { r, i, c: row[i] }, l = DQ0_ML[s.mapLay[r][i]];
+      out.all.push(q);
+      if (l === 'pc') out.pc = { r, i };
+      else if (out[l]) out[l].push(q);
+    }
+  });
+  return out;
+}
 // A dq0 test's lines typed, each at its prompt (rc's "% ", the game's "> ")
 const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
 
@@ -2909,6 +2935,81 @@ module.exports = {
         if (!mp.after || !mp.after.map.some(r => r.trim())) f.push('no map drawn');
         dq0Need(f, sw, 'E_ARRIVE', {}, 'not along the tunnel');
         return [...f, ...caveReport(m, 1, 1)];
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0fog', meaning: true, what: 'Dingus Quest Zero\'s map as the character knows the place (slice 4.2, DUNGEON.md\'s the map kept; the user\'s, 2026-10-16 and 2026-10-23: only what it sees now plain, the rest obscured, a mental map fading by its Intelligence and Will, the better kept where it\'s often been, a map drawn on paper while mapping as it goes), by the maker\'s map (the UI bank\'s rows and their layers, ML_*): at seed 3 (dq0 -T, a human hunter: INT 10, WIL 13) what it sees now with its heights, what it saw facing the other way faint (a floor a comma); its torch put out, all of it remembered, none seen now; an hour later its squares put off where they truly are (faded a tenth: it doesn\'t know north underground); three hours on, gone; the same place come to again four times (down the stairway and five minutes there each time) still on the map after three hours in the dark; with paper and charcoal (dq0 -k) mapping as it goes, a map begun ("You begin a map."; Drawing opened by it the referee\'s, dq0rules\'), what it drew shown as drawn while it carries the map (its torch out, nothing seen now), not once it\'s put down, again as it\'s taken up',
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'turn around', 'map', 'douse the torch', 'map', 'wait 1 hour', 'map', 'wait 2 hours', 'map', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'wait 5 minutes', 'u', 'd', 'wait 5 minutes', 'u', 'd', 'wait 5 minutes', 'u', 'douse the torch',
+        'wait 3 hours', 'map', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k paper,charcoal', 'map as I go', 'turn around', 'turn around', 'douse the torch', 'map',
+        'light the torch', 'drop the map', 'douse the torch', 'map', 'light the torch', 'take the map', 'douse the torch', 'map', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), maps = T.filter(t => t.line === 'map');
+        if (maps.length !== 8) return ['the eight maps not typed: ' + maps.length];
+        const [m1, m2, m3, m4, p1, d1, d2, d3] = maps.map(t => dq0MapLayers(t.after));
+        if (process.env.MAPDUMP) maps.forEach(t => console.log(t.k, dq0MapDump(t.after)));
+        if (m1.none || !m1.now.length || !m1.kept.length) f.push('facing the other way: ' + m1.now.length + ' squares seen now, ' + m1.kept.length + ' remembered (both wanted)');
+        if (m1.kept.some(q => q.c === '.' || /[1-9a-i]/.test(q.c))) f.push('a remembered square drawn as one seen now (a floor not faint, or its height)');
+        if (!m1.now.some(q => q.c === '.') || m1.now.some(q => q.c === ',')) f.push('the floor it sees now not plain');
+        if (m2.now.length || !m2.kept.length) f.push('its torch out: ' + m2.now.length + ' squares seen now (none wanted), ' + m2.kept.length + ' remembered');
+        const at = l => new Set(l.map(q => q.r + ',' + q.i));
+        const k2 = at(m2.kept);
+        if (!m3.kept.some(q => !k2.has(q.r + ',' + q.i))) f.push('an hour on, nothing put off where it was (a human, no north sense)');
+        if (m4.kept.length) f.push('three hours on, ' + m4.kept.length + ' squares still remembered (seen once: gone)');
+        if (!p1.kept.length) f.push('come to four times: nothing remembered after three hours');
+        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k paper,charcoal'), mg = T.after(g, 'map as I go');
+        if (!mg.after || !mg.after.pc.map || !dq0Thing(mg.after, 'map') || dq0Thing(mg.after, 'paper')) f.push('mapping as it goes with paper: no map begun (pc_map ' + (mg.after && mg.after.pc.map) + ')');
+        inTurn(s, ['> map as I go', 'You begin a map.'], f, 'the map begun: ');
+        if (!d1.drawn.length) f.push('its map carried: nothing shown as drawn');
+        if (d2.drawn.length) f.push('its map put down: ' + d2.drawn.length + ' squares still shown as drawn');
+        if (!d3.drawn.length) f.push('its map taken up again: nothing shown as drawn');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0mapturn', what: 'Dingus Quest Zero\'s map turned as the character faces (slice 4.2, DUNGEON.md\'s bearings underground; the user\'s, 2026-10-16: a dwarf\'s north up, anyone else\'s the way it faces up), by the maker\'s map and the words: at seed 3 (dq0 -T) a human facing north, the map north up, the character in its middle, a compass in its top right corner (N above +); facing east, east up (the rows turned a quarter: what\'s to its south to its right), the compass\'s N to the left of its +, "Facing E" beside it and no square given (its coordinates would give the true north away); a dwarf (hmchar -p k) at the same place facing east, north up (the window kept in the stratum, no compass; the window by the room\'s door where the human\'s north-up map has it, the human\'s facing east turned a quarter), its square given; its torch put out an hour, fewer squares remembered but none put off (a dwarf knows north)',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'hmchar -q -s 9 -p k -o /ram/d.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'face north', 'map', 'face east', 'map', 'quit',
+        'dq0 -p t -s 3 -c /ram/d.hm -T', 'face east', 'map', 'douse the torch', 'map', 'wait 1 hour', 'map', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], maps = T.filter(t => t.line === 'map');
+        if (maps.length !== 5) return ['the five maps not typed: ' + maps.length];
+        const [hn, he, de, dk, dw] = maps.map(t => dq0MapLayers(t.after));
+        if (process.env.MAPDUMP) maps.forEach(t => console.log(t.k, dq0MapDump(t.after)));
+        for (const [l, x] of [['facing north', hn], ['facing east', he]]) if (!x.pc || x.pc.r !== 10 || x.pc.i !== 32) f.push('a human ' + l + ': the @ not in the middle (' + JSON.stringify(x.pc) + ')');
+        // (The window by the room's door: where the dwarf's north-up map has it, the human's has it turned)
+        const st = x => x.all.filter(q => q.c === '"').map(q => ({ dx: q.i - x.pc.i, dy: q.r - x.pc.r }));
+        const ds = de.pc ? st(de) : [];
+        if (!ds.length) f.push('the dwarf\'s map: no window near it');
+        else {
+          const { dx, dy } = ds[0];
+          if (!st(hn).some(q => q.dx === dx && q.dy === dy)) f.push('facing north: the window not where north up has it (' + dx + ',' + dy + ')');
+          if (!st(he).some(q => q.dx === dy && q.dy === -dx)) f.push('facing east: the window not turned a quarter (' + dy + ',' + -dx + ' wanted; ' + JSON.stringify(st(he)) + ')');
+        }
+        // (The compass, the UI's: the map's lines as they were said, its first three rows' last columns)
+        const plain = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').split(/\r?\n/);
+        const rows = (k, n) => { let c = 0; const i = plain.findIndex(l => l.startsWith('The map (you face') && c++ === k); return i < 0 ? [] : plain.slice(i + 1, i + 1 + n); };
+        const rn = rows(0, 3), re = rows(1, 3), rd = rows(2, 3);
+        if (!rn[0] || rn[0][62] !== 'N' || !rn[1] || rn[1][62] !== '+') f.push('facing north: no compass, N above + (' + JSON.stringify(rn.map(l => l.slice(60, 64))) + ')');
+        if (!re[1] || re[1].slice(61, 63) !== 'N+') f.push('facing east: no compass, N left of + (' + JSON.stringify(re.map(l => l.slice(60, 64))) + ')');
+        if (rd.some(l => l.slice(61, 64).includes('N'))) f.push('the dwarf\'s map: a compass');
+        const s = dq0Story(out);
+        inTurn(s, ['> face east', '> map', 'The map (you face east', 'Facing E'], f, 'the human: ');
+        if (/Sq -?\d+,-?\d+/.test(s.slice(s.indexOf('> face north'), s.indexOf('% dq0 -p t -s 3 -c /ram/d.hm')))) f.push('the human\'s map: its square given');
+        if (!/Sq -?\d+,-?\d+/.test(s.slice(s.indexOf('% dq0 -p t -s 3 -c /ram/d.hm')))) f.push('the dwarf\'s map: no square given');
+        if (!dk.kept.length || !(dw.kept.length < dk.kept.length)) f.push('the dwarf an hour in the dark: ' + dw.kept.length + ' squares remembered of ' + dk.kept.length + ' (fewer wanted)');
+        const kk = new Set(dk.kept.map(q => q.r + ',' + q.i));
+        if (dw.kept.some(q => !kk.has(q.r + ',' + q.i))) f.push('the dwarf\'s memory put off where it was (it knows north)');
+        return f;
       },
       sdcard: true
     },
@@ -4130,6 +4231,14 @@ module.exports = {
         const h = help.text.join(' ').replace(/ +/g, ' ');
         if (!h.includes('19200 or 115200 baud')) f.push('the help doesn' + Q + 't give the serial port' + Q + 's rates');
         if (!help.text.slice(27, 58).some(l => l.trim())) f.push('the screen alone: nothing below row 26 (the window not 57 rows)');
+        // (The map in colour on the screen, slice 4.2's: the character's @ and a floor it sees now each a colour of
+        // their own, neither the words' own)
+        const fg = (r, c) => map.cells.attrs[r * 80 + c] & 15, tr = map.text.findIndex(l => l.startsWith('The map (you face'));
+        const ar = map.text.findIndex((l, r) => r > tr && l.slice(0, 64).includes('@')), ac = ar < 0 ? -1 : map.text[ar].indexOf('@');
+        const dc = ar < 0 ? -1 : map.text[ar].slice(0, 64).search(/[.]/);
+        if (tr < 0 || ar < 0 || dc < 0) f.push('the map' + Q + 's @ or a floor beside it not found on the screen');
+        else if (fg(ar, ac) === fg(tr, 0) || fg(ar, dc) === fg(tr, 0) || fg(ar, ac) === fg(ar, dc))
+          f.push('the map not in its colours on the screen: @ ' + fg(ar, ac) + ', a floor seen now ' + fg(ar, dc) + ', the words ' + fg(tr, 0));
         return f;
       },
       sdcard: true

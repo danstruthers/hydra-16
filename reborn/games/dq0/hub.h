@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     17                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     18                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -47,7 +47,8 @@
                                                 **   P_STUMBLE; 16: the hands and limbs, pc_shand, the blows' x[2],
                                                 **   items.h's IH_*, IO_SWAP, rs.h's summary's limbs and limp, P_RISE,
                                                 **   C_LAME ..., I_RISE, the actors' move, arm and dropped, RS_REARM,
-                                                **   O_REARM; 17: the bearings, pc_skew, pc_lost) */
+                                                **   O_REARM; 17: the bearings, pc_skew, pc_lost; 18: the map making,
+                                                **   pc_chart, pc_map) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -482,7 +483,7 @@ enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN }
                                                 **   a hole dug part way before, the world's DUG record's) */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
        TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE, TE_LOW, TE_OUT, TE_ROBBED,
-       TE_BEGUN, TE_ASK_SHORT };
+       TE_BEGUN, TE_ASK_SHORT, TE_LEARNT };
                                                 /* E_TASK's: stopped as
                                                 **   the player asked; stopped hard, by a wound or a blow (HOUSE.md:
                                                 **   all wounds), by a hostile in sight within 30 feet; asking, soft
@@ -515,7 +516,9 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
                                                 **   or a question of a task with one, TE_STOPPED ... TE_NEAR,
                                                 **   TE_ASK_SEEN, TE_ASK_TIRED, TE_ASK_HEARD, TE_ASK_SHORT); asking,
                                                 **   a battering's, a bare part's blow that would hurt it stopped
-                                                **   short (once a door: "Keep at it?") */
+                                                **   short (once a door: "Keep at it?"); a skill opened as it's used
+**   (the referee's: Drawing, by the first map drawn, slice 4.2's;
+**   told, no question) */
 #define TE_STILL        0x80
 #define TE_QUIET        0x40
 enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS,     /* E_BEAT's: a quiet stretch
@@ -1005,7 +1008,19 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   burns down; the world's as its lights burn, slice 4.1's), */
     char            pc_left[20];                /*   in words, for the status line ("torch 40m"; "" none, or one
                                                 **   that never burns down: the world's, as the referee's are its) */
+    /* The character's map making (slice 4.2's: DUNGEON.md, the map kept), the world's, as what it carries changes
+    ** (s_light_now's): what it can draw with, and the map it carries (the senses draw on it, mapping as it goes; the
+    ** maker shows its squares drawn) */
+    unsigned char   pc_chart;                   /* CH_* */
+    unsigned        pc_map;                     /*   and its map's item's id (the first map it carries; 0 none), */
+    signed char     pc_drawn;                   /*   and how true it's drawing it, mapping as it goes on paper: the
+                                                **   referee's grade (rs.h's G_*: P_DRAW's, asked as it comes into a
+                                                **   room or walks a way; the senses' for the chunks they draw) */
 };
+#define CH_DRAW         0x01                    /* (pc_chart's: the things to draw a map with to hand, the catalogue's
+                                                **   by their keys: a sheet (paper, parchment) or its map, a pencil or
+                                                **   charcoal or a quill and ink, and a hand free; HOUSE.md's the map
+                                                **   kept) */
 #define SN_SEEN         0x01                    /* (dsense's res: the character seen, */
 #define SN_HEARD        0x02                    /*   heard, */
 #define SN_SMELT        0x04                    /*   smelt: slice 4.1's, still air, within its nose's reach) */
@@ -1029,7 +1044,8 @@ enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY };      /* The look's kinds: a look abo
 
 /* The UI's bank's records (UI_BANK) */
 struct uirec {
-    char            map[MAP_H][MAP_W + 1];      /* The map's rows (the maker's, as the UI asks: mapq) */
+    char            map[MAP_H][MAP_W + 1];      /* The map's rows (the maker's, as the UI asks: mapq; maplay their
+                                                **   squares' layers) */
     char            things_text[400];           /* The things' words for the UI (what's carried: ireq's reply), and
                                                 **   the UI's to the things (dq0 -k's: the things more) */
     struct cmd      kept;                       /* A command whose thing was out of reach, kept while the character
@@ -1037,7 +1053,11 @@ struct uirec {
     struct tread    tread;                      /* The traces read (I_TRACE's reply: the world's), */
     char            trtext[TR_TEXT];            /*   and its words, for the UI to say ("The floor here is flagged, grey
                                                 **   with dust. ...") */
+    unsigned char   maplay[MAP_H][MAP_W];       /* The map's squares' layers (ML_*: the maker's, with its rows: the UI
+                                                **   colours them, slice 4.2's) */
 };
+enum { ML_NOW, ML_KEPT, ML_DRAWN, ML_PC, ML_COMPASS };   /* (A map's square: seen now; remembered; drawn on the map
+                                                **   carried; the character; the compass) */
 
 /* The world's bank's records (WORLD_BANK): the dungeon's (world.h) */
 struct wrec {
@@ -1132,6 +1152,9 @@ struct wsave {
 **   own hub.pc_lamp world
 **   own hub.pc_fuel world                                      (Its light's minutes left: slice 4.1's)
 **   own hub.pc_left world
+**   own hub.pc_chart world                                     (Its map making, by what it carries: slice 4.2's)
+**   own hub.pc_map world
+**   own hub.pc_drawn world
 **   own hub.pcsum referee
 **   own hub.look senses +world                                 (The world's look asked)
 **   own hub.mapq maker +ui
@@ -1195,8 +1218,10 @@ struct wsave {
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)
 **   own chunk.tile maker +senses +world                        (Its squares: the senses' memory in them, seen and
-**                                                                seen now; the world's changes, a square dug, a pit
-**                                                                opened, store.c's change, the seen mark kept)
+**                                                                seen now, drawn; the world's changes, a square dug, a
+**                                                                pit opened, store.c's change, the seen marks kept)
+**   own chunk.kept maker +senses                               (The character's memory of it: the senses', as it
+**                                                                looks about; the maker's, its seen maps')
 **   own chunk.room[*].flags maker +senses +world               (A room's: R_VISITED, the senses' memory, come into;
 **                                                                R_LIT, its sconce's light, the world's ROOM_LIT)
 **   own chunk.portal maker +world                              (Made from the seed; worked by the world, each change
@@ -1218,6 +1243,7 @@ struct wsave {
 **                                                                a look one way's own, WAY_SEEN)
 **   own bank(UI_BANK) ui
 **   own uirec.map maker +ui
+**   own uirec.maplay maker +ui                                 (Its squares' layers: slice 4.2's)
 **   own uirec.things_text world +ui
 **   own uirec.tread world                                      (The traces read: I_TRACE's reply)
 **   own uirec.trtext world                                     (Their words)
