@@ -88,6 +88,7 @@ unsigned char flee_on (void);                   /* Part 26 */
 unsigned char toward_middle (void);            /* Part 3 */
 void __fastcall__ across (unsigned char h, unsigned char r);   /* Part 33 */
 void __fastcall__ intent_more (struct msg* m);  /* Part 37 */
+void __fastcall__ intent_few (struct msg* m);   /* Part 53 */
 unsigned char tripped (void);                   /* Part 43 */
 unsigned char __fastcall__ dark_end (unsigned char how);    /* Part 44 */
 unsigned char __fastcall__ bearings (unsigned w);   /* Part 52 */
@@ -4063,8 +4064,8 @@ void __fastcall__ s_disengage_go (const struct msg* m)
 
 static unsigned char pc_waited;
 
-/* An intent carried out, the UI's: a step, a walk, a climb (each answered at once: the main RAM's); the rest part
-** 37's (intent_more: a turn and a wait too, slice 4.2's, the main RAM's room) */
+/* An intent carried out, the UI's: a step, a walk, a climb (each answered at once: the main RAM's); a turn, a wait
+** and the quit part 53's (intent_few: slice 4.2's, the main RAM's room); the rest part 37's (intent_more) */
 static void __fastcall__ intent (struct msg* m)
 {
     if (m->kind == I_STOP || m->kind == I_GO_ON || m->kind == I_ASK) {
@@ -4099,20 +4100,23 @@ static void __fastcall__ intent (struct msg* m)
     case I_STEP:
         step_to (m->w1 & 7, m->w2, (m->w1 & STEP_KEEP) != 0);
         break;
+    case I_WAIT:
+    case I_TURN:
+    case I_QUIT:
+        intent_few (m);                         /* (Part 53's) */
+        break;
     default:
         intent_more (m);                        /* (The rest: part 37's) */
         break;
     }
 }
 
-/* ==== Part 37: the rest of the UI's intents carried out (intent's; its own part, the main RAM's room: slice 4.1's) */
-#pragma code-name (push, "SW37CODE")
-#pragma rodata-name (push, "SW37RODATA")
+/* ==== Part 53: a turn, a wait, the quit (intent's; its own part, the main RAM's room: slice 4.2's) */
+#pragma code-name (push, "SW53CODE")
+#pragma rodata-name (push, "SW53RODATA")
 
-void __fastcall__ s_intent_more (struct msg* m)
+void __fastcall__ s_intent_few (struct msg* m)
 {
-    unsigned char k, d;
-
     switch (m->kind) {
     case I_WAIT:
         busy (m->w1 ? m->w1 : HUB->round);
@@ -4141,6 +4145,21 @@ void __fastcall__ s_intent_more (struct msg* m)
     case I_QUIT:
         HUB->quit = 1;
         break;
+    }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 37: the rest of the UI's intents carried out (intent's; its own part, the main RAM's room: slice 4.1's) */
+#pragma code-name (push, "SW37CODE")
+#pragma rodata-name (push, "SW37RODATA")
+
+void __fastcall__ s_intent_more (struct msg* m)
+{
+    unsigned char k, d;
+
+    switch (m->kind) {
     case I_DIG:
         start_dig (m->a);
         break;
