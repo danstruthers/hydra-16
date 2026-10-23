@@ -1079,3 +1079,15 @@ weapon and armour tables (Combat 3-4); a squire equipped by its lord.  So three 
 - **Things used up**, by each kind's data: drawing's charcoal and chalk soon, a pencil and a pot of ink long; a
   light's fuel already; missiles (slice 4.7): arrows and bolts that break, missiles taken up again where they fell or
   out of what they struck, a wild miss (a critical failure) maybe lost.
+
+Then, on the denizens: "Denizens should be equiped appropriately for each type, with those items one their bodies as
+appropriate.  If the denizens have stuff that would normally be stored where they sleep (If their mates can be
+trusted, or they have lockable chests), then some of their kit may be where they sleep.  Most humanoid minions will
+have little in the way of belongings other than those required for their occupations (which would usually be weapons
+and armor and some small amount of coins and personal trinkets, but usually not water and food unless they are
+wandering explorers).  The details will need long, hard thought.  More intelligent enemies would have more personal
+items ov real value (dwarves, elves, humans), for instance.  Please put together a plan for believeably equiping the
+other inhabitants of the dungeon."  So the outfits are every actor's: each denizen's kind (and role: a leader, a
+guard, a wanderer) its gear on its body, its other belongings where it sleeps where its mates can be trusted or a
+chest locks, a minion's little more than its trade's (weapons, armour, a few coins, a trinket; no food or water but
+a wanderer's), the more intelligent peoples' more of real value; first a plan, for the user to see.
