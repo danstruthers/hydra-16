@@ -38,8 +38,12 @@ unsigned bled_at;
 
 static unsigned __fastcall__ apart (int dx, int dy)
 {
-    dx = dx < 0 ? -dx : dx;
-    dy = dy < 0 ? -dy : dy;
+    if (dx < 0) {
+        dx = -dx;
+    }
+    if (dy < 0) {
+        dy = -dy;
+    }
     return dx > dy ? dx : dy;
 }
 
@@ -237,7 +241,7 @@ void s_den_intents (void)
             d = (m.w1 & 7) >> 1;
             x = bd.x + dir_x[d];
             y = bd.y + dir_y[d];
-            if (den_legs () || taken (x, y) || !step_ok (bd.sn, bd.x, bd.y, d)) {
+            if ((((bd.move & 4) | bd.pos) && den_legs ()) || taken (x, y) || !step_ok (bd.sn, bd.x, bd.y, d)) {
                 bd.ready += 10;
                 break;
             }
@@ -276,8 +280,8 @@ void s_den_intents (void)
             }
             break;
         case I_GOTO:                            /* (A dash past the character: a moment's) */
-            if (den_legs () || !open_sq (at (bd.sn, m.w1, m.w2)) || apart (m.w1 - bd.x, m.w2 - bd.y) > 2 ||
-                taken (m.w1, m.w2)) {
+            if ((((bd.move & 4) | bd.pos) && den_legs ()) || !open_sq (at (bd.sn, m.w1, m.w2)) ||
+                apart (m.w1 - bd.x, m.w2 - bd.y) > 2 || taken (m.w1, m.w2)) {
                 bd.ready += 10;
                 break;
             }
