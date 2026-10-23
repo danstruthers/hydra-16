@@ -1039,3 +1039,43 @@ and then it should ask for confirmation.  If your hands are empty, but you have 
 like `You can try battering it with your hands, but would you rather use your axe?` or some equivalent saying."  So
 a blow with nothing named strikes with what's in hand; with empty hands and something better carried, it asks first
 (yes takes that in hand, else the bare hands); with nothing better carried, the bare hands, unasked.
+
+### Outfits, reach and things used up
+
+The user (2026-10-23), on the map agent's questions (the kit, using things up, "handy and equipped"): "For starting
+kit, each class should have appropriate starting kit, with weapons, armor, and other items appropriate for characters
+just starting out in their occupation.  Universally, a backpack, torches, tinder box, rations x3, full waterskin, belt
+with pouch and belt knife/dagger, some money.  If a bow or other ranged weapon, appropriate ammo and storage (arrows +
+quiver, sling stones or bullets + pouch, bolts plus bolt case, etc.).  Swords have scabbards, daggers have sheathes
+(both on the belt).  Throwing knives should have a bandolier with a number of knives (maybe 3-5) included.  Shield
+skill normally includes a shield.  Starting money should be allocated to weapons, armor, and supplies, as per costs in
+the HM rules.  Thieves/Lia Kavair should have tools of the trade, and probably mapping materials.  Please do a deep
+analysis of each occupation and come up with a good list of starting gear for each, but keep in mind that it should be
+somewhat random what specific gear is generated, but it should stay appropriate to occupation and selected skills  As
+for using up material, arrows can break, and should be able to be retrieved, as should sling bullets and stones not
+embedded in something, but wild misses (critical failures) should possible be lost.  Ink, pencils, charcoal, etc.,
+should be used up eventually.  A pot of ink might last a really long time, as might a pencil, but a chunk of charcoal
+or chalk would be used up faster.  You can build that.  Handy would be readily available, so in a backpack that is
+being worn is not as readily available as one in a belt pouch.  In a sack, in a backpack is two-containers deep, so
+should require longer for each level of container.  A backpack on the ground or in hand (not worn) is more readily
+available and does not require a grope to remove it first before taking something out of it.  Searching a worn
+backpack takes it off first, then if it was on, puts it back on, each taking time.  Just shrugging it off/dropping it
+before battle should not require time.  Please go over what I have tried to lay out here and make it consistent and
+as general (appropriately applying it to as many cases) as possible."  The book: a character begins with the clothes
+worn, a knapsack, a moneybelt and its family wealth by class (Character 11: serf 40, 80, 160d; unguilded 60, 120,
+240d; guilded 90, 180, 360d; noble 600, 1,200, 2,400d: poor, average, rich), spent at HarnWorld's price list and the
+weapon and armour tables (Combat 3-4); a squire equipped by its lord.  So three general systems, every actor's:
+
+- **Outfits**: the universal kit, then the occupation's by its skills (each weapon with its carrier: a sword's
+  scabbard and a dagger's sheath on the belt, a bow's quiver of arrows, a sling's pouch of stones or bullets, a
+  crossbow's bolt case, a bandolier of three to five throwing knives; a shield with Shield; armour and supplies),
+  bought with the family wealth at the book's prices, random within what suits the occupation and the skills chosen;
+  thieves' tools and mapping materials for a thief.  First the analysis of every occupation, for the user to see.
+- **Reach**: how readily a thing comes to hand, for every taking out, putting away, search and tool's use: in hand;
+  on the body (a belt's pouch, a sheath, a scabbard, a quiver, a bandolier); in a container set down or held; in a
+  worn pack (taken off first, and put back on after, each its time); each container deeper its time more; a pack
+  shrugged off or dropped at no time.  A tool "handy" (mapping's materials, picks, a tinderbox) is one readily to
+  hand: not in a worn pack.
+- **Things used up**, by each kind's data: drawing's charcoal and chalk soon, a pencil and a pot of ink long; a
+  light's fuel already; missiles (slice 4.7): arrows and bolts that break, missiles taken up again where they fell or
+  out of what they struck, a wild miss (a critical failure) maybe lost.
