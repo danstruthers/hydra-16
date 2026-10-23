@@ -345,7 +345,9 @@ static const unsigned char tooled[] = { VB_ATTACK_OBJECT, VB_BREAK_OBJECT, VB_FO
     VB_TOUCH_OBJECT, VB_BAR_OBJECT, VB_CLIMB, VB_SEARCH, VB_EXAMINE_OBJECT, VB_JUMP };
 
 /* What the command's done with (its "with": the other thing's word, or, nothing else said, the thing's), to hand?
-** 1, it the other thing now (the thing unsaid, if that was it), a blow's in hand; 0, refused (the things' words) */
+** 1, it the other thing now (the thing unsaid, if that was it), a blow's to take in hand first, once its target's
+** found (main.c's hold_w: the hold, its words, the referee told, its time, as the blow's sent: slice 4.1b's); 0,
+** refused (the things' words) */
 static unsigned char tool_ok (void)
 {
     char* w = cmd.other.word[0] ? cmd.other.word : cmd.obj.word;
@@ -370,15 +372,9 @@ static unsigned char tool_ok (void)
         }
     }
     if (a == VB_ATTACK_OBJECT || a == VB_BREAK_OBJECT) {
-        strike = SK_THING | (unsigned char) othings_x;  /* (That thing strikes, and no other: its kind, IO_FIND's) */
-        if (othings (IO_HOLD, cmd.other.word, "", 0) == IR_OK) {
-            msg (lb);                           /* (In hand first, a blow's: "You take the bar in both hands.") */
-            intend2 (I_WAIT, othings_x, 1);
-        } else if (!strstr (lb, "already")) {
-            msg (lb);                           /* (No hand free for it: "Your hands are full ...", not struck with
-                                                **   another instead) */
-            return 0;
-        }
+        strike = SK_THING | (unsigned char) othings_x;  /* (That thing strikes, and no other: its kind, IO_FIND's; in
+                                                **   hand first, once there's something to strike) */
+        strcpy (hold_w, cmd.other.word);
     }
     if (a != VB_FILL_OBJECT) {
         cmd.other.word[0] = 0;                  /* (Checked: the action's own rules use what's to hand; a fill's fuel

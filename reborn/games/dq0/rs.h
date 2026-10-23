@@ -74,6 +74,10 @@ enum {
                                                 **   the book's grope, an attribute's test) */
     P_STUMBLE,                                  /* Keeping one's feet, over a thing in the way (the book's stumble
                                                 **   roll: its steps the darkness, the thing, the pace, 2026-10-22) */
+    P_RISE,                                     /* Getting up, prone (the book's Rise, Combat 8; asked each time: the
+                                                **   ruleset's whether it's a test, HarnMaster's house's for one
+                                                **   seriously or grievously wounded, its summary's LB_HURT, or with no
+                                                **   good arm; never with no leg to stand on: slice 4.1b's) */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 
@@ -106,20 +110,27 @@ enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
 #define C_STUNNED       0x0008                  /* (HarnMaster's shock) */
 #define C_BLEEDING      0x0010
 #define C_FATIGUED      0x0020                  /* (Tired, or tiring: rest owed it, RS_EXERT's) */
-#define C_ARM_USELESS   0x0040
-#define C_LEG_USELESS   0x0080
+#define C_ARM_USELESS   0x0040                  /* (An arm useless, either: the summary's limbs say which) */
+#define C_LEG_USELESS   0x0080                  /* (A leg useless, either) */
 #define C_BLINDED       0x0100
 #define C_ASLEEP        0x0200
 #define C_POISONED      0x0400
 #define C_FRIGHTENED    0x0800
+#define C_LAME          0x1000                  /* How its limbs move it (slice 4.1b's, every actor's: the world's to
+                                                **   apply): at half its move, a leg useless on four (the book's
+                                                **   quadruped on three good legs, Combat 14); */
+#define C_CRAWLS        0x2000                  /*   at a crawl's pace only, on one good leg (hopping, or a crutch's
+                                                **   walk) or none (crawling, its arms enough); */
+#define C_STUCK         0x4000                  /*   not at all (no leg to stand on, nor arms enough to crawl) */
+#define C_MOVE          (C_LAME | C_CRAWLS | C_STUCK)
 
 /* ---- Health: how hurt an actor is, in words any ruleset can say */
 enum { H_FINE, H_HURT, H_BADLY, H_CRITICAL, H_DOWN, H_DEAD };
 
 /* ---- How an attack came out, for the words (O_DISPATCH: a helpless one finished; O_RISE: the attacker, fallen,
-** only got to its feet) */
+** only got to its feet, or tried, a 1, and is still down; O_REARM: the attacker took up its weapon again, RS_REARM) */
 enum { O_MISS, O_DODGED, O_BLOCKED, O_HIT, O_BOTH_HIT, O_COUNTER_HIT, O_FUMBLE, O_STUMBLE, O_ADVANTAGE, O_CRIT,
-    O_DISPATCH, O_RISE };
+    O_DISPATCH, O_RISE, O_REARM };
 
 /* ---- Defences: the stance the player sets (the ruleset decides what each means; auto: its best; HarnMaster's: a
 ** round's defences, a block or a dodge each once a round, a counterstrike only on D_COUNTER: HOUSE.md) */
@@ -133,8 +144,8 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** killer alone, RS_KILLER: no blow, result 0xFF, else).  The reply: result how it
 ** came out (O_*; 0xFF: none struck), a whose a fumble or a stumble was (1 the attacker's, 2 the defender's, 3
 ** both's), b the defence (D_*), c AF_*, its effects (x: X_WOUND, X_DEATH, X_COND_ON: C_PRONE, C_UNCONSCIOUS;
-** X_DROP: a weapon fumbled), w1 the attacker's health (H_*) and the defender's times 256, w2 the tenths one knocked
-** senseless is out for; its words in the text, four lines: the attacker's weapon ("sword", "bite"), the defender's,
+** X_DROP: what a hand held fumbled, its x[0] the hand, DH_*), w1 the attacker's health (H_*) and the defender's times
+** 256, w2 the tenths one knocked senseless is out for; its words in the text, four lines: the attacker's weapon ("sword", "bite"), the defender's,
 ** what the attacker's strike did ("a serious cut to its left thigh (S2)", "your ring byrnie": the armour that stopped
 ** it), and the defender's (a counterstrike's, a block's on a bare arm or a claw).  A creature's blow and the
 ** character's at one (the world's, its slot: it keeps what the blow did, and puts the words in the fights' ring,
@@ -147,7 +158,8 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** hub's pc_strike says (SK_*: the best it holds, a fist, a foot, the head: Unarmed's, the book's hand, foot and head;
 ** SK_THING | a kind, that thing and no other, the catalogue's (items.h's struct kind, in the hub's CAT_BANK: the
 ** referee's to read), a weapon of the ruleset's as itself, anything else as the ruleset treats a thing swung, by its
-** kind's data, its words the kind's name; a soft one never asked of, the world's: rshouse.h's RS_HOUSE_SWING).
+** kind's data, its words the kind's name; a soft one never asked of, the world's: rshouse.h's RS_HOUSE_SWING), in the
+** hand the hub's pc_shand says (its hand's own: the off hand's penalty, one-handed, an arm hurt: slice 4.1b's).
 **
 ** At a thing (other RS_THING: a door, a portcullis's bars, a window's shutters or glass; the maker's), which ignores it
 ** (the book's Ignore defence): x[0..3] the thing's resistance to blunt, edge, point and fire (its armour), c the blow's
@@ -163,6 +175,8 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define RS_PRONE_D      0x04                    /*   the defender) */
 #define RS_KILLER       0x08                    /* (RS_ATTACK's w2: the attacker a killer, the character senseless finished
                                                 **   where it lies; else the blow held: the minds', by its nature) */
+#define RS_REARM        0x20                    /* (RS_ATTACK's w2: the attacker, its weapon let fall, takes it up again,
+                                                **   its turn: O_REARM, slice 4.1b's) */
 #define RS_SHORT        0x10                    /* (RS_ATTACK at RS_THING's w2: a bare part (no armour on it: the
                                                 **   fists, the feet, the head) that would be hurt stopped short of it,
                                                 **   unhurt, result | 4: the first time at a door, HOUSE.md's) */
@@ -188,7 +202,11 @@ struct rs_effect {
     unsigned char   x[2];
 };
 enum { X_NONE, X_WOUND, X_HEAL, X_COND_ON, X_COND_OFF, X_DEATH, X_DROP, X_EXTRA_ACTION, X_IMPROVED };
-/* (An X_WOUND's cond: the conditions it leaves the actor in; its x[0] where it is, BP_*, and x[1] its aspect, AS_*) */
+/* (An X_WOUND's cond: the conditions it leaves the actor in; its x[0] where it is, BP_*, and x[1] its aspect, AS_*.
+** An X_DROP's x[0] the hands that let go what they held, DH_*: the character's, what it holds there, the world's to put
+** down, a neighbouring square or the same one; a creature's, its weapon, held in its right) */
+#define DH_LEFT         0x01                    /* (items.h's IH_* the same) */
+#define DH_RIGHT        0x02
 enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREARM, BP_HAND, BP_CHEST, BP_BELLY,
     BP_GROIN, BP_HIP, BP_THIGH, BP_KNEE, BP_CALF, BP_FOOT };
 #define BP_RIGHT        0x80                    /* (A limb's right side) */
@@ -230,7 +248,17 @@ struct rs_summary {
     unsigned char   power;                      /* 0-100: how mighty, the same scale whatever the ruleset */
     unsigned char   northsense;                 /* 1: it always knows which way north is underground (its species':
                                                 **   a dwarf's); 0: it can lose its bearings (DUNGEON.md, to come) */
+    unsigned char   limbs;                      /* Its hands and limbs (LB_*: the character's, slice 4.1b's) */
+    unsigned char   limp;                       /* Its legs hurt, slowing its walk and faster paces (0: none; the
+                                                **   levels, the referee's, its steps above the slower for them) */
 };
+#define LB_LEFT         0x01                    /* (A summary's limbs: its main hand the left, left-handed; */
+#define LB_AMBI         0x02                    /*   either, no off hand, ambidextrous; */
+#define LB_ARM_L        0x04                    /*   its left arm useless (its hand holds nothing), */
+#define LB_ARM_R        0x08                    /*   its right; */
+#define LB_LEG_L        0x10                    /*   its left leg useless (it bears no weight), */
+#define LB_LEG_R        0x20                    /*   its right; */
+#define LB_HURT         0x40                    /*   seriously or grievously wounded: getting up its test, P_RISE) */
 
 /* ---- The requests (the hub's referee areas carry one, and its reply) */
 enum {

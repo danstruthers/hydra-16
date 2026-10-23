@@ -22,7 +22,8 @@
 
 #pragma static-locals (on)
 
-static struct actor a;
+struct actor sact;                              /* (A body, copied out of the hub's header: dens.c's too, never both at
+                                                **   once, the main RAM's room) */
 
 static unsigned __fastcall__ apart (int dx, int dy)
 {
@@ -45,13 +46,13 @@ void sense_actor (void)
     hear = HUB->dsense.hear;
     eyes = HUB->dsense.eyes;
     nose = HUB->dsense.nose;                    /* (Its smell's reach in still air, squares) */
-    memcpy (&a, &HUB->actor[k], sizeof a);
+    memcpy (&sact, &HUB->actor[k], sizeof sact);
     pcs = HUB->pc_stratum;
     pcx = HUB->pc_x;
     pcy = HUB->pc_y;
     own = HUB->pc_light;
     res = 0;
-    if (a.sn != pcs || k >= NACTORS) {
+    if (sact.sn != pcs || k >= NACTORS) {
         HUB->dsense.res = 0;
         HUB->dsense.slack = 0xFF;               /* (Another stratum: till the character moves) */
         return;
@@ -59,14 +60,15 @@ void sense_actor (void)
     if (HUB->pc_ready > hub_now ()) {
         res = SN_HEARD;                         /* (Busy: heard within its hearing) */
     }
-    dx = pcx - a.x;
-    dy = pcy - a.y;
+    dx = pcx - sact.x;
+    dy = pcy - sact.y;
     dist = apart (dx, dy);
     if (dist > hear) {
         res = 0;
     }
-    lv = cached (a.sn, a.x, a.y) ? light_at (a.sn, a.x, a.y) : 0;   /* Its eyes, adapted to the light it stands in
-                                                **   (none made for it: the maker's order the denizens' own) */
+    lv = cached (sact.sn, sact.x, sact.y) ? light_at (sact.sn, sact.x, sact.y) : 0;   /* Its eyes, adapted to the
+                                                **   light it stands in (none made for it: the maker's order the
+                                                **   denizens' own) */
     if (own && dist <= own && 2 * (own - dist) + 1 > lv) {
         lv = 2 * (own - dist) + 1;
     }
@@ -77,7 +79,7 @@ void sense_actor (void)
     if (!lit && (ex = (e->a >> 4) - lv) < 16) {
         m = m * 4 / (4 + ex);                   /* (Darkvision the less, its eyes used to more light) */
     }
-    if (!res && (dist <= m || dist <= nose) && clear_line (a.sn, a.x, a.y, dx, dy, dist, 1)) {
+    if (!res && (dist <= m || dist <= nose) && clear_line (sact.sn, sact.x, sact.y, dx, dy, dist, 1)) {
         res = dist <= m ? SN_SEEN : SN_SMELT;
     }
     hub_map (0);

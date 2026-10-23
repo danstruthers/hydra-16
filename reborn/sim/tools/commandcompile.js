@@ -130,7 +130,7 @@ const MOVE_WORDS = new Set(['move', 'mv', 'walk', 'trundle', 'mosey', 'saunter',
 const SPEECH_WORDS = new Set(['say', 'yell', 'scream', 'shout', 'whisper']);
 // These take no object: "wait the sword" is a role error, not a parse error.
 const INTRANSITIVE = new Set(['wait', 'rest', 'sleep', 'stop']);
-const PACE = { crawl: 'crawl', 'slow walk': 'slowwalk', walk: 'walk', trot: 'trot', run: 'run', sprint: 'sprint' };
+const PACE = { crawl: 'crawl', hop: 'hop', 'slow walk': 'slowwalk', walk: 'walk', trot: 'trot', run: 'run', sprint: 'sprint' };
 const META = { status: 'VB_META_STATUS', help: 'VB_META_HELP', inventory: 'VB_META_INVENTORY', i: 'VB_META_INVENTORY',
   map: 'VB_META_MAP', save: 'VB_META_SAVE', quit: 'VB_META_QUIT', q: 'VB_META_QUIT', sheet: 'VB_META_SHEET',
   pause: 'VB_META_PAUSE' };
@@ -574,6 +574,10 @@ function phraseSem(spec, env, ctx) {
     }
     case 'drop': return withObj('VB_DROP_OBJECT');
     case 'put': {
+      if (kidsOf(spec, 'hand-phrase')[0]) {      // (Into a hand: "put the dagger in my other hand", the UI's a hold)
+        const h = objOf(0);
+        return h.stop || act('VB_PUT_OBJECT', { object: h.value });
+      }
       const a = objOf(0), b = objOf(1);
       if (a.stop) return a.stop;
       if (b.stop) return b.stop;
@@ -835,6 +839,8 @@ function phraseSem(spec, env, ctx) {
     }
     // Pass forfeits the turn: only when engaged. "pass the time" is a wait, in the wait rule.
     case 'pass': return ctx.engaged.length ? act('VB_PASS', {}) : err('NOT_ENGAGED');
+    // What's in the hands changed over, left to right (slice 4.1b)
+    case 'swap': return act('VB_SWAP_HANDS', {});
     // Religion: prayer, intervention, invocations (performed, not cast); baptism is the invocation that converts.
     case 'pray': {
       const t = topicAfter(spec, env, ['for']);

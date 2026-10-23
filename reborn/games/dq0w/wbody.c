@@ -38,8 +38,12 @@ unsigned bled_at;
 
 static unsigned __fastcall__ apart (int dx, int dy)
 {
-    dx = dx < 0 ? -dx : dx;
-    dy = dy < 0 ? -dy : dy;
+    if (dx < 0) {
+        dx = -dx;
+    }
+    if (dy < 0) {
+        dy = -dy;
+    }
     return dx > dy ? dx : dy;
 }
 
@@ -218,6 +222,8 @@ void s_den_intents (void)
             bd.step = m.a;
             bd.pos = POS_STANDING;              /* (On its feet, walking: its body's, the world's) */
             bd.gait = GA_WALK;
+            bd.move = m.x[3];                   /* (Its legs, the referee's: slice 4.1b's) */
+            bd.arm = 0;
             bleeds = m.b ? bleeds | 1 << bk : bleeds & ~(1 << bk);
             was = bd.doing;
             break;
@@ -235,7 +241,7 @@ void s_den_intents (void)
             d = (m.w1 & 7) >> 1;
             x = bd.x + dir_x[d];
             y = bd.y + dir_y[d];
-            if (taken (x, y) || !step_ok (bd.sn, bd.x, bd.y, d)) {
+            if ((((bd.move & 4) | bd.pos) && den_legs ()) || taken (x, y) || !step_ok (bd.sn, bd.x, bd.y, d)) {
                 bd.ready += 10;
                 break;
             }
@@ -252,6 +258,8 @@ void s_den_intents (void)
                 if (TILE (*p) == T_STEPS) {
                     c += bd.step / 2;
                 }
+                c += c * (bd.move & 3);         /* (Lame, twice its time; crawling, three times: slice
+                                                **   4.1b's) */
                 if ((m.w2 & STEP_FEELS) && unlit_at (bd.sn, x, y)) {
                     c <<= 1;                    /* (Its kind no darkvision, a square unlit: it feels its way, at
                                                 **   half its pace, HOUSE.md's walking in the dark) */
@@ -272,7 +280,8 @@ void s_den_intents (void)
             }
             break;
         case I_GOTO:                            /* (A dash past the character: a moment's) */
-            if (!open_sq (at (bd.sn, m.w1, m.w2)) || apart (m.w1 - bd.x, m.w2 - bd.y) > 2 || taken (m.w1, m.w2)) {
+            if ((((bd.move & 4) | bd.pos) && den_legs ()) || !open_sq (at (bd.sn, m.w1, m.w2)) ||
+                apart (m.w1 - bd.x, m.w2 - bd.y) > 2 || taken (m.w1, m.w2)) {
                 bd.ready += 10;
                 break;
             }

@@ -83,7 +83,7 @@ void __fastcall__ items_begin (const char* dir);    /* (Part 13) The catalogue i
                                                 **   emptied, a game carried on its read, its light */
 void __fastcall__ stock_down (unsigned char k); /* (Part 13) Cache slot k's chunk's things put down (the maker's
                                                 **   list, the world bank's stock) */
-void __fastcall__ lay_body (unsigned char kind, unsigned char sn, unsigned x, unsigned y);   /* (Part 13) A denizen's
+unsigned __fastcall__ lay_body (unsigned char kind, unsigned char sn, unsigned x, unsigned y);   /* (Part 13) A denizen's
                                                 **   remains put down where it fell (KI_BODY, KI_BONES) */
 unsigned char puzzle (void);                    /* (Part 16: wgame.c) The hub's ireq, IO_PUZZLE's, answered (but its
                                                 **   state): 1 if what lies about has changed */
@@ -98,6 +98,11 @@ unsigned char __fastcall__ fumbled (unsigned char k);  /* (dq0w.c's part 25) A g
 extern unsigned char noinit;                    /* (dq0 -I: no grope's test while engaged: the tests') */
 unsigned char __fastcall__ in_reach (unsigned n);
 unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);
+extern unsigned char held_k[2], held_h[2];      /* (The main RAM's, things.c's: what the character holds, the main
+                                                **   hand's kind first, and the hands they're in, IH_*: held_kinds') */
+void held_kinds (void);
+unsigned char __fastcall__ shand_of (unsigned char s);  /* (The hand that holds the thing that strikes: the hub's
+                                                **   pc_shand) */
 void light_now (void);
 void __fastcall__ go_to (unsigned x, unsigned y);
 

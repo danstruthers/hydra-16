@@ -2167,26 +2167,26 @@ set stance=D_AUTO
 
 # ---- What strikes (HOUSE.md's fights, the user's, 2026-10-22): a thing named (the hub's pc_strike, SK_THING and its
 # kind, the catalogue's) strikes as itself if it's one of the referee's weapons, else as the book's stick or club by
-# its weight (the house's: rshouse.h's), its words its name; nothing named, what's in its hands (RS_WIELD: the better
-# of two by the blow's reckoning, at a thing the impact, at a denizen the attack mastery; a soft thing the least), its
+# its weight (the house's: rshouse.h's), its words its name; nothing named, what's in its hands (RS_WIELD: its main
+# hand's, x0, slice 4.1b's; a soft thing the least, the other's then), its
 # hands empty the best it carries asked about (its key), never a weapon a thing would spoil at a thing
 
 char
 end
 set strike=SK_BEST stance=D_AUTO
-case at a door, a torch and a bar held: the bar (the book's club, blunt 4, over the torch's 2, its stick's)
+case at a door, the bar in its main hand, a torch in the other: the bar (its main hand's, slice 4.1b's)
 dice
-ask WIELD b=1 x0=KI_TORCH x1=KI_BAR
-want result=2 dice=0
-case at a denizen, a torch and a sword held: the sword (Sword 80, its attack class 15)
+ask WIELD b=1 x0=KI_BAR x1=KI_TORCH
+want result=1 dice=0
+case at a denizen, the torch in its main hand, a sword in the other: the torch (its main hand's, not the better)
 dice
 ask WIELD b=0 x0=KI_TORCH x1=KI_SWORD
-want result=2
+want result=1
 case a rope held alone: it strikes, soft as it is (one attempt, the world's)
 dice
 ask WIELD b=1 x0=KI_ROPE
 want result=1
-case a rope and a lantern held, at a denizen: the lantern (a stick), the soft rope the least
+case a rope in its main hand and a lantern in the other, at a denizen: the lantern (a stick), a soft thing the least
 dice
 ask WIELD b=0 x0=KI_ROPE x1=KI_LANTERN
 want result=2
@@ -2220,3 +2220,209 @@ dice 100:31 6:3*
 ask ATTACK other=RS_THING x0=9 x1=9 x2=1 x3=9
 want result=0 b=AS_POINT text="dagger"
 set strike=SK_BEST
+
+# ---- The hands (slice 4.1b): each thing held in its hand (RS_EQUIP's marks: < the left, > the right, * both), the
+# thing that strikes in the hand the hub's pc_shand says; in the off hand a weapon's special penalty, 10 (Combat 3),
+# none if she's ambidextrous (Character 9, her file's med 4); her main hand the right, the left if she's left-handed
+# (med 15).  A sword named at a door (its resistances: edge 1, the rest 9): Sword 80, its class 15, 95; a d100's 88
+# a marginal success (three dice) in her main hand, a marginal failure in her off hand (85: the Ignore table's one die)
+
+char
+end
+case a sword in her right hand (her main), at a door: 95, the 88 a marginal success, three dice: 3 x 3 + edge 5 - 1
+set strike=SK_THING+KI_SWORD shand=IH_RIGHT
+dice
+ask EQUIP a=2 text=">blade4"
+dice 100:88 6:3*
+ask ATTACK other=RS_THING x0=9 x1=1 x2=9 x3=9
+want w1=13 b=AS_EDGE
+case the sword in her left hand (her off hand): 85, the 88 a marginal failure, one die: 3 + 5 - 1
+set shand=IH_LEFT
+dice
+ask EQUIP a=2 text="<blade4"
+dice 100:88 6:3*
+ask ATTACK other=RS_THING x0=9 x1=1 x2=9 x3=9
+want w1=7 b=AS_EDGE
+case the summary: her main hand the right (no LB_LEFT), not ambidextrous, no limb useless, no limp
+want sum.limbs=0 sum.limp=0
+char
+med 4
+end
+case ambidextrous (med 4): the sword in her left hand no worse, 95, three dice
+set shand=IH_LEFT
+dice
+ask EQUIP a=2 text="<blade4"
+dice 100:88 6:3*
+ask ATTACK other=RS_THING x0=9 x1=1 x2=9 x3=9
+want w1=13 sum.limbs=LB_AMBI
+char
+med 15
+end
+case left-handed (med 15): the sword in her left hand her main, 95, three dice
+set shand=IH_LEFT
+dice
+ask EQUIP a=2 text="<blade4"
+dice 100:88 6:3*
+ask ATTACK other=RS_THING x0=9 x1=1 x2=9 x3=9
+want w1=13 sum.limbs=LB_LEFT
+case and in her right hand, her off hand: 85, one die
+set shand=IH_RIGHT
+dice
+ask EQUIP a=2 text=">blade4"
+dice 100:88 6:3*
+ask ATTACK other=RS_THING x0=9 x1=1 x2=9 x3=9
+want w1=7
+char
+med 5
+end
+case an arm missing or deformed (med 5): her off arm, the left, useless (no two-handed use: Character 9)
+dice
+ask EQUIP a=2 text=""
+want sum.limbs=LB_ARM_L sum.cond&C_ARM_USELESS=C_ARM_USELESS
+set strike=SK_BEST shand=0
+
+# ---- An arm's wound and what its hand lets go of (slice 4.1b: Combat 14, Skills 21): a serious one's fumble roll
+# (3d6 over DEX), a grievous one's at once and its limb useless; a harm's roll only for a hand that holds something
+# (RS_EQUIP 2's w2, the hands that do: DH_*); X_DROP's x[0] the hand, the world's to drop what it holds there
+
+char
+end
+case a dart's serious stab to her right forearm (mid 38), her right hand holding a sword: the fumble roll 18, let go of
+dice
+ask EQUIP a=2 text=">blade4" w2=DH_RIGHT
+dice 100:38 6:1 6:1 6:6 6:6 6:6
+ask HARM a=HC_STRIKE b=AS_POINT w1=9
+want e0.loc=BP_FOREARM|BP_RIGHT e0.band=2 e1.kind=X_DROP e1.target=0 e1.loc=DH_RIGHT
+char
+end
+case the same, her right hand empty: no fumble roll, nothing let go of
+dice
+ask EQUIP a=2 text="" w2=0
+dice 100:38 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_POINT w1=9
+want e0.loc=BP_FOREARM|BP_RIGHT e1.kind=X_NONE
+char
+end
+case a grievous stab to her left hand (mid 41), a torch in it: let go of at once, no roll; the arm useless
+dice
+ask EQUIP a=2 text="<torch4" w2=DH_LEFT
+dice 100:41 6:1 6:1 6:1 6:1
+ask HARM a=HC_STRIKE b=AS_POINT w1=13
+want e0.loc=BP_HAND e0.band=3 e1.kind=X_DROP e1.loc=DH_LEFT sum.limbs&LB_ARM_L=LB_ARM_L sum.cond&C_ARM_USELESS=C_ARM_USELESS
+char
+end
+case her left arm whole, the sword in it blocks a kobold's spear (Sword 80, less the off hand's 10, its defence 10: 80)
+dice
+ask EQUIP a=2 text="<blade4" w2=DH_LEFT
+dice
+ask NEW_ACTOR actor=1 w1=20 text="kobold"
+set now=30000 stance=D_BLOCK
+dice 100:21 100:58 ...
+ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
+want b=D_BLOCK result=O_BLOCKED
+case the spear and her sword (her left, her off hand: a block of 80) both fumbled (the table's BF): each let go of
+set now=31000
+dice 100:100 100:95 6:6 6:6 6:6 6:6 6:6 6:6
+ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
+want result=O_FUMBLE a=3 e0.kind=X_DROP e0.target=1 e0.loc=DH_RIGHT e1.kind=X_DROP e1.target=0 e1.loc=DH_LEFT
+char
+inj 7 2 3 4 0 8
+end
+case her left hand useless (a grievous wound, its limb unusable): the sword in it does nothing, her block a bare arm's
+dice
+ask EQUIP a=2 text="<blade4" w2=DH_LEFT
+set now=32000
+dice 100:21 100:58 ...
+ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
+want b=D_BLOCK result=O_HIT sum.limbs&LB_ARM_L=LB_ARM_L sum.limbs&LB_HURT=LB_HURT
+set stance=D_AUTO
+
+# ---- Getting up, prone (slice 4.1b: the book's Rise, Combat 8, a round; the house's test, HOUSE.md's prone): always,
+# unhurt; seriously or grievously wounded, an Agility test (x5, less the physical penalty); no good arm four steps the
+# harder; no leg to stand on, never; in a fight, the attacker's turn (O_RISE: its a 1 if it stays down)
+
+char
+end
+case unhurt: she gets up, no test
+dice
+ask TEST a=P_RISE
+want grade=G_MS
+char
+med 14
+end
+case a leg missing or deformed (med 14, Character 9): a limp of five levels, the house's, half her move
+dice
+ask EQUIP a=2 text=""
+want sum.limp=5 sum.limbs=0
+char
+inj 12 0 2 3 0 0
+end
+case a serious wound to her left thigh (3 levels): an Agility test, 60 less 15: 7 up, 96 still down
+dice 100:7
+ask TEST a=P_RISE
+want grade=G_MS
+dice 100:96
+ask TEST a=P_RISE
+want grade=G_MF
+case the same, prone in a fight (RS_PRONE_A): her turn getting up (O_RISE), 7 up (a 0), 96 still down (a 1)
+set now=900000
+dice
+ask NEW_ACTOR actor=1 w1=9 text="rat"
+dice 100:7
+ask ATTACK actor=0 other=1 a=Z_MID b=AS_BEST w2=RS_PRONE_A
+want result=O_RISE a=0
+dice 100:96
+ask ATTACK actor=0 other=1 a=Z_MID b=AS_BEST w2=RS_PRONE_A
+want result=O_RISE a=1
+char
+inj 6 2 3 4 0 8
+inj 134 2 3 4 0 8
+end
+case both forearms grievously wounded, no good arm: four steps the harder (60, less 40, less 20: 5, the least), 7 down
+dice 100:7
+ask TEST a=P_RISE
+want grade=G_MF
+char
+inj 12 0 3 4 0 8
+inj 140 0 3 4 0 8
+end
+case both thighs grievously wounded, no leg to stand on: never, no test; in a fight, still down
+dice
+ask TEST a=P_RISE
+want grade=G_CF
+set now=901000
+dice
+ask NEW_ACTOR actor=1 w1=9 text="rat"
+dice
+ask ATTACK actor=0 other=1 a=Z_MID b=AS_BEST w2=RS_PRONE_A
+want result=O_RISE a=1
+
+# ---- A creature's weapon let fall (slice 4.1b: the book's fumbles, Combat 14, Skills 21; HOUSE.md's denizens'
+# limbs): its fists after it (its weapon's mastery less 10, the house's), nothing more of it to let fall; taken up
+# again (RS_REARM: its turn, O_REARM), its weapon's once more
+
+char
+end
+case a kobold's spear and her sword both fumbled (the table's BF): its spear let fall, the kobold disarmed
+dice
+ask EQUIP a=2 text=">blade4" w2=DH_RIGHT
+set now=950000 stance=D_BLOCK
+dice
+ask NEW_ACTOR actor=2 w1=21 text="kobold"
+dice 100:100 100:95 6:6 6:6 6:6 6:6 6:6 6:6
+ask ATTACK actor=2 other=0 a=Z_MID b=AS_BEST
+want result=O_FUMBLE e0.kind=X_DROP e0.target=2 e0.loc=DH_RIGHT
+case disarmed: its fists (the words' first line), nothing of its to let fall, her sword let go of again
+set now=951000
+dice 100:100 100:95 6:6 6:6 6:6 6:6 6:6 6:6
+ask ATTACK actor=2 other=0 a=Z_MID b=AS_BEST
+want result=O_FUMBLE text~"fists" e0.kind=X_DROP e0.target=0 e1.kind=X_NONE
+case its spear taken up again (RS_REARM): its turn (O_REARM), no blow; its next blow its spear's, let fall again
+set now=952000
+dice
+ask ATTACK actor=2 other=0 a=Z_MID b=AS_BEST w2=RS_REARM
+want result=O_REARM
+set now=953000
+dice 100:100 100:95 6:6 6:6 6:6 6:6 6:6 6:6
+ask ATTACK actor=2 other=0 a=Z_MID b=AS_BEST
+want result=O_FUMBLE text~"spear" e0.kind=X_DROP e0.target=2

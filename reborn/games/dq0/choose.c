@@ -248,6 +248,9 @@ unsigned char __fastcall__ o_choose (struct cmd* c)
     cx = 0;
     strike = SK_BEST;                           /* (What a blow strikes with: the verb's, or the thing named, resolve.c's,
                                                 **   or what's in its hands, wield's) */
+    shand = 0;                                  /* (No hand said yet: main.c's hand_said; nothing to take in hand
+                                                **   for a blow, resolve.c's) */
+    hold_w[0] = 0;
     if (tasked) {
         tasked = 0;
         if ((j = o_answer_of (cl)) != 0) {
@@ -303,9 +306,11 @@ unsigned char s_wield (void)
         !cmd.obj.kind && cmd.obj.word[0])) {
         return 0;                               /* (A part of it said; a thing named; a thing broken, not a portal) */
     }
-    t = a == VB_BREAK_OBJECT || (k = cmd.obj.kind) == OB_DOOR || k == OB_WINDOW || k == OB_PORTC;
-    if (!t && !fight_target (&cmd)) {
-        return 0;                               /* (No denizen there to strike: why not told as it's carried out) */
+    k = cmd.obj.kind;
+    t = a == VB_BREAK_OBJECT || k == OB_DOOR || k == OB_WINDOW || k == OB_PORTC;
+    if ((!t && !fight_target (&cmd)) || (t && k && !pick (k | PICK_ANY, cmd.obj.lies))) {
+        return 0;                               /* (No denizen there to strike, nor a door, a window, a portcullis
+                                                **   seen: why not told as it's carried out, unasked, slice 4.1b's) */
     }
     b = hub_here ();
     hub_map (0);

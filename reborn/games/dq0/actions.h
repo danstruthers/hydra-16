@@ -29,6 +29,7 @@ enum {
     VB_DISARM_OBJECT, VB_BAR_OBJECT, VB_HANG_OBJECT, VB_COMBINE_OBJECT, VB_APPROACH_OBJECT, VB_DECEIVE, VB_THREATEN,
     VB_CALM, VB_BEFRIEND, VB_ALLY_COME, VB_ALLY_STAY, VB_ALLY_DISMISS, VB_META_SHEET, VB_META_PAUSE,
     VB_OBSERVE_IN,                              /* (Looked into a thing, onto it: "look in the sack", slice 4.1's) */
+    VB_SWAP_HANDS,                              /* (What's in its hands changed over: "swap hands", slice 4.1b's) */
     NACTIONS
 };
 

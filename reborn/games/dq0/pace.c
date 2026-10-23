@@ -1,7 +1,8 @@
 /*
 ** pace.c - (swapped part 4) the character's pace, its watchfulness, its state and its small moves, from the line typed
 ** (DUNGEON.md: moving; the user's, 2026-10-16), before the parser's command: a pace ("walk", "walk slowly", "creep",
-** "sneak", "jog", "run", "sprint"; "set pace to jog"; "run north" sets it and goes, the move the command's), a
+** "sneak", "jog", "run", "sprint"; "set pace to jog"; "run north" sets it and goes, the move the command's; and the
+** way its legs go, "crawl", "hop", "walk": slice 4.1b's), a
 ** watchfulness ("search for traps as I go", "watch for traps", "move carefully", "listen as I go", "map as I go";
 ** "stop searching", "stop listening", "stop mapping", "stop running"), "status", and a small move ("move left one
 ** space", "step forward", "go north 20 feet", "back up two squares", "sidestep right": a square is 5 feet, a yard 3).
@@ -70,7 +71,8 @@ static unsigned char __fastcall__ any (const char* list)
 ** sprint are; "walk" alone, there, the cautious walk */
 static const struct { char w[11]; unsigned char g; } paces[] = {
     { "creep", GA_CREEP }, { "creeping", GA_CREEP }, { "sneak", GA_CREEP }, { "sneaking", GA_CREEP },
-    { "tiptoe", GA_CREEP }, { "crawl", GA_CREEP }, { "quietly", GA_CREEP }, { "stealthily", GA_CREEP },
+    { "tiptoe", GA_CREEP }, { "crawl", GA_CREEP | GA_CRAWL }, { "hop", GA_WALK | GA_HOP },
+    { "quietly", GA_CREEP }, { "stealthily", GA_CREEP },
     { "slowly", GA_SLOW }, { "slow", GA_SLOW }, { "walk", GA_WALK }, { "walking", GA_WALK },
     { "normal", GA_WALK | GA_SAID }, { "normally", GA_WALK | GA_SAID }, { "quickly", GA_WALK | GA_SAID },
     { "jog", GA_JOG }, { "jogging", GA_JOG }, { "trot", GA_JOG }, { "briskly", GA_JOG },
@@ -147,7 +149,8 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
             n = (3 * d + 2) / 5;
         }
     }
-    said = g != 0xFF && g > GA_WALK ? GA_SAID : 0;   /* (Outright, GA_SAID's or faster than a walk: for the dark) */
+    said = g != 0xFF && (g & 7) > GA_WALK ? GA_SAID : 0;  /* (Outright, GA_SAID's or faster than a walk: for the dark;
+                                                **   the legs' way, crawling or hopping, the world's: slice 4.1b's) */
     g = g == 0xFF ? g : g & ~GA_SAID;
     wa = HUB->watch;
     if (any ("stop\0")) {                       /* (Stopped: what it names; a pace's, back to a walk) */
@@ -245,7 +248,8 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
 ** a small move's, a count's unit (a count is only a square's with one, or a figure at the end); so a word it comes
 ** to match must be here too */
 static const char pace_words[] =
-    "creep\0creeping\0sneak\0sneaking\0tiptoe\0crawl\0quietly\0stealthily\0slowly\0slow\0walk\0walking\0normal\0"
+    "creep\0creeping\0sneak\0sneaking\0tiptoe\0crawl\0hop\0quietly\0stealthily\0slowly\0slow\0walk\0"
+    "walking\0normal\0"
     "normally\0quickly\0jog\0jogging\0trot\0briskly\0run\0running\0hurry\0sprint\0sprinting\0dash\0"
     "status\0stop\0trap\0traps\0carefully\0careful\0warily\0listen\0listening\0mapping\0map\0"
     "step\0sidestep\0shuffle\0back\0"

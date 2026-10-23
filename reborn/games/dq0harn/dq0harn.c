@@ -95,15 +95,16 @@ unsigned char tflag[NTOOLS], tqual[NTOOLS];
 #define RS_HOUSE_DIG
 #include "../dq0/rshouse.h"
 
-/* All that's to hand, anew: the keys in the text, each after its mark (* held, + worn, a space neither) and its
-** quality after it (a digit) */
+/* All that's to hand, anew: the keys in the text, each after its mark (held: < in the left hand, > the right, * both;
+** + worn; a space neither) and its quality after it (a digit) */
 static void __fastcall__ equip_all (const char* keys)
 {
     unsigned char k = 0, n, f;
 
     memset (tools, 0, sizeof tools);
     while (*keys && k < NTOOLS) {
-        f = *keys == '*' ? T_HELD : *keys == '+' ? T_WORN : 0;
+        f = *keys == '*' ? T_HELD | T_LEFT | T_RIGHT : *keys == '<' ? T_HELD | T_LEFT : *keys == '>' ? T_HELD | T_RIGHT :
+            *keys == '+' ? T_WORN : 0;
         if (*keys < 'a') {
             ++keys;
         }
@@ -206,6 +207,8 @@ static const unsigned char purpose[P_THEME] = {
     ATTR | HARN_DEX,                                                    /* A grope: Dexterity */
     ATTR | HARN_AGL,                                                    /* Keeping one's feet: Agility (the
                                                                         **   book's stumble roll: test's) */
+    ATTR | HARN_AGL,                                                    /* Getting up, prone: Agility (the
+                                                                        **   book's Rise, Combat 8) */
 };
 
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
@@ -248,6 +251,9 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
                                                 **   steps, the book's darkness 2 points, a heavy obstruction's 2) */
         return harn_stumble_roll (c, -(int) steps / 2) ? G_MF : G_MS;
     }
+    if (p == P_RISE) {
+        return rise_of (c);                     /* (Getting up: the house's test, if any, gear.c's) */
+    }
     return test_sk (c, purpose[p], steps);
 }
 
@@ -268,36 +274,10 @@ static unsigned char __fastcall__ sense (unsigned char a)
 unsigned tired, rested;                         /* Exertion toward the next level, rest toward the next gone */
 unsigned char spent_at;                         /* (The pace the time went at, or GA_WORK, GA_REST: spent's) */
 
-/* Its conditions (rs.h's C_*), as its sheet has them (the character's, or a creature's): its state (senseless, in
-** shock, dead), bleeders, limbs made useless; tired, or tiring */
-unsigned __fastcall__ cond_of (const harn_char* h)
-{
-    static const unsigned state[4] = { 0, C_UNCONSCIOUS, C_STUNNED, C_DEAD };
-    unsigned c = state[h->state & 3] | (h->fl || (h == &pc && tired) ? C_FATIGUED : 0);   /* (Tired, or tiring) */
-    unsigned char k;
-    const harn_injury* j;
-
-    for (k = 0; k < h->ninj; ++k) {
-        j = &h->inj[k];
-        if (j->flags & HARN_IF_BLEEDER) {
-            c |= C_BLEEDING;
-        }
-        if (j->flags & HARN_IF_LIMB) {
-            c |= harn_is_limb (j->loc) == 1 ? C_ARM_USELESS : C_LEG_USELESS;
-        }
-    }
-    return c;
-}
-
-/* Its health in words any ruleset can say (the game's: by its injuries' levels against its Endurance; down, in
-** shock or senseless) */
-unsigned char __fastcall__ health_of (const harn_char* h)
-{
-    unsigned char ip = harn_get_ip (h), e = harn_end (h);
-
-    return h->state == HARN_DEAD ? H_DEAD : h->state != HARN_CONSCIOUS ? H_DOWN : !ip ? H_FINE : 3 * ip < e ? H_HURT :
-        3 * ip < 2 * e ? H_BADLY : H_CRITICAL;
-}
+/* (Its limbs and its conditions: gear.c's, overlay 3's, the main RAM's room: limbs_of, cond_of) */
+unsigned char lhurt[4];
+unsigned char cplan = BF_BIPED;
+unsigned char hheld;                            /* (The hands that hold something: RS_EQUIP 2's w2, DH_*) */
 
 static void status (void)
 {
@@ -305,7 +285,7 @@ static void status (void)
     char b[8];
     struct rs_summary* s = &HUB->pcsum;
     static const unsigned char rate[3] = { 100, 50, 33 };
-    unsigned char ep = harn_get_pp (&pc) - harn_get_up (&pc), k, w, g, v;
+    unsigned char ep = harn_get_pp (&pc) - harn_get_up (&pc), k, w, g, v, l;
 
     strcpy (HUB->pcstatus, "UP ");
     strcat (HUB->pcstatus, utoa (harn_get_up (&pc), b, 10));
@@ -322,13 +302,19 @@ static void status (void)
         ++k;
         k >>= 1;
     }
-    s->step = w = k < 4 ? 50 : 200 / k;
-    s->gstep[GA_CREEP] = w + (w << 1);          /* (The game's: a sixth of its Move, a quarter; the book's: a jog its
-                                                **   Move, a run twice, a sprint three times) */
-    s->gstep[GA_SLOW] = w << 1;
+    s->limbs = v = limbs_of (&pc);              /* (Its hands and limbs; a leg hurt, its walk the slower, the
+                                                **   house's: each level of the injuries to the legs it walks on a
+                                                **   fifth more time a square, slice 4.1b's) */
+    s->limp = l = (v & LB_LEG_L ? 0 : lhurt[2]) + (v & LB_LEG_R ? 0 : lhurt[3]);
+    w = k < 4 ? 50 : 200 / k;
+    s->step = w = (unsigned) w * (5 + l) / 5 > 255 ? 255 : (unsigned) w * (5 + l) / 5;
+    s->gstep[GA_CREEP] = w > 85 ? 255 : w + (w << 1);   /* (The game's: a sixth of its Move, a quarter; the book's: a
+                                                **   jog its Move, a run twice, a sprint three times) */
+    s->gstep[GA_SLOW] = w > 127 ? 255 : w << 1;
     s->gstep[GA_WALK] = w;
     for (g = GA_JOG; g < NGAITS; ++g) {
         v = rate[g - GA_JOG] / k;
+        v = (unsigned) v * (5 + l) / 5 > 255 ? 255 : (unsigned) v * (5 + l) / 5;
         s->gstep[g] = pc.state == HARN_SHOCK ? w : !v ? 1 : v < w ? v : w;
     }
     s->attacks = 1;
@@ -629,6 +615,7 @@ static void __fastcall__ answer (struct req* r)
         tnow = HUB->now;
         stance = HUB->pc_stance;
         pc_way = HUB->pc_strike;
+        pc_hand = HUB->pc_shand;
         if (pc_way & SK_THING) {
             kind_in (pc_way & 0x7F);            /* (The thing named that strikes: its kind, for the overlay) */
         }
@@ -703,6 +690,7 @@ static void __fastcall__ answer (struct req* r)
     case RS_EQUIP:
         if (r->a == 2) {
             equip_all (r->text);
+            hheld = r->w2;                      /* (The hands that hold something, any thing: slice 4.1b's) */
             set_load (r->w1);                   /* (And its load: its summary anew) */
             status ();
         } else {

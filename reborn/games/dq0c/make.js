@@ -70,6 +70,9 @@ function build({ dir, objdir, say = () => {} }) {
   if (!(ram <= lim.TABLES_MAX)) throw new Error('obj/games/dq0c.dat: ' + ram + " bytes for dq0c's RAM, more than dq0c.s's TABLES_MAX (" + lim.TABLES_MAX + ')');
   if (!(body.length <= lim.RULES_MAX)) throw new Error('obj/games/dq0c.dat: the rules ' + body.length + " bytes, more than dq0c.s's RULES_MAX (" + lim.RULES_MAX + ')');
   if (!(w.length <= lim.WORDS_MAX)) throw new Error('obj/games/dq0c.dat: the words ' + w.length + " bytes, more than dq0c.s's WORDS_MAX (" + lim.WORDS_MAX + ')');
+  const match = incNames(fs.readFileSync(path.join(dir, 'cmdmatch.s'), 'latin1'));   // (Its rules and names counted: a
+  if (!((g[5] | g[6] << 8) <= match.MAXRULES && (g[7] | g[8] << 8) <= 255))      //   byte each, cmdmatch.s's)
+    throw new Error('games/dq0/commands.ebnf: ' + (g[5] | g[6] << 8) + " rules, more than cmdmatch.s's MAXRULES (" + match.MAXRULES + ')');
   fs.mkdirSync(objdir, { recursive: true });
   fs.writeFileSync(path.join(objdir, '..', 'dq0c.dat'), dat);
   say('dq0c.dat: ' + dat.length + ' bytes: in the RAM ' + ram + ' (the grammar\'s words ' + head.length + ', its index ' + i.length +

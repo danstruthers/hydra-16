@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     15                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     16                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -44,7 +44,10 @@
                                                 **   task's what, TE_BEGUN, TE_ASK_SHORT, I_WAIT's kind, a battering's beats, WB_TELLS ...;
                                                 **   14: the player's shortcuts, ALIAS_AT; 15: the dark's walks and the search's forms, WB_FEEL ...
                                                 **   WB_SHORT, FA_*, GA_SAID, GOING_BOLD, SF_*, PA_SEARCH's b and w1, IO_SEEK, STEP_FEELS, rs.h's
-                                                **   P_STUMBLE) */
+                                                **   P_STUMBLE; 16: the hands and limbs, pc_shand, the blows' x[2],
+                                                **   items.h's IH_*, IO_SWAP, rs.h's summary's limbs and limp, P_RISE,
+                                                **   C_LAME ..., I_RISE, the actors' move, arm and dropped, RS_REARM,
+                                                **   O_REARM) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -286,7 +289,9 @@ enum {
                                                 **   in the hub's pc_foe, and struck: the referee asked, E_FIGHT), and
                                                 **   fighting on (LT_FIGHT: a blow each round after it); while it
                                                 **   fights, its target changed, struck at as it's next free; x[1]
-                                                **   what it strikes with (SK_*: the hub's pc_strike) */
+                                                **   what it strikes with (SK_*: the hub's pc_strike), x[2] the hand
+                                                **   it's in, if that's said (IH_*: the hub's pc_shand; 0, the world's
+                                                **   to find; I_PORTAL's and I_CLOSE's x[2] the same) */
     I_ENTER,                                    /* (The denizens' own, below) A body come into the world's keeping */
     I_LEAVE,                                    /*   gone from it (no longer an actor) */
     I_ROUSE,                                    /*   its wait cut short */
@@ -335,6 +340,9 @@ enum {
                                                 **   helpless beside it, robbed: what it holds (but a light lit) and
                                                 **   its pennies taken off to w1 w2 (its lair's home square, on its
                                                 **   stratum: or where it stands), a round's work; E_TASK TE_ROBBED */
+    I_RISE,                                     /* Getting up, prone ("get up", "stand", "rise": the book's Rise, a
+                                                **   round, the referee's P_RISE; E_BEAT WB_RISEN or WB_NOT_UP: slice
+                                                **   4.1b's) */
     NINTENTS
 };
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
@@ -525,10 +533,21 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   it, stumbled over it and on; run into what's there, FA_* times
                                                 **   256, its gait times 4096; gone over an edge, a drop's or a pit's
                                                 **   (FA_*), the fall after; stopped short at it); */
-       WB_SWAT };                               /* (The world's: a blow at a denizen with a soft thing, one attempt, no
+       WB_SWAT,                                 /* (The world's: a blow at a denizen with a soft thing, one attempt, no
                                                 **   harm, the actor plus 1 times 256, the thing the hub's pc_strike's:
                                                 **   "You swat at the rat with the cloak, but it seems ineffectual.",
-                                                **   the user's, 2026-10-22) */
+                                                **   the user's, 2026-10-22); */
+       WB_DROP, WB_PICKS,                       /* (The hands and limbs', slice 4.1b's, every actor's: b whose, 0 the
+                                                **   character, else the actor plus 1: a thing let go of, fumbled, its
+                                                **   kind times 256 (the catalogue's), told after the blow's words (in
+                                                **   the denizens' ring, a fight's) or the harm's; a weapon a denizen
+                                                **   let go of taken up again, its kind times 256; */
+       WB_RISEN, WB_NOT_UP, WB_FALLEN,          /*   got to its feet (the book's Rise), struggling and still down, fallen
+                                                **   prone (a stumble failed, a leg giving way); */
+       WB_LIMP, WB_HOP, WB_CRUTCH, WB_CRAWL, WB_STUCK, WB_NO_RUN };   /* the character's walk: limping, its legs
+                                                **   hurt; hopping on its one good leg; walking with a crutch, its kind
+                                                **   times 256; crawling; not able to move; no faster than a walk on
+                                                **   one leg) */
 enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT };   /* (What stops a walk in the dark, met: the
                                                 **   world's ahead) */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
@@ -556,6 +575,8 @@ enum { WS_PACE, WS_STANCE, WS_PAUSE };          /* WQ_SET's what: the character'
 #define GA_SAID         0x80                    /* (A pace said outright, faster than feeling the way: a jog, a run, a
                                                 **   sprint, "walk quickly"; said in the dark, the walk goes at it there,
                                                 **   its dangers, 2026-10-22) */
+#define GA_CRAWL        0x40                    /* (And the way its legs go said: crawling, "crawl", prone or on one leg; */
+#define GA_HOP          0x20                    /*   hopping, "hop"; neither, the best it can: slice 4.1b's) */
 enum { PW_ANY, PW_DOOR, PW_WINDOW };            /* I_PORTAL's b: a door or a portcullis, a window or a slit */
 enum { SF_ABOUT, SF_NEAR, SF_WALL, SF_FLOOR, SF_FOR, SF_ON };   /* (PA_SEARCH's b, 2026-10-22: the search's form,
                                                 **   HOUSE.md's searching: about it, as far as it sees; within reach, nearby; a
@@ -746,6 +767,11 @@ struct actor {
     unsigned char   step;                       /* Tenths of a second to go a square */
     unsigned char   pos;                        /* Its body's position (POS_*: standing, prone ...) */
     unsigned char   gait;                       /* The pace it goes at (rs.h's GA_*: a walk, till their paces come) */
+    unsigned char   move;                       /* How its legs move it (rs.h's C_MOVE bits, the referee's, down 12: 1
+                                                **   lame, half its pace; 2 crawling or hopping, a third; 4 stuck: slice
+                                                **   4.1b's) */
+    unsigned char   arm;                        /* Its weapon let fall, its kind (0 none), */
+    unsigned        dropped;                    /*   and where it lies (an item: to take up again) */
     unsigned        x, y;                       /* (These, its doing and its name as struct sight's den: copied whole) */
     unsigned char   doing;                      /* What it's doing (DO_*: watching, coming, keeping off: it senses the
                                                 **   character) */
@@ -913,6 +939,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pc_strike;                  /* What it strikes with (SK_*: the parser's, as it's told: the world's,
                                                 **   from the blow's intent, I_ATTACK's, I_PORTAL's x[1]; SK_THING | a
                                                 **   kind, a thing; fighting back unbidden, what it holds: RS_WIELD's) */
+    unsigned char   pc_shand;                   /*   and the hand that holds it (items.h's IH_*: the world's, the blow's
+                                                **   x[2] if it's said, else its hand that holds one of that kind, the
+                                                **   main hand's first; 0, a part of it: slice 4.1b's) */
     /* The denizens' intents to the world (their actors' bodies': hub.h's the denizens' intents), a ring: written at
     ** di_head (the denizens' task: a full one waited on), read at di_tail as each is carried out (the world: it rings
     ** the denizens as it has) */
@@ -1143,6 +1172,7 @@ struct wsave {
 **   own hub.pc_aim world
 **   own hub.pc_stance world
 **   own hub.pc_strike world                                    (The blow's intent's)
+**   own hub.pc_shand world
 **   own hub.di_head denizens                                   (The denizens' intents: their ring)
 **   own hub.di denizens
 **   own hub.di_tail world                                      (Its reader's place)

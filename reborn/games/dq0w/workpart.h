@@ -46,6 +46,8 @@ static void __fastcall__ told (unsigned char kind, unsigned w1, unsigned char a)
 #define trap_told(o)    told (E_TRAP, (o) << 8 | wk.tq.kind | wk.tq.trigger << 4, 0)
 
 #ifdef W_HARM
+void harm_fx (void);                            /* (Part 49's: wlimbs.c) */
+
 /* The referee's harm (rs.h's RS_HARM: cause a, and b, c, w1, w2 by it), the UI told (E_HARM), the time it's out for
 ** taken */
 static void __fastcall__ harm (unsigned char a, unsigned char b, unsigned char c, unsigned char w1)
@@ -67,6 +69,8 @@ static void __fastcall__ harm (unsigned char a, unsigned char b, unsigned char c
     r = hub_ask (SLOT_WORLD);
     wk.tt += r->w2;
     told (E_HARM, a | r->b << 8 | (r->w2 ? E_OUT : 0), 0);
+    harm_fx ();                                 /* (What it dropped, fallen prone: part 49's, slice 4.1b's) */
+    hub_map (0);
     r->state = REQ_FREE;
 }
 #endif

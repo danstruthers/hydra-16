@@ -127,7 +127,31 @@ go:
             SWPART      45, 5               ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
             SWPART      46, 7               ; A search's thing, for or on; what a search turns up (things.c)
             SWPART      47, 13              ; What's on a thing or in it, searched (things.c)
+            SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
+                                            ;   (things.c: slice 4.1b's)
+            SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
+            SWPART      50, 13              ; The legs: getting up, a move's start prone, how fast (dq0w.c's)
+            SWPART      51, 8               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c)
 
+            SWFN        work, 48
+            SWFN        worked, 48
+            SWFN        hold_in, 48
+            SWFN        swap, 48
+            SWFN        hand_free, 48
+            SWFN        held_kinds, 48
+            SWFN        shand_of, 48
+            SWFN        equip_now, 49
+            SWFN        drop_held, 49
+            SWFN        harm_fx, 49
+            SWFN        limb_news, 49
+            SWFN        den_reach, 51
+            SWFN        den_took, 51
+            SWFN        den_word, 51
+            SWFN        den_drop, 51
+            SWFN        den_legs, 51
+            SWFN        rise_pc, 50
+            SWFN        limbs_go, 50
+            SWFN        limbs_pace, 50
             SWFN        start_dig, 1
             SWFN        dig_on, 1
             SWFN        climb, 2

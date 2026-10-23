@@ -7,7 +7,7 @@
 #ifndef _DQ0HARN_H
 #define _DQ0HARN_H
 
-/* dq0harn.c */
+/* dq0harn.c (and gear.c's, overlay 3's: health_of, limbs_of, cond_of, rise_of) */
 extern harn_char pc;                            /* The character */
 extern char name[16], calling[20];
 extern char* tp;                                /* The words into a reply: where the next goes, */
@@ -15,6 +15,17 @@ extern char* tend;                              /*   and the end */
 void __fastcall__ put (const char* s);          /* (From the overlay too: s may be in the window) */
 void __fastcall__ putn (int v);
 unsigned __fastcall__ cond_of (const harn_char* c);        /* Its conditions (rs.h's C_*) */
+unsigned char __fastcall__ limbs_of (const harn_char* c);  /* Its limbs (rs.h's LB_*), each one's hurt in lhurt */
+signed char __fastcall__ rise_of (const harn_char* h);  /* (Overlay 3's, gear.c's) Getting up, prone: its grade (the
+                                                **   book's Rise, the house's test) */
+extern unsigned char lhurt[4];                  /* (The injuries' levels on its left arm, its right, its left leg, its
+                                                **   right) */
+extern unsigned char cplan;                     /* (A creature's body, cond_of's: BF_*, the bestiary's) */
+extern unsigned char hheld;                     /* (The character's hands that hold something, RS_EQUIP's: DH_*) */
+#define BF_MINDLESS     0x01                    /* (The bestiary's flags: bones that move, mindless; */
+#define BF_BIPED        0x02                    /*   on two legs, its hands free (folk, the dead); */
+#define BF_QUAD         0x04                    /*   on four (its forelegs the strike table's arms); neither, no legs
+                                                **   to lose: a snake's, a bat's wings, a spider's many) */
 #define conditions()    cond_of (&pc)           /* The character's */
 unsigned char __fastcall__ health_of (const harn_char* c); /* Its health (rs.h's H_*) */
 unsigned char __fastcall__ has (const char* key);   /* A tool to hand, by its key ("pick") */
@@ -40,6 +51,8 @@ extern unsigned char tflag[NTOOLS];             /*   T_HELD, T_WORN, */
 extern unsigned char tqual[NTOOLS];             /*   its quality (0-9) */
 #define T_HELD  0x01
 #define T_WORN  0x02
+#define T_LEFT  0x04                            /* (Held in the left hand: RS_EQUIP's marks, slice 4.1b's) */
+#define T_RIGHT 0x08                            /*   the right; both, a thing in both hands */
 extern unsigned long tnow;                      /* (The clock, the hub's, as a request's answered) */
 extern unsigned char stance;                    /* (The character's stance, the hub's pc_stance, the same) */
 extern unsigned long gseed;                     /* (The game's seed) */
@@ -51,12 +64,14 @@ struct beast {
     unsigned char   kind;                       /* Its bestiary entry plus 1 (0: none yet) */
     unsigned char   att[5];                     /* Strength, Stamina, Dexterity, Agility, Will */
     unsigned char   wt;                         /* Its weight, in 4 lb */
-    unsigned char   state;                      /* HARN_CONSCIOUS ... */
+    unsigned char   state;                      /* HARN_CONSCIOUS ... (| BS_DISARMED) */
     unsigned char   bl;                         /* Bloodloss */
     unsigned char   ninj;
     harn_injury     inj[3];                     /* (More: the last takes their levels) */
     unsigned long   out;                        /* Senseless till then (the clock's tenths) */
 };
+#define BS_DISARMED     0x80                    /* (Its state's: its weapon let fall, its fists till it takes it up:
+                                                **   fight.c's, slice 4.1b's) */
 #define NSHEETS         256
 typedef char beast_fits[sizeof (struct beast) * NSHEETS <= 0x2000 ? 1 : -1];
 extern struct beast bs;                         /* (A sheet, copied out of the bank) */
@@ -115,17 +130,25 @@ struct side {
     unsigned char   bslot[SIDE_BLK];            /*   slot in tools, BARE_ARM a bare arm's, */
     int             bml[SIDE_BLK];              /*   block's EML) */
     unsigned char   aslot;                      /* (And the slot of what it strikes with: BARE_ARM a part of it) */
+    unsigned char   dslot;                      /* (And of what it defended with last: BARE_ARM a bare arm, 0xFF a
+                                                **   dodge: gear.c's pc_defence) */
     const struct bkind* b;                      /* (A creature's entry; 0: the character) */
     char            word[14];                   /* Its weapon, in a word (a thing named, its kind's name) */
 };
 
 /* gear.c (overlay 3): the character's weapons and armour */
+void __fastcall__ hit_thing (struct req* q, struct side* s);   /* A blow at a thing (RS_ATTACK at RS_THING: fight.c's,
+                                                **   side s the attacker's) */
 void __fastcall__ pc_side (struct side* s);     /* Its side of a fight: what it strikes with (pc_way's), blocks with,
                                                 **   dodges */
 unsigned char __fastcall__ pc_defence (struct side* d, unsigned char f, unsigned char armed);  /* Its defence (HARN_*)
                                                 **   against foe f this round (a round's defences, the user's) */
 void __fastcall__ pc_wield (struct req* r);     /* RS_WIELD: what it would strike with, of what it holds (r a copy,
                                                 **   its words put); its hands empty, the best it carries */
+unsigned char __fastcall__ fumbled (const struct side* s, unsigned char att);  /* The hands that let go of what side s
+                                                **   fumbled (its attack's, att 1; its block's), rs.h's DH_* */
+unsigned char __fastcall__ wound_drops (const struct side* t, unsigned char loc);  /* The hand an arm's wound at loc
+                                                **   lets go of what it holds (DH_*) */
 unsigned char __fastcall__ pc_armour (unsigned char loc, unsigned char aspect);    /* Its armour at loc against an
                                                 **   aspect (HARN_*), all its worn pieces', the last named in arm
                                                 **   (""); loc SOLE: its soles' (a kick at a thing) */
@@ -133,6 +156,7 @@ unsigned char __fastcall__ pc_armour (unsigned char loc, unsigned char aspect); 
 extern char arm[16];
 extern unsigned char pc_way;                    /* (The hub's pc_strike, as a request's answered: SK_*; SK_THING | a
                                                 **   kind, its kind in wk) */
+extern unsigned char pc_hand;                   /* (The hub's pc_shand: the hand that holds it, items.h's IH_*) */
 
 /* bank.s */
 void __fastcall__ setbank (unsigned char b);

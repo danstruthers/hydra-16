@@ -21,6 +21,8 @@
 #include "../dq0/hub.h"
 #include "world.h"
 #include "things.h"
+
+extern unsigned char pmode;                     /* (dq0w.c's: the legs' way said) */
 #include "work.h"
 
 #pragma local-strings (on)
@@ -319,7 +321,8 @@ void s_pc_asked (void)
     switch (HUB->wreq.a) {
     case WS_PACE:
         if (x != 0xFF) {
-            HUB->gait = x & ~GA_SAID;
+            HUB->gait = x & 7;
+            pmode = x & (GA_CRAWL | GA_HOP);    /* (The legs' way said: dq0w.c's part 50, slice 4.1b's) */
             bold_ = 0;
             if (x & GA_SAID) {                  /* (Said outright in the dark, or blind: gone at there, its dangers,
                                                 **   dq0w.c's paced; said in the light, the dark's walk cautious) */

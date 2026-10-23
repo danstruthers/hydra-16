@@ -1078,6 +1078,105 @@ are drafts, the user's as they are for now (2026-10-22).
     traps (the world's PA_CHECK, examine's).  **"search for traps", "search for hidden things"**: a search, as "search"
     is.
 
+## Hands and limbs *(slice 4.1b, 2026-10-22: drafted for the user to review)*
+
+The user's (DECISIONS.md's hands and limbs): two hands, handedness from the character's profile, the off hand's
+penalty unless ambidextrous, the book's fumbles for arm wounds dropping what that hand holds, a leg's wounds slowing
+the walk and its stumbles laying it prone, a limb made useless.  The book's own rules are the referee's: the medical
+traits (Character 9: left-handed, ambidextrous, an arm missing or deformed), the one-handed penalties and the off
+hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous limb wound (Combat 14), the Rise
+(Combat 8).  What the house adds:
+
+- **Each thing held is in the left hand, the right, or both** *(every ruleset's)*: the item's own (its sn, the
+  hand: items.h's IH_*).  A thing taken up goes to the hand that suits it: a weapon or a tool the main hand, a shield
+  (its key "shield") or a light the other, a two-handed thing (the things' rule: two-handed, or 20 pints or more) both;
+  the other hand if that one's taken or useless; none free, the pack, else refused ("Your hands are full: stow
+  something, or put it down.").  The kit's torch in the off hand.  Said outright: "hold the sword in my left hand",
+  "take the torch in my right hand", "put the dagger in my other hand", "hold the spear in both hands" (any thing
+  that isn't two-handed may be held in both: the book has no bonus for it, and none's taken), "in my off hand", "in
+  my main hand"; a thing held already moved to it ("You shift the sword to your left hand."); a hand that holds
+  something else refused ("Your left hand holds the torch."), a two-handed thing in one ("The pick takes both
+  hands.").  "swap hands", "switch hands", "change hands": both things change hands ("You change hands: the sword
+  in your left, the torch in your right."), refused if a thing's in both, or a hand to go to is useless.  A second's
+  work each (10 tenths).  What's carried, a look and an examine say which hand ("a torch (lit), in your left hand",
+  "Your spear is in both hands.").  (things.c's part 48; main.c's hand_said, limbs_cmd.)
+- **The main hand** is the referee's (its summary's limbs: HarnMaster's by the medical traits): the right, the left if
+  it's left-handed; ambidextrous, the right, with no off hand.  The book's arm missing or deformed (Character 9: no
+  work that needs both hands) makes its off arm the useless one, the house's choice of which.  (gear.c's limbs_of.)
+- **What strikes, nothing named, is the main hand's** *(every ruleset's)*: the thing in the main hand (or both), else
+  the other's; a soft thing only if that's all it holds (the user's rule of the soft, as before).  This replaces "the
+  better of two" (the strike agent's draft): a sword in the off hand and a torch in the main, the torch strikes, till
+  the player says "with the sword".  A thing named strikes in the hand that holds it (the main hand's first, if both
+  hold one of its kind), or the hand said ("attack the rat with the dagger in my left hand": taken into that hand
+  first, if it isn't there).  (choose.c's wield, RS_WIELD's x[0] the main hand's; the hub's pc_shand.)
+- **A thing in one hand, the book's one-handed penalty** (Combat 3's HM: a spear's and a staff's 10; the game's tools
+  none, a pick or a shovel always in both); **a weapon in the off hand, the book's 10 more**, but a shield's, and none
+  if it's ambidextrous.  (gear.c's hand_pen.)
+- **An arm's hurt hinders what its hand uses, the house's: each level of its injuries (shoulder, upper arm, elbow,
+  forearm, hand, on that side) a step** (5) worse, for its attack and its block; a thing in both hands the worse arm's.
+  Why: the book's universal penalty already counts every injury once; the arm's own levels count again for what that
+  hand does, as the user asked ("arm wounds and using a shield or weapon in that hand"), in the book's scale of a
+  level's worth.  The numbers the user's to judge.  (gear.c's hand_pen.)
+- **An arm's wound lets go of what its hand holds, the book's** (Combat 14, Skills 21): a wound to the arm (shoulder to
+  hand) its fumble roll, 3d6 and the physical penalty over Dexterity (the Combat Tables' u, on every limb's row), a
+  grievous one at once; and the melee table's fumbles (AF, DF, BF) what struck or blocked.  The house's: a harm's (a
+  trap's, a fall's) roll is made only if that hand holds something (the world tells the referee which do, RS_EQUIP's
+  w2); a fight's is made as before, whatever it holds.  What's let go of falls where the book's die puts it (a d10: 1-6
+  the square that way, north, northeast, southeast, south, southwest, northwest, if it's open floor; 7-10 its own),
+  seen lying there, told after the blow's words ("Your sword falls from your hand."); the referee told what's to hand
+  at once.  A creature's own parts (a bite, claws) are never let go of.  (fight.c's strike, mishap; gear.c's fumbled,
+  wound_drops; sheet.c's harm; wlimbs.c's drop_held, part 49's.)
+- **A useless arm** (a grievous wound, till it heals to M1; an amputation for good): its hand holds nothing ("Your left
+  arm is useless."), no two-handed thing ("You can't hold the pick in one hand."), and a shield or a weapon on it
+  does nothing (no block, no blow).  (things.c's hand_for; gear.c's pc_side.)
+- **A leg hurt, a limp, the house's: each level of the injuries to a leg it walks on (hip, thigh, knee, calf, foot)
+  a fifth more time a square** for every pace (a serious thigh wound of 3 levels: 24 tenths a square for 15), told
+  once as it walks ("You limp.").  Why: the book slows only by the universal penalty (its Move, Combat 6, is the
+  attributes' alone); the user asked that a serious fracture make walking harder.  The numbers the user's to judge.
+  A leg missing or deformed (the medical trait, Character 9: the book's half move) is a limp of five levels, twice
+  the time a square; the book's pegleg, its full move, isn't in the game yet.  (dq0harn.c's status; gear.c's
+  limbs_of; the summary's limp.)
+- **One leg useless** (a grievous wound, the book's Combat 14: a crutch or a staff to lean on, else a crawl): it hops,
+  at a crawl's pace, the house's three times a walk's time a square, tiring as strenuous work does (the user's,
+  2026-10-22); told once ("You hop along on your good leg.").  A thing long and sturdy held (its kind's form KF_LONG,
+  the catalogue's: a spear, a shovel, a door's bar) is a crutch, a walk's pace at most ("You lean on the spear and
+  hobble along.").  No faster than a walk on one leg ("You can't run on one leg.").  "crawl north" goes down and
+  crawls, "hop north" hops, "walk north" the best it can (a crutch, else a hop), each kept as a pace is till another's
+  said.  (dq0w.c's part 50, limbs_pace.)
+- **Crawling** is at the same pace, three times a walk's time a square (the house's), tiring as a walk does: on its
+  belly, prone ("You crawl."; PRONE on the status line).  It needs a good arm and a good leg, or both arms with no
+  good leg (the user's, 2026-10-22); both legs useless, it falls at its first move ("You fall.") and crawls; neither
+  way, it can't move at all ("You can't move.": the referee's C_STUCK).  On two good legs "crawl" is a creep, as
+  before.  (gear.c's cond_of: the book's two legs, C_CRAWLS or C_STUCK.)
+- **Prone, and getting up** (the book's Rise, Combat 8: a round): fallen in a fight (a stumble), from a harm (a
+  trap's), or over a thing in its way in the dark, it's prone.  "get up", "stand", "rise" take a round; a walk, a
+  step, a climb, a disengage gets up first (a round the later) unless it's crawling; prone in a fight, its round is
+  getting up, no blow.  The test: the book's Rise is free but for one seriously or grievously wounded (the book leaves
+  a test to the GM: the house takes it, Agility ×5); and the house's, with no good arm (the user's, 2026-10-22:
+  "getting up with no good arms ... should probably require an agility check"), the same test four steps the harder;
+  failed, the round's spent, still down ("You struggle, but can't get up.").  No good leg, it can't ("Your legs won't
+  bear you.").  The hub's pc_pos is the character's position (POS_PRONE; crouching, kneeling and sitting are slice
+  4.6's).  (dq0w.c's part 50, rise_pc, limbs_go; in a fight the referee's, fight.c's attack, O_RISE; gear.c's
+  rise_of, P_RISE's.)
+- **The denizens' limbs are the character's** *(every actor's)*: a creature's weapon fumbled (the melee table's
+  fumbles, an arm's wound: the book's, as the character's) falls where the book's die puts it (a d10, as above), seen
+  lying there, told ("The kobold drops its spear."), its kind the catalogue's of the weapon's name (a kobold lord's
+  axe, the book's handaxe, a kind of its own); its own parts (a bite, claws) never.  Disarmed, it fights with its
+  fists, the house's: its weapon's mastery less 10 (the book has no number for a creature's punch).  Its weapon still
+  lying in its reach (its square or beside it), its next blow's turn is spent taking it up ("The kobold snatches up its
+  spear."); taken by the character first, it fights on with its fists.  (fight.c's effect, beast_side, RS_REARM;
+  wlimbs.c's part 51.)
+- **A creature's legs** (the referee's, by its body: the bestiary's two legs or four): on two, one leg useless, it
+  hops or crawls at a third of its pace (as the character's: three times the time a square); on four, one useless
+  (its forelegs the strike table's arms), at half its pace (the book's: on three good legs, half its move), two, a
+  third, more, not at all; on two, both legs useless, a crawl if both its arms are whole, else not at all.  A
+  creature on neither (a spider, a snake, a bat) none of it.  (gear.c's cond_of; wbody.c's step, its time.)
+- **A creature prone gets up as the character does**: in a fight its turn (the book's Rise, with the house's test,
+  above: seriously or grievously wounded, an Agility test, failed still down, "The ghoul struggles, but can't get
+  up."; no leg to stand on, never); out of a fight, at its next move, a round (no test: a creature's moves are its
+  mind's, unfought), unless it crawls on (its legs won't bear it as they should).  ("The kobold gets to its feet.":
+  wlimbs.c's part 51, den_legs.)
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

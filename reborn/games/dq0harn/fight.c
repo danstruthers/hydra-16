@@ -47,8 +47,6 @@
 ** hide's protection (blunt, edge, point, fire), and its weapons (a word, its ML, its impact, its aspect, the part it
 ** strikes with: 0xFF a weapon held), the first the one it uses most */
 
-#define BF_MINDLESS     0x01
-
 struct nweapon {
     char            word[7];
     unsigned char   ml, imp, aspect, part;
@@ -61,17 +59,17 @@ static const struct bkind {
     unsigned char   flags;
     struct nweapon  w[2];
 } bestiary[] = {
-    { "rat", { 5, 8, 10, 14, 6 }, 3, 2, 30, 50, { 1, 1, 0, 1 }, 0,
+    { "rat", { 5, 8, 10, 14, 6 }, 3, 2, 30, 50, { 1, 1, 0, 1 }, BF_QUAD,
       { { "bite", 45, 2, HARN_POINT, HARN_FACE }, { "" } } },
     { "spider", { 6, 9, 12, 15, 8 }, 4, 3, 40, 55, { 2, 3, 1, 0 }, 0,
       { { "bite", 50, 3, HARN_POINT, HARN_FACE }, { "" } } },
-    { "ghoul", { 13, 14, 11, 11, 12 }, 35, 4, 70, 40, { 1, 1, 1, 0 }, 0,
+    { "ghoul", { 13, 14, 11, 11, 12 }, 35, 4, 70, 40, { 1, 1, 1, 0 }, BF_BIPED,
       { { "claws", 55, 4, HARN_EDGE, HARN_HAND }, { "bite", 45, 4, HARN_POINT, HARN_FACE } } },
-    { "skel", { 10, 10, 10, 10, 10 }, 10, 4, 90, 35, { 0, 4, 6, 2 }, BF_MINDLESS,
+    { "skel", { 10, 10, 10, 10, 10 }, 10, 4, 90, 35, { 0, 4, 6, 2 }, BF_MINDLESS | BF_BIPED,
       { { "sword", 50, 4, HARN_EDGE, 0xFF }, { "" } } },
-    { "bear", { 22, 18, 8, 10, 12 }, 150, 5, 60, 30, { 4, 3, 2, 3 }, 0,
+    { "bear", { 22, 18, 8, 10, 12 }, 150, 5, 60, 30, { 4, 3, 2, 3 }, BF_QUAD,
       { { "claws", 65, 6, HARN_EDGE, HARN_HAND }, { "bite", 55, 7, HARN_POINT, HARN_FACE } } },
-    { "kobold", { 8, 10, 12, 13, 9 }, 15, 3, 40, 55, { 2, 2, 1, 1 }, 0,
+    { "kobold", { 8, 10, 12, 13, 9 }, 15, 3, 40, 55, { 2, 2, 1, 1 }, BF_BIPED,
       { { "spear", 45, 5, HARN_POINT, 0xFF }, { "" } } },
     { "bat", { 3, 8, 10, 10, 8 }, 1, 1, 45, 50, { 1, 1, 0, 1 }, 0,                  /* (Bats 1, p10) */
       { { "bite", 45, 1, HARN_POINT, HARN_FACE }, { "" } } },
@@ -81,19 +79,20 @@ static const struct bkind {
       { { "bite", 65, 5, HARN_POINT, HARN_FACE }, { "" } } },
     { "lindwrm", { 22, 18, 4, 18, 16 }, 200, 6, 85, 90, { 5, 9, 4, 5 }, 0,         /* (Dragons 14, p37) */
       { { "claws", 85, 7, HARN_EDGE, HARN_HAND }, { "bite", 68, 7, HARN_POINT, HARN_FACE } } },
-    { "wight", { 12, 12, 6, 10, 1 }, 40, 4, 60, 35, { 1, 1, 1, 0 }, BF_MINDLESS,    /* (Morvrin 5, p78: a man's, */
-      { { "claws", 55, 3, HARN_POINT, HARN_HAND }, { "" } } },                      /*   its will gone) */
-    { "shade", { 11, 12, 11, 11, 15 }, 38, 4, 70, 50, { 2, 2, 1, 0 }, 0,            /* (Morvrin 3, p76: a priest's) */
-      { { "sword", 60, 5, HARN_EDGE, 0xFF }, { "" } } },
-    { "koblord", { 11, 12, 12, 13, 12 }, 20, 3, 60, 55, { 3, 3, 2, 1 }, 0,
+    { "wight", { 12, 12, 6, 10, 1 }, 40, 4, 60, 35, { 1, 1, 1, 0 }, BF_MINDLESS | BF_BIPED,
+      { { "claws", 55, 3, HARN_POINT, HARN_HAND }, { "" } } },                      /* (Morvrin 5, p78: a man's,
+                                                                                    **   its will gone) */
+    { "shade", { 11, 12, 11, 11, 15 }, 38, 4, 70, 50, { 2, 2, 1, 0 }, BF_BIPED,
+      { { "sword", 60, 5, HARN_EDGE, 0xFF }, { "" } } },                            /* (Morvrin 3, p76: a priest's) */
+    { "koblord", { 11, 12, 12, 13, 12 }, 20, 3, 60, 55, { 3, 3, 2, 1 }, BF_BIPED,
       { { "axe", 55, 6, HARN_EDGE, 0xFF }, { "" } } },
-    { "bandit", { 11, 11, 11, 11, 11 }, 40, 4, 50, 45, { 2, 2, 1, 1 }, 0,
+    { "bandit", { 11, 11, 11, 11, 11 }, 40, 4, 50, 45, { 2, 2, 1, 1 }, BF_BIPED,
       { { "sword", 50, 5, HARN_EDGE, 0xFF }, { "" } } },
-    { "banlord", { 14, 13, 12, 12, 13 }, 45, 4, 65, 55, { 4, 5, 3, 2 }, 0,
+    { "banlord", { 14, 13, 12, 12, 13 }, 45, 4, 65, 55, { 4, 5, 3, 2 }, BF_BIPED,
       { { "sword", 65, 6, HARN_EDGE, 0xFF }, { "" } } },
-    { "cultist", { 10, 10, 11, 10, 12 }, 38, 4, 55, 40, { 1, 1, 0, 0 }, 0,
+    { "cultist", { 10, 10, 11, 10, 12 }, 38, 4, 55, 40, { 1, 1, 0, 0 }, BF_BIPED,
       { { "dagger", 45, 3, HARN_POINT, 0xFF }, { "" } } },
-    { "priest", { 10, 11, 12, 11, 16 }, 38, 4, 70, 45, { 2, 2, 1, 1 }, 0,
+    { "priest", { 10, 11, 12, 11, 16 }, 38, 4, 70, 45, { 2, 2, 1, 1 }, BF_BIPED,
       { { "mace", 55, 5, HARN_BLUNT, 0xFF }, { "" } } },
 };
 #define NBEASTS         (sizeof bestiary / sizeof bestiary[0])
@@ -112,6 +111,8 @@ static unsigned char prones;                    /* (The request's: the attacker 
 
 static const struct bkind* __fastcall__ unpack (unsigned char who)
 {
+    const struct bkind* b;
+
     sheet_get (crn = aden[(who - 1) & 7]);
     memset (&cr, 0, sizeof cr);
     cr.att[HARN_STR] = bs.att[0];
@@ -127,7 +128,9 @@ static const struct bkind* __fastcall__ unpack (unsigned char who)
     cr.bl = bs.bl;
     cr.ninj = bs.ninj;
     memcpy (cr.inj, bs.inj, sizeof bs.inj);
-    return &bestiary[bs.kind && bs.kind <= NBEASTS ? bs.kind - 1 : 0];
+    b = &bestiary[bs.kind && bs.kind <= NBEASTS ? bs.kind - 1 : 0];
+    cplan = b->flags;                           /* (Its body: on two legs, on four, its limbs' rules, gear.c's) */
+    return b;
 }
 
 static void pack (void)
@@ -138,7 +141,7 @@ static void pack (void)
         cr.inj[2].il += cr.inj[k].il;
         cr.inj[2].flags |= cr.inj[k].flags;
     }
-    bs.state = cr.state;
+    bs.state = cr.state | (bs.state & BS_DISARMED);
     bs.bl = cr.bl;
     bs.ninj = cr.ninj > 3 ? 3 : cr.ninj;
     memcpy (bs.inj, cr.inj, sizeof bs.inj);
@@ -150,6 +153,8 @@ static struct req* R;                           /* The request (a copy) */
 static unsigned char nfx;                       /* Its effects so far */
 static char line[2][72];                        /* What the attacker's strike did, and the defender's */
 
+static const struct nweapon fists = { "fists", 0, 0, HARN_BLUNT, HARN_HAND };
+
 static void __fastcall__ beast_side (struct side* s, unsigned char who)
 {
     const struct bkind* b = unpack (who);
@@ -160,6 +165,11 @@ static void __fastcall__ beast_side (struct side* s, unsigned char who)
     s->b = b;
     s->size = b->size;
     s->aml = w->ml - pp;
+    if ((bs.state & BS_DISARMED) && w->part == 0xFF) {
+        w = &fists;                             /* (Its weapon let fall: its fists, its weapon's mastery less 10, the
+                                                **   house's; slice 4.1b's) */
+        s->aml -= 10;
+    }
     s->dodge = b->dge - pp;
     s->dml = 0;
     s->bare = 0;
@@ -186,6 +196,10 @@ static void __fastcall__ effect (unsigned char target, unsigned char kind, unsig
 {
     struct rs_effect* e = (struct rs_effect*) R->x + nfx;
 
+    if (kind == X_DROP && target) {
+        bs.state |= BS_DISARMED;                /* (A creature's weapon let fall: its fists till it takes it up again,
+                                                **   the world's RS_REARM; slice 4.1b's) */
+    }
     if (nfx < RS_EFFECTS) {
         e->target = target;
         e->kind = kind;
@@ -286,8 +300,8 @@ static void __fastcall__ strike (struct side* s, struct side* t, unsigned char n
     if ((f & HARN_W_STUMBLE) && ((f & HARN_W_LIMB) || harn_stumble_roll (c, 0))) {
         prone (t, 1);                           /* (A leg's: fallen) */
     }
-    if ((f & HARN_W_FUMBLE) && ((f & HARN_W_LIMB) || harn_fumble_roll (c, 0))) {
-        effect (t->who, X_DROP, 0, 0, 0, 0);    /* (An arm's: what it held dropped) */
+    if ((f & HARN_W_FUMBLE) && ((f & HARN_W_LIMB) || harn_fumble_roll (c, 0)) && (p = wound_drops (t, loc)) != 0) {
+        effect (t->who, X_DROP, 0, 0, p, 0);    /* (An arm's: what it held in that hand dropped, the world's) */
     }
     if (f & HARN_W_DOWN) {
         R->w2 = knocked_out (c, t->who ? &bs.out : &pc_out, &R->c);    /* (Senseless: the tenths till it comes
@@ -303,8 +317,8 @@ static void __fastcall__ mishap (struct side* s, unsigned char stumble, unsigned
     if (stumble ? harn_stumble_roll (s->c, 0) : harn_fumble_roll (s->c, 0)) {
         if (stumble) {
             prone (s, 1);
-        } else {
-            effect (s->who, X_DROP, 0, 0, 0, 0);
+        } else if ((stumble = fumbled (s, s == &A)) != 0) {
+            effect (s->who, X_DROP, 0, 0, stumble, 0);  /* (What it struck with, or blocked with, its hand's) */
         }
     }
 }
@@ -334,8 +348,15 @@ static void attack (void)
         R->result = 0xFF;                       /* (It can't) */
         return;
     }
-    if (is_prone (&A)) {                        /* (Fallen: it gets up, its turn spent) */
-        prone (&A, 0);
+    if (prones & RS_REARM) {                    /* (Its weapon let fall taken up again, its turn spent: the world's,
+                                                **   slice 4.1b's) */
+        bs.state &= ~BS_DISARMED;
+        R->result = O_REARM;
+        return;
+    }
+    if (is_prone (&A)) {                        /* (Fallen: it gets up, its turn spent; or tries to and stays down,
+                                                **   a: the house's test, gear.c's rise_of, slice 4.1b's) */
+        R->a = !G_OK (rise_of (A.c));
         R->result = O_RISE;
         return;
     }
@@ -599,59 +620,6 @@ static void __fastcall__ left (unsigned char shy)
     R->grade = f;
 }
 
-/* A blow at a thing (RS_ATTACK at RS_THING: rs.h's), which ignores it: the character's attack tested (its weapon's
-** attack mastery, or Unarmed's), the Ignore table's strike (Combat 12: a critical failure none), its impact (the
-** dice, the weapon's for the aspect that does the thing most harm), the thing's resistance off it; and a part that
-** struck it hurt if the blow went wrong (rs.h's: the book's H2 on a bare part meeting something hard, the game's
-** numbers), HC_STRUCK's harm (sheet.c's).  A part's blow the house's Unarmed test (HOUSE.md's battering, the user's,
-** 2026-10-22): a marginal failure harms neither, a critical failure the part alone; a bare part's hurt stopped short
-** (RS_SHORT: none, result | 4) */
-static void thing (void)
-{
-    static unsigned char hq[offsetof (struct req, text)];   /* (The harm's request: but its text) */
-#define h   (*(struct req*) hq)
-    unsigned char res[4], k, lv, n, asp = 0, run = R->c, a, pull = R->w2 & RS_SHORT;
-    int imp, v, top = -100;
-
-    memcpy (res, R->x, sizeof res);
-    memset (R->x, 0, sizeof R->x);
-    pc_side (&A);
-    for (k = 0; k < 3; ++k) {
-        if (A.imp[k] >= 0 && (v = A.imp[k] - res[k]) > top) {
-            top = v;
-            asp = k;
-        }
-    }
-    lv = harn_test (A.aml);
-    n = A.part != 0xFF && lv <= HARN_MF ? 0 : HARN_R_DICE (harn_melee_result (HARN_IGNORE, lv, 0));
-    imp = n ? dice (n, 6) + A.imp[asp] : 0;
-    R->w1 = imp > res[asp] ? imp - res[asp] : 0;
-    R->b = asp;
-    R->c = 0;
-    R->w2 = 0;
-    R->result = A.part != 0xFF ? 2 : 0;
-    put (A.word);
-    if (A.part != 0xFF && lv == HARN_CF) {      /* (Gone wrong: the part hurt; a bare one stopped short of it, asked) */
-        a = A.part == HARN_FOOT ? pc_armour (SOLE, 0) : pc_armour (A.part, HARN_BLUNT);
-        v = dice (2, 6) + res[0] / 2 - a;
-        if (v > 0 && pull && !a) {
-            R->result |= 4;
-        } else if (v > 0) {
-            memset (hq, 0, sizeof hq);
-            h.kind = RS_HARM;
-            h.a = HC_STRUCK;
-            h.c = A.part;
-            h.w1 = v;
-            h.w2 = run;
-            harm (&h);
-            R->c = h.b;
-            R->w2 = h.w2;
-            R->result |= h.result;
-        }
-    }
-#undef h
-}
-
 /* r a copy of the request, in the main RAM (but its text: its words put into it) */
 void __fastcall__ o_fight (struct req* r)
 {
@@ -678,7 +646,7 @@ void __fastcall__ o_fight (struct req* r)
         return;
     }
     if (r->other == RS_THING) {
-        thing ();
+        hit_thing (r, &A);                      /* (Gear.c's: overlay 3's) */
         return;
     }
     memset (r->x, 0, sizeof r->x);              /* (RS_ATTACK) */

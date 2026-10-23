@@ -24,7 +24,7 @@ struct material {
 };
 
 /* A kind of thing (the catalogue's: a stand-in for the theme's data), in rs.h's units */
-#define NKINDS          68
+#define NKINDS          69
 struct kind {
     char            name[14];                   /* "torch", "backpack" ... */
     unsigned char   flags;                      /* K_* */
@@ -68,6 +68,8 @@ struct kind {
 #define KF_FORMS        0x0F                    /* (A kind's form's own: KF_SOLID ... alone) */
 #define KF_COUNT        0x40                    /* (A kind's form: a lot of them counted, its qty how many, split and
                                                 **   joined again as they're moved: rations, pennies, arrows) */
+#define KF_LONG         0x80                    /* (A kind's form: long and sturdy, a haft, a pole, a staff: it serves
+                                                **   as a crutch, held: slice 4.1b's) */
 
 /* The catalogue's kinds, by number (things.c's order: the maker puts them down by these) */
 enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKIN, KI_RATIONS, KI_TINDERBOX, KI_PICK,
@@ -86,6 +88,7 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
                                                 **   torch's), a pot of pitch (a torch's) */
     KI_SCONCE,                                  /* A room's sconce, on its wall (slice 4.1's: the maker's, fixed): a
                                                 **   torch in it, lit and tended where the room's kept, else cold */
+    KI_AXE,                                     /* A hand axe (a kobold lord's, let fall: slice 4.1b's) */
     KI_COUNT };
 
 /* An item */
@@ -94,7 +97,7 @@ struct item {
     unsigned char   kind;                       /* 0: a free record; else the catalogue's (1 on) */
     unsigned char   flags;                      /* I_* */
     unsigned char   where;                      /* IW_* */
-    unsigned char   sn;                         /* (On a square: its stratum) */
+    unsigned char   sn;                         /* (On a square: its stratum; held, the hand it's in: IH_*) */
     unsigned        x, y;                       /* On a square: it; an actor's: x the actor (0 the character); in
                                                 **   an item: x that item's number */
     unsigned char   qty;
@@ -130,7 +133,7 @@ struct item {
 #define IS_LOCK         0x04                    /* It has a lock (a chest's: its lid's) */
 #define IS_BURST        0x08                    /* Its lock forced, burst: it won't lock again */
 #define I_LIT           0x01                    /* A light, lit */
-#define I_HELD          0x02                    /* In a hand */
+#define I_HELD          0x02                    /* In a hand (its sn which: IH_*) */
 #define I_WORN          0x04                    /* Worn (a belt, a pack, armour) */
 #define I_HIDDEN        0x08                    /* Hidden (found by searching) */
 #define I_MAGIC         0x10                    /*   by magic (found only by magical means) */
@@ -141,6 +144,10 @@ struct item {
                                                 **   to set, slice 4.1's): it never burns down while it's tended;
                                                 **   moved by the item store (taken up, put down, handled) it's tended
                                                 **   no longer, and burns as any light does */
+#define IH_LEFT         0x01                    /* (A held thing's hand, its sn: the character's left, slice 4.1b's; */
+#define IH_RIGHT        0x02                    /*   its right; */
+#define IH_BOTH         0x03                    /*   both, a two-handed thing or one held so; rs.h's DH_* the same) */
+#define IH_OTHER        0x04                    /* (IO_HOLD's to: its other hand, not the one it's in, or the off hand) */
 enum { IW_SQUARE, IW_ACTOR, IW_ITEM,
     IW_PORTAL };                                /* A portal's part (a door's bar, a window's pane or bars: the maker's,
                                                 **   as it stocks a chunk), in it: sn, x, y its square (a bar's, the
@@ -187,7 +194,10 @@ enum { IO_KIT, IO_GET, IO_DROP, IO_LIST, IO_SAVE, IO_RESTORE,
     IO_COMBINE,                                 /* The things named (name, into) to hand made one: name's becomes kind
                                                 **   to (a theme's: its rule's), into's gone */
     /* A thing handled (name; into the other): each worded into things_text, the time it took back in x (tenths) */
-    IO_HOLD,                                    /* Taken into a hand (two at most; a two-handed thing both) */
+    IO_HOLD,                                    /* Taken into a hand (two at most; a two-handed thing both): to the
+                                                **   hand wanted (IH_*; 0, the one that suits it: a weapon or a tool
+                                                **   the main hand, a shield or a light the other, the free one; one
+                                                **   held already moved to it) */
     IO_STOW,                                    /* Put in the pack (its room, its weight, what it keeps) */
     IO_PUT,                                     /* Put in into (to 0) or on it (to 1: a surface's; a belt's: hung) */
     IO_TAKE,                                    /* Taken from into: into the pack, else a hand */
@@ -245,6 +255,9 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
 #define IO_HANDS        (IO_BAR + 11)           /* The kinds of what the character holds (a blow with nothing named:
                                                 **   what's in its hands strikes, the user's, 2026-10-22): x the
                                                 **   first's, y the second's (0 none) */
+#define IO_SWAP         (IO_BAR + 12)           /* What's in the character's hands changed over, left to right and right
+                                                **   to left (slice 4.1b's: "swap hands"), worded into things_text, its
+                                                **   time in x (tenths); IR_NO refused, the words why */
 enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS };   /* (IO_LOOK's: a look at it; a closer look; its
                                                 **   condition; its weight; its lock; gone over for traps) */
 #define IO_PUZZLE       (IO_BAR + 4)           /* A command of the theme's puzzle's (theme.h), judged by its rules

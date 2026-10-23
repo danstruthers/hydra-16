@@ -161,6 +161,13 @@ ovl_out:
             OVFN        pc_side, 3
             OVFN        pc_defence, 3
             OVFN        pc_wield, 3
+            OVFN        limbs_of, 3
+            OVFN        cond_of, 3
+            OVFN        rise_of, 3
+            OVFN        hit_thing, 3
+            OVFN        health_of, 3
+            OVFN        fumbled, 3
+            OVFN        wound_drops, 3
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0harn.cfg's SWAP, a part at a time,
 ; copied there from overlay 4's bank as it's called)

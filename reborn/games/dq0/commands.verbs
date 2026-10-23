@@ -165,6 +165,7 @@ counter     thing=VB_COUNTER unsaid=none
 talent      alone=VB_USE_TALENT thing=VB_USE_TALENT
 link        thing=VB_LINK_MIND unsaid=none
 orate       alone=VB_ORATE thing=VB_ORATE
+swap        alone=VB_SWAP_HANDS thing=VB_SWAP_HANDS                  # (new, slice 4.1b: what's in the hands changed over)
 
 [words]
 change facing = face
@@ -176,6 +177,8 @@ fast talk = bluff
 short rest = sleep
 short sleep = sleep
 get up = stand
+change hands = swap
+change my hands = swap
 lie down = liedown
 lay down = liedown
 go prone = liedown
@@ -223,6 +226,7 @@ mosey = move
 saunter = move
 run = move
 crawl = move
+hop = move
 head = move
 m = map
 enter = enter
@@ -462,6 +466,9 @@ sleep = sleep
 rest = sleep
 sit = sit
 stand = stand
+rise = stand
+swap = swap
+switch = swap
 crouch = crouch
 kneel = crouch
 squat = crouch
