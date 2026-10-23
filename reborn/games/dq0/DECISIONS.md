@@ -441,6 +441,16 @@ now, the rest obscured and, for those poor at it underground, remembered wrong; 
 for traps) keeping it true, with the map's materials to hand.  Designed on reborn-game-bearing (hmchar's species
 landed from it), the rest kept for slice 4.2.
 
+Slice 4.2 begun (2026-10-23: "Go ahead and push, then start 4.2"), the old design reused; the user on its plan:
+"Those look really good."  Then: "If you are underground to start, and you are just waking up from a fall, you could
+start out disoriented, so your "known" north could be quite far off.  Doesn't really matter, but it will shift for
+non-dwarves (or other above-ground dwellers), so things will get interesting when players start using cardinal
+directions they believe are true.  One more piece to ponder is the fact that going over the same area many times will
+reinforce that space in the player's mind, making the map more constant in well-traveled places, similar to how smell
+reinforces with repeated transits."  So a start's bearings by how the character came there (walked in by the way in,
+north known; underground disoriented, a fall's waking, its north off, maybe far off, unknowing); and a place's memory
+strengthened by each passing, kept better and fading slower the more it's crossed, as a scent is.
+
 **Design:** DUNGEON.md, moving (watchfulness: mapping as it goes); still to come.
 
 ### Every suggestion generalized; one system for long tasks
