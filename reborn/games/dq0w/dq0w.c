@@ -1600,7 +1600,8 @@ static void __fastcall__ spend (unsigned char a, unsigned long t)
 ** within a few squares it sees, each the referee's P_SEARCH: wtrap.c's), quietly (told only if it finds something)
 ** and in no more time (the slow walk paid for it) */
 static unsigned char barw_;
-static unsigned char __fastcall__ work (unsigned char what, unsigned x, unsigned y, unsigned char d);
+unsigned char __fastcall__ work (unsigned char what, unsigned x, unsigned y, unsigned char d);   /* (Part 48's) */
+void __fastcall__ worked (unsigned long t);
 
 
 /* A move done: the character there, what it saw seen, and the UI told; the time it took at its pace the referee's */
@@ -2196,11 +2197,16 @@ static struct portal* __fastcall__ door_ahead (unsigned long* tt)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* ==== Part 48: the work done and what came of it (work, worked: a command's, its own part, the main RAM's room for
+** the hands and limbs, slice 4.1b) */
+#pragma code-name (push, "SW48CODE")
+#pragma rodata-name (push, "SW48RODATA")
+
 /* What (PA_*, or W_STEP) worked at x, y (or about the character, NO_SQ) from where the character stands (mx, my), d
 ** the way from there to it, by the part whose work it is (a command's all one part's: a door's, its shutters', a
 ** bar's the doors'; any portal's blows the blows'; a portcullis's, a window's the portals'; a trap's, a search's the
 ** traps'): 1 if there was nothing there to work */
-static unsigned char __fastcall__ work (unsigned char what, unsigned x, unsigned y, unsigned char d)
+unsigned char __fastcall__ s_work (unsigned char what, unsigned x, unsigned y, unsigned char d)
 {
     struct portal* p;
     unsigned char k, shut;
@@ -2245,7 +2251,7 @@ static unsigned char __fastcall__ work (unsigned char what, unsigned x, unsigned
 
 /* What came of it (the work's): the character where it says, busy t more and the time it took; or in a pit,
 ** climbing out to there */
-static void __fastcall__ worked (unsigned long t)
+void __fastcall__ s_worked (unsigned long t)
 {
     hub_map (0);
     t += wk.tt > 60000UL ? 60000U : (unsigned) wk.tt;
@@ -2275,6 +2281,9 @@ static void __fastcall__ worked (unsigned long t)
         event (E_ARRIVE, 0, A_CLIMBED);         /* (Through a window: somewhere new) */
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* A search's end (the long task's: its time done, or stopped): the walls about it searched, the nearest first as far
 ** as its time went (HOUSE.md: a search cut short covers the part done, wtrap.c's), told (E_PORTAL: the UI's things'

@@ -68,6 +68,7 @@ static unsigned char made;                      /* (The theme to read: 0xFF the 
 const char* savedir;                            /* (dq0 -d: the save's folder; task.c's meta too) */
 unsigned char __fastcall__ things (unsigned char op, const char* name);   /* (way.c's too, part 6's) */
 static void to_hand (void);
+void __fastcall__ news (const struct msg* m);    /* (Part 11's: the rarer news, worded) */
 static void __fastcall__ dig_used (unsigned char n);
 static char dug_with[16];                       /* (The tool a dig took, named) */
 unsigned char finds;                            /* (Things a search turned up, told as it ends: the hub's text;
@@ -786,7 +787,6 @@ static unsigned char events (void)          /* (How many there were) */
 {
     static struct msg m;
     unsigned char k, n = 0;
-    struct req* r;
 
     while (!quit && hub_next (&place, &m)) {
         ++n;
@@ -857,19 +857,6 @@ static unsigned char events (void)          /* (How many there were) */
                                                 **   the traces read, words.c's) */
             }
             break;
-        case E_NOWAY:
-            if (m.who == 0 && (m.w1 & 0xFF) == N_DEN) {
-                strcpy (lb, HUB->actor[(m.w1 >> 8) & 7].name);  /* (A denizen's: its name, for overlay 4) */
-                den_way ();
-            } else if (m.who == 0 && m.w1 == N_SHUT) {
-                way_words ();                   /* (The theme's: its lock) */
-            } else if (m.who == 0) {
-                tell (m.w1 == N_SHUT ? T_THE_WAY_OUT :
-                     m.w1 == N_NO_STAIRS ? T_THERE_S_NO : m.w1 == N_NO_DIG ?
-                     T_THERE_S_NOTHING : m.w1 == N_CLOSED ? T_THE_PORTCULLIS_IS : m.w1 == N_DOOR ? T_DOOR_SHUT :
-                     T_YOU_CAN_T);
-            }
-            break;
         case E_TASK:                            /* (The long task's: stopped, asked, refused; slice 4.0's) */
             if (m.who == 0) {
                 k = task_words (m.w1, m.b);
@@ -894,59 +881,15 @@ static unsigned char events (void)          /* (How many there were) */
                 beat_words (m.w1);
             }
             break;
+        case E_NOWAY:                           /* (The rarer news, its words part 11's: the main RAM's room, slice
+                                                **   4.1b's) */
         case E_DIG:
-            if (m.who == 0) {
-                k = m.w1 >> 8;
-                if (k == D_BEGUN || k == D_AGAIN) {
-                    dug_with[0] = 0;
-                } else if (k != D_NO_TOOL) {
-                    dig_used (m.b);
-                }
-                dig_words (k, m.w1 & 0xFF);
-            }
-            break;
         case E_LEDGE:
-            if (m.who == 0) {
-                k = (signed char) m.w1 > 0 ? (signed char) m.w1 : -(signed char) m.w1;
-                climb_words ((signed char) m.w1 > 0 ? CW_RISES : CW_FALLS, k);
-            }
-            break;
         case E_CLIMB:
-            if (m.who == 0) {
-                climb_words (m.w1 >> 8, m.w1 & 0xFF);
-            }
-            break;
         case E_HARM:
-            if (m.who == 0) {                   /* (The referee's words of its wounds, then the UI's of it all) */
-                r = ask_b (RS_DESCRIBE, 0, 2);
-                strcpy (lb, r->text);
-                r->state = REQ_FREE;
-                harm_words (m.w1, HUB->pcsum.cond);
-                if (HUB->pcsum.cond & C_DEAD) {
-                    end (END_DIED);             /* (The game's end) */
-                }
-            }
-            break;
         case E_PORTAL:
             if (m.who == 0) {
-                if (finds == 0xFF) {            /* (A search's end: the things concealed about it too, as far as the
-                                                **   walls were searched, the part of it done: the world's reach) */
-                    HUB->ireq.to = m.a;
-                    finds = things (IO_SEARCH, "");
-                }
-                if (!finds || m.w1 != PO_NOTHING) {
-                    fixt_words (&m);
-                }
-                k = m.w1;                       /* (A part lifted out: now taken up) */
-                if (lifting[0] && (k == PO_LIFTED || k == PO_PANE_OUT || k == PO_BARS_OUT)) {
-                    strcpy (pending, lifting);
-                }
-                lifting[0] = 0;
-                rebar |= k == PO_REBARRED;
-                if (finds && (m.w1 == PO_FOUND || m.w1 == PO_NOTHING || m.w1 == PO_FOUND_TRAP)) {
-                    msg (tt ());                /* (What its search turned up besides) */
-                    finds = 0;
-                }
+                news (&m);
             }
             break;
         case E_TRAP:
@@ -968,6 +911,79 @@ static unsigned char events (void)          /* (How many there were) */
     }
     return n;
 }
+
+/* ==== Part 11: the rarer news of the world's, worded (events()'s, the character's: a way refused, a dig, a ledge, a
+** climb, a harm, a portal worked; its own part, the main RAM's room: slice 4.1b's) */
+#pragma code-name (push, "SW11CODE")
+#pragma rodata-name (push, "SW11RODATA")
+
+void __fastcall__ s_news (const struct msg* m)
+{
+    unsigned char k;
+    struct req* r;
+
+    switch (m->kind) {
+    case E_NOWAY:
+        if ((m->w1 & 0xFF) == N_DEN) {
+            strcpy (lb, HUB->actor[(m->w1 >> 8) & 7].name);  /* (A denizen's: its name, for overlay 4) */
+            den_way ();
+        } else if (m->w1 == N_SHUT) {
+            way_words ();                       /* (The theme's: its lock) */
+        } else {
+            tell (m->w1 == N_NO_STAIRS ? T_THERE_S_NO : m->w1 == N_NO_DIG ? T_THERE_S_NOTHING : m->w1 == N_CLOSED ?
+                T_THE_PORTCULLIS_IS : m->w1 == N_DOOR ? T_DOOR_SHUT : T_YOU_CAN_T);
+        }
+        break;
+    case E_DIG:
+        k = m->w1 >> 8;
+        if (k == D_BEGUN || k == D_AGAIN) {
+            dug_with[0] = 0;
+        } else if (k != D_NO_TOOL) {
+            dig_used (m->b);
+        }
+        dig_words (k, m->w1 & 0xFF);
+        break;
+    case E_LEDGE:
+        k = (signed char) m->w1 > 0 ? (signed char) m->w1 : -(signed char) m->w1;
+        climb_words ((signed char) m->w1 > 0 ? CW_RISES : CW_FALLS, k);
+        break;
+    case E_CLIMB:
+        climb_words (m->w1 >> 8, m->w1 & 0xFF);
+        break;
+    case E_HARM:                                /* (The referee's words of its wounds, then the UI's of it all) */
+        r = ask_b (RS_DESCRIBE, 0, 2);
+        strcpy (lb, r->text);
+        r->state = REQ_FREE;
+        harm_words (m->w1, HUB->pcsum.cond);
+        if (HUB->pcsum.cond & C_DEAD) {
+            end (END_DIED);                     /* (The game's end) */
+        }
+        break;
+    case E_PORTAL:
+        if (finds == 0xFF) {                    /* (A search's end: the things concealed about it too, as far as the
+                                                **   walls were searched, the part of it done: the world's reach) */
+            HUB->ireq.to = m->a;
+            finds = things (IO_SEARCH, "");
+        }
+        if (!finds || m->w1 != PO_NOTHING) {
+            fixt_words (m);
+        }
+        k = m->w1;                              /* (A part lifted out: now taken up) */
+        if (lifting[0] && (k == PO_LIFTED || k == PO_PANE_OUT || k == PO_BARS_OUT)) {
+            strcpy (pending, lifting);
+        }
+        lifting[0] = 0;
+        rebar |= k == PO_REBARRED;
+        if (finds && (m->w1 == PO_FOUND || m->w1 == PO_NOTHING || m->w1 == PO_FOUND_TRAP)) {
+            msg (tt ());                        /* (What its search turned up besides) */
+            finds = 0;
+        }
+        break;
+    }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The commands (the parser comes later: a word, and the rest) */
 

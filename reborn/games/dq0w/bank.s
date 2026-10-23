@@ -127,7 +127,10 @@ go:
             SWPART      45, 5               ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
             SWPART      46, 7               ; A search's thing, for or on; what a search turns up (things.c)
             SWPART      47, 13              ; What's on a thing or in it, searched (things.c)
+            SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked)
 
+            SWFN        work, 48
+            SWFN        worked, 48
             SWFN        start_dig, 1
             SWFN        dig_on, 1
             SWFN        climb, 2

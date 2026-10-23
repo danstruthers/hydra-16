@@ -216,6 +216,7 @@ ovl_out:
             SWPART      8, 5                ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
             SWPART      10, 11              ; A search, by its form (search.c)
+            SWPART      11, 13              ; The rarer news, worded (main.c); the hands and limbs
 
             SWFN        begin, 1
             SWFN        size, 1
@@ -250,3 +251,4 @@ ovl_out:
             SWFN        place_go, 7
             SWFN        look_way, 6
             SWFN        search_go, 10
+            SWFN        news, 11
