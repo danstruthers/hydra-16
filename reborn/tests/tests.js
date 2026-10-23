@@ -2939,14 +2939,15 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0fog', meaning: true, what: 'Dingus Quest Zero\'s map as the character knows the place (slice 4.2, DUNGEON.md\'s the map kept; the user\'s, 2026-10-16 and 2026-10-23: only what it sees now plain, the rest obscured, a mental map fading by its Intelligence and Will, the better kept where it\'s often been, a map drawn on paper while mapping as it goes), by the maker\'s map (the UI bank\'s rows and their layers, ML_*): at seed 3 (dq0 -T, a human hunter: INT 10, WIL 13) what it sees now with its heights, what it saw facing the other way faint (a floor a comma); its torch put out, all of it remembered, none seen now; an hour later its squares put off where they truly are (faded a tenth: it doesn\'t know north underground); three hours on, gone; the same place come to again four times (down the stairway and five minutes there each time) still on the map after three hours in the dark; with paper and charcoal (dq0 -k) mapping as it goes, a map begun ("You begin a map.", Drawing opened: "You start to learn drawing."), what it drew shown as drawn while it carries the map, not once it\'s put down, again as it\'s taken up',
+      name: 'dq0fog', meaning: true, what: 'Dingus Quest Zero\'s map as the character knows the place (slice 4.2, DUNGEON.md\'s the map kept; the user\'s, 2026-10-16 and 2026-10-23: only what it sees now plain, the rest obscured, a mental map fading by its Intelligence and Will, the better kept where it\'s often been, a map drawn on paper while mapping as it goes), by the maker\'s map (the UI bank\'s rows and their layers, ML_*): at seed 3 (dq0 -T, a human hunter: INT 10, WIL 13) what it sees now with its heights, what it saw facing the other way faint (a floor a comma); its torch put out, all of it remembered, none seen now; an hour later its squares put off where they truly are (faded a tenth: it doesn\'t know north underground); three hours on, gone; the same place come to again four times (down the stairway and five minutes there each time) still on the map after three hours in the dark; with paper and charcoal (dq0 -k) mapping as it goes, a map begun ("You begin a map."; Drawing opened by it the referee\'s, dq0rules\'), what it drew shown as drawn while it carries the map (its torch out, nothing seen now), not once it\'s put down, again as it\'s taken up',
       init: 't_rc', cycles: 4000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'turn around', 'map', 'douse the torch', 'map', 'wait 1 hour', 'map', 'wait 2 hours', 'map', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'wait 5 minutes', 'u', 'd', 'wait 5 minutes', 'u', 'd', 'wait 5 minutes', 'u', 'douse the torch',
         'wait 3 hours', 'map', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -k paper,charcoal', 'map as I go', 'turn around', 'turn around', 'map', 'drop the map', 'map',
-        'take the map', 'map', 'quit', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k paper,charcoal', 'map as I go', 'turn around', 'turn around', 'douse the torch', 'map',
+        'light the torch', 'drop the map', 'douse the torch', 'map', 'light the torch', 'take the map', 'douse the torch', 'map', 'quit',
+        'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out), maps = T.filter(t => t.line === 'map');
@@ -2964,7 +2965,7 @@ module.exports = {
         if (!p1.kept.length) f.push('come to four times: nothing remembered after three hours');
         const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k paper,charcoal'), mg = T.after(g, 'map as I go');
         if (!mg.after || !mg.after.pc.map || !dq0Thing(mg.after, 'map') || dq0Thing(mg.after, 'paper')) f.push('mapping as it goes with paper: no map begun (pc_map ' + (mg.after && mg.after.pc.map) + ')');
-        inTurn(s, ['> map as I go', 'You begin a map.', '> turn around', 'You start to learn drawing.'], f, 'the map begun: ');
+        inTurn(s, ['> map as I go', 'You begin a map.'], f, 'the map begun: ');
         if (!d1.drawn.length) f.push('its map carried: nothing shown as drawn');
         if (d2.drawn.length) f.push('its map put down: ' + d2.drawn.length + ' squares still shown as drawn');
         if (!d3.drawn.length) f.push('its map taken up again: nothing shown as drawn');
@@ -2973,7 +2974,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0mapturn', meaning: true, what: 'Dingus Quest Zero\'s map turned as the character faces (slice 4.2, DUNGEON.md\'s bearings underground; the user\'s, 2026-10-16: a dwarf\'s north up, anyone else\'s the way it faces up), by the maker\'s map and the words: at seed 3 (dq0 -T) a human facing north, the map north up, the character in its middle, a compass in its top right corner (N above +); facing east, east up (the rows turned a quarter: what\'s to its south to its right), the compass\'s N to the left of its +, "Facing E" beside it and no square given (its coordinates would give the true north away); a dwarf (hmchar -p k) at the same place facing east, north up (the window kept in the stratum, no compass; the window by the room\'s door where the human\'s north-up map has it, the human\'s facing east turned a quarter), its square given; its torch put out an hour, fewer squares remembered but none put off (a dwarf knows north)',
+      name: 'dq0mapturn', what: 'Dingus Quest Zero\'s map turned as the character faces (slice 4.2, DUNGEON.md\'s bearings underground; the user\'s, 2026-10-16: a dwarf\'s north up, anyone else\'s the way it faces up), by the maker\'s map and the words: at seed 3 (dq0 -T) a human facing north, the map north up, the character in its middle, a compass in its top right corner (N above +); facing east, east up (the rows turned a quarter: what\'s to its south to its right), the compass\'s N to the left of its +, "Facing E" beside it and no square given (its coordinates would give the true north away); a dwarf (hmchar -p k) at the same place facing east, north up (the window kept in the stratum, no compass; the window by the room\'s door where the human\'s north-up map has it, the human\'s facing east turned a quarter), its square given; its torch put out an hour, fewer squares remembered but none put off (a dwarf knows north)',
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'hmchar -q -s 9 -p k -o /ram/d.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'face north', 'map', 'face east', 'map', 'quit',
