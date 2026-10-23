@@ -1039,7 +1039,8 @@ enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY };      /* The look's kinds: a look abo
 
 /* The UI's bank's records (UI_BANK) */
 struct uirec {
-    char            map[MAP_H][MAP_W + 1];      /* The map's rows (the maker's, as the UI asks: mapq) */
+    char            map[MAP_H][MAP_W + 1];      /* The map's rows (the maker's, as the UI asks: mapq; maplay their
+                                                **   squares' layers) */
     char            things_text[400];           /* The things' words for the UI (what's carried: ireq's reply), and
                                                 **   the UI's to the things (dq0 -k's: the things more) */
     struct cmd      kept;                       /* A command whose thing was out of reach, kept while the character
@@ -1047,7 +1048,11 @@ struct uirec {
     struct tread    tread;                      /* The traces read (I_TRACE's reply: the world's), */
     char            trtext[TR_TEXT];            /*   and its words, for the UI to say ("The floor here is flagged, grey
                                                 **   with dust. ...") */
+    unsigned char   maplay[MAP_H][MAP_W];       /* The map's squares' layers (ML_*: the maker's, with its rows: the UI
+                                                **   colours them, slice 4.2's) */
 };
+enum { ML_NOW, ML_KEPT, ML_DRAWN, ML_PC, ML_COMPASS };   /* (A map's square: seen now; remembered; drawn on the map
+                                                **   carried; the character; the compass) */
 
 /* The world's bank's records (WORLD_BANK): the dungeon's (world.h) */
 struct wrec {
@@ -1232,6 +1237,7 @@ struct wsave {
 **                                                                a look one way's own, WAY_SEEN)
 **   own bank(UI_BANK) ui
 **   own uirec.map maker +ui
+**   own uirec.maplay maker +ui                                 (Its squares' layers: slice 4.2's)
 **   own uirec.things_text world +ui
 **   own uirec.tread world                                      (The traces read: I_TRACE's reply)
 **   own uirec.trtext world                                     (Their words)

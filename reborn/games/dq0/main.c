@@ -408,7 +408,7 @@ static void sheet (void)
                                                 **   theme's kinds a number on; the hub's actors' legs and weapons let fall:
                                                 **   slice 4.1b's; 18, the seen maps' drawn squares and each chunk's
                                                 **   memory, the maker's; the catalogue's paper ... map, the theme's
-                                                **   kinds seven on: slice 4.2's) */
+                                                **   kinds seven on, the map in plain letters: slice 4.2's) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -417,8 +417,10 @@ static struct save {
     struct pc       pc;
     struct quest    q;                          /* (Its theme, its puzzle, and its ending: a game done isn't carried
                                                 **   on, but a new one begun) */
+    unsigned char   plain;                      /* (The map in plain letters: the player's, dq0.h's) */
 } sv;
 static unsigned char resumed;
+unsigned char plain;
 
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
@@ -481,6 +483,7 @@ void s_save_game (void)
     sv.seed = HUB->seed;
     sv.pc = P;
     sv.q = Q;
+    sv.plain = plain;
     if ((fd = open (save_path ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
         write (fd, &sv, sizeof sv);
         names_keep (fd, 0);                     /* (The names given: the theme bank's) */
@@ -2048,6 +2051,7 @@ void __fastcall__ s_begin (int argc, char* argv[])
         resumed = 1;
         seed = sv.seed;
         Q = sv.q;
+        plain = sv.plain;
         if (pace == 0xFF) {
             pace = sv.pace;
         }

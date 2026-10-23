@@ -1607,9 +1607,16 @@ function pcReport(m, attaches, naks, repeats) {
 // met by its neighbours' (those in the cache); n chunks of stratum sn at least (CAVEDUMP=1: each one drawn)
 const CHUNK_SIZE = 0xAA0, CK_TILE = 443, CK_ROOM = 8;
 const T_ROCK = 0, T_FLOOR = 1, T_WALL = 2, T_CORR = 4, T_WINDOW = 6;
+// The hub's chunk cache's banks (world.h's CACHE_BANK: 5 on, 8 of them), from its bank 0's (its magic "DQ") on: none
+// of the other banks taken for chunks by their looks (the UI bank's map's layers would pass, slice 4.2's)
+function cacheBanks(m) {
+  const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
+  const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51);
+  return hub === undefined ? [] : [0, 1, 2, 3, 4, 5, 6, 7].map(i => banks[hub + 5 + i]).filter(b => b);
+}
 function cacheChunks(m, sn) {
   const out = new Map();
-  for (const b of Object.values(m.sharedBanks())) {
+  for (const b of cacheBanks(m)) {
     for (let k = 0; k < 3; k++) {
       const o = k * CHUNK_SIZE, nrooms = b[o + 5], tile = b.subarray(o + CK_TILE, o + CK_TILE + 1024);
       if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x0F) > 9)) continue;
@@ -1836,7 +1843,7 @@ const DQ0_BEASTS = () => DQ0_MAKE().bestiary(path.join(__dirname, '..', 'games',
 
 function builtChunks(m, sn) {
   const out = [], C = { room: 8, zone: 56, portal: 219, tile: 443, elev: 1467, pceil: 2555 };
-  for (const b of Object.values(m.sharedBanks())) {
+  for (const b of cacheBanks(m)) {
     for (let k = 0; k < 3; k++) {
       const o = k * 0xAA0, nr = b[o + 5], nz = b[o + 6], np = b[o + C.portal - 1];
       const tile = b.subarray(o + C.tile, o + C.tile + 1024);
@@ -4130,6 +4137,14 @@ module.exports = {
         const h = help.text.join(' ').replace(/ +/g, ' ');
         if (!h.includes('19200 or 115200 baud')) f.push('the help doesn' + Q + 't give the serial port' + Q + 's rates');
         if (!help.text.slice(27, 58).some(l => l.trim())) f.push('the screen alone: nothing below row 26 (the window not 57 rows)');
+        // (The map in colour on the screen, slice 4.2's: the character's @ and a floor it sees now each a colour of
+        // their own, neither the words' own)
+        const fg = (r, c) => map.cells.attrs[r * 80 + c] & 15, tr = map.text.findIndex(l => l.startsWith('The map (you face'));
+        const ar = map.text.findIndex((l, r) => r > tr && l.slice(0, 64).includes('@')), ac = ar < 0 ? -1 : map.text[ar].indexOf('@');
+        const dc = ar < 0 ? -1 : map.text[ar].slice(0, 64).search(/[.]/);
+        if (tr < 0 || ar < 0 || dc < 0) f.push('the map' + Q + 's @ or a floor beside it not found on the screen');
+        else if (fg(ar, ac) === fg(tr, 0) || fg(ar, dc) === fg(tr, 0) || fg(ar, ac) === fg(ar, dc))
+          f.push('the map not in its colours on the screen: @ ' + fg(ar, ac) + ', a floor seen now ' + fg(ar, dc) + ', the words ' + fg(tr, 0));
         return f;
       },
       sdcard: true
