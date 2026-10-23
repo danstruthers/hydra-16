@@ -615,9 +615,7 @@ static void thing (void)
 
     memcpy (res, R->x, sizeof res);
     memset (R->x, 0, sizeof R->x);
-    at_thing = 1;
     pc_side (&A);
-    at_thing = 0;
     for (k = 0; k < 3; ++k) {
         if (A.imp[k] >= 0 && (v = A.imp[k] - res[k]) > top) {
             top = v;
@@ -674,6 +672,9 @@ void __fastcall__ o_fight (struct req* r)
         return;
     case RS_CONTEST:
         tested ();
+        return;
+    case RS_WIELD:
+        pc_wield (r);
         return;
     }
     if (r->other == RS_THING) {

@@ -2,8 +2,8 @@
 ** wblow.c - (dq0w) portals broken by blows (break: the user's, 2026-10-15): a door battered down, a portcullis's bars
 ** broken through, a window's shutters, its glass, its bars (DUNGEON.md: portals).  Each blow an attack the part
 ** ignores (the referee's RS_ATTACK at RS_THING: the user's, 2026-10-16, "model it after unarmed combat"), with what
-** the character strikes with (the hub's pc_strike: the tool to hand that hits a thing hardest, a fist, a foot, its
-** head), its impact less the material's resistance to it (the less, the worse the part's state) taken off its body
+** the character strikes with (the hub's pc_strike: the thing named or in its hands, the UI's, 2026-10-22; a fist, a
+** foot, its head), its impact less the material's resistance to it (the less, the worse the part's state) taken off its body
 ** (body.h's, by its material, size, thickness and state: fixtures.c's as it made it), the harm kept (PORTAL_HARM); a
 ** door broken down open for good (PS_WRECKED), a portcullis a way through for good, jammed.  A fist, a foot or a head
 ** that strikes it is hurt by a blow gone wrong (the referee's: more by a sturdy door than a rotten one, less with
@@ -14,7 +14,8 @@
 ** hard or by the player (pc_cut), the harm done so far stays.  Told as it goes (the user's, 2026-10-22: its first
 ** words dq0w.c's, as it's begun): the first blow that marks it, the one that leaves it giving, every fourth else
 ** (E_BEAT); a bare part's first blow that would hurt it stopped short of it, asked (RS_SHORT, the referee's: "Keep at
-** it?"), once a door.
+** it?"), once a door.  A soft thing named that strikes (dq0w.c's door_work: the house's, rshouse.h's) one attempt, no
+** harm, a blow's time, told (PO_SOFT), and no long task (the user's, 2026-10-22).
 **
 ** All of it swapped part 6's (../dq0/swap.inc: dq0w.cfg's SW6), blows () called through its stub (bank.s's).
 */
@@ -162,6 +163,13 @@ void s_blows (void)
             out = part == PP_GLASS ? PO_SHATTERED : part == PP_BARS ? PO_BARS_BROKEN : PO_SMASHED;
         }
     } else if (!out) {
+        if (wk.what < W_BLOW && wk.link) {      /* (A soft thing named: one attempt, no harm, a blow's time, told; no
+                                                **   long task, dq0w.c's door_work: the user's, 2026-10-22) */
+            wk.tt = BLOW_T;
+            wk.what = PA_BREAK;
+            tail (PO_SOFT);
+            return;
+        }
         if (wk.what < W_BLOW) {                 /* (Begun: the blows as it's free, a long task, dq0w.c's) */
             wk.was = h;
             wk.what = W_BLOW;

@@ -475,6 +475,24 @@ static void tools (void)
     HUB->ireq.x = i;
 }
 
+/* What's in the character's hands (IO_HANDS: a blow with nothing named, the UI's), their kinds in the request's x and
+** y (0 none) */
+static void hands_held (void)
+{
+    unsigned char k[2];
+    unsigned i = 0, n = 0;
+
+    k[0] = k[1] = 0;
+    while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
+        if ((ip->flags & I_HELD) && n < 2) {
+            k[n++] = ip->kind;
+        }
+    }
+    hub_map (0);
+    HUB->ireq.x = k[0];
+    HUB->ireq.y = k[1];
+}
+
 /* The character's light: the brightest lit thing it carries (in a hand, worn, hung from its belt: one stowed is
 ** put out), into the hub, named (its minutes left the lights' burning's: part 27's) */
 void s_light_now (void)
@@ -538,6 +556,9 @@ unsigned char s_serve (void)
         break;
     case IO_TOOLS:
         tools ();
+        break;
+    case IO_HANDS:
+        hands_held ();
         break;
     case IO_WEAR:
         wear (iq.name, iq.to);

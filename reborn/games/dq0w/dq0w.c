@@ -2123,6 +2123,7 @@ static unsigned px_, py_;                       /* (The door's square, in the fr
 static unsigned char pd_;                       /* (The way from where the character stands to it) */
 static unsigned char want_;                     /* (What's to be worked, I_PORTAL's b: PW_*) */
                                                 /* (barw_: a bar to set in a door's brackets, I_PORTAL's x[0]: its width;
+                                                **   a door broken, 1 its striker a soft thing, door_work's;
                                                 **   1, a search's quietly) */
 #define WANTED(t)       ((TILE (t) == T_DOOR && want_ != PW_WINDOW) || (TILE (t) == T_WINDOW && want_ != PW_DOOR))
 
@@ -2317,15 +2318,26 @@ static void __fastcall__ begun (unsigned char k, unsigned char what)
 }
 
 /* A door (or a portcullis, a window, a slit) the character faces worked, walked up to first; or about it: a search,
-** a trap in reach disarmed (else the door ahead's) (part 12's) */
+** a trap in reach disarmed (else the door ahead's) (part 12's); broken with a soft thing (the hub's pc_strike, the
+** house's: rshouse.h's), one attempt, no harm, a blow's time, told (barw_ 1, wblow.c's: the user's, 2026-10-22) */
 #pragma code-name (push, "SW12CODE")
 #pragma rodata-name (push, "SW12RODATA")
+
+#define RS_HOUSE_SWING  door_swing
+#include "../dq0/rshouse.h"
+#undef RS_HOUSE_SWING
 
 void __fastcall__ s_door_work (unsigned char what)
 {
     unsigned long t;
     unsigned char p;
 
+    hub_map (0);
+    if (what == PA_BREAK && ((p = HUB->pc_strike) & SK_THING)) {
+        hub_map (CAT_BANK);
+        barw_ = door_swing (CATALOGUE + (p & 0x7F)) == IM_SOFT;
+        hub_map (0);
+    }
     here ();
     if (what == PA_SEARCH) {                    /* (A long task: a minute's, what it finds told as it ends; a search for
                                                 **   a thing, till it's found, I_PORTAL's w1: its form the UI's, by touch
@@ -2372,8 +2384,9 @@ void __fastcall__ s_door_work (unsigned char what)
     worked (t);
     p = wk.pq.kind + 1;                         /* (Its words: a door's, a portcullis's, a window's) */
     if (wk.what == W_BLOW) {
-        begun (LT_BATTER, p | HUB->pc_strike << 4);     /* (Battering: a long task, a blow at a time as it's free,
-                                                **   its first words at once, the user's: the striker's) */
+        begun (LT_BATTER, p | (HUB->pc_strike & SK_THING ? SK_WITH : HUB->pc_strike << 4));    /* (Battering: a long
+                                                **   task, a blow at a time as it's free, its first words at once, the
+                                                **   user's: the striker's, a part of it or the thing named) */
     } else if (wk.task) {
         lwork = what;                           /* (The timed work: done as its time's up, work_done) */
         lw_x = px_;
@@ -3275,6 +3288,69 @@ unsigned char s_close_on (void);
 static void __fastcall__ fight_begin (unsigned char k);
 static void __fastcall__ fight_blow (unsigned char k);
 
+/* What a thing swung does (rshouse.h's, the house's) */
+#define RS_HOUSE_SWING  fight_swing
+#include "../dq0/rshouse.h"
+#undef RS_HOUSE_SWING
+
+/* The thing named that strikes (the hub's pc_strike) a soft one (the house's: the user's, 2026-10-22, "if it is
+** something soft ... it should reply with something like 'You attempt to batter the door with the noodle, but it seems
+** ineffectual'"): its blow at k (the actor plus 1) one attempt, no harm, a round's time, told (E_BEAT's WB_SWAT), no
+** fight begun of it; 1 if it was (the hub in the window after) */
+static unsigned char __fastcall__ swatted (unsigned char k)
+{
+    unsigned char s;
+
+    hub_map (0);
+    if (!((s = HUB->pc_strike) & SK_THING)) {
+        return 0;
+    }
+    hub_map (CAT_BANK);
+    s = fight_swing (CATALOGUE + (s & 0x7F));
+    hub_map (0);
+    if (s != IM_SOFT) {
+        return 0;
+    }
+    busy (HUB->round);
+    event (E_BEAT, 0, WB_SWAT | k << 8);
+    return 1;
+}
+
+/* What it fights back with unbidden (the user's, 2026-10-22: what's in its hands): the thing it holds the referee
+** would strike with (RS_WIELD), as a thing named is (SK_THING), but a soft one; else the best it holds (SK_BEST: its
+** fists, its hands empty) */
+static unsigned char in_hand (void)
+{
+    struct req* r;
+    unsigned char k[2], n = 0, s;
+    unsigned i = 0;
+
+    k[0] = k[1] = 0;
+    while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
+        if ((ip->flags & I_HELD) && n < 2) {
+            k[n++] = ip->kind;
+        }
+    }
+    hub_map (0);
+    r = &HUB->slot[SLOT_WORLD];
+    r->kind = RS_WIELD;
+    r->actor = 0;
+    r->b = 0;
+    r->x[0] = k[0];
+    r->x[1] = k[1];
+    r = hub_ask (SLOT_WORLD);
+    s = r->result;
+    r->state = REQ_FREE;
+    if (!s) {
+        return SK_BEST;
+    }
+    s = k[s - 1];
+    hub_map (CAT_BANK);
+    n = fight_swing (CATALOGUE + s);
+    hub_map (0);
+    return n == IM_SOFT ? SK_BEST : SK_THING | s;
+}
+
 /* A blow's close-in begun (I_CLOSE: walked up to its target, then struck; engaged already, refused, the user's) */
 void __fastcall__ s_close_go (const struct msg* m)
 {
@@ -3316,7 +3392,10 @@ unsigned char s_close_on (void)
             HUB->pc_strike = pstrike;
             HUB->pc_aim = paim;
             fheld = 0;
-            fight_begin (++k | TE_QUIET);       /* (The walk over: the blow's round, and fighting on after it) */
+            if (swatted (++k)) {
+                return 2;                       /* (A soft thing's: one attempt, no fight) */
+            }
+            fight_begin (k | TE_QUIET);         /* (The walk over: the blow's round, and fighting on after it) */
             fight_blow (k);
             return 2;
         }
@@ -3445,6 +3524,10 @@ static unsigned char ftired;                    /* (A level more tired by its fi
 
 static void __fastcall__ fight_blow (unsigned char k)
 {
+    if (swatted (k)) {                          /* (Its target changed as it fought, struck with a soft thing: one
+        pc_cut = 1;                             **   attempt, the fight over) */
+        return;
+    }
     busy (HUB->round);
     spend (GA_WORK, HUB->round);                /* (A round of fighting strenuous work: the user's, 2026-10-21, the
                                                 **   book's second variant, a level each five minutes of it) */
@@ -3470,6 +3553,9 @@ void __fastcall__ s_fight_go (const struct msg* m)
         HUB->pc_task.foe = m->a;
         fsaid = 1;
         return;
+    }
+    if (swatted (m->a)) {
+        return;                                 /* (A soft thing's: one attempt, no fight) */
     }
     fight_begin (m->a | TE_QUIET);
     fight_blow (m->a);
@@ -3558,7 +3644,7 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
     fight_begin (h & 2 ? k | TE_STILL : k);    /* (A hostile engaging it: fought back, at the middle, with what it
                                                 **   holds; after a command that took a fight over, turned to) */
     HUB->pc_aim = Z_MID;
-    HUB->pc_strike = SK_BEST;
+    HUB->pc_strike = in_hand ();
     fight_blow (k);
     return 2;
 }

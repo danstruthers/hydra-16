@@ -144,13 +144,16 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** C_PRONE effect, the world's to lay it down); the reply's grade what it left
 ** them in (hub.h's FF_*: the creature's courage tested if it was wounded and stands, RS_MORALE's: FF_FLEES, or
 ** AF_CAUTIOUS).  The character strikes with what the
-** hub's pc_strike says (SK_*: the best to hand, a fist, a foot, the head: Unarmed's, the book's hand, foot and head).
+** hub's pc_strike says (SK_*: the best it holds, a fist, a foot, the head: Unarmed's, the book's hand, foot and head;
+** SK_THING | a kind, that thing and no other, the catalogue's (items.h's struct kind, in the hub's CAT_BANK: the
+** referee's to read), a weapon of the ruleset's as itself, anything else as the ruleset treats a thing swung, by its
+** kind's data, its words the kind's name; a soft one never asked of, the world's: rshouse.h's RS_HOUSE_SWING).
 **
 ** At a thing (other RS_THING: a door, a portcullis's bars, a window's shutters or glass; the maker's), which ignores it
 ** (the book's Ignore defence): x[0..3] the thing's resistance to blunt, edge, point and fire (its armour), c the blow's
-** number in a run of them; the character's best to hand the tool that hits a thing hardest (not a weapon), else its
-** fists.  The reply: w1 the harm the thing takes (the impact past its resistance, its aspect the best against it: b),
-** result 2 if a part of the striker struck it (its words in the text, the striker's weapon), and its own hurt if the
+** number in a run of them; struck with what the hub's pc_strike says, as at a denizen.  The reply: w1 the harm the
+** thing takes (the impact past its resistance, its aspect the best against it: b), result 2 if a part of the striker
+** struck it (its words in the text, the striker's weapon), and its own hurt if the
 ** blow went wrong (a part only, the house's Unarmed test, HOUSE.md's battering: a marginal failure harms neither, a
 ** critical failure no harm to the thing, but the part's 2d6, the book's H2 for a part that meets something hard,
 ** Combat 12; and half the thing's blunt resistance; less the part's armour, a kick's the soles'): HC_STRUCK's, c its
@@ -284,6 +287,14 @@ enum {
                                                 **   seeded anew from w1.  The reply what was rolled since the last:
                                                 **   w1 the dice, c the faces forced but not rolled, x the first
                                                 **   ones' sides (0 past the last) */
+    RS_WIELD,                                   /* What the character would strike with, nothing named (the user's,
+                                                **   2026-10-22: what's in its hands, never a better thing carried
+                                                **   unasked), at a denizen (b 0) or a thing (b 1): x[0], x[1] the
+                                                **   kinds it holds (the catalogue's: 0 none; the things' IO_HANDS) ->
+                                                **   result the one to strike with by the ruleset's reckoning (1 x[0]'s,
+                                                **   2 x[1]'s; a soft thing's the least), 0 its hands empty; and then
+                                                **   the key of the best it carries for such a blow, if it does better
+                                                **   than its bare hands, in the text ("" none: the UI's to ask) */
 };
 
 /* A neutral character: what carries over between rulesets.  Attributes on a 3-18 scale (HarnMaster's as they are; a

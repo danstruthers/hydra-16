@@ -19,7 +19,10 @@
 **   - what it's done with ("with the bar", "using the pick": the instrument, the user's, 2026-10-22): to hand
 **     (carried, or lying within reach: the things' IO_FIND, as a fill's fuel and a door's bar are), else refused,
 **     the things' words ("You have no bar to hand."), never done with bare hands or another thing instead; a blow's
-**     taken in hand first, as a named weapon is (names.c's).
+**     taken in hand first, as a named weapon is (names.c's), and struck with that thing and no other (strike's
+**     SK_THING, its kind: the user's, 2026-10-22, HOUSE.md's fights and portals);
+**   - a blow with nothing named, asked about first, its hands empty and a better thing carried (choose.c's: CF_ASKED,
+**     the command carried out as it's answered).
 ** A thing found has its square (struct cthing's x, y) and its name as its word.  Its own state (the last thing named,
 ** the target, the question, the things to take) is kept in its overlay's bank (its data there: the code's only).
 ** The fixtures (doors, windows, stairs ...) are choose.c's to find and to ask about (overlay 7: pick, choose).
@@ -367,6 +370,7 @@ static unsigned char tool_ok (void)
         }
     }
     if (a == VB_ATTACK_OBJECT || a == VB_BREAK_OBJECT) {
+        strike = SK_THING | (unsigned char) othings_x;  /* (That thing strikes, and no other: its kind, IO_FIND's) */
         if (othings (IO_HOLD, cmd.other.word, "", 0) == IR_OK) {
             msg (lb);                           /* (In hand first, a blow's: "You take the bar in both hands.") */
             intend2 (I_WAIT, othings_x, 1);
@@ -424,6 +428,9 @@ unsigned char o_resolve (void)
     struct sight* s = &sight_copy;
     unsigned char k, n, a = cmd.action;
 
+    if (cmd.flags & CF_ASKED) {
+        return RV_DONE;                         /* (A blow's question put: choose.c's) */
+    }
     hub_mem (SIGHT_BANK, s, SIGHT, sizeof *s);  /* (The senses' record as it is now) */
     if (untarget) {                             /* (The world's events: the character turned) */
         untarget = 0;

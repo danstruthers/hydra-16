@@ -3726,10 +3726,10 @@ module.exports = {
     // only with DQ0ANS96=1, to measure)
     ...(process.env.DQ0ANS96 ? [dq0AnswerTest(9600)] : []),
     {
-      name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken and climbed through, a weak-eyed character), every reply the senses give (a look\'s, the denizens\' senses\') with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, the old code\'s (DQ0LOOKS=write: written afresh from this run)',
+      name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken (punched bare-handed, as the old code\'s run struck it: the torch in hand would strike it now, the user\'s, 2026-10-22) and climbed through, a weak-eyed character), every reply the senses give (a look\'s, the denizens\' senses\') with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, the old code\'s (DQ0LOOKS=write: written afresh from this run)',
       init: 't_rc', cycles: 3000e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm\rācp /ram/c.hm /ram/w.hm\rāecho att eye 4 >> /ram/w.hm\r' +
-        [['dq0 -p t -s 3 -c /ram/c.hm -T -k sword',['look','turn left','turn right','walk to the door ahead to my left','2','look','turn around','turn left','turn right','map','d','look','sw','look']],['dq0 -p t -s 5 -c /ram/c.hm -T',['d','wait','go right','turn left','look','turn around','wait','look']],['dq0 -p t -s 7 -c /ram/w.hm',['open the door behind me','s','move south 4 squares','face north','look','douse the torch','z','z','z','look','light the torch','z','look','turn around','n']],['dq0 -p t -s 3 -c /ram/c.hm -T',['drop the torch','turn around','step forward','look','turn around','step forward','get torch','look']],['dq0 -p t -s 12 -c /ram/c.hm -T',['e','wait','e','wait','e','turn around','lower portcullis','w','look','raise portcullis','w','turn left']],['dq0 -p t -s 12 -c /ram/c.hm',['n','turn around','break window','climb through window','turn around','look','turn right']],['dq0 -p t -s 4 -c /ram/c.hm',['open door','3','look','go through the door','look','turn left']],['dq0 -p t -s 517 -c /ram/c.hm',['look','turn left','turn right','turn around','look']]].map(([g, c]) => 'ā' + g + '\r' + c.concat('quit').map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
+        [['dq0 -p t -s 3 -c /ram/c.hm -T -k sword',['look','turn left','turn right','walk to the door ahead to my left','2','look','turn around','turn left','turn right','map','d','look','sw','look']],['dq0 -p t -s 5 -c /ram/c.hm -T',['d','wait','go right','turn left','look','turn around','wait','look']],['dq0 -p t -s 7 -c /ram/w.hm',['open the door behind me','s','move south 4 squares','face north','look','douse the torch','z','z','z','look','light the torch','z','look','turn around','n']],['dq0 -p t -s 3 -c /ram/c.hm -T',['drop the torch','turn around','step forward','look','turn around','step forward','get torch','look']],['dq0 -p t -s 12 -c /ram/c.hm -T',['e','wait','e','wait','e','turn around','lower portcullis','w','look','raise portcullis','w','turn left']],['dq0 -p t -s 12 -c /ram/c.hm',['n','turn around','punch the window','climb through window','turn around','look','turn right']],['dq0 -p t -s 4 -c /ram/c.hm',['open door','3','look','go through the door','look','turn left']],['dq0 -p t -s 517 -c /ram/c.hm',['look','turn left','turn right','turn around','look']]].map(([g, c]) => 'ā' + g + '\r' + c.concat('quit').map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
       expect: ['% echo $status'],
       // (The senses' task found by its code, dq0p.hyx's at its main; its hub_reply's calls snapped, as the game it's in
       // the quits told so far)
@@ -3941,10 +3941,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0break', what: 'Dingus Quest Zero\'s portcullises and windows broken (the user\'s, 2026-10-16; DUNGEON.md: portals), by the world\'s events (the referee\'s blows and Strength: HarnMaster\'s, at these seeds): at seed 514\'s gatehouse a portcullis lowered by its winch, then battered with a pick (dq0 -k pick: blows at its iron bars off their body, as a door\'s) till they break, a gap through for good (battered again, jammed; examined; it won\'t lower), and gone through; then a strong character (Strength 18) bending its bars apart (P_FORCE), and through; then at seed 12 a glazed window not climbed through while its glass is in it, the glass broken (the referee\'s blow at a thing, HC_BLOW at RS_THING), climbed through (its sill, P_CLIMB) into the passage beyond, the window seen from there, its glass gone (dq0portcbreak\'s and dq0window\'s, these together)',
+      name: 'dq0break', what: 'Dingus Quest Zero\'s portcullises and windows broken (the user\'s, 2026-10-16; DUNGEON.md: portals), by the world\'s events (the referee\'s blows and Strength: HarnMaster\'s, at these seeds): at seed 514\'s gatehouse a portcullis lowered by its winch, then battered with a pick (dq0 -k pick: blows at its iron bars off their body, as a door\'s; its torch put down first, its hands empty, the pick offered and taken, dq0 -a\'s yes) till they break, a gap through for good (battered again, jammed; examined; it won\'t lower), and gone through; then a strong character (Strength 18) bending its bars apart (P_FORCE), and through; then at seed 12 a glazed window not climbed through while its glass is in it, the glass broken (the referee\'s blow at a thing, HC_BLOW at RS_THING), climbed through (its sill, P_CLIMB) into the passage beyond, the window seen from there, its glass gone (dq0portcbreak\'s and dq0window\'s, these together)',
       init: 't_rc', cycles: 1400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 514 -c /ram/c.hm -k pick', 'lower portcullis',
-        'break portcullis', 'break', 'x portcullis', 'lower portcullis', 'n', 'quit', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/s.hm', 'echo att str 18 >> /ram/s.hm',
+        'drop the torch', 'break portcullis', 'break', 'x portcullis', 'lower portcullis', 'n', 'quit', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/s.hm', 'echo att str 18 >> /ram/s.hm',
         'dq0 -p t -s 514 -c /ram/s.hm', 'lower portcullis', 'bend the bars', 'bend bars', 'n', 'quit',
         'dq0 -p t -s 12 -c /ram/c.hm', 'n', 'turn around', 'climb through window', 'break window', 'climb through window', 'turn around', 'quit',
         'echo $status']) },
@@ -4000,11 +4000,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0wordsfix', what: 'Dingus Quest Zero\'s words, a test about wording alone: the fixtures\' (the doors, their bars, the windows) as the user asked (2026-10-15 and 16): at seed 4, three doors none of them ahead, open door listing them, numbered, from the character\'s left round (each where it lies, its state), 3 turning to and opening the one behind it to its right, the room\'s doors told again; its door\'s bar lifted out of its brackets and taken, carried; at seed 12 a window examined (its make, its pane judged), its pane looked at closely, not climbed through glazed, broken (shards at its feet), climbed through into a passage, the window seen from there; at seed 15 a barred door examined (its bar in its brackets), the bar looked at closely, the door battered with a pick till it gives way, broken down for good: it won\'t shut (dq0doors\', dq0choose\'s and dq0window\'s words)',
+      name: 'dq0wordsfix', what: 'Dingus Quest Zero\'s words, a test about wording alone: the fixtures\' (the doors, their bars, the windows) as the user asked (2026-10-15 and 16): at seed 4, three doors none of them ahead, open door listing them, numbered, from the character\'s left round (each where it lies, its state), 3 turning to and opening the one behind it to its right, the room\'s doors told again; its door\'s bar lifted out of its brackets and taken, carried; at seed 12 a window examined (its make, its pane judged), its pane looked at closely, not climbed through glazed, broken (shards at its feet), climbed through into a passage, the window seen from there; at seed 15 a barred door examined (its bar in its brackets), the bar looked at closely, the door battered with a pick till it gives way (the torch put down, the pick taken in hand: "You set to battering the door with the pick."), broken down for good: it won\'t shut (dq0doors\', dq0choose\'s and dq0window\'s words)',
       init: 't_rc', cycles: 1000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 4 -c /ram/c.hm', 'open door', '3', 'look', 'take the bar',
         'i', 'quit', 'dq0 -p t -s 12 -c /ram/c.hm', 'n', 'examine the window', 'x glass', 'climb through window', 'break window', 'look', 'climb through window',
-        'turn around', 'quit', 'dq0 -p t -s 15 -c /ram/c.hm -k pick', 'examine the door ahead to my left', 'examine bar', 'break the door ahead to my left', 'look',
+        'turn around', 'quit', 'dq0 -p t -s 15 -c /ram/c.hm -k pick', 'examine the door ahead to my left', 'examine bar', 'drop the torch',
+        'break the door ahead to my left', 'look',
         'close', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -4019,7 +4020,8 @@ module.exports = {
           '> climb through window', 'You set to climbing through the window.', 'You get up onto the sill, and through. You are in a passage.', '> turn around',
           'There is a shuttered window ahead (its shutters open).',
           '% dq0 -p t -s 15', '> examine the door ahead to my left', 'Brackets for a bar are fixed on this side, the bar in them.', '> examine bar',
-          '4 feet long, 3 inches thick', '> break the door ahead to my left', 'You set to battering the door.', 'It gives way, and crashes open', '> look',
+          '4 feet long, 3 inches thick', '> break the door ahead to my left', 'You take the pick in both hands.', 'You set to battering the door with the pick.',
+          'It gives way, and crashes open', '> look',
           'There is a door ahead (broken down).', '> close', 'It\'s broken: it won\'t shut.', '% echo $status'], f);
         return f;
       },
@@ -4202,12 +4204,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0batter', what: 'Dingus Quest Zero\'s doors battered (the user\'s, 2026-10-15 and 16: "model it after unarmed combat": a blow at a thing an attack it ignores, by Unarmed, its impact less the door\'s resistance off its body; the striker hurt as a blow goes wrong, less with skill and armour; boots for a kick, a helm for a head butt; the tool to hand that hits hardest; the user\'s, 2026-10-22: a part\'s blow the house\'s Unarmed test, a marginal failure harming neither, a critical failure the part, and a bare part\'s first hurt at a door stopped short, asked), by the world\'s events (the referee\'s, HarnMaster\'s, at these seeds; each game\'s first blow the same roll): at seed 14\'s sound iron-bound door, bare fists making no mark, the first blow that would hurt them stopped short (asked: "Keep at it?", dq0 -a\'s yes), unhurt; punched again, not asked again at that door, and by the third the hand hurt seriously, the blows stopped as the character\'s too hurt; a kick in knee boots and a head butt in an iron helm not stopped short (not bare), hurt by their blows gone wrong; at seed 19\'s rotten door one of Unarmed 95 (hmchar\'s file) breaking it down unhurt; at seed 15 a pick battering a door till it gives way, broken down for good: it won\'t shut (dq0hands\' and dq0kick\'s, and dq0doors\' blows, these together; the injuries\' words the referee\'s)',
+      name: 'dq0batter', what: 'Dingus Quest Zero\'s doors battered (the user\'s, 2026-10-15 and 16: "model it after unarmed combat": a blow at a thing an attack it ignores, by Unarmed, its impact less the door\'s resistance off its body; the striker hurt as a blow goes wrong, less with skill and armour; boots for a kick, a helm for a head butt; the tool to hand that hits hardest; the user\'s, 2026-10-22: a part\'s blow the house\'s Unarmed test, a marginal failure harming neither, a critical failure the part, and a bare part\'s first hurt at a door stopped short, asked), by the world\'s events (the referee\'s, HarnMaster\'s, at these seeds; each game\'s first blow the same roll): at seed 14\'s sound iron-bound door, bare fists making no mark, the first blow that would hurt them stopped short (asked: "Keep at it?", dq0 -a\'s yes), unhurt; punched again, not asked again at that door, and by the third the hand hurt seriously, the blows stopped as the character\'s too hurt; a kick in knee boots and a head butt in an iron helm not stopped short (not bare), hurt by their blows gone wrong; at seed 19\'s rotten door one of Unarmed 95 (hmchar\'s file) breaking it down unhurt; at seed 15 a pick battering a door till it gives way (its torch put down first: its hands empty, the pick offered and taken, dq0 -a\'s yes, the user\'s, 2026-10-22), broken down for good: it won\'t shut (dq0hands\' and dq0kick\'s, and dq0doors\' blows, these together; the injuries\' words the referee\'s)',
       init: 't_rc', cycles: 1400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/u.hm', 'echo ml una 95 >> /ram/u.hm',
         'dq0 -p t -s 14 -c /ram/c.hm', 'punch the door', 'punch the door', 'punch the door', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'', 'wear the knee boots', 'kick the door', 'quit',
         'dq0 -p t -s 14 -c /ram/c.hm -k \'iron helm\'', 'wear the iron helm', 'head butt the door', 'quit', 'dq0 -p t -s 19 -c /ram/u.hm', 'punch the door', 'quit',
-        'dq0 -p t -s 15 -c /ram/c.hm -k pick', 'break the door ahead to my left', 'close', 'quit', 'echo $status']) },
+        'dq0 -p t -s 15 -c /ram/c.hm -k pick', 'drop the torch', 'break the door ahead to my left', 'close', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], hurt = t => Math.max(0, ...dq0Ev(t, 'E_HARM', { hc: 'HC_STRUCK' }).map(e => e.band));
@@ -4233,11 +4235,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0battering', what: 'Dingus Quest Zero\'s battering a long task (slice 4.0, HOUSE.md\'s long tasks: a blow at a time as the clock goes, its bar the blows struck, stopped by the player or hard, the harm done kept), by the world\'s events and the long task\'s part done as it went (the hub\'s pc_task: the referee\'s, HarnMaster\'s, at these seeds): at seed 14 a pick battering the sound door a dozen blows, one at a time (LT_BATTER, its length a dozen), leaving it giving, and battered again, broken down; then the same door battered and "stop digging" refused as it goes (it\'s a battering), "stop battering" stopping it part way, how the door stands told, and battered again, broken down in as many blows in all as without the stop (the harm done kept, each blow its own roll as before); with the hand-written theme\'s hostile rats (inhabit.txt) a battering stopped hard by a rat\'s blow; told as it goes (the user\'s, 2026-10-22: "nothing is written to the output until after it is resolved"): its first words at once (E_TASK TE_BEGUN, its what the door and what strikes it), a beat as its blows first tell (WB_TELLS) and as they leave it giving (WB_GIVES); both its ends (the user\'s: "doesn\'t seem to stop kicking a door once started"): the dozenth blow (above), and the fourth that makes no mark (seed 14\'s door punched bare-handed: four blows, no more, its bare fist stopped short once and not again at that door, and punched again, four more); a kick in knee boots ending of itself (no question: not bare), and a bare-footed kick at seed 15\'s door stopped short once and breaking it down',
+      name: 'dq0battering', what: 'Dingus Quest Zero\'s battering a long task (slice 4.0, HOUSE.md\'s long tasks: a blow at a time as the clock goes, its bar the blows struck, stopped by the player or hard, the harm done kept), by the world\'s events and the long task\'s part done as it went (the hub\'s pc_task: the referee\'s, HarnMaster\'s, at these seeds): at seed 14 a pick battering the sound door (its torch put down and the pick taken in hand first: what\'s in its hands strikes, the user\'s, 2026-10-22) a dozen blows, one at a time (LT_BATTER, its length a dozen), leaving it giving, and battered again, broken down; then the same door battered and "stop digging" refused as it goes (it\'s a battering), "stop battering" stopping it part way, how the door stands told, and battered again, broken down in as many blows in all as without the stop (the harm done kept, each blow its own roll as before); with the hand-written theme\'s hostile rats (inhabit.txt) a battering stopped hard by a rat\'s blow; told as it goes (the user\'s, 2026-10-22: "nothing is written to the output until after it is resolved"): its first words at once (E_TASK TE_BEGUN, its what the door and what strikes it), a beat as its blows first tell (WB_TELLS) and as they leave it giving (WB_GIVES); both its ends (the user\'s: "doesn\'t seem to stop kicking a door once started"): the dozenth blow (above), and the fourth that makes no mark (seed 14\'s door punched bare-handed: four blows, no more, its bare fist stopped short once and not again at that door, and punched again, four more); a kick in knee boots ending of itself (no question: not bare), and a bare-footed kick at seed 15\'s door stopped short once and breaking it down',
       init: 't_rc', cycles: 1800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
-        'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'break the door', 'break', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'break the door']) +
-        'ĀĀstop digging\rstop battering\r' + dq0Typed(['break', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick', 'break the door ahead', 'quit',
+        'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'drop the torch', 'hold the pick', 'break the door', 'break', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k pick',
+        'drop the torch', 'hold the pick', 'break the door']) +
+        'ĀĀstop digging\rstop battering\r' + dq0Typed(['break', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick', 'drop the torch', 'hold the pick', 'break the door ahead', 'quit',
         'dq0 -p t -s 14 -c /ram/c.hm', 'punch the door', 'punch the door', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'', 'wear the knee boots',
         'kick the door', 'quit', 'dq0 -p t -s 15 -c /ram/c.hm', 'kick the door ahead to my left', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -4253,7 +4256,7 @@ module.exports = {
         const n1 = run(b1, r1, 'the whole run'), m1 = run(r1, q1, 'the run after it');
         if (n1 !== 12) f.push('the whole run not a dozen blows: ' + n1);
         const first = dq0Ev(b1, 'E_TASK', { te: 'TE_BEGUN', task: 'LT_BATTER' })[0];
-        if (!first || first !== b1.events.find(e => e.kind !== 'E_VIEW') || first.what !== 1) f.push('the battering\'s first words not at once, at the door, the best to hand (' + dq0Evs(b1) + ')');
+        if (!first || first !== b1.events.find(e => e.kind !== 'E_VIEW') || first.what !== (1 | 0x40)) f.push('the battering\'s first words not at once, at the door, with the pick (' + dq0Evs(b1) + ')');
         for (const beat of ['WB_TELLS', 'WB_GIVES']) dq0Need(f, b1, 'E_BEAT', { beat }, 'no ' + beat + ' as it went');
         if (!tasks.some(e => e.kind === 'LT_BATTER' && e.len === 12)) f.push('the long task\'s length not a dozen blows');
         dq0Need(f, b1, 'E_PORTAL', { po: 'PO_GIVING' }, 'the pick\'s dozen blows didn\'t leave the door giving');
@@ -4777,6 +4780,81 @@ module.exports = {
         }
         const od = s.slice(s.indexOf('> open the door'), s.indexOf('> check the door for traps'));
         if ((od.match(/passage, 30 feet/g) || []).length !== 1) f.push('what the door shows told other than once: ' + od);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0strike', what: 'Dingus Quest Zero\'s blows by what strikes (the user\'s playtest, 2026-10-22: "I cannot `hit the door with bar` if I have a `bar` in hand.  It still says I am battering it with my bare hands"; "A bar should just be treated as a club or stick, no?"; a soft thing tried once, "it seems ineffectual"; nothing named, what\'s in hand; HOUSE.md\'s fights, what strikes), by the world\'s events, the hub\'s pc_strike and the words: at seed 14 (dq0 -k bar: the torch and the bar in hand) the door hit with the bar, battered with it (TE_BEGUN\'s what the door and SK_WITH, pc_strike the bar\'s kind: "You set to battering the door with the bar."), no part of the character struck (no stop short, no hurt); hit with nothing named, the bar again (of the two in hand the referee\'s, RS_WIELD: the club over the torch\'s stick); the torch alone in hand, the door hit, battered with the torch (never a better thing carried, unasked); a rope named (soft): one attempt, no battering ("You attempt to batter the door with the rope, but it seems ineffectual."), and a kick said outright a kick still; at seed 5 (dq0 -T) a giant rat attacked with the bar ("You strike at the giant rat with your bar"), and one swatted with a cloak, no blow struck ("You swat at the giant rat with the cloak, but it seems ineffectual.")',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 14 -c /ram/c.hm -k bar', 'hit the door with the bar', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k bar', 'hit the door', 'quit',
+        'dq0 -p t -s 14 -c /ram/c.hm', 'hit the door', 'quit',
+        'dq0 -p t -s 14 -c /ram/c.hm -k rope', 'batter the door with the rope', 'kick the door', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -k bar -T', 'd', 'wait', 'go right', 'attack the rat with the bar', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -k cloak -T', 'd', 'wait', 'go right', 'attack the rat with the cloak', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const begun = t => dq0Ev(t, 'E_TASK', { te: 'TE_BEGUN', task: 'LT_BATTER' })[0];
+        const g1 = T.of('dq0 -p t -s 14 -c /ram/c.hm -k bar'), h1 = T.after(g1, 'hit the door with the bar');
+        const h2 = T.after(T.after(h1, 'dq0 -p t -s 14 -c /ram/c.hm -k bar'), 'hit the door');
+        for (const [t, w] of [[h1, 'named'], [h2, 'nothing named, the bar and the torch in hand']]) {
+          const b = begun(t);
+          if (!b || b.what !== (1 | 0x40)) f.push('the door hit with the bar (' + w + '): not battered with a thing (' + dq0Evs(t) + ')');
+          if (!t.after || t.after.pc.strike !== (0x80 | K.KI_BAR)) f.push('the door hit with the bar (' + w + '): pc_strike ' + (t.after && t.after.pc.strike));
+          dq0Never(f, t, 'E_TASK', { te: 'TE_ASK_SHORT' }, 'the bar\'s blows stopped short (' + w + ': no part of it strikes)');
+          dq0Never(f, t, 'E_HARM', { hc: 'HC_STRUCK' }, 'the character hurt by the bar\'s blows (' + w + ')');
+          if (!dq0Ev(t, 'E_PORTAL', { po: p => ['PO_BROKE_DOWN', 'PO_GIVING', 'PO_HOLDING', 'PO_NO_MARK'].includes(p) }).length) f.push('the bar\'s battering not ended (' + w + ': ' + dq0Evs(t) + ')');
+        }
+        const g2 = T.of('dq0 -p t -s 14 -c /ram/c.hm'), h3 = T.after(g2, 'hit the door');
+        if (!begun(h3) || begun(h3).what !== (1 | 0x40) || !h3.after || h3.after.pc.strike !== (0x80 | K.KI_TORCH)) f.push('the torch in hand, the door not battered with it (' + dq0Evs(h3) + ')');
+        const r = T.of('batter the door with the rope'), k = T.after(r, 'kick the door');
+        dq0Need(f, r, 'E_PORTAL', { po: 'PO_SOFT' }, 'the rope not one attempt, ineffectual');
+        if (begun(r)) f.push('the rope\'s attempt a battering (' + dq0Evs(r) + ')');
+        if (!begun(k) || begun(k).what !== (1 | 2 << 4)) f.push('a kick said outright not a kick (' + dq0Evs(k) + ')');
+        const a = T.of('attack the rat with the bar');
+        if (!dq0Ev(a, 'E_FIGHT', { who: 0 }).length) f.push('the rat not struck at with the bar (' + dq0Evs(a) + ')');
+        const c = T.of('attack the rat with the cloak'), cq = T.and(c);
+        dq0Need(f, cq, 'E_BEAT', { beat: 'WB_SWAT' }, 'the rat not swatted at with the cloak');
+        if (dq0Ev(c, 'E_FIGHT', { who: 0 }).length) f.push('a blow struck with the cloak (' + dq0Evs(c) + ')');
+        inTurn(s, ['> hit the door with the bar', 'You set to battering the door with the bar.', '> hit the door', 'You set to battering the door with the bar.',
+          '> hit the door', 'You set to battering the door with the torch.', '> batter the door with the rope',
+          'You attempt to batter the door with the rope, but it seems ineffectual.', '> kick the door', 'You set to kicking the door.',
+          '> attack the rat with the bar', 'You strike at the giant rat with your bar', '> attack the rat with the cloak',
+          'You swat at the giant rat with the cloak, but it seems ineffectual.'], f, 'the words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0rather', asks: true, what: 'Dingus Quest Zero\'s blow with nothing named and its hands empty (the user\'s, 2026-10-22: "I don\'t think it should auto-fallback to something better unless you have nothing at hand, and then it should ask for confirmation.  If your hands are empty, but you have an axe at your belt, then something like `You can try battering it with your hands, but would you rather use your axe?`"; HOUSE.md\'s fights, what strikes), by the world\'s events, the hub\'s pc_strike and the words: at seed 14 (dq0 -k pick: the pick in the pack) the torch put down, the door hit: asked ("... would you rather use your pick?", nothing struck), yes taking the pick in hand and battering with it; again, no battering bare-handed ("You set to battering the door."), stopped; asked again, and a look typed instead letting the blow go (no battering, the look done); at seed 5 (dq0 -T, dq0 -k sword: Sword 80) its sword stowed, the rats seen down the ladder, its torch put down, a rat attacked: asked ("You can fight it with your fists, but would you rather draw your sword?"), a look letting it go; and before it, its hands empty, a ghoul attacked with none there to fight: not asked',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'drop the torch', 'hit the door', 'yes', 'quit',
+        'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'drop the torch', 'hit the door', 'no', 'stop', 'hit the door', 'look', 'quit',
+        'cp /ram/c.hm /ram/s.hm', 'echo ml swd 80 >> /ram/s.hm', 'dq0 -p t -s 5 -c /ram/s.hm -k sword -T', 'stow the sword', 'drop the torch', 'attack the ghoul',
+        'take the torch', 'd', 'drop the torch', 'attack the rat', 'look', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const begun = t => dq0Ev(t, 'E_TASK', { te: 'TE_BEGUN', task: 'LT_BATTER' })[0];
+        const g1 = T.of('dq0 -p t -s 14 -c /ram/c.hm -k pick'), h1 = T.after(g1, 'hit the door'), y = T.after(h1, 'yes');
+        if (begun(h1)) f.push('battered before it was asked (' + dq0Evs(h1) + ')');
+        if (!begun(y) || begun(y).what !== (1 | 0x40) || !y.after || y.after.pc.strike !== (0x80 | K.KI_PICK)) f.push('yes: not battered with the pick (' + dq0Evs(y) + ')');
+        const g2 = T.after(y, 'dq0 -p t -s 14 -c /ram/c.hm -k pick'), h2 = T.after(g2, 'hit the door'), n = T.after(h2, 'no');
+        const h3 = T.after(n, 'hit the door'), l = T.after(h3, 'look');
+        if (begun(h2)) f.push('battered before it was asked, again (' + dq0Evs(h2) + ')');
+        if (!begun(n) || begun(n).what !== 1) f.push('no: not battered bare-handed (' + dq0Evs(n) + ')');
+        if (begun(h3) || begun(l)) f.push('the blow asked about not let go for a look (' + dq0Evs(h3) + '; ' + dq0Evs(l) + ')');
+        const a = T.of('attack the rat'), al = T.after(a, 'look');
+        if (dq0Ev(a, 'E_FIGHT', { who: 0 }).length || dq0Ev(al, 'E_FIGHT', { who: 0 }).length) f.push('the rat struck at, asked about and let go (' + dq0Evs(a) + ')');
+        inTurn(s, ['> hit the door', 'You can try battering it with your hands, but would you rather use your pick?', '> yes', 'You take the pick in both hands.',
+          'You set to battering the door with the pick.', '> hit the door', 'You can try battering it with your hands, but would you rather use your pick?',
+          '> no', 'You set to battering the door.', '> hit the door', 'would you rather use your pick?', '> look', '> attack the ghoul', '> take the torch',
+          '> attack the rat', 'You can fight it with your fists, but would you rather draw your sword?', '> look'], f, 'the words: ');
+        const ag = s.slice(s.indexOf('> attack the ghoul'), s.indexOf('> take the torch'));
+        if (/would you rather/.test(ag)) f.push('asked with nothing to fight: ' + ag);
         return f;
       },
       sdcard: true
@@ -5445,11 +5523,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0tiring', asks: true, what: 'Dingus Quest Zero\'s strenuous work tiring the character (the user\'s, 2026-10-20: "Tiring work includes swimming, climbing, running, battering down a door"; HOUSE.md\'s moving and tiring: the world\'s RS_EXERT at GA_WORK, the referee\'s rate the book\'s for strenuous activity, a level each five minutes) and a search cut short (the user\'s: the part done, the nearest squares first, each at the full chance), by the world\'s events and the referee\'s replies and summary (HarnMaster\'s, at these seeds): at seed 3 a pick\'s shaft (dq0 -T), each ten-minute spell two fatigue levels, a level more asked of ("You\'re tiring.  Keep digging?"), yes going on, no stopping it (nothing more charged), and a spell stopped part way tiring for the part of it done; one nearly a level tired (pc.hm\'s pace line) climbing seed 517\'s ledge (dq0harm\'s: a round without a hold first), its first round tiring it a level more, asked of, no refused part way up and the climb on up; the same battering seed 14\'s door (dq0battering\'s), its first blow tiring it a level more, asked of, and each blow heard (a noise a blow, E_NOISE\'s NZ_BLOW); then (seed 7\'s thief by the door with a hidden dart trap, dq0traps\', at the menacing pace) two whole searches reaching every square (E_PORTAL\'s reach, 19), a third stopped at once reaching only the character\'s own square (the trap beside it not found), and in the same game again a third stopped part way reaching the door, the trap found (at the full chance: the third search\'s, as dq0traps\' whole one finds it), each search\'s reach its part done\'s',
+      name: 'dq0tiring', asks: true, what: 'Dingus Quest Zero\'s strenuous work tiring the character (the user\'s, 2026-10-20: "Tiring work includes swimming, climbing, running, battering down a door"; HOUSE.md\'s moving and tiring: the world\'s RS_EXERT at GA_WORK, the referee\'s rate the book\'s for strenuous activity, a level each five minutes) and a search cut short (the user\'s: the part done, the nearest squares first, each at the full chance), by the world\'s events and the referee\'s replies and summary (HarnMaster\'s, at these seeds): at seed 3 a pick\'s shaft (dq0 -T), each ten-minute spell two fatigue levels, a level more asked of ("You\'re tiring.  Keep digging?"), yes going on, no stopping it (nothing more charged), and a spell stopped part way tiring for the part of it done; one nearly a level tired (pc.hm\'s pace line) climbing seed 517\'s ledge (dq0harm\'s: a round without a hold first), its first round tiring it a level more, asked of, no refused part way up and the climb on up; the same battering seed 14\'s door (dq0battering\'s, the torch put down first, the pick taken), its first blow tiring it a level more, asked of, and each blow heard (a noise a blow, E_NOISE\'s NZ_BLOW); then (seed 7\'s thief by the door with a hidden dart trap, dq0traps\', at the menacing pace) two whole searches reaching every square (E_PORTAL\'s reach, 19), a third stopped at once reaching only the character\'s own square (the trap beside it not found), and in the same game again a third stopped part way reaching the door, the trap found (at the full chance: the third search\'s, as dq0traps\' whole one finds it), each search\'s reach its part done\'s',
       init: 't_rc', cycles: 2500e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/t.hm', 'echo pace 2 0 5990 >> /ram/t.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', 'dig down', 'yes', 'no', 'dig down', '!' + 'Ā'.repeat(3) + 'stop', 'quit',
-        'dq0 -p t -s 517 -c /ram/t.hm', 'ne', 'e', 'u', 'no', 'quit', 'dq0 -p t -s 14 -c /ram/t.hm -k pick -a', 'break the door', 'quit',
+        'dq0 -p t -s 517 -c /ram/t.hm', 'ne', 'e', 'u', 'no', 'quit', 'dq0 -p t -s 14 -c /ram/t.hm -k pick -a', 'drop the torch', 'break the door', 'quit',
         'hmchar -q -s 1 -u feudal -c thief -o /ram/th.hm', 'echo ml lck 95 >> /ram/th.hm',
         ...['!stop', '!' + 'Ā'.repeat(6) + 'stop'].flatMap(st => ['dq0 -p m -s 7 -c /ram/th.hm -a', 'search', 'search', 'search', st, 'quit']), 'echo $status']
         .map(l => (l[0] === '!' ? l.slice(1) : 'ā' + l) + '\r').join('') },

@@ -3,10 +3,11 @@
 ** ruleset's), so a second ruleset gives the same game where the rules aren't its own: the tools that dig, by the
 ** material (RS_HOUSE_DIG: the table; RS_HOUSE_DIG_TOOL: the one to hand that suits best, the function named so); what
 ** the character's going and watchfulness make of a notice (RS_HOUSE_NOTICE); and the words of its pace, its
-** watchfulness and its light in its state (RS_HOUSE_STATE: RS_DESCRIBE b 3's).  A referee defines the parts it wants
-** before it includes this, where it wants their code (its main RAM, an overlay, a swapped part): each part once in a
-** file, static (but the dig tool's), its words through the referee's own put and putn, the tools to hand its own
-** (tools[NTOOLS][8], RS_EQUIP's keys).
+** watchfulness and its light in its state (RS_HOUSE_STATE: RS_DESCRIBE b 3's); what a thing does swung (RS_HOUSE_SWING:
+** the function named so, the world's too).  A referee defines the parts it wants before it includes this, where it
+** wants their code (its main RAM, an overlay, a swapped part): each part once in a file, static (but the dig tool's;
+** the swing's in each part that wants it, named for it), its words through the referee's own put and putn, the tools
+** to hand its own (tools[NTOOLS][8], RS_EQUIP's keys).
 */
 
 /* ---- The tools that dig (HOUSE.md: digging; rs.h's P_DIG): each one's key (the things' catalogue's), its half-feet a
@@ -49,6 +50,33 @@ unsigned char __fastcall__ RS_HOUSE_DIG_TOOL (unsigned char m)
         }
     }
     return best;
+}
+#endif
+
+/* ---- What a thing does swung (HOUSE.md's fights and portals, the user's, 2026-10-22: "I think it should try and use
+** whatever you request, but if it is something soft ... it should reply with something like 'You attempt to batter the
+** door with the noodle, but it seems ineffectual'"): a thing named to strike with (or the one in its hands) that isn't
+** a weapon of the ruleset's, by its kind's data (items.h's struct kind, the catalogue's): soft (IM_SOFT) if it's made of
+** something that gives (cloth, leather, wax, tallow, food and the like) or only breaks (glass, pottery), if it's a heap
+** or a lot (sand, pennies, arrows), anything worn (armour, clothes: not made to swing), under half a pound, or lighter
+** than its bulk (hollow, loose: a basket, a pack, straw): one attempt, told, no harm; else light (IM_LIGHT, under two and
+** a half pounds: the book's stick, HarnMaster's referee) or hefty (IM_HEFTY: its club).  The ruleset's own weapons by
+** their keys first, the referee's */
+#if defined (RS_HOUSE_SWING)
+#if !defined (RS_HOUSE_SWING_DONE)
+#define RS_HOUSE_SWING_DONE
+enum { IM_SOFT, IM_LIGHT, IM_HEFTY };
+#define IM_HARD         ((1u << MT_WOOD) | (1u << MT_IRON) | (1u << MT_STEEL) | (1u << MT_BRONZE) | (1u << MT_BONE) | \
+                         (1u << MT_STONE) | (1u << MT_SILVER))
+#endif
+
+static unsigned char __fastcall__ RS_HOUSE_SWING (const struct kind* k)
+{
+    if (!(IM_HARD & 1u << k->mat) || (k->form & (KF_SMALL | KF_LIQUID | KF_GAS | KF_COUNT)) || (k->flags & K_WEAR) ||
+        k->weight < 2 || k->weight < k->bulk) {
+        return IM_SOFT;
+    }
+    return k->weight < 10 ? IM_LIGHT : IM_HEFTY;
 }
 #endif
 

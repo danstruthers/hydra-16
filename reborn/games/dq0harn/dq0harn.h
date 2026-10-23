@@ -18,6 +18,9 @@ unsigned __fastcall__ cond_of (const harn_char* c);        /* Its conditions (rs
 #define conditions()    cond_of (&pc)           /* The character's */
 unsigned char __fastcall__ health_of (const harn_char* c); /* Its health (rs.h's H_*) */
 unsigned char __fastcall__ has (const char* key);   /* A tool to hand, by its key ("pick") */
+extern struct kind wk;                          /* A thing's kind, the catalogue's (the hub's pc_strike's, SK_THING;
+                                                **   RS_WIELD's, each held in turn), */
+void __fastcall__ kind_in (unsigned char k);    /*   copied in (from an overlay too: the window put back) */
 signed char __fastcall__ grade (unsigned char level);   /* A level of success (harn.h's) as rs.h's grade */
 struct pstate {                                 /* (The character's state's words need, the hub's: copied) */
     unsigned char   gait, watch;                /* Its pace, its watchfulness (rs.h's GA_*, hub.h's WA_*) */
@@ -113,7 +116,7 @@ struct side {
     int             bml[SIDE_BLK];              /*   block's EML) */
     unsigned char   aslot;                      /* (And the slot of what it strikes with: BARE_ARM a part of it) */
     const struct bkind* b;                      /* (A creature's entry; 0: the character) */
-    char            word[8];                    /* Its weapon, in a word */
+    char            word[14];                   /* Its weapon, in a word (a thing named, its kind's name) */
 };
 
 /* gear.c (overlay 3): the character's weapons and armour */
@@ -121,13 +124,15 @@ void __fastcall__ pc_side (struct side* s);     /* Its side of a fight: what it 
                                                 **   dodges */
 unsigned char __fastcall__ pc_defence (struct side* d, unsigned char f, unsigned char armed);  /* Its defence (HARN_*)
                                                 **   against foe f this round (a round's defences, the user's) */
+void __fastcall__ pc_wield (struct req* r);     /* RS_WIELD: what it would strike with, of what it holds (r a copy,
+                                                **   its words put); its hands empty, the best it carries */
 unsigned char __fastcall__ pc_armour (unsigned char loc, unsigned char aspect);    /* Its armour at loc against an
                                                 **   aspect (HARN_*), all its worn pieces', the last named in arm
                                                 **   (""); loc SOLE: its soles' (a kick at a thing) */
 #define SOLE    0x7F
 extern char arm[16];
-extern unsigned char pc_way;                    /* (The hub's pc_strike, as a request's answered: SK_*) */
-extern unsigned char at_thing;                  /* (Its blow at a thing: its best the tool that hits it hardest) */
+extern unsigned char pc_way;                    /* (The hub's pc_strike, as a request's answered: SK_*; SK_THING | a
+                                                **   kind, its kind in wk) */
 
 /* bank.s */
 void __fastcall__ setbank (unsigned char b);

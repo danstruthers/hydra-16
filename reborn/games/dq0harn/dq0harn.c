@@ -13,7 +13,9 @@
 ** first time, kept in a bank after), RS_ATTACK (a blow struck, HarnMaster's melee: by the character, or at it),
 ** RS_MORALE, RS_TIME (bleeding), RS_CONTEST (two actors' tests: the engage initiative test's, a creature's by its
 ** sheet), RS_EXERT (fatigue, by the pace moved at or strenuous work, and rest); RS_DESCRIBE b 3 (its state,
-** the status command's, the hub's pace and watchfulness).  Its summary gives each pace's step, and the notice
+** the status command's, the hub's pace and watchfulness); RS_WIELD (what the character would strike with, nothing
+** named: of what it holds, else the best it carries, gear.c's).  A thing named that strikes (the hub's pc_strike,
+** SK_THING) its kind read from the hub's catalogue (kind_in: wk).  Its summary gives each pace's step, and the notice
 ** tests go by the character's pace and state.  The sheet's words and the harm are overlay 1's (sheet.c), the
 ** fights overlay 2's (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's
 ** three (the world's, the UI's, and the denizens' task's: DSLOT, a short one), each rung for, answered in place, the
@@ -149,7 +151,7 @@ static void __fastcall__ set_load (unsigned qp)
     pc.neq = 1;
 }
 
-/* A tool equipped (sheet.c's too: a blow at a thing struck with the best to hand) */
+/* A tool equipped (Lockcraft's picks) */
 unsigned char __fastcall__ has (const char* key)
 {
     unsigned char k;
@@ -160,6 +162,19 @@ unsigned char __fastcall__ has (const char* key)
         }
     }
     return 0;
+}
+
+/* A thing's kind, the catalogue's (in the hub's bank: the thing that strikes, the hub's pc_strike's; RS_WIELD's, each
+** held in turn), copied into wk; the window put back (gear.c's, the overlay's, too) */
+struct kind wk;
+
+void __fastcall__ kind_in (unsigned char k)
+{
+    unsigned char b = getbank ();
+
+    hub_map (CAT_BANK);
+    memcpy (&wk, CATALOGUE + k, sizeof wk);
+    setbank (b);
 }
 
 #pragma code-name (push, "SW2CODE")
@@ -610,9 +625,13 @@ static void __fastcall__ answer (struct req* r)
     case RS_ATTACK:
     case RS_MORALE:
     case RS_TIME:
+    case RS_WIELD:                              /* (What it would strike with: gear.c's, through fight's) */
         tnow = HUB->now;
         stance = HUB->pc_stance;
         pc_way = HUB->pc_strike;
+        if (pc_way & SK_THING) {
+            kind_in (pc_way & 0x7F);            /* (The thing named that strikes: its kind, for the overlay) */
+        }
         gseed = HUB->seed;
         memcpy (rq, r, sizeof rq);
         fight ((struct req*) rq);

@@ -242,6 +242,9 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   the world's tests made now, told as it ends), on or in one (SF_ON:
                                                 **   carried, or within reach: IR_NONE, none; IR_NOT_HERE, seen out of
                                                 **   reach, where it lies in x, y), the name kept for IO_SEARCH's */
+#define IO_HANDS        (IO_BAR + 11)           /* The kinds of what the character holds (a blow with nothing named:
+                                                **   what's in its hands strikes, the user's, 2026-10-22): x the
+                                                **   first's, y the second's (0 none) */
 enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS };   /* (IO_LOOK's: a look at it; a closer look; its
                                                 **   condition; its weight; its lock; gone over for traps) */
 #define IO_PUZZLE       (IO_BAR + 4)           /* A command of the theme's puzzle's (theme.h), judged by its rules

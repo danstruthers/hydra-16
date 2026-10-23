@@ -216,7 +216,15 @@ void __fastcall__ o_fixt_words (const struct msg* m)
     unsigned w = m->w1;
     unsigned char out = w & 0xFF, kind = w >> 8 & 7;
 
-    if (out > PO_FOUND_TRAP) {
+    if (out == PO_SOFT) {                       /* (A blow with a soft thing, the hub's pc_strike's: one attempt, the
+                                                **   user's, 2026-10-22) */
+        strcpy (lb, kind == PK_WINDOW || kind == PK_SLIT ? "You attempt to batter the window with the " :
+            kind == PK_PORTCULLIS ? "You attempt to batter the portcullis with the " :
+            "You attempt to batter the door with the ");
+        hub_mem (0, &out, &HUB->pc_strike, 1);
+        hub_mem (CAT_BANK, lb + strlen (lb), CATALOGUE[out & 0x7F].name, sizeof CATALOGUE[0].name);
+        strcat (lb, ", but it seems ineffectual.");
+    } else if (out > PO_FOUND_TRAP) {
         strcpy (lb, blows[out - PO_BROKE_DOWN]);
     } else if (out >= PO_RAISED) {
         if (out == PO_FOUND_TRAP) {

@@ -432,9 +432,15 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a 
                                                 **   growl), the character sensed, lost (its senses' own) */
 enum { NZ_WORK, NZ_BLOW };                      /* E_NOISE's b: work's (a dig's, a door forced ...), a blow at a thing
                                                 **   (a battering's, each blow: the sound task's) */
-enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best to hand (the
-                                                **   best weapon held at a denizen, the tool that hits hardest at a
-                                                **   thing; else the fists), a fist, a foot, the head */
+enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best it holds (the
+                                                **   best weapon in its hands, the referee's; else the fists: the UI's
+                                                **   with nothing named, its hands empty), a fist, a foot, the head */
+#define SK_THING        0x80                    /* (| a kind, the catalogue's: the thing named, or the one in its hands
+                                                **   the UI chose, and no other: a weapon of the referee's as itself,
+                                                **   anything else as the referee treats it; a soft thing one attempt,
+                                                **   no harm, the world's: HOUSE.md's fights and portals, 2026-10-22) */
+#define SK_WITH         0x40                    /* (The long task's what, a battering's: its striker the thing named,
+                                                **   the hub's pc_strike's kind, not a part of it times 16) */
 #define FO_GONE         0xFF
 #define FO_BLED         0xFE                    /* (E_FIGHT's x[1]: no blow, but the attacker dead of its bleeding) */
 #define FF_A_DOWN       0x01                    /* E_FIGHT's x[2]: the attacker knocked senseless, */
@@ -511,14 +517,18 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
        WB_TELLS, WB_GIVES, WB_ON,                /*   a battering's as it goes (the user's, 2026-10-22): the first blow
                                                 **   that marks it, the one that leaves it giving, every fourth blow
                                                 **   else; */
-       WB_FEEL, WB_FELT, WB_THING, WB_TRIP, WB_STUMBLE, WB_HIT, WB_OFF, WB_SHORT };   /* (The dark's, 2026-10-22:
+       WB_FEEL, WB_FELT, WB_THING, WB_TRIP, WB_STUMBLE, WB_HIT, WB_OFF, WB_SHORT,     /* (The dark's, 2026-10-22:
                                                 **   HOUSE.md's walking in the dark: a walk set out on, its heading
                                                 **   times 256 and its gait faster than feeling its way times 4096 (0:
                                                 **   feeling its way); what its hands met, FA_* times 256; its foot on a
                                                 **   thing in its way, its kind times 256 (the catalogue's); fallen over
                                                 **   it, stumbled over it and on; run into what's there, FA_* times
                                                 **   256, its gait times 4096; gone over an edge, a drop's or a pit's
-                                                **   (FA_*), the fall after; stopped short at it) */
+                                                **   (FA_*), the fall after; stopped short at it); */
+       WB_SWAT };                               /* (The world's: a blow at a denizen with a soft thing, one attempt, no
+                                                **   harm, the actor plus 1 times 256, the thing the hub's pc_strike's:
+                                                **   "You swat at the rat with the cloak, but it seems ineffectual.",
+                                                **   the user's, 2026-10-22) */
 enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT };   /* (What stops a walk in the dark, met: the
                                                 **   world's ahead) */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
@@ -572,8 +582,10 @@ enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARR
                                                 /*   a bar set in its brackets again, none this side, barred already,
                                                 **   open, burst open once (it won't bar), no bar to hand, one too
                                                 **   short to span it; */
-       PO_GAP, PO_JAMMED };                     /*   a portcullis's bars broken through, its bars forced apart (it
-                                                **   won't move) */
+       PO_GAP, PO_JAMMED,                       /*   a portcullis's bars broken through, its bars forced apart (it
+                                                **   won't move); */
+       PO_SOFT };                               /*   a blow at it with a soft thing, one attempt, no harm (the thing
+                                                **   the hub's pc_strike's, the user's, 2026-10-22) */
 #define PO_SHOWS        0x8000                  /* (E_PORTAL's w1, an opening's: what it shows beyond told with it, as
                                                 **   the look after it found it, 2026-10-22: a what, WB_*, | 4 lit; b
                                                 **   the room's kind; w2 how far it's seen, squares: the world's
@@ -673,7 +685,9 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
 #define CF_HALF         0x02                    /*   a half turn, "turn half left": an eighth; */
 #define CF_UNSAID       0x04                    /*   its thing not said: its verb's (dflt) to fill; */
 #define CF_STRANGE      0x08                    /*   no verb, and the line's first word one the game doesn't know:
-                                                **   "bribe the goblin", a verb it hasn't) */
+                                                **   "bribe the goblin", a verb it hasn't; */
+#define CF_ASKED        0x10                    /*   the UI's: a blow's question put, its command kept, not carried
+                                                **   out now: choose.c's) */
 struct cmd {
     unsigned char   action;                     /* VB_* */
     unsigned char   actor;                      /* Whose: 0 the character, an actor's entry plus 1 */
@@ -897,7 +911,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pc_aim;                     /* Its aim (Z_*) */
     unsigned char   pc_stance;                  /* (The world's: the UI's request, WQ_SET) */
     unsigned char   pc_strike;                  /* What it strikes with (SK_*: the parser's, as it's told: the world's,
-                                                **   from the blow's intent, I_ATTACK's, I_PORTAL's x[1]) */
+                                                **   from the blow's intent, I_ATTACK's, I_PORTAL's x[1]; SK_THING | a
+                                                **   kind, a thing; fighting back unbidden, what it holds: RS_WIELD's) */
     /* The denizens' intents to the world (their actors' bodies': hub.h's the denizens' intents), a ring: written at
     ** di_head (the denizens' task: a full one waited on), read at di_tail as each is carried out (the world: it rings
     ** the denizens as it has) */
@@ -947,7 +962,8 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   the giant rat"; 0 none) */
         unsigned char what;                     /* What it's done to, for its words (the world's, as it's begun: a
                                                 **   timed work's, a battering's): a portal's kind plus 1 (world.h's
-                                                **   PK_*), and a battering's striker (SK_*) times 16; 0x80 | a thing's
+                                                **   PK_*), and a battering's striker (SK_*) times 16, or SK_WITH (the
+                                                **   thing named: the hub's pc_strike's kind); 0x80 | a thing's
                                                 **   kind (the catalogue's); 0 none (a trap's, the place's) */
     }               pc_task;
     volatile unsigned pc_fuel;                  /* The character's light's minutes left (pc_lamp's: 0xFFFF, it never

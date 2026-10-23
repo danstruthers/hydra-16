@@ -111,7 +111,7 @@ go:
             SWPART      29, 10              ; The traces read: the floor, a track, a smell (wtrace.c)
             SWPART      30, 10              ; The traces' store's files: a chunk's records put out, read in (wtrfile.c)
             SWPART      31, 11              ; The traces read, in words (wtrword.c)
-            SWPART      32, 9               ; The way the character's scent goes, a hunter's (wtrscent.c)
+            SWPART      32, 3               ; The way the character's scent goes, a hunter's (wtrscent.c)
             SWPART      33, 12              ; A walk across a room (dq0w.c's across: the main RAM's room)
             SWPART      34, 15              ; The rooms' lights by their sconces (wkept.c)
             SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)

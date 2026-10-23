@@ -29,7 +29,7 @@ struct work {
     unsigned char   what;                       /* PA_*, or W_STEP; a battering's W_BLOW, W_GONE as it goes */
     unsigned char   pd;                         /* The way from where the character stands to the portal */
     unsigned char   link;                       /* PA_BAR's: the widest bar to hand, its width (0 none); a search's:
-                                                **   1, as it goes (quietly) */
+                                                **   1, as it goes (quietly); PA_BREAK's: 1, a soft thing strikes */
     unsigned        px, py;                     /* The portal's square (or NO_SQ: about the character) */
     unsigned        fx, fy;                     /* Where the character stands (or came from); the reply's where it is
                                                 **   after (a pit's: where it climbs out to) */

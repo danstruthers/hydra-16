@@ -9,6 +9,13 @@
 ** (choose; any other line, the choice let go).  From the hub's record of what the character perceives (copied into
 ** look.c's sight_copy: the hub isn't in the window while an overlay is), and its facing as the command was made
 ** (pc_face).  Its own state is kept in its overlay's bank (its data there: the code's only).
+**
+** And a blow with nothing named (the user's, 2026-10-22: "I don't think it should auto-fallback to something better
+** unless you have nothing at hand, and then it should ask for confirmation"; HOUSE.md's fights and portals): what's
+** in its hands strikes (of two, the referee's choice: wield's, part 9's, RS_WIELD), as a thing named does; its hands
+** empty and a better thing carried (the referee's, by the reckoning a blow goes by), asked ("You can try
+** battering it with your hands, but would you rather use your pick?"), the command kept: yes, with that thing (taken
+** in hand as a thing named is, resolve.c's); no, or any other answer, bare-handed; a command instead, the blow let go.
 */
 
 #pragma code-name ("OV7CODE")
@@ -39,6 +46,9 @@ static unsigned char ph[NPICK] = { 0 };         /*   the heading it lies, */
 static unsigned char pi[NPICK] = { 0 };         /*   and its record (a door's, or ndoors on: an opening's) */
 static unsigned cx = 0, cy = 0;                 /* The one chosen, for the command again (cx 0: none; till the
                                                 **   next) */
+static unsigned char tasked = 0;                /* A blow's question put (kept the blow, its other thing the better
+                                                **   one carried) */
+unsigned char __fastcall__ o_answer_of (const char* l);    /* (This overlay's: task.c's) */
 
 static void __fastcall__ add (const char* s)
 {
@@ -214,9 +224,21 @@ unsigned char __fastcall__ o_pick (unsigned char obj, unsigned char orel)
     return 1;
 }
 
+/* A blow with nothing named (c a fresh command, or one made again: main.c's cmd, wield's): what's in its hands named,
+** or asked about (the command kept, CF_ASKED: resolve's to leave it be) */
+static void __fastcall__ wielded (struct cmd* c)
+{
+    if ((c->action == VB_ATTACK_OBJECT || c->action == VB_BREAK_OBJECT) && wield () == 2) {
+        memcpy (&kept, c, sizeof kept);
+        tasked = 1;
+        c->flags |= CF_ASKED;
+    }
+}
+
 /* A command (main.c's, the parser's, before it's carried out): if a choice was asked, a number (1 ...) or a way
 ** ("left", "the one on the right": the nearest that way) chooses one, and the command asked about is carried out on
-** it (c made it again; o_pick gives that one); any other command lets the choice go */
+** it (c made it again; o_pick gives that one); any other command lets the choice go.  A blow's question answered
+** (cl's line: yes, no), the blow kept made again; any other command lets it go */
 unsigned char __fastcall__ o_choose (struct cmd* c)
 {
     unsigned char n = asked, k = 0xFF, j, d, bd = 0xFF;
@@ -224,24 +246,93 @@ unsigned char __fastcall__ o_choose (struct cmd* c)
     cur = c;
     asked = 0;
     cx = 0;
-    if (!n || (c->action != VB_MOVE_DIRECTION && c->action != VB_MOVE_TOWARD) || c->obj.kind) {
-        return 0;
-    }
-    if (c->n && c->n <= n && !c->obj.word[0]) {
-        k = c->n - 1;
-    } else if (c->dir <= H_NW) {
-        for (j = 0; j < n; ++j) {
-            if (ph[j] == c->dir && (d = apart (px[j], py[j])) < bd) {
-                bd = d;
-                k = j;
+    strike = SK_BEST;                           /* (What a blow strikes with: the verb's, or the thing named, resolve.c's,
+                                                **   or what's in its hands, wield's) */
+    if (tasked) {
+        tasked = 0;
+        if ((j = o_answer_of (cl)) != 0) {
+            memcpy (c, &kept, sizeof kept);
+            if (j == 1) {
+                c->prep = PR_WITH;              /* (Yes: with the better thing, taken in hand) */
+            } else {
+                c->other.word[0] = 0;           /* (No: bare-handed) */
             }
+            return 1;
         }
     }
-    if (k == 0xFF) {
-        return 0;
+    if (n && (c->action == VB_MOVE_DIRECTION || c->action == VB_MOVE_TOWARD) && !c->obj.kind) {
+        if (c->n && c->n <= n && !c->obj.word[0]) {
+            k = c->n - 1;
+        } else if (c->dir <= H_NW) {
+            for (j = 0; j < n; ++j) {
+                if (ph[j] == c->dir && (d = apart (px[j], py[j])) < bd) {
+                    bd = d;
+                    k = j;
+                }
+            }
+        }
+        if (k != 0xFF) {
+            memcpy (c, &kept, sizeof kept);
+            cx = px[k];
+            cy = py[k];
+            wielded (c);
+            return 1;
+        }
     }
-    memcpy (c, &kept, sizeof kept);
-    cx = px[k];
-    cy = py[k];
-    return 1;
+    wielded (c);
+    return 0;
 }
+
+#pragma code-name (push, "SW9CODE")
+#pragma rodata-name (push, "SW9RODATA")
+#pragma local-strings (push, on)
+
+/* (Part 9's, its room: main-RAM code, the referee asked) A blow with nothing named (the command, cmd:
+** VB_ATTACK_OBJECT's at a denizen there to strike, but a kick's, a punch's, a head butt's; VB_BREAK_OBJECT's at a door,
+** a window, a portcullis): what's in its hands strikes (the things' IO_HANDS; of two, the referee's choice,
+** RS_WIELD's), strike that thing: 1; its hands empty, a better thing carried (RS_WIELD's key, its name the
+** things' IO_WEAR's, worn by nothing), its name its other thing and the question put: 2 (dq0 -a's: yes, unasked, with
+** it: 1); else 0, its bare hands (the window put back) */
+#define USLOT           (HUB->slot[SLOT_UI])
+unsigned char s_wield (void)
+{
+    unsigned b;
+    unsigned char a = cmd.action, t, k;
+
+    if ((a == VB_ATTACK_OBJECT && cmd.aux != SK_BEST) || cmd.prep == PR_WITH || (a == VB_BREAK_OBJECT &&
+        !cmd.obj.kind && cmd.obj.word[0])) {
+        return 0;                               /* (A part of it said; a thing named; a thing broken, not a portal) */
+    }
+    t = a == VB_BREAK_OBJECT || (k = cmd.obj.kind) == OB_DOOR || k == OB_WINDOW || k == OB_PORTC;
+    if (!t && !fight_target (&cmd)) {
+        return 0;                               /* (No denizen there to strike: why not told as it's carried out) */
+    }
+    b = hub_here ();
+    hub_map (0);
+    things (IO_HANDS, "");
+    USLOT.x[0] = (unsigned char) HUB->ireq.x;
+    USLOT.x[1] = (unsigned char) HUB->ireq.y;
+    ask_b (RS_WIELD, 0, t)->state = REQ_FREE;
+    if ((k = USLOT.result) != 0) {              /* (What's in its hands strikes: held already, nothing to take) */
+        strike = SK_THING | USLOT.x[k - 1];
+        k = 1;
+    } else if (USLOT.text[0]) {                 /* (Its hands empty, a better thing carried: asked about) */
+        HUB->ireq.to = 0;
+        things (IO_WEAR, USLOT.text);
+        strcpy (cmd.other.word, HUB->ireq.name);
+        k = 2;
+        if (autogo) {
+            cmd.prep = PR_WITH;
+            k = 1;
+        } else {
+            sayf ("\nYou can %s, but would you rather %s your %s?", t ? "try battering it with your hands" :
+                "fight it with your fists", t ? "use" : "draw", cmd.other.word);
+        }
+    }
+    hub_back (b);
+    return k;
+}
+
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
