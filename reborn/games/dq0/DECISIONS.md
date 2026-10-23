@@ -1062,7 +1062,7 @@ available and does not require a grope to remove it first before taking somethin
 backpack takes it off first, then if it was on, puts it back on, each taking time.  Just shrugging it off/dropping it
 before battle should not require time.  Please go over what I have tried to lay out here and make it consistent and
 as general (appropriately applying it to as many cases) as possible."  The book: a character begins with the clothes
-worn, a knapsack, a moneybelt and its family wealth by class (Character 11: serf 40, 80, 160d; unguilded 60, 120,
+worn, a knapsack, a moneybelt and its family wealth by class (Character 17: serf 40, 80, 160d; unguilded 60, 120,
 240d; guilded 90, 180, 360d; noble 600, 1,200, 2,400d: poor, average, rich), spent at HarnWorld's price list and the
 weapon and armour tables (Combat 3-4); a squire equipped by its lord.  So three general systems, every actor's:
 
