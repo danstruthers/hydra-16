@@ -21,6 +21,7 @@
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
+SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
 
             .bss
 _ovbank:    .res        19          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
@@ -132,6 +133,7 @@ go:
             SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
             SWPART      50, 13              ; The legs: getting up, a move's start prone, how fast (dq0w.c's)
             SWPART      51, 8               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c)
+            SWPART      52, 3               ; The character's bearings underground (dq0w.c's: slice 4.2's)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -152,6 +154,8 @@ go:
             SWFN        rise_pc, 50
             SWFN        limbs_go, 50
             SWFN        limbs_pace, 50
+            SWFN        bearings, 52
+            SWFN        bearings_off, 52
             SWFN        start_dig, 1
             SWFN        dig_on, 1
             SWFN        climb, 2

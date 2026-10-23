@@ -200,6 +200,7 @@ ovl_out:
             OVFN        names_in, 10
             OVFN        focus_words, 13
             OVFN        felt_words, 7
+            OVFN        facing_words, 7
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)
 

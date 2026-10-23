@@ -100,7 +100,8 @@ static unsigned char __fastcall__ count_of (const char* s)
     return 0;
 }
 
-/* The referee's words of the character's state, its pace and watchfulness changed first as a says (0: all of it) */
+/* The referee's words of the character's state, its pace and watchfulness changed first as a says (0: all of it, and
+** the way it believes it faces after them: slice 4.2's bearings) */
 static void __fastcall__ described (unsigned char a)
 {
     struct req* r = ask_b (RS_DESCRIBE, a, 3);
@@ -110,6 +111,7 @@ static void __fastcall__ described (unsigned char a)
     } else {
         blank ();
         say (r->text);
+        facing_words ();                        /* (The way it believes it faces: overlay 7's) */
         blank ();
     }
     r->state = REQ_FREE;

@@ -163,7 +163,7 @@ void __fastcall__ s_drop_held (unsigned char h, unsigned char ring)
 
 /* A harm's effects (the referee's RS_HARM reply, the world's slot, as it's answered: a fall's, a trap's), the
 ** character's: what its hands let go of (X_DROP, an arm's fumble), fallen prone (a leg's stumble: an X_WOUND's
-** C_PRONE), the world's body's position (the hub's pc_pos) */
+** C_PRONE), the world's body's position (the hub's pc_pos); a fall, its bearings shaken (part 52's, slice 4.2's) */
 void s_harm_fx (void)
 {
     static const struct rs_effect* e;
@@ -188,6 +188,8 @@ void s_harm_fx (void)
         lm.t = HUB->now;
         hub_event (&lm);
     }
+    bearings_off (0);                           /* (A fall's, its bearings shaken: part 52's, slice 4.2's, the
+                                                **   harm's request read before what's let go of is told the referee) */
     if (h) {
         s_drop_held (h, 0);
     }

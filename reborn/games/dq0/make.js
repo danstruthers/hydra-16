@@ -95,7 +95,12 @@ function compile(text, f, beasts, count) {
     switch (l.key) {
       case 'theme': str(l, v[0], 4, 32); break;
       case 'mission':
-        b[1] = t.mission = v[0] === 'both' ? 3 : v[0] === 'rule' ? 2 : v[0] === 'escape' ? 1 : bad(l, 'escape, rule or both');
+        t.mission = v[0] === 'both' ? 3 : v[0] === 'rule' ? 2 : v[0] === 'escape' ? 1 : bad(l, 'escape, rule or both');
+        b[1] = b[1] & 0x80 | t.mission;
+        break;
+      case 'start':                                                 // (How the character came in: theme.h's TM_FELL)
+        if (v[0] !== 'walked' && v[0] !== 'fell') bad(l, 'walked or fell');
+        b[1] |= v[0] === 'fell' ? 0x80 : 0;
         break;
       case 'story': b.writeUInt16LE(text_(l, v[0]), 776); break;
       case 'stratum':
@@ -244,7 +249,7 @@ function compile(text, f, beasts, count) {
       default: bad(l, `no key ${l.key}`);
     }
   }
-  if (!strata.length || !b[4] || !b[1]) throw new Error(`${f}: no name, mission or strata`);
+  if (!strata.length || !b[4] || !(b[1] & 3)) throw new Error(`${f}: no name, mission or strata`);
   const faction = (l, name) => {                                    // (A faction's number, 1 ...)
     const k = factions.findIndex(x => x.name === name);
     if (k < 0) bad(l, `no faction ${name} of the theme's`);

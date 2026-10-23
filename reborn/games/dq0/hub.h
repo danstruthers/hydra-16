@@ -47,7 +47,7 @@
                                                 **   P_STUMBLE; 16: the hands and limbs, pc_shand, the blows' x[2],
                                                 **   items.h's IH_*, IO_SWAP, rs.h's summary's limbs and limp, P_RISE,
                                                 **   C_LAME ..., I_RISE, the actors' move, arm and dropped, RS_REARM,
-                                                **   O_REARM; 17: the bearings, pc_skew, pc_lost) */
+                                                **   O_REARM; 17: the bearings, pc_skew, pc_lost, E_BEARING) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -434,8 +434,12 @@ enum {
                                                 **   kind (LT_*) times 256; b (TE_NOT's) the kind the stop named */
     E_BEAT,                                     /* who's walk, as it goes (DUNGEON.md: moving): w1 the beat (WB_*), its
                                                 **   side (WS_*) times 256; or its battering's (WB_TELLS ...) */
+    E_BEARING,                                  /* who's bearings (slice 4.2's: the hub's pc_skew and pc_lost, the
+                                                **   world's): w1 BRG_LOST, it knows now it's lost them; BRG_KNOWN,
+                                                **   set right, come back into a room it knows */
     NEVENTS
 };
+enum { BRG_NONE, BRG_LOST, BRG_KNOWN };
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
                                                 **   growl), the character sensed, lost (its senses' own) */
 enum { NZ_WORK, NZ_BLOW };                      /* E_NOISE's b: work's (a dig's, a door forced ...), a blow at a thing
@@ -569,6 +573,8 @@ enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: wha
 enum { WQ_SAVE, WQ_EXAMINE, WQ_START, WQ_SET }; /* The hub's wreq's kinds */
 #define WY_NO_INIT      0x100                   /* (WQ_START's y: dq0 -I, the tests', no engage initiative test nor
                                                 **   a grope's test while engaged: their fights' dice as they were) */
+#define WY_NO_BEAR      0x200                   /* (And dq0 -N, the tests': the character's bearings never tested, as
+                                                **   one that knows north's: their compass words where they went) */
 enum { WS_PACE, WS_STANCE, WS_PAUSE };          /* WQ_SET's what: the character's pace (x, GA_*: 0xFF as it is; |
                                                 **   GA_SAID, said outright) and its watchfulness (y, WA_*); its stance
                                                 **   (x, rs.h's D_*); the game paused (x 1) or going on (x 0) */
@@ -1062,14 +1068,15 @@ struct wrec {
 #define WSAVE_MAGIC     0x5744                  /* "DW" */
 struct wsave {
     unsigned        magic;
-    unsigned char   version;                    /* (1) */
+    unsigned char   version;                    /* (2: the bearings, slice 4.2's) */
     unsigned char   sn, face, pos;              /* The character's place (its stratum, its facing, its body's
                                                 **   position), */
     unsigned        x, y;                       /*   its square, */
     unsigned char   gait, watch;                /*   its pace and watchfulness; */
     unsigned char   open, done;                 /* the theme's puzzle: the way out opened, its rules done (a bit
                                                 **   each); */
-    unsigned long   now;                        /* the clock */
+    unsigned long   now;                        /* the clock; */
+    unsigned char   skew, lost;                 /* the character's bearings (the hub's pc_skew, pc_lost: slice 4.2's) */
 };
 
 /* Who writes what (Phase 2: one authority on state).  Each region of the hub has an owner, the one task that writes
@@ -1179,6 +1186,8 @@ struct wsave {
 **   own hub.pc_stance world
 **   own hub.pc_strike world                                    (The blow's intent's)
 **   own hub.pc_shand world
+**   own hub.pc_skew world                                      (Its bearings: the world's, by the referee's tests)
+**   own hub.pc_lost world
 **   own hub.di_head denizens                                   (The denizens' intents: their ring)
 **   own hub.di denizens
 **   own hub.di_tail world                                      (Its reader's place)

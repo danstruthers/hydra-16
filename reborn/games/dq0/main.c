@@ -52,6 +52,7 @@ const char* cl;                                 /* (The command's line, s_comman
 unsigned char harm_told;                        /* (The states a harm's words told in this answer: intro.c's) */
 unsigned char autogo;                           /* (dq0 -a: every soft question answered yes, unasked: the tests') */
 static unsigned char noinit;                    /* (dq0 -I: no engage initiative test, no grope's: the tests') */
+static unsigned char nobear;                    /* (dq0 -N: its bearings never tested: the tests', slice 4.2's) */
 static unsigned char asked;                     /* (A sound's question put in this command's long task) */
 static unsigned bar_done;                       /* (The long task's part done as the bar was last drawn) */
 unsigned char busy = 1;                         /* The character's doing something: no command till it's free (nor
@@ -380,7 +381,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    17                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    18                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -406,7 +407,8 @@ static void sheet (void)
                                                 **   thing's lid, its tie, its stopper, its lock; 16, the player's
                                                 **   shortcuts after the names: alias.c's; 17, the catalogue's axe, the
                                                 **   theme's kinds a number on; the hub's actors' legs and weapons let fall:
-                                                **   slice 4.1b's) */
+                                                **   slice 4.1b's; 18, the world's world.dat the character's
+                                                **   bearings: slice 4.2's) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -597,7 +599,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     HUB->wreq.kind = WQ_START;                  /* (Its clock's round and pace, the character's pace and watchfulness:
                                                 **   a game carried on, its save's, the world's) */
     HUB->wreq.x = round;
-    HUB->wreq.y = noinit ? pace | WY_NO_INIT : pace;
+    HUB->wreq.y = pace | (noinit ? WY_NO_INIT : 0) | (nobear ? WY_NO_BEAR : 0);
     HUB->wreq.a = pc_gait;
     HUB->wreq.b = pc_watch;
     hub_call (&HUB->wreq, T_WORLD);
@@ -692,6 +694,13 @@ static unsigned char placing;                   /* (A place in the room walked t
                                                 **   to it") */
 unsigned char untarget;                         /* (The target let go at the next command: resolve.c's) */
 
+/* The heading the character believes h is (the hub's pc_skew: its bearings, the world's, slice 4.2's: the north it
+** believes in, the compass's words and the status line's), from the true one */
+unsigned char __fastcall__ believed (unsigned char h)
+{
+    return (h + HUB->pc_skew) & 7;
+}
+
 /* ---- The status line */
 
 void status (void)
@@ -707,8 +716,8 @@ void status (void)
                                                 **   a fight's foe; the light's minutes left: task.c's) */
         strcat (right, HUB->pcstatus);          /* (The referee's words: "UP 0" ...; prone, said: slice 4.1b's) */
         strcat (right, HUB->pc_pos == POS_PRONE ? " PRONE  facing " : "  facing ");
-        strcat (right, head_abbr[HUB->pc_face & 7]);
-        strcat (right, "  ");
+        strcat (right, head_abbr[believed (HUB->pc_face)]);   /* (The way it believes it faces: slice 4.2's) */
+        strcat (right, HUB->pc_lost ? "?  " : "  ");
     }
     strcat (right, utoa ((unsigned) (now / 600), n, 10));    /* (The game's minutes gone, the user's: no seconds) */
     strcat (right, " min");
@@ -868,7 +877,7 @@ static unsigned char events (void)          /* (How many there were) */
                 }
                 if (m.w1 == V_FACING) {         /* (A turn's first words, as it's begun: out at once, its look
                                                 **   after, V_TURNED's) */
-                    sayf ("\nYou turn to face %s.", head_name[HUB->pc_face & 7]);
+                    sayf ("\nYou turn to face %s.", head_name[believed (HUB->pc_face)]);
                     t_flush ();
                     break;
                 }
@@ -915,6 +924,7 @@ static unsigned char events (void)          /* (How many there were) */
                     T_THE_PORTCULLIS_IS : m.w1 == N_DOOR ? T_DOOR_SHUT : T_YOU_CAN_T);
             }
             break;
+        case E_BEARING:                         /* (Its bearings lost, or set right: slice 4.2's) */
         case E_DIG:                             /* (The rarer news, its words part 11's: the main RAM's room, slice
                                                 **   4.1b's) */
         case E_LEDGE:
@@ -989,6 +999,9 @@ void __fastcall__ s_news (const struct msg* m)
     switch (m->kind) {
     case E_BEAT:
         limb_words (m);
+        break;
+    case E_BEARING:                             /* (Its bearings: lost, known, or set right, a room it knows) */
+        tell (m->w1 == BRG_LOST ? T_LOST_BEARINGS : T_BEARINGS_BACK);
         break;
     case E_DIG:
         k = m->w1 >> 8;
@@ -1523,7 +1536,7 @@ void __fastcall__ s_cq_post (const char* l)
     hub_map (0);
     HUB->cq.kind = CQ_MATCH;
     HUB->cq.len = n;
-    HUB->cq.face = HUB->pc_face;
+    HUB->cq.face = believed (HUB->pc_face);     /* (Its compass the north it believes in: slice 4.2's) */
     hub_post (&HUB->cq, T_COMMANDS);
     cq_st = CQ_OUT;
 }
@@ -1541,9 +1554,10 @@ static void cq_wait (void)
     }
 }
 
-/* The command line l makes (the command parser's: the line posted, if it wasn't), into cmd: its ways as the
-** character faces made the compass's as it faces now (dq0c's CQ_REL | n), a half turn an eighth ("turn half
-** left").  Its verdict */
+/* The command line l makes (the command parser's: the line posted, if it wasn't), into cmd: its ways by the compass
+** the north the character believes in (slice 4.2's bearings: the parser's made as it believes it faces), made the
+** true ones; its ways as it faces made the compass's as it faces now (dq0c's CQ_REL | n), a half turn an eighth
+** ("turn half left").  Its verdict */
 signed char __fastcall__ s_cq_cmd (const char* l)
 {
     static unsigned char f, d;
@@ -1558,10 +1572,15 @@ signed char __fastcall__ s_cq_cmd (const char* l)
     memcpy (&cmd, HUB_WINDOW + CQ_CMD, sizeof cmd);
     hub_map (0);
     f = HUB->pc_face;
-    if (cmd.dir != 0xFF && (cmd.dir & CQ_REL)) {
+    d = HUB->pc_skew;
+    if (cmd.dir <= H_NW) {
+        cmd.dir = (cmd.dir - d) & 7;
+    } else if (cmd.dir != 0xFF && (cmd.dir & CQ_REL)) {
         cmd.dir = (f + cmd.dir) & 7;
     }
-    if (cmd.obj.lies != 0xFF && (cmd.obj.lies & CQ_REL)) {
+    if (cmd.obj.lies <= H_NW) {
+        cmd.obj.lies = (cmd.obj.lies - d) & 7;
+    } else if (cmd.obj.lies != 0xFF && (cmd.obj.lies & CQ_REL)) {
         cmd.obj.lies = (f + cmd.obj.lies) & 7;
     }
     if (cmd.action == VB_FACE_DIRECTION && (cmd.flags & CF_HALF) && cmd.dir < GO_UP) {
@@ -1683,7 +1702,7 @@ again:
         if (cmd.dir > H_NW) {
             tell (T_WHICH_WAY_LEFT);
         } else if (cmd.dir == HUB->pc_face) {
-            sayf ("\nYou face %s already.", head_name[cmd.dir]);
+            sayf ("\nYou face %s already.", head_name[believed (cmd.dir)]);
         } else {
             intend (I_TURN, cmd.dir);
         }
@@ -2013,6 +2032,8 @@ void __fastcall__ s_args (int argc, char* argv[])
             small = 1;                          /* (For the tests: the caches small, paged to the save folder soon) */
         } else if (!strcmp (argv[i], "-a")) {
             autogo = 1;                         /* (For the tests: a long task goes on at every soft question) */
+        } else if (!strcmp (argv[i], "-N")) {
+            nobear = 1;                         /* (For the tests: its bearings never tested, as if it knew north) */
         } else if (!strcmp (argv[i], "-I")) {
             noinit = 1;                         /* (For the tests: no engage initiative test, no grope's) */
         } else if (!strcmp (argv[i], "-T")) {
@@ -2027,7 +2048,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C] [-a] [-I]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C] [-a] [-I] [-N]");
         }
     }
 }

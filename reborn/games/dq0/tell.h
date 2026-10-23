@@ -45,6 +45,8 @@ enum {
     T_BURDENED,                                 /* (The load: the summary's 1, 2, 3) */
     T_HEAVILY_BURDENED,
     T_OVERLOADED,
+    T_LOST_BEARINGS,                            /* (Its bearings, E_BEARING's: slice 4.2's) */
+    T_BEARINGS_BACK,
     T_COUNT
 };
 

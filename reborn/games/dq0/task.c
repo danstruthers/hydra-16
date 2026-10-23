@@ -368,10 +368,12 @@ void __fastcall__ o_felt_words (unsigned w)
     };
     static const char* const into[FA_PIT + 1] = { "", "a wall", "a door", "iron bars", "", "a rise in the floor", "" };
     static const char* const gait[4] = { "walk", "jog", "run", "sprint" };
-    unsigned char b = w >> 8, k = b & 7, g = (b >> 4) - GA_WALK & 3;
+    unsigned char b = w >> 8, k = b & 7, g = (b >> 4) - GA_WALK & 3, sk;
 
     switch ((unsigned char) w) {
     case WB_FEEL:
+        hub_mem (0, &sk, &HUB->pc_skew, 1);     /* (The way by the north it believes in: slice 4.2's) */
+        k = (k + sk) & 7;
         if (b >> 4) {
             sayf ("\nYou %s %s into the dark.", gait[g], head_name[k]);
         } else {
@@ -417,6 +419,17 @@ void __fastcall__ o_felt_words (unsigned w)
         return;
     }
 }
+/* The way the character believes it faces, said (the status command's, after the referee's words of its state: slice
+** 4.2's bearings, the north it believes in; unsure of it, said so) */
+void o_facing_words (void)
+{
+    unsigned char f, b[2];
+
+    hub_mem (0, &f, &HUB->pc_face, 1);
+    hub_mem (0, b, &HUB->pc_skew, 2);           /* (pc_skew and pc_lost) */
+    sayf ("\nFacing: %s%s.", head_name[(f + b[0]) & 7], b[1] ? ", you think; you've lost your bearings" : "");
+}
+
 /* A wait's length, tenths (I_WAIT's w1): line l's duration, n minutes or hours ("wait 10 minutes", "an hour"); 0 a
 ** round (nothing said); 100 minutes at most, the world's sixteen bits' */
 unsigned __fastcall__ o_wait_of (const char* l, unsigned char n)

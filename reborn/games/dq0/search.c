@@ -88,7 +88,7 @@ unsigned char s_search_go (void)
         }
         t = HUB->ireq.x;                        /* (For it: the time to find it, the world's; 0, a whole search) */
     }
-    sayf (d ? felt[f] : lit[f], f == SF_WALL ? head_name[h] : w);
+    sayf (d ? felt[f] : lit[f], f == SF_WALL ? head_name[believed (h)] : w);   /* (By the north it believes in) */
     finds = 0xFF;                               /* (Its end awaited: what it finds told, E_PORTAL's) */
     m.kind = I_PORTAL;
     m.who = 0;

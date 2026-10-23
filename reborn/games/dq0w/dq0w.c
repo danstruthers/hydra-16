@@ -90,12 +90,17 @@ void __fastcall__ across (unsigned char h, unsigned char r);   /* Part 33 */
 void __fastcall__ intent_more (struct msg* m);  /* Part 37 */
 unsigned char tripped (void);                   /* Part 43 */
 unsigned char __fastcall__ dark_end (unsigned char how);    /* Part 44 */
+unsigned char __fastcall__ bearings (unsigned w);   /* Part 52 */
+void __fastcall__ bearings_off (unsigned feet); /* (wbody.h's) */
+static unsigned char pc_down;                   /* (The character senseless: main's, its bearings off as it is) */
 struct work wk;
 extern char _SWAP_START__[];
 unsigned char den_done;                         /* (wbody.h's) */
 unsigned char den_saw;
 unsigned char noinit;                           /* (dq0 -I: no engage initiative test, nor a grope's; the UI's
                                                 **   WQ_START, wgame.c's) */
+unsigned char nobear;                           /* (dq0 -N: the character's bearings never tested, as one that knows
+                                                **   north's: the tests', wgame.c's) */
 
 static unsigned last;                           /* The tick count at the last look */
 static unsigned acc;                            /* Real ticks times round, not yet game time */
@@ -225,6 +230,8 @@ static void __fastcall__ task (unsigned char kind, unsigned len)
 ** squares, stepped as the clock goes (stepping) */
 static unsigned char pquiet, plast, pfull, pprev; /* (pprev: the square before, stepped from, in a passage) */
 static unsigned char proom;                     /* (The squares of a room walked, as it goes: beat's, a room crossed) */
+static unsigned char bbends, bdark, bout;       /* (A move's, for its bearings, part 52's: its passage's bends, a room
+                                                **   crossed in the dark, a passage's square walked: beat's) */
 unsigned char bold_;                            /* (A pace said outright in the dark: wgame.c's WS_PACE; gone as a move
                                                 **   begins in the light: paced's) */
 static unsigned char feel_, rush_;              /* (The move's, paced's: in the dark; its gait faster than feeling its
@@ -1624,7 +1631,7 @@ static unsigned char went_cut;                 /* (A walk over to a thing stoppe
                                                 **   not "You go over to it.") */
 static void arrive (void)
 {
-    unsigned char first, how = move.how, dw = pon && pfeel;
+    unsigned char first, how = move.how, dw = pon && pfeel, bn;
     unsigned t = went;
 
     move.on = 0;
@@ -1684,6 +1691,7 @@ static void arrive (void)
     first = looked (LF_ARRIVE);                 /* (What it sees: the denizens there, at the turns pace, given their
                                                 **   turn first, the chunks round it made, so it sees them as it gets
                                                 **   there; the first time in a room, the senses' memory's) */
+    bn = bearings (move.how | first << 8);      /* (Its bearings, by the way it came: part 52's, told after it) */
     if (!HUB->tpr && !HUB->paused && !HUB->hold) {
         turn ();
     }
@@ -1700,6 +1708,9 @@ static void arrive (void)
     event (E_ARRIVE, 0, how | first << 8 | (how == A_UP || how == A_DOWN ? (unsigned) move.dir << 12 : 0) |
         (how == A_WENT_TO && went_cut ? 0x200 : 0));
     went_cut = 0;
+    if (bn) {
+        event (E_BEARING, 0, bn);
+    }
     if ((how == A_CROSSED || how == A_STEPPED) && move.ledge) {
         event (E_LEDGE, 0, (unsigned char) move.ledge);
     }
@@ -1712,6 +1723,138 @@ static void arrive (void)
     hub_map (0);
     HUB->pc_going = IDLE;
 }
+
+/* ==== Part 52: the character's bearings underground (slice 4.2's: DUNGEON.md's bearings underground, HOUSE.md's; the
+** user's, 2026-10-16 and 23).  Its true facing the world's, which every task that works the place goes by; the north it
+** believes in the hub's pc_skew (eighths of a turn: the heading it believes it faces the true one and the skew, & 7)
+** and pc_lost (it knows it's lost them), the world's to keep, kept with the game (world.dat).  At a move's end
+** (arrive's): come into a room it has been in before (the senses' R_VISITED) from elsewhere (a passage walked, another
+** room, another stratum), a landmark, its bearings set right (told, E_BEARING); else, after a walk along a passage
+** that bent (its bends counted as it went: beat's) or across a room in the dark (felt, not seen: two of its squares or
+** more, on out of it or to its far side), the referee's P_BEARING at HOUSE.md's steps: a success changes nothing, a
+** marginal failure drifts the belief an eighth (the referee's result its way), unknown to it, a critical failure a
+** quarter, and it knows (told).  What disorients it (bearings_off): come round below from a fall as the game begins
+** (the theme's start, TM_FELL), knocked senseless (main's: whatever did it), a fall of ten feet or more (harm_fx's, part
+** 49's): the test the harder, a failure leaving its north anywhere (a fall's, the drift).  One whose species knows
+** north (the referee's summary's northsense) is never tested, never astray.  Its own part: the main RAM's room */
+#pragma code-name (push, "SW52CODE")
+#pragma rodata-name (push, "SW52RODATA")
+
+#define BEAR_OUT        10                      /* (Come round from a fall, or senseless: the steps the harder) */
+#define BEAR_FAMILIAR   25                      /* (Passed this way so often, no test: familiar's) */
+#define BEAR_KNOWN      127
+#define FAMILIAR(n)     ((n) >= BEAR_FAMILIAR ? BEAR_KNOWN : (n) >= 10 ? 4 : (n) >= 3 ? 2 : 0)
+static unsigned char bsn = 0xFF, broom, bcx, bcy;   /* (The room it was in at the last move's end: 0xFF none) */
+static unsigned char bast;                      /* (btest's: astray) */
+#define W_SLOT          HUB->slot[SLOT_WORLD]   /* (The world's referee slot: a harm's request and its reply) */
+#define KNOWS_NORTH     (HUB->pcsum.northsense | nobear)    /* (Its species', or dq0 -N's, the tests') */
+
+/* The test, at the steps: a failure's drift an eighth (a critical failure's a quarter), its way the referee's result
+** (the bearings' own d8 less one: odd the other way); or astray (bast), the north it believes in anywhere, by the d8
+** (the true one too, by chance).  BRG_LOST if it knows now it's lost them (a critical failure), else 0 */
+static unsigned char __fastcall__ btest (signed char steps)
+{
+    static signed char g, k;
+
+    wsteps = steps;
+    g = test_w (P_BEARING, 0);
+    hub_map (0);
+    if (G_OK (g)) {
+        return 0;
+    }
+    k = g == G_CF ? 2 : 1;
+    if (wres & 1) {
+        k = -k;
+    }
+    HUB->pc_skew = (bast ? wres : HUB->pc_skew + k) & 7;
+    if (g != G_CF || HUB->pc_lost) {
+        return 0;
+    }
+    HUB->pc_lost = 1;
+    return BRG_LOST;
+}
+
+/* The ways walked often (the user's, 2026-10-23: "familiar ways should be easier"): the steps a test about square x, y
+** of stratum sn is the easier for the times the character's passed through that part of the dungeon, n (FAMILIAR's,
+** HOUSE.md's: 3 times or more two steps, 10 four, BEAR_FAMILIAR or more no test at all, BEAR_KNOWN).  The hook for the
+** map's count of passings (the map agent's, the map's memory: to be wired to it as the two are merged); none yet */
+#pragma warn (unused-param, push, off)
+static signed char __fastcall__ familiar (unsigned char sn, unsigned x, unsigned y)
+{
+    return FAMILIAR (0);
+}
+#pragma warn (unused-param, pop)
+
+/* A move's end (arrive's: w its how, A_*, the first time there times 256): its bearings, by the way it came; the news
+** (BRG_*, 0 none) for arrive to tell after the arrival */
+unsigned char __fastcall__ s_bearings (unsigned w)
+{
+    static unsigned char how, r, sn, cx, cy, k, n;
+    static signed char e;
+
+    how = (unsigned char) w;
+    hub_map (0);
+    sn = HUB->pc_stratum;
+    r = room_of (sn, HUB->pc_x, HUB->pc_y);
+    cx = (unsigned char) C->cx;
+    cy = (unsigned char) C->cy;
+    hub_map (0);
+    k = bast = 0;
+    if (how == A_CROSSED && pfeel && proom >= 2) {
+        bdark = 1;                              /* (A room felt across in the dark, to its far side) */
+    }
+    n = bbends + bdark;
+    if (how == A_START) {
+        HUB->pc_skew = HUB->pc_lost = 0;        /* (Walked in by the way in from the surface: north known) */
+        hub_map (THEME_BANK);
+        bast = THEME->mission & TM_FELL;
+        hub_map (0);
+        if (bast && !KNOWS_NORTH) {
+            k = btest (-BEAR_OUT);              /* (Come round below from a fall: astray, maybe) */
+        }
+    } else if (!KNOWS_NORTH) {                  /* (One that knows north: never tested, never astray) */
+        if (how != A_RESUMED && r != 0xFF && !(w >> 8) &&
+            (bout || r != broom || sn != bsn || cx != bcx || cy != bcy)) {
+            if (HUB->pc_skew | HUB->pc_lost) {
+                HUB->pc_skew = HUB->pc_lost = 0;    /* (Come back into a room it knows: a landmark) */
+                k = BRG_KNOWN;
+            }
+        } else if (n && (e = familiar (sn, HUB->pc_x, HUB->pc_y)) != BEAR_KNOWN) {
+            k = btest (6 - 2 * (n > 12 ? 12 : n) - (pfeel ? 4 : 0) + e);
+        }                                       /* (One bend four steps the easier, each one more two the harder,
+                                                **   a room crossed in the dark as a bend; the dark four the harder) */
+    }
+    bsn = sn;
+    broom = r;
+    bcx = cx;
+    bcy = cy;
+    bbends = bdark = bout = 0;
+    return k;
+}
+
+/* What disorients it (main's, harm_fx's, part 49's): BO_OUT knocked senseless, its bearings astray as it comes round
+** (BEAR_OUT steps the harder); else (0) a harm's, the world's slot's request and its reply: a fall of ten feet or more
+** (no hold caught, not knocked senseless: main's), its tumble's drift, a step the harder each five feet (BEAR_OUT at
+** most); told if it knows it's lost them */
+void __fastcall__ s_bearings_off (unsigned feet)
+{
+    static unsigned char k;
+
+    hub_map (0);
+    if (!feet && W_SLOT.a == HC_FALL && W_SLOT.result != 1 && !W_SLOT.w2) {
+        feet = W_SLOT.w1;
+    }
+    if (KNOWS_NORTH || feet < 10) {
+        return;
+    }
+    bast = feet == BO_OUT;
+    if ((k = btest (bast || feet >= 5 * BEAR_OUT ? -BEAR_OUT : -(signed char) (feet / 5))) != 0) {
+        event (E_BEARING, 0, k);
+    }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (push, "SW3CODE")
 #pragma rodata-name (push, "SW3RODATA")
@@ -2724,10 +2867,13 @@ static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
                                                 **   told as it goes, the user's) */
             hub_map (0);
             event (E_BEAT, 0, WB_CROSS);
+            bdark |= pfeel;                     /* (Felt across in the dark: its bearings', part 52's) */
         }
         proom = 0;
+        bout = 1;
         if (h != plast && pprev) {         /* (A turn between two squares of the passage walked) */
             b = WB_TURN;
+            ++bbends;                           /* (A bend: its bearings') */
             s = ((h - plast) & 7) < 4 ? WS_RIGHT : WS_LEFT;
         } else if (t == T_DOOR) {
             b = WB_DOOR;
@@ -4206,6 +4352,14 @@ int main (int argc, char* argv[])
         if (HUB->round && (burn_ask || HUB->now >= burn_due)) {
             burns_now ();                       /* (The lights burnt down, a game minute's: part 27's; once the game's
                                                 **   begun, WQ_START's, its clock a game carried on's) */
+            hub_map (0);
+        }
+        if (!((unsigned char) HUB->pcsum.cond & C_UNCONSCIOUS)) {
+            pc_down = 0;
+        } else if (!pc_down) {
+            pc_down = 1;
+            bearings_off (BO_OUT);              /* (Knocked senseless: its bearings astray as it comes round, part
+                                                **   52's) */
             hub_map (0);
         }
         ++HUB->beat[T_WORLD];
