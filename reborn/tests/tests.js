@@ -2013,8 +2013,8 @@ const DQ0_REPEATS = [
     why: 'fighting on (the user\'s, 2026-10-20): one attack fights its foes in turn, each falling, fleeing, getting up, fought back or turned to told as it comes (two of a name, the same words)' },
   { what: /^(?:You stop fighting|You fumble for the .+)\.$/,
     why: 'commands typed ahead as the character fights, each taking the fight over in turn, fought on between them (fighting on), their answers one' },
-  { what: /^A giant rat is .+, keeping its distance\.$/, tests: /^dq0traces$/,
-    why: 'a walk across the rats\' cell: a shy rat told keeping its distance as the walk\'s look stirs, then again where it is as the look on arriving has it (the tellings two, the stir not first in the second)' },
+  { what: /^A giant rat is .+, keeping its distance\.$/, tests: /^dq0(?:traces|legs)$/,
+    why: 'a walk across the rats\' cell: a shy rat told keeping its distance as the walk\'s look stirs, then again where it is as the look on arriving has it (the tellings two, the stir not first in the second; dq0legs\' hops and crawls there too)' },
   { what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
   { what: /^An? (?:cave adder|bandit) is ahead(?: to your (?:left|right))?, \d+ feet away\.$/, tests: /^dq0(?:helpless|robbed)$/,
     why: 'a walk stopped by a hostile seen: told as the walk\'s look stirs, then again in the look as it stops (the stir and that look one telling, as dq0traces\' rats\')' },
@@ -4942,6 +4942,45 @@ module.exports = {
         inTurn(s, ['> i', 'You carry a torch (lit), in your right hand;', '> hold the dagger in my left hand', 'Your left arm is useless.',
           '> hold the pick', 'Your left arm is useless. You can\'t hold the pick in one hand.', '> swap hands', 'Your left arm is useless.'],
           f, 'the words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0legs', what: 'Dingus Quest Zero\'s legs (slice 4.1b, the user\'s, 2026-10-21: "A serious fracture to the leg should make it more difficult to walk"; 2026-10-22: "You can stand and hop with one good leg.  Hopping would be quite slow (crawl speed), and would tire you at the strenuous work rate.  A crutch could be used to move at walk speed"; "both arms are required if both legs are unusable"), by the referee\'s summary (its limbs, its limp, its conditions), the hub\'s pc_pos and the words, at seed 3 (dq0 -T): a serious wound to the left thigh (its file\'s inj line), its walk a limp (each level a fifth slower: 3, 24 a square for 15), told ("You limp."); a grievous one, the leg useless: hopping (a crawl\'s pace, three times a walk\'s, strenuous work: "You hop along on your good leg."), no run ("You can\'t run on one leg."), "hop north" said; with a spear in hand (dq0 -k spear, long and sturdy) a crutch at a walk\'s pace ("You lean on the spear and hobble along."), "crawl south" down and crawling ("You crawl.", PRONE on the status line), "walk north" prone getting up first (the book\'s Rise: its test, seriously hurt), "crawl north", "get up" (its test the dice\'s, a round: "You get to your feet.", or "You struggle, but can\'t get up."); both legs useless: falling at its first move and crawling ("You fall.", "You crawl."), "get up" refused ("Your legs won\'t bear you."); both legs and an arm: no move at all ("You can\'t move.")',
+      init: 't_rc', cycles: 3600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'cp /ram/c.hm /ram/b.hm', 'echo inj 12 0 2 3 0 0 >> /ram/b.hm', 'dq0 -p t -s 3 -c /ram/b.hm -T', 'n', 'quit',
+        'cp /ram/c.hm /ram/a.hm', 'echo inj 12 0 3 4 0 8 >> /ram/a.hm', 'dq0 -p t -s 3 -c /ram/a.hm -T', 'n', 'run south', 'hop north', 'quit',
+        'dq0 -p t -s 3 -c /ram/a.hm -T -k spear', 'n', 'crawl south', 'walk north', 'crawl north', 'get up', 'quit',
+        'cp /ram/a.hm /ram/d.hm', 'echo inj 140 0 3 4 0 8 >> /ram/d.hm', 'dq0 -p t -s 3 -c /ram/d.hm -T', 'n', 'get up', 'quit',
+        'echo inj 6 2 3 4 0 8 >> /ram/d.hm', 'dq0 -p t -s 3 -c /ram/d.hm -T', 'n', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const game = c => T.of('dq0 -p t -s 3 -c /ram/' + c + ' -T');
+        const g1 = game('b.hm'), n1 = T.after(g1, 'n');
+        if (!n1.after || n1.after.sum.limp !== 3 || n1.after.sum.gstep[2] !== 24) f.push('a serious thigh wound not a limp, 3 levels, 24 a square (' + (n1.after && [n1.after.sum.limp, n1.after.sum.gstep]) + ')');
+        const g2 = game('a.hm'), n2 = T.after(g2, 'n'), r2 = T.after(n2, 'run south'), h2 = T.after(r2, 'hop north');
+        if (!n2.after || !(n2.after.sum.limbs & 0x10) || !(n2.after.sum.cond & 0x2000)) f.push('a grievous thigh wound not its left leg useless, crawling (' + (n2.after && [n2.after.sum.limbs, n2.after.sum.cond]) + ')');
+        const g3 = T.of('dq0 -p t -s 3 -c /ram/a.hm -T -k spear'), n3 = T.after(g3, 'n'), c3 = T.after(n3, 'crawl south'), u3 = T.after(c3, 'walk north');
+        const c4 = T.after(u3, 'crawl north'), up = T.after(c4, 'get up');
+        const took = x => x.after && x.at ? x.after.pc.now - x.at.pc.now : -1;
+        if (took(n2) < 2 * took(n3)) f.push('the hop not at a crawl\'s pace, three times the crutch\'s walk (' + took(n2) + ', ' + took(n3) + ')');
+        if (!c3.after || c3.after.pc.pos !== 1) f.push('"crawl south" on one leg not prone');
+        if (!u3.after || u3.after.pc.pos !== 0) f.push('a walk prone not up first');
+        if (!c4.after || c4.after.pc.pos !== 1) f.push('"crawl north" not down');
+        const rose = up.after && up.after.pc.pos === 0;     // (Its test the dice's: up, or told it struggles, a round either way)
+        if (took(up) !== 100) f.push('"get up" not a round (' + took(up) + ')');
+        const g4 = game('d.hm'), n4 = T.after(g4, 'n'), u4 = T.after(n4, 'get up');
+        if (!n4.after || n4.after.pc.pos !== 1 || !u4.after || u4.after.pc.pos !== 1) f.push('both legs useless not down and crawling, not kept down');
+        const g5 = T.after(u4, 'dq0 -p t -s 3 -c /ram/d.hm -T'), n5 = T.after(g5, 'n');
+        if (!n5.after || !(n5.after.sum.cond & 0x4000) || n5.after.pc.x !== n5.at.pc.x || n5.after.pc.y !== n5.at.pc.y) f.push('both legs and an arm useless: not stuck');
+        inTurn(s, ['> n', 'You limp.', '> quit',
+          '> n', 'You hop along on your good leg.', '> run south', 'You can\'t run on one leg.', '> hop north', '> quit',
+          '> n', 'You lean on the spear and hobble along.', '> crawl south', 'You crawl.', 'PRONE', '> walk north', 'You get to your feet.',
+          '> crawl north', 'You crawl.', '> get up', rose ? 'You get to your feet.' : 'You struggle, but can\'t get up.', '> quit',
+          '> n', 'You fall.', 'You crawl.', '> get up', 'Your legs won\'t bear you.', '> quit', '> n', 'You can\'t move.'], f, 'the words: ');
         return f;
       },
       sdcard: true

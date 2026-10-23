@@ -156,10 +156,12 @@ static unsigned char late;                      /* (The turns pace's: the denize
 static unsigned long free_at;                   /* (When it was last free of work: its rest from then, RS_EXERT's) */
 static unsigned went;                           /* (The last thing's time: a move's, as it's done) */
 
+static unsigned char pextra;                    /* (A move's time more: getting up first, part 50's) */
 static void __fastcall__ busy (unsigned long t)
 {
     went = t > 60000UL ? 60000U : (unsigned) t;
-    free_at = HUB->pc_ready = HUB->now + went;
+    free_at = HUB->pc_ready = HUB->now + went + pextra;
+    pextra = 0;
     HUB->pc_tx = HUB->pc_x;
     HUB->pc_ty = HUB->pc_y;
     late = 0;
@@ -334,6 +336,11 @@ static void here (void)
 static unsigned char pace_, mul_ = 1, searching;
 static unsigned char lim_ = 250;                /* (A walk's squares at most: a small move's, I_STEP's, fewer) */
 static unsigned char pst = 10;
+extern unsigned char pmode;                     /* (The legs' way said: GA_CRAWL, GA_HOP; part 50's) */
+static unsigned char lsaid;                     /* (The legs' way last told: part 50's) */
+void limbs_pace (void);                         /* (Part 50's: how fast its legs go) */
+unsigned char limbs_go (void);
+unsigned char __fastcall__ rise_pc (unsigned char timed);
 static unsigned char runs;                      /* (A flight's: at a run, whatever the player's pace: part 24's) */
 
 static unsigned char dark (void);
@@ -361,6 +368,9 @@ static void paced (void)
     w = HUB->pcsum.gstep[g < GA_WALK ? GA_WALK : g];
     pst = w ? w : 10;
     HUB->pc_going = g + 1 | (dk ? GOING_DARK : 0);
+    if (HUB->pc_pos == POS_PRONE || HUB->pcsum.limp || (HUB->pcsum.limbs & (LB_LEG_L | LB_LEG_R)) || pmode || lsaid) {
+        limbs_pace ();                          /* (Its legs not whole, or prone: part 50's, slice 4.1b's) */
+    }
 }
 
 /* A square's time to walk into, tenths of a second: the pace's step (the referee's, its summary's gstep), more uphill
@@ -2793,10 +2803,9 @@ void s_step_on (void)
             return;
         }
         if (pthing == pnext + 1 && tripped ()) {
-            HUB->pc_face = h;                   /* (Over a thing in its way in the dark, fallen: a round to rise, part
-                                                **   43's) */
+            HUB->pc_face = h;                   /* (Over a thing in its way in the dark, fallen, prone: up again a
+                                                **   round, the next move's or "get up", part 43's, slice 4.1b's) */
             halt (0xFF);
-            HUB->pc_ready = HUB->now + ROUND_T;
             return;
         }
         if (!pnext) {
@@ -3064,6 +3073,10 @@ unsigned char s_tripped (void)
     g = test_w (P_STUMBLE, 0);
     hub_map (0);
     event (E_BEAT, 0, (G_OK (g) ? WB_STUMBLE : WB_TRIP) | pthk << 8);
+    if (!G_OK (g)) {
+        hub_map (0);
+        HUB->pc_pos = POS_PRONE;                /* (Fallen over it: prone, slice 4.1b's) */
+    }
     pthing = 0;
     return !G_OK (g);
 }
@@ -3911,6 +3924,12 @@ static void __fastcall__ intent (struct msg* m)
         hub_map (0);
     }
     free_at = HUB->now;
+#define MOVES   (1UL << I_GO | 1UL << I_CLIMB | 1UL << I_GOTO | 1UL << I_STEP | 1UL << I_TAKE | 1UL << I_CLOSE | \
+                 1UL << I_DISENGAGE)
+    if ((MOVES >> m->kind & 1) && (HUB->pc_pos == POS_PRONE || (HUB->pcsum.cond & C_MOVE) || pmode) && limbs_go ()) {
+        return;                                 /* (Prone, its legs not whole: up first, or crawling; or no move:
+                                                **   part 50's, slice 4.1b's) */
+    }
     switch (m->kind) {
     case I_WAIT:
         busy (m->w1 ? m->w1 : HUB->round);
@@ -4006,6 +4025,9 @@ void __fastcall__ s_intent_more (struct msg* m)
         break;
     case I_DISENGAGE:
         disengage_go (m);                       /* (The book's disengage: part 26's) */
+        break;
+    case I_RISE:                                /* (Getting up: part 50's) */
+        rise_pc (1);
         break;
     case I_TRACE:
         tr_flush (0);                           /* (The traces read, the journal taken in first, then the time it
@@ -4366,6 +4388,168 @@ unsigned char __fastcall__ s_ways_near (unsigned char* tx, unsigned char* ty)
     *tx = bx;
     *ty = by;
     return 1;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 50: the character's legs (slice 4.1b; the user's, 2026-10-21: "A serious fracture to the leg should make
+** it more difficult to walk ... don't forget stumbles and falling prone with leg wounds"; 2026-10-22: "For a leg or
+** hip, that means no walking, but crawling may still be possible if one arm and one leg still work"; "You can stand and
+** hop with one good leg.  Hopping would be quite slow (crawl speed), and would tire you at the strenuous work rate.  A
+** crutch could be used to move at walk speed"; "No good arms makes crawling impossible, and both arms are required if
+** both legs are unusable.  Also, getting up with no good arms would be difficult, should probably require an agility
+** check"): getting up, prone (the book's Rise, the referee's P_RISE); a move's start, prone or its legs not whole (up
+** first, or crawling; not at all); how fast its legs go (paced's: a limp the referee's steps, a hop a crawl's pace and
+** strenuous work, a crutch a walk at most, a crawl), each way told once as it changes.  Its own part, the main RAM's
+** room (HOUSE.md's hands and limbs) */
+#pragma code-name (push, "SW50CODE")
+#pragma rodata-name (push, "SW50RODATA")
+
+static unsigned char lfast;                     /* (A faster pace refused, told: lsaid the legs' way last told) */
+static unsigned char lgood, agood;              /* (Its legs it can stand on, its arms that work: limbs_now's) */
+unsigned char pmode;                            /* (The way said: GA_CRAWL, GA_HOP; 0 the best it can: wgame.c's) */
+
+static void limbs_now (void)
+{
+    unsigned char l;
+
+    hub_map (0);
+    l = HUB->pcsum.limbs;
+    lgood = 2 - ((l & LB_LEG_L) != 0) - ((l & LB_LEG_R) != 0);
+    agood = 2 - ((l & LB_ARM_L) != 0) - ((l & LB_ARM_R) != 0);
+}
+
+/* The legs' way told, once it changes (E_BEAT: w its WB_* and more; 0, walking whole again: nothing) */
+static void __fastcall__ legs_told (unsigned w)
+{
+    if ((unsigned char) w != lsaid) {
+        lsaid = w;
+        if (w) {
+            event (E_BEAT, 0, w);
+        }
+    }
+}
+
+/* Getting up, prone (the book's Rise, I_RISE's and a move's): the referee's (P_RISE: always, or its test,
+** HarnMaster's house's for one seriously or grievously hurt, or with no good arm); none, no leg to stand on.  Timed, a
+** round of its time; told (WB_RISEN, | 256 on its feet already; WB_NOT_UP, | 256 its legs won't bear it); 1 on its
+** feet.  (In a fight, the referee's own: RS_ATTACK's O_RISE) */
+unsigned char __fastcall__ s_rise_pc (unsigned char timed)
+{
+    unsigned char ok;
+
+    limbs_now ();
+    hub_map (0);
+    if (HUB->pc_pos != POS_PRONE) {
+        event (E_BEAT, 0, WB_RISEN | 0x100);
+        HUB->pc_ready = HUB->now;
+        return 1;
+    }
+    if (!lgood) {
+        event (E_BEAT, 0, WB_NOT_UP | 0x100);   /* (No leg to stand on: no time) */
+        HUB->pc_ready = HUB->now;
+        return 0;
+    }
+    ok = G_OK (test_w (P_RISE, 0));             /* (The ruleset's: always, or a test) */
+    hub_map (0);
+    if (timed) {
+        busy (ROUND_T);
+    }
+    if (ok) {
+        HUB->pc_pos = POS_STANDING;
+        event (E_BEAT, 0, WB_RISEN);
+        return 1;
+    }
+    event (E_BEAT, 0, WB_NOT_UP);
+    return 0;
+}
+
+/* A move's start (intent's: a walk, a step, a climb, walking over to a thing or a foe, a disengage), the character
+** prone or its limbs not whole: not at all (no leg to stand on, nor arms enough to crawl: told); prone, up first (the
+** move a round the later), unless it crawls (said, or it can't stand: no leg, standing it falls), failing it no move;
+** on one leg, a crawl said, down to crawl.  1 if there's no move */
+unsigned char s_limbs_go (void)
+{
+    limbs_now ();
+    hub_map (0);
+    if (HUB->pcsum.cond & C_STUCK) {
+        event (E_BEAT, 0, WB_STUCK);
+        HUB->pc_ready = HUB->now;
+        return 1;
+    }
+    if (!lgood && HUB->pc_pos != POS_PRONE) {
+        HUB->pc_pos = POS_PRONE;                /* (No leg to stand on: down, to crawl) */
+        event (E_BEAT, 0, WB_FALLEN);
+    }
+    if (HUB->pc_pos == POS_PRONE) {
+        if (!lgood || (pmode == GA_CRAWL && agood && (lgood || agood == 2))) {
+            return 0;                           /* (Crawling: it can't stand, or it's said, and it can) */
+        }
+        if (!s_rise_pc (0)) {
+            busy (ROUND_T);                     /* (Still down: its round spent, no move) */
+            return 1;
+        }
+        pextra = ROUND_T;
+        return 0;
+    }
+    if (pmode == GA_CRAWL && lgood < 2 && agood) {
+        HUB->pc_pos = POS_PRONE;                /* (On one leg, a crawl said: down to crawl) */
+    }
+    return 0;
+}
+
+/* How fast its legs go (paced's, the character prone or its legs not whole, or a way said): prone, a crawl (a crawl's
+** pace: three times a walk's time a square, the house's; tiring as a walk does); one leg, a crutch held (a thing long and
+** sturdy: its kind's KF_LONG) a walk at most, else a hop (a crawl's pace, tiring as strenuous work does, GA_WORK); no
+** faster pace (told); a limp (its legs hurt: the referee's steps the slower already) told; each way told once */
+void s_limbs_pace (void)
+{
+    unsigned i = 0;
+    unsigned w;
+    unsigned char k = 0;
+
+    limbs_now ();
+    hub_map (0);
+    w = HUB->pcsum.gstep[GA_WALK] * 3;
+    w = w > 255 ? 255 : w;
+    if (HUB->pc_pos == POS_PRONE) {
+        pst = w;
+        mul_ = 1;
+        pace_ = GA_CREEP;
+        legs_told (WB_CRAWL);
+        return;
+    }
+    if (lgood == 2) {
+        legs_told (HUB->pcsum.limp ? WB_LIMP : 0);
+        return;
+    }
+    while (pmode != GA_HOP && (i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
+        if ((ip->flags & I_HELD) && (k = ip->kind) != 0) {
+            hub_map (CAT_BANK);
+            if (CATALOGUE[k].form & KF_LONG) {
+                break;                          /* (A crutch: held, long and sturdy) */
+            }
+            k = 0;
+        }
+    }
+    hub_map (0);
+    if (pace_ > GA_WALK && !lfast) {
+        event (E_BEAT, 0, WB_NO_RUN);           /* (No faster than a walk on one leg) */
+    }
+    lfast = pace_ > GA_WALK;
+    if (pace_ > GA_WALK) {
+        pace_ = GA_WALK;
+        pst = HUB->pcsum.gstep[GA_WALK];
+    }
+    if (i && k) {
+        legs_told (WB_CRUTCH | (unsigned) k << 8);
+        return;
+    }
+    pst = w;
+    mul_ = 1;
+    pace_ = GA_WORK;                            /* (Hopping: strenuous work, the user's) */
+    legs_told (WB_HOP);
 }
 
 #pragma code-name (pop)

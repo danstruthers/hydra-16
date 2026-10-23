@@ -703,8 +703,8 @@ void status (void)
     if (task_[T_WORLD] > 0) {
         bar_text (right, bar_done = HUB->pc_task.done, HUB->pc_task.len);   /* (A long task's bar, its part done;
                                                 **   a fight's foe; the light's minutes left: task.c's) */
-        strcat (right, HUB->pcstatus);          /* (The referee's words: "UP 0" ...) */
-        strcat (right, "  facing ");
+        strcat (right, HUB->pcstatus);          /* (The referee's words: "UP 0" ...; prone, said: slice 4.1b's) */
+        strcat (right, HUB->pc_pos == POS_PRONE ? " PRONE  facing " : "  facing ");
         strcat (right, head_abbr[HUB->pc_face & 7]);
         strcat (right, "  ");
     }
@@ -946,21 +946,33 @@ static unsigned char events (void)          /* (How many there were) */
 #pragma rodata-name (push, "SW11RODATA")
 
 /* The limbs' news (an E_BEAT's, WB_DROP on: slice 4.1b's), every actor's (b whose: 0 the character, else the actor
-** plus 1), worded */
+** plus 1; w1's high byte a kind, or for WB_RISEN and WB_NOT_UP 1 if on its feet already, or no leg to stand on),
+** worded: by WB_*, the character's words, then another's (a kind named %s, the actor before it) */
 static void __fastcall__ limb_words (const struct msg* m)
 {
+    static const char* const lwords[] = {
+        "\nYour %s falls from your hand.", "\nThe %s drops its %s.",
+        0, "\nThe %s snatches up its %s.",
+        "\nYou get to your feet.", "\nThe %s gets to its feet.",
+        "\nYou struggle, but can't get up.", "\nThe %s struggles, but can't get up.",
+        "\nYou fall.", "\nThe %s falls.",
+        "\nYou limp.", 0,
+        "\nYou hop along on your good leg.", 0,
+        "\nYou lean on the %s and hobble along.", 0,
+        "\nYou crawl.", 0,
+        "\nYou can't move.", 0,
+        "\nYou can't run on one leg.", 0,
+        "\nYou are on your feet already.", "\nYour legs won't bear you."    /* (WB_RISEN, WB_NOT_UP, the one more) */
+    };
     char kn[sizeof CATALOGUE[0].name];
-    const char* who = m->b ? HUB->actor[(m->b - 1) & 7].name : "";
+    unsigned char k = (unsigned char) m->w1 - WB_DROP;
+    const char* s;
 
     hub_mem (CAT_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
-    switch ((unsigned char) m->w1) {
-    case WB_DROP:
-        if (m->b) {
-            sayf ("\nThe %s drops its %s.", who, kn);
-        } else {
-            sayf ("\nYour %s falls from your hand.", kn);
-        }
-        break;
+    k = (k == WB_RISEN - WB_DROP || k == WB_NOT_UP - WB_DROP) && m->w1 >> 8 ?
+        (WB_NO_RUN - WB_DROP + 1) * 2 + k - (WB_RISEN - WB_DROP) : k * 2 + (m->b != 0);
+    if (k < sizeof lwords / sizeof lwords[0] && (s = lwords[k]) != 0) {
+        sayf (s, m->b ? HUB->actor[(m->b - 1) & 7].name : kn, kn);
     }
 }
 
@@ -1107,11 +1119,16 @@ unsigned char s_hold_first (void)
 }
 
 /* The hands' and limbs' commands (s_command's: slice 4.1b's): what's in its hands changed over ("swap hands", "switch
-** hands": the things' IO_SWAP, its words, its time) */
+** hands": the things' IO_SWAP, its words, its time); getting up ("get up", "stand", "rise": the world's I_RISE, the
+** book's Rise) */
 void s_limbs_cmd (void)
 {
     unsigned t;
 
+    if (cmd.action == VB_STAND) {
+        intend2 (I_RISE, 0, 0);
+        return;
+    }
     if (cmd.action == VB_SWAP_HANDS) {
         t = things (IO_SWAP, "") == IR_OK ? HUB->ireq.x : 0;
         msg (tt ());
@@ -1762,6 +1779,7 @@ portal:
         hide (cmd.obj.word);
         return;
     case VB_SWAP_HANDS:                         /* (The hands' and limbs': part 11's, slice 4.1b's) */
+    case VB_STAND:
         limbs_cmd ();
         return;
     case VB_HOLD_OBJECT:                        /* (A thing handled: the things' request the verb's, IO_*) */

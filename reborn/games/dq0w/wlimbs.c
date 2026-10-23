@@ -81,6 +81,19 @@ void s_equip_now (void)
     hub_ask (SLOT_WORLD)->state = REQ_FREE;
 }
 
+/* The limbs' news (E_BEAT's w, WB_* and more; b whose, 0 the character, else the actor's entry plus 1), in the
+** denizens' ring (a fight's: after its blows' words) */
+void __fastcall__ s_limb_news (unsigned w, unsigned char b)
+{
+    hub_map (0);
+    lm.kind = E_BEAT;
+    lm.who = 0;
+    lm.b = b;
+    lm.w1 = w;
+    lm.t = HUB->now;
+    hub_devent (&lm);
+}
+
 /* What the character holds in hands h (rs.h's DH_*: the referee's X_DROP's) let go of, fumbled: each on the floor where
 ** the book's die puts it (Skills 21: a d10, 1-6 the square that way, north, northeast, southeast, south, southwest,
 ** northwest, if it can lie there; 7-10 its own), told (E_BEAT's WB_DROP, its kind; in the denizens' ring, ring 1, after
@@ -161,6 +174,11 @@ void s_harm_fx (void)
     }
     if (pr) {
         HUB->pc_pos = POS_PRONE;
+        lm.kind = E_BEAT;                       /* ("You fall.") */
+        lm.who = lm.b = 0;
+        lm.w1 = WB_FALLEN;
+        lm.t = HUB->now;
+        hub_event (&lm);
     }
     if (h) {
         s_drop_held (h, 0);

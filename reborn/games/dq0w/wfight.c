@@ -117,7 +117,13 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         r->state = REQ_FREE;
         return 0xFF;
     }
-    if (out == O_RISE) {                        /* (The attacker got up, its turn spent) */
+    if (out == O_RISE) {                        /* (The attacker got up, its turn spent; or tried and is still down,
+                                                **   a: the limbs' news, no blow's record, slice 4.1b's) */
+        if (r->a) {
+            r->state = REQ_FREE;
+            limb_news (WB_NOT_UP, att);
+            return 0;
+        }
         pa = POS_STANDING;
     }
     for (dh = i = 0, e = (const struct rs_effect*) r->x; i < RS_EFFECTS && e->kind; ++i, ++e) {

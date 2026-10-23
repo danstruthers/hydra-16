@@ -2334,5 +2334,58 @@ ask EQUIP a=2 text="<blade4" w2=DH_LEFT
 set now=32000
 dice 100:21 100:58 ...
 ask ATTACK actor=1 other=0 a=Z_MID b=AS_BEST
-want b=D_BLOCK result=O_HIT sum.limbs=LB_ARM_L
+want b=D_BLOCK result=O_HIT sum.limbs&LB_ARM_L=LB_ARM_L sum.limbs&LB_HURT=LB_HURT
 set stance=D_AUTO
+
+# ---- Getting up, prone (slice 4.1b: the book's Rise, Combat 8, a round; the house's test, HOUSE.md's prone): always,
+# unhurt; seriously or grievously wounded, an Agility test (x5, less the physical penalty); no good arm four steps the
+# harder; no leg to stand on, never; in a fight, the attacker's turn (O_RISE: its a 1 if it stays down)
+
+char
+end
+case unhurt: she gets up, no test
+dice
+ask TEST a=P_RISE
+want grade=G_MS
+char
+inj 12 0 2 3 0 0
+end
+case a serious wound to her left thigh (3 levels): an Agility test, 60 less 15: 7 up, 96 still down
+dice 100:7
+ask TEST a=P_RISE
+want grade=G_MS
+dice 100:96
+ask TEST a=P_RISE
+want grade=G_MF
+case the same, prone in a fight (RS_PRONE_A): her turn getting up (O_RISE), 7 up (a 0), 96 still down (a 1)
+set now=900000
+dice
+ask NEW_ACTOR actor=1 w1=9 text="rat"
+dice 100:7
+ask ATTACK actor=0 other=1 a=Z_MID b=AS_BEST w2=RS_PRONE_A
+want result=O_RISE a=0
+dice 100:96
+ask ATTACK actor=0 other=1 a=Z_MID b=AS_BEST w2=RS_PRONE_A
+want result=O_RISE a=1
+char
+inj 6 2 3 4 0 8
+inj 134 2 3 4 0 8
+end
+case both forearms grievously wounded, no good arm: four steps the harder (60, less 40, less 20: 5, the least), 7 down
+dice 100:7
+ask TEST a=P_RISE
+want grade=G_MF
+char
+inj 12 0 3 4 0 8
+inj 140 0 3 4 0 8
+end
+case both thighs grievously wounded, no leg to stand on: never, no test; in a fight, still down
+dice
+ask TEST a=P_RISE
+want grade=G_CF
+set now=901000
+dice
+ask NEW_ACTOR actor=1 w1=9 text="rat"
+dice
+ask ATTACK actor=0 other=1 a=Z_MID b=AS_BEST w2=RS_PRONE_A
+want result=O_RISE a=1

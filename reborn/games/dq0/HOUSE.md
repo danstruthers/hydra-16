@@ -1130,6 +1130,32 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
 - **A useless arm** (a grievous wound, till it heals to M1; an amputation for good): its hand holds nothing ("Your left
   arm is useless."), no two-handed thing ("You can't hold the pick in one hand."), and a shield or a weapon on it
   does nothing (no block, no blow).  (things.c's hand_for; gear.c's pc_side.)
+- **A leg hurt, a limp, the house's: each level of the injuries to a leg it walks on (hip, thigh, knee, calf, foot)
+  a fifth more time a square** for every pace (a serious thigh wound of 3 levels: 24 tenths a square for 15), told
+  once as it walks ("You limp.").  Why: the book slows only by the universal penalty (its Move, Combat 6, is the
+  attributes' alone); the user asked that a serious fracture make walking harder.  The numbers the user's to judge.
+  (dq0harn.c's status; the summary's limp.)
+- **One leg useless** (a grievous wound, the book's Combat 14: "a crutch, staff, or something to lean on"): it hops,
+  at a crawl's pace, the house's three times a walk's time a square, tiring as strenuous work does (the user's,
+  2026-10-22); told once ("You hop along on your good leg.").  A thing long and sturdy held (its kind's form KF_LONG,
+  the catalogue's: a spear, a shovel, a door's bar) is a crutch, a walk's pace at most ("You lean on the spear and
+  hobble along.").  No faster than a walk on one leg ("You can't run on one leg.").  "crawl north" goes down and
+  crawls, "hop north" hops, "walk north" the best it can (a crutch, else a hop), each kept as a pace is till another's
+  said.  (dq0w.c's part 50, limbs_pace.)
+- **Crawling** is at the same pace, three times a walk's time a square (the house's), tiring as a walk does: on its
+  belly, prone ("You crawl."; PRONE on the status line).  It needs a good arm and a good leg, or both arms with no
+  good leg (the user's, 2026-10-22); both legs useless, it falls at its first move ("You fall.") and crawls; neither
+  way, it can't move at all ("You can't move.": the referee's C_STUCK).  On two good legs "crawl" is a creep, as
+  before.  (gear.c's cond_of: the book's two legs, C_CRAWLS or C_STUCK.)
+- **Prone, and getting up** (the book's Rise, Combat 8: a round): fallen in a fight (a stumble), from a harm (a
+  trap's), or over a thing in its way in the dark, it's prone.  "get up", "stand", "rise" take a round; a walk, a
+  step, a climb, a disengage gets up first (a round the later) unless it's crawling; prone in a fight, its round is
+  getting up, no blow.  The house's test: the book's Rise is free, but for one seriously or grievously wounded, or
+  with no good arm (the user's, 2026-10-22: "getting up with no good arms ... should probably require an agility
+  check"), an Agility test (×5; no good arm four steps the harder, the house's); failed, the round's spent, still
+  down ("You struggle, but can't get up.").  No good leg, it can't ("Your legs won't bear you.").  The hub's pc_pos
+  is the character's position (POS_PRONE; crouching, kneeling and sitting are slice 4.6's).  (dq0w.c's part 50,
+  rise_pc, limbs_go; wfight.c's pc_blow; P_RISE the ruleset's.)
 
 ## Decided, not yet built
 

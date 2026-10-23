@@ -123,7 +123,7 @@
 <stop>           ::= <STOP> [ <task-name> ]                     (* question 9: "stop" alone, or "stop digging" *)
 <step>           ::= "step" <direction>                 (* one square; facing unchanged: "step r" *)
 <pace-set>       ::= "pace" [ <pace-word> | "walk" ] | "double time" [ "!" ]  (* sets the default pace; "double time!" is a run *)
-<pace-word>      ::= "crawl" | "slow walk" | "trot" | "jog" | "run" | "sprint" | "dash"
+<pace-word>      ::= "crawl" | "hop" | "slow walk" | "trot" | "jog" | "run" | "sprint" | "dash"
 <charge>         ::= [ "fast" ] "charge" [ "!" ]        (* run at the closest enemy ahead, attack it, shout "Charge!"; fast: a sprint *)
 
 (* ---- Naming and meta-commands (question 15: naming things is "name" or "call") ---- *)

@@ -226,6 +226,7 @@ mosey = move
 saunter = move
 run = move
 crawl = move
+hop = move
 head = move
 m = map
 enter = enter

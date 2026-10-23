@@ -68,6 +68,8 @@ struct kind {
 #define KF_FORMS        0x0F                    /* (A kind's form's own: KF_SOLID ... alone) */
 #define KF_COUNT        0x40                    /* (A kind's form: a lot of them counted, its qty how many, split and
                                                 **   joined again as they're moved: rations, pennies, arrows) */
+#define KF_LONG         0x80                    /* (A kind's form: long and sturdy, a haft, a pole, a staff: it serves
+                                                **   as a crutch, held: slice 4.1b's) */
 
 /* The catalogue's kinds, by number (things.c's order: the maker puts them down by these) */
 enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKIN, KI_RATIONS, KI_TINDERBOX, KI_PICK,

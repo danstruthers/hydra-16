@@ -74,10 +74,10 @@ enum {
                                                 **   the book's grope, an attribute's test) */
     P_STUMBLE,                                  /* Keeping one's feet, over a thing in the way (the book's stumble
                                                 **   roll: its steps the darkness, the thing, the pace, 2026-10-22) */
-    P_RISE,                                     /* Getting up, prone (the book's Rise, Combat 8: always, but for one
-                                                **   seriously or grievously wounded, or with no good arm, an
-                                                **   attribute's test, the ruleset's; its result 1 if it can't stand at
-                                                **   all, no leg to stand on: slice 4.1b's) */
+    P_RISE,                                     /* Getting up, prone (the book's Rise, Combat 8; asked each time: the
+                                                **   ruleset's whether it's a test, HarnMaster's house's for one
+                                                **   seriously or grievously wounded, its summary's LB_HURT, or with no
+                                                **   good arm; never with no leg to stand on: slice 4.1b's) */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 
@@ -255,7 +255,8 @@ struct rs_summary {
 #define LB_ARM_L        0x04                    /*   its left arm useless (its hand holds nothing), */
 #define LB_ARM_R        0x08                    /*   its right; */
 #define LB_LEG_L        0x10                    /*   its left leg useless (it bears no weight), */
-#define LB_LEG_R        0x20                    /*   its right) */
+#define LB_LEG_R        0x20                    /*   its right; */
+#define LB_HURT         0x40                    /*   seriously or grievously wounded: getting up its test, P_RISE) */
 
 /* ---- The requests (the hub's referee areas carry one, and its reply) */
 enum {

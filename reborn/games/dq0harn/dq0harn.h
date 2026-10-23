@@ -16,6 +16,8 @@ void __fastcall__ put (const char* s);          /* (From the overlay too: s may 
 void __fastcall__ putn (int v);
 unsigned __fastcall__ cond_of (const harn_char* c);        /* Its conditions (rs.h's C_*) */
 unsigned char __fastcall__ limbs_of (const harn_char* c);  /* Its limbs (rs.h's LB_*), each one's hurt in lhurt */
+signed char __fastcall__ rise_of (const harn_char* h);  /* (Overlay 3's, gear.c's) Getting up, prone: its grade (the
+                                                **   book's Rise, the house's test) */
 extern unsigned char lhurt[4];                  /* (The injuries' levels on its left arm, its right, its left leg, its
                                                 **   right) */
 extern unsigned char cplan;                     /* (A creature's body, cond_of's: BF_*, the bestiary's) */

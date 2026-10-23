@@ -1,5 +1,5 @@
 /*
-** dq0.h - Dingus Quest Zero: a text adventure in real time, in random dungeons, on a ruleset's rules (HÃÂÃÂ¢rnMaster's,
+** dq0.h - Dingus Quest Zero: a text adventure in real time, in random dungeons, on a ruleset's rules (HÃ¢rnMaster's,
 ** so far: the referee's, games/dq0harn; the game asks it in rs.h's terms, never naming a skill or a die).
 **
 ** The game's parts, each a file:

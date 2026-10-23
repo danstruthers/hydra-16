@@ -339,6 +339,9 @@ enum {
                                                 **   helpless beside it, robbed: what it holds (but a light lit) and
                                                 **   its pennies taken off to w1 w2 (its lair's home square, on its
                                                 **   stratum: or where it stands), a round's work; E_TASK TE_ROBBED */
+    I_RISE,                                     /* Getting up, prone ("get up", "stand", "rise": the book's Rise, a
+                                                **   round, the referee's P_RISE; E_BEAT WB_RISEN or WB_NOT_UP: slice
+                                                **   4.1b's) */
     NINTENTS
 };
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
@@ -571,6 +574,8 @@ enum { WS_PACE, WS_STANCE, WS_PAUSE };          /* WQ_SET's what: the character'
 #define GA_SAID         0x80                    /* (A pace said outright, faster than feeling the way: a jog, a run, a
                                                 **   sprint, "walk quickly"; said in the dark, the walk goes at it there,
                                                 **   its dangers, 2026-10-22) */
+#define GA_CRAWL        0x40                    /* (And the way its legs go said: crawling, "crawl", prone or on one leg; */
+#define GA_HOP          0x20                    /*   hopping, "hop"; neither, the best it can: slice 4.1b's) */
 enum { PW_ANY, PW_DOOR, PW_WINDOW };            /* I_PORTAL's b: a door or a portcullis, a window or a slit */
 enum { SF_ABOUT, SF_NEAR, SF_WALL, SF_FLOOR, SF_FOR, SF_ON };   /* (PA_SEARCH's b, 2026-10-22: the search's form,
                                                 **   HOUSE.md's searching: about it, as far as it sees; within reach, nearby; a

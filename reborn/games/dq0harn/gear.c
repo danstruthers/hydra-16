@@ -136,6 +136,10 @@ unsigned char __fastcall__ o_limbs_of (const harn_char* h)
     }
     for (k = 0; k < h->ninj; ++k) {
         p = &h->inj[k];
+        if (p->sev >= HARN_SERIOUS) {
+            l |= LB_HURT;                       /* (Seriously or grievously wounded: getting up, the book's Rise, a
+                                                **   test) */
+        }
         if ((j = harn_is_limb (p->loc)) != 0) {
             j = (j - 1) * 2 + ((p->loc & HARN_RIGHT) != 0);
             v = lhurt[j] + p->il;
@@ -173,6 +177,29 @@ unsigned __fastcall__ o_cond_of (const harn_char* h)
         c |= !k ? 0 : k == 1 ? C_LAME : k == 2 ? C_CRAWLS : C_STUCK;
     }
     return c;
+}
+
+/* Getting up, prone (the book's Rise, Combat 8: a round; the house's, every actor's, HOUSE.md's prone): its grade
+** (rs.h's G_*): never with no leg to stand on (on two legs, both useless; on four, two or more: G_CF); seriously or
+** grievously wounded, or with no good arm (the user's, 2026-10-22), an Agility test (x5; no good arm four steps the
+** harder); else always (G_MS) */
+signed char __fastcall__ o_rise_of (const harn_char* h)
+{
+    unsigned char l = o_limbs_of (h), legs, arms;
+
+    legs = !!(l & LB_LEG_L) + !!(l & LB_LEG_R);
+    arms = !!(l & LB_ARM_L) + !!(l & LB_ARM_R);
+    if (h != &pc && (cplan & BF_QUAD)) {
+        legs += arms;                           /* (Its forelegs the arms: two lame of four, it can't, as on two) */
+        arms = 0;
+    }
+    if (legs >= 2) {
+        return G_CF;
+    }
+    if (!(l & LB_HURT) && arms < 2) {
+        return G_MS;
+    }
+    return grade (harn_test_attr (h, HARN_AGL, 5, arms < 2 ? 0 : -4 * STEP_PCT));
 }
 
 /* What a thing swung does, by its kind's data (rshouse.h's: the house's, every ruleset's) */

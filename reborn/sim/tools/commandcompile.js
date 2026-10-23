@@ -130,7 +130,7 @@ const MOVE_WORDS = new Set(['move', 'mv', 'walk', 'trundle', 'mosey', 'saunter',
 const SPEECH_WORDS = new Set(['say', 'yell', 'scream', 'shout', 'whisper']);
 // These take no object: "wait the sword" is a role error, not a parse error.
 const INTRANSITIVE = new Set(['wait', 'rest', 'sleep', 'stop']);
-const PACE = { crawl: 'crawl', 'slow walk': 'slowwalk', walk: 'walk', trot: 'trot', run: 'run', sprint: 'sprint' };
+const PACE = { crawl: 'crawl', hop: 'hop', 'slow walk': 'slowwalk', walk: 'walk', trot: 'trot', run: 'run', sprint: 'sprint' };
 const META = { status: 'VB_META_STATUS', help: 'VB_META_HELP', inventory: 'VB_META_INVENTORY', i: 'VB_META_INVENTORY',
   map: 'VB_META_MAP', save: 'VB_META_SAVE', quit: 'VB_META_QUIT', q: 'VB_META_QUIT', sheet: 'VB_META_SHEET',
   pause: 'VB_META_PAUSE' };

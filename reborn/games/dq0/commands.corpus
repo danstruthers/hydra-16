@@ -135,6 +135,7 @@ f	VB_MOVE_DIRECTION	direction=F	facing=N	question 5
 move left one space	VB_MOVE_DIRECTION	direction=L;distance=1	facing=N	one square
 run north	VB_MOVE_DIRECTION	direction=N;pace=run	-	run
 crawl north	VB_MOVE_DIRECTION	direction=N;pace=crawl	-	crawl
+hop north	VB_MOVE_DIRECTION	direction=N;pace=hop	-	hop: on one good leg (slice 4.1b)
 move to the door	VB_MOVE_TOWARD	object=door	near=door	toward
 walk toward the goblin	VB_MOVE_TOWARD	object=goblin	near=goblin	toward
 turn left	VB_FACE_DIRECTION	direction=L	facing=N	turn

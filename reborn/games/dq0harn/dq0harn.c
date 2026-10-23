@@ -207,6 +207,8 @@ static const unsigned char purpose[P_THEME] = {
     ATTR | HARN_DEX,                                                    /* A grope: Dexterity */
     ATTR | HARN_AGL,                                                    /* Keeping one's feet: Agility (the
                                                                         **   book's stumble roll: test's) */
+    ATTR | HARN_AGL,                                                    /* Getting up, prone: Agility (the
+                                                                        **   book's Rise, Combat 8) */
 };
 
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
@@ -248,6 +250,9 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
                                                 **   the circumstances, over Agility a fall; a point of the roll two
                                                 **   steps, the book's darkness 2 points, a heavy obstruction's 2) */
         return harn_stumble_roll (c, -(int) steps / 2) ? G_MF : G_MS;
+    }
+    if (p == P_RISE) {
+        return rise_of (c);                     /* (Getting up: the house's test, if any, gear.c's) */
     }
     return test_sk (c, purpose[p], steps);
 }
