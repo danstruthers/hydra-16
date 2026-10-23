@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     16                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     17                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -47,7 +47,7 @@
                                                 **   P_STUMBLE; 16: the hands and limbs, pc_shand, the blows' x[2],
                                                 **   items.h's IH_*, IO_SWAP, rs.h's summary's limbs and limp, P_RISE,
                                                 **   C_LAME ..., I_RISE, the actors' move, arm and dropped, RS_REARM,
-                                                **   O_REARM) */
+                                                **   O_REARM; 17: the bearings, pc_skew, pc_lost) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -942,6 +942,12 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pc_shand;                   /*   and the hand that holds it (items.h's IH_*: the world's, the blow's
                                                 **   x[2] if it's said, else its hand that holds one of that kind, the
                                                 **   main hand's first; 0, a part of it: slice 4.1b's) */
+    /* The character's bearings (slice 4.2's: DUNGEON.md's bearings underground): the north it believes in against the
+    ** true one, the world's to keep from the referee's tests (P_BEARING) and a landmark's setting it right; every
+    ** task that works the place uses the true facing, the UI's words, the parser's compass and the map the believed */
+    unsigned char   pc_skew;                    /* Eighths of a turn: its believed heading the true one plus this, & 7
+                                                **   (0 for one that knows north: the referee's summary's northsense) */
+    unsigned char   pc_lost;                    /*   and 1 if it knows it's lost its bearings ("facing NE?") */
     /* The denizens' intents to the world (their actors' bodies': hub.h's the denizens' intents), a ring: written at
     ** di_head (the denizens' task: a full one waited on), read at di_tail as each is carried out (the world: it rings
     ** the denizens as it has) */
