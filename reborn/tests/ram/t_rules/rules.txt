@@ -2429,8 +2429,9 @@ want result=O_FUMBLE text~"spear" e0.kind=X_DROP e0.target=2
 
 # ---- Bearings underground (slice 4.2: rs.h's P_BEARING, DUNGEON.md's and HOUSE.md's bearings underground): kept by
 # Awareness, or Mining if it's the higher, at the world's steps (a passage's one bend four the easier, each one more two
-# the harder, the dark four); a failure's drift one way or the other by a d2 (1 clockwise, result 0; 2 the other,
-# result 1), its dice the bearings' own; one of the Khuzdul (its summary's northsense) never tested
+# the harder, the dark four; ten, come round from a fall or senseless); a failure's d8 (its face less one the
+# result: the world's, a drift's way, odd the other, or where a north astray lies), its dice the bearings' own; one of
+# the Khuzdul (its summary's northsense) never tested
 
 char
 end
@@ -2441,31 +2442,38 @@ want grade=G_MS result=0
 dice 100:80
 ask TEST a=P_BEARING steps=4
 want grade=G_CS result=0
-case one bend: 81 a marginal failure, its drift clockwise (the d2's 1); 85 a critical, the other way (its 2)
-dice 100:81 2:1
+case one bend: 81 a marginal failure, its d8 a 1 (result 0); 85 a critical, its d8 a 2 (result 1)
+dice 100:81 8:1
 ask TEST a=P_BEARING steps=4
 want grade=G_MF result=0
-dice 100:85 2:2
+dice 100:85 8:2
 ask TEST a=P_BEARING steps=4
 want grade=G_CF result=1
 case three bends in the dark (6 less 6, less 4: 4 steps the harder): 60 less 20, 40: 40 a critical success, 41 a failure
 dice 100:40
 ask TEST a=P_BEARING steps=-4
 want grade=G_CS
-dice 100:41 2:2
+dice 100:41 8:4
 ask TEST a=P_BEARING steps=-4
-want grade=G_MF result=1
+want grade=G_MF result=3
 case many bends in the dark: the 5-95 clamp, 5 a critical success, 6 a marginal failure
 dice 100:5
 ask TEST a=P_BEARING steps=-22
 want grade=G_CS
-dice 100:6 2:1
+dice 100:6 8:7
 ask TEST a=P_BEARING steps=-22
-want grade=G_MF result=0
+want grade=G_MF result=6
+case come round from a fall, or senseless (10 steps the harder): 60 less 50, 10: 10 a critical success, 11 a failure
+dice 100:10
+ask TEST a=P_BEARING steps=-10
+want grade=G_CS
+dice 100:11 8:8
+ask TEST a=P_BEARING steps=-10
+want grade=G_MF result=7
 char
 ml min 80
 end
-case a miner (Mining 80, her Awareness 60): tested by Mining, the higher, 79 a success at no steps (a room crossed in the dark)
+case a miner (Mining 80, Awareness 60): tested by Mining, the higher, 79 a success at no steps (a dark room crossed)
 dice 100:79
 ask TEST a=P_BEARING
 want grade=G_MS
@@ -2478,7 +2486,7 @@ ask TEST a=P_BEARING steps=-22
 want grade=G_CS result=0 dice=0 sum.northsense=1
 char
 end
-case its own dice: the referee's other tests roll as they did, a bearing tested between or not (the same seed, a strike's words the same)
+case its own dice: her other tests roll as they did, a bearing tested between or not (a strike's words the same)
 seed 1234
 ask HARM a=HC_STRIKE b=AS_EDGE c=2
 want text="a serious gash to your right hip (S3)"

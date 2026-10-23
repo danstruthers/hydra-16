@@ -79,10 +79,11 @@ enum {
                                                 **   seriously or grievously wounded, its summary's LB_HURT, or with no
                                                 **   good arm; never with no leg to stand on: slice 4.1b's) */
     P_BEARING,                                  /* Keeping one's bearings underground, the way come by bending, or
-                                                **   felt across a room in the dark (the world's, at a move's end:
-                                                **   DUNGEON.md's bearings underground, slice 4.2's; its steps the
-                                                **   bends and the dark, HOUSE.md's): the reply's result the way a
-                                                **   failure's drift goes (0 clockwise, 1 the other), the north the
+                                                **   felt across a room in the dark, or come round from a fall or
+                                                **   senseless (the world's: DUNGEON.md's bearings underground, slice
+                                                **   4.2's; its steps HOUSE.md's): the reply's result on a failure a
+                                                **   d8 less one (0-7), the world's to make a drift's way of (odd the
+                                                **   other way) or where a north astray now lies, the north the
                                                 **   character believes in the world's to keep (the hub's pc_skew);
                                                 **   its dice the referee's own, apart from its other tests', so they
                                                 **   roll as they did; one whose species knows north (its summary's

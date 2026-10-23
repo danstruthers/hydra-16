@@ -511,10 +511,10 @@ static void __fastcall__ answer (struct req* r)
             break;
         }
         if (r->a == P_BEARING) {                /* (Its bearings: the flat odds, by their own dice, and a failure's
-                                                **   way by them too: rshouse.h's, slice 4.2's) */
+                                                **   d8 by them too: rshouse.h's, slice 4.2's) */
             bdice ();
             g = r->grade = flat (r->steps);
-            r->result = g < 0 && random (2);
+            r->result = g < 0 ? random (8) : 0;
             bdice ();
             break;
         }

@@ -6,7 +6,8 @@
 ** and keeps his bearings in them); an Intelligence roll was the other candidate, but keeping count of turns is
 ** attention more than reasoning, and Survival is the outdoors' (the sun, the stars), of no use below.  One whose
 ** species lives below (the Khuzdul: its summary's northsense) always knows north, never tested.  Its dice its own
-** (rshouse.h's), so the game's other tests roll as they did; a failure's drift one way or the other by them too.
+** (rshouse.h's), so the game's other tests roll as they did; a failure's d8 by them too (the world's: a drift one way or
+** the other, or a north astray anywhere).
 */
 
 #pragma code-name ("OV3CODE")
@@ -19,7 +20,8 @@
 #include "dq0harn.h"
 
 unsigned long bseed;                            /* (The bearings' dice: rshouse.h's) */
-unsigned char bway;                             /* (A failure's drift: 0 clockwise, 1 the other) */
+unsigned char bway;                             /* (A failure's d8 less one, 0-7: the world's, a drift's way, or where
+                                                **   a north astray lies) */
 
 #define RS_HOUSE_BEARING
 #include "../dq0/rshouse.h"
@@ -31,7 +33,7 @@ static int __fastcall__ level (unsigned char sk)
 }
 
 /* The test, at the circumstances' steps (STEP_PCT each: the world's, the bends and the dark): its grade (rs.h's
-** G_*), bway a failure's way */
+** G_*), bway a failure's d8 less one */
 signed char __fastcall__ o_bearing_of (signed char steps)
 {
     int a = level (HARN_AWA), m = level (HARN_MIN);
@@ -44,7 +46,7 @@ signed char __fastcall__ o_bearing_of (signed char steps)
     bdice ();
     g = grade (harn_test ((a > m ? a : m) + STEP_PCT * steps));
     if (g < 0) {
-        bway = die (2) - 1;
+        bway = die (8) - 1;
     }
     bdice ();
     return g;
