@@ -7,9 +7,10 @@
 ** denizens it sees (dens.c: the world's bodies), the lights it sees far off (eyes.c).  The senses answer for every
 ** actor (DUNGEON.md: perception as layers): the light layer theirs to work out (light.c), each actor's eyes theirs to
 ** keep (eyes.c), each denizen's senses theirs to answer, its mind asking (sense.c: the hub's dsense); and the memory of
-** what the character has seen theirs (the chunks' seen marks, the walk's squares felt, R_VISITED).  A look's own work
-** is in swapped parts (bank.s, LIBDIR/dq0p.ovl), the answers to the denizens in the main RAM.  It waits on its
-** doorbell (costing nothing) between requests.
+** what the character has seen theirs (the chunks' seen marks, the walk's squares felt, R_VISITED; each chunk's memory
+** and what's drawn on its map: view.c's kept, slice 4.2's).  A look's own work is in swapped parts (bank.s,
+** LIBDIR/dq0p.ovl), the answers to the denizens in the main RAM.  It waits on its doorbell (costing nothing) between
+** requests.
 */
 
 #include <fcntl.h>

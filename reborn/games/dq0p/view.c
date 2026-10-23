@@ -25,7 +25,8 @@
 ** as the light allows: a glance's reach every way else.
 **
 ** And what the character keeps of it (DUNGEON.md, the map kept): each chunk it sees any of, its memory (struct
-** chunk's kept) made fresh as the marks go in; mapping as it goes on paper, what it sees drawn (T_DRAWN: kept's).
+** chunk's kept) made fresh after the view (part 4's: kept); mapping as it goes on paper, what it sees drawn as the
+** marks go in (T_DRAWN: cast.s's run_out, run_d).
 */
 
 #include <string.h>
