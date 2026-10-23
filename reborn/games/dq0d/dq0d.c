@@ -183,6 +183,8 @@ struct den {
 #define NNAMES          8
 #define NDREG           32
 #define GIVE_WAY        20                      /* (Rounds the minds wait for the UI's command in hand: a second) */
+static unsigned char gw;                        /* (The rounds they've waited so far: main's, and tend's between
+                                                **   actors) */
 #define DN_MAGIC        0x4E44                  /* "DN": dens.dat's */
 struct head {
     unsigned        magic;
@@ -511,13 +513,15 @@ void __fastcall__ s_populate (unsigned char n)
 static void grow (void)
 {
     static unsigned char ms[MAXSTRATA], ns[MAXSTRATA];
+    const struct stratum* p;
     unsigned char k;
 
     hub_map (WORLD_BANK);                       /* (The hub's slots: each one's stratum, its own number; at once, as
-                                                **   it's looked at every time round) */
-    for (k = 0; k < MAXSTRATA; ++k) {
-        ms[k] = WREC->strata[k].made;
-        ns[k] = WREC->strata[k].n;
+                                                **   it's looked at every time round: walked, not indexed, no
+                                                **   multiplying) */
+    for (k = 0, p = WREC->strata; k < MAXSTRATA; ++k, ++p) {
+        ms[k] = p->made;
+        ns[k] = p->n;
     }
     hub_map (0);
     for (k = 0; k < MAXSTRATA; ++k) {
@@ -1642,6 +1646,10 @@ static void tend (void)
     lnow = now;
     for (k = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {
         hub_map (0);
+        if (!turns && HUB->ui_cmd && gw < GIVE_WAY) {
+            break;                              /* (The UI's command come in meanwhile: the rest decide next time
+                                                **   round, its answer first) */
+        }
         if (!q->name[0]) {
             continue;
         }
@@ -2066,7 +2074,7 @@ int main (int argc, char* argv[])
     static unsigned lpx, lpy;
     static unsigned char lpl;
     static unsigned long done_at;
-    static unsigned char gone, g, act, gw;
+    static unsigned char gone, g, act;
     unsigned char* p;
     int b;
 

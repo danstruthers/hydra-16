@@ -2106,6 +2106,10 @@ int main (int argc, char* argv[])
                 t_key (k);
             }
         }
+        if (t_next () && (!busy || !held)) {
+            HUB->ui_cmd = 1;                    /* (A line entered: the senses' look and the minds give way at once,
+                                                **   not after the events and the status line; its answer first) */
+        }
         k = events ();
         heard ();
         now = hub_now ();
