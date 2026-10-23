@@ -483,7 +483,7 @@ enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN }
                                                 **   a hole dug part way before, the world's DUG record's) */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
        TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE, TE_LOW, TE_OUT, TE_ROBBED,
-       TE_BEGUN, TE_ASK_SHORT };
+       TE_BEGUN, TE_ASK_SHORT, TE_LEARNT };
                                                 /* E_TASK's: stopped as
                                                 **   the player asked; stopped hard, by a wound or a blow (HOUSE.md:
                                                 **   all wounds), by a hostile in sight within 30 feet; asking, soft
@@ -516,7 +516,9 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
                                                 **   or a question of a task with one, TE_STOPPED ... TE_NEAR,
                                                 **   TE_ASK_SEEN, TE_ASK_TIRED, TE_ASK_HEARD, TE_ASK_SHORT); asking,
                                                 **   a battering's, a bare part's blow that would hurt it stopped
-                                                **   short (once a door: "Keep at it?") */
+                                                **   short (once a door: "Keep at it?"); a skill opened as it's used
+**   (the referee's: Drawing, by the first map drawn, slice 4.2's;
+**   told, no question) */
 #define TE_STILL        0x80
 #define TE_QUIET        0x40
 enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS,     /* E_BEAT's: a quiet stretch
@@ -1010,7 +1012,10 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** (s_light_now's): what it can draw with, and the map it carries (the senses draw on it, mapping as it goes; the
     ** maker shows its squares drawn) */
     unsigned char   pc_chart;                   /* CH_* */
-    unsigned        pc_map;                     /*   and its map's item's id (the first map it carries; 0 none) */
+    unsigned        pc_map;                     /*   and its map's item's id (the first map it carries; 0 none), */
+    signed char     pc_drawn;                   /*   and how true it's drawing it, mapping as it goes on paper: the
+                                                **   referee's grade (rs.h's G_*: P_DRAW's, asked as it comes into a
+                                                **   room or walks a way; the senses' for the chunks they draw) */
 };
 #define CH_DRAW         0x01                    /* (pc_chart's: the things to draw a map with to hand, the catalogue's
                                                 **   by their keys: a sheet (paper, parchment) or its map, a pencil or
@@ -1149,6 +1154,7 @@ struct wsave {
 **   own hub.pc_left world
 **   own hub.pc_chart world                                     (Its map making, by what it carries: slice 4.2's)
 **   own hub.pc_map world
+**   own hub.pc_drawn world
 **   own hub.pcsum referee
 **   own hub.look senses +world                                 (The world's look asked)
 **   own hub.mapq maker +ui

@@ -224,7 +224,11 @@ struct chunk {
         unsigned char n;                        /*   its passings, the times it's come to see it again (KEPT_PASS
                                                 **   or more out of its sight: 255 at most), */
         unsigned    map;                        /*   and the map its T_DRAWN squares are on (that map's item's id: 0
-                                                **   none) */
+                                                **   none), */
+        signed char dq;                         /*   how true they're drawn (the referee's grade, the hub's pc_drawn
+                                                **   as it was first drawn on that map: rs.h's G_*; 0 untested), */
+        unsigned char dsk;                      /*   and the north believed in then (the hub's pc_skew: drawn by it,
+                                                **   so drawn turned and put off, a wrong map unknowing) */
     }               kept;
 };
 /* (A chunk's kept: the clock in 25.6 seconds, 16 bits, its tenths' middle bytes, no long division (the hub's header in

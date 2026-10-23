@@ -498,6 +498,7 @@ static unsigned tx_, ty_, fx_, fy_;             /* (The trap's square, and the o
 static unsigned char cut;                       /* (The way worked out last stops at it, cut_t tenths on) */
 static unsigned long cut_t;
 void on_way (void);                             /* (Part 37's) */
+void draw_test (void);                          /* (Part 7's: a stretch of the map drawn, slice 4.2's) */
 static void stopped (void);
 
 /* C's trap on its square x, y that's set, and set off as it's walked on; or NULL */
@@ -773,6 +774,11 @@ static unsigned char __fastcall__ looked (unsigned char first)
         it_near ();
     }
     HUB->look.first = first;
+    if ((HUB->look.wn || (first & LF_ARRIVE) || !HUB->pc_drawn) && (HUB->watch & WA_MAP) && (HUB->pc_chart & CH_DRAW) &&
+        HUB->pc_map) {
+        draw_test ();                           /* (Mapping as it goes on paper: a way walked, a room come into, or
+                                                **   the first look, drawn: how true, part 7's) */
+    }
     hub_post (&HUB->look, T_SENSES);
     while (!hub_wait_t (&HUB->look, 4)) {      /* (Asleep meanwhile, a request rung waking it: the senses' stock,
                                                 **   the UI's things; else four ticks, the clock on from the ticks
@@ -3959,6 +3965,47 @@ static void __fastcall__ intent (struct msg* m)
         break;
     }
 }
+
+/* ==== Part 7 (wwin.c's, its room): a stretch of the map drawn as the character goes (slice 4.2's) */
+#pragma code-name (push, "SW7CODE")
+#pragma rodata-name (push, "SW7RODATA")
+
+/* How true what it draws now is (the hub's pc_drawn: the referee's P_DRAW test, HOUSE.md's the map kept; a skill
+** opened by it told, E_TASK's TE_LEARNT); its map's make the better or the worse for it (its quality, the mean of
+** the last and this test's: a critical success 9, a marginal 6, a marginal failure 3, a critical 0) */
+void s_draw_test (void)
+{
+    struct req* r = &HUB->slot[SLOT_WORLD];
+    signed char g;
+    unsigned char opened, q;
+    unsigned i = 0, id = HUB->pc_map;
+
+    r->kind = RS_TEST;
+    r->actor = 0;
+    r->a = P_DRAW;
+    r->b = 0;
+    r->steps = 0;
+    r->result = 0;
+    r = hub_ask (SLOT_WORLD);
+    g = r->grade;
+    opened = r->result;
+    r->state = REQ_FREE;
+    HUB->pc_drawn = g;
+    if (opened) {
+        event (E_TASK, 0, TE_LEARNT);           /* ("You start to learn drawing.": the UI's) */
+    }
+    q = g == G_CS ? 9 : g == G_MS ? 6 : g == G_MF ? 3 : 0;
+    while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+        if (ip->id == id) {
+            ip->quality = (ip->quality + q + 1) >> 1;
+            break;
+        }
+    }
+    hub_map (0);
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ==== Part 37: the rest of the UI's intents carried out (intent's; its own part, the main RAM's room: slice 4.1's) */
 #pragma code-name (push, "SW37CODE")

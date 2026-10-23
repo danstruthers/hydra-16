@@ -216,11 +216,12 @@ static void __fastcall__ view_grid (unsigned gx, unsigned gy, unsigned char w)
 ** well it keeps it made fresh (the summary's mapmind, mapping as it goes, half that not, a quarter of mapmind more for
 ** each of its passings' points, TR_MORE's; 100 at most; never less than it remembers of it still: a tenth lost each
 ** KEPT_FADE); and its squares drawn on its map as the marks went in (run_d's), the chunk's drawn squares another
-** map's wiped but those (seen now) */
+** map's wiped but those (seen now), how true they're drawn kept (the referee's grade, the north believed in then) */
 void s_kept (void)
 {
     unsigned now, age, map, u, u0;              /* (On the C stack: the main RAM's room) */
-    unsigned char q, q4, i0, i1, j, j0, j1, f, left;
+    unsigned char q, q4, i0, i1, j, j0, j1, f, left, dsk;
+    signed char dq;
     struct ckept* k;
     unsigned char* p;
 
@@ -231,6 +232,8 @@ void s_kept (void)
     q4 >>= 2;
     u0 = KEPT_UNIT (HUB->pcsum.mapfade);
     map = HUB->pc_map;
+    dq = HUB->pc_drawn;
+    dsk = HUB->pc_skew;
     for (j0 = 0; j0 < bw; j0 = j1) {            /* (Each chunk's rows of the view, and its columns) */
         j1 = j0 + CW - ((by0 + j0 - v_y0) & (CW - 1));
         j1 = j1 < bw ? j1 : bw;
@@ -265,7 +268,9 @@ void s_kept (void)
             k->q = left > f ? left : f;
             k->m = now;
             if (run_d && k->map != map) {
-                k->map = map;
+                k->map = map;                   /* (First drawn on this map: how true, by the north believed in) */
+                k->dq = dq;
+                k->dsk = dsk;
                 for (p = &C->tile[0][0], age = 0; age < CW * CW; ++age, ++p) {
                     if (!(*p & T_VIS)) {
                         *p &= ~T_DRAWN;

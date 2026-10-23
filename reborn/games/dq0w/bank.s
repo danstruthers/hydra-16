@@ -86,7 +86,8 @@ go:
                                             ;   several, things moved by the count, what closes worked (things.c)
             SWPART      5, 2                ; Doors (wdoor.c)
             SWPART      6, 3                ; Blows (wblow.c)
-            SWPART      7, 14               ; Portcullises and windows (wwin.c)
+            SWPART      7, 14               ; Portcullises and windows (wwin.c); the map drawn as it goes (dq0w.c's
+                                            ;   draw_test: slice 4.2's)
             SWPART      8, 4                ; Traps and searches (wtrap.c)
             SWPART      9, 4                ; The walks (dq0w.c's go, go_to, step_to)
             SWPART      10, 5               ; The things: the requests answered, a thing handled (things.c)
@@ -282,5 +283,6 @@ go:
             SWFN        across, 33
             SWFN        intent_more, 37
             SWFN        on_way, 37
+            SWFN        draw_test, 7
             SWFN        store_put, 38
             SWFN        change, 38

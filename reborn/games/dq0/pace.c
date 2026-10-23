@@ -121,6 +121,7 @@ static void __fastcall__ described (unsigned char a)
 unsigned char __fastcall__ s_pace_cmd (const char* l)
 {
     unsigned char i, k, g = 0xFF, wa, st, n = 0, keep, d, said;
+    unsigned mw;
 
     strncpy (b, l, INMAX);
     split ();
@@ -222,9 +223,13 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     k = (cmd.action == VB_MOVE_DIRECTION || cmd.action == VB_MOVE_TOWARD || cmd.action == VB_ENTER ||
         cmd.action == VB_APPROACH_OBJECT) && (cmd.dir != 0xFF || cmd.obj.kind);
     st = st && (!k || n || g != HUB->gait || wa != HUB->watch);    /* (Said, unless it goes on as it was) */
+    mw = HUB->pc_map;
     wset (WS_PACE, g == 0xFF ? g : g | said, wa);   /* (The world's, set: its request) */
     if (st) {
         described (1);
+    }
+    if (!mw && HUB->pc_map) {
+        msg ("You begin a map.");               /* (Mapping on paper: its first sheet the map, the world's) */
     }
     d = cmd.dir;
     if (nw > 1 && !strcmp (w[0], "back") && !strcmp (w[1], "up")) {

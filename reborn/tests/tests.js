@@ -2155,6 +2155,25 @@ const dq0Holder = (s, i) => s && i && i.where === 'IW_ITEM' ? s.items.find(j => 
 // ways), as one string: the same place seen the same, compared
 const dq0View = s => !s || !s.sight ? '' : JSON.stringify(Object.assign({}, s.sight, { seq: 0, dens: [], first: 0 }));
 const DQ0_I = { LIT: 0x01, HELD: 0x02, WORN: 0x04, HIDDEN: 0x08 };   // (items.h's I_*)
+// The maker's map in a snapshot (slice 4.2's: dq0meaning's map and mapLay): each square shown by its layer (ML_*: seen
+// now, remembered, drawn on the map carried), and the @'s place: { now, kept, drawn, all: [{ r, i, c }], pc: { r, i } }
+const DQ0_ML = ['now', 'kept', 'drawn', 'pc', 'compass'];
+// (MAPDUMP=1: a snapshot's map, each square's layer after its row: n now, k remembered, d drawn, @ the character)
+const dq0MapDump = s => !s || !s.map ? '(no map)' : s.map.map((row, r) => row.padEnd(64) + ' ' + Array.from(row, (c, i) => c === ' ' ? ' ' : 'nkd@c'[s.mapLay[r][i]]).join('')).filter(l => l.trim()).join('\n');
+function dq0MapLayers(s) {
+  const out = { now: [], kept: [], drawn: [], all: [], pc: null, none: !s || !s.map || !s.mapLay };
+  if (out.none) return out;
+  s.map.forEach((row, r) => {
+    for (let i = 0; i < row.length; i++) {
+      if (row[i] === ' ') continue;
+      const q = { r, i, c: row[i] }, l = DQ0_ML[s.mapLay[r][i]];
+      out.all.push(q);
+      if (l === 'pc') out.pc = { r, i };
+      else if (out[l]) out[l].push(q);
+    }
+  });
+  return out;
+}
 // A dq0 test's lines typed, each at its prompt (rc's "% ", the game's "> ")
 const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
 
@@ -2916,6 +2935,80 @@ module.exports = {
         if (!mp.after || !mp.after.map.some(r => r.trim())) f.push('no map drawn');
         dq0Need(f, sw, 'E_ARRIVE', {}, 'not along the tunnel');
         return [...f, ...caveReport(m, 1, 1)];
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0fog', meaning: true, what: 'Dingus Quest Zero\'s map as the character knows the place (slice 4.2, DUNGEON.md\'s the map kept; the user\'s, 2026-10-16 and 2026-10-23: only what it sees now plain, the rest obscured, a mental map fading by its Intelligence and Will, the better kept where it\'s often been, a map drawn on paper while mapping as it goes), by the maker\'s map (the UI bank\'s rows and their layers, ML_*): at seed 3 (dq0 -T, a human hunter: INT 10, WIL 13) what it sees now with its heights, what it saw facing the other way faint (a floor a comma); its torch put out, all of it remembered, none seen now; an hour later its squares put off where they truly are (faded a tenth: it doesn\'t know north underground); three hours on, gone; the same place come to again four times (down the stairway and five minutes there each time) still on the map after three hours in the dark; with paper and charcoal (dq0 -k) mapping as it goes, a map begun ("You begin a map.", Drawing opened: "You start to learn drawing."), what it drew shown as drawn while it carries the map, not once it\'s put down, again as it\'s taken up',
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'turn around', 'map', 'douse the torch', 'map', 'wait 1 hour', 'map', 'wait 2 hours', 'map', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'wait 5 minutes', 'u', 'd', 'wait 5 minutes', 'u', 'd', 'wait 5 minutes', 'u', 'douse the torch',
+        'wait 3 hours', 'map', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k paper,charcoal', 'map as I go', 'turn around', 'turn around', 'map', 'drop the map', 'map',
+        'take the map', 'map', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), maps = T.filter(t => t.line === 'map');
+        if (maps.length !== 8) return ['the eight maps not typed: ' + maps.length];
+        const [m1, m2, m3, m4, p1, d1, d2, d3] = maps.map(t => dq0MapLayers(t.after));
+        if (process.env.MAPDUMP) maps.forEach(t => console.log(t.k, dq0MapDump(t.after)));
+        if (m1.none || !m1.now.length || !m1.kept.length) f.push('facing the other way: ' + m1.now.length + ' squares seen now, ' + m1.kept.length + ' remembered (both wanted)');
+        if (m1.kept.some(q => q.c === '.' || /[1-9a-i]/.test(q.c))) f.push('a remembered square drawn as one seen now (a floor not faint, or its height)');
+        if (!m1.now.some(q => q.c === '.') || m1.now.some(q => q.c === ',')) f.push('the floor it sees now not plain');
+        if (m2.now.length || !m2.kept.length) f.push('its torch out: ' + m2.now.length + ' squares seen now (none wanted), ' + m2.kept.length + ' remembered');
+        const at = l => new Set(l.map(q => q.r + ',' + q.i));
+        const k2 = at(m2.kept);
+        if (!m3.kept.some(q => !k2.has(q.r + ',' + q.i))) f.push('an hour on, nothing put off where it was (a human, no north sense)');
+        if (m4.kept.length) f.push('three hours on, ' + m4.kept.length + ' squares still remembered (seen once: gone)');
+        if (!p1.kept.length) f.push('come to four times: nothing remembered after three hours');
+        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k paper,charcoal'), mg = T.after(g, 'map as I go');
+        if (!mg.after || !mg.after.pc.map || !dq0Thing(mg.after, 'map') || dq0Thing(mg.after, 'paper')) f.push('mapping as it goes with paper: no map begun (pc_map ' + (mg.after && mg.after.pc.map) + ')');
+        inTurn(s, ['> map as I go', 'You begin a map.', '> turn around', 'You start to learn drawing.'], f, 'the map begun: ');
+        if (!d1.drawn.length) f.push('its map carried: nothing shown as drawn');
+        if (d2.drawn.length) f.push('its map put down: ' + d2.drawn.length + ' squares still shown as drawn');
+        if (!d3.drawn.length) f.push('its map taken up again: nothing shown as drawn');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0mapturn', meaning: true, what: 'Dingus Quest Zero\'s map turned as the character faces (slice 4.2, DUNGEON.md\'s bearings underground; the user\'s, 2026-10-16: a dwarf\'s north up, anyone else\'s the way it faces up), by the maker\'s map and the words: at seed 3 (dq0 -T) a human facing north, the map north up, the character in its middle, a compass in its top right corner (N above +); facing east, east up (the rows turned a quarter: what\'s to its south to its right), the compass\'s N to the left of its +, "Facing E" beside it and no square given (its coordinates would give the true north away); a dwarf (hmchar -p k) at the same place facing east, north up (the window kept in the stratum, no compass; the window by the room\'s door where the human\'s north-up map has it, the human\'s facing east turned a quarter), its square given; its torch put out an hour, fewer squares remembered but none put off (a dwarf knows north)',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'hmchar -q -s 9 -p k -o /ram/d.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'face north', 'map', 'face east', 'map', 'quit',
+        'dq0 -p t -s 3 -c /ram/d.hm -T', 'face east', 'map', 'douse the torch', 'map', 'wait 1 hour', 'map', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], maps = T.filter(t => t.line === 'map');
+        if (maps.length !== 5) return ['the five maps not typed: ' + maps.length];
+        const [hn, he, de, dk, dw] = maps.map(t => dq0MapLayers(t.after));
+        if (process.env.MAPDUMP) maps.forEach(t => console.log(t.k, dq0MapDump(t.after)));
+        for (const [l, x] of [['facing north', hn], ['facing east', he]]) if (!x.pc || x.pc.r !== 10 || x.pc.i !== 32) f.push('a human ' + l + ': the @ not in the middle (' + JSON.stringify(x.pc) + ')');
+        // (The window by the room's door: where the dwarf's north-up map has it, the human's has it turned)
+        const st = x => x.all.filter(q => q.c === '"').map(q => ({ dx: q.i - x.pc.i, dy: q.r - x.pc.r }));
+        const ds = de.pc ? st(de) : [];
+        if (!ds.length) f.push('the dwarf\'s map: no window near it');
+        else {
+          const { dx, dy } = ds[0];
+          if (!st(hn).some(q => q.dx === dx && q.dy === dy)) f.push('facing north: the window not where north up has it (' + dx + ',' + dy + ')');
+          if (!st(he).some(q => q.dx === dy && q.dy === -dx)) f.push('facing east: the window not turned a quarter (' + dy + ',' + -dx + ' wanted; ' + JSON.stringify(st(he)) + ')');
+        }
+        // (The compass, the UI's: the map's lines as they were said, its first three rows' last columns)
+        const plain = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '').split(/\r?\n/);
+        const rows = (k, n) => { let c = 0; const i = plain.findIndex(l => l.startsWith('The map (you face') && c++ === k); return i < 0 ? [] : plain.slice(i + 1, i + 1 + n); };
+        const rn = rows(0, 3), re = rows(1, 3), rd = rows(2, 3);
+        if (!rn[0] || rn[0][62] !== 'N' || !rn[1] || rn[1][62] !== '+') f.push('facing north: no compass, N above + (' + JSON.stringify(rn.map(l => l.slice(60, 64))) + ')');
+        if (!re[1] || re[1].slice(61, 63) !== 'N+') f.push('facing east: no compass, N left of + (' + JSON.stringify(re.map(l => l.slice(60, 64))) + ')');
+        if (rd.some(l => l.slice(61, 64).includes('N'))) f.push('the dwarf\'s map: a compass');
+        const s = dq0Story(out);
+        inTurn(s, ['> face east', '> map', 'The map (you face east', 'Facing E'], f, 'the human: ');
+        if (/Sq -?\d+,-?\d+/.test(s.slice(s.indexOf('> face north'), s.indexOf('% dq0 -p t -s 3 -c /ram/d.hm')))) f.push('the human\'s map: its square given');
+        if (!/Sq -?\d+,-?\d+/.test(s.slice(s.indexOf('% dq0 -p t -s 3 -c /ram/d.hm')))) f.push('the dwarf\'s map: no square given');
+        if (!dk.kept.length || !(dw.kept.length < dk.kept.length)) f.push('the dwarf an hour in the dark: ' + dw.kept.length + ' squares remembered of ' + dk.kept.length + ' (fewer wanted)');
+        const kk = new Set(dk.kept.map(q => q.r + ',' + q.i));
+        if (dw.kept.some(q => !kk.has(q.r + ',' + q.i))) f.push('the dwarf\'s memory put off where it was (it knows north)');
+        return f;
       },
       sdcard: true
     },

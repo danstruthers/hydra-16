@@ -27,7 +27,7 @@
 #define VF_STATIC       static
 #include "../dq0/vfile.inc"
 
-#define SEEN_BANKS      4                       /* (A map 269 bytes: 30 to a bank, 120 in all, as there were) */
+#define SEEN_BANKS      4                       /* (A map 271 bytes: 30 to a bank, 120 in all, as there were) */
 #define SEEN_PER_BANK   (0x2000 / sizeof (struct seen))
 
 struct seen {

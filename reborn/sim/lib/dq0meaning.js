@@ -94,7 +94,7 @@ const EXPRS = {
   bDist: F('struct beyond', 'dist'), bKind: F('struct beyond', 'kind'), bLit: F('struct beyond', 'lit'),
   wNitems: F('struct wayseen', 'nitems'), wItem: F('struct wayseen', 'item'), wNdens: F('struct wayseen', 'ndens'),
   wDen: F('struct wayseen', 'den'), wNglows: F('struct wayseen', 'nglows'), wGlow: F('struct wayseen', 'glow'),
-  uiBank: 'UI_BANK', uMap: F('struct uirec', 'map'), mapH: 'MAP_H', mapW: 'MAP_W',
+  uiBank: 'UI_BANK', uMap: F('struct uirec', 'map'), mapH: 'MAP_H', mapW: 'MAP_W', uMapLay: F('struct uirec', 'maplay'),
   uTread: F('struct uirec', 'tread'), uTrtext: F('struct uirec', 'trtext'), trText: 'TR_TEXT', trHow: F('struct tread', 'how'),
   trResult: F('struct tread', 'result'), trGrade: F('struct tread', 'grade'), trFloor: F('struct tread', 'floor'), trDust: F('struct tread', 'dust'),
   trTrod: F('struct tread', 'trod'), trSmoke: F('struct tread', 'smoke'), trNtr: F('struct tread', 'ntr'), trTr: F('struct tread', 'tr'),
@@ -286,6 +286,8 @@ function createRecorder() {
     }
     const ui = bank(L.uiBank);                                   // (The map's rows, as the maker last drew them)
     if (ui) for (let r = 0; r < L.mapH; r++) s.map.push(str(ui, L.uMap + r * (L.mapW + 1), L.mapW));
+    if (ui) s.mapLay = Array.from({ length: L.mapH }, (_, r) => Array.from(ui.subarray(L.uMapLay + r * L.mapW, L.uMapLay + (r + 1) * L.mapW)));   // (Each
+    // square's layer, the maker's: ML_NOW, ML_KEPT, ML_DRAWN, ML_PC: slice 4.2's)
     if (ui) {                                                   // (The traces read last: the world's reply, its words;
       const o = L.uTread;                                       //   slice 4.1's)
       s.tread = { how: name('TRC_FLOOR', ui[o + L.trHow]), result: name('TRR_OK', ui[o + L.trResult]), grade: s8(ui[o + L.trGrade]),
