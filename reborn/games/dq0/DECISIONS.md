@@ -850,7 +850,10 @@ a useless leg walks no more: the character crawls if an arm and a leg still work
 user: "You can stand and hop with one good leg.  Hopping would be quite slow (crawl speed), and would tire you at the
 strenuous work rate.  A crutch could be used to move at walk speed."  So with one good leg the character can stand
 (the book's Rise) and hop, at a crawl's speed and tiring as strenuous work does, or walk at a walk's speed with a
-crutch (a staff, a pole: a thing that serves as one, held); with no good leg it crawls, if an arm still works.
+crutch (a staff, a pole: a thing that serves as one, held); with no good leg it crawls, if an arm still works.  And
+then: "No good arms makes crawling impossible, and both arms are required if both legs are unusable.  Also, getting
+up with no good arms would be difficult, should probably require an agility check or something similar."  So a crawl
+needs a good arm with a good leg, or both arms with neither leg; getting up with no good arm takes an Agility test.
 
 **Design:** the plan's slice 4.1b (to be drafted with it).
 
