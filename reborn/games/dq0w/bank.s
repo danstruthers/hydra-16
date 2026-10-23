@@ -279,5 +279,6 @@ go:
             SWFN        tr_scent, 32
             SWFN        across, 33
             SWFN        intent_more, 37
+            SWFN        on_way, 37
             SWFN        store_put, 38
             SWFN        change, 38

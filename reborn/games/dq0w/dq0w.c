@@ -497,7 +497,7 @@ static void den_way (void)
 static unsigned tx_, ty_, fx_, fy_;             /* (The trap's square, and the one it's walked onto from) */
 static unsigned char cut;                       /* (The way worked out last stops at it, cut_t tenths on) */
 static unsigned long cut_t;
-static void on_way (void);
+void on_way (void);                             /* (Part 37's) */
 static void stopped (void);
 
 /* C's trap on its square x, y that's set, and set off as it's walked on; or NULL */
@@ -2549,26 +2549,6 @@ unsigned char s_batter_on (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The walk worked out last stops at the trap on its way (tx_, ty_, from fx_, fy_: its chunk's, C's, made the
-** frame's), to be set off as it gets there (or noticed in time: wtrap.c's) */
-static void on_way (void)
-{
-    unsigned ox = STRATUM (sn_).x0 + C->cx * CW, oy = STRATUM (sn_).y0 + C->cy * CW;
-
-    tx_ += ox;
-    ty_ += oy;
-    fx_ += ox;
-    fy_ += oy;
-    hub_map (0);
-    move.on = 1;
-    move.how = A_STOPPED;
-    move.sn = sn_;
-    move.x = tx_;
-    move.y = ty_;
-    move.face = bearing ((int) (tx_ - fx_), (int) (ty_ - fy_));
-    set_off (cut_t);
-}
-
 /* On the trap on its way (A_STOPPED): set off (wtrap.c's) */
 static void stopped (void)
 {
@@ -3983,6 +3963,27 @@ static void __fastcall__ intent (struct msg* m)
 /* ==== Part 37: the rest of the UI's intents carried out (intent's; its own part, the main RAM's room: slice 4.1's) */
 #pragma code-name (push, "SW37CODE")
 #pragma rodata-name (push, "SW37RODATA")
+
+/* The walk worked out last stops at the trap on its way (tx_, ty_, from fx_, fy_: its chunk's, C's, made the
+** frame's), to be set off as it gets there (or noticed in time: wtrap.c's): part 37's (the main RAM's room, slice
+** 4.2's: only as a walk's worked out with a trap on its way) */
+void s_on_way (void)
+{
+    unsigned ox = STRATUM (sn_).x0 + C->cx * CW, oy = STRATUM (sn_).y0 + C->cy * CW;
+
+    tx_ += ox;
+    ty_ += oy;
+    fx_ += ox;
+    fy_ += oy;
+    hub_map (0);
+    move.on = 1;
+    move.how = A_STOPPED;
+    move.sn = sn_;
+    move.x = tx_;
+    move.y = ty_;
+    move.face = bearing ((int) (tx_ - fx_), (int) (ty_ - fy_));
+    set_off (cut_t);
+}
 
 void __fastcall__ s_intent_more (struct msg* m)
 {
