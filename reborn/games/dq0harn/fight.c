@@ -47,8 +47,6 @@
 ** hide's protection (blunt, edge, point, fire), and its weapons (a word, its ML, its impact, its aspect, the part it
 ** strikes with: 0xFF a weapon held), the first the one it uses most */
 
-#define BF_MINDLESS     0x01
-
 struct nweapon {
     char            word[7];
     unsigned char   ml, imp, aspect, part;

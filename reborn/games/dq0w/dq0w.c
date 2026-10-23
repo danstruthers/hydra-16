@@ -147,6 +147,7 @@ static unsigned pspent;                         /* (A walk's tenths the referee'
 static unsigned char pfoe, paim, pstrike, pfd;  /* (A blow's close-in, I_CLOSE's: its target plus 1, 0 none; the
                                                 **   blow's aim, what it strikes with; how far off it was as the walk
                                                 **   last set out) */
+static unsigned char pshand;                    /* (The hand that holds what it strikes with: the hub's pc_shand) */
 
 /* The character busy for t tenths: free again at pc_ready (the turns pace: the clock moved on to it a slice at a
 ** time, turns_run), standing where it is unless a move says where it's going (bound_for) */
@@ -3326,34 +3327,29 @@ static unsigned char __fastcall__ swatted (unsigned char k)
 }
 
 /* What it fights back with unbidden (the user's, 2026-10-22: what's in its hands): the thing it holds the referee
-** would strike with (RS_WIELD), as a thing named is (SK_THING), but a soft one; else the best it holds (SK_BEST: its
-** fists, its hands empty) */
+** would strike with (RS_WIELD: its main hand's first, slice 4.1b's), as a thing named is (SK_THING), but a soft one;
+** else the best it holds (SK_BEST: its fists, its hands empty); its hand the hub's pc_shand */
 static unsigned char in_hand (void)
 {
     struct req* r;
-    unsigned char k[2], n = 0, s;
-    unsigned i = 0;
+    unsigned char n, s;
 
-    k[0] = k[1] = 0;
-    while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
-        if ((ip->flags & I_HELD) && n < 2) {
-            k[n++] = ip->kind;
-        }
-    }
-    hub_map (0);
+    held_kinds ();
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_WIELD;
     r->actor = 0;
     r->b = 0;
-    r->x[0] = k[0];
-    r->x[1] = k[1];
+    r->x[0] = held_k[0];
+    r->x[1] = held_k[1];
     r = hub_ask (SLOT_WORLD);
     s = r->result;
     r->state = REQ_FREE;
+    HUB->pc_shand = 0;
     if (!s) {
         return SK_BEST;
     }
-    s = k[s - 1];
+    HUB->pc_shand = held_h[s - 1];
+    s = held_k[s - 1];
     hub_map (CAT_BANK);
     n = fight_swing (CATALOGUE + s);
     hub_map (0);
@@ -3374,6 +3370,7 @@ void __fastcall__ s_close_go (const struct msg* m)
     pfoe = m->a;
     paim = m->b;
     pstrike = m->x[1];
+    pshand = m->x[2] ? m->x[2] : shand_of (pstrike);
     pfd = 0xFF;
     s_close_on ();
 }
@@ -3399,6 +3396,7 @@ unsigned char s_close_on (void)
             hub_map (0);
             pfoe = 0;
             HUB->pc_strike = pstrike;
+            HUB->pc_shand = pshand;
             HUB->pc_aim = paim;
             fheld = 0;
             if (swatted (++k)) {
@@ -3554,8 +3552,11 @@ static void __fastcall__ fight_blow (unsigned char k)
 ** changed, struck at as the character's next free; else struck now, a round of its time, and fought on after it */
 void __fastcall__ s_fight_go (const struct msg* m)
 {
+    pshand = m->x[2] ? m->x[2] : shand_of (m->x[1]);    /* (The hand that holds it: said, else the main hand's
+                                                **   first, slice 4.1b's) */
     hub_map (0);
     HUB->pc_strike = m->x[1];
+    HUB->pc_shand = pshand;
     HUB->pc_aim = m->b;
     fheld = 0;
     if (HUB->pc_task.kind == LT_FIGHT && !pc_cut) {
@@ -3975,7 +3976,10 @@ void __fastcall__ s_intent_more (struct msg* m)
         close_go (m);                           /* (Walked up to it, then struck: part 23's) */
         break;
     case I_PORTAL:
-        HUB->pc_strike = m->x[1];               /* (What it strikes with: the parser's) */
+        k = m->x[2] ? m->x[2] : shand_of (m->x[1]);
+        hub_map (0);
+        HUB->pc_strike = m->x[1];               /* (What it strikes with: the parser's; its hand, said or found) */
+        HUB->pc_shand = k;
         want_ = m->b;
         tgx = m->w1;
         tgy = m->w2;

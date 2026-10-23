@@ -42,12 +42,12 @@ it answers with result 0xFF.
 | RS_HELLO | the UI, as the game starts | w1 the round (tenths: the world's clock, a climb's round, a creature held back); the text's lines: its name, its character generator ("": none) |
 | RS_LOAD_PC | the UI (its slot's text the file's path; "" none) | result (0, or 1: no character); the text's lines, the name and the calling; a and b the pace and watchfulness the file kept (GA_WALK and 0 if none); pcsum and pcstatus set |
 | RS_SAVE | the UI (the path of the save's pc.hm) | nothing (the referee writes its character, and its creatures' sheets into the save folder: the hub's savedir) |
-| RS_EQUIP | the UI (a 2: every key to hand, each after its mark and with its quality, w1 the load in quarter pounds) | nothing (pcsum anew: load, step) |
+| RS_EQUIP | the UI (a 2: every key to hand, each after its mark, held: < its left hand, > its right, * both; + worn; and with its quality, w1 the load in quarter pounds) | nothing (pcsum anew: load, step, limbs) |
 | RS_TEST | the world, the UI, the denizens' task | grade (G_CF ... G_CS); result 1 can't (no tool, magic only), 2 a tongue it doesn't speak; P_DIG's text the tool's key ("hands": bare), w1 the half-feet, w2 the wear |
 | RS_EXERT | the world (w1 tenths at pace a, or at strenuous work, GA_WORK: a climb's rounds, a dig's spells, a battering's blows; or GA_REST) | result 1 if it tired the character a level more (the world's soft question); pcsum anew |
 | RS_CONTEST | the world (the engage initiative test: actor the engager, other the defender, a and b P_INITIATIVE) | result (2: the other did better, its tactical advantage; 1 the actor, 0 alike), grade and c the two grades |
 | RS_HARM | the world (a cause, HC_*, and its numbers) | x the effects (rs.h's struct rs_effect, X_NONE after the last); b the worst wound's band (0 none); w2 the tenths it's senseless (0); result 1 a fall stopped by a hold; the text its words; pcsum anew (cond: C_DEAD ends the game) |
-| RS_WIELD | the UI (a blow with nothing named: b 1 at a thing, x[0] and x[1] the kinds held, the things' IO_HANDS); the world (fighting back unbidden) | result the one held to strike with (1, 2; 0 its hands empty); then the text the key of a better thing carried, to ask about ("" none) |
+| RS_WIELD | the UI (a blow with nothing named: b 1 at a thing, x[0] the kind in its main hand, x[1] the other's, the things' IO_HANDS); the world (fighting back unbidden) | result the one held to strike with (1, 2: the main hand's, but a soft thing; 0 its hands empty); then the text the key of a better thing carried, to ask about ("" none) |
 | RS_ATTACK | the world (a blow: actor at other, a its aim, b AS_BEST, w2 shy and prone bits; the hub's pc_strike what the character strikes with: SK_*, or SK_THING and a kind, the catalogue's) | result O_* (0xFF: none struck), a whose fumble or stumble, c AF_* (AF_CAUTIOUS, AF_BLEEDING), grade hub.h's FF_* (senseless, dead, flees, fallen), w2 the tenths one's out for, x the effects (X_COND_ON C_PRONE: fallen), the text its four lines (below); at RS_THING (other): w1 the harm the thing takes, c, w2 and result's bit 0 the striker's own hurt (bit 1: a part of it struck) |
 | RS_TIME | the world (actor 0xFF: the bleeders, w2's bits) | w1 the bits of those dead of it |
 | RS_NEW_ACTOR | the denizens' task (its text the kind's key, w1 the record's number) | x a struct rs_summary (cond: C_BLEEDING) |
@@ -63,7 +63,10 @@ The words the game knows in a reply (a convention every referee keeps):
   empty one just strikes.
 - **P_DIG's tool** is a key of the things' catalogue, or "hands"; the UI names the tool by the thing it takes.
 - **The keys to hand** (RS_EQUIP) are the catalogue's (items.h's tool keys: "pick", "picks", "ltunic" ...): a referee
-  maps them to its own weapons and armour.
+  maps them to its own weapons and armour.  A held one's mark is its hand (slice 4.1b's: < the left, > the right, *
+  both), and the thing that strikes is in the hand the hub's pc_shand says: a referee's own penalties by them (the off
+  hand's, one-handed), and its main hand its summary's limbs (rs.h's LB_*, with the limbs made useless: the world's
+  hands hold nothing there).
 
 ## The house's rules, every referee's
 

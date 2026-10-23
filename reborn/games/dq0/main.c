@@ -68,7 +68,12 @@ static unsigned char made;                      /* (The theme to read: 0xFF the 
 const char* savedir;                            /* (dq0 -d: the save's folder; task.c's meta too) */
 unsigned char __fastcall__ things (unsigned char op, const char* name);   /* (way.c's too, part 6's) */
 static void to_hand (void);
-void __fastcall__ news (const struct msg* m);    /* (Part 11's: the rarer news, worded) */
+void __fastcall__ news (const struct msg* m);    /* (Part 11's: the rarer news, worded; a thing hidden; the hands' and
+                                                **   limbs': slice 4.1b's) */
+void __fastcall__ hide (const char* w);
+void hand_said (void);
+void limbs_cmd (void);
+unsigned char hold_first (void);
 static void __fastcall__ dig_used (unsigned char n);
 static char dug_with[16];                       /* (The tool a dig took, named) */
 unsigned char finds;                            /* (Things a search turned up, told as it ends: the hub's text;
@@ -83,6 +88,10 @@ static char lifting[16];                        /* (A portal's part being lifted
 static unsigned char barw, rebar;               /* (A bar to hand to bar a door with, its width; and the door barred:
                                                 **   the bar to set in its brackets, as the character's free) */
 unsigned char strike;                           /* (What it strikes with: the parser's, SK_*, sent with each blow) */
+unsigned char shand;                            /* (The hand that holds it, if it's said: items.h's IH_*, sent with each
+                                                **   blow; the hand a thing's to go in, a hold's: slice 4.1b's) */
+char hold_w[16];                                /* (A blow's thing to take in hand first, its target found: resolve.c's,
+                                                **   part 11's hold_first) */
 static unsigned char pc_gait, pc_watch;         /* (The character's file's pace and watchfulness: the referee's) */
 
 struct pc P;
@@ -881,9 +890,19 @@ static unsigned char events (void)          /* (How many there were) */
                 beat_words (m.w1);
             }
             break;
-        case E_NOWAY:                           /* (The rarer news, its words part 11's: the main RAM's room, slice
+        case E_NOWAY:                           /* (A way refused: told at once, the main RAM's) */
+            if (m.who == 0 && (m.w1 & 0xFF) == N_DEN) {
+                strcpy (lb, HUB->actor[(m.w1 >> 8) & 7].name);  /* (A denizen's: its name, for overlay 4) */
+                den_way ();
+            } else if (m.who == 0 && m.w1 == N_SHUT) {
+                way_words ();                   /* (The theme's: its lock) */
+            } else if (m.who == 0) {
+                tell (m.w1 == N_NO_STAIRS ? T_THERE_S_NO : m.w1 == N_NO_DIG ? T_THERE_S_NOTHING : m.w1 == N_CLOSED ?
+                    T_THE_PORTCULLIS_IS : m.w1 == N_DOOR ? T_DOOR_SHUT : T_YOU_CAN_T);
+            }
+            break;
+        case E_DIG:                             /* (The rarer news, its words part 11's: the main RAM's room, slice
                                                 **   4.1b's) */
-        case E_DIG:
         case E_LEDGE:
         case E_CLIMB:
         case E_HARM:
@@ -912,8 +931,8 @@ static unsigned char events (void)          /* (How many there were) */
     return n;
 }
 
-/* ==== Part 11: the rarer news of the world's, worded (events()'s, the character's: a way refused, a dig, a ledge, a
-** climb, a harm, a portal worked; its own part, the main RAM's room: slice 4.1b's) */
+/* ==== Part 11: the rarer news of the world's, worded (events()'s, the character's: a dig, a ledge, a climb, a harm, a
+** portal worked; its own part, the main RAM's room: slice 4.1b's) */
 #pragma code-name (push, "SW11CODE")
 #pragma rodata-name (push, "SW11RODATA")
 
@@ -923,17 +942,6 @@ void __fastcall__ s_news (const struct msg* m)
     struct req* r;
 
     switch (m->kind) {
-    case E_NOWAY:
-        if ((m->w1 & 0xFF) == N_DEN) {
-            strcpy (lb, HUB->actor[(m->w1 >> 8) & 7].name);  /* (A denizen's: its name, for overlay 4) */
-            den_way ();
-        } else if (m->w1 == N_SHUT) {
-            way_words ();                       /* (The theme's: its lock) */
-        } else {
-            tell (m->w1 == N_NO_STAIRS ? T_THERE_S_NO : m->w1 == N_NO_DIG ? T_THERE_S_NOTHING : m->w1 == N_CLOSED ?
-                T_THE_PORTCULLIS_IS : m->w1 == N_DOOR ? T_DOOR_SHUT : T_YOU_CAN_T);
-        }
-        break;
     case E_DIG:
         k = m->w1 >> 8;
         if (k == D_BEGUN || k == D_AGAIN) {
@@ -982,6 +990,107 @@ void __fastcall__ s_news (const struct msg* m)
     }
 }
 
+
+/* A thing hidden where the character stands (P_CONCEAL: the referee's test, the things' record), worded by how
+** well (its difficulty, in steps); part 11's, part 2's room */
+void __fastcall__ s_hide (const char* w)
+{
+    unsigned char d;
+
+    if (!*w) {
+        tell (T_HIDE_WHAT_HIDING);
+    } else if ((HUB->ireq.to = reach == 4 ? IO_DONE : 0, things (IO_HIDE, w)) == IR_OK) {
+        if (reach != 4) {
+            more (VB_HIDE);                     /* (Begun: a minute's work, a timed work, the things' IO_DONE at its
+                                                **   end, words.c's) */
+            return;
+        }
+        d = HUB->ireq.qty;
+        tell (d >= 10 ? T_HID_CUNNINGLY : d >= 4 ? T_HID_WELL : T_HID_POORLY);
+        to_hand ();
+    } else {
+        tell (T_YOU_CARRY_NONE);
+    }
+}
+
+/* The hand said in the command's line (cl: "in my left hand", "in my right hand", "in both hands", "in my other hand",
+** "in my off hand", "in my main hand"; slice 4.1b's), into shand (items.h's IH_*; IH_OTHER, the other one): a thing
+** taken, put, held or worn so made a hold of it, into that hand ("take the torch in my right hand", "put the dagger in
+** my other hand"); and the way and the count the parser made of its words no more (dq0c's meaning takes "left" for a
+** way, "both" for a count: "attack the rat with the dagger in my left hand" no rat to its left) */
+void s_hand_said (void)
+{
+    static const char* const said[6] = { "left hand", "right hand", "both hands", "other hand", "off hand",
+        "main hand" };
+    const char* p;
+    unsigned char k, a = cmd.action, h;
+
+    for (k = 0; k < 6; ++k) {
+        for (p = cl; *p && strnicmp (p, said[k], strlen (said[k])); ++p) {
+        }
+        if (*p) {
+            break;
+        }
+    }
+    if (k == 6) {
+        return;
+    }
+    h = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
+    shand = k == 0 ? IH_LEFT : k == 1 ? IH_RIGHT : k == 2 ? IH_BOTH : k == 3 ? IH_OTHER : k == 4 ? h ^ IH_BOTH : h;
+    cmd.dir = 0xFF;
+    cmd.how = 0;
+    cmd.n = 0;
+    if (a == VB_PUT_OBJECT || a == VB_RETRIEVE_OBJECT || a == VB_EQUIP_OBJECT || a == VB_HANG_OBJECT ||
+        a == VB_HOLD_OBJECT) {
+        cmd.action = VB_HOLD_OBJECT;
+        cmd.aux = IO_HOLD;
+        cmd.prep = 0;
+        cmd.other.word[0] = 0;
+        cmd.other.sel = 0;
+    }
+}
+
+/* A blow's thing taken in hand first (resolve.c's hold_w: its target found, the blow to be sent), into the hand said,
+** if one was (shand): its words ("You take the bar in both hands."), the referee told what's to hand now (RS_EQUIP: its
+** blocks with it from now on), its time; held already, nothing; 0, no hand for it, why not told ("Your hands are full
+** ...": not struck with another instead) */
+unsigned char s_hold_first (void)
+{
+    unsigned char r;
+    unsigned t;
+
+    HUB->ireq.into[0] = 0;
+    HUB->ireq.to = shand;
+    r = things (IO_HOLD, hold_w);
+    t = HUB->ireq.x;
+    hold_w[0] = 0;
+    if (r == IR_OK) {
+        msg (tt ());
+        to_hand ();
+        intend2 (I_WAIT, t, 1);
+    } else if (!strstr (tt (), "already")) {
+        msg (tt ());
+        return 0;
+    }
+    return 1;
+}
+
+/* The hands' and limbs' commands (s_command's: slice 4.1b's): what's in its hands changed over ("swap hands", "switch
+** hands": the things' IO_SWAP, its words, its time) */
+void s_limbs_cmd (void)
+{
+    unsigned t;
+
+    if (cmd.action == VB_SWAP_HANDS) {
+        t = things (IO_SWAP, "") == IR_OK ? HUB->ireq.x : 0;
+        msg (tt ());
+        if (t) {
+            to_hand ();                         /* (The referee told its hands anew) */
+            intend2 (I_WAIT, t, 1);
+        }
+    }
+}
+
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -1022,6 +1131,7 @@ static void __fastcall__ work (unsigned char what, unsigned char obj)
     m.w2 = ty;
     m.x[0] = barw;
     m.x[1] = strike;
+    m.x[2] = shand;
     if (hub_send (&m)) {
         busy = 1;
         t_prompt (0);
@@ -1036,7 +1146,8 @@ static void __fastcall__ intend (unsigned char kind, unsigned char a)
     m.who = 0;
     m.a = a;
     m.w1 = m.w2 = 0;
-    m.x[1] = strike;                            /* (I_ATTACK's: what it strikes with) */
+    m.x[1] = strike;                            /* (I_ATTACK's: what it strikes with, the hand it's in) */
+    m.x[2] = shand;
     if (kind == I_GO) {                         /* (Through the one meant, if it was found) */
         m.w1 = tx;
         m.w2 = ty;
@@ -1139,7 +1250,7 @@ static void __fastcall__ handle (unsigned char op, const char* x, const char* y,
     unsigned char was = HUB->pc_light;
 
     strcpy (HUB->ireq.into, y);
-    HUB->ireq.to = on;
+    HUB->ireq.to = on | shand;                  /* (A hold's: the hand said, slice 4.1b's) */
     things (op, x);
     if (HUB->ireq.result == IR_NOT_HERE && reach_go ()) {
         return;                                 /* (Out of reach: walked over to it first, then again) */
@@ -1241,28 +1352,6 @@ static void show_map (void)
 ** was said): 1, its square in tx, ty; 0, none; 2, several and none ahead, which asked (overlay 7's pick) */
 unsigned tx, ty;
 #define find(obj, orel) pick ((obj), (orel))
-
-/* A thing hidden where the character stands (P_CONCEAL: the referee's test, the things' record), worded by how
-** well (its difficulty, in steps) */
-static void __fastcall__ hide (const char* w)
-{
-    unsigned char d;
-
-    if (!*w) {
-        tell (T_HIDE_WHAT_HIDING);
-    } else if ((HUB->ireq.to = reach == 4 ? IO_DONE : 0, things (IO_HIDE, w)) == IR_OK) {
-        if (reach != 4) {
-            more (VB_HIDE);                     /* (Begun: a minute's work, a timed work, the things' IO_DONE at its
-                                                **   end, words.c's) */
-            return;
-        }
-        d = HUB->ireq.qty;
-        tell (d >= 10 ? T_HID_CUNNINGLY : d >= 4 ? T_HID_WELL : T_HID_POORLY);
-        to_hand ();
-    } else {
-        tell (T_YOU_CARRY_NONE);
-    }
-}
 
 /* The character's way with a denizen (how: hub.h's SW_*, the command's verb's: commands.verbs' aux; its things, the
 ** one meant and a name or a thing, and its request): asked of the denizens' task (the hub's sway: it lends the UI's
@@ -1476,6 +1565,9 @@ void __fastcall__ s_command (char* l)
         sayf ("\nI don't understand that.");
         return;
     }
+    if (strstr (l, "hand")) {
+        hand_said ();                           /* (A hand said: part 11's, slice 4.1b's) */
+    }
     if (resolve () != RV_ON) {                  /* (Its things found, its unsaid filled; or a question asked) */
         return;
     }
@@ -1571,6 +1663,10 @@ portal:
         if (cmd.obj.kind && d) {
             cmd.obj.lies = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y);    /* (The one it sees: faced) */
         }
+        if (hold_w[0] && (!cmd.obj.kind || d) && !hold_first ()) {
+            return;                             /* (A blow's thing in hand first, its door seen: no hand for
+                                                **   it, why not told) */
+        }
         if (cmd.obj.lies <= H_NW && cmd.obj.lies != HUB->pc_face) {
             intend (I_TURN, cmd.obj.lies);      /* (The door that way: faced first) */
         }
@@ -1633,6 +1729,9 @@ portal:
     case VB_HIDE:                               /* (P_CONCEAL: a thing; oneself comes with the denizens) */
         hide (cmd.obj.word);
         return;
+    case VB_SWAP_HANDS:                         /* (The hands' and limbs': part 11's, slice 4.1b's) */
+        limbs_cmd ();
+        return;
     case VB_HOLD_OBJECT:                        /* (A thing handled: the things' request the verb's, IO_*) */
     case VB_EQUIP_OBJECT:
     case VB_UNEQUIP_OBJECT:
@@ -1672,7 +1771,9 @@ portal:
             goto portal;
         }
         if (d) {
-            intend (d & FT_CLOSE ? I_CLOSE : I_ATTACK, d & 0x0F);   /* (Out of reach: closed with first) */
+            if (!hold_w[0] || hold_first ()) {  /* (Its thing in hand first, slice 4.1b's) */
+                intend (d & FT_CLOSE ? I_CLOSE : I_ATTACK, d & 0x0F);   /* (Out of reach: closed with first) */
+            }
             return;
         }
         msg (lb);

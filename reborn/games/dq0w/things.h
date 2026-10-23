@@ -98,6 +98,11 @@ unsigned char __fastcall__ fumbled (unsigned char k);  /* (dq0w.c's part 25) A g
 extern unsigned char noinit;                    /* (dq0 -I: no grope's test while engaged: the tests') */
 unsigned char __fastcall__ in_reach (unsigned n);
 unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);
+extern unsigned char held_k[2], held_h[2];      /* (The main RAM's, things.c's: what the character holds, the main
+                                                **   hand's kind first, and the hands they're in, IH_*: held_kinds') */
+void held_kinds (void);
+unsigned char __fastcall__ shand_of (unsigned char s);  /* (The hand that holds the thing that strikes: the hub's
+                                                **   pc_shand) */
 void light_now (void);
 void __fastcall__ go_to (unsigned x, unsigned y);
 

@@ -106,7 +106,8 @@ static void status (void)
     s->power = 10;
 }
 
-/* ---- What's to hand: the keys, each after its mark (* held, + worn, a space neither) and a digit after it */
+/* ---- What's to hand: the keys, each after its mark (held: < in the left hand, > the right, * both; + worn; a space
+** neither) and a digit after it */
 
 static void __fastcall__ equip_all (const char* keys)
 {
@@ -114,7 +115,7 @@ static void __fastcall__ equip_all (const char* keys)
 
     memset (tools, 0, sizeof tools);
     while (*keys && k < NTOOLS) {
-        f = *keys == '*';
+        f = *keys == '*' || *keys == '<' || *keys == '>';
         if (*keys < 'a') {
             ++keys;
         }
@@ -501,6 +502,10 @@ static void __fastcall__ answer (struct req* r)
             }
             g = r->grade = DIG_TESTED (m) ? flat (r->steps) : G_MS;    /* (Earth: the tool's rate, untested) */
             r->w1 = g == G_CS ? 2 * k : g == G_MS ? k : g == G_MF ? k / 2 : 0;
+            break;
+        }
+        if (r->a == P_RISE) {
+            r->grade = G_MS;                    /* (Getting up: always, the null ruleset's, slice 4.1b's) */
             break;
         }
         if (((r->a == P_SEARCH || r->a == P_DISARM) && r->b == HIDE_MAGICAL) ||

@@ -4040,11 +4040,11 @@ module.exports = {
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         inTurn(o, ['> walk to the door behind me Which door: 1. the portcullis behind you, 10 feet off (raised), or 2. the door behind you, 5 feet off (open)?',
-          '> 1', 'You go over to it.', '> i', 'You carry a torch (lit), in your hand; a backpack, worn (in it: 3 rations, a tinderbox, a basket, a heap of sand,',
+          '> 1', 'You go over to it.', '> i', 'You carry a torch (lit), in your left hand; a backpack, worn (in it: 3 rations, a tinderbox, a basket, a heap of sand,',
           'a sword, a torch, a flask of oil); a belt, worn (on it: a pouch (in it: 12 pennies), a dagger, a waterskin); a table, in both hands. In all, 60 lb.', '> drop table', 'Put down.',
           '> put the candle on the table', 'You put the candle on the table.', '> look', 'At your feet lies a table. On the table lies a candle.',
           '> take the candle from the table', 'You take the candle from the table. It\'s in your backpack.', '> wear cloak', 'You put on the cloak.',
-          '> hold basket', 'You take the basket in your hand.', '> put sand in basket', 'The basket won\'t keep the heap of sand: it would run out.',
+          '> hold basket', 'You take the basket in your right hand.', '> put sand in basket', 'The basket won\'t keep the heap of sand: it would run out.',
           '> put the dagger in the waterskin', 'The dagger won\'t go in the waterskin.', '> hang the quiver on my belt', 'You hang the quiver from your belt.',
           '> put arrows in quiver', 'You put the arrows in the quiver.', '> hang the candle', 'The candle won\'t hang from a belt.', '> wield the dagger',
           'Your hands are full: stow something, or put it down.', '> stow basket', 'You stow the basket in your backpack.', '> put the backpack in the basket',
@@ -4763,7 +4763,7 @@ module.exports = {
         dq0Never(f, T.of('hit the door with the hammer'), 'E_PORTAL', {}, 'a blow struck with a hammer it hasn\'t got');
         dq0Need(f, T.of('check the door for traps'), 'E_TRAP', { to: 'TO_CLEAN' }, 'the door not gone over for traps');
         inTurn(s, ['> look at the table', 'The table is at your feet.', 'On it lie two chisels.', '> look at the torch',
-          'Your torch is in your hand. It\'s lit.', '> examine the torch', 'Your torch is in your hand. It\'s lit. It\'s made of wood; it\'s',
+          'Your torch is in your left hand. It\'s lit.', '> examine the torch', 'Your torch is in your left hand. It\'s lit. It\'s made of wood; it\'s',
           '> assess the dagger', 'You judge it worth about', '> judge the dagger', 'You judge it a', 'dagger.', '> appraise the dagger',
           'You judge it', 'it would fetch about', '> heft the backpack', 'Your backpack weighs about', 'with what\'s in it.',
           '> look at the chest', 'The chest is at your feet. It\'s closed, with a lock.', '> examine the lock of the chest', 'The chest has a',
@@ -4855,6 +4855,67 @@ module.exports = {
           '> attack the rat', 'You can fight it with your fists, but would you rather draw your sword?', '> look'], f, 'the words: ');
         const ag = s.slice(s.indexOf('> attack the ghoul'), s.indexOf('> take the torch'));
         if (/would you rather/.test(ag)) f.push('asked with nothing to fight: ' + ag);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0hands', what: 'Dingus Quest Zero\'s two hands (slice 4.1b, the user\'s, 2026-10-21: "is there handedness (right handed versus left versus ambidextrous) in the character profile?  ... There should be a penalty for using a weapon in your off hand unless ambidextrous"), by where each thing is (the item store\'s records: the hand its sn), the hub\'s pc_shand and the words: at seed 3 (dq0 -T, dq0 -k sword,spear: right-handed) the kit\'s torch in its left hand, its sword in its right (a weapon the main hand, a light the other), the spear in the pack; the hands swapped ("You change hands: ..."); the sword refused its right hand, the torch there; the torch put down, the sword put in its other hand; the spear refused both hands, the sword in one; the sword stowed, the spear taken in both hands, looked at ("Your spear is in both hands."); the torch refused its left hand, the spear in both; the spear moved to its left hand, the lit torch taken up into its right; what it carries by hand; a left-handed character (its file\'s med 15) the torch in its right hand, the sword in its left; at seed 5 (dq0 -T: the rats) a rat attacked with the dagger in its left hand: the dagger taken in its left hand first (its words), struck with (pc_strike the dagger, pc_shand its left hand)',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k sword,spear', 'i', 'swap hands', 'hold the sword in my right hand', 'drop the torch',
+        'put the sword in my other hand', 'hold the spear in both hands', 'stow the sword', 'hold the spear in both hands',
+        'look at the spear', 'take the lit torch in my left hand', 'hold the spear in my left hand', 'take the lit torch in my right hand',
+        'i', 'quit',
+        'cp /ram/c.hm /ram/l.hm', 'echo med 15 >> /ram/l.hm', 'dq0 -p t -s 3 -c /ram/l.hm -T -k sword', 'i', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -T -I', 'd', 'wait', 'go right', 'drop the torch', 'attack the rat with the dagger in my left hand',
+        'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const H = { L: 1, R: 2, B: 3 }, hn = ['none', 'left', 'right', 'both'];
+        const hand = (t, name, h, what) => {
+          const i = t && dq0Thing(t.after, name);
+          if (!i || !(i.flags & DQ0_I.HELD) || i.where !== 'IW_ACTOR' || (i.sn & 3) !== h) f.push((t ? t.line : '?') + ': the ' + name + ' not in its ' + hn[h] + ' hand (' + (i ? i.where + ' flags ' + i.flags + ' sn ' + i.sn : 'none') + ')' + (what ? ': ' + what : ''));
+        };
+        const free = (t, name, what) => { const i = t && dq0Thing(t.after, name); if (i && (i.flags & DQ0_I.HELD)) f.push(t.line + ': the ' + name + ' still held (' + what + ')'); };
+        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k sword,spear');
+        hand(g, 'torch', H.L, 'the kit\'s light, its off hand');
+        hand(g, 'sword', H.R, 'a weapon, its main hand');
+        free(g, 'spear', 'its hands full: in the pack');
+        const sw = T.after(g, 'swap hands');
+        hand(sw, 'sword', H.L);
+        hand(sw, 'torch', H.R);
+        hand(T.after(sw, 'hold the sword in my right hand'), 'sword', H.L, 'refused, the torch there');
+        const ot = T.after(sw, 'put the sword in my other hand');
+        hand(ot, 'sword', H.R);
+        free(T.after(ot, 'hold the spear in both hands'), 'spear', 'the sword in one hand');
+        const st = T.after(ot, 'stow the sword'), sp = T.after(st, 'hold the spear in both hands');
+        hand(sp, 'spear', H.B);
+        const lt = T.after(sp, 'take the lit torch in my left hand');
+        hand(lt, 'spear', H.B, 'the torch refused');
+        const sl = T.after(lt, 'hold the spear in my left hand');
+        hand(sl, 'spear', H.L);
+        hand(T.after(sl, 'take the lit torch in my right hand'), 'torch', H.R);
+        const lg = T.of('dq0 -p t -s 3 -c /ram/l.hm -T -k sword');
+        hand(lg, 'torch', H.R, 'left-handed: its off hand the right');
+        hand(lg, 'sword', H.L, 'left-handed: its main hand the left');
+        const a = T.of('attack the rat with the dagger in my left hand');
+        hand(a, 'dagger', H.L, 'taken in its left hand to strike with');
+        if (!dq0Ev(a, 'E_FIGHT', { who: 0 }).length) f.push('the rat not struck at with the dagger (' + dq0Evs(a) + ')');
+        if (!a.after || a.after.pc.strike !== (0x80 | K.KI_DAGGER) || a.after.pc.shand !== H.L) f.push('the blow not the dagger in its left hand: pc_strike ' + (a.after && a.after.pc.strike) + ', pc_shand ' + (a.after && a.after.pc.shand));
+        inTurn(s, ['> i', 'You carry a torch (lit), in your left hand;', 'a sword, in your right hand.',
+          '> swap hands', 'You change hands: the sword in your left, the torch in your right.',
+          '> hold the sword in my right hand', 'Your right hand holds the torch.', '> drop the torch', 'Put down.',
+          '> put the sword in my other hand', 'You shift the sword to your right hand.',
+          '> hold the spear in both hands', 'Your right hand holds the sword.', '> stow the sword', 'You stow the sword in your backpack.',
+          '> hold the spear in both hands', 'You take the spear in both hands.', '> look at the spear', 'Your spear is in both hands.',
+          '> take the lit torch in my left hand', 'Your left hand holds the spear.',
+          '> hold the spear in my left hand', 'You shift the spear to your left hand.',
+          '> take the lit torch in my right hand', 'You take the torch in your right hand.',
+          '> i', 'You carry a torch (lit), in your right hand;', 'a spear, in your left hand',
+          '> i', 'You carry a torch (lit), in your right hand;', 'a sword, in your left hand.',
+          '> attack the rat with the dagger in my left hand', 'You take the dagger in your left hand.', 'You strike at the giant rat with your dagger'], f, 'the words: ');
         return f;
       },
       sdcard: true
@@ -5104,7 +5165,7 @@ module.exports = {
         if (!dq0Rep(dip, 'ireq', { kind: 'IO_FILL', result: 'IR_OK' }).length || both.length !== 2 || !both.every(i => i.fuel === 60) ||
           !fla(dip.after) || fla(dip.after).fuel !== 280) f.push('the spent torch not renewed from the oil: ' + JSON.stringify([...both, fla(dip.after)].map(i => i && i.fuel)));
         inTurn(s, ['> dip the torch in the oil', 'You soak the torch in the flask of oil.'], f, 'the dip\'s words: ');
-        const g2 = T.of('dq0 -p t -s 7 -c /ram/c.hm -T'), lk = T.after(g2, 'look'), stub = st => st && st.items.find(i => i.name === 'candle stubs' && i.sn === st.pc.sn);
+        const g2 = T.of('dq0 -p t -s 7 -c /ram/c.hm -T'), lk = T.after(g2, 'look'), stub = st => st && st.items.find(i => i.name === 'candle stubs' && (i.where !== 'IW_SQUARE' || i.sn === st.pc.sn));   // (A held thing's sn its hand: slice 4.1b's)
         const found = stub(lk.after);
         if (!found || !found.id || found.where !== 'IW_SQUARE' || !(found.fuel > 0 && found.fuel < 25)) f.push('the chapel\'s candle stubs not found with some life left, less than a whole one\'s: ' + JSON.stringify(found));
         const ls = T.of('light the candle stubs'), ds = T.of('drop the candle stubs'), w5 = T.after(ds, 'wait 10 minutes');

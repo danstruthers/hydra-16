@@ -2167,26 +2167,26 @@ set stance=D_AUTO
 
 # ---- What strikes (HOUSE.md's fights, the user's, 2026-10-22): a thing named (the hub's pc_strike, SK_THING and its
 # kind, the catalogue's) strikes as itself if it's one of the referee's weapons, else as the book's stick or club by
-# its weight (the house's: rshouse.h's), its words its name; nothing named, what's in its hands (RS_WIELD: the better
-# of two by the blow's reckoning, at a thing the impact, at a denizen the attack mastery; a soft thing the least), its
+# its weight (the house's: rshouse.h's), its words its name; nothing named, what's in its hands (RS_WIELD: its main
+# hand's, x0, slice 4.1b's; a soft thing the least, the other's then), its
 # hands empty the best it carries asked about (its key), never a weapon a thing would spoil at a thing
 
 char
 end
 set strike=SK_BEST stance=D_AUTO
-case at a door, a torch and a bar held: the bar (the book's club, blunt 4, over the torch's 2, its stick's)
+case at a door, the bar in its main hand, a torch in the other: the bar (its main hand's, slice 4.1b's)
 dice
-ask WIELD b=1 x0=KI_TORCH x1=KI_BAR
-want result=2 dice=0
-case at a denizen, a torch and a sword held: the sword (Sword 80, its attack class 15)
+ask WIELD b=1 x0=KI_BAR x1=KI_TORCH
+want result=1 dice=0
+case at a denizen, the torch in its main hand, a sword in the other: the torch (its main hand's, not the better)
 dice
 ask WIELD b=0 x0=KI_TORCH x1=KI_SWORD
-want result=2
+want result=1
 case a rope held alone: it strikes, soft as it is (one attempt, the world's)
 dice
 ask WIELD b=1 x0=KI_ROPE
 want result=1
-case a rope and a lantern held, at a denizen: the lantern (a stick), the soft rope the least
+case a rope in its main hand and a lantern in the other, at a denizen: the lantern (a stick), a soft thing the least
 dice
 ask WIELD b=0 x0=KI_ROPE x1=KI_LANTERN
 want result=2
@@ -2220,3 +2220,63 @@ dice 100:31 6:3*
 ask ATTACK other=RS_THING x0=9 x1=9 x2=1 x3=9
 want result=0 b=AS_POINT text="dagger"
 set strike=SK_BEST
+
+# ---- The hands (slice 4.1b): each thing held in its hand (RS_EQUIP's marks: < the left, > the right, * both), the
+# thing that strikes in the hand the hub's pc_shand says; in the off hand a weapon's special penalty, 10 (Combat 3),
+# none if she's ambidextrous (Character 9, her file's med 4); her main hand the right, the left if she's left-handed
+# (med 15).  A sword named at a door (its resistances: edge 1, the rest 9): Sword 80, its class 15, 95; a d100's 88
+# a marginal success (three dice) in her main hand, a marginal failure in her off hand (85: the Ignore table's one die)
+
+char
+end
+case a sword in her right hand (her main), at a door: 95, the 88 a marginal success, three dice: 3 x 3 + edge 5 - 1
+set strike=SK_THING+KI_SWORD shand=IH_RIGHT
+dice
+ask EQUIP a=2 text=">blade4"
+dice 100:88 6:3*
+ask ATTACK other=RS_THING x0=9 x1=1 x2=9 x3=9
+want w1=13 b=AS_EDGE
+case the sword in her left hand (her off hand): 85, the 88 a marginal failure, one die: 3 + 5 - 1
+set shand=IH_LEFT
+dice
+ask EQUIP a=2 text="<blade4"
+dice 100:88 6:3*
+ask ATTACK other=RS_THING x0=9 x1=1 x2=9 x3=9
+want w1=7 b=AS_EDGE
+case the summary: her main hand the right (no LB_LEFT), not ambidextrous, no limb useless, no limp
+want sum.limbs=0 sum.limp=0
+char
+med 4
+end
+case ambidextrous (med 4): the sword in her left hand no worse, 95, three dice
+set shand=IH_LEFT
+dice
+ask EQUIP a=2 text="<blade4"
+dice 100:88 6:3*
+ask ATTACK other=RS_THING x0=9 x1=1 x2=9 x3=9
+want w1=13 sum.limbs=LB_AMBI
+char
+med 15
+end
+case left-handed (med 15): the sword in her left hand her main, 95, three dice
+set shand=IH_LEFT
+dice
+ask EQUIP a=2 text="<blade4"
+dice 100:88 6:3*
+ask ATTACK other=RS_THING x0=9 x1=1 x2=9 x3=9
+want w1=13 sum.limbs=LB_LEFT
+case and in her right hand, her off hand: 85, one die
+set shand=IH_RIGHT
+dice
+ask EQUIP a=2 text=">blade4"
+dice 100:88 6:3*
+ask ATTACK other=RS_THING x0=9 x1=1 x2=9 x3=9
+want w1=7
+char
+med 5
+end
+case an arm missing or deformed (med 5): her off arm, the left, useless (no two-handed use: Character 9)
+dice
+ask EQUIP a=2 text=""
+want sum.limbs=LB_ARM_L sum.cond&C_ARM_USELESS=C_ARM_USELESS
+set strike=SK_BEST shand=0

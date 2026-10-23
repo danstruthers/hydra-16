@@ -139,6 +139,7 @@ VB_ALLY_DISMISS         target
 VB_META_SHEET
 VB_META_PAUSE
 VB_OBSERVE_IN           object
+VB_SWAP_HANDS                                   (* what's in the hands changed over, left to right (slice 4.1b) *)
 
 [results]
 ERROR:NOT_UNDERSTOOD

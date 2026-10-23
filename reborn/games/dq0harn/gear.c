@@ -14,7 +14,11 @@
 ** holds (RS_WIELD's: the UI's, and the world's as it fights back), its hands empty the best it carries asked about
 ** (pc_wield's).  Armour (Combat 4-5) by its pieces: each one's material's protection where it covers, a poor piece
 ** (quality 0-2) a point less, a fine one (7-9) a point more; footwear's soles their own (what a kick at a thing does
-** to the foot: the game's).
+** to the foot: the game's).  Each thing it holds the worse for its hand (slice 4.1b's: RS_EQUIP's marks, the hub's
+** pc_shand for the thing that strikes): in one hand, the book's one-handed penalty (Combat 3's HM: a spear's, a staff's
+** 10); in the off hand a weapon's special penalty, 10, but a shield's, none if it's ambidextrous (Combat 3); its arm's
+** hurt, the house's (each level of the injuries to that arm a step, in both hands the worse arm's); a useless arm's
+** thing none of its (the world's to put down).
 */
 
 #pragma code-name ("OV3CODE")
@@ -28,7 +32,8 @@
 
 /* The weapons, by the tools' keys: a word, its skill, its attack and defence classes, its blunt, edge and point
 ** impacts (-1: none), the part it is (0xFF: a thing held; TOOL: a tool, the one that hits a thing hardest offered for
-** it, its hands empty: a weapon a thing would spoil); the unarmed first (SK_PUNCH, SK_KICK, SK_HEAD's: the hand, the
+** it, its hands empty: a weapon a thing would spoil), its penalty one-handed (the book's HM, a two-handed thing's
+** always in both: the things'); the unarmed first (SK_PUNCH, SK_KICK, SK_HEAD's: the hand, the
 ** foot, the head); the book's stick, club and staff (Combat 3: their numbers, a point's optional aspect left out) what
 ** a thing swung is treated as (a theme's own kinds by these keys too); the shield last */
 #define TOOL            0xFE
@@ -38,6 +43,7 @@ static const struct weapon {
     unsigned char   sk, wac, wdc;
     signed char     imp[3];
     unsigned char   part;
+    unsigned char   hm;
 } weapons[] = {
     { "hands", "fists", HARN_UNA, 0, 15, { 0, -1, -1 }, HARN_HAND },
     { "", "foot", HARN_UNA, 5, 5, { 1, -1, -1 }, HARN_FOOT },
@@ -45,7 +51,7 @@ static const struct weapon {
     { "knife", "dagger", HARN_DAG, 5, 5, { 1, 2, 5 }, 0xFF },
     { "blade", "sword", HARN_SWD, 15, 10, { 3, 5, 3 }, 0xFF },
     { "mace", "mace", HARN_CLU, 15, 5, { 6, -1, -1 }, 0xFF },
-    { "spear", "spear", HARN_SPR, 20, 10, { 4, -1, 7 }, 0xFF },
+    { "spear", "spear", HARN_SPR, 20, 10, { 4, -1, 7 }, 0xFF, 10 },
     { "pick", "pick", HARN_AXE, 10, 5, { 2, -1, 5 }, TOOL },
     { "mattock", "mattock", HARN_AXE, 15, 5, { 3, 4, 4 }, TOOL },
     { "shovel", "shovel", HARN_SPR, 10, 10, { 2, 3, -1 }, TOOL },
@@ -54,7 +60,7 @@ static const struct weapon {
     { "torch", "torch", HARN_CLU, 5, 5, { 2, -1, -1 }, 0xFF },
     { "stick", "stick", HARN_CLU, 5, 5, { 2, -1, -1 }, 0xFF },
     { "club", "club", HARN_CLU, 15, 5, { 4, -1, -1 }, 0xFF },
-    { "staff", "staff", HARN_SPR, 20, 15, { 4, -1, -1 }, 0xFF },
+    { "staff", "staff", HARN_SPR, 20, 15, { 4, -1, -1 }, 0xFF, 10 },
     { "shield", "shield", HARN_SHD, 5, 20, { 2, -1, -1 }, 0xFF },
 };
 #define NWEAPONS        (sizeof weapons / sizeof weapons[0])
@@ -88,11 +94,85 @@ static const struct piece {
 #define NARMOUR         (sizeof pieces / sizeof pieces[0])
 
 char arm[16];
-unsigned char pc_way;
+unsigned char pc_way, pc_hand;
+
+/* What the thing in hand (or hands) h (T_LEFT, T_RIGHT: RS_EQUIP's marks) is the worse for, weapon j (the house's and
+** the book's, above): in one hand, its one-handed penalty, and the off hand's (hoff: its mark, 0 if it's ambidextrous)
+** for a weapon but a shield; its arm's hurt, a step a level of its injuries (lhurt's, limbs_of's: in both, the worse) */
+static unsigned char hoff;
+static int __fastcall__ hand_pen (unsigned char h, unsigned char j)
+{
+    unsigned char a = h & T_LEFT ? lhurt[0] : 0, b = h & T_RIGHT ? lhurt[1] : 0;
+    int p = 0;
+
+    if (h && h != (T_LEFT | T_RIGHT)) {
+        p = weapons[j].hm + (j != SHIELD && h == hoff ? 10 : 0);
+    }
+    return p + STEP_PCT * (a > b ? a : b);
+}
 
 static int __fastcall__ eml (harn_char* c, unsigned char sk)
 {
     return c->ml[sk] ? harn_eml (c, sk) : harn_get_oml (c, sk) - 5 * harn_get_pp (c);
+}
+
+/* Its limbs (rs.h's LB_*, slice 4.1b's), as its sheet has them (the character's, or a creature's): its main hand (the
+** medical traits', Character 9: left-handed, ambidextrous; an arm missing or deformed, its off arm the one, no
+** two-handed use), each limb made useless (a grievous wound, till it heals to M1: Combat 14); and each one's hurt, its
+** injuries' levels (lhurt: the left arm's, the right's, the left leg's, the right's) */
+unsigned char __fastcall__ o_limbs_of (const harn_char* h)
+{
+    unsigned char k, l = 0, j, v = 0;
+    const harn_injury* p;
+
+    memset (lhurt, 0, sizeof lhurt);
+    for (k = 0; h == &pc && k < HARN_MEDMAX; ++k) {
+        j = pc.med[k];
+        l |= j == HARN_LEFTHANDED ? LB_LEFT : j == HARN_AMBIDEXTROUS ? LB_AMBI : 0;
+        v |= j == HARN_MED_ARM;
+    }
+    if (h == &pc && v) {
+        l |= l & LB_LEFT ? LB_ARM_R : LB_ARM_L;
+    }
+    for (k = 0; k < h->ninj; ++k) {
+        p = &h->inj[k];
+        if ((j = harn_is_limb (p->loc)) != 0) {
+            j = (j - 1) * 2 + ((p->loc & HARN_RIGHT) != 0);
+            v = lhurt[j] + p->il;
+            lhurt[j] = v < p->il ? 255 : v;
+            if (p->flags & HARN_IF_LIMB) {
+                l |= LB_ARM_L << j;
+            }
+        }
+    }
+    return l;
+}
+
+/* Its conditions (rs.h's C_*), as its sheet has them (the character's, or a creature's: its body cplan's, BF_*):
+** its state (senseless, in shock, dead), bleeders, limbs made useless and how they move it now (the book's, Combat 14:
+** on two legs, one useless, it hops or walks with a staff, its arms enough it crawls, none: C_CRAWLS, else C_STUCK; on
+** four, one useless, at half its move, C_LAME, two, C_CRAWLS, more, C_STUCK); tired, or tiring */
+unsigned __fastcall__ o_cond_of (const harn_char* h)
+{
+    static const unsigned state[4] = { 0, C_UNCONSCIOUS, C_STUNNED, C_DEAD };
+    unsigned c = state[h->state & 3] | (h->fl || (h == &pc && tired) ? C_FATIGUED : 0);   /* (Tired, or tiring) */
+    unsigned char k, l = o_limbs_of (h), arms, legs, b = h == &pc ? BF_BIPED : cplan;
+
+    for (k = 0; k < h->ninj; ++k) {
+        if (h->inj[k].flags & HARN_IF_BLEEDER) {
+            c |= C_BLEEDING;
+        }
+    }
+    arms = !!(l & LB_ARM_L) + !!(l & LB_ARM_R);
+    legs = !!(l & LB_LEG_L) + !!(l & LB_LEG_R);
+    c |= (arms ? C_ARM_USELESS : 0) | (legs ? C_LEG_USELESS : 0);
+    if (b & BF_BIPED) {
+        c |= !legs ? 0 : legs == 1 || !arms ? C_CRAWLS : C_STUCK;
+    } else if (b & BF_QUAD) {
+        k = arms + legs;                        /* (Its forelegs the strike table's arms) */
+        c |= !k ? 0 : k == 1 ? C_LAME : k == 2 ? C_CRAWLS : C_STUCK;
+    }
+    return c;
 }
 
 /* What a thing swung does, by its kind's data (rshouse.h's: the house's, every ruleset's) */
@@ -191,9 +271,11 @@ unsigned char __fastcall__ o_pc_armour (unsigned char loc, unsigned char aspect)
 void __fastcall__ o_pc_side (struct side* s)
 {
     const struct weapon* w;
-    unsigned char k, j, best = 0, named = 0;
+    unsigned char k, j, best = 0, named = 0, l = o_limbs_of (&pc), dead, h;
     int v, att = 0, blk = 0;
 
+    dead = (l & LB_ARM_L ? T_LEFT : 0) | (l & LB_ARM_R ? T_RIGHT : 0);
+    hoff = l & LB_AMBI ? 0 : l & LB_LEFT ? T_RIGHT : T_LEFT;
     s->c = &pc;
     s->size = 4;
     s->b = 0;
@@ -201,8 +283,8 @@ void __fastcall__ o_pc_side (struct side* s)
     s->nblk = 0;
     s->aslot = BARE_ARM;
     for (k = 0; k < NTOOLS; ++k) {              /* (What it holds that's a weapon: its best to strike with, its best
-                                                **   to block with) */
-        if (!tools[k][0] || !(tflag[k] & T_HELD)) {
+                                                **   to block with, each the worse for its hand; a useless arm's none) */
+        if (!tools[k][0] || !(tflag[k] & T_HELD) || ((h = tflag[k] & (T_LEFT | T_RIGHT)) & dead)) {
             continue;
         }
         for (j = NUNARMED; j < NWEAPONS && strcmp (weapons[j].key, tools[k]); ++j) {
@@ -211,7 +293,7 @@ void __fastcall__ o_pc_side (struct side* s)
             continue;
         }
         w = &weapons[j];
-        v = eml (&pc, w->sk);
+        v = eml (&pc, w->sk) - hand_pen (h, j);
         if (v + w->wdc > blk) {
             blk = v + w->wdc;
         }
@@ -229,7 +311,8 @@ void __fastcall__ o_pc_side (struct side* s)
                                                 **   it; its slot, if it's one the table knows, its counterstrike's) */
         named = 1;
         best = j;
-        att = eml (&pc, weapons[j].sk) + weapons[j].wac;
+        att = eml (&pc, weapons[j].sk) + weapons[j].wac - hand_pen ((pc_hand & IH_LEFT ? T_LEFT : 0) |
+            (pc_hand & IH_RIGHT ? T_RIGHT : 0), j);    /* (In the hand that holds it, the hub's pc_shand) */
         for (s->aslot = BARE_ARM, k = 0; k < NTOOLS; ++k) {
             if (wk.tool[0] && !strcmp (tools[k], wk.tool)) {
                 s->aslot = k;
@@ -260,22 +343,23 @@ void __fastcall__ o_pc_side (struct side* s)
 
 /* RS_WIELD (rs.h's): what the character would strike with, nothing named (the user's, 2026-10-22: "I don't think it
 ** should auto-fallback to something better unless you have nothing at hand, and then it should ask for
-** confirmation"), at a denizen (q's b 0) or a thing (b 1): of the kinds it holds (x[0], x[1]), the better by the
-** reckoning a blow goes by (worth's), result 1 or 2; its hands empty, result 0, and the key of the best it carries for
+** confirmation"), at a denizen (q's b 0) or a thing (b 1): of the kinds it holds (x[0] its main hand's, x[1] its
+** other's), its main hand's, but a soft thing (the other's then, if it isn't: slice 4.1b's), result 1 or 2; its hands
+** empty, result 0, and the key of the best it carries for
 ** such a blow, if it does better than its bare hands (at a denizen a weapon, but its shield or a torch, by its attack
 ** mastery; at a thing the tool that hits it hardest, not a weapon a thing would spoil), put in the reply's words */
 void __fastcall__ o_pc_wield (struct req* q)
 {
-    unsigned char k, j, at = q->b;
-    int v, top = -0x7FFF;
+    unsigned char k, j, at = q->b, soft = 2;
+    int v, top;
     const char* key = 0;
 
     q->result = 0;
     for (k = 0; k < 2; ++k) {
         if (q->x[k]) {
             kind_in (q->x[k]);
-            if ((v = worth (row_of (), at)) > top) {
-                top = v;
+            if ((j = row_of () == SOFT) < soft) {
+                soft = j;
                 q->result = k + 1;
             }
         }

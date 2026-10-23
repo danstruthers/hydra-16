@@ -1078,6 +1078,47 @@ are drafts, the user's as they are for now (2026-10-22).
     traps (the world's PA_CHECK, examine's).  **"search for traps", "search for hidden things"**: a search, as "search"
     is.
 
+## Hands and limbs *(slice 4.1b, 2026-10-22: drafted for the user to review)*
+
+The user's (DECISIONS.md's hands and limbs): two hands, handedness from the character's profile, the off hand's
+penalty unless ambidextrous, the book's fumbles for arm wounds dropping what that hand holds, a leg's wounds slowing
+the walk and its stumbles laying it prone, a limb made useless.  The book's own rules are the referee's: the medical
+traits (Character 9: left-handed, ambidextrous, an arm missing or deformed), the one-handed penalties and the off
+hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous limb wound (Combat 14), the Rise
+(Combat 8).  What the house adds:
+
+- **Each thing held is in the left hand, the right, or both** *(every ruleset's)*: the item's own (its sn, the
+  hand: items.h's IH_*).  A thing taken up goes to the hand that suits it: a weapon or a tool the main hand, a shield
+  (its key "shield") or a light the other, a two-handed thing (the things' rule: two-handed, or 20 pints or more) both;
+  the other hand if that one's taken or useless; none free, the pack, else refused ("Your hands are full: stow
+  something, or put it down.").  The kit's torch in the off hand.  Said outright: "hold the sword in my left hand",
+  "take the torch in my right hand", "put the dagger in my other hand", "hold the spear in both hands" (any thing
+  that isn't two-handed may be held in both: the book has no bonus for it, and none's taken), "in my off hand", "in
+  my main hand"; a thing held already moved to it ("You shift the sword to your left hand."); a hand that holds
+  something else refused ("Your left hand holds the torch."), a two-handed thing in one ("The pick takes both
+  hands.").  "swap hands", "switch hands", "change hands": both things change hands ("You change hands: the sword
+  in your left, the torch in your right."), refused if a thing's in both, or a hand to go to is useless.  A second's
+  work each (10 tenths).  What's carried, a look and an examine say which hand ("a torch (lit), in your left hand",
+  "Your spear is in both hands.").  (things.c's part 48; main.c's hand_said, limbs_cmd.)
+- **The main hand** is the referee's (its summary's limbs: HarnMaster's by the medical traits): the right, the left if
+  it's left-handed; ambidextrous, the right, with no off hand.  The book's arm missing or deformed (Character 9:
+  "activities which require two hands ... are impossible") makes its off arm the useless one, the house's choice of
+  which.  (gear.c's limbs_of.)
+- **What strikes, nothing named, is the main hand's** *(every ruleset's)*: the thing in the main hand (or both), else
+  the other's; a soft thing only if that's all it holds (the user's rule of the soft, as before).  This replaces "the
+  better of two" (the strike agent's draft): a sword in the off hand and a torch in the main, the torch strikes, till
+  the player says "with the sword".  A thing named strikes in the hand that holds it (the main hand's first, if both
+  hold one of its kind), or the hand said ("attack the rat with the dagger in my left hand": taken into that hand
+  first, if it isn't there).  (choose.c's wield, RS_WIELD's x[0] the main hand's; the hub's pc_shand.)
+- **A thing in one hand, the book's one-handed penalty** (Combat 3's HM: a spear's and a staff's 10; the game's tools
+  none, a pick or a shovel always in both); **a weapon in the off hand, the book's 10 more**, but a shield's, and none
+  if it's ambidextrous.  (gear.c's hand_pen.)
+- **An arm's hurt hinders what its hand uses, the house's: each level of its injuries (shoulder, upper arm, elbow,
+  forearm, hand, on that side) a step** (5) worse, for its attack and its block; a thing in both hands the worse arm's.
+  Why: the book's universal penalty already counts every injury once; the arm's own levels count again for what that
+  hand does, as the user asked ("arm wounds and using a shield or weapon in that hand"), in the book's scale of a
+  level's worth.  The numbers the user's to judge.  (gear.c's hand_pen.)
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

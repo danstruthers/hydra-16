@@ -34,6 +34,7 @@
                    | <break> | <raise> | <lower> | <bend> | <force> | <disarm> | <rebar> | <hang> | <combine>
                    | <appraise>
                    | <deceive> | <threaten> | <calm> | <befriend> | <approach> | <ally>
+                   | <swap>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ] | <LOOK> <object> "over" | <LOOK> "over" <object>   (* "look the torch over":
@@ -64,12 +65,15 @@
 <face>           ::= [ "change" ] ( "face" | "facing" | "turn" ) [ "half" ] [ "to" ] <direction> | "turn" "around"   (* "turn around" is a half turn: facing back; "turn half left": an eighth *)
 
 (* ---- Handling things (question 2: CLOSE and OPEN are actions) ---- *)
-<get>            ::= <GET> [ <object> ] [ <from-phrase> ] | <GET> <object> <off-phrase> | <GET> <object> "up"   (* bare: the last thing named, else things near (question 8); "pick the sword up" *)
+<get>            ::= <GET> [ <object> ] [ <from-phrase> ] [ <hand-phrase> ] | <GET> <object> <off-phrase> | <GET> <object> "up"   (* bare: the last thing named, else things near (question 8); "pick the sword up"; "take the torch in my right hand" (slice 4.1b) *)
 <drop>           ::= <DROP> [ <object> ] | "put" <object> "down"   (* bare: the last thing named *)
-<put>            ::= <PUT> <thing> <put-prep> <object>   (* "put the bar back in its brackets": back, a way, passed over *)
+<put>            ::= <PUT> <thing> <put-prep> <object> | <PUT> <thing> <hand-phrase>   (* "put the bar back in its brackets": back, a way, passed over; "put the dagger in my other hand": held there (slice 4.1b) *)
 <put-prep>       ::= "in" | "into" | "inside" | "on" | "onto" | "on top of" | "under" | "against"
 <use>            ::= <USE> <object> [ ( "on" | "with" ) <object> ]
-<equip>          ::= <EQUIP> [ <object> ]   (* bare: the last thing named *)
+<equip>          ::= <EQUIP> [ <object> ] [ <hand-phrase> ]   (* bare: the last thing named; "wield the sword in my left hand" *)
+(* ---- The hands (added 2026-10-22, slice 4.1b): the hand a thing goes in, or the one that holds what strikes ---- *)
+<hand-phrase>    ::= "in" [ "my" ] ( ( "left" | "right" | "other" | "off" | "main" ) "hand" | "both" "hands" )
+<swap>           ::= ( "swap" | "switch" | "change" ) "hands" | "swap"   (* what's in the hands changed over, left to right *)
 <unequip>        ::= <UNEQUIP> [ <object> ] | "put" <object> "away" | "take" <object> "off"   (* "put away the sword", "put the sword away", "take the helm off" *)
 <open>           ::= "o" [ <thing> [ <USING> <object> ] ]   (* "open" alone: what's in front *)
 <close>          ::= "close" [ <thing> ]           (* "close look" is <DETAIL> <LOOK>, not this *)
@@ -77,7 +81,7 @@
 <off-phrase>     ::= "off" <object>
 
 (* ---- Fighting ---- *)
-<attack>         ::= <ATTACK> [ <thing> [ <USING> <object> ] ]   (* bare: the target, else the nearest foe *)
+<attack>         ::= <ATTACK> [ <thing> [ <USING> <object> [ <hand-phrase> ] ] ]   (* bare: the target, else the nearest foe; "attack the rat with the dagger in my left hand" *)
 <USING>          ::= "with" | "using"                (* what it's done with: an instrument, to hand (2026-10-22) *)
 <grapple>        ::= <GRAPPLE> <object> | <THROW> <object> | "put" <object> "in" [ "a" ] ( "head" "lock" | "headlock" )   (* a grapple maneuver: the object is engaged; "toss" and "throw" a creature are grapples too *)
 <throw>          ::= <THROW> [ <throwing> ] <at-phrase>          (* at something: a target *)
@@ -225,7 +229,7 @@
 <posture>        ::= <SIT> | <STAND> | <LIE-DOWN> | <CROUCH> | ( "lie" | "lay" ) [ "down" ] ( "on" | "in" ) <object>          (* a change of the standing state; no object *)
 <SIT>            ::= "sit" [ "down" ]
 <sit-on>        ::= "sit" [ "down" ] "on" <object>   (* sitting on a surface: VB_SIT *)
-<STAND>          ::= "stand" [ "up" ] | "get" "up"          (* "get up" is a stand, not a get with a direction *)
+<STAND>          ::= "stand" [ "up" ] | "get" "up" | "rise"   (* "get up" is a stand, not a get with a direction; "rise" (slice 4.1b: prone, the book's Rise) *)
 <LIE-DOWN>       ::= "lie" [ "down" | "prone" ] | "lay" [ "down" ] | "go" "prone" | "prone"
 <pretend>        ::= <PRETEND> [ "to" "be" ] <pretense>     (* a state the player does not have: "pretend dead",
                                                              "feign ignorance", "pretend to be asleep" *)
@@ -255,7 +259,7 @@
 <PULL>           ::= "pull"
 <give>           ::= <GIVE> <object> ( "to" | "for" ) <object>
 <GIVE>           ::= "g"
-<grab>           ::= ( "grab" | "hold" ) <object> [ <from-phrase> ]   (* a grapple when the object is engaged; else a get, or a carry for hold *)
+<grab>           ::= ( "grab" | "hold" ) <object> [ <from-phrase> ] [ <hand-phrase> ]   (* a grapple when the object is engaged; else a get, or a carry for hold; "hold the spear in both hands" *)
 <lock>           ::= "lock" <thing> [ <USING> <object> ]
 <unlock>         ::= "unlock" <thing> [ <USING> <object> ]
                    | ( "unlock" | "pick" ) ( "the" | "its" ) "lock" ( "of" | "on" ) <thing> [ <USING> <object> ]   (* "pick

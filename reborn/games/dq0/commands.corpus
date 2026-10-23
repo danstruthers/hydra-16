@@ -308,6 +308,7 @@ sit down	VB_SIT	-	-	posture, down
 stand	VB_STAND	-	-	posture
 stand up	VB_STAND	-	-	posture, up
 get up	VB_STAND	-	-	a stand, not a get with a direction
+rise	VB_STAND	-	-	the book's Rise: getting up, prone (slice 4.1b)
 lie down	VB_LIE_DOWN	-	-	posture
 lay down	VB_LIE_DOWN	-	-	the same, lay
 go prone	VB_LIE_DOWN	-	-	prone is lying down
@@ -341,6 +342,16 @@ push the door	VB_PUSH_OBJECT	object=door	near=door	push
 pull the lever	VB_PULL_OBJECT	object=lever	near=lever	pull
 give the apple to the goblin	VB_GIVE_OBJECT	object=apple;target=goblin	near=apple,goblin	give
 hold the torch	VB_HOLD_OBJECT	object=torch	near=torch	hold
+hold the sword in my left hand	VB_HOLD_OBJECT	object=sword	near=sword	the hand said (slice 4.1b)
+take the torch in my right hand	VB_RETRIEVE_OBJECT	object=torch	near=torch	taken into the hand said (the UI's: a hold)
+put the dagger in my other hand	VB_PUT_OBJECT	object=dagger	near=dagger	into its other hand (the UI's: a hold)
+hold the spear in both hands	VB_HOLD_OBJECT	object=spear	near=spear	in both hands
+wield the sword in my off hand	VB_EQUIP_OBJECT	object=sword	near=sword	the off hand
+attack the rat with the dagger in my left hand	VB_ATTACK_OBJECT	object=rat;instrument=dagger	near=rat,dagger	struck with the left hand's
+swap hands	VB_SWAP_HANDS	-	-	what's in the hands changed over (slice 4.1b)
+switch hands	VB_SWAP_HANDS	-	-	switch: swap
+change hands	VB_SWAP_HANDS	-	-	change hands
+swap	VB_SWAP_HANDS	-	-	swap alone
 lock the door	VB_LOCK_OBJECT	object=door	near=door	lock
 unlock the door with the key	VB_UNLOCK_OBJECT	object=door;instrument=key	near=door,key	unlock with a key
 pick the lock of the chest	VB_UNLOCK_OBJECT	object=chest	near=chest	a thing's lock picked (slice 4.1)

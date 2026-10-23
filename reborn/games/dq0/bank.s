@@ -252,3 +252,7 @@ ovl_out:
             SWFN        look_way, 6
             SWFN        search_go, 10
             SWFN        news, 11
+            SWFN        hide, 11
+            SWFN        hand_said, 11
+            SWFN        limbs_cmd, 11
+            SWFN        hold_first, 11

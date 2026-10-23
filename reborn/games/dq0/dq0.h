@@ -1,5 +1,5 @@
 /*
-** dq0.h - Dingus Quest Zero: a text adventure in real time, in random dungeons, on a ruleset's rules (HÃ¢rnMaster's,
+** dq0.h - Dingus Quest Zero: a text adventure in real time, in random dungeons, on a ruleset's rules (HÃÂÃÂ¢rnMaster's,
 ** so far: the referee's, games/dq0harn; the game asks it in rs.h's terms, never naming a skill or a die).
 **
 ** The game's parts, each a file:
@@ -146,6 +146,9 @@ void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2);   /* (
 void __fastcall__ wset (unsigned char what, unsigned char x, unsigned char y);  /* (main.c's) The character's state, or
                                                 **   the game's, set (the world's: the hub's wreq, WQ_SET, WS_*), from
                                                 **   anywhere (the window put back) */
+extern unsigned char shand;                     /* (main.c's) The hand said: items.h's IH_* (slice 4.1b's) */
+extern char hold_w[16];                         /* (main.c's) A blow's thing to take in hand first, as it's sent ("":
+                                                **   none) */
 extern unsigned char strike;                    /* (main.c's) What the character strikes with (SK_*: the parser's), sent
                                                 **   with each blow (I_ATTACK's, I_PORTAL's x[1]) */
 /* ---- choose.c (overlay 7): the thing meant, of those the character perceives; of several, which, asked */

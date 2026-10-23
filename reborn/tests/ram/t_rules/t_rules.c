@@ -11,7 +11,7 @@
 **   char ... end               a character: base's lines, then these (a later line over an earlier one), written to
 **                              /ram/t.hm and loaded (RS_LOAD_PC)
 **   case WORDS                 the next case's name: its checks one line, "ok - WORDS" or "not ok - WORDS: why"
-**   set FIELD=V ...            the hub's, the world's own: gait watch going (pc_going) stance strike
+**   set FIELD=V ...            the hub's, the world's own: gait watch going (pc_going) stance strike shand
 **   dice S:F ... [S:F*] [...]  the next request's dice, in turn: each one's sides and the face it's to show (S:F*:
 **                              that face for every die after; ...: more dice after them, not held to anything); no
 **                              words: no dice at all.  Without it, the dice fall as the seed has them
@@ -21,9 +21,10 @@
 **                              its reply kept, and the dice it rolled held to the case's (dice)
 **   want FIELD=V ...           the reply: grade result a b c w1 w2, eN.kind eN.band eN.loc eN.aspect eN.cond (its
 **                              effect N), dice (how many it rolled), sum.FIELD (the hub's summary after it: cond
-**                              health step gN (gstep[N]) sight hearing smell load northsense), status="..." (the
-**                              hub's pcstatus), text="..." (all of it), text~"..." (it has it), text!"..." (it
-**                              hasn't), text=@ (the words of the request before it); FIELD&MASK=V; a value a number
+**                              health step gN (gstep[N]) sight hearing smell load northsense limbs limp),
+**                              status="..." (the hub's pcstatus), text="..." (all of it), text~"..." (it has it),
+**                              text!"..." (it hasn't), text=@ (the words of the request before it); FIELD&MASK=V;
+**                              a value a number
 **                              or rs.h's names, | and + between (C_PRONE|C_BLEEDING, GA_JOG+1)
 **
 ** Then "t_rules: N cases, F failed" and "t_rules: PASS" (or FAIL).  The catalogue (LIBDIR/dq0w.cat, the world's) is
@@ -227,14 +228,16 @@ static const struct sym syms[] = {
     S (P_SWIM), S (P_BALANCE), S (P_FORCE), S (P_LIFT), S (P_PICKLOCK), S (P_DISARM), S (P_ENDURE),
     S (P_RESIST_POISON), S (P_RESIST_MIND), S (P_DODGE_HAZARD), S (P_FIRST_AID), S (P_LORE), S (P_TRACK),
     S (P_PERSUADE), S (P_INTIMIDATE), S (P_ANIMALS), S (P_DIG), S (P_APPRAISE), S (P_CONCEAL), S (P_ASSESS),
-    S (P_DECEIVE), S (P_THROW), S (P_INITIATIVE), S (P_GROPE), S (P_STUMBLE), S (P_THEME),
+    S (P_DECEIVE), S (P_THROW), S (P_INITIATIVE), S (P_GROPE), S (P_STUMBLE), S (P_RISE), S (P_THEME),
     S (HIDE_MECHANICAL), S (HIDE_MAGICAL),
     S (AP_WEAPON), S (AP_ARMOUR), S (AP_METAL), S (AP_WOOD), S (AP_HIDE), S (AP_CLOTH), S (AP_POTTERY), S (AP_JEWEL),
     S (AP_BOOK), S (AP_FOOD), S (AP_BONE), S (AP_STONE), S (AP_GLASS),
     S (MAT_EARTH), S (MAT_STONE), S (MAT_MASONRY), S (MAT_FLAGS), S (MAT_SOIL),
     S (GA_CREEP), S (GA_SLOW), S (GA_WALK), S (GA_JOG), S (GA_RUN), S (GA_SPRINT), S (GA_REST), S (GA_WORK),
     S (C_PRONE), S (C_UNCONSCIOUS), S (C_DEAD), S (C_STUNNED), S (C_BLEEDING), S (C_FATIGUED), S (C_ARM_USELESS),
-    S (C_LEG_USELESS),
+    S (C_LEG_USELESS), S (C_LAME), S (C_CRAWLS), S (C_STUCK),
+    S (LB_LEFT), S (LB_AMBI), S (LB_ARM_L), S (LB_ARM_R), S (LB_LEG_L), S (LB_LEG_R), S (DH_LEFT), S (DH_RIGHT),
+    S (IH_LEFT), S (IH_RIGHT), S (IH_BOTH),
     S (H_FINE), S (H_HURT), S (H_BADLY), S (H_CRITICAL), S (H_DOWN), S (H_DEAD),
     S (X_NONE), S (X_WOUND), S (X_HEAL), S (X_COND_ON), S (X_COND_OFF), S (X_DEATH), S (X_DROP),
     S (BP_SKULL), S (BP_FACE), S (BP_NECK), S (BP_SHOULDER), S (BP_UPPER_ARM), S (BP_ELBOW), S (BP_FOREARM),
@@ -368,6 +371,8 @@ static void set (void)
             HUB->pc_stance = n;
         } else if (!strcmp (tok[k], "strike")) {
             HUB->pc_strike = n;
+        } else if (!strcmp (tok[k], "shand")) {
+            HUB->pc_shand = n;
         } else if (!strcmp (tok[k], "now")) {
             HUB->now = n;
         } else {
@@ -482,7 +487,10 @@ static void request (void)
 static long __fastcall__ field (const char* f, unsigned char* ok)
 {
     static const char* const sf[] = { "cond", "health", "step", "attacks", "sight", "hearing", "smell",
-        "darkvision", "nightvision", "morale", "load", "power", "northsense" };
+        "darkvision", "nightvision", "morale", "load", "power", "northsense", "limbs", "limp" };
+#define SO(m)   offsetof (struct rs_summary, m)
+    static const unsigned char so[] = { 0, SO (health), SO (step), SO (attacks), SO (sight), SO (hearing), SO (smell),
+        SO (darkvision), SO (nightvision), SO (morale), SO (load), SO (power), SO (northsense), SO (limbs), SO (limp) };
     const struct rs_effect* e;
     unsigned char k;
 
@@ -528,20 +536,8 @@ static long __fastcall__ field (const char* f, unsigned char* ok)
         }
         for (k = 0; k < sizeof sf / sizeof sf[0] && strcmp (f, sf[k]); ++k) {
         }
-        switch (k) {
-        case 0: return sum.cond;
-        case 1: return sum.health;
-        case 2: return sum.step;
-        case 3: return sum.attacks;
-        case 4: return sum.sight;
-        case 5: return sum.hearing;
-        case 6: return sum.smell;
-        case 7: return sum.darkvision;
-        case 8: return sum.nightvision;
-        case 9: return sum.morale;
-        case 10: return sum.load;
-        case 11: return sum.power;
-        case 12: return sum.northsense;
+        if (k < sizeof sf / sizeof sf[0]) {
+            return k ? ((const unsigned char*) &sum)[so[k]] : sum.cond;    /* (Its bytes but cond, its first) */
         }
     }
     *ok = 0;

@@ -7,7 +7,7 @@
 #ifndef _DQ0HARN_H
 #define _DQ0HARN_H
 
-/* dq0harn.c */
+/* dq0harn.c (and gear.c's, overlay 3's: limbs_of, cond_of) */
 extern harn_char pc;                            /* The character */
 extern char name[16], calling[20];
 extern char* tp;                                /* The words into a reply: where the next goes, */
@@ -15,6 +15,14 @@ extern char* tend;                              /*   and the end */
 void __fastcall__ put (const char* s);          /* (From the overlay too: s may be in the window) */
 void __fastcall__ putn (int v);
 unsigned __fastcall__ cond_of (const harn_char* c);        /* Its conditions (rs.h's C_*) */
+unsigned char __fastcall__ limbs_of (const harn_char* c);  /* Its limbs (rs.h's LB_*), each one's hurt in lhurt */
+extern unsigned char lhurt[4];                  /* (The injuries' levels on its left arm, its right, its left leg, its
+                                                **   right) */
+extern unsigned char cplan;                     /* (A creature's body, cond_of's: BF_*, the bestiary's) */
+#define BF_MINDLESS     0x01                    /* (The bestiary's flags: bones that move, mindless; */
+#define BF_BIPED        0x02                    /*   on two legs, its hands free (folk, the dead); */
+#define BF_QUAD         0x04                    /*   on four (its forelegs the strike table's arms); neither, no legs
+                                                **   to lose: a snake's, a bat's wings, a spider's many) */
 #define conditions()    cond_of (&pc)           /* The character's */
 unsigned char __fastcall__ health_of (const harn_char* c); /* Its health (rs.h's H_*) */
 unsigned char __fastcall__ has (const char* key);   /* A tool to hand, by its key ("pick") */
@@ -40,6 +48,8 @@ extern unsigned char tflag[NTOOLS];             /*   T_HELD, T_WORN, */
 extern unsigned char tqual[NTOOLS];             /*   its quality (0-9) */
 #define T_HELD  0x01
 #define T_WORN  0x02
+#define T_LEFT  0x04                            /* (Held in the left hand: RS_EQUIP's marks, slice 4.1b's) */
+#define T_RIGHT 0x08                            /*   the right; both, a thing in both hands */
 extern unsigned long tnow;                      /* (The clock, the hub's, as a request's answered) */
 extern unsigned char stance;                    /* (The character's stance, the hub's pc_stance, the same) */
 extern unsigned long gseed;                     /* (The game's seed) */
@@ -133,6 +143,7 @@ unsigned char __fastcall__ pc_armour (unsigned char loc, unsigned char aspect); 
 extern char arm[16];
 extern unsigned char pc_way;                    /* (The hub's pc_strike, as a request's answered: SK_*; SK_THING | a
                                                 **   kind, its kind in wk) */
+extern unsigned char pc_hand;                   /* (The hub's pc_shand: the hand that holds it, items.h's IH_*) */
 
 /* bank.s */
 void __fastcall__ setbank (unsigned char b);

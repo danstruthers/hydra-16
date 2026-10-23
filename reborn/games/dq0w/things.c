@@ -73,6 +73,8 @@ unsigned __fastcall__ s_shut_in (unsigned n);
 void __fastcall__ many (char* b, unsigned n, unsigned char k);    /* Part 35 */
 void __fastcall__ s_many (char* b, unsigned n, unsigned char k);  /*   (its own, there) */
 unsigned char bar_hand (void);                  /* Part 35 */
+unsigned char __fastcall__ hold_in (unsigned n, unsigned char want);    /* Part 48 */
+unsigned char swap (void);
 void __fastcall__ listed (unsigned n);          /* Part 11 */
 #define HW_CARRIED      1                       /* (pick's how: carried; seen, lying about; either, as far as it sees,
                                                 **   or to hand, within reach (afar else); in win) */
@@ -149,6 +151,38 @@ const struct burn* __fastcall__ burn_of (unsigned char k)
 static unsigned char __fastcall__ two (const struct kind* k)
 {
     return k->flags & K_TWO || k->bulk >= 20 ? 2 : 1;
+}
+
+/* What the character holds in its hands (held_kinds: held_k[0] the main hand's kind, or a thing's in both; held_k[1]
+** the other hand's; 0 none), and the hand each is in (held_h, items.h's IH_*): its main hand the summary's, the
+** left if it's left-handed, slice 4.1b's (the hub's header in the window after) */
+unsigned char held_k[2], held_h[2];
+void held_kinds (void)
+{
+    unsigned i = 0;
+    unsigned char m, h, j;
+
+    hub_map (0);
+    m = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
+    held_k[0] = held_k[1] = held_h[0] = held_h[1] = 0;
+    while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
+        if (ip->flags & I_HELD) {
+            h = ip->sn & IH_BOTH ? ip->sn & IH_BOTH : m;
+            j = !(h & m);
+            held_k[j] = ip->kind;
+            held_h[j] = h;
+        }
+    }
+    hub_map (0);
+}
+
+/* The hand that holds the thing that strikes (s, the hub's pc_strike: SK_THING | its kind), for the hub's pc_shand: the
+** main hand's, if it holds one of that kind, else the other's; 0 none (a part of it, or the best it holds: the
+** referee's) */
+unsigned char __fastcall__ shand_of (unsigned char s)
+{
+    held_kinds ();
+    return !(s & SK_THING) ? 0 : held_k[0] == (s & 0x7F) ? held_h[0] : held_k[1] == (s & 0x7F) ? held_h[1] : 0;
 }
 
 /* The catalogue's bank in the window (bank.s's m0 ... put it back with it) */
@@ -247,7 +281,7 @@ unsigned csum;                                  /* (pick's: how many of those it
 ** time it took) */
 static struct ireq iq;
 static unsigned pack, belt, dropped, seen_d, took;
-static unsigned char hands, afar, nin;
+static unsigned char afar, nin;
 static unsigned far_n, far_x, far_y;            /* (The thing at_hand found out of reach, and where it lies) */
 static char xn[16], yn[16];                     /* (The two names said: the words asked, then the things'; the
                                                 **   catalogue's bank's code's, and a count's words) */
@@ -387,13 +421,13 @@ unsigned __fastcall__ s_bulk_in (unsigned x)
     return b;
 }
 
-/* ---- The character's hands, its pack, its belt (about's), and where a thing will go */
+/* ---- The character's pack, its belt (about's), and where a thing will go */
 void s_about (void)
 {
     const struct kind* k;
     unsigned i = 0;
 
-    pack = belt = hands = 0;
+    pack = belt = 0;
     while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
         fetch (&rec, i);
         k = kind_of (rec.kind);
@@ -402,9 +436,6 @@ void s_about (void)
         }
         if ((rec.flags & I_WORN) && (k->flags & K_BELT) && !belt) {
             belt = i;
-        }
-        if (rec.flags & I_HELD) {
-            hands += two (k);
         }
     }
 }
@@ -420,38 +451,44 @@ static void __fastcall__ place (unsigned n, unsigned char where, unsigned x, uns
     p->flags = (p->flags & ~(I_HELD | I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | flags;
 }
 
-/* Thing n carried: into the pack if it fits, else in a hand (hand first: the other way about): 1 in the pack, 2 in
-** a hand, 0 neither (full) */
+/* Thing n carried: into the pack if it fits, else in a hand, the one that suits it (part 48's: hand first, the other
+** way about): 1 in the pack, 2 in a hand, 0 neither (full) */
+unsigned char __fastcall__ hand_free (unsigned n);
 unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 {
     unsigned char h;
 
     s_about ();
-    h = hands + two (kind_at (n)) <= 2;
+    h = hand_free (n);
     if ((!hand_first || !h) && pack && !fits (n, pack)) {
         place (n, IW_ITEM, pack, 0);
         return 1;
     }
     if (h) {
         place (n, IW_ACTOR, 0, I_HELD);
+        item_at (n)->sn = h;
         return 2;
     }
     return 0;
 }
 
 /* ---- The tools: the keys of all the character carries (anywhere on it: a skill used, the one that suits takes
-** itself out), into the hub's things_text, each after its mark (* held, + worn, a space neither: what's held fights,
-** what's worn guards) and its quality after it (a digit: rs.h's RS_EQUIP), and its load (the weight of all it
+** itself out), into the hub's things_text, each after its mark (held: < in the left hand, > the right, * both; + worn;
+** a space neither: what's held fights, what's worn guards) and its quality after it (a digit: rs.h's RS_EQUIP), and its load (the weight of all it
 ** carries, worn or not, in quarter pounds: the referee's encumbrance) in the request's x; and one used, worn (the
 ** referee's choice, by its key), its name back in the request (bare hands: "hands") */
 static void tools (void)
 {
+    static const char hmark[4] = " <>*";
     char m[2];
     const struct kind* k;
     unsigned i = 0;
     char* t;
+    unsigned char mh;
 
     m[1] = 0;
+    hub_map (0);
+    mh = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
 
     hub_map (UI_BANK);
     UIREC->things_text[0] = 0;
@@ -462,7 +499,8 @@ static void tools (void)
             hub_map (UI_BANK);
             t = UIREC->things_text;
             if (strlen (t) < sizeof UIREC->things_text - 11) {
-                m[0] = rec.flags & I_HELD ? '*' : rec.flags & I_WORN ? '+' : ' ';
+                m[0] = rec.flags & I_HELD ? hmark[rec.sn & IH_BOTH ? rec.sn & IH_BOTH : mh] : rec.flags & I_WORN ? '+' :
+                    ' ';
                 strcat (t, m);
                 strcat (t, k->tool);
                 m[0] = '0' + rec.quality;
@@ -475,22 +513,13 @@ static void tools (void)
     HUB->ireq.x = i;
 }
 
-/* What's in the character's hands (IO_HANDS: a blow with nothing named, the UI's), their kinds in the request's x and
-** y (0 none) */
+/* What's in the character's hands (IO_HANDS: a blow with nothing named, the UI's), their kinds in the request's x, its
+** main hand's (or a thing's in both), and y, its other's (0 none: held_kinds') */
 static void hands_held (void)
 {
-    unsigned char k[2];
-    unsigned i = 0, n = 0;
-
-    k[0] = k[1] = 0;
-    while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
-        if ((ip->flags & I_HELD) && n < 2) {
-            k[n++] = ip->kind;
-        }
-    }
-    hub_map (0);
-    HUB->ireq.x = k[0];
-    HUB->ireq.y = k[1];
+    held_kinds ();
+    HUB->ireq.x = held_k[0];
+    HUB->ireq.y = held_k[1];
 }
 
 /* The character's light: the brightest lit thing it carries (in a hand, worn, hung from its belt: one stowed is
@@ -559,6 +588,9 @@ unsigned char s_serve (void)
         break;
     case IO_HANDS:
         hands_held ();
+        break;
+    case IO_SWAP:                               /* (What's in its hands changed over: part 48's) */
+        iq.result = swap ();
         break;
     case IO_WEAR:
         wear (iq.name, iq.to);
@@ -1595,7 +1627,8 @@ void __fastcall__ closer (unsigned char mode);  /* (Part 42's) */
 
 unsigned char s_look_at (void)
 {
-    static const char* const where[4] = { "in your hand", "in both hands", "worn", "on you" };
+    static const char* const where[6] = { "worn", "on you", "in your hand", "in your left hand", "in your right hand",
+        "in both hands" };
     static const char* const shut[3][2] = { { "open", "closed" }, { "untied", "tied shut" },
         { "unstoppered", "stoppered" } };
     const struct kind* q;
@@ -1655,7 +1688,8 @@ unsigned char s_look_at (void)
         return IR_OK;
     }
     if (rec.where == IW_ACTOR) {
-        put (where[rec.flags & I_HELD ? (lk.flags & K_TWO || lk.bulk >= 20) : rec.flags & I_WORN ? 2 : 3]);
+        put (where[rec.flags & I_HELD ? 2 + (rec.sn & IH_BOTH) : !(rec.flags & I_WORN)]);   /* (The hand it's in, its sn:
+                                                **   slice 4.1b's) */
     } else if (rec.where == IW_ITEM) {
         q = kind_of (item_at (rec.x)->kind);     /* (What it's in, or on) */
         put (q->keeps & KF_ON || q->flags & K_BELT ? "on " : "in ");
@@ -2049,9 +2083,11 @@ static unsigned char gm;
 static void __fastcall__ contents (unsigned char where, unsigned x, unsigned char depth)
 {
     const struct kind* k;
+    static const char* const hands_in[4] = { ", in your hand", ", in your left hand", ", in your right hand",
+        ", in both hands" };
     struct item q;
     unsigned i = 0, j, told[8];
-    unsigned char first = 1, n, kf, kk, t2, nt = 0;
+    unsigned char first = 1, n, kf, kk, nt = 0;
     char* t;
     char* e;
 
@@ -2060,7 +2096,6 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
         k = kind_of (q.kind);
         kf = k->flags;
         kk = k->keeps;
-        t2 = two (k);
         load += (unsigned) k->weight * (kf & K_PLURAL && !(k->form & KF_COUNT) ? 1 : q.qty);
         for (n = 0; n < nt && told[n] != i; ++n) {
         }
@@ -2105,8 +2140,8 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
         s_thing_words (&q);
         tw_n = 0;
         if (!depth) {
-            put (q.flags & I_HELD ? (t2 == 2 ? ", in both hands" : ", in your hand") :
-                q.flags & I_WORN ? ", worn" : "");
+            put (q.flags & I_HELD ? hands_in[q.sn & IH_BOTH] : q.flags & I_WORN ? ", worn" : "");   /* (The hand it's
+                                                **   in, its sn: slice 4.1b's) */
         }
         if (kf & (K_CONTAINER | K_BELT) || kk & KF_ON) {
             t = tq;
@@ -2493,7 +2528,7 @@ void s_kit (void)
     unsigned made[NKIT];
     const unsigned char* e;
     unsigned i;
-    unsigned char k;
+    unsigned char k, off;
     char* c;
     char* more = tbuf;
 
@@ -2501,10 +2536,14 @@ void s_kit (void)
     strncpy (more, UIREC->things_text, 63);     /* (The things more: the UI's -k, in the UI bank's text) */
     hub_map (0);
     more[63] = 0;
+    off = HUB->pcsum.limbs & LB_LEFT ? IH_RIGHT : IH_LEFT;
     for (k = 0; k < NKIT; ++k) {
         e = kit_list[k];
         made[k] = i = item_new (e[0], e[1] == 0xFF ? IW_ACTOR : IW_ITEM, e[1] == 0xFF ? 0 : made[e[1]], e[2]);
         item_at (i)->flags = e[3];
+        if (e[3] & I_HELD) {
+            item_at (i)->sn = off;              /* (Its torch a light: in its off hand, slice 4.1b's) */
+        }
     }
     for (; *more; more = c) {
         if ((c = strchr (more, ',')) != 0) {
@@ -2516,6 +2555,8 @@ void s_kit (void)
             item_at (i)->where = IW_ACTOR;      /* (No room: held all the same) */
             item_at (i)->x = 0;
             item_at (i)->flags = (item_at (i)->flags & ~(I_WORN | I_HIDDEN)) | I_KNOWN | I_HELD;
+            k = two (kind_at (i)) == 2 ? IH_BOTH : off ^ IH_BOTH;
+            item_at (i)->sn = k;                /* (Its hand: both for a two-handed thing, else the main) */
         }
     }
     for (k = 0; k < sizeof spare; ++k) {        /* (The pack's spare torch and flask of oil, D5's, after the things
@@ -2774,22 +2815,11 @@ static unsigned other (void)
     return c;
 }
 
-/* Into a hand (from anywhere on the character, or within reach) */
+/* Into a hand (from anywhere on the character, or within reach): IO_HOLD's the one its to says, else the one that suits
+** it (part 48's, and its words) */
 static unsigned char __fastcall__ hold (unsigned n)
 {
-    static unsigned char t;
-
-    t = two (KIND (n));
-    m0 (about);
-    FETCH (n);
-    if ((o.flags & I_HELD) && B (m1 (on_pc, n))) {
-        return no (SA_HELD);
-    }
-    if (hands + t > 2) {
-        return no (SA_HANDS);
-    }
-    o_place (n, IW_ACTOR, 0, I_HELD);
-    return yes (t == 2 ? SA_HOLD2 : SA_HOLD, 10);
+    return B (m2 (hold_in, n, iq.kind == IO_HOLD ? iq.to : 0));
 }
 
 /* Put in the pack (put 0); or in the other thing, on it (iq's to 1: a surface's; a belt's: hung from it; none named:
@@ -3261,5 +3291,228 @@ unsigned char __fastcall__ s_on_it (unsigned n, unsigned char touch)
 }
 
 #pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 48 (dq0w.c's work and what came of it, and here, its room): the hands (slice 4.1b; the user's, 2026-10-21:
+** "is there handedness (right handed versus left versus ambidextrous) in the character profile?"): each thing held in
+** the left hand, the right, or both (its sn, items.h's IH_*); the hand a thing taken up goes to, the one that suits it
+** (a weapon or a tool the main hand, a shield or a light the other, a two-handed thing both, the one free if only one
+** is), or the one said ("hold the sword in my left hand", "put the dagger in my other hand", "hold the spear in both
+** hands"); a useless arm's hand holds nothing (the user's, 2026-10-22: "For an arm or hand, that means no picking things
+** up with that hand"), nor a two-handed thing; what's in them changed over ("swap hands").  The main hand is the
+** referee's (its summary's limbs: the medical traits', left-handed, ambidextrous) */
+#pragma code-name (push, "SW48CODE")
+#pragma rodata-name (push, "SW48RODATA")
+
+static const char* const hword[4] = { "", "left", "right", "both" };
+static unsigned char hmain, hdead, hused, hcur;  /* (The main hand, the useless ones, those holding something else, its
+                                                **   own: hands_now's) */
+static unsigned char hkind[2];                  /* (What's in the left hand and the right: their kinds, 0 none) */
+
+/* The character's hands as they are, but for thing n (n held: its own hand, hcur) */
+static void __fastcall__ hands_now (unsigned n)
+{
+    unsigned i = 0;
+    unsigned char l, h;
+
+    hub_map (0);
+    l = HUB->pcsum.limbs;
+    hmain = l & LB_LEFT ? IH_LEFT : IH_RIGHT;
+    hdead = (l & LB_ARM_L ? IH_LEFT : 0) | (l & LB_ARM_R ? IH_RIGHT : 0);
+    hused = hcur = hkind[0] = hkind[1] = 0;
+    while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
+        if (ip->flags & I_HELD) {
+            h = ip->sn & IH_BOTH ? ip->sn & IH_BOTH : hmain;
+            if (h & IH_LEFT) {
+                hkind[0] = ip->kind;
+            }
+            if (h & IH_RIGHT) {
+                hkind[1] = ip->kind;
+            }
+            if (i == n) {
+                hcur = h;
+            } else {
+                hused |= h;
+            }
+        }
+    }
+    hub_map (0);
+}
+
+/* The hand thing n would go in (IH_*) as want says (IH_*, IH_OTHER; 0 the one that suits it, the other if that's taken),
+** its hands as they are (hands_now's); 0 none, and why not in hwhy: HW_FULL (no hand free), HW_TAKEN (the one said
+** holds something else: in hside), HW_LIMB (an arm useless, hside's), HW_TWO (a two-handed thing, one hand said) */
+enum { HW_FULL = 1, HW_TAKEN, HW_LIMB, HW_TWO };
+static unsigned char hwhy, hside, htwo;
+static unsigned char __fastcall__ hand_for (unsigned n, unsigned char want)
+{
+    const struct kind* k = kind_at (n);
+    unsigned char h, off = hmain ^ IH_BOTH;
+
+    htwo = two (k) == 2;
+    if (htwo && want && want != IH_BOTH) {
+        hwhy = HW_TWO;
+        return 0;
+    }
+    if (htwo || want == IH_BOTH) {
+        h = IH_BOTH;
+    } else if (want == IH_OTHER) {
+        h = hcur == IH_LEFT ? IH_RIGHT : hcur == IH_RIGHT ? IH_LEFT : off;
+    } else if (want) {
+        h = want;
+    } else {
+        h = (k->flags & K_LIGHT) || !strcmp (k->tool, "shield") ? off : hmain;    /* (What suits it) */
+        if (h & (hused | hdead)) {
+            h ^= IH_BOTH;                       /* (Taken, or its arm useless: the other) */
+        }
+    }
+    hwhy = h & hdead ? HW_LIMB : !(h & hused) ? 0 : want ? HW_TAKEN : HW_FULL;
+    hside = h & (hwhy == HW_LIMB ? hdead : hused);
+    return hwhy ? 0 : h;
+}
+
+/* The hand thing n would go in, the one that suits it (carry's: a thing taken up, its hand first, else the pack); 0
+** none free */
+unsigned char __fastcall__ s_hand_free (unsigned n)
+{
+    hands_now (n);
+    return hand_for (n, 0);
+}
+
+/* A hand's words ("your left hand", "both hands") */
+static void __fastcall__ hand_words (unsigned char h)
+{
+    put (h == IH_BOTH ? "both hands" : "your ");
+    if (h != IH_BOTH) {
+        put (hword[h]);
+        put (" hand");
+    }
+}
+
+/* Why not, in words (hwhy's) */
+static void why_not (void)
+{
+    const struct kind* k;
+
+    if (hwhy == HW_FULL) {
+        put ("Your hands are full: stow something, or put it down.");
+        return;
+    }
+    if (hwhy == HW_TWO) {
+        put ("The ");
+        put (xn);
+        put (" takes both hands.");
+        return;
+    }
+    put ("Your ");
+    put (hword[hside == IH_BOTH ? IH_LEFT : hside]);
+    if (hwhy == HW_LIMB) {
+        put (" arm is useless.");
+        if (htwo) {
+            put (" You can't hold the ");
+            put (xn);
+            put (" in one hand.");
+        }
+        return;
+    }
+    k = kind_of (hkind[hside == IH_RIGHT]);
+    put (" hand holds the ");
+    put (k->name);
+    put (".");
+}
+
+/* Thing n taken into a hand (IO_HOLD's, the catalogue's bank's hold: from anywhere on the character, or within reach;
+** its name in xn): the one want says (IH_*, IH_OTHER: the request's to), or, none said, the one that suits it; one held
+** already moved to it.  Its words into the hub's text: IR_OK (its time, took) or IR_NO (why not) */
+unsigned char __fastcall__ s_hold_in (unsigned n, unsigned char want)
+{
+    struct item* p;
+    unsigned char h;
+
+    hands_now (n);
+    if (hcur && (!want || want == hcur || (want == IH_OTHER && hcur == IH_BOTH))) {
+        put ("You hold the ");              /* (Held already: in that hand, or none said) */
+        put (xn);
+        put (" in ");
+        hand_words (hcur);
+        put (" already.");
+        return IR_NO;
+    }
+    if (!(h = hand_for (n, want))) {
+        why_not ();
+        return IR_NO;
+    }
+    p = item_at (n);
+    p->where = IW_ACTOR;
+    p->x = 0;
+    p->flags = (p->flags & ~(I_HELD | I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | I_HELD;
+    p->sn = h;
+    put (hcur ? "You shift the " : "You take the ");
+    put (xn);
+    put (hcur ? " to " : " in ");
+    hand_words (h);
+    put (".");
+    took = 10;
+    return IR_OK;
+}
+
+/* What's in the character's hands changed over, left to right and right to left (IO_SWAP's: "swap hands"), its words
+** into the hub's text, its time in the request's x: IR_OK, or IR_NO (nothing held, a thing in both hands, a hand to go
+** into useless) */
+unsigned char s_swap (void)
+{
+    unsigned i = 0, l = 0, r = 0;
+    unsigned char h;
+
+    text_new ();
+    hands_now (0);
+    while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
+        if (ip->flags & I_HELD) {
+            h = ip->sn & IH_BOTH ? ip->sn & IH_BOTH : hmain;
+            if (h == IH_BOTH) {
+                strcpy (xn, kind_of (ip->kind)->name);
+                put ("The ");
+                put (xn);
+                put (" takes both your hands.");
+                return IR_NO;
+            }
+            if (h == IH_LEFT) {
+                l = i;
+            } else {
+                r = i;
+            }
+        }
+    }
+    if (!l && !r) {
+        put ("Your hands are empty.");
+        return IR_NO;
+    }
+    if ((l && (hdead & IH_RIGHT)) || (r && (hdead & IH_LEFT))) {
+        put (hdead & IH_RIGHT ? "Your right arm is useless." : "Your left arm is useless.");
+        return IR_NO;
+    }
+    if (l) {
+        item_at (l)->sn = IH_RIGHT;
+    }
+    if (r) {
+        item_at (r)->sn = IH_LEFT;
+    }
+    if (l && r) {
+        put ("You change hands: the ");
+        put (kind_of (hkind[1])->name);
+        put (" in your left, the ");
+        put (kind_of (hkind[0])->name);
+        put (" in your right.");
+    } else {
+        put ("You shift the ");
+        put (kind_of (hkind[!l])->name);
+        put (l ? " to your right hand." : " to your left hand.");
+    }
+    hub_map (0);
+    HUB->ireq.x = 10;
+    return IR_OK;
+}
+
 #pragma code-name (pop)
 #pragma rodata-name (pop)

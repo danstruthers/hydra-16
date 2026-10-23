@@ -242,7 +242,7 @@ void __fastcall__ s_den_rob (unsigned x, unsigned y)
 {
     static struct msg m;
     static unsigned i, n;
-    static unsigned char kind, f;
+    static unsigned char kind, f, hd;
     static char key[sizeof CATALOGUE[0].tool];
     unsigned char* s;
 
@@ -273,6 +273,7 @@ void __fastcall__ s_den_rob (unsigned x, unsigned y)
             kind = ip->kind;
             f = ip->flags;
             n = ip->quality;
+            hd = ip->sn;
             if (!mine ()) {
                 continue;
             }
@@ -281,7 +282,8 @@ void __fastcall__ s_den_rob (unsigned x, unsigned y)
             memcpy (wb + 1, CATALOGUE[kind].tool, sizeof key);
             hub_map (0);
             if (wb[1] && strlen (WSLOT.text) < REQ_TEXT - sizeof wb) {
-                wb[0] = f & I_HELD ? '*' : f & I_WORN ? '+' : ' ';
+                wb[0] = f & I_HELD ? " <>*"[hd & IH_BOTH ? hd & IH_BOTH : IH_RIGHT] : f & I_WORN ? '+' : ' ';   /* (Held: its
+                                                **   hand's mark, slice 4.1b's) */
                 key[0] = '0' + n;
                 key[1] = 0;
                 strcat (wb, key);
