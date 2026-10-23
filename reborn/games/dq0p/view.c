@@ -23,6 +23,9 @@
 ** A look one way (HOUSE.md's looking one way: dq0p.c's v_way) is the same look, reaching twice as far (WAY_R squares
 ** at most, the grid's) in the quarter ahead of the character (within 45 degrees of the way it faces: cast.s's), as far
 ** as the light allows: a glance's reach every way else.
+**
+** And what the character keeps of it (DUNGEON.md, the map kept): each chunk it sees any of, its memory (struct
+** chunk's kept) made fresh as the marks go in; mapping as it goes on paper, what it sees drawn (T_DRAWN: kept's).
 */
 
 #include <string.h>
@@ -56,6 +59,8 @@ void rect (void);                               /* (cast.s's: the grid made, mov
 void grid_shift (void);
 void __fastcall__ mark_rows (unsigned char unmark);
 unsigned char __fastcall__ band (unsigned x, unsigned x1);
+unsigned char run_d;                            /* (cast.s's run_out's: T_DRAWN, a square seen now drawn on the map
+                                                **   as the marks go in, mapping on paper; or 0) */
 
 struct lamp lamp[NLAMPS];
 unsigned char nlamps;
@@ -70,13 +75,14 @@ void give_way (void);                           /* (dq0p.c's: the look giving wa
 /* The squares a walk went (the world's: from x, y its first way d, n squares; the look's walk), felt in the dark,
 ** remembered (T_SEEN): as dq0w.c's walk goes them, along a passage (a wide one's breadth beside it no way on), on at
 ** its bends, through a door, into a room (part 2's: its breadth, chunk.c's, there); a walk in the dark (d | 0x80) as it
-** goes there, by what the character knew: straight on, round a bend only where the way ahead's closed */
+** goes there, by what the character knew: straight on, round a bend only where the way ahead's closed.  A walk in
+** the light, mapping as it goes on paper, drawn too (the view's run_d: the look's view first, dq0p.c's) */
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 void __fastcall__ s_felt (unsigned char sn, unsigned x, unsigned y, unsigned char d, unsigned char n)
 {
     unsigned char* p;
-    unsigned char h0 = d, cross;                /* (h0: in the dark, | 0x80) */
+    unsigned char h0 = d, cross, m = d & 0x80 ? T_SEEN : T_SEEN | run_d;    /* (h0: in the dark, | 0x80) */
 
     d &= 3;
     way_room = 0xFF;
@@ -88,7 +94,7 @@ void __fastcall__ s_felt (unsigned char sn, unsigned x, unsigned y, unsigned cha
         if (!(p = at (sn, x, y))) {
             return;
         }
-        *p |= T_SEEN;
+        *p |= m;
         if (!n || TILE (*p) == T_DOOR || ((h0 & 0x80) && step_ok (sn, x, y, d))) {
             continue;
         }
@@ -201,6 +207,78 @@ static void __fastcall__ view_grid (unsigned gx, unsigned gy, unsigned char w)
     gsh = s->h;
 }
 
+/* ==== Part 4 (its own, small: a look's, after the view's, dq0p.c's) */
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+
+/* The character's memory of this look's squares (the last view's: bx0, by0, bw, blo, bhi), each chunk with any of
+** them in it: a passing more if it's come to see it again (KEPT_PASS or more since it last did: 255 at most); how
+** well it keeps it made fresh (the summary's mapmind, mapping as it goes, half that not, a quarter of mapmind more for
+** each of its passings' points, TR_MORE's; 100 at most; never less than it remembers of it still: a tenth lost each
+** KEPT_FADE); and its squares drawn on its map as the marks went in (run_d's), the chunk's drawn squares another
+** map's wiped but those (seen now) */
+void s_kept (void)
+{
+    unsigned now, age, map, u, u0;              /* (On the C stack: the main RAM's room) */
+    unsigned char q, q4, i0, i1, j, j0, j1, f, left;
+    struct ckept* k;
+    unsigned char* p;
+
+    hub_map (0);
+    now = KEPT_CLOCK;
+    q4 = HUB->pcsum.mapmind;
+    q = HUB->watch & WA_MAP ? q4 : q4 >> 1;
+    q4 >>= 2;
+    u0 = KEPT_UNIT (HUB->pcsum.mapfade);
+    map = HUB->pc_map;
+    for (j0 = 0; j0 < bw; j0 = j1) {            /* (Each chunk's rows of the view, and its columns) */
+        j1 = j0 + CW - ((by0 + j0 - v_y0) & (CW - 1));
+        j1 = j1 < bw ? j1 : bw;
+        for (i0 = 0; i0 < bw; i0 = i1) {
+            i1 = i0 + CW - ((bx0 + i0 - v_x0) & (CW - 1));
+            i1 = i1 < bw ? i1 : bw;
+            for (j = j0; j < j1 && (blo[j] >= i1 || bhi[j] < i0); ++j) {
+            }
+            if (j == j1 || !at (v_sn, bx0 + i0, by0 + j)) {
+                continue;                       /* (None of its squares seen now) */
+            }
+            k = &C->kept;
+            age = now - k->m;
+            if ((!k->q || age >= KEPT_PASS) && k->n < 255) {
+                ++k->n;
+            }
+            f = q;                              /* (Fresh: its passings' points, TR_MORE's, a quarter of mapmind
+                                                **   each, and its fading the slower, twice for each) */
+            u = u0;
+            if (k->n >= 4) {
+                f += q4;
+                u <<= 1;
+            }
+            if (k->n >= 12) {
+                f += q4;
+                u <<= 1;
+            }
+            f = f < 100 ? f : 100;
+            for (left = k->q; age >= u && left; age -= u) {
+                left = left > 10 ? left - 10 : 0;   /* (What it remembers of it still: a tenth lost each fade) */
+            }
+            k->q = left > f ? left : f;
+            k->m = now;
+            if (run_d && k->map != map) {
+                k->map = map;
+                for (p = &C->tile[0][0], age = 0; age < CW * CW; ++age, ++p) {
+                    if (!(*p & T_VIS)) {
+                        *p &= ~T_DRAWN;
+                    }
+                }
+            }
+        }
+    }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char light,
     unsigned char sight, unsigned char dark)
 {
@@ -211,6 +289,7 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
 
     own = at (sn, x, y) != 0;
     z = (own ? C->elev[cy_][cx_] : 0) + EYE;
+    run_d = 0;
     mark_rows (1);                              /* The last view's seen now unmarked (its rows' marks): this one's are
                                                 **   marked after */
     stratum (sn);
@@ -281,5 +360,11 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
     bw = w;
     memcpy (blo, g_lo, w);
     memcpy (bhi, g_hi, w);
+    run_d = own && (GRID[((unsigned) range << 7) + (range << 1)] & T_VIS) ? T_DRAWN : 0;     /* (Its own square
+                                                **   lit: light to draw by) */
+    hub_map (0);
+    if (!(HUB->watch & WA_MAP) || !(HUB->pc_chart & CH_DRAW) || !HUB->pc_map) {
+        run_d = 0;                              /* (Not mapping as it goes on paper: nothing drawn) */
+    }
     mark_rows (0);
 }

@@ -821,15 +821,15 @@ note:
 ; into piece as they are) into the chunk
 
             .export     _run_in, _run_out, _run_clear, _run_p, _run_q, _run_g, _light_in, _run_l, _run_lo, _run_lb
-            .export     _grid_put, _grid_fill, _grid_clr, _run_d
-            .import     _piece
+            .export     _grid_put, _grid_fill, _grid_clr
+            .import     _piece, _run_d                  ; (view.c's run_d: run_out's T_DRAWN, a square seen now drawn on
+                                                        ;   the map; or 0)
             .importzp   ptr3
 
 G_DOOR      = $20                           ; (run_in's in piece: a door or a window, view.c's to look at; G_LAMP
                                             ;   is the grid's alone)
 
             .bss
-_run_d:     .res        1                   ; (run_out's: T_DRAWN, a square seen now drawn on the map, view.c's; or 0)
 _run_p:     .res        2
 _run_q:     .res        2
 _run_g:     .res        2

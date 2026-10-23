@@ -217,14 +217,29 @@ struct chunk {
                                                 **   small rooms' too, the builders' one height) */
     struct ckept {                              /* The character's memory of it (DUNGEON.md, the map kept: the senses',
                                                 **   as it looks about; the maker's to keep with its seen squares): */
-        unsigned    m;                          /*   the game minute it last saw any of it (the clock's tenths over
-                                                **   600, 16 bits), */
+        unsigned    m;                          /*   when it last saw any of it (KEPT_CLOCK's), */
         unsigned char q;                        /*   how well it kept it then (0-100: 0 never seen; the referee's
-                                                **   summary's mapmind, mapping as it goes, half that not), */
+                                                **   summary's mapmind, mapping as it goes, half that not, the more
+                                                **   for its passings), */
+        unsigned char n;                        /*   its passings, the times it's come to see it again (KEPT_PASS
+                                                **   or more out of its sight: 255 at most), */
         unsigned    map;                        /*   and the map its T_DRAWN squares are on (that map's item's id: 0
                                                 **   none) */
     }               kept;
 };
+/* (A chunk's kept: the clock in 25.6 seconds, 16 bits, its tenths' middle bytes, no long division (the hub's header in
+** the window); a passing, seen again 4 minutes or more after it was last; the referee's mapfade, minutes a tenth lost,
+** in those units (KEPT_UNIT: 60 / 25.6 a minute, near enough, and one more; shifts, no multiplying), twice as long for 4
+** passings, four times for 12: hub.h's TR_MORE, a trace's rule) */
+#define KEPT_CLOCK      (*(unsigned*) ((unsigned char*) &HUB->now + 1))
+#define KEPT_PASS       9
+#define KEPT_UNIT(f)    (((unsigned) (f) << 1) + ((f) >> 2) + ((f) >> 4) + 1)
+#define KEPT_FADE(f, n) (KEPT_UNIT (f) << TR_MORE (n))
+/* How well the character knows square x, y's place, a reader's of the chunks (the world's, the denizens', the senses':
+** at ()'s chunk in the window after): its chunk's passings (0 never seen; TR_MORE's points of them, a well-known place's,
+** 1 at 4, 2 at 12), the senses' to count as it looks about (slice 4.2's: the bearings kept the easier where it's
+** familiar, the lead's to wire) */
+#define KEPT_KNOWN(sn, x, y)    (at ((sn), (x), (y)) ? C->kept.n : 0)
 #define CHUNK_SIZE      0x0AA0                  /* Three to a bank */
 typedef char chunk_fits[sizeof (struct chunk) <= CHUNK_SIZE ? 1 : -1];
 

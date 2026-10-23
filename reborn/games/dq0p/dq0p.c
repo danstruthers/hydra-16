@@ -65,13 +65,16 @@ static void look (void)
     wd = HUB->look.wd;
     wn = HUB->look.wn;
     sync_strata ();                             /* (The strata's records, the world bank's) */
-    if (wn) {
-        felt (sn, wx, wy, wd, wn);              /* (The squares walked, remembered: felt in the dark) */
-    }
     things_lamps (sn, x, y);                    /* (The lit things lying about: a torch put down) */
     view (sn, x, y, face, light, sight, dark);
+    kept ();                                    /* (What it keeps of it: each chunk's memory, part 4's) */
     glows (sn, x, y, face, range, own);         /* (Its eyes adapted, the lights it sees far off: eyes.c's) */
     give_way ();
+    if (wn) {
+        felt (sn, wx, wy, wd, wn);              /* (The squares walked, remembered: felt in the dark; drawn, mapping
+                                                **   as it goes in the light, the view's run_d: after it, with what
+                                                **   it perceives, part 2's, one copy of the part a look) */
+    }
     first = perceive (sn, x, y, face, own, first);
     sees = dens_seen ();                        /* (The denizens it sees with it: the world's bodies) */
     if (v_way) {
