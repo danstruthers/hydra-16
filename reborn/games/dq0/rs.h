@@ -78,6 +78,15 @@ enum {
                                                 **   ruleset's whether it's a test, HarnMaster's house's for one
                                                 **   seriously or grievously wounded, its summary's LB_HURT, or with no
                                                 **   good arm; never with no leg to stand on: slice 4.1b's) */
+    P_BEARING,                                  /* Keeping one's bearings underground, the way come by bending, or
+                                                **   felt across a room in the dark (the world's, at a move's end:
+                                                **   DUNGEON.md's bearings underground, slice 4.2's; its steps the
+                                                **   bends and the dark, HOUSE.md's): the reply's result the way a
+                                                **   failure's drift goes (0 clockwise, 1 the other), the north the
+                                                **   character believes in the world's to keep (the hub's pc_skew);
+                                                **   its dice the referee's own, apart from its other tests', so they
+                                                **   roll as they did; one whose species knows north (its summary's
+                                                **   northsense) isn't asked, and never fails */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
 
@@ -247,7 +256,7 @@ struct rs_summary {
     unsigned char   load;                       /* Encumbrance: 0 none, 1 a little burdened, 2 heavily, 3 overloaded */
     unsigned char   power;                      /* 0-100: how mighty, the same scale whatever the ruleset */
     unsigned char   northsense;                 /* 1: it always knows which way north is underground (its species':
-                                                **   a dwarf's); 0: it can lose its bearings (DUNGEON.md, to come) */
+                                                **   a dwarf's); 0: it can lose its bearings (P_BEARING) */
     unsigned char   limbs;                      /* Its hands and limbs (LB_*: the character's, slice 4.1b's) */
     unsigned char   limp;                       /* Its legs hurt, slowing its walk and faster paces (0: none; the
                                                 **   levels, the referee's, its steps above the slower for them) */

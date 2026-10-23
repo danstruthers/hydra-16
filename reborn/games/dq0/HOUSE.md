@@ -31,7 +31,8 @@ plays them as HarnMaster's referee does.
   attribute times 5); picking a lock, disarming and making out a mechanism Lockcraft; enduring Condition; resisting
   poison Endurance times 5; resisting the mind Will times 5; dodging a hazard Dodge; first aid Physician; lore Lore;
   tracking Tracking; persuading and intimidating Rhetoric; animals Animalcraft; digging Mining; guile Intrigue;
-  throwing Throwing.
+  throwing Throwing; keeping one's bearings underground Awareness, or Mining if it's the higher (Bearings
+  underground, below: bearing.c's).
   (dq0harn.c's purpose table.)  Why: the game's code stays the same whatever the ruleset; only the referee knows
   skills.
 - **A skill never opened is tried at its opening level,** less five a point of its group's penalty, as an opened

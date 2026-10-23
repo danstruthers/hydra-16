@@ -4,7 +4,8 @@
 ** material (RS_HOUSE_DIG: the table; RS_HOUSE_DIG_TOOL: the one to hand that suits best, the function named so); what
 ** the character's going and watchfulness make of a notice (RS_HOUSE_NOTICE); and the words of its pace, its
 ** watchfulness and its light in its state (RS_HOUSE_STATE: RS_DESCRIBE b 3's); what a thing does swung (RS_HOUSE_SWING:
-** the function named so, the world's too).  A referee defines the parts it wants before it includes this, where it
+** the function named so, the world's too); the bearings' own dice (RS_HOUSE_BEARING: P_BEARING's, apart from the
+** rest).  A referee defines the parts it wants before it includes this, where it
 ** wants their code (its main RAM, an overlay, a swapped part): each part once in a file, static (but the dig tool's;
 ** the swing's in each part that wants it, named for it), its words through the referee's own put and putn, the tools
 ** to hand its own (tools[NTOOLS][8], RS_EQUIP's keys).
@@ -161,5 +162,23 @@ static void __fastcall__ house_light (unsigned char light, const char* lamp, uns
     } else {
         put (dark ? "none: it's dark here, and you feel your way." : "none of your own: this place's own light.");
     }
+}
+#endif
+
+/* ---- The bearings' own dice (rs.h's P_BEARING; HOUSE.md's bearings underground, every ruleset's): the generator's
+** state (dice.h's numbers: xorshift.s's xs_seed) swapped for the bearings' own about their test, before it and after
+** (bdice), so the game's other tests roll as they did whether its walks bend or not; the bearings' state the referee's
+** bseed, begun at the first from the generator's as it is then (its own seed's: the game's), scrambled */
+#if defined (RS_HOUSE_BEARING) && !defined (RS_HOUSE_BEARING_DONE)
+#define RS_HOUSE_BEARING_DONE
+extern unsigned long xs_seed;
+extern unsigned long bseed;
+
+static void bdice (void)
+{
+    unsigned long t = xs_seed;
+
+    xs_seed = bseed ? bseed : t ^ 0x42454152UL;
+    bseed = t;
 }
 #endif
