@@ -457,7 +457,17 @@ remembered dim, a drawn map's squares a colour of their own, the character brigh
 to turn colour off.  And: "And just remember that with better intelligence, the map stays clearer longer, but that
 doesn't mean it is bright and shiny when you can't see it."  So only what's seen now is bright; what's remembered is
 dim however well it's kept (a memory's quality says whether a square's shown, how true its place, at most which dim
-shade).
+shade).  And: "Map quality should reflect the drawing skill of the map maker (or cartography first, then drawing
+second if no opened cartography skill).  If neither is open, open drawing when the first map is being drawn.
+Cartography is a skill that can only be opened with the right tools and instruction.  I am not sure what the HM rules
+say regarding that.  Please try to use the HM rules where they are explicit, and we can add to the house rules for
+the cases where it is unclear or leaves it to the GM."  The book: Cartography a specialty of Drawing (Skills 13), a
+map's quality limited by what its maker knew; a specialty chosen at the skill's ML 40, opened at its ML (Skills 2); a
+teacher at least 20 higher (Skills 7); Drawing's [1 Month], Cookery's [First Use] (not defined in the text: read as
+how each is opened).  So a drawn map tested as it's drawn (Cartography, else Drawing; its errors and the believed
+north's in it), Drawing opened at its first map (the house's, over the book's month), Cartography only by instruction
+and its tools (none in the dungeon yet: from the sheet, else later), a skill not opened tested as the book's opening
+says, generally.
 
 **Design:** DUNGEON.md, moving (watchfulness: mapping as it goes); still to come.
 
