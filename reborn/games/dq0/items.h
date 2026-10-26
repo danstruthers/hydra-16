@@ -94,6 +94,8 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_AXE,                                     /* A hand axe (a kobold lord's, let fall: slice 4.1b's) */
     KI_PAPER, KI_PARCHMENT, KI_CHARCOAL, KI_PENCIL, KI_QUILL, KI_INK, KI_MAP,  /* The things to draw a map with, and
                                                 **   the map (slice 4.2's: by their keys, things.c's chart_now) */
+    KI_CHALK,                                   /* (Another point that draws, used up soon: HOUSE.md's things used up,
+                                                **   2026-10-26) */
     KI_COUNT };
 
 /* An item */

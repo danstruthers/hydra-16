@@ -137,11 +137,23 @@ struct burn {
     unsigned char   fuels;                      /* FU_*: a light's, those that renew it (0: none, it burns away); a
                                                 **   fuel's, what it is */
 };
-#define NBURNS          6
+#define NBURNS          11
 #define FU_OIL          0x01
 #define FU_PITCH        0x02
+#define FU_DRAW         0x04                    /* (Used up as it's drawn with: charcoal, chalk, a pencil, a quill, ink;
+                                                **   HOUSE.md's things used up, 2026-10-26: no light, no fuel) */
 #define BURN_LOW        10                      /* Burning low: its last ten minutes (the house rule's) */
 extern const struct burn burns[NBURNS];
+struct snap {                                   /* (What breaks as it's used: kinds.c's snaps, a missile's, slice 4.7's) */
+    unsigned char   kind;                       /* (KI_*) */
+    unsigned char   chance;                     /* (In a hundred, shot or thrown) */
+};
+#define NSNAPS          1
+extern const struct snap snaps[NSNAPS];
+unsigned char __fastcall__ s_use_up (unsigned n, unsigned char by);  /* (dq0w.c's part 7: thing n used up by minutes,
+                                                **   or a lot by one; gone, told: 1, else 0) */
+extern unsigned chart_w[5];                     /* (things.c's: the map making's things handy, by their keys, part 26's
+                                                **   chart_now's: a sheet, a map, a point, a quill, ink) */
 const struct burn* __fastcall__ burn_of (unsigned char k);  /* How kind k burns (a copy), or 0: never (a glow), or no
                                                 **   fuel; the catalogue's bank left in the window */
 unsigned char fill (void);                      /* (Part 27, its room) The hub's ireq, IO_FILL's: a light renewed */

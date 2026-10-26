@@ -418,6 +418,10 @@ void __fastcall__ o_felt_words (unsigned w)
         sayf ((unsigned char) w == WB_SWAT ? "\nYou swat at %s%s with the %s, but it seems ineffectual." :
             "\nYou set to battering %s%s with the %s.", *lb >= 'a' ? "the " : "", lb, lb + 32);
         return;
+    case WB_SPENT:                              /* (A thing used up, its kind: HOUSE.md's things used up) */
+        hub_mem (CAT_BANK, lb, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
+        sayf ("\nYour %s is %s.", lb, b == KI_INK ? "dry" : b == KI_QUILL ? "worn out" : "worn to nothing");
+        return;
     }
 }
 /* A wait's length, tenths (I_WAIT's w1): line l's duration, n minutes or hours ("wait 10 minutes", "an hour"); 0 a

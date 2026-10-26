@@ -3976,7 +3976,9 @@ static void __fastcall__ intent (struct msg* m)
 
 /* How true what it draws now is (the hub's pc_drawn: the referee's P_DRAW test, HOUSE.md's the map kept; a skill
 ** opened by it told, E_TASK's TE_LEARNT); its map's make the better or the worse for it (its quality, the mean of
-** the last and this test's: a critical success 9, a marginal 6, a marginal failure 3, a critical 0) */
+** the last and this test's: a critical success 9, a marginal 6, a marginal failure 3, a critical 0); what it draws
+** with used up by it (drawn_down's) */
+static void drawn_down (void);
 void s_draw_test (void)
 {
     struct req* r = &HUB->slot[SLOT_WORLD];
@@ -4005,7 +4007,45 @@ void s_draw_test (void)
             break;
         }
     }
+    drawn_down ();
     hub_map (0);
+}
+
+/* ---- Things used up (HOUSE.md's, the user's, 2026-10-23: "Ink, pencils, charcoal, etc., should be used up
+** eventually"), one way for every kind, by its data (as a light's fuel is: the item's fuel, its minutes left, its whole
+** life the catalogue's burns, FU_DRAW's): thing n used up by minutes (by), or, by none, one of a lot (qty: a missile's,
+** slice 4.7's to call, its stub to come); used up, gone, told ("Your charcoal is worn to nothing.": E_BEAT's WB_SPENT, its
+** kind): 1, else 0 */
+static struct item* up;
+static unsigned char upk;
+unsigned char __fastcall__ s_use_up (unsigned n, unsigned char by)
+{
+    up = item_at (n);
+    if (!(upk = up->kind)) {
+        return 0;                               /* (Gone already) */
+    }
+    if (by && up->fuel > by) {
+        up->fuel -= by;
+        return 0;
+    }
+    if (!by && --up->qty) {
+        return 0;
+    }
+    up->kind = 0;
+    event (E_BEAT, 0, WB_SPENT | upk << 8);
+    return 1;
+}
+
+/* A drawing's minutes (DRAW_USE: a room come into, a way walked, mapping on paper) off what it draws with (the map
+** making's, chart_w: things.c's chart_now, as the light's made, the handy ones by their keys): a point (charcoal,
+** chalk, a pencil), else its quill and its ink; one spent, the map making made again (light_now's) */
+#define DRAW_USE        2
+static void drawn_down (void)
+{
+    if (chart_w[2] ? s_use_up (chart_w[2], DRAW_USE) : s_use_up (chart_w[3], DRAW_USE) | s_use_up (chart_w[4],
+        DRAW_USE)) {
+        light_now ();
+    }
 }
 
 #pragma code-name (pop)

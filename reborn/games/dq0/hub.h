@@ -540,6 +540,8 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   harm, the actor plus 1 times 256, the thing the hub's pc_strike's:
                                                 **   "You swat at the rat with the cloak, but it seems ineffectual.",
                                                 **   the user's, 2026-10-22); */
+       WB_SPENT,                                /* (The world's: a thing used up, its kind times 256, HOUSE.md's things
+                                                **   used up: "Your charcoal is worn to nothing.", 2026-10-26); */
        WB_DROP, WB_PICKS,                       /* (The hands and limbs', slice 4.1b's, every actor's: b whose, 0 the
                                                 **   character, else the actor plus 1: a thing let go of, fumbled, its
                                                 **   kind times 256 (the catalogue's), told after the blow's words (in

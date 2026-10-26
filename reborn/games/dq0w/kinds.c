@@ -96,6 +96,8 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "horn of ink", K_HAND, 1, 1, 0, 0, 0, 0, 1, "ink", MT_BONE, AP_BONE, 6 },
     { "map", K_HAND, 0, 1, 0, 0, 0, 0, 2, "map", MT_CLOTH, AP_CLOTH, 2 },          /*   a sheet drawn on, the map:
                                                 **   DUNGEON.md, the map kept, slice 4.2's) */
+    { "chalk", K_HAND | K_PLURAL, 0, 1, 0, 0, 0, 0, 1, "draw", MT_STONE, AP_STONE, 1 },   /* (A point that draws, soon
+                                                **   used up: HOUSE.md's things used up, 2026-10-26) */
 };
 
 /* How each light burns (DUNGEON.md: light; HOUSE.md's burning, slice 4.1's): its kind; how long a whole one burns
@@ -103,10 +105,21 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
 ** thick four hours, its make, its thickness and its wax more or less; a lantern's fill of oil, a pint, six hours; a
 ** handful of candle stubs half an hour); and the fuels that renew it (FU_*: none, it burns away).  Then each fuel's:
 ** its kind, how much a whole one holds, in the same tens of minutes of a light's burning (a flask of oil a lantern's
-** fill), and what it is.  A light that isn't listed (a glow, the theme's) never burns down */
+** fill), and what it is.  A light that isn't listed (a glow, the theme's) never burns down.  And the things used up as
+** they're drawn with (FU_DRAW: HOUSE.md's things used up, the user's, 2026-10-23, "A pot of ink might last a really long
+** time, as might a pencil, but a chunk of charcoal or chalk would be used up faster"), in the same tens of minutes, of
+** drawing: a stick of charcoal four hours, chalk three, a pencil twenty, a horn of ink ten, a quill thirty */
 const struct burn burns[NBURNS] = {
     { KI_TORCH, 6, FU_OIL | FU_PITCH }, { KI_CANDLE, 24, 0 }, { KI_LANTERN, 36, FU_OIL }, { KI_STUBS, 3, 0 },
-    { KI_OIL, 36, FU_OIL }, { KI_PITCH, 24, FU_PITCH }
+    { KI_OIL, 36, FU_OIL }, { KI_PITCH, 24, FU_PITCH },
+    { KI_CHARCOAL, 24, FU_DRAW }, { KI_CHALK, 18, FU_DRAW }, { KI_PENCIL, 120, FU_DRAW }, { KI_INK, 60, FU_DRAW },
+    { KI_QUILL, 180, FU_DRAW }
+};
+
+/* What breaks as it's used (slice 4.7's missiles to use, the user's, 2026-10-23: "arrows can break"), its kind and its
+** chance in a hundred, shot or thrown; a lot's one used up as a drawing thing is (dq0w.c's s_use_up, part 7's) */
+const struct snap snaps[NSNAPS] = {
+    { KI_ARROWS, 25 }
 };
 
 /* What a kind of thing affords (the plan's affordances, in the kinds' data): thrown, its reach (the short band of
@@ -125,7 +138,8 @@ const unsigned char throws[KI_COUNT] = {
     1, 0, 2, 0,                                 /* pot, straw, stubs, well */
     2, 1,                                       /* flask of oil, pot of pitch */
     0, 2,                                       /* sconce, axe */
-    0, 0, 2, 2, 1, 2, 0                         /* paper, parchment, charcoal, pencil, quill, horn of ink, map */
+    0, 0, 2, 2, 1, 2, 0,                        /* paper, parchment, charcoal, pencil, quill, horn of ink, map */
+    2                                           /* chalk */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 

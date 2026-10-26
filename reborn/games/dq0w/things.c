@@ -246,6 +246,7 @@ unsigned char wsel;
 unsigned wnot, win, wforce;
 unsigned handled;                               /* (The thing a request handled last: a count's, as each is moved) */
 unsigned csum;                                  /* (pick's: how many of those it chose from, all told) */
+unsigned chart_w[5];                            /* (The map making's things, part 26's, handy, by their keys) */
 unsigned rtime, roff;                           /* (The reach owed, part 10's: its time, the pack taken off for it, */
 unsigned char rsteps, rbody;                    /*   its steps; the main RAM's, part 35's too) */
 
@@ -816,6 +817,7 @@ void s_chart_now (void)
     hub_map (0);
     mh = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
     busy = (HUB->pcsum.limbs & LB_ARM_L ? IH_LEFT : 0) | (HUB->pcsum.limbs & LB_ARM_R ? IH_RIGHT : 0);
+    memset (chart_w, 0, sizeof chart_w);
     while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
         fetch (&rec, i);
         for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {   /* (On it, or in what it carries) */
@@ -839,6 +841,8 @@ void s_chart_now (void)
             continue;
         }
         has |= 1 << f;
+        chart_w[f] = i;                         /* (Each handy, by its key: what it draws with, used up as it draws,
+                                                **   dq0w.c's drawn_down) */
         if (!f && !sheet) {
             sheet = i;
         }
@@ -2115,10 +2119,12 @@ static void __fastcall__ word (const char* s)
 static void worn_words (void)
 {
     static const char* const life[5] = { "close to breaking", "battered", "well worn", "little worn", "as good as new" };
-    static const char* const left[3][6] = {
+    static const char* const left[4][6] = {
         { "burnt out", "nearly burnt out", "mostly burnt down", "half burnt down", "a quarter burnt down", "hardly burnt" },
         { "out of oil", "nearly out of oil", "low on oil", "half full of oil", "three-quarters full of oil", "full of oil" },
-        { "empty", "nearly empty", "a quarter full", "half full", "three-quarters full", "full" } };
+        { "empty", "nearly empty", "a quarter full", "half full", "three-quarters full", "full" },
+        { "used up", "nearly used up", "mostly used", "half used", "a little used", "hardly used" } };   /* (A thing drawn
+                                                **   with, but ink: HOUSE.md's things used up) */
     const struct burn* b;
     unsigned w;
 
@@ -2132,8 +2138,8 @@ static void worn_words (void)
     }
     if (rec.id && (b = burn_of (rec.kind)) != 0) {
         w = b->life * 10;                       /* (A whole one's minutes: the quarters left) */
-        word (left[!(lk.flags & K_LIGHT) ? 2 : rec.kind == KI_LANTERN][!rec.fuel ? 0 : rec.fuel >= w ? 5 :
-            1 + rec.fuel * 4 / w]);
+        word (left[lk.flags & K_LIGHT ? rec.kind == KI_LANTERN : (b->fuels & FU_DRAW) && rec.kind != KI_INK ? 3 : 2]
+            [!rec.fuel ? 0 : rec.fuel >= w ? 5 : 1 + rec.fuel * 4 / w]);
     }
 }
 
