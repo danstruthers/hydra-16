@@ -84,6 +84,10 @@ static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
         wk.qy = wk.py;
     }
     r->state = REQ_FREE;
+    if (r->w2) {
+        bearings_off (BO_OUT);                  /* (Knocked senseless by its own blow's hurt: its bearings astray as
+                                                **   it comes round, part 52's, slice 4.2's) */
+    }
     if (i) {
         if ((unsigned) h + i >= body) {
             wk.what = W_GONE;

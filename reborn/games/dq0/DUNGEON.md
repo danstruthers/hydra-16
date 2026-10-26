@@ -991,7 +991,8 @@ often the easier.  The numbers are HOUSE.md's (bearings underground).
   52's s_bearings, from arrive), after a walk along a passage that bent (the walk's beats count its turns: beat's
   WB_TURN), or a room crossed in the dark (felt across, not seen): one bend four steps the easier, each one more two
   the harder, a room crossed in the dark as a bend, the dark four the harder.  A straight passage and a lit room ask
-  nothing.  A way walked often is the easier (by the map's count of passings: the hook, part 52's familiar).
+  nothing.  A way walked often is the easier, by the map's count of passings of the chunk the walk ends in (world.h's
+  KEPT_KNOWN: TR_MORE's points, a trace's rule), and so often it's no test at all (part 52's familiar).
 - **What comes of it.**  A success: nothing changes (a belief already wrong stays wrong: only a landmark puts it
   right).  A marginal failure: the believed north drifts an eighth one way or the other (the referee's result: the
   bearings' d8), and the character doesn't know it.  A critical failure: a quarter, and it knows it has lost its way
@@ -1002,8 +1003,9 @@ often the easier.  The numbers are HOUSE.md's (bearings underground).
 - **What disorients.**  How the character came in, the theme's (theme.h's TM_FELL, a theme file's "start | fell"):
   come round below from a fall, its bearings are tested far the harder as the game begins, a failure leaving its
   north anywhere.  So is being knocked senseless, by whatever (a blow: the world sees the referee's summary's
-  C_UNCONSCIOUS; a harm's time out, a fall's, a trap's); a fall of ten feet or more shakes it (harm_fx's: the harder the further), a failure the walk's
-  drift.  Nothing moves the character while it's senseless yet.
+  C_UNCONSCIOUS; a harm's time out, a fall's, a trap's; a trap's gas choked on, wtrap.c's; its own blow at a thing
+  gone wrong, wblow.c's); a fall of ten feet or more shakes it (harm_fx's: the harder the further), a failure the
+  walk's drift.  Nothing moves the character while it's senseless yet.
 - **What uses the belief.**  The status line, "You turn to face ...", "You face ... already.", the dark's "You feel
   your way north.", "You search the north wall...", and the parser's compass words: "north" means the north the
   character believes in (the parser's compass made as it believes it faces, the UI's cq_cmd making it the true way

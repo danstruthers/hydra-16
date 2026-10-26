@@ -1208,9 +1208,11 @@ the game (world.dat).  Every ruleset's but the test itself (the referee's).  Eac
 - **Its steps:** one bend **four steps the easier**, each one more **two the harder** (two bends 2 easier, three none,
   four 2 harder, twelve or more 18 harder); a room crossed in the dark counts as a bend; a walk in the dark **four
   the harder** (so a dark room crossed, alone, is a test at no steps).
-- **Familiar ways the easier** (the user's, 2026-10-23): by the times the character has passed that way, **3 or more
-  two steps the easier, 10 or more four, 25 or more no test at all**.  The count is the map's (the map agent's
-  passings, the map's memory, slice 4.2): part 52's familiar is the hook, giving none till the two are joined.
+- **Familiar ways the easier** (the user's, 2026-10-23): by the map's count of passings (the map kept, below: the
+  times the character's come to see that part of the place again, four minutes or more after it last saw it), of the
+  chunk the walk ends in, and the trace's rule for them (TR_MORE: a point at 4, another at 12): **4 passings or more
+  four steps the easier, 12 or more no test at all**.  One count for the map's memory, the traces and the bearings,
+  not a second.  (Part 52's familiar, world.h's KEPT_KNOWN.)
 - **What comes of it:** a success changes nothing (a belief already wrong stays wrong: only a landmark puts it
   right); a marginal failure drifts the believed north **an eighth**, and the character doesn't know it; a critical
   failure **a quarter**, and it knows: "You've lost your bearings: you're no longer sure which way is north.", the
@@ -1231,8 +1233,8 @@ the game (world.dat).  Every ruleset's but the test itself (the referee's).  Eac
   themegen's own themes walk in, and pass a hand-written theme's start line on.
 - **What disorients it** (the user's, 2026-10-23: any moment the game moves the character without its walking):
   knocked senseless (by anything: a blow, the referee's summary's C_UNCONSCIOUS as the world sees it; a harm, a fall's,
-  a trap's, a wall run into in the dark, by its time out), its bearings tested as the start's from a fall (ten harder,
-  a failure anywhere); a fall of **ten feet or more** (a pit, a ledge jumped or fallen from, a shaft, over an edge in
+  a trap's, a wall run into in the dark, by its time out; a trap's gas choked on; its own blow at a door or a thing
+  gone wrong), its bearings tested as the start's from a fall (ten harder, a failure anywhere); a fall of **ten feet or more** (a pit, a ledge jumped or fallen from, a shaft, over an edge in
   the dark, a window's sill; a hold caught, none), **a step the harder each five feet** (ten at most), a failure the
   walk's drift.  Nothing moves the character while it's senseless yet (a robber takes things, it doesn't drag); if
   one comes, its being knocked out has done it already.  A climb, a window climbed through, stairs and ladders don't

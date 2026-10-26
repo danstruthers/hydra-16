@@ -1743,14 +1743,11 @@ static void arrive (void)
 ** quarter, and it knows (told).  What disorients it (bearings_off): come round below from a fall as the game begins
 ** (the theme's start, TM_FELL), knocked senseless (main's: whatever did it), a fall of ten feet or more (harm_fx's, part
 ** 49's): the test the harder, a failure leaving its north anywhere (a fall's, the drift).  One whose species knows
-** north (the referee's summary's northsense) is never tested, never astray.  Its own part: the main RAM's room */
-#pragma code-name (push, "SW52CODE")
-#pragma rodata-name (push, "SW52RODATA")
-
+** north (the referee's summary's northsense) is never tested, never astray.  Its own part, but for its test (the
+** main RAM's) */
 #define BEAR_OUT        10                      /* (Come round from a fall, or senseless: the steps the harder) */
-#define BEAR_FAMILIAR   25                      /* (Passed this way so often, no test: familiar's) */
-#define BEAR_KNOWN      127
-#define FAMILIAR(n)     ((n) >= BEAR_FAMILIAR ? BEAR_KNOWN : (n) >= 10 ? 4 : (n) >= 3 ? 2 : 0)
+#define BEAR_FAMILIAR   4                       /* (A way walked often, each of its passings' points: familiar's) */
+#define BEAR_KNOWN      127                     /* (So often, no test) */
 static unsigned char bsn = 0xFF, broom, bcx, bcy;   /* (The room it was in at the last move's end: 0xFF none) */
 static unsigned char bast;                      /* (btest's: astray) */
 #define W_SLOT          HUB->slot[SLOT_WORLD]   /* (The world's referee slot: a harm's request and its reply) */
@@ -1758,7 +1755,8 @@ static unsigned char bast;                      /* (btest's: astray) */
 
 /* The test, at the steps: a failure's drift an eighth (a critical failure's a quarter), its way the referee's result
 ** (the bearings' own d8 less one: odd the other way); or astray (bast), the north it believes in anywhere, by the d8
-** (the true one too, by chance).  BRG_LOST if it knows now it's lost them (a critical failure), else 0 */
+** (the true one too, by chance).  BRG_LOST if it knows now it's lost them (a critical failure), else 0 (the main
+** RAM's: part 52's bank full) */
 static unsigned char __fastcall__ btest (signed char steps)
 {
     static signed char g, k;
@@ -1781,16 +1779,22 @@ static unsigned char __fastcall__ btest (signed char steps)
     return BRG_LOST;
 }
 
+#pragma code-name (push, "SW52CODE")
+#pragma rodata-name (push, "SW52RODATA")
+
 /* The ways walked often (the user's, 2026-10-23: "familiar ways should be easier"): the steps a test about square x, y
-** of stratum sn is the easier for the times the character's passed through that part of the dungeon, n (FAMILIAR's,
-** HOUSE.md's: 3 times or more two steps, 10 four, BEAR_FAMILIAR or more no test at all, BEAR_KNOWN).  The hook for the
-** map's count of passings (the map agent's, the map's memory: to be wired to it as the two are merged); none yet */
-#pragma warn (unused-param, push, off)
+** of stratum sn is the easier for the times the character's passed through that part of the dungeon, by the map's
+** count of its chunk's passings (the senses', as it looks about: world.h's KEPT_KNOWN), its points TR_MORE's, a
+** trace's rule (HOUSE.md's: 4 passings or more BEAR_FAMILIAR steps the easier, 12 or more no test at all, BEAR_KNOWN) */
 static signed char __fastcall__ familiar (unsigned char sn, unsigned x, unsigned y)
 {
-    return FAMILIAR (0);
+    static unsigned char n;
+
+    n = KEPT_KNOWN (sn, x, y);
+    hub_map (0);
+    n = TR_MORE (n);
+    return n > 1 ? BEAR_KNOWN : n * BEAR_FAMILIAR;
 }
-#pragma warn (unused-param, pop)
 
 /* A move's end (arrive's: w its how, A_*, the first time there times 256): its bearings, by the way it came; the news
 ** (BRG_*, 0 none) for arrive to tell after the arrival */

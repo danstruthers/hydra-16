@@ -2174,6 +2174,10 @@ function dq0MapLayers(s) {
   });
   return out;
 }
+// The place the character's in come to see again n times (its passings, the map's: the torch put out five minutes,
+// lit again; dq0bearing's)
+const passings = n => Array(n).fill(['douse the torch', 'wait 5 minutes', 'light the torch']).flat();
+
 // A dq0 test's lines typed, each at its prompt (rc's "% ", the game's "> ")
 const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
 
@@ -5122,8 +5126,8 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0bearing', what: 'Dingus Quest Zero\'s bearings underground (slice 4.2, the user\'s, 2026-10-16: "Dwarves or other denizens that live underground don\'t have this problem, but humans would, so instead of direction heading, a check would need to be made"; 2026-10-23: a start below, come round from a fall, disoriented; HOUSE.md\'s bearings underground), by the hub\'s bearings (pc_skew, pc_lost), the referee\'s P_BEARING tests and the words: at seed 3 a human of little Awareness (hmchar\'s file, its Awareness 5) walks the passage east of the way in, which bends twice: tested, failed, its north drifted an eighth unknown to it (the status line\'s "facing SE", truly east); "turn left" truly north, told as it believes ("You turn to face northeast."); "face north" its believed north (truly northwest), "face northwest" truly west; forward back along the passage into the kitchen it began in, a landmark, its bearings set right ("You know this place: your bearings come back to you.", no test); east again and back twice, the third time east a critical failure: a quarter off and known ("You\'ve lost your bearings ...", "facing S?"), the status command\'s "Facing: south, you think"; kept with the game (dq0 -d) and carried on with it; a dwarf (hmchar -p dwarf, its Awareness as poor) the same way never tested, "You turn to face north."; a theme whose character comes round below from a fall (a hand-written theme\'s "start | fell", themegen\'s to fill out): the human tested as it begins (ten steps the harder), its north astray, the dwarf not; knocked senseless by the hand-written theme\'s rats (dq0senseless\'s), tested as it\'s out; and the kobold warren (seed 517: its story\'s fall through a ruin\'s floor, its start fallen in), tested as it begins and again as it jumps down its gatehouse\'s ledge, ten feet',
-      bearings: true, init: 't_rc', cycles: 4000e6,
+      name: 'dq0bearing', what: 'Dingus Quest Zero\'s bearings underground (slice 4.2, the user\'s, 2026-10-16: "Dwarves or other denizens that live underground don\'t have this problem, but humans would, so instead of direction heading, a check would need to be made"; 2026-10-23: a start below, come round from a fall, disoriented; HOUSE.md\'s bearings underground), by the hub\'s bearings (pc_skew, pc_lost), the referee\'s P_BEARING tests and the words: at seed 3 a human of little Awareness (hmchar\'s file, its Awareness 5) walks the passage east of the way in, which bends twice: tested, failed, its north drifted an eighth unknown to it (the status line\'s "facing SE", truly east); "turn left" truly north, told as it believes ("You turn to face northeast."); "face north" its believed north (truly northwest), "face northwest" truly west; forward back along the passage into the kitchen it began in, a landmark, its bearings set right ("You know this place: your bearings come back to you.", no test); east again and back twice, the third time east a critical failure: a quarter off and known ("You\'ve lost your bearings ...", "facing S?"), the status command\'s "Facing: south, you think"; kept with the game (dq0 -d) and carried on with it; a dwarf (hmchar -p dwarf, its Awareness as poor) the same way never tested, "You turn to face north."; a theme whose character comes round below from a fall (a hand-written theme\'s "start | fell", themegen\'s to fill out): the human tested as it begins (ten steps the harder), its north astray, the dwarf not; knocked senseless by the hand-written theme\'s rats (dq0senseless\'s), tested as it\'s out; and the kobold warren (seed 517: its story\'s fall through a ruin\'s floor, its start fallen in), tested as it begins and again as it jumps down its gatehouse\'s ledge, ten feet; and a way walked often the easier (the user\'s, 2026-10-23: by the map\'s passings, the senses\' count of the times it\'s come to see a chunk again; its torch put out five minutes and lit again a passing): the bending passage east tested at 2 steps new, 6 with its end come to four times, untested at twelve',
+      bearings: true, init: 't_rc', cycles: 5000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml awa 5 >> /ram/c.hm',
         'hmchar -q -s 5 -p dwarf -o /ram/d.hm', 'echo ml awa 5 >> /ram/d.hm',
         'dq0 -p t -s 3 -c /ram/c.hm', 'e', 'turn left', 'face north', 'face northwest', 'f', 'e', 'turn around', 'f', 'e', 'turn around', 'f', 'e', 'status',
@@ -5135,6 +5139,7 @@ module.exports = {
         'cp /ram/c.hm /ram/s.hm', 'echo ml una 5 >> /ram/s.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
         'dq0 -p t -s 3 -c /ram/s.hm -T -d /ram/g', 'defend none', ...Array(12).fill('wait'), 'quit',
         'dq0 -p t -s 517 -c /ram/c.hm', 'turn half left', 'f', 'turn half right', 'f', 'u', 'u', 'turn around', 'jump down', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -d /ram/f', 'e', ...passings(3), 'turn around', 'f', 'e', ...passings(8), 'turn around', 'f', 'e', 'quit',
         'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -5185,7 +5190,13 @@ module.exports = {
         const w = T.of('dq0 -p t -s 517 -c /ram/c.hm'), j = T.after(w, 'jump down');
         if (tests(w).length !== 1) f.push('the warren\'s start, fallen in: not tested (' + JSON.stringify(tests(w)) + ')');
         if (tests(j).length !== 1) f.push('the jump down 10 feet: not tested (' + JSON.stringify(tests(j)) + ')');
-        this.notes = [e1, e2, e3, e4, h, ...(out1 ? [out1] : []), w, j].map(t => t.line + ': ' + JSON.stringify(tests(t).map(q => [q.grade, q.result])) + ' ' + (t.after && [t.after.pc.skew, t.after.pc.lost]));
+        // Familiar ways (the map's passings of the passage's end, its chunk's: 4 four steps the easier, 12 untested)
+        const v = T.of('dq0 -p t -s 3 -c /ram/c.hm -d /ram/f'), v1 = T.after(v, 'e'), v2 = T.after(T.after(v1, 'f'), 'e');
+        const v3 = T.after(T.after(v2, 'f'), 'e');
+        if (tests(v1).length !== 1 || tests(v1)[0].steps !== 2) f.push('the passage east, new: not tested at 2 steps (' + JSON.stringify(tests(v1)) + ')');
+        if (tests(v2).length !== 1 || tests(v2)[0].steps !== 6) f.push('the passage east, its end come to 4 times: not tested at 6 steps (' + JSON.stringify(tests(v2)) + ')');
+        if (tests(v3).length) f.push('the passage east, its end come to 12 times: tested (' + JSON.stringify(tests(v3)) + ')');
+        this.notes = [e1, e2, e3, e4, h, ...(out1 ? [out1] : []), w, j, v1, v2, v3].map(t => t.line + ': ' + JSON.stringify(tests(t).map(q => [q.grade, q.result])) + ' ' + (t.after && [t.after.pc.skew, t.after.pc.lost]));
         return f;
       },
       sdcard: true
