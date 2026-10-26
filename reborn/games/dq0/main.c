@@ -1602,6 +1602,25 @@ void s_cq_drop (void)
     cq_st = 0;
 }
 
+/* What waited for the character to be free (main's, seldom: part 2's, the main RAM's room, slice 4.2's) */
+void s_when_free (void)
+{
+    if (rebar) {                                /* (A door barred: its bar set in its brackets, on the square the
+                                                **   character stands on, beside it; what it carries anew) */
+        rebar = 0;
+        HUB->ireq.to = 1;
+        HUB->ireq.x = HUB->pc_x;
+        HUB->ireq.y = HUB->pc_y;
+        HUB->ireq.item = HUB->pc_stratum;
+        things (IO_BAR, "");
+        to_hand ();
+    }
+    if (pending[0]) {                           /* (Lifted out, or come to: now taken up) */
+        take (pending);
+        pending[0] = 0;
+    }
+}
+
 /* A command, the parser's, carried out: by its action (actions.h's VB_*), the verb's own value its aux (the things'
 ** request, a door's work, the denizens' sway: commands.verbs') */
 void __fastcall__ s_command (char* l)
@@ -2153,19 +2172,8 @@ int main (int argc, char* argv[])
             shown = hy_ticks ();
             status ();
         }
-        if (!busy && rebar) {                   /* (A door barred: its bar set in its brackets, on the square the
-                                                **   character stands on, beside it; what it carries anew) */
-            rebar = 0;
-            HUB->ireq.to = 1;
-            HUB->ireq.x = HUB->pc_x;
-            HUB->ireq.y = HUB->pc_y;
-            HUB->ireq.item = HUB->pc_stratum;
-            things (IO_BAR, "");
-            to_hand ();
-        }
-        if (!busy && pending[0]) {              /* (Lifted out, or come to: now taken up) */
-            take (pending);
-            pending[0] = 0;
+        if (!busy && (rebar || pending[0])) {
+            when_free ();                       /* (A door barred, a thing lifted out: part 2's) */
         }
         if (!busy && (reach & 1)) {
             ++reach;                            /* (Walked over to its thing, or its timed work's time up: the command

@@ -228,6 +228,7 @@ ovl_out:
             SWFN        cq_post, 2
             SWFN        cq_cmd, 2
             SWFN        cq_drop, 2
+            SWFN        when_free, 2
             SWFN        take, 2
             SWFN        took_up, 2
             SWFN        map, 3

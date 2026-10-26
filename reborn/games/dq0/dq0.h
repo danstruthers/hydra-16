@@ -340,6 +340,8 @@ signed char __fastcall__ cq_cmd (const char* l);   /* Part 2 (main.c): the comma
                                                 **   character faces now: the grammar's verdict (1 a command; 0 not
                                                 **   one; -1 too long; -2 none, the game ending) */
 void cq_drop (void);                            /* Part 2 (main.c): the line posted seen to (its reply waited for) */
+void when_free (void);                          /* Part 2 (main.c): what waited for the character to be free (a door
+                                                **   barred, a thing lifted out) */
 extern unsigned char cq_again;                  /* (The line changed since it was posted: names_subst's) */
 void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by its name */
 extern char where_w[34];                        /* (Where in its room a thing lies: part 8's words) */
