@@ -617,6 +617,18 @@ arrows; its qty how many, its weight each one's times it) is split for part of i
 where it goes; fewer there than asked, as many as there are, told.  The inventory, the look, a look in, tell things
 alike together ("two sacks"), and those on one square in one sentence.
 
+**Reach, and things used up** (2026-10-26, the user's: "Handy would be readily available, so in a backpack that is
+being worn is not as readily available as one in a belt pouch"; HOUSE.md's reach, handy tools and things used up):
+how readily a thing comes to hand is where it is, one rule for every taking out, putting away, look in, search and
+tool's use, every actor's (the character's, a robber's rifling it): in hand at once; on the body (worn, hung from a
+belt, in what's open to the hand: a pouch, a quiver) or lying within reach a quick draw; each container's level more
+(held, set down, in another); a pack worn on the back (its kind's, KF_BACK) taken off and put on again; engaged, a
+round a step (the book's grope); dropping, or a pack shrugged off, no time.  The time owed is the item store's, added
+to the character's next spell of time (things.c's reach, dq0w.c's pextra).  A tool is handy in hand or on the body:
+mapping as it goes draws only with its things handy.  What's used up is each kind's data, as a light's fuel: the
+things drawn with (the catalogue's burns, FU_DRAW: charcoal, chalk, a pencil, ink, a quill) a drawing's minutes off
+each, gone and told when spent; a lot's one used up, and a missile's chance to break (slice 4.7's to use).
+
 An item is **found** through the character's senses, as everything else is: only on a square it sees now, lit;
 noticed by the referee's test of its sight (rs.h: P_NOTICE_SIGHT, or P_SEARCH when it searches), the steps from the
 distance, the light, the item's size, and how it's **hidden**: by nothing, or concealed (its hide, in steps: found only by

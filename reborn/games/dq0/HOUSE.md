@@ -631,7 +631,8 @@ climb's test to hold on).
   walked over to), holding one (drawing, wielding, swapping a weapon), stowing it, putting it in or on another, or
   taking it out of one, while the character's in an enemy's zone, is a test of its hands (the referee's P_GROPE:
   HarnMaster's Dexterity times 5); failed, nothing's done and the round's wasted ("You fumble for the sword.").
-  Wearing and taking off, dropping, lighting and putting out aren't gropes.
+  Wearing and taking off, dropping, lighting and putting out aren't gropes.  Its time the reach's (2026-10-26, Reach,
+  handy tools and things used up: a round a step, the readiest a round, a worn pack's off and on a round each).
 - **Going places, as built:** the place's square worked out from the room's floor as the character faces (the floor
   in thirds for the centre, its edge rows for a side or a corner, the nearer end of each when a corner's not said);
   where it's rock (a cave's), the nearest square the way reaches; "You're there already." if it is.  The search's
@@ -1213,11 +1214,13 @@ dq0harn's, and the drawing's test.)*
 - **A disorienting moment** (a fall, a blow or a trap's gas that knocks it senseless, coming round) leaves what it kept
   as it was: the bearings take it (agent bearing's believed north, which the map's compass shows), not the memory.
 - **The things to draw a map with** (the catalogue's, by their keys, things.c's chart_now): a sheet to draw on (some
-  paper, some parchment) or its map, and a point that draws (some charcoal, a pencil) or a quill and a horn of ink.
-  "Handy and equipped" (the user's): carried anywhere about it (a hand, its pack, its belt), and a hand to draw with,
+  paper, some parchment) or its map, and a point that draws (some charcoal, some chalk, a pencil) or a quill and a horn
+  of ink.  "Handy and equipped" (the user's): handy (the reach's rule, 2026-10-26, below: in a hand, or on the body, in
+  nothing that isn't open to the hand: a pouch on its belt yes, its pack worn or a sack no), and a hand to draw with,
   free or holding one of them (its other may hold its light, not a sword in both); its arm not useless; and light to
-  draw by, its own square lit.  Without them, mapping as it goes keeps the map in mind, twice as well.  *(For review:
-  the hand and the light.)*
+  draw by, its own square lit.  Without them, mapping as it goes keeps the map in mind, twice as well; carried but not
+  handy, told once as it looks about ("Your drawing things are in your backpack."), till they're handy or it stops
+  mapping.  A map carried anywhere is shown.  *(For review: the hand and the light.)*
 - **A map begun**: mapping as it goes with them and no map, its first sheet is made the map ("You begin a map."): an
   item, "map", dropped, lost or stolen like anything else.  What it draws is what it sees (each square marked as it's
   seen now, a walk's squares in the light too), each chunk's drawing one map's (a newer map drawn over it there wipes
@@ -1237,9 +1240,8 @@ dq0harn's, and the drawing's test.)*
   dq0harn.c's draw_learn: the book's rule, Drawing 40 or more, opened at Drawing's mastery); a character's sheet may
   carry it (the referee's own skill, its file's "ml 91 N").  hmchar's Cartographer/Artist (the book's Drawing/4) could
   take it as its specialty at Drawing's mastery: not built (hmchar's main RAM).  *(For review: every part of it.)*
-- **What the materials cost to use**: not built yet.  Proposed: drawn as a light burns, a minute of mapping on paper
-  a minute of the point's life: a stick of charcoal four hours, a pencil twenty, a horn of ink ten (a quill lasting as
-  long as its ink); a sheet holds a stratum's map whole (the map's sheets its own).  *(For the user's choice.)*
+- **What the materials cost to use**: built 2026-10-26, the reach's things used up (below): each drawing two minutes
+  of the point's life, or the quill's and the ink's; a sheet holds a stratum's map whole (the map's sheets its own).
 - **The kit carries none of them** (dq0 -k paper,charcoal gives them, the tests').  Proposed: a sheet of paper and a
   stick of charcoal in the pack (it changes every game's dice for the things made after the kit: the kit's last).
   None are in the dungeon's stock yet either (a solar's, a chapel's would be the places: dq0m/uses.c).  *(For the
@@ -1256,7 +1258,63 @@ dq0harn's, and the drawing's test.)*
   on its map brown, the @ bright cyan, the compass cyan; the glyphs as without colour, so the map reads either way.
   "colour off" (or "no colours") plain letters, "colour on" again, kept with the game (game.dat).  (look.c's s_map.)
 - **The catalogue's** (kinds.c's): paper and parchment a sheet's (weight nothing and a quarter pound, worth 2 and 4
-  pennies), charcoal (1), a pencil (3), a quill (1), a horn of ink (a quarter pound, 6), the map (a sheet's).
+  pennies), charcoal (1), a pencil (3), a quill (1), a horn of ink (a quarter pound, 6), the map (a sheet's); chalk
+  (1, 2026-10-26).
+
+## Reach, handy tools and things used up *(2026-10-26: drafted for the user to review)*
+
+The user's (DECISIONS.md's outfits, reach and things used up, 2026-10-23): handy is readily available, a worn pack less
+so than a belt pouch; each container deeper longer; a pack on the ground or in hand reached into without taking it off;
+a worn pack searched taken off and put back on, each its time; a pack shrugged off or dropped before a fight at no
+time; charcoal and chalk used up soon, a pencil and a pot of ink long.  The book's own rule is the referee's: the
+Grope (Combat 7: drawing or changing a weapon, retrieving an item from the ground, a turn; its Dexterity test,
+P_GROPE, Skills 21).  What the house adds, every number the house's:
+
+- **Reach, one rule for every taking out, putting away, look inside, search and tool's use** *(every ruleset's, every
+  actor's)*: a thing's reach is by where it is, its levels out to whoever carries it.  **In hand**: none.  **On the
+  body** (worn, hung from a belt, in what's open to the hand: anything that isn't a container, a belt or a surface; a
+  container that hangs from a belt, a pouch, a quiver, a sheath; anything worn that isn't a pack on the back) **or
+  lying within reach** (on the floor, on a table): a quick draw, no time more than the handling's own (a second to take
+  in hand, two to put away).  **A container's level** (held, set down, in another: a sack, a chest, a pack in hand or on
+  the ground): two seconds more each, so a thing in a sack in a chest four.  **A pack worn on the back** (the
+  catalogue's: a kind worn on the back, KF_BACK, the backpack's; not names in code): taken off first and put on again
+  after, ten seconds more, and its level's two, once a handling however often it's reached into ("You take off your
+  backpack for it, and put it on again.", after the handling's words; a thing taken up into it or put down from it
+  quietly).  So a thing from a belt pouch a second, from the worn pack thirteen, from a sack in the worn pack fifteen,
+  from a pack on the ground four; a thing taken up into the worn pack fourteen.  (things.c's part 10: reach_from,
+  reach_to, its time owed the character's next spell, dq0w.c's pextra.)  *(For review: every number.)*
+- **"take off the pack" leaves it off** (in a hand: none free, refused) till "put on the pack" (five
+  seconds each, as any worn thing's).  "the pack" names the backpack (the chooser's: a name of one word's end, four
+  letters or more: "pack", "skin" a waterskin), "shrug off" drops (the grammar's, 2026-10-26).
+- **Dropping takes no time** (the book's: discarded freely, no grope): a thing in hand let fall, a pack on the back
+  shrugged off; a thing in a pack or a pouch got out first (its reach); worn armour taken off first (a doff's five
+  seconds).
+- **Looking in a thing, or searching it, is its reach**: a look in the worn pack takes it off and puts it on again
+  (fifteen seconds, the look's three with it), searching it a minute and twelve; a look in a sack held five
+  seconds.  "look at" a thing isn't (the plain look).
+- **Engaged, a round a step** (the book's grope, a turn): the readiest (on the body, lying within reach) a round; each
+  container's level a round more; a pack on the back taken off a round, and put on again a round (so a thing stowed in
+  the worn pack in a fight three rounds: drop the pack first, at no time); a thing in hand none.  The grope's test once,
+  as before (failed, the round wasted).  Dropping no round.  (part 10's reach_done, by part 24's engagement.)
+- **A robber's** the same (every actor's): its rifling the helpless character a round a step, its round's own the
+  first, a pack taken off and not put on again (wfight.c's den_rob).  A denizen's weapon taken up again, its turn, as
+  before.
+- **A tool's use takes its reach first** (handy tools): lockpicks for a lock picked (a chest's, a door's), a pick or a
+  shovel for a dig (its first spell), a tinderbox for a light lit (none, a flame to hand), a light filled and its fuel,
+  a thing thrown, a thing opened or closed, a blow's weapon taken in hand first (its hold); by the catalogue's tool keys,
+  the first carried (part 4's tool_reach).  A rope's use has none yet: nothing uses a rope.
+- **Handy** is in hand or on the body (the reach's rule: in nothing that isn't open to the hand); mapping as it goes
+  wants its things handy (the map kept, above).
+- **Things used up, one way for every kind, by its data** (the catalogue's burns, as a light's fuel: the item's fuel its
+  minutes left, its whole life the kind's, FU_DRAW's): drawing with them, a stick of charcoal four hours, chalk three, a
+  pencil twenty, a horn of ink ten, a quill thirty; each drawing (a room come into, a way walked, mapping on paper) two
+  minutes off the point it draws with, else off its quill and its ink.  Spent, gone, told ("Your charcoal is worn to
+  nothing.", "Your horn of ink is dry.", "Your quill is worn out."); how much is left a closer look's ("half used").
+  A sheet's room no limit (a stratum's map on one).  (dq0w.c's part 7: s_use_up, drawn_down.)  *(For review: every
+  number.)*
+- **Missiles' use, for slice 4.7**: a lot's one used up (s_use_up by none: its qty), and what breaks as it's used, its
+  chance in a hundred, the catalogue's (kinds.c's snaps: arrows 25); a wild miss lost and their taking up again slice
+  4.7's (the user's, DECISIONS.md).
 
 ## Decided, not yet built
 
