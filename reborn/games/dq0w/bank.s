@@ -24,7 +24,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
 
             .bss
-_ovbank:    .res        19          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+_ovbank:    .res        20          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
                                     ;   world's own banks (its paging's tables: ipage.c's; the ways across a room;
                                     ;   the traces' store, two: wtrace.c's)
 ova:        .res        1           ; (.A and .X kept through a stub)
@@ -97,7 +97,7 @@ go:
             SWPART      13, 8               ; The item store's rarer work: begun, kept, the kit, a chunk's things
             SWPART      14, 6               ; The denizens' bodies: their intents carried out (wbody.c)
             SWPART      15, 14              ; The blows, the bleeding (wfight.c)
-            SWPART      16, 1               ; The game's own rules: the puzzle judged, a thing walked to (wgame.c)
+            SWPART      16, 16              ; The game's own rules: the puzzle judged, a thing walked to (wgame.c)
             SWPART      17, 6               ; The things' files: their chunks paged (ipage.c)
             SWPART      18, 7               ; The change records' files, the save's stamps (wfile.c)
             SWPART      19, 8               ; The game's files begun, the item store kept (wfile.c); a hole dug kept
@@ -127,7 +127,7 @@ go:
             SWPART      42, 2               ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 10              ; A walk in the dark set out on: its way felt, a thing stumbled over
             SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
-            SWPART      45, 3               ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
+            SWPART      45, 16              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
             SWPART      46, 7               ; A search's thing, for or on; what a search turns up (things.c)
             SWPART      47, 13              ; What's on a thing or in it, searched (things.c)
             SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
@@ -135,8 +135,8 @@ go:
             SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
             SWPART      50, 13              ; The legs: getting up, a move's start prone, how fast (dq0w.c's)
             SWPART      51, 8               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c)
-            SWPART      52, 3               ; The character's bearings underground (dq0w.c's: slice 4.2's)
-            SWPART      53, 2               ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
+            SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
+            SWPART      53, 16              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
 
             SWFN        work, 48
             SWFN        worked, 48
