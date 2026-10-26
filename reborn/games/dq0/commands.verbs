@@ -212,6 +212,7 @@ take off = doff
 put on = don
 put down = drop
 set down = drop
+shrug off = drop                            # (new, 2026-10-26: a pack shrugged off, let fall at no time, HOUSE.md's reach)
 put away = stow
 where is = find
 where am = where

@@ -186,10 +186,10 @@
 <TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of" | "into" | "onto" | "past" | "through"
 <ALONG>      ::= "up" | "down" | "along" | "across"   (* up or down a stairway or a ladder; along a passage *)
 <GET>        ::= "get" | "take" | "pick up" | "pick"
-<DROP>       ::= "drop" | "put down"
+<DROP>       ::= "drop" | "put down" | "shrug off"
 <PUT>        ::= "put" | "place"
 <USE>        ::= "use" | "make use of"
-<EQUIP>      ::= "equip"
+<EQUIP>      ::= "equip" | "put on"
 <UNEQUIP>    ::= "doff" | "take off" | "put away"
 <ATTACK>     ::= "fight" | "slash" | "bash" | "stab" | "punch" | "kick" | "bite" | "headbutt" | "elbow" | "knee" | "slap" | "butt"
 <GRAPPLE>    ::= "grapple" | "wrestle" | "tackle" | "pin" | "choke"

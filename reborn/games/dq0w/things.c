@@ -975,10 +975,12 @@ static unsigned char __fastcall__ word_of4 (const char* k, const char* w, unsign
 
 static unsigned char __fastcall__ named4 (const char* k, const char* w)
 {
-    unsigned char n = strlen (w);
+    unsigned char n = strlen (w), m = strlen (k);
 
     return word_of4 (k, w, n) || (n > 2 && w[n - 1] == 's' && (word_of4 (k, w, n - 1) ||
-        (w[n - 2] == 'e' && word_of4 (k, w, n - 2))));
+        (w[n - 2] == 'e' && word_of4 (k, w, n - 2)))) || (n > 3 && m > n && !strcmp (k + m - n, w));    /* (Or the end
+                                                **   of a name of one word and another: "pack" a backpack, "skin" a
+                                                **   waterskin, 2026-10-26) */
 }
 
 /* The thing in rec (fetched) named so: by its kind's name (named's), or by the name the character gave it (the UI's
