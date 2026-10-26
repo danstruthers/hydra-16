@@ -1091,3 +1091,21 @@ other inhabitants of the dungeon."  So the outfits are every actor's: each deniz
 guard, a wanderer) its gear on its body, its other belongings where it sleeps where its mates can be trusted or a
 chest locks, a minion's little more than its trade's (weapons, armour, a few coins, a trinket; no food or water but
 a wanderer's), the more intelligent peoples' more of real value; first a plan, for the user to see.
+
+The plans written (2026-10-26: F:/.claude/hydra-2/outfits/outfits.md, denizens.md, kinds.md, denizens-kinds.md, outside
+the repository), the user's answers to their questions:
+1. The universal kit comes out of the family's money, strictly: a poor character may go without some of it.
+2. The family wealth rolled at the character's making, 25/50/25 poor, average, rich, nudged by estrangement, kept in
+   its file.
+3. A soldier brings its unit's weapons and armour, free.
+4. A knight's lance and horse are left at the dungeon's mouth.
+5. A cleric: the book's equipment, the universal kit from its temple, weapons and shields for the fighting churches
+   (Agrik, Larani, Sarajin).
+6. "Some kit should be generated when denizens are created (weapons, armor) but others (personal items) can wait
+   until first encountered."
+7. A denizen's armour only what it wears (the fixed numbers gone).
+8. Some denizens unready now, before slice 4.6: weapons sheathed or set down, a turn to ready them.
+9. Coins for all folk: elves and kobolds too (silver pennies; a dwarf's gold crown as proposed).
+10. A key opens its own lock, no test.
+11. "Please use the denizens from the HarnWorld Bestiary, and include Khuzdul (dwarves), the Sindarin (elves),
+   Humans, and Gargun (or all types)."
