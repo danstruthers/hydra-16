@@ -23,7 +23,7 @@ typedef char kinds_fit[KI_COUNT <= KI_THEME ? 1 : -1];   /* (The theme's after t
 const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, theme.h: the UI's, as it starts) */
     { "", 0 },
     { "torch", K_LIGHT | K_HAND, 4, 2, 0, 0, 0, 4, 3, "torch", MT_WOOD, AP_WOOD, 1 },
-    { "backpack", K_CONTAINER | K_WEAR, 8, 20, 32, 160, 0, 0, 5, "", MT_LEATHER, AP_HIDE, 24, SS | KF_LID },
+    { "backpack", K_CONTAINER | K_WEAR, 8, 20, 32, 160, 0, 0, 5, "", MT_LEATHER, AP_HIDE, 24, SS | KF_LID, KF_BACK },
     { "belt", K_BELT | K_WEAR, 2, 1, 0, 0, 4, 0, 2, "", MT_LEATHER, AP_HIDE, 6 },
     { "pouch", K_CONTAINER | K_HANG, 1, 1, 2, 16, 0, 0, 1, "", MT_LEATHER, AP_HIDE, 3, SS | KF_TIE },
     { "dagger", K_HAND | K_HANG, 4, 1, 0, 0, 0, 0, 2, "knife", MT_IRON, AP_WEAPON, 60 },

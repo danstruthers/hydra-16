@@ -246,6 +246,8 @@ unsigned char wsel;
 unsigned wnot, win, wforce;
 unsigned handled;                               /* (The thing a request handled last: a count's, as each is moved) */
 unsigned csum;                                  /* (pick's: how many of those it chose from, all told) */
+unsigned rtime, roff;                           /* (The reach owed, part 10's: its time, the pack taken off for it, */
+unsigned char rsteps, rbody;                    /*   its steps; the main RAM's, part 35's too) */
 
 /* The request, copied (serve's), and what its handling shares (the hands, the pack, the belt: about's; the last put
 ** down; how far the thing named is, seen_named's; out of reach, at_hand's; the things in a container, bulk_in's; the
@@ -425,6 +427,7 @@ static void __fastcall__ place (unsigned n, unsigned char where, unsigned x, uns
 /* Thing n carried: into the pack if it fits, else in a hand, the one that suits it (part 48's: hand first, the other
 ** way about): 1 in the pack, 2 in a hand, 0 neither (full) */
 unsigned char __fastcall__ hand_free (unsigned n);
+void __fastcall__ s_reach_to (unsigned c);
 unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 {
     unsigned char h;
@@ -433,6 +436,7 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
     h = hand_free (n);
     if ((!hand_first || !h) && pack && !fits (n, pack)) {
         place (n, IW_ITEM, pack, 0);
+        s_reach_to (pack);                      /* (Put away: its reach, HOUSE.md's) */
         return 1;
     }
     if (h) {
@@ -442,6 +446,147 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
     }
     return 0;
 }
+
+/* ---- The reach (HOUSE.md's: the user's, 2026-10-23, "Handy would be readily available, so in a backpack that is being
+** worn is not as readily available as one in a belt pouch"): how readily a thing comes to hand, by where it is, for
+** every taking out, putting away, look inside, search and tool's use, every actor's.  In hand, at once; on the body
+** (worn, hung from a belt, in what's open to the hand: open_hand's) or lying within reach, a quick draw, no time more
+** than the handling's own; in a container (held, set down, in another), R_IN a level; in a pack worn on the back,
+** taken off first and put on again after, R_OFFON and its level, once a handling however often it's reached into.
+** Engaged, a round a step (the book's grope, a turn: the readiest a turn, each level deeper a turn more, a pack's
+** taking off and its putting on again a turn each).  What's owed (rtime, rsteps, rbody) is added to the character's
+** next spell of time as the handling's done (reach_done: dq0w.c's busy, its pextra) */
+#define R_IN            20                      /* (Tenths: a container's level, reached into) */
+#define R_OFFON         100                     /* (A pack on the back taken off, and put on again) */
+unsigned char __fastcall__ zone_step (unsigned ox, unsigned oy, unsigned x, unsigned y);  /* (dq0w.c's part 24) */
+
+#pragma static-locals (push, on)
+
+/* What reaching into container c is (rec its record, copied: what holds it, lw and lx): 0 open to the hand, a quick
+** draw (not a container: a belt, a surface; one that hangs from a belt, a pouch, a quiver, a sheath; one worn, but a
+** pack on the back), 1 a container's level (held, set down, in another; or closed), 2 a pack on the back (the
+** catalogue's KF_BACK: off, reached into, on again) */
+static unsigned char lw;
+static unsigned lx;
+static unsigned char __fastcall__ level_of (unsigned c)
+{
+    static const struct kind* k;
+    static unsigned char f;
+
+    fetch (&rec, c);
+    lw = rec.where;
+    lx = rec.x;
+    k = kind_of (rec.kind);
+    f = k->flags;
+    if (rec.shut & IS_CLOSED) {
+        return 1;
+    }
+    if (!(f & K_CONTAINER) || (f & K_HANG)) {
+        return 0;
+    }
+    return !(rec.flags & I_WORN) ? 1 : k->form & KF_BACK ? 2 : 0;
+}
+
+/* Whether thing i is handy (HOUSE.md's handy tools: in hand, or on the body, in nothing that isn't open to the hand):
+** 0 if it is, else the outermost thing it's in that isn't (a pack worn, a sack: part 26's map making's words) */
+unsigned __fastcall__ s_handy (unsigned i)
+{
+    static unsigned c;
+
+    for (c = 0; fetch (&rec, i), rec.where == IW_ITEM; ) {
+        if (level_of (i = rec.x)) {
+            c = i;
+        }
+    }
+    return c;
+}
+
+/* Container c reached into (a thing put in it, or got out of it, looked for in it), and what holds it, out to whoever
+** has it or where it lies */
+void __fastcall__ s_reach_to (unsigned c)
+{
+    static unsigned char l;
+
+    for (;;) {
+        if (!(l = level_of (c))) {
+            rbody = 1;
+        } else if (l == 2) {
+            if (roff != c) {                    /* (A pack on the back: off, reached into, on again, once) */
+                roff = c;
+                rtime += R_OFFON + R_IN;
+                rsteps += 3;
+            }
+            return;
+        } else {
+            rtime += R_IN;
+            ++rsteps;
+        }
+        if (lw != IW_ITEM) {
+            return;
+        }
+        c = lx;
+    }
+}
+
+/* Thing n got out, to hand (a hand's, held, at once; worn, or lying within reach, a quick draw) */
+void __fastcall__ s_reach_from (unsigned n)
+{
+    fetch (&rec, n);
+    if (rec.where == IW_ITEM) {
+        s_reach_to (rec.x);
+    } else if (!(rec.flags & I_HELD)) {
+        rbody = 1;
+    }
+}
+
+/* What's owed, done: added to the character's next spell of time (engaged, a round a step: zone_step's), and, said, a
+** pack taken off for it told ("You take off your backpack for it, and put it on again."); then none owed */
+static void rclear (void)
+{
+    rtime = roff = 0;
+    rsteps = rbody = 0;
+}
+
+void __fastcall__ s_reach_done (unsigned char said)
+{
+    static unsigned char s;
+
+    hub_map (0);
+    if ((s = rsteps + rbody) != 0 && zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
+        hub_map (0);
+        rtime = s * HUB->round;
+    }
+    pextra += rtime;
+    if (roff && said) {
+        put (" You take off your ");
+        put (kind_at (roff)->name);
+        put (" for it, and put it on again.");
+    }
+    rclear ();
+}
+
+/* A flame to hand (IO_LIGHT's, the catalogue's bank's light; part 10's, its room): a thing lit, carried or within
+** reach; or a tinderbox carried, its reach the lighting's (HOUSE.md's handy tools): 1, or 0 */
+unsigned char s_flame (void)
+{
+    static unsigned i, t;
+
+    for (i = t = 0; (i = items (i, IN_SQUARE | IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0; ) {
+        if (ip->flags & I_LIT) {
+            if (s_on_pc (i) || s_in_reach (i)) {
+                return 1;
+            }
+        } else if (!t && s_on_pc (i) && !strcmp (kind_at (i)->tool, "tinder")) {
+            t = i;
+        }
+    }
+    if (t) {
+        s_reach_from (t);
+    }
+    return t != 0;
+}
+
+#pragma static-locals (pop)
 
 /* ---- The tools: the keys of all the character carries (anywhere on it: a skill used, the one that suits takes
 ** itself out), into the hub's things_text, each after its mark (held: < in the left hand, > the right, * both; + worn;
@@ -532,6 +677,7 @@ unsigned char s_serve (void)
     unsigned char changed = 0, k;
     unsigned n;
 
+    rclear ();                                  /* (No reach owed yet) */
     hub_map (0);
     memcpy (&iq, &HUB->ireq, sizeof iq);
     iq.result = IR_OK;
@@ -603,7 +749,10 @@ unsigned char s_serve (void)
                                                 **   wasted, nothing done, its words) */
             took = HUB->round;
         } else if (k >= IO_STOW && k <= IO_TAKE) {
-            iq.result = moved (k);              /* (Stowed, put, taken from: one, or as many as it says) */
+            if ((iq.result = moved (k)) == IR_OK && k != IO_TAKE) {
+                s_reach_to (cont);              /* (Stowed, put, taken from: one, or as many as it says; what it went
+                                                **   in reached into, once) */
+            }
         } else {
             cat_map ();
             iq.result = o_handle ();
@@ -627,6 +776,12 @@ unsigned char s_serve (void)
     if (iq.result == IR_OK && (iq.kind == IO_GET || (iq.kind >= IO_HOLD && iq.kind <= IO_DOUSE))) {
         sconce_lights (1);                      /* (A sconce's torch taken, put in, lit, put out: its room's light) */
     }
+    if (iq.result == IR_OK && iq.kind != IO_KIT && iq.kind != IO_HIDE) {
+        s_reach_done (iq.kind != IO_GET && iq.kind != IO_DROP);    /* (Its reach owed, the character's next
+                                                **   spell's; a pack taken off for it told, but a thing taken up's or
+                                                **   put down's: the UI's words alone) */
+    }
+    rclear ();
     hub_map (0);
     HUB->ireq.result = iq.result;
     return changed && iq.kind != IO_KIT;
@@ -988,6 +1143,7 @@ static unsigned char __fastcall__ get (unsigned n)
     }
     fetch (&rec, n);
     k = kind_of (rec.kind);
+    rbody = 1;                                  /* (Its reach: lying within reach, a grope engaged, HOUSE.md's) */
     return rec.where == IW_PORTAL ? IR_FIXED : k->keeps & KF_FIXED ? IR_NO :
         !noinit && fumbled (rec.kind) ? IR_FUMBLED : carry (n, 0) ? IR_OK : IR_FULL;  /* (A portal's part: lifted
                                                 **   out first, the world's; a theme's altar, never: its words the
@@ -1049,6 +1205,13 @@ static unsigned char __fastcall__ put_down_here (unsigned n)
         put (kind_of (item_at (c)->kind)->name);
         put (" is closed.");
         return IR_NO;
+    }
+    if (!(item_at (n)->flags & I_WORN)) {
+        reach_from (n);                         /* (Got out first: its reach, HOUSE.md's; let fall from a hand, none) */
+    } else if (!(kind_at (n)->form & KF_BACK)) {
+        rtime += 50;                            /* (Worn: taken off first, a doff's 5 seconds; a pack on the back
+                                                **   shrugged off, none) */
+        ++rsteps;
     }
     hub_map (0);
     sn = HUB->pc_stratum;
@@ -2933,6 +3096,7 @@ static unsigned char take_from (void)
     if (!(n = in_other ())) {
         return IR_NO;
     }
+    m1 (reach_from, n);
     if (B (m1 (on_pc, c))) {
         return hold (n);
     }
@@ -2982,20 +3146,8 @@ static unsigned char __fastcall__ doff (unsigned n)
     return yes (r == 1 ? SA_IN_PACK : SA_IN_HAND, 50);
 }
 
-/* ---- Light: a flame to hand (a tinderbox carried, a lit thing carried or within reach) */
-static unsigned char flame (void)
-{
-    static unsigned i;
-
-    for (i = 1; i < NITEMS; ++i) {
-        FETCH (i);
-        if (o.kind && ((o.flags & I_LIT) || !strcmp (kinds[o.kind].tool, "tinder")) &&
-            (B (m1 (on_pc, i)) || ((o.flags & I_LIT) && B (m1 (in_reach, i))))) {
-            return 1;
-        }
-    }
-    return 0;
-}
+/* ---- Light: a flame to hand (part 10's flame, its room) */
+unsigned char flame (void);
 
 /* A light spent (its fuel all burnt: a lantern dry, a torch burnt out; slice 4.1's): its words why it won't light, or
 ** 0 (o's) */
@@ -3053,15 +3205,15 @@ static unsigned char __fastcall__ light (unsigned char on)
     if ((r = spent ()) != 0) {
         return no (r);                          /* (Its fuel all burnt: renewed first, a torch, a lantern) */
     }
-    if (!flame ()) {
+    if (!B (m0 (flame))) {
         return no (SA_NO_FLAME);
     }
     if ((c = m1 (shut_in, n)) != 0) {
         name_of (c, 0);                         /* (In a thing closed: opened first) */
         return no (SA_SHUT);
     }
-    if (x && B (m1 (on_pc, n)) && (r = hold (n)) != IR_OK) {
-        return r;                               /* (Out of the pack first, into a hand) */
+    if (x && B (m1 (on_pc, n)) && (m1 (reach_from, n), (r = hold (n)) != IR_OK)) {
+        return r;                               /* (Out of the pack first, into a hand: its reach) */
     }
     m0 (text_new);                              /* (Its words alone) */
     o_flags (n, I_LIT, 0);
@@ -3119,6 +3271,7 @@ static unsigned char o_handle (void)
         m2 (store, (unsigned) &o, n);
         return IR_OK;
     }
+    m1 (reach_from, n);                         /* (Its reach: part 10's, HOUSE.md's) */
     if ((c2 = m1 (shut_in, n)) != 0) {
         name_of (c2, 0);                        /* (In a thing closed: "The backpack is closed.") */
         return no (SA_SHUT);

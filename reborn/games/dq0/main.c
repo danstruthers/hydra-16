@@ -1778,7 +1778,8 @@ portal:
             } else {
                 tell (T_PUT_DOWN);
             }
-            after (d, 10, IO_DROP);
+            after (d, 1, IO_DROP);              /* (No time: let fall, HOUSE.md's reach; the world's reach owed
+                                                **   for one got out first) */
         } else if (pa == IR_NO) {
             msg (tt ());                        /* (Why not: in a thing closed) */
         } else {

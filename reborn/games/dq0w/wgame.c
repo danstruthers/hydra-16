@@ -190,6 +190,9 @@ unsigned char s_take_up (void)
             r = w == IW_PORTAL || (CATALOGUE[k].keeps & KF_FIXED) ? IR_FIXED : !noinit && fumbled (k) ? IR_FUMBLED :
                 carry (n, 0) ? IR_OK : IR_FULL; /* (Engaged, a grope failed: the round wasted, its words) */
         }
+        if (r == IR_OK) {
+            reach_done (0);                     /* (Its reach owed, things.c's: the UI's wait for it after) */
+        }
         light_now ();                           /* (Its light: what it holds lit) */
     }
     take_n = 0;

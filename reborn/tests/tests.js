@@ -5363,8 +5363,11 @@ module.exports = {
         const lt2 = lt.after && named(lt.after, 'torch')[0];
         if (!lt2 || !(lt2.flags & I.LIT) || lt2.fuel !== 60) f.push('the spare torch not lit: ' + JSON.stringify(lt2));
         if (!dq0Rep(gt, 'ireq', { kind: 'IO_GET', result: 'IR_OK' }).length) f.push('the spent torch not taken up');
+        // (The spent one renewed, a whole hour's; the spare lit burning meanwhile, its minute or two: the reach's, a torch
+        // got out of the pack to light it, and the spent one stowed, HOUSE.md's reach, 2026-10-26)
         const both = dip.after ? named(dip.after, 'torch') : [];
-        if (!dq0Rep(dip, 'ireq', { kind: 'IO_FILL', result: 'IR_OK' }).length || both.length !== 2 || !both.every(i => i.fuel === 60) ||
+        if (!dq0Rep(dip, 'ireq', { kind: 'IO_FILL', result: 'IR_OK' }).length || both.length !== 2 ||
+          !both.some(i => !(i.flags & I.LIT) && i.fuel === 60) || !both.some(i => (i.flags & I.LIT) && i.fuel >= 57) ||
           !fla(dip.after) || fla(dip.after).fuel !== 280) f.push('the spent torch not renewed from the oil: ' + JSON.stringify([...both, fla(dip.after)].map(i => i && i.fuel)));
         inTurn(s, ['> dip the torch in the oil', 'You soak the torch in the flask of oil.'], f, 'the dip\'s words: ');
         const g2 = T.of('dq0 -p t -s 7 -c /ram/c.hm -T'), lk = T.after(g2, 'look'), stub = st => st && st.items.find(i => i.name === 'candle stubs' && (i.where !== 'IW_SQUARE' || i.sn === st.pc.sn));   // (A held thing's sn its hand: slice 4.1b's)

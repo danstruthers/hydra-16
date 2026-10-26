@@ -206,6 +206,11 @@ go:
             SWFN        bulk_of, 10
             SWFN        carry, 10
             SWFN        about, 10
+            SWFN        reach_from, 10      ; (The reach, 2026-10-26: HOUSE.md's)
+            SWFN        reach_to, 10
+            SWFN        reach_done, 10
+            SWFN        handy, 10
+            SWFN        flame, 10
             SWFN        drop, 35
             SWFN        throw_at, 4
             SWFN        list, 11

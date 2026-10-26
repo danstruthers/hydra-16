@@ -70,6 +70,9 @@ struct kind {
                                                 **   joined again as they're moved: rations, pennies, arrows) */
 #define KF_LONG         0x80                    /* (A kind's form: long and sturdy, a haft, a pole, a staff: it serves
                                                 **   as a crutch, held: slice 4.1b's) */
+#define KF_BACK         0x20                    /* (A kind's form: worn on the back, a backpack: taken off to reach
+                                                **   into, and put on again after, HOUSE.md's reach, 2026-10-26; any
+                                                **   other worn thing is open to the hand: a quiver, a bandolier) */
 
 /* The catalogue's kinds, by number (things.c's order: the maker puts them down by these) */
 enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKIN, KI_RATIONS, KI_TINDERBOX, KI_PICK,

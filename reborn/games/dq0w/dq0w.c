@@ -156,7 +156,8 @@ static unsigned char late;                      /* (The turns pace's: the denize
 static unsigned long free_at;                   /* (When it was last free of work: its rest from then, RS_EXERT's) */
 static unsigned went;                           /* (The last thing's time: a move's, as it's done) */
 
-static unsigned char pextra;                    /* (A move's time more: getting up first, part 50's) */
+unsigned pextra;                                /* (A move's time more: getting up first, part 50's; a thing's reach,
+                                                **   the item store's as a handling's done, things.c's reach_done) */
 static void __fastcall__ busy (unsigned long t)
 {
     went = t > 60000UL ? 60000U : (unsigned) t;
