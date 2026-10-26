@@ -4161,6 +4161,12 @@ void s_draw_test (void)
     unsigned char opened, q;
     unsigned i = 0, id = HUB->pc_map;
 
+    here ();
+    if (!HUB->pc_light && dark ()) {
+        return;                                 /* (No light to draw by, none of its own and its square unseen as it
+                                                **   last looked: nothing drawn, nothing used up, HOUSE.md's the map
+                                                **   kept, 2026-10-26) */
+    }
     r->kind = RS_TEST;
     r->actor = 0;
     r->a = P_DRAW;

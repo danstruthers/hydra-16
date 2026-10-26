@@ -103,7 +103,7 @@ go:
             SWPART      19, 8               ; The game's files begun, the item store kept (wfile.c); a hole dug kept
             SWPART      20, 7               ; The things' files: a chunk's put out, read in (ipage.c)
             SWPART      21, 5               ; The ways across a room worked out (dq0w.c's ways)
-            SWPART      22, 14              ; The strata's records out of the hub, back (sfile.c)
+            SWPART      22, 16              ; The strata's records out of the hub, back (sfile.c)
             SWPART      23, 11              ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 12              ; Engagement, a blow's close-in, fighting on (dq0w.c's)
             SWPART      25, 6               ; The engage initiative test, a grope's (dq0w.c's)
