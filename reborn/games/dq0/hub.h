@@ -1021,6 +1021,8 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   by their keys: a sheet (paper, parchment) or its map, a pencil or
                                                 **   charcoal or a quill and ink, and a hand free; HOUSE.md's the map
                                                 **   kept) */
+#define CH_PACKED       0xFE                    /* (Or, not handy, what they're in: its kind times 2, the UI's to tell
+                                                **   once, mapping as it goes: HOUSE.md's handy tools, 2026-10-26) */
 #define SN_SEEN         0x01                    /* (dsense's res: the character seen, */
 #define SN_HEARD        0x02                    /*   heard, */
 #define SN_SMELT        0x04                    /*   smelt: slice 4.1's, still air, within its nose's reach) */

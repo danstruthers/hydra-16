@@ -248,12 +248,29 @@ static void items (void)
     }
 }
 
-/* The things and the denizens it sees, added to lb (words.c's, from look.c's copy of the hub's record) */
+/* The things and the denizens it sees, added to lb (words.c's, from look.c's copy of the hub's record); and, mapping
+** as it goes with the things to draw with not handy (the world's pc_chart, CH_PACKED: what they're in), told once
+** (HOUSE.md's handy tools: "Your drawing things are in your backpack.") till they're handy, or it's not mapping */
+static unsigned char packed;
 void o_seen_words (void)
 {
+    char nm[sizeof CATALOGUE[0].name];
+    unsigned char w, c;
+
     S = &sight_copy;
     if (!(S->first & SIGHT_HURRY)) {                            /* (A run's or a sprint's look: not the things about) */
         items ();
     }
     den_words ();                               /* (The denizens it sees: overlay 9's, dens.c) */
+    hub_mem (0, &w, &HUB->watch, 1);
+    hub_mem (0, &c, &HUB->pc_chart, 1);
+    if (!(w & WA_MAP) || !(c & CH_PACKED)) {
+        packed = 0;
+    } else if (!packed) {
+        packed = 1;
+        hub_mem (CAT_BANK, nm, CATALOGUE[c >> 1].name, sizeof nm);
+        add (" Your drawing things are in your ");
+        add (nm);
+        add (".");
+    }
 }

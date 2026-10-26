@@ -800,17 +800,18 @@ unsigned char s_serve (void)
 #pragma rodata-name (push, "SW26RODATA")
 
 /* The character's map making (the hub's pc_chart and pc_map: DUNGEON.md, the map kept; HOUSE.md's), by what it
-** carries (anywhere on it): the things to draw a map with to hand, the catalogue's by their keys (a sheet to draw on,
-** "sheet", or its map, "map"; a point that draws, "draw", or a quill, "quill", and ink, "ink"), and a hand to draw
-** with (free, or holding one of them; its arm not useless); and the first map it carries.  Mapping as it goes with
-** them, and no map, its first sheet is made the map (the kind keyed "map").  Part 26's (its room), called as the
-** light is (s_light_now's) */
+** carries: the things to draw a map with handy (in hand, or on the body, in nothing that isn't open to the hand:
+** HOUSE.md's handy tools, the user's, 2026-10-23), the catalogue's by their keys (a sheet to draw on, "sheet", or its
+** map, "map"; a point that draws, "draw", or a quill, "quill", and ink, "ink"), and a hand to draw with (free, or
+** holding one of them; its arm not useless); and the first map it carries (anywhere on it: shown).  Mapping as it goes
+** with them, and no map, its first sheet is made the map (the kind keyed "map").  Not handy, what they're in (its kind
+** in pc_chart: CH_PACKED's, the UI's to tell).  Part 26's (its room), called as the light is (s_light_now's) */
 void s_chart_now (void)
 {
     static const char keys[5][6] = { "sheet", "map", "draw", "quill", "ink" };
     const struct kind* k;
     unsigned i = 0, j, sheet = 0, map = 0;
-    unsigned char has = 0, busy, mh, h, f;
+    unsigned char has = 0, busy, mh, h, f, pk = 0;
 
     hub_map (0);
     mh = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
@@ -830,11 +831,16 @@ void s_chart_now (void)
             busy |= h;                          /* (A hand that holds something else) */
             continue;
         }
+        if (f == 1 && !map) {
+            map = i;
+        }
+        if ((j = handy (i)) != 0) {
+            pk = item_kind (j);                 /* (Not handy: in a pack worn, a sack) */
+            continue;
+        }
         has |= 1 << f;
         if (!f && !sheet) {
             sheet = i;
-        } else if (f == 1 && !map) {
-            map = i;
         }
     }
     f = (has & 3) && ((has & 4) || (has & 24) == 24) && (busy & IH_BOTH) != IH_BOTH;
@@ -850,7 +856,7 @@ void s_chart_now (void)
     }
     i = map ? item_at (map)->id : 0;
     hub_map (0);
-    HUB->pc_chart = f ? CH_DRAW : 0;
+    HUB->pc_chart = f ? CH_DRAW : pk << 1;
     HUB->pc_map = i;
 }
 
