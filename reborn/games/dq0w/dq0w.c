@@ -4032,6 +4032,7 @@ unsigned char __fastcall__ s_use_up (unsigned n, unsigned char by)
         return 0;
     }
     up->kind = 0;
+    hub_map (0);
     event (E_BEAT, 0, WB_SPENT | upk << 8);
     return 1;
 }
