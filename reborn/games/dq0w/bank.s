@@ -126,7 +126,7 @@ go:
             SWPART      42, 2               ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 10              ; A walk in the dark set out on: its way felt, a thing stumbled over
             SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
-            SWPART      45, 5               ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
+            SWPART      45, 3               ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
             SWPART      46, 7               ; A search's thing, for or on; what a search turns up (things.c)
             SWPART      47, 13              ; What's on a thing or in it, searched (things.c)
             SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
