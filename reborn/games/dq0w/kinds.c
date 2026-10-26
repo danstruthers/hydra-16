@@ -87,6 +87,15 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
                                                 **   torch in it, the maker's: DUNGEON.md, light kept) */
     { "axe", K_HAND | K_HANG, 12, 3, 0, 0, 0, 0, 3, "axe", MT_IRON, AP_WEAPON, 72 },   /* (The book's handaxe: a
                                                 **   kobold lord's, let fall; slice 4.1b's) */
+    { "paper", K_HAND | K_PLURAL, 0, 1, 0, 0, 0, 0, 2, "sheet", MT_CLOTH, AP_CLOTH, 2 },     /* (The things to draw a
+                                                **   map with, by their keys: a sheet to draw on, */
+    { "parchment", K_HAND | K_PLURAL, 1, 1, 0, 0, 0, 0, 2, "sheet", MT_LEATHER, AP_HIDE, 4 },
+    { "charcoal", K_HAND | K_PLURAL, 0, 1, 0, 0, 0, 0, 1, "draw", MT_WOOD, AP_WOOD, 1 },    /*   a point that draws, */
+    { "pencil", K_HAND, 0, 1, 0, 0, 0, 0, 1, "draw", MT_WOOD, AP_WOOD, 3 },
+    { "quill", K_HAND, 0, 1, 0, 0, 0, 0, 1, "quill", MT_BONE, AP_BONE, 1 },     /*   or a quill and its ink; */
+    { "horn of ink", K_HAND, 1, 1, 0, 0, 0, 0, 1, "ink", MT_BONE, AP_BONE, 6 },
+    { "map", K_HAND, 0, 1, 0, 0, 0, 0, 2, "map", MT_CLOTH, AP_CLOTH, 2 },          /*   a sheet drawn on, the map:
+                                                **   DUNGEON.md, the map kept, slice 4.2's) */
 };
 
 /* How each light burns (DUNGEON.md: light; HOUSE.md's burning, slice 4.1's): its kind; how long a whole one burns
@@ -115,7 +124,8 @@ const unsigned char throws[KI_COUNT] = {
     1, 4, 1,                                    /* mace, spear (a javelin's), shield */
     1, 0, 2, 0,                                 /* pot, straw, stubs, well */
     2, 1,                                       /* flask of oil, pot of pitch */
-    0, 2                                        /* sconce, axe */
+    0, 2,                                       /* sconce, axe */
+    0, 0, 2, 2, 1, 2, 0                         /* paper, parchment, charcoal, pencil, quill, horn of ink, map */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 

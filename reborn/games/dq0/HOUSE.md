@@ -1244,6 +1244,87 @@ the game (world.dat).  Every ruleset's but the test itself (the referee's).  Eac
   ways as it faces (ahead, left, behind) are always true, the body's own, as the senses' words are (all of them as it
   faces).  The map, its compass and its panel's facing are the map's (slice 4.2's map agent's).
 
+## The map kept *(slice 4.2's map: drafted 2026-10-23 for the user to review)*
+
+The user's (2026-10-16 and 2026-10-23, DECISIONS.md's bearings and the map): the map plain only where the character
+sees now, the rest obscured; a mental map by its Intelligence, fading by its Intelligence and Will, the better kept
+where it's often been; mapping as it goes keeping it the better, on paper with the things to draw with handy and
+equipped; a drawn map as good as its maker's drawing (Cartography first, then Drawing), and only as good as what was
+seen; a dwarf's map north up, anyone else's the way it faces up; what's seen now told apart from what's remembered,
+in colour.  The book's own rules are the referee's: Drawing and its specialty Cartography (Skills 14: a poetic map's
+quality limited by what its maker knew), a specialty chosen at 40 and opened at the skill's mastery (Skills 2), a
+skill's opening (its OML).  Every number here is the house's.  *(Every ruleset's, but the referee's numbers, marked
+dq0harn's, and the drawing's test.)*
+
+- **How well it keeps what it sees** (the referee's summary's mapmind): five times its Intelligence, of a hundred (an
+  Intelligence of 20 or more, all of it), mapping as it goes; half that, not.  The null referee's 50, a middling mind's.
+  (dq0harn.c's status; dq0null.c's.)  Why: the user's Intelligence; mapping is attention, twice as well kept.
+- **How fast it fades** (the summary's mapfade): a tenth of it (ten points) every twice its Intelligence and Will
+  together, minutes: some forty-five minutes for most (Intelligence 10, Will 13: 46); the null referee's 40.  A place
+  seen once without mapping (a quality of 25) is gone in some two and a quarter hours, mapped (50) in four and a half.
+- **A place often come to** (the user's, 2026-10-23, a trace's rule: hub.h's TR_MORE): each time the character comes to
+  see a place again, four minutes or more after it last saw it, is a passing (a stay isn't, but a long wait with no
+  look about, then one, counts once).  Four passings make its memory a quarter of mapmind the better as it's seen
+  again and fade half as fast; twelve another quarter, and a quarter as fast.  So a human's (Intelligence 10) place
+  come to four times is still kept, put off a little, after three hours in the dark, where one seen once is gone.  The
+  count is the bearings' too (world.h's KEPT_KNOWN: the lead's to wire, agent bearing's well-travelled ways).
+- **A place is a chunk** (160 feet square): what's remembered, when, how well and how often, is each chunk's, not each
+  room's.  Why: it's kept with the seen squares the maker already keeps by chunk, in the same bytes' room.
+- **What the map shows of a memory**: each square of it by its quality and forty more, of a hundred, a square at a
+  time by its place (gone at nothing); faintly, a floor a comma, no heights.  For one that doesn't know north
+  underground (anyone but a dwarf) a chunk's squares are put off where they truly are, the more the more it's faded
+  since it was seen: six squares at the most, as it's gone, its own way (the user's "fuzzy or off": directions and
+  distances off).  A dwarf's are never put off, only fewer.
+- **A walk's squares**, felt or seen as it goes, are remembered as their chunk's memory goes (a walk's look is at its
+  end: a chunk only walked through, never looked at, is kept as it was).
+- **A disorienting moment** (a fall, a blow or a trap's gas that knocks it senseless, coming round) leaves what it kept
+  as it was: the bearings take it (agent bearing's believed north, which the map's compass shows), not the memory.
+- **The things to draw a map with** (the catalogue's, by their keys, things.c's chart_now): a sheet to draw on (some
+  paper, some parchment) or its map, and a point that draws (some charcoal, a pencil) or a quill and a horn of ink.
+  "Handy and equipped" (the user's): carried anywhere about it (a hand, its pack, its belt), and a hand to draw with,
+  free or holding one of them (its other may hold its light, not a sword in both); its arm not useless; and light to
+  draw by, its own square lit.  Without them, mapping as it goes keeps the map in mind, twice as well.  *(For review:
+  the hand and the light.)*
+- **A map begun**: mapping as it goes with them and no map, its first sheet is made the map ("You begin a map."): an
+  item, "map", dropped, lost or stolen like anything else.  What it draws is what it sees (each square marked as it's
+  seen now, a walk's squares in the light too), each chunk's drawing one map's (a newer map drawn over it there wipes
+  the older's).  Its drawing is shown only while it carries that map (the first it carries, if it has more), and only
+  where it was drawn: a map found or carried from another stratum shows nothing of this one.
+- **How true it's drawn** (the referee's P_DRAW: the book's Drawing, its Cartography specialty first, dq0harn's): a
+  test as each room's come into and each way's walked, mapping on paper (and the first look it draws at), its grade
+  kept with each chunk as it's first drawn on the map, with the north it believed in then.  A critical success true;
+  a marginal success one square in eight left out; a marginal failure one in four, and put off a square; a critical
+  failure one in three, and put off three; and two squares more for each eighth of a turn its believed north was off
+  (a lost character draws a wrong map without knowing it).  The book's limit holds: only what it saw is drawn.  The
+  map's own make (its quality, 0-9) the mean of the last and each test's: 9, 6, 3, 0.  Drawn squares shown brown,
+  faintly, never as seen now.
+- **Drawing opened by a map** (dq0harn's, over the book's month of teaching, its [1 Month]): neither Drawing nor
+  Cartography open, the first map's test opens Drawing at its opening level, told once ("You start to learn
+  drawing.").  **Cartography** opens only by teaching (a teacher, a book: none in the dungeon yet; the hook,
+  dq0harn.c's draw_learn: the book's rule, Drawing 40 or more, opened at Drawing's mastery); a character's sheet may
+  carry it (the referee's own skill, its file's "ml 91 N").  hmchar's Cartographer/Artist (the book's Drawing/4) could
+  take it as its specialty at Drawing's mastery: not built (hmchar's main RAM).  *(For review: every part of it.)*
+- **What the materials cost to use**: not built yet.  Proposed: drawn as a light burns, a minute of mapping on paper
+  a minute of the point's life: a stick of charcoal four hours, a pencil twenty, a horn of ink ten (a quill lasting as
+  long as its ink); a sheet holds a stratum's map whole (the map's sheets its own).  *(For the user's choice.)*
+- **The kit carries none of them** (dq0 -k paper,charcoal gives them, the tests').  Proposed: a sheet of paper and a
+  stick of charcoal in the pack (it changes every game's dice for the things made after the kit: the kit's last).
+  None are in the dungeon's stock yet either (a solar's, a chapel's would be the places: dq0m/uses.c).  *(For the
+  user's choice.)*
+- **The map turned**: one that knows north (the summary's northsense, a dwarf) north up, the window kept in the
+  stratum, its square in the panel; the rest the way it faces up, to the quarter turn (its body's: facing north or
+  northeast north up, east or southeast east up: what it faces up, or up and to its right), the character in the
+  middle, the rows turned, a compass in the top right corner, its N where the north it believes in lies (a ? when it
+  knows it's lost its bearings).  The panel's facing and the words above the map the one it believes in ("you face
+  northeast, or so you think", lost).  No square given in the panel: its coordinates would give the true north away.
+  Why turned by the body's facing: what's ahead is always up, whatever it believes; the belief only names the way.
+- **The colours** (the user's, 2026-10-23): what it sees now bright white, everything remembered dim grey however
+  well kept (how well decides whether a square's shown, and how true its place, never its brightness), what's drawn
+  on its map brown, the @ bright cyan, the compass cyan; the glyphs as without colour, so the map reads either way.
+  "colour off" (or "no colours") plain letters, "colour on" again, kept with the game (game.dat).  (look.c's s_map.)
+- **The catalogue's** (kinds.c's): paper and parchment a sheet's (weight nothing and a quarter pound, worth 2 and 4
+  pennies), charcoal (1), a pencil (3), a quill (1), a horn of ink (a quarter pound, 6), the map (a sheet's).
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without
@@ -1281,6 +1362,19 @@ the game (world.dat).  Every ruleset's but the test itself (the referee's).  Eac
 
 ## Open
 
+- **Skills opened as they're used** (slice 4.2's, the user's, 2026-10-23: [First Use] skills open at their OML on
+  first use and are told; those learnt by study don't open on the spot).  Today a skill not open is tested at its
+  opening level less its group's penalty and stays unopened (the user's, 2026-10-20), but Drawing, opened by the first
+  map drawn (the map kept).  The skills the game tests that a character may not have: on first use, Swimming
+  (P_SWIM), Acrobatics (P_BALANCE), Physician (P_FIRST_AID), Cookery (appraising food); by study, Lockcraft (2 months:
+  P_PICKLOCK, P_DISARM, P_ASSESS), Lore (1: P_LORE, appraising books and bones), Tracking (1: P_TRACK), Animalcraft
+  (1: P_ANIMALS), Mining (1: P_DIG), Drawing (1: P_DRAW, the house's exception), and appraising's crafts: Weaponcraft
+  (4), Metalcraft (2), Timbercraft (1), Hidework (1), Textilecraft (1), Ceramics (2), Jewelcraft (2), Masonry (1),
+  Glassworking (3).  Every other the game tests every character has.  Opening the first-use ones is a few bytes in the
+  referee's test (dq0harn.c's test_sk), but each test's asker would have to tell it: the user's to choose.
+- **Skills developed by use** (the book's development rolls): not in the game.  The hook would be easy: every skill
+  test passes through dq0harn.c's test_sk, where a success could mark the skill (a bit each), the book's roll
+  (harn.h's harn_develop) made for the marked ones when the game gives them (a rest, a day's end).
 - **Sight's detail by distance** (the user's, 2026-10-20): the light limits what's seen more than distance does,
   but within it the eyes set how much detail is made out (movement only, then a shape, humanoid or not, then the
   race), by the sight attribute, unless blind; modelled if it can be, perhaps later.  For now a look one way's

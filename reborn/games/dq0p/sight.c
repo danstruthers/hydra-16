@@ -197,7 +197,7 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
         whole = 1;
         for (j = rp.y; j < (unsigned char) (rp.y + rp.h); ++j) {
             for (i = rp.x; i < (unsigned char) (rp.x + rp.w); ++i) {
-                if ((C->tile[j][i] & (T_SEEN | 0x1F)) == T_FLOOR) {   /* (Its floor's: a cave's bounds take in rock) */
+                if ((C->tile[j][i] & (T_SEEN | 0x0F)) == T_FLOOR) {   /* (Its floor's: a cave's bounds take in rock) */
                     whole = 0;
                 }
             }

@@ -161,7 +161,7 @@ void __fastcall__ s_change (unsigned char sn, unsigned x, unsigned y, unsigned c
                 }
             }
         } else {                                /* (The square: its kind, its floor, and (a link) its opening) */
-            *p = (*p & T_SEEN) | tile;
+            *p = (*p & (T_SEEN | T_DRAWN)) | tile;
             C->elev[cy_][cx_] = elev;
             if (link != 0xFF && C->nopen < NOPEN) {
                 o = &C->open[C->nopen++];

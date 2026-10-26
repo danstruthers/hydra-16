@@ -384,9 +384,16 @@ void __fastcall__ say_raw (const char* s)
         newline ();
     }
     to_story ();
-    while (*s && col < tw - 1) {
-        out (*s++);
-        ++col;
+    for (; *s; ++s) {                           /* (A colour's escape taking no room, and out whole, the line cut or
+                                                **   not: the map's) */
+        if (*s == 0x1B) {
+            while (out (*s), *s >= 0x1B && *s < 'a' && s[1]) {
+                ++s;
+            }
+        } else if (col < tw - 1) {
+            out (*s);
+            ++col;
+        }
     }
     blanked = 0;
     newline ();

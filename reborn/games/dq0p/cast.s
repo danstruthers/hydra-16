@@ -822,7 +822,8 @@ note:
 
             .export     _run_in, _run_out, _run_clear, _run_p, _run_q, _run_g, _light_in, _run_l, _run_lo, _run_lb
             .export     _grid_put, _grid_fill, _grid_clr
-            .import     _piece
+            .import     _piece, _run_d                  ; (view.c's run_d: run_out's T_DRAWN, a square seen now drawn on
+                                                        ;   the map; or 0)
             .importzp   ptr3
 
 G_DOOR      = $20                           ; (run_in's in piece: a door or a window, view.c's to look at; G_LAMP
@@ -841,7 +842,7 @@ doors:      .res        1
             .segment    "SW1RODATA"
 kind:       .byte       G_OPAQUE | G_SKIP, G_INSIDE, G_OPAQUE | G_WALL, G_WALL | G_DOOR, 0, G_INSIDE
             .byte       G_WALL | G_DOOR, G_INSIDE, G_INSIDE, G_INSIDE           ; (world.h's T_ROCK ... T_PIT;
-            .res        22, 0                                   ;   the rest 0)
+            .res        6, 0                                    ;   the rest 0: TILE's four bits)
 
             .segment    "SW1CODE"
 ; unsigned char __fastcall__ run_in (unsigned char n): its squares' flags (what each is: kind; G_DOOR, a door or a
@@ -852,7 +853,7 @@ _run_in:
             stz         doors
             ldy         #0
 @sq:        lda         (ptr1),y
-            and         #$1F
+            and         #$0F                ; (TILE's: T_DRAWN above it)
             tax
             lda         kind,x
             sta         _piece,y
@@ -916,7 +917,8 @@ _grid_clr:
             bne         @sq
             rts
 
-; void __fastcall__ run_out (unsigned char n): the grid's marks (G_VIS, G_SEEN) into its squares
+; void __fastcall__ run_out (unsigned char n): the grid's marks (G_VIS, G_SEEN) into its squares, and one seen now
+; drawn too (run_d's T_DRAWN: the map drawn as it goes, view.c's)
 _run_out:
             sta         cnt
             jsr         ptrs
@@ -924,7 +926,10 @@ _run_out:
             lda         (ptr3),y
             and         #G_VIS | G_SEEN
             beq         @g
-            ora         (ptr1),y
+            bit         #G_VIS
+            beq         @o
+            ora         _run_d
+@o:         ora         (ptr1),y
             sta         (ptr1),y
 @g:         inc         ptr1
             bne         @p

@@ -95,6 +95,8 @@ take	VB_RETRIEVE_OBJECT	object=sword	last=sword	bare take, last named (question 
 take	ERROR:NOTHING_HERE	-	-	bare take, nothing near (question 8)
 take all	VB_RETRIEVE_OBJECT	object=all-near	near=sword,rat	take all
 drop the sword	VB_DROP_OBJECT	object=sword	near=sword	drop
+drop the map	VB_DROP_OBJECT	object=map	near=map	the map a thing, not the map command (slice 4.2)
+look at the map	VB_OBSERVE_OBJECT	object=map	near=map	a map carried looked at (slice 4.2)
 put down the sword	VB_DROP_OBJECT	object=sword	near=sword	put down
 put the sword in the chest	VB_PUT_OBJECT	object=sword;container=chest	near=sword,chest	put in
 put the sack in the other sack	VB_PUT_OBJECT	object=sack;container=sack	near=sack	the other of two alike (slice 4.1)

@@ -18,6 +18,8 @@ void __fastcall__ way_seen (unsigned char sn, unsigned char face);  /* A look on
                                                 **   after the look's, and its denizens' (part 3's, way.c) */
 void __fastcall__ felt (unsigned char sn, unsigned x, unsigned y, unsigned char d, unsigned char n);   /* A walk's
                                                 **   squares remembered (from x, y its first way d, n of them) */
+void kept (void);                               /* The memory of what the view saw kept (each chunk's: part 4's,
+                                                **   after the view's) */
 
 /* The lit things lying about near the character (things.c's, before each view): the chunks round them reached with
 ** the view's, in its order (their light the light layer's, light.c's) */

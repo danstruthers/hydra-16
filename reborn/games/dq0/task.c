@@ -215,6 +215,9 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     case TE_ROBBED:                             /* (Helpless, robbed: a robber's way, the denizens') */
         sayf ("\n%s goes through your things as you lie helpless, and takes what it finds.", foe (named, 1));
         break;
+    case TE_LEARNT:                             /* (A skill opened as it's used: Drawing, the first map, slice 4.2's) */
+        msg ("You start to learn drawing.");
+        break;
     case TE_BEGUN:                              /* (A timed work, a battering, begun: its first words at once, its
                                                 **   outcome as its time's done, HOUSE.md's long tasks; the user's,
                                                 **   2026-10-22) */

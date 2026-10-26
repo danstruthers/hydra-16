@@ -21,7 +21,8 @@
 **                              its reply kept, and the dice it rolled held to the case's (dice)
 **   want FIELD=V ...           the reply: grade result a b c w1 w2, eN.kind eN.band eN.loc eN.aspect eN.cond (its
 **                              effect N), dice (how many it rolled), sum.FIELD (the hub's summary after it: cond
-**                              health step gN (gstep[N]) sight hearing smell load northsense limbs limp),
+**                              health step gN (gstep[N]) sight hearing smell load northsense limbs limp mapmind
+**                              mapfade),
 **                              status="..." (the hub's pcstatus), text="..." (all of it), text~"..." (it has it),
 **                              text!"..." (it hasn't), text=@ (the words of the request before it); FIELD&MASK=V;
 **                              a value a number
@@ -228,7 +229,7 @@ static const struct sym syms[] = {
     S (P_SWIM), S (P_BALANCE), S (P_FORCE), S (P_LIFT), S (P_PICKLOCK), S (P_DISARM), S (P_ENDURE),
     S (P_RESIST_POISON), S (P_RESIST_MIND), S (P_DODGE_HAZARD), S (P_FIRST_AID), S (P_LORE), S (P_TRACK),
     S (P_PERSUADE), S (P_INTIMIDATE), S (P_ANIMALS), S (P_DIG), S (P_APPRAISE), S (P_CONCEAL), S (P_ASSESS),
-    S (P_DECEIVE), S (P_THROW), S (P_INITIATIVE), S (P_GROPE), S (P_STUMBLE), S (P_RISE), S (P_BEARING),
+    S (P_DECEIVE), S (P_THROW), S (P_INITIATIVE), S (P_GROPE), S (P_STUMBLE), S (P_RISE), S (P_DRAW), S (P_BEARING),
     S (P_THEME),
     S (HIDE_MECHANICAL), S (HIDE_MAGICAL),
     S (AP_WEAPON), S (AP_ARMOUR), S (AP_METAL), S (AP_WOOD), S (AP_HIDE), S (AP_CLOTH), S (AP_POTTERY), S (AP_JEWEL),
@@ -490,10 +491,11 @@ static void request (void)
 static long __fastcall__ field (const char* f, unsigned char* ok)
 {
     static const char* const sf[] = { "cond", "health", "step", "attacks", "sight", "hearing", "smell",
-        "darkvision", "nightvision", "morale", "load", "power", "northsense", "limbs", "limp" };
+        "darkvision", "nightvision", "morale", "load", "power", "northsense", "limbs", "limp", "mapmind", "mapfade" };
 #define SO(m)   offsetof (struct rs_summary, m)
     static const unsigned char so[] = { 0, SO (health), SO (step), SO (attacks), SO (sight), SO (hearing), SO (smell),
-        SO (darkvision), SO (nightvision), SO (morale), SO (load), SO (power), SO (northsense), SO (limbs), SO (limp) };
+        SO (darkvision), SO (nightvision), SO (morale), SO (load), SO (power), SO (northsense), SO (limbs), SO (limp),
+        SO (mapmind), SO (mapfade) };
     const struct rs_effect* e;
     unsigned char k;
 

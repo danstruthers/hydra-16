@@ -82,6 +82,8 @@ void __fastcall__ ask_line (char* b, unsigned char max);  /* A line typed, waiti
 #define PACE_TURNS      3                       /* The world moves only as the character does (a turn game) */
 extern unsigned long now;                       /* The game's time */
 extern unsigned char pace, paused;
+extern unsigned char plain;                     /* The map in plain letters, no colours (the player's: "colour off",
+                                                **   pace.c's; kept with the game: main.c's save) */
 extern const char* savedir;                     /* (main.c's: dq0 -d's, the save's folder) */
 unsigned char __fastcall__ more (unsigned char action);  /* Overlay 2 (words.c's): the commands chores hasn't, as
                                                 **   they come (slice 4.1's on): 1 if it was one, carried out */
@@ -321,7 +323,7 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[13];
+extern unsigned char ovbank[14];
 
 /* ---- The swapped parts (bank.s's stubs: swap.inc), run in the main RAM's top (dq0.cfg's SWAP), a part at a time */
 

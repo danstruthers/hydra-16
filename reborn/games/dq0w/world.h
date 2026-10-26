@@ -50,14 +50,16 @@ extern unsigned char smask;
 #define CACHE_BANK(k)   (1 + PLAN_BANKS + (k) / 3)
 #define CHUNK_AT(k)     ((struct chunk*) (0x8000 + ((k) % 3) * CHUNK_SIZE))
 
-/* Squares: the low five bits a kind; T_SEEN: the character has seen it; T_VIS: it sees it now; T_HOLE: a shaft in
-** the ceiling above */
+/* Squares: the low four bits a kind; T_SEEN: the character has seen it; T_VIS: it sees it now; T_HOLE: a shaft in
+** the ceiling above; T_DRAWN: on the map it draws (the senses', as it sees it, mapping as it goes on paper: DUNGEON.md,
+** the map kept; the map its chunk's kept.map) */
 enum { T_ROCK, T_FLOOR, T_WALL, T_DOOR, T_CORR, T_STEPS, T_WINDOW, T_UP, T_DOWN, T_PIT };
 #define T_SEEN          0x80
 #define T_VIS           0x40
 #define T_MARK          0x40                    /* (A grower's, the same bit: a square reached) */
 #define T_HOLE          0x20
-#define TILE(t)         ((t) & 0x1F)
+#define T_DRAWN         0x10
+#define TILE(t)         ((t) & 0x0F)
 #define T_PASS(t)       (TILE (t) != T_ROCK && TILE (t) != T_WALL && TILE (t) != T_WINDOW && TILE (t) != T_PIT)
 #define T_INSIDE(t)     (TILE (t) == T_FLOOR || TILE (t) == T_STEPS || TILE (t) == T_UP || TILE (t) == T_DOWN || \
                          TILE (t) == T_PIT)
@@ -213,7 +215,35 @@ struct chunk {
     struct trap     trap[NTRAPS];
     unsigned char   pceil;                      /* Its passages' ceiling, feet above their floor (a built one's: its
                                                 **   small rooms' too, the builders' one height) */
+    struct ckept {                              /* The character's memory of it (DUNGEON.md, the map kept: the senses',
+                                                **   as it looks about; the maker's to keep with its seen squares): */
+        unsigned    m;                          /*   when it last saw any of it (KEPT_CLOCK's), */
+        unsigned char q;                        /*   how well it kept it then (0-100: 0 never seen; the referee's
+                                                **   summary's mapmind, mapping as it goes, half that not, the more
+                                                **   for its passings), */
+        unsigned char n;                        /*   its passings, the times it's come to see it again (KEPT_PASS
+                                                **   or more out of its sight: 255 at most), */
+        unsigned    map;                        /*   and the map its T_DRAWN squares are on (that map's item's id: 0
+                                                **   none), */
+        signed char dq;                         /*   how true they're drawn (the referee's grade, the hub's pc_drawn
+                                                **   as it was first drawn on that map: rs.h's G_*; 0 untested), */
+        unsigned char dsk;                      /*   and the north believed in then (the hub's pc_skew: drawn by it,
+                                                **   so drawn turned and put off, a wrong map unknowing) */
+    }               kept;
 };
+/* (A chunk's kept: the clock in 25.6 seconds, 16 bits, its tenths' middle bytes, no long division (the hub's header in
+** the window); a passing, seen again 4 minutes or more after it was last; the referee's mapfade, minutes a tenth lost,
+** in those units (KEPT_UNIT: 60 / 25.6 a minute, near enough, and one more; shifts, no multiplying), twice as long for 4
+** passings, four times for 12: hub.h's TR_MORE, a trace's rule) */
+#define KEPT_CLOCK      (*(unsigned*) ((unsigned char*) &HUB->now + 1))
+#define KEPT_PASS       9
+#define KEPT_UNIT(f)    (((unsigned) (f) << 1) + ((f) >> 2) + ((f) >> 4) + 1)
+#define KEPT_FADE(f, n) (KEPT_UNIT (f) << TR_MORE (n))
+/* How well the character knows square x, y's place, a reader's of the chunks (the world's, the denizens', the senses':
+** at ()'s chunk in the window after): its chunk's passings (0 never seen; TR_MORE's points of them, a well-known place's,
+** 1 at 4, 2 at 12), the senses' to count as it looks about (slice 4.2's: the bearings kept the easier where it's
+** familiar, the lead's to wire) */
+#define KEPT_KNOWN(sn, x, y)    (at ((sn), (x), (y)) ? C->kept.n : 0)
 #define CHUNK_SIZE      0x0AA0                  /* Three to a bank */
 typedef char chunk_fits[sizeof (struct chunk) <= CHUNK_SIZE ? 1 : -1];
 

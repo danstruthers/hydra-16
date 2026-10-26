@@ -106,6 +106,9 @@ static void status (void)
     s->nightvision = 1;
     s->morale = 10;
     s->power = 10;
+    s->mapmind = 50;                            /* (Its map in mind, as dq0harn's of a middling mind: half of what it
+                                                **   sees kept, mapping as it goes, a tenth lost every forty minutes) */
+    s->mapfade = 40;
 }
 
 /* ---- What's to hand: the keys, each after its mark (held: < in the left hand, > the right, * both; + worn; a space

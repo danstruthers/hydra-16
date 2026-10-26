@@ -78,6 +78,11 @@ enum {
                                                 **   ruleset's whether it's a test, HarnMaster's house's for one
                                                 **   seriously or grievously wounded, its summary's LB_HURT, or with no
                                                 **   good arm; never with no leg to stand on: slice 4.1b's) */
+    P_DRAW,                                     /* A map drawn as one goes, a stretch or a room of it (slice 4.2's:
+                                                **   the book's Drawing, its Cartography specialty first): its grade how
+                                                **   true it's drawn (DUNGEON.md, the map kept); the reply's result 1 if
+                                                **   the test opened the skill (the house's, HarnMaster's: Drawing, the
+                                                **   first map drawn) */
     P_BEARING,                                  /* Keeping one's bearings underground, the way come by bending, or
                                                 **   felt across a room in the dark, or come round from a fall or
                                                 **   senseless (the world's: DUNGEON.md's bearings underground, slice
@@ -261,6 +266,9 @@ struct rs_summary {
     unsigned char   limbs;                      /* Its hands and limbs (LB_*: the character's, slice 4.1b's) */
     unsigned char   limp;                       /* Its legs hurt, slowing its walk and faster paces (0: none; the
                                                 **   levels, the referee's, its steps above the slower for them) */
+    unsigned char   mapmind;                    /* Its map in mind (DUNGEON.md, the map kept: slice 4.2's): how well it
+                                                **   keeps what it sees, mapping as it goes (0-100; half that, not), */
+    unsigned char   mapfade;                    /*   and the game minutes it takes to lose a tenth of it (1 on) */
 };
 #define LB_LEFT         0x01                    /* (A summary's limbs: its main hand the left, left-handed; */
 #define LB_AMBI         0x02                    /*   either, no off hand, ambidextrous; */

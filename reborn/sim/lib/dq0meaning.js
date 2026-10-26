@@ -48,6 +48,7 @@ const EXPRS = {
   pcLight: F('struct hub', 'pc_light'), pcLamp: F('struct hub', 'pc_lamp'), pcsum: F('struct hub', 'pcsum'),
   gait: F('struct hub', 'gait'), watch: F('struct hub', 'watch'), pcPos: F('struct hub', 'pc_pos'), pcGoing: F('struct hub', 'pc_going'),
   pcReady: F('struct hub', 'pc_ready'), hubNow: F('struct hub', 'now'),
+  pcChart: F('struct hub', 'pc_chart'), pcMap: F('struct hub', 'pc_map'),
   pcStance: F('struct hub', 'pc_stance'), pcStrike: F('struct hub', 'pc_strike'), pcShand: F('struct hub', 'pc_shand'), pcSkew: F('struct hub', 'pc_skew'), pcLost: F('struct hub', 'pc_lost'), wayOpen: F('struct hub', 'way_open'), digTool: F('struct hub', 'dig_tool'),
   sCond: F('struct rs_summary', 'cond'), sHealth: F('struct rs_summary', 'health'), sLoad: F('struct rs_summary', 'load'),
   sSight: F('struct rs_summary', 'sight'), sStep: F('struct rs_summary', 'step'), sGstep: F('struct rs_summary', 'gstep'), ngaits: 'NGAITS',
@@ -93,7 +94,7 @@ const EXPRS = {
   bDist: F('struct beyond', 'dist'), bKind: F('struct beyond', 'kind'), bLit: F('struct beyond', 'lit'),
   wNitems: F('struct wayseen', 'nitems'), wItem: F('struct wayseen', 'item'), wNdens: F('struct wayseen', 'ndens'),
   wDen: F('struct wayseen', 'den'), wNglows: F('struct wayseen', 'nglows'), wGlow: F('struct wayseen', 'glow'),
-  uiBank: 'UI_BANK', uMap: F('struct uirec', 'map'), mapH: 'MAP_H', mapW: 'MAP_W',
+  uiBank: 'UI_BANK', uMap: F('struct uirec', 'map'), mapH: 'MAP_H', mapW: 'MAP_W', uMapLay: F('struct uirec', 'maplay'),
   uTread: F('struct uirec', 'tread'), uTrtext: F('struct uirec', 'trtext'), trText: 'TR_TEXT', trHow: F('struct tread', 'how'),
   trResult: F('struct tread', 'result'), trGrade: F('struct tread', 'grade'), trFloor: F('struct tread', 'floor'), trDust: F('struct tread', 'dust'),
   trTrod: F('struct tread', 'trod'), trSmoke: F('struct tread', 'smoke'), trNtr: F('struct tread', 'ntr'), trTr: F('struct tread', 'tr'),
@@ -229,7 +230,8 @@ function createRecorder() {
         pos: h[L.pcPos], gait: h[L.gait], watch: h[L.watch], going: h[L.pcGoing], stance: name('D_NONE', h[L.pcStance]), strike: name('SK_BEST', h[L.pcStrike]), shand: h[L.pcShand],
         skew: h[L.pcSkew], lost: h[L.pcLost],
         task: { kind: name('LT_NONE', h[L.pcTask]), asking: h[L.pcTask + 1], len: w16(h, L.pcTask + 2), done: w16(h, L.pcTask + 4), foe: h[L.pcTask + L.ltFoe] - 1 },
-        ready: w16(h, L.pcReady) + w16(h, L.pcReady + 2) * 65536, now: w16(h, L.hubNow) + w16(h, L.hubNow + 2) * 65536 },
+        ready: w16(h, L.pcReady) + w16(h, L.pcReady + 2) * 65536, now: w16(h, L.hubNow) + w16(h, L.hubNow + 2) * 65536,
+        chart: h[L.pcChart], map: w16(h, L.pcMap) },
       sum: { cond: w16(h, L.pcsum + L.sCond), health: h[L.pcsum + L.sHealth], load: h[L.pcsum + L.sLoad], sight: h[L.pcsum + L.sSight],
         step: h[L.pcsum + L.sStep], gstep: Array.from(h.subarray(L.pcsum + L.sGstep, L.pcsum + L.sGstep + L.ngaits)),
         limbs: h[L.pcsum + L.sLimbs], limp: h[L.pcsum + L.sLimp], northsense: h[L.pcsum + L.sNorth] },
@@ -286,6 +288,8 @@ function createRecorder() {
     }
     const ui = bank(L.uiBank);                                   // (The map's rows, as the maker last drew them)
     if (ui) for (let r = 0; r < L.mapH; r++) s.map.push(str(ui, L.uMap + r * (L.mapW + 1), L.mapW));
+    if (ui) s.mapLay = Array.from({ length: L.mapH }, (_, r) => Array.from(ui.subarray(L.uMapLay + r * L.mapW, L.uMapLay + (r + 1) * L.mapW)));   // (Each
+    // square's layer, the maker's: ML_NOW, ML_KEPT, ML_DRAWN, ML_PC: slice 4.2's)
     if (ui) {                                                   // (The traces read last: the world's reply, its words;
       const o = L.uTread;                                       //   slice 4.1's)
       s.tread = { how: name('TRC_FLOOR', ui[o + L.trHow]), result: name('TRR_OK', ui[o + L.trResult]), grade: s8(ui[o + L.trGrade]),
