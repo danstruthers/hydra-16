@@ -164,6 +164,8 @@ static void head (void)
         val (gmission);
         end_line ();
     }
+    given_key ("start");                        /* (How the character came in, if it's given: walked
+                                                **   in if not, the compiler's; slice 4.2's bearings) */
     if (given_key ("story")) {
         return;
     }

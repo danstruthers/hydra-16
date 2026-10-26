@@ -169,6 +169,17 @@ function initiativeOf(t) {
   } });
 }
 for (const t of tests) if (/^dq0/.test(t.name) && !t.initiative) initiativeOf(t);
+// And with -N (the character's bearings never tested, as one that knows north's: slice 4.2's, the tests' compass words
+// going where they went), but in the tests of them, those with bearings: true
+function bearingsOf(t) {
+  const d = Object.getOwnPropertyDescriptor(t, 'machine');
+  Object.defineProperty(t, 'machine', { configurable: true, enumerable: true, get() {
+    const m = d ? (d.get ? d.get.call(this) : d.value) : {};
+    if (typeof m.input !== 'string') return m;
+    return Object.assign({}, m, { input: m.input.replace(/(\u0101dq0(?: [^\r]*)?)\r/g, '$1 -N\r') });
+  } });
+}
+for (const t of tests) if (/^dq0/.test(t.name) && !t.bearings) bearingsOf(t);
 function meaningArgs(argv) {
   if (!RULES) return argv;
   for (let i = 0; i < argv.length; i++) {

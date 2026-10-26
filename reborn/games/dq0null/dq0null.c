@@ -5,7 +5,7 @@
 ** band critical), a blow's the same, harm a flat few points, no fatigue, no shock, no bleeding.  It's there to show
 ** the game asks a ruleset nothing but rs.h's requests (RULESETS.md): the tests that are meaning checks (tests.js's
 ** meaning: true) run with it too (RULES=null node sim/test.js).  The house's rules it applies as every referee does
-** (../dq0/rshouse.h: the tools that dig, a notice's steps by the pace, the state's words).
+** (../dq0/rshouse.h: the tools that dig, a notice's steps by the pace, the state's words, the bearings' own dice).
 **
 ** Its character: any file of name, occupation, pace and language lines (hmchar's will do: its other lines passed
 ** over), or none (RS_LOAD_PC's path empty: it makes its own; RS_HELLO names no character generator); written back
@@ -64,6 +64,8 @@ static void __fastcall__ putn (int v)
 #define RS_HOUSE_DIG_TOOL   dig_tool
 #define RS_HOUSE_NOTICE
 #define RS_HOUSE_STATE
+#define RS_HOUSE_BEARING
+unsigned long bseed;                            /* (The bearings' own dice: rshouse.h's) */
 #include "../dq0/rshouse.h"
 
 /* ---- The flat odds: a d100 at most BASE and 5 a step (5 to 95) a success, critical in the fifth of its band nearest
@@ -509,6 +511,14 @@ static void __fastcall__ answer (struct req* r)
         }
         if (r->a == P_RISE) {
             r->grade = G_MS;                    /* (Getting up: always, the null ruleset's, slice 4.1b's) */
+            break;
+        }
+        if (r->a == P_BEARING) {                /* (Its bearings: the flat odds, by their own dice, and a failure's
+                                                **   d8 by them too: rshouse.h's, slice 4.2's) */
+            bdice ();
+            g = r->grade = flat (r->steps);
+            r->result = g < 0 ? random (8) : 0;
+            bdice ();
             break;
         }
         if (((r->a == P_SEARCH || r->a == P_DISARM) && r->b == HIDE_MAGICAL) ||

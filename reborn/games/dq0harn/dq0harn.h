@@ -18,6 +18,9 @@ unsigned __fastcall__ cond_of (const harn_char* c);        /* Its conditions (rs
 unsigned char __fastcall__ limbs_of (const harn_char* c);  /* Its limbs (rs.h's LB_*), each one's hurt in lhurt */
 signed char __fastcall__ rise_of (const harn_char* h);  /* (Overlay 3's, gear.c's) Getting up, prone: its grade (the
                                                 **   book's Rise, the house's test) */
+signed char __fastcall__ bearing_of (signed char steps);   /* (Overlay 3's, bearing.c's) The character's bearings kept
+                                                **   (P_BEARING): its grade, bway a failure's d8 less one */
+extern unsigned char bway;                      /* (A failure's d8 less one: the world's) */
 extern unsigned char lhurt[4];                  /* (The injuries' levels on its left arm, its right, its left leg, its
                                                 **   right) */
 extern unsigned char cplan;                     /* (A creature's body, cond_of's: BF_*, the bestiary's) */

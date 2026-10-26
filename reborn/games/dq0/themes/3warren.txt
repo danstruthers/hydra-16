@@ -1,8 +1,10 @@
 # 3warren.txt - (dq0) a stand-in theme: a kobold warren, mines under a ruin (1crypt.txt has the format).  Its
-# mission either: out by the warren's own key, or to rule the kobolds by their totem on the chieftain's throne.
+# mission either: out by the warren's own key, or to rule the kobolds by their totem on the chieftain's throne.  Its
+# character fallen in, through a ruin's floor (its story's): come round below, its bearings off (slice 4.2's).
 
 theme    | the Kobold Warren
 mission  | both
+start    | fell
 story    | You fell through the floor of a ruin into the warren of the kobolds, and the hole has been stopped up
            behind you.  The warren's gate is locked with brass, and the kobolds keep its key in pieces; and they
            obey whoever sets their totem on the bone throne of their chieftains.

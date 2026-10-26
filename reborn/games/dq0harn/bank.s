@@ -170,6 +170,7 @@ ovl_out:
             OVFN        wound_drops, 3
             OVFN        test_sk, 3
             OVFN        draw_test, 3
+            OVFN        bearing_of, 3
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0harn.cfg's SWAP, a part at a time,
 ; copied there from overlay 4's bank as it's called)

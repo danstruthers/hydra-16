@@ -43,7 +43,7 @@ it answers with result 0xFF.
 | RS_LOAD_PC | the UI (its slot's text the file's path; "" none) | result (0, or 1: no character); the text's lines, the name and the calling; a and b the pace and watchfulness the file kept (GA_WALK and 0 if none); pcsum and pcstatus set |
 | RS_SAVE | the UI (the path of the save's pc.hm) | nothing (the referee writes its character, and its creatures' sheets into the save folder: the hub's savedir) |
 | RS_EQUIP | the UI (a 2: every key to hand, each after its mark, held: < its left hand, > its right, * both; + worn; and with its quality, w1 the load in quarter pounds) | nothing (pcsum anew: load, step, limbs) |
-| RS_TEST | the world, the UI, the denizens' task | grade (G_CF ... G_CS; P_RISE's the ruleset's whether a test: HarnMaster's for one seriously or grievously wounded, or with no good arm, G_CF with no leg to stand on); result 1 can't (no tool, magic only), 2 a tongue it doesn't speak; P_DIG's text the tool's key ("hands": bare), w1 the half-feet, w2 the wear |
+| RS_TEST | the world, the UI, the denizens' task | grade (G_CF ... G_CS; P_RISE's the ruleset's whether a test: HarnMaster's for one seriously or grievously wounded, or with no good arm, G_CF with no leg to stand on); result 1 can't (no tool, magic only), 2 a tongue it doesn't speak; P_BEARING's result on a failure a d8 less one (0-7: the world keeps the belief, a drift's way by it, odd the other, or a north astray anywhere), its dice the bearings' own (RS_HOUSE_BEARING), so the others roll as they did, and one whose summary's northsense is set never asked; P_DIG's text the tool's key ("hands": bare), w1 the half-feet, w2 the wear |
 | RS_EXERT | the world (w1 tenths at pace a, or at strenuous work, GA_WORK: a climb's rounds, a dig's spells, a battering's blows; or GA_REST) | result 1 if it tired the character a level more (the world's soft question); pcsum anew |
 | RS_CONTEST | the world (the engage initiative test: actor the engager, other the defender, a and b P_INITIATIVE) | result (2: the other did better, its tactical advantage; 1 the actor, 0 alike), grade and c the two grades |
 | RS_HARM | the world (a cause, HC_*, and its numbers) | x the effects (rs.h's struct rs_effect, X_NONE after the last); b the worst wound's band (0 none); w2 the tenths it's senseless (0); result 1 a fall stopped by a hold; the text its words; pcsum anew (cond: C_DEAD ends the game) |
@@ -76,7 +76,8 @@ RS_HOUSE_DIG_TOOL the choice of the one to hand), a notice's steps by the pace a
 a creep a step better, a jog two worse ...; a hazard underfoot by a glance or a search; listening), the state's
 words of the pace, the watchfulness and the light (RS_HOUSE_STATE), and what a thing does swung that isn't a weapon of
 the ruleset's (RS_HOUSE_SWING: soft, light or hefty, by its kind's data; the world's too, a soft thing's single
-attempt its own, never asked of a referee).  Lockpicking wants "picks" to hand and magic's
+attempt its own, never asked of a referee), and the bearings' own dice (RS_HOUSE_BEARING: the generator swapped for
+theirs about a P_BEARING test, so a game's other tests roll the same whether its walks bend or not).  Lockpicking wants "picks" to hand and magic's
 hiding wants magic in both referees (a line each).
 
 ## What the game no longer assumes (fixed in Phase 3A)

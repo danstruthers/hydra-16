@@ -8,6 +8,8 @@
 # (its last value, a space between; or, its first character past the spaces a bar, more values).  The keys:
 #   theme     its name, as the story and the endings say it
 #   mission   escape, rule, or both: what ends the game well (the way out opened and taken; the place ruled)
+#   start     how the character came in: walked (in by the way in from the surface, knowing north: the default) or
+#             fell (come round below from a fall, its bearings off: slice 4.2's, DUNGEON.md's bearings underground)
 #   story     what the character knows of the place as it comes in (told after the title)
 #   stratum   a stratum, from the top down (8 at most; past the last, the last again): its name, and the styles its
 #             plan may be grown in, one or two letters (b built, n natural, m mine, x mixed), one picked by its seed

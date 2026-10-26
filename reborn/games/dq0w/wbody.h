@@ -41,7 +41,10 @@ void equip_now (void);                          /* (Part 49: wlimbs.c) What's to
 void __fastcall__ drop_held (unsigned char h, unsigned char ring);   /* (Part 49) What the character holds in hands h
                                                 **   (DH_*) let go of, fumbled: told in the denizens' ring (ring 1) or
                                                 **   the world's */
-void harm_fx (void);                            /* (Part 49) A harm's effects: dropped, prone */
+void harm_fx (void);                            /* (Part 49) A harm's effects: dropped, prone; a fall's, its bearings */
+void __fastcall__ bearings_off (unsigned feet); /* (Part 52: dq0w.c) The character's bearings shaken: 0, a harm's (a
+                                                **   fall's), or BO_OUT, knocked senseless (slice 4.2's) */
+#define BO_OUT          0xFFFFU
 unsigned char den_reach (void);                 /* (Part 51: wlimbs.c) Body bd's weapon let fall, in its reach */
 void den_took (void);                           /* (Part 51) Taken up again, told */
 void __fastcall__ den_word (const char* t, unsigned char n);   /* (Part 51) Its weapon's word: line n of t */

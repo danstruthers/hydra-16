@@ -200,6 +200,7 @@ ovl_out:
             OVFN        names_in, 10
             OVFN        focus_words, 13
             OVFN        felt_words, 7
+            OVFN        facing_words, 7
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)
 
@@ -207,7 +208,7 @@ ovl_out:
 
             SWPART      1, 8                ; The start and the end (main.c): the task's arguments, the world
                                             ;   started, the game kept, the world stopped
-            SWPART      2, 3                ; The commands (main.c)
+            SWPART      2, 14               ; The commands (main.c: the map's bank, overlay 3 full at slice 4.2)
             SWPART      3, 14               ; The map (look.c)
             SWPART      4, 9                ; The pace, the watchfulness, the state, small moves (pace.c)
             SWPART      5, 10               ; The names given (names.c)
@@ -227,6 +228,7 @@ ovl_out:
             SWFN        cq_post, 2
             SWFN        cq_cmd, 2
             SWFN        cq_drop, 2
+            SWFN        when_free, 2
             SWFN        take, 2
             SWFN        took_up, 2
             SWFN        map, 3

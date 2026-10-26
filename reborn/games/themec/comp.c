@@ -385,10 +385,13 @@ const char* __fastcall__ comp_line (struct line* l)
     if (!strcmp (k, "theme")) {
         put (v[0], (unsigned char*) T->name - R, sizeof T->name);
     } else if (!strcmp (k, "mission")) {
-        R[1] = !strcmp (v[0], "both") ? 3 : !strcmp (v[0], "rule") ? 2 : !strcmp (v[0], "escape") ? 1 : 0;
-        if (!R[1]) {
+        R[1] |= !strcmp (v[0], "both") ? 3 : !strcmp (v[0], "rule") ? 2 : !strcmp (v[0], "escape") ? 1 : 0;
+        if (!(R[1] & 3)) {
             err = "escape, rule or both";
         }
+    } else if (!strcmp (k, "start")) {          /* (How the character came in: walked, or fell, TM_FELL: its bearings,
+                                                **   slice 4.2's; make.js holds a stand-in's to the two words) */
+        R[1] |= *v[0] == 'f' ? TM_FELL : 0;
     } else if (!strcmp (k, "story")) {
         T->story = text (v[0]);
     } else if (!strcmp (k, "stratum")) {
@@ -483,7 +486,7 @@ const char* comp_end (void)
     struct tlayer* y;
 
     err = 0;
-    if (!nstrata || !R[4] || !R[1]) {
+    if (!nstrata || !R[4] || !(R[1] & 3)) {
         return "no name, mission or strata";
     }
     for (k = 0; k < TSTRATA; ++k) {

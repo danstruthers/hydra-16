@@ -2103,8 +2103,8 @@ function dq0Turns(m) {
   const r = m.dq0 || { games: [], lines: [], final: () => null }, all = { events: [], dens: [], replies: [], snaps: [] };   // (None: sim/dl's)
   r.games.forEach((g, gi) => { for (const k of Object.keys(all)) for (const e of g[k]) all[k].push(Object.assign({ game: gi }, e)); });
   const fin = r.final(), of = (list, k) => list.filter(e => e.line === k + 1);
-  // (A dq0 line as the test wrote it: sim/test.js's -I and -a, and RULES=NAME's -r NAME, taken off)
-  const T = r.lines.map(l => l.replace(/^(dq0(?: .*)?) -I$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1').replace(/^(dq0(?: .*)?) -r \S+$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1')).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
+  // (A dq0 line as the test wrote it: sim/test.js's -N, -I and -a, and RULES=NAME's -r NAME, taken off)
+  const T = r.lines.map(l => l.replace(/^(dq0(?: .*)?) -N$/, '$1').replace(/^(dq0(?: .*)?) -I$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1').replace(/^(dq0(?: .*)?) -r \S+$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1')).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
     at: all.snaps.find(s => s.line === k + 1) || null }));
   T.forEach((t, k) => {
     t.after = k + 1 < T.length ? T[k + 1].at || fin : fin;
@@ -2174,6 +2174,10 @@ function dq0MapLayers(s) {
   });
   return out;
 }
+// The place the character's in come to see again n times (its passings, the map's: the torch put out five minutes,
+// lit again; dq0bearing's)
+const passings = n => Array(n).fill(['douse the torch', 'wait 5 minutes', 'light the torch']).flat();
+
 // A dq0 test's lines typed, each at its prompt (rc's "% ", the game's "> ")
 const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
 
@@ -3387,7 +3391,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0rules', what: 'Dingus Quest Zero\'s referee\'s unit tests (Phase 3A: tests/ram/t_rules, its cases in rules.txt beside it): the HarnMaster referee (dq0harn) asked rs.h\'s requests by a program playing the world\'s part, its dice fixed (RS_DICE: dice.h\'s hook), each answer held to the book\'s rules and HOUSE.md\'s, and the dice each rolled to the book\'s: the tests\' grades at their edges (critical and marginal, the 5-95 clamp, the penalty each skill takes), noticing by pace and state, falls by height and ground (a landing on the feet, a hold grabbed), injuries by impact, aspect, location and armour (Combat 13-14), the kill, amputation, shock and stumble rolls, senselessness and coming round, bleeding, encumbrance by load, fatigue by exertion and rest, digging and appraising',
+      name: 'dq0rules', what: 'Dingus Quest Zero\'s referee\'s unit tests (Phase 3A: tests/ram/t_rules, its cases in rules.txt beside it): the HarnMaster referee (dq0harn) asked rs.h\'s requests by a program playing the world\'s part, its dice fixed (RS_DICE: dice.h\'s hook), each answer held to the book\'s rules and HOUSE.md\'s, and the dice each rolled to the book\'s: the tests\' grades at their edges (critical and marginal, the 5-95 clamp, the penalty each skill takes), noticing by pace and state, falls by height and ground (a landing on the feet, a hold grabbed), injuries by impact, aspect, location and armour (Combat 13-14), the kill, amputation, shock and stumble rolls, senselessness and coming round, bleeding, encumbrance by load, fatigue by exertion and rest, digging and appraising, the bearings underground (P_BEARING: Awareness, or Mining if higher, by the bends and the dark; one of the Khuzdul never tested; its own dice, the others rolling as they did)',
       init: 't_rc', cycles: 1100e6,
       pc: { files: () => ({ 't_rules.hyx': fs.readFileSync(path.join(__dirname, '..', 'obj', 'tests', 't_rules.hyx')),
         'rules.txt': fs.readFileSync(path.join(__dirname, 'ram', 't_rules', 'rules.txt')) }) },
@@ -5118,6 +5122,82 @@ module.exports = {
           '> n', 'You lean on the spear and hobble along.', '> crawl south', 'You crawl.', 'PRONE', '> walk north', 'You get to your feet.',
           '> crawl north', 'You crawl.', '> get up', rose ? 'You get to your feet.' : 'You struggle, but can\'t get up.', '> quit',
           '> n', 'You fall.', 'You crawl.', '> get up', 'Your legs won\'t bear you.', '> quit', '> n', 'You can\'t move.'], f, 'the words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0bearing', what: 'Dingus Quest Zero\'s bearings underground (slice 4.2, the user\'s, 2026-10-16: "Dwarves or other denizens that live underground don\'t have this problem, but humans would, so instead of direction heading, a check would need to be made"; 2026-10-23: a start below, come round from a fall, disoriented; HOUSE.md\'s bearings underground), by the hub\'s bearings (pc_skew, pc_lost), the referee\'s P_BEARING tests and the words: at seed 3 a human of little Awareness (hmchar\'s file, its Awareness 5) walks the passage east of the way in, which bends twice: tested, failed, its north drifted an eighth unknown to it (the status line\'s "facing SE", truly east); "turn left" truly north, told as it believes ("You turn to face northeast."); "face north" its believed north (truly northwest), "face northwest" truly west; forward back along the passage into the kitchen it began in, a landmark, its bearings set right ("You know this place: your bearings come back to you.", no test); east again and back twice, the third time east a critical failure: a quarter off and known ("You\'ve lost your bearings ...", "facing S?"), the status command\'s "Facing: south, you think"; kept with the game (dq0 -d) and carried on with it; a dwarf (hmchar -p dwarf, its Awareness as poor) the same way never tested, "You turn to face north."; a theme whose character comes round below from a fall (a hand-written theme\'s "start | fell", themegen\'s to fill out): the human tested as it begins (ten steps the harder), its north astray, the dwarf not; knocked senseless by the hand-written theme\'s rats (dq0senseless\'s), tested as it\'s out; and the kobold warren (seed 517: its story\'s fall through a ruin\'s floor, its start fallen in), tested as it begins and again as it jumps down its gatehouse\'s ledge, ten feet; and a way walked often the easier (the user\'s, 2026-10-23: by the map\'s passings, the senses\' count of the times it\'s come to see a chunk again; its torch put out five minutes and lit again a passing): the bending passage east tested at 2 steps new, 6 with its end come to four times, untested at twelve',
+      bearings: true, init: 't_rc', cycles: 5000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml awa 5 >> /ram/c.hm',
+        'hmchar -q -s 5 -p dwarf -o /ram/d.hm', 'echo ml awa 5 >> /ram/d.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm', 'e', 'turn left', 'face north', 'face northwest', 'f', 'e', 'turn around', 'f', 'e', 'turn around', 'f', 'e', 'status',
+        'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -d /ram/k', 'e', 'quit', 'dq0 -p t -d /ram/k', 'look', 'quit',
+        'dq0 -p t -s 3 -c /ram/d.hm', 'e', 'turn left', 'quit',
+        'echo \'start    | fell\' > /ram/t.txt', 'dq0 -p t -s 4 -c /ram/c.hm -t /ram/t.txt', 'look', 'quit',
+        'dq0 -p t -s 4 -c /ram/d.hm -t /ram/t.txt', 'look', 'quit',
+        'cp /ram/c.hm /ram/s.hm', 'echo ml una 5 >> /ram/s.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+        'dq0 -p t -s 3 -c /ram/s.hm -T -d /ram/g', 'defend none', ...Array(12).fill('wait'), 'quit',
+        'dq0 -p t -s 517 -c /ram/c.hm', 'turn half left', 'f', 'turn half right', 'f', 'u', 'u', 'turn around', 'jump down', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -d /ram/f', 'e', ...passings(3), 'turn around', 'f', 'e', ...passings(8), 'turn around', 'f', 'e', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const tests = t => t.replies.filter(q => q.req === 'slot0' && q.kind === K.RS_TEST && q.a === K.P_BEARING);
+        const bear = (t, w) => dq0Ev(t, 'E_BEARING', { brg: w }).length;
+        const at = (t, skew, lost, what) => { if (!t.after || t.after.pc.skew !== skew || t.after.pc.lost !== lost) f.push(what + ': its bearings ' + (t.after && [t.after.pc.skew, t.after.pc.lost]) + ', not ' + [skew, lost]); };
+        const face = (t, h, what) => { if (!t.after || t.after.pc.face !== h) f.push(what + ': truly facing ' + (t.after && t.after.pc.face) + ', not ' + h); };
+        // The human at seed 3
+        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm'), e1 = T.after(g, 'e'), tl = T.after(e1, 'turn left'), fn = T.after(tl, 'face north');
+        const fw = T.after(fn, 'face northwest'), b1 = T.after(fw, 'f'), e2 = T.after(b1, 'e'), b2 = T.after(e2, 'f'), e3 = T.after(b2, 'e');
+        const b3 = T.after(e3, 'f'), e4 = T.after(b3, 'e'), st = T.after(e4, 'status');
+        if (!g.after || g.after.pc.skew || g.after.pc.lost) f.push('a new game, walked in by the way in, not knowing north');
+        if (tests(e1).length !== 1 || tests(e1)[0].grade !== -1) f.push('the bending passage east: not one test, failed (' + JSON.stringify(tests(e1)) + ')');
+        at(e1, 1, 0, 'the walk east, a marginal failure');
+        face(e1, 2, 'the walk east');
+        face(tl, 0, '"turn left"');
+        face(fn, 7, '"face north", the north it believes in');
+        face(fw, 6, '"face northwest"');
+        if (tests(b1).length || !bear(b1, 'BRG_KNOWN')) f.push('back into the kitchen: not a landmark, told, untested (' + dq0Evs(b1) + ')');
+        at(b1, 0, 0, 'back in the kitchen');
+        if (tests(e2).length !== 1 || tests(e3).length !== 1 || tests(e4).length !== 1) f.push('east again: not tested each time');
+        if (!bear(e4, 'BRG_LOST')) f.push('the third time east: not lost, known (' + dq0Evs(e4) + ')');
+        at(e4, 2, 1, 'the third time east, a critical failure');
+        inTurn(s, ['> turn left', 'You turn to face northeast.', '> face north', 'You turn to face north.',
+          '> face northwest', 'You turn to face northwest.', '> f', 'You know this place: your bearings come back to you.',
+          'You\'ve lost your bearings: you\'re no longer sure which way is north.', '> status', 'Facing: south, you think'], f, 'the words: ');
+        inTurn(dq0StatusRows(out), ['facing SE', 'facing S?'], f, 'the status line: ');
+        // Kept with the game, and carried on
+        const k1 = T.of('dq0 -p t -s 3 -c /ram/c.hm -d /ram/k'), k2 = T.after(k1, 'e'), k3 = T.after(k2, 'dq0 -p t -d /ram/k'), k4 = T.after(k3, 'look');
+        at(k2, 1, 0, 'the kept game\'s walk east');
+        if (!k4.at || k4.at.pc.skew !== 1) f.push('the game carried on: its bearings not as kept (' + (k4.at && k4.at.pc.skew) + ')');
+        // The dwarf
+        const d = T.of('dq0 -p t -s 3 -c /ram/d.hm'), d1 = T.after(d, 'e'), d2 = T.after(d1, 'turn left');
+        if (!d1.after || !d1.after.sum.northsense) f.push('the dwarf\'s summary not knowing north');
+        if (tests(d1).length || !d1.after || d1.after.pc.skew) f.push('the dwarf tested, or astray (' + JSON.stringify(tests(d1)) + ')');
+        inTurn(s.slice(s.indexOf('-c /ram/d.hm')), ['> turn left', 'You turn to face north.'], f, 'the dwarf\'s words: ');
+        // Fallen in
+        const h = T.of('dq0 -p t -s 4 -c /ram/c.hm -t /ram/t.txt'), hd = T.of('dq0 -p t -s 4 -c /ram/d.hm -t /ram/t.txt');
+        if (tests(h).length !== 1) f.push('come round below from a fall: the human not tested as it begins (' + JSON.stringify(tests(h)) + ')');
+        if (!h.after || !h.after.pc.skew) f.push('come round below from a fall: the human\'s north not astray (' + (h.after && h.after.pc.skew) + ')');
+        if (tests(hd).length || !hd.after || hd.after.pc.skew) f.push('come round below from a fall: the dwarf tested, or astray');
+        // Knocked senseless (the hand-written theme's rats, seed 3: dq0senseless's): tested as it's out, astray
+        const o = T.of('dq0 -p t -s 3 -c /ram/s.hm -T -d /ram/g'), out1 = T.slice(o.k).find(t => t.after && (t.after.sum.cond & 2));
+        if (!out1) f.push('never knocked senseless');
+        else if (tests(out1).length !== 1) f.push('knocked senseless (' + out1.line + '): not tested as it\'s out (' + JSON.stringify(tests(out1)) + ')');
+        // The kobold warren (seed 517): fallen in, tested as it begins; a jump down its ledge (10 feet), tested
+        const w = T.of('dq0 -p t -s 517 -c /ram/c.hm'), j = T.after(w, 'jump down');
+        if (tests(w).length !== 1) f.push('the warren\'s start, fallen in: not tested (' + JSON.stringify(tests(w)) + ')');
+        if (tests(j).length !== 1) f.push('the jump down 10 feet: not tested (' + JSON.stringify(tests(j)) + ')');
+        // Familiar ways (the map's passings of the passage's end, its chunk's: 4 four steps the easier, 12 untested)
+        const v = T.of('dq0 -p t -s 3 -c /ram/c.hm -d /ram/f'), v1 = T.after(v, 'e'), v2 = T.after(T.after(v1, 'f'), 'e');
+        const v3 = T.after(T.after(v2, 'f'), 'e');
+        if (tests(v1).length !== 1 || tests(v1)[0].steps !== 2) f.push('the passage east, new: not tested at 2 steps (' + JSON.stringify(tests(v1)) + ')');
+        if (tests(v2).length !== 1 || tests(v2)[0].steps !== 6) f.push('the passage east, its end come to 4 times: not tested at 6 steps (' + JSON.stringify(tests(v2)) + ')');
+        if (tests(v3).length) f.push('the passage east, its end come to 12 times: tested (' + JSON.stringify(tests(v3)) + ')');
+        this.notes = [e1, e2, e3, e4, h, ...(out1 ? [out1] : []), w, j, v1, v2, v3].map(t => t.line + ': ' + JSON.stringify(tests(t).map(q => [q.grade, q.result])) + ' ' + (t.after && [t.after.pc.skew, t.after.pc.lost]));
         return f;
       },
       sdcard: true

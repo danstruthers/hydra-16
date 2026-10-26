@@ -7,8 +7,8 @@
 ** 2.7): the game begun (the UI's WQ_START: the ruleset's round, the pace and its real ticks a round, the character's
 ** pace and watchfulness), the character's pace and watchfulness, its stance, the game paused (WQ_SET), and the world's
 ** part of the save (world.dat, hub.h's struct wsave: the clock, the character's place, its pace, its watchfulness and
-** its body's position, the puzzle's, the strata's records), written with the game (WQ_SAVE) and read back as it's
-** carried on.
+** its body's position, its bearings, the puzzle's, the strata's records), written with the game (WQ_SAVE) and read
+** back as it's carried on.
 **
 ** All of it swapped part 16's (../dq0/swap.inc: dq0w.cfg's SW16), called through its stubs (bank.s's).
 */
@@ -23,6 +23,7 @@
 #include "things.h"
 
 extern unsigned char pmode;                     /* (dq0w.c's: the legs' way said) */
+extern unsigned char nobear;                    /* (dq0w.c's: dq0 -N, the tests', its bearings never tested) */
 #include "work.h"
 
 #pragma local-strings (on)
@@ -251,7 +252,7 @@ void s_world_keep (void)
     }
     hub_map (0);
     w.magic = WSAVE_MAGIC;
-    w.version = 1;
+    w.version = 2;
     w.sn = HUB->pc_stratum;
     w.face = HUB->pc_face;
     w.pos = HUB->pc_pos;
@@ -262,6 +263,8 @@ void s_world_keep (void)
     w.open = HUB->way_open;
     w.done = done_;
     w.now = HUB->now;
+    w.skew = HUB->pc_skew;
+    w.lost = HUB->pc_lost;
     write (fd, &w, sizeof w);
     hub_map (WORLD_BANK);                       /* (The strata's records, the world bank's) */
     write (fd, WREC->strata, sizeof WREC->strata);
@@ -269,7 +272,7 @@ void s_world_keep (void)
     close (fd);
 }
 
-/* A game carried on: the world's part of its save read back (the clock, the character's place and state, the
+/* A game carried on: the world's part of its save read back (the clock, the character's place, state and bearings, the
 ** puzzle's, the strata's records: the world begins from them, s_begin) */
 static void world_back (void)
 {
@@ -292,6 +295,8 @@ static void world_back (void)
         HUB->gait = w.gait;
         HUB->watch = w.watch;
         HUB->way_open = w.open;
+        HUB->pc_skew = w.skew;                  /* (Its bearings as they were: slice 4.2's) */
+        HUB->pc_lost = w.lost;
         done_ = w.done;
         hub_map (WORLD_BANK);
         read (fd, WREC->strata, sizeof WREC->strata);
@@ -314,6 +319,7 @@ void s_pc_asked (void)
         HUB->pace = HUB->wreq.y;
         HUB->tpr = tprs[HUB->wreq.y & 3];
         noinit = (HUB->wreq.y & WY_NO_INIT) != 0;   /* (dq0 -I: the tests') */
+        nobear = (HUB->wreq.y & WY_NO_BEAR) != 0;   /* (dq0 -N: the tests') */
         HUB->gait = HUB->wreq.a;
         HUB->watch = HUB->wreq.b;
         if (HUB->resume) {

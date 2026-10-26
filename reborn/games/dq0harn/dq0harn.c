@@ -14,7 +14,8 @@
 ** RS_MORALE, RS_TIME (bleeding), RS_CONTEST (two actors' tests: the engage initiative test's, a creature's by its
 ** sheet), RS_EXERT (fatigue, by the pace moved at or strenuous work, and rest); RS_DESCRIBE b 3 (its state,
 ** the status command's, the hub's pace and watchfulness); RS_WIELD (what the character would strike with, nothing
-** named: of what it holds, else the best it carries, gear.c's).  A thing named that strikes (the hub's pc_strike,
+** named: of what it holds, else the best it carries, gear.c's); P_BEARING, the bearings underground (bearing.c's,
+** overlay 3: its own dice).  A thing named that strikes (the hub's pc_strike,
 ** SK_THING) its kind read from the hub's catalogue (kind_in: wk).  Its summary gives each pace's step, and the notice
 ** tests go by the character's pace and state.  The sheet's words and the harm are overlay 1's (sheet.c), the
 ** fights overlay 2's (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's
@@ -213,6 +214,8 @@ static const unsigned char purpose[P_THEME] = {
                                                                         **   book's Rise, Combat 8) */
     HARN_DRA,                                                           /* A map drawn: Drawing (Cartography
                                                                         **   first, overlay 3's draw_test) */
+    HARN_AWA,                                                           /* Bearings: Awareness, or Mining if
+                                                                        **   higher (bearing.c's) */
 };
 
 /* The referee's own skill (harn.h's a program's own, after the book's: its file's "ml 91 N" line): Drawing's
@@ -698,6 +701,11 @@ static void __fastcall__ answer (struct req* r)
             }
             r->grade = DIG_TESTED (m) ? test (&pc, r->a, r->steps) : G_MS;    /* (Earth: the tool's rate, untested) */
             r->w1 = r->grade == G_CS ? 2 * k : r->grade == G_MS ? k : r->grade == G_MF ? k / 2 : 0;
+            break;
+        }
+        if (r->a == P_BEARING) {                /* (Its bearings, by its own dice: overlay 3's, bearing.c) */
+            r->grade = bearing_of (r->steps);
+            r->result = bway;
             break;
         }
         if (r->a == P_APPRAISE) {               /* (By the craft that knows the thing) */

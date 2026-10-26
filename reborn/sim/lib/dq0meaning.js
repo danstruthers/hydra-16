@@ -1,9 +1,9 @@
 // dq0meaning.js - what happened in a Dingus Quest Zero test, read from the hub (Phase 3A: tests cut to meaning, not
 // words): the world's events and the denizens' (their rings, as each is written), the replies to the requests that
 // change things (the things', the denizens' sway, the world's, the referee's slots), and at each line entered (a CR
-// read from the serial port) the state the line finds: the character's place, facing, light, pace, position and
-// summary, the denizens near it, the things in the item store, the names given, what it perceives (the senses'
-// record, struct sight), the theme, its long task (the hub's pc_task), the change records in the cache's pages
+// read from the serial port) the state the line finds: the character's place, facing and bearings, light, pace,
+// position and summary, the denizens near it, the things in the item store, the names given, what it perceives (the
+// senses' record, struct sight), the theme, its long task (the hub's pc_task), the change records in the cache's pages
 // (world.h's: a square's, a portal's state, its harm, a trap's, a chunk stocked, a hole dug part way).  hub.h's
 // structs are laid out by cc65 (hubown.js's evaluate: the build's own compiler, so the offsets are the game's), kept
 // in obj/dq0meaning.json as the headers stand; their enums and constants read from the headers, so an event's numbers
@@ -42,17 +42,17 @@ const EXPRS = {
   slot: F('struct hub', 'slot'), slotSize: 'sizeof (struct req)', nslots: 'NSLOTS', dslot: F('struct hub', 'dslot'),
   rqKind: F('struct req', 'kind'), rqActor: F('struct req', 'actor'), rqOther: F('struct req', 'other'), rqA: F('struct req', 'a'),
   rqB: F('struct req', 'b'), rqC: F('struct req', 'c'), rqW1: F('struct req', 'w1'), rqW2: F('struct req', 'w2'),
-  rqGrade: F('struct req', 'grade'), rqResult: F('struct req', 'result'),
+  rqGrade: F('struct req', 'grade'), rqResult: F('struct req', 'result'), rqSteps: F('struct req', 'steps'),
   now: F('struct hub', 'now'), quit: F('struct hub', 'quit'), seed: F('struct hub', 'seed'), pcstatus: F('struct hub', 'pcstatus'),
   pcSn: F('struct hub', 'pc_stratum'), pcX: F('struct hub', 'pc_x'), pcY: F('struct hub', 'pc_y'), pcFace: F('struct hub', 'pc_face'),
   pcLight: F('struct hub', 'pc_light'), pcLamp: F('struct hub', 'pc_lamp'), pcsum: F('struct hub', 'pcsum'),
   gait: F('struct hub', 'gait'), watch: F('struct hub', 'watch'), pcPos: F('struct hub', 'pc_pos'), pcGoing: F('struct hub', 'pc_going'),
   pcReady: F('struct hub', 'pc_ready'), hubNow: F('struct hub', 'now'),
   pcChart: F('struct hub', 'pc_chart'), pcMap: F('struct hub', 'pc_map'),
-  pcStance: F('struct hub', 'pc_stance'), pcStrike: F('struct hub', 'pc_strike'), pcShand: F('struct hub', 'pc_shand'), wayOpen: F('struct hub', 'way_open'), digTool: F('struct hub', 'dig_tool'),
+  pcStance: F('struct hub', 'pc_stance'), pcStrike: F('struct hub', 'pc_strike'), pcShand: F('struct hub', 'pc_shand'), pcSkew: F('struct hub', 'pc_skew'), pcLost: F('struct hub', 'pc_lost'), wayOpen: F('struct hub', 'way_open'), digTool: F('struct hub', 'dig_tool'),
   sCond: F('struct rs_summary', 'cond'), sHealth: F('struct rs_summary', 'health'), sLoad: F('struct rs_summary', 'load'),
   sSight: F('struct rs_summary', 'sight'), sStep: F('struct rs_summary', 'step'), sGstep: F('struct rs_summary', 'gstep'), ngaits: 'NGAITS',
-  sLimbs: F('struct rs_summary', 'limbs'), sLimp: F('struct rs_summary', 'limp'),
+  sLimbs: F('struct rs_summary', 'limbs'), sLimp: F('struct rs_summary', 'limp'), sNorth: F('struct rs_summary', 'northsense'),
   actor: F('struct hub', 'actor'), actorSize: 'sizeof (struct actor)', nactors: 'NACTORS',
   aState: F('struct actor', 'state'), aSn: F('struct actor', 'sn'), aFace: F('struct actor', 'face'), aPos: F('struct actor', 'pos'),
   aX: F('struct actor', 'x'), aY: F('struct actor', 'y'), aDoing: F('struct actor', 'doing'), aName: F('struct actor', 'name'),
@@ -208,6 +208,7 @@ function createRecorder() {
         else if (e.te === 'TE_BEGUN' || e.te === 'TE_ASK_SHORT') e.what = e.b;   // (A timed work's, a battering's: what it's done to)
         else e.named = name('LT_NONE', e.b);
         break;
+      case 'E_BEARING': e.brg = name('BRG_NONE', w); break;
       case 'E_BEAT': e.beat = name('WB_QUIET', w & 0xFF); e.side = name('WS_AHEAD', w >> 8);
         if ((w & 0xFF) >= K.WB_FEEL) {                         // (The dark's, 2026-10-22: what's met, FA_*, a thing's
           e.fa = name('FA_NONE', w >> 8 & 7); e.thing = w >> 8; e.head = w >> 8 & 7; e.gait = w >> 12;   //   kind, a heading
@@ -227,12 +228,13 @@ function createRecorder() {
       status: str(h, L.pcstatus, 16), digTool: [0, 1, 2, 3].map(i => str(h, L.digTool + i * 8, 8)),
       pc: { sn: h[L.pcSn], x: w16(h, L.pcX), y: w16(h, L.pcY), face: h[L.pcFace], light: h[L.pcLight], lamp: str(h, L.pcLamp, 14), fuel: w16(h, L.pcFuel), left: str(h, L.pcLeft, 20),
         pos: h[L.pcPos], gait: h[L.gait], watch: h[L.watch], going: h[L.pcGoing], stance: name('D_NONE', h[L.pcStance]), strike: name('SK_BEST', h[L.pcStrike]), shand: h[L.pcShand],
+        skew: h[L.pcSkew], lost: h[L.pcLost],
         task: { kind: name('LT_NONE', h[L.pcTask]), asking: h[L.pcTask + 1], len: w16(h, L.pcTask + 2), done: w16(h, L.pcTask + 4), foe: h[L.pcTask + L.ltFoe] - 1 },
         ready: w16(h, L.pcReady) + w16(h, L.pcReady + 2) * 65536, now: w16(h, L.hubNow) + w16(h, L.hubNow + 2) * 65536,
         chart: h[L.pcChart], map: w16(h, L.pcMap) },
       sum: { cond: w16(h, L.pcsum + L.sCond), health: h[L.pcsum + L.sHealth], load: h[L.pcsum + L.sLoad], sight: h[L.pcsum + L.sSight],
         step: h[L.pcsum + L.sStep], gstep: Array.from(h.subarray(L.pcsum + L.sGstep, L.pcsum + L.sGstep + L.ngaits)),
-        limbs: h[L.pcsum + L.sLimbs], limp: h[L.pcsum + L.sLimp] },
+        limbs: h[L.pcsum + L.sLimbs], limp: h[L.pcsum + L.sLimp], northsense: h[L.pcsum + L.sNorth] },
       actors: [], items: [], names: [], sight: null, theme: '', map: [] };
     for (let k = 0; k < L.nactors; k++) {
       const o = L.actor + k * L.actorSize, a = { k, state: h[o + L.aState], sn: h[o + L.aSn], face: h[o + L.aFace], pos: h[o + L.aPos],
@@ -373,7 +375,7 @@ function createRecorder() {
       else if (off === L.dslot || (off >= L.slot && off < L.slot + L.nslots * L.slotSize && (off - L.slot) % L.slotSize === 0)) {
         game.replies.push({ line: enters, req: off === L.dslot ? 'dslot' : 'slot' + (off - L.slot) / L.slotSize, kind: h[off + L.rqKind],
           actor: h[off + L.rqActor], other: h[off + L.rqOther], a: h[off + L.rqA], b: h[off + L.rqB], c: h[off + L.rqC],
-          w1: w16(h, off + L.rqW1), w2: w16(h, off + L.rqW2), grade: s8(h[off + L.rqGrade]), result: h[off + L.rqResult] });
+          w1: w16(h, off + L.rqW1), w2: w16(h, off + L.rqW2), grade: s8(h[off + L.rqGrade]), result: h[off + L.rqResult], steps: s8(h[off + L.rqSteps]) });
       }
     }
   }

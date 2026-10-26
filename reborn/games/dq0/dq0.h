@@ -55,6 +55,9 @@ void t_done (void);                             /* The cursor back to the line t
 void t_flush (void);                            /* What's said so far out now (the cursor left where it is) */
 void __fastcall__ t_status (const char* left, const char* right);  /* The status line drawn */
 void status (void);                             /* (main.c) The status line, as the game is now */
+unsigned char __fastcall__ believed (unsigned char h);  /* (main.c) True heading h, as the character believes it
+                                                **   (its bearings: the hub's pc_skew, slice 4.2's; not an
+                                                **   overlay's, the hub not in the window) */
 void inl_show (void);                           /* The line typed drawn again */
 void __fastcall__ t_prompt (unsigned char ready);   /* The character free (1: the prompt "> ") or busy (0) */
 extern unsigned char t_ready;
@@ -237,6 +240,7 @@ void __fastcall__ dig_words (unsigned char how, unsigned char feet);   /* Overla
 unsigned char __fastcall__ task_words (unsigned w, unsigned char named);   /* Overlay 3: a long task's (task.c) */
 void __fastcall__ beat_words (unsigned w);
 void __fastcall__ felt_words (unsigned w);      /* (Overlay 7's) A walk in the dark's beat (task.c's) */
+void facing_words (void);                       /* (Overlay 7's) The way it believes it faces (task.c's: slice 4.2's) */
 unsigned char __fastcall__ stop_kind (const char* word);  /* Overlay 7 (task.c's): the task a stop names */
 unsigned char __fastcall__ answer_of (const char* l);     /*   and a question's answer */
 void __fastcall__ bar_text (char* s, unsigned done, unsigned len);  /* (Overlay 3) */
@@ -336,6 +340,8 @@ signed char __fastcall__ cq_cmd (const char* l);   /* Part 2 (main.c): the comma
                                                 **   character faces now: the grammar's verdict (1 a command; 0 not
                                                 **   one; -1 too long; -2 none, the game ending) */
 void cq_drop (void);                            /* Part 2 (main.c): the line posted seen to (its reply waited for) */
+void when_free (void);                          /* Part 2 (main.c): what waited for the character to be free (a door
+                                                **   barred, a thing lifted out) */
 extern unsigned char cq_again;                  /* (The line changed since it was posted: names_subst's) */
 void __fastcall__ take (const char* name);      /* Part 2: a thing taken up, by its name */
 extern char where_w[34];                        /* (Where in its room a thing lies: part 8's words) */

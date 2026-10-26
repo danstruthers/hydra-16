@@ -44,6 +44,10 @@ static void __fastcall__ told (unsigned char kind, unsigned w1, unsigned char a)
 
 #define noise(loud)     told (E_NOISE, 0, (loud))
 #define trap_told(o)    told (E_TRAP, (o) << 8 | wk.tq.kind | wk.tq.trigger << 4, 0)
+void __fastcall__ bearings_off (unsigned feet); /* (Part 52's: dq0w.c, wbody.h's) The character's bearings shaken */
+#ifndef BO_OUT
+#define BO_OUT          0xFFFFU                 /* (Knocked senseless: wbody.h's) */
+#endif
 
 #ifdef W_HARM
 void harm_fx (void);                            /* (Part 49's: wlimbs.c) */
@@ -172,6 +176,7 @@ static void __fastcall__ spring (unsigned char on)
     } else if (k == TK_GAS) {
         o = TO_CHOKED;
         wk.tt += wk.tq.power * 300;             /* (Senseless, half a minute a point of its power) */
+        bearings_off (BO_OUT);                  /* (Its bearings astray as it comes round: part 52's, slice 4.2's) */
     }
     trap_told (o);
     if (o == TO_SPRUNG && k < TK_GAS) {

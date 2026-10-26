@@ -31,7 +31,8 @@ plays them as HarnMaster's referee does.
   attribute times 5); picking a lock, disarming and making out a mechanism Lockcraft; enduring Condition; resisting
   poison Endurance times 5; resisting the mind Will times 5; dodging a hazard Dodge; first aid Physician; lore Lore;
   tracking Tracking; persuading and intimidating Rhetoric; animals Animalcraft; digging Mining; guile Intrigue;
-  throwing Throwing.
+  throwing Throwing; keeping one's bearings underground Awareness, or Mining if it's the higher (Bearings
+  underground, below: bearing.c's).
   (dq0harn.c's purpose table.)  Why: the game's code stays the same whatever the ruleset; only the referee knows
   skills.
 - **A skill never opened is tried at its opening level,** less five a point of its group's penalty, as an opened
@@ -1178,6 +1179,74 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   mind's, unfought), unless it crawls on (its legs won't bear it as they should).  ("The kobold gets to its feet.":
   wlimbs.c's part 51, den_legs.)
 
+## Bearings underground *(slice 4.2, drafted 2026-10-23 for the user to review)*
+
+The user's (DECISIONS.md's bearings and the map, 2026-10-16: "traveling underground, for many species, is
+disorienting ... Dwarves or other denizens that live underground don't have this problem, but humans would, so
+instead of direction heading, a check would need to be made"; 2026-10-23: a start below, waking from a fall,
+disoriented, and anything else that disorients the same way; familiar ways easier).  The world keeps the true facing
+for every task that works the place; the character's north is a belief, the hub's pc_skew (the heading it believes it
+faces the true one and the skew, in eighths of a turn) and pc_lost (it knows it's lost them), the world's, kept with
+the game (world.dat).  Every ruleset's but the test itself (the referee's).  Each number here is a draft for the user.
+
+- **Who knows north:** the Khuzdul, who live below (the referee's summary's northsense: HarnMaster's species
+  attribute); every other kind keeps its bearings by attention (the Sindarin are forest folk).  One that knows north is
+  never tested and never astray, whatever befalls it.  The denizens keep the true north: they're the underground's
+  own.  (dq0harn.c's status, bearing.c; dq0w.c's part 52.)
+- **The tests keep north** *(the house's choice, for the user to review)*: dq0 -N has the character keep its bearings
+  as one that knows north does; the runner gives every dq0 test -N but those about the bearings (bearings: true, as
+  -I is given but to those about the engage initiative test), so their compass words go where they went before the
+  bearings came; the soak plays them.  (main.c's args, WQ_START's WY_NO_BEAR; sim/test.js.)
+- **The test** (rs.h's P_BEARING): Awareness, or Mining if the character's is the higher (a miner knows tunnels).  The
+  book has no skill of direction: an Intelligence roll was the other candidate, but keeping count of the turns is
+  attention more than reasoning; Survival is the outdoors' (the sun, the stars), of no use below.  Its dice the
+  bearings' own (rshouse.h's RS_HOUSE_BEARING), so the game's other tests roll as they would without it.  (dq0harn's
+  bearing.c; dq0null's flat odds.)
+- **When it's asked:** at a move's end, after a walk along a passage that bent (each turn between two of the
+  passage's squares a bend: the walk's beats' WB_TURN), or across a room in the dark (felt across, not seen: two of
+  its squares or more, and on out of it or to its far side; a small step, or a walk to a place in it, isn't a
+  crossing).  A straight passage and a lit room ask nothing.  (dq0w.c's beat, part 52's s_bearings.)
+- **Its steps:** one bend **four steps the easier**, each one more **two the harder** (two bends 2 easier, three none,
+  four 2 harder, twelve or more 18 harder); a room crossed in the dark counts as a bend; a walk in the dark **four
+  the harder** (so a dark room crossed, alone, is a test at no steps).
+- **Familiar ways the easier** (the user's, 2026-10-23): by the map's count of passings (the map kept, below: the
+  times the character's come to see that part of the place again, four minutes or more after it last saw it), of the
+  chunk the walk ends in, and the trace's rule for them (TR_MORE: a point at 4, another at 12): **4 passings or more
+  four steps the easier, 12 or more no test at all**.  One count for the map's memory, the traces and the bearings,
+  not a second.  (Part 52's familiar, world.h's KEPT_KNOWN.)
+- **What comes of it:** a success changes nothing (a belief already wrong stays wrong: only a landmark puts it
+  right); a marginal failure drifts the believed north **an eighth**, and the character doesn't know it; a critical
+  failure **a quarter**, and it knows: "You've lost your bearings: you're no longer sure which way is north.", the
+  status line's facing with a ? after it ("facing NE?").  Which way it drifts is the bearings' own d8 (odd the other
+  way).
+- **An eighth off, the compass misleads in a passage:** the four ways the character believes in are truly
+  diagonals, and a passage goes only by the four, so "north" there is "You can't go that way."; the ways as it faces
+  (forward, back, left, right) still go where it means.  The game's choice: the believed way is taken as said, not
+  nudged to the nearest passage (at an eighth off both of the nearest are as near).
+- **Landmarks:** coming back into a room it has been in before (the senses' R_VISITED: come into, not only seen;
+  the room by the way in, a stairway's room it came down by, any it has crossed), from elsewhere (a passage walked,
+  another room, another stratum), sets its bearings right, told if they were wrong or it knew itself lost ("You know
+  this place: your bearings come back to you."), and tests nothing more.
+- **The start** (theme.h's TM_FELL, a theme file's "start | walked" or "start | fell"): walked in by the way in from
+  the surface (the default) it knows north; come round below from a fall, its bearings are tested **ten steps the
+  harder**, a failure leaving its north **anywhere** (the d8: any of the eight, the true one by chance), not known to
+  it but on a critical failure.  The kobold warren's stand-in starts so (its story: fallen through a ruin's floor);
+  themegen's own themes walk in, and pass a hand-written theme's start line on.
+- **What disorients it** (the user's, 2026-10-23: any moment the game moves the character without its walking):
+  knocked senseless (by anything: a blow, the referee's summary's C_UNCONSCIOUS as the world sees it; a harm, a fall's,
+  a trap's, a wall run into in the dark, by its time out; a trap's gas choked on; its own blow at a door or a thing
+  gone wrong), its bearings tested as the start's from a fall (ten harder, a failure anywhere); a fall of **ten feet or more** (a pit, a ledge jumped or fallen from, a shaft, over an edge in
+  the dark, a window's sill; a hold caught, none), **a step the harder each five feet** (ten at most), a failure the
+  walk's drift.  Nothing moves the character while it's senseless yet (a robber takes things, it doesn't drag); if
+  one comes, its being knocked out has done it already.  A climb, a window climbed through, stairs and ladders don't
+  disorient.  (main's watch of the summary, harm_fx's, part 49's: part 52's bearings_off.)
+- **What goes by the belief:** the status line's facing, "You turn to face ...", "You face ... already.", the dark's
+  "You feel your way north." and "You run north into the dark.", "You search the north wall...", and every compass
+  word typed: "go north", "turn east", "face north", "the door to the north", "north and to my left", "search the north
+  wall", "look north" mean the north it believes in (the UI makes them the true ways it means, main.c's cq_cmd).  The
+  ways as it faces (ahead, left, behind) are always true, the body's own, as the senses' words are (all of them as it
+  faces).  The map, its compass and its panel's facing are the map's (slice 4.2's map agent's).
+
 ## The map kept *(slice 4.2's map: drafted 2026-10-23 for the user to review)*
 
 The user's (2026-10-16 and 2026-10-23, DECISIONS.md's bearings and the map): the map plain only where the character
@@ -1327,8 +1396,8 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
 - **D13, the pit climb:** a slip climbing out of a pit ends the climb, and the player chooses what next.  Today a
   slip slides 5 feet back and the climb goes on.
 - **D6, bleeding with first aid** (P_FIRST_AID binds a bleeder).  Today nothing stops bleeding.
-- **Bearings and mental maps** (DUNGEON.md: the character's sense of where it is, by Awareness or Mining; a map in
-  its head that fades): slices 4.1-4.2.
+- **Mental maps** (DUNGEON.md: a map in the character's head that fades): slice 4.2's map (its bearings, by
+  Awareness or Mining, built: Bearings underground, above).
 - **Sniffing one way** (slice 4.0's looking one way: "sniff at the grating"): the trace layer's (slice 4.1: smells in
   the deposit layer).  Today a sniff takes its 3 seconds and smells nothing out of the ordinary.
 - **A look one way's twice as far:** it reaches twice a glance's squares, but 31 at most (155 feet: the senses' grid,

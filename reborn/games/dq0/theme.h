@@ -21,7 +21,8 @@
 ** (dq0m/plan.c), put down as the chunk is first made (dq0m/stock.c's list, the world's to put down); and the rules
 ** of what's done with them (read, combine, put one on or in another, use one on the way out), each with its words
 ** and what it does (the way out opened, the place ruled);
-** its mission (to escape, to rule the place, or either); the way out's lock in words, shut and open; and the
+** its mission (to escape, to rule the place, or either), and how the character came in (walked in, or fallen in: its
+** bearings, slice 4.2's); the way out's lock in words, shut and open; and the
 ** endings' words (escaped, ruled, dead).
 **
 ** And its history (the user's, DesignIdeas.md: "determine what the history of the geographic area is, then you can
@@ -63,6 +64,9 @@ enum { TR_READ, TR_COMBINE, TR_PUT, TR_OUT };
 enum { TE_NONE, TE_OPEN, TE_RULE };             /* Nothing more; the way out opened; the place ruled (an ending) */
 #define TM_ESCAPE       0x01                    /* The mission: to escape, */
 #define TM_RULE         0x02                    /*   to rule the place (either, if both) */
+#define TM_FELL         0x80                    /* (And how the character came in, the theme file's start: come round
+                                                **   below from a fall, its bearings off, slice 4.2's; else walked in by
+                                                **   the way in from the surface, knowing north) */
 enum { END_NONE, END_ESCAPED, END_RULED, END_DIED };
 enum { P_HALLS, P_KEEP, P_TEMPLE, P_CELLARS, P_CRYPT, P_WORKS };  /* A stratum's purpose (DUNGEON.md: built to a plan) */
 #define P_FORT          0x80                    /*   and fortified */
