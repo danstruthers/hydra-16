@@ -104,6 +104,8 @@ unsigned __fastcall__ handy (unsigned i);       /* (Whether thing i is handy: 0,
                                                 **   to the hand) */
 void __fastcall__ reach_from (unsigned n);      /* (Thing n got out, to hand) */
 void __fastcall__ reach_to (unsigned c);        /* (Container c reached into: a thing put in it, looked for in it) */
+void __fastcall__ tool_reach (const char* keys);    /* (Part 4's: a tool used got out, the first carried of one of
+                                                **   those keys, each 0-ended, an empty one last) */
 unsigned __fastcall__ reach_done (unsigned char said);  /* (What's owed added, its time back; said, a pack taken off
                                                 **   for it told; then none owed) */
 extern unsigned rtime, roff, pextra;            /* (What's owed: its time, tenths; the pack taken off for it) */

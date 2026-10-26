@@ -29,6 +29,9 @@
 #define W_SPRING
 #include "workpart.h"
 
+void __fastcall__ tool_reach (const char* keys);    /* (things.c's parts 4 and 10: a tool got out first, HOUSE.md's */
+unsigned __fastcall__ reach_done (unsigned char said);  /*   handy tools, its time owed the next spell) */
+
 void s_doors (void)
 {
     unsigned char out, what = wk.what, st, mine;
@@ -106,8 +109,11 @@ void s_doors (void)
                 break;
             }
             if (wk.plan) {                      /* (Begun, the means to hand (the referee's): a minute a try, the
-                                                **   test made again at its end, its outcome then) */
+                                                **   test made again at its end, its outcome then; the lockpicks
+                                                **   got out first) */
                 timed (LT_PICK, 600);
+                tool_reach ("picks\0");
+                reach_done (0);
                 return;
             }
             if (g > 0) {

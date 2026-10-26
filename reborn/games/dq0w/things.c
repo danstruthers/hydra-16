@@ -888,6 +888,7 @@ unsigned char __fastcall__ s_throw_at (const char* name)
     if (!n) {
         return IR_NONE;
     }
+    reach_from (n);                             /* (Got out first: its reach, HOUSE.md's) */
     fetch (&rec, n);
     cat_map ();
     reach = throws[rec.kind < KI_COUNT ? rec.kind : 0];
@@ -1113,6 +1114,24 @@ unsigned __fastcall__ s_at_hand (const char* name)
 {
     afar = 0;
     return *name ? s_pick (name, HW_HAND) : 0;
+}
+
+/* A tool used, got out first (HOUSE.md's handy tools: its reach owed, part 10's; part 4's, its room): the first the
+** character carries whose key (the catalogue's: the referee's to choose by) is one of keys ("pick\0shovel\0": each
+** 0-ended, an empty one last: a dig begun, a lock's picking) */
+void __fastcall__ s_tool_reach (const char* keys)
+{
+    const char* k;
+    unsigned i = 0;
+
+    while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+        for (k = keys; *k; k += strlen (k) + 1) {
+            if (!strcmp (kind_at (i)->tool, k) && on_pc (i)) {
+                reach_from (i);
+                return;
+            }
+        }
+    }
 }
 
 #pragma static-locals (pop)
@@ -1555,6 +1574,9 @@ unsigned char s_shut_work (void)
     }
     make_own (n);                               /* (Its lid and its lock its own: found closed, a chest locked
                                                 **   sometimes) */
+    if (!d) {
+        reach_from (n);                         /* (Its reach, as it's begun: HOUSE.md's) */
+    }
     fetch (&rec, n);
     k = kind_of (rec.kind);
     strcpy (nm, k->name);
@@ -1596,8 +1618,9 @@ unsigned char s_shut_work (void)
         }
         if (!d) {
             t = 600;                            /* (The means to hand: a minute a try, as a door's, a long task, its
-                                                **   test made again at its end) */
+                                                **   test made again at its end; the lockpicks' reach first) */
             lt = LT_PICK;
+            tool_reach ("picks\0");
         } else if (g > 0) {
             s &= ~IS_LOCKED;
             say3 ("You pick the lock of the ", nm, ".");
@@ -1727,6 +1750,9 @@ unsigned char s_inside (void)
             put (" is closed.");
         }
         return IR_OK;
+    }
+    if (iq.kind == IO_INSIDE) {
+        reach_to (n);                           /* (Its reach, looked into: a pack worn taken off, HOUSE.md's) */
     }
     for (j = 0; (j = items (j, IN_X | IN_ITEM, n)) != 0; ) {
         fetch (&rec, j);
@@ -2506,6 +2532,10 @@ unsigned char s_fill (void)
         put3 ("The ", ln, " has all it can take.");
         return IR_NO;
     }
+    if (!(iq.to & IO_DONE)) {
+        reach_from (n);                         /* (The light and its fuel got out first: their reach, HOUSE.md's) */
+        reach_from (c);
+    }
     hub_map (0);
     HUB->ireq.x = takes == FU_OIL ? 200 : 100;
     if (!(iq.to & IO_DONE)) {
@@ -3224,6 +3254,7 @@ static unsigned char __fastcall__ light (unsigned char on)
     return yes (SA_LIGHT, 0);
 }
 
+
 /* A thing handled, as the request (iq) asks: IR_OK, or IR_NO (refused: the words why) */
 static unsigned char o_handle (void)
 {
@@ -3392,7 +3423,9 @@ unsigned char s_seek (void)
     HUB->ireq.x = 0;
     if (f == SF_ON && !touch) {
         if ((sitem = pick (sname, HW_HAND)) != 0) {
-            return IR_OK;                       /* (Carried, or within reach) */
+            reach_to (sitem);                   /* (Carried, or within reach: its reach, a pack worn taken off to
+                                                **   search it, and put on again, HOUSE.md's) */
+            return IR_OK;
         }
         if (!afar) {
             return IR_NONE;

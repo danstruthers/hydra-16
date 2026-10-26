@@ -2022,6 +2022,9 @@ void __fastcall__ s_start_dig (unsigned char d)
         dig.top = 0xFF;
     }
     dig_kept (1);                               /* (Told, begun: on from where it was left, a hole begun before) */
+    tool_reach ("pick\0shovel\0");              /* (A digger's tool got out first: its reach, HOUSE.md's handy tools,
+                                                **   the first spell's) */
+    reach_done (0);
     spell ();
 }
 

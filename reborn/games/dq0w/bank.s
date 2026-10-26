@@ -210,6 +210,7 @@ go:
             SWFN        reach_to, 10
             SWFN        reach_done, 10
             SWFN        handy, 10
+            SWFN        tool_reach, 4
             SWFN        flame, 10
             SWFN        drop, 35
             SWFN        throw_at, 4

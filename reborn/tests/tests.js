@@ -5361,7 +5361,8 @@ module.exports = {
         const dr = T.of('drop the torch'), lt = T.of('light torch'), gt = T.of('get the torch'), dip = T.of('dip the torch in the oil');
         if (!dq0Here(dr.after).some(i => i.name === 'torch' && !i.fuel)) f.push('the spent torch not put down');
         const lt2 = lt.after && named(lt.after, 'torch')[0];
-        if (!lt2 || !(lt2.flags & I.LIT) || lt2.fuel !== 60) f.push('the spare torch not lit: ' + JSON.stringify(lt2));
+        if (!lt2 || !(lt2.flags & I.LIT) || lt2.fuel < 59) f.push('the spare torch not lit: ' + JSON.stringify(lt2));   // (Its
+        // minute's tick may fall in its reach, got out of the pack: HOUSE.md's reach, 2026-10-26)
         if (!dq0Rep(gt, 'ireq', { kind: 'IO_GET', result: 'IR_OK' }).length) f.push('the spent torch not taken up');
         // (The spent one renewed, a whole hour's; the spare lit burning meanwhile, its minute or two: the reach's, a torch
         // got out of the pack to light it, and the spent one stowed, HOUSE.md's reach, 2026-10-26)
