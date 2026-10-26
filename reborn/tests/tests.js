@@ -5062,6 +5062,98 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0handy', what: 'Dingus Quest Zero\'s reach, how readily a thing comes to hand (the user\'s, 2026-10-23: "Handy would be readily available, so in a backpack that is being worn is not as readily available as one in a belt pouch.  In a sack, in a backpack is two-containers deep, so should require longer for each level of container.  A backpack on the ground or in hand (not worn) is more readily available ... Searching a worn backpack takes it off first, then if it was on, puts it back on, each taking time.  Just shrugging it off/dropping it before battle should not require time"; HOUSE.md\'s reach, handy tools and things used up), by the clock between one line and the next, the things\' replies (the reach owed in the reply\'s y, tenths) and the words: at seed 3 (dq0 -T, dq0 -k sack: the sack in its main hand) the rations from the worn pack into the sack held (the pack off and on again, 10 seconds, and each level 2: told, "You take off your backpack for it, and put it on again."), the sack stowed in the worn pack, the rations from the sack in it (two deep: 15 seconds), dropped at no time, the pennies from the belt\'s pouch (a quick draw, a second), the worn pack looked in (15 seconds) and searched (a minute and 12), shrugged off ("shrug off the pack": no time), the tinderbox taken from it on the ground (a level: 4 seconds), the pack put on ("put on the pack", 5 seconds), its torch put down, the pack taken off and left off ("take off the pack": in both hands), looked in held (5 seconds), put on again; at seed 7 (the ghoul engaging it at once, armoured) a grope in a fight a round a step (the book\'s, Combat 7, a turn): its sword fumbled (a hand free), the dagger drawn from the belt a round, stowed in the worn pack three (off, in, on), the pack dropped, the rations taken from it on the ground a round',
+      init: 't_rc', cycles: 3200e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k sack', 'put the rations in the sack', 'stow the sack', 'take the rations from the sack',
+        'drop the rations', 'take the pennies from the pouch', 'drop the pennies', 'look in the backpack', 'search the backpack',
+        'shrug off the pack', 'take the tinderbox from the backpack', 'drop the tinderbox', 'put on the pack', 'drop the torch',
+        'take off the pack', 'look in the pack', 'put on the pack', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait']) +
+        'hold the dagger\rstow the dagger\rdrop the backpack\rtake the rations from the backpack\r' + dq0Typed(['quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k sack');
+        if (g.k < 0) return ['the first game not played'];
+        const dt = t => t.at && t.after ? t.after.now - t.at.now : null;
+        const rep = (t, kind) => dq0Rep(t, 'ireq', { kind, result: 'IR_OK' })[0];
+        const want = (line, kind, time, owed, what) => {
+          const t = T.of(line, g.k), r = rep(t, kind);
+          if (!r) { f.push(line + ': no ' + kind + ' done (' + JSON.stringify(t.replies.map(e => e.kind + ' ' + e.result)) + ')'); return; }
+          if (owed !== undefined && r.y !== owed) f.push(line + ': its reach ' + r.y + ' tenths, not ' + owed + ' (' + what + ')');
+          if (time !== undefined && dt(t) !== time) f.push(line + ': ' + dt(t) + ' tenths, not ' + time + ' (' + what + ')');
+        };
+        want('put the rations in the sack', 'IO_PUT', 160, 140, 'from the worn pack, off and on, into the sack held, a level');
+        want('stow the sack', 'IO_STOW', 140, 120, 'into the worn pack');
+        want('take the rations from the sack', 'IO_TAKE', 150, 140, 'from a sack in the worn pack: two deep');
+        want('drop the rations', 'IO_DROP', 1, undefined, 'let fall: no time');
+        want('take the pennies from the pouch', 'IO_TAKE', 10, undefined, 'the belt\'s pouch: a quick draw');
+        want('look in the backpack', 'IO_INSIDE', 150, 120, 'the worn pack taken off to look in, and put on again');
+        want('search the backpack', 'IO_SEEK', 720, 120, 'searched, off and on');
+        want('shrug off the pack', 'IO_DROP', 1, undefined, 'a pack shrugged off: no time');
+        want('take the tinderbox from the backpack', 'IO_TAKE', 40, 20, 'from the pack on the ground: a level, no taking off');
+        want('put on the pack', 'IO_DON', 50, undefined, 'worn');
+        want('take off the pack', 'IO_DOFF', 50, undefined, 'taken off, left off');
+        want('look in the pack', 'IO_INSIDE', 50, 20, 'the pack held: a level');
+        const off = T.of('take off the pack', g.k), pk = off.after && dq0Thing(off.after, 'backpack');
+        if (!pk || (pk.flags & DQ0_I.WORN) || !(pk.flags & DQ0_I.HELD)) f.push('the pack not left off, in a hand: ' + JSON.stringify(pk));
+        const on2 = T.after(T.of('look in the pack', g.k), 'put on the pack'), pk2 = on2.after && dq0Thing(on2.after, 'backpack');
+        if (!pk2 || !(pk2.flags & DQ0_I.WORN)) f.push('the pack not put on again: ' + JSON.stringify(pk2));
+        inTurn(s, ['> put the rations in the sack', 'You put the rations in the sack. You take off your backpack for it, and put it on again.',
+          '> look in the backpack', 'You take off your backpack for it, and put it on again.', '> shrug off the pack', 'Put down.',
+          '> put on the pack', 'You put on the backpack.', '> take off the pack', 'You take off the backpack.'], f, 'the words: ');
+        // A grope in a fight (the referee's round, 100 tenths: HarnMaster's), its reach a round a step
+        const g2 = T.of('dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T');
+        if (g2.k < 0) return [...f, 'the fight\'s game not played'];
+        const w = T.after(g2, 'wait'), late = T.filter(t => t.k >= w.k && t.game === w.game);   // (Typed ahead as it fights: each line
+        // entered before it's carried out, its reply in a later turn's)
+        const fight = (line, kind, owed, what) => {
+          const r = late.map(t => rep(t, kind)).find(Boolean);
+          if (!r || r.y !== owed) f.push(line + ', engaged: its reach ' + (r ? r.y : 'none done') + ', not ' + owed + ' (' + what + ')');
+        };
+        fight('hold the dagger', 'IO_HOLD', 100, 'from the belt: a round');
+        fight('stow the dagger', 'IO_STOW', 300, 'into the worn pack: off, in, on, a round each');
+        fight('take the rations from the backpack', 'IO_TAKE', 100, 'from the pack dropped on the ground: a round');
+        if (!late.some(t => rep(t, 'IO_DROP'))) f.push('the pack not dropped in the fight');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0usedup', what: 'Dingus Quest Zero\'s handy tools and things used up (the user\'s, 2026-10-23: "Ink, pencils, charcoal, etc., should be used up eventually.  A pot of ink might last a really long time, as might a pencil, but a chunk of charcoal or chalk would be used up faster"; mapping\'s things "handy and equipped"; HOUSE.md\'s reach, handy tools and things used up, and the map kept), by the hub\'s map making (pc_chart, pc_map), the item store (the chalk\'s fuel: minutes of drawing left), the world\'s events and the words: at seed 3 (dq0 -T, dq0 -k paper,chalk: the paper in hand, the chalk in the worn pack) mapping as it goes with its chalk not handy: no map begun, what they\'re in the hub\'s (pc_chart, CH_PACKED: the backpack), told once as it looks ("Your drawing things are in your backpack.", not again the next look); the chalk put in the pouch on its belt, handy: the map begun (pc_chart CH_DRAW, pc_map), each drawing (a walk across the room and back, mapping on paper) two minutes off the chalk (three hours: the catalogue\'s burns, FU_DRAW), till it\'s spent: gone, told ("Your chalk is worn to nothing.", E_BEAT\'s WB_SPENT, its kind), the map making without it (no CH_DRAW)',
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k paper,chalk', 'map as I go', 'look', 'look', 'put the chalk in the pouch',
+        ...Array(48).fill(['go to the far side', 'go to the near side']).flat(), 'i', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k paper,chalk');
+        if (g.k < 0) return ['the game not played'];
+        const mg = T.after(g, 'map as I go'), l1 = T.after(mg, 'look'), l2 = T.after(l1, 'look'), pu = T.after(l2, 'put the chalk in the pouch');
+        if (!mg.after || mg.after.pc.map || (mg.after.pc.chart & 1) || mg.after.pc.chart >> 1 !== K.KI_BACKPACK) f.push('mapping with the chalk in the worn pack: pc_chart ' + (mg.after && mg.after.pc.chart) + ', pc_map ' + (mg.after && mg.after.pc.map) + ' (not handy, in the backpack, no map begun wanted)');
+        const told = (s.match(/Your drawing things are in your backpack\./g) || []).length;
+        if (told !== 1) f.push('"Your drawing things are in your backpack." told ' + told + ' times, not once');
+        inTurn(s, ['> look', 'Your drawing things are in your backpack.', '> look', '> put the chalk in the pouch'], f, 'told as it looks: ');
+        if (!pu.after || !(pu.after.pc.chart & 1) || !pu.after.pc.map) f.push('the chalk handy in the pouch: no map making (pc_chart ' + (pu.after && pu.after.pc.chart) + ', pc_map ' + (pu.after && pu.after.pc.map) + ')');
+        const chalk = st => st && st.items.find(i => i.name === 'chalk');
+        const c0 = chalk(pu.after);
+        if (!c0 || c0.fuel < 176 || c0.fuel > 180) f.push('the chalk not three hours of drawing as it\'s put in the pouch: ' + JSON.stringify(c0));
+        const left = T.filter(t => t.k > pu.k && /^go to the/.test(t.line)).map(t => chalk(t.after)).filter(Boolean).map(c => c.fuel);
+        if (left.length < 40 || left.some((v, i) => i && ((left[i - 1] - v) & 1 || left[i - 1] - v < 0 || left[i - 1] - v > 4)) ||
+          left[0] - left[left.length - 1] < 160) f.push('the chalk not used up two minutes a drawing as it walks: ' + left.join(' '));
+        const spent = T.filter(t => t.k > pu.k && dq0Ev(t, 'E_BEAT', { beat: 'WB_SPENT', thing: K.KI_CHALK }).length);
+        if (spent.length !== 1) f.push('the chalk not spent once (' + spent.length + ')');
+        const end = T.of('i', pu.k);
+        if (chalk(end.after)) f.push('the chalk not gone: ' + JSON.stringify(chalk(end.after)));
+        if (end.after && (end.after.pc.chart & 1)) f.push('still drawing with no chalk: pc_chart ' + end.after.pc.chart);
+        inTurn(s, ['Your chalk is worn to nothing.'], f, 'the chalk spent: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0limbs', what: 'Dingus Quest Zero\'s limbs (slice 4.1b, the user\'s, 2026-10-21: "if you have a limb injury, it should affect that limbs usefulness"; 2026-10-22: "For an arm or hand, that means no picking things up with that hand"), by where each thing is (the item store\'s), the referee\'s summary (its limbs) and the words: a character with a grievous wound to its left forearm, its limb useless (its file\'s inj line: the book\'s, Combat 14): its summary\'s limbs its left arm useless; at seed 3 (dq0 -T, dq0 -k pick) the kit\'s torch in its right hand (its off hand the useless one), the pick (two-handed) in the pack; the dagger refused its left hand ("Your left arm is useless."), the pick refused ("You can\'t hold the pick in one hand."), the hands not swapped (the torch not into the useless hand)',
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
