@@ -98,14 +98,14 @@ unsigned char __fastcall__ fumbled (unsigned char k);  /* (dq0w.c's part 25) A g
 extern unsigned char noinit;                    /* (dq0 -I: no grope's test while engaged: the tests') */
 unsigned char __fastcall__ in_reach (unsigned n);
 unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);
-/* The reach (HOUSE.md's, 2026-10-26: part 10's; open_hand the main RAM's): how readily a thing comes to hand, by where it
-** is, its time owed as a handling's done, the character's next spell's (dq0w.c's busy, pextra) */
+/* The reach (HOUSE.md's, 2026-10-26: part 10's): how readily a thing comes to hand, by where it is, its time owed as a
+** handling's done, the character's next spell's (dq0w.c's busy, pextra) */
 unsigned __fastcall__ handy (unsigned i);       /* (Whether thing i is handy: 0, or the thing it's in that isn't open
                                                 **   to the hand) */
 void __fastcall__ reach_from (unsigned n);      /* (Thing n got out, to hand) */
 void __fastcall__ reach_to (unsigned c);        /* (Container c reached into: a thing put in it, looked for in it) */
-void __fastcall__ reach_done (unsigned char said);  /* (What's owed added, said: a pack taken off for it told; then
-                                                **   none) */
+unsigned __fastcall__ reach_done (unsigned char said);  /* (What's owed added, its time back; said, a pack taken off
+                                                **   for it told; then none owed) */
 extern unsigned rtime, roff, pextra;            /* (What's owed: its time, tenths; the pack taken off for it) */
 extern unsigned char rsteps, rbody;             /* (Its steps, a fight's rounds: its levels; one, on the body) */
 extern unsigned char held_k[2], held_h[2];      /* (The main RAM's, things.c's: what the character holds, the main

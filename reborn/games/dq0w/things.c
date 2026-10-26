@@ -547,22 +547,24 @@ static void rclear (void)
     rsteps = rbody = 0;
 }
 
-void __fastcall__ s_reach_done (unsigned char said)
+unsigned __fastcall__ s_reach_done (unsigned char said)
 {
     static unsigned char s;
+    static unsigned t;
 
     hub_map (0);
     if ((s = rsteps + rbody) != 0 && zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
         hub_map (0);
         rtime = s * HUB->round;
     }
-    pextra += rtime;
+    pextra += t = rtime;
     if (roff && said) {
         put (" You take off your ");
         put (kind_at (roff)->name);
         put (" for it, and put it on again.");
     }
     rclear ();
+    return t;
 }
 
 /* A flame to hand (IO_LIGHT's, the catalogue's bank's light; part 10's, its room): a thing lit, carried or within
@@ -776,10 +778,12 @@ unsigned char s_serve (void)
     if (iq.result == IR_OK && (iq.kind == IO_GET || (iq.kind >= IO_HOLD && iq.kind <= IO_DOUSE))) {
         sconce_lights (1);                      /* (A sconce's torch taken, put in, lit, put out: its room's light) */
     }
-    if (iq.result == IR_OK && iq.kind != IO_KIT && iq.kind != IO_HIDE) {
-        s_reach_done (iq.kind != IO_GET && iq.kind != IO_DROP);    /* (Its reach owed, the character's next
-                                                **   spell's; a pack taken off for it told, but a thing taken up's or
-                                                **   put down's: the UI's words alone) */
+    if (iq.result == IR_OK && iq.kind != IO_KIT && iq.kind != IO_HIDE &&
+        (n = s_reach_done (iq.kind != IO_GET && iq.kind != IO_DROP)) != 0 && iq.kind != IO_THROW) {
+        hub_map (0);                            /* (Its reach owed, the character's next spell's, and in the reply's y
+                                                **   (the tests'; a throw's where it lies); a pack taken off for it told,
+                                                **   but a thing taken up's or put down's: the UI's words alone) */
+        HUB->ireq.y = n;
     }
     rclear ();
     hub_map (0);

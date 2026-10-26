@@ -288,6 +288,7 @@ void __fastcall__ s_den_rob (unsigned x, unsigned y)
         if (!mine () || (kind != KI_PENNIES && ((f & (I_HELD | I_LIT)) != I_HELD))) {
             continue;
         }
+        reach_from (i);                         /* (Its reach, the robber's: HOUSE.md's, every actor's) */
         p = item_at (i);
         p->where = IW_SQUARE;
         p->sn = bd.sn;
@@ -296,7 +297,14 @@ void __fastcall__ s_den_rob (unsigned x, unsigned y)
         p->flags &= ~(I_HELD | I_WORN);
         ++n;
     }
+    kind = rsteps + rbody - (roff != 0);        /* (Its rounds: a step's each, the round's own the first; a pack taken
+                                                **   off, not put on again) */
     hub_map (0);
+    if (kind > 1) {
+        bd.ready += (kind - 1) * HUB->round;
+    }
+    rtime = roff = 0;
+    rsteps = rbody = 0;
     if (n) {
         equip_now ();                           /* (What's to hand now, and its load: the referee's, at once, part
                                                 **   49's) */
