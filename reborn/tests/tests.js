@@ -5307,7 +5307,7 @@ module.exports = {
         'return to the grotto', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -N -k torch', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'wait 2 hours', 'wait 2 hours',
         'go back to the grotto', 'light the torch', 'go back to the grotto', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -N -k paper,charcoal,lantern', 'douse the torch', 'drop the torch', 'light the lantern', 'map as I go', 'd',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -N -k paper,charcoal,lantern', 'douse the torch', 'drop the torch', 'light the lantern', 'put the charcoal in the pouch', 'map as I go', 'd',
         'call this room the Grotto', 'n', 'w', 'w', 'w', 'stop mapping', 'wait 3 hours', 'wait 2 hours', 'wait 1 hour', 'go back to the grotto', 'quit',
         ...['', ' -N'].flatMap(n => ['dq0 -p t -s 3 -c /ram/c.hm -T' + n, 'd', 'call this room the Grotto', 'n', 'w', 'f', 'f', 'f', 'l', 'f', 'r', 'f', 'l', 'f',
           'r', 'f', 'f', 'l', 'f', 'go back to the grotto', ...(n ? ['!' + 'Ā'.repeat(6) + 'turn around'] : []), 'quit']),
