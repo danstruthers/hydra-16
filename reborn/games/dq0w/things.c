@@ -2329,9 +2329,12 @@ static unsigned char sig (void)
 /* What the character carries gathered first, in one pass of the store (the records on an actor, and every record in
 ** or on a thing: what's in what it carries among them), its list and its load worded from that: each thing's
 ** contents found there, not by a pass each (a pass some 25,000 cycles: an inventory's passes were a third of a
-** million); more than GOT_MAX of them, the passes as before (ngot 0xFF) */
-#define GOT_MAX         48
-static struct got { unsigned n, x; unsigned char where, kind; }* got;
+** million); more than GOT_MAX of them, the passes as before (ngot 0xFF).  The list in the kinds' bank, after the outfits'
+** (outfit.h's OF_LIST: the world's), not the C stack (its 48 there, 288 bytes, took the stack into the swapped parts'
+** area, a part's code overwritten: the soak's hangs, 2026-10-27) */
+#define GOT_MAX         200
+static struct got { unsigned n, x; unsigned char where, kind; } ge;
+#define GOT_AT          ((struct got*) 0x9A00)
 static unsigned char ngot;
 static unsigned char gcur;                      /* (The entry next_in gave last: the next looked for after it, a
                                                 **   container's things in turn, not the list again for each,
@@ -2350,11 +2353,12 @@ static unsigned next_in (void)
     if (ngot == 0xFF) {
         return items (nx_n, IN_X | 1 << nx_w, nx_x);
     }
+    hub_map (KIND_BANK);                        /* (The list's bank) */
     n = nx_n;
     w = nx_w;
     at = nx_x;
-    k = n && gcur < ngot && got[gcur].n == n ? gcur + 1 : 0;
-    for (g = got + k; k < ngot; ++k, ++g) {
+    k = n && gcur < ngot && GOT_AT[gcur].n == n ? gcur + 1 : 0;
+    for (g = GOT_AT + k; k < ngot; ++k, ++g) {
         if (g->x == at && g->where == w && g->n > n) {
             gcur = k;
             return g->n;
@@ -2439,8 +2443,9 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
             lwo = tw.flags & I_WORN;
             lin = 0xFF;                         /* (Whether something's in it: alike's to ask) */
             if (ngot != 0xFF) {
-                for (gp = got + gk + 1, gm = ngot - gk - 1; gm; --gm, ++gp) {  /* (Those after it in the list
+                for (gp = GOT_AT + gk + 1, gm = ngot - gk - 1; gm; --gm, ++gp) {  /* (Those after it in the list
                                                 **   gathered, from its place: next_in's, not the list again for each) */
+                    hub_map (KIND_BANK);
                     if (gp->where == where && gp->x == x && gp->kind == tw.kind) {
                         jn = gp->n;
                         ln += alike (i, told, &nt);
@@ -2493,24 +2498,21 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
 
 void s_list (void)
 {
-    struct got g[GOT_MAX];
-    struct got* p = g;
     char b[6];
     unsigned i = 0;
 
-    got = g;
     ngot = 0;
     while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
         if (ngot == GOT_MAX) {
             ngot = 0xFF;
             break;
         }
-        p->n = i;
-        p->x = ip->x;
-        p->where = ip->where;
-        p->kind = ip->kind;
-        ++p;
-        ++ngot;
+        ge.n = i;
+        ge.x = ip->x;
+        ge.where = ip->where;
+        ge.kind = ip->kind;
+        hub_map (KIND_BANK);
+        memcpy (GOT_AT + ngot++, &ge, sizeof ge);
     }
     text_new ();
     load = 0;

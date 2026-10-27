@@ -359,11 +359,11 @@ void s_den_equip (void)
     static unsigned char f, n, h, k;
     struct req* r;
 
-    if (!(ki = kit_next (0))) {
-        return;
-    }
     hub_map (0);
     HUB->slot[SLOT_WORLD].text[0] = 0;
+    if (!(ki = kit_next (0))) {               /* (Its first: ip its record, its bank in the window) */
+        return;
+    }
     for (; ki; ki = kit_next (ki)) {
         f = ip->flags;
         n = ip->quality;
