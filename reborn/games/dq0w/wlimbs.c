@@ -317,10 +317,29 @@ static void __fastcall__ filed (unsigned i, unsigned char held)
 
 /* A denizen's things made (I_KIT's, the denizens' ring's, part 14's: its lair placed): drawn and made (part 57's), but
 ** for dq0 -K (the tests': none of theirs) */
+/* Kind k a role in the outfits' index (its entry "#" and its number, outfits.js's: the index read in, the character's
+** outfit's, as the game began): 1, or 0 (none, or no index: a kind with no things of its own, part 57 not called) */
+static unsigned char __fastcall__ has_role (unsigned char k)
+{
+    unsigned h = ('#' * 31 + k), n;
+    unsigned char* q;
+
+    hub_map (KIND_BANK);
+    if ((OF_INDEX[0] | OF_INDEX[1] << 8) != 0x464F) {
+        return 0;
+    }
+    for (n = OF_INDEX[3], q = OF_INDEX + 4; n; --n, q += 5) {
+        if ((q[0] | q[1] << 8) == h) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void __fastcall__ s_den_other (const struct msg* m)
 {
     hub_map (0);
-    if (!(HUB->gear & GE_OLD)) {
+    if (!(HUB->gear & GE_OLD) && has_role (m->x[1])) {
         ost.did = m->t;
         ost.hx = m->w1;
         ost.hy = m->w2;

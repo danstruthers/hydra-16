@@ -3,7 +3,8 @@
 // data file, dq0o.dat (make.js's: the kinds by their names in the catalogue as it's linked), which the world reads into
 // banks of its own as it starts and draws from (dq0w/outfit.c).  The file's layout (outfit.c's, little-endian):
 //
-//   'O' 'F' VERSION NSEC, then NSEC entries { hash (2), offset (2) } (the section's name hashed: outfit.c's hash),
+//   'O' 'F' VERSION NSEC, then NSEC entries { hash (2), offset (2), flags (1) } (the section's name hashed: outfit.c's
+//   hash; its flags, its head's first byte, for a draw that wants some: 204 entries at most),
 //   then the sections (200 bytes each at most: outfit.c reads one whole, by its offset)
 //   a section:  flags (SF_*: weapon 1, shield 2, free 4, kit 8, armed 16), bent (its bent's section's entry plus 1,
 //               0 none), keep (the money kept, percent: 0 the tenth), make (its things' quality: 0xFF by the wealth,
@@ -21,7 +22,7 @@
 'use strict';
 const fs = require('fs');
 
-const VERSION = 1;
+const VERSION = 2;                                      // (2: a section's flags in its index entry, 2026-10-27)
 const TAGS = ['feudal', 'imperial', 'viking', 'tribal', 'sindarin', 'khuzan', 'slave', 'serf', 'unguilded', 'guilded', 'noble',
   'poor', 'average', 'rich', 'female', 'male'];
 const PLACES = { worn: 1, hand: 2, off: 3, both: 4, belt: 5, pouch: 6, pack: 7, in: 8 };
@@ -133,9 +134,10 @@ function compile({ src, names, out, dens }) {
   if (dens && fs.existsSync(dens)) {
     const keys = fs.readFileSync(dens, 'latin1').split(/\r?\n/).filter(l => l.trim() && !/^\s*#/.test(l)).map(l => (l.split('|')[1] || '').trim());
     keys.forEach((k, i) => { if (index.has('role ' + k)) alias.push(['#' + String.fromCharCode(i + 1), index.get('role ' + k)]); });
+    for (const [n] of alias) if (hashes.has(hash(n))) throw new Error(src + ': the entry of kind ' + n.charCodeAt(1) + ' hashes as section ' + hashes.get(hash(n)) + ' does');
   }
   const body = [];
-  const head = 4 + (secs.length + alias.length) * 4;
+  const head = 4 + (secs.length + alias.length) * 5;
   let at = head;
   const offs = [];
   for (const s of secs) {
@@ -164,9 +166,9 @@ function compile({ src, names, out, dens }) {
   file.write('OF', 0, 'latin1');
   file[2] = VERSION;
   file[3] = secs.length + alias.length;
-  if (secs.length + alias.length > 255) throw new Error(src + ': more than 255 sections and kinds');
-  secs.forEach((s, i) => { file.writeUInt16LE(hash(s.name), 4 + i * 4); file.writeUInt16LE(offs[i], 6 + i * 4); });
-  alias.forEach(([n, i], k) => { file.writeUInt16LE(hash(n), 4 + (secs.length + k) * 4); file.writeUInt16LE(offs[i], 6 + (secs.length + k) * 4); });
+  if (secs.length + alias.length > 204) throw new Error(src + ': more than 204 sections and kinds (outfit.h: OF_INDEX, 1K)');
+  secs.forEach((s, i) => { file.writeUInt16LE(hash(s.name), 4 + i * 5); file.writeUInt16LE(offs[i], 6 + i * 5); file[8 + i * 5] = s.flags; });
+  alias.forEach(([n, i], k) => { const e = 4 + (secs.length + k) * 5; file.writeUInt16LE(hash(n), e); file.writeUInt16LE(offs[i], e + 2); file[e + 4] = secs[i].flags; });
   for (const { at, b } of body) Buffer.from(b).copy(file, at);
   fs.writeFileSync(out, file);
   return { sections: secs.length, kinds: alias.length, bytes: at };

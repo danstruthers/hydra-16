@@ -30,9 +30,10 @@
 #pragma local-strings (on)
 
 #define OF_MAGIC        0x464F                  /* (dq0o.dat's: "OF", its version) */
-#define OF_VERSION      1
+#define OF_VERSION      2                       /* (2: each entry its section's flags, 5 bytes) */
 
-/* A section by its name (the hash outfits.js's): its offset in the file, 0 none */
+/* A section by its name (the hash outfits.js's): its offset in the file, 0 none; its flags (its index entry's) in fflags */
+static unsigned char fflags;
 static unsigned __fastcall__ find (const char* p)
 {
     unsigned h = 0, k, n;
@@ -43,8 +44,9 @@ static unsigned __fastcall__ find (const char* p)
     }
     hub_map (KIND_BANK);
     n = OF_INDEX[3];
-    for (k = 0, q = OF_INDEX + 4; k < n; ++k, q += 4) {
+    for (k = 0, q = OF_INDEX + 4; k < n; ++k, q += 5) {
         if ((q[0] | q[1] << 8) == h) {
+            fflags = q[4];
             return q[2] | q[3] << 8;
         }
     }
@@ -78,11 +80,13 @@ static unsigned char __fastcall__ reply_line (unsigned char n, const char* pre)
 static unsigned char __fastcall__ skills (unsigned char from, unsigned char want, unsigned char n)
 {
     unsigned char k;
+    unsigned o;
 
     for (k = from; n && reply_line (k, "skill "); ++k) {
         ost.want = want;
-        if (draw_at (find (b), MD_ALL)) {
-            --n;
+        if ((o = find (b)) != 0 && (fflags & (SF_WEAPON | SF_SHIELD)) == want && draw_at (o, MD_ALL)) {
+            --n;                                /* (A section none, or not of those wanted: not read, part 59 not
+                                                **   called, its time) */
         }
     }
     ost.want = 0xFF;
@@ -107,8 +111,8 @@ static unsigned char opened (void)
         return 0;
     }
     hub_map (KIND_BANK);                        /* (Its index into the kinds' bank, the first time) */
-    if ((OF_INDEX[0] | OF_INDEX[1] << 8) != OF_MAGIC) {     /* (Its head, then its entries: 4 bytes each) */
-        for (boff = 0, k = 0; boff < 4 + 4 * (unsigned) k && (n = read (ost.fd, b, sizeof b)) > 0; boff += n) {
+    if ((OF_INDEX[0] | OF_INDEX[1] << 8) != OF_MAGIC) {     /* (Its head, then its entries: 5 bytes each) */
+        for (boff = 0, k = 0; boff < 4 + 5 * (unsigned) k && (n = read (ost.fd, b, sizeof b)) > 0; boff += n) {
             hub_map (KIND_BANK);
             memcpy (OF_INDEX + boff, b, n);
             k = OF_INDEX[3];
@@ -214,7 +218,7 @@ unsigned char s_outfit (void)
     }
     if (draw_at (off, MD_HEAD) && (k = ost.bent) != 0) {    /* (Its bent's armour) */
         hub_map (KIND_BANK);
-        boff = OF_INDEX[4 * k + 2] | OF_INDEX[4 * k + 3] << 8;
+        boff = OF_INDEX[5 * k + 1] | OF_INDEX[5 * k + 2] << 8;    /* (Entry k - 1's offset) */
         draw_at (boff, MD_ALL);
     }
     ost.tool = 1;                               /* (Its skills' tools) */
