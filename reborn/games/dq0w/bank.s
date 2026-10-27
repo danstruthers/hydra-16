@@ -137,6 +137,7 @@ go:
             SWPART      51, 8               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c)
             SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
             SWPART      53, 16              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
+            SWPART      54, 16              ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -212,10 +213,10 @@ go:
             SWFN        bulk_of, 10
             SWFN        carry, 10
             SWFN        about, 10
-            SWFN        reach_from, 10      ; (The reach, 2026-10-26: HOUSE.md's)
-            SWFN        reach_to, 10
-            SWFN        reach_done, 10
-            SWFN        handy, 10
+            SWFN        reach_from, 54      ; (The reach, 2026-10-26: HOUSE.md's)
+            SWFN        reach_to, 54
+            SWFN        reach_done, 54
+            SWFN        handy, 54
             SWFN        tool_reach, 4
             SWFN        flame, 10
             SWFN        drop, 35

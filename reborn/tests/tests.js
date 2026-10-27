@@ -3689,7 +3689,7 @@ module.exports = {
       init: 't_rc', cycles: 1800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T',
         'drop pick', 'walk to the door ahead', 'turn around', 'stow the pick', 'go to the centre of the room', 'go to the far left corner',
-        'go to the near side', 'walk forward to the other side', 'quit', 'echo ml swd 80 >> /ram/c.hm',
+        'face north', 'go to the near side', 'face north', 'walk forward to the other side', 'quit', 'echo ml swd 80 >> /ram/c.hm',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'attack the ghoul', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'go to the far side']) +
         '\u0100go to the far side\r' + dq0Typed(['quit', 'echo $status']) },
@@ -3705,13 +3705,15 @@ module.exports = {
         const at = (t, what, want) => {
           const s = t.after, r = s && s.sight;
           if (!r || r.where !== 0) { f.push(t.line + ': not in a room'); return; }
-          const w = want(r);
-          if (s.pc.x !== w[0] || s.pc.y !== w[1]) f.push(t.line + ': at ' + s.pc.x + ',' + s.pc.y + ', not ' + what + ' ' + w.join(',') + ' (' + dq0Evs(t) + ')');
+          const w = want(r, t.at ? t.at.pc.x : r.rx);   // (A side's square in the column it set out from)
+          const on = u => u && u.actors.some(x => x.state && x.sn === u.pc.sn && x.x === w[0] && x.y === w[1]);   // (A denizen on it: beside it)
+          if ((s.pc.x !== w[0] || s.pc.y !== w[1]) && !((on (t.at) || on (s)) && Math.abs(s.pc.x - w[0]) <= 1 && Math.abs(s.pc.y - w[1]) <= 1))
+            f.push(t.line + ': at ' + s.pc.x + ',' + s.pc.y + ', not ' + what + ' ' + w.join(',') + ' (' + dq0Evs(t) + ')');
         };
         at(T.of('go to the centre of the room'), 'the centre', r => [r.rx + (r.rw - 1 >> 1), r.ry + (r.rh - 1 >> 1)]);
         at(T.of('go to the far left corner'), 'the far left corner', r => [r.rx, r.ry]);
-        at(T.of('go to the near side'), 'the near side', r => [r.rx, r.ry + r.rh - 1]);
-        at(T.of('walk forward to the other side'), 'the other side', r => [r.rx, r.ry]);
+        at(T.of('go to the near side'), 'the near side', (r, x) => [x, r.ry + r.rh - 1]);
+        at(T.of('walk forward to the other side'), 'the other side', (r, x) => [x, r.ry]);
         const a = T.of('attack the ghoul'), gh = a.at && a.at.actors.find(x => x.name === 'ghoul');
         if (!gh) return [...f, 'no ghoul'];
         dq0Need(f, a, 'E_ARRIVE', { how: 'A_WENT_TO' }, 'the ghoul not closed with');

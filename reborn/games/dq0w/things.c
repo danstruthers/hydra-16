@@ -428,7 +428,6 @@ static void __fastcall__ place (unsigned n, unsigned char where, unsigned x, uns
 /* Thing n carried: into the pack if it fits, else in a hand, the one that suits it (part 48's: hand first, the other
 ** way about): 1 in the pack, 2 in a hand, 0 neither (full) */
 unsigned char __fastcall__ hand_free (unsigned n);
-void __fastcall__ s_reach_to (unsigned c);
 unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 {
     unsigned char h;
@@ -437,7 +436,7 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
     h = hand_free (n);
     if ((!hand_first || !h) && pack && !fits (n, pack)) {
         place (n, IW_ITEM, pack, 0);
-        s_reach_to (pack);                      /* (Put away: its reach, HOUSE.md's) */
+        reach_to (pack);                        /* (Put away: its reach, HOUSE.md's: part 54's) */
         return 1;
     }
     if (h) {
@@ -450,8 +449,9 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 
 /* ---- The reach (HOUSE.md's: the user's, 2026-10-23, "Handy would be readily available, so in a backpack that is being
 ** worn is not as readily available as one in a belt pouch"): how readily a thing comes to hand, by where it is, for
-** every taking out, putting away, look inside, search and tool's use, every actor's.  In hand, at once; on the body
-** (worn, hung from a belt, in what's open to the hand: open_hand's) or lying within reach, a quick draw, no time more
+** every taking out, putting away, look inside, search and tool's use, every actor's (part 54's, its own: part 10's
+** room, an inventory's swap the smaller).  In hand, at once; on the body
+** (worn, hung from a belt, in what's open to the hand: level_of's) or lying within reach, a quick draw, no time more
 ** than the handling's own; in a container (held, set down, in another), R_IN a level; in a pack worn on the back,
 ** taken off first and put on again after, R_OFFON and its level, once a handling however often it's reached into.
 ** Engaged, a round a step (the book's grope, a turn: the readiest a turn, each level deeper a turn more, a pack's
@@ -462,6 +462,8 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 unsigned char __fastcall__ zone_step (unsigned ox, unsigned oy, unsigned x, unsigned y);  /* (dq0w.c's part 24) */
 
 #pragma static-locals (push, on)
+#pragma code-name (push, "SW54CODE")
+#pragma rodata-name (push, "SW54RODATA")
 
 /* What reaching into container c is (rec its record, copied: what holds it, lw and lx): 0 open to the hand, a quick
 ** draw (not a container: a belt, a surface; one that hangs from a belt, a pouch, a quiver, a sheath; one worn, but a
@@ -568,6 +570,16 @@ unsigned __fastcall__ s_reach_done (unsigned char said)
     return t;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* (Part 10's own: none owed, serve's) */
+static void rclear10 (void)
+{
+    rtime = roff = 0;
+    rsteps = rbody = 0;
+}
+
 /* A flame to hand (IO_LIGHT's, the catalogue's bank's light; part 10's, its room): a thing lit, carried or within
 ** reach; or a tinderbox carried, its reach the lighting's (HOUSE.md's handy tools): 1, or 0 */
 unsigned char s_flame (void)
@@ -584,7 +596,7 @@ unsigned char s_flame (void)
         }
     }
     if (t) {
-        s_reach_from (t);
+        reach_from (t);
     }
     return t != 0;
 }
@@ -680,7 +692,7 @@ unsigned char s_serve (void)
     unsigned char changed = 0, k;
     unsigned n;
 
-    rclear ();                                  /* (No reach owed yet) */
+    rclear10 ();                                /* (No reach owed yet) */
     hub_map (0);
     memcpy (&iq, &HUB->ireq, sizeof iq);
     iq.result = IR_OK;
@@ -753,7 +765,7 @@ unsigned char s_serve (void)
             took = HUB->round;
         } else if (k >= IO_STOW && k <= IO_TAKE) {
             if ((iq.result = moved (k)) == IR_OK && k != IO_TAKE) {
-                s_reach_to (cont);              /* (Stowed, put, taken from: one, or as many as it says; what it went
+                reach_to (cont);                /* (Stowed, put, taken from: one, or as many as it says; what it went
                                                 **   in reached into, once) */
             }
         } else {
@@ -780,13 +792,13 @@ unsigned char s_serve (void)
         sconce_lights (1);                      /* (A sconce's torch taken, put in, lit, put out: its room's light) */
     }
     if (iq.result == IR_OK && iq.kind != IO_KIT && iq.kind != IO_HIDE &&
-        (n = s_reach_done (iq.kind != IO_GET && iq.kind != IO_DROP)) != 0 && iq.kind != IO_THROW) {
+        (n = reach_done (iq.kind != IO_GET && iq.kind != IO_DROP)) != 0 && iq.kind != IO_THROW) {
         hub_map (0);                            /* (Its reach owed, the character's next spell's, and in the reply's y
                                                 **   (the tests'; a throw's where it lies); a pack taken off for it told,
                                                 **   but a thing taken up's or put down's: the UI's words alone) */
         HUB->ireq.y = n;
     }
-    rclear ();
+    rclear10 ();
     hub_map (0);
     HUB->ireq.result = iq.result;
     return changed && iq.kind != IO_KIT;
