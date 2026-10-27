@@ -1359,7 +1359,7 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   shrugged off; a thing in a pack or a pouch got out first (its reach); worn armour taken off first (a doff's five
   seconds).
 - **Looking in a thing, or searching it, is its reach**: a look in the worn pack takes it off and puts it on again
-  (fifteen seconds, the look's three with it), searching it a minute and twelve; a look in a sack held five
+  (fifteen seconds, the look's three with it), searching it within the search's minute; a look in a sack held five
   seconds.  "look at" a thing isn't (the plain look).
 - **Engaged, a round a step** (the book's grope, a turn): the readiest (on the body, lying within reach) a round; each
   container's level a round more; a pack on the back taken off a round, and put on again a round (so a thing stowed in

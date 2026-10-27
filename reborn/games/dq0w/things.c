@@ -560,8 +560,11 @@ unsigned __fastcall__ s_reach_done (unsigned char said)
         hub_map (0);
         rtime = s * HUB->round;
     }
-    pextra += t = rtime;
-    if (roff && said) {
+    t = rtime;
+    if (!(said & RD_LONG)) {
+        pextra += t;                            /* (A long task's its own length's instead: the caller's, RD_LONG) */
+    }
+    if (roff && (said & RD_SAID)) {
         put (" You take off your ");
         put (kind_at (roff)->name);
         put (" for it, and put it on again.");
@@ -791,12 +794,18 @@ unsigned char s_serve (void)
     if (iq.result == IR_OK && (iq.kind == IO_GET || (iq.kind >= IO_HOLD && iq.kind <= IO_DOUSE))) {
         sconce_lights (1);                      /* (A sconce's torch taken, put in, lit, put out: its room's light) */
     }
+    k = iq.kind == IO_SHUT || iq.kind == IO_FILL;   /* (A timed work begun, or a lid's: its reach its time's) */
     if (iq.result == IR_OK && iq.kind != IO_KIT && iq.kind != IO_HIDE &&
-        (n = reach_done (iq.kind != IO_GET && iq.kind != IO_DROP)) != 0 && iq.kind != IO_THROW) {
+        (n = reach_done ((iq.kind != IO_GET && iq.kind != IO_DROP ? RD_SAID : 0) | (k ? RD_LONG : 0))) != 0 &&
+        iq.kind != IO_THROW) {
         hub_map (0);                            /* (Its reach owed, the character's next spell's, and in the reply's y
                                                 **   (the tests'; a throw's where it lies); a pack taken off for it told,
-                                                **   but a thing taken up's or put down's: the UI's words alone) */
+                                                **   but a thing taken up's or put down's: the UI's words alone; a timed
+                                                **   work's its length the more, its time in x, as its task's) */
         HUB->ireq.y = n;
+        if (k) {
+            HUB->ireq.x += n;
+        }
     }
     rclear10 ();
     hub_map (0);
@@ -3449,9 +3458,9 @@ unsigned char s_seek (void)
     HUB->ireq.x = 0;
     if (f == SF_ON && !touch) {
         if ((sitem = pick (sname, HW_HAND)) != 0) {
-            reach_to (sitem);                   /* (Carried, or within reach: its reach, a pack worn taken off to
-                                                **   search it, and put on again, HOUSE.md's) */
-            return IR_OK;
+            return IR_OK;                       /* (Carried, or within reach: a pack worn taken off to search it,
+                                                **   and put on again, within the search's minute, HOUSE.md's reach:
+                                                **   a search of a thing a minute's, no longer) */
         }
         if (!afar) {
             return IR_NONE;

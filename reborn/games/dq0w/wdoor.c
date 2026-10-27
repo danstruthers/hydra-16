@@ -111,9 +111,8 @@ void s_doors (void)
             if (wk.plan) {                      /* (Begun, the means to hand (the referee's): a minute a try, the
                                                 **   test made again at its end, its outcome then; the lockpicks
                                                 **   got out first) */
-                timed (LT_PICK, 600);
                 tool_reach ("picks\0");
-                reach_done (0);
+                timed (LT_PICK, 600 + reach_done (2));  /* (Its reach its length's, RD_LONG) */
                 return;
             }
             if (g > 0) {

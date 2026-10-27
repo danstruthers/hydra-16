@@ -108,6 +108,8 @@ void __fastcall__ tool_reach (const char* keys);    /* (Part 4's: a tool used go
                                                 **   those keys, each 0-ended, an empty one last) */
 unsigned __fastcall__ reach_done (unsigned char said);  /* (What's owed added, its time back; said, a pack taken off
                                                 **   for it told; then none owed) */
+#define RD_SAID         0x01                    /* (reach_done's: a pack taken off for it told; */
+#define RD_LONG         0x02                    /*   a long task's, not added: its length the more, the caller's) */
 extern unsigned rtime, roff, pextra;            /* (What's owed: its time, tenths; the pack taken off for it) */
 extern unsigned char rsteps, rbody;             /* (Its steps, a fight's rounds: its levels; one, on the body) */
 extern unsigned char held_k[2], held_h[2];      /* (The main RAM's, things.c's: what the character holds, the main
