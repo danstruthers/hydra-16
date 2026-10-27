@@ -64,7 +64,7 @@ void s_equip_now (void)
         if ((f & I_HELD) && lp == ip) {
             hh |= h ? h : mh;                   /* (The hands that hold something) */
         }
-        hub_map (CAT_BANK);                     /* (Its key after its mark, its quality after it) */
+        hub_map (KIND_BANK);                     /* (Its key after its mark, its quality after it) */
         memcpy (wb + 1, CATALOGUE[kind].tool, sizeof CATALOGUE[0].tool);
         hub_map (0);
         if (wb[1] && strlen (r->text) < REQ_TEXT - sizeof wb) {
@@ -232,7 +232,7 @@ void s_den_drop (void)
     unsigned x = bd.x, y = bd.y;
     unsigned char* q;
 
-    hub_map (CAT_BANK);
+    hub_map (KIND_BANK);
     for (k = 1; k < NKINDS && strcmp (CATALOGUE[k].name, dword); ++k) {
     }
     hub_map (0);

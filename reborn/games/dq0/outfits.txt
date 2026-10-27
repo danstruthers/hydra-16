@@ -1,0 +1,861 @@
+; outfits.txt - Dingus Quest Zero's outfits: what the character begins with, by its occupation, its skills and its
+; family's wealth (the plan the user reviewed, outfits.md, and DECISIONS.md's "Outfits, reach and things used up":
+; the universal kit, then the occupation's things, its weapons by its weapon skills, its armour by its bent, its
+; skills' tools, all bought at the book's prices with the family wealth, strictly within it; a soldier's unit issue,
+; a knight's lord's gift and a cleric's temple's things free), and what each denizen carries (denizens.md, Phase 1:
+; weapons, armour and clothes, made as its lair's placed).  The world compiles nothing of it: games/dq0w/make.js
+; (outfits.js) makes it lib/dq0/dq0o.dat, the kinds by the catalogue's names (games/dq0w/kinds.c), and the world
+; draws from it (games/dq0w/outfit.c), on a die of its own (the game's seed and the character's numbers, or the
+; stratum's and the denizen's: the same each time).  The book's prices are the catalogue's (a thing's value), paid
+; as the appraiser would value the make bought: value x (2 + quality) / 6.  HOUSE.md's outfits say the house's
+; rules; these are its numbers, all the house's but where a page is given (the book's: Character 17, Combat 2-4,
+; Religion 9, Character 27-29).
+;
+; A section: [NAME] and its header's words.  NAME: universal; an occupation (hmchar's, occupations.txt's names;
+; NAME/c the one of culture c's, where two cultures have one name: f feudal, i imperial, v viking, t tribal, s
+; sindarin, k khuzan); skill NAME (an open skill's things: harn.h's skill names); bent NAME (an occupation's armour);
+; role KEY (a denizen's kind's, kinds.txt's key).  Its words: weapon (a weapon skill's: three at most, and a
+; shield), shield, armed (its own lines arm it: no weapon skill's drawn, a unit's issue, a cleric's), bent NAME, keep
+; N (the money kept, percent: a tenth else), make Q D (its things' make, Q + 1dD: else the wealth's), purse N D (its
+; money NdD pennies, not the family's: a new cleric's, Religion 9), kit (the universal kit given it: a temple's),
+; free (every line given: a denizen's).
+;
+; A line: CHANCE: CHOICE | CHOICE ...  CHANCE: need (bought first, before the money's kept), a percentage (bought
+; after, by chance), free (given), free N (given, N in a hundred); if TAGS, not TAGS (commas between: a character with
+; one of them, none of them): feudal imperial viking tribal sindarin khuzan, slave serf unguilded guilded noble, poor
+; average rich, female male.  A CHOICE: things, commas between, one choice drawn by its weight (*W, 1 else; TAG*W its
+; weight for a character with the tag), of those it can pay for; instead KIND (it takes the place of the kind made
+; already: the knife a dagger; none made, nothing).  A thing: KIND[@PLACE] [N or N-M] [lit] [full] [own] [fine]:
+; worn, hand (the main), off, both, belt (hung from it, in its carrier), pouch (the first on the belt), pack, in (in the
+; thing before it in the choice); pack else; how many; a light lit, a waterskin full, its own make (half the price, a
+; point less), a point better.  A thing that won't go where it's meant goes in the pack; one that won't go there
+; isn't made.
+
+; ---- The universal kit (the user's: a backpack, torches, a tinderbox, three days' rations, a full waterskin, a belt with
+; a pouch and a belt knife, some money; the book's free: the clothes worn, a knapsack, a moneybelt, credentials:
+; Character 17), bought in the user's order (DECISIONS.md's answer 1: strictly, a poor character may go without some)
+[universal]
+free: clothes@worn
+free if slave,serf: sandals@worn
+free not slave,serf: shoes@worn
+free: backpack@worn
+free: belt@worn
+free: pouch@belt
+free if guilded,noble: letter@pouch
+need: torch@off lit
+need: tinderbox@pack
+need: rations@pack 3
+need: waterskin@belt full
+need: sheath@belt, knife@in
+need: torch@pack
+need: flask of oil@pack
+
+; ---- The weapons by the open weapon skills (Combat 2: a main weapon, a reserve and a shield; the weights the book's
+; Treasure table's, narrowed to the catalogue's kinds), each with its carrier and its missiles (Combat 17: 12 to 24
+; arrows; sling stones plentiful)
+[skill Dagger] weapon
+need: sheath@belt, dagger@in instead knife
+15: bandolier@worn, taburi@in 3-5
+[skill Sword] weapon
+need: scabbard@belt, shortsword@in *35 sindarin*0 | scabbard@belt, sword@in *30 sindarin*0 | scabbard@belt, falchion@in *15 sindarin*0 | scabbard@belt, bastard sword@in *15 sindarin*0 | scabbard@belt, longknife@in *5 sindarin*100
+[skill Club] weapon
+need: mace@belt *45 | club@belt *40
+[skill Axe] weapon
+need: axe@belt *40 | hatchet@belt *30 | battleaxe@hand *15 | shorkana@belt 2 *10 viking*60 | sickle@belt *5
+[skill Spear] weapon
+need: spear@hand *70 | staff@hand *15
+[skill Polearm] weapon
+need: poleaxe@both
+[skill Bow] weapon
+need: shortbow@worn, quiver@belt, arrows@in 12-24 *60 sindarin*0 | longbow@worn, quiver@belt, arrows@in 12-24 *30 sindarin*0 | crossbow@worn, bolt case@belt, bolts@in 12-24 *5 khuzan*50 sindarin*0 | hartbow@worn, quiver@belt, arrows@in 12-24 *5 sindarin*100
+[skill Sling] weapon
+need: sling@belt, pouch@belt, sling stones@in 10-20
+[skill Net] weapon
+need: net@pack
+[skill Whip] weapon
+need: whip@belt
+[skill Shield] shield
+need: round shield@worn *60 noble*30 | buckler@worn *30 noble*10 | kite shield@worn *10 noble*30 | knight shield@worn *0 noble*30 | tower shield@worn *0 imperial*50
+
+; ---- The armour by an occupation's bent, each piece by its chance while the money lasts
+[bent none]
+10: leather cap@worn
+[bent light]
+80: leather cap@worn *50 | kurbul helm@worn *30
+30: leather vest@worn
+20: gauntlets@worn
+20: knee boots@worn instead shoes
+[bent medium]
+80: kurbul helm@worn | iron helm@worn
+90: gambeson@worn *50 | leather tunic@worn *40
+40 not rich: ring byrnie@worn
+30 if rich: mail byrnie@worn
+50: knee boots@worn instead shoes
+40: gauntlets@worn
+
+; ---- The skills' tools (the drawing things and the thieves' tools in the pouch, handy: HOUSE.md's handy tools)
+[skill Drawing]
+60: paper@pouch, charcoal@pouch *60 | paper@pouch, pencil@pouch *40
+30: chalk@pouch
+[skill Script]
+50: parchment@pack, quill@pack, horn of ink@pack
+[skill Inkcraft]
+50: parchment@pack, quill@pack, horn of ink@pack
+[skill Law]
+50: parchment@pack, quill@pack, horn of ink@pack
+[skill Lockcraft]
+60: lockpicks@pouch
+[skill Climbing]
+50: rope@pack
+15: grapple@pack
+[skill Seamanship]
+50: rope@pack
+[skill Mining]
+70: pick@pack
+30: shovel@pack
+50: candle@pack 2-4
+[skill Masonry]
+70: chisel@pack, hammer@belt
+[skill Metalcraft]
+50: hammer@belt
+[skill Weaponcraft]
+50: hammer@belt
+[skill Jewelcraft]
+50: hammer@belt
+[skill Woodcraft]
+50: hatchet@belt
+[skill Timbercraft]
+50: hatchet@belt
+[skill Physician]
+70: bandages@pack 3-6
+40: herbs@pack 1-3
+[skill Herblore]
+50: herbs@pack 1-3, vial@pack
+[skill Alchemy]
+50: herbs@pack 1-3, vial@pack
+[skill Perfumery]
+50: herbs@pack 1-3, vial@pack
+[skill Embalming]
+50: herbs@pack 1-3, vial@pack
+[skill Survival]
+40: sack@pack
+20: rope@pack
+[skill Foraging]
+40: sack@pack
+[skill Fishing]
+40: sack@pack
+[skill Hunting]
+40: sack@pack
+[skill Tracking]
+40: sack@pack
+[skill Cookery]
+40: rations@pack 2
+
+; ---- The unguilded (Character 15)
+[Animal Trainer]
+60: rope@pack
+40: whip@belt
+30: staff@hand
+[Beggar]
+60: sack@pack
+15: candle stubs@pack
+[Cartographer/Artist]
+need: paper@pouch, charcoal@pouch, pencil@pouch
+60: quill@pack, horn of ink@pack
+40: parchment@pack
+40: chalk@pouch
+20: lantern@belt
+[Cook/Servant]
+50: rations@pack 2
+30: herbs@pack 1-2
+20: club@belt
+[Farmer]
+40: sickle@belt *40 | hatchet@belt *30
+60: sack@pack
+30: staff@hand
+20: sling@belt, pouch@belt, sling stones@in 10-20
+[Fisherman]
+60: rope@pack
+20: net@pack
+[Gladiator] bent light
+50: kurbul helm@worn
+40: gauntlets@worn
+50: bandages@pack 2-4
+[Herdsman]
+60: staff@hand
+50: sling@belt, pouch@belt, sling stones@in 10-20
+[Hunter/Trapper]
+60: sack@pack
+30: rope@pack
+30: hatchet@belt
+20: leather cap@worn
+[Laborer]
+50: sack@pack
+30: rope@pack
+30: club@belt
+10: crowbar@pack
+[Longshoreman]
+50: sack@pack
+50: rope@pack
+30: club@belt
+10: crowbar@pack
+[Prostitute/Pimp]
+30: ring@worn
+20 if male: club@belt
+[Ratter]
+need: sack@pack
+30: herbs@pack 1-2
+20: lantern@belt
+[Sage/Tutor]
+need: parchment@pack, quill@pack, horn of ink@pack
+50: candle@pack 2-4
+40: robe@pack
+[Scribe]
+need: parchment@pack, paper@pouch, quill@pack, horn of ink@pack
+50: pencil@pouch
+50: candle@pack 2-4
+20: chalk@pouch
+[Teamster]
+60: rope@pack
+30: hatchet@belt
+20: knee boots@worn instead shoes
+[Thatcher]
+need: rope@pack
+30: sickle@belt
+30: hatchet@belt
+15: grapple@pack
+[Toymaker]
+50: paper@pouch, charcoal@pouch
+40: chisel@pack
+30: hammer@belt
+25: lockpicks@pouch
+
+; ---- The guilded (Character 15: every one its guild's papers, the universal kit's letter)
+[Alchemist]
+need: vial@pack 2, herbs@pack 2
+50: parchment@pack, quill@pack, horn of ink@pack
+60: bandages@pack 2
+10: pick@pack
+30: staff@hand
+[Apothecary]
+need: herbs@pack 3, vial@pack 2, bandages@pack 3
+40: parchment@pack, quill@pack, horn of ink@pack
+[Astrologer]
+need: paper@pouch, pencil@pouch
+40: quill@pack, horn of ink@pack
+20: lantern@belt
+[Chandler]
+need: candle@pack 4-6
+50: lantern@belt
+50: flask of oil@pack 2
+30: pot of pitch@pack
+20: torch@pack 2
+[Charcoaler]
+need: hatchet@belt
+60: sack@pack
+60: charcoal@pack
+30: rope@pack
+[Clothier]
+50: cloak@worn
+20: ring@worn
+[Courtesan]
+60: ring@worn
+20: sheath@belt, dagger@in instead knife
+[Embalmer]
+need: vial@pack 2, bandages@pack 4
+50: herbs@pack 1-3
+15: hammer@belt, chisel@pack
+[Glassworker]
+70: vial@pack 2
+20: lantern@belt
+[Harper/Skald]
+40: cloak@worn
+[Hideworker]
+40: leather cap@worn own
+60: sack@pack
+[Innkeeper]
+50: rations@pack 2
+50: candle@pack 2-4
+30: club@belt
+10: iron pot@pack
+[Jeweler]
+need: hammer@belt
+50: ring@worn
+[Lexigrapher]
+need: parchment@pack own, quill@pack 2, horn of ink@pack
+40: pencil@pouch
+[Litigant]
+need: parchment@pack, quill@pack, horn of ink@pack
+40: ring@worn
+40: cloak@worn
+[Locksmith]
+need: lockpicks@pouch, hammer@belt
+50: chisel@pack
+40: iron key@pouch 2
+20: crowbar@pack
+[Mason]
+need: chisel@pack, hammer@belt
+40: pick@pack
+50: chalk@pouch
+30: rope@pack
+[Mercantyler] bent light keep 20
+need: sack@pack
+40: ring@worn
+40: parchment@pack, quill@pack, horn of ink@pack
+[Metalsmith]
+need: hammer@belt
+40: chisel@pack
+30: hatchet@belt own
+20: crowbar@pack
+[Miller/Millwright]
+need: sack@pack 2
+40: hammer@belt
+20: chisel@pack
+[Miner]
+need: pick@pack
+50: hammer@belt, chisel@pack
+50: candle@pack 2-4 *60 | lantern@belt *40
+50: leather cap@worn
+30: shovel@pack
+30: rope@pack
+30: hobnail boots@worn instead shoes
+[Ostler]
+50: rope@pack
+40: knee boots@worn instead shoes
+30: whip@belt
+[Perfumer]
+need: vial@pack 3, herbs@pack 2
+30: ring@worn
+[Physician]
+need: bandages@pack 6, herbs@pack 3, vial@pack 2
+[Pilot] bent light
+need: parchment@pack 2, pencil@pouch
+50: rope@pack
+50: cloak@worn
+20: grapple@pack
+[Potter]
+30: vial@pack
+[Salter]
+50: rations@pack 2
+60: sack@pack
+20: pick@pack
+[Seaman]
+need: rope@pack
+40: cloak@worn
+30: grapple@pack
+[Shipwright]
+need: hammer@belt, hatchet@belt
+50: chisel@pack
+40: rope@pack
+[Tentmaker]
+need: sack@pack 2
+40: rope@pack
+[Thespian]
+50: cloak@worn
+30: paper@pouch, charcoal@pouch
+30: mask@pack
+[Thief (Lia-Kavair)] bent light
+need: lockpicks@pouch, paper@pouch, charcoal@pouch
+50: crowbar@pack
+40: rope@pack
+50: sack@pack
+40: candle@pack 2
+25: grapple@pack
+20: pencil@pack, chalk@pack
+[Timberwright]
+need: hatchet@belt
+50: rope@pack
+[Weaponcrafter] bent light
+need: hammer@belt
+40: leather cap@worn
+[Woodcrafter]
+need: hatchet@belt, hammer@belt
+40: chisel@pack
+40: club@belt own *50 | staff@hand own *50
+
+; ---- The nobles (Character 15; a noble's horse stays at home)
+[Herald] bent medium
+need: surcoat@worn
+60: paper@pouch, pencil@pouch
+60: ring@worn
+[Lady]
+need: sheath@belt, dagger@in fine instead knife
+80: ring@worn
+60: cloak@worn
+40: paper@pouch, pencil@pouch
+
+; ---- The soldiers (Character 27, 29: the unit's issue free, its make the unit's; the family's wealth the kit and the
+; rest; a lance and a horse left at the dungeon's mouth, DECISIONS.md's answer 4).  A knight's issue its lord's gift
+; (Character 17)
+[Militia UF] armed make 3 3
+free: spear@hand
+free: round shield@worn
+[Yeoman LF] armed make 3 3
+free: spear@hand
+free: scabbard@belt, shortsword@in
+free: sheath@belt, dagger@in instead knife
+free: round shield@worn
+free: leather cap@worn
+free: leather vest@worn
+[Guardsman LF] armed make 3 3
+free: spear@hand
+free: scabbard@belt, shortsword@in
+free: sheath@belt, dagger@in instead knife
+free: round shield@worn
+free: leather cap@worn
+free: leather vest@worn
+[Order infantry LF] armed make 3 3
+free: spear@hand
+free: scabbard@belt, shortsword@in
+free: sheath@belt, dagger@in instead knife
+free: round shield@worn
+free: leather cap@worn
+free: leather vest@worn
+[Guardsman MF] armed make 3 3
+free: spear@hand
+free: scabbard@belt, falchion@in
+free: sheath@belt, dagger@in instead knife
+free: round shield@worn
+free: iron helm@worn
+free: gambeson@worn
+free: ring byrnie@worn
+[Order infantry MF] armed make 3 3
+free: spear@hand
+free: scabbard@belt, falchion@in
+free: sheath@belt, dagger@in instead knife
+free: round shield@worn
+free: iron helm@worn
+free: gambeson@worn
+free: ring byrnie@worn
+[Yeoman SB] armed make 3 3
+free: shortbow@worn, quiver@belt, arrows@in 12-24
+free: scabbard@belt, falchion@in
+free: sheath@belt, dagger@in instead knife
+free: buckler@worn
+free: kurbul helm@worn
+free: leather vest@worn
+[Yeoman LB] armed make 3 3
+free: longbow@worn, quiver@belt, arrows@in 12-24
+free: scabbard@belt, falchion@in
+free: sheath@belt, dagger@in instead knife
+free: buckler@worn
+free: kurbul helm@worn
+free: leather vest@worn
+[Order archer SB] armed make 3 3
+free: shortbow@worn, quiver@belt, arrows@in 12-24
+free: scabbard@belt, shortsword@in
+free: sheath@belt, dagger@in instead knife
+free: buckler@worn
+free: kurbul helm@worn
+free: leather vest@worn
+[Knight MH] armed make 5 2
+free: scabbard@belt, sword@in
+free: axe@belt
+free: sheath@belt, dagger@in instead knife
+free: knight shield@worn
+free: iron helm@worn
+free: mail cowl@worn
+free: gambeson@worn
+free: mail hauberk@worn
+free: knee boots@worn instead shoes
+free: gauntlets@worn
+60: surcoat@worn
+50: ring@worn
+40: lantern@belt
+[Knight/Bailiff] armed make 5 2
+free: scabbard@belt, sword@in
+free: axe@belt
+free: sheath@belt, dagger@in instead knife
+free: knight shield@worn
+free: iron helm@worn
+free: mail cowl@worn
+free: gambeson@worn
+free: mail hauberk@worn
+free: knee boots@worn instead shoes
+free: gauntlets@worn
+60: surcoat@worn
+50: ring@worn
+40: lantern@belt
+[Order knight MH] armed make 5 2
+free: scabbard@belt, sword@in
+free: mace@belt
+free: sheath@belt, dagger@in instead knife
+free: knight shield@worn
+free: iron helm@worn
+free: mail cowl@worn
+free: gambeson@worn
+free: mail hauberk@worn
+free: knee boots@worn instead shoes
+free: gauntlets@worn
+60: surcoat@worn
+50: ring@worn
+40: lantern@belt
+[Patrician MH] armed make 5 2
+free: scabbard@belt, sword@in
+free: axe@belt
+free: sheath@belt, dagger@in instead knife
+free: kite shield@worn
+free: iron helm@worn
+free: mail cowl@worn
+free: gambeson@worn
+free: mail hauberk@worn
+free: knee boots@worn instead shoes
+free: gauntlets@worn
+60: surcoat@worn
+50: ring@worn
+40: lantern@belt
+[Knight HH] armed make 5 2
+free: scabbard@belt, bastard sword@in
+free: axe@belt
+free: sheath@belt, dagger@in instead knife
+free: kite shield@worn
+free: great helm@worn
+free: mail cowl@worn
+free: gambeson@worn
+free: mail hauberk@worn
+free: mail leggings@worn
+free: knee boots@worn instead shoes
+60: surcoat@worn
+50: ring@worn
+40: lantern@belt
+[Order knight HH] armed make 5 2
+free: scabbard@belt, bastard sword@in
+free: mace@belt
+free: sheath@belt, dagger@in instead knife
+free: kite shield@worn
+free: great helm@worn
+free: mail cowl@worn
+free: gambeson@worn
+free: mail hauberk@worn
+free: mail leggings@worn
+free: knee boots@worn instead shoes
+60: surcoat@worn
+50: ring@worn
+40: lantern@belt
+[Legionnaire LF] armed make 3 3
+free: spear@hand
+free: scabbard@belt, shortsword@in
+free: sheath@belt, dagger@in instead knife
+free: tower shield@worn
+free: leather cap@worn
+free: leather vest@worn
+[Legionnaire MF] armed make 3 3
+free: spear@hand
+free: scabbard@belt, shortsword@in
+free: sheath@belt, dagger@in instead knife
+free: tower shield@worn
+free: iron helm@worn
+free: gambeson@worn
+free: ring byrnie@worn
+[Legionnaire SB] armed make 3 3
+free: shortbow@worn, quiver@belt, arrows@in 12-24
+free: scabbard@belt, shortsword@in
+free: sheath@belt, dagger@in instead knife
+free: buckler@worn
+free: kurbul helm@worn
+free: leather vest@worn
+[Clansman UF] armed make 3 3
+free: spear@hand
+free: round shield@worn
+free: shorkana@belt 2-3
+[Clansman LF] armed make 3 3
+free: spear@hand
+free: round shield@worn
+free: shortbow@worn, quiver@belt, arrows@in 12-24
+free: sheath@belt, dagger@in instead knife
+free: shorkana@belt 2
+free: leather cap@worn
+free: leather vest@worn
+[Huscarl MF] armed make 3 3
+free: battleaxe@hand
+free: scabbard@belt, sword@in
+free: round shield@worn
+free: sheath@belt, dagger@in instead knife
+free: shorkana@belt 2
+free: iron helm@worn
+free: gambeson@worn
+free: mail byrnie@worn
+[Huscarl LH] armed make 3 3
+free: scabbard@belt, sword@in
+free: sheath@belt, dagger@in instead knife
+free: round shield@worn
+free: shorkana@belt 2
+free: leather cap@worn
+free: leather tunic@worn
+free: knee boots@worn instead shoes
+[Clansman LF/k] armed make 4 3
+free: spear@hand
+free: axe@belt
+free: round shield@worn
+free: leather cap@worn
+free: leather vest@worn
+[Low Guard MF] armed make 4 3
+free: spear@hand
+free: battleaxe@pack
+free: sheath@belt, dagger@in instead knife
+free: round shield@worn
+free: iron helm@worn
+free: gambeson@worn
+free: ring byrnie@worn
+[High Guard HF] armed make 5 3
+free: poleaxe@pack
+free: mace@belt
+free: sheath@belt, dagger@in instead knife
+free: round shield@worn
+free: iron helm@worn
+free: mail cowl@worn
+free: gambeson@worn
+free: mail hauberk@worn
+free: knee boots@worn instead shoes
+[Ranger UF] armed make 4 3
+free: hartbow@worn, quiver@belt, arrows@in 12-24
+free: scabbard@belt, longknife@in
+free: sheath@belt, dagger@in instead knife
+free: buckler@worn
+[Ranger LF] armed make 4 3
+free: hartbow@worn, quiver@belt, arrows@in 12-24
+free: scabbard@belt, longknife@in
+free: sheath@belt, dagger@in instead knife
+free: buckler@worn
+free: leather cap@worn
+free: leather vest@worn
+[Guardian MF] armed make 4 3
+free: spear@hand
+free: scabbard@belt, longknife@in
+free: sheath@belt, dagger@in instead knife
+free: round shield@worn
+free: iron helm@worn
+free: gambeson@worn
+free: ring byrnie@worn
+[Horsebow LH] armed make 4 3
+free: hartbow@worn, quiver@belt, arrows@in 12-24
+free: scabbard@belt, longknife@in
+free: knight shield@worn
+free: leather cap@worn
+free: leather tunic@worn
+free: knee boots@worn instead shoes
+[Knight MH/s] armed make 5 2
+free: scabbard@belt, longknife@in
+free: knight shield@worn
+free: iron helm@worn
+free: mail cowl@worn
+free: gambeson@worn
+free: mail hauberk@worn
+free: knee boots@worn instead shoes
+free: gauntlets@worn
+60: surcoat@worn
+50: ring@worn
+
+; ---- The clerics (Religion 9: a new cleric's wool robe, its linen clothes, sandals or boots, a dagger or a staff, a
+; ring of its rank, 6 to 36 pennies; the universal kit its temple's, DECISIONS.md's answer 5; the fighting churches'
+; weapons and shields from the temple's armoury; each church's marks, its page 1).  The 6d6 buys its skills' tools
+[Cleric (Agrik)] armed kit purse 6 6
+free: robe@worn
+free: ring@worn
+free 40: knee boots@worn instead shoes
+free: mace@belt
+free: sickle@belt
+free: round shield@worn
+free: letter@pouch
+[Cleric (Halea)] armed kit purse 6 6
+free: robe@worn
+free: ring@worn fine
+free 40: knee boots@worn instead shoes
+free: staff@hand *50 | sheath@belt, dagger@in instead knife *50
+free: letter@pouch
+[Cleric (Ilvir)] armed kit purse 6 6
+free: robe@worn
+free: ring@worn
+free 40: knee boots@worn instead shoes
+free: staff@hand *50 | sheath@belt, dagger@in instead knife *50
+free: letter@pouch
+70: paper@pouch, charcoal@pouch
+50: bandages@pack 2
+[Cleric (Larani)] armed kit purse 6 6
+free: surcoat@worn
+free: ring@worn
+free 40: knee boots@worn instead shoes
+free: sheath@belt, dagger@in instead knife
+free: scabbard@belt, sword@in
+free: round shield@worn
+free: letter@pouch
+[Cleric (Morgath)] armed kit purse 6 6
+free: robe@worn
+free: ring@worn
+free 40: knee boots@worn instead shoes
+free: sheath@belt, dagger@in instead knife
+free: mask@worn own
+free: letter@pouch
+[Cleric (Naveh)] armed kit purse 6 6
+free: robe@worn
+free: ring@worn
+free 40: knee boots@worn instead shoes
+free: sheath@belt, dagger@in instead knife
+free: sheath@belt, dagger@in
+free 20: lockpicks@pouch
+free: letter@pouch
+[Cleric (Peoni)] armed kit purse 6 6
+free: robe@worn
+free: ring@worn
+free 40: knee boots@worn instead shoes
+free: staff@hand
+free: letter@pouch
+60: bandages@pack 4
+50: herbs@pack 2
+[Cleric (Sarajin)] armed kit purse 6 6
+free: robe@worn
+free: ring@worn
+free 40: knee boots@worn instead shoes
+free: axe@belt *70 | battleaxe@hand *30
+free: round shield@worn
+free: leather cap@worn
+free 50: leather vest@worn
+free: letter@pouch
+[Cleric (Save-K'nor)] armed kit purse 6 6
+free: robe@worn
+free: ring@worn
+free 40: knee boots@worn instead shoes
+free: staff@hand *50 | sheath@belt, dagger@in instead knife *50
+free: letter@pouch
+70: paper@pouch, charcoal@pouch
+[Cleric (Siem)] armed kit purse 6 6
+free: robe@worn
+free: ring@worn
+free 40: knee boots@worn instead shoes
+free: staff@hand *50 | sheath@belt, dagger@in instead knife *50
+free: letter@pouch
+50: herbs@pack 1-2
+
+; ---- The denizens (denizens.md, Phase 1: each kind's weapons, carriers, armour and clothes, made as its lair's first
+; placed, DECISIONS.md's answer 6; personal things, purses and valuables, when first met: later phases).  Its make by
+; its maker (denizens.md 5: kobold-made crude, men's middling, the dead's their people's).  A weapon in hand is ready;
+; one on the belt, sheathed, wants a turn to draw (answer 8).  The beasts carry nothing
+[role kobold] free make 0 3
+free: spear@hand *60 | club@hand *15 | hatchet@hand *15 | knife@hand *10
+free 50: hide jerkin@worn
+free 70: belt@worn
+free 30: buckler@worn
+free 15: kurbul helm@worn
+free 20: sling@belt, pouch@belt, sling stones@in 10-20
+[role koblord] free make 2 3
+free: axe@hand *60 | falchion@hand *15 | shortsword@hand *10 | battleaxe@hand *15
+free: hide jerkin@worn
+free: belt@worn
+free 60: buckler@off *50 | round shield@off *50
+free 70: leather vest@worn *40 | ring byrnie@worn *30 | kurbul helm@worn *30
+[role bandit] free make 2 4
+free: clothes@worn
+free: shoes@worn *60 | knee boots@worn *40
+free: belt@worn
+free: sheath@belt, knife@in *60 | sheath@belt, dagger@in *40
+free: scabbard@belt, shortsword@in *35 | spear@hand *20 | club@belt *10 | hatchet@belt *10 | scabbard@belt, falchion@in *15 | scabbard@belt, sword@in *10
+free 75: leather vest@worn *40 | leather tunic@worn *25 | gambeson@worn *10
+free 40: kurbul helm@worn *50 | leather cap@worn *50
+free 60: buckler@worn *40 | round shield@worn *20
+free 25: shortbow@worn, quiver@belt, arrows@in 12-20
+free 30: cloak@worn
+[role banlord] free make 4 4
+free: clothes@worn
+free: knee boots@worn
+free: belt@worn
+free: sheath@belt, dagger@in
+free: scabbard@belt, sword@in *50 | scabbard@belt, falchion@in *30 | scabbard@belt, bastard sword@in *20
+free: mail byrnie@worn *50 | scale byrnie@worn *30 | ring byrnie@worn *20
+free 70: kite shield@off *60 | round shield@off *40
+free 70: iron helm@worn *50 | kurbul helm@worn *50
+free 60: cloak@worn
+free 40: gauntlets@worn
+free 20: mail cowl@worn
+[role cultist] free make 2 4
+free: robe@worn
+free: clothes@worn
+free: mask@worn
+free: belt@worn
+free: sheath@belt, knife@in *40 | sheath@belt, dagger@in *30 | staff@hand *30
+free: sandals@worn *70 | knee boots@worn *30
+[role priest] free make 4 4
+free: robe@worn
+free: clothes@worn
+free: mask@worn fine
+free: belt@worn
+free: mace@hand
+free: sandals@worn *50 | knee boots@worn *50
+[role skel] free make 1 4
+free: sword@hand *60 | spear@hand *25 | axe@hand *15
+free 70: shroud@worn
+free 25: round shield@off
+free 20: iron helm@worn
+[role wight] free make 0 2
+free 70: club@belt *34 | hatchet@belt *33 | scabbard@belt, shortsword@in *33
+free 50: shroud@worn
+[role shade] free make 5 3
+free: sword@hand
+free: robe@worn
+free: mask@worn
+free: belt@worn
+
+; ---- The HarnWorld Bestiary's folk (DECISIONS.md's answer 11: the Khuzdul, the Sindarin, men and the Gargun), their
+; gear here as the data their kinds come with (Phase 4's: the kinds themselves aren't in the game yet; the Gargun the
+; kobolds stand for)
+[role gargun] free make 0 3
+free: spear@hand *50 | club@hand *15 | hatchet@hand *15 | axe@hand *10 | knife@hand *10
+free 50: hide jerkin@worn
+free 70: belt@worn
+free 30: buckler@worn
+free 15: kurbul helm@worn
+[role khuzwar] free make 6 3
+free: battleaxe@hand *40 | warhammer@hand *30 | axe@hand *30
+free: mail byrnie@worn *70 | scale byrnie@worn *30
+free: mail cowl@worn *50 | iron helm@worn *50
+free: clothes@worn
+free: knee boots@worn
+free: belt@worn
+free 60: gambeson@worn
+free 60: knight shield@off *50 | round shield@off *50
+free 50: gauntlets@worn
+[role khuzmin] free make 5 3
+free: pick@both
+free: hammer@belt
+free: chisel@pack
+free: lantern@belt
+free: leather cap@worn
+free: leather vest@worn
+free: clothes@worn
+free: knee boots@worn
+free: belt@worn
+free: sack@pack
+[role khuzeld] free make 7 2
+free: warhammer@hand *50 | battleaxe@hand *50
+free: mail byrnie@worn fine
+free: iron helm@worn
+free: clothes@worn
+free: knee boots@worn
+free: belt@worn
+[role sindwar] free make 6 3
+free: scabbard@belt, longknife@in
+free: clothes@worn
+free: knee boots@worn
+free: cloak@worn
+free: belt@worn
+free 80: hartbow@worn, quiver@belt, arrows@in 20
+free 70: leather vest@worn *50 | leather tunic@worn *50
+free 40: kurbul helm@worn
+[role manarms] free make 3 3
+free: spear@hand *50 | scabbard@belt, shortsword@in *50
+free: round shield@worn *50 | knight shield@worn *50
+free: sheath@belt, knife@in
+free: clothes@worn
+free: knee boots@worn
+free: belt@worn
+free 85: leather tunic@worn *40 | leather vest@worn *30 | ring byrnie@worn *30
+free 80: kurbul helm@worn *50 | iron helm@worn *50
+free 25: crossbow@worn, bolt case@belt, bolts@in 12-20
+[role captain] free make 4 4
+free: scabbard@belt, sword@in
+free: kite shield@off
+free: mail byrnie@worn
+free: iron helm@worn
+free: knee boots@worn
+free: clothes@worn
+free: belt@worn
+free 60: gauntlets@worn

@@ -268,7 +268,7 @@ void o_seen_words (void)
         packed = 0;
     } else if (!packed) {
         packed = 1;
-        hub_mem (CAT_BANK, nm, CATALOGUE[c >> 1].name, sizeof nm);
+        hub_mem (KIND_BANK, nm, CATALOGUE[c >> 1].name, sizeof nm);
         add (" Your drawing things are in your ");
         add (nm);
         add (".");

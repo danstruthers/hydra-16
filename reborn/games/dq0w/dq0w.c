@@ -1401,7 +1401,10 @@ static void __fastcall__ planned (unsigned char n)
 {
     ask_maker (M_PLAN, n, 0, 0);
     hub_map (WORLD_BANK);
-    memcpy (&WREC->strata[SLOT (n)], &WREC->grown, sizeof WREC->grown);
+    memcpy ((char*) &WREC->strata[SLOT (n)] + 1, (char*) &WREC->grown + 1, sizeof WREC->grown - 1);
+    WREC->strata[SLOT (n)].made = WREC->grown.made;     /* (Its made last: the denizens, looking as it's copied, see a
+                                                **   record whole or not made, never a half: 2026-10-27, dq0kept's
+                                                **   seed 535, a lair placed by a stratum's regions not yet there) */
     sync_strata ();
     kept_wait (n);                              /* (Its populations, wkept.c's) */
 }
@@ -2973,7 +2976,7 @@ void __fastcall__ s_door_work (unsigned char what)
 
     hub_map (0);
     if (what == PA_BREAK && ((p = HUB->pc_strike) & SK_THING)) {
-        hub_map (CAT_BANK);
+        hub_map (KIND_BANK);
         barw_ = door_swing (CATALOGUE + (p & 0x7F)) == IM_SOFT;
         hub_map (0);
     }
@@ -3604,7 +3607,7 @@ unsigned char s_dark_way (void)
         bigx[nbig] = p->x;
         bigy[nbig] = p->y;
         j = p->kind;
-        hub_map (CAT_BANK);
+        hub_map (KIND_BANK);
         if ((b = CATALOGUE[j].bulk) >= BIG_BULK) {
             bigk[nbig] = j;
             bigb[nbig] = b;
@@ -3933,7 +3936,7 @@ static unsigned char __fastcall__ swatted (unsigned char k)
     if (!((s = HUB->pc_strike) & SK_THING)) {
         return 0;
     }
-    hub_map (CAT_BANK);
+    hub_map (KIND_BANK);
     s = fight_swing (CATALOGUE + (s & 0x7F));
     hub_map (0);
     if (s != IM_SOFT) {
@@ -3968,7 +3971,7 @@ static unsigned char in_hand (void)
     }
     HUB->pc_shand = held_h[s - 1];
     s = held_k[s - 1];
-    hub_map (CAT_BANK);
+    hub_map (KIND_BANK);
     n = fight_swing (CATALOGUE + s);
     hub_map (0);
     return n == IM_SOFT ? SK_BEST : SK_THING | s;
@@ -4378,7 +4381,7 @@ unsigned char __fastcall__ s_fumbled (unsigned char k)
     if (G_OK (g)) {
         return 0;
     }
-    hub_map (CAT_BANK);
+    hub_map (KIND_BANK);
     strcpy (w, CATALOGUE[k].name);
     hub_map (UI_BANK);
     strcpy (UIREC->things_text, "You fumble for the ");
@@ -5291,7 +5294,7 @@ void s_limbs_pace (void)
     }
     while (pmode != GA_HOP && (i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
         if ((ip->flags & I_HELD) && (k = ip->kind) != 0) {
-            hub_map (CAT_BANK);
+            hub_map (KIND_BANK);
             if (CATALOGUE[k].form & KF_LONG) {
                 break;                          /* (A crutch: held, long and sturdy) */
             }
@@ -5396,7 +5399,7 @@ void s_burns_now (void)
         wx = p->x;
         wy = p->y;
         mine = ww == IW_ACTOR && !wx;
-        hub_map (CAT_BANK);
+        hub_map (KIND_BANK);
         r = mine ? CATALOGUE[q.kind].light : 0;
         if (!q.id || (q.flags & I_TENDED) || !(b = burn_of (q.kind))) {
             more |= mine;                       /* (A light of its own lit that lasts: no other's burning low told) */
@@ -5460,7 +5463,7 @@ void s_burns_now (void)
     if (out || seen) {
         if (out) {
             light_now ();                       /* (Its light made again: another lit still, or none) */
-            hub_map (CAT_BANK);
+            hub_map (KIND_BANK);
             memcpy (ln, CATALOGUE[out].name, sizeof ln);
             hub_map (0);
             HUB->pc_left[0] = 0;                /* (Its words too, the next time round) */

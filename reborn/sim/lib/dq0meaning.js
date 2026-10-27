@@ -62,7 +62,7 @@ const EXPRS = {
   namesAt: '(unsigned) NAMES_AT - 0x8000', tnames: 'TNAMES', tname: 'sizeof (struct tname)', nmWhat: F('struct tname', 'what'),
   nmSn: F('struct tname', 'sn'), nmX: F('struct tname', 'x'), nmY: F('struct tname', 'y'), nmKind: F('struct tname', 'kind'),
   nmName: F('struct tname', 'name'),
-  catBank: 'CAT_BANK', kindSize: 'sizeof (struct kind)', nkinds: 'NKINDS', kFlags: F('struct kind', 'flags'), kWeight: F('struct kind', 'weight'),
+  catBank: 'KIND_BANK', kindSize: 'sizeof (struct kind)', nkinds: 'NKINDS', kFlags: F('struct kind', 'flags'), kWeight: F('struct kind', 'weight'),
   item0: 'ITEM_BANK (0)', itemSize: 'sizeof (struct item)', nitems: 'NITEMS', iKind: F('struct item', 'kind'), iFlags: F('struct item', 'flags'),
   iWhere: F('struct item', 'where'), iSn: F('struct item', 'sn'), iX: F('struct item', 'x'), iY: F('struct item', 'y'),
   iQty: F('struct item', 'qty'), iId: F('struct item', 'id'), iFuel: F('struct item', 'fuel'), iShut: F('struct item', 'shut'), iThick: F('struct item', 'thick'),

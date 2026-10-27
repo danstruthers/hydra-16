@@ -176,7 +176,7 @@ void __fastcall__ kind_in (unsigned char k)
 {
     unsigned char b = getbank ();
 
-    hub_map (CAT_BANK);
+    hub_map (KIND_BANK);
     memcpy (&wk, CATALOGUE + k, sizeof wk);
     setbank (b);
 }

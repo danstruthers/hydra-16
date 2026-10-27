@@ -16,7 +16,7 @@
 REC         = 25                            ; sizeof (struct item)
 PER_BANK    = 327                           ; Records a bank (0x2000 / 25)
 NITEMS      = 654                           ; (ITEM_BANKS of them)
-BANK0       = 14                            ; ITEM_BANK (0): CAT_BANK + 1
+BANK0       = 14                            ; ITEM_BANK (0): KIND_BANK + 1
 LAST_BANK   = BANK0 + 1
 END         = $8000 + PER_BANK * REC      ; (A bank's records' end)
 IN_X        = $80                           ; items ()'s in: its x is x (else any, but IN_FLAGS)

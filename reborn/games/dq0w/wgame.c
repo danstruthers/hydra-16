@@ -187,7 +187,7 @@ unsigned char s_take_up (void)
     } else {
         if ((r = take_rest ()) == IR_NONE) {    /* (A count, taken up as it gets there: the request as it was, part
                                                 **   4's: "take 4 rations", the user's) */
-            hub_map (CAT_BANK);
+            hub_map (KIND_BANK);
             r = w == IW_PORTAL || (CATALOGUE[k].keeps & KF_FIXED) ? IR_FIXED : !noinit && fumbled (k) ? IR_FUMBLED :
                 carry (n, 0) ? IR_OK : IR_FULL; /* (Engaged, a grope failed: the round wasted, its words) */
         }

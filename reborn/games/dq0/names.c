@@ -273,7 +273,7 @@ static unsigned char __fastcall__ taken (const char* k, struct tname* self)
     }
     k = key (k);
     for (i = 1; i < NKINDS; ++i) {              /* (A kind of thing's: the catalogue's) */
-        hub_map (CAT_BANK);
+        hub_map (KIND_BANK);
         memcpy (ob, CATALOGUE[i].name, sizeof CATALOGUE[0].name);
         hub_map (0);
         if (ob[0] && word_of (ob, k)) {

@@ -157,7 +157,7 @@ static const char* weapon (void)
 
     if (s & SK_THING) {
         bare = 0;
-        hub_map (CAT_BANK);
+        hub_map (KIND_BANK);
         memcpy (wname, CATALOGUE[s & 0x7F].name, sizeof wname);
         hub_map (0);
         return wname;

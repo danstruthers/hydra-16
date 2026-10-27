@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     19                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     20                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -48,8 +48,9 @@
                                                 **   items.h's IH_*, IO_SWAP, rs.h's summary's limbs and limp, P_RISE,
                                                 **   C_LAME ..., I_RISE, the actors' move, arm and dropped, RS_REARM,
                                                 **   O_REARM; 17: the bearings, pc_skew, pc_lost; 18: the map making,
-                                                **   pc_chart, pc_map; 19: the bearings' E_BEARING) */
-#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1)   /* Bank 0: the header, the
+                                                **   pc_chart, pc_map; 19: the bearings' E_BEARING; 20: the kinds in
+                                                **   a bank of their own, KIND_BANK, NKINDS 128) */
+#define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
                                                 **   items' (items.h); the denizens' events; the senses' look
@@ -57,13 +58,20 @@
                                                 **   each bank its keeper's: the senses' (SIGHT_BANK), the UI's
                                                 **   (UI_BANK), the world's (WORLD_BANK); the change records' pages
                                                 **   (CHANGE_BANK: world.h's, the world's); the commands' text (CMD_BANK:
-                                                **   the UI's, the command parser's to read) */
-#define CAT_BANK        (1 + PLAN_BANKS + CACHE_BANKS)
+                                                **   the UI's, the command parser's to read); the kinds (KIND_BANK) */
+#define KIND_BANK       (1 + PLAN_BANKS + CACHE_BANKS)  /* The catalogue's kinds, in a bank of their own (the outfits'
+                                                **   room, 2026-10-27: NKINDS records at $8000, items.h's struct kind),
+                                                **   every task's to read, a kind's record copied out (beside bank 0,
+                                                **   its U the header's: a task that puts back the bank register alone
+                                                **   finds the header again); */
+#define CAT_BANK        (CMD_BANK + 1)          /*   the rest of the catalogue: how lights burn, what's thrown how
+                                                **   far, the things' words and the code that handles things (the
+                                                **   world's alone: dq0w.cfg's CAT, its window put back by hub_map) */
 #define CATALOGUE       ((struct kind*) 0x8000)
-#define ITEM_BANK(i)    (CAT_BANK + 1 + (i) / (0x2000 / sizeof (struct item)))
+#define ITEM_BANK(i)    (KIND_BANK + 1 + (i) / (0x2000 / sizeof (struct item)))
 #define ITEM_AT(i)      ((struct item*) 0x8000 + (i) % (0x2000 / sizeof (struct item)))
 #define HUB_WINDOW      ((unsigned char*) 0x8000)
-#define DEN_BANK        (CAT_BANK + 1 + ITEM_BANKS)     /* The denizens' events (DQ_SIZE of them, a ring: the world's) */
+#define DEN_BANK        (KIND_BANK + 1 + ITEM_BANKS)     /* The denizens' events (DQ_SIZE of them, a ring: the world's) */
 #define DQ_SIZE         64
 #define DQ_AT           ((struct msg*) 0x8000)
 #define SND_AT          ((char*) 0x8000 + DQ_SIZE * sizeof (struct msg))    /* The sounds (SOUND.md), after them: the
@@ -1260,8 +1268,9 @@ struct wsave {
 **   own chunk.elev maker +world                                (a harm, a square dug, an opening: dq0w/store.c)
 **   own chunk.nopen maker +world
 **   own chunk.open maker +world
-**   own bank(CAT_BANK) world                                   (The catalogue: the world's, the theme's kinds)
-**   own banks(CAT_BANK+1,ITEM_BANKS) world                     (The items' places and states)
+**   own bank(CAT_BANK) world                                   (The catalogue: the world's)
+**   own bank(KIND_BANK) world                                  (Its kinds: the world's, the theme's after them)
+**   own banks(KIND_BANK+1,ITEM_BANKS) world                    (The items' places and states)
 **   own bank(DEN_BANK) world                                   (The denizens' events)
 **   own bank(DEN_BANK,SND_AT,FIGHT_AT) sound +ui               (The sounds: the UI clears them)
 **   own bank(DEN_BANK,FIGHT_AT,FIGHT_AT+NFIGHTS) world         (The fights' words)

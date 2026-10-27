@@ -33,7 +33,7 @@ static const struct kind* __fastcall__ kind_of (unsigned char k)
     static unsigned char next;
     struct kind* r = &kb[next++ & 1];
 
-    hub_map (CAT_BANK);
+    hub_map (KIND_BANK);
     memcpy (r, CATALOGUE + (k < NK ? k : 0), sizeof *r);
     return r;
 }

@@ -384,10 +384,10 @@ void __fastcall__ s_keep (unsigned char back)
                 if (read (fd, buf, PIECE) != PIECE) {
                     memset (buf, 0, PIECE);
                 }
-                hub_map (CAT_BANK + 1 + b);
+                hub_map (KIND_BANK + 1 + b);
                 memcpy ((char*) 0x8000 + off, buf, PIECE);
             } else {
-                hub_map (CAT_BANK + 1 + b);
+                hub_map (KIND_BANK + 1 + b);
                 memcpy (buf, (char*) 0x8000 + off, PIECE);
                 write (fd, buf, PIECE);
             }
@@ -421,7 +421,7 @@ done:
 ** in, and the character's light from it */
 void __fastcall__ s_items_begin (const char* dir)
 {
-    unsigned off;
+    unsigned off, k;
     unsigned char b;
     int fd, n;
 
@@ -431,15 +431,22 @@ void __fastcall__ s_items_begin (const char* dir)
     strcat (path, "/dq0w.cat");
     hub_map (CAT_BANK);
     memset ((void*) 0x8000, 0, 0x2000);
-    if ((fd = open (path, O_RDONLY)) >= 0) {
-        for (off = 0; off < 0x2000 && (n = read (fd, buf, PIECE)) > 0; off += n) {
-            hub_map (CAT_BANK);
-            memcpy ((char*) 0x8000 + off, buf, n);
+    hub_map (KIND_BANK);
+    memset ((void*) 0x8000, 0, 0x2000);
+    if ((fd = open (path, O_RDONLY)) >= 0) {    /* (The kinds first, their own bank's, as many bytes as the first
+                                                **   record's cap_weight says, PIECEs whole: dq0w/make.js's; then the
+                                                **   catalogue's) */
+        for (off = 0, k = 0x2000; off < k + 0x2000 && (n = read (fd, buf, PIECE)) > 0; off += n) {
+            if (!off) {
+                k = ((struct kind*) buf)->cap_weight;
+            }
+            hub_map (off < k ? KIND_BANK : CAT_BANK);
+            memcpy ((char*) 0x8000 + (off < k ? off : off - k), buf, n);
         }
         close (fd);
     }
     for (b = 0; b < ITEM_BANKS; ++b) {          /* (The store empty; a game carried on, its kept) */
-        hub_map (CAT_BANK + 1 + b);
+        hub_map (KIND_BANK + 1 + b);
         memset ((void*) 0x8000, 0, 0x2000);
     }
     hub_map (0);

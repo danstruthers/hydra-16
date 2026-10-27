@@ -1,10 +1,11 @@
 /*
 ** kinds.c - (dq0w) the catalogue (items.h's struct kind: a stand-in for the theme's data, till themes are data): not
-** in the task's RAM but its own file's, dq0w.cat (dq0w.cfg's CAT), which the world reads as it starts into the hub's
-** catalogue bank (CAT_BANK), where the kinds are at $8000 as they're linked; a kind's record copied out as it's
-** wanted (things.c; the senses', the UI's too).  Its order is items.h's KI_* (the maker lists things by those).
-** After it, how the lights burn (burns: slice 4.1's), what's thrown how far, and the things' words (things.h's SA_*),
-** in the bank too, each copied out as it's wanted.
+** in the task's RAM but its own file's, dq0w.cat (dq0w.cfg's KIN and CAT), which the world reads as it starts into the
+** hub's banks: the kinds into their own (KIND_BANK, 2026-10-27: the outfits' room), where they're at $8000 as they're
+** linked, the words of their names after them (dq0w/make.js's); a kind's record copied out as it's wanted (things.c;
+** the senses', the UI's, the referee's too).  Its order is items.h's KI_* (the maker lists things by those).  Then,
+** in the catalogue's bank (CAT_BANK, the world's), how the lights burn (burns: slice 4.1's), what's thrown how far,
+** and the things' words (things.h's SA_*), each copied out as it's wanted.
 */
 
 #pragma rodata-name ("CATRODATA")
@@ -20,39 +21,43 @@
 ** lid, a tie, a stopper: KF_LID, KF_TIE, KF_STOPPER), its own form (0 a thing whole; KF_COUNT a lot, counted: its
 ** weight one's) */
 typedef char kinds_fit[KI_COUNT <= KI_THEME ? 1 : -1];   /* (The theme's after the catalogue's own) */
+#pragma rodata-name (push, "KINDATA")           /* (The kinds in a bank of their own: the hub's KIND_BANK) */
 const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, theme.h: the UI's, as it starts) */
     { "", 0 },
     { "torch", K_LIGHT | K_HAND, 4, 2, 0, 0, 0, 4, 3, "torch", MT_WOOD, AP_WOOD, 1 },
     { "backpack", K_CONTAINER | K_WEAR, 8, 20, 32, 160, 0, 0, 5, "", MT_LEATHER, AP_HIDE, 24, SS | KF_LID, KF_BACK },
-    { "belt", K_BELT | K_WEAR, 2, 1, 0, 0, 4, 0, 2, "", MT_LEATHER, AP_HIDE, 6 },
-    { "pouch", K_CONTAINER | K_HANG, 1, 1, 2, 16, 0, 0, 1, "", MT_LEATHER, AP_HIDE, 3, SS | KF_TIE },
-    { "dagger", K_HAND | K_HANG, 4, 1, 0, 0, 0, 0, 2, "knife", MT_IRON, AP_WEAPON, 60 },
+    { "belt", K_BELT | K_WEAR, 2, 1, 0, 0, 6, 0, 2, "", MT_LEATHER, AP_HIDE, 10 },     /* (Six slots: a pouch, a sheath,
+                                                **   a scabbard, a waterskin, a quiver, a mace, the outfits') */
+    { "pouch", K_CONTAINER | K_HANG, 1, 1, 3, 16, 0, 0, 1, "", MT_LEATHER, AP_HIDE, 9, SS | KF_TIE },
+    { "dagger", K_HAND | K_HANG, 4, 1, 0, 0, FM_KNIFE, 0, 2, "dagger", MT_IRON, AP_WEAPON, 24 },
     { "waterskin", K_CONTAINER | K_HANG, 4, 4, 4, 20, 0, 0, 2, "", MT_LEATHER, AP_HIDE, 8, KF_LIQUID | KF_STOPPER },
-    { "rations", K_PLURAL, 4, 2, 0, 0, 0, 0, 2, "", MT_OTHER, AP_FOOD, 4, 0, KF_COUNT },   /* (A day's: a pound) */
+    { "rations", K_PLURAL, 4, 2, 0, 0, 0, 0, 2, "", MT_OTHER, AP_FOOD, 2, 0, KF_COUNT },   /* (A day's: a pound) */
     { "tinderbox", 0, 1, 1, 0, 0, 0, 0, 1, "tinder", MT_IRON, AP_METAL, 6 },
-    { "pick", K_HAND | K_TWO, 24, 6, 0, 0, 0, 0, 4, "pick", MT_IRON, AP_METAL, 48 },
+    { "pick", K_HAND | K_TWO, 24, 6, 0, 0, 0, 0, 4, "pick", MT_IRON, AP_METAL, 8 },
     { "shovel", K_HAND | K_TWO, 20, 8, 0, 0, 0, 0, 4, "shovel", MT_IRON, AP_METAL, 36, 0, KF_LONG },
     { "lockpicks", 0, 1, 1, 0, 0, 0, 0, 1, "picks", MT_IRON, AP_METAL, 40 },
     { "chisel", K_HAND, 2, 1, 0, 0, 0, 0, 1, "chisel", MT_STEEL, AP_METAL, 12 },
     { "rope", 0, 40, 8, 0, 0, 0, 0, 4, "rope", MT_CLOTH, AP_CLOTH, 12 },
     { "bones", K_PLURAL, 8, 4, 0, 0, 0, 0, 4, "", MT_BONE, AP_BONE, 0 },
     { "pennies", K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "", MT_BRONZE, AP_METAL, 1, 0, KF_SMALL | KF_COUNT },
-    { "iron key", 0, 1, 0, 0, 0, 0, 0, 1, "key", MT_IRON, AP_METAL, 4 },
+    { "iron key", 0, 1, 0, 0, 0, 0, 0, 1, "key", MT_IRON, AP_METAL, 2 },
     { "candle", K_LIGHT | K_HAND, 1, 1, 0, 0, 0, 2, 1, "", MT_TALLOW, AP_FOOD, 1 },   /* (Tallow, a fine one beeswax) */
-    { "lantern", K_LIGHT | K_HAND | K_HANG, 8, 4, 0, 0, 0, 6, 3, "", MT_IRON, AP_METAL, 30 },
-    { "sack", K_CONTAINER, 2, 2, 24, 120, 0, 0, 3, "", MT_CLOTH, AP_CLOTH, 3, SS | KF_TIE },
+    { "lantern", K_LIGHT | K_HAND | K_HANG, 8, 4, 0, 0, 0, 6, 3, "", MT_IRON, AP_METAL, 12 },
+    { "sack", K_CONTAINER, 2, 2, 24, 120, 0, 0, 3, "", MT_CLOTH, AP_CLOTH, 1, SS | KF_TIE },
     { "chest", K_CONTAINER, 120, 80, 60, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 80, SS | KF_LID },
     { "skull", 0, 4, 2, 0, 0, 0, 0, 3, "", MT_BONE, AP_BONE, 0 },
     { "broken sword", 0, 12, 2, 0, 0, 0, 0, 4, "blade", MT_IRON, AP_WEAPON, 10 },
     { "cloak", K_WEAR, 8, 6, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 24 },
     { "potsherds", K_PLURAL, 2, 1, 0, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 0 },
-    { "sword", K_HAND | K_HANG, 12, 3, 0, 0, 0, 0, 4, "blade", MT_IRON, AP_WEAPON, 240 },
+    { "sword", K_HAND | K_HANG, 12, 3, 0, 0, FM_SWORD, 0, 4, "blade", MT_IRON, AP_WEAPON, 150 },  /* (The book's
+                                                **   broadsword) */
     { "basket", K_CONTAINER, 4, 8, 16, 80, 0, 0, 3, "", MT_WOOD, AP_WOOD, 2, KF_SOLID },
     { "heap of sand", 0, 8, 1, 0, 0, 0, 0, 2, "", MT_STONE, AP_POTTERY, 0, 0, KF_SMALL },
     { "table", 0, 160, 60, 30, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 20, KF_ON },
     { "chair", 0, 40, 20, 8, 120, 0, 0, 5, "", MT_WOOD, AP_WOOD, 8, KF_ON },
-    { "quiver", K_CONTAINER | K_HANG, 2, 2, 4, 24, 0, 0, 2, "", MT_LEATHER, AP_HIDE, 4, KF_SOLID },
-    { "arrows", K_PLURAL, 2, 2, 0, 0, 0, 0, 2, "", MT_WOOD, AP_WEAPON, 1, 0, KF_COUNT },
+    { "quiver", K_CONTAINER | K_HANG, 2, 2, 4, 24, FM_ARROW, 0, 2, "", MT_LEATHER, AP_HIDE, 8, KF_SOLID },
+    { "arrows", K_PLURAL, 4, 1, 0, 0, FM_ARROW, 0, 2, "", MT_WOOD, AP_WEAPON, 1, 0, KF_COUNT | KF_TENS },  /* (A tenth
+                                                **   of a pound each: Combat 3) */
     { "bar", 0, 40, 12, 0, 0, 0, 0, 5, "", MT_WOOD, AP_WOOD, 4, 0, KF_LONG },  /* (A portal's parts: a door's bar, */
     { "pane of glass", 0, 4, 6, 0, 0, 0, 0, 3, "", MT_GLASS, AP_GLASS, 30 },     /*   a window's glass, */
     { "iron bars", K_PLURAL, 60, 20, 0, 0, 0, 0, 5, "", MT_IRON, AP_METAL, 10 },  /*   its bars; */
@@ -72,7 +77,8 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "mace", K_HAND | K_HANG, 16, 3, 0, 0, 0, 0, 3, "mace", MT_IRON, AP_WEAPON, 84 },     /* (Weapons) */
     { "spear", K_HAND, 20, 6, 0, 0, 0, 0, 5, "spear", MT_WOOD, AP_WEAPON, 60, 0, KF_LONG },  /* (Long and sturdy:
                                                 **   a crutch, the spear, the shovel, a door's bar) */
-    { "round shield", K_HAND, 24, 12, 0, 0, 0, 0, 4, "shield", MT_WOOD, AP_WEAPON, 42 },
+    { "round shield", K_HAND | K_WEAR, 24, 12, 0, 0, 0, 0, 4, "shield", MT_WOOD, AP_WEAPON, 42 },  /* (Worn: slung on
+                                                **   the back, taken in hand to fight) */
     { "iron pot", K_CONTAINER, 32, 8, 6, 48, 0, 0, 3, "", MT_IRON, AP_METAL, 10, SS | KF_LIQUID | KF_LID }, /* (A room's use's
                                                 **   leavings: the stock's, dq0m/uses.c) */
     { "heap of straw", 0, 4, 8, 0, 0, 0, 0, 3, "", MT_OTHER, AP_WOOD, 0 },
@@ -98,7 +104,69 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
                                                 **   DUNGEON.md, the map kept, slice 4.2's) */
     { "chalk", K_HAND | K_PLURAL, 0, 1, 0, 0, 0, 0, 1, "draw", MT_STONE, AP_STONE, 1 },   /* (A point that draws, soon
                                                 **   used up: HOUSE.md's things used up, 2026-10-26) */
+    /* (2026-10-27, the outfits: the carriers, each its family's alone, and the missiles, by the ten; then the weapons
+    ** (the referee's by their keys: Combat 3), the shields, the armour and clothes (Combat 4), the tools; prices the
+    ** book's, else the house's: outfits' kinds.md) */
+    { "scabbard", K_CONTAINER | K_HANG, 4, 3, 4, 24, FM_SWORD, 0, 2, "", MT_LEATHER, AP_HIDE, 48, KF_SOLID },
+    { "sheath", K_CONTAINER | K_HANG, 1, 1, 1, 8, FM_KNIFE, 0, 1, "", MT_LEATHER, AP_HIDE, 6, KF_SOLID },
+    { "bandolier", K_CONTAINER | K_WEAR, 2, 1, 5, 20, FM_THROWN, 0, 2, "", MT_LEATHER, AP_HIDE, 12, KF_SOLID },
+    { "bolt case", K_CONTAINER | K_HANG, 2, 2, 4, 24, FM_BOLT, 0, 2, "", MT_LEATHER, AP_HIDE, 8, KF_SOLID },
+    { "sling stones", K_PLURAL, 4, 1, 0, 0, FM_SHOT, 0, 1, "", MT_STONE, AP_STONE, 0, 0, KF_COUNT | KF_TENS },
+    { "bolts", K_PLURAL, 4, 1, 0, 0, FM_BOLT, 0, 2, "", MT_WOOD, AP_WEAPON, 1, 0, KF_COUNT | KF_TENS },
+    { "water", K_PLURAL, 5, 1, 0, 0, 0, 0, 1, "", MT_OTHER, AP_FOOD, 0, 0, KF_LIQUID | KF_COUNT },   /* (Pints) */
+    { "knife", K_HAND | K_HANG, 4, 1, 0, 0, FM_KNIFE, 0, 1, "knife", MT_IRON, AP_WEAPON, 6 },
+    { "taburi", K_HAND | K_HANG | K_PLURAL, 4, 1, 0, 0, FM_THROWN, 0, 2, "taburi", MT_IRON, AP_WEAPON, 20, 0, KF_COUNT },
+    { "shortsword", K_HAND | K_HANG, 8, 2, 0, 0, FM_SWORD, 0, 3, "shortsw", MT_IRON, AP_WEAPON, 90 },
+    { "falchion", K_HAND | K_HANG, 16, 3, 0, 0, FM_SWORD, 0, 4, "falchin", MT_IRON, AP_WEAPON, 120 },
+    { "longknife", K_HAND | K_HANG, 4, 2, 0, 0, FM_SWORD, 0, 3, "longknf", MT_IRON, AP_WEAPON, 96 },
+    { "bastard sword", K_HAND | K_HANG, 20, 4, 0, 0, FM_SWORD, 0, 4, "bastard", MT_IRON, AP_WEAPON, 180 },
+    { "club", K_HAND | K_HANG, 12, 3, 0, 0, 0, 0, 3, "club", MT_WOOD, AP_WEAPON, 12 },
+    { "staff", K_HAND, 16, 8, 0, 0, 0, 0, 5, "staff", MT_WOOD, AP_WEAPON, 36, 0, KF_LONG },
+    { "hatchet", K_HAND | K_HANG, 8, 2, 0, 0, 0, 0, 3, "hatchet", MT_IRON, AP_WEAPON, 12 },
+    { "shorkana", K_HAND | K_HANG, 8, 2, 0, 0, 0, 0, 3, "shorkan", MT_IRON, AP_WEAPON, 48 },
+    { "battleaxe", K_HAND, 24, 6, 0, 0, 0, 0, 4, "battlax", MT_IRON, AP_WEAPON, 100, 0, KF_LONG },
+    { "poleaxe", K_HAND | K_TWO, 32, 12, 0, 0, 0, 0, 6, "poleaxe", MT_IRON, AP_WEAPON, 96, 0, KF_LONG },
+    { "sling", K_HAND | K_HANG, 1, 1, 0, 0, 0, 0, 1, "sling", MT_LEATHER, AP_HIDE, 6 },
+    { "shortbow", K_HAND | K_TWO | K_WEAR, 8, 6, 0, 0, 0, 0, 4, "shortbw", MT_WOOD, AP_WEAPON, 24 },  /* (Worn
+                                                **   slung, both hands to shoot) */
+    { "longbow", K_HAND | K_TWO | K_WEAR, 12, 10, 0, 0, 0, 0, 5, "longbow", MT_WOOD, AP_WEAPON, 36 },
+    { "hartbow", K_HAND | K_TWO | K_WEAR, 8, 6, 0, 0, 0, 0, 4, "hartbow", MT_WOOD, AP_WEAPON, 96 },
+    { "crossbow", K_HAND | K_TWO | K_WEAR, 20, 8, 0, 0, 0, 0, 4, "crossbw", MT_WOOD, AP_WEAPON, 60 },
+    { "sickle", K_HAND | K_HANG, 4, 2, 0, 0, 0, 0, 2, "sickle", MT_IRON, AP_WEAPON, 10 },
+    { "net", K_HAND, 16, 6, 0, 0, 0, 0, 3, "net", MT_CLOTH, AP_CLOTH, 48 },
+    { "whip", K_HAND | K_HANG, 8, 2, 0, 0, 0, 0, 3, "whip", MT_LEATHER, AP_HIDE, 12 },
+    { "warhammer", K_HAND | K_HANG, 20, 3, 0, 0, 0, 0, 3, "warhamm", MT_IRON, AP_WEAPON, 90 },
+    { "buckler", K_HAND | K_HANG | K_WEAR, 12, 4, 0, 0, 0, 0, 3, "buckler", MT_WOOD, AP_WEAPON, 24 },  /* (Shields:
+                                                **   worn slung, taken in hand to fight) */
+    { "knight shield", K_HAND | K_WEAR, 20, 10, 0, 0, 0, 0, 4, "kshield", MT_WOOD, AP_WEAPON, 60 },
+    { "kite shield", K_HAND | K_WEAR, 28, 14, 0, 0, 0, 0, 5, "kite", MT_WOOD, AP_WEAPON, 72 },
+    { "tower shield", K_HAND | K_WEAR, 32, 18, 0, 0, 0, 0, 5, "tower", MT_WOOD, AP_WEAPON, 96 },
+    { "clothes", K_WEAR | K_PLURAL, 35, 8, 0, 0, 0, 0, 3, "clothes", MT_CLOTH, AP_CLOTH, 176 },  /* (A tunic and
+                                                **   leggings) */
+    { "robe", K_WEAR, 32, 8, 0, 0, 0, 0, 4, "robe", MT_CLOTH, AP_CLOTH, 158 },
+    { "leather vest", K_WEAR, 22, 6, 0, 0, 0, 0, 3, "lvest", MT_LEATHER, AP_ARMOUR, 112 },
+    { "kurbul helm", K_WEAR, 4, 2, 0, 0, 0, 0, 2, "khelm", MT_LEATHER, AP_ARMOUR, 20 },
+    { "mail cowl", K_WEAR, 16, 2, 0, 0, 0, 0, 2, "mcowl", MT_IRON, AP_ARMOUR, 120 },
+    { "mail byrnie", K_WEAR, 88, 8, 0, 0, 0, 0, 4, "mbyrnie", MT_IRON, AP_ARMOUR, 660 },
+    { "scale byrnie", K_WEAR, 123, 10, 0, 0, 0, 0, 4, "sbyrnie", MT_IRON, AP_ARMOUR, 440 },
+    { "great helm", K_WEAR, 35, 6, 0, 0, 0, 0, 3, "ghelm", MT_STEEL, AP_ARMOUR, 275 },
+    { "mail leggings", K_WEAR | K_PLURAL, 88, 8, 0, 0, 0, 0, 3, "mlegs", MT_IRON, AP_ARMOUR, 660 },
+    { "surcoat", K_WEAR, 21, 6, 0, 0, 0, 0, 4, "surcoat", MT_CLOTH, AP_CLOTH, 106 },
+    { "hide jerkin", K_WEAR, 40, 10, 0, 0, 0, 0, 3, "hide", MT_LEATHER, AP_HIDE, 60 },     /* (Untanned hide and fur:
+                                                **   quilt's protection, the house's reading of Combat 4) */
+    { "shroud", K_WEAR, 6, 3, 0, 0, 0, 0, 3, "shroud", MT_CLOTH, AP_CLOTH, 4 },            /* (The dead's linen) */
+    { "mask", K_WEAR, 4, 2, 0, 0, 0, 0, 2, "", MT_WOOD, AP_WOOD, 6 },
+    { "crowbar", K_HAND, 20, 3, 0, 0, 0, 0, 3, "crowbar", MT_IRON, AP_METAL, 9 },
+    { "bandages", K_PLURAL, 1, 1, 0, 0, 0, 0, 1, "bandage", MT_CLOTH, AP_CLOTH, 1, 0, KF_COUNT },
+    { "letter", K_HAND, 0, 0, 0, 0, 0, 0, 2, "", MT_CLOTH, AP_BOOK, 0 },   /* (Credentials: guild papers, a letter of
+                                                **   introduction, Character 17) */
+    { "ring", K_WEAR, 0, 0, 0, 0, 0, 0, 1, "", MT_SILVER, AP_JEWEL, 12 },
+    { "grapple", K_HAND, 12, 2, 0, 0, 0, 0, 3, "grapple", MT_IRON, AP_METAL, 10 },
+    { "hammer", K_HAND | K_HANG, 8, 1, 0, 0, 0, 0, 2, "hammer", MT_IRON, AP_METAL, 6 },
+    { "herbs", K_PLURAL, 1, 1, 0, 0, 0, 0, 1, "herbs", MT_OTHER, AP_FOOD, 6, 0, KF_COUNT },   /* (Ounces) */
+    { "vial", K_CONTAINER | K_HAND, 2, 1, 1, 5, 0, 0, 1, "", MT_GLASS, AP_GLASS, 6, KF_LIQUID | KF_STOPPER },
 };
+#pragma rodata-name (pop)
 
 /* How each light burns (DUNGEON.md: light; HOUSE.md's burning, slice 4.1's): its kind; how long a whole one burns
 ** at middling make, in tens of minutes (a torch an hour, the house rule's; a tallow candle three-quarters of an inch
@@ -139,7 +207,15 @@ const unsigned char throws[KI_COUNT] = {
     2, 1,                                       /* flask of oil, pot of pitch */
     0, 2,                                       /* sconce, axe */
     0, 0, 2, 2, 1, 2, 0,                        /* paper, parchment, charcoal, pencil, quill, horn of ink, map */
-    2                                           /* chalk */
+    2,                                          /* chalk */
+    1, 1, 1, 1, 2, 1, 0,                        /* scabbard, sheath, bandolier, bolt case, sling stones, bolts, water */
+    2, 4, 1, 1, 1, 1, 2, 1, 2, 3,               /* knife, taburi (thrown: Combat 16), shortsword, falchion, longknife,
+                                                **   bastard sword, club, staff, hatchet, shorkana (thrown) */
+    1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 1,            /* battleaxe, poleaxe, sling, shortbow, longbow, hartbow, crossbow,
+                                                **   sickle, net, whip, warhammer */
+    1, 0, 0, 0,                                 /* buckler, knight shield, kite shield, tower shield */
+    1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1,      /* clothes ... mask: armour and clothes */
+    1, 2, 1, 2, 2, 2, 2, 2                      /* crowbar, bandages, letter, ring, grapple, hammer, herbs, vial */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 

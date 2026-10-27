@@ -24,7 +24,9 @@ struct material {
 };
 
 /* A kind of thing (the catalogue's: a stand-in for the theme's data), in rs.h's units */
-#define NKINDS          76
+#define NKINDS          128                     /* (In a bank of their own, the hub's KIND_BANK: 128 x 37
+                                                **   bytes; a kind's number kept in seven bits in places, a thing struck
+                                                **   with's, a light's, a container's: rs.h's SK_THING, E_TASK's) */
 struct kind {
     char            name[14];                   /* "torch", "backpack" ... */
     unsigned char   flags;                      /* K_* */
@@ -32,7 +34,10 @@ struct kind {
     unsigned char   bulk;                       /* Its size: pints */
     unsigned char   cap_bulk;                   /* A container's (a surface's): the size it holds, pints, */
     unsigned        cap_weight;                 /*   and the weight it bears, quarter pounds */
-    unsigned char   slots;                      /* A belt's: things that hang from it */
+    unsigned char   slots;                      /* A belt's: things that hang from it; a carrier's (a container
+                                                **   that isn't a belt) and a weapon's or a missile's, its family
+                                                **   (FM_*: a scabbard keeps a sword, a quiver arrows, and nothing
+                                                **   else; 0, anything: a pouch, a sack) */
     unsigned char   light;                      /* A light's reach, lit: squares */
     unsigned char   seen;                       /* How far off it's made out, past a speck: squares (1 a key, 4 a
                                                 **   sword, 7 a chest; 15 at most) */
@@ -73,6 +78,13 @@ struct kind {
 #define KF_BACK         0x20                    /* (A kind's form: worn on the back, a backpack: taken off to reach
                                                 **   into, and put on again after, HOUSE.md's reach, 2026-10-26; any
                                                 **   other worn thing is open to the hand: a quiver, a bandolier) */
+#define KF_TENS         0x10                    /* (A kind's form: a lot whose weight and bulk are by the ten, the
+                                                **   missiles', a tenth of a pound each: arrows, bolts, sling stones,
+                                                **   the outfits', 2026-10-27) */
+enum { FM_NONE, FM_SWORD, FM_KNIFE, FM_ARROW, FM_BOLT, FM_SHOT, FM_THROWN };    /* A carrier's family and its things'
+                                                **   (a kind's slots, not a belt's: a scabbard's swords, a sheath's
+                                                **   knives and daggers, a quiver's arrows, a bolt case's bolts, a
+                                                **   pouch of sling stones, a bandolier's throwing knives) */
 
 /* The catalogue's kinds, by number (things.c's order: the maker puts them down by these) */
 enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKIN, KI_RATIONS, KI_TINDERBOX, KI_PICK,
@@ -96,7 +108,21 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
                                                 **   the map (slice 4.2's: by their keys, things.c's chart_now) */
     KI_CHALK,                                   /* (Another point that draws, used up soon: HOUSE.md's things used up,
                                                 **   2026-10-26) */
+    KI_SCABBARD, KI_SHEATH, KI_BANDOLIER, KI_BOLT_CASE, KI_STONES, KI_BOLTS, KI_WATER,     /* The outfits' (2026-10-27):
+                                                **   the carriers and missiles, */
+    KI_KNIFE, KI_TABURI, KI_SHORTSWORD, KI_FALCHION, KI_LONGKNIFE, KI_BASTARD, KI_CLUB, KI_STAFF, KI_HATCHET,
+    KI_SHORKANA, KI_BATTLEAXE, KI_POLEAXE, KI_SLING, KI_SHORTBOW, KI_LONGBOW, KI_HARTBOW, KI_CROSSBOW, KI_SICKLE,
+    KI_NET, KI_WHIP, KI_WARHAMMER,              /*   the weapons, */
+    KI_BUCKLER, KI_KSHIELD, KI_KITE, KI_TOWER,  /*   the shields, */
+    KI_CLOTHES, KI_ROBE, KI_LVEST, KI_KHELM, KI_MCOWL, KI_MBYRNIE, KI_SBYRNIE, KI_GHELM, KI_MLEGS, KI_SURCOAT,
+    KI_JERKIN, KI_SHROUD, KI_MASK,              /*   armour and clothes, */
+    KI_CROWBAR, KI_BANDAGES, KI_LETTER, KI_RING, KI_GRAPPLE, KI_HAMMER, KI_HERBS, KI_VIAL,   /*   tools and
+                                                **   belongings */
     KI_COUNT };
+
+#define KIND_WORDS      ((const char*) (CATALOGUE + NKINDS))     /* (In the kinds' bank after them: the words of
+                                                **   their names, each once, a space after each, a 0 after all: the
+                                                **   build's, dq0w/make.js's, for the command parser) */
 
 /* An item */
 #define NITEMS          (ITEM_BANKS * (0x2000 / sizeof (struct item)))

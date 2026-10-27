@@ -41,7 +41,7 @@
 #define TOOL            0xFE
 static const struct weapon {
     char            key[8];
-    char            word[8];
+    char            word[14];                   /* (A catalogue's name: the world finds a weapon let fall by it) */
     unsigned char   sk, wac, wdc;
     signed char     imp[3];
     unsigned char   part;
@@ -50,8 +50,22 @@ static const struct weapon {
     { "hands", "fists", HARN_UNA, 0, 15, { 0, -1, -1 }, HARN_HAND },
     { "", "foot", HARN_UNA, 5, 5, { 1, -1, -1 }, HARN_FOOT },
     { "", "head", HARN_UNA, 0, 0, { 1, -1, -1 }, HARN_SKULL },
-    { "knife", "dagger", HARN_DAG, 5, 5, { 1, 2, 5 }, 0xFF },
+    { "dagger", "dagger", HARN_DAG, 5, 5, { 1, 2, 5 }, 0xFF },
+    { "knife", "knife", HARN_DAG, 5, 0, { 0, 1, 4 }, 0xFF },
+    { "taburi", "taburi", HARN_DAG, 5, 0, { 0, -1, 4 }, 0xFF },
     { "blade", "sword", HARN_SWD, 15, 10, { 3, 5, 3 }, 0xFF },
+    { "shortsw", "shortsword", HARN_SWD, 10, 5, { 2, 4, 4 }, 0xFF },
+    { "falchin", "falchion", HARN_SWD, 15, 5, { 4, 6, 1 }, 0xFF },
+    { "longknf", "longknife", HARN_SWD, 10, 15, { 1, 3, 5 }, 0xFF },
+    { "bastard", "bastard sword", HARN_SWD, 20, 10, { 4, 7, 4 }, 0xFF, 10 },
+    { "hatchet", "hatchet", HARN_AXE, 5, 5, { 3, 4, -1 }, 0xFF },
+    { "sickle", "sickle", HARN_AXE, 5, 5, { 1, 4, 3 }, 0xFF },
+    { "shorkan", "shorkana", HARN_AXE, 5, 5, { 3, 5, -1 }, 0xFF },
+    { "battlax", "battleaxe", HARN_AXE, 20, 10, { 6, 9, -1 }, 0xFF, 15 },
+    { "warhamm", "warhammer", HARN_AXE, 15, 5, { 6, -1, 5 }, 0xFF, 5 },
+    { "poleaxe", "poleaxe", HARN_POL, 25, 5, { 6, 9, 6 }, 0xFF },
+    { "net", "net", HARN_NET, 20, 0, { 2, -1, -1 }, 0xFF },
+    { "whip", "whip", HARN_WHP, 25, 5, { 2, 1, -1 }, 0xFF },
     { "mace", "mace", HARN_CLU, 15, 5, { 6, -1, -1 }, 0xFF },
     { "spear", "spear", HARN_SPR, 20, 10, { 4, -1, 7 }, 0xFF, 10 },
     { "axe", "axe", HARN_AXE, 10, 5, { 4, 6, -1 }, 0xFF },  /* (The book's handaxe: a creature's let fall, slice
@@ -66,10 +80,16 @@ static const struct weapon {
     { "club", "club", HARN_CLU, 15, 5, { 4, -1, -1 }, 0xFF },
     { "staff", "staff", HARN_SPR, 20, 15, { 4, -1, -1 }, 0xFF, 10 },
     { "shield", "shield", HARN_SHD, 5, 20, { 2, -1, -1 }, 0xFF },
+    { "buckler", "buckler", HARN_SHD, 5, 15, { 1, -1, -1 }, 0xFF },     /* (The shields last: Combat 3) */
+    { "kshield", "knight shield", HARN_SHD, 5, 20, { 2, -1, -1 }, 0xFF },
+    { "kite", "kite shield", HARN_SHD, 5, 25, { 3, -1, -1 }, 0xFF },
+    { "tower", "tower shield", HARN_SHD, 5, 25, { 3, -1, -1 }, 0xFF },
 };
 #define NWEAPONS        (sizeof weapons / sizeof weapons[0])
 #define NUNARMED        3
-#define SHIELD          (NWEAPONS - 1)
+#define NSHIELDS        5
+#define SHIELD          (NWEAPONS - NSHIELDS)   /* (The first shield) */
+#define IS_SHIELD(j)    ((j) >= SHIELD && (j) < NWEAPONS)
 #define TORCH           (SHIELD - 4)
 #define STICK           (SHIELD - 3)
 #define CLUB            (SHIELD - 2)
@@ -80,6 +100,9 @@ static const struct weapon {
 #define L(x)            (1u << HARN_ ## x)
 #define TUNIC           (L (UPPERARM) | L (SHOULDER) | L (THORAX) | L (ABDOMEN) | L (HIP) | L (GROIN))
 #define HAUBERK         (TUNIC | L (FOREARM) | L (ELBOW) | L (THIGH))
+#define LEGS            (L (HIP) | L (GROIN) | L (THIGH) | L (KNEE) | L (CALF))
+#define ROBE            (TUNIC | L (FOREARM) | L (ELBOW) | L (THIGH) | L (KNEE) | L (CALF))
+#define VEST            (L (SHOULDER) | L (THORAX) | L (ABDOMEN))
 static const struct piece {
     char            key[8];
     char            name[16];
@@ -94,6 +117,14 @@ static const struct piece {
     { "sandals", "sandals", HARN_CLOTH, 0, 1 }, { "shoes", "shoes", HARN_LEATHER, L (FOOT), 3 },
     { "boots", "knee boots", HARN_LEATHER, L (KNEE) | L (CALF) | L (FOOT), 4 },
     { "hobnail", "hobnail boots", HARN_LEATHER, L (KNEE) | L (CALF) | L (FOOT), 6, 1 },
+    { "clothes", "clothes", HARN_CLOTH, TUNIC | LEGS },     /* (2026-10-27, the outfits': a tunic and leggings) */
+    { "robe", "robe", HARN_CLOTH, ROBE }, { "surcoat", "surcoat", HARN_CLOTH, VEST | L (HIP) | L (GROIN) | L (THIGH) },
+    { "lvest", "leather vest", HARN_LEATHER, VEST }, { "khelm", "kurbul helm", HARN_KURBUL, L (SKULL) },
+    { "mcowl", "mail cowl", HARN_MAIL, L (SKULL) | L (NECK) }, { "mbyrnie", "mail byrnie", HARN_MAIL, TUNIC },
+    { "sbyrnie", "scale byrnie", HARN_SCALE, TUNIC }, { "ghelm", "great helm", HARN_PLATE, L (SKULL) | L (FACE) | L (NECK) },
+    { "mlegs", "mail leggings", HARN_MAIL, LEGS }, { "hide", "hide jerkin", HARN_QUILT, TUNIC },   /* (Hide and fur:
+                                                **   quilt's, Combat 4's fur, the house's) */
+    { "shroud", "shroud", HARN_CLOTH, ROBE },
 };
 #define NARMOUR         (sizeof pieces / sizeof pieces[0])
 
@@ -110,7 +141,7 @@ static int __fastcall__ hand_pen (unsigned char h, unsigned char j)
     int p = 0;
 
     if (h && h != (T_LEFT | T_RIGHT)) {
-        p = weapons[j].hm + (j != SHIELD && h == hoff ? 10 : 0);
+        p = weapons[j].hm + (!IS_SHIELD (j) && h == hoff ? 10 : 0);
     }
     return p + STEP_PCT * (a > b ? a : b);
 }
@@ -348,7 +379,7 @@ void __fastcall__ o_pc_side (struct side* s)
             s->bslot[s->nblk] = k;
             s->bml[s->nblk++] = v + w->wdc;
         }
-        if (j != SHIELD && v + w->wac > att) {
+        if (!IS_SHIELD (j) && v + w->wac > att) {
             att = v + w->wac;
             best = j;
             s->aslot = k;

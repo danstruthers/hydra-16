@@ -100,15 +100,15 @@ static struct item rec;
 /* (item_at and items are items.s's, in assembly: its store's layout as here) */
 typedef char store_fits[sizeof (struct item) == 25 && ITEM_BANK (0) == 14 && ITEM_BANKS == 2 ? 1 : -1];
 
-/* A kind's record, copied out of the catalogue's bank (into one of four, in turn: an expression may want two at
-** once): the catalogue's bank left in the window */
+/* A kind's record, copied out of the kinds' bank (into one of four, in turn: an expression may want two at once):
+** the kinds' bank left in the window */
 static const struct kind* __fastcall__ kind_of (unsigned char k)
 {
     static struct kind kb[4];
     static unsigned char next;
     struct kind* r = &kb[next++ & 3];
 
-    hub_map (CAT_BANK);
+    hub_map (KIND_BANK);
     memcpy (r, kinds + (k < NK ? k : 0), sizeof *r);
     return r;
 }
@@ -160,6 +160,13 @@ unsigned char held_k[2], held_h[2];             /* (What the character holds: pa
 void cat_map (void)
 {
     hub_map (CAT_BANK);
+}
+
+/* A kind's flags (the catalogue's code's: the kinds in a bank of their own) */
+static unsigned char __fastcall__ kind_flags (unsigned char k)
+{
+    hub_map (KIND_BANK);
+    return CATALOGUE[k < NK ? k : 0].flags;
 }
 
 /* The UI's request answered (serve's, part 10's; but what's carried listed, and a tool's wear, by their own part,
@@ -355,6 +362,10 @@ unsigned __fastcall__ s_weight_of (unsigned i)
     unsigned w = (unsigned) k->weight * (k->flags & K_PLURAL && !(k->form & KF_COUNT) ? 1 : item_at (i)->qty);  /* (A
                                                 **   lot counted, its count's: "drop two rations") */
 
+    if (k->form & KF_TENS) {
+        w = (w + 9) / 10;                       /* (A lot by the ten: the missiles', a tenth of a pound each) */
+    }
+
     if (k->flags & (K_CONTAINER | K_BELT) || k->keeps & KF_ON) {
         w += s_weight_in (IW_ITEM, i);
     }
@@ -376,6 +387,9 @@ unsigned __fastcall__ s_bulk_of (unsigned i)
     const struct kind* k = kind_at (i);
     unsigned b = k->bulk, c;
 
+    if (k->form & KF_TENS) {
+        b = (b * item_at (i)->qty + 9) / 10;    /* (Its bulk by the ten too) */
+    }
     if (k->flags & K_CONTAINER && (c = s_bulk_in (i)) > b) {
         b = c;
     }
@@ -2267,7 +2281,8 @@ void __fastcall__ s_thing_words (const struct item* q)
         put (!(k->flags & K_LIGHT) ? (q->fuel ? "" : " (empty)") : q->fuel ? " (burning low)" : " (spent)");
     }
     if (q->wear >= 32) {                        /* (Its wear: a blade dulled, a tool worn) */
-        put (!strcmp (k->tool, "blade") || !strcmp (k->tool, "knife") ? (q->wear >= 128 ? " (dull)" : " (dulled)") :
+        put (!(k->flags & K_BELT) && (k->slots == FM_SWORD || k->slots == FM_KNIFE) ? (q->wear >= 128 ? " (dull)" :
+            " (dulled)") :
             " (worn)");
     }
     if (c == KF_STOPPER ? q->id && !(q->shut & IS_CLOSED) : c && (q->shut & IS_CLOSED)) {
@@ -2364,7 +2379,8 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
         k = kind_of (q.kind);
         kf = k->flags;
         kk = k->keeps;
-        load += (unsigned) k->weight * (kf & K_PLURAL && !(k->form & KF_COUNT) ? 1 : q.qty);
+        j = (unsigned) k->weight * (kf & K_PLURAL && !(k->form & KF_COUNT) ? 1 : q.qty);
+        load += k->form & KF_TENS ? (j + 9) / 10 : j;    /* (A lot by the ten: the missiles') */
         for (n = 0; n < nt && told[n] != i; ++n) {
         }
         if (n < nt) {
@@ -2727,7 +2743,7 @@ void s_theme_kinds (void)
     for (i = 0; i < NTKINDS; ++i) {
         hub_map (THEME_BANK);
         memcpy (&k, &THEME->kind[i], sizeof k);
-        hub_map (CAT_BANK);
+        hub_map (KIND_BANK);
         memcpy ((struct kind*) CATALOGUE + KI_THEME + i, &k, sizeof k);
     }
     hub_map (0);
@@ -2963,7 +2979,10 @@ unsigned __fastcall__ m2 (void* f, unsigned a, unsigned b);
 static struct item o;                           /* (A record copied out, for the code here) */
 
 #define B(v)            ((unsigned char) (v))   /* (A char's result) */
-#define KIND(i)         (&kinds[B (m1 (item_kind, i))])
+#define KIND(i)         ((const struct kind*) m1 (kind_at, i))  /* (Item i's kind's, copied out: the kinds in their
+                                                **   own bank) */
+#define KIND_K(k)       ((const struct kind*) m1 (kind_of, k))
+#define KFLAGS(k)       B (m1 (kind_flags, k))
 #define FETCH(i)        m2 (fetch, (unsigned) &o, i)
 
 static void __fastcall__ say (unsigned char n)
@@ -3029,11 +3048,12 @@ static unsigned char __fastcall__ o_fits (unsigned n, unsigned c)
 {
     static const struct kind* k;
     static unsigned j, bear;
-    static unsigned char kf, form, lit, cf, keeps, room, slots;
+    static unsigned char kf, form, lit, cf, keeps, room, slots, fam;
 
     k = KIND (n);
     kf = k->flags;
     form = k->form & KF_FORMS ? k->form & KF_FORMS : KF_SOLID;
+    fam = k->slots;
     FETCH (n);
     lit = o.flags & I_LIT;
     k = KIND (c);
@@ -3056,8 +3076,9 @@ static unsigned char __fastcall__ o_fits (unsigned n, unsigned c)
         if (!(keeps & KF_ON)) {
             return SA_NOT_HOLDER;
         }
-    } else if (!(keeps & form)) {
-        return form == KF_SOLID ? SA_WONT_GO : SA_RUN_OUT;
+    } else if (!(keeps & form) || (slots && fam != slots)) {    /* (A carrier its family's alone: a scabbard a
+                                                **   sword's, a quiver arrows', outfits' kinds.md, 2026-10-27) */
+        return form == KF_SOLID || slots ? SA_WONT_GO : SA_RUN_OUT;
     } else if (lit) {
         return SA_PUT_OUT;
     }
@@ -3184,7 +3205,7 @@ static unsigned char __fastcall__ don (unsigned n)
     static unsigned char k, kf;
 
     k = B (m1 (item_kind, n));
-    kf = kinds[k].flags;
+    kf = KFLAGS (k);
     if (!(kf & K_WEAR)) {
         return kf & K_HAND ? hold (n) : no (SA_NO_WEAR);
     }
@@ -3237,8 +3258,8 @@ static unsigned char __fastcall__ light (unsigned char on)
 
     for (n = 1; n < NITEMS && *iq.name != '#' && !*iq.into; ++n) {
         FETCH (n);
-        if (o.kind && (kinds[o.kind].flags & K_LIGHT) && !(o.flags & I_LIT) == on && (!on || !spent ()) &&
-            (!*iq.name || named (kinds[o.kind].name, iq.name)) && B (m1 (on_pc, n))) {
+        if (o.kind && (KFLAGS (o.kind) & K_LIGHT) && !(o.flags & I_LIT) == on && (!on || !spent ()) &&
+            (!*iq.name || named (KIND_K (o.kind)->name, iq.name)) && B (m1 (on_pc, n))) {
             break;
         }
     }
@@ -3258,7 +3279,7 @@ static unsigned char __fastcall__ light (unsigned char on)
     FETCH (n);
     r = o.flags & I_LIT;
     x = o.where == IW_ITEM && !(KIND (o.x)->flags & K_BELT);  /* (In a container: the pack ...) */
-    if (!(kinds[o.kind].flags & K_LIGHT)) {
+    if (!(KFLAGS (o.kind) & K_LIGHT)) {
         return no (SA_NO_LIGHT);
     }
     if (!on) {

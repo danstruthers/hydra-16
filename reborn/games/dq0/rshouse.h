@@ -24,7 +24,8 @@ static const struct { char key[8]; unsigned char rate[5], wear[5]; } digger[] = 
     { "hands", { 0, 0, 0, 0, 1 }, { 0, 0, 0, 0, 0 } }, { "shovel", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } },
     { "spade", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } }, { "pick", { 2, 4, 2, 6, 4 }, { 0, 1, 1, 1, 0 } },
     { "mattock", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } },
-    { "blade", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } }, { "knife", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } },
+    { "blade", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } }, { "dagger", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } },
+    { "knife", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } },
 };
 #define NDIGGERS        (sizeof digger / sizeof digger[0])
 #define DIG_TESTED(m)   ((m) != MAT_EARTH && (m) != MAT_SOIL)   /* (Earth dug at the tool's rate; the rest a Mining test) */
@@ -73,7 +74,9 @@ enum { IM_SOFT, IM_LIGHT, IM_HEFTY };
 
 static unsigned char __fastcall__ RS_HOUSE_SWING (const struct kind* k)
 {
-    if (!(IM_HARD & 1u << k->mat) || (k->form & (KF_SMALL | KF_LIQUID | KF_GAS | KF_COUNT)) || (k->flags & K_WEAR) ||
+    if (!(IM_HARD & 1u << k->mat) || (k->form & (KF_SMALL | KF_LIQUID | KF_GAS | KF_COUNT)) ||
+        (k->flags & (K_WEAR | K_HAND)) == K_WEAR ||    /* (Worn and not held: a shield or a bow slung isn't worn
+                                                **   to swing, it's held, 2026-10-27) */
         k->weight < 2 || k->weight < k->bulk) {
         return IM_SOFT;
     }

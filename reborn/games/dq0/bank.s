@@ -157,7 +157,7 @@ ovl_out:
             OVFN        sway_words, 6
             OVFN        dig_words, 1
             OVFN        task_words, 3
-            OVFN        beat_words, 8
+            OVFN        beat_words, 3
             OVFN        stop_kind, 7
             OVFN        answer_of, 7
             OVFN        bar_text, 3

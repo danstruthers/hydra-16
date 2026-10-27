@@ -641,9 +641,21 @@ static void world_words (void)
     static unsigned n;
     unsigned char i, k;
 
-    n = 0;
-    for (i = 0; i < NKINDS; ++i) {
-        hub_map (CAT_BANK);
+    for (n = 0; ; n += k) {                     /* (The catalogue's words, each once, the build's: dq0w/make.js's, in
+                                                **   the kinds' bank after them; "kite shield", "tower shield": the
+                                                **   parser's lists are words, its room CQ_WORDS) */
+        hub_map (KIND_BANK);
+        memcpy (nm, KIND_WORDS + n, sizeof nm - 1);
+        hub_map (CMD_BANK);
+        for (k = 0; k < sizeof nm - 1 && nm[k]; ++k) {
+        }
+        memcpy (HUB_WINDOW + n, nm, k);
+        if (k < sizeof nm - 1) {
+            break;
+        }
+    }
+    for (i = KI_THEME; i < NKINDS; ++i) {       /* (Then the theme's kinds') */
+        hub_map (KIND_BANK);
         memcpy (nm, CATALOGUE[i].name, sizeof CATALOGUE[0].name);
         hub_map (CMD_BANK);
         if ((k = strlen (nm)) != 0 && n + k + 2 < CQ_WORDS) {
@@ -994,7 +1006,7 @@ static void __fastcall__ limb_words (const struct msg* m)
     unsigned char k = (unsigned char) m->w1 - WB_DROP;
     const char* s;
 
-    hub_mem (CAT_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
+    hub_mem (KIND_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
     k = (k == WB_RISEN - WB_DROP || k == WB_NOT_UP - WB_DROP) && m->w1 >> 8 ?
         (WB_NO_RUN - WB_DROP + 1) * 2 + k - (WB_RISEN - WB_DROP) : k * 2 + (m->b != 0);
     if (k < sizeof lwords / sizeof lwords[0] && (s = lwords[k]) != 0) {

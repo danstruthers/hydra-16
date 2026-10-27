@@ -57,8 +57,8 @@ static unsigned char __fastcall__ lamp (unsigned char b)
 {
     unsigned char f;
 
-    hub_mem (CAT_BANK, fn, CATALOGUE[b & 0x7F].name, sizeof CATALOGUE[0].name);
-    hub_mem (CAT_BANK, &f, &CATALOGUE[b & 0x7F].flags, 1);
+    hub_mem (KIND_BANK, fn, CATALOGUE[b & 0x7F].name, sizeof CATALOGUE[0].name);
+    hub_mem (KIND_BANK, &f, &CATALOGUE[b & 0x7F].flags, 1);
     return f & K_PLURAL;
 }
 
@@ -359,7 +359,8 @@ void __fastcall__ o_bar_text (char* s, unsigned done, unsigned len)
     }
 }
 
-#pragma code-name (push, "OV8CODE")       /* (Overlay 8's: a walk's beats, a battering's; overlay 3's room) */
+#pragma code-name (push, "OV8CODE")       /* (A walk's beats, a battering's: once overlay 8's, now linked in
+                                                **   overlay 3, dq0.cfg's, overlay 8's room part 1's, 2026-10-27) */
 #pragma rodata-name (push, "OV8RODATA")
 #pragma local-strings (push, on)
 
@@ -443,8 +444,8 @@ void __fastcall__ o_felt_words (unsigned w)
     case WB_THING:
     case WB_TRIP:
     case WB_STUMBLE:
-        hub_mem (CAT_BANK, lb, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
-        hub_mem (CAT_BANK, &k, &CATALOGUE[b].flags, 1);
+        hub_mem (KIND_BANK, lb, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
+        hub_mem (KIND_BANK, &k, &CATALOGUE[b].flags, 1);
         sayf ((unsigned char) w == WB_THING ? "\nYour foot finds something on the floor: %s %s." :
             (unsigned char) w == WB_TRIP ?
             "\nYou trip over something on the floor (%s %s), and go sprawling; you pick yourself up." :
@@ -470,12 +471,12 @@ void __fastcall__ o_felt_words (unsigned w)
             strcpy (lb, k == PK_PORTCULLIS ? "portcullis" : k == PK_DOOR ? "door" : "window");
         }
         hub_mem (0, &k, &HUB->pc_strike, 1);
-        hub_mem (CAT_BANK, lb + 32, CATALOGUE[k & 0x7F].name, sizeof CATALOGUE[0].name);
+        hub_mem (KIND_BANK, lb + 32, CATALOGUE[k & 0x7F].name, sizeof CATALOGUE[0].name);
         sayf ((unsigned char) w == WB_SWAT ? "\nYou swat at %s%s with the %s, but it seems ineffectual." :
             "\nYou set to battering %s%s with the %s.", *lb >= 'a' ? "the " : "", lb, lb + 32);
         return;
     case WB_SPENT:                              /* (A thing used up, its kind: HOUSE.md's things used up) */
-        hub_mem (CAT_BANK, lb, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
+        hub_mem (KIND_BANK, lb, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
         sayf ("\nYour %s is %s.", lb, b == KI_INK ? "dry" : b == KI_QUILL ? "worn out" : "worn to nothing");
         return;
     }

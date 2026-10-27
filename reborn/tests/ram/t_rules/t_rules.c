@@ -607,7 +607,7 @@ int main (int argc, char* argv[])
 {
     static char args[40];
     unsigned char t, n;
-    unsigned off;
+    unsigned off, k;
     int s;
 
     if (argc < 2 || (sfd = open (argv[1], O_RDONLY)) < 0) {
@@ -631,9 +631,14 @@ int main (int argc, char* argv[])
     }
     map (SIGHT_BANK);                           /* (The senses' record: none) */
     memset (HUB_WINDOW, 0, 0x2000);
-    if ((s = open (LIBDIR "/dq0w.cat", O_RDONLY)) >= 0) {   /* (The catalogue, the world's: wfile.c's) */
-        for (off = 0; off < 0x2000 && (n = read (s, line, sizeof line)) > 0; off += n) {
-            map (CAT_BANK);
+    if ((s = open (LIBDIR "/dq0w.cat", O_RDONLY)) >= 0) {   /* (The catalogue's kinds, the world's: wfile.c's, the
+                                                **   file's first bytes, as many as the first kind's cap_weight says) */
+        for (off = 0, k = 0x2000; off < k && (n = read (s, line, k - off < sizeof line ? k - off : sizeof line)) > 0;
+            off += n) {
+            if (!off) {
+                k = ((struct kind*) line)->cap_weight;
+            }
+            map (KIND_BANK);
             memcpy (HUB_WINDOW + off, line, n);
         }
         close (s);
