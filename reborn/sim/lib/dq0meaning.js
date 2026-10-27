@@ -117,6 +117,14 @@ const EXPRS = {
   wStrata: F('struct wrec', 'strata'), stSize: 'sizeof (struct stratum)', maxstrata: 'MAXSTRATA', stMade: F('struct stratum', 'made'),
   stN: F('struct stratum', 'n'), stX0: F('struct stratum', 'x0'), stY0: F('struct stratum', 'y0'), stW: F('struct stratum', 'w'),
   stH: F('struct stratum', 'h'),
+  // (The chunks' cache, the character's memory of each: slice 4.2's travel's, dq0travel's)
+  cacheBank0: 'CACHE_BANK (0)', ncslots: 'NCSLOTS', chunkSize: 'CHUNK_SIZE', wCslot: F('struct wrec', 'cslot'), csSize: 'sizeof (struct cslot)',
+  csUsed: F('struct cslot', 'used'), csSn: F('struct cslot', 'sn'), csCx: F('struct cslot', 'cx'), csCy: F('struct cslot', 'cy'),
+  ckNrooms: F('struct chunk', 'nrooms'), ckRoom: F('struct chunk', 'room'), rmSize: 'sizeof (struct room)', rmX: F('struct room', 'x'),
+  rmY: F('struct room', 'y'), rmW: F('struct room', 'w'), rmH: F('struct room', 'h'), rmFlags: F('struct room', 'flags'), rmKind: F('struct room', 'kind'),
+  ckKept: F('struct chunk', 'kept'), kQ: F('struct ckept', 'q'), kM: F('struct ckept', 'm'), kN: F('struct ckept', 'n'), kMap: F('struct ckept', 'map'),
+  kDq: F('struct ckept', 'dq'), kDsk: F('struct ckept', 'dsk'), kSk: F('struct ckept', 'sk'), sMapfade: F('struct rs_summary', 'mapfade'),
+  sMapmind: F('struct rs_summary', 'mapmind'),
 };
 
 // The headers' enums and #defines with a number: { names: { NAME: value }, blocks: [[NAME ...] an enum's members] }
@@ -234,7 +242,8 @@ function createRecorder() {
         chart: h[L.pcChart], map: w16(h, L.pcMap) },
       sum: { cond: w16(h, L.pcsum + L.sCond), health: h[L.pcsum + L.sHealth], load: h[L.pcsum + L.sLoad], sight: h[L.pcsum + L.sSight],
         step: h[L.pcsum + L.sStep], gstep: Array.from(h.subarray(L.pcsum + L.sGstep, L.pcsum + L.sGstep + L.ngaits)),
-        limbs: h[L.pcsum + L.sLimbs], limp: h[L.pcsum + L.sLimp], northsense: h[L.pcsum + L.sNorth] },
+        limbs: h[L.pcsum + L.sLimbs], limp: h[L.pcsum + L.sLimp], northsense: h[L.pcsum + L.sNorth],
+        mapfade: h[L.pcsum + L.sMapfade], mapmind: h[L.pcsum + L.sMapmind] },
       actors: [], items: [], names: [], sight: null, theme: '', map: [] };
     for (let k = 0; k < L.nactors; k++) {
       const o = L.actor + k * L.actorSize, a = { k, state: h[o + L.aState], sn: h[o + L.aSn], face: h[o + L.aFace], pos: h[o + L.aPos],
@@ -273,6 +282,15 @@ function createRecorder() {
         s.changes.push({ sn: b[o + L.chSn], x: w16(b, o + L.chX), y: w16(b, o + L.chY), tile: b[o + L.chTile], elev: s8(b[o + L.chElev]), link,
           what: ['PORTAL_STATE', 'PORTAL_HARM', 'TRAP_STATE', 'STOCKED', 'DUG', 'ROOM_LIT'].find(n => K[n] === link) || (link === 0xFF ? 'SQUARE' : 'OPENING') });
       }
+    }
+    s.chunks = [];                                               // (The chunks in the cache, each with what the character
+    if (wb) for (let k = 0; k < L.ncslots; k++) {               //   keeps of it, its rooms: slice 4.2's)
+      const o = L.wCslot + k * L.csSize, cb = bank(L.cacheBank0 + Math.floor(k / 3)), c = (k % 3) * L.chunkSize, kp = c + L.ckKept;
+      if (!wb[o + L.csUsed] || !cb) continue;
+      s.chunks.push({ sn: wb[o + L.csSn], cx: w16(wb, o + L.csCx), cy: w16(wb, o + L.csCy), q: cb[kp + L.kQ], m: w16(cb, kp + L.kM), n: cb[kp + L.kN],
+        map: w16(cb, kp + L.kMap), dq: s8(cb[kp + L.kDq]), dsk: cb[kp + L.kDsk], sk: cb[kp + L.kSk],
+        rooms: Array.from({ length: Math.min(cb[c + L.ckNrooms], 6) }, (_, i) => { const r = c + L.ckRoom + i * L.rmSize;
+          return { x: cb[r + L.rmX], y: cb[r + L.rmY], w: cb[r + L.rmW], h: cb[r + L.rmH], flags: cb[r + L.rmFlags], kind: cb[r + L.rmKind] }; }) });
     }
     s.slots = [];                                                // (The strata's records in the hub's slots, the world's:
     if (wb) for (let k = 0; k < L.maxstrata; k++) {              //   their bounds, as made)
