@@ -228,7 +228,10 @@ struct chunk {
         signed char dq;                         /*   how true they're drawn (the referee's grade, the hub's pc_drawn
                                                 **   as it was first drawn on that map: rs.h's G_*; 0 untested), */
         unsigned char dsk;                      /*   and the north believed in then (the hub's pc_skew: drawn by it,
-                                                **   so drawn turned and put off, a wrong map unknowing) */
+                                                **   so drawn turned and put off, a wrong map unknowing); */
+        unsigned char sk;                       /*   the north it believed in as it last saw it (the hub's pc_skew:
+                                                **   travel's, slice 4.2's, its way there off by how far its belief's
+                                                **   gone since) */
     }               kept;
 };
 /* (A chunk's kept: the clock in 25.6 seconds, 16 bits, its tenths' middle bytes, no long division (the hub's header in

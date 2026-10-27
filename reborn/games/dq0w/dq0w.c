@@ -2006,7 +2006,8 @@ static unsigned char looked_at (void)
 /* Where the character believes the place is, from where it stands (tvx, tvy: here ()'s square, mx, my): seen now,
 ** where it is; else drawn on the map it carries, in light to read it by, where the map has it (put off as it was
 ** drawn: map.c's); else as it's kept, put off for one that doesn't know north as its memory's faded (map.c's); the way
-** by the north it believes in (turned back by its skew: astray as it's wrong).  How it knows it: 3 seen, 2 by its map,
+** by the north it believes in (turned back by its skew: astray as it's wrong; its memory's by the north it believed in
+** as it last saw the place, so only as far as its belief's gone since).  How it knows it: 3 seen, 2 by its map,
 ** 1 by its memory, 0 forgotten */
 static const unsigned char doffs54[5] = { 3, 1, 0, 0, 0 };  /* (map.c's doffs: by the grade, G_CF on) */
 static unsigned char where (void)
@@ -2021,7 +2022,7 @@ static unsigned char where (void)
     if (looked_at ()) {
         return 3;
     }
-    skew = HUB->pc_skew;
+    skew = HUB->pc_skew;                        /* (A map read by the north it believes in now) */
     if (HUB->pc_map && tv.k.map == HUB->pc_map && tv.drawn && !dk) {   /* (On its map: as it was drawn there) */
         how = 2;
         n = (tv.k.dsk + 4) & 7;
@@ -2030,6 +2031,8 @@ static unsigned char where (void)
         w = tv.kcx * 5 + tv.kcy * 3 + tv.k.dq + tv.k.dsk;
     } else if ((g = kept_left (&tv.k)) >= KEPT_GONE) {     /* (In its mind: as it's kept it) */
         how = 1;
+        skew -= tv.k.sk;                        /* (Its mind's by the north it believed in then: off as far as its
+                                                **   belief's gone since) */
         n = KNOWS_NORTH ? 0 : (unsigned char) (6 * (tv.k.q - g) / tv.k.q);
         w = tv.kcx * 3 + tv.kcy * 5 + (unsigned char) tv.k.m;
     } else {
@@ -2089,13 +2092,14 @@ static void __fastcall__ weigh (unsigned ex, unsigned ey)
 }
 
 /* The way out chosen (weigh's: none, ter 0xFF), from a room by its doors and passages' mouths (as go sees them: a door
-** hidden no way, in the dark only one it knows; the ways across it to them), from a passage by its ways on (in the dark
-** only those it knows): the way it came the square behind it (as it faces, come in) */
+** hidden no way, in the dark only one it knows; the ways across it to them), from a passage by its ways on and its
+** doors, shut or not (in the dark only those it knows): the way it came the square behind it (as it faces, come in) */
 void s_way_out (void)
 {
     unsigned char r, k, d, bx, by, face, t;
     struct room q;
     struct portal* p;
+    unsigned char* sq;
     unsigned ox, oy, nx, ny;
 
     dens_where ();
@@ -2137,7 +2141,9 @@ void s_way_out (void)
         for (d = 0; d < 4; ++d) {
             nx = mx + dir_x[d];
             ny = my + dir_y[d];
-            if (step_ok (sn_, mx, my, d) && !breadth (sn_, mx, my, d) && (!feel_ || known_at (nx, ny))) {
+            t = (sq = at (sn_, nx, ny)) != 0 && TILE (*sq) == T_DOOR;   /* (A door that way, shut or not: a
+                                                **   passage's, the walk stopped before it) */
+            if ((t || (step_ok (sn_, mx, my, d) && !breadth (sn_, mx, my, d))) && (!feel_ || known_at (nx, ny))) {
                 weigh (nx, ny);
                 if (tex == nx && tey == ny) {
                     teh = H_OF (d);             /* (Its heading, if it's the one) */
@@ -2177,8 +2183,15 @@ static unsigned char leg (void)
         evb = tv.what;
         event (E_TASK, 0, TE_BEGUN | LT_TRAVEL << 8);  /* ("You head back toward the Mausoleum.") */
     }
-    tgx = room_of (sn_, mx, my) != 0xFF ? tex : 0;  /* (A room's door or mouth meant; a passage's way its heading) */
-    tgy = tey;
+    if ((tgx = room_of (sn_, mx, my) != 0xFF ? tex : 0) == 0 && !step_ok (sn_, mx, my, teh >> 1)) {
+        at (sn_, tex, tey);                     /* (A passage's door that way, shut: open it first, as a room's that
+                                                **   it hasn't handled, the walk's) */
+        how = portal_at (cx_, cy_) && portal_at (cx_, cy_)->kind == PK_PORTCULLIS ? N_CLOSED : N_DOOR;
+        no_way (how);
+        trav_end (0);
+        return 0;
+    }
+    tgy = tey;                                  /* (A room's door or mouth meant; a passage's way its heading) */
     go (teh);
     hub_map (0);
     if (!move.on) {

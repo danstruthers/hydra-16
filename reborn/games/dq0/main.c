@@ -381,7 +381,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    19                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    20                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -410,7 +410,9 @@ static void sheet (void)
                                                 **   slice 4.1b's; 18, the seen maps' drawn squares and each chunk's
                                                 **   memory, the maker's; the catalogue's paper ... map, the theme's
                                                 **   kinds seven on, the map in plain letters: slice 4.2's; 19, the
-                                                **   world's world.dat the character's bearings: slice 4.2's) */
+                                                **   world's world.dat the character's bearings: slice 4.2's; 20, each
+                                                **   chunk's memory the north believed in as it was last seen: the
+                                                **   maker's seen maps, travel's, slice 4.2's) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -868,6 +870,10 @@ static unsigned char events (void)          /* (How many there were) */
                     tell (T_YOU_GO_OVER);
                 }
                 placing = 0;
+                if (HUB->pc_task.kind == LT_TRAVEL) {
+                    ntold = 0;                  /* (A journey's leg: each place it comes to told whole, a look of
+                                                **   its own, as each walk's is: slice 4.2's travel) */
+                }
                 k = m.w1 & 0xFF;               /* (As a run or a sprint ends, briefly: the pace not held) */
                 look ((m.w1 >> 8 & 1) | ((k == A_WALKED || k == A_CROSSED || k == A_WENT_TO || k == A_STEPPED) &&
                     HUB->gait > GA_JOG && !(HUB->watch & (WA_TRAPS | WA_LISTEN | WA_MAP)) && !sight_get ()->dark ? 4 :

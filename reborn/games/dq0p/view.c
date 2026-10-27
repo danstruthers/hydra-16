@@ -217,11 +217,12 @@ static void __fastcall__ view_grid (unsigned gx, unsigned gy, unsigned char w)
 ** (KEPT_PASS or more since it last did: 255 at most); how well it keeps it made fresh (fr's q, a quarter of mapmind
 ** more for each of its passings' points, TR_MORE's; 100 at most; never less than it remembers of it still: a tenth lost
 ** each KEPT_FADE); forgotten (under KEPT_GONE: HOUSE.md's travel, slice 4.2's), remembered afresh, what it saw of it
-** before gone (its seen marks wiped but those it sees now, its rooms no longer visited; its drawing on paper kept) */
+** before gone (its seen marks wiped but those it sees now, its rooms no longer visited; its drawing on paper kept);
+** the north it believes in now kept with it (travel's: its way back off by how far its belief's gone since) */
 extern unsigned char at_bank;                   /* (chunk.c's: at ()'s chunk's bank) */
 struct fresh {
     unsigned        now, u0;
-    unsigned char   q, q4;
+    unsigned char   q, q4, sk;
 };
 static void __fastcall__ fresh (const struct fresh* fr)
 {
@@ -258,6 +259,7 @@ static void __fastcall__ fresh (const struct fresh* fr)
     }
     k->q = left > f ? left : f;
     k->m = fr->now;
+    k->sk = fr->sk;                             /* (The north it believes in as it knows it again) */
 }
 
 /* The character's memory of this look's squares (the last view's: bx0, by0, bw, blo, bhi), each chunk with any of
@@ -281,6 +283,7 @@ void s_kept (void)
     fr.q = HUB->watch & WA_MAP ? fr.q4 : fr.q4 >> 1;
     fr.q4 >>= 2;
     fr.u0 = KEPT_UNIT (HUB->pcsum.mapfade);
+    fr.sk = HUB->pc_skew;
     map = HUB->pc_map;
     dq = HUB->pc_drawn;
     dsk = HUB->pc_skew;
