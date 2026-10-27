@@ -11,6 +11,9 @@
 
             .export     _item_at, _items, _ip
             .import     _hub_map, incsp3
+.ifndef ITEMS_ALL                           ; (The world's: things.c's, the records past it all free; a reader of
+            .import     _ihigh              ;   its store, the senses, looks at every record, ITEMS_ALL)
+.endif
             .importzp   sp, ptr1
 
 REC         = 25                            ; sizeof (struct item)
@@ -114,10 +117,16 @@ _items:
             inc         at                  ; From the one after i,
             bne         @in
             inc         at + 1
-@in:        lda         at                  ;   if there is one
-            cmp         #<NITEMS
+@in:        lda         at                  ;   if there is one (the records in use all before ihigh,
+.ifdef ITEMS_ALL                            ;   things.c's: 2026-10-27, an inventory's pass of them the
+            cmp         #<NITEMS            ;   shorter; the senses', every one)
             lda         at + 1
             sbc         #>NITEMS
+.else
+            cmp         _ihigh
+            lda         at + 1
+            sbc         _ihigh + 1
+.endif
             bcc         @find
             jmp         @none
 @find:      jsr         find
@@ -154,7 +163,16 @@ _items:
 @next:      inc         at                  ; The next record,
             bne         @on
             inc         at + 1
-@on:        lda         ptr1
+@on:
+.ifndef ITEMS_ALL
+            lda         at                  ;   none past ihigh
+            cmp         _ihigh
+            lda         at + 1
+            sbc         _ihigh + 1
+            bcc         @more
+            jmp         @none
+.endif
+@more:      lda         ptr1
             clc
             adc         #REC
             sta         ptr1

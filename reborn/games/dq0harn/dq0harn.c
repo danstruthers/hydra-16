@@ -44,8 +44,9 @@
 void __fastcall__ load_pc (struct req* r);      /* (Part 1's stubs: bank.s's) */
 void __fastcall__ save_pc (struct req* r);
 void __fastcall__ beasts (unsigned char back);
-unsigned char __fastcall__ dig_tool (unsigned char m);     /* (Part 2's) */
+void __fastcall__ dig_answer (struct req* r);   /* (Part 2's) */
 void __fastcall__ dice_set (struct req* r);
+void __fastcall__ outfit_of (struct req* r);    /* (Overlay 1's: outfit.c, RS_OUTFIT) */
 signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 3's) */
 signed char __fastcall__ draw_test (signed char steps);     /* (Overlay 3's: a map drawn, slice 4.2's) */
 
@@ -94,9 +95,7 @@ void __fastcall__ putn (int v)
 
 char tools[NTOOLS][8];
 unsigned char tflag[NTOOLS], tqual[NTOOLS];
-
-#define RS_HOUSE_DIG
-#include "../dq0/rshouse.h"
+unsigned wealth;                                /* (The family's wealth, its file's "wealth" line: 0 none) */
 
 /* All that's to hand, anew: the keys in the text, each after its mark (held: < in the left hand, > the right, * both;
 ** + worn; a space neither) and its quality after it (a digit) */
@@ -184,9 +183,30 @@ void __fastcall__ kind_in (unsigned char k)
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 
-/* The tool to hand that suits the material best (rshouse.h's, s_dig_tool: its digger's number) */
+/* The tool to hand that suits the material best (rshouse.h's, s_dig_tool: its digger's number); the table part 2's
+** alone (the main RAM's room, 2026-10-27) */
+static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char steps);
+#define RS_HOUSE_DIG
 #define RS_HOUSE_DIG_TOOL   s_dig_tool
 #include "../dq0/rshouse.h"
+
+/* A dig's test (RS_TEST's P_DIG): judged by the tool to hand that suits it best, its rate a spell at a marginal
+** success (earth's untested: the tool's rate), its key and its wear in the reply */
+void __fastcall__ s_dig_answer (struct req* r)
+{
+    unsigned char m = r->b > MAT_SOIL ? MAT_STONE : r->b, t = s_dig_tool (m), k = digger[t].rate[m];
+
+    strcpy (r->text, digger[t].key);
+    r->w2 = digger[t].wear[m];
+    if (!k) {
+        r->result = 1;
+        r->w1 = 0;
+        r->w2 = 0;
+        return;
+    }
+    r->grade = DIG_TESTED (m) ? test (&pc, r->a, r->steps) : G_MS;
+    r->w1 = r->grade == G_CS ? 2 * k : r->grade == G_MS ? k : r->grade == G_MF ? k / 2 : 0;
+}
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -411,6 +431,8 @@ static void __fastcall__ own_line (char* l)
         strncpy (name, l + 5, sizeof name - 1);
     } else if (!strncmp (l, "occupation ", 11)) {
         strncpy (calling, l + 11, sizeof calling - 1);
+    } else if (!strncmp (l, "wealth ", 7)) {
+        wealth = atoi (l + 7);                  /* (Its family's, hmchar's: RS_OUTFIT's) */
     } else if (!strncmp (l, "language ", 9) && strlen (tongues) + strlen (l + 8) < sizeof tongues) {
         strcat (tongues, l + 8);
     }
@@ -503,8 +525,8 @@ void __fastcall__ sheet_put (unsigned char n)
     bwrite (sb, (struct beast*) 0x8000 + n, &bs, sizeof bs);
 }
 
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW2CODE")             /* (Part 2's: part 1's room, 2026-10-27) */
+#pragma rodata-name (push, "SW2RODATA")
 
 /* The bank written to the save folder's beasts.dat (back 1: read from it, or cleared: none there; 2: cleared) */
 void __fastcall__ s_beasts (unsigned char back)
@@ -687,20 +709,8 @@ static void __fastcall__ answer (struct req* r)
         r->b = watch;
         break;
     case RS_TEST:
-        if (r->a == P_DIG) {                    /* (Judged by the tool to hand that suits it best) */
-            m = r->b > MAT_SOIL ? MAT_STONE : r->b;
-            t = dig_tool (m);
-            k = digger[t].rate[m];
-            strcpy (r->text, digger[t].key);
-            r->w2 = digger[t].wear[m];
-            if (!k) {
-                r->result = 1;
-                r->w1 = 0;
-                r->w2 = 0;
-                break;
-            }
-            r->grade = DIG_TESTED (m) ? test (&pc, r->a, r->steps) : G_MS;    /* (Earth: the tool's rate, untested) */
-            r->w1 = r->grade == G_CS ? 2 * k : r->grade == G_MS ? k : r->grade == G_MF ? k / 2 : 0;
+        if (r->a == P_DIG) {                    /* (Judged by the tool to hand that suits it best: part 2's) */
+            dig_answer (r);
             break;
         }
         if (r->a == P_BEARING) {                /* (Its bearings, by its own dice: overlay 3's, bearing.c) */
@@ -784,6 +794,11 @@ static void __fastcall__ answer (struct req* r)
         break;
     case RS_DICE:                               /* (A test's: its dice fixed) */
         dice_set (r);
+        break;
+    case RS_OUTFIT:                             /* (Its outfit's makings: overlay 1's, outfit.c, in a copy) */
+        memcpy (rq, r, sizeof rq);
+        outfit_of ((struct req*) rq);
+        memcpy (r, rq, sizeof rq);
         break;
     case RS_CONTEST:                            /* (Each one's test, the actor's first: who did better) */
         g = side (r->actor, r->a, r->steps);

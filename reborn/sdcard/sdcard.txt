@@ -34,6 +34,7 @@ games/lib/dq0/aliases.txt ../games/dq0/commands.aliases ;   the game's own short
 games/lib/dq0/dq0w  ../obj/games/dq0w.hyx       ;   tasks: its world, its rules (HarnMaster's referee) and its maker
 games/lib/dq0/dq0w.ovl ../obj/games/dq0w.hyx.ovl
 games/lib/dq0/dq0w.cat ../obj/games/dq0w.hyx.cat
+games/lib/dq0/dq0o.dat ../obj/games/dq0o.dat ;   the outfits (games/dq0/outfits.txt: the world's to draw)
 games/lib/dq0/dq0harn ../obj/games/dq0harn.hyx ;   (the dungeon grown); /sd/0/games/dq0, or dq0 with bind -a
 games/lib/dq0/dq0harn.ovl ../obj/games/dq0harn.hyx.ovl
 games/lib/dq0/dq0null ../obj/games/dq0null.hyx ;   (the null ruleset's referee, flat odds: dq0 -r null)

@@ -8,7 +8,7 @@ HUB_WINDOW  = $8000                 ; The hub's bank in the window (hub.h's HUB_
 HUB_U       = $FFF1                 ; The shared RAM's macro-page register, then the bank register (hub.c's hub_map)
 HUB_BANKREG = $00
 HUB_MAGIC   = $5144                 ; "DQ" (hub.h's)
-HUB_VERSION = 20
+HUB_VERSION = 21
 
 HUBO_SEM    = 4                     ; Bank 0: each task's doorbell (a semaphore), by role
 HUBO_TASK   = 12                    ;   each role's task number

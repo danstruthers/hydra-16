@@ -4,7 +4,7 @@
 // banks of its own as it starts and draws from (dq0w/outfit.c).  The file's layout (outfit.c's, little-endian):
 //
 //   'O' 'F' VERSION NSEC, then NSEC entries { hash (2), offset (2) } (the section's name hashed: outfit.c's hash),
-//   then the sections, none across an 8K bank's end (the offset's bank its top bits)
+//   then the sections (200 bytes each at most: outfit.c reads one whole, by its offset)
 //   a section:  flags (SF_*: weapon 1, shield 2, free 4, kit 8, armed 16), bent (its bent's section's entry plus 1,
 //               0 none), keep (the money kept, percent: 0 the tenth), make (its things' quality: 0xFF by the wealth,
 //               else the least), mdie (the quality's die, 1d that, 0 none), purse n, purse m (its money NdM, not the
@@ -144,15 +144,14 @@ function compile({ src, names, out }) {
         if (c.instead) lb.push(c.instead);
         for (const t of c.things) lb.push(t.kind, t.place | t.flags << 4, t.lo, t.hi);
       }
-      if (lb.length + 1 > 96) fail(s.ln, 'a line of ' + (lb.length + 1) + ' bytes (outfit.c reads 96 at most)');
       b.push(lb.length + 1, ...lb);
     }
-    if ((at >> 13) !== ((at + b.length - 1) >> 13)) at = (at | 0x1FFF) + 1;    // (Not across a bank's end)
+    if (b.length > 200) fail(s.ln, 'a section of ' + b.length + ' bytes (outfit.c reads 200 at most)');
     offs.push(at);
     body.push({ at, b });
     at += b.length;
   }
-  if (at > 0x4000) throw new Error(src + ': the outfits ' + at + ' bytes, past two banks');
+  if (at > 0xFFFF) throw new Error(src + ': the outfits ' + at + ' bytes, past a 16-bit offset');
   const file = Buffer.alloc(at);
   file.write('OF', 0, 'latin1');
   file[2] = VERSION;

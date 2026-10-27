@@ -10,7 +10,8 @@
 ** ruleset's character generator (its referee names it: hmchar) is run to make one (in this window, the screen as it
 ** is outside the game while it runs), into /ram/dq0.hm; a ruleset with none makes its own.  The rules: the ruleset's
 ** name (RULESETS.md: harn, HarnMaster's, if none's given; null, flat odds), its referee libdir/dq0NAME (the save's: a
-** game carried on keeps its own).  The tests' own: -C, -a, -T, and -I (no engage initiative test, nor a grope's test
+** game carried on keeps its own).  The tests' own: -C, -a, -T, -K (the kit as it was before the outfits, the denizens
+** with none of theirs: their dice as they were), and -I (no engage initiative test, nor a grope's test
 ** while engaged: HOUSE.md's, the user's way to keep the tests' fights as they were).
 **
 ** The game is tasks that meet in the hub (hub.h): this one, the UI, makes it and starts the others (the world,
@@ -63,6 +64,7 @@ static unsigned place;                          /* Where this task is in the wor
 static int task_[NTASKS];                       /* Each task's number, as it was started (0: not) */
 static unsigned char test_start;
 static unsigned char small;                     /* (dq0 -C: the caches small, the tests') */
+static unsigned char gear;                      /* (dq0 -K: the kit as it was, no outfits drawn, the tests') */
 static const char* kit;                         /* (dq0 -k: things more, as the game starts: a tool, ...) */
 static const char* tfile;                       /* (dq0 -t: a theme written by hand) */
 static unsigned char made;                      /* (The theme to read: 0xFF the game's own, themegen's; theme.h) */
@@ -572,6 +574,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     HUB->seed = seed;
     HUB->test_start = test_start;
     HUB->small = small;
+    HUB->gear = gear;
     hub_map (DEN_BANK);                         /* (The sounds' words: none till the sound task's put them there; the
                                                 **   places kept lit, the denizens' as they decide its populations) */
     memset (SND_AT, 0, (2 * SND_KINDS + SND_WORLD) * SND_REC);
@@ -2076,6 +2079,9 @@ void __fastcall__ s_args (int argc, char* argv[])
             kit = argv[++i];                    /* (A tool to begin with: till the items layer, the tests') */
         } else if (!strcmp (argv[i], "-C")) {
             small = 1;                          /* (For the tests: the caches small, paged to the save folder soon) */
+        } else if (!strcmp (argv[i], "-K")) {
+            gear = GE_OLD;                      /* (For the tests: the kit as it was before the outfits, the denizens
+                                                **   with none of theirs: their dice as they were) */
         } else if (!strcmp (argv[i], "-a")) {
             autogo = 1;                         /* (For the tests: a long task goes on at every soft question) */
         } else if (!strcmp (argv[i], "-N")) {
@@ -2094,7 +2100,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C] [-a] [-I] [-N]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C] [-a] [-I] [-N] [-K]");
         }
     }
 }

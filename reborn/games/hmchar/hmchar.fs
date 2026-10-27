@@ -23,7 +23,8 @@
 \ (the book's limits), its skills opened as the book has them (the weapons or crafts it gives chosen); or the
 \ player's own (11 points, two in a skill at most and three in one, its primary); the five option points spent
 \ (Character 16: a skill opened at its OML for one, or improved by its SB for one, two points in a skill at most); a
-\ name.  Not here: the family's occupation and its skills, contacts, the veterans' points.
+\ name; the family's wealth (Character 17's by its class: rolled last, its file's "wealth" line, 2026-10-27).  Not
+\ here: the family's occupation and its skills, contacts, the veterans' points.
 
 require hydra.fl
 require harn.fs
@@ -424,6 +425,14 @@ variable ai
   s" -o" word= if ai @ 1+ arg 63 min dup to out-n out swap move  2 ai +! exit then
   usage ;
 : options ( -- ) 1 ai !  begin ai @ argc < while option repeat ;
+\ ---- The family's wealth (Character 17, by its class: poor, average or rich; C's wealth, the house's odds): d100,
+\ a quarter poor, half average, a quarter rich, an outcast's or an unpopular child's ten less, a favourite's ten more; a
+\ slave's a serf's poor.  Rolled last of all; its file's "wealth" line (the game's outfit bought with it)
+create wealth-t  40 , 40 , 40 ,  40 , 80 , 160 ,  60 , 120 , 240 ,  90 , 180 , 360 ,  600 , 1200 , 2400 ,
+: wealth ( -- u )
+  d100  harn-estrange c@ dup 2 < if drop 10 - else 4 = if 10 + then then
+  dup 25 > swap 75 > + negate  harn-social c@ dup 5 < 0= if drop 1 then  3 * + cells wealth-t + @ ;
+
 : hmchar ( -- )
   options
   find-lib  lib-ok? 0= if 0 to libdir-n s" /sd/0/games/lib/hmchar" lib+ then
@@ -442,6 +451,7 @@ variable ai
   dup harn-write drop
   line{ s" name " line+ name name-n line+ line} drop
   line{ s" occupation " line+ occname occ-n line+ line} drop
+  line{ s" wealth" line+ wealth line+n line} drop
   close-file drop
   ." Written to " out out-n type cr ;
 hmchar

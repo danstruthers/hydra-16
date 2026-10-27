@@ -1,0 +1,198 @@
+/*
+** outfit.c - (dq0w, swapped part 57: ../dq0/swap.inc, bank.s's stubs) the outfits drawn (games/dq0/outfits.txt,
+** compiled by games/dq0w/outfits.js into lib/dq0/dq0o.dat; the plan the user reviewed, and DECISIONS.md's "Outfits,
+** reach and things used up"): the character's at a new game's start (s_kit's), the referee asked for its makings
+** (RS_OUTFIT: its occupation, its open skills by their mastery, its family's wealth, its tags, a seed), its sections
+** found and drawn (part 59's draw_at) in the order an outfit's bought (HOUSE.md's outfits): the universal kit; the
+** occupation's needs; its first weapon (its highest weapon skill's); a tenth of what's left kept (its keep's share);
+** the other weapons, three in all, and a shield; its bent's armour; its skills' tools; its likely and rare things; the
+** money (pennies, 255 at most: the rest left with the family).  The things drawn in the list (outfit.h's); part 58
+** makes them.  Its own data in its image (it calls part 59, which puts it out and in again: none that lasts across
+** a call), the draw's state the main RAM's (ost).
+*/
+
+#include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <hydra.h>
+#include "../dq0/hub.h"
+#include "world.h"
+#include "things.h"
+#include "trace.h"
+#include "outfit.h"
+
+#pragma code-name ("SW57CODE")
+#pragma rodata-name ("SW57RODATA")
+#pragma bss-name ("SW57RODATA")                 /* (Its own data: none of it wanted across a call of part 59's,
+                                                **   which puts this part out and in again) */
+#pragma local-strings (on)
+
+#define OF_MAGIC        0x464F                  /* (dq0o.dat's: "OF", its version) */
+#define OF_VERSION      1
+
+/* A section by its name (the hash outfits.js's): its offset in the file, 0 none */
+static unsigned __fastcall__ find (const char* p)
+{
+    unsigned h = 0, k, n;
+    unsigned char* q;
+
+    for (; *p; ++p) {
+        h = h * 31 + (unsigned char) *p;
+    }
+    hub_map (KIND_BANK);
+    n = OF_INDEX[3];
+    for (k = 0, q = OF_INDEX + 4; k < n; ++k, q += 4) {
+        if ((q[0] | q[1] << 8) == h) {
+            return q[2] | q[3] << 8;
+        }
+    }
+    return 0;
+}
+
+/* Line n of the referee's reply (its occupation, then its skills, by their mastery) after pre, in b: 1, or 0 none */
+static char b[64];
+static unsigned char __fastcall__ reply_line (unsigned char n, const char* pre)
+{
+    const char* t;
+    unsigned char k;
+
+    hub_map (0);
+    for (t = HUB->slot[SLOT_UI].text; n && *t; ++t) {
+        n -= *t == '\n';
+    }
+    if (!*t) {
+        return 0;
+    }
+    strcpy (b, pre);
+    for (k = strlen (b); *t && *t != '\n' && k < sizeof b - 3; ++k) {
+        b[k] = *t++;
+    }
+    b[k] = 0;
+    return 1;
+}
+
+/* The skills' sections (the reply's lines from line from on) whose flags are want, drawn, n at most: the line after
+** the last drawn */
+static unsigned char __fastcall__ skills (unsigned char from, unsigned char want, unsigned char n)
+{
+    unsigned char k;
+
+    for (k = from; n && reply_line (k, "skill "); ++k) {
+        ost.want = want;
+        if (draw_at (find (b), MD_ALL)) {
+            --n;
+        }
+    }
+    ost.want = 0xFF;
+    return k;
+}
+
+/* ---- The character's outfit: the referee asked (RS_OUTFIT, the UI's slot: the UI waits on the kit), drawn into the
+** list; 0 if there's none (no file, a referee that hasn't one: the kit as it was) */
+unsigned char s_outfit (void)
+{
+    struct req* r;
+    unsigned char occ = 0, k, first;
+    unsigned off = 0, boff;
+    int n;
+
+    memset (&ost, 0, sizeof ost);
+    ost.want = 0xFF;
+    hy_bank (ovbank[OVBANKS]);
+    strcpy (b, TR_DIR);
+    strcat (b, "/dq0o.dat");
+    hub_map (0);
+    if ((ost.fd = open (b, O_RDONLY)) < 0) {
+        return 0;
+    }
+    hub_map (KIND_BANK);                        /* (Its index into the kinds' bank, the first time) */
+    if ((OF_INDEX[0] | OF_INDEX[1] << 8) != OF_MAGIC) {     /* (Its head, then its entries: 4 bytes each) */
+        for (boff = 0, k = 0; boff < 4 + 4 * (unsigned) k && (n = read (ost.fd, b, sizeof b)) > 0; boff += n) {
+            hub_map (KIND_BANK);
+            memcpy (OF_INDEX + boff, b, n);
+            k = OF_INDEX[3];
+        }
+        hub_map (KIND_BANK);
+    }
+    OF_N = 0;                                   /* (The list empty) */
+    if ((OF_INDEX[0] | OF_INDEX[1] << 8) != OF_MAGIC || OF_INDEX[2] != OF_VERSION) {
+        close (ost.fd);
+        return 0;
+    }
+    hub_map (0);
+    r = &HUB->slot[SLOT_UI];
+    r->kind = RS_OUTFIT;
+    r->actor = 0;
+    r->text[0] = 0;
+    r = hub_ask (SLOT_UI);
+    if (r->result) {
+        r->state = REQ_FREE;
+        close (ost.fd);
+        return 0;
+    }
+    ost.budget = r->w1;
+    ost.rs = r->w2 | 1;
+    ost.tags = r->x[0] | r->x[1] << 8;
+    ost.level = r->a;
+    if (reply_line (0, "")) {                   /* (Its occupation's section: the culture's own first, NAME/c) */
+        k = strlen (b);
+        for (first = 0; first < 6 && !(ost.tags & 1u << first); ++first) {
+        }
+        b[k] = '/';
+        b[k + 1] = "fivtsk"[first < 6 ? first : 0];
+        b[k + 2] = 0;
+        if (!(off = find (b))) {
+            b[k] = 0;
+            off = find (b);
+        }
+    }
+    if (draw_at (off, MD_HEAD)) {               /* (Its flags; its purse, not the family's: a cleric's 6d6) */
+        occ = ost.sflags;
+        if (ost.pn) {
+            for (ost.budget = 0, k = ost.pn; k--; ) {
+                ost.rs = ost.rs * 25173U + 13849U;
+                ost.budget += 1 + (ost.rs >> 8) % ost.pd;
+            }
+        }
+    }
+    ost.freeall = (occ & SF_KIT) != 0;          /* (The universal kit: its temple's, given) */
+    draw_at (find ("universal"), MD_ALL);
+    ost.freeall = 0;
+    draw_at (off, MD_NEED);                     /* (Its occupation's needs) */
+    first = 1;
+    if (!(occ & SF_ARMED)) {                    /* (Its first weapon, its highest weapon skill's) */
+        first = skills (1, SF_WEAPON, 1);
+    }
+    draw_at (off, MD_HEAD);
+    k = ost.keep ? ost.keep : 10;
+    ost.kept = ost.budget * k / 100;            /* (A tenth of what's left kept as money) */
+    ost.budget -= ost.kept;
+    if (!(occ & SF_ARMED)) {                    /* (Its other weapons, three in all, and a shield) */
+        skills (first, SF_WEAPON, 2);
+        skills (1, SF_SHIELD, 1);
+    }
+    if (draw_at (off, MD_HEAD) && (k = ost.bent) != 0) {    /* (Its bent's armour) */
+        hub_map (KIND_BANK);
+        boff = OF_INDEX[4 * k + 2] | OF_INDEX[4 * k + 3] << 8;
+        draw_at (boff, MD_ALL);
+    }
+    ost.tool = 1;                               /* (Its skills' tools) */
+    skills (1, 0, 255);
+    reply_line (0, "");                         /* (Its likely and rare things) */
+    draw_at (off, MD_CHANCE);
+    hub_map (0);
+    HUB->slot[SLOT_UI].state = REQ_FREE;
+    close (ost.fd);
+    ost.budget += ost.kept;                     /* (The money: in the pouch) */
+    hub_map (KIND_BANK);
+    if (ost.budget && (k = OF_N) < NOFIT) {
+        OF_LIST[k].kind = KI_PENNIES;
+        OF_LIST[k].qty = ost.budget > 255 ? 255 : ost.budget;
+        OF_LIST[k].quality = 4;
+        OF_LIST[k].place = PL_POUCH;
+        OF_LIST[k].in = OF_LIST[k].flags = 0;
+        OF_N = k + 1;
+    }
+    return 1;
+}

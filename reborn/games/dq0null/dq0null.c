@@ -540,6 +540,14 @@ static void __fastcall__ answer (struct req* r)
         attack (r);
         status ();
         break;
+    case RS_OUTFIT:                             /* (The universal kit only, at an average make, with its 49 pennies:
+                                                **   some money left; no occupation, no skills, no tags) */
+        r->w1 = 49;
+        r->w2 = (unsigned) HUB->seed | 1;
+        r->a = 1;
+        r->x[0] = r->x[1] = 0;
+        *tp = 0;
+        break;
     case RS_WIELD:                              /* (What it would strike with: the first it holds; its hands empty,
                                                 **   none better, asked of, than its bare hands) */
         r->result = r->x[0] ? 1 : r->x[1] ? 2 : 0;

@@ -22,8 +22,9 @@
 ; church by its deity, Character 23; not yet a mage's, Character 25) that the character's class and sex allow it (the
 ; book's limits), its skills opened as the book has them (the weapons or crafts it gives chosen); or the player's own
 ; (11 points, two in a skill at most and three in one, its primary); the five option points spent (Character 16: a
-; skill opened at its OML for one, or improved by its SB for one, two points in a skill at most); a name.  Not here:
-; the family's occupation and its skills, contacts, the veterans' points.
+; skill opened at its OML for one, or improved by its SB for one, two points in a skill at most); a name; the family's
+; wealth (Character 17's by its class: rolled last, its file's "wealth" line, 2026-10-27).  Not here: the family's
+; occupation and its skills, contacts, the veterans' points.
 
 ; The options (before the library: a wrong one is said at once)
 (def {quiet} NIL)
@@ -436,6 +437,16 @@
   (+ (nth (random 12) {"Al" "Bra" "Dor" "Ka" "Ly" "Mo" "Ne" "Ro" "Sa" "Tor" "Wy" "Ha"})
   (nth (random 11) {"dan" "ric" "nel" "gyn" "wen" "lor" "vik" "mar" "seth" "ka" "ven"}))}))
 
+; ---- The family's wealth (Character 17, by its class: poor, average or rich; C's wealth, the house's odds): d100, a
+; quarter poor, half average, a quarter rich, an outcast's or an unpopular child's ten less, a favourite's ten more; a
+; slave's a serf's poor.  Rolled last of all; its file's "wealth" line (the game's outfit bought with it)
+(def {wealth} (fn {} {do
+  =(e (h :estrange))
+  =(r0 (harn.d 100))
+  =(r ?((< e 2) (- r0 10) ?((eq e 4) (+ r0 10) r0)))
+  (nth ?((<= r 25) 0 ?((<= r 75) 1 2))
+    (nth (h :social) {{40 40 40} {40 80 160} {60 120 240} {90 180 360} {600 1200 2400}}))}))
+
 ; ---- The program
 (find-lib)
 (def {kept} NIL)
@@ -453,6 +464,6 @@
 ?(quiet (make-name) (while {eq name ""} {do (print) (set! {name} (ask "A name: "))}))
 (profile)
 ?(out NIL (set! {out} (+ name ".hm")))
-(try (harn.write out h (list (+ "name " name) (+ "occupation " occname)))
+(try (harn.write out h (list (+ "name " name) (+ "occupation " occname) (+ "wealth " (wealth))))
   {do (print-to stderr (+ "hmchar.hl: " out ": can't write it")) (exit 1)})
 (print (+ "Written to " out))

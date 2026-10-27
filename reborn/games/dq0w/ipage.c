@@ -429,6 +429,9 @@ unsigned char __fastcall__ s_it_in (unsigned char sn, unsigned cx, unsigned cy)
                     }
                 }
                 memcpy (item_at (i), &q, sizeof q);
+                if (i >= ihigh) {
+                    ihigh = i + 1;              /* (items ()'s end past it) */
+                }
                 mput (k, i);
             }
             for (k = 0; k < n; ++k) {           /* (In another: its record's number, by its place) */

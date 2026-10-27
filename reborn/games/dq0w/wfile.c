@@ -386,6 +386,7 @@ void __fastcall__ s_keep (unsigned char back)
                 }
                 hub_map (KIND_BANK + 1 + b);
                 memcpy ((char*) 0x8000 + off, buf, PIECE);
+                ihigh = NITEMS;                 /* (Read back: items ()'s end the store's, till the next) */
             } else {
                 hub_map (KIND_BANK + 1 + b);
                 memcpy (buf, (char*) 0x8000 + off, PIECE);
@@ -451,6 +452,7 @@ void __fastcall__ s_items_begin (const char* dir)
     }
     hub_map (0);
     ilim = HUB->small ? 24 : NITEMS;            /* (dq0 -C: the tests' small store, its chunks paged soon) */
+    ihigh = 1;                                  /* (None in use) */
     irs = (unsigned) HUB->seed | 1;
     if (HUB->resume) {
         s_keep (1);

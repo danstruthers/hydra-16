@@ -33,6 +33,7 @@
 #include "world.h"
 #include "work.h"
 #include "things.h"
+#include "outfit.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
@@ -105,13 +106,18 @@ typedef char store_fits[sizeof (struct item) == 25 && ITEM_BANK (0) == 14 && ITE
 static const struct kind* __fastcall__ kind_of (unsigned char k)
 {
     static struct kind kb[4];
-    static unsigned char next;
-    struct kind* r = &kb[next++ & 3];
+    static struct kind* r = kb;
+    static unsigned o;
 
+    r = r == kb + 3 ? kb : r + 1;
+    o = k < NK ? k : 0;
+    o = (o << 5) + (o << 2) + o;                /* (Its place, 37 bytes a kind: no multiplying, an inventory's
+                                                **   every thing's, 2026-10-27) */
     hub_map (KIND_BANK);
-    memcpy (r, kinds + (k < NK ? k : 0), sizeof *r);
+    memcpy (r, (const char*) kinds + o, sizeof *r);
     return r;
 }
+typedef char kind_fits[sizeof (struct kind) == 37 ? 1 : -1];
 
 /* Item i's record copied out (into q); item i's kind's record (kind_of's) */
 static void __fastcall__ fetch (struct item* q, unsigned i)
@@ -154,6 +160,7 @@ static unsigned char __fastcall__ two (const struct kind* k)
     return k->flags & K_TWO || k->bulk >= 20 ? 2 : 1;
 }
 
+struct ost ost;                                 /* (The outfits' draw's state: parts 57 and 59's, outfit.h's) */
 unsigned char held_k[2], held_h[2];             /* (What the character holds: part 48's held_kinds) */
 
 /* The catalogue's bank in the window (bank.s's m0 ... put it back with it) */
@@ -210,6 +217,8 @@ static char* tq;                                /* (Or into the main RAM, on to 
 static char* tqe;
 static void __fastcall__ put (const char* s)
 {
+    static unsigned n, r;
+
     if (tq) {
         while (*s && tq < tqe) {
             *tq++ = *s++;
@@ -217,11 +226,12 @@ static void __fastcall__ put (const char* s)
         *tq = 0;
         return;
     }
+    n = strlen (s);                             /* (Copied whole, the library's: an inventory's every word, quicker
+                                                **   than a byte at a time, 2026-10-27) */
     hub_map (UI_BANK);                          /* (The text the UI bank's: the header back after) */
-    while (*s && tp < UIREC->things_text + sizeof UIREC->things_text - 1) {
-        *tp++ = *s++;
-    }
-    *tp = 0;
+    r = UIREC->things_text + sizeof UIREC->things_text - 1 - tp;
+    memcpy (tp, s, n = n < r ? n : r);
+    *(tp += n) = 0;
     hub_map (0);
 }
 
@@ -1322,6 +1332,9 @@ static unsigned __fastcall__ split (unsigned n, unsigned char k)
     for (i = 1; i < ilim; ++i) {
         p = item_at (i);
         if (!p->kind) {
+            if (i >= ihigh) {
+                ihigh = i + 1;
+            }
             rec.qty = k;
             rec.flags &= ~I_NAMED;
             rec.id = ++item_at (0)->x;
@@ -2017,7 +2030,8 @@ off:
             word ("battered");
         }
         if (rec.wear >= 32) {
-            word (lk.tool[1] == 'l' || lk.tool[1] == 'n' ? (rec.wear >= 128 ? "dull" : "dulled") : "worn");
+            word (!(lk.flags & K_BELT) && (lk.slots == FM_SWORD || lk.slots == FM_KNIFE) ?
+                (rec.wear >= 128 ? "dull" : "dulled") : "worn");
         }
         if (sh & IS_LOCK) {
             word (sh & IS_BURST ? "its lock broken" : "with a lock");
@@ -2170,8 +2184,8 @@ static void worn_words (void)
         word (life[w >= 10 ? 4 : w >= 7 ? 3 : w >= 4 ? 2 : w >= 2 ? 1 : 0]);
     }
     if (rec.wear >= 32) {                       /* (A blade dug with, dulled; a tool worn) */
-        word (lk.tool[1] == 'l' || lk.tool[1] == 'n' ? (rec.wear >= 128 ? "its edge dull" : "its edge dulled") :
-            "worn with use");
+        word (!(lk.flags & K_BELT) && (lk.slots == FM_SWORD || lk.slots == FM_KNIFE) ?
+            (rec.wear >= 128 ? "its edge dull" : "its edge dulled") : "worn with use");
     }
     if (rec.id && (b = burn_of (rec.kind)) != 0) {
         w = b->life * 10;                       /* (A whole one's minutes: the quarters left) */
@@ -2243,75 +2257,106 @@ void __fastcall__ s_closer (unsigned char mode)
 
 
 static unsigned char tw_n;                      /* (How many alike told together: "two sacks") */
-#pragma static-locals (push, on)                /* (Called again by nothing before it's done: quicker) */
-void __fastcall__ s_thing_words (const struct item* q)
-{
-    const struct kind* k = kind_of (q->kind);
-    char b[6];
-    unsigned char c = k->keeps & KF_CLOSES;
+static struct item tw;                          /* (The thing worded, copied out, and its kind's record: the main */
+static const struct kind* twk;                  /*   RAM's, many's call swapping this part out and in again) */
 
-    if (q->flags & I_NAMED) {                   /* (A name the character gave it: its id, marked for the UI, "#12 a
+/* A thing in words (tw, twk its kind's): its kind, how many, and what anyone can see of its state (its make and worth
+** are an appraiser's to judge) */
+static void words (void)
+{
+    static char b[6];
+    static unsigned char c;
+
+    c = twk->keeps & KF_CLOSES;
+    if (tw.flags & I_NAMED) {                   /* (A name the character gave it: its id, marked for the UI, "#12 a
                                                 **   sword", worded "Linda, your sword") */
         put ("#");
-        put (utoa (q->id, b, 10));
+        put (utoa (tw.id, b, 10));
         put (" ");
     }
-    if (tw_n > 1 || (q->qty == 1 && (k->form & KF_COUNT))) {
-        many (tbuf, tw_n > 1 ? tw_n : 1, q->kind);    /* (Alike, told together; one of a lot, "a ration") */
+    if (tw_n > 1 || (tw.qty == 1 && (twk->form & KF_COUNT))) {
+        many (tbuf, tw_n > 1 ? tw_n : 1, tw.kind);   /* (Alike, told together; one of a lot, "a ration") */
         put (tbuf);
     } else {
-        if (q->qty > 1) {
-            put (utoa (q->qty, b, 10));
+        if (tw.qty > 1) {
+            put (utoa (tw.qty, b, 10));
             put (" ");
-        } else if (!(k->flags & K_PLURAL)) {
-            put (strchr ("aeiou", k->name[0]) ? "an " : "a ");
+        } else if (!(twk->flags & K_PLURAL)) {
+            put (strchr ("aeiou", twk->name[0]) ? "an " : "a ");
         }
-        put (k->name);
+        put (twk->name);
     }
-    if (q->dur_max && q->dur * 10 < q->dur_max) {
+    if (tw.dur_max && tw.dur * 10 < tw.dur_max) {
         put (" (nearly broken)");
-    } else if (q->dur_max && q->dur * 3 < q->dur_max) {
+    } else if (tw.dur_max && tw.dur * 3 < tw.dur_max) {
         put (" (battered)");
     }
-    if (q->flags & I_LIT) {
+    if (tw.flags & I_LIT) {
         put (" (lit)");
     }
-    if (q->id && q->fuel <= BURN_LOW && burn_of (q->kind)) {    /* (A light spent or low, a fuel empty: slice
-                                                **   4.1's) */
-        put (!(k->flags & K_LIGHT) ? (q->fuel ? "" : " (empty)") : q->fuel ? " (burning low)" : " (spent)");
+    if (tw.id && tw.fuel <= BURN_LOW && (tw.fuel || (twk->flags & K_LIGHT) || (unsigned char) (tw.kind - KI_OIL) <=
+        KI_PITCH - KI_OIL) && burn_of (tw.kind)) {  /* (A light spent or low, a fuel empty: slice 4.1's; only a
+                                                **   light's or a fuel's spent, burn_of not asked of the rest) */
+        put (!(twk->flags & K_LIGHT) ? (tw.fuel ? "" : " (empty)") : tw.fuel ? " (burning low)" : " (spent)");
     }
-    if (q->wear >= 32) {                        /* (Its wear: a blade dulled, a tool worn) */
-        put (!(k->flags & K_BELT) && (k->slots == FM_SWORD || k->slots == FM_KNIFE) ? (q->wear >= 128 ? " (dull)" :
-            " (dulled)") :
-            " (worn)");
+    if (tw.wear >= 32) {                        /* (Its wear: a blade dulled, a tool worn) */
+        put (!(twk->flags & K_BELT) && (twk->slots == FM_SWORD || twk->slots == FM_KNIFE) ? (tw.wear >= 128 ?
+            " (dull)" : " (dulled)") : " (worn)");
     }
-    if (c == KF_STOPPER ? q->id && !(q->shut & IS_CLOSED) : c && (q->shut & IS_CLOSED)) {
+    if (c == KF_STOPPER ? tw.id && !(tw.shut & IS_CLOSED) : c && (tw.shut & IS_CLOSED)) {
         put (c == KF_STOPPER ? " (unstoppered)" : " (closed)");    /* (What closes it: a lid, a tie, shut; a stopper
                                                 **   out) */
     }
 }
-#pragma static-locals (pop)
+
+/* A thing in words, any (part 11's to the others: its record copied, its words put as the text is going) */
+void __fastcall__ s_thing_words (const struct item* q)
+{
+    memcpy (&tw, q, sizeof tw);
+    twk = kind_of (tw.kind);
+    words ();
+}
+
+/* What its words say of a thing's state, in a byte (two alike if theirs are: a thing's words are its kind's, how many,
+** its make's wear and harm, lit, its fuel, closed: words's), tw's */
+static unsigned char sig (void)
+{
+    return (tw.flags & I_LIT) | (tw.dur_max && tw.dur * 10 < tw.dur_max ? 2 : tw.dur_max && tw.dur * 3 < tw.dur_max ?
+        4 : 0) | (tw.wear >= 128 ? 8 : tw.wear >= 32 ? 16 : 0) | (tw.shut & IS_CLOSED ? 32 : 0) | (tw.fuel <= BURN_LOW ?
+        (tw.fuel ? 64 : 128) : 0) | (tw.id ? 0 : 1);
+}
 
 /* What the character carries gathered first, in one pass of the store (the records on an actor, and every record in
 ** or on a thing: what's in what it carries among them), its list and its load worded from that: each thing's
 ** contents found there, not by a pass each (a pass some 25,000 cycles: an inventory's passes were a third of a
 ** million); more than GOT_MAX of them, the passes as before (ngot 0xFF) */
 #define GOT_MAX         48
-static struct got { unsigned n, x; unsigned char where; }* got;
+static struct got { unsigned n, x; unsigned char where, kind; }* got;
 static unsigned char ngot;
+static unsigned char gcur;                      /* (The entry next_in gave last: the next looked for after it, a
+                                                **   container's things in turn, not the list again for each,
+                                                **   2026-10-27, the outfits' more things) */
 
 /* The next record after i at where, x (IN_X's: items ()'s order, the records' own) */
 #pragma static-locals (push, on)
-static unsigned __fastcall__ next_in (unsigned i, unsigned char where, unsigned x)
+static unsigned nx_n, nx_x;                     /* (next_in's arguments: the caller's, set in these, no C stack's) */
+static unsigned char nx_w;
+static unsigned next_in (void)
 {
-    struct got* g = got;
-    unsigned char k;
+    struct got* g;
+    unsigned char k, w;
+    unsigned n, at;
 
     if (ngot == 0xFF) {
-        return items (i, IN_X | 1 << where, x);
+        return items (nx_n, IN_X | 1 << nx_w, nx_x);
     }
-    for (k = ngot; k; --k, ++g) {
-        if (g->n > i && g->where == where && g->x == x) {
+    n = nx_n;
+    w = nx_w;
+    at = nx_x;
+    k = n && gcur < ngot && got[gcur].n == n ? gcur + 1 : 0;
+    for (g = got + k; k < ngot; ++k, ++g) {
+        if (g->x == at && g->where == w && g->n > n) {
+            gcur = k;
             return g->n;
         }
     }
@@ -2324,89 +2369,87 @@ static unsigned __fastcall__ next_in (unsigned i, unsigned char where, unsigned 
 static unsigned load;
 static unsigned char lmode;                     /* (The words a list in a sentence, look in's: "a candle and two
                                                 **   chisels", not "(in it: ...)") */
-#define wa              tbuf                    /* (Two things' words compared, alike's: the main RAM's buffer, idle
-                                                **   meanwhile) */
-#define wb              (tbuf + 40)
+static unsigned char quiet;                     /* (In a thing closed: weighed, not told) */
+#define wb              (tbuf + 40)             /* (A text's end, a closed thing's: nothing put) */
+static unsigned char lsig, lkf, lwo, ln, lin;
+static const struct kind* cl_k;
+static struct got* gp;
+static unsigned char gm;
+static unsigned j, jn;
 
-/* Things a and b alike, to be told together ("two sacks": the same kind, one each, worn alike, neither named nor
-** held (each in a hand told), nor with anything in it, the same in the words that tell them) */
-#pragma static-locals (push, on)
-static unsigned char __fastcall__ alike (unsigned a, unsigned b)
+/* Thing jn alike the one worded (tw, its sig lsig, worn lwo, nothing in it lin; i its number): the same kind, one each,
+** worn alike, neither named nor held, nothing in either, the same in what their words say (sig's): 1, tw back as it was
+** (told: its number added to those, nt their count) */
+static unsigned char __fastcall__ alike (unsigned i, unsigned* told, unsigned char* nt)
 {
-    struct item p, q;
-    char* t = tq;
-    char* e = tqe;
-    unsigned char r;
+    static unsigned char r;
 
-    if (item_at (a)->kind != item_at (b)->kind) {
-        return 0;                               /* (Quickly, most of them) */
+    fetch (&tw, jn);
+    if (lin == 0xFF) {
+        nx_n = 0;
+        nx_w = IW_ITEM;
+        nx_x = i;
+        lin = lkf && next_in () != 0;           /* (Something in it: none alike; asked once, a candidate found) */
+        fetch (&tw, jn);
     }
-    fetch (&p, a);
-    fetch (&q, b);
-    if (p.kind != q.kind || p.qty != 1 || q.qty != 1 || ((p.flags ^ q.flags) & I_WORN) ||
-        ((p.flags | q.flags) & (I_NAMED | I_HELD)) || next_in (0, IW_ITEM, a) || next_in (0, IW_ITEM, b)) {
-        return 0;
+    nx_n = 0;
+    nx_w = IW_ITEM;
+    nx_x = jn;
+    r = tw.qty == 1 && (tw.flags & I_WORN) == lwo && !(tw.flags & (I_NAMED | I_HELD)) && sig () == lsig && !lin &&
+        !next_in ();
+    if (r && *nt < 8) {
+        told[(*nt)++] = jn;
     }
-    tq = wa;
-    tqe = wa + 39;
-    s_thing_words (&p);
-    tq = wb;
-    tqe = wb + 39;
-    s_thing_words (&q);
-    r = !strcmp (wa, wb);
-    tq = t;
-    tqe = e;
+    fetch (&tw, i);
     return r;
 }
-#pragma static-locals (pop)
 
-static struct got* gp;                          /* (contents's, its alike's search: static, none of it live as it
-                                                **   goes on into what's in a thing) */
-static unsigned char gm;
 static void __fastcall__ contents (unsigned char where, unsigned x, unsigned char depth)
 {
-    const struct kind* k;
     static const char* const hands_in[4] = { ", in your hand", ", in your left hand", ", in your right hand",
         ", in both hands" };
-    struct item q;
-    unsigned i = 0, j, told[8];
-    unsigned char first = 1, n, kf, kk, nt = 0;
+    unsigned i = 0, told[8];
+    unsigned char first = 1, nt = 0, gk = 0;
     char* t;
     char* e;
 
-    while ((i = next_in (i, where, x)) != 0) {
-        fetch (&q, i);
-        k = kind_of (q.kind);
-        kf = k->flags;
-        kk = k->keeps;
-        j = (unsigned) k->weight * (kf & K_PLURAL && !(k->form & KF_COUNT) ? 1 : q.qty);
-        load += k->form & KF_TENS ? (j + 9) / 10 : j;    /* (A lot by the ten: the missiles') */
-        for (n = 0; n < nt && told[n] != i; ++n) {
+    while (gcur = gk, nx_n = i, nx_w = where, nx_x = x, (i = next_in ()) != 0) {  /* (From its place: what's in it,
+                                                **   and alike's, looked elsewhere) */
+        gk = gcur;
+        fetch (&tw, i);
+        twk = kind_of (tw.kind);
+        lkf = twk->flags;
+        j = (unsigned) twk->weight * (lkf & K_PLURAL && !(twk->form & KF_COUNT) ? 1 : tw.qty);
+        load += twk->form & KF_TENS ? (j + 9) / 10 : j;  /* (A lot by the ten: the missiles') */
+        lkf = lkf & (K_CONTAINER | K_BELT) || twk->keeps & KF_ON;
+        if (quiet) {                            /* (In a thing closed: its weight, not its words) */
+            if (lkf) {
+                contents (IW_ITEM, i, depth + 1);
+            }
+            continue;
         }
-        if (n < nt) {
+        for (ln = 0; ln < nt && told[ln] != i; ++ln) {
+        }
+        if (ln < nt) {
             continue;                           /* (Told with one alike before it: nothing in it, nothing more) */
         }
-        n = 1;
-        if (q.qty == 1 && !(q.flags & (I_NAMED | I_HELD))) {     /* (One that may have others alike: alike's) */
+        ln = 1;
+        if (tw.qty == 1 && !(tw.flags & (I_NAMED | I_HELD))) {   /* (One that may have others alike: alike's) */
+            lsig = sig ();
+            lwo = tw.flags & I_WORN;
+            lin = 0xFF;                         /* (Whether something's in it: alike's to ask) */
             if (ngot != 0xFF) {
-                for (gp = got, gm = ngot; gp->n != i; ++gp, --gm) {
-                }                               /* (Those after it in the list gathered, from its place: not the
-                                                **   list again for each, next_in's) */
-                while (--gm) {
-                    if ((++gp)->where == where && gp->x == x && alike (i, gp->n)) {
-                        ++n;
-                        if (nt < 8) {
-                            told[nt++] = gp->n;
-                        }
+                for (gp = got + gk + 1, gm = ngot - gk - 1; gm; --gm, ++gp) {  /* (Those after it in the list
+                                                **   gathered, from its place: next_in's, not the list again for each) */
+                    if (gp->where == where && gp->x == x && gp->kind == tw.kind) {
+                        jn = gp->n;
+                        ln += alike (i, told, &nt);
                     }
                 }
             } else {
-                for (j = i; (j = next_in (j, where, x)) != 0; ) {
-                    if (alike (i, j)) {         /* (Those alike after it: "two sacks", the user's) */
-                        ++n;
-                        if (nt < 8) {
-                            told[nt++] = j;
-                        }
+                for (jn = i; nx_n = jn, nx_w = where, nx_x = x, (jn = next_in ()) != 0; ) {
+                    if (item_at (jn)->kind == tw.kind) {
+                        ln += alike (i, told, &nt);
                     }
                 }
             }
@@ -2416,24 +2459,26 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
         } else if (lmode && depth == 1) {
             put (first ? "" : ", ");
         } else {
-            put (first ? (kind_at (x)->flags & K_BELT || kind_at (x)->keeps & KF_ON ?
-                " (on it: " : " (in it: ") : ", ");
+            put (first ? (cl_k = kind_at (x), cl_k->flags & K_BELT || cl_k->keeps & KF_ON) ? " (on it: " : " (in it: " :
+                ", ");
         }
         first = 0;
-        tw_n = n;
-        s_thing_words (&q);
+        tw_n = ln;
+        words ();
         tw_n = 0;
         if (!depth) {
-            put (q.flags & I_HELD ? hands_in[q.sn & IH_BOTH] : q.flags & I_WORN ? ", worn" : "");   /* (The hand it's
-                                                **   in, its sn: slice 4.1b's) */
+            put (tw.flags & I_HELD ? hands_in[tw.sn & IH_BOTH] : tw.flags & I_WORN ? ", worn" : "");  /* (The hand
+                                                **   it's in, its sn: slice 4.1b's) */
         }
-        if (kf & (K_CONTAINER | K_BELT) || kk & KF_ON) {
+        if (lkf) {
             t = tq;
             e = tqe;
-            if (q.shut & IS_CLOSED) {
+            if (tw.shut & IS_CLOSED) {
                 tq = tqe = wb + 39;             /* (Closed: what's in it not told, but its weight counted) */
+                quiet = 1;
             }
             contents (IW_ITEM, i, depth + 1);
+            quiet = 0;
             tq = t;
             tqe = e;
         }
@@ -2463,6 +2508,7 @@ void s_list (void)
         p->n = i;
         p->x = ip->x;
         p->where = ip->where;
+        p->kind = ip->kind;
         ++p;
         ++ngot;
     }
@@ -2484,7 +2530,6 @@ void __fastcall__ s_listed (unsigned n)
     contents (IW_ITEM, n, 1);
     lmode = 0;
 }
-
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -2712,6 +2757,8 @@ void s_seen_owned (void)
 /* A free record taken, its thing put down (where, sn, x, y, qty: the rest none, not yet its own): its number, or 0
 ** (the store full: a chunk of it put out, ipage.c's, if one can be) */
 unsigned ilim = NITEMS;                         /* (The store's records used, at most: dq0 -C's fewer) */
+unsigned ihigh = NITEMS;                        /* (Every record from here on free: items ()'s end, items.s's, raised
+                                                **   as a record's taken, 2026-10-27) */
 static unsigned __fastcall__ put_down (unsigned char kind, unsigned char where, unsigned char sn, unsigned x,
     unsigned y, unsigned char qty)
 {
@@ -2721,6 +2768,10 @@ static unsigned __fastcall__ put_down (unsigned char kind, unsigned char where, 
     for (i = 1; i < ilim || it_room () && (i = 1); ++i) {   /* (Record 0 is never one: "none") */
         p = item_at (i);
         if (!p->kind) {
+            if (i >= ihigh) {
+                ihigh = i + 1;
+            }
+            p = item_at (i);
             memset (p, 0, sizeof *p);
             p->kind = kind;
             p->where = where;
@@ -2796,10 +2847,11 @@ static unsigned __fastcall__ item_new (unsigned char kind, unsigned char where, 
     return i;
 }
 
-/* ---- The character's kit (a stand-in for the theme's and the occupation's): a torch lit in hand, a backpack worn
-** (rations, a tinderbox in it), a belt (a pouch of pennies, a dagger, a waterskin hanging from it); and things more
-** (dq0 -k, commas between: in the hub's text), each held if there's a hand for it, else in the pack; then a spare
-** torch and a flask of oil in the pack (D5: slice 4.1's) */
+/* ---- The character's kit: its outfit (part 57's, outfit.c: the universal kit and its occupation's, as the referee
+** says, the outfits' file's); or, dq0 -K's (the tests') or without the outfits, the kit as it was: a torch lit in hand,
+** a backpack worn (rations, a tinderbox in it), a belt (a pouch of pennies, a dagger, a waterskin hanging from it), and
+** a spare torch and a flask of oil in the pack after (D5: slice 4.1's); and things more (dq0 -k, commas between: in the
+** hub's text), each held if there's a hand for it, else in the pack */
 static const unsigned char spare[] = { KI_TORCH, KI_OIL };
 
 /* Each thing: its kind, what it's in (an earlier one's place in the list; 0xFF: on the character), how many, its
@@ -2816,9 +2868,14 @@ void s_kit (void)
     unsigned made[NKIT];
     const unsigned char* e;
     unsigned i;
-    unsigned char k, off;
+    unsigned char k, off, old;
     char* c;
     char* more = tbuf;
+
+    hub_map (0);
+    if (!(old = (HUB->gear & GE_OLD) || !outfit ())) {
+        outmake (0);                            /* (Its outfit drawn: its things made) */
+    }
 
     hub_map (UI_BANK);
     strncpy (more, UIREC->things_text, 63);     /* (The things more: the UI's -k, in the UI bank's text) */
@@ -2828,7 +2885,7 @@ void s_kit (void)
     if (HUB->pcsum.limbs & (off == IH_LEFT ? LB_ARM_L : LB_ARM_R)) {
         off ^= IH_BOTH;                         /* (Its off arm useless: its torch in the other) */
     }
-    for (k = 0; k < NKIT; ++k) {
+    for (k = 0; old && k < NKIT; ++k) {
         e = kit_list[k];
         made[k] = i = item_new (e[0], e[1] == 0xFF ? IW_ACTOR : IW_ITEM, e[1] == 0xFF ? 0 : made[e[1]], e[2]);
         item_at (i)->flags = e[3];
@@ -2850,7 +2907,7 @@ void s_kit (void)
             item_at (i)->sn = k;                /* (Its hand: both for a two-handed thing, else the main) */
         }
     }
-    for (k = 0; k < sizeof spare; ++k) {        /* (The pack's spare torch and flask of oil, D5's, after the things
+    for (k = 0; old && k < sizeof spare; ++k) { /* (The pack's spare torch and flask of oil, D5's, after the things
                                                 **   more: theirs made as they were) */
         item_new (spare[k], IW_ITEM, made[1], 1);
     }

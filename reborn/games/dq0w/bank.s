@@ -24,7 +24,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
 
             .bss
-_ovbank:    .res        21          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+_ovbank:    .res        22          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
                                     ;   world's own banks (its paging's tables: ipage.c's; the ways across a room;
                                     ;   the traces' store, two: wtrace.c's)
 ova:        .res        1           ; (.A and .X kept through a stub)
@@ -133,7 +133,7 @@ go:
             SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
                                             ;   (things.c: slice 4.1b's)
             SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
-            SWPART      50, 13              ; The legs: getting up, a move's start prone, how fast (dq0w.c's)
+            SWPART      50, 14              ; The legs: getting up, a move's start prone, how fast (dq0w.c's)
             SWPART      51, 1               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
                                             ;   overlay 1's bank, overlay 8's room part 19's, 2026-10-27)
             SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
@@ -141,9 +141,15 @@ go:
             SWPART      54, 16              ; Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
             SWPART      55, 16              ; Travel to a place it knows (dq0w.c's: slice 4.2's)
             SWPART      56, 17              ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
+            SWPART      57, 18              ; The outfits drawn: the character's, a denizen's (outfit.c, 2026-10-27)
+            SWPART      58, 18              ; The outfits made (outmake.c)
+            SWPART      59, 18              ; An outfit's section drawn (outdraw.c)
 
             SWFN        work, 48
             SWFN        worked, 48
+            SWFN        outfit, 57
+            SWFN        outmake, 58
+            SWFN        draw_at, 59
             SWFN        hold_in, 48
             SWFN        swap, 48
             SWFN        hand_free, 48

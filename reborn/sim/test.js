@@ -180,6 +180,17 @@ function bearingsOf(t) {
   } });
 }
 for (const t of tests) if (/^dq0/.test(t.name) && !t.bearings) bearingsOf(t);
+// And with -K (the kit as it was before the outfits, the denizens with none of theirs: the tests' kit, their dice as
+// they were, 2026-10-27), but in the tests of the outfits, those with outfit: true
+function kitOf(t) {
+  const d = Object.getOwnPropertyDescriptor(t, 'machine');
+  Object.defineProperty(t, 'machine', { configurable: true, enumerable: true, get() {
+    const m = d ? (d.get ? d.get.call(this) : d.value) : {};
+    if (typeof m.input !== 'string') return m;
+    return Object.assign({}, m, { input: m.input.replace(/(\u0101dq0(?: [^\r]*)?)\r/g, '$1 -K\r') });
+  } });
+}
+for (const t of tests) if (/^dq0/.test(t.name) && !t.outfit) kitOf(t);
 function meaningArgs(argv) {
   if (!RULES) return argv;
   for (let i = 0; i < argv.length; i++) {

@@ -59,6 +59,7 @@ extern unsigned char tqual[NTOOLS];             /*   its quality (0-9) */
 extern unsigned long tnow;                      /* (The clock, the hub's, as a request's answered) */
 extern unsigned char stance;                    /* (The character's stance, the hub's pc_stance, the same) */
 extern unsigned long gseed;                     /* (The game's seed) */
+extern unsigned wealth;                         /* (The family's wealth, its file's: 0 none; RS_OUTFIT's) */
 extern char bkey[8];                            /* (RS_NEW_ACTOR's key, from the request's text) */
 
 /* A creature's sheet (a denizen's record's: kept in a bank of the referee's, 32 bytes each, by the record's number):
@@ -83,7 +84,7 @@ void __fastcall__ sheet_get (unsigned char n);  /* Sheet n into bs */
 void __fastcall__ sheet_put (unsigned char n);  /*   and back */
 
 /* sheet.c (overlay 1) */
-#define OVLS    4                               /* (The 4th: the swapped parts' images) */
+#define OVLS    5                               /* (The 4th and 5th: the swapped parts' images) */
 extern char hurt[200];                          /* The last harm's words */
 void sheet (void);                              /* The sheet, into the reply */
 void brief (void);                              /*   its short lines */

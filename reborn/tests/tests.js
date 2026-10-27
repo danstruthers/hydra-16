@@ -1759,6 +1759,10 @@ function hmcharCheck(out, file) {
   if (fl[k++] !== 'vol 0 0 0 0 0') f.push('vol: ' + fl[k - 1]);
   if (fl[k++] !== 'name ' + m1[1]) f.push('name: ' + fl[k - 1] + ', the profile\'s ' + m1[1]);
   if (fl[k++] !== 'occupation ' + m1[9]) f.push('occupation: ' + fl[k - 1] + ', the profile\'s ' + m1[9]);
+  if (/^wealth /.test(fl[k] || '')) {                   // (C's hmchar's: the family's wealth, Character 17's by its class)
+    const w = +fl[k++].slice(7), cls = [[40, 40, 40], [40, 80, 160], [60, 120, 240], [90, 180, 360], [600, 1200, 2400]][fam[1]] || [];
+    if (!cls.includes(w)) f.push('wealth: ' + w + ', not the book\'s for its class (' + cls.join(', ') + ')');
+  }
   if (fl.length !== k) f.push('the file\'s lines after occupation: ' + JSON.stringify(fl.slice(k)));
   if (f.length) return f;
   // The profile agreeing with it
@@ -2106,8 +2110,8 @@ function dq0Turns(m) {
   const r = m.dq0 || { games: [], lines: [], final: () => null }, all = { events: [], dens: [], replies: [], snaps: [] };   // (None: sim/dl's)
   r.games.forEach((g, gi) => { for (const k of Object.keys(all)) for (const e of g[k]) all[k].push(Object.assign({ game: gi }, e)); });
   const fin = r.final(), of = (list, k) => list.filter(e => e.line === k + 1);
-  // (A dq0 line as the test wrote it: sim/test.js's -N, -I and -a, and RULES=NAME's -r NAME, taken off)
-  const T = r.lines.map(l => l.replace(/^(dq0(?: .*)?) -N$/, '$1').replace(/^(dq0(?: .*)?) -I$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1').replace(/^(dq0(?: .*)?) -r \S+$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1')).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
+  // (A dq0 line as the test wrote it: sim/test.js's -K, -N, -I and -a, and RULES=NAME's -r NAME, taken off)
+  const T = r.lines.map(l => l.replace(/^(dq0(?: .*)?) -K$/, '$1').replace(/^(dq0(?: .*)?) -N$/, '$1').replace(/^(dq0(?: .*)?) -I$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1').replace(/^(dq0(?: .*)?) -r \S+$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1')).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
     at: all.snaps.find(s => s.line === k + 1) || null }));
   T.forEach((t, k) => {
     t.after = k + 1 < T.length ? T[k + 1].at || fin : fin;
@@ -2247,7 +2251,7 @@ function dq0AnswerTest(baud) {
     ...games.flatMap(g => [g, ...DQ0_ANSWERS.map(c => c[0]), 'quit']), 'echo $status'];
   return {
     name: baud === 115200 ? 'dq0answer' : 'dq0answer96', what: 'Dingus Quest Zero\'s answers timed at ' + baud + ' baud (the user\'s D17: the responsiveness targets at 115,200; a command answered in a fifth of a second, 720,000 cycles, a look in half, 1.79M): from Enter to the answer\'s first letter, and to its last, for a turn left and right at seed 3, a step, what the character carries, a door examined, a look, a step that can\'t be taken and a walk, at the turns pace and the normal pace',
-    meaning: true,
+    meaning: true, outfit: true,                  // (The game as it's played: its outfit drawn, 2026-10-27)
     init: 't_rc', cycles: 1500e6,
     machine: { input: lines.map((l, i) => '\u0101' + '\u0100'.repeat(wait * (i + 1) % 3) + l + '\r').join('') },
     expect: ['% echo $status'],
@@ -3268,6 +3272,84 @@ module.exports = {
         dq0Need(f, s, 'E_ARRIVE', {}, 'saunter off to the left not a move');
         if (!s.at || !s.after || !(s.after.pc.x > s.at.pc.x) || s.after.pc.face !== 2) f.push('not moved to its left (east, facing south)');
         if (!still(T.of('foo'))) f.push('a word it doesn\'t know did something (' + dq0Evs(T.of('foo')) + ')');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0outfit', outfit: true, what: 'Dingus Quest Zero\'s starting outfits (games/dq0/outfits.txt, the world\'s draw: outfit.c, outdraw.c, outmake.c; DECISIONS.md\'s outfits, HOUSE.md\'s), by the things each character begins with (the store\'s records) and hmchar\'s files: the family\'s wealth rolled and kept (its "wealth" line, the book\'s by its class); the universal kit (clothes and footwear worn, a backpack and a belt worn, a pouch on the belt, a torch lit in hand, a tinderbox, three rations, a waterskin full, a knife in its sheath, a spare torch and a flask of oil), bought at the book\'s prices within the wealth (seed 5\'s hunter, a serf: sandals; its Spear a staff in hand, all it could pay for); seed 8\'s thief its lockpicks, paper and charcoal in its pouch (handy), its Club\'s club and its Dagger\'s dagger in the knife\'s place, in its sheath; a yeoman of the shortbows its unit\'s issue, free (a shortbow worn, a quiver of 12 to 24 arrows on the belt, a falchion in its scabbard, a dagger in its sheath, a buckler, a kurbul helm and a leather vest worn); a cleric of Peoni its temple\'s things, free (a robe, a ring, a staff, its letter, the universal kit) and 6 to 36 pennies; the null ruleset\'s the universal kit alone, with some money; the same character in the same game the same outfit; each thing its own (its number, its make)',
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cat /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'inventory', 'quit',
+        'hmchar -q -s 8 -u feudal -c thief -o /ram/t.hm', 'cat /ram/t.hm', 'dq0 -p t -s 3 -c /ram/t.hm -T', 'quit',
+        'hmchar -q -s 11 -u feudal -c \'yeoman sb\' -o /ram/y.hm', 'dq0 -p t -s 3 -c /ram/y.hm -T', 'quit',
+        'hmchar -q -s 12 -u feudal -c \'cleric (peoni)\' -o /ram/p.hm', 'dq0 -p t -s 3 -c /ram/p.hm -T', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -r null', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], I = DQ0_I;
+        const cat = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0w.hyx.cat'));
+        const kinds = new Map();                        // (The catalogue's names and values, as the world has them)
+        for (let k = 1; k < 120; k++) { const r = cat.subarray(k * 37, k * 37 + 37), n = r.subarray(0, 14); kinds.set(n.subarray(0, n.indexOf(0) < 0 ? 14 : n.indexOf(0)).toString('latin1'), { value: r.readUInt16LE(33), form: r[36] }); }
+        const price = i => { const k = kinds.get(i.name) || { value: 0, form: 0 }; return Math.floor(k.value * (2 + i.quality) / 6) * (k.form & 0x40 ? i.qty : 1); };
+        let from = 0;
+        const game = (line, what) => { const t = T.of(line, from); from = t.k + 1; const s = t.after; if (!s) f.push(what + ': no state'); return s; };
+        const has = (s, what, name, test = () => true) => { const i = dq0Carried(s).find(j => j.name === name && test(j)); if (!i) f.push(what + ': no ' + name + ' as it should be: ' + JSON.stringify(dq0Carried(s).map(j => j.name))); return i; };
+        const inside = (s, i) => i ? s.items.find(j => j.n === i.x) : null;
+        const kit = (s, what, foot) => {
+          has(s, what, 'clothes', i => i.flags & I.WORN); has(s, what, foot, i => i.flags & I.WORN);
+          const pack = has(s, what, 'backpack', i => i.flags & I.WORN), belt = has(s, what, 'belt', i => i.flags & I.WORN);
+          has(s, what, 'pouch', i => belt && i.x === belt.n); has(s, what, 'torch', i => (i.flags & (I.HELD | I.LIT)) === (I.HELD | I.LIT));
+          for (const n of ['tinderbox', 'flask of oil']) has(s, what, n, i => pack && i.x === pack.n);
+          has(s, what, 'rations', i => pack && i.x === pack.n && i.qty === 3);
+          const skin = has(s, what, 'waterskin', i => belt && i.x === belt.n);
+          has(s, what, 'water', i => skin && i.x === skin.n && i.qty === 4);
+          const sheath = has(s, what, 'sheath', i => belt && i.x === belt.n);
+          if (!dq0Carried(s).some(i => (i.name === 'knife' || i.name === 'dagger') && sheath && i.x === sheath.n)) f.push(what + ': no knife or dagger in its sheath');
+          if (dq0Carried(s).some(i => !i.id)) f.push(what + ': a thing not its own (no number)');
+        };
+        const wealth = file => { const w = (file.match(/\nwealth (\d+)/) || [])[1]; return w === undefined ? -1 : +w; };
+        const story = dq0Story(out), hm = (k) => story.split('% cat ')[k] || '';
+        // seed 5's hunter: a serf, its wealth rolled and kept, the kit bought within it, its Spear's staff in hand
+        const w5 = wealth(out.slice(out.indexOf('% cat /ram/c.hm'), out.indexOf('% dq0 -p t -s 3 -c /ram/c.hm -T')).replace(/\r/g, ''));
+        if (![40, 80, 160].includes(w5)) f.push('the hunter\'s file: no serf\'s wealth line (' + w5 + ')');
+        const s1 = game('dq0 -p t -s 3 -c /ram/c.hm -T', 'the hunter');
+        kit(s1, 'the hunter', 'sandals');
+        const free = ['clothes', 'sandals', 'shoes', 'backpack', 'belt', 'pouch', 'water', 'pennies', 'letter'];
+        const spent = s => dq0Carried(s).filter(i => !free.includes(i.name)).reduce((a, i) => a + price(i), 0);
+        const money = s => dq0Carried(s).filter(i => i.name === 'pennies').reduce((a, i) => a + i.qty, 0);
+        if (s1 && spent(s1) + money(s1) > w5) f.push('the hunter: spent ' + spent(s1) + ' and kept ' + money(s1) + ', more than its wealth ' + w5);
+        if (!/You carry clothes, worn; sandals, worn; a backpack, worn \(in it:/.test(story)) f.push('the hunter\'s inventory not its outfit: ' + story.slice(story.indexOf('You carry'), story.indexOf('You carry') + 200));
+        // seed 8's thief: its tools and mapping things handy, its club and dagger
+        const s2 = game('dq0 -p t -s 3 -c /ram/t.hm -T', 'the thief');
+        kit(s2, 'the thief', 'sandals');
+        const pouch = s2 && dq0Carried(s2).find(i => i.name === 'pouch');
+        for (const n of ['lockpicks', 'paper', 'charcoal']) has(s2, 'the thief', n, i => pouch && i.x === pouch.n);
+        has(s2, 'the thief', 'club'); has(s2, 'the thief', 'dagger', i => inside(s2, i) && inside(s2, i).name === 'sheath');
+        const w8 = wealth(out.slice(out.indexOf('% cat /ram/t.hm'), out.indexOf('% dq0 -p t -s 3 -c /ram/t.hm -T')).replace(/\r/g, ''));
+        if (s2 && spent(s2) + money(s2) > w8) f.push('the thief: spent ' + spent(s2) + ' and kept ' + money(s2) + ', more than its wealth ' + w8);
+        // the yeoman SB: its unit's issue
+        const s3 = game('dq0 -p t -s 3 -c /ram/y.hm -T', 'the yeoman');
+        has(s3, 'the yeoman', 'shortbow', i => i.flags & I.WORN);
+        const quiver = has(s3, 'the yeoman', 'quiver', i => inside(s3, i) && inside(s3, i).name === 'belt');
+        has(s3, 'the yeoman', 'arrows', i => quiver && i.x === quiver.n && i.qty >= 12 && i.qty <= 24);
+        has(s3, 'the yeoman', 'falchion', i => inside(s3, i) && inside(s3, i).name === 'scabbard');
+        has(s3, 'the yeoman', 'dagger', i => inside(s3, i) && inside(s3, i).name === 'sheath');
+        for (const n of ['buckler', 'kurbul helm', 'leather vest']) has(s3, 'the yeoman', n, i => i.flags & I.WORN);
+        // the cleric of Peoni: the temple's things, 6d6 pennies
+        const s4 = game('dq0 -p t -s 3 -c /ram/p.hm -T', 'the cleric');
+        kit(s4, 'the cleric', 'shoes');
+        for (const n of ['robe', 'ring']) has(s4, 'the cleric', n, i => i.flags & I.WORN);
+        has(s4, 'the cleric', 'staff', i => i.flags & I.HELD); has(s4, 'the cleric', 'letter');
+        if (s4 && (money(s4) > 36)) f.push('the cleric: ' + money(s4) + ' pennies, more than 6d6');
+        // the null ruleset: the universal kit only, with some money
+        const s5 = game('dq0 -p t -s 3 -c /ram/c.hm -T', 'the null ruleset\'s');
+        kit(s5, 'the null ruleset\'s', 'shoes');
+        if (s5 && dq0Carried(s5).some(i => i.name === 'staff')) f.push('the null ruleset\'s: its occupation\'s things');
+        if (s5 && !money(s5)) f.push('the null ruleset\'s: no money');
+        // the hunter again: the same outfit
+        const s6 = game('dq0 -p t -s 3 -c /ram/c.hm -T', 'the hunter again');
+        const list = s => s ? JSON.stringify(dq0Carried(s).map(i => [i.name, i.qty, i.quality, i.mat, i.flags & (I.HELD | I.WORN | I.LIT)])) : '';
+        if (list(s6) !== list(s1)) f.push('the hunter again: not the same outfit: ' + list(s6) + ' against ' + list(s1));
         return f;
       },
       sdcard: true
@@ -4357,7 +4439,7 @@ module.exports = {
     },
     {
       name: 'dq0battering', what: 'Dingus Quest Zero\'s battering a long task (slice 4.0, HOUSE.md\'s long tasks: a blow at a time as the clock goes, its bar the blows struck, stopped by the player or hard, the harm done kept), by the world\'s events and the long task\'s part done as it went (the hub\'s pc_task: the referee\'s, HarnMaster\'s, at these seeds): at seed 14 a pick battering the sound door (its torch put down and the pick taken in hand first: what\'s in its hands strikes, the user\'s, 2026-10-22) a dozen blows, one at a time (LT_BATTER, its length a dozen), leaving it giving, and battered again, broken down; then the same door battered and "stop digging" refused as it goes (it\'s a battering), "stop battering" stopping it part way, how the door stands told, and battered again, broken down in as many blows in all as without the stop (the harm done kept, each blow its own roll as before); with the hand-written theme\'s hostile rats (inhabit.txt) a battering stopped hard by a rat\'s blow ("break the door ahead with the pick": the pick taken in hand by the battering\'s command, the rats coming as it batters); told as it goes (the user\'s, 2026-10-22: "nothing is written to the output until after it is resolved"): its first words at once (E_TASK TE_BEGUN, its what the door and what strikes it), a beat as its blows first tell (WB_TELLS) and as they leave it giving (WB_GIVES); both its ends (the user\'s: "doesn\'t seem to stop kicking a door once started"): the dozenth blow (above), and the fourth that makes no mark (seed 14\'s door punched bare-handed: four blows, no more, its bare fist stopped short once and not again at that door, and punched again, four more); a kick in knee boots ending of itself (no question: not bare), and a bare-footed kick at seed 15\'s door stopped short once and breaking it down',
-      init: 't_rc', cycles: 1800e6,
+      init: 't_rc', cycles: 1900e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
         'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'drop the torch', 'hold the pick', 'break the door', 'break', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k pick',
         'drop the torch', 'hold the pick', 'break the door']) +
@@ -6504,7 +6586,7 @@ module.exports = {
         'The third: shield\nThat one\'s chosen already.\n', 'Points left: 4. A skill: climb\nNo more than two points in a skill: that one\'s had its share.\n',
         'A skill: zzz\nThere\'s no such skill.\n', 'Written to Dorn.hm\n',
         'hmchar.hl: -s: hylang\'s random can\'t be seeded (hmchar.fs and C\'s hmchar have -s)\nusage: hmchar.hl [-o file] [-q] [-p species] [-c occupation] [-u culture]\n1\n%',
-        '=> {{"name Dorn" "occupation Gladiator"} ', 'hylang> => exit'],
+        '=> {{"name Dorn" "occupation Gladiator" "wealth ', 'hylang> => exit'],
       check(m, out) {
         const f = [], q = hmRun(out, 'cd /ram; hmchar.hl -q -o q.hm; ' + HM_FILE('q.hm')), d = hmRun(out, HM_FILE('Dorn.hm'));
         if (!q) return ['-q: its output or its file not found'];
@@ -6520,7 +6602,7 @@ module.exports = {
         if (c.length !== 1 || c[0] - c0 <= 0) f.push('Climbing: ' + c0 + ', then ' + c.join(', ') + ': not improved by its SB once');
         if (!/occupation Gladiator\n/.test(d.file) || !['ml dag ', 'ml shd ', 'ml swd '].every(k => d.file.includes(k))) f.push('Dorn.hm: not a Gladiator with Dagger, Shield and Sword');
         if (!/^att dty 6$/m.test(d.file) || !/^ml rpeo \d+$/m.test(d.file) || !/, Piety \d+ \(Peoni\);/.test(play)) f.push('Dorn.hm: Peoni not the deity, or Ritual: Peoni not open');
-        const eml = out.match(/=> \{\{"name Dorn" "occupation Gladiator"\} (\d+)\}/);
+        const eml = out.match(/=> \{\{"name Dorn" "occupation Gladiator" "wealth \d+"\} (\d+)\}/);
         if (!eml || +eml[1] !== c[0]) f.push('harntest.hl\'s eml of Climbing: ' + (eml && eml[1]) + ', not ' + c[0]);
         const e = hmRun(out, 'cd /ram; hmchar.hl -q -p elf -o e.hm; ' + HM_FILE('e.hm'));
         if (!e) return [...f, '-p elf: its output or its file not found'];

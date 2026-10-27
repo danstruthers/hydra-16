@@ -74,8 +74,10 @@ by a request or an intent.
   hub's two change banks, under the hub's change_lock (the maker reads them meanwhile), and paged to the save folder
   (no fixed size).
 - **The item store** is the world's too, its only writer, so it has no lock: the catalogue (read into the hub's
-  catalogue bank as the world starts, from its own file, dq0w.cat; the theme's kinds added after it as the UI asks,
-  IO_THEME) and every item's place and state (dq0w/things.c, its code in the world's swapped parts and, for a thing
+  banks as the world starts, from its own file, dq0w.cat: the kinds into a bank of their own, KIND_BANK, every task's
+  to read, the theme's kinds added after them as the UI asks, IO_THEME; how lights burn, what's thrown, the things'
+  words and the code that handles things into the catalogue's bank, CAT_BANK, 2026-10-27) and every item's place and
+  state (dq0w/things.c, its code in the world's swapped parts and, for a thing
   handled, in the catalogue's bank).  The others ask, or say what they mean: the **UI** asks the world for what's
   carried and for every command about things (the hub's ireq: take, drop, put, light, wear, the kit, a search ...),
   the world answering in its loop (and, while it waits for a look, what wants none: what's carried, the tools, a
@@ -551,7 +553,11 @@ time; what's moved since is the item store's.
 **Containers**: a container item has a capacity, its space (bulk) and the weight it bears, and holds items up to both;
 what it holds is carried with it, its weight counting toward its carrier's load.  A **belt** holds in its own way:
 things hang from it (a pouch, a sheath, a quiver, a blade), each in a slot of its own, by how many it has room for,
-not by space inside it.  The things (dq0w/things.c): held in a hand (hold, wield, ready: two hands at most, a
+not by space inside it (six slots: a pouch, a sheath, a scabbard, a waterskin, a quiver, a mace, 2026-10-27).  A
+**carrier** keeps its own family's things and nothing else (a kind's family, its slots byte for anything but a belt:
+a scabbard a sword's, a sheath a knife's or a dagger's, a quiver arrows, a bolt case bolts, a bandolier throwing
+knives; a pouch or a sack anything that fits).  **Missiles** weigh by the ten (KF_TENS: arrows, bolts, sling stones a
+tenth of a pound each, the book's), their bulk too.  The things (dq0w/things.c): held in a hand (hold, wield, ready: two hands at most, a
 two-handed thing or a big one both), stowed in the pack, put in a container (by its room and the weight it bears; a
 container in another, by its own bulk or what it holds, the more; never into itself or what's in it), taken from it
 (into the pack, else a hand), hung from the belt (by its slots; only what hangs), worn and taken off (one of a kind
@@ -559,8 +565,16 @@ worn); the inventory says which hand (both), what's worn, what's in or on what, 
 pack first, then a hand.  **The load** (all the character carries, worn or not, its armour too) is the referee's to
 judge: the things give it with the tools to hand (RS_EQUIP), and the referee makes it HarnMaster's encumbrance (the
 load over the endurance, its physical penalty: the body's tests harder, its move less, so the world's step slower),
-worded on the sheet (the load, the encumbrance) and in the inventory ("You're heavily burdened.").  Every container
-holds what fits in it as yet: a scabbard isn't kept to its one blade, nor a quiver to its arrows.
+worded on the sheet (the load, the encumbrance) and in the inventory ("You're heavily burdened.").
+
+**Outfits** (2026-10-27: games/dq0/outfits.txt, HOUSE.md's outfits): what the character begins with is drawn as a new
+game starts, the world's (dq0w/outfit.c, outdraw.c, outmake.c), from the referee's makings of it (RS_OUTFIT: the
+occupation, the open skills by their mastery, the family's wealth, the culture, class, wealth and sex): the universal
+kit, the occupation's things, its weapons by its weapon skills (each in its carrier, with its missiles), its armour by
+its bent, its skills' tools, all bought at the book's prices with the family's wealth, strictly within it (a soldier's
+unit issue, a knight's lord's gift and a cleric's temple's things given), the money left in the pouch.  Each thing's
+made its own at once (its make the draw's, its own die: the world's dice untouched).  The same outfits file holds the
+denizens' gear, drawn by the same code (DENIZENS.md).  dq0 -K (the tests') begins with the kit as it was before.
 
 **Surfaces, and what a container keeps in**: things can lie **on** an item as well as in it (a table, a chair, a
 shelf, an altar: a surface, items.h's KF_ON; what's on it seen with it, not hidden inside: "On the table lies a

@@ -341,7 +341,19 @@ enum {
                                                 **   2 x[1]'s; a soft thing's the least), 0 its hands empty; and then
                                                 **   the key of the best it carries for such a blow, if it does better
                                                 **   than its bare hands, in the text ("" none: the UI's to ask) */
+    RS_OUTFIT,                                  /* The character's outfit (the world's, a new game's kit: 2026-10-27,
+                                                **   games/dq0/outfits.txt) -> w1 the money it has to spend (its
+                                                **   family's wealth, the ruleset's), w2 a seed for its draw (the
+                                                **   character's own numbers), a its wealth (0 poor, 1 average, 2
+                                                **   rich), x[0] and x[1] its tags (OT_*: its culture, its class, its
+                                                **   wealth, its sex, a bit each), the text a line its occupation's
+                                                **   name (its outfit's section), then a line each its open skills'
+                                                **   names, the highest first (each its section's: weapons, tools);
+                                                **   result 0, or 0xFF none (the kit as it was) */
 };
+enum { OT_FEUDAL, OT_IMPERIAL, OT_VIKING, OT_TRIBAL, OT_SINDARIN, OT_KHUZAN, OT_SLAVE, OT_SERF, OT_UNGUILDED,
+    OT_GUILDED, OT_NOBLE, OT_POOR, OT_AVERAGE, OT_RICH, OT_FEMALE, OT_MALE };    /* (RS_OUTFIT's tags: outfits.txt's,
+                                                **   outfits.js's TAGS, in order) */
 
 /* A neutral character: what carries over between rulesets.  Attributes on a 3-18 scale (HarnMaster's as they are; a
 ** d20's: Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma mapped to the nearest); its abilities as

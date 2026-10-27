@@ -525,6 +525,15 @@ silent on all of it.
   taken); its Ritual opened at its OML, as harn_create opens a religious character's; -q none.  The profile names it
   after the Piety.  A cleric's church is its deity's: a character with a deity is offered its own church alone, one
   with none any of the ten, the church making its deity the character's (as before).  (hmocc's deity.)
+- **The family's wealth is rolled and kept** *(2026-10-27: drafted for the user to review)* (DECISIONS.md's outfits,
+  answer 2; Character 17's three levels a class: serf 40, 80, 160d; unguilded 60, 120, 240d; guilded 90, 180, 360d;
+  noble 600, 1,200, 2,400d): d100, 01-25 poor, 26-75 average, 76-00 rich, an outcast's or an unpopular child's roll
+  ten less, a favourite's ten more (the book's nod to estrangement, made mild); a slave's a serf's poor, 40d (one who
+  has come away with something).  Rolled last of all, so the rest of the character's dice fall as they did; written
+  in its file, "wealth 120" (hmchar.c's wealth).  The referee reads it (a file without one, an older one or another
+  program's, has it rolled from the character's own numbers, the same each time: dq0harn/outfit.c).  It isn't written
+  back into the save's copy: the family's wealth is what the outfit's bought with, at the start.  *(For review: the
+  odds, the nudge, a slave's.)*
 
 ## The null ruleset (dq0null)
 
@@ -1451,6 +1460,77 @@ for the user.  *(Every ruleset's: the bearings' tests the referee's.)*
   share, by the true place: the underground's own know north, and know their way.
 - **Found on the way** *(for the user)*: a wait longer than 100 minutes is a wait of 100 ("wait 2 hours", "wait 3
   hours": the world's busy takes 60,000 tenths at most, the UI's wait_of holds it to that), though it was asked for longer.
+
+## Outfits *(2026-10-27: drafted for the user to review)*
+
+The user's (DECISIONS.md's "Outfits, reach and things used up", and the eleven answers to the plans' questions): each
+occupation its own starting kit, the universal kit for everyone, weapons with their carriers and missiles, a shield
+with Shield, bought at the book's prices with the family's wealth; random, but suiting the occupation and the skills
+chosen.  The data is games/dq0/outfits.txt (its head says how it's written), the draw the world's (dq0w/outfit.c,
+outdraw.c, outmake.c), the referee's the makings (RS_OUTFIT: RULESETS.md).  The book's own is Character 17 (what a
+character begins with), Combat 2-4 (weapons, armour), Character 27-29 (the units), Religion 9 (a new cleric's things),
+HarnWorld's price list.  What the house adds, every number the house's (and outfits.txt's every chance and weight):
+
+- **The order an outfit's bought in:** the universal kit (in the user's order: a torch lit in the off hand, a tinderbox,
+  three days' rations, a full waterskin, a knife in its sheath on the belt, a spare torch, a flask of oil; and free, the
+  book's: clothes, sandals for a serf or a slave and shoes for the rest, a backpack, a belt and its pouch, a guilded or
+  noble character's papers); the occupation's needs; its first weapon (its highest weapon skill's); a tenth of what's
+  left kept as money (a mercantyler's fifth: merchants carry silver); its other weapons, three in all (Combat 2: a main
+  one, a reserve and a shield), each its skill's own draw; a shield with Shield; its bent's armour (none, light,
+  medium: each piece by its chance); its skills' tools (a tool it has already not bought again); its likely and rare
+  things; what's left joins the money, in the pouch.
+- **Strictly within its money** (answer 1): a thing's price is what the appraiser would value it at, its kind's value
+  times 2 plus its quality, a sixth (appraise.c's rule); a draw is among the choices it could pay for at the best make
+  it might get, so the price paid never passes what's left; a poor character may go without some of the kit (the book's
+  free things it always has).  A thing of its own make (a hideworker's cap, a weaponcrafter's weapons) costs half, a
+  point lower.  *(For review: the free things.)*
+- **The make:** a poor family's things 2 + 1d3, an average one's 3 + 1d3, a rich one's 4 + 1d3 (the game's 0-9, about
+  4 middling); a unit's issue 3 + 1d3 (the Khuzdul's 4 + 1d3, the Sindarin's too), a knight's from its lord 5 + 1d2, a
+  high guard's 5 + 1d3.  A blade's metal by its make (steel at 7 on, bronze at 1 or less: make_own's rule).
+- **Weapons by skill** (outfits.txt's [skill ...]: the book's Treasure table's weights, narrowed to the catalogue's
+  kinds): Dagger the kit's knife made a dagger, and three to five taburi in a bandolier one time in seven; Sword a
+  shortsword, a broadsword, a falchion, a bastard sword or a longknife in a scabbard (a Sindarin's always the
+  longknife); Club a mace or a club; Axe a handaxe, a hatchet, a battleaxe, two shorkana (a Viking's mostly) or a
+  sickle; Spear a spear or a staff, in hand; Polearm a poleaxe; Bow a shortbow, a longbow, a crossbow (a Khuzan's
+  mostly) or a hartbow (a Sindarin's always), slung, with a quiver (a bolt case) of 12 to 24 arrows (bolts); Sling a
+  sling and a pouch of 10 to 20 sling stones (free: the book's plentiful); Net, Whip theirs; Shield a round shield, a
+  buckler or a kite shield (a noble's a knight shield or a kite shield as often, an Imperial's a tower shield), slung
+  on the back.  A weapon that won't hang from the belt is held, or in the pack.
+- **Armour by bent:** none, a leather cap one time in ten; light, a leather cap or a kurbul helm, a leather vest,
+  gauntlets, knee boots in the shoes' place, each by its chance; medium, a helm, a gambeson or a leather tunic, a ring
+  byrnie (a rich family's a mail byrnie), knee boots, gauntlets.  An occupation's bent is outfits.txt's (most none; the
+  gladiator, the mercantyler, the pilot, the thief, the weaponcrafter light; the herald medium).
+- **The skills' tools:** each open skill's by its chance (Drawing paper and charcoal or a pencil, in the pouch, handy,
+  and chalk; Script, Inkcraft and Law parchment, a quill and a horn of ink; Lockcraft lockpicks in the pouch; Climbing
+  and Seamanship rope, a grapple; Mining a pick, a shovel, candles; Masonry a chisel and a hammer; the smiths a hammer;
+  Woodcraft and Timbercraft a hatchet; Physician bandages and herbs; the herbalists herbs and a vial; Survival and the
+  others a sack, rope).  *(Not drawn by whether the skill's the occupation's own or an option point's, as the plan
+  had it: the referee's makings don't say which.)*
+- **Soldiers** (answer 3): the unit's issue free, its weapons and its troop type's armour (Character 29), no weapon
+  skill drawn besides; the family's wealth for the kit and the rest.  **Knights** (answer 4): the lance and the horse
+  left at the dungeon's mouth; its lord's gift, the sword, the axe or mace, the dagger, the shield, the armour; a
+  surcoat, a ring, a lantern by chance.  **Clerics** (answer 5): the book's things free (a robe, a ring of its rank,
+  boots two times in five, a dagger or a staff), the universal kit its temple's, the fighting churches' weapons and
+  shields (Agrik's mace, sickle and round shield; Larani's sword and round shield; Sarajin's handaxe or battleaxe and
+  round shield); its money 6d6 pennies (Religion 9), its skills' tools bought with it; each church's marks
+  (Morgath's mask, Naveh's two daggers, Larani's surcoat for a robe, Peoni's staff).
+- **The money:** pennies in the pouch, 255 at most (the rest left with the family: a lot's count is a byte).
+  *(For review.)*
+- **Placing:** worn; in a hand (the main one; the torch the off one); hung from the belt, in its carrier (a sword in
+  its scabbard, a knife in its sheath); in the pouch (mapping things and lockpicks: handy, HOUSE.md's reach); in the
+  pack; what won't go where it's meant in the pack, what won't go in the pack not made.
+- **Its own die:** the referee's seed for the draw (the character's attributes and its name hashed), so the same
+  character in the same game draws the same outfit; the world's dice untouched (each thing made its own with its make
+  already drawn).
+- **The null ruleset's** the universal kit only, with 49 pennies to buy it (some money left).
+- **dq0 -K** (the tests'): the kit as it was before the outfits, no outfit drawn (and the denizens with none of
+  theirs): the tests' dice as they were.
+- **A carrier keeps its own family's things alone** (kinds.md's rule: a kind's family, a scabbard a sword's, a
+  sheath a knife's, a quiver arrows', a bolt case bolts', a bandolier throwing knives'), **missiles weigh by the ten**
+  (arrows, bolts and stones a tenth of a pound each, the book's), **a belt has six slots**.  *(For review.)*
+- **The book's prices** where the plan found the catalogue's wrong (HarnWorld's price list and Combat 3: a dagger 24d,
+  a broadsword 150d, a quiver 8d, a pouch 9d, a lantern 12d, a belt 10d, a pick 8d, a key 2d, a sack 1d; rations 2d a
+  day, the house's), and the new kinds' (outfits' kinds.md: the book's where it gives one, the house's else).
 
 ## Decided, not yet built
 

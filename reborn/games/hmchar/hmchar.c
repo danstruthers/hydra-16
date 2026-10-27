@@ -28,7 +28,9 @@
 ** any; the user's, 2026-10-20): 11 points (the book's occupations' median, a point opening a skill at its OML and a
 ** point for each SB more), two in a skill at most and three in one, its primary; then the five option points spent
 ** (Character 16: a skill opened at its OML for one, or improved by its SB for one; but no more than two points in one
-** skill, the user's: so improved once at most; ? lists the skills, the open ones' ML and the others' OML); a name.
+** skill, the user's: so improved once at most; ? lists the skills, the open ones' ML and the others' OML); a name;
+** the family's wealth (Character 17's by its class: rolled last, its file's "wealth" line, the game's outfit bought
+** with it, 2026-10-27).
 ** Not here: the family's occupation and its skills, contacts, the veterans' points.
 **
 ** Its lib/hmchar (in its own directory, as rc's $prog has it, else the card's /sd/0/games/lib/hmchar): the
@@ -378,6 +380,22 @@ static unsigned char __fastcall__ species (const char* w)
 
 static char exppath[56], bppath[56];
 
+/* The family's wealth (Character 17: by its class, poor, average or rich; the GM's to choose, the book says): rolled
+** (the user's, DECISIONS.md's outfits, answer 2: a quarter poor, half average, a quarter rich, an outcast or an
+** unpopular child a tenth the poorer, a favourite a tenth the richer, the house's), last of all, so the rest of the
+** character's dice fall as they did; a slave's a serf's poor, the house's.  Kept in its file (its "wealth" line, the
+** game's: its outfit bought with it) */
+static const unsigned wealth_of[5][3] = {
+    { 40, 40, 40 }, { 40, 80, 160 }, { 60, 120, 240 }, { 90, 180, 360 }, { 600, 1200, 2400 }
+};
+
+static unsigned wealth (void)
+{
+    int r = 1 + random (100) + (h.estrange <= HARN_UNPOPULAR ? -10 : h.estrange == HARN_FAVORITE ? 10 : 0);
+
+    return wealth_of[h.social < 5 ? h.social : HARN_SERF][r <= 25 ? 0 : r <= 75 ? 1 : 2];
+}
+
 static int usage (void)
 {
     err ("usage: hmchar [-s seed] [-o file] [-q] [-p species] [-c occupation] [-u culture]\n");
@@ -483,6 +501,8 @@ int main (int argc, char* argv[])
     strcpy (line, "occupation ");
     strcat (line, occname);
     harn_write_line (fd, line);
+    strcpy (line, "wealth ");
+    harn_write_line (fd, strcat (line, utoa (wealth (), line + 40, 10)));
     close (fd);
     s ("Written to ");
     s (out);

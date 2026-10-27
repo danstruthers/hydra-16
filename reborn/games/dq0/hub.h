@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     20                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     21                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -49,7 +49,8 @@
                                                 **   C_LAME ..., I_RISE, the actors' move, arm and dropped, RS_REARM,
                                                 **   O_REARM; 17: the bearings, pc_skew, pc_lost; 18: the map making,
                                                 **   pc_chart, pc_map; 19: the bearings' E_BEARING; 20: the kinds in
-                                                **   a bank of their own, KIND_BANK, NKINDS 128) */
+                                                **   a bank of their own, KIND_BANK, NKINDS 128; 21: the outfits, gear,
+                                                **   GE_OLD, rs.h's RS_OUTFIT) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -1050,7 +1051,11 @@ struct hub {                                    /* Bank 0, at $8000 */
     signed char     pc_drawn;                   /*   and how true it's drawing it, mapping as it goes on paper: the
                                                 **   referee's grade (rs.h's G_*: P_DRAW's, asked as it comes into a
                                                 **   room or walks a way; the senses' for the chunks they draw) */
+    unsigned char   gear;                       /* dq0 -K (the tests'): GE_OLD, the kit as it was before the outfits,
+                                                **   and the denizens with none of theirs (the outfits drawn else:
+                                                **   games/dq0/outfits.txt, the world's) */
 };
+#define GE_OLD          0x01
 #define CH_DRAW         0x01                    /* (pc_chart's: the things to draw a map with to hand, the catalogue's
                                                 **   by their keys: a sheet (paper, parchment) or its map, a pencil or
                                                 **   charcoal or a quill and ink, and a hand free; HOUSE.md's the map
@@ -1252,6 +1257,7 @@ struct wsave {
 **   own hub.vlo world
 **   own hub.vhi world
 **   own hub.small ui                                           (dq0 -C)
+**   own hub.gear ui                                            (dq0 -K)
 **   own hub.pc_task world                                      (The character's long task: slice 4.0's)
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
