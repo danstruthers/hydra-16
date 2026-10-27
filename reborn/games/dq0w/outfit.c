@@ -159,7 +159,7 @@ void __fastcall__ s_den_kit (unsigned char kind)
 unsigned char s_outfit (void)
 {
     struct req* r;
-    unsigned char occ = 0, k, first;
+    unsigned char occ = 0, k, first, okeep = 0, obent = 0;
     unsigned off = 0, boff;
 
     if (!opened ()) {
@@ -191,8 +191,12 @@ unsigned char s_outfit (void)
             off = find (b);
         }
     }
-    if (draw_at (off, MD_HEAD)) {               /* (Its flags; its purse, not the family's: a cleric's 6d6) */
+    if (off && draw_at (off, MD_HEAD)) {        /* (Its flags, its keep, its bent, kept: read once, 2026-10-27, each
+                                                **   draw_at two parts' copies; its purse, not the family's: a
+                                                **   cleric's 6d6) */
         occ = ost.sflags;
+        okeep = ost.keep;
+        obent = ost.bent;
         if (ost.pn) {
             for (ost.budget = 0, k = ost.pn; k--; ) {
                 ost.rs = ost.rs * 25173U + 13849U;
@@ -203,28 +207,30 @@ unsigned char s_outfit (void)
     ost.freeall = (occ & SF_KIT) != 0;          /* (The universal kit: its temple's, given) */
     draw_at (find ("universal"), MD_ALL);
     ost.freeall = 0;
-    draw_at (off, MD_NEED);                     /* (Its occupation's needs) */
+    if (off) {
+        draw_at (off, MD_NEED);                 /* (Its occupation's needs) */
+    }
     first = 1;
     if (!(occ & SF_ARMED)) {                    /* (Its first weapon, its highest weapon skill's) */
         first = skills (1, SF_WEAPON, 1);
     }
-    draw_at (off, MD_HEAD);
-    k = ost.keep ? ost.keep : 10;
+    k = okeep ? okeep : 10;
     ost.kept = ost.budget * k / 100;            /* (A tenth of what's left kept as money) */
     ost.budget -= ost.kept;
     if (!(occ & SF_ARMED)) {                    /* (Its other weapons, three in all, and a shield) */
         skills (first, SF_WEAPON, 2);
         skills (1, SF_SHIELD, 1);
     }
-    if (draw_at (off, MD_HEAD) && (k = ost.bent) != 0) {    /* (Its bent's armour) */
+    if ((k = obent) != 0) {                     /* (Its bent's armour) */
         hub_map (KIND_BANK);
         boff = OF_INDEX[5 * k + 1] | OF_INDEX[5 * k + 2] << 8;    /* (Entry k - 1's offset) */
         draw_at (boff, MD_ALL);
     }
     ost.tool = 1;                               /* (Its skills' tools) */
     skills (1, 0, 255);
-    reply_line (0, "");                         /* (Its likely and rare things) */
-    draw_at (off, MD_CHANCE);
+    if (off) {
+        draw_at (off, MD_CHANCE);               /* (Its likely and rare things) */
+    }
     hub_map (0);
     HUB->slot[SLOT_UI].state = REQ_FREE;
     close (ost.fd);
