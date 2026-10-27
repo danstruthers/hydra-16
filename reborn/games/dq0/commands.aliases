@@ -57,6 +57,8 @@ detailed close
 detail close
 really close
 head walk
+return walk
+travel walk
 inventory i
 inspect x
 attack fight

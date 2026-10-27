@@ -137,6 +137,8 @@ go:
             SWPART      51, 8               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c)
             SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
             SWPART      53, 2               ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
+            SWPART      54, 16              ; Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
+            SWPART      55, 16              ; Travel to a place it knows (dq0w.c's: slice 4.2's)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -160,6 +162,9 @@ go:
             SWFN        bearings, 52
             SWFN        bearings_off, 52
             SWFN        intent_few, 53
+            SWFN        way_out, 54
+            SWFN        travel_go, 55
+            SWFN        travel_on, 55
             SWFN        start_dig, 1
             SWFN        dig_on, 1
             SWFN        climb, 2

@@ -397,7 +397,7 @@ function createRecorder() {
       return read(r, t);
     };
   }
-  return { hook, attach, games, lines, final: snap, layout: () => layout() };
+  return { hook, attach, games, lines, final: snap, layout: () => layout(), bank };   // (bank: one of the hub's, a tool's)
 }
 
 module.exports = { createRecorder, layout, constants };

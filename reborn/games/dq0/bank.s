@@ -237,6 +237,7 @@ ovl_out:
             SWFN        den_seen, 8
             SWFN        actor_seen, 8
             SWFN        pace_cmd, 4
+            SWFN        travel_go, 4
             SWFN        names_line, 5
             SWFN        names_den, 6
             SWFN        names_subst, 6

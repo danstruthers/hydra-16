@@ -182,7 +182,8 @@
 (* ---- Lexicon: the classes. Each is one abstract meaning; the words are its synonyms. ---- *)
 <LOOK>       ::= "look" | "take a gander" | "take a look"
 <DETAIL>     ::= "close" | "in detail"
-<MOVE>       ::= "walk" | "go"
+<MOVE>       ::= "walk" | "go" | ( "make" | "find" ) "my" "way"   (* "make my way back to the Mausoleum": travel's,
+                                                 slice 4.2; "return to", "travel to", "head back to": walk's aliases *)
 <TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of" | "into" | "onto" | "past" | "through"
 <ALONG>      ::= "up" | "down" | "along" | "across"   (* up or down a stairway or a ladder; along a passage *)
 <GET>        ::= "get" | "take" | "pick up" | "pick"

@@ -1648,6 +1648,9 @@ void __fastcall__ s_command (char* l)
     d = choose (&cmd);                          /* (A choice asked for: this line's, the command again; a fixture's, */
     d |= answer (d);                            /*   or a thing's) */
     tx = 0;
+    if (!d && (unsigned char) (cmd.action - VB_MOVE_DIRECTION) < 2 && cmd.how && travel_go (l)) {
+        return;                                 /* (A place it knows gone to, "go back to the Mausoleum": part 4's) */
+    }
     if (!d && (cmd.flags & CF_STRANGE) && *l != '#') {   /* (A verb the game doesn't know: the grammar's, not done
                                                 **   yet ("grapple"); or none of its ("bribe") */
         unknown (ok);
