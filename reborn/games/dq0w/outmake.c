@@ -5,8 +5,9 @@
 ** it, a sword in its scabbard), in the pouch on the belt, in the pack (its room, the weight it bears: what won't go in
 ** its pouch in the pack; what won't go in the pack not made); a light lit, a waterskin full (its pints of water in it).
 ** Then each made its own (s_make_own's way: its number, its material by its make, its durability whole, a light's life,
-** what's stoppered shut; no die of the world's spent: its make the draw's).  It calls no other part (its own data in its
-** image: the main RAM's room).
+** what's stoppered shut; no die of the world's spent: its make the draw's).  The character's, or a denizen's (its
+** things filed at its lair's home, IW_DEN, its number theirs: I_KIT's, 2026-10-27).  It calls no other part (its own
+** data in its image: the main RAM's room).
 */
 
 #include <string.h>
@@ -24,6 +25,7 @@
 
 static unsigned pack, belt, pouch;              /* The worn pack, the belt, the pouch on it */
 static unsigned char hands, mainh;              /* The hands holding something (IH_*), the main one */
+static unsigned char den;                       /* (A denizen's things: ost's did, filed at its lair's home, IW_DEN) */
 static unsigned made[NOFIT];                    /* Each entry's thing made (0 none) */
 static struct kind kk;                          /* A kind's record, copied out */
 static struct ofit e;
@@ -83,7 +85,7 @@ static unsigned __fastcall__ make (unsigned char k, unsigned char q, unsigned ch
 {
     struct item* p;
     unsigned i, x = 0;
-    unsigned char w = IW_ACTOR, f = I_KNOWN, h = 0;
+    unsigned char w = den ? IW_DEN : IW_ACTOR, f = den ? 0 : I_KNOWN, h = 0;
 
     kind_get (k);
     if (pl == PL_HAND || pl == PL_OFF || pl == PL_BOTH) {
@@ -140,6 +142,14 @@ static unsigned __fastcall__ make (unsigned char k, unsigned char q, unsigned ch
     p->flags = f;
     p->sn = h;
     p->quality = g;
+    if (w == IW_DEN) {                          /* (A denizen's: filed at its lair's home, its number its owner and
+                                                **   hide, its hand by its kind) */
+        p->x = ost.hx;
+        p->y = ost.hy;
+        p->sn = ost.hsn;
+        p->owner = ost.did;
+        p->hide = ost.did >> 8;
+    }
     hands |= h;
     if (k == KI_BACKPACK && pl == PL_WORN && !pack) {
         pack = i;
@@ -193,16 +203,15 @@ static void __fastcall__ own (unsigned i)
     }
 }
 
-/* The list's things made, the character's (who 0) */
+/* The list's things made, the character's (who 0), or a denizen's (who 1: ost's did, its lair's home) */
 void __fastcall__ s_outmake (unsigned char who)
 {
     unsigned char k, n;
     unsigned i;
 
-    (void) who;
     hub_map (0);
-    mainh = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
-    if (HUB->pcsum.limbs & (mainh == IH_LEFT ? LB_ARM_R : LB_ARM_L)) {
+    mainh = (den = who) != 0 || !(HUB->pcsum.limbs & LB_LEFT) ? IH_RIGHT : IH_LEFT;
+    if (!den && (HUB->pcsum.limbs & (mainh == IH_LEFT ? LB_ARM_R : LB_ARM_L))) {
         hands |= mainh ^ IH_BOTH;               /* (Its off arm useless: nothing held in it) */
     }
     hub_map (KIND_BANK);

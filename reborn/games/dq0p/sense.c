@@ -13,6 +13,7 @@
 ** cast: how far it may go with the answer standing (slack).
 */
 
+#include <stddef.h>
 #include <string.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
@@ -22,8 +23,11 @@
 
 #pragma static-locals (on)
 
-struct actor sact;                              /* (A body, copied out of the hub's header: dens.c's too, never both at
-                                                **   once, the main RAM's room) */
+#define SACT            offsetof (struct actor, did)    /* (dens.c's the same) */
+#define sact            (*(struct actor*) sactb)
+unsigned char sactb[SACT];                      /* (A body, copied out of the hub's header: dens.c's too, never both at
+                                                **   once, the main RAM's room; its fields up to its denizen's, the
+                                                **   senses' wanting none of those) */
 
 static unsigned __fastcall__ apart (int dx, int dy)
 {
@@ -46,7 +50,7 @@ void sense_actor (void)
     hear = HUB->dsense.hear;
     eyes = HUB->dsense.eyes;
     nose = HUB->dsense.nose;                    /* (Its smell's reach in still air, squares) */
-    memcpy (&sact, &HUB->actor[k], sizeof sact);
+    memcpy (&sact, &HUB->actor[k], SACT);
     pcs = HUB->pc_stratum;
     pcx = HUB->pc_x;
     pcy = HUB->pc_y;

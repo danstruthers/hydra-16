@@ -191,13 +191,18 @@ void s_den_intents (void)
             continue;
         }
         any = 1;
-        if (m.kind == I_TROD || m.kind == I_SWEPT) {   /* (One out but not an actor: its passing; a chunk kept
-                                                **   swept, its keepers' lair placed: the traces') */
-            bd.kind = m.kind == I_SWEPT ? TK_SWEPT : m.x[1];    /* (Body bd but a copy: none put back) */
-            bd.sn = m.x[2];
-            bd.x = m.w1;
-            bd.y = m.w2;
-            den_trod (m.kind == I_SWEPT ? 0 : (m.a & (7 | TS_STAY)) | TS_NOWAY | (unsigned) m.b << 8);
+        if ((unsigned char) (m.kind - I_TROD) <= I_KIT - I_TROD) {     /* (One out but not an actor: its passing;
+                                                **   a chunk kept swept, its keepers' lair placed: the traces'; a
+                                                **   denizen's things made: part 60's) */
+            if (m.kind == I_KIT) {
+                den_other (&m);
+            } else {
+                bd.kind = m.kind == I_SWEPT ? TK_SWEPT : m.x[1];    /* (Body bd but a copy: none put back) */
+                bd.sn = m.x[2];
+                bd.x = m.w1;
+                bd.y = m.w2;
+                den_trod (m.kind == I_SWEPT ? 0 : (m.a & (7 | TS_STAY)) | TS_NOWAY | (unsigned) m.b << 8);
+            }
             continue;
         }
         BD_GET ((m.who - 1) & 7);
@@ -213,18 +218,9 @@ void s_den_intents (void)
             bd.ready = HUB->now - CATCHUP;      /* (Fallen behind the clock: a few seconds made up at most) */
         }
         switch (m.kind) {
-        case I_ENTER:                           /* (A denizen come near the character: its body's from its record) */
-            bd.state = 1;
-            bd.sn = m.x[2];
-            bd.x = m.w1;
-            bd.y = m.w2;
-            bd.ready = m.t;
-            bd.step = m.a;
-            bd.pos = POS_STANDING;              /* (On its feet, walking: its body's, the world's) */
-            bd.gait = GA_WALK;
-            bd.move = m.x[3];                   /* (Its legs, the referee's: slice 4.1b's) */
-            bd.arm = 0;
-            bleeds = m.b ? bleeds | 1 << bk : bleeds & ~(1 << bk);
+        case I_ENTER:                           /* (A denizen come near the character: its body's from its record,
+                                                **   its things: part 60's) */
+            den_enter (&m);
             was = bd.doing;
             break;
         case I_LEAVE:

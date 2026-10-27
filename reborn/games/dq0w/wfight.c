@@ -61,12 +61,12 @@ static void __fastcall__ told (unsigned char att, unsigned char def, unsigned ch
 }
 
 /* Body bd dead: gone from the dungeon, its remains where it fell (an item of the store's: a body, a skeleton's bones),
-** the world to look about again (the remains seen); its bleeding over */
+** its things on them (the outfits' gear), the world to look about again (the remains seen); its bleeding over */
 static void died (void)
 {
     bd.state = 0;
     bleeds &= ~(1 << bk);
-    lay_body (bd.remains, bd.sn, bd.x, bd.y);
+    den_strip (lay_body (bd.remains, bd.sn, bd.x, bd.y));     /* (Its things on its body: part 51's) */
     den_saw = 1;
 }
 
@@ -247,7 +247,9 @@ void s_bled (void)
 /* A blow struck by body bd (entry bk) at def (0 the character), its aim z (its intent, I_ATTACK: part 14's) */
 void __fastcall__ s_den_blow (unsigned char def, unsigned char z)
 {
-    blow (bk + 1, def, z);
+    if (!den_draw ()) {                         /* (Its weapon drawn first, its hands empty: its round's, part 60's) */
+        blow (bk + 1, def, z);
+    }
 }
 
 static struct item* p;

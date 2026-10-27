@@ -3355,6 +3355,76 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0kit', outfit: true, what: 'Dingus Quest Zero\'s denizens\' gear (the outfits\' plan\'s phase 1: games/dq0/outfits.txt\'s [role bandit], DENIZENS.md\'s their things, HOUSE.md\'s the denizens\' gear), by the item store\'s records and the blows told: a lair of hostile bandits (a theme of them, as dq0disarm\'s) placed as the game begins, each bandit\'s things made (items.h\'s IW_DEN, its number its own: the hub\'s actor\'s did), clothes and a belt worn, a weapon held or on its belt (in its carrier: a sword in its scabbard), two bandits\' things not the same, the same seed\'s game the same things (kinds, makes, materials); a bandit drawing its weapon from its belt before it strikes (WB_DRAWS, told: "The bandit draws its hatchet."), striking with it (its words that weapon\'s), its weapon let fall the same record (WB_DROP: on the floor); one killed, its things on its body ("look at the body": what it wore, its belt and its sheath\'s knife on it), its vest taken from the body; the game saved and carried on, each denizen\'s things the same records (their numbers, makes, places)',
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
+        'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
+        'cp /ram/g/theme.txt /ram/h/theme.txt', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
+        'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'drop the backpack', 'drop the torch', 'attack', 'attack', 'look at the body',
+        'take the leather vest from the body', 'quit', 'dq0 -d /ram/g', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm'", 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out), I = DQ0_I;
+        const g1 = T.of("dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'"), s1 = g1.after;
+        if (!s1) return ['the game not played'];
+        // (Each thing's own: by its record, its holder's chain to its top, IW_DEN's its denizen's)
+        const kit = s => {
+          const by = new Map(s.items.map(i => [i.n, i])), top = i => { for (let d = 0; i && d < 8 && i.where === 'IW_ITEM'; d++) i = by.get(i.x); return i; };
+          const r = new Map();
+          for (const i of s.items) { const p = top(i); if (p && p.where === 'IW_DEN') { if (!r.has(p.did)) r.set(p.did, []); r.get(p.did).push(i); } }
+          return r;
+        };
+        const k1 = kit(s1), bandits = s1.actors.filter(a => a.name === 'bandit' && a.did);
+        if (bandits.length < 2) return [...f, 'not two bandits about as the game began: ' + JSON.stringify(s1.actors)];
+        for (const a of bandits) {
+          const t = k1.get(a.did) || [], has = (n, fl) => t.some(i => i.name === n && (!fl || (i.flags & fl)));
+          if (!has('clothes', I.WORN) || !has('belt', I.WORN)) f.push('bandit ' + a.did + ': no clothes and belt worn (' + t.map(i => i.name).join(', ') + ')');
+          if (!t.some(i => /^(sword|shortsword|falchion|club|hatchet|spear|knife|dagger)$/.test(i.name))) f.push('bandit ' + a.did + ': no weapon of its own');
+          if (t.some(i => !i.id)) f.push('bandit ' + a.did + ': a thing not made its own (no number)');
+        }
+        const sig = d => (k1.get(d) || []).map(i => i.name + i.quality + '/' + i.mat).sort().join(',');
+        if (sig(bandits[0].did) === sig(bandits[1].did)) f.push('two bandits\' things the same: ' + sig(bandits[0].did));
+        const scab = s1.items.find(i => i.name === 'sword' && i.where === 'IW_ITEM' && (s1.items.find(j => j.n === i.x) || {}).name === 'scabbard');
+        if (!scab && ![...k1.values()].flat().some(i => i.name === 'shortsword' || i.name === 'falchion')) f.push('no blade in its scabbard on a bandit\'s belt');
+        // (Drawn before it strikes, told; its blow by that weapon)
+        const all = T.filter(u => u.k > g1.k && u.game === g1.game).flatMap(u => [...u.events, ...u.dens]);
+        const draw = all.find(e => e.kind === 'E_BEAT' && e.beat === 'WB_DRAWS' && e.b > 0);
+        const kname = k => (s1.items.find(i => i.kind === k) || {}).name;
+        if (!draw) f.push('no bandit drew its weapon (WB_DRAWS)');
+        else {
+          const w = kname(draw.thing);
+          inTurn(o, ['The bandit draws its ' + w + '.', 'The bandit strikes at you with its ' + w], f, 'the drawing\'s words: ');
+        }
+        // (Its weapon let fall: the same record on the floor)
+        const drop = all.find(e => e.kind === 'E_BEAT' && e.beat === 'WB_DROP' && e.b > 0);
+        if (drop) {
+          const u = T.filter(x => x.k > g1.k && x.game === g1.game).find(x => [...x.events, ...x.dens].includes(drop));
+          const was = [...k1.values()].flat().filter(i => i.kind === drop.thing).map(i => i.n);
+          const now = u && u.after ? u.after.items.filter(i => i.kind === drop.thing && i.where === 'IW_SQUARE').map(i => i.n) : [];
+          if (!now.some(n => was.includes(n))) f.push('the weapon let fall not the bandit\'s own (records ' + was.join(' ') + ', on the floor ' + now.join(' ') + ')');
+        }
+        // (Killed: its things on its body, looked at, its vest taken from it)
+        const lk = T.after(g1, 'look at the body'), sb = lk.after;
+        const body = sb && sb.items.find(i => i.name === 'body' && sb.items.some(j => j.where === 'IW_ITEM' && j.x === i.n && j.name === 'clothes'));
+        if (!body) f.push('no body with its clothes on it');
+        if (!/The body is beside you\. On it lie clothes, (?:shoes|knee boots), a belt/.test(o)) f.push('the body\'s things not told as it\'s looked at');
+        const tk = T.after(lk, 'take the leather vest from the body');
+        if (!tk.after || !dq0Carried(tk.after).some(i => i.name === 'leather vest')) f.push('the leather vest not taken from the body');
+        // (Saved and carried on: each denizen's things the same records; the same seed's game the same things)
+        const rec = s => JSON.stringify([...kit(s).entries()].sort((a, b) => a[0] - b[0]).map(([d, t]) => [d, t.map(i => [i.n, i.name, i.quality, i.mat, i.id, i.where, i.x]).sort()]));
+        const q1 = T.after(tk, 'quit'), g2 = T.after(q1, 'dq0 -d /ram/g');
+        if (!q1.at || !g2.after) f.push('the game not saved and carried on');
+        else if (rec(q1.at) !== rec(g2.after)) f.push('carried on, the denizens\' things not the same');
+        const g3 = T.of("dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm'"), s3 = g3.after;
+        const same = s => JSON.stringify([...kit(s).entries()].sort((a, b) => a[0] - b[0]).map(([d, t]) => [d, t.map(i => [i.name, i.quality, i.mat]).sort()]));
+        if (!s3) f.push('the game again not played');
+        else if (same(s3) !== same(s1)) f.push('the same seed\'s game not the same things');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0items', meaning: true, what: 'Dingus Quest Zero\'s things (items.h, the world\'s item store), by where each one is (the store\'s records) and what the world said to each request (ireq\'s result): the kit a character begins with (dq0 -k pick: a pick more), its torch lit in hand, its pack and belt worn; what it carries listed; a thing examined, one there isn\'t refused; a thing put down (on its square, seen at its feet), taken up again; one out of reach walked over to first (the world\'s I_TAKE); one it hasn\'t refused; a thing hidden where it stands (on its square, hidden, seen so), taken up again (their words: dq0wordsthings)',
       init: 't_rc', cycles: 800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', 'inventory',
@@ -6546,7 +6616,8 @@ module.exports = {
     // a test (the rest left to the soak's 200 seeds: each game's start a game start's cycles, some 195M)
     ...[[1, 30, 66, 93, 111, 122], [138, 152, 161, 171, 189, 197]].map((seeds, k) => ({
       name: 'dq0start' + k, meaning: true, what: 'Dingus Quest Zero\'s starts (dq0m/plan.c\'s links and the world\'s way out off their chunks\' edges, world.h\'s INSET: room for the room each comes out in, built.c\'s tries all failing else, a fifth of the starts a dead end of a passage), by what the character perceives (the senses\' record): seeds ' + seeds.join(', ') + ' (some of those that began at a dead end), each beginning in a room, by the stairs up to the way out, with a door, a portcullis or a passage on (seen ahead, or turned round, or as it crosses the room and back by its own light: the rooms dark since slice 4.1, nobody keeping their lights)',
-      init: 't_rc', cycles: seeds.length * 300e6,      // (A timeout: each game started, turned round and quit)
+      init: 't_rc', cycles: seeds.length * 320e6,      // (A timeout: each game started, turned round and quit; 320M
+      // a game since 2026-10-27, 300M before: the outfits' and the denizens' gear's bigger world and referee to load)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         ...seeds.flatMap(s => ['dq0 -p t -s ' + s + ' -c /ram/c.hm', 'turn around', 'go forward', 'turn around', 'go forward', 'quit']), 'echo $status']) },
       expect: ['% echo $status'],

@@ -339,6 +339,29 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   waits for it to be itself again), and none cornered beside it strikes.  To come: a captor leading it away, an ally
   standing over it.
 
+### Their things
+
+*(2026-10-27: the outfits' gear, the plan's phase 1; HOUSE.md's the denizens' gear, for review.)*
+
+- **Made as a lair's placed:** for each of its folk and its dead the denizens' task posts I_KIT (its kind, its
+  number, its lair's home square); the world draws its kind's role (games/dq0/outfits.txt's [role KEY], the index's
+  entry by the kind's number: outfits.js's), every line given, on a die of its own, by the character's outfit's code
+  (dq0w/outfit.c, outdraw.c, outmake.c: parts 57-59), and makes each thing its own at once.  They're the item store's
+  (items.h's IW_DEN: its lair's home square, its number in the record's owner and hide), filed with that chunk (the
+  paging's, ipage.c: in its region's file while the chunk's out), not seen lying there.
+- **An actor's:** the hub's actor its denizen's number and its lair's home (did, hx, hy, hsn: the denizens'); the
+  world reads its lair's chunk into the store as it comes near (I_ENTER) and keeps it there while it's an actor
+  (ipage.c's kept_for), and tells the referee what it holds and wears (RS_EQUIP for the actor, the character's marks:
+  dq0w/wlimbs.c's part 60), again as they change (drawn, let fall, taken up).  The referee keeps each actor's weapon,
+  shield and pieces (gear.c's dwr, dsh, dpc) till it's made an actor again (RS_NEW_ACTOR): its blow by the weapon it
+  holds, its armour by its pieces (fight.c's beast_side and guard; folk none but them, BF_FOLK).  Never told (a
+  beast, dq0 -K), the bestiary's as before; the null referee ignores them.
+- **Drawn as it strikes:** its hands empty of a weapon, its first blow draws the best on its belt instead, its round
+  (WB_DRAWS).  A weapon let fall is its own (the same record, on the floor and back in its hand).
+- **Dead:** what it held where it fell, the rest on its body (the remains a surface: KF_ON), anyone's to take.
+- **Not yet:** a shield's block (the referee's denizens dodge or counterstrike, as before); the UI naming what one
+  holds and wears; the lair's own things, beds, keys, purses (the plan's phases 2 and 3).
+
 ## Still to come
 
 What the plans bring later, by the slice or phase that brings it:

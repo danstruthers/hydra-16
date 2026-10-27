@@ -144,7 +144,14 @@ function one(s, turns, verbose, fight) {
   const end = dead ? 'died: ' + (game.slice(Math.max(0, dm.index - 240), dm.index).replace(/\s+/g, ' ').split(/(?<=[.!]) /).slice(-3).join(' ')) : quitAt >= 0 ? 'quit' : 'did not end';
   const ok = !problems.length;
   if (!ok || verbose) { fs.mkdirSync(OUT, { recursive: true }); fs.writeFileSync(path.join(OUT, s + '.txt'), res.out); }
-  return { seed: s, ok, problems, end, turns: Math.min(typed.length, turns), refused, left, cycles: res.m.cpu.cyc };
+  // (The item store's use, the most of its records in use at a snapshot, and of them the denizens' things: IW_DEN and
+  // what's in them, the outfits' gear, 2026-10-27)
+  let store = 0, dens = 0;
+  for (const g of (res.m.dq0 ? res.m.dq0.games : [])) for (const sn of g.snaps) {
+    const by = new Map(sn.items.map(i => [i.n, i])), top = i => { for (let d = 0; i && d < 8 && i.where === 'IW_ITEM'; d++) i = by.get(i.x); return i; };
+    if (sn.items.length > store) { store = sn.items.length; dens = sn.items.filter(i => { const p = top(i); return p && p.where === 'IW_DEN'; }).length; }
+  }
+  return { seed: s, ok, problems, end, turns: Math.min(typed.length, turns), refused, left, cycles: res.m.cpu.cyc, store, dens };
 }
 
 function main(argv) {
@@ -159,7 +166,7 @@ function main(argv) {
     while (shown < n && results[shown]) {
       const x = results[shown++];
       console.log((x.ok ? 'ok   ' : 'FAIL ') + String(x.seed).padStart(4) + '  ' + String(x.turns).padStart(3) + ' turns, ' + x.end +
-        (x.left ? '' : '; never left its first room') + (x.refused.length ? '; refused: ' + x.refused.slice(0, 4).map(l => JSON.stringify(l)).join(', ') : ''));
+        (x.left ? '' : '; never left its first room') + '; store ' + x.store + ' (' + x.dens + ' the denizens)' + (x.refused.length ? '; refused: ' + x.refused.slice(0, 4).map(l => JSON.stringify(l)).join(', ') : ''));
       for (const p of x.problems) console.log('        ! ' + p);
     }
   };

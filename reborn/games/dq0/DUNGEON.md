@@ -73,22 +73,23 @@ by a request or an intent.
   kind replacing the one before it, kept by **region** (256 squares each way, the plan's) in the 64 pages of the
   hub's two change banks, under the hub's change_lock (the maker reads them meanwhile), and paged to the save folder
   (no fixed size).
-- **The item store** is the world's too, its only writer, so it has no lock: the catalogue (read into the hub's
-  banks as the world starts, from its own file, dq0w.cat: the kinds into a bank of their own, KIND_BANK, every task's
-  to read, the theme's kinds added after them as the UI asks, IO_THEME; how lights burn, what's thrown, the things'
-  words and the code that handles things into the catalogue's bank, CAT_BANK, 2026-10-27) and every item's place and
-  state (dq0w/things.c, its code in the world's swapped parts and, for a thing
-  handled, in the catalogue's bank).  The others ask, or say what they mean: the **UI** asks the world for what's
-  carried and for every command about things (the hub's ireq: take, drop, put, light, wear, the kit, a search ...),
-  the world answering in its loop (and, while it waits for a look, what wants none: what's carried, the tools, a
-  tool's wear); the **maker**'s stock is a list the world puts down, in the order the chunks were stocked, before
-  anyone looks for them (the world as it takes its intents, answers the UI or works a door; the **senses**, as a look
-  comes to a chunk stocked that isn't put down yet, ask it first: the hub's stock); a **denizen**'s remains the world
-  puts down itself as it dies; the senses read the records for what the character perceives, and the world makes a
-  thing its own (its number, its make: no two alike) as a look first sees it, after the look, in the order seen.  The
-  character's light (pc_light, pc_lamp) is the world's, worked out as what it carries changes.  The records (744, in
-  two of the hub's banks) are a cache: what the character carries, and the things of the chunks round it, a chunk's
-  all or none, the rest in the save folder by region; kept with the game (items.dat).
+- **The item store** is the world's too, its only writer, so it has no lock: the catalogue (read into the hub's banks as
+  the world starts, from its own file, dq0w.cat: the kinds into a bank of their own, KIND_BANK, every task's to read,
+  the theme's kinds added after them as the UI asks, IO_THEME; how lights burn, what's thrown, the things' words and the
+  code that handles things into the catalogue's bank, CAT_BANK, 2026-10-27) and every item's place and state
+  (dq0w/things.c, its code in the world's swapped parts and, for a thing handled, in the catalogue's bank).  The others
+  ask, or say what they mean: the **UI** asks the world for what's carried and for every command about things (the hub's
+  ireq: take, drop, put, light, wear, the kit, a search ...), the world answering in its loop (and, while it waits for a
+  look, what wants none: what's carried, the tools, a tool's wear); the **maker**'s stock is a list the world puts down,
+  in the order the chunks were stocked, before anyone looks for them (the world as it takes its intents, answers the UI
+  or works a door; the **senses**, as a look comes to a chunk stocked that isn't put down yet, ask it first: the hub's
+  stock); a **denizen**'s remains the world puts down itself as it dies, its things on them; its things (worn, held, on
+  its belt) the world makes as its lair's placed (I_KIT's, the outfits' gear: filed with its lair's home, IW_DEN,
+  2026-10-27: DENIZENS.md's their things); the senses read the records for what the character perceives, and the world
+  makes a thing its own (its number, its make: no two alike) as a look first sees it, after the look, in the order seen.
+  The character's light (pc_light, pc_lamp) is the world's, worked out as what it carries changes.  The records (744, in
+  two of the hub's banks) are a cache: what the character carries, and the things of the chunks round it, a chunk's all
+  or none, the rest in the save folder by region; kept with the game (items.dat).
 - **The bodies and the blows** are the world's: every body in the dungeon, the character's and the denizens' near it
   (the hub's actors, their body halves: place, facing, when free, step, position, what each is doing), and every
   blow struck.  The **denizens**' task (dq0d) is their minds: it decides what each means to do, by what the senses

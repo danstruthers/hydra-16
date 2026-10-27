@@ -45,8 +45,9 @@ function build({ dir, objdir, say = () => {} }) {
   file.writeUInt16LE(kin, 18);                          // (The kinds' length, in the first's (none's) cap_weight: wfile.c's)
   fs.writeFileSync(f, file);
   // The outfits
-  const o = outfits.compile({ src: path.join(games, 'dq0', 'outfits.txt'), names, out: path.join(objdir, '..', 'dq0o.dat') });
-  say('dq0w.cat: ' + names.filter(Boolean).length + ' kinds, their words ' + text.length + ' bytes; dq0o.dat: ' + o.sections + ' outfits, ' + o.bytes + ' bytes');
+  const o = outfits.compile({ src: path.join(games, 'dq0', 'outfits.txt'), names, out: path.join(objdir, '..', 'dq0o.dat'),
+    dens: path.join(games, 'dq0d', 'kinds.txt') });
+  say('dq0w.cat: ' + names.filter(Boolean).length + ' kinds, their words ' + text.length + ' bytes; dq0o.dat: ' + o.sections + ' outfits (and ' + o.kinds + ' of the denizens\' kinds), ' + o.bytes + ' bytes');
   return { words: text.length, outfits: o };
 }
 

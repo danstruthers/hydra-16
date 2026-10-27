@@ -15,6 +15,9 @@
 //   a choice:   weight, info (its things' count, bits 0-3; its weights' by tags, bits 4-5; CI_INSTEAD, a kind made
 //               already it takes the place of follows), { tag, weight } x the weights, the instead, the things:
 //               { kind, place (PL_*, bits 0-3) | flags (TF_* << 4), least, most (how many: 0 one) }
+//   the index's last entries the denizens' kinds (dq0d/kinds.txt's, by number: "#" and a byte, the first 1) whose
+//   key has a [role KEY] section, each that section's offset (the world's draw at a lair's placing, I_KIT's: by the
+//   kind's number alone, 2026-10-27)
 'use strict';
 const fs = require('fs');
 
@@ -33,7 +36,7 @@ function hash(s) {
   return h;
 }
 
-function compile({ src, names, out }) {
+function compile({ src, names, out, dens }) {
   if (!fs.existsSync(src)) { if (fs.existsSync(out)) fs.rmSync(out); return { sections: 0, bytes: 0 }; }
   const kind = new Map(names.map((n, i) => [n, i]).filter(([n]) => n));
   const lines = fs.readFileSync(src, 'latin1').split(/\r?\n/);
@@ -126,8 +129,13 @@ function compile({ src, names, out }) {
     hashes.set(h, s.name);
     if (s.bent && !index.has(s.bent)) fail(s.ln, 'no section ' + s.bent);
   }
+  const alias = [];                                     // (The denizens' kinds by number: their roles' sections)
+  if (dens && fs.existsSync(dens)) {
+    const keys = fs.readFileSync(dens, 'latin1').split(/\r?\n/).filter(l => l.trim() && !/^\s*#/.test(l)).map(l => (l.split('|')[1] || '').trim());
+    keys.forEach((k, i) => { if (index.has('role ' + k)) alias.push(['#' + String.fromCharCode(i + 1), index.get('role ' + k)]); });
+  }
   const body = [];
-  const head = 4 + secs.length * 4;
+  const head = 4 + (secs.length + alias.length) * 4;
   let at = head;
   const offs = [];
   for (const s of secs) {
@@ -155,12 +163,13 @@ function compile({ src, names, out }) {
   const file = Buffer.alloc(at);
   file.write('OF', 0, 'latin1');
   file[2] = VERSION;
-  file[3] = secs.length;
-  if (secs.length > 255) throw new Error(src + ': more than 255 sections');
+  file[3] = secs.length + alias.length;
+  if (secs.length + alias.length > 255) throw new Error(src + ': more than 255 sections and kinds');
   secs.forEach((s, i) => { file.writeUInt16LE(hash(s.name), 4 + i * 4); file.writeUInt16LE(offs[i], 6 + i * 4); });
+  alias.forEach(([n, i], k) => { file.writeUInt16LE(hash(n), 4 + (secs.length + k) * 4); file.writeUInt16LE(offs[i], 6 + (secs.length + k) * 4); });
   for (const { at, b } of body) Buffer.from(b).copy(file, at);
   fs.writeFileSync(out, file);
-  return { sections: secs.length, bytes: at };
+  return { sections: secs.length, kinds: alias.length, bytes: at };
 }
 
 module.exports = { compile, hash, TAGS, PLACES };

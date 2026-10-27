@@ -182,10 +182,19 @@ struct item {
 #define IH_BOTH         0x03                    /*   both, a two-handed thing or one held so; rs.h's DH_* the same) */
 #define IH_OTHER        0x04                    /* (IO_HOLD's to: its other hand, not the one it's in, or the off hand) */
 enum { IW_SQUARE, IW_ACTOR, IW_ITEM,
-    IW_PORTAL };                                /* A portal's part (a door's bar, a window's pane or bars: the maker's,
+    IW_PORTAL,                                  /* A portal's part (a door's bar, a window's pane or bars: the maker's,
                                                 **   as it stocks a chunk), in it: sn, x, y its square (a bar's, the
                                                 **   square on its bar's side), seen and judged as a thing lying there
                                                 **   is, not taken up (IR_FIXED) but lifted out (the maker's) */
+    IW_DEN };                                   /* A denizen's own (the outfits' gear, 2026-10-27: worn, held, hung
+                                                **   from its belt; what's in them IW_ITEM's), made as its lair's
+                                                **   placed (I_KIT's): sn, x, y its lair's home square (filed with
+                                                **   that chunk, as a thing lying there is, but not seen there; its
+                                                **   chunk kept in the store while it's an actor), owner and hide its
+                                                **   number, the denizens' id (its low byte, its high: the hub's
+                                                **   actor's did); held (I_HELD), its hand by its kind (two-handed
+                                                **   both, a shield or a light the left, else the right); it dead, on
+                                                **   its body (IW_ITEM), what it held beside it */
 
 #define ITEM_BANKS      2
 

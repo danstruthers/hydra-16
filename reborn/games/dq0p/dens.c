@@ -5,12 +5,15 @@
 ** world asks (the hub's look, LK_DENS: their bodies changed).
 */
 
+#include <stddef.h>
 #include <string.h>
 #include "../dq0/hub.h"
 #include "../dq0w/world.h"
 #include "sight.h"
 
-extern struct actor sact;                       /* (A body, copied out of the hub's header: sense.c's) */
+#define SACT            offsetof (struct actor, did)    /* (sense.c's the same) */
+#define sact            (*(struct actor*) sactb)
+extern unsigned char sactb[SACT];               /* (A body, copied out of the hub's header: sense.c's) */
 static unsigned sig[NACTORS];                   /* (Each body as it was seen: its record, what it's doing) */
 
 unsigned char dens_seen (void)
@@ -24,7 +27,7 @@ unsigned char dens_seen (void)
         hub_map (0);
         s = 0;
         if (a->state) {                         /* (Its body copied out only if it's one: most aren't) */
-            memcpy (&sact, a, sizeof sact);
+            memcpy (&sact, a, SACT);
             if (sact.sn == HUB->pc_stratum && n < SEE_DENS && (p = at (sact.sn, sact.x, sact.y)) != 0 && (*p & T_VIS)) {
                 hub_map (SIGHT_BANK);
                 memcpy (&SIGHT->den[n++], &sact.x, sizeof SIGHT->den[0]);

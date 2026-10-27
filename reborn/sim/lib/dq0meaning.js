@@ -56,7 +56,7 @@ const EXPRS = {
   actor: F('struct hub', 'actor'), actorSize: 'sizeof (struct actor)', nactors: 'NACTORS',
   aState: F('struct actor', 'state'), aSn: F('struct actor', 'sn'), aFace: F('struct actor', 'face'), aPos: F('struct actor', 'pos'),
   aX: F('struct actor', 'x'), aY: F('struct actor', 'y'), aDoing: F('struct actor', 'doing'), aName: F('struct actor', 'name'),
-  aAttitude: F('struct actor', 'attitude'), aFaction: F('struct actor', 'faction'), aKind: F('struct actor', 'kind'),
+  aAttitude: F('struct actor', 'attitude'), aFaction: F('struct actor', 'faction'), aKind: F('struct actor', 'kind'), aDid: F('struct actor', 'did'),
   themeBank: 'THEME_BANK', thName: F('struct theme', 'name'), thStratum: F('struct theme', 'stratum'), tstrata: 'TSTRATA',
   tSname: F('struct sight', 'sname'),
   namesAt: '(unsigned) NAMES_AT - 0x8000', tnames: 'TNAMES', tname: 'sizeof (struct tname)', nmWhat: F('struct tname', 'what'),
@@ -66,7 +66,7 @@ const EXPRS = {
   item0: 'ITEM_BANK (0)', itemSize: 'sizeof (struct item)', nitems: 'NITEMS', iKind: F('struct item', 'kind'), iFlags: F('struct item', 'flags'),
   iWhere: F('struct item', 'where'), iSn: F('struct item', 'sn'), iX: F('struct item', 'x'), iY: F('struct item', 'y'),
   iQty: F('struct item', 'qty'), iId: F('struct item', 'id'), iFuel: F('struct item', 'fuel'), iShut: F('struct item', 'shut'), iThick: F('struct item', 'thick'),
-  iMat: F('struct item', 'mat'), iQuality: F('struct item', 'quality'), pcFuel: F('struct hub', 'pc_fuel'), pcLeft: F('struct hub', 'pc_left'),
+  iMat: F('struct item', 'mat'), iQuality: F('struct item', 'quality'), iOwner: F('struct item', 'owner'), iHide: F('struct item', 'hide'), pcFuel: F('struct hub', 'pc_fuel'), pcLeft: F('struct hub', 'pc_left'),
   ioName: 'IO_NAME', ioTheme: 'IO_THEME', ioBegin: 'IO_BEGIN', ioPuzzle: 'IO_PUZZLE', ioThrow: 'IO_THROW', ioFill: 'IO_FILL', ioShut: 'IO_SHUT', ioInside: 'IO_INSIDE', ioLook: 'IO_LOOK', ioSeek: 'IO_SEEK',
   ioHands: 'IO_HANDS', sightBank: 'SIGHT_BANK', tSeq: F('struct sight', 'seq'), tWhere: F('struct sight', 'where'), tDark: F('struct sight', 'dark'),
   tKind: F('struct sight', 'kind'), tSize: F('struct sight', 'size'), tRw: F('struct sight', 'rw'), tRh: F('struct sight', 'rh'), tRx: F('struct sight', 'rx'), tRy: F('struct sight', 'ry'),
@@ -248,7 +248,7 @@ function createRecorder() {
     for (let k = 0; k < L.nactors; k++) {
       const o = L.actor + k * L.actorSize, a = { k, state: h[o + L.aState], sn: h[o + L.aSn], face: h[o + L.aFace], pos: h[o + L.aPos],
         x: w16(h, o + L.aX), y: w16(h, o + L.aY), doing: name('DO_ROAM', h[o + L.aDoing]), name: str(h, o + L.aName, 12),
-        attitude: name('AT_HOSTILE', h[o + L.aAttitude]), faction: h[o + L.aFaction], kind: h[o + L.aKind] };
+        attitude: name('AT_HOSTILE', h[o + L.aAttitude]), faction: h[o + L.aFaction], kind: h[o + L.aKind], did: w16(h, o + L.aDid) };
       if (a.state || a.name) s.actors.push(a);
     }
     const cat = bank(L.catBank), kname = k => cat ? str(cat, k * L.kindSize, 14) : '';     // (CATALOGUE[kind])
@@ -259,7 +259,8 @@ function createRecorder() {
       s.items.push({ n: i, kind: b[o + L.iKind], name: kname(b[o + L.iKind]), weight: cat ? cat[b[o + L.iKind] * L.kindSize + L.kWeight] : 0,
         kflags: cat ? cat[b[o + L.iKind] * L.kindSize + L.kFlags] : 0, flags: b[o + L.iFlags], where: name('IW_SQUARE', b[o + L.iWhere]),
         sn: b[o + L.iSn], x: w16(b, o + L.iX), y: w16(b, o + L.iY), qty: b[o + L.iQty], id: w16(b, o + L.iId), fuel: w16(b, o + L.iFuel),
-        thick: b[o + L.iThick], mat: b[o + L.iMat], quality: b[o + L.iQuality], shut: b[o + L.iShut] });
+        thick: b[o + L.iThick], mat: b[o + L.iMat], quality: b[o + L.iQuality], shut: b[o + L.iShut],
+        did: b[o + L.iWhere] === K.IW_DEN ? b[o + L.iOwner] | b[o + L.iHide] << 8 : 0 });
     }
     const th = bank(L.themeBank);
     if (th) {

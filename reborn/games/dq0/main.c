@@ -383,7 +383,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    20                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    21                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -414,7 +414,9 @@ static void sheet (void)
                                                 **   kinds seven on, the map in plain letters: slice 4.2's; 19, the
                                                 **   world's world.dat the character's bearings: slice 4.2's; 20, each
                                                 **   chunk's memory the north believed in as it was last seen: the
-                                                **   maker's seen maps, travel's, slice 4.2's) */
+                                                **   maker's seen maps, travel's, slice 4.2's; 21, the catalogue's
+                                                **   kinds 128, the theme's from 120, the outfits' kinds; the items'
+                                                **   records a denizen's own, IW_DEN: the outfits' gear) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -795,10 +797,11 @@ static void heard (void)
             continue;
         }
         if (m.kind == E_BEAT) {
-            if (actor_seen (m.b)) {
+            if ((unsigned char) m.w1 == WB_DRAWS || actor_seen (m.b)) {
                 news (&m);                      /* (A fight's limbs' news, after its blow's words: part 11's, a thing
                                                 **   let go of, a fall; another's only if it's seen, not in the dark
-                                                **   or out of sight) */
+                                                **   or out of sight; a weapon drawn to strike, beside it, as its blow
+                                                **   is, the outfits' gear) */
             }
             continue;
         }
@@ -994,6 +997,7 @@ static void __fastcall__ limb_words (const struct msg* m)
     static const char* const lwords[] = {
         "\nYour %s falls from your hand.", "\nThe %s drops its %s.",
         0, "\nThe %s snatches up its %s.",
+        0, "\nThe %s draws its %s.",               /* (WB_DRAWS: a denizen's weapon from its belt, the outfits') */
         "\nYou get to your feet.", "\nThe %s gets to its feet.",
         "\nYou struggle, but can't get up.", "\nThe %s struggles, but can't get up.",
         "\nYou fall.", "\nThe %s falls.",

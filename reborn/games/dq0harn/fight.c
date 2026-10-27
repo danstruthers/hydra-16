@@ -69,7 +69,7 @@ static const struct bkind {
       { { "sword", 50, 4, HARN_EDGE, 0xFF }, { "" } } },
     { "bear", { 22, 18, 8, 10, 12 }, 150, 5, 60, 30, { 4, 3, 2, 3 }, BF_QUAD,
       { { "claws", 65, 6, HARN_EDGE, HARN_HAND }, { "bite", 55, 7, HARN_POINT, HARN_FACE } } },
-    { "kobold", { 8, 10, 12, 13, 9 }, 15, 3, 40, 55, { 2, 2, 1, 1 }, BF_BIPED,
+    { "kobold", { 8, 10, 12, 13, 9 }, 15, 3, 40, 55, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK,
       { { "spear", 45, 5, HARN_POINT, 0xFF }, { "" } } },
     { "bat", { 3, 8, 10, 10, 8 }, 1, 1, 45, 50, { 1, 1, 0, 1 }, 0,                  /* (Bats 1, p10) */
       { { "bite", 45, 1, HARN_POINT, HARN_FACE }, { "" } } },
@@ -84,15 +84,15 @@ static const struct bkind {
                                                                                     **   its will gone) */
     { "shade", { 11, 12, 11, 11, 15 }, 38, 4, 70, 50, { 2, 2, 1, 0 }, BF_BIPED,
       { { "sword", 60, 5, HARN_EDGE, 0xFF }, { "" } } },                            /* (Morvrin 3, p76: a priest's) */
-    { "koblord", { 11, 12, 12, 13, 12 }, 20, 3, 60, 55, { 3, 3, 2, 1 }, BF_BIPED,
+    { "koblord", { 11, 12, 12, 13, 12 }, 20, 3, 60, 55, { 3, 3, 2, 1 }, BF_BIPED | BF_FOLK,
       { { "axe", 55, 6, HARN_EDGE, 0xFF }, { "" } } },
-    { "bandit", { 11, 11, 11, 11, 11 }, 40, 4, 50, 45, { 2, 2, 1, 1 }, BF_BIPED,
+    { "bandit", { 11, 11, 11, 11, 11 }, 40, 4, 50, 45, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK,
       { { "sword", 50, 5, HARN_EDGE, 0xFF }, { "" } } },
-    { "banlord", { 14, 13, 12, 12, 13 }, 45, 4, 65, 55, { 4, 5, 3, 2 }, BF_BIPED,
+    { "banlord", { 14, 13, 12, 12, 13 }, 45, 4, 65, 55, { 4, 5, 3, 2 }, BF_BIPED | BF_FOLK,
       { { "sword", 65, 6, HARN_EDGE, 0xFF }, { "" } } },
-    { "cultist", { 10, 10, 11, 10, 12 }, 38, 4, 55, 40, { 1, 1, 0, 0 }, BF_BIPED,
+    { "cultist", { 10, 10, 11, 10, 12 }, 38, 4, 55, 40, { 1, 1, 0, 0 }, BF_BIPED | BF_FOLK,
       { { "dagger", 45, 3, HARN_POINT, 0xFF }, { "" } } },
-    { "priest", { 10, 11, 12, 11, 16 }, 38, 4, 70, 45, { 2, 2, 1, 1 }, BF_BIPED,
+    { "priest", { 10, 11, 12, 11, 16 }, 38, 4, 70, 45, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK,
       { { "mace", 55, 5, HARN_BLUNT, 0xFF }, { "" } } },
 };
 #define NBEASTS         (sizeof bestiary / sizeof bestiary[0])
@@ -165,26 +165,46 @@ static void __fastcall__ beast_side (struct side* s, unsigned char who)
     s->b = b;
     s->size = b->size;
     s->aml = w->ml - pp;
+    s->dodge = b->dge - pp;
+    s->dml = 0;
+    s->bare = 0;
+    s->imp[0] = s->imp[1] = s->imp[2] = -1;
+    strcpy (s->word, w->word);
+    if (w->part == 0xFF && dwr[(who - 1) & 7] != 0xFF) {
+        den_side (s, (who - 1) & 7);              /* (Its things told: the weapon it holds, gear.c's; the outfits'
+                                                **   gear) */
+        return;
+    }
     if ((bs.state & BS_DISARMED) && w->part == 0xFF) {
         w = &fists;                             /* (Its weapon let fall: its fists, its weapon's mastery less 10, the
                                                 **   house's; slice 4.1b's) */
         s->aml -= 10;
     }
-    s->dodge = b->dge - pp;
-    s->dml = 0;
-    s->bare = 0;
-    s->imp[0] = s->imp[1] = s->imp[2] = -1;
     s->imp[w->aspect] = w->imp;
     s->part = w->part;
     strcpy (s->word, w->word);
 }
 
-/* What guards side t at loc against aspect: the character's armour, a creature's hide */
+/* What guards side t at loc against aspect: the character's armour, a creature's hide; an actor's things told (the
+** outfits' gear), the pieces it wears (folk: no hide but them, DECISIONS.md's answer 7; the dead their own besides,
+** the better) */
 static unsigned char __fastcall__ guard (const struct side* t, unsigned char loc, unsigned char aspect)
 {
+    unsigned char h, v;
+
     if (t->b) {
-        strcpy (arm, t->b->arm[aspect & 3] ? "hide" : "");
-        return t->b->arm[aspect & 3];
+        h = t->b->arm[aspect & 3];
+        if (dwr[(t->who - 1) & 7] != 0xFF) {
+            v = den_armour ((t->who - 1) & 7, loc, aspect);
+            if (t->b->flags & BF_FOLK) {
+                h = 0;
+            }
+            if (v >= h) {
+                return v;
+            }
+        }
+        strcpy (arm, h ? "hide" : "");
+        return h;
     }
     return pc_armour (loc, aspect);
 }
@@ -474,6 +494,7 @@ static void new_beast (void)
         return;
     }
     aden[k] = n;
+    dwr[k] = 0xFF;                              /* (Its things untold yet: the world's RS_EQUIP, as it comes near) */
     for (j = 0; j < NBEASTS && strcmp (bestiary[j].key, bkey); ++j) {
     }
     if (j == NBEASTS) {

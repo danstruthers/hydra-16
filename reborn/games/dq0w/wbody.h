@@ -45,11 +45,18 @@ void harm_fx (void);                            /* (Part 49) A harm's effects: d
 void __fastcall__ bearings_off (unsigned feet); /* (Part 52: dq0w.c) The character's bearings shaken: 0, a harm's (a
                                                 **   fall's), or BO_OUT, knocked senseless (slice 4.2's) */
 #define BO_OUT          0xFFFFU
-unsigned char den_reach (void);                 /* (Part 51: wlimbs.c) Body bd's weapon let fall, in its reach */
-void den_took (void);                           /* (Part 51) Taken up again, told */
+unsigned char den_reach (void);                 /* (Part 60: wlimbs.c) Body bd's weapon let fall, in its reach */
+void den_took (void);                           /* (Part 60) Taken up again, told */
 void __fastcall__ den_word (const char* t, unsigned char n);   /* (Part 51) Its weapon's word: line n of t */
-void den_drop (void);                           /* (Part 51) Its weapon on the floor, told */
+void den_drop (void);                           /* (Part 60) Its weapon on the floor, told */
 unsigned char den_legs (void);                  /* (Part 51) Its legs at a move's start: 1 no move */
+void __fastcall__ den_other (const struct msg* m);  /* (Part 60) A denizen's things made (I_KIT's) */
+void __fastcall__ den_enter (const struct msg* m);  /* (Part 60) Come near (I_ENTER's): its body's from it, its
+                                                **   things in the store, the referee told */
+unsigned char den_draw (void);                  /* (Part 60) Its weapon drawn from its belt, its hands empty of one: 1
+                                                **   (its round's), or 0 */
+void __fastcall__ den_strip (unsigned body);    /* (Part 60) Dead: its things on its body (body, its remains), what
+                                                **   it held beside it */
 void __fastcall__ limb_news (unsigned w, unsigned char b);  /* (Part 49) The limbs' news, the denizens' ring's (E_BEAT's
                                                 **   w; b whose: 0 the character, else the actor's entry plus 1) */
 unsigned char __fastcall__ engaged (unsigned char eng, unsigned char def);  /* (dq0w.c's part 25) The engage

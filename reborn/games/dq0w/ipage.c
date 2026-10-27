@@ -99,8 +99,27 @@ static void __fastcall__ none_of (unsigned char sn, unsigned char rx, unsigned c
     }
 }
 
+/* Chunk cx, cy of stratum sn an actor's things' (its lair's home's, where they're filed: the outfits' gear, IW_DEN),
+** kept in the store while it's an actor: 1; the world's own bank in the window after */
+static unsigned char __fastcall__ kept_for (unsigned char sn, unsigned cx, unsigned cy)
+{
+    struct actor* a;
+    unsigned char k;
+
+    hub_map (0);
+    for (k = 0, a = HUB->actor; k < NACTORS; ++k, ++a) {
+        if (a->name[0] && a->did && a->hsn == sn && (a->hx - STRATUM (sn).x0) >> CW_BITS == cx &&
+            (a->hy - STRATUM (sn).y0) >> CW_BITS == cy) {
+            break;
+        }
+    }
+    own ();
+    return k < NACTORS;
+}
+
 /* A record made free, or a place in the table: the chunk least lately wanted that isn't round the character (nor the
-** chunk at hand) put out (part 20's it_out), its entry free: 1, or 0 (none to put out, or no folder) */
+** chunk at hand, nor an actor's things') put out (part 20's it_out), its entry free: 1, or 0 (none to put out, or no
+** folder) */
 #pragma bss-name (push, "BSS")                  /* (Its locals the main RAM's: it calls a part, which puts this one
                                                 **   out and in again, its own data as its image has it) */
 static unsigned char make_room (void)
@@ -113,7 +132,8 @@ static unsigned char make_room (void)
     own ();
     for (k = 0, r = IPG->r; k < NIRES; ++k, ++r) {
         if (r->used && (r->sn != pcs || r->cx - pcx + rad > 2 * rad || r->cy - pcy + rad > 2 * rad) &&
-            (r->sn != esn || r->cx != ecx || r->cy != ecy) && (b == 0xFF || r->stamp - s > 0x8000U)) {
+            (r->sn != esn || r->cx != ecx || r->cy != ecy) && (b == 0xFF || r->stamp - s > 0x8000U) &&
+            !kept_for (r->sn, r->cx, r->cy)) {
             b = k;
             s = r->stamp;
         }
@@ -288,14 +308,16 @@ static unsigned char __fastcall__ at_hand (unsigned char sn, unsigned cx, unsign
     return vf_name (path, "it", sn, cx >> 3, cy >> 3);
 }
 
-/* Thing i's in the chunk at hand: it lies on one of its squares, or it's in (or on) one that does */
+/* Thing i's in the chunk at hand: it lies on one of its squares, or it's in (or on) one that does (a denizen's own
+** filed there too, its lair's home: IW_DEN) */
 static unsigned char __fastcall__ in_chunk (unsigned i)
 {
     struct item* p;
 
     for (p = item_at (i); p->where == IW_ITEM; p = item_at (p->x)) {
     }
-    return (p->where == IW_SQUARE || p->where == IW_PORTAL) && p->sn == hsn && p->x - hx0 < CW && p->y - hy0 < CW;
+    return p->where != IW_ACTOR && p->sn == hsn && p->x - hx0 < CW && p->y - hy0 < CW;    /* (IW_SQUARE, IW_PORTAL,
+                                                **   IW_DEN) */
 }
 
 /* The other chunks' groups in the file in, past (out >= 0: copied to out, their count added to all) or to the chunk
@@ -337,7 +359,7 @@ unsigned char __fastcall__ s_it_out (unsigned char sn, unsigned cx, unsigned cy)
         if (in >= 0) {
             others ();
         }
-        for (i = 0, m = 0; (i = items (i, IN_SQUARE | IN_ITEM | IN_PORTAL, 0)) != 0; ) {    /* (Its own things) */
+        for (i = 0, m = 0; (i = items (i, IN_SQUARE | IN_ITEM | IN_PORTAL | IN_DEN, 0)) != 0; ) {    /* (Its own) */
             if (in_chunk (i)) {
                 mput (OUT (m), i);
                 ++m;

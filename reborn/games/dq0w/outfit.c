@@ -12,6 +12,7 @@
 */
 
 #include <fcntl.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -88,16 +89,15 @@ static unsigned char __fastcall__ skills (unsigned char from, unsigned char want
     return k;
 }
 
-/* ---- The character's outfit: the referee asked (RS_OUTFIT, the UI's slot: the UI waits on the kit), drawn into the
-** list; 0 if there's none (no file, a referee that hasn't one: the kit as it was) */
-unsigned char s_outfit (void)
+/* The outfits' file opened (ost's fd), its index in the kinds' bank (read the first time), the draw begun (ost's
+** state but a denizen's, the list empty): 1, or 0 (none, or not this version's: closed) */
+static unsigned char opened (void)
 {
-    struct req* r;
-    unsigned char occ = 0, k, first;
-    unsigned off = 0, boff;
+    unsigned char k;
+    unsigned boff;
     int n;
 
-    memset (&ost, 0, sizeof ost);
+    memset (&ost, 0, offsetof (struct ost, did));
     ost.want = 0xFF;
     hy_bank (ovbank[OVBANKS]);
     strcpy (b, TR_DIR);
@@ -121,6 +121,46 @@ unsigned char s_outfit (void)
         return 0;
     }
     hub_map (0);
+    return 1;
+}
+
+/* ---- A denizen's things (I_KIT's, as its lair's placed: ost's did, hx, hy, hsn), its kind's role drawn (the
+** index's "#" and its kind's number, a byte: outfits.js's; none, no things), every line given, on its own die (its
+** stratum's seed and its number: the same things each time), and made (part 58's: filed with its lair's home square,
+** IW_DEN) */
+void __fastcall__ s_den_kit (unsigned char kind)
+{
+    unsigned off;
+
+    if (!opened ()) {
+        return;
+    }
+    ost.rs = ((unsigned) STRATUM (ost.hsn).seed ^ ost.did * 40503U) | 1;
+    ost.level = 1;
+    b[0] = '#';                                /* (Its name in the index: "#" and its number, a byte) */
+    b[1] = kind;
+    b[2] = 0;
+    off = find (b);
+    draw_at (off, MD_ALL);
+    close (ost.fd);
+    hub_map (KIND_BANK);
+    if (OF_N) {
+        outmake (1);
+    }
+    hub_map (0);
+}
+
+/* ---- The character's outfit: the referee asked (RS_OUTFIT, the UI's slot: the UI waits on the kit), drawn into the
+** list; 0 if there's none (no file, a referee that hasn't one: the kit as it was) */
+unsigned char s_outfit (void)
+{
+    struct req* r;
+    unsigned char occ = 0, k, first;
+    unsigned off = 0, boff;
+
+    if (!opened ()) {
+        return 0;
+    }
     r = &HUB->slot[SLOT_UI];
     r->kind = RS_OUTFIT;
     r->actor = 0;

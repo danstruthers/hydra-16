@@ -317,7 +317,9 @@ enum {
                                                 **   by it, a skill used taking the tool that suits, a fight by what's
                                                 **   held and worn; a 2's w1 the load, all the actor carries (its
                                                 **   weight): its encumbrance the referee's, in the summary (its
-                                                **   load, its step) and its tests */
+                                                **   load, its step) and its tests; an actor's (actor its entry
+                                                **   plus 1, a 2: the world's, its things held and worn, the
+                                                **   outfits' gear, 2026-10-27), its blow and its armour by them */
     RS_INITIATIVE,                              /* Actors -> each one's delay as a fight starts */
     RS_MORALE,
     RS_EXPERIENCE,                              /* Something that counts to advancement */

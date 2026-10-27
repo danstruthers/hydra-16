@@ -547,6 +547,7 @@ static unsigned char __fastcall__ open_sq (unsigned char* p)
 static struct msg im;                           /* (Its intents: below) */
 static void __fastcall__ post (unsigned char kind, unsigned char who);
 static void trodden (void);
+static void kitted (void);
 
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
@@ -610,6 +611,15 @@ void __fastcall__ s_place (unsigned char i)
             D.ready = now + random (50);
         }
         den_put (k);
+        if ((kind_get (kd), KF_NATURE (K.form)) >= NA_FOLK) {    /* (Folk and the dead: its things made, the world's
+                                                **   draw by its kind's role, filed at its home, the outfits' gear) */
+            im.x[1] = kd;
+            im.x[2] = L.sn;
+            im.w1 = L.hx;
+            im.w2 = L.hy;
+            im.t = D.id;
+            kitted ();
+        }
         im.x[1] = kd;                           /* (Its scent where it lives, at its lair's home: a passing, its comings
                                                 **   and goings, and its stays, the most: the world's traces told) */
         im.x[2] = L.sn;
@@ -759,6 +769,16 @@ static void trodden (void)
     stirs = st;
 }
 
+/* A denizen's things made (I_KIT, the world's: the outfits' gear), its fields the caller's: not a stir, as a passing
+** isn't */
+static void kitted (void)
+{
+    unsigned char st = stirs;
+
+    post (I_KIT, 0);
+    stirs = st;
+}
+
 static void settle (void)
 {
     stirs = 0;
@@ -866,6 +886,11 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     a.step = K.step;
     a.attitude = D.attitude;
     a.faction = D.fac;
+    a.did = KF_NATURE (K.form) >= NA_FOLK ? D.id : 0;  /* (Its things': filed at its lair's home, the outfits' gear;
+                                                **   folk's and the dead's, s_place's I_KIT; a beast none) */
+    a.hx = D.hx;
+    a.hy = D.hy;
+    a.hsn = D.lsn;
     aorder[k] = D.order;
     sgen[k] = 0;
     alert[k] = 0;

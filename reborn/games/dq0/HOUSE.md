@@ -1532,6 +1532,35 @@ HarnWorld's price list.  What the house adds, every number the house's (and outf
   a broadsword 150d, a quiver 8d, a pouch 9d, a lantern 12d, a belt 10d, a pick 8d, a key 2d, a sack 1d; rations 2d a
   day, the house's), and the new kinds' (outfits' kinds.md: the book's where it gives one, the house's else).
 
+### The denizens' gear *(2026-10-27: drafted for the user to review)*
+
+The plan's phase 1 (denizens.md's, the user's answers 6, 7 and 8): each denizen's weapons, armour and clothes things
+of the item store, drawn by the same code as the character's outfit, from outfits.txt's [role KEY] sections (the
+kinds' keys: kobold, kobold lord, bandit, bandit lord, cultist, high priest, skeleton, wight, shade; and the Gargun,
+the Khuzdul, the Sindarin and men's, for the kinds the later phases bring).  What the house adds:
+
+- **Made as its lair's placed** (answer 6: weapons and armour at its creation; the purses and the trinkets later):
+  every line of its role given, on a die of its own (its stratum's seed and its number: the same things each time,
+  the world's dice untouched); filed with its lair's home (the store's chunk there: items.h's IW_DEN), not seen
+  lying there; that chunk kept in the store while the denizen's an actor.  Folk and the dead only (their kinds'
+  natures); a beast has none.
+- **Its blow by the weapon it holds** (gear.c's rows, the character's): its kind's own weapon (the bestiary's) at the
+  bestiary's mastery; another the better or the worse by their attack classes (a bandit's shortsword five less than
+  its sword), another skill's ten less; nothing in its hands its fists, ten less (as a weapon let fall).  A beast's
+  as before.
+- **Its armour the pieces it wears** (answer 7: a folk denizen's fixed numbers gone): each piece's protection where it
+  covers (a poor one a point less, a fine one a point more), as the character's; the dead their own (bones, dead
+  flesh) or their pieces, the better; a beast's hide as before.
+- **Unready** (answer 8): a denizen at its ease keeps its weapon sheathed or hung from its belt (a spear, a staff in
+  hand); about to strike with its hands empty it draws the best on its belt first, its round's (the book's grope),
+  told ("The bandit draws its shortsword.").
+- **A weapon let fall the real one**: its own weapon, fumbled, the same thing on the floor, taken up again the same
+  (a sword the character takes up is the bandit's own).
+- **Dead, its things on its body**: what it wore and carried on its body (a body and bones are surfaces: "look at the
+  body", "take the vest from the body"), what it held let fall where it lies.  *(For review: a worn piece taken off a
+  body with no more time than one lying there; the plan had twice its taking-off time.)*
+- **dq0 -K** (the tests'): no denizen's things, the bestiary's as before.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

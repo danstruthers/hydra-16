@@ -1,5 +1,6 @@
 /*
-** gear.c - (overlay 3, the referee's: called through bank.s's stubs) the character's gear in a fight: what it strikes
+** gear.c - (overlay 3, the referee's: called through bank.s's stubs) the character's gear in a fight (and since
+** 2026-10-27 the denizens', their things told: the outfits' gear, below): what it strikes
 ** with and blocks with (what it holds: RS_EQUIP's marks, the tools' keys; its own hands, feet and head, the Unarmed
 ** skill's, as it's asked: the hub's pc_strike), and the armour it wears.
 **
@@ -151,107 +152,6 @@ static int __fastcall__ eml (harn_char* c, unsigned char sk)
     return c->ml[sk] ? harn_eml (c, sk) : harn_get_oml (c, sk) - 5 * harn_get_pp (c);
 }
 
-/* Its health in words any ruleset can say (the game's: by its injuries' levels against its Endurance; down, in
-** shock or senseless): overlay 3's, the main RAM's room, slice 4.1b's */
-unsigned char __fastcall__ o_health_of (const harn_char* h)
-{
-    unsigned char ip = harn_get_ip (h), e = harn_end (h);
-
-    return h->state == HARN_DEAD ? H_DEAD : h->state != HARN_CONSCIOUS ? H_DOWN : !ip ? H_FINE : 3 * ip < e ? H_HURT :
-        3 * ip < 2 * e ? H_BADLY : H_CRITICAL;
-}
-
-/* Its limbs (rs.h's LB_*, slice 4.1b's), as its sheet has them (the character's, or a creature's): its main hand (the
-** medical traits', Character 9: left-handed, ambidextrous; an arm missing or deformed, its off arm the one, no
-** two-handed use), each limb made useless (a grievous wound, till it heals to M1: Combat 14); and each one's hurt, its
-** injuries' levels (lhurt: the left arm's, the right's, the left leg's, the right's; a leg missing or deformed, the
-** medical trait's, five levels, a limp at half its move) */
-unsigned char __fastcall__ o_limbs_of (const harn_char* h)
-{
-    unsigned char k, l = 0, j, v = 0;
-    const harn_injury* p;
-
-    memset (lhurt, 0, sizeof lhurt);
-    for (k = 0; h == &pc && k < HARN_MEDMAX; ++k) {
-        j = pc.med[k];
-        l |= j == HARN_LEFTHANDED ? LB_LEFT : j == HARN_AMBIDEXTROUS ? LB_AMBI : 0;
-        v |= j == HARN_MED_ARM;
-        if (j == HARN_MED_LEG) {
-            lhurt[2] = 5;                       /* (A leg missing or deformed, Character 9: half its move, a limp of five
-                                                **   levels, the house's; the left, its choice) */
-        }
-    }
-    if (h == &pc && v) {
-        l |= l & LB_LEFT ? LB_ARM_R : LB_ARM_L;
-    }
-    for (k = 0; k < h->ninj; ++k) {
-        p = &h->inj[k];
-        if (p->sev >= HARN_SERIOUS) {
-            l |= LB_HURT;                       /* (Seriously or grievously wounded: getting up, the book's Rise, a
-                                                **   test) */
-        }
-        if ((j = harn_is_limb (p->loc)) != 0) {
-            j = (j - 1) * 2 + ((p->loc & HARN_RIGHT) != 0);
-            v = lhurt[j] + p->il;
-            lhurt[j] = v < p->il ? 255 : v;
-            if (p->flags & (HARN_IF_LIMB | HARN_IF_AMPUTATED)) {
-                l |= LB_ARM_L << j;             /* (Useless, or gone: an amputation's never heals whole) */
-            }
-        }
-    }
-    return l;
-}
-
-/* Its conditions (rs.h's C_*), as its sheet has them (the character's, or a creature's: its body cplan's, BF_*):
-** its state (senseless, in shock, dead), bleeders, limbs made useless and how they move it now (the book's, Combat 14:
-** on two legs, one useless, it hops or walks with a staff, its arms enough it crawls, none: C_CRAWLS, else C_STUCK; on
-** four, one useless, at half its move, C_LAME, two, C_CRAWLS, more, C_STUCK); tired, or tiring */
-unsigned __fastcall__ o_cond_of (const harn_char* h)
-{
-    static const unsigned state[4] = { 0, C_UNCONSCIOUS, C_STUNNED, C_DEAD };
-    unsigned c = state[h->state & 3] | (h->fl || (h == &pc && tired) ? C_FATIGUED : 0);   /* (Tired, or tiring) */
-    unsigned char k, l = o_limbs_of (h), arms, legs, b = h == &pc ? BF_BIPED : cplan;
-
-    for (k = 0; k < h->ninj; ++k) {
-        if (h->inj[k].flags & HARN_IF_BLEEDER) {
-            c |= C_BLEEDING;
-        }
-    }
-    arms = !!(l & LB_ARM_L) + !!(l & LB_ARM_R);
-    legs = !!(l & LB_LEG_L) + !!(l & LB_LEG_R);
-    c |= (arms ? C_ARM_USELESS : 0) | (legs ? C_LEG_USELESS : 0);
-    if (b & BF_BIPED) {
-        c |= !legs ? 0 : legs == 1 || !arms ? C_CRAWLS : C_STUCK;
-    } else if (b & BF_QUAD) {
-        k = arms + legs;                        /* (Its forelegs the strike table's arms) */
-        c |= !k ? 0 : k == 1 ? C_LAME : k == 2 ? C_CRAWLS : C_STUCK;
-    }
-    return c;
-}
-
-/* Getting up, prone (the book's Rise, Combat 8: a round; the house's, every actor's, HOUSE.md's prone): its grade
-** (rs.h's G_*): never with no leg to stand on (on two legs, both useless; on four, two or more: G_CF); seriously or
-** grievously wounded, or with no good arm (the user's, 2026-10-22), an Agility test (x5; no good arm four steps the
-** harder); else always (G_MS) */
-signed char __fastcall__ o_rise_of (const harn_char* h)
-{
-    unsigned char l = o_limbs_of (h), legs, arms;
-
-    legs = !!(l & LB_LEG_L) + !!(l & LB_LEG_R);
-    arms = !!(l & LB_ARM_L) + !!(l & LB_ARM_R);
-    if (h != &pc && (cplan & BF_QUAD)) {
-        legs += arms;                           /* (Its forelegs the arms: two lame of four, it can't, as on two) */
-        arms = 0;
-    }
-    if (legs >= 2) {
-        return G_CF;
-    }
-    if (!(l & LB_HURT) && arms < 2) {
-        return G_MS;
-    }
-    return grade (harn_test_attr (h, HARN_AGL, 5, arms < 2 ? 0 : -4 * STEP_PCT));
-}
-
 /* What a thing swung does, by its kind's data (rshouse.h's: the house's, every ruleset's) */
 #define RS_HOUSE_SWING  swing
 #include "../dq0/rshouse.h"
@@ -341,6 +241,92 @@ unsigned char __fastcall__ o_pc_armour (unsigned char loc, unsigned char aspect)
     return worn (guards);
 }
 
+/* ---- The denizens' things (the outfits' gear, 2026-10-27: DENIZENS.md's gear; the world's RS_EQUIP for an actor):
+** what each actor holds and wears, as the world tells it (its weapon's row, its shield's, its pieces), its blow by the
+** weapon it holds (the table's, the character's: its kind's own weapon skill the bestiary's mastery, another weapon's
+** the worse or better by their attack classes, another skill's ten less, the house's), its armour by its pieces (a poor
+** one a point less, a fine one a point more, as the character's); nothing held, its fists (ten less, as a weapon let
+** fall); never told (a beast, dq0 -K's), the bestiary's, as before */
+unsigned char dwr[NACTORS];                     /* (Each actor's weapon held: its row, 0 none, 0xFF untold; */
+unsigned char dsh[NACTORS];                     /*   its shield held: its row, 0 none; */
+unsigned char dpc[NACTORS][DPIECES];            /*   its pieces worn: each its entry plus 1, | DP_POOR, DP_FINE) */
+char dtext[DTEXT_N];                            /* (Its marks, RS_EQUIP's text, copied: dq0harn.c's) */
+#define DP_POOR         0x20
+#define DP_FINE         0x40
+
+/* RS_EQUIP for actor k (its marks in dtext: < the left hand, > the right, * both, + worn, each key's quality after it) */
+void __fastcall__ o_den_equip (unsigned char k)
+{
+    const char* t = dtext;
+    char key[8];
+    unsigned char m, j, n = 0, q;
+
+    dwr[k] = dsh[k] = 0;
+    memset (dpc[k], 0, DPIECES);
+    while (*t) {
+        m = *t++;
+        for (j = 0; *t && (*t < '0' || *t > '9'); ++t) {
+            if (j < sizeof key - 1) {
+                key[j++] = *t;
+            }
+        }
+        key[j] = 0;
+        q = *t ? *t++ - '0' : 0;
+        if (m == '+') {
+            for (j = 0; j < NARMOUR && strcmp (pieces[j].key, key); ++j) {
+            }
+            if (j < NARMOUR && n < DPIECES) {
+                dpc[k][n++] = (j + 1) | (q <= 2 ? DP_POOR : q >= 7 ? DP_FINE : 0);
+            }
+            continue;
+        }
+        for (j = NUNARMED; j < NWEAPONS && strcmp (weapons[j].key, key); ++j) {
+        }
+        if (j < NWEAPONS && IS_SHIELD (j)) {
+            dsh[k] = j;
+        } else if (j < NWEAPONS && (m != '<' || !dwr[k])) {
+            dwr[k] = j;
+        }
+    }
+}
+
+/* Actor k's blow, its things told (fight.c's beast_side: s's aml its kind's own weapon's, s's word its word): the
+** weapon it holds (none, or let fall: its fists, ten less) */
+void __fastcall__ o_den_side (struct side* s, unsigned char k)
+{
+    const struct weapon* w;
+    unsigned char j, o;
+
+    for (o = NUNARMED; o < NWEAPONS && strcmp (weapons[o].word, s->word); ++o) {
+    }
+    j = bs.state & BS_DISARMED ? 0 : dwr[k];
+    w = &weapons[j];
+    if (!j) {
+        s->aml -= 10;
+    } else if (o < NWEAPONS) {
+        s->aml += w->wac - weapons[o].wac - (w->sk != weapons[o].sk ? 10 : 0);
+    }
+    memcpy (s->imp, w->imp, sizeof s->imp);
+    s->part = j ? 0xFF : w->part;
+    strcpy (s->word, w->word);
+}
+
+/* Actor k's armour at loc against aspect, its pieces' (the last that guards named in arm: "" none) */
+unsigned char __fastcall__ o_den_armour (unsigned char k, unsigned char loc, unsigned char aspect)
+{
+    unsigned char j, c, sum = 0;
+
+    arm[0] = 0;
+    bit = 1u << HARN_LOC (loc);
+    asp = aspect;
+    for (j = 0; j < DPIECES && (c = dpc[k][j]) != 0; ++j) {
+        wp = &pieces[(c & 0x1F) - 1];
+        wq = c & DP_POOR ? 0 : c & DP_FINE ? 9 : 5;
+        sum += guards ();
+    }
+    return sum;
+}
+
 /* Its side of a fight: what it strikes with (pc_way's: SK_BEST, the best weapon it holds, else its fists; SK_THING,
 ** the thing named, its kind in wk, and no other, its words its name, a soft one its fists (the world never asks it);
 ** else that part of it), its block (the best of what it holds, its weapon or its shield; else a bare arm) and each
@@ -348,7 +334,7 @@ unsigned char __fastcall__ o_pc_armour (unsigned char loc, unsigned char aspect)
 void __fastcall__ o_pc_side (struct side* s)
 {
     const struct weapon* w;
-    unsigned char k, j, best = 0, named = 0, l = o_limbs_of (&pc), dead, h;
+    unsigned char k, j, best = 0, named = 0, l = limbs_of (&pc), dead, h;
     int v, att = 0, blk = 0;
 
     dead = (l & LB_ARM_L ? T_LEFT : 0) | (l & LB_ARM_R ? T_RIGHT : 0);

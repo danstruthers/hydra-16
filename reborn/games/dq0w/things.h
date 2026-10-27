@@ -13,6 +13,7 @@ extern struct item* ip;
 #define IN_ACTOR        (1 << IW_ACTOR)
 #define IN_ITEM         (1 << IW_ITEM)
 #define IN_PORTAL       (1 << IW_PORTAL)
+#define IN_DEN          (1 << IW_DEN)
 #define IN_X            0x80
 #define IN_FLAGS        0x40
 void owned (void);                              /* The things a look saw (the senses' record's) made their own, as
@@ -70,7 +71,7 @@ void __fastcall__ keep (unsigned char back);    /* The store kept (items.dat), o
 extern unsigned ilim;                           /* (things.c's: the records used, at most) */
 extern unsigned ihigh;                          /* (things.c's: every record from it on free; raised as one's taken) */
 extern unsigned irs;                            /* (things.c's: a thing's own numbers, made) */
-#define OVBANKS         18                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
+#define OVBANKS         19                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
                                                 **   own: ipage.c's, ovbank[OVBANKS]; the ways across a room's,
                                                 **   dq0w.c's, ovbank[OVBANKS + 1]; the traces' store's, wtrace.c's,
                                                 **   ovbank[OVBANKS + 2] and [OVBANKS + 3]) */

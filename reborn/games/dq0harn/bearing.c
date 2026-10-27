@@ -1,5 +1,5 @@
 /*
-** bearing.c - (overlay 3, the referee's: called through bank.s's stubs) the character's bearings underground kept
+** bearing.c - (overlay 5, the referee's: called through bank.s's stubs) the character's bearings underground kept
 ** (rs.h's P_BEARING; DUNGEON.md's bearings underground, HOUSE.md's, slice 4.2's): the way it's come by bending, or
 ** felt across a room in the dark, noted as it went.  The book has no skill of direction: the game's choice, Awareness
 ** (each turn of the way noticed as it's taken), or Mining if the character's is the higher (a miner knows tunnels,
@@ -10,8 +10,8 @@
 ** the other, or a north astray anywhere).
 */
 
-#pragma code-name ("OV3CODE")
-#pragma rodata-name ("OV3RODATA")
+#pragma code-name ("OV5CODE")                 /* (Overlay 5's, beside part 2's image: 2026-10-27, overlay 3's room */
+#pragma rodata-name ("OV5RODATA")             /*   for the denizens' gear) */
 
 #include <dice.h>
 #include <harn.h>

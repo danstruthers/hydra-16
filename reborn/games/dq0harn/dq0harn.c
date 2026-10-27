@@ -101,10 +101,10 @@ unsigned wealth;                                /* (The family's wealth, its fil
 ** + worn; a space neither) and its quality after it (a digit) */
 static void __fastcall__ equip_all (const char* keys)
 {
-    unsigned char k = 0, n, f;
+    unsigned char k = 0, n, f, j;
 
     memset (tools, 0, sizeof tools);
-    while (*keys && k < NTOOLS) {
+    while (*keys) {
         f = *keys == '*' ? T_HELD | T_LEFT | T_RIGHT : *keys == '<' ? T_HELD | T_LEFT : *keys == '>' ? T_HELD | T_RIGHT :
             *keys == '+' ? T_WORN : 0;
         if (*keys < 'a') {
@@ -113,10 +113,20 @@ static void __fastcall__ equip_all (const char* keys)
         for (n = 0; keys[n] >= 'a'; ++n) {
         }
         if (n && n < sizeof tools[0]) {
-            memcpy (tools[k], keys, n);
-            tflag[k] = f;
-            tqual[k] = keys[n] >= '0' && keys[n] <= '9' ? keys[n] - '0' : 4;
-            ++k;
+            if (k < NTOOLS) {
+                j = k++;
+            } else {                            /* (Full, an outfit's many things: what's held or worn in the place of
+                                                **   a thing carried, what fights first, 2026-10-27) */
+                for (j = NTOOLS; j && tflag[j - 1]; --j) {
+                }
+                j = f && j ? j - 1 : NTOOLS;
+            }
+            if (j < NTOOLS) {
+                memset (tools[j], 0, sizeof tools[j]);
+                memcpy (tools[j], keys, n);
+                tflag[j] = f;
+                tqual[j] = keys[n] >= '0' && keys[n] <= '9' ? keys[n] - '0' : 4;
+            }
         }
         keys += n;
         if (*keys >= '0' && *keys <= '9') {
@@ -262,11 +272,11 @@ signed char __fastcall__ grade (unsigned char level)
     return g[level & 3];
 }
 
-#pragma code-name (push, "OV3CODE")
-#pragma rodata-name (push, "OV3RODATA")
+#pragma code-name (push, "OV5CODE")            /* (Overlay 5's, beside part 2's image: 2026-10-27) */
+#pragma rodata-name (push, "OV5RODATA")
 
 /* A skill's test (or an attribute's: ATTR), at the steps (a skill not learnt: its opening level, less its group's
-** penalty, as a learnt one's: harn_eml's, its level 0, the penalty alone; the user's, 2026-10-20): overlay 3's (the main
+** penalty, as a learnt one's: harn_eml's, its level 0, the penalty alone; the user's, 2026-10-20): overlay 5's (the main
 ** RAM's room, slice 4.2's: no hub in it), its stub test_sk */
 signed char __fastcall__ o_test_sk (harn_char* c, unsigned char sk, signed char steps)
 {
@@ -759,7 +769,10 @@ static void __fastcall__ answer (struct req* r)
         status ();
         break;
     case RS_EQUIP:
-        if (r->a == 2) {
+        if (r->actor) {                         /* (An actor's things held and worn: the outfits' gear, gear.c's) */
+            strncpy (dtext, r->text, sizeof dtext - 1);
+            den_equip ((r->actor - 1) & 7);
+        } else if (r->a == 2) {
             equip_all (r->text);
             hheld = r->w2;                      /* (The hands that hold something, any thing: slice 4.1b's) */
             set_load (r->w1);                   /* (And its load: its summary anew) */

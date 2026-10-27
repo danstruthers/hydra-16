@@ -116,10 +116,10 @@ static void status (void)
 
 static void __fastcall__ equip_all (const char* keys)
 {
-    unsigned char k = 0, n, f;
+    unsigned char k = 0, n, f, j;
 
     memset (tools, 0, sizeof tools);
-    while (*keys && k < NTOOLS) {
+    while (*keys) {
         f = *keys == '*' || *keys == '<' || *keys == '>';
         if (*keys < 'a') {
             ++keys;
@@ -127,8 +127,18 @@ static void __fastcall__ equip_all (const char* keys)
         for (n = 0; keys[n] >= 'a'; ++n) {
         }
         if (n && n < sizeof tools[0]) {
-            memcpy (tools[k], keys, n);
-            held[k++] = f;
+            if (k < NTOOLS) {
+                j = k++;
+            } else {                            /* (Full: what's held in the place of a thing carried, 2026-10-27) */
+                for (j = NTOOLS; j && held[j - 1]; --j) {
+                }
+                j = f && j ? j - 1 : NTOOLS;
+            }
+            if (j < NTOOLS) {
+                memset (tools[j], 0, sizeof tools[j]);
+                memcpy (tools[j], keys, n);
+                held[j] = f;
+            }
         }
         keys += n;
         if (*keys >= '0' && *keys <= '9') {
@@ -572,6 +582,10 @@ static void __fastcall__ answer (struct req* r)
         status ();
         break;
     case RS_EQUIP:
+        if (r->actor) {                         /* (An actor's things: not this ruleset's, its creatures' blows
+                                                **   its own) */
+            break;
+        }
         if (r->a == 2) {
             equip_all (r->text);
         } else if (r->a) {

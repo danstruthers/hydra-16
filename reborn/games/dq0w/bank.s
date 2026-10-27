@@ -24,7 +24,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
 
             .bss
-_ovbank:    .res        22          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+_ovbank:    .res        23          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
                                     ;   world's own banks (its paging's tables: ipage.c's; the ways across a room;
                                     ;   the traces' store, two: wtrace.c's)
 ova:        .res        1           ; (.A and .X kept through a stub)
@@ -120,7 +120,7 @@ go:
             SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
             SWPART      37, 4               ; The rest of the UI's intents carried out (dq0w.c's intent_more)
-            SWPART      38, 6               ; A change record kept and made (store.c's store_put, change)
+            SWPART      38, 19              ; A change record kept and made (store.c's store_put, change)
             SWPART      39, 12              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 12              ; Its weight, its lock, traps; a thing described (things.c)
             SWPART      41, 8               ; An opening told with what it shows beyond (dq0w.c's revealed)
@@ -144,10 +144,12 @@ go:
             SWPART      57, 18              ; The outfits drawn: the character's, a denizen's (outfit.c, 2026-10-27)
             SWPART      58, 18              ; The outfits made (outmake.c)
             SWPART      59, 18              ; An outfit's section drawn (outdraw.c)
+            SWPART      60, 19              ; The denizens' things; a weapon let fall, taken up (wlimbs.c, 2026-10-27)
 
             SWFN        work, 48
             SWFN        worked, 48
             SWFN        outfit, 57
+            SWFN        den_kit, 57
             SWFN        outmake, 58
             SWFN        draw_at, 59
             SWFN        hold_in, 48
@@ -159,11 +161,15 @@ go:
             SWFN        drop_held, 49
             SWFN        harm_fx, 49
             SWFN        limb_news, 49
-            SWFN        den_reach, 51
-            SWFN        den_took, 51
+            SWFN        den_reach, 60
+            SWFN        den_took, 60
             SWFN        den_word, 51
-            SWFN        den_drop, 51
+            SWFN        den_drop, 60
             SWFN        den_legs, 51
+            SWFN        den_other, 60
+            SWFN        den_enter, 60
+            SWFN        den_draw, 60
+            SWFN        den_strip, 60
             SWFN        rise_pc, 50
             SWFN        limbs_go, 50
             SWFN        limbs_pace, 50

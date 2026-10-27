@@ -38,7 +38,8 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "lockpicks", K_PLURAL, 1, 1, 0, 0, 0, 0, 1, "picks", MT_IRON, AP_METAL, 40 },
     { "chisel", K_HAND, 2, 1, 0, 0, 0, 0, 1, "chisel", MT_STEEL, AP_METAL, 12 },
     { "rope", 0, 40, 8, 0, 0, 0, 0, 4, "rope", MT_CLOTH, AP_CLOTH, 12 },
-    { "bones", K_PLURAL, 8, 4, 0, 0, 0, 0, 4, "", MT_BONE, AP_BONE, 0 },
+    { "bones", K_PLURAL, 8, 4, 20, 200, 0, 0, 4, "", MT_BONE, AP_BONE, 0, KF_ON },   /* (What a skeleton had on it
+                                                **   on them: the outfits' gear) */
     { "pennies", K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "", MT_BRONZE, AP_METAL, 1, 0, KF_SMALL | KF_COUNT },
     { "iron key", 0, 1, 0, 0, 0, 0, 0, 1, "key", MT_IRON, AP_METAL, 2 },
     { "candle", K_LIGHT | K_HAND, 1, 1, 0, 0, 0, 2, 1, "", MT_TALLOW, AP_FOOD, 1 },   /* (Tallow, a fine one beeswax) */
@@ -62,7 +63,8 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "pane of glass", 0, 4, 6, 0, 0, 0, 0, 3, "", MT_GLASS, AP_GLASS, 30 },     /*   a window's glass, */
     { "iron bars", K_PLURAL, 60, 20, 0, 0, 0, 0, 5, "", MT_IRON, AP_METAL, 10 },  /*   its bars; */
     { "glass shards", K_PLURAL, 2, 1, 0, 0, 0, 0, 2, "", MT_GLASS, AP_GLASS, 0 },  /*   a pane broken) */
-    { "body", 0, 240, 60, 0, 0, 0, 0, 6, "", MT_OTHER, AP_BONE, 0 },  /* (A denizen dead) */
+    { "body", 0, 240, 60, 60, 400, 0, 0, 6, "", MT_OTHER, AP_BONE, 0, KF_ON },  /* (A denizen dead: what it wore
+                                                **   and carried on it, the outfits' gear) */
     { "leather cap", K_WEAR, 3, 1, 0, 0, 0, 0, 2, "lcap", MT_LEATHER, AP_ARMOUR, 16 },    /* (Armour: its key the */
     { "leather tunic", K_WEAR, 35, 8, 0, 0, 0, 0, 4, "ltunic", MT_LEATHER, AP_ARMOUR, 176 },  /*   referee's piece) */
     { "gambeson", K_WEAR, 79, 16, 0, 0, 0, 0, 4, "gambson", MT_CLOTH, AP_ARMOUR, 264 },

@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     21                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     22                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -50,7 +50,8 @@
                                                 **   O_REARM; 17: the bearings, pc_skew, pc_lost; 18: the map making,
                                                 **   pc_chart, pc_map; 19: the bearings' E_BEARING; 20: the kinds in
                                                 **   a bank of their own, KIND_BANK, NKINDS 128; 21: the outfits, gear,
-                                                **   GE_OLD, rs.h's RS_OUTFIT) */
+                                                **   GE_OLD, rs.h's RS_OUTFIT; 22: the denizens' gear, I_KIT, the
+                                                **   actors' did, hx, hy, hsn, WB_DRAWS) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -346,6 +347,11 @@ enum {
     I_SWEPT,                                    /* (The denizens', who 0) A chunk kept swept (a lair of a kind that
                                                 **   sweeps its floors, K_SWEEPS, placed): w1 w2 a square in it, x[2]
                                                 **   its stratum */
+    I_KIT,                                      /* (The denizens', who 0, after I_SWEPT: part 14's test) A denizen's things made as its lair's placed
+                                                **   (the outfits' gear, 2026-10-27: games/dq0/outfits.txt's role
+                                                **   by its kind, the world's draw): x[1] its kind, t its number (the
+                                                **   denizens' id), w1 w2 its lair's home square, x[2] its stratum;
+                                                **   its things filed there (items.h's IW_DEN) till it dies */
     I_ROB,                                      /* (The denizens', a robber's: kinds.txt's ways r) The character,
                                                 **   helpless beside it, robbed: what it holds (but a light lit) and
                                                 **   its pennies taken off to w1 w2 (its lair's home square, on its
@@ -571,11 +577,12 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   the user's, 2026-10-22); */
        WB_SPENT,                                /* (The world's: a thing used up, its kind times 256, HOUSE.md's things
                                                 **   used up: "Your charcoal is worn to nothing.", 2026-10-26); */
-       WB_DROP, WB_PICKS,                       /* (The hands and limbs', slice 4.1b's, every actor's: b whose, 0 the
+       WB_DROP, WB_PICKS, WB_DRAWS,             /* (The hands and limbs', slice 4.1b's, every actor's: b whose, 0 the
                                                 **   character, else the actor plus 1: a thing let go of, fumbled, its
                                                 **   kind times 256 (the catalogue's), told after the blow's words (in
                                                 **   the denizens' ring, a fight's) or the harm's; a weapon a denizen
-                                                **   let go of taken up again, its kind times 256; */
+                                                **   let go of taken up again, its kind times 256; a denizen's weapon
+                                                **   drawn (from its belt, its carrier: the outfits', 2026-10-27); */
        WB_RISEN, WB_NOT_UP, WB_FALLEN,          /*   got to its feet (the book's Rise), struggling and still down, fallen
                                                 **   prone (a stumble failed, a leg giving way); */
        WB_LIMP, WB_HOP, WB_CRUTCH, WB_CRAWL, WB_STUCK, WB_NO_RUN };   /* the character's walk: limping, its legs
@@ -825,6 +832,12 @@ struct actor {
     unsigned char   remains;                    /* What it leaves dead (items.h's KI_BODY, KI_BONES) */
     unsigned char   timid;                      /* 1: a shy kind (the referee's: shaken, it flees); | RS_KILLER, a killer
                                                 **   (the referee's: it finishes one senseless; kinds.txt's ways k) */
+    unsigned        did;                        /* Its denizen's number (the denizens' record's id: its things',
+                                                **   items.h's IW_DEN, the outfits' denizens' gear, 2026-10-27; 0
+                                                **   none), */
+    unsigned        hx, hy;                     /*   its lair's home square, where its things are filed (the store's
+                                                **   chunk there kept while it's an actor: ipage.c's), */
+    unsigned char   hsn;                        /*   on this stratum */
 };
 enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIED };   /* An attitude, the worst
                                                 **   first (DENIZENS.md): attacks on sight; threatens, keeps off;
@@ -1228,6 +1241,10 @@ struct wsave {
 **   own hub.actor[*].kind denizens
 **   own hub.actor[*].remains denizens
 **   own hub.actor[*].timid denizens
+**   own hub.actor[*].did denizens                              (Its things', the outfits' gear: 2026-10-27)
+**   own hub.actor[*].hx denizens
+**   own hub.actor[*].hy denizens
+**   own hub.actor[*].hsn denizens
 **   own hub.dsave denizens +ui
 **   own hub.den_seq world
 **   own hub.pc_tx world

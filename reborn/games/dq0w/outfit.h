@@ -46,6 +46,10 @@ struct ost {
                                                 **   0 a tool's; 0xFF any) */
     unsigned char   sflags, bent, keep, pn, pd; /* The last section read's: its flags, its bent's entry, its money kept,
                                                 **   its purse (pn dice of pd) */
+    unsigned        did;                        /* A denizen's (I_KIT's, last: not cleared as a draw begins): its number,
+                                                **   the denizens' id, */
+    unsigned        hx, hy;                     /*   its lair's home square, */
+    unsigned char   hsn;                        /*   its stratum */
 };
 extern struct ost ost;
 enum { MD_ALL, MD_NEED, MD_CHANCE, MD_HEAD };   /* (A section's lines drawn: all, the needs, the rest; none, its head
@@ -56,6 +60,9 @@ unsigned char outfit (void);                    /* (Part 57) The character's out
 unsigned char __fastcall__ draw_at (unsigned off, unsigned char mode);   /* (Part 59) The outfits' section at off
                                                 **   read, its head kept (ost), drawn as mode says if its flags are
                                                 **   ost.want's: 1 drawn, 0 not (none there, not wanted) */
-void __fastcall__ outmake (unsigned char who);  /* (Part 58) The list's things made: the character's (who 0) */
+void __fastcall__ outmake (unsigned char who);  /* (Part 58) The list's things made: the character's (who 0), or a
+                                                **   denizen's (1: ost's did, its things filed at hx, hy, IW_DEN) */
+void __fastcall__ den_kit (unsigned char kind); /* (Part 57) A denizen's things drawn by its kind and made (ost's did,
+                                                **   hx, hy, hsn: I_KIT's) */
 
 #endif
