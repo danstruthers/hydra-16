@@ -509,20 +509,6 @@ void on_way (void);                             /* (Part 37's) */
 void draw_test (void);                          /* (Part 7's: a stretch of the map drawn, slice 4.2's) */
 static void stopped (void);
 
-/* C's trap on its square x, y that's set, and set off as it's walked on; or NULL */
-static struct trap* __fastcall__ trap_at (unsigned char x, unsigned char y)
-{
-    struct trap* t = C->trap;
-    unsigned char n;
-
-    for (n = C->ntraps; n; --n, ++t) {
-        if (t->x == x && t->y == y && TS_SET (t->state) && t->trigger != TT_DOOR) {
-            return t;
-        }
-    }
-    return 0;
-}
-
 /* ---- The way across a room, round its ledges: the squares of its chunk (in the window) from the room's floor to
 ** one of its doors or openings, by steps that can be walked; the time it takes.  The ways from a square of the room
 ** to all its squares (its floor and its walls, as big as the chunk lets it be: no fixed room's size) worked out at
@@ -815,6 +801,20 @@ static void __fastcall__ see (unsigned char first)
 ** traces', slice 4.1; part 9's walks calling it, once a move) */
 #pragma code-name (push, "SW33CODE")
 #pragma rodata-name (push, "SW33RODATA")
+
+/* C's trap on its square x, y that's set, and set off as it's walked on; or NULL (part 33's own, and part 21's: the main RAM's room, slice 4.2's) */
+static struct trap* __fastcall__ trap_at (unsigned char x, unsigned char y)
+{
+    struct trap* t = C->trap;
+    unsigned char n;
+
+    for (n = C->ntraps; n; --n, ++t) {
+        if (t->x == x && t->y == y && TS_SET (t->state) && t->trigger != TT_DOOR) {
+            return t;
+        }
+    }
+    return 0;
+}
 
 void __fastcall__ s_across (unsigned char h, unsigned char r)
 {
@@ -1743,8 +1743,8 @@ static void arrive (void)
 ** quarter, and it knows (told).  What disorients it (bearings_off): come round below from a fall as the game begins
 ** (the theme's start, TM_FELL), knocked senseless (main's: whatever did it), a fall of ten feet or more (harm_fx's, part
 ** 49's): the test the harder, a failure leaving its north anywhere (a fall's, the drift).  One whose species knows
-** north (the referee's summary's northsense) is never tested, never astray.  Its own part, but for its test (the
-** main RAM's) */
+** north (the referee's summary's northsense) is never tested, never astray.  Its own part (its
+** image in overlay 16's bank, travel's, slice 4.2's) */
 #define BEAR_OUT        10                      /* (Come round from a fall, or senseless: the steps the harder) */
 #define BEAR_FAMILIAR   4                       /* (A way walked often, each of its passings' points: familiar's) */
 #define BEAR_KNOWN      127                     /* (So often, no test) */
@@ -1753,13 +1753,16 @@ static unsigned char bast;                      /* (btest's: astray) */
 #define W_SLOT          HUB->slot[SLOT_WORLD]   /* (The world's referee slot: a harm's request and its reply) */
 #define KNOWS_NORTH     (HUB->pcsum.northsense | nobear)    /* (Its species', or dq0 -N's, the tests') */
 
+#pragma code-name (push, "SW52CODE")
+#pragma rodata-name (push, "SW52RODATA")
+
 /* The test, at the steps: a failure's drift an eighth (a critical failure's a quarter), its way the referee's result
 ** (the bearings' own d8 less one: odd the other way); or astray (bast), the north it believes in anywhere, by the d8
-** (the true one too, by chance).  BRG_LOST if it knows now it's lost them (a critical failure), else 0 (the main
-** RAM's: part 52's bank full) */
+** (the true one too, by chance).  BRG_LOST if it knows now it's lost them (a critical failure), else 0 (part 52's
+** again, its image in overlay 16's bank: travel's, slice 4.2's) */
 static unsigned char __fastcall__ btest (signed char steps)
 {
-    static signed char g, k;
+    signed char g, k;
 
     wsteps = steps;
     g = test_w (P_BEARING, 0);
@@ -1778,9 +1781,6 @@ static unsigned char __fastcall__ btest (signed char steps)
     HUB->pc_lost = 1;
     return BRG_LOST;
 }
-
-#pragma code-name (push, "SW52CODE")
-#pragma rodata-name (push, "SW52RODATA")
 
 /* The ways walked often (the user's, 2026-10-23: "familiar ways should be easier"): the steps a test about square x, y
 ** of stratum sn is the easier for the times the character's passed through that part of the dungeon, by the map's
@@ -4388,12 +4388,23 @@ static int __fastcall__ ovl_load (const char* dir)
     return 0;
 }
 
+/* A number, an argument's (atoi's, without the C library's ctype: the main RAM's room, slice 4.2's) */
+static unsigned char __fastcall__ num (const char* s)
+{
+    unsigned char n = 0;
+
+    while (*s >= '0' && *s <= '9') {
+        n = n * 10 + *s++ - '0';
+    }
+    return n;
+}
+
 int main (int argc, char* argv[])
 {
     static struct msg m;
     unsigned char was_busy = 0, dseq = 0, took;
 
-    if (argc < 4 || ovl_load (argv[3]) || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
+    if (argc < 4 || ovl_load (argv[3]) || hub_attach (num (argv[1]), num (argv[2]))) {
         return 1;
     }
     memset (&HUB->pc_task, 0, sizeof HUB->pc_task);     /* (No long task yet) */
@@ -4491,6 +4502,20 @@ int main (int argc, char* argv[])
 #pragma code-name (push, "SW21CODE")
 #pragma rodata-name (push, "SW21RODATA")
 
+/* C's trap on its square x, y that's set, and set off as it's walked on; or NULL (part 21's own: part 33's trap_at) */
+static struct trap* __fastcall__ trap_at21 (unsigned char x, unsigned char y)
+{
+    struct trap* t = C->trap;
+    unsigned char n;
+
+    for (n = C->ntraps; n; --n, ++t) {
+        if (t->x == x && t->y == y && TS_SET (t->state) && t->trigger != TT_DOOR) {
+            return t;
+        }
+    }
+    return 0;
+}
+
 /* The step from chunk square x, y the way d, if it can be walked (into the room's walls and floor: wox ...): its
 ** time, or 0xFFFF (it can't: rock, a wall, a ledge too high, a denizen on it, a trap known of); wtrap 1 if there's
 ** one that's set on the square stepped onto (the chunk in the window) */
@@ -4505,7 +4530,7 @@ static unsigned __fastcall__ step_by (unsigned char x, unsigned char y, unsigned
         return 0xFFFF;
     }
     u = C->tile[ny][nx];
-    q = trap_at (nx, ny);
+    q = trap_at21 (nx, ny);
     if (!T_PASS (u) || den_on (rx0 + nx, ry0 + ny) || (q && !(q->state & TS_HIDDEN)) || (wr == 0xFF && TILE (u) == T_DOOR)) {
         return 0xFFFF;                          /* (Nor onto a denizen, nor a trap it knows of: it goes round) */
     }

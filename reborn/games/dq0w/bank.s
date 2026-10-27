@@ -24,7 +24,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
 
             .bss
-_ovbank:    .res        19          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+_ovbank:    .res        20          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
                                     ;   world's own banks (its paging's tables: ipage.c's; the ways across a room;
                                     ;   the traces' store, two: wtrace.c's)
 ova:        .res        1           ; (.A and .X kept through a stub)
@@ -135,7 +135,7 @@ go:
             SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
             SWPART      50, 13              ; The legs: getting up, a move's start prone, how fast (dq0w.c's)
             SWPART      51, 8               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c)
-            SWPART      52, 3               ; The character's bearings underground (dq0w.c's: slice 4.2's)
+            SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
             SWPART      53, 2               ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
 
             SWFN        work, 48
