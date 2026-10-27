@@ -436,7 +436,7 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
     h = hand_free (n);
     if ((!hand_first || !h) && pack && !fits (n, pack)) {
         place (n, IW_ITEM, pack, 0);
-        reach_to (pack);                        /* (Put away: its reach, HOUSE.md's: part 54's) */
+        reach_to (pack);                        /* (Put away: its reach, HOUSE.md's: part 56's) */
         return 1;
     }
     if (h) {
@@ -449,7 +449,7 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 
 /* ---- The reach (HOUSE.md's: the user's, 2026-10-23, "Handy would be readily available, so in a backpack that is being
 ** worn is not as readily available as one in a belt pouch"): how readily a thing comes to hand, by where it is, for
-** every taking out, putting away, look inside, search and tool's use, every actor's (part 54's, its own: part 10's
+** every taking out, putting away, look inside, search and tool's use, every actor's (part 56's, its own: part 10's
 ** room, an inventory's swap the smaller).  In hand, at once; on the body
 ** (worn, hung from a belt, in what's open to the hand: level_of's) or lying within reach, a quick draw, no time more
 ** than the handling's own; in a container (held, set down, in another), R_IN a level; in a pack worn on the back,
@@ -462,8 +462,8 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 unsigned char __fastcall__ zone_step (unsigned ox, unsigned oy, unsigned x, unsigned y);  /* (dq0w.c's part 24) */
 
 #pragma static-locals (push, on)
-#pragma code-name (push, "SW54CODE")
-#pragma rodata-name (push, "SW54RODATA")
+#pragma code-name (push, "SW56CODE")
+#pragma rodata-name (push, "SW56RODATA")
 
 /* What reaching into container c is (rec its record, copied: what holds it, lw and lx): 0 open to the hand, a quick
 ** draw (not a container: a belt, a surface; one that hangs from a belt, a pouch, a quiver, a sheath; one worn, but a

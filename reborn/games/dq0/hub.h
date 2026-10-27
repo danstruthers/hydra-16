@@ -344,8 +344,19 @@ enum {
     I_RISE,                                     /* Getting up, prone ("get up", "stand", "rise": the book's Rise, a
                                                 **   round, the referee's P_RISE; E_BEAT WB_RISEN or WB_NOT_UP: slice
                                                 **   4.1b's) */
+    I_TRAVEL,                                   /* A journey to a place the character knows ("go back to the
+                                                **   Mausoleum": HOUSE.md's travel, slice 4.2's): w1 w2 its square
+                                                **   (a room named, its floor's northwest square: the names' struct
+                                                **   tname), x[2] its stratum, x[0] x[1] its floor's size; b the
+                                                **   name's entry (NAMES_AT's), TRV_IN the way in (the world's to
+                                                **   find), TRV_KIND | a room's kind (the last of that kind it was in,
+                                                **   the world's to find); a leg at a time, each a walk (LT_TRAVEL);
+                                                **   E_TASK TE_BEGUN, TE_THERE ..., b the same */
     NINTENTS
 };
+#define TRV_IN          0x3F                    /* (I_TRAVEL's b, E_TASK's: the way in, where the character began; */
+#define TRV_KIND        0x80                    /*   | a room's kind (world.h's U_*); */
+#define TRV_ON          0x40                    /*   E_TASK's | under way, not as it begins) */
 /* The denizens' intents (their ring, the hub's di: the minds', for their actors' bodies, the world's to carry out
 ** by the character's rules): who the actor's entry plus 1; x[0] what it's doing now (DO_*: the world keeps it, and
 ** tells as one notices the character or loses it), x[1] the heading it faces (0xFF: either, as it is).  I_STEP: a
@@ -487,7 +498,12 @@ enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN }
                                                 **   a hole dug part way before, the world's DUG record's) */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
        TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE, TE_LOW, TE_OUT, TE_ROBBED,
-       TE_BEGUN, TE_ASK_SHORT, TE_LEARNT };
+       TE_BEGUN, TE_ASK_SHORT, TE_LEARNT, TE_THERE, TE_FORGOT, TE_UNSURE, TE_ASTRAY, TE_ELSEWHERE };
+                                                /* (The last five a journey's, I_TRAVEL's, slice 4.2's, b its place,
+                                                **   | TRV_ON under way: there, or there already; the place or the way
+                                                **   there not remembered, or no longer; its bearings lost, known, so
+                                                **   it can't tell which way it lies; lost its way, forty legs gone,
+                                                **   or no way on that it knows of; on another stratum) */
                                                 /* E_TASK's: stopped as
                                                 **   the player asked; stopped hard, by a wound or a blow (HOUSE.md:
                                                 **   all wounds), by a hostile in sight within 30 feet; asking, soft
@@ -696,6 +712,8 @@ enum { DF_NONE, DF_PLACE, DF_LAST, DF_NEAR, DF_FRONT, DF_TARGET, DF_HAND };   /*
 enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK, LT_BATTER, LT_FIGHT,  /* A long
                                                 **   task's kind (a verb's: commands.verbs' task); LT_FIGHT fighting
                                                 **   on, the world's (HOUSE.md's); */
+       LT_TRAVEL,                               /*   a journey to a place named, a leg at a time (I_TRAVEL's: each leg
+                                                **   a walk, slice 4.2's); */
        LT_STUDY, LT_DISARM, LT_PICK, LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_PRISE, LT_TRACK, LT_SNIFF, LT_FILL,
        LT_HIDE };
                                                 /*   the timed work (HOUSE.md's long tasks, the user's, 2026-10-22:

@@ -24,7 +24,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
 
             .bss
-_ovbank:    .res        20          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+_ovbank:    .res        21          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
                                     ;   world's own banks (its paging's tables: ipage.c's; the ways across a room;
                                     ;   the traces' store, two: wtrace.c's)
 ova:        .res        1           ; (.A and .X kept through a stub)
@@ -97,13 +97,13 @@ go:
             SWPART      13, 8               ; The item store's rarer work: begun, kept, the kit, a chunk's things
             SWPART      14, 6               ; The denizens' bodies: their intents carried out (wbody.c)
             SWPART      15, 14              ; The blows, the bleeding (wfight.c)
-            SWPART      16, 16              ; The game's own rules: the puzzle judged, a thing walked to (wgame.c)
+            SWPART      16, 17              ; The game's own rules: the puzzle judged, a thing walked to (wgame.c)
             SWPART      17, 6               ; The things' files: their chunks paged (ipage.c)
             SWPART      18, 7               ; The change records' files, the save's stamps (wfile.c)
             SWPART      19, 8               ; The game's files begun, the item store kept (wfile.c); a hole dug kept
             SWPART      20, 7               ; The things' files: a chunk's put out, read in (ipage.c)
             SWPART      21, 5               ; The ways across a room worked out (dq0w.c's ways)
-            SWPART      22, 16              ; The strata's records out of the hub, back (sfile.c)
+            SWPART      22, 17              ; The strata's records out of the hub, back (sfile.c)
             SWPART      23, 11              ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 12              ; Engagement, a blow's close-in, fighting on (dq0w.c's)
             SWPART      25, 6               ; The engage initiative test, a grope's (dq0w.c's)
@@ -127,7 +127,7 @@ go:
             SWPART      42, 2               ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 10              ; A walk in the dark set out on: its way felt, a thing stumbled over
             SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
-            SWPART      45, 16              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
+            SWPART      45, 17              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
             SWPART      46, 7               ; A search's thing, for or on; what a search turns up (things.c)
             SWPART      47, 13              ; What's on a thing or in it, searched (things.c)
             SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
@@ -137,7 +137,9 @@ go:
             SWPART      51, 8               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c)
             SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
             SWPART      53, 16              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
-            SWPART      54, 16              ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
+            SWPART      54, 16              ; Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
+            SWPART      55, 16              ; Travel to a place it knows (dq0w.c's: slice 4.2's)
+            SWPART      56, 17              ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -161,6 +163,9 @@ go:
             SWFN        bearings, 52
             SWFN        bearings_off, 52
             SWFN        intent_few, 53
+            SWFN        way_out, 54
+            SWFN        travel_go, 55
+            SWFN        travel_on, 55
             SWFN        start_dig, 1
             SWFN        dig_on, 1
             SWFN        climb, 2
@@ -213,10 +218,10 @@ go:
             SWFN        bulk_of, 10
             SWFN        carry, 10
             SWFN        about, 10
-            SWFN        reach_from, 54      ; (The reach, 2026-10-26: HOUSE.md's)
-            SWFN        reach_to, 54
-            SWFN        reach_done, 54
-            SWFN        handy, 54
+            SWFN        reach_from, 56      ; (The reach, 2026-10-26: HOUSE.md's)
+            SWFN        reach_to, 56
+            SWFN        reach_done, 56
+            SWFN        handy, 56
             SWFN        tool_reach, 4
             SWFN        flame, 10
             SWFN        drop, 35

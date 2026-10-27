@@ -228,7 +228,10 @@ struct chunk {
         signed char dq;                         /*   how true they're drawn (the referee's grade, the hub's pc_drawn
                                                 **   as it was first drawn on that map: rs.h's G_*; 0 untested), */
         unsigned char dsk;                      /*   and the north believed in then (the hub's pc_skew: drawn by it,
-                                                **   so drawn turned and put off, a wrong map unknowing) */
+                                                **   so drawn turned and put off, a wrong map unknowing); */
+        unsigned char sk;                       /*   the north it believed in as it last saw it (the hub's pc_skew:
+                                                **   travel's, slice 4.2's, its way there off by how far its belief's
+                                                **   gone since) */
     }               kept;
 };
 /* (A chunk's kept: the clock in 25.6 seconds, 16 bits, its tenths' middle bytes, no long division (the hub's header in
@@ -244,6 +247,11 @@ struct chunk {
 ** 1 at 4, 2 at 12), the senses' to count as it looks about (slice 4.2's: the bearings kept the easier where it's
 ** familiar, the lead's to wire) */
 #define KEPT_KNOWN(sn, x, y)    (at ((sn), (x), (y)) ? C->kept.n : 0)
+/* A place forgotten (HOUSE.md's travel, slice 4.2's): its chunk's memory under a tenth as it is now (what's left of
+** kept.q, a tenth lost each KEPT_FADE: the map's rule, dq0m/map.c's memory, the senses' kept, the world's kept_left).
+** Its seen squares known no longer: a walk in the dark doesn't go by them, travel doesn't find the way there; and seen
+** again it's remembered afresh (its old marks wiped, its rooms no longer visited: the senses') */
+#define KEPT_GONE       10
 #define CHUNK_SIZE      0x0AA0                  /* Three to a bank */
 typedef char chunk_fits[sizeof (struct chunk) <= CHUNK_SIZE ? 1 : -1];
 

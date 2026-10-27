@@ -2031,6 +2031,9 @@ const DQ0_REPEATS = [
     why: 'knocked senseless, come round in shock a round later, struck senseless again, all in one wait\'s answer (the UI waiting it out): two black-outs, each told (dq0strike\'s rats, fought with a bar, three)' },
   { what: /^(?:You struggle|The .+ struggles), but can't get up\.$/,
     why: 'a fall\'s Rise tried each round and failed (the book\'s test for one seriously or grievously wounded, slice 4.1b\'s), each try told' },
+  { what: /^(?:The passage (?:forks here|ends here; it goes back behind you|comes to a door; it goes back behind you)|You are in a passage|It goes .+)\.$/,
+    tests: /^dq0travel$/,
+    why: 'a journey\'s legs (slice 4.2\'s travel), each place it comes to told whole as it gets there (the UI\'s told begun again each leg, a look of its own): one fork or stretch of passage much like another in words' },
 ];
 function dq0Answers(out) {
   const s = out.replace(/\r/g, '').replace(/\x1b\[7m[\s\S]*?\x1b\[0m/g, '')
@@ -4323,7 +4326,7 @@ module.exports = {
     },
     {
       name: 'dq0batter', what: 'Dingus Quest Zero\'s doors battered (the user\'s, 2026-10-15 and 16: "model it after unarmed combat": a blow at a thing an attack it ignores, by Unarmed, its impact less the door\'s resistance off its body; the striker hurt as a blow goes wrong, less with skill and armour; boots for a kick, a helm for a head butt; the tool to hand that hits hardest; the user\'s, 2026-10-22: a part\'s blow the house\'s Unarmed test, a marginal failure harming neither, a critical failure the part, and a bare part\'s first hurt at a door stopped short, asked), by the world\'s events (the referee\'s, HarnMaster\'s, at these seeds; each game\'s first blow the same roll): at seed 14\'s sound iron-bound door, bare fists making no mark, the first blow that would hurt them stopped short (asked: "Keep at it?", dq0 -a\'s yes), unhurt; punched again, not asked again at that door, and by the third the hand hurt seriously, the blows stopped as the character\'s too hurt; a kick in knee boots and a head butt in an iron helm not stopped short (not bare), hurt by their blows gone wrong; at seed 19\'s rotten door one of Unarmed 95 (hmchar\'s file) breaking it down unhurt; at seed 15 a pick battering a door till it gives way (its torch put down first: its hands empty, the pick offered and taken, dq0 -a\'s yes, the user\'s, 2026-10-22), broken down for good: it won\'t shut (dq0hands\' and dq0kick\'s, and dq0doors\' blows, these together; the injuries\' words the referee\'s)',
-      init: 't_rc', cycles: 1600e6,
+      init: 't_rc', cycles: 1500e6,   // (1,393M at slice 4.2's travel, more to start a game since: the world's 16th overlay read in)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/u.hm', 'echo ml una 95 >> /ram/u.hm',
         'dq0 -p t -s 14 -c /ram/c.hm', 'punch the door', 'punch the door', 'punch the door', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'', 'wear the knee boots', 'kick the door', 'quit',
         'dq0 -p t -s 14 -c /ram/c.hm -k \'iron helm\'', 'wear the iron helm', 'head butt the door', 'quit', 'dq0 -p t -s 19 -c /ram/u.hm', 'punch the door', 'quit',
@@ -5064,12 +5067,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0handy', what: 'Dingus Quest Zero\'s reach, how readily a thing comes to hand (the user\'s, 2026-10-23: "Handy would be readily available, so in a backpack that is being worn is not as readily available as one in a belt pouch.  In a sack, in a backpack is two-containers deep, so should require longer for each level of container.  A backpack on the ground or in hand (not worn) is more readily available ... Searching a worn backpack takes it off first, then if it was on, puts it back on, each taking time.  Just shrugging it off/dropping it before battle should not require time"; HOUSE.md\'s reach, handy tools and things used up), by the clock between one line and the next, the things\' replies (the reach owed in the reply\'s y, tenths) and the words: at seed 3 (dq0 -T, dq0 -k sack: the sack in its main hand) the rations from the worn pack into the sack held (the pack off and on again, 10 seconds, and each level 2: told, "You take off your backpack for it, and put it on again."), the sack stowed in the worn pack, the rations from the sack in it (two deep: 15 seconds), dropped at no time, the pennies from the belt\'s pouch (a quick draw, a second), the worn pack looked in (15 seconds) and searched (its minute: off and on within it), shrugged off ("shrug off the pack": no time), the tinderbox taken from it on the ground (a level: 4 seconds), the pack put on ("put on the pack", 5 seconds), its torch put down, the pack taken off and left off ("take off the pack": in both hands), looked in held (5 seconds), put on again; at seed 7 (the ghoul engaging it at once, armoured) a grope in a fight a round a step (the book\'s, Combat 7, a turn): its sword fumbled (a hand free), the dagger drawn from the belt a round, stowed in the worn pack three (off, in, on), the pack dropped, the rations taken from it on the ground a round',
+      name: 'dq0handy', what: 'Dingus Quest Zero\'s reach, how readily a thing comes to hand (the user\'s, 2026-10-23: "Handy would be readily available, so in a backpack that is being worn is not as readily available as one in a belt pouch.  In a sack, in a backpack is two-containers deep, so should require longer for each level of container.  A backpack on the ground or in hand (not worn) is more readily available ... Searching a worn backpack takes it off first, then if it was on, puts it back on, each taking time.  Just shrugging it off/dropping it before battle should not require time"; HOUSE.md\'s reach, handy tools and things used up), by the clock between one line and the next, the things\' replies (the reach owed in the reply\'s y, tenths) and the words: at seed 3 (dq0 -T, dq0 -k sack: the sack in its main hand) the rations from the worn pack into the sack held (the pack off and on again, 10 seconds, and each level 2: told, "You take off your backpack for it, and put it on again."), the sack stowed in the worn pack, the rations from the sack in it (two deep: 15 seconds), dropped at no time, the pennies from the belt\'s pouch (a quick draw, a second), the worn pack looked in (15 seconds) and searched (its minute: off and on within it), dropped ("drop the pack": no time), the tinderbox taken from it on the ground (a level: 4 seconds), the pack put on ("put on the pack", 5 seconds), its torch put down, the pack taken off and left off ("take off the pack": in both hands), looked in held (5 seconds), put on again; at seed 7 (the ghoul engaging it at once, armoured) a grope in a fight a round a step (the book\'s, Combat 7, a turn): its sword fumbled (a hand free), the dagger drawn from the belt a round, stowed in the worn pack three (off, in, on), the pack dropped, the rations taken from it on the ground a round',
       init: 't_rc', cycles: 3200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sack', 'put the rations in the sack', 'stow the sack', 'take the rations from the sack',
         'drop the rations', 'take the pennies from the pouch', 'drop the pennies', 'look in the backpack', 'search the backpack',
-        'shrug off the pack', 'take the tinderbox from the backpack', 'drop the tinderbox', 'put on the pack', 'drop the torch',
+        'drop the pack', 'take the tinderbox from the backpack', 'drop the tinderbox', 'put on the pack', 'drop the torch',
         'take off the pack', 'look in the pack', 'put on the pack', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait']) +
         'hold the dagger\rstow the dagger\rdrop the backpack\rtake the rations from the backpack\r' + dq0Typed(['quit', 'echo $status']) },
@@ -5093,7 +5096,7 @@ module.exports = {
         want('take the pennies from the pouch', 'IO_TAKE', 10, undefined, 'the belt\'s pouch: a quick draw');
         want('look in the backpack', 'IO_INSIDE', 150, 120, 'the worn pack taken off to look in, and put on again');
         want('search the backpack', 'IO_SEEK', 600, undefined, 'searched: off and on within its minute');
-        want('shrug off the pack', 'IO_DROP', 1, undefined, 'a pack shrugged off: no time');
+        want('drop the pack', 'IO_DROP', 1, undefined, 'a pack worn let fall: no time');
         want('take the tinderbox from the backpack', 'IO_TAKE', 40, 20, 'from the pack on the ground: a level, no taking off');
         want('put on the pack', 'IO_DON', 50, undefined, 'worn');
         want('take off the pack', 'IO_DOFF', 50, undefined, 'taken off, left off');
@@ -5103,7 +5106,7 @@ module.exports = {
         const on2 = T.after(T.of('look in the pack', g.k), 'put on the pack'), pk2 = on2.after && dq0Thing(on2.after, 'backpack');
         if (!pk2 || !(pk2.flags & DQ0_I.WORN)) f.push('the pack not put on again: ' + JSON.stringify(pk2));
         inTurn(s, ['> put the rations in the sack', 'You put the rations in the sack. You take off your backpack for it, and put it on again.',
-          '> look in the backpack', 'You take off your backpack for it, and put it on again.', '> shrug off the pack', 'Put down.',
+          '> look in the backpack', 'You take off your backpack for it, and put it on again.', '> drop the pack', 'Put down.',
           '> put on the pack', 'You put on the backpack.', '> take off the pack', 'You take off the backpack.'], f, 'the words: ');
         // A grope in a fight (the referee's round, 100 tenths: HarnMaster's), its reach a round a step
         const g2 = T.of('dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T');
@@ -5292,6 +5295,99 @@ module.exports = {
         if (tests(v2).length !== 1 || tests(v2)[0].steps !== 6) f.push('the passage east, its end come to 4 times: not tested at 6 steps (' + JSON.stringify(tests(v2)) + ')');
         if (tests(v3).length) f.push('the passage east, its end come to 12 times: tested (' + JSON.stringify(tests(v3)) + ')');
         this.notes = [e1, e2, e3, e4, h, ...(out1 ? [out1] : []), w, j, v1, v2, v3].map(t => t.line + ': ' + JSON.stringify(tests(t).map(q => [q.grade, q.result])) + ' ' + (t.after && [t.after.pc.skew, t.after.pc.lost]));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0travel', what: 'Dingus Quest Zero\'s travel to a place it knows (slice 4.2, the user\'s, 2026-10-16: "name this room "The Mausoleum" and then you could say "I want to go back to the mausoleum" and you would be on your way, and the game would move you at your current rate of speed back toward that named place, as long as your direction sense/orientation checks held up.  Orientation checks would be aided if good maps are used"; HOUSE.md\'s travel), by the world\'s events (E_TASK\'s LT_TRAVEL, the legs\' E_ARRIVE), where the character ends, the chunks\' memory (the cache\'s, each chunk\'s kept) and the words: at seed 3\'s caves (dq0 -T, knowing north: -N) the cave by the stairs named the Grotto, three walks west out of its chunk, "go back to the grotto" there a leg at a time (TE_BEGUN, two legs or more, TE_THERE under way: in its room), again there already, "return to the grotto" the same; the same walks and two hours\' waits twice (its torch out between), its memory of the Grotto\'s chunk under a tenth: refused (TE_FORGOT, no walk), and again in the light of its spare torch (the chunk it\'s in seen, not the Grotto\'s); a map drawn as it went (paper, charcoal, a lantern lit), its memory gone after four hours\' waits but its map carried showing the Grotto, in light to read it: on its way by the map (begun, walked, not refused: there, or stopped by a giant rat in its way); a wrong belief taking it astray (its bearings tested, the hunter\'s Awareness: a long way walked, its north an eighth off since it last saw the Grotto, not knowing it) its first leg another way than the same walks\' knowing north (-N) take, the one stopped by a command typed as it goes (TE_STOPPED); at seed 4 the kitchen past the barred door named the Gallery, "go back to where I came in" stopped by a shut door it hasn\'t opened, the way nearest the bedchamber (E_NOWAY N_DOOR, no walk); "go back to the kitchen" (a kind of room, the theme\'s word) there already',
+      bearings: true, init: 't_rc', cycles: 7000e6,
+      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -N', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'go back to the grotto', 'go back to the grotto',
+        'return to the grotto', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -N -k torch', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'wait 2 hours', 'wait 2 hours',
+        'go back to the grotto', 'light the torch', 'go back to the grotto', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -N -k paper,charcoal,lantern', 'douse the torch', 'drop the torch', 'light the lantern', 'map as I go', 'd',
+        'call this room the Grotto', 'n', 'w', 'w', 'w', 'stop mapping', 'wait 3 hours', 'wait 2 hours', 'wait 1 hour', 'go back to the grotto', 'quit',
+        ...['', ' -N'].flatMap(n => ['dq0 -p t -s 3 -c /ram/c.hm -T' + n, 'd', 'call this room the Grotto', 'n', 'w', 'f', 'f', 'f', 'l', 'f', 'r', 'f', 'l', 'f',
+          'r', 'f', 'f', 'l', 'f', 'go back to the grotto', ...(n ? ['!' + 'Ā'.repeat(6) + 'turn around'] : []), 'quit']),
+        'dq0 -p t -s 4 -c /ram/c.hm -N', 'take the bar', 'open', 'n', 'e', 'n', 'call this room the Gallery', 'go back to where I came in',
+        'go back to the kitchen', 'quit', 'echo $status'].map(l => (l[0] === '!' ? l.slice(1) : 'ā' + l) + '\r').join('') },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const tr = (t, te) => dq0Ev(t, 'E_TASK', { task: 'LT_TRAVEL', te });
+        const legs = t => dq0Ev(t, 'E_ARRIVE').length;
+        // (The named room's chunk and room in a state, and the character in it; what it keeps of that chunk now, 0-100: the
+        // world's kept_left, the map's rule)
+        const named = (st, nm) => st && st.names.find(q => q.name.toLowerCase() === nm.toLowerCase());
+        const chunkOf = (st, sn, x, y) => { const sl = st.slots.find(q => q.n === sn); if (!sl) return null;
+          const cx = (x - sl.x0) >> 5, cy = (y - sl.y0) >> 5; return { c: st.chunks.find(q => q.sn === sn && q.cx === cx && q.cy === cy), ix: (x - sl.x0) & 31, iy: (y - sl.y0) & 31, cx, cy }; };
+        const inRoom = (st, nm) => { const r = named(st, nm); if (!r || st.pc.sn !== r.sn) return false;
+          const a = chunkOf(st, r.sn, r.x, r.y), b = chunkOf(st, st.pc.sn, st.pc.x, st.pc.y);
+          if (!a || !b || !a.c || a.cx !== b.cx || a.cy !== b.cy) return false;
+          return a.c.rooms.some(q => a.ix >= q.x && a.ix < q.x + q.w && a.iy >= q.y && a.iy < q.y + q.h && b.ix >= q.x && b.ix < q.x + q.w && b.iy >= q.y && b.iy < q.y + q.h); };
+        const left = (st, c) => { let age = ((Math.floor(st.pc.now / 256) & 0xFFFF) - c.m) & 0xFFFF, mf = st.sum.mapfade, u = (mf << 1) + (mf >> 2) + (mf >> 4) + 1, q = c.q;
+          if (c.n >= 4) u <<= 1; if (c.n >= 12) u <<= 1; while (age >= u && q) { age -= u; q = q > 10 ? q - 10 : 0; } return q; };
+        const kept = (st, nm) => { const r = named(st, nm), a = r && chunkOf(st, r.sn, r.x, r.y); return a && a.c; };
+        const at = (t, what) => { if (!t.at || !t.after) { f.push(what + ': no state'); return false; } return true; };
+        // The Grotto gone back to, knowing north
+        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -N'), b1 = T.after(g, 'go back to the grotto'), b2 = T.after(b1, 'go back to the grotto');
+        const b3 = T.after(b2, 'return to the grotto');
+        if (at(b1, 'the first journey')) {
+          if (!tr(b1, 'TE_BEGUN').length || legs(b1) < 2 || !tr(b1, 'TE_THERE').filter(e => e.b & 0x40).length) f.push('"go back to the grotto": not begun, two legs or more, there under way (' + dq0Evs(b1) + ')');
+          if (!inRoom(b1.after, 'the Grotto')) f.push('"go back to the grotto": not in the Grotto at its end: ' + JSON.stringify(b1.after.pc && [b1.after.pc.x, b1.after.pc.y]));
+          if (inRoom(b1.at, 'the Grotto')) f.push('the first journey begun in the Grotto');
+        }
+        for (const [t, l] of [[b2, 'again'], [b3, '"return to the grotto"']]) {
+          if (!tr(t, 'TE_THERE').filter(e => !(e.b & 0x40)).length || legs(t)) f.push(l + ': not there already, no walk (' + dq0Evs(t) + ')');
+        }
+        inTurn(s, ['> go back to the grotto', 'You head back toward the Grotto.', 'You\'re back in the Grotto.', '> go back to the grotto',
+          'You\'re in the Grotto already.', '> return to the grotto', 'You\'re in the Grotto already.'], f, 'the words: ');
+        // Forgotten: two hours' waits twice, out of the Grotto's chunk
+        const h = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -N -k torch'), h1 = T.after(h, 'go back to the grotto'), h2 = T.after(h1, 'go back to the grotto');
+        for (const [t, l] of [[h1, 'in the dark'], [h2, 'in its torch\'s light']]) {
+          if (!at(t, 'forgotten ' + l)) continue;
+          const c = kept(t.at, 'the Grotto');
+          if (!c || left(t.at, c) >= 10) f.push('forgotten ' + l + ': the Grotto\'s chunk kept still: ' + (c ? left(t.at, c) : 'no chunk'));
+          if (!tr(t, 'TE_FORGOT').length || legs(t) || t.after.pc.x !== t.at.pc.x || t.after.pc.y !== t.at.pc.y) f.push('forgotten ' + l + ': not refused, or walked (' + dq0Evs(t) + ')');
+        }
+        if (h2.at && !h2.at.pc.light) f.push('the spare torch not lit');
+        inTurn(s.slice(s.indexOf('-k torch')), ['> go back to the grotto', 'You don\'t remember the way to the Grotto.'], f, 'forgotten\'s words: ');
+        // A map carried after the memory's gone
+        const p = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -N -k paper,charcoal,lantern'), p1 = T.after(p, 'go back to the grotto');
+        if (at(p1, 'the map\'s journey')) {
+          const c = kept(p1.at, 'the Grotto');
+          if (!c || left(p1.at, c) >= 10) f.push('the map\'s: the Grotto still remembered: ' + (c ? left(p1.at, c) : 'no chunk'));
+          if (!c || !p1.at.pc.map || c.map !== p1.at.pc.map) f.push('the map\'s: the Grotto\'s chunk not drawn on the map carried: ' + JSON.stringify(c && [c.map, p1.at.pc.map]));
+          if (!p1.at.pc.light) f.push('the map\'s: no light to read it by');
+          if (!tr(p1, 'TE_BEGUN').length || !legs(p1) || tr(p1, 'TE_FORGOT').length ||
+            !((tr(p1, 'TE_THERE').length && inRoom(p1.after, 'the Grotto')) || dq0Ev(p1, 'E_NOWAY', { why: 'N_DEN' }).length))
+            f.push('the map\'s: not on its way there by the map (there, or a denizen in its way: ' + dq0Evs(p1) + ')');
+        }
+        // Astray, by a belief gone wrong since it saw the Grotto: its first leg another way than knowing north takes
+        const a = T.of('dq0 -p t -s 3 -c /ram/c.hm -T'), a1 = T.after(a, 'go back to the grotto');
+        const n = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -N', g.k + 1), n1 = T.after(n, 'go back to the grotto');
+        if (at(a1, 'astray') && at(n1, 'knowing north')) {
+          const c = kept(a1.at, 'the Grotto');
+          if (!c || a1.at.pc.lost || !((a1.at.pc.skew - c.sk) & 7)) f.push('astray: its belief not off since it saw the Grotto, or known lost: ' + JSON.stringify(c && [a1.at.pc.skew, c.sk, a1.at.pc.lost]));
+          if (a1.at.pc.x !== n1.at.pc.x || a1.at.pc.y !== n1.at.pc.y) f.push('astray: not set out from where the walks knowing north did');
+          const first = t => (dq0Ev(t, 'E_ARRIVE')[0] || {}).t;
+          if (!tr(a1, 'TE_BEGUN').length || !first(a1) || first(a1) === first(n1)) f.push('astray: its first leg the one knowing north takes (' + dq0Evs(a1) + ' | ' + dq0Evs(n1) + ')');
+        }
+        const nt = T.after(n1, 'turn around'), stops = [...tr(n1, 'TE_STOPPED'), ...tr(nt, 'TE_STOPPED')];
+        if (!stops.length || tr(n1, 'TE_THERE').length || tr(nt, 'TE_THERE').length) f.push('a command typed as it goes: the journey not stopped (' + dq0Evs(n1) + ' ' + dq0Evs(nt) + ')');
+        inTurn(s.slice(s.lastIndexOf('-T -N')), ['You head back toward the Grotto.', 'You stop travelling.'], f, 'the stop\'s words: ');
+        // A shut door it hasn't opened, the way nearest; a kind of room
+        const d = T.of('dq0 -p t -s 4 -c /ram/c.hm -N'), d1 = T.after(d, 'go back to where I came in'), d2 = T.after(d1, 'go back to the kitchen');
+        if (at(d1, 'the shut door')) {
+          if (!inRoom(d1.at, 'the Gallery')) f.push('the shut door: not set out from the Gallery');
+          if (!dq0Ev(d1, 'E_NOWAY', { why: 'N_DOOR' }).length || legs(d1) || tr(d1, 'TE_THERE').length) f.push('the shut door: not stopped by it, unwalked (' + dq0Evs(d1) + ')');
+        }
+        if (!tr(d2, 'TE_THERE').filter(e => e.b === (0x80 | 8)).length) f.push('"go back to the kitchen": not there already, the kitchen\'s kind (' + dq0Evs(d2) + ')');
+        inTurn(s.slice(s.indexOf('-s 4')), ['> go back to where I came in', 'You head back toward where you came in.', 'The door is shut: open it first.',
+          '> go back to the kitchen', 'You\'re in the kitchen already.'], f, 'the shut door\'s words: ');
+        this.notes = [b1, h1, h2, p1, a1, n1, d1].map(t => t.line + ': ' + dq0Evs(t).slice(0, 300));
         return f;
       },
       sdcard: true

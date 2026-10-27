@@ -118,7 +118,6 @@ equip the helm	VB_EQUIP_OBJECT	object=helm	near=helm	equip
 doff the helm	VB_UNEQUIP_OBJECT	object=helm	-	doff
 take off the helm	VB_UNEQUIP_OBJECT	object=helm	-	take off is one token
 put on the helm	VB_EQUIP_OBJECT	object=helm	near=helm	put on is one token (2026-10-26)
-shrug off the backpack	VB_DROP_OBJECT	object=backpack	near=backpack	shrug off: dropped (a pack let fall at no time, 2026-10-26)
 store the sword	VB_UNEQUIP_OBJECT	object=sword	-	store
 stow the sword	VB_UNEQUIP_OBJECT	object=sword	-	stow, a synonym of unequip
 put away the sword	VB_UNEQUIP_OBJECT	object=sword	-	put away, a synonym of unequip
@@ -583,6 +582,16 @@ go to the far left corner	VB_MOVE_TOWARD	object=corner	near=corner	a corner, by 
 walk forward to the other side	VB_MOVE_TOWARD	object=side;direction=F	near=side	straight ahead to the far wall
 go to the near side	VB_MOVE_TOWARD	object=side	near=side	near: the side behind
 go to the far end of the hall	VB_MOVE_TOWARD	object=end	near=end	the far end: the far side
+
+# --- travel to a place it knows (slice 4.2: the UI makes a move to a room named, or the way in, a journey) ---
+go back to the mausoleum	VB_MOVE_TOWARD	object=mausoleum;direction=B	names=mausoleum	a room named, gone back to
+go to the mausoleum	VB_MOVE_TOWARD	object=mausoleum	names=mausoleum	a room named, gone to
+return to the mausoleum	VB_MOVE_TOWARD	object=mausoleum	names=mausoleum	return: walk's alias
+head back to the mausoleum	VB_MOVE_TOWARD	object=mausoleum;direction=B	names=mausoleum	head: walk's alias
+walk back to the mausoleum	VB_MOVE_TOWARD	object=mausoleum;direction=B	names=mausoleum	walked back to
+travel to the entrance	VB_MOVE_TOWARD	object=entrance	names=entrance	travel: walk's alias; the way in
+make my way back to the mausoleum	VB_MOVE_TOWARD	object=mausoleum;direction=B	names=mausoleum	make my way: a move
+find my way back to the way out	VB_MOVE_TOWARD	object=way out;direction=B	-	the way out, gone back to
 
 # --- the parser's fixes (2026-10-22: a review of the commands) ---
 defend counter	VB_DEFEND	defence=counter	-	the help's stance: a counterstrike

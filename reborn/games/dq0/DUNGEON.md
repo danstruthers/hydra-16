@@ -1088,11 +1088,74 @@ it by), and "attack the rat with Linda" takes Linda in hand first.  The words sa
 sword, in your hand": the things mark a named thing, `I_NAMED`), a thing seen lying ("At your feet lies Linda, your
 sword."), and a room named, as the character's in it ("You are in the Mausoleum, a crypt ...").
 
-**For the way back** ("go back to the mausoleum": the travel still to come): the UI's `room_named (text)` (names.c)
-finds a room whose name's words are in a line (the case and its "the" aside), and gives its entry's number (0xFF:
-none) and the entry in `named_room`: `sn` its stratum, `x`, `y` a square in it (its floor's northwest corner, the
-dungeon's frame), `w`, `h` its floor.  Any other task can read the table where it is (the theme bank in the window:
+**For the way back** ("go back to the mausoleum": travel, below): the UI's `room_named (text)` (names.c) finds a room
+whose name's words are in a line (the case and its "the" aside), and gives its entry's number (0xFF: none) and the
+entry in `named_room`: `sn` its stratum, `x`, `y` a square in it (its floor's northwest corner, the dungeon's frame),
+`w`, `h` its floor.  Any other task can read the table where it is (the theme bank in the window:
 `NAMES_AT[i].what == NM_ROOM`).
+
+### Travel to a place it knows (slice 4.2)
+
+The user (2026-10-16): "Aliases should be allowed for rooms (name this room "The Mausoleum") and then you could say "I
+want to go back to the mausoleum" and you would be on your way, and the game would move you at your current rate of
+speed back toward that named place, as long as your direction sense/orientation checks held up.  Orientation checks
+would be aided if good maps are used."  Its numbers are HOUSE.md's (travel).
+
+- **The words** (the parser's moves to a thing, commands.ebnf's and its aliases: "go to", "go back to", "walk back
+  to", "head back to", "return to", "travel to", "make my way back to", "find my way back to"; the UI's part 4,
+  pace.c's travel_go, before the move's own): a room named (room_named), the way in ("the entrance", "the way in",
+  "where I started", "the start"; "the way out" said going back: the top stratum's way out, where the character
+  began), or a kind of room the theme names, the last of them it was in that it remembers ("go back to the kitchen";
+  the parser's room words, "the hall", "the cell", said going back).  Anything else is the move it was ("go to the
+  door").  The world's I_TRAVEL: w1 w2 a square (a room's floor's northwest), x[2] its stratum, x[0] x[1] its floor,
+  b its name's entry (TRV_IN the way in, TRV_KIND | a room's kind: the world finds them).
+- **What it knows of the place** (the world's part 55): a place is remembered while its chunk's memory is a tenth or
+  more as it is now (world.h's KEPT_GONE; the world's kept_left, the map's rule); a map carried shows it where its
+  room's drawn on that map, and it can read it in light (its square lit, its eyes not blinded).  Forgotten and no map
+  that shows it, the journey's refused ("You don't remember the way to the Mausoleum."); on another stratum too ("The
+  Mausoleum isn't on this level."); and so is one that knows it's lost its bearings (the hub's pc_lost), unless it sees
+  the place ("You've lost your bearings: you can't tell which way to go.").
+- **Where it believes the place is**: seen now (any of its floor), where it is; on its map, where it's drawn (put off
+  as the map's drawing is: kept.dq, kept.dsk); else in mind, put off as its memory's faded for one that doesn't know
+  north (the map's rule, kept.q, kept.m).  The way to it by the north it believes in: a map by the north it believes
+  in now, its mind by how far its belief's gone since it last saw that chunk (each chunk's kept.sk, the north believed
+  in then, the senses'), so a belief that's gone wrong since takes it astray, and one that was as wrong then and is no
+  worse takes it there.
+- **A leg at a time** (the main loop's chain, as each leg's done: part 55's travel_on), each a walk (go's, I_GO's,
+  part 9's: its pace, the bearings' tests at each bend, the landmarks, the traps, the denizens, the dark all as they
+  are): out of each place (a room by its doors and passages' mouths, a door hidden none, in the dark only those it
+  knows; a passage by its ways on and its doors) by the way that lies nearest where it believes the place is (part
+  54's way_out: the further way and half the other, near enough as the crow flies), a way it hasn't taken on this
+  journey before one it has (its first squares in the ways' bank after the path, TRAV_TK), and not back the way it
+  came if there's another.  A door it has handled is opened as it goes (go's); one it hasn't, or one locked or barred,
+  ends the journey ("The door is shut: open it first."), and so does a passage's shut door.  The long task's
+  LT_TRAVEL, each leg a walk's bar.
+- **Its end**: there ("You're back in the Mausoleum."; the way in, "You're back where you came in."); its memory of
+  the place gone on the way ("You no longer remember the way to the Mausoleum."); its bearings lost on the way, and
+  known; forty legs, or no way on that it knows of ("You've lost your way: you can't find the Mausoleum."); a leg's
+  walk ended short (a denizen in its way, a trap, a fall, a ledge: told as they are); stopped as a long task is (a
+  wound, a hostile near, a question answered no, "stop", "stop walking", "stop travelling", any command typed as it
+  goes but those taken at once: the UI's free_cmd).  Each leg's place is told whole as it gets there (the UI's told
+  begun again: a look of its own).
+- **A map aids the bearings** (part 52's familiar): a walk's end in a chunk drawn on the map carried, the walk not in
+  the dark, its test four steps the easier (BEAR_MAP), half that where the drawing was a marginal failure's, none at a
+  critical failure's: every walk's, a journey's legs among them.
+- **What's kept now** (the map agent's list): every place that went by squares the character had seen goes by what it
+  keeps.  The dark's walks know only squares of chunks it still remembers (known_at, a door's or a mouth's UNKNOWN:
+  kept_tile).  A chunk seen again once it's forgotten is remembered afresh (the senses' fresh): its seen marks wiped but
+  those it sees now, its rooms no longer visited (a room's size and shape, sight.c's whole; a landmark, the bearings';
+  a first look's words), its drawing on paper kept.  A walk felt in the dark keeps the chunks it goes through as a look
+  keeps what it sees (the senses' kept, its way retraced: before felt marks its squares).  A place in the room ("go to
+  the far left corner", place_go) needs no change: the room it's in is the one it's looking at, kept fresh, and a walk
+  to the far side of a room partly seen goes on till it meets it, seeing as it goes, as any walk does; in the dark it's
+  refused already.
+- **Every actor**: the denizens move a square at a time (dq0d.c's step_for: toward a square, away from one, about its
+  home), and away from the character coarsely (roam: a square of its range about its lair, put there); none goes to a
+  place by way of the rooms and passages yet.  What could share travel's code, when one does (a denizen going home to
+  its lair, a robber off with its loot, an ally sent home, OR_HOME): the way out of where it stands nearest the place
+  (part 54's way_out, the world's: by the true place, its own bearings never off, no memory to forget), a leg at a time
+  as its intents (an I_GOTO to the way out, then on); the minds keep no journey state now, and the world's travel state
+  is the character's alone (tv, TRAV_TK).  Not built: a denizen walks home now as it wanders, within its range.
 
 ## Still to come
 
@@ -1130,9 +1193,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   rolled), the off hand's penalty unless ambidextrous; an arm's injuries hindering that hand, the book's fumble rolls
   dropping what it holds; a leg's slowing a walk, a stumble roll failed laying the character prone; a limb made
   useless.
-- **Bearings, the map and travel** (slice 4.2): the character's believed north, by Awareness or Mining; the map clear
-  only where it sees, remembered by its bearings, mapping as it goes keeping it true with materials to hand; a mental
-  map that fades; travel to a named place ("go back to the mausoleum").
+- **Bearings, the map and travel** (slice 4.2, built 2026-10-23 to 26): the character's believed north, by Awareness or
+  Mining; the map clear only where it sees, remembered by its bearings, mapping as it goes keeping it true with
+  materials to hand; a mental map that fades; travel to a named place ("go back to the mausoleum": Travel, above).
 - **Wounds over time** (slice 4.3): bleeding as time passes, first aid and bandages, healing (D6); poison, a venom's
   wounds over time (an adder's bite).
 - **The sound layer and the denizens' hearing by pace** (slice 4.5): pulses over the rooms and openings, a background

@@ -19,7 +19,7 @@
 
 static const char* const doing[] = {           /* (By LT_*) */
     "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering",
-    "fighting", "studying the mechanism", "disarming the trap", "picking the lock", "forcing", "heaving at",
+    "fighting", "travelling", "studying the mechanism", "disarming the trap", "picking the lock", "forcing", "heaving at",
     "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
     "hiding"
 };
@@ -65,8 +65,32 @@ static unsigned char __fastcall__ lamp (unsigned char b)
 #define FW_BATTER       0xFF                    /* (felt_words' own: a battering's first words, struck with the thing
                                                 **   named, its what times 256) */
 #pragma data-name (push, "OV3RODATA")          /* (Its words made in the overlay's bank: the main RAM's none) */
-static char nb[20] = "", dn[36] = "";
+static char nb[20] = "", dn[36] = "", pn[24] = "";
 #pragma data-name (pop)
+
+/* A journey's place (E_TASK's b, I_TRAVEL's: a name's entry, TRV_IN, TRV_KIND | a room's kind; TRV_ON aside), as it's
+** said: "the Mausoleum" (the name as given), "the kitchen" (the theme's word); the way in "where you came in" */
+static const char* __fastcall__ place (unsigned char b)
+{
+    char t[NAME_LEN];                           /* (On the C stack: the hub's bank in the window as it's copied, not
+                                                **   the overlay's) */
+    b &= ~TRV_ON;
+    if (b == TRV_IN) {
+        return "where you came in";
+    }
+    *pn = 0;
+    if (b & TRV_KIND) {
+        b &= ~TRV_KIND;
+        strcpy (pn, "the ");
+        hub_mem (THEME_BANK, t, b < 8 ? THEME->room[b] : THEME->uses[(b - 8) % TUSES], 16);
+        t[15] = 0;
+    } else {
+        hub_mem (THEME_BANK, t, NAMES_AT[b % TNAMES].name, NAME_LEN);
+        t[NAME_LEN - 1] = 0;
+    }
+    strcat (pn, t);
+    return pn;
+}
 
 /* What a long task's done to (the long task's what, n: hub.h's), its words: "the door", "the chest"; "it" */
 static const char* __fastcall__ noun (unsigned char n)
@@ -222,6 +246,10 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
                                                 **   outcome as its time's done, HOUSE.md's long tasks; the user's,
                                                 **   2026-10-22) */
         p = w >> 8;
+        if (p == LT_TRAVEL) {                   /* (A journey: slice 4.2's) */
+            sayf ("\nYou head back toward %s.", place (named));
+            break;
+        }
         if (p == LT_BATTER && (n & SK_WITH)) {
             felt_words (FW_BATTER | n << 8);    /* (Struck with the thing named: "with the bar", overlay 7's room) */
             break;
@@ -232,6 +260,32 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         break;
     case TE_ASK_SHORT:
         say ("  Keep at it?");
+        break;
+    case TE_THERE:                              /* (A journey's: slice 4.2's, HOUSE.md's travel; b its place, | TRV_ON
+                                                **   under way) */
+        p = (named & ~TRV_ON) == TRV_IN;
+        sayf (named & TRV_ON ? "\nYou're back %s%s." : "\nYou're %s%s already.", p ? "" : "in ", place (named));
+        break;
+    case TE_FORGOT:
+        sayf (named & TRV_ON ? "\nYou no longer remember the way to %s." : "\nYou don't remember the way to %s.",
+              place (named));
+        break;
+    case TE_UNSURE:
+        msg ("You've lost your bearings: you can't tell which way to go.");
+        break;
+    case TE_ASTRAY:
+        sayf ("\nYou've lost your way: you can't find %s.", place (named));
+        break;
+    case TE_ELSEWHERE:
+        if ((named & ~TRV_ON) == TRV_IN) {
+            msg ("You came in on a level above this one.");
+        } else {
+            place (named);
+            if (pn[0] >= 'a' && pn[0] <= 'z') {
+                pn[0] -= 'a' - 'A';
+            }
+            sayf ("\n%s isn't on this level.", pn);
+        }
         break;
     }
     return k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT || k == TE_ASK_SHORT;
@@ -285,7 +339,7 @@ void __fastcall__ o_bar_text (char* s, unsigned done, unsigned len)
         strcat (s, "  ");
     } else if (b && len) {
         hub_mem (0, &i, &HUB->pc_going, 1);
-        if (b == LT_WALK && (i & GOING_DARK)) {
+        if ((b == LT_WALK || b == LT_TRAVEL) && (i & GOING_DARK)) {
             strcat (s, (i & 0x7F) <= GA_SLOW + 1 ? "by feel " : "blind ");   /* (In the dark: feeling its way, or
                                                 **   not, said outright) */
         }
@@ -460,12 +514,13 @@ unsigned char __fastcall__ o_stop_kind (const char* word)
                                          "waiting", "resting", "sleeping", "talking", "battering", "breaking",
                                          "smashing", "fighting", "attacking", "kicking", "punching", "butting",
                                          "studying", "disarming", "picking", "forcing", "heaving", "bending",
-                                         "winding", "tracking", "sniffing", "filling", "soaking", "hiding" };
+                                         "winding", "tracking", "sniffing", "filling", "soaking", "hiding",
+                                         "travelling", "returning", "heading" };
     static const unsigned char kind_[] = { LT_WALK, LT_WALK, LT_WALK, LT_CLIMB, LT_DIG, LT_DIG, LT_SEARCH, LT_WAIT,
                                            LT_WAIT, LT_SLEEP, LT_TALK, LT_BATTER, LT_BATTER, LT_BATTER, LT_FIGHT,
                                            LT_FIGHT, LT_BATTER, LT_BATTER, LT_BATTER, LT_STUDY, LT_DISARM, LT_PICK,
                                            LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_TRACK, LT_SNIFF, LT_FILL,
-                                           LT_FILL, LT_HIDE };
+                                           LT_FILL, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL };
     unsigned char i;
 
     for (i = 0; i < sizeof kind_; ++i) {
@@ -519,6 +574,9 @@ unsigned char __fastcall__ o_free_cmd (const char* l)
         return 1;
     }
     hub_mem (0, &i, &HUB->pc_task.kind, 1);
+    if (i == LT_TRAVEL) {
+        return 2;                               /* (A journey: any command ends it, HOUSE.md's travel) */
+    }
     return i != LT_FIGHT ? 0 : a == VB_ATTACK_OBJECT && !cmd.obj.kind ? 1 : 2;
 }
 
