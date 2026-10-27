@@ -428,13 +428,19 @@ static unsigned __fastcall__ cost (int dz, unsigned char steps)
     return c * mul_;
 }
 
-/* Square x, y known to the character: seen (now, or before: T_SEEN, the map remembered), or felt, walked in the dark
-** (the senses' felt: T_SEEN too) */
+/* A square of chunk C (its tile t) known to the character: seen now, or before (T_SEEN, the map remembered), or felt,
+** walked in the dark (the senses' felt: T_SEEN too), and its chunk not forgotten (HOUSE.md's travel: what's kept now) */
+static unsigned char __fastcall__ kept_tile (unsigned char t)
+{
+    return (t & T_VIS) || ((t & T_SEEN) && kept_left (&C->kept) >= KEPT_GONE);
+}
+
+/* Square x, y known to the character (kept_tile's) */
 static unsigned char __fastcall__ known_at (unsigned x, unsigned y)
 {
     unsigned char* p = at (sn_, x, y);
 
-    return p && (*p & (T_SEEN | T_VIS));
+    return p && kept_tile (*p);
 }
 
 /* A way off to the side of the passage at (mx, my), heading d, that the character knows of: 1 (a fork it knows) */
@@ -647,11 +653,11 @@ static unsigned char dark (void)
 ** and the walk's stopped there, facing it (felt_stop: 0 if there was nothing to tell, or it isn't dark); no way on in a
 ** passage, said either way (no_exit: go's).  Part 45's (the main RAM's room), but a square it knows and a thing found
 ** by touch, the main RAM's */
-#define UNKNOWN(t)      unknown_ (t)            /* (In the dark, a square it doesn't know: a door or a passage's mouth it
-                                                **   neither sees nor has seen) */
+#define UNKNOWN(t)      unknown_ (t)            /* (In the dark, a square of chunk C it doesn't know: a door or a
+                                                **   passage's mouth it neither sees nor has seen, or has forgotten) */
 static unsigned char __fastcall__ unknown_ (unsigned char t)
 {
-    return feel_ && !(t & (T_SEEN | T_VIS));
+    return feel_ && !kept_tile (t);
 }
 
 unsigned char __fastcall__ ahead (unsigned char h);     /* (Part 45's stubs) */
