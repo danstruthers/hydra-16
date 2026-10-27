@@ -93,6 +93,10 @@ unsigned char tripped (void);                   /* Part 43 */
 unsigned char __fastcall__ dark_end (unsigned char how);    /* Part 44 */
 unsigned char __fastcall__ bearings (unsigned w);   /* Part 52 */
 void __fastcall__ bearings_off (unsigned feet); /* (wbody.h's) */
+void __fastcall__ travel_go (const struct msg* m);  /* Part 55 */
+unsigned char travel_on (void);
+void way_out (void);                            /* Part 54 */
+unsigned char trav;                             /* (A journey under way: part 54's, its next leg as the last is done) */
 static unsigned char pc_down;                   /* (The character senseless: main's, its bearings off as it is) */
 struct work wk;
 extern char _SWAP_START__[];
@@ -324,6 +328,9 @@ static unsigned char sn_, mface;                /* (The character's stratum; a w
 static unsigned char stept = 10;                /* (The referee's step, tenths a square: from the hub as a move
                                                 **   starts, for the chunks are in the window as it's walked) */
 static unsigned mx, my;                         /* (A walk's square) */
+static unsigned kfade, know;                    /* (The character's memory's fade, KEPT_UNIT's of the summary's
+                                                **   mapfade, and the clock, KEPT_CLOCK's: kept_left's, as here ()
+                                                **   found them, for the chunks are in the window as it's walked) */
 
 /* Where the character is, as a move or a piece of work starts: its stratum, its square, its step */
 static void here (void)
@@ -332,6 +339,28 @@ static void here (void)
     mx = HUB->pc_x;
     my = HUB->pc_y;
     stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
+    kfade = KEPT_UNIT (HUB->pcsum.mapfade);
+    know = KEPT_CLOCK;
+}
+
+/* What the character keeps of a chunk now (k: its kept, the chunk's in the window), 0-100: its quality then, a tenth
+** lost each fade since (its passings' points, TR_MORE's, the fade twice as slow for each): the map's rule (dq0m/map.c's
+** memory, the senses' kept: HOUSE.md's the map kept); under KEPT_GONE, forgotten */
+static unsigned char __fastcall__ kept_left (const struct ckept* k)
+{
+    unsigned age = know - k->m, u = kfade;
+    unsigned char left = k->q, n = k->n;
+
+    if (n >= 4) {
+        u <<= 1;
+    }
+    if (n >= 12) {
+        u <<= 1;
+    }
+    for (; age >= u && left; age -= u) {
+        left = left > 10 ? left - 10 : 0;
+    }
+    return left;
 }
 
 /* The pace a move goes at (from where it stands: here ()'s), the hub's pc_going from now till it's there and has
@@ -399,13 +428,19 @@ static unsigned __fastcall__ cost (int dz, unsigned char steps)
     return c * mul_;
 }
 
-/* Square x, y known to the character: seen (now, or before: T_SEEN, the map remembered), or felt, walked in the dark
-** (the senses' felt: T_SEEN too) */
+/* A square of chunk C (its tile t) known to the character: seen now, or before (T_SEEN, the map remembered), or felt,
+** walked in the dark (the senses' felt: T_SEEN too), and its chunk not forgotten (HOUSE.md's travel: what's kept now) */
+static unsigned char __fastcall__ kept_tile (unsigned char t)
+{
+    return (t & T_VIS) || ((t & T_SEEN) && kept_left (&C->kept) >= KEPT_GONE);
+}
+
+/* Square x, y known to the character (kept_tile's) */
 static unsigned char __fastcall__ known_at (unsigned x, unsigned y)
 {
     unsigned char* p = at (sn_, x, y);
 
-    return p && (*p & (T_SEEN | T_VIS));
+    return p && kept_tile (*p);
 }
 
 /* A way off to the side of the passage at (mx, my), heading d, that the character knows of: 1 (a fork it knows) */
@@ -509,19 +544,6 @@ void on_way (void);                             /* (Part 37's) */
 void draw_test (void);                          /* (Part 7's: a stretch of the map drawn, slice 4.2's) */
 static void stopped (void);
 
-/* C's trap on its square x, y that's set, and set off as it's walked on; or NULL */
-static struct trap* __fastcall__ trap_at (unsigned char x, unsigned char y)
-{
-    struct trap* t = C->trap;
-    unsigned char n;
-
-    for (n = C->ntraps; n; --n, ++t) {
-        if (t->x == x && t->y == y && TS_SET (t->state) && t->trigger != TT_DOOR) {
-            return t;
-        }
-    }
-    return 0;
-}
 
 /* ---- The way across a room, round its ledges: the squares of its chunk (in the window) from the room's floor to
 ** one of its doors or openings, by steps that can be walked; the time it takes.  The ways from a square of the room
@@ -631,11 +653,11 @@ static unsigned char dark (void)
 ** and the walk's stopped there, facing it (felt_stop: 0 if there was nothing to tell, or it isn't dark); no way on in a
 ** passage, said either way (no_exit: go's).  Part 45's (the main RAM's room), but a square it knows and a thing found
 ** by touch, the main RAM's */
-#define UNKNOWN(t)      unknown_ (t)            /* (In the dark, a square it doesn't know: a door or a passage's mouth it
-                                                **   neither sees nor has seen) */
+#define UNKNOWN(t)      unknown_ (t)            /* (In the dark, a square of chunk C it doesn't know: a door or a
+                                                **   passage's mouth it neither sees nor has seen, or has forgotten) */
 static unsigned char __fastcall__ unknown_ (unsigned char t)
 {
-    return feel_ && !(t & (T_SEEN | T_VIS));
+    return feel_ && !kept_tile (t);
 }
 
 unsigned char __fastcall__ ahead (unsigned char h);     /* (Part 45's stubs) */
@@ -815,6 +837,20 @@ static void __fastcall__ see (unsigned char first)
 ** traces', slice 4.1; part 9's walks calling it, once a move) */
 #pragma code-name (push, "SW33CODE")
 #pragma rodata-name (push, "SW33RODATA")
+
+/* C's trap on its square x, y that's set, and set off as it's walked on; or NULL (part 33's own, and part 21's: the main RAM's room, slice 4.2's) */
+static struct trap* __fastcall__ trap_at (unsigned char x, unsigned char y)
+{
+    struct trap* t = C->trap;
+    unsigned char n;
+
+    for (n = C->ntraps; n; --n, ++t) {
+        if (t->x == x && t->y == y && TS_SET (t->state) && t->trigger != TT_DOOR) {
+            return t;
+        }
+    }
+    return 0;
+}
 
 void __fastcall__ s_across (unsigned char h, unsigned char r)
 {
@@ -1743,8 +1779,8 @@ static void arrive (void)
 ** quarter, and it knows (told).  What disorients it (bearings_off): come round below from a fall as the game begins
 ** (the theme's start, TM_FELL), knocked senseless (main's: whatever did it), a fall of ten feet or more (harm_fx's, part
 ** 49's): the test the harder, a failure leaving its north anywhere (a fall's, the drift).  One whose species knows
-** north (the referee's summary's northsense) is never tested, never astray.  Its own part, but for its test (the
-** main RAM's) */
+** north (the referee's summary's northsense) is never tested, never astray.  Its own part (its
+** image in overlay 16's bank, travel's, slice 4.2's) */
 #define BEAR_OUT        10                      /* (Come round from a fall, or senseless: the steps the harder) */
 #define BEAR_FAMILIAR   4                       /* (A way walked often, each of its passings' points: familiar's) */
 #define BEAR_KNOWN      127                     /* (So often, no test) */
@@ -1753,13 +1789,16 @@ static unsigned char bast;                      /* (btest's: astray) */
 #define W_SLOT          HUB->slot[SLOT_WORLD]   /* (The world's referee slot: a harm's request and its reply) */
 #define KNOWS_NORTH     (HUB->pcsum.northsense | nobear)    /* (Its species', or dq0 -N's, the tests') */
 
+#pragma code-name (push, "SW52CODE")
+#pragma rodata-name (push, "SW52RODATA")
+
 /* The test, at the steps: a failure's drift an eighth (a critical failure's a quarter), its way the referee's result
 ** (the bearings' own d8 less one: odd the other way); or astray (bast), the north it believes in anywhere, by the d8
-** (the true one too, by chance).  BRG_LOST if it knows now it's lost them (a critical failure), else 0 (the main
-** RAM's: part 52's bank full) */
+** (the true one too, by chance).  BRG_LOST if it knows now it's lost them (a critical failure), else 0 (part 52's
+** again, its image in overlay 16's bank: travel's, slice 4.2's) */
 static unsigned char __fastcall__ btest (signed char steps)
 {
-    static signed char g, k;
+    signed char g, k;
 
     wsteps = steps;
     g = test_w (P_BEARING, 0);
@@ -1779,21 +1818,29 @@ static unsigned char __fastcall__ btest (signed char steps)
     return BRG_LOST;
 }
 
-#pragma code-name (push, "SW52CODE")
-#pragma rodata-name (push, "SW52RODATA")
-
 /* The ways walked often (the user's, 2026-10-23: "familiar ways should be easier"): the steps a test about square x, y
 ** of stratum sn is the easier for the times the character's passed through that part of the dungeon, by the map's
 ** count of its chunk's passings (the senses', as it looks about: world.h's KEPT_KNOWN), its points TR_MORE's, a
-** trace's rule (HOUSE.md's: 4 passings or more BEAR_FAMILIAR steps the easier, 12 or more no test at all, BEAR_KNOWN) */
+** trace's rule (HOUSE.md's: 4 passings or more BEAR_FAMILIAR steps the easier, 12 or more no test at all, BEAR_KNOWN).
+** And a map that shows the way (the user's, 2026-10-16: "Orientation checks would be aided if good maps are used"):
+** that chunk drawn on the map it carries, and the walk not in the dark (light to read it by), BEAR_MAP steps the easier
+** (HOUSE.md's travel: drawn at a marginal failure half that, at a critical failure none) */
+#define BEAR_MAP        4
 static signed char __fastcall__ familiar (unsigned char sn, unsigned x, unsigned y)
 {
     static unsigned char n;
+    unsigned map;
+    signed char g = 0;
 
+    hub_map (0);
+    map = HUB->pc_map;
     n = KEPT_KNOWN (sn, x, y);
+    if (n && map && C->kept.map == map && !pfeel) {   /* (Seen, so its chunk in the window: KEPT_KNOWN's) */
+        g = C->kept.dq == G_CF ? 0 : C->kept.dq == G_MF ? BEAR_MAP / 2 : BEAR_MAP;
+    }
     hub_map (0);
     n = TR_MORE (n);
-    return n > 1 ? BEAR_KNOWN : n * BEAR_FAMILIAR;
+    return n > 1 ? BEAR_KNOWN : n * BEAR_FAMILIAR + g;
 }
 
 /* A move's end (arrive's: w its how, A_*, the first time there times 256): its bearings, by the way it came; the news
@@ -1868,6 +1915,412 @@ void __fastcall__ s_bearings_off (unsigned feet)
     if ((k = btest (bast || feet >= 5 * BEAR_OUT ? -BEAR_OUT : -(signed char) (feet / 5))) != 0) {
         event (E_BEARING, 0, k);
     }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 54: travel to a place it knows (slice 4.2's: HOUSE.md's travel; the user's, 2026-10-16: "name this room
+** "The Mausoleum" and then you could say "I want to go back to the mausoleum" and you would be on your way, and the game
+** would move you at your current rate of speed back toward that named place, as long as your direction
+** sense/orientation checks held up").  The UI's I_TRAVEL: a room named (its square, its floor), the way in (the top
+** stratum's way out, where the character began: TRV_IN), the last room of a kind it was in that it remembers
+** (TRV_KIND).  Refused if it's on another stratum, if the character knows it's lost its bearings (the hub's pc_lost:
+** it can't tell which way the place lies), or if it doesn't remember the place (its chunk's memory under a tenth,
+** KEPT_GONE) and carries no map that shows it (its room drawn on the map it carries, and light to read it by).  Then a
+** leg at a time, each a walk (go's, I_GO's: at its pace, its bearings tested as any walk's, the traps, the denizens, the
+** dark, all as they are), out of each place (a room, a fork, a passage's end) by the way that lies nearest where it
+** believes the place to be: as its map shows it (drawn, off as it was drawn), else as its memory keeps it (off as it's
+** faded, for one that doesn't know north: the map's rule, dq0m/map.c's), the way taken by the north it believes in, so
+** a belief gone wrong takes it astray; a way it hasn't taken on this journey before one it has, and not back the way it
+** came if there's another; once it sees the place, straight there.  It ends there (told), as its memory of the place
+** goes, as it knows it's lost its bearings, after forty legs (lost), as a leg's walk ends short (a denizen in its way,
+** a trap, a fall, a ledge: told as they are), or a way's shut (told: go's); stopped as any long task is (a wound, a
+** hostile near, a question answered no, the player's "stop", any command: the UI's).  Its state the main RAM's (tv),
+** the ways out it's taken the ways' bank's, after the path (TRAV_TK) */
+#define TRAV_LEGS       40                      /* (Its legs at most: lost then) */
+static struct {
+    unsigned        x, y;                       /* Where to: a room's floor's northwest square (or a square alone, */
+    unsigned char   sn, w, h, what;             /*   on stratum sn), its floor's size; I_TRAVEL's b */
+    unsigned char   legs, room, drawn;          /* The legs set out on; its room in its chunk (0xFF: none); drawn on the
+                                                **   map carried (as last read) */
+    unsigned char   kcx, kcy;                   /* Its chunk (the low bytes), and its memory of it as last read (the */
+    struct ckept    k;                          /*   cache may let the chunk go meanwhile) */
+    unsigned        lx, ly;                     /* The leg's end, as it set out (0xFFFF: none, a trap on its way) */
+} tv;
+static int tvx, tvy;                            /* (A leg's: where it believes the place is, from where it stands; */
+static unsigned tbx, tby, tex, tey, ted;        /*   the way it came, the way out chosen, how far that is from where
+                                                **   it believes the place is; */
+static unsigned char ter, teh;                  /*   its rank, 1 taken before, 2 back; its heading) */
+#define TRAV_TK         ((unsigned (*)[2]) (PATH_AT + 3 * PATH_MAX))   /* (Each way out by its first square) */
+typedef char trav_fits[CW * CW * (sizeof (struct wcell) + 2) + 3 * PATH_MAX + 4 * TRAV_LEGS <= 0x2000 ? 1 : -1];
+
+#pragma code-name (push, "SW55CODE")
+#pragma rodata-name (push, "SW55RODATA")
+
+/* The journey's end, or its refusal (te: TE_*, told, b its place, | TRV_ON under way; 0, nothing): the character free */
+static void __fastcall__ trav_end (unsigned char te)
+{
+    trav = 0;
+    if (te) {
+        evb = tv.what | (tv.legs ? TRV_ON : 0);
+        event (E_TASK, 0, te | LT_TRAVEL << 8);
+    }
+    hub_map (0);
+    HUB->pc_ready = HUB->now;
+    HUB->pc_going = IDLE;
+}
+
+/* The place read, its chunk in the hub's cache (a look about's) or the journey begun (at () may have the maker make
+** it): its memory kept as it is (the cache may let it go); 1 if any of it's seen now (its floor, or its square) */
+static unsigned char looked_at (void)
+{
+    struct stratum* s = &STRATUM (tv.sn);
+    unsigned cx = (tv.x - s->x0) >> CW_BITS, cy = (tv.y - s->y0) >> CW_BITS;
+    struct cslot* c;
+    unsigned char i, j, t = 0;
+
+    if (tv.legs) {
+        hub_map (WORLD_BANK);
+        for (i = 0, c = WREC->cslot; i < NCSLOTS && !(c->used && c->sn == tv.sn && c->cx == cx && c->cy == cy); ++i, ++c) {
+        }
+        hub_map (0);
+        if (i == NCSLOTS) {
+            return 0;                           /* (Not in the cache: not seen) */
+        }
+    }
+    at (tv.sn, tv.x, tv.y);
+    memcpy (&tv.k, &C->kept, sizeof tv.k);
+    tv.kcx = (unsigned char) C->cx;
+    tv.kcy = (unsigned char) C->cy;
+    for (j = 0; j < tv.h; ++j) {
+        for (i = 0; i < tv.w; ++i) {
+            t |= C->tile[cy_ + j][cx_ + i];     /* (Its floor's squares' marks together) */
+        }
+    }
+    tv.drawn = t & T_DRAWN;
+    hub_map (0);
+    return t & T_VIS;
+}
+
+/* Where the character believes the place is, from where it stands (tvx, tvy: here ()'s square, mx, my): seen now,
+** where it is; else drawn on the map it carries, in light to read it by, where the map has it (put off as it was
+** drawn: map.c's); else as it's kept, put off for one that doesn't know north as its memory's faded (map.c's); the way
+** by the north it believes in (turned back by its skew: astray as it's wrong; its memory's by the north it believed in
+** as it last saw the place, so only as far as its belief's gone since).  How it knows it: 3 seen, 2 by its map,
+** 1 by its memory, 0 forgotten */
+static const unsigned char doffs54[5] = { 3, 1, 0, 0, 0 };  /* (map.c's doffs: by the grade, G_CF on) */
+static unsigned char where (void)
+{
+    unsigned char n, w, g, how, skew, dk;
+    int t;
+
+    here ();
+    dk = dark ();
+    tvx = tv.x + (tv.w >> 1) - mx;
+    tvy = tv.y + (tv.h >> 1) - my;
+    if (looked_at ()) {
+        return 3;
+    }
+    skew = HUB->pc_skew;                        /* (A map read by the north it believes in now) */
+    if (HUB->pc_map && tv.k.map == HUB->pc_map && tv.drawn && !dk) {   /* (On its map: as it was drawn there) */
+        how = 2;
+        n = (tv.k.dsk + 4) & 7;
+        g = (unsigned char) (tv.k.dq + 2);
+        n = doffs54[g < 5 ? g : 2] + 2 * (n < 4 ? 4 - n : n - 4);
+        w = tv.kcx * 5 + tv.kcy * 3 + tv.k.dq + tv.k.dsk;
+    } else if ((g = kept_left (&tv.k)) >= KEPT_GONE) {     /* (In its mind: as it's kept it) */
+        how = 1;
+        skew -= tv.k.sk;                        /* (Its mind's by the north it believed in then: off as far as its
+                                                **   belief's gone since) */
+        n = KNOWS_NORTH ? 0 : (unsigned char) (6 * (tv.k.q - g) / tv.k.q);
+        w = tv.kcx * 3 + tv.kcy * 5 + (unsigned char) tv.k.m;
+    } else {
+        return 0;
+    }
+    w &= 7;
+    tvx += head_x[w] * (int) n;
+    tvy += head_y[w] * (int) n;
+    for (skew = (8 - skew) & 7; skew >= 2; skew -= 2) {   /* (The way it believes in the true one: turned back by its
+                                                **   skew, a quarter at a time clockwise, then an eighth) */
+        t = tvx;
+        tvx = -tvy;
+        tvy = t;
+    }
+    if (skew) {
+        t = tvx;                                /* (An eighth: its length no matter, only its way) */
+        tvx -= tvy;
+        tvy += t;
+    }
+    return how;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ---- (Part 54: the way out, as a leg's worked out: part 55's way_out) */
+#pragma code-name (push, "SW54CODE")
+#pragma rodata-name (push, "SW54RODATA")
+
+/* A way out of where the character stands (its first square, ex ey; from mx, my), weighed: a way it hasn't taken on
+** this journey before one it has, any before the way it came (tbx, tby), then the nearest where it believes the place
+** is (as the crow flies, near enough: the further way and half the other); kept if it's the best so far (tex ...) */
+static void __fastcall__ weigh (unsigned ex, unsigned ey)
+{
+    unsigned char r = 0, i;
+    int dx = tvx - (int) (ex - mx), dy = tvy - (int) (ey - my);
+    unsigned d;
+
+    hy_bank (ovbank[OVBANKS + 1]);
+    for (i = 0; i < tv.legs && (TRAV_TK[i][0] != ex || TRAV_TK[i][1] != ey); ++i) {
+    }
+    hub_map (at_bank);                          /* (The chunk back in the window) */
+    r = (i < tv.legs) + (ex == tbx && ey == tby ? 2 : 0);
+    if (dx < 0) {
+        dx = -dx;
+    }
+    if (dy < 0) {
+        dy = -dy;
+    }
+    d = dx > dy ? dx + (dy >> 1) : dy + (dx >> 1);
+    if (r < ter || (r == ter && d < ted)) {
+        ter = r;
+        ted = d;
+        tex = ex;
+        tey = ey;
+    }
+}
+
+/* The way out chosen (weigh's: none, ter 0xFF), from a room by its doors and passages' mouths (as go sees them: a door
+** hidden no way, in the dark only one it knows; the ways across it to them), from a passage by its ways on and its
+** doors, shut or not (in the dark only those it knows): the way it came the square behind it (as it faces, come in) */
+void s_way_out (void)
+{
+    unsigned char r, k, d, bx, by, face, t;
+    struct room q;
+    struct portal* p;
+    unsigned char* sq;
+    unsigned ox, oy, nx, ny;
+
+    dens_where ();
+    here ();
+    paced ();                                   /* (In the dark or not: feel_, as the walk will be) */
+    hub_map (0);
+    face = HUB->pc_face;
+    ter = 0xFF;
+    tbx = tby = 0;                              /* (Set out from here: no way it came) */
+    if (tv.legs) {
+        tbx = mx - head_x[face];
+        tby = my - head_y[face];
+    }
+    if ((r = room_of (sn_, mx, my)) != 0xFF) {
+        memcpy (&q, &C->room[r], sizeof q);
+        rx0 = ox = mx - cx_;
+        ry0 = oy = my - cy_;
+        ways (r, cx_, cy_);
+        for (k = 0; k < 4; ++k) {
+            for (d = 0; wall_tile (&q, k, d); ++d) {
+                bx = wall_x;
+                by = wall_y;
+                t = C->tile[by][bx];
+                if (TILE (t) == T_DOOR && !((p = portal_at (bx, by)) != 0 && (p->state & PS_HIDDEN)) && !UNKNOWN (t) &&
+                    way (bx, by) != 0xFFFFFFFFUL) {
+                    weigh (ox + bx, oy + by);
+                }
+            }
+        }
+        for (by = q.y ? q.y - 1 : 0; by <= q.y + q.h && by < CW; ++by) {
+            for (bx = q.x ? q.x - 1 : 0; bx <= q.x + q.w && bx < CW; ++bx) {
+                if (TILE (t = C->tile[by][bx]) == T_CORR && !UNKNOWN (t) && way (bx, by) != 0xFFFFFFFFUL) {
+                    weigh (ox + bx, oy + by);
+                }
+            }
+        }
+        teh = bearing ((int) (tex - mx), (int) (tey - my));
+    } else {
+        for (d = 0; d < 4; ++d) {
+            nx = mx + dir_x[d];
+            ny = my + dir_y[d];
+            t = (sq = at (sn_, nx, ny)) != 0 && TILE (*sq) == T_DOOR;   /* (A door that way, shut or not: a
+                                                **   passage's, the walk stopped before it) */
+            if ((t || (step_ok (sn_, mx, my, d) && !breadth (sn_, mx, my, d))) && (!feel_ || known_at (nx, ny))) {
+                weigh (nx, ny);
+                if (tex == nx && tey == ny) {
+                    teh = H_OF (d);             /* (Its heading, if it's the one) */
+                }
+            }
+        }
+    }
+    hub_map (0);
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+#pragma code-name (push, "SW55CODE")
+#pragma rodata-name (push, "SW55RODATA")
+
+/* The next leg set out on, or the journey's end told: 1 if it's under way */
+static unsigned char leg (void)
+{
+    unsigned char how;
+
+    how = where ();
+    hub_map (0);
+    how = !how ? TE_FORGOT : how < 3 && HUB->pc_lost ? TE_UNSURE : tv.legs >= TRAV_LEGS ? TE_ASTRAY : 0;
+    if (!how) {                                 /* (Forgotten, or no longer; its bearings lost, known: which way?;
+                                                **   forty legs: lost) */
+        way_out ();
+        if (ter == 0xFF) {
+            how = TE_ASTRAY;                    /* (No way on it knows of) */
+        }
+    }
+    if (how) {
+        trav_end (how);
+        return 0;
+    }
+    if (!tv.legs) {
+        evb = tv.what;
+        event (E_TASK, 0, TE_BEGUN | LT_TRAVEL << 8);  /* ("You head back toward the Mausoleum.") */
+    }
+    if ((tgx = room_of (sn_, mx, my) != 0xFF ? tex : 0) == 0 && !step_ok (sn_, mx, my, teh >> 1)) {
+        at (sn_, tex, tey);                     /* (A passage's door that way, shut: open it first, as a room's that
+                                                **   it hasn't handled, the walk's) */
+        how = portal_at (cx_, cy_) && portal_at (cx_, cy_)->kind == PK_PORTCULLIS ? N_CLOSED : N_DOOR;
+        no_way (how);
+        trav_end (0);
+        return 0;
+    }
+    tgy = tey;                                  /* (A room's door or mouth meant; a passage's way its heading) */
+    go (teh);
+    hub_map (0);
+    if (!move.on) {
+        trav_end (0);                           /* (Its way shut, or a denizen in it: go's, told) */
+        return 0;
+    }
+    HUB->pc_task.kind = LT_TRAVEL;
+    tv.lx = move.how == A_STOPPED ? 0xFFFF : HUB->pc_tx;
+    tv.ly = HUB->pc_ty;
+    hy_bank (ovbank[OVBANKS + 1]);
+    TRAV_TK[tv.legs][0] = tex;
+    TRAV_TK[tv.legs++][1] = tey;
+    hub_map (0);
+    trav = 1;
+    return 1;
+}
+
+/* The character in the place (its room in its chunk; or on its square, one that isn't a room's) */
+static unsigned char there (void)
+{
+    unsigned char r;
+
+    hub_map (0);
+    if (HUB->pc_stratum != tv.sn) {
+        return 0;
+    }
+    r = room_of (tv.sn, HUB->pc_x, HUB->pc_y);
+    r = tv.room == 0xFF ? 0 : r == tv.room && (unsigned char) C->cx == tv.kcx && (unsigned char) C->cy == tv.kcy;
+    hub_map (0);
+    return r || (HUB->pc_x == tv.x && HUB->pc_y == tv.y);
+}
+
+/* The room of kind n it was in last that it remembers (TRV_KIND's: the senses' R_VISITED, in the chunks of its stratum
+** in the cache, the one it saw last; not the one it's in): its floor's northwest square in tv; 0 none (but the one it's
+** in, if that's of the kind: there already, tv's that) */
+static unsigned char __fastcall__ of_kind (unsigned char n)
+{
+    struct cslot c;
+    struct stratum* s = &STRATUM (sn_);
+    unsigned best = 0xFFFF, age, ox, oy;
+    unsigned char k, r, pr;
+
+    tv.x = mx;
+    tv.y = my;
+    if ((pr = room_of (sn_, mx, my)) != 0xFF && C->room[pr].kind == n) {
+        best = 0xFFFE;                          /* (The room it's in, if there's no other) */
+    }
+    ox = C->cx;
+    oy = C->cy;
+    for (k = 0; k < NCSLOTS; ++k) {
+        hub_map (WORLD_BANK);
+        memcpy (&c, &WREC->cslot[k], sizeof c);
+        if (!c.used || c.sn != sn_ || !at (sn_, s->x0 + (c.cx << CW_BITS), s->y0 + (c.cy << CW_BITS)) ||
+            (age = know - C->kept.m) >= best || kept_left (&C->kept) < KEPT_GONE) {
+            continue;
+        }
+        for (r = 0; r < C->nrooms; ++r) {
+            if (C->room[r].kind == n && (C->room[r].flags & R_VISITED) && (r != pr || c.cx != ox || c.cy != oy)) {
+                best = age;
+                tv.x = s->x0 + (c.cx << CW_BITS) + C->room[r].x;
+                tv.y = s->y0 + (c.cy << CW_BITS) + C->room[r].y;
+                break;
+            }
+        }
+    }
+    hub_map (0);
+    return best != 0xFFFF;
+}
+
+/* A journey begun (the UI's I_TRAVEL): where to, and whether it can go there; its first leg */
+void __fastcall__ s_travel_go (const struct msg* m)
+{
+    struct room* q;
+    unsigned char b = m->b;
+
+    memset (&tv, 0, sizeof tv);
+    tv.what = b;
+    here ();
+    hub_map (0);
+    tv.sn = sn_;
+    tv.x = m->w1;
+    tv.y = m->w2;
+    if (b == TRV_IN) {
+        tv.sn = 0;                              /* (The way in: the top stratum's way out, where it began) */
+        tv.x = STRATUM (0).link[0].x;
+        tv.y = STRATUM (0).link[0].y;
+    } else if (!(b & TRV_KIND)) {
+        tv.sn = m->x[2];
+    } else if (!of_kind (b & ~TRV_KIND)) {
+        trav_end (TE_FORGOT);                   /* (None it remembers) */
+        return;
+    }
+    if (tv.sn != sn_) {
+        trav_end (TE_ELSEWHERE);
+        return;
+    }
+    tv.w = tv.h = 1;
+    tv.room = room_of (tv.sn, tv.x, tv.y);
+    tv.kcx = (unsigned char) C->cx;             /* (Its chunk: there's, before it's looked at) */
+    tv.kcy = (unsigned char) C->cy;
+    if (tv.room != 0xFF) {
+        q = &C->room[tv.room];                  /* (Its room's floor: the way in's too) */
+        tv.x += q->x - cx_;
+        tv.y += q->y - cy_;
+        tv.w = q->w;
+        tv.h = q->h;
+    }
+    hub_map (0);
+    if (there ()) {
+        trav_end (TE_THERE);                    /* (There already) */
+        return;
+    }
+    leg ();
+}
+
+/* A journey's leg done (the main loop's, as the character's free): there (told), or the next leg; or its end, a leg
+** that ended short (a denizen, a trap, a fall: told), stopped (the player, a hard stop: told).  2 if a leg's set out */
+unsigned char s_travel_on (void)
+{
+    hub_map (0);
+    if (HUB->pc_task.kind != LT_TRAVEL || HUB->pc_x != tv.lx || HUB->pc_y != tv.ly || HUB->pc_stratum != tv.sn) {
+        trav_end (0);                           /* (Stopped, or short of the leg's end) */
+        return 0;
+    }
+    if (there ()) {
+        trav_end (TE_THERE);                    /* ("You're back in the Mausoleum.") */
+        return 0;
+    }
+    return leg () ? 2 : 0;
 }
 
 #pragma code-name (pop)
@@ -2913,9 +3366,10 @@ void s_step_on (void)
             if (move.on && move.how == A_CLIMBING) {
                 cl_hold = 1;                    /* (Its grip tested at once: the round's end now) */
                 HUB->pc_ready = HUB->now;
-            } else if (HUB->pc_task.kind != LT_FIGHT && (HUB->pc_task.kind != LT_WALK || npath > pnext)) {
+            } else if (HUB->pc_task.kind != LT_FIGHT && ((HUB->pc_task.kind != LT_WALK && HUB->pc_task.kind !=
+                LT_TRAVEL) || npath > pnext)) {
                 stop (TE_HIT);                  /* (A fight's blows at it no stop; nor a walk's stopped already,
-                                                **   come into a zone: told once) */
+                                                **   come into a zone: told once; a journey's leg's the same) */
             }
         }
         return;
@@ -3029,8 +3483,8 @@ void __fastcall__ s_task_word (const struct msg* m)
         if (!m->w1) {
             event (E_TASK, 0, TE_IDLE);         /* (The player's stop, nothing to stop; a command's, nothing said) */
         }
-    } else if (m->a && m->a != k) {
-        evb = m->a;                             /* (The one named: its b) */
+    } else if (m->a && m->a != k && (m->a != LT_WALK || k != LT_TRAVEL)) {
+        evb = m->a;                             /* (The one named: its b; "stop walking", a journey's leg too) */
         event (E_TASK, 0, TE_NOT | k << 8);
     } else if (k == LT_CLIMB) {
         event (E_TASK, 0, TE_CANT | k << 8);   /* (Part way up: no stopping; asked, "no", it goes on all the same) */
@@ -4068,7 +4522,7 @@ static void __fastcall__ intent (struct msg* m)
     }
     free_at = HUB->now;
 #define MOVES   (1UL << I_GO | 1UL << I_CLIMB | 1UL << I_GOTO | 1UL << I_STEP | 1UL << I_TAKE | 1UL << I_CLOSE | \
-                 1UL << I_DISENGAGE)
+                 1UL << I_DISENGAGE | 1UL << I_TRAVEL)
     if ((MOVES >> m->kind & 1) && (HUB->pc_pos == POS_PRONE || (HUB->pcsum.cond & C_MOVE) || pmode) && limbs_go ()) {
         return;                                 /* (Prone, its legs not whole: up first, or crawling; or no move:
                                                 **   part 50's, slice 4.1b's) */
@@ -4252,6 +4706,9 @@ void __fastcall__ s_intent_more (struct msg* m)
     case I_RISE:                                /* (Getting up: part 50's) */
         rise_pc (1);
         break;
+    case I_TRAVEL:                              /* (A journey to a place named: part 54's) */
+        travel_go (m);
+        break;
     case I_TRACE:
         tr_flush (0);                           /* (The traces read, the journal taken in first, then the time it
                                                 **   takes: parts 28's, 29's) */
@@ -4388,12 +4845,23 @@ static int __fastcall__ ovl_load (const char* dir)
     return 0;
 }
 
+/* A number, an argument's (atoi's, without the C library's ctype: the main RAM's room, slice 4.2's) */
+static unsigned char __fastcall__ num (const char* s)
+{
+    unsigned char n = 0;
+
+    while (*s >= '0' && *s <= '9') {
+        n = n * 10 + *s++ - '0';
+    }
+    return n;
+}
+
 int main (int argc, char* argv[])
 {
     static struct msg m;
     unsigned char was_busy = 0, dseq = 0, took;
 
-    if (argc < 4 || ovl_load (argv[3]) || hub_attach (atoi (argv[1]), atoi (argv[2]))) {
+    if (argc < 4 || ovl_load (argv[3]) || hub_attach (num (argv[1]), num (argv[2]))) {
         return 1;
     }
     memset (&HUB->pc_task, 0, sizeof HUB->pc_task);     /* (No long task yet) */
@@ -4451,9 +4919,10 @@ int main (int argc, char* argv[])
                 pc_waited = 0;
                 ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */
             }
-            took = take_n ? take_up () : pfoe ? close_on () : srch ? searched () : lwork ? work_done () : 0;
-                                                /* (A thing walked over to: taken up, or walked on to; a blow's
-                                                **   close-in: struck, or walked on; a timed work's end) */
+            took = take_n ? take_up () : pfoe ? close_on () : srch ? searched () : lwork ? work_done () :
+                trav ? travel_on () : 0;        /* (A thing walked over to: taken up, or walked on to; a blow's
+                                                **   close-in: struck, or walked on; a timed work's end; a journey's
+                                                **   next leg, or its end, part 54's) */
             if (!took && HUB->pc_task.kind == LT_BATTER) {
                 took = batter_on ();            /* (A battering's next blow, or what came of it told) */
             }
@@ -4491,6 +4960,20 @@ int main (int argc, char* argv[])
 #pragma code-name (push, "SW21CODE")
 #pragma rodata-name (push, "SW21RODATA")
 
+/* C's trap on its square x, y that's set, and set off as it's walked on; or NULL (part 21's own: part 33's trap_at) */
+static struct trap* __fastcall__ trap_at21 (unsigned char x, unsigned char y)
+{
+    struct trap* t = C->trap;
+    unsigned char n;
+
+    for (n = C->ntraps; n; --n, ++t) {
+        if (t->x == x && t->y == y && TS_SET (t->state) && t->trigger != TT_DOOR) {
+            return t;
+        }
+    }
+    return 0;
+}
+
 /* The step from chunk square x, y the way d, if it can be walked (into the room's walls and floor: wox ...): its
 ** time, or 0xFFFF (it can't: rock, a wall, a ledge too high, a denizen on it, a trap known of); wtrap 1 if there's
 ** one that's set on the square stepped onto (the chunk in the window) */
@@ -4505,7 +4988,7 @@ static unsigned __fastcall__ step_by (unsigned char x, unsigned char y, unsigned
         return 0xFFFF;
     }
     u = C->tile[ny][nx];
-    q = trap_at (nx, ny);
+    q = trap_at21 (nx, ny);
     if (!T_PASS (u) || den_on (rx0 + nx, ry0 + ny) || (q && !(q->state & TS_HIDDEN)) || (wr == 0xFF && TILE (u) == T_DOOR)) {
         return 0xFFFF;                          /* (Nor onto a denizen, nor a trap it knows of: it goes round) */
     }

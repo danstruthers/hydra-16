@@ -143,6 +143,10 @@ unsigned char __fastcall__ pace_cmd (const char* l);   /* 1 if it was one of the
                                                 **   but a pace said with a move set first) */
 unsigned char __fastcall__ pacing (const char* l);     /* Overlay 9 (pace.c): 0 if line l can't be one of them (none
                                                 **   of the words pace_cmd acts on: its part not copied in) */
+unsigned char __fastcall__ travel_go (const char* l);  /* The command's move to a place the character knows ("go back
+                                                **   to the Mausoleum", the parser's cmd): its journey (I_TRAVEL), 1;
+                                                **   else 0 (slice 4.2's) */
+extern unsigned char busy;                      /* (main.c's: the character's doing something) */
 struct req;
 struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned char b);   /* (main.c's) The referee
                                                 **   asked, the UI's slot */

@@ -1327,6 +1327,72 @@ dq0harn's, and the drawing's test.)*
 - **The catalogue's** (kinds.c's): paper and parchment a sheet's (weight nothing and a quarter pound, worth 2 and 4
   pennies), charcoal (1), a pencil (3), a quill (1), a horn of ink (a quarter pound, 6), the map (a sheet's).
 
+## Travel to a place it knows *(slice 4.2's travel: drafted 2026-10-26 for the user to review)*
+
+The user's (2026-10-16, DECISIONS.md's names for rooms and bearings and the map: "name this room "The Mausoleum" and
+then you could say "I want to go back to the mausoleum" and you would be on your way, and the game would move you at
+your current rate of speed back toward that named place, as long as your direction sense/orientation checks held up.
+Orientation checks would be aided if good maps are used"); the old design's going back (2026-10-16: a leg at a time,
+each bend tested, the way out nearest where it believes the place to be, not back the way it came, refused under a
+tenth, stopped at a barred way or after forty legs).  The book has no rule for it: every number here is the house's,
+for the user.  *(Every ruleset's: the bearings' tests the referee's.)*
+
+- **The places** *(for review)*: a room named ("go back to the Mausoleum", "go to", "return to", "head back to", "walk
+  back to", "travel to", "make my way back to", "find my way back to"); the way in ("the entrance", "the way in", "where
+  I started", "the start"; "the way out" said going back): the top stratum's way out, where the character came in; and
+  a kind of room the theme names ("go back to the kitchen"), the last of them it was in that it still remembers (the one
+  it's in only if there's no other: there already).  Why the last: "the kitchen" said after leaving one means that one.
+  *(Not yet: a journey to another stratum: refused, "The Mausoleum isn't on this level."; a fork named, a thing.)*
+- **Remembered under a tenth no longer** (the old design's): the place's chunk's memory as it is now (the map's rule,
+  HOUSE.md's the map kept) under 10 of 100 (KEPT_GONE), and no map carried that shows it: "You don't remember the way to
+  the Mausoleum."  One rule wherever a square seen before is gone by (below).  Why a tenth: the old design's, and at a
+  tenth the map shows a square in two; the user's to set.
+- **A map shows the way** *(for review)*: the place's room drawn on the map it carries, and light to read it by (its own
+  square lit, not blinded): the place where the map has it, off as it was drawn (its drawing's grade, the north
+  believed in as it was drawn: the map kept's rule).  In the dark the map's no help, as it can't be read; its memory
+  still can be.
+- **Where it believes the place lies**: seen now, where it is (straight there); else where its map or its mind has it,
+  put off as each is (a mind's as it's faded, for one that doesn't know north).  The way to it by the north it believes
+  in: *(the house's, for review)* its mind's by how far its belief's gone since it last saw that part of the dungeon
+  (each chunk keeps the north believed in as it was last seen), so a belief gone wrong since takes it astray, and one
+  as wrong then and no worse takes it there (its sense of where things lie went wrong with it); its map's by the north
+  it believes in now (a map's read by its compass, its own errors drawn in).  The old design's "the true way off by its
+  bearings' skew" was the whole skew; this is the part that's gone wrong since.
+- **The way out of each place** *(for review)*: from a room its doors and its passages' mouths (in the dark only those
+  it knows), from a passage its ways on and its doors; the one whose first square is nearest where it believes the place
+  is (as the crow flies, near enough: the further way and half the other); a way it hasn't taken on this journey before
+  one it has (the house's: else it would go back and forth between a fork and a dead end that points the place's way),
+  and not back the way it came if there's another (the old design's).
+- **Each leg a walk** (the old design's): at its pace, each bend tested for its bearings as any walk's (and the dark's,
+  the traps', the denizens' rules as they are); a landmark sets its bearings right as it passes one, and the journey
+  goes on by them.  A door it has opened or shut before is opened as it goes (go's, the user's); one it hasn't, or one
+  locked or barred, and a passage's shut door, ends the journey there: "The door is shut: open it first."
+- **A map aids the bearings** (the user's): a walk ending in a part of the dungeon drawn on the map it carries, not in
+  the dark, four steps the easier (the old design's "four steps better"); *(for review)* two if that part was drawn at a
+  marginal failure, none at a critical failure (a bad map no help).  Every walk's, not only a journey's.
+- **Its end**: there ("You're back in the Mausoleum."); its memory of the place gone on the way ("You no longer remember
+  the way to the Mausoleum."); its bearings lost on the way, and known (a critical failure: "You've lost your bearings:
+  you can't tell which way to go."); forty legs (the old design's), or no way on it knows of: "You've lost your way: you
+  can't find the Mausoleum."; a leg's walk ended short (a denizen in its way, a trap, a fall, a ledge: told as they
+  are).  A long task (HOUSE.md's long tasks: LT_TRAVEL, "travelling"): stopped hard as a walk is, asked soft ("Keep
+  travelling?"), "stop", "stop walking", "stop travelling"; *(the house's, for review)* any command typed as it goes
+  stops it at once and is carried out after (the old design's "any command ends it"), but those taken at once (the
+  map, what's carried, the status, a look about).
+- **Its words** *(for review)*: "You head back toward the Mausoleum." as it sets out; each leg's beats and the place it
+  comes to, told whole (a look of its own each leg, as a walk's is); "You're back in the Mausoleum." (the way in:
+  "You're back where you came in."), "You're in the Mausoleum already."
+- **What's kept now** (the map agent's list, slice 4.2's): the dark's walks go only by squares of parts of the dungeon
+  it still remembers (a tenth or more); a part seen again once it's forgotten is remembered afresh, what it saw of it
+  before gone (its seen squares, its rooms visited: so a room's size, a landmark, a first look go by what's kept; its
+  drawing on paper kept); *(for review)* a walk felt in the dark keeps the parts it goes through as a look keeps what
+  it sees, as well and as fresh (they were remembered as felt, but their memory never made fresh).
+- **Every actor** *(not built: listed)*: the denizens move a square at a time, toward or away, and away from the
+  character coarsely about their lairs; none goes to a place by way of the rooms and passages yet.  When one does (a
+  denizen going home, a robber off with its loot, an ally sent home), the world's way out of each place is the code to
+  share, by the true place: the underground's own know north, and know their way.
+- **Found on the way** *(for the user)*: a wait longer than 100 minutes is a wait of 100 ("wait 2 hours", "wait 3
+  hours": the world's busy takes 60,000 tenths at most, the UI's wait_of holds it to that), though it was asked for longer.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

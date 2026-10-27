@@ -252,6 +252,79 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     return !k;
 }
 
+/* The words p (one or more, a space between) among the line's, one after another: 1 if so (split's) */
+static unsigned char __fastcall__ said (const char* p)
+{
+    unsigned char i, j, n;
+    const char* q;
+
+    for (i = 0; i < nw; ++i) {
+        for (q = p, j = i; j < nw; ++j, q += n + 1) {
+            n = strlen (w[j]);
+            if (strnicmp (q, w[j], n) || (q[n] && q[n] != ' ')) {
+                break;
+            }
+            if (!q[n]) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+/* A journey to a place the character knows (HOUSE.md's travel, slice 4.2's; the user's, 2026-10-16: "I want to go
+** back to the mausoleum"): the parser's move to a thing (main.c's command: "go to", "go back to", "walk back to",
+** "head back to", "return to", "travel to", "make my way back to", the aliases' and the grammar's), whose thing is a
+** room named (names.c's room_named: "the Mausoleum"), the way in ("the entrance", "the way in", "where I started",
+** "the start"; "the way out", said going back), or a kind of room the theme names, the last of them it was in ("the
+** kitchen"; said going back, the room words the parser knows: "the hall", "the cell").  The world's (I_TRAVEL): 1 if
+** it's one, sent; else 0, the move as it was */
+unsigned char __fastcall__ s_travel_go (const char* l)
+{
+    struct msg m;                               /* (On the C stack: the main RAM's none) */
+    char k[16];
+    unsigned char e, o = cmd.obj.kind, back, n, best = 0;
+
+    if (o && o != OB_WAY_OUT && o != OB_ROOM) {
+        return 0;                               /* (A thing it sees: walked to, as it was) */
+    }
+    strncpy (b, l, INMAX);
+    split ();
+    back = any ("back\0return\0travel\0way\0returning\0") != 0;
+    memset (&m, 0, sizeof m);
+    m.kind = I_TRAVEL;
+    if (!o && (e = room_named (l)) != 0xFF) {
+        m.b = e;                                /* (A room named: where it is, the names') */
+        m.w1 = named_room.x;
+        m.w2 = named_room.y;
+        m.x[0] = named_room.w;
+        m.x[1] = named_room.h;
+        m.x[2] = named_room.sn;
+    } else if ((!o && (any ("entrance\0start\0started\0began\0beginning\0") || said ("way in") ||
+               said ("came in"))) || (o == OB_WAY_OUT && back)) {
+        m.b = TRV_IN;
+    } else if (!o || back) {
+        for (e = 0; e < 8 + TUSES; ++e) {       /* (A kind of room, its words the theme's: the longest said) */
+            hub_mem (THEME_BANK, k, e < 8 ? THEME->room[e] : THEME->uses[e - 8], sizeof k);
+            k[sizeof k - 1] = 0;
+            if (*k && (n = strlen (k)) > best && said (k)) {
+                best = n;
+                m.b = TRV_KIND | e;
+            }
+        }
+        if (!best) {
+            return 0;
+        }
+    } else {
+        return 0;
+    }
+    if (hub_send (&m)) {
+        busy = 1;
+        t_prompt (0);
+    }
+    return 1;
+}
+
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 #pragma code-name (push, "OV9CODE")

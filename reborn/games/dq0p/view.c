@@ -212,29 +212,86 @@ static void __fastcall__ view_grid (unsigned gx, unsigned gy, unsigned char w)
 #pragma code-name (push, "SW4CODE")
 #pragma rodata-name (push, "SW4RODATA")
 
+/* What it keeps of chunk C as it comes to know it again (fr: the clock, the fade, how well it keeps what it sees: its
+** mapmind, mapping as it goes, half that not, and a quarter of it): a passing more if it's come to see it again
+** (KEPT_PASS or more since it last did: 255 at most); how well it keeps it made fresh (fr's q, a quarter of mapmind
+** more for each of its passings' points, TR_MORE's; 100 at most; never less than it remembers of it still: a tenth lost
+** each KEPT_FADE); forgotten (under KEPT_GONE: HOUSE.md's travel, slice 4.2's), remembered afresh, what it saw of it
+** before gone (its seen marks wiped but those it sees now, its rooms no longer visited; its drawing on paper kept);
+** the north it believes in now kept with it (travel's: its way back off by how far its belief's gone since) */
+extern unsigned char at_bank;                   /* (chunk.c's: at ()'s chunk's bank) */
+struct fresh {
+    unsigned        now, u0;
+    unsigned char   q, q4, sk;
+};
+static void __fastcall__ fresh (const struct fresh* fr)
+{
+    struct ckept* k = &C->kept;
+    unsigned age = fr->now - k->m, u = fr->u0, i;
+    unsigned char f = fr->q, left;
+    unsigned char* p;
+
+    if ((!k->q || age >= KEPT_PASS) && k->n < 255) {
+        ++k->n;
+    }
+    if (k->n >= 4) {                            /* (Fresh: its passings' points, TR_MORE's, a quarter of mapmind
+                                                **   each, and its fading the slower, twice for each) */
+        f += fr->q4;
+        u <<= 1;
+    }
+    if (k->n >= 12) {
+        f += fr->q4;
+        u <<= 1;
+    }
+    f = f < 100 ? f : 100;
+    for (left = k->q; age >= u && left; age -= u) {
+        left = left > 10 ? left - 10 : 0;       /* (What it remembers of it still: a tenth lost each fade) */
+    }
+    if (k->q && left < KEPT_GONE) {
+        for (p = &C->tile[0][0], i = 0; i < CW * CW; ++i, ++p) {
+            if (!(*p & T_VIS)) {
+                *p &= ~T_SEEN;                  /* (Forgotten: what it saw then gone) */
+            }
+        }
+        for (i = 0; i < C->nrooms; ++i) {
+            C->room[i].flags &= ~R_VISITED;
+        }
+    }
+    k->q = left > f ? left : f;
+    k->m = fr->now;
+    k->sk = fr->sk;                             /* (The north it believes in as it knows it again) */
+}
+
 /* The character's memory of this look's squares (the last view's: bx0, by0, bw, blo, bhi), each chunk with any of
-** them in it: a passing more if it's come to see it again (KEPT_PASS or more since it last did: 255 at most); how
-** well it keeps it made fresh (the summary's mapmind, mapping as it goes, half that not, a quarter of mapmind more for
-** each of its passings' points, TR_MORE's; 100 at most; never less than it remembers of it still: a tenth lost each
-** KEPT_FADE); and its squares drawn on its map as the marks went in (run_d's), the chunk's drawn squares another
-** map's wiped but those (seen now), how true they're drawn kept (the referee's grade, the north believed in then) */
+** them in it, made fresh (fresh's); and its squares drawn on its map as the marks went in (run_d's), the chunk's drawn
+** squares another map's wiped but those (seen now), how true they're drawn kept (the referee's grade, the north
+** believed in then).  And a walk's squares felt in the dark (the look's walk, wd | 0x80: its way felt's, s_felt's,
+** before it marks them, its bends near enough), each chunk it went through made fresh the same (HOUSE.md's travel: what's felt kept as what's
+** seen, slice 4.2's) */
 void s_kept (void)
 {
-    unsigned now, age, map, u, u0;              /* (On the C stack: the main RAM's room) */
-    unsigned char q, q4, i0, i1, j, j0, j1, f, left, dsk;
+    unsigned age, map, x, y;                    /* (On the C stack: the main RAM's room) */
+    unsigned char i0, i1, j, j0, j1, dsk, d, n, sn, lcx, lcy, lb;
     signed char dq;
     struct ckept* k;
     unsigned char* p;
+    struct fresh fr;
 
     hub_map (0);
-    now = KEPT_CLOCK;
-    q4 = HUB->pcsum.mapmind;
-    q = HUB->watch & WA_MAP ? q4 : q4 >> 1;
-    q4 >>= 2;
-    u0 = KEPT_UNIT (HUB->pcsum.mapfade);
+    fr.now = KEPT_CLOCK;
+    fr.q4 = HUB->pcsum.mapmind;
+    fr.q = HUB->watch & WA_MAP ? fr.q4 : fr.q4 >> 1;
+    fr.q4 >>= 2;
+    fr.u0 = KEPT_UNIT (HUB->pcsum.mapfade);
+    fr.sk = HUB->pc_skew;
     map = HUB->pc_map;
     dq = HUB->pc_drawn;
     dsk = HUB->pc_skew;
+    x = HUB->look.wx;
+    y = HUB->look.wy;
+    d = HUB->look.wd;
+    n = HUB->look.wn;
+    sn = HUB->pc_stratum;
     for (j0 = 0; j0 < bw; j0 = j1) {            /* (Each chunk's rows of the view, and its columns) */
         j1 = j0 + CW - ((by0 + j0 - v_y0) & (CW - 1));
         j1 = j1 < bw ? j1 : bw;
@@ -246,28 +303,8 @@ void s_kept (void)
             if (j == j1 || !at (v_sn, bx0 + i0, by0 + j)) {
                 continue;                       /* (None of its squares seen now) */
             }
+            fresh (&fr);
             k = &C->kept;
-            age = now - k->m;
-            if ((!k->q || age >= KEPT_PASS) && k->n < 255) {
-                ++k->n;
-            }
-            f = q;                              /* (Fresh: its passings' points, TR_MORE's, a quarter of mapmind
-                                                **   each, and its fading the slower, twice for each) */
-            u = u0;
-            if (k->n >= 4) {
-                f += q4;
-                u <<= 1;
-            }
-            if (k->n >= 12) {
-                f += q4;
-                u <<= 1;
-            }
-            f = f < 100 ? f : 100;
-            for (left = k->q; age >= u && left; age -= u) {
-                left = left > 10 ? left - 10 : 0;   /* (What it remembers of it still: a tenth lost each fade) */
-            }
-            k->q = left > f ? left : f;
-            k->m = now;
             if (run_d && k->map != map) {
                 k->map = map;                   /* (First drawn on this map: how true, by the north believed in) */
                 k->dq = dq;
@@ -278,6 +315,32 @@ void s_kept (void)
                     }
                 }
             }
+        }
+    }
+    if (n && (d & 0x80)) {                      /* (A walk felt in the dark: its way as s_felt goes it) */
+        d &= 3;
+        lb = 0;
+        while (n--) {
+            x += dir_x[d];
+            y += dir_y[d];
+            if (!(p = at (sn, x, y))) {
+                break;
+            }
+            if (!lb || at_bank != lb || (unsigned char) C->cx != lcx || (unsigned char) C->cy != lcy) {
+                lb = at_bank;                   /* (A chunk come into: made fresh, once) */
+                lcx = (unsigned char) C->cx;
+                lcy = (unsigned char) C->cy;
+                fresh (&fr);
+            }
+            if (TILE (*p) == T_DOOR || step_ok (sn, x, y, d)) {
+                continue;
+            }
+            i0 = step_ok (sn, x, y, (d + 1) & 3);   /* (Round a bend: its one way to the side; ways_from's, near
+                                                **   enough, the chunks it went through all that's wanted) */
+            if (i0 == step_ok (sn, x, y, (d + 3) & 3)) {
+                break;
+            }
+            d = (d + (i0 ? 1 : 3)) & 3;
         }
     }
 }
