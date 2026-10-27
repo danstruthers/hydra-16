@@ -1821,15 +1821,26 @@ static unsigned char __fastcall__ btest (signed char steps)
 /* The ways walked often (the user's, 2026-10-23: "familiar ways should be easier"): the steps a test about square x, y
 ** of stratum sn is the easier for the times the character's passed through that part of the dungeon, by the map's
 ** count of its chunk's passings (the senses', as it looks about: world.h's KEPT_KNOWN), its points TR_MORE's, a
-** trace's rule (HOUSE.md's: 4 passings or more BEAR_FAMILIAR steps the easier, 12 or more no test at all, BEAR_KNOWN) */
+** trace's rule (HOUSE.md's: 4 passings or more BEAR_FAMILIAR steps the easier, 12 or more no test at all, BEAR_KNOWN).
+** And a map that shows the way (the user's, 2026-10-16: "Orientation checks would be aided if good maps are used"):
+** that chunk drawn on the map it carries, and the walk not in the dark (light to read it by), BEAR_MAP steps the easier
+** (HOUSE.md's travel: drawn at a marginal failure half that, at a critical failure none) */
+#define BEAR_MAP        4
 static signed char __fastcall__ familiar (unsigned char sn, unsigned x, unsigned y)
 {
     static unsigned char n;
+    unsigned map;
+    signed char g = 0;
 
+    hub_map (0);
+    map = HUB->pc_map;
     n = KEPT_KNOWN (sn, x, y);
+    if (n && map && C->kept.map == map && !pfeel) {   /* (Seen, so its chunk in the window: KEPT_KNOWN's) */
+        g = C->kept.dq == G_CF ? 0 : C->kept.dq == G_MF ? BEAR_MAP / 2 : BEAR_MAP;
+    }
     hub_map (0);
     n = TR_MORE (n);
-    return n > 1 ? BEAR_KNOWN : n * BEAR_FAMILIAR;
+    return n > 1 ? BEAR_KNOWN : n * BEAR_FAMILIAR + g;
 }
 
 /* A move's end (arrive's: w its how, A_*, the first time there times 256): its bearings, by the way it came; the news
