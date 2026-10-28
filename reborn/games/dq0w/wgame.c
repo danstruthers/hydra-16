@@ -57,7 +57,7 @@ static unsigned char __fastcall__ found (const char* name)
         return 0xFF;
     }
     k = HUB->ireq.x;
-    return k >= KI_THEME ? k - KI_THEME : 0xFE;
+    return (unsigned char) (k - KI_THEME) < NTKINDS ? k - KI_THEME : 0xFE;
 }
 
 /* The rule (verb, a, b) among the theme's: its number, or 0xFF (the theme's bank in the window) */

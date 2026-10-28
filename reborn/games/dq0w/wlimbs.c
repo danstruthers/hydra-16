@@ -318,19 +318,25 @@ static void __fastcall__ filed (unsigned i, unsigned char held)
 
 /* A denizen's things made (I_KIT's, the denizens' ring's, part 14's: its lair placed): drawn and made (part 57's), but
 ** for dq0 -K (the tests': none of theirs) */
-/* Kind k a role in the outfits' index (its entry "#" and its number, outfits.js's: the index read in, the character's
-** outfit's, as the game began): 1, or 0 (none, or no index: a kind with no things of its own, part 57 not called) */
-static unsigned char __fastcall__ has_role (unsigned char k)
+/* A section m asks for (I_KIT's a: its role's, its lair's) in the outfits' index for its kind (its entry "#" or "&" and
+** its number, outfits.js's: the index read in, the character's outfit's, as the game began), or its personal things
+** (KT_PURSE: its kind's or its standing's): 1, or 0 (none, or no index: a kind with no things of its own, part 57 not
+** called) */
+static unsigned char __fastcall__ has_role (const struct msg* m)
 {
-    unsigned h = ('#' * 31 + k), n;
+    unsigned h, n;
     unsigned char* q;
 
-    hub_map (KIND_BANK);
+    hub_map (CAT_BANK);
     if ((OF_INDEX[0] | OF_INDEX[1] << 8) != 0x464F) {
         return 0;
     }
+    if (m->a & KT_PURSE) {
+        return 1;
+    }
     for (n = OF_INDEX[3], q = OF_INDEX + 4; n; --n, q += 5) {
-        if ((q[0] | q[1] << 8) == h) {
+        h = q[0] | q[1] << 8;
+        if (((m->a & KT_ROLE) && h == '#' * 31 + m->x[1]) || ((m->a & KT_LAIR) && h == '&' * 31 + m->x[1])) {
             return 1;
         }
     }
@@ -340,13 +346,14 @@ static unsigned char __fastcall__ has_role (unsigned char k)
 void __fastcall__ s_den_other (const struct msg* m)
 {
     hub_map (0);
-    if (!(HUB->gear & GE_OLD) && has_role (m->x[1])) {
+    if (!(HUB->gear & GE_OLD) && has_role (m)) {
         ost.did = m->t;
         ost.hx = m->w1;
         ost.hy = m->w2;
         ost.hsn = m->x[2];
+        ost.fac = m->b;
         it_need (ost.hsn, (ost.hx - STRATUM (ost.hsn).x0) >> CW_BITS, (ost.hy - STRATUM (ost.hsn).y0) >> CW_BITS);
-        den_kit (m->x[1]);
+        den_kit (m);
     }
 }
 
@@ -357,11 +364,14 @@ void s_den_equip (void)
 {
     static const char hmark[4] = " <>*";
     static char wb[12];
-    static unsigned char f, n, h, k;
+    static unsigned char f, n, h, k, ag;
+    static unsigned i;
+    static struct item* q;
     struct req* r;
 
     hub_map (0);
     HUB->slot[SLOT_WORLD].text[0] = 0;
+    HUB->agear[bk] = ag = 0;
     if (!(ki = kit_next (0))) {               /* (Its first: ip its record, its bank in the window) */
         return;
     }
@@ -369,6 +379,11 @@ void s_den_equip (void)
         f = ip->flags;
         n = ip->quality;
         dkind (ip->kind);
+        if ((f & I_HELD) && weapon ()) {        /* (How it looks: armed, armoured, the hub's agear) */
+            ag |= AG_ARMED;
+        } else if ((f & (I_WORN | I_HIDDEN)) == I_WORN && dk.craft == AP_ARMOUR) {
+            ag |= AG_ARMOUR;
+        }
         if (!dk.tool[0] || !(f & (I_HELD | I_WORN))) {
             continue;
         }
@@ -384,7 +399,20 @@ void s_den_equip (void)
             strcat (r->text, wb);
         }
     }
+    for (i = 0; !(ag & AG_ARMED) && (i = items (i, IN_ITEM, 0)) != 0; ) {
+        k = ip->kind;                           /* (A weapon at its belt, in its carrier there or hung from it) */
+        if ((q = item_at (ip->x))->where == IW_ITEM) {
+            q = item_at (q->x);
+        }
+        if (q->where == IW_DEN && (q->owner | q->hide << 8) == bd.did) {
+            dkind (k);
+            if (weapon ()) {
+                ag |= AG_ARMED;
+            }
+        }
+    }
     hub_map (0);
+    HUB->agear[bk] = ag;
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_EQUIP;
     r->actor = bk + 1;

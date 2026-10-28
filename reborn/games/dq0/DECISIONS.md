@@ -1109,3 +1109,12 @@ the repository), the user's answers to their questions:
 10. A key opens its own lock, no test.
 11. "Please use the denizens from the HarnWorld Bestiary, and include Khuzdul (dwarves), the Sindarin (elves),
    Humans, and Gargun (or all types)."
+
+Then (2026-10-27), on the denizens' gear told (the gear2 brief's item 4: the UI naming what a denizen holds and
+wears): "For #4, I would prefer that the game say general things when looking, more detail when examining,
+including basic quality of visible equipment when assessing, as would normally be the case.  If assessing at a
+distance, eyesight should dictate quality/granularity of any assessment/examination based on viewing distance,
+naturally"  So three levels of detail for anything seen, things and actors alike: a look general, examining more
+(what it holds and wears), assessing the quality and condition of what's visible; the viewer's eyesight and the
+distance setting how much comes through, one rule for every viewer; what's hidden (beneath clothing, in a pack)
+never told by looking.

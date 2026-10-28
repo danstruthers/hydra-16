@@ -20,7 +20,8 @@
 ** material, the craft that knows it, its worth (pennies); what it keeps (KF_*: a surface KF_ON) and what closes it (a
 ** lid, a tie, a stopper: KF_LID, KF_TIE, KF_STOPPER), its own form (0 a thing whole; KF_COUNT a lot, counted: its
 ** weight one's) */
-typedef char kinds_fit[KI_COUNT <= KI_THEME ? 1 : -1];   /* (The theme's after the catalogue's own) */
+typedef char kinds_fit[KI_OWN_END <= KI_THEME && KI_COUNT <= NKINDS ? 1 : -1];   /* (The theme's after the catalogue's
+                                                **   own, the high kinds after the theme's) */
 #pragma rodata-name (push, "KINDATA")           /* (The kinds in a bank of their own: the hub's KIND_BANK) */
 const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, theme.h: the UI's, as it starts) */
     { "", 0 },
@@ -167,6 +168,24 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "hammer", K_HAND | K_HANG, 8, 1, 0, 0, 0, 0, 2, "hammer", MT_IRON, AP_METAL, 6 },
     { "herbs", K_PLURAL, 1, 1, 0, 0, 0, 0, 1, "herbs", MT_OTHER, AP_FOOD, 6, 0, KF_COUNT },   /* (Ounces) */
     { "vial", K_CONTAINER | K_HAND, 2, 1, 1, 5, 0, 0, 1, "", MT_GLASS, AP_GLASS, 6, KF_LIQUID | KF_STOPPER },
+    { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 },    /* (The theme's eight, the
+                                                **   UI's as it starts: KI_THEME's) */
+    /* (KI_HIGH on, 2026-10-27: the denizens' belongings and valuables, never lit nor struck with) */
+    { "furs", K_PLURAL, 40, 20, 0, 0, 0, 0, 4, "", MT_LEATHER, AP_HIDE, 30 },    /* (A lord's bed: a heap of them) */
+    { "blanket", 0, 12, 6, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 4 },
+    { "cask", K_CONTAINER, 40, 40, 32, 200, 0, 0, 5, "", MT_WOOD, AP_WOOD, 12, KF_LIQUID | KF_STOPPER },   /* (Four
+                                                **   gallons: a band's water) */
+    { "crowns", K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "", MT_GOLD, AP_METAL, 100, 0, KF_SMALL | KF_COUNT },   /* (The
+                                                **   Khuzdul's gold coin: a hundred pennies, the house's) */
+    { "brooch", K_WEAR, 0, 0, 0, 0, 0, 0, 1, "", MT_SILVER, AP_JEWEL, 30 },   /* (A jewel's or a plate's worth
+                                                **   its kind's in silver: by its material, HOUSE.md's) */
+    { "necklace", K_WEAR, 0, 0, 0, 0, 0, 0, 1, "", MT_SILVER, AP_JEWEL, 60 },
+    { "pendant", K_WEAR, 0, 0, 0, 0, 0, 0, 1, "", MT_SILVER, AP_JEWEL, 24 },
+    { "goblet", K_HAND, 2, 1, 0, 0, 0, 0, 2, "", MT_SILVER, AP_JEWEL, 80 },
+    { "gem", 0, 0, 0, 0, 0, 0, 0, 1, "", MT_STONE, AP_JEWEL, 120 },
+    { "talisman", K_WEAR, 0, 0, 0, 0, 0, 0, 1, "", MT_BONE, AP_BONE, 1 },    /* (A tribal charm: a tooth on a
+                                                **   thong, a bright pebble) */
+    { "dice", K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "", MT_BONE, AP_BONE, 2 },
 };
 #pragma rodata-name (pop)
 
@@ -217,7 +236,10 @@ const unsigned char throws[KI_COUNT] = {
                                                 **   sickle, net, whip, warhammer */
     1, 0, 0, 0,                                 /* buckler, knight shield, kite shield, tower shield */
     1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1,      /* clothes ... mask: armour and clothes */
-    1, 2, 1, 2, 2, 2, 2, 2                      /* crowbar, bandages, letter, ring, grapple, hammer, herbs, vial */
+    1, 2, 1, 2, 2, 2, 2, 2,                     /* crowbar, bandages, letter, ring, grapple, hammer, herbs, vial */
+    0, 0, 0, 0, 0, 0, 0, 0,                     /* (the theme's eight) */
+    1, 1, 0, 2, 2, 2, 2, 2, 2, 2, 2             /* furs, blanket, cask, crowns, brooch, necklace, pendant, goblet, gem,
+                                                **   talisman, dice */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 

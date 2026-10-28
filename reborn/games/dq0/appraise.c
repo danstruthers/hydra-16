@@ -28,6 +28,7 @@ static const struct material mats[NMATS] = {
     { "cloth", { 6, 1, 2, 0, 5, 1 } }, { "bone", { 3, 5, 5, 4, 7, 2 } }, { "clay", { 1, 6, 5, 9, 8, 6 } },
     { "stone", { 6, 8, 9, 9, 9, 4 } }, { "glass", { 0, 5, 3, 6, 4, 9 } }, { "silver", { 4, 5, 5, 6, 6, 5 } },
     { "", { 0, 0, 0, 0, 0, 0 } }, { "beeswax", { 2, 1, 1, 0, 3, 2 } }, { "tallow", { 1, 1, 1, 0, 2, 1 } },
+    { "gold", { 3, 4, 4, 6, 6, 9 } },
 };
 static const char* const harm[NDMG] = { "blows", "edges", "points", "fire", "cold", "acid" };
 static const char* const make[10] = {

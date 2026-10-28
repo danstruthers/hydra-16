@@ -32,8 +32,8 @@ static const char* const doing[9] = {
 
 /* The denizens as they're told, alike ones together: each the way it lies (REL8 as the character faces), how far
 ** (squares), what it's doing (DO_*), its name (as it lies there; all 0: too far to make out), how many */
-struct told { unsigned char rel, d, doing; char name[12]; unsigned char n; };
-#define ALIKE       15                          /* (Its bytes that make it alike: all but n) */
+struct told { unsigned char rel, d, doing; char name[12]; unsigned char gear, n; };
+#define ALIKE       16                          /* (Its bytes that make it alike: all but n) */
 static struct told now_[SEE_DENS] = { { 0 } };  /* As they are now (group's), */
 static unsigned char nnow = 0, heard = 0;       /*   so many; one heard close behind */
 static struct told was[SEE_DENS] = { { 0 } };   /* As they were told last, */
@@ -130,6 +130,9 @@ static void group (void)
         if (n[0] < 'a' || t.d <= 3 + S.eye) {
             strncpy (t.name, n, sizeof t.name - 1);
         }
+        t.gear = t.d <= 1 + S.eye ? S.den[i].gear & (AG_ARMED | AG_ARMOUR) : 0;   /* (Its things at a look, made out
+                                                **   nearer than its kind: "armed and armoured", HOUSE.md's three
+                                                **   levels, 2026-10-27) */
         for (k = 0, p = now_; k < nnow; ++k, ++p) {     /* (One alike told already: with it) */
             pa = (char*) p;
             pb = (char*) &t;
@@ -176,6 +179,9 @@ static void __fastcall__ tell_one (const struct told* t)
     unsigned char many = t->n > 1;
 
     named (t, 0);
+    if (t->gear) {
+        add (t->gear == AG_ARMED ? ", armed," : t->gear == AG_ARMOUR ? ", armoured," : ", armed and armoured,");
+    }
     add (many ? " are " : " is ");
     add (relname[t->rel & 7]);
     add (", ");

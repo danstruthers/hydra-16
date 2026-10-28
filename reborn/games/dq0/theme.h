@@ -42,7 +42,8 @@
 #define THEME_SIZE      0x1000                  /* A theme's bytes in dq0t.dat (its record, then its words) */
 #define THEME_HEAD      1321                    /* (struct theme's: make.js lays it out the same) */
 #define NTKINDS         8                       /* Its own kinds of things, */
-#define KI_THEME        (NKINDS - NTKINDS)      /*   the catalogue's from here (items.h's NKINDS) */
+#define KI_THEME        120                     /*   the catalogue's from here to KI_THEME + NTKINDS - 1 (items.h's
+                                                **   KI_HIGH on after them, 2026-10-27: a theme's kinds held to 127) */
 #define NPIECES         8                       /* The puzzle's pieces (and its fixtures: an altar, a throne) */
 #define NRULES          8                       /* Its rules */
 #define TSTRATA         8                       /* (world.h's MAXSTRATA) */

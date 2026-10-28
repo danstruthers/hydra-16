@@ -180,6 +180,8 @@ struct den {
 #define D_OUT           0x01                    /* On a square of its own */
 #define D_ACTOR         0x02                    /* An actor now (the hub's entry the truth while it is) */
 #define D_DEAD          0x04                    /* Dead (its body left where it fell: an item) */
+#define D_MET           0x08                    /* Met (made an actor once: its personal things made, I_KIT's KT_PURSE,
+                                                **   the outfits' phase 3, 2026-10-27) */
 #define NNAMES          8
 #define NDREG           32
 #define GIVE_WAY        20                      /* (Rounds the minds wait for the UI's command in hand: a second) */
@@ -257,6 +259,43 @@ static void __fastcall__ den_put (unsigned char i)
     hy_bank (pb);
     memcpy (&POP->den[i], &D, sizeof D);
     hub_map (0);
+}
+
+/* A kind's belongings' ways (kinds.txt's keeps, standing and home: make.js's, after the factions in the kinds' bank,
+** 2026-10-27), copied out (X) */
+struct dkx {
+    unsigned char   keeps;                      /* KP_*: what it doesn't carry, where */
+    unsigned char   standing;                   /* 0-4: its means */
+    unsigned char   home[3];                    /* Its home room's uses, the best liked first (world.h's U_*; 0xFF none) */
+};
+enum { KP_BODY, KP_OPEN, KP_HIDDEN, KP_BOX, KP_TO_LEADER, KP_LEADER };
+static struct dkx X;
+static void __fastcall__ kx_get (unsigned char k)
+{
+    hy_bank (kb);
+    memcpy (&X, (struct dkx*) ((struct faction*) (KINDS + nkinds) + KINDS[0].styles) + (k < nkinds ? k : 0), sizeof X);
+    hub_map (0);
+}
+
+/* The room of the chunk at ox, oy (stratum sn: a lair's, kind k's) its home's in: one of the uses its kind likes best
+** (its home's, kinds.txt's: of the first of them the chunk has, one by the dice), else any; the chunk in the window */
+static unsigned char __fastcall__ home_room (unsigned char k, unsigned char sn, unsigned ox, unsigned oy)
+{
+    unsigned char u, r, n, j;
+
+    kx_get (k);
+    at (sn, ox, oy);
+    for (u = 0; u < 3 && X.home[u] != 0xFF; ++u) {
+        for (n = 0, r = 0; r < C->nrooms; ++r) {
+            n += C->room[r].kind == X.home[u];
+        }
+        if (n) {
+            for (j = random (n), r = 0; C->room[r].kind != X.home[u] || j--; ++r) {
+            }
+            return r;
+        }
+    }
+    return random (C->nrooms);
 }
 
 #pragma code-name (push, "SW4CODE")
@@ -570,7 +609,7 @@ void __fastcall__ s_place (unsigned char i)
         x0 = L.hx - 3;
         y0 = L.hy - 3;
     } else if (at (L.sn, ox, oy) && C->nrooms) {
-        q = &C->room[random (C->nrooms)];
+        q = &C->room[home_room (L.kind, L.sn, ox, oy)];  /* (By its use, its kind's liking: 2026-10-27) */
         x0 = ox + q->x;
         y0 = oy + q->y;
         w = q->w;
@@ -611,8 +650,14 @@ void __fastcall__ s_place (unsigned char i)
             D.ready = now + random (50);
         }
         den_put (k);
-        if ((kind_get (kd), KF_NATURE (K.form)) >= NA_FOLK) {    /* (Folk and the dead: its things made, the world's
-                                                **   draw by its kind's role, filed at its home, the outfits' gear) */
+        im.a = (kind_get (kd), KF_NATURE (K.form)) >= NA_FOLK ? (j ? KT_ROLE : KT_ROLE | KT_LAIR) : 0;  /* (Its lair's
+                                                **   own with its first: its stores, its hoard; folk's and the dead's:
+                                                **   a beast's den's things later, its I_KIT the world's time, a part
+                                                **   swapped in and out for nothing) */
+        if (im.a) {                             /* (Folk and the dead: its things made, the world's draw by its kind's
+                                                **   role, filed at its home, the outfits' gear) */
+            im.b = K.faction;
+            im.x[0] = 0;
             im.x[1] = kd;
             im.x[2] = L.sn;
             im.w1 = L.hx;
@@ -791,6 +836,32 @@ static void settle (void)
 }
 
 /* Actor k's (the copy a's) intent: what it's doing, and the way it faces, with it */
+/* Where actor k (a robber, its kind's record K) takes what it robs (I_ROB's w1, w2, x[2], b): its faction's hoard, the
+** home of a lair of its faction's leader (kinds.txt's keeps H) placed on its stratum (RB_HOARD: the world puts the
+** takings in the hoard there, b its kind's faction); else its own home, hidden there if its kind hides its things
+** (RB_HIDE), else lying there (HOUSE.md's the robbers' takings, 2026-10-27); K its own again after */
+static void __fastcall__ rob_to (unsigned char k)
+{
+    unsigned char i, f = K.faction;
+
+    im.w1 = ahx[k];
+    im.w2 = ahy[k];
+    im.b = f;
+    kx_get (akind[k]);
+    im.x[2] = X.keeps == KP_HIDDEN ? RB_HIDE : 0;
+    for (i = 0; i < hd.nlairs; ++i) {
+        lair_get (i);
+        if (L.kind && (L.flags & L_PLACED) && L.sn == a.sn && (kx_get (L.kind), X.keeps == KP_LEADER) &&
+            (kind_get (L.kind), K.faction == f)) {
+            im.w1 = L.hx;
+            im.w2 = L.hy;
+            im.x[2] = RB_HOARD;
+            break;
+        }
+    }
+    kind_get (akind[k]);
+}
+
 static void __fastcall__ act (unsigned char kind, unsigned char k)
 {
     im.x[0] = a.doing;
@@ -826,6 +897,27 @@ static unsigned char __fastcall__ name_of (unsigned id)
     for (n = 0; n < NNAMES && hd.names[n].id != id; ++n) {
     }
     return n;
+}
+
+/* Denizen D (its kind's record K) first met, as it's first made an actor: its personal things made (I_KIT's
+** KT_PURSE, the world's draw: its purse, its trinkets, its valuables by its standing, the user's answer 6: made as it's
+** first met, then kept), folk's only, if it has any standing (kinds.txt's) */
+static void met (void)
+{
+    unsigned char k = D.kind, f = K.faction;
+
+    if (KF_NATURE (K.form) != NA_FOLK || (kx_get (k), !X.standing)) {
+        return;
+    }
+    im.a = KT_PURSE;
+    im.b = f;
+    im.x[0] = X.standing;
+    im.x[1] = k;
+    im.x[2] = D.lsn;
+    im.w1 = D.hx;
+    im.w2 = D.hy;
+    im.t = D.id;
+    kitted ();
 }
 
 #pragma code-name (push, "SW4CODE")
@@ -869,9 +961,14 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
 {
     struct rs_summary* s = (struct rs_summary*) rq.x;
 
-    D.flags |= D_ACTOR;
+    k |= D.flags & D_MET ? 0 : 0x80;          /* (First met: its personal things, met's) */
+    D.flags |= D_ACTOR | D_MET;
     den_put (i);
     kind_get (D.kind);
+    if (k & 0x80) {
+        k &= 0x7F;
+        met ();
+    }
     akind[k] = D.kind;
     stn[k] = nowq;                              /* (Its stay from now, if it's the square the entry's last was on) */
     ahx[k] = D.hx;
@@ -1439,8 +1536,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
         if (sres[k] && !fled[k] && (!(K_HELP (K) & H_ROBS) || dist <= 1)) {
             if (K_HELP (K) & H_ROBS) {
                 a.doing = DO_FLEE;              /* (Off with what it takes, to its lair: the world's) */
-                im.w1 = ahx[k];
-                im.w2 = ahy[k];
+                rob_to (k);
                 act (I_ROB, k);
             }
             a.attitude = AT_UNFRIENDLY;

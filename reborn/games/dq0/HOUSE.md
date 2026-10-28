@@ -1561,6 +1561,76 @@ the Khuzdul, the Sindarin and men's, for the kinds the later phases bring).  Wha
   body with no more time than one lying there; the plan had twice its taking-off time.)*
 - **dq0 -K** (the tests'): no denizen's things, the bestiary's as before.
 
+### The denizens' belongings and valuables *(2026-10-27: the plan's phases 2 and 3, drafted for the user to review)*
+
+The plan's phases 2 and 3 (denizens.md's sections 3 and 5, the user's answers 6, 9 and 10): what a denizen owns but
+doesn't carry, where it sleeps, its community's stores, its leader's hoard, its purse and its valuables, all things of
+the item store, drawn by the same code from outfits.txt.  What the house adds:
+
+- **Where they sleep:** a lair's home is the room of its chunk its kind likes best (kinds.txt's home: bandits quarters,
+  barracks or a guardroom; their lord a solar, quarters or a hall; cultists a cell, quarters or a chapel; their priest
+  a chapel; the ghouls, the skeletons, the wights and the shade a crypt; beasts a cave; kobolds anywhere), one of them
+  by the dice, else any room as before.  Each denizen's bed is a square of open floor in that room, its own (a
+  blanket, a heap of straw, a lord's furs); what it keeps there lies on it, or hidden in it (a kobold's stash one time
+  in four, a few pennies or a bright pebble: found only by searching).
+- **Kept by trust** (kinds.txt's keeps): all on the body (beasts, the dead), open at its bed (the cultists: a candle),
+  hidden at its bed (a kobold's stash; their takings their lord's), in a locked box at its bed (a bandit one time in
+  three, a chest of 5 to 30 pennies; the bandit lord's and the high priest's always, 20 to 120), given to its leader.
+- **Keys that fit** (answer 10): a key made with a box locks it, and opens its lock alone, with no test, in three
+  seconds ("You unlock the chest with its key."; "lock the chest" locks it again); another key doesn't fit ("Your key
+  doesn't fit its lock."), and a lock without its key is picked or forced as before.  A box's key is in its owner's
+  pouch, a hoard's on its leader.  The rule is every making's: a key made
+  after a box locks it (dq0 -k's "chest,iron key", the tests').  The maker's keys fit nothing yet.
+- **The shared stores** (each lair's, with its first denizen's: outfits.txt's [lair KEY]): a larder (a sack or a basket
+  of 2 to 12 days' rations), the bandits' water (a cask, full, one time in two; their lord's always), spare arms (a sack
+  with a spear and a club, one bandits' lair in three), the cultists' candles.  *(Not yet: a beast's den, its
+  bedding and its prey's bones; a ghoul's nest; a shade's tomb: drafted, then left out, as they moved the tests'
+  openings.)*
+- **The hoard:** a faction's leader's lair keeps it (the kobold lord's, the bandit lord's, the high priest's): a chest of
+  20 to 200 pennies and valuables, locked (the kobold lord's one time in two), its key in the leader's pouch.
+- **The robbers' takings:** what a robber takes goes into its faction's hoard if its leader's lair is placed on the
+  stratum (the robber's kind's faction, the stand-in's: its takings in the chest, the chest as it was); else hidden at
+  its own home if its kind hides its things; else on its home's square, as before.
+- **Personal things made when first met** (answer 6): as a denizen's first made an actor, its purse and its valuables
+  (outfits.txt's [purse KEY], else its standing's [standing N], by kinds.txt's standing: 1 tribal, 2 common folk, 3
+  people of standing, 4 lords), then kept.  A box at its bed is a personal thing too (made then, with its key).
+- **Coins for all folk** (answer 9): silver pennies everyone's; the Khuzdul's gold crowns (100 pennies each); a
+  kobold's 1 to 3 (60%), a bandit's 2 to 24, a cultist's 6 to 36 (Religion 9's new cleric), a bandit lord's 10 to 60,
+  a priest's 20 to 80.  The Sindarin's too, a few (the plan had none).
+- **Valuables:** the new kinds (crowns, a brooch, a necklace, a pendant, a goblet, a gem, a talisman, dice) and the
+  ring, each of a material (bronze, silver, gold: outfits.txt's word after a thing).  **Worth by material:** a jewel's
+  or a plate's kind written for silver; ten times in gold, a quarter in bronze or iron, a twentieth in bone, wood or
+  stone (appraising's worth: the plan's, the book's silver at 20d an ounce and gold at 400d, a tenth for the work).
+- **Worn beneath its clothes** (DUNGEON.md's concealment): a purse under a tunic, a ring on a cord (a bandit's one time
+  in seven, a lord's purse more often): not told by a look at the body, nor taken; found by searching it (its minute),
+  then as any other thing on it.
+- **The kinds past seven bits:** the belongings' and valuables' kinds are numbered 128 on (items.h's KI_HIGH, NKINDS
+  144: the catalogue was full), never lit nor struck with: a blow with one is the best held instead.
+- *For review:* every chance and number in outfits.txt's [lair], [purse] and [standing] sections; the home rooms by
+  kind; the bed, a blanket for every folk denizen (the plan's straw for kobolds one in two); a box's contents made as
+  it's first met rather than as its lair's placed.
+
+### What's seen of an actor *(2026-10-27: the user's three levels, drafted for the user to review)*
+
+The user's (DECISIONS.md's, 2026-10-27): "the game say general things when looking, more detail when examining,
+including basic quality of visible equipment when assessing ... If assessing at a distance, eyesight should dictate
+quality/granularity of any assessment/examination based on viewing distance".  One rule for every viewer (the
+character's side built):
+
+- **A look** says how it seems in general: "A bandit, armed and armoured, is ahead to your left, 10 feet away."
+  (armed: a weapon in hand or at its belt; armoured: armour worn, not clothes), within one square more than the eyes'
+  sight (the senses' eye, 0-9: its name's made out within three more).
+- **Examining** ("examine the bandit") tells what it holds, wears and has at its belt, each thing made out within its
+  kind's seen squares and half the eyes' sight more (a thing's look from afar, as appraise.c's): "The bandit holds a
+  spear. It wears clothes, shoes and a leather vest. At its belt: a pouch, a knife in a sheath and a shortsword in a
+  scabbard."; past that, "There's more you can't make out from here."
+- **Assessing** ("assess the bandit") adds each one's make and condition, within half that distance: "a fine
+  shortsword", "a sound leather vest, cracked" (by its material: iron and steel rusted, leather cracked, cloth frayed,
+  wood rotten, silver and bronze tarnished; badly, under four tenths of its durability left).  By eye alone, no test
+  (the book's appraisal tests are for a thing in hand: assessing a thing itself still is).
+- **Never told by looking:** what's beneath its clothes, in its pouch, in its pack.
+- *For review:* the distances; assessing by eye with no test; the words.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

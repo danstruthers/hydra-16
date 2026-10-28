@@ -2022,6 +2022,8 @@ const DQ0_REPEATS = [
     why: 'a walk\'s beats as it goes (slice 4.0): a winding passage turns the same way more than once, has more than one doorway, goes on quietly every 30 feet' },
   { what: /^(?:It falls senseless|It flees|The .+ falls dead|The .+ gets to its feet|You get to your feet|You turn to the .+|You fight back against the .+)\.$/,
     why: 'fighting on (the user\'s, 2026-10-20): one attack fights its foes in turn, each falling, fleeing, getting up, fought back or turned to told as it comes (two of a name, the same words)' },
+  { what: /^(?:Your .+ falls from your hand|The .+ drops its .+|The .+ snatches up its .+)\.$/,
+    why: 'a fight\'s fumbles (slice 4.1b\'s hands), each told as it comes: a thing let fall at each fumble (two torches held, two fumbles), a denizen\'s weapon dropped and snatched up again its next turn, twice in a long answer\'s rounds (the soak\'s seed 85, 2026-10-27)' },
   { what: /^(?:You stop fighting|You fumble for the .+)\.$/,
     why: 'commands typed ahead as the character fights, each taking the fight over in turn, fought on between them (fighting on), their answers one' },
   { what: /^A giant rat is .+, keeping its distance\.$/, tests: /^dq0(?:traces|legs)$/,
@@ -3425,6 +3427,83 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0keys', what: 'Dingus Quest Zero\'s keys that fit (the user\'s answer 10: "A key opens its own lock, no test"; HOUSE.md\'s keys that fit, the outfits\' phase 2): a key made after a chest locks it and fits it alone (dq0 -k\'s "chest,iron key": every making\'s rule, the denizens\' boxes\' too): the chest put down locked, opened with its key with no test, a few seconds ("You unlock the chest with its key."), closed and locked again with it ("You lock the chest with its key."); its key put down, no picks: nothing to pick it with; a chest whose key was put down and another key kept ("chest,iron key,iron key"): "Your key doesn\'t fit its lock.", the chest locked still',
+      init: 't_rc', cycles: 900e6, outfit: true,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'chest,iron key'",
+        'drop the chest', 'open the chest', 'unlock the chest', 'open the chest', 'close the chest', 'lock the chest', 'open the chest', 'drop the iron key',
+        'unlock the chest', 'quit', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'chest,iron key,iron key'", 'drop the chest', 'drop the iron key', 'unlock the chest', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out);
+        const g1 = T.of("dq0 -p t -s 3 -c /ram/c.hm -T -k 'chest,iron key'");
+        if (!g1.after) return ['the game not played'];
+        const chest = s => s && s.items.find(i => i.name === 'chest'), keys = s => s ? s.items.filter(i => i.name === 'iron key') : [];
+        const c0 = chest(g1.after), k0 = keys(g1.after);
+        if (!c0 || !(c0.shut & 2) || k0.length !== 1 || k0[0].fits !== c0.id) f.push('the kit\'s chest not locked, its key not fitting it: ' + JSON.stringify([c0, k0]));
+        const u = T.of('unlock the chest', g1.k);
+        if (!/You unlock the chest with its key\./.test(o)) f.push('not unlocked with its key');
+        if (u.replies.some(r => r.req === 'slot0' || r.req === 'slot1')) f.push('a test asked of the referee as its own key opened it');
+        if (!u.after || (chest(u.after).shut & 2)) f.push('the chest locked still, unlocked');
+        if (!/You open the chest: it's empty\./.test(o)) f.push('the chest not opened');
+        const l = T.of('lock the chest', g1.k);
+        if (!/You lock the chest with its key\./.test(o) || !l.after || !(chest(l.after).shut & 2)) f.push('not locked again with its key');
+        if (!/You have nothing to pick its lock with\./.test(o)) f.push('unlocked with no key and no picks');
+        const g2 = T.of("dq0 -p t -s 3 -c /ram/c.hm -T -k 'chest,iron key,iron key'"), u2 = T.of('unlock the chest', g2.k);
+        if (!/Your key doesn't fit its lock\./.test(o)) f.push('another key said to fit');
+        if (!u2.after || !(chest(u2.after).shut & 2)) f.push('the chest opened by another key');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0lair', outfit: true, what: 'Dingus Quest Zero\'s denizens\' belongings and valuables (the outfits\' plan\'s phases 2 and 3: games/dq0/outfits.txt\'s [role bandit] beds, [lair bandit], [purse bandit], DENIZENS.md\'s their things, HOUSE.md\'s the denizens\' belongings; the user\'s answers 6, 9, 10) and what\'s seen of them (the user\'s three levels, 2026-10-27), by the item store\'s records and the words: dq0kit\'s hostile bandits, each one\'s bed (a blanket, lying in its lair\'s home room: its faction\'s), the lair\'s larder (a sack of rations) made as it\'s placed; each one met, its purse (pennies in its pouch); each box at a bed locked, its key in that bandit\'s pouch alone fitting it; a bandit looked at "armed" (the look\'s general words), examined (what it holds and wears), assessed (each one\'s make); one killed, a thing worn beneath its clothes not told as its body\'s looked at, found as it\'s searched; the same seed\'s game the same belongings',
+      init: 't_rc', cycles: 1700e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
+        'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
+        'cp /ram/g/theme.txt /ram/h/theme.txt', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
+        'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'examine the bandit', 'assess the bandit', 'drop the backpack', 'drop the torch', 'attack',
+        'attack', 'look at the body', 'search the body', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm'", 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out), I = DQ0_I;
+        const g1 = T.of("dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'"), s1 = g1.after, q1 = T.of('quit', g1.k);
+        if (!s1 || !q1.at) return ['the game not played'];
+        const top = (s, i) => { const by = new Map(s.items.map(j => [j.n, j])); for (let d = 0; i && d < 8 && i.where === 'IW_ITEM'; d++) i = by.get(i.x); return i; };
+        const s = q1.at, bandits = [...new Set(s.items.filter(i => i.where === 'IW_DEN').map(i => i.did))];
+        const beds = s.items.filter(i => i.name === 'blanket' && i.where === 'IW_SQUARE');
+        if (beds.length < bandits.length || beds.some(b => !b.owner)) f.push('not a bed each, its faction\'s: ' + beds.length + ' for ' + bandits.length);
+        if (beds.length && (Math.max(...beds.map(b => b.x)) - Math.min(...beds.map(b => b.x)) > 24 || Math.max(...beds.map(b => b.y)) - Math.min(...beds.map(b => b.y)) > 24)) f.push('the beds not in one room');
+        if (!s.items.some(i => i.name === 'rations' && i.where === 'IW_ITEM' && (top(s, i) || {}).owner && (top(s, i) || {}).where === 'IW_SQUARE')) f.push('no larder');
+        const met = s.actors.filter(a => a.name === 'bandit' && a.did).map(a => a.did);
+        const purse = d => s.items.some(i => i.name === 'pennies' && i.where === 'IW_ITEM' && (top(s, i) || {}).did === d);
+        if (!met.length || !met.some(purse)) f.push('no bandit met with pennies in its pouch: ' + JSON.stringify(met));
+        const chests = s.items.filter(i => i.name === 'chest' && i.where === 'IW_SQUARE' && i.owner);
+        for (const c of chests) {
+          const k = s.items.filter(i => i.name === 'iron key' && i.fits === c.id);
+          if (!(c.shut & 2) || k.length !== 1 || !(top(s, k[0]) || {}).did) f.push('chest ' + c.id + ': not locked, or its key not on its owner: ' + JSON.stringify(k));
+        }
+        if (!/A bandit, armed(?: and armoured)?,? is /.test(o)) f.push('no bandit looked at armed');
+        if (!/The bandit (?:holds|wears) [a-z]/.test(o)) f.push('the bandit examined: what it holds and wears not told');
+        if (!/The bandit (?:holds|wears) (?:an? )?(?:crude|poor|plain|sound|good|fine|master's) /.test(o)) f.push('the bandit assessed: no make told');
+        const lk = T.of('look at the body', g1.k), sr = T.of('search the body', g1.k), sb = lk.at;
+        const body = sb && sb.items.find(i => i.name === 'body');
+        const hid = body ? sb.items.filter(i => i.where === 'IW_ITEM' && i.x === body.n && (i.flags & I.HIDDEN) && !(i.flags & 0x20)) : [];
+        if (hid.length) {
+          const w = o.slice(o.indexOf('> look at the body'), o.indexOf('> search the body')), w2 = o.slice(o.indexOf('> search the body'));
+          if (new RegExp('On it lie[^.]*\\b' + hid[0].name + '\\b').test(w)) f.push('a thing worn beneath its clothes told at a look: ' + hid[0].name);
+          if (!w2.slice(0, 600).includes(hid[0].name)) f.push('a thing worn beneath its clothes not found by searching: ' + hid[0].name);
+        }
+        const sig = st => JSON.stringify(st.items.filter(i => i.owner && i.where === 'IW_SQUARE').map(i => [i.name, i.x, i.y, i.quality, i.mat]).sort());
+        const g2 = T.of("dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm'");
+        if (!g2.after) f.push('the game again not played');
+        else if (sig(g2.after) !== sig(s1)) f.push('the same seed\'s game not the same belongings');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0items', meaning: true, what: 'Dingus Quest Zero\'s things (items.h, the world\'s item store), by where each one is (the store\'s records) and what the world said to each request (ireq\'s result): the kit a character begins with (dq0 -k pick: a pick more), its torch lit in hand, its pack and belt worn; what it carries listed; a thing examined, one there isn\'t refused; a thing put down (on its square, seen at its feet), taken up again; one out of reach walked over to first (the world\'s I_TAKE); one it hasn\'t refused; a thing hidden where it stands (on its square, hidden, seen so), taken up again (their words: dq0wordsthings)',
       init: 't_rc', cycles: 800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T', 'inventory',
@@ -4659,7 +4738,9 @@ module.exports = {
     {
       name: 'dq0disarm', asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' limbs: a denizen\'s fumble (slice 4.1b, the brief\'s: "The same rules for every actor with hands and legs: a denizen\'s fumble drops its weapon (the world\'s floor, seen and taken up)"), by the denizens\' events, the item store and the words (HarnMaster\'s dice as they fall here: no -a, no -I, asks and initiative, the game as a search found it): the hand-written theme\'s hostile bandits (dq0robbed\'s, seed 1, south of the start), the character (hmchar seed 23, Dodge 90, Sword 60) its pack dropped (2026-10-26: its armour from it there, the reach\'s times, the dice as a search of the variants found them), in a gambeson and a mail hauberk, blocking, waiting for them: a bandit\'s sword fumbled ("The bandit strikes at you with its sword, but fumbles the blow."), let fall (the world\'s E_BEAT WB_DROP in the denizens\' ring, its kind the sword\'s, its b the bandit\'s entry plus 1: "The bandit drops its sword."), taken up again at its next turn (WB_PICKS, the referee\'s RS_REARM and O_REARM: "The bandit snatches up its sword."), gone from the floor (as many swords in the store after as before)',
       init: 't_rc', cycles: 1500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
+      // (hmchar's seed 26, not 23, 2026-10-27: the bandits' lairs in the rooms they like, the belongings', their fight's dice
+      // another fall, the fumble in another bout)
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 26 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
         'echo ml swd 60 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
         "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
         'defend block', 'wait', 'open the door', ...Array(20).fill('wait'), 'quit', 'echo $status']) },

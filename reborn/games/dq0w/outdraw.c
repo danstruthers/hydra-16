@@ -29,7 +29,7 @@
 #define LI_IF           0x40                    /*   an if mask after it, */
 #define LI_NOT          0x80                    /*   a not mask) */
 #define CI_INSTEAD      0x40                    /* (A choice's info: the kind it takes the place of after its weights) */
-#define SEC_MAX         200                     /* (A section's bytes at most: outfits.js's) */
+#define SEC_MAX         255                     /* (A section's bytes at most: outfits.js's) */
 
 static unsigned char sec[SEC_MAX];              /* The section, read in */
 static unsigned char smake, smdie;              /* Its make */
@@ -94,7 +94,7 @@ static void __fastcall__ things (const unsigned char* p, unsigned char n)
 {
     unsigned char k, q, j, many, tf, prev = 0, i = 0;
 
-    for (; n--; p += 4, prev = i) {
+    for (; n--; p += 5, prev = i) {
         k = p[0];
         tf = p[1] >> 4;
         q = p[2] + (p[3] > p[2] ? die (p[3] - p[2] + 1) : 0);
@@ -115,6 +115,7 @@ static void __fastcall__ things (const unsigned char* p, unsigned char n)
             e.place = p[1] & 15;
             e.in = e.place == PL_IN ? prev : 0;
             e.flags = tf;
+            e.mat = p[4];
             kind_get (k);
             pay (e.quality, q, tf, 0);
             hub_map (KIND_BANK);
@@ -146,7 +147,7 @@ static unsigned char __fastcall__ weight (const unsigned char* c)
     cn = ci & 15;
     g = smake != 0xFF ? smake + smdie : 5 + ost.level;  /* (Its price at the best make it may be: what it must have,
                                                 **   strictly within its money, DECISIONS.md's answer 1) */
-    for (p = c + cw, k = ck ? cn - 1 : 0, p += 4 * k; k < cn; ++k, p += 4) {   /* (In another's place: its last
+    for (p = c + cw, k = ck ? cn - 1 : 0, p += 5 * k; k < cn; ++k, p += 5) {   /* (In another's place: its last
                                                 **   thing's, less the other's worth) */
         kind_get (p[0]);
         v += (unsigned) ((unsigned long) kk.value * (2 + g + ((p[1] >> 4) & TF_FINE ? 1 : 0)) / 6) *
@@ -195,7 +196,7 @@ static void __fastcall__ line (const unsigned char* p, unsigned char mode)
     n = info & 15;
     for (total = 0, first = c, j = 0; j < n; ++j) {     /* (Its choices: each one's weight, of those it can pay for) */
         total += weight (c);
-        c += cw + 4 * cn;
+        c += cw + 5 * cn;
     }
     if (total) {
         r = die (total > 255 ? 255 : total);
@@ -205,18 +206,19 @@ static void __fastcall__ line (const unsigned char* p, unsigned char mode)
                 break;
             }
             r -= w;
-            c += cw + 4 * cn;
+            c += cw + 5 * cn;
         }
         if (j < n && !ck) {
             things (c + cw, cn);
         } else if (j < n && (v = drawn (ck)) != 0) {    /* (In the place of a thing drawn: its last thing's kind) */
-            c += cw + 4 * (cn - 1);
+            c += cw + 5 * (cn - 1);
             hub_map (KIND_BANK);
             memcpy (&e, OF_LIST + v - 1, sizeof e);
             kind_get (e.kind);
             pay (e.quality, e.qty, e.flags, 1); /* (The old thing's price back) */
             e.kind = c[0];
             e.flags = c[1] >> 4;
+            e.mat = c[4];
             e.quality = quality (e.flags);
             kind_get (c[0]);
             pay (e.quality, e.qty, e.flags, 0);
@@ -233,8 +235,9 @@ unsigned char __fastcall__ s_draw_at (unsigned off, unsigned char mode)
     unsigned char k, n;
     const unsigned char* p = sec + 8;
 
-    hub_map (0);
-    if (!off || lseek (ost.fd, off, SEEK_SET) != (long) off || read (ost.fd, sec, SEC_MAX) <= 8) {
+    hub_map (0);                                /* (Its bytes alone, the index's length: its file read the less,
+                                                **   2026-10-27) */
+    if (!off || lseek (ost.fd, off, SEEK_SET) != (long) off || read (ost.fd, sec, ost.slen ? ost.slen : SEC_MAX) <= 8) {
         return 0;
     }
     ost.sflags = sec[0];

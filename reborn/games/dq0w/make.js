@@ -26,7 +26,7 @@ function build({ dir, objdir, say = () => {} }) {
   const f = path.join(objdir, '..', 'dq0w.hyx.cat');
   const cat = fs.readFileSync(f);
   const names = [];
-  for (let k = 0; k < nkinds - ntk; k++) {
+  for (let k = 0; k < nkinds; k++) {                  // (The theme's eight, theme.h's KI_THEME on, empty here)
     const r = cat.subarray(k * KIND, k * KIND + 14);
     names.push(r.subarray(0, r.indexOf(0) < 0 ? 14 : r.indexOf(0)).toString('latin1'));
   }
@@ -38,7 +38,7 @@ function build({ dir, objdir, say = () => {} }) {
   for (const n of names) for (const w of n.split(' ')) if (w && dict.has(w) && !seen.has(w)) { seen.add(w); words.push(w); }
   const text = Buffer.from(words.map(w => w + ' ').join('') + '\0', 'latin1');
   const at = nkinds * KIND, kin = (at + text.length + 63) & ~63;   // (The kinds' part of the file, whole pieces: wfile.c's)
-  if (kin > 0x1400) throw new Error('dq0w.cat: the kinds\' words past the kinds\' bank (' + (at + text.length) + ' bytes)');
+  if (kin > 0x1580) throw new Error('dq0w.cat: the kinds\' words past the kinds\' bank (' + (at + text.length) + ' bytes)');
   if (text.length > 1024 - 200) throw new Error('dq0w.cat: the kinds\' words ' + text.length + ' bytes, past the parser\'s room less the theme\'s (hub.h\'s CQ_WORDS)');
   if (cat.readUInt16LE(18)) throw new Error('dq0w.cat: the first kind\'s cap_weight not 0 (the kinds\' length goes there)');
   const file = Buffer.concat([cat.subarray(0, at), text, Buffer.alloc(kin - at - text.length), cat.subarray(at)]);

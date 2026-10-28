@@ -3974,7 +3974,9 @@ static unsigned char in_hand (void)
         return SK_BEST;
     }
     HUB->pc_shand = held_h[s - 1];
-    s = held_k[s - 1];
+    if ((s = held_k[s - 1]) >= KI_HIGH) {
+        return SK_BEST;                         /* (A belonging, a valuable: no striker, its kind past seven bits) */
+    }
     hub_map (KIND_BANK);
     n = fight_swing (CATALOGUE + s);
     hub_map (0);

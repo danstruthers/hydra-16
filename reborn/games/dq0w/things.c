@@ -77,6 +77,8 @@ void __fastcall__ s_many (char* b, unsigned n, unsigned char k);  /*   (its own,
 unsigned char bar_hand (void);                  /* Part 35 */
 unsigned char __fastcall__ hold_in (unsigned n, unsigned char want);    /* Part 48 */
 unsigned char swap (void);
+unsigned char gear_words (void);                /* Part 62 */
+void __fastcall__ kit_lock (unsigned b, unsigned k);   /* Part 61 */
 void __fastcall__ listed (unsigned n);          /* Part 11 */
 #define HW_CARRIED      1                       /* (pick's how: carried; seen, lying about; either, as far as it sees,
                                                 **   or to hand, within reach (afar else); in win) */
@@ -753,6 +755,9 @@ unsigned char s_serve (void)
         break;
     case IO_HANDS:
         hands_held ();
+        break;
+    case IO_GEAR:                               /* (A denizen's things made out: part 61's) */
+        iq.result = gear_words ();
         break;
     case IO_SWAP:                               /* (What's in its hands changed over: part 48's) */
         iq.result = swap ();
@@ -1560,7 +1565,31 @@ static void __fastcall__ say3 (const char* a, const char* b, const char* c)
     put (c);
 }
 
-static void __fastcall__ and_last (char* from);
+/* (The list's last ", " made " and ": part 61's and_last, its own copy) */
+static void __fastcall__ and_last36 (char* from)
+{
+    char* p;
+    char* l = 0;
+    unsigned char d = 0;
+
+    hub_map (UI_BANK);
+    for (p = from; *p; ++p) {                   /* (The list's last ", ", not in a thing's own "(in it: ...)") */
+        if (*p == '(') {
+            ++d;
+        } else if (*p == ')') {
+            --d;
+        } else if (!d && *p == ',' && p[1] == ' ') {
+            l = p;
+        }
+    }
+    if (l && tp + 4 < UIREC->things_text + sizeof UIREC->things_text) {
+        memmove (l + 5, l + 2, strlen (l + 2) + 1);
+        memcpy (l, " and ", 5);
+        tp += 3;
+    }
+    hub_map (0);
+}
+
 static void __fastcall__ reveal (unsigned n)
 {
     static const char* const full[6] = { ": it's empty.", ": it's nearly empty.", ": it's a quarter full.",
@@ -1584,7 +1613,7 @@ static void __fastcall__ reveal (unsigned n)
     t0 = tp;
     hub_map (0);
     listed (n);
-    and_last (t0);
+    and_last36 (t0);
     put (".");
 }
 
@@ -1607,6 +1636,32 @@ static signed char __fastcall__ tested (unsigned char p, signed char steps)
     }
     r->state = REQ_FREE;
     return g;
+}
+
+/* A key the character carries (in hand, on it, in what it carries) that fits the lock of thing number id (its number
+** in the key's size and thick: HOUSE.md's keys that fit, 2026-10-27): 1; 2, keys but none that fits; 0, none */
+static unsigned char __fastcall__ key_fits (unsigned id)
+{
+    unsigned i = 0, j;
+    unsigned char r = 0;
+    struct item* p;
+
+    while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+        if (item_at (i)->kind != KI_KEY) {
+            continue;
+        }
+        for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {
+        }
+        if (item_at (j)->where != IW_ACTOR || item_at (j)->x) {
+            continue;
+        }
+        p = item_at (i);
+        if ((p->size | p->thick << 8) == id) {
+            return 1;
+        }
+        r = 2;
+    }
+    return r;
 }
 
 unsigned char s_shut_work (void)
@@ -1651,6 +1706,15 @@ unsigned char s_shut_work (void)
         return IR_NO;
     }
     --c;
+    if ((w == PA_LOCK || w == PA_UNLOCK) && (s & (IS_LOCK | IS_BURST | IS_CLOSED)) == (IS_LOCK | IS_CLOSED) &&
+        ((s & IS_LOCKED) != 0) == (w == PA_UNLOCK) && (lt = key_fits (rec.id)) == 1) {
+        s ^= IS_LOCKED;                         /* (With its own key: no test, a few seconds) */
+        say3 (w == PA_LOCK ? "You lock the " : "You unlock the ", nm, " with its key.");
+        t = 30;
+        lt = 0;
+        ok = IR_OK;
+        goto done;
+    }
     if (w == PA_LOCK) {
         say3 ("The ", nm, !(s & IS_LOCK) ? " has no lock." : s & IS_BURST ? "'s lock is broken." : s & IS_LOCKED ?
             " is locked already." : " has a lock, but you have no key to it.");
@@ -1673,9 +1737,10 @@ unsigned char s_shut_work (void)
             return IR_NO;
         }
         if ((g = tested (P_PICKLOCK, -1 - (signed char) (rec.quality / 3))) == -100) {
-            put ("You have nothing to pick its lock with.");
+            put (lt ? "Your key doesn't fit its lock." : "You have nothing to pick its lock with.");
             return IR_NO;
         }
+        lt = 0;
         if (!d) {
             t = 600;                            /* (The means to hand: a minute a try, as a door's, a long task, its
                                                 **   test made again at its end; the lockpicks' reach first) */
@@ -1720,6 +1785,7 @@ unsigned char s_shut_work (void)
         reveal (n);
         ok = IR_OK;
     }
+done:
     item_at (n)->shut = s;
     hub_map (0);
     HUB->ireq.x = d ? 0 : t;                    /* (Done: its time spent already) */
@@ -1729,6 +1795,10 @@ unsigned char s_shut_work (void)
 }
 
 #pragma static-locals (pop)
+
+/* ==== Part 61: what's in a thing (part 36's, its room: the keys that fit, 2026-10-27) */
+#pragma code-name (push, "SW61CODE")
+#pragma rodata-name (push, "SW61RODATA")
 
 /* ---- What's in a thing, or on it (IO_INSIDE, the user's, 2026-10-21: "look in the sack", "look on the table", "look
 ** into the well"): the thing named (to hand: carried, or within reach; seen but out of reach, IR_NOT_HERE: the UI
@@ -1837,6 +1907,204 @@ unsigned char s_inside (void)
     put (".");
     return IR_OK;
 }
+
+/* The theme's kinds (the theme bank's, the UI's: theme.h) into the catalogue, after its own
+** (part 61's, part 13's room: 2026-10-27) */
+void s_theme_kinds (void)
+{
+    struct kind k;
+    unsigned char i;
+
+    for (i = 0; i < NTKINDS; ++i) {
+        hub_map (THEME_BANK);
+        memcpy (&k, &THEME->kind[i], sizeof k);
+        hub_map (KIND_BANK);
+        memcpy ((struct kind*) CATALOGUE + KI_THEME + i, &k, sizeof k);
+    }
+    hub_map (0);
+}
+
+/* Box b locked, key k made to fit it alone (the kit's, dq0 -k's "chest,iron key": outmake.c's rule, every making's;
+** HOUSE.md's keys that fit) */
+void __fastcall__ s_kit_lock (unsigned b, unsigned k)
+{
+    struct item* p;
+    unsigned id;
+
+    make_own (b);
+    make_own (k);
+    p = item_at (b);
+    p->shut = IS_CLOSED | IS_LOCK | IS_LOCKED;
+    id = p->id;
+    p = item_at (k);
+    p->size = id;
+    p->thick = id >> 8;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 62: a denizen's things made out (2026-10-27) */
+#pragma code-name (push, "SW62CODE")
+#pragma rodata-name (push, "SW62RODATA")
+
+/* (The list's last ", " made " and ": part 61's and_last, its own copy) */
+static void __fastcall__ and_last62 (char* from)
+{
+    char* p;
+    char* l = 0;
+    unsigned char d = 0;
+
+    hub_map (UI_BANK);
+    for (p = from; *p; ++p) {                   /* (The list's last ", ", not in a thing's own "(in it: ...)") */
+        if (*p == '(') {
+            ++d;
+        } else if (*p == ')') {
+            --d;
+        } else if (!d && *p == ',' && p[1] == ' ') {
+            l = p;
+        }
+    }
+    if (l && tp + 4 < UIREC->things_text + sizeof UIREC->things_text) {
+        memmove (l + 5, l + 2, strlen (l + 2) + 1);
+        memcpy (l, " and ", 5);
+        tp += 3;
+    }
+    hub_map (0);
+}
+
+/* ---- A denizen's things as the character makes them out (IO_GEAR: the user's, 2026-10-27, "the game say general
+** things when looking, more detail when examining, including basic quality of visible equipment when assessing ...
+** eyesight should dictate quality/granularity ... based on viewing distance"; HOUSE.md's three levels): the actor
+** named (iq.name, a word of its name: the nearest on the character's stratum), its things in sight (in hand, worn but
+** what's beneath its clothes, at its belt: hung there, or in a carrier there; what's in its pouch or its pack never),
+** each one the eyes make out from there (within its kind's seen squares and half the eyes' sight more: a thing's look
+** from afar, appraise.c's), assessed (level 2) its make and its condition too, within half that.  Every viewer's rule;
+** the character's alone asks it yet */
+static const char gmake[10][9] = { "crude", "crude", "poor", "plain", "sound", "sound", "good", "fine", "fine",
+    "master's" };                               /* (appraise.c's makes) */
+static unsigned char gd, geye, glv, gn, gfar;
+static struct item gr;
+
+/* Thing i's words, if the eyes make it out (gd its distance, geye the eyes, glv the level): a list's next, after
+** pre (the list's first) or ", "; in its carrier c (0 none): 1, or 0 (not made out: gfar) */
+static unsigned char __fastcall__ gthing (unsigned i, const char* pre, unsigned c)
+{
+    const struct kind* k;
+    unsigned char r, life, m;
+    char nm[14], cn[14];
+
+    fetch (&gr, i);
+    k = kind_of (gr.kind);
+    strcpy (nm, k->name);
+    r = k->seen + (geye >> 1);
+    if (gd > r) {
+        gfar = 1;
+        return 0;
+    }
+    put (gn++ ? ", " : pre);
+    if (!(k->flags & K_PLURAL)) {
+        put (glv == 2 && gd * 2 <= r ? (strchr ("aeiou", gmake[gr.quality % 10][0]) ? "an " : "a ") :
+            strchr ("aeiou", nm[0]) ? "an " : "a ");
+    }
+    if (glv == 2 && gd * 2 <= r) {              /* (Assessed, near enough: its make, its condition) */
+        put (gmake[gr.quality % 10]);
+        put (" ");
+        put (nm);
+        life = gr.dur_max ? (unsigned char) (gr.dur / (gr.dur_max / 10 + 1)) : 10;
+        if (life < 7) {
+            m = gr.mat;
+            put (life < 4 ? ", badly " : ", ");
+            put (m == MT_IRON || m == MT_STEEL ? "rusted" : m == MT_LEATHER ? "cracked" : m == MT_CLOTH ? "frayed" :
+                m == MT_WOOD ? "rotten" : m == MT_SILVER || m == MT_BRONZE ? "tarnished" : "worn");
+        }
+    } else {
+        put (nm);
+    }
+    if (c) {
+        strcpy (cn, kind_at (c)->name);
+        put (" in a ");
+        put (cn);
+    }
+    return 1;
+}
+
+unsigned char s_gear_words (void)
+{
+    struct actor* a;
+    unsigned char k, best = 0xFF, d, part, any = 0;
+    unsigned i, j, did = 0, belt = 0;
+    int dx, dy;
+    char nm[12];
+    char* t0;
+
+    text_new ();
+    glv = iq.to & 3;
+    geye = iq.to >> 4;
+    for (gd = 0xFF, k = 0; k < NACTORS; ++k) {  /* (The nearest of that name on its stratum) */
+        hub_map (0);
+        a = &HUB->actor[k];
+        if (!a->state || a->sn != HUB->pc_stratum || !strstr (a->name, iq.name)) {
+            continue;
+        }
+        dx = a->x - HUB->pc_x;
+        dy = a->y - HUB->pc_y;
+        dx = dx < 0 ? -dx : dx;
+        dy = dy < 0 ? -dy : dy;
+        d = dx > 250 || dy > 250 ? 250 : dx > dy ? dx : dy;
+        if (d < gd) {
+            gd = d;
+            best = k;
+            did = a->did;
+            strcpy (nm, a->name);
+        }
+    }
+    if (best == 0xFF) {
+        return IR_NONE;
+    }
+    put (nm[0] < 'a' ? "" : "The ");
+    put (nm);
+    gfar = 0;
+    for (part = 0; did && part < 3; ++part) {   /* (In hand, worn, at its belt) */
+        gn = 0;
+        hub_map (UI_BANK);
+        t0 = tp;
+        for (i = 0; (i = items (i, IN_DEN, 0)) != 0; ) {
+            if ((ip->owner | ip->hide << 8) != did) {
+                continue;
+            }
+            fetch (&gr, i);
+            if (part == 0 && (gr.flags & I_HELD)) {
+                gthing (i, any ? ". It holds " : " holds ", 0);
+            } else if (part == 1 && (gr.flags & (I_WORN | I_HIDDEN | I_HELD)) == I_WORN) {
+                if (kind_of (gr.kind)->flags & K_BELT) {
+                    belt = i;
+                }
+                gthing (i, any ? ". It wears " : " wears ", 0);
+            }
+        }
+        if (part == 2 && belt) {
+            for (i = 0; (i = items (i, IN_X | IN_ITEM, belt)) != 0; ) {
+                fetch (&gr, i);
+                if ((gr.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN) {
+                    continue;
+                }
+                j = kind_of (gr.kind)->slots ? items (0, IN_X | IN_ITEM, i) : 0;   /* (A carrier's: what's in it) */
+                gthing (j ? j : i, any ? ". At its belt: " : " has at its belt ", j ? i : 0);
+            }
+        }
+        if (gn) {
+            any = 1;
+            and_last62 (t0);
+        }
+    }
+    put (!any ? (did && gfar ? " is too far off for you to make out what it carries." : " carries nothing that you can see.") :
+        gfar ? ". There's more you can't make out from here." : ".");
+    return IR_OK;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* (Part 40's, its room: part 36's once, part 11's before it) */
 #pragma code-name (push, "SW40CODE")
@@ -2096,6 +2364,12 @@ unsigned char __fastcall__ s_describe (const char* name)
     r->dur = rec.dur;
     r->dur_max = rec.dur_max;
     r->value = k->value;
+    if (k->mat == MT_SILVER && rec.mat != MT_SILVER) {   /* (Worth by material, HOUSE.md's: a kind written in silver,
+                                                **   ten times in gold, a quarter in bronze or iron, a twentieth in bone,
+                                                **   wood or stone, 2026-10-27) */
+        r->value = rec.mat == MT_GOLD ? k->value * 10 : rec.mat >= MT_IRON && rec.mat <= MT_BRONZE ? k->value / 4 :
+            k->value / 20;
+    }
     r->size = rec.size;
     r->thick = rec.thick;
     r->to = k->seen << 8 | seen_d;
@@ -2154,7 +2428,7 @@ unsigned char __fastcall__ s_look_more (unsigned n, unsigned char mode)
 #pragma static-locals (push, on)
 
 static const char matname[NMATS][8] = { "", "wood", "iron", "steel", "bronze", "leather", "cloth", "bone", "clay",
-    "stone", "glass", "silver", "", "beeswax", "tallow" };
+    "stone", "glass", "silver", "", "beeswax", "tallow", "gold" };
 
 /* A word of a list (part 39's word, its own copy) */
 #define word            word42
@@ -2334,7 +2608,7 @@ static unsigned char sig (void)
 ** area, a part's code overwritten: the soak's hangs, 2026-10-27) */
 #define GOT_MAX         200
 static struct got { unsigned n, x; unsigned char where, kind; } ge;
-#define GOT_AT          ((struct got*) 0x9A00)
+#define GOT_AT          ((struct got*) 0x9B00)
 static unsigned char ngot;
 static unsigned char gcur;                      /* (The entry next_in gave last: the next looked for after it, a
                                                 **   container's things in turn, not the list again for each,
@@ -2431,6 +2705,10 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
                 contents (IW_ITEM, i, depth + 1);
             }
             continue;
+        }
+        if ((tw.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN) {
+            continue;                           /* (Hidden, not found yet: worn beneath a body's clothes, the outfits'
+                                                **   phase 3, found by searching it) */
         }
         for (ln = 0; ln < nt && told[ln] != i; ++ln) {
         }
@@ -2787,20 +3065,6 @@ static unsigned __fastcall__ put_down (unsigned char kind, unsigned char where, 
     return 0;
 }
 
-/* The theme's kinds (the theme bank's, the UI's: theme.h) into the catalogue, after its own */
-void s_theme_kinds (void)
-{
-    struct kind k;
-    unsigned char i;
-
-    for (i = 0; i < NTKINDS; ++i) {
-        hub_map (THEME_BANK);
-        memcpy (&k, &THEME->kind[i], sizeof k);
-        hub_map (KIND_BANK);
-        memcpy ((struct kind*) CATALOGUE + KI_THEME + i, &k, sizeof k);
-    }
-    hub_map (0);
-}
 
 /* A name said (named's, part 10's: a copy of its own) */
 static unsigned char __fastcall__ a_word (const char* k, const char* w)
@@ -2869,7 +3133,7 @@ void s_kit (void)
 {
     unsigned made[NKIT];
     const unsigned char* e;
-    unsigned i;
+    unsigned i, box = 0;
     unsigned char k, off, old;
     char* c;
     char* more = tbuf;
@@ -2896,6 +3160,7 @@ void s_kit (void)
         }
     }
     for (; *more; more = c) {
+        i = 0xFFFF;
         if ((c = strchr (more, ',')) != 0) {
             *c++ = 0;
         } else {
@@ -2907,6 +3172,13 @@ void s_kit (void)
             item_at (i)->flags = (item_at (i)->flags & ~(I_WORN | I_HIDDEN)) | I_KNOWN | I_HELD;
             k = two (kind_at (i)) == 2 ? IH_BOTH : off ^ IH_BOTH;
             item_at (i)->sn = k;                /* (Its hand: both for a two-handed thing, else the main) */
+        }
+        if (i != 0xFFFF && (k = item_at (i)->kind) == KI_CHEST) {
+            box = i;                            /* (A key after a chest locks it, and fits it alone: the outfits'
+                                                **   rule, every making's, HOUSE.md's keys that fit; part 61's) */
+        } else if (i != 0xFFFF && k == KI_KEY && box) {
+            kit_lock (box, i);
+            box = 0;
         }
     }
     for (k = 0; old && k < sizeof spare; ++k) { /* (The pack's spare torch and flask of oil, D5's, after the things
@@ -3610,11 +3882,19 @@ unsigned char s_search (void)
 unsigned char __fastcall__ s_on_it (unsigned n, unsigned char touch)
 {
     unsigned char on;
+    unsigned j;
 
     make_own (n);
     fetch (&rec, n);
     memcpy (&lk, kind_of (rec.kind), sizeof lk);
     lpl = (lk.flags & K_PLURAL) || rec.qty > 1;
+    on = (lk.keeps & KF_ON) != 0;
+    for (on = 0, j = 0; !(rec.shut & IS_CLOSED) && (j = items (j, IN_X | IN_ITEM, n)) != 0; ) {
+        if ((ip->flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN) {
+            ip->flags |= I_KNOWN;               /* (Searched: what's worn beneath its clothes found, a body's, the
+                                                **   outfits' phase 3, 2026-10-27; the search's minute its time) */
+        }
+    }
     on = (lk.keeps & KF_ON) != 0;
     if (rec.shut & IS_CLOSED) {
         put (lpl ? "They're closed: you go over the outside of them. " : "It's closed: you go over the outside of it. ");

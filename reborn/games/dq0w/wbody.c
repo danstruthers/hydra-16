@@ -307,7 +307,7 @@ void s_den_intents (void)
         case I_ROB:
             bd.ready += HUB->round;
             if (m.kind == I_ROB) {
-                den_rob (m.w1, m.w2);
+                den_rob (&m);
             } else {
                 den_blow (m.a, m.b);
             }

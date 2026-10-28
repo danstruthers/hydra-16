@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     22                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     23                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -51,7 +51,8 @@
                                                 **   pc_chart, pc_map; 19: the bearings' E_BEARING; 20: the kinds in
                                                 **   a bank of their own, KIND_BANK, NKINDS 128; 21: the outfits, gear,
                                                 **   GE_OLD, rs.h's RS_OUTFIT; 22: the denizens' gear, I_KIT, the
-                                                **   actors' did, hx, hy, hsn, WB_DRAWS) */
+                                                **   actors' did, hx, hy, hsn, WB_DRAWS; 23: their belongings, I_KIT's
+                                                **   a and b, I_ROB's x[2], the actors' agear) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -260,6 +261,11 @@ typedef char names_fit[TNAMES * sizeof (struct tname) <= 0x800 ? 1 : -1];  /* (T
 enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, T_COMMANDS, NTASKS };
 
 /* An entry of a queue: an intent (to the world), or an event (from it) */
+#define KT_ROLE         0x01                    /* (I_KIT's a: its role's things, */
+#define KT_LAIR         0x02                    /*   its lair's own, */
+#define KT_PURSE        0x04                    /*   its personal things) */
+#define RB_HIDE         1                       /* (I_ROB's x[2]: the takings hidden at its home, */
+#define RB_HOARD        2                       /*   or put in its faction's hoard there) */
 struct msg {
     unsigned char   kind;                       /* I_* or E_* */
     unsigned char   who;                        /* The actor (0: the character) */
@@ -351,11 +357,18 @@ enum {
                                                 **   (the outfits' gear, 2026-10-27: games/dq0/outfits.txt's role
                                                 **   by its kind, the world's draw): x[1] its kind, t its number (the
                                                 **   denizens' id), w1 w2 its lair's home square, x[2] its stratum;
-                                                **   its things filed there (items.h's IW_DEN) till it dies */
+                                                **   its things filed there (items.h's IW_DEN) till it dies; a what
+                                                **   it's drawn (KT_*: its role's things, as its lair's placed; its
+                                                **   lair's own, with its first denizen's; its personal things, as
+                                                **   it's first met), b its kind's faction (a hoard's), x[0] its
+                                                **   standing (its personal things': kinds.txt's) */
     I_ROB,                                      /* (The denizens', a robber's: kinds.txt's ways r) The character,
                                                 **   helpless beside it, robbed: what it holds (but a light lit) and
                                                 **   its pennies taken off to w1 w2 (its lair's home square, on its
-                                                **   stratum: or where it stands), a round's work; E_TASK TE_ROBBED */
+                                                **   stratum: or where it stands), a round's work; E_TASK TE_ROBBED;
+                                                **   x[2] RB_HOARD, w1 w2 its faction's leader's home (its hoard
+                                                **   there, b its kind's faction: the takings in it), RB_HIDE, hidden
+                                                **   at its home (kinds.txt's keeps), 2026-10-27 */
     I_RISE,                                     /* Getting up, prone ("get up", "stand", "rise": the book's Rise, a
                                                 **   round, the referee's P_RISE; E_BEAT WB_RISEN or WB_NOT_UP: slice
                                                 **   4.1b's) */
@@ -1067,7 +1080,13 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   gear;                       /* dq0 -K (the tests'): GE_OLD, the kit as it was before the outfits,
                                                 **   and the denizens with none of theirs (the outfits drawn else:
                                                 **   games/dq0/outfits.txt, the world's) */
+    unsigned char   agear[NACTORS];             /* Each actor's things as anyone sees them at a look (AG_*: the world's,
+                                                **   as it tells the referee what it holds and wears; the senses' to
+                                                **   copy with its body, the UI's look to word: "a bandit, armed and
+                                                **   armoured", the user's three levels, 2026-10-27) */
 };
+#define AG_ARMED        0x01                    /* (An actor's agear: a weapon in hand or at its belt, */
+#define AG_ARMOUR       0x02                    /*   armour worn) */
 #define GE_OLD          0x01
 #define CH_DRAW         0x01                    /* (pc_chart's: the things to draw a map with to hand, the catalogue's
                                                 **   by their keys: a sheet (paper, parchment) or its map, a pencil or
@@ -1247,6 +1266,7 @@ struct wsave {
 **   own hub.actor[*].hsn denizens
 **   own hub.dsave denizens +ui
 **   own hub.den_seq world
+**   own hub.agear world                                        (Each actor's things at a look: 2026-10-27)
 **   own hub.pc_tx world
 **   own hub.pc_ty world
 **   own hub.dq_head world                                      (The denizens' events: the world's)

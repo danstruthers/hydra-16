@@ -14,8 +14,9 @@
 /* What a thing's made of: its resistance to each kind of harm (0 none ... 9 all but proof: the referee's impact, not a
 ** difficulty), and its toughness (the durability a quarter pound of it gives, at middling quality) */
 enum { MT_NONE, MT_WOOD, MT_IRON, MT_STEEL, MT_BRONZE, MT_LEATHER, MT_CLOTH, MT_BONE, MT_CLAY, MT_STONE, MT_GLASS,
-    MT_SILVER, MT_OTHER, MT_WAX, MT_TALLOW, NMATS };    /* (Beeswax and tallow: a candle's, slice 4.1's) */
-#define MAT_TOUGH       { 1, 3, 6, 8, 5, 3, 1, 2, 1, 8, 1, 4, 1, 1, 1 }
+    MT_SILVER, MT_OTHER, MT_WAX, MT_TALLOW, MT_GOLD, NMATS };   /* (Beeswax and tallow: a candle's, slice 4.1's; gold, the
+                                                **   valuables', 2026-10-27) */
+#define MAT_TOUGH       { 1, 3, 6, 8, 5, 3, 1, 2, 1, 8, 1, 4, 1, 1, 1, 3 }
 enum { DM_BLUNT, DM_EDGE, DM_POINT, DM_FIRE, DM_COLD, DM_ACID, NDMG };  /* Kinds of harm (the referee's, by aspect) */
 struct material {
     char            name[8];
@@ -24,9 +25,12 @@ struct material {
 };
 
 /* A kind of thing (the catalogue's: a stand-in for the theme's data), in rs.h's units */
-#define NKINDS          128                     /* (In a bank of their own, the hub's KIND_BANK: 128 x 37
+#define NKINDS          144                     /* (In a bank of their own, the hub's KIND_BANK: 144 x 37
                                                 **   bytes; a kind's number kept in seven bits in places, a thing struck
-                                                **   with's, a light's, a container's: rs.h's SK_THING, E_TASK's) */
+                                                **   with's, a light's: rs.h's SK_THING, E_TASK's; so the kinds from 128
+                                                **   on, past the theme's (theme.h's KI_THEME, 120 to 127), are none of
+                                                **   those: belongings and valuables, never lit, never a striker, KI_HIGH
+                                                **   on: 2026-10-27, the denizens' belongings) */
 struct kind {
     char            name[14];                   /* "torch", "backpack" ... */
     unsigned char   flags;                      /* K_* */
@@ -118,6 +122,13 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_JERKIN, KI_SHROUD, KI_MASK,              /*   armour and clothes, */
     KI_CROWBAR, KI_BANDAGES, KI_LETTER, KI_RING, KI_GRAPPLE, KI_HAMMER, KI_HERBS, KI_VIAL,   /*   tools and
                                                 **   belongings */
+    KI_OWN_END,                                 /* (The theme's eight next: theme.h's KI_THEME, 120) */
+    KI_HIGH = 128,                              /* (The kinds past the theme's, from 128: never lit nor struck with,
+                                                **   NKINDS's) */
+    KI_FURS = KI_HIGH, KI_BLANKET, KI_CASK,     /* The denizens' belongings (2026-10-27: a bed's, a store's) */
+    KI_CROWNS, KI_BROOCH, KI_NECKLACE, KI_PENDANT, KI_GOBLET, KI_GEM, KI_TALISMAN, KI_DICE,  /*   and valuables (a
+                                                **   jewel's or a plate's worth its kind's for silver: HOUSE.md's worth
+                                                **   by material) */
     KI_COUNT };
 
 #define KIND_WORDS      ((const char*) (CATALOGUE + NKINDS))     /* (In the kinds' bank after them: the words of
@@ -158,6 +169,9 @@ struct item {
                                                 **   decided as it's made its own, found closed, a chest locked
                                                 **   sometimes; the kit's open, but what's stoppered) */
 };
+#define OW_HOARD        0x80                    /* (An owner: a faction's hoard, | the faction, kinds' stand-in's: a
+                                                **   robber's takings put in it; else a lair's things the faction's
+                                                **   number; a denizen's own, IW_DEN, its did's low byte) */
 #define SC_LIT          0x01                    /* (A sconce's hide: its room lit by it, as the world last made it; */
 #define SC_NOW          0x02                    /*   a light in it lit now, the world's pass's mark) */
 #define IS_CLOSED       0x01                    /* Closed (its lid down, its tie tied, its stopper in): nothing put in
@@ -300,6 +314,14 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
 #define IO_SWAP         (IO_BAR + 12)           /* What's in the character's hands changed over, left to right and right
                                                 **   to left (slice 4.1b's: "swap hands"), worded into things_text, its
                                                 **   time in x (tenths); IR_NO refused, the words why */
+#define IO_GEAR         (IO_BAR + 13)           /* A denizen's things as the character makes them out (the user's,
+                                                **   2026-10-27: a look general, examining more, assessing their
+                                                **   quality; the eyes and the distance setting how much): name the
+                                                **   actor named (its name, or a word of it: the nearest the character
+                                                **   sees), to its level (1 examined: what it holds, wears and has at
+                                                **   its belt; 2 assessed: each one's make and condition too) | the
+                                                **   eyes' sight times 16 (the senses' eye, 0-9); its words in
+                                                **   things_text, IR_NONE none (2026-10-27) */
 enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS };   /* (IO_LOOK's: a look at it; a closer look; its
                                                 **   condition; its weight; its lock; gone over for traps) */
 #define IO_PUZZLE       (IO_BAR + 4)           /* A command of the theme's puzzle's (theme.h), judged by its rules

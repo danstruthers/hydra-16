@@ -726,10 +726,16 @@ free: staff@hand *50 | sheath@belt, dagger@in instead knife *50
 free: letter@pouch
 50: herbs@pack 1-2
 
-; ---- The denizens (denizens.md, Phase 1: each kind's weapons, carriers, armour and clothes, made as its lair's first
-; placed, DECISIONS.md's answer 6; personal things, purses and valuables, when first met: later phases).  Its make by
-; its maker (denizens.md 5: kobold-made crude, men's middling, the dead's their people's).  A weapon in hand is ready;
-; one on the belt, sheathed, wants a turn to draw (answer 8).  The beasts carry nothing
+; ---- The denizens (denizens.md: each kind's weapons, carriers, armour and clothes, made as its lair's first placed,
+; DECISIONS.md's answer 6, Phase 1; and what's at its bed, Phase 2: bed (lying there, a square of its lair's home room),
+; stash (hidden there, found by searching), a key locking the last thing with a lid made before it, its own lock).  Its
+; make by its maker (denizens.md 5: kobold-made crude, men's middling, the dead's their people's).  A weapon in hand is
+; ready; one on the belt, sheathed, wants a turn to draw (answer 8).  The beasts carry nothing.  [lair KEY]: a lair's
+; own things, made with its first denizen's (home, its lair's home room's floor: its stores; hoard, its faction's
+; hoard there, where its robbers' takings go: denizens.md 3).  [purse KEY]: its personal things, made as it's first
+; met (Phase 3: its purse, its trinkets, its valuables; under, worn beneath its clothes, found by searching its body),
+; else its standing's (kinds.txt's): [standing N].  A material after a thing (bronze, silver, gold ...) its own: a
+; jewel's worth by it (HOUSE.md's worth by material)
 [role kobold] free make 0 3
 free: spear@hand *60 | club@hand *15 | hatchet@hand *15 | knife@hand *10
 free 50: hide jerkin@worn
@@ -737,12 +743,16 @@ free 70: belt@worn
 free 30: buckler@worn
 free 15: kurbul helm@worn
 free 20: sling@belt, pouch@belt, sling stones@in 10-20
+free 50: heap of straw@bed
+free 25: pennies@stash 1-6 | talisman@stash
+free 50: pouch@belt
 [role koblord] free make 2 3
 free: axe@hand *60 | falchion@hand *15 | shortsword@hand *10 | battleaxe@hand *15
 free: hide jerkin@worn
 free: belt@worn
 free 60: buckler@off *50 | round shield@off *50
 free 70: leather vest@worn *40 | ring byrnie@worn *30 | kurbul helm@worn *30
+free: pouch@belt
 [role bandit] free make 2 4
 free: clothes@worn
 free: shoes@worn *60 | knee boots@worn *40
@@ -754,6 +764,8 @@ free 40: kurbul helm@worn *50 | leather cap@worn *50
 free 60: buckler@worn *40 | round shield@worn *20
 free 25: shortbow@worn, quiver@belt, arrows@in 12-20
 free 30: cloak@worn
+free: blanket@bed
+free: pouch@belt
 [role banlord] free make 4 4
 free: clothes@worn
 free: knee boots@worn
@@ -766,6 +778,8 @@ free 70: iron helm@worn *50 | kurbul helm@worn *50
 free 60: cloak@worn
 free 40: gauntlets@worn
 free 20: mail cowl@worn
+free: furs@bed
+free: pouch@belt
 [role cultist] free make 2 4
 free: robe@worn
 free: clothes@worn
@@ -773,6 +787,9 @@ free: mask@worn
 free: belt@worn
 free: sheath@belt, knife@in *40 | sheath@belt, dagger@in *30 | staff@hand *30
 free: sandals@worn *70 | knee boots@worn *30
+free: blanket@bed
+free 30: candle@bed
+free: pouch@belt
 [role priest] free make 4 4
 free: robe@worn
 free: clothes@worn
@@ -780,6 +797,8 @@ free: mask@worn fine
 free: belt@worn
 free: mace@hand
 free: sandals@worn *50 | knee boots@worn *50
+free: blanket@bed
+free: pouch@belt
 [role skel] free make 1 4
 free: sword@hand *60 | spear@hand *25 | axe@hand *15
 free 70: shroud@worn
@@ -794,6 +813,70 @@ free: robe@worn
 free: mask@worn
 free: belt@worn
 
+; ---- The lairs' own things (denizens.md 3: stores, the hoard; the beasts' dens and the dead's lairs later: their
+; openings, the tests', moved by them)
+[lair koblord]
+free: furs@home
+free: basket@home, rations@in 2-6
+free: chest@hoard, pennies@in 20-80, talisman@in, ring@in bronze
+free 50: iron key@pouch
+free 30: gem@hoard
+[lair bandit]
+free: sack@home, rations@in 4-12
+free 50: cask@home full
+free 30: sack@home, spear@in, club@in
+[lair banlord]
+free: sack@home, rations@in 4-12
+free: cask@home full
+free: chest@hoard, pennies@in 40-200, brooch@in, goblet@in, iron key@pouch
+[lair cultist]
+free: sack@home, rations@in 6-12
+free: candle@home 2-4
+[lair priest]
+free: candle@home 2-6
+free: chest@hoard, pennies@in 30-150, goblet@in, pendant@in, iron key@pouch
+
+; ---- Personal things, made as a denizen's first met (denizens.md 5: its means by its standing; coins for all folk,
+; DECISIONS.md's answer 9: silver pennies, the Khuzdul's gold crowns, a hundred pennies each)
+[standing 1]
+free 60: pennies@pouch 1-3
+free 33: talisman@worn
+[standing 2]
+free: pennies@pouch 2-36
+free 30: ring@worn bronze | dice@pouch | pendant@worn bronze
+[standing 3]
+free: pennies@pouch 10-80
+free: ring@worn *50 | brooch@worn *30 | pendant@worn *20
+free 20: pouch@under, pennies@in 5-30
+[standing 4]
+free: pennies@pouch 20-120
+free: ring@worn gold *50 | necklace@worn gold *50
+free: gem@pouch 1-2
+[purse koblord]
+free: pennies@pouch 2-12
+free: talisman@worn
+free 30: ring@worn bronze *50 | ring@worn *50
+[purse bandit]
+free 33: chest@bed, pennies@in 5-30, iron key@pouch
+free: pennies@pouch 2-24
+free 25: dice@pouch
+free 25: ring@worn bronze *50 | talisman@worn *50
+free 15: ring@under
+[purse banlord]
+free: chest@bed, pennies@in 20-120, ring@in, iron key@pouch
+free: pennies@pouch 10-60
+free 60: ring@worn
+free 20: crowns@pouch 1
+free 40: pouch@under, pennies@in 10-40
+[purse cultist]
+free: pennies@pouch 6-36
+free: ring@worn bronze
+free 50: pendant@worn bronze
+[purse priest]
+free: chest@bed, pennies@in 20-120, iron key@pouch
+free: pennies@pouch 20-80
+free: pendant@worn
+free: ring@worn *70 | ring@worn gold *30
 ; ---- The HarnWorld Bestiary's folk (DECISIONS.md's answer 11: the Khuzdul, the Sindarin, men and the Gargun), their
 ; gear here as the data their kinds come with (Phase 4's: the kinds themselves aren't in the game yet; the Gargun the
 ; kobolds stand for)
@@ -803,6 +886,7 @@ free 50: hide jerkin@worn
 free 70: belt@worn
 free 30: buckler@worn
 free 15: kurbul helm@worn
+free 50: pouch@belt
 [role khuzwar] free make 6 3
 free: battleaxe@hand *40 | warhammer@hand *30 | axe@hand *30
 free: mail byrnie@worn *70 | scale byrnie@worn *30
@@ -813,6 +897,7 @@ free: belt@worn
 free 60: gambeson@worn
 free 60: knight shield@off *50 | round shield@off *50
 free 50: gauntlets@worn
+free: pouch@belt
 [role khuzmin] free make 5 3
 free: pick@both
 free: hammer@belt
@@ -824,6 +909,7 @@ free: clothes@worn
 free: knee boots@worn
 free: belt@worn
 free: sack@pack
+free: pouch@belt
 [role khuzeld] free make 7 2
 free: warhammer@hand *50 | battleaxe@hand *50
 free: mail byrnie@worn fine
@@ -831,6 +917,7 @@ free: iron helm@worn
 free: clothes@worn
 free: knee boots@worn
 free: belt@worn
+free: pouch@belt
 [role sindwar] free make 6 3
 free: scabbard@belt, longknife@in
 free: clothes@worn
@@ -840,6 +927,7 @@ free: belt@worn
 free 80: hartbow@worn, quiver@belt, arrows@in 20
 free 70: leather vest@worn *50 | leather tunic@worn *50
 free 40: kurbul helm@worn
+free: pouch@belt
 [role manarms] free make 3 3
 free: spear@hand *50 | scabbard@belt, shortsword@in *50
 free: round shield@worn *50 | knight shield@worn *50
@@ -850,6 +938,7 @@ free: belt@worn
 free 85: leather tunic@worn *40 | leather vest@worn *30 | ring byrnie@worn *30
 free 80: kurbul helm@worn *50 | iron helm@worn *50
 free 25: crossbow@worn, bolt case@belt, bolts@in 12-20
+free: pouch@belt
 [role captain] free make 4 4
 free: scabbard@belt, sword@in
 free: kite shield@off
@@ -859,3 +948,30 @@ free: knee boots@worn
 free: clothes@worn
 free: belt@worn
 free 60: gauntlets@worn
+free: pouch@belt
+[purse gargun]
+free 50: pennies@pouch 1-3
+free 33: talisman@worn
+[purse khuzwar]
+free: pennies@pouch 10-40
+free 30: crowns@pouch 1-2
+free 70: ring@worn *75 | ring@worn gold *25
+free 40: brooch@worn
+[purse khuzmin]
+free: pennies@pouch 5-20
+free 12: gem@pouch 1-3
+[purse khuzeld]
+free: pennies@pouch 20-60
+free: crowns@pouch 2-6
+free: ring@worn gold
+free: necklace@worn gold
+[purse sindwar]
+free: pennies@pouch 1-6
+free 60: brooch@worn
+free 40: ring@worn
+[purse manarms]
+free: pennies@pouch 3-30
+free 25: dice@pouch
+[purse captain]
+free: pennies@pouch 20-100
+free: ring@worn

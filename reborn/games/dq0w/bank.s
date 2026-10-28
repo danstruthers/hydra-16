@@ -120,9 +120,9 @@ go:
             SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
             SWPART      37, 4               ; The rest of the UI's intents carried out (dq0w.c's intent_more)
-            SWPART      38, 19              ; A change record kept and made (store.c's store_put, change)
+            SWPART      38, 16              ; A change record kept and made (store.c's store_put, change)
             SWPART      39, 12              ; A thing looked at (things.c: 2026-10-22)
-            SWPART      40, 12              ; Its weight, its lock, traps; a thing described (things.c)
+            SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
             SWPART      41, 8               ; An opening told with what it shows beyond (dq0w.c's revealed)
             SWPART      42, 2               ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 10              ; A walk in the dark set out on: its way felt, a thing stumbled over
@@ -142,9 +142,11 @@ go:
             SWPART      55, 16              ; Travel to a place it knows (dq0w.c's: slice 4.2's)
             SWPART      56, 17              ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
             SWPART      57, 18              ; The outfits drawn: the character's, a denizen's (outfit.c, 2026-10-27)
-            SWPART      58, 18              ; The outfits made (outmake.c)
+            SWPART      58, 19              ; The outfits made (outmake.c)
             SWPART      59, 18              ; An outfit's section drawn (outdraw.c)
             SWPART      60, 19              ; The denizens' things; a weapon let fall, taken up (wlimbs.c, 2026-10-27)
+            SWPART      61, 18              ; What's in a thing (things.c's s_inside: part 36's room, 2026-10-27)
+            SWPART      62, 17              ; A denizen's things made out (things.c's s_gear_words, 2026-10-27)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -251,7 +253,9 @@ go:
             SWFN        look_at, 39
             SWFN        look_more, 40
             SWFN        closer, 42
-            SWFN        inside, 36
+            SWFN        inside, 61
+            SWFN        kit_lock, 61
+            SWFN        gear_words, 62
             SWFN        listed, 11
             SWFN        many, 35
             SWFN        hide, 13
@@ -261,7 +265,7 @@ go:
             SWFN        work_done, 12
             SWFN        keep, 19
             SWFN        kit, 13
-            SWFN        theme_kinds, 13
+            SWFN        theme_kinds, 61
             SWFN        items_begin, 19
             SWFN        it_room, 17
             SWFN        it_need, 17

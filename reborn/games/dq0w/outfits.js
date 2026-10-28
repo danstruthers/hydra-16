@@ -4,8 +4,9 @@
 // banks of its own as it starts and draws from (dq0w/outfit.c).  The file's layout (outfit.c's, little-endian):
 //
 //   'O' 'F' VERSION NSEC, then NSEC entries { hash (2), offset (2), flags (1) } (the section's name hashed: outfit.c's
-//   hash; its flags, its head's first byte, for a draw that wants some: 204 entries at most),
-//   then the sections (200 bytes each at most: outfit.c reads one whole, by its offset)
+//   hash; its flags, its head's first byte, for a draw that wants some: 190 entries at most), then each entry's
+//   section's length, a byte (version 4: the world reads it whole, no more),
+//   then the sections (255 bytes each at most: outdraw.c reads one whole, by its offset; 200 till version 3)
 //   a section:  flags (SF_*: weapon 1, shield 2, free 4, kit 8, armed 16), bent (its bent's section's entry plus 1,
 //               0 none), keep (the money kept, percent: 0 the tenth), make (its things' quality: 0xFF by the wealth,
 //               else the least), mdie (the quality's die, 1d that, 0 none), purse n, purse m (its money NdM, not the
@@ -15,17 +16,24 @@
 //               of these, none of these), the choices
 //   a choice:   weight, info (its things' count, bits 0-3; its weights' by tags, bits 4-5; CI_INSTEAD, a kind made
 //               already it takes the place of follows), { tag, weight } x the weights, the instead, the things:
-//               { kind, place (PL_*, bits 0-3) | flags (TF_* << 4), least, most (how many: 0 one) }
+//               { kind, place (PL_*, bits 0-3) | flags (TF_* << 4), least, most (how many: 0 one), material (MT_*: 0
+//               the kind's own, version 3's) }
 //   the index's last entries the denizens' kinds (dq0d/kinds.txt's, by number: "#" and a byte, the first 1) whose
 //   key has a [role KEY] section, each that section's offset (the world's draw at a lair's placing, I_KIT's: by the
-//   kind's number alone, 2026-10-27)
+//   kind's number alone, 2026-10-27); "&" and the byte, its [lair KEY] section's (the lair's own things, drawn with
+//   its first denizen's); "%" and the byte, its [purse KEY] section's (its personal things, as it's first met; a kind
+//   without one, its standing's: [standing N], by its name)
 'use strict';
 const fs = require('fs');
 
-const VERSION = 2;                                      // (2: a section's flags in its index entry, 2026-10-27)
+const VERSION = 4;                                      // (2: a section's flags in its index entry, 2026-10-27; 3: a
+                                                        //   thing's material, the denizens' places and sections)
 const TAGS = ['feudal', 'imperial', 'viking', 'tribal', 'sindarin', 'khuzan', 'slave', 'serf', 'unguilded', 'guilded', 'noble',
   'poor', 'average', 'rich', 'female', 'male'];
-const PLACES = { worn: 1, hand: 2, off: 3, both: 4, belt: 5, pouch: 6, pack: 7, in: 8 };
+const PLACES = { worn: 1, hand: 2, off: 3, both: 4, belt: 5, pouch: 6, pack: 7, in: 8,
+  bed: 9, stash: 10, home: 11, hoard: 12, under: 13 };  // (outfit.h's PL_*: the denizens' from bed on, 2026-10-27)
+const MATS = { wood: 1, iron: 2, steel: 3, bronze: 4, leather: 5, cloth: 6, bone: 7, clay: 8, stone: 9, glass: 10,
+  silver: 11, gold: 15 };                               // (items.h's MT_*: a thing's own, its kind's else)
 const TFLAGS = { lit: 1, full: 2, own: 4, fine: 8 };
 const SF = { weapon: 1, shield: 2, free: 4, kit: 8, armed: 16 };
 const LC_FREE = 0x80, LC_NEED = 0x40, LI_FREE = 0x10, LI_NEED = 0x20, LI_IF = 0x40, LI_NOT = 0x80, CI_INSTEAD = 0x40;
@@ -98,10 +106,11 @@ function compile({ src, names, out, dens }) {
           c.instead = kind.get(n);
         }
         if (!rest.length) continue;
-        const th = { kind: 0, place: PLACES.pack, lo: 0, hi: 0, flags: 0 };
-        while (rest.length > 1 && (TFLAGS[rest[rest.length - 1]] || /^\d+(-\d+)?$/.test(rest[rest.length - 1]))) {
+        const th = { kind: 0, place: PLACES.pack, lo: 0, hi: 0, flags: 0, mat: 0 };
+        while (rest.length > 1 && (TFLAGS[rest[rest.length - 1]] || MATS[rest[rest.length - 1]] || /^\d+(-\d+)?$/.test(rest[rest.length - 1]))) {
           const t = rest.pop();
           if (TFLAGS[t]) th.flags |= TFLAGS[t];
+          else if (MATS[t]) th.mat = MATS[t];
           else { const [a, b] = t.split('-').map(Number); th.lo = a; th.hi = b === undefined ? a : b; }
         }
         let n = rest.join(' '), at;
@@ -133,15 +142,20 @@ function compile({ src, names, out, dens }) {
   const alias = [];                                     // (The denizens' kinds by number: their roles' sections)
   if (dens && fs.existsSync(dens)) {
     const keys = fs.readFileSync(dens, 'latin1').split(/\r?\n/).filter(l => l.trim() && !/^\s*#/.test(l)).map(l => (l.split('|')[1] || '').trim());
-    keys.forEach((k, i) => { if (index.has('role ' + k)) alias.push(['#' + String.fromCharCode(i + 1), index.get('role ' + k)]); });
+    keys.forEach((k, i) => {                            // (Its role's, its lair's, its personal things': # & %)
+      for (const [c, s] of [['#', 'role '], ['&', 'lair '], ['%', 'purse ']])
+        if (index.has(s + k)) alias.push([c + String.fromCharCode(i + 1), index.get(s + k)]);
+    });
     for (const [n] of alias) if (hashes.has(hash(n))) throw new Error(src + ': the entry of kind ' + n.charCodeAt(1) + ' hashes as section ' + hashes.get(hash(n)) + ' does');
   }
   const body = [];
-  const head = 4 + (secs.length + alias.length) * 5;
+  const named = secs.filter(s => !/^(role|lair|purse) /.test(s.name)), entry = new Map(named.map((s, i) => [s.name, i]));   // (A
+                                                        //   denizen's sections found by its kind's number alone: no entry by name)
+  const head = 4 + (named.length + alias.length) * 6;   // (Version 4: each entry's section's length after the entries)
   let at = head;
   const offs = [];
   for (const s of secs) {
-    const b = [s.flags, s.bent ? index.get(s.bent) + 1 : 0, s.keep, s.make, s.mdie, s.pn, s.pm, s.lines.length];
+    const b = [s.flags, s.bent ? entry.get(s.bent) + 1 : 0, s.keep, s.make, s.mdie, s.pn, s.pm, s.lines.length];
     for (const l of s.lines) {
       if (l.choices.length > 15) fail(s.ln, 'more than 15 choices');
       const lb = [l.pct, l.choices.length | (l.chance & LC_FREE ? LI_FREE : 0) | (l.chance & LC_NEED ? LI_NEED : 0) |
@@ -152,11 +166,11 @@ function compile({ src, names, out, dens }) {
         if (c.things.length > 15 || c.over.length > 3) fail(s.ln, 'a choice of more than 15 things, or 3 weights');
         lb.push(c.weight, c.things.length | c.over.length << 4 | (c.instead ? CI_INSTEAD : 0), ...c.over.flat());
         if (c.instead) lb.push(c.instead);
-        for (const t of c.things) lb.push(t.kind, t.place | t.flags << 4, t.lo, t.hi);
+        for (const t of c.things) lb.push(t.kind, t.place | t.flags << 4, t.lo, t.hi, t.mat);
       }
       b.push(lb.length + 1, ...lb);
     }
-    if (b.length > 200) fail(s.ln, 'a section of ' + b.length + ' bytes (outfit.c reads 200 at most)');
+    if (b.length > 255) fail(s.ln, 'a section of ' + b.length + ' bytes (outdraw.c reads 255 at most)');
     offs.push(at);
     body.push({ at, b });
     at += b.length;
@@ -165,10 +179,12 @@ function compile({ src, names, out, dens }) {
   const file = Buffer.alloc(at);
   file.write('OF', 0, 'latin1');
   file[2] = VERSION;
-  file[3] = secs.length + alias.length;
-  if (secs.length + alias.length > 204) throw new Error(src + ': more than 204 sections and kinds (outfit.h: OF_INDEX, 1K)');
-  secs.forEach((s, i) => { file.writeUInt16LE(hash(s.name), 4 + i * 5); file.writeUInt16LE(offs[i], 6 + i * 5); file[8 + i * 5] = s.flags; });
-  alias.forEach(([n, i], k) => { const e = 4 + (secs.length + k) * 5; file.writeUInt16LE(hash(n), e); file.writeUInt16LE(offs[i], e + 2); file[e + 4] = secs[i].flags; });
+  file[3] = named.length + alias.length;
+  if (named.length + alias.length > 190) throw new Error(src + ': more than 190 sections and kinds (outfit.h: OF_INDEX)');
+  named.forEach((s, i) => { const k = secs.indexOf(s); file.writeUInt16LE(hash(s.name), 4 + i * 5); file.writeUInt16LE(offs[k], 6 + i * 5); file[8 + i * 5] = s.flags; });
+  alias.forEach(([n, i], k) => { const e = 4 + (named.length + k) * 5; file.writeUInt16LE(hash(n), e); file.writeUInt16LE(offs[i], e + 2); file[e + 4] = secs[i].flags; });
+  const lens = [...named.map(s => body[secs.indexOf(s)].b.length), ...alias.map(([, i]) => body[i].b.length)], l0 = 4 + (named.length + alias.length) * 5;
+  lens.forEach((n, k) => { file[l0 + k] = n; });
   for (const { at, b } of body) Buffer.from(b).copy(file, at);
   fs.writeFileSync(out, file);
   return { sections: secs.length, kinds: alias.length, bytes: at };

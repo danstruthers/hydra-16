@@ -30,7 +30,9 @@
 #pragma local-strings (on)
 
 #define OF_MAGIC        0x464F                  /* (dq0o.dat's: "OF", its version) */
-#define OF_VERSION      2                       /* (2: each entry its section's flags, 5 bytes) */
+#define OF_VERSION      4                       /* (2: each entry its section's flags, 5 bytes; 3: a thing's
+                                                **   material, its fifth byte, the denizens' places; 4: the sections'
+                                                **   lengths after the entries, 2026-10-27) */
 
 /* A section by its name (the hash outfits.js's): its offset in the file, 0 none; its flags (its index entry's) in fflags */
 static unsigned char fflags;
@@ -42,11 +44,13 @@ static unsigned __fastcall__ find (const char* p)
     for (; *p; ++p) {
         h = h * 31 + (unsigned char) *p;
     }
-    hub_map (KIND_BANK);
+    hub_map (CAT_BANK);
     n = OF_INDEX[3];
     for (k = 0, q = OF_INDEX + 4; k < n; ++k, q += 5) {
         if ((q[0] | q[1] << 8) == h) {
             fflags = q[4];
+            ost.slen = OF_INDEX[4 + 5 * n + k];  /* (Its length, the index's table after its entries: read whole, no
+                                                **   more, 2026-10-27) */
             return q[2] | q[3] << 8;
         }
     }
@@ -54,7 +58,7 @@ static unsigned __fastcall__ find (const char* p)
 }
 
 /* Line n of the referee's reply (its occupation, then its skills, by their mastery) after pre, in b: 1, or 0 none */
-static char b[64];
+static char b[256];                             /* (256: the index read in the fewer pieces, the start the quicker) */
 static unsigned char __fastcall__ reply_line (unsigned char n, const char* pre)
 {
     const char* t;
@@ -110,16 +114,18 @@ static unsigned char opened (void)
     if ((ost.fd = open (b, O_RDONLY)) < 0) {
         return 0;
     }
-    hub_map (KIND_BANK);                        /* (Its index into the kinds' bank, the first time) */
-    if ((OF_INDEX[0] | OF_INDEX[1] << 8) != OF_MAGIC) {     /* (Its head, then its entries: 5 bytes each) */
-        for (boff = 0, k = 0; boff < 4 + 5 * (unsigned) k && (n = read (ost.fd, b, sizeof b)) > 0; boff += n) {
-            hub_map (KIND_BANK);
+    hub_map (CAT_BANK);                         /* (Its index into the catalogue's bank, the first time) */
+    if ((OF_INDEX[0] | OF_INDEX[1] << 8) != OF_MAGIC) {     /* (Its head, its entries, 5 bytes each, their
+                                                **   sections' lengths) */
+        for (boff = 0, k = 0; boff < 4 + 6 * (unsigned) k && (n = read (ost.fd, b, sizeof b)) > 0; boff += n) {
+            hub_map (CAT_BANK);
             memcpy (OF_INDEX + boff, b, n);
             k = OF_INDEX[3];
         }
-        hub_map (KIND_BANK);
     }
+    hub_map (KIND_BANK);
     OF_N = 0;                                   /* (The list empty) */
+    hub_map (CAT_BANK);
     if ((OF_INDEX[0] | OF_INDEX[1] << 8) != OF_MAGIC || OF_INDEX[2] != OF_VERSION) {
         close (ost.fd);
         return 0;
@@ -128,24 +134,50 @@ static unsigned char opened (void)
     return 1;
 }
 
-/* ---- A denizen's things (I_KIT's, as its lair's placed: ost's did, hx, hy, hsn), its kind's role drawn (the
-** index's "#" and its kind's number, a byte: outfits.js's; none, no things), every line given, on its own die (its
-** stratum's seed and its number: the same things each time), and made (part 58's: filed with its lair's home square,
-** IW_DEN) */
-void __fastcall__ s_den_kit (unsigned char kind)
+/* ---- A denizen's things (I_KIT's: ost's did, hx, hy, hsn, fac), each section m's a asks drawn by its kind (the
+** index's entries, outfits.js's, "#", "&" or "%" and its kind's number, a byte; none, no things): its role's (KT_ROLE,
+** as its lair's placed), its lair's own (KT_LAIR, with its first denizen's: its beds, its stores, its hoard), its
+** personal things (KT_PURSE, as it's first met: its kind's [purse KEY], else its standing's, m's x[0], [standing N]),
+** every line given, each on its own die (its stratum's seed, its number and the section's: the same things each
+** time), and made (part 58's: filed with its lair's home square, IW_DEN; its belongings in its lair's home room) */
+void __fastcall__ s_den_kit (const struct msg* m)
 {
+    static const char pre[3] = { '#', '&', '%' };
     unsigned off;
+    unsigned char k, r;
+    struct room* q;
 
     if (!opened ()) {
         return;
     }
-    ost.rs = ((unsigned) STRATUM (ost.hsn).seed ^ ost.did * 40503U) | 1;
+    if ((r = room_of (ost.hsn, ost.hx, ost.hy)) != 0xFF) {    /* (Its lair's home room's floor, the chunk in the
+                                                **   window: its belongings' squares, part 58's) */
+        q = &C->room[r];
+        ost.bx0 = ost.hx - cx_ + q->x;
+        ost.by0 = ost.hy - cy_ + q->y;
+        ost.bw = q->w;
+        ost.bh = q->h;
+    } else {
+        ost.bx0 = ost.hx;
+        ost.by0 = ost.hy;
+        ost.bw = ost.bh = 1;
+    }
     ost.level = 1;
-    b[0] = '#';                                /* (Its name in the index: "#" and its number, a byte) */
-    b[1] = kind;
-    b[2] = 0;
-    off = find (b);
-    draw_at (off, MD_ALL);
+    for (k = 0; k < 3; ++k) {
+        if (!(m->a & 1 << k)) {
+            continue;
+        }
+        ost.rs = ((unsigned) STRATUM (ost.hsn).seed ^ ost.did * 40503U ^ k * 0x3B1DU) | 1;
+        b[0] = pre[k];                          /* (Its name in the index: the section's mark and its kind's number) */
+        b[1] = m->x[1];
+        b[2] = 0;
+        if (!(off = find (b)) && k == 2) {      /* (No purse of its kind's own: its standing's) */
+            strcpy (b, "standing 0");
+            b[9] += m->x[0];
+            off = find (b);
+        }
+        draw_at (off, MD_ALL);
+    }
     close (ost.fd);
     hub_map (KIND_BANK);
     if (OF_N) {
@@ -159,7 +191,7 @@ void __fastcall__ s_den_kit (unsigned char kind)
 unsigned char s_outfit (void)
 {
     struct req* r;
-    unsigned char occ = 0, k, first, okeep = 0, obent = 0;
+    unsigned char occ = 0, k, first, okeep = 0, obent = 0, olen;
     unsigned off = 0, boff;
 
     if (!opened ()) {
@@ -191,6 +223,7 @@ unsigned char s_outfit (void)
             off = find (b);
         }
     }
+    olen = ost.slen;                            /* (Its section's length: find's, the others' after it) */
     if (off && draw_at (off, MD_HEAD)) {        /* (Its flags, its keep, its bent, kept: read once, 2026-10-27, each
                                                 **   draw_at two parts' copies; its purse, not the family's: a
                                                 **   cleric's 6d6) */
@@ -208,6 +241,7 @@ unsigned char s_outfit (void)
     draw_at (find ("universal"), MD_ALL);
     ost.freeall = 0;
     if (off) {
+        ost.slen = olen;
         draw_at (off, MD_NEED);                 /* (Its occupation's needs) */
     }
     first = 1;
@@ -222,13 +256,15 @@ unsigned char s_outfit (void)
         skills (1, SF_SHIELD, 1);
     }
     if ((k = obent) != 0) {                     /* (Its bent's armour) */
-        hub_map (KIND_BANK);
+        hub_map (CAT_BANK);
         boff = OF_INDEX[5 * k + 1] | OF_INDEX[5 * k + 2] << 8;    /* (Entry k - 1's offset) */
+        ost.slen = OF_INDEX[4 + 5 * OF_INDEX[3] + k - 1];
         draw_at (boff, MD_ALL);
     }
     ost.tool = 1;                               /* (Its skills' tools) */
     skills (1, 0, 255);
     if (off) {
+        ost.slen = olen;
         draw_at (off, MD_CHANCE);               /* (Its likely and rare things) */
     }
     hub_map (0);

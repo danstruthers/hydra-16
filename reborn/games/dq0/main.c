@@ -70,6 +70,7 @@ static const char* tfile;                       /* (dq0 -t: a theme written by h
 static unsigned char made;                      /* (The theme to read: 0xFF the game's own, themegen's; theme.h) */
 const char* savedir;                            /* (dq0 -d: the save's folder; task.c's meta too) */
 unsigned char __fastcall__ things (unsigned char op, const char* name);   /* (way.c's too, part 6's) */
+void gear_look (void);                          /* (Part 11: a denizen's things made out) */
 static void to_hand (void);
 void __fastcall__ news (const struct msg* m);    /* (Part 11's: the rarer news, worded; a thing hidden; the hands' and
                                                 **   limbs': slice 4.1b's) */
@@ -383,7 +384,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    21                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    22                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -416,7 +417,9 @@ static void sheet (void)
                                                 **   chunk's memory the north believed in as it was last seen: the
                                                 **   maker's seen maps, travel's, slice 4.2's; 21, the catalogue's
                                                 **   kinds 128, the theme's from 120, the outfits' kinds; the items'
-                                                **   records a denizen's own, IW_DEN: the outfits' gear) */
+                                                **   records a denizen's own, IW_DEN: the outfits' gear; 22, its
+                                                **   belongings where it sleeps, its record's D_MET, its kinds past
+                                                **   128) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -659,7 +662,7 @@ static void world_words (void)
             break;
         }
     }
-    for (i = KI_THEME; i < NKINDS; ++i) {       /* (Then the theme's kinds') */
+    for (i = KI_THEME; i < KI_THEME + NTKINDS; ++i) {   /* (Then the theme's kinds') */
         hub_map (KIND_BANK);
         memcpy (nm, CATALOGUE[i].name, sizeof CATALOGUE[0].name);
         hub_map (CMD_BANK);
@@ -1145,6 +1148,16 @@ void s_hand_said (void)
 ** if one was (shand): its words ("You take the bar in both hands."), the referee told what's to hand now (RS_EQUIP: its
 ** blocks with it from now on), its time; held already, nothing; 0, no hand for it, why not told ("Your hands are full
 ** ...": not struck with another instead) */
+/* A denizen's things as the eyes make them out from here (the world's IO_GEAR: examined, or assessed, cmd's aux),
+** after how it seems (deal's): HOUSE.md's three levels, the user's, 2026-10-27 */
+void s_gear_look (void)
+{
+    HUB->ireq.to = (cmd.aux ? 2 : 1) | sight_get ()->eye << 4;
+    if (things (IO_GEAR, cmd.obj.word) == IR_OK) {
+        msg (tt ());
+    }
+}
+
 unsigned char s_hold_first (void)
 {
     unsigned char r;
@@ -1802,7 +1815,9 @@ portal:
     case VB_EXAMINE_OBJECT:                     /* (A thing looked at closely: judged, by the craft that knows it; a */
     case VB_EXAMINE_LOCALE:                     /*   portal, or its part if it's not there; else the room) */
         if (cmd.obj.word[0] && !cmd.obj.kind && deal (SW_LOOK | SW_QUIET) != SR_NONE) {
-            return;                             /* (A denizen it sees: how it seems) */
+            gear_look ();                       /* (A denizen it sees: how it seems, then its things as the eyes
+                                                **   make them out from here, part 11's) */
+            return;
         }
         if ((pa = look_way (VB_EXAMINE_OBJECT)) != 0) {
             goto portal;                        /* (A thing, a portal, the room, its aspects: part 6's, way.c; a door

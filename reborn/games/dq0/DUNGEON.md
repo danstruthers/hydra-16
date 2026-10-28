@@ -85,7 +85,10 @@ by a request or an intent.
   or works a door; the **senses**, as a look comes to a chunk stocked that isn't put down yet, ask it first: the hub's
   stock); a **denizen**'s remains the world puts down itself as it dies, its things on them; its things (worn, held, on
   its belt) the world makes as its lair's placed (I_KIT's, the outfits' gear: filed with its lair's home, IW_DEN,
-  2026-10-27: DENIZENS.md's their things); the senses read the records for what the character perceives, and the world
+  2026-10-27: DENIZENS.md's their things), its belongings where it sleeps and its lair's stores and hoard with it
+  (lying in its lair's home room, its faction's: owner), its purse and its valuables as it's first met, a thing worn
+  beneath its clothes hidden (found by searching its body, as it lies dead); a key fits one lock, its own (the locked
+  thing's number in the key's size and thick); the senses read the records for what the character perceives, and the world
   makes a thing its own (its number, its make: no two alike) as a look first sees it, after the look, in the order seen.
   The character's light (pc_light, pc_lamp) is the world's, worked out as what it carries changes.  The records (744, in
   two of the hub's banks) are a cache: what the character carries, and the things of the chunks round it, a chunk's all
@@ -1240,7 +1243,7 @@ Designed, but in no slice of the plans yet (DECISIONS.md has the user's words fo
   character's, and what they disturb there an event the disturbed act on.
 - **Mining up and slanting**: a raise through the ceiling to the stratum above, an incline.
 - **Things hidden by other things or on someone**: under a body, a cloak, a fallen beam (seen once it's moved, freed
-  by a strength test); worn beneath clothing (found by searching the body); in a container's secret part (a false
+  by a strength test); in a container's secret part (a false
   bottom, a hollow heel).  **Holes** as containers: a hole dug in a floor, filled in, a concealed one, dug out again
   to get at what's in it.  **Hiding oneself** by Concealment, and a hidden denizen found by a contest of its
   Concealment against the searcher's Awareness.

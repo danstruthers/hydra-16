@@ -372,7 +372,9 @@ static unsigned char tool_ok (void)
         }
     }
     if (a == VB_ATTACK_OBJECT || a == VB_BREAK_OBJECT) {
-        strike = SK_THING | (unsigned char) othings_x;  /* (That thing strikes, and no other: its kind, IO_FIND's; in
+        strike = (unsigned char) othings_x < KI_HIGH ? SK_THING | (unsigned char) othings_x : SK_BEST;  /* (That thing
+                                                **   strikes, and no other: its kind, IO_FIND's (one past seven bits,
+                                                **   items.h's KI_HIGH, the best held); in
                                                 **   hand first, once there's something to strike) */
         strcpy (hold_w, cmd.other.word);
     }

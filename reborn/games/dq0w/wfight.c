@@ -271,18 +271,31 @@ static unsigned char mine (void)
 ** should be recounted immediately after a robbery"), the UI the robbery (E_TASK TE_ROBBED, b the robber plus 1), if
 ** anything was taken */
 #define WSLOT           (HUB->slot[SLOT_WORLD])
-void __fastcall__ s_den_rob (unsigned x, unsigned y)
+void __fastcall__ s_den_rob (const struct msg* q)
 {
     static struct msg m;
-    static unsigned i, n;
-    static unsigned char kind, f;
+    static unsigned i, n, x, y, box;
+    static unsigned char kind, f, how, fac;
     unsigned char* s;
 
+    x = q->w1;
+    y = q->w2;
+    how = q->x[2];
+    fac = q->b;
     s = at (bd.sn, x, y);
     if (!s || !(TILE (*s) == T_FLOOR || TILE (*s) == T_CORR) ||
         !it_need (bd.sn, (x - STRATUM (bd.sn).x0) >> CW_BITS, (y - STRATUM (bd.sn).y0) >> CW_BITS)) {
         x = bd.x;
         y = bd.y;
+        how = 0;
+    }
+    for (box = 0, i = 0; how == RB_HOARD && (i = items (i, IN_SQUARE, 0)) != 0; ) {
+        if (ip->owner == (OW_HOARD | fac) && ip->sn == bd.sn && (unsigned) (ip->x - x + 16) <= 32 &&
+            (unsigned) (ip->y - y + 16) <= 32) {
+            box = i;                            /* (Its faction's hoard, by its leader's home: the takings in it,
+                                                **   2026-10-27) */
+            break;
+        }
     }
     for (n = 0, i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
         kind = ip->kind;
@@ -297,6 +310,13 @@ void __fastcall__ s_den_rob (unsigned x, unsigned y)
         p->x = x;
         p->y = y;
         p->flags &= ~(I_HELD | I_WORN);
+        if (box) {
+            p->where = IW_ITEM;
+            p->x = box;
+        } else if (how == RB_HIDE) {
+            p->flags = (p->flags & ~I_KNOWN) | I_HIDDEN;   /* (Its stash at its home: found by searching) */
+            p->hide = 1;
+        }
         ++n;
     }
     kind = rsteps + rbody - (roff != 0);        /* (Its rounds: a step's each, the round's own the first; a pack taken

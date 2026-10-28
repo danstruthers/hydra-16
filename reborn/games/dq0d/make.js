@@ -1,7 +1,8 @@
 // make.js - (dq0d) the denizens' data files, after its build (build.js calls build): kinds.txt (the game's bestiary)
 // made obj/games/dq0d.dat, 40 bytes a kind (dq0d.c's struct dkind), the first none (its flags the kinds' count, the
 // first too, its styles the factions'; a kind's styles' high bits its way with a foe it's brought down); then
-// factions.txt's factions, 32 bytes each (struct faction), the first none.
+// factions.txt's factions, 32 bytes each (struct faction), the first none; then each kind's belongings' ways, 5 bytes
+// a kind, the first none (dq0d.c's struct dkx: its keeps, its standing, its home's three room uses, 2026-10-27).
 // And the kinds' traces (slice 4.1: their tread, marks, smell, scent and nose) made obj/games/dq0tr.dat, 64 bytes a
 // kind (the world's traces' store, dq0w/wtrace.c's struct tkind), the first the character's own.  And the world's lore
 // (lore.h): peoples.txt made obj/games/dq0f.dat, deities.txt obj/games/dq0g.dat, 64 bytes a
@@ -20,6 +21,7 @@ const STYLES = { b: 0, n: 1, m: 2, x: 3 };      // level.h's ST_*: a bit each
 const MINDS = { m: 0, b: 1, l: 2, a: 3, c: 4 }; // dq0d.c's M_*
 const AT = { h: 0, u: 1, w: 2, i: 3, f: 4 };    // hub.h's AT_*
 const KREC = 40, FREC = 32, NFACT = 8;          // (dq0d.c's: a kind's record, a faction's, the factions at most)
+const XREC = 5, KEEPS = 'bohclH', USES = 'chlvygaskpbreqowitdf';   // (dq0d.c's struct dkx; its KP_*; world.h's U_*)
 const SND_KINDS = 32;                           // (hub.h's: the kinds at most, the first none; the themes' bits)
 const LANDS = 'mhfscp', CLIMATES = 'ctw';       // lore.h's LA_*, CL_*: a bit each, in order
 const LIGHTS = { '*': 0, d: 1, l: 2 }, NATURES = { a: 0, v: 1, m: 2, f: 3, d: 4 };  // LI_*, NA_*
@@ -93,13 +95,13 @@ function build({ dir, objdir, say = () => {} }) {
   const kinds = lines(path.join(dir, 'kinds.txt')), keys = kinds.map(f => f[1]);
   if (facs.length >= NFACT) throw new Error('dq0d/factions.txt: more than ' + (NFACT - 1) + ' factions');
   if (kinds.length >= SND_KINDS) throw new Error('dq0d/kinds.txt: more than ' + (SND_KINDS - 1) + ' kinds');
-  const out = Buffer.alloc(KREC * (kinds.length + 1) + FREC * (facs.length + 1));
+  const out = Buffer.alloc(KREC * (kinds.length + 1) + FREC * (facs.length + 1) + XREC * (kinds.length + 1));
   out[20] = kinds.length + 1;
   out[21] = facs.length + 1;
   kinds.forEach((f, i) => {
     const at = KREC * (i + 1), pair = s => s.split('-').map(Number), fac = names.indexOf(f[11]) + 1;
     const bad = () => { throw new Error(`dq0d/kinds.txt: line ${i + 1}: ${f.join(' | ')}`); };
-    if (f.length !== 27 || !/^[0-9]$/.test(f[22]) || !/^[0-9]$/.test(f[24]) || !/^[0-9]$/.test(f[26]) ||
+    if (f.length !== 30 || KEEPS.indexOf(f[27]) < 0 || !/^[0-4]$/.test(f[29]) || !(f[28] === '*' || /^[a-z]{1,3}$/.test(f[28]) && [...f[28]].every(c => USES.includes(c))) || !/^[0-9]$/.test(f[22]) || !/^[0-9]$/.test(f[24]) || !/^[0-9]$/.test(f[26]) ||
         f[23].length > 23 || f[25].length > 23 || f[0].length > 11 || f[1].length > 7 || !fac || !(f[12] in MINDS) || !(f[18] in LIGHTS) ||
         !(f[19] in NATURES) || !/^[1-6]$/.test(f[15]) || !/^(body|bones)$/.test(f[21])) bad();
     out.write(f[0], at, 'latin1');
@@ -140,6 +142,12 @@ function build({ dir, objdir, say = () => {} }) {
     out[at + 20] = AT[f[2]];
     rel[i].forEach((v, j) => { out[at + 21 + j + 1] = v; });
     out[at + 21] = AT.i;                         // (To none: indifferent)
+  });
+  kinds.forEach((f, i) => {                     // (Each kind's belongings' ways: keeps, standing, its home's uses)
+    const at = KREC * (kinds.length + 1) + FREC * (facs.length + 1) + XREC * (i + 1);
+    out[at] = KEEPS.indexOf(f[27]);
+    out[at + 1] = +f[29];
+    for (let k = 0; k < 3; k++) out[at + 2 + k] = f[28] !== '*' && k < f[28].length ? USES.indexOf(f[28][k]) : 0xFF;
   });
   fs.writeFileSync(path.join(objdir, '..', 'dq0d.dat'), out);
 

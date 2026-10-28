@@ -359,8 +359,25 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
 - **Drawn as it strikes:** its hands empty of a weapon, its first blow draws the best on its belt instead, its round
   (WB_DRAWS).  A weapon let fall is its own (the same record, on the floor and back in its hand).
 - **Dead:** what it held where it fell, the rest on its body (the remains a surface: KF_ON), anyone's to take.
-- **Not yet:** a shield's block (the referee's denizens dodge or counterstrike, as before); the UI naming what one
-  holds and wears; the lair's own things, beds, keys, purses (the plan's phases 2 and 3).
+- **Where it sleeps** *(2026-10-27: the plan's phases 2 and 3; HOUSE.md's the denizens' belongings, for review)*: its
+  lair's home is the room of its chunk its kind likes best (kinds.txt's home), its bed a square of that room's floor
+  (its role's bed and stash things: a blanket, a kobold's straw and stash), its lair's own things with its first
+  denizen's I_KIT (KT_LAIR: outfits.txt's [lair KEY], the larder, the water, the spare arms, the candles, the hoard);
+  each lying there (IW_SQUARE, owner its kind's faction, a hoard's OW_HOARD | it), paged with that chunk as any.
+- **First met:** as it's first made an actor (s_enlist; its record's D_MET, kept) its personal things (I_KIT KT_PURSE:
+  [purse KEY], else [standing N] by kinds.txt's standing): its purse in its pouch, its valuables worn, a box at its bed
+  locked with its key (a key made locks the last lidded thing made before it, and fits it alone), a thing worn beneath
+  its clothes hidden (found by searching its body).
+- **A robber's takings** (I_ROB's x[2], b): to its faction's hoard, in the chest at the home of a placed lair of its
+  faction's leader (kinds.txt's keeps H) on its stratum (RB_HOARD); else hidden at its home if its kind hides its
+  things (RB_HIDE); else lying there.
+- **Seen:** the world keeps each actor's look (the hub's agear, AG_ARMED, AG_ARMOUR: as it tells the referee), the
+  senses copy it with its body (struct sden's gear), the look words it ("a bandit, armed and armoured"); examined or
+  assessed (IO_GEAR, the world's: dq0w/things.c's part 62) what it holds, wears and has at its belt, as far as the
+  eyes make out (HOUSE.md's what's seen of an actor).
+- **Not yet:** a shield's block (the referee's denizens dodge or counterstrike, as before); a beast's den's and the
+  dead's lairs' things; the robbers' own stashes (no kind hides its things yet but the kobolds, whose takings are their
+  lord's).
 
 ## Still to come
 

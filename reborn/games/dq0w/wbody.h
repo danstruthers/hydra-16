@@ -30,8 +30,9 @@ void den_intents (void);                        /* (Part 14) The denizens' inten
 void pc_blow (void);                            /* (Part 15) The character's blow at the actor it's posted (the hub's
                                                 **   pc_foe) */
 void __fastcall__ den_blow (unsigned char def, unsigned char z);  /* (Part 15) Body bd's blow at def (I_ATTACK's) */
-void __fastcall__ den_rob (unsigned x, unsigned y);     /* (Part 15) The character robbed by body bd, what it takes
-                                                **   put down on x, y (I_ROB's) */
+void __fastcall__ den_rob (const struct msg* m);    /* (Part 15) The character robbed by body bd, what it takes
+                                                **   put down at m's w1, w2, or in its faction's hoard there, or hidden
+                                                **   there (I_ROB's) */
 void bled (void);                               /* (Part 15) The bleeding's bloodloss, a minute at a time */
 unsigned char __fastcall__ den_first (unsigned char k, unsigned char away);    /* (Part 14) Body k's tactical
                                                 **   advantage: backed away (away 1), 2; or its blow first, 1 */

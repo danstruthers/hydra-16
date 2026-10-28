@@ -18,7 +18,7 @@ static unsigned sig[NACTORS];                   /* (Each body as it was seen: it
 
 unsigned char dens_seen (void)
 {
-    static unsigned char k, n, ch;
+    static unsigned char k, n, ch, g;
     static unsigned char* p;
     static unsigned s;
     static struct actor* a;
@@ -28,10 +28,12 @@ unsigned char dens_seen (void)
         s = 0;
         if (a->state) {                         /* (Its body copied out only if it's one: most aren't) */
             memcpy (&sact, a, SACT);
+            g = HUB->agear[k];                  /* (Its things at a look: the world's, AG_*; the hub in the window) */
             if (sact.sn == HUB->pc_stratum && n < SEE_DENS && (p = at (sact.sn, sact.x, sact.y)) != 0 && (*p & T_VIS)) {
                 hub_map (SIGHT_BANK);
-                memcpy (&SIGHT->den[n++], &sact.x, sizeof SIGHT->den[0]);
-                s = 0x8000U | sact.doing << 8 | sact.den;
+                memcpy (&SIGHT->den[n], &sact.x, offsetof (struct sden, gear));
+                SIGHT->den[n++].gear = g;
+                s = 0x8000U | (unsigned) (g & 7) << 12 | sact.doing << 8 | sact.den;
             }
         }
         if (s != sig[k]) {
