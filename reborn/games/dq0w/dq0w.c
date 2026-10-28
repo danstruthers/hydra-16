@@ -2447,6 +2447,10 @@ void __fastcall__ s_start (const char* dir)
     hub_map (0);
     stept = HUB->pcsum.step ? HUB->pcsum.step : 10;
     s_begin ();
+    tr_flush (0);                               /* (The traces' store begun as the game starts, not at its first flush:
+                                                **   its two banks cleared, its kinds read, some 1.2M cycles, a command's
+                                                **   answer kept waiting behind it, 2026-10-27: dq0answer's normal pace,
+                                                **   the null referee's) */
     arrive ();                                  /* (Its look the first: the things round it in the item store first, its
                                                 **   paging's) */
     event (E_READY, 0, 0);                      /* (The UI waits for it: its commands, the world started) */

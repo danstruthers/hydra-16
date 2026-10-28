@@ -121,7 +121,9 @@ int __fastcall__ hub_attach (unsigned char s, unsigned char me)
 #endif
 
 /* The clock, read whole: tick is bumped before now is written and after (the world's), so a read between two
-** equal even ticks saw it whole */
+** equal even ticks saw it whole (HUB_NO_NOW: a task that never reads it, the world, its own clock's keeper: its
+** room) */
+#ifndef HUB_NO_NOW
 unsigned long hub_now (void)
 {
     unsigned char t;
@@ -133,6 +135,7 @@ unsigned long hub_now (void)
     } while ((t & 1) || t != HUB->tick);
     return n;
 }
+#endif
 
 void __fastcall__ hub_ring (unsigned char t)
 {
@@ -142,7 +145,8 @@ void __fastcall__ hub_ring (unsigned char t)
 #ifndef HUB_NO_QUEUES                           /* (A task that neither sends nor takes intents and events: its room) */
 /* ---- The UI's intents, to the world */
 
-#ifndef HUB_NO_SEND                             /* (A task that only reads the queues: the denizens' room) */
+#if !defined (HUB_NO_SEND) && !defined (HUB_NO_ISEND)  /* (A task that only reads the queues: the denizens'
+                                                **   room; one that takes the intents, sending none: the world's) */
 unsigned char __fastcall__ hub_send (const struct msg* m)
 {
     unsigned char h = HUB->iq_head, n = (h + 1) % IQ_SIZE;
@@ -190,6 +194,7 @@ void __fastcall__ hub_event (const struct msg* m)
 }
 #endif
 
+#ifndef HUB_NO_NEXT                             /* (A task that writes the events, reading none: the world's room) */
 unsigned char __fastcall__ hub_next (unsigned* place, struct msg* m)
 {
     unsigned h = HUB->eq_head;
@@ -204,6 +209,7 @@ unsigned char __fastcall__ hub_next (unsigned* place, struct msg* m)
     ++*place;
     return 1;
 }
+#endif
 
 /* ---- The denizens' events (DENIZENS.md: events), in their own bank: an entry copied in or out whole, between the
 ** main RAM and the bank (m is the main RAM's), the header in the window after (a reader that falls DQ_SIZE behind

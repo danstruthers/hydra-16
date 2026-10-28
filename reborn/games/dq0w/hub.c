@@ -4,4 +4,7 @@
 
 #define HUB_ATTACHED                            /* (Attached, not made: no hub_create, no hub_spawn) */
 #define HUB_DWRITE                              /* (The denizens' events: the world's to write, its bodies') */
+#define HUB_NO_ISEND                            /* (Intents taken, none sent: the world's room, 2026-10-27; */
+#define HUB_NO_NEXT                             /*   events written, none read; */
+#define HUB_NO_NOW                              /*   the clock its own) */
 #include "../dq0/hub.c"

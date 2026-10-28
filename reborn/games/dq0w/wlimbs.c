@@ -126,7 +126,8 @@ void __fastcall__ s_drop_held (unsigned char h, unsigned char ring)
         hub_map (0);
         x = HUB->pc_x;
         y = HUB->pc_y;
-        if ((d = dice (1, 10)) <= 6) {          /* (Beside it, that way, if it's open floor) */
+        if ((d = 1 + random (10)) <= 6) {       /* (Beside it, that way, if it's open floor: dice (1, 10)'s roll, without
+                                                **   dice.c in the main RAM, 2026-10-27) */
             d = way[d - 1];
             q = at (sn, x + head_x[d], y + head_y[d]);
             if (q && (TILE (*q) == T_FLOOR || TILE (*q) == T_CORR || TILE (*q) == T_STEPS)) {
@@ -516,7 +517,7 @@ void s_den_drop (void)
     } else if (k >= NKINDS) {
         return;
     }
-    if ((d = dice (1, 10)) <= 6) {
+    if ((d = 1 + random (10)) <= 6) {           /* (dice (1, 10)'s) */
         d = way[d - 1];
         q = at (bd.sn, x + head_x[d], y + head_y[d]);
         if (q && (TILE (*q) == T_FLOOR || TILE (*q) == T_CORR || TILE (*q) == T_STEPS)) {
