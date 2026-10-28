@@ -746,7 +746,7 @@ free 30: buckler@worn
 free 15: kurbul helm@worn
 free 20: sling@belt, pouch@belt, sling stones@in 10-20
 free 50: heap of straw@bed
-free 25: pennies@stash 1d6 | talisman@stash
+free 25: pennies@stash 1d6 | farthings@stash 1d6 | talisman@stash
 free 50: pouch@belt
 [role koblord] free make 2 3
 free: axe@hand *60 | falchion@hand *15 | shortsword@hand *10 | battleaxe@hand *15
@@ -845,14 +845,18 @@ free: chest@hoard, pennies@in 30-150, crowns@in 1d2, goblet@in, jewel@in 1d2, ir
 ; sections', its notes, trade goods, written works, potions and artifacts left out.  The house's: a box at the bed
 ; keeping as much again as the purse's dice (kinds.txt's keeps c), a kobold's stash, a talisman, dice.  A kind with no
 ; [purse KEY] its standing's: 1 tribal the book's Hunters/Tribesmen (the Gargun's), 2 common folk its Vagrant/Beggar
-; (the nearest the book has), 3 people of standing its Mercantyler, 4 lords its Warrior/Noble
+; (the nearest the book has), 3 people of standing its Mercantyler, 4 lords its Warrior/Noble.  And the poor's change,
+; the house's (the user's, 2026-10-28: "Please keep farthings as they might be useful for denizens"): farthings, cut
+; pennies, besides the book's pence, a tribe's, a vagrant's, a brigand's, a miner's: their own lines
 [standing 1]
 free 20: pennies@pouch 3d6
+free 30: farthings@pouch 1d4
 free 2: crowns@pouch 1d2
 free 1: jewel@worn 1d3
 free 33: talisman@worn
 [standing 2]
 free 10: pennies@pouch 1d8
+free 30: farthings@pouch 1d6
 free 1: crowns@pouch 1d2
 free 1: jewel@worn 1d2
 free 20: dice@pouch
@@ -867,12 +871,14 @@ free 15: jewel@worn 1d3
 ; (The kobold lord as its tribe, the book's Gargun: Hunters/Tribesmen)
 [purse koblord]
 free 20: pennies@pouch 3d6
+free 30: farthings@pouch 1d4
 free 2: crowns@pouch 1d2
 free 1: jewel@worn 1d3
 free: talisman@worn
 ; (A bandit the book's Brigand/Outlaw)
 [purse bandit]
 free 75: pennies@pouch 1d6
+free 20: farthings@pouch 1d4
 free 5: crowns@pouch 1d3
 free 15: jewel@worn 1d3
 free 33: chest@bed, pennies@in 1d6, iron key@pouch
@@ -975,6 +981,7 @@ free: pouch@belt
 ; miner the house's nearest, Hunters/Tribesmen: working folk)
 [purse gargun]
 free 20: pennies@pouch 3d6
+free 30: farthings@pouch 1d4
 free 2: crowns@pouch 1d2
 free 1: jewel@worn 1d3
 free 33: talisman@worn
@@ -984,6 +991,7 @@ free 30: crowns@pouch 1d3
 free 15: jewel@worn 1d3
 [purse khuzmin]
 free 20: pennies@pouch 3d6
+free 30: farthings@pouch 1d4
 free 2: crowns@pouch 1d2
 free 1: jewel@worn 1d3
 [purse khuzeld]

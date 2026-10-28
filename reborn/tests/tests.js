@@ -6202,10 +6202,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0money', what: 'Dingus Quest Zero\'s money as the HarnMaster books have it (the user\'s, 2026-10-28: DECISIONS.md\'s money, HOUSE.md\'s): the kit\'s 12 silver pennies (a dram each: the pouch\'s weight nothing more than before), examined close their stamps told (the theme\'s mints: 1crypt\'s, four in five the region\'s own, Cendra\'s), their mix kept in the pile\'s record (its groups by mint, fifteenths of it), assessed their worth in pennies (as a local would take them); a stocked old coin\'s mint by its era (themes\' mint lines compiled: dq0themec\'s); the same seed\'s pile the same mix',
-      init: 't_rc', cycles: 700e6,
+      name: 'dq0money', what: 'Dingus Quest Zero\'s money as the HarnMaster books have it (the user\'s, 2026-10-28: DECISIONS.md\'s money, HOUSE.md\'s): the kit\'s 12 silver pennies (a dram each: the pouch\'s weight nothing more than before), examined close their stamps told (the theme\'s mints: 1crypt\'s, four in five the region\'s own, Cendra\'s), their mix kept in the pile\'s record (its groups by mint, fifteenths of it), assessed their worth in pennies (as a local would take them); farthings, a penny cut in four (the user\'s "Please keep farthings"), the money counted ("count the money"), a farthing worth a farthing, one dropped and taken again joined to the other; a stocked old coin\'s mint by its era (themes\' mint lines compiled: dq0themec\'s); the same seed\'s pile the same mix',
+      init: 't_rc', cycles: 1100e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm',
-        'examine the pennies', 'value the pennies', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm', 'examine the pennies', 'quit', 'echo $status']) },
+        'examine the pennies', 'value the pennies', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm', 'examine the pennies', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k farthings,farthings', 'inventory', 'count the money', 'examine the farthings', 'value the farthings', 'drop 1 farthing', 'take the farthing', 'inventory', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], A = dq0Answers(out);
@@ -6215,6 +6215,11 @@ module.exports = {
         if (!/Their stamps: (all|most|many|some|a few) of Cendra/.test(ex[0])) f.push('no stamps told, the region\'s own first: ' + ex[0]);
         if (ex[0] !== ex[1]) f.push('the same seed\'s pile not the same mix: ' + ex[0] + ' / ' + ex[1]);
         if (!val.length || !/You judge them worth (about (\d+ pennies|a penny|half a penny|a farthing|three farthings)|nothing)/.test(val[0])) f.push('no worth in pennies: ' + val[0]);
+        // (Farthings, the user's, 2026-10-28: a penny cut in four, a coin of its own; the money counted)
+        const cnt = said('count the money'), fv = said('value the farthings'), inv = said('inventory');
+        if (!cnt.length || !/Your (12 pennies|farthings?) (are|is) in your /.test(cnt[0])) f.push('the money not counted: ' + cnt[0]);
+        if (!fv.length || !/worth about (a farthing|half a penny)\./.test(fv[0])) f.push('the farthings not worth a farthing: ' + fv[0]);
+        if (inv.length < 2 || !/2 farthings/.test(inv[inv.length - 1])) f.push('the farthing taken again not joined to the other: ' + inv[inv.length - 1]);
         const s = T.of('examine the pennies').after, p = s && dq0Carried(s).find(i => i.name === 'pennies');
         if (!p) f.push('no pennies carried');
         else {

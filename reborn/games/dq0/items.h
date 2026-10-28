@@ -134,6 +134,8 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_CROWNS, KI_BROOCH, KI_NECKLACE, KI_PENDANT, KI_GOBLET, KI_GEM, KI_TALISMAN, KI_DICE,  /*   and valuables (a
                                                 **   jewel's or a plate's worth its kind's for silver: HOUSE.md's worth
                                                 **   by material) */
+    KI_FARTHINGS,                               /* (A silver penny cut in four, HarnWorld 23's: the user's, 2026-10-28,
+                                                **   "Please keep farthings as they might be useful for denizens") */
     KI_COUNT };
 
 #define KIND_WORDS      ((const char*) (CATALOGUE + NKINDS))     /* (In the kinds' bank after them: the words of

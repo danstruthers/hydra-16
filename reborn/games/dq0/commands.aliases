@@ -145,4 +145,6 @@ refuel fill
 check x
 study x
 determine x
+# Coins counted (added 2026-10-28, the money's: "count the pennies", their number and their stamps told)
+count x
 batter break

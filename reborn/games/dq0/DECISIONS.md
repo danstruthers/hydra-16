@@ -1132,7 +1132,7 @@ money, for review):
   the dwarves' gold coin, an ounce, worth 240 pennies, and rare (most never see one).  Every worth and price in
   farthings (the catalogue's, the outfits' prices, the family wealth: a candle 1f, a hot meal 1d, a dagger 24d); the
   appraisal's words in farthings under a penny, pennies under a pound, pounds and shillings above ("about 2 pounds 6
-  shillings").  No cut pennies made for change (a purse's odd farthings none): no trader yet.
+  shillings").
 - **Prices:** HarnWorld's list (read from its PDF's table: the text extraction had shifted the farthing prices) and
   the core's weapon and armour tables (Combat 3-4, the referee's book, where the two differ: a mail hauberk 990d, a
   handaxe 72d); the house's for what the book lacks, by its nearest, marked in kinds.c.
@@ -1183,7 +1183,15 @@ local or full-value Azadmere coins.  You shall be able to specify which coins to
 groups are kept by mint, each one's worth known from its mint's ways, so "the lowest-worth coins first" and "only
 these mints" are a pick among them; the mints' names and words are what the parser will take.
 
+Then (2026-10-28): "Please keep farthings as they might be useful for denizens/"  So the farthing is a coin of its
+own, as the book has it (HarnWorld 23: a silver penny cut in four): a kind (KI_FARTHINGS, silver, worth a farthing,
+too light to weigh), in piles with mints as pennies are (a cut penny keeps its penny's mint); the character's odd
+farthings in its purse as farthings; the poor's purses (a tribe's, a kobold's, a vagrant's, a brigand's, a miner's)
+some farthings besides the book's pence (the house's: the tables give silver in pence), for review.  Told and taken as
+any coin ("2 farthings", "take 1 farthing"; examined, their stamps), "count" an examining ("count the pennies"; "count
+the money" the pennies'), and for the market to come, change.
+
 Left for later (DUNGEON.md's): the coins' metal value (three quarters of their face, the book's) and their discount
 abroad beyond the appraisal's telling, buying and selling (second-hand clothing 30-60% of new, a mercantyler's 10% and
-50%), the market's paying, cut pennies for change, usurers' notes, trade goods, written works and potions in the
+50%), the market's paying and its change, usurers' notes, trade goods, written works and potions in the
 purses, the Khuzdul and the Sindarin as denizens (their purses written, the kinds to come).

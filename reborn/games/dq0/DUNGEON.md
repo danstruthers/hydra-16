@@ -678,7 +678,8 @@ names), its words pennies under a pound, pounds and shillings over (HOUSE.md's m
 
 **Money** (2026-10-28, the user's: "Is the money system modeled after the one in the HM rules?  If not, it should be.";
 DECISIONS.md's money, HOUSE.md's): silver pennies, a dram each, the coin everyone carries; the Khuzan crown, an ounce of
-gold, 240 pennies, rare; prices the book's, in farthings.  Coins are **piles**: a pile of pennies is one thing, but
+gold, 240 pennies, rare; the farthing, a penny cut in four, a coin too (the user's, 2026-10-28); prices the book's, in
+farthings.  Coins are **piles**: a pile of pennies is one thing, but
 it holds up to four groups by **mint** (theme.h's struct tmint, the theme's mint lines: today's realms, the region's
 own and its neighbours' and the dwarves' hold, and the peoples of its eras who struck coin), each its share; a part
 taken the same mix, two piles put together merged.  Today's coins are four in five the region's own; coins lying in an
@@ -1250,7 +1251,7 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   by its state, the pit climb (D13).
 - **The market** (when trading comes: DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a
   mercantyler's 10% buying and 50% selling to the source, second-hand clothes 30-60% of new, haggling), the coins'
-  metal value and their discount outside their own land in the trade itself (the appraisal tells it now), cut pennies
+  metal value and their discount outside their own land in the trade itself (the appraisal tells it now), farthings
   for change; paying with the lowest-worth coins first unless the seller asks for the local or the dwarves', and the
   user's "pay with Kanday [coins/pennies/farthings/money]" (a pile's groups by mint, each one's worth known, the
   mints' names and adjectives the parser's); usurers' notes, trade goods, written works and potions in the purses.

@@ -1515,7 +1515,7 @@ HarnWorld's price list.  What the house adds, every number the house's (and outf
   round shield); its money 6d6 pennies (Religion 9), its skills' tools bought with it; each church's marks
   (Morgath's mask, Naveh's two daggers, Larani's surcoat for a robe, Peoni's staff).
 - **The money:** what's left, all of it, silver pennies in the pouch (piles of 250 at most, a lot's count a byte,
-  told as one: "600 pennies"), the odd farthings none (no cut pennies for change: Money, below).  *(For review.)*
+  told as one: "600 pennies"), its odd farthings farthings (cut pennies: Money, below).  *(For review.)*
 - **Placing:** worn; in a hand (the main one; the torch the off one); hung from the belt, in its carrier (a sword in
   its scabbard, a knife in its sheath); in the pouch (mapping things and lockpicks: handy, HOUSE.md's reach); in the
   pack; what won't go where it's meant in the pack, what won't go in the pack not made.
@@ -1643,7 +1643,13 @@ What the house adds, for review:
 - **Worth in farthings** (kinds.c's value; the outfits' prices and budgets; the family wealth four times its pennies);
   the appraisal's words: under a penny "a farthing", "half a penny", "three farthings"; under a pound "about N
   pennies" (from 20 on to the nearest five); a pound or more "about 2 pounds 6 shillings" (to the nearest shilling).
-- **No farthing coins:** a purse's odd farthings dropped (no cut pennies for change till there's a trader).
+- **Farthings** (the user's, 2026-10-28: "Please keep farthings as they might be useful for denizens"): a coin of its
+  own, a silver penny cut in four (HarnWorld 23), worth a farthing, too light to weigh (a quarter dram, under the
+  weight's 64th), in piles with mints as pennies are; the character's odd farthings its purse's; the poor's purses
+  some besides the book's pence (the house's: a tribe's, a kobold lord's, a Gargun's, a Khuzan miner's 1d4 three times
+  in ten, a vagrant's 1d6 three in ten, a bandit's 1d4 one in five; a kobold's stash its pennies or its farthings).
+  "count X" an examining ("count the pennies": their number, their stamps); "count the money", "the coins" the
+  pennies'.
 - **A coin's weight by the dram** (items.h's LOT_WT: a pile's count over 64 quarter pounds, to the nearest: under 32
   pennies nothing; a crown an ounce).
 - **The house's prices** (the book has no such thing; by its nearest): a torch 1d, a backpack 24d, rations 1.5d a

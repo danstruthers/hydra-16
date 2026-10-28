@@ -2705,7 +2705,8 @@ static unsigned char __fastcall__ alike (unsigned i, unsigned* told, unsigned ch
     nx_w = IW_ITEM;
     nx_x = jn;
     r = tw.qty == 1 && (tw.flags & I_WORN) == lwo && !(tw.flags & (I_NAMED | I_HELD)) && sig () == lsig && !lin &&
-        !next_in ();
+        (!lkf || !next_in ());                  /* (Nothing in it: asked only of a kind that holds things, its kind's
+                                                **   the same; the list not gone through for each, 2026-10-28) */
     if (r && *nt < 8) {
         told[(*nt)++] = jn;
     }
@@ -2748,10 +2749,11 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
             continue;                           /* (Told with one alike before it: nothing in it, nothing more) */
         }
         ln = 1;
-        if ((twk->form & (KF_COUNT | KF_SMALL)) == (KF_COUNT | KF_SMALL) && !(tw.flags & I_NAMED)) {   /* (A pile of
-                                                **   coins (the only lots past 250: a rich purse), the others there told
-                                                **   with it, dq0answer's inventory the quicker for none else; a
-                                                **   purse's 600 pennies in piles of 250, 2026-10-28) */
+        if ((twk->form & (KF_COUNT | KF_SMALL)) == (KF_COUNT | KF_SMALL) && tw.qty > 125 && !(tw.flags & I_NAMED)) {
+                                                /* (A pile of coins past 125 (the only lots past 250 together: a rich
+                                                **   purse), the others after it there told with it, dq0answer's
+                                                **   inventory the quicker for none else; a purse's 600 pennies in
+                                                **   piles of 250, 2026-10-28) */
             tw_sum = tw.qty;
             for (jn = i; nx_n = jn, nx_w = where, nx_x = x, (jn = next_in ()) != 0; ) {
                 cl_p = item_at (jn);
@@ -2766,12 +2768,14 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
             lwo = tw.flags & I_WORN;
             lin = 0xFF;                         /* (Whether something's in it: alike's to ask) */
             if (ngot != 0xFF) {
+                hub_map (KIND_BANK);            /* (The list's bank in the window once, and again after alike's: an
+                                                **   inventory the quicker, 2026-10-28) */
                 for (gp = GOT_AT + gk + 1, gm = ngot - gk - 1; gm; --gm, ++gp) {  /* (Those after it in the list
                                                 **   gathered, from its place: next_in's, not the list again for each) */
-                    hub_map (KIND_BANK);
                     if (gp->where == where && gp->x == x && gp->kind == tw.kind) {
                         jn = gp->n;
                         ln += alike (i, told, &nt);
+                        hub_map (KIND_BANK);
                     }
                 }
             } else {

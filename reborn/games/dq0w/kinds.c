@@ -193,6 +193,9 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "talisman", K_WEAR, 0, 0, 0, 0, 0, 0, 1, "", MT_BONE, AP_BONE, 4 },    /* (A tribal charm: a tooth on a
                                                 **   thong, a bright pebble) */
     { "dice", K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "", MT_BONE, AP_BONE, 8 },
+    { "farthings", K_PLURAL, 0, 0, 0, 0, 0, 0, 1, "", MT_SILVER, AP_METAL, 1, 0, KF_SMALL | KF_COUNT | KF_TENS },  /* (A
+                                                **   penny cut in four, a quarter dram: under the weight's 64th, none,
+                                                **   2026-10-28) */
 };
 #pragma rodata-name (pop)
 
@@ -245,8 +248,9 @@ const unsigned char throws[KI_COUNT] = {
     1, 1, 0, 1, 1, 0, 0, 1, 0, 1, 0, 1, 1,      /* clothes ... mask: armour and clothes */
     1, 2, 1, 2, 2, 2, 2, 2,                     /* crowbar, bandages, letter, ring, grapple, hammer, herbs, vial */
     0, 0, 0, 0, 0, 0, 0, 0,                     /* (the theme's eight) */
-    1, 1, 0, 2, 2, 2, 2, 2, 2, 2, 2             /* furs, blanket, cask, crowns, brooch, necklace, pendant, goblet, gem,
+    1, 1, 0, 2, 2, 2, 2, 2, 2, 2, 2,            /* furs, blanket, cask, crowns, brooch, necklace, pendant, goblet, gem,
                                                 **   talisman, dice */
+    2                                           /* farthings */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 

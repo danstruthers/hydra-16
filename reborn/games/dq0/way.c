@@ -148,6 +148,9 @@ static unsigned char examine (void)
 {
     unsigned char ex = cmd.aux, k = cmd.obj.kind;
 
+    if (!strcmp (cmd.obj.word, "money") || !strcmp (cmd.obj.word, "coins")) {
+        strcpy (cmd.obj.word, "pennies");       /* (The money counted, its pennies: "count the money", 2026-10-28) */
+    }
     if (cmd.obj.word[0]) {
         if (ex & EX_BOTH ? judged_as (ex) : looked (ex & EX_TRAPS ? LM_TRAPS : ex & EX_WEIGHT ? LM_WEIGHT : ex & EX_LOCK ?
             LM_LOCK : ex & EX_COND ? LM_COND : LM_CLOSE, ex & EX_TRAPS ? 100 : ex ? 10 : 30)) {
