@@ -481,7 +481,7 @@ void inl_show (void)
     csi ();
     out ('K');
     unhide ();
-    outs (t_ready ? "> " : "  ");
+    outs (t_ready && !qlen ? "> " : "  ");   /* (A line entered, not yet taken: no prompt, 2026-10-28) */
     outs (inl + from);
     shown = inn - from;
     away = 0;
@@ -498,7 +498,9 @@ void t_done (void)
             csi ();
             out ('K');
             unhide ();
-            outs (t_ready ? "> " : "  ");
+            outs (t_ready && !qlen ? "> " : "  ");    /* (A line entered and not yet taken up, the
+                                                **   world's or a stir's words out before it: not a prompt, a test's
+                                                **   next line not typed on it, 2026-10-28) */
         }
         away = 0;
     }
@@ -583,6 +585,8 @@ char* t_line (void)
     n = strlen (queue) + 1;                     /* (The first line, out of the queue) */
     memcpy (taken, queue, n);
     qlen -= n;
+    away = 1;                                   /* (The line typed drawn again at t_done: its prompt as the game
+                                                **   stands, none shown while the line waited, 2026-10-28) */
     memmove (queue, queue + n, qlen);
     return taken;
 }
