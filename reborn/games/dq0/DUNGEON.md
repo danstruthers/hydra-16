@@ -672,8 +672,20 @@ it, a search, a close look).
 material's worth and its value are an appraiser's judgement (examine X): the referee tests the craft that knows that
 kind of thing (rs.h's P_APPRAISE, its AP_*: HOUSE.md's tests), and the judgement is as near the truth as the grade: a
 critical success right, a marginal success near (its make a step off, its worth a fifth), a marginal failure well
-off, a critical failure wild (said as surely).  The judgement isn't remembered with the thing; the theme's things
-have no values of their own yet.
+off, a critical failure wild (said as surely).  The judgement isn't remembered with the thing.  Its worth is in
+farthings, the book's (HarnWorld 23: four to the penny, the penny a dram of silver, the shilling and the pound only
+names), its words pennies under a pound, pounds and shillings over (HOUSE.md's money).
+
+**Money** (2026-10-28, the user's: "Is the money system modeled after the one in the HM rules?  If not, it should be.";
+DECISIONS.md's money, HOUSE.md's): silver pennies, a dram each, the coin everyone carries; the Khuzan crown, an ounce of
+gold, 240 pennies, rare; prices the book's, in farthings.  Coins are **piles**: a pile of pennies is one thing, but
+it holds up to four groups by **mint** (theme.h's struct tmint, the theme's mint lines: today's realms, the region's
+own and its neighbours' and the dwarves' hold, and the peoples of its eras who struck coin), each its share; a part
+taken the same mix, two piles put together merged.  Today's coins are four in five the region's own; coins lying in an
+old era's works are its people's (the maker's stock: an old vault's, a crypt's), a gold-striking people's sometimes
+crowns.  Examined close, a pile's stamps are told; assessed, its worth as a local would take it (coins of elsewhere
+less, the region's own and the dwarves' at par, an old era's their silver's).  What a denizen carries is the book's
+Personal Possessions (Treasure 2-3), its condition and what lies lost the Treasure condition table's (Treasure 1).
 
 ### Light kept: somebody's
 
@@ -1236,6 +1248,12 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   denizens open, shut, lock and break portals, and take things, by the same rules.
 - **The house rules decided, not yet built** (HOUSE.md): Strength and weapons, free pounds, a wrecked portal appraised
   by its state, the pit climb (D13).
+- **The market** (when trading comes: DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a
+  mercantyler's 10% buying and 50% selling to the source, second-hand clothes 30-60% of new, haggling), the coins'
+  metal value and their discount outside their own land in the trade itself (the appraisal tells it now), cut pennies
+  for change; paying with the lowest-worth coins first unless the seller asks for the local or the dwarves', and the
+  user's "pay with Kanday [coins/pennies/farthings/money]" (a pile's groups by mint, each one's worth known, the
+  mints' names and adjectives the parser's); usurers' notes, trade goods, written works and potions in the purses.
 
 Designed, but in no slice of the plans yet (DECISIONS.md has the user's words for most):
 

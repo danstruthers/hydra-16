@@ -1118,3 +1118,72 @@ naturally"  So three levels of detail for anything seen, things and actors alike
 (what it holds and wears), assessing the quality and condition of what's visible; the viewer's eyesight and the
 distance setting how much comes through, one rule for every viewer; what's hidden (beneath clothing, in a pack)
 never told by looking.
+
+### Money
+
+The user (2026-10-28): "Is the money system modeled after the one in the HM rules?  If not, it should be."  It wasn't
+(prices in whole pennies, the pennies bronze and weightless, a crown 100 pennies, a purse capped at 255, the denizens'
+purses and valuables the house's ranges), so it is now, the book's where it speaks (HarnWorld's Prices and Incomes and
+its price list; HarnMaster's Treasure 1-7, Combat 3-4 and Character 17), the house's where it doesn't (HOUSE.md's
+money, for review):
+
+- **The coins and the reckoning** (HarnWorld 23): the silver penny (d) the only common coin, a dram of silver (Treasure
+  2); the farthing (f) a quarter penny; the shilling (12d) and the pound (240d) only names for amounts; the Khuzan crown
+  the dwarves' gold coin, an ounce, worth 240 pennies, and rare (most never see one).  Every worth and price in
+  farthings (the catalogue's, the outfits' prices, the family wealth: a candle 1f, a hot meal 1d, a dagger 24d); the
+  appraisal's words in farthings under a penny, pennies under a pound, pounds and shillings above ("about 2 pounds 6
+  shillings").  No cut pennies made for change (a purse's odd farthings none): no trader yet.
+- **Prices:** HarnWorld's list (read from its PDF's table: the text extraction had shifted the farthing prices) and
+  the core's weapon and armour tables (Combat 3-4, the referee's book, where the two differ: a mail hauberk 990d, a
+  handaxe 72d); the house's for what the book lacks, by its nearest, marked in kinds.c.
+- **A purse holds all its money:** a lot's count is a byte (250 at most, as lots join), so a big purse is several piles
+  told as one ("You carry ... 600 pennies").
+- **The denizens' purses and valuables by the Personal Possessions tables** (Treasure 2-3): each kind its category (a
+  bandit a Brigand/Outlaw; its lord, both, the higher chances; a high priest a Cleric; the Gargun, and the kobolds that
+  stand for them, Hunters/Tribesmen; the Khuzdul and the Sindarin by the human tables, as the book allows), its silver,
+  gold and gems or jewelry each by the table's chance and dice, made as it's first met; the jewelry by Treasure 5's
+  items and materials.  Hoards the house's still: the book says only to use the possessions tables as guides.
+- **Condition by Treasure 1's table:** what a denizen carries or keeps by its Person column (most good, a few fair or
+  worse, one in ten as new), what lies lost or left in the dungeon by its Found column (one in five broken or decayed;
+  silver and gold the less: the house's thirty more on the roll), told by the appraisal's life words (as good as new
+  now its Excellent: the life reckoned in tenths of the whole).
+
+Then (2026-10-28): "Also change what dwarves carry for money.  Gold crowns are far too valuable for all dwarves to just
+be carrying them around."  So the Khuzdul carry silver pennies like everyone, by their category's silver; a crown only
+by its gold chance (a warrior's or an elder's three in ten, a miner's two in a hundred), else in hoards and vaults.
+The same mistake looked for elsewhere: every denizen's gold, gems and jewelry now the table's chance (a bandit's ring
+one time in four, a priest's pendant always, an elder's gold necklace always: all gone; a priest's ring of its rank
+kept, Religion 9's).
+
+Then: "each coin should include its provenance (where it was minted), with the local region mintage most common (80%)
+unless belonging to an historic/anchient hoard, which should, of course, be appropriately stocked."  And: "Of note, a
+single group of coins should have a mint, yes, but one "pile" may contain many different mintings."  So:
+
+- **Mints:** the theme's (theme.h's struct tmint, its mint lines: themegen's, the stand-ins' by hand): today's, the
+  region's own realm (the game's own world, G3: its name the men's tongue's, from the seed), two neighbours (one in two
+  times hard to pass), the dwarves' hold (gold, taken at par everywhere, as Azadmere's are); and of old, each era's
+  people who struck coin (the kobolds and the hill-men none).  Each has its name ("pennies of Velmor") and its word, an
+  adjective ("Velmoran"), for the market to come.
+- **A pile, many mintings:** a pile of coins is one thing, taken, counted and dropped as one; within it up to four
+  groups by mint, each its share; a part taken has the same mix (the house's: proportional), two piles put together
+  merge their groups (the four greatest kept, the rest folded into the greatest).
+- **Where they come from:** today's coins (a purse, a hoard of now): four in five the region's own, the rest a
+  neighbour's or the dwarves'; coins lying in an old era's works its people's, whole, a gold-striking people's one
+  time in four crowns (the maker's stock: an old vault's, a crypt's), worn by the Found table; the present era's (held
+  still) today's.
+- **Told:** the inventory and a look "pennies"; examined close, their stamps ("Their stamps: most of Velmor, a few of
+  Kharzad."; an era's "(old)"); assessed, their worth as a local would take it (the book's 10-20% off for coins of
+  elsewhere, the house's 15%; at par the region's own and the dwarves'; hard to pass, half; an old era's their
+  silver's, three quarters).
+
+For the market, later (the user's, 2026-10-28, not built: no trader yet): "Make a note for the market later: you will
+normally try to pay with the lowest-value coins first (foreign coins other than Azadmere), but the seller may require
+local or full-value Azadmere coins.  You shall be able to specify which coins to use, i.e. `pay with Kanday
+[coins/pennies/farthings/money]`" (the realm written as the user corrected it: "Change Kandor to Kanday").  A pile's
+groups are kept by mint, each one's worth known from its mint's ways, so "the lowest-worth coins first" and "only
+these mints" are a pick among them; the mints' names and words are what the parser will take.
+
+Left for later (DUNGEON.md's): the coins' metal value (three quarters of their face, the book's) and their discount
+abroad beyond the appraisal's telling, buying and selling (second-hand clothing 30-60% of new, a mercantyler's 10% and
+50%), the market's paying, cut pennies for change, usurers' notes, trade goods, written works and potions in the
+purses, the Khuzdul and the Sindarin as denizens (their purses written, the kinds to come).

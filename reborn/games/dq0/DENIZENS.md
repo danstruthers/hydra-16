@@ -367,7 +367,11 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
 - **First met:** as it's first made an actor (s_enlist; its record's D_MET, kept) its personal things (I_KIT KT_PURSE:
   [purse KEY], else [standing N] by kinds.txt's standing): its purse in its pouch, its valuables worn, a box at its bed
   locked with its key (a key made locks the last lidded thing made before it, and fits it alone), a thing worn beneath
-  its clothes hidden (found by searching its body).
+  its clothes hidden (found by searching its body).  Since 2026-10-28 by the book's Personal Possessions (Treasure 2-3:
+  each kind its category, its silver, gold and jewels by the table's chance and dice; DECISIONS.md's money, HOUSE.md's):
+  a bandit a Brigand/Outlaw, its lord a Warrior/Noble too, the high priest a Cleric, the kobolds the Gargun's
+  Hunters/Tribesmen; its things' condition the Treasure condition table's Person column (most good); its coins today's
+  mints', four in five the region's own.
 - **A robber's takings** (I_ROB's x[2], b): to its faction's hoard, in the chest at the home of a placed lair of its
   faction's leader (kinds.txt's keeps H) on its stratum (RB_HOARD); else hidden at its home if its kind hides its
   things (RB_HIDE); else lying there.

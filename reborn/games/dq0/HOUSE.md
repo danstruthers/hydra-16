@@ -1514,8 +1514,8 @@ HarnWorld's price list.  What the house adds, every number the house's (and outf
   shields (Agrik's mace, sickle and round shield; Larani's sword and round shield; Sarajin's handaxe or battleaxe and
   round shield); its money 6d6 pennies (Religion 9), its skills' tools bought with it; each church's marks
   (Morgath's mask, Naveh's two daggers, Larani's surcoat for a robe, Peoni's staff).
-- **The money:** pennies in the pouch, 255 at most (the rest left with the family: a lot's count is a byte).
-  *(For review.)*
+- **The money:** what's left, all of it, silver pennies in the pouch (piles of 250 at most, a lot's count a byte,
+  told as one: "600 pennies"), the odd farthings none (no cut pennies for change: Money, below).  *(For review.)*
 - **Placing:** worn; in a hand (the main one; the torch the off one); hung from the belt, in its carrier (a sword in
   its scabbard, a knife in its sheath); in the pouch (mapping things and lockpicks: handy, HOUSE.md's reach); in the
   pack; what won't go where it's meant in the pack, what won't go in the pack not made.
@@ -1528,9 +1528,8 @@ HarnWorld's price list.  What the house adds, every number the house's (and outf
 - **A carrier keeps its own family's things alone** (kinds.md's rule: a kind's family, a scabbard a sword's, a
   sheath a knife's, a quiver arrows', a bolt case bolts', a bandolier throwing knives'), **missiles weigh by the ten**
   (arrows, bolts and stones a tenth of a pound each, the book's), **a belt has six slots**.  *(For review.)*
-- **The book's prices** where the plan found the catalogue's wrong (HarnWorld's price list and Combat 3: a dagger 24d,
-  a broadsword 150d, a quiver 8d, a pouch 9d, a lantern 12d, a belt 10d, a pick 8d, a key 2d, a sack 1d; rations 2d a
-  day, the house's), and the new kinds' (outfits' kinds.md: the book's where it gives one, the house's else).
+- **The book's prices**, in farthings, for every kind it has (Money, below: HarnWorld's price list and Combat 3-4),
+  the house's by its nearest for the rest (kinds.c marks them).
 
 ### The denizens' gear *(2026-10-27: drafted for the user to review)*
 
@@ -1575,7 +1574,8 @@ the item store, drawn by the same code from outfits.txt.  What the house adds:
   in four, a few pennies or a bright pebble: found only by searching).
 - **Kept by trust** (kinds.txt's keeps): all on the body (beasts, the dead), open at its bed (the cultists: a candle),
   hidden at its bed (a kobold's stash; their takings their lord's), in a locked box at its bed (a bandit one time in
-  three, a chest of 5 to 30 pennies; the bandit lord's and the high priest's always, 20 to 120), given to its leader.
+  three; the bandit lord's and the high priest's always: its savings, as many pennies again as its purse's dice, the
+  house's), given to its leader.
 - **Keys that fit** (answer 10): a key made with a box locks it, and opens its lock alone, with no test, in three
   seconds ("You unlock the chest with its key."; "lock the chest" locks it again); another key doesn't fit ("Your key
   doesn't fit its lock."), and a lock without its key is picked or forced as before.  A box's key is in its owner's
@@ -1587,26 +1587,27 @@ the item store, drawn by the same code from outfits.txt.  What the house adds:
   bedding and its prey's bones; a ghoul's nest; a shade's tomb: drafted, then left out, as they moved the tests'
   openings.)*
 - **The hoard:** a faction's leader's lair keeps it (the kobold lord's, the bandit lord's, the high priest's): a chest of
-  20 to 200 pennies and valuables, locked (the kobold lord's one time in two), its key in the leader's pouch.
+  20 to 200 pennies, a crown or two (the bandit lord's and the high priest's) and jewels (Treasure 5's, drawn), locked
+  (the kobold lord's one time in two), its key in the leader's pouch.  (The book has no hoard tables: its possessions
+  tables "as guides", Treasure 1.)
 - **The robbers' takings:** what a robber takes goes into its faction's hoard if its leader's lair is placed on the
   stratum (the robber's kind's faction, the stand-in's: its takings in the chest, the chest as it was); else hidden at
   its own home if its kind hides its things; else on its home's square, as before.
 - **Personal things made when first met** (answer 6): as a denizen's first made an actor, its purse and its valuables
-  (outfits.txt's [purse KEY], else its standing's [standing N], by kinds.txt's standing: 1 tribal, 2 common folk, 3
-  people of standing, 4 lords), then kept.  A box at its bed is a personal thing too (made then, with its key).
-- **Coins for all folk** (answer 9): silver pennies everyone's; the Khuzdul's gold crowns (100 pennies each); a
-  kobold's 1 to 3 (60%), a bandit's 2 to 24, a cultist's 6 to 36 (Religion 9's new cleric), a bandit lord's 10 to 60,
-  a priest's 20 to 80.  The Sindarin's too, a few (the plan had none).
+  by the book's Personal Possessions (Treasure 2-3: Money, below; outfits.txt's [purse KEY], else its standing's
+  [standing N]), then kept.  A box at its bed is a personal thing too (made then, with its key).
+- **Coins for all folk** (answer 9): silver pennies everyone's, by its category's chance and dice (a bandit's 1d6 three
+  times in four, a lord's 7d6); a gold crown only by its gold chance (the user's, 2026-10-28: not every dwarf's).
 - **Valuables:** the new kinds (crowns, a brooch, a necklace, a pendant, a goblet, a gem, a talisman, dice) and the
-  ring, each of a material (bronze, silver, gold: outfits.txt's word after a thing).  **Worth by material:** a jewel's
-  or a plate's kind written for silver; ten times in gold, a quarter in bronze or iron, a twentieth in bone, wood or
-  stone (appraising's worth: the plan's, the book's silver at 20d an ounce and gold at 400d, a tenth for the work).
+  ring; a jewel's item and material drawn by Treasure 5's tables (outfits.txt's jewel), worth by its material (Money,
+  below).
 - **Worn beneath its clothes** (DUNGEON.md's concealment): a purse under a tunic, a ring on a cord (a bandit's one time
   in seven, a lord's purse more often): not told by a look at the body, nor taken; found by searching it (its minute),
   then as any other thing on it.
 - **The kinds past seven bits:** the belongings' and valuables' kinds are numbered 128 on (items.h's KI_HIGH, NKINDS
   144: the catalogue was full), never lit nor struck with: a blow with one is the best held instead.
-- *For review:* every chance and number in outfits.txt's [lair], [purse] and [standing] sections; the home rooms by
+- *For review:* every chance and number in outfits.txt's [lair] sections, the boxes' savings, the talismans and dice
+  (the book's own the purses' silver, gold and jewels: Money, below); the home rooms by
   kind; the bed, a blanket for every folk denizen (the plan's straw for kobolds one in two); a box's contents made as
   it's first met rather than as its lair's placed.
 
@@ -1630,6 +1631,62 @@ character's side built):
   (the book's appraisal tests are for a thing in hand: assessing a thing itself still is).
 - **Never told by looking:** what's beneath its clothes, in its pouch, in its pack.
 - *For review:* the distances; assessing by eye with no test; the words.
+
+## Money *(2026-10-28: the book's, and the house's where it's silent, drafted for the user to review)*
+
+The user (DECISIONS.md's money): "Is the money system modeled after the one in the HM rules?  If not, it should be.",
+then the dwarves' crowns, each coin's provenance, a pile of many mintings.  The book's: HarnWorld 23-26 (the coins,
+the reckoning, the price list, the incomes), HarnMaster's Treasure 1-7 (the condition table, the Personal
+Possessions, the jewelry, the gems), Combat 3-4 (the weapons' and armour's prices), Character 17 (the family wealth).
+What the house adds, for review:
+
+- **Worth in farthings** (kinds.c's value; the outfits' prices and budgets; the family wealth four times its pennies);
+  the appraisal's words: under a penny "a farthing", "half a penny", "three farthings"; under a pound "about N
+  pennies" (from 20 on to the nearest five); a pound or more "about 2 pounds 6 shillings" (to the nearest shilling).
+- **No farthing coins:** a purse's odd farthings dropped (no cut pennies for change till there's a trader).
+- **A coin's weight by the dram** (items.h's LOT_WT: a pile's count over 64 quarter pounds, to the nearest: under 32
+  pennies nothing; a crown an ounce).
+- **The house's prices** (the book has no such thing; by its nearest): a torch 1d, a backpack 24d, rations 1.5d a
+  day (two cold meals), a shovel 8d (a pick's), lockpicks 40d, a chisel 6d (a hammer's), rope 12d, a chest 20d, a
+  broken sword 10d, a cloak 24d, a basket 2d, a door's bar 4d, a pane of glass 30d, iron bars 10d, hobnail boots 120d,
+  a flask of oil 2d (a pint of the book's lamp oil and its flask), a pot of pitch 2d, a sconce 4d, paper 2d, a stick
+  of charcoal and of chalk a farthing, a pencil 3d, a horn of ink 1d (the book's 3d a quart), a map sheet 2d, a sheath
+  6d, a bandolier 12d, a bolt case 8d (a quiver's), bolts as arrows (1.25d), a hide jerkin 60d, a shroud 4d, a mask
+  6d, bandages 1d, furs 30d (an ermine's or a sable's hide), a cask 12d (a hogshead 15d), a talisman 1d, dice 2d.
+  The book's, read from its own table: a candle 1f, a table 36d, a chair 12d, a blanket 48d, a waterskin 10d (its
+  wineskin), parchment 2d, a quill 1d, an iron pot 10d (its cauldron), arrows 15d a dozen.
+- **Jewels** (Treasure 5): a kind written in silver, its worth the book's middle weight at 60d an ounce (a ring 28d, a
+  pendant 47d, a brooch 34d, a necklace 540d, a goblet, half a pound of plate, 480d); by its material, Treasure 5's
+  values: twenty times in gold, eight in stone (jade), a tenth in glass, a sixtieth in the base ones (bronze, pewter,
+  bone and horn).  The items narrowed to the catalogue's (a bracelet or an anklet a necklace, a comb or earrings a
+  brooch), the materials too (ivory with bone, amber with silver, mithril with gold); no adornments, inlays or
+  engravings yet.  A gem (Treasure 7) a cut common one of middling size, 400d.
+- **The categories** (Treasure 2-3: the book's own for each, but): the kobolds the Gargun's Hunters/Tribesmen, their
+  lord the same; a bandit lord both a Brigand/Outlaw and a Warrior/Noble, the higher chance and dice (the book's rule
+  for two); a cultist, an outlawed cult's lay folk, a Brigand/Outlaw; a Khuzan miner Hunters/Tribesmen (working folk:
+  the book has no craftsman's); a kind's standing for one with no purse of its own: 1 Hunters/Tribesmen, 2
+  Vagrant/Beggar, 3 Mercantyler, 4 Warrior/Noble.  Its notes, trade goods, written works, potions and artifacts left
+  out; a bandit's box at its bed keeping as many pennies again as its purse's dice; a talisman, dice.
+- **Condition** (Treasure 1's table, its life's tenths): broken or decayed 0-1, poor 2-3, fair 4-6, good 7-9,
+  excellent 10 (as new); a denizen's things by the Person column, what lies lost or left by the Found column, silver and
+  gold 30 more on the roll (slow to decay, the book's word); a portal's part set down as before (up to six tenths
+  worn); the character's own new.  The appraisal's life left now its tenths of the whole (as good as new at its whole:
+  it was a tenth short before).
+- **Mints** (theme.h's struct tmint): themegen's today's four, from the seed (the region's own realm and two
+  neighbours named in the men's tongue, one of them hard to pass one game in two; the dwarves' hold in theirs, gold,
+  at par), and an era's people's of old for each but the kobolds and the hill-men; each one's word its name with an,
+  or n after a vowel ("Velmoran"), an era's its people's name.  A hand-written theme gives them with its region, or
+  has none (its coins of no mint told).
+- **A pile's mix:** four groups at most, each a mint and its share in fifteenths (a byte each of the pile's size,
+  thick and fuel); a part taken the same mix (proportional); two piles merged by their coins counted, the four
+  greatest kept, the rest folded into the greatest.  Today's coins as they're first wanted: a fifth of the pile, ten
+  to thirty in a hundred by its numbers (one coin one time in five), another of today's mints' (one, by its numbers),
+  the rest the region's own; a crown the gold mint's.  Coins lying in an old era's works its people's, whole, a
+  gold-striking people's one time in four crowns, an eighth as many (the maker's, by the square: no die).
+- **Their worth as a local takes it:** the region's own and the dwarves' at par, another realm's 85 in a hundred (the
+  book's 10-20% off), a hard one's half, an old era's three quarters (its silver's: the book's coins 75% metal).
+- **Told:** a closer look at a pile within reach, its stamps by how much of it each group is ("all", "most", "many",
+  "some", "a few"), an era's "(old)"; the appraisal its worth so.
 
 ## Decided, not yet built
 

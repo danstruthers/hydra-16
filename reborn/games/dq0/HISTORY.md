@@ -48,6 +48,11 @@ round, the elves' soft, the hill-men's rough, the kobolds' yapping, the sun-prie
 
 - **The region:** a land (mountains, hills, forest, marsh, coast, plain), its rock, its water, its climate; its name
   the oldest people's (the Kharum Hills).
+- **Its mints** (2026-10-28, the user's: "each coin should include its provenance"; DECISIONS.md's money): today's,
+  the realm the region lies in and two neighbours (named in the men's tongue from the seed: no die of the history's),
+  the dwarves' hold (gold, taken at par everywhere); and of old, each era's people who struck coin (not the kobolds nor
+  the hill-men): the theme's mint lines (its name, its adjective, now or its era, its ways), the coins' (HOUSE.md's
+  money).
 - **The eras**, oldest first, two or three: a people of the land (not the one before it; kobolds only last), what
   they made (keep, temple, mine, tomb, town, hold: their people's works), how it ended (abandoned, conquered by the
   people after, collapsed, flooded, cursed; the last may still hold it), how long ago (the oldest 18 to 40 centuries,
