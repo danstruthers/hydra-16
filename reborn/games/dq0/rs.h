@@ -345,7 +345,7 @@ enum {
                                                 **   than its bare hands, in the text ("" none: the UI's to ask) */
     RS_OUTFIT,                                  /* The character's outfit (the world's, a new game's kit: 2026-10-27,
                                                 **   games/dq0/outfits.txt) -> w1 the money it has to spend (its
-                                                **   family's wealth, the ruleset's), w2 a seed for its draw (the
+                                                **   family's wealth, the ruleset's: farthings, 2026-10-28), w2 a seed for its draw (the
                                                 **   character's own numbers), a its wealth (0 poor, 1 average, 2
                                                 **   rich), x[0] and x[1] its tags (OT_*: its culture, its class, its
                                                 **   wealth, its sex, a bit each), the text a line its occupation's

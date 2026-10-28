@@ -41,12 +41,42 @@ static void __fastcall__ add (const char* s)
 }
 
 /* v, moved by as much as pct percent of it, one way or the other */
-static unsigned __fastcall__ off (unsigned v, unsigned char pct)
+static unsigned long __fastcall__ off (unsigned long v, unsigned char pct)
 {
-    unsigned d = v / 100 * pct + v % 100 * pct / 100;
+    unsigned long d = v * pct / 100 * random (101) / 100;     /* (In hundredths of it: worths past 16 bits,
+                                                **   farthings) */
 
-    d = random (d + 1);
-    return random (2) ? (v + d < v ? 0xFFFF : v + d) : v - d;
+    return random (2) ? v + d : v - d;
+}
+
+/* An amount of money in words, f farthings (none: nothing): HarnWorld 23's, four farthings to the penny, twelve pennies
+** the shilling, twenty shillings the pound (only names for amounts: the penny the coin), the house's way of saying it
+** (2026-10-28): under a penny in farthings ("half a penny"), under a pound in pennies (from 20 on to the nearest five),
+** else in pounds and shillings ("about 2 pounds 6 shillings") */
+static void __fastcall__ money (unsigned long f)
+{
+    char b[12];
+    unsigned long s;
+
+    add ("about ");
+    if (f < 4) {
+        add (f == 1 ? "a farthing" : f == 2 ? "half a penny" : "three farthings");
+        return;
+    }
+    if (f < 960) {
+        s = (f + 2) >> 2;
+        add (ultoa (s >= 20 ? (s + 2) / 5 * 5 : s, b, 10));
+        add (s == 1 ? " penny" : " pennies");
+        return;
+    }
+    s = (f + 24) / 48;
+    add (ultoa (s / 20, b, 10));
+    add (s < 40 ? " pound" : " pounds");
+    if ((f = s % 20) != 0) {
+        add (" ");
+        add (ultoa (f, b, 10));
+        add (f == 1 ? " shilling" : " shillings");
+    }
 }
 
 /* What the material stands up to (those of its resistances from lo to hi) */
@@ -67,11 +97,18 @@ static unsigned char __fastcall__ resists (const unsigned char* r, unsigned char
     return n + k;
 }
 
+/* Its life left in tenths, d of its most m (10: as good as new, Treasure 1's Excellent; none, 10) */
+static unsigned char __fastcall__ tenths (unsigned d, unsigned m)
+{
+    return m ? (unsigned char) ((unsigned long) d * 10 / m) : 10;
+}
+
 void __fastcall__ o_appraise (const struct ireq* q, signed char g, unsigned char ex)
 {
     signed char qual = q->quality;
     unsigned char mat = q->mat, life;
-    unsigned val, dur = q->dur;
+    unsigned long val;
+    unsigned dur = q->dur;
     char b[8];
 
     if ((unsigned char) q->to > NEAR_SQ) {      /* (Seen from afar: no closer look) */
@@ -89,8 +126,9 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g, unsigned char
         add (" feet off. You'd have to go closer to make out more.");
         return;
     }
-    val = (q->value * (2 + q->quality) + 3) / 6;      /* (Its worth: its kind's, by its make and how worn it is) */
-    life = q->dur_max ? (unsigned char) (dur / (q->dur_max / 10 + 1)) : 10;
+    val = ((unsigned long) q->value * (2 + q->quality) + 3) / 6;  /* (Its worth: its kind's, by its make and how worn
+                                                **   it is; farthings) */
+    life = tenths (dur, q->dur_max);
     val = (val + 1) / 2 + val * life / 20;
     if (q->qty > 1) {
         val *= q->qty;
@@ -118,16 +156,15 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g, unsigned char
         break;
     }
     qual = qual < 0 ? 0 : qual > 9 ? 9 : qual;
-    life = q->dur_max ? (unsigned char) (dur / (q->dur_max / 10 + 1)) : 10;
+    life = tenths (dur, q->dur_max);
     lb[0] = 0;
     add ("You judge ");
     add (q->qty > 1 || q->plural ? "them" : "it");
     if (!(ex & EX_QUALITY)) {                   /* (Its value alone) */
         add (" worth ");
         if (val) {
-            add ("about ");
-            add (utoa (val >= 20 ? (val + 2) / 5 * 5 : val, b, 10));
-            add (val == 1 ? " penny." : " pennies.");
+            money (val);
+            add (".");
         } else {
             add ("nothing to anyone.");
         }
@@ -152,7 +189,7 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g, unsigned char
         life = resists (mats[mat].resist, 7, 9, "well to ", 0);
         life = resists (mats[mat].resist, 4, 6, "fairly to ", life);
         resists (mats[mat].resist, 0, 3, "poorly to ", life);
-        life = q->dur_max ? (unsigned char) (dur / (q->dur_max / 10 + 1)) : 10;
+        life = tenths (dur, q->dur_max);
     }
     add (". ");
     if (q->size || q->thick) {                  /* (Its size and thickness, plain to see: a portal's part's; a
@@ -188,9 +225,9 @@ void __fastcall__ o_appraise (const struct ireq* q, signed char g, unsigned char
             "It has about half its life left" : life >= 2 ? "It has little life left" : "It's close to breaking");
     }
     if (val) {
-        add (q->qty > 1 || q->plural ? "; they would fetch about " : "; it would fetch about ");
-        add (utoa (val >= 20 ? (val + 2) / 5 * 5 : val, b, 10));
-        add (val == 1 ? " penny." : " pennies.");
+        add (q->qty > 1 || q->plural ? "; they would fetch " : "; it would fetch ");
+        money (val);
+        add (".");
     } else {
         add (", and worth nothing to anyone.");
     }

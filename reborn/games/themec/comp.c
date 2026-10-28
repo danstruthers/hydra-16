@@ -135,8 +135,8 @@ static unsigned __fastcall__ pounds (const char* s, unsigned max)
 }
 
 /* A kind's line: name, ways, weight (pounds), bulk (pints), how far off it's made out (feet, in fives: the map's
-** squares), material, craft, worth (pennies); a container's room (pints) and the weight it bears (pounds): rs.h's
-** units made of them, as make.js makes them */
+** squares), material, craft, worth (pennies, to a farthing: 2.25); a container's room (pints) and the weight it
+** bears (pounds): rs.h's units made of them (the worth farthings), as make.js makes them */
 static void __fastcall__ kind_line (struct line* l)
 {
     char** v = l->v;
@@ -184,7 +184,7 @@ static void __fastcall__ kind_line (struct line* l)
     k->cap_weight = l->n > 9 ? pounds (v[9], 0xFFFF) : 0;
     k->mat = mat;
     k->craft = craft;
-    k->value = atoi (v[7]);
+    k->value = pounds (v[7], 0xFFFF);           /* (Pennies, to a quarter: farthings, items.h's) */
     k->keeps = keeps;
     ++nkinds;
 }
@@ -326,6 +326,35 @@ static void __fastcall__ layer_line (struct line* l)
     y->work = w;
 }
 
+/* A mint (2026-10-28): its name, its word (an adjective), now or its era (the eras' number, the theme's from 1), its ways (l g p h: MW_*'s,
+** or -) */
+static void __fastcall__ mint_line (struct line* l)
+{
+    char** v = l->v;
+    static const char mw[] = "lgph";
+    struct tmint* m = &T->mint[T->nmints];
+    unsigned char era;
+    const char* c;
+    const char* w;
+
+    if (T->nmints >= TMINTS || l->n < 3 || strlen (v[0]) > 15 || strlen (v[1]) > 15 || (era = strcmp (v[2], "now") ?
+        atoi (v[2]) : 0) > TERAS) {
+        err = "a mint: its name and its word (15 letters at most each), now or its era, its ways (l g p h, or -)";
+        return;
+    }
+    strcpy (m->name, v[0]);
+    strcpy (m->adj, v[1]);
+    m->era = era;
+    for (c = l->n > 3 ? v[3] : "-"; *c && *c != '-'; ++c) {
+        if (!(w = strchr (mw, *c))) {
+            err = "a mint's ways: l g p h";
+            return;
+        }
+        m->ways |= 1 << (w - mw);
+    }
+    ++T->nmints;
+}
+
 static void __fastcall__ faction_line (struct line* l)
 {
     char** v = l->v;
@@ -465,6 +494,8 @@ const char* __fastcall__ comp_line (struct line* l)
         layer_line (l);
     } else if (!strcmp (k, "faction")) {
         faction_line (l);
+    } else if (!strcmp (k, "mint")) {
+        mint_line (l);
     } else if (!strcmp (k, "goal")) {
         if ((x = find (goals, v[0])) < 1 || l->n < 3 || !*v[1] || atoi (v[2]) > 255) {
             return "a goal: artifact, evil, prisoner or through; its name; its stratum; its guardians";

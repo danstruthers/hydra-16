@@ -20,6 +20,10 @@ light    | lit by smoky tallow lamps
 denizens | kobold rat spider bear
 
 region   | the Scarps | hills | slate | springs | cold
+mint     | Scarholt | Scarholtan | now | l
+mint     | Brannoch | Brannochan | now | -
+mint     | Ostmark | Ostmarkan | now | h
+mint     | Kharzad | Kharzadan | now | gp
 people   | warren-kin | kobolds | 5 | rough
 era      | warren-kin | mine | held | 0 | stores | The kobolds came up through the old diggings and took the
            ruin above for their own, and they keep it still.

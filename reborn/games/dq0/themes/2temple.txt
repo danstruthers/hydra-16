@@ -19,6 +19,11 @@ light    | lit by lamps of green glass
 denizens | rat spider ghoul skel
 
 region   | the Mere | marsh | sandstone | lake | wet
+mint     | Merrow | Merrowan | now | l
+mint     | Cendra | Cendran | now | -
+mint     | Ostmark | Ostmarkan | now | -
+mint     | Kharzad | Kharzadan | now | gp
+mint     | the Deep Mother | Mother's | 1 | -
 people   | Mother's folk | men | 4 | dressed
 era      | Mother's folk | temple | flooded | 1 | the dead | The temple of the Deep Mother sank into the marsh, and its
            priests with it; its doors were sealed against the water.

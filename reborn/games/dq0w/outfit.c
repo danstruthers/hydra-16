@@ -6,9 +6,9 @@
 ** found and drawn (part 59's draw_at) in the order an outfit's bought (HOUSE.md's outfits): the universal kit; the
 ** occupation's needs; its first weapon (its highest weapon skill's); a tenth of what's left kept (its keep's share);
 ** the other weapons, three in all, and a shield; its bent's armour; its skills' tools; its likely and rare things; the
-** money (pennies, 255 at most: the rest left with the family).  The things drawn in the list (outfit.h's); part 58
-** makes them.  Its own data in its image (it calls part 59, which puts it out and in again: none that lasts across
-** a call), the draw's state the main RAM's (ost).
+** money (prices and the wealth in farthings; what's left all of it silver pennies, in lots of 250).  The things
+** drawn in the list (outfit.h's); part 58 makes them.  Its own data in its image (it calls part 59, which puts it out
+** and in again: none that lasts across a call), the draw's state the main RAM's (ost).
 */
 
 #include <fcntl.h>
@@ -30,9 +30,10 @@
 #pragma local-strings (on)
 
 #define OF_MAGIC        0x464F                  /* (dq0o.dat's: "OF", its version) */
-#define OF_VERSION      4                       /* (2: each entry its section's flags, 5 bytes; 3: a thing's
+#define OF_VERSION      5                       /* (2: each entry its section's flags, 5 bytes; 3: a thing's
                                                 **   material, its fifth byte, the denizens' places; 4: the sections'
-                                                **   lengths after the entries, 2026-10-27) */
+                                                **   lengths after the entries, 2026-10-27; 5: a count's dice, a
+                                                **   jewel, 2026-10-28) */
 
 /* A section by its name (the hash outfits.js's): its offset in the file, 0 none; its flags (its index entry's) in fflags */
 static unsigned char fflags;
@@ -270,14 +271,18 @@ unsigned char s_outfit (void)
     hub_map (0);
     HUB->slot[SLOT_UI].state = REQ_FREE;
     close (ost.fd);
-    ost.budget += ost.kept;                     /* (The money: in the pouch) */
+    ost.budget += ost.kept;                     /* (The money: in the pouch, silver pennies, the odd farthings none
+                                                **   (no cut pennies made for change: HOUSE.md's money), in lots of 250
+                                                **   at most (a lot's count a byte, joined to 250), all of it: told
+                                                **   together, 2026-10-28) */
     hub_map (KIND_BANK);
-    if (ost.budget && (k = OF_N) < NOFIT) {
+    for (boff = ost.budget >> 2; boff && (k = OF_N) < NOFIT; boff -= olen) {
+        olen = boff > 250 ? 250 : boff;
+        memset (OF_LIST + k, 0, sizeof *OF_LIST);
         OF_LIST[k].kind = KI_PENNIES;
-        OF_LIST[k].qty = ost.budget > 255 ? 255 : ost.budget;
+        OF_LIST[k].qty = olen;
         OF_LIST[k].quality = 4;
         OF_LIST[k].place = PL_POUCH;
-        OF_LIST[k].in = OF_LIST[k].flags = 0;
         OF_N = k + 1;
     }
     return 1;

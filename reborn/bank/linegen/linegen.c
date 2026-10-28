@@ -205,6 +205,10 @@ static void head (void)
 
 static void region_lines (void)
 {
+    static char nm[16], adj[16];
+    unsigned char e, n;
+    struct era* r;
+
     begin_line ("region");
     val (rname);
     val (land);
@@ -212,6 +216,36 @@ static void region_lines (void)
     val (water);
     val (climate);
     end_line ();
+    for (e = 0; e < 4; ++e) {                   /* (Its mints, 2026-10-28, the user's "each coin should include its
+                                                **   provenance": today's, the region's own realm, two neighbours (one
+                                                **   in two times hard to pass), the dwarves' hold, gold and taken at
+                                                **   par, as Azadmere's are; named in the men's tongue and the
+                                                **   dwarves', from the seed: none of the history's dice spent; each
+                                                **   its word, its name and an, or n after a vowel) */
+        strcpy (nm, name_of (e == 3 ? 1 : 2, NG_PLACE, seed ^ (0x6D696E74UL + e * 0x9E37UL)));
+        strcpy (adj, nm);
+        n = strlen (adj);
+        if (n < 14) {
+            strcat (adj, strchr ("aeiou", adj[n - 1]) ? "n" : "an");
+        }
+        begin_line ("mint");
+        val (nm);
+        val (adj);
+        val ("now");
+        val (e == 0 ? "l" : e == 3 ? "gp" : e == 2 && (seed & 4) ? "h" : "-");
+        end_line ();
+    }
+    for (e = 0, r = er; e < ne; ++e, ++r) {     /* (Of old: each era's people who struck coin, the kobolds and the
+                                                **   hill-men none, the dwarves' gold too; their word their name) */
+        if (strcmp (r->kind, "kobolds") && strcmp (r->kind, "hill-men")) {
+            begin_line ("mint");
+            val (r->pthe);
+            val (r->people);
+            valn (e + 1);
+            val (strcmp (r->kind, "dwarves") ? "-" : "g");
+            end_line ();
+        }
+    }
 }
 
 static void hist_lines (void)

@@ -384,7 +384,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    22                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    23                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -419,7 +419,9 @@ static void sheet (void)
                                                 **   kinds 128, the theme's from 120, the outfits' kinds; the items'
                                                 **   records a denizen's own, IW_DEN: the outfits' gear; 22, its
                                                 **   belongings where it sleeps, its record's D_MET, its kinds past
-                                                **   128) */
+                                                **   128; 23, worth in farthings, a theme's mints (its record's
+                                                **   head the longer), a pile of coins' mints in its size, thick and
+                                                **   fuel: the money's, 2026-10-28) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;

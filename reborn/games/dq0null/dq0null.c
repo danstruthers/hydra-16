@@ -552,7 +552,7 @@ static void __fastcall__ answer (struct req* r)
         break;
     case RS_OUTFIT:                             /* (The universal kit only, at an average make, with its 49 pennies:
                                                 **   some money left; no occupation, no skills, no tags) */
-        r->w1 = 49;
+        r->w1 = 49 * 4;                         /* (Farthings, 2026-10-28) */
         r->w2 = (unsigned) HUB->seed | 1;
         r->a = 1;
         r->x[0] = r->x[1] = 0;

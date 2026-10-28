@@ -24,7 +24,10 @@ enum { PL_NONE, PL_WORN, PL_HAND, PL_OFF, PL_BOTH, PL_BELT, PL_POUCH, PL_PACK, P
 #define TF_LIT          0x01                    /* (A thing's flags: lit, */
 #define TF_FULL         0x02                    /*   full, its water in it, */
 #define TF_OWN          0x04                    /*   its own make, */
-#define TF_FINE         0x08                    /*   a point better) */
+#define TF_FINE         0x08                    /*   a point better; the high four bits, a denizen's: its life's tenths
+                                                **   lost, its condition, Treasure 1's, 2026-10-28) */
+#define MT_JEWEL        0xFE                    /* (A thing's material: a jewel, Treasure 5's item and material drawn,
+                                                **   part 59's) */
 #define SF_WEAPON       0x01                    /* (A section's flags: a weapon skill's, */
 #define SF_SHIELD       0x02                    /*   the shield's, */
 #define SF_FREE         0x04                    /*   every line given (a denizen's), */

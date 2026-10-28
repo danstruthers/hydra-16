@@ -3290,7 +3290,7 @@ module.exports = {
       check(m, out) {
         const T = dq0Turns(m), f = [], I = DQ0_I;
         const cat = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0w.hyx.cat'));
-        const kinds = new Map();                        // (The catalogue's names and values, as the world has them)
+        const kinds = new Map();                        // (The catalogue's names and values (farthings, 2026-10-28), as the world has them)
         for (let k = 1; k < 120; k++) { const r = cat.subarray(k * 37, k * 37 + 37), n = r.subarray(0, 14); kinds.set(n.subarray(0, n.indexOf(0) < 0 ? 14 : n.indexOf(0)).toString('latin1'), { value: r.readUInt16LE(33), form: r[36] }); }
         const price = i => { const k = kinds.get(i.name) || { value: 0, form: 0 }; return Math.floor(k.value * (2 + i.quality) / 6) * (k.form & 0x40 ? i.qty : 1); };
         let from = 0;
@@ -3319,7 +3319,7 @@ module.exports = {
         const free = ['clothes', 'sandals', 'shoes', 'backpack', 'belt', 'pouch', 'water', 'pennies', 'letter'];
         const spent = s => dq0Carried(s).filter(i => !free.includes(i.name)).reduce((a, i) => a + price(i), 0);
         const money = s => dq0Carried(s).filter(i => i.name === 'pennies').reduce((a, i) => a + i.qty, 0);
-        if (s1 && spent(s1) + money(s1) > w5) f.push('the hunter: spent ' + spent(s1) + ' and kept ' + money(s1) + ', more than its wealth ' + w5);
+        if (s1 && spent(s1) + 4 * money(s1) > 4 * w5) f.push('the hunter: spent ' + spent(s1) / 4 + 'd and kept ' + money(s1) + ', more than its wealth ' + w5);
         if (!/You carry clothes, worn; sandals, worn; a backpack, worn \(in it:/.test(story)) f.push('the hunter\'s inventory not its outfit: ' + story.slice(story.indexOf('You carry'), story.indexOf('You carry') + 200));
         // seed 8's thief: its tools and mapping things handy, its club and dagger
         const s2 = game('dq0 -p t -s 3 -c /ram/t.hm -T', 'the thief');
@@ -3328,7 +3328,7 @@ module.exports = {
         for (const n of ['lockpicks', 'paper', 'charcoal']) has(s2, 'the thief', n, i => pouch && i.x === pouch.n);
         has(s2, 'the thief', 'club'); has(s2, 'the thief', 'dagger', i => inside(s2, i) && inside(s2, i).name === 'sheath');
         const w8 = wealth(out.slice(out.indexOf('% cat /ram/t.hm'), out.indexOf('% dq0 -p t -s 3 -c /ram/t.hm -T')).replace(/\r/g, ''));
-        if (s2 && spent(s2) + money(s2) > w8) f.push('the thief: spent ' + spent(s2) + ' and kept ' + money(s2) + ', more than its wealth ' + w8);
+        if (s2 && spent(s2) + 4 * money(s2) > 4 * w8) f.push('the thief: spent ' + spent(s2) / 4 + 'd and kept ' + money(s2) + ', more than its wealth ' + w8);
         // the yeoman SB: its unit's issue
         const s3 = game('dq0 -p t -s 3 -c /ram/y.hm -T', 'the yeoman');
         has(s3, 'the yeoman', 'shortbow', i => i.flags & I.WORN);
@@ -3339,7 +3339,7 @@ module.exports = {
         for (const n of ['buckler', 'kurbul helm', 'leather vest']) has(s3, 'the yeoman', n, i => i.flags & I.WORN);
         // the cleric of Peoni: the temple's things, 6d6 pennies
         const s4 = game('dq0 -p t -s 3 -c /ram/p.hm -T', 'the cleric');
-        kit(s4, 'the cleric', 'shoes');
+        kit(s4, 'the cleric', s4 && dq0Carried(s4).some(i => i.name === 'knee boots') ? 'knee boots' : 'shoes');   // (Boots two times in five)
         for (const n of ['robe', 'ring']) has(s4, 'the cleric', n, i => i.flags & I.WORN);
         has(s4, 'the cleric', 'staff', i => i.flags & I.HELD); has(s4, 'the cleric', 'letter');
         if (s4 && (money(s4) > 36)) f.push('the cleric: ' + money(s4) + ' pennies, more than 6d6');
@@ -6202,15 +6202,41 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0money', what: 'Dingus Quest Zero\'s money as the HarnMaster books have it (the user\'s, 2026-10-28: DECISIONS.md\'s money, HOUSE.md\'s): the kit\'s 12 silver pennies (a dram each: the pouch\'s weight nothing more than before), examined close their stamps told (the theme\'s mints: 1crypt\'s, four in five the region\'s own, Cendra\'s), their mix kept in the pile\'s record (its groups by mint, fifteenths of it), assessed their worth in pennies (as a local would take them); a stocked old coin\'s mint by its era (themes\' mint lines compiled: dq0themec\'s); the same seed\'s pile the same mix',
+      init: 't_rc', cycles: 700e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm',
+        'examine the pennies', 'value the pennies', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm', 'examine the pennies', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], A = dq0Answers(out);
+        const said = c => A.filter(a => a.cmd === c).map(a => a.text);
+        const ex = said('examine the pennies'), val = said('value the pennies');
+        if (ex.length < 2) return ['the pennies not examined twice: ' + JSON.stringify(ex)];
+        if (!/Their stamps: (all|most|many|some|a few) of Cendra/.test(ex[0])) f.push('no stamps told, the region\'s own first: ' + ex[0]);
+        if (ex[0] !== ex[1]) f.push('the same seed\'s pile not the same mix: ' + ex[0] + ' / ' + ex[1]);
+        if (!val.length || !/You judge them worth (about (\d+ pennies|a penny|half a penny|a farthing|three farthings)|nothing)/.test(val[0])) f.push('no worth in pennies: ' + val[0]);
+        const s = T.of('examine the pennies').after, p = s && dq0Carried(s).find(i => i.name === 'pennies');
+        if (!p) f.push('no pennies carried');
+        else {
+          const g = [p.size, p.thick, p.fuel & 255, p.fuel >> 8].filter(b => b), sum = g.reduce((a, b) => a + (b & 15), 0);
+          if (!g.length || (g[0] >> 4) !== 1 || sum !== 15) f.push('the pile\'s groups not kept (the first Cendra\'s, fifteen shares): ' + JSON.stringify(g));
+          if (p.qty !== 12 || p.weight !== 1) f.push('the kit\'s pennies: ' + p.qty + ', weight ' + p.weight + ' (a dram each, 12)');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0load', what: 'Dingus Quest Zero\'s load (the user\'s, 2026-10-16), by the things\' weights (the catalogue\'s, all the character carries) and the referee\'s summary (its load: HarnMaster\'s encumbrance, the load over its endurance, as the game\'s bands): the kit alone 9 lb (its spare torch and flask of oil, D5\'s, slice 4.1), a little burdened; with a pick, a shovel, a rope, a sword and bones (dq0 -k) 35 lb, heavily burdened; some put down, 17 lb, a little burdened again (the sheet\'s penalties the referee\'s, its unit tests\'; the words: dq0wordsthings)',
       init: 't_rc', cycles: 700e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -k pick,shovel,rope,sword,bones', 'drop rope', 'drop shovel', 'drop sword', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
-        // (A thing's weight its kind's, in quarter pounds, times how many but a plural kind's (K_PLURAL: 3 rations one lot):
+        // (A thing's weight its kind's, in quarter pounds, times how many but a plural kind's (K_PLURAL: 3 rations one lot;
+        // coins by the dram, 64 to the quarter pound, items.h's LOT_WT, 2026-10-28):
         // the catalogue's, as the things weigh them)
-        const T = dq0Turns(m), f = [], lb = s => dq0Carried(s).reduce((w, i) => w + i.weight * (i.kflags & 0x40 ? 1 : Math.max(1, i.qty)), 0) / 4, load = s => s ? s.sum.load : -1;
+        const T = dq0Turns(m), f = [], lb = s => dq0Carried(s).reduce((w, i) => w + ((i.kform & 0x12) === 0x12 ? (i.weight * i.qty + 32) >> 6 : i.weight * (i.kflags & 0x40 ? 1 : Math.max(1, i.qty))), 0) / 4, load = s => s ? s.sum.load : -1;
         const k = T.of('dq0 -p t -s 3 -c /ram/c.hm').after, h = T.of('dq0 -p t -s 3 -c /ram/c.hm -k pick,shovel,rope,sword,bones').after, d = T.of('drop sword').after;
         for (const [s, w, l, what] of [[k, 9, 1, 'the kit alone'], [h, 35, 2, 'with the things more'], [d, 17, 1, 'some put down']]) {
           if (!s || lb(s) !== w) f.push(what + ': ' + (s && lb(s)) + ' lb carried, not ' + w);

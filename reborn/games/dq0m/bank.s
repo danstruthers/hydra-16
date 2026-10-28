@@ -163,6 +163,7 @@ ovl_out:
             OVFN        pl_flush, 2
             OVFN        layer_at, 7
             OVFN        uses, 7
+            OVFN        coin_mint, 5
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0m.cfg's SWAP, a part at a time, copied
 ; there from overlay 6's bank as it's called)

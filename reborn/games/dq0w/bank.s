@@ -102,11 +102,11 @@ go:
             SWPART      18, 7               ; The change records' files, the save's stamps (wfile.c)
             SWPART      19, 8               ; The game's files begun, the item store kept (wfile.c); a hole dug kept
             SWPART      20, 7               ; The things' files: a chunk's put out, read in (ipage.c)
-            SWPART      21, 5               ; The ways across a room worked out (dq0w.c's ways)
+            SWPART      21, 6               ; The ways across a room worked out (dq0w.c's ways; overlay 5's till 2026-10-28)
             SWPART      22, 17              ; The strata's records out of the hub, back (sfile.c)
             SWPART      23, 11              ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 12              ; Engagement, a blow's close-in, fighting on (dq0w.c's)
-            SWPART      25, 6               ; The engage initiative test, a grope's (dq0w.c's)
+            SWPART      25, 13              ; The engage initiative test, a grope's (dq0w.c's; overlay 6's till 2026-10-28)
             SWPART      26, 9               ; Disengaging (dq0w.c's); the map making, by what the character carries
                                             ;   (things.c: slice 4.2's)
             SWPART      27, 9               ; The lights burning down (dq0w.c's: slice 4.1's)
@@ -147,6 +147,8 @@ go:
             SWPART      60, 19              ; The denizens' things; a weapon let fall, taken up (wlimbs.c, 2026-10-27)
             SWPART      61, 18              ; What's in a thing (things.c's s_inside: part 36's room, 2026-10-27)
             SWPART      62, 17              ; A denizen's things made out (things.c's s_gear_words, 2026-10-27)
+            SWPART      63, 12              ; The character's kit (things.c's, part 13's till 2026-10-28)
+            SWPART      64, 5               ; The coins' mints (things.c's, 2026-10-28)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -264,7 +266,11 @@ go:
             SWFN        revealed, 41
             SWFN        work_done, 12
             SWFN        keep, 19
-            SWFN        kit, 13
+            SWFN        kit, 63
+            SWFN        mix_need, 64
+            SWFN        mix_join, 64
+            SWFN        mix_words, 64
+            SWFN        mix_worth, 64
             SWFN        theme_kinds, 61
             SWFN        items_begin, 19
             SWFN        it_room, 17

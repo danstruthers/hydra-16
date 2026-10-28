@@ -170,7 +170,7 @@ ovl_out:
             OVFN        portal_words, 10
             OVFN        harm_words, 1
             OVFN        appraise, 1
-            OVFN        tell, 1
+            OVFN        tell, 14
             OVFN        words, 2
             OVFN        more, 2
             OVFN        stir_words, 9

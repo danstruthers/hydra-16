@@ -94,6 +94,41 @@ static void __fastcall__ piece_down (const struct chunk* c, unsigned char i, uns
     }
 }
 
+/* (Overlay 5's) The mint of the coins lying in the chunk (2026-10-28, the user's: a historic hoard's coins "appropriately
+** stocked"): its layer's era's people's (theme.h's struct tmint, its number), if that era has ended (old coins; a
+** stratum of no layers its theme's first era's), 0x80 more if it struck gold; else 0, today's (the world's to mix as
+** they're first wanted: part 63's) */
+#pragma code-name (push, "OV5CODE")
+#pragma rodata-name (push, "OV5RODATA")
+unsigned char __fastcall__ o_coin_mint (unsigned char sn)
+{
+    static struct tlayer y;
+    static struct tera e;
+    static struct tmint m;
+    unsigned char k = sn < TSTRATA ? sn : TSTRATA - 1, era, n, i;
+
+    hub_get (THEME_BANK, &THEME->layer[k][ulayer & SG_LAYER], &y, sizeof y);
+    hub_get (THEME_BANK, &THEME->neras, &n, 1);
+    if (!(era = y.era) && !(era = n ? 1 : 0)) {
+        return 0;
+    }
+    hub_get (THEME_BANK, &THEME->era[era - 1], &e, sizeof e);
+    if (e.end == EN_HELD) {
+        return 0;
+    }
+    hub_get (THEME_BANK, &THEME->nmints, &n, 1);
+    for (i = 0; i < n; ++i) {
+        hub_get (THEME_BANK, &THEME->mint[i], &m, sizeof m);
+        if (m.era == era) {
+            return i + 1 | (m.ways & MW_GOLD ? 0x80 : 0);
+        }
+    }
+    return 0;
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+unsigned char __fastcall__ coin_mint (unsigned char sn);    /* (Overlay 5's: overlay 7's room) */
+
 /* The chunk (in the main RAM, the growers' L; its first square x0, y0 in the frame) stocked, listed in sk: two tries
 ** a room, each a thing at the style's odds, at a square of its floor, of a kind its use left; its use's mark, in its
 ** middle (and a kitchen's well, where there's water, by its west wall); the theme's pieces whose place it is; then
@@ -103,7 +138,8 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
 {
     const struct room* r;
     const struct portal* p;
-    unsigned char i, n, lx, ly, k, hidden, d, q, h;
+    struct sthing* e;
+    unsigned char i, n, lx, ly, k, hidden, d, q, h, m;
     unsigned x, y;
 
     sk.n = 0;
@@ -127,8 +163,17 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
             q = (hidden ? k : SP->kinds[d]) == KI_PENNIES ? 2 + random (20) : 3;    /* (The style's kind's draws:
                                                 **   the stock's dice as they were before its uses) */
             h = hidden ? SP->h_lo + 2 * random (SP->h_span) : ST_SHOWN;
-            if (k) {                            /* (Else rotted away) */
-                put_down (k, c->sn, x0 + lx, y0 + ly, k == KI_PENNIES ? q : 1, h);
+            if (k == KI_PENNIES) {              /* (Coins: an era's of old by their mint, its gold one time in four:
+                                                **   crowns, an eighth as many, no die; the maker's, 2026-10-28) */
+                if ((m = coin_mint (c->sn)) & 0x80 && !((lx + ly) & 3)) {
+                    k = KI_CROWNS;
+                    q = q / 8 + 1;
+                }
+                if ((e = put_down (k, c->sn, x0 + lx, y0 + ly, q, h)) != 0) {
+                    e->make = m & 15;
+                }
+            } else if (k) {                     /* (Else rotted away) */
+                put_down (k, c->sn, x0 + lx, y0 + ly, 1, h);
             }
         }
     }

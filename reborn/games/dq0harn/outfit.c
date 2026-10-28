@@ -45,7 +45,7 @@ void __fastcall__ o_outfit_of (struct req* r)
         lv = roll <= 25 ? 0 : roll <= 75 ? 1 : 2;
         v = purse[c][lv];
     }
-    r->w1 = v;
+    r->w1 = v * 4;                              /* (Farthings, the world's prices', 2026-10-28) */
     r->w2 = h;
     r->a = lv;
     v = 1u << culture_tag[pc.culture < 6 ? pc.culture : HARN_FEUDAL] | 1u << (OT_SLAVE + c) | 1u << (OT_POOR + lv) |

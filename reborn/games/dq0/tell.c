@@ -1,10 +1,11 @@
 /*
-** tell.c - (overlay 1) Dingus Quest Zero's fixed messages (tell.h's names): the UI's words in its overlay's bank rather
-** than its RAM (the user: the tasks have RAM to spare in their banks), each said by msg as it's asked for
+** tell.c - (overlay 14, overlay 1's till 2026-10-28: the appraisal's money words its room) Dingus Quest Zero's fixed
+** messages (tell.h's names): the UI's words in its overlay's bank rather than its RAM (the user: the tasks have RAM to
+** spare in their banks), each said by msg as it's asked for
 */
 
-#pragma code-name ("OV1CODE")
-#pragma rodata-name ("OV1RODATA")
+#pragma code-name ("OV14CODE")
+#pragma rodata-name ("OV14RODATA")
 
 #include "dq0.h"
 #include "tell.h"

@@ -30,7 +30,8 @@
 #             made out past a speck (feet, in fives, the map's squares: 5 a coin or a key, 20 a sword, 35 a chest,
 #             75 at most), its material (wood iron steel bronze leather cloth bone clay stone glass silver other),
 #             the craft that knows it (weapon armour metal wood hide cloth pottery jewel book food bone stone glass),
-#             its worth (pennies); a container's or a surface's room (pints) and the weight it bears (pounds)
+#             its worth (pennies, to a farthing: 2.25); a container's or a surface's room (pints) and the weight it
+#             bears (pounds)
 #   piece     a piece of the puzzle (or a fixture of it: an altar, a throne), put down in the dungeon (8 at most):
 #             its kind, the strata it may lie in (first-last, from the top: 0), concealed (how hard to find by
 #             searching: the steps worse a search goes, rs.h's scale, 0 to 30: 2 tucked away, 6 hidden well, 12
@@ -53,7 +54,12 @@
 #   region    the land it lies in: its name; its land (mountains, hills, forest, marsh, coast, plain); its rock
 #             (granite, limestone, sandstone, basalt, slate, chalk); its water (springs, river, lake, sea, none); its
 #             climate (cold, mild, warm, wet, dry)
-#   people    a people of its history (8 at most): its name (15 letters at most), what they are (dwarves, men,
+#   mint      who struck the coins found here (8 at most, 2026-10-28: a coin's provenance, the user's): its name, as
+#             "pennies of" says it (15 letters at most); its word, an adjective ("Cendran pennies": the market's to
+#             come); now (a realm of today's) or its era (an era's people of old, by its number); its ways (l the
+#             region's own, four coins in five of today's; g it strikes gold, crowns; p taken at par everywhere, as
+#             the dwarves' are; h hard to pass outside its land; or -)
+#   people   a people of its history (8 at most): its name (15 letters at most), what they are (dwarves, men,
 #             elves, kobolds ...: the game's own), their tongue (namegen's, 1-8), how they build (hewn, dressed,
 #             brick, timber, rough)
 #   era       an age of its history, oldest first (6 at most, numbered from 1): its people (a people's name), what
@@ -97,6 +103,11 @@ light    | lit by torches in iron brackets
 denizens | rat spider ghoul skel bear kobold
 
 region   | the Barrow Hill | hills | limestone | springs | mild
+mint     | Cendra | Cendran | now | l
+mint     | Ostmark | Ostmarkan | now | -
+mint     | Belloc | Bellocan | now | h
+mint     | Kharzad | Kharzadan | now | gp
+mint     | the hill-kings | hill-king | 1 | -
 people   | hill-kings | men | 3 | dressed
 era      | hill-kings | tomb | abandoned | 9 | the dead | Aldric, last of the kings under the hill, was laid in his
            crypt with his crown and his seal, and the hill was shut after him.

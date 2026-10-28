@@ -92,12 +92,18 @@ static void __fastcall__ pay (unsigned char g, unsigned char q, unsigned char tf
 /* A choice's things (n of them at p): drawn into the list, paid for */
 static void __fastcall__ things (const unsigned char* p, unsigned char n)
 {
-    unsigned char k, q, j, many, tf, prev = 0, i = 0;
+    unsigned char k, q, j, many, tf, r, prev = 0, i = 0;
 
     for (; n--; p += 5, prev = i) {
         k = p[0];
         tf = p[1] >> 4;
-        q = p[2] + (p[3] > p[2] ? die (p[3] - p[2] + 1) : 0);
+        if (p[2] & 0x80) {                      /* (The book's dice: 7d6 pennies, 2026-10-28) */
+            for (q = 0, j = p[2] & 0x7F; j--; ) {
+                q += 1 + die (p[3]);
+            }
+        } else {
+            q = p[2] + (p[3] > p[2] ? die (p[3] - p[2] + 1) : 0);
+        }
         kind_get (k);
         many = 1;
         if (!(kk.form & KF_COUNT)) {
@@ -115,8 +121,28 @@ static void __fastcall__ things (const unsigned char* p, unsigned char n)
             e.place = p[1] & 15;
             e.in = e.place == PL_IN ? prev : 0;
             e.flags = tf;
-            e.mat = p[4];
-            kind_get (k);
+            if ((e.mat = p[4]) == MT_JEWEL) {   /* (A jewel: Treasure 5's item, narrowed to the catalogue's (a
+                                                **   bracelet or an anklet a necklace, a comb or earrings a brooch),
+                                                **   and its material (ivory with bone, amber with silver, jade
+                                                **   stone, mithril gold: the house's), a gem in the pouch) */
+                r = die (100);
+                e.kind = r < 15 ? KI_GEM : r < 40 ? KI_RING : r < 55 ? KI_PENDANT : r < 75 ? KI_NECKLACE : KI_BROOCH;
+                r = die (100);
+                e.mat = e.kind == KI_GEM ? 0 : r < 15 ? MT_BONE : r < 25 ? MT_BRONZE : r < 30 ? MT_GLASS : r < 75 ?
+                    MT_SILVER : r < 80 ? MT_STONE : MT_GOLD;
+                if (!e.mat) {
+                    e.place = PL_POUCH;
+                }
+            }
+            if (sec[0] & SF_FREE) {             /* (A denizen's: its condition by Treasure 1's table, its Person
+                                                **   column, its life's tenths lost in its flags' high four bits,
+                                                **   part 58's: broken 1, poor 2-3, fair 4-6, good 7-9, as new 10; by
+                                                **   the draw's state and the list's place, no die spent: the draws
+                                                **   after it as they were) */
+                r = (unsigned char) ((ost.rs >> 3) + i * 37 + j * 11) % 100;
+                e.flags |= (r < 1 ? 9 : r < 3 ? 7 + (r & 1) : r < 10 ? 4 + r % 3 : r < 90 ? 1 + r % 3 : 0) << 4;
+            }
+            kind_get (e.kind);
             pay (e.quality, q, tf, 0);
             hub_map (KIND_BANK);
             if ((i = OF_N) < NOFIT) {
@@ -151,7 +177,7 @@ static unsigned char __fastcall__ weight (const unsigned char* c)
                                                 **   thing's, less the other's worth) */
         kind_get (p[0]);
         v += (unsigned) ((unsigned long) kk.value * (2 + g + ((p[1] >> 4) & TF_FINE ? 1 : 0)) / 6) *
-            ((kk.form & KF_COUNT) && p[3] ? p[3] : 1);
+            ((kk.form & KF_COUNT) && p[3] ? p[2] & 0x80 ? (p[2] & 0x7F) * p[3] : p[3] : 1);
     }
     if (ck) {
         kind_get (ck);

@@ -40,7 +40,7 @@
 #define _THEME_H
 
 #define THEME_SIZE      0x1000                  /* A theme's bytes in dq0t.dat (its record, then its words) */
-#define THEME_HEAD      1321                    /* (struct theme's: make.js lays it out the same) */
+#define THEME_HEAD      1594                    /* (struct theme's: make.js lays it out the same) */
 #define NTKINDS         8                       /* Its own kinds of things, */
 #define KI_THEME        120                     /*   the catalogue's from here to KI_THEME + NTKINDS - 1 (items.h's
                                                 **   KI_HIGH on after them, 2026-10-27: a theme's kinds held to 127) */
@@ -102,6 +102,21 @@ struct tfaction {                               /* The inhabitants now (the them
     unsigned char   attitude;                   /* To the character as it first meets it (hub.h's AT_*) */
 };
 enum { G_NONE, G_ARTIFACT, G_EVIL, G_PRISONER, G_THROUGH };   /* The goal's kind (G_NONE: the mission's puzzle alone) */
+#define TMINTS          8                       /* The mints (2026-10-28, the user's: "each coin should include its
+                                                **   provenance (where it was minted)"): the realms and peoples whose
+                                                **   coins are found here, */
+struct tmint {
+    char            name[16];                   /* who struck them, said after "pennies of" ("Velmor", "the Khazrim"), */
+    char            adj[16];                    /*   and as a word before them ("Velmoran pennies": the market's, to
+                                                **   come, "pay with Velmoran pennies"), */
+    unsigned char   era;                        /*   when: 0 now (a realm's of today), else the era's (1 ...: its
+                                                **   people's, of old), */
+    unsigned char   ways;                       /*   its ways (MW_*): */
+};
+#define MW_LOCAL        0x01                    /*   the region's own (four coins in five of today's, HOUSE.md's money), */
+#define MW_GOLD         0x02                    /*   it strikes gold too (crowns), */
+#define MW_PAR          0x04                    /*   taken at its worth everywhere (the Khuzdul's, as Azadmere's are), */
+#define MW_HARD         0x08                    /*   hard to pass outside its own land (clipped, debased: Rethem's) */
 
 /* stratagen (bank/stratagen: a bank program, the maker's and themegen's): which of a stratum's layers a chunk of it is
 ** now, from the layers, the stratum's size in chunks and its way in's chunk, and its seed (HISTORY.md) */
@@ -155,6 +170,9 @@ struct theme {
                                                 **   name in lib/dq0/themes (make.js's: "1crypt.txt"); a game's own,
                                                 **   "": theme.txt in the save's folder (the hub's savedir), or in
                                                 **   /ram/dq0 without one */
+    unsigned char   nmints;                     /* Its mints (the theme file's mint lines, 2026-10-28: a coin's its
+                                                **   number, 1 ..., an item's fuel's low byte; 0 none told) */
+    struct tmint    mint[TMINTS];
 };
 #define THEME           ((struct theme*) 0x8000)    /* (In the hub's theme bank) */
 typedef char theme_head[sizeof (struct theme) == THEME_HEAD ? 1 : -1];

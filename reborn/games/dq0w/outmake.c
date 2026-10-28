@@ -52,20 +52,25 @@ static unsigned char __fastcall__ die (unsigned char n)
 static void __fastcall__ spot (unsigned char k)
 {
     unsigned char t, *q;
+    unsigned x, y;
 
-    if (sqset & 1 << k) {
+    if (sqset & (k + 1)) {                      /* (k 0 or 1: its bit) */
         return;
     }
-    sqset |= 1 << k;
+    sqset |= k + 1;
     for (t = 0; t < 12; ++t) {
-        sqx[k] = ost.bx0 + die (ost.bw);
-        sqy[k] = ost.by0 + die (ost.bh);
-        if ((q = at (ost.hsn, sqx[k], sqy[k])) != 0 && TILE (*q) == T_FLOOR && (sqx[k] != ost.hx || sqy[k] != ost.hy)) {
-            return;
+        x = ost.bx0 + die (ost.bw);
+        y = ost.by0 + die (ost.bh);
+        if ((q = at (ost.hsn, x, y)) != 0 && TILE (*q) == T_FLOOR && (x != ost.hx || y != ost.hy)) {
+            break;
         }
     }
-    sqx[k] = ost.hx;
-    sqy[k] = ost.hy;
+    if (t == 12) {
+        x = ost.hx;
+        y = ost.hy;
+    }
+    sqx[k] = x;                                 /* (Its squares stored once: the part's room, 2026-10-28) */
+    sqy[k] = y;
 }
 
 /* Kind k's record copied out (kk) */
@@ -80,7 +85,7 @@ static unsigned char tb, tw;
 static void __fastcall__ measure (unsigned char q)
 {
     tb = kk.form & KF_TENS ? (kk.bulk * q + 9) / 10 : kk.bulk;
-    tw = kk.form & KF_TENS ? (kk.weight * q + 9) / 10 : kk.form & KF_COUNT ? kk.weight * q : kk.weight;
+    tw = kk.form & KF_TENS ? LOT_WT (kk.form, kk.weight * q) : kk.form & KF_COUNT ? kk.weight * q : kk.weight;
 }
 
 /* The things in container c: how many, their bulk and weight (those directly in it) */
@@ -248,6 +253,7 @@ static void __fastcall__ own (unsigned i)
     if (!p->dur) {
         p->dur = p->dur_max = 1;
     }
+    p->dur -= p->dur_max / 10 * (e.flags >> 4);    /* (A denizen's condition, part 59's: Treasure 1's) */
     if ((kk.keeps & KF_CLOSES) == KF_STOPPER) {
         p->shut = IS_CLOSED;
     } else if (p->kind == KI_CHEST) {

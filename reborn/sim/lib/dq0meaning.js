@@ -63,7 +63,7 @@ const EXPRS = {
   namesAt: '(unsigned) NAMES_AT - 0x8000', tnames: 'TNAMES', tname: 'sizeof (struct tname)', nmWhat: F('struct tname', 'what'),
   nmSn: F('struct tname', 'sn'), nmX: F('struct tname', 'x'), nmY: F('struct tname', 'y'), nmKind: F('struct tname', 'kind'),
   nmName: F('struct tname', 'name'),
-  catBank: 'KIND_BANK', kindSize: 'sizeof (struct kind)', nkinds: 'NKINDS', kFlags: F('struct kind', 'flags'), kWeight: F('struct kind', 'weight'),
+  catBank: 'KIND_BANK', kindSize: 'sizeof (struct kind)', nkinds: 'NKINDS', kFlags: F('struct kind', 'flags'), kWeight: F('struct kind', 'weight'), kForm: F('struct kind', 'form'), kValue: F('struct kind', 'value'),
   item0: 'ITEM_BANK (0)', itemSize: 'sizeof (struct item)', nitems: 'NITEMS', iKind: F('struct item', 'kind'), iFlags: F('struct item', 'flags'),
   iWhere: F('struct item', 'where'), iSn: F('struct item', 'sn'), iX: F('struct item', 'x'), iY: F('struct item', 'y'),
   iQty: F('struct item', 'qty'), iId: F('struct item', 'id'), iFuel: F('struct item', 'fuel'), iShut: F('struct item', 'shut'), iSize: F('struct item', 'size'), iThick: F('struct item', 'thick'),
@@ -258,7 +258,8 @@ function createRecorder() {
       const b = bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
       if (!b || !b[o + L.iKind]) continue;
       s.items.push({ n: i, kind: b[o + L.iKind], name: kname(b[o + L.iKind]), weight: cat ? cat[b[o + L.iKind] * L.kindSize + L.kWeight] : 0,
-        kflags: cat ? cat[b[o + L.iKind] * L.kindSize + L.kFlags] : 0, flags: b[o + L.iFlags], where: name('IW_SQUARE', b[o + L.iWhere]),
+        kflags: cat ? cat[b[o + L.iKind] * L.kindSize + L.kFlags] : 0, kform: cat ? cat[b[o + L.iKind] * L.kindSize + L.kForm] : 0,
+        kvalue: cat ? w16(cat, b[o + L.iKind] * L.kindSize + L.kValue) : 0, size: b[o + L.iSize], flags: b[o + L.iFlags], where: name('IW_SQUARE', b[o + L.iWhere]),
         sn: b[o + L.iSn], x: w16(b, o + L.iX), y: w16(b, o + L.iY), qty: b[o + L.iQty], id: w16(b, o + L.iId), fuel: w16(b, o + L.iFuel),
         thick: b[o + L.iThick], mat: b[o + L.iMat], quality: b[o + L.iQuality], shut: b[o + L.iShut],
         did: b[o + L.iWhere] === K.IW_DEN ? b[o + L.iOwner] | b[o + L.iHide] << 8 : 0, owner: b[o + L.iOwner], hide: b[o + L.iHide],

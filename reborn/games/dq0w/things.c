@@ -59,7 +59,7 @@ void __fastcall__ thing_words (const struct item* q);   /* (Part 11's) */
 unsigned char __fastcall__ hide (const char* name);
 void __fastcall__ make_own (unsigned i);         /* Part 13 */
 void seen_owned (void);
-void kit (void);
+void kit (void);                                /* Part 63 (part 13's till 2026-10-28) */
 void theme_kinds (void);
 unsigned __fastcall__ pick (const char* name, unsigned char how);    /* Part 4 (its room): a thing of several */
 unsigned __fastcall__ at_hand (const char* name);
@@ -79,6 +79,10 @@ unsigned char __fastcall__ hold_in (unsigned n, unsigned char want);    /* Part 
 unsigned char swap (void);
 unsigned char gear_words (void);                /* Part 62 */
 void __fastcall__ kit_lock (unsigned b, unsigned k);   /* Part 61 */
+void __fastcall__ mix_need (unsigned i);        /* Part 64: a pile of coins's mints (2026-10-28) */
+void __fastcall__ mix_join (unsigned i, unsigned n);
+void __fastcall__ mix_words (unsigned i);
+unsigned char __fastcall__ mix_worth (unsigned i);
 void __fastcall__ listed (unsigned n);          /* Part 11 */
 #define HW_CARRIED      1                       /* (pick's how: carried; seen, lying about; either, as far as it sees,
                                                 **   or to hand, within reach (afar else); in win) */
@@ -375,7 +379,8 @@ unsigned __fastcall__ s_weight_of (unsigned i)
                                                 **   lot counted, its count's: "drop two rations") */
 
     if (k->form & KF_TENS) {
-        w = (w + 9) / 10;                       /* (A lot by the ten: the missiles', a tenth of a pound each) */
+        w = LOT_WT (k->form, w);                /* (A lot by the ten: the missiles', a tenth of a pound each; coins
+                                                **   by the dram) */
     }
 
     if (k->flags & (K_CONTAINER | K_BELT) || k->keeps & KF_ON) {
@@ -1365,6 +1370,9 @@ static unsigned __fastcall__ join (unsigned n)
         if (i != n && rec.kind == q.kind && !(rec.flags & (I_NAMED | I_HIDDEN)) && rec.qty + q.qty <= 250 &&
             (rec.flags & (I_HELD | I_WORN)) == (q.flags & (I_HELD | I_WORN)) &&
             (q.where != IW_SQUARE || (rec.sn == q.sn && rec.y == q.y))) {
+            if (rec.fuel != q.fuel || rec.size != q.size || rec.thick != q.thick) {
+                mix_join (i, n);                /* (Two piles of coins: their mints' groups merged, part 63's) */
+            }
             item_at (i)->qty += q.qty;
             item_at (n)->kind = 0;              /* (The lot moved, gone into the other) */
             return i;
@@ -2317,7 +2325,14 @@ off:
         put (".");
     }
     if (mode) {
+        if ((cl = (lk.form & (KF_SMALL | KF_COUNT)) == (KF_SMALL | KF_COUNT)) != 0) {
+            rec.size = rec.thick = 0;           /* (A pile of coins: no measure, its size and thick its mints' shares;
+                                                **   its stamps told after, part 64's, 2026-10-28) */
+        }
         closer (LM_CLOSE);                      /* (What a closer look shows besides: part 42's) */
+        if (cl && ld <= NEAR_SQ) {
+            mix_words (n);
+        }
     }
     if (c) {                                    /* What's in it, on it, within reach (look in's words) */
         put (" ");
@@ -2345,6 +2360,7 @@ unsigned char __fastcall__ s_describe (const char* name)
     const struct kind* k;
     struct ireq* r;
     unsigned n = pick (name, HW_ANY);         /* (Carried, or seen: the one most to hand, of several) */
+    unsigned char c = 100;
 
     if (!n) {
         return IR_NONE;
@@ -2352,6 +2368,15 @@ unsigned char __fastcall__ s_describe (const char* name)
     make_own (n);
     fetch (&rec, n);
     k = kind_of (rec.kind);
+    if ((k->form & (KF_SMALL | KF_COUNT)) == (KF_SMALL | KF_COUNT)) {
+        c = mix_worth (n);                      /* (A pile of coins: its worth as a local would take it, by its mints,
+                                                **   part 63's; no measure, its size and thick its mints' shares) */
+        fetch (&rec, n);
+        rec.size = rec.thick = 0;
+        rec.quality = 4;                        /* (A coin's worth its face, not its make's: the appraisal's middling
+                                                **   make, its worth times one) */
+        k = kind_of (rec.kind);
+    }
     hub_map (0);
     r = &HUB->ireq;
     strcpy (r->name, k->name);
@@ -2365,11 +2390,13 @@ unsigned char __fastcall__ s_describe (const char* name)
     r->dur_max = rec.dur_max;
     r->value = k->value;
     if (k->mat == MT_SILVER && rec.mat != MT_SILVER) {   /* (Worth by material, HOUSE.md's: a kind written in silver,
-                                                **   ten times in gold, a quarter in bronze or iron, a twentieth in bone,
-                                                **   wood or stone, 2026-10-27) */
-        r->value = rec.mat == MT_GOLD ? k->value * 10 : rec.mat >= MT_IRON && rec.mat <= MT_BRONZE ? k->value / 4 :
-            k->value / 20;
+                                                **   by Treasure 5's jewelry materials, silver's 60d an ounce: twenty
+                                                **   times in gold, eight in stone (jade's), a tenth in glass, a sixtieth
+                                                **   in the base ones (bronze, pewter, bone and horn), 2026-10-28) */
+        r->value = rec.mat == MT_GOLD ? k->value * 20 : rec.mat == MT_STONE ? k->value * 8 : rec.mat == MT_GLASS ?
+            k->value / 10 : k->value / 60;
     }
+    r->value = (unsigned) ((unsigned long) r->value * c / 100);
     r->size = rec.size;
     r->thick = rec.thick;
     r->to = k->seen << 8 | seen_d;
@@ -2531,6 +2558,7 @@ void __fastcall__ s_closer (unsigned char mode)
 
 
 static unsigned char tw_n;                      /* (How many alike told together: "two sacks") */
+static unsigned tw_sum;                         /* (A lot's count with its others' told with it: 0 its own) */
 static struct item tw;                          /* (The thing worded, copied out, and its kind's record: the main */
 static const struct kind* twk;                  /*   RAM's, many's call swapping this part out and in again) */
 
@@ -2540,6 +2568,7 @@ static void words (void)
 {
     static char b[6];
     static unsigned char c;
+    static unsigned q;
 
     c = twk->keeps & KF_CLOSES;
     if (tw.flags & I_NAMED) {                   /* (A name the character gave it: its id, marked for the UI, "#12 a
@@ -2548,12 +2577,13 @@ static void words (void)
         put (utoa (tw.id, b, 10));
         put (" ");
     }
-    if (tw_n > 1 || (tw.qty == 1 && (twk->form & KF_COUNT))) {
+    q = tw_sum ? tw_sum : tw.qty;
+    if (tw_n > 1 || (q == 1 && (twk->form & KF_COUNT))) {
         many (tbuf, tw_n > 1 ? tw_n : 1, tw.kind);   /* (Alike, told together; one of a lot, "a ration") */
         put (tbuf);
     } else {
-        if (tw.qty > 1) {
-            put (utoa (tw.qty, b, 10));
+        if (q > 1) {
+            put (utoa (q, b, 10));
             put (" ");
         } else if (!(twk->flags & K_PLURAL)) {
             put (strchr ("aeiou", twk->name[0]) ? "an " : "a ");
@@ -2651,6 +2681,7 @@ static unsigned char quiet;                     /* (In a thing closed: weighed, 
 #define wb              (tbuf + 40)             /* (A text's end, a closed thing's: nothing put) */
 static unsigned char lsig, lkf, lwo, ln, lin;
 static const struct kind* cl_k;
+static struct item* cl_p;
 static struct got* gp;
 static unsigned char gm;
 static unsigned j, jn;
@@ -2698,7 +2729,8 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
         twk = kind_of (tw.kind);
         lkf = twk->flags;
         j = (unsigned) twk->weight * (lkf & K_PLURAL && !(twk->form & KF_COUNT) ? 1 : tw.qty);
-        load += twk->form & KF_TENS ? (j + 9) / 10 : j;  /* (A lot by the ten: the missiles') */
+        load += twk->form & KF_TENS ? LOT_WT (twk->form, j) : j;     /* (A lot by the ten: the missiles'; coins by
+                                                **   the dram) */
         lkf = lkf & (K_CONTAINER | K_BELT) || twk->keeps & KF_ON;
         if (quiet) {                            /* (In a thing closed: its weight, not its words) */
             if (lkf) {
@@ -2716,7 +2748,20 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
             continue;                           /* (Told with one alike before it: nothing in it, nothing more) */
         }
         ln = 1;
-        if (tw.qty == 1 && !(tw.flags & (I_NAMED | I_HELD))) {   /* (One that may have others alike: alike's) */
+        if ((twk->form & (KF_COUNT | KF_SMALL)) == (KF_COUNT | KF_SMALL) && !(tw.flags & I_NAMED)) {   /* (A pile of
+                                                **   coins (the only lots past 250: a rich purse), the others there told
+                                                **   with it, dq0answer's inventory the quicker for none else; a
+                                                **   purse's 600 pennies in piles of 250, 2026-10-28) */
+            tw_sum = tw.qty;
+            for (jn = i; nx_n = jn, nx_w = where, nx_x = x, (jn = next_in ()) != 0; ) {
+                cl_p = item_at (jn);
+                if (cl_p->kind == tw.kind && !((cl_p->flags ^ tw.flags) & (I_NAMED | I_HIDDEN | I_HELD | I_WORN)) &&
+                    nt < 8) {
+                    tw_sum += cl_p->qty;
+                    told[nt++] = jn;
+                }
+            }
+        } else if (tw.qty == 1 && !(tw.flags & (I_NAMED | I_HELD))) {   /* (One that may have others alike: alike's) */
             lsig = sig ();
             lwo = tw.flags & I_WORN;
             lin = 0xFF;                         /* (Whether something's in it: alike's to ask) */
@@ -2749,6 +2794,7 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
         tw_n = ln;
         words ();
         tw_n = 0;
+        tw_sum = 0;
         if (!depth) {
             put (tw.flags & I_HELD ? hands_in[tw.sn & IH_BOTH] : tw.flags & I_WORN ? ", worn" : "");  /* (The hand
                                                 **   it's in, its sn: slice 4.1b's) */
@@ -2970,6 +3016,7 @@ void __fastcall__ s_make_own (unsigned i)
     id = ++p->x;
     q.id = id;
     k = kind_of (q.kind);
+    a = q.mat;                                  /* (Its make the maker's already: a portal's part's) */
     if (!(m = q.mat)) {
         q.quality = rnd (4) + rnd (4) + rnd (3);
         if (rnd (8) == 0) {
@@ -2985,7 +3032,17 @@ void __fastcall__ s_make_own (unsigned i)
         q.mat = m;
     }
     q.dur_max = tough[m] * (k->weight + 4) * (5 + q.quality) / 5;
-    q.dur = q.where == IW_SQUARE ? q.dur_max - q.dur_max / 10 * rnd (7) : q.dur_max;
+    q.dur = q.dur_max;
+    if (q.where == IW_SQUARE && a) {            /* (A portal's part set down: its wear, up to six tenths, as before) */
+        q.dur -= q.dur_max / 10 * rnd (7);
+    } else if (q.where == IW_SQUARE) {          /* (Found, lost or left: its condition by Treasure 1's table, its Found
+                                                **   column, its life's tenths: broken 0-1, poor 2-3, fair 4-6, good
+                                                **   7-9, as new 10; silver and gold the less decayed, the house's
+                                                **   30 more on the roll, 2026-10-28) */
+        h = rnd (100) + (m == MT_SILVER || m == MT_GOLD ? 30 : 0);
+        q.dur -= q.dur_max / 10 * (h < 20 ? 9 + (h & 1) : h < 60 ? 7 + (h & 1) : h < 80 ? 4 + h % 3 : h < 95 ? 1 +
+            h % 3 : 0);
+    }
     if (!q.dur) {
         q.dur = 1;
     }
@@ -3066,127 +3123,6 @@ static unsigned __fastcall__ put_down (unsigned char kind, unsigned char where, 
 }
 
 
-/* A name said (named's, part 10's: a copy of its own) */
-static unsigned char __fastcall__ a_word (const char* k, const char* w)
-{
-    unsigned char n = strlen (w);
-
-    for (;;) {
-        if (!strncmp (k, w, n)) {
-            return 1;
-        }
-        if (!(k = strchr (k, ' '))) {
-            return 0;
-        }
-        ++k;
-    }
-}
-
-/* A kind by its name (or a word of it: "sand"; the whole name first, so "sword" isn't a broken one): its number,
-** or 0 */
-static unsigned char __fastcall__ kind_named (const char* name)
-{
-    unsigned char k;
-
-    for (k = 1; k < NK; ++k) {
-        if (!strcmp (kind_of (k)->name, name)) {
-            return k;
-        }
-    }
-    for (k = 1; k < NK; ++k) {
-        if (a_word (kind_of (k)->name, name)) {
-            return k;
-        }
-    }
-    return 0;
-}
-
-/* A thing made for the character (its kit's): a record taken, made its own: its number, or 0xFFFF */
-static unsigned __fastcall__ item_new (unsigned char kind, unsigned char where, unsigned x, unsigned char qty)
-{
-    unsigned i = put_down (kind, where, 0, x, 0, qty);
-
-    if (!i) {
-        return 0xFFFF;
-    }
-    s_make_own (i);
-    return i;
-}
-
-/* ---- The character's kit: its outfit (part 57's, outfit.c: the universal kit and its occupation's, as the referee
-** says, the outfits' file's); or, dq0 -K's (the tests') or without the outfits, the kit as it was: a torch lit in hand,
-** a backpack worn (rations, a tinderbox in it), a belt (a pouch of pennies, a dagger, a waterskin hanging from it), and
-** a spare torch and a flask of oil in the pack after (D5: slice 4.1's); and things more (dq0 -k, commas between: in the
-** hub's text), each held if there's a hand for it, else in the pack */
-static const unsigned char spare[] = { KI_TORCH, KI_OIL };
-
-/* Each thing: its kind, what it's in (an earlier one's place in the list; 0xFF: on the character), how many, its
-** flags */
-#define NKIT    9
-static const unsigned char kit_list[NKIT][4] = {
-    { KI_TORCH, 0xFF, 1, I_HELD | I_LIT | I_KNOWN }, { KI_BACKPACK, 0xFF, 1, I_WORN | I_KNOWN }, { KI_RATIONS, 1, 3, 0 },
-    { KI_TINDERBOX, 1, 1, 0 }, { KI_BELT, 0xFF, 1, I_WORN | I_KNOWN }, { KI_POUCH, 4, 1, 0 }, { KI_PENNIES, 5, 12, 0 },
-    { KI_DAGGER, 4, 1, 0 }, { KI_WATERSKIN, 4, 1, 0 }
-};
-
-void s_kit (void)
-{
-    unsigned made[NKIT];
-    const unsigned char* e;
-    unsigned i, box = 0;
-    unsigned char k, off, old;
-    char* c;
-    char* more = tbuf;
-
-    hub_map (0);
-    if (!(old = (HUB->gear & GE_OLD) || !outfit ())) {
-        outmake (0);                            /* (Its outfit drawn: its things made) */
-    }
-
-    hub_map (UI_BANK);
-    strncpy (more, UIREC->things_text, 63);     /* (The things more: the UI's -k, in the UI bank's text) */
-    hub_map (0);
-    more[63] = 0;
-    off = HUB->pcsum.limbs & LB_LEFT ? IH_RIGHT : IH_LEFT;
-    if (HUB->pcsum.limbs & (off == IH_LEFT ? LB_ARM_L : LB_ARM_R)) {
-        off ^= IH_BOTH;                         /* (Its off arm useless: its torch in the other) */
-    }
-    for (k = 0; old && k < NKIT; ++k) {
-        e = kit_list[k];
-        made[k] = i = item_new (e[0], e[1] == 0xFF ? IW_ACTOR : IW_ITEM, e[1] == 0xFF ? 0 : made[e[1]], e[2]);
-        item_at (i)->flags = e[3];
-        if (e[3] & I_HELD) {
-            item_at (i)->sn = off;              /* (Its torch a light: in its off hand, slice 4.1b's) */
-        }
-    }
-    for (; *more; more = c) {
-        i = 0xFFFF;
-        if ((c = strchr (more, ',')) != 0) {
-            *c++ = 0;
-        } else {
-            c = more + strlen (more);
-        }
-        if ((k = kind_named (more)) != 0 && (i = item_new (k, IW_ACTOR, 0, 1)) != 0xFFFF && !carry (i, 1)) {
-            item_at (i)->where = IW_ACTOR;      /* (No room: held all the same) */
-            item_at (i)->x = 0;
-            item_at (i)->flags = (item_at (i)->flags & ~(I_WORN | I_HIDDEN)) | I_KNOWN | I_HELD;
-            k = two (kind_at (i)) == 2 ? IH_BOTH : off ^ IH_BOTH;
-            item_at (i)->sn = k;                /* (Its hand: both for a two-handed thing, else the main) */
-        }
-        if (i != 0xFFFF && (k = item_at (i)->kind) == KI_CHEST) {
-            box = i;                            /* (A key after a chest locks it, and fits it alone: the outfits'
-                                                **   rule, every making's, HOUSE.md's keys that fit; part 61's) */
-        } else if (i != 0xFFFF && k == KI_KEY && box) {
-            kit_lock (box, i);
-            box = 0;
-        }
-    }
-    for (k = 0; old && k < sizeof spare; ++k) { /* (The pack's spare torch and flask of oil, D5's, after the things
-                                                **   more: theirs made as they were) */
-        item_new (spare[k], IW_ITEM, made[1], 1);
-    }
-}
-
 /* Cache slot k's chunk's things put down, as the maker listed them stocking it (the world bank's stock: a thing on a
 ** square of the chunk, concealed or not; a portal's part, in its portal or by it, its make the portal's; a sconce's
 ** torch in it, a kept room's lit and tended: DUNGEON.md, light kept), in the list's order (the hub's header in the
@@ -3223,7 +3159,10 @@ void __fastcall__ s_stock_down (unsigned char k)
         if (e.hide == ST_LIT) {                 /* (A kept room's sconce's torch: the room lit by it, store.c's) */
             p->flags = I_LIT | I_TENDED;
         }
-        if (e.make) {                           /* (A portal's part's make: the portal's) */
+        if (e.make && e.make < 16) {            /* (Coins of an era of old, the maker's: their mint, whole, part 63's
+                                                **   piles, 2026-10-28; a portal's part's make its material's above) */
+            p->size = e.make << 4 | 15;
+        } else if (e.make) {                    /* (A portal's part's make: the portal's) */
             p->mat = m = e.make >> 4;
             p->quality = e.make & 15;
             p->size = e.size;
@@ -4182,5 +4121,347 @@ unsigned char s_swap (void)
     return IR_OK;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 63 (2026-10-28: part 13's room, the coins'): the character's kit */
+#pragma code-name (push, "SW63CODE")
+#pragma rodata-name (push, "SW63RODATA")
+#pragma static-locals (push, on)
+
+/* A free record taken, its thing put down (part 13's put_down, a copy of its own) */
+static unsigned __fastcall__ put_down63 (unsigned char kind, unsigned char where, unsigned char sn, unsigned x,
+    unsigned y, unsigned char qty)
+{
+    struct item* p;
+    unsigned i;
+
+    for (i = 1; i < ilim || it_room () && (i = 1); ++i) {
+        p = item_at (i);
+        if (!p->kind) {
+            if (i >= ihigh) {
+                ihigh = i + 1;
+            }
+            p = item_at (i);
+            memset (p, 0, sizeof *p);
+            p->kind = kind;
+            p->where = where;
+            p->sn = sn;
+            p->x = x;
+            p->y = y;
+            p->qty = qty;
+            return i;
+        }
+    }
+    return 0;
+}
+
+/* A name said (named's, part 10's: a copy of its own) */
+static unsigned char __fastcall__ a_word (const char* k, const char* w)
+{
+    unsigned char n = strlen (w);
+
+    for (;;) {
+        if (!strncmp (k, w, n)) {
+            return 1;
+        }
+        if (!(k = strchr (k, ' '))) {
+            return 0;
+        }
+        ++k;
+    }
+}
+
+/* A kind by its name (or a word of it: "sand"; the whole name first, so "sword" isn't a broken one): its number,
+** or 0 */
+static unsigned char __fastcall__ kind_named (const char* name)
+{
+    unsigned char k;
+
+    for (k = 1; k < NK; ++k) {
+        if (!strcmp (kind_of (k)->name, name)) {
+            return k;
+        }
+    }
+    for (k = 1; k < NK; ++k) {
+        if (a_word (kind_of (k)->name, name)) {
+            return k;
+        }
+    }
+    return 0;
+}
+
+/* A thing made for the character (its kit's): a record taken, made its own: its number, or 0xFFFF */
+static unsigned __fastcall__ item_new (unsigned char kind, unsigned char where, unsigned x, unsigned char qty)
+{
+    unsigned i = put_down63 (kind, where, 0, x, 0, qty);
+
+    if (!i) {
+        return 0xFFFF;
+    }
+    make_own (i);                               /* (Part 13's) */
+    return i;
+}
+
+/* ---- The character's kit: its outfit (part 57's, outfit.c: the universal kit and its occupation's, as the referee
+** says, the outfits' file's); or, dq0 -K's (the tests') or without the outfits, the kit as it was: a torch lit in hand,
+** a backpack worn (rations, a tinderbox in it), a belt (a pouch of pennies, a dagger, a waterskin hanging from it), and
+** a spare torch and a flask of oil in the pack after (D5: slice 4.1's); and things more (dq0 -k, commas between: in the
+** hub's text), each held if there's a hand for it, else in the pack */
+static const unsigned char spare[] = { KI_TORCH, KI_OIL };
+
+/* Each thing: its kind, what it's in (an earlier one's place in the list; 0xFF: on the character), how many, its
+** flags */
+#define NKIT    9
+static const unsigned char kit_list[NKIT][4] = {
+    { KI_TORCH, 0xFF, 1, I_HELD | I_LIT | I_KNOWN }, { KI_BACKPACK, 0xFF, 1, I_WORN | I_KNOWN }, { KI_RATIONS, 1, 3, 0 },
+    { KI_TINDERBOX, 1, 1, 0 }, { KI_BELT, 0xFF, 1, I_WORN | I_KNOWN }, { KI_POUCH, 4, 1, 0 }, { KI_PENNIES, 5, 12, 0 },
+    { KI_DAGGER, 4, 1, 0 }, { KI_WATERSKIN, 4, 1, 0 }
+};
+
+void s_kit (void)
+{
+    unsigned made[NKIT];
+    const unsigned char* e;
+    unsigned i, box = 0;
+    unsigned char k, off, old;
+    char* c;
+    char* more = tbuf;
+
+    hub_map (0);
+    if (!(old = (HUB->gear & GE_OLD) || !outfit ())) {
+        outmake (0);                            /* (Its outfit drawn: its things made) */
+    }
+
+    hub_map (UI_BANK);
+    strncpy (more, UIREC->things_text, 63);     /* (The things more: the UI's -k, in the UI bank's text) */
+    hub_map (0);
+    more[63] = 0;
+    off = HUB->pcsum.limbs & LB_LEFT ? IH_RIGHT : IH_LEFT;
+    if (HUB->pcsum.limbs & (off == IH_LEFT ? LB_ARM_L : LB_ARM_R)) {
+        off ^= IH_BOTH;                         /* (Its off arm useless: its torch in the other) */
+    }
+    for (k = 0; old && k < NKIT; ++k) {
+        e = kit_list[k];
+        made[k] = i = item_new (e[0], e[1] == 0xFF ? IW_ACTOR : IW_ITEM, e[1] == 0xFF ? 0 : made[e[1]], e[2]);
+        item_at (i)->flags = e[3];
+        if (e[3] & I_HELD) {
+            item_at (i)->sn = off;              /* (Its torch a light: in its off hand, slice 4.1b's) */
+        }
+    }
+    for (; *more; more = c) {
+        i = 0xFFFF;
+        if ((c = strchr (more, ',')) != 0) {
+            *c++ = 0;
+        } else {
+            c = more + strlen (more);
+        }
+        if ((k = kind_named (more)) != 0 && (i = item_new (k, IW_ACTOR, 0, 1)) != 0xFFFF && !carry (i, 1)) {
+            item_at (i)->where = IW_ACTOR;      /* (No room: held all the same) */
+            item_at (i)->x = 0;
+            item_at (i)->flags = (item_at (i)->flags & ~(I_WORN | I_HIDDEN)) | I_KNOWN | I_HELD;
+            k = two (kind_at (i)) == 2 ? IH_BOTH : off ^ IH_BOTH;
+            item_at (i)->sn = k;                /* (Its hand: both for a two-handed thing, else the main) */
+        }
+        if (i != 0xFFFF && (k = item_at (i)->kind) == KI_CHEST) {
+            box = i;                            /* (A key after a chest locks it, and fits it alone: the outfits'
+                                                **   rule, every making's, HOUSE.md's keys that fit; part 61's) */
+        } else if (i != 0xFFFF && k == KI_KEY && box) {
+            kit_lock (box, i);
+            box = 0;
+        }
+    }
+    for (k = 0; old && k < sizeof spare; ++k) { /* (The pack's spare torch and flask of oil, D5's, after the things
+                                                **   more: theirs made as they were) */
+        item_new (spare[k], IW_ITEM, made[1], 1);
+    }
+}
+
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 64 (2026-10-28): the coins' mints (the user's: "each coin should include its provenance (where it was
+** minted), with the local region mintage most common (80%) unless belonging to an historic/anchient hoard, which
+** should, of course, be appropriately stocked", and "a single group of coins should have a mint, yes, but one "pile"
+** may contain many different mintings"; HOUSE.md's money).  A pile of coins (a lot of pennies, of crowns: its kind's
+** form KF_SMALL and KF_COUNT) is one thing; within it up to four groups by mint, each its mint (the theme's, theme.h's
+** struct tmint: 1 ...) and its share of the pile (fifteenths, as near as they come) a byte, the high four bits and the
+** low, of its size, thick and fuel (no coin's measured, none burns).  A part of a pile taken is the same mix; two piles
+** put together, their groups merged (the four greatest, the rest folded into the greatest: the house's).  A pile with
+** no mix yet (its fuel 0) is given today's as it's first wanted (a purse, a hoard of now: four coins in five the
+** region's own, the rest its neighbours' and the dwarves', the house's); an old era's coins are the maker's (its mint,
+** whole: s_stock_down) */
+#pragma code-name (push, "SW64CODE")
+#pragma rodata-name (push, "SW64RODATA")
+#pragma static-locals (push, on)
+
+static unsigned char cm_n, cm_era[TMINTS], cm_ways[TMINTS];    /* (The theme's mints: how many, each one's era, ways) */
+static unsigned cm_c[TMINTS + 1];               /* (A pile's coins by mint: counts) */
+static unsigned char* cm_b;                     /* (Its groups: its size, thick and fuel's bytes, each a mint (the high
+                                                **   four bits: 0 none) and its share (the low four)) */
+static unsigned char cm_s;                      /* (Their shares' sum) */
+
+/* The theme's mints' eras and ways copied out */
+static void cm_mints (void)
+{
+    const struct tmint* m = THEME->mint;
+    unsigned char k;
+
+    hub_map (THEME_BANK);
+    cm_n = THEME->nmints;
+    for (k = 0; k < TMINTS; ++k, ++m) {
+        cm_era[k] = m->era;
+        cm_ways[k] = m->ways;
+    }
+}
+
+/* Pile i's groups found (cm_b, cm_s) */
+static void __fastcall__ cm_at (unsigned i)
+{
+    unsigned char k;
+
+    cm_b = &item_at (i)->size;
+    for (cm_s = 0, k = 0; k < 4; ++k) {
+        cm_s += cm_b[k] & 15;
+    }
+}
+
+/* The groups made from the counts (cm_c, by mint), the four greatest, in fifteenths of their sum (each at least one,
+** the greatest the rest), put in the pile's bytes (cm_b) */
+static void cm_groups (void)
+{
+    unsigned t = 0, c;
+    unsigned char k, j, b, left = 15, w;
+
+    for (k = 1; k <= TMINTS; ++k) {
+        t += cm_c[k];
+    }
+    for (j = 0; j < 4; ++j) {
+        for (b = 0, k = 1; k <= TMINTS; ++k) {
+            if (cm_c[k] > cm_c[b]) {
+                b = k;
+            }
+        }
+        w = 0;
+        if ((c = cm_c[b]) != 0) {
+            w = (unsigned char) ((c * 15 + t / 2) / t);
+            w = !w ? 1 : w > left ? left : w;
+            left -= w;
+        }
+        cm_b[j] = b << 4 | w;
+        cm_c[b] = 0;
+    }
+    cm_b[0] += left;                            /* (The greatest the rest: fifteen in all) */
+}
+
+/* Thing i's mix, if it's a pile of coins with none yet: today's (its numbers', no die: four coins in five, a fifth more
+** or less, the region's own, the rest another's of today, a neighbour's or the dwarves'; a crown the gold one's, the
+** dwarves') */
+void __fastcall__ s_mix_need (unsigned i)
+{
+    struct item* p = item_at (i);
+    unsigned h = (p->id + i) * 40503U;
+    unsigned char q = p->qty, kind = p->kind, k, f = 0, n = 0, local = 0, o[TMINTS];
+
+    if (p->fuel || p->size || !(kind_of (kind)->form & KF_SMALL)) {
+        return;
+    }
+    cm_mints ();
+    for (k = 0; k < cm_n; ++k) {
+        if (!cm_era[k]) {
+            if (!local && cm_ways[k] & (kind == KI_CROWNS ? MW_GOLD : MW_LOCAL)) {
+                local = k + 1;
+            } else if (kind != KI_CROWNS) {
+                o[n++] = k + 1;
+            }
+        }
+    }
+    if (n) {                                    /* (A fifth, more or less, the others': one at least one time in five) */
+        f = !local ? q : (unsigned char) (((unsigned) q * (10 + h % 21) + 50) / 100);
+        if (!f && !(h % 5)) {
+            f = 1;
+        }
+    } else if (!local) {
+        return;
+    }
+    memset (cm_c, 0, sizeof cm_c);
+    cm_c[local] = q - f;
+    cm_c[o[(h >> 5) % (n | !n)]] += f;
+    cm_at (i);
+    cm_groups ();
+}
+
+/* Pile n joined to pile i (alike, its count not yet added): their groups merged, each group's coins counted (its
+** share of its pile) */
+void __fastcall__ s_mix_join (unsigned i, unsigned n)
+{
+    unsigned char k, j, g;
+    unsigned q;
+
+    s_mix_need (i);
+    s_mix_need (n);
+    memset (cm_c, 0, sizeof cm_c);
+    for (j = 0; j < 2; ++j) {
+        q = item_at (j ? n : i)->qty;
+        cm_at (j ? n : i);
+        for (k = 0; k < 4 && cm_s; ++k) {
+            g = cm_b[k];
+            cm_c[g >> 4] += (q * (g & 15) + cm_s / 2) / cm_s;
+        }
+    }
+    cm_c[0] = 0;
+    cm_at (i);
+    cm_groups ();
+}
+
+/* Pile i's mix in words, put (examined, near): its stamps, each group by how much of it it is ("most", "many", "some",
+** "a few"; one alone "all"), of whom, old if an era's of old ("Their stamps: most of Velmor, a few of Kharzad.") */
+void __fastcall__ s_mix_words (unsigned i)
+{
+    static const char* const much[4] = { "a few", "some", "many", "most" };
+    static char nm[16];
+    static unsigned char g[4];
+    unsigned char k, m;
+
+    s_mix_need (i);
+    cm_mints ();
+    cm_at (i);
+    memcpy (g, cm_b, 4);
+    for (k = 0; k < 4 && (m = g[k] >> 4) != 0 && m <= cm_n; ++k) {
+        put (k ? ", " : " Their stamps: ");
+        put (g[1] < 16 ? "all" : much[(g[k] & 15) * 4 / (cm_s + 1)]);
+        put (" of ");
+        hub_map (THEME_BANK);
+        strcpy (nm, THEME->mint[m - 1].name);
+        put (nm);
+        put (cm_era[m - 1] ? " (old)" : "");
+    }
+    put (k ? "." : "");
+}
+
+/* Pile i's worth as a local would take it, in hundredths of its face (the book's, HarnWorld 23: coins of elsewhere
+** discounted 10 to 20%, the house's 15; at par the dwarves' and the region's own; hard to pass, half; an old era's, no
+** realm's now, its silver's, three quarters) */
+unsigned char __fastcall__ s_mix_worth (unsigned i)
+{
+    unsigned char k, w, m, v;
+    unsigned t = 0;
+
+    s_mix_need (i);
+    cm_mints ();
+    cm_at (i);
+    for (k = 0; k < 4; ++k) {
+        v = 100;
+        if ((m = cm_b[k] >> 4) != 0 && m <= cm_n) {
+            w = cm_ways[m - 1];
+            v = cm_era[m - 1] ? 75 : w & (MW_LOCAL | MW_PAR) ? 100 : w & MW_HARD ? 50 : 85;
+        }
+        t += (cm_b[k] & 15) * v;
+    }
+    return cm_s ? (unsigned char) (t / cm_s) : 100;
+}
+
+#pragma static-locals (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)

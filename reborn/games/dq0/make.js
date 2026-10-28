@@ -9,7 +9,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const THEME_SIZE = 0x1000, HEAD = 1321, FILE_AT = 1305, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;   // theme.h's
+const THEME_SIZE = 0x1000, HEAD = 1594, FILE_AT = 1305, MINT_AT = 1321, TMINTS = 8, NTKINDS = 8, NPIECES = 8, NRULES = 8, TSTRATA = 8;   // theme.h's
 const TLAYERS = 3, TERAS = 6, TFACTIONS = 8, TPEOPLES = 8;
 const KIND = 37;                                                    // items.h's struct kind
 const WT_LB = 4, SQ_FT = 5;                                         // rs.h's units: a pound's quarters, a square's feet
@@ -152,7 +152,7 @@ function compile(text, f, beasts, count) {
         b[at + 22] = num(l, v[4], 1, 15 * SQ_FT, 'how far off it\'s made out, feet') / SQ_FT;   // (Squares)
         b[at + 31] = mat;
         b[at + 32] = craft;
-        b.writeUInt16LE(num(l, v[7], 1, 0xFFFF, 'its worth, pennies'), at + 33);
+        b.writeUInt16LE(num(l, v[7], 4, 0xFFFF, 'its worth, pennies (to a farthing: 2.25)'), at + 33);   // (Farthings)
         b[at + 35] = keeps;
         kinds.push(v[0]);
         t.kinds.push({ name: v[0], fixed: (keeps & 0x80) !== 0 });
@@ -238,6 +238,19 @@ function compile(text, f, beasts, count) {
         b.writeUInt32LE(ks.reduce((m, k) => m | 1 << (k + 1), 0) >>> 0, at + 12);
         [d0, d1, +v[5], +v[3], lead, AT[v[6]]].forEach((x, i) => { b[at + 16 + i] = x; });
         factions.push({ name: v[0], kinds: ks, d0, d1, lair: +v[5], leader: lead, l });
+        break;
+      }
+      case 'mint': {                                                // (2026-10-28: who struck the coins found here)
+        const era = v[2] === 'now' ? 0 : +v[2], ways = v[3] === undefined || v[3] === '-' ? '' : v[3];
+        if (b[MINT_AT] >= TMINTS || !v[0] || v[0].length > 15 || !v[1] || v[1].length > 15 || !(Number.isInteger(era) && era >= 0 && era <= TERAS) ||
+            [...ways].some(c => !'lgph'.includes(c))) {
+          bad(l, 'a mint: its name and its word (15 letters at most each), now or its era, its ways (l g p h, or -)');
+        }
+        const at = MINT_AT + 1 + 34 * b[MINT_AT]++;
+        b.write(v[0], at, 'latin1');
+        b.write(v[1], at + 16, 'latin1');
+        b[at + 32] = era;
+        b[at + 33] = [...ways].reduce((m, c) => m | 1 << 'lgph'.indexOf(c), 0);
         break;
       }
       case 'goal': {

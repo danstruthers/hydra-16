@@ -16,8 +16,9 @@
 //               of these, none of these), the choices
 //   a choice:   weight, info (its things' count, bits 0-3; its weights' by tags, bits 4-5; CI_INSTEAD, a kind made
 //               already it takes the place of follows), { tag, weight } x the weights, the instead, the things:
-//               { kind, place (PL_*, bits 0-3) | flags (TF_* << 4), least, most (how many: 0 one), material (MT_*: 0
-//               the kind's own, version 3's) }
+//               { kind, place (PL_*, bits 0-3) | flags (TF_* << 4), least, most (how many: 0 one; least | 0x80 the
+//               book's dice, least of most: 7d6, 2026-10-28), material (MT_*: 0 the kind's own, version 3's; 0xFE
+//               a jewel, Treasure 5's item and material drawn) }
 //   the index's last entries the denizens' kinds (dq0d/kinds.txt's, by number: "#" and a byte, the first 1) whose
 //   key has a [role KEY] section, each that section's offset (the world's draw at a lair's placing, I_KIT's: by the
 //   kind's number alone, 2026-10-27); "&" and the byte, its [lair KEY] section's (the lair's own things, drawn with
@@ -26,14 +27,17 @@
 'use strict';
 const fs = require('fs');
 
-const VERSION = 4;                                      // (2: a section's flags in its index entry, 2026-10-27; 3: a
-                                                        //   thing's material, the denizens' places and sections)
+const VERSION = 5;                                      // (2: a section's flags in its index entry, 2026-10-27; 3: a
+                                                        //   thing's material, the denizens' places and sections; 5:
+                                                        //   the book's dice, a jewel, 2026-10-28)
 const TAGS = ['feudal', 'imperial', 'viking', 'tribal', 'sindarin', 'khuzan', 'slave', 'serf', 'unguilded', 'guilded', 'noble',
   'poor', 'average', 'rich', 'female', 'male'];
 const PLACES = { worn: 1, hand: 2, off: 3, both: 4, belt: 5, pouch: 6, pack: 7, in: 8,
   bed: 9, stash: 10, home: 11, hoard: 12, under: 13 };  // (outfit.h's PL_*: the denizens' from bed on, 2026-10-27)
 const MATS = { wood: 1, iron: 2, steel: 3, bronze: 4, leather: 5, cloth: 6, bone: 7, clay: 8, stone: 9, glass: 10,
   silver: 11, gold: 15 };                               // (items.h's MT_*: a thing's own, its kind's else)
+const MT_JEWEL = 0xFE;                                  // (A thing's material: Treasure 5's item and material drawn,
+                                                        //   outdraw.c's, 2026-10-28)
 const TFLAGS = { lit: 1, full: 2, own: 4, fine: 8 };
 const SF = { weapon: 1, shield: 2, free: 4, kit: 8, armed: 16 };
 const LC_FREE = 0x80, LC_NEED = 0x40, LI_FREE = 0x10, LI_NEED = 0x20, LI_IF = 0x40, LI_NOT = 0x80, CI_INSTEAD = 0x40;
@@ -107,11 +111,21 @@ function compile({ src, names, out, dens }) {
         }
         if (!rest.length) continue;
         const th = { kind: 0, place: PLACES.pack, lo: 0, hi: 0, flags: 0, mat: 0 };
-        while (rest.length > 1 && (TFLAGS[rest[rest.length - 1]] || MATS[rest[rest.length - 1]] || /^\d+(-\d+)?$/.test(rest[rest.length - 1]))) {
+        while (rest.length > 1 && (TFLAGS[rest[rest.length - 1]] || MATS[rest[rest.length - 1]] || /^\d+(-\d+|d\d+)?$/.test(rest[rest.length - 1]))) {
           const t = rest.pop();
           if (TFLAGS[t]) th.flags |= TFLAGS[t];
           else if (MATS[t]) th.mat = MATS[t];
-          else { const [a, b] = t.split('-').map(Number); th.lo = a; th.hi = b === undefined ? a : b; }
+          else if (t.includes('d')) {                    // (NdD: the book's dice, least N | 0x80, most D)
+            const [a, b] = t.split('d').map(Number);
+            if (!(a >= 1 && a <= 127 && b >= 1 && b <= 255)) fail(ln, 'dice ' + t);
+            th.lo = 0x80 | a;
+            th.hi = b;
+          } else {
+            const [a, b] = t.split('-').map(Number);
+            th.lo = a;
+            th.hi = b === undefined ? a : b;
+            if (a > 127 || th.hi > 255) fail(ln, 'a count of ' + t + ' (its least 127 at most, its most 255)');
+          }
         }
         let n = rest.join(' '), at;
         if ((at = n.lastIndexOf('@')) >= 0) {
@@ -119,6 +133,10 @@ function compile({ src, names, out, dens }) {
           if (!PLACES[p]) fail(ln, 'no place ' + p);
           th.place = PLACES[p];
           n = n.slice(0, at);
+        }
+        if (n === 'jewel') {                             // (Treasure 5's jewelry: each one's item and material drawn,
+          n = 'ring';                                   //   outdraw.c's, 2026-10-28: its kind a ring's, its material
+          th.mat = MT_JEWEL;                            //   MT_JEWEL)
         }
         if (!kind.has(n)) fail(ln, 'no kind ' + n);
         th.kind = kind.get(n);

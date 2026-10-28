@@ -48,7 +48,8 @@ struct kind {
     char            tool[8];                    /* Its key for the referee's tests ("pick", "picks"), or "" */
     unsigned char   mat;                        /* What it's mostly made of, as a rule (MT_*: one may differ) */
     unsigned char   craft;                      /* The craft that knows it (rs.h's AP_*: its appraiser's) */
-    unsigned        value;                      /* Its worth, a sound one, new: in pennies */
+    unsigned        value;                      /* Its worth, a sound one, new: in farthings (four to the penny,
+                                                **   HarnWorld 23: 2026-10-28) */
     unsigned char   keeps;                      /* A container's: the forms it keeps in (KF_*: a basket not sand nor
                                                 **   water, a sack not water); KF_ON: a surface, things lie on it;
                                                 **   what closes it (KF_LID, KF_TIE, KF_STOPPER; none, it's open) */
@@ -84,7 +85,11 @@ struct kind {
                                                 **   other worn thing is open to the hand: a quiver, a bandolier) */
 #define KF_TENS         0x10                    /* (A kind's form: a lot whose weight and bulk are by the ten, the
                                                 **   missiles', a tenth of a pound each: arrows, bolts, sling stones,
-                                                **   the outfits', 2026-10-27) */
+                                                **   the outfits', 2026-10-27; with KF_SMALL, coins, its weight by the
+                                                **   64, in drams: a silver penny a dram, a gold crown an ounce,
+                                                **   Treasure 2's, 2026-10-28) */
+#define LOT_WT(f, w)    ((f) & KF_SMALL ? ((w) + 32) >> 6 : ((w) + 9) / 10)    /* (A lot's weight by the ten, w its
+                                                **   kind's times its count, form f: quarter pounds) */
 enum { FM_NONE, FM_SWORD, FM_KNIFE, FM_ARROW, FM_BOLT, FM_SHOT, FM_THROWN };    /* A carrier's family and its things'
                                                 **   (a kind's slots, not a belt's: a scabbard's swords, a sheath's
                                                 **   knives and daggers, a quiver's arrows, a bolt case's bolts, a

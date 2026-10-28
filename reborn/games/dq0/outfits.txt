@@ -25,11 +25,13 @@
 ; one of them, none of them): feudal imperial viking tribal sindarin khuzan, slave serf unguilded guilded noble, poor
 ; average rich, female male.  A CHOICE: things, commas between, one choice drawn by its weight (*W, 1 else; TAG*W its
 ; weight for a character with the tag), of those it can pay for; instead KIND (it takes the place of the kind made
-; already: the knife a dagger; none made, nothing).  A thing: KIND[@PLACE] [N or N-M] [lit] [full] [own] [fine]:
-; worn, hand (the main), off, both, belt (hung from it, in its carrier), pouch (the first on the belt), pack, in (in the
-; thing before it in the choice); pack else; how many; a light lit, a waterskin full, its own make (half the price, a
-; point less), a point better.  A thing that won't go where it's meant goes in the pack; one that won't go there
-; isn't made.
+; already: the knife a dagger; none made, nothing).  A thing: KIND[@PLACE] [N, N-M or NdD] [lit] [full] [own] [fine]
+; [MATERIAL]: worn, hand (the main), off, both, belt (hung from it, in its carrier), pouch (the first on the belt), pack,
+; in (in the thing before it in the choice); pack else; how many (NdD the book's dice: 7d6 pennies); a light lit, a
+; waterskin full, its own make (half the price, a point less), a point better; its material.  A thing that won't go
+; where it's meant goes in the pack; one that won't go there isn't made.  KIND jewel: Treasure 5's jewelry, each one's
+; item (a gem, a ring, a pendant, a necklace or a brooch: the book's items narrowed to the catalogue's) and material
+; drawn by its tables (a gem in the pouch).  The prices are farthings (kinds.c's), the money pennies.
 
 ; ---- The universal kit (the user's: a backpack, torches, a tinderbox, three days' rations, a full waterskin, a belt with
 ; a pouch and a belt knife, some money; the book's free: the clothes worn, a knapsack, a moneybelt, credentials:
@@ -744,7 +746,7 @@ free 30: buckler@worn
 free 15: kurbul helm@worn
 free 20: sling@belt, pouch@belt, sling stones@in 10-20
 free 50: heap of straw@bed
-free 25: pennies@stash 1-6 | talisman@stash
+free 25: pennies@stash 1d6 | talisman@stash
 free 50: pouch@belt
 [role koblord] free make 2 3
 free: axe@hand *60 | falchion@hand *15 | shortsword@hand *10 | battleaxe@hand *15
@@ -818,9 +820,9 @@ free: belt@worn
 [lair koblord]
 free: furs@home
 free: basket@home, rations@in 2-6
-free: chest@hoard, pennies@in 20-80, talisman@in, ring@in bronze
+free: chest@hoard, pennies@in 20-80, talisman@in, jewel@in 1d2
 free 50: iron key@pouch
-free 30: gem@hoard
+free 10: gem@hoard
 [lair bandit]
 free: sack@home, rations@in 4-12
 free 50: cask@home full
@@ -828,55 +830,72 @@ free 30: sack@home, spear@in, club@in
 [lair banlord]
 free: sack@home, rations@in 4-12
 free: cask@home full
-free: chest@hoard, pennies@in 40-200, brooch@in, goblet@in, iron key@pouch
+free: chest@hoard, pennies@in 40-200, crowns@in 1d3, jewel@in 1d3, goblet@in, iron key@pouch
 [lair cultist]
 free: sack@home, rations@in 6-12
 free: candle@home 2-4
 [lair priest]
 free: candle@home 2-6
-free: chest@hoard, pennies@in 30-150, goblet@in, pendant@in, iron key@pouch
+free: chest@hoard, pennies@in 30-150, crowns@in 1d2, goblet@in, jewel@in 1d2, iron key@pouch
 
-; ---- Personal things, made as a denizen's first met (denizens.md 5: its means by its standing; coins for all folk,
-; DECISIONS.md's answer 9: silver pennies, the Khuzdul's gold crowns, a hundred pennies each)
+; ---- Personal things, made as a denizen's first met: the book's Personal Possessions (Treasure 2-3, 2026-10-28: the
+; user's "Is the money system modeled after the one in the HM rules?  If not, it should be."), each kind its category,
+; each line its chance and dice: its silver (pennies, a dram each), its gold (crowns, an ounce each, the only gold
+; coin: rare), its gems and jewelry (Treasure 5's, drawn); the book's clothing, armour and weapons are the [role]
+; sections', its notes, trade goods, written works, potions and artifacts left out.  The house's: a box at the bed
+; keeping as much again as the purse's dice (kinds.txt's keeps c), a kobold's stash, a talisman, dice.  A kind with no
+; [purse KEY] its standing's: 1 tribal the book's Hunters/Tribesmen (the Gargun's), 2 common folk its Vagrant/Beggar
+; (the nearest the book has), 3 people of standing its Mercantyler, 4 lords its Warrior/Noble
 [standing 1]
-free 60: pennies@pouch 1-3
+free 20: pennies@pouch 3d6
+free 2: crowns@pouch 1d2
+free 1: jewel@worn 1d3
 free 33: talisman@worn
 [standing 2]
-free: pennies@pouch 2-36
-free 30: ring@worn bronze | dice@pouch | pendant@worn bronze
+free 10: pennies@pouch 1d8
+free 1: crowns@pouch 1d2
+free 1: jewel@worn 1d2
+free 20: dice@pouch
 [standing 3]
-free: pennies@pouch 10-80
-free: ring@worn *50 | brooch@worn *30 | pendant@worn *20
-free 20: pouch@under, pennies@in 5-30
+free 90: pennies@pouch 9d6
+free 35: crowns@pouch 1d6
+free 35: jewel@worn 1d6
 [standing 4]
-free: pennies@pouch 20-120
-free: ring@worn gold *50 | necklace@worn gold *50
-free: gem@pouch 1-2
+free 90: pennies@pouch 7d6
+free 30: crowns@pouch 1d3
+free 15: jewel@worn 1d3
+; (The kobold lord as its tribe, the book's Gargun: Hunters/Tribesmen)
 [purse koblord]
-free: pennies@pouch 2-12
+free 20: pennies@pouch 3d6
+free 2: crowns@pouch 1d2
+free 1: jewel@worn 1d3
 free: talisman@worn
-free 30: ring@worn bronze *50 | ring@worn *50
+; (A bandit the book's Brigand/Outlaw)
 [purse bandit]
-free 33: chest@bed, pennies@in 5-30, iron key@pouch
-free: pennies@pouch 2-24
+free 75: pennies@pouch 1d6
+free 5: crowns@pouch 1d3
+free 15: jewel@worn 1d3
+free 33: chest@bed, pennies@in 1d6, iron key@pouch
 free 25: dice@pouch
-free 25: ring@worn bronze *50 | talisman@worn *50
-free 15: ring@under
+free 25: talisman@worn
+; (Its lord a Brigand/Outlaw and a Warrior: the higher chance and dice, the book's rule for one of two categories)
 [purse banlord]
-free: chest@bed, pennies@in 20-120, ring@in, iron key@pouch
-free: pennies@pouch 10-60
-free 60: ring@worn
-free 20: crowns@pouch 1
-free 40: pouch@under, pennies@in 10-40
+free 90: pennies@pouch 7d6
+free 30: crowns@pouch 1d3
+free 15: jewel@worn 1d3
+free: chest@bed, pennies@in 7d6, iron key@pouch
+; (A cultist an outlawed cult's lay folk: Brigand/Outlaw, the house's nearest)
 [purse cultist]
-free: pennies@pouch 6-36
-free: ring@worn bronze
-free 50: pendant@worn bronze
+free 75: pennies@pouch 1d6
+free 5: crowns@pouch 1d3
+free 15: jewel@worn 1d3
+; (The high priest the book's Cleric)
 [purse priest]
-free: chest@bed, pennies@in 20-120, iron key@pouch
-free: pennies@pouch 20-80
-free: pendant@worn
-free: ring@worn *70 | ring@worn gold *30
+free 90: pennies@pouch 6d6
+free 20: crowns@pouch 1d3
+free 5: jewel@worn 1d3
+free: chest@bed, pennies@in 6d6, iron key@pouch
+free: ring@worn                                 ; (The ring of its rank, Religion 9's: not its jewelry)
 ; ---- The HarnWorld Bestiary's folk (DECISIONS.md's answer 11: the Khuzdul, the Sindarin, men and the Gargun), their
 ; gear here as the data their kinds come with (Phase 4's: the kinds themselves aren't in the game yet; the Gargun the
 ; kobolds stand for)
@@ -949,29 +968,38 @@ free: clothes@worn
 free: belt@worn
 free 60: gauntlets@worn
 free: pouch@belt
+; (Their personal things by the book's Personal Possessions, the Khuzdul and the Sindarin by the human tables as the
+; book allows (2026-10-28, the user's: "Also change what dwarves carry for money.  Gold crowns are far too valuable for
+; all dwarves to just be carrying them around."): silver pennies like everyone, a crown only by its category's gold
+; chance.  The Gargun the book's Hunters/Tribesmen; a warrior, an elder, a man-at-arms, a captain its Warrior/Noble; a
+; miner the house's nearest, Hunters/Tribesmen: working folk)
 [purse gargun]
-free 50: pennies@pouch 1-3
+free 20: pennies@pouch 3d6
+free 2: crowns@pouch 1d2
+free 1: jewel@worn 1d3
 free 33: talisman@worn
 [purse khuzwar]
-free: pennies@pouch 10-40
-free 30: crowns@pouch 1-2
-free 70: ring@worn *75 | ring@worn gold *25
-free 40: brooch@worn
+free 90: pennies@pouch 7d6
+free 30: crowns@pouch 1d3
+free 15: jewel@worn 1d3
 [purse khuzmin]
-free: pennies@pouch 5-20
-free 12: gem@pouch 1-3
+free 20: pennies@pouch 3d6
+free 2: crowns@pouch 1d2
+free 1: jewel@worn 1d3
 [purse khuzeld]
-free: pennies@pouch 20-60
-free: crowns@pouch 2-6
-free: ring@worn gold
-free: necklace@worn gold
+free 90: pennies@pouch 7d6
+free 30: crowns@pouch 1d3
+free 15: jewel@worn 1d3
 [purse sindwar]
-free: pennies@pouch 1-6
-free 60: brooch@worn
-free 40: ring@worn
+free 90: pennies@pouch 7d6
+free 30: crowns@pouch 1d3
+free 15: jewel@worn 1d3
 [purse manarms]
-free: pennies@pouch 3-30
+free 90: pennies@pouch 7d6
+free 30: crowns@pouch 1d3
+free 15: jewel@worn 1d3
 free 25: dice@pouch
 [purse captain]
-free: pennies@pouch 20-100
-free: ring@worn
+free 90: pennies@pouch 7d6
+free 30: crowns@pouch 1d3
+free 15: jewel@worn 1d3
