@@ -1799,6 +1799,84 @@ What the house adds, for review:
 - **Told:** a closer look at a pile within reach, its stamps by how much of it each group is ("all", "most", "many",
   "some", "a few"), an era's "(old)"; the appraisal its worth so.
 
+## Sound, the air and moving quietly *(slices 4.5 and 4.6, 2026-10-29: drafted for the user to review)*
+
+The plan's slices (DUNGEON.md's still to come; D15; the user's 2026-10-21 on scents, the air and hunters downwind):
+sounds that go round corners and through doors as a pulse over the rooms and openings, a background that masks, the
+character's steps heard by its pace and its armour, the denizens hearing by it; a draught carrying smells downwind;
+the body's positions; moving quietly by Stealth, the denizens' stealth too.  The book's own: Listening (Skills 22: a
+hearing test at a multiple of Hearing by the noise's loudness, background noise interfering), Stealth (Skills 9:
+tested to move without being detected, its EML by the distance and the cover, any failure detection), Awareness
+(Skills 11), a prone man's and a crouching man's height (Combat 16's target sizes).  The game hears by reach, not by a
+roll (SOUND.md's rule, D9: tuned by ear later), and tests Stealth where the book does.  What the house adds:
+
+- **How far a sound goes: the sound layer** *(every ruleset's)*: the senses work out a pulse from the character's
+  square over the squares round it, 20 each way (dq0p/sound.c, pulse.s: hub.h's SOUND_AT), the way a sound goes to
+  each: round corners (the eight ways; a corner cut only past a square that isn't rock), through an open door, a
+  doorway, a portcullis, a grating, an arrow slit; a shut door or a closed window two squares more (SOUND.md's
+  figure, as before), a room's wall four a square of it (SOUND.md's), never the rock a passage is cut in; nothing
+  further than 58 squares of it.  The same way both ways: what the denizens hear of the character, and what it hears
+  of them (the world's E_DEN, what lies between it and the character, from it: wbody.c's between).  Past the 20
+  squares, or not reached, not heard (no step is heard so far).  Why: the line through the rock it was let a rat hear
+  a man through thirty feet of stone; a pulse is the plan's, and the senses' to keep as the light layer is.
+- **How loud** *(every ruleset's, for review)*: the character's steps at a slow walk or a walk 2, a jog 3, a run 4, a
+  sprint 5, hopping 3; metal armour worn (six pounds or more of iron, steel or bronze: mail, plate) a level more; a
+  wait, a listen, a timed work (a lock picked, a thing hidden) 1; anything else it does 2; a dig's and a battering's
+  noises as they were (the world's E_NOISE).  The denizens' steps 1, a dash 2, a noise of their own 3 (every eighth
+  step), as they were.  (dq0w.c's part 50, step_loud; the hub's pc_noise.)  Why: the book's Listening table has
+  breathing soft and footsteps two levels louder; the walk's 2 keeps the reach the denizens heard the character at
+  before (their kind's hearing).
+- **Heard** *(every ruleset's)*: a sound of loudness L, less the background where the hearer is (below), heard within
+  L times the hearer's hearing over two squares the way it goes (a denizen's its kind's, kinds.txt's; the
+  character's (hearing + 3) / 2, as before), a little further downwind and less upwind ((8 + w) / 8, w the draught's
+  figure below).  The denizens hear the character as it's busy (sense.c's), and its noises as they come (dq0d.c's
+  hear: the senses asked of each, its loudness); the character hears them as it did (main.c's heard, the sound
+  task's), the way the layer says.
+- **The background** *(every ruleset's, for review)*: water in a well or a cistern 2, the wind at a shaft or the way
+  out 1 (2 in a draught of 2 or more; none in still air), each a level less every four squares off; a crowd (three
+  or more others within three squares, awake) 1; the loudest of them where the hearer stands, taken off every sound's
+  loudness (gone at none).  Running water comes with slice 4.9.  Told as a listen ends: "You hear nothing but water
+  trickling somewhere near.", or after what it heard, "Behind it all, the wind in a shaft near by."  Not yet: a
+  fight's din (its blows heard by the denizens near: the fights' slice).
+- **Moving quietly** *(the book's Stealth, D15; the rest for review)*: creeping ("creep", "sneak", "sneak north",
+  "tiptoe", "quietly"; a crawl, a creep crouched) tests Stealth as it starts (the referee's, the world's slot), again
+  as its body's position or its stratum changes or five minutes on (QUIET_T); the grade sets its steps' loudness: a
+  critical success 0 (no one hears it), a marginal one 1, a marginal failure 2 (as a walk), a critical failure 3.
+  Low the easier: crouched a step, prone two (the book's cover).  The grade is secret, as the GM's roll; nothing's
+  told of it.  The null ruleset's flat odds the same way.
+- **The denizens' stealth** *(for review)*: a hostile hunter by smell (its nose 6 or more, kinds.txt's: K_NOSE)
+  coming at the character stalks it: its Stealth tested as it begins (the denizens' slot, RS_TEST with the actor:
+  HarnMaster's referee by its sheet, the bestiary having no Stealth of its own, its Agility times 5; the book's
+  Stealth is Agility, Hearing and Will, Skills 9), its grade its steps' loudness, a success 0, a marginal failure 1, a
+  critical failure 2, and no noise of its own while it stalks (dq0d.c's decide).
+- **The draught** *(for review)*: a stratum's air goes from its way up (the way out, on the top stratum) towards its
+  way down, the heading between them in plan, strength 1 with both, a level more for the way out to the open air,
+  another for a shaft (3 at most); with no way down, or none up, still air (the senses', the hub's air_h, air_s).
+  Its figure for a way from the character: straight downwind twice its strength, within 45 degrees of it once, across
+  it none, upwind the same less.  Why: the plan's draughts through the dungeon, made one figure a stratum till the
+  water and the surface's wind come (slice 4.9).
+- **Smelt on the air** *(for review)*: a denizen smells the character within a third of its nose in still air (slice
+  4.1's, as built), times (2 + w) / 2 with the draught: downwind in a draught of 2, three times as far, a keen nose's
+  some 7 or 8 squares where a walk's heard 8 and a creep's 0 to 4; upwind less, or nothing; along the way the air goes
+  (no shut door, no closed window nor wall on it: the sound layer's).  So a hunter downwind knows of a creeping
+  character before it hears or sees it (the user's, 2026-10-21).  "sniff" tells the draught first: "You feel a faint
+  draught from behind you to your left.", "The air is still."  Not yet: the character's own sniff reaching further
+  upwind (wtrace.c's sniff: its overlay has no room), a trail followed downwind (wtrscent.c's).
+- **The body's positions** *(for review)*: "crouch" (or "squat"), "kneel", "sit", "lie down", "stand" or "get up":
+  a second each (POSE_T), up from prone the book's Rise (a round); there already, told so, no time ("You are
+  crouching already."); no leg to stand on, none but prone.  Crouched it walks low, a slow walk's pace at most (twice
+  a walk's time a square); kneeling or sitting, a move gets up first (a second, "You get to your feet."); prone it
+  crawls (slice 4.1b's).  Its eyes 5 feet above its floor standing, 3 crouched, kneeling or sitting, 1 prone (the
+  look's, what's seen over a ledge or a rise: the book's prone man some 2 feet tall, a crouching man 4, Combat 16).
+  Seen low with no light of its own three quarters as far (prone half) by a denizen.  In a fight, kneeling or sitting
+  is as prone (the easier struck, its turn spent getting up); crouched as standing.  The status line says it
+  (CROUCHED, KNEELING, SITTING; PRONE as before).  Not yet: a missile's target by its height (slice 4.7's to read
+  pc_pos), the denizens' own positions but prone.
+- **What it costs** *(2026-10-29, the emulator)*: the pulse some 0.3-0.5M cycles, worked out after a look that finds
+  the character moved (and the denizens about), or as a denizen's senses or a wait's end find it out of date; nothing
+  for a turn or a look in place; the senses' answers to the denizens and the pulse in a swapped part of their own
+  (part 5, overlay 4), their main RAM the more for it.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

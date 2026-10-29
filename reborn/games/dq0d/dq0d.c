@@ -751,6 +751,7 @@ static unsigned char sgen[NACTORS], sres[NACTORS];  /* (Each actor's senses as t
 static unsigned sax[NACTORS], say[NACTORS];
 static unsigned long alert[NACTORS];            /* (Each actor still and facing a noise it heard till then) */
 static unsigned char steps[NACTORS];            /* (Each one's steps: a noise of its own every eighth) */
+static unsigned char stalk[NACTORS];            /* (Each one stalking the character: its steps' loudness plus 1) */
 static unsigned char stq[NACTORS], stn[NACTORS];   /* (Each one's square, its x and 16 times its y (a step's
                                                 **   always another), and the TQ its stay there last journalled) */
 static unsigned char fled[NACTORS];             /* (Each one fleeing the character: its turns of it left) */
@@ -1079,6 +1080,7 @@ static unsigned char __fastcall__ taken (unsigned char me, unsigned x, unsigned 
 ** DUNGEON.md's perception as layers, the senses answering for every actor): seen by the light layer and its eyes,
 ** heard, as they find it; and how far it may go with the answer standing (slk: a far one's, the coarse answer) */
 static unsigned char slk[NACTORS];
+static unsigned char loud;                      /* (A noise of the character's asked of: hear's) */
 static unsigned char __fastcall__ senses (unsigned char k)
 {
     hub_map (0);
@@ -1089,9 +1091,12 @@ static unsigned char __fastcall__ senses (unsigned char k)
     HUB->dsense.eyes = K.eyes;
     HUB->dsense.nose = (knose[akind[k] % SND_KINDS] + pcstay) / 3;  /* (Its smell's reach in still air: a third of
                                                 **   its nose, squares, the character's stay a point or two more) */
+    HUB->dsense.noise = loud;                   /* (0: the character as it is; a noise of its: heard, hear's) */
     hub_call (&HUB->dsense, T_SENSES);
     HUB->dsense.state = REQ_FREE;
-    slk[k] = HUB->dsense.slack;
+    if (!loud) {
+        slk[k] = HUB->dsense.slack;
+    }
     return (HUB->dsense.res & (SN_SEEN | SN_HEARD | SN_SMELT)) != 0;
 }
 
@@ -1179,7 +1184,9 @@ unsigned char __fastcall__ s_dart (unsigned char k)
 /* ---- Its events (DENIZENS.md: events): what its actors do, the world's to tell as it does it (the hub's denizens'
 ** events: nobody waits for them, and each perceives them or not by its own senses); and the noises they hear, their
 ** own and the world's (the character's: digging), each by every actor within its kind's hearing times the noise's
-** loudness over two: it turns to face the noise, stands a while, and looks for the character again at once */
+** loudness over two (the character's by the senses' sound layer, slice 4.5's: round corners, muffled by a door, a
+** wall, masked by the background where it is): it turns to face the noise, stands a while, and looks for the
+** character again at once */
 
 static unsigned wplace, dplace, fplace;         /* (Its places in the world's events, and in the denizens': the noises',
                                                 **   the blows') */
@@ -1188,7 +1195,7 @@ static void hear (void)
 {
     static struct msg m;
     static struct actor* q;
-    static unsigned char k, src, sn, loud;
+    static unsigned char k, src, sn;
 
     for (;;) {
         hub_map (0);
@@ -1217,15 +1224,17 @@ static void hear (void)
                 continue;                       /* (Not those fighting, fleeing, or senseless: nothing turns them) */
             }
             kind_get (akind[k]);
-            if (apart (q->x - m.w1, q->y - m.w2) > K.hear * loud / 2) {
-                continue;
+            if (src ? apart (q->x - m.w1, q->y - m.w2) > K.hear * loud / 2 : !(senses (k) & 1)) {
+                continue;                       /* (The character's: the senses' to say, loud as it is) */
             }
+            hub_map (0);
             rface = bearing (m.w1 - q->x, m.w2 - q->y);
             alert[k] = now + 100;
             sgen[k] = 0;                        /* (It senses again: the character, if it's there to be sensed) */
             rouse (k, 1);
         }
     }
+    loud = 0;
     settle ();
 }
 
@@ -1589,19 +1598,26 @@ static unsigned char __fastcall__ decide (unsigned char k)
     hub_map (0);
     HUB->actor[k].attitude = a.attitude;        /* (Its mind's own, as it decides) */
     HUB->actor[k].foe = a.foe;
-    if (d < 4) {                                /* (A step, now and then a noise of its own; its kind with no darkvision,
-                                                **   feeling its way in the dark: the world's, STEP_FEELS) */
-        im.w1 = H_OF (d);
+    if (!foe || !(K.flags & K_NOSE) || a.doing != DO_COMING) {
+        stalk[k] = 0;                           /* (A hunter coming at the character stalks it: its Stealth tested as
+                                                **   it begins, D15's, every actor's; its grade the steps' loudness,
+                                                **   no noise of its own: HOUSE.md's sound and stealth) */
+    } else if (!stalk[k]) {
+        rq.a = P_STEALTH;
+        rq.steps = 0;
+        ask (RS_TEST, k + 1, 0);
+        stalk[k] = (signed char) rq.grade > 0 ? 1 : rq.grade == G_MF ? 2 : 3;
+    }
+    if (d < 4 || d == 0xFB) {                   /* (A step, now and then a noise of its own; its kind with no
+                                                **   darkvision, feeling its way in the dark: the world's, STEP_FEELS;
+                                                **   the way the scent goes, the world's to find) */
+        im.w1 = d == 0xFB ? STEP_SCENT : H_OF (d);
         im.w2 = K.dark ? 1 : 1 | STEP_FEELS;
-        im.a = ++steps[k] & 7 ? DE_MOVED : DE_NOISE;
-        im.b = steps[k] & 7 ? 1 : 3;
-        act (I_STEP, k);
-    } else if (d == 0xFB) {                     /* (The way the scent goes, the world's to find) */
-        im.w1 = STEP_SCENT;
-        im.w2 = K.dark ? 1 : 1 | STEP_FEELS;
-        im.x[2] = knose[akind[k] % SND_KINDS];
-        im.a = ++steps[k] & 7 ? DE_MOVED : DE_NOISE;
-        im.b = steps[k] & 7 ? 1 : 3;
+        if (d == 0xFB) {
+            im.x[2] = knose[akind[k] % SND_KINDS];
+        }
+        im.a = ++steps[k] & 7 || stalk[k] ? DE_MOVED : DE_NOISE;
+        im.b = stalk[k] ? stalk[k] - 1 : steps[k] & 7 ? 1 : 3;
         act (I_STEP, k);
     } else if (d == 0xFD) {                     /* (A dash past the character, louder) */
         im.w1 = dsx;
@@ -2258,7 +2274,7 @@ int main (int argc, char* argv[])
                                                 **   it there) */
                 hub_map (0);
             }
-            pcbusy = HUB->pc_ready > now;
+            pcbusy = HUB->pc_ready > now ? HUB->pc_noise + 1 : 0;  /* (Busy, and how loud: slice 4.5's) */
             pcrest = pcbusy && (HUB->pc_task.kind == LT_WAIT || HUB->pc_task.kind == LT_SLEEP) && !HUB->pc_task.asking;
             pcdead = (HUB->pcsum.cond & C_DEAD) != 0;
             pchelp = (HUB->pcsum.cond & C_STUNNED) || ((HUB->pcsum.cond & C_UNCONSCIOUS) && pcbusy);
@@ -2281,11 +2297,11 @@ int main (int argc, char* argv[])
                 pcstay = TR_MORE ((unsigned char) (nowq - pcq + 1));
             }
         }
-        if (act && (pcx != lpx || pcy != lpy || (pclit | pcbusy << 1 | pcstay << 2) != lpl)) {
+        if (act && (pcx != lpx || pcy != lpy || (pclit | pcstay << 1 | pcbusy << 3) != lpl)) {
             lpx = pcx;                          /* (The character changed: each actor senses it again; its stay's
                                                 **   scent too) */
             lpy = pcy;
-            lpl = pclit | pcbusy << 1 | pcstay << 2;
+            lpl = pclit | pcstay << 1 | pcbusy << 3;
             if (!++sense_gen) {
                 sense_gen = 1;
             }

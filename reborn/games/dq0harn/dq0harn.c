@@ -719,6 +719,11 @@ static void __fastcall__ answer (struct req* r)
         r->b = watch;
         break;
     case RS_TEST:
+        if (r->actor) {                         /* (A creature's, by its sheet: a hunter's Stealth, the denizens',
+                                                **   slice 4.6's) */
+            r->grade = side (r->actor, r->a, r->steps);
+            break;
+        }
         if (r->a == P_DIG) {                    /* (Judged by the tool to hand that suits it best: part 2's) */
             dig_answer (r);
             break;

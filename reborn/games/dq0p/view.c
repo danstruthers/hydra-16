@@ -356,8 +356,11 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
     static int z;
     static struct lamp* l;
 
+    hub_map (0);
+    k = HUB->pc_pos;                            /* (Its eyes by its body's position: crouched, kneeling, sitting three
+                                                **   feet, prone one, HOUSE.md's, slice 4.6's) */
     own = at (sn, x, y) != 0;
-    z = (own ? C->elev[cy_][cx_] : 0) + EYE;
+    z = (own ? C->elev[cy_][cx_] : 0) + (k ? (k == POS_PRONE ? 1 : 3) : EYE);
     run_d = 0;
     mark_rows (1);                              /* The last view's seen now unmarked (its rows' marks): this one's are
                                                 **   marked after */

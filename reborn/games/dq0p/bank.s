@@ -13,7 +13,7 @@ SWDEPTH     = 4                     ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: two copied each look)
 
             .bss
-_ovbank:    .res        3           ; The parts' images' banks (dq0p.cfg's OV1 ...)
+_ovbank:    .res        4           ; The parts' images' banks (dq0p.cfg's OV1 ...)
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
 
@@ -23,6 +23,7 @@ ovx:        .res        1
             SWPART      2, 2                ; What the character perceives made (sight.c)
             SWPART      3, 3                ; A look one way's own record (way.c)
             SWPART      4, 3                ; What the character keeps of a look (view.c's kept: slice 4.2's)
+            SWPART      5, 4                ; The sound layer's pulse (sound.c, pulse.s: slice 4.5's)
 
             SWFN        view, 1
             SWFN        felt, 2
@@ -31,3 +32,5 @@ ovx:        .res        1
             SWFN        perceive, 2
             SWFN        way_seen, 3
             SWFN        kept, 4
+            SWFN        pulse, 5
+            SWFN        sense_actor, 5

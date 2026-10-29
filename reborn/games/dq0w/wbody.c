@@ -71,31 +71,30 @@ static unsigned char __fastcall__ open_sq (unsigned char* p)
     return p && (TILE (*p) == T_FLOOR || TILE (*p) == T_CORR || TILE (*p) == T_STEPS);
 }
 
-/* What lies between body bd and the character, for those who hear it (SOUND.md: E_DEN's x[3]): the squares of wall
-** and rock on the line (15 at most), and the shut doors times 16; 0 off its stratum, or more than 24 squares off
-** (beyond anyone's hearing of a step) */
+/* What lies between body bd and the character, for those who hear it (SOUND.md: E_DEN's x[3]), by the senses' sound
+** layer (hub.h's SOUND_AT, slice 4.5's: round corners, a shut door or a wall on the way): the squares the sound goes
+** past the line between them, a quarter (15 at most), and a shut door or a wall on the way times 16 (its two squares
+** out of them); 15 not reached, or past the layer (beyond anyone's hearing of a step); 0 off its stratum */
 static unsigned char between (void)
 {
-    unsigned char* p;
-    struct portal* q;
-    unsigned char solid = 0, doors = 0;
-    unsigned i, dist;
-    int dx = bpx - bd.x, dy = bpy - bd.y;
+    static unsigned char c, e;
+    static int dx, dy;
 
-    if (bd.sn != bps || (dist = apart (dx, dy)) > 24) {
+    if (bd.sn != bps) {
         return 0;
     }
-    for (i = 1; i < dist; ++i) {
-        p = at (bd.sn, bd.x + dx * (int) i / (int) dist, bd.y + dy * (int) i / (int) dist);
-        if (!p || !T_CLEAR (*p)) {
-            if (solid < 15) {
-                ++solid;
-            }
-        } else if (TILE (*p) == T_DOOR && (q = portal_at (cx_, cy_)) != 0 && !(q->state & PS_OPEN) && doors < 15) {
-            ++doors;
-        }
+    dx = bd.x - bpx;
+    dy = bd.y - bpy;
+    hub_map (SIGHT_BANK);
+    c = SNDHEAD->ok && SNDHEAD->sn == bps && SNDHEAD->x == bpx && SNDHEAD->y == bpy && dx >= -SND_R && dx <= SND_R &&
+        dy >= -SND_R && dy <= SND_R ? SND_SQ (dx, dy) : SND_NONE;
+    hub_map (0);
+    if (c >= 0x80) {
+        return 15;
     }
-    return solid | doors << 4;
+    e = SND_COST (c) - apart (dx, dy) + 2 - (c & SND_AIR ? DOOR_SND : 0);
+    e = (signed char) e < 0 ? 0 : e >> 2;
+    return (e > 15 ? 15 : e) | (c & SND_AIR) >> 2;
 }
 
 /* Body bd's passing journalled as it leaves its square (the traces': trod.inc's): its kind's (0 none: not kept), the

@@ -49,11 +49,12 @@ queues as they come, by its own place in each (nobody waits for it, nor it for a
 works out:
 
 - **How far it carries**, by the character's hearing: heard within L times (hearing + 3) / 2 squares (as the UI
-  tells it: DENIZENS.md's seen and heard), counted as the sound goes: each square of wall or rock on the line between
-  it and the character as four squares further, each shut door as two (DUNGEON.md's "a door, closed ... sound
-  dulled").  What lies between is the world's to say, as it moves the denizens' bodies (the event's x[3], walls and
-  rock in the low four bits, shut doors in the high), since it has the dungeon's squares at hand and the sound task
-  needn't.
+  tells it: DENIZENS.md's seen and heard), L less the background where the character is (the hub's pc_mask: water,
+  wind, a crowd: slice 4.5's), counted as the sound goes: round corners, each square of a room's wall as four squares
+  further, each shut door as two (DUNGEON.md's "a door, closed ... sound dulled"), the rock a passage is cut in not at
+  all.  What lies between is the world's to say, as it moves the denizens' bodies (the event's x[3]), from the
+  senses' sound layer (DUNGEON.md's perception as layers: the squares the sound goes past the line, a quarter, in the
+  low four bits, a shut door or a wall on the way in the high), since it has it at hand and the sound task needn't.
 - **How loud it is**: the sound's level, falling off as it goes: (reach - distance + 1) / (reach + 1) of it, never
   below a whisper; a quarter less from behind (behind, or behind to either side: the chips can't tell ahead from
   behind by the speakers, so behind is softer); muffled (anything between) a few semitones lower too, duller.
@@ -120,9 +121,11 @@ words in the hub if it can and ends, and the game goes on silent; without the so
 - **Ambience** (slice 4.9's water, and the sound layer of slice 4.5): the dungeon's own sounds, water in a cistern or
   a stream, wind in a shaft, a source that sounds as long as the character's near it, from the chunk's features; a
   background level (water, wind, a fight's din) that masks quiet sounds.
-- **The sound layer** (slice 4.5): a sound a pulse round corners over the rooms and openings, so the denizens hear
-  through walls as the character does (the line from each hearer, not only the character's), the character's steps
-  heard by its pace; and the hearing's figures tuned by ear once the real environmental sounds are in (D9, open).
+- **The sound layer** (slice 4.5, built 2026-10-29: DUNGEON.md's perception as layers, HOUSE.md's sound, the air and
+  moving quietly): a pulse round corners over the squares and openings from the character's, so the denizens hear it
+  as it hears them, its steps by its pace, its armour and its Stealth, a background that masks.  Left: the
+  background's own sounds played (ambience, above), the denizens hearing one another by it, and the hearing's
+  figures tuned by ear once the real environmental sounds are in (D9, open).
 
 Designed, but in no slice of the plans yet:
 

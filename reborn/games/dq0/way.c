@@ -185,8 +185,9 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
         return examine ();
     }
     if (action == VB_NONE) {                    /* (A listen's or a sniff's end: what came of it) */
-        if (!heard_at) {
-            msg ("You hear nothing.");          /* (Nothing told as it listened: main.c's heard) */
+        if (lsn & 3) {
+            bg_words (heard_at != 0);           /* (Nothing told as it listened, main.c's heard, or something: the
+                                                **   background behind it, the sound layer's: part 11's) */
         }
         lsn = 0;
         return 0;
@@ -221,6 +222,7 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
         return 0;
     }
     if (k == 4) {
+        bg_words (2);                           /* (The draught, the air's: part 11's, slice 4.5's) */
         intend2 (I_TRACE, TRC_SMELL | (unsigned) h << 8, WAY_T);   /* (The world's: the smell read, worded, then
                                                 **   its time) */
         return 0;

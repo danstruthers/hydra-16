@@ -112,7 +112,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     r->steps = 0;
     pa = att ? bd.pos : HUB->pc_pos;           /* (Their bodies' positions, the world's: prone, the easier struck) */
     pd = att ? HUB->pc_pos : bd.pos;
-    r->w2 = bd.timid | (pa == POS_PRONE ? RS_PRONE_A : 0) | (pd == POS_PRONE ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0);
+    r->w2 = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0);
     r = hub_ask (SLOT_WORLD);
     if ((out = r->result) == 0xFF) {
         r->state = REQ_FREE;

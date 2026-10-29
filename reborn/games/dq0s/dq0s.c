@@ -217,7 +217,7 @@ struct src {
 };
 static struct src sv[NSRC];
 static unsigned char nsrc;
-static unsigned char hearing, face;             /* (The character's, this pass) */
+static unsigned char hearing, face, mask;       /* (The character's, this pass) */
 
 /* A sound heard (sound n, from who, loud 0-9, dx dy squares off the character, between: E_DEN's x[3]): its level, its
 ** speakers and its note worked out, kept as who's latest (or, the list full, in place of the quietest, if it's
@@ -237,7 +237,8 @@ static unsigned char __fastcall__ heard (unsigned char who, unsigned char n, uns
     dx = dx < 0 ? -dx : dx;
     dy = dy < 0 ? -dy : dy;
     d = 2 * ((dx > dy ? dx : dy) + 4 * (between & 15) + 2 * (between >> 4));
-    reach = loud * (hearing + 3);
+    reach = (loud > mask ? loud - mask : 0) * (hearing + 3);   /* (The background where the character is masking it:
+                                                **   the senses' sound layer's, slice 4.5's) */
     if (d > reach) {
         return 0;
     }
@@ -372,6 +373,7 @@ static void listen (void)
 
     hub_map (0);
     hearing = HUB->pcsum.hearing;
+    mask = HUB->pc_mask;
     face = HUB->pc_face;
     sn = HUB->pc_stratum;
     px = HUB->pc_x;

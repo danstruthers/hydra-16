@@ -732,6 +732,8 @@ unsigned char __fastcall__ believed (unsigned char h)
 
 /* ---- The status line */
 
+static const char* const posw[] = { "", " PRONE", " CROUCHED", " KNEELING", " SITTING", "", "", "" };
+
 void status (void)
 {
     static char left[48], right[72];            /* (Its right side's longest: paused, a fight's words, the state, the
@@ -744,7 +746,8 @@ void status (void)
         bar_text (right, bar_done = HUB->pc_task.done, HUB->pc_task.len);   /* (A long task's bar, its part done;
                                                 **   a fight's foe; the light's minutes left: task.c's) */
         strcat (right, HUB->pcstatus);          /* (The referee's words: "UP 0" ...; prone, said: slice 4.1b's) */
-        strcat (right, HUB->pc_pos == POS_PRONE ? " PRONE  facing " : "  facing ");
+        strcat (right, posw[HUB->pc_pos & 7]);  /* (Not standing, said: slices 4.1b's, 4.6's) */
+        strcat (right, "  facing ");
         strcat (right, head_abbr[believed (HUB->pc_face)]);   /* (The way it believes it faces: slice 4.2's) */
         strcat (right, HUB->pc_lost ? "?  " : "  ");
     }
@@ -822,7 +825,9 @@ static void heard (void)
         if ((lsn & 1) && ((rel + 1) & 7) < 3) {
             dx >>= 1;                           /* (Listened for, that way: twice as far) */
         }
-        if (dx * 2 > m.b * (HUB->pcsum.hearing + 3) || m.t < heard_at + (rel == heard_rel ? 300 : 50)) {
+        if (dx * 2 > (m.b > HUB->pc_mask ? m.b - HUB->pc_mask : 0) * (HUB->pcsum.hearing + 3) ||   /* (The
+                                                **   background masking it: slice 4.5's) */
+            m.t < heard_at + (rel == heard_rel ? 300 : 50)) {
             continue;
         }
         heard_at = m.t;
@@ -1015,15 +1020,48 @@ static void __fastcall__ limb_words (const struct msg* m)
         "\nYou can't run on one leg.", 0,
         "\nYou are on your feet already.", "\nYour legs won't bear you."    /* (WB_RISEN, WB_NOT_UP, the one more) */
     };
+    static const char pdo[5][10] = { "", "lie down", "crouch", "kneel", "sit down" };
+    static const char pis[5][10] = { "", "lying", "crouching", "kneeling", "sitting" };
     char kn[sizeof CATALOGUE[0].name];
     unsigned char k = (unsigned char) m->w1 - WB_DROP;
     const char* s;
 
+    if (k == WB_POSED - WB_DROP) {              /* (The body's position as it said, slice 4.6's) */
+        k = (m->w1 >> 8) & 7;
+        sayf (m->w1 & 0x8000 ? "\nYou are %s already." : "\nYou %s.", m->w1 & 0x8000 ? pis[k] : pdo[k]);
+        return;
+    }
     hub_mem (KIND_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
     k = (k == WB_RISEN - WB_DROP || k == WB_NOT_UP - WB_DROP) && m->w1 >> 8 ?
         (WB_NO_RUN - WB_DROP + 1) * 2 + k - (WB_RISEN - WB_DROP) : k * 2 + (m->b != 0);
     if (k < sizeof lwords / sizeof lwords[0] && (s = lwords[k]) != 0) {
         sayf (s, m->b ? HUB->actor[(m->b - 1) & 7].name : kn, kn);
+    }
+}
+
+/* The background and the air, worded (way.c's, slices 4.5's: the senses' sound layer's, the hub's pc_bg, air_h,
+** air_s): a listen's end (what 0: heard nothing, what it hears behind it all; 1, heard something, the background
+** after it), a sniff's start (2: the draught, from where, or the air still) */
+void __fastcall__ s_bg_words (unsigned char what)
+{
+    static const char* const bgw[] = { "", "water trickling somewhere near", "the wind in a shaft near by",
+        "those about you moving" };
+    static const char* const airw[] = { "", "faint ", "", "strong " };
+    static const char* const relname[8] = {
+        "ahead", "ahead to your right", "your right", "behind you to your right", "behind you",
+        "behind you to your left", "your left", "ahead to your left" };
+    unsigned char b = HUB->pc_bg & 3;
+
+    if (what == 2) {
+        if (HUB->air_s) {
+            sayf ("\nYou feel a %sdraught from %s.", airw[HUB->air_s & 3], relname[(HUB->air_h + 4 - HUB->pc_face) & 7]);
+        } else {
+            msg ("The air is still.");
+        }
+    } else if (!what) {
+        sayf (b ? "\nYou hear nothing but %s." : "\nYou hear nothing.", bgw[b]);
+    } else if (b) {
+        sayf ("\nBehind it all, %s.", bgw[b]);
     }
 }
 
@@ -1184,13 +1222,14 @@ unsigned char s_hold_first (void)
 
 /* The hands' and limbs' commands (s_command's: slice 4.1b's): what's in its hands changed over ("swap hands", "switch
 ** hands": the things' IO_SWAP, its words, its time); getting up ("get up", "stand", "rise": the world's I_RISE, the
-** book's Rise) */
+** book's Rise); the body's position ("crouch", "squat", "kneel", "sit", "lie down": I_RISE's position, slice 4.6's) */
 void s_limbs_cmd (void)
 {
     unsigned t;
 
-    if (cmd.action == VB_STAND) {
-        intend2 (I_RISE, 0, 0);
+    if (cmd.action != VB_SWAP_HANDS) {
+        intend2 (I_RISE, cmd.action == VB_SIT ? POS_SITTING : cmd.action == VB_LIE_DOWN ? POS_PRONE :
+            cmd.action == VB_STAND ? POS_STANDING : strstr (cl, "kneel") ? POS_KNEELING : POS_CROUCHED, 0);
         return;
     }
     if (cmd.action == VB_SWAP_HANDS) {
@@ -1877,8 +1916,11 @@ portal:
     case VB_HIDE:                               /* (P_CONCEAL: a thing; oneself comes with the denizens) */
         hide (cmd.obj.word);
         return;
-    case VB_SWAP_HANDS:                         /* (The hands' and limbs': part 11's, slice 4.1b's) */
-    case VB_STAND:
+    case VB_SWAP_HANDS:                         /* (The hands' and limbs': part 11's, slice 4.1b's; */
+    case VB_STAND:                              /*   the body's position, slice 4.6's) */
+    case VB_SIT:
+    case VB_CROUCH:
+    case VB_LIE_DOWN:
         limbs_cmd ();
         return;
     case VB_HOLD_OBJECT:                        /* (A thing handled: the things' request the verb's, IO_*) */

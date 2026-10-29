@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     24                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     25                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -53,7 +53,10 @@
                                                 **   GE_OLD, rs.h's RS_OUTFIT; 22: the denizens' gear, I_KIT, the
                                                 **   actors' did, hx, hy, hsn, WB_DRAWS; 23: their belongings, I_KIT's
                                                 **   a and b, I_ROB's x[2], the actors' agear; 24: the long durations,
-                                                **   I_WAIT's a (WA_MIN, WA_SLEEP), E_TIME's b, the long task's mins) */
+                                                **   I_WAIT's a (WA_MIN, WA_SLEEP), E_TIME's b, the long task's mins;
+                                                **   25: the sound and the air, pc_noise, pc_mask, pc_bg, air_h,
+                                                **   air_s, dsense's noise and cost, the sound layer's grid, SND_*,
+                                                **   I_RISE's w1 a body's position) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -250,6 +253,34 @@ typedef char names_fit[TNAMES * sizeof (struct tname) <= 0x800 ? 1 : -1];  /* (T
 #define SIGHT           ((struct sight*) HUB_WINDOW)
 #define WAY_AT          0x1000
 #define WAY_SEEN        ((struct wayseen*) (HUB_WINDOW + WAY_AT))  /* (A look one way's own, after it: level.h's) */
+/* The sound layer (slice 4.5's: DUNGEON.md's perception as layers), the senses', in SIGHT_BANK after a look one way's
+** own: a pulse from the character's square over the squares round it (SND_R each way), how far a sound goes between
+** it and each square it reaches, round corners, through what lets sound through (a shut door or a closed window
+** muffling it, DOOR_SND squares more; a room's wall four a square of it, SOUND.md's; not the rock), a square's byte its
+** squares (SND_COST), SND_AIR if a shut door, a closed window or a wall was on the way (the air doesn't pass: the air
+** layer's), SND_NONE not reached; the
+** background's sources with it (water, wind: their squares and levels).  Worked out as a denizen's senses ask and it's
+** out of date (ok 0: the character moved, the world's doors or squares changed, E_LIGHT); any task reads it while
+** it's ok (the world's E_DEN, what lies between: wbody.c's between) */
+#define SOUND_AT        0x1100
+#define SND_R           20
+#define SND_W           (2 * SND_R + 3)         /* (A row: a border square each side, never reached) */
+#define DOOR_SND        2                       /* (A shut door's squares more: SOUND.md's) */
+#define SND_NONE        0xFF
+#define SND_AIR         0x40
+#define SND_COST(c)     ((c) & 0x3F)
+#define NBGS            8
+struct sndhead {
+    unsigned char   ok;                         /* 1: worked out, for the character on sn at x, y */
+    unsigned char   sn;
+    unsigned        x, y;
+    unsigned char   nbg;                        /* The background's sources: their squares, their levels (and their */
+    struct { unsigned x, y; unsigned char lv; } bg[NBGS];  /*   kinds, BG_*, times 16) */
+};
+#define SNDHEAD         ((struct sndhead*) (HUB_WINDOW + SOUND_AT))
+#define SND_GRID        ((unsigned char*) (HUB_WINDOW + SOUND_AT + 48))
+#define SND_SQ(dx, dy)  (SND_GRID[((dy) + SND_R + 1) * SND_W + (dx) + SND_R + 1])  /* (dx, dy from x, y: SND_R at most) */
+#define SND_QUEUE       (SOUND_AT + 48 + SND_W * SND_W)    /* (The pulse's queues, its own) */
 #define UI_BANK         (SIGHT_BANK + 1)        /* The UI's (struct uirec): the map, the things' words */
 #define UIREC           ((struct uirec*) HUB_WINDOW)
 #define WORLD_BANK      (UI_BANK + 1)           /* The world's (struct wrec): the strata's records, the chunks' cache's
@@ -376,7 +407,8 @@ enum {
                                                 **   at its home (kinds.txt's keeps), 2026-10-27 */
     I_RISE,                                     /* Getting up, prone ("get up", "stand", "rise": the book's Rise, a
                                                 **   round, the referee's P_RISE; E_BEAT WB_RISEN or WB_NOT_UP: slice
-                                                **   4.1b's) */
+                                                **   4.1b's); or to the body's position w1 (POS_*: "crouch", "kneel",
+                                                **   "sit", "lie down", a moment; E_BEAT WB_POSED: slice 4.6's) */
     I_TRAVEL,                                   /* A journey to a place the character knows ("go back to the
                                                 **   Mausoleum": HOUSE.md's travel, slice 4.2's): w1 w2 its square
                                                 **   (a room named, its floor's northwest square: the names' struct
@@ -611,10 +643,12 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   (2026-10-29); */
        WB_RISEN, WB_NOT_UP, WB_FALLEN,          /*   got to its feet (the book's Rise), struggling and still down, fallen
                                                 **   prone (a stumble failed, a leg giving way); */
-       WB_LIMP, WB_HOP, WB_CRUTCH, WB_CRAWL, WB_STUCK, WB_NO_RUN };   /* the character's walk: limping, its legs
+       WB_LIMP, WB_HOP, WB_CRUTCH, WB_CRAWL, WB_STUCK, WB_NO_RUN,     /* the character's walk: limping, its legs
                                                 **   hurt; hopping on its one good leg; walking with a crutch, its kind
                                                 **   times 256; crawling; not able to move; no faster than a walk on
-                                                **   one leg) */
+                                                **   one leg; */
+       WB_POSED };                              /*   its body's position changed as it said, the position times 256,
+                                                **   | 0x8000 there already: slice 4.6's) */
 enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT };   /* (What stops a walk in the dark, met: the
                                                 **   world's ahead) */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
@@ -1048,8 +1082,14 @@ struct hub {                                    /* Bank 0, at $8000 */
         unsigned char nose;                     /*   and how far it smells it in still air (squares: its kind's nose
                                                 **   over 3, slice 4.1's, and the character's stay's points, TR_MORE's;
                                                 **   the air layer's to carry further downwind) */
+        unsigned char noise;                    /*   a noise of the character's (the world's E_NOISE: its loudness,
+                                                **   1-9), heard or not (SN_HEARD alone); 0: the character as it is,
+                                                **   its own noise (pc_noise) as it's busy (slice 4.5's) */
         unsigned char res;                      /* (The reply's) SN_* */
         unsigned char slack;                    /* (The reply's) squares it may go, the answer standing (0: none) */
+        unsigned char cost;                     /* (The reply's) how far a sound goes from the character to it, the
+                                                **   sound layer's (round corners, a shut door DOOR_SND squares more;
+                                                **   0xFF past it) */
     }               dsense;
     volatile unsigned char ui_cmd;              /* The UI's: a line taken and its command in hand (its words not yet
                                                 **   all out): the senses' look gives way to it a while (dq0prompt:
@@ -1101,7 +1141,19 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   as it tells the referee what it holds and wears; the senses' to
                                                 **   copy with its body, the UI's look to word: "a bandit, armed and
                                                 **   armoured", the user's three levels, 2026-10-27) */
+    /* The sound and the air (slices 4.5 and 4.6: DUNGEON.md's perception as layers, the sound layer and the air):
+    ** how loud the character is as it's busy (the world's, as it sets about a thing: its steps by its pace, its
+    ** armour, its body's position and, moving quietly, its Stealth's grade; else a quiet thing's), the background
+    ** where it stands that masks quieter sounds (the senses', as they work the sound layer out: its level and its
+    ** kind), and the draught on its stratum (the senses': the way the air goes, from the stratum's way up towards its
+    ** way down, and how strongly) */
+    unsigned char   pc_noise;                   /* 0-9 (HOUSE.md's sound and stealth) */
+    unsigned char   pc_mask;                    /* 0-9, */
+    unsigned char   pc_bg;                      /*   BG_* */
+    unsigned char   air_h;                      /* The heading the draught blows toward (H_*) */
+    unsigned char   air_s;                      /*   and its strength: 0 still air ... 3 a strong draught */
 };
+enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind in a shaft, a crowd about) */
 #define AG_ARMED        0x01                    /* (An actor's agear: a weapon in hand or at its belt, */
 #define AG_ARMOUR       0x02                    /*   armour worn) */
 #define GE_OLD          0x01
@@ -1124,7 +1176,9 @@ struct hub {                                    /* Bank 0, at $8000 */
 enum { POS_STANDING, POS_PRONE, POS_CROUCHED, POS_KNEELING, POS_SITTING };   /* A body's position (the hub's pc_pos,
                                                 **   an actor's pos: the world's; the referee's to judge by, and to
                                                 **   say it's fallen, rs.h's RS_ATTACK; crouched, kneeling and
-                                                **   sitting to come) */
+                                                **   sitting the player's, slice 4.6's: a low walk crouched, up first
+                                                **   from the others; kneeling and sitting, prone in a fight) */
+#define POS_LOW(p)      ((p) == POS_PRONE || (p) >= POS_KNEELING)   /* (Prone in a fight: the house's) */
 
 enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY };      /* The look's kinds: a look about; the denizens seen looked at again;
                                                 **   the eyes only, as time's gone (the lights seen far off: a wait's);
@@ -1313,6 +1367,11 @@ struct wsave {
 **   own hub.small ui                                           (dq0 -C)
 **   own hub.gear ui                                            (dq0 -K)
 **   own hub.pc_task world                                      (The character's long task: slice 4.0's)
+**   own hub.pc_noise world                                     (How loud it is: slice 4.5's, the world's)
+**   own hub.pc_mask senses                                     (The background where it is, the senses' sound
+**   own hub.pc_bg senses                                       (layer's; the stratum's draught, the air's)
+**   own hub.air_h senses
+**   own hub.air_s senses
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)
@@ -1386,6 +1445,7 @@ typedef char dq0c_fits[offsetof (struct hub, sem) == HUBO_SEM && offsetof (struc
                        offsetof (struct hub, quit) == HUBO_QUIT && offsetof (struct cq, bank) == CQO_BANK &&
                        offsetof (struct cq, len) == CQO_LEN && offsetof (struct cq, res) == CQO_RES &&
                        offsetof (struct cq, face) == CQO_FACE && NTASKS == 8 ? 1 : -1];
+typedef char snd_fit[sizeof (struct sndhead) <= 48 && SND_QUEUE + 1024 + 128 + 256 <= 0x2000 ? 1 : -1];
 typedef char recs_fit[sizeof (struct sight) <= 0x1000 && sizeof (struct uirec) <= 0x2000 &&
                       sizeof (struct wrec) <= 0x2000 ? 1 : -1];
 typedef char snd_fits[(char*) (KEPT_AT + 1) - (char*) 0x8000 <= 0x2000 ? 1 : -1];   /* (DEN_BANK's: the places

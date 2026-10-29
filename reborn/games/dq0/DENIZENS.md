@@ -277,19 +277,27 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
 - **Heard:** the denizens' events go out as the world moves their bodies (a step quietly, a noise of their own every
   eighth, loud as a squeak; a dash past the character louder; the character sensed, or lost, silently).  The UI tells
   those the character hears and doesn't see (one it sees is told as seen), in each kind's sound's words (SOUND.md):
-  heard within loudness times (hearing + 3) / 2 squares (the character's hearing, the referee's, 0-9), each square of
-  wall or rock between four squares further, each shut door two, by the way it lies ("You hear a scurrying behind you
-  to your left."), the same way not again for half a minute, nor any for five seconds; and the sound task plays them
-  on the chips (SOUND.md).  A denizen hears the others' events and the world's (the character's noises: E_NOISE,
-  digging), within its kind's hearing times the loudness over two: it turns to face the noise, stands a while, and
-  looks for the character again at once (and so may see it).
+  heard within loudness times (hearing + 3) / 2 squares (the character's hearing, the referee's, 0-9), the way the
+  sound goes (the senses' sound layer, slice 4.5's: round corners, each shut door two squares further, each square of
+  a room's wall four; the background where the character is taken off its loudness), by the way it lies ("You hear a
+  scurrying behind you to your left."), the same way not again for half a minute, nor any for five seconds; and the
+  sound task plays them on the chips (SOUND.md).  A denizen hears the character as it's busy (the senses' answer, by
+  the layer: its loudness the world's, its steps by its pace, its armour and its Stealth), the others' events (within
+  its kind's hearing times the loudness over two) and the world's (the character's noises: E_NOISE, digging, the
+  senses asked by the layer): it turns to face the noise, stands a while, and looks for the character again at once
+  (and so may see it).
+- **Stalking** (slice 4.6, HOUSE.md's): a hostile hunter by smell (K_NOSE) coming at the character moves quietly, its
+  Stealth tested as it begins (the referee's, by its sheet), its steps unheard on a success, as a step on a marginal
+  failure, louder on a critical one, no noise of its own meanwhile.
 - **Smelt** (slice 4.1): a kind with a nose (kinds.txt's nose, 0-9) smells the character in still air within a third
   of it (squares: a rat's 2, a bear's 2, a man's none), along a line the air passes (no rock, wall nor shut door): the
   senses answer it with what's seen and heard (the hub's dsense: its nose's reach asked, SN_SMELT told), and it's
   sensed as if seen.  The character's scent the stronger as it stays where it is (hub.h's TR_MORE, of a passing each
   four minutes there: the minds' own count, pcstay), the nose's reach a third of the nose and those points more (a
   rat's 3 squares once the character's been on its square some three quarters of an hour, a man's 1).  Downwind
-  further, upwind less, with the air layer (slice 4.5).
+  further, upwind less or not at all, with the air (slice 4.5, HOUSE.md's: its draught's figure, (2 + w) / 2 of it, a
+  draught of 2 three times as far straight downwind), along the way the air goes (no shut door, closed window nor wall
+  on it).
 - **A stay** (the user's, 2026-10-22): an actor standing, resting or fighting where it is leaves its scent the
   stronger there, a passing each four minutes on its square (dq0d.c's stayed, as each goes by: I_TROD's TS_STAY, the
   world's traces).
@@ -403,10 +411,11 @@ What the plans bring later, by the slice or phase that brings it:
   (a guardian, a faction's hoard), the strata's ages and sizes, the things lying about by theme.
 - **The command interpreter** (Phase 3C): a denizen's mind making the same command structure as the player's, the
   world applying it the same way (opening and breaking doors, taking things, throwing, attacking).
-- **Daily life** (slice 4.5): schedules by kind and faction, patrols that keep a pattern; the sound layer (the
-  denizens hearing through walls as the character does, the character's steps heard by its pace).
-- **Body position and moving quietly** (slice 4.6): every actor's position and gait, Stealth tests against the
-  denizens' Awareness.
+- **Daily life** (slice 4.5): schedules by kind and faction, patrols that keep a pattern (the sound layer built,
+  2026-10-29: the denizens hearing the character by it, its steps by its pace).
+- **Body position and moving quietly** (slice 4.6, built for the character and a hunter's stalk, 2026-10-29): every
+  actor's position and gait (the denizens' but prone still to come), their noises by the layer to one another (an
+  actor's own still heard as the crow flies).
 - **Fights complete** (slice 4.7): one combat path, missiles (a bow through an arrow slit), allies fighting beside the
   character, factions fighting each other, morale from the layers (leaders seen or heard, darkness, din).
 - **Fetching and influence** (slice 4.8): an ally fetching things (tell Grub to fetch the key), gifts, bribes,

@@ -149,7 +149,9 @@ by a request or an intent.
   file's for a new game, RS_LOAD_PC's reply), its stance (WS_STANCE), what it strikes with (sent with the blow,
   I_ATTACK's and I_PORTAL's x[1]: the hub's pc_strike), and its **body's position**: standing or prone (crouched,
   kneeling and sitting are named, hub.h's POS_*, but nothing takes them yet), the hub's pc_pos for the character and
-  each actor's pos (and its gait) for the denizens' bodies, the world's records.  The referee reads the positions as
+  each actor's pos (and its gait) for the denizens' bodies, the world's records; since slice 4.6 the character's
+  crouched, kneeling and sitting too, as the player says (I_RISE's position: a low walk crouched, up first from
+  kneeling or sitting, its eyes the lower: HOUSE.md's body position).  The referee reads the positions as
   it judges (the world puts them in the request, RS_ATTACK's RS_PRONE_A and RS_PRONE_D: a prone defender the easier
   to strike, a prone attacker only getting up, its turn spent) and reports a fall (a stumble, a leg giving way: an
   X_COND_ON C_PRONE effect) and a getting up (O_RISE), which the world applies; it keeps no position of its own.  The
@@ -894,9 +896,9 @@ threshold; what it reads becomes the circumstances (the steps) of the referee's 
   (the character's look, the denizens' asking); the referee judges.
 - **Kept by how each spreads, none on a clock.**  **Light** (instant, in straight lines) is a grid, half a byte a
   square (0 dark ... 15), 512 bytes a chunk, worked out as it's first wanted and again only near a change
-  (dq0p/light.c: 16 chunks' grids in a bank of the senses' own).  Light is the only layer built as a grid; the
-  traces on the floor and their smells are the world's records (below: the traces on the floor), sound and the air
-  still to come.
+  (dq0p/light.c: 16 chunks' grids in a bank of the senses' own).  Light and sound are the layers built as grids (the
+  sound layer's round the character alone, below); the traces on the floor and their smells are the world's records
+  (below: the traces on the floor); the air a draught a stratum (below).
 - **The light layer.**  Its emitters: a lit room's own light (R_LIT: its floor and walls, 6; a glow's, or its sconce's
   light: light kept, above) and the lit things lying about, but those in a sconce (a lamp of reach r, its kind's
   light: the squares within r each way it has a clear line to from two feet above its floor, 2 (r - d) + 1 at d
@@ -920,13 +922,32 @@ threshold; what it reads becomes the circumstances (the steps) of the referee's 
   less, by 4 / (4 + e), as its eyes are still e levels used to more light than there is.  The figures where the book
   is silent: the character's rate (19), the dazzle (6 levels, 5 tenths a level), the reach (16 b / (4 + a), 31 at
   most), a room's light (6), a lamp's brightness (2 r + 1).
+- **The sound layer** (slice 4.5, built 2026-10-29: HOUSE.md's sound, the air and moving quietly): a pulse from the
+  character's square over the squares round it, 20 each way (dq0p/sound.c and pulse.s, the senses' part 5: in the
+  hub's SIGHT_BANK, SOUND_AT, any task's to read), how far a sound goes between it and each square: round corners,
+  through what lets sound through, a shut door or a closed window two squares more, a room's wall four a square of it,
+  never the rock; each square marked if a shut door, a closed window or a wall was on the way (the air's not passing).
+  The same way both ways: the denizens hear the character by it, and the world says what lies between a denizen and
+  the character by it (E_DEN's x[3], the UI's and the sound task's).  Worked out after a look that finds the
+  character moved (the denizens about), as the world's doors and squares change (E_LIGHT), as a denizen's senses or
+  a wait's end find it out of date.  With it the **background** that masks (water in a well or a cistern, the wind
+  at a shaft or the way out, a crowd about: the hub's pc_mask and pc_bg for the character's own), and each sound's
+  loudness (the character's as the world sets it, the hub's pc_noise: its steps by its pace, its armour and, moving
+  quietly, its Stealth; the denizens' as their minds say, a stalking hunter's by its Stealth).
+- **The air** (slice 4.5): a stratum's draught, from its way up (the way out on the top) towards its way down, its
+  strength by its ways (the senses', the hub's air_h, air_s); a scent carried further downwind, less upwind or not at
+  all, along the way the air goes (the sound layer's squares with no door nor wall on the way): so a hunter downwind
+  smells the character before it hears or sees it.  A sound carried a little further downwind.  Rain and running
+  water with slice 4.9.
 - **The denizens' senses** are the senses': each actor's mind asks (the hub's dsense, its kind's sight, darkvision,
   hearing and eyes with it) as it decides, and is told whether it sees the character (lit, by its own light or the
-  light layer where it stands, within the kind's sight; else within its darkvision, as its eyes allow; a line clear)
-  or hears it (working, within its hearing), and how far it may go with the answer standing: a far one's **coarse
-  answer**, beyond all of them, no line cast, till it's gone further or the character changes.  Its eyes adapt to the
-  light it stands in (the layer's, and the character's light near it).  A mind does nothing yet with a light it sees
-  far off.
+  light layer where it stands, within the kind's sight; else within its darkvision, as its eyes allow; a line clear;
+  the character low, crouched or prone, seen less far unless it carries a light), hears it (busy, by the sound layer:
+  its loudness less the background where the actor is, within its loudness times the kind's hearing over two, the
+  way the sound goes) or smells it (the air), and how far it may go with the answer standing: a far one's **coarse
+  answer**, beyond all of them, no line cast, till it's gone further or the character changes.  A noise of the
+  character's (a dig's, a battering's) asked of the same way, heard or not.  Its eyes adapt to the light it stands in
+  (the layer's, and the character's light near it).  A mind does nothing yet with a light it sees far off.
 
 ### The traces on the floor, smells and smoke (slice 4.1)
 
@@ -988,10 +1009,11 @@ alert those with particularly good sense of smell long before sound or light mig
   the character went from the square it's on, or the freshest beside it, each square's life the longer for its
   passings and the character's stays there).  The character is smelt in still air the further for its stay where it
   stands (the minds' own count of it, dq0d.c's pcstay: the nose's reach the more).
-- **The air and the rain to come** plug in at one place each: a draft widens a scent's reach downwind and narrows it
-  upwind (wtrace.c's sniff, wtrscent.c's trail, sense.c's smelt), and carries a scent to a denizen far downwind (the
-  air layer, slice 4.5, with sound); rain and running water fade scents and prints faster (wtrace.c's faded, hub.h's
-  SCENT_LIFE: slice 4.9, with water).
+- **The air and the rain** plug in at one place each: a draught widens a scent's reach downwind and narrows it
+  upwind (sense.c's smelt, built with slice 4.5's air: the denizens smelling the character; still to come, wtrace.c's
+  sniff, the character's own, and wtrscent.c's trail), and carries a scent to a denizen far downwind (the air, slice
+  4.5); rain and running water fade scents and prints faster (wtrace.c's faded, hub.h's SCENT_LIFE: slice 4.9, with
+  water).
 
 ### Seeing, and the map
 
@@ -1235,12 +1257,14 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   materials to hand; a mental map that fades; travel to a named place ("go back to the mausoleum": Travel, above).
 - **Wounds over time** (slice 4.3): bleeding as time passes, first aid and bandages, healing (D6); poison, a venom's
   wounds over time (an adder's bite).
-- **The sound layer and the denizens' hearing by pace** (slice 4.5): pulses over the rooms and openings, a background
-  level that masks; the character's steps heard by its pace; the air layer with it: draughts through the rooms and
-  openings carrying smells, the character's scent among them, downwind with the sound, so a keen nose downwind knows
-  of it long before a sound or a light reaches it (why hunters keep downwind of their prey).
-- **Body position and moving quietly** (slice 4.6): crouched, kneeling, sitting; low-walking, crawling; moving quietly
-  by Stealth (D15); eye height by position.
+- **The sound layer and the denizens' hearing by pace** (slice 4.5, built 2026-10-29: perception as layers, above):
+  a pulse over the squares and openings, a background that masks, the character's steps heard by its pace and its
+  armour; the air with it, a stratum's draught carrying the character's scent downwind.  Left: a fight's din heard
+  and masking; running water's sound (slice 4.9); the character's sniff and a hunter's trail by the draught; a draught
+  that follows the passages, not one figure a stratum.
+- **Body position and moving quietly** (slice 4.6, built 2026-10-29: HOUSE.md's): crouched, kneeling, sitting, prone;
+  a low walk, crawling; moving quietly by Stealth (D15), a hunter's stalk; eye height by position.  Left: the
+  denizens' own positions but prone, a missile's target by its height (slice 4.7's).
 - **Fights complete** (slice 4.7): missiles and ammunition as items (through slits and windows; a quiver's arrows).
 - **Water** (slice 4.9): the plan's rivers, falls and lakes, water levels, swimming and drowning, a well's water from
   the plan; rain where the surface reaches (shafts, the open), washing scents and prints away; hunger and thirst,

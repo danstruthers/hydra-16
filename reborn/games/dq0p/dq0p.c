@@ -26,6 +26,7 @@
 #include "light.h"
 #include "eyes.h"
 void sense_actor (void);                        /* (sense.c's: the hub's dsense answered) */
+void snd_need (void);                           /* (sound.c's: the sound layer up to date) */
 
 static unsigned char sees;                      /* (The denizens seen changed: the look's reply's ch) */
 unsigned char v_way;                            /* (A look one way, the hub's LK_WAY: view.h's) */
@@ -84,6 +85,13 @@ static void look (void)
     }
     hub_map (0);
     HUB->look.first = first;
+    for (wn = 0; wn < NACTORS; ++wn) {          /* (The sound layer, for the denizens about: before the world goes on,
+                                                **   its E_DEN's what lies between, wbody.c's, by it) */
+        if (HUB->actor[wn].state && HUB->actor[wn].sn == sn) {
+            snd_need ();
+            break;
+        }
+    }
 }
 
 /* The look giving way to the UI's command in hand at the real paces (the hub's ui_cmd: its answer, the world's, the
@@ -106,7 +114,7 @@ void give_way (void)
 }
 
 /* The swapped parts' images read into banks of its own (dir/dq0p.ovl: dq0p.cfg's OV1 ..., 8K each): 0, or -1 */
-#define OVBANKS         3
+#define OVBANKS         4
 extern unsigned char ovbank[OVBANKS];
 extern char _SWAP_START__[];
 static int __fastcall__ ovl_load (const char* dir)
@@ -123,6 +131,7 @@ static int __fastcall__ ovl_load (const char* dir)
     ovbank[0] = n;                              /* (In a run: n, n + 1 ...) */
     ovbank[1] = n + 1;
     ovbank[2] = n + 2;
+    ovbank[3] = n + 3;
     for (off = 0; (n = read (fd, b, 512)) > 0; off += n) {    /* (The file the build made: OVBANKS banks at most,
                                                 **   64K at most, off back at 0 only as it ends) */
         hy_bank (ovbank[off >> 13]);
@@ -169,8 +178,10 @@ int main (int argc, char* argv[])
             if (HUB->look.kind == LK_DENS) {
                 sees = dens_seen ();            /* (Only the denizens seen, looked at again: their bodies changed) */
             } else if (HUB->look.kind == LK_EYES) {
-                pc ();                          /* (Only its eyes, as time's gone: the lights far off) */
+                pc ();                          /* (Only its eyes, as time's gone: the lights far off; and the sound
+                                                **   layer, for what it hears, a listen's end) */
                 sync_strata ();
+                snd_need ();
                 glows (sn, x, y, face, range, own);
                 hub_map (SIGHT_BANK);
                 memcpy (&SIGHT->nglows, &G, sizeof G);

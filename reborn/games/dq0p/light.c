@@ -85,6 +85,7 @@ static void __fastcall__ stale (unsigned char sn, unsigned x, unsigned y, unsign
 }
 
 /* The world's events since the last: a light or an obstruction changed (E_LIGHT), the grids near it out of date */
+extern unsigned char sgen;
 void light_events (void)
 {
     static struct msg* m;
@@ -98,6 +99,7 @@ void light_events (void)
         m = &HUB->eq[place % EQ_SIZE];
         if (m->kind == E_LIGHT) {
             ++lgen;
+            ++sgen;                             /* (The sound layer out of date too: sound.c's) */
             stale (m->a, m->w1, m->w2, LREACH);
         }
     }

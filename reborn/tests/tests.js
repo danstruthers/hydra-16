@@ -3881,6 +3881,15 @@ module.exports = {
         const near = end.actors.filter(a => a.state && a.name === 'giant rat' && a.attitude === 'AT_HOSTILE' && a.doing !== 'DO_DOWN' &&
           Math.max(Math.abs(a.x - end.pc.x), Math.abs(a.y - end.pc.y)) <= 4 && a.y === end.pc.y && a.x > end.pc.x && a.x < 32722);
         if (end.pc.light) f.push('the character not in the dark');
+        // (Slices 4.5 and 4.6: the rats on its scent stalk it, their Stealth tested, the denizens' slot's, their steps
+        // the quieter; every sound's way from the character to a rat no shorter than the line, round the corner longer)
+        const g = m.dq0.games[m.dq0.games.length - 1] || { replies: [], dens: [] }, rs = g.replies.filter(r => r.req === 'dsense' && r.cost !== 255);
+        if (!g.replies.some(r => r.req === 'dslot' && r.kind === 4 && r.a === 4 && r.actor)) f.push("no rat's Stealth tested, stalking");
+        if (!g.dens.some(e => e.kind === 'E_DEN' && e.de === 'DE_MOVED' && e.b === 0)) f.push("no rat's step silent, stalking");
+        const short = rs.filter(r => r.cost < Math.max(Math.abs(r.x - r.pc.x), Math.abs(r.y - r.pc.y)));
+        if (short.length) f.push("a sound's way shorter than the line: " + JSON.stringify(short[0]));
+        if (!rs.some(r => r.cost > Math.max(Math.abs(r.x - r.pc.x), Math.abs(r.y - r.pc.y)))) f.push('no sound round the corner, the long way');
+        if (process.env.DQ0DBG) this.notes = ['air ' + end.pc.airH + '/' + end.pc.airS + ' mask ' + end.pc.mask, ...rs.slice(0, 20).map(r => JSON.stringify(r))];
         if (near.length < 2) f.push('the rats not come after it along the passage: the character at ' + end.pc.x + ',' + end.pc.y + ', the rats ' +
           JSON.stringify(end.actors.map(a => [a.x, a.y, a.doing])) + ' (its squares walked ' + [...trail].join(' ') + ')');
         return f;
@@ -3888,6 +3897,59 @@ module.exports = {
       sdcard: true
     },
 
+    {
+      name: 'dq0pose', meaning: true, what: 'Dingus Quest Zero\'s body positions (slice 4.6, HOUSE.md\'s body position, for review), by the hub\'s state and the words: at seed 3 by the way down the character crouches ("You crouch.", a second, the status line\'s CROUCHED), is told it\'s crouching already, kneels (the grammar\'s "kneel", the UI\'s by the word), sits, stands ("You get to your feet."), is told it\'s on its feet already, lies down, gets up (the book\'s Rise), crouches and steps forward crouched (a low walk: still crouched, a slow walk\'s pace), sits and steps forward (up first, a moment: "You get to your feet.", standing after)',
+      init: 't_rc', cycles: 400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'crouch', 'crouch', 'kneel',
+        'sit', 'stand', 'stand', 'lie down', 'get up', 'crouch', 'step forward', 'sit', 'step forward', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out), at = l => T.of(l), pos = t => t.after ? t.after.pc.pos : -1;
+        const want = [['crouch', 2], ['kneel', 3], ['sit', 4], ['stand', 0], ['lie down', 1], ['get up', 0]];
+        for (const [l, p] of want) if (pos(at(l)) !== p) f.push(l + ': the position ' + pos(at(l)) + ', not ' + p);
+        const c2 = T.of('crouch', at('crouch').k + 1), s2 = T.of('stand', at('stand').k + 1), c3 = T.of('crouch', at('get up').k);
+        if (pos(c2) !== 2) f.push('crouch again: not crouching');
+        if (pos(s2) !== 0) f.push('stand again: not standing');
+        const st1 = T.of('step forward', c3.k), si2 = T.of('sit', st1.k), st2 = T.of('step forward', si2.k);
+        if (pos(st1) !== 2) f.push('a step crouched: not crouching after it (' + pos(st1) + ')');
+        if (st1.after && st1.at && st1.after.pc.x === st1.at.pc.x && st1.after.pc.y === st1.at.pc.y) f.push('a step crouched: no step');
+        if (pos(st2) !== 0) f.push('a step sitting: not standing after it (' + pos(st2) + ')');
+        if (at('crouch').after && at('crouch').at && at('crouch').after.now - at('crouch').at.now < 10) f.push('crouching took no time');
+        for (const w of ['You crouch.', 'You are crouching already.', 'You kneel.', 'You sit down.', 'You get to your feet.',
+          'You are on your feet already.', 'You lie down.'])
+          if (!o.includes(w)) f.push('not said: ' + w);
+        if (!out.includes('CROUCHED')) f.push('the status line never CROUCHED');
+        if (process.env.DQ0DBG) this.notes = [o.slice(o.indexOf('> crouch'), o.indexOf('> quit'))];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0quiet', meaning: true, what: 'Dingus Quest Zero\'s moving quietly (slice 4.6, D15: Stealth tested as it starts, again as something changes; HOUSE.md\'s sound and stealth, for review), by the referee\'s replies and the hub\'s state: at seed 3 by the way down, a step at a walk as loud as a walk (the hub\'s pc_noise 2, no Stealth test); creeping, its first step tested (the world\'s slot: RS_TEST, P_STEALTH), its loudness the grade\'s (a critical success 0, a marginal 1, a marginal failure 2, a critical 3), its next not tested again, the same loudness; crouched, tested again (its position changed); a walk again, 2, no test; a wait softly, 1',
+      init: 't_rc', cycles: 400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'step forward', 'creep',
+        'step back', 'step forward', 'crouch', 'step back', 'stand', 'walk', 'step forward', 'wait', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], STEALTH = 4, RS_TEST = 4;
+        const tests = t => dq0Rep(t, 'slot0', { kind: RS_TEST, a: STEALTH }), loud = g => g >= 2 ? 0 : g === 1 ? 1 : g === -1 ? 2 : 3;
+        const s0 = T.of('step forward'), cr = T.of('creep'), s1 = T.of('step back', cr.k), s2 = T.of('step forward', s1.k), cd = T.of('crouch', s2.k);
+        const s3 = T.of('step back', cd.k), wk = T.of('walk', s3.k), s4 = T.of('step forward', wk.k), w = T.of('wait', s4.k), nz = t => t.after ? t.after.pc.noise : -1;
+        if (nz(s0) !== 2 || tests(s0).length) f.push('a walk\'s step: its noise ' + nz(s0) + ', ' + tests(s0).length + ' Stealth tests');
+        const t1 = tests(s1);
+        if (t1.length !== 1) f.push('the first creeping step: ' + t1.length + ' Stealth tests');
+        else if (nz(s1) !== loud(t1[0].grade)) f.push('the first creeping step: its noise ' + nz(s1) + ', its grade ' + t1[0].grade);
+        if (tests(s2).length) f.push('the second creeping step tested again');
+        if (t1.length && nz(s2) !== nz(s1)) f.push('the second creeping step not as loud as the first');
+        const t3 = tests(s3);
+        if (t3.length !== 1) f.push('the crouched creeping step: ' + t3.length + ' Stealth tests (its position changed)');
+        else if (t3[0].steps !== 1) f.push('the crouched creeping step: its test ' + t3[0].steps + ' steps, not 1');
+        if (nz(s4) !== 2 || tests(s4).length) f.push('a walk again: its noise ' + nz(s4) + ', ' + tests(s4).length + ' Stealth tests');
+        if (nz(w) !== 1) f.push('a wait: its noise ' + nz(w) + ', not 1');
+        return f;
+      },
+      sdcard: true
+    },
     {
       name: 'dq0stay', meaning: true, what: 'Dingus Quest Zero\'s scents strengthened by passing and by staying (the user\'s, 2026-10-22: "repeated passage or occupancy should enhance prior smells"; HOUSE.md\'s light and traces, DUNGEON.md\'s a stay counts as passings), by the world\'s reply (the UI bank\'s tread), its words and the traces\' journal: at seed 3 the giant rats\' lair by the way down where the character starts, its keepers\' scent journalled where they live as it\'s placed (each rat a passing at its home square, with the most stays: the denizens\' ring), sniffed at once and heavy ("A musky smell hangs heavy here: giant rats, by the smell of it.": its strength 6, TR_HEAVY); the rats standing about as the character waits 50 minutes a step off, their stays journalled where each stood (I_TROD\'s TS_STAY, a TQ each); and the character\'s own stay there, its torch lit: once it\'s stepped back (and looked for tracks: the journal taken in as its torch burns, the store\'s smoke a torch\'s) and put its torch out, its smoke still smelt three hours on (faint), where a passing\'s is gone by then (dq0traces)',
       init: 't_rc', cycles: 3000e6,

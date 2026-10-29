@@ -179,6 +179,8 @@ go:
             SWFN        rise_pc, 50
             SWFN        limbs_go, 50
             SWFN        limbs_pace, 50
+            SWFN        pose_pc, 50
+            SWFN        step_loud, 50
             SWFN        bearings, 52
             SWFN        bearings_off, 52
             SWFN        intent_few, 53
