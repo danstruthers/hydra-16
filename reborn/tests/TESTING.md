@@ -83,4 +83,46 @@ check `node sim/test.js --list --near basic` (or the area you mean) shows it, or
 
 ## What the tiers save
 
-TIMES
+These figures were measured on 2026-10-29 with `-j 8`, while other agents shared the machine. Times are each test's
+own process's wall time, summed (`obj/testtimes.json`). Cycles are the emulated machine's.
+
+| Area | Tests | Cycles | Share of cycles | Process time | Share of time |
+|---|---:|---:|---:|---:|---:|
+| The game's (dq0...) | 105 | 101.1G | 84% | 150 min | 86% |
+| hmchar's | 2 | 2.5G | 2% | 3 min | 2% |
+| hylang's (hy...) | 14 | 5.6G | 5% | 7 min | 4% |
+| The rest of HydraOS's | 116 | 11.3G | 9% | 15 min | 8% |
+| The base's | 16 | 0.2G | 0.1% | 0.3 min | 0.2% |
+| **The whole suite** | 253 | 120.6G | | 175 min | |
+
+The whole suite took 22 minutes of wall time at `-j 8` on the shared machine (12 to 14 minutes when it was
+quieter). RULES=null's 43 meaning tests add 31% of the suite again. One dq0answer run takes about 75 to 90 s.
+
+What `--changed` runs, for some sample diffs:
+
+| What changed | Tests | Share of the suite's time |
+|---|---:|---:|
+| The game only (games/, its rebuilt bin/ images) | 107 | 88% |
+| The game, and a new dq0 test entry in tests.js | 108 | 88% |
+| The design documents only (HOUSE.md ...) | 0 | 0% |
+| The BASIC module | 18 | 1% |
+| The hylang module | 36 | 7% |
+| A program (edit) | 15 | 1% |
+| A test module (t_task) | 1 | 0% |
+| The kernel, the emulator, an unknown path | 253 | 100% |
+
+The game's tests are most of the suite, so for game work `--changed` saves only the other eighth. The report tier
+saves more by leaving the soaks and dq0answer at waits 1 and 2 to the lead's single run each round. The working
+loop saves the most: a `--near` area is 4% to 26% of the suite (`fight` 17%, `parser` 8%, `map` 26%, `gear` 17%,
+`money` 6%, `senses` 12%, `time` 10%, `screen` 4%).
+
+One report as the brief's checks were, against the report tier, for a game-only change on the same machine:
+
+| Step | Before (every agent, every report) | `--tier report` |
+|---|---|---|
+| The suite | the whole suite, 253 tests, about 22 min | 107 tests, 14 min |
+| RULES=null | 43 tests, about 5.5 min | 43 tests, 5.5 min |
+| The soaks (`-n 200`; `-n 100 -fight 0.8`) | about 19 min + 10 min (16 seeds took 90 s) | the lead's |
+| dq0answer at waits 1 and 2 | about 3 min | the lead's |
+| The parser's | always | only when the grammar changed |
+| **Total** | about 60 min | about 20 min (measured: 19 min 44 s) |
