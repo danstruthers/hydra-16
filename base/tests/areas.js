@@ -10,6 +10,7 @@ const rules = [
   ['base/tests/areas.js', ['*']],
   [/^base\/tests\/mod\/([^/]+)\//, ['mod:$1']],
   [/^base\/(README\.md|.*\.md)$/, ['none']],
+  ['base/bin/', ['none']],                                    // (The build's images, from the sources: theirs the rules)
   ['base/', ['*']],
 ];
 

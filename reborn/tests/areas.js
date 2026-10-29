@@ -63,11 +63,10 @@ const rules = [
   // The SDKs: the assembly one's includes every module's; the C one's library the C programs'
   ['reborn/sdk/c/', ['c', 'dq0', 'hmchar']],
   ['reborn/sdk/', ['*']],
-  // The SD card's files, and the built images (the tests make their ROM from obj/, their card bin/sdcard.img)
+  // The SD card's files; the built images none: the build makes them from the sources, whose rules run the tests
+  // (the tests' ROM is made from obj/, their card is bin/sdcard.img, as the build made them)
   ['reborn/sdcard/', ['sdcard']],
-  ['reborn/bin/sdcard.img', ['sdcard']],
-  [/^reborn\/bin\/(prom\d+\.bin|hydra-16\.html)$/, ['none']],
-  ['reborn/bin/', ['*']],                                     // (bios_rockwell.bin, bios_wdc.bin)
+  ['reborn/bin/', ['none']],
   // The emulator and its tools: the dq0 tests' watchers, the PC tool's, the danlang emulator (--dl's)
   ['reborn/sim/lib/dq0meaning.js', ['dq0']],
   ['reborn/sim/lib/hubown.js', ['dq0']],
@@ -186,8 +185,8 @@ const CASES = [
   ['reborn/tests/numtest.js', { has: ['numbers'], not: ['dq0*', 'boot'] }],
   ['reborn/programs/edit/edit.s', { has: ['edit', 'rom', 'init'], not: ['dq0fight', 'basic'] }],
   ['reborn/sdk/c/lib/dice.c', { has: ['dq0*', 'race', 'c'], not: ['boot', 'forth'] }],
-  ['reborn/bin/sdcard.img', { has: ['dq0*', 'race', 'tools'], not: ['boot', 'forth'] }],
-  ['reborn/bin/prom0.bin', 'none'], ['reborn/bin/bios_rockwell.bin', '*'],
+  ['reborn/sdcard/songs/vera.mml', { has: ['dq0*', 'race', 'tools'], not: ['boot', 'forth'] }],
+  ['reborn/bin/sdcard.img', 'none'], ['reborn/bin/prom0.bin', 'none'], ['base/bin/bios_rockwell.bin', 'none'],
   ['reborn/sim/lib/dq0meaning.js', { has: ['dq0*'], not: ['boot', 'race'] }],
   ['reborn/sim/lib/pchost.js', { has: ['pc', 'pc-img', 'dq0rules'], not: ['boot'] }],
   ['reborn/sim/dl/cpu.dl', 'none'], ['reborn/sim/tools/soak.js', 'none'], ['reborn/sim/tiers.js', 'none'],
