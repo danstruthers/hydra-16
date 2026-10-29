@@ -1508,10 +1508,11 @@ static void __fastcall__ stayed (unsigned char k)
 ** will be free, as the world will have it) */
 static unsigned char __fastcall__ decide (unsigned char k)
 {
-    unsigned char d = 0xFF, was, foe;
+    unsigned char d = 0xFF, was, foe, ag;
 
     kind_get (akind[k]);
     memcpy (&a, &HUB->actor[k], sizeof a);
+    ag = HUB->agear[k];                         /* (Its things, the world's: a launcher, a shot to be had) */
     stayed (k);
     wt = 0;
     refx = pcx;
@@ -1560,6 +1561,10 @@ static unsigned char __fastcall__ decide (unsigned char k)
     } else if (sres[k] && foe && dist == 1) {
         a.face = bearing (ddx, ddy);            /* (A foe beside it: it strikes) */
         d = 0xFC;
+    } else if (sres[k] && foe && a.sn == pcs && (ag & (AG_SHOOTS | AG_NOSHOT)) == AG_SHOOTS) {
+        a.face = bearing (ddx, ddy);            /* (A foe it senses further off, a launcher of its own and a shot to
+                                                **   be had: it shoots, the world's to say if it can, slice 4.7's) */
+        d = 0xFA;
     } else if ((d = keep_off (k)) != 0xFF) {
         a.doing = sres[k] ? DO_WATCH : DO_ROAM;
     } else if (a.attitude == AT_ALLIED) {
@@ -1609,10 +1614,10 @@ static unsigned char __fastcall__ decide (unsigned char k)
         im.a = DE_MOVED;
         im.b = 2;
         act (I_GOTO, k);
-    } else if (d == 0xFC) {                     /* (A round's blow: outnumbering it, later) */
+    } else if (d >= 0xFA && d <= 0xFC && d != 0xFB) {   /* (A round's blow, or a shot: outnumbering it, later) */
         a.doing = DO_FIGHT;
         im.a = 0;
-        im.b = Z_MID;
+        im.b = d == 0xFA ? Z_MID | AIM_SHOT : Z_MID;
         act (I_ATTACK, k);
     }
     if (wt) {

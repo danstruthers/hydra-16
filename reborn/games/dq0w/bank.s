@@ -24,7 +24,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
 
             .bss
-_ovbank:    .res        23          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+_ovbank:    .res        24          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
                                     ;   world's own banks (its paging's tables: ipage.c's; the ways across a room;
                                     ;   the traces' store, two: wtrace.c's)
 ova:        .res        1           ; (.A and .X kept through a stub)
@@ -150,6 +150,11 @@ go:
             SWPART      62, 17              ; A denizen's things made out (things.c's s_gear_words, 2026-10-27)
             SWPART      63, 12              ; The character's kit (things.c's, part 13's till 2026-10-28)
             SWPART      64, 5               ; The coins' mints (things.c's, 2026-10-28)
+            SWPART      65, 20              ; The missiles: a shot, its line, where it falls (wshoot.c: slice 4.7's)
+            SWPART      66, 20              ; A launcher loaded, the missiles gathered (wshoot.c)
+            SWPART      67, 20              ; The character's shot, where a missile falls (wshoot.c); a robbery
+                                            ;   (wfight.c's, part 15's room)
+            SWPART      68, 14              ; A launcher loaded (wshoot.c: overlay 20's room)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -273,6 +278,13 @@ go:
             SWFN        mix_join, 64
             SWFN        mix_words, 64
             SWFN        mix_worth, 64
+            SWFN        shot_op, 65         ; (The missiles, slice 4.7's)
+            SWFN        gath_op, 66
+            SWFN        mfire, 65
+            SWFN        pc_shot, 67
+            SWFN        mfall, 67
+            SWFN        load_go, 68
+            SWFN        shot_blow, 15
             SWFN        theme_kinds, 61
             SWFN        items_begin, 19
             SWFN        it_room, 17
@@ -308,7 +320,7 @@ go:
             SWFN        den_intents, 14
             SWFN        pc_blow, 15
             SWFN        den_blow, 15
-            SWFN        den_rob, 15
+            SWFN        den_rob, 67         ; (Part 15's room, 2026-10-29)
             SWFN        bled, 15
             SWFN        puzzle, 16
             SWFN        take_go, 16

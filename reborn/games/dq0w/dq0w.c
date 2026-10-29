@@ -54,6 +54,9 @@
 #include "world.h"
 #include "work.h"
 #include "things.h"
+
+/* The missiles (wshoot.c's, parts 65 and 66: slice 4.7's; their calls wbody.h's) */
+extern unsigned char pshoot, gath;              /* (The character's fight a missile's; a gathering under way) */
 #include "wbody.h"
 #include "trace.h"
 
@@ -3228,8 +3231,9 @@ static void __fastcall__ halt (unsigned char why)
     HUB->pc_task.asking = 0;
     if (why != 0xFF) {
         take_n = 0;                             /* (Stopped, hard or by the player: what it walked for dropped, a
-                                                **   thing to take up, a blow's close-in) */
+                                                **   thing to take up, a blow's close-in, a gathering) */
         pfoe = 0;
+        gath = 0;
         went_cut = move.how == A_WENT_TO;       /* (Not got there: its arrival not told as over to it) */
         event (E_TASK, 0, why | HUB->pc_task.kind << 8);
         HUB->pc_task.kind = LT_NONE;            /* (Its task over, told: a blow after it no second stop) */
@@ -4105,6 +4109,9 @@ static unsigned char __fastcall__ fight_reach (unsigned char k)
     unsigned ax, ay;
     unsigned char d;
 
+    if (pshoot) {
+        return shot_op (SO_REACH, k, 0);        /* (A missile's: within range, seen, a clear line, part 65's) */
+    }
     hub_map (0);
     a = &HUB->actor[(k - 1) & 7];
     if (!k || !a->state || a->sn != HUB->pc_stratum) {
@@ -4130,6 +4137,9 @@ static unsigned char fight_foe (void)
     struct actor* a;
     unsigned ax, ay;
 
+    if (pshoot) {
+        return shot_op (SO_FOE, 0, 0);          /* (A missile's: the nearest hostile it can shoot at, part 65's) */
+    }
     for (k = f = 0; k < NACTORS; ++k) {
         hub_map (0);
         a = &HUB->actor[k];
@@ -4170,7 +4180,7 @@ static unsigned char ftired;                    /* (A level more tired by its fi
 
 static void __fastcall__ fight_blow (unsigned char k)
 {
-    if (swatted (k)) {                          /* (Its target changed as it fought, struck with a soft thing: one
+    if (!pshoot && swatted (k)) {               /* (Its target changed as it fought, struck with a soft thing: one
         pc_cut = 1;                             **   attempt, the fight over) */
         return;
     }
@@ -4196,14 +4206,15 @@ void __fastcall__ s_fight_go (const struct msg* m)
     hub_map (0);
     HUB->pc_strike = m->x[1];
     HUB->pc_shand = pshand;
-    HUB->pc_aim = m->b;
+    HUB->pc_aim = m->b & ~AIM_SHOT;
+    pshoot = (m->b & AIM_SHOT) != 0;            /* (A shot or a throw: part 65's, fought on as a blow is) */
     fheld = 0;
     if (HUB->pc_task.kind == LT_FIGHT && !pc_cut) {
         HUB->pc_task.foe = m->a;
         fsaid = 1;
         return;
     }
-    if (swatted (m->a)) {
+    if (!pshoot && swatted (m->a)) {
         return;                                 /* (A soft thing's: one attempt, no fight) */
     }
     fight_begin (m->a | TE_QUIET);
@@ -4237,11 +4248,18 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
             HUB->pc_task.foe = 0;
             return 0;
         }
+        if (pshoot) {                           /* (Shooting, an enemy engaging it: the melee's, with what it holds,
+            pshoot = 0;                         **   a bow the book's stick; else on with its missiles) */
+            if (!(pshoot = !fight_foe ())) {
+                HUB->pc_strike = in_hand ();
+            }
+        }
         h = fight_reach (k = HUB->pc_task.foe);
         if (h != 2 && (!h || !fsaid)) {
             if (!(k = fight_foe ())) {          /* (Its target beaten: the next, or none: told, but after a blow alone,
                                                 **   its words enough, "You finish the giant rat where it lies.") */
                 if (HUB->pc_task.done > 1) {
+                    evb = pshoot << 1;          /* (A missile's: "No foe is left in your sights.") */
                     event (E_TASK, 0, TE_NO_FOE | LT_FIGHT << 8);
                 }
                 HUB->pc_task.foe = 0;
@@ -4287,6 +4305,7 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
         return 3;
     }
     fwant = 0;
+    pshoot = 0;
     if (!(k = fight_foe ()) || (HUB->pcsum.cond & C_STUNNED)) {
         return idle ? 3 : 0;                    /* (None; or it's in shock, in no state to fight) */
     }
@@ -4790,6 +4809,12 @@ void __fastcall__ s_intent_more (struct msg* m)
     case I_DISENGAGE:
         disengage_go (m);                       /* (The book's disengage: part 26's) */
         break;
+    case I_LOAD:                                /* (A launcher loaded, the missiles gathered: part 66's, slice 4.7's) */
+        busy (load_go ());
+        break;
+    case I_GATHER:
+        gath_op (GO_GATHER, m->a);
+        break;
     case I_RISE:                                /* (Getting up: part 50's) */
         rise_pc (1);
         break;
@@ -5077,8 +5102,9 @@ int main (int argc, char* argv[])
                 pc_waited = 0;
                 ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */
             }
-            took = take_n ? take_up () : pfoe ? close_on () : srch ? searched () : lwork ? work_done () :
-                trav ? travel_on () : 0;        /* (A thing walked over to: taken up, or walked on to; a blow's
+            took = take_n ? take_up () : gath ? gath_op (GO_ON, 0) : pfoe ? close_on () : srch ? searched () : lwork ?
+                work_done () : trav ? travel_on () : 0;     /* (A thing walked over to: taken up, or walked on to; a
+                                                **   gathering's next, part 66's; a blow's
                                                 **   close-in: struck, or walked on; a timed work's end; a journey's
                                                 **   next leg, or its end, part 54's) */
             if (!took && HUB->pc_task.kind == LT_BATTER) {

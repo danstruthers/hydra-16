@@ -30,6 +30,8 @@ enum {
     VB_CALM, VB_BEFRIEND, VB_ALLY_COME, VB_ALLY_STAY, VB_ALLY_DISMISS, VB_META_SHEET, VB_META_PAUSE,
     VB_OBSERVE_IN,                              /* (Looked into a thing, onto it: "look in the sack", slice 4.1's) */
     VB_SWAP_HANDS,                              /* (What's in its hands changed over: "swap hands", slice 4.1b's) */
+    VB_GATHER_OBJECT,                           /* (The missiles lying about gathered again: "gather the arrows",
+                                                **   slice 4.7's) */
     NACTIONS
 };
 

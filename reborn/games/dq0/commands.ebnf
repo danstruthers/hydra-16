@@ -17,7 +17,7 @@
 <command>        ::= <phrase> [ <manner> ]   (* "open the chest carefully", "drop the pick quietly": how, after any command *)
 <phrase>         ::= <look> | <examine> | <move> | <face> | <get> | <grab> | <drop> | <put> | <use>
                    | <equip> | <unequip> | <open> | <close> | <attack> | <grapple>
-                   | <throw> | <shoot> | <load> | <jump> | <say> | <tell> | <cast> | <eat>
+                   | <throw> | <shoot> | <load> | <gather> | <jump> | <say> | <tell> | <cast> | <eat>
                    | <drink> | <swim> | <find> | <search> | <listen> | <smell> | <track>
                    | <target> | <wait> | <rest> | <stop> | <naming> | <meta>
                    | <step> | <pace-set> | <charge> | <light> | <extinguish> | <posture> | <pretend>
@@ -89,8 +89,9 @@
                    | <THROW>          (* in a direction: a floor square, distance asked *)
 <throwing>       ::= <manner> [ <object> ] | <object> [ <manner> ]   (* "throw hard the apple", "throw the apple hard" *)
 <throw-dir>      ::= <direction> | "around the corner"
-<shoot>          ::= <SHOOT> [ <object> ] [ <at-phrase> ]   (* "fire the bow at the goblin", "shoot at the goblin", "shoot the goblin" *)
-<load>           ::= <LOAD> <object>
+<shoot>          ::= <SHOOT> [ <object> ] [ <at-phrase> ] [ <USING> <object> ]   (* "fire the bow at the goblin", "shoot at the goblin", "shoot the goblin", "shoot at the goblin with my bow" *)
+<load>           ::= <LOAD> <object>   (* "load the crossbow", "nock an arrow" (nock: an alias), "draw the bow" *)
+<gather>         ::= <GATHER> [ <object> ]   (* "gather the arrows", "collect the bolts", "gather": the missiles lying about, each walked to (slice 4.7) *)
 <at-phrase>      ::= ( "at" | "toward" | "towards" | "to" | "on" ) <object>
 
 (* ---- Other actions ---- *)
@@ -196,6 +197,7 @@
 <THROW>      ::= "t" | "sling"
 <SHOOT>      ::= "fire"
 <LOAD>       ::= "draw"
+<GATHER>     ::= "gather"
 <JUMP>       ::= "j"
 <SAY>        ::= "say"
 <VOLUME-SAY>  ::= "yell" | "whisper"

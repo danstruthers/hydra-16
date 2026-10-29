@@ -86,7 +86,8 @@ void __fastcall__ sheet_get (unsigned char n);  /* Sheet n into bs */
 void __fastcall__ sheet_put (unsigned char n);  /*   and back */
 
 /* sheet.c (overlay 1) */
-#define OVLS    5                               /* (The 4th and 5th: the swapped parts' images) */
+#define OVLS    6                               /* (The 4th and 5th: the swapped parts' images; the 6th the missiles',
+                                                **   missile.c's, slice 4.7's) */
 extern char hurt[200];                          /* The last harm's words */
 void sheet (void);                              /* The sheet, into the reply */
 void brief (void);                              /*   its short lines */
@@ -113,6 +114,10 @@ enum { BY_ASPECT, BY_BITE, BY_CLAWS, BY_STING, BY_HORNS };
 extern unsigned char pc_by[HARN_INJMAX];
 #define IF_POOL         0x80                    /* (An injury's flags, the referee's own, the library's never: the
                                                 **   lesser hurts past the record's room, folded together: wound's) */
+
+/* missile.c (overlay 6): a missile's attack (RS_ATTACK's RS_MISSILE: fight.c's, its sides made), and fight.c's that
+** it calls (through their stubs) and shares: the sides, the request, its effects, its words */
+void shot (void);                               /* (Its declarations after struct side's, below) */
 
 /* fight.c (overlay 2) */
 void __fastcall__ fight (struct req* r);        /* RS_NEW_ACTOR, RS_ATTACK, RS_MORALE, RS_TIME, RS_CONTEST (a
@@ -141,6 +146,17 @@ struct side {
     const struct bkind* b;                      /* (A creature's entry; 0: the character) */
     char            word[14];                   /* Its weapon, in a word (a thing named, its kind's name) */
 };
+
+void __fastcall__ strike (struct side* s, struct side* t, unsigned char n, unsigned char z, unsigned char part,
+    char* w, unsigned char stop);               /* (fight.c's, missile.c's through their stubs) */
+void __fastcall__ effect (unsigned char target, unsigned char kind, unsigned cond, unsigned char band,
+    unsigned char loc, unsigned char aspect);
+int __fastcall__ pc_shield (struct side* s);    /* (gear.c's) The best block of the shields the character holds (its
+                                                **   EML; its word in s's), 0 none: a missile's */
+extern struct side A, D;
+extern struct req* R;
+extern unsigned char nfx, prones;
+extern char line[2][72];
 
 /* gear.c (overlay 3): the character's weapons and armour */
 void __fastcall__ hit_thing (struct req* q, struct side* s);   /* A blow at a thing (RS_ATTACK at RS_THING: fight.c's,

@@ -460,7 +460,7 @@ its height above the floor (a climb to go through).
 
 **What passes**: every portal, and every part of one, says what it lets through, **sight**, **missiles** (an arrow, a
 thrown spear), **movement**, **sound**, **liquids** (boiling oil, water); the portal's own is what all its parts let
-through, as they are now (sight and movement are worked so now; missiles and liquids come with them, below):
+through, as they are now (sight, movement and missiles are worked so now, slice 4.7's for missiles; liquids to come):
 
 | Part, or opening    | Sight | Missiles | Movement | (and)                |
 |---------------------|-------|----------|----------|----------------------|
@@ -647,7 +647,20 @@ round a step (the book's grope); dropping, or a pack shrugged off, no time.  The
 to the character's next spell of time (things.c's reach, dq0w.c's pextra).  A tool is handy in hand or on the body:
 mapping as it goes draws only with its things handy.  What's used up is each kind's data, as a light's fuel: the
 things drawn with (the catalogue's burns, FU_DRAW: charcoal, chalk, a pencil, ink, a quill) a drawing's minutes off
-each, gone and told when spent; a lot's one used up, and a missile's chance to break (slice 4.7's to use).
+each, gone and told when spent; a lot's one used up, and a missile's chance to break (slice 4.7's: an arrow one
+time in four, a bolt in seven, as it's shot).
+
+**Missiles** (slice 4.7, 2026-10-29: HOUSE.md's missiles, for review; the referee's RS_MISSILE, the book's Combat
+15-17): a shot ("shoot the bandit", "fire the bow at the rat", "shoot at the rat with my bow") or a throw at a denizen
+("throw the dagger at it"), every actor's by the same code (dq0w/wshoot.c): the launcher in hand (taken up first, its
+round's), its missile the loaded one ("nock an arrow", "load the crossbow") or the handiest of its family carried
+(a quiver's arrows, a bolt case's bolts, a pouch's stones); the range's band by the book's ranges (the long and the
+extreme none for a launcher underground); a clear line (what passes, above; one standing in it stops the shot unless
+the mark is as far beyond again); the mark behind cover beside a slit or a window; aware of the shot or not; the
+referee asked, the shot told as a blow is (a fight's words), fought on as a fight is (a long task); the missile then
+lying where it falls (at the mark's feet, past it on a miss, near it gone wild), broken by its chance, a thing thrown
+moved itself.  "gather the arrows" walks over to each one it knows of in sight within twelve squares and takes it up
+into its quiver.
 
 An item is **found** through the character's senses, as everything else is: only on a square it sees now, lit;
 noticed by the referee's test of its sight (rs.h: P_NOTICE_SIGHT, or P_SEARCH when it searches), the steps from the
@@ -1241,7 +1254,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   of it long before a sound or a light reaches it (why hunters keep downwind of their prey).
 - **Body position and moving quietly** (slice 4.6): crouched, kneeling, sitting; low-walking, crawling; moving quietly
   by Stealth (D15); eye height by position.
-- **Fights complete** (slice 4.7): missiles and ammunition as items (through slits and windows; a quiver's arrows).
+- **Fights complete** (slice 4.7): built 2026-10-29 (missiles, above; HOUSE.md's missiles); left: a miss's stray at
+  one beside the mark (the book's 20%: the referee's MS_STRAY there for it), the set auto-engage range (its hook
+  dq0w/wshoot.c's SO_FOE), the denizens throwing things, a denizen changing its weapon for its bow.
 - **Water** (slice 4.9): the plan's rivers, falls and lakes, water levels, swimming and drowning, a well's water from
   the plan; rain where the surface reaches (shafts, the open), washing scents and prints away; hunger and thirst,
   eating and drinking.

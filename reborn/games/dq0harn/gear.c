@@ -550,6 +550,26 @@ unsigned char __fastcall__ o_pc_defence (struct side* d, unsigned char f, unsign
     return uhow[s];
 }
 
+/* The best block the shields the character holds give (side s's, its blocks: a missile's, Combat 15: at Shield ML,
+** high or low velocity alike), its word in s's: 0 none */
+int __fastcall__ o_pc_shield (struct side* s)
+{
+    unsigned char k, j;
+    int v = 0;
+
+    for (k = 0; k < s->nblk; ++k) {
+        if (s->bslot[k] < NTOOLS) {
+            for (j = SHIELD; j < NWEAPONS && strcmp (weapons[j].key, tools[s->bslot[k]]); ++j) {
+            }
+            if (j < NWEAPONS && s->bml[k] > v) {
+                v = s->bml[k];
+                strcpy (s->word, weapons[j].word);
+            }
+        }
+    }
+    return v;
+}
+
 /* A blow at a thing (RS_ATTACK at RS_THING: rs.h's), which ignores it: the character's attack tested (its weapon's
 ** attack mastery, or Unarmed's), the Ignore table's strike (Combat 12: a critical failure none), its impact (the
 ** dice, the weapon's for the aspect that does the thing most harm), the thing's resistance off it; and a part that

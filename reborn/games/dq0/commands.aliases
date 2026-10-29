@@ -32,6 +32,8 @@ feign pretend
 fake pretend
 leap j
 load draw
+nock draw
+collect gather
 shoot fire
 chuck t
 hurl t

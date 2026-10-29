@@ -124,7 +124,21 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
         }
         who (aname, !(f->which & FW_FIRST));    /* (The blow: "You strike at the giant rat with your sword", "The
                                                 **   ghoul claws at you", "The kobold strikes at you with its spear") */
-        if (pc && !strcmp (aw, "foot")) {
+        if (f->which & FW_THROWN) {             /* (A missile's, slice 4.7's: "You throw your dagger at the giant
+                                                **   rat", "You shoot at the bandit with your shortbow", "The kobold
+                                                **   shoots at you with its sling") */
+            add (pc ? " throw your " : " throws its ");
+            add (aw);
+            add (" at ");
+            who (dname, 0);
+        } else if (f->which & FW_MISSILE) {
+            add (pc ? " shoot at " : " shoots at ");
+            who (dname, 0);
+            if (*aw) {
+                add (pc ? " with your " : " with its ");
+                add (aw);
+            }
+        } else if (pc && !strcmp (aw, "foot")) {
             add (" kick at ");                  /* ("You kick at the giant rat") */
             who (dname, 0);
         } else if (pc) {
@@ -180,8 +194,9 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
         case O_STUMBLE:
             k = f->which;
             if (k & 1) {
-                add (out == O_FUMBLE ? (pc ? ", but fumble the blow" : ", but fumbles the blow") :
-                    pc ? ", but stumble" : ", but stumbles");
+                add (out != O_FUMBLE ? (pc ? ", but stumble" : ", but stumbles") : f->which & FW_MISSILE ?
+                    (pc ? ", but your shot goes wild" : ", but its shot goes wild") :
+                    pc ? ", but fumble the blow" : ", but fumbles the blow");
             }
             if (k & 2) {
                 add (out == O_FUMBLE ? (pc ? "; it falters" : "; you fumble your guard") :

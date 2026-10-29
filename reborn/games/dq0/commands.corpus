@@ -496,6 +496,11 @@ turn it on	VB_LIGHT_OBJECT	object=lamp	last=lamp	turn on, a pronoun
 turn it off	VB_EXTINGUISH_OBJECT	object=lamp	last=lamp	turn off, a pronoun
 use the key with the lock	VB_USE_OBJECT	object=key;target=lock	near=key,lock	use with
 shoot at the goblin	VB_SHOOT_OBJECT	target=goblin	near=goblin	shoot at, with no object first
+shoot at the goblin with the bow	VB_SHOOT_OBJECT	target=goblin	near=goblin,bow	shoot at, the launcher after (slice 4.7: the bow the meaning's other, cmdmean.s's)
+nock an arrow	VB_LOAD_OBJECT	object=arrow	near=arrow	nock: an alias of draw, load (slice 4.7)
+gather the arrows	VB_GATHER_OBJECT	object=arrows	near=arrows	gather: the missiles lying about (slice 4.7)
+collect the bolts	VB_GATHER_OBJECT	object=bolts	near=bolts	collect: an alias of gather
+gather	VB_GATHER_OBJECT	-	-	gather alone: any missiles lying about
 cast light on the goblin	VB_CAST_SPELL	spell=light;target=goblin	near=goblin	cast on
 listen to the door	VB_LISTEN	object=door	near=door	listen to
 look for the key	VB_FIND_OBJECT	object=key	near=key	look for is find

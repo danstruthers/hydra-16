@@ -2010,12 +2010,14 @@ function inTurn(o, want, f, name = '') {
 // with its reason; and the hub's live chunks (dq0Doubled) with no two portals or traps on one square (a door made
 // twice, its trap twice: the look told it twice).  sim/test.js's dq0 check, in every dq0 test (HUBOWN=0 too)
 const DQ0_REPEATS = [
+  { what: /^A bandit, armed and armoured, is ahead\b/, tests: /^dq0missile$/,
+    why: 'a walk stopped by a hostile come into sight (slice 4.7\'s test): its stir told, then the look after the stop, the bandit in both' },
   { what: /^\(\d+ feet to go\.\)/, why: 'a dig\'s spells, each told as it ends (dig down: many spells to an answer)' },
   { what: /^(?:The work goes (?:well|slowly)|Your tool slips and turns; little comes of that spell of work)\.$/,
     why: 'a dig\'s spells, each told as it ends (a long dig: hours of spells between one stir and the next, some the same)' },
   { what: /^You (?:climb on|slip back a little|find no hold yet) \(\d+ feet to go\)\.$/,
     why: 'a climb\'s rounds, each told as it ends (a long climb: many rounds to an answer, some the same)' },
-  { what: /^(?:(The|A) .* |Something )(bites|claws|strikes|swings|lunges|thrusts)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge)\b/,
+  { what: /^(?:(The|A) .* |Something )(bites|claws|strikes|swings|lunges|thrusts|shoots|throws)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge|shoot|throw)\b/,
     why: 'a fight\'s rounds, each blow told as it falls (attack: the rounds till it ends, the same words some of them; in the dark "Something", unseen: dq0traces\' rats)' },
   { what: /^You hear /, why: 'a sound heard each time it\'s made (main.c\'s heard: half a minute apart the same way, five seconds any; a search\'s or a wait\'s minute hears several)' },
   { what: /^(The passage turns (left|right)|You go through a doorway|You go on down the passage|The way (rises|falls away))\.$/,
@@ -4864,6 +4866,33 @@ module.exports = {
           f.push('the character\'s blow not blocked by the bandit\'s shield (D_BLOCK, AF_SHIELD, O_BLOCKED): ' + JSON.stringify(blocks));
         if (blocks.some(r => r.b !== 1 || r.actor !== 0)) f.push('AF_SHIELD not a denizen\'s block: ' + JSON.stringify(blocks));
         inTurn(o, ['The bandit unslings its round shield.', 'it fends off the blow with its shield.'], f, 'the shield\'s words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0missile', outfit: true, asks: true, near: ['fight'], what: 'Dingus Quest Zero\'s missiles (slice 4.7, 2026-10-29: DUNGEON.md\'s missiles, HOUSE.md\'s, for review; the referee\'s RS_MISSILE, HarnMaster\'s Combat 15-17), by the words, the fights told and the item store: the character (hmchar seed 23, its Bow 90: its outfit a shortbow slung, a quiver of arrows at its belt) down seed 5\'s ladder by the giant rats, its torch put down, "shoot the rat": its shortbow taken up first (its round\'s, "You take up your shortbow."), then shot (E_FIGHT, "You shoot at the giant rat with your shortbow"), an arrow the fewer in its quiver; "gather the arrows" told what it found; then with the hand-written theme\'s bandits (dq0shield\'s, seed 1), down the passage south: a bandit with a shortbow of its own shooting at the character from further off than beside it (E_FIGHT by it, "The bandit shoots at you with its shortbow")',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml bow 90 >> /ram/c.hm',
+        'dq0 -p t -s 5 -c /ram/c.hm -T', 'd', 'drop the torch', 'shoot the rat', 'look', 'gather the arrows', 'inventory', 'quit',
+        'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
+        'go south', 'go south', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out);
+        if (process.env.DQ0SHOW) { console.log(o); for (const t of T) console.log(dq0Evs(t)); }
+        const g1 = T.of('dq0 -p t -s 5 -c /ram/c.hm -T'), g2 = T.of("dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'gambeson,mail hauberk'");
+        if (g1.k < 0 || g2.k < 0) return ['the games not played'];
+        const arrows = s => dq0Carried(s).filter(i => i.name === 'arrows').reduce((a, i) => a + i.qty, 0);
+        const sh = T.of('shoot the rat', g1.k), d0 = T.of('drop the torch', g1.k);
+        if (!dq0Ev(sh, 'E_FIGHT', { who: 0 }).length) f.push('no shot at the rat told (' + dq0Evs(sh) + ')');
+        inTurn(o, ['You take up your shortbow.', 'You shoot at the giant rat with your shortbow'], f, 'the character\'s shot: ');
+        if (!(arrows(sh.after) < arrows(d0.after))) f.push('no arrow the fewer (' + arrows(d0.after) + ' before, ' + arrows(sh.after) + ' after)');
+        if (!/You gather up \d+ arrows?\.|You find nothing to gather\./.test(o)) f.push('the gathering not told');
+        const den = T.filter(u => u.k > g2.k).flatMap(u => u.dens).filter(e => e.kind === 'E_FIGHT' && e.who > 0);
+        if (!den.length) f.push('no bandit\'s shot');
+        if (!/The bandit shoots at you with its shortbow/.test(o)) f.push('the bandit\'s shot not told');
         return f;
       },
       sdcard: true

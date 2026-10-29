@@ -439,14 +439,19 @@ static unsigned char pc_shield (void)
 /* ---- Fights (RS_ATTACK): a blow a flat test (a prone defender four steps the easier, each other foe two), a hit
 ** two wounds (a critical one four); a creature wounded that stands holds its ground on a flat test (a shy one four
 ** steps the worse) or flees.  A shield held two steps the harder for a blow at its holder, once a round, the null's
-** simple way (2026-10-29): a blow that would have hit but for it blocked, told so (AF_SHIELD, its words the shield's).  At a thing: a flat 6 of impact, less its least resistance to a blow */
+** simple way (2026-10-29): a blow that would have hit but for it blocked, told so (AF_SHIELD, its words the shield's).  At a thing: a flat 6 of impact, less its least resistance to a blow.
+** A missile's (RS_MISSILE, slice 4.7's, the null's simple way): the same flat test, two steps the worse a range's band
+** past the short, four behind cover, two the easier unaware of it; a stray's a hit, no test; its words the kind's name */
 
 static void __fastcall__ attack (struct req* r)
 {
     struct rs_effect* e = (struct rs_effect*) r->x;
     unsigned char a = r->actor, d = r->other, f = r->w2, n, k, t, w, sh = 0, rr = 0;
     unsigned char* dw;
-    signed char g = 0, st = r->steps - 2 * r->c;
+    unsigned mw = r->w2;
+    unsigned char mk = r->c;
+    signed char g = 0, st = mw & RS_MISSILE ? r->steps - 2 * (r->b & 3) - (mw & MS_COVER ? 4 : 0) +
+        (mw & MS_UNAWARE ? 2 : 0) : r->steps - 2 * r->c;
 
     for (k = 1, t = r->x[0]; k < 3; ++k) {      /* (At a thing: its least resistance to a blow) */
         t = r->x[k] < t ? r->x[k] : t;
@@ -477,8 +482,18 @@ static void __fastcall__ attack (struct req* r)
         st += f & RS_PRONE_D ? 4 : 0;
         g = flat_r (st - (sh ? 2 : 0), rr = 1 + random (100));
         sh = !G_OK (g) && sh && G_OK (flat_r (st, rr)) ? sh : 0;  /* (Blocked: it would have hit but for it) */
+        if (mw & MS_STRAY) {
+            g = G_MS;                           /* (A missile's stray: a hit) */
+            sh = 0;
+        }
     }
-    put (a ? "" : weapon ());                   /* (Its words: the attacker's weapon, the defender's, the strike's) */
+    if (a && (mw & RS_MISSILE)) {
+        hub_map (KIND_BANK);                    /* (A creature's missile: its kind's name) */
+        memcpy (wname, CATALOGUE[mk < NKINDS ? mk : 0].name, sizeof wname);
+        hub_map (0);
+    }
+    put (a ? (mw & RS_MISSILE ? wname : "") : weapon ());   /* (Its words: the attacker's weapon, the defender's, the
+                                                **   strike's) */
     put ("\n");
     put (sh ? shw[sh - 1] : d ? "" : weapon ());
     put ("\n");

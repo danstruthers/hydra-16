@@ -423,8 +423,66 @@ silent on all of it.
   weapons' ranges; other things are judged by their weight and their shape.
 - **Thrown hard: twice as far, and 10 less** (2 steps).  ("throw the dagger hard at the rat": struct cmd's manner.)
 - **Beyond the extreme band it falls short**, at the band's end on the line to the mark; **a miss lands beside the
-  mark** (on its square, as yet); **a hit strikes it**, but wounds nothing yet: the referee's missile attack (Combat
-  15's: its defences, its impact) is to come.  The thing lands out of the thrower's hands, where it falls.
+  mark** (on its square, as yet).  The thing lands out of the thrower's hands, where it falls.  A thing thrown at a
+  denizen is a missile's attack (below, slice 4.7's): it strikes, or it misses, by the book.
+
+## Missiles *(slice 4.7, 2026-10-29: drafted for the user to review)*
+
+The book's missile combat (Combat 15-17) for every actor, the character's and a denizen's, by the same code (the world's
+dq0w/wshoot.c, the referee's dq0harn/missile.c; the null referee's simple way).  Where the book is explicit it's the
+book's; the house's below, each marked.
+
+- **What shoots**: a sling, a shortbow, a longbow, a hartbow, a crossbow, in hand (both hands; a sling the right).
+  "shoot the bandit" takes up the launcher it carries if it isn't in hand (slung, on the belt), its round's (the
+  book's grope: an unprepared missile weapon prepared, used the next turn), its hands free first ("Your hands are
+  full: put something down first.").  A thing thrown at a denizen ("throw the dagger at the rat") goes by Throwing (a
+  taburi by Dagger, a shorkana by Axe, a spear by Spear: the book's), its impact the thing's own as a weapon's (a light
+  thing the stick's, a hefty one the club's: Combat 8), all of it at the short and medium ranges, half at the long and
+  extreme (Combat 16's Melee row); its aspect by the d6 (Combat 17's Random Aspect).
+- **Its missile**: the launcher's loaded one, else one of its family carried (a quiver's arrows, a bolt case's bolts,
+  a pouch's sling stones), the handiest first; one in the pack its reach owed (HOUSE.md's reach).  "nock an arrow",
+  "load the crossbow" load it ahead (a bow's or a sling's half a round, a crossbow's a round).  *(For review: the
+  loading's times.)*
+- **Its time**: a round a shot, the book's load and fire (a bow, a sling); a crossbow's load a round more, its shot
+  the next (the book's: load, or fire).  Fighting on with missiles is a long task as melee is (HOUSE.md's fighting on):
+  a shot each round at the target while it's in range, seen and the line clear and a missile's to hand, then the
+  nearest hostile it can shoot at; an enemy engaging it, the melee takes over, with what it holds (a bow the book's
+  stick, a sling a soft thing).  The set auto-engage range (the user's, to come) plugs in at dq0w/wshoot.c's SO_FOE.
+- **Ranges** (Combat 16's Missile Data Table, in five-foot squares): a sling 15, a shortbow 20, a longbow 25, a
+  hartbow 30, a crossbow 20 the short band, each band twice the last, the medium 20 less, the long 40, the extreme 80.
+  *Underground, under a ceiling, a launcher's long and extreme bands none and its medium 15 less* (the book's
+  restricted missile ranges, its 10-20 the house's middle).  *(For review.)*  A thing thrown keeps all four bands.
+- **The line**: each square between the shooter and its mark must let a missile through (the floor, an open door, a
+  portcullis's bars, an arrow slit, a window with no glass and its shutters open or none: DUNGEON.md's what passes);
+  one that stands in it stops the shot unless the mark is as far beyond it again (the book's firing over).  The
+  mark beside a slit or a window the line comes through is behind cover: a strike below its neck strikes the stone
+  (Combat 17's cover). *(For review: the cover up to the neck.)*
+- **Aware or not**: a denizen that hasn't sensed the character ignores the shot (the book's Ignore); the character
+  ignores one from a denizen it doesn't see.  Aware, the defence is the book's: a shield's block at its full block (a
+  denizen's its weapon mastery and the shield's class, as melee's), a low-velocity missile's block with a weapon at
+  half (a bare arm's at half its Unarmed, struck by it: H2), none against an arrow, a bolt or a stone; a dodge at full
+  against a thing thrown, at half against those.  The character's by its stance (block, dodge; none none; else the
+  better), a denizen's the better.
+- **The EML**: the skill (Bow for the bows and the crossbow, Sling, Throwing or the thrown weapon's own), less the
+  range's band, an aim high or low 10, the mark's size (Combat 16's table: a giant rat 15 less, a bear 10 more; one
+  prone a two-foot mark).  *A denizen's skill at a missile weapon its bestiary weapon's mastery ten less* (as any
+  other weapon of a skill not its own's).  *(For review.)*
+- **What comes of it** (the missile attack table): wild (the shooter's fumble roll for its launcher: failed, let
+  fall), a miss, a block (the shield or the weapon struck, no harm), a strike of n dice and the missile's impact at
+  its range, the armour at the location off it.  *(Left: the book's 20% that a miss strikes one beside the mark, the
+  referee's MS_STRAY there for it, the world's left for room.)*
+- **Where it falls**: a hit or a block at the mark's feet; a miss on past it along the line, one to four squares,
+  short of what stops it; a wild one somewhere within two squares; known to the character.  *An arrow breaks one time
+  in four (kinds.c's snaps, the user's "arrows can break"), a bolt one in seven (the house's: shorter, thicker), a
+  stone never; a thing thrown never.*  *(For review.)*  "gather the arrows" walks over to each missile it knows of
+  within twelve squares, seen, the nearest first, and takes it up into its quiver (joined to the lot there), else as
+  a thing taken up.
+- **Denizens**: one with a launcher of its own and its missiles, hostile, sensing the character further off than
+  beside it, shoots (its mind's: the world says if it can; no shot to be had from there, out of range or no clear
+  line, it closes with the character, till it moves); its launcher taken up from its back or its belt first, its
+  round's (not with something else in its hands); its missiles run out, it shoots no more; the character beside it,
+  it lets its launcher fall (no time, the book's) and draws its weapon.  *(For review: a denizen holding a weapon
+  doesn't change it for its bow.)*
 
 ## Commands
 

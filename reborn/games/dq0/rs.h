@@ -195,6 +195,21 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define RS_SHORT        0x10                    /* (RS_ATTACK at RS_THING's w2: a bare part (no armour on it: the
                                                 **   fists, the feet, the head) that would be hurt stopped short of it,
                                                 **   unhurt, result | 4: the first time at a door, HOUSE.md's) */
+#define RS_MISSILE      0x40                    /* (RS_ATTACK's w2: a missile's attack, shot or thrown (slice 4.7's, the
+                                                **   book's Combat 15-17): c the kind it's shot with or the thing
+                                                **   thrown (the catalogue's KI_*), b its range's band (0 short ... 3
+                                                **   extreme, the world's: its ranges' table), w1 the range in squares,
+                                                **   a the aim (Z_*), steps the circumstances; the defender aware of it
+                                                **   or not (MS_UNAWARE: the book's Ignore), behind cover (MS_COVER: a
+                                                **   slit's or a window's sill, the strike below its head on the
+                                                **   stone), or a stray's (MS_STRAY: a miss that struck one beside its
+                                                **   mark, the book's, a strike of one die, no test); the reply as a
+                                                **   blow's (O_FUMBLE a wild shot, the attacker's fumble roll: a
+                                                **   launcher let fall, X_DROP), its words the same four lines (the
+                                                **   attacker's weapon its kind's name) */
+#define MS_UNAWARE      0x100
+#define MS_COVER        0x200
+#define MS_STRAY        0x400
 #define AF_STOPPED      0x01                    /* The attacker's strike stopped by armour (its line the armour's) */
 #define AF_STOPPED_D    0x02                    /*   the defender's */
 #define AF_TA           0x04                    /* The defender's tactical advantage: an action more, at once */

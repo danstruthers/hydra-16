@@ -339,6 +339,15 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   flees a while, unfriendly, without another blow.  No foe engages it meanwhile (the world's engage initiative test
   waits for it to be itself again), and none cornered beside it strikes.  To come: a captor leading it away, an ally
   standing over it.
+- **Missiles** (slice 4.7, 2026-10-29: HOUSE.md's missiles, for review): a hostile actor with a launcher of its own (a
+  sling, a bow, a crossbow among its things: the world's agear AG_SHOOTS, as it tells the referee its things) and its
+  missiles, sensing the character further off than beside it, shoots at it a round at a time (its mind's: I_ATTACK's
+  AIM_SHOT, the world's to say if it can, dq0w/wshoot.c): its launcher taken up from its back or its belt first, its
+  round's ("The bandit unslings its shortbow."), not if its hands hold something else; no shot to be had from where it
+  stands (out of range, no clear line: AG_NOSHOT, till it moves), it comes on; its missiles spent, it shoots no more.
+  The character beside it, it lets its launcher fall ("The bandit drops its shortbow.": no time) and draws its weapon.
+  Its shots told as its blows are ("The bandit shoots at you with its shortbow: a serious puncture to your thigh"), its
+  missiles lying where they fall.
 
 ### Their things
 

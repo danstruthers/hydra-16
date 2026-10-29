@@ -23,6 +23,25 @@ extern unsigned char den_saw;                   /* A body fallen: the world to l
                          bpy = HUB->pc_y, bps = HUB->pc_stratum)
 #define BD_PUT()        (hub_map (0), memcpy (&HUB->actor[bk], &bd, offsetof (struct actor, name)))
 
+/* A blow's missile (wfight.c's: RS_MISSILE's, set before part 15's shot_blow by wshoot.c's, 0 after): what it's shot
+** with or the thing thrown, its range's band, its range, MS_* (rs.h's), the circumstances' steps */
+struct mshot {
+    unsigned char   kind, band, dist;
+    unsigned        flags;
+    signed char     steps;
+};
+extern struct mshot mshot;
+unsigned char __fastcall__ shot_op (unsigned char op, unsigned char k, unsigned char z);   /* (Part 65's: wshoot.c)
+                                                **   The missiles' calls: */
+void __fastcall__ pc_shot (unsigned char k);    /* (Part 67's) The character's shot at actor k */
+enum { SO_ARMS, SO_REACH, SO_FOE, SO_DEN, SO_UNBOW };  /* what the character shoots with; whether it can shoot at k
+                                                **   (plus 1: 2, 1 senseless, 0 not); the nearest foe it can, plus 1;
+                                                **   body bd's shot at the character (aim z); its launcher let fall */
+unsigned __fastcall__ gath_op (unsigned char op, unsigned char a);  /* (Part 66's) The missiles gathered (begun, a
+                                                **   their family; its next, 2 on) */
+enum { GO_GATHER, GO_ON };
+unsigned load_go (void);                        /* (Part 68's) A launcher loaded: its time */
+
 /* ---- The parts' (bank.s's stubs) */
 void den_intents (void);                        /* (Part 14) The denizens' intents carried out (the hub's di), they
                                                 **   rung after */

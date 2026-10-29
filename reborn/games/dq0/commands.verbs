@@ -108,6 +108,7 @@ stop        alone=VB_STOP thing=VB_STOP
 step        way=VB_STEP_DIRECTION alone=VB_STEP_DIRECTION
 shoot       thing=VB_SHOOT_OBJECT unsaid=target
 load        thing=VB_LOAD_OBJECT unsaid=hand
+gather      thing=VB_GATHER_OBJECT alone=VB_GATHER_OBJECT unsaid=none
 say         alone=VB_SAY thing=VB_SAY
 cast        alone=VB_CAST_SPELL thing=VB_CAST_SPELL
 eat         thing=VB_EAT_OBJECT unsaid=none
@@ -411,6 +412,9 @@ shoot = shoot
 fire = shoot
 draw = load
 load = load
+nock = load
+gather = gather
+collect = gather
 say = say
 yell = say
 whisper = say

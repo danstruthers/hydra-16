@@ -25,7 +25,13 @@
 #define LOUD_FIGHT      5
 
 static unsigned char fring;                     /* (The fights' ring's next) */
-static char wb[32];                             /* (A blow's words on their way to the ring, a piece at a time) */
+struct mshot mshot;                             /* (wbody.h's: a blow's missile, wshoot.c's) */
+extern unsigned char pshoot;                    /* (wshoot.c's: the character's fight a missile's) */
+#pragma bss-name (push, "SW15RODATA")
+static char wb[32];                             /* (A blow's words on their way to the ring, a piece at a time: part
+                                                **   15's image's, to_ring's alone, no part called as it's used; the
+                                                **   main RAM's room, 2026-10-29) */
+#pragma bss-name (pop)
 
 #pragma code-name ("SW15CODE")
 #pragma rodata-name ("SW15RODATA")
@@ -113,6 +119,13 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     pa = att ? bd.pos : HUB->pc_pos;           /* (Their bodies' positions, the world's: prone, the easier struck) */
     pd = att ? HUB->pc_pos : bd.pos;
     r->w2 = bd.timid | (pa == POS_PRONE ? RS_PRONE_A : 0) | (pd == POS_PRONE ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0);
+    if (mshot.kind) {                           /* (A missile's, shot or thrown: wshoot.c's, slice 4.7's) */
+        r->c = mshot.kind;
+        r->b = mshot.band;
+        r->w1 = mshot.dist;
+        r->steps = mshot.steps;
+        r->w2 |= RS_MISSILE | mshot.flags;
+    }
     r = hub_ask (SLOT_WORLD);
     if ((out = r->result) == 0xFF) {
         r->state = REQ_FREE;
@@ -165,7 +178,9 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     hub_map (DEN_BANK);
     memset (f, 0, sizeof *f);
     f->out = w2;
-    f->which = wh | (z & FW_FIRST) | (c & AF_AGAIN ? FW_AGAIN : 0) | (c & AF_SHIELD ? FW_SHIELD : 0);
+    f->which = wh | (z & FW_FIRST) | (c & AF_AGAIN ? FW_AGAIN : 0) | (c & AF_SHIELD ? FW_SHIELD : 0) |
+        (!mshot.kind ? 0 : (unsigned char) (mshot.kind - KI_SLING) <= KI_CROSSBOW - KI_SLING ? FW_MISSILE :
+        FW_MISSILE | FW_THROWN);
     if (att) {
         to_ring (f->att, HUB->actor[(att - 1) & 7].name, sizeof f->att);
     }
@@ -246,13 +261,57 @@ void s_bled (void)
     hub_map (0);
 }
 
-/* A blow struck by body bd (entry bk) at def (0 the character), its aim z (its intent, I_ATTACK: part 14's) */
+/* A blow struck by body bd (entry bk) at def (0 the character), its aim z (its intent, I_ATTACK: part 14's); a shot,
+** AIM_SHOT, part 65's (slice 4.7's) */
 void __fastcall__ s_den_blow (unsigned char def, unsigned char z)
 {
+    if (z & AIM_SHOT) {
+        shot_op (SO_DEN, def, z & ~AIM_SHOT);
+        return;
+    }
+    shot_op (SO_UNBOW, 0, 0);                   /* (A launcher in its hands let fall first: part 65's) */
     if (!den_draw ()) {                         /* (Its weapon drawn first, its hands empty: its round's, part 60's) */
         blow (bk + 1, def, z);
     }
 }
+
+/* A missile's blow (wshoot.c's, part 65's: mshot set), mshot cleared after: 0 shot, 1 not (the attacker only got to
+** its feet, or took up its weapon: its turn), 0xFF none (none to strike: senseless, dead) */
+unsigned char __fastcall__ s_shot_blow (unsigned char att, unsigned char def, unsigned char z)
+{
+    unsigned char r;
+
+    bev.x[1] = 0xFF;
+    r = blow (att, def, z);
+    mshot.kind = 0;
+    return r == 0xFF ? 0xFF : bev.x[1] == 0xFF || bev.x[1] == O_RISE || bev.x[1] == O_REARM;
+}
+
+/* The character's blow at the actor it's posted (the hub's pc_foe, I_ATTACK's: a round of its time), struck if the
+** actor's still beside it (gone, nothing: the UI found it there) */
+void s_pc_blow (void)
+{
+    unsigned char k;
+
+    hub_map (0);
+    k = (HUB->pc_foe - 1) & 7;
+    HUB->pc_foe = 0;
+    if (pshoot) {
+        pc_shot (k);                            /* (A shot, fought on as a blow is: part 67's) */
+        return;
+    }
+    BD_GET (k);
+    if (!bd.state || bd.sn != bps || (unsigned) (bd.x - bpx + 1) > 2 || (unsigned) (bd.y - bpy + 1) > 2 ||
+        blow (0, k + 1, HUB->pc_aim) == 0xFF) {
+        return;
+    }
+    BD_PUT ();
+    ++HUB->den_seq;                             /* (Changed: the world looks again at what the character sees) */
+}
+
+/* ==== Part 67's (part 15's room, 2026-10-29: the missiles' part, wshoot.c's, dq0w.cfg's SW67): a robbery */
+#pragma code-name ("SW67CODE")
+#pragma rodata-name ("SW67RODATA")
 
 static struct item* p;
 
@@ -275,9 +334,9 @@ static unsigned char mine (void)
 #define WSLOT           (HUB->slot[SLOT_WORLD])
 void __fastcall__ s_den_rob (const struct msg* q)
 {
-    static struct msg m;
-    static unsigned i, n, x, y, box;
-    static unsigned char kind, f, how, fac;
+    struct msg m;                               /* (On the C stack: the main RAM's room, 2026-10-29) */
+    unsigned i, n, x, y, box;
+    unsigned char kind, f, how, fac;
     unsigned char* s;
 
     x = q->w1;
@@ -340,22 +399,4 @@ void __fastcall__ s_den_rob (const struct msg* q)
         hub_event (&m);
         ++HUB->den_seq;
     }
-}
-
-/* The character's blow at the actor it's posted (the hub's pc_foe, I_ATTACK's: a round of its time), struck if the
-** actor's still beside it (gone, nothing: the UI found it there) */
-void s_pc_blow (void)
-{
-    unsigned char k;
-
-    hub_map (0);
-    k = (HUB->pc_foe - 1) & 7;
-    HUB->pc_foe = 0;
-    BD_GET (k);
-    if (!bd.state || bd.sn != bps || (unsigned) (bd.x - bpx + 1) > 2 || (unsigned) (bd.y - bpy + 1) > 2 ||
-        blow (0, k + 1, HUB->pc_aim) == 0xFF) {
-        return;
-    }
-    BD_PUT ();
-    ++HUB->den_seq;                             /* (Changed: the world looks again at what the character sees) */
 }
