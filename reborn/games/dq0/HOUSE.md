@@ -1902,8 +1902,10 @@ roll (SOUND.md's rule, D9: tuned by ear later), and tests Stealth where the book
 - **How loud** *(every ruleset's, for review)*: the character's steps at a slow walk or a walk 2, a jog 3, a run 4, a
   sprint 5, hopping 3; metal armour worn (six pounds or more of iron, steel or bronze: mail, plate) a level more as
   it moves; asleep 1; anything else it does 2 (a wait too: its gear, its breath, as the denizens heard it before); a
-  dig's and a battering's noises as they were (the world's E_NOISE).  The denizens' steps 1, a dash 2, a noise of their own 3 (every eighth
-  step), as they were.  (dq0w.c's part 50, step_loud; the hub's pc_noise.)  Why: the book's Listening table has
+  dig's and a battering's noises as they were (the world's E_NOISE).  The denizens' steps 1, a dash 2, a noise of
+  their own 3 (every eighth step), as they were.  (The world's as a move starts creeping, crawling, hopping, not
+  standing or its legs not whole: dq0w.c's part 50, step_loud, the hub's pc_noise; else the senses' by its pace,
+  pc_going; the armour weighed as what's worn changes, the hub's pc_clank.)  Why: the book's Listening table has
   breathing soft and footsteps two levels louder; the walk's 2 keeps the reach the denizens heard the character at
   before (their kind's hearing).
 - **Heard** *(every ruleset's)*: a sound of loudness L, less the background where the hearer is (below), heard within
@@ -1958,12 +1960,13 @@ roll (SOUND.md's rule, D9: tuned by ear later), and tests Stealth where the book
   is as prone (the easier struck, its turn spent getting up); crouched as standing.  The status line says it
   (CROUCHED, KNEELING, SITTING; PRONE as before).  Not yet: a missile's target by its height (slice 4.7's to read
   pc_pos), the denizens' own positions but prone.
-- **What it costs** *(2026-10-29, the emulator)*: the pulse some 0.34M cycles (its fill 0.08M, a chunk's rectangle at a
-  time in assembly; its search 0.12M), worked out only as a denizen's senses or a wait's end find it out of date (the
-  character moved, a door or a square changed): once a denizens' turn at most, nothing for a turn or a look in place;
-  the world's what lies between from a layer a step or two old (from where it was worked out, and those squares more).
-  The senses' answers to the denizens (some 0.05M each) and the pulse in a swapped part of their own (part 5,
-  overlay 4), their main RAM the more for it.
+- **What it costs** *(2026-10-29, the emulator)*: the pulse some 0.2-0.35M cycles (its fill a chunk's rectangle at a
+  time in assembly; its search 0.04-0.12M), worked out only as a denizen's senses or a wait's end find it out of date
+  (the character moved, a door or a square changed): once a denizens' turn at most, nothing for a turn or a look in
+  place; the world's what lies between from a layer a step or two old (from where it was worked out, and those squares
+  more).  The senses' answers to the denizens their part 6, the pulse their part 5 (both in their overlay 4); the
+  world's step loudness at once by the senses for a plain walk (no part swapped as a move starts: dq0answer's times as
+  they were).
 
 ## The peoples *(2026-10-29: Phase 4's, the user's answer 11; drafted for the user to review)*
 

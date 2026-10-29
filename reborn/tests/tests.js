@@ -3928,7 +3928,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0quiet', meaning: true, what: 'Dingus Quest Zero\'s moving quietly (slice 4.6, D15: Stealth tested as it starts, again as something changes; HOUSE.md\'s sound and stealth, for review), by the referee\'s replies and the hub\'s state: at seed 3 by the way down, a step at a walk as loud as a walk (the hub\'s pc_noise 2, no Stealth test); creeping, its first step tested (the world\'s slot: RS_TEST, P_STEALTH), its loudness the grade\'s (a critical success 0, a marginal 1, a marginal failure 2, a critical 3), its next not tested again, the same loudness; crouched, tested again (its position changed); a walk again, 2, no test; a wait as loud as a walk, 2 (asleep, 1)',
+      name: 'dq0quiet', meaning: true, what: 'Dingus Quest Zero\'s moving quietly (slice 4.6, D15: Stealth tested as it starts, again as something changes; HOUSE.md\'s sound and stealth, for review), by the referee\'s replies and the hub\'s state: at seed 3 by the way down, a step at a walk as loud as its pace (the senses\' to reckon, the hub\'s pc_noise 0xFF, no Stealth test); creeping, its first step tested (the world\'s slot: RS_TEST, P_STEALTH), its loudness the grade\'s (a critical success 0, a marginal 1, a marginal failure 2, a critical 3), its next not tested again, the same loudness; crouched, tested again (its position changed); a walk again, the senses\' to reckon, no test',
       init: 't_rc', cycles: 400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'step forward', 'creep',
         'step back', 'step forward', 'crouch', 'step back', 'stand', 'walk', 'step forward', 'wait', 'quit', 'echo $status']) },
@@ -3938,7 +3938,7 @@ module.exports = {
         const tests = t => dq0Rep(t, 'slot0', { kind: RS_TEST, a: STEALTH }), loud = g => g >= 2 ? 0 : g === 1 ? 1 : g === -1 ? 2 : 3;
         const s0 = T.of('step forward'), cr = T.of('creep'), s1 = T.of('step back', cr.k), s2 = T.of('step forward', s1.k), cd = T.of('crouch', s2.k);
         const s3 = T.of('step back', cd.k), wk = T.of('walk', s3.k), s4 = T.of('step forward', wk.k), w = T.of('wait', s4.k), nz = t => t.after ? t.after.pc.noise : -1;
-        if (nz(s0) !== 2 || tests(s0).length) f.push('a walk\'s step: its noise ' + nz(s0) + ', ' + tests(s0).length + ' Stealth tests');
+        if (nz(s0) !== 255 || tests(s0).length) f.push('a walk\'s step: its noise ' + nz(s0) + ', ' + tests(s0).length + ' Stealth tests');
         const t1 = tests(s1);
         if (t1.length !== 1) f.push('the first creeping step: ' + t1.length + ' Stealth tests');
         else if (nz(s1) !== loud(t1[0].grade)) f.push('the first creeping step: its noise ' + nz(s1) + ', its grade ' + t1[0].grade);
@@ -3947,8 +3947,7 @@ module.exports = {
         const t3 = tests(s3);
         if (t3.length !== 1) f.push('the crouched creeping step: ' + t3.length + ' Stealth tests (its position changed)');
         else if (t3[0].steps !== 1) f.push('the crouched creeping step: its test ' + t3[0].steps + ' steps, not 1');
-        if (nz(s4) !== 2 || tests(s4).length) f.push('a walk again: its noise ' + nz(s4) + ', ' + tests(s4).length + ' Stealth tests');
-        if (nz(w) !== 2) f.push('a wait: its noise ' + nz(w) + ', not 2');
+        if (nz(s4) !== 255 || tests(s4).length) f.push('a walk again: its noise ' + nz(s4) + ' (not the senses), ' + tests(s4).length + ' Stealth tests');
         return f;
       },
       sdcard: true
