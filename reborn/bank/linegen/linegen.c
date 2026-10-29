@@ -182,7 +182,10 @@ static void head (void)
         }
         strcat (story, ".");
     }
-    for (k = 0; k < nf && strcmp (fa[k].name, "dead") && strcmp (fa[k].name, "kobolds"); ++k) {
+    for (k = 0; k < nf && !among (fa[k].name, "dwarves elves soldiers"); ++k) {
+    }                                           /* (A people that holds it still first, 2026-10-29; else the dead, the
+                                                **   gargun, the kobolds: the first of them) */
+    for (k = k < nf ? k : 0; k < nf && !among (fa[k].name, "dwarves elves soldiers dead kobolds gargun"); ++k) {
     }
     if (data (TK_NOW, k < nf ? fa[k].name : nf ? fa[nf - 1].name : "vermin", 0)) {
         strcat (story, " ");

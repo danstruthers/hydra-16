@@ -297,7 +297,8 @@ void __fastcall__ s_den_rob (const struct msg* q)
         !it_need (bd.sn, (x - STRATUM (bd.sn).x0) >> CW_BITS, (y - STRATUM (bd.sn).y0) >> CW_BITS)) {
         x = bd.x;
         y = bd.y;
-        how = 0;
+        how = how == RB_HOARD ? RB_HOARD : 0;  /* (Its home no floor, a way's square: its hoard still the one
+                                                **   near, 2026-10-29) */
     }
     for (box = 0, i = 0; how == RB_HOARD && (i = items (i, IN_SQUARE, 0)) != 0; ) {
         if (ip->owner == (OW_HOARD | fac) && ip->sn == bd.sn && (unsigned) (ip->x - x + 16) <= 32 &&

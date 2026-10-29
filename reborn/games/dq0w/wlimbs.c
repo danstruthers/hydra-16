@@ -400,7 +400,7 @@ void s_den_equip (void)
         if ((f & I_HELD) && weapon ()) {        /* (How it looks: armed, armoured, the hub's agear) */
             ag |= AG_ARMED;
         } else if ((f & (I_WORN | I_HIDDEN)) == I_WORN && dk.craft == AP_ARMOUR) {
-            ag |= AG_ARMOUR;
+            ag |= AG_ARMOUR | ((dk.mat == MT_IRON || dk.mat == MT_STEEL) && dk.bulk >= 8 ? AG_MAIL : 0);
         }
         if (!dk.tool[0] || !(f & (I_HELD | I_WORN))) {
             continue;

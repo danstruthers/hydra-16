@@ -91,7 +91,7 @@ static unsigned char __fastcall__ differ (unsigned char n)
     return 0;
 }
 
-/* A kind's name, more than one: "giant rats", "cave spiders" (added to lb) */
+/* A kind's name, more than one: "giant rats", "cave spiders", "dwarves" (added to lb) */
 static void __fastcall__ plural (const char* n)
 {
     char b[16];
@@ -100,6 +100,8 @@ static void __fastcall__ plural (const char* n)
     strcpy (b, n);
     if (c == 'y' && k > 1 && !strchr ("aeiou", n[k - 2])) {
         strcpy (b + k - 1, "ies");
+    } else if (c == 'f') {
+        strcpy (b + k - 1, "ves");           /* ("dwarves", "elves": the peoples, 2026-10-29) */
     } else {
         strcat (b, c == 's' || c == 'x' || c == 'z' || (c == 'h' && k > 1 && strchr ("cs", n[k - 2])) ? "es" : "s");
     }
@@ -130,7 +132,7 @@ static void group (void)
         if (n[0] < 'a' || t.d <= 3 + S.eye) {
             strncpy (t.name, n, sizeof t.name - 1);
         }
-        t.gear = t.d <= 1 + S.eye ? S.den[i].gear & (AG_ARMED | AG_ARMOUR) : 0;   /* (Its things at a look, made out
+        t.gear = t.d <= 1 + S.eye ? S.den[i].gear & (AG_ARMED | AG_ARMOUR | AG_MAIL) : 0;   /* (Its things at a look, made out
                                                 **   nearer than its kind: "armed and armoured", HOUSE.md's three
                                                 **   levels, 2026-10-27) */
         for (k = 0, p = now_; k < nnow; ++k, ++p) {     /* (One alike told already: with it) */
@@ -174,14 +176,17 @@ static void __fastcall__ named (const struct told* t, unsigned char the)
 
 /* Group t told: "A giant rat is ahead to your left, 15 feet away, watching you."; "Two giant rats are ..."; an ally
 ** named: "Grub is behind you, 5 feet away, following you."; "Something is ahead, 40 feet away." */
+static const char* const gwords[4] = { "", ", armed,", ", armoured,", ", armed and armoured," };
 static void __fastcall__ tell_one (const struct told* t)
 {
-    unsigned char many = t->n > 1;
+    unsigned char many = t->n > 1, g = t->gear;
 
     named (t, 0);
-    if (t->gear) {
-        add (t->gear == AG_ARMED ? ", armed," : t->gear == AG_ARMOUR ? ", armoured," : ", armed and armoured,");
+    if (g & AG_MAIL) {                          /* ("A dwarf in mail, armed, is ...": 2026-10-29) */
+        add (" in mail");
+        g &= AG_ARMED;
     }
+    add (gwords[g & 3]);
     add (many ? " are " : " is ");
     add (relname[t->rel & 7]);
     add (", ");

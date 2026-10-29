@@ -42,60 +42,15 @@
 #include "../dq0/rs.h"
 #include "dq0harn.h"
 
-/* ---- The bestiary: by the kinds' keys, each one's attributes (Strength, Stamina, Dexterity, Agility, Will), its
-** weight (4 lb), its size (1 tiny ... 4 a man ... 6 very large), its Initiative (its courage: morale) and Dodge, its
-** hide's protection (blunt, edge, point, fire), and its weapons (a word, its ML, its impact, its aspect, the part it
-** strikes with: 0xFF a weapon held), the first the one it uses most */
+/* ---- The bestiary (beasts.c's, in overlay 5: dq0harn.h's struct bkind), an entry at a time copied out (bk) */
 
-struct nweapon {
-    char            word[7];
-    unsigned char   ml, imp, aspect, part;
-};
-static const struct bkind {
-    char            key[8];
-    unsigned char   att[5];
-    unsigned char   wt, size, ini, dge;
-    unsigned char   arm[4];
-    unsigned char   flags;
-    struct nweapon  w[2];
-} bestiary[] = {
-    { "rat", { 5, 8, 10, 14, 6 }, 3, 2, 30, 50, { 1, 1, 0, 1 }, BF_QUAD,
-      { { "bite", 45, 2, HARN_POINT, HARN_FACE }, { "" } } },
-    { "spider", { 6, 9, 12, 15, 8 }, 4, 3, 40, 55, { 2, 3, 1, 0 }, 0,
-      { { "bite", 50, 3, HARN_POINT, HARN_FACE }, { "" } } },
-    { "ghoul", { 13, 14, 11, 11, 12 }, 35, 4, 70, 40, { 1, 1, 1, 0 }, BF_BIPED,
-      { { "claws", 55, 4, HARN_EDGE, HARN_HAND }, { "bite", 45, 4, HARN_POINT, HARN_FACE } } },
-    { "skel", { 10, 10, 10, 10, 10 }, 10, 4, 90, 35, { 0, 4, 6, 2 }, BF_MINDLESS | BF_BIPED,
-      { { "sword", 50, 4, HARN_EDGE, 0xFF }, { "" } } },
-    { "bear", { 22, 18, 8, 10, 12 }, 150, 5, 60, 30, { 4, 3, 2, 3 }, BF_QUAD,
-      { { "claws", 65, 6, HARN_EDGE, HARN_HAND }, { "bite", 55, 7, HARN_POINT, HARN_FACE } } },
-    { "kobold", { 8, 10, 12, 13, 9 }, 15, 3, 40, 55, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK,
-      { { "spear", 45, 5, HARN_POINT, 0xFF }, { "" } } },
-    { "bat", { 3, 8, 10, 10, 8 }, 1, 1, 45, 50, { 1, 1, 0, 1 }, 0,                  /* (Bats 1, p10) */
-      { { "bite", 45, 1, HARN_POINT, HARN_FACE }, { "" } } },
-    { "adder", { 4, 10, 12, 12, 8 }, 1, 2, 45, 60, { 1, 1, 0, 1 }, 0,               /* (Snakes 3, p88) */
-      { { "bite", 55, 3, HARN_POINT, HARN_FACE }, { "" } } },
-    { "basilsk", { 16, 13, 14, 14, 10 }, 28, 5, 55, 70, { 6, 6, 4, 4 }, 0,         /* (Dragons 13, p36) */
-      { { "bite", 65, 5, HARN_POINT, HARN_FACE }, { "" } } },
-    { "lindwrm", { 22, 18, 4, 18, 16 }, 200, 6, 85, 90, { 5, 9, 4, 5 }, 0,         /* (Dragons 14, p37) */
-      { { "claws", 85, 7, HARN_EDGE, HARN_HAND }, { "bite", 68, 7, HARN_POINT, HARN_FACE } } },
-    { "wight", { 12, 12, 6, 10, 1 }, 40, 4, 60, 35, { 1, 1, 1, 0 }, BF_MINDLESS | BF_BIPED,
-      { { "claws", 55, 3, HARN_POINT, HARN_HAND }, { "" } } },                      /* (Morvrin 5, p78: a man's,
-                                                                                    **   its will gone) */
-    { "shade", { 11, 12, 11, 11, 15 }, 38, 4, 70, 50, { 2, 2, 1, 0 }, BF_BIPED,
-      { { "sword", 60, 5, HARN_EDGE, 0xFF }, { "" } } },                            /* (Morvrin 3, p76: a priest's) */
-    { "koblord", { 11, 12, 12, 13, 12 }, 20, 3, 60, 55, { 3, 3, 2, 1 }, BF_BIPED | BF_FOLK,
-      { { "axe", 55, 6, HARN_EDGE, 0xFF }, { "" } } },
-    { "bandit", { 11, 11, 11, 11, 11 }, 40, 4, 50, 45, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK,
-      { { "sword", 50, 5, HARN_EDGE, 0xFF }, { "" } } },
-    { "banlord", { 14, 13, 12, 12, 13 }, 45, 4, 65, 55, { 4, 5, 3, 2 }, BF_BIPED | BF_FOLK,
-      { { "sword", 65, 6, HARN_EDGE, 0xFF }, { "" } } },
-    { "cultist", { 10, 10, 11, 10, 12 }, 38, 4, 55, 40, { 1, 1, 0, 0 }, BF_BIPED | BF_FOLK,
-      { { "dagger", 45, 3, HARN_POINT, 0xFF }, { "" } } },
-    { "priest", { 10, 11, 12, 11, 16 }, 38, 4, 70, 45, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK,
-      { { "mace", 55, 5, HARN_BLUNT, 0xFF }, { "" } } },
-};
-#define NBEASTS         (sizeof bestiary / sizeof bestiary[0])
+static struct bkind bk;
+
+static const struct bkind* __fastcall__ beast (unsigned char j)
+{
+    bread (ovbank[OVLS - 1], &bestiary[j < NBEASTS ? j : 0], &bk, sizeof bk);
+    return &bk;
+}
 
 /* A creature's own parts that word its wounds by what they are (sheet.c's wound_words: BY_*, in order; talons
 ** claws'): a weapon's word one of these */
@@ -132,7 +87,7 @@ static const struct bkind* __fastcall__ unpack (unsigned char who)
     cr.bl = bs.bl;
     cr.ninj = bs.ninj;
     memcpy (cr.inj, bs.inj, sizeof bs.inj);
-    b = &bestiary[bs.kind && bs.kind <= NBEASTS ? bs.kind - 1 : 0];
+    b = beast (bs.kind ? bs.kind - 1 : 0);
     cplan = b->flags;                           /* (Its body: on two legs, on four, its limbs' rules, gear.c's) */
     return b;
 }
@@ -528,13 +483,13 @@ static void new_beast (void)
     }
     aden[k] = n;
     dwr[k] = 0xFF;                              /* (Its things untold yet: the world's RS_EQUIP, as it comes near) */
-    for (j = 0; j < NBEASTS && strcmp (bestiary[j].key, bkey); ++j) {
+    for (j = 0; j < NBEASTS && strcmp (beast (j)->key, bkey); ++j) {
     }
     if (j == NBEASTS) {
         j = 0;
         R->result = 1;
     }
-    b = &bestiary[j];
+    b = beast (j);
     sheet_get (n);
     if (bs.kind != j + 1) {
         memset (&bs, 0, sizeof bs);
@@ -577,6 +532,9 @@ static unsigned char __fastcall__ courage (const struct bkind* b, signed char st
         return M_STEADY;
     }
     lv = d100 ();
+    if (b->flags & BF_BERSERK) {               /* (Sooner berserk than fled: the black orc's, Gargun 6) */
+        return lv <= 60 ? M_BERSERK : lv <= 85 ? M_DESPERATE : M_CAUTIOUS;
+    }
     return lv <= 25 ? M_BERSERK : lv <= 50 ? M_DESPERATE : lv <= 75 ? M_BROKEN : M_CAUTIOUS;
 }
 

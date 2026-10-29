@@ -947,15 +947,73 @@ free 5: jewel@worn 1d3
 free: chest@bed, pennies@in 6d6, iron key@pouch
 free: ring@worn                                 ; (The ring of its rank, Religion 9's: not its jewelry)
 ; ---- The HarnWorld Bestiary's folk (DECISIONS.md's answer 11: the Khuzdul, the Sindarin, men and the Gargun), their
-; gear here as the data their kinds come with (Phase 4's: the kinds themselves aren't in the game yet; the Gargun the
-; kobolds stand for)
-[role gargun] free make 0 3
-free: spear@hand *50 | club@hand *15 | hatchet@hand *15 | axe@hand *10 | knife@hand *10
-free 50: hide jerkin@worn
-free 70: belt@worn
-free 30: buckler@worn
-free 15: kurbul helm@worn
+; kinds in the game since 2026-10-29 (Phase 4's peoples, kinds.txt's).  The Gargun by the book's Equipment (HarnMaster
+; 3.5's Gargun 4-8, each sub-species its own: their own make, the house's crude to middling; a Kyani's finer, Gargun
+; 7: their artifacts finer than other Gargun's), the cloth tunic the catalogue's clothes, a cowl or a cap its leather
+; cap, a plate halfhelm its iron helm; their nests' straw, their stashes (the commoners' hidden, their mates not
+; trusted: Gargun 2-3's squabbling and thieving) the house's.  Their king (the house's) a black orc's best.
+[role arak] free make 0 3
+free: mankar@hand *45 | club@hand *30 | spear@hand *25
+free 80: belt@worn
+free 60: sheath@belt, dagger@in
+free 70: clothes@worn
+free 50: leather vest@worn
+free 40: leather cap@worn
+free 50: buckler@worn
+free 50: shortbow@worn, quiver@belt, arrows@in 6-12
 free 50: pouch@belt
+free 60: heap of straw@bed
+free 25: pennies@stash 1d6 | farthings@stash 1d6 | talisman@stash
+[role hyeka] free make 1 3
+free: mankar@hand *50 | spear@hand *35 | pick@both *15
+free 80: belt@worn
+free 70: clothes@worn
+free 70: leather vest@worn
+free 50: leather cap@worn
+free 50: round shield@worn
+free 50: pouch@belt
+free 60: heap of straw@bed
+free 25: pennies@stash 1d6 | farthings@stash 1d6 | talisman@stash
+[role khanu] free make 1 3
+free: mang@hand *50 | axe@hand *30 | spear@hand *20
+free: belt@worn
+free 40: club@belt *50 | axe@belt *50
+free 70: clothes@worn
+free 70: ring byrnie@worn
+free 50: iron helm@worn
+free 60: round shield@worn
+free 50: pouch@belt
+[role kyani] free make 2 3
+free: spear@hand *55 | mankar@hand *45
+free 80: belt@worn
+free 50: sheath@belt, dagger@in
+free 70: clothes@worn
+free 70: leather tunic@worn
+free 40: leather cap@worn
+free 60: round shield@worn
+free 50: pouch@belt
+free 60: heap of straw@bed
+[role viasal] free make 1 3
+free: axe@hand *45 | mang@hand *35 | spear@hand *20
+free 80: belt@worn
+free 70: sheath@belt, dagger@in
+free 70: clothes@worn
+free 60: ring byrnie@worn
+free 40: iron helm@worn
+free 60: round shield@worn
+free 50: pouch@belt
+free 60: heap of straw@bed
+free 25: pennies@stash 1d6 | farthings@stash 1d6 | talisman@stash
+[role garking] free make 2 3
+free: mang@hand
+free: belt@worn
+free: sheath@belt, dagger@in
+free: clothes@worn
+free: ring byrnie@worn *60 | mail byrnie@worn *40
+free: iron helm@worn
+free 70: round shield@off
+free: furs@bed
+free: pouch@belt
 [role khuzwar] free make 6 3
 free: battleaxe@hand *40 | warhammer@hand *30 | axe@hand *30
 free: mail byrnie@worn *70 | scale byrnie@worn *30
@@ -968,17 +1026,16 @@ free 60: knight shield@off *50 | round shield@off *50
 free 50: gauntlets@worn
 free: pouch@belt
 [role khuzmin] free make 5 3
+free: belt@worn
 free: pick@both
 free: hammer@belt
-free: chisel@pack
+free: pouch@belt
+free: chisel@pouch
 free: lantern@belt
 free: leather cap@worn
 free: leather vest@worn
 free: clothes@worn
 free: knee boots@worn
-free: belt@worn
-free: sack@pack
-free: pouch@belt
 [role khuzeld] free make 7 2
 free: warhammer@hand *50 | battleaxe@hand *50
 free: mail byrnie@worn fine
@@ -988,56 +1045,102 @@ free: knee boots@worn
 free: belt@worn
 free: pouch@belt
 [role sindwar] free make 6 3
+free: belt@worn
 free: scabbard@belt, longknife@in
 free: clothes@worn
 free: knee boots@worn
 free: cloak@worn
-free: belt@worn
 free 80: hartbow@worn, quiver@belt, arrows@in 20
 free 70: leather vest@worn *50 | leather tunic@worn *50
 free 40: kurbul helm@worn
 free: pouch@belt
 [role manarms] free make 3 3
+free: belt@worn
 free: spear@hand *50 | scabbard@belt, shortsword@in *50
 free: round shield@worn *50 | knight shield@worn *50
 free: sheath@belt, knife@in
 free: clothes@worn
 free: knee boots@worn
-free: belt@worn
 free 85: leather tunic@worn *40 | leather vest@worn *30 | ring byrnie@worn *30
 free 80: kurbul helm@worn *50 | iron helm@worn *50
 free 25: crossbow@worn, bolt case@belt, bolts@in 12-20
 free: pouch@belt
 [role captain] free make 4 4
+free: belt@worn
 free: scabbard@belt, sword@in
 free: kite shield@off
 free: mail byrnie@worn
 free: iron helm@worn
 free: knee boots@worn
 free: clothes@worn
-free: belt@worn
 free 60: gauntlets@worn
 free: pouch@belt
+; (The peoples' lairs' own things, the house's (denizens.md 3): the Gargun's the bones of what they've eaten (Gargun 3:
+; meat only, their own dead too), their king's hoard; the Khuzdul's stores, their elder's hoard (the dwarves' gold in
+; their hoards and vaults, not their purses: the user's, 2026-10-28), a miner's tools; a warden's stores; the soldiers'
+; stores and spare arms (an armoury's), their captain's strongbox.  Each made as the lair's first placed (answer 6).)
+[lair arak]
+free: bones@home
+[lair hyeka]
+free: bones@home
+free 50: skull@home
+[lair khanu]
+free: bones@home
+free: skull@home 1-2
+[lair kyani]
+free: bones@home
+[lair viasal]
+free: bones@home
+free: skull@home 1-3
+[lair garking]
+free: bones@home
+free: skull@home 1-2
+free: chest@hoard, pennies@in 20-80, farthings@in 2d6, jewel@in 1d2       ; (Unlocked: none of the tribe dares)
+[lair khuzwar]
+free: sack@home, rations@in 6-12
+free: cask@home full
+free 40: sack@home, axe@in, warhammer@in
+[lair khuzmin]
+free: sack@home, rations@in 4-8
+free: pick@home
+free 50: chisel@home
+free 50: hammer@home
+free 50: lantern@home
+[lair khuzeld]
+free: cask@home full
+free: chest@hoard, pennies@in 40-200, crowns@in 1d6, jewel@in 1d4, goblet@in, iron key@pouch
+free 30: gem@hoard
+[lair sindwar]
+free: basket@home, rations@in 4-8
+free 50: cask@home full
+[lair manarms]
+free: sack@home, rations@in 6-12
+free: cask@home full
+free 50: sack@home, spear@in, spear@in, shortsword@in
+[lair captain]
+free: chest@hoard, pennies@in 40-150, crowns@in 1d2, jewel@in 1d2, iron key@pouch
 ; (Their personal things by the book's Personal Possessions, the Khuzdul and the Sindarin by the human tables as the
 ; book allows (2026-10-28, the user's: "Also change what dwarves carry for money.  Gold crowns are far too valuable for
 ; all dwarves to just be carrying them around."): silver pennies like everyone, a crown only by its category's gold
-; chance.  The Gargun the book's Hunters/Tribesmen; a warrior, an elder, a man-at-arms, a captain its Warrior/Noble; a
+; chance.  The Gargun the book's Hunters/Tribesmen (their standing's, [standing 1]); a warrior, an elder, a man-at-arms, a captain its Warrior/Noble; a
 ; miner the house's nearest, Hunters/Tribesmen: working folk)
-[purse gargun]
-free 20: pennies@pouch 3d6
+[purse kyani]                                   ; (The white orcs' silver, the house's: Gargun 7, they treasure it
+free 20: pennies@pouch 3d6                      ;   above all else, and work it finely)
 free 30: farthings@pouch 1d4
 free 2: crowns@pouch 1d2
-free 1: jewel@worn 1d3
+free 10: ring@worn silver *50 | pendant@worn silver *50
 free 33: talisman@worn
 [purse khuzwar]
 free 90: pennies@pouch 7d6
 free 30: crowns@pouch 1d3
 free 15: jewel@worn 1d3
+free 70: chest@bed, pennies@in 7d6, iron key@pouch
 [purse khuzmin]
 free 20: pennies@pouch 3d6
 free 30: farthings@pouch 1d4
 free 2: crowns@pouch 1d2
 free 1: jewel@worn 1d3
+free 50: chest@bed, pennies@in 3d6, iron key@pouch
 [purse khuzeld]
 free 90: pennies@pouch 7d6
 free 30: crowns@pouch 1d3
@@ -1051,6 +1154,7 @@ free 90: pennies@pouch 7d6
 free 30: crowns@pouch 1d3
 free 15: jewel@worn 1d3
 free 25: dice@pouch
+free 50: chest@bed, pennies@in 3d6, iron key@pouch
 [purse captain]
 free 90: pennies@pouch 7d6
 free 30: crowns@pouch 1d3

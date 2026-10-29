@@ -1,11 +1,13 @@
 # factions.txt - (dq0d) the denizens' factions: a stand-in theme's, for the games whose theme has no inhabitants of its
 # own (a theme file's factions take their place, popgen's: kinds.txt names each kind's, and a theme's faction speaks
 # its first kind's faction's tongue).  make.js puts them in the denizens' task's data file after the kinds
-# (lib/dq0/dq0d.dat: 32 bytes a faction, the first none), 7 at most.
+# (lib/dq0/dq0d.dat: 32 bytes a faction, the first none), 15 at most.  A stand-in game has the first 7 (the stand-in
+# themes' kinds are theirs: dq0d.c's NFACT); the rest only a history's (themegen's, as its inhabitants: Phase 4's
+# peoples, 2026-10-29), each game's factions 7 at most, numbered as its theme has them.
 #
 # A line a faction, its fields between bars:
 #   name       as kinds.txt names it (11 letters at most)
-#   tongue     the tongue it speaks (7 at most: the referee's word for it, which the character may speak), or - none
+#   tongue     the tongue it speaks (8 at most: the referee's word for it, which the character may speak), or - none
 #   attitude   its attitude to the character as it first meets it: h hostile, u unfriendly, w wary, i indifferent,
 #              f friendly
 #   others     how it stands with the other factions, by name: h hostile, w wary, f friendly (the rest indifferent);
@@ -19,3 +21,7 @@ beasts     | -      | w        | kobolds w, outlaws w
 kobolds    | kobold | u        | vermin h, dead h, outlaws h
 outlaws    | common | u        | dead h, kobolds h, cult w
 cult       | common | h        | dead f, outlaws w, vermin w
+dwarves    | khuzdul  | w        | gargun h, kobolds h, dead h, crawlers w, outlaws w
+elves      | sindarin | w        | gargun h, dead h, cult h, kobolds w, outlaws w
+gargun     | gargun   | h        | kobolds h, outlaws h, dead h, cult w, beasts w
+soldiers   | common   | u        | outlaws h, gargun h, kobolds h, dead h, cult h
