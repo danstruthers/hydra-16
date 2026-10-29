@@ -106,7 +106,8 @@ by a request or an intent.
   referee writes nothing of the hub's but its own replies and records (the sheets, pcstatus, pcsum).  The denizens
   take each blow to heart as they read it (their courage, RS_MORALE in their own slot; their attitudes), and keep
   the places kept lit (the hub's KEPT_AT: light kept, below), as they decide a stratum's populations.  At the
-  **turns pace** the world gives the denizens their turn (den_go) at each slice of the clock and after its own work
+  **turns pace** the world gives the denizens their turn (den_go) at each slice of the clock (ten seconds; a long
+  wait's longer, to the next actor's moment, HOUSE.md's long waits) and after its own work
   at the same clock, and waits for their I_DONE, carrying out their intents meanwhile: the same game whatever the
   tasks' timing, the referee's one stream of dice seeing the same requests in the same order.
 - **The senses** (dq0p) answer for every actor, and own every actor's memory of what it has perceived: what the
@@ -762,7 +763,11 @@ or a shaft can be jumped down (jump down: a fall of its height).
   wait) is one long task, the world's (the hub's pc_task: its kind, its length and its part done in its own units).
   A walk's way is worked out as it starts and walked a square at a time as the clock goes, the character on each
   square in its turn (the denizens see it there, the senses look every third square and at each beat); a dig's
-  spells, a climb's rounds and a wait the same task in place.  Its progress is a bar on the status line, ten cells,
+  spells, a climb's rounds and a wait the same task in place.  A long one's length past 100 minutes (a wait's, a
+  sleep's or a rest's: a night's, and much more) is in minutes, sixteen bits of them, its part done too (the long
+  task's mins: the user's, 2026-10-28, HOUSE.md's long waits); while the character waits or sleeps the clock goes on
+  from one actor's moment to the next (ten minutes at most), the denizens about it the slower in their idle ways, and
+  at the real paces it runs as the turns pace does.  Its progress is a bar on the status line, ten cells,
   and words as it goes: a walk's beats (the passage turns, a doorway, it rises or falls, a room crossed as it leaves
   it for a door or a passage, "You cross the room.", and on a quiet stretch "You go on down the passage" every 30
   feet), a dig's spells, a climb's rounds.  A wide passage is one passage (the user's, 2026-10-21): a square beside the

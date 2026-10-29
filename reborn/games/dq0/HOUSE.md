@@ -1434,7 +1434,8 @@ for the user.  *(Every ruleset's: the bearings' tests the referee's.)*
 - **Each leg a walk** (the old design's): at its pace, each bend tested for its bearings as any walk's (and the dark's,
   the traps', the denizens' rules as they are); a landmark sets its bearings right as it passes one, and the journey
   goes on by them.  A door it has opened or shut before is opened as it goes (go's, the user's); one it hasn't, or one
-  locked or barred, and a passage's shut door, ends the journey there: "The door is shut: open it first."
+  locked or barred, and a passage's shut door, ends the journey there: "The door is shut: open it first."  *(Settled,
+  not for review: the user's, 2026-10-28, "travel should stop at a closed door", DECISIONS.md's.)*
 - **A map aids the bearings** (the user's): a walk ending in a part of the dungeon drawn on the map it carries, not in
   the dark, four steps the easier (the old design's "four steps better"); *(for review)* two if that part was drawn at a
   marginal failure, none at a critical failure (a bad map no help).  Every walk's, not only a journey's.
@@ -1458,8 +1459,61 @@ for the user.  *(Every ruleset's: the bearings' tests the referee's.)*
   character coarsely about their lairs; none goes to a place by way of the rooms and passages yet.  When one does (a
   denizen going home, a robber off with its loot, an ally sent home), the world's way out of each place is the code to
   share, by the true place: the underground's own know north, and know their way.
-- **Found on the way** *(for the user)*: a wait longer than 100 minutes is a wait of 100 ("wait 2 hours", "wait 3
-  hours": the world's busy takes 60,000 tenths at most, the UI's wait_of holds it to that), though it was asked for longer.
+- **Found on the way** *(settled: the user's, 2026-10-28)*: a wait longer than 100 minutes was a wait of 100 ("wait 2
+  hours", "wait 3 hours": the world's busy took 60,000 tenths at most, the UI's wait_of held it to that).  Now the
+  long durations are in minutes, a night's sleep and more (Long waits, sleep and rest, below).
+
+## Long waits, sleep and rest *(2026-10-28: the user's 16-bit minutes; the rest drafted for the user to review)*
+
+The user (2026-10-28, DECISIONS.md's travel's stop and waits a night long): "waits should be able to last a full night's
+sleep, so 8 hours at least.  Some spells may take longer than that to cast, so 16-bit minutes would be better."  Every
+ruleset's (the fatigue rested off the referee's).
+
+- **Long durations in minutes, as built** (the user's): a duration past 100 minutes (the 60,000 tenths that sixteen bits
+  were given) is carried in minutes, to 65,535 of them (some 45 days): a wait's intent (I_WAIT's WA_MIN), the long
+  task's length and part done (its mins: the bar's ten cells as before), the time told (E_TIME's).  Shorter ones keep
+  their tenths, so no short action's time changed.  The clock and the ready times were 32-bit tenths already (65,535
+  minutes is 39 million of them), so the world counts a long wait as any other; the general kind (the world's task_for)
+  is ready for the timed work that runs longer, and a spell's casting when it comes.  The referee's fatigue rest is told
+  the whole of it, in pieces (RS_EXERT's sixteen bits; it was held to 100 minutes too).
+- **What's said** *(the parser's; the house's words for review)*: "wait 10 minutes", "wait an hour", "wait half an
+  hour", "wait 8 hours", "wait eight hours" (the parser's numbers: figures, and one to ten), "wait 3 hours 20 minutes",
+  "wait 3 hours and 20 minutes" (one duration, not two commands: the line's parts don't split at an "and" between a unit
+  and a number), "wait for an hour and 5 minutes"; "sleep" and "rest" (the same: the player unaware), a night's, eight
+  hours, when no length is said *(the house's: the book's night of sleep, Skills 6)*; "short rest", "short sleep" half
+  an hour *(the house's: the grammar's 30 to 60 minutes)*; "sleep 8 hours", "rest for an hour", "sleep for 2 hours" as
+  said.  Not: "sleep until dawn" (no day underground, and the parser hasn't it).
+- **Told back** *(for review)*: "You wait eight hours.", "You wait three hours and twenty minutes.", "You wait half an
+  hour.", "You wait an hour and five minutes."; "You settle down to sleep for eight hours." ("to rest" when rest was
+  said); a round's wait, or less than a minute, "Time passes." as before.  As it goes: "Keep waiting?", "Keep
+  sleeping?"; stopped, "You stop waiting.", "You stop sleeping."; "stop sleeping" and "stop resting" name a sleep, "stop
+  waiting" a wait.  The status line's clock after, its minutes gone ("767 min").
+- **Sleep and rest as built** *(the house's, for review)*: the same as a wait in the world but for their words and their
+  kind (LT_SLEEP): the book's fatigue recovery for the time of it, a fatigue level each ten minutes of rest (Skills 6's
+  Fatigue Recovery, the referee's already; a night's sleep, the book says, clears most or all of it: eight hours of it
+  does), the wait broken off as any long task is (hard: a wound, a blow, a hostile within 30 feet, its light gone out;
+  soft, asked: a denizen seen, a sound heard).  Not yet: a sleeper's Awareness at half (Skills 11's Awareness: a
+  sleeper's tested at half its mastery at most; it perceives as one awake for now); lying down to sleep (it sleeps where
+  it stands); healing (Physician 3: a Healing Roll every five days, each day twelve hours' rest: the game has no healing
+  yet), hunger and thirst (slice 4.9's).
+- **A long wait's speed** *(the house's, for review)*: at the real paces a wait or a sleep longer than a round runs as
+  the turns pace runs it, as fast as the tasks go (an hour's wait no hour of the player's, nor a night's sleep a night),
+  the pace's own back as it ends, is stopped or asks.
+- **Coarser ticks while the character rests** *(the house's, for review: the game's rules allow it, the book's silent)*:
+  the world's slices of the clock go on from one actor's moment to the next (none acts between: the soonest of their
+  ready times), ten minutes at most (the book's rest unit), a minute at most while the light the character carries is
+  within ten minutes of burning low; the lights burn the minutes of a slice at once, looked at every ten minutes (every
+  minute near burning low, and at once as the rest begins or ends); the traces' clock counts each four minutes gone.
+  The denizens about it, idle while it rests: a watcher's or an idler's while thirty times as long (a watcher's three to
+  six minutes, an idler's one or two: roused all the same as the character changes, and every idle one as its rest
+  ends), no idle wandering in its sight, one unseen and unaware a coarse move ten or twenty minutes apart; a hostile
+  one, one on its scent, one alerted by a noise, one fleeing, as ever.  Those away from it (not actors) a coarse move
+  five or ten minutes apart (ten times their while).
+- **The figures** *(2026-10-28, the emulator, 3.6 MHz)*: "wait 8 hours" with nothing near, 20.9M cycles (some 6 seconds
+  of the machine's; it was 0.6M a minute, some 81 seconds for eight hours, and held to 100 minutes); at the normal pace
+  the same; in the dark by the giant rats' lair (seed 3, three rats about), 62M (17 seconds; 782M, three and a half
+  minutes, before the coarser ticks); in the lit cave below with rats about (seed 21), 111M (31 seconds; 3,200M, a
+  quarter of an hour, before).
 
 ## Outfits *(2026-10-27: drafted for the user to review)*
 

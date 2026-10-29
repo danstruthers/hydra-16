@@ -1195,3 +1195,22 @@ Left for later (DUNGEON.md's): the coins' metal value (three quarters of their f
 abroad beyond the appraisal's telling, buying and selling (second-hand clothing 30-60% of new, a mercantyler's 10% and
 50%), the market's paying and its change, usurers' notes, trade goods, written works and potions in the
 purses, the Khuzdul and the Sindarin as denizens (their purses written, the kinds to come).
+
+### Travel's stop at a shut door, and waits a night long
+
+The user (2026-10-28), on HOUSE.md's two points for the user (travel's end at a shut door it hasn't opened; a wait
+over 100 minutes held to 100): "Of the behaviors to confirm, travel should stop at a closed door, and waits should be
+able to last a full night's sleep, so 8 hours at least.  Some spells may take longer than that to cast, so 16-bit
+minutes would be better."
+
+- **Travel stops at a closed door** as built: a door the character hasn't opened or shut before, one locked or barred,
+  a passage's shut door, ends the journey there ("The door is shut: open it first."); one it has opened or shut before
+  is opened as it goes.  HOUSE.md's line settled.
+- **Long durations in 16-bit minutes:** a duration past 100 minutes (the most sixteen bits of tenths hold, 60,000 of
+  them) is carried in minutes, up to 65,535 (some 45 days): a wait, a sleep, a rest, and any long task's length
+  (the general kind, for a spell's casting to come), its part done in minutes too.  Shorter ones keep their tenths,
+  so no short action's time changed.  The clock and the ready times were already 32-bit tenths; only what carries a
+  duration in sixteen bits has the unit beside it (an intent's, the long task's, an event's).  So "wait 8 hours"
+  waits eight hours, "sleep 8 hours" and "rest" sleep a night, and the words tell it back ("You wait eight hours.").
+  The house's ways of it (the parser's durations, a night's sleep unsaid, the long wait's speed, the coarser ticks
+  while the character rests) are in HOUSE.md's long waits, for review.
