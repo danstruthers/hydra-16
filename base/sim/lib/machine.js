@@ -41,6 +41,7 @@ const { createYm } = require('./ym2151.js');
 const { createRtc, RTC_REGS, RTC_TASK } = require('./ds1747.js');
 const { createVera } = require('./vera.js');
 const { createAudio } = require('./audio.js');
+const { createCore, available: coreAvailable } = require('./core.js');
 
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
 const LINES = 16;                                             // The IRQ lines (0 the highest priority)
@@ -58,12 +59,30 @@ function createMachine(opt) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const rnd = n => (random() * n) | 0;
 
+  // ---- The WebAssembly core (core.js: the CPU and the memory map, run by runWasm), unless something's on that only
+  // the JS has (a model's what-if, a RAM fault, read watches, a BIOS image short of 128K), or opt.core is 'js' (or
+  // HYDRA_CORE=js): then the JS's alone (cpu65c02.js and rd, wr).  With it, the memory is in its memory (task RAM,
+  // the banks, the vector RAM, the trace's ring: views of it), the JS's ways reading and writing the same bytes
+  const coreWanted = opt.core || (typeof process === 'object' && process.env && process.env.HYDRA_CORE) || 'wasm';
+  const coreBanks = Math.max(0, Math.min(240, opt.modules * 16 || 0));
+  const core = coreWanted !== 'js' && coreAvailable() && !opt.model && !opt.u7Fault && !opt.ramFault && !(opt.readWatches || []).length &&
+    osrom.length >= 0x20000 ? createCore(coreEnv(), { banks: coreBanks, promLen: pagedrom.length, osromLen: osrom.length,
+      ringLen: opt.trace === undefined ? 25 : opt.trace }) : null;
+  const coreFlags = core ? new Uint8Array(core.buf, core.FLAGS, 16 * 256 + 256) : null;
+  if (core) { new Uint8Array(core.buf, core.PROM, pagedrom.length).set(pagedrom); new Uint8Array(core.buf, core.OSROM, osrom.length).set(osrom); }
+
   // ---- memory, the pseudo-registers, the devices (in this order: the power-up's random numbers)
-  const taskRam = []; for (let i = 0; i < 16; i++) taskRam.push(new Uint8Array(0x8000).map(() => rnd(256)));
+  const taskRam = [];
+  for (let i = 0; i < 16; i++) {
+    const r = core ? new Uint8Array(core.buf, core.TR + i * 0x8000, 0x8000) : new Uint8Array(0x8000);
+    for (let j = 0; j < 0x8000; j++) r[j] = rnd(256);
+    taskRam.push(r);
+  }
   let cpu = null;
   const rtc = opt.rtc !== undefined ? createRtc({ time: opt.rtc, batteryLow: opt.rtcBatteryLow, clock: opt.clock, now: () => cpu.cyc, rnd }) : null;
   const taskBank = {}, sharedBank = {};
-  const vecRam = new Uint16Array(16).map(() => rnd(65536));
+  const vecRam = core ? new Uint16Array(core.buf, core.VEC, 16) : new Uint16Array(16);
+  for (let i = 0; i < 16; i++) vecRam[i] = rnd(65536);
   // T/U/V/W are 8-bit latches (74F573) read back through a 74F541: a read gives the whole byte written.  Only
   // T0-T3 select the task, U0-U3 the shared macro-page and W0-W3 the BIOS ROM page (the socket wires W0-W5
   // for up to a 512K chip; with a 128K image, W4-W5 fold back, as on a 39SF010)
@@ -99,8 +118,15 @@ function createMachine(opt) {
     : u7 ? (u7.high ? T | u7.mask : T & ~u7.mask) : T;
   const bankInstalled = b => b >= 0xF0 ? (model !== 'noshared' && U < opt.sharedU) : b < opt.modules * 16;
   function bankMem(b) {
-    if (b >= 0xF0) { const k = U * 16 + (b & 15); return sharedBank[k] || (sharedBanks_[k] = sharedBank[k] = new Uint8Array(0x2000)); }
-    const k = T * 256 + b; return taskBank[k] || (taskBanks[k] = taskBank[k] = new Uint8Array(0x2000));
+    if (b >= 0xF0) { const k = U * 16 + (b & 15); return sharedBank[k] || (sharedBanks_[k] = sharedBank[k] = newBank(1, k)); }
+    const k = T * 256 + b; return taskBank[k] || (taskBanks[k] = taskBank[k] = newBank(0, k));
+  }
+  // A bank's bytes, first reached (shared: 1, k = U * 16 + its low four bits; a task's: k = T * 256 + b): the core's,
+  // marked reached there too
+  function newBank(shared, k) {
+    if (!core) return new Uint8Array(0x2000);
+    coreFlags[shared ? 16 * 256 + k : k] = 1;
+    return new Uint8Array(core.buf, shared ? core.SB + k * 0x2000 : core.TB + ((k >> 8) * coreBanks + (k & 255)) * 0x2000, 0x2000);
   }
   // A RAM fault: the offset in the window that the chip holding bank b actually sees
   const sameChip = (b, f) => b >= 0xF0 ? f >= 0xF0 && ((b ^ f) & 0x0C) === 0 : f < 0xF0 && (b >> 4) === (f >> 4);
@@ -153,18 +179,29 @@ function createMachine(opt) {
     }
     if (a < 0xA000) { const b = taskRam[tsel(0)][0]; return bankInstalled(b) ? bankMem(b)[ramOfs(b, a)] : (a >> 8); }  // floating bus
     if (a < 0xE000) { const off = romBank(taskRam[tsel(1)][1]) * 0x4000 + ((a - 0xA000) ^ 0x2000); return off < pagedrom.length ? pagedrom[off] : 0xFF; }
-    if (a >= 0xFF00 && a < 0xFFF0) {
-      const t = cpu.ioAt;
-      sync(t);                                                  // (The devices, as of this access's cycle)
-      if (a >= 0xFF10 && a < 0xFF14) { flushAcia(); const b = acia.read(a - 0xFF10, t); settleAcia(); return b; }
-      if (a < 0xFF10) { flushVia(); const b = via.read(a - 0xFF00); settleVia(); return b; }
-      if (a === 0xFF41) { flushYm(); const b = ym.readStatus(t); settleYm(); return b; }
-      if (vera && a >= 0xFF20 && a < 0xFF40) { flushVera(); const b = vera.read(a - 0xFF20, t); settleVera(); return b < 0 ? 0xFF : b; }   // (Configuring: floating)
-      return 0xFF;
-    }
+    if (a >= 0xFF00 && a < 0xFFF0) return ioRead(a);
     if (a === 0xFFF0) return regT; if (a === 0xFFF1) return regU; if (a === 0xFFF2) return V; if (a === 0xFFF3) return regW;
     if (a === 0xFFFE || a === 0xFFFF) { const v = vecRam[V & 15]; return a === 0xFFFE ? v & 0xFF : v >> 8; }
     return osrom[W * 0x2000 + (a - 0xE000)];
+  }
+  // The I/O page ($FF00-$FFEF), read and written: the devices, as of the access's cycle
+  function ioRead(a) {
+    const t = cpu.ioAt;
+    sync(t);
+    if (a >= 0xFF10 && a < 0xFF14) { flushAcia(); const b = acia.read(a - 0xFF10, t); settleAcia(); return b; }
+    if (a < 0xFF10) { flushVia(); const b = via.read(a - 0xFF00); settleVia(); return b; }
+    if (a === 0xFF41) { flushYm(); const b = ym.readStatus(t); settleYm(); return b; }
+    if (vera && a >= 0xFF20 && a < 0xFF40) { flushVera(); const b = vera.read(a - 0xFF20, t); settleVera(); return b < 0 ? 0xFF : b; }   // (Configuring: floating)
+    return 0xFF;
+  }
+  function ioWrite(a, v) {
+    const t = cpu.ioAt;
+    sync(t);
+    if (a >= 0xFF10 && a < 0xFF14) { flushAcia(); acia.write(a - 0xFF10, v, t); settleAcia(); return; }
+    if (a < 0xFF10) { flushVia(); via.write(a - 0xFF00, v); settleVia(); return; }
+    if (a === 0xFF40) { ym.select(v); return; }                 // YM2151: register, then data
+    if (a === 0xFF41) { flushYm(); ym.write(v, t); settleYm(); return; }
+    if (vera && a >= 0xFF20 && a < 0xFF40) { flushVera(); vera.write(a - 0xFF20, v, t); settleVera(); return; }
   }
   function wr(a, v) {
     v &= 0xFF;
@@ -200,13 +237,7 @@ function createMachine(opt) {
       bankMem(b)[ramOfs(b, a)] = v; return;
     }
     if (a < 0xFF00) return;
-    const t = cpu.ioAt;
-    if (a < 0xFFF0) sync(t);                                    // (The devices, as of this access's cycle)
-    if (a >= 0xFF10 && a < 0xFF14) { flushAcia(); acia.write(a - 0xFF10, v, t); settleAcia(); return; }
-    if (a < 0xFF10) { flushVia(); via.write(a - 0xFF00, v); settleVia(); return; }
-    if (a === 0xFF40) { ym.select(v); return; }                 // YM2151: register, then data
-    if (a === 0xFF41) { flushYm(); ym.write(v, t); settleYm(); return; }
-    if (vera && a >= 0xFF20 && a < 0xFF40) { flushVera(); vera.write(a - 0xFF20, v, t); settleVera(); return; }
+    if (a < 0xFFF0) { ioWrite(a, v); return; }
     if (a === 0xFFF0) { regT = v; T = v & 15; quick(); return; } if (a === 0xFFF1) { regU = v; U = v & 15; quick(); return; }
     if (a === 0xFFF2) { V = v; return; } if (a === 0xFFF3) { regW = v; W = v & 15; quick(); return; }
     if (a === 0xFFFE) { vecRam[V & 15] = (vecRam[V & 15] & 0xFF00) | v; return; }
@@ -300,7 +331,7 @@ function createMachine(opt) {
   const traceLen = opt.trace === undefined ? 25 : opt.trace, pcWatches = opt.pcWatches || [], profileFrom = opt.profile === undefined ? -1 : opt.profile,
     profileTo = opt.profileTo === undefined ? Infinity : opt.profileTo;
   const I = FLAGS.I;
-  const ring = new Uint16Array(Math.max(1, traceLen) * 8);    // The trace: the last traceLen instructions, a ring
+  const ring = core ? new Uint16Array(core.buf, core.RING, Math.max(1, traceLen) * 8) : new Uint16Array(Math.max(1, traceLen) * 8);   // The trace: the last traceLen instructions, a ring
   let ringAt = 0, ringN = 0;                                  //   (W T PC A X Y S P each), m.trace's list
   const breaks = opt.breaks || [];
   m.breakHit = null; m.skipBreak = false;
@@ -344,7 +375,8 @@ function createMachine(opt) {
   function run(limit) {
     quick();
     flush();
-    runTo(limit);
+    if (core && !breaks.length && !calls && !opt.pcHist && profileFrom < 0 && !(opt.watches || []).length && pcWatches.length <= 4) runWasm(limit);
+    else runTo(limit);
     flush();
     if (audio) audio.pump(cpu.cyc);
   }
@@ -415,6 +447,81 @@ function createMachine(opt) {
           log('pc: ' + hx(W, 1) + ':' + hx(PC, 4) + ' T=' + hx(T, 1) + ' A=' + hx(cpu.A) + ' X=' + hx(cpu.X) + ' Y=' + hx(cpu.Y) + ' S=' + hx(cpu.S) + ' P=' + hx(cpu.P) + ' at cycle ' + cyc); }
       }
       cpu.step(irqVector);
+    }
+  }
+
+  // runQuick's loop in the WebAssembly core (core65's lib.rs: run): each instruction's start seen to here when the
+  // devices want a tick, an interrupt's to be taken or the CPU waits, the rest there; its state to it and back (toCore,
+  // fromCore), the JS CPU's (cpu65c02.js) the state between.  Its imports (coreEnv) take the state as it is at their
+  // call, the instruction's (cyc its first cycle), and give back what changes the core's next steps (the devices'
+  // next tick, the IRQ line, a key typed)
+  function toCore(limit) {
+    const si = core.si, sf = core.sf;
+    si[0] = cpu.A; si[1] = cpu.X; si[2] = cpu.Y; si[3] = cpu.S; si[4] = cpu.P; si[5] = cpu.PC; si[6] = cpu.lastPC; si[7] = cpu.waiting ? 1 : 0; si[8] = 0;
+    si[9] = regT; si[10] = regU; si[11] = V; si[12] = regW;
+    if (irqDirty) { irqN = irqLine(); irqDirty = false; }
+    si[13] = irqN; si[14] = acia.typedAt >= 0 ? 1 : 0; si[15] = iOffFrom; si[16] = traceLen; si[17] = ringAt; si[18] = ringN;
+    si[19] = pcWatches.length;
+    for (let i = 0; i < pcWatches.length; i++) { si[20 + 2 * i] = pcWatches[i].pc; si[21 + 2 * i] = pcWatches[i].page; }
+    si[30] = sharedWrite ? 1 : 0; si[31] = rtc ? 1 : 0;
+    si[32] = opt.sharedU > 0 ? Math.min(16, Math.ceil(opt.sharedU)) : 0; si[33] = 0;
+    for (let i = 0; i < 16; i++) si[48 + i] = stackLow[i];
+    sf[0] = cpu.cyc; sf[1] = limit; sf[2] = devNext; sf[3] = devSeen; sf[4] = iOffAt; sf[5] = cpu.ioAt;
+  }
+  function fromCore() {
+    const si = core.si, sf = core.sf;
+    cpu.A = si[0]; cpu.X = si[1]; cpu.Y = si[2]; cpu.S = si[3]; cpu.P = si[4]; cpu.PC = si[5]; cpu.lastPC = si[6];
+    cpu.cyc = sf[0]; cpu.ioAt = sf[5];
+    regT = si[9]; regU = si[10]; V = si[11]; regW = si[12]; T = regT & 15; U = regU & 15; W = regW & 15;
+    quick();
+  }
+  function afterImport() {
+    if (irqDirty) { irqN = irqLine(); irqDirty = false; }
+    core.si[13] = irqN; core.si[14] = acia.typedAt >= 0 ? 1 : 0; core.sf[2] = devNext;
+  }
+  function coreEnv() {
+    return {
+      io_rd: (a, ioAt, c0) => { fromCore(); if (c0 > devSeen) devSeen = c0; const v = ioRead(a); afterImport(); return v; },
+      io_wr: (a, v, ioAt, c0) => { fromCore(); if (c0 > devSeen) devSeen = c0; ioWrite(a, v); afterImport(); },
+      shared_write: (k, off, v) => { fromCore(); sharedWrite(k, off, v, T, cpu.lastPC, W); afterImport(); },
+      rtc_rd: r => { fromCore(); const v = rtc.read(r); afterImport(); return v; },
+      rtc_wr: (r, v) => { fromCore(); rtc.write(r, v); afterImport(); },
+      reached: (shared, k) => {
+        if (shared) { if (!sharedBank[k]) sharedBanks_[k] = sharedBank[k] = newBank(1, k); }
+        else if (!taskBank[k]) taskBanks[k] = taskBank[k] = newBank(0, k);
+      },
+      stack_low: (t, s) => { fromCore(); stackLow[t] = s; stackLowAt[t] = [W, cpu.lastPC, cpu.cyc]; afterImport(); },
+      brk_vector: () => { fromCore(); const v = irqVector(); afterImport(); return v; },
+      ioff_note: (n, from, to, at) => { fromCore(); iOffNote(n, from, to, at); afterImport(); },
+      pc_watch: pc => {
+        fromCore();
+        log('pc: ' + hx(W, 1) + ':' + hx(pc, 4) + ' T=' + hx(T, 1) + ' A=' + hx(cpu.A) + ' X=' + hx(cpu.X) + ' Y=' + hx(cpu.Y) + ' S=' + hx(cpu.S) + ' P=' + hx(cpu.P) + ' at cycle ' + cpu.cyc);
+        afterImport();
+      },
+    };
+  }
+  function runWasm(limit) {
+    for (;;) {
+      const cyc = cpu.cyc;
+      if (cyc >= limit || cpu.halted) return;
+      if (cyc > devSeen) { if (cyc < devNext) devSeen = cyc; else sync(cyc); }
+      if (irqDirty) { irqN = irqLine(); irqDirty = false; }
+      if (irqN >= 0) {
+        cpu.waiting = false;
+        if (!(cpu.P & I)) {
+          if (iOffAt >= 0) { iOffNote(cyc - iOffAt, iOffFrom, W << 16 | cpu.lastPC, iOffAt); iOffAt = -1; }
+          cpu.interrupt(irqVector()); continue;
+        }
+      }
+      if (cpu.waiting) { cpu.cyc += Math.max(1, Math.min(nextEvent(), limit - cyc)); continue; }
+      toCore(limit);
+      const why = core.x.run(1);
+      fromCore();
+      const si = core.si, sf = core.sf;
+      if (sf[3] > devSeen) devSeen = sf[3];                    // (The last instruction's start: the devices seen to it)
+      iOffAt = sf[4]; iOffFrom = si[15]; ringAt = si[17]; ringN = si[18];
+      if (why === 3) cpu.waiting = true;
+      else if (why === 4) cpu.halted = 'STP at ' + cpu.where((cpu.PC - 1) & 0xFFFF);
     }
   }
 
