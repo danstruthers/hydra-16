@@ -5103,8 +5103,11 @@ module.exports = {
           if (!c || c.name !== 'chest' || !(c.owner & 0x80)) f.push('the ' + t.name + ' not in the king\'s hoard: ' + JSON.stringify(by.get(t.n)) + ' ' + JSON.stringify(c));
         }
         const look = s.slice(s.indexOf('> look in the chest'), s.indexOf('> take the dagger from the chest'));
-        if (!/dagger/.test(look) || !/penn/.test(look)) f.push('the takings not found in the chest: ' + JSON.stringify(look.slice(0, 600)));
-        if (!dq0Named(dq0Carried(tk.after), 'dagger').length) f.push('the dagger not taken back from the hoard: ' + JSON.stringify(s.slice(s.indexOf('> take the dagger from the chest'), s.indexOf('> take the dagger from the chest') + 300)));
+        const shock = /open the chest You're in shock: you can do no more than rest/.test(s);   // (Slice 4.3's: come round in shock, it handles
+                                                // nothing, the book's; the hoard's then the hub's alone, above)
+        if (shock && !/take the dagger from the chest You're in shock: you can do no more than rest/.test(s)) f.push('in shock, the dagger taken from the chest');
+        else if (!shock && (!/dagger/.test(look) || !/penn/.test(look))) f.push('the takings not found in the chest: ' + JSON.stringify(look.slice(0, 600)));
+        if (!shock && !dq0Named(dq0Carried(tk.after), 'dagger').length) f.push('the dagger not taken back from the hoard: ' + JSON.stringify(s.slice(s.indexOf('> take the dagger from the chest'), s.indexOf('> take the dagger from the chest') + 300)));
         const h2 = T.of('hold the dagger', h1.k + 1), q2 = T.of('quit', h2.k + 1);
         if (!h2.after || !q2.at) return [...f, 'the second game not played'];
         const b2 = dq0Carried(h2.after), dag2 = dq0Named(b2, 'dagger')[0], pen2 = dq0Named(b2, 'pennies')[0];

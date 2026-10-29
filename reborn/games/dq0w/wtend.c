@@ -26,7 +26,8 @@ unsigned char __fastcall__ on_pc (unsigned i);   /* (Part 10's stub: carried by 
 extern unsigned char pc_hit;                    /* (dq0w.c's: a hurt stops its long task, hard) */
 static unsigned long body_at;                   /* (The minutes told up to: the last one's end) */
 static unsigned long wdue;                      /* (The referee's next watch: asked then, nothing bleeding) */
-unsigned long body_due;                         /* (The same, for the lights' minute: wbody.h's) */
+unsigned long body_due = 144000UL;              /* (The same, for the lights' minute: wbody.h's; at first four hours on, so a
+                                                **   game begun asks nothing of its first minutes but a hurt's) */
 
 /* The bodies' time (wfight.c's bled, as a minute or more has gone: the lights' minute, the denizens' intents): the
 ** referee told, if there's anything to tell it; the actors dead of it back, and those that bound their bleeding times
