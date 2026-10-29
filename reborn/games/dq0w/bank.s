@@ -94,7 +94,9 @@ go:
             SWPART      10, 5               ; The things: the requests answered, a thing handled (things.c)
             SWPART      11, 5               ; The things listed, searched for, described, hidden
             SWPART      12, 15              ; A door's work begun (dq0w.c's door_work)
-            SWPART      13, 8               ; The item store's rarer work: begun, kept, the kit, a chunk's things
+            SWPART      13, 8               ; The item store's rarer work: begun, kept, the kit, a chunk's things;
+                                            ;   the map making, by what the character carries (things.c: part 26's
+                                            ;   till 2026-10-28, overlay 9's room)
             SWPART      14, 6               ; The denizens' bodies: their intents carried out (wbody.c)
             SWPART      15, 14              ; The blows, the bleeding (wfight.c)
             SWPART      16, 17              ; The game's own rules: the puzzle judged, a thing walked to (wgame.c)
@@ -107,8 +109,7 @@ go:
             SWPART      23, 11              ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 12              ; Engagement, a blow's close-in, fighting on (dq0w.c's)
             SWPART      25, 13              ; The engage initiative test, a grope's (dq0w.c's; overlay 6's till 2026-10-28)
-            SWPART      26, 9               ; Disengaging (dq0w.c's); the map making, by what the character carries
-                                            ;   (things.c: slice 4.2's)
+            SWPART      26, 9               ; Disengaging (dq0w.c's)
             SWPART      27, 9               ; The lights burning down (dq0w.c's: slice 4.1's)
             SWPART      28, 9               ; The traces' store: the journal taken in, kept (wtrace.c)
             SWPART      29, 10              ; The traces read: the floor, a track, a smell (wtrace.c)
@@ -218,7 +219,7 @@ go:
             SWFN        named, 10
             SWFN        on_pc, 10
             SWFN        light_now, 10
-            SWFN        chart_now, 26
+            SWFN        chart_now, 13
             SWFN        at_hand, 4
             SWFN        carried_named, 4
             SWFN        seen_named, 4

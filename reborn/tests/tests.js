@@ -3118,6 +3118,67 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0longwait', asks: true, what: 'Dingus Quest Zero\'s long waits (the user\'s, 2026-10-28: "waits should be able to last a full night\'s sleep, so 8 hours at least.  Some spells may take longer than that to cast, so 16-bit minutes would be better."; DECISIONS.md\'s, HOUSE.md\'s long waits), by the world\'s events and the clock: at seed 3 in the kitchen (nothing near), its torch put out, "wait 8 hours" waited whole (its intent in minutes, I_WAIT\'s WA_MIN: the clock 288,000 tenths on, the long task 480 minutes, mins), told "You wait eight hours.", the status after; "wait 3 hours 20 minutes" (200 minutes, its spans added up) and "wait 3 hours and 20 minutes" (one duration, not two commands) told so; "rest" a night\'s sleep (LT_SLEEP, "You settle down to rest for eight hours."), "sleep 8 hours" the same; each in the cycles a bearable wait takes (the coarser ticks while nothing\'s near: ten-minute slices); at the normal pace the same wait as quick (run as the turns pace runs it); at seed 21 below, by the giant rats, a long wait asked about at a sound ("Keep waiting?") and answered no: broken off, hours short of its eight; and with the hand-written theme\'s hostile rats a sleep broken off hard by a bite (dq0tasks\' long tasks)',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+        'dq0 -p t -s 3 -c /ram/c.hm', 'douse the torch', 'wait 8 hours', 'status', 'wait 3 hours 20 minutes', 'wait 3 hours and 20 minutes', 'rest', 'sleep 8 hours', 'quit',
+        'dq0 -p n -s 3 -c /ram/c.hm', 'douse the torch', 'wait 8 hours', 'quit',
+        'dq0 -p t -s 21 -c /ram/c.hm -T', 'd', 'wait 8 hours', 'no', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'sleep 8 hours', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out);
+        const games = [], g = [];
+        for (const t of T) { if (/^dq0 /.test(t.line)) games.push(g.splice(0)); g.push(t); }
+        games.push(g.splice(0)); games.shift();
+        if (games.length !== 4) return ['the four games not played: ' + games.length];
+        const of = (gm, line, n = 0) => gm.filter(t => t.line === line)[n] || { k: -1, line, events: [], dens: [], at: null, after: null };
+        const took = t => t.at && t.after ? t.after.now - t.at.now : -1, cyc = t => t.at && t.after ? t.after.cyc - t.at.cyc : Infinity;
+        const time = t => dq0Ev(t, 'E_TIME', {})[0];
+        // (Waited whole, nothing near: its time in minutes, told, the clock on; bearable)
+        const [a, b, c, d] = games;
+        const w8 = of(a, 'wait 8 hours'), e8 = time(w8);
+        if (took(w8) !== 288000) f.push('"wait 8 hours" not eight hours waited: ' + took(w8) + ' tenths');
+        if (!e8 || e8.w1 !== 480 || !e8.mins) f.push('"wait 8 hours" not its 480 minutes, in minutes (E_TIME\'s WA_MIN): ' + JSON.stringify(e8));
+        if (!w8.after || w8.after.pc.task.len !== 480 || !w8.after.pc.task.mins) f.push('the long task not 480 minutes, in minutes: ' + JSON.stringify(w8.after && w8.after.pc.task));
+        if (!/> wait 8 hours You wait eight hours\./.test(o)) f.push('"wait 8 hours" not told "You wait eight hours."');
+        if (cyc(w8) > 40e6) f.push('eight hours waited, nothing near, too slow: ' + (cyc(w8) / 1e6).toFixed(1) + 'M cycles (40M at most)');
+        const st = of(a, 'status');
+        if (!st.at || st.at.now < 288000) f.push('the clock not on eight hours at the status after: ' + (st.at && st.at.now));
+        if (!/> status Pace: [^>]*Facing: south\./.test(o)) f.push('no status after the wait');
+        for (const line of ['wait 3 hours 20 minutes', 'wait 3 hours and 20 minutes']) {
+          const t = of(a, line), words = 'You wait three hours and twenty minutes.';
+          if (took(t) !== 120000) f.push('"' + line + '" not 200 minutes: ' + took(t) + ' tenths');
+          if (!o.includes('> ' + line + ' ' + words)) f.push('"' + line + '" not told "' + words + '"');
+        }
+        if (/I don't know how to minutes/.test(o)) f.push('"and 20 minutes" taken for a command of its own');
+        for (const [line, words] of [['rest', 'You settle down to rest for eight hours.'], ['sleep 8 hours', 'You settle down to sleep for eight hours.']]) {
+          const t = of(a, line), e = time(t);
+          if (took(t) !== 288000) f.push('"' + line + '" not a night\'s sleep: ' + took(t) + ' tenths');
+          if (!e || !e.asleep) f.push('"' + line + '" not asleep (E_TIME\'s WA_SLEEP): ' + JSON.stringify(e));
+          if (!o.includes('> ' + line + ' ' + words)) f.push('"' + line + '" not told "' + words + '"');
+          if (cyc(t) > 40e6) f.push('"' + line + '" too slow: ' + (cyc(t) / 1e6).toFixed(1) + 'M cycles');
+        }
+        if (!m.dq0.games[0].tasks.some(k => k.kind === 'LT_SLEEP' && k.len === 480)) f.push('no sleep\'s long task, LT_SLEEP, 480 minutes');
+        // (At the normal pace: the long wait as quick, the turns pace's way)
+        const n8 = of(b, 'wait 8 hours');
+        if (took(n8) < 288000 || took(n8) > 288600) f.push('the normal pace\'s "wait 8 hours" not eight hours: ' + took(n8) + ' tenths (its real clock a few more at most)');
+        if (cyc(n8) > 60e6) f.push('the normal pace\'s eight hours too slow: ' + (cyc(n8) / 1e6).toFixed(1) + 'M cycles (60M at most)');
+        // (Broken off: asked at a sound, "no"; and stopped hard by a bite)
+        const all = gm => gm.flatMap(t => t.events);
+        if (!all(c).some(e => e.kind === 'E_TASK' && e.te === 'TE_ASK_HEARD' && e.task === 'LT_WAIT')) f.push('the long wait not asked about at a sound');
+        if (!all(c).some(e => e.kind === 'E_TASK' && e.te === 'TE_STOPPED' && e.task === 'LT_WAIT')) f.push('the long wait not stopped at no');
+        const cw = of(c, 'wait 8 hours'), cn = of(c, 'no'), cend = cn.after ? cn.after.now : -1;
+        if (!cw.at || cend < 0 || cend - cw.at.now >= 288000) f.push('the broken-off wait not short of its eight hours: ' + (cend - (cw.at ? cw.at.now : 0)));
+        if (!all(d).some(e => e.kind === 'E_TASK' && e.te === 'TE_HIT' && e.task === 'LT_SLEEP')) f.push('the sleep not stopped hard by a bite: ' + all(d).filter(e => e.kind === 'E_TASK').map(e => e.te + ':' + e.task).join(', '));
+        const ds = of(d, 'sleep 8 hours');
+        if (!ds.at || !ds.after || ds.after.now - ds.at.now >= 288000) f.push('the bitten sleep not short of its eight hours');
+        this.notes = ['the cycles of the long waits: eight hours nothing near ' + (cyc(w8) / 1e6).toFixed(1) + 'M, rest ' + (cyc(of(a, 'rest')) / 1e6).toFixed(1) + 'M, at the normal pace ' + (cyc(n8) / 1e6).toFixed(1) + 'M'];
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0tasks', asks: true, what: 'Dingus Quest Zero\'s long tasks (slice 4.0, HOUSE.md\'s: the world\'s, the hub\'s pc_task; the user\'s choices: a bar and words, hard stops, soft asks, all wounds hard), by the world\'s events: at seed 3 "stop" with nothing to stop, then a walk east down a passage a square at a time, its beats as it goes (it turns, a quiet stretch) and its bar on the status line; at seed 3 by the way down a dig begun, "stop walking" refused (it\'s a dig), "stop digging" stops it; at seed 21 below, a long wait asked about at a sound heard ("Keep waiting?": the UI\'s, I_ASK), answered yes (it goes on), no (it stops), and with a command (it stops, and the command\'s carried out); and with the hand-written theme\'s hostile rats (inhabit.txt) a long wait stopped hard by a bite',
       init: 't_rc', cycles: 3500e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
@@ -5541,7 +5602,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -T -N -k torch', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'wait 2 hours', 'wait 2 hours',
         'go back to the grotto', 'light the torch', 'go back to the grotto', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -N -k paper,charcoal,lantern', 'douse the torch', 'drop the torch', 'light the lantern', 'put the charcoal in the pouch', 'map as I go', 'd',
-        'call this room the Grotto', 'n', 'w', 'w', 'w', 'stop mapping', 'wait 3 hours', 'wait 2 hours', 'wait 1 hour', 'go back to the grotto', 'quit',
+        'call this room the Grotto', 'n', 'w', 'w', 'w', 'stop mapping', 'wait 100 minutes', 'wait 100 minutes', 'wait 1 hour', 'go back to the grotto', 'quit',
         ...['', ' -N'].flatMap(n => ['dq0 -p t -s 3 -c /ram/c.hm -T' + n, 'd', 'call this room the Grotto', 'n', 'w', 'f', 'f', 'f', 'l', 'f', 'r', 'f', 'l', 'f',
           'r', 'f', 'f', 'l', 'f', 'go back to the grotto', ...(n ? ['!' + 'Ā'.repeat(6) + 'turn around'] : []), 'quit']),
         'dq0 -p t -s 4 -c /ram/c.hm -N', 'take the bar', 'open', 'n', 'e', 'n', 'call this room the Gallery', 'go back to where I came in',

@@ -285,6 +285,13 @@ y"Here we come!"	VB_SAY	text=Here we come!;volume=loud	-	yell by prefix
 "Charge!"	VB_SAY	text=Charge!;volume=loud	-	ending in ! is yelled
 "Hello."	VB_SAY	text=Hello.;volume=normal	-	plain quoted text: said aloud
 sleep for an hour	VB_SLEEP	duration=60min	-	sleep with a duration
+sleep 8 hours	VB_SLEEP	duration=480min	-	sleep with a duration, its for unsaid (the long durations, 2026-10-28)
+rest 2 hours	VB_SLEEP	duration=120min	-	rest with a duration, its for unsaid
+wait 8 hours	VB_WAIT	duration=480min	-	a night's wait: past 100 minutes, in minutes (the long durations)
+wait 3 hours 20 minutes	VB_WAIT	duration=200min	-	a duration's spans added up
+wait 3 hours and 20 minutes	VB_WAIT	duration=200min	-	its spans joined by and, one duration (not a sequence)
+wait half an hour	VB_WAIT	duration=30min	-	half an hour
+wait for an hour and 5 minutes	VB_WAIT	duration=65min	-	an hour and minutes
 wait 10 minutes	VB_WAIT	duration=10min	-	a long task, stopped by stop
 wait	VB_WAIT	duration=1min	-	bare wait: a minute
 stop waiting	VB_STOP	task=waiting	-	stops the wait

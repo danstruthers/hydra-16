@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     23                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     24                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -52,7 +52,8 @@
                                                 **   a bank of their own, KIND_BANK, NKINDS 128; 21: the outfits, gear,
                                                 **   GE_OLD, rs.h's RS_OUTFIT; 22: the denizens' gear, I_KIT, the
                                                 **   actors' did, hx, hy, hsn, WB_DRAWS; 23: their belongings, I_KIT's
-                                                **   a and b, I_ROB's x[2], the actors' agear) */
+                                                **   a and b, I_ROB's x[2], the actors' agear; 24: the long durations,
+                                                **   I_WAIT's a (WA_MIN, WA_SLEEP), E_TIME's b, the long task's mins) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -277,7 +278,9 @@ struct msg {
 
 /* Intents: what an actor means to do (the UI's for the character, the denizens' for theirs) */
 enum {
-    I_NONE, I_WAIT,                             /* w1: tenths (0: a round); w2: 1, quietly (a thing's handling);
+    I_NONE, I_WAIT,                             /* w1: tenths (0: a round), or minutes (a's WA_MIN: a long duration,
+                                                **   over 100 minutes, 65,535 at most); a | WA_SLEEP: asleep (the
+                                                **   long task LT_SLEEP); w2: 1, quietly (a thing's handling);
                                                 **   | a long task's kind times 256, a timed work's (LT_*: the
                                                 **   things', HOUSE.md's long tasks, its words begun the UI's, its
                                                 **   end the UI's again as the character's free, not stopped), and
@@ -396,6 +399,11 @@ enum {
 ** stratum, a its step, b 1 if it's bleeding, t when it's ready; I_LEAVE; I_ROUSE: free w1 tenths from now (w2 1:
 ** whenever it was free; 0: if it was later); I_DONE (who 0): w1 the turn it's done (the hub's den_go: the turns
 ** pace's, the world going on once it's in), t the clock then */
+#define WA_MIN          1                       /* (I_WAIT's a, E_TIME's b: w1 in minutes, a long duration's) */
+#define WA_SLEEP        2                       /* (I_WAIT's a, E_TIME's b: asleep, LT_SLEEP's) */
+#define LONG_T          60000U                  /* (The tenths a duration's sixteen bits are given at most: past
+                                                **   them, 100 minutes, it's in minutes, to 65,535 of them, some 45
+                                                **   days: I_WAIT's WA_MIN, the long task's mins) */
 #define STEP_COARSE     0x200
 #define STEP_FEELS      2                       /* (I_STEP's w2: a kind that can't see in the dark, HOUSE.md's) */
 #define STEP_SCENT      0x400                   /* (I_STEP's w1, the heading none: the way the character's scent goes,
@@ -425,7 +433,8 @@ enum {
 
 /* Events: what's happened, in the world's terms (the UI words them; the denizens and the sound hear them) */
 enum {
-    E_NONE, E_TIME,                             /* Time passed for who: w1 tenths */
+    E_NONE, E_TIME,                             /* Time passed for who: w1 tenths, or minutes (b's WA_MIN: the
+                                                **   character's wait, its I_WAIT's a as b, WA_SLEEP too) */
     E_READY,                                    /* who can act again */
     E_BYE,                                      /* The world's ending */
     E_ARRIVE,                                   /* who's somewhere new: w1 how (A_*), 256 the first time there,
@@ -903,7 +912,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned long now;
     volatile unsigned long pc_ready;            /* When the character can act again */
     unsigned        round;                      /* The ruleset's round, tenths of a second */
-    unsigned        tpr;                        /* Real ticks a round, at the pace (0: turns) */
+    unsigned        tpr;                        /* Real ticks a round, at the pace (0: turns; and while a long wait
+                                                **   or a sleep runs as the turns pace does, the world's wait_pace) */
     volatile unsigned char paused, hold, quit;  /* Paused (Escape: the UI's request, WQ_SET), held (a question), ending
                                                 **   (the UI's I_QUIT): the world's */
     unsigned char   pace;
@@ -1056,7 +1066,8 @@ struct hub {                                    /* Bank 0, at $8000 */
         unsigned char asking;                   /* A soft interruption put to the player (E_TASK's TE_ASK*): 1 */
         unsigned    len, done;                  /* Its length and its part done, its own units (a walk's squares, a
                                                 **   dig's half-feet, a climb's feet, a wait's tenths, a battering's
-                                                **   blows; a fight's none, its blows struck so far) */
+                                                **   blows; a fight's none, its blows struck so far); a timed one's
+                                                **   (a wait, a sleep, a search, the timed work) in minutes if mins */
         unsigned char foe;                      /* A fight's target, the actor plus 1 (the status line's "Fighting
                                                 **   the giant rat"; 0 none) */
         unsigned char what;                     /* What it's done to, for its words (the world's, as it's begun: a
@@ -1064,6 +1075,8 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   PK_*), and a battering's striker (SK_*) times 16, or SK_WITH (the
                                                 **   thing named: the hub's pc_strike's kind); 0x80 | a thing's
                                                 **   kind (the catalogue's); 0 none (a trap's, the place's) */
+        unsigned char mins;                     /* 1: len and done in minutes (a long duration's: over 100
+                                                **   minutes, as tenths won't go in 16 bits; the world's task_for) */
     }               pc_task;
     volatile unsigned pc_fuel;                  /* The character's light's minutes left (pc_lamp's: 0xFFFF, it never
                                                 **   burns down; the world's as its lights burn, slice 4.1's), */

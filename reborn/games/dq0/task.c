@@ -9,6 +9,7 @@
 ** game paused or kept overlay 7's).
 */
 
+#include <stdlib.h>
 #include <string.h>
 #include "dq0.h"
 #include "hub.h"
@@ -492,21 +493,6 @@ void o_facing_words (void)
     sayf ("\nFacing: %s%s.", head_name[(f + b[0]) & 7], b[1] ? ", you think; you've lost your bearings" : "");
 }
 
-/* A wait's length, tenths (I_WAIT's w1): line l's duration, n minutes or hours ("wait 10 minutes", "an hour"); 0 a
-** round (nothing said); 100 minutes at most, the world's sixteen bits' */
-unsigned __fastcall__ o_wait_of (const char* l, unsigned char n)
-{
-    unsigned long t;
-
-    if (strstr (l, "hour")) {
-        t = 36000UL * (n ? n : 1);
-    } else if (strstr (l, "minute")) {
-        t = 600UL * (n ? n : 1);
-    } else {
-        return 0;
-    }
-    return t > 60000UL ? 60000U : (unsigned) t;
-}
 
 /* The task a stop names, by its word ("digging"; "": none, LT_NONE) */
 unsigned char __fastcall__ o_stop_kind (const char* word)
@@ -518,7 +504,7 @@ unsigned char __fastcall__ o_stop_kind (const char* word)
                                          "winding", "tracking", "sniffing", "filling", "soaking", "hiding",
                                          "travelling", "returning", "heading" };
     static const unsigned char kind_[] = { LT_WALK, LT_WALK, LT_WALK, LT_CLIMB, LT_DIG, LT_DIG, LT_SEARCH, LT_WAIT,
-                                           LT_WAIT, LT_SLEEP, LT_TALK, LT_BATTER, LT_BATTER, LT_BATTER, LT_FIGHT,
+                                           LT_SLEEP, LT_SLEEP, LT_TALK, LT_BATTER, LT_BATTER, LT_BATTER, LT_FIGHT,
                                            LT_FIGHT, LT_BATTER, LT_BATTER, LT_BATTER, LT_STUDY, LT_DISARM, LT_PICK,
                                            LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_TRACK, LT_SNIFF, LT_FILL,
                                            LT_FILL, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL };
@@ -599,3 +585,153 @@ void __fastcall__ o_meta (unsigned char action)
 #pragma local-strings (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
+
+
+/* ---- The long durations (the user's, 2026-10-28: "waits should be able to last a full night's sleep, so 8 hours at
+** least.  Some spells may take longer than that to cast, so 16-bit minutes would be better."): a wait's, a sleep's,
+** a rest's length read from the line, its intent (I_WAIT: in minutes past 100 of them, WA_MIN), and told back
+** (E_TIME's).  Overlay 13's (its room) */
+#pragma code-name (push, "OV13CODE")
+#pragma rodata-name (push, "OV13RODATA")
+#pragma data-name (push, "OV13RODATA")
+#pragma bss-name (push, "OV13RODATA")
+#pragma static-locals (push, on)              /* (Its locals static, in its bank: the code the less) */
+#pragma local-strings (push, on)
+
+static const char nwords[] = "\0one\0two\0three\0four\0five\0six\0seven\0eight\0nine\0ten\0eleven\0twelve\0thirteen\0"
+    "fourteen\0fifteen\0sixteen\0seventeen\0eighteen\0nineteen\0twenty\0thirty\0forty\0fifty\0sixty\0seventy\0eighty\0"
+    "ninety";                                   /* (0 to 19, then the tens from twenty: 20 on) */
+static char nb_[24];
+static unsigned char rest_;                     /* (A rest said, not a sleep: its words) */
+
+/* The nth of nwords */
+static const char* __fastcall__ nth (unsigned char n)
+{
+    const char* p = nwords;
+
+    while (n--) {
+        p += strlen (p) + 1;
+    }
+    return p;
+}
+
+/* A number, n, in words: "eight", "twenty-five"; past 99 its figures */
+static const char* __fastcall__ num_words (unsigned n)
+{
+    if (n >= 100) {
+        return utoa (n, nb_, 10);
+    }
+    if (n < 20) {
+        return nth (n);
+    }
+    strcpy (nb_, nth (n / 10 + 18));
+    if (n % 10) {
+        strcat (nb_, "-");
+        strcat (nb_, nth (n % 10));
+    }
+    return nb_;
+}
+
+/* A wait's length, minutes: line l's duration, its spans added up, each a number and a unit ("wait 10 minutes", "an
+** hour", "3 hours 20 minutes", "3 hours and 20 minutes", "half an hour", "eight hours": the parser's numbers, figures
+** and one to ten), n the parser's first number (one of its words not known here); 0 none said (a round); 65,535 at
+** most */
+static unsigned __fastcall__ wait_of (const char* l, unsigned char n)
+{
+    register const char* p = l;
+    const char* w;
+    unsigned long t = 0;
+    unsigned v = 0;
+    unsigned char k, c, half = 0, said = 0;
+
+    for (; *p; ++p) {
+        if (p != l && p[-1] != ' ') {
+            continue;                           /* (A word's first letter, each) */
+        }
+        c = *p | 0x20;
+        if (c >= '0' && c <= '9') {
+            v = atoi (p);
+        } else if (c == 'h' && p[1] == 'a') {
+            half = 1;                           /* ("half") */
+        } else if (c == 'h' || (c == 'm' && p[1] == 'i')) {
+            if (!v) {                           /* ("hour", "hours", "minute", "minutes") */
+                v = said || !n ? 1 : n;         /* (Its number the parser's: a word not known here) */
+            }
+            t += c == 'h' ? (half ? 30 : 60UL * v) : half ? 0 : v;
+            v = half = 0;
+            said = 1;
+        } else if (c == 'a' && (p[1] == ' ' || p[2] == ' ')) {
+            v = 1;                              /* ("a", "an") */
+        } else {
+            for (k = 1; k <= 10; ++k) {         /* ("one" ... "ten") */
+                w = nth (k);
+                c = strlen (w);
+                if (!strnicmp (p, w, c) && (p[c] | 0x20) == ' ') {
+                    v = k;
+                }
+            }
+        }
+    }
+    return !said ? 0 : t > 65535UL ? 65535U : t ? (unsigned) t : 1;
+}
+
+/* A wait (VB_WAIT, VB_PASS) or a sleep or a rest (VB_SLEEP) begun (chores'): as long as the line says (wait_of); a
+** wait or a pass with none said a round; a sleep or a rest a night's, eight hours, or a short one's, half an hour
+** (the house's); its intent in tenths, or in minutes past 100 of them (WA_MIN), asleep for a sleep (WA_SLEEP) */
+void __fastcall__ o_wait_go (unsigned char action)
+{
+    unsigned m = wait_of (cl, cmd.n);
+    unsigned char a = 0;
+
+    if (action == VB_SLEEP) {
+        rest_ = strstr (cl, "rest") != 0;
+        if (!m) {
+            m = strstr (cl, "short") ? 30 : 480;
+        }
+        a = WA_SLEEP;
+    }
+    if (m > 100) {
+        a |= WA_MIN;
+    } else {
+        m *= 600;
+    }
+    intend_a = a;
+    intend2 (I_WAIT, m, 0);
+}
+
+/* Time passed for the character (E_TIME: w its tenths, or its minutes, b's WA_MIN; asleep, WA_SLEEP), told: a
+** round's (none said), "Time passes."; a wait's as long as it is, "You wait eight hours.", "You wait three hours and
+** twenty minutes."; a sleep's, "You settle down to sleep for eight hours." (a rest's, to rest) */
+void __fastcall__ o_time_said (unsigned w, unsigned char b)
+{
+    unsigned m = b & WA_MIN ? w : w / 600, h = m / 60, r = m % 60;
+
+    if (!(b & (WA_MIN | WA_SLEEP)) && (w < 600 || w % 600)) {
+        tell (T_TIME_PASSES);                   /* (A round, or less than a minute's: as it was) */
+        return;
+    }
+    sayf (b & WA_SLEEP ? "\nYou settle down to %s for " : "\nYou wait ", rest_ ? "rest" : "sleep");
+    if (m == 30) {
+        say ("half an hour");
+    } else {
+        if (h) {
+            say (h == 1 ? "an" : num_words (h));
+            say (h == 1 ? " hour" : " hours");
+            if (r) {
+                say (" and ");
+            }
+        }
+        if (r || !h) {
+            say (r == 1 ? "a" : num_words (r));
+            say (r == 1 ? " minute" : " minutes");
+        }
+    }
+    say (".");
+}
+
+#pragma local-strings (pop)
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma data-name (pop)
+#pragma bss-name (pop)

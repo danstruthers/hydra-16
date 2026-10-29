@@ -850,10 +850,10 @@ unsigned char s_serve (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 26 (dq0w.c's, its room): the map making, as the light (slice 4.2's; the world's parts are 51 at most,
-** swap.inc's table) */
-#pragma code-name (push, "SW26CODE")
-#pragma rodata-name (push, "SW26RODATA")
+/* ==== Part 13 (part 26's till 2026-10-28: overlay 9's room, the lights' burning's): the map making, as the light
+** (slice 4.2's; the world's parts are 51 at most, swap.inc's table) */
+#pragma code-name (push, "SW13CODE")
+#pragma rodata-name (push, "SW13RODATA")
 
 /* The character's map making (the hub's pc_chart and pc_map: DUNGEON.md, the map kept; HOUSE.md's), by what it
 ** carries: the things to draw a map with handy (in hand, or on the body, in nothing that isn't open to the hand:
@@ -861,7 +861,7 @@ unsigned char s_serve (void)
 ** map, "map"; a point that draws, "draw", or a quill, "quill", and ink, "ink"), and a hand to draw with (free, or
 ** holding one of them; its arm not useless); and the first map it carries (anywhere on it: shown).  Mapping as it goes
 ** with them, and no map, its first sheet is made the map (the kind keyed "map").  Not handy, what they're in (its kind
-** in pc_chart: CH_PACKED's, the UI's to tell).  Part 26's (its room), called as the light is (s_light_now's) */
+** in pc_chart: CH_PACKED's, the UI's to tell).  Part 13's (its room), called as the light is (s_light_now's) */
 void s_chart_now (void)
 {
     static const char keys[5][6] = { "sheet", "map", "draw", "quill", "ink" };

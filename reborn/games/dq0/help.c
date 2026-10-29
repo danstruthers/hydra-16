@@ -1,10 +1,10 @@
 /*
-** help.c - (overlay 6) the commands listed (help, "?"): the game's lib folder's help.txt, each line a paragraph (a line
+** help.c - (overlay 1, overlay 6's till 2026-10-28: its room for parts.c's) the commands listed (help, "?"): the game's lib folder's help.txt, each line a paragraph (a line
 ** begun with # not said); and a verb the game doesn't know, or doesn't do yet, said back as typed (main.c's command)
 */
 
-#pragma code-name ("OV6CODE")
-#pragma rodata-name ("OV6RODATA")
+#pragma code-name ("OV1CODE")
+#pragma rodata-name ("OV1RODATA")
 
 #include <fcntl.h>
 #include <string.h>

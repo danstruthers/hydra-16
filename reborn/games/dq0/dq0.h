@@ -152,6 +152,7 @@ struct req* __fastcall__ ask_b (unsigned char kind, unsigned char a, unsigned ch
                                                 **   asked, the UI's slot */
 void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2);   /* (main.c's) An intent to the world (an
                                                 **   overlay's too) */
+extern unsigned char intend_a;                  /* (main.c's) The next intent's a (intend2's: then 0) */
 void __fastcall__ wset (unsigned char what, unsigned char x, unsigned char y);  /* (main.c's) The character's state, or
                                                 **   the game's, set (the world's: the hub's wreq, WQ_SET, WS_*), from
                                                 **   anywhere (the window put back) */
@@ -229,8 +230,8 @@ void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsig
 
 void title (void);                              /* Overlay 1: the title, the pace asked */
 void __fastcall__ entered (unsigned char resumed);  /* Overlay 1: the character come into the dungeon */
-void help (void);                               /* Overlay 6 (help.c's): the commands, listed (help.txt) */
-void __fastcall__ unknown (unsigned char f);    /* Overlay 6: a verb the game doesn't know (f 0), or doesn't do yet
+void help (void);                               /* Overlay 1 (help.c's): the commands, listed (help.txt) */
+void __fastcall__ unknown (unsigned char f);    /* Overlay 1: a verb the game doesn't know (f 0), or doesn't do yet
                                                 **   (f 1), said back from the command's line (cl) */
 extern const char* cl;                          /* The command's line (main.c's) */
 unsigned char parts_in (void);                  /* Overlay 6 (parts.c's): the line typed queued in its parts, 0 no room */
@@ -248,7 +249,8 @@ void facing_words (void);                       /* (Overlay 7's) The way it beli
 unsigned char __fastcall__ stop_kind (const char* word);  /* Overlay 7 (task.c's): the task a stop names */
 unsigned char __fastcall__ answer_of (const char* l);     /*   and a question's answer */
 void __fastcall__ bar_text (char* s, unsigned done, unsigned len);  /* (Overlay 3) */
-unsigned __fastcall__ wait_of (const char* l, unsigned char n);     /* (Overlay 7) */
+void __fastcall__ wait_go (unsigned char action);   /* (Overlay 13) A wait, a sleep or a rest begun (task.c's) */
+void __fastcall__ time_said (unsigned w, unsigned char b);  /* (Overlay 13) Time passed, told: E_TIME's */
 void __fastcall__ state_words (unsigned char cond);
 unsigned char __fastcall__ free_cmd (const char* l);   /* Overlay 7: a line typed as the character's busy, carried
                                                 **   out at once (1), held (0), or held and its fight stopped for it

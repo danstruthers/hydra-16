@@ -284,14 +284,22 @@ function numberOf(node, env) {
   return numWord(w) ?? null;
 }
 
-// Minutes of a duration: "10 minutes", "2 hours", "an hour", "a minute".
+// Minutes of a duration: "10 minutes", "2 hours", "an hour", "a minute", "half an hour", "3 hours 20 minutes", "3
+// hours and 20 minutes" (its spans added up, each a number and a unit: the long durations, 2026-10-28, as the UI's
+// task.c's wait_of reads the line).
 function minutesOf(node, env) {
-  const t = textOf(node, env);
-  if (t === 'an hour') return 60;
-  if (t === 'a minute') return 1;
-  const n = numberOf(node, env) ?? 1;
-  const unit = wordsOf(node, env).find(w => /^(hour|minute)/.test(w));
-  return n * (unit && unit.startsWith('hour') ? 60 : 1);
+  let t = 0, v = 0, half = false;
+  for (const w of wordsOf(node, env)) {
+    if (/^\d+$/.test(w)) v = Number(w);
+    else if (w === 'a' || w === 'an') v = v || 1;
+    else if (w === 'half') half = true;
+    else if (numWord(w) !== undefined) v += numWord(w);
+    else if (/^(hour|minute)/.test(w)) {
+      t += w.startsWith('hour') ? (half ? 30 : 60 * (v || 1)) : half ? 0 : v || 1;
+      v = 0; half = false;
+    }
+  }
+  return Math.min(t || 1, 65535);
 }
 
 // ---- the context ----------------------------------------------------------------------------------------------------

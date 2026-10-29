@@ -150,8 +150,8 @@ ovl_out:
 
 ; The overlays' functions (dq0.h has them with their overlays)
             OVFN        title, 1
-            OVFN        help, 6
-            OVFN        unknown, 6
+            OVFN        help, 1
+            OVFN        unknown, 1
             OVFN        parts_in, 6
             OVFN        alias_said, 4
             OVFN        sway_words, 6
@@ -161,7 +161,8 @@ ovl_out:
             OVFN        stop_kind, 7
             OVFN        answer_of, 7
             OVFN        bar_text, 3
-            OVFN        wait_of, 7
+            OVFN        wait_go, 13
+            OVFN        time_said, 13
             OVFN        state_words, 7
             OVFN        free_cmd, 7
             OVFN        meta, 7

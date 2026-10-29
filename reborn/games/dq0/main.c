@@ -854,7 +854,7 @@ static unsigned char events (void)          /* (How many there were) */
         switch (m.kind) {
         case E_TIME:
             if (m.who == 0) {
-                tell (T_TIME_PASSES);
+                time_said (m.w1, m.b);          /* ("Time passes.", "You wait eight hours.": task.c's) */
             }
             break;
         case E_READY:
@@ -1207,6 +1207,8 @@ void s_limbs_cmd (void)
 
 /* ---- The commands (the parser comes later: a word, and the rest) */
 
+unsigned char intend_a;
+
 void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2)
 {
     static struct msg m;
@@ -1215,7 +1217,8 @@ void __fastcall__ intend2 (unsigned char kind, unsigned w1, unsigned w2)
 
     m.kind = kind;
     m.who = 0;
-    m.a = 0;
+    m.a = intend_a;                             /* (Its a, if it's one that has it: a wait's unit, task.c's) */
+    intend_a = 0;
     m.w1 = w1;
     m.w2 = w2;
     hub_map (0);
@@ -1515,8 +1518,9 @@ static unsigned char __fastcall__ chores (unsigned char action)
         show_map ();
         break;
     case VB_WAIT:                               /* (A round, or as long as it says: "wait 10 minutes"; engaged, */
-    case VB_PASS:                               /*   "pass": a round given up, defending) */
-        intend2 (I_WAIT, wait_of (cl, cmd.n), 0);
+    case VB_PASS:                               /*   "pass": a round given up, defending; a sleep or a rest, a */
+    case VB_SLEEP:                              /*   night's or as long as it says: task.c's) */
+        wait_go (action);
         break;
     case VB_DISENGAGE:                          /* (Away from the foes engaging it, the book's disengage; a flight */
     case VB_FLEE:                               /*   at a run once free: the world's) */

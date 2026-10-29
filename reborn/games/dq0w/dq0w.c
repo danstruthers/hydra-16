@@ -159,8 +159,9 @@ static unsigned char pfoe, paim, pstrike, pfd;  /* (A blow's close-in, I_CLOSE's
                                                 **   last set out) */
 static unsigned char pshand;                    /* (The hand that holds what it strikes with: the hub's pc_shand) */
 
-/* The character busy for t tenths: free again at pc_ready (the turns pace: the clock moved on to it a slice at a
-** time, turns_run), standing where it is unless a move says where it's going (bound_for) */
+/* The character busy for t tenths (a long wait's hours too: the clock's and pc_ready's 32 bits): free again at
+** pc_ready (the turns pace: the clock moved on to it a slice at a time, turns_run), standing where it is unless a
+** move says where it's going (bound_for) */
 static unsigned char late;                      /* (The turns pace's: the denizens' task slow to keep up) */
 
 static unsigned long free_at;                   /* (When it was last free of work: its rest from then, RS_EXERT's) */
@@ -170,8 +171,9 @@ unsigned pextra;                                /* (A move's time more: getting 
                                                 **   the item store's as a handling's done, things.c's reach_done) */
 static void __fastcall__ busy (unsigned long t)
 {
-    went = t > 60000UL ? 60000U : (unsigned) t;
-    free_at = HUB->pc_ready = HUB->now + went + pextra;
+    went = t > LONG_T ? LONG_T : (unsigned) t;  /* (The last thing's time, sixteen bits: a long wait's its whole
+                                                **   in pc_ready) */
+    free_at = HUB->pc_ready = HUB->now + t + pextra;
     pextra = 0;
     HUB->pc_tx = HUB->pc_x;
     HUB->pc_ty = HUB->pc_y;
@@ -228,9 +230,11 @@ static void __fastcall__ task (unsigned char kind, unsigned len)
     HUB->pc_task.done = 0;
     HUB->pc_task.foe = 0;
     HUB->pc_task.what = 0;
+    HUB->pc_task.mins = 0;
     pc_hit = 0;
     pt0 = HUB->now;
 }
+
 
 /* A walk set out on, its way the path's: the character busy for t tenths, its long task a walk of the path's
 ** squares, stepped as the clock goes (stepping) */
@@ -1658,8 +1662,11 @@ unsigned char s_toward_middle (void)
 ** tenths: wres 1 if it tired the character a level more */
 static void __fastcall__ spend (unsigned char a, unsigned long t)
 {
-    ww1 = t > 60000UL ? 60000U : (unsigned) t;
-    ask_w (RS_EXERT, a, 0);
+    do {                                        /* (A long rest's in pieces: RS_EXERT's w1 sixteen bits) */
+        ww1 = t > LONG_T ? LONG_T : (unsigned) t;
+        t -= ww1;
+        ask_w (RS_EXERT, a, 0);
+    } while (t);
     ww1 = 0;
 }
 
@@ -3187,12 +3194,15 @@ static void stopped (void)
 ** a walk's next square come, a blow or a wound to see to) */
 static void stepping (void)
 {
+    unsigned char k;
+
     hub_map (0);
-    if (!HUB->pc_task.kind || HUB->pc_task.asking) {
+    if (!(k = HUB->pc_task.kind) || HUB->pc_task.asking) {
         return;
     }
-    if (HUB->pc_task.kind == LT_WAIT || HUB->pc_task.kind == LT_SEARCH || HUB->pc_task.kind >= LT_STUDY || lwork) {
-        HUB->pc_task.done = (unsigned) (HUB->now - pt0);    /* (A timed work's its time, a window's climb's) */
+    if ((k == LT_WAIT || k == LT_SLEEP || k == LT_SEARCH || k >= LT_STUDY || lwork) && !HUB->pc_task.mins) {
+        HUB->pc_task.done = (unsigned) (HUB->now - pt0);    /* (A timed work's its time, a window's climb's; a
+                                                **   long one's minutes the burning's, part 27's, as they go by) */
     }
     if (pc_hit || (pon && pnext < npath && HUB->now >= pdue)) {
         step_on ();
@@ -3206,7 +3216,7 @@ static void stepping (void)
 ** it meets told; any task stopped, hard (a blow or a wound: all wounds, the user's; a hostile in sight within 30
 ** feet), or put to the player, soft (something else new seen: "Keep walking?"), or stopped as the player asks */
 static unsigned long pask;                      /* (When the question was put) */
-static unsigned prem;                           /* (The tenths it had left then) */
+static unsigned long prem;                      /* (When it was to be free then) */
 
 static void __fastcall__ halt (unsigned char why)
 {
@@ -3256,7 +3266,7 @@ static void __fastcall__ ask (unsigned char why)
     hub_map (0);
     HUB->pc_task.asking = 1;
     pask = HUB->now;
-    prem = HUB->pc_ready > HUB->now ? (unsigned) (HUB->pc_ready - HUB->now) : 0;
+    prem = HUB->pc_ready;
     HUB->pc_ready = HUB->now;                   /* (The clock still at the turns pace till it's answered) */
     if (!evb) {
         evb = HUB->pc_task.what;                /* (Its words: what it's done to; a fight's its health) */
@@ -3461,12 +3471,14 @@ unsigned char s_task_news (void)
     return news ();
 }
 
-/* A soft question answered: the task on as it was */
+/* A soft question answered: the task on as it was, its end as much later as the question took */
 static void go_on (void)
 {
+    unsigned long d = HUB->now - pask;
+
     HUB->pc_task.asking = 0;
-    pt0 += HUB->now - pask;
-    HUB->pc_ready = HUB->now + prem;
+    pt0 += d;
+    HUB->pc_ready = prem + d;
 }
 
 /* The player's stop (I_STOP: a its kind named, or none) and a soft question's answer (I_GO_ON) */
@@ -4572,11 +4584,24 @@ static void __fastcall__ intent (struct msg* m)
 #pragma code-name (push, "SW53CODE")
 #pragma rodata-name (push, "SW53RODATA")
 
+/* A timed long task begun, t tenths long (a wait, a sleep; the timed work, a spell's casting to come, as they're
+** longer): its length in tenths, or in minutes past what sixteen bits of them hold (LONG_T, 100 minutes: the long
+** task's mins, its part done counted in minutes too, the lights' burning's, part 27's).  Part 53's (the main RAM's
+** room) */
+static void __fastcall__ task_for (unsigned char kind, unsigned long t)
+{
+    task (kind, t > LONG_T ? (unsigned) (t / 600) : (unsigned) t);
+    HUB->pc_task.mins = t > LONG_T;
+}
+
 void __fastcall__ s_intent_few (struct msg* m)
 {
+    unsigned long t;
+
     switch (m->kind) {
-    case I_WAIT:
-        busy (m->w1 ? m->w1 : HUB->round);
+    case I_WAIT:                                /* (w1 tenths, or minutes, WA_MIN's: a long wait's, a sleep's) */
+        t = m->a & WA_MIN ? (unsigned long) m->w1 * 600 : m->w1 ? m->w1 : HUB->round;
+        busy (t);
         if (m->w2 >> 8) {                       /* (A timed work of the UI's, the things': its long task, its end
                                                 **   the UI's as the character's free, not stopped) */
             task (m->w2 >> 8, m->w1);
@@ -4584,11 +4609,13 @@ void __fastcall__ s_intent_few (struct msg* m)
             break;
         }
         pc_waited = 1;                          /* (Its eyes looked to as it ends: the senses') */
-        if (!m->w2 && m->w1 > HUB->round) {
-            task (LT_WAIT, m->w1);              /* (A wait longer than a round: a long task) */
+        if (!m->w2 && t > HUB->round) {
+            task_for (m->a & WA_SLEEP ? LT_SLEEP : LT_WAIT, t);  /* (A wait longer than a round, or a sleep: a long
+                                                **   task, in minutes past 100 of them) */
         }
         free_at = HUB->now;                     /* (Waiting: rest) */
         if (!m->w2) {
+            evb = m->a;                         /* (Its unit and its sleep, for the words: E_TIME's b) */
             event (E_TIME, 0, m->w1 ? m->w1 : HUB->round);
         }
         break;
@@ -4830,9 +4857,41 @@ static void turn (void)
     late = BEHIND;
 }
 
+/* A turn's slice of the clock: TURN_SLICE; a long wait's or a sleep's, on to the next actor's moment (the soonest of
+** their ready: none acts before it, the slices between theirs with nothing to do; resting, the actors' idle ways the
+** coarser, the denizens' decide's), WAIT_SLICE at most (nothing near: the denizens away from it moved coarsely as
+** ever, a move each when due; the lights burning down the slice's minutes at once), and no further than the lights'
+** next look (burn_due: ten minutes on as it rests, a minute while the light it carries is near burning low, so it's
+** told as it happens, the wait stopped as it goes out, at its minute) */
+#define WAIT_SLICE      6000                    /* (Ten minutes: the book's rest a fatigue level, Skills' fatigue
+                                                **   recovery) */
+static unsigned char __fastcall__ wait_on (void);
+
+static unsigned slice (void)
+{
+    struct actor* a = HUB->actor;
+    unsigned long r;
+    unsigned char k;
+
+    if (!wait_on ()) {
+        return TURN_SLICE;
+    }
+    if ((r = HUB->now + WAIT_SLICE) > burn_due && HUB->round) {
+        r = burn_due;                           /* (On to the lights' next look, a minute's or a rest's ten: a light
+                                                **   burning low or out at its moment) */
+    }
+    for (k = NACTORS; k; --k, ++a) {
+        if (a->state && a->ready < r) {
+            r = a->ready;                       /* (A denizen about it: on to its moment) */
+        }
+    }
+    return r < HUB->now + TURN_SLICE ? TURN_SLICE : (unsigned) (r - HUB->now);
+}
+
 static unsigned char turns_run (void)
 {
-    unsigned d;
+    unsigned long d;
+    unsigned s;
 
     if (HUB->tpr || HUB->paused || HUB->hold) {
         return 0;
@@ -4841,17 +4900,53 @@ static unsigned char turns_run (void)
         turn ();                                /* (Its own work told: the denizens' turn at it, at this clock) */
         return 1;
     }
-    if ((d = (unsigned) HUB->pc_ready - (unsigned) HUB->now) == 0 || d > 60000U) {
-        return 0;                               /* (Free: busy () takes 60,000 tenths at most) */
+    if (HUB->pc_ready <= HUB->now) {
+        return 0;                               /* (Free) */
     }
+    d = HUB->pc_ready - HUB->now;
     if (HUB->pc_foe) {
         pc_blow ();
     }
     hub_map (0);
-    advance (d < TURN_SLICE ? d : TURN_SLICE);
+    s = slice ();
+    advance (d < s ? d : s);
     stepping ();                                /* (Its walk on, square by square, before the denizens' turn) */
     turn ();
     return 1;
+}
+
+/* A long wait or a sleep under way, not asking (a wait longer than a round: its long task) */
+static unsigned char __fastcall__ wait_on (void)
+{
+    unsigned char k = HUB->pc_task.kind;
+
+    return (k == LT_WAIT || k == LT_SLEEP) && !HUB->pc_task.asking;
+}
+
+/* A long wait or a sleep at the real paces (longer than a round, and not asking): run as the turns pace runs it, as
+** fast as the tasks go, the denizens given their turns (the house's, HOUSE.md's long waits: an hour's wait no hour of
+** the player's, nor a night's sleep a night), the pace's real ticks a round kept meanwhile (tpr 0: every task's turns
+** pace), put back as it ends, is stopped or asks */
+static unsigned tpr_kept;
+
+static void wait_pace (void)
+{
+    static unsigned char was;
+
+    if (wait_on () != was) {
+        was ^= 1;
+        burn_ask = 1;                           /* (The lights' burning looked to at once: its cadence a rest's, or
+                                                **   no longer, part 27's) */
+    }
+    if (was) {
+        if (HUB->tpr) {
+            tpr_kept = HUB->tpr;
+            HUB->tpr = 0;
+        }
+    } else if (tpr_kept) {
+        HUB->tpr = tpr_kept;
+        tpr_kept = 0;
+    }
 }
 
 /* The real clock's ticks since the last look, made game time at the pace */
@@ -4968,6 +5063,7 @@ int main (int argc, char* argv[])
             hub_map (0);
         }
         ++HUB->beat[T_WORLD];
+        wait_pace ();                           /* (A long wait at the real paces: as fast as the turns pace goes) */
         if (turns_run ()) {
             continue;                           /* (The turns pace: the denizens catching up) */
         }
@@ -5348,6 +5444,7 @@ void __fastcall__ task_out (unsigned char b);   /* (Part 23's) */
 unsigned long burn_due;
 unsigned char burn_ask;                         /* (The minutes left made again at once: a light's change) */
 static unsigned char burn_on;                   /* (The first minute begun) */
+static unsigned long burn_at;                   /* (The minutes burnt up to: the last one's end) */
 
 /* The character's light's minutes left (f, its brightest's: 0xFFFF it never burns down), in words for the status
 ** line, the hub's pc_left ("torch 40m", "lantern 5h59m"; "" none: the UI's main RAM's room, as the referee's
@@ -5388,11 +5485,14 @@ void s_burns_now (void)
     burn_ask = 0;
     if (!burn_on) {
         burn_on = 1;                            /* (The first: a minute from now, the game begun or carried on) */
-        burn_due = HUB->now + 600;
+        burn_at = HUB->now;
     }
-    for (d = 0; HUB->now >= burn_due; ++d) {    /* (The minutes gone, a minute at a time: no long division; none, a
-                                                **   light's change, I_LIGHT's, the minutes left made again) */
-        burn_due += 600;
+    for (d = 0; HUB->now >= burn_at + 600; ++d) {   /* (The minutes gone, a minute at a time: no long division; none,
+                                                **   a light's change, I_LIGHT's, the minutes left made again) */
+        burn_at += 600;
+    }
+    if (HUB->pc_task.mins) {
+        HUB->pc_task.done = (unsigned) ((HUB->now - pt0) / 600);   /* (A long task's minutes done, as they go by) */
     }
     best = out = seen = 0;
     bf = 0xFFFF;
@@ -5492,6 +5592,11 @@ void s_burns_now (void)
         HUB->pc_fuel = bf;
         left_words (bf);
     }
+    hub_map (0);
+    burn_due = burn_at + (wait_on () && !(HUB->pc_light && HUB->pc_fuel <= BURN_LOW + WAIT_SLICE / 600) ? WAIT_SLICE :
+        600);                                   /* (The next look a minute on; resting, ten, its light not near burning
+                                                **   low: the long durations' coarser ticks, 2026-10-28; the clock's
+                                                **   slices end there, slice's) */
 }
 
 #pragma code-name (pop)

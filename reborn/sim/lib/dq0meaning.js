@@ -111,7 +111,7 @@ const EXPRS = {
   chTile: F('struct change', 'tile'), chElev: F('struct change', 'elev'), chLink: F('struct change', 'link'),
   dsenseAt: F('struct hub', 'dsense'), dsenseSize: S('struct hub', 'dsense'),
   pcTask: F('struct hub', 'pc_task'), ltKind: F('struct ltask', 'kind'), ltLen: F('struct ltask', 'len'), ltDone: F('struct ltask', 'done'),
-  ltFoe: F('struct ltask', 'foe'),
+  ltFoe: F('struct ltask', 'foe'), ltMins: F('struct ltask', 'mins'),
   keptAt: '(unsigned) KEPT_AT - 0x8000', kpN: F('struct kept', 'n'), kpGen: F('struct kept', 'gen'), kpAt: F('struct kept', 'at'),
   keepSize: 'sizeof (struct keep)', kpSn: F('struct keep', 'sn'), kpRange: F('struct keep', 'range'), kpLive: F('struct keep', 'live'),
   kpCx: F('struct keep', 'cx'), kpCy: F('struct keep', 'cy'), kpLid: F('struct keep', 'lid'),
@@ -197,6 +197,7 @@ function createRecorder() {
       case 'E_ARRIVE': e.how = name('A_WALKED', w & 0xFF); e.first = !!(w & 0x100); e.link = w >> 12; break;
       case 'E_NOWAY': e.why = name('N_NO_EXIT', w & 0xFF); e.actor = w >> 8; break;
       case 'E_VIEW': e.why = name('V_TURNED', w); break;
+      case 'E_TIME': e.mins = !!(e.b & 1); e.asleep = !!(e.b & 2); break;     // (I_WAIT's a: WA_MIN, WA_SLEEP)
       case 'E_DIG': e.how = name('D_BEGUN', w >> 8); e.feet = w & 0xFF; break;
       case 'E_CLIMB': e.how = name('K_BEGUN', w >> 8); e.feet = w & 0xFF; break;
       case 'E_LEDGE': e.rise = s8(w & 0xFF); break;
@@ -238,7 +239,7 @@ function createRecorder() {
       pc: { sn: h[L.pcSn], x: w16(h, L.pcX), y: w16(h, L.pcY), face: h[L.pcFace], light: h[L.pcLight], lamp: str(h, L.pcLamp, 14), fuel: w16(h, L.pcFuel), left: str(h, L.pcLeft, 20),
         pos: h[L.pcPos], gait: h[L.gait], watch: h[L.watch], going: h[L.pcGoing], stance: name('D_NONE', h[L.pcStance]), strike: name('SK_BEST', h[L.pcStrike]), shand: h[L.pcShand],
         skew: h[L.pcSkew], lost: h[L.pcLost],
-        task: { kind: name('LT_NONE', h[L.pcTask]), asking: h[L.pcTask + 1], len: w16(h, L.pcTask + 2), done: w16(h, L.pcTask + 4), foe: h[L.pcTask + L.ltFoe] - 1 },
+        task: { kind: name('LT_NONE', h[L.pcTask]), asking: h[L.pcTask + 1], len: w16(h, L.pcTask + 2), done: w16(h, L.pcTask + 4), foe: h[L.pcTask + L.ltFoe] - 1, mins: h[L.pcTask + L.ltMins] },
         ready: w16(h, L.pcReady) + w16(h, L.pcReady + 2) * 65536, now: w16(h, L.hubNow) + w16(h, L.hubNow + 2) * 65536,
         chart: h[L.pcChart], map: w16(h, L.pcMap) },
       sum: { cond: w16(h, L.pcsum + L.sCond), health: h[L.pcsum + L.sHealth], load: h[L.pcsum + L.sLoad], sight: h[L.pcsum + L.sSight],
@@ -276,7 +277,7 @@ function createRecorder() {
           kind: str(th, o + L.nmKind, 14), name: str(th, o + L.nmName, 20) });
       }
     }
-    s.task = { kind: name('LT_NONE', h[L.pcTask + L.ltKind]), len: w16(h, L.pcTask + L.ltLen), done: w16(h, L.pcTask + L.ltDone), foe: h[L.pcTask + L.ltFoe] - 1 };
+    s.task = { kind: name('LT_NONE', h[L.pcTask + L.ltKind]), len: w16(h, L.pcTask + L.ltLen), done: w16(h, L.pcTask + L.ltDone), foe: h[L.pcTask + L.ltFoe] - 1, mins: h[L.pcTask + L.ltMins] };
     s.changes = [];                                              // (The change records in the cache's pages: world.h's,
     const wb = bank(L.worldBank), cper = Math.floor(0x2000 / L.chPage);  //   the world's, by page)
     if (wb) for (let p = 0; p < L.ncpages; p++) {

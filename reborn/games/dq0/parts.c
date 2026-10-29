@@ -15,6 +15,8 @@
 static const char ways[] = "n\0s\0e\0w\0ne\0nw\0se\0sw\0north\0south\0east\0west\0northeast\0northwest\0"
     "southeast\0southwest\0up\0down\0u\0d\0left\0right\0l\0r\0forward\0back\0f\0b\0ahead\0";
 static const char dets[] = "the\0a\0an\0my\0your\0all\0both\0this\0that\0these\0those\0every\0each\0";
+static const char units[] = "hour\0hours\0minute\0minutes\0";   /* (A duration's: "3 hours and 20 minutes" one) */
+static const char nums[] = "a\0an\0one\0two\0three\0four\0five\0six\0seven\0eight\0nine\0ten\0";
 static unsigned char pa[NPARTS], pn[NPARTS], np;    /* (The parts: where each begins in inl, its length) */
 
 /* The word at inl + i one of list's (each 0-ended, an empty one last): 1 */
@@ -48,7 +50,8 @@ static void __fastcall__ part (unsigned char a, unsigned char b)
     }
 }
 
-/* The line typed in parts: at a ";", at "then" (", then", "and then"), at "and" (but between two ways) */
+/* The line typed in parts: at a ";", at "then" (", then", "and then"), at "and" (but between two ways, or a
+** duration's two spans: "wait 3 hours and 20 minutes", the long durations, 2026-10-28) */
 static void parts (void)
 {
     static unsigned char i, a, w;
@@ -69,7 +72,8 @@ static void parts (void)
         } else if (inl[i] == ' ' && among (i + 1, "and\0\0") && inl[i + 4] == ' ') {
             for (w = i; w > a && inl[w - 1] != ' ' && inl[w - 1] != ','; --w) {
             }
-            if (among (i + 5, "then\0\0") || !among (w, ways) || !among (i + 5, ways)) {
+            if (among (i + 5, "then\0\0") || ((!among (w, ways) || !among (i + 5, ways)) && (!among (w, units) ||
+                (!among (i + 5, nums) && (inl[i + 5] < '0' || inl[i + 5] > '9'))))) {
                 part (a, i);            /* (Not "north and east": two commands; "and then" the "then"'s) */
                 a = i + 5;
                 i += 4;

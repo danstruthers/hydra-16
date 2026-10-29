@@ -19,7 +19,7 @@
                    | <equip> | <unequip> | <open> | <close> | <attack> | <grapple>
                    | <throw> | <shoot> | <load> | <jump> | <say> | <tell> | <cast> | <eat>
                    | <drink> | <swim> | <find> | <search> | <listen> | <smell> | <track>
-                   | <target> | <wait> | <rest> | <sleep> | <stop> | <naming> | <meta>
+                   | <target> | <wait> | <rest> | <stop> | <naming> | <meta>
                    | <step> | <pace-set> | <charge> | <light> | <extinguish> | <posture> | <pretend>
                    | <enter> | <leave> | <climb> | <dig> | <wake> | <hide> | <sneak>
                    | <knock> | <push> | <pull> | <give> | <lock> | <unlock> | <fill> | <dip> | <read> | <taste> | <touch>
@@ -118,8 +118,7 @@
 <track>          ::= <TRACK> [ "for" ] [ <object> ]
 <target>         ::= <TARGET> [ <object> ] | "clear target" | "untarget"
 <wait>           ::= <WAIT> [ "for" ] [ <duration> ] | "pass" "the" "time"   (* "wait", "wait for 10 minutes"; "pass the time" is a wait *)
-<rest>           ::= [ "short" ] <REST> [ "for" <duration> ]   (* rest and sleep are the same: VB_SLEEP, the player unaware. "short rest" is a sleep of 30 to 60 minutes, which fatigue, illness and injury may turn into a full sleep *)
-<sleep>          ::= [ "short" ] <SLEEP> [ "for" <duration> | ( "in" | "on" ) <object> ]   (* VB_SLEEP: its length is not typed (fatigue, injury, sickness); a duration overrides it *)
+<rest>           ::= [ "short" ] ( <REST> | <SLEEP> ) [ [ "for" ] <duration> | ( "in" | "on" ) <object> ]   (* rest and sleep are the same: VB_SLEEP, the player unaware. "short rest" is a sleep of 30 to 60 minutes, which fatigue, illness and injury may turn into a full sleep. Its length is not typed (fatigue, injury, sickness); a duration overrides it ("sleep 8 hours", "rest for an hour").  (One rule, rest's and sleep's: the rules' room, 2026-10-28) *)
 <stop>           ::= <STOP> [ <task-name> ]                     (* question 9: "stop" alone, or "stop digging" *)
 <step>           ::= "step" <direction>                 (* one square; facing unchanged: "step r" *)
 <pace-set>       ::= "pace" [ <pace-word> | "walk" ] | "double time" [ "!" ]  (* sets the default pace; "double time!" is a run *)
@@ -140,13 +139,14 @@
 <loc-prep>       ::= "in" | "on" | "at" | "under" | "behind" | "beside" | "near" | "by" | "against"
                    | "through" | "around" | "over" | "across"
 <manner>         ::= "carefully" | "slowly" | "quickly" | "quietly" | "hard" | "gently" | "lightly" | "firmly"
-<duration>       ::= <number> ( "minute" | "minutes" | "hour" | "hours" ) | "an hour" | "a minute"
+<duration>       ::= ( <number> | "an" | "a" | "half" "an" ) ( "minute" | "minutes" | "hour" | "hours" ) [ [ "and" ] <duration> ]   (* "an hour", "half an hour", "3 hours 20 minutes", "3 hours and 20 minutes": its spans added up (the long durations, 2026-10-28) *)
 <here-ref>       ::= "me" | "myself"        (* question 14: "me" only, never "you" *)
 
 (* ---- Objects ---- *)
 <object>         ::= <object-one> { "and" <object-one> }
 <object-one>     ::= <np> | <pronoun> | <me-phrase> | <everything> | <way-out>   (* "the sword and the shield": a list, one command for each *)
-<chosen>         ::= ( "closest" | "nearest" | "largest" | "biggest" | "smallest" | "lead" | <ordinal> ) [ "one" ]   (* "the closest", "the second one": of those it perceives *)
+<chosen>         ::= ( <superlative> | <ordinal> ) [ "one" ]   (* "the closest", "the second one": of those it perceives *)
+<superlative>    ::= "closest" | "nearest" | "largest" | "biggest" | "smallest" | "lead"   (* (<chosen>'s and <selector>'s: the rules' room, 2026-10-28) *)
 <way-out>        ::= [ "the" ] "way" "out"          (* the theme's way out of the dungeon *)
 <np>             ::= [ <det> ] ( [ <selector> ] { <adj> } <head> | <chosen> ) | <portion> [ "of" ] <det> { <adj> } <head>
 <portion>        ::= "all" | "half" | "both" | <number>   (* "all the sacks", "half the rations", "two of the sacks": how many of them, slice 4.1's *)
@@ -154,8 +154,7 @@
 <of-room>        ::= "of" [ "the" | "this" ] ( "room" | "chamber" | "hall" | "cave" | "cavern" )   (* "the centre of the room" *)
 <lies>           ::= <compass> | <relative>
 <det>            ::= "a" | "an" | "the" | "this" | "that" | "these" | "those" | "its"   (* "my coat": <me-phrase> *)
-<selector>       ::= <number> | "all" | "every" | "each" | "any" | "both" | <ordinal>
-                   | "closest" | "nearest" | "largest" | "biggest" | "smallest" | "lead"
+<selector>       ::= <number> | "all" | "every" | "each" | "any" | "both" | <ordinal> | <superlative>
 <head>           ::= { <noun> } <name>                (* every word a thing can be called: "the mail hauberk" (a noun: no adjective, number or ordinal) *)
 <pronoun>        ::= "it" | "them" | "that" | "this" | "one" | "he" | "she" | "him" | "her"   (* "it": the last thing of any kind (question 7); he, she, him, her: the last person named (context "person=") *)
 <me-phrase>      ::= <here-ref> | ( "my" | "your" ) <np>

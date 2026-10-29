@@ -352,6 +352,8 @@ static int __fastcall__ kinds_load (const char* dir)
 static unsigned long now;
 static unsigned pcx, pcy;
 static unsigned char pcs, pclit, pcbusy, pcdead;
+static unsigned char pcrest;                    /* (The character in a long wait or asleep, not asked of: the actors'
+                                                **   idle ways the coarser, decide's and coarse's) */
 static unsigned char pchelp;                    /* (Helpless: in shock, or senseless as it lies, busy till it comes
                                                 **   round; the referee's conditions) */
 static unsigned char pcstay;                    /* (Its stay where it stands, since it came onto the square: its
@@ -1151,7 +1153,9 @@ static void __fastcall__ coarse (unsigned char k, unsigned lim)
             break;
         }
     }
-    wt = 60 + random (60);
+    wt = pcrest ? 6000 + random (6000) : 60 + random (60);  /* (The character resting: a coarse move ten or twenty
+                                                **   minutes apart, as those away from it move, roam's: the long
+                                                **   durations' coarser ticks, 2026-10-28) */
 }
 
 #pragma code-name (push, "SW4CODE")
@@ -1568,11 +1572,16 @@ static unsigned char __fastcall__ decide (unsigned char k)
     } else if (turns && !(*at (a.sn, a.x, a.y) & T_VIS)) {
         coarse (k, K.flags & K_LAIR ? 2 : K.range);
         d = 0xFE;                               /* (Unseen, unaware: a coarse move) */
-    } else if (K.flags & K_LAIR ? !random (4) : random (3)) {
+    } else if (!pcrest && (K.flags & K_LAIR ? !random (4) : random (3))) {
         d = step_for (k, K.flags & K_LAIR ? 2 : K.range, S_ANY);
-    }
-    if (d == 0xFF) {                            /* (Watching: a while, unless it changes; fleeing, a moment) */
+    }                                           /* (The character resting: no idle wandering in its sight) */
+    if (d == 0xFF) {                            /* (Watching: a while, unless it changes; fleeing, a moment; the
+                                                **   character resting, thirty times the while, a watcher's or an idler's:
+                                                **   roused all the same as it changes, tend's) */
         wt = a.doing == DO_FLEE ? 10 + random (20) : a.doing ? 60 + random (60) : 10 + random (40);
+        if (pcrest && a.doing != DO_FLEE) {
+            wt *= 30;                           /* (A watcher's three to six minutes, an idler's one or two) */
+        }
     }
     hub_map (0);
     HUB->actor[k].attitude = a.attitude;        /* (Its mind's own, as it decides) */
@@ -1686,7 +1695,9 @@ static unsigned char roam (void)
             im.b = 0;                           /* (A passing, no stay) */
             trodden ();
         }
-        D.ready = now + ROAM_T + random (ROAM_T);
+        x = pcrest ? 10 * ROAM_T : ROAM_T;      /* (The character resting: ten times the while, the long durations'
+                                                **   coarser ticks) */
+        D.ready = now + x + random (x);
         if (D.ready < roam_at) {
             roam_at = D.ready;
         }
@@ -1740,12 +1751,14 @@ static void tend (void)
 {
     static unsigned lx, ly;
     static unsigned long lnow;
-    static unsigned char ls = 0xFF, fresh, lgen;
+    static unsigned char ls = 0xFF, fresh, lgen, lrest;
     struct actor* q;
     unsigned long r;
-    unsigned char k, n, again = struck, woke = lgen != sense_gen;
+    unsigned char k, n, again = struck, woke = lgen != sense_gen, up = lrest > pcrest;
 
     lgen = sense_gen;
+    lrest = pcrest;                             /* (up: the character's rest over, the idle roused too: their waits a
+                                                **   rest's long ones) */
     struck = 0;
     if (pcx != lx || pcy != ly || pcs != ls) {
         lx = pcx;
@@ -1774,7 +1787,7 @@ static void tend (void)
         if (!q->name[0]) {
             continue;
         }
-        if (woke && q->doing && q->doing < DO_FIGHT && q->ready > now + 10) {
+        if (woke && (q->doing || up) && q->doing < DO_FIGHT && q->ready > now + 10) {
             rouse (k, 1 + random (10));         /* (The character's changed: a watcher sees to it soon; not one
                                                 **   fighting, fleeing or senseless: its own time) */
             settle ();
@@ -2239,6 +2252,7 @@ int main (int argc, char* argv[])
                 hub_map (0);
             }
             pcbusy = HUB->pc_ready > now;
+            pcrest = pcbusy && (HUB->pc_task.kind == LT_WAIT || HUB->pc_task.kind == LT_SLEEP) && !HUB->pc_task.asking;
             pcdead = (HUB->pcsum.cond & C_DEAD) != 0;
             pchelp = (HUB->pcsum.cond & C_STUNNED) || ((HUB->pcsum.cond & C_UNCONSCIOUS) && pcbusy);
             if (!(pclit = HUB->pc_light != 0) && DONE (pcs) && (p = at (pcs, pcx, pcy)) != 0) {
@@ -2247,9 +2261,11 @@ int main (int argc, char* argv[])
             hub_map (0);
         }
         if (act) {
-            if (now >= nextq) {                 /* (The traces' clock: a TQ gone by) */
+            if (now >= nextq) {                 /* (The traces' clock: a TQ gone by; a long wait's coarse turn's,
+                                                **   ten minutes, each of them) */
+                nowq += 1 + ((unsigned) now - (unsigned) nextq) / TQ;   /* (Sixteen bits: a turn ten minutes on
+                                                **   at most) */
                 nextq = now + TQ;
-                ++nowq;
             }
             if (pcx != lpx || pcy != lpy) {
                 pcq = nowq;                     /* (Come onto a square: its stay there begun) */
