@@ -2341,6 +2341,11 @@ module.exports = {
       expect: ['SH:X', 'POST found faults: shared RAM RAM (left unused)'],
     },
     {
+      name: 'tiers', area: 'tiers', what: "the tests chosen by what changed (sim/test.js --changed, --near, --list: ../base/sim/select.js, tests/areas.js; TESTING.md's tiers): the tests files read as entries, sample paths to the tests they must run and mustn't (areas.js's CASES), tests.js's lines to their entries, their helpers' tests or every test, every area a rule names some test's, NEAR's names tests",
+      init: 'init', cycles: 3e6, expect: ['POST ok'],
+      check() { const r = require('./areas.js').selfCheck(); this.notes = r.notes; return r.failures; },
+    },
+    {
       name: 'hwtest', what: 'a T typed during POST starts the hardware test (paged ROM bank 1)',
       init: 'init', cycles: 3e6, machine: { input: 'T' },
       expect: ['Hydra-16 hardware test'],

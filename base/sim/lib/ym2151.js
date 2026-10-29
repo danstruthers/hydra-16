@@ -50,7 +50,14 @@ function createYm(env) {
     if (y.reg === 0x14) timers(v, t);
     if (y.reg === 0x08 && (v & 0x78)) y.keyOns.push('ch ' + (v & 7) + ' at cycle ' + t);
   };
-  y.irqActive = () => !!(y.status & 3);
+  y.idleTo = () => {                                          // (The first cycle a tick does anything: machine.js's sync)
+    let n = Infinity;
+    if (y.resetAt >= 0) n = y.resetAt;
+    if (y.aNext >= 0 && y.aNext < n) n = y.aNext;
+    if (y.bNext >= 0 && y.bNext < n) n = y.bNext;
+    return n;
+  };
+  y.irqActive = () =>!!(y.status & 3);
   y.nextEvent = devCyc => {
     let n = Infinity;
     if (y.aNext >= 0 && (y.regs[0x14] & 4)) n = Math.min(n, Math.max(1, y.aNext - devCyc));
