@@ -12,9 +12,13 @@
 // the tests' meaning checks, tests.js's dq0Turns).
 // RULES=NAME (null ...): the dq0 tests run with that ruleset's referee (games/dq0/RULESETS.md: dq0 -r NAME added to
 // each dq0 line typed), and with no test named, those that are meaning checks (tests.js's meaning: true: their checks
-// what happened, not its words) are the ones run.
+// what happened, not its words) are the ones run (of --near's, or --changed's, with them).
+// The tests a change can affect (--changed [REF], --near AREA, --list: the base's runner's, ../base/sim/select.js, with
+// tests/areas.js's table), and the tiers of checks (--tier report|lead: sim/tiers.js, tests/TESTING.md).
 //
-// Usage: [HUBOWN=0|1] [RULES=NAME] node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N] [--dl]
+// Usage: [HUBOWN=0|1] [RULES=NAME] node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...] [--list] [--build]
+//          [-v] [--seed N] [-j N] [--dl]
+//        node sim/test.js --tier report|lead [--changed REF] [-j N] [--seed N] [--list]
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -191,21 +195,22 @@ function kitOf(t) {
   } });
 }
 for (const t of tests) if (/^dq0/.test(t.name) && !t.outfit) kitOf(t);
-function meaningArgs(argv) {
-  if (!RULES) return argv;
-  for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === '--one') return argv;
-    if (argv[i] === '-j' || argv[i] === '--seed') { i++; continue; }
-    if (!argv[i].startsWith('-')) return argv;                // (Tests named: those)
-  }
-  const names = tests.filter(t => /^dq0/.test(t.name) && t.meaning).map(t => t.name);
-  if (!names.length) { console.error('RULES=' + RULES + ': no dq0 test is a meaning check (meaning: true)'); process.exit(2); }
-  return [...argv, ...names];
+// RULES=NAME and no test named: of the list (all, or --near's), the meaning checks (the runner's restrict)
+function meaningOf(list) {
+  if (!RULES) return list;
+  if (!tests.some(t => /^dq0/.test(t.name) && t.meaning)) { console.error('RULES=' + RULES + ': no dq0 test is a meaning check (meaning: true)'); process.exit(2); }
+  return list.filter(t => /^dq0/.test(t.name) && t.meaning);
 }
 
 runner.setup({ root: ROOT, tests, IRQ_OFF_MAX, image, pcFolder, self: __filename, instrument, summary,
   build: () => require('../build.js').buildBoth({ quiet: true }),
-  runDl: (...a) => require('./dl/bridge.js').runDl(...a) });
+  runDl: (...a) => require('./dl/bridge.js').runDl(...a),
+  areas: require('../tests/areas.js'), ref: 'reborn-game', restrict: meaningOf,
+  testFiles: { 'base/tests/tests.js': require('../../base/tests/tests.js').tests, 'reborn/tests/tests.js': tests } });
 
-if (require.main === module) runner.main(meaningArgs(process.argv.slice(2)));
+if (require.main === module) {
+  const argv = process.argv.slice(2), k = argv.indexOf('--tier');
+  if (k >= 0) require('./tiers.js').main(argv[k + 1], [...argv.slice(0, k), ...argv.slice(k + 2)]);
+  else runner.main(argv);
+}
 module.exports = { runTest: runner.runTest, runTestDl: runner.runTestDl, image };
