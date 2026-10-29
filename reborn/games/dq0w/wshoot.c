@@ -87,7 +87,7 @@ static unsigned char __fastcall__ span (int dx, int dy)
 /* ---- The line of fire (lof: no part called) */
 #pragma bss-name (push, "SW65RODATA")
 static unsigned lx_, ly_;
-static unsigned char lcover;
+static unsigned char lcover, lfree;
 #pragma bss-name (pop)
 
 /* Whether a missile passes square lx_, ly_ of sn: 0 not, 1 it does, 2 through a narrow opening (a slit, a window) */
@@ -98,7 +98,7 @@ static unsigned char __fastcall__ passes (unsigned char sn)
     const struct portal* o;
 
     if (!p || (t = TILE (*p)) == T_ROCK || t == T_WALL) {
-        return 0;
+        return lfree;                           /* (A wall's corner: the eye's past it, the line's) */
     }
     if ((t == T_DOOR || t == T_WINDOW) && (o = portal_at (cx_, cy_)) != 0) {
         if (o->kind == PK_SLIT) {
@@ -134,7 +134,7 @@ static unsigned char __fastcall__ someone (unsigned char sn, unsigned char me, u
 /* The line from sx, sy to tx, ty on sn (the squares between them, by Bresenham's steps): 0 clear (lcover: the target
 ** behind cover, beside a slit or a window the line comes through), SH_LINE (a wall, a door, glass), SH_WAY (someone in
 ** it, the target not as far beyond again) */
-static unsigned char __fastcall__ lof (unsigned char sn, unsigned sx, unsigned sy, unsigned tx, unsigned ty,
+static unsigned char __fastcall__ lof1 (unsigned char sn, unsigned sx, unsigned sy, unsigned tx, unsigned ty,
     unsigned char me, unsigned char tgt)
 {
     signed char dx = (signed char) (tx - sx), dy = (signed char) (ty - sy), ex, ey, err, e2;
@@ -143,6 +143,9 @@ static unsigned char __fastcall__ lof (unsigned char sn, unsigned sx, unsigned s
     ex = dx < 0 ? -dx : dx;
     ey = dy < 0 ? -dy : dy;
     err = ex - ey;
+    lfree = (*(me == 0xFE ? at (sn, tx, ty) : at (sn, sx, sy)) & T_VIS) != 0;   /* (The denizen seen by the character:
+                                                **   the eye's line, the senses', past a wall's corner; a portal's,
+                                                **   someone's in it still the line's end) */
     lx_ = sx;
     ly_ = sy;
     lcover = 0;
@@ -168,6 +171,16 @@ static unsigned char __fastcall__ lof (unsigned char sn, unsigned sx, unsigned s
             return SH_WAY;
         }
     }
+}
+
+/* The line either way (Bresenham's squares from the other end, past a corner the first way cut: the eye's, a
+** doorway seen across at a slant): 0 clear, else the first way's why */
+static unsigned char __fastcall__ lof (unsigned char sn, unsigned sx, unsigned sy, unsigned tx, unsigned ty,
+    unsigned char me, unsigned char tgt)
+{
+    unsigned char r = lof1 (sn, sx, sy, tx, ty, me, tgt);
+
+    return r == SH_LINE && !lof1 (sn, tx, ty, sx, sy, tgt, me) ? 0 : r;
 }
 
 /* ---- What an actor shoots with (arms: the character's, who 0; body bd's, its own, its did's things, IW_DEN, and
@@ -326,7 +339,8 @@ static void __fastcall__ den_shot (unsigned char z)
         for (i = 0; (i = items (i, IN_DEN, 0)) != 0; ) {
             if ((ip->flags & I_HELD) && mine (i, 1)) {
                 hub_map (0);
-                HUB->agear[bk] |= AG_NOSHOT;    /* (Its hands full: it fights with what it holds) */
+                HUB->agear[bk] &= ~AG_SHOOTS;   /* (Its hands full: it fights with what it holds, shooting no more
+                                                **   till its things change, its RS_EQUIP) */
                 bd.ready = HUB->now;
                 return;
             }
@@ -372,14 +386,11 @@ static void den_unbow (void)
     limb_news (WB_DROP | (unsigned) sl_kind << 8, bk + 1);
 }
 
-/* Part 65's calls: SO_ARMS what the character shoots with (arms'); SO_REACH whether it can shoot at k (its entry plus 1); SO_FOE
-** the nearest hostile it can shoot at (fighting on's, part 24's fight_foe: not fleeing; its range the launcher's bands:
-** a setting of the player's to come, the auto-engage range, the user's, would set here where a fight on begins with
-** them), it plus 1, or 0; SO_DEN body bd's shot at the character, its aim z; SO_UNBOW its launcher let fall */
+/* Part 65's calls: SO_ARMS what the character shoots with (arms'); SO_REACH whether it can shoot at k (its entry plus 1);
+** SO_DEN body bd's shot at the character, its aim z; SO_UNBOW its launcher let fall (SO_FOE part 67's pc_shot's) */
 unsigned char __fastcall__ s_shot_op (unsigned char op, unsigned char k, unsigned char z)
 {
-    unsigned char f = 0, d, best = 0xFF;
-    struct actor* a;
+    unsigned char f = 0;
 
     hub_map (0);
     switch (op) {
@@ -387,20 +398,6 @@ unsigned char __fastcall__ s_shot_op (unsigned char op, unsigned char k, unsigne
         return arms (0);
     case SO_REACH:
         return shot_reach (k);
-    case SO_FOE:
-        for (k = 0; k < NACTORS; ++k) {
-            hub_map (0);
-            a = &HUB->actor[k];
-            if (a->state && a->attitude == AT_HOSTILE && a->doing < DO_FLEE && shot_reach (k + 1) == 2) {
-                hub_map (0);
-                d = span ((int) (a->x - HUB->pc_x), (int) (a->y - HUB->pc_y));
-                if (d < best) {
-                    best = d;
-                    f = k + 1;
-                }
-            }
-        }
-        break;
     case SO_DEN:
         den_shot (z);
         break;
@@ -440,47 +437,14 @@ static unsigned char __fastcall__ missile (unsigned char k, unsigned char f)
 }
 
 /* ---- Gathering (I_GATHER: "gather the arrows"): the missiles lying where the character sees them, on its stratum
-** within GATHER_D squares, of the family said (FM_*, 0 any), each walked over to and taken up in turn (into a carrier
-** of its family it carries, a quiver, joined to the lot there; else as a thing taken up is, things.c's carry), the
+** within GATHER_D squares, of the family said (FM_*, 0 any), each walked over to and taken up in turn (as a thing
+** taken up is, things.c's carry: put back in the quiver by the player, "put the arrows in the quiver"), the
 ** nearest first, a lot it can't get to passed by (two at most); none left, told how many (TE_GATHERED, the last's kind
 ** times 256, b the count).  As it's free (the main loop's, gath): 2 walking or taking up, 0 done.  Its state the main
 ** RAM's (kept through the parts it calls) */
 #define GATHER_D        12
 static unsigned char gfam, gcount, gskip, glast;
 static unsigned gfx, gfy, gtried[2];
-
-/* Lot n into a carrier of its family on the character (a quiver), joined to one alike there: 1, or 0 none */
-static unsigned char __fastcall__ quivered (unsigned n)
-{
-    unsigned i, c = 0;
-    unsigned char k = item_at (n)->kind, q = item_at (n)->qty, f, s;
-
-    f = k == KI_ARROWS ? FM_ARROW : k == KI_BOLTS ? FM_BOLT : FM_SHOT;
-    for (i = 0; !c && (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
-        s = ip->kind;
-        hub_map (KIND_BANK);
-        if ((CATALOGUE[s].flags & K_CONTAINER) && CATALOGUE[s].slots == f && on_pc (i)) {
-            c = i;
-        }
-    }
-    if (!c) {
-        hub_map (0);
-        return 0;
-    }
-    for (i = 0; (i = items (i, IN_ITEM | IN_X, c)) != 0; ) {
-        if (ip->kind == k && ip->qty + q <= 250) {
-            ip->qty += q;
-            item_at (n)->kind = 0;
-            hub_map (0);
-            return 1;
-        }
-    }
-    item_at (n)->where = IW_ITEM;
-    item_at (n)->x = c;
-    item_at (n)->flags &= ~(I_HELD | I_WORN | I_HIDDEN);
-    hub_map (0);
-    return 1;
-}
 
 static unsigned char gather_on (void)
 {
@@ -526,7 +490,7 @@ static unsigned char gather_on (void)
         }
         return 2;
     }
-    if (!quivered (n) && !carry (n, 0)) {
+    if (!carry (n, 0)) {
         gtried[gskip++ & 1] = n;               /* (No room for it) */
         return 2;
     }
@@ -640,13 +604,32 @@ void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned 
 ** a launcher, or the thing it throws; its aim pc_aim): the shot, its missile, its time (a crossbow's load a round
 ** more, a missile not handy its reach); one carried not in hand taken up first (its round's, TE_READIED); not to be shot, told (E_TASK
 ** TE_NO_SHOT, b why: SH_*) and the fight given up */
-void __fastcall__ s_pc_shot (unsigned char k)
+unsigned char __fastcall__ s_pc_shot (unsigned char k)
 {
     unsigned char tk, why = 0, sn;
     unsigned tx, ty, thr = 0;
     struct msg m;
     struct item* p;
 
+    if (k == 0xFF) {                            /* (The foe it turns its missiles to: the nearest hostile it can shoot
+                                                **   at, not fleeing, fighting on's, part 24's fight_foe; its range the
+                                                **   launcher's bands: a setting of the player's to come, the auto-engage
+                                                **   range, the user's, would set here where a fight on begins with them) */
+        for (why = 0xFF, k = 0; k < NACTORS; ++k) {
+            hub_map (0);
+            if (HUB->actor[k].state && HUB->actor[k].attitude == AT_HOSTILE && HUB->actor[k].doing < DO_FLEE &&
+                shot_op (SO_REACH, k + 1, 0) == 2) {
+                hub_map (0);
+                sn = span67 ((int) (HUB->actor[k].x - HUB->pc_x), (int) (HUB->actor[k].y - HUB->pc_y));
+                if (sn < why) {
+                    why = sn;
+                    thr = k + 1;
+                }
+            }
+        }
+        hub_map (0);
+        return (unsigned char) thr;
+    }
     tk = HUB->pc_strike & 0x7F;
     sn = HUB->pc_stratum;
     BD_GET (k);
@@ -720,6 +703,7 @@ void __fastcall__ s_pc_shot (unsigned char k)
         m.t = HUB->now;
         hub_event (&m);
     }
+    return 0;
 }
 
 #pragma code-name (pop)

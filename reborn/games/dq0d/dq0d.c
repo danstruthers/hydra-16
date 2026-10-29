@@ -761,6 +761,9 @@ static unsigned char steps[NACTORS];            /* (Each one's steps: a noise of
 static unsigned char stq[NACTORS], stn[NACTORS];   /* (Each one's square, its x and 16 times its y (a step's
                                                 **   always another), and the TQ its stay there last journalled) */
 static unsigned char fled[NACTORS];             /* (Each one fleeing the character: its turns of it left) */
+unsigned char __fastcall__ shoots (unsigned char k, unsigned char ag);   /* (Part 2's: slice 4.7's) */
+static unsigned char shat[NACTORS];             /* (Where the character was as each last shot, or meant to: AG_NOSHOT's
+                                                **   worth while it's there still, slice 4.7's) */
 static unsigned wt;                             /* (The wait an actor's decided on, tenths) */
 static unsigned dsx, dsy;                       /* (The square a cornered one darts to) */
 
@@ -1521,6 +1524,29 @@ static void __fastcall__ stayed (unsigned char k)
     }
 }
 
+/* Whether actor k shoots at the character it senses further off than beside it (slice 4.7's): a launcher of its own
+** and its missiles (the world's agear, AG_SHOOTS) and a shot to be had (AG_NOSHOT, the world's: none from where it
+** stands, but the character's moved since it last shot or meant to, shat's); 1, facing it, the world's to say if it
+** can.  Part 2's (the main RAM's room) */
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+unsigned char __fastcall__ s_shoots (unsigned char k, unsigned char ag)
+{
+    unsigned char h = (unsigned char) (pcx + 7 * pcy);
+
+    if (shat[k] != h) {
+        ag &= ~AG_NOSHOT;
+    }
+    if ((ag & (AG_SHOOTS | AG_NOSHOT)) != AG_SHOOTS) {
+        return 0;
+    }
+    shat[k] = h;
+    a.face = bearing (ddx, ddy);
+    return 1;
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* What actor k means to do, by its kind, its attitude and what it senses, said (its intent: the world does it, by the
 ** character's rules, or strikes its blow) and waited for, and the blows struck taken to heart (fought): kept off a
 ** foe; an ally's way; as it senses the character, meets's (a foe beside it: a blow); a noise heard, still a while;
@@ -1532,7 +1558,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
 
     kind_get (akind[k]);
     memcpy (&a, &HUB->actor[k], sizeof a);
-    ag = HUB->agear[k];                         /* (Its things, the world's: a launcher, a shot to be had) */
+    ag = HUB->agear[k];                         /* (Its things, the world's: a launcher, a shot, slice 4.7's) */
     stayed (k);
     wt = 0;
     refx = pcx;
@@ -1581,10 +1607,8 @@ static unsigned char __fastcall__ decide (unsigned char k)
     } else if (sres[k] && foe && dist == 1) {
         a.face = bearing (ddx, ddy);            /* (A foe beside it: it strikes) */
         d = 0xFC;
-    } else if (sres[k] && foe && a.sn == pcs && (ag & (AG_SHOOTS | AG_NOSHOT)) == AG_SHOOTS) {
-        a.face = bearing (ddx, ddy);            /* (A foe it senses further off, a launcher of its own and a shot to
-                                                **   be had: it shoots, the world's to say if it can, slice 4.7's) */
-        d = 0xFA;
+    } else if (sres[k] && foe && a.sn == pcs && shoots (k, ag)) {
+        d = 0xFA;                               /* (A foe it senses further off, a shot: part 2's, slice 4.7's) */
     } else if ((d = keep_off (k)) != 0xFF) {
         a.doing = sres[k] ? DO_WATCH : DO_ROAM;
     } else if (a.attitude == AT_ALLIED) {

@@ -4877,11 +4877,11 @@ module.exports = {
         'dq0 -p t -s 5 -c /ram/c.hm -T', 'd', 'drop the torch', 'shoot the rat', 'look', 'gather the arrows', 'inventory', 'quit',
         'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
         "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
-        'go south', 'go south', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+        'go south', ...Array(8).fill('wait'), 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], o = dq0Story(out);
-        if (process.env.DQ0SHOW) { console.log(o); for (const t of T) console.log(dq0Evs(t)); }
+        if (process.env.DQ0SHOW) { console.log(o); for (const t of T) console.log(dq0Evs(t), t.at ? JSON.stringify(t.at.actors.map(a => [a.k, a.name, a.x, a.y, a.doing, a.ag])) + ' pc ' + t.at.pc.x + ',' + t.at.pc.y : ''); }
         const g1 = T.of('dq0 -p t -s 5 -c /ram/c.hm -T'), g2 = T.of("dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'gambeson,mail hauberk'");
         if (g1.k < 0 || g2.k < 0) return ['the games not played'];
         const arrows = s => dq0Carried(s).filter(i => i.name === 'arrows').reduce((a, i) => a + i.qty, 0);
@@ -4894,6 +4894,21 @@ module.exports = {
         if (!den.length) f.push('no bandit\'s shot');
         if (!/The bandit shoots at you with its shortbow/.test(o)) f.push('the bandit\'s shot not told');
         return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0missprobe', outfit: true, asks: true, near: ['fight'], what: 'scratch probe',
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml bow 90 >> /ram/c.hm',
+        'mkdir /ram/g', "echo 'faction | Wardens | sindwar | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        ...[1].flatMap(s => ["dq0 -p t -s " + s + " -c /ram/c.hm -T -d /ram/g -k 'gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk', 'go south', ...Array(6).fill('wait'), 'quit']), 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        for (const t of dq0Turns(m)) if (t.at) console.log(t.line.slice(0,20), JSON.stringify(t.at.actors.map(a => [a.k, a.name, a.x, a.y, a.doing, a.ag, a.attitude])), 'pc', t.at.pc.x, t.at.pc.y);
+        const o = dq0Story(out); let i = -1; while ((i = o.indexOf('shoots at you', i + 1)) >= 0) console.log(o.slice(Math.max(0, i - 400), i + 60));
+        console.log((o.match(/dq0 -p t -s \d|shoots at you/g) || []).join(' '));
+        return [];
       },
       sdcard: true
     },

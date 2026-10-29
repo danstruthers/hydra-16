@@ -33,9 +33,10 @@ struct mshot {
 extern struct mshot mshot;
 unsigned char __fastcall__ shot_op (unsigned char op, unsigned char k, unsigned char z);   /* (Part 65's: wshoot.c)
                                                 **   The missiles' calls: */
-void __fastcall__ pc_shot (unsigned char k);    /* (Part 67's) The character's shot at actor k */
-enum { SO_ARMS, SO_REACH, SO_FOE, SO_DEN, SO_UNBOW };  /* what the character shoots with; whether it can shoot at k
-                                                **   (plus 1: 2, 1 senseless, 0 not); the nearest foe it can, plus 1;
+unsigned char __fastcall__ pc_shot (unsigned char k);  /* (Part 67's) The character's shot at actor k; 0xFF: the
+                                                **   nearest foe it can shoot at, plus 1 (0 none) */
+enum { SO_ARMS, SO_REACH, SO_DEN, SO_UNBOW };  /* what the character shoots with; whether it can shoot at k
+                                                **   (plus 1: 2, 1 senseless, 0 not);
                                                 **   body bd's shot at the character (aim z); its launcher let fall */
 unsigned __fastcall__ gath_op (unsigned char op, unsigned char a);  /* (Part 66's) The missiles gathered (begun, a
                                                 **   their family; its next, 2 on) */

@@ -243,6 +243,7 @@ void __fastcall__ sway_words (const struct sway* s);   /* Overlay 6: the charact
                                                 **   denizens' task's answer (the hub's sway, copied), into lb */
 void __fastcall__ dig_words (unsigned char how, unsigned char feet);   /* Overlay 1: digging's, how it goes */
 unsigned char __fastcall__ task_words (unsigned w, unsigned char named);   /* Overlay 3: a long task's (task.c) */
+void __fastcall__ shot_words (unsigned w, unsigned char named);   /* Overlay 15: the missiles' (shots.c: slice 4.7's) */
 void __fastcall__ beat_words (unsigned w);
 void __fastcall__ felt_words (unsigned w);      /* (Overlay 7's) A walk in the dark's beat (task.c's) */
 void facing_words (void);                       /* (Overlay 7's) The way it believes it faces (task.c's: slice 4.2's) */
@@ -329,7 +330,7 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[14];
+extern unsigned char ovbank[15];
 
 /* ---- The swapped parts (bank.s's stubs: swap.inc), run in the main RAM's top (dq0.cfg's SWAP), a part at a time */
 

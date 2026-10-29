@@ -48,7 +48,7 @@ static struct bkind bk;
 
 static const struct bkind* __fastcall__ beast (unsigned char j)
 {
-    bread (ovbank[OVLS - 1], &bestiary[j < NBEASTS ? j : 0], &bk, sizeof bk);
+    bread (ovbank[5 - 1], &bestiary[j < NBEASTS ? j : 0], &bk, sizeof bk);
     return &bk;
 }
 

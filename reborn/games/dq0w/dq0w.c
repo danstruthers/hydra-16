@@ -4138,7 +4138,7 @@ static unsigned char fight_foe (void)
     unsigned ax, ay;
 
     if (pshoot) {
-        return shot_op (SO_FOE, 0, 0);          /* (A missile's: the nearest hostile it can shoot at, part 65's) */
+        return pc_shot (0xFF);                  /* (A missile's: the nearest hostile it can shoot at, part 67's) */
     }
     for (k = f = 0; k < NACTORS; ++k) {
         hub_map (0);

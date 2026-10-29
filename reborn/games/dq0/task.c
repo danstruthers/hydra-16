@@ -125,13 +125,6 @@ static const char* __fastcall__ doing_of (unsigned char k, unsigned char n)
 ** or the foe (TE_FIGHT's), or the health (TE_ASK_HURT's), or a light's kind (TE_LOW's, TE_OUT's), or what it was done
 ** to (a stop's, a question's, a timed work begun: the long task's what).  1 if a question's put; 2 one answered yes
 ** unasked (dq0 -a's, the tests': not put); 4 fighting on begun (the character busy) */
-static const char* const noshot[SH_CANT] = {   /* (TE_NO_SHOT's, by SH_*) */
-    "You can't shoot now.", "You hold nothing to shoot with.", "You have nothing left to shoot.",
-    "It's out of range.", "You have no clear shot at it.", "Someone's in the way of your shot.",
-    "Your mark is gone from sight.", "Your hands are full: put something down first."
-};
-static char mk[sizeof CATALOGUE[0].name];
-
 unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
 {
     unsigned char k = w >> 8, p = (unsigned char) w, n = named, one = 0;
@@ -226,30 +219,11 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         msg (named == 1 ? "You're in no state to fight." : named ? "No foe is left in your sights." :
             "No foe is left beside you.");
         break;
-    case TE_NO_SHOT:                            /* (The missiles', slice 4.7's: no shot, b why, SH_*) */
-        msg (noshot[named < SH_CANT ? named : 0]);
-        break;
-    case TE_READIED:                            /* (A launcher taken up to shoot, its kind w's high byte) */
-    case TE_LOADED:                             /* (A launcher loaded, its kind w's high byte; b 1, already) */
-    case TE_GATHERED:                           /* (The missiles gathered: b how many, w's high byte the last's kind) */
-        hub_mem (KIND_BANK, mk, CATALOGUE[w >> 8].name, sizeof mk);
-        if (p == TE_GATHERED) {
-            if (!named) {
-                msg ("You find nothing to gather.");
-                break;
-            }
-            if (named == 1 && mk[strlen (mk) - 1] == 's') {
-                mk[strlen (mk) - 1] = 0;        /* ("1 arrow") */
-            }
-            sayf ("\nYou gather up %u %s.", named, mk);
-        } else if (p == TE_READIED) {
-            sayf ("\nYou take up your %s.", mk);
-        } else if (named) {
-            sayf ("\nYour %s is loaded already.", mk);
-        } else {
-            sayf ((w >> 8) == KI_CROSSBOW ? "\nYou span the %s and set a bolt in it." : (w >> 8) == KI_SLING ?
-                "\nYou set a stone in your %s." : "\nYou nock an arrow to your %s.", mk);
-        }
+    case TE_NO_SHOT:                            /* (The missiles', slice 4.7's: overlay 4's, shots.c) */
+    case TE_LOADED:
+    case TE_GATHERED:
+    case TE_READIED:
+        shot_words (w, named);
         break;
     case TE_LOW:                                /* (A light it carries in its last ten minutes: slice 4.1's) */
         p = lamp (named);
