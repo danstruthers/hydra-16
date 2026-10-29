@@ -3958,7 +3958,7 @@ module.exports = {
       machine: { input: ['bankrun /sd/0/games/lib/dq0/popgen.bp /sd/0/games/lib/dq0 /sd/0/games/lib/dq0/inhabit.txt 3 >/ram/p1',
         'bankrun /sd/0/games/lib/dq0/popgen.bp /sd/0/games/lib/dq0 /sd/0/games/lib/dq0/inhabit.txt 3 >/ram/p2',
         'cat /ram/p1', 'cmp /ram/p1 /ram/p2 && echo same', 'echo done'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['popgen: 4 factions, 17 kinds\n',
+      expect: ['popgen: 4 factions, 29 kinds\n',
         'Gnawers (rat bat): 40 on strata 0-3, their lair on 0; hostile to you; hostile to Diggers, wary of Brigands\n',
         'Diggers (kobold rat): 30 on strata 1-4, led by a koblord, their lair on 2; unfriendly to you; hostile to Gnawers, hostile to Brigands, hostile to Hollow\n',
         'Hollow (skel wight): 24 on strata 2-5, led by a shade, their lair on 4; hostile to you; hostile to Diggers\n',
@@ -5028,6 +5028,87 @@ module.exports = {
           f.push('not finished where it lay (a mortal wound to its neck): ' + all[dead].out + ' ' + JSON.stringify((s.match(/[^.]*mortal[^.]*\./) || [''])[0]));
         const t = T.find(t => dq0Ev(t, 'E_FIGHT', { def: 0 }).some(e => e.ff & FF_D_DEAD));
         if (t) dq0Need(f, t, 'E_BYE', {}, 'the game not ended by the death');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0hoard', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's robbers' takings carried off (gear3's item 4, left; DENIZENS.md's a robber's takings, HOUSE.md's the denizens' belongings and the peoples): a hand-written theme's hostile giant rats with an orc king as their leader (seed 2: their home by the way down where the character starts, the king with them: popgen's, its own lair things made with the home since 2026-10-29, its hoard a chest beside it), the character poor and undefended with a dagger in hand: knocked senseless and robbed by the king (a robber since 2026-10-29: the tribe's spoils its hoard's), its dagger and its pennies put in the king's hoard (I_ROB's RB_HOARD: the chest marked OW_HOARD, its tribe's), found there (\"open the chest\", \"look in the chest\": unlocked, the house's), and taken back; and a tribe of brown orcs with no king (seed 1, south of the start): robbed by one, the takings hidden at its home (RB_HIDE: a brown orc keeps its things hidden, its mates not trusted), off the character's square, found by searching only (I_HIDDEN)",
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
+        'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', "echo 'faction | Tribe | rat | 0-0 | 5 | garking | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -k dagger',
+        'defend none', 'hold the dagger', ...Array(16).fill('wait'), 'stand up', 'open the chest', 'open the chest', 'look in the chest', 'take the dagger from the chest', 'quit',
+        "echo 'faction | Tribe | hyeka | 0-0 | 96 | - | 0 | h | -' > /ram/h/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k dagger',
+        'defend none', 'hold the dagger', 'open the door', 's 3', ...Array(20).fill('wait'), 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], I = DQ0_I, s = dq0Story(out);
+        const robs = t0 => T.filter(t => t.k > t0.k).flatMap(t => dq0Ev(t, 'E_TASK', { te: 'TE_ROBBED' }));
+        const h1 = T.of('hold the dagger'), o1 = T.of('open the chest'), tk = T.of('take the dagger from the chest');
+        if (!h1.after || !o1.at || !tk.after) return ['the first game not played'];
+        const b1 = dq0Carried(h1.after), dag = dq0Named(b1, 'dagger')[0], pen = dq0Named(b1, 'pennies')[0];
+        if (!dag || !pen) return ['no dagger or pennies to begin with'];
+        const r1 = robs(h1).filter(e => T.indexOf(T.find(t => t.events.includes(e) || t.dens.includes(e))) < o1.k);
+        if (r1.length !== 1) f.push('the first game: not robbed once: ' + r1.length);
+        else if (!o1.at.actors.some(a => a.k === r1[0].by && a.name === 'orc king')) f.push('not robbed by the orc king: ' + JSON.stringify(o1.at.actors.map(a => [a.k, a.name])) + ' ' + r1[0].by);
+        const by = new Map(o1.at.items.map(i => [i.n, i])), box = n => { const i = by.get(n); return i && i.where === 'IW_ITEM' ? by.get(i.x) : null; };
+        for (const t of [dag, pen]) {
+          const c = box(t.n);
+          if (!c || c.name !== 'chest' || !(c.owner & 0x80)) f.push('the ' + t.name + ' not in the king\'s hoard: ' + JSON.stringify(by.get(t.n)) + ' ' + JSON.stringify(c));
+        }
+        const look = s.slice(s.indexOf('> look in the chest'), s.indexOf('> take the dagger from the chest'));
+        if (!/dagger/.test(look) || !/penn/.test(look)) f.push('the takings not found in the chest: ' + JSON.stringify(look.slice(0, 600)));
+        if (!dq0Named(dq0Carried(tk.after), 'dagger').length) f.push('the dagger not taken back from the hoard: ' + JSON.stringify(s.slice(s.indexOf('> take the dagger from the chest'), s.indexOf('> take the dagger from the chest') + 300)));
+        const h2 = T.of('hold the dagger', h1.k + 1), q2 = T.of('quit', h2.k + 1);
+        if (!h2.after || !q2.at) return [...f, 'the second game not played'];
+        const b2 = dq0Carried(h2.after), dag2 = dq0Named(b2, 'dagger')[0], pen2 = dq0Named(b2, 'pennies')[0];
+        const r2 = robs(h2);
+        if (r2.length !== 1) f.push('the second game: not robbed once: ' + r2.length);
+        else if (!q2.at.actors.some(a => a.k === r2[0].by && a.name === 'brown orc') && !/A brown orc|The brown orc/.test(s.slice(s.lastIndexOf('% echo \'faction | Tribe | hyeka')))) f.push('not robbed by a brown orc');
+        const by2 = new Map(q2.at.items.map(i => [i.n, i]));
+        for (const t of [dag2, pen2].filter(Boolean)) {
+          const i = by2.get(t.n);
+          if (!i || i.where !== 'IW_SQUARE' || !(i.flags & I.HIDDEN) || !i.hide || (i.x === q2.at.pc.x && i.y === q2.at.pc.y))
+            f.push('the ' + t.name + ' not hidden at the robber\'s home: ' + JSON.stringify(i));
+        }
+        if (!dag2 || !pen2) f.push('no dagger or pennies in the second game');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0peoples', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's peoples (Phase 4: the user's answer 11, the HarnWorld Bestiary's Khuzdul, Sindarin, men and Gargun; DENIZENS.md's the peoples, HOUSE.md's for review), each in a hand-written theme's faction on the top stratum (seed 1, south of the start): dwarves wary, seen in mail and armed (\"A dwarf in mail, armed, ...\", \"Two dwarves\": AG_MAIL, the plural), examined their arms and mail (outfits.txt's [role khuzwar]), deaf to the common tongue (\"doesn't speak any tongue you know\"), heard by a character who speaks khuzdul (its file's language line: the faction's tongue, factions.txt's); a tribe of brown orcs and black orcs under a king, hostile, seen armed, their own weapons made (a mankar or a mang: the catalogue's, Combat 3's (G)); elves keeping their distance (shy), a longknife at the belt and a hartbow worn; every one's sheet the referee's from its own key (RS_NEW_ACTOR answered 0: the bestiary's, beasts.c's)",
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/k.hm', 'echo language khuzdul >> /ram/k.hm',
+        'mkdir /ram/g', 'mkdir /ram/g2', 'mkdir /ram/h', 'mkdir /ram/e',
+        "echo 'faction | Hold | khuzwar | 0-0 | 96 | khuzeld | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/g2/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        'open the door', 'south', 'wait', 'examine the dwarf', 'talk to the dwarf', 'quit',
+        'dq0 -p t -s 1 -c /ram/k.hm -T -d /ram/g2', 'open the door', 'south', 'wait', 'talk to the dwarf', 'quit',
+        "echo 'faction | Tribe | hyeka khanu | 0-0 | 96 | garking | 0 | h | -' > /ram/h/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h',
+        'open the door', 'south', ...Array(8).fill('wait'), 'quit',
+        "echo 'faction | Wardens | sindwar | 0-0 | 96 | - | 0 | w | -' > /ram/e/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/e',
+        'open the door', 'south', 'wait', 'wait', 'examine the elf', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const games = s.split('% dq0 -p t').slice(1);
+        if (games.length !== 4) return ['not four games: ' + games.length];
+        const [dw, dk, or, el] = games;
+        if (!/A dwarf in mail, armed, is /.test(dw)) f.push('no dwarf in mail, armed, seen');
+        if (!/Two dwarves in mail/.test(dw)) f.push('no "Two dwarves" told');
+        const ex = dw.slice(dw.indexOf('> examine the dwarf'), dw.indexOf('> talk to the dwarf'));
+        if (!/seems wary/.test(ex) || !/mail byrnie|scale byrnie/.test(ex) || !/axe|warhammer|battleaxe/.test(ex)) f.push('the dwarf not examined wary, in mail, armed: ' + JSON.stringify(ex.slice(0, 300)));
+        if (!/The dwarf doesn't speak any tongue you know\./.test(dw)) f.push('the dwarf understood the common tongue');
+        const tk = dk.slice(dk.indexOf('> talk to the dwarf'));
+        if (/doesn't speak any tongue you know/.test(tk) || !/> talk to the dwarf/.test(dk)) f.push('the dwarf not heard in khuzdul: ' + JSON.stringify(tk.slice(0, 200)));
+        if (!/A (brown|black) orc, armed/.test(or)) f.push('no orc seen armed');
+        const items = T.filter(t => t.after).flatMap(t => t.after.items);
+        if (!items.some(i => i.name === 'mankar' || i.name === 'mang')) f.push('no mankar or mang made (the orcs\x27 own): ' + [...new Set(items.map(i => i.name))].join(', '));
+        if (!/An elf/.test(el) || !/keeping its distance/.test(el)) f.push('no elf keeping its distance');
+        const ee = el.slice(el.indexOf('> examine the elf'));
+        if (!/longknife/.test(ee) || !/hartbow/.test(ee)) f.push('the elf\'s longknife and hartbow not seen: ' + JSON.stringify(ee.slice(0, 300)));
+        const na = T.flatMap(t => t.replies).filter(r => r.kind === K.RS_NEW_ACTOR);
+        if (!na.length || na.some(r => r.result !== 0)) f.push('a sheet not the bestiary\'s own (RS_NEW_ACTOR): ' + na.filter(r => r.result !== 0).length + ' of ' + na.length);
         return f;
       },
       sdcard: true

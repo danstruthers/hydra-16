@@ -315,7 +315,7 @@ elf), men-at-arms (a soldier) and their captain.  Their factions (factions.txt's
 tongues khuzdul, sindarin, gargun, common) are a history's (themegen's inhabitants: HISTORY.md), or a theme file's
 written by hand; the stand-in themes have none of them.  Their minds by their ways, as the factions and attitudes allow
 now: the Gargun hostile to all, the dwarves above all; a brown orc a robber hiding its takings, a black and a red orc
-and their king killers, a small orc a shy hunter by smell, a white orc sparing a fallen foe; the dwarves wary, keeping
+killers, their king a robber of its tribe's spoils, a small orc a shy hunter by smell, a white orc sparing a fallen foe; the dwarves wary, keeping
 to their halls and their lights, hard to fool; the elf wary and aloof, keeping its distance; the soldiers unfriendly at
 their posts.  Their sheets the referee's (the Gargun's the book's, their fur's armour the better of it and what they
 wear; a black orc sooner berserk than fled); the null referee's by their gear as anyone's.  Left for later (HOUSE.md):
@@ -395,7 +395,8 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   Hunters/Tribesmen; its things' condition the Treasure condition table's Person column (most good); its coins today's
   mints', four in five the region's own.
 - **A robber's takings** (I_ROB's x[2], b): to its faction's hoard, in the chest at the home of a placed lair of its
-  faction's leader (kinds.txt's keeps H) on its stratum (RB_HOARD); else hidden at its home if its kind hides its
+  faction's leader (kinds.txt's keeps H; or, 2026-10-29, a theme's home with its leader, its theme's faction the
+  robber's: the leader's own lair things, its hoard, made with that home as it's placed) on its stratum (RB_HOARD); else hidden at its home if its kind hides its
   things (RB_HIDE); else lying there.
 - **Seen:** the world keeps each actor's look (the hub's agear, AG_ARMED, AG_ARMOUR: as it tells the referee), the
   senses copy it with its body (struct sden's gear), the look words it ("a bandit, armed and armoured"); examined or

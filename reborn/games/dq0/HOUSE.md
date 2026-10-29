@@ -1826,8 +1826,8 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
   quick (Move 13), a dwarf's short-legged (11 tenths a square), an elf's light (9).
 - **Their minds** (DENIZENS.md's factions and attitudes, what they allow now): the Gargun hostile to everyone, the
   dwarves above all (the book's "insane hatred"); a brown orc a robber that hides its takings at its bed (its mates not
-  trusted: the book's squabbling, thieving tribes), a black and a red orc and their king killers (the book's: they eat
-  their prisoners), a small orc a shy hunter, a white orc neither (the book's least violent, its honour: a foe brought
+  trusted: the book's squabbling, thieving tribes), a black and a red orc killers (the book's: they eat their
+  prisoners), their king a robber, the tribe's spoils its hoard's, a small orc a shy hunter, a white orc neither (the book's least violent, its honour: a foe brought
   down left be), and the easiest swayed (one step), a black orc the hardest (three against).  The dwarves wary, keeping
   to their halls (a lair intruded on, the attitude a step down), cunning (hard to fool), stubborn (a step against);
   the elf wary and aloof, keeping its distance (shy), two steps against swaying; the soldiers unfriendly, keeping to
@@ -1853,6 +1853,10 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
   dwarves' gold in it, crowns, not in their purses: the user's), a locked box at a warrior's or a miner's bed; an elf's
   longknife and hartbow (Combat 3's (S)), its stores; the soldiers' a unit's issue, their stores and spare arms, their
   captain's strongbox.
+- **A leader's things in a theme's home** (all the themes', 2026-10-29: found building the hoard's test): popgen puts a
+  faction's leader in its home, the first lair of its first kind; its own lair things (its [lair KEY]: a king's, a lord's,
+  an elder's, a captain's hoard) are made there too as the home's placed, and a robber of its faction (the theme's)
+  takes its takings to that hoard (they were made for the stand-ins' leaders only, whose lairs are their own).
 - **Seen:** a look's "in mail" for a body in mail or other metal body armour ("A dwarf in mail, armed, is ahead"),
   else "armoured" as before.
 - **Left for later** (written down, not built): the black orcs' slaves (the book's hybrid colonies: brown and small

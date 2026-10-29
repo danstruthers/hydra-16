@@ -163,6 +163,9 @@ struct lair {
     unsigned char   rx, ry;                     /* Its region (its chunk's first square's, the frame's) */
 };
 #define L_PLACED        0x01                    /* Its denizens placed */
+#define L_LEADER        0x02                    /* Its faction's leader with them (a theme's home: popgen's, 2026-10-29), its
+                                                **   faction the high bits (L_FAC) */
+#define L_FAC(f)        (((f) >> 4) & 7)
 struct den {
     unsigned char   kind;
     unsigned char   flags;                      /* D_* */
@@ -476,6 +479,9 @@ static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, un
         den_put (u);
     }
     L.n = i;
+    if (ll) {
+        L.flags |= L_LEADER | (lf & 7) << 4;
+    }
     lair_put (t);
     if ((K.flags & K_LIGHTS) && i) {            /* (Its keepers' lights: the places kept, the hub's) */
         hub_map (DEN_BANK);
@@ -652,9 +658,10 @@ void __fastcall__ s_place (unsigned char i)
             D.ready = now + random (50);
         }
         den_put (k);
-        im.a = (j ? 0 : KT_LAIR) | ((kind_get (kd), KF_NATURE (K.form)) >= NA_FOLK ? KT_ROLE : 0);  /* (Its lair's
-                                                **   own with its first: its stores, its hoard; a beast's den's, the
-                                                **   dead's lair's, 2026-10-29; folk's and the dead's roles) */
+        im.a = (j && kd == L.kind ? 0 : KT_LAIR) | ((kind_get (kd), KF_NATURE (K.form)) >= NA_FOLK ? KT_ROLE : 0);  /* (Its
+                                                **   lair's own with its first: its stores, its hoard; a beast's den's,
+                                                **   the dead's lair's, 2026-10-29; folk's and the dead's roles; a
+                                                **   theme's leader with its home its own too, its hoard, 2026-10-29) */
         if (im.a == KT_LAIR && (hub_map (0), HUB->gear & GE_OLD)) {
             im.a = 0;                           /* (dq0 -K's, the tests': a beast's den none, as before, not even asked
                                                 **   of the world) */
@@ -842,9 +849,10 @@ static void settle (void)
 
 /* Actor k's (the copy a's) intent: what it's doing, and the way it faces, with it */
 /* Where actor k (a robber, its kind's record K) takes what it robs (I_ROB's w1, w2, x[2], b): its faction's hoard, the
-** home of a lair of its faction's leader (kinds.txt's keeps H) placed on its stratum (RB_HOARD: the world puts the
-** takings in the hoard there, b its kind's faction); else its own home, hidden there if its kind hides its things
-** (RB_HIDE), else lying there (HOUSE.md's the robbers' takings, 2026-10-27); K its own again after */
+** home of a lair of its faction's leader (kinds.txt's keeps H; or a theme's home, its leader with it: L_LEADER,
+** 2026-10-29, its theme's faction the robber's) placed on its stratum (RB_HOARD: the world puts the takings in the
+** hoard there, b its kind's faction); else its own home, hidden there if its kind hides its things (RB_HIDE), else
+** lying there (HOUSE.md's the robbers' takings, 2026-10-27); K its own again after */
 static void __fastcall__ rob_to (unsigned char k)
 {
     unsigned char i, f = K.faction;
@@ -856,8 +864,9 @@ static void __fastcall__ rob_to (unsigned char k)
     im.x[2] = X.keeps == KP_HIDDEN ? RB_HIDE : 0;
     for (i = 0; i < hd.nlairs; ++i) {
         lair_get (i);
-        if (L.kind && (L.flags & L_PLACED) && L.sn == a.sn && (kx_get (L.kind), X.keeps == KP_LEADER) &&
-            (kind_get (L.kind), K.faction == f)) {
+        if (L.kind && (L.flags & L_PLACED) && L.sn == a.sn && ((L.flags & L_LEADER) ?
+            L_FAC (L.flags) == HUB->actor[k].faction :
+            (kx_get (L.kind), X.keeps == KP_LEADER) && (kind_get (L.kind), K.faction == f))) {
             im.w1 = L.hx;
             im.w2 = L.hy;
             im.x[2] = RB_HOARD;
