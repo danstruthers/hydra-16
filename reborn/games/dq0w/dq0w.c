@@ -5061,6 +5061,8 @@ int main (int argc, char* argv[])
             bearings_off (BO_OUT);              /* (Knocked senseless: its bearings astray as it comes round, part
                                                 **   52's) */
             hub_map (0);
+            HUB->pc_pos = POS_PRONE;            /* (And fallen: up again as it comes round, the book's Rise, as every
+                                                **   actor's, 2026-10-29) */
         }
         ++HUB->beat[T_WORLD];
         wait_pace ();                           /* (A long wait at the real paces: as fast as the turns pace goes) */

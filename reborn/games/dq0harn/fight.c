@@ -368,16 +368,17 @@ static void attack (void)
         R->result = 0xFF;                       /* (It can't) */
         return;
     }
+    if (is_prone (&A)) {                        /* (Fallen: it gets up, its turn spent; or tries to and stays down,
+                                                **   a: the house's test, gear.c's rise_of, slice 4.1b's; up first,
+                                                **   then its weapon taken up, 2026-10-29) */
+        R->a = !G_OK (rise_of (A.c));
+        R->result = O_RISE;
+        return;
+    }
     if (prones & RS_REARM) {                    /* (Its weapon let fall taken up again, its turn spent: the world's,
                                                 **   slice 4.1b's) */
         bs.state &= ~BS_DISARMED;
         R->result = O_REARM;
-        return;
-    }
-    if (is_prone (&A)) {                        /* (Fallen: it gets up, its turn spent; or tries to and stays down,
-                                                **   a: the house's test, gear.c's rise_of, slice 4.1b's) */
-        R->a = !G_OK (rise_of (A.c));
-        R->result = O_RISE;
         return;
     }
     if (D.who && D.c->state == HARN_UNCONSCIOUS) {

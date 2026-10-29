@@ -1006,7 +1006,7 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     a.timid = (K.flags & K_SHY) | (K_HELP (K) & H_KILLS ? RS_KILLER : 0);   /* (K_SHY the referee's 1) */
     hub_map (0);
     memcpy (HUB->actor[k].name, a.name, sizeof a - offsetof (struct actor, name));
-    im.x[0] = 0;
+    im.x[0] = s->cond & C_UNCONSCIOUS ? DO_DOWN : 0;   /* (Left senseless, and senseless still: it lies there) */
     im.x[1] = a.face;
     im.x[2] = a.sn;
     im.x[3] = s->cond >> 12 & 7;                /* (Its legs, the referee's C_MOVE: slice 4.1b's) */
@@ -2073,7 +2073,8 @@ void s_sway (void)
         for (k = 0; k < NACTORS; ++k) {
             hub_map (0);
             q = &HUB->actor[k];
-            if (q->name[0] && q->attitude == AT_ALLIED && q->sn == pcs && apart (q->x - pcx, q->y - pcy) <= 12) {
+            if (q->name[0] && q->attitude == AT_ALLIED && q->sn == pcs && apart (q->x - pcx, q->y - pcy) <= 12 &&
+                q->doing != DO_DOWN) {          /* (Not one lying senseless: it hears nothing) */
                 strcpy (sw.name, ++n == 1 ? q->name : "");
                 order (k);
                 rouse (k, 1 | ROUSE_SET);
@@ -2088,7 +2089,10 @@ void s_sway (void)
         sw.was = sw.now = q->attitude;
         kind_get (akind[k]);
         sw.beast = K.mind == M_BEAST;
-        switch (sw.kind) {
+        switch (q->doing == DO_DOWN && sw.kind ? 0xFF : sw.kind) {
+        case 0xFF:
+            sw.result = SR_DOWN;                /* (Senseless: it hears nothing, it takes no request, till it comes
+                                                **   round, 2026-10-29) */
         case SW_LOOK:
             break;
         case SW_NAME:

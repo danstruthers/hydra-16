@@ -83,6 +83,10 @@ void __fastcall__ o_sway_words (const struct sway* s)
         who (1);
         add (" pays no heed: there's no mind in it to sway.");
         return;
+    case SR_DOWN:
+        who (1);
+        add (" lies senseless: it can't hear you.");
+        return;
     case SR_AS_FAR:
         who (1);
         seeming (" seems ", " already: that won't move it further.");

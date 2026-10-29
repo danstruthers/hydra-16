@@ -432,7 +432,7 @@ void __fastcall__ s_den_enter (const struct msg* m)
     bd.y = m->w2;
     bd.ready = m->t;
     bd.step = m->a;
-    bd.pos = POS_STANDING;
+    bd.pos = bd.doing == DO_DOWN ? POS_PRONE : POS_STANDING;   /* (Senseless still, as it was left: lying there) */
     bd.gait = GA_WALK;
     bd.move = m->x[3];
     bd.arm = 0;

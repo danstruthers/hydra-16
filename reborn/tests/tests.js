@@ -4797,14 +4797,14 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0disarm', asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' limbs: a denizen\'s fumble (slice 4.1b, the brief\'s: "The same rules for every actor with hands and legs: a denizen\'s fumble drops its weapon (the world\'s floor, seen and taken up)"), by the denizens\' events, the item store and the words (HarnMaster\'s dice as they fall here: no -a, no -I, asks and initiative, the game as a search found it): the hand-written theme\'s hostile bandits (dq0robbed\'s, seed 1, south of the start), the character (hmchar seed 23, Dodge 90, Sword 60) its pack dropped (2026-10-26: its armour from it there, the reach\'s times, the dice as a search of the variants found them), in a gambeson and a mail hauberk, blocking, waiting for them: a bandit\'s sword fumbled ("The bandit strikes at you with its sword, but fumbles the blow."), let fall (the world\'s E_BEAT WB_DROP in the denizens\' ring, its kind the sword\'s, its b the bandit\'s entry plus 1: "The bandit drops its sword."), taken up again at its next turn (WB_PICKS, the referee\'s RS_REARM and O_REARM: "The bandit snatches up its sword."), gone from the floor (as many swords in the store after as before)',
+      name: 'dq0disarm', asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' limbs: a denizen\'s fumble (slice 4.1b, the brief\'s: "The same rules for every actor with hands and legs: a denizen\'s fumble drops its weapon (the world\'s floor, seen and taken up)"), by the denizens\' events, the item store and the words (HarnMaster\'s dice as they fall here: no -a, no -I, asks and initiative, the game as a search found it): the hand-written theme\'s hostile bandits (dq0robbed\'s, seed 1, south of the start), the character (hmchar seed 23, Dodge 90, Sword 60) its pack dropped (2026-10-26: its armour from it there, the reach\'s times, the dice as a search of the variants found them), in a gambeson and a mail hauberk, blocking, waiting for them: a bandit knocked senseless by its blow ("It falls senseless.", "lying senseless"), doing nothing as it lies there, deaf to words ("talk to the bandit": "The bandit lies senseless: it can\'t hear you.", the denizens\' SR_DOWN, the rouse the talk sends it ignored), its first turn as it comes round getting to its feet (the referee\'s O_RISE, "The bandit gets to its feet.": it fell as it was knocked out, 2026-10-29), and only then fighting on; a bandit\'s sword fumbled (its blow\'s, "The bandit strikes at you with its sword, but fumbles the blow.", or its guard\'s, "; it falters.": since 2026-10-29 its guard\'s, the fight\'s dice another fall), let fall (the world\'s E_BEAT WB_DROP in the denizens\' ring, its kind the sword\'s, its b the bandit\'s entry plus 1: "The bandit drops its sword."), taken up again at its next turn (WB_PICKS, the referee\'s RS_REARM and O_REARM: "The bandit snatches up its sword."), gone from the floor (as many swords in the store after as before)',
       init: 't_rc', cycles: 1500e6,
       // (hmchar's seed 26, not 23, 2026-10-27: the bandits' lairs in the rooms they like, the belongings', their fight's dice
       // another fall, the fumble in another bout)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 26 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
         'echo ml swd 60 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
         "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
-        'defend block', 'wait', 'open the door', ...Array(20).fill('wait'), 'quit', 'echo $status']) },
+        'defend block', 'wait', 'open the door', ...Array(17).fill('wait'), 'talk to the bandit', ...Array(3).fill('wait'), 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [];
@@ -4817,8 +4817,17 @@ module.exports = {
         else if (!pick || pick.b !== drop.b || pick.thing !== drop.thing) f.push('the bandit\'s sword not taken up again (' + JSON.stringify(pick) + ')');
         const swords = s => s ? s.items.filter(i => i.name === 'sword').length : -1;
         if (swords(end.at) !== swords(w0.after)) f.push('a sword left on the floor, taken up again (' + swords(w0.after) + ' swords before, ' + swords(end.at) + ' after)');
-        inTurn(dq0Story(out), ['The bandit strikes at you with its sword, but fumbles the blow.', 'The bandit drops its sword.', 'The bandit snatches up its sword.'], f,
-          'the bandit\'s fumble\'s words: ');
+        const said = dq0Story(out), fum = said.search(/The bandit strikes at you with its sword, but fumbles the blow\.|; it falters\./);
+        if (fum < 0) f.push('the bandit\'s fumble not told');
+        else inTurn(said.slice(fum), ['The bandit drops its sword.', 'The bandit snatches up its sword.'], f, 'the bandit\'s fumble\'s words: ');
+        // (Knocked senseless, it lies there doing nothing, and comes round on the floor: its first turn after, up)
+        const fights = T.filter(u => u.k > g.k).flatMap(u => u.dens).filter(e => e.kind === 'E_FIGHT');
+        const out1 = fights.findIndex(e => e.who === 0 && e.a > 0 && (e.ff & 4)), by = out1 < 0 ? 0 : fights[out1].a;
+        const next = fights.slice(out1 + 1).find(e => e.who === by);
+        if (out1 < 0) f.push('no bandit knocked senseless');
+        else if (!next || next.out !== 'O_RISE') f.push('the bandit come round not getting to its feet first (' + JSON.stringify(next) + ')');
+        inTurn(said, ['falls senseless.', 'lying senseless.', 'The bandit lies senseless: it can\'t hear you.', 'The bandit gets to its feet.'], f,
+          'the bandit knocked senseless: ');
         return f;
       },
       sdcard: true

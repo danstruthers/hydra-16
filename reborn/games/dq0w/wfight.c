@@ -181,7 +181,9 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     hub_map (0);
     r->state = REQ_FREE;
     if (ff & (me == att ? FF_A_DOWN : FF_D_DOWN)) {
-        bd.doing = DO_DOWN;                     /* (Senseless: it lies there till it comes round) */
+        bd.doing = DO_DOWN;                     /* (Senseless: it falls, and lies there till it comes round; up again,
+                                                **   its turn, the book's Rise, 2026-10-29) */
+        bd.pos = POS_PRONE;
         bd.ready = HUB->now + w2;
     }
     if ((ff & (att ? FF_D_DOWN : FF_A_DOWN)) && HUB->pc_ready < HUB->now + w2) {

@@ -875,11 +875,11 @@ enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRI
                                                 /* (dq0.h's V_TALK ... V_NAME in the same order) */
 enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH };   /* An ally's request (SW_ORDER's): follow the character,
                                                 **   wait where it is, go back to its own ways, fetch a thing */
-enum { SR_OK, SR_NONE, SR_FAR, SR_TONGUE, SR_BEAST, SR_MINDLESS, SR_AS_FAR, SR_NOT_ALLY, SR_CANT };   /* A sway's
-                                                **   result: done (a test's: grade, was, now), none such in sight,
-                                                **   too far (an animal's out of reach), no tongue in common, an
-                                                **   animal (words don't reach it), mindless, as far as that way
-                                                **   goes, not an ally, it can't (yet) */
+enum { SR_OK, SR_NONE, SR_FAR, SR_TONGUE, SR_BEAST, SR_MINDLESS, SR_AS_FAR, SR_NOT_ALLY, SR_CANT, SR_DOWN };
+                                                /* A sway's result: done (a test's: grade, was, now), none such in
+                                                **   sight, too far (an animal's out of reach), no tongue in common,
+                                                **   an animal (words don't reach it), mindless, as far as that way
+                                                **   goes, not an ally, it can't (yet), senseless (it hears nothing) */
 struct sway {
     RQH;                                        /* (kind: SW_*) */
     char            word[16];                   /* The one meant (a name, a kind's word; "": the nearest, or every

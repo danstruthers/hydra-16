@@ -207,6 +207,13 @@ void s_den_intents (void)
         }
         BD_GET ((m.who - 1) & 7);
         was = bd.doing;
+        if (was == DO_DOWN && bd.ready > HUB->now && m.kind != I_ENTER && m.kind != I_LEAVE) {
+            m.kind = I_WAIT;                    /* (Senseless till it comes round: it does nothing meanwhile, its mind's
+                                                **   intent posted before it fell, or a rouse, no matter; it lies
+                                                **   there, its doing kept, 2026-10-29) */
+            m.w1 = 0;
+            m.x[0] = m.x[1] = 0xFF;
+        }
         if (m.x[0] != 0xFF) {
             bd.doing = m.x[0];
         }

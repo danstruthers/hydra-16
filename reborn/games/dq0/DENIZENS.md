@@ -325,11 +325,12 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   words in a ring in their bank: the referee's for the wounds and the armour, the UI's for the rest), heard by the
   others (they turn to it) and played (the sound task's *hit, *swish).
 - **After:** a denizen wounded tests its morale (RS_MORALE: HOUSE.md's fights): broken (or a shy one cautious) it
-  flees a minute; cautious, it holds back a round.  One knocked senseless lies there till it comes round, and is
-  finished if it's struck meanwhile; one bleeding loses blood a minute at a time (RS_TIME) and may die of it; one dead
+  flees a minute; cautious, it holds back a round.  One knocked senseless falls and lies there till it comes round,
+  doing nothing meanwhile (its mind's intents and rouses not carried out, words not heard: HOUSE.md's hands and
+  limbs, 2026-10-29), and is finished if it's struck meanwhile; come round, its first turn is getting up; one bleeding loses blood a minute at a time (RS_TIME) and may die of it; one dead
   leaves its body (an item: a body, a skeleton's bones: the world's, put down as it dies) and never comes back.  A
   blow is harm done (attitudes, above); one that flees is unfriendly after.  The character knocked senseless waits it
-  out (it can't defend meanwhile); dead, the game ends.
+  out (it can't defend meanwhile), fallen, up again as it comes round; dead, the game ends.
 - **The character helpless** (senseless, or in shock: the referee's conditions in the hub's summary, C_UNCONSCIOUS
   while it lies out, C_STUNNED): what a foe does to it is its mind's, by its kind's nature (the user's, 2026-10-21;
   kinds.txt's ways k and r, the kind's record's K_HELP; HOUSE.md's fights).  A killer strikes on (the referee finishes

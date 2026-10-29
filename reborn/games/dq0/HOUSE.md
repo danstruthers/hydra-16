@@ -1187,6 +1187,23 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   up."; no leg to stand on, never); out of a fight, at its next move, a round (no test: a creature's moves are its
   mind's, unfought), unless it crawls on (its legs won't bear it as they should).  ("The kobold gets to its feet.":
   wlimbs.c's part 51, den_legs.)
+- **Knocked senseless, an actor falls, and does nothing till it comes round** *(every actor's; 2026-10-29, drafted
+  for the user to review)*: it lies prone where it fell.  Whatever its mind meant to do (a step, a blow, a robbery,
+  posted as it fell), and whatever would rouse it (a noise, words), it does nothing till its time out is over; talked
+  to, it hears nothing ("The bandit lies senseless: it can't hear you.": no test, no rouse); left behind and met again
+  still out, it's lying there still.  Come round, its first turn is the book's Rise ("The bandit gets to its feet.",
+  the test above), then its weapon, if it let it fall and it lies in its reach, taken up (a turn, as before), then it
+  fights.  The character knocked senseless falls too: up again as it comes round (a round: "get up"; a walk, a fight's
+  first round, gets up first).  Why: the book's unconscious have no engagement zone (Combat 6) and a fallen body rises
+  by the Rise (Combat 8); before, a bandit came round where it stood and struck at once, or snatched up its sword from
+  where it lay, with no word of its coming round, and an intent its mind had posted as it fell, or a rouse, was carried
+  out while it lay there (it was shown fighting, not lying senseless).  (wfight.c's blow; wbody.c's den_intents;
+  wlimbs.c's den_enter; dq0d.c's enlist and sway, SR_DOWN; fight.c's attack: the Rise before the weapon taken up;
+  dq0w.c's main, the character's.)  *Not yet* (siblings found, left): a creature come round in shock (the book's last
+  shock roll; the referee gives creatures none); the character in shock may still handle things and speak (the book
+  allows only rest, being led away, or a half move), left till shock recovery comes (Physician 3), else a character
+  once in shock could never take a thing up again; a denizen come round out of a fight walks off without its weapon
+  let fall (only its next blow's turn takes it up).
 
 ## Bearings underground *(slice 4.2, drafted 2026-10-23 for the user to review)*
 
