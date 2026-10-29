@@ -77,6 +77,7 @@ unsigned char __fastcall__ reg_need (unsigned char sn, unsigned char rx, unsigne
 void dneed (void);
 void __fastcall__ harmed (unsigned char k);     /* Part 2 */
 unsigned char __fastcall__ stalks (unsigned char k);
+unsigned char __fastcall__ scent (unsigned char k);
 unsigned char __fastcall__ draw_on (unsigned char k);
 void sway (void);
 int __fastcall__ start (const char* dir);      /* Part 4 */
@@ -1475,9 +1476,11 @@ static unsigned char __fastcall__ meets (unsigned char k, unsigned char was)
 ** on along it to the next: the step toward that (step_for's); or, an older trail, the world's to find (STEP_SCENT:
 ** the traces' store, which keeps it all, each square's scent the longer for its passings and the character's stays
 ** there: hub.h's TR_MORE), 0xFB, at once if the last one led it on, else once each ten seconds (sniffed: till then);
-** 0xFF, neither */
+** 0xFF, neither (part 5's, the main RAM's room: slice 4.5's) */
 static unsigned long sniffed[NACTORS];
-static unsigned char __fastcall__ scent (unsigned char k)
+#pragma code-name (push, "SW5CODE")
+#pragma rodata-name (push, "SW5RODATA")
+unsigned char __fastcall__ s_scent (unsigned char k)
 {
     struct tstep* e;
     unsigned n, i;
@@ -1511,6 +1514,8 @@ static unsigned char __fastcall__ scent (unsigned char k)
     }
     return d;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Actor k's stay where it stands (the copy a): a passing for each TQ on its square, journalled as each goes by (the
 ** world's traces, I_TROD's TS_STAY: its scent the stronger there, hub.h's TR_MORE), not waited for */
@@ -1605,7 +1610,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
                                                 **   goes; the world's, an older trail: DO_ROAM, if there's none) */
     } else if (foe && !(K.flags & K_SHY) && drawn[k] && (d = draw_on (k)) != 0xFF) {
         a.doing = DO_COMING;                    /* (Drawn on to where it last sensed the character, heard it, a while:
-                                                **   slice 4.5's, HOUSE.md's: part 2's) */
+                                                **   slice 4.5's, HOUSE.md's: part 5's) */
     } else if (alert[k] > now) {
         d = 0xFE;                               /* (A noise heard: still, facing the way it came, a while) */
         wt = 10 + random (20);
@@ -1874,6 +1879,9 @@ static struct sway sw;
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 
+#pragma code-name (push, "SW5CODE")
+#pragma rodata-name (push, "SW5RODATA")
+
 /* A hunter's stalk begun (decide's, slices 4.5 and 4.6: HOUSE.md's sound, the air and moving quietly): its Stealth
 ** tested (the referee's, by its sheet, in the denizens' slot), its steps' loudness plus 1 by the grade: a success 0,
 ** a marginal failure 1, a critical one 2 */
@@ -1894,6 +1902,9 @@ unsigned char __fastcall__ s_draw_on (unsigned char k)
     refy = lsy[k];
     return step_for (k, 4 * K.range + 8, S_TOWARD);
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Whether name n (an actor's, or a kind's) is meant by w (the parser's word, in lower case): the start of one of its
 ** words ("rat", "giant", "grub") */

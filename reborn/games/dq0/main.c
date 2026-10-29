@@ -77,6 +77,7 @@ void __fastcall__ news (const struct msg* m);    /* (Part 11's: the rarer news, 
 void __fastcall__ hide (const char* w);
 void hand_said (void);
 void limbs_cmd (void);
+void __fastcall__ pose_words (unsigned w);      /* (Part 12's: the body's position, worded) */
 unsigned char hold_first (void);
 static void __fastcall__ dig_used (unsigned char n);
 static char dug_with[16];                       /* (The tool a dig took, named) */
@@ -1020,15 +1021,12 @@ static void __fastcall__ limb_words (const struct msg* m)
         "\nYou can't run on one leg.", 0,
         "\nYou are on your feet already.", "\nYour legs won't bear you."    /* (WB_RISEN, WB_NOT_UP, the one more) */
     };
-    static const char pdo[5][10] = { "", "lie down", "crouch", "kneel", "sit down" };
-    static const char pis[5][10] = { "", "lying", "crouching", "kneeling", "sitting" };
     char kn[sizeof CATALOGUE[0].name];
     unsigned char k = (unsigned char) m->w1 - WB_DROP;
     const char* s;
 
-    if (k == WB_POSED - WB_DROP) {              /* (The body's position as it said, slice 4.6's) */
-        k = (m->w1 >> 8) & 7;
-        sayf (m->w1 & 0x8000 ? "\nYou are %s already." : "\nYou %s.", m->w1 & 0x8000 ? pis[k] : pdo[k]);
+    if (k == WB_POSED - WB_DROP) {              /* (The body's position as it said, slice 4.6's: part 12's) */
+        pose_words (m->w1);
         return;
     }
     hub_mem (KIND_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
@@ -1036,32 +1034,6 @@ static void __fastcall__ limb_words (const struct msg* m)
         (WB_NO_RUN - WB_DROP + 1) * 2 + k - (WB_RISEN - WB_DROP) : k * 2 + (m->b != 0);
     if (k < sizeof lwords / sizeof lwords[0] && (s = lwords[k]) != 0) {
         sayf (s, m->b ? HUB->actor[(m->b - 1) & 7].name : kn, kn);
-    }
-}
-
-/* The background and the air, worded (way.c's, slices 4.5's: the senses' sound layer's, the hub's pc_bg, air_h,
-** air_s): a listen's end (what 0: heard nothing, what it hears behind it all; 1, heard something, the background
-** after it), a sniff's start (2: the draught, from where, or the air still) */
-void __fastcall__ s_bg_words (unsigned char what)
-{
-    static const char* const bgw[] = { "", "water trickling somewhere near", "the wind in a shaft near by",
-        "those about you moving" };
-    static const char* const airw[] = { "", "faint ", "", "strong " };
-    static const char* const relname[8] = {
-        "ahead", "ahead to your right", "your right", "behind you to your right", "behind you",
-        "behind you to your left", "your left", "ahead to your left" };
-    unsigned char b = HUB->pc_bg & 3;
-
-    if (what == 2) {
-        if (HUB->air_s) {
-            sayf ("\nYou feel a %sdraught from %s.", airw[HUB->air_s & 3], relname[(HUB->air_h + 4 - HUB->pc_face) & 7]);
-        } else {
-            msg ("The air is still.");
-        }
-    } else if (!what) {
-        sayf (b ? "\nYou hear nothing but %s." : "\nYou hear nothing.", bgw[b]);
-    } else if (b) {
-        sayf ("\nBehind it all, %s.", bgw[b]);
     }
 }
 
@@ -2360,3 +2332,46 @@ int main (int argc, char* argv[])
     finish ();
     return 0;
 }
+
+/* ==== Part 12: the body's positions and the background, worded (slices 4.5 and 4.6: overlay 1's bank, part 11's room) */
+#pragma code-name (push, "SW12CODE")
+#pragma rodata-name (push, "SW12RODATA")
+
+/* The body's position as the character said (E_BEAT WB_POSED's w1: the position times 256, | 0x8000 there already) */
+void __fastcall__ s_pose_words (unsigned w)
+{
+    static const char pdo[5][10] = { "", "lie down", "crouch", "kneel", "sit down" };
+    static const char pis[5][10] = { "", "lying", "crouching", "kneeling", "sitting" };
+    unsigned char k = (w >> 8) & 7;
+
+    sayf (w & 0x8000 ? "\nYou are %s already." : "\nYou %s.", w & 0x8000 ? pis[k] : pdo[k]);
+}
+
+/* The background and the air, worded (way.c's, slices 4.5's: the senses' sound layer's, the hub's pc_bg, air_h,
+** air_s): a listen's end (what 0: heard nothing, what it hears behind it all; 1, heard something, the background
+** after it), a sniff's start (2: the draught, from where, or the air still) */
+void __fastcall__ s_bg_words (unsigned char what)
+{
+    static const char* const bgw[] = { "", "water trickling somewhere near", "the wind in a shaft near by",
+        "those about you moving" };
+    static const char* const airw[] = { "", "faint ", "", "strong " };
+    static const char* const relname[8] = {
+        "ahead", "ahead to your right", "your right", "behind you to your right", "behind you",
+        "behind you to your left", "your left", "ahead to your left" };
+    unsigned char b = HUB->pc_bg & 3;
+
+    if (what == 2) {
+        if (HUB->air_s) {
+            sayf ("\nYou feel a %sdraught from %s.", airw[HUB->air_s & 3], relname[(HUB->air_h + 4 - HUB->pc_face) & 7]);
+        } else {
+            msg ("The air is still.");
+        }
+    } else if (!what) {
+        sayf (b ? "\nYou hear nothing but %s." : "\nYou hear nothing.", bgw[b]);
+    } else if (b) {
+        sayf ("\nBehind it all, %s.", bgw[b]);
+    }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)

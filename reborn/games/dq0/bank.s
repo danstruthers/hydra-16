@@ -219,6 +219,7 @@ ovl_out:
             SWPART      9, 13               ; The player's shortcuts (alias.c)
             SWPART      10, 11              ; A search, by its form (search.c)
             SWPART      11, 3               ; The rarer news, worded (main.c); the hands and limbs
+            SWPART      12, 1               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
 
             SWFN        begin, 1
             SWFN        size, 1
@@ -260,6 +261,7 @@ ovl_out:
             SWFN        hide, 11
             SWFN        hand_said, 11
             SWFN        limbs_cmd, 11
-            SWFN        bg_words, 11
+            SWFN        bg_words, 12
+            SWFN        pose_words, 12
             SWFN        hold_first, 11
             SWFN        gear_look, 11

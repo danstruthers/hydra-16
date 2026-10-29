@@ -25,6 +25,7 @@ ovx:        .res        1
                                             ;   (the kinds read in, popgen loaded);
                                             ;   an actor made, retired, killed, an ally come along,
                                             ;   a cornered one's dart
+            SWPART      5, 2                ; The senses' own: a hunter's stalk, a scent followed, one drawn on (slice 4.5's)
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -33,8 +34,9 @@ ovx:        .res        1
             SWFN        reg_need, 3
             SWFN        dneed, 4
             SWFN        harmed, 2
-            SWFN        stalks, 2
-            SWFN        draw_on, 2
+            SWFN        stalks, 5
+            SWFN        scent, 5
+            SWFN        draw_on, 5
             SWFN        sway, 2
             SWFN        start, 4
             SWFN        enlist, 4
