@@ -653,13 +653,13 @@ static void __fastcall__ answer (struct req* r)
         break;
     case RS_TIME:                               /* (No bleeding: none dies of it; a wound healed by its rest, a tended
                                                 **   one's eight hours, an untended one's a day: slice 4.3's simple way) */
+        if (!r->a && wounds) {
+            rest_m += r->w1;                    /* (At rest: toward a wound healed) */
+        }
         r->w1 = 0;
         r->c = 0;
         r->w2 = 0;
         r->grade = 0;
-        if (!r->a && wounds) {
-            rest_m += r->w1;                    /* (At rest: toward a wound healed) */
-        }
         if (wounds && rest_m >= (tended ? 420 : 1260)) {
             --wounds;
             tended -= tended != 0;

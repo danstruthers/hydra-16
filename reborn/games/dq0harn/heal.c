@@ -23,7 +23,7 @@
 
 #pragma code-name ("OV6CODE")
 #pragma rodata-name ("OV6RODATA")
-#pragma local-strings (on)                      /* (A function's strings beside it: overlay 5's too) */
+#pragma local-strings (on)                      /* (A function's strings beside it: overlay 7's too) */
 
 #include <stdlib.h>
 #include <string.h>
@@ -293,7 +293,7 @@ static void __fastcall__ body_time (struct req* r)
         bleed (&pc, m);
         if (pv.hr && pc.state != HARN_DEAD) {
             venom_time (m * (r->a == 2 ? 4 : r->a ? 2 : 1));    /* (Its venom's course: its interval at rest, half
-                                                **   that about, a quarter at vigorous work: overlay 5's) */
+                                                **   that about, a quarter at vigorous work: overlay 7's) */
         }
     }
     for (k = 0; k < NACTORS; ++k) {
@@ -529,11 +529,11 @@ void __fastcall__ o_body_req (struct req* r)
     }
 }
 
-/* ==== Overlay 5's (its room: overlay 6 full): a venom's course, and the status's words of the body */
-#pragma code-name (push, "OV5CODE")
-#pragma rodata-name (push, "OV5RODATA")
+/* ==== Overlay 7's (its room: overlay 6 full, 5 the bestiary's): a venom's course, and the status's words of the body */
+#pragma code-name (push, "OV7CODE")
+#pragma rodata-name (push, "OV7RODATA")
 
-static void vdice5 (void)                       /* (vdice's, overlay 5's own) */
+static void vdice5 (void)                       /* (vdice's, overlay 7's own) */
 {
     unsigned long t = xs_seed;
 
@@ -541,7 +541,7 @@ static void vdice5 (void)                       /* (vdice's, overlay 5's own) */
     vseed = t;
 }
 
-static void __fastcall__ nput5 (const char* s)  /* (nput's, overlay 5's own) */
+static void __fastcall__ nput5 (const char* s)  /* (nput's, overlay 7's own) */
 {
     unsigned char n = strlen (news);
 

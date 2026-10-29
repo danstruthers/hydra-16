@@ -2213,9 +2213,9 @@ dice
 ask NEW_ACTOR actor=5 w1=14 text="rat"
 want result=0
 set now=20000 stance=D_AUTO
-case in shock, bitten: no defence, a minor bite; its shock roll over Endurance: senseless a round
+case in shock, bitten: no defence, a minor bite; its shock roll over Endurance: senseless a round (a killer's: one in shock held from any other, slice 4.3's)
 dice 100:41 6:2 6:2 6:2 100:50 6:6 6:6 6:6 6:1 6:1 6:1 6:6 6:6 6:6
-ask ATTACK actor=5 other=0 a=Z_MID b=AS_BEST
+ask ATTACK actor=5 other=0 a=Z_MID b=AS_BEST w2=RS_KILLER
 want result=O_HIT b=D_NONE w2=100 text~"a minor bite to your thorax (M1)" status="UP 3 OUT" dice=14
 set now=20100
 dice

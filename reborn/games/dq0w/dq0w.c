@@ -5618,8 +5618,10 @@ void s_burns_now (void)
         600);                                   /* (The next look a minute on; resting, ten, its light not near burning
                                                 **   low: the long durations' coarser ticks, 2026-10-28; the clock's
                                                 **   slices end there, slice's) */
-    bled ();                                    /* (The bodies' time with it: the bleeding, the character's wounds,
-                                                **   part 70's, slice 4.3's) */
+    if (bleeds || (HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) || HUB->pcsum.health != H_FINE || HUB->now >= body_due) {
+        bled ();                                /* (The bodies' time with it: the bleeding, the character's wounds,
+                                                **   part 70's, slice 4.3's; nothing to tell, no part swapped in) */
+    }
 }
 
 #pragma code-name (pop)

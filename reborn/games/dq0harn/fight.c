@@ -48,7 +48,7 @@ static struct bkind bk;
 
 static const struct bkind* __fastcall__ beast (unsigned char j)
 {
-    bread (ovbank[OVLS - 1], &bestiary[j < NBEASTS ? j : 0], &bk, sizeof bk);
+    bread (ovbank[5 - 1], &bestiary[j < NBEASTS ? j : 0], &bk, sizeof bk);    /* (Overlay 5's: the 6th heal.c's) */
     return &bk;
 }
 
@@ -394,6 +394,11 @@ static void attack (void)
         R->b = D_NONE;
         return;
     }
+    if (!D.who && pc.state == HARN_SHOCK && !(prones & RS_KILLER)) {
+        R->result = 0xFF;                       /* (In shock, helpless: a blow from any but a killer held too, as one
+                                                **   senseless's is: nobody engages one helpless, slice 4.3's) */
+        return;
+    }
     def = defence ();
     if (z != HARN_MID && def != HARN_IGNORE) {
         mod -= 2 * STEP_PCT;                    /* (Aimed high or low, two steps: Ignore's free) */
@@ -551,7 +556,7 @@ static void morale (void)
 /* A sheet's kind's flags (BF_*: heal.c's, a folk creature binding its bleeding) */
 unsigned char __fastcall__ o_beast_flags (unsigned char kind)
 {
-    return bestiary[kind && kind <= NBEASTS ? kind - 1 : 0].flags;
+    return beast (kind ? kind - 1 : 0)->flags;
 }
 
 /* A creature's side of two actors' tests (RS_CONTEST's, dq0harn.c's: the actor's test of purpose a, at the steps): by

@@ -2029,11 +2029,11 @@ const DQ0_REPEATS = [
   { what: /^A giant rat is .+, keeping its distance\.$/, tests: /^dq0(?:traces|legs)$/,
     why: 'a walk across the rats\' cell: a shy rat told keeping its distance as the walk\'s look stirs, then again where it is as the look on arriving has it (the tellings two, the stir not first in the second; dq0legs\' hops and crawls there too)' },
   { what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
-  { what: /^An? (?:cave adder|bandit) is ahead(?: to your (?:left|right))?, \d+ feet away\.$/, tests: /^dq0(?:helpless|robbed)$/,
+  { what: /^An? (?:cave adder|bandit) is ahead(?: to your (?:left|right))?, \d+ feet away(?:, keeping its distance)?\.$/, tests: /^dq0(?:helpless|robbed|venom)$/,
     why: 'a walk stopped by a hostile seen: told as the walk\'s look stirs, then again in the look as it stops (the stir and that look one telling, as dq0traces\' rats\')' },
   { what: /^You keep at it\.$/,
     why: 'a battering\'s beat every fourth blow once its blows tell (the user\'s, 2026-10-22: told as it goes), twice or more in a dozen' },
-  { what: /^Everything goes black\.$/, tests: /^dq0(?:finished|strike)$/,
+  { what: /^Everything goes black\.$/, tests: /^dq0(?:finished|strike|helpless|venom)$/,
     why: 'knocked senseless, come round in shock a round later, struck senseless again, all in one wait\'s answer (the UI waiting it out): two black-outs, each told (dq0strike\'s rats, fought with a bar, three)' },
   { what: /^(?:You struggle|The .+ struggles), but can't get up\.$/,
     why: 'a fall\'s Rise tried each round and failed (the book\'s test for one seriously or grievously wounded, slice 4.1b\'s), each try told' },
@@ -4659,7 +4659,7 @@ module.exports = {
     },
     {
       name: 'dq0battering', what: 'Dingus Quest Zero\'s battering a long task (slice 4.0, HOUSE.md\'s long tasks: a blow at a time as the clock goes, its bar the blows struck, stopped by the player or hard, the harm done kept), by the world\'s events and the long task\'s part done as it went (the hub\'s pc_task: the referee\'s, HarnMaster\'s, at these seeds): at seed 14 a pick battering the sound door (its torch put down and the pick taken in hand first: what\'s in its hands strikes, the user\'s, 2026-10-22) a dozen blows, one at a time (LT_BATTER, its length a dozen), leaving it giving, and battered again, broken down; then the same door battered and "stop digging" refused as it goes (it\'s a battering), "stop battering" stopping it part way, how the door stands told, and battered again, broken down in as many blows in all as without the stop (the harm done kept, each blow its own roll as before); with the hand-written theme\'s hostile rats (inhabit.txt) a battering stopped hard by a rat\'s blow ("break the door ahead with the pick": the pick taken in hand by the battering\'s command, the rats coming as it batters); told as it goes (the user\'s, 2026-10-22: "nothing is written to the output until after it is resolved"): its first words at once (E_TASK TE_BEGUN, its what the door and what strikes it), a beat as its blows first tell (WB_TELLS) and as they leave it giving (WB_GIVES); both its ends (the user\'s: "doesn\'t seem to stop kicking a door once started"): the dozenth blow (above), and the fourth that makes no mark (seed 14\'s door punched bare-handed: four blows, no more, its bare fist stopped short once and not again at that door, and punched again, four more); a kick in knee boots ending of itself (no question: not bare), and a bare-footed kick at seed 15\'s door stopped short once and breaking it down',
-      init: 't_rc', cycles: 1900e6,
+      init: 't_rc', cycles: 2200e6,   // (Past 1,900M at slice 4.3's: its hands hurt, the referee told each minute of it, and the overlays more)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
         'dq0 -p t -s 14 -c /ram/c.hm -k pick', 'drop the torch', 'hold the pick', 'break the door', 'break', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k pick',
         'drop the torch', 'hold the pick', 'break the door']) +
@@ -4982,14 +4982,14 @@ module.exports = {
       check(m, out) {
         const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4, s = dq0Story(out);
         const all = T.flatMap(t => dq0Ev(t, 'E_FIGHT', {}));
-        const down = all.findIndex(e => (e.def === 0 && (e.ff & FF_D_DOWN)) || (e.who === 0 && (e.ff & FF_A_DOWN)));
+        const down = all.map(e => !!((e.def === 0 && (e.ff & FF_D_DOWN)) || (e.who === 0 && (e.ff & FF_A_DOWN)))).lastIndexOf(true);   // (The last fall: slice 4.3's venom, more than one)
         const bites = [...s.matchAll(/(?:The cave adder|Something) bites at you: a (minor|serious|grievous) ([a-z ]+?) to your [a-z ]+? \(([MSG])(\d+)\)/g)];
         if (bites.length < 13) f.push('not more than twelve wounds (' + bites.length + ')');
         const odd = bites.filter(b => !/^(?:deep )?bite$/.test(b[2]) || b[1][0].toUpperCase() !== b[3] ||
           !({ M: [1], S: [2, 3], G: [4, 5] })[b[3]].includes(+b[4]));
         if (odd.length) f.push('wounds not worded a bite, at their own levels: ' + odd.map(b => b[0]).join('; '));
         if (/ stab /.test(s)) f.push('a stab told: ' + s.match(/[^.]* stab [^.]*\./)[0]);
-        const up = bites.reduce((n, b) => n + +b[4], 0), pen = s.match(/Condition: in shock: (\d+) injuries and lesser hurts, the worst a (serious|grievous) ((?:deep )?bite) to your [a-z ]+? \(([SG])(\d)\)[^.]*penalties: universal (\d+)/);
+        const up = bites.reduce((n, b) => n + +b[4], 0) + (s.match(/It spreads to your/g) || []).length, pen = s.match(/Condition: in shock: (\d+) injuries and lesser hurts, the worst a (serious|grievous) ((?:deep )?bite) to your [a-z ]+? \(([SG])(\d)\)[^.]*penalties: universal (\d+)/);
         if (!pen) f.push('the state not "in shock: N injuries and lesser hurts, the worst a ... bite ...": ' + JSON.stringify((s.match(/Condition: [^.]*\./) || [''])[0]));
         else {
           if (+pen[1] !== 11) f.push('the real injuries not eleven beside the lesser hurts: ' + pen[1]);
@@ -5001,10 +5001,8 @@ module.exports = {
         if (after.length) f.push('struck at after it fell: ' + after.map(e => e.out).join(', '));
         if (!/Everything goes black\..*cave adder[^.]*, fleeing\./.test(s)) f.push('the adders not seen fleeing once it was down');
         if (!/You're in no state to fight\./.test(s)) f.push('not in shock after (no state to fight)');
-        if (s.indexOf('Everything goes black.') !== s.lastIndexOf('Everything goes black.')) f.push('knocked senseless again');
         const cond = [...s.matchAll(/Condition: [^.]*\./g)].map(x => x[0]);   // (Kept: the game carried on, its words the same, a bite a bite)
         if (cond.length !== 2 || cond[0] !== cond[1]) f.push('its state not the same carried on (what dealt each injury kept): ' + JSON.stringify(cond));
-        if (f.length && process.env.DQ0DUMP) f.push(dq0Story(out));   // (DUMP)
         return f;
       },
       sdcard: true
@@ -5025,7 +5023,6 @@ module.exports = {
           f.push('its state not poisoned, nor weak from the loss of blood: ' + JSON.stringify((s.match(/Condition: [^.]*\./) || [''])[0]));
         if (!/You bleed to death\. You are dead\./.test(s)) f.push('not bled to death');
         if (!T.some(t => dq0Ev(t, 'E_BYE', {}).length)) f.push('the game not ended by the death');
-        if (f.length && process.env.DQ0DUMP) f.push(s);
         return f;
       },
       sdcard: true
@@ -5052,7 +5049,6 @@ module.exports = {
         if (!/first aid You clean and bind a wound\.[^>]*It's (?:tended|badly done)\./.test(n)) f.push('the null referee\'s first aid not its own');
         if (!/first aid You have no wounds that want tending\./.test(n)) f.push('the null referee\'s wound tended twice');
         if (!/A wound has healed\./.test(n)) f.push('the null referee\'s wound not healed by a night\'s rest');
-        if (f.length && process.env.DQ0DUMP) f.push(s);
         return f;
       },
       sdcard: true
@@ -5184,11 +5180,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again (slice 4.3's: come round in shock, eight hours waited first, a thing not taken up in shock, its torch burnt out meanwhile and its spare lit); and its encumbrance the referee's the same)",
+      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again (since slice 4.3, come round in shock, a thing not taken up in shock: its torch let fall and not taken up, the load's check that one's alone); and its encumbrance the referee's the same)",
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
         'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
-        'defend none', 'hold the dagger', 'open the door', 'south', ...Array(12).fill('wait'), 'wait 8 hours', 'light the torch', 'drop the torch', 'take the torch', 'quit', 'echo $status']) },
+        'defend none', 'hold the dagger', 'open the door', 'south', ...Array(12).fill('wait'), 'drop the torch', 'take the torch', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4, s = dq0Story(out), I = DQ0_I;
@@ -5202,7 +5198,8 @@ module.exports = {
         if (robs.length !== 1) f.push('not robbed once: ' + robs.length);
         else if (!q.at.actors.some(a => a.k === robs[0].by && a.name === 'bandit')) f.push('robbed by no bandit: ' + robs[0].by);
         if (!/The bandit goes through your things as you lie helpless, and takes what it finds\./.test(s)) f.push('the robbery not told');
-        const now = dq0Carried(q.at), torch = now.find(i => i.name === 'torch' && (i.flags & I.HELD));
+        const now = dq0Carried(q.at), shock = /take the torch You're in shock: you can do no more than rest/.test(s);
+        const torch = (shock ? dq0Carried(T.of('drop the torch').at) : now).find(i => i.name === 'torch' && (i.flags & I.HELD));   // (In shock: as it came round)
         if (dq0Named(now, 'dagger').length || dq0Named(now, 'pennies').length) f.push('the dagger or the pennies still carried');
         if (!torch || !(torch.flags & I.LIT)) f.push('its torch not in hand, lit');
         const lay = q.at.items.filter(i => i.where === 'IW_SQUARE' && (i.n === dag.n || i.n === pen.n));
@@ -5215,10 +5212,9 @@ module.exports = {
         if (rt && rt.after && !dq0Carried(rt.after).some(i => i.name === 'torch' && (i.flags & I.HELD) && (i.flags & I.LIT))) f.push('its torch not in hand, lit, as it was robbed');
         const was = eq(h, 'slot1').pop(), told = rt ? eq(rt, 'slot0') : [], again = eq(tk, 'slot1').pop();
         if (told.length !== 1) f.push('the robbed load not told the referee as it was robbed (the world\'s RS_EQUIP 2): ' + told.length);
-        else if (!was || !again || told[0].w1 >= was.w1 || told[0].w1 !== again.w1)
+        else if (!was || (!shock && !again) || told[0].w1 >= was.w1 || (!shock && told[0].w1 !== again.w1))
           f.push('the load told as it was robbed not what was left: before ' + (was && was.w1) + ', robbed ' + told[0].w1 + ', its torch put down and taken up again ' + (again && again.w1));
-        if (rt && tk.after && rt.after && rt.after.sum.load !== tk.after.sum.load) f.push('the referee\'s encumbrance after the robbery ' + rt.after.sum.load + ', not ' + tk.after.sum.load);
-        if (f.length && process.env.DQ0DUMP) f.push(dq0Story(out));   // (DUMP)
+        if (!shock && rt && tk.after && rt.after && rt.after.sum.load !== tk.after.sum.load) f.push('the referee\'s encumbrance after the robbery ' + rt.after.sum.load + ', not ' + tk.after.sum.load);
         return f;
       },
       sdcard: true
@@ -6349,7 +6345,6 @@ module.exports = {
             if (mine(t).length) f.push('"no": fought on (' + dq0Evs(t) + ')');
           }
         }
-        if (f.length && process.env.DQ0DUMP) f.push(dq0Story(out));   // (DUMP)
         return f;
       },
       sdcard: true

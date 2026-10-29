@@ -219,7 +219,7 @@ struct sym {
 #define S(n)    { #n, n }
 static const struct sym syms[] = {
     S (RS_HELLO), S (RS_LOAD_PC), S (RS_TEST), S (RS_ATTACK), S (RS_HARM), S (RS_TIME), S (RS_EXERT), S (RS_EQUIP),
-    S (RS_DESCRIBE), S (RS_MORALE), S (RS_DICE), S (RS_NEW_ACTOR), S (RS_CONTEST), S (RS_WIELD), S (RS_TREAT),
+    S (RS_DESCRIBE), S (RS_MORALE), S (RS_DICE), S (RS_NEW_ACTOR), S (RS_CONTEST), S (RS_WIELD), S (RS_TREAT), S (RS_KILLER),
     S (SK_BEST), S (SK_PUNCH), S (SK_KICK), S (SK_HEAD), S (SK_THING), S (RS_THING),
     S (KI_TORCH), S (KI_DAGGER), S (KI_PICK), S (KI_SHOVEL), S (KI_ROPE), S (KI_CANDLE), S (KI_LANTERN), S (KI_SACK),
     S (KI_CHEST), S (KI_SKULL), S (KI_CLOAK), S (KI_SWORD), S (KI_BASKET), S (KI_CHAIR), S (KI_BAR), S (KI_PANE),

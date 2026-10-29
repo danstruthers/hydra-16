@@ -34,6 +34,7 @@ void __fastcall__ den_rob (const struct msg* m);    /* (Part 15) The character r
                                                 **   put down at m's w1, w2, or in its faction's hoard there, or hidden
                                                 **   there (I_ROB's) */
 void bled (void);                               /* (Part 15) The bleeding's bloodloss, a minute at a time */
+extern unsigned long body_due;                  /* (Part 70's: the referee's next watch, wtend.c's) */
 unsigned char __fastcall__ den_first (unsigned char k, unsigned char away);    /* (Part 14) Body k's tactical
                                                 **   advantage: backed away (away 1), 2; or its blow first, 1 */
 unsigned char __fastcall__ unlit_at (unsigned char sn, unsigned x, unsigned y);  /* (dq0w.c's) A square dark to

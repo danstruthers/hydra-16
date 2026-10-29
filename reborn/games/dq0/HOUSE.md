@@ -1568,7 +1568,7 @@ table, the healing roll, the infection's and the shock's rolls); what the house 
 - **Another's wounds**: one beside it, an ally (friendly or allied) or one lying senseless; any other "won't let you
   near its wounds".  Its sheet's wounds as the character's.
 - **Healing, the book's** (Physician 4): a healing roll each wound every five days (the Sindarin two), its rate times
-  the Endurance, its levels gone, a wound healed told ("The minor cut to your left forearm has healed."); an EE
+  the Endurance, its levels gone, a wound healed told ("The minor cut to your left forearm has healed."; a roll that fails told too, "... is no better.", the house's); an EE
   treatment healed at the day's end *(the house's: the book's "in a day", the next day's mark)*; an open wound infected
   on a critical failure, then the infection's daily roll, gone at H6, dead at H0 (the Sindarin never).  *The house's*:
   the character's five-day rolls want sixty hours' rest of the five days (the book's twelve hours a day: its waits, its
@@ -1586,7 +1586,8 @@ table, the healing roll, the infection's and the shock's rolls); what the house 
   as before), turn, let a thing drop, call out, give an ally a short order, and the game's own commands; anything else
   refused ("You're in shock: you can do no more than rest, or walk slowly away."; to talk, "you can't string the words
   together"), first aid too (the book's: one not in shock).  (dq0/tend.c's early, before a command's things are looked
-  for.)
+  for.)  A blow at it in shock from any but a killer held, as one at it senseless is (the referee's, RS_KILLER: nobody
+  engages one helpless; a killer strikes on).
 - **A creature's shock, the book's** (every character's): one knocked senseless comes round in shock if its last shock
   roll failed (the referee had dropped it), its only defence none and striking nothing, till its watch's roll brings
   it out.  *The house's*: a creature's shock never kills it (H0 held at H1).  Not yet: the minds' way with one in
@@ -1604,9 +1605,12 @@ table, the healing roll, the infection's and the shock's rolls); what the house 
   senselessness of an ache (the book's shock roll for a new injury not made of it).  Not yet: antidotes (Khalmet's Theriac: the market's,
   Treasure 4's potions), stings (no stinging kind in the game yet), creatures envenomed (none fights another, no blade's
   poisoned).
+- **The body's own dice** *(the house's)*: the time's work (the bleeding, a folk creature's binding, the watches' rolls)
+  and a venom's rolls roll the referee's dice of their own, swapped in about them as the bearings' are (rshouse.h's
+  way), so a fight's and a walk's dice roll as they did whether a body bleeds, heals or is poisoned meanwhile.
 - **The null ruleset's simple way** (dq0null.c): no bleeding, no shock, no venom; first aid five minutes a wound, each
-  tended once ("You clean and bind a wound."); a wound healed each eight hours' rest if it's tended, each day's if not
-  ("A wound has healed.").
+  tended once ("You clean and bind a wound."); a wound healed each seven hours' rest if it's tended, each twenty-one
+  hours' if not ("A wound has healed.").
 
 ## Outfits *(2026-10-27: drafted for the user to review)*
 

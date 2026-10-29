@@ -91,7 +91,7 @@ void __fastcall__ sheet_get (unsigned char n);  /* Sheet n into bs */
 void __fastcall__ sheet_put (unsigned char n);  /*   and back */
 
 /* sheet.c (overlay 1) */
-#define OVLS    6                               /* (The 4th and 5th: the swapped parts' images; the 6th heal.c's) */
+#define OVLS    7                               /* (The 4th and 5th: the swapped parts' images; the 6th and 7th heal.c's) */
 extern char hurt[200];                          /* The last harm's words */
 void sheet (void);                              /* The sheet, into the reply */
 void brief (void);                              /*   its short lines */
@@ -142,8 +142,8 @@ void __fastcall__ body_req (struct req* r);     /* RS_HARM, RS_TIME, RS_TREAT (r
 unsigned char __fastcall__ envenom (const char* key, unsigned char loc, int impact);   /* (fight.c's: a venomous
                                                 **   bite; 1 told) */
 void body_state (void);                         /* (The status's: sheet.c's o_state's) */
-void __fastcall__ venom_time (unsigned m);      /* (Overlay 5's: the venom's course, m minutes at rest's) */
-void __fastcall__ body_line (char* l, unsigned char rd);    /* (Overlay 5's: the save's "body" line made, or read) */
+void __fastcall__ venom_time (unsigned m);      /* (Overlay 7's: the venom's course, m minutes at rest's) */
+void __fastcall__ body_line (char* l, unsigned char rd);    /* (Overlay 7's: the save's "body" line made, or read) */
 extern unsigned out_t;                          /* (Knocked senseless by a venom's ache: RS_TIME's w2) */
 
 /* The bestiary (beasts.c's, overlay 5's read-only data since 2026-10-29: the peoples' room in overlay 2): by the kinds'
