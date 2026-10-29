@@ -349,8 +349,8 @@ function createMachine(opt) {
     : u7 ? (u7.high ? T | u7.mask : T & ~u7.mask) : T;
   const bankInstalled = b => b >= 0xF0 ? (model !== 'noshared' && U < opt.sharedU) : b < opt.modules * 16;
   function bankMem(b) {
-    if (b >= 0xF0) { const k = U * 16 + (b & 15); return sharedBank[k] || (sharedBank[k] = new Uint8Array(0x2000)); }
-    const k = T * 256 + b; return taskBank[k] || (taskBank[k] = new Uint8Array(0x2000));
+    if (b >= 0xF0) { const k = U * 16 + (b & 15); return sharedBank[k] || (sharedBanks_[k] = sharedBank[k] = new Uint8Array(0x2000)); }
+    const k = T * 256 + b; return taskBank[k] || (taskBanks[k] = taskBank[k] = new Uint8Array(0x2000));
   }
   // A RAM fault: the offset in the window that the chip holding bank b actually sees
   const sameChip = (b, f) => b >= 0xF0 ? f >= 0xF0 && ((b ^ f) & 0x0C) === 0 : f < 0xF0 && (b >> 4) === (f >> 4);
@@ -360,7 +360,42 @@ function createMachine(opt) {
     return f.high ? o | f.mask : o & ~f.mask;
   }
   const readWatches = opt.readWatches || [], rWatch = readWatches.length > 0, sharedWrite = opt.sharedWrite || null;
+  // The quick ways (the same answers): task RAM read or written straight, below lowRd and lowWr (none if a model's
+  // what-if, a read watch, a write watch is on; the RTC's registers at the top of its task's); the bank window and
+  // the paged ROM by the task's $00 and $01 (bankRam: its copy of $0000-$7FFF); the BIOS ROM's page (wBase).  Set
+  // again as T, U or W changes, and as a run starts (opt.watches may have changed)
+  let ram = null, bankRam = null, lowRd = 0, lowWr = 0, wBase = 0, sharedOn = false;
+  const bankLimit = opt.modules * 16, promLen = pagedrom.length;
+  const romBase = new Float64Array(256).map((_, b) => romBank(b) * 0x4000);
+  const taskBanks = new Array(16 * 256).fill(null), sharedBanks_ = new Array(256).fill(null);
+  function quick() {
+    ram = taskRam[T]; bankRam = taskRam[tsel(0)];
+    const top = rtc && T === RTC_TASK ? RTC_REGS : 0x8000;
+    lowRd = plain && !rWatch ? top : 0;
+    lowWr = plain && !(opt.watches || []).length ? top : 0;
+    wBase = W * 0x2000 - 0xE000;
+    sharedOn = model !== 'noshared' && U < opt.sharedU;
+  }
   function rd(a) {
+    if (a < lowRd) return ram[a];
+    if (a >= 0x8000 && a < 0xA000 && !ramFault) {
+      const b = bankRam[0];
+      if (b >= 0xF0) {
+        if (!sharedOn) return a >> 8;
+        const k = U * 16 + (b & 15); let mem = sharedBanks_[k];
+        if (mem === null) mem = bankMem(b);
+        return mem[a - 0x8000];
+      }
+      if (!(b < bankLimit)) return a >> 8;
+      let mem = taskBanks[T * 256 + b];
+      if (mem === null) mem = bankMem(b);
+      return mem[a - 0x8000];
+    }
+    if (a >= 0xA000 && a < 0xE000) { const off = romBase[bankRam[1]] + ((a - 0xA000) ^ 0x2000); return off < promLen ? pagedrom[off] : 0xFF; }
+    if (a >= 0xE000 && a < 0xFF00) return osrom[wBase + a];
+    return rdSlow(a);
+  }
+  function rdSlow(a) {
     if (a < 0x8000) {
       if (rWatch) for (const w of readWatches) if (w.addr === a && (w.task < 0 || w.task === tsel(a)))
         log('read: $' + hx(a, 4) + ' (task ' + hx(tsel(a), 1) + ') ' + hx(taskRam[tsel(a)][a]) + ' by ' + hx(W, 1) + ':' + hx(cpu.PC, 4) + ' at cycle ' + cpu.cyc);
@@ -371,10 +406,10 @@ function createMachine(opt) {
     if (a >= 0xFF00 && a < 0xFFF0) {
       const t = cpu.ioAt;
       sync(t);                                                  // (The devices, as of this access's cycle)
-      if (a >= 0xFF10 && a < 0xFF14) return acia.read(a - 0xFF10, t);
-      if (a < 0xFF10) return via.read(a - 0xFF00);
-      if (a === 0xFF41) return ym.readStatus(t);
-      if (vera && a >= 0xFF20 && a < 0xFF40) { const b = vera.read(a - 0xFF20, t); return b < 0 ? 0xFF : b; }   // (Configuring: floating)
+      if (a >= 0xFF10 && a < 0xFF14) { flushAcia(); const b = acia.read(a - 0xFF10, t); settleAcia(); return b; }
+      if (a < 0xFF10) { flushVia(); const b = via.read(a - 0xFF00); settleVia(); return b; }
+      if (a === 0xFF41) { flushYm(); const b = ym.readStatus(t); settleYm(); return b; }
+      if (vera && a >= 0xFF20 && a < 0xFF40) { flushVera(); const b = vera.read(a - 0xFF20, t); settleVera(); return b < 0 ? 0xFF : b; }   // (Configuring: floating)
       return 0xFF;
     }
     if (a === 0xFFF0) return regT; if (a === 0xFFF1) return regU; if (a === 0xFFF2) return V; if (a === 0xFFF3) return regW;
@@ -383,6 +418,25 @@ function createMachine(opt) {
   }
   function wr(a, v) {
     v &= 0xFF;
+    if (a < lowWr) { ram[a] = v; return; }
+    if (a >= 0x8000 && a < 0xA000 && !ramFault) {
+      const b = bankRam[0];
+      if (b >= 0xF0) {
+        if (!sharedOn) return;
+        const k = U * 16 + (b & 15);
+        if (sharedWrite) sharedWrite(k, a - 0x8000, v, T, cpu.lastPC, W);
+        let mem = sharedBanks_[k];
+        if (mem === null) mem = bankMem(b);
+        mem[a - 0x8000] = v; return;
+      }
+      if (!(b < bankLimit)) return;
+      let mem = taskBanks[T * 256 + b];
+      if (mem === null) mem = bankMem(b);
+      mem[a - 0x8000] = v; return;
+    }
+    wrSlow(a, v);
+  }
+  function wrSlow(a, v) {
     if (a < 0x8000) {
       for (const w of opt.watches || []) if (w.addr === a && (w.task < 0 || w.task === tsel(a)))
         log('watch: $' + hx(a, 4) + ' (task ' + hx(tsel(a), 1) + ') ' + hx(taskRam[tsel(a)][a]) + ' -> ' + hx(v) + ' by ' + hx(W, 1) + ':' + hx(cpu.lastPC, 4) + ' at cycle ' + cpu.cyc);
@@ -398,13 +452,13 @@ function createMachine(opt) {
     if (a < 0xFF00) return;
     const t = cpu.ioAt;
     if (a < 0xFFF0) sync(t);                                    // (The devices, as of this access's cycle)
-    if (a >= 0xFF10 && a < 0xFF14) { acia.write(a - 0xFF10, v, t); return; }
-    if (a < 0xFF10) { via.write(a - 0xFF00, v); return; }
+    if (a >= 0xFF10 && a < 0xFF14) { flushAcia(); acia.write(a - 0xFF10, v, t); settleAcia(); return; }
+    if (a < 0xFF10) { flushVia(); via.write(a - 0xFF00, v); settleVia(); return; }
     if (a === 0xFF40) { ym.select(v); return; }                 // YM2151: register, then data
-    if (a === 0xFF41) { ym.write(v, t); return; }
-    if (vera && a >= 0xFF20 && a < 0xFF40) { vera.write(a - 0xFF20, v, t); return; }
-    if (a === 0xFFF0) { regT = v; T = v & 15; return; } if (a === 0xFFF1) { regU = v; U = v & 15; return; }
-    if (a === 0xFFF2) { V = v; return; } if (a === 0xFFF3) { regW = v; W = v & 15; return; }
+    if (a === 0xFF41) { flushYm(); ym.write(v, t); settleYm(); return; }
+    if (vera && a >= 0xFF20 && a < 0xFF40) { flushVera(); vera.write(a - 0xFF20, v, t); settleVera(); return; }
+    if (a === 0xFFF0) { regT = v; T = v & 15; quick(); return; } if (a === 0xFFF1) { regU = v; U = v & 15; quick(); return; }
+    if (a === 0xFFF2) { V = v; return; } if (a === 0xFFF3) { regW = v; W = v & 15; quick(); return; }
     if (a === 0xFFFE) { vecRam[V & 15] = (vecRam[V & 15] & 0xFF00) | v; return; }
     if (a === 0xFFFF) { vecRam[V & 15] = (vecRam[V & 15] & 0xFF) | (v << 8); return; }
   }
@@ -437,21 +491,60 @@ function createMachine(opt) {
   }
   const pcHist = new Map(), profHist = new Map(), profCyc = new Map(), profTask = new Array(16).fill(0);
   let profCount = 0, profCycles = 0;
+  quick();
   cpu.PC = rd(0xFFFC) | (rd(0xFFFD) << 8); cpu.P |= FLAGS.I;  // RESET
 
-  // The devices, brought up to cycle t (at the start of each instruction, and at each I/O access: the access's cycle)
-  let devCyc = 0;
+  // The devices, brought up to cycle t (at the start of each instruction, and at each I/O access: the access's cycle).
+  // A tick that only counts a device's timers down can wait: devSeen is the last cycle the devices were brought up
+  // to; each device's ticks wait until the first cycle it may do more than count down (its idleTo: viaNext ...,
+  // devNext the soonest), and are then taken together, as one (the ticks before, its own since viaAt or aciaAt),
+  // and the tick that does more is given its own cycles, as if every tick had come.  A device read, written or told
+  // something from outside is brought up to devSeen first (its flush), and ticks at the next instruction.  (The
+  // YM2151's and the VERA's ticks are to a cycle, not by one: a tick that does nothing is left out)
+  let devSeen = 0, devNext = 0, viaAt = 0, viaNext = 0, ymNext = 0, veraNext = vera ? 0 : Infinity, aciaAt = 0, aciaNext = 0, irqN = -1, irqDirty = true;
   function sync(t) {
-    const d = t - devCyc; if (d <= 0) return; devCyc = t;
-    via.tick(d);
-    while (ca1At < ca1Edges.length && ca1Edges[ca1At][0] <= t) via.ca1(ca1Edges[ca1At++][1]);
-    ym.tick(t);
-    if (vera) vera.tick(t);
-    acia.tick(d, t);
+    if (t <= devSeen) return;
+    const prev = devSeen; devSeen = t;
+    if (t < devNext) return;
+    if (t >= viaNext) {
+      if (prev > viaAt) via.tick(prev - viaAt);                 // (The ticks that only counted down, as one)
+      via.tick(t - prev); viaAt = t;
+      while (ca1At < ca1Edges.length && ca1Edges[ca1At][0] <= t) via.ca1(ca1Edges[ca1At++][1]);
+      viaNext = t + via.nextEvent();
+      if (ca1At < ca1Edges.length && ca1Edges[ca1At][0] < viaNext) viaNext = ca1Edges[ca1At][0];
+      irqDirty = true;
+    }
+    if (t >= ymNext) { ym.tick(t); ymNext = ym.idleTo(); irqDirty = true; }
+    if (vera && t >= veraNext) { vera.tick(t); veraNext = vera.idleTo(t); irqDirty = true; }
+    if (t >= aciaNext) {
+      if (prev > aciaAt) acia.tick(prev - aciaAt, prev);
+      acia.tick(t - prev, t); aciaAt = t;
+      aciaNext = acia.idleTo(t); irqDirty = true;
+    }
+    devNext = Math.min(viaNext, ymNext, veraNext, aciaNext);
   }
+  // A device brought up to devSeen, to be read or changed: it ticks again at the next instruction (or, read or written
+  // by the CPU, its settle works out when)
+  function flushVia() { if (devSeen > viaAt) { via.tick(devSeen - viaAt); viaAt = devSeen; } viaNext = devNext = 0; irqDirty = true; }
+  function flushAcia() { if (devSeen > aciaAt) { acia.tick(devSeen - aciaAt, devSeen); aciaAt = devSeen; } aciaNext = devNext = 0; irqDirty = true; }
+  function flushYm() { ymNext = devNext = 0; irqDirty = true; }
+  function flushVera() { if (!vera) return; vera.tick(devSeen); veraNext = devNext = 0; irqDirty = true; }
+  function flush() { flushVia(); flushAcia(); flushYm(); flushVera(); }
+  // A device read or written (brought up to devSeen first): its idleTo, as it is now
+  const settled = () => { devNext = Math.min(viaNext, ymNext, veraNext, aciaNext); irqDirty = true; };
+  function settleVia() {
+    viaNext = viaAt + via.nextEvent();
+    if (ca1At < ca1Edges.length && ca1Edges[ca1At][0] < viaNext) viaNext = ca1Edges[ca1At][0];
+    settled();
+  }
+  function settleAcia() { aciaNext = acia.idleTo(aciaAt); settled(); }
+  function settleYm() { ymNext = ym.idleTo(); settled(); }
+  function settleVera() { veraNext = vera.idleTo(devSeen); settled(); }
   // Cycles to the next device event (for a WAI: the CPU sleeps until then)
-  const nextEvent = () => Math.min(via.nextEvent(), ym.nextEvent(devCyc), acia.nextEvent(), vera ? vera.nextEvent(devCyc) : Infinity,
-    ca1At < ca1Edges.length ? Math.max(1, ca1Edges[ca1At][0] - devCyc) : Infinity);
+  const nextEvent = () => { flush(); return Math.min(via.nextEvent(), ym.nextEvent(devSeen), acia.nextEvent(), vera ? vera.nextEvent(devSeen) : Infinity,
+    ca1At < ca1Edges.length ? Math.max(1, ca1Edges[ca1At][0] - devSeen) : Infinity); };
+  // (What's typed or sent from outside: the devices up to date first)
+  for (const k of ['send', 'type']) { const f = acia[k]; acia[k] = x => { flushAcia(); f(x); }; }
 
   // Run until cycle limit (or a halt)
   const traceLen = opt.trace === undefined ? 25 : opt.trace, pcWatches = opt.pcWatches || [], profileFrom = opt.profile === undefined ? -1 : opt.profile,
@@ -499,13 +592,18 @@ function createMachine(opt) {
     pendAt = (pendAt + 1) % pend.length; pendN++;
   }
   function run(limit) {
+    quick();
+    flush();
     runTo(limit);
+    flush();
     if (audio) audio.pump(cpu.cyc);
   }
   function runTo(limit) {
+    if (!breaks.length && !calls && !traceLen && !opt.pcHist && profileFrom < 0) { runQuick(limit); return; }
     while (cpu.cyc < limit && !cpu.halted) {
       sync(cpu.cyc);
-      if (irqLine() >= 0) {
+      if (irqDirty) { irqN = irqLine(); irqDirty = false; }
+      if (irqN >= 0) {
         cpu.waiting = false;
         if (!(cpu.P & I)) {                                     // (Taken: an IRQs-off stretch ends here, and the
           if (iOffAt >= 0) { iOffNote(cpu.cyc - iOffAt, iOffFrom, W << 16 | cpu.lastPC, iOffAt); iOffAt = -1; }   //   service starts its own)
@@ -541,14 +639,45 @@ function createMachine(opt) {
     }
   }
 
+  // runTo's loop with none of the debugger's and the profile's things on (the tests' runs): the same, step for step
+  function runQuick(limit) {
+    const nW = pcWatches.length;
+    for (;;) {
+      const cyc = cpu.cyc;
+      if (cyc >= limit || cpu.halted) return;
+      if (cyc > devSeen) { if (cyc < devNext) devSeen = cyc; else sync(cyc); }
+      if (irqDirty) { irqN = irqLine(); irqDirty = false; }
+      if (irqN >= 0) {
+        cpu.waiting = false;
+        if (!(cpu.P & I)) {
+          if (iOffAt >= 0) { iOffNote(cyc - iOffAt, iOffFrom, W << 16 | cpu.lastPC, iOffAt); iOffAt = -1; }
+          cpu.interrupt(irqVector()); continue;
+        }
+      }
+      if (cpu.waiting) { cpu.cyc += Math.max(1, Math.min(nextEvent(), limit - cyc)); continue; }
+      if (acia.typedAt >= 0) {                                  // IRQs-off stretches, from the first key typed
+        if (cpu.P & I) { if (iOffAt < 0) { iOffAt = cyc; iOffFrom = W << 16 | cpu.PC; } }
+        else if (iOffAt >= 0) { iOffNote(cyc - iOffAt, iOffFrom, W << 16 | cpu.lastPC, iOffAt); iOffAt = -1; }
+      }
+      if (nW) {
+        const PC = cpu.PC;
+        for (let i = 0; i < nW; i++) { const w = pcWatches[i]; if (w.pc === PC && (w.page < 0 || w.page === W))
+          log('pc: ' + hx(W, 1) + ':' + hx(PC, 4) + ' T=' + hx(T, 1) + ' A=' + hx(cpu.A) + ' X=' + hx(cpu.X) + ' Y=' + hx(cpu.Y) + ' S=' + hx(cpu.S) + ' P=' + hx(cpu.P) + ' at cycle ' + cyc); }
+      }
+      cpu.step(irqVector);
+    }
+  }
+
   // The reset button (RESB): the CPU, the VIA, the ACIA and the YM2151 reset, and the VERA configures itself again;
   // RAM, the pseudo-registers (plain latches), VRAM and the SD cards keep their state, as on the board
   function hwReset() {
+    flush();
     via.reset();
     acia.reset();
     ym.reset();
     if (vera) vera.reset(cpu.cyc);
     cpu.reset();
+    flush();
   }
 
   // (A task's RAM bank b, as it is: undefined if it was never written; tools/hysnap.js reads hylang's heap with it)
@@ -591,8 +720,6 @@ const CYC = ('7621535532216465' + '2551546524216465' + '6621335542214465' + '255
 const PAGE_X = new Uint8Array(256);
 for (const o of [0x11, 0x19, 0x1D, 0x31, 0x39, 0x3D, 0x51, 0x59, 0x5D, 0x71, 0x79, 0x7D, 0xB1, 0xB9, 0xBD, 0xD1, 0xD9, 0xDD,
   0xF1, 0xF9, 0xFD, 0xBC, 0xBE, 0x3C, 0x1E, 0x3E, 0x5E, 0x7E]) PAGE_X[o] = 1;   // (Shifts abs,X too, on the 65C02)
-const DECIMAL_X = new Uint8Array(256);
-for (const o of [0x61, 0x65, 0x69, 0x6D, 0x71, 0x72, 0x75, 0x79, 0x7D, 0xE1, 0xE5, 0xE9, 0xED, 0xF1, 0xF2, 0xF5, 0xF9, 0xFD]) DECIMAL_X[o] = 1;
 const C = 1, Z = 2, I = 4, D = 8, B = 0x10, Vf = 0x40, N = 0x80;
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
 
@@ -613,6 +740,7 @@ function createCpu(bus) {
   const fetch = () => { const v = rd(PC); PC = (PC + 1) & 0xFFFF; return v; };
   const fetch16 = () => { const v = rd16(PC); PC = (PC + 2) & 0xFFFF; return v; };
   function adc(v) {
+    if (P & D) extra = 1;                                     // (Decimal mode: a cycle more)
     const c = P & C; let r = A + v + c;
     P = (P & ~(C | Vf)) | (r > 0xFF ? C : 0) | ((~(A ^ v) & (A ^ r) & 0x80) ? Vf : 0);
     if (P & D) {
@@ -624,6 +752,7 @@ function createCpu(bus) {
   }
   function sbc(v) {
     if (!(P & D)) { adc(v ^ 0xFF); return; }
+    extra = 1;
     const b = 1 - (P & C), r = A - v - b; let lo = (A & 15) - (v & 15) - b, hi = (A >> 4) - (v >> 4);
     if (lo < 0) { lo -= 6; hi--; } if (hi < 0) hi -= 6;
     P = (P & ~C) | (r >= 0 ? C : 0); A = setNZ(((hi << 4) | (lo & 15)) & 0xFF);
@@ -649,20 +778,17 @@ function createCpu(bus) {
   const rol = v => { const c = P & C; P = (P & ~C) | (v >> 7); return setNZ(((v << 1) | c) & 0xFF); };
   const ror = v => { const c = P & C; P = (P & ~C) | (v & 1); return setNZ((v >> 1) | (c << 7)); };
   const bit = v => { P = (P & ~(N | Vf | Z)) | (v & 0xC0) | ((A & v) ? 0 : Z); };
-  const ALU = [v => A = setNZ(A | v), v => A = setNZ(A & v), v => A = setNZ(A ^ v), adc, null, null, v => cmp(A, v), sbc];
-  const CC1_MODE = [indx, zp, () => -1, abs, indy, zpx, absy, absx];                  // (cc = 1: bbb's mode; -1 immediate)
-  const CC2_MODE = [null, zp, null, abs, null, zpx, null, absx];                       // (cc = 2: the shifts, INC, DEC)
-  const CC2_OP = [asl, rol, lsr, ror, null, null, v => setNZ((v - 1) & 0xFF), v => setNZ((v + 1) & 0xFF)];
+  const dec = v => setNZ((v - 1) & 0xFF), inc = v => setNZ((v + 1) & 0xFF);
   const bad = () => { cpu.halted = 'unimplemented opcode $' + hx(op) + ' at ' + cpu.where((PC - 1) & 0xFFFF); };
 
-  // One instruction; .vector() gives BRK's vector
+  // One instruction; .vector() gives BRK's vector.  (Every opcode its own case, its mode and operation called
+  // straight: no table of functions in the way)
   cpu.step = vector => {
     cpu.lastPC = PC;
     op = fetch();
-    crossed = 0; extra = DECIMAL_X[op] && (P & D) ? 1 : 0;
+    crossed = 0; extra = 0;
     cpu.ioAt = cpu.cyc + CYC[op] - 1;                         // (Its data access: the last cycle, near enough)
-    let a, v, t;
-    const aaa = op >> 5, bbb = (op >> 2) & 7, cc = op & 3;
+    let a, v, t, z;
     switch (op) {
       case 0x00: PC = (PC + 1) & 0xFFFF; irq(vector(), true); break;                   // BRK
       case 0x40: P = pull() | 0x30; PC = pull(); PC |= pull() << 8; break;              // RTI
@@ -695,7 +821,7 @@ function createCpu(bus) {
       case 0x04: case 0x0C: a = op === 0x04 ? zp() : abs(); v = rd(a); P = (P & ~Z) | ((A & v) ? 0 : Z); wr(a, v | A); break;   // TSB
       case 0x14: case 0x1C: a = op === 0x14 ? zp() : abs(); v = rd(a); P = (P & ~Z) | ((A & v) ? 0 : Z); wr(a, v & ~A); break;  // TRB
       case 0x92: wr(indz(), A); break; case 0xB2: A = setNZ(rd(indz())); break;
-      case 0x12: ALU[0](rd(indz())); break; case 0x32: ALU[1](rd(indz())); break; case 0x52: ALU[2](rd(indz())); break;
+      case 0x12: A = setNZ(A | rd(indz())); break; case 0x32: A = setNZ(A & rd(indz())); break; case 0x52: A = setNZ(A ^ rd(indz())); break;
       case 0x72: adc(rd(indz())); break; case 0xD2: cmp(A, rd(indz())); break; case 0xF2: sbc(rd(indz())); break;
       case 0xA2: X = setNZ(fetch()); break; case 0xA0: Y = setNZ(fetch()); break;
       case 0xA6: X = setNZ(rd(zp())); break; case 0xB6: X = setNZ(rd(zpy())); break; case 0xAE: X = setNZ(rd(abs())); break; case 0xBE: X = setNZ(rd(absy())); break;
@@ -709,22 +835,29 @@ function createCpu(bus) {
       case 0x03: case 0x13: case 0x23: case 0x33: case 0x43: case 0x53: case 0x63: case 0x73: case 0x83: case 0x93: case 0xA3: case 0xB3:
       case 0xC3: case 0xD3: case 0xE3: case 0xF3: case 0x0B: case 0x1B: case 0x2B: case 0x3B: case 0x4B: case 0x5B: case 0x6B: case 0x7B:
       case 0x8B: case 0x9B: case 0xAB: case 0xBB: case 0xEB: case 0xFB: break;                                   // 1-byte NOPs
-      default:
-        if ((op & 0x0F) === 0x0F) { const n = (op >> 4) & 7, z = fetch(); const set = (rd(z) >> n) & 1; br((op & 0x80) ? set : !set); break; }   // BBR/BBS
-        if ((op & 0x0F) === 0x07) { const n = (op >> 4) & 7, z = fetch(); v = rd(z); wr(z, (op & 0x80) ? v | (1 << n) : v & ~(1 << n)); break; } // RMB/SMB
-        if (cc === 1) {
-          a = CC1_MODE[bbb]();
-          if (aaa === 4) { if (a >= 0) wr(a, A); else fetch(); break; }                // STA (no immediate)
-          v = a < 0 ? fetch() : rd(a);
-          if (aaa === 5) A = setNZ(v); else ALU[aaa](v);
-          break;
-        }
-        if (cc === 2) {
-          const mode = CC2_MODE[bbb], f = CC2_OP[aaa];
-          if (!mode || !f) { bad(); break; }
-          rmw(mode(), f); break;
-        }
-        bad();
+      case 0x01: A = setNZ(A | rd(indx())); break; case 0x05: A = setNZ(A | rd(zp())); break; case 0x09: A = setNZ(A | fetch()); break; case 0x0D: A = setNZ(A | rd(abs())); break; case 0x11: A = setNZ(A | rd(indy())); break; case 0x15: A = setNZ(A | rd(zpx())); break; case 0x19: A = setNZ(A | rd(absy())); break; case 0x1D: A = setNZ(A | rd(absx())); break;   // ORA
+      case 0x21: A = setNZ(A & rd(indx())); break; case 0x25: A = setNZ(A & rd(zp())); break; case 0x29: A = setNZ(A & fetch()); break; case 0x2D: A = setNZ(A & rd(abs())); break; case 0x31: A = setNZ(A & rd(indy())); break; case 0x35: A = setNZ(A & rd(zpx())); break; case 0x39: A = setNZ(A & rd(absy())); break; case 0x3D: A = setNZ(A & rd(absx())); break;   // AND
+      case 0x41: A = setNZ(A ^ rd(indx())); break; case 0x45: A = setNZ(A ^ rd(zp())); break; case 0x49: A = setNZ(A ^ fetch()); break; case 0x4D: A = setNZ(A ^ rd(abs())); break; case 0x51: A = setNZ(A ^ rd(indy())); break; case 0x55: A = setNZ(A ^ rd(zpx())); break; case 0x59: A = setNZ(A ^ rd(absy())); break; case 0x5D: A = setNZ(A ^ rd(absx())); break;   // EOR
+      case 0x61: adc(rd(indx())); break; case 0x65: adc(rd(zp())); break; case 0x69: adc(fetch()); break; case 0x6D: adc(rd(abs())); break; case 0x71: adc(rd(indy())); break; case 0x75: adc(rd(zpx())); break; case 0x79: adc(rd(absy())); break; case 0x7D: adc(rd(absx())); break;   // ADC
+      case 0x81: wr(indx(), A); break; case 0x85: wr(zp(), A); break; case 0x8D: wr(abs(), A); break; case 0x91: wr(indy(), A); break; case 0x95: wr(zpx(), A); break; case 0x99: wr(absy(), A); break; case 0x9D: wr(absx(), A); break;   // STA
+      case 0xA1: A = setNZ(rd(indx())); break; case 0xA5: A = setNZ(rd(zp())); break; case 0xA9: A = setNZ(fetch()); break; case 0xAD: A = setNZ(rd(abs())); break; case 0xB1: A = setNZ(rd(indy())); break; case 0xB5: A = setNZ(rd(zpx())); break; case 0xB9: A = setNZ(rd(absy())); break; case 0xBD: A = setNZ(rd(absx())); break;   // LDA
+      case 0xC1: cmp(A, rd(indx())); break; case 0xC5: cmp(A, rd(zp())); break; case 0xC9: cmp(A, fetch()); break; case 0xCD: cmp(A, rd(abs())); break; case 0xD1: cmp(A, rd(indy())); break; case 0xD5: cmp(A, rd(zpx())); break; case 0xD9: cmp(A, rd(absy())); break; case 0xDD: cmp(A, rd(absx())); break;   // CMP
+      case 0xE1: sbc(rd(indx())); break; case 0xE5: sbc(rd(zp())); break; case 0xE9: sbc(fetch()); break; case 0xED: sbc(rd(abs())); break; case 0xF1: sbc(rd(indy())); break; case 0xF5: sbc(rd(zpx())); break; case 0xF9: sbc(rd(absy())); break; case 0xFD: sbc(rd(absx())); break;   // SBC
+      case 0x06: a = zp(); wr(a, asl(rd(a))); break; case 0x0E: a = abs(); wr(a, asl(rd(a))); break; case 0x16: a = zpx(); wr(a, asl(rd(a))); break; case 0x1E: a = absx(); wr(a, asl(rd(a))); break;
+      case 0x26: a = zp(); wr(a, rol(rd(a))); break; case 0x2E: a = abs(); wr(a, rol(rd(a))); break; case 0x36: a = zpx(); wr(a, rol(rd(a))); break; case 0x3E: a = absx(); wr(a, rol(rd(a))); break;
+      case 0x46: a = zp(); wr(a, lsr(rd(a))); break; case 0x4E: a = abs(); wr(a, lsr(rd(a))); break; case 0x56: a = zpx(); wr(a, lsr(rd(a))); break; case 0x5E: a = absx(); wr(a, lsr(rd(a))); break;
+      case 0x66: a = zp(); wr(a, ror(rd(a))); break; case 0x6E: a = abs(); wr(a, ror(rd(a))); break; case 0x76: a = zpx(); wr(a, ror(rd(a))); break; case 0x7E: a = absx(); wr(a, ror(rd(a))); break;
+      case 0xC6: a = zp(); wr(a, dec(rd(a))); break; case 0xCE: a = abs(); wr(a, dec(rd(a))); break; case 0xD6: a = zpx(); wr(a, dec(rd(a))); break; case 0xDE: a = absx(); wr(a, dec(rd(a))); break;
+      case 0xE6: a = zp(); wr(a, inc(rd(a))); break; case 0xEE: a = abs(); wr(a, inc(rd(a))); break; case 0xF6: a = zpx(); wr(a, inc(rd(a))); break; case 0xFE: a = absx(); wr(a, inc(rd(a))); break;
+      case 0x0F: z = fetch(); br(!((rd(z) >> 0) & 1)); break; case 0x8F: z = fetch(); br((rd(z) >> 0) & 1); break; case 0x07: z = fetch(); wr(z, rd(z) & 0xFE); break; case 0x87: z = fetch(); wr(z, rd(z) | 0x01); break;
+      case 0x1F: z = fetch(); br(!((rd(z) >> 1) & 1)); break; case 0x9F: z = fetch(); br((rd(z) >> 1) & 1); break; case 0x17: z = fetch(); wr(z, rd(z) & 0xFD); break; case 0x97: z = fetch(); wr(z, rd(z) | 0x02); break;
+      case 0x2F: z = fetch(); br(!((rd(z) >> 2) & 1)); break; case 0xAF: z = fetch(); br((rd(z) >> 2) & 1); break; case 0x27: z = fetch(); wr(z, rd(z) & 0xFB); break; case 0xA7: z = fetch(); wr(z, rd(z) | 0x04); break;
+      case 0x3F: z = fetch(); br(!((rd(z) >> 3) & 1)); break; case 0xBF: z = fetch(); br((rd(z) >> 3) & 1); break; case 0x37: z = fetch(); wr(z, rd(z) & 0xF7); break; case 0xB7: z = fetch(); wr(z, rd(z) | 0x08); break;
+      case 0x4F: z = fetch(); br(!((rd(z) >> 4) & 1)); break; case 0xCF: z = fetch(); br((rd(z) >> 4) & 1); break; case 0x47: z = fetch(); wr(z, rd(z) & 0xEF); break; case 0xC7: z = fetch(); wr(z, rd(z) | 0x10); break;
+      case 0x5F: z = fetch(); br(!((rd(z) >> 5) & 1)); break; case 0xDF: z = fetch(); br((rd(z) >> 5) & 1); break; case 0x57: z = fetch(); wr(z, rd(z) & 0xDF); break; case 0xD7: z = fetch(); wr(z, rd(z) | 0x20); break;
+      case 0x6F: z = fetch(); br(!((rd(z) >> 6) & 1)); break; case 0xEF: z = fetch(); br((rd(z) >> 6) & 1); break; case 0x67: z = fetch(); wr(z, rd(z) & 0xBF); break; case 0xE7: z = fetch(); wr(z, rd(z) | 0x40); break;
+      case 0x7F: z = fetch(); br(!((rd(z) >> 7) & 1)); break; case 0xFF: z = fetch(); br((rd(z) >> 7) & 1); break; case 0x77: z = fetch(); wr(z, rd(z) & 0x7F); break; case 0xF7: z = fetch(); wr(z, rd(z) | 0x80); break;
+      default: bad();                                                                    // (None: every opcode is above)
     }
     cpu.cyc += CYC[op] + extra + (crossed && PAGE_X[op] ? 1 : 0);
   };
@@ -849,7 +982,25 @@ function createAcia(env) {
       else { if (a.typedAt < 0) a.typedAt = t; a.rx = c.charCodeAt(0); a.rdrf = 1; a.rxAt = t; if (!(a.cmd & 2)) a.irq = 1; a.rxDelay = paste ? a.charCycles() : 20000; }
     }
   };
-  a.irqActive = () => !!(a.irq && ((!wdc && (a.cmd & 0x0C) === 0x04 && a.tdre) || (!(a.cmd & 2) && a.rdrf)));
+  // After a tick at cycle t: the first cycle a tick may do more than count its timers down (a character's time over,
+  // a byte in, a prompt waited for come): until then the machine's ticks can wait, taken together (machine.js's sync)
+  a.idleTo = t => {
+    let n = a.txTimer > 0 ? t + a.txTimer : Infinity;
+    if (a.pcQueue.length) return Math.min(n, t + Math.max(1, a.pcDelay));
+    const q = a.rxQueue;
+    if (!q.length) return n;
+    const c = q[0];
+    if (c === 'ā') {
+      if (a.promptFrom < 0) return t + 1;
+      if (a.sent > a.promptFrom && (a.tail.endsWith('> ') || a.tail.endsWith('>') || a.tail.endsWith('% ') || a.tail.endsWith('%') || a.tail.endsWith(' <')))
+        return Math.min(n, Math.max(t + 1, a.sentAt + PROMPT_QUIET));
+      return n;
+    }
+    if (a.held && !a.kbd && c < 'Ā' && a.lag <= 0) return n;
+    if (!a.rdrf || paste || a.kbd || c === 'Ă') return Math.min(n, t + Math.max(1, a.rxDelay));
+    return n;
+  };
+  a.irqActive = () =>!!(a.irq && ((!wdc && (a.cmd & 0x0C) === 0x04 && a.tdre) || (!(a.cmd & 2) && a.rdrf)));
   a.nextEvent = () => {
     let n = Infinity;
     if (a.txTimer > 0) n = Math.min(n, a.txTimer);
@@ -1394,7 +1545,14 @@ function createYm(env) {
     if (y.reg === 0x14) timers(v, t);
     if (y.reg === 0x08 && (v & 0x78)) y.keyOns.push('ch ' + (v & 7) + ' at cycle ' + t);
   };
-  y.irqActive = () => !!(y.status & 3);
+  y.idleTo = () => {                                          // (The first cycle a tick does anything: machine.js's sync)
+    let n = Infinity;
+    if (y.resetAt >= 0) n = y.resetAt;
+    if (y.aNext >= 0 && y.aNext < n) n = y.aNext;
+    if (y.bNext >= 0 && y.bNext < n) n = y.bNext;
+    return n;
+  };
+  y.irqActive = () =>!!(y.status & 3);
   y.nextEvent = devCyc => {
     let n = Infinity;
     if (y.aNext >= 0 && (y.regs[0x14] & 4)) n = Math.min(n, Math.max(1, y.aNext - devCyc));
@@ -2428,6 +2586,13 @@ function createVera(env) {
     return ((isr | (fcnt < AFLOW ? 8 : 0)) & ien) !== 0;
   }
   function tick(t) { curT = t; if (t >= readyAt) { scan(t); if (ien & 8) pcm(t); } }
+  // After a tick at devCyc: the first cycle a tick does more than note the bus's cycle (configured, a unit with
+  // something to do; with the PCM's interrupt on, every tick: machine.js's sync)
+  function idleTo(devCyc) {
+    if (devCyc < readyAt) return readyAt;
+    if (ien & 8) return devCyc + 1;
+    return Math.max(devCyc + 1, nextCyc);
+  }
   function nextEvent(devCyc) {
     if (devCyc < readyAt) return Math.max(1, readyAt - devCyc);
     let n = Infinity;                                         // (Only an interrupt that's on: VSYNC's and SPRCOL's
@@ -2642,7 +2807,7 @@ function createVera(env) {
   }
   // The sound on: each sample given to fn(left, right) (16 bits each), from cycle 0
   function sound(fn) { sink = fn; made = 0; }
-  Object.assign(v, { read, write, tick, irqActive, nextEvent, reset: t => reconfigure(t), frame, cells, text, peek, rgbPalette, sound, soundTo, load });
+  Object.assign(v, { read, write, tick, idleTo, irqActive, nextEvent,reset: t => reconfigure(t), frame, cells, text, peek, rgbPalette, sound, soundTo, load });
   return v;
 }
 
