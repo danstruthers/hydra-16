@@ -140,14 +140,14 @@ typedef char dkind_fits[sizeof (struct dkind) == 40 ? 1 : -1];     /* (make.js's
 #define NFACT           8
 struct faction {
     char            name[12];
-    char            tongue[8];                  /* ("": none) */
+    char            tongue[9];                  /* ("": none; 8 letters, 2026-10-29: "sindarin") */
     unsigned char   att;                        /* AT_* */
-    unsigned char   rel[NFACT];                 /* AT_*: each faction's, by number */
-    unsigned char   spare[3];
+    unsigned char   rel[NFACT];                 /* AT_*: each faction's, by number (a stand-in's: the first 7) */
+    unsigned char   spare[2];
 };
 typedef char faction_fits[sizeof (struct faction) == 32 ? 1 : -1];
 static unsigned char nfacts;
-static char ftongue[NFACT][8];
+static char ftongue[NFACT][9];
 static unsigned char fatt0[NFACT], frel[NFACT][NFACT];
 
 /* ---- The records: the lairs and the denizens, in a bank of their own (a cache: its records' places free, kind 0,
@@ -165,6 +165,9 @@ struct lair {
     unsigned char   rx, ry;                     /* Its region (its chunk's first square's, the frame's) */
 };
 #define L_PLACED        0x01                    /* Its denizens placed */
+#define L_LEADER        0x02                    /* Its faction's leader with them (a theme's home: popgen's, 2026-10-29), its
+                                                **   faction the high bits (L_FAC) */
+#define L_FAC(f)        (((f) >> 4) & 7)
 struct den {
     unsigned char   kind;
     unsigned char   flags;                      /* D_* */
@@ -478,6 +481,9 @@ static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, un
         den_put (u);
     }
     L.n = i;
+    if (ll) {
+        L.flags |= L_LEADER | (lf & 7) << 4;
+    }
     lair_put (t);
     if ((K.flags & K_LIGHTS) && i) {            /* (Its keepers' lights: the places kept, the hub's) */
         hub_map (DEN_BANK);
@@ -654,9 +660,10 @@ void __fastcall__ s_place (unsigned char i)
             D.ready = now + random (50);
         }
         den_put (k);
-        im.a = (j ? 0 : KT_LAIR) | ((kind_get (kd), KF_NATURE (K.form)) >= NA_FOLK ? KT_ROLE : 0);  /* (Its lair's
-                                                **   own with its first: its stores, its hoard; a beast's den's, the
-                                                **   dead's lair's, 2026-10-29; folk's and the dead's roles) */
+        im.a = (j && kd == L.kind ? 0 : KT_LAIR) | ((kind_get (kd), KF_NATURE (K.form)) >= NA_FOLK ? KT_ROLE : 0);  /* (Its
+                                                **   lair's own with its first: its stores, its hoard; a beast's den's,
+                                                **   the dead's lair's, 2026-10-29; folk's and the dead's roles; a
+                                                **   theme's leader with its home its own too, its hoard, 2026-10-29) */
         if (im.a == KT_LAIR && (hub_map (0), HUB->gear & GE_OLD)) {
             im.a = 0;                           /* (dq0 -K's, the tests': a beast's den none, as before, not even asked
                                                 **   of the world) */
@@ -845,9 +852,10 @@ static void settle (void)
 
 /* Actor k's (the copy a's) intent: what it's doing, and the way it faces, with it */
 /* Where actor k (a robber, its kind's record K) takes what it robs (I_ROB's w1, w2, x[2], b): its faction's hoard, the
-** home of a lair of its faction's leader (kinds.txt's keeps H) placed on its stratum (RB_HOARD: the world puts the
-** takings in the hoard there, b its kind's faction); else its own home, hidden there if its kind hides its things
-** (RB_HIDE), else lying there (HOUSE.md's the robbers' takings, 2026-10-27); K its own again after */
+** home of a lair of its faction's leader (kinds.txt's keeps H; or a theme's home, its leader with it: L_LEADER,
+** 2026-10-29, its theme's faction the robber's) placed on its stratum (RB_HOARD: the world puts the takings in the
+** hoard there, b its kind's faction); else its own home, hidden there if its kind hides its things (RB_HIDE), else
+** lying there (HOUSE.md's the robbers' takings, 2026-10-27); K its own again after */
 static void __fastcall__ rob_to (unsigned char k)
 {
     unsigned char i, f = K.faction;
@@ -859,8 +867,9 @@ static void __fastcall__ rob_to (unsigned char k)
     im.x[2] = X.keeps == KP_HIDDEN ? RB_HIDE : 0;
     for (i = 0; i < hd.nlairs; ++i) {
         lair_get (i);
-        if (L.kind && (L.flags & L_PLACED) && L.sn == a.sn && (kx_get (L.kind), X.keeps == KP_LEADER) &&
-            (kind_get (L.kind), K.faction == f)) {
+        if (L.kind && (L.flags & L_PLACED) && L.sn == a.sn && ((L.flags & L_LEADER) ?
+            L_FAC (L.flags) == HUB->actor[k].faction :
+            (kx_get (L.kind), X.keeps == KP_LEADER) && (kind_get (L.kind), K.faction == f))) {
             im.w1 = L.hx;
             im.w2 = L.hy;
             im.x[2] = RB_HOARD;
@@ -1276,21 +1285,32 @@ void __fastcall__ s_killed (unsigned char k)
     hub_map (0);
 }
 
-/* Actor k fallen (dead, senseless): its kin among the actors test their courage (RS_MORALE, a bad situation, two
-** steps worse: a friend seen slain), and those it breaks (or shakes, a shy kind) flee */
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW2CODE")            /* (Part 2's since 2026-10-29: part 4's room for the peoples) */
+#pragma rodata-name (push, "SW2RODATA")
+
+/* Actor k fallen (dead, senseless): its kin among the actors (its kind, and its faction's: 2026-10-29) test their
+** courage (RS_MORALE, a bad situation, two steps worse: a friend seen slain; four, its faction's leader: HOUSE.md's
+** the peoples, the Gargun's king above all), and those it breaks (or shakes, a shy kind) flee; K its own again after */
 void __fastcall__ s_dismay (unsigned char k)
 {
-    unsigned char j;
+    unsigned char j, f = HUB->actor[k].faction;
+    signed char st;
 
+    kx_get (akind[k]);
+    st = X.keeps == KP_LEADER ? -4 : -2;
     for (j = 0; j < NACTORS; ++j) {
-        if (j != k && akind[j] == akind[k] && !fled[j]) {
-            rq.steps = -2;
+        if (j != k && HUB->actor[j].name[0] && (akind[j] == akind[k] || HUB->actor[j].faction == f) && !fled[j]) {
+            kind_get (akind[j]);
+            rq.steps = st;
             ask (RS_MORALE, j + 1, 0);
             if (rq.result == M_BROKEN || (rq.result == M_CAUTIOUS && (K.flags & K_SHY))) {
                 fled[j] = FLEE_T;               /* (Its doing and its attitude its next turn's: fleeing) */
             }
         }
     }
+    kind_get (akind[k]);
 }
 
 #pragma code-name (pop)
@@ -2216,11 +2236,13 @@ int __fastcall__ s_start (const char* dir)
         } else {
             memcpy (fatt0, piece, NFACT);
             memcpy (frel, piece + POP_NFACT, NFACT * NFACT);
-            memcpy (piece + 128, ftongue, sizeof ftongue);
-            for (f = 1; f < NFACT; ++f) {       /* (Each its first kind's stand-in faction's tongue) */
+            for (f = 1; f < NFACT; ++f) {       /* (Each its first kind's stand-in faction's tongue, from its record:
+                                                **   the history's factions past a stand-in's 7 too, 2026-10-29) */
                 kind_get (piece[POP_NFACT * (POP_NFACT + 1) + f]);
-                k = K.faction & (NFACT - 1);
-                memcpy (ftongue[f], piece + 128 + k * sizeof ftongue[0], sizeof ftongue[0]);
+                hy_bank (kb);
+                k = K.faction < KINDS[0].styles ? K.faction : 0;
+                memcpy (ftongue[f], ((struct faction*) (KINDS + nkinds) + k)->tongue, sizeof ftongue[0]);
+                hub_map (0);
             }
         }
     }

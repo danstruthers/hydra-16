@@ -37,8 +37,9 @@ enum { PL_NONE, PL_WORN, PL_HAND, PL_OFF, PL_BOTH, PL_BELT, PL_POUCH, PL_PACK, P
 #define SF_OLD          0x40                    /*   of old, grave goods: the stratum's age, its oldest era's mint) */
 #define OF_INDEX        ((unsigned char*) 0x9480)    /* (The outfits' file's head and its sections' index, read into
                                                 **   the catalogue's bank after its code the first time (CAT_BANK):
-                                                **   4 bytes, then 5 a section, then each one's length, 190 at most:
-                                                **   outfits.js's, 2026-10-27) */
+                                                **   4 bytes, then 5 a section, then each one's length, 250 at most:
+                                                **   outfits.js's, 2026-10-27; to $9A80 at most, 2026-10-29, the
+                                                **   peoples: the bank's code ends at $944A) */
 
 /* A thing drawn: its kind, how many (of a lot counted; else one), its make, where it goes, the thing it goes in (PL_IN:
 ** the list's entry plus 1), its flags, its material (MT_*: 0 its kind's) */

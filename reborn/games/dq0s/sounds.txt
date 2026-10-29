@@ -51,6 +51,30 @@ cultist  | step  | soft footsteps     | d 37   | n 0 92    | 2-20 | 2    | 60
 cultist  | noise | a low chanting     | 52 50  | t 0 50    | 1-0  | 90   | 85
 priest   | step  | a slow tread       | d 37   | n 0 82    | 2-28 | 2    | 65
 priest   | noise | a droning prayer   | 52 45  | t 0 45    | 1-0  | 100  | 90
+arak     | step  | light padding feet | d 37   | n 0 96    | 3-10 | 2    | 60
+arak     | noise | a yipping snarl    | 85 80  | p 32 80   | 3-10 | 5    | 95
+hyeka    | step  | padding feet       | d 37   | n 0 90    | 2-16 | 2    | 75
+hyeka    | noise | a guttural grunting | 52 40 | t 0 40    | 3-12 | 8    | 100
+khanu    | step  | heavy padding feet | d 41   | n 0 80    | 2-18 | 3    | 85
+khanu    | noise | a harsh snarl      | 30 30  | s 0 35    | 1-0  | 70   | 110
+kyani    | step  | soft padding feet  | d 37   | n 0 94    | 2-16 | 2    | 65
+kyani    | noise | a low growling     | 30 34  | s 0 38    | 1-0  | 80   | 90
+viasal   | step  | padding feet       | d 37   | n 0 86    | 2-16 | 2    | 80
+viasal   | noise | a guttural snarling | 52 36 | t 0 36    | 2-14 | 10   | 105
+garking  | step  | a heavy tread      | d 41   | n 0 70    | 2-22 | 4    | 90
+garking  | noise | a bellowing grunt  | 30 26  | s 0 30    | 1-0  | 90   | 120
+khuzwar  | step  | heavy boots        | d 41   | n 0 72    | 2-22 | 3    | 85
+khuzwar  | noise | a deep voice       | 52 40  | t 0 40    | 1-0  | 50   | 100
+khuzmin  | step  | heavy boots        | d 41   | n 0 72    | 2-22 | 3    | 85
+khuzmin  | noise | a tapping of picks | d 76   | n 0 100   | 3-20 | 1    | 95
+khuzeld  | step  | slow, heavy boots  | d 41   | n 0 68    | 2-26 | 3    | 80
+khuzeld  | noise | a deep murmur      | 52 36  | t 0 36    | 1-0  | 70   | 90
+sindwar  | step  | faint footfalls    | d 37   | n 0 96    | 2-20 | 1    | 40
+sindwar  | noise | a soft singing     | 52 64  | t 0 64    | 1-0  | 60   | 60
+manarms  | step  | booted footsteps   | d 37   | n 0 80    | 2-20 | 3    | 85
+manarms  | noise | a clink of mail    | d 81   | n 0 110   | 2-6  | 1    | 80
+captain  | step  | booted footsteps   | d 37   | n 0 78    | 2-20 | 3    | 85
+captain  | noise | a barked order     | 52 50  | t 0 50    | 1-0  | 40   | 105
 *dig     | -     | -                  | d 80   | n 0 116   | 1-0  | 3    | 100
 *open    | -     | -                  | 120 50 | s 8 50    | 1-0  | 40   | 90
 *shut    | -     | -                  | d 35   | n 0 40    | 1-0  | 6    | 110

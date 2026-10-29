@@ -26,7 +26,7 @@
 #             chapel, a bedchamber, the lord's solar, a well room, a cistern, a gatehouse, a guardroom, a workshop)
 
 people    | the Ardish | ardish
-kinds     | bandit banlord
+kinds     | bandit banlord manarms captain
 tongue    | common
 lands     | h p f c
 climate   | t
@@ -58,7 +58,7 @@ uses      | firepit | larder | sleeping hall | weapon store | spirit house | sle
           | cistern | gate | watch post | workshop
 
 people    | the Delvers | delver
-kinds     | -
+kinds     | khuzwar khuzmin khuzeld
 tongue    | delver
 lands     | m h
 climate   | *
@@ -122,7 +122,7 @@ uses      | cookpit | larder | warriors' den | armoury | shrine | sleeping burro
           | gatehouse | guardroom | workshop
 
 people    | the Starkin | starkin
-kinds     | -
+kinds     | sindwar
 tongue    | starkin
 lands     | f h
 climate   | t

@@ -58,6 +58,8 @@ static const struct weapon {
     { "shortsw", "shortsword", HARN_SWD, 10, 5, { 2, 4, 4 }, 0xFF },
     { "falchin", "falchion", HARN_SWD, 15, 5, { 4, 6, 1 }, 0xFF },
     { "longknf", "longknife", HARN_SWD, 10, 15, { 1, 3, 5 }, 0xFF },
+    { "mankar", "mankar", HARN_SWD, 10, 5, { 2, 5, 0 }, 0xFF },     /* (The Gargun's, Combat 3's (G): 2026-10-29) */
+    { "mang", "mang", HARN_SWD, 15, 10, { 3, 6, 0 }, 0xFF, 5 },
     { "bastard", "bastard sword", HARN_SWD, 20, 10, { 4, 7, 4 }, 0xFF, 10 },
     { "hatchet", "hatchet", HARN_AXE, 5, 5, { 3, 4, -1 }, 0xFF },
     { "sickle", "sickle", HARN_AXE, 5, 5, { 1, 4, 3 }, 0xFF },

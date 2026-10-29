@@ -48,6 +48,12 @@ extern unsigned long seed;                      /* (The seed it's made from) */
 unsigned char __fastcall__ era_now (unsigned char k);   /* Stratum k's era now (its last layer built or reused's) */
 unsigned char __fastcall__ lives (unsigned char b, unsigned char k);    /* The bestiary's kind b can live in k */
 int __fastcall__ work_of (const char* s);       /* WK_*, or -1 */
+const char* __fastcall__ peoples (const char* f);  /* Faction f one of the history's peoples' (the dwarves, the elves,
+                                                **   the soldiers, the gargun: 2026-10-29): its kinds, pk_era the era
+                                                **   its place is (1 on; 0, it isn't there), pk_lead its leader's key; or
+                                                **   NULL, none of them */
+extern unsigned char pk_era;
+extern const char* pk_lead;
 const char* __fastcall__ purpose_words (unsigned char p);
 
 /* ---- Words: the slots (%A ...: history.txt's, goals.txt's) filled; the data's words picked */
