@@ -39,7 +39,7 @@ extern unsigned tg_lines;
 extern unsigned char tg_key[];
 
 /* The bestiary (the data's beast and faction lines: kinds.txt's, factions.txt's) */
-#define NBEASTS         16
+#define NBEASTS         32                      /* (hub.h's SND_KINDS: the kinds at most; 2026-10-29, the peoples) */
 struct beast {
     char            key[8];
     unsigned char   styles;                     /* A bit each: ST_* (b n m x) */

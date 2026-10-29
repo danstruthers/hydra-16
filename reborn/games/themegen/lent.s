@@ -10,6 +10,7 @@
             .forceimport    _ge, _geu, _gg, _given, _given_each, _gk, _gmission, _goal_line, _gs, _gu, _land, _lives
             .forceimport    _name_of, _nbeasts, _ne, _nf, _noun, _ns, _pick, _purpose_of, _purpose_words, _rand32
             .forceimport    _rname, _rock, _seed, _sl, _st, _tg_count, _tg_find, _tg_get, _tg_key, _tg_lines, _title
+            .forceimport    _peoples, _pk_era, _pk_lead
             .forceimport    _val, _valn, _water, _work_of, _works, _wused, _beasts, _erp, _stp, _fap, _beastp, _Dp
             .forceimport    _strncat, _strncmp, _ultoa, ___bzero, _strlen, _strcpy, _strcat, _strcmp, _strchr, _strstr
             .forceimport    _strncpy, _memcpy, _memset, _atoi, _write

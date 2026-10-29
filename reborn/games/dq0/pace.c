@@ -327,8 +327,8 @@ unsigned char __fastcall__ s_travel_go (const char* l)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "OV9CODE")
-#pragma rodata-name (push, "OV9RODATA")
+#pragma code-name (push, "OV3CODE")            /* (Overlay 3's since 2026-10-29: overlay 9's room for the look) */
+#pragma rodata-name (push, "OV3RODATA")
 
 /* ---- A line's first look (main.c's, in the overlay's bank: the part's copied in only for a line that may be its):
 ** 0 if line l has none of the words s_pace_cmd acts on (split's words, the case aside), nor one begun with a figure.

@@ -20,7 +20,8 @@ const TREC = 64, NOSE_HUNTS = 6;                // (wtrace.c's struct tkind: a k
 const STYLES = { b: 0, n: 1, m: 2, x: 3 };      // level.h's ST_*: a bit each
 const MINDS = { m: 0, b: 1, l: 2, a: 3, c: 4 }; // dq0d.c's M_*
 const AT = { h: 0, u: 1, w: 2, i: 3, f: 4 };    // hub.h's AT_*
-const KREC = 40, FREC = 32, NFACT = 8;          // (dq0d.c's: a kind's record, a faction's, the factions at most)
+const KREC = 40, FREC = 32, NFACT = 8, NFILE = 16;   // (dq0d.c's: a kind's record, a faction's, a game's factions at
+                                                //   most; the file's: the history's past a stand-in's, 2026-10-29)
 const XREC = 5, KEEPS = 'bohclH', USES = 'chlvygaskpbreqowitdf';   // (dq0d.c's struct dkx; its KP_*; world.h's U_*)
 const SND_KINDS = 32;                           // (hub.h's: the kinds at most, the first none; the themes' bits)
 const LANDS = 'mhfscp', CLIMATES = 'ctw';       // lore.h's LA_*, CL_*: a bit each, in order
@@ -93,7 +94,7 @@ function words(base) {
 function build({ dir, objdir, say = () => {} }) {
   const facs = lines(path.join(dir, 'factions.txt')), names = facs.map(f => f[0]);
   const kinds = lines(path.join(dir, 'kinds.txt')), keys = kinds.map(f => f[1]);
-  if (facs.length >= NFACT) throw new Error('dq0d/factions.txt: more than ' + (NFACT - 1) + ' factions');
+  if (facs.length >= NFILE) throw new Error('dq0d/factions.txt: more than ' + (NFILE - 1) + ' factions');
   if (kinds.length >= SND_KINDS) throw new Error('dq0d/kinds.txt: more than ' + (SND_KINDS - 1) + ' kinds');
   const out = Buffer.alloc(KREC * (kinds.length + 1) + FREC * (facs.length + 1) + XREC * (kinds.length + 1));
   out[20] = kinds.length + 1;
@@ -126,7 +127,7 @@ function build({ dir, objdir, say = () => {} }) {
   });
   const rel = names.map(() => names.map(() => AT.i)), base = KREC * (kinds.length + 1);
   facs.forEach((f, i) => {
-    if (f.length !== 4 || f[0].length > 11 || f[1].length > 7 || !(f[2] in AT))
+    if (f.length !== 4 || f[0].length > 11 || f[1].length > 8 || !(f[2] in AT))
       throw new Error(`dq0d/factions.txt: line ${i + 1}: ${f.join(' | ')}`);
     rel[i][i] = AT.f;
     f[3].split(',').map(s => s.trim()).filter(s => s && s !== '-').forEach(s => {
@@ -139,9 +140,9 @@ function build({ dir, objdir, say = () => {} }) {
     const at = base + FREC * (i + 1);
     out.write(f[0], at, 'latin1');
     if (f[1] !== '-') out.write(f[1], at + 12, 'latin1');
-    out[at + 20] = AT[f[2]];
-    rel[i].forEach((v, j) => { out[at + 21 + j + 1] = v; });
-    out[at + 21] = AT.i;                         // (To none: indifferent)
+    out[at + 21] = AT[f[2]];                    // (Its tongue 8 letters, 2026-10-29: "sindarin")
+    rel[i].forEach((v, j) => { if (j + 1 < NFACT) out[at + 22 + j + 1] = v; });   // (A stand-in's: the first 7's)
+    out[at + 22] = AT.i;                         // (To none: indifferent)
   });
   kinds.forEach((f, i) => {                     // (Each kind's belongings' ways: keeps, standing, its home's uses)
     const at = KREC * (kinds.length + 1) + FREC * (facs.length + 1) + XREC * (i + 1);

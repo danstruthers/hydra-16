@@ -136,6 +136,9 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
                                                 **   by material) */
     KI_FARTHINGS,                               /* (A silver penny cut in four, HarnWorld 23's: the user's, 2026-10-28,
                                                 **   "Please keep farthings as they might be useful for denizens") */
+    KI_MANKAR, KI_MANG,                         /* The Gargun's weapons (Combat 3's (G): Phase 4's peoples, 2026-10-29;
+                                                **   past the theme's, the own kinds' room full: struck with as the
+                                                **   best held, never named as the striker) */
     KI_COUNT };
 
 #define KIND_WORDS      ((const char*) (CATALOGUE + NKINDS))     /* (In the kinds' bank after them: the words of

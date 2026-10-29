@@ -1799,6 +1799,68 @@ What the house adds, for review:
 - **Told:** a closer look at a pile within reach, its stamps by how much of it each group is ("all", "most", "many",
   "some", "a few"), an era's "(old)"; the appraisal its worth so.
 
+## The peoples *(2026-10-29: Phase 4's, the user's answer 11; drafted for the user to review)*
+
+The user's (DECISIONS.md's outfits, answer 11): "Please use the denizens from the HarnWorld Bestiary, and include
+Khuzdul (dwarves), the Sindarin (elves), Humans, and Gargun (or all types)."  Twelve kinds more (dq0d/kinds.txt, 29 in
+all): the five Gargun sub-species and their king, the Khuzdul's warrior, miner and elder, a Sindarin warden, men-at-arms
+and their captain.  The books' where they speak: HarnMaster 3.5's Gargun 1-8 (each sub-species' attributes, skills,
+natural armour, equipment, group, habitat, ways), Character 7-8 (the species' attribute modifiers), HarnWorld's
+Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, for review:
+
+- **The names:** the Gargun by the book's English names, "small orc" (Gargu-arak), "brown orc" (hyeka), "black orc"
+  (khanu), "white orc" (kyani), "red orc" (viasal), and an "orc king"; "dwarf", "dwarf miner", "dwarf elder"; "elf";
+  "soldier", "captain".  More than one: "dwarves", "elves" (dens.c's plural, an f made ves).
+- **Their sheets** (dq0harn/beasts.c): the Gargun's the book's (attributes, Initiative, Dodge, the usual weapon's
+  mastery); their fur and hide the book's natural armour (B4 E3 P1 F3), the better of it and what they wear at each
+  place (not folk's: the book has their armour over it, the house takes the better, as the dead's); the black orc and
+  the king sooner berserk than fled (the book's "more likely to become berserk than flee": a critical failure of
+  courage berserk six in ten, desperate a quarter, cautious the rest, never broken); the king the house's, a black orc's
+  best (Strength 15, Initiative 80, its mang 70).  The Khuzdul and the Sindarin a man's 11 with the species' modifiers;
+  their trade's mastery the house's (a warrior's 65, a miner's 50, an elder's 70, a warden's 65); men-at-arms and a
+  captain as the bandit and its lord.  Their weights by their build (a dwarf some 150 lb).
+- **Their senses and ways** (kinds.txt): the Gargun nocturnal (they keep to the dark), their night vision seeing as
+  far in the dark as by a light (the book's: no darkness penalty), the small orc's hearing and nose keen (a hunter by
+  smell, following a trail); the dwarves', the elf's and the soldiers' sight a man's, by their own light (they keep
+  their rooms lit, as the bandits do), the elf's the keener (Eyesight 2 more: 60 feet).  Their paces: a small orc's
+  quick (Move 13), a dwarf's short-legged (11 tenths a square), an elf's light (9).
+- **Their minds** (DENIZENS.md's factions and attitudes, what they allow now): the Gargun hostile to everyone, the
+  dwarves above all (the book's "insane hatred"); a brown orc a robber that hides its takings at its bed (its mates not
+  trusted: the book's squabbling, thieving tribes), a black and a red orc and their king killers (the book's: they eat
+  their prisoners), a small orc a shy hunter, a white orc neither (the book's least violent, its honour: a foe brought
+  down left be), and the easiest swayed (one step), a black orc the hardest (three against).  The dwarves wary, keeping
+  to their halls (a lair intruded on, the attitude a step down), cunning (hard to fool), stubborn (a step against);
+  the elf wary and aloof, keeping its distance (shy), two steps against swaying; the soldiers unfriendly, keeping to
+  their posts.  A faction's kin dismayed as one falls (each of its kind and, since this, of its faction among the
+  actors, its courage tested two steps worse), and four worse as its leader falls (the king above all: the book's
+  Gargun submit only to a strength they've seen).
+- **Their tongues** (factions.txt): the dwarves' khuzdul, the elves' sindarin, the soldiers' common; the Gargun one,
+  "gargun" (the book's: five tongues and a sign language every Gargun knows; the house's one for them all, the sign
+  language's).  A word to one wants its tongue (a character's file's "language khuzdul").
+- **Where they live** (themegen's histgen, its peoples): the dwarves, the elves and the men's soldiers where an era of
+  their people holds its works still (the last era's "it is theirs still"), on that era's strata; the Gargun in
+  mountains, hills or forest where an era of the dwarves lost its works and no dwarves hold theirs (the book's colonies
+  in abandoned Khuzdul halls), a tribe of white orcs in cold mountains, else by the dice brown orcs ruled by black ones,
+  red orcs alone (too fierce for the black orcs' rule), or brown and small orcs; their king their leader, the dwarves'
+  elder theirs, the soldiers' captain theirs.  The story's who has it now: a people that holds it first.
+- **Their gear** (outfits.txt): the Gargun's the book's Equipment lists, their own make (crude to middling; a white
+  orc's finer, the book's: they make finer things), the cloth tunic the catalogue's clothes, a cowl a leather cap, a
+  plate halfhelm an iron helm; the mankar and the mang their own weapons (Combat 3's (G): the catalogue's past the
+  theme's, its own kinds' room full, so named in "strike with the mang" the best held is struck with); a white orc's
+  silver now and then (the book's: they treasure it above all); their nests' straw, a brown or red orc's stash at its
+  bed; their lairs the bones of what they've eaten, their king's hoard.  The dwarves' fine (a warrior's mail, an
+  axe or a warhammer, a shield; a miner's pick, hammer, chisel and lantern), their stores and their elder's hoard (the
+  dwarves' gold in it, crowns, not in their purses: the user's), a locked box at a warrior's or a miner's bed; an elf's
+  longknife and hartbow (Combat 3's (S)), its stores; the soldiers' a unit's issue, their stores and spare arms, their
+  captain's strongbox.
+- **Seen:** a look's "in mail" for a body in mail or other metal body armour ("A dwarf in mail, armed, is ahead"),
+  else "armoured" as before.
+- **Left for later** (written down, not built): the black orcs' slaves (the book's hybrid colonies: brown and small
+  orcs ruled, a faction within a faction), the red and black orcs' feuds within a tribe, a swarm and a civil war; the
+  white orcs' trade in silver and the dwarves' trade (the market); the Gargun cowed by a strength they see (an
+  attitude by the character's power: DENIZENS.md's more of the attitudes); the elves' barter (the user's answer 9
+  gives them coins); a captor leading the character away (the soldiers'); the Gargun's sub-species' own tongues.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

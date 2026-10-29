@@ -126,7 +126,15 @@ folk     | crawlers | the spiders
 folk     | dead | the dead
 folk     | beasts | the beasts
 folk     | kobolds | the kobolds
+folk     | gargun | the gargun
+folk     | dwarves | the dwarves
+folk     | elves | the elves
+folk     | soldiers | the soldiers
+now      | dwarves | The dwarves hold it still, and keep its halls lit against the dark.
+now      | elves | The elves keep it still, and few who come there see them.
+now      | soldiers | Soldiers hold it still, and keep its gates against all comers.
 now      | dead | Now the dead walk there in the dark, and worse things with them.
+now      | gargun | Now the gargun have it, and squabble and feast in its dark.
 now      | kobolds | Now the kobolds dig and squabble in it, and keep what they find.
 now      | beasts | Now beasts lair in it, and the dark has it.
 now      | crawlers | Now spiders spin in it, and the dark has it.

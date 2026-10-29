@@ -339,11 +339,11 @@ int __fastcall__ beast_of (const char* key)
 
 void bestiary (void)
 {
-    static char fac[8][12];
+    static char fac[16][12];                    /* (factions.txt's, 15 at most: the history's peoples, 2026-10-29) */
     unsigned char k, nf = 0;
     struct beast* b;
 
-    for (k = 0; k < 8 && data (TK_FACTION, 0, k); ++k) {
+    for (k = 0; k < 16 && data (TK_FACTION, 0, k); ++k) {
         strncpy (fac[nf++], D.v[0], 11);
     }
     for (k = 0; k < NBEASTS && data (TK_BEAST, 0, k); ++k) {

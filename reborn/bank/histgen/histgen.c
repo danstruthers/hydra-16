@@ -183,11 +183,17 @@ static void make_strata (void)
 
 /* ---- The inhabitants now: each of the bestiary's factions that has a stratum its kinds live in, and that the
 ** history calls for, its strata those, its lair one of them (the dead's an era's that ended cursed, the kobolds' the
-** deepest of their mines), its number its kinds' lairs' groups */
+** deepest of their mines), its number its kinds' lairs' groups.  The peoples (Phase 4's, 2026-10-29): the dwarves, the
+** elves and the men's soldiers where an era of theirs holds its works still, on its strata; the gargun in mountains,
+** hills or forest where the dwarves' works were lost (the book's: their colonies in abandoned Khuzdul halls), a tribe
+** of one or two of their kinds (white orcs in cold mountains; else brown orcs ruled by black ones, red orcs, or brown
+** and small orcs), with a king; the dwarves' elder and the soldiers' captain their leaders (themegen's peoples) */
+#pragma static-locals (push, on)                /* (Its locals static: the bank program's room, 2026-10-29) */
 static void make_factions (void)
 {
-    unsigned char k, b, sn, n, ok, any, cursed = 0, dead = 0, nw;
+    unsigned char k, b, sn, n, ok, any, cursed = 0, dead = 0, nw, h, i;
     unsigned char where[TSTRATA];
+    const char* ch;                             /* (Its kinds chosen: of its own, these only) */
     struct fac* f;
     struct beast* p;
 
@@ -201,16 +207,31 @@ static void make_factions (void)
     for (k = 0; nf < TFACTIONS && data (TK_FACTION, 0, k); ++k) {
         f = &fa[nf];
         memset (f, 0, sizeof *f);
+        ok = !strcmp (D.v[0], "dead") ? dead : !strcmp (D.v[0], "beasts") ? among (land, "mountains hills forest") : 1;
+        h = 0;
+        if ((ch = peoples (D.v[0])) != 0) {     /* (A people's: its era, its kinds, its leader) */
+            ok = (h = pk_era) != 0;
+        }
+        if (!ok) {
+            continue;
+        }
         for (nw = sn = 0; sn < ns; ++sn) {      /* (Where its kinds live) */
             for (any = b = 0; b < nbeasts; ++b) {
-                any |= beasts[b].faction == k && lives (b, sn);
+                any |= beasts[b].faction == k && (!ch || among (beasts[b].key, ch)) && lives (b, sn);
             }
             if (any) {
                 where[nw++] = sn;
             }
         }
-        ok = !strcmp (D.v[0], "dead") ? dead : !strcmp (D.v[0], "beasts") ? among (land, "mountains hills forest") : 1;
-        if (!nw || !ok) {
+        for (i = sn = 0; h && sn < nw; ++sn) {  /* (A people's on its era's strata, if its kinds live there) */
+            if (era_now (where[sn]) == h) {
+                where[i++] = where[sn];
+            }
+        }
+        if (i) {
+            nw = i;
+        }
+        if (!nw) {
             continue;
         }
         strcpy (f->name, D.v[0]);
@@ -220,7 +241,7 @@ static void make_factions (void)
         f->d1 = where[nw - 1];
         f->lair = where[random (nw)];
         for (n = b = 0, p = beasts; b < nbeasts; ++b, ++p) {
-            if (p->faction == k) {
+            if (p->faction == k && (!ch || among (p->key, ch))) {
                 if (*f->kinds) {
                     strcat (f->kinds, " ");
                 }
@@ -232,6 +253,9 @@ static void make_factions (void)
             }
         }
         f->n = n ? n : 1;
+        if (ch && pk_lead) {
+            f->leader = beast_of (pk_lead) + 1;
+        }
         if (cursed && !strcmp (f->name, "dead")) {
             for (sn = 0; sn < nw && era_now (where[sn]) != cursed; ++sn) {
             }
@@ -247,6 +271,7 @@ static void make_factions (void)
         ++nf;
     }
 }
+#pragma static-locals (pop)
 
 /* ---- A hand-written theme's own groups read in, so that what's made fits them */
 

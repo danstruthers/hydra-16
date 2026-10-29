@@ -4,7 +4,7 @@
 // banks of its own as it starts and draws from (dq0w/outfit.c).  The file's layout (outfit.c's, little-endian):
 //
 //   'O' 'F' VERSION NSEC, then NSEC entries { hash (2), offset (2), flags (1) } (the section's name hashed: outfit.c's
-//   hash; its flags, its head's first byte, for a draw that wants some: 190 entries at most), then each entry's
+//   hash; its flags, its head's first byte, for a draw that wants some: 250 entries at most), then each entry's
 //   section's length, a byte (version 4: the world reads it whole, no more),
 //   then the sections (255 bytes each at most: outdraw.c reads one whole, by its offset; 200 till version 3)
 //   a section:  flags (SF_*: weapon 1, shield 2, free 4, kit 8, armed 16), bent (its bent's section's entry plus 1,
@@ -198,7 +198,7 @@ function compile({ src, names, out, dens }) {
   file.write('OF', 0, 'latin1');
   file[2] = VERSION;
   file[3] = named.length + alias.length;
-  if (named.length + alias.length > 190) throw new Error(src + ': more than 190 sections and kinds (outfit.h: OF_INDEX)');
+  if (named.length + alias.length > 250) throw new Error(src + ': more than 250 sections and kinds (outfit.h: OF_INDEX)');
   named.forEach((s, i) => { const k = secs.indexOf(s); file.writeUInt16LE(hash(s.name), 4 + i * 5); file.writeUInt16LE(offs[k], 6 + i * 5); file[8 + i * 5] = s.flags; });
   alias.forEach(([n, i], k) => { const e = 4 + (named.length + k) * 5; file.writeUInt16LE(hash(n), e); file.writeUInt16LE(offs[i], e + 2); file[e + 4] = secs[i].flags; });
   const lens = [...named.map(s => body[secs.indexOf(s)].b.length), ...alias.map(([, i]) => body[i].b.length)], l0 = 4 + (named.length + alias.length) * 5;

@@ -138,14 +138,14 @@ typedef char dkind_fits[sizeof (struct dkind) == 40 ? 1 : -1];     /* (make.js's
 #define NFACT           8
 struct faction {
     char            name[12];
-    char            tongue[8];                  /* ("": none) */
+    char            tongue[9];                  /* ("": none; 8 letters, 2026-10-29: "sindarin") */
     unsigned char   att;                        /* AT_* */
-    unsigned char   rel[NFACT];                 /* AT_*: each faction's, by number */
-    unsigned char   spare[3];
+    unsigned char   rel[NFACT];                 /* AT_*: each faction's, by number (a stand-in's: the first 7) */
+    unsigned char   spare[2];
 };
 typedef char faction_fits[sizeof (struct faction) == 32 ? 1 : -1];
 static unsigned char nfacts;
-static char ftongue[NFACT][8];
+static char ftongue[NFACT][9];
 static unsigned char fatt0[NFACT], frel[NFACT][NFACT];
 
 /* ---- The records: the lairs and the denizens, in a bank of their own (a cache: its records' places free, kind 0,
@@ -1263,21 +1263,32 @@ void __fastcall__ s_killed (unsigned char k)
     hub_map (0);
 }
 
-/* Actor k fallen (dead, senseless): its kin among the actors test their courage (RS_MORALE, a bad situation, two
-** steps worse: a friend seen slain), and those it breaks (or shakes, a shy kind) flee */
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW2CODE")            /* (Part 2's since 2026-10-29: part 4's room for the peoples) */
+#pragma rodata-name (push, "SW2RODATA")
+
+/* Actor k fallen (dead, senseless): its kin among the actors (its kind, and its faction's: 2026-10-29) test their
+** courage (RS_MORALE, a bad situation, two steps worse: a friend seen slain; four, its faction's leader: HOUSE.md's
+** the peoples, the Gargun's king above all), and those it breaks (or shakes, a shy kind) flee; K its own again after */
 void __fastcall__ s_dismay (unsigned char k)
 {
-    unsigned char j;
+    unsigned char j, f = HUB->actor[k].faction;
+    signed char st;
 
+    kx_get (akind[k]);
+    st = X.keeps == KP_LEADER ? -4 : -2;
     for (j = 0; j < NACTORS; ++j) {
-        if (j != k && akind[j] == akind[k] && !fled[j]) {
-            rq.steps = -2;
+        if (j != k && HUB->actor[j].name[0] && (akind[j] == akind[k] || HUB->actor[j].faction == f) && !fled[j]) {
+            kind_get (akind[j]);
+            rq.steps = st;
             ask (RS_MORALE, j + 1, 0);
             if (rq.result == M_BROKEN || (rq.result == M_CAUTIOUS && (K.flags & K_SHY))) {
                 fled[j] = FLEE_T;               /* (Its doing and its attitude its next turn's: fleeing) */
             }
         }
     }
+    kind_get (akind[k]);
 }
 
 #pragma code-name (pop)
@@ -2174,11 +2185,13 @@ int __fastcall__ s_start (const char* dir)
         } else {
             memcpy (fatt0, piece, NFACT);
             memcpy (frel, piece + POP_NFACT, NFACT * NFACT);
-            memcpy (piece + 128, ftongue, sizeof ftongue);
-            for (f = 1; f < NFACT; ++f) {       /* (Each its first kind's stand-in faction's tongue) */
+            for (f = 1; f < NFACT; ++f) {       /* (Each its first kind's stand-in faction's tongue, from its record:
+                                                **   the history's factions past a stand-in's 7 too, 2026-10-29) */
                 kind_get (piece[POP_NFACT * (POP_NFACT + 1) + f]);
-                k = K.faction & (NFACT - 1);
-                memcpy (ftongue[f], piece + 128 + k * sizeof ftongue[0], sizeof ftongue[0]);
+                hy_bank (kb);
+                k = K.faction < KINDS[0].styles ? K.faction : 0;
+                memcpy (ftongue[f], ((struct faction*) (KINDS + nkinds) + k)->tongue, sizeof ftongue[0]);
+                hub_map (0);
             }
         }
     }
