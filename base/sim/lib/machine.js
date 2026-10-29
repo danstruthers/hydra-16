@@ -29,7 +29,8 @@
 // test runner's hub writers' check, reborn/sim/lib/hubown.js); opt.calls (a Map: a jump table slot's
 // address -> its call's name), opt.errNames (code -> name) and opt.callFilter (a Set of names and "tN", or none):
 // each call a program makes logged, with its registers, and what it gives back as it returns.  The loop that runs each instruction allocates nothing, so the emulator runs as fast as the
-// host can (about 20 MHz of the Hydra's cycles on a 2019 desktop): keep it that way.
+// host can (with the WebAssembly core, core.js: some 90 MHz of the Hydra's cycles in a dq0 test on a 2019 desktop, 190 MHz
+// on plain code; the JS's alone about half that): keep it that way.
 'use strict';
 const { createCpu, FLAGS } = require('./cpu65c02.js');
 const { createAcia } = require('./acia.js');
@@ -41,6 +42,7 @@ const { createYm } = require('./ym2151.js');
 const { createRtc, RTC_REGS, RTC_TASK } = require('./ds1747.js');
 const { createVera } = require('./vera.js');
 const { createAudio } = require('./audio.js');
+const { createCore, available: coreAvailable } = require('./core.js');
 
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
 const LINES = 16;                                             // The IRQ lines (0 the highest priority)
@@ -58,12 +60,30 @@ function createMachine(opt) {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
   const rnd = n => (random() * n) | 0;
 
+  // ---- The WebAssembly core (core.js: the CPU and the memory map, run by runWasm), unless something's on that only
+  // the JS has (a model's what-if, a RAM fault, read watches, a BIOS image short of 128K), or opt.core is 'js' (or
+  // HYDRA_CORE=js): then the JS's alone (cpu65c02.js and rd, wr).  With it, the memory is in its memory (task RAM,
+  // the banks, the vector RAM, the trace's ring: views of it), the JS's ways reading and writing the same bytes
+  const coreWanted = opt.core || (typeof process === 'object' && process.env && process.env.HYDRA_CORE) || 'wasm';
+  const coreBanks = Math.max(0, Math.min(240, opt.modules * 16 || 0));
+  const core = coreWanted !== 'js' && coreAvailable() && !opt.model && !opt.u7Fault && !opt.ramFault && !(opt.readWatches || []).length &&
+    osrom.length >= 0x20000 ? createCore(coreEnv(), { banks: coreBanks, promLen: pagedrom.length, osromLen: osrom.length,
+      ringLen: opt.trace === undefined ? 25 : opt.trace }) : null;
+  const coreFlags = core ? new Uint8Array(core.buf, core.FLAGS, 16 * 256 + 256) : null;
+  if (core) { new Uint8Array(core.buf, core.PROM, pagedrom.length).set(pagedrom); new Uint8Array(core.buf, core.OSROM, osrom.length).set(osrom); }
+
   // ---- memory, the pseudo-registers, the devices (in this order: the power-up's random numbers)
-  const taskRam = []; for (let i = 0; i < 16; i++) taskRam.push(new Uint8Array(0x8000).map(() => rnd(256)));
+  const taskRam = [];
+  for (let i = 0; i < 16; i++) {
+    const r = core ? new Uint8Array(core.buf, core.TR + i * 0x8000, 0x8000) : new Uint8Array(0x8000);
+    for (let j = 0; j < 0x8000; j++) r[j] = rnd(256);
+    taskRam.push(r);
+  }
   let cpu = null;
   const rtc = opt.rtc !== undefined ? createRtc({ time: opt.rtc, batteryLow: opt.rtcBatteryLow, clock: opt.clock, now: () => cpu.cyc, rnd }) : null;
   const taskBank = {}, sharedBank = {};
-  const vecRam = new Uint16Array(16).map(() => rnd(65536));
+  const vecRam = core ? new Uint16Array(core.buf, core.VEC, 16) : new Uint16Array(16);
+  for (let i = 0; i < 16; i++) vecRam[i] = rnd(65536);
   // T/U/V/W are 8-bit latches (74F573) read back through a 74F541: a read gives the whole byte written.  Only
   // T0-T3 select the task, U0-U3 the shared macro-page and W0-W3 the BIOS ROM page (the socket wires W0-W5
   // for up to a 512K chip; with a 128K image, W4-W5 fold back, as on a 39SF010)
@@ -99,8 +119,15 @@ function createMachine(opt) {
     : u7 ? (u7.high ? T | u7.mask : T & ~u7.mask) : T;
   const bankInstalled = b => b >= 0xF0 ? (model !== 'noshared' && U < opt.sharedU) : b < opt.modules * 16;
   function bankMem(b) {
-    if (b >= 0xF0) { const k = U * 16 + (b & 15); return sharedBank[k] || (sharedBank[k] = new Uint8Array(0x2000)); }
-    const k = T * 256 + b; return taskBank[k] || (taskBank[k] = new Uint8Array(0x2000));
+    if (b >= 0xF0) { const k = U * 16 + (b & 15); return sharedBank[k] || (sharedBanks_[k] = sharedBank[k] = newBank(1, k)); }
+    const k = T * 256 + b; return taskBank[k] || (taskBanks[k] = taskBank[k] = newBank(0, k));
+  }
+  // A bank's bytes, first reached (shared: 1, k = U * 16 + its low four bits; a task's: k = T * 256 + b): the core's,
+  // marked reached there too
+  function newBank(shared, k) {
+    if (!core) return new Uint8Array(0x2000);
+    coreFlags[shared ? 16 * 256 + k : k] = 1;
+    return new Uint8Array(core.buf, shared ? core.SB + k * 0x2000 : core.TB + ((k >> 8) * coreBanks + (k & 255)) * 0x2000, 0x2000);
   }
   // A RAM fault: the offset in the window that the chip holding bank b actually sees
   const sameChip = (b, f) => b >= 0xF0 ? f >= 0xF0 && ((b ^ f) & 0x0C) === 0 : f < 0xF0 && (b >> 4) === (f >> 4);
@@ -110,7 +137,42 @@ function createMachine(opt) {
     return f.high ? o | f.mask : o & ~f.mask;
   }
   const readWatches = opt.readWatches || [], rWatch = readWatches.length > 0, sharedWrite = opt.sharedWrite || null;
+  // The quick ways (the same answers): task RAM read or written straight, below lowRd and lowWr (none if a model's
+  // what-if, a read watch, a write watch is on; the RTC's registers at the top of its task's); the bank window and
+  // the paged ROM by the task's $00 and $01 (bankRam: its copy of $0000-$7FFF); the BIOS ROM's page (wBase).  Set
+  // again as T, U or W changes, and as a run starts (opt.watches may have changed)
+  let ram = null, bankRam = null, lowRd = 0, lowWr = 0, wBase = 0, sharedOn = false;
+  const bankLimit = opt.modules * 16, promLen = pagedrom.length;
+  const romBase = new Float64Array(256).map((_, b) => romBank(b) * 0x4000);
+  const taskBanks = new Array(16 * 256).fill(null), sharedBanks_ = new Array(256).fill(null);
+  function quick() {
+    ram = taskRam[T]; bankRam = taskRam[tsel(0)];
+    const top = rtc && T === RTC_TASK ? RTC_REGS : 0x8000;
+    lowRd = plain && !rWatch ? top : 0;
+    lowWr = plain && !(opt.watches || []).length ? top : 0;
+    wBase = W * 0x2000 - 0xE000;
+    sharedOn = model !== 'noshared' && U < opt.sharedU;
+  }
   function rd(a) {
+    if (a < lowRd) return ram[a];
+    if (a >= 0x8000 && a < 0xA000 && !ramFault) {
+      const b = bankRam[0];
+      if (b >= 0xF0) {
+        if (!sharedOn) return a >> 8;
+        const k = U * 16 + (b & 15); let mem = sharedBanks_[k];
+        if (mem === null) mem = bankMem(b);
+        return mem[a - 0x8000];
+      }
+      if (!(b < bankLimit)) return a >> 8;
+      let mem = taskBanks[T * 256 + b];
+      if (mem === null) mem = bankMem(b);
+      return mem[a - 0x8000];
+    }
+    if (a >= 0xA000 && a < 0xE000) { const off = romBase[bankRam[1]] + ((a - 0xA000) ^ 0x2000); return off < promLen ? pagedrom[off] : 0xFF; }
+    if (a >= 0xE000 && a < 0xFF00) return osrom[wBase + a];
+    return rdSlow(a);
+  }
+  function rdSlow(a) {
     if (a < 0x8000) {
       if (rWatch) for (const w of readWatches) if (w.addr === a && (w.task < 0 || w.task === tsel(a)))
         log('read: $' + hx(a, 4) + ' (task ' + hx(tsel(a), 1) + ') ' + hx(taskRam[tsel(a)][a]) + ' by ' + hx(W, 1) + ':' + hx(cpu.PC, 4) + ' at cycle ' + cpu.cyc);
@@ -118,21 +180,51 @@ function createMachine(opt) {
     }
     if (a < 0xA000) { const b = taskRam[tsel(0)][0]; return bankInstalled(b) ? bankMem(b)[ramOfs(b, a)] : (a >> 8); }  // floating bus
     if (a < 0xE000) { const off = romBank(taskRam[tsel(1)][1]) * 0x4000 + ((a - 0xA000) ^ 0x2000); return off < pagedrom.length ? pagedrom[off] : 0xFF; }
-    if (a >= 0xFF00 && a < 0xFFF0) {
-      const t = cpu.ioAt;
-      sync(t);                                                  // (The devices, as of this access's cycle)
-      if (a >= 0xFF10 && a < 0xFF14) return acia.read(a - 0xFF10, t);
-      if (a < 0xFF10) return via.read(a - 0xFF00);
-      if (a === 0xFF41) return ym.readStatus(t);
-      if (vera && a >= 0xFF20 && a < 0xFF40) { const b = vera.read(a - 0xFF20, t); return b < 0 ? 0xFF : b; }   // (Configuring: floating)
-      return 0xFF;
-    }
+    if (a >= 0xFF00 && a < 0xFFF0) return ioRead(a);
     if (a === 0xFFF0) return regT; if (a === 0xFFF1) return regU; if (a === 0xFFF2) return V; if (a === 0xFFF3) return regW;
     if (a === 0xFFFE || a === 0xFFFF) { const v = vecRam[V & 15]; return a === 0xFFFE ? v & 0xFF : v >> 8; }
     return osrom[W * 0x2000 + (a - 0xE000)];
   }
+  // The I/O page ($FF00-$FFEF), read and written: the devices, as of the access's cycle
+  function ioRead(a) {
+    const t = cpu.ioAt;
+    sync(t);
+    if (a >= 0xFF10 && a < 0xFF14) { flushAcia(); const b = acia.read(a - 0xFF10, t); settleAcia(); return b; }
+    if (a < 0xFF10) { const was = viaAccess(); const b = via.read(a - 0xFF00); viaDone(was); return b; }
+    if (a === 0xFF41) { flushYm(); const b = ym.readStatus(t); settleYm(); return b; }
+    if (vera && a >= 0xFF20 && a < 0xFF40) { flushVera(); const b = vera.read(a - 0xFF20, t); settleVera(); return b < 0 ? 0xFF : b; }   // (Configuring: floating)
+    return 0xFF;
+  }
+  function ioWrite(a, v) {
+    const t = cpu.ioAt;
+    sync(t);
+    if (a >= 0xFF10 && a < 0xFF14) { flushAcia(); acia.write(a - 0xFF10, v, t); settleAcia(); return; }
+    if (a < 0xFF10) { const was = viaAccess(); via.write(a - 0xFF00, v); viaDone(was); return; }
+    if (a === 0xFF40) { ym.select(v); return; }                 // YM2151: register, then data
+    if (a === 0xFF41) { flushYm(); ym.write(v, t); settleYm(); return; }
+    if (vera && a >= 0xFF20 && a < 0xFF40) { flushVera(); vera.write(a - 0xFF20, v, t); settleVera(); return; }
+  }
   function wr(a, v) {
     v &= 0xFF;
+    if (a < lowWr) { ram[a] = v; return; }
+    if (a >= 0x8000 && a < 0xA000 && !ramFault) {
+      const b = bankRam[0];
+      if (b >= 0xF0) {
+        if (!sharedOn) return;
+        const k = U * 16 + (b & 15);
+        if (sharedWrite) sharedWrite(k, a - 0x8000, v, T, cpu.lastPC, W);
+        let mem = sharedBanks_[k];
+        if (mem === null) mem = bankMem(b);
+        mem[a - 0x8000] = v; return;
+      }
+      if (!(b < bankLimit)) return;
+      let mem = taskBanks[T * 256 + b];
+      if (mem === null) mem = bankMem(b);
+      mem[a - 0x8000] = v; return;
+    }
+    wrSlow(a, v);
+  }
+  function wrSlow(a, v) {
     if (a < 0x8000) {
       for (const w of opt.watches || []) if (w.addr === a && (w.task < 0 || w.task === tsel(a)))
         log('watch: $' + hx(a, 4) + ' (task ' + hx(tsel(a), 1) + ') ' + hx(taskRam[tsel(a)][a]) + ' -> ' + hx(v) + ' by ' + hx(W, 1) + ':' + hx(cpu.lastPC, 4) + ' at cycle ' + cpu.cyc);
@@ -146,15 +238,9 @@ function createMachine(opt) {
       bankMem(b)[ramOfs(b, a)] = v; return;
     }
     if (a < 0xFF00) return;
-    const t = cpu.ioAt;
-    if (a < 0xFFF0) sync(t);                                    // (The devices, as of this access's cycle)
-    if (a >= 0xFF10 && a < 0xFF14) { acia.write(a - 0xFF10, v, t); return; }
-    if (a < 0xFF10) { via.write(a - 0xFF00, v); return; }
-    if (a === 0xFF40) { ym.select(v); return; }                 // YM2151: register, then data
-    if (a === 0xFF41) { ym.write(v, t); return; }
-    if (vera && a >= 0xFF20 && a < 0xFF40) { vera.write(a - 0xFF20, v, t); return; }
-    if (a === 0xFFF0) { regT = v; T = v & 15; return; } if (a === 0xFFF1) { regU = v; U = v & 15; return; }
-    if (a === 0xFFF2) { V = v; return; } if (a === 0xFFF3) { regW = v; W = v & 15; return; }
+    if (a < 0xFFF0) { ioWrite(a, v); return; }
+    if (a === 0xFFF0) { regT = v; T = v & 15; quick(); return; } if (a === 0xFFF1) { regU = v; U = v & 15; quick(); return; }
+    if (a === 0xFFF2) { V = v; return; } if (a === 0xFFF3) { regW = v; W = v & 15; quick(); return; }
     if (a === 0xFFFE) { vecRam[V & 15] = (vecRam[V & 15] & 0xFF00) | v; return; }
     if (a === 0xFFFF) { vecRam[V & 15] = (vecRam[V & 15] & 0xFF) | (v << 8); return; }
   }
@@ -187,27 +273,75 @@ function createMachine(opt) {
   }
   const pcHist = new Map(), profHist = new Map(), profCyc = new Map(), profTask = new Array(16).fill(0);
   let profCount = 0, profCycles = 0;
+  const coreStep = cpu.step;                                  // (The CPU's own step: one put in its place runs the JS's)
+  quick();
   cpu.PC = rd(0xFFFC) | (rd(0xFFFD) << 8); cpu.P |= FLAGS.I;  // RESET
 
-  // The devices, brought up to cycle t (at the start of each instruction, and at each I/O access: the access's cycle)
-  let devCyc = 0;
+  // The devices, brought up to cycle t (at the start of each instruction, and at each I/O access: the access's cycle).
+  // A tick that only counts a device's timers down can wait: devSeen is the last cycle the devices were brought up
+  // to; each device's ticks wait until the first cycle it may do more than count down (its idleTo: viaNext ...,
+  // devNext the soonest), and are then taken together, as one (the ticks before, its own since viaAt or aciaAt),
+  // and the tick that does more is given its own cycles, as if every tick had come.  A device read, written or told
+  // something from outside is brought up to devSeen first (its flush), and ticks at the next instruction.  (The
+  // YM2151's and the VERA's ticks are to a cycle, not by one: a tick that does nothing is left out)
+  let devSeen = 0, devNext = 0, viaAt = 0, viaNext = 0, ymNext = 0, veraNext = vera ? 0 : Infinity, aciaAt = 0, aciaNext = 0, irqN = -1, irqDirty = true;
   function sync(t) {
-    const d = t - devCyc; if (d <= 0) return; devCyc = t;
-    via.tick(d);
-    while (ca1At < ca1Edges.length && ca1Edges[ca1At][0] <= t) via.ca1(ca1Edges[ca1At++][1]);
-    ym.tick(t);
-    if (vera) vera.tick(t);
-    acia.tick(d, t);
+    if (t <= devSeen) return;
+    const prev = devSeen; devSeen = t;
+    if (t < devNext) return;
+    if (t >= viaNext) {
+      if (prev > viaAt) via.tick(prev - viaAt);                 // (The ticks that only counted down, as one)
+      via.tick(t - prev); viaAt = t;
+      while (ca1At < ca1Edges.length && ca1Edges[ca1At][0] <= t) via.ca1(ca1Edges[ca1At++][1]);
+      viaNext = t + via.nextEvent();
+      if (ca1At < ca1Edges.length && ca1Edges[ca1At][0] < viaNext) viaNext = ca1Edges[ca1At][0];
+      irqDirty = true;
+    }
+    if (t >= ymNext) { ym.tick(t); ymNext = ym.idleTo(); irqDirty = true; }
+    if (vera && t >= veraNext) { vera.tick(t); veraNext = vera.idleTo(t); irqDirty = true; }
+    if (t >= aciaNext) {
+      if (prev > aciaAt) acia.tick(prev - aciaAt, prev);
+      acia.tick(t - prev, t); aciaAt = t;
+      aciaNext = acia.idleTo(t); irqDirty = true;
+    }
+    devNext = Math.min(viaNext, ymNext, veraNext, aciaNext);
   }
+  // A device brought up to devSeen, to be read or changed: it ticks again at the next instruction (or, read or written
+  // by the CPU, its settle works out when)
+  function flushVia() { if (devSeen > viaAt) { via.tick(devSeen - viaAt); viaAt = devSeen; } viaNext = devNext = 0; irqDirty = true; }
+  function flushAcia() { if (devSeen > aciaAt) { acia.tick(devSeen - aciaAt, devSeen); aciaAt = devSeen; } aciaNext = devNext = 0; irqDirty = true; }
+  function flushYm() { ymNext = devNext = 0; irqDirty = true; }
+  function flushVera() { if (!vera) return; vera.tick(devSeen); veraNext = devNext = 0; irqDirty = true; }
+  function flush() { flushVia(); flushAcia(); flushYm(); flushVera(); }
+  // A device read or written (brought up to devSeen first): its idleTo, as it is now
+  const settled = () => { devNext = Math.min(viaNext, ymNext, veraNext, aciaNext); irqDirty = true; };
+  function settleVia() {
+    viaNext = viaAt + via.nextEvent();
+    if (ca1At < ca1Edges.length && ca1Edges[ca1At][0] < viaNext) viaNext = ca1Edges[ca1At][0];
+    settled();
+  }
+  // (The VIA's, its port B the SD cards' bit-banged SPI: the most often; the IRQ lines asked again only if its own changed)
+  function viaAccess() { if (devSeen > viaAt) { via.tick(devSeen - viaAt); viaAt = devSeen; } return via.irqActive(); }
+  function viaDone(was) {
+    viaNext = viaAt + via.nextEvent();
+    if (ca1At < ca1Edges.length && ca1Edges[ca1At][0] < viaNext) viaNext = ca1Edges[ca1At][0];
+    devNext = Math.min(viaNext, ymNext, veraNext, aciaNext);
+    if (via.irqActive() !== was) irqDirty = true;
+  }
+  function settleAcia() { aciaNext = acia.idleTo(aciaAt); settled(); }
+  function settleYm() { ymNext = ym.idleTo(); settled(); }
+  function settleVera() { veraNext = vera.idleTo(devSeen); settled(); }
   // Cycles to the next device event (for a WAI: the CPU sleeps until then)
-  const nextEvent = () => Math.min(via.nextEvent(), ym.nextEvent(devCyc), acia.nextEvent(), vera ? vera.nextEvent(devCyc) : Infinity,
-    ca1At < ca1Edges.length ? Math.max(1, ca1Edges[ca1At][0] - devCyc) : Infinity);
+  const nextEvent = () => { flush(); return Math.min(via.nextEvent(), ym.nextEvent(devSeen), acia.nextEvent(), vera ? vera.nextEvent(devSeen) : Infinity,
+    ca1At < ca1Edges.length ? Math.max(1, ca1Edges[ca1At][0] - devSeen) : Infinity); };
+  // (What's typed or sent from outside: the devices up to date first)
+  for (const k of ['send', 'type']) { const f = acia[k]; acia[k] = x => { flushAcia(); f(x); }; }
 
   // Run until cycle limit (or a halt)
   const traceLen = opt.trace === undefined ? 25 : opt.trace, pcWatches = opt.pcWatches || [], profileFrom = opt.profile === undefined ? -1 : opt.profile,
     profileTo = opt.profileTo === undefined ? Infinity : opt.profileTo;
   const I = FLAGS.I;
-  const ring = new Uint16Array(Math.max(1, traceLen) * 8);    // The trace: the last traceLen instructions, a ring
+  const ring = core ? new Uint16Array(core.buf, core.RING, Math.max(1, traceLen) * 8) : new Uint16Array(Math.max(1, traceLen) * 8);   // The trace: the last traceLen instructions, a ring
   let ringAt = 0, ringN = 0;                                  //   (W T PC A X Y S P each), m.trace's list
   const breaks = opt.breaks || [];
   m.breakHit = null; m.skipBreak = false;
@@ -249,13 +383,19 @@ function createMachine(opt) {
     pendAt = (pendAt + 1) % pend.length; pendN++;
   }
   function run(limit) {
-    runTo(limit);
+    quick();
+    flush();
+    if (core && cpu.step === coreStep && !breaks.length && !calls && !opt.pcHist && profileFrom < 0 && !(opt.watches || []).length && pcWatches.length <= 4) runWasm(limit);   // (A step of its own: a test's look at each, nprof.js's)
+    else runTo(limit);
+    flush();
     if (audio) audio.pump(cpu.cyc);
   }
   function runTo(limit) {
+    if (!breaks.length && !calls && !traceLen && !opt.pcHist && profileFrom < 0) { runQuick(limit); return; }
     while (cpu.cyc < limit && !cpu.halted) {
       sync(cpu.cyc);
-      if (irqLine() >= 0) {
+      if (irqDirty) { irqN = irqLine(); irqDirty = false; }
+      if (irqN >= 0) {
         cpu.waiting = false;
         if (!(cpu.P & I)) {                                     // (Taken: an IRQs-off stretch ends here, and the
           if (iOffAt >= 0) { iOffNote(cpu.cyc - iOffAt, iOffFrom, W << 16 | cpu.lastPC, iOffAt); iOffAt = -1; }   //   service starts its own)
@@ -291,14 +431,122 @@ function createMachine(opt) {
     }
   }
 
+  // runTo's loop with none of the debugger's and the profile's things on (the tests' runs): the same, step for step
+  function runQuick(limit) {
+    const nW = pcWatches.length;
+    for (;;) {
+      const cyc = cpu.cyc;
+      if (cyc >= limit || cpu.halted) return;
+      if (cyc > devSeen) { if (cyc < devNext) devSeen = cyc; else sync(cyc); }
+      if (irqDirty) { irqN = irqLine(); irqDirty = false; }
+      if (irqN >= 0) {
+        cpu.waiting = false;
+        if (!(cpu.P & I)) {
+          if (iOffAt >= 0) { iOffNote(cyc - iOffAt, iOffFrom, W << 16 | cpu.lastPC, iOffAt); iOffAt = -1; }
+          cpu.interrupt(irqVector()); continue;
+        }
+      }
+      if (cpu.waiting) { cpu.cyc += Math.max(1, Math.min(nextEvent(), limit - cyc)); continue; }
+      if (acia.typedAt >= 0) {                                  // IRQs-off stretches, from the first key typed
+        if (cpu.P & I) { if (iOffAt < 0) { iOffAt = cyc; iOffFrom = W << 16 | cpu.PC; } }
+        else if (iOffAt >= 0) { iOffNote(cyc - iOffAt, iOffFrom, W << 16 | cpu.lastPC, iOffAt); iOffAt = -1; }
+      }
+      if (nW) {
+        const PC = cpu.PC;
+        for (let i = 0; i < nW; i++) { const w = pcWatches[i]; if (w.pc === PC && (w.page < 0 || w.page === W))
+          log('pc: ' + hx(W, 1) + ':' + hx(PC, 4) + ' T=' + hx(T, 1) + ' A=' + hx(cpu.A) + ' X=' + hx(cpu.X) + ' Y=' + hx(cpu.Y) + ' S=' + hx(cpu.S) + ' P=' + hx(cpu.P) + ' at cycle ' + cyc); }
+      }
+      cpu.step(irqVector);
+    }
+  }
+
+  // runQuick's loop in the WebAssembly core (core65's lib.rs: run): each instruction's start seen to here when the
+  // devices want a tick, an interrupt's to be taken or the CPU waits, the rest there; its state to it and back (toCore,
+  // fromCore), the JS CPU's (cpu65c02.js) the state between.  Its imports (coreEnv) take the state as it is at their
+  // call, the instruction's (cyc its first cycle), and give back what changes the core's next steps (the devices'
+  // next tick, the IRQ line, a key typed)
+  function toCore(limit) {
+    const si = core.si, sf = core.sf;
+    si[0] = cpu.A; si[1] = cpu.X; si[2] = cpu.Y; si[3] = cpu.S; si[4] = cpu.P; si[5] = cpu.PC; si[6] = cpu.lastPC; si[7] = cpu.waiting ? 1 : 0; si[8] = 0;
+    si[9] = regT; si[10] = regU; si[11] = V; si[12] = regW;
+    if (irqDirty) { irqN = irqLine(); irqDirty = false; }
+    si[13] = irqN; si[14] = acia.typedAt >= 0 ? 1 : 0; si[15] = iOffFrom; si[16] = traceLen; si[17] = ringAt; si[18] = ringN;
+    si[19] = pcWatches.length;
+    for (let i = 0; i < pcWatches.length; i++) { si[20 + 2 * i] = pcWatches[i].pc; si[21 + 2 * i] = pcWatches[i].page; }
+    si[30] = sharedWrite ? 1 : 0; si[31] = rtc ? 1 : 0;
+    si[32] = opt.sharedU > 0 ? Math.min(16, Math.ceil(opt.sharedU)) : 0; si[33] = 0;
+    for (let i = 0; i < 16; i++) si[48 + i] = stackLow[i];
+    sf[0] = cpu.cyc; sf[1] = limit; sf[2] = devNext; sf[3] = devSeen; sf[4] = iOffAt; sf[5] = cpu.ioAt;
+  }
+  function fromCore() {
+    const si = core.si, sf = core.sf;
+    cpu.A = si[0]; cpu.X = si[1]; cpu.Y = si[2]; cpu.S = si[3]; cpu.P = si[4]; cpu.PC = si[5]; cpu.lastPC = si[6];
+    cpu.cyc = sf[0]; cpu.ioAt = sf[5];
+    V = si[11];
+    if (si[9] !== regT || si[10] !== regU || si[12] !== regW) { regT = si[9]; regU = si[10]; regW = si[12]; T = regT & 15; U = regU & 15; W = regW & 15; quick(); }
+  }
+  function afterImport() {
+    if (irqDirty) { irqN = irqLine(); irqDirty = false; }
+    core.si[13] = irqN; core.si[14] = acia.typedAt >= 0 ? 1 : 0; core.sf[2] = devNext;
+    if (cpu.halted) core.si[8] = 1;                           // (Stopped from outside: hysnap.js's PC watch)
+  }
+  function coreEnv() {
+    return {
+      // (The VIA's: nothing it and what's on it do reads the CPU's registers, only the access's cycle)
+      io_rd: (a, ioAt, c0) => { if (a < 0xFF10) { cpu.cyc = c0; cpu.ioAt = ioAt; } else fromCore(); if (c0 > devSeen) devSeen = c0; const v = ioRead(a); afterImport(); return v; },
+      io_wr: (a, v, ioAt, c0) => { if (a < 0xFF10) { cpu.cyc = c0; cpu.ioAt = ioAt; } else fromCore(); if (c0 > devSeen) devSeen = c0; ioWrite(a, v); afterImport(); },
+      shared_write: (k, off, v) => { fromCore(); sharedWrite(k, off, v, T, cpu.lastPC, W); afterImport(); },
+      rtc_rd: r => { fromCore(); const v = rtc.read(r); afterImport(); return v; },
+      rtc_wr: (r, v) => { fromCore(); rtc.write(r, v); afterImport(); },
+      reached: (shared, k) => {
+        if (shared) { if (!sharedBank[k]) sharedBanks_[k] = sharedBank[k] = newBank(1, k); }
+        else if (!taskBank[k]) taskBanks[k] = taskBank[k] = newBank(0, k);
+      },
+      stack_low: (t, s) => { fromCore(); stackLow[t] = s; stackLowAt[t] = [W, cpu.lastPC, cpu.cyc]; afterImport(); },
+      brk_vector: () => { fromCore(); const v = irqVector(); afterImport(); return v; },
+      ioff_note: (n, from, to, at) => { fromCore(); iOffNote(n, from, to, at); afterImport(); },
+      pc_watch: pc => {
+        fromCore();
+        log('pc: ' + hx(W, 1) + ':' + hx(pc, 4) + ' T=' + hx(T, 1) + ' A=' + hx(cpu.A) + ' X=' + hx(cpu.X) + ' Y=' + hx(cpu.Y) + ' S=' + hx(cpu.S) + ' P=' + hx(cpu.P) + ' at cycle ' + cpu.cyc);
+        afterImport();
+      },
+    };
+  }
+  function runWasm(limit) {
+    for (;;) {
+      const cyc = cpu.cyc;
+      if (cyc >= limit || cpu.halted) return;
+      if (cyc > devSeen) { if (cyc < devNext) devSeen = cyc; else sync(cyc); }
+      if (irqDirty) { irqN = irqLine(); irqDirty = false; }
+      if (irqN >= 0) {
+        cpu.waiting = false;
+        if (!(cpu.P & I)) {
+          if (iOffAt >= 0) { iOffNote(cyc - iOffAt, iOffFrom, W << 16 | cpu.lastPC, iOffAt); iOffAt = -1; }
+          cpu.interrupt(irqVector()); continue;
+        }
+      }
+      if (cpu.waiting) { cpu.cyc += Math.max(1, Math.min(nextEvent(), limit - cyc)); continue; }
+      toCore(limit);
+      const why = core.x.run(1);
+      fromCore();
+      const si = core.si, sf = core.sf;
+      if (sf[3] > devSeen) devSeen = sf[3];                    // (The last instruction's start: the devices seen to it)
+      iOffAt = sf[4]; iOffFrom = si[15]; ringAt = si[17]; ringN = si[18];
+      if (why === 3) cpu.waiting = true;
+      else if (why === 4) cpu.halted = 'STP at ' + cpu.where((cpu.PC - 1) & 0xFFFF);
+    }
+  }
+
   // The reset button (RESB): the CPU, the VIA, the ACIA and the YM2151 reset, and the VERA configures itself again;
   // RAM, the pseudo-registers (plain latches), VRAM and the SD cards keep their state, as on the board
   function hwReset() {
+    flush();
     via.reset();
     acia.reset();
     ym.reset();
     if (vera) vera.reset(cpu.cyc);
     cpu.reset();
+    flush();
   }
 
   // (A task's RAM bank b, as it is: undefined if it was never written; tools/hysnap.js reads hylang's heap with it)

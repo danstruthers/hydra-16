@@ -12,6 +12,8 @@
 //   4. the paged ROM       modules/rom.txt -> bin/prom0.bin (tools/romimg.js): the module directory, the hardware
 //                          test in bank 1, the modules (one 512K chip, as few banks as it needs; the rest $FF)
 //   5. the budgets         the BIOS ROM's pages, the modules: used, and room left (tools/budget.js)
+// And first, once, the emulator's WebAssembly core (sim/core65/make.js: sim/lib/core65.js, in Git), built again only
+// when its source has changed and Rust is here (cargo, with the wasm32-unknown-unknown target); else the committed one.
 // All of it twice, once for each serial chip U3 can be (ACIA_CHIP, the kernel's alone: Rockwell's R65C51, WDC's
 // W65C51N), and the images named for the chip where the two builds' differ (tools/images.js): the BIOS ROM's,
 // bin/bios_rockwell.bin and bios_wdc.bin.  The paged ROM comes out the same for both (its drivers ask the BIOS, and
@@ -240,6 +242,8 @@ function takeImages(dir, names) {
 // written for both (images.js).  dirs: each folder of images (the base's bin; HydraOS's adds its own) and its names.
 // OUT: the last build's result
 function buildBoth(opt = {}, buildOne = build, dirs = [[at('bin'), IMAGE_NAMES]]) {
+  const core = require('./sim/core65/make.js').make();         // (The emulator's core: said when it was built, or couldn't be)
+  if (core) console.log(core);
   const last = opt.acia || 'rockwell';
   if (!images.ACIAS.includes(last)) throw new Error('--acia rockwell or wdc');
   const order = [images.ACIAS.find(a => a !== last), last], made = dirs.map(() => ({}));

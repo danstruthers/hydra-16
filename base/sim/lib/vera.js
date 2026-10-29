@@ -570,6 +570,13 @@ function createVera(env) {
     return ((isr | (fcnt < AFLOW ? 8 : 0)) & ien) !== 0;
   }
   function tick(t) { curT = t; if (t >= readyAt) { scan(t); if (ien & 8) pcm(t); } }
+  // After a tick at devCyc: the first cycle a tick does more than note the bus's cycle (configured, a unit with
+  // something to do; with the PCM's interrupt on, every tick: machine.js's sync)
+  function idleTo(devCyc) {
+    if (devCyc < readyAt) return readyAt;
+    if (ien & 8) return devCyc + 1;
+    return Math.max(devCyc + 1, nextCyc);
+  }
   function nextEvent(devCyc) {
     if (devCyc < readyAt) return Math.max(1, readyAt - devCyc);
     let n = Infinity;                                         // (Only an interrupt that's on: VSYNC's and SPRCOL's
@@ -784,7 +791,7 @@ function createVera(env) {
   }
   // The sound on: each sample given to fn(left, right) (16 bits each), from cycle 0
   function sound(fn) { sink = fn; made = 0; }
-  Object.assign(v, { read, write, tick, irqActive, nextEvent, reset: t => reconfigure(t), frame, cells, text, peek, rgbPalette, sound, soundTo, load });
+  Object.assign(v, { read, write, tick, idleTo, irqActive, nextEvent,reset: t => reconfigure(t), frame, cells, text, peek, rgbPalette, sound, soundTo, load });
   return v;
 }
 
