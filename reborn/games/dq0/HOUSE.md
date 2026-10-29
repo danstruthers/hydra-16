@@ -1911,12 +1911,13 @@ roll (SOUND.md's rule, D9: tuned by ear later), and tests Stealth where the book
 - **Heard** *(every ruleset's)*: a sound of loudness L, less the background where the hearer is (below), heard within
   L times the hearer's hearing over two squares the way it goes (a denizen's its kind's, kinds.txt's; the
   character's (hearing + 3) / 2, as before), a little further downwind and less upwind ((32 + w) / 32, w the
-  draught's figure below: a fifth at most).  The denizens hear the character as it's busy (sense.c's), and its noises as they come (dq0d.c's
-  hear: the senses asked of each, its loudness); the character hears them as it did (main.c's heard, the sound
-  task's), the way the layer says.
+  draught's figure below: a fifth at most).  The denizens hear the character as it's busy (sense.c's), and its
+  noises as they come (dq0d.c's hear: the senses asked of each, its loudness); the character hears them as it did
+  (main.c's heard, the sound task's), the way the layer says.
 - **A noise drawing them** *(for review)*: a hostile denizen, not a shy one, that heard the character (or saw it, or
   smelt it) and has lost it goes on towards where it last sensed it, a step at a time, for its next eight decisions
-  (DRAWN_N: dq0d.c's draw_on), unless it senses it again; a shy one keeps away as ever.  So a bandit that hears a door
+  (DRAWN_N: dq0d.c's draw_on), unless it senses it again, as far as it would follow a scent (one that
+  keeps to its lair a step or two from it); a shy one keeps away as ever.  So a bandit that hears a door
   opened comes to see.  Not yet: the way there found round walls (it goes straight, as a denizen does).
 - **The background** *(every ruleset's, for review)*: water in a well or a cistern 2, the wind at a shaft or the way
   out 1 (2 in a draught of 2 or more; none in still air), each a level less every four squares off; a crowd about
@@ -1930,7 +1931,8 @@ roll (SOUND.md's rule, D9: tuned by ear later), and tests Stealth where the book
   as its body's position or its stratum changes or five minutes on (QUIET_T); the grade sets its steps' loudness: a
   critical success 0 (no one hears it), a marginal one 1, a marginal failure 2 (as a walk), a critical failure 3.
   Low the easier: crouched a step, prone two (the book's cover).  The grade is secret, as the GM's roll; nothing's
-  told of it.  The null ruleset's flat odds the same way.  The test has dice of its own (rshouse.h's RS_HOUSE_QUIET, as the
+  told of it.  The null ruleset's flat odds the same way.  The test has dice of its own (rshouse.h's
+  RS_HOUSE_QUIET, as the
   bearings' have), so the game's other tests roll as they did whether anyone creeps or stalks.
 - **The denizens' stealth** *(for review)*: a hostile hunter by smell (its nose 6 or more, kinds.txt's: K_NOSE)
   coming at the character stalks it: its Stealth tested as it begins (the denizens' slot, RS_TEST with the actor:
