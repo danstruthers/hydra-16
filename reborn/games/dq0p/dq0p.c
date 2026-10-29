@@ -85,13 +85,6 @@ static void look (void)
     }
     hub_map (0);
     HUB->look.first = first;
-    for (wn = 0; wn < NACTORS; ++wn) {          /* (The sound layer, for the denizens about: before the world goes on,
-                                                **   its E_DEN's what lies between, wbody.c's, by it) */
-        if (HUB->actor[wn].state && HUB->actor[wn].sn == sn) {
-            snd_need ();
-            break;
-        }
-    }
 }
 
 /* The look giving way to the UI's command in hand at the real paces (the hub's ui_cmd: its answer, the world's, the

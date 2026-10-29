@@ -680,6 +680,9 @@ static signed char __fastcall__ side (unsigned char who, unsigned char p, signed
     return q->grade;
 }
 
+#define RS_HOUSE_QUIET                          /* (Moving quietly's own dice: the main RAM's) */
+#include "../dq0/rshouse.h"
+
 static void __fastcall__ answer (struct req* r)
 {
     unsigned char k, m, t;
@@ -719,9 +722,11 @@ static void __fastcall__ answer (struct req* r)
         r->b = watch;
         break;
     case RS_TEST:
-        if (r->actor) {                         /* (A creature's, by its sheet: a hunter's Stealth, the denizens',
-                                                **   slice 4.6's) */
-            r->grade = side (r->actor, r->a, r->steps);
+        if (r->a == P_STEALTH) {                /* (Moving quietly, by its own dice: the character's, or a creature's
+                                                **   by its sheet, a hunter's stalk, the denizens': slice 4.6's) */
+            qdice ();
+            r->grade = r->actor ? side (r->actor, P_STEALTH, r->steps) : test (&pc, P_STEALTH, r->steps);
+            qdice ();
             break;
         }
         if (r->a == P_DIG) {                    /* (Judged by the tool to hand that suits it best: part 2's) */

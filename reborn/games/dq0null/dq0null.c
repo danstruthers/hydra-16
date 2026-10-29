@@ -65,6 +65,7 @@ static void __fastcall__ putn (int v)
 #define RS_HOUSE_NOTICE
 #define RS_HOUSE_STATE
 #define RS_HOUSE_BEARING
+#define RS_HOUSE_QUIET
 unsigned long bseed;                            /* (The bearings' own dice: rshouse.h's) */
 #include "../dq0/rshouse.h"
 
@@ -617,6 +618,13 @@ static void __fastcall__ answer (struct req* r)
         }
         if (r->a <= P_NOTICE_SMELL) {           /* (By its going and watchfulness: the house's) */
             r->steps += house_notice (r, HUB->pc_going, HUB->watch);
+        }
+        if (r->a == P_STEALTH) {
+            qdice ();                           /* (Moving quietly, by its own dice: the house's) */
+            r->grade = flat (r->steps);
+            qdice ();
+            *tp = 0;
+            break;
         }
         r->grade = flat (r->steps);
         *tp = 0;

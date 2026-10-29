@@ -74,25 +74,28 @@ static unsigned char __fastcall__ open_sq (unsigned char* p)
 /* What lies between body bd and the character, for those who hear it (SOUND.md: E_DEN's x[3]), by the senses' sound
 ** layer (hub.h's SOUND_AT, slice 4.5's: round corners, a shut door or a wall on the way): the squares the sound goes
 ** past the line between them, a quarter (15 at most), and a shut door or a wall on the way times 16 (its two squares
-** out of them); 15 not reached, or past the layer (beyond anyone's hearing of a step); 0 off its stratum */
+** out of them); 15 not reached, or past the layer (beyond anyone's hearing of a step); 0 off its stratum.  The layer
+** worked out where the character was a step or two before (the senses' to bring up to date as a denizen asks): from
+** there, and those squares more */
 static unsigned char between (void)
 {
-    static unsigned char c, e;
+    static unsigned char c, e, o;
     static int dx, dy;
 
     if (bd.sn != bps) {
         return 0;
     }
-    dx = bd.x - bpx;
-    dy = bd.y - bpy;
     hub_map (SIGHT_BANK);
-    c = SNDHEAD->ok && SNDHEAD->sn == bps && SNDHEAD->x == bpx && SNDHEAD->y == bpy && dx >= -SND_R && dx <= SND_R &&
-        dy >= -SND_R && dy <= SND_R ? SND_SQ (dx, dy) : SND_NONE;
+    dx = bd.x - SNDHEAD->x;
+    dy = bd.y - SNDHEAD->y;
+    c = SNDHEAD->ok && SNDHEAD->sn == bps && dx >= -SND_R && dx <= SND_R && dy >= -SND_R && dy <= SND_R ?
+        SND_SQ (dx, dy) : SND_NONE;
+    o = apart (bpx - SNDHEAD->x, bpy - SNDHEAD->y);
     hub_map (0);
     if (c >= 0x80) {
         return 15;
     }
-    e = SND_COST (c) - apart (dx, dy) + 2 - (c & SND_AIR ? DOOR_SND : 0);
+    e = SND_COST (c) + o - apart (bd.x - bpx, bd.y - bpy) + 2 - (c & SND_AIR ? DOOR_SND : 0);
     e = (signed char) e < 0 ? 0 : e >> 2;
     return (e > 15 ? 15 : e) | (c & SND_AIR) >> 2;
 }

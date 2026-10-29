@@ -23,10 +23,17 @@
 #include "../dq0w/world.h"
 #include "light.h"
 
+extern unsigned char at_bank;                   /* (chunk.c's: at ()'s chunk's bank) */
+
 #pragma static-locals (on)
 
 void __fastcall__ pulse (unsigned char sn, unsigned x, unsigned y);    /* (Part 5's: bank.s's stub) */
 void __fastcall__ pulse_run (unsigned char* centre);                    /* (pulse.s's, part 5's) */
+void __fastcall__ fill_rect (unsigned char h);                         /* (pulse.s's: a chunk's squares into the grid) */
+extern unsigned char* fl_src;
+extern unsigned char* fl_dst;
+extern unsigned char fl_su, fl_sx, fl_du, fl_dx, fl_w, fl_cj, fl_nd, fl_dsl[], fl_dsh[], fl_ddl[], fl_ddh[], fl_dcj[];
+extern unsigned char hub_u[], hub_x[];          /* (hub.c's, HUB_UX: each bank's U and $00) */
 
 unsigned char sgen;                             /* (Bumped as the world's doors and squares change: light.c's) */
 static unsigned char sgen_ = 0xFF;              /* (As of the layer's last pulse) */
@@ -157,21 +164,16 @@ static void __fastcall__ draught (unsigned char sn)
     }
 }
 
-/* A square of chunk C (at ()'s: its tile t) for the pulse: SND_NONE rock (or no square), 0xFC a wall (a sound through
-** it, muffled: four squares a square of it), 0xFD shut (a door, a closed window: muffled), 0xFE open */
-static unsigned char __fastcall__ kind_of (unsigned char t, unsigned char cx)
+/* A door's or a window's square of chunk C (in the window: its square x, y in it) for the pulse: 0xFD shut (a door,
+** a closed window: muffled), 0xFE open (a portcullis, a grating, an arrow slit; a door open or broken down, a window
+** open with no glass in it); the rest of the squares the pulse's own, s_pulse's: SND_NONE rock (or no square), 0xFC a
+** wall (a sound through it muffled, four squares a square of it), 0xFE open */
+static unsigned char __fastcall__ kind_of (unsigned char x, unsigned char y)
 {
     static struct portal* q;
     static unsigned char k;
 
-    k = TILE (t);
-    if (k == T_ROCK) {
-        return SND_NONE;
-    }
-    if (k == T_WALL) {
-        return 0xFC;
-    }
-    if ((k == T_DOOR || k == T_WINDOW) && (q = portal_at (cx, cy_)) != 0) {
+    if ((q = portal_at (x, y)) != 0) {
         k = q->kind;
         if (k == PK_PORTCULLIS || k == PK_GRATE || k == PK_SLIT) {
             return 0xFE;
@@ -234,10 +236,10 @@ static void __fastcall__ sources (unsigned x0, unsigned y0, unsigned char wind)
 ** hub's pc_mask, pc_bg) */
 void __fastcall__ s_pulse (unsigned char sn, unsigned x, unsigned y)
 {
-    unsigned char row[SND_W];                   /* (On the C stack: the main RAM's none) */
-    static unsigned char i, j, n, wind, miss, ci, cj, seen[9];
-    static unsigned gx, gy, cx, cy, sx, sy;
-    static unsigned char* p;
+    static unsigned char i, k, wind, cj, cb[9];
+    static unsigned cx, cy, sx, sy, ox, oy, off, cox[9], coy[9];
+    static int gxr, gyr, i0, i1, j0, j1;
+    static struct chunk* cp[9];
     static struct stratum* s;
 
     if (sn != asn_) {
@@ -250,51 +252,66 @@ void __fastcall__ s_pulse (unsigned char sn, unsigned x, unsigned y)
     SNDHEAD->ok = 0;
     SNDHEAD->nbg = 0;
     s = &STRATUM (sn);
-    gx = x - SND_R - 1;
-    gy = y - SND_R - 1;
-    miss = 0;
-    memset (seen, 0, sizeof seen);
-    for (j = 0; j < SND_W; ++j) {
-        memset (row, SND_NONE, SND_W);
-        sy = gy + j;
-        for (i = 1; j && j < SND_W - 1 && i < SND_W - 1; i += n) {
-            sx = gx + i;
-            n = 1;
-            if (sx - s->x0 >= s->w || sy - s->y0 >= s->h) {
-                continue;                       /* (Off the stratum: none) */
-            }
-            if (!cached (sn, sx, sy)) {
-                miss = 1;                       /* (Not in the cache: worked out again, the next time asked) */
-                continue;
-            }
-            p = at (sn, sx, sy);
-            n = CW - cx_;
-            if (n > SND_W - 1 - i) {
-                n = SND_W - 1 - i;
-            }
-            cx = cx_;
-            for (ci = 0; ci < n; ++ci) {
-                row[i + ci] = kind_of (p[ci], cx + ci);
-            }
-            cx = (sx - s->x0) >> CW_BITS;       /* (Its chunk's sources, once: the nine round the character's) */
-            cy = (sy - s->y0) >> CW_BITS;
-            cj = (unsigned char) (cy - ((y - s->y0) >> CW_BITS) + 1) * 3 + (unsigned char) (cx - ((x - s->x0) >> CW_BITS) + 1);
-            if (cj < 9 && !seen[cj]) {
-                seen[cj] = 1;
-                sources (s->x0 + (cx << CW_BITS), s->y0 + (cy << CW_BITS), wind);
-            }
+    cx = (x - s->x0) >> CW_BITS;                /* (The nine chunks round the character's, those the cache has: each
+                                                **   found once, its sources gathered; the rest rock, till the
+                                                **   character moves: no denizen's there, nor anyone's sound) */
+    cy = (y - s->y0) >> CW_BITS;
+    for (cj = 0; cj < 9; ++cj) {
+        cb[cj] = 0;
+        cox[cj] = ox = (cx + cj % 3 - 1) << CW_BITS;
+        coy[cj] = oy = (cy + cj / 3 - 1) << CW_BITS;
+        if (ox < s->w && oy < s->h && cached (sn, sx = s->x0 + ox, sy = s->y0 + oy) && at (sn, sx, sy)) {
+            cb[cj] = at_bank;
+            cp[cj] = C;
+            sources (sx, sy, wind);
         }
-        hub_map (SIGHT_BANK);
-        memcpy (SND_GRID + j * SND_W, row, SND_W);
     }
+    hub_map (SIGHT_BANK);                       /* (The grid: rock, and each chunk's squares in it by their kinds,
+                                                **   pulse.s's, a row at a time; a door's or a window's by its
+                                                **   portal) */
+    memset (SND_GRID, SND_NONE, SND_W * SND_W);
+    fl_du = hub_u[SIGHT_BANK];
+    fl_dx = hub_x[SIGHT_BANK];
+    fl_nd = 0;
+    gxr = (int) (x - s->x0) - (SND_R + 1);
+    gyr = (int) (y - s->y0) - (SND_R + 1);
+    for (cj = 0; cj < 9; ++cj) {
+        if (!cb[cj]) {
+            continue;
+        }
+        i0 = (int) cox[cj] - gxr;
+        j0 = (int) coy[cj] - gyr;
+        i1 = i0 + CW - 1;
+        j1 = j0 + CW - 1;
+        i0 = i0 < 1 ? 1 : i0;
+        j0 = j0 < 1 ? 1 : j0;
+        i1 = i1 > SND_W - 2 ? SND_W - 2 : i1;
+        j1 = j1 > SND_W - 2 ? SND_W - 2 : j1;
+        if (i0 > i1 || j0 > j1) {
+            continue;
+        }
+        fl_su = hub_u[cb[cj]];
+        fl_sx = hub_x[cb[cj]];
+        fl_src = &cp[cj]->tile[j0 + gyr - (int) coy[cj]][i0 + gxr - (int) cox[cj]];
+        fl_dst = SND_GRID + j0 * SND_W + i0;
+        fl_w = i1 - i0 + 1;
+        fl_cj = cj;
+        fill_rect (j1 - j0 + 1);
+    }
+    for (k = 0; k < fl_nd; ++k) {
+        hub_map (cb[cj = fl_dcj[k]]);
+        C = cp[cj];
+        off = ((unsigned) fl_dsh[k] << 8 | fl_dsl[k]) - (unsigned) &C->tile[0][0];
+        i = kind_of (off & (CW - 1), off >> CW_BITS);
+        hub_map (SIGHT_BANK);
+        *(unsigned char*) ((unsigned) fl_ddh[k] << 8 | fl_ddl[k]) = i;
+    }
+    hub_map (SIGHT_BANK);
     pulse_run (&SND_SQ (0, 0));
     SNDHEAD->sn = sn;
     SNDHEAD->x = x;
     SNDHEAD->y = y;
     SNDHEAD->ok = 1;
-    if (miss) {
-        --sgen_;                                /* (A chunk it didn't have: again, the next time it's asked) */
-    }
     i = snd_mask (x, y, 0);
     hub_map (0);
     HUB->pc_mask = i;

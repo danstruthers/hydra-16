@@ -12,7 +12,11 @@
 #include "hub.h"
 
 static unsigned char seg;
-static unsigned char u[HUB_BANKS], x[HUB_BANKS];   /* Each bank's U and $00 (SEG_MAP's), found once */
+#ifndef HUB_UX
+static
+#endif
+unsigned char hub_u[HUB_BANKS], hub_x[HUB_BANKS];  /* Each bank's U and $00 (SEG_MAP's), found once (HUB_UX: a task's
+                                                **   own code switching banks itself, the senses' sound layer's) */
 static unsigned char cur;                       /* The bank hub_map put in the window last */
 static unsigned char self;                      /* This task's role (T_*: its doorbell) */
 unsigned char smask = MAXSTRATA - 1;            /* (world.h's SLOT: the strata's slots, less one) */
@@ -31,8 +35,8 @@ static int find_banks (void)
         if (hy_call (HY_SEG_MAP, &r)) {
             return -1;
         }
-        u[b] = r.a;
-        x[b] = r.x;
+        hub_u[b] = r.a;
+        hub_x[b] = r.x;
     }
     hub_map (0);
     return 0;
@@ -41,8 +45,8 @@ static int find_banks (void)
 void __fastcall__ hub_map (unsigned char bank)
 {
     cur = bank;
-    *(volatile unsigned char*) 0xFFF1 = u[bank];    /* U, then the bank (hydra.h's hy_seg_map, without the call) */
-    *(volatile unsigned char*) 0 = x[bank];
+    *(volatile unsigned char*) 0xFFF1 = hub_u[bank];    /* U, then the bank (hydra.h's hy_seg_map, without the call) */
+    *(volatile unsigned char*) 0 = hub_x[bank];
 }
 
 #if !defined (HUB_ATTACHED) || defined (HUB_BACK)  /* (The UI's and the maker's: the others' room) */
@@ -58,7 +62,7 @@ unsigned hub_here (void)
 void __fastcall__ hub_back (unsigned w)
 {
     cur = w >> 8;
-    *(volatile unsigned char*) 0xFFF1 = u[cur];
+    *(volatile unsigned char*) 0xFFF1 = hub_u[cur];
     *(volatile unsigned char*) 0 = w;
 }
 #endif

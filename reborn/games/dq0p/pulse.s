@@ -11,7 +11,8 @@
 ;
 ;   void __fastcall__ pulse_run (unsigned char* centre);    the character's square in the grid (0 put on it)
 
-            .export     _pulse_run
+            .export     _pulse_run, _fill_rect, _fl_src, _fl_dst, _fl_su, _fl_sx, _fl_du, _fl_dx, _fl_w, _fl_cj, _fl_nd
+            .export     _fl_dsl, _fl_dsh, _fl_ddl, _fl_ddh, _fl_dcj
             .importzp   ptr1, ptr2, ptr3, ptr4, tmp1, tmp2, tmp3, tmp4, sreg, regsave
 
 GRID        = $8000 + $1100 + 48            ; (hub.h's SND_GRID: SOUND_AT, its head)
@@ -30,7 +31,102 @@ AIR         = $40
 DOORX       = 2                             ; (DOOR_SND)
 WALLX       = 4
 
+            .bss
+_fl_src:    .res        2
+_fl_dst:    .res        2
+_fl_su:     .res        1
+_fl_sx:     .res        1
+_fl_du:     .res        1
+_fl_dx:     .res        1
+_fl_w:      .res        1
+_fl_cj:     .res        1
+_fl_nd:     .res        1
+_fl_dsl:    .res        32
+_fl_dsh:    .res        32
+_fl_ddl:    .res        32
+_fl_ddh:    .res        32
+_fl_dcj:    .res        32
+buf:        .res        W
+
             .segment    "SW5CODE"
+
+; A chunk's rectangle of squares (fl_src: its first, in its bank, fl_su and fl_sx its U and $00; fl_w across, h rows,
+; CW apart) classified into the grid (fl_dst, in its bank, fl_du, fl_dx; SND_W apart) by their kinds (world.h's
+; T_*): rock $FF, a wall $FC, the rest open $FE; a door or a window $7F, noted (its square's address in the chunk and
+; in the grid, the chunk's fl_cj: fl_ds*, fl_dd*, fl_dcj, fl_nd of them, MAXD at most) for its portal to say (s_pulse's).
+; A row at a time through buf, the banks switched by their registers (hub.c's hub_map's way, without the call)
+;
+;   void __fastcall__ fill_rect (unsigned char h);
+MAXD        = 32
+_fill_rect: sta         tmp2
+            lda         _fl_src
+            sta         ptr1
+            lda         _fl_src + 1
+            sta         ptr1 + 1
+            lda         _fl_dst
+            sta         ptr2
+            lda         _fl_dst + 1
+            sta         ptr2 + 1
+@row:       lda         _fl_su
+            sta         $FFF1
+            lda         _fl_sx
+            sta         $00
+            ldy         _fl_w
+            dey
+@sq:        lda         (ptr1),y
+            and         #$0F
+            tax
+            lda         kinds,x
+            sta         buf,y
+            bmi         @next
+            ldx         _fl_nd              ; (A door, a window: noted)
+            cpx         #MAXD
+            bcs         @next
+            tya
+            clc
+            adc         ptr1
+            sta         _fl_dsl,x
+            lda         ptr1 + 1
+            adc         #0
+            sta         _fl_dsh,x
+            tya
+            clc
+            adc         ptr2
+            sta         _fl_ddl,x
+            lda         ptr2 + 1
+            adc         #0
+            sta         _fl_ddh,x
+            lda         _fl_cj
+            sta         _fl_dcj,x
+            inc         _fl_nd
+@next:      dey
+            bpl         @sq
+            lda         _fl_du
+            sta         $FFF1
+            lda         _fl_dx
+            sta         $00
+            ldy         _fl_w
+            dey
+@cp:        lda         buf,y
+            sta         (ptr2),y
+            dey
+            bpl         @cp
+            clc
+            lda         ptr1
+            adc         #32
+            sta         ptr1
+            bcc         :+
+            inc         ptr1 + 1
+:           clc
+            lda         ptr2
+            adc         #W
+            sta         ptr2
+            bcc         :+
+            inc         ptr2 + 1
+:           dec         tmp2
+            bne         @row
+            rts
+kinds:      .byte       $FF, $FE, $FC, $7F, $FE, $FE, $7F, $FE, $FE, $FE, $FE, $FE, $FE, $FE, $FE, $FE
 
 ; ptr1: the square taken (less W + 1: its eight about it at (ptr1),y, y 0 ... 2 W + 2); ptr2, ptr3 the open queue's
 ; head and tail; tmp3, tmp4 the shut queue's; ptr4, ptr4 + 1 the walls'; tmp1, tmp2, regsave + 2 the marks for a

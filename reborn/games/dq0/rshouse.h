@@ -185,3 +185,20 @@ static void bdice (void)
     bseed = t;
 }
 #endif
+
+/* ---- Moving quietly's own dice (rs.h's P_STEALTH, the character's and a creature's: HOUSE.md's sound, the air and
+** moving quietly, every ruleset's): the same way as the bearings' (qdice about the test, before it and after), so the
+** game's other tests roll as they did whether anyone creeps or stalks; its state the referee's qseed */
+#if defined (RS_HOUSE_QUIET) && !defined (RS_HOUSE_QUIET_DONE)
+#define RS_HOUSE_QUIET_DONE
+extern unsigned long xs_seed;
+static unsigned long qseed;
+
+static void qdice (void)
+{
+    unsigned long t = xs_seed;
+
+    xs_seed = qseed ? qseed : t ^ 0x51554945UL;
+    qseed = t;
+}
+#endif
