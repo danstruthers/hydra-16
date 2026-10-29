@@ -112,7 +112,25 @@ function createAcia(env) {
       else { if (a.typedAt < 0) a.typedAt = t; a.rx = c.charCodeAt(0); a.rdrf = 1; a.rxAt = t; if (!(a.cmd & 2)) a.irq = 1; a.rxDelay = paste ? a.charCycles() : 20000; }
     }
   };
-  a.irqActive = () => !!(a.irq && ((!wdc && (a.cmd & 0x0C) === 0x04 && a.tdre) || (!(a.cmd & 2) && a.rdrf)));
+  // After a tick at cycle t: the first cycle a tick may do more than count its timers down (a character's time over,
+  // a byte in, a prompt waited for come): until then the machine's ticks can wait, taken together (machine.js's sync)
+  a.idleTo = t => {
+    let n = a.txTimer > 0 ? t + a.txTimer : Infinity;
+    if (a.pcQueue.length) return Math.min(n, t + Math.max(1, a.pcDelay));
+    const q = a.rxQueue;
+    if (!q.length) return n;
+    const c = q[0];
+    if (c === 'ā') {
+      if (a.promptFrom < 0) return t + 1;
+      if (a.sent > a.promptFrom && (a.tail.endsWith('> ') || a.tail.endsWith('>') || a.tail.endsWith('% ') || a.tail.endsWith('%') || a.tail.endsWith(' <')))
+        return Math.min(n, Math.max(t + 1, a.sentAt + PROMPT_QUIET));
+      return n;
+    }
+    if (a.held && !a.kbd && c < 'Ā' && a.lag <= 0) return n;
+    if (!a.rdrf || paste || a.kbd || c === 'Ă') return Math.min(n, t + Math.max(1, a.rxDelay));
+    return n;
+  };
+  a.irqActive = () =>!!(a.irq && ((!wdc && (a.cmd & 0x0C) === 0x04 && a.tdre) || (!(a.cmd & 2) && a.rdrf)));
   a.nextEvent = () => {
     let n = Infinity;
     if (a.txTimer > 0) n = Math.min(n, a.txTimer);

@@ -18,8 +18,6 @@ const CYC = ('7621535532216465' + '2551546524216465' + '6621335542214465' + '255
 const PAGE_X = new Uint8Array(256);
 for (const o of [0x11, 0x19, 0x1D, 0x31, 0x39, 0x3D, 0x51, 0x59, 0x5D, 0x71, 0x79, 0x7D, 0xB1, 0xB9, 0xBD, 0xD1, 0xD9, 0xDD,
   0xF1, 0xF9, 0xFD, 0xBC, 0xBE, 0x3C, 0x1E, 0x3E, 0x5E, 0x7E]) PAGE_X[o] = 1;   // (Shifts abs,X too, on the 65C02)
-const DECIMAL_X = new Uint8Array(256);
-for (const o of [0x61, 0x65, 0x69, 0x6D, 0x71, 0x72, 0x75, 0x79, 0x7D, 0xE1, 0xE5, 0xE9, 0xED, 0xF1, 0xF2, 0xF5, 0xF9, 0xFD]) DECIMAL_X[o] = 1;
 const C = 1, Z = 2, I = 4, D = 8, B = 0x10, Vf = 0x40, N = 0x80;
 const hx = (v, n = 2) => v.toString(16).toUpperCase().padStart(n, '0');
 
@@ -40,6 +38,7 @@ function createCpu(bus) {
   const fetch = () => { const v = rd(PC); PC = (PC + 1) & 0xFFFF; return v; };
   const fetch16 = () => { const v = rd16(PC); PC = (PC + 2) & 0xFFFF; return v; };
   function adc(v) {
+    if (P & D) extra = 1;                                     // (Decimal mode: a cycle more)
     const c = P & C; let r = A + v + c;
     P = (P & ~(C | Vf)) | (r > 0xFF ? C : 0) | ((~(A ^ v) & (A ^ r) & 0x80) ? Vf : 0);
     if (P & D) {
@@ -51,6 +50,7 @@ function createCpu(bus) {
   }
   function sbc(v) {
     if (!(P & D)) { adc(v ^ 0xFF); return; }
+    extra = 1;
     const b = 1 - (P & C), r = A - v - b; let lo = (A & 15) - (v & 15) - b, hi = (A >> 4) - (v >> 4);
     if (lo < 0) { lo -= 6; hi--; } if (hi < 0) hi -= 6;
     P = (P & ~C) | (r >= 0 ? C : 0); A = setNZ(((hi << 4) | (lo & 15)) & 0xFF);
@@ -76,20 +76,17 @@ function createCpu(bus) {
   const rol = v => { const c = P & C; P = (P & ~C) | (v >> 7); return setNZ(((v << 1) | c) & 0xFF); };
   const ror = v => { const c = P & C; P = (P & ~C) | (v & 1); return setNZ((v >> 1) | (c << 7)); };
   const bit = v => { P = (P & ~(N | Vf | Z)) | (v & 0xC0) | ((A & v) ? 0 : Z); };
-  const ALU = [v => A = setNZ(A | v), v => A = setNZ(A & v), v => A = setNZ(A ^ v), adc, null, null, v => cmp(A, v), sbc];
-  const CC1_MODE = [indx, zp, () => -1, abs, indy, zpx, absy, absx];                  // (cc = 1: bbb's mode; -1 immediate)
-  const CC2_MODE = [null, zp, null, abs, null, zpx, null, absx];                       // (cc = 2: the shifts, INC, DEC)
-  const CC2_OP = [asl, rol, lsr, ror, null, null, v => setNZ((v - 1) & 0xFF), v => setNZ((v + 1) & 0xFF)];
+  const dec = v => setNZ((v - 1) & 0xFF), inc = v => setNZ((v + 1) & 0xFF);
   const bad = () => { cpu.halted = 'unimplemented opcode $' + hx(op) + ' at ' + cpu.where((PC - 1) & 0xFFFF); };
 
-  // One instruction; .vector() gives BRK's vector
+  // One instruction; .vector() gives BRK's vector.  (Every opcode its own case, its mode and operation called
+  // straight: no table of functions in the way)
   cpu.step = vector => {
     cpu.lastPC = PC;
     op = fetch();
-    crossed = 0; extra = DECIMAL_X[op] && (P & D) ? 1 : 0;
+    crossed = 0; extra = 0;
     cpu.ioAt = cpu.cyc + CYC[op] - 1;                         // (Its data access: the last cycle, near enough)
-    let a, v, t;
-    const aaa = op >> 5, bbb = (op >> 2) & 7, cc = op & 3;
+    let a, v, t, z;
     switch (op) {
       case 0x00: PC = (PC + 1) & 0xFFFF; irq(vector(), true); break;                   // BRK
       case 0x40: P = pull() | 0x30; PC = pull(); PC |= pull() << 8; break;              // RTI
@@ -122,7 +119,7 @@ function createCpu(bus) {
       case 0x04: case 0x0C: a = op === 0x04 ? zp() : abs(); v = rd(a); P = (P & ~Z) | ((A & v) ? 0 : Z); wr(a, v | A); break;   // TSB
       case 0x14: case 0x1C: a = op === 0x14 ? zp() : abs(); v = rd(a); P = (P & ~Z) | ((A & v) ? 0 : Z); wr(a, v & ~A); break;  // TRB
       case 0x92: wr(indz(), A); break; case 0xB2: A = setNZ(rd(indz())); break;
-      case 0x12: ALU[0](rd(indz())); break; case 0x32: ALU[1](rd(indz())); break; case 0x52: ALU[2](rd(indz())); break;
+      case 0x12: A = setNZ(A | rd(indz())); break; case 0x32: A = setNZ(A & rd(indz())); break; case 0x52: A = setNZ(A ^ rd(indz())); break;
       case 0x72: adc(rd(indz())); break; case 0xD2: cmp(A, rd(indz())); break; case 0xF2: sbc(rd(indz())); break;
       case 0xA2: X = setNZ(fetch()); break; case 0xA0: Y = setNZ(fetch()); break;
       case 0xA6: X = setNZ(rd(zp())); break; case 0xB6: X = setNZ(rd(zpy())); break; case 0xAE: X = setNZ(rd(abs())); break; case 0xBE: X = setNZ(rd(absy())); break;
@@ -136,22 +133,29 @@ function createCpu(bus) {
       case 0x03: case 0x13: case 0x23: case 0x33: case 0x43: case 0x53: case 0x63: case 0x73: case 0x83: case 0x93: case 0xA3: case 0xB3:
       case 0xC3: case 0xD3: case 0xE3: case 0xF3: case 0x0B: case 0x1B: case 0x2B: case 0x3B: case 0x4B: case 0x5B: case 0x6B: case 0x7B:
       case 0x8B: case 0x9B: case 0xAB: case 0xBB: case 0xEB: case 0xFB: break;                                   // 1-byte NOPs
-      default:
-        if ((op & 0x0F) === 0x0F) { const n = (op >> 4) & 7, z = fetch(); const set = (rd(z) >> n) & 1; br((op & 0x80) ? set : !set); break; }   // BBR/BBS
-        if ((op & 0x0F) === 0x07) { const n = (op >> 4) & 7, z = fetch(); v = rd(z); wr(z, (op & 0x80) ? v | (1 << n) : v & ~(1 << n)); break; } // RMB/SMB
-        if (cc === 1) {
-          a = CC1_MODE[bbb]();
-          if (aaa === 4) { if (a >= 0) wr(a, A); else fetch(); break; }                // STA (no immediate)
-          v = a < 0 ? fetch() : rd(a);
-          if (aaa === 5) A = setNZ(v); else ALU[aaa](v);
-          break;
-        }
-        if (cc === 2) {
-          const mode = CC2_MODE[bbb], f = CC2_OP[aaa];
-          if (!mode || !f) { bad(); break; }
-          rmw(mode(), f); break;
-        }
-        bad();
+      case 0x01: A = setNZ(A | rd(indx())); break; case 0x05: A = setNZ(A | rd(zp())); break; case 0x09: A = setNZ(A | fetch()); break; case 0x0D: A = setNZ(A | rd(abs())); break; case 0x11: A = setNZ(A | rd(indy())); break; case 0x15: A = setNZ(A | rd(zpx())); break; case 0x19: A = setNZ(A | rd(absy())); break; case 0x1D: A = setNZ(A | rd(absx())); break;   // ORA
+      case 0x21: A = setNZ(A & rd(indx())); break; case 0x25: A = setNZ(A & rd(zp())); break; case 0x29: A = setNZ(A & fetch()); break; case 0x2D: A = setNZ(A & rd(abs())); break; case 0x31: A = setNZ(A & rd(indy())); break; case 0x35: A = setNZ(A & rd(zpx())); break; case 0x39: A = setNZ(A & rd(absy())); break; case 0x3D: A = setNZ(A & rd(absx())); break;   // AND
+      case 0x41: A = setNZ(A ^ rd(indx())); break; case 0x45: A = setNZ(A ^ rd(zp())); break; case 0x49: A = setNZ(A ^ fetch()); break; case 0x4D: A = setNZ(A ^ rd(abs())); break; case 0x51: A = setNZ(A ^ rd(indy())); break; case 0x55: A = setNZ(A ^ rd(zpx())); break; case 0x59: A = setNZ(A ^ rd(absy())); break; case 0x5D: A = setNZ(A ^ rd(absx())); break;   // EOR
+      case 0x61: adc(rd(indx())); break; case 0x65: adc(rd(zp())); break; case 0x69: adc(fetch()); break; case 0x6D: adc(rd(abs())); break; case 0x71: adc(rd(indy())); break; case 0x75: adc(rd(zpx())); break; case 0x79: adc(rd(absy())); break; case 0x7D: adc(rd(absx())); break;   // ADC
+      case 0x81: wr(indx(), A); break; case 0x85: wr(zp(), A); break; case 0x8D: wr(abs(), A); break; case 0x91: wr(indy(), A); break; case 0x95: wr(zpx(), A); break; case 0x99: wr(absy(), A); break; case 0x9D: wr(absx(), A); break;   // STA
+      case 0xA1: A = setNZ(rd(indx())); break; case 0xA5: A = setNZ(rd(zp())); break; case 0xA9: A = setNZ(fetch()); break; case 0xAD: A = setNZ(rd(abs())); break; case 0xB1: A = setNZ(rd(indy())); break; case 0xB5: A = setNZ(rd(zpx())); break; case 0xB9: A = setNZ(rd(absy())); break; case 0xBD: A = setNZ(rd(absx())); break;   // LDA
+      case 0xC1: cmp(A, rd(indx())); break; case 0xC5: cmp(A, rd(zp())); break; case 0xC9: cmp(A, fetch()); break; case 0xCD: cmp(A, rd(abs())); break; case 0xD1: cmp(A, rd(indy())); break; case 0xD5: cmp(A, rd(zpx())); break; case 0xD9: cmp(A, rd(absy())); break; case 0xDD: cmp(A, rd(absx())); break;   // CMP
+      case 0xE1: sbc(rd(indx())); break; case 0xE5: sbc(rd(zp())); break; case 0xE9: sbc(fetch()); break; case 0xED: sbc(rd(abs())); break; case 0xF1: sbc(rd(indy())); break; case 0xF5: sbc(rd(zpx())); break; case 0xF9: sbc(rd(absy())); break; case 0xFD: sbc(rd(absx())); break;   // SBC
+      case 0x06: a = zp(); wr(a, asl(rd(a))); break; case 0x0E: a = abs(); wr(a, asl(rd(a))); break; case 0x16: a = zpx(); wr(a, asl(rd(a))); break; case 0x1E: a = absx(); wr(a, asl(rd(a))); break;
+      case 0x26: a = zp(); wr(a, rol(rd(a))); break; case 0x2E: a = abs(); wr(a, rol(rd(a))); break; case 0x36: a = zpx(); wr(a, rol(rd(a))); break; case 0x3E: a = absx(); wr(a, rol(rd(a))); break;
+      case 0x46: a = zp(); wr(a, lsr(rd(a))); break; case 0x4E: a = abs(); wr(a, lsr(rd(a))); break; case 0x56: a = zpx(); wr(a, lsr(rd(a))); break; case 0x5E: a = absx(); wr(a, lsr(rd(a))); break;
+      case 0x66: a = zp(); wr(a, ror(rd(a))); break; case 0x6E: a = abs(); wr(a, ror(rd(a))); break; case 0x76: a = zpx(); wr(a, ror(rd(a))); break; case 0x7E: a = absx(); wr(a, ror(rd(a))); break;
+      case 0xC6: a = zp(); wr(a, dec(rd(a))); break; case 0xCE: a = abs(); wr(a, dec(rd(a))); break; case 0xD6: a = zpx(); wr(a, dec(rd(a))); break; case 0xDE: a = absx(); wr(a, dec(rd(a))); break;
+      case 0xE6: a = zp(); wr(a, inc(rd(a))); break; case 0xEE: a = abs(); wr(a, inc(rd(a))); break; case 0xF6: a = zpx(); wr(a, inc(rd(a))); break; case 0xFE: a = absx(); wr(a, inc(rd(a))); break;
+      case 0x0F: z = fetch(); br(!((rd(z) >> 0) & 1)); break; case 0x8F: z = fetch(); br((rd(z) >> 0) & 1); break; case 0x07: z = fetch(); wr(z, rd(z) & 0xFE); break; case 0x87: z = fetch(); wr(z, rd(z) | 0x01); break;
+      case 0x1F: z = fetch(); br(!((rd(z) >> 1) & 1)); break; case 0x9F: z = fetch(); br((rd(z) >> 1) & 1); break; case 0x17: z = fetch(); wr(z, rd(z) & 0xFD); break; case 0x97: z = fetch(); wr(z, rd(z) | 0x02); break;
+      case 0x2F: z = fetch(); br(!((rd(z) >> 2) & 1)); break; case 0xAF: z = fetch(); br((rd(z) >> 2) & 1); break; case 0x27: z = fetch(); wr(z, rd(z) & 0xFB); break; case 0xA7: z = fetch(); wr(z, rd(z) | 0x04); break;
+      case 0x3F: z = fetch(); br(!((rd(z) >> 3) & 1)); break; case 0xBF: z = fetch(); br((rd(z) >> 3) & 1); break; case 0x37: z = fetch(); wr(z, rd(z) & 0xF7); break; case 0xB7: z = fetch(); wr(z, rd(z) | 0x08); break;
+      case 0x4F: z = fetch(); br(!((rd(z) >> 4) & 1)); break; case 0xCF: z = fetch(); br((rd(z) >> 4) & 1); break; case 0x47: z = fetch(); wr(z, rd(z) & 0xEF); break; case 0xC7: z = fetch(); wr(z, rd(z) | 0x10); break;
+      case 0x5F: z = fetch(); br(!((rd(z) >> 5) & 1)); break; case 0xDF: z = fetch(); br((rd(z) >> 5) & 1); break; case 0x57: z = fetch(); wr(z, rd(z) & 0xDF); break; case 0xD7: z = fetch(); wr(z, rd(z) | 0x20); break;
+      case 0x6F: z = fetch(); br(!((rd(z) >> 6) & 1)); break; case 0xEF: z = fetch(); br((rd(z) >> 6) & 1); break; case 0x67: z = fetch(); wr(z, rd(z) & 0xBF); break; case 0xE7: z = fetch(); wr(z, rd(z) | 0x40); break;
+      case 0x7F: z = fetch(); br(!((rd(z) >> 7) & 1)); break; case 0xFF: z = fetch(); br((rd(z) >> 7) & 1); break; case 0x77: z = fetch(); wr(z, rd(z) & 0x7F); break; case 0xF7: z = fetch(); wr(z, rd(z) | 0x80); break;
+      default: bad();                                                                    // (None: every opcode is above)
     }
     cpu.cyc += CYC[op] + extra + (crossed && PAGE_X[op] ? 1 : 0);
   };
