@@ -2,12 +2,16 @@
 // encodeGrammar turns the rules of commands.ebnf into bytes; encodeAliases turns the default aliases (commands.aliases)
 // into their own bytes, so the grammar and the aliases can sit in different banks. decodeGrammar and decodeAliases read
 // them back to what commandcompile.js uses. The corpus must give the same results from the bytes as from the text.
-// Grammar layout (version 7): magic "DQ0G"; the rule count; the name count; the word count and the words (5 bits a
+// Grammar layout (version 8): magic "DQ0G"; the rule count; the name count; the word count and the words (5 bits a
 // letter, a length byte); one kind byte per open name (the matcher's K_ codes, OPEN_KIND); then the rules, one after
 // another. The names are not in the table: a rule or open name is its number in grammarNames' order (rules, then open
 // names). A composite node (sequence, alternative, option, repeat) is [tag, size, count or child, ...]: the size is one
 // byte under 128, else two bytes with the top bit of the first set, counted from the tag, so a reader steps over the
-// node without walking it. A leaf (name, word list, quote) has no size: its length is in its tag or count.
+// node without walking it. A leaf has no size: a rule's name is two bytes, $40 | its number's top five bits, then its
+// low byte (rules to 8191); an open name's two, $60 and its number among the open names (the rule count less); a word
+// alone two, $80 | its number's top seven bits, then its low byte; a list of words [tag, count, each word's number in
+// two bytes]; a quote its tag. (Version 7's names were three bytes, its words alone four:
+// version 8 is the rule room of 2026-10-29, the rules a fifth smaller.)
 // Alias layout: magic "DQ0A", version 1; the count; per alias: the word, the verb, and a flag (1: stands anywhere).
 //   node sim/tools/commandtables.js [grammar.bin] [aliases.bin] [index.bin]   write the tables and print their sizes
 //   node sim/tools/commandtables.js --check                       encode, decode, and run the corpus through the tables
@@ -20,9 +24,11 @@ const words = require('./commandwords.js');
 const GAME = path.join(__dirname, '..', '..', 'games', 'dq0');
 const MAGIC = [0x44, 0x51, 0x30, 0x47]; // "DQ0G"
 const MAGIC_ALIAS = [0x44, 0x51, 0x30, 0x41]; // "DQ0A"
-const VERSION = 7;
+const VERSION = 8;
 const VERSION_ALIAS = 1;
-const TAG = { seq: 1, alt: 2, opt: 3, rep: 4, nt: 5, term: 6, quote: 7 };
+const TAG = { seq: 1, alt: 2, opt: 3, rep: 4, term: 6, quote: 7 };
+const NAME = 0x40, OPEN = 0x60, WORD = 0x80;   // a rule's name's first byte, an open name's, a word's alone
+const tagOf = b => b >= WORD ? 'term' : b >= NAME ? 'nt' : Object.keys(TAG).find(k => TAG[k] === b);
 
 // The open names are declared on the header line of the grammar: "open: ...".
 function openNames(file) {
@@ -84,9 +90,19 @@ function encodeGrammar(rules, open) {
       case 'rep': return composite(TAG.rep, [], node(n.x));
       case 'nt':
         if (!nameId.has(n.name)) throw new Error('undefined name <' + n.name + '>');
-        return [TAG.nt, ...u16(nameId.get(n.name))];
+        if (nameId.get(n.name) >= rules.size) {
+          if (nameId.get(n.name) - rules.size > 255) throw new Error('too many open names');
+          return [OPEN, nameId.get(n.name) - rules.size];
+        }
+        if (nameId.get(n.name) > 0x1FFF) throw new Error('too many rules');
+        return [NAME | nameId.get(n.name) >> 8, nameId.get(n.name) & 255];
       case 'term':
         if (n.words.length > 255) throw new Error('term too long');
+        if (n.words.length === 1) {
+          const w = wid(n.words[0]);
+          if (w > 0x7FFF) throw new Error('too many words');
+          return [WORD | w >> 8, w & 255];
+        }
         return [TAG.term, n.words.length, ...n.words.flatMap(w => u16(wid(w)))];
       case 'quote': return [TAG.quote];
       default: throw new Error('bad node ' + n.t);
@@ -134,6 +150,9 @@ function decodeGrammar(buf, names) {
   const node = () => {
     const start = p;
     const tag = u8();
+    if (tag >= WORD) return { t: 'term', words: [words[(tag & 0x7F) << 8 | u8()]] };
+    if (tag >= OPEN) return { t: 'nt', name: names[ruleCount + u8()] };
+    if (tag >= NAME) return { t: 'nt', name: names[(tag & 0x1F) << 8 | u8()] };
     switch (tag) {
       case TAG.seq: case TAG.alt: case TAG.opt: case TAG.rep: {
         const b = u8();
@@ -150,7 +169,6 @@ function decodeGrammar(buf, names) {
         p = end;
         return result;
       }
-      case TAG.nt: return { t: 'nt', name: names[u16()] };
       case TAG.term: { const n = u8(); const ws = []; for (let i = 0; i < n; i++) ws.push(words[u16()]); return { t: 'term', words: ws }; }
       case TAG.quote: return { t: 'quote' };
       default: throw new Error('bad tag ' + tag + ' at ' + start);
@@ -175,8 +193,8 @@ function decodeAliases(buf) {
 }
 
 // ---- The index table: what the 65C02 matcher uses to find words, and to skip what can't match -------------------------
-// Index layout (version 2): magic "DQ0I", the version; the rule count, the word count (the grammar table's) and the
-// dictionary's entry count (two bytes each); the rules "line", "sequence" and "quoted-text" (a byte each: what the
+// Index layout (version 3): magic "DQ0I", the version; the rule count, the word count (the grammar table's) and the
+// dictionary's entry count (two bytes each); the rules "line", "sequence" and "quoted-text" (two bytes each: what the
 // matcher treats by name); the hash's permutation (256 bytes: Pearson's, the matcher's and wordHash's); the dictionary:
 // for each of the 256 hashes, where its words start (257 offsets from the first word, two bytes each), then the words in
 // hash order, each its length, its letters and its entry (two bytes: entries 0 to n - 1 are the grammar's words, by
@@ -187,7 +205,7 @@ function decodeAliases(buf) {
 // offsets, its first words (the count; the words, sorted, two bytes each; then each one's option, a byte) and its options
 // that can begin with an open name or match nothing (the count, then option and kinds, bit 15 for nothing).
 const INDEX_MAGIC = [0x44, 0x51, 0x30, 0x49]; // "DQ0I"
-const INDEX_VERSION = 2;
+const INDEX_VERSION = 3;
 const ALT_INDEX_MIN = 8;          // an alternation of this many options or more is indexed by its first words
 const K_QUOTED = 10;              // the matcher's kind for quoted text (cmdmatch.s's K_QUOTED)
 const LX = { adj: 1, task: 2, ordinal: 4, number: 8, notspell: 16, notobject: 32 };   // cmdmatch.s's LX_*
@@ -238,17 +256,17 @@ function nodeOffsets(buf, rules) {
   p += nnames - nrules;
   const head = q => (buf[q + 1] & 0x80) ? q + 3 : q + 2;
   const next = q => {
+    if (buf[q] >= NAME) return q + 2;
     switch (buf[q]) {
       case TAG.seq: case TAG.alt: case TAG.opt: case TAG.rep:
         return q + ((buf[q + 1] & 0x80) ? (((buf[q + 1] & 0x7F) << 8) | buf[q + 2]) : buf[q + 1]);
-      case TAG.nt: return q + 3;
       case TAG.term: return q + 2 + 2 * buf[q + 1];
       default: return q + 1;
     }
   };
   const at = new Map();
   const visit = (n, q) => {
-    if (buf[q] !== TAG[n.t]) throw new Error('the grammar table and the rules differ at ' + q);
+    if (tagOf(buf[q]) !== n.t) throw new Error('the grammar table and the rules differ at ' + q);
     at.set(n, q);
     if (n.t === 'seq' || n.t === 'alt') {
       let c = head(q) + 1;
@@ -354,7 +372,7 @@ function encodeIndex(rules, gbuf, aliases = DEFAULT_ALIASES, game = words.gameWo
   const { R, of } = firstSets(rules);
   checkLeftRecursion(rules, of);
   const names = [...rules.keys()], n = names.length;
-  const id = k => { const i = names.indexOf(k); if (i < 0 || i > 255) throw new Error('no rule <' + k + '> for the matcher'); return i; };
+  const id = k => { const i = names.indexOf(k); if (i < 0 || i > 0x3FFF) throw new Error('no rule <' + k + '> for the matcher'); return i; };
   // The dictionary: the grammar's words (their numbers), then the lexicon's others, then the aliases' first words, then
   // the game's (commands.words: what dq0c makes of a command)
   const entries = [...words], flags = words.map(() => 0), entryOf = new Map(words.map((w, i) => [w, i]));
@@ -382,7 +400,7 @@ function encodeIndex(rules, gbuf, aliases = DEFAULT_ALIASES, game = words.gameWo
     khi.push(((f.kinds >> 8) & 0x7F) | (f.nullable ? 0x80 : 0));
   });
   const out = [...INDEX_MAGIC, INDEX_VERSION, ...u16(n), ...u16(words.length), ...u16(entries.length),
-    id('line'), id('sequence'), id('quoted-text'), ...PEARSON, ...starts.flatMap(u16), ...recs, ...flags, ...bloom.flat(), ...klo, ...khi];
+    ...u16(id('line')), ...u16(id('sequence')), ...u16(id('quoted-text')), ...PEARSON, ...starts.flatMap(u16), ...recs, ...flags, ...bloom.flat(), ...klo, ...khi];
   // The large alternations
   const alts = [];
   const walk = t => {
@@ -416,7 +434,7 @@ function indexWords(ibuf, gbuf) {
   const rd = q => ibuf[q] | (ibuf[q + 1] << 8);
   const words = tableWords(gbuf), n = rd(9), seen = new Array(n).fill(null);
   for (let b = 0; b < 256; b++) {
-    for (let p = 784 + rd(270 + 2 * b), end = 784 + rd(272 + 2 * b); p < end;) {
+    for (let p = 787 + rd(273 + 2 * b), end = 787 + rd(275 + 2 * b); p < end;) {
       const len = ibuf[p];
       const w = String.fromCharCode(...ibuf.subarray(p + 1, p + 1 + len)), e = rd(p + 1 + len);
       if (wordHash(w) !== b) throw new Error('the index: ' + w + ' in the wrong bucket');

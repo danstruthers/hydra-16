@@ -7,8 +7,15 @@
 // base's (system: 'base') boots the base's image: modules/rom.txt's modules (ser, wozmon), less its without, and its
 // own (tests/mod's: obj/tests), its init.
 //
-// Usage: node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N] [--dl]
+// Usage: node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...] [--list] [--build] [-v] [--seed N] [-j N] [--dl]
 //   NAME      only these tests (default: all)
+//   --changed [REF]  of those, only the ones what's changed since REF can affect (sim/select.js: the files changed
+//             since REF's merge base with HEAD, committed or not, and the new ones, each mapped to areas by the
+//             system's tests/areas.js; a path it doesn't know runs every test).  REF: the default the system's
+//             (HydraOS's reborn-game), or --changed=REF
+//   --near AREA,...  the tests of these areas (areas.js's: fight, parser, map, basic, mod:t_rc ...) or of these names,
+//             as well as the NAMEs: an agent's working loop
+//   --list    what would run, and why (the files changed and their areas, each test's reason), without running
 //   --build   build first (node build.js)
 //   -v        each test's output, and its "ok" lines
 //   --seed N  the power-up's random RAM (default 1: the same each run)
@@ -20,7 +27,10 @@
 // image(t) (its own; the base's tests still the base's), build(), pcFolder(t, opt), runDl(t, machine, opt, extra),
 // self (the file a test's process runs: its --one), instrument(t, opt) (or none: a test's own watch on the machine,
 // { boot: its boot's options, attach(m) as it's booted, judge(m) -> { failures, notes } }, sim/lib's emulator's
-// alone), summary(list, opt) (after the tests, before the count) }; then main(argv).
+// alone), summary(list, opt) (after the tests, before the count), areas (its tests/areas.js: { rules, areasOf }),
+// testFiles (its tests files: { path from the repository's top: the tests it makes }), ref (--changed's default),
+// restrict(list, opt) (the list when no NAME's given, the system's narrowing of it: HydraOS's RULES=NAME, the meaning
+// checks) }; then main(argv).  After the tests, obj/testtimes.json: each one's wall time and cycles.
 // The emulator runs as fast as the host can, never paced to the Hydra's clock (run.js -i is): the cycles a test
 // reports, and its budgets, are the emulated machine's.
 'use strict';
@@ -34,7 +44,7 @@ const { readManifest, hwtest } = require('../build.js');
 const BASE = path.join(__dirname, '..');
 // The system the tests are run for (setup): the base's own, unless a system on it says otherwise
 const env = { root: BASE, tests: null, IRQ_OFF_MAX: 200, image: null, build: null, pcFolder: null, runDl: null, self: __filename,
-  instrument: null, summary: null };
+  instrument: null, summary: null, areas: null, testFiles: null, ref: 'reborn-game', restrict: null };
 function setup(e) { Object.assign(env, e); }
 const baseTests = () => require('../tests/tests.js').tests.map(t => Object.assign(t, { system: 'base' }));
 
@@ -157,6 +167,13 @@ function report(t, r, opt, lbl) {
   return { ok, text: out.join('\n') };
 }
 
+// A test's time noted (opt.times: its name's { ms, mcycles }, the wall time of its run, its process's, and its
+// report's cycles), for obj/testtimes.json (main's, after the tests: the tiers' measures, tests/TESTING.md)
+function times(opt, t, text, ms) {
+  const c = text.match(/ checks, ([\d.]+)M cycles\)/);
+  if (opt.times) opt.times[t.name] = { ms, mcycles: c ? +c[1] : null, ok: text.startsWith('PASS ') };
+}
+
 // The tests, opt.jobs at a time, each in a process of its own (this file, with --one NAME), the longest (by its
 // cycles) started first; each report shown in the list's order once it and those before it are in.  OUT: (a promise)
 // how many failed
@@ -175,7 +192,7 @@ function parallel(list, opt) {
         const i = order[next], t = list[i], args = [env.self, '--one', t.name, '--seed', String(opt.seed)];
         if (opt.verbose) args.push('-v');
         if (opt.dl) args.push('--dl');
-        const p = spawn(process.execPath, args, { stdio: ['ignore', 'pipe', 'inherit'] });
+        const p = spawn(process.execPath, args, { stdio: ['ignore', 'pipe', 'inherit'] }), t0 = Date.now();
         let text = '';
         running++;
         p.stdout.setEncoding('utf8');
@@ -185,6 +202,7 @@ function parallel(list, opt) {
           text = text.replace(/\r?\n$/, '');
           if (!/^(PASS|FAIL) /.test(text)) text = 'FAIL ' + (t.name + ' ').padEnd(8) + t.what + '\n       ! its process ended (code ' + code + ')' + (text ? '\n' + text : '');
           done[i] = { ok: code === 0 && text.startsWith('PASS '), text };
+          times(opt, t, text, Date.now() - t0);
           show();
           start();
         });
@@ -194,9 +212,57 @@ function parallel(list, opt) {
   });
 }
 
+const USAGE = 'usage: node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...] [--list] [--build] [-v] [--seed N] [-j N] [--dl]';
+
+// The selector's view of the system (sim/select.js): its top, its tests, its tests files, its areas
+function selectorOf(tests, opt) {
+  const sel = require('./select.js'), top = sel.topOf(env.root);
+  const files = env.testFiles || { [path.relative(top, path.join(BASE, 'tests', 'tests.js')).split(path.sep).join('/')]: tests };
+  return { sel, o: { top, tests, files, areas: env.areas || require('../tests/areas.js'), dl: !!opt.dl } };
+}
+
+// The tests to run: the NAMEs and --near's (or all), the system's narrowing (restrict) when no NAME's given, then of
+// those --changed's.  OUT: { list, why: Map (name -> [why]) or null, changes: forChanges's or null }
+function choose(tests, opt) {
+  let named = opt.names.length ? tests.filter(t => opt.names.includes(t.name)) : tests;
+  if (opt.names.length && !named.length && !opt.near.length) { console.error('no such test: ' + opt.names.join(' ')); process.exit(2); }
+  const why = new Map(named === tests ? [] : named.map(t => [t.name, ['named']]));
+  let S = null;
+  if (opt.near.length || opt.changed !== undefined) S = selectorOf(tests, opt);
+  if (opt.near.length) {
+    const n = S.sel.near(S.o, opt.near);
+    if (n.unknown.length) { console.error('--near: no test of ' + n.unknown.join(', ') + ' (an area of tests/areas.js, or a test\'s name)'); process.exit(2); }
+    named = tests.filter(t => (opt.names.length && opt.names.includes(t.name)) || n.list.includes(t));
+    for (const t of n.list) if (!why.has(t.name)) why.set(t.name, ['near ' + opt.near.join(',')]);
+  }
+  if (!opt.names.length && env.restrict) named = env.restrict(named, opt);
+  let changes = null;
+  if (opt.changed !== undefined) {
+    try { changes = S.sel.forChanges(Object.assign({ ref: opt.changed || env.ref }, S.o)); }
+    catch (e) { console.error(e.message); process.exit(2); }
+    named = named.filter(t => changes.run.has(t.name));
+    for (const t of named) why.set(t.name, changes.run.get(t.name));
+  }
+  return { list: named, why: why.size || changes ? why : null, changes };
+}
+
+// --list: what's changed and its areas, and each test that would run, and why
+function listing(tests, c, opt) {
+  if (c.changes) {
+    const ch = c.changes;
+    console.log('--changed ' + ch.ref + ': since ' + ch.base.slice(0, 10) + ', ' + ch.files.length + ' file(s) changed');
+    for (const x of ch.changed) console.log('  ' + x.file + '  -> ' + x.said.join('; '));
+  }
+  for (const t of c.list) {
+    const w = c.why ? c.why.get(t.name) || ['all'] : ['all'];
+    console.log('RUN  ' + (t.name + ' ').padEnd(16) + w.slice(0, 2).join('; ') + (w.length > 2 ? '; and ' + (w.length - 2) + ' more' : ''));
+  }
+  console.log(c.list.length + ' of ' + tests.length + ' tests would run' + (opt.dl ? ' (with --dl)' : '') + (process.env.RULES ? ' (RULES=' + process.env.RULES + ')' : ''));
+}
+
 async function main(argv) {
   const tests = [...baseTests(), ...(env.tests || [])];
-  const opt = { seed: 1, verbose: false, names: [], jobs: require('os').cpus().length, one: null };
+  const opt = { seed: 1, verbose: false, names: [], jobs: require('os').cpus().length, one: null, near: [], changed: undefined };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === '-v') opt.verbose = true;
     else if (argv[i] === '--seed') opt.seed = +argv[++i];
@@ -204,7 +270,15 @@ async function main(argv) {
     else if (argv[i] === '-j') opt.jobs = Math.max(1, Math.floor(+argv[++i]) || 1);
     else if (argv[i] === '--one') opt.one = argv[++i];        // (parallel's: one test, its report, its status)
     else if (argv[i] === '--dl') opt.dl = true;
-    else if (argv[i].startsWith('-')) { console.error('usage: node sim/test.js [NAME ...] [--build] [-v] [--seed N] [-j N] [--dl]'); process.exit(2); }
+    else if (argv[i] === '--list') opt.list = true;
+    else if (argv[i] === '--near') opt.near.push(...String(argv[++i] || '').split(',').filter(Boolean));
+    else if (argv[i].startsWith('--changed=')) opt.changed = argv[i].slice(10);
+    else if (argv[i] === '--changed') {                       // (Its REF: the next word, if it's no test's name and git knows it)
+      opt.changed = '';
+      const n = argv[i + 1];
+      if (n && !n.startsWith('-') && !tests.some(t => t.name === n) && isRef(n)) { opt.changed = n; i++; }
+    }
+    else if (argv[i].startsWith('-')) { console.error(USAGE); process.exit(2); }
     else opt.names.push(argv[i]);
   }
   if (opt.one) {
@@ -213,24 +287,39 @@ async function main(argv) {
     process.exit(r.ok ? 0 : 1);
   }
   if (opt.build) (env.build || (() => require('../build.js').buildBoth({ quiet: true })))();
-  const named = opt.names.length ? tests.filter(t => opt.names.includes(t.name)) : tests;
-  if (!named.length) { console.error('no such test: ' + opt.names.join(' ')); process.exit(2); }
+  const c = choose(tests, opt), named = c.list;
+  if (opt.list) { listing(tests, c, opt); process.exit(0); }
+  if (!named.length) { console.log('no test to run: ' + (opt.changed !== undefined ? 'none depends on what\'s changed' : 'none of these')); process.exit(0); }
   const list = named.filter(t => !(opt.dl && t.jsOnly));
   for (const t of named) if (!list.includes(t)) console.log('SKIP ' + (t.name + ' ').padEnd(8) + t.what + '  (' + t.jsOnly + ')');
   let failed = 0;
+  opt.times = {};
+  const t0 = Date.now();
   if (opt.jobs > 1 && list.length > 1) failed = await parallel(list, opt);
   else {
     const lbl = labels();
     for (const t of list) {
-      const r = report(t, await (opt.dl ? runTestDl : runTest)(t, opt), opt, lbl);
+      const s = Date.now(), r = report(t, await (opt.dl ? runTestDl : runTest)(t, opt), opt, lbl);
       console.log(r.text);
+      times(opt, t, r.text, Date.now() - s);
       if (!r.ok) failed++;
     }
   }
+  try {                                                         // (The times: obj/testtimes.json, the last run's)
+    fs.mkdirSync(path.join(env.root, 'obj'), { recursive: true });
+    fs.writeFileSync(path.join(env.root, 'obj', 'testtimes.json'), JSON.stringify({ at: new Date().toISOString(), jobs: opt.jobs,
+      wall: Date.now() - t0, rules: process.env.RULES || '', tests: opt.times }, null, 1));
+  } catch (e) { /* (No record) */ }
   if (env.summary) env.summary(list, opt);
   console.log(failed ? failed + ' of ' + list.length + ' tests failed' : 'all ' + list.length + ' tests passed');
   process.exit(failed ? 1 : 0);
 }
 
+// A git ref the repository knows (--changed's REF)
+function isRef(r) {
+  try { require('child_process').execFileSync('git', ['rev-parse', '--verify', '--quiet', r + '^{commit}'], { cwd: env.root, stdio: 'ignore' }); return true; }
+  catch (e) { return false; }
+}
+
 if (require.main === module) main(process.argv.slice(2));
-module.exports = { setup, main, runTest, runTestDl, image, baseImage };
+module.exports = { setup, main, runTest, runTestDl, image, baseImage, choose, selectorOf };
