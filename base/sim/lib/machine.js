@@ -29,7 +29,8 @@
 // test runner's hub writers' check, reborn/sim/lib/hubown.js); opt.calls (a Map: a jump table slot's
 // address -> its call's name), opt.errNames (code -> name) and opt.callFilter (a Set of names and "tN", or none):
 // each call a program makes logged, with its registers, and what it gives back as it returns.  The loop that runs each instruction allocates nothing, so the emulator runs as fast as the
-// host can (about 20 MHz of the Hydra's cycles on a 2019 desktop): keep it that way.
+// host can (with the WebAssembly core, core.js: some 90 MHz of the Hydra's cycles in a dq0 test on a 2019 desktop, 190 MHz
+// on plain code; the JS's alone about half that): keep it that way.
 'use strict';
 const { createCpu, FLAGS } = require('./cpu65c02.js');
 const { createAcia } = require('./acia.js');
