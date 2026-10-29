@@ -79,12 +79,9 @@ static unsigned char __fastcall__ open_sq (unsigned char* p)
 ** there, and those squares more */
 static unsigned char between (void)
 {
-    static unsigned char c, e, o;
-    static int dx, dy;
+    unsigned char c, e, o;                      /* (On the C stack: the main RAM's none; another stratum's */
+    int dx, dy;                                 /*   not heard, the layer's not its) */
 
-    if (bd.sn != bps) {
-        return 0;
-    }
     hub_map (SIGHT_BANK);
     dx = bd.x - SNDHEAD->x;
     dy = bd.y - SNDHEAD->y;

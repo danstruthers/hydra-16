@@ -205,7 +205,19 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
 
 /* A dig's test (RS_TEST's P_DIG): judged by the tool to hand that suits it best, its rate a spell at a marginal
 ** success (earth's untested: the tool's rate), its key and its wear in the reply */
+void __fastcall__ s_quiet_test (struct req* r);
+static void __fastcall__ dig_of (struct req* r);
+
 void __fastcall__ s_dig_answer (struct req* r)
+{
+    if (r->a == P_STEALTH) {
+        s_quiet_test (r);                       /* (Moving quietly's, through this stub: the main RAM's room) */
+    } else {
+        dig_of (r);
+    }
+}
+
+static void __fastcall__ dig_of (struct req* r)
 {
     unsigned char m = r->b > MAT_SOIL ? MAT_STONE : r->b, t = s_dig_tool (m), k = digger[t].rate[m];
 
@@ -689,8 +701,30 @@ static signed char __fastcall__ side (unsigned char who, unsigned char p, signed
     return q->grade;
 }
 
-#define RS_HOUSE_QUIET                          /* (Moving quietly's own dice: the main RAM's) */
-#include "../dq0/rshouse.h"
+/* Moving quietly's test (RS_TEST's P_STEALTH: slice 4.6's), by its own dice (rshouse.h's RS_HOUSE_QUIET's way, here),
+** so the game's other tests roll as they did: the character's, or a creature's by its sheet (a hunter's stalk, the
+** denizens'); part 2's, the main RAM's room */
+extern unsigned long xs_seed;
+static unsigned long qseed;
+
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+static void qdice (void)
+{
+    unsigned long t = xs_seed;
+
+    xs_seed = qseed ? qseed : t ^ 0x51554945UL;
+    qseed = t;
+}
+
+void __fastcall__ s_quiet_test (struct req* r)
+{
+    qdice ();
+    r->grade = r->actor ? side (r->actor, P_STEALTH, r->steps) : test (&pc, P_STEALTH, r->steps);
+    qdice ();
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 static void __fastcall__ answer (struct req* r)
 {
@@ -740,14 +774,8 @@ static void __fastcall__ answer (struct req* r)
         r->b = watch;
         break;
     case RS_TEST:
-        if (r->a == P_STEALTH) {                /* (Moving quietly, by its own dice: the character's, or a creature's
-                                                **   by its sheet, a hunter's stalk, the denizens': slice 4.6's) */
-            qdice ();
-            r->grade = r->actor ? side (r->actor, P_STEALTH, r->steps) : test (&pc, P_STEALTH, r->steps);
-            qdice ();
-            break;
-        }
-        if (r->a == P_DIG) {                    /* (Judged by the tool to hand that suits it best: part 2's) */
+        if (r->a == P_DIG || r->a == P_STEALTH) {   /* (Judged by the tool to hand that suits it best; moving quietly,
+                                                **   by its own dice: part 2's) */
             dig_answer (r);
             break;
         }

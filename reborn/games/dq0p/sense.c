@@ -81,8 +81,11 @@ void s_sense_actor (void)
         return;
     }
     if (!noise && HUB->pc_ready > hub_now ()) {
-        noise = HUB->pc_going ? HUB->pc_noise : HUB->pc_task.kind == LT_SLEEP ? 1 : 2;   /* (Busy: its steps as loud
-                                                **   as the world says, the rest as a walk; asleep, softly) */
+        c = (HUB->pc_going & 0x3F) - 1;         /* (Busy: its steps as loud as the world says, or by its pace, a walk
+                                                **   2, a jog 3, a run 4, a sprint 5, its armour a level more; the
+                                                **   rest as a walk; asleep, softly: HOUSE.md's) */
+        noise = !HUB->pc_going ? (HUB->pc_task.kind == LT_SLEEP ? 1 : 2) : HUB->pc_noise != 0xFF ? HUB->pc_noise :
+            (c > GA_WALK ? c : GA_WALK) + HUB->pc_clank;
     }
     snd_need ();                                /* (The sound layer, for the character where it is: sound.c's) */
     dx = sact.x - pcx;                          /* (From the character to it: the way a sound or a smell goes) */

@@ -1152,11 +1152,19 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** where it stands that masks quieter sounds (the senses', as they work the sound layer out: its level and its
     ** kind), and the draught on its stratum (the senses': the way the air goes, from the stratum's way up towards its
     ** way down, and how strongly) */
-    unsigned char   pc_noise;                   /* 0-9 (HOUSE.md's sound and stealth) */
+    unsigned char   pc_noise;                   /* 0-9 (HOUSE.md's sound and stealth: its steps' loudness as the world
+                                                **   reckoned it, a creep's, a crawl's, a hop's ...; 0xFF the senses' to
+                                                **   reckon by its pace, pc_going, and its armour) */
     unsigned char   pc_mask;                    /* 0-9, */
     unsigned char   pc_bg;                      /*   BG_* */
     unsigned char   air_h;                      /* The heading the draught blows toward (H_*) */
     unsigned char   air_s;                      /*   and its strength: 0 still air ... 3 a strong draught */
+    unsigned char   pc_clank;                   /* The character's metal armour worn, 1 (the world's: its steps a level
+                                                **   the louder; weighed as what's worn changes) */
+    unsigned char   pc_qp;                      /* Moving quietly (the world's, its Stealth: D15's): the position it was
+                                                **   tested in (0xFF none yet), */
+    signed char     pc_qg;                      /*   the grade, */
+    unsigned        pc_qat;                     /*   when (tenths, sixteen bits) */
 };
 enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind in a shaft, a crowd about) */
 #define AG_ARMED        0x01                    /* (An actor's agear: a weapon in hand or at its belt, */
@@ -1379,6 +1387,10 @@ struct wsave {
 **   own hub.pc_bg senses                                       (layer's; the stratum's draught, the air's)
 **   own hub.air_h senses
 **   own hub.air_s senses
+**   own hub.pc_clank world                                     (The character's armour, its creep's Stealth: the
+**   own hub.pc_qp world                                        (world's, slice 4.6's)
+**   own hub.pc_qg world
+**   own hub.pc_qat world
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)
