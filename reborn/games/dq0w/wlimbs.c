@@ -24,6 +24,8 @@
 #include "trace.h"
 #include "outfit.h"
 
+extern unsigned char pc_clank;                  /* (dq0w.c's: metal armour worn, 1; 0xFF to be weighed) */
+
 #pragma local-strings (on)
 #pragma code-name ("SW49CODE")
 #pragma rodata-name ("SW49RODATA")
@@ -57,6 +59,7 @@ void s_equip_now (void)
     r = &HUB->slot[SLOT_WORLD];
     r->text[0] = 0;
     mh = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
+    pc_clank = 0xFF;                            /* (Its armour weighed again, as it next moves: step_loud's, slice 4.5's) */
     for (hh = 0, i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
         kind = ip->kind;
         f = ip->flags;

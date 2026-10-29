@@ -1837,8 +1837,9 @@ roll (SOUND.md's rule, D9: tuned by ear later), and tests Stealth where the book
   (DRAWN_N: dq0d.c's draw_on), unless it senses it again; a shy one keeps away as ever.  So a bandit that hears a door
   opened comes to see.  Not yet: the way there found round walls (it goes straight, as a denizen does).
 - **The background** *(every ruleset's, for review)*: water in a well or a cistern 2, the wind at a shaft or the way
-  out 1 (2 in a draught of 2 or more; none in still air), each a level less every four squares off; a crowd (three
-  or more others within three squares, awake) 1; the loudest of them where the hearer stands, taken off every sound's
+  out 1 (2 in a draught of 2 or more; none in still air), each a level less every four squares off; a crowd about
+  the character (three or more within three squares of it, awake: the character's alone, the denizens hear past
+  their own) 1; the loudest of them where the hearer stands, taken off every sound's
   loudness (gone at none).  Running water comes with slice 4.9.  Told as a listen ends: "You hear nothing but water
   trickling somewhere near.", or after what it heard, "Behind it all, the wind in a shaft near by."  Not yet: a
   fight's din (its blows heard by the denizens near: the fights' slice).

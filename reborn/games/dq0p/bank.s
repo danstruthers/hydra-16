@@ -24,6 +24,7 @@ ovx:        .res        1
             SWPART      3, 3                ; A look one way's own record (way.c)
             SWPART      4, 3                ; What the character keeps of a look (view.c's kept: slice 4.2's)
             SWPART      5, 4                ; The sound layer's pulse (sound.c, pulse.s: slice 4.5's)
+            SWPART      6, 4                ; The denizens' senses answered, the sound layer read (sense.c, sound.c)
 
             SWFN        view, 1
             SWFN        felt, 2
@@ -33,4 +34,5 @@ ovx:        .res        1
             SWFN        way_seen, 3
             SWFN        kept, 4
             SWFN        pulse, 5
-            SWFN        sense_actor, 5
+            SWFN        sense_actor, 6
+            SWFN        snd_mask, 6

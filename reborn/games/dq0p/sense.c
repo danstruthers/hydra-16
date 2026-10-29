@@ -37,12 +37,12 @@ unsigned char sactb[SACT];                      /* (A body, copied out of the hu
 
 void snd_need (void);                           /* (sound.c's) */
 unsigned char __fastcall__ snd_cost (unsigned x, unsigned y);
-unsigned char __fastcall__ snd_mask (unsigned x, unsigned y, unsigned char k);
+unsigned char __fastcall__ s_snd_mask (unsigned x, unsigned y, unsigned char k);
 signed char __fastcall__ snd_wind (int dx, int dy);
 
-#pragma code-name (push, "SW5CODE")             /* (Part 5's, with the sound layer: once a denizen's turn, the main
+#pragma code-name (push, "SW6CODE")             /* (Part 6's, with the layer's readers: once a denizen's turn, the main
                                                 **   RAM's room) */
-#pragma rodata-name (push, "SW5RODATA")
+#pragma rodata-name (push, "SW6RODATA")
 
 static unsigned __fastcall__ apart (int dx, int dy)
 {
@@ -81,7 +81,8 @@ void s_sense_actor (void)
         return;
     }
     if (!noise && HUB->pc_ready > hub_now ()) {
-        noise = HUB->pc_noise;                  /* (Busy: as loud as it's being) */
+        noise = HUB->pc_going ? HUB->pc_noise : HUB->pc_task.kind == LT_SLEEP ? 1 : 2;   /* (Busy: its steps as loud
+                                                **   as the world says, the rest as a walk; asleep, softly) */
     }
     snd_need ();                                /* (The sound layer, for the character where it is: sound.c's) */
     dx = sact.x - pcx;                          /* (From the character to it: the way a sound or a smell goes) */
@@ -89,7 +90,7 @@ void s_sense_actor (void)
     dist = apart (dx, dy);
     w = snd_wind (dx, dy);
     reach = 0;
-    if (noise > (m = snd_mask (sact.x, sact.y, k + 1))) {
+    if (noise > (m = s_snd_mask (sact.x, sact.y, k + 1))) {
         reach = (noise - m) * hear * (32 + w) / 32; /* (Twice the squares: a loudness's times the hearing's over two,
                                                 **   downwind a little further, upwind a little less) */
         if (2 * dist <= reach) {

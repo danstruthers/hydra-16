@@ -4910,6 +4910,7 @@ module.exports = {
         'defend block', 'wait', 'open the door', ...Array(36).fill('wait'), 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
+        if (process.env.DQ0DBG) { const T0 = dq0Turns(m), g = m.dq0.games[m.dq0.games.length - 1]; this.notes = [...g.replies.filter(r => r.req === 'dsense' && r.line >= 13 && r.line < 20).slice(0, 40).map(r => r.line + ' w' + r.who + ' n' + r.noise + ' r' + r.res + ' c' + r.cost + ' a' + r.x + ',' + r.y + ' pc' + r.pc.x + ',' + r.pc.y + '/' + r.pc.noise), ...T0.filter(t => t.k >= 12 && t.k < 22).map(t => t.line + ' ' + JSON.stringify(t.after && t.after.actors.map(a => [a.x, a.y, a.doing])) + ' pc ' + JSON.stringify(t.after && [t.after.pc.x, t.after.pc.y, t.after.pc.light, t.after.pc.airS, t.after.pc.airH, t.after.pc.mask]))]; }
         const T = dq0Turns(m), f = [], K = m.dq0.layout().K, o = dq0Story(out);
         const g = T.of("dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'");
         if (g.k < 0) return ['the game not played'];

@@ -382,6 +382,7 @@ extern unsigned char pmode;                     /* (The legs' way said: GA_CRAWL
 static unsigned char lsaid;                     /* (The legs' way last told: part 50's) */
 void limbs_pace (void);                         /* (Part 50's: how fast its legs go; how loud its steps are) */
 void step_loud (void);
+extern unsigned char pc_clank;
 unsigned char limbs_go (void);
 unsigned char __fastcall__ rise_pc (unsigned char timed);
 void __fastcall__ pose_pc (unsigned char pos);
@@ -415,7 +416,12 @@ static void paced (void)
     if (HUB->pc_pos || HUB->pcsum.limp || (HUB->pcsum.limbs & (LB_LEG_L | LB_LEG_R)) || pmode || lsaid) {
         limbs_pace ();                          /* (Its legs not whole, or not standing: part 50's, slice 4.1b's) */
     }
-    step_loud ();                               /* (How loud its steps are: part 50's, slice 4.5's) */
+    if ((unsigned char) (pace_ - 1) >= GA_SPRINT || pc_clank > 1) {
+        step_loud ();                           /* (How loud its steps are, creeping, hopping, its armour to weigh:
+                                                **   part 50's, slice 4.5's; else at once) */
+    } else {
+        HUB->pc_noise = (pace_ > GA_WALK ? pace_ : GA_WALK) + pc_clank;
+    }
 }
 
 /* A square's time to walk into, tenths of a second: the pace's step (the referee's, its summary's gstep), more uphill
@@ -4549,8 +4555,6 @@ static void __fastcall__ intent (struct msg* m)
         hub_map (0);
     }
     free_at = HUB->now;
-    HUB->pc_noise = m->kind == I_WAIT && (m->a & WA_SLEEP) ? 1 : 2;   /* (Busy at it: as loud as a walk, unless it
-                                                **   says; asleep, softly: HOUSE.md's sound) */
 #define MOVES   (1UL << I_GO | 1UL << I_CLIMB | 1UL << I_GOTO | 1UL << I_STEP | 1UL << I_TAKE | 1UL << I_CLOSE | \
                  1UL << I_DISENGAGE | 1UL << I_TRAVEL)
     if ((MOVES >> m->kind & 1) && (HUB->pc_pos || (HUB->pcsum.cond & C_MOVE) || pmode) && limbs_go ()) {
@@ -5484,6 +5488,7 @@ void s_limbs_pace (void)
 ** marginal one 1, a marginal failure 2, a critical one 3; low the easier (crouched a step, prone two); metal armour
 ** worn (six pounds of it or more: mail, plate) a level more */
 #define QUIET_T         3000                    /* (Tenths: five minutes) */
+unsigned char pc_clank = 0xFF;                  /* (Metal armour worn, 1; 0xFF to be weighed: wlimbs.c's equip_now) */
 static unsigned char qp = 0xFF, qsn;            /* (The last test's: its position, its stratum, */
 static unsigned long qat;                       /*   when, */
 static signed char qg;                          /*   its grade) */
@@ -5508,18 +5513,19 @@ void s_step_loud (void)
         qp = 0xFF;                              /* (Not moving quietly: tested again as it begins) */
         l = g == GA_WORK ? 3 : g < GA_WALK ? 2 : g;
     }
-    for (i = 0; (i = items (i, IN_X | IN_ACTOR, 0)) != 0; ) {
-        if ((ip->flags & I_WORN) && (ip->mat == MT_IRON || ip->mat == MT_STEEL || ip->mat == MT_BRONZE) &&
-            (k = ip->kind) != 0) {
+    for (i = 0; pc_clank == 0xFF && (i = items (i, IN_X | IN_ACTOR, 0)) != 0; ) {
+        if ((ip->flags & I_WORN) && ip->mat >= MT_IRON && ip->mat <= MT_BRONZE && (k = ip->kind) != 0) {
             hub_map (KIND_BANK);
             if (CATALOGUE[k].weight >= 24) {
-                ++l;                            /* (Mail's chink, plate's clank) */
-                break;
+                pc_clank = 1;                   /* (Mail's chink, plate's clank) */
             }
         }
     }
+    if (pc_clank == 0xFF) {
+        pc_clank = 0;                           /* (Weighed once as what's worn changes: wlimbs.c's equip_now) */
+    }
     hub_map (0);
-    HUB->pc_noise = l;
+    HUB->pc_noise = l + pc_clank;
 }
 
 #pragma code-name (pop)
