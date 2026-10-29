@@ -191,7 +191,8 @@ static void make_strata (void)
 #pragma static-locals (push, on)                /* (Its locals static: the bank program's room, 2026-10-29) */
 static void make_factions (void)
 {
-    unsigned char k, b, sn, n, ok, any, cursed = 0, dead = 0, nw, h, i;
+    unsigned char k, b, sn, n, ok, any, cursed = 0, dead = 0, nw, h, i, pass;
+    unsigned pm = 0;                            /* (The peoples' factions, a bit each: the first pass's) */
     unsigned char where[TSTRATA];
     const char* ch;                             /* (Its kinds chosen: of its own, these only) */
     struct fac* f;
@@ -204,71 +205,80 @@ static void make_factions (void)
         dead |= er[k].end == EN_CURSED || er[k].end == EN_CONQUERED || er[k].work == W_TOMB || er[k].work == W_TEMPLE;
     }
     nf = 0;
-    for (k = 0; nf < TFACTIONS && data (TK_FACTION, 0, k); ++k) {
-        f = &fa[nf];
-        memset (f, 0, sizeof *f);
-        ok = !strcmp (D.v[0], "dead") ? dead : !strcmp (D.v[0], "beasts") ? among (land, "mountains hills forest") : 1;
-        h = 0;
-        if ((ch = peoples (D.v[0])) != 0) {     /* (A people's: its era, its kinds, its leader) */
-            ok = (h = pk_era) != 0;
-        }
-        if (!ok) {
-            continue;
-        }
-        for (nw = sn = 0; sn < ns; ++sn) {      /* (Where its kinds live) */
-            for (any = b = 0; b < nbeasts; ++b) {
-                any |= beasts[b].faction == k && (!ch || among (beasts[b].key, ch)) && lives (b, sn);
+    for (pass = 0; pass < 2; ++pass) {          /* (The peoples first, as they hold their works: then the rest, as
+                                                **   many as there's room for) */
+        for (k = 0; nf < TFACTIONS && data (TK_FACTION, 0, k); ++k) {
+            f = &fa[nf];
+            memset (f, 0, sizeof *f);
+            ok = !strcmp (D.v[0], "dead") ? dead :
+                !strcmp (D.v[0], "beasts") ? among (land, "mountains hills forest") : 1;
+            h = 0;
+            ch = 0;
+            if (pass ? (pm & 1u << k) != 0 : (ch = peoples (D.v[0])) == 0) {
+                continue;                           /* (A people's the first pass's: its era, its kinds, its leader) */
             }
-            if (any) {
-                where[nw++] = sn;
+            if (ch) {
+                pm |= 1u << k;
+                ok = (h = pk_era) != 0;
             }
-        }
-        for (i = sn = 0; h && sn < nw; ++sn) {  /* (A people's on its era's strata, if its kinds live there) */
-            if (era_now (where[sn]) == h) {
-                where[i++] = where[sn];
+            if (!ok) {
+                continue;
             }
-        }
-        if (i) {
-            nw = i;
-        }
-        if (!nw) {
-            continue;
-        }
-        strcpy (f->name, D.v[0]);
-        f->att[0] = *D.v[1];
-        strncpy (f->others, D.n > 2 ? D.v[2] : "-", sizeof f->others - 1);
-        f->d0 = where[0];
-        f->d1 = where[nw - 1];
-        f->lair = where[random (nw)];
-        for (n = b = 0, p = beasts; b < nbeasts; ++b, ++p) {
-            if (p->faction == k && (!ch || among (p->key, ch))) {
-                if (*f->kinds) {
-                    strcat (f->kinds, " ");
+            for (nw = sn = 0; sn < ns; ++sn) {      /* (Where its kinds live) */
+                for (any = b = 0; b < nbeasts; ++b) {
+                    any |= beasts[b].faction == k && (!ch || among (beasts[b].key, ch)) && lives (b, sn);
                 }
-                strcat (f->kinds, p->key);
-                n += (p->n0 + p->n1) * p->lairs / 2;
-                if (!strcmp (f->name, "kobolds") && !f->leader) {
-                    f->leader = b + 1;          /* (Its chieftain: one of its own) */
+                if (any) {
+                    where[nw++] = sn;
                 }
             }
-        }
-        f->n = n ? n : 1;
-        if (ch && pk_lead) {
-            f->leader = beast_of (pk_lead) + 1;
-        }
-        if (cursed && !strcmp (f->name, "dead")) {
-            for (sn = 0; sn < nw && era_now (where[sn]) != cursed; ++sn) {
+            for (i = sn = 0; h && sn < nw; ++sn) {  /* (A people's on its era's strata, if its kinds live there) */
+                if (era_now (where[sn]) == h) {
+                    where[i++] = where[sn];
+                }
             }
-            if (sn < nw) {
-                f->lair = where[sn];
+            if (i) {
+                nw = i;
             }
-        } else if (!strcmp (f->name, "kobolds")) {
-            f->lair = where[nw - 1];
+            if (!nw) {
+                continue;
+            }
+            strcpy (f->name, D.v[0]);
+            f->att[0] = *D.v[1];
+            strncpy (f->others, D.n > 2 ? D.v[2] : "-", sizeof f->others - 1);
+            f->d0 = where[0];
+            f->d1 = where[nw - 1];
+            f->lair = where[random (nw)];
+            for (n = b = 0, p = beasts; b < nbeasts; ++b, ++p) {
+                if (p->faction == k && (!ch || among (p->key, ch))) {
+                    if (*f->kinds) {
+                        strcat (f->kinds, " ");
+                    }
+                    strcat (f->kinds, p->key);
+                    n += (p->n0 + p->n1) * p->lairs / 2;
+                    if (!strcmp (f->name, "kobolds") && !f->leader) {
+                        f->leader = b + 1;          /* (Its chieftain: one of its own) */
+                    }
+                }
+            }
+            f->n = n ? n : 1;
+            if (ch && pk_lead) {
+                f->leader = beast_of (pk_lead) + 1;
+            }
+            if (cursed && !strcmp (f->name, "dead")) {
+                for (sn = 0; sn < nw && era_now (where[sn]) != cursed; ++sn) {
+                }
+                if (sn < nw) {
+                    f->lair = where[sn];
+                }
+            } else if (!strcmp (f->name, "kobolds")) {
+                f->lair = where[nw - 1];
+            }
+            if (f->leader && !lives (f->leader - 1, f->lair)) {
+                f->leader = 0;
+            }
+            ++nf;
         }
-        if (f->leader && !lives (f->leader - 1, f->lair)) {
-            f->leader = 0;
-        }
-        ++nf;
     }
 }
 #pragma static-locals (pop)

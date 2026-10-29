@@ -5114,6 +5114,26 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0peoplegen', near: ['theme'], what: "Dingus Quest Zero's peoples in a region's history (Phase 4's, 2026-10-29: themegen's histgen and peoples (), HISTORY.md's inhabitants, HOUSE.md's the peoples): at seed 4 the dwarves' works lost in the hills, a tribe of gargun (brown orcs ruled by black ones, their king their leader) among the inhabitants, placed first (the peoples before the rest, as many as there's room for); at seed 22 men holding their keep still, its soldiers and their captain, and the story's who has it now theirs (\"Soldiers hold it still\"); each theme passing the theme checker (themec, in themegen's place: its status none)",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: ['bind -a /sd/0/games /bin', 'themegen -q -s 4 -o /ram/a', 'echo seed 4 status $status', 'grep faction /ram/a/theme.txt',
+        'themegen -q -s 22 -o /ram/b', 'echo seed 22 status $status', 'grep faction /ram/b/theme.txt', 'grep still /ram/b/theme.txt', 'echo done'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['seed 4 status\n', 'seed 22 status\n', '% echo done\ndone\n'],
+      check(m, out) {
+        const o = out.replace(/\r/g, ''), f = [];
+        const part = (a, b) => o.slice(o.indexOf(a), o.indexOf(b));
+        const fl = s => s.split('\n').filter(l => /^faction\s*\|/.test(l)).map(l => l.split('|').map(v => v.trim()));
+        const g = fl(part('% grep faction /ram/a', '% themegen -q -s 22')), s = fl(part('% grep faction /ram/b', '% grep still'));
+        if (!g.length || g[0][1] !== 'gargun') f.push('seed 4: the gargun not the first faction: ' + JSON.stringify(g.map(x => x[1])));
+        else if (!g[0][2].split(' ').every(k => /^(arak|hyeka|khanu|kyani|viasal)$/.test(k)) || g[0][5] !== 'garking') f.push('seed 4: the gargun\'s kinds or king: ' + g[0].join(' | '));
+        if (!s.length || s[0][1] !== 'soldiers' || s[0][2] !== 'manarms' || s[0][5] !== 'captain') f.push('seed 22: no soldiers first, men-at-arms and their captain: ' + JSON.stringify(s[0]));
+        if (!/Soldiers hold it still/.test(part('% grep still /ram/b', '% echo done').replace(/\s+/g, ' '))) f.push('seed 22: the story not the soldiers\': ' + part('% grep still /ram/b', '% echo done').replace(/\s+/g, ' '));
+        if (g.length > 8 || s.length > 8) f.push('more factions than a theme has room for');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again; and its encumbrance the referee's the same)",
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',

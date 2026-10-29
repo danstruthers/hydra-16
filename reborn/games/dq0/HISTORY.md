@@ -74,7 +74,8 @@ round, the elves' soft, the hill-men's rough, the kobolds' yapping, the sun-prie
   the elves and the men's soldiers where an era of their people holds its works still, on its strata; the gargun in
   mountains, hills or forest where the dwarves lost their works and hold none (a tribe of white orcs in cold mountains,
   else by the dice brown orcs ruled by black ones, red orcs, or brown and small orcs), their king their leader, the
-  dwarves' elder and the soldiers' captain theirs; who has it now in the story a people that holds it first, the
+  dwarves' elder and the soldiers' captain theirs, the peoples' factions before the rest (a theme's room
+  is seven); who has it now in the story a people that holds it first, the
   gargun after the dead as a goal's guardians.  Each faction's strata the ones its
   kinds live in; its lair one of them (the dead's a stratum of the cursed era's, the kobolds' their deepest mine); its
   number its kinds' lairs' groups; the kobolds' leader one of their own.

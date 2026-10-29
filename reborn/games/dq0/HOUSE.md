@@ -1842,7 +1842,8 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
   mountains, hills or forest where an era of the dwarves lost its works and no dwarves hold theirs (the book's colonies
   in abandoned Khuzdul halls), a tribe of white orcs in cold mountains, else by the dice brown orcs ruled by black ones,
   red orcs alone (too fierce for the black orcs' rule), or brown and small orcs; their king their leader, the dwarves'
-  elder theirs, the soldiers' captain theirs.  The story's who has it now: a people that holds it first.
+  elder theirs, the soldiers' captain theirs; the peoples' factions before the others (a theme places seven). 
+  The story's who has it now: a people that holds it first.
 - **Their gear** (outfits.txt): the Gargun's the book's Equipment lists, their own make (crude to middling; a white
   orc's finer, the book's: they make finer things), the cloth tunic the catalogue's clothes, a cowl a leather cap, a
   plate halfhelm an iron helm; the mankar and the mang their own weapons (Combat 3's (G): the catalogue's past the
