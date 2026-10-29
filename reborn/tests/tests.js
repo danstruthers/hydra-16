@@ -3894,7 +3894,6 @@ module.exports = {
         const short = rs.filter(r => r.cost < Math.max(Math.abs(r.x - r.pc.x), Math.abs(r.y - r.pc.y)));
         if (short.length) f.push("a sound's way shorter than the line: " + JSON.stringify(short[0]));
         if (!rs.some(r => r.cost > Math.max(Math.abs(r.x - r.pc.x), Math.abs(r.y - r.pc.y)))) f.push('no sound round the corner, the long way');
-        if (process.env.DQ0DBG) this.notes = ['air ' + end.pc.airH + '/' + end.pc.airS + ' mask ' + end.pc.mask, ...rs.slice(0, 20).map(r => JSON.stringify(r))];
         if (near.length < 2) f.push('the rats not come after it along the passage: the character at ' + end.pc.x + ',' + end.pc.y + ', the rats ' +
           JSON.stringify(end.actors.map(a => [a.x, a.y, a.doing])) + ' (its squares walked ' + [...trail].join(' ') + ')');
         return f;
@@ -3924,13 +3923,12 @@ module.exports = {
           'You are on your feet already.', 'You lie down.'])
           if (!o.includes(w)) f.push('not said: ' + w);
         if (!out.includes('CROUCHED')) f.push('the status line never CROUCHED');
-        if (process.env.DQ0DBG) this.notes = [o.slice(o.indexOf('> crouch'), o.indexOf('> quit'))];
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0quiet', meaning: true, what: 'Dingus Quest Zero\'s moving quietly (slice 4.6, D15: Stealth tested as it starts, again as something changes; HOUSE.md\'s sound and stealth, for review), by the referee\'s replies and the hub\'s state: at seed 3 by the way down, a step at a walk as loud as a walk (the hub\'s pc_noise 2, no Stealth test); creeping, its first step tested (the world\'s slot: RS_TEST, P_STEALTH), its loudness the grade\'s (a critical success 0, a marginal 1, a marginal failure 2, a critical 3), its next not tested again, the same loudness; crouched, tested again (its position changed); a walk again, 2, no test; a wait softly, 1',
+      name: 'dq0quiet', meaning: true, what: 'Dingus Quest Zero\'s moving quietly (slice 4.6, D15: Stealth tested as it starts, again as something changes; HOUSE.md\'s sound and stealth, for review), by the referee\'s replies and the hub\'s state: at seed 3 by the way down, a step at a walk as loud as a walk (the hub\'s pc_noise 2, no Stealth test); creeping, its first step tested (the world\'s slot: RS_TEST, P_STEALTH), its loudness the grade\'s (a critical success 0, a marginal 1, a marginal failure 2, a critical 3), its next not tested again, the same loudness; crouched, tested again (its position changed); a walk again, 2, no test; a wait as loud as a walk, 2 (asleep, 1)',
       init: 't_rc', cycles: 400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'step forward', 'creep',
         'step back', 'step forward', 'crouch', 'step back', 'stand', 'walk', 'step forward', 'wait', 'quit', 'echo $status']) },
@@ -3950,7 +3948,7 @@ module.exports = {
         if (t3.length !== 1) f.push('the crouched creeping step: ' + t3.length + ' Stealth tests (its position changed)');
         else if (t3[0].steps !== 1) f.push('the crouched creeping step: its test ' + t3[0].steps + ' steps, not 1');
         if (nz(s4) !== 2 || tests(s4).length) f.push('a walk again: its noise ' + nz(s4) + ', ' + tests(s4).length + ' Stealth tests');
-        if (nz(w) !== 1) f.push('a wait: its noise ' + nz(w) + ', not 1');
+        if (nz(w) !== 2) f.push('a wait: its noise ' + nz(w) + ', not 2');
         return f;
       },
       sdcard: true

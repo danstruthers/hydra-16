@@ -928,9 +928,9 @@ threshold; what it reads becomes the circumstances (the steps) of the referee's 
   through what lets sound through, a shut door or a closed window two squares more, a room's wall four a square of it,
   never the rock; each square marked if a shut door, a closed window or a wall was on the way (the air's not passing).
   The same way both ways: the denizens hear the character by it, and the world says what lies between a denizen and
-  the character by it (E_DEN's x[3], the UI's and the sound task's).  Worked out after a look that finds the
-  character moved (the denizens about), as the world's doors and squares change (E_LIGHT), as a denizen's senses or
-  a wait's end find it out of date.  With it the **background** that masks (water in a well or a cistern, the wind
+  the character by it (E_DEN's x[3], the UI's and the sound task's; from a layer a step or two old, from where it was
+  worked out).  Worked out as a denizen's senses or a wait's end find it out of date (the character moved, the
+  world's doors and squares changed: E_LIGHT).  With it the **background** that masks (water in a well or a cistern, the wind
   at a shaft or the way out, a crowd about: the hub's pc_mask and pc_bg for the character's own), and each sound's
   loudness (the character's as the world sets it, the hub's pc_noise: its steps by its pace, its armour and, moving
   quietly, its Stealth; the denizens' as their minds say, a stalking hunter's by its Stealth).

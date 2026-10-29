@@ -90,8 +90,8 @@ void s_sense_actor (void)
     w = snd_wind (dx, dy);
     reach = 0;
     if (noise > (m = snd_mask (sact.x, sact.y, k + 1))) {
-        reach = (noise - m) * hear * (8 + w) / 8;   /* (Twice the squares: a loudness's times the hearing's over two,
-                                                **   downwind the further) */
+        reach = (noise - m) * hear * (32 + w) / 32; /* (Twice the squares: a loudness's times the hearing's over two,
+                                                **   downwind a little further, upwind a little less) */
         if (2 * dist <= reach) {
             c = snd_cost (sact.x, sact.y);
             c = c == SND_NONE ? 0xFF : SND_COST (c);

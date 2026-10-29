@@ -1820,18 +1820,22 @@ roll (SOUND.md's rule, D9: tuned by ear later), and tests Stealth where the book
   squares, or not reached, not heard (no step is heard so far).  Why: the line through the rock it was let a rat hear
   a man through thirty feet of stone; a pulse is the plan's, and the senses' to keep as the light layer is.
 - **How loud** *(every ruleset's, for review)*: the character's steps at a slow walk or a walk 2, a jog 3, a run 4, a
-  sprint 5, hopping 3; metal armour worn (six pounds or more of iron, steel or bronze: mail, plate) a level more; a
-  wait, a listen, a timed work (a lock picked, a thing hidden) 1; anything else it does 2; a dig's and a battering's
-  noises as they were (the world's E_NOISE).  The denizens' steps 1, a dash 2, a noise of their own 3 (every eighth
+  sprint 5, hopping 3; metal armour worn (six pounds or more of iron, steel or bronze: mail, plate) a level more as
+  it moves; asleep 1; anything else it does 2 (a wait too: its gear, its breath, as the denizens heard it before); a
+  dig's and a battering's noises as they were (the world's E_NOISE).  The denizens' steps 1, a dash 2, a noise of their own 3 (every eighth
   step), as they were.  (dq0w.c's part 50, step_loud; the hub's pc_noise.)  Why: the book's Listening table has
   breathing soft and footsteps two levels louder; the walk's 2 keeps the reach the denizens heard the character at
   before (their kind's hearing).
 - **Heard** *(every ruleset's)*: a sound of loudness L, less the background where the hearer is (below), heard within
   L times the hearer's hearing over two squares the way it goes (a denizen's its kind's, kinds.txt's; the
-  character's (hearing + 3) / 2, as before), a little further downwind and less upwind ((8 + w) / 8, w the draught's
-  figure below).  The denizens hear the character as it's busy (sense.c's), and its noises as they come (dq0d.c's
+  character's (hearing + 3) / 2, as before), a little further downwind and less upwind ((32 + w) / 32, w the
+  draught's figure below: a fifth at most).  The denizens hear the character as it's busy (sense.c's), and its noises as they come (dq0d.c's
   hear: the senses asked of each, its loudness); the character hears them as it did (main.c's heard, the sound
   task's), the way the layer says.
+- **A noise drawing them** *(for review)*: a hostile denizen, not a shy one, that heard the character (or saw it, or
+  smelt it) and has lost it goes on towards where it last sensed it, a step at a time, for its next eight decisions
+  (DRAWN_N: dq0d.c's draw_on), unless it senses it again; a shy one keeps away as ever.  So a bandit that hears a door
+  opened comes to see.  Not yet: the way there found round walls (it goes straight, as a denizen does).
 - **The background** *(every ruleset's, for review)*: water in a well or a cistern 2, the wind at a shaft or the way
   out 1 (2 in a draught of 2 or more; none in still air), each a level less every four squares off; a crowd (three
   or more others within three squares, awake) 1; the loudest of them where the hearer stands, taken off every sound's
@@ -1843,7 +1847,8 @@ roll (SOUND.md's rule, D9: tuned by ear later), and tests Stealth where the book
   as its body's position or its stratum changes or five minutes on (QUIET_T); the grade sets its steps' loudness: a
   critical success 0 (no one hears it), a marginal one 1, a marginal failure 2 (as a walk), a critical failure 3.
   Low the easier: crouched a step, prone two (the book's cover).  The grade is secret, as the GM's roll; nothing's
-  told of it.  The null ruleset's flat odds the same way.
+  told of it.  The null ruleset's flat odds the same way.  The test has dice of its own (rshouse.h's RS_HOUSE_QUIET, as the
+  bearings' have), so the game's other tests roll as they did whether anyone creeps or stalks.
 - **The denizens' stealth** *(for review)*: a hostile hunter by smell (its nose 6 or more, kinds.txt's: K_NOSE)
   coming at the character stalks it: its Stealth tested as it begins (the denizens' slot, RS_TEST with the actor:
   HarnMaster's referee by its sheet, the bestiary having no Stealth of its own, its Agility times 5; the book's
@@ -1872,10 +1877,12 @@ roll (SOUND.md's rule, D9: tuned by ear later), and tests Stealth where the book
   is as prone (the easier struck, its turn spent getting up); crouched as standing.  The status line says it
   (CROUCHED, KNEELING, SITTING; PRONE as before).  Not yet: a missile's target by its height (slice 4.7's to read
   pc_pos), the denizens' own positions but prone.
-- **What it costs** *(2026-10-29, the emulator)*: the pulse some 0.3-0.5M cycles, worked out after a look that finds
-  the character moved (and the denizens about), or as a denizen's senses or a wait's end find it out of date; nothing
-  for a turn or a look in place; the senses' answers to the denizens and the pulse in a swapped part of their own
-  (part 5, overlay 4), their main RAM the more for it.
+- **What it costs** *(2026-10-29, the emulator)*: the pulse some 0.34M cycles (its fill 0.08M, a chunk's rectangle at a
+  time in assembly; its search 0.12M), worked out only as a denizen's senses or a wait's end find it out of date (the
+  character moved, a door or a square changed): once a denizens' turn at most, nothing for a turn or a look in place;
+  the world's what lies between from a layer a step or two old (from where it was worked out, and those squares more).
+  The senses' answers to the denizens (some 0.05M each) and the pulse in a swapped part of their own (part 5,
+  overlay 4), their main RAM the more for it.
 
 ## Decided, not yet built
 

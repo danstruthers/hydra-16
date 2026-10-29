@@ -32,6 +32,8 @@ ovx:        .res        1
             SWFN        reg_need, 3
             SWFN        dneed, 4
             SWFN        harmed, 2
+            SWFN        stalks, 2
+            SWFN        draw_on, 2
             SWFN        sway, 2
             SWFN        start, 4
             SWFN        enlist, 4

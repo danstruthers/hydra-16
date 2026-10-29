@@ -4549,8 +4549,8 @@ static void __fastcall__ intent (struct msg* m)
         hub_map (0);
     }
     free_at = HUB->now;
-    HUB->pc_noise = m->kind == I_WAIT ? 1 : 2;  /* (Busy at it: as loud as a walk, unless it says; waiting, a listen,
-                                                **   a timed work, softly: HOUSE.md's sound) */
+    HUB->pc_noise = m->kind == I_WAIT && (m->a & WA_SLEEP) ? 1 : 2;   /* (Busy at it: as loud as a walk, unless it
+                                                **   says; asleep, softly: HOUSE.md's sound) */
 #define MOVES   (1UL << I_GO | 1UL << I_CLIMB | 1UL << I_GOTO | 1UL << I_STEP | 1UL << I_TAKE | 1UL << I_CLOSE | \
                  1UL << I_DISENGAGE | 1UL << I_TRAVEL)
     if ((MOVES >> m->kind & 1) && (HUB->pc_pos || (HUB->pcsum.cond & C_MOVE) || pmode) && limbs_go ()) {

@@ -76,6 +76,8 @@ unsigned char __fastcall__ rec_new (unsigned char lair);
 unsigned char __fastcall__ reg_need (unsigned char sn, unsigned char rx, unsigned char ry);
 void dneed (void);
 void __fastcall__ harmed (unsigned char k);     /* Part 2 */
+unsigned char __fastcall__ stalks (unsigned char k);
+unsigned char __fastcall__ draw_on (unsigned char k);
 void sway (void);
 int __fastcall__ start (const char* dir);      /* Part 4 */
 void __fastcall__ enlist (unsigned char i, unsigned char k);
@@ -888,6 +890,8 @@ static void __fastcall__ rouse (unsigned char k, unsigned w)
 
 static unsigned char aorder[NACTORS];           /* (Each one's request, an ally's: its record's while it's an actor) */
 static unsigned lsx[NACTORS], lsy[NACTORS];     /* (Where each last sensed the character: an ally follows it there) */
+#define DRAWN_N         8                       /* (A hostile one drawn on there, its decisions: drawn) */
+static unsigned char drawn[NACTORS];
 static unsigned char intr[NACTORS];             /* (Each one's lair intruded on, not yet left: its attitude fallen) */
 static unsigned char seenfoe[NACTORS];          /* (Each one's seen the character with an enemy of its faction's) */
 static unsigned char anear[NACTORS];            /* (Each one beside the character as it last acted: an ally comes
@@ -1541,6 +1545,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
     if (sres[k]) {
         lsx[k] = pcx;
         lsy[k] = pcy;
+        drawn[k] = DRAWN_N;
         feel (k);
     }
     anear[k] = a.sn == pcs && dist <= 3;
@@ -1578,6 +1583,9 @@ static unsigned char __fastcall__ decide (unsigned char k)
     } else if (foe && (K.flags & K_NOSE) && (d = scent (k)) != 0xFF) {
         a.doing = DO_COMING;                    /* (Its nose to the character's trail: after it, the way the scent
                                                 **   goes; the world's, an older trail: DO_ROAM, if there's none) */
+    } else if (foe && !(K.flags & K_SHY) && drawn[k] && (d = draw_on (k)) != 0xFF) {
+        a.doing = DO_COMING;                    /* (Drawn on to where it last sensed the character, heard it, a while:
+                                                **   slice 4.5's, HOUSE.md's: part 2's) */
     } else if (alert[k] > now) {
         d = 0xFE;                               /* (A noise heard: still, facing the way it came, a while) */
         wt = 10 + random (20);
@@ -1603,10 +1611,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
                                                 **   it begins, D15's, every actor's; its grade the steps' loudness,
                                                 **   no noise of its own: HOUSE.md's sound and stealth) */
     } else if (!stalk[k]) {
-        rq.a = P_STEALTH;
-        rq.steps = 0;
-        ask (RS_TEST, k + 1, 0);
-        stalk[k] = (signed char) rq.grade > 0 ? 1 : rq.grade == G_MF ? 2 : 3;
+        stalk[k] = stalks (k);
     }
     if (d < 4 || d == 0xFB) {                   /* (A step, now and then a noise of its own; its kind with no
                                                 **   darkvision, feeling its way in the dark: the world's, STEP_FEELS;
@@ -1848,6 +1853,27 @@ static struct sway sw;
 
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
+
+/* A hunter's stalk begun (decide's, slices 4.5 and 4.6: HOUSE.md's sound, the air and moving quietly): its Stealth
+** tested (the referee's, by its sheet, in the denizens' slot), its steps' loudness plus 1 by the grade: a success 0,
+** a marginal failure 1, a critical one 2 */
+unsigned char __fastcall__ s_stalks (unsigned char k)
+{
+    rq.a = P_STEALTH;
+    rq.steps = 0;
+    ask (RS_TEST, k + 1, 0);
+    return (signed char) rq.grade > 0 ? 1 : rq.grade == G_MF ? 2 : 3;
+}
+
+/* Actor k (the copy a), hostile, drawn on to where it last sensed the character (decide's: heard it, seen it, smelt
+** it, and lost it), a while (DRAWN_N decisions): its step that way, or 0xFF (there, or no way nearer) */
+unsigned char __fastcall__ s_draw_on (unsigned char k)
+{
+    --drawn[k];
+    refx = lsx[k];
+    refy = lsy[k];
+    return step_for (k, 4 * K.range + 8, S_TOWARD);
+}
 
 /* Whether name n (an actor's, or a kind's) is meant by w (the parser's word, in lower case): the start of one of its
 ** words ("rat", "giant", "grub") */
