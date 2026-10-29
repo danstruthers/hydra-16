@@ -183,9 +183,7 @@ go:
             SWFN        den_enter, 60
             SWFN        den_draw, 60
             SWFN        den_strip, 60
-            SWFN        rise_pc, 50
-            SWFN        limbs_go, 50
-            SWFN        limbs_pace, 50
+            SWFN        legs, 50
             SWFN        bearings, 52
             SWFN        bearings_off, 52
             SWFN        intent_few, 53

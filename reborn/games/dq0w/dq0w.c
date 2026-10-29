@@ -380,10 +380,13 @@ static unsigned char lim_ = 250;                /* (A walk's squares at most: a 
 static unsigned char pst = 10;
 extern unsigned char pmode;                     /* (The legs' way said: GA_CRAWL, GA_HOP; part 50's) */
 static unsigned char lsaid;                     /* (The legs' way last told: part 50's) */
-void limbs_pace (void);                         /* (Part 50's: how fast its legs go; how loud its steps are) */
+unsigned char __fastcall__ legs (unsigned char op);  /* (Part 50's, one stub, the main RAM's room: L_PACE how fast its
+                                                **   legs go and how loud its steps are; L_GO a move's start; 0x80 |
+                                                **   a position said; 0 or 1 getting up, untimed or timed) */
+#define L_PACE          0x40
+#define L_GO            0x41
 
-unsigned char limbs_go (void);
-unsigned char __fastcall__ rise_pc (unsigned char timed);
+
 static unsigned char runs;                      /* (A flight's: at a run, whatever the player's pace: part 24's) */
 
 static unsigned char dark (void);
@@ -415,7 +418,7 @@ static void paced (void)
                                                 **   legs not whole, not standing: part 50's, slices 4.5, 4.6) */
     if (HUB->pc_pos || HUB->pcsum.limp || (HUB->pcsum.limbs & (LB_LEG_L | LB_LEG_R)) || pmode || lsaid || !g ||
         HUB->pc_clank == 0xFF) {
-        limbs_pace ();                          /* (Its legs not whole, or not standing: part 50's, slice 4.1b's) */
+        legs (L_PACE);                          /* (Its legs not whole, or not standing: part 50's, slice 4.1b's) */
     }
 }
 
@@ -4552,7 +4555,7 @@ static void __fastcall__ intent (struct msg* m)
     free_at = HUB->now;
 #define MOVES   (1UL << I_GO | 1UL << I_CLIMB | 1UL << I_GOTO | 1UL << I_STEP | 1UL << I_TAKE | 1UL << I_CLOSE | \
                  1UL << I_DISENGAGE | 1UL << I_TRAVEL)
-    if ((MOVES >> m->kind & 1) && (HUB->pc_pos || (HUB->pcsum.cond & C_MOVE) || pmode) && limbs_go ()) {
+    if ((MOVES >> m->kind & 1) && (HUB->pc_pos || (HUB->pcsum.cond & C_MOVE) || pmode) && legs (L_GO)) {
         return;                                 /* (Prone, its legs not whole: up first, or crawling; or no move:
                                                 **   part 50's, slice 4.1b's) */
     }
@@ -4814,7 +4817,7 @@ void __fastcall__ s_intent_more (struct msg* m)
         disengage_go (m);                       /* (The book's disengage: part 26's) */
         break;
     case I_RISE:                                /* (Getting up, or down: part 50's) */
-        rise_pc (0x80 | m->w1);
+        legs (0x80 | m->w1);
         break;
     case I_TRAVEL:                              /* (A journey to a place named: part 54's) */
         travel_go (m);
@@ -5332,15 +5335,31 @@ static void __fastcall__ legs_told (unsigned w)
 ** round of its time; told (WB_RISEN, | 256 on its feet already; WB_NOT_UP, | 256 its legs won't bear it); 1 on its
 ** feet.  (In a fight, the referee's own: RS_ATTACK's O_RISE) */
 void __fastcall__ s_pose_pc (unsigned char pos);
+unsigned char s_limbs_go (void);
+void s_limbs_pace (void);
+unsigned char __fastcall__ s_rise_pc (unsigned char timed);
+
+/* Part 50's one stub (the main RAM's room): what's asked, op (L_*, a position said, getting up) */
+unsigned char __fastcall__ s_legs (unsigned char op)
+{
+    if (op == L_PACE) {
+        s_limbs_pace ();
+        return 0;
+    }
+    if (op == L_GO) {
+        return s_limbs_go ();
+    }
+    if (op & 0x80) {
+        s_pose_pc (op & 7);                     /* (A position said: I_RISE's, slice 4.6's) */
+        return 0;
+    }
+    return s_rise_pc (op);
+}
 
 unsigned char __fastcall__ s_rise_pc (unsigned char timed)
 {
     unsigned char ok;
 
-    if (timed & 0x80) {
-        s_pose_pc (timed & 7);                  /* (A position said: I_RISE's, slice 4.6's) */
-        return 0;
-    }
     limbs_now ();
     hub_map (0);
     if (HUB->pc_pos != POS_PRONE) {             /* (Crouched, kneeling, sitting: up, a moment; no test) */
