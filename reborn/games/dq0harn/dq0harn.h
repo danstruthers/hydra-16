@@ -91,8 +91,8 @@ void __fastcall__ sheet_get (unsigned char n);  /* Sheet n into bs */
 void __fastcall__ sheet_put (unsigned char n);  /*   and back */
 
 /* sheet.c (overlay 1) */
-#define OVLS    8                               /* (The 4th and 5th: the swapped parts' images; the 6th and 7th heal.c's;
-                                                **   the 8th the missiles', missile.c's, slice 4.7's) */
+#define OVLS    7                               /* (The 4th and 5th: the swapped parts' images; the 6th and 7th heal.c's;
+                                                **   the 7th the missiles' too, missile.c's, slice 4.7's) */
 extern char hurt[200];                          /* The last harm's words */
 void sheet (void);                              /* The sheet, into the reply */
 void brief (void);                              /*   its short lines */
@@ -121,7 +121,7 @@ extern unsigned char pc_by[HARN_INJMAX];
 #define IF_POOL         0x80                    /* (An injury's flags, the referee's own, the library's never: the
                                                 **   lesser hurts past the record's room, folded together: wound's) */
 
-/* missile.c (overlay 8): a missile's attack (RS_ATTACK's RS_MISSILE: fight.c's, its sides made), and fight.c's that
+/* missile.c (overlay 7): a missile's attack (RS_ATTACK's RS_MISSILE: fight.c's, its sides made), and fight.c's that
 ** it calls (through their stubs) and shares: the sides, the request, its effects, its words */
 unsigned shot (void);                           /* (Its declarations after struct side's, below) */
 

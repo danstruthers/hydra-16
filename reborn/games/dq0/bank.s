@@ -14,7 +14,7 @@
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 16                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 15                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
@@ -185,7 +185,7 @@ ovl_out:
             OVFN        taken_next, 11
             OVFN        throw_words, 10
             OVFN        fixt_words, 4
-            OVFN        shot_words, 16      ; (The missiles' words: shots.c, slice 4.7's, overlay 16)
+            OVFN        shot_words, 15      ; (The missiles' words: shots.c, slice 4.7's, overlay 15)
             OVFN        trap_words, 10
             OVFN        trap_name, 10
             OVFN        den_way, 4

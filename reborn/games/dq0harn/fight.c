@@ -110,7 +110,7 @@ static void pack (void)
     sheet_put (crn);
 }
 
-struct side A, D;                               /* (These four missile.c's too: a missile's attack, overlay 8's) */
+struct side A, D;                               /* (These four missile.c's too: a missile's attack, overlay 7's) */
 struct req* R;                                  /* The request (a copy) */
 unsigned char nfx;                              /* Its effects so far */
 char line[2][72];                               /* What the attacker's strike did, and the defender's */
@@ -644,7 +644,7 @@ void __fastcall__ o_fight (struct req* r)
     }
     A.who = r->actor;
     D.who = r->other;
-    if (r->w2 & RS_MISSILE) {                   /* (A missile's: overlay 8's, missile.c; a creature's skill at it its
+    if (r->w2 & RS_MISSILE) {                   /* (A missile's: overlay 7's, missile.c; a creature's skill at it its
                                                 **   own weapon's, ten less, the house's) */
         if (r->actor) {
             A.aml = A.b->w[0].ml - 5 * harn_get_pp (&cr) - 10;

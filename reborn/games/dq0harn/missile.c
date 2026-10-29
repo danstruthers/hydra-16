@@ -1,5 +1,5 @@
 /*
-** missile.c - (overlay 8, the referee's: called through bank.s's stubs) a missile's attack, HarnMaster's (Combat 15-17:
+** missile.c - (overlay 7, heal.c's too, the referee's: called through bank.s's stubs) a missile's attack, HarnMaster's (Combat 15-17:
 ** the missile sequence, slice 4.7's): an RS_ATTACK with RS_MISSILE (rs.h's), its sides made by fight.c's o_fight (the
 ** character's, a creature's), its strike and its words fight.c's (through their stubs: strike, effect).
 **
@@ -27,8 +27,8 @@
 ** stray's (MS_STRAY, the world's: a miss that struck one beside its mark, the book's 20%) a strike of one die, no test.
 */
 
-#pragma code-name ("OV8CODE")
-#pragma rodata-name ("OV8RODATA")
+#pragma code-name ("OV7CODE")
+#pragma rodata-name ("OV7RODATA")
 
 #include <stddef.h>
 #include <string.h>
