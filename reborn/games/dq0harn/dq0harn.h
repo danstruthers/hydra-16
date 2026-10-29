@@ -30,7 +30,9 @@ extern unsigned char hheld;                     /* (The character's hands that h
 #define BF_QUAD         0x04                    /*   on four (its forelegs the strike table's arms); neither, no legs
                                                 **   to lose: a snake's, a bat's wings, a spider's many); */
 #define BF_FOLK         0x08                    /*   folk, its armour only what it wears, its things told: the outfits'
-                                                **   gear, DECISIONS.md's answer 7) */
+                                                **   gear, DECISIONS.md's answer 7); */
+#define BF_BERSERK      0x10                    /*   one that would sooner go berserk than flee (the Gargu-khanu: its
+                                                **   breakdown never a flight, the house's, 2026-10-29) */
 #define conditions()    cond_of (&pc)           /* The character's */
 unsigned char __fastcall__ health_of (const harn_char* c); /* Its health (rs.h's H_*) */
 unsigned char __fastcall__ has (const char* key);   /* A tool to hand, by its key ("pick") */
@@ -124,8 +126,27 @@ void __fastcall__ fight (struct req* r);        /* RS_NEW_ACTOR, RS_ATTACK, RS_M
                                                 **   creature's side: r a copy, as harm's) */
 extern unsigned long pc_out;                    /* (The character senseless till then, the clock's tenths) */
 
+/* The bestiary (beasts.c's, overlay 5's read-only data since 2026-10-29: the peoples' room in overlay 2): by the kinds'
+** keys, each one's attributes (Strength, Stamina, Dexterity, Agility, Will), its weight (4 lb), its size (1 tiny ... 4 a
+** man ... 6 very large), its Initiative (its courage: morale) and Dodge, its hide's protection (blunt, edge, point,
+** fire), and its weapons (a word, its ML, its impact, its aspect, the part it strikes with: 0xFF a weapon held), the
+** first the one it uses most; an entry copied out into the main RAM as it's wanted (fight.c's beast) */
+struct nweapon {
+    char            word[7];
+    unsigned char   ml, imp, aspect, part;
+};
+struct bkind {
+    char            key[8];
+    unsigned char   att[5];
+    unsigned char   wt, size, ini, dge;
+    unsigned char   arm[4];
+    unsigned char   flags;
+    struct nweapon  w[2];
+};
+#define NBEASTS         29                      /* (beasts.c's entries: its check) */
+extern const struct bkind bestiary[NBEASTS];    /* (Overlay 5's: read with bread, never in the window here) */
+
 /* A side of a fight, as a blow wants it (fight.c's; gear.c's for the character) */
-struct bkind;
 #define SIDE_BLK        4
 #define BARE_ARM        NTOOLS
 struct side {

@@ -1125,7 +1125,9 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   armoured", the user's three levels, 2026-10-27) */
 };
 #define AG_ARMED        0x01                    /* (An actor's agear: a weapon in hand or at its belt, */
-#define AG_ARMOUR       0x02                    /*   armour worn) */
+#define AG_ARMOUR       0x02                    /*   armour worn, */
+#define AG_MAIL         0x04                    /*   mail worn over its body: a byrnie, a hauberk, metal body armour,
+                                                **   2026-10-29: "a dwarf in mail") */
 #define AG_SHOOTS       0x10                    /* (A launcher among its things, and its missiles: its mind's to shoot,
                                                 **   slice 4.7's; */
 #define AG_NOSHOT       0x20                    /*   no shot to be had from where it stands, the world's: till it

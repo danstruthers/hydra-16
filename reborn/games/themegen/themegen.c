@@ -81,6 +81,53 @@ unsigned char __fastcall__ lives (unsigned char b, unsigned char k)
     return k >= p->d0 && k <= p->d1 && (p->styles & style_bits (st[k < ns ? k : ns - 1].styles));
 }
 
+/* The history's peoples' factions (histgen's inhabitants, 2026-10-29: Phase 4's peoples): the dwarves, the elves and
+** the men's soldiers where an era of theirs holds its works still (its era theirs); the gargun in mountains, hills or
+** forest where the dwarves' works were lost and none hold theirs (the book's: their colonies in abandoned Khuzdul
+** halls), a tribe of one or two of their kinds (white orcs in cold mountains; else, by the dice, brown orcs ruled by
+** black ones, red orcs, or brown and small orcs); the dwarves' elder, the soldiers' captain and the gargun's king their
+** leaders */
+static const char* const pname[] = { "dwarves", "elves", "soldiers", "gargun" };
+static const char* const pera[] = { "dwarves", "elves", "men", "dwarves" };
+static const char* const pkinds[] = { "khuzwar khuzmin", "sindwar", "manarms", "kyani", "hyeka khanu", "viasal",
+    "hyeka arak" };
+static const char* const plead[] = { "khuzeld", 0, "captain", "garking" };
+unsigned char pk_era;
+const char* pk_lead;
+
+static unsigned char __fastcall__ era_of (const char* kind, unsigned char held)
+{
+    unsigned char k;
+
+    for (k = 0; k < ne; ++k) {
+        if (!strcmp (er[k].kind, kind) && (er[k].end == EN_HELD) == held) {
+            return k + 1;
+        }
+    }
+    return 0;
+}
+
+const char* __fastcall__ peoples (const char* f)
+{
+    unsigned char p;
+
+    for (p = 0; p < 4 && strcmp (f, pname[p]); ++p) {
+    }
+    if (p == 4) {
+        return 0;
+    }
+    pk_lead = plead[p];
+    pk_era = era_of (pera[p], p != 3);
+    if (p == 3) {
+        if (era_of (pera[0], 1) || !among (land, "mountains hills forest")) {
+            pk_era = 0;
+        } else if (pk_era && (strcmp (land, "mountains") || strcmp (climate, "cold"))) {
+            p = 4 + random (3);
+        }
+    }
+    return pkinds[p];
+}
+
 int __fastcall__ work_of (const char* s)
 {
     unsigned char k;

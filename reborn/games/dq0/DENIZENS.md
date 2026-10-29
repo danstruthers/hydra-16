@@ -86,8 +86,8 @@ group sizes, its leader in its home (HOUSE.md, who lives where).  Else the stand
 that lives in the stratum's style at its depth, its lairs and how many in each.  Each lair lies where its kind lairs
 (by the stratum's ways in and out, for those that lair there; else a chunk of a region of halls), each denizen a
 record from then on (its kind, its faction, its attitude, where it is, what it's doing, its state: the referee's
-sheet once it has one).  The kinds are data, the game's bestiary (dq0d/kinds.txt: seventeen, modelled on the HarnWorld
-Bestiary's creatures that suit a dungeon, and folk of the game's own; a name, the referee's key, its ways, the styles
+sheet once it has one).  The kinds are data, the game's bestiary (dq0d/kinds.txt: twenty-nine, modelled on the HarnWorld
+Bestiary's creatures that suit a dungeon, folk of the game's own, and since 2026-10-29 the book's peoples, below; a name, the referee's key, its ways, the styles
 and depths it lives in, its numbers, its range, its senses, its pace, its stand-in faction, its mind, its sway, its
 eyes, and for the history its habitat, nature, size and arms, and what it leaves dead), made a data file the task
 reads into a bank of its own (lib/dq0/dq0d.dat, with the stand-in's factions).  The world's peoples and deities are
@@ -130,7 +130,8 @@ four squares).
 **Factions** (a theme's inhabitants; else the stand-in's, dq0d/factions.txt, part of the denizens' data file): each
 one's tongue (a theme's faction speaks its first kind's stand-in faction's), its attitude to the character as it first
 meets it, and how it stands with each other one (hostile, wary, indifferent, friendly: the worse of the two ways it's
-said).  Each denizen's record has its faction (a kind may be in two); each kind (kinds.txt) its stand-in faction, its
+said); fifteen at most, a stand-in game's the first seven, the rest (the peoples': dwarves, elves, gargun, soldiers) a
+history's only (themegen's inhabitants: HISTORY.md).  Each denizen's record has its faction (a kind may be in two); each kind (kinds.txt) its stand-in faction, its
 mind (mindless, a beast, low, average, cunning) and its own steps for or against swaying it.  The denizens' head
 keeps each faction's attitude now (its newcomers': a stratum populated later starts from it).
 
@@ -306,6 +307,20 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   a square stops short of one (the way across a room found round them), and one in the very next square is told ("A
   giant rat is in the way.": E_NOWAY's N_DEN, the actor's).
 
+### The peoples *(2026-10-29: Phase 4's, the user's answer 11; HOUSE.md's the peoples, for review)*
+
+The HarnWorld Bestiary's peoples beside the game's own: the five Gargun (the small, brown, black, white and red orcs:
+HarnMaster's Gargun 4-8) and their king, the Khuzdul (a dwarf, a dwarf miner, a dwarf elder), a Sindarin warden (an
+elf), men-at-arms (a soldier) and their captain.  Their factions (factions.txt's dwarves, elves, gargun, soldiers: their
+tongues khuzdul, sindarin, gargun, common) are a history's (themegen's inhabitants: HISTORY.md), or a theme file's
+written by hand; the stand-in themes have none of them.  Their minds by their ways, as the factions and attitudes allow
+now: the Gargun hostile to all, the dwarves above all; a brown orc a robber hiding its takings, a black and a red orc
+killers, their king a robber of its tribe's spoils, a small orc a shy hunter by smell, a white orc sparing a fallen foe; the dwarves wary, keeping
+to their halls and their lights, hard to fool; the elf wary and aloof, keeping its distance; the soldiers unfriendly at
+their posts.  Their sheets the referee's (the Gargun's the book's, their fur's armour the better of it and what they
+wear; a black orc sooner berserk than fled); the null referee's by their gear as anyone's.  Left for later (HOUSE.md):
+the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the dwarves' and the white orcs' trade.
+
 ### Fights
 
 - **Sheets:** each actor has the referee's sheet (RS_NEW_ACTOR, by its kind's key, its record's number:
@@ -325,7 +340,9 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   words in a ring in their bank: the referee's for the wounds and the armour, the UI's for the rest), heard by the
   others (they turn to it) and played (the sound task's *hit, *swish).
 - **After:** a denizen wounded tests its morale (RS_MORALE: HOUSE.md's fights): broken (or a shy one cautious) it
-  flees a minute; cautious, it holds back a round.  One knocked senseless falls and lies there till it comes round,
+  flees a minute; cautious, it holds back a round.  As one falls its kin among the actors (its kind and, since
+  2026-10-29, its faction) test their courage, two steps worse, four as their faction's leader falls (HOUSE.md's the
+  peoples).  One knocked senseless falls and lies there till it comes round,
   doing nothing meanwhile (its mind's intents and rouses not carried out, words not heard: HOUSE.md's hands and
   limbs, 2026-10-29), and is finished if it's struck meanwhile; come round, its first turn is getting up; one bleeding loses blood a minute at a time (RS_TIME) and may die of it; one dead
   leaves its body (an item: a body, a skeleton's bones: the world's, put down as it dies) and never comes back.  A
@@ -387,7 +404,8 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   Hunters/Tribesmen; its things' condition the Treasure condition table's Person column (most good); its coins today's
   mints', four in five the region's own.
 - **A robber's takings** (I_ROB's x[2], b): to its faction's hoard, in the chest at the home of a placed lair of its
-  faction's leader (kinds.txt's keeps H) on its stratum (RB_HOARD); else hidden at its home if its kind hides its
+  faction's leader (kinds.txt's keeps H; or, 2026-10-29, a theme's home with its leader, its theme's faction the
+  robber's: the leader's own lair things, its hoard, made with that home as it's placed) on its stratum (RB_HOARD); else hidden at its home if its kind hides its
   things (RB_HIDE); else lying there.
 - **Seen:** the world keeps each actor's look (the hub's agear, AG_ARMED, AG_ARMOUR: as it tells the referee), the
   senses copy it with its body (struct sden's gear), the look words it ("a bandit, armed and armoured"); examined or
@@ -398,7 +416,13 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   rats, the cave spiders, the bear, the basilisk, the lindworm, the ghouls, the skeletons, the wights and the shade:
   bedding, its prey's bones, a past victim's remains with its things, the dead's grave goods, found (Treasure 1's Found
   column) and of old (their stratum's age; their coins its oldest era's people's).
-- **Not yet:** the robbers' own stashes (no kind hides its things yet but the kobolds, whose takings are their lord's).
+- **The peoples'** *(2026-10-29; HOUSE.md's the peoples, for review)*: the Gargun's by the book's equipment, their own
+  make, the mankar and the mang (the catalogue's), their nests' straw, a brown or red orc's stash at its bed, their
+  lairs' bones, their king's hoard; the Khuzdul's fine arms and mail, a miner's tools, their stores and their elder's
+  hoard (the dwarves' gold); an elf's longknife and hartbow; the soldiers' issue, their stores and spare arms, their
+  captain's strongbox (outfits.txt's [role], [lair] and [purse] sections by their keys).
+- **A robber's stash:** a brown orc's takings hidden at its home (RB_HIDE: its kind's keeps h, no king of its tribe's
+  placed on the stratum), found there by searching; a kobold's its lord's (RB_HOARD).
 
 ## Still to come
 

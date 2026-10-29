@@ -15,10 +15,10 @@
 #include "../../games/themegen/themegen.h"
 
 /* The faction (fa: 0 ...) that guards stratum k: the first that lives there of the dead, the kobolds, the beasts,
-** the crawlers, the vermin; any other; or 0xFF */
+** the crawlers, the vermin (the gargun after the dead, 2026-10-29); any other; or 0xFF */
 static unsigned char __fastcall__ guard_of (unsigned char k)
 {
-    static const char* const order[] = { "dead", "kobolds", "beasts", "crawlers", "vermin", 0 };
+    static const char* const order[] = { "dead", "gargun", "kobolds", "beasts", "crawlers", "vermin", 0 };
     unsigned char i, j;
 
     for (i = 0; order[i]; ++i) {
