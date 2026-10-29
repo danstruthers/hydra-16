@@ -324,10 +324,6 @@ void s_den_intents (void)
             told_den (bd.doing ? DE_NOTICED : DE_LOST, 0);
         }
         BD_PUT ();
-        if (m.kind != I_ATTACK) {
-            HUB->agear[bk] &= ~AG_NOSHOT;       /* (Something else done, a step, a wait: a shot looked for again
-                                                **   as it means to, slice 4.7's) */
-        }
         if (m.kind != I_WAIT || bd.doing != was) {
             ++HUB->den_seq;                     /* (Changed: the world looks again at what the character sees) */
         }

@@ -496,11 +496,16 @@ static unsigned long rnd_at;
 /* The character's defence (its side d) against foe f (its who) this round, armed if f strikes with a weapon: its
 ** stance's, D_AUTO the better of a block and the dodge left (a bare arm's block against a weapon the last: struck,
 ** H2), D_BLOCK or D_DODGE that first; none left, none.  A block's EML in d->dml, d->bare if it's a bare arm's */
+static unsigned char __fastcall__ pc_shield (struct side* s);
+
 unsigned char __fastcall__ o_pc_defence (struct side* d, unsigned char f, unsigned char armed)
 {
     unsigned char k, s, how = HARN_IGNORE;
     int v = -0x7FFF, w;
 
+    if (f == PD_SHIELD) {
+        return pc_shield (d);
+    }
     if (tnow >= rnd_at + ROUND_T) {            /* (A round on: its defences all free again) */
         rnd_at = tnow;
         memset (used, 0, sizeof used);
@@ -553,11 +558,10 @@ unsigned char __fastcall__ o_pc_defence (struct side* d, unsigned char f, unsign
 }
 
 /* The best block the shields the character holds give (side s's, its blocks: a missile's, Combat 15: at Shield ML,
-** high or low velocity alike), its word in s's: 0 none */
-int __fastcall__ o_pc_shield (struct side* s)
+** high or low velocity alike), its word in s's: 0 none (pc_defence's PD_SHIELD) */
+static unsigned char __fastcall__ pc_shield (struct side* s)
 {
-    unsigned char k, j;
-    int v = 0;
+    unsigned char k, j, v = 0;
 
     for (k = 0; k < s->nblk; ++k) {
         if (s->bslot[k] < NTOOLS) {

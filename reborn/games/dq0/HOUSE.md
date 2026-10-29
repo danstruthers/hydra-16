@@ -366,8 +366,8 @@ silent on all of it.
 - **A creature's courage** is its Initiative test, its injuries its penalty: a marginal failure holds it back a
   round; a critical failure breaks it, a d100: berserk (1-25), desperate (26-50), broken (51-75), cautious (76-100).
   A wounded creature still standing is tested; a shy one that holds back flees.  (fight.c's courage, left.)
-- **Bleeding** loses a point of blood a minute for each bleeding wound; past the Endurance, death.  (fight.c's
-  bled.)
+- **Bleeding** loses a point of blood a minute for each bleeding wound; past the Endurance, death.  (heal.c's bleed,
+  every actor's: wounds over time, below.)
 - **Wounds, as built** (the user's adder playtest, 2026-10-21: "the wounds just kept getting worse and worse", and
   its bites were worded stabs; drafted for the user to review).  Each wound is worded with its own level, the
   book's (M1, S2, S3, G4, G5).  A creature's own part words its wounds by what it is: a bite a bite (minor, serious;
@@ -386,8 +386,8 @@ silent on all of it.
   conscious, so one in shock was struck on and never fell): over its Endurance, it's senseless.  (sheet.c's wound.)
 - **In shock, the character can only rest, or walk or crawl away at half its Move** (Skills 22; the book's Combat 14
   asks an Initiative test for the half-move: the game takes Skills 22's, no test): its walk's steps twice as long, no
-  faster pace (a run in shock is that walk); it ignores any blow (no defence) and is in no state to fight.
-  (dq0harn.c's status.)
+  faster pace (a run in shock is that walk); it ignores any blow (no defence) and is in no state to fight; nothing
+  else but rest, a look, a word called out (wounds over time, below: slice 4.3's).  (dq0harn.c's status.)
 - **A helpless character and its foes, by their nature** (the user's choice, 2026-10-21; helpless: senseless, or in
   shock).  Each kind's way is kinds.txt's (its ways k and r).  A killer (k: the ghoul, the skeleton, the cave bear,
   the basilisk, the lindworm, the wight, the shade, the cultists and their high priest) strikes on, and one senseless
@@ -479,7 +479,7 @@ book's; the house's below, each marked.
   a thing taken up.
 - **Denizens**: one with a launcher of its own and its missiles, hostile, sensing the character further off than
   beside it, shoots (its mind's: the world says if it can; no shot to be had from there, out of range or no clear
-  line, it closes with the character, till it moves); its launcher taken up from its back or its belt first, its
+  line, it closes with the character till the character moves); its launcher taken up from its back or its belt first, its
   round's (not with something else in its hands); its missiles run out, it shoots no more; the character beside it,
   it lets its launcher fall (no time, the book's) and draws its weapon.  *(For review: a denizen holding a weapon
   doesn't change it for its bow.)*
@@ -1257,11 +1257,10 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   where it lay, with no word of its coming round, and an intent its mind had posted as it fell, or a rouse, was carried
   out while it lay there (it was shown fighting, not lying senseless).  (wfight.c's blow; wbody.c's den_intents;
   wlimbs.c's den_enter; dq0d.c's enlist and sway, SR_DOWN; fight.c's attack: the Rise before the weapon taken up;
-  dq0w.c's main, the character's.)  *Not yet* (siblings found, left): a creature come round in shock (the book's last
-  shock roll; the referee gives creatures none); the character in shock may still handle things and speak (the book
-  allows only rest, being led away, or a half move), left till shock recovery comes (Physician 3), else a character
-  once in shock could never take a thing up again; a denizen come round out of a fight walks off without its weapon
-  let fall (only its next blow's turn takes it up).
+  dq0w.c's main, the character's.)  *Not yet* (siblings found, left): a denizen come round out of a fight walks off
+  without its weapon let fall (only its next blow's turn takes it up).  (A creature come round in shock, and the
+  character in shock held to rest, a look and a half move: built with shock's recovery, slice 4.3's, wounds over time,
+  below.)
 
 ## Bearings underground *(slice 4.2, drafted 2026-10-23 for the user to review)*
 
@@ -1569,8 +1568,7 @@ ruleset's (the fatigue rested off the referee's).
   does), the wait broken off as any long task is (hard: a wound, a blow, a hostile within 30 feet, its light gone out;
   soft, asked: a denizen seen, a sound heard).  Not yet: a sleeper's Awareness at half (Skills 11's Awareness: a
   sleeper's tested at half its mastery at most; it perceives as one awake for now); lying down to sleep (it sleeps where
-  it stands); healing (Physician 3: a Healing Roll every five days, each day twelve hours' rest: the game has no healing
-  yet), hunger and thirst (slice 4.9's).
+  it stands); hunger and thirst (slice 4.9's).  Healing as it rests: wounds over time, below (slice 4.3's).
 - **A long wait's speed** *(the house's, for review)*: at the real paces a wait or a sleep longer than a round runs as
   the turns pace runs it, as fast as the tasks go (an hour's wait no hour of the player's, nor a night's sleep a night),
   the pace's own back as it ends, is stopped or asks.
@@ -1589,6 +1587,88 @@ ruleset's (the fatigue rested off the referee's).
   the same; in the dark by the giant rats' lair (seed 3, three rats about), 66M (18 seconds; 782M, three and a half
   minutes, before the coarser ticks); in the lit cave below with rats about (seed 21), 123M (34 seconds; 3,200M, a
   quarter of an hour, before).
+
+## Wounds over time *(slice 4.3, 2026-10-29: the book's, and the house's where it's silent, drafted for the user to review)*
+
+The user's (DECISIONS.md's D6: "bleeding over time, as HarnMaster has it, with first aid and bandages that stop it, and
+healing over days of rest"; a helpless character, and poison, 2026-10-21: the adder's venom, resisting it, its effects
+over time, antidotes).  The book's rules are the referee's (dq0harn/heal.c, on the library's harnheal.c: the Treatment
+table, the healing roll, the infection's and the shock's rolls); what the house adds, and how it's built:
+
+- **Time told the referee** *(every ruleset's)*: the world tells it the minutes gone (RS_TIME) a minute at a time while
+  any body bleeds or the character's poisoned, else as the referee's next mark comes (HarnMaster's: a watch, four hours
+  on from the game's start or its carrying on, not the hour of the day: the underground has none), with what the
+  character was about: at rest (standing still, waiting, asleep), about, or at vigorous work (at a run, a fight,
+  strenuous work).  What came of it for the character is told as it happens ("You feel faint from the loss of
+  blood.", "It spreads to your left knee."), a hurt anew or a death a hard stop of its long task; while it sleeps,
+  held, and told as it wakes.  (dq0w/wtend.c's body_ask, with the lights' minute; dq0/tend.c's body_words.)
+- **Bleeding, the book's** (Combat 14, Physician 3): a grievous blow's bleeder a point of blood a minute, dead past the
+  Endurance, every actor alike (it was the denizens' alone, and a minute's however long a wait had been: now the
+  minutes gone, and the character's too).  Told once, past half its Endurance ("You feel faint from the loss of
+  blood."); the status's "weak from the loss of blood", past half "faint".  Its blood got back the book's way, a
+  five-day roll.
+- **First aid, the book's treatment** (Physician 2-3), the character the healer: "tend my wounds", "first aid",
+  "bandage my left arm", "treat the bandit" (tend, tend to, treat, bandage, dress, bind, staunch, first aid, first aid
+  to or for; a part said, its wound there; none, the most urgent: a bleeder first, then the worst not yet treated).  A
+  timed work (LT_TEND: "stop tending"), its outcome at its end: a bleeder's tourniquet a minute, tried again each
+  minute till it holds (the book's), +50; a dressing five minutes a level; a compress or a splint 5d6 minutes; surgery
+  10d6.  The Treatment roll the referee's (Physician, unopened at its opening level as every skill is), the table's
+  bonus with the treatment to hand.  *The house's*: bandages for a dressing; a knife or a dagger and bandages for
+  surgery (no needle and thread in the catalogue yet: the blade and the bandages stand for them); a compress's cold
+  water and a splint's stick taken as found; the tourniquet anything to hand (a strip of cloth, a belt), its +50
+  always.  A dressing and surgery use a bandage up if it has one (the things' IO_USE).  The wound's healing rate after
+  it (the sheet's "tended"), told plainly ("It's well tended.", "It's tended, roughly.", "It's badly done."); the book's
+  one treatment roll a wound.
+- **Treating itself** (Physician 2: one not in shock may treat its own minor and serious wounds, not its grievous
+  ones): *the house's*, a grievous wound's bleeder it may staunch itself, the wound itself not ("You can't treat a
+  wound so grave yourself.").  Not yet: the book's 5 less a day past a day's delay, an attendant's half Physician on the
+  healing and shock rolls, diagnosis, cauterising.
+- **Another's wounds**: one beside it, an ally (friendly or allied) or one lying senseless; any other "won't let you
+  near its wounds".  Its sheet's wounds as the character's.
+- **Healing, the book's** (Physician 4): a healing roll each wound every five days (the Sindarin two), its rate times
+  the Endurance, its levels gone, a wound healed told ("The minor cut to your left forearm has healed."; a roll that fails told too, "... is no better.", the house's); an EE
+  treatment healed at the day's end *(the house's: the book's "in a day", the next day's mark)*; an open wound infected
+  on a critical failure, then the infection's daily roll, gone at H6, dead at H0 (the Sindarin never).  *The house's*:
+  the character's five-day rolls want sixty hours' rest of the five days (the book's twelve hours a day: its waits, its
+  sleep and its standing still, the fatigue's rest), else forfeit, as the book has it.  So a night's sleep heals
+  little: the book's rolls come five days apart.
+- **The creatures heal the same**, every sheet at each mark, in their lairs or wherever they are, every five-day roll
+  made (*the house's*: as if they rest), but never infected (*the house's*: a creature away from the character dies of
+  nothing unseen).  A folk creature binds its own bleeding (*the house's*: a minute's tourniquet each minute it isn't
+  fighting, a layman's Physician 30 and the +50, "The bandit binds its bleeding wound."); a beast bleeds on.  Not yet:
+  their minds resting a wounded one in its lair (DENIZENS.md), one tending another.
+- **Shock's recovery, the book's** (Physician 4): one in shock rolls each watch (four hours), its rate (H5 at first)
+  times its Endurance, out of it at H6 ("You come out of shock."), dead at H0.
+- **In shock, the book's** (Combat 14: it may rest, be led away, or make a half move), as built at last (HOUSE.md's
+  hands and limbs left it till shock's recovery came): *the house's*, it may look, wait, sleep, walk (at half its move,
+  as before), turn, let a thing drop, call out, give an ally a short order, and the game's own commands; anything else
+  refused ("You're in shock: you can do no more than rest, or walk slowly away."; to talk, "you can't string the words
+  together"), first aid too (the book's: one not in shock).  (dq0/tend.c's early, before a command's things are looked
+  for.)  A blow at it in shock from any but a killer held, as one at it senseless is (the referee's, RS_KILLER: nobody
+  engages one helpless; a killer strikes on).
+- **A creature's shock, the book's** (every character's): one knocked senseless comes round in shock if its last shock
+  roll failed (the referee had dropped it), its only defence none and striking nothing, till its watch's roll brings
+  it out.  *The house's*: a creature's shock never kills it (H0 held at H1).  Not yet: the minds' way with one in
+  shock (it stands, or lies, doing nothing).
+- **Venom, the bestiary's** (HarnWorld Bestiary 1, Snakes 2-3: an infection's course): the cave adder's bite (the heath
+  adder's H3, a roll each hour at rest, a B1 bleeder at the bite, an ache, an M1, at each place it spreads to, healing
+  at H6 once the venom's gone), the basilisk's (Dragons 13: H2, ten minutes), the lindworm's (Dragons 14: H3, ten
+  minutes, each place it reaches numb, a limb useless, the chest or the belly reached its breath stopped).  Delivered
+  by a bite that wounds (a weak one may not: its rate a point more for each point of impact under 5, past H5 none, the
+  bestiary's option); its first roll at once ("The bite burns: there's venom in it."), then one each interval, at rest
+  the whole, about half, vigorous a quarter; the worse spread a place nearer the heart (a critical failure two, the
+  bestiary's option), the better its rate up; gone at H6 ("The venom's fire dies away: you've thrown it off."), dead at
+  H0 ("The venom reaches your heart.").  The status's "poisoned, the venom in your right calf".  *The house's*: bitten
+  again, the worse venom kept; the places it spreads to, the next nearer the heart, then up the body to the skull; no
+  senselessness of an ache (the book's shock roll for a new injury not made of it).  Not yet: antidotes (Khalmet's Theriac: the market's,
+  Treasure 4's potions), stings (no stinging kind in the game yet), creatures envenomed (none fights another, no blade's
+  poisoned).
+- **The body's own dice** *(the house's)*: the time's work (the bleeding, a folk creature's binding, the watches' rolls)
+  and a venom's rolls roll the referee's dice of their own, swapped in about them as the bearings' are (rshouse.h's
+  way), so a fight's and a walk's dice roll as they did whether a body bleeds, heals or is poisoned meanwhile.
+- **The null ruleset's simple way** (dq0null.c): no bleeding, no shock, no venom; first aid five minutes a wound, each
+  tended once ("You clean and bind a wound."); a wound healed each seven hours' rest if it's tended, each twenty-one
+  hours' if not ("A wound has healed.").
 
 ## Outfits *(2026-10-27: drafted for the user to review)*
 
@@ -1934,7 +2014,7 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
 - **D13, a wrecked door, window or portcullis appraises by its state.**  Today appraisal doesn't see the damage.
 - **D13, the pit climb:** a slip climbing out of a pit ends the climb, and the player chooses what next.  Today a
   slip slides 5 feet back and the climb goes on.
-- **D6, bleeding with first aid** (P_FIRST_AID binds a bleeder).  Today nothing stops bleeding.
+
 - **Mental maps** (DUNGEON.md: a map in the character's head that fades): slice 4.2's map (its bearings, by
   Awareness or Mining, built: Bearings underground, above).
 - **Sniffing one way** (slice 4.0's looking one way: "sniff at the grating"): the trace layer's (slice 4.1: smells in

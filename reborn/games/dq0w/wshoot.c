@@ -41,14 +41,12 @@
 unsigned char pshoot;                           /* (The character's fight a missile's: part 24's, I_ATTACK's AIM_SHOT) */
 unsigned char gath;                             /* (A gathering under way: the main loop's, gather_on) */
 extern const unsigned char throws[];            /* (kinds.c's, the catalogue's bank's) */
-unsigned char __fastcall__ shot_blow (unsigned char att, unsigned char def, unsigned char z);  /* (Part 15's) */
 unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's) */
 void cat_map (void);                            /* (things.c's: the catalogue's bank in the window) */
 unsigned char __fastcall__ mfire (unsigned char att, unsigned char def, unsigned char z, unsigned char sn,
     unsigned sx, unsigned sy, unsigned tx, unsigned ty, unsigned thr, unsigned char tk);    /* (Part 65's) */
 void __fastcall__ mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned tx, unsigned ty, unsigned char out,
     unsigned char mk, unsigned thr);            /* (Part 67's) */
-static unsigned char shot;                      /* (fire's: 1 shot, a missile gone; 0 none) */
 
 /* The launchers by kind, from KI_SLING: a sling, the bows, a crossbow; their missiles' family */
 #define IS_LAUNCHER(k)  ((unsigned char) ((k) - KI_SLING) <= KI_CROSSBOW - KI_SLING)
@@ -56,9 +54,10 @@ static unsigned char shot;                      /* (fire's: 1 shot, a missile go
 #define FAM_OF(k)       ((k) == KI_SLING ? FM_SHOT : (k) == KI_CROSSBOW ? FM_BOLT : FM_ARROW)
 
 /* What an actor has to shoot with (arms'): its launcher (sl_item, held: sl_held) and a missile for it (sm_item: the
-** launcher's loaded one, or the handiest of its family carried); the main RAM's (kept through the parts called) */
+** launcher's loaded one, or the handiest of its family carried); the main RAM's (kept through the parts called: items
+** calls part 19's items_begin, which puts a part's image back as it was) */
 static unsigned sl_item, sm_item;
-static unsigned char sl_held, sl_kind;
+static unsigned char sl_kind, sl_held;
 
 #pragma code-name (push, "SW65CODE")
 #pragma rodata-name (push, "SW65RODATA")
@@ -184,7 +183,7 @@ static unsigned char __fastcall__ lof (unsigned char sn, unsigned sx, unsigned s
 }
 
 /* ---- What an actor shoots with (arms: the character's, who 0; body bd's, its own, its did's things, IW_DEN, and
-** what's in them), sl_item ...: 1 a launcher (sl_kind its kind), 0 none */
+** what's in them), sl_item ...: 1 a launcher (sl_kind its kind), 2 one in hand, 0 none */
 static unsigned char __fastcall__ mine (unsigned i, unsigned char who)
 {
     struct item* q = item_at (i);
@@ -218,7 +217,7 @@ static unsigned char __fastcall__ arms (unsigned char who)
     if (item_at (sl_item)->shut & IS_NOCKED) {
         sm_item = sl_item;                      /* (Loaded: its missile in it) */
         hub_map (0);
-        return 1;
+        return 1 + sl_held;
     }
     mk = sl_kind == KI_SLING ? KI_STONES : sl_kind == KI_CROSSBOW ? KI_BOLTS : KI_ARROWS;
     for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
@@ -232,20 +231,19 @@ static unsigned char __fastcall__ arms (unsigned char who)
     }
     sm_item = best;
     hub_map (0);
-    return 1;
+    return 1 + sl_held;
 }
 
 /* ---- A shot (or a throw) by att (0 the character, else an actor's entry plus 1; body bd the denizen in it) at def,
 ** its aim z, from sx, sy at tx, ty on sn: its launcher's (sl_*, sm_item) or the thing thrown (thr, its kind tk): its
-** range, its line, the referee asked (part 15's blow), its missile taken and fallen.  0 if it was shot (shot 1), or if
-** the shooter's turn went getting up or taking up its weapon (shot 0); else why not (SH_*) */
+** range, its line, the referee asked (part 15's blow), its missile taken and fallen.  0 if it was shot, or if the
+** shooter's turn went getting up or taking up its weapon; else why not (SH_*) */
 unsigned char __fastcall__ s_mfire (unsigned char att, unsigned char def, unsigned char z, unsigned char sn,
     unsigned sx, unsigned sy, unsigned tx, unsigned ty, unsigned thr, unsigned char tk)
 {
     unsigned char d = span ((int) (tx - sx), (int) (ty - sy)), band, out, mk, c;
     struct item* p;
 
-    shot = 0;
     mk = thr ? tk : sl_kind;
     c = reach_of (mk);
     for (band = 0; band < 4 && d > (unsigned) (c << band); ++band) {
@@ -262,12 +260,10 @@ unsigned char __fastcall__ s_mfire (unsigned char att, unsigned char def, unsign
     mshot.dist = d;
     mshot.flags = (lcover ? MS_COVER : 0) | ((att ? (*at (sn, sx, sy) & T_VIS) : bd.doing != DO_ROAM) ? 0 :
         MS_UNAWARE);                            /* (The character sees its shooter; a denizen senses the character) */
-    mshot.steps = 0;
-    if ((out = shot_blow (att, def, z)) != 0) {
-        return out == 0xFF ? SH_CANT : 0;
+    den_blow (def, z | AIM_FIRE);               /* (Part 15's blow, the missile's: how it came out, told, bev's) */
+    if ((out = bev.x[1]) == 0xFF || out == O_RISE || out == O_REARM) {
+        return out == 0xFF ? SH_CANT : 0;       /* (None struck; or its turn went getting up, taking up its weapon) */
     }
-    shot = 1;
-    out = bev.x[1];                             /* (How it came out: the blow's, told) */
     if (!thr) {
         p = item_at (sm_item);                  /* (Its missile: the launcher unloaded, or one from the lot) */
         if (sm_item == sl_item) {
@@ -316,33 +312,29 @@ static unsigned char __fastcall__ shot_reach (unsigned char k)
 /* A denizen's shot (body bd, entry bk: its intent's, I_ATTACK's AIM_SHOT, part 15's den_blow) at the character, its
 ** aim z: its launcher taken in hand first (from its back, its belt: its round's, the book's grope; not if it holds
 ** another thing: no shot, AG_NOSHOT), a missile of its own for it (none: it shoots no more, AG_SHOOTS gone), the shot
-** (none to be had, out of range, no clear line: AG_NOSHOT, its mind's to close with the character, till it moves:
-** part 14's) */
+** (none to be had, out of range, no clear line: AG_NOSHOT, its mind's to close with the character till the character
+** moves: part 14's) */
 static void __fastcall__ den_shot (unsigned char z)
 {
     unsigned i;
     struct item* p;
+    unsigned char g = AG_SHOOTS;                /* (What's lost if there's no shot: its shooting, else this shot) */
 
+    HUB->agear[bk] &= ~AG_NOSHOT;               /* (A shot looked for: none from here, set again) */
     if (!arms (1) || !sm_item) {
-        HUB->agear[bk] &= ~AG_SHOOTS;           /* (None, or no missile left: it closes with the character, its round
-        bd.ready = HUB->now;                    **   given back: free now, nothing done) */
-        return;
+        goto none;                              /* (None, or no missile left: it closes with the character) */
     }
+    g = AG_NOSHOT;
     if (span ((int) (bpx - bd.x), (int) (bpy - bd.y)) > (unsigned) (reach_of (sl_kind) << (BANDS - 1)) ||
         lof (bd.sn, bd.x, bd.y, bpx, bpy, bk, 0xFE)) {
-        hub_map (0);
-        HUB->agear[bk] |= AG_NOSHOT;            /* (No shot from here: none readied for it, its round given back: free now) */
-        bd.ready = HUB->now;
-        return;
+        goto none;                              /* (No shot from here: none readied for it) */
     }
     if (!sl_held) {
         for (i = 0; (i = items (i, IN_DEN, 0)) != 0; ) {
             if ((ip->flags & I_HELD) && mine (i, 1)) {
-                hub_map (0);
-                HUB->agear[bk] &= ~AG_SHOOTS;   /* (Its hands full: it fights with what it holds, shooting no more
+                g = AG_SHOOTS;                  /* (Its hands full: it fights with what it holds, shooting no more
                                                 **   till its things change, its RS_EQUIP) */
-                bd.ready = HUB->now;
-                return;
+                goto none;
             }
         }
         p = item_at (sl_item);                  /* (Taken in hand: from its back, from its belt, its round's) */
@@ -364,6 +356,11 @@ static void __fastcall__ den_shot (unsigned char z)
         hub_map (0);
         HUB->agear[bk] |= AG_NOSHOT;
     }
+    return;
+none:
+    hub_map (0);                                /* (Its round given back: free now, nothing done) */
+    HUB->agear[bk] = g == AG_NOSHOT ? HUB->agear[bk] | AG_NOSHOT : HUB->agear[bk] & ~AG_SHOOTS;
+    bd.ready = HUB->now;
 }
 
 /* Body bd about to strike in melee (part 15's den_blow): a launcher it holds let fall at its feet, its hands free for
@@ -443,8 +440,9 @@ static unsigned char __fastcall__ missile (unsigned char k, unsigned char f)
 ** times 256, b the count).  As it's free (the main loop's, gath): 2 walking or taking up, 0 done.  Its state the main
 ** RAM's (kept through the parts it calls) */
 #define GATHER_D        12
-static unsigned char gfam, gcount, gskip, glast;
-static unsigned gfx, gfy, gtried[2];
+static unsigned char gcount, glast;          /* (gath: the family, FM_*, plus 0x80) */
+static unsigned char gat;                       /* (Where it was as it last set out, a hash) */
+static unsigned gtried[1];                      /* (The lot passed by) */
 
 static unsigned char gather_on (void)
 {
@@ -458,8 +456,8 @@ static unsigned char gather_on (void)
     for (i = 0; (i = items (i, IN_SQUARE, 0)) != 0; ) {
         x = ip->x;
         y = ip->y;
-        if (ip->sn != sn || (ip->flags & (I_KNOWN | I_HIDDEN)) != I_KNOWN || !missile (ip->kind, gfam) ||
-            i == gtried[0] || i == gtried[1] ||
+        if (ip->sn != sn || (ip->flags & (I_KNOWN | I_HIDDEN)) != I_KNOWN || !missile (ip->kind, gath & 0x7F) ||
+            i == gtried[0] ||
             (unsigned) (x - px + GATHER_D) > 2 * GATHER_D || (unsigned) (y - py + GATHER_D) > 2 * GATHER_D) {
             continue;
         }
@@ -481,17 +479,16 @@ static unsigned char gather_on (void)
     glast = item_at (n)->kind;
     hub_map (0);
     if (!in_reach (n)) {
-        if (px == gfx && py == gfy) {
-            gtried[gskip++ & 1] = n;            /* (No nearer: passed by) */
+        if (gat == (unsigned char) (px + (py << 4))) {
+            gtried[0] = n;            /* (No nearer: passed by) */
         } else {
-            gfx = px;
-            gfy = py;
+            gat = px + (py << 4);
             go_to (x, y);
         }
         return 2;
     }
     if (!carry (n, 0)) {
-        gtried[gskip++ & 1] = n;               /* (No room for it) */
+        gtried[0] = n;               /* (No room for it) */
         return 2;
     }
     gcount = gcount + k > 255 ? 255 : gcount + k;
@@ -506,11 +503,10 @@ unsigned __fastcall__ s_gath_op (unsigned char op, unsigned char a)
     if (op == GO_ON) {
         return gather_on ();
     }
-    gfam = a;
-    gcount = gskip = glast = 0;
-    gfx = gfy = 0xFFFF;
+    gcount = glast = 0;
+    gat = 0xFF;
     memset (gtried, 0, sizeof gtried);
-    gath = 1;
+    gath = a | 0x80;
     return 0;
 }
 
@@ -606,7 +602,7 @@ void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned 
 ** TE_NO_SHOT, b why: SH_*) and the fight given up */
 unsigned char __fastcall__ s_pc_shot (unsigned char k)
 {
-    unsigned char tk, why = 0, sn;
+    unsigned char tk, why = 0, sn, ar;
     unsigned tx, ty, thr = 0;
     struct msg m;
     struct item* p;
@@ -638,10 +634,10 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
     if (!bd.state || bd.sn != sn) {
         why = SH_GONE;
     } else if (IS_LAUNCHER (tk)) {
-        why = !shot_op (SO_ARMS, 0, 0) ? SH_NONE : !sm_item ? SH_SPENT : 0;
+        why = !(ar = shot_op (SO_ARMS, 0, 0)) ? SH_NONE : !sm_item ? SH_SPENT : 0;
         hub_map (0);
         HUB->pc_strike = SK_THING | sl_kind;    /* (What it shoots with: the referee's, the words') */
-        if (!why && !sl_held) {                 /* (Carried, not in hand: taken up, both hands but a sling's, if
+        if (!why && ar < 2) {                 /* (Carried, not in hand: taken up, both hands but a sling's, if
                                                 **   they're free, its round's grope, the book's; its shot the next) */
             for (thr = 0; (thr = items (thr, IN_FLAGS | IN_ACTOR, I_HELD)) != 0 && ip->x; ) {
             }
@@ -684,7 +680,7 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
         why = mfire (0, k + 1, HUB->pc_aim, sn, HUB->pc_x, HUB->pc_y, tx, ty, thr, tk);
         BD_PUT ();
         ++HUB->den_seq;
-        if (shot && !thr) {
+        if (!why && !thr) {
             equip_now ();                       /* (Its load the lighter, the referee told) */
         }
     }
@@ -694,7 +690,8 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
         if (why != 0xFF) {
             pshoot = 0;
             HUB->pc_task.foe = 0;               /* (No shot: the fight given up, told why; one fought on after it with
-            HUB->pc_strike = SK_BEST;           **   what it holds) */
+                                                **   what it holds) */
+            HUB->pc_strike = SK_BEST;
             m.w1 = TE_NO_SHOT;
         }
         m.kind = E_TASK;

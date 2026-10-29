@@ -34,7 +34,7 @@
                    | <break> | <raise> | <lower> | <bend> | <force> | <disarm> | <rebar> | <hang> | <combine>
                    | <appraise>
                    | <deceive> | <threaten> | <calm> | <befriend> | <approach> | <ally>
-                   | <swap>
+                   | <swap> | <tend>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ] | <LOOK> <object> "over" | <LOOK> "over" <object>   (* "look the torch over":
@@ -74,6 +74,9 @@
 (* ---- The hands (added 2026-10-22, slice 4.1b): the hand a thing goes in, or the one that holds what strikes ---- *)
 <hand-phrase>    ::= "in" [ "my" ] ( ( "left" | "right" | "other" | "off" | "main" ) "hand" | "both" "hands" )
 <swap>           ::= ( "swap" | "switch" | "change" ) "hands" | "swap"   (* what's in the hands changed over, left to right *)
+<tend>           ::= <TEND> [ <object> ]       (* first aid (slice 4.3): "tend my wounds", "bandage my left arm", "treat the
+                                                 bandit", "first aid"; none said, its own wounds *)
+<TEND>           ::= "tend" [ "to" ] | "treat" | "bandage" | "dress" | "bind" | "staunch" | "first" "aid" [ "to" | "for" ]
 <unequip>        ::= <UNEQUIP> [ <object> ] | "put" <object> "away" | "take" <object> "off"   (* "put away the sword", "put the sword away", "take the helm off" *)
 <open>           ::= "o" [ <thing> [ <USING> <object> ] ]   (* "open" alone: what's in front *)
 <close>          ::= "close" [ <thing> ]           (* "close look" is <DETAIL> <LOOK>, not this *)

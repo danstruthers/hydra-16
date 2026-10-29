@@ -24,13 +24,13 @@ extern unsigned char den_saw;                   /* A body fallen: the world to l
 #define BD_PUT()        (hub_map (0), memcpy (&HUB->actor[bk], &bd, offsetof (struct actor, name)))
 
 /* A blow's missile (wfight.c's: RS_MISSILE's, set before part 15's shot_blow by wshoot.c's, 0 after): what it's shot
-** with or the thing thrown, its range's band, its range, MS_* (rs.h's), the circumstances' steps */
+** with or the thing thrown, its range's band, its range, MS_* (rs.h's) */
 struct mshot {
     unsigned char   kind, band, dist;
     unsigned        flags;
-    signed char     steps;
 };
 extern struct mshot mshot;
+#define AIM_FIRE        0x20                    /* (den_blow's z: a missile's blow, mshot set: part 65's) */
 unsigned char __fastcall__ shot_op (unsigned char op, unsigned char k, unsigned char z);   /* (Part 65's: wshoot.c)
                                                 **   The missiles' calls: */
 unsigned char __fastcall__ pc_shot (unsigned char k);  /* (Part 67's) The character's shot at actor k; 0xFF: the
@@ -54,6 +54,7 @@ void __fastcall__ den_rob (const struct msg* m);    /* (Part 15) The character r
                                                 **   put down at m's w1, w2, or in its faction's hoard there, or hidden
                                                 **   there (I_ROB's) */
 void bled (void);                               /* (Part 15) The bleeding's bloodloss, a minute at a time */
+extern unsigned long body_due;                  /* (Part 70's: the referee's next watch, wtend.c's) */
 unsigned char __fastcall__ den_first (unsigned char k, unsigned char away);    /* (Part 14) Body k's tactical
                                                 **   advantage: backed away (away 1), 2; or its blow first, 1 */
 unsigned char __fastcall__ unlit_at (unsigned char sn, unsigned x, unsigned y);  /* (dq0w.c's) A square dark to

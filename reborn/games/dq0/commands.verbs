@@ -167,6 +167,7 @@ talent      alone=VB_USE_TALENT thing=VB_USE_TALENT
 link        thing=VB_LINK_MIND unsaid=none
 orate       alone=VB_ORATE thing=VB_ORATE
 swap        alone=VB_SWAP_HANDS thing=VB_SWAP_HANDS                  # (new, slice 4.1b: what's in the hands changed over)
+tend        alone=VB_TEND thing=VB_TEND unsaid=none skill=P_FIRST_AID task=LT_TEND   # (new, slice 4.3: first aid)
 
 [words]
 change facing = face
@@ -475,6 +476,16 @@ stand = stand
 rise = stand
 swap = swap
 switch = swap
+tend = tend
+tend to = tend
+treat = tend
+bandage = tend
+dress = tend
+bind = tend
+staunch = tend
+first aid = tend
+first aid to = tend
+first aid for = tend
 crouch = crouch
 kneel = crouch
 squat = crouch

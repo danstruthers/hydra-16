@@ -78,7 +78,7 @@ void __fastcall__ hide (const char* w);
 void hand_said (void);
 void limbs_cmd (void);
 unsigned char hold_first (void);
-unsigned char missiles (void);                  /* (Part 11's: the missiles, slice 4.7's) */
+unsigned char missiles (void);                  /* (Part 13's: the missiles, slice 4.7's) */
 static void __fastcall__ dig_used (unsigned char n);
 static char dug_with[16];                       /* (The tool a dig took, named) */
 unsigned char finds;                            /* (Things a search turned up, told as it ends: the hub's text;
@@ -868,6 +868,9 @@ static unsigned char events (void)          /* (How many there were) */
                 if (lsn) {
                     look_way (VB_NONE);         /* (A listen's or a sniff's end: way.c's) */
                 }
+                if (news_due && (task_words (TE_BODY, 0) & 8)) {
+                    end (END_DIED);             /* (Its body's news held as it slept: told as it wakes, slice 4.3's) */
+                }
                 if (!quit) {
                     t_prompt (!busy);
                 }
@@ -922,11 +925,17 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_TASK:                            /* (The long task's: stopped, asked, refused; slice 4.0's) */
             if (m.who == 0) {
+                if ((unsigned char) m.w1 == TE_BODY) {
+                    heard ();                   /* (The blow that brought it told first: a venomous bite's) */
+                }
                 k = task_words (m.w1, m.b);
                 if (k & 2) {
                     intend2 (I_GO_ON, 0, 0);    /* (dq0 -a's: on, unasked) */
                 } else if ((asking = k & 1) != 0) {
                     t_prompt (1);               /* (Its answer's prompt: the character still busy) */
+                }
+                if (k & 8) {
+                    end (END_DIED);             /* (Dead of its wounds, its venom: TE_BODY's, slice 4.3's) */
                 }
                 if (k & 4) {
                     busy = 1;                   /* (Fighting on begun by the world: busy till it's done, E_READY; a
@@ -1186,9 +1195,9 @@ unsigned char s_hold_first (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 12 (slice 4.7's): the missiles (overlay 1's bank, after its own) */
-#pragma code-name (push, "SW12CODE")
-#pragma rodata-name (push, "SW12RODATA")
+/* ==== Part 13 (slice 4.7's): the missiles (overlay 1's bank, after its own) */
+#pragma code-name (push, "SW13CODE")
+#pragma rodata-name (push, "SW13RODATA")
 
 /* ---- The missiles (slice 4.7's: DUNGEON.md's fights complete), s_command's: a shot ("shoot the bandit", "fire the
 ** bow at the rat", "shoot at the rat with my bow"; "shoot", the target), a throw at a denizen ("throw the dagger at
@@ -1603,6 +1612,7 @@ static void show_map (void)
 ** was said): 1, its square in tx, ty; 0, none; 2, several and none ahead, which asked (overlay 7's pick) */
 unsigned tx, ty;
 #define find(obj, orel) pick ((obj), (orel))
+unsigned char news_due;                         /* (The body's news held as it sleeps: part 12's) */
 
 /* The character's way with a denizen (how: hub.h's SW_*, the command's verb's: commands.verbs' aux; its things, the
 ** one meant and a name or a thing, and its request): asked of the denizens' task (the hub's sway: it lends the UI's

@@ -13,7 +13,7 @@
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 6                     ; dq0harn.cfg's overlays (the 4th and 5th the swapped parts' images)
+OVMAX       = 8                     ; dq0harn.cfg's overlays (the 4th and 5th the swapped parts' images)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
@@ -175,10 +175,13 @@ ovl_out:
             OVFN        test_sk, 5
             OVFN        draw_test, 5
             OVFN        bearing_of, 5
-            OVFN        shot, 6             ; (A missile's attack, slice 4.7's: missile.c)
-            OVFN        strike, 2           ;   (fight.c's that it calls)
-            OVFN        effect, 2
-            OVFN        pc_shield, 3        ;   (gear.c's)
+            OVFN        beast_flags, 2
+            OVFN        body_req, 6
+            OVFN        envenom, 7
+            OVFN        body_state, 7
+            OVFN        venom_time, 7
+            OVFN        body_line, 7
+            OVFN        shot, 8             ; (A missile's attack, slice 4.7's: missile.c)
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0harn.cfg's SWAP, a part at a time,
 ; copied there from overlay 4's bank as it's called)

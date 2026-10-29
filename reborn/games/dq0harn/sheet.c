@@ -45,16 +45,16 @@ unsigned char pc_by[HARN_INJMAX];
 
 /* An injury's words, by its aspect and severity (minor, serious, grievous or worse); or by the creature's part that
 ** dealt it (BY_BITE ...: a bite, claws' rake, a sting, horns' gore) */
-static const char* const wound_word[4 + BY_HORNS][3] = {
+static const char* const wound_word[4 + BY_VENOM][3] = {
     { "bruise", "fracture", "crush" }, { "cut", "gash", "deep gash" }, { "stab", "stab", "deep stab" },
     { "burn", "burn", "burn" }, { "bite", "bite", "deep bite" }, { "scratch", "rake", "deep rake" },
-    { "sting", "sting", "deep sting" }, { "gore", "gore", "deep gore" }
+    { "sting", "sting", "deep sting" }, { "gore", "gore", "deep gore" }, { "ache", "ache", "ache" }
 };
 
 static const char* __fastcall__ noun (unsigned char by, unsigned char aspect, unsigned char sev)
 {
     by &= ~BY_ITS;
-    return wound_word[by && by <= BY_HORNS ? 3 + by : aspect & 3][sev > HARN_GRIEVOUS ? 2 : sev ? sev - 1 : 0];
+    return wound_word[by && by <= BY_VENOM ? 3 + by : aspect & 3][sev > HARN_GRIEVOUS ? 2 : sev ? sev - 1 : 0];
 }
 
 /* Where it is ("left thigh"), after w */
@@ -175,6 +175,8 @@ unsigned __fastcall__ o_knocked_out (harn_char* c, unsigned long* o, unsigned ch
     }
     *o = tnow + w;
     if (c != &pc) {
+        bs.state = c->state == HARN_SHOCK ? bs.state | BS_SHOCKED : bs.state & ~BS_SHOCKED;  /* (Its last shock
+                                                **   roll's: it comes round in shock, fight.c's unpack) */
         c->state = HARN_UNCONSCIOUS;
     }
     return w;
@@ -373,7 +375,8 @@ void o_sheet (void)
             put (" (");
             put (noun (pc_by[k], j->aspect, j->sev));
         }
-        put (j->flags & HARN_IF_BLEEDER ? "), bleeding" : ")");
+        put (j->flags & HARN_IF_BLEEDER ? "), bleeding" : j->flags & HARN_IF_INFECTED ? "), infected" : j->flags &
+            HARN_IF_TREATED ? "), tended" : ")");
     }
     if (pc.bl) {
         put ("; bloodloss ");
@@ -452,6 +455,7 @@ void __fastcall__ o_spent (unsigned t)
         n = t > 600 ? 600 : t;
         t -= n;
         if (a == GA_REST) {
+
             if (n <= tired) {
                 tired -= n;
                 continue;
@@ -549,6 +553,7 @@ void o_state (void)
         put (b);
         put (bleed ? ", bleeding" : "");
     }
+    body_state ();                              /* (Tended, poisoned, its blood lost: heal.c's) */
     penalty (pc.fl, "a little tired", "tired", "exhausted", "fatigue ");
     penalty (harn_get_ep (&pc), "a little burdened", "heavily burdened", "overloaded", "encumbrance ");
     put ("; penalties: universal ");

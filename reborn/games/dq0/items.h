@@ -334,6 +334,9 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   its belt; 2 assessed: each one's make and condition too) | the
                                                 **   eyes' sight times 16 (the senses' eye, 0-9); its words in
                                                 **   things_text, IR_NONE none (2026-10-27) */
+#define IO_USE          (IO_BAR + 14)           /* A thing the character carries used up by its key (name: the
+                                                **   catalogue's tool key, "bandage": a dressing's, the UI's first aid,
+                                                **   slice 4.3's): a lot one less, its last gone, told; IR_NONE none */
 enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS };   /* (IO_LOOK's: a look at it; a closer look; its
                                                 **   condition; its weight; its lock; gone over for traps) */
 #define IO_PUZZLE       (IO_BAR + 4)           /* A command of the theme's puzzle's (theme.h), judged by its rules

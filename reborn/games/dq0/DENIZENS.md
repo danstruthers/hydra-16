@@ -344,7 +344,11 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   2026-10-29, its faction) test their courage, two steps worse, four as their faction's leader falls (HOUSE.md's the
   peoples).  One knocked senseless falls and lies there till it comes round,
   doing nothing meanwhile (its mind's intents and rouses not carried out, words not heard: HOUSE.md's hands and
-  limbs, 2026-10-29), and is finished if it's struck meanwhile; come round, its first turn is getting up; one bleeding loses blood a minute at a time (RS_TIME) and may die of it; one dead
+  limbs, 2026-10-29), and is finished if it's struck meanwhile; come round, its first turn is getting up, or, its last
+  shock roll failed, it comes round in shock and does nothing (strikes nothing, defends nothing) till a watch's roll
+  brings it out (slice 4.3's); one bleeding loses blood a minute at a time (RS_TIME, the minutes gone) and may die of
+  it, a folk one binding its own bleeding the minute it isn't fighting ("The bandit binds its bleeding wound."); every
+  creature's wounds heal by the book's rolls as the days pass, wherever it is (HOUSE.md's wounds over time); one dead
   leaves its body (an item: a body, a skeleton's bones: the world's, put down as it dies) and never comes back.  A
   blow is harm done (attitudes, above); one that flees is unfriendly after.  The character knocked senseless waits it
   out (it can't defend meanwhile), fallen, up again as it comes round; dead, the game ends.
@@ -361,7 +365,7 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   missiles, sensing the character further off than beside it, shoots at it a round at a time (its mind's: I_ATTACK's
   AIM_SHOT, the world's to say if it can, dq0w/wshoot.c): its launcher taken up from its back or its belt first, its
   round's ("The bandit unslings its shortbow."), not if its hands hold something else; no shot to be had from where it
-  stands (out of range, no clear line: AG_NOSHOT, till it moves), it comes on; its missiles spent, it shoots no more.
+  stands (out of range, no clear line: AG_NOSHOT), it comes on till the character moves (then it looks for a shot again); its missiles spent, it shoots no more.
   The character beside it, it lets its launcher fall ("The bandit drops its shortbow.": no time) and draws its weapon.
   Its shots told as its blows are ("The bandit shoots at you with its shortbow: a serious puncture to your thigh"), its
   missiles lying where they fall.

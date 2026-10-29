@@ -32,6 +32,9 @@ static char name[16] = "Dingus", calling[20] = "Wanderer";
 static char tongues[32] = " common";            /* The tongues it speaks, a space before each (dq0harn's way) */
 static unsigned char gait = GA_WALK, watch;     /* (Its file's pace and watchfulness: the world's to set) */
 static unsigned char wounds;                    /* The character's, and each creature's (by its record) */
+static unsigned char tended;                    /* (The character's wounds tended: slice 4.3's simple way) */
+static unsigned rest_m;                         /* (Its rest toward the next wound healed: minutes, RS_TIME's) */
+static char news[40];                           /* (What time did to it: RS_DESCRIBE b 4's) */
 static unsigned char sheet[NSHEETS];
 static unsigned char aden[NACTORS];             /* (Each actor's record) */
 static unsigned char restored;
@@ -663,9 +666,39 @@ static void __fastcall__ answer (struct req* r)
         r->result = g > (signed char) r->c ? 1 : g < (signed char) r->c ? 2 : 0;
         *tp = 0;
         break;
-    case RS_TIME:                               /* (No bleeding: none dies of it) */
+    case RS_TIME:                               /* (No bleeding: none dies of it; a wound healed by its rest, a tended
+                                                **   one's eight hours, an untended one's a day: slice 4.3's simple way) */
+        if (!r->a && wounds) {
+            rest_m += r->w1;                    /* (At rest: toward a wound healed) */
+        }
         r->w1 = 0;
+        r->c = 0;
+        r->w2 = 0;
+        r->grade = 0;
+        if (wounds && rest_m >= (tended ? 420 : 1260)) {
+            --wounds;
+            tended -= tended != 0;
+            rest_m = 0;
+            strcpy (news, "A wound has healed.");
+            r->grade = 2;
+            status ();
+        }
         r->b = health (wounds, TOUGH);
+        *(unsigned long*) (r->x + 4) = HUB->now + 36000UL;     /* (Asked an hour on, nothing bleeding, unhurt) */
+        *tp = 0;
+        break;
+    case RS_TREAT:                              /* (First aid, the simple way: five minutes a wound, the character's
+                                                **   own, each tended once; its heal the sooner) */
+        if (r->other || wounds <= tended) {
+            r->result = 1;
+            put (r->other ? "It has no wounds you can tend." : "You have no wounds that want tending.");
+        } else if (!r->a) {
+            r->w1 = 3000;
+            put ("You clean and bind a wound.");
+        } else {
+            ++tended;
+            put (G_OK (flat (0)) ? "It's tended." : "It's badly done.");
+        }
         break;
     case RS_EXERT:                              /* (No fatigue: never a level more) */
         r->result = 0;
@@ -717,6 +750,9 @@ static void __fastcall__ answer (struct req* r)
             putn (TOUGH);
         } else if (r->b == 2) {
             put (hurt);
+        } else if (r->b == 4) {
+            put (news);                         /* (What time did to it, told once) */
+            news[0] = 0;
         } else if (r->b == 3) {
             status ();
             state (r->a);

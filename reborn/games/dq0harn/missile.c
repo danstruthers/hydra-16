@@ -1,5 +1,5 @@
 /*
-** missile.c - (overlay 6, the referee's: called through bank.s's stubs) a missile's attack, HarnMaster's (Combat 15-17:
+** missile.c - (overlay 8, the referee's: called through bank.s's stubs) a missile's attack, HarnMaster's (Combat 15-17:
 ** the missile sequence, slice 4.7's): an RS_ATTACK with RS_MISSILE (rs.h's), its sides made by fight.c's o_fight (the
 ** character's, a creature's), its strike and its words fight.c's (through their stubs: strike, effect).
 **
@@ -27,8 +27,8 @@
 ** stray's (MS_STRAY, the world's: a miss that struck one beside its mark, the book's 20%) a strike of one die, no test.
 */
 
-#pragma code-name ("OV6CODE")
-#pragma rodata-name ("OV6RODATA")
+#pragma code-name ("OV8CODE")
+#pragma rodata-name ("OV8RODATA")
 
 #include <stddef.h>
 #include <string.h>
@@ -72,16 +72,30 @@ static const unsigned char redge[4] = { 0, 4, 0, 2 };
 static const signed char tsize[7] = { 0, -20, -15, -10, 0, 10, 15 };
 static const signed char band_ml[4] = { 0, -20, -40, -80 };
 
+/* The missile attack table (the book's Combat tables, harn.h's harn_missile_result: here, the main RAM's room): by
+** the defence (a block, a dodge), the attacker's level (CF, MF, MS, CS), the defender's; the Ignore's by the attacker's */
+#define WLD_            HARN_R_WILD
+#define MS__            HARN_R_MISS
+#define MH_(n)          (HARN_R_AH | (n))
+static const unsigned char mtab[2][4][4] = {
+    { { WLD_, WLD_, WLD_, WLD_ }, { MS__, MS__, MS__, MS__ }, { MH_ (2), MH_ (1), HARN_R_BLOCK, HARN_R_BLOCK },
+      { MH_ (3), MH_ (2), MH_ (1), HARN_R_BLOCK } },
+    { { WLD_, WLD_, WLD_, WLD_ }, { MS__, MS__, MS__, MS__ }, { MH_ (2), MH_ (1), MS__, MS__ },
+      { MH_ (3), MH_ (2), MH_ (1), MS__ } },
+};
+static const unsigned char mign[4] = { WLD_, MS__, MH_ (2), MH_ (3) };
+
 static int __fastcall__ eml (unsigned char sk)
 {
     return pc.ml[sk] ? harn_eml (&pc, sk) : harn_get_oml (&pc, sk) - 5 * harn_get_pp (&pc);
 }
 
-void o_shot (void)
+unsigned o_shot (void)
 {
-    static const struct mw* w;
-    static unsigned char band, f, z, def, al, dl, res, n, hv, asp, k, loc, sz;
-    static int mod, blk, dge, imp;
+    const struct mw* w;                         /* (On the C stack: the main RAM's room) */
+    unsigned char band, f, z, def, al, dl, res, n, hv, asp, k, loc, sz;
+    int mod, blk = 0, dge = 0, imp;
+    unsigned out = 0;
 
     band = R->b & 3;
     f = R->w2 >> 8;
@@ -91,12 +105,12 @@ void o_shot (void)
     R->a = R->c = 0;
     if (A.c->state != HARN_CONSCIOUS || (!A.who && pc_out > tnow)) {
         R->result = 0xFF;                       /* (It can't) */
-        return;
+        return 0;
     }
     if (prones & RS_PRONE_A) {                  /* (Fallen: it gets up first, its turn spent, as a blow's) */
         R->a = !G_OK (rise_of (A.c));
         R->result = O_RISE;
-        return;
+        return 0;
     }
     for (w = mws; w < mws + NMW && w->kind != k; ++w) {
     }
@@ -155,7 +169,7 @@ void o_shot (void)
                 strcpy (D.word, dshw);
             }
         } else {
-            blk = pc_shield (&D);
+            blk = pc_defence (&D, PD_SHIELD, 0);
             D.bare = D.bare && !blk;
             if (!blk && !hv) {
                 blk = D.dml / 2;                /* (A low-velocity one's: half its weapon's block, or its bare arm's) */
@@ -176,7 +190,7 @@ void o_shot (void)
     } else {
         al = harn_test (A.aml + mod);
         dl = def == HARN_IGNORE ? 0 : harn_test (def == HARN_BLOCK ? blk : dge);
-        res = harn_missile_result (def, al, dl);
+        res = def == HARN_IGNORE ? mign[al & 3] : mtab[def == HARN_DODGE][al & 3][dl & 3];
     }
     n = HARN_R_DICE (res);
     switch (HARN_R_KIND (res)) {
@@ -185,7 +199,7 @@ void o_shot (void)
         R->result = O_FUMBLE;
         R->a = 1;
         if (w < mws + NMW && w->sk != HARN_DAG && w->sk != HARN_AXE && w->sk != HARN_SPR && harn_fumble_roll (A.c, 0)) {
-            effect (A.who, X_DROP, 0, 0, A.who ? DH_RIGHT : pc_hand & IH_BOTH, 0);
+            out = SHOT_DROP;
         }
         break;
     case HARN_R_BLOCK:
@@ -193,8 +207,7 @@ void o_shot (void)
         if (D.who && D.dslot) {
             R->c |= AF_SHIELD;
         } else if (!D.who && D.bare) {          /* (A bare arm's: struck, the book's H2) */
-            R->b = asp;
-            strike (&A, &D, 2, 0, HARN_FOREARM, line[0], AF_STOPPED);
+            out = SHOT_HIT (2, 0, asp, HARN_FOREARM);
         }
         break;
     case HARN_R_AH:
@@ -205,12 +218,12 @@ void o_shot (void)
             R->c |= AF_STOPPED;
             break;
         }
-        R->b = asp;                             /* (fight.c's strike: the attacker's aspect, its request's b) */
-        strike (&A, &D, n, z, loc, line[0], AF_STOPPED);
+        out = SHOT_HIT (n, z, asp, loc);
         break;
     default:
         R->result = def == HARN_DODGE && al >= HARN_MS ? O_DODGED : O_MISS;
         break;
     }
     R->b = def == HARN_BLOCK ? D_BLOCK : def == HARN_DODGE ? D_DODGE : D_NONE;
+    return out;
 }

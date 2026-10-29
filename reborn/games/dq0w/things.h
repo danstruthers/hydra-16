@@ -71,7 +71,7 @@ void __fastcall__ keep (unsigned char back);    /* The store kept (items.dat), o
 extern unsigned ilim;                           /* (things.c's: the records used, at most) */
 extern unsigned ihigh;                          /* (things.c's: every record from it on free; raised as one's taken) */
 extern unsigned irs;                            /* (things.c's: a thing's own numbers, made) */
-#define OVBANKS         20                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
+#define OVBANKS         21                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
                                                 **   own: ipage.c's, ovbank[OVBANKS]; the ways across a room's,
                                                 **   dq0w.c's, ovbank[OVBANKS + 1]; the traces' store's, wtrace.c's,
                                                 **   ovbank[OVBANKS + 2] and [OVBANKS + 3]) */
@@ -156,6 +156,9 @@ struct snap {                                   /* (What breaks as it's used: ki
 extern const struct snap snaps[NSNAPS];
 unsigned char __fastcall__ s_use_up (unsigned n, unsigned char by);  /* (dq0w.c's part 7: thing n used up by minutes,
                                                 **   or a lot by one; gone, told: 1, else 0) */
+unsigned body_ask (void);                       /* (Part 70's, wtend.c: the bodies' time told the referee: those dead
+                                                **   of it, and times 256 those that bound their bleeding) */
+unsigned char __fastcall__ use_key (const char* key);   /* (Part 7's: a thing used up by its key, IO_USE) */
 extern unsigned chart_w[5];                     /* (things.c's: the map making's things handy, by their keys, part 26's
                                                 **   chart_now's: a sheet, a map, a point, a quill, ink) */
 const struct burn* __fastcall__ burn_of (unsigned char k);  /* How kind k burns (a copy), or 0: never (a glow), or no

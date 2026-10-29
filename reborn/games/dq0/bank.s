@@ -14,7 +14,7 @@
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 15                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 16                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
@@ -185,7 +185,7 @@ ovl_out:
             OVFN        taken_next, 11
             OVFN        throw_words, 10
             OVFN        fixt_words, 4
-            OVFN        shot_words, 15      ; (The missiles' words: shots.c, slice 4.7's, overlay 15)
+            OVFN        shot_words, 16      ; (The missiles' words: shots.c, slice 4.7's, overlay 16)
             OVFN        trap_words, 10
             OVFN        trap_name, 10
             OVFN        den_way, 4
@@ -220,7 +220,8 @@ ovl_out:
             SWPART      9, 13               ; The player's shortcuts (alias.c)
             SWPART      10, 11              ; A search, by its form (search.c)
             SWPART      11, 3               ; The rarer news, worded (main.c); the hands and limbs
-            SWPART      12, 1               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
+            SWPART      12, 15              ; Wounds over time: first aid, in shock, the body's news (tend.c)
+            SWPART      13, 1               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
 
             SWFN        begin, 1
             SWFN        size, 1
@@ -263,5 +264,8 @@ ovl_out:
             SWFN        hand_said, 11
             SWFN        limbs_cmd, 11
             SWFN        hold_first, 11
-            SWFN        missiles, 12        ; (The missiles: slice 4.7's)
+            SWFN        missiles, 13        ; (The missiles: slice 4.7's)
             SWFN        gear_look, 11
+            SWFN        early, 12
+            SWFN        tend, 12
+            SWFN        body_words, 12

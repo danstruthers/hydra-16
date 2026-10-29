@@ -1246,8 +1246,13 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
 - **Bearings, the map and travel** (slice 4.2, built 2026-10-23 to 26): the character's believed north, by Awareness or
   Mining; the map clear only where it sees, remembered by its bearings, mapping as it goes keeping it true with
   materials to hand; a mental map that fades; travel to a named place ("go back to the mausoleum": Travel, above).
-- **Wounds over time** (slice 4.3): bleeding as time passes, first aid and bandages, healing (D6); poison, a venom's
-  wounds over time (an adder's bite).
+- **Wounds over time** (slice 4.3, built 2026-10-29: HOUSE.md's wounds over time): bleeding as time passes, every
+  actor's (the referee told the minutes gone, RS_TIME); first aid ("tend my wounds", "bandage my left arm", "treat the
+  bandit": the book's treatment, a timed work, bandages used up); healing over days of rest (the book's five-day
+  rolls, infection, a treatment's EE), told as it wakes; shock's recovery each watch, and in shock only rest, a look and
+  a half move; a creature come round in shock; the venoms of the adder, the basilisk and the lindworm (the bestiary's,
+  an infection's course); a folk denizen binding its own bleeding.  Not yet: antidotes (with the market), the minds'
+  way with a wounded or shocked denizen (resting in its lair, tending another), stings.
 - **The sound layer and the denizens' hearing by pace** (slice 4.5): pulses over the rooms and openings, a background
   level that masks; the character's steps heard by its pace; the air layer with it: draughts through the rooms and
   openings carrying smells, the character's scent among them, downwind with the sound, so a keen nose downwind knows
