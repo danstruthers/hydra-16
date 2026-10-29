@@ -310,8 +310,16 @@ static void __fastcall__ den_shot (unsigned char z)
     unsigned i;
     struct item* p;
 
-    if (!arms (1) || (sl_held && !sm_item)) {
-        HUB->agear[bk] &= ~AG_SHOOTS;           /* (None, or no missile left: it closes with the character) */
+    if (!arms (1) || !sm_item) {
+        HUB->agear[bk] &= ~AG_SHOOTS;           /* (None, or no missile left: it closes with the character, its round
+        bd.ready = HUB->now;                    **   given back: free now, nothing done) */
+        return;
+    }
+    if (span ((int) (bpx - bd.x), (int) (bpy - bd.y)) > (unsigned) (reach_of (sl_kind) << (BANDS - 1)) ||
+        lof (bd.sn, bd.x, bd.y, bpx, bpy, bk, 0xFE)) {
+        hub_map (0);
+        HUB->agear[bk] |= AG_NOSHOT;            /* (No shot from here: none readied for it, its round given back: free now) */
+        bd.ready = HUB->now;
         return;
     }
     if (!sl_held) {
@@ -319,6 +327,7 @@ static void __fastcall__ den_shot (unsigned char z)
             if ((ip->flags & I_HELD) && mine (i, 1)) {
                 hub_map (0);
                 HUB->agear[bk] |= AG_NOSHOT;    /* (Its hands full: it fights with what it holds) */
+                bd.ready = HUB->now;
                 return;
             }
         }
