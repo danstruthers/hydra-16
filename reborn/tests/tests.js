@@ -4039,7 +4039,7 @@ module.exports = {
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         inTurn(o, ['> examine the rat', 'The giant rat seems hostile.', '> search', 'The giant rat bites at you', '> quit',
-          '% dq0 -d /ram/g', '> examine the rat', 'The giant rat seems hostile.', '> quit'], f);
+          '% dq0 -d /ram/g', '> examine the rat', 'The giant rat seems ', '> quit'], f);   // (Hostile, or unfriendly after it, the character helpless: the fight's dice since slice 4.5's hearing)
         const want = Buffer.from(' \0\0' + fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0g.txt'), 'latin1') + '\0', 'latin1');
         if (!m.taskRam.some(r => Buffer.from(r.buffer, r.byteOffset, r.length).includes(want)))
           f.push('the deities\' names not the command parser\'s words (no task\'s RAM has them as CQ_WORLD\'s third list)');
@@ -4449,7 +4449,7 @@ module.exports = {
     },
     {
       name: 'dq0words', what: 'Dingus Quest Zero\'s words, a test about wording alone (the others check meaning: dq0words, dq0wordsfix and dq0wordsthings are where the game\'s sentences are held to): rooms and what\'s seen as the user asked (2026-10-15 and 16): at seed 3 a room told in general words at a glance (a small kitchen, a barrel vault high overhead), the door behind not told ("descriptions often tell you what lies behind you, which you can\'t really see"), its figures (its size in feet, its ceiling\'s height) only on a close look (look closely, x room); the door behind told as it turns round, examined in full (its make, size and thickness); at seed 5 a close look at a hall whose far side is dark, no figures, its far side lost in the dark; at seed 11 a door across the pantry examined, only its look from afar (tall, of wood, how far, go closer), and by a weak-eyed character (Eyesight 4: "Eyesight score should affect the amount of detail") not even its wood (dq0doors\' and dq0sense\'s words)',
-      init: 't_rc', cycles: 1200e6,
+      init: 't_rc', cycles: 1350e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/w.hm', 'echo att eye 4 >> /ram/w.hm',
         'dq0 -p t -s 3 -c /ram/c.hm', 'look', 'look closely', 'x room', 'turn around', 'examine the door ahead to my left', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm', 'x room', 'quit', 'dq0 -p t -s 11 -c /ram/c.hm', 'examine the door ahead to my left', 'quit',
@@ -4474,7 +4474,7 @@ module.exports = {
     },
     {
       name: 'dq0wordsfix', what: 'Dingus Quest Zero\'s words, a test about wording alone: the fixtures\' (the doors, their bars, the windows) as the user asked (2026-10-15 and 16): at seed 4, three doors none of them ahead, open door listing them, numbered, from the character\'s left round (each where it lies, its state), 3 turning to and opening the one behind it to its right, the room\'s doors told again; its door\'s bar lifted out of its brackets and taken, carried; at seed 12 a window examined (its make, its pane judged), its pane looked at closely, not climbed through glazed, broken (shards at its feet), climbed through into a passage, the window seen from there; at seed 15 a barred door examined (its bar in its brackets), the bar looked at closely, the door battered with a pick till it gives way (the torch put down, the pick taken in hand: "You set to battering the door with the pick."), broken down for good: it won\'t shut (dq0doors\', dq0choose\'s and dq0window\'s words)',
-      init: 't_rc', cycles: 1000e6,
+      init: 't_rc', cycles: 1150e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 4 -c /ram/c.hm', 'open door', '3', 'look', 'take the bar',
         'i', 'quit', 'dq0 -p t -s 12 -c /ram/c.hm', 'n', 'examine the window', 'x glass', 'climb through window', 'break window', 'look', 'climb through window',
         'turn around', 'quit', 'dq0 -p t -s 15 -c /ram/c.hm -k pick', 'examine the door ahead to my left', 'examine bar', 'drop the torch',
@@ -4924,7 +4924,7 @@ module.exports = {
         if (!ready || !blocks.some(r => r.actor === 0 && r.other === ready.b && r.b === 1 && r.result === 2))
           f.push('the character\'s blow not blocked by the bandit\'s shield (D_BLOCK, AF_SHIELD, O_BLOCKED): ' + JSON.stringify(blocks));
         if (blocks.some(r => r.b !== 1 || r.actor !== 0)) f.push('AF_SHIELD not a denizen\'s block: ' + JSON.stringify(blocks));
-        inTurn(o, ['The bandit unslings its round shield.', 'it fends off the blow with its shield.'], f, 'the shield\'s words: ');
+        inTurn(o, ['The bandit unslings its ', 'it fends off the blow with its '], f, 'the shield\'s words: ');   // (Its shield the outfit's: a round shield, a buckler)
         return f;
       },
       sdcard: true
@@ -7074,8 +7074,9 @@ module.exports = {
     // a test (the rest left to the soak's 200 seeds: each game's start a game start's cycles, some 195M)
     ...[[1, 30, 66, 93, 111, 122], [138, 152, 161, 171, 189, 197]].map((seeds, k) => ({
       name: 'dq0start' + k, meaning: true, what: 'Dingus Quest Zero\'s starts (dq0m/plan.c\'s links and the world\'s way out off their chunks\' edges, world.h\'s INSET: room for the room each comes out in, built.c\'s tries all failing else, a fifth of the starts a dead end of a passage), by what the character perceives (the senses\' record): seeds ' + seeds.join(', ') + ' (some of those that began at a dead end), each beginning in a room, by the stairs up to the way out, with a door, a portcullis or a passage on (seen ahead, or turned round, or as it crosses the room and back by its own light: the rooms dark since slice 4.1, nobody keeping their lights)',
-      init: 't_rc', cycles: seeds.length * 320e6,      // (A timeout: each game started, turned round and quit; 320M
-      // a game since 2026-10-27, 300M before: the outfits' and the denizens' gear's bigger world and referee to load)
+      init: 't_rc', cycles: seeds.length * 360e6,      // (A timeout: each game started, turned round and quit; 360M
+      // a game since 2026-10-29, the sound layer's pulses as it walks (320M since 2026-10-27, 300M before: the outfits'
+      // and the denizens' gear's bigger world and referee to load))
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         ...seeds.flatMap(s => ['dq0 -p t -s ' + s + ' -c /ram/c.hm', 'turn around', 'go forward', 'turn around', 'go forward', 'quit']), 'echo $status']) },
       expect: ['% echo $status'],

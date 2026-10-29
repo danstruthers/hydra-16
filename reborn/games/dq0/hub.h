@@ -1464,7 +1464,7 @@ typedef char dq0c_fits[offsetof (struct hub, sem) == HUBO_SEM && offsetof (struc
                        offsetof (struct hub, quit) == HUBO_QUIT && offsetof (struct cq, bank) == CQO_BANK &&
                        offsetof (struct cq, len) == CQO_LEN && offsetof (struct cq, res) == CQO_RES &&
                        offsetof (struct cq, face) == CQO_FACE && NTASKS == 8 ? 1 : -1];
-typedef char snd_fit[sizeof (struct sndhead) <= 48 && SND_QUEUE + 1024 + 128 + 256 <= 0x2000 ? 1 : -1];
+typedef char snd_fit[sizeof (struct sndhead) <= 48 && SND_QUEUE + 1024 + 128 + 512 <= 0x2000 ? 1 : -1];
 typedef char recs_fit[sizeof (struct sight) <= 0x1000 && sizeof (struct uirec) <= 0x2000 &&
                       sizeof (struct wrec) <= 0x2000 ? 1 : -1];
 typedef char snd_fits[(char*) (KEPT_AT + 1) - (char*) 0x8000 <= 0x2000 ? 1 : -1];   /* (DEN_BANK's: the places

@@ -21,8 +21,8 @@ QM          = GRID + W * W                  ; (SND_QUEUE: the open squares' queu
 QMEND       = QM + 1024
 QDL         = QMEND                         ; (The shut squares', 64: their addresses' low bytes, high)
 QDH         = QDL + 64
-QWL         = QDH + 64                      ; (The walls', 128)
-QWH         = QWL + 128
+QWL         = QDH + 64                      ; (The walls', 256: a queue full, a square more not marked)
+QWH         = QWL + 256
 MAXC        = 58
 OPEN        = $FE
 SHUT        = $FD
@@ -211,10 +211,7 @@ popw:       ldy         ptr4
             sta         ptr1
             lda         QWH,y
             sta         ptr1 + 1
-            iny
-            tya
-            and         #127
-            sta         ptr4
+            inc         ptr4
             jmp         expand
 popd:       ldy         tmp3
             lda         QDL,y
@@ -310,35 +307,39 @@ try:        lda         (ptr1),y
             beq         @open
             cmp         #SHUT
             beq         @shut
-            lda         regsave + 2         ; (A wall: its queue)
+            ldx         ptr4 + 1            ; (A wall: its queue, if it isn't full)
+            inx
+            cpx         ptr4
+            beq         @no
+            dex
+            lda         regsave + 2
             sta         (ptr1),y
             tya
             clc
             adc         ptr1
-            ldx         ptr4 + 1
             sta         QWL,x
             lda         ptr1 + 1
             adc         #0
             sta         QWH,x
-            inx
-            txa
-            and         #127
-            sta         ptr4 + 1
+            inc         ptr4 + 1
             rts
-@shut:      lda         tmp2                ; (Shut: its queue)
+@shut:      lda         tmp4                ; (Shut: its queue, if it isn't full)
+            clc
+            adc         #1
+            and         #63
+            cmp         tmp3
+            beq         @no
+            ldx         tmp4
+            sta         tmp4
+            lda         tmp2
             sta         (ptr1),y
             tya
             clc
             adc         ptr1
-            ldx         tmp4
             sta         QDL,x
             lda         ptr1 + 1
             adc         #0
             sta         QDH,x
-            inx
-            txa
-            and         #63
-            sta         tmp4
 @no:        rts
 @open:      lda         tmp1
             sta         (ptr1),y

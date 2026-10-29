@@ -1900,7 +1900,8 @@ unsigned char __fastcall__ s_draw_on (unsigned char k)
     --drawn[k];
     refx = lsx[k];
     refy = lsy[k];
-    return step_for (k, 4 * K.range + 8, S_TOWARD);
+    return step_for (k, K.flags & K_LAIR ? 2 : 2 * K.range + 8, S_TOWARD);   /* (Not far from its lair: one that
+                                                **   keeps to it, a step or two) */
 }
 
 #pragma code-name (pop)
