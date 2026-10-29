@@ -1511,8 +1511,8 @@ ruleset's (the fatigue rested off the referee's).
   five or ten minutes apart (ten times their while).
 - **The figures** *(2026-10-28, the emulator, 3.6 MHz)*: "wait 8 hours" with nothing near, 20.9M cycles (some 6 seconds
   of the machine's; it was 0.6M a minute, some 81 seconds for eight hours, and held to 100 minutes); at the normal pace
-  the same; in the dark by the giant rats' lair (seed 3, three rats about), 62M (17 seconds; 782M, three and a half
-  minutes, before the coarser ticks); in the lit cave below with rats about (seed 21), 111M (31 seconds; 3,200M, a
+  the same; in the dark by the giant rats' lair (seed 3, three rats about), 66M (18 seconds; 782M, three and a half
+  minutes, before the coarser ticks); in the lit cave below with rats about (seed 21), 123M (34 seconds; 3,200M, a
   quarter of an hour, before).
 
 ## Outfits *(2026-10-27: drafted for the user to review)*
