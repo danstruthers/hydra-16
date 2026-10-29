@@ -9,7 +9,7 @@
 ; words set (CQ_WORLD), nothing (CQ_NONE: the round trip alone, timed).  Between them it waits on its doorbell, costing
 ; nothing; it ends when the hub's quit is set (the world's, as the game ends: the UI rings it then).  Assembly
 ; throughout (cmdmatch.s the matcher, cmdmean.s the meaning): no C runtime.  Its RAM: the tables (13K), the matcher's
-; and the meaning's (5K), a line, the world's words; its banks, the rules (7K) and the words and verbs (3K).
+; and the meaning's (5K), a line, the world's words; its banks, the rules (6K) and the words and verbs (5K).
 ; ****************************************************************************
 
 .include "hydra.inc"
@@ -27,8 +27,9 @@
 TABLES_MAX  = 14848                 ; dq0c.dat's room in the RAM: its header, then the tables there; and in the banks,
 RULES_MAX   = 8192                  ;   the rules, the words and verbs (make.js holds the file to them)
 WORDS_MAX   = 8192
-DAT_HEAD    = 15                    ; Its header: "DQ0C", version 3, the lengths of the grammar's counts and words, the
-DAT_VERSION = 3                     ;   index, the aliases (those in the RAM), the rules and the words' table (the banks)
+DAT_HEAD    = 15                    ; Its header: "DQ0C", version 4, the lengths of the grammar's counts (its words'
+DAT_VERSION = 4                     ;   bytes counted, not there), the index, the aliases (those in the RAM), the rules
+                                    ;   and the words' table (the banks)
 RULES_AT    = $8000                 ; (A bank in the window)
 WORLD_MAX   = CQ_WORDS              ; The world's words kept (their three lists, each 0-ended: hub.h's most)
 LINE_MAX    = 255                   ; A line's letters kept
