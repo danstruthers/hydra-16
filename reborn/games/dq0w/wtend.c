@@ -52,8 +52,8 @@ unsigned s_body_ask (void)
     }
     k = HUB->pc_task.kind;
     g = HUB->pc_going & 0x3F;
-    a = g ? (g > GA_JOG + 1 ? 2 : 1) : k == LT_FIGHT || k == LT_DIG || k == LT_BATTER || k == LT_CLIMB || k == LT_FORCE ||
-        k == LT_HEAVE || k == LT_BEND ? 2 : k == LT_NONE || k == LT_WAIT || k == LT_SLEEP ? 0 : 1;   /* (At rest
+    a = k == LT_WAIT || k == LT_SLEEP ? 0 : g ? (g > GA_JOG + 1 ? 2 : 1) : k == LT_FIGHT || k == LT_DIG ||
+        k == LT_BATTER || k == LT_CLIMB || k == LT_FORCE || k == LT_HEAVE || k == LT_BEND ? 2 : k == LT_NONE ? 0 : 1;   /* (At rest
                                                 **   standing still, or waiting, asleep; vigorous at a run, or at
                                                 **   strenuous work, a fight; else about) */
     for (k = 0; k < NACTORS; ++k) {

@@ -491,6 +491,20 @@ static void __fastcall__ treat (struct req* r)
     }
 }
 
+/* The body's own dice (as the bearings' are, rshouse.h's): the generator's state swapped for theirs about a time's
+** work and a venom's rolls, before it and after, so a fight's, a test's, a walk's dice roll as they did whether a
+** body bleeds, heals or is poisoned meanwhile or not (vseed: begun from the generator's as it is then) */
+extern unsigned long xs_seed;
+unsigned long vseed;
+
+static void vdice (void)
+{
+    unsigned long t = xs_seed;
+
+    xs_seed = vseed ? vseed : t ^ 0x56454E4FUL;
+    vseed = t;
+}
+
 /* RS_HARM (overlay 1's, sheet.c's harm: its words, hurt, the reply's), RS_TIME, RS_TREAT (r a copy) */
 void __fastcall__ o_body_req (struct req* r)
 {
@@ -505,7 +519,9 @@ void __fastcall__ o_body_req (struct req* r)
         put (hurt);
         break;
     case RS_TIME:
+        vdice ();
         body_time (r);
+        vdice ();
         break;
     default:
         treat (r);
@@ -516,6 +532,14 @@ void __fastcall__ o_body_req (struct req* r)
 /* ==== Overlay 5's (its room: overlay 6 full): a venom's course, and the status's words of the body */
 #pragma code-name (push, "OV5CODE")
 #pragma rodata-name (push, "OV5RODATA")
+
+static void vdice5 (void)                       /* (vdice's, overlay 5's own) */
+{
+    unsigned long t = xs_seed;
+
+    xs_seed = vseed ? vseed : t ^ 0x56454E4FUL;
+    vseed = t;
+}
 
 static void __fastcall__ nput5 (const char* s)  /* (nput's, overlay 5's own) */
 {
@@ -670,7 +694,9 @@ unsigned char __fastcall__ o_envenom (const char* key, unsigned char loc, int im
     pv.loc = loc;
     out_t = 0;
     nput (" The bite burns: there's venom in it.");
+    vdice5 ();
     venom_roll ();
+    vdice5 ();
     return 1;
 }
 

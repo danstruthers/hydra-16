@@ -5004,6 +5004,7 @@ module.exports = {
         if (s.indexOf('Everything goes black.') !== s.lastIndexOf('Everything goes black.')) f.push('knocked senseless again');
         const cond = [...s.matchAll(/Condition: [^.]*\./g)].map(x => x[0]);   // (Kept: the game carried on, its words the same, a bite a bite)
         if (cond.length !== 2 || cond[0] !== cond[1]) f.push('its state not the same carried on (what dealt each injury kept): ' + JSON.stringify(cond));
+        if (f.length && process.env.DQ0DUMP) f.push(dq0Story(out));   // (DUMP)
         return f;
       },
       sdcard: true
@@ -5082,11 +5083,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again (slice 4.3's: come round in shock, eight hours waited first, a thing not taken up in shock); and its encumbrance the referee's the same)",
+      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again (slice 4.3's: come round in shock, eight hours waited first, a thing not taken up in shock, its torch burnt out meanwhile and its spare lit); and its encumbrance the referee's the same)",
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
         'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
-        'defend none', 'hold the dagger', 'open the door', 'south', ...Array(12).fill('wait'), 'drop the torch', 'wait 8 hours', 'take the torch', 'quit', 'echo $status']) },
+        'defend none', 'hold the dagger', 'open the door', 'south', ...Array(12).fill('wait'), 'wait 8 hours', 'light the torch', 'drop the torch', 'take the torch', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4, s = dq0Story(out), I = DQ0_I;
@@ -5100,9 +5101,7 @@ module.exports = {
         if (robs.length !== 1) f.push('not robbed once: ' + robs.length);
         else if (!q.at.actors.some(a => a.k === robs[0].by && a.name === 'bandit')) f.push('robbed by no bandit: ' + robs[0].by);
         if (!/The bandit goes through your things as you lie helpless, and takes what it finds\./.test(s)) f.push('the robbery not told');
-        const rt0 = T.find(t => dq0Ev(t, 'E_TASK', { te: 'TE_ROBBED' }).length), held = rt0 && rt0.after ? dq0Carried(rt0.after) : [];
-        const now = dq0Carried(q.at), torch = held.find(i => i.name === 'torch' && (i.flags & I.HELD));   // (As it was robbed: in shock after, it
-                                                // waits it out, slice 4.3's, its torch burnt out meanwhile)
+        const now = dq0Carried(q.at), torch = now.find(i => i.name === 'torch' && (i.flags & I.HELD));
         if (dq0Named(now, 'dagger').length || dq0Named(now, 'pennies').length) f.push('the dagger or the pennies still carried');
         if (!torch || !(torch.flags & I.LIT)) f.push('its torch not in hand, lit');
         const lay = q.at.items.filter(i => i.where === 'IW_SQUARE' && (i.n === dag.n || i.n === pen.n));
@@ -5112,11 +5111,13 @@ module.exports = {
         if (/You are dead\./.test(s)) f.push('the character killed');
         const RSE = m.dq0.layout().K.RS_EQUIP, eq = (t, slot) => t.replies.filter(r => r.kind === RSE && r.a === 2 && r.req === slot);
         const rt = T.find(t => dq0Ev(t, 'E_TASK', { te: 'TE_ROBBED' }).length), tk = T.of('take the torch');
+        if (rt && rt.after && !dq0Carried(rt.after).some(i => i.name === 'torch' && (i.flags & I.HELD) && (i.flags & I.LIT))) f.push('its torch not in hand, lit, as it was robbed');
         const was = eq(h, 'slot1').pop(), told = rt ? eq(rt, 'slot0') : [], again = eq(tk, 'slot1').pop();
         if (told.length !== 1) f.push('the robbed load not told the referee as it was robbed (the world\'s RS_EQUIP 2): ' + told.length);
         else if (!was || !again || told[0].w1 >= was.w1 || told[0].w1 !== again.w1)
           f.push('the load told as it was robbed not what was left: before ' + (was && was.w1) + ', robbed ' + told[0].w1 + ', its torch put down and taken up again ' + (again && again.w1));
         if (rt && tk.after && rt.after && rt.after.sum.load !== tk.after.sum.load) f.push('the referee\'s encumbrance after the robbery ' + rt.after.sum.load + ', not ' + tk.after.sum.load);
+        if (f.length && process.env.DQ0DUMP) f.push(dq0Story(out));   // (DUMP)
         return f;
       },
       sdcard: true
@@ -6247,6 +6248,7 @@ module.exports = {
             if (mine(t).length) f.push('"no": fought on (' + dq0Evs(t) + ')');
           }
         }
+        if (f.length && process.env.DQ0DUMP) f.push(dq0Story(out));   // (DUMP)
         return f;
       },
       sdcard: true
