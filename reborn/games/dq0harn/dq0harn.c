@@ -49,6 +49,9 @@ void __fastcall__ dice_set (struct req* r);
 void __fastcall__ outfit_of (struct req* r);    /* (Overlay 1's: outfit.c, RS_OUTFIT) */
 signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 3's) */
 signed char __fastcall__ draw_test (signed char steps);     /* (Overlay 3's: a map drawn, slice 4.2's) */
+char news[NEWS_N];                              /* (What time did to the character, heal.c's: RS_DESCRIBE b 4's) */
+
+char tpart[16];                                 /* (RS_TREAT's part said) */
 
 harn_char pc;                                   /* The character */
 char name[16], calling[20];
@@ -441,6 +444,8 @@ static void __fastcall__ own_line (char* l)
         strncpy (name, l + 5, sizeof name - 1);
     } else if (!strncmp (l, "occupation ", 11)) {
         strncpy (calling, l + 11, sizeof calling - 1);
+    } else if (!strncmp (l, "body ", 5)) {
+        body_line (l + 5, 1);                   /* (Its venom, its rest toward its healing rolls: heal.c's) */
     } else if (!strncmp (l, "wealth ", 7)) {
         wealth = atoi (l + 7);                  /* (Its family's, hmchar's: RS_OUTFIT's) */
     } else if (!strncmp (l, "language ", 9) && strlen (tongues) + strlen (l + 8) < sizeof tongues) {
@@ -455,6 +460,8 @@ void __fastcall__ s_load_pc (struct req* r)
 
     strncpy (path, r->text, sizeof path - 1);
     r->result = 1;
+    pv.hr = 0;                                  /* (No venom, no rest yet: its file's "body" line's, if any) */
+    rest_m = 0;
     if ((fd = open (path, O_RDONLY)) < 0) {
         return;
     }
@@ -492,6 +499,8 @@ void __fastcall__ s_save_pc (struct req* r)
     line[5] += g;
     line[7] += w;
     strcat (line, utoa (tired, b, 10));
+    harn_write_line (fd, line);
+    body_line (line, 0);                        /* (Its venom, its rest: heal.c's) */
     harn_write_line (fd, line);
     strcpy (line, "dealt ");                    /* (What dealt each injury: its words') */
     for (g = 0; g < pc.ninj; ++g) {
@@ -694,7 +703,6 @@ static void __fastcall__ answer (struct req* r)
         strncpy (bkey, r->text, sizeof bkey - 1);
     case RS_ATTACK:
     case RS_MORALE:
-    case RS_TIME:
     case RS_WIELD:                              /* (What it would strike with: gear.c's, through fight's) */
         tnow = HUB->now;
         stance = HUB->pc_stance;
@@ -706,6 +714,16 @@ static void __fastcall__ answer (struct req* r)
         gseed = HUB->seed;
         memcpy (rq, r, sizeof rq);
         fight ((struct req*) rq);
+        memcpy (r, rq, sizeof rq);
+        status ();
+        break;
+    case RS_HARM:                               /* (Harm, wounds over time, first aid: overlay 6's, heal.c, in a */
+    case RS_TIME:                               /*   copy, the part said copied for it; the harm overlay 1's, its */
+    case RS_TREAT:                              /*   words a line) */
+        tnow = HUB->now;
+        strncpy (tpart, r->text, sizeof tpart - 1);
+        memcpy (rq, r, sizeof rq);
+        body_req ((struct req*) rq);
         memcpy (r, rq, sizeof rq);
         status ();
         break;
@@ -781,13 +799,7 @@ static void __fastcall__ answer (struct req* r)
             equip (r->text, r->a);
         }
         break;
-    case RS_HARM:                               /* (In a copy, the overlay's: its words, a line) */
-        memcpy (rq, r, sizeof rq);
-        harm ((struct req*) rq);
-        memcpy (r, rq, sizeof rq);
-        strcpy (r->text, hurt);
-        status ();
-        break;
+
     case RS_SAVE:                               /* (The sheet into the save: hmchar's format, its own lines; and the
                                                 **   creatures', beasts.dat) */
         save_pc (r);
@@ -801,6 +813,9 @@ static void __fastcall__ answer (struct req* r)
             put (hurt);
         } else if (r->b == 3) {
             pace_set (r->a);
+        } else if (r->b == 4) {
+            put (news);                         /* (What time did to it: heal.c's, told once) */
+            news[0] = 0;
         } else {
             sheet ();
         }

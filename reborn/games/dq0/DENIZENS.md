@@ -327,7 +327,11 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
 - **After:** a denizen wounded tests its morale (RS_MORALE: HOUSE.md's fights): broken (or a shy one cautious) it
   flees a minute; cautious, it holds back a round.  One knocked senseless falls and lies there till it comes round,
   doing nothing meanwhile (its mind's intents and rouses not carried out, words not heard: HOUSE.md's hands and
-  limbs, 2026-10-29), and is finished if it's struck meanwhile; come round, its first turn is getting up; one bleeding loses blood a minute at a time (RS_TIME) and may die of it; one dead
+  limbs, 2026-10-29), and is finished if it's struck meanwhile; come round, its first turn is getting up, or, its last
+  shock roll failed, it comes round in shock and does nothing (strikes nothing, defends nothing) till a watch's roll
+  brings it out (slice 4.3's); one bleeding loses blood a minute at a time (RS_TIME, the minutes gone) and may die of
+  it, a folk one binding its own bleeding the minute it isn't fighting ("The bandit binds its bleeding wound."); every
+  creature's wounds heal by the book's rolls as the days pass, wherever it is (HOUSE.md's wounds over time); one dead
   leaves its body (an item: a body, a skeleton's bones: the world's, put down as it dies) and never comes back.  A
   blow is harm done (attitudes, above); one that flees is unfriendly after.  The character knocked senseless waits it
   out (it can't defend meanwhile), fallen, up again as it comes round; dead, the game ends.

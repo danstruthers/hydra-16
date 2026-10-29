@@ -22,7 +22,7 @@ static const char* const doing[] = {           /* (By LT_*) */
     "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering",
     "fighting", "travelling", "studying the mechanism", "disarming the trap", "picking the lock", "forcing", "heaving at",
     "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
-    "hiding"
+    "hiding", "tending the wound"
 };
 #define NDOING          (sizeof doing / sizeof doing[0])
 
@@ -155,6 +155,9 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         return 2;
     }
     switch (k) {
+    case TE_BODY:                               /* (What time did to its body: the referee's words, part 12's; 8 dead
+                                                **   of it, slice 4.3's) */
+        return body_words ();
     case TE_STOPPED:
     case TE_HIT:
     case TE_NEAR:
@@ -502,12 +505,12 @@ unsigned char __fastcall__ o_stop_kind (const char* word)
                                          "smashing", "fighting", "attacking", "kicking", "punching", "butting",
                                          "studying", "disarming", "picking", "forcing", "heaving", "bending",
                                          "winding", "tracking", "sniffing", "filling", "soaking", "hiding",
-                                         "travelling", "returning", "heading" };
+                                         "travelling", "returning", "heading", "tending", "treating", "bandaging" };
     static const unsigned char kind_[] = { LT_WALK, LT_WALK, LT_WALK, LT_CLIMB, LT_DIG, LT_DIG, LT_SEARCH, LT_WAIT,
                                            LT_SLEEP, LT_SLEEP, LT_TALK, LT_BATTER, LT_BATTER, LT_BATTER, LT_FIGHT,
                                            LT_FIGHT, LT_BATTER, LT_BATTER, LT_BATTER, LT_STUDY, LT_DISARM, LT_PICK,
                                            LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_TRACK, LT_SNIFF, LT_FILL,
-                                           LT_FILL, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL };
+                                           LT_FILL, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL, LT_TEND, LT_TEND, LT_TEND };
     unsigned char i;
 
     for (i = 0; i < sizeof kind_; ++i) {

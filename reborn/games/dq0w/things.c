@@ -767,6 +767,9 @@ unsigned char s_serve (void)
     case IO_SWAP:                               /* (What's in its hands changed over: part 48's) */
         iq.result = swap ();
         break;
+    case IO_USE:                                /* (A thing used up by its key: a bandage, first aid's, part 70's) */
+        iq.result = use_key (iq.name);
+        break;
     case IO_WEAR:
         wear (iq.name, iq.to);
         break;

@@ -2552,3 +2552,107 @@ seed 1234
 ask TEST a=P_BEARING steps=-20
 ask HARM a=HC_STRIKE b=AS_EDGE c=2
 want text="a serious gash to your right hip (S3)"
+
+# ---- Wounds over time (slice 4.3: HOUSE.md's wounds over time; Physician 2-4): first aid, the treatment's healing
+# rate, a day's mark (a treatment's EE healed), shock's watch roll, the time's words (RS_DESCRIBE b 4)
+
+char
+end
+case the clock's watches caught up (four hours each, from the first time told): unhurt, nothing to tell (the words of the cases before told first)
+dice
+ask DESCRIBE b=4
+set now=1000000
+dice ...
+ask TIME w1=1
+want result=0 grade=0
+char
+inj 140 1 3 4 0 1
+end
+case first aid: a bleeder first, a tourniquet a minute (Physician 3), the right thigh's
+dice
+ask TREAT a=0
+want result=0 b=0 c=0 w1=600 text~"tourniquet" text~"right thigh"
+dice 100:96
+ask TREAT a=1 b=0 c=0 x0=140
+want result=1 text="The blood still flows." sum.cond&C_BLEEDING=C_BLEEDING
+dice 100:5
+ask TREAT a=1 b=0 c=0 x0=140
+want result=0 text="The bleeding stops." sum.cond&C_BLEEDING=0
+case the grievous gash itself she can't treat herself (Physician 2)
+dice
+ask TREAT a=0
+want result=2 text~"so grave"
+char
+inj 6 1 1 1 0 0
+inj 140 0 2 2 0 0
+end
+case a part said: the left arm's minor cut a dressing, five minutes a level; the right leg's serious fracture a splint
+ask TREAT a=0 text="left arm"
+want result=0 b=0 c=1 w1=3000 text="You clean and dress the minor cut to your left forearm (M1)."
+ask TREAT a=0 text="right leg"
+want result=0 b=1 c=3 text~"You set and splint the serious fracture to your right thigh (S2)."
+ask TREAT a=0 text="head"
+want result=1 text~"nothing there"
+case the dressing done: no bandages, no bonus (Physician's opening level, its penalty); 5 a critical success: EE
+dice 100:5
+ask TREAT a=1 b=0 c=1 x0=6
+want result=0 text~"within the day"
+dice
+ask DESCRIBE b=0
+want text~"left forearm M1 (cut), tended"
+case the day's end (six watches on): the treated cut healed, told (RS_DESCRIBE b 4)
+set now=1872000
+dice ...
+ask TIME w1=1
+want result=0 grade=2
+dice
+ask DESCRIBE b=4
+want text~"The minor cut to your left forearm (M1) has healed."
+dice
+ask DESCRIBE b=4
+want text=""
+char
+vol 0 0 0 2 5
+end
+case in shock: a watch's roll (Physician 4: H5 times Endurance 12, 60), 5 a critical success: out of it
+want status="UP 0 SHOCK"
+set now=2016000
+dice 100:5 ...
+ask TIME w1=1
+want result=0 grade=2 status="UP 0"
+dice
+ask DESCRIBE b=4
+want text~"You come out of shock."
+char
+vol 0 0 0 2 1
+end
+case in shock at H1: 96 a marginal failure, H0: dead of it
+set now=2160000
+dice 100:96 ...
+ask TIME w1=1
+want result=1 b=H_DEAD
+dice
+ask DESCRIBE b=4
+want text~"You die of shock."
+char
+inj 3 0 1 1 5 4
+end
+case five days on (thirty watches): her treated bruise (H5) its healing roll, its rate times Endurance 12 (60), sixty hours' rest of them: 5 a critical success, healed (Physician 4)
+set now=4320000
+dice 100:5 ...
+ask TIME w1=3600
+want result=0 grade=2
+dice
+ask DESCRIBE b=4
+want text~"The minor bruise to your left shoulder (M1) has healed."
+char
+inj 3 0 1 1 5 4
+end
+case five days more, too little rest (the house's: sixty hours of the five days): no healing roll, the days forfeit
+set now=8640000
+dice ...
+ask TIME w1=10
+want result=0 grade=0
+dice
+ask DESCRIBE b=0
+want text~"left shoulder M1 (bruise), tended"

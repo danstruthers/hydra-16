@@ -429,6 +429,9 @@ unsigned char o_resolve (void)
     if (cmd.flags & CF_ASKED) {
         return RV_DONE;                         /* (A blow's question put: choose.c's) */
     }
+    if ((k = early ()) != 0) {
+        return k - 1;                           /* (In shock, refused; first aid its own: part 12's, slice 4.3's) */
+    }
     hub_mem (SIGHT_BANK, s, SIGHT, sizeof *s);  /* (The senses' record as it is now) */
     if (untarget) {                             /* (The world's events: the character turned) */
         untarget = 0;

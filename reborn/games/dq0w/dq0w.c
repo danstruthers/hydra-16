@@ -4708,6 +4708,25 @@ unsigned char __fastcall__ s_use_up (unsigned n, unsigned char by)
     return 1;
 }
 
+/* A thing used up by its key (IO_USE, the UI's first aid: a bandage a dressing takes, slice 4.3's), the first the
+** character carries: one of its lot used up (s_use_up's); IR_OK, or IR_NONE (none) */
+unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's stub) */
+unsigned char __fastcall__ s_use_key (const char* key)
+{
+    unsigned i = 0;
+    unsigned char kd;
+
+    while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+        kd = item_at (i)->kind;
+        hub_map (KIND_BANK);
+        if (!strcmp (CATALOGUE[kd].tool, key) && on_pc (i)) {
+            s_use_up (i, 0);
+            return IR_OK;
+        }
+    }
+    return IR_NONE;
+}
+
 /* A drawing's minutes (DRAW_USE: a room come into, a way walked, mapping on paper) off what it draws with (the map
 ** making's, chart_w: things.c's chart_now, as the light's made, the handy ones by their keys): a point (charcoal,
 ** chalk, a pencil), else its quill and its ink; one spent, the map making made again (light_now's) */
@@ -5599,6 +5618,8 @@ void s_burns_now (void)
         600);                                   /* (The next look a minute on; resting, ten, its light not near burning
                                                 **   low: the long durations' coarser ticks, 2026-10-28; the clock's
                                                 **   slices end there, slice's) */
+    bled ();                                    /* (The bodies' time with it: the bleeding, the character's wounds,
+                                                **   part 70's, slice 4.3's) */
 }
 
 #pragma code-name (pop)

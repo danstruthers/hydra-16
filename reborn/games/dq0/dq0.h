@@ -329,7 +329,12 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[14];
+extern unsigned char ovbank[15];
+unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
+                                                **   2; first aid's, 1; else 0) */
+void tend (void);                               /* Part 12: first aid (VB_TEND) */
+unsigned char body_words (void);                /* Part 12: what time did to its body, told (8: dead of it) */
+extern unsigned char news_due;                  /* (main.c's: the body's news held as it sleeps, part 12's) */
 
 /* ---- The swapped parts (bank.s's stubs: swap.inc), run in the main RAM's top (dq0.cfg's SWAP), a part at a time */
 

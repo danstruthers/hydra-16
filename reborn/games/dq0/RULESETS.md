@@ -32,7 +32,7 @@ The two so far:
 ## What a ruleset must answer
 
 Each request the game makes today, who makes it, and what of the reply it reads.  A referee may answer more (rs.h
-has requests no one makes yet: RS_TEST_MANY, RS_REST, RS_TREAT, RS_INITIATIVE, RS_EXPERIENCE, RS_POWER,
+has requests no one makes yet: RS_TEST_MANY, RS_REST, RS_INITIATIVE, RS_EXPERIENCE, RS_POWER,
 RS_EXPORT, RS_IMPORT, RS_RESTORE, RS_QUIT), and RS_DICE is the referee's unit tests' alone (tests/ram/t_rules: the
 next dice's faces fixed, the dice rolled since said back; dq0harn answers it, a ruleset needn't); one it doesn't know
 it answers with result 0xFF.
@@ -50,10 +50,11 @@ it answers with result 0xFF.
 | RS_WIELD | the UI (a blow with nothing named: b 1 at a thing, x[0] the kind in its main hand, x[1] the other's, the things' IO_HANDS); the world (fighting back unbidden) | result the one held to strike with (1, 2: the main hand's, but a soft thing; 0 its hands empty); then the text the key of a better thing carried, to ask about ("" none) |
 | RS_OUTFIT | the world (a new game's kit, 2026-10-27: games/dq0/outfits.txt) | result 0 (0xFF: none, the kit as it was); w1 the money the outfit's bought with (HarnMaster's the family's wealth, hmchar's file's; the null ruleset's 49, the universal kit's); w2 the draw's seed (the character's own numbers); a its wealth (0 poor, 1 average, 2 rich); x[0], x[1] its tags (rs.h's OT_*: culture, class, wealth, sex); the text a line its occupation (its outfit's section; the null ruleset's none), then a line each its open skills, the highest first |
 | RS_ATTACK | the world (a blow: actor at other, a its aim, b AS_BEST, w2 shy and prone bits, RS_REARM a creature's weapon let fall taken up again, its turn; the hub's pc_strike what the character strikes with: SK_*, or SK_THING and a kind, the catalogue's) | result O_* (0xFF: none struck; O_RISE the attacker's turn getting up, a 1 if it's still down; O_REARM its weapon in hand again), a whose fumble or stumble, c AF_* (AF_CAUTIOUS, AF_BLEEDING; AF_SHIELD the defender, a creature, blocked with its shield: 2026-10-29), grade hub.h's FF_* (senseless, dead, flees, fallen), w2 the tenths one's out for, x the effects (X_COND_ON C_PRONE: fallen; X_DROP what a hand let go of, the character's or a creature's weapon, the world's to put on the floor), the text its four lines (below); at RS_THING (other): w1 the harm the thing takes, c, w2 and result's bit 0 the striker's own hurt (bit 1: a part of it struck) |
-| RS_TIME | the world (actor 0xFF: the bleeders, w2's bits) | w1 the bits of those dead of it |
+| RS_TIME | the world (slice 4.3's wounds over time: w1 the minutes gone, a minute at a time while anyone bleeds, the character's poisoned or hurt, else at the ruleset's next mark; actor 0xFF, w2's bits the actors bleeding, x[0]'s those fighting; b 1 the character's too, a what it was about: 0 at rest, 1 about, 2 vigorous) | w1 the bits of those dead of it, c those that bound their bleeding; result 1 the character dead; grade 2 news of it (RS_DESCRIBE b 4), 4 hurt anew (a hard stop); w2 the tenths it's senseless; x[4..7] when it's next to be asked, nothing bleeding |
+| RS_TREAT | the UI (first aid, slice 4.3's: other the patient, 0 itself; its text the part said) | a 0, the plan: result 0 (1 nothing to treat, 2 not its own to treat, 3 no patient), b the wound, c the treatment, x[0] where, w1 its time (tenths), the text its first words; a 1, done (b, c, x[0] the plan's): result 1 a bleeder bleeding still (a minute more), 2 the plan gone; the text its words, a line after them the key of a thing used up ("bandage": the things' IO_USE) |
 | RS_NEW_ACTOR | the denizens' task (its text the kind's key, w1 the record's number) | x a struct rs_summary (cond: C_BLEEDING) |
 | RS_MORALE | the denizens' task (an actor, the steps) | result M_* (M_BROKEN, M_CAUTIOUS flee) |
-| RS_DESCRIBE | the UI | b 0 the sheet (said whole); b 1 the map panel's lines (each 15 characters at most); b 2 the last harm's words; b 3 the state (status: the pace, the watchfulness, the condition, the light; a 1, the pace and watchfulness only) |
+| RS_DESCRIBE | the UI | b 0 the sheet (said whole); b 1 the map panel's lines (each 15 characters at most); b 2 the last harm's words; b 3 the state (status: the pace, the watchfulness, the condition, the light; a 1, the pace and watchfulness only); b 4 what time did to the character's body since it was last told (RS_TIME's news, once: slice 4.3's) |
 
 The words the game knows in a reply (a convention every referee keeps):
 
