@@ -21,7 +21,14 @@ function bytes() {                                         // (Its base64: no at
 const available = () => typeof WebAssembly === 'object' && typeof WebAssembly.Module === 'function';
 
 function createCore(env, sizes) {
-  if (!module_) module_ = new WebAssembly.Module(bytes());
+  // (In Node.js, compiled whole by the optimizing compiler, V8's TurboFan, not first by its baseline one, Liftoff:
+  // Liftoff's code leaves work for V8's background threads, and a process.exit while one's at it fails Node's
+  // assertion !(handle->flags & UV_HANDLE_CLOSING) on Windows, its exit code not 0: the tests' processes, the short
+  // ones.  As fast, and no slower to start)
+  if (!module_) {
+    if (typeof process === 'object' && process.versions && process.versions.node) require('v8').setFlagsFromString('--no-liftoff');
+    module_ = new WebAssembly.Module(bytes());
+  }
   const x = new WebAssembly.Instance(module_, { env }).exports;
   const up = (n, a) => Math.ceil(n / a) * a;
   const L = {};
