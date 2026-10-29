@@ -201,6 +201,7 @@ function parallel(list, opt) {
           running--;
           text = text.replace(/\r?\n$/, '');
           if (!/^(PASS|FAIL) /.test(text)) text = 'FAIL ' + (t.name + ' ').padEnd(8) + t.what + '\n       ! its process ended (code ' + code + ')' + (text ? '\n' + text : '');
+          else if (code !== 0 && text.startsWith('PASS ')) text = 'FAIL' + text.slice(4) + '\n       ! its process ended (code ' + code + ') after its report';   // (Its exit failed)
           done[i] = { ok: code === 0 && text.startsWith('PASS '), text };
           times(opt, t, text, Date.now() - t0);
           show();
