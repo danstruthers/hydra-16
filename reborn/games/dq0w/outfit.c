@@ -164,6 +164,10 @@ void __fastcall__ s_den_kit (const struct msg* m)
         ost.bw = ost.bh = 1;
     }
     ost.level = 1;
+    ost.omint = 0xFF;                           /* (Its stratum's grave goods' coins' mint, not looked for yet; their
+                                                **   age, five a century: part 59's) */
+    k = STRATUM (ost.hsn).age;
+    ost.age = k > 50 ? 250 : 5 * k;
     for (k = 0; k < 3; ++k) {
         if (!(m->a & 1 << k)) {
             continue;

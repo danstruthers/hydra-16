@@ -238,6 +238,10 @@ static void __fastcall__ own (unsigned i)
 
     kind_get (p->kind);
     m = e.mat ? e.mat : kk.mat;                 /* (The list's material, else its kind's: a gold ring) */
+    if (m & 0x80) {
+        item_at (i)->size = m << 4 | 15;        /* (Old coins: their mint, whole, part 59's; part 63's piles) */
+        m = kk.mat;
+    }
     if (m == MT_IRON && kk.craft == AP_WEAPON) {
         m = g >= 7 ? MT_STEEL : g <= 1 ? MT_BRONZE : MT_IRON;   /* (A blade's metal by its make) */
     }

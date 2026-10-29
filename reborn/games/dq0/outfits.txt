@@ -815,8 +815,7 @@ free: robe@worn
 free: mask@worn
 free: belt@worn
 
-; ---- The lairs' own things (denizens.md 3: stores, the hoard; the beasts' dens and the dead's lairs later: their
-; openings, the tests', moved by them)
+; ---- The lairs' own things (denizens.md 3: stores, the hoard; the beasts' dens and the dead's lairs below)
 [lair koblord]
 free: furs@home
 free: basket@home, rations@in 2-6
@@ -837,6 +836,51 @@ free: candle@home 2-4
 [lair priest]
 free: candle@home 2-6
 free: chest@hoard, pennies@in 30-150, crowns@in 1d2, goblet@in, jewel@in 1d2, iron key@pouch
+
+; ---- The beasts' dens and the dead's lairs (denizens.md 3's; 2026-10-29: made with their lair's first, as it's placed,
+; then kept, as the folk's lairs' things are): found, what lies lost or left there (its condition Treasure 1's Found
+; column, silver and gold the less decayed); the dead's of old besides (old: the worse for their stratum's age, a
+; century 5 on the Found roll, and their coins the people's of its oldest era, their mint whole).  A beast's den its
+; bedding and the bones of its prey, and now and then a past victim's remains, an explorer's things lying on them; a
+; ghoul's nest the bones and skulls, the plundered arms and the grave goods of the crypts it lairs in (Grave-Wights);
+; a skeleton's and a wight's what the dead were laid with; a shade's its grave goods, unrotted (the Shadow keeps them:
+; old, not found), its coins, a writing (a parchment: no book in the catalogue).  The chances the house's (the plan's)
+[lair rat] found
+free: heap of straw@home
+free: bones@home
+[lair spider] found
+free: bones@home
+free 25: bones@home, backpack@in, torch@in, rope@in, waterskin@in, pennies@in 2d6 | bones@home, leather tunic@in, sword@in, pouch@in, pennies@in 3d6 | bones@home, cloak@in, pick@in, lantern@in, sack@in
+[lair bear] found
+free: heap of straw@home
+free: bones@home
+free 50: skull@home
+free 25: bones@home, backpack@in, torch@in, rope@in, waterskin@in, pennies@in 2d6 | bones@home, leather tunic@in, sword@in, pouch@in, pennies@in 3d6 | bones@home, gambeson@in, spear@in, knife@in, sack@in
+[lair basilsk] found
+free: bones@home
+free 33: bones@home, backpack@in, torch@in, rope@in, waterskin@in, pennies@in 2d6 | bones@home, leather tunic@in, sword@in, pouch@in, pennies@in 3d6 | bones@home, cloak@in, pick@in, lantern@in, sack@in
+[lair lindwrm] found
+free: bones@home
+free: skull@home
+free 50: bones@home, mail byrnie@in, sword@in, round shield@in, pouch@in, pennies@in 4d6 | bones@home, backpack@in, torch@in, rope@in, waterskin@in, pennies@in 2d6
+[lair ghoul] found old
+free: bones@home
+free: skull@home 1-3
+free 70: broken sword@home | sword@home | spear@home | mail byrnie@home *2 | iron helm@home | round shield@home
+free 40: broken sword@home | axe@home | ring byrnie@home | leather cap@home
+free 60: jewel@home 1d4
+[lair skel] found old
+free 40: pennies@home 2d6
+free 30: candle stubs@home
+free 20: jewel@home
+[lair wight] found old
+free: bones@home
+free 50: pennies@home 3d6
+free 40: jewel@home 1d2
+[lair shade] old
+free: jewel@home 1d3
+free: pennies@home 20-100
+free 33: parchment@home
 
 ; ---- Personal things, made as a denizen's first met: the book's Personal Possessions (Treasure 2-3, 2026-10-28: the
 ; user's "Is the money system modeled after the one in the HM rules?  If not, it should be."), each kind its category,

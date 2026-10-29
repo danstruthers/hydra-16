@@ -1003,6 +1003,7 @@ static void __fastcall__ limb_words (const struct msg* m)
         "\nYour %s falls from your hand.", "\nThe %s drops its %s.",
         0, "\nThe %s snatches up its %s.",
         0, "\nThe %s draws its %s.",               /* (WB_DRAWS: a denizen's weapon from its belt, the outfits') */
+        0, "\nThe %s unslings its %s.",            /* (WB_READIES: its shield from its back, 2026-10-29) */
         "\nYou get to your feet.", "\nThe %s gets to its feet.",
         "\nYou struggle, but can't get up.", "\nThe %s struggles, but can't get up.",
         "\nYou fall.", "\nThe %s falls.",

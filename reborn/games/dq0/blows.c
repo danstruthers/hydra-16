@@ -149,7 +149,10 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
             break;
         case O_BLOCKED:
             add (pc ? "; it fends off the blow" : "; you fend it off with your ");
-            if (!pc) {
+            if (pc && (f->which & FW_SHIELD)) {
+                add (" with its ");            /* (Its shield's block: "with its buckler", 2026-10-29) */
+            }
+            if (!pc || (f->which & FW_SHIELD)) {
                 add (line[1]);
             }
             if (*line[2]) {                     /* (A bare arm struck as it blocked) */

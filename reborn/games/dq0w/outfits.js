@@ -39,7 +39,7 @@ const MATS = { wood: 1, iron: 2, steel: 3, bronze: 4, leather: 5, cloth: 6, bone
 const MT_JEWEL = 0xFE;                                  // (A thing's material: Treasure 5's item and material drawn,
                                                         //   outdraw.c's, 2026-10-28)
 const TFLAGS = { lit: 1, full: 2, own: 4, fine: 8 };
-const SF = { weapon: 1, shield: 2, free: 4, kit: 8, armed: 16 };
+const SF = { weapon: 1, shield: 2, free: 4, kit: 8, armed: 16, found: 32, old: 64 };
 const LC_FREE = 0x80, LC_NEED = 0x40, LI_FREE = 0x10, LI_NEED = 0x20, LI_IF = 0x40, LI_NOT = 0x80, CI_INSTEAD = 0x40;
 
 // The world's hash of a section's name (outfit.c's: h = h * 31 + c, 16 bits)

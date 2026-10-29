@@ -358,7 +358,11 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   holds, its armour by its pieces (fight.c's beast_side and guard; folk none but them, BF_FOLK).  Never told (a
   beast, dq0 -K), the bestiary's as before; the null referee ignores them.
 - **Drawn as it strikes:** its hands empty of a weapon, its first blow draws the best on its belt instead, its round
-  (WB_DRAWS).  A weapon let fall is its own (the same record, on the floor and back in its hand).
+  (WB_DRAWS); its weapon in one hand and a shield slung on its back, the next unslings the shield into its other hand
+  (WB_READIES, 2026-10-29).  A weapon let fall is its own (the same record, on the floor and back in its hand).
+- **Its shield** *(2026-10-29; HOUSE.md's the denizens' gear, for review)*: held, it blocks with it when that's the
+  best of its defences, once a round (the referee's: fight.c's defence, gear.c's den_side; the null referee's two
+  steps), told "it fends off the blow with its buckler" (rs.h's AF_SHIELD, the fight ring's FW_SHIELD).
 - **Dead:** what it held where it fell, the rest on its body (the remains a surface: KF_ON), anyone's to take.
 - **Where it sleeps** *(2026-10-27: the plan's phases 2 and 3; HOUSE.md's the denizens' belongings, for review)*: its
   lair's home is the room of its chunk its kind likes best (kinds.txt's home), its bed a square of that room's floor
@@ -380,9 +384,12 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   senses copy it with its body (struct sden's gear), the look words it ("a bandit, armed and armoured"); examined or
   assessed (IO_GEAR, the world's: dq0w/things.c's part 62) what it holds, wears and has at its belt, as far as the
   eyes make out (HOUSE.md's what's seen of an actor).
-- **Not yet:** a shield's block (the referee's denizens dodge or counterstrike, as before); a beast's den's and the
-  dead's lairs' things; the robbers' own stashes (no kind hides its things yet but the kobolds, whose takings are their
-  lord's).
+- **The beasts' dens and the dead's lairs** *(2026-10-29; HOUSE.md's the denizens' belongings, for review)*: a beast's
+  lair's things too with its first's I_KIT (KT_LAIR alone: dq0d.c's place), outfits.txt's [lair KEY] for the giant
+  rats, the cave spiders, the bear, the basilisk, the lindworm, the ghouls, the skeletons, the wights and the shade:
+  bedding, its prey's bones, a past victim's remains with its things, the dead's grave goods, found (Treasure 1's Found
+  column) and of old (their stratum's age; their coins its oldest era's people's).
+- **Not yet:** the robbers' own stashes (no kind hides its things yet but the kobolds, whose takings are their lord's).
 
 ## Still to come
 

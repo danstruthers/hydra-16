@@ -206,7 +206,8 @@ void s_harm_fx (void)
 ** A creature's own parts (bites, claws) are not dropped."): body bd's (wbody.h's) weapon let fall, its word the
 ** referee's, its kind the catalogue's of that name, where the book's die puts it (as the character's: Skills 21),
 ** kept as the body's to take up again in its reach, its turn (the referee's RS_REARM, O_REARM); its legs at a move's
-** start.  Its own part, the main RAM's room */
+** start.  Its own part, the main RAM's room; and a denizen's things' making asked (part 60's once, 2026-10-29: its
+** room, a shield readied) */
 #pragma code-name (push, "SW51CODE")
 #pragma rodata-name (push, "SW51RODATA")
 
@@ -241,6 +242,64 @@ unsigned char s_den_legs (void)
         bd.ready += HUB->round;
         limb_news (WB_RISEN, bk + 1);
         return 1;
+    }
+    return 0;
+}
+
+/* A denizen's things made (I_KIT's, the denizens' ring's, part 14's: its lair placed): drawn and made (part 57's), but
+** for dq0 -K (the tests': none of theirs) */
+/* A section m asks for (I_KIT's a: its role's, its lair's) in the outfits' index for its kind (its entry "#" or "&" and
+** its number, outfits.js's: the index read in, the character's outfit's, as the game began), or its personal things
+** (KT_PURSE: its kind's or its standing's): 1, or 0 (none, or no index: a kind with no things of its own, part 57 not
+** called) */
+static unsigned char __fastcall__ has_role (const struct msg* m)
+{
+    unsigned h, n;
+    unsigned char* q;
+
+    hub_map (CAT_BANK);
+    if ((OF_INDEX[0] | OF_INDEX[1] << 8) != 0x464F) {
+        return 0;
+    }
+    if (m->a & KT_PURSE) {
+        return 1;
+    }
+    for (n = OF_INDEX[3], q = OF_INDEX + 4; n; --n, q += 5) {
+        h = q[0] | q[1] << 8;
+        if (((m->a & KT_ROLE) && h == '#' * 31 + m->x[1]) || ((m->a & KT_LAIR) && h == '&' * 31 + m->x[1])) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void __fastcall__ s_den_other (const struct msg* m)
+{
+    hub_map (0);
+    if (!(HUB->gear & GE_OLD) && has_role (m)) {
+        ost.did = m->t;
+        ost.hx = m->w1;
+        ost.hy = m->w2;
+        ost.hsn = m->x[2];
+        ost.fac = m->b;
+        it_need (ost.hsn, (ost.hx - STRATUM (ost.hsn).x0) >> CW_BITS, (ost.hy - STRATUM (ost.hsn).y0) >> CW_BITS);
+        den_kit (m);
+    }
+}
+
+/* The mint of the people of the oldest era of the lair's stratum (its first layer's: the theme's era and its mint of
+** that era), 0 none (no era said, or one still held: today's coins): old coins', the dead's lairs' (part 59's, as the first is drawn, 2026-10-29) */
+unsigned char s_old_mint (void)
+{
+    unsigned char k = ost.hsn < TSTRATA ? ost.hsn : TSTRATA - 1, era, n;
+
+    hub_map (THEME_BANK);
+    if ((era = THEME->layer[k][0].era) != 0 && THEME->era[era - 1].end != EN_HELD) {
+        for (n = THEME->nmints, k = 0; k < n; ++k) {
+            if (THEME->mint[k].era == era) {
+                return k + 1;
+            }
+        }
     }
     return 0;
 }
@@ -314,47 +373,6 @@ static void __fastcall__ filed (unsigned i, unsigned char held)
         p->flags |= I_HELD;
     }
     hub_map (0);
-}
-
-/* A denizen's things made (I_KIT's, the denizens' ring's, part 14's: its lair placed): drawn and made (part 57's), but
-** for dq0 -K (the tests': none of theirs) */
-/* A section m asks for (I_KIT's a: its role's, its lair's) in the outfits' index for its kind (its entry "#" or "&" and
-** its number, outfits.js's: the index read in, the character's outfit's, as the game began), or its personal things
-** (KT_PURSE: its kind's or its standing's): 1, or 0 (none, or no index: a kind with no things of its own, part 57 not
-** called) */
-static unsigned char __fastcall__ has_role (const struct msg* m)
-{
-    unsigned h, n;
-    unsigned char* q;
-
-    hub_map (CAT_BANK);
-    if ((OF_INDEX[0] | OF_INDEX[1] << 8) != 0x464F) {
-        return 0;
-    }
-    if (m->a & KT_PURSE) {
-        return 1;
-    }
-    for (n = OF_INDEX[3], q = OF_INDEX + 4; n; --n, q += 5) {
-        h = q[0] | q[1] << 8;
-        if (((m->a & KT_ROLE) && h == '#' * 31 + m->x[1]) || ((m->a & KT_LAIR) && h == '&' * 31 + m->x[1])) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-void __fastcall__ s_den_other (const struct msg* m)
-{
-    hub_map (0);
-    if (!(HUB->gear & GE_OLD) && has_role (m)) {
-        ost.did = m->t;
-        ost.hx = m->w1;
-        ost.hy = m->w2;
-        ost.hsn = m->x[2];
-        ost.fac = m->b;
-        it_need (ost.hsn, (ost.hx - STRATUM (ost.hsn).x0) >> CW_BITS, (ost.hy - STRATUM (ost.hsn).y0) >> CW_BITS);
-        den_kit (m);
-    }
 }
 
 /* What body bd holds and wears told the referee (RS_EQUIP 2, the actor's: the keys of its things held and worn, each
@@ -447,7 +465,9 @@ void __fastcall__ s_den_enter (const struct msg* m)
 /* Body bd about to strike, its hands empty of a weapon (a denizen at its ease keeps its sheathed, or hung from its
 ** belt, DENIZENS.md's gear): the best on its belt (in a carrier hung there, or hung there itself: the worthiest) drawn
 ** into its main hand, its round's (the book's grope; the caller's time), told (WB_DRAWS, its kind), the referee told:
-** 1; else 0 (a weapon in hand, its own let fall, none on its belt, no things of its own) */
+** 1; a weapon in one hand, a shield slung on its back taken in the other, if it's free, its round's the same (WB_READIES,
+** 2026-10-29): 1; else 0 (a weapon in hand and its shield too, or none, its own let fall, none on its belt, no things
+** of its own) */
 unsigned char s_den_draw (void)
 {
     static unsigned i, best, top;
@@ -461,9 +481,40 @@ unsigned char s_den_draw (void)
         if (ip->flags & I_HELD) {
             dkind (ip->kind);
             if (weapon ()) {
-                return 0;
+                break;
             }
         }
+    }
+    if (ki) {                                   /* (A weapon in hand, in one: a shield slung on its back taken in its
+                                                **   other hand, its round's, if that hand's free; told, WB_READIES,
+                                                **   2026-10-29) */
+        if (dk.flags & K_TWO) {
+            return 0;
+        }
+        for (best = 0, i = 0; (i = kit_next (i)) != 0; ) {
+            k = ip->flags;
+            dkind (ip->kind);
+            if (dk.craft == AP_WEAPON && (dk.flags & (K_WEAR | K_TWO)) == K_WEAR) {
+                if (k & I_HELD) {
+                    return 0;                   /* (In hand already) */
+                }
+                if ((k & (I_WORN | I_HIDDEN)) == I_WORN) {
+                    best = i;
+                }
+            } else if ((k & I_HELD) && hand () != IH_RIGHT) {
+                return 0;                       /* (Its other hand holds something: a light) */
+            }
+        }
+        if (!best) {
+            return 0;
+        }
+        p = item_at (best);
+        p->flags = (p->flags & ~I_WORN) | I_HELD;
+        k = p->kind;
+        hub_map (0);
+        limb_news (WB_READIES | (unsigned) k << 8, bk + 1);
+        s_den_equip ();
+        return 1;
     }
     for (best = top = 0, i = 0; (i = items (i, IN_ITEM, 0)) != 0; ) {
         k = ip->kind;

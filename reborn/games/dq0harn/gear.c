@@ -291,12 +291,22 @@ void __fastcall__ o_den_equip (unsigned char k)
 }
 
 /* Actor k's blow, its things told (fight.c's beast_side: s's aml its kind's own weapon's, s's word its word): the
-** weapon it holds (none, or let fall: its fists, ten less) */
+** weapon it holds (none, or let fall: its fists, ten less); and the shield it holds, if it does (its row in s's dslot,
+** its word dshw's, its impacts dshi's: what a fist that meets it takes): its block's EML in s's dml, its kind's own
+** weapon's mastery (the bestiary's one figure for its fighting: the house's, 2026-10-29) and the shield's defence class
+** (Combat 3's; a shield none the worse in the off hand) */
+char dshw[14];
+signed char dshi[3];
 void __fastcall__ o_den_side (struct side* s, unsigned char k)
 {
     const struct weapon* w;
     unsigned char j, o;
 
+    if ((s->dslot = j = dsh[k]) != 0) {
+        s->dml = s->aml + weapons[j].wdc;
+        strcpy (dshw, weapons[j].word);
+        memcpy (dshi, weapons[j].imp, sizeof dshi);
+    }
     for (o = NUNARMED; o < NWEAPONS && strcmp (weapons[o].word, s->word); ++o) {
     }
     j = bs.state & BS_DISARMED ? 0 : dwr[k];
@@ -529,6 +539,14 @@ unsigned char __fastcall__ o_pc_defence (struct side* d, unsigned char f, unsign
         d->bare = s == BARE_ARM;
     }
     d->dslot = uhow[s] == HARN_DODGE ? 0xFF : s;   /* (What it defends with: its fumble's, slice 4.1b's) */
+    if (uhow[s] == HARN_BLOCK && s < NTOOLS) {  /* (A block's words what blocked: "you fend it off with your
+                                                **   buckler", not the weapon it strikes with, 2026-10-29) */
+        for (k = NUNARMED; k < NWEAPONS && strcmp (weapons[k].key, tools[s]); ++k) {
+        }
+        if (k < NWEAPONS) {
+            strcpy (d->word, weapons[k].word);
+        }
+    }
     return uhow[s];
 }
 

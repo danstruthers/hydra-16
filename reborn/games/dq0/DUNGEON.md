@@ -86,7 +86,8 @@ by a request or an intent.
   stock); a **denizen**'s remains the world puts down itself as it dies, its things on them; its things (worn, held, on
   its belt) the world makes as its lair's placed (I_KIT's, the outfits' gear: filed with its lair's home, IW_DEN,
   2026-10-27: DENIZENS.md's their things), its belongings where it sleeps and its lair's stores and hoard with it
-  (lying in its lair's home room, its faction's: owner), its purse and its valuables as it's first met, a thing worn
+  (lying in its lair's home room, its faction's: owner; a beast's den's bedding, bones and a past victim's remains, the
+  dead's grave goods, found and of old, 2026-10-29), its purse and its valuables as it's first met, a thing worn
   beneath its clothes hidden (found by searching its body, as it lies dead); a key fits one lock, its own (the locked
   thing's number in the key's size and thick); the senses read the records for what the character perceives, and the world
   makes a thing its own (its number, its make: no two alike) as a look first sees it, after the look, in the order seen.

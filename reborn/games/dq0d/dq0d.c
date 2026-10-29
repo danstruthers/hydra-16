@@ -652,12 +652,15 @@ void __fastcall__ s_place (unsigned char i)
             D.ready = now + random (50);
         }
         den_put (k);
-        im.a = (kind_get (kd), KF_NATURE (K.form)) >= NA_FOLK ? (j ? KT_ROLE : KT_ROLE | KT_LAIR) : 0;  /* (Its lair's
-                                                **   own with its first: its stores, its hoard; folk's and the dead's:
-                                                **   a beast's den's things later, its I_KIT the world's time, a part
-                                                **   swapped in and out for nothing) */
-        if (im.a) {                             /* (Folk and the dead: its things made, the world's draw by its kind's
-                                                **   role, filed at its home, the outfits' gear) */
+        im.a = (j ? 0 : KT_LAIR) | ((kind_get (kd), KF_NATURE (K.form)) >= NA_FOLK ? KT_ROLE : 0);  /* (Its lair's
+                                                **   own with its first: its stores, its hoard; a beast's den's, the
+                                                **   dead's lair's, 2026-10-29; folk's and the dead's roles) */
+        if (im.a == KT_LAIR && (hub_map (0), HUB->gear & GE_OLD)) {
+            im.a = 0;                           /* (dq0 -K's, the tests': a beast's den none, as before, not even asked
+                                                **   of the world) */
+        }
+        if (im.a) {                             /* (Its things made, the world's draw by its kind's role and its
+                                                **   lair's, filed at its home, the outfits' gear) */
             im.b = K.faction;
             im.x[0] = 0;
             im.x[1] = kd;

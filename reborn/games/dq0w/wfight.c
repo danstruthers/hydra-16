@@ -165,7 +165,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     hub_map (DEN_BANK);
     memset (f, 0, sizeof *f);
     f->out = w2;
-    f->which = wh | (z & FW_FIRST) | (c & AF_AGAIN ? FW_AGAIN : 0);
+    f->which = wh | (z & FW_FIRST) | (c & AF_AGAIN ? FW_AGAIN : 0) | (c & AF_SHIELD ? FW_SHIELD : 0);
     if (att) {
         to_ring (f->att, HUB->actor[(att - 1) & 7].name, sizeof f->att);
     }

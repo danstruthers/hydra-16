@@ -168,6 +168,7 @@ static void __fastcall__ beast_side (struct side* s, unsigned char who)
     s->dodge = b->dge - pp;
     s->dml = 0;
     s->bare = 0;
+    s->dslot = 0;                               /* (No shield held: den_side's, its things told) */
     s->imp[0] = s->imp[1] = s->imp[2] = -1;
     strcpy (s->word, w->word);
     if (w->part == 0xFF && dwr[(who - 1) & 7] != 0xFF) {
@@ -337,20 +338,35 @@ static void __fastcall__ mishap (struct side* s, unsigned char stumble, unsigned
     if (stumble ? harn_stumble_roll (s->c, 0) : harn_fumble_roll (s->c, 0)) {
         if (stumble) {
             prone (s, 1);
-        } else if ((stumble = fumbled (s, s == &A)) != 0) {
+        } else if ((s == &A || !(R->c & AF_SHIELD)) && (stumble = fumbled (s, s == &A)) != 0) {
+                                                /* (A shield's block fumbled: it's strapped on, nothing let go
+                                                **   of: the book's fumble roll the easier for it, Skills 21; the
+                                                **   house's none) */
             effect (s->who, X_DROP, 0, 0, stumble, 0);  /* (What it struck with, or blocked with, its hand's) */
         }
     }
 }
 
 /* The defender's defence (HARN_BLOCK ...): the character's, its round's (gear.c's pc_defence); a creature's by its
-** nature (a counterstrike if it's the better at it, else a dodge); in shock, or senseless, none */
+** nature (a counterstrike if it's the better at it, else a dodge; a shield held, a block with it if that's the best of
+** the three (the book's Block, Combat 9), once a round as the character's are (HOUSE.md's): its words the shield's,
+** AF_SHIELD; 2026-10-29); in shock, or senseless, none */
+static unsigned long dbt[NACTORS];              /* (Each actor's shield free to block again then: a round on) */
 static unsigned char defence (void)
 {
+    unsigned char k = (D.who - 1) & 7;
+
     if (D.c->state != HARN_CONSCIOUS || (!D.who && pc_out > tnow)) {
         return HARN_IGNORE;
     }
     if (D.who) {
+        if (D.dslot && D.dml >= D.aml && D.dml >= D.dodge && tnow >= dbt[k]) {
+            dbt[k] = tnow + 100;                /* (A round's tenths, RS_HELLO's) */
+            strcpy (D.word, dshw);
+            memcpy (D.imp, dshi, sizeof D.imp);    /* (A fist that meets it struck by the shield, not its sword) */
+            R->c |= AF_SHIELD;
+            return HARN_BLOCK;
+        }
         return D.aml >= D.dodge ? HARN_COUNTER : HARN_DODGE;
     }
     return pc_defence (&D, A.who, A.part == 0xFF);

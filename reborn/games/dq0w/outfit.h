@@ -32,7 +32,9 @@ enum { PL_NONE, PL_WORN, PL_HAND, PL_OFF, PL_BOTH, PL_BELT, PL_POUCH, PL_PACK, P
 #define SF_SHIELD       0x02                    /*   the shield's, */
 #define SF_FREE         0x04                    /*   every line given (a denizen's), */
 #define SF_KIT          0x08                    /*   the universal kit given (a temple's), */
-#define SF_ARMED        0x10                    /*   its own lines its weapons: no weapon skill's drawn) */
+#define SF_ARMED        0x10                    /*   its own lines its weapons: no weapon skill's drawn, */
+#define SF_FOUND        0x20                    /*   a lair's leavings, lost or left: Treasure 1's Found column, */
+#define SF_OLD          0x40                    /*   of old, grave goods: the stratum's age, its oldest era's mint) */
 #define OF_INDEX        ((unsigned char*) 0x9480)    /* (The outfits' file's head and its sections' index, read into
                                                 **   the catalogue's bank after its code the first time (CAT_BANK):
                                                 **   4 bytes, then 5 a section, then each one's length, 190 at most:
@@ -69,6 +71,9 @@ struct ost {
                                                 **   room): from bx0, by0, */
     unsigned char   bw, bh;                     /*   bw by bh squares */
     unsigned char   slen;                       /* The section found last's length (find's: draw_at reads that alone) */
+    unsigned char   omint, age;                 /* A lair's old coins' mint (0 today's, 0xFF not looked for yet), its
+                                                **   stratum's age, five a century (the dead's grave goods, SF_OLD's,
+                                                **   2026-10-29) */
 };
 extern struct ost ost;
 enum { MD_ALL, MD_NEED, MD_CHANCE, MD_HEAD };   /* (A section's lines drawn: all, the needs, the rest; none, its head
@@ -81,6 +86,7 @@ unsigned char __fastcall__ draw_at (unsigned off, unsigned char mode);   /* (Par
                                                 **   ost.want's: 1 drawn, 0 not (none there, not wanted) */
 void __fastcall__ outmake (unsigned char who);  /* (Part 58) The list's things made: the character's (who 0), or a
                                                 **   denizen's (1: ost's did, its things filed at hx, hy, IW_DEN) */
+unsigned char old_mint (void);                  /* (Part 51) The lair's stratum's oldest era's mint (ost's hsn), 0 none */
 void __fastcall__ den_kit (const struct msg* m); /* (Part 57) A denizen's things drawn by its kind and made (I_KIT's:
                                                 **   ost's did, hx, hy, hsn, fac set, the chunk in the store) */
 

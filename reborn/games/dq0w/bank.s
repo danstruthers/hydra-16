@@ -135,7 +135,7 @@ go:
                                             ;   (things.c: slice 4.1b's)
             SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
             SWPART      50, 14              ; The legs: getting up, a move's start prone, how fast (dq0w.c's)
-            SWPART      51, 1               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
+            SWPART      51, 19              ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
                                             ;   overlay 1's bank, overlay 8's room part 19's, 2026-10-27)
             SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
             SWPART      53, 16              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
@@ -171,7 +171,8 @@ go:
             SWFN        den_word, 51
             SWFN        den_drop, 60
             SWFN        den_legs, 51
-            SWFN        den_other, 60
+            SWFN        den_other, 51
+            SWFN        old_mint, 51
             SWFN        den_enter, 60
             SWFN        den_draw, 60
             SWFN        den_strip, 60

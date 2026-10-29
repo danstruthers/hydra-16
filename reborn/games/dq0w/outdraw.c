@@ -89,12 +89,23 @@ static void __fastcall__ pay (unsigned char g, unsigned char q, unsigned char tf
     ost.budget = back ? ost.budget + v : v > ost.budget ? 0 : ost.budget - v;
 }
 
-/* A choice's things (n of them at p): drawn into the list, paid for */
+/* Treasure 5's jewelry by fives of the d100: its item, its material */
+static const unsigned char jkind[20] = { KI_GEM, KI_GEM, KI_GEM, KI_RING, KI_RING, KI_RING, KI_RING, KI_RING,
+    KI_PENDANT, KI_PENDANT, KI_PENDANT, KI_NECKLACE, KI_NECKLACE, KI_NECKLACE, KI_NECKLACE, KI_BROOCH, KI_BROOCH,
+    KI_BROOCH, KI_BROOCH, KI_BROOCH };
+static const unsigned char jmat[20] = { MT_BONE, MT_BONE, MT_BONE, MT_BRONZE, MT_BRONZE, MT_GLASS, MT_SILVER,
+    MT_SILVER, MT_SILVER, MT_SILVER, MT_SILVER, MT_SILVER, MT_SILVER, MT_SILVER, MT_SILVER, MT_STONE, MT_GOLD, MT_GOLD,
+    MT_GOLD, MT_GOLD };
+
+/* A choice's things (n of them at p): drawn into the list, paid for; a thing in another (PL_IN) in the last that went
+** elsewhere (the choice's container: a chest's pennies, its crowns, its goblet, all in it, 2026-10-29; it was in the
+** thing just before it, the pennies) */
 static void __fastcall__ things (const unsigned char* p, unsigned char n)
 {
-    unsigned char k, q, j, many, tf, r, prev = 0, i = 0;
+    static const unsigned char lost[20] = { 9, 9, 9, 9, 8, 8, 8, 8, 7, 7, 7, 7, 6, 5, 5, 4, 3, 2, 1, 0 };
+    unsigned char k, q, j, many, tf, r, g, prev = 0, i = 0;
 
-    for (; n--; p += 5, prev = i) {
+    for (; n--; p += 5, prev = (p[-4] & 15) != PL_IN ? i : prev) {
         k = p[0];
         tf = p[1] >> 4;
         if (p[2] & 0x80) {                      /* (The book's dice: 7d6 pennies, 2026-10-28) */
@@ -125,22 +136,38 @@ static void __fastcall__ things (const unsigned char* p, unsigned char n)
                                                 **   bracelet or an anklet a necklace, a comb or earrings a brooch),
                                                 **   and its material (ivory with bone, amber with silver, jade
                                                 **   stone, mithril gold: the house's), a gem in the pouch) */
-                r = die (100);
-                e.kind = r < 15 ? KI_GEM : r < 40 ? KI_RING : r < 55 ? KI_PENDANT : r < 75 ? KI_NECKLACE : KI_BROOCH;
-                r = die (100);
-                e.mat = e.kind == KI_GEM ? 0 : r < 15 ? MT_BONE : r < 25 ? MT_BRONZE : r < 30 ? MT_GLASS : r < 75 ?
-                    MT_SILVER : r < 80 ? MT_STONE : MT_GOLD;
+                e.kind = jkind[die (100) / 5];  /* (Its tables by fives: 2026-10-29, the part's room) */
+                r = jmat[die (100) / 5];
+                e.mat = e.kind == KI_GEM ? 0 : r;
                 if (!e.mat) {
                     e.place = PL_POUCH;
                 }
             }
-            if (sec[0] & SF_FREE) {             /* (A denizen's: its condition by Treasure 1's table, its Person
+            kind_get (e.kind);
+            r = (unsigned char) ((ost.rs >> 3) + i * 37 + j * 11) % 100;
+            if (sec[0] & SF_FOUND) {            /* (A lair's leavings, lost or left: its condition by Treasure 1's
+                                                **   Found column, silver and gold 30 the better on the roll (as the
+                                                **   maker's found things are), an old one's (SF_OLD) 5 the worse a
+                                                **   century of its stratum's age, the house's (2026-10-29); its
+                                                **   life's tenths lost: broken 9 (a tenth left, as the Person
+                                                **   column's), poor 7-8, fair 4-6, good 1-3, as new none) */
+                g = e.mat ? e.mat : kk.mat;
+                r += g == MT_SILVER || g == MT_GOLD ? 30 : 0;
+                if (sec[0] & SF_OLD) {
+                    r = r > ost.age ? r - ost.age : 0;
+                }
+                e.flags |= lost[r < 100 ? r / 5 : 19] << 4;
+            } else if (sec[0] & SF_FREE) {      /* (A denizen's: its condition by Treasure 1's table, its Person
                                                 **   column, its life's tenths lost in its flags' high four bits,
                                                 **   part 58's: broken 1, poor 2-3, fair 4-6, good 7-9, as new 10; by
                                                 **   the draw's state and the list's place, no die spent: the draws
                                                 **   after it as they were) */
-                r = (unsigned char) ((ost.rs >> 3) + i * 37 + j * 11) % 100;
                 e.flags |= (r < 1 ? 9 : r < 3 ? 7 + (r & 1) : r < 10 ? 4 + r % 3 : r < 90 ? 1 + r % 3 : 0) << 4;
+            }
+            if ((sec[0] & SF_OLD) && (kk.form & KF_SMALL) &&
+                (ost.omint == 0xFF ? (ost.omint = old_mint ()) : ost.omint) != 0) {
+                e.mat = 0x80 | ost.omint;       /* (Old coins, grave goods': the mint of the people of its stratum's
+                                                **   oldest era, whole: part 57's, part 58's) */
             }
             kind_get (e.kind);
             pay (e.quality, q, tf, 0);

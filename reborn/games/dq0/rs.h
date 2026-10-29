@@ -200,6 +200,8 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define AF_TA           0x04                    /* The defender's tactical advantage: an action more, at once */
 #define AF_CAUTIOUS     0x08                    /* The creature in it, wounded, holds back a round (its courage) */
 #define AF_BLEEDING     0x10                    /*   bleeding (the referee's RS_TIME a minute at a time) */
+#define AF_SHIELD       0x40                    /* The defender blocked with its shield (a creature's: its words the
+                                                **   shield's, "it fends off the blow with its buckler": FW_SHIELD) */
 #define AF_AGAIN        0x20                    /* The one knocked senseless out already, struck again as it lies (the
                                                 **   reply's w2 the longer of the two: its black-out told once) */
 

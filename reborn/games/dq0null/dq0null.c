@@ -71,16 +71,20 @@ unsigned long bseed;                            /* (The bearings' own dice: rsho
 /* ---- The flat odds: a d100 at most BASE and 5 a step (5 to 95) a success, critical in the fifth of its band nearest
 ** the end (the low rolls of a success, the high of a failure) */
 
-static signed char __fastcall__ flat (signed char steps)
+static signed char __fastcall__ flat_r (signed char steps, unsigned char r)
 {
     int c = BASE + STEP_PCT * steps;
-    unsigned char r = 1 + random (100);
 
     c = c < 5 ? 5 : c > 95 ? 95 : c;
     if (r <= c) {
         return r <= c / 5 ? G_CS : G_MS;
     }
     return r > 100 - (100 - c) / 5 ? G_CF : G_MF;
+}
+
+static signed char __fastcall__ flat (signed char steps)
+{
+    return flat_r (steps, 1 + random (100));
 }
 
 /* Health in words any ruleset can say, by the wounds against the toughness */
@@ -376,16 +380,73 @@ static void __fastcall__ harm (struct req* r)
     wound_words (n);
 }
 
+/* ---- Shields (2026-10-29): the shields' keys (the catalogue's tools: a round shield, a buckler, a knight shield, a
+** kite and a tower shield) and their words; each actor's held (RS_EQUIP 2's marks, the world's for an actor: its row
+** plus 1, 0 none); the character's by its things held; each one's shield free to block again then (a round on: the
+** character's first, then each actor's) */
+static const char shk[5][8] = { "shield", "buckler", "kshield", "kite", "tower" };
+static const char* const shw[5] = { "shield", "buckler", "knight shield", "kite shield", "tower shield" };
+static unsigned char ashd[NACTORS];
+static unsigned long sfree[NACTORS + 1];
+
+/* The shield key n letters at k is (its row plus 1), or 0 none */
+static unsigned char __fastcall__ shield_key (const char* k, unsigned char n)
+{
+    unsigned char j;
+
+    for (j = 0; j < 5; ++j) {
+        if (strlen (shk[j]) == n && !memcmp (shk[j], k, n)) {
+            return j + 1;
+        }
+    }
+    return 0;
+}
+
+/* Actor k's things told (RS_EQUIP 2's marks: < the left hand, > the right, * both, + worn, each key's quality after
+** it): the shield it holds */
+static void __fastcall__ den_shield (unsigned char k, const char* t)
+{
+    unsigned char m, n;
+
+    ashd[k] = 0;
+    while (*t) {
+        m = *t++;
+        for (n = 0; t[n] >= 'a'; ++n) {
+        }
+        if (m != '+' && !ashd[k]) {
+            ashd[k] = shield_key (t, n);
+        }
+        t += n;
+        if (*t >= '0' && *t <= '9') {
+            ++t;
+        }
+    }
+}
+
+/* The character's shield held (its row plus 1), or 0 */
+static unsigned char pc_shield (void)
+{
+    unsigned char k, j;
+
+    for (k = 0; k < NTOOLS; ++k) {
+        if (tools[k][0] && held[k] && (j = shield_key (tools[k], strlen (tools[k]))) != 0) {
+            return j;
+        }
+    }
+    return 0;
+}
+
 /* ---- Fights (RS_ATTACK): a blow a flat test (a prone defender four steps the easier, each other foe two), a hit
 ** two wounds (a critical one four); a creature wounded that stands holds its ground on a flat test (a shy one four
-** steps the worse) or flees.  At a thing: a flat 6 of impact, less its least resistance to a blow */
+** steps the worse) or flees.  A shield held two steps the harder for a blow at its holder, once a round, the null's
+** simple way (2026-10-29): a blow that would have hit but for it blocked, told so (AF_SHIELD, its words the shield's).  At a thing: a flat 6 of impact, less its least resistance to a blow */
 
 static void __fastcall__ attack (struct req* r)
 {
     struct rs_effect* e = (struct rs_effect*) r->x;
-    unsigned char a = r->actor, d = r->other, f = r->w2, n, k, t, w;
+    unsigned char a = r->actor, d = r->other, f = r->w2, n, k, t, w, sh = 0, rr = 0;
     unsigned char* dw;
-    signed char g, st = r->steps - 2 * r->c;
+    signed char g = 0, st = r->steps - 2 * r->c;
 
     for (k = 1, t = r->x[0]; k < 3; ++k) {      /* (At a thing: its least resistance to a blow) */
         t = r->x[k] < t ? r->x[k] : t;
@@ -406,13 +467,27 @@ static void __fastcall__ attack (struct req* r)
     }
     dw = d ? &sheet[aden[(d - 1) & 7]] : &wounds;
     t = d ? BTOUGH : TOUGH;
+    if (!(f & RS_PRONE_A)) {                    /* (The blow's die; its holder's shield, if it's free this round) */
+        k = d ? ((d - 1) & 7) + 1 : 0;
+        if ((sh = d ? ashd[k - 1] : pc_shield ()) != 0 && HUB->now >= sfree[k]) {
+            sfree[k] = HUB->now + 100;
+        } else {
+            sh = 0;
+        }
+        st += f & RS_PRONE_D ? 4 : 0;
+        g = flat_r (st - (sh ? 2 : 0), rr = 1 + random (100));
+        sh = !G_OK (g) && sh && G_OK (flat_r (st, rr)) ? sh : 0;  /* (Blocked: it would have hit but for it) */
+    }
     put (a ? "" : weapon ());                   /* (Its words: the attacker's weapon, the defender's, the strike's) */
     put ("\n");
-    put (d ? "" : weapon ());
+    put (sh ? shw[sh - 1] : d ? "" : weapon ());
     put ("\n");
     if (f & RS_PRONE_A) {
         r->result = O_RISE;                     /* (Fallen: it gets up, its turn spent) */
-    } else if (!G_OK (g = flat (st + (f & RS_PRONE_D ? 4 : 0)))) {
+    } else if (sh) {
+        r->result = O_BLOCKED;
+        r->c = AF_SHIELD;
+    } else if (!G_OK (g)) {
         r->result = O_MISS;
     } else {
         r->result = O_HIT;
@@ -583,7 +658,10 @@ static void __fastcall__ answer (struct req* r)
         break;
     case RS_EQUIP:
         if (r->actor) {                         /* (An actor's things: not this ruleset's, its creatures' blows
-                                                **   its own) */
+                                                **   its own; but the shield it holds, 2026-10-29) */
+            if (r->a == 2) {
+                den_shield ((r->actor - 1) & 7, r->text);
+            }
             break;
         }
         if (r->a == 2) {

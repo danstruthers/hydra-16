@@ -107,6 +107,8 @@ struct fight {
 };
 #define FW_FIRST        0x80                    /* (which's: a tactical advantage's blow, struck first: the engage
                                                 **   initiative test's, the striker the quicker) */
+#define FW_SHIELD       0x20                    /* (which's: the defender, a creature, blocked with its shield: rs.h's
+                                                **   AF_SHIELD, "it fends off the blow with its buckler", 2026-10-29) */
 #define FW_AGAIN        0x40                    /* (which's: the one knocked senseless out already, struck as it
                                                 **   lay: rs.h's AF_AGAIN, no new black-out told) */
 
@@ -599,12 +601,14 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   the user's, 2026-10-22); */
        WB_SPENT,                                /* (The world's: a thing used up, its kind times 256, HOUSE.md's things
                                                 **   used up: "Your charcoal is worn to nothing.", 2026-10-26); */
-       WB_DROP, WB_PICKS, WB_DRAWS,             /* (The hands and limbs', slice 4.1b's, every actor's: b whose, 0 the
+       WB_DROP, WB_PICKS, WB_DRAWS, WB_READIES, /* (The hands and limbs', slice 4.1b's, every actor's: b whose, 0 the
                                                 **   character, else the actor plus 1: a thing let go of, fumbled, its
                                                 **   kind times 256 (the catalogue's), told after the blow's words (in
                                                 **   the denizens' ring, a fight's) or the harm's; a weapon a denizen
                                                 **   let go of taken up again, its kind times 256; a denizen's weapon
-                                                **   drawn (from its belt, its carrier: the outfits', 2026-10-27); */
+                                                **   drawn (from its belt, its carrier: the outfits', 2026-10-27); a
+                                                **   denizen's shield taken in hand from its back, its kind times 256
+                                                **   (2026-10-29); */
        WB_RISEN, WB_NOT_UP, WB_FALLEN,          /*   got to its feet (the book's Rise), struggling and still down, fallen
                                                 **   prone (a stumble failed, a leg giving way); */
        WB_LIMP, WB_HOP, WB_CRUTCH, WB_CRAWL, WB_STUCK, WB_NO_RUN };   /* the character's walk: limping, its legs

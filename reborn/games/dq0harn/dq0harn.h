@@ -165,6 +165,8 @@ extern char arm[16];
 extern unsigned char dwr[NACTORS];              /* (Each actor's weapon held, its row: 0 none, 0xFF untold, the bestiary's;
                                                 **   the world's RS_EQUIP for an actor, the outfits' gear) */
 extern unsigned char dsh[NACTORS];              /* (Its shield held, its row) */
+extern char dshw[14];                           /* (The shield's word, den_side's: a block's words, 2026-10-29; */
+extern signed char dshi[3];                     /*   its impacts, a fist's or a claw's that meets it) */
 extern unsigned char dpc[NACTORS][DPIECES];     /* (Its pieces worn) */
 extern char dtext[DTEXT_N];                     /* (Its marks, RS_EQUIP's text, copied in) */
 void __fastcall__ den_equip (unsigned char k);  /* Actor k's things told (dtext's marks) */

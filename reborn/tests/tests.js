@@ -3149,7 +3149,9 @@ module.exports = {
         for (const line of ['wait 3 hours 20 minutes', 'wait 3 hours and 20 minutes']) {
           const t = of(a, line), words = 'You wait three hours and twenty minutes.';
           if (took(t) !== 120000) f.push('"' + line + '" not 200 minutes: ' + took(t) + ' tenths');
-          if (!o.includes('> ' + line + ' ' + words)) f.push('"' + line + '" not told "' + words + '"');
+          // (The task's bar, the status line's, may come before the words: typed as the status answer ended, the
+          // line's drawn again as it's taken up, 2026-10-29)
+          if (!o.replace(/\[[.#]{10}\] /g, '').includes('> ' + line + ' ' + words)) f.push('"' + line + '" not told "' + words + '"');
         }
         if (/I don't know how to minutes/.test(o)) f.push('"and 20 minutes" taken for a command of its own');
         for (const [line, words] of [['rest', 'You settle down to rest for eight hours.'], ['sleep 8 hours', 'You settle down to sleep for eight hours.']]) {
@@ -3701,7 +3703,9 @@ module.exports = {
     },
     {
       name: 'dq0save', meaning: true, what: 'Dingus Quest Zero kept (dq0 -d: the save on a card, here /ram), by the game\'s state: a thing put down, down a stairway, quit (kept as it ends: the world\'s save), the folder listed (the UI\'s game, the things, the world\'s change records, the denizens\', the maker\'s seen maps), then the game carried on: in the stratum below, where it stood and as it faced, seeing what it saw, carrying what it carried, each thing where it was (worn, held, in what)',
-      init: 't_rc', cycles: 800e6,
+      // (850M, not 800M, 2026-10-29: two games begun, the referee's and the world's code the more for the shields and
+      // the dens (some 4M more to load); it was at 799.4M)
+      init: 't_rc', cycles: 850e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept', 'drop the dagger',
         'd', 'quit', 'ls /ram/kept', 'dq0 -d /ram/kept', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -4828,6 +4832,61 @@ module.exports = {
         else if (!next || next.out !== 'O_RISE') f.push('the bandit come round not getting to its feet first (' + JSON.stringify(next) + ')');
         inTurn(said, ['falls senseless.', 'lying senseless.', 'The bandit lies senseless: it can\'t hear you.', 'The bandit gets to its feet.'], f,
           'the bandit knocked senseless: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0shield', outfit: true, asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' shields (the gear3 agent\'s, 2026-10-29; HOUSE.md\'s the denizens\' gear: a shield held blocks, for review), by the denizens\' events, the referee\'s replies and the words: dq0disarm\'s bandits with their own things (the outfits\'), the character (hmchar seed 23, Dodge 90, Sword 90) in a gambeson and a mail hauberk waiting for them: a bandit with its weapon in hand unslinging the shield on its back into its other hand, its round (the world\'s E_BEAT WB_READIES, its kind a shield\'s: "The bandit unslings its round shield."), then blocking the character\'s blow with it (RS_ATTACK\'s reply: the defence D_BLOCK, its c AF_SHIELD, O_BLOCKED: "it fends off the blow with its shield."); a shield\'s block only ever a block (AF_SHIELD with D_BLOCK alone), and by an actor that holds one',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
+        'echo ml swd 90 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
+        'defend block', 'wait', 'open the door', ...Array(36).fill('wait'), 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], K = m.dq0.layout().K, o = dq0Story(out);
+        const g = T.of("dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'");
+        if (g.k < 0) return ['the game not played'];
+        const after = T.filter(u => u.k > g.k), names = new Map();
+        for (const u of after) for (const s of [u.at, u.after]) if (s) for (const i of s.items) names.set(i.kind, i.name);
+        const shields = ['round shield', 'buckler', 'knight shield', 'kite shield', 'tower shield'];
+        const ready = after.flatMap(u => [...u.events, ...u.dens]).find(e => e.kind === 'E_BEAT' && e.beat === 'WB_READIES' && e.b > 0);
+        if (!ready || !shields.includes(names.get(ready.thing))) f.push('no bandit\'s shield unslung (' + JSON.stringify(ready) + ')');
+        const atts = after.flatMap(u => u.replies).filter(r => r.kind === K.RS_ATTACK);
+        const blocks = atts.filter(r => r.c & 0x40);
+        if (!ready || !blocks.some(r => r.actor === 0 && r.other === ready.b && r.b === 1 && r.result === 2))
+          f.push('the character\'s blow not blocked by the bandit\'s shield (D_BLOCK, AF_SHIELD, O_BLOCKED): ' + JSON.stringify(blocks));
+        if (blocks.some(r => r.b !== 1 || r.actor !== 0)) f.push('AF_SHIELD not a denizen\'s block: ' + JSON.stringify(blocks));
+        inTurn(o, ['The bandit unslings its round shield.', 'it fends off the blow with its shield.'], f, 'the shield\'s words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0dens', outfit: true, what: 'Dingus Quest Zero\'s beasts\' dens and the dead\'s lairs (the outfits\' plan, denizens.md 3; the gear3 agent\'s, 2026-10-29; HOUSE.md\'s the denizens\' belongings, for review), by the item store\'s records: the hand-written theme\'s giant rats (dq0senseless\'s, seed 3) their nests made as their lairs are placed, each a heap of straw with bones on its square, their faction\'s, kept with the game (dq0 -d: the same things where they were, carried on); seed 7\'s crypt below (dq0armour\'s ghoul) a ghoul\'s nest, bones and skulls together, what lies there found (Treasure 1\'s Found column: some of it worn, its durability short of its whole)',
+      init: 't_rc', cycles: 1200e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g',
+        'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'look', 'quit', 'dq0 -d /ram/g', 'look', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -T', 'd', 'look', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [];
+        const g1 = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g'), q1 = T.of('quit', g1.k), g2 = T.of('dq0 -d /ram/g'), q2 = T.of('quit', g2.k);
+        const g3 = T.of('dq0 -p t -s 7 -c /ram/c.hm -T'), q3 = T.of('quit', g3.k);
+        if (!q1.at || !q2.at || !q3.at) return ['the games not played'];
+        const lying = (s, n) => s.items.filter(i => i.name === n && i.where === 'IW_SQUARE' && i.owner);
+        const nests = s => lying(s, 'heap of straw').filter(h => lying(s, 'bones').some(b => b.sn === h.sn && b.x === h.x && b.y === h.y));
+        const n1 = nests(q1.at), n2 = nests(q2.at);
+        if (!n1.length) f.push('no rats\' nest (a heap of straw, bones on its square, its faction\'s)');
+        const sig = l => JSON.stringify(l.map(i => [i.sn, i.x, i.y]).sort());
+        if (sig(n1) !== sig(n2)) f.push('the nests not kept with the game: ' + sig(n1) + ' then ' + sig(n2));
+        const s3 = q3.at, skulls = lying(s3, 'skull'), nest = skulls.find(k => lying(s3, 'bones').some(b => b.sn === k.sn && b.x === k.x && b.y === k.y));
+        if (!nest) f.push('no ghoul\'s nest (skulls and bones together): ' + JSON.stringify(skulls));
+        else {
+          const there = s3.items.filter(i => i.where === 'IW_SQUARE' && i.owner === nest.owner && i.sn === nest.sn && i.x === nest.x && i.y === nest.y);
+          if (!there.some(i => i.durMax && i.dur < i.durMax)) f.push('nothing in the ghoul\'s nest worn (Found): ' + JSON.stringify(there.map(i => [i.name, i.dur, i.durMax])));
+        }
         return f;
       },
       sdcard: true

@@ -1629,6 +1629,20 @@ the Khuzdul, the Sindarin and men's, for the kinds the later phases bring).  Wha
 - **Dead, its things on its body**: what it wore and carried on its body (a body and bones are surfaces: "look at the
   body", "take the vest from the body"), what it held let fall where it lies.  *(For review: a worn piece taken off a
   body with no more time than one lying there; the plan had twice its taking-off time.)*
+- **A shield held blocks** *(2026-10-29, drafted for the user to review)*: a denizen with a shield in hand blocks with
+  it (the book's Block, Combat 9) when that's the best of its three defences, once a round as the character's
+  defences are; else it counterstrikes or dodges as before (a weapon alone: as before).  Its block's mastery is its
+  kind's own weapon mastery (the bestiary's: the book gives a creature one figure for its fighting) and the shield's
+  defence class (Combat 3: a buckler 15, a round or a knight shield 20, a kite or a tower shield 25), a shield none the
+  worse in the off hand.  Told: "You strike at the bandit with your sword; it fends off the blow with its buckler."  A
+  fist that meets it is struck by the shield (its blunt impact), not by the weapon the denizen holds.  A shield's block
+  fumbled lets nothing go (strapped on: the book's fumble roll is the easier for it, Skills 21; the house's, no roll).
+  A shield slung on its back is taken in hand as it fights (its weapon in one hand, the other free), its round's grope,
+  as a weapon's drawn from its belt ("The bandit unslings its round shield.").  The character's block says what blocked:
+  "you fend it off with your shield" (it said the weapon it strikes with).  The null ruleset's simple way: a shield
+  held, either side's, makes a blow at its holder two steps the harder, once a round; a blow that would have hit but for
+  it is blocked, told so.  (fight.c's defence; gear.c's den_side, pc_defence; wlimbs.c's den_draw; dq0null.c's attack.)
+  *Not yet:* a shield's cover against missiles (Combat 15-16: nothing's shot yet).
 - **dq0 -K** (the tests'): no denizen's things, the bestiary's as before.
 
 ### The denizens' belongings and valuables *(2026-10-27: the plan's phases 2 and 3, drafted for the user to review)*
@@ -1654,9 +1668,29 @@ the item store, drawn by the same code from outfits.txt.  What the house adds:
   after a box locks it (dq0 -k's "chest,iron key", the tests').  The maker's keys fit nothing yet.
 - **The shared stores** (each lair's, with its first denizen's: outfits.txt's [lair KEY]): a larder (a sack or a basket
   of 2 to 12 days' rations), the bandits' water (a cask, full, one time in two; their lord's always), spare arms (a sack
-  with a spear and a club, one bandits' lair in three), the cultists' candles.  *(Not yet: a beast's den, its
-  bedding and its prey's bones; a ghoul's nest; a shade's tomb: drafted, then left out, as they moved the tests'
-  openings.)*
+  with a spear and a club, one bandits' lair in three), the cultists' candles.  A thing in another in a line (@in) is
+  in the line's first thing that isn't (a chest's pennies, its crowns, its goblet all in the chest: 2026-10-29; each
+  was in the one just before it, the goblet in the jewels in the crowns in the pennies).
+- **The beasts' dens and the dead's lairs** *(2026-10-29, drafted for the user to review: denizens.md 3)*: made with the
+  lair's first denizen as it's placed (as the character first comes near), then kept, as a folk lair's things are; lying
+  on its home room's floor.  A giant rats' nest a heap of straw and bones; a cave spider's bones; a cave bear's den
+  straw, bones, a skull one time in two; a basilisk's bones; a lindworm's bones and a skull; and a past victim's remains
+  now and then (a spider's or a bear's one time in four, a basilisk's one in three, a lindworm's one in two): bones with
+  an explorer's things on them (a backpack, a torch, a rope, a waterskin, a few pennies; a tunic, a sword, a pouch; a
+  cloak, a pick, a lantern, a sack; a lindworm's victim in mail with a sword and a shield).  The dead's: a ghoul's nest
+  bones and one to three skulls, the arms it plundered (a sword, broken or whole, a spear, a mail byrnie, a helm, a
+  shield: one seven times in ten, another four in ten) and its grave goods (one to four jewels, Treasure 5's, three
+  times in five); a skeleton's crypt a few pennies (2d6, two times in five), candle stubs (three in ten), a jewel (one
+  in five); a wight's bones, pennies (3d6, one in two), a jewel or two (four in ten); a shade's tomb its grave goods
+  unrotted (one to three jewels, 20 to 100 pennies, a parchment one time in three: no book in the catalogue).  What's
+  found there is in the condition Treasure 1's Found column gives (lost or left: broken 01-20, poor 21-60, fair 61-80,
+  good 81-95, as new 96-00), silver and gold 30 the better (as the maker's found things), and the dead's of old 5 the
+  worse a century of their stratum's age; a shade's as new (the Shadow keeps them).  The dead's coins are old: struck by
+  the people of their stratum's oldest era, that mint whole (HISTORY.md's mints: "Their stamps: all of ..., old"); none
+  such (no era, or one still held), today's.  (outfits.txt's [lair rat] ...; its found and old; outdraw.c, outfit.c,
+  outmake.c; dq0d.c's place: a beast's lair's things now too.)  *Not yet:* a bat's roost (guano: no kind), an adder's; a
+  victim's things aged by how long ago (Phase 4's explorers); zombies (no kind yet); the leavings owned by the lair's
+  faction as a folk lair's stores are (ownership's not used yet).
 - **The hoard:** a faction's leader's lair keeps it (the kobold lord's, the bandit lord's, the high priest's): a chest of
   20 to 200 pennies, a crown or two (the bandit lord's and the high priest's) and jewels (Treasure 5's, drawn), locked
   (the kobold lord's one time in two), its key in the leader's pouch.  (The book has no hoard tables: its possessions
