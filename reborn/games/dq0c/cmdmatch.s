@@ -1,13 +1,14 @@
 ; ****************************************************************************
 ; cmdmatch.s - Dingus Quest Zero's command matcher, for the 65C02: does a line parse by the command grammar?  The
 ; host's reference is sim/tools/commandcompile.js; the tables are sim/tools/commandtables.js's (the grammar, DQ0G
-; version 7; its index, DQ0I version 2; the default aliases, DQ0A version 1); the test data, commandmatch-gen.js's.
+; version 8; its index, DQ0I version 3; the default aliases, DQ0A version 1); the test data, commandmatch-gen.js's.
 ;
 ; Its calls (the parser's task, dq0c.s, makes them; C's cmdmatch.h, sim/tools/cmdmatch/cmdmatch_c.s, wraps them):
 ;   cm_init     the tables: cm_g the grammar, cm_i its index, cm_a the default aliases (each where it stays).  C = 0,
 ;               or C = 1: one is not a dq0 table, they don't belong together, or one is too large for the matcher.
 ;               The grammar may be in two parts: cm_r (not 0) its rules, where they are (with the kinds before them),
-;               cm_g its counts and words (the words only cm_init reads; the rules are read as the lines are matched)
+;               cm_g its counts and, for its words, only their bytes' length (two bytes after the counts: the words
+;               themselves are the index's; the rules are read as the lines are matched)
 ;   cm_world    the world's words, when they change: cm_g the words the world names things by, cm_i the names
 ;               given, cm_a the deities' names (space-separated lists, each to stay as it is till the next cm_world)
 ;   cm_match    a line (.A/.X, zero-ended): .A 1 if it parses, 0 if not, $FF (and .X $FF) if it is too long or
@@ -32,11 +33,13 @@
 ; The return addresses go on the 6502's stack (two bytes a level, the grammar's nesting at most); a composite node's
 ; working values on a stack of their own (fstk).  A line that would nest deeper than either allows gives -1.
 ;
-; Its size: 4.6K of code; 4K of RAM (the tokens, the cache, the working values' stack, the dictionary's marks and
-; alias chains, the aliases, the rules' addresses) and 42 bytes of zero page.  The tables are read where they are: the
+; Its size: 4.7K of code; 4.4K of RAM (the tokens, the cache, the working values' stack, the dictionary's marks and
+; alias chains, the aliases, the rules' addresses) and 46 bytes of zero page.  The tables are read where they are: the
 ; grammar may be in a RAM bank at $8000 while it matches (sim/tools/cmdmatch/cmdhy.c), the index and the aliases not.
-; Speed (sim/tools/commandmatch-test.js): about 41,000 cycles a command on the corpus (2026-10-19: the grammar's
-; bare verbs and its selectors alone; 34,000 before); a command's round trip through dq0c (--task) about 64,000.
+; Speed (sim/tools/commandmatch-test.js): about 50,000 cycles a command on the corpus (2026-10-29; 41,000 on
+; 2026-10-19, the grammar the smaller); a command's round trip through dq0c (--task) about 64,000.  The rule room
+; (2026-10-29): a rule's number two bytes (MAXRULES, its rows' bytes a page on through canfar), a name or a word
+; alone two bytes in the table, the grammar's words not in dq0c's RAM; as fast as before within a half per cent.
 ; ****************************************************************************
 
             .setcpu     "65C02"
@@ -49,9 +52,11 @@ T_SEQ       = 1
 T_ALT       = 2
 T_OPT       = 3
 T_REP       = 4
-T_NT        = 5
-T_TERM      = 6
+T_TERM      = 6                     ; (Words: two or more)
 T_QUOTE     = 7
+T_NAME      = $40                   ; A rule's name: $40 | its number's top five bits, then its low byte
+T_OPEN      = $60                   ; An open name: $60, then its number among them (its kind's in pkind)
+T_WORD      = $80                   ; A word alone: $80 | its number's top seven bits, then its low byte
 
 ; The open-name kinds, a bit each in a token's mask (tokmlo: kinds 0-7, tokmhi: 8-11)
 K_OBJ       = $01                   ; (lo)
@@ -79,7 +84,7 @@ W_NAME      = 2                     ; A name given to a thing
 W_DEITY     = 4                     ; A deity's name
 
 MAXTOK      = 14                    ; Positions 0-14 fit a 16-bit mask
-MAXRULES    = 240                   ; (A rule's number, and a name's, is a byte)
+MAXRULES    = 400                   ; (A rule's number, and a name's, two bytes: rid, ridh; the open names 255 at most)
 MAXENT      = 720                   ; The dictionary's entries (the index's, 566 now, then the world's own words)
 MAXDYN      = 16                    ; The world's own words: deities' names that are no word of the dictionary's
 MAXALIAS    = 160                   ; (The default aliases: 134 now)
@@ -95,7 +100,8 @@ TBUFMAX     = 180                   ; A line's letters kept
 np:         .res        2           ; ends: the node
 pos:        .res        1           ; ends: the position
 res:        .res        2           ; ends: the positions it can end at
-rid:        .res        1           ; A rule's number
+rid:        .res        1           ; A rule's number (or a name's: leaf's), low and high
+ridh:       .res        1
 cp:         .res        2           ; The working values (a composite node's, kept on fstk by each that uses them):
 wn:         .res        1           ;   the child, the count left,
 wm:         .res        2           ;   the positions to start from, the positions reached,
@@ -116,25 +122,28 @@ pperm:      .res        2           ; The hash's permutation
 pkind:      .res        2           ; The open names' kinds
 pklo:       .res        2           ; The rules' first kinds, and (pkhi's top bit) whether they can match nothing
 pkhi:       .res        2
+pklo1:      .res        2           ; (The same, a page on: rules 256 on)
+pkhi1:      .res        2
 lnp:        .res        2           ; tokenize's line; cm_world's list; cm_init's aliases
 te:         .res        2           ; lookup: the bucket's end
 
             .bss
 gbase:      .res        2           ; The grammar table
-nrules:     .res        1
-nnames:     .res        1
+nrules:     .res        2
+nnames:     .res        2
 nwords:     .res        2
 rplo:       .res        MAXRULES    ; Each rule's body
 rphi:       .res        MAXRULES
 nent:       .res        2           ; The index's dictionary: its entries,
-rline:      .res        1           ;   the rules treated by name,
-rseq:       .res        1
-rquoted:    .res        1
+rline:      .res        2           ;   the rules treated by name,
+rseq:       .res        2
+rquoted:    .res        2
 dstart:     .res        2           ;   where each hash's words start, the words, their flags
 drec:       .res        2
 dflags:     .res        2
 brlo:       .res        8           ; The rules' first words: the Bloom filter's rows
 brhi:       .res        8
+brhi1:      .res        8           ; (The same, a page on: rules 256 on)
 nindex:     .res        1           ; The indexed alternations: each one's node, options, first words (and their
 ixnlo:      .res        MAXINDEX    ;   options), count, and its open options and their count
 ixnhi:      .res        MAXINDEX
@@ -151,7 +160,7 @@ ixphi:      .res        MAXINDEX
 ixpn:       .res        MAXINDEX
 thenlo:     .res        1           ; The word "then"
 thenhi:     .res        1
-linenode:   .res        3           ; The rule "line", as a node
+linenode:   .res        2           ; The rule "line", as a node
 lmark:      .res        MAXENT      ; Each entry's marks (W_*)
 ahead:      .res        MAXENT      ; Each entry's first alias, + 1 (0: none)
 ndyn:       .res        1           ; The world's own words: their letters, lengths and hashes
@@ -185,7 +194,8 @@ tokmlo:     .res        MAXTOK + 1
 tokmhi:     .res        MAXTOK + 1
 tokbk:      .res        MAXTOK + 1
 tokbb:      .res        MAXTOK + 1
-ckr:        .res        CACHE       ; The cache: rule, position ($FF: empty), ends
+ckr:        .res        CACHE       ; The cache: rule (low, high), position ($FF: empty), ends
+ckh:        .res        CACHE
 ckp:        .res        CACHE
 cml:        .res        CACHE
 cmh:        .res        CACHE
@@ -407,8 +417,8 @@ done:       rts
 ; skip: cp past its node: a composite by its size, a leaf by its length
 .proc skip
             lda         (cp)
-            cmp         #T_NT
-            beq         three
+            cmp         #T_NAME         ; (a name, or a word alone: two)
+            bcs         two
             cmp         #T_TERM
             beq         term
             cmp         #T_QUOTE
@@ -444,7 +454,7 @@ term:       ldy         #1              ; 2, and 2 a word
             adc         cp+1
             sta         cp+1
             rts
-three:      lda         #3
+two:        lda         #2
             bra         add
 one:        lda         #1
 add:        clc
@@ -1065,16 +1075,21 @@ nexttok:    inx
             cpx         #HWMIN
             bcc         deep
             lda         (np)
+            bmi         word            ; (a word alone)
+            cmp         #T_NAME
+            bcs         name
             cmp         #8
             bcs         none
             asl         a
             tax
             jmp         (table,x)
+word:       jmp         e_leaf
+name:       jmp         e_nt
 deep:       jmp         abort
 none:       stz         res
             stz         res+1
             rts
-table:      .word       none, e_seq, e_alt, e_opt, e_rep, e_nt, e_leaf, e_leaf
+table:      .word       none, e_seq, e_alt, e_opt, e_rep, none, e_leaf, e_leaf
 .endproc
 
 ; setend: res: position .A's bit, or nothing if .A is $FF
@@ -1092,18 +1107,55 @@ zero:       stz         res
             rts
 .endproc
 
-; leaf: a word (or words), quoted text or an open name at lfp, from position .X.  OUT: C clear: not a leaf (a rule);
-; C set: .A the position it ends at, $FF if it doesn't match
+; leaf: a word (or words), quoted text or an open name at lfp, from position .X.  OUT: C clear: not a leaf (a rule:
+; its number in rid, ridh); C set: .A the position it ends at, $FF if it doesn't match
 .proc leaf
             stx         t2
             lda         (lfp)
+            bmi         word
+            cmp         #T_NAME
+            bcs         nt
             cmp         #T_TERM
             beq         term
-            cmp         #T_NT
-            beq         nt
             cmp         #T_QUOTE
             beq         quote
             clc
+            rts
+word:       cpx         ntok            ; a word alone: its low byte, then its high
+            bcs         no
+            sta         t1
+            ldy         #1
+            lda         (lfp),y
+            cmp         tokwl,x
+            bne         no
+            lda         t1
+            and         #$7F
+            cmp         tokwh,x
+            beq         one
+no:         lda         #$FF
+            sec
+            rts
+nt:         cmp         #T_OPEN         ; a rule: its number (quoted-text a leaf)
+            bcs         open
+            and         #$1F
+            sta         ridh
+            ldy         #1
+            lda         (lfp),y
+            sta         rid
+            cmp         rquoted
+            beq         maybeq
+rule:       clc
+            rts
+maybeq:     lda         ridh
+            cmp         rquoted+1
+            bne         rule
+quote:      cpx         ntok
+            bcs         no
+            lda         tokq,x
+            beq         no
+one:        inx
+            txa
+            sec
             rts
 term:       ldy         #1
             lda         (lfp),y
@@ -1128,24 +1180,10 @@ words:      lda         (lfp),y
             txa
             sec
             rts
-quote:      cpx         ntok
+open:       cpx         ntok            ; an open name: its kind
             bcs         no
-            lda         tokq,x
-            beq         no
-one:        inx
-            txa
-            sec
-            rts
-nt:         ldy         #1
+            ldy         #1
             lda         (lfp),y
-            cmp         rquoted
-            beq         quote
-            cmp         nrules
-            bcc         rule
-            cpx         ntok
-            bcs         no
-            sec                         ; the open name's number: its kind
-            sbc         nrules
             tay
             lda         (pkind),y
             cmp         #8
@@ -1160,18 +1198,19 @@ khi:        sbc         #8
             lda         bitb,y
             and         tokmhi,x
             bne         one
-no:         lda         #$FF
-            sec
-            rts
-rule:       clc
-            rts
+            bra         no
 .endproc
 
-; canbegin: can rule .A begin at position .X (a sequence needs a then)?  Its first words (the Bloom filter) and kinds,
-; or it can match nothing.  C set if it can.
+; canbegin: can rule rid (ridh) begin at position .X (a sequence needs a then)?  Its first words (the Bloom filter)
+; and kinds, or it can match nothing.  C set if it can.  (Each row a byte a rule: rules 0-255 by the rows' pointers,
+; 256 on by canfar, through the pointers a page on: pklo1, pkhi1, brhi1.)
 .proc canbegin
-            tay
-            cmp         rseq
+            ldy         rid
+            lda         ridh
+            bne         far
+            cpy         rseq
+            bne         gate
+            lda         rseq+1
             bne         gate
             lda         hasthen
             beq         no
@@ -1203,6 +1242,44 @@ no:         clc
             rts
 yes:        sec
             rts
+far:        jmp         canfar
+.endproc
+
+.proc canfar
+            cpy         rseq
+            bne         gate
+            lda         rseq+1
+            beq         gate
+            lda         hasthen
+            beq         no
+gate:       lda         (pkhi1),y
+            bmi         yes             ; it can match nothing
+            cpx         ntok
+            bcs         no
+            sty         t1
+            lda         tokbb,x         ; the token's word among its first words?
+            beq         kinds
+            lda         tokbk,x
+            tay
+            lda         brlo,y
+            sta         tq
+            lda         brhi1,y
+            sta         tq+1
+            ldy         t1
+            lda         (tq),y
+            and         tokbb,x
+            bne         yes
+kinds:      ldy         t1              ; or a kind of the token's among its first kinds?
+            lda         (pklo1),y
+            and         tokmlo,x
+            bne         yes
+            lda         (pkhi1),y
+            and         tokmhi,x
+            bne         yes
+no:         clc
+            rts
+yes:        sec
+            rts
 .endproc
 
 ; A word or quoted text on its own
@@ -1216,7 +1293,7 @@ yes:        sec
             jmp         setend
 .endproc
 
-; A name: an open name's leaf, or a rule: from the cache, or entered if the token can begin it
+; A name: an open name's leaf, or a rule (leaf's rid, ridh): from the cache, or entered if the token can begin it
 .proc e_nt
             lda         np
             sta         lfp
@@ -1226,10 +1303,7 @@ yes:        sec
             jsr         leaf
             bcc         rule
             jmp         setend
-rule:       ldy         #1
-            lda         (np),y
-            sta         rid
-            ldx         pos             ; the cache
+rule:       ldx         pos             ; the cache
             txa
             ora         gen
             sta         posg
@@ -1244,13 +1318,15 @@ rule:       ldy         #1
             lda         ckr,x
             cmp         rid
             bne         miss
+            lda         ckh,x
+            cmp         ridh
+            bne         miss
             lda         cml,x
             sta         res
             lda         cmh,x
             sta         res+1
             rts
-miss:       lda         rid
-            ldx         pos
+miss:       ldx         pos
             jsr         canbegin
             bcs         enter
             stz         res
@@ -1258,19 +1334,28 @@ miss:       lda         rid
             rts
 enter:      ldx         fsp
             KEEP        rid
+            KEEP        ridh
             KEEP        pos
             stx         fsp
             cpx         #FSTKMAX
             bcs         over
-            ldy         rid
+            ldy         rid             ; its body
+            lda         ridh
+            bne         high
             lda         rplo,y
             sta         np
             lda         rphi,y
             sta         np+1
-            lda         pos
+            bra         body
+high:       lda         rplo + 256,y
+            sta         np
+            lda         rphi + 256,y
+            sta         np+1
+body:       lda         pos
             jsr         ends
             ldx         fsp
             TAKE        pos
+            TAKE        ridh
             TAKE        rid
             stx         fsp
             ldx         pos             ; into the cache
@@ -1281,6 +1366,8 @@ enter:      ldx         fsp
             tax
             lda         rid
             sta         ckr,x
+            lda         ridh
+            sta         ckh,x
             lda         pos
             ora         gen
             sta         ckp,x
@@ -1334,11 +1421,9 @@ big:        ldy         #3
             cmp         #$FF
             beq         done
             bra         really
-first:      lda         (lfp)           ; a rule first: can the token begin it?  (Anything else: the call)
-            cmp         #T_NT
-            bne         really
-            ldy         #1
-            lda         (lfp),y
+first:      lda         (lfp)           ; a rule first (leaf's rid, ridh): can the token begin it?  (Anything
+            cmp         #T_NAME         ;   else: the call)
+            bcc         really
             ldx         wp
             jsr         canbegin
             bcc         done
@@ -2019,7 +2104,8 @@ no:         sec
             rts
 .endproc
 
-; rdgrammar: the counts, past the words, the open names' kinds, and each rule's body (each where the last ended)
+; rdgrammar: the counts, past the words (or, the grammar in two parts, past as many bytes as they'd take), the open
+; names' kinds, and each rule's body (each where the last ended)
 .proc rdgrammar
             lda         cm_g
             sta         tp
@@ -2028,24 +2114,25 @@ no:         sec
             sta         tp+1
             sta         gbase+1
             lda         #'G'
-            ldx         #7
+            ldx         #8
             jsr         magic
             jcs         bad
-            ldy         #6              ; rules (MAXRULES at most) and names (255 at most)
+            ldy         #5              ; rules (MAXRULES at most) and names (their open names 255 at most)
             lda         (tp),y
-            jne         bad
-            dey
-            lda         (tp),y
-            cmp         #MAXRULES + 1
-            jcs         bad
             sta         nrules
-            ldy         #8
+            cmp         #<(MAXRULES + 1)
+            iny
             lda         (tp),y
-            jne         bad
-            dey
+            sta         nrules+1
+            sbc         #>(MAXRULES + 1)
+            jcs         bad
+            iny
             lda         (tp),y
             sta         nnames
-            ldy         #9
+            iny
+            lda         (tp),y
+            sta         nnames+1
+            iny
             lda         (tp),y
             sta         nwords
             sta         tq
@@ -2053,7 +2140,26 @@ no:         sec
             lda         (tp),y
             sta         nwords+1
             sta         tq+1
+            lda         cm_r+1          ; (In two parts: the words' bytes counted, not there)
+            beq         whole
+            ldy         #11
             clc
+            lda         (tp),y
+            adc         #11
+            sta         t1
+            iny
+            lda         (tp),y
+            adc         #0
+            sta         t2
+            clc
+            lda         tp
+            adc         t1
+            sta         tp
+            lda         tp+1
+            adc         t2
+            sta         tp+1
+            bra         kinds
+whole:      clc
             lda         tp
             adc         #11
             sta         tp
@@ -2098,27 +2204,50 @@ here:       lda         tp
             sta         pkind
             lda         tp+1
             sta         pkind+1
-            lda         nnames
+            lda         nnames          ; (the open names: 255 at most)
             sec
             sbc         nrules
-            bcc         bad
+            tax
+            lda         nnames+1
+            sbc         nrules+1
+            bne         bad
+            txa
             clc
             adc         tp
             sta         cp
             lda         tp+1
             adc         #0
             sta         cp+1
-            ldx         #0
-rules:      cpx         nrules
-            bcs         ok
-            lda         cp
-            sta         rplo,x
+            lda         #<rplo          ; tq, tr: each rule's place in rplo, rphi
+            sta         tq
+            lda         #>rplo
+            sta         tq+1
+            lda         #<rphi
+            sta         tr
+            lda         #>rphi
+            sta         tr+1
+            stz         rid             ; (the rules counted)
+            stz         ridh
+rules:      lda         rid
+            cmp         nrules
+            bne         one
+            lda         ridh
+            cmp         nrules+1
+            beq         ok
+one:        lda         cp
+            sta         (tq)
             lda         cp+1
-            sta         rphi,x
-            phx
-            jsr         skip
-            plx
-            inx
+            sta         (tr)
+            inc         tq
+            bne         :+
+            inc         tq+1
+:           inc         tr
+            bne         :+
+            inc         tr+1
+:           jsr         skip
+            inc         rid
+            bne         rules
+            inc         ridh
             bra         rules
 ok:         clc
             rts
@@ -2134,7 +2263,7 @@ bad:        sec
             lda         cm_i+1
             sta         tp+1
             lda         #'I'
-            ldx         #2
+            ldx         #3
             jsr         magic
             jcs         bad
             ldy         #5
@@ -2143,6 +2272,7 @@ bad:        sec
             jne         bad
             iny
             lda         (tp),y
+            cmp         nrules+1
             jne         bad
             iny
             lda         (tp),y
@@ -2164,28 +2294,25 @@ bad:        sec
             lda         nent
             cmp         #<(MAXENT - MAXDYN) + 1
             jcs         bad
-:           ldy         #11
-            lda         (tp),y
-            sta         rline
-            iny
-            lda         (tp),y
-            sta         rseq
-            iny
-            lda         (tp),y
-            sta         rquoted
-            clc                         ; the permutation, at 14
+:           ldy         #16             ; the rules by name: two bytes each
+:           lda         (tp),y
+            sta         rline - 11,y
+            dey
+            cpy         #10
+            bne         :-
+            clc                         ; the permutation, at 17
             lda         tp
-            adc         #14
+            adc         #17
             sta         pperm
             lda         tp+1
             adc         #0
             sta         pperm+1
-            clc                         ; the hashes' starts, at 270; the words, 514 bytes on
+            clc                         ; the hashes' starts, at 273; the words, 514 bytes on
             lda         tp
-            adc         #<270
+            adc         #<273
             sta         dstart
             lda         tp+1
-            adc         #>270
+            adc         #>273
             sta         dstart+1
             clc
             lda         dstart
@@ -2221,6 +2348,8 @@ rows:       lda         tp
             sta         brlo,x
             lda         tp+1
             sta         brhi,x
+            ina
+            sta         brhi1,x
             jsr         pastrules
             inx
             cpx         #8
@@ -2232,8 +2361,16 @@ rows:       lda         tp
             jsr         pastrules
             lda         tp
             sta         pkhi
+            sta         pkhi1
             lda         tp+1
             sta         pkhi+1
+            ina
+            sta         pkhi1+1
+            lda         pklo
+            sta         pklo1
+            lda         pklo+1
+            ina
+            sta         pklo1+1
             jsr         pastrules
             lda         (tp)            ; the indexed alternations
             cmp         #MAXINDEX + 1
@@ -2262,11 +2399,11 @@ then:       lda         #<thenword
             bne         bad
             cmp         nwords
             bcs         bad
-:           lda         #T_NT
+:           lda         rline+1         ; (a name: two bytes)
+            ora         #T_NAME
             sta         linenode
             lda         rline
             sta         linenode+1
-            stz         linenode+2
             clc
             rts
 bad:        sec
@@ -2275,6 +2412,10 @@ bad:        sec
 
 ; pastrules: tp past a row of a byte a rule.  pasty: tp past .Y bytes.  (.X kept)
 .proc pastrules
+            lda         tp+1
+            clc
+            adc         nrules+1
+            sta         tp+1
             ldy         nrules
 .endproc
 .proc pasty
