@@ -132,7 +132,7 @@ const NEAR = {
     'dq0handtheme', 'dq0plan', 'dq0inhab', 'dq0popgen'],
   time: ['dq0longwait', 'dq0tasks', 'dq0timed', 'dq0pace', 'dq0steps', 'dq0tiring', 'dq0watch', 'dq0rather', 'dq0stay',
     'dq0usedup', 'dq0answer'],
-  body: ['dq0limbs', 'dq0legs', 'dq0hands', 'dq0handy', 'dq0harm', 'dq0tiring', 'dq0senseless', 'dq0helpless', 'dq0disarm',
+  body: ['dq0limbs', 'dq0legs', 'dq0hands', 'dq0handy', 'dq0harm', 'dq0tiring', 'dq0senseless', 'dq0helpless', 'dq0disarm', 'dq0venom', 'dq0tend',
     'dq0pose', 'dq0quiet'],
   save: ['dq0save', 'dq0kept', 'dq0soak', 'dq0quest', 'dq0vast'],
   screen: ['dq0vera', 'dq0veraplain', 'dq0veraserial', 'dq0prompt', 'dq0sound', 'dq0soundx', 'dq0answer', 'dq0mapturn'],

@@ -48,7 +48,7 @@ static struct bkind bk;
 
 static const struct bkind* __fastcall__ beast (unsigned char j)
 {
-    bread (ovbank[OVLS - 1], &bestiary[j < NBEASTS ? j : 0], &bk, sizeof bk);
+    bread (ovbank[5 - 1], &bestiary[j < NBEASTS ? j : 0], &bk, sizeof bk);    /* (Overlay 5's: the 6th heal.c's) */
     return &bk;
 }
 
@@ -58,7 +58,7 @@ static const char natural[][8] = { "", "bite", "claws", "sting", "horns", "talon
 
 /* ---- A creature's sheet, unpacked (into a HarnMaster character, for the book's functions) and packed again */
 
-static harn_char cr;                            /* (The creature in the fight) */
+harn_char cr;                                   /* (The creature in the fight; heal.c's too) */
 static unsigned char crn;                       /*   and its sheet's number */
 unsigned long pc_out;                           /* (The character senseless till then: it can't defend; dq0harn.h's) */
 static unsigned char prones;                    /* (The request's: the attacker prone, RS_PRONE_A; the defender,
@@ -78,8 +78,12 @@ static const struct bkind* __fastcall__ unpack (unsigned char who)
     cr.att[HARN_WT] = bs.wt * 4;
     cr.state = bs.state & 3;
     if (cr.state == HARN_UNCONSCIOUS && tnow >= bs.out) {
-        cr.state = HARN_CONSCIOUS;              /* (Come round) */
+        cr.state = bs.state & BS_SHOCKED ? HARN_SHOCK : HARN_CONSCIOUS;    /* (Come round: in shock, or not, as
+                                                **   its last shock roll had it, sheet.c's wake; slice 4.3's) */
+        bs.state &= ~BS_SHOCKED;
+        bs.out = 5;                             /* (In shock, H5: Physician 4) */
     }
+    cr.shockhr = cr.state == HARN_SHOCK ? (unsigned char) bs.out : 0;
     cr.bl = bs.bl;
     cr.ninj = bs.ninj;
     memcpy (cr.inj, bs.inj, sizeof bs.inj);
@@ -96,7 +100,10 @@ static void pack (void)
         cr.inj[2].il += cr.inj[k].il;
         cr.inj[2].flags |= cr.inj[k].flags;
     }
-    bs.state = cr.state | (bs.state & BS_DISARMED);
+    bs.state = cr.state | (bs.state & (BS_DISARMED | BS_SHOCKED));
+    if (cr.state == HARN_SHOCK) {
+        bs.out = cr.shockhr;                    /* (Its shock's healing rate, heal.c's watches) */
+    }
     bs.bl = cr.bl;
     bs.ninj = cr.ninj > 3 ? 3 : cr.ninj;
     memcpy (bs.inj, cr.inj, sizeof bs.inj);
@@ -272,6 +279,15 @@ static void __fastcall__ strike (struct side* s, struct side* t, unsigned char n
         effect (t->who, X_DEATH, C_DEAD, HARN_KILL, loc, aspect);
         return;
     }
+    if (s->b && !t->who && by == BY_BITE) {
+        strcpy (bkey, s->b->key);               /* (Its kind's key into the main RAM: the bestiary's the window's) */
+        if (envenom (bkey, loc, impact - p)) {
+            R->c |= AF_NEWS;                    /* (A venomous bite: its venom's course, heal.c's, told after) */
+            if (out_t) {
+                R->w2 = out_t;                  /* (Its ache's shock: senseless) */
+            }
+        }
+    }
     effect (t->who, X_WOUND, cond_of (c), sev, loc, aspect);
     if ((f & HARN_W_STUMBLE) && ((f & HARN_W_LIMB) || harn_stumble_roll (c, 0))) {
         prone (t, 1);                           /* (A leg's: fallen) */
@@ -376,6 +392,11 @@ static void attack (void)
         wound_words (line[0], HARN_KILL, z, k, 0, dealt (&A));
         R->result = O_HIT;
         R->b = D_NONE;
+        return;
+    }
+    if (!D.who && pc.state == HARN_SHOCK && !(prones & RS_KILLER)) {
+        R->result = 0xFF;                       /* (In shock, helpless: a blow from any but a killer held too, as one
+                                                **   senseless's is: nobody engages one helpless, slice 4.3's) */
         return;
     }
     def = defence ();
@@ -532,45 +553,10 @@ static void morale (void)
     }
 }
 
-/* Time passed (RS_TIME, w1 minutes): the bleeders' bloodloss, a point a minute each, death past the endurance (Combat
-** 14: harn.h's harn_bleed, here, for its file brings all the healing with it): of actor (0 the character), or, actor
-** 0xFF, of each actor in w2's bits (bit k: entry k), w1 back its bits of those dead of it */
-static unsigned char __fastcall__ bled (harn_char* c)
+/* A sheet's kind's flags (BF_*: heal.c's, a folk creature binding its bleeding) */
+unsigned char __fastcall__ o_beast_flags (unsigned char kind)
 {
-    unsigned char k, n = 0;
-    unsigned v;
-
-    for (k = 0; k < c->ninj; ++k) {
-        n += (c->inj[k].flags & HARN_IF_BLEEDER) != 0;
-    }
-    v = c->bl + n * R->w1;
-    c->bl = v > 255 ? 255 : v;
-    if (n && c->bl > harn_end (c)) {
-        c->state = HARN_DEAD;
-    }
-    return c->state == HARN_DEAD;
-}
-
-static void bleed (void)
-{
-    unsigned char k, dead = 0;
-
-    if (R->actor != 0xFF) {
-        R->result = R->actor ? (unpack (R->actor), bled (&cr)) : bled (&pc);
-        R->b = health_of (R->actor ? &cr : &pc);
-        if (R->actor) {
-            pack ();
-        }
-        return;
-    }
-    for (k = 0; k < NACTORS; ++k) {
-        if (R->w2 & 1 << k) {
-            unpack (k + 1);
-            dead |= bled (&cr) << k;
-            pack ();
-        }
-    }
-    R->w1 = dead;
+    return beast (kind ? kind - 1 : 0)->flags;
 }
 
 /* A creature's side of two actors' tests (RS_CONTEST's, dq0harn.c's: the actor's test of purpose a, at the steps): by
@@ -632,9 +618,6 @@ void __fastcall__ o_fight (struct req* r)
         return;
     case RS_MORALE:
         morale ();
-        return;
-    case RS_TIME:
-        bleed ();
         return;
     case RS_CONTEST:
         tested ();

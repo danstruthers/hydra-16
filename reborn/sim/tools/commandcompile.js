@@ -849,6 +849,8 @@ function phraseSem(spec, env, ctx) {
     case 'pass': return ctx.engaged.length ? act('VB_PASS', {}) : err('NOT_ENGAGED');
     // What's in the hands changed over, left to right (slice 4.1b)
     case 'swap': return act('VB_SWAP_HANDS', {});
+    // First aid (slice 4.3): its own wounds (none said, or a part of it: the game's), or another's
+    case 'tend': return optObj('VB_TEND');
     // Religion: prayer, intervention, invocations (performed, not cast); baptism is the invocation that converts.
     case 'pray': {
       const t = topicAfter(spec, env, ['for']);

@@ -73,7 +73,8 @@ unsigned char __fastcall__ o_limbs_of (const harn_char* h)
 unsigned __fastcall__ o_cond_of (const harn_char* h)
 {
     static const unsigned state[4] = { 0, C_UNCONSCIOUS, C_STUNNED, C_DEAD };
-    unsigned c = state[h->state & 3] | (h->fl || (h == &pc && tired) ? C_FATIGUED : 0);   /* (Tired, or tiring) */
+    unsigned c = state[h->state & 3] | (h->fl || (h == &pc && tired) ? C_FATIGUED : 0) |  /* (Tired, or tiring; */
+        (h == &pc && pv.hr ? C_POISONED : 0);   /*   a venom in it, heal.c's) */
     unsigned char k, l = o_limbs_of (h), arms, legs, b = h == &pc ? BF_BIPED : cplan;
 
     for (k = 0; k < h->ninj; ++k) {

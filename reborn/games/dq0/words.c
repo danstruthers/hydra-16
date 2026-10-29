@@ -537,6 +537,9 @@ unsigned char __fastcall__ o_more (unsigned char action)
     case VB_HIDE:                               /* (A thing hidden, begun: main.c's hide, the things' IO_HIDE) */
         worked (IR_OK);
         break;
+    case VB_TEND:                               /* (First aid: part 12's, slice 4.3's) */
+        tend ();
+        break;
     default:
         return 0;
     }

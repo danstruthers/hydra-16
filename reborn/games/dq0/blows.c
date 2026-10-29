@@ -103,9 +103,9 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
         add (" is out of reach.");
         return 0;
     }
-    if (out == FO_BLED) {
+    if (out == FO_BLED || out == FO_BOUND) {
         who (aname, 1);
-        add (" collapses, bled white.");
+        add (out == FO_BLED ? " collapses, bled white." : " binds its bleeding wound.");
         return 0;
     }
     if (out == O_RISE) {

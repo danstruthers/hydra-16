@@ -77,7 +77,7 @@ void __fastcall__ news (const struct msg* m);    /* (Part 11's: the rarer news, 
 void __fastcall__ hide (const char* w);
 void hand_said (void);
 void limbs_cmd (void);
-void __fastcall__ pose_words (unsigned w);      /* (Part 12's: the body's position, worded) */
+void __fastcall__ pose_words (unsigned w);      /* (Part 13's: the body's position, worded) */
 unsigned char hold_first (void);
 static void __fastcall__ dig_used (unsigned char n);
 static char dug_with[16];                       /* (The tool a dig took, named) */
@@ -873,6 +873,9 @@ static unsigned char events (void)          /* (How many there were) */
                 if (lsn) {
                     look_way (VB_NONE);         /* (A listen's or a sniff's end: way.c's) */
                 }
+                if (news_due && (task_words (TE_BODY, 0) & 8)) {
+                    end (END_DIED);             /* (Its body's news held as it slept: told as it wakes, slice 4.3's) */
+                }
                 if (!quit) {
                     t_prompt (!busy);
                 }
@@ -927,11 +930,17 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         case E_TASK:                            /* (The long task's: stopped, asked, refused; slice 4.0's) */
             if (m.who == 0) {
+                if ((unsigned char) m.w1 == TE_BODY) {
+                    heard ();                   /* (The blow that brought it told first: a venomous bite's) */
+                }
                 k = task_words (m.w1, m.b);
                 if (k & 2) {
                     intend2 (I_GO_ON, 0, 0);    /* (dq0 -a's: on, unasked) */
                 } else if ((asking = k & 1) != 0) {
                     t_prompt (1);               /* (Its answer's prompt: the character still busy) */
+                }
+                if (k & 8) {
+                    end (END_DIED);             /* (Dead of its wounds, its venom: TE_BODY's, slice 4.3's) */
                 }
                 if (k & 4) {
                     busy = 1;                   /* (Fighting on begun by the world: busy till it's done, E_READY; a
@@ -1025,7 +1034,7 @@ static void __fastcall__ limb_words (const struct msg* m)
     unsigned char k = (unsigned char) m->w1 - WB_DROP;
     const char* s;
 
-    if (k == WB_POSED - WB_DROP) {              /* (The body's position as it said, slice 4.6's: part 12's) */
+    if (k == WB_POSED - WB_DROP) {              /* (The body's position as it said, slice 4.6's: part 13's) */
         pose_words (m->w1);
         return;
     }
@@ -1479,6 +1488,7 @@ static void show_map (void)
 ** was said): 1, its square in tx, ty; 0, none; 2, several and none ahead, which asked (overlay 7's pick) */
 unsigned tx, ty;
 #define find(obj, orel) pick ((obj), (orel))
+unsigned char news_due;                         /* (The body's news held as it sleeps: part 12's) */
 
 /* The character's way with a denizen (how: hub.h's SW_*, the command's verb's: commands.verbs' aux; its things, the
 ** one meant and a name or a thing, and its request): asked of the denizens' task (the hub's sway: it lends the UI's
@@ -2333,9 +2343,9 @@ int main (int argc, char* argv[])
     return 0;
 }
 
-/* ==== Part 12: the body's positions and the background, worded (slices 4.5 and 4.6: overlay 1's bank, part 11's room) */
-#pragma code-name (push, "SW12CODE")
-#pragma rodata-name (push, "SW12RODATA")
+/* ==== Part 13: the body's positions and the background, worded (slices 4.5 and 4.6: overlay 1's bank, part 11's room) */
+#pragma code-name (push, "SW13CODE")
+#pragma rodata-name (push, "SW13RODATA")
 
 /* The body's position as the character said (E_BEAT WB_POSED's w1: the position times 256, | 0x8000 there already) */
 void __fastcall__ s_pose_words (unsigned w)

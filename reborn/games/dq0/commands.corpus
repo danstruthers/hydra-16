@@ -363,6 +363,11 @@ swap hands	VB_SWAP_HANDS	-	-	what's in the hands changed over (slice 4.1b)
 switch hands	VB_SWAP_HANDS	-	-	switch: swap
 change hands	VB_SWAP_HANDS	-	-	change hands
 swap	VB_SWAP_HANDS	-	-	swap alone
+first aid	VB_TEND	-	-	first aid, its own wounds (slice 4.3)
+tend	VB_TEND	-	-	tend alone: its own
+treat the bandit	VB_TEND	object=bandit	near=bandit	another's wounds
+bandage the bandit	VB_TEND	object=bandit	near=bandit	bandage: tend
+first aid for the bandit	VB_TEND	object=bandit	near=bandit	first aid for
 lock the door	VB_LOCK_OBJECT	object=door	near=door	lock
 unlock the door with the key	VB_UNLOCK_OBJECT	object=door;instrument=key	near=door,key	unlock with a key
 pick the lock of the chest	VB_UNLOCK_OBJECT	object=chest	near=chest	a thing's lock picked (slice 4.1)

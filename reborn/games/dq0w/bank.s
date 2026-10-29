@@ -24,7 +24,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
 
             .bss
-_ovbank:    .res        23          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+_ovbank:    .res        25          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
                                     ;   world's own banks (its paging's tables: ipage.c's; the ways across a room;
                                     ;   the traces' store, two: wtrace.c's)
 ova:        .res        1           ; (.A and .X kept through a stub)
@@ -149,7 +149,13 @@ go:
             SWPART      61, 18              ; What's in a thing (things.c's s_inside: part 36's room, 2026-10-27)
             SWPART      62, 17              ; A denizen's things made out (things.c's s_gear_words, 2026-10-27)
             SWPART      63, 12              ; The character's kit (things.c's, part 13's till 2026-10-28)
-            SWPART      64, 5               ; The coins' mints (things.c's, 2026-10-28)
+            SWPART      64, 21              ; The coins' mints (things.c's, 2026-10-28; overlay 21's, 2026-10-29)
+            SWPART      65, 20              ; (65-69: agent missile's numbers, placeholders here: wplace.s)
+            SWPART      66, 20
+            SWPART      67, 20
+            SWPART      68, 20
+            SWPART      69, 20
+            SWPART      70, 21              ; Wounds over time: the bodies' time told, a thing used up (wtend.c)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -312,6 +318,8 @@ go:
             SWFN        den_blow, 15
             SWFN        den_rob, 15
             SWFN        bled, 15
+            SWFN        body_ask, 70
+            SWFN        use_key, 7
             SWFN        puzzle, 16
             SWFN        take_go, 16
             SWFN        take_up, 16

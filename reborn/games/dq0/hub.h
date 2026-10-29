@@ -538,6 +538,7 @@ enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's
                                                 **   the hub's pc_strike's kind, not a part of it times 16) */
 #define FO_GONE         0xFF
 #define FO_BLED         0xFE                    /* (E_FIGHT's x[1]: no blow, but the attacker dead of its bleeding) */
+#define FO_BOUND        0xFD                    /*   (or its bleeding bound, the referee's: slice 4.3's) */
 #define FF_A_DOWN       0x01                    /* E_FIGHT's x[2]: the attacker knocked senseless, */
 #define FF_A_DEAD       0x02                    /*   dead, */
 #define FF_D_DOWN       0x04                    /*   the defender senseless, */
@@ -569,7 +570,10 @@ enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN }
                                                 **   a hole dug part way before, the world's DUG record's) */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
        TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE, TE_LOW, TE_OUT, TE_ROBBED,
-       TE_BEGUN, TE_ASK_SHORT, TE_LEARNT, TE_THERE, TE_FORGOT, TE_UNSURE, TE_ASTRAY, TE_ELSEWHERE };
+       TE_BEGUN, TE_ASK_SHORT, TE_LEARNT, TE_THERE, TE_FORGOT, TE_UNSURE, TE_ASTRAY, TE_ELSEWHERE,
+       TE_BODY };                               /* (TE_BODY: what time did to its body, a venom's course, a wound
+                                                **   healed, the bleeding: the referee's words, RS_DESCRIBE b 4's,
+                                                **   slice 4.3's) */
                                                 /* (The last five a journey's, I_TRAVEL's, slice 4.2's, b its place,
                                                 **   | TRV_ON under way: there, or there already; the place or the way
                                                 **   there not remembered, or no longer; its bearings lost, known, so
@@ -791,7 +795,8 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
        LT_TRAVEL,                               /*   a journey to a place named, a leg at a time (I_TRAVEL's: each leg
                                                 **   a walk, slice 4.2's); */
        LT_STUDY, LT_DISARM, LT_PICK, LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_PRISE, LT_TRACK, LT_SNIFF, LT_FILL,
-       LT_HIDE };
+       LT_HIDE, LT_TEND };                      /* (LT_TEND: first aid, a wound treated, the UI's timed work: slice
+                                                **   4.3's) */
                                                 /*   the timed work (HOUSE.md's long tasks, the user's, 2026-10-22:
                                                 **   its first words at once, its outcome as its time's done, decided
                                                 **   then): a trap's mechanism made out, a trap disarmed, a lock

@@ -80,6 +80,9 @@ struct beast {
 };
 #define BS_DISARMED     0x80                    /* (Its state's: its weapon let fall, its fists till it takes it up:
                                                 **   fight.c's, slice 4.1b's) */
+#define BS_SHOCKED      0x40                    /* (Its state's, senseless: it comes round in shock, the book's last
+                                                **   shock roll's, sheet.c's wake; in shock, its out its shock's
+                                                **   healing rate: slice 4.3's) */
 #define NSHEETS         256
 typedef char beast_fits[sizeof (struct beast) * NSHEETS <= 0x2000 ? 1 : -1];
 extern struct beast bs;                         /* (A sheet, copied out of the bank) */
@@ -88,7 +91,7 @@ void __fastcall__ sheet_get (unsigned char n);  /* Sheet n into bs */
 void __fastcall__ sheet_put (unsigned char n);  /*   and back */
 
 /* sheet.c (overlay 1) */
-#define OVLS    5                               /* (The 4th and 5th: the swapped parts' images) */
+#define OVLS    7                               /* (The 4th and 5th: the swapped parts' images; the 6th and 7th heal.c's) */
 extern char hurt[200];                          /* The last harm's words */
 void sheet (void);                              /* The sheet, into the reply */
 void brief (void);                              /*   its short lines */
@@ -110,7 +113,8 @@ unsigned __fastcall__ knocked_out (harn_char* c, unsigned long* o, unsigned char
 /* What dealt an injury, for its words (the character's: pc_by, each injury's, kept with its sheet): BY_ASPECT its
 ** aspect's (a weapon's, a fall's, a trap's); else a creature's own part (the referee's bestiary's weapons, by their
 ** words: claws and talons alike) */
-enum { BY_ASPECT, BY_BITE, BY_CLAWS, BY_STING, BY_HORNS };
+enum { BY_ASPECT, BY_BITE, BY_CLAWS, BY_STING, BY_HORNS, BY_VENOM };   /* (BY_VENOM: a venom's ache where it's
+                                                **   spread, heal.c's) */
 #define BY_ITS          0x80                    /* (wound_words's: to a creature, "to its") */
 extern unsigned char pc_by[HARN_INJMAX];
 #define IF_POOL         0x80                    /* (An injury's flags, the referee's own, the library's never: the
@@ -120,6 +124,27 @@ extern unsigned char pc_by[HARN_INJMAX];
 void __fastcall__ fight (struct req* r);        /* RS_NEW_ACTOR, RS_ATTACK, RS_MORALE, RS_TIME, RS_CONTEST (a
                                                 **   creature's side: r a copy, as harm's) */
 extern unsigned long pc_out;                    /* (The character senseless till then, the clock's tenths) */
+extern harn_char cr;                            /* (A creature's sheet unpacked: the fight's, heal.c's too) */
+unsigned char __fastcall__ beast_flags (unsigned char kind);   /* (A sheet's kind's BF_*, the bestiary's) */
+
+/* heal.c (overlay 6): wounds over time (slice 4.3) */
+#define NEWS_N          120
+extern char news[NEWS_N];                       /* (What time did to the character, in words: RS_DESCRIBE b 4's) */
+extern char tpart[16];                          /* (RS_TREAT's part said: its text's, copied) */
+struct venom {                                  /* (The character's venom: its healing rate, 0 none; where it's got to;
+                                                **   its kind, heal.c's; its interval's minutes gone, at rest's) */
+    unsigned char   hr, loc, kind;
+    unsigned        left;
+};
+extern struct venom pv;
+extern unsigned rest_m;                         /* (Its rest toward its healing rolls, minutes: RS_TIME's at rest) */
+void __fastcall__ body_req (struct req* r);     /* RS_HARM, RS_TIME, RS_TREAT (r a copy) */
+unsigned char __fastcall__ envenom (const char* key, unsigned char loc, int impact);   /* (fight.c's: a venomous
+                                                **   bite; 1 told) */
+void body_state (void);                         /* (The status's: sheet.c's o_state's) */
+void __fastcall__ venom_time (unsigned m);      /* (Overlay 7's: the venom's course, m minutes at rest's) */
+void __fastcall__ body_line (char* l, unsigned char rd);    /* (Overlay 7's: the save's "body" line made, or read) */
+extern unsigned out_t;                          /* (Knocked senseless by a venom's ache: RS_TIME's w2) */
 
 /* The bestiary (beasts.c's, overlay 5's read-only data since 2026-10-29: the peoples' room in overlay 2): by the kinds'
 ** keys, each one's attributes (Strength, Stamina, Dexterity, Agility, Will), its weight (4 lb), its size (1 tiny ... 4 a

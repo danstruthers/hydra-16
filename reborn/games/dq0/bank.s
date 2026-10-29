@@ -14,7 +14,7 @@
             .include    "zeropage.inc"
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 14                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 15                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
@@ -219,7 +219,8 @@ ovl_out:
             SWPART      9, 13               ; The player's shortcuts (alias.c)
             SWPART      10, 11              ; A search, by its form (search.c)
             SWPART      11, 3               ; The rarer news, worded (main.c); the hands and limbs
-            SWPART      12, 1               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
+            SWPART      12, 15              ; Wounds over time: first aid, in shock, the body's news (tend.c)
+            SWPART      13, 1               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
 
             SWFN        begin, 1
             SWFN        size, 1
@@ -261,7 +262,10 @@ ovl_out:
             SWFN        hide, 11
             SWFN        hand_said, 11
             SWFN        limbs_cmd, 11
-            SWFN        bg_words, 12
-            SWFN        pose_words, 12
+            SWFN        bg_words, 13
+            SWFN        pose_words, 13
             SWFN        hold_first, 11
             SWFN        gear_look, 11
+            SWFN        early, 12
+            SWFN        tend, 12
+            SWFN        body_words, 12

@@ -202,6 +202,8 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define AF_BLEEDING     0x10                    /*   bleeding (the referee's RS_TIME a minute at a time) */
 #define AF_SHIELD       0x40                    /* The defender blocked with its shield (a creature's: its words the
                                                 **   shield's, "it fends off the blow with its buckler": FW_SHIELD) */
+#define AF_NEWS         0x80                    /* The character's body's news (a venomous bite's venom: the referee's
+                                                **   words, RS_DESCRIBE b 4's; the world's E_TASK TE_BODY, slice 4.3's) */
 #define AF_AGAIN        0x20                    /* The one knocked senseless out already, struck again as it lies (the
                                                 **   reply's w2 the longer of the two: its black-out told once) */
 
@@ -305,13 +307,32 @@ enum {
                                                 **   one whose move engaged them) */
     RS_ATTACK,                                  /* Attacker, defender, weapon, mode, range, steps -> the outcome */
     RS_HARM,                                    /* A cause (fall, fire, poison ...) and its dice -> effects */
-    RS_TIME,                                    /* Minutes passed (w1): bleeding, fatigue -> effects (b its health,
-                                                **   result 1 if it died of them) */
+    RS_TIME,                                    /* Minutes passed (w1, the world's, a minute at a time while anyone
+                                                **   bleeds or the character's poisoned, else at each watch, four hours,
+                                                **   of the clock: slice 4.3's): the bleeders' blood lost (w2's bits, the
+                                                **   actors bleeding; x[0]'s, those of them fighting), the character's
+                                                **   too (b 1), its venom's course by what it was about (a: 0 at rest,
+                                                **   1 about, 2 at vigorous work), and as the clock passes the ruleset's
+                                                **   marks the shock's recovery, the healing of wounds, infection (every
+                                                **   sheet's; actor 0, the character's alone) -> w1 the actors dead of
+                                                **   it, c those that bound their bleeding, result 1 the character dead,
+                                                **   b its health, grade 2 news of it (its words RS_DESCRIBE b 4's) | 4
+                                                **   hurt anew (a hard stop: a venom's ache), w2 the tenths it's
+                                                **   senseless (0), x[4..7] the clock when it's next to be asked if
+                                                **   nothing bleeds (a long's: the ruleset's next mark) */
     RS_EXERT,                                   /* Time passed (w1 tenths) moving at a pace (a: GA_*), at strenuous
                                                 **   work (GA_WORK), or standing still (GA_REST): fatigue gained, or
                                                 **   rested off (its summary anew; result 1, a level more) */
     RS_REST,                                    /* Hours resting: healing, advancement -> effects, words */
-    RS_TREAT,                                   /* A healer, a patient -> effects */
+    RS_TREAT,                                   /* First aid, a wound treated (slice 4.3's): the character the healer,
+                                                **   other the patient (0 itself, else an actor's entry plus 1), its
+                                                **   text the part said ("left arm", "" any); a 0, planned: b the wound,
+                                                **   c the treatment, x[0] where, w1 its time (tenths), the text its first
+                                                **   words; result 1 nothing to treat, 2 not one it can treat itself, 3
+                                                **   no patient (its words why).  a 1, done (b, c, x[0] the plan's): the
+                                                **   text its words, and on a line after them the key of a thing used
+                                                **   up ("bandage"); result 1 a bleeder still bleeding (a minute more),
+                                                **   2 the plan gone */
     RS_EQUIP,                                   /* An item taken up (a 1) or put away (a 0): its key in the text
                                                 **   ("pick"); or all that's to hand anew (a 2: the keys, each after
                                                 **   a mark, * held, + worn, a space neither, and its quality after it,
@@ -326,7 +347,9 @@ enum {
     RS_MORALE,
     RS_EXPERIENCE,                              /* Something that counts to advancement */
     RS_DESCRIBE,                                /* An actor's sheet, wounds, or a line -> words (b 3: its state, the
-                                                **   hub's pace and watchfulness its first lines; a 1, those only) */
+                                                **   hub's pace and watchfulness its first lines; a 1, those only; b 4,
+                                                **   what time did to its body since it was last told: RS_TIME's news,
+                                                **   slice 4.3's) */
     RS_POWER,                                   /* (Later: spells and psionics, a generic power) */
     RS_EXPORT,                                  /* The character as a neutral one (struct rs_neutral) */
     RS_IMPORT,                                  /* A neutral character made one of this ruleset's */

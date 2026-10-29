@@ -85,6 +85,19 @@ static unsigned char __fastcall__ to_ring (char* d, const char* s, unsigned char
     return j < n;
 }
 
+/* The character's body's news told the UI (E_TASK's TE_BODY: a venomous bite's venom, its words the referee's) */
+static void news_ev (void)
+{
+    struct msg m;
+
+    hub_map (0);
+    m.kind = E_TASK;
+    m.who = m.a = m.b = 0;
+    m.w1 = TE_BODY;
+    m.t = HUB->now;
+    hub_event (&m);
+}
+
 /* A blow (att at def: 0 the character, else an actor's entry plus 1; body bd in it), its aim z: the referee asked
 ** (RS_ATTACK, the world's slot: w2 1 if the creature's shy), its words put in the ring at fring (who struck at whom,
 ** the actors' names, "" the character; the tenths one's senseless for; whose a fumble or a stumble was; the
@@ -199,6 +212,9 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         bleeds |= 1 << bk;
     }
     told (att, def, out, ff);
+    if (c & AF_NEWS) {
+        news_ev ();                             /* (A venomous bite: its venom told after it, slice 4.3's) */
+    }
     if (dh) {
         drop_held (dh, 1);                      /* (Told after the blow, in the denizens' ring) */
     }
@@ -211,34 +227,26 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     return 0;
 }
 
-/* The bodies bleeding, their bloodloss reckoned a minute at a time (RS_TIME, all at once); those dead of it told (as
-** the UI says, as the character sees them: the ring's name theirs) */
+/* The bodies' time (part 70's body_ask: the referee told the minutes gone, the bleeding's bloodloss, the character's
+** body's, slice 4.3's); those dead of it told, and those that bound their bleeding (as the UI says, as the character
+** sees them: the ring's name theirs) */
 void s_bled (void)
 {
-    struct req* r;
-    unsigned char k, dead;
+    unsigned w = body_ask ();
+    unsigned char k;
 
-    hub_map (0);
-    if (!bleeds || (unsigned) HUB->now - bled_at < 600) {
-        return;
-    }
-    bled_at = (unsigned) HUB->now;
-    r = &HUB->slot[SLOT_WORLD];
-    r->kind = RS_TIME;
-    r->actor = 0xFF;
-    r->other = 0;
-    r->w1 = 1;
-    r->w2 = bleeds;
-    r = hub_ask (SLOT_WORLD);
-    dead = r->w1;
-    r->state = REQ_FREE;
     for (k = 0; k < NACTORS; ++k) {
-        if (dead & 1 << k) {
+        if (w & 0x101 << k) {
             BD_GET (k);
             hub_map (DEN_BANK);
             strcpy (FIGHT_AT[fring].att, bd.name);
-            told (k + 1, 0, FO_BLED, FF_A_DEAD);
-            died ();
+            if (w & 1 << k) {
+                told (k + 1, 0, FO_BLED, FF_A_DEAD);
+                died ();
+            } else {
+                told (k + 1, 0, FO_BOUND, 0);
+                bleeds &= ~(1 << k);
+            }
             BD_PUT ();
             ++HUB->den_seq;
         }
@@ -333,7 +341,8 @@ void __fastcall__ s_den_rob (const struct msg* q)
     if (n) {
         equip_now ();                           /* (What's to hand now, and its load: the referee's, at once, part
                                                 **   49's) */
-        m.kind = E_TASK;
+        hub_map (0);
+    m.kind = E_TASK;
         m.who = 0;
         m.b = bk + 1;
         m.w1 = TE_ROBBED;
