@@ -472,8 +472,8 @@ function createMachine(opt) {
     const si = core.si, sf = core.sf;
     cpu.A = si[0]; cpu.X = si[1]; cpu.Y = si[2]; cpu.S = si[3]; cpu.P = si[4]; cpu.PC = si[5]; cpu.lastPC = si[6];
     cpu.cyc = sf[0]; cpu.ioAt = sf[5];
-    regT = si[9]; regU = si[10]; V = si[11]; regW = si[12]; T = regT & 15; U = regU & 15; W = regW & 15;
-    quick();
+    V = si[11];
+    if (si[9] !== regT || si[10] !== regU || si[12] !== regW) { regT = si[9]; regU = si[10]; regW = si[12]; T = regT & 15; U = regU & 15; W = regW & 15; quick(); }
   }
   function afterImport() {
     if (irqDirty) { irqN = irqLine(); irqDirty = false; }

@@ -10,7 +10,14 @@
 const { WASM } = require('./core65.js');
 
 let module_ = null;
-const bytes = () => typeof atob === 'function' ? Uint8Array.from(atob(WASM), c => c.charCodeAt(0)) : Buffer.from(WASM, 'base64');
+function bytes() {                                         // (Its base64: no atob or Buffer needed)
+  const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/', val = new Uint8Array(128);
+  for (let i = 0; i < 64; i++) val[A.charCodeAt(i)] = i;
+  const s = WASM.replace(/=+$/, ''), out = new Uint8Array(Math.floor(s.length * 3 / 4));
+  let o = 0, acc = 0, bits = 0;
+  for (let i = 0; i < s.length; i++) { acc = acc << 6 | val[s.charCodeAt(i)]; bits += 6; if (bits >= 8) { bits -= 8; out[o++] = (acc >> bits) & 0xFF; } }
+  return out;
+}
 const available = () => typeof WebAssembly === 'object' && typeof WebAssembly.Module === 'function';
 
 function createCore(env, sizes) {
