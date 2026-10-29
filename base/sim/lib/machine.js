@@ -189,7 +189,7 @@ function createMachine(opt) {
     const t = cpu.ioAt;
     sync(t);
     if (a >= 0xFF10 && a < 0xFF14) { flushAcia(); const b = acia.read(a - 0xFF10, t); settleAcia(); return b; }
-    if (a < 0xFF10) { flushVia(); const b = via.read(a - 0xFF00); settleVia(); return b; }
+    if (a < 0xFF10) { const was = viaAccess(); const b = via.read(a - 0xFF00); viaDone(was); return b; }
     if (a === 0xFF41) { flushYm(); const b = ym.readStatus(t); settleYm(); return b; }
     if (vera && a >= 0xFF20 && a < 0xFF40) { flushVera(); const b = vera.read(a - 0xFF20, t); settleVera(); return b < 0 ? 0xFF : b; }   // (Configuring: floating)
     return 0xFF;
@@ -198,7 +198,7 @@ function createMachine(opt) {
     const t = cpu.ioAt;
     sync(t);
     if (a >= 0xFF10 && a < 0xFF14) { flushAcia(); acia.write(a - 0xFF10, v, t); settleAcia(); return; }
-    if (a < 0xFF10) { flushVia(); via.write(a - 0xFF00, v); settleVia(); return; }
+    if (a < 0xFF10) { const was = viaAccess(); via.write(a - 0xFF00, v); viaDone(was); return; }
     if (a === 0xFF40) { ym.select(v); return; }                 // YM2151: register, then data
     if (a === 0xFF41) { flushYm(); ym.write(v, t); settleYm(); return; }
     if (vera && a >= 0xFF20 && a < 0xFF40) { flushVera(); vera.write(a - 0xFF20, v, t); settleVera(); return; }
@@ -272,6 +272,7 @@ function createMachine(opt) {
   }
   const pcHist = new Map(), profHist = new Map(), profCyc = new Map(), profTask = new Array(16).fill(0);
   let profCount = 0, profCycles = 0;
+  const coreStep = cpu.step;                                  // (The CPU's own step: one put in its place runs the JS's)
   quick();
   cpu.PC = rd(0xFFFC) | (rd(0xFFFD) << 8); cpu.P |= FLAGS.I;  // RESET
 
@@ -317,6 +318,14 @@ function createMachine(opt) {
     viaNext = viaAt + via.nextEvent();
     if (ca1At < ca1Edges.length && ca1Edges[ca1At][0] < viaNext) viaNext = ca1Edges[ca1At][0];
     settled();
+  }
+  // (The VIA's, its port B the SD cards' bit-banged SPI: the most often; the IRQ lines asked again only if its own changed)
+  function viaAccess() { if (devSeen > viaAt) { via.tick(devSeen - viaAt); viaAt = devSeen; } return via.irqActive(); }
+  function viaDone(was) {
+    viaNext = viaAt + via.nextEvent();
+    if (ca1At < ca1Edges.length && ca1Edges[ca1At][0] < viaNext) viaNext = ca1Edges[ca1At][0];
+    devNext = Math.min(viaNext, ymNext, veraNext, aciaNext);
+    if (via.irqActive() !== was) irqDirty = true;
   }
   function settleAcia() { aciaNext = acia.idleTo(aciaAt); settled(); }
   function settleYm() { ymNext = ym.idleTo(); settled(); }
@@ -375,7 +384,7 @@ function createMachine(opt) {
   function run(limit) {
     quick();
     flush();
-    if (core && !breaks.length && !calls && !opt.pcHist && profileFrom < 0 && !(opt.watches || []).length && pcWatches.length <= 4) runWasm(limit);
+    if (core && cpu.step === coreStep && !breaks.length && !calls && !opt.pcHist && profileFrom < 0 && !(opt.watches || []).length && pcWatches.length <= 4) runWasm(limit);   // (A step of its own: a test's look at each, nprof.js's)
     else runTo(limit);
     flush();
     if (audio) audio.pump(cpu.cyc);
@@ -478,11 +487,13 @@ function createMachine(opt) {
   function afterImport() {
     if (irqDirty) { irqN = irqLine(); irqDirty = false; }
     core.si[13] = irqN; core.si[14] = acia.typedAt >= 0 ? 1 : 0; core.sf[2] = devNext;
+    if (cpu.halted) core.si[8] = 1;                           // (Stopped from outside: hysnap.js's PC watch)
   }
   function coreEnv() {
     return {
-      io_rd: (a, ioAt, c0) => { fromCore(); if (c0 > devSeen) devSeen = c0; const v = ioRead(a); afterImport(); return v; },
-      io_wr: (a, v, ioAt, c0) => { fromCore(); if (c0 > devSeen) devSeen = c0; ioWrite(a, v); afterImport(); },
+      // (The VIA's: nothing it and what's on it do reads the CPU's registers, only the access's cycle)
+      io_rd: (a, ioAt, c0) => { if (a < 0xFF10) { cpu.cyc = c0; cpu.ioAt = ioAt; } else fromCore(); if (c0 > devSeen) devSeen = c0; const v = ioRead(a); afterImport(); return v; },
+      io_wr: (a, v, ioAt, c0) => { if (a < 0xFF10) { cpu.cyc = c0; cpu.ioAt = ioAt; } else fromCore(); if (c0 > devSeen) devSeen = c0; ioWrite(a, v); afterImport(); },
       shared_write: (k, off, v) => { fromCore(); sharedWrite(k, off, v, T, cpu.lastPC, W); afterImport(); },
       rtc_rd: r => { fromCore(); const v = rtc.read(r); afterImport(); return v; },
       rtc_wr: (r, v) => { fromCore(); rtc.write(r, v); afterImport(); },

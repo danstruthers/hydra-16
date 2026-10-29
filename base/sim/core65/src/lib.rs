@@ -240,6 +240,7 @@ impl Mach {
   #[inline(always)] fn setb(&self, o: usize, v: u32) { unsafe { *(o as *mut u8) = v as u8; } }
   // The state out before an import (the registers as the JS CPU has them mid-instruction: cyc its first cycle), and
   // what JS may have changed back after it
+  #[inline(never)]
   fn out(&self) {
     unsafe {
       let r = &*self.cur;
@@ -248,9 +249,37 @@ impl Mach {
       SF[F_CYC] = self.c0 as f64; SF[F_IOAT] = r.io_at as f64;
     }
   }
+  #[inline(always)]
   fn reach(&mut self, kind: u32, k: u32) {
     let f = self.flags + if kind == 0 { k as usize } else { 16 * 256 + k as usize };
-    if self.b(f) == 0 { self.out(); unsafe { reached(kind, k); } }
+    if self.b(f) == 0 { self.first_reach(kind, k); }
+  }
+  // (The rare ways, out of the quick ones' way)
+  #[inline(never)] fn first_reach(&mut self, kind: u32, k: u32) { self.out(); unsafe { reached(kind, k); } }
+  #[inline(never)] fn io_read(&mut self, a: u32) -> u32 { self.out(); let io_at = unsafe { (*self.cur).io_at } as f64; unsafe { io_rd(a, io_at, self.c0 as f64) } }
+  #[inline(never)] fn io_write(&mut self, a: u32, v: u32) { self.out(); let io_at = unsafe { (*self.cur).io_at } as f64; unsafe { io_wr(a, v, io_at, self.c0 as f64); } }
+  #[inline(never)] fn rtc_read(&mut self, a: u32) -> u32 { self.out(); unsafe { rtc_rd(a - 0x7FF8) } }
+  #[inline(never)] fn rtc_write(&mut self, a: u32, v: u32) { self.out(); unsafe { rtc_wr(a - 0x7FF8, v); } }
+  #[inline(never)] fn hook_write(&mut self, k: u32, off: u32, v: u32) { self.out(); unsafe { shared_write(k, off, v); } }
+  #[inline(never)] fn rd_high(&mut self, a: u32) -> u32 {
+    if a < 0xFFF0 { return self.io_read(a); }
+    if a == 0xFFF0 { return self.reg_t; } if a == 0xFFF1 { return self.reg_u; } if a == 0xFFF2 { return self.vreg; } if a == 0xFFF3 { return self.reg_w; }
+    if a == 0xFFFE || a == 0xFFFF {
+      let o = self.vec + ((self.vreg & 15) as usize) * 2;
+      return if a == 0xFFFE { self.b(o) } else { self.b(o + 1) };
+    }
+    self.b(self.osrom + (self.w as usize) * 0x2000 + (a - 0xE000) as usize)
+  }
+  #[inline(never)] fn wr_high(&mut self, a: u32, v: u32) {
+    if a < 0xFFF0 { self.io_write(a, v); return; }
+    if a == 0xFFF0 { self.reg_t = v; self.t = v & 15; return; }
+    if a == 0xFFF1 { self.set_u(v); return; }
+    if a == 0xFFF2 { self.vreg = v; return; }
+    if a == 0xFFF3 { self.reg_w = v; self.w = v & 15; return; }
+    if a == 0xFFFE || a == 0xFFFF {
+      let o = self.vec + ((self.vreg & 15) as usize) * 2;
+      self.setb(if a == 0xFFFE { o } else { o + 1 }, v);
+    }
   }
   fn set_u(&mut self, v: u32) { self.reg_u = v; self.u = v & 15; self.shared_on = !self.noshared && self.u < self.shared_u; }
 }
@@ -259,7 +288,7 @@ impl Bus for Mach {
   #[inline(always)]
   fn rd(&mut self, a: u32) -> u32 {
     if a < 0x8000 {
-      if self.rtc && a >= 0x7FF8 && self.t == 15 { self.out(); return unsafe { rtc_rd(a - 0x7FF8) }; }
+      if self.rtc && a >= 0x7FF8 && self.t == 15 { return self.rtc_read(a); }
       return self.b(self.tr + (self.t as usize) * 0x8000 + a as usize);
     }
     if a < 0xA000 {
@@ -280,19 +309,13 @@ impl Bus for Mach {
       return if off < self.prom_len { self.b(self.prom + off as usize) } else { 0xFF };
     }
     if a < 0xFF00 { return self.b(self.osrom + (self.w as usize) * 0x2000 + (a - 0xE000) as usize); }
-    if a < 0xFFF0 { self.out(); let io_at = unsafe { (*self.cur).io_at } as f64; return unsafe { io_rd(a, io_at, self.c0 as f64) }; }
-    if a == 0xFFF0 { return self.reg_t; } if a == 0xFFF1 { return self.reg_u; } if a == 0xFFF2 { return self.vreg; } if a == 0xFFF3 { return self.reg_w; }
-    if a == 0xFFFE || a == 0xFFFF {
-      let o = self.vec + ((self.vreg & 15) as usize) * 2;
-      return if a == 0xFFFE { self.b(o) } else { self.b(o + 1) };
-    }
-    self.b(self.osrom + (self.w as usize) * 0x2000 + (a - 0xE000) as usize)
+    self.rd_high(a)
   }
   #[inline(always)]
   fn wr(&mut self, a: u32, v: u32) {
     let v = v & 0xFF;
     if a < 0x8000 {
-      if self.rtc && a >= 0x7FF8 && self.t == 15 { self.out(); unsafe { rtc_wr(a - 0x7FF8, v); } return; }
+      if self.rtc && a >= 0x7FF8 && self.t == 15 { self.rtc_write(a, v); return; }
       self.setb(self.tr + (self.t as usize) * 0x8000 + a as usize, v); return;
     }
     if a < 0xA000 {
@@ -300,7 +323,7 @@ impl Bus for Mach {
       if b >= 0xF0 {
         if !self.shared_on { return; }
         let k = self.u * 16 + (b & 15);
-        if self.hook { self.out(); unsafe { shared_write(k, a - 0x8000, v); } }
+        if self.hook { self.hook_write(k, a - 0x8000, v); }
         self.reach(1, k);
         self.setb(self.sb + (k as usize) * 0x2000 + (a - 0x8000) as usize, v); return;
       }
@@ -309,15 +332,7 @@ impl Bus for Mach {
       self.setb(self.tb + ((self.t * self.banks + b) as usize) * 0x2000 + (a - 0x8000) as usize, v); return;
     }
     if a < 0xFF00 { return; }
-    if a < 0xFFF0 { self.out(); let io_at = unsafe { (*self.cur).io_at } as f64; unsafe { io_wr(a, v, io_at, self.c0 as f64); } return; }
-    if a == 0xFFF0 { self.reg_t = v; self.t = v & 15; return; }
-    if a == 0xFFF1 { self.set_u(v); return; }
-    if a == 0xFFF2 { self.vreg = v; return; }
-    if a == 0xFFF3 { self.reg_w = v; self.w = v & 15; return; }
-    if a == 0xFFFE || a == 0xFFFF {
-      let o = self.vec + ((self.vreg & 15) as usize) * 2;
-      self.setb(if a == 0xFFFE { o } else { o + 1 }, v);
-    }
+    self.wr_high(a, v)
   }
   fn pushed(&mut self, s: u32) {
     unsafe {
@@ -330,7 +345,8 @@ impl Bus for Mach {
 
 // Run (machine.js's runWasm): from the state, to cycle limit or until machine.js is wanted.  The first instruction's
 // start (the devices' sync, the IRQ lines, a WAI) machine.js has seen to (skip).  OUT: why it stopped: 0 the limit,
-// 1 the devices (devNext), 2 an interrupt to take, 3 waiting (WAI), 4 stopped (STP)
+// 1 the devices (devNext), 2 an interrupt to take, 3 waiting (WAI), 4 stopped (STP), 5 stopped by machine.js (in an
+// import: cpu.halted set, as hysnap.js's PC watch does; the instruction it came in finished first, as the JS's)
 #[no_mangle]
 pub extern "C" fn run(skip: u32) -> u32 {
   unsafe {
@@ -386,6 +402,7 @@ pub extern "C" fn run(skip: u32) -> u32 {
       let w = c.step();
       if w == 1 { SI[S_WAITING] = 1; why = 3; break; }
       if w == 2 { SI[S_HALTED] = 1; why = 4; break; }
+      if SI[S_HALTED] != 0 { why = 5; break; }
     }
     let m = &*c.m; let regs = &c.r;
     SI[S_A] = regs.a as i32; SI[S_X] = regs.x as i32; SI[S_Y] = regs.y as i32; SI[S_S] = regs.s as i32; SI[S_P] = regs.p as i32; SI[S_PC] = regs.pc as i32;
