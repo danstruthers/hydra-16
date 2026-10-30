@@ -6298,7 +6298,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0flee', what: 'Dingus Quest Zero\'s unarmed blows and morale (the user\'s, 2026-10-16: punching, kicking, head butts, the referee\'s gear.c, by Unarmed; RS_MORALE, HarnMaster\'s Initiative test, Combat 18), by the blows told and the denizens\' state (the referee\'s dice at this seed): at seed 5\'s giant rats (bare fists: the character\'s Unarmed 80) a punch fought on (HOUSE.md\'s fighting on, the user\'s, 2026-10-20: every blow of it a punch, the hub\'s pc_strike), the rat and its kin turning on the character, a punch felling one; its kin shaken and, shy, fleeing (fighting no more, no foe left beside it); the one down finished with a kick; the other gone out of reach, a head butt at it not struck (dq0unarmed\'s, in it; a kick, a head butt and punches typed one by one before fighting on)',
+      name: 'dq0flee', what: 'Dingus Quest Zero\'s unarmed blows and morale (the user\'s, 2026-10-16: punching, kicking, head butts, the referee\'s gear.c, by Unarmed; RS_MORALE, HarnMaster\'s Initiative test, Combat 18), by the blows told and the denizens\' state (the referee\'s dice at this seed): at seed 5\'s giant rats (bare fists: the character\'s Unarmed 80) a punch fought on (HOUSE.md\'s fighting on, the user\'s, 2026-10-20: every blow of it a punch, the hub\'s pc_strike), the rat and its kin turning on the character, a punch felling one; its kin that heard it fall shaken and, shy, fleeing (fighting no more, no foe left beside it), those out of hearing untested (since 2026-10-30, HOUSE.md\'s morale: a fall unfelt till it\'s known); the one down finished with a kick; the other gone out of reach, a head butt at it not struck (dq0unarmed\'s, in it; a kick, a head butt and punches typed one by one before fighting on)',
       init: 't_rc', cycles: 900e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml una 80 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -T', 'd',
         'wait', 'go right', 'punch the rat', 'kick the rat', 'head butt the rat', 'quit', 'echo $status']) },
@@ -6312,8 +6312,13 @@ module.exports = {
         if (new Set(dq0Ev(p, 'E_FIGHT', { def: 0, who: w => w > 0 }).map(e => e.who)).size < 2) f.push('the rat and its kin not both striking at the character');
         const felled = mine(p).find(e => e.out === 'O_HIT' && (e.ff & FF_D_DOWN)), rat = felled && felled.def;
         if (!felled) f.push('no punch felled a rat (' + dq0Evs(p) + ')');
-        const kin = p.after ? p.after.actors.filter(a => a.k + 1 !== rat) : [];
-        if (!kin.length || kin.some(a => a.doing !== 'DO_FLEE')) f.push('its kin not fleeing: ' + kin.map(a => a.doing).join(', '));
+        // (Its kin that heard it fall tested and fleeing; those out of their hearing of a fight's din, 15 squares, not
+        // tested: the fall unfelt till it's known, HOUSE.md's morale, 2026-10-30)
+        const C = require('../sim/lib/dq0meaning.js').constants().names, tested = new Set(dq0Rep(p, 'dslot', { kind: C.RS_MORALE }).map(r => r.actor));
+        const down = p.after && p.after.actors.find(a => a.k + 1 === rat), kin = p.after ? p.after.actors.filter(a => a.k + 1 !== rat) : [];
+        const heard = kin.filter(a => tested.has(a.k + 1)), far = a => !down || Math.max(Math.abs(a.x - down.x), Math.abs(a.y - down.y)) > 15;
+        if (!heard.length || heard.some(a => a.doing !== 'DO_FLEE')) f.push('its kin not fleeing: ' + kin.map(a => a.doing + (tested.has(a.k + 1) ? ' (tested)' : '')).join(', '));
+        if (kin.some(a => !tested.has(a.k + 1) && !far(a))) f.push('a kin within its hearing not tested: ' + JSON.stringify(kin.map(a => [a.k, a.x, a.y])) + ' ' + JSON.stringify(down));
         dq0Need(f, p, 'E_TASK', { te: 'TE_NO_FOE' }, 'the fight not over, no foe left');
         if (!mine(k).some(e => e.def === rat && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the one down not finished (' + dq0Evs(k) + ')');
         if (!k.after || k.after.pc.strike !== 'SK_KICK') f.push('not finished with a kick: ' + (k.after && k.after.pc.strike));

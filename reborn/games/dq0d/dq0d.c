@@ -44,8 +44,10 @@
 ** copied there from the overlays' file's banks, LIBDIR/dq0d.ovl, as it's called; bank.s's stubs): part 1, the
 ** populations, the placing; part 2, the character's ways with a denizen, and harmed; part 3, the records paged; part
 ** 4, the regions round the character wanted, the records kept, the task's start (the kinds read in, popgen loaded),
-** and what its actors seldom do (one made an actor or no longer one, killed, its kin dismayed, an ally come along, a
-** cornered one's dart).
+** and what its actors seldom do (one made an actor or no longer one, killed, an ally come along, a cornered one's
+** dart); part 5, the senses' own (a hunter's stalk, a scent followed, one drawn on); part 6, morale (HOUSE.md's: the
+** field about an actor and its bonds to its leaders, reckoned as it engages and as one near it falls; its kin
+** dismayed, a leader's loss known; the bonds aged by the clock).
 ** The blows its actors strike and take are the world's, told as the denizens' events (E_FIGHT): it takes them to heart
 ** (fought: fleeing, dismay, harmed, a death recorded).
 */
@@ -84,10 +86,12 @@ int __fastcall__ start (const char* dir);      /* Part 4 */
 void __fastcall__ enlist (unsigned char i, unsigned char k);
 void __fastcall__ retire (unsigned char k);
 void __fastcall__ killed (unsigned char k);
-void __fastcall__ dismay (unsigned char k);
 unsigned char __fastcall__ along (unsigned char k);
 unsigned char __fastcall__ dart (unsigned char k);
-extern unsigned char ovbank[2];
+void __fastcall__ dismay (unsigned char k);    /* Part 6 (morale) */
+void __fastcall__ heart (unsigned char k);
+void age (void);
+extern unsigned char ovbank[3];
 extern char _SWAP_START__[];
 
 /* ---- The kinds: the data file's (make.js's, from kinds.txt: the game's bestiary), in a bank of their own */
@@ -182,12 +186,17 @@ struct den {
                                                 **   lair's rx, ry) */
     unsigned        hx, hy;                     /* Its lair's home square (placed) */
     unsigned char   fac;                        /* Its faction (its kind's, the stand-in's; or the theme's) */
+    unsigned char   serve;                      /* The weeks it had served its leaders as the game began (a leader's,
+                                                **   it had led: its band's age), */
+    unsigned char   contact;                    /*   and how much it's with them, 0-255 (part 6's: its bonds' growth) */
 };
 #define D_OUT           0x01                    /* On a square of its own */
 #define D_ACTOR         0x02                    /* An actor now (the hub's entry the truth while it is) */
 #define D_DEAD          0x04                    /* Dead (its body left where it fell: an item) */
 #define D_MET           0x08                    /* Met (made an actor once: its personal things made, I_KIT's KT_PURSE,
                                                 **   the outfits' phase 3, 2026-10-27) */
+#define D_LOST          0x10                    /* It knows a leader of its is lost (dead): no bond to a dead one after
+                                                **   (part 6's; one it doesn't know of holds) */
 #define NNAMES          8
 #define NDREG           32
 #define GIVE_WAY        30                      /* (Tenths the minds wait for the UI's command in hand, at most: its
@@ -278,8 +287,11 @@ struct dkx {
     unsigned char   standing;                   /* 0-4: its means */
     unsigned char   home[3];                    /* Its home room's uses, the best liked first (world.h's U_*; 0xFF none) */
     unsigned char   body;                       /* Its body (hub.h's BD_*: how it gets up, and falls, worded) */
+    unsigned char   rank;                       /* Its rank in its faction (RK_*: kinds.txt's, 2026-10-30) */
 };
 enum { KP_BODY, KP_OPEN, KP_HIDDEN, KP_BOX, KP_TO_LEADER, KP_LEADER };
+enum { RK_FILE, RK_CAPTAIN, RK_LORD };          /* (The rank and file; a band's head; a chieftain or a spiritual
+                                                **   leader: part 6's morale) */
 static struct dkx X;
 static void __fastcall__ kx_get (unsigned char k)
 {
@@ -479,11 +491,15 @@ static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, un
     D.lrx = L.rx;
     D.lry = L.ry;
     D.attitude = hd.fatt[lf & (NFACT - 1)];    /* (Its faction's, as the character stands with it) */
+    D.contact = ll ? 200 : 64;                  /* (With its leader in its lair, often; else seldom: part 6's bonds) */
+    rx = 8 + ((unsigned char) (L.id * 5 ^ L.id >> 1) & 127);  /* (The band's age, weeks: by its number, not the dice, so the
+                                                **   populations' dice are as they were) */
     for (i = 0; i < L.n + (ll != 0) && (u = rec_new (0)) != 0xFF; ++i) {
         if (i == L.n) {
             D.kind = ll;                        /* (Its leader, the last) */
         }
         D.id = ++hd.ids;
+        D.serve = rx - ((unsigned char) D.id & rx >> 3);   /* (Each its own, about the band's age) */
         den_put (u);
     }
     L.n = i;
@@ -964,6 +980,8 @@ static void __fastcall__ write_back (unsigned char k)
     D.ready = a.ready;
     D.attitude = a.attitude;
     D.order = aorder[k];
+    D.serve = a.serve;                          /* (Its bonds: part 6's) */
+    D.contact = a.contact;
 }
 
 /* Actor k no longer one (far from the character): its record its own again, its body gone from the world's keeping
@@ -1025,6 +1043,11 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     strcpy (rq.text, K.key);
     rq.w1 = i;
     ask (RS_NEW_ACTOR, k + 1, 0);
+    a.lead = s->lead;                           /* (Its influence and might, the referee's; its bonds its record's: part
+                                                **   6's morale) */
+    a.power = s->power;
+    a.serve = D.serve;
+    a.contact = D.contact;
     im.b = (s->cond & C_BLEEDING) != 0;
     strcpy (a.name, (i = name_of (D.id)) < NNAMES ? hd.names[i].name : K.name);
     a.kind = D.kind;
@@ -1302,41 +1325,14 @@ void __fastcall__ s_killed (unsigned char k)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW2CODE")            /* (Part 2's since 2026-10-29: part 4's room for the peoples) */
-#pragma rodata-name (push, "SW2RODATA")
-
-/* Actor k fallen (dead, senseless): its kin among the actors (its kind, and its faction's: 2026-10-29) test their
-** courage (RS_MORALE, a bad situation, two steps worse: a friend seen slain; four, its faction's leader: HOUSE.md's
-** the peoples, the Gargun's king above all), and those it breaks (or shakes, a shy kind) flee; K its own again after */
-void __fastcall__ s_dismay (unsigned char k)
-{
-    unsigned char j, f = HUB->actor[k].faction;
-    signed char st;
-
-    kx_get (akind[k]);
-    st = X.keeps == KP_LEADER ? -4 : -2;
-    for (j = 0; j < NACTORS; ++j) {
-        if (j != k && HUB->actor[j].name[0] && (akind[j] == akind[k] || HUB->actor[j].faction == f) && !fled[j]) {
-            kind_get (akind[j]);
-            rq.steps = st;
-            ask (RS_MORALE, j + 1, 0);
-            if (rq.result == M_BROKEN || (rq.result == M_CAUTIOUS && (K.flags & K_SHY))) {
-                fled[j] = FLEE_T;               /* (Its doing and its attitude its next turn's: fleeing) */
-            }
-        }
-    }
-    kind_get (akind[k]);
-}
-
-#pragma code-name (pop)
-#pragma rodata-name (pop)
 
 /* The blows the world's struck since the last look (E_FIGHT, the denizens' events), taken to heart, in turn: 1 if
 ** there were any */
+static struct msg fm;                           /* (The blow at hand: harmed reads it) */
+#define m fm
 static unsigned char fought (void)
 {
-    static struct msg m;
-    unsigned char k, f, att, n = 0;
+    unsigned char k, f, att, n = 0, g;
 
     while (hub_dnext (&fplace, &m)) {
         if (m.kind != E_FIGHT) {
@@ -1346,18 +1342,17 @@ static unsigned char fought (void)
         f = m.x[2];
         att = m.who;
         k = ((att ? att : m.a) - 1) & 7;        /* (The actor in it: the character fights them one at a time) */
-        if (m.x[1] != FO_BLED) {
-            if (f & FF_FLEES) {
-                fled[k] = FLEE_T;               /* (Broken: it flees, and won't seek the fight again) */
-                HUB->actor[k].attitude = AT_UNFRIENDLY;
-            }
-            if (f & (att ? FF_A_DEAD | FF_A_DOWN : FF_D_DEAD | FF_D_DOWN)) {
-                kind_get (akind[k]);
-                dismay (k);
-            }
-            if (!att) {
-                harmed (k);                     /* (Its own, and their foes, think again of the character) */
-            }
+        if (m.x[1] != FO_BLED && (f & FF_FLEES)) {
+            fled[k] = FLEE_T;                   /* (Broken: it flees, and won't seek the fight again) */
+            HUB->actor[k].attitude = AT_UNFRIENDLY;
+        }
+        if ((g = f & (att ? FF_A_DEAD | FF_A_DOWN : FF_D_DEAD | FF_D_DOWN)) != 0) {
+            dismay (k | g << 4);                /* (Its kin's courage, how it fell in the high bits: part 6's; bled to
+                                                **   death too, a fall all the same) */
+        }
+        if (m.x[1] != FO_BLED && !att) {
+            harmed (k);                         /* (Its own, and their foes, think again of the character; its
+                                                **   wound seen) */
         }
         if (f & (att ? FF_A_DEAD : FF_D_DEAD)) {
             killed (k);
@@ -1365,6 +1360,7 @@ static unsigned char fought (void)
     }
     return n;
 }
+#undef m
 
 /* ---- Attitudes (DENIZENS.md): each denizen's to the character (hub.h's AT_*), its faction's to begin with, moved by
 ** what happens: its lair intruded on (a kind that keeps to it: the character beside its home), the character seen
@@ -1697,6 +1693,9 @@ static unsigned char __fastcall__ decide (unsigned char k)
         im.b = 2;
         act (I_GOTO, k);
     } else if (d >= 0xFA && d <= 0xFC && d != 0xFB) {   /* (A round's blow, or a shot: outnumbering it, later) */
+        if (was != DO_FIGHT) {
+            heart (k);                          /* (Its heart as it engages: the field about it, its bonds; part 6's) */
+        }
         a.doing = DO_FIGHT;
         im.a = 0;
         im.b = d == 0xFA ? Z_MID | AIM_SHOT : Z_MID;
@@ -1740,6 +1739,9 @@ static unsigned char __fastcall__ rec_on (unsigned char sn, unsigned x, unsigned
 
 /* Those due moved: 1 if any was */
 static unsigned long roam_at;                   /* (The soonest one's due) */
+#define NOW_HI          (((unsigned*) &now)[1]) /* (The clock's high word: 65536 tenths, near enough two hours) */
+#define DAY_HI          13                      /* (A day of them, near enough) */
+static unsigned aged;                           /* (The bonds aged to then, the high word: part 6's age) */
 
 static unsigned char roam (void)
 {
@@ -1749,6 +1751,9 @@ static unsigned char roam (void)
 
     if (now < roam_at) {
         return 0;
+    }
+    if (NOW_HI - aged >= DAY_HI) {
+        age ();                                 /* (The bonds aged by the clock, a day at a time: part 6's) */
     }
     roam_at = now + ROAM_T;
     for (i = 0; i < hd.ndens; ++i, ++q) {
@@ -2007,6 +2012,9 @@ void __fastcall__ s_harmed (unsigned char k)
     unsigned l;
 
     hub_map (0);
+    if ((fm.x[1] == O_HIT || fm.x[1] == O_BOTH_HIT) && !(fm.x[2] & FF_STOPPED)) {
+        q[k].mood |= AM_HURT;                   /* (Wounded, as its fellows see it: part 6's field) */
+    }
     f = q[k].faction;
     den_get (q[k].den);
     l = D.lid;
@@ -2234,7 +2242,7 @@ void s_sway (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1, OV2): 0, or -1 */
+/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1, OV2, OV3): 0, or -1 */
 static int __fastcall__ ovl_load (const char* dir)
 {
     unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Through the parts' area: none in it yet) */
@@ -2243,12 +2251,13 @@ static int __fastcall__ ovl_load (const char* dir)
 
     strcpy ((char*) b, dir);
     strcat ((char*) b, "/dq0d.ovl");
-    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (2)) < 0) {
+    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (3)) < 0) {
         return -1;
     }
     ovbank[0] = n;
     ovbank[1] = n + 1;
-    for (off = 0; off < 0x4000 && (n = read (fd, b, 512)) > 0; off += n) {
+    ovbank[2] = n + 2;
+    for (off = 0; off < 0x6000 && (n = read (fd, b, 512)) > 0; off += n) {
         hy_bank (ovbank[off >> 13]);
         memcpy ((void*) (0x8000 + (off & 0x1FFF)), b, n);
     }
@@ -2803,5 +2812,397 @@ void __fastcall__ s_keep (unsigned char back)
     hub_map (0);
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 6: morale (HOUSE.md's morale, for review; DECISIONS.md's the user's of 2026-10-29: "any intelligent
+** creature should modify the morale field around itself").  Each intelligent actor (a mind low, average or cunning:
+** no beast, nothing mindless) sways the courage of those about it by its influence: its rank in its faction (kinds.txt's:
+** the rank and file, a captain, a lord or a spiritual leader) and its influence skill (the referee's summary's lead:
+** Oratory or Rhetoric), for its friends (its kind, its faction) and against its foes (a faction hostile to theirs: and
+** any foe mightier than one, by its power, its fearsomeness), less with distance, by how it's doing (wounded, half;
+** berserk, twice; fallen or fleeing, a friend's turned against them, a foe's none); the character too, by its own
+** (its allies its friends, those hostile to it its foes).  A friend's counts the more as one has been long with its
+** band (its time served and its contact: the bonds about it).  And bonds upward: each subordinate's to its leaders
+** (its band's head in its lair, its faction's above that, wherever they are), by the leader's rank, the time they've
+** had together (the leader's own a new leader's less) and how much they're together (contact: a band living with its
+** leader every day, others each time they're near; aged by the clock).  All of it is reckoned only as a test is made
+** (or may be: an actor's heart, as it engages, and as one near it falls), never kept up as things go: the field and
+** the bonds held to the book's band (twenty points either way), the situation besides.  A fall (dismay): each of the
+** fallen's kin that knows of it (hears the fight's din: its hearing, a fight as loud as the world's blows) tests at
+** once, the fallen its influence turned, its bond to it gone if it was its leader (dead: known lost from then, its
+** record's D_LOST; one that doesn't know of it keeps its bond, the fall unfelt till it's known: told, the hook). */
+#pragma code-name (push, "SW6CODE")
+#pragma rodata-name (push, "SW6RODATA")
+#pragma bss-name (push, "SW6RODATA")            /* (Its locals the part's own: the main RAM's room) */
+#pragma register-vars (push, on)                /* (Its records' pointers in the zero page) */
+
+#define FIELD_R         8                       /* Squares an actor's influence reaches (all of it beside one, half at
+                                                **   five, falling off with distance: falloff) */
+#define FALL_LOUD       5                       /* A fall's din (the world's blows', wfight.c's LOUD_FIGHT) */
+#define WEEK_HI         92                      /* A week, the clock's high words (65536 tenths each) */
+#define FULL_WEEKS      128                     /* The weeks together that make a bond's time whole (some two and a
+                                                **   half years: the bonds' scale, 0-128) */
+#define CONTACT_UP      16                      /* A bond's contact the more each time an actor's near its leader */
+#define FIELD_MAX       20                      /* The field and the bonds held to the book's band (points) */
+#define SEEN_SLAIN      10                      /* A friend seen to fall: the book's bad situation (points), */
+#define DESPERATE       20                      /*   none of its friends left standing about it, desperate */
+
+static const unsigned char rankw[3] = { 2, 5, 10 };    /* A rank's weight (points): the rank and file, a captain, a lord
+                                                **   or a spiritual leader (its influence, a sixteenth of its skill
+                                                **   more; and its bonds' whole) */
+static const unsigned char falloff[FIELD_R + 1] = { 255, 255, 205, 171, 146, 128, 114, 102, 93 };   /* (An
+                                                **   influence's 256ths at each distance: four over the squares and
+                                                **   three) */
+static unsigned tb;                             /* (times') */
+static unsigned char krank[SND_KINDS];          /* (Each kind's rank: ranks') */
+static unsigned weeks;                          /* (The game's weeks gone) */
+static unsigned char l1, l2;                    /* (A record's leaders, chain's: its band's head, its faction's above it;
+                                                **   0xFF none) */
+static struct actor tp, tq;                     /* (The one reckoned for, and another about it: copied out) */
+static unsigned char gi;                        /* (The actor grab copies) */
+static unsigned char rj, rfallen, rgone;        /* (reckon's: the one reckoned for, the one fallen, the bond gone) */
+static unsigned char js, jc, jq;                /* (Its time served and its contact, 0-128 each, and its band's
+                                                **   familiar: their mean) */
+static unsigned char fw, fd;                    /* (An influence's weight, points, and its distance) */
+static int rf;                                  /* (The field as it's reckoned) */
+static signed char mf, mb;                      /* (The last reckoning's field and bonds, points) */
+static unsigned char nfr;                       /* (And its friends standing about it) */
+
+/* Each kind's rank, and the weeks gone (each entry's first: the part's data are its own while it's in) */
+static void ranks (void)
+{
+    static unsigned char k;
+
+    for (k = 0; k < nkinds && k < SND_KINDS; ++k) {
+        kx_get (k);
+        krank[k] = X.rank;
+    }
+    weeks = NOW_HI / WEEK_HI;
+}
+
+/* a times tb (16 bits: no library multiplying for the main RAM to keep) */
+static unsigned __fastcall__ times (unsigned char a)
+{
+    static unsigned r, s;
+
+    for (r = 0, s = a; tb; tb >>= 1, s <<= 1) {
+        if (tb & 1) {
+            r += s;
+        }
+    }
+    return r;
+}
+
+/* A bond's time (0-128): w weeks served as the game began, the game's weeks since on them, FULL_WEEKS at most */
+static unsigned char __fastcall__ tpart (unsigned char w)
+{
+    static unsigned t;
+
+    t = w + weeks;
+    return t >= FULL_WEEKS ? FULL_WEEKS : t;
+}
+
+/* Actor gi copied out (into t), the hub's header in the window */
+static void __fastcall__ grab (struct actor* t)
+{
+    hub_map (0);
+    memcpy (t, &HUB->actor[gi], sizeof *t);
+}
+
+/* Record d's leaders (l1, l2): the highest above its rank in its own lair (its band's head), and its faction's highest
+** above that elsewhere (wherever it is); a dead one counted while it doesn't know of a loss (D_LOST); D its record's
+** after, the hub's header in the window */
+static void __fastcall__ chain (unsigned char d)
+{
+    register struct den* q = POP->den;
+    static unsigned char i, b1, b2, r, dead;
+
+    den_get (d);
+    b1 = b2 = krank[D.kind & (SND_KINDS - 1)];
+    dead = D.flags & D_LOST ? D_DEAD : 0;       /* (Dead and known: no leader) */
+    l1 = l2 = 0xFF;
+    hy_bank (pb);
+    for (i = 0; i < hd.ndens; ++i, ++q) {
+        if (q->kind && q->fac == D.fac && i != d && !(q->flags & dead)) {
+            r = krank[q->kind & (SND_KINDS - 1)];
+            if (q->lid == D.lid) {
+                if (r > b1) {
+                    b1 = r;
+                    l1 = i;
+                }
+            } else if (r > b2) {
+                b2 = r;
+                l2 = i;
+            }
+        }
+    }
+    hub_map (0);
+    if (b2 <= b1) {
+        l2 = 0xFF;                              /* (Not above its band's head) */
+    }
+}
+
+/* The bond (points) to leader record l (0xFF none, or rgone: 0) of the one reckoned for (js, jc): the leader's rank's
+** weight by the time they've had together (the lesser of its service and the leader's own) and how much they're
+** together */
+static unsigned char __fastcall__ bond (unsigned char l)
+{
+    register struct den* q;
+    static unsigned char t;
+
+    if (l == 0xFF || l == rgone) {
+        return 0;
+    }
+    hy_bank (pb);
+    q = &POP->den[l];
+    t = q->serve;
+    fw = rankw[krank[q->kind & (SND_KINDS - 1)]];
+    hub_map (0);
+    t = tpart (t);
+    tb = (t < js ? t : js) + jc;
+    return times (fw) >> 8;
+}
+
+/* A friend's influence fw (points) at fd, for the one reckoned for (turned: against it), its band's familiar the more */
+static void __fastcall__ by (unsigned char turned)
+{
+    tb = 128 + jq;
+    fw = times (fw) >> 8;
+    tb = falloff[fd];
+    fw = times (fw) >> 8;
+    rf += turned ? -fw : fw;
+}
+
+/* A foe's weight (points) against the one reckoned for: its influence fw, and an eighth of its might (power pw) over
+** the other's; wounded, half */
+static void __fastcall__ against (unsigned char pw)
+{
+    fw += pw > tp.power ? (unsigned char) (pw - tp.power) >> 3 : 0;
+    tb = falloff[fd];
+    fw = times (fw) >> 8;
+    rf -= fw;
+}
+
+/* Actor rj's heart (points): the field about it and its bonds, held to the book's band; rfallen the actor fallen (0xFF
+** none), its influence turned; rgone a leader's record whose bond's taken away (0xFF none).  mf, mb, nfr after; K its
+** kind's, the hub's header in the window */
+static signed char reckon (void)
+{
+    static unsigned char smart, nl, b;
+
+    gi = rj;
+    grab (&tp);
+    js = tpart (tp.serve);
+    jc = tp.contact >> 1;
+    jq = (js + jc) >> 1;                        /* (Its bonds about it: how familiar its band is) */
+    kind_get (akind[rj]);
+    l1 = l2 = 0xFF;
+    if ((smart = K.mind >= M_LOW) != 0) {
+        chain (tp.den);
+    }
+    rf = nfr = nl = 0;
+    for (gi = 0; gi < NACTORS; ++gi) {
+        grab (&tq);
+        if (gi == rj || !tq.name[0] || tq.sn != tp.sn || (fd = apart (tq.x - tp.x, tq.y - tp.y)) > FIELD_R) {
+            continue;
+        }
+        kind_get (akind[gi]);
+        fw = K.mind >= M_LOW ? rankw[krank[akind[gi] & (SND_KINDS - 1)]] + (tq.lead >> 4) : 0;
+        if (tq.mood & AM_BERSERK) {
+            fw <<= 1;                           /* (Berserk, twice; wounded, half) */
+        }
+        if (tq.mood & AM_HURT) {
+            fw >>= 1;
+        }
+        b = gi == rfallen || tq.doing >= DO_FLEE || fled[gi];   /* (Fallen or fleeing) */
+        if (akind[gi] == akind[rj] || tq.faction == tp.faction) {
+            by (b);                             /* (A friend: fallen or fleeing, its influence turned) */
+            if (!b) {
+                ++nfr;
+                nl |= tq.den == l1 || tq.den == l2;
+            }
+        } else if (!b && REL (tp.faction, tq.faction) == AT_HOSTILE) {
+            against (tq.power);
+        }
+    }
+    hub_map (0);
+    if (!pcdead && pcs == tp.sn && (fd = apart (pcx - tp.x, pcy - tp.y)) <= FIELD_R) {
+        fw = rankw[RK_FILE] + (HUB->pcsum.lead >> 4);  /* (The character's: the rank and file's, its own skill) */
+        if (tp.attitude == AT_ALLIED) {
+            by (0);
+        } else if (tp.attitude <= AT_UNFRIENDLY && !pchelp) {
+            against (HUB->pcsum.power);
+        }
+    }
+    b = 0;
+    if (smart) {
+        if (nl && tp.contact < 255 - CONTACT_UP) {
+            HUB->actor[rj].contact = tp.contact + CONTACT_UP;  /* (With its leader again: the bond the stronger) */
+        }
+        b = bond (l1) + bond (l2);
+    }
+    mf = rf < -127 ? -127 : rf > 127 ? 127 : rf;
+    mb = b;
+    rf += b;
+    kind_get (akind[rj]);
+    return rf < -FIELD_MAX ? -FIELD_MAX : rf > FIELD_MAX ? FIELD_MAX : rf;
+}
+
+/* Every actor's heart anew (rfallen the one fallen, its influence turned: 0xFF none) */
+static void hearts (void)
+{
+    rgone = 0xFF;
+    for (rj = 0; rj < NACTORS; ++rj) {
+        if (rj != rfallen && (hub_map (0), HUB->actor[rj].name[0])) {
+            HUB->actor[rj].heart = reckon () / 5;
+        }
+    }
+}
+
+/* Actor rj's courage tested (RS_MORALE, in the task's own slot): its heart (rfallen, rgone: reckon's), the situation's
+** besides (a friend seen to fall; desperate, none left standing), why (MR_*): broken (or shaken, a shy kind), it flees;
+** berserk, so its fellows see it */
+static void __fastcall__ courage (unsigned char why)
+{
+    rq.steps = (reckon () - (nfr ? SEEN_SLAIN : DESPERATE)) / 5;
+    rq.a = why;
+    rq.b = mf;
+    rq.c = mb;
+    rq.w1 = rgone != 0xFF ? rgone : rfallen;
+    ask (RS_MORALE, rj + 1, 0);
+    if (rq.result == M_BROKEN || (rq.result == M_CAUTIOUS && (K.flags & K_SHY))) {
+        fled[rj] = FLEE_T;                      /* (Its doing and its attitude its next turn's: fleeing) */
+    } else if (rq.result == M_BERSERK) {
+        HUB->actor[rj].mood |= AM_BERSERK;
+    }
+}
+
+/* Actor k fallen (its high bits how, FF_* << 4: dead, else senseless): each of its kin among the actors (its kind, its faction) that knows of
+** it (hears the fight's din: within its hearing of a fight's loudness, as it hears another's noise; its sight never
+** reaches further) tests its courage: its friend's fall the book's bad situation (desperate, none left standing about
+** it), the fallen's influence turned; its leader's (its band's head, its faction's), its bond to it gone (dead: known
+** lost from then).  Then every actor's heart anew.  K its own after */
+void __fastcall__ s_dismay (unsigned char k)
+{
+    static unsigned char j, dead, why;
+    static struct actor f;
+
+    dead = k & (FF_A_DEAD | FF_D_DEAD) << 4;   /* (Dead, else senseless) */
+    rfallen = gi = k & 7;
+    ranks ();
+    grab (&f);
+    for (j = 0; j < NACTORS; ++j) {
+        gi = j;
+        grab (&tp);
+        if (j == rfallen || !tp.name[0] || fled[j] || (akind[j] != akind[rfallen] && tp.faction != f.faction) ||
+            tp.sn != f.sn || (kind_get (akind[j]), apart (tp.x - f.x, tp.y - f.y) > (unsigned) K.hear * FALL_LOUD / 2)) {
+            continue;                           /* (Unheard: unfelt, its bond to it holding, till it's known) */
+        }
+        why = MR_FELL;
+        if (K.mind >= M_LOW) {
+            chain (tp.den);
+            if (f.den == l1 || f.den == l2) {
+                why = MR_LEADER;
+                if (dead) {
+                    D.flags |= D_LOST;          /* (Known lost: no bond to it from now) */
+                    den_put (tp.den);
+                }
+            }
+        }
+        rj = j;
+        rgone = f.den;
+        courage (why);
+    }
+    hearts ();
+    kind_get (akind[rfallen]);
+}
+
+/* Actor k's heart as it engages (decide's: the field about it and its bonds, its steps the world's blow carries to the
+** referee, its courage tested with them as it's wounded); K its own after */
+void __fastcall__ s_heart (unsigned char k)
+{
+    rj = k;
+    rfallen = rgone = 0xFF;
+    ranks ();
+    HUB->actor[k].heart = reckon () / 5;
+}
+
+/* Record l (0xFF none) if it's dead, else 0xFF */
+static unsigned char __fastcall__ dead_of (unsigned char l)
+{
+    if (l != 0xFF) {
+        hy_bank (pb);
+        l = POP->den[l].flags & D_DEAD ? l : 0xFF;
+        hub_map (0);
+    }
+    return l;
+}
+
+/* The hook for a loss told (a runner's word, a survivor's, to come: through a stub, SWFN told, 6): actor j learns of
+** its leaders' deaths it didn't know of: known lost from then (D_LOST), its courage tested at once (MR_TOLD), its
+** bond to the first of them gone, the news a bad situation.  K its own after */
+void __fastcall__ s_told (unsigned char j)
+{
+    static unsigned char d;
+
+    rj = j;
+    rfallen = 0xFF;
+    ranks ();
+    hub_map (0);
+    chain (d = HUB->actor[j].den);
+    if ((rgone = dead_of (l1)) == 0xFF) {
+        rgone = dead_of (l2);
+    }
+    if (rgone != 0xFF) {
+        D.flags |= D_LOST;
+        den_put (d);
+        courage (MR_TOLD);
+    }
+    kind_get (akind[j]);
+}
+
+/* The bonds aged by the clock (roam's, a day or more gone since they last were): each record not an actor (an
+** actor's its own while it is, each time it's near its leader), living with its leader (a lair with its faction's
+** leader in it: L_LEADER) its contact whole (with it every day); else the less, an eighth a day (eight days at most) */
+void s_age (void)
+{
+    register struct den* q;
+    static unsigned lids[8];
+    static unsigned char i, j, m, dn;
+
+    if (!aged) {
+        aged = NOW_HI;                          /* (The first time: from now) */
+        return;
+    }
+    for (dn = 0; NOW_HI - aged >= DAY_HI; ++dn) {
+        aged += DAY_HI;
+    }
+    dn = dn > 8 ? 8 : dn;
+    for (i = m = 0; i < hd.nlairs; ++i) {
+        lair_get (i);
+        if (L.kind && (L.flags & L_LEADER) && m < 8) {
+            lids[m++] = L.id;
+        }
+    }
+    hy_bank (pb);
+    for (i = 0, q = POP->den; i < hd.ndens; ++i, ++q) {
+        if (q->kind && !(q->flags & (D_DEAD | D_ACTOR))) {
+            for (j = 0; j < m && lids[j] != q->lid; ++j) {
+            }
+            if (j < m) {
+                q->contact = 255;               /* (With its leader every day: as much as can be) */
+            } else {
+                for (j = dn; j; --j) {
+                    q->contact -= q->contact >> 3;
+                }
+            }
+        }
+    }
+    hub_map (0);
+}
+
+#pragma register-vars (pop)
+#pragma bss-name (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
