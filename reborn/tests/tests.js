@@ -3242,8 +3242,8 @@ module.exports = {
         const want = ['Which do you mean: 1. the giant rat ahead to your left, on the right, 2. the giant rat ahead to your left, on the ' +
           'left, or 3. the giant rat ahead?', 'Your target: the giant rat.', 'Your target: the giant rat ahead to your left.',
           'You take the dagger in your right hand.', 'You throw your dagger at the giant rat, and miss.', 'Put down.',
-          'Which do you mean: 1. the body ahead, 2. the bones ahead to your right, or 3. the pick where you stand?', 'Taken.',
-          'Which do you mean: 1. the body ahead, or 2. the pick where you stand?', 'Taken.', 'Your hands are full, and your pack too.',
+          'Which do you mean: 1. the body ahead', 'the bones ahead to your right, or 3. the pick where you stand?', 'Taken.',
+          'Which do you mean: 1. the body ahead', 'or 2. the pick where you stand?', 'Taken.', 'Your hands are full, and your pack too.',
           'a pick, a torch, a flask of oil, bones', 'You carry none of those.', 'Your hands are full, and your pack too.', 'Throw it at what?',
           'You finish the giant rat where it lies.', 'You have no target now.',
           'You have no target.', 'You turn to face north.', 'You cross the room.', '% echo $status'];

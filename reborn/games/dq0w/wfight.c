@@ -284,7 +284,11 @@ void __fastcall__ s_den_blow (unsigned char def, unsigned char z)
         mshot.kind = 0;
         return;
     }
-    shot_op (SO_UNBOW, 0, 0);                   /* (A launcher in its hands let fall first: part 65's) */
+    hub_map (0);
+    if (HUB->agear[bk] & AG_SHOOTS) {
+        shot_op (SO_UNBOW, 0, 0);               /* (A launcher in its hands let fall first: part 65's, asked only of one
+                                                **   with a launcher, the part's copy the dearer) */
+    }
     if (!den_draw ()) {                         /* (Its weapon drawn first, its hands empty: its round's, part 60's) */
         blow (bk + 1, def, z);
     }

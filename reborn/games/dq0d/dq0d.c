@@ -1607,8 +1607,9 @@ static unsigned char __fastcall__ decide (unsigned char k)
     } else if (sres[k] && foe && dist == 1) {
         a.face = bearing (ddx, ddy);            /* (A foe beside it: it strikes) */
         d = 0xFC;
-    } else if (sres[k] && foe && a.sn == pcs && shoots (k, ag)) {
-        d = 0xFA;                               /* (A foe it senses further off, a shot: part 2's, slice 4.7's) */
+    } else if (sres[k] && foe && (ag & AG_SHOOTS) && a.sn == pcs && shoots (k, ag)) {
+        d = 0xFA;                               /* (A foe it senses further off, a shot: part 2's, slice 4.7's; asked
+                                                **   only of one with a launcher, the part's copy the dearer) */
     } else if ((d = keep_off (k)) != 0xFF) {
         a.doing = sres[k] ? DO_WATCH : DO_ROAM;
     } else if (a.attitude == AT_ALLIED) {

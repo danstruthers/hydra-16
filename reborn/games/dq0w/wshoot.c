@@ -314,6 +314,8 @@ static unsigned char __fastcall__ shot_reach (unsigned char k)
 ** another thing: no shot, AG_NOSHOT), a missile of its own for it (none: it shoots no more, AG_SHOOTS gone), the shot
 ** (none to be had, out of range, no clear line: AG_NOSHOT, its mind's to close with the character till the character
 ** moves: part 14's) */
+static void den_unbow (void);
+
 static void __fastcall__ den_shot (unsigned char z)
 {
     unsigned i;
@@ -358,6 +360,9 @@ static void __fastcall__ den_shot (unsigned char z)
     }
     return;
 none:
+    if (g == AG_SHOOTS && sl_held) {
+        den_unbow ();                           /* (Its missiles spent: its launcher let fall, its weapon's next) */
+    }
     hub_map (0);                                /* (Its round given back: free now, nothing done) */
     HUB->agear[bk] = g == AG_NOSHOT ? HUB->agear[bk] | AG_NOSHOT : HUB->agear[bk] & ~AG_SHOOTS;
     bd.ready = HUB->now;
