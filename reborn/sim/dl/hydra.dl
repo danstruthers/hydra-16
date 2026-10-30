@@ -76,6 +76,7 @@
 (load-roms (read-file spec-bios) (read-file spec-prom))
 (set! {ac-paste ac-flow} spec-paste spec-flow)
 (set! {ac-charcyc} (char-cycles))
+(set! {opt-junk} (+ spec-out "/../junk-" opt-seed ".bin"))   ; (the seed's junk kept beside the tests' results: machine.dl's)
 (power-up)
 (type-keys spec-keys)
 (devsched)                      ; (the keys: the ACIA's next event)

@@ -145,8 +145,7 @@
 
 ; ---- the VIA (port 0, IRQ line 0): timer 1 (one-shot or free-running), timer 2 (one-shot), the shift register's
 ; timing and flag, port B (SPI: spi-portb, spi-miso), port A (pins; the I2C bus on PA0 and PA1), CA1's edge
-(def {vr} (hash-create))
-(dotimes {i 16} (hash-put vr [i 0]))
+(def {vr} (buffer 16))
 (def {via-t1 via-t1latch via-t1on via-ifr via-ier via-t2 via-t2latchl via-t2on via-srleft via-ca1level opt-portain}
   #xFFFF #xFFFF NIL 0 0 #xFFFF #xFF NIL -1 1 255)
 (fun {via-portb} {spi-portb (bit-or (bit-and (vr 0) (vr 2)) (bit-and (bit-xor (vr 2) 255) #x7F))})
@@ -157,8 +156,8 @@
   (set {m} (bit-and (shr (vr 11) 2) 7))
   (set! {via-ifr} (bit-and via-ifr (bit-not 4)))
   (set! {via-srleft} (if (in? m {2 6}) 16 (if (in? m {1 5}) (* 16 (+ via-t2latchl 2)) -1)))
-  (if (in? m {1 2}) (hash-put vr [10 255]) 0)})
-(fun {via-read r at} {if (in? r {0 1 2 3 15 12})
+  (if (in? m {1 2}) (buffer-put vr 10 255) 0)})
+(fun {via-read r at} {if (or (< r 4) (== r 15) (== r 12))
   (if (zero? r) (do (set {ddr} (vr 2)) (bit-or (bit-and (vr 0) ddr) (bit-and (+ #x7F (* 128 (spi-miso))) (bit-xor ddr 255))))
     (if (in? r {1 15}) (do (if (== r 1) (set! {via-ifr} (bit-and via-ifr (bit-not 3))) 0)
                            (bit-or (bit-and (vr 1) (vr 3)) (bit-and (via-pinsa) (bit-xor (vr 3) 255))))
@@ -173,10 +172,10 @@
                 (if (== r 7) (shr via-t1latch 8)
                   (if (== r 13) (bit-or via-ifr (if (zero? (bit-and via-ifr via-ier #x7F)) 0 128))
                     (if (== r 14) (bit-or via-ier 128) (vr r)))))))))))})
-(fun {via-write r b at} {if (in? r {0 1 2 3 15 12})
-  (if (== r 15) (do (hash-put vr [1 b]) (via-porta))
-    (if (== r 1) (do (hash-put vr [1 b]) (set! {via-ifr} (bit-and via-ifr (bit-not 3))) (via-porta))
-      (do (hash-put vr [r b]) (if (in? r {0 2}) (via-portb) (if (== r 3) (via-porta) 0)))))
+(fun {via-write r b at} {if (or (< r 4) (== r 15) (== r 12))
+  (if (== r 15) (do (buffer-put vr 1 b) (via-porta))
+    (if (== r 1) (do (buffer-put vr 1 b) (set! {via-ifr} (bit-and via-ifr (bit-not 3))) (via-porta))
+      (do (buffer-put vr r b) (if (or (zero? r) (== r 2)) (via-portb) (if (== r 3) (via-porta) 0)))))
   (do (via-sync at)
     (if (in? r {4 6}) (set! {via-t1latch} (+ (bit-and via-t1latch #xFF00) b))
       (if (== r 5) (set! {via-t1latch via-t1 via-t1on via-ifr} (+ (bit-and via-t1latch 255) (* b 256)) (+ (bit-and via-t1latch 255) (* b 256)) T (bit-and via-ifr (bit-not #x40)))
@@ -185,9 +184,9 @@
             (if (== r 9) (set! {via-t2 via-t2on via-ifr} (+ (* b 256) via-t2latchl) T (bit-and via-ifr (bit-not #x20)))
               (if (== r 13) (set! {via-ifr} (bit-and via-ifr (bit-not (bit-and b #x7F))))
                 (if (== r 14) (set! {via-ier} (if (bit? b 7) (bit-or via-ier (bit-and b #x7F)) (bit-and via-ier (bit-not (bit-and b #x7F)))))
-                  (if (== r 10) (do (hash-put vr [10 b]) (via-srstart))
-                    (if (== r 11) (do (hash-put vr [11 b]) (if (zero? (bit-and b #x1C)) (set! {via-srleft} -1) 0))
-                      (hash-put vr [r b])))))))))))})
+                  (if (== r 10) (do (buffer-put vr 10 b) (via-srstart))
+                    (if (== r 11) (do (buffer-put vr 11 b) (if (zero? (bit-and b #x1C)) (set! {via-srleft} -1) 0))
+                      (buffer-put vr r b)))))))))))})
 (fun {via-tick d} {do
   (if (>= via-srleft 0) (do (set! {via-srleft} (- via-srleft d)) (if (< via-srleft 0) (set! {via-ifr} (bit-or via-ifr 4)) 0)) 0)
   (if via-t2on (do (set! {via-t2} (- via-t2 d)) (if (< via-t2 0) (set! {via-ifr via-t2on via-t2} (bit-or via-ifr #x20) NIL (bit-and via-t2 #xFFFF)) 0)) 0)
@@ -198,7 +197,7 @@
       (if (bit? (vr 11) 6) (set! {via-t1} (+ via-t1 via-t1latch 2)) (set! {via-t1 via-t1on} #xFFFF NIL)))) 0)})
 (fun {via-irq?} {pos? (bit-and via-ifr via-ier #x7F)})
 (fun {via-next} {min (if via-t1on (+ via-t1 1) INF) (if via-t2on (+ via-t2 1) INF) (if (>= via-srleft 0) (+ via-srleft 1) INF)})
-(fun {via-reset} {do (dotimes {i 16} (hash-put vr [i 0])) (set! {via-ifr via-ier via-t1on via-t2on via-srleft} 0 0 NIL NIL -1) (via-portb)})
+(fun {via-reset} {do (buffer-fill vr 0) (set! {via-ifr via-ier via-t1on via-t2on via-srleft} 0 0 NIL NIL -1) (via-portb)})
 
 ; ---- the YM2151 (port 4, IRQ line 4): busy 64 of its clocks after a data write (a write then is lost, counted); timers
 ; A and B, their flags (IRQ line 4), reset as the write's busy time ends; key-ons noted, and each write if ym-log (the

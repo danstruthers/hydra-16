@@ -4,7 +4,7 @@
 ;
 ; Memory.  mem, a buffer: a task's $0000-$7FFF at T * 32768 + a; its RAM bank b (installed: below modules * 16) at
 ; BANKS + (T * NB + b) * 8192; shared bank (U, b) at SHARED + (U * 16 + b - #xF0) * 8192.  A task's 32K powers up
-; junk (pu: the same each time, from the seed); banks 0.  rom, a buffer: the BIOS ROM's 16 pages of 8K, then the paged
+; junk (machine.js's, from the seed: junk-ram); banks 0.  rom, a buffer: the BIOS ROM's 16 pages of 8K, then the paged
 ; ROM's 256 banks of 16K, each as the CPU sees it at $A000-$DFFF (the board's swap of A13, and of the bank number's bits
 ; 2 and 3, undone here once).  The bases (remap: when T, U, W or a task's $00 or $01 change): tbz, tbs, tbl
 ; (the zero page's, the stack's and the rest's base in mem), bkon and bkb (the bank window: installed, its base), pbase
@@ -46,26 +46,35 @@
     (if (and (== opt-model "nostack") (>= ad #x100) (< ad #x200)) 0
       (if opt-u7 (if opt-u7high (bit-or tt opt-u7mask) (bit-and tt (bit-xor opt-u7mask 15))) tt)))})
 
-(fun {bank-installed b} {if (>= b #xF0) (and (not (== opt-model "noshared")) (< uu opt-sharedu)) (< b NB)})
-(fun {bank-base b} {if (>= b #xF0) (+ SHARED (* (+ (* uu 16) (- b #xF0)) 8192) (- #x8000)) (+ BANKS (* (+ (* tt NB) b) 8192) (- #x8000))})
+; (ts-plain: no what-if nor fault, every access the task's own: tsel is T; sh-on: the shared banks there; set at power-up)
+(def {ts-plain sh-on} T T)
+
 
 ; The bases, again (and rd, wr and the blocks for them: the slow mode, with the clock chip in task F's top 8 bytes,
-; or a what-if); the next instruction's place not known, and the run loop's inner loop (a block too) ended: the code
-; may be another bank's
+; or a what-if).  The code running may now be another's (below $E000: the task's RAM, its bank, its paged ROM; the
+; BIOS ROM's page changed; the slow mode come or gone): the next instruction's place not known, and the run loop's
+; inner loop (a block too) ended.  Code in the BIOS ROM's page goes on (the kernel's calls change T as they go)
 (fun {remap} {do
-  (set! {tbz tbs tbl} (* (tsel 0) 32768) (+ (* (tsel #x100) 32768) 256) (* (tsel #x200) 32768))
+  (if ts-plain (set! {tbz tbs tbl} (* tt 32768) (+ (* tt 32768) 256) (* tt 32768))
+    (set! {tbz tbs tbl} (* (tsel 0) 32768) (+ (* (tsel #x100) 32768) 256) (* (tsel #x200) 32768)))
   (remap-banks)
-  (set! {wbase} (- (* ww 8192) #xE000))
-  (set! {rtct} (and rtc-on (== (tsel #x7FF8) 15)))
-  (set! {mslow} (or rtct model-slow))
-  (if mslow (def {rd wr dcache} rd-slow wr-slow dcache-slow) (def {rd wr dcache} rd-fast wr-fast dcache-fast))})
+  (set {w} (- (* ww 8192) #xE000))
+  (set! {rtct} (and rtc-on (== (if ts-plain tt (tsel #x7FF8)) 15)))
+  (set {s} (or rtct model-slow))
+  (if (and (== w wbase) (== s mslow)) 0 (do
+    (set! {wbase mslow ck lim} w s -1 0)
+    (if mslow (def {rd wr dcache} rd-slow wr-slow dcache-slow) (def {rd wr dcache} rd-fast wr-fast dcache-fast))))})
 (def {model-slow} NIL)
-; Only the banks' (a write to $0000 or $0001, the task's own: tbz's): the bank window's, the paged ROM's
+(fun {set-t v} {do (set! {regt tt} v (bit-and v 15)) (remap)})       ; (T written: a block's own way to it, cpu.dl's)
+; Only the banks' (a write to $0000 or $0001, the task's own: tbz's): the bank window's, the paged ROM's (the code
+; running, below $E000, may now be another's: remap's)
 (fun {remap-banks} {do
   (set {b0} (mem tbz))
-  (set! {bkon bkb} (bank-installed b0) (bank-base b0))
-  (if (and bkon opt-ramfault (same-chip b0 opt-rfbank)) (set! {bkon} :fault) 0)
-  (set! {pbase ck lim} (+ PROM (* (mem (+ tbz 1)) 16384) (- #xA000)) -1 0)})
+  (if (>= b0 #xF0) (set! {bkon bkb} (and sh-on (< uu opt-sharedu)) (+ SHARED (* (+ (* uu 16) b0 -240) 8192) -32768))   ; (bank b0: there, its base)
+    (set! {bkon bkb} (< b0 NB) (+ BANKS (* (+ (* tt NB) b0) 8192) -32768)))
+  (if (and opt-ramfault bkon (same-chip b0 opt-rfbank)) (set! {bkon} :fault) 0)
+  (set! {pbase} (+ PROM (* (mem (+ tbz 1)) 16384) -40960))
+  (if (< pc #xE000) (set! {ck lim} -1 0) 0)})
 
 ; A RAM fault: the chip holding bank b sees an address line stuck (bit mask of the window's offset)
 (fun {same-chip b f} {if (>= b #xF0) (and (>= f #xF0) (zero? (bit-and (bit-xor b f) 12))) (and (< f #xF0) (== (shr b 4) (shr f 4)))})
@@ -101,10 +110,13 @@
   (if (>= at nx-ac) (do (ac-sync at) (ac-sched)) 0)
   (set! {seen} at)
   at})
+; (Port B and its DDR, the SD cards' SPI, the most often: neither the timers nor the flags, its next event and IRQ as
+; they were)
+(fun {via-sched-after ad} {if (or (== ad #xFF00) (== ad #xFF02)) 0 (via-sched)})
 (fun {rd-io ad} {if (> ad #xFFFF) (rd (bit-and ad #xFFFF))
   (if (< ad #xFFF0)
     (do (set {at} (io-at))
-        (set {r} (if (< ad #xFF10) (do (set {x} (via-read (- ad #xFF00) at)) (via-sched) x)
+        (set {r} (if (< ad #xFF10) (do (set {x} (via-read (- ad #xFF00) at)) (via-sched-after ad) x)
                    (if (< ad #xFF14) (do (if (and (== ad #xFF11) (< at nx-ac)) 0 (ac-sync at))    ; (*)
                                          (set {x} (acia-read (- ad #xFF10) at)) (ac-sched) x)
                      (if (== ad #xFF41) (do (ym-sync at) (set {x} (ym-read-status at)) (ym-sched) x)
@@ -119,14 +131,14 @@
 (fun {wr-io ad v} {if (> ad #xFFFF) (wr (bit-and ad #xFFFF) v)
   (if (< ad #xFFF0)
     (do (set {at} (io-at))
-        (if (< ad #xFF10) (do (via-write (- ad #xFF00) v at) (via-sched))
+        (if (< ad #xFF10) (do (via-write (- ad #xFF00) v at) (via-sched-after ad))
           (if (< ad #xFF14) (do (ac-sync at) (acia-write (- ad #xFF10) v at) (ac-sched))
             (if (== ad #xFF40) (ym-select v)
               (if (== ad #xFF41) (do (ym-sync at) (ym-write v at) (ym-sched))
                 (if (and ve-on (>= ad #xFF20) (< ad #xFF40)) (do (ve-sync at) (vera-write (- ad #xFF20) v at) (ve-sched)) 0)))))
         (dev-due)
         (io-lim))
-    (if (== ad #xFFF0) (do (set! {regt tt} v (bit-and v 15)) (remap))
+    (if (== ad #xFFF0) (set-t v)
       (if (== ad #xFFF1) (do (set! {regu uu} v (bit-and v 15)) (remap))
         (if (== ad #xFFF2) (set! {regv} v)
           (if (== ad #xFFF3) (do (set! {regw ww} v (bit-and v 15)) (remap))
@@ -190,6 +202,9 @@
 ; the 8 longest of them, the longest first (as long: in the order they came): (cycles from to at) each
 (def {ioff-track ioff-at ioff-from} NIL -1 0)
 (def {ioff-top} {})
+; (and to find at once that a stretch changes none of them: each place's longest there, ioff-best, and the 8th's,
+; ioff-floor, -1 till there are 8)
+(def {ioff-best ioff-floor} (hash-create) -1)
 (fun {ioff-on} {ioff-on-at pc})
 (fun {ioff-on-at n} {if ioff-track (set! {ioff-at ioff-from} cyc (+ (* ww 65536) n)) 0})     ; (n: PC, after SEI or PLP)
 (fun {ioff-off p} {if (and ioff-track (>= ioff-at 0)) (do
@@ -197,6 +212,12 @@
   (set! {ioff-at} -1)) 0})
 (fun {ioff-sorted l} {sort l (fn {x y} {> (fst x) (fst y)})})
 (fun {ioff-note n from to at} {do
+  (set {b} (hash-get ioff-best from))
+  (if (if (nil? b) (>= ioff-floor n) (>= b n)) 0 (do
+    (ioff-place n from to at)
+    (set! {ioff-best ioff-floor} (to# (map (fn {x} {list (snd x) (fst x)}) ioff-top))
+      (if (>= (len ioff-top) 8) (fst (nth 7 ioff-top)) -1))))})
+(fun {ioff-place n from to at} {do
   (set {k} (- (len ioff-top) 1))
   (while {and (>= k 0) (not (== (snd (nth k ioff-top)) from))} (set {k} (- k 1)))
   (set {e} (list n from to at))
@@ -217,6 +238,11 @@
   (do (set {ph} (if mslow -1 (if (< pc #x8000) (+ tbl pc) (if (and bkon (not (== bkon :fault))) (+ bkb pc) -1))))
       (if (< ph 0) (ramexec) (do (set! {ck} (+ RAMPLACE ph)) (or (dcache ck) (decode)))))
   (do (set! {ck} (+ pc (if (< pc #xE000) pbase wbase))) (or (dcache ck) (decode)))})
+; One instruction alone (while a prompt may come: seen is each one's start, as machine.js's devSeen): a ROM one's
+; handler kept (step), RAM's made each time; a watched place's block (its watch)
+(fun {exec-one} {if (or mslow (< pc #xA000)) (ramexec) (do
+  (set! {ck} (+ pc (if (< pc #xE000) pbase wbase)))
+  (if (watched? ck) (or (dcache ck) (decode)) (if (steppable?) (step) (ramexec))))})
 (fun {run limit} {do
   (set! {stopat} (if halted 0 limit))
   (while {< cyc stopat}
@@ -227,7 +253,7 @@
         (if irqp (set! {waiting} NIL) (set! {seen cyc} cyc (max (+ cyc 1) (min devwake stopat))))
         (do (set! {lim} (min devnext stopat))
             (if ac-prompt
-              (while {< cyc lim} (set! {seen} cyc) (if (< ck 0) (exec-slow) (or (dcache ck) (decode))))
+              (while {< cyc lim} (set! {seen} cyc) (exec-one))
               (while {< cyc lim} (if (< ck 0) (exec-slow) (or (dcache ck) (decode)))))))))
   NIL})
 
@@ -242,6 +268,28 @@
     (str-join (map (fn {b} {do (set {at} (* (romBank b) 16384))
       (if (< at plen) (+ (substring prom (+ at 8192) 8192) (substring prom at 8192)) ff)}) (range 256)) ""))))})
 
+; The tasks' RAM's junk (pu-fill's, from pu-s), or with opt-junk (a file's name, the seed's: hydra.dl's) as kept there:
+; its 524288 bytes, then the generator's state after them (4 bytes, the lowest first).  Made, it's kept there (whole:
+; written beside it, then renamed; another run's made first, the one there kept)
+(def {opt-junk} NIL)
+(fun {junk-ram} {if (and opt-junk (exists? opt-junk) (junk-read)) 0 (do
+  (pu-fill mem 524288)
+  (if opt-junk (do
+    (set {tmp} (+ opt-junk "." (pid)))
+    (try {do (set {s} (open tmp :write))
+             (write-bytes s mem 0 524288)
+             (write-bytes s (map (fn {k} {bit-and (shr pu-s (* 8 k)) 255}) (range 4)))
+             (close s)
+             (rename tmp opt-junk)}
+      {if (exists? tmp) (remove tmp) 0})) 0))})
+(fun {junk-read} {do
+  (set {s} (open opt-junk :read))
+  (set {n} (read-buffer s mem 0 524288))
+  (set {st} (read-bytes s 4))
+  (close s)
+  (if (and (== n 524288) (== (len st) 4))
+    (do (set! {pu-s} (+ (fst st) (shl (snd st) 8) (shl (thd st) 16) (shl (nth 3 st) 24))) T) NIL)})
+
 (fun {power-up} {do
   (set! {NB} (* opt-modules 16))
   (set! {SHARED} (+ BANKS (* 16 NB 8192)))
@@ -249,13 +297,15 @@
   ; (the junk, machine.js's, in its order: the tasks' RAM, a byte each; an unset clock's registers; the vectors;
   ; T U V W; a Vera X's VRAM)
   (set! {pu-s} (bit-and opt-seed #xFFFFFFFF))
-  (pu-fill mem 524288)
+  (junk-ram)
   (if (== rtc-junk :unset) (do (set! {rtc-junk} (buffer 8)) (dotimes {i 8} (buffer-put rtc-junk i (pu-byte)))) 0)
   (dotimes {i 16} (hash-put vecs [i (pu-word)]))
   (set! {regt regu regv regw} (pu-byte) (pu-byte) (pu-byte) (pu-byte))
   (if ve-on (pu-fill ve-vram 131072) 0)
   (set! {tt uu ww} (bit-and regt 15) (bit-and regu 15) (bit-and regw 15))
   (set! {model-slow} (in? opt-model {"zponly" "nostack"}))
+  (set! {ts-plain sh-on} (not (or opt-u7 (in? opt-model {"sharedlow" "zponly" "nostack"})))
+    (not (== opt-model "noshared")))
   (remap)
   (set! {irq-stuck} (and (>= opt-stuckirq 0) (< opt-stuckirq 16)))
   (devsched)

@@ -286,12 +286,13 @@
 ; (and, in the fast mode, an access at an address it works out, ea, straight to the low 32K's memory if it's there)
 (fun {const-rd mn a} {if (and (== mn "abs") (not mslow))
   (if (< a #x8000) "(mem (+ tbl %a))" (if (< a #xA000) "(rd %a)"
-    (if (< a #xE000) "(rom (+ pbase %a))" (if (< a #xFF00) "(rom (+ wbase %a))" "(rd-io %a)"))))
+    (if (< a #xE000) "(rom (+ pbase %a))" (if (< a #xFF00) "(rom (+ wbase %a))" (if (== a #xFFF0) "regt" "(rd-io %a)")))))
   (if (and (in? mn {"absx" "absy" "indx" "indy" "indz"}) (not mslow)) "(if (< ea 32768) (mem (+ tbl ea)) (rd ea))"
     (snd (modes mn)))})
 (fun {const-wr mn a} {if (== mn "zp") (if (< a 2) "(wr %a %V)" "(buffer-put mem (+ tbz %a) %V)")
   (if (and (== mn "abs") (not mslow))
-    (if (< a 2) "(wr %a %V)" (if (< a #x8000) "(buffer-put mem (+ tbl %a) %V)" (if (< a #xFF00) "(wr %a %V)" "(wr-io %a %V)")))
+    (if (< a 2) "(wr %a %V)" (if (< a #x8000) "(buffer-put mem (+ tbl %a) %V)" (if (< a #xFF00) "(wr %a %V)"
+      (if (== a #xFFF0) "(set-t %V)" "(wr-io %a %V)"))))
     (if (and (in? mn {"absx" "absy" "indx" "indy" "indz"}) (not mslow))
       "(if (< ea 2) (wr ea %V) (if (< ea 32768) (buffer-put mem (+ tbl ea) %V) (wr ea %V)))"
       (thd (modes mn))))})
@@ -319,13 +320,30 @@
 ; next instruction's PC set, the rest not run.  If an event may be due in it, its first instruction alone (step), the
 ; run loop doing the rest.  One whose last instruction goes back to its start (a branch, taken or not, a JMP) runs
 ; again while it does, and while it still can whole (blk-lp).  Decoded, kept (dcache: the fast mode's, or the slow
-; mode's), run.  One across its window's end: decoded each time
+; mode's), run.  One across its window's end: decoded each time.  A place met for its first times (below COLD-RUNS,
+; cold: most code run once or twice isn't worth a block's making): the instructions from it, each alone (step), as
+; far as its block would go (or lim, or a place with a block, or a watched place); but a watched place, or an
+; instruction across its window's end, decoded at once
 (def {gq} {gq})
 (def {mslow dcache-fast dcache-slow} NIL (hash-create) (hash-create))
 (def {dcache} dcache-fast)
+(def {cold COLD-RUNS} (hash-create) 4)
 (def {enders} (to# (map (fn {o} {list o T}) (join {#x00 #x40 #x60 #x6C #x7C #xCB #xDB}
   (filter (fn {o} {in? (opkind o) {"b" "s" "j"}}) (hash-keys opkind))))))
-(fun {decode} {if (>= ck RAMPLACE) (rdecode (- ck RAMPLACE)) (do
+(fun {decode} {if (>= ck RAMPLACE) (ram-decode) (do
+  (set {v} (+ 1 (or (hash-get cold ck) 0)))
+  (if (and (< v COLD-RUNS) (steppable?)) (do (hash-put cold [ck v]) (cold-run))
+    (do (hash-remove cold ck) (rom-block))))})
+; (The instruction at pc, at its ROM place ck, run alone and its handler kept: not a watched place, nor across its window)
+(fun {steppable?} {and (not (watched? ck)) (== (window pc) (window (+ pc (oplen (rd pc)) -1)))})
+(fun {cold-run} {do
+  (set {go} T)
+  (while {go}
+    (set {op} (rd pc))
+    (step)
+    (set {go} (and (< cyc lim) (>= ck 0) (not (hash-get enders op)) (nil? (hash-get dcache ck)) (steppable?))))
+  1})
+(fun {rom-block} {do
   (set {p} pc)
   (set {at} ck)
   (set {insts} (hash-create))
@@ -347,7 +365,7 @@
   (if (zero? count) (ramexec)
     (do (set {h} (watched ck (eval (join (tail gq) (read (block-text insts count ck))))))
         (hash-put dcache [ck h])
-        (h))))})
+        (h)))})
 (fun {block-text insts count ck0} {do
   (set {c} (block-code insts count ck0 "(step)"))
   (+ "fn {} {" (substring c 1 (- (len c) 2)) "}")})
@@ -396,10 +414,25 @@
 ; that its bytes are what they were (if not, decoded again; or, decoded again lately, the instruction alone: code being
 ; changed).  A block ends in its part of the memory map ($0000-$7FFF, or the bank window), or after a write that may
 ; change it (to an address it doesn't know, or near it): it doesn't change its own code.  (The slow mode's RAM code,
-; and a bank that isn't there: an instruction at a time, ramexec)
+; and a bank that isn't there: an instruction at a time, ramexec.)  A place met for its first times (cold, as a ROM
+; one): its instructions each alone (ramexec), as far as its block would go (or lim, or a place with a block); a
+; block whose bytes changed, cold again
 (def {RAMPLACE} #x1000000)
 (def {rlast} (hash-create))
-(fun {rmiss ph} {if (< (- cyc (rlast ph)) 20000) (ramexec) (rdecode ph)})
+(fun {rmiss ph} {if (< (- cyc (rlast ph)) 20000) (ramexec) (do (hash-remove dcache ck) (ram-decode))})
+(fun {ram-decode} {do
+  (set {v} (+ 1 (or (hash-get cold ck) 0)))
+  (if (< v COLD-RUNS) (do (hash-put cold [ck v]) (ram-cold-run)) (do (hash-remove cold ck) (rdecode (- ck RAMPLACE))))})
+(fun {ram-cold-run} {do
+  (set {lo} (if (< pc #x8000) 0 #x8000))
+  (set {hi} (+ lo (if (< pc #x8000) #x8000 #x2000)))
+  (set {go} T)
+  (while {go}
+    (set {op} (rd pc))
+    (ramexec)
+    (set {go} (and (< cyc lim) (not (hash-get enders op)) (>= pc lo) (<= (+ pc (oplen (rd pc))) hi)
+      (nil? (hash-get dcache (+ RAMPLACE (if (< pc #x8000) tbl bkb) pc))))))
+  1})
 (fun {rdecode ph} {do
   (set {p} pc)
   (set {at} (+ RAMPLACE ph))
