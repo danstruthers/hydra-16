@@ -272,6 +272,7 @@ TF_DRIVER       = $01         ; TI_FLAGS: a driver
 TF_STOPPED      = $80         ; TI_FLAGS: stopped (/proc's ctl: TASKSTOP)
 TF_FORE         = $02         ; TI_FLAGS: in the foreground (TASKFORE): the scheduler picks it first
 FORE_RUN        = 8           ; The foreground's turn at most, in ticks (TASKFORE): then the background has the rest of a tick
+FORE_SRV        = 2           ; A driver's time in the foreground from a foreground task's call to it, in ticks (TASKFORE)
 TI_PARENT       = 2           ; TASKINFO: its parent ($FF: none)
 TI_CPU          = 3           ; TASKINFO: its CPU time, in ticks (3 bytes)
 TI_BANK         = 6           ; TASKINFO: its module's paged ROM bank ($FF: none)

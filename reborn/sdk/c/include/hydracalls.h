@@ -229,6 +229,7 @@
 #define HY_TF_STOPPED           0x80      /* TI_FLAGS: stopped (/proc's ctl: TASKSTOP) */
 #define HY_TF_FORE              0x02      /* TI_FLAGS: in the foreground (TASKFORE): the scheduler picks it first */
 #define HY_FORE_RUN             8         /* The foreground's turn at most, in ticks (TASKFORE): then the background has the rest of a tick */
+#define HY_FORE_SRV             2         /* A driver's time in the foreground from a foreground task's call to it, in ticks (TASKFORE) */
 #define HY_TI_PARENT            2         /* TASKINFO: its parent ($FF: none) */
 #define HY_TI_CPU               3         /* TASKINFO: its CPU time, in ticks (3 bytes) */
 #define HY_TI_BANK              6         /* TASKINFO: its module's paged ROM bank ($FF: none) */
