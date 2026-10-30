@@ -17,6 +17,7 @@
 #define TR_DIR          ((char*) 0x9F80)        /* (The game's lib folder, its dq0tr.dat's: in the world's own paging
                                                 **   bank, ipage.c's, its last 128 bytes; s_start's, as the store's
                                                 **   emptied) */
+extern int trfd;                                /* (Its dq0tr.dat, the kinds' words, kept open: wtrword.c's; dq0w.c's) */
 
 extern unsigned char tr_n;                      /* The passings journalled since the store last took them in (trod.inc's
                                                 **   trod: each part's own that journals them) */

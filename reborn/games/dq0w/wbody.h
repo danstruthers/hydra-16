@@ -44,6 +44,7 @@ enum { GO_GATHER, GO_ON };
 unsigned load_go (void);                        /* (Part 68's) A launcher loaded: its time */
 
 /* ---- The parts' (bank.s's stubs) */
+unsigned char ui_first (void);                  /* (dq0w.c's) The UI's command in hand: the denizens' intents wait */
 void den_intents (void);                        /* (Part 14) The denizens' intents carried out (the hub's di), they
                                                 **   rung after */
 #define DEN_INTENTS()   (HUB->di_tail != HUB->di_head)  /* (Some to carry out: the hub's header in the window) */

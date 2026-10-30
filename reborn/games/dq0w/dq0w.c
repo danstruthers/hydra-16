@@ -5084,6 +5084,26 @@ static int __fastcall__ ovl_load (const char* dir)
 }
 
 
+int trfd = -1;                                  /* (The traces' kinds' words, kept open: wtrword.c's, trace.h) */
+
+/* A command in hand at the real paces (the hub's ui_cmd, the UI's: Enter to its answer's news): 1, the denizens'
+** intents wait (they'd copy parts in, and draw outfits, a quarter second and more of the world's time in the
+** kernel's foreground with the UI's), a quarter second at most; then 0, on with them (wbody.c's den_intents looks
+** between them).  The hub's header in the window */
+unsigned char ui_first (void)
+{
+    static unsigned t0;
+
+    if (!HUB->tpr || !HUB->ui_cmd) {
+        t0 = 0;
+        return 0;
+    }
+    if (!t0) {
+        t0 = hy_ticks () | 1;
+    }
+    return (unsigned) (hy_ticks () - t0) < 50;
+}
+
 int main (int argc, char* argv[])
 {
     static struct msg m;
@@ -5099,8 +5119,9 @@ int main (int argc, char* argv[])
         if (tr_n >= TR_FLUSH) {
             tr_flush (0);                       /* (The passings journalled taken into the traces' store: part 28's) */
         }
-        if (DEN_INTENTS ()) {
-            den_intents ();                     /* (The denizens' intents carried out) */
+        if (DEN_INTENTS () && !ui_first ()) {
+            den_intents ();                     /* (The denizens' intents carried out; not while the UI's command is
+                                                **   in hand at the real paces, its answer first: ui_first's) */
         }
         while (hub_take (&m)) {
             intent (&m);

@@ -710,6 +710,39 @@ static void stop_world (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* The answer's tasks (the world, the command parser, the senses, the referee) in the kernel's foreground while a
+** command's in hand (on 1: the hub's ui_cmd, fore_sync's), or out of it (0); on 2, the UI's own, for good (as its
+** loop begins: so a line's Enter is looked for at the next tick, a tick at most behind the background's work; a
+** driver serving its calls, the console's, with it).  TASKFORE: base/kernel/sched.s; overlay 6's */
+#pragma code-name (push, "OV6CODE")
+#pragma rodata-name (push, "OV6RODATA")
+void __fastcall__ o_fore_set (unsigned char on)
+{
+    static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_SENSES, T_REFEREE };
+    unsigned char k;
+
+    if (on > 1) {
+        hy_taskfore (hy_task (), 1);
+        return;
+    }
+    for (k = 0; k < sizeof fg; ++k) {
+        if (task_[fg[k]] > 0) {
+            hy_taskfore (task_[fg[k]], on);
+        }
+    }
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+static unsigned char fored;                     /* (The answer's tasks in the foreground: ui_cmd as it was) */
+static unsigned char iqh, owed;                 /* (The intents' ring as a line's taken; an answer owed, main's) */
+static void fore_sync (void)
+{
+    if (HUB->ui_cmd != fored) {
+        fore_set (fored = HUB->ui_cmd);
+    }
+}
+
 static unsigned char cq_st;                     /* The line posted to the command parser: none (0), its reply not
                                                 **   taken (CQ_OUT), or taken (CQ_IN: its struct cmd in CMD_BANK) */
 #define CQ_OUT      1
@@ -846,8 +879,8 @@ static unsigned char events (void)          /* (How many there were) */
 
     while (!quit && hub_next (&place, &m)) {
         ++n;
-        if (!m.who && busy && (m.kind != E_VIEW || m.w1 != V_STIR)) {
-            HUB->ui_cmd = 0;                    /* (The character's news: a command's answer begun, its intent out;
+        if (!m.who && (busy | owed) && (m.kind != E_VIEW || m.w1 != V_STIR)) {
+            HUB->ui_cmd = owed = 0;             /* (The character's news: a command's answer begun, its intent out;
                                                 **   not a denizen stirring, the background's, held till after it) */
         }
         switch (m.kind) {
@@ -2356,6 +2389,7 @@ int main (int argc, char* argv[])
     find_dirs ();                               /* (The overlays read in, and the swapped parts with them, first) */
     ovl_load ();
     begin (argc, argv);
+    fore_set (2);                               /* (The UI in the foreground: its loop's naps, its Enter seen) */
     while (!quit) {
         hub_map (0);                            /* (The hub at $8000 again: a call may have moved the window) */
         while (t_haskey ()) {
@@ -2374,6 +2408,9 @@ int main (int argc, char* argv[])
         if (t_next () && (!busy || !held)) {
             HUB->ui_cmd = 1;                    /* (A line entered: the senses' look and the minds give way at once,
                                                 **   not after the events and the status line; its answer first) */
+            fore_sync ();                       /* (The answer's tasks in the foreground meanwhile) */
+            cq_post (t_next ());                /* (And the command parser at work on it while the events are told:
+                                                **   part 2's, in as a rule; posted once, cq_st's) */
         }
         k = events ();
         heard ();
@@ -2432,6 +2469,8 @@ int main (int argc, char* argv[])
             l = 0;
         }
         if (l) {
+            iqh = HUB->iq_head;                 /* (The UI's intents' ring as the line's taken: one sent, its answer
+                                                **   owed, the world's news) */
             f = names_in (l = t_line ());       /* (The line's first look, in the overlays' banks: a part's
                                                 **   copied in only for a line that may be its; an ordinary
                                                 **   command's only part 2, the commands') */
@@ -2464,12 +2503,16 @@ int main (int argc, char* argv[])
                 status ();                      /* (A world's answer to come: the status line after it, events') */
             }
             hub_map (0);
-            HUB->ui_cmd = busy;                 /* (Its answer the world's, not yet said: the look and the minds
-                                                **   give way till the character's news comes, events') */
+            owed = HUB->iq_head != iqh;
+            HUB->ui_cmd = busy | owed;          /* (Its answer the world's, not yet said: the look and the minds
+                                                **   give way till the character's news comes, events'; an intent
+                                                **   sent, the character not busy, its answer owed too: a step that
+                                                **   can't be taken, the world's words) */
         } else {
             ready ();                           /* (The commands' part back, if another's in) */
         }
         t_done ();
+        fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */
         hub_nap (quick ? (--quick, 1) : 4);     /* (A fiftieth of a second: the keys looked for, the world's
                                                 **   events told; each look at the keys a call of the console's,
                                                 **   some 9,000 cycles with its own, a quarter of the CPU at two

@@ -179,6 +179,9 @@ void s_den_intents (void)
     static int z;
 
     for (any = 0, hub_map (0); (t = HUB->di_tail) != HUB->di_head; hub_map (0), HUB->di_tail = (t + 1) % DI_SIZE) {
+        if (ui_first ()) {
+            break;                              /* (The rest after the UI's command's answer) */
+        }
         memcpy (&m, &HUB->di[t], sizeof m);
         help = HUB->pcsum.cond & (C_STUNNED | C_UNCONSCIOUS);   /* (The character helpless: no one engages it, the
                                                 **   minds' to say what's done to it) */
