@@ -387,7 +387,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    24                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    25                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -425,7 +425,8 @@ static void sheet (void)
                                                 **   128; 23, worth in farthings, a theme's mints (its record's
                                                 **   head the longer), a pile of coins' mints in its size, thick and
                                                 **   fuel: the money's, 2026-10-28; 24, the denizens' records' serve
-                                                **   and contact, D_LOST: morale's bonds, 2026-10-30) */
+                                                **   and contact, D_LOST: morale's bonds, 2026-10-30; 25, their
+                                                **   D_RANK and D_PROM: succession) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -817,8 +818,8 @@ static void heard (void)
             }
             continue;
         }
-        if (m.kind != E_DEN || !m.b || m.x[2] || m.x[0] != HUB->pc_stratum) {
-            continue;
+        if (m.kind != E_DEN || !m.b || (m.x[2] && m.a != DE_RALLY) || m.x[0] != HUB->pc_stratum) {
+            continue;                           /* (A rally told seen too: its words, part 14's) */
         }
         dx = m.w1 - HUB->pc_x;
         dy = m.w2 - HUB->pc_y;
@@ -2512,10 +2513,21 @@ void s_when_free (void)
 ** main RAM's room) */
 void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 {
+    static const char* n;
+
     hub_map (DEN_BANK);                         /* (Its sound's words: the sound task's, if it's put them there) */
     memcpy (heard_what, SND_AT + (m->x[1] % SND_KINDS * 2 + (m->a == DE_NOISE)) * SND_REC, sizeof heard_what);
     hub_map (0);
     heard_what[sizeof heard_what - 1] = 0;
+    if (m->a == DE_RALLY) {                     /* (A successor at its post rallying its fellows, HOUSE.md's morale:
+                                                **   seen, by its name; else its shout) */
+        n = HUB->actor[(m->who - 1) & (NACTORS - 1)].name;
+        if (m->x[2]) {
+            sayf (*n >= 'a' ? "\nThe %s rallies its fellows." : "\n%s rallies its fellows.", n);
+            return;
+        }
+        strcpy (heard_what, "a rallying shout");
+    }
     heard_words (m->a | (m->x[3] ? 0x80 : 0), rel);
     msg (lb);
     if (busy && HUB->pc_task.kind && !asked) {

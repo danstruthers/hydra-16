@@ -47,7 +47,8 @@
 ** and what its actors seldom do (one made an actor or no longer one, killed, an ally come along, a cornered one's
 ** dart); part 5, the senses' own (a hunter's stalk, a scent followed, one drawn on); part 6, morale (HOUSE.md's: the
 ** field about an actor and its bonds to its leaders, reckoned as it engages and as one near it falls; its kin
-** dismayed, a leader's loss known; the bonds aged by the clock).
+** dismayed, a leader's loss known); part 5 also the bonds aged by the clock; part 7, succession (a dead leader's
+** post taken by the most influential of those below it).
 ** The blows its actors strike and take are the world's, told as the denizens' events (E_FIGHT): it takes them to heart
 ** (fought: fleeing, dismay, harmed, a death recorded).
 */
@@ -91,6 +92,7 @@ unsigned char __fastcall__ dart (unsigned char k);
 void __fastcall__ dismay (unsigned char k);    /* Part 6 (morale) */
 void __fastcall__ heart (unsigned char k);
 void age (void);
+void __fastcall__ succeed (unsigned char x);   /* Part 7 */
 extern unsigned char ovbank[3];
 extern char _SWAP_START__[];
 
@@ -196,7 +198,10 @@ struct den {
 #define D_MET           0x08                    /* Met (made an actor once: its personal things made, I_KIT's KT_PURSE,
                                                 **   the outfits' phase 3, 2026-10-27) */
 #define D_LOST          0x10                    /* It knows a leader of its is lost (dead): no bond to a dead one after
-                                                **   (part 6's; one it doesn't know of holds) */
+                                                **   (part 6's; one it doesn't know of holds), and of the one after it */
+#define D_RANK(f)       ((f) >> 5 & 3)          /* A successor's rank, its post's (RK_*: its kind's the less; part 6's
+                                                **   succession, 2026-10-30), */
+#define D_PROM          0x80                    /*   a successor: its serve the week it took its post (its tenure) */
 #define NNAMES          8
 #define NDREG           32
 #define GIVE_WAY        30                      /* (Tenths the minds wait for the UI's command in hand, at most: its
@@ -2850,6 +2855,7 @@ void __fastcall__ s_keep (unsigned char back)
 #define FIELD_MAX       20                      /* The field and the bonds held to the book's band (points) */
 #define SEEN_SLAIN      10                      /* A friend seen to fall: the book's bad situation (points), */
 #define DESPERATE       20                      /*   none of its friends left standing about it, desperate */
+#define RALLY_LOUD      6                       /* A successor's rallying shout (a fight's din is 5) */
 
 static const unsigned char rankw[3] = { 2, 5, 10 };    /* A rank's weight (points): the rank and file, a captain, a lord
                                                 **   or a spiritual leader (its influence, a sixteenth of its skill
@@ -2913,22 +2919,44 @@ static void __fastcall__ grab (struct actor* t)
     memcpy (t, &HUB->actor[gi], sizeof *t);
 }
 
+/* Record q's rank: its kind's, or a successor's post's if it's known (see) */
+static unsigned char __fastcall__ rank_of (const struct den* q, unsigned char see)
+{
+    return see && D_RANK (q->flags) > krank[q->kind & (SND_KINDS - 1)] ? D_RANK (q->flags) : krank[q->kind & (SND_KINDS - 1)];
+}
+
+/* Record d's rank, its post's (the field's: an actor seen at its post) */
+static unsigned char __fastcall__ rrank (unsigned char d)
+{
+    hy_bank (pb);
+    d = rank_of (&POP->den[d], 1);
+    hub_map (0);
+    return d;
+}
+
+/* A successor's tenure (0-128): the weeks since it took its post (its serve the week it did) */
+static unsigned char __fastcall__ tenure (unsigned char w)
+{
+    w = (unsigned char) weeks - w;
+    return w > FULL_WEEKS ? FULL_WEEKS : w;
+}
+
 /* Record d's leaders (l1, l2): the highest above its rank in its own lair (its band's head), and its faction's highest
-** above that elsewhere (wherever it is); a dead one counted while it doesn't know of a loss (D_LOST); D its record's
-** after, the hub's header in the window */
+** above that elsewhere (wherever it is); a dead one counted while it doesn't know of a loss (D_LOST), a successor at
+** its post only once it does; D its record's after, the hub's header in the window */
 static void __fastcall__ chain (unsigned char d)
 {
     register struct den* q = POP->den;
     static unsigned char i, b1, b2, r, dead;
 
     den_get (d);
-    b1 = b2 = krank[D.kind & (SND_KINDS - 1)];
-    dead = D.flags & D_LOST ? D_DEAD : 0;       /* (Dead and known: no leader) */
+    b1 = b2 = rank_of (&D, 1);
+    dead = D.flags & D_LOST ? D_DEAD : 0;       /* (Dead and known: no leader; and its successor known) */
     l1 = l2 = 0xFF;
     hy_bank (pb);
     for (i = 0; i < hd.ndens; ++i, ++q) {
         if (q->kind && q->fac == D.fac && i != d && !(q->flags & dead)) {
-            r = krank[q->kind & (SND_KINDS - 1)];
+            r = rank_of (q, dead);
             if (q->lid == D.lid) {
                 if (r > b1) {
                     b1 = r;
@@ -2947,8 +2975,8 @@ static void __fastcall__ chain (unsigned char d)
 }
 
 /* The bond (points) to leader record l (0xFF none, or rgone: 0) of the one reckoned for (js, jc): the leader's rank's
-** weight by the time they've had together (the lesser of its service and the leader's own) and how much they're
-** together */
+** weight by the time they've had together (the lesser of its service and the leader's own: a successor's, since it
+** took its post, but to its own band's) and how much they're together; D the one reckoned for's record */
 static unsigned char __fastcall__ bond (unsigned char l)
 {
     register struct den* q;
@@ -2959,10 +2987,10 @@ static unsigned char __fastcall__ bond (unsigned char l)
     }
     hy_bank (pb);
     q = &POP->den[l];
-    t = q->serve;
-    fw = rankw[krank[q->kind & (SND_KINDS - 1)]];
+    t = q->flags & D_PROM ? (q->lid == D.lid ? FULL_WEEKS : tenure (q->serve)) : tpart (q->serve);   /* (A successor's:
+                                                **   a new leader's, but to its own band, what they had with it) */
+    fw = rankw[rank_of (q, 1)];
     hub_map (0);
-    t = tpart (t);
     tb = (t < js ? t : js) + jc;
     return times (fw) >> 8;
 }
@@ -3003,6 +3031,9 @@ static signed char reckon (void)
     l1 = l2 = 0xFF;
     if ((smart = K.mind >= M_LOW) != 0) {
         chain (tp.den);
+        if (D.flags & D_PROM) {
+            js = tenure (tp.serve);             /* (A successor: its time at its post) */
+        }
     }
     rf = nfr = ndown = nl = 0;
     for (gi = 0; gi < NACTORS; ++gi) {
@@ -3011,7 +3042,7 @@ static signed char reckon (void)
             continue;
         }
         kind_get (akind[gi]);
-        fw = smart && K.mind >= M_LOW ? rankw[krank[akind[gi] & (SND_KINDS - 1)]] + (tq.lead >> 4) : 0;   /* (A mind
+        fw = smart && K.mind >= M_LOW ? rankw[rrank (tq.den)] + (tq.lead >> 4) : 0;   /* (A mind
                                                 **   sways a mind: a beast feels only a foe's might, and its fellows'
                                                 **   falls) */
         if (tq.mood & AM_BERSERK) {
@@ -3098,8 +3129,8 @@ static void __fastcall__ courage (unsigned char why)
 ** faction) that knows of it (hears the fight's din: within its hearing of a fight's loudness, as it hears another's
 ** noise; its sight never reaches further; not one senseless) tests its courage (not one fleeing already): its friend's
 ** fall the book's bad situation (desperate, none left standing about it), the fallen's influence gone; its leader's
-** (its band's head, its faction's), its bond to it gone (dead: known lost from then).  Then every actor's heart anew.
-** K its own after */
+** (its band's head, its faction's), its bond to it gone (dead: known lost from then, and its successor known).  Dead,
+** its post taken (succeed).  Then every actor's heart anew.  K its own after */
 void __fastcall__ s_dismay (unsigned char k)
 {
     static unsigned char j, dead, why;
@@ -3134,9 +3165,13 @@ void __fastcall__ s_dismay (unsigned char k)
             courage (why);
         }
     }
+    if (dead) {
+        succeed (f.den);                        /* (Its post taken, if it held one: the new leader's from now) */
+    }
     hearts ();
     kind_get (akind[rfallen]);
 }
+
 
 /* Actor k's heart as it engages (decide's: the field about it and its bonds, its steps the world's blow carries to the
 ** referee, its courage tested with them as it's wounded); K its own after */
@@ -3182,6 +3217,18 @@ void __fastcall__ s_told (unsigned char j)
     kind_get (akind[j]);
 }
 
+
+#pragma register-vars (pop)
+#pragma bss-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 5 again: the bonds aged (part 6's room, 2026-10-30) */
+#pragma code-name (push, "SW5CODE")
+#pragma rodata-name (push, "SW5RODATA")
+#pragma bss-name (push, "SW5RODATA")
+#pragma register-vars (push, on)
+
 /* The bonds aged by the clock (roam's, a day or more gone since they last were): each record not an actor (an
 ** actor's its own while it is, each time it's near its leader), living with its leader (a lair with its faction's
 ** leader in it: L_LEADER) its contact whole (with it every day); else the less, an eighth a day (eight days at most) */
@@ -3223,6 +3270,106 @@ void s_age (void)
 }
 
 #pragma register-vars (pop)
+#pragma bss-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 7: succession (the user's, 2026-10-30: part 6's room) */
+#pragma code-name (push, "SW7CODE")
+#pragma rodata-name (push, "SW7RODATA")
+#pragma bss-name (push, "SW7RODATA")
+
+/* A leader dead (record x, its rank above the rank and file): its post taken by the most influential of those
+** directly below it (the user's, 2026-10-30): of its faction's next rank down if it was the faction's highest (none
+** left as high: the faction's leader), else of its own lair's (its band's head); the next rank down from that if none's
+** left; minds only.  Influence its rank's weight and a sixteenth of its skill (an actor's, the referee's; a record not
+** met, none), ties by its might (an actor's power and its arms and armour; a record not met, none), then by the
+** dice.  The successor takes the post (its rank, D_RANK: its weight) and its tenure begins (D_PROM: a new leader's
+** bonds, but to its own band); an actor at its post rallies its fellows, told (I_GOTO where it stands: DE_RALLY, a
+** shout, the UI's words).  Part 7's (part 6's room): its kinds' ranks its own.  Those who know of the death know of it; those who don't, not till they're told */
+void __fastcall__ s_succeed (unsigned char x)
+{
+    static const unsigned char rankw7[3] = { 2, 5, 10 };   /* (Part 6's rankw) */
+    static unsigned char i, r, n, lev, llev, fac, top, best, ba, k, key, bkey, mt, bmt, ties, pass, kmind[SND_KINDS], kr[SND_KINDS];
+    static unsigned lid;
+
+    for (i = 0; i < nkinds && i < SND_KINDS; ++i) {
+        kind_get (i);
+        kmind[i] = K.mind >= M_LOW;
+        kx_get (i);
+        kr[i] = X.rank;
+    }
+    den_get (x);
+    r = (D_RANK (D.flags) > kr[D.kind & (SND_KINDS - 1)] ? D_RANK (D.flags) : kr[D.kind & (SND_KINDS - 1)]);
+    fac = D.fac;
+    lid = D.lid;
+    top = 1;
+    lev = llev = best = ba = 0xFF;
+    for (pass = 0; r && pass < 2; ++pass) {     /* (Pass 0: its faction's highest still?  The ranks below it, its
+                                                **   faction's and its lair's.  Pass 1: the best of those directly
+                                                **   below it) */
+        for (i = 0; i < hd.ndens; ++i) {
+            den_get (i);
+            if (!D.kind || i == x || D.fac != fac || (D.flags & D_DEAD) || !kmind[D.kind & (SND_KINDS - 1)]) {
+                continue;
+            }
+            n = (D_RANK (D.flags) > kr[D.kind & (SND_KINDS - 1)] ? D_RANK (D.flags) : kr[D.kind & (SND_KINDS - 1)]);
+            if (!pass) {
+                if (n >= r) {
+                    top = 0;
+                } else {
+                    lev = lev == 0xFF || n > lev ? n : lev;
+                    llev = D.lid == lid && (llev == 0xFF || n > llev) ? n : llev;
+                }
+                continue;
+            }
+            if (n != lev || (!top && D.lid != lid)) {
+                continue;
+            }
+            key = rankw7[n] + 64;               /* (Fit to take it now: not fleeing, nor senseless) */
+            mt = 0;
+            for (k = 0; k < NACTORS; ++k) {
+                if (HUB->actor[k].name[0] && HUB->actor[k].den == i) {
+                    key += (HUB->actor[k].lead >> 4) - (HUB->actor[k].doing >= DO_FLEE || fled[k] ? 64 : 0);   /* (Met:
+                                                **   its own, the referee's; one broken or senseless only if none's
+                                                **   fit) */
+                    mt = HUB->actor[k].power + (HUB->agear[k] & (AG_ARMED | AG_ARMOUR | AG_MAIL)) * 2;
+                    break;
+                }
+            }
+            if (best == 0xFF || key > bkey || (key == bkey && mt > bmt)) {
+                best = i;
+                ba = k;
+                bkey = key;
+                bmt = mt;
+                ties = 1;
+            } else if (key == bkey && mt == bmt && !random (++ties)) {
+                best = i;                       /* (Alike: the dice) */
+                ba = k;
+            }
+        }
+        lev = top ? lev : llev;
+    }
+    if (best == 0xFF) {
+        return;
+    }
+    den_get (best);
+    D.flags = (D.flags & 0x9F) | r << 5 | D_PROM;
+    D.serve = (unsigned char) (NOW_HI / WEEK_HI);            /* (Its tenure from now) */
+    den_put (best);
+    if (ba < NACTORS) {
+        HUB->actor[ba].mood |= AM_LEADS;        /* (At its post, as its fellows see it) */
+    }
+    if (ba < NACTORS && HUB->actor[ba].doing < DO_FLEE) {
+        im.x[0] = im.x[1] = 0xFF;               /* (At its post: it rallies its fellows, a shout where it stands) */
+        im.w1 = HUB->actor[ba].x;
+        im.w2 = HUB->actor[ba].y;
+        im.a = DE_RALLY;
+        im.b = RALLY_LOUD;
+        post (I_GOTO, ba + 1);
+    }
+}
+
 #pragma bss-name (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)

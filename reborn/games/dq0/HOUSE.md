@@ -2146,12 +2146,26 @@ one may be (no standing updates: the 65C02's time).  *(Every number here is for 
   faction's), that leader's influence and its bond are removed for the test; dead, it's known lost from then (no bond to a dead
   leader after).  One that doesn't hear it (out of hearing, on another stratum, not an actor, senseless) keeps its bond
   to the dead leader till it's told: a runner's word or a survivor's (dq0d.c's s_told, the hook: nothing calls it yet).
+- **Succession** *(the user's, 2026-10-30, DECISIONS.md's; the rest for review)*: a leader's death leaves its post (a
+  band's head, a faction's leader: any rank above the rank and file) to the most influential of those directly below
+  it: if it was its faction's highest (none left as high), of its faction's next rank down, wherever they are (a king's,
+  its captains); else of its own lair's (a band's head's, its band).  The next rank down from that if none's left;
+  minds only.  Influence as the field's (rank and a sixteenth of the skill; a record not met yet, its rank alone: the
+  ones about the character are known best); one fleeing or lying senseless only if none else is fit; ties by might (an
+  actor's power, and two for each of its arms, armour and mail), then the dice.  The successor takes the post's rank (its
+  record's, beside its kind's) and its weight; its tenure begins then, so the bonds to it are a new leader's, but those
+  of its own lair (its band) keep what they had with it.  Those who know of the death (it's heard, or told) know of the
+  successor too; those who don't, not till they do.  The band's test on the loss is made without the dead leader, as
+  before, the new leader counting from then.  An actor at its post, not fleeing, rallies its fellows: a shout where it
+  stands (a moment's), told as the character sees it ("The small orc rallies its fellows.") or hears it ("You hear a
+  rallying shout ahead.").  Only a death leaves a post for now: a leader gone off the level for good (the world knows
+  of none yet) would too.  A promotion leaves no post below it to fill: the successor heads its own band still.
 - **The character's own morale** is the player's: never tested (D14).
 
 *(For review besides the numbers: the character's might is the referee's placeholder (10), so it frightens no one
-yet: as the creatures' it would be its size and its weapon's skill, weighing on every beast it fights; no succession:
-a band whose head is dead is led by no one after, but its faction's leader above; a fall seen but not heard isn't
-known apart; morale tests only as one's wounded or a fellow falls, not before every action as the book has it.)*
+yet: as the creatures' it would be its size and its weapon's skill, weighing on every beast it fights; a fall seen but
+not heard isn't known apart; morale tests only as one's wounded or a fellow falls, not before every action as the book
+has it.)*
 
 ## Decided, not yet built
 

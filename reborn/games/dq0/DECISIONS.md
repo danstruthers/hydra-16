@@ -1252,3 +1252,17 @@ morale:
 - **The character** sways its allies and its foes by its own rank and skill; its own morale stays the player's (D14).
 
 **Design:** HOUSE.md's morale; DENIZENS.md's fights and attitudes.
+
+### Succession
+
+The user (2026-10-30), after the morale work: "When a leader dies, the next one below him in the heirarchy
+(strongest/most influential of the those directly below them) should take over."
+
+Built the same day (branch reborn-game-morale2), for review in HOUSE.md's morale: every leader's post in the chain (a
+band's head, a faction's leader) left by its death is taken by the most influential of those directly below it (the
+morale's influence: rank and skill; ties by might, then the dice), from the next rank down if there's none left
+directly below; the successor takes the post's rank and weight; the bonds to it begin as a new leader's, but its own
+band's keep what they had with it; those who know of the death know of the successor (the told hook's too); one at
+its post that the character sees or hears rallies its fellows, told ("The small orc rallies its fellows.").
+
+**Design:** HOUSE.md's morale; DENIZENS.md's morale.

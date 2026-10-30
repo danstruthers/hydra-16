@@ -360,7 +360,9 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   hub's: the steps the world's blow carries to the referee) as it engages and as one near it falls (dq0d's part 6).  A
   leader's fall heard tests its band at once, its influence and bond removed; dead, known lost (the record's D_LOST);
   unheard (far off, below, senseless), the bond holds till it's told (the hook: a runner's word, a survivor's, to
-  come).  One knocked senseless falls and lies there till it comes round,
+  come).  A dead leader's post is taken by the most influential of those directly below it (the user's,
+  2026-10-30: succession, dq0d's part 7; the record's D_RANK and D_PROM), a new leader's bonds to it but its own
+  band's, rallying its fellows where the character sees or hears it (DE_RALLY).  One knocked senseless falls and lies there till it comes round,
   doing nothing meanwhile (its mind's intents and rouses not carried out, words not heard: HOUSE.md's hands and
   limbs, 2026-10-29), and is finished if it's struck meanwhile; come round, its first turn is getting up, or, its last
   shock roll failed, it comes round in shock and does nothing (strikes nothing, defends nothing) till a watch's roll

@@ -544,8 +544,10 @@ enum {
     NEVENTS
 };
 enum { BRG_NONE, BRG_LOST, BRG_KNOWN };
-enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST };    /* E_DEN's what: a step, a noise of its own (a squeak, a
-                                                **   growl), the character sensed, lost (its senses' own) */
+enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY };   /* E_DEN's what: a step, a noise of its own (a squeak,
+                                                **   a growl), the character sensed, lost (its senses' own); a
+                                                **   successor rallying its fellows at its post (the denizens', a
+                                                **   shout: told seen or heard, the UI's, 2026-10-30) */
 enum { NZ_WORK, NZ_BLOW };                      /* E_NOISE's b: work's (a dig's, a door forced ...), a blow at a thing
                                                 **   (a battering's, each blow: the sound task's) */
 enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best it holds (the
@@ -942,7 +944,8 @@ struct actor {
     unsigned char   contact;                    /*   and how much it's been with them, 0-255 (its bonds' growth) */
 };
 #define AM_HURT         0x01                    /* (An actor's mood: wounded, */
-#define AM_BERSERK      0x02                    /*   berserk, its courage's test's) */
+#define AM_BERSERK      0x02                    /*   berserk, its courage's test's; */
+#define AM_LEADS        0x04                    /*   a successor at its leader's post: succession's, 2026-10-30) */
 enum { BD_TWO, BD_FOUR, BD_SERPENT, BD_MANY, BD_WINGS, BD_NONE, NBODIES };
 enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIED };   /* An attitude, the worst
                                                 **   first (DENIZENS.md): attacks on sight; threatens, keeps off;
