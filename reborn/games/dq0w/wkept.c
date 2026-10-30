@@ -31,43 +31,46 @@ extern struct change rec;                       /* (store.c's: the record writte
 
 /* Stratum n's populations waited for, the denizens' as its plan's grown (the hub's places kept, KEPT_AT), so its
 ** chunks are stocked by their keepers' lights from the first (dq0w.c's planned; and a game carried on, the places kept
-** read back): their intents carried out meanwhile (they may be waiting on the world's), for as long as they take, not
-** by the clock: a stratum's chunks stocked before its keepers are placed have their sconces dark, so the game went by
-** how fast the denizens populated it (dq0robbed, 2026-10-30: ten seconds at most, stratum 0's populations then none
-** or a third placed, by the code's layout).  Only a task that's stuck is left: thirty seconds with neither a keeping
-** added nor a beat of its.  That at the turns pace alone (the tests' and replays': the same game whatever the code's
-** speed); at the real paces not waited for (the game's start as quick as it was, the user's ten seconds): owed
-** (kowed, the lights' minute's to look at), its stocked chunks' kept rooms lit as its populations are done
-** (kept_late).  One owed at a time: another stratum's waited for first (the hub's header in the window after) */
+** read back): their intents carried out meanwhile (they may be waiting on the world's).  At the turns pace (the
+** tests' and replays': the same game whatever the code's speed) for as long as they take, not by the clock: a
+** stratum's chunks stocked before its keepers are placed have their sconces dark, so the game went by how fast the
+** denizens populated it (dq0robbed, 2026-10-30: ten seconds at most, stratum 0's populations then none or a third
+** placed, by the code's layout); only a task that's stuck is left, thirty seconds with neither a keeping added nor a
+** beat of its.  At the real paces ten seconds at most, as before (the game's start as quick as it was, the user's ten
+** seconds); not done by then, owed (kowed: the lights' minute's to look at), its stocked chunks' kept rooms lit as its
+** populations are done (kept_late).  One owed at a time (the hub's header in the window after) */
 extern unsigned char kowed;                     /* (dq0w.c's: a stratum's populations owed, its number plus 1) */
 void __fastcall__ s_kept_wait (unsigned char n)
 {
-    unsigned t0 = hy_ticks ();
-    unsigned char d, k, b, kn = 0xFF, kb = 0;
+    unsigned t0 = hy_ticks (), t1 = t0;
+    unsigned char d, k, b, kn = 0xFF, kb = 0, real;
 
     hub_map (0);
-    if ((HUB->pace & 3) != 3 && (!kowed || kowed == n + 1)) {
-        kowed = n + 1;                          /* (A real pace: owed, kept_late's as they're done) */
-        return;
-    }
+    real = (HUB->pace & 3) != 3;
     for (;;) {
         hub_map (DEN_BANK);
         d = KEPT_DONE (KEPT_AT, n);
         k = KEPT_AT->n;
         hub_map (0);
+        if (d || HUB->quit) {
+            return;
+        }
         b = HUB->beat[T_DENIZENS];
         if (k != kn || b != kb) {
-            kn = k;                             /* (On its way: the wait begun again) */
+            kn = k;                             /* (On its way: the wait begun again, the turns pace's) */
             kb = b;
             t0 = hy_ticks ();
         }
-        if (d || HUB->quit || (unsigned) (hy_ticks () - t0) > 30 * HY_TICK_HZ) {
-            return;
+        if (real ? (unsigned) (hy_ticks () - t1) > 10 * HY_TICK_HZ : (unsigned) (hy_ticks () - t0) > 30 * HY_TICK_HZ) {
+            break;
         }
         hub_sleep (1);
         if (DEN_INTENTS ()) {
             den_intents ();
         }
+    }
+    if (real && !kowed) {
+        kowed = n + 1;                          /* (Owed: kept_late's as they're done) */
     }
 }
 

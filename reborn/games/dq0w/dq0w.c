@@ -5801,9 +5801,15 @@ void s_burns_now (void)
                                                 **   once the other is too, or out) */
     }
     if (d) {
-        if (kowed) {
-            kept_late (kowed - 1);              /* (A stratum's populations owed, a real pace's: its kept rooms lit as
-                                                **   they're done, wkept.c's, a minute's look) */
+        if (kowed && !HUB->ui_cmd) {
+            hub_map (DEN_BANK);
+            mine = KEPT_DONE (KEPT_AT, kowed - 1);
+            hub_map (0);
+            if (mine) {
+                kept_late (kowed - 1);          /* (A stratum's populations owed, a real pace's: its kept rooms lit as
+                                                **   they're done, wkept.c's, a minute's look; not while a command's
+                                                **   in hand, its answer first) */
+            }
         }
         sconce_lights (0xFF);                   /* (The rooms' lights by their sconces, a minute's: one burnt out, its
                                                 **   keepers gone: wkept.c's) */
