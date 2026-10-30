@@ -276,7 +276,7 @@ static void __fastcall__ set_off (unsigned long t)
         t = dt_;
     }
     busy (t);
-    task (LT_WALK, npath);
+    task (trav ? LT_TRAVEL : LT_WALK, npath);   /* (A journey's leg a journey's: part 54's) */
     pnext = 0;
     pquiet = 0;
     pfull = npath;
@@ -2217,6 +2217,9 @@ static unsigned char leg (void)
         return 0;
     }
     tgy = tey;                                  /* (A room's door or mouth meant; a passage's way its heading) */
+    trav = 1;                                   /* (On a journey as its leg's walk sets out: its long task a journey's
+                                                **   from its first moment, set_off's, so a line typed as a leg
+                                                **   begins stops it, the UI's free_cmd) */
     go (teh);
     hub_map (0);
     if (!move.on) {
@@ -2230,7 +2233,6 @@ static unsigned char leg (void)
     TRAV_TK[tv.legs][0] = tex;
     TRAV_TK[tv.legs++][1] = tey;
     hub_map (0);
-    trav = 1;
     return 1;
 }
 

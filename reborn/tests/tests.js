@@ -2118,8 +2118,9 @@ function dq0Turns(m) {
   r.games.forEach((g, gi) => { for (const k of Object.keys(all)) for (const e of g[k]) all[k].push(Object.assign({ game: gi }, e)); });
   const fin = r.final(), of = (list, k) => list.filter(e => e.line === k + 1);
   // (A dq0 line as the test wrote it: sim/test.js's -K, -N, -I and -a, RULES=NAME's -r NAME, and the dice's offset,
-  // -R N (DQ0_ROLLS's, or a test's own: not a game's command), taken off)
-  const bare = l => { for (let x = l; ; ) { const y = x.replace(/^(dq0(?: .*)?) (?:-[KNIa]|-r \S+|-R \d+)$/, '$1'); if (y === x) return x; x = y; } };
+  // -R N (DQ0_ROLLS's, or a test's own: not a game's command), taken off: each once, the last added first, as sim/test.js
+  // adds them, so a test's own flag before them is kept (dq0travel's -N; a test's own -R last of its own, taken off)
+  const bare = l => !/^dq0( |$)/.test(l) ? l : [/ -R \d+$/, / -K$/, / -N$/, / -I$/, / -a$/, / -r \S+$/, / -R \d+$/].reduce((x, re) => x.replace(re, ''), l);
   const T = r.lines.map(bare).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
     at: all.snaps.find(s => s.line === k + 1) || null }));
   T.forEach((t, k) => {
@@ -2199,7 +2200,8 @@ const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
 
 // Dingus Quest Zero's morale's own (dq0morale): at each line's Enter (the CR as the ACIA has it, the game still as it
 // stands), the pokes made (each { g: the game, 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, k:
-// the actor's entry, set: { field: value } }) and the actors' hearts kept after them (m.hearts: { g, line, n, acts: [{ k,
+// the actor's entry, or name: its name, the first so named, set: { field: value }; hub: { the layout's name: a byte },
+// the hub's own, pcSkew say) and the actors' hearts kept after them (m.hearts: { g, line, n, acts: [{ k,
 // name, heart, doing }] }): the hub's actor's heart,
 // lead, power, mood, serve, contact and bonds are its struct's last seven bytes (hub.h's, 2026-10-30), attitude and
 // faction the layout's; and its record's (rec: { or: flags or'd in, serve, contact }: dq0Rec's).  The test's own setting
@@ -2231,10 +2233,14 @@ function dq0Poke(m, pokes) {
         if (h) {
           const { L } = m.dq0.layout(), at = k => L.actor + k * L.actorSize;
           const off = f => TAIL.includes(f) ? L.actorSize - 7 + TAIL.indexOf(f) : f === 'attitude' ? L.aAttitude : L.aFaction;
+          const named = k => { let n = ''; for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]); return n; };
           for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed]) {
-            for (const [f, v] of Object.entries(p.set || {})) h[at(p.k) + off(f)] = v;
+            for (const [f, v] of Object.entries(p.hub || {})) h[L[f]] = v;   // (The hub's own bytes, by the layout's names: pcSkew)
+            const k = p.name === undefined ? p.k : [...Array(L.nactors).keys()].find(j => named(j) === p.name);   // (By its name: the first)
+            if (k === undefined) continue;
+            for (const [f, v] of Object.entries(p.set || {})) h[at(k) + off(f)] = v;
             if (p.rec) {
-              const R = dq0Rec(m), o = R.at(h[at(p.k) + L.aName + 12]);
+              const R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]);
               if (p.rec.or) R.mem[o + R.FLAGS] |= p.rec.or;
               if (p.rec.serve !== undefined) R.mem[o + R.SERVE] = p.rec.serve;
               if (p.rec.contact !== undefined) R.mem[o + R.CONTACT] = p.rec.contact;
@@ -2283,6 +2289,41 @@ function dq0Aware(m, line, actor, after) {
       } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
     }
     return read(r, t);
+  };
+}
+
+// A line typed as the game's words come, not at a cycle (a test's own: what a player reacting to them types, whatever
+// the code's speed): each { g: the game, 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, words,
+// text }: after that line's Enter, the first time the story shows the words (the escapes left out, spaces and line
+// ends as one), the text typed next, before the input still to come (its waits for a prompt from then on)
+function dq0OnWords(m, list) {
+  const a = m.acia, read = a.read, shown = a.shown, norm = s => s.replace(/\s+/g, ' ');
+  let typed = '', g = 0, seen = {}, armed = null, story = '', esc = 0;
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^dq0 /.test(typed)) { ++g; seen = {}; }
+        seen[typed] = (seen[typed] || 0) + 1;
+        const p = list.find(q => q.g === g && q.line === typed && q.n === seen[typed]);
+        if (p) { armed = p; story = ''; }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+  a.shown = (v, t) => {
+    shown(v, t);
+    if (esc === 1) { esc = v === 0x5B ? 2 : 0; return; }
+    if (esc === 2) { if (v >= 0x40 && v <= 0x7E) esc = 0; return; }
+    if (v === 0x1B) { esc = 1; return; }
+    if (!armed) return;
+    story = norm(story + (v < 0x20 ? ' ' : String.fromCharCode(v))).slice(-200);
+    if (story.includes(norm(armed.words))) {
+      a.rxQueue.unshift(...armed.text);
+      a.promptFrom = -1;
+      armed = null;
+    }
   };
 }
 
@@ -5810,7 +5851,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0handy', what: 'Dingus Quest Zero\'s reach, how readily a thing comes to hand (the user\'s, 2026-10-23: "Handy would be readily available, so in a backpack that is being worn is not as readily available as one in a belt pouch.  In a sack, in a backpack is two-containers deep, so should require longer for each level of container.  A backpack on the ground or in hand (not worn) is more readily available ... Searching a worn backpack takes it off first, then if it was on, puts it back on, each taking time.  Just shrugging it off/dropping it before battle should not require time"; HOUSE.md\'s reach, handy tools and things used up), by the clock between one line and the next, the things\' replies (the reach owed in the reply\'s y, tenths) and the words: at seed 3 (dq0 -T, dq0 -k sack: the sack in its main hand) the rations from the worn pack into the sack held (the pack off and on again, 10 seconds, and each level 2: told, "You take off your backpack for it, and put it on again."), the sack stowed in the worn pack, the rations from the sack in it (two deep: 15 seconds), dropped at no time, the pennies from the belt\'s pouch (a quick draw, a second), the worn pack looked in (15 seconds) and searched (its minute: off and on within it), dropped ("drop the pack": no time), the tinderbox taken from it on the ground (a level: 4 seconds), the pack put on ("put on the pack", 5 seconds), its torch put down, the pack taken off and left off ("take off the pack": in both hands), looked in held (5 seconds), put on again; at seed 7 (the ghoul engaging it at once, armoured) a grope in a fight a round a step (the book\'s, Combat 7, a turn): its sword fumbled (a hand free), the dagger drawn from the belt a round, stowed in the worn pack three (off, in, on), the pack dropped, the rations taken from it on the ground a round',
+      name: 'dq0handy', what: 'Dingus Quest Zero\'s reach, how readily a thing comes to hand (the user\'s, 2026-10-23: "Handy would be readily available, so in a backpack that is being worn is not as readily available as one in a belt pouch.  In a sack, in a backpack is two-containers deep, so should require longer for each level of container.  A backpack on the ground or in hand (not worn) is more readily available ... Searching a worn backpack takes it off first, then if it was on, puts it back on, each taking time.  Just shrugging it off/dropping it before battle should not require time"; HOUSE.md\'s reach, handy tools and things used up), by the clock between one line and the next, the things\' replies (the reach owed in the reply\'s y, tenths) and the words: at seed 3 (dq0 -T, dq0 -k sack: the sack in its main hand) the rations from the worn pack into the sack held (the pack off and on again, 10 seconds, and each level 2: told, "You take off your backpack for it, and put it on again."), the sack stowed in the worn pack, the rations from the sack in it (two deep: 15 seconds), dropped at no time, the pennies from the belt\'s pouch (a quick draw, a second), the worn pack looked in (15 seconds) and searched (its minute: off and on within it), dropped ("drop the pack": no time), the tinderbox taken from it on the ground (a level: 4 seconds), the pack put on ("put on the pack", 5 seconds), its torch put down, the pack taken off and left off ("take off the pack": in both hands), looked in held (5 seconds), put on again; at seed 7 (the ghoul engaging it at once, armoured) a grope in a fight a round a step (the book\'s, Combat 7, a turn): its sword fumbled (a hand free), the dagger drawn from the belt a round, stowed in the worn pack three (off, in, on), the pack dropped, the rations taken from it on the ground a round, each line typed ahead as the wait begins (held, the first taking the fight over as it begins, each after it the fight fought on in between, its round out first), the quit last (the fight taken over by it, not fought to the end): the scene set, the ghoul steady (dq0Poke\'s, at the wait: its mood AM_STEADY, so morale never takes it out of the fight before the lines are done)',
       init: 't_rc', cycles: 3200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sack', 'put the rations in the sack', 'stow the sack', 'take the rations from the sack',
@@ -5818,7 +5859,10 @@ module.exports = {
         'drop the pack', 'take the tinderbox from the backpack', 'drop the tinderbox', 'put on the pack', 'drop the torch',
         'take off the pack', 'look in the pack', 'put on the pack', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait']) +
-        'hold the dagger\rstow the dagger\rdrop the backpack\rtake the rations from the backpack\r' + dq0Typed(['quit', 'echo $status']) },
+        'hold the dagger\rstow the dagger\rdrop the backpack\rtake the rations from the backpack\rquit\r' + dq0Typed(['echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 2, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } }]);   // (The ghoul steady: hub.h's AM_STEADY)
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out);
@@ -5864,6 +5908,8 @@ module.exports = {
         fight('stow the dagger', 'IO_STOW', 300, 'into the worn pack: off, in, on, a round each');
         fight('take the rations from the backpack', 'IO_TAKE', 100, 'from the pack dropped on the ground: a round');
         if (!late.some(t => rep(t, 'IO_DROP'))) f.push('the pack not dropped in the fight');
+        const hw = (m.hearts || []).find(h => h.g === 2 && h.line === 'wait');
+        if (!hw || !hw.acts.some(a => a.name === 'ghoul' && a.mood === 8)) f.push('the ghoul not set steady');
         return f;
       },
       sdcard: true
@@ -6043,19 +6089,22 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0travel', what: 'Dingus Quest Zero\'s travel to a place it knows (slice 4.2, the user\'s, 2026-10-16: "name this room "The Mausoleum" and then you could say "I want to go back to the mausoleum" and you would be on your way, and the game would move you at your current rate of speed back toward that named place, as long as your direction sense/orientation checks held up.  Orientation checks would be aided if good maps are used"; HOUSE.md\'s travel), by the world\'s events (E_TASK\'s LT_TRAVEL, the legs\' E_ARRIVE), where the character ends, the chunks\' memory (the cache\'s, each chunk\'s kept) and the words: at seed 3\'s caves (dq0 -T, knowing north: -N) the cave by the stairs named the Grotto, three walks west out of its chunk, "go back to the grotto" there a leg at a time (TE_BEGUN, two legs or more, TE_THERE under way: in its room), again there already, "return to the grotto" the same; the same walks and two hours\' waits twice (its torch out between), its memory of the Grotto\'s chunk under a tenth: refused (TE_FORGOT, no walk), and again in the light of its spare torch (the chunk it\'s in seen, not the Grotto\'s); a map drawn as it went (paper, charcoal, a lantern lit), its memory gone after four hours\' waits but its map carried showing the Grotto, in light to read it: on its way by the map (begun, walked, not refused: there, or stopped by a giant rat in its way); a wrong belief taking it astray (its bearings tested, the hunter\'s Awareness: a long way walked, its north an eighth off since it last saw the Grotto, not knowing it) its first leg another way than the same walks\' knowing north (-N) take, the one stopped by a command typed as it goes (TE_STOPPED); at seed 4 the kitchen past the barred door named the Gallery, "go back to where I came in" stopped by a shut door it hasn\'t opened, the way nearest the bedchamber (E_NOWAY N_DOOR, no walk); "go back to the kitchen" (a kind of room, the theme\'s word) there already',
+      name: 'dq0travel', what: 'Dingus Quest Zero\'s travel to a place it knows (slice 4.2, the user\'s, 2026-10-16: "name this room "The Mausoleum" and then you could say "I want to go back to the mausoleum" and you would be on your way, and the game would move you at your current rate of speed back toward that named place, as long as your direction sense/orientation checks held up.  Orientation checks would be aided if good maps are used"; HOUSE.md\'s travel), by the world\'s events (E_TASK\'s LT_TRAVEL, the legs\' E_ARRIVE), where the character ends, the chunks\' memory (the cache\'s, each chunk\'s kept) and the words: at seed 3\'s caves (dq0 -T, knowing north: -N) the cave by the stairs named the Grotto, three walks west out of its chunk, "go back to the grotto" there a leg at a time (TE_BEGUN, two legs or more, TE_THERE under way: in its room), again there already, "return to the grotto" the same, then the same walks out and "go back to the grotto" again, stopped by a command typed as it begins ("turn around" typed as "You head back toward the Grotto." is told, as a player would: TE_STOPPED, not there); the same walks and two hours\' waits twice (its torch out between), its memory of the Grotto\'s chunk under a tenth: refused (TE_FORGOT, no walk), and again in the light of its spare torch (the chunk it\'s in seen, not the Grotto\'s); a map drawn as it went (paper, charcoal, a lantern lit), its memory gone after four hours\' waits but its map carried showing the Grotto, in light to read it: on its way by the map (begun, walked, not refused: there, or stopped by a giant rat in its way); a wrong belief taking it astray (its bearings tested, the hunter\'s Awareness: a long way walked, its north an eighth off since it last saw the Grotto, not knowing it) its first leg another way than the same walks\' knowing north (-N) take; at seed 4 the kitchen past the barred door named the Gallery, "go back to where I came in" stopped by a shut door it hasn\'t opened, the way nearest the bedchamber (E_NOWAY N_DOOR, no walk); "go back to the kitchen" (a kind of room, the theme\'s word) there already',
       bearings: true, init: 't_rc', cycles: 7000e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -N', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'go back to the grotto', 'go back to the grotto',
-        'return to the grotto', 'quit',
+        'return to the grotto', 'n', 'w', 'w', 'w', 'go back to the grotto', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -N -k torch', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'wait 2 hours', 'wait 2 hours',
         'go back to the grotto', 'light the torch', 'go back to the grotto', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -N -k paper,charcoal,lantern', 'douse the torch', 'drop the torch', 'light the lantern', 'put the charcoal in the pouch', 'map as I go', 'd',
         'call this room the Grotto', 'n', 'w', 'w', 'w', 'stop mapping', 'wait 100 minutes', 'wait 100 minutes', 'wait 1 hour', 'go back to the grotto', 'quit',
         ...['', ' -N'].flatMap(n => ['dq0 -p t -s 3 -c /ram/c.hm -T' + n, 'd', 'call this room the Grotto', 'n', 'w', 'f', 'f', 'f', 'l', 'f', 'r', 'f', 'l', 'f',
-          'r', 'f', 'f', 'l', 'f', 'go back to the grotto', ...(n ? ['!' + 'Ā'.repeat(6) + 'turn around'] : []), 'quit']),
+          'r', 'f', 'f', 'l', 'f', 'go back to the grotto', 'quit']),
         'dq0 -p t -s 4 -c /ram/c.hm -N', 'take the bar', 'open', 'n', 'e', 'n', 'call this room the Gallery', 'go back to where I came in',
-        'go back to the kitchen', 'quit', 'echo $status'].map(l => (l[0] === '!' ? l.slice(1) : 'ā' + l) + '\r').join('') },
+        'go back to the kitchen', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'go back to the grotto', n: 3, words: 'You head back toward the Grotto.', text: 'turn around\r' }]);   // (Typed as it's told)
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out);
@@ -6085,8 +6134,13 @@ module.exports = {
         for (const [t, l] of [[b2, 'again'], [b3, '"return to the grotto"']]) {
           if (!tr(t, 'TE_THERE').filter(e => !(e.b & 0x40)).length || legs(t)) f.push(l + ': not there already, no walk (' + dq0Evs(t) + ')');
         }
+        // Stopped by a command typed as it begins, the same walks out again
+        const b4 = T.after(b3, 'go back to the grotto'), bt = T.after(b4, 'turn around'), stops = [...tr(b4, 'TE_STOPPED'), ...tr(bt, 'TE_STOPPED')];
+        if (bt.k < 0 || bt.game !== b4.game) f.push('"turn around" not typed as the journey began');
+        else if (!tr(b4, 'TE_BEGUN').length || !stops.length || tr(b4, 'TE_THERE').length || tr(bt, 'TE_THERE').length) f.push('a command typed as it goes: the journey not stopped (' + dq0Evs(b4) + ' ' + dq0Evs(bt) + ')');
         inTurn(s, ['> go back to the grotto', 'You head back toward the Grotto.', 'You\'re back in the Grotto.', '> go back to the grotto',
-          'You\'re in the Grotto already.', '> return to the grotto', 'You\'re in the Grotto already.'], f, 'the words: ');
+          'You\'re in the Grotto already.', '> return to the grotto', 'You\'re in the Grotto already.', '> go back to the grotto',
+          'You head back toward the Grotto.', '> turn around', 'You stop travelling.'], f, 'the words: ');
         // Forgotten: two hours' waits twice, out of the Grotto's chunk
         const h = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -N -k torch'), h1 = T.after(h, 'go back to the grotto'), h2 = T.after(h1, 'go back to the grotto');
         for (const [t, l] of [[h1, 'in the dark'], [h2, 'in its torch\'s light']]) {
@@ -6118,9 +6172,6 @@ module.exports = {
           const first = t => (dq0Ev(t, 'E_ARRIVE')[0] || {}).t;
           if (!tr(a1, 'TE_BEGUN').length || !first(a1) || first(a1) === first(n1)) f.push('astray: its first leg the one knowing north takes (' + dq0Evs(a1) + ' | ' + dq0Evs(n1) + ')');
         }
-        const nt = T.after(n1, 'turn around'), stops = [...tr(n1, 'TE_STOPPED'), ...tr(nt, 'TE_STOPPED')];
-        if (!stops.length || tr(n1, 'TE_THERE').length || tr(nt, 'TE_THERE').length) f.push('a command typed as it goes: the journey not stopped (' + dq0Evs(n1) + ' ' + dq0Evs(nt) + ')');
-        inTurn(s.slice(s.lastIndexOf('-T -N')), ['You head back toward the Grotto.', 'You stop travelling.'], f, 'the stop\'s words: ');
         // A shut door it hasn't opened, the way nearest; a kind of room
         const d = T.of('dq0 -p t -s 4 -c /ram/c.hm -N'), d1 = T.after(d, 'go back to where I came in'), d2 = T.after(d1, 'go back to the kitchen');
         if (at(d1, 'the shut door')) {
@@ -6130,7 +6181,7 @@ module.exports = {
         if (!tr(d2, 'TE_THERE').filter(e => e.b === (0x80 | 8)).length) f.push('"go back to the kitchen": not there already, the kitchen\'s kind (' + dq0Evs(d2) + ')');
         inTurn(s.slice(s.indexOf('-s 4')), ['> go back to where I came in', 'You head back toward where you came in.', 'The door is shut: open it first.',
           '> go back to the kitchen', 'You\'re in the kitchen already.'], f, 'the shut door\'s words: ');
-        this.notes = [b1, h1, h2, p1, a1, n1, d1].map(t => t.line + ': ' + dq0Evs(t).slice(0, 300));
+        this.notes = [b1, b4, h1, h2, p1, a1, n1, d1].map(t => t.line + ': ' + dq0Evs(t).slice(0, 300));
         return f;
       },
       sdcard: true
