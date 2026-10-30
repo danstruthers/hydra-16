@@ -202,6 +202,7 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
 #define RS_HOUSE_DIG
 #define RS_HOUSE_DIG_TOOL   s_dig_tool
 #define RS_HOUSE_QUIET                          /* (Moving quietly's own dice: s_quiet_test's) */
+#define RS_HOUSE_DICE                           /* (The dice by who asks: main's) */
 #include "../dq0/rshouse.h"
 
 /* A dig's test (RS_TEST's P_DIG): judged by the tool to hand that suits it best, its rate a spell at a marginal
@@ -927,6 +928,7 @@ int main (int argc, char* argv[])
     rseed (HUB->seed ^ 0x5245);                 /* (Its own dice: the game's seed, and its role) */
     harn_own_skills (own, 1);                   /* (Its own skill: Cartography) */
     beasts (2);
+    DICE_BEGIN
     for (;;) {
         hy_sem_acquire (HUB->sem[T_REFEREE]);   /* (Waiting costs nothing) */
         hub_map (0);
@@ -935,10 +937,12 @@ int main (int argc, char* argv[])
         }
         for (s = 0; s < NSLOTS; ++s) {
             if (hub_posted (&HUB->slot[s])) {
+                DICE_IN (s)
                 answer (&HUB->slot[s]);
                 hub_reply (&HUB->slot[s]);
             }
         }
+        DICE_IN (NSLOTS)
         den_slot ();
     }
     return 0;

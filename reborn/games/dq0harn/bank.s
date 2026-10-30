@@ -201,3 +201,13 @@ ovl_out:
             SWFN        harn_sunsign_name, 2
             SWFN        dig_answer, 2
             SWFN        dice_set, 2
+
+; The dice by who asks (rshouse.h's RS_HOUSE_DICE: ../dq0/dice.inc), overlay 7's, through its stub (OVFN's, by hand)
+            .export     _dice_to
+_dice_to:   ldy         #7
+            jsr         ovl_in
+            jsr         dice_entry
+            jmp         ovl_out
+DICE_OVL    = 1
+.define     DICE_SEG    "OV7CODE"
+            .include    "../dq0/dice.inc"

@@ -69,6 +69,7 @@ static void __fastcall__ putn (int v)
 #define RS_HOUSE_STATE
 #define RS_HOUSE_BEARING
 #define RS_HOUSE_QUIET
+#define RS_HOUSE_DICE                           /* (The dice by who asks: main's) */
 unsigned long bseed;                            /* (The bearings' own dice: rshouse.h's) */
 #include "../dq0/rshouse.h"
 
@@ -797,6 +798,7 @@ int main (int argc, char* argv[])
         return 1;
     }
     rseed (HUB->seed ^ 0x5245);                 /* (Its own dice: the game's seed, and its role) */
+    DICE_BEGIN
     for (;;) {
         hy_sem_acquire (HUB->sem[T_REFEREE]);
         hub_map (0);
@@ -805,12 +807,14 @@ int main (int argc, char* argv[])
         }
         for (s = 0; s < NSLOTS; ++s) {
             if (hub_posted (&HUB->slot[s])) {
+                DICE_IN (s)
                 answer (&HUB->slot[s]);
                 hub_reply (&HUB->slot[s]);
             }
         }
         if (hub_posted (DSLOT)) {               /* (The denizens' task's, its own: DTEXT of its text) */
             tlim = DTEXT;
+            DICE_IN (NSLOTS)
             answer (DSLOT);
             tlim = REQ_TEXT;
             hub_reply (DSLOT);

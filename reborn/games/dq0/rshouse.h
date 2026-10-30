@@ -198,3 +198,15 @@ extern unsigned long xs_seed;
 #define QUIET_IN        { unsigned long qt_ = xs_seed; xs_seed = QUIET_MIX (qt_);
 #define QUIET_OUT       xs_seed = qt_; }
 #endif
+
+/* ---- The dice by who asks (RS_HOUSE_DICE: every referee's main loop, 2026-10-30): each requester's dice its own stream,
+** the world's slot's (0: the game's own as it began, after the referee's start), the UI's (1) and the denizens' (DSLOT:
+** NSLOTS), the generator's state (xs_seed) swapped in round each answer; so a game's dice go by its seed and its
+** commands, not by the order the tasks' requests reach the referee (one stream answered as they came: a turns pace
+** game's fights went by how the tasks interleaved, dq0cmd's, dq0handy's, with a byte more of code anywhere) */
+#if defined (RS_HOUSE_DICE) && !defined (RS_HOUSE_DICE_DONE)
+#define RS_HOUSE_DICE_DONE
+void __fastcall__ dice_to (unsigned char k);    /* (../dq0/dice.inc's, a referee's .s includes it; : begun) */
+#define DICE_BEGIN      dice_to (0xFF);
+#define DICE_IN(k)      dice_to (k);
+#endif

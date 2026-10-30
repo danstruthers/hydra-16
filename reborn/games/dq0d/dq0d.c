@@ -581,6 +581,14 @@ void __fastcall__ s_populate (unsigned char n)
 
 /* The strata grown since the last look, populated (none while the world's asking the maker: a plan may be half
 ** copied into the world bank), whatever the pace (the world waits for them: KEPT_AT) */
+/* The minds' dice (their decisions', every random () but a stratum's population's and a lair's placing): a stream of
+** their own, from the game's seed, kept round populate's and place's own (each rseeds the generator by its stratum's
+** numbers, a lair's).  Those come as the maker's chunks are made, in the background: with one stream, the minds'
+** next numbers were the last placing's, so a game's fights at the turns pace went by how the tasks interleaved (dq0cmd's
+** rats, with a byte more of code here, 2026-10-30) */
+extern unsigned long xs_seed;                   /* (xorshift.s's state) */
+static unsigned long minds;
+
 static void grow (void)
 {
     static unsigned char ms[MAXSTRATA], ns[MAXSTRATA];
@@ -598,7 +606,9 @@ static void grow (void)
     for (k = 0; k < MAXSTRATA; ++k) {
         if (ms[k] && !DONE (ns[k]) && !hub_posted (&HUB->mreq[ASK_WORLD])) {
             sync_strata ();
-            populate (ns[k]);
+            minds = xs_seed;
+            populate (ns[k]);                   /* (By the stratum's own numbers, the minds' kept: their dice, grow's) */
+            xs_seed = minds;
         }
     }
 }
@@ -758,7 +768,9 @@ static unsigned char nearby (void)
         lair_get (i);
         if (L.kind && L.sn == pcs && !(L.flags & L_PLACED) && L.cx + 1 - cx <= 2 && L.cy + 1 - cy <= 2 &&
             made (L.sn, L.cx, L.cy)) {
-            place (i);
+            minds = xs_seed;
+            place (i);                          /* (By the lair's own numbers, the minds' kept: their dice, grow's) */
+            xs_seed = minds;
             n = 1;
         }
     }
@@ -2353,6 +2365,7 @@ int main (int argc, char* argv[])
     }
     kb = b;
     pb = b + 1;
+    rseed (HUB->seed ^ 0x2B7E1516UL);          /* (The minds' dice, their own: grow's) */
     if (start (argv[3])) {
         return 1;
     }
