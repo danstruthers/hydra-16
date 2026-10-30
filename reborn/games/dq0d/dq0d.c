@@ -47,7 +47,7 @@
 ** and what its actors seldom do (one made an actor or no longer one, killed, an ally come along, a cornered one's
 ** dart); part 5, the senses' own (a hunter's stalk, a scent followed, one drawn on); part 6, morale (HOUSE.md's: the
 ** field about an actor and its bonds to its leaders, reckoned as it engages and as one near it falls; its kin
-** dismayed, a leader's loss known); part 5 also the bonds aged by the clock; part 7, succession (a dead leader's
+** dismayed, a leader's loss known); part 7, succession, and the bonds aged by the clock (a dead leader's
 ** post taken by the most influential of those below it).
 ** The blows its actors strike and take are the world's, told as the denizens' events (E_FIGHT): it takes them to heart
 ** (fought: fleeing, dismay, harmed, a death recorded).
@@ -1760,7 +1760,7 @@ static unsigned char roam (void)
         return 0;
     }
     if (NOW_HI - aged >= DAY_HI) {
-        age ();                                 /* (The bonds aged by the clock, a day at a time: part 6's) */
+        age ();                                 /* (The bonds aged by the clock, a day at a time: part 7's) */
     }
     roam_at = now + ROAM_T;
     for (i = 0; i < hd.ndens; ++i, ++q) {
@@ -3223,10 +3223,10 @@ void __fastcall__ s_told (unsigned char j)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 5 again: the bonds aged (part 6's room, 2026-10-30) */
-#pragma code-name (push, "SW5CODE")
-#pragma rodata-name (push, "SW5RODATA")
-#pragma bss-name (push, "SW5RODATA")
+/* ==== Part 7 again: the bonds aged (part 6's room, 2026-10-30; not part 5, the hunters' own, copied in at every scent) */
+#pragma code-name (push, "SW7CODE")
+#pragma rodata-name (push, "SW7RODATA")
+#pragma bss-name (push, "SW7RODATA")
 #pragma register-vars (push, on)
 
 /* The bonds aged by the clock (roam's, a day or more gone since they last were): each record not an actor (an

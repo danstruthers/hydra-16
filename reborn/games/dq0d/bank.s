@@ -49,4 +49,4 @@ ovx:        .res        1
             SWFN        dismay, 6
             SWFN        heart, 6
             SWFN        succeed, 7
-            SWFN        age, 5               ; (Part 5's since 2026-10-30: part 6's room)
+            SWFN        age, 7               ; (Part 7's since 2026-10-30: part 6's room)
