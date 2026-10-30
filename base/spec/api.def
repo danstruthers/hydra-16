@@ -395,6 +395,21 @@ call RUN task impl=K_RUN
   doc:    banks and pages the program takes (and not gives back) are the task's till it ends.  A program running in
   doc:    place can RUN another.
 
+call TASKFORE task impl=K_TASKFORE far
+  in:     .A = a task: this one, or one it started; .X = 1 to put it in the foreground, 0 to take it out
+  out:    -
+  errors: E_PERM (the kernel task, a driver, or another program's task), E_SRCH (not a task, or not started)
+  blocks: no
+  hl:     .A=n .X=n ->
+  doc:    Put a task in the foreground, or take it out.  The scheduler picks a task in the foreground before the
+  doc:    others whenever it can run: at the next switch (a tick at most), not after a round of everything else
+  doc:    that's busy; and a driver serving its call goes first with it.  For a program whose answer to a key runs
+  doc:    through tasks of its own while others work in the background (a game's: its UI, parser and world first;
+  doc:    its monsters' minds after).  It can't starve the rest: the foreground has FORE_RUN ticks at most, then the
+  doc:    background the rest of a tick (its tasks in turn), so every task gets its turn.  A task waits in the
+  doc:    foreground as any task waits (sleeping, on a semaphore: no CPU).  TASKINFO's TI_FLAGS has TF_FORE while
+  doc:    it's in.  It goes with the task: gone when the task ends, or EXECs another program.
+
 # ---- memory (BIOS ROM page 1)
 
 call BREAK memory impl=K_BRK far
@@ -1043,9 +1058,11 @@ const ME_NAME         4        "MODINFO: its name (11 bytes, zero-padded: 10 cha
 const ME_PAGE         15       "MODINFO: its header's page in its first bank, 0-63 ($A000 + 256 * it: a module of a bank, packed with others)"
 const ME_SIZE         16
 const TI_STATE        0        "TASKINFO's answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked, 8 event)"
-const TI_FLAGS        1        "TASKINFO: its flags (TF_DRIVER, TF_STOPPED)"
+const TI_FLAGS        1        "TASKINFO: its flags (TF_DRIVER, TF_FORE, TF_STOPPED)"
 const TF_DRIVER       $01      "TI_FLAGS: a driver"
 const TF_STOPPED      $80      "TI_FLAGS: stopped (/proc's ctl: TASKSTOP)"
+const TF_FORE         $02      "TI_FLAGS: in the foreground (TASKFORE): the scheduler picks it first"
+const FORE_RUN        8        "The foreground's turn at most, in ticks (TASKFORE): then the background has the rest of a tick"
 const TI_PARENT       2        "TASKINFO: its parent ($FF: none)"
 const TI_CPU          3        "TASKINFO: its CPU time, in ticks (3 bytes)"
 const TI_BANK         6        "TASKINFO: its module's paged ROM bank ($FF: none)"

@@ -20,7 +20,7 @@ function gives.
 
 <!-- calls:begin -->
 
-Made from `base/spec/api.def` and `base/spec/errors.def` by `node docs/build/callref.js`: 96 calls in 9 groups.
+Made from `base/spec/api.def` and `base/spec/errors.def` by `node docs/build/callref.js`: 97 calls in 9 groups.
 
 **The groups:** [system](#system-f800), [task](#task-f830), [memory](#memory-f890), [file](#file-f8c0), [name](#name-f920), [cons](#cons-f950), [time](#time-f980), [server](#server-f9b0), [dbg](#dbg-fa10); [the error codes](#the-error-codes); [the constants](#the-constants).
 
@@ -115,7 +115,7 @@ Call a routine in another bank of the paged ROM (a library module's: HT_LIBRARY,
 
 ## task (`$F830`)
 
-Tasks: starting and ending them, waiting, scheduling, ticks: 32 slots from `$F830`, 28 used.
+Tasks: starting and ending them, waiting, scheduling, ticks: 32 slots from `$F830`, 29 used.
 
 | Call | Address | What it does |
 | :--- | :------ | :----------- |
@@ -147,6 +147,7 @@ Tasks: starting and ending them, waiting, scheduling, ticks: 32 slots from `$F83
 | [`EXEC`](#exec) | `$F87B` | Run a program in this task, in place of the one that calls it (Plan 9's exec). |
 | [`SEM_WAIT`](#sem_wait) | `$F87E` | SEM_ACQUIRE with a time limit. |
 | [`RUN`](#run) | `$F881` | Run a bank program in this task, as a subroutine, and wait for it. |
+| [`TASKFORE`](#taskfore) | `$F884` | Put a task in the foreground, or take it out. |
 
 ### EXITS
 
@@ -565,6 +566,21 @@ SEM_ACQUIRE with a time limit: take one of a semaphore's count; if there's none,
 | **hylang** | `sys-run r0=s r1=args? .A=n? r2=map? -> .A` |
 
 Run a bank program in this task, as a subroutine, and wait for it.  A bank program (HF_BANK, not HF_TASK) is kept in this task's code cache: RAM banks of its own (eight at most, BANKS_ALLOC's), several programs to a bank, one above the other, each loaded the first time it's run (its file's o65 module, relocated where it's put) and kept for the next; when there's no room the one run least lately is given up.  The program is known by its file (STAT's), so a changed file is loaded again.  It runs with its bank at $8000 and its zero page in the program's ($22 up), on this task's stack: its arguments at r0, its fds this task's 0, 1 and 2 (SPAWN_FDMAP: the map's), no note handler (the task keeps its name).  It ends as a program does (returning from main, EXITS, a note's default: Ctrl-C), and then the task is the caller's again: its fds (the program's closed), note handler, zero page, banks at $8000 and $A000 and break; a note that ended the program (but a kill) is posted again, for the caller's own handler.  RUN_LEND lets the program move the break past the caller's (BREAK: memory the caller doesn't use; it's put back after); without it, BREAK fails.  The banks and pages the program takes (and not gives back) are the task's till it ends.  A program running in place can RUN another.
+
+### TASKFORE
+
+`$F884`, a far call (its routine on another BIOS page).
+
+| | |
+| :-- | :-- |
+| **In** | .A = a task: this one, or one it started; .X = 1 to put it in the foreground, 0 to take it out |
+| **Out** | - |
+| **Errors** | E_PERM (the kernel task, a driver, or another program's task), E_SRCH (not a task, or not started) |
+| **Waits** | no |
+| **HyForth** | `sys-taskfore ( .A .X -- ior )` |
+| **hylang** | `sys-taskfore .A=n .X=n ->` |
+
+Put a task in the foreground, or take it out.  The scheduler picks a task in the foreground before the others whenever it can run: at the next switch (a tick at most), not after a round of everything else that's busy; and a driver serving its call goes first with it.  For a program whose answer to a key runs through tasks of its own while others work in the background (a game's: its UI, parser and world first; its monsters' minds after).  It can't starve the rest: the foreground has FORE_RUN ticks at most, then the background the rest of a tick (its tasks in turn), so every task gets its turn.  A task waits in the foreground as any task waits (sleeping, on a semaphore: no CPU).  TASKINFO's TI_FLAGS has TF_FORE while it's in.  It goes with the task: gone when the task ends, or EXECs another program.
 
 ---
 
@@ -1712,9 +1728,11 @@ What `hydra.inc` defines besides the calls and the error codes (`hydracalls.h` h
 | `ME_PAGE` | `15` | MODINFO: its header's page in its first bank, 0-63 ($A000 + 256 * it: a module of a bank, packed with others) |
 | `ME_SIZE` | `16` |  |
 | `TI_STATE` | `0` | TASKINFO's answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked, 8 event) |
-| `TI_FLAGS` | `1` | TASKINFO: its flags (TF_DRIVER, TF_STOPPED) |
+| `TI_FLAGS` | `1` | TASKINFO: its flags (TF_DRIVER, TF_FORE, TF_STOPPED) |
 | `TF_DRIVER` | `$01` | TI_FLAGS: a driver |
 | `TF_STOPPED` | `$80` | TI_FLAGS: stopped (/proc's ctl: TASKSTOP) |
+| `TF_FORE` | `$02` | TI_FLAGS: in the foreground (TASKFORE): the scheduler picks it first |
+| `FORE_RUN` | `8` | The foreground's turn at most, in ticks (TASKFORE): then the background has the rest of a tick |
 | `TI_PARENT` | `2` | TASKINFO: its parent ($FF: none) |
 | `TI_CPU` | `3` | TASKINFO: its CPU time, in ticks (3 bytes) |
 | `TI_BANK` | `6` | TASKINFO: its module's paged ROM bank ($FF: none) |

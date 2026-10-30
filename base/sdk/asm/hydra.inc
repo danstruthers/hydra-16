@@ -58,6 +58,7 @@ EXEC            = $F87B       ; r0 = the program's path (as SPAWN's); r1 = its a
 SEM_WAIT        = $F87E       ; .A = a semaphore; .X = the most ticks to wait (TICK_HZ a second; 0: none, as SEM_TRY)
 RUN             = $F881       ; r0 = a bank program's path (as SPAWN's); r1 = its arguments (as SPAWN's), or 0; .A = flags (SPAWN_FDMAP, RUN_LEND); r2 = an fd map (with SPAWN_FDMAP, as SPAWN's).  None of them in the window ($8000-$9FFF)
                               ; -> .A = its exit code; r0 = its exit message (31 characters at most: TA_SCRATCH, "" for none)
+TASKFORE        = $F884       ; .A = a task: this one, or one it started; .X = 1 to put it in the foreground, 0 to take it out
 
 ; ---- memory: Memory: the break, pages, banks, shared segments (phase 1.8)
 BREAK           = $F890       ; r0 = the new end of the program's data (the first byte past it), or 0 to ask
@@ -266,9 +267,11 @@ ME_NAME         = 4           ; MODINFO: its name (11 bytes, zero-padded: 10 cha
 ME_PAGE         = 15          ; MODINFO: its header's page in its first bank, 0-63 ($A000 + 256 * it: a module of a bank, packed with others)
 ME_SIZE         = 16          
 TI_STATE        = 0           ; TASKINFO's answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked, 8 event)
-TI_FLAGS        = 1           ; TASKINFO: its flags (TF_DRIVER, TF_STOPPED)
+TI_FLAGS        = 1           ; TASKINFO: its flags (TF_DRIVER, TF_FORE, TF_STOPPED)
 TF_DRIVER       = $01         ; TI_FLAGS: a driver
 TF_STOPPED      = $80         ; TI_FLAGS: stopped (/proc's ctl: TASKSTOP)
+TF_FORE         = $02         ; TI_FLAGS: in the foreground (TASKFORE): the scheduler picks it first
+FORE_RUN        = 8           ; The foreground's turn at most, in ticks (TASKFORE): then the background has the rest of a tick
 TI_PARENT       = 2           ; TASKINFO: its parent ($FF: none)
 TI_CPU          = 3           ; TASKINFO: its CPU time, in ticks (3 bytes)
 TI_BANK         = 6           ; TASKINFO: its module's paged ROM bank ($FF: none)

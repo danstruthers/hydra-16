@@ -90,6 +90,10 @@ module.exports = {
       init: 't_sem', cycles: 30e6,
     },
     {
+      name: 'fore', what: 'the foreground (TASKFORE, TF_FORE): itself, a child, not the kernel task, a driver, a free task or its parent; the flag in TASKINFO; a foreground task busy for good beside one in the background, which still has its turns (a tick in every FORE_RUN + 1) and ends; the flag gone with the task',
+      init: 't_fore', cycles: 40e6,
+    },
+    {
       name: 'xcall', what: 'XCALL: a library module\'s routines (t_lib), registers and flags both ways, its bank and back, a system call from it',
       init: 't_xcall', modules: ['t_lib'], cycles: 10e6,
     },

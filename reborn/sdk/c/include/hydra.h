@@ -80,6 +80,9 @@ void __fastcall__ hy_exits (const char* msg);               /* End with a messag
 int __fastcall__ hy_note (int task, unsigned char note);    /* A note (HY_NOTE_*) to a task (HY_NOTE_GROUP |
                                                             **   a group: its tasks) */
 unsigned char hy_parent (void);                             /* The task that started this one (0xFF: none) */
+int __fastcall__ hy_taskfore (unsigned char task, unsigned char on);   /* Task (this one, or one it started) in
+                                                            **   the foreground (on 1) or not (0): TASKFORE, the
+                                                            **   scheduler's first pick: 0, or -1 */
 
 /* ---- Semaphores: every task's, by number; a mutex (HY_SEM_MUTEX) is given back only by the task that took it */
 

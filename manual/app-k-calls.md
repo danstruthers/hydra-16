@@ -40,7 +40,7 @@ in small letters, with `-` for `_`:
 
 **`WAIT`** ($F833). Wait for a program this one started to end, and get its exit code and message. *In:* A = a task this one started, or $FF for any; r0 = a buffer for the message (32 bytes), or 0. *Out:* A = the task that ended; X = its exit code; its message in r0's buffer ("" for none). *Errors:* E_CHILD, E_INTR. *It can wait.*
 
-**`SPAWN`** ($F836). Start a program, in a task of its own. *In:* r0 = the program's path (through the namespace: /bin/NAME; or #m/NAME, a module in the paged ROM); r1 = its arguments (zero-terminated strings, an empty one after the last: 176 bytes at most), or 0; A = flags (SPAWN_NEWGROUP, SPAWN_NEWNS, SPAWN_FDMAP, SPAWN_NOENV, SPAWN_STOPPED); r2 = an fd map (with SPAWN_FDMAP). *Out:* A = the new task. *Errors:* E_NOENT, E_NOEXEC, E_NOTASK, E_TOOBIG, E_INVAL, E_MFILE, E_INTR. *It can wait.*
+**`SPAWN`** ($F836). Start a program, in a task of its own. *In:* r0 = the program's path (through the namespace: /bin/NAME; or #m/NAME, a module in the paged ROM); r1 = its arguments (zero-terminated strings, an empty one after the last: 176 bytes at most), or 0; A = flags (SPAWN_NEWGROUP, SPAWN_NEWNS, SPAWN_FDMAP, SPAWN_NOENV, SPAWN_STOPPED, SPAWN_RUN, RUN_LEND); r2 = an fd map (with SPAWN_FDMAP). *Out:* A = the new task (SPAWN_RUN: this one, if the program ran in it). *Errors:* E_NOENT, E_NOEXEC, E_NOTASK, E_TOOBIG, E_INVAL, E_MFILE, E_INTR. *It can wait.*
 
 **`GETPID`** ($F839). This task's number (0 to 15). *Out:* A = this task's number.
 
@@ -90,6 +90,10 @@ in small letters, with `-` for `_`:
 
 **`SEM_WAIT`** ($F87E). Take one from a semaphore, waiting a given number of ticks at most for it. *In:* A = a semaphore; X = the most ticks to wait (TICK_HZ a second; 0: none, as SEM_TRY). *Errors:* E_AGAIN, E_INVAL, E_BUSY, E_INTR. *It can wait.*
 
+**`RUN`** ($F881). Run a bank program in this task, as a subroutine, and wait for it: loaded once into banks of the task's own and kept for the next time. *In:* r0 = a bank program's path (as SPAWN's); r1 = its arguments (as SPAWN's), or 0; A = flags (SPAWN_FDMAP, RUN_LEND); r2 = an fd map (with SPAWN_FDMAP, as SPAWN's).  None of them in the window ($8000-$9FFF). *Out:* A = its exit code; r0 = its exit message (31 characters at most: TA_SCRATCH, "" for none). *Errors:* E_NOEXEC, E_NOENT, E_BUSY, E_NOMEM, E_TOOBIG, E_FAULT, E_INTR. *It can wait.*
+
+**`TASKFORE`** ($F884). Put this task, or one it started, in the **foreground**: the scheduler picks it first whenever it can run (a tick at most), leaving the others a turn after FORE_RUN ticks; or take it out. *In:* A = a task: this one, or one it started; X = 1 to put it in the foreground, 0 to take it out. *Errors:* E_PERM, E_SRCH.
+
 
 ## K.3 Memory
 
@@ -118,6 +122,10 @@ in small letters, with `-` for `_`:
 **`BANKS_ALLOC_IN`** ($F8B1). As `BANKS_ALLOC`, from a range of bank numbers only. *In:* A = how many; X = the lowest bank it may take; Y = the highest (module m's are $m0-$mF). *Out:* A = the first. *Errors:* E_INVAL, E_NOMEM.
 
 **`SEG_CREATE_IN`** ($F8B4). As `SEG_CREATE`, from a range of the shared RAM only. *In:* A = how many banks (1-128); X = the lowest shared bank ID it may take; Y = the highest (U << 4 | the bank's low nibble; segments have $80-$FF). *Out:* A = the segment. *Errors:* E_INVAL, E_NOMEM.
+
+**`BANK_LOAD`** ($F8B7). Find a bank program's child (functions a program calls itself, in a bank) in the task's code cache, loading it if it isn't there: where its entries are. *In:* r0 = a child's path (an o65 module, linked at $8000: sdk/c/child.cfg); r1 = its caller's exports (NAME.exp), or 0; A = where its zero page goes; X = the bytes there it may have.  None of them in the window. *Out:* A = its bank; X = its directory entry (RB_DIR + 16 x X in its bank: RE_GEN its load, RE_TABLE its table). *Errors:* E_NOENT, E_NOEXEC, E_RANGE, E_IO, E_NOMEM, E_TOOBIG, E_FAULT. *It can wait.*
+
+**`BANK_FLUSH`** ($F8BA). Give up every program and child kept in the task's code cache, and free the banks left empty. *In:* A = the banks the code cache may have from now on (RC_BANKS to start with), or 0 (as it was). *It can wait.*
 
 
 ## K.4 Files

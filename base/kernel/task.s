@@ -709,6 +709,10 @@ K_INIT_RUN:
 ; they've started (K_BOOT_STARTED), init (the directory's MD_INIT: K_TASK_BOOT_INIT).  Each said on the console:
 ; "task F: cons", or "module NAME: error $xx"
 K_TASK_BOOT:
+            ldx         #K0_SCHED_END - K0_FORES - 1        ; (The scheduler's bytes, POST's till now: no
+:           stz         K0_FORES,X                          ;   foreground yet, its place task 0's)
+            dex
+            bpl         :-
             jsr         K_MD_VALID
             bcc         :+
             TPRINT      T_S_NOMODS

@@ -44,6 +44,7 @@
 #define HY_EXEC                 0xF87B
 #define HY_SEM_WAIT             0xF87E
 #define HY_RUN                  0xF881
+#define HY_TASKFORE             0xF884
 
 /* ---- memory: Memory: the break, pages, banks, shared segments (phase 1.8) */
 #define HY_BREAK                0xF890
@@ -223,9 +224,11 @@
 #define HY_ME_PAGE              15        /* MODINFO: its header's page in its first bank, 0-63 ($A000 + 256 * it: a module of a bank, packed with others) */
 #define HY_ME_SIZE              16
 #define HY_TI_STATE             0         /* TASKINFO's answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked, 8 event) */
-#define HY_TI_FLAGS             1         /* TASKINFO: its flags (TF_DRIVER, TF_STOPPED) */
+#define HY_TI_FLAGS             1         /* TASKINFO: its flags (TF_DRIVER, TF_FORE, TF_STOPPED) */
 #define HY_TF_DRIVER            0x01      /* TI_FLAGS: a driver */
 #define HY_TF_STOPPED           0x80      /* TI_FLAGS: stopped (/proc's ctl: TASKSTOP) */
+#define HY_TF_FORE              0x02      /* TI_FLAGS: in the foreground (TASKFORE): the scheduler picks it first */
+#define HY_FORE_RUN             8         /* The foreground's turn at most, in ticks (TASKFORE): then the background has the rest of a tick */
 #define HY_TI_PARENT            2         /* TASKINFO: its parent ($FF: none) */
 #define HY_TI_CPU               3         /* TASKINFO: its CPU time, in ticks (3 bytes) */
 #define HY_TI_BANK              6         /* TASKINFO: its module's paged ROM bank ($FF: none) */
