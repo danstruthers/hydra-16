@@ -90,7 +90,7 @@ static unsigned char __fastcall__ count_of (const char* s)
     unsigned char k;
 
     if (*s >= '0' && *s <= '9') {
-        k = atoi (s);
+        k = dnum (s);
         return k ? k : 1;
     }
     for (p = counts, k = 1; *p; p += strlen (p) + 1, ++k) {

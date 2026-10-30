@@ -204,20 +204,20 @@ void s_size (void)
             kbd = 1;
         }
         if (!strncmp (p, "size ", 5)) {
-            tw = atoi (p + 5);
+            tw = dnum (p + 5);
             if ((p = strchr (p + 5, ' ')) != 0) {
-                th = atoi (p + 1);
+                th = dnum (p + 1);
             }
         }
     }
     if (tw != 80 || th != 24) {
         return;                                 /* (The console's) */
     }
-    if ((p = env ("COLUMNS", eb, sizeof eb)) != 0 && atoi (p) > 0) {
-        tw = atoi (p);
+    if ((p = env ("COLUMNS", eb, sizeof eb)) != 0 && dnum (p) > 0) {
+        tw = dnum (p);
     }
-    if ((p = env ("LINES", eb, sizeof eb)) != 0 && atoi (p) > 0) {
-        th = atoi (p);
+    if ((p = env ("LINES", eb, sizeof eb)) != 0 && dnum (p) > 0) {
+        th = dnum (p);
     }
 }
 

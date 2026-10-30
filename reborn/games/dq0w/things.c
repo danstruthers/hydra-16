@@ -214,35 +214,22 @@ void owned (void)
     }
 }
 
-/* ---- The hub's text (things_text, the UI bank's): the words put after what's there, the text begun again */
-static char* tp;
-static char* tq;                                /* (Or into the main RAM, on to tqe: things' words compared, alike:
+/* ---- The hub's text (things_text, the UI bank's): the words put after what's there (tlist.s's put, in assembly: an
+** inventory's every word, 2026-10-30), the text begun again */
+void __fastcall__ put (const char* s);
+extern char* tp;                                /* (tlist.s's: the text's end so far, and how far it may go, its bank) */
+extern char* tpe;
+extern unsigned char put_bank;
+extern char* tq;                                /* (Or into the main RAM, on to tqe: things' words compared, alike:
                                                 **   part 11's) */
-static char* tqe;
-static void __fastcall__ put (const char* s)
-{
-    static unsigned n, r;
-
-    if (tq) {
-        while (*s && tq < tqe) {
-            *tq++ = *s++;
-        }
-        *tq = 0;
-        return;
-    }
-    n = strlen (s);                             /* (Copied whole, the library's: an inventory's every word, quicker
-                                                **   than a byte at a time, 2026-10-27) */
-    hub_map (UI_BANK);                          /* (The text the UI bank's: the header back after) */
-    r = UIREC->things_text + sizeof UIREC->things_text - 1 - tp;
-    memcpy (tp, s, n = n < r ? n : r);
-    *(tp += n) = 0;
-    hub_map (0);
-}
+extern char* tqe;
 
 static void text_new (void)
 {
+    put_bank = UI_BANK;
     hub_map (UI_BANK);
     tp = UIREC->things_text;
+    tpe = tp + sizeof UIREC->things_text - 1;
     *tp = 0;
     hub_map (0);
 }
@@ -2640,36 +2627,24 @@ static unsigned char sig (void)
 #define GOT_MAX         200
 static struct got { unsigned n, x; unsigned char where, kind; } ge;
 #define GOT_AT          ((struct got*) 0x9B00)
-static unsigned char ngot;
-static unsigned char gcur;                      /* (The entry next_in gave last: the next looked for after it, a
+extern unsigned char ngot;                      /* (tlist.s's, as next_got's are) */
+extern unsigned char gcur;                      /* (The entry next_in gave last: the next looked for after it, a
                                                 **   container's things in turn, not the list again for each,
                                                 **   2026-10-27, the outfits' more things) */
 
-/* The next record after i at where, x (IN_X's: items ()'s order, the records' own) */
+/* The next record after i at where, x (IN_X's: items ()'s order, the records' own): the list gathered, tlist.s's
+** next_got (in assembly: an inventory's every thing, 2026-10-30) */
 #pragma static-locals (push, on)
-static unsigned nx_n, nx_x;                     /* (next_in's arguments: the caller's, set in these, no C stack's) */
-static unsigned char nx_w;
+extern unsigned nx_n, nx_x;                     /* (next_in's arguments: the caller's, set in these, no C stack's) */
+extern unsigned char nx_w;
+unsigned next_got (void);
 static unsigned next_in (void)
 {
-    struct got* g;
-    unsigned char k, w;
-    unsigned n, at;
-
     if (ngot == 0xFF) {
         return items (nx_n, IN_X | 1 << nx_w, nx_x);
     }
     hub_map (KIND_BANK);                        /* (The list's bank) */
-    n = nx_n;
-    w = nx_w;
-    at = nx_x;
-    k = n && gcur < ngot && GOT_AT[gcur].n == n ? gcur + 1 : 0;
-    for (g = GOT_AT + k; k < ngot; ++k, ++g) {
-        if (g->x == at && g->where == w && g->n > n) {
-            gcur = k;
-            return g->n;
-        }
-    }
-    return 0;
+    return next_got ();
 }
 #pragma static-locals (pop)
 

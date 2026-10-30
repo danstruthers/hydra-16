@@ -660,7 +660,7 @@ static unsigned __fastcall__ wait_of (const char* l, unsigned char n)
         }
         c = *p | 0x20;
         if (c >= '0' && c <= '9') {
-            v = atoi (p);
+            v = dnum (p);
         } else if (c == 'h' && p[1] == 'a') {
             half = 1;                           /* ("half") */
         } else if (c == 'h' || (c == 'm' && p[1] == 'i')) {

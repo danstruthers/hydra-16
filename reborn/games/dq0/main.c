@@ -146,6 +146,17 @@ char* __fastcall__ env (const char* name, char* buf, unsigned char size)
     return buf;
 }
 
+/* A number, a word's (atoi's, without the C library's atol and ctype: the main RAM's room, 2026-10-30) */
+unsigned __fastcall__ dnum (const char* s)
+{
+    unsigned n = 0;
+
+    while (*s >= '0' && *s <= '9') {
+        n = n * 10 + *s++ - '0';
+    }
+    return n;
+}
+
 static void find_dirs (void)
 {
     char pv[sizeof gamedir + 1];
