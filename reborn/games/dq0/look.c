@@ -73,7 +73,8 @@ void __fastcall__ look (unsigned char first)
     words ();
     if (!lb_stream) {
         names_look (1);
-        msg (lb);
+        lb_said ();                             /* (Its sentences said but those said already this answer, as a
+                                                **   streamed look's are: lbsaid.s's) */
     }
     lb_stream = 0;
 }
@@ -85,9 +86,8 @@ void stir (void)
     sight_get ();
     pc_face = HUB->pc_face;
     stir_words ();
-    if (lb[0]) {
-        msg (lb);
-    }
+    lb_tell ();                                 /* (Said, and kept as told: the look after, a walk stopped by it,
+                                                **   tells it not again, lbsaid.s's) */
 }
 
 /* ---- The map, and beside it (under it, if the screen's too narrow) the character's state: where it is (its

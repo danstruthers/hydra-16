@@ -135,6 +135,9 @@ extern unsigned char pc_face;                   /* (The hub's, copied for the ov
 #define TOLD        24                          /* (A look's sentences said this answer: look.c's told, ntold) */
 extern unsigned told[TOLD];
 extern unsigned char ntold;
+extern unsigned lb_salt;                        /* (lbsaid.s's: where the sentences said are said of, their hash begun
+                                                **   with it: the character's square, main.c's) */
+void lb_tell (void);                            /* (lb's words all said, each kept as told: lbsaid.s's) */
 void lb_said (void);                            /* (A look's words said, lbsaid.s's: words.c's and seen.c's lb_out) */
 
 /* ---- pace.c (part 4): the pace, the watchfulness, the state, small moves, from the line typed */

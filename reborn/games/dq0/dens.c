@@ -154,6 +154,9 @@ static void group (void)
 ** things", an ally's name ("Grub") */
 static void __fastcall__ named (const struct told* t, unsigned char the)
 {
+    add ("\002");                               /* (Its sentence said of nothing, not of the place, as a thing's:
+                                                **   lbsaid.s's, a denizen told as it stirs, a walk stopped by it a
+                                                **   step on, not told again in the look there) */
     if (t->name[0] && t->name[0] < 'a') {
         add (" ");
         add (t->name);

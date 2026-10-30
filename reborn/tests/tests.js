@@ -2026,11 +2026,7 @@ const DQ0_REPEATS = [
     why: 'a fight\'s fumbles (slice 4.1b\'s hands), each told as it comes: a thing let fall at each fumble (two torches held, two fumbles), a denizen\'s weapon dropped and snatched up again its next turn, twice in a long answer\'s rounds (the soak\'s seed 85, 2026-10-27)' },
   { what: /^(?:You stop fighting|You fumble for the .+)\.$/,
     why: 'commands typed ahead as the character fights, each taking the fight over in turn, fought on between them (fighting on), their answers one' },
-  { what: /^A giant rat is .+, keeping its distance\.$/, tests: /^dq0(?:traces|legs)$/,
-    why: 'a walk across the rats\' cell: a shy rat told keeping its distance as the walk\'s look stirs, then again where it is as the look on arriving has it (the tellings two, the stir not first in the second; dq0legs\' hops and crawls there too)' },
   { what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
-  { what: /^An? (?:cave adder|bandit) is ahead(?: to your (?:left|right))?, \d+ feet away(?:, keeping its distance)?\.$/, tests: /^dq0(?:helpless|robbed|venom)$/,
-    why: 'a walk stopped by a hostile seen: told as the walk\'s look stirs, then again in the look as it stops (the stir and that look one telling, as dq0traces\' rats\')' },
   { what: /^You keep at it\.$/,
     why: 'a battering\'s beat every fourth blow once its blows tell (the user\'s, 2026-10-22: told as it goes), twice or more in a dozen' },
   { what: /^Everything goes black\.$/, tests: /^dq0(?:finished|strike|helpless|venom)$/,
@@ -4911,7 +4907,6 @@ module.exports = {
         'defend block', 'wait', 'open the door', ...Array(36).fill('wait'), 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
-        if (process.env.DQ0DBG) { const T0 = dq0Turns(m), g = m.dq0.games[m.dq0.games.length - 1]; this.notes = [...g.replies.filter(r => r.req === 'dsense' && r.line >= 13 && r.line < 20).slice(0, 40).map(r => r.line + ' w' + r.who + ' n' + r.noise + ' r' + r.res + ' c' + r.cost + ' a' + r.x + ',' + r.y + ' pc' + r.pc.x + ',' + r.pc.y + '/' + r.pc.noise), ...T0.filter(t => t.k >= 12 && t.k < 22).map(t => t.line + ' ' + JSON.stringify(t.after && t.after.actors.map(a => [a.x, a.y, a.doing])) + ' pc ' + JSON.stringify(t.after && [t.after.pc.x, t.after.pc.y, t.after.pc.light, t.after.pc.airS, t.after.pc.airH, t.after.pc.mask]))]; }
         const T = dq0Turns(m), f = [], K = m.dq0.layout().K, o = dq0Story(out);
         const g = T.of("dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'");
         if (g.k < 0) return ['the game not played'];
@@ -5073,7 +5068,7 @@ module.exports = {
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'open the door', 'south', 'drop the torch', 'south', 'flee', 'flee', 'status', 'tend my wounds', 'wait 2 hours', 'echo $status']) },
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'open the door', 'south', 'drop the torch', 'south', 'wait', 'flee', 'flee', 'status', 'tend my wounds', 'wait 2 hours', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out);
@@ -5244,11 +5239,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again (since slice 4.3, come round in shock, a thing not taken up in shock: its torch let fall and not taken up, the load's check that one's alone); and its encumbrance the referee's the same)",
+      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start; the character walking on east toward them, as the dice now fall: they keep to their room, watching), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again (since slice 4.3, come round in shock, a thing not taken up in shock: its torch let fall and not taken up, the load's check that one's alone); and its encumbrance the referee's the same)",
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
         'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
-        'defend none', 'hold the dagger', 'open the door', 'south', ...Array(12).fill('wait'), 'drop the torch', 'take the torch', 'quit', 'echo $status']) },
+        'defend none', 'hold the dagger', 'open the door', 'south', 'east', ...Array(12).fill('wait'), 'drop the torch', 'take the torch', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4, s = dq0Story(out), I = DQ0_I;
@@ -5594,7 +5589,7 @@ module.exports = {
         'look at the spear', 'take the lit torch in my left hand', 'hold the spear in my left hand', 'take the lit torch in my right hand',
         'i', 'quit',
         'cp /ram/c.hm /ram/l.hm', 'echo med 15 >> /ram/l.hm', 'dq0 -p t -s 3 -c /ram/l.hm -T -k sword', 'i', 'quit',
-        'cp /ram/c.hm /ram/s.hm', 'echo ml swd 80 >> /ram/s.hm', 'dq0 -p t -s 5 -c /ram/s.hm -T -I -k sword', 'd', 'wait', 'go right',
+        'cp /ram/c.hm /ram/s.hm', 'echo ml swd 80 >> /ram/s.hm', 'dq0 -p t -s 5 -c /ram/s.hm -T -I -k sword', 'd', 'go right',
         'drop the torch', 'attack the rat with the sword in my left hand',
         'quit', 'echo $status']) },
       expect: ['% echo $status'],

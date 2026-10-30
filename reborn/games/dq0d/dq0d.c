@@ -2289,7 +2289,7 @@ static unsigned char __fastcall__ num (const char* s)
 int main (int argc, char* argv[])
 {
     static unsigned lpx, lpy;
-    static unsigned char lpl;
+    static unsigned char lpl, lpn;
     static unsigned long done_at;
     static unsigned char gone, g, act;
     unsigned char* p;
@@ -2334,7 +2334,10 @@ int main (int argc, char* argv[])
                                                 **   it there) */
                 hub_map (0);
             }
-            pcbusy = HUB->pc_ready > now ? HUB->pc_noise + 1 : 0;  /* (Busy, and how loud: slice 4.5's) */
+            pcbusy = HUB->pc_ready > now;       /* (Busy; and how loud, its noise sensed again as it changes: slice
+                                                **   4.5's; not pc_noise + 1, 0 as it's 0xFF, the senses' to reckon
+                                                **   by its pace: a busy character taken for idle, one senseless
+                                                **   not helpless, struck on, never robbed) */
             pcrest = pcbusy && (HUB->pc_task.kind == LT_WAIT || HUB->pc_task.kind == LT_SLEEP) && !HUB->pc_task.asking;
             pcdead = (HUB->pcsum.cond & C_DEAD) != 0;
             pchelp = (HUB->pcsum.cond & C_STUNNED) || ((HUB->pcsum.cond & C_UNCONSCIOUS) && pcbusy);
@@ -2357,11 +2360,13 @@ int main (int argc, char* argv[])
                 pcstay = TR_MORE ((unsigned char) (nowq - pcq + 1));
             }
         }
-        if (act && (pcx != lpx || pcy != lpy || (pclit | pcstay << 1 | pcbusy << 3) != lpl)) {
+        if (act && (pcx != lpx || pcy != lpy || (pclit | pcstay << 1 | pcbusy << 3) != lpl ||
+            (pcbusy && HUB->pc_noise != lpn))) {
             lpx = pcx;                          /* (The character changed: each actor senses it again; its stay's
                                                 **   scent too) */
             lpy = pcy;
             lpl = pclit | pcstay << 1 | pcbusy << 3;
+            lpn = HUB->pc_noise;
             if (!++sense_gen) {
                 sense_gen = 1;
             }

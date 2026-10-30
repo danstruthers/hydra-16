@@ -205,12 +205,14 @@ static void items (void)
                 --lbe;                          /* (In a sconce: its sentence's, its full stop still in lb) */
                 add (", ");
             } else {
-                add (" On the ");
+                add (" \002On the ");    /* (A thing's sentence: \002, not said of the place, lbsaid.s's: the
+                                                **   same thing seen from two places told once an answer) */
                 add (S->item[on].name);
                 add (" ");
             }
         } else if ((k = lie_words (i)) == 2) {
-            add (where_w);                      /* (A sconce on the wall, the verb with it: part 8's) */
+            add (" \002");
+            add (where_w + 1);                  /* (A sconce on the wall, the verb with it: part 8's) */
             w = 1;
         } else {
             for (j = i + 1; !b && j < S->nitems; ++j) {     /* (The others on its square: with it) */
@@ -223,10 +225,11 @@ static void items (void)
             }
             told |= now;
             if (k) {
-                add (where_w);                  /* (In a corner, against a wall: part 8's) */
+                add (" \002");
+                add (where_w + 1);              /* (In a corner, against a wall: part 8's) */
             } else {
-                add (S->item[i].hid & 1 ? (S->item[i].rel == 0xFF ? " Hidden at your feet " : " Hidden on the floor ") :
-                    S->item[i].rel == 0xFF ? " At your feet " : " On the floor ");
+                add (S->item[i].hid & 1 ? (S->item[i].rel == 0xFF ? " \002Hidden at your feet " : " \002Hidden on the floor ") :
+                    S->item[i].rel == 0xFF ? " \002At your feet " : " \002On the floor ");
                 if (S->item[i].rel != 0xFF) {
                     add (relname[S->item[i].rel & 7]);
                     add (" ");

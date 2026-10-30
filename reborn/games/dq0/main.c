@@ -902,10 +902,9 @@ static unsigned char events (void)          /* (How many there were) */
                     tell (T_YOU_GO_OVER);
                 }
                 placing = 0;
-                if (HUB->pc_task.kind == LT_TRAVEL) {
-                    ntold = 0;                  /* (A journey's leg: each place it comes to told whole, a look of
-                                                **   its own, as each walk's is: slice 4.2's travel) */
-                }
+                lb_salt = HUB->pc_x + HUB->pc_y;    /* (A look's words said of where it's come to: a journey's
+                                                **   next leg told whole, its things seen before once an answer:
+                                                **   lbsaid.s's) */
                 k = m.w1 & 0xFF;               /* (As a run or a sprint ends, briefly: the pace not held) */
                 look ((m.w1 >> 8 & 1) | ((k == A_WALKED || k == A_CROSSED || k == A_WENT_TO || k == A_STEPPED) &&
                     HUB->gait > GA_JOG && !(HUB->watch & (WA_TRAPS | WA_LISTEN | WA_MAP)) && !sight_get ()->dark ? 4 :
