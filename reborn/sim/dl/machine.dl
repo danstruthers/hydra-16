@@ -22,8 +22,23 @@
 (def {tbz tbs tbl bkon bkb pbase wbase rtct} 0 256 0 NIL 0 0 0 NIL)
 (def {vecs} (hash-create))
 
-; Junk: a byte for k, the same each time for a seed
-(fun {pu k} {bit-and (shr (* (bit-xor (+ k 12345) (* opt-seed 7919)) 2654435761) 13) 255})
+; Junk: the power-up's random numbers, sim/lib/machine.js's (mulberry32, from the seed: pu-s), drawn in its order
+; (power-up): the tasks' RAM, an unset clock's registers, the vectors, T U V W, a Vera X's VRAM.  pu-next: its next,
+; a 32-bit number; pu-byte, its rnd(256); pu-word, its rnd(65536); pu-fill, a buffer's first n bytes, a rnd(256)
+; each (pu-byte's, in one: its last step, z ^ z >> 14, leaves the top byte as it was).  (A product's low 32 bits are
+; Math.imul's)
+(def {pu-s} 0)
+(fun {pu-next} {do
+  (set! {pu-s} (bit-and (+ pu-s #x6D2B79F5) #xFFFFFFFF))
+  (set {z} (bit-and (* (bit-xor pu-s (shr pu-s 15)) (bit-or pu-s 1)) #xFFFFFFFF))
+  (set {z} (bit-xor (bit-and (+ z (* (bit-xor z (shr z 7)) (bit-or z 61))) #xFFFFFFFF) z))
+  (bit-xor z (shr z 14))})
+(fun {pu-byte} {shr (pu-next) 24})
+(fun {pu-word} {shr (pu-next) 16})
+(fun {pu-fill buf n} {dotimes {i n} (do
+  (set! {pu-s} (bit-and (+ pu-s #x6D2B79F5) #xFFFFFFFF))
+  (set {z} (bit-and (* (bit-xor pu-s (shr pu-s 15)) (bit-or pu-s 1)) #xFFFFFFFF))
+  (buffer-put buf i (shr (bit-xor (bit-and (+ z (* (bit-xor z (shr z 7)) (bit-or z 61))) #xFFFFFFFF) z) 24)))})
 
 ; Which task's $0000-$7FFF an access at a uses (the model what-ifs, the U7 fault)
 (fun {tsel ad} {if (== opt-model "sharedlow") 0
@@ -78,10 +93,17 @@
 
 ; The I/O page: the devices ($FF00-$FFEF: the one accessed brought up to this access's cycle first, and its next
 ; event and IRQ line found again after), T U V W, the vector RAM.  After a device's access, the run loop's inner loop
-; ends at the next event, which may now be sooner, or at once if an IRQ is to be taken (io-lim)
+; ends at the next event, which may now be sooner, or at once if an IRQ is to be taken (io-lim).  io-at: a device's
+; access's cycle (its last), the ACIA brought up to it first if it's due (machine.js's sync, at every access: a key
+; comes at the access's cycle), and seen moved on to it
+(fun {io-at} {do
+  (set {at} (- cyc 1))
+  (if (>= at nx-ac) (do (ac-sync at) (ac-sched)) 0)
+  (set! {seen} at)
+  at})
 (fun {rd-io ad} {if (> ad #xFFFF) (rd (bit-and ad #xFFFF))
   (if (< ad #xFFF0)
-    (do (set {at} (- cyc 1))
+    (do (set {at} (io-at))
         (set {r} (if (< ad #xFF10) (do (set {x} (via-read (- ad #xFF00) at)) (via-sched) x)
                    (if (< ad #xFF14) (do (if (and (== ad #xFF11) (< at nx-ac)) 0 (ac-sync at))    ; (*)
                                          (set {x} (acia-read (- ad #xFF10) at)) (ac-sched) x)
@@ -96,7 +118,7 @@
         (rom (+ wbase ad)))))})
 (fun {wr-io ad v} {if (> ad #xFFFF) (wr (bit-and ad #xFFFF) v)
   (if (< ad #xFFF0)
-    (do (set {at} (- cyc 1))
+    (do (set {at} (io-at))
         (if (< ad #xFF10) (do (via-write (- ad #xFF00) v at) (via-sched))
           (if (< ad #xFF14) (do (ac-sync at) (acia-write (- ad #xFF10) v at) (ac-sched))
             (if (== ad #xFF40) (ym-select v)
@@ -130,8 +152,10 @@
 ; ---- the devices: each brought up to cycle at when it's accessed, or when the next event is due (devsync, all of
 ; them), from its own cycle (via-cyc, ym-cyc, ac-cyc: they don't touch each other); the next cycle each wants and
 ; whether its IRQ line is active, found again after (via-sched, ym-sched, ac-sched); the next cycle one of them wants
-; (devnext) and whether an IRQ line is active (irqp), from those (dev-due)
-(def {via-cyc ym-cyc ac-cyc ve-cyc nx-via nx-ym nx-ac nx-ve devnext} 0 0 0 0 1 1 1 INF 1)
+; (devnext) and whether an IRQ line is active (irqp), from those (dev-due).  A wait (WAI) wakes at devwake: the same
+; but the ACIA's prompt waited for (nx-acw: machine.js's nextEvent).  seen: the last cycle the machine saw (machine.js's
+; devSeen: an instruction's start, an access's cycle, an interrupt's start, a wait's), while a prompt may come (ac-prompt)
+(def {via-cyc ym-cyc ac-cyc ve-cyc nx-via nx-ym nx-ac nx-acw nx-ve devnext devwake seen ac-prompt} 0 0 0 0 1 1 1 1 INF 1 1 0 NIL)
 (def {irq-via irq-ym irq-ac irq-ve irq-stuck} NIL NIL NIL NIL NIL)
 (fun {via-sync at} {do
   (set {d} (- at via-cyc))
@@ -144,9 +168,10 @@
 (fun {devsync at} {do (via-sync at) (ym-sync at) (ac-sync at) (ve-sync at)})
 (fun {via-sched} {set! {nx-via irq-via} (+ via-cyc (max 1 (min (via-next) (ca1-next)))) (via-irq?)})
 (fun {ym-sched} {set! {nx-ym irq-ym} (+ ym-cyc (max 1 (ym-next))) (ym-irq?)})
-(fun {ac-sched} {set! {nx-ac irq-ac} (+ ac-cyc (max 1 (acia-next))) (and (acia-irq?) (< opt-acialine 16))})
+(fun {ac-sched} {set! {nx-ac nx-acw irq-ac ac-prompt} (+ ac-cyc (max 1 (acia-next))) (+ ac-cyc (max 1 (acia-wake)))
+  (and (acia-irq?) (< opt-acialine 16)) (acia-prompt?)})
 (fun {ve-sched} {if ve-on (set! {nx-ve irq-ve} (+ ve-cyc (max 1 (vera-next ve-cyc))) (vera-irq?)) 0})
-(fun {dev-due} {set! {devnext irqp} (min nx-via nx-ym nx-ac nx-ve) (or irq-via irq-ac irq-ym irq-ve irq-stuck)})
+(fun {dev-due} {set! {devnext devwake irqp} (min nx-via nx-ym nx-ac nx-ve) (min nx-via nx-ym nx-acw nx-ve) (or irq-via irq-ac irq-ym irq-ve irq-stuck)})
 (fun {devsched} {do (via-sched) (ym-sched) (ac-sched) (ve-sched) (dev-due)})
 
 ; CA1's pulses (cycles, in order): low at each, high again 500 cycles on
@@ -161,16 +186,24 @@
 (fun {ca1-next} {if (< ca1-at ca1-n) (max 1 (- (fst (ca1-edges ca1-at)) via-cyc)) INF})
 
 ; ---- the longest stretches with IRQs off (the I flag set), from the first key typed or the boot done (ioff-track):
-; by where each began (page:PC as page * 65536 + PC), the longest from there: [cycles, to, at]
+; machine.js's iOffTop, as its iOffNote keeps it: for each place one began (page:PC as page * 65536 + PC) its longest,
+; the 8 longest of them, the longest first (as long: in the order they came): (cycles from to at) each
 (def {ioff-track ioff-at ioff-from} NIL -1 0)
-(def {ioffs} (hash-create))
+(def {ioff-top} {})
 (fun {ioff-on} {ioff-on-at pc})
 (fun {ioff-on-at n} {if ioff-track (set! {ioff-at ioff-from} cyc (+ (* ww 65536) n)) 0})     ; (n: PC, after SEI or PLP)
 (fun {ioff-off p} {if (and ioff-track (>= ioff-at 0)) (do
-  (set {n} (- cyc ioff-at))
-  (set {old} (hash-get ioffs ioff-from))
-  (if (or (nil? old) (< (fst old) n)) (hash-put ioffs [ioff-from [n (+ (* ww 65536) p) ioff-at]]) 0)
+  (ioff-note (- cyc ioff-at) ioff-from (+ (* ww 65536) p) ioff-at)
   (set! {ioff-at} -1)) 0})
+(fun {ioff-sorted l} {sort l (fn {x y} {> (fst x) (fst y)})})
+(fun {ioff-note n from to at} {do
+  (set {k} (- (len ioff-top) 1))
+  (while {and (>= k 0) (not (== (snd (nth k ioff-top)) from))} (set {k} (- k 1)))
+  (set {e} (list n from to at))
+  (if (>= k 0)
+    (if (< (fst (nth k ioff-top)) n) (set! {ioff-top} (ioff-sorted (join (take k ioff-top) (list e) (drop (+ k 1) ioff-top)))) 0)
+    (if (and (>= (len ioff-top) 8) (>= (fst (nth 7 ioff-top)) n)) 0
+      (set! {ioff-top} (take 8 (ioff-sorted (join ioff-top (list e)))))))})
 (fun {ioff-chg i0 p n} {if (== i0 fi) 0 (if (zero? fi) (ioff-off p) (ioff-on-at n))})
 (fun {ioff-start} {if ioff-track 0 (do (set! {ioff-track} T) (if (zero? fi) 0 (ioff-on)))})
 
@@ -189,11 +222,13 @@
   (while {< cyc stopat}
     (if (< cyc devnext) 0 (do (devsync cyc) (devsched)))
     (if (and irqp (zero? fi))
-      (do (if (>= ioff-at 0) (ioff-off pc) 0) (interrupt (irqvec)))
+      (do (if (>= ioff-at 0) (ioff-off pc) 0) (set! {seen} cyc) (interrupt (irqvec)))
       (if waiting
-        (if irqp (set! {waiting} NIL) (set! {cyc} (max (+ cyc 1) (min devnext stopat))))
+        (if irqp (set! {waiting} NIL) (set! {seen cyc} cyc (max (+ cyc 1) (min devwake stopat))))
         (do (set! {lim} (min devnext stopat))
-            (while {< cyc lim} (if (< ck 0) (exec-slow) (or (dcache ck) (decode))))))))
+            (if ac-prompt
+              (while {< cyc lim} (set! {seen} cyc) (if (< ck 0) (exec-slow) (or (dcache ck) (decode))))
+              (while {< cyc lim} (if (< ck 0) (exec-slow) (or (dcache ck) (decode)))))))))
   NIL})
 
 ; ---- power-up
@@ -211,15 +246,14 @@
   (set! {NB} (* opt-modules 16))
   (set! {SHARED} (+ BANKS (* 16 NB 8192)))
   (set! {mem} (buffer (+ SHARED (* 16 16 8192))))
-  ; (the tasks' RAM's junk: 4K of it, each 4K of the 512K a turn of it, as fast as two copies)
-  (set {junk} (buffer 4096))
-  (dotimes {i 4096} (buffer-put junk i (pu i)))
-  (dotimes {b 128} (do
-    (set {r} (bit-and (* b 37) 4095))
-    (buffer-copy mem (* b 4096) junk r)
-    (buffer-copy mem (+ (* b 4096) (- 4096 r)) junk 0 r)))
-  (dotimes {i 16} (hash-put vecs [i (+ (pu (+ 900000 i)) (* 256 (pu (+ 900100 i))))]))
-  (set! {regt regu regv regw} (pu 910000) (pu 910001) (pu 910002) (pu 910003))
+  ; (the junk, machine.js's, in its order: the tasks' RAM, a byte each; an unset clock's registers; the vectors;
+  ; T U V W; a Vera X's VRAM)
+  (set! {pu-s} (bit-and opt-seed #xFFFFFFFF))
+  (pu-fill mem 524288)
+  (if (== rtc-junk :unset) (do (set! {rtc-junk} (buffer 8)) (dotimes {i 8} (buffer-put rtc-junk i (pu-byte)))) 0)
+  (dotimes {i 16} (hash-put vecs [i (pu-word)]))
+  (set! {regt regu regv regw} (pu-byte) (pu-byte) (pu-byte) (pu-byte))
+  (if ve-on (pu-fill ve-vram 131072) 0)
   (set! {tt uu ww} (bit-and regt 15) (bit-and regu 15) (bit-and regw 15))
   (set! {model-slow} (in? opt-model {"zponly" "nostack"}))
   (remap)

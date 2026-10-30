@@ -12,7 +12,7 @@
 ; character's time over) holds the serial port's keys back, after 2 more, till an XON
 (def {ac-wdc ac-paste ac-kbd KBD-DELAY} NIL NIL NIL 150000)
 (def {ac-flow ac-held ac-lag ac-flowbyte ac-xoffs ac-xons} T NIL 0 0 0 0)
-(def {ac-cmd ac-ctrl ac-tdre ac-txtimer ac-irq ac-rdrf ac-rx ac-overruns} 0 0 1 0 0 0 0 0)
+(def {ac-cmd ac-ctrl ac-tdre ac-txtimer ac-irq ac-rdrf ac-rx ac-overruns ac-ovr} 0 0 1 0 0 0 0 0 0)
 (def {ac-txend ac-txsent ac-gapmin ac-charcyc} (- INF) 0 INF 0)
 (def {rxq rxh rxn rxdelay rxlost typedat typedlast} (hash-create) 0 0 200000 0 -1 -1)
 (def {pcq pcqh pcqt pcdelay pclost} (hash-create) 0 0 0 0)
@@ -41,9 +41,9 @@
 (fun {acia-read r at} {if (zero? r)
   (do (if (pos? ac-rdrf) (do (set {l} (- at ac-rxat))
         (set! {lat-min lat-max lat-sum lat-n} (min lat-min l) (max lat-max l) (+ lat-sum l) (+ lat-n 1))) 0)
-      (set! {ac-rdrf} 0)
+      (set! {ac-rdrf ac-ovr} 0 0)
       ac-rx)
-  (if (== r 1) (do (set {s} (+ (if (pos? ac-irq) 128 0) (if (or (pos? ac-tdre) ac-wdc) 16 0) (if (pos? ac-rdrf) 8 0))) (set! {ac-irq} 0) s)
+  (if (== r 1) (do (set {s} (+ (if (pos? ac-irq) 128 0) (if (or (pos? ac-tdre) ac-wdc) 16 0) (if (pos? ac-rdrf) 8 0) (* 4 ac-ovr))) (set! {ac-irq} 0) s)   ; (4: a byte lost since the last read)
     (if (== r 2) ac-cmd ac-ctrl))})
 
 (fun {acia-write r v at} {if (zero? r)
@@ -93,7 +93,7 @@
     (set {c} (pcq pcqh))
     (hash-remove pcq pcqh)
     (set! {pcqh} (+ pcqh 1))
-    (if (pos? ac-rdrf) (set! {pclost} (+ pclost 1)) (acia-in c at))
+    (if (pos? ac-rdrf) (set! {pclost ac-ovr} (+ pclost 1) 1) (acia-in c at))
     (set! {pcdelay} ac-charcyc)
     (if (and (>= pcqh pcqt) (< rxdelay pcdelay)) (set! {rxdelay} pcdelay) 0)))})
 (fun {acia-send bytes} {do
@@ -101,10 +101,12 @@
   (each {b bytes} (do (hash-put pcq [pcqt b]) (set! {pcqt} (+ pcqt 1))))})
 
 ; The keys: one each 20000 cycles (a wait, a prompt), or as fast as the line goes (paste: one arriving while the
-; last is unread is lost)
+; last is unread is lost, and the overrun bit set).  A prompt come: the keys go on in the same tick, its own cycles
+; (acia.js's: from the last cycle the machine saw, machine.dl's seen)
 (fun {acia-keys d at} {if (< rxh rxn)
   (if (== (rxq rxh) 257)
-    (if (prompted at) (do (rx-shift) (set! {promptfrom rxdelay} -1 20000) (if (>= rxh rxn) (set! {typedlast} at) 0) (key-head)) 0)
+    (if (prompted at) (do (rx-shift) (set! {promptfrom rxdelay} -1 20000) (if (>= rxh rxn) (set! {typedlast} at) 0) (key-head)
+                          (acia-keys (- at seen) at)) 0)
     (if (key-held?) (set! {rxdelay} (max 1 (- rxdelay d)))
     (do (set! {rxdelay} (- rxdelay d))
         (if (and (<= rxdelay 0) (or (zero? ac-rdrf) ac-paste ac-kbd (== (rxq rxh) 258))) (do
@@ -115,7 +117,7 @@
           (if (or (== c 258) (== c 259)) (set! {ac-kbd rxdelay} (and (== c 258) smc-on) (if (and (== c 258) smc-on) KBD-DELAY 20000))
           (if (and ac-kbd (not (== c 256))) (do (smc-type c) (set! {rxdelay} KBD-DELAY))
           (if (== c 256) (do (set! {rxdelay} 2000000) (if (>= rxh rxn) (set! {typedlast} (+ at rxdelay)) 0))
-            (if (pos? ac-rdrf) (set! {rxlost rxdelay} (+ rxlost 1) ac-charcyc)
+            (if (pos? ac-rdrf) (set! {rxlost ac-ovr rxdelay} (+ rxlost 1) 1 ac-charcyc)
               (do (if (< typedat 0) (do (set! {typedat} at) (ioff-start)) 0)
                   (acia-in c at)
                   (set! {rxdelay} (if ac-paste ac-charcyc 20000)))))))
@@ -131,7 +133,15 @@
         (if (key-held?) n
           (if (> rxdelay 0) (min n rxdelay) (if (or (zero? ac-rdrf) ac-paste ac-kbd (== (rxq rxh) 258)) 1 n))))
       n))})
-(fun {acia-reset} {set! {ac-cmd ac-ctrl ac-tdre ac-txtimer ac-irq ac-rdrf} 0 0 1 0 0 0})
+; The next a wait (WAI) wakes for (acia.js's nextEvent): not a prompt waited for (the output wakes it), and a key's
+; time even with the last unread
+(fun {acia-wake} {do
+  (set {n} (if (> ac-txtimer 0) ac-txtimer INF))
+  (if (< pcqh pcqt) (min n (max 1 pcdelay))
+    (if (and (< rxh rxn) (not (== (rxq rxh) 257)) (not (key-held?))) (min n (max 1 rxdelay)) n))})
+; A prompt waited for, and one sent since: from its time (quiet) a tick may find it (machine.dl's seen kept for it)
+(fun {acia-prompt?} {and (< rxh rxn) (== (rxq rxh) 257) (> ac-sent promptfrom) (prompt-tail?)})
+(fun {acia-reset} {set! {ac-cmd ac-ctrl ac-tdre ac-txtimer ac-irq ac-rdrf ac-ovr} 0 0 1 0 0 0 0})
 
 ; ---- the VIA (port 0, IRQ line 0): timer 1 (one-shot or free-running), timer 2 (one-shot), the shift register's
 ; timing and flag, port B (SPI: spi-portb, spi-miso), port A (pins; the I2C bus on PA0 and PA1), CA1's edge

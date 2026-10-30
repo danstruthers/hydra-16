@@ -13,7 +13,7 @@
   (set! {rtc-on rtc-batlow rtc-dow} T battery-low 4)
   (set! {rtc-base} (if (num? tm) tm (if (== tm :now) (+ (time) EPOCH-2000) EPOCH-2000)))
   (set! {rtc-osc} (not (== tm :stopped)))
-  (if (== tm :unset) (set! {rtc-junk} (buffer (map (fn {i} {pu (+ 920000 i)}) (range 8)))) 0)})
+  (if (== tm :unset) (set! {rtc-junk} :unset) 0)})        ; (its junk drawn at power-up, in machine.js's order)
 
 (fun {bcd n} {+ (* (div n 10) 16) (mod n 10)})
 (fun {unbcd b} {+ (* (shr b 4) 10) (bit-and b 15)})
