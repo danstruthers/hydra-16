@@ -403,7 +403,7 @@ call TASKFORE task impl=K_TASKFORE far
   hl:     .A=n .X=n ->
   doc:    Put a task in the foreground, or take it out.  The scheduler picks a task in the foreground before the
   doc:    others whenever it can run: at the next switch (a tick at most), not after a round of everything else
-  doc:    that's busy; and a driver serving its call goes first with it, and for FORE_SRV ticks after the call (the
+  doc:    that's busy; and a driver serving its call goes first with it, and for FORE_SRV ticks from the call (the
   doc:    work it left the driver: a console's words out at once).  For a program whose answer to a key runs
   doc:    through tasks of its own while others work in the background (a game's: its UI, parser and world first;
   doc:    its monsters' minds after).  It can't starve the rest: the foreground has FORE_RUN ticks at most, then the
@@ -1064,7 +1064,7 @@ const TF_DRIVER       $01      "TI_FLAGS: a driver"
 const TF_STOPPED      $80      "TI_FLAGS: stopped (/proc's ctl: TASKSTOP)"
 const TF_FORE         $02      "TI_FLAGS: in the foreground (TASKFORE): the scheduler picks it first"
 const FORE_RUN        8        "The foreground's turn at most, in ticks (TASKFORE): then the background has the rest of a tick"
-const FORE_SRV        2        "A driver's time in the foreground after a foreground task's call to it ends, in ticks (TASKFORE)"
+const FORE_SRV        2        "A driver's time in the foreground from a foreground task's call to it, in ticks (TASKFORE)"
 const TI_PARENT       2        "TASKINFO: its parent ($FF: none)"
 const TI_CPU          3        "TASKINFO: its CPU time, in ticks (3 bytes)"
 const TI_BANK         6        "TASKINFO: its module's paged ROM bank ($FF: none)"

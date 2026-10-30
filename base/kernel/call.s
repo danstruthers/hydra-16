@@ -37,6 +37,17 @@ K_SCALL:
 @srch:
             FAIL        E_SRCH
 
+@fsrv:                                                      ; (This task's .X a moment in its K_X)
+            stx         K_X
+            lda         T_REGISTER                          ; .A = this task
+            stz         T_REGISTER                          ; ---- The kernel task's
+            sty         K0_FSRV
+            ldx         K0_TICKS
+            stx         K0_FSRVT
+            sta         T_REGISTER                          ; ---- This task
+            ldx         K_X
+            bra         @look
+
 @gone:                                                      ; (In the task called; .A = this task)
             sta         T_REGISTER
             cli
@@ -64,6 +75,9 @@ K_SCALL:
             bcs         @srch
             sei
             sta         K_A                                 ; (The argument .A, while we look)
+            lda         TK_FLAGS                            ; A foreground caller's: the task called the foreground's
+            and         #TF_FORE                            ;   FORE_SRV ticks from now (K0_FSRV: sched.s; the work
+            bne         @fsrv                               ;   the call leaves it, the console's words)
 @look:                                                      ; IRQs off; .X: the argument.  Is it there, and free?
             lda         T_REGISTER                          ; .A = this task (the caller)
             sty         T_REGISTER                          ; ---- The task called: its zero page (a quick look)
@@ -100,19 +114,6 @@ K_SCALL:
             tsx
             stx         TK_SP                               ; Its stack pointer, as it was before the call
             stz         TK_BUSY                             ; Free again (callers blocked on it: the scheduler)
-            pha                                         ; (The result kept)
-            ldx         T_REGISTER                          ; (.X: this task, the server)
-            ldy         TK_INCALLER
-            sty         T_REGISTER                          ; ---- The caller
-            lda         TK_FLAGS                            ; A foreground caller's: the server its foreground's a
-            and         #TF_FORE                            ;   moment more (K0_FSRV, FORE_SRV ticks: sched.s)
-            beq         :+
-            stz         T_REGISTER                          ; ---- The kernel task's
-            stx         K0_FSRV
-            lda         K0_TICKS
-            sta         K0_FSRVT
-:           stx         T_REGISTER                          ; ---- The server again
-            pla
             ldy         TK_INCALLER
             ldx         TK_INX
             sty         T_REGISTER                          ; ---- The caller: its zero page (not its stack yet)
