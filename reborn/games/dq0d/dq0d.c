@@ -1693,8 +1693,10 @@ static unsigned char __fastcall__ decide (unsigned char k)
         im.b = 2;
         act (I_GOTO, k);
     } else if (d >= 0xFA && d <= 0xFC && d != 0xFB) {   /* (A round's blow, or a shot: outnumbering it, later) */
-        if (was != DO_FIGHT) {
-            heart (k);                          /* (Its heart as it engages: the field about it, its bonds; part 6's) */
+        if (was != DO_FIGHT && K.mind >= M_LOW) {
+            heart (k);                          /* (A mind's heart as it engages: the field about it, its bonds; part
+                                                **   6's.  A beast's is reckoned as one near it falls: it feels only a
+                                                **   foe's might, and its fellows' falls) */
         }
         a.doing = DO_FIGHT;
         im.a = 0;
@@ -3009,7 +3011,9 @@ static signed char reckon (void)
             continue;
         }
         kind_get (akind[gi]);
-        fw = K.mind >= M_LOW ? rankw[krank[akind[gi] & (SND_KINDS - 1)]] + (tq.lead >> 4) : 0;
+        fw = smart && K.mind >= M_LOW ? rankw[krank[akind[gi] & (SND_KINDS - 1)]] + (tq.lead >> 4) : 0;   /* (A mind
+                                                **   sways a mind: a beast feels only a foe's might, and its fellows'
+                                                **   falls) */
         if (tq.mood & AM_BERSERK) {
             fw <<= 1;                           /* (Berserk, twice; wounded, half) */
         }
@@ -3033,7 +3037,8 @@ static signed char reckon (void)
     }
     hub_map (0);
     if (!pcdead && pcs == tp.sn && (fd = apart (pcx - tp.x, pcy - tp.y)) <= FIELD_R) {
-        fw = rankw[RK_FILE] + (HUB->pcsum.lead >> 4);  /* (The character's: the rank and file's, its own skill) */
+        fw = smart ? rankw[RK_FILE] + (HUB->pcsum.lead >> 4) : 0;   /* (The character's: the rank and file's, its own
+                                                **   skill) */
         if (tp.attitude == AT_ALLIED) {
             by (0);
         } else if (tp.attitude <= AT_UNFRIENDLY && !pchelp) {

@@ -2105,10 +2105,10 @@ worse, a desperate one twenty, a good one ten better, an excellent one twenty.  
 the field about the one tested and its bonds to its leaders (the user's).  It is reckoned only as a test is made, or as
 one may be (no standing updates: the 65C02's time).  *(Every number here is for review.)*  (dq0d.c's part 6.)
 
-- **Who sways, who's swayed.**  Every intelligent creature sways those about it: a mind low, average or cunning
-  (kinds.txt's); no beast, nothing mindless.  Every creature with a mind is swayed, beasts too (by the minds about it,
-  by its foes); the mindless fear nothing (the referee's).  *(For review: a pack's lead beast swaying its pack, the
-  brief's choice, left out.)*
+- **Who sways, who's swayed.**  Every intelligent creature sways the minds about it: a mind low, average or cunning
+  (kinds.txt's); no beast, nothing mindless.  A beast isn't swayed by rank or words: it feels only a foe's might over
+  its own and its fellows' falls (the book's situations); the mindless fear nothing (the referee's).  *(For review: a
+  pack's lead beast swaying its pack, the brief's choice, left out.)*
 - **Influence** (points, 5 to a step): its rank's weight, the rank and file 2, a captain 5 (a band's head: a black orc,
   the soldiers' captain), a lord or a spiritual leader 10 (a chieftain, a king, a high priest, a dwarf elder, a shade
   over the dead: kinds.txt's new rank), and a sixteenth of its influence skill (the book's Oratory or Rhetoric, the
