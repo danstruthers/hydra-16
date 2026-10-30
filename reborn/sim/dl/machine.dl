@@ -260,13 +260,14 @@
 ; ---- power-up
 ; (Bank b's place in the chips: bits 2 and 3 crossed; bits 6 and 7 go straight, as base/sim/lib/machine.js has them)
 (fun {romBank b} {+ (bit-and b #xF3) (shl (bit-and b 4) 1) (shr (bit-and b 8) 1)})
-; rom from the images (strings): the BIOS ROM (128K), then each paged ROM bank as the CPU sees it (halves swapped: A13)
-(fun {load-roms bios prom} {do
+; rom from the images (strings): the BIOS ROM (128K), then each paged ROM bank as the CPU sees it (halves swapped: A13).
+; (pimg, not prom: a name bound in a call is looked for in each scope out, everywhere, and PROM is remap's)
+(fun {load-roms bios pimg} {do
   (set {ff} (str-repeat (code-char 255) 16384))
-  (set {plen} (len prom))
+  (set {plen} (len pimg))
   (set! {rom} (buffer (+ (substring bios 0 131072)
     (str-join (map (fn {b} {do (set {at} (* (romBank b) 16384))
-      (if (< at plen) (+ (substring prom (+ at 8192) 8192) (substring prom at 8192)) ff)}) (range 256)) ""))))})
+      (if (< at plen) (+ (substring pimg (+ at 8192) 8192) (substring pimg at 8192)) ff)}) (range 256)) ""))))})
 
 ; The tasks' RAM's junk (pu-fill's, from pu-s), or with opt-junk (a file's name, the seed's: hydra.dl's) as kept there:
 ; its 524288 bytes, then the generator's state after them (4 bytes, the lowest first).  Made, it's kept there (whole:
