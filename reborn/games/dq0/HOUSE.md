@@ -365,7 +365,8 @@ silent on all of it.
   reach their Endurance; so too the death god's mindless dead, the wights (the book's: Bestiary p78).  (fight.c.)
 - **A creature's courage** is its Initiative test, its injuries its penalty: a marginal failure holds it back a
   round; a critical failure breaks it, a d100: berserk (1-25), desperate (26-50), broken (51-75), cautious (76-100).
-  A wounded creature still standing is tested; a shy one that holds back flees.  (fight.c's courage, left.)
+  A wounded creature still standing is tested; a shy one that holds back flees.  Its situation's steps are its heart
+  since 2026-10-30 (the field about it and its bonds: morale, below).  (fight.c's courage, left.)
 - **Bleeding** loses a point of blood a minute for each bleeding wound; past the Endurance, death.  (heal.c's bleed,
   every actor's: wounds over time, below.)
 - **Wounds, as built** (the user's adder playtest, 2026-10-21: "the wounds just kept getting worse and worse", and
@@ -2063,7 +2064,8 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
   the elf wary and aloof, keeping its distance (shy), two steps against swaying; the soldiers unfriendly, keeping to
   their posts.  A faction's kin dismayed as one falls (each of its kind and, since this, of its faction among the
   actors, its courage tested two steps worse), and four worse as its leader falls (the king above all: the book's
-  Gargun submit only to a strength they've seen).
+  Gargun submit only to a strength they've seen); since 2026-10-30 the field and the bonds instead (morale, below: a
+  friend's fall the book's bad situation, a leader's its influence and bond removed).
 - **Their tongues** (factions.txt): the dwarves' khuzdul, the elves' sindarin, the soldiers' common; the Gargun one,
   "gargun" (the book's: five tongues and a sign language every Gargun knows; the house's one for them all, the sign
   language's).  A word to one wants its tongue (a character's file's "language khuzdul").
@@ -2095,6 +2097,61 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
   white orcs' trade in silver and the dwarves' trade (the market); the Gargun cowed by a strength they see (an
   attitude by the character's power: DENIZENS.md's more of the attitudes); the elves' barter (the user's answer 9
   gives them coins); a captor leading the character away (the soldiers'); the Gargun's sub-species' own tongues.
+
+## Morale *(2026-10-30: the user's of 2026-10-29, DECISIONS.md's; its numbers and the rest drafted for the user to review)*
+
+The book's morale is the Initiative test (Combat 18), its modifiers the GM's reading of the situation, a bad one ten
+worse, a desperate one twenty, a good one ten better, an excellent one twenty.  The house reckons that situation from
+the field about the one tested and its bonds to its leaders (the user's).  It is reckoned only as a test is made, or as
+one may be (no standing updates: the 65C02's time).  *(Every number here is for review.)*  (dq0d.c's part 6.)
+
+- **Who sways, who's swayed.**  Every intelligent creature sways those about it: a mind low, average or cunning
+  (kinds.txt's); no beast, nothing mindless.  Every creature with a mind is swayed, beasts too (by the minds about it,
+  by its foes); the mindless fear nothing (the referee's).  *(For review: a pack's lead beast swaying its pack, the
+  brief's choice, left out.)*
+- **Influence** (points, 5 to a step): its rank's weight, the rank and file 2, a captain 5 (a band's head: a black orc,
+  the soldiers' captain), a lord or a spiritual leader 10 (a chieftain, a king, a high priest, a dwarf elder, a shade
+  over the dead: kinds.txt's new rank), and a sixteenth of its influence skill (the book's Oratory or Rhetoric, the
+  better).  A creature's skill is the house's, three times its Will (Rhetoric's base, Skills 12's three attributes, the
+  bestiary keeping only Will of them); the null ruleset gives none.  The character is the rank and file, its own skill
+  on top.
+- **The field:** every actor within eight squares on its stratum, and the character, its influence the less with
+  distance (all of it beside one, half at five squares, a third at eight: four over the distance and three).  A
+  friend (its faction, or its kind not of a faction hostile to it) for it, a foe (a faction hostile to its own; the
+  character to one hostile or unfriendly to it, not while it lies helpless) against it.  A friend's counts half to
+  whole by how familiar one's own band is (its time served and contact, the bonds' measure below).  How each is doing:
+  wounded, half; berserk, twice (a test of ours came out so); fleeing, a friend's turned against one; fallen
+  (senseless or dead), its influence gone and the book's bad situation (ten worse, once, however many), desperate if
+  none of one's friends is left standing about one (twenty).  A foe's weight is its influence and an eighth of its might
+  over one's own (the game's power, the referee's: a fearsome foe the heavier), wounded half, fleeing or fallen none.
+  The character's allies are its friends, swayed by it for them.
+- **Bonds upward:** each subordinate's to its band's head (the highest above its rank in its own lair: popgen's leader
+  with its home) and to its faction's highest above that (in any lair, wherever it is: the records kept).  A bond is its
+  leader's rank's weight by the time they've had together and their contact, half each: the time the lesser of its
+  weeks served and the leader's own (a new leader's the less), whole at 128 weeks; the contact 0-255.  As the
+  populations are made each band has an age, 8 to 135 weeks by its lair's number (not the dice, so the dice are as
+  they were), each of it about that; the game's weeks are added as they pass.  Contact: a band living with its leader
+  starts at 200 and is whole each day; others start at 64 and lose an eighth a day (eight days at most at a time: the
+  clock's, a long wait's too), and gain 16 each time one's reckoned near its leader.  Only the minds have bonds.
+- **The band:** the field held to twenty points either way, the field and the bonds together held the same, the
+  situation beyond (a desperate one lower); the steps the points over five, towards nothing.
+- **When:** an actor's heart is reckoned as it engages (the steps the world's blow carries to the referee: its courage
+  tested with them as it's wounded, both rulesets) and anew for every actor as one near falls.  A morale test is made
+  as before: one wounded and standing (the referee's, its heart its steps), and the kin of one fallen (below).
+- **A fall known** (replacing the peoples' fixed two steps and four): each of the fallen's kin (its kind, its faction)
+  that hears it fall tests its courage at once: within its hearing of a fight's din (the world's blows' loudness, 5: its
+  hearing's squares times that, over two, as it hears another's noise; within its sight the din always reaches it, so
+  sight isn't reckoned apart); not one senseless (it hears nothing); not one fleeing already (it knows, and flees on).
+  Its friend's fall is the book's bad situation (above).  If the fallen was its leader (its band's head or its
+  faction's), that leader's influence and its bond are removed for the test; dead, it's known lost from then (no bond to a dead
+  leader after).  One that doesn't hear it (out of hearing, on another stratum, not an actor, senseless) keeps its bond
+  to the dead leader till it's told: a runner's word or a survivor's (dq0d.c's s_told, the hook: nothing calls it yet).
+- **The character's own morale** is the player's: never tested (D14).
+
+*(For review besides the numbers: the character's might is the referee's placeholder (10), so it frightens no one
+yet: as the creatures' it would be its size and its weapon's skill, weighing on every beast it fights; no succession:
+a band whose head is dead is led by no one after, but its faction's leader above; a fall seen but not heard isn't
+known apart; morale tests only as one's wounded or a fellow falls, not before every action as the book has it.)*
 
 ## Decided, not yet built
 

@@ -2033,8 +2033,8 @@ const DQ0_REPEATS = [
   { what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
   { what: /^You keep at it\.$/,
     why: 'a battering\'s beat every fourth blow once its blows tell (the user\'s, 2026-10-22: told as it goes), twice or more in a dozen' },
-  { what: /^Everything goes black\.$/, tests: /^dq0(?:finished|strike|helpless|venom)$/,
-    why: 'knocked senseless, come round in shock a round later, struck senseless again, all in one wait\'s answer (the UI waiting it out): two black-outs, each told (dq0strike\'s rats, fought with a bar, three)' },
+  { what: /^Everything goes black\.$/, tests: /^dq0(?:finished|strike|helpless|venom|morale)$/,
+    why: 'knocked senseless, come round in shock a round later, struck senseless again, all in one wait\'s answer (the UI waiting it out): two black-outs, each told (dq0strike\'s rats, fought with a bar, three; dq0morale\'s small orcs, a knife in the hand of each)' },
   { what: /^(?:You struggle|The .+ struggles), but can't get up\.$/,
     why: 'a fall\'s Rise tried each round and failed (the book\'s test for one seriously or grievously wounded, slice 4.1b\'s), each try told' },
   { what: /^(?:The passage (?:forks here|ends here; it goes back behind you|comes to a door; it goes back behind you)|You are in a passage|It goes .+)\.$/,
@@ -2190,6 +2190,45 @@ const passings = n => Array(n).fill(['douse the torch', 'wait 5 minutes', 'light
 
 // A dq0 test's lines typed, each at its prompt (rc's "% ", the game's "> ")
 const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
+
+// Dingus Quest Zero's morale's own (dq0morale): at each line's Enter (the CR as the ACIA has it, the game still as it
+// stands), the pokes made (each { g: the game, 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, k:
+// the actor's entry, set: { field: value } }) and the actors' hearts kept after them (m.hearts: { g, line, n, acts: [{ k,
+// name, heart, doing }] }): the hub's actor's heart,
+// lead, power, mood, serve and contact are its struct's last six bytes (hub.h's, 2026-10-30), attitude and faction the
+// layout's.  The test's own setting up, as dq0Aware's
+function dq0Poke(m, pokes) {
+  const a = m.acia, read = a.read, TAIL = ['heart', 'lead', 'power', 'mood', 'serve', 'contact'];
+  let typed = '', g = 0, seen = {};
+  m.hearts = [];
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^dq0 /.test(typed)) {
+          ++g;
+          seen = {};
+        }
+        seen[typed] = (seen[typed] || 0) + 1;
+        const h = m.dq0 && m.dq0.bank(0);
+        if (h) {
+          const { L } = m.dq0.layout(), at = k => L.actor + k * L.actorSize;
+          const off = f => TAIL.includes(f) ? L.actorSize - 6 + TAIL.indexOf(f) : f === 'attitude' ? L.aAttitude : L.aFaction;
+          for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed]) for (const [f, v] of Object.entries(p.set)) h[at(p.k) + off(f)] = v;
+          const acts = [];
+          for (let k = 0; k < L.nactors; k++) {
+            let n = '';
+            for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]);
+            if (n) acts.push({ k, name: n, heart: (h[at(k) + L.actorSize - 6] << 24) >> 24, doing: h[at(k) + L.aDoing] });
+          }
+          m.hearts.push({ g, line: typed, n: seen[typed], acts });
+        }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+}
 
 // A denizen made aware of the character as a line is typed (a test's own setting up: the line's Enter read, the
 // actor named its doing DO_WATCH in the hub, as if it had noticed the character; slice 4.5's, an unaware one engages
@@ -6293,6 +6332,66 @@ module.exports = {
         if (stub(w5.after)) f.push('the stubs not burnt away: ' + JSON.stringify(stub(w5.after)));
         if (!w5.after || w5.after.now - ds.after.now < 6000) f.push('the wait stopped by a light it doesn\'t carry');
         inTurn(s, ['> wait 10 minutes', 'The candle stubs gutter and go out.'], f, 'the stubs\' words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0morale', near: ['fight', 'denizens'], what: "Dingus Quest Zero's morale (the user's, 2026-10-29: every intelligent creature sways the morale field about it, by its rank and its influence skills, for its friends and against its foes; bonds upward to its leaders regardless of distance, growing with time served and contact; a leader's loss, known, a morale check at once with its influence removed; HOUSE.md's morale, for review), by the denizens' morale tests (RS_MORALE in their slot: steps, why, the field, the bonds and the leaders reckoned) and a strong character (its attributes 99) in mail, among a hand-written theme's small orcs (a shy, wary people) at seed 2, their home by the way down where the character starts (popgen's, its leader with its band), another band of them by it, a third on the stratum below.  Their king their leader: struck down, senseless, then dead, every small orc that heard it fall tests at once, its leader's loss (its band's head for its own band, the faction's for the other, wherever it is), its bond to it taken away, the band beside it the worse (the book's bad situation, a friend fallen about it); after its death those that heard it are led by no one, while the band below, that didn't hear it, keeps its bond to the dead king, its fall unfelt.  The band hostile, fighting beside its king, a fellow's fall weighed with its king's presence and its bond (the field and the bonds above nothing).  A black orc their band's head (a captain), kings above it in the tribe: its fall the home band's leader's loss, its bond to the kings holding; an old band (long served, often with its leaders) the steadier at its fall than a new one, by those bonds.  An ally of the character's heartened by it; a fearsome foe beside a band (a mighty one of a faction hostile to it) weighing on it.  (The test's own setting up: pokes of the actors' hub fields at a line's Enter, dq0Poke's)",
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: (() => {
+        const kit = "-k 'sword,gambeson,mail hauberk,mail cowl,great helm'", dress = ['wear the gambeson', 'wear the mail hauberk', 'wear the mail cowl', 'wear the great helm', 'hold the sword'];
+        const game = d => ['dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/' + d + ' ' + kit, ...dress], king = "'faction | Tribe | arak | 0-1 | 20 | garking | 0 | w | -'";
+        return dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 100 >> /ram/c.hm', 'echo ml ini 100 >> /ram/c.hm',
+          'echo ml dge 100 >> /ram/c.hm', 'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm',
+          ...['h', 'p', 'b', 'c', 'd', 'e'].flatMap(d => ['mkdir /ram/' + d, 'echo ' + king + ' > /ram/' + d + '/theme.txt']),
+          ...['b', 'c'].map(d => "echo 'faction | Tribe | arak garking | 0-1 | 30 | khanu | 0 | w | -' > /ram/" + d + '/theme.txt'),
+          "echo 'faction | Tribe | arak | 0-1 | 20 | garking | 0 | w | Beasts h' > /ram/e/theme.txt", "echo 'faction | Beasts | bear | 1-1 | 1 | - | 1 | w | -' >> /ram/e/theme.txt",
+          ...game('h'), 'attack the small orc', 'wait', 'wait', 'attack the orc king', 'wait', 'attack the orc king', 'wait', 'd', 'wait', 'attack the small orc', 'wait', 'wait', 'quit',
+          ...game('p'), 'wait', 'wait', 'quit',
+          ...['b', 'c'].flatMap(d => [...game(d), 'attack the black orc', 'wait', 'attack the black orc', 'quit']),
+          ...['d', 'e'].flatMap(d => [...game(d), 'attack the orc king', 'quit']), 'echo $status']);
+      })() },
+      start(m) {
+        const band = (g, set) => [0, 1].map(k => ({ g, line: 'attack the black orc', n: 1, k, set }));
+        dq0Poke(m, [
+          ...[0, 1, 2].map(k => ({ g: 2, line: 'hold the sword', n: 1, k, set: { attitude: 0 } })),    // (Game 2: the band and its king hostile)
+          ...band(3, { serve: 255, contact: 255 }), ...band(4, { serve: 0, contact: 0 }),             // (Games 3, 4: an old band, a new one)
+          { g: 5, line: 'attack the orc king', n: 1, k: 1, set: { attitude: 5 } },                    // (Game 5: one the character's ally)
+          { g: 6, line: 'attack the orc king', n: 1, k: 1, set: { faction: 2, power: 250 } }]);       // (Game 6: one a fearsome foe)
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), C = require('../sim/lib/dq0meaning.js').constants().names, f = [], MR_FELL = 1, MR_LEADER = 2, NONE = 0xFF;
+        const tests = g => { const seen = new Set(); return T.filter(t => t.game === g).flatMap(t => dq0Rep(t, 'dslot', { kind: C.RS_MORALE }).map(r => Object.assign({ cmd: t.line, at: t.k }, r)))
+          .filter(r => { const k = JSON.stringify(r); return !seen.has(k) && seen.add(k); }); };
+        const games = [...new Set(T.map(t => t.game).filter(g => g >= 0))].sort((a, b) => a - b);
+        if (games.length !== 6) return ['not six games: ' + games.length];
+        const [gk, gp, gb, gc, gd, ge] = games, K = tests(gk), say = r => JSON.stringify({ cmd: r.cmd, actor: r.actor, a: r.a, b: r.b, c: r.c, l1: r.w2 & NONE, l2: r.w2 >> 8, steps: r.steps });
+        const l1 = r => r.w2 & NONE, l2 = r => r.w2 >> 8;
+        // (The king's fall: every small orc that heard it, its leader's loss, the bond taken away; the band beside it the worse)
+        const first = K.filter(r => r.a === MR_LEADER && r.cmd === 'attack the orc king'), fa = first.filter(r => r.w1 === first[0].w1);
+        const own = fa.filter(r => l1(r) === r.w1), other = fa.filter(r => l1(r) === NONE && l2(r) === r.w1);
+        if (new Set(fa.map(r => r.actor)).size < 4 || !own.length || !other.length) f.push('not every small orc tested at the king\'s fall, the king its band\'s head and the other band\'s faction head: ' + fa.map(say).join(' '));
+        if (K.some(r => r.a === MR_LEADER && r.c !== 0)) f.push('a bond to the fallen king not taken away: ' + K.filter(r => r.a === MR_LEADER).map(say).join(' '));
+        if (own.length && other.length && Math.max(...own.map(r => r.steps)) >= Math.min(...other.map(r => r.steps))) f.push('the band beside the fallen king not the worse: ' + fa.map(say).join(' '));
+        // (After its death: those that heard it led by no one; the band below keeps its bond, the fall unfelt)
+        const d = T.find(t => t.game === gk && t.line === 'd'), after = K.filter(r => r.a === MR_FELL && r.w1 !== (fa[0] || {}).w1);
+        const lastK = Math.max(...K.filter(r => r.a === MR_LEADER).map(r => r.at)), up = after.filter(r => d && r.at >= lastK && r.at < d.k), below = after.filter(r => d && r.at > d.k);
+        if (!up.length || up.some(r => l1(r) !== NONE || l2(r) !== NONE || r.c !== 0)) f.push('a small orc that heard the king die still led by it: ' + up.map(say).join(' '));
+        if (!below.length || below.some(r => l2(r) === NONE || r.c < 1)) f.push('the band below not keeping its bond to the dead king (unheard): ' + below.map(say).join(' '));
+        // (The king's presence: a fellow's fall weighed with the king standing beside its band, the field and the bond above nothing)
+        const P = tests(gp), kp = P.find(r => r.a === MR_LEADER), pf = P.filter(r => r.a === MR_FELL && l1(r) !== NONE && (!kp || r.at <= kp.at));
+        if (!pf.length || pf.some(r => r.b <= 0 || r.c <= 0)) f.push('the king\'s band not steadied by its presence: ' + P.map(say).join(' '));
+        // (The black orc's fall, its bond to the kings holding; the old band the steadier, the new the less)
+        const at = (g, k, why) => tests(g).find(r => r.a === why && r.actor === k + 1), ob = [0, 1].map(k => at(gb, k, MR_LEADER)), nb = [0, 1].map(k => at(gc, k, MR_LEADER));
+        if (ob.some(r => !r || l2(r) === NONE || r.c < 1)) f.push('the black orc\'s fall not its band\'s leader\'s loss, its bond to the kings above holding: ' + tests(gb).map(say).join(' '));
+        else if (nb.some(r => !r) || ob.some((r, i) => r.steps <= nb[i].steps || r.c <= nb[i].c)) f.push('the old band not the steadier than the new: ' + [...ob, ...nb].filter(Boolean).map(say).join(' '));
+        // (An ally heartened; a fearsome foe weighing)
+        const ad = at(gd, 1, MR_LEADER), aa = fa.find(r => r.actor === 2);
+        if (!ad || !aa || ad.b <= aa.b) f.push('the ally not heartened by the character: ' + [ad, aa].filter(Boolean).map(say).join(' '));
+        const fe = at(ge, 0, MR_LEADER), ff = fa.find(r => r.actor === 1);
+        if (!fe || !ff || fe.b >= ff.b - 3) f.push('the fearsome foe beside the band not weighing on it: ' + [fe, ff].filter(Boolean).map(say).join(' '));
         return f;
       },
       sdcard: true

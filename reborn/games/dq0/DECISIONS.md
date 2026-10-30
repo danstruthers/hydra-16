@@ -1217,3 +1217,38 @@ minutes would be better."
   waits eight hours, "sleep 8 hours" and "rest" sleep a night, and the words tell it back ("You wait eight hours.").
   The house's ways of it (the parser's durations, a night's sleep unsaid, the long wait's speed, the coarser ticks
   while the character rests) are in HOUSE.md's long waits, for review.
+
+### Morale: a field about every mind, and bonds to its leaders
+
+The user (2026-10-29), on the peoples' note that a fallen leader dismays its faction four steps worse: "I read your
+comment on morale, and the effect of a falled leader should be more generic.  Any intelligent creature should modify
+the morale field around itself.  The strength of that effect should be based on their importance/rank as well as their
+own influence skills.  A chieftan or spiritual leader has a much larger influence (positive to their own
+subordinates/friends, negative to their foes), but there should also be some heirarchical influence, regardless of
+distance, that trickles down from leaders to subordinates no matter how close.  That passive influence would increase
+with time (new leaders having less influence than old ones, and frequency of contact reinforcing that bond).  So, there
+are upward bonds to leaders above you, and environmental bonds based on how close other friendly units are to you, and
+how they are doing.  The loss of a leader (that the subordinate knows about) would instantly cause a morale check with
+that leader's influence removed.  The local morale field and any morale bonds act as morale check bonuses or
+penalties."  Then: "Queue up the new morale work."
+
+Built 2026-10-30 (branch reborn-game-morale), the lead's defaults where the user didn't say, for review in HOUSE.md's
+morale:
+
+- **The field:** each intelligent actor (a mind low, average or cunning; no beast, nothing mindless) and the character
+  sway the courage of every actor within eight squares by their influence: their rank in their faction (kinds.txt's new
+  rank: the rank and file, a captain, a lord or a spiritual leader) and their influence skill (Oratory or Rhetoric, the
+  referee's), for their friends and against their foes (a mighty foe the more: its fearsomeness), less with distance, by
+  how each is doing (wounded, berserk, fleeing, fallen).  A friend counts the more as one's band is old and close.
+- **The bonds:** each subordinate's to its band's head and to its faction's leader above that, wherever they are, by
+  the leader's rank, the time they've had together (a new leader's the less) and their contact (a band living with
+  its leader every day; others as they meet), aged by the clock.
+- **Reckoned only as a test is made** (the 65C02's time), or as one may be: an actor's heart as it engages (the
+  world's blow carries it to the referee, its courage tested with it as it's wounded) and as one near it falls; held
+  to the book's band (Combat 18: twenty points either way), the book's bad and desperate situations beyond it.
+- **A leader's loss known:** one that hears it fall (the fight's din) tests at once with that leader's influence and
+  bond removed; one that doesn't (out of hearing, below, senseless) keeps its bond till it's told (a runner's or a
+  survivor's word: the hook, to come).  It replaces the peoples' fixed two steps and four.
+- **The character** sways its allies and its foes by its own rank and skill; its own morale stays the player's (D14).
+
+**Design:** HOUSE.md's morale; DENIZENS.md's fights and attitudes.

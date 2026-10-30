@@ -2821,17 +2821,18 @@ void __fastcall__ s_keep (unsigned char back)
 ** the rank and file, a captain, a lord or a spiritual leader) and its influence skill (the referee's summary's lead:
 ** Oratory or Rhetoric), for its friends (its kind, its faction) and against its foes (a faction hostile to theirs: and
 ** any foe mightier than one, by its power, its fearsomeness), less with distance, by how it's doing (wounded, half;
-** berserk, twice; fallen or fleeing, a friend's turned against them, a foe's none); the character too, by its own
-** (its allies its friends, those hostile to it its foes).  A friend's counts the more as one has been long with its
+** berserk, twice; fleeing, a friend's turned against them; fallen, gone; a foe's either, none); the character too, by
+** its own (its allies its friends, those hostile to it its foes).  A friend's counts the more as one has been long with its
 ** band (its time served and its contact: the bonds about it).  And bonds upward: each subordinate's to its leaders
 ** (its band's head in its lair, its faction's above that, wherever they are), by the leader's rank, the time they've
 ** had together (the leader's own a new leader's less) and how much they're together (contact: a band living with its
 ** leader every day, others each time they're near; aged by the clock).  All of it is reckoned only as a test is made
 ** (or may be: an actor's heart, as it engages, and as one near it falls), never kept up as things go: the field and
-** the bonds held to the book's band (twenty points either way), the situation besides.  A fall (dismay): each of the
-** fallen's kin that knows of it (hears the fight's din: its hearing, a fight as loud as the world's blows) tests at
-** once, the fallen its influence turned, its bond to it gone if it was its leader (dead: known lost from then, its
-** record's D_LOST; one that doesn't know of it keeps its bond, the fall unfelt till it's known: told, the hook). */
+** the bonds held to the book's band (twenty points either way), the situation besides (a friend fallen about it, the
+** book's bad situation; none left standing, desperate).  A fall (dismay): each of the fallen's kin that knows of it
+** (hears the fight's din: its hearing, a fight as loud as the world's blows; not one senseless) tests at once (not one
+** fleeing already), the fallen's influence gone, its bond to it gone if it was its leader (dead: known lost from then,
+** its record's D_LOST; one that doesn't know of it keeps its bond, the fall unfelt till it's known: told, the hook). */
 #pragma code-name (push, "SW6CODE")
 #pragma rodata-name (push, "SW6RODATA")
 #pragma bss-name (push, "SW6RODATA")            /* (Its locals the part's own: the main RAM's room) */
@@ -2867,7 +2868,7 @@ static unsigned char js, jc, jq;                /* (Its time served and its cont
 static unsigned char fw, fd;                    /* (An influence's weight, points, and its distance) */
 static int rf;                                  /* (The field as it's reckoned) */
 static signed char mf, mb;                      /* (The last reckoning's field and bonds, points) */
-static unsigned char nfr;                       /* (And its friends standing about it) */
+static unsigned char nfr, ndown;                /* (And its friends standing about it, and down) */
 
 /* Each kind's rank, and the weeks gone (each entry's first: the part's data are its own while it's in) */
 static void ranks (void)
@@ -2984,9 +2985,9 @@ static void __fastcall__ against (unsigned char pw)
     rf -= fw;
 }
 
-/* Actor rj's heart (points): the field about it and its bonds, held to the book's band; rfallen the actor fallen (0xFF
-** none), its influence turned; rgone a leader's record whose bond's taken away (0xFF none).  mf, mb, nfr after; K its
-** kind's, the hub's header in the window */
+/* Actor rj's heart (points): the field about it and its bonds, held to the book's band, the situation besides (a friend
+** fallen: rfallen the actor fallen, 0xFF none, or one lying senseless); rgone a leader's record whose bond's taken away
+** (0xFF none).  mf, mb, nfr after; K its kind's, the hub's header in the window */
 static signed char reckon (void)
 {
     static unsigned char smart, nl, b;
@@ -3001,7 +3002,7 @@ static signed char reckon (void)
     if ((smart = K.mind >= M_LOW) != 0) {
         chain (tp.den);
     }
-    rf = nfr = nl = 0;
+    rf = nfr = ndown = nl = 0;
     for (gi = 0; gi < NACTORS; ++gi) {
         grab (&tq);
         if (gi == rj || !tq.name[0] || tq.sn != tp.sn || (fd = apart (tq.x - tp.x, tq.y - tp.y)) > FIELD_R) {
@@ -3015,12 +3016,16 @@ static signed char reckon (void)
         if (tq.mood & AM_HURT) {
             fw >>= 1;
         }
-        b = gi == rfallen || tq.doing >= DO_FLEE || fled[gi];   /* (Fallen or fleeing) */
-        if (akind[gi] == akind[rj] || tq.faction == tp.faction) {
-            by (b);                             /* (A friend: fallen or fleeing, its influence turned) */
-            if (!b) {
-                ++nfr;
-                nl |= tq.den == l1 || tq.den == l2;
+        b = gi == rfallen || tq.doing == DO_DOWN ? 2 : tq.doing == DO_FLEE || fled[gi];   /* (Fallen, 2; fleeing) */
+        if (tq.faction == tp.faction || (akind[gi] == akind[rj] && REL (tp.faction, tq.faction) != AT_HOSTILE)) {
+            if (b == 2) {
+                ++ndown;                        /* (A friend fallen: its influence gone, the book's bad situation) */
+            } else {
+                by (b);                         /* (A friend: fleeing, its influence turned) */
+                if (!b) {
+                    ++nfr;
+                    nl |= tq.den == l1 || tq.den == l2;
+                }
             }
         } else if (!b && REL (tp.faction, tq.faction) == AT_HOSTILE) {
             against (tq.power);
@@ -3042,14 +3047,20 @@ static signed char reckon (void)
         }
         b = bond (l1) + bond (l2);
     }
-    mf = rf < -127 ? -127 : rf > 127 ? 127 : rf;
+    rf = rf < -FIELD_MAX ? -FIELD_MAX : rf > FIELD_MAX ? FIELD_MAX : rf;
+    mf = rf;
     mb = b;
     rf += b;
+    rf = rf < -FIELD_MAX ? -FIELD_MAX : rf > FIELD_MAX ? FIELD_MAX : rf;
+    if (ndown) {
+        rf -= nfr ? SEEN_SLAIN : DESPERATE;     /* (A friend fallen: the book's bad situation; none left standing about
+                                                **   it, desperate: beyond the field's band) */
+    }
     kind_get (akind[rj]);
-    return rf < -FIELD_MAX ? -FIELD_MAX : rf > FIELD_MAX ? FIELD_MAX : rf;
+    return rf;
 }
 
-/* Every actor's heart anew (rfallen the one fallen, its influence turned: 0xFF none) */
+/* Every actor's heart anew (rfallen the one fallen: 0xFF none) */
 static void hearts (void)
 {
     rgone = 0xFF;
@@ -3060,16 +3071,16 @@ static void hearts (void)
     }
 }
 
-/* Actor rj's courage tested (RS_MORALE, in the task's own slot): its heart (rfallen, rgone: reckon's), the situation's
-** besides (a friend seen to fall; desperate, none left standing), why (MR_*): broken (or shaken, a shy kind), it flees;
-** berserk, so its fellows see it */
+/* Actor rj's courage tested (RS_MORALE, in the task's own slot): its heart (rfallen, rgone: reckon's), why (MR_*): broken
+** (or shaken, a shy kind), it flees; berserk, so its fellows see it */
 static void __fastcall__ courage (unsigned char why)
 {
-    rq.steps = (reckon () - (nfr ? SEEN_SLAIN : DESPERATE)) / 5;
+    rq.steps = reckon () / 5;
     rq.a = why;
     rq.b = mf;
     rq.c = mb;
     rq.w1 = rgone != 0xFF ? rgone : rfallen;
+    rq.w2 = l1 | l2 << 8;
     ask (RS_MORALE, rj + 1, 0);
     if (rq.result == M_BROKEN || (rq.result == M_CAUTIOUS && (K.flags & K_SHY))) {
         fled[rj] = FLEE_T;                      /* (Its doing and its attitude its next turn's: fleeing) */
@@ -3078,11 +3089,12 @@ static void __fastcall__ courage (unsigned char why)
     }
 }
 
-/* Actor k fallen (its high bits how, FF_* << 4: dead, else senseless): each of its kin among the actors (its kind, its faction) that knows of
-** it (hears the fight's din: within its hearing of a fight's loudness, as it hears another's noise; its sight never
-** reaches further) tests its courage: its friend's fall the book's bad situation (desperate, none left standing about
-** it), the fallen's influence turned; its leader's (its band's head, its faction's), its bond to it gone (dead: known
-** lost from then).  Then every actor's heart anew.  K its own after */
+/* Actor k fallen (its high bits how, FF_* << 4: dead, else senseless): each of its kin among the actors (its kind, its
+** faction) that knows of it (hears the fight's din: within its hearing of a fight's loudness, as it hears another's
+** noise; its sight never reaches further; not one senseless) tests its courage (not one fleeing already): its friend's
+** fall the book's bad situation (desperate, none left standing about it), the fallen's influence gone; its leader's
+** (its band's head, its faction's), its bond to it gone (dead: known lost from then).  Then every actor's heart anew.
+** K its own after */
 void __fastcall__ s_dismay (unsigned char k)
 {
     static unsigned char j, dead, why;
@@ -3095,9 +3107,10 @@ void __fastcall__ s_dismay (unsigned char k)
     for (j = 0; j < NACTORS; ++j) {
         gi = j;
         grab (&tp);
-        if (j == rfallen || !tp.name[0] || fled[j] || (akind[j] != akind[rfallen] && tp.faction != f.faction) ||
-            tp.sn != f.sn || (kind_get (akind[j]), apart (tp.x - f.x, tp.y - f.y) > (unsigned) K.hear * FALL_LOUD / 2)) {
-            continue;                           /* (Unheard: unfelt, its bond to it holding, till it's known) */
+        if (j == rfallen || !tp.name[0] || (akind[j] != akind[rfallen] && tp.faction != f.faction) || tp.sn != f.sn ||
+            tp.doing == DO_DOWN || (kind_get (akind[j]), apart (tp.x - f.x, tp.y - f.y) > (unsigned) K.hear * FALL_LOUD / 2)) {
+            continue;                           /* (Unheard, or senseless: unfelt, its bond to it holding, till it's
+                                                **   known) */
         }
         why = MR_FELL;
         if (K.mind >= M_LOW) {
@@ -3110,9 +3123,11 @@ void __fastcall__ s_dismay (unsigned char k)
                 }
             }
         }
-        rj = j;
-        rgone = f.den;
-        courage (why);
+        if (!fled[j]) {
+            rj = j;                             /* (Fleeing already: it knows, and flees on) */
+            rgone = f.den;
+            courage (why);
+        }
     }
     hearts ();
     kind_get (akind[rfallen]);
@@ -3141,7 +3156,7 @@ static unsigned char __fastcall__ dead_of (unsigned char l)
 
 /* The hook for a loss told (a runner's word, a survivor's, to come: through a stub, SWFN told, 6): actor j learns of
 ** its leaders' deaths it didn't know of: known lost from then (D_LOST), its courage tested at once (MR_TOLD), its
-** bond to the first of them gone, the news a bad situation.  K its own after */
+** bond to the first of them gone.  K its own after */
 void __fastcall__ s_told (unsigned char j)
 {
     static unsigned char d;
