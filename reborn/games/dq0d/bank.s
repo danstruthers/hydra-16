@@ -24,8 +24,9 @@ ovx:        .res        1
                                             ;   (the kinds read in, popgen loaded);
                                             ;   an actor made, retired, killed, an ally come along,
                                             ;   a cornered one's dart
-            SWPART      5, 2                ; The senses' own: a hunter's stalk, a scent followed, one drawn on (slice 4.5's)
+            SWPART      5, 3                ; The senses' own: a hunter's stalk, a scent followed, one drawn on (slice 4.5's)
             SWPART      6, 3                ; Morale: the field and the bonds, an actor's kin dismayed (2026-10-30)
+            SWPART      7, 3                ; Succession (2026-10-30)
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -47,4 +48,5 @@ ovx:        .res        1
             SWFN        dart, 4
             SWFN        dismay, 6
             SWFN        heart, 6
-            SWFN        age, 6
+            SWFN        succeed, 7
+            SWFN        age, 7               ; (Part 7's since 2026-10-30: part 6's room)

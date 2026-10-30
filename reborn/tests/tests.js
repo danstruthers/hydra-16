@@ -2195,10 +2195,21 @@ const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
 // stands), the pokes made (each { g: the game, 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, k:
 // the actor's entry, set: { field: value } }) and the actors' hearts kept after them (m.hearts: { g, line, n, acts: [{ k,
 // name, heart, doing }] }): the hub's actor's heart,
-// lead, power, mood, serve and contact are its struct's last six bytes (hub.h's, 2026-10-30), attitude and faction the
-// layout's.  The test's own setting up, as dq0Aware's
+// lead, power, mood, serve, contact and bonds are its struct's last seven bytes (hub.h's, 2026-10-30), attitude and
+// faction the layout's; and its record's (rec: { or: flags or'd in, serve, contact }: dq0Rec's).  The test's own setting
+// up, as dq0Aware's
+// The denizens' records (dq0d's pb bank, its label's: the task the hub's task[T_DENIZENS]): { mem, at(i) the record
+// i's offset, and its fields' }: dq0d.c's struct pop (its head 322 bytes, 64 lairs of 17), struct den (28 bytes: its
+// flags at 1, its id at 4, its serve and contact at 26 and 27)
+let dq0RecPb = 0;
+function dq0Rec(m) {
+  const h = m.dq0.bank(0), t = h[12 + 2], lbl = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+  const pb = dq0RecPb || (dq0RecPb = parseInt(/^al ([0-9A-F]+) \._pb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][pb]) || new Uint8Array(0x2000);
+  return { mem, at: i => 322 + 64 * 17 + 28 * i, FLAGS: 1, ID: 4, SERVE: 26, CONTACT: 27 };
+}
+
 function dq0Poke(m, pokes) {
-  const a = m.acia, read = a.read, TAIL = ['heart', 'lead', 'power', 'mood', 'serve', 'contact'];
+  const a = m.acia, read = a.read, TAIL = ['heart', 'lead', 'power', 'mood', 'serve', 'contact', 'bonds'];
   let typed = '', g = 0, seen = {};
   m.hearts = [];
   a.read = (r, t) => {
@@ -2213,13 +2224,25 @@ function dq0Poke(m, pokes) {
         const h = m.dq0 && m.dq0.bank(0);
         if (h) {
           const { L } = m.dq0.layout(), at = k => L.actor + k * L.actorSize;
-          const off = f => TAIL.includes(f) ? L.actorSize - 6 + TAIL.indexOf(f) : f === 'attitude' ? L.aAttitude : L.aFaction;
-          for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed]) for (const [f, v] of Object.entries(p.set)) h[at(p.k) + off(f)] = v;
+          const off = f => TAIL.includes(f) ? L.actorSize - 7 + TAIL.indexOf(f) : f === 'attitude' ? L.aAttitude : L.aFaction;
+          for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed]) {
+            for (const [f, v] of Object.entries(p.set || {})) h[at(p.k) + off(f)] = v;
+            if (p.rec) {
+              const R = dq0Rec(m), o = R.at(h[at(p.k) + L.aName + 12]);
+              if (p.rec.or) R.mem[o + R.FLAGS] |= p.rec.or;
+              if (p.rec.serve !== undefined) R.mem[o + R.SERVE] = p.rec.serve;
+              if (p.rec.contact !== undefined) R.mem[o + R.CONTACT] = p.rec.contact;
+            }
+          }
           const acts = [];
           for (let k = 0; k < L.nactors; k++) {
             let n = '';
             for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]);
-            if (n) acts.push({ k, name: n, heart: (h[at(k) + L.actorSize - 6] << 24) >> 24, doing: h[at(k) + L.aDoing] });
+            if (n) {
+              const t = h.subarray(at(k) + L.actorSize - 7, at(k) + L.actorSize), R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]);
+              acts.push({ k, name: n, heart: (t[0] << 24) >> 24, lead: t[1], power: t[2], mood: t[3], bonds: t[6], doing: h[at(k) + L.aDoing],
+                rank: R.mem[o + R.FLAGS] >> 5 & 3, prom: !!(R.mem[o + R.FLAGS] & 0x80) });
+            }
           }
           m.hearts.push({ g, line: typed, n: seen[typed], acts });
         }
@@ -3997,7 +4020,7 @@ module.exports = {
     },
     {
       name: 'dq0quiet', meaning: true, what: 'Dingus Quest Zero\'s moving quietly (slice 4.6, D15: Stealth tested as it starts, again as something changes; HOUSE.md\'s sound and stealth, for review), by the referee\'s replies and the hub\'s state: at seed 3 by the way down, a step at a walk as loud as its pace (the senses\' to reckon, the hub\'s pc_noise 0xFF, no Stealth test); creeping, its first step tested (the world\'s slot: RS_TEST, P_STEALTH), its loudness the grade\'s (a critical success 0, a marginal 1, a marginal failure 2, a critical 3), its next not tested again, the same loudness; crouched, tested again (its position changed); a walk again, the senses\' to reckon, no test',
-      init: 't_rc', cycles: 440e6,       // (399.4M at reborn-game 85e0144a, its length at the turns pace moving with how the tasks interleave: 400M+ with the answers' work, 2026-10-30)
+      init: 't_rc', cycles: 450e6,   // (400e6 till 2026-10-30: 399.4M at the morale's merge, over it with succession's parts)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'step forward', 'creep',
         'step back', 'step forward', 'crouch', 'step back', 'stand', 'walk', 'step forward', 'wait', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -6337,7 +6360,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0morale', near: ['fight', 'denizens'], what: "Dingus Quest Zero's morale (the user's, 2026-10-29: every intelligent creature sways the morale field about it, by its rank and its influence skills, for its friends and against its foes; bonds upward to its leaders regardless of distance, growing with time served and contact; a leader's loss, known, a morale check at once with its influence removed; HOUSE.md's morale, for review), by the denizens' morale tests (RS_MORALE in their slot: steps, why, the field, the bonds and the leaders reckoned) and a strong character (its attributes 99) in mail, among a hand-written theme's small orcs (a shy, wary people) at seed 2, their home by the way down where the character starts (popgen's, its leader with its band), another band of them by it, a third on the stratum below.  Their king their leader: struck down, senseless, then dead, every small orc that heard it fall tests at once, its leader's loss (its band's head for its own band, the faction's for the other, wherever it is), its bond to it taken away, the band beside it the worse (the book's bad situation, a friend fallen about it); after its death those that heard it are led by no one, while the band below, that didn't hear it, keeps its bond to the dead king, its fall unfelt.  The band hostile, fighting beside its king, a fellow's fall weighed with its king's presence and its bond (the field and the bonds above nothing).  A black orc their band's head (a captain), kings above it in the tribe: its fall the home band's leader's loss, its bond to the kings holding; an old band (long served, often with its leaders) the steadier at its fall than a new one, by those bonds.  An ally of the character's heartened by it; a fearsome foe beside a band (a mighty one of a faction hostile to it) weighing on it.  (The test's own setting up: pokes of the actors' hub fields at a line's Enter, dq0Poke's)",
+      name: 'dq0morale', near: ['fight', 'denizens'], what: "Dingus Quest Zero's morale (the user's, 2026-10-29: every intelligent creature sways the morale field about it, by its rank and its influence skills, for its friends and against its foes; bonds upward to its leaders regardless of distance, growing with time served and contact; a leader's loss, known, a morale check at once with its influence removed; HOUSE.md's morale, for review), by the denizens' morale tests (RS_MORALE in their slot: steps, why, the field, the bonds and the leaders reckoned) and a strong character (its attributes 99) in mail, among a hand-written theme's small orcs (a shy, wary people) at seed 2, their home by the way down where the character starts (popgen's, its leader with its band), another band of them by it, a third on the stratum below.  Their king their leader: struck down, senseless, then dead, every small orc that heard it fall tests at once, its leader's loss (its band's head for its own band, the faction's for the other, wherever it is), its bond to it taken away, the band beside it the worse (the book's bad situation, a friend fallen about it); after its death those that heard it are led by its successor (since 2026-10-30: the most influential of those below it, dq0succession's), while the band below, that didn't hear it, keeps its bond to the dead king, its fall unfelt.  The band hostile, fighting beside its king, a fellow's fall weighed with its king's presence and its bond (the field and the bonds above nothing).  A black orc their band's head (a captain), kings above it in the tribe: its fall the home band's leader's loss, its bond to the kings holding; an old band (long served, often with its leaders) the steadier at its fall than a new one, by those bonds.  An ally of the character's heartened by it; a fearsome foe beside a band (a mighty one of a faction hostile to it) weighing on it.  (The test's own setting up: pokes of the actors' hub fields at a line's Enter, dq0Poke's)",
       init: 't_rc', cycles: 4000e6,
       machine: { input: (() => {
         const kit = "-k 'sword,gambeson,mail hauberk,mail cowl,great helm'", dress = ['wear the gambeson', 'wear the mail hauberk', 'wear the mail cowl', 'wear the great helm', 'hold the sword'];
@@ -6377,8 +6400,8 @@ module.exports = {
         if (own.length && other.length && Math.max(...own.map(r => r.steps)) >= Math.min(...other.map(r => r.steps))) f.push('the band beside the fallen king not the worse: ' + fa.map(say).join(' '));
         // (After its death: those that heard it led by no one; the band below keeps its bond, the fall unfelt)
         const d = T.find(t => t.game === gk && t.line === 'd'), after = K.filter(r => r.a === MR_FELL && r.w1 !== (fa[0] || {}).w1);
-        const lastK = Math.max(...K.filter(r => r.a === MR_LEADER).map(r => r.at)), up = after.filter(r => d && r.at >= lastK && r.at < d.k), below = after.filter(r => d && r.at > d.k);
-        if (!up.length || up.some(r => l1(r) !== NONE || l2(r) !== NONE || r.c !== 0)) f.push('a small orc that heard the king die still led by it: ' + up.map(say).join(' '));
+        const kingRec = (fa[0] || {}).w1, lastK = Math.max(...K.filter(r => r.a === MR_LEADER).map(r => r.at)), up = after.filter(r => d && r.at >= lastK && r.at < d.k), below = after.filter(r => d && r.at > d.k);
+        if (up.some(r => l1(r) === kingRec || l2(r) === kingRec) || new Set(up.filter(r => l1(r) === NONE && l2(r) === NONE).map(r => r.actor)).size > 1) f.push('a small orc that heard the king die still led by it, or by no successor (but the successor itself): ' + up.map(say).join(' '));
         if (!below.length || below.some(r => l2(r) === NONE || r.c < 1)) f.push('the band below not keeping its bond to the dead king (unheard): ' + below.map(say).join(' '));
         // (The king's presence: a fellow's fall weighed with the king standing beside its band, the field and the bond above nothing)
         const P = tests(gp), kp = P.find(r => r.a === MR_LEADER), pf = P.filter(r => r.a === MR_FELL && l1(r) !== NONE && (!kp || r.at <= kp.at));
@@ -6392,6 +6415,51 @@ module.exports = {
         if (!ad || !aa || ad.b <= aa.b) f.push('the ally not heartened by the character: ' + [ad, aa].filter(Boolean).map(say).join(' '));
         const fe = at(ge, 0, MR_LEADER), ff = fa.find(r => r.actor === 1);
         if (!fe || !ff || fe.b >= ff.b - 3) f.push('the fearsome foe beside the band not weighing on it: ' + [fe, ff].filter(Boolean).map(say).join(' '));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0succession', near: ['fight', 'denizens'], what: "Dingus Quest Zero's succession (the user's, 2026-10-30: \"When a leader dies, the next one below him in the heirarchy (strongest/most influential of the those directly below them) should take over\"; the chain filled all the way down, the coordinator's; HOUSE.md's morale, for review), dq0morale's small orcs at seed 2 and a strong character in mail, each scene set by pokes of the actors' hub fields and the denizens' records at a line's Enter (dq0Poke's, dq0Rec's), its outcome the records' and the hub's, not the dice's: a black orc its band's head, two of its band kept out of the fight (another faction's in the hub for the while: no test of their courage, no fleeing), one the more influential (its skill), the other the mightier: the black orc slain, the more influential at its head (its record's rank a captain's, AM_LEADS), rallying them, told as the character sees it (\"The small orc rallies its fellows.\"); the same in the dark, the torch doused, told as heard (\"You hear a rallying shout ...\"); and a king its tribe's leader, a captain below it (its record's rank) heading a band of its own: the king slain, the captain king after and its band's best its head (the chain filled), the captain's own band's bond to it kept, the king's old band's to it a new leader's",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: (() => {
+        const kit = "-k 'sword,gambeson,mail hauberk,mail cowl,great helm'", dress = ['wear the gambeson', 'wear the mail hauberk', 'wear the mail cowl', 'wear the great helm', 'hold the sword'];
+        const game = d => ['dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/' + d + ' ' + kit, ...dress], head = "'faction | Tribe | arak garking | 0-1 | 30 | khanu | 0 | w | -'";
+        return dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 100 >> /ram/c.hm', 'echo ml ini 100 >> /ram/c.hm',
+          'echo ml dge 100 >> /ram/c.hm', 'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm',
+          ...['b', 'd', 'k'].map(d => 'mkdir /ram/' + d), 'echo ' + head + ' > /ram/b/theme.txt', 'echo ' + head + ' > /ram/d/theme.txt',
+          "echo 'faction | Tribe | arak | 0-1 | 20 | garking | 0 | w | -' > /ram/k/theme.txt",
+          ...game('b'), ...Array(5).fill(['attack the black orc', 'wait']).flat(), 'quit',
+          ...game('d'), 'attack the black orc', 'wait', 'attack the black orc', 'douse the torch', ...Array(4).fill(['attack the black orc', 'wait']).flat(), 'quit',
+          ...game('k'), 'attack the orc king', 'wait', 'attack the orc king', 'wait', 'quit', 'echo $status']);
+      })() },
+      start(m) {
+        const apart = g => [{ g, line: 'attack the black orc', n: 1, k: 0, set: { faction: 7, lead: 255, power: 0 } },   // (The more influential,
+          { g, line: 'attack the black orc', n: 1, k: 1, set: { faction: 7, lead: 0, power: 250 } }];              //   the mightier: out of the fight)
+        dq0Poke(m, [...apart(1), ...apart(2),
+          { g: 3, line: 'attack the orc king', n: 1, k: 3, set: { serve: 255, contact: 255 }, rec: { or: 0x20 } },   // (A captain, its band's head)
+          { g: 3, line: 'attack the orc king', n: 1, k: 4, set: { serve: 255, contact: 255 } },                     // (Its band: long with it)
+          ...[0, 1].map(k => ({ g: 3, line: 'attack the orc king', n: 1, k, set: { serve: 255, contact: 255 }, rec: { or: 0x10 } }))]);   // (The king's
+                                                // band, long with it too; they know (D_LOST): so they know of its successor)
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], DE_RALLY = 4, AM_LEADS = 4, H = m.hearts || [];
+        const games = [...new Set(T.map(t => t.game).filter(g => g >= 0))].sort((a, b) => a - b);
+        if (games.length !== 3) return ['not three games: ' + games.length];
+        const last = g => H.filter(x => x.g === g).slice(-1)[0], st = dq0Story(out).split('% dq0 -p t').slice(1);
+        const rallies = gi => T.filter(t => t.game === games[gi]).flatMap(t => dq0Ev(t, 'E_DEN', { a: DE_RALLY }));
+        for (const [gi, g, how] of [[0, 1, 'seen'], [1, 2, 'heard']]) {
+          const e = last(g), b0 = e && e.acts.find(a => a.k === 0), b1 = e && e.acts.find(a => a.k === 1), r = rallies(gi);
+          if (!b0 || !(b0.mood & AM_LEADS) || b0.rank !== 1 || !b0.prom || (b1 && ((b1.mood & AM_LEADS) || b1.rank))) f.push('game ' + g + ': the more influential not at the black orc\'s post over the mightier: ' + JSON.stringify(e && e.acts));
+          if (r.length !== 1 || r[0].who !== 1 || r[0].seen !== (how === 'seen')) f.push('game ' + g + ': not one rally by it, ' + how + ': ' + JSON.stringify(r));
+          if (!(how === 'seen' ? /The small orc rallies its fellows\./ : /You hear a rallying shout/).test(st[gi] || '')) f.push('game ' + g + ': the rally ' + how + ' not told');
+        }
+        const e3 = H.find(x => x.g === 3 && x.line === 'wait' && x.n === 2), act = k => e3 && e3.acts.find(a => a.k === k), c3 = act(3), c4 = act(4), c0 = act(0) || act(1);
+        if (!c3 || c3.rank !== 2 || !c3.prom) f.push('the captain not king after the king: ' + JSON.stringify(e3 && e3.acts));
+        if (!c4 || c4.rank !== 1 || !c4.prom) f.push('the captain\'s band not headed by its best after (the chain not filled): ' + JSON.stringify(e3 && e3.acts));
+        if (c4 && c0 && !(c4.bonds >= 8 && c0.bonds <= 4)) f.push('the bonds to the new king not its own band\'s kept, the rest\'s a new leader\'s: ' + JSON.stringify([c4, c0]));
+        if (!c0) f.push('none of the king\'s old band left to see');
         return f;
       },
       sdcard: true
