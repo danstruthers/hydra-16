@@ -31,18 +31,28 @@ extern struct change rec;                       /* (store.c's: the record writte
 
 /* Stratum n's populations waited for, the denizens' as its plan's grown (the hub's places kept, KEPT_AT), so its
 ** chunks are stocked by their keepers' lights from the first (dq0w.c's planned; and a game carried on, the places kept
-** read back): their intents carried out meanwhile (they may be waiting on the world's), ten seconds at most (the hub's
-** header in the window after) */
+** read back): their intents carried out meanwhile (they may be waiting on the world's), for as long as they take, not
+** by the clock: a stratum's chunks stocked before its keepers are placed have their sconces dark, so the game went by
+** how fast the denizens populated it (dq0robbed, 2026-10-30: ten seconds at most, stratum 0's populations then none
+** or a third placed, by the code's layout).  Only a task that's stuck is left: thirty seconds with neither a keeping
+** added nor a beat of its (the hub's header in the window after) */
 void __fastcall__ s_kept_wait (unsigned char n)
 {
     unsigned t0 = hy_ticks ();
-    unsigned char d;
+    unsigned char d, k, b, kn = 0xFF, kb = 0;
 
     for (;;) {
         hub_map (DEN_BANK);
         d = KEPT_DONE (KEPT_AT, n);
+        k = KEPT_AT->n;
         hub_map (0);
-        if (d || HUB->quit || (unsigned) (hy_ticks () - t0) > 2000) {
+        b = HUB->beat[T_DENIZENS];
+        if (k != kn || b != kb) {
+            kn = k;                             /* (On its way: the wait begun again) */
+            kb = b;
+            t0 = hy_ticks ();
+        }
+        if (d || HUB->quit || (unsigned) (hy_ticks () - t0) > 30 * HY_TICK_HZ) {
             return;
         }
         hub_sleep (1);
