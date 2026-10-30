@@ -4588,6 +4588,9 @@ static void __fastcall__ intent (struct msg* m)
         tgy = m->w2;
         go (m->a & 7);
         break;
+    case I_CLIMB:
+        climb (m->a);
+        break;
     case I_GOTO:
         go_near = m->a;
         go_to (m->w1, m->w2);
@@ -4799,9 +4802,6 @@ void __fastcall__ s_intent_more (struct msg* m)
     unsigned char k, d;
 
     switch (m->kind) {
-    case I_CLIMB:                               /* (Part 2's: intent's till 2026-10-29, the main RAM's room) */
-        climb (m->a);
-        break;
     case I_DIG:
         start_dig (m->a);
         break;
@@ -5099,9 +5099,8 @@ int main (int argc, char* argv[])
             den_saw = 0;                        /* (A body fallen: looked at again, the things too) */
             see (0);
         }
-        if (HUB->den_seq != dseq && !HUB->ui_cmd) {
-            dseq = HUB->den_seq;                /* (Not as the UI's command is in hand: the background's, after its
-                                                **   answer's begun) */
+        if (HUB->den_seq != dseq) {
+            dseq = HUB->den_seq;
             stirred ();                         /* (The denizens' bodies' changes: what it sees of them) */
             hub_map (0);
         }

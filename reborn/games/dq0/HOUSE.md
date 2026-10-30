@@ -669,7 +669,8 @@ climb's test to hold on).
   conscious (a hostile or unfriendly denizen: one that strikes at a character beside it) has a zone, its own square
   and the eight round it, but not through a wall or a shut door, nor round a corner (a diagonal with solid squares on
   both sides).  One lying down has only its own square, one senseless none; a friendly one's or an ally's doesn't
-  count.  The character in an enemy's zone is engaged with it.  Any walk stops as it comes into an enemy's zone, a
+  count; nor one that hasn't noticed the character (roaming, its mind's doing as it doesn't sense it: walked past
+  unaware, it engages no one till it does; every actor's, 2026-10-29, for review).  The character in an enemy's zone is engaged with it.  Any walk stops as it comes into an enemy's zone, a
   hard stop ("The giant rat engages you."), and one begun in a zone goes a single square and stops there if it's
   still in one (the book's one square a turn within them): a walk over to a thing, or past a hostile, stops where it's
   engaged.  A blow's close-in ends in its target's zone, beside it, and the blow is struck; engaged by another first,

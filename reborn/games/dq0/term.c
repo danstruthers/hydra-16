@@ -226,7 +226,10 @@ void s_size (void)
 
 /* ---- The screen */
 
-void t_init (void)
+#pragma code-name (push, "SW1CODE")             /* (Part 1's, its stub t_init, bank.s's: the main RAM's room) */
+#pragma rodata-name (push, "SW1RODATA")
+
+void s_t_init (void)
 {
     static unsigned char once;
 
@@ -264,6 +267,9 @@ void t_init (void)
     inl_show ();
     t_done ();
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 void t_away (void)
 {

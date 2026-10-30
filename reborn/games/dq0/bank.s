@@ -226,6 +226,7 @@ ovl_out:
 
             SWFN        begin, 1
             SWFN        size, 1
+            SWFN        t_init, 1
             SWFN        finish, 1
             SWFN        save_game, 1
             SWFN        command, 2

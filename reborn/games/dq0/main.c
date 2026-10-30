@@ -799,12 +799,10 @@ static void __fastcall__ blow (const struct msg* m)
 static void heard (void)
 {
     static struct msg m;
-    unsigned dx, dy, p;
+    unsigned dx, dy;
     unsigned char rel;
 
-    t_flush ();                                 /* (What's told so far out first: a command's answer's first
-                                                **   words, before the background's held till after them) */
-    while (p = dplace, hub_dnext (&dplace, &m)) {
+    while (hub_dnext (&dplace, &m)) {
         if (m.kind == E_FIGHT && (!m.who || !m.a)) {
             blow (&m);
             continue;
@@ -835,18 +833,12 @@ static void heard (void)
             m.t < heard_at + (rel == heard_rel ? 300 : 50)) {
             continue;
         }
-        if (HUB->ui_cmd) {
-            dplace = p;                         /* (Heard as a command's in hand: told, and what's after it, once its
-                                                **   answer's begun) */
-            break;
-        }
         heard_at = m.t;
         heard_rel = rel;
         noise_told (&m, rel);                   /* (Told: part 14's, the main RAM's room) */
     }
 }
 
-static unsigned char stir_due;                  /* (A denizen stirred, its telling held: events') */
 static unsigned char events (void)          /* (How many there were) */
 {
     static struct msg m;
@@ -918,8 +910,7 @@ static unsigned char events (void)          /* (How many there were) */
         case E_VIEW:
             if (m.who == 0) {
                 if (m.w1 == V_STIR) {
-                    stir_due = 1;               /* (A denizen it sees moved: told after the events, and after a
-                                                **   command's answer's first words, below) */
+                    stir ();                    /* (A denizen it sees moved) */
                     break;
                 }
                 if (m.w1 == V_FACING) {         /* (A turn's first words, as it's begun: out at once, its look
@@ -1004,11 +995,6 @@ static unsigned char events (void)          /* (How many there were) */
             }
             break;
         }
-    }
-    if (stir_due && !HUB->ui_cmd && !quit) {
-        stir_due = 0;                           /* (The background's news: the denizens stirring, as the command's
-                                                **   answer's begun, never before it) */
-        stir ();
     }
     return n;
 }
@@ -2484,7 +2470,7 @@ int main (int argc, char* argv[])
             ready ();                           /* (The commands' part back, if another's in) */
         }
         t_done ();
-        hub_nap (quick ? (--quick, 2) : 4);     /* (A fiftieth of a second: the keys looked for, the world's
+        hub_nap (quick ? (--quick, 1) : 4);     /* (A fiftieth of a second: the keys looked for, the world's
                                                 **   events told; each look at the keys a call of the console's,
                                                 **   some 9,000 cycles with its own, a quarter of the CPU at two
                                                 **   ticks while nothing happened; a hundredth just after a command,

@@ -1870,9 +1870,9 @@ static void tend (void)
     lnow = now;
     for (k = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {
         hub_map (0);
-        if (!turns && HUB->ui_cmd && gw) {
-            break;                              /* (The UI's command come in meanwhile: the rest decide next time
-                                                **   round, its answer first) */
+        if (!turns && HUB->ui_cmd && gw != 2) {
+            break;                              /* (The UI's command come in meanwhile, as they decide, though not
+                                                **   seen yet: the rest decide next time round, its answer first) */
         }
         if (!q->name[0]) {
             continue;
