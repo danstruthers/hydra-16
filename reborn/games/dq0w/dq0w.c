@@ -100,6 +100,9 @@ void __fastcall__ travel_go (const struct msg* m);  /* Part 55 */
 unsigned char travel_on (void);
 void way_out (void);                            /* Part 54 */
 unsigned char trav;                             /* (A journey under way: part 54's, its next leg as the last is done) */
+unsigned char kowed;                            /* (A stratum's populations owed at a real pace, its number plus 1:
+                                                **   wkept.c's, its kept rooms lit as they're done, kept_late: the
+                                                **   lights' minute's) */
 static unsigned char pc_down;                   /* (The character senseless: main's, its bearings off as it is) */
 struct work wk;
 extern char _SWAP_START__[];
@@ -4914,8 +4917,9 @@ void __fastcall__ s_intent_more (struct msg* m)
 ** same clock after work of its own (an event told since their last: the character arrived, its work done, free
 ** again), so they act through all the time what it does takes, and the game's the same whatever the tasks' timing;
 ** waited for each time (their intents carried out as they come, the world asleep on its doorbell between), for as long
-** as they take: thirty seconds at most, by the clock, not by its wakes (each intent rings it: a turn of many
-** denizens woke it a thousand times, and a turn cut short at a count made the game turn on the tasks' timing); one
+** as they take: thirty seconds at most without an intent from them, by the clock, not by its wakes (each intent
+** rings it: a turn of many denizens woke it a thousand times, and a turn cut short at a count made the game turn
+** on the tasks' timing); one
 ** that stuck is left to catch up as it can, late, till the character's next command.  The character's blow struck as the clock
 ** moves on, before it (its round's: the slice's first, seen by the denizens as they see the slice).  1 if it moved it
 ** on or gave them a turn */
@@ -4935,7 +4939,10 @@ static void turn (void)
     for (t0 = hy_ticks (); !late && BEHIND && (unsigned) (hy_ticks () - t0) < TURN_WAIT; ) {
         hub_sleep (1);                          /* (Waited for here, a tick at a time at most) */
         if (DEN_INTENTS ()) {
-            den_intents ();                     /* (Their intents carried out as they come) */
+            den_intents ();                     /* (Their intents carried out as they come: on its way, the wait
+                                                **   begun again, so a long turn that's going isn't left late, only a
+                                                **   stuck one, thirty seconds with none) */
+            t0 = hy_ticks ();
         }
         if (hub_posted (&HUB->ireq)) {
             things ();                          /* (The UI's things meanwhile: what's carried ...) */
@@ -5794,6 +5801,10 @@ void s_burns_now (void)
                                                 **   once the other is too, or out) */
     }
     if (d) {
+        if (kowed) {
+            kept_late (kowed - 1);              /* (A stratum's populations owed, a real pace's: its kept rooms lit as
+                                                **   they're done, wkept.c's, a minute's look) */
+        }
         sconce_lights (0xFF);                   /* (The rooms' lights by their sconces, a minute's: one burnt out, its
                                                 **   keepers gone: wkept.c's) */
     }

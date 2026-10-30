@@ -160,6 +160,7 @@ go:
             SWPART      68, 14              ; A launcher loaded (wshoot.c: overlay 20's room)
             SWPART      69, 20              ; (Agent missile's last number, not used: a placeholder, wplace.s)
             SWPART      70, 21              ; Wounds over time: the bodies' time told, a thing used up (wtend.c)
+            SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -310,6 +311,7 @@ go:
             SWFN        flee_on, 26
             SWFN        sconce_lights, 34
             SWFN        kept_wait, 34
+            SWFN        kept_late, 71
             SWFN        engaged, 25
             SWFN        fumbled, 25
             SWFN        den_first, 14

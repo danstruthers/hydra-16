@@ -12,6 +12,7 @@ void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned cha
     unsigned char link);                        /* Kept, and made in its chunk (the window moved) */
 void stocks (void);                             /* The chunks the maker stocked marked so (STOCKED) */
 void __fastcall__ kept_wait (unsigned char n);  /* (Part 28's) Stratum n's populations waited for (the denizens') */
+void __fastcall__ kept_late (unsigned char sn);  /* (Part 71's, wkept.c) Its populations done late: its stocked kept rooms lit */
 unsigned char __fastcall__ sconce_lights (unsigned char reach);  /* (Part 28's: wkept.c) The rooms' lights by their
                                                 **   sconces' (the chunks round the character, reach 0xFF; the chunk just
                                                 **   stocked, SL_STOCKED, its first square rec's; else those within
