@@ -7,7 +7,9 @@
 ; The spec is danlang, loaded after the machine: the images (spec-bios, spec-prom), the cycles (spec-cycles), the
 ; result (spec-init, or spec-expect: a list of strings), the marks (spec-marks), keys typed (spec-keys: codes; 256 a
 ; wait, 257 a wait for a prompt), bytes the PC sends after a mark (spec-send-after, spec-send), BOOT_DONE's address
-; (spec-boot-done: IRQs-off stretches counted from it), where the results go (spec-out), and the machine's options
+; (spec-boot-done: IRQs-off stretches counted from it), where the results go (spec-out), the screen looked at as the
+; keyboard types 1024 (spec-snap: a test's own look, its start hook's, in the harness), the size a terminal that
+; answers it gives (spec-termsize: rows and columns), and the machine's options
 ; and devices (opt-..., spi-card, spi-echo, i2c-device, rtc-setup, ca1-setup, vera-setup, vera-card, smc-setup ...).  With spec-peer, every byte the
 ; serial port sends goes to the harness (stdout, "T byte cycle"), which answers (stdin, "C hex;P hex": the bytes
 ; that are the console's, and the PC's own sent back): the PC tool's part of /pc, or the PC's end of XMODEM.
@@ -16,13 +18,14 @@
 ; cycles, the IRQs-off stretches, the devices' states for the checks), cards.bin (the cards' blocks written: for each,
 ; its device, its block number (4 bytes, least first) and its 512 bytes; the Vera X's card is device 16), vera.bin
 ; (with a Vera X: VRAM, the palette, the sprites' and the PSG's registers, the DCSEL sets, the layers', then the PCM
-; bytes logged).
+; bytes logged), snaps.bin (with spec-snap: vera.bin's first part as it was at each look; result.json's snaps, the
+; output's length then).
 
 (def {here} (substring (fst args) 0 (+ 1 (max (last-index-of (fst args) "/") (last-index-of (fst args) "\\")))))
 (each {f {"cpu.dl" "machine.dl" "devices.dl" "spi.dl" "i2c.dl" "rtc.dl" "vera.dl" "smc.dl"}} (load (+ here f)))
 
 (def {spec-bios spec-prom spec-cycles spec-init spec-expect spec-marks spec-keys spec-send-after spec-send spec-boot-done
-  spec-out spec-peer spec-paste spec-flow} "" "" 30000000 "" NIL {} {} "" {} -1 "." NIL NIL T)
+  spec-out spec-peer spec-paste spec-flow spec-snap spec-termsize} "" "" 30000000 "" NIL {} {} "" {} -1 "." NIL NIL T NIL NIL)
 (load (nth 1 args))
 
 ; ---- the console's output: in pieces (a string grows by copying), its tail for the marks, the result's search window
@@ -40,7 +43,12 @@
     (set {mk} (nth i spec-marks))
     (if (and (nil? (hash-get marks-at i)) (ends-with? out-tail mk)) (do
       (hash-put marks-at [i at])
-      (if (and (== mk spec-send-after) (not send-done)) (do (set! {send-done} T) (acia-send spec-send)) 0)) 0)))})
+      (if (and (== mk spec-send-after) (not send-done)) (do (set! {send-done} T) (acia-send spec-send)) 0)) 0)))
+  ; (spec-termsize: (rows columns): the terminal answers the size asked, ESC [ 18 t, at once and at the line's rate, as
+  ; the PC tool does: ESC [ 8 ; rows ; columns t)
+  (if (and spec-termsize (== v #x74) (ends-with? out-tail (+ (code-char 27) "[18t"))) (do
+    (set {a} (+ (code-char 27) "[8;" (fst spec-termsize) ";" (snd spec-termsize) "t"))
+    (acia-send (map (fn {i} {char-code (char-at a i)}) (range (len a))))) 0)})
 
 ; A byte the serial port sends: the console's, or (with a peer) the harness's to sort out
 (fun {on-tx v at} {if peer-on (peer-byte v at) (out-byte v at)})
@@ -77,6 +85,13 @@
   (fun {watched at h} {if (watched? at)
     (fn {} {do (if (< typedat 0) (do (set! {typedat} cyc) (ioff-start)) 0) (h)})
     h})) 0)
+; spec-snap: at each 1024 the keyboard types (and not the next move, as the test's look takes it), the Vera X as it is
+; to snaps.bin, and the output's length (snap-at)
+(def {snap-s snap-at} NIL {})
+(if (and spec-snap ve-on) (set! {smc-snap} (fn {} {do
+  (if (nil? snap-s) (set! {snap-s} (open (+ spec-out "/snaps.bin") :write)) 0)
+  (each {b (list ve-vram ve-pal ve-spr ve-psg ve-dc ve-lay)} (write-bytes snap-s b))
+  (set! {snap-at} (join snap-at (list out-n)))})) 0)
 
 (def {done} NIL)
 (while {and (< cyc spec-cycles) (not halted) (not done)}
@@ -86,16 +101,17 @@
 
 ; ---- the results
 (def {res} spec-out)
+(if snap-s (close snap-s) 0)
 (write-file (+ res "/out.txt") (+ (str-join (map (fn {i} {out-pieces i}) (range (len out-pieces))) "") out-now))
 (fun {js-str s} {+ "\"" (str-replace (str-replace s "\\" "\\\\") "\"" "\\\"") "\""})
 (fun {js-list l} {+ "[" (str-join l ",") "]"})
-(def {ioff-list} (sort (map (fn {k} {cons k (hash-get ioffs k)}) (hash-keys ioffs)) (fn {x y} {> (snd x) (snd y)})))
 (fun {place k} {+ (hex (shr k 16) 1) ":" (hex (bit-and k #xFFFF) 4)})
 (write-file (+ res "/result.json") (+ "{"
   "\"cycles\":" cyc ","
   "\"halted\":" (if halted (js-str halted) "null") ","
   "\"marks\":{" (str-join (map (fn {i} {+ "\"" i "\":" (hash-get marks-at i)}) (hash-keys marks-at)) ",") "},"
-  "\"ioff\":" (js-list (map (fn {x} {js-list (list (snd x) (js-str (place (fst x))) (js-str (place (thd x))) (nth 3 x))}) (take 8 ioff-list))) ","
+  "\"snaps\":" (js-list snap-at) ","
+  "\"ioff\":" (js-list (map (fn {x} {js-list (list (fst x) (js-str (place (snd x))) (js-str (place (thd x))) (nth 3 x))}) ioff-top)) ","
   "\"keyOns\":" (js-list (map (fn {i} {js-str (+ "ch " (fst (ym-keyons i)) " at cycle " (snd (ym-keyons i)))}) (range ym-nkeys))) ","
   "\"ymLost\":" ym-lost ","
   "\"ymRegs\":" (js-list (map (fn {i} {ym-r i}) (range 256))) ","

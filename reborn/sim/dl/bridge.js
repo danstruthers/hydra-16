@@ -2,11 +2,12 @@
 // written (the images, the cards, the keys, the machine's options, the marks), danlang run on it, and what came out
 // read back as the JS machine's would be, for sim/test.js to judge (its marks, budgets, IRQs-off stretch and checks):
 // a Vera X's VRAM and registers into a JS one (sim/lib/vera.js's load), so a check that looks at the screen draws
-// it as the JS machine's would (frame, cells, text); its card's blocks written into the test's card, as the VIA's.
+// it as the JS machine's would (frame, cells, text), and a test's own look at the screen as the keyboard types (its
+// start hook's) given the screen as it was then; its card's blocks written into the test's card, as the VIA's.
 // The PC's end of /pc or of XMODEM (sim/lib/pchost.js, xmpeer.js) stays here, in the harness: each byte the Hydra's
 // serial port sends comes over danlang's stdout, and the console's bytes and the PC's go back over its stdin.
 //
-// The danlang interpreter: $DANLANG, or the Release build beside this repository (../danlang: dotnet build -c Release).
+// The danlang interpreter: $DANLANG, or the Release build beside this repository (../danlang: dotnet publish -c Release).
 // The emulator: $HYDRA_DL (its hydra.dl, the others beside it: a copy, to go on changing these while a run uses it), or
 // this folder's.
 'use strict';
@@ -21,9 +22,13 @@ const HYDRA_DL = process.env.HYDRA_DL || path.join(__dirname, 'hydra.dl');
 
 function danlang() {
   if (process.env.DANLANG) return process.env.DANLANG;
-  const exe = path.join(ROOT, '..', '..', 'danlang', 'bin', 'Release', 'net6.0', process.platform === 'win32' ? 'danlang.exe' : 'danlang');
-  if (fs.existsSync(exe)) return exe;
-  throw new Error('no danlang: set DANLANG, or build ../danlang (dotnet build -c Release)');
+  // (Its published build first, compiled ahead of time; then its build; then an older danlang's, on .NET 6)
+  const name = process.platform === 'win32' ? 'danlang.exe' : 'danlang';
+  const rid = (process.platform === 'win32' ? 'win' : process.platform === 'darwin' ? 'osx' : 'linux') + '-' + process.arch;
+  const release = path.join(ROOT, '..', '..', 'danlang', 'bin', 'Release');
+  for (const exe of [path.join(release, 'net8.0', rid, 'publish', name), path.join(release, 'net8.0', name), path.join(release, 'net6.0', name)])
+    if (fs.existsSync(exe)) return exe;
+  throw new Error('no danlang: set DANLANG, or build ../danlang (dotnet publish -c Release)');
 }
 
 // A string as danlang reads it (its bytes; escapes for the others)
@@ -54,6 +59,8 @@ function writeSpec(t, m, opt, dir, extra) {
   set('spec-peer', extra.peer ? 'T' : 'NIL');
   set('spec-paste', m.paste ? 'T' : 'NIL');
   set('spec-flow', m.flow === 'none' ? 'NIL' : 'T');
+  if (t.start && keys(m.input).includes(0x400)) set('spec-snap', 'T');   // (Its look at the screen as the keyboard types Ѐ: lookAgain)
+  if (m.termSize) set('spec-termsize', dlList(m.termSize));
   set('opt-seed', opt.seed === undefined ? 1 : opt.seed);
   if (m.modules !== undefined) set('opt-modules', m.modules);
   if (m.sharedU !== undefined) set('opt-sharedu', m.sharedU);
@@ -96,8 +103,30 @@ function writeSpec(t, m, opt, dir, extra) {
   fs.writeFileSync(path.join(dir, 'spec.dl'), out.join('\n') + '\n', 'latin1');
 }
 
+// A JS Vera X, as danlang's was (vera.bin's first part, from take(n): its next n bytes)
+const VERA_BYTES = 131072 + 512 + 1024 + 64 + 256 + 14;
+function veraOf(machine, take) {
+  const vo = machine.vera === true ? {} : machine.vera;
+  const v = createVera({ clock: machine.clock, rnd: () => 0, version: vo.version });
+  v.load({ vram: take(131072), palette: take(512), sprites: take(1024), psg: take(64), dc: take(256), layers: take(14) });
+  return v;
+}
+
+// A test's look at the screen as the keyboard types Ѐ (its start hook's: the SMC's type taken over, m.vera and
+// m.out looked at), given the screen and the output as they were at each (danlang's snaps.bin, and result.json's snaps)
+function lookAgain(t, machine, dir, snaps, out) {
+  const sb = fs.readFileSync(path.join(dir, 'snaps.bin')), look = { smc: { type: () => {} }, vera: null, out: '' };
+  t.start(look);
+  snaps.forEach((n, i) => {
+    let at = i * VERA_BYTES;
+    look.vera = veraOf(machine, k => sb.subarray(at, at += k));
+    look.out = out.slice(0, n);
+    look.smc.type('Ѐ');
+  });
+}
+
 // Test t run in danlang.  extra: { image (the paged ROM), marks, bootDone, peer (a PC host or an XMODEM peer: push,
-// send, flush) }.  OUT: (a promise) { m: the machine as the checks see it, marks: { name: cycle } }
+// send) }.  OUT: (a promise) { m: the machine as the checks see it, marks: { name: cycle } }
 async function runDl(t, machine, opt, extra) {
   const dir = path.join(ROOT, 'obj', 'dl', t.name);
   fs.rmSync(dir, { recursive: true, force: true });
@@ -105,7 +134,7 @@ async function runDl(t, machine, opt, extra) {
   fs.writeFileSync(path.join(dir, 'prom.bin'), extra.image);
   writeSpec(t, machine, opt, dir, extra);
   const args = [HYDRA_DL, path.join(dir, 'spec.dl')];
-  let errText = '', peerOut = [];
+  let errText = '';
   if (!extra.peer) {
     const r = spawnSync(danlang(), args, { encoding: 'latin1', maxBuffer: 1 << 26 });
     if (r.error) throw r.error;
@@ -139,13 +168,11 @@ async function runDl(t, machine, opt, extra) {
       child.on('error', reject);
       child.on('close', () => resolve());
     });
-    peerOut = p.flush ? [...p.flush()] : [];
-  }
+  }                                                         // (A frame cut short isn't the output's: sim/test.js's isn't)
   const res = path.join(dir, 'result.json');
   if (!fs.existsSync(res)) throw new Error('the danlang emulator gave no result: ' + errText.trim().slice(-2000));
   const r = JSON.parse(fs.readFileSync(res, 'latin1'));
-  let out = fs.readFileSync(path.join(dir, 'out.txt'), 'latin1');
-  if (peerOut.length) out += String.fromCharCode(...peerOut);
+  const out = fs.readFileSync(path.join(dir, 'out.txt'), 'latin1');
   // The cards' blocks written, back in the cards (as the JS machine's writes go)
   const cards = fs.readFileSync(path.join(dir, 'cards.bin'));
   for (let i = 0; i + 517 <= cards.length; i += 517) {
@@ -171,15 +198,15 @@ async function runDl(t, machine, opt, extra) {
     dl: { errText },
   };
   if (r.vera) {                                             // The Vera X: a JS one, as danlang's left it (for frame, cells, text)
-    const vb = fs.readFileSync(path.join(dir, 'vera.bin')), vo = machine.vera === true ? {} : machine.vera;
-    const v = createVera({ clock: machine.clock, rnd: () => 0, version: vo.version });
+    const vb = fs.readFileSync(path.join(dir, 'vera.bin'));
     let at = 0;
     const take = n => vb.subarray(at, at += n);
-    v.load({ vram: take(131072), palette: take(512), sprites: take(1024), psg: take(64), dc: take(256), layers: take(14) });
+    const v = veraOf(machine, take);
     Object.assign(v, { frames: r.vera.frames, psgOns: r.vera.psgOns, pcmIn: r.vera.pcmIn, pcmOut: r.vera.pcmOut, pcmLost: r.vera.pcmLost,
       pcmUnderruns: r.vera.pcmUnderruns, pcmLog: r.vera.pcmLog === null ? null : [...take(r.vera.pcmLog)] });
     m.vera = v;
   }
+  if (r.snaps.length) lookAgain(t, machine, dir, r.snaps, out);
   if (r.smc) m.smc = r.smc;
   return { m, marks };
 }

@@ -2,11 +2,12 @@
 ; (sim/lib/smc.js, the reference: its header has the firmware's answers).  The I2C side (i2c.dl's device, :smc):
 ; smc-addr as its address comes (NIL: not acknowledged), smc-put each byte written, smc-get each byte read, smc-end
 ; as its transaction ends.  The host's side: smc-type (a key code as the ACIA's keyboard mode passes it: a character,
-; or 512 + n key n tapped, 768 + n pressed, 896 + n let go, 1024 the next of the spec's moves), smc-move.  The
-; keyboard's buffer holds 15 codes, the mouse's 15 bytes; more are lost (counted).
+; or 512 + n key n tapped, 768 + n pressed, 896 + n let go, 1024 the next of the spec's moves, or with smc-snap, a
+; function, that instead: a test's look at the screen, hydra.dl's), smc-move.  The keyboard's buffer holds 15 codes,
+; the mouse's 15 bytes; more are lost (counted).
 
-(def {smc-on smc-reg smc-dflt smc-reading smc-mid smc-leds smc-lost smc-mlost smc-reads smc-nacks}
-  NIL #x41 #x41 NIL 0 0 0 0 0 0)
+(def {smc-on smc-reg smc-dflt smc-reading smc-mid smc-leds smc-lost smc-mlost smc-reads smc-nacks smc-snap}
+  NIL #x41 #x41 NIL 0 0 0 0 0 0 NIL)
 (def {smc-kq smc-kh smc-kn smc-mq smc-mh smc-mn smc-d smc-dn smc-b smc-bn smc-bat}
   (buffer 16) 0 0 (buffer 16) 0 0 (buffer 3) 0 (buffer 8) 0 0)
 (def {smc-moves smc-nmoves smc-atmove smc-cmds smc-ncmds} (hash-create) 0 0 (hash-create) 0)
@@ -80,7 +81,7 @@
 (fun {smc-key n down} {if (>= smc-kn 15) (set! {smc-lost} (+ smc-lost 1))
   (do (buffer-put smc-kq (bit-and (+ smc-kh smc-kn) 15) (bit-or (bit-and n #x7F) (if down 0 #x80))) (set! {smc-kn} (+ smc-kn 1)))})
 (fun {smc-tap n} {do (smc-key n T) (smc-key n NIL)})
-(fun {smc-type c} {if (== c 1024) (smc-next-move)
+(fun {smc-type c} {if (== c 1024) (if smc-snap (smc-snap) (smc-next-move))
   (if (and (>= c 896) (< c 1024)) (smc-key (- c 896) NIL)
     (if (>= c 768) (smc-key (- c 768) T)
       (if (>= c 512) (smc-tap (- c 512))
