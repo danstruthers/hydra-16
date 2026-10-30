@@ -175,8 +175,8 @@
   "28 1 - %N (set {i0} fi) (set! {rs} (bit-and (+ rs 1) 255)) (set {v} (mem (+ tbs rs))) (set! {nf zf cf vf fi fd} (bit-and v 128) (if (bit? v 1) 0 1) (bit-and v 1) (if (bit? v 6) 1 0) (bit-and v 4) (bit-and v 8)) (if (and irqp (zero? fi)) (set! {lim} 0) 0) (if (== i0 fi) 0 (ioff-chg i0 %p %n))|"
   "40 1 - (set {i0} fi) (setp (pull)) (set {lo} (pull)) (set {hi} (pull)) (set! {pc cyc ck} (word lo hi) (+ cyc %C) -1) (if (and irqp (zero? fi)) (set! {lim} 0) 0) (ioff-chg i0 %p pc)|"
   "60 1 - (set {lo} (mem (+ tbs (bit-and (+ rs 1) 255)))) (set! {rs} (bit-and (+ rs 2) 255)) (set! {pc cyc ck} (+ (word lo (mem (+ tbs rs))) 1) (+ cyc %C) -1)|"
-  "00 1 - (set! {cyc} (+ cyc %C)) (push (shr %k 8)) (push (bit-and %k 255)) (push (getp)) (set {i0} fi) (set! {fi fd pc ck} 4 0 (irqvec) -1) (if (zero? i0) (ioff-on) 0)|"
-  "20 3 j (buffer-put mem (+ tbs rs) (shr %k 8)) (buffer-put mem (+ tbs (bit-and (- rs 1) 255)) (bit-and %k 255)) (set! {rs pc cyc ck} (bit-and (- rs 2) 255) %a (+ cyc %C) %tk)|"
+  "00 1 - (set! {cyc} (+ cyc %C)) (push %kh) (push %kl) (push (getp)) (set {i0} fi) (set! {fi fd pc ck} 4 0 (irqvec) -1) (if (zero? i0) (ioff-on) 0)|"
+  "20 3 j (buffer-put mem (+ tbs rs) %kh) (buffer-put mem (+ tbs (bit-and (- rs 1) 255)) %kl) (set! {rs pc cyc ck} (bit-and (- rs 2) 255) %a (+ cyc %C) %tk)|"
   "4C 3 j (set! {pc cyc ck} %a (+ cyc %C) %tk)|"
   "6C 3 - (set! {pc cyc ck} (word (rd %a) (rd (bit-and (+ %a 1) #xFFFF))) (+ cyc %C) -1)|"
   "7C 3 - (set {ea} (bit-and (+ %a rx) #xFFFF)) (set! {pc cyc ck} (word (rd ea) (rd (bit-and (+ ea 1) #xFFFF))) (+ cyc %C) -1)|"
@@ -211,9 +211,14 @@
 (fun {op-code op code} {do code})
 ; %N as next (NEXT, or nothing: a block's instruction but its last), and %C as the cycles
 (fun {expand op code next} {str-replace (str-replace code "%N" next) "%C" (to-str (opcyc op))})
-; Its placeholders as values: names (a factory's), or numbers (a block's)
-(fun {fill code p a n tg k nk tk} {str-replace (str-replace (str-replace (str-replace (str-replace (str-replace (str-replace code
-  "%nk" (to-str nk)) "%tk" (to-str tk)) "%tg" (to-str tg)) "%p" (to-str p)) "%a" (to-str a)) "%n" (to-str n)) "%k" (to-str k)})
+; Its placeholders as values: names (a factory's), or numbers (a block's); %kh and %kl, k's high and low bytes (a
+; return address's, JSR's and BRK's: worked out here for a block)
+(fun {fill code p a n tg k nk tk} {do
+  (set {kh} (if (num? k) (to-str (shr k 8)) (+ "(shr " k " 8)")))
+  (set {kl} (if (num? k) (to-str (bit-and k 255)) (+ "(bit-and " k " 255)")))
+  (str-replace (str-replace (str-replace (str-replace (str-replace (str-replace (str-replace (str-replace (str-replace code
+    "%nk" (to-str nk)) "%tk" (to-str tk)) "%tg" (to-str tg)) "%p" (to-str p)) "%a" (to-str a)) "%n" (to-str n))
+    "%kh" kh) "%kl" kl) "%k" (to-str k))})
 (fun {factory-text op} {+ "(fn {p a n tg k nk tk} {fn {} {do " (fill (expand op (op-codes op) NEXT) "p" "a" "n" "tg" "k" "nk" "tk") " 1}})"})
 (fun {factory op len kind code} {do
   (hash-put oplen [op len])
@@ -283,32 +288,55 @@
   (set {code} (if (nil? mo) (op-codes op)
     (memop-code op (modes (fst mo)) (opers (snd mo)) (const-rd (fst mo) (nth 2 i)) (const-wr (fst mo) (nth 2 i)))))
   (unpack (fill (expand op code (if last NEXT ""))) (tail i)))})
-; (and, in the fast mode, an access at an address it works out, ea, straight to the low 32K's memory if it's there)
+; N and Z (nf zf) a block's instruction writes both of, left out when neither is read before both are written again
+; in it (by a branch on them, PHP or BRK; or with the block left, at its end or a look at lim): nz-cuts, each write
+; as the code has it and what's left without them; nz-def?, whether an instruction's code writes both
+(def {nz-cuts} (join
+  (map (fn {x} {list (+ "(set! {nf zf} " x " " x ")") ""}) {"ra" "rx" "ry" "r" "v"})
+  (foldl join {} (map (fn {y} {map (fn {x} {list (+ "(set! {" y " nf zf} " x " " x " " x ")") (+ "(set! {" y "} " x ")")})
+    {"ra" "rx" "ry" "rs" "r"}}) {"ra" "rx" "ry"}))
+  {{"(set! {cf nf zf} (if (< d 0) 0 1) (bit-and d 255) d)" "(set! {cf} (if (< d 0) 0 1))"}
+   {"(set! {nf vf zf} v (if (bit? v 6) 1 0) (bit-and ra v))" "(set! {vf} (if (bit? v 6) 1 0))"}}))
+(fun {nz-cut code} {foldl (fn {s c} {str-replace s (fst c) (snd c)}) code nz-cuts})
+(fun {nz-def? code} {or (contains? code "nf zf}") (contains? code "{nf vf zf}") (contains? code "{nf zf cf vf fi fd}")
+  (contains? code "(adc ") (contains? code "(sbc ")})
+(fun {nz-reads? op} {in? op {#x10 #x30 #xD0 #xF0 #x08 #x00}})
+; (and, in the fast mode, an access at an address it works out, ea, straight to the low 32K's memory if it's there; an
+; indexed one by X or Y, its base a, the same if every index keeps it in one part of the map: in? part)
+(fun {in-part? lo hi a} {and (>= a lo) (< (+ a 255) hi)})
 (fun {const-rd mn a} {if (and (== mn "abs") (not mslow))
   (if (< a #x8000) "(mem (+ tbl %a))" (if (< a #xA000) "(rd %a)"
     (if (< a #xE000) "(rom (+ pbase %a))" (if (< a #xFF00) "(rom (+ wbase %a))" (if (== a #xFFF0) "regt" "(rd-io %a)")))))
-  (if (and (in? mn {"absx" "absy" "indx" "indy" "indz"}) (not mslow)) "(if (< ea 32768) (mem (+ tbl ea)) (rd ea))"
-    (snd (modes mn)))})
+  (if (and (in? mn {"absx" "absy"}) (not mslow))
+    (if (in-part? 0 #x8000 a) "(mem (+ tbl ea))" (if (in-part? #xA000 #xE000 a) "(rom (+ pbase ea))"
+      (if (in-part? #xE000 #xFF00 a) "(rom (+ wbase ea))" (if (in-part? #x8000 #xFF00 a) "(rd ea)"
+        "(if (< ea 32768) (mem (+ tbl ea)) (rd ea))"))))
+    (if (and (in? mn {"indx" "indy" "indz"}) (not mslow)) "(if (< ea 32768) (mem (+ tbl ea)) (rd ea))"
+      (snd (modes mn))))})
 (fun {const-wr mn a} {if (== mn "zp") (if (< a 2) "(wr %a %V)" "(buffer-put mem (+ tbz %a) %V)")
   (if (and (== mn "abs") (not mslow))
     (if (< a 2) "(wr %a %V)" (if (< a #x8000) "(buffer-put mem (+ tbl %a) %V)" (if (< a #xFF00) "(wr %a %V)"
       (if (== a #xFFF0) "(set-t %V)" "(wr-io %a %V)"))))
-    (if (and (in? mn {"absx" "absy" "indx" "indy" "indz"}) (not mslow))
-      "(if (< ea 2) (wr ea %V) (if (< ea 32768) (buffer-put mem (+ tbl ea) %V) (wr ea %V)))"
-      (thd (modes mn))))})
+    (if (and (in? mn {"absx" "absy"}) (not mslow) (in-part? 2 #x8000 a)) "(buffer-put mem (+ tbl ea) %V)"
+      (if (and (in? mn {"absx" "absy"}) (not mslow) (in-part? #x8000 #xFF00 a)) "(wr ea %V)"
+        (if (and (in? mn {"absx" "absy" "indx" "indy" "indz"}) (not mslow))
+          "(if (< ea 2) (wr ea %V) (if (< ea 32768) (buffer-put mem (+ tbl ea) %V) (wr ea %V)))"
+          (thd (modes mn))))))})
 ; Whether an instruction may end its block (lim sooner after it): an access that may be I/O (an address it doesn't know,
 ; or the I/O page), a write that may change the banks ($0000 or $0001), or, in the slow mode, any through rd or wr; or
-; CLI or PLP (I cleared, an IRQ to be taken)
+; CLI or PLP (I cleared, an IRQ to be taken).  (An indexed one whose every address is below the I/O page, and, written,
+; not $0000 or $0001, doesn't)
 (fun {may-end? i} {do
   (set {mo} (hash-get opmem (fst i)))
   (if (nil? mo) (in? (fst i) {#x28 #x58}) (do
     (set {mn} (fst mo))
     (set {a} (nth 2 i))
     (set {w?} (not (== (fst (opers (snd mo))) :r)))
-    (if (in? mn {"absx" "absy" "indx" "indy" "indz"}) T
+    (if (in? mn {"absx" "absy"}) (or mslow (not (in-part? (if w? 2 0) #xFF00 a)))
+    (if (in? mn {"indx" "indy" "indz"}) T
       (if (== mn "abs") (or mslow (>= a #xFF00) (and w? (< a 2)))
         (if (== mn "zp") (and w? (< a 2))
-          (and w? (in? mn {"zpx" "zpy"})))))))})
+          (and w? (in? mn {"zpx" "zpy"}))))))))})
 
 ; A ROM block: the instructions from pc (at its place ck) on, in its window, till one that changes the flow (a branch,
 ; a jump, a return, BRK, WAI, STP; but a JMP or BRA in the window to another place than the block's start, which it
@@ -387,13 +415,17 @@
   (hash-put fb [last pend])
   (hash-put upto [last most])
   ; (backward: the code, an instruction that may end the block followed by its look at lim: the rest whole, if it
-  ; still can be)
+  ; still can be; N and Z left out where they're not read: nz-live, whether they are after the instruction)
   (set {s} "")
   (set {j} last)
+  (set {nz-live} T)
   (while {>= j 0}
     (set {i} (insts j))
     (set {c} (hash-get fb j))
-    (set {tx} (+ (if (and c (> c 0)) (+ "(set! {cyc} (+ cyc " c ")) ") "") (code-of i (== j last))))
+    (set {code} (code-of i (== j last)))
+    (set {after} (or (== j last) (hash-get ends j) nz-live))
+    (set {nz-live} (or (nz-reads? (fst i)) (and after (not (nz-def? code)))))
+    (set {tx} (+ (if (and c (> c 0)) (+ "(set! {cyc} (+ cyc " c ")) ") "") (if after code (nz-cut code))))
     (set {s} (if (== j last) tx
       (if (hash-get ends j) (+ tx " (if (< (+ cyc " (- most (upto (+ j 1))) ") lim) (do " s ") (do (set! {pc ck} " (nth 3 i) " -1) 1))")
         (+ tx " " s))))
