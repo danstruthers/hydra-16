@@ -133,7 +133,8 @@ waiting.
 * **The foreground** (`TASKFORE`, opt-in): a program can put itself, or a task it started, in the foreground
   (`TF_FORE`).  The scheduler picks a foreground task that can run before the round robin's, at the next switch (a tick
   at most) rather than after a round of every busy task, and a driver serving a foreground task's call counts as one
-  with it.  Its turns go by the ticks: the foreground has `FORE_RUN` (8) ticks at most, then the background the rest
+  with it, and for `FORE_SRV` (2) ticks after the call ends (the work the call left it, a console's words, out at
+  once rather than behind the background's).  Its turns go by the ticks: the foreground has `FORE_RUN` (8) ticks at most, then the background the rest
   of a tick, its tasks in turn, so a foreground task busy for good still leaves every other task its turn.  It's for a
   program whose answer to a key runs through tasks of its own while others work in the background (Dingus Quest Zero:
   its UI, parser, world and senses while a command is in hand; its denizens' minds after).  The flag goes with the task:

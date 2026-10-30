@@ -8,6 +8,7 @@
 ;   "c"         20 ticks asleep, then count down 65536 three times: end with the time that took over its own CPU
 ;               time meanwhile (TASKINFO's, in ticks)
 ;   "p"         TASKFORE its parent: end with 0, or $E0 + the error
+;   "w"         a server called for good: a space written to the console (ser's) again and again
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -139,6 +140,34 @@ parent:
             EXPECT_A    0, "a new child: not in the foreground"
             jsr         wait_kid
 
+; ---- A foreground task calling a server for good (the console's writes), the server in the foreground a moment
+; after each call (K0_FSRV, FORE_SRV): the background still has its turns
+            lda         #'w'
+            jsr         spawn
+            sta         busy
+            lda         #'c'
+            jsr         spawn
+            lda         busy
+            ldx         #1
+            jsr         TASKFORE
+            EXPECT_OK   "TASKFORE of a child calling a server for good"
+            jsr         wait_kid                            ; (It ends: neither starves it)
+            sta         n
+            OK          "the background task beside it and its server ran, and ended"
+            lda         n
+            cmp         #FORE_RUN + 4
+            bcc         :+
+            NOTOK       "beside a server's caller: the time taken FORE_RUN + 3 times its CPU at most"
+            bra         @kill2
+:           OK          "beside a server's caller: the time taken FORE_RUN + 3 times its CPU at most"
+@kill2:
+            lda         busy
+            ldx         #NOTE_KILL
+            jsr         NOTE
+            EXPECT_OK   "the server's caller killed"
+            jsr         wait_kid
+            OK          "and ended"
+
             DONE        "t_fore"
 
 ; ---- The parent's helpers
@@ -206,6 +235,10 @@ child:
             beq         c_count
             cmp         #'p'
             beq         c_parent
+            cmp         #'w'
+            bne         :+
+            jmp         c_write
+:
             lda         #$EE
             jmp         end
 
@@ -289,5 +322,13 @@ end:
             stz         r0 + 1
             jmp         EXITS
 
+c_write:
+            LDR         r0, s_space                         ; (A server called for good: ser's writes)
+            LDR         r1, 1
+            lda         #1
+            jsr         WRITE
+            bra         c_write
+
 .rodata
 s_self:     .byte       "#m/t_fore", 0
+s_space:    .byte       " "

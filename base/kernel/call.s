@@ -100,6 +100,19 @@ K_SCALL:
             tsx
             stx         TK_SP                               ; Its stack pointer, as it was before the call
             stz         TK_BUSY                             ; Free again (callers blocked on it: the scheduler)
+            pha                                         ; (The result kept)
+            ldx         T_REGISTER                          ; (.X: this task, the server)
+            ldy         TK_INCALLER
+            sty         T_REGISTER                          ; ---- The caller
+            lda         TK_FLAGS                            ; A foreground caller's: the server its foreground's a
+            and         #TF_FORE                            ;   moment more (K0_FSRV, FORE_SRV ticks: sched.s)
+            beq         :+
+            stz         T_REGISTER                          ; ---- The kernel task's
+            stx         K0_FSRV
+            lda         K0_TICKS
+            sta         K0_FSRVT
+:           stx         T_REGISTER                          ; ---- The server again
+            pla
             ldy         TK_INCALLER
             ldx         TK_INX
             sty         T_REGISTER                          ; ---- The caller: its zero page (not its stack yet)

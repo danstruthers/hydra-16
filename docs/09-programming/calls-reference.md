@@ -580,7 +580,7 @@ Run a bank program in this task, as a subroutine, and wait for it.  A bank progr
 | **HyForth** | `sys-taskfore ( .A .X -- ior )` |
 | **hylang** | `sys-taskfore .A=n .X=n ->` |
 
-Put a task in the foreground, or take it out.  The scheduler picks a task in the foreground before the others whenever it can run: at the next switch (a tick at most), not after a round of everything else that's busy; and a driver serving its call goes first with it.  For a program whose answer to a key runs through tasks of its own while others work in the background (a game's: its UI, parser and world first; its monsters' minds after).  It can't starve the rest: the foreground has FORE_RUN ticks at most, then the background the rest of a tick (its tasks in turn), so every task gets its turn.  A task waits in the foreground as any task waits (sleeping, on a semaphore: no CPU).  TASKINFO's TI_FLAGS has TF_FORE while it's in.  It goes with the task: gone when the task ends, or EXECs another program.
+Put a task in the foreground, or take it out.  The scheduler picks a task in the foreground before the others whenever it can run: at the next switch (a tick at most), not after a round of everything else that's busy; and a driver serving its call goes first with it, and for FORE_SRV ticks after the call (the work it left the driver: a console's words out at once).  For a program whose answer to a key runs through tasks of its own while others work in the background (a game's: its UI, parser and world first; its monsters' minds after).  It can't starve the rest: the foreground has FORE_RUN ticks at most, then the background the rest of a tick (its tasks in turn), so every task gets its turn.  A task waits in the foreground as any task waits (sleeping, on a semaphore: no CPU).  TASKINFO's TI_FLAGS has TF_FORE while it's in.  It goes with the task: gone when the task ends, or EXECs another program.
 
 ---
 
@@ -1733,6 +1733,7 @@ What `hydra.inc` defines besides the calls and the error codes (`hydracalls.h` h
 | `TF_STOPPED` | `$80` | TI_FLAGS: stopped (/proc's ctl: TASKSTOP) |
 | `TF_FORE` | `$02` | TI_FLAGS: in the foreground (TASKFORE): the scheduler picks it first |
 | `FORE_RUN` | `8` | The foreground's turn at most, in ticks (TASKFORE): then the background has the rest of a tick |
+| `FORE_SRV` | `2` | A driver's time in the foreground after a foreground task's call to it ends, in ticks (TASKFORE) |
 | `TI_PARENT` | `2` | TASKINFO: its parent ($FF: none) |
 | `TI_CPU` | `3` | TASKINFO: its CPU time, in ticks (3 bytes) |
 | `TI_BANK` | `6` | TASKINFO: its module's paged ROM bank ($FF: none) |
