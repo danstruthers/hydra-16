@@ -711,9 +711,11 @@ static void stop_world (void)
 #pragma rodata-name (pop)
 
 /* The answer's tasks (the world, the command parser, the senses, the referee) in the kernel's foreground while a
-** command's in hand (on 1: the hub's ui_cmd, fore_sync's), or out of it (0); on 2, the UI's own, for good (as its
-** loop begins: so a line's Enter is looked for at the next tick, a tick at most behind the background's work; a
-** driver serving its calls, the console's, with it).  TASKFORE: base/kernel/sched.s; overlay 6's */
+** command's in hand (on 1: the hub's ui_cmd, fore_sync's), or out of it (0); on 2, the UI's own, for good (as its loop
+** begins: so a line's Enter is looked for at the next tick, a tick at most behind the background's work; a driver
+** serving its calls, the console's, with it).  The senses with them: the world waits on their look and their stock
+** (in the background, an inventory's answer was 60,000 cycles the slower).  TASKFORE: base/kernel/sched.s; overlay
+** 6's */
 #pragma code-name (push, "OV6CODE")
 #pragma rodata-name (push, "OV6RODATA")
 void __fastcall__ o_fore_set (unsigned char on)
