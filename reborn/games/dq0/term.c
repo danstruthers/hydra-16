@@ -537,8 +537,8 @@ static void enter (void)
     inl[0] = 0;
     shown = 0;                                  /* (The line typed drawn again by t_done, once the command's done:
                                                 **   its "> " a prompt only when the game's ready) */
-    away = 1;
-    t_flush ();                                 /* (Out at once: the answer's words, when they come, the first out) */
+    away = 1;                                   /* (Out once the line's posted to the command parser, main's: the
+                                                **   parse begun first, the echo meanwhile; the answer's words after it) */
 }
 
 void __fastcall__ t_key (unsigned char k)

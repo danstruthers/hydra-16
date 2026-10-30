@@ -21,6 +21,8 @@
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
+SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
+                                    ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
 
             .bss

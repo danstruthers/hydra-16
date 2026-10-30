@@ -1217,3 +1217,24 @@ minutes would be better."
   waits eight hours, "sleep 8 hours" and "rest" sleep a night, and the words tell it back ("You wait eight hours.").
   The house's ways of it (the parser's durations, a night's sleep unsaid, the long wait's speed, the coarser ticks
   while the character rests) are in HOUSE.md's long waits, for review.
+
+## 2026-10-30
+
+### The answers' times held (the kernel's foreground)
+
+The user (2026-10-30): the answer-time checks (D17's, dq0answer's and dq0prompt's) are the user's and never raised;
+they swung 100,000-250,000 cycles with any change in how the tasks interleaved.  Their times are to hold whatever the
+background is doing.
+
+- **The kernel's foreground** (base/kernel/sched.s, TASKFORE: a general, opt-in hint any program can use): a task in
+  it is picked before the others whenever it can run, a tick at most after it can, and a driver serving its call with
+  it; the foreground has eight ticks at most, then the background the rest of a tick, so nothing starves.
+- **The UI** is in it for good; **the world, the command parser, the senses and the referee** while a command's in
+  hand (the hub's ui_cmd, from its Enter till the character's news; held while an intent's answer is owed).  The
+  denizens' minds, the maker and the sound are the background.
+- **The world** leaves the denizens' intents while a command's in hand at the real paces, a quarter second at most
+  (a denizen's kit and its parts' copies could hold the UI's intent back a second).  The turns pace is as it was.
+- **The lib folder's files** a task reads again and again are opened once and kept open (the outfits, the traces'
+  words, the help): an open on the card was some 700,000 cycles.
+
+**Design:** DENIZENS.md, the tasks giving way to a command in hand; docs/03-base/kernel.md, the scheduler.

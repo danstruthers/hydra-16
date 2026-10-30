@@ -2403,6 +2403,9 @@ int main (int argc, char* argv[])
                 t_key (k);
                 quick = 25;                     /* (A line being typed: its Enter looked for twice as often, the
                                                 **   background given way to it the sooner) */
+                if (k == 10) {                  /* (Enter: t_getkey's) */
+                    break;                      /* (A line entered: taken up at once, the keys after it next time) */
+                }
             }
         }
         if (t_next () && (!busy || !held)) {
@@ -2411,6 +2414,7 @@ int main (int argc, char* argv[])
             fore_sync ();                       /* (The answer's tasks in the foreground meanwhile) */
             cq_post (t_next ());                /* (And the command parser at work on it while the events are told:
                                                 **   part 2's, in as a rule; posted once, cq_st's) */
+            t_flush ();                         /* (The line entered, into the story meanwhile: term.c's enter) */
         }
         k = events ();
         heard ();

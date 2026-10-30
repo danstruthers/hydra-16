@@ -284,9 +284,11 @@ static void world_back (void)
     }
     if (read (fd, &w, sizeof w) == sizeof w && w.magic == WSAVE_MAGIC) {
         hub_map (0);
+        __asm__ ("jsr %w", HY_PREEMPT_OFF);
         ++HUB->tick;                            /* (The clock, as advance () writes it) */
         HUB->now = w.now;
         ++HUB->tick;
+        __asm__ ("jsr %w", HY_PREEMPT_ON);
         HUB->pc_stratum = w.sn;
         HUB->pc_x = w.x;
         HUB->pc_y = w.y;

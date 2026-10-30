@@ -113,12 +113,16 @@ unsigned char nobear;                           /* (dq0 -N: the character's bear
 static unsigned last;                           /* The tick count at the last look */
 static unsigned acc;                            /* Real ticks times round, not yet game time */
 
-/* The clock moved on by d tenths, written so that a reader sees it whole (hub_now) */
+/* The clock moved on by d tenths, written so that a reader sees it whole (hub_now); the CPU held meanwhile (PREEMPT_OFF:
+** some 60 cycles), so a reader never finds it half written and waits on it: a reader in the kernel's foreground, the
+** UI's, waited for the world's next turn, a third of a million cycles, 2026-10-30) */
 static void __fastcall__ advance (unsigned long d)
 {
+    __asm__ ("jsr %w", HY_PREEMPT_OFF);
     ++HUB->tick;
     HUB->now += d;
     ++HUB->tick;
+    __asm__ ("jsr %w", HY_PREEMPT_ON);
 }
 
 static unsigned char evb;                       /* (The next event's b: then 0) */
