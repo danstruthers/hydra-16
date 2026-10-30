@@ -485,7 +485,7 @@ static void __fastcall__ attack (struct req* r)
         st += f & RS_PRONE_D ? 4 : 0;
         g = flat_r (st - (sh ? 2 : 0), rr = 1 + random (100));
         sh = !G_OK (g) && sh && G_OK (flat_r (st, rr)) ? sh : 0;  /* (Blocked: it would have hit but for it) */
-        if (mw & MS_STRAY) {
+        if ((mw & (RS_MISSILE | MS_STRAY)) == (RS_MISSILE | MS_STRAY)) {
             g = G_MS;                           /* (A missile's stray: a hit) */
             sh = 0;
         }

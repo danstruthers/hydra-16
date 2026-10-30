@@ -98,7 +98,7 @@ unsigned o_shot (void)
     unsigned out = 0;
 
     band = R->b & 3;
-    f = R->w2 >> 8;
+    f = R->w2 >> 8;                             /* (Its MS_*, rs.h's, their high byte: MS_ >> 8 below) */
     z = R->a == Z_HIGH ? HARN_HIGH : R->a == Z_LOW ? HARN_LOW : HARN_MID;
     mod = STEP_PCT * (signed char) R->steps;
     k = R->c;
@@ -161,7 +161,7 @@ unsigned o_shot (void)
     }
     mod += band_ml[band] + tsize[sz] - (z != HARN_MID ? 10 : 0);
     def = HARN_IGNORE;
-    if (!(f & (MS_UNAWARE | MS_STRAY)) && D.c->state == HARN_CONSCIOUS && (D.who || pc_out <= tnow)) {
+    if (!(f & ((MS_UNAWARE | MS_STRAY) >> 8)) && D.c->state == HARN_CONSCIOUS && (D.who || pc_out <= tnow)) {
         dge = hv ? D.dodge / 2 : D.dodge;       /* (Its defences: Combat 15's) */
         if (D.who) {
             blk = D.dslot ? D.dml : hv || D.part != 0xFF ? 0 : D.aml / 2;
@@ -184,7 +184,7 @@ unsigned o_shot (void)
             def = HARN_IGNORE;
         }
     }
-    if (f & MS_STRAY) {
+    if (f & (MS_STRAY >> 8)) {
         res = HARN_R_AH | 1;                    /* (A stray's: a strike of one die, no test) */
         al = HARN_MS;
     } else {
@@ -213,7 +213,7 @@ unsigned o_shot (void)
     case HARN_R_AH:
         R->result = O_HIT;
         loc = harn_strike_location (z);
-        if ((f & MS_COVER) && HARN_LOC (loc) > HARN_NECK) {
+        if ((f & (MS_COVER >> 8)) && HARN_LOC (loc) > HARN_NECK) {
             strcpy (line[0], "the stone");      /* (Behind cover: "..., but the stone turns the blow") */
             R->c |= AF_STOPPED;
             break;
