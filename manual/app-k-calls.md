@@ -218,7 +218,7 @@ in small letters, with `-` for `_`:
 
 **`CLIENT_WRITE`** ($F9CB). A driver: copy bytes to the program whose request it's serving. *In:* r0 = here (the data); r1 = there, in the client's view; r2 = a count. *(Not in the languages.)*
 
-**`NOTE_QUEUE`** ($F9CE). An interrupt handler: send a note to a note group (as the console does for <kbd>CTRL</kbd>-<kbd>C</kbd>). *In:* IRQs off; X = a note group (0-15); A = the note's bit: 1 << (note - 1), for a note 1-8. *Out:* X kept. *(Not in the languages.)*
+**`NOTE_QUEUE`** ($F9CE). An interrupt handler: send a note to a note group (as the console does for <kbd>CTRL</kbd>-<kbd>C</kbd>). *In:* IRQs off; X = a note group (0-15); A = the note's bit: 1 << (note - 1), for a note 1-8. *Out:* A = 0; X kept. *(Not in the languages.)*
 
 **`ROMREAD`** ($F9D1). Copy bytes from any bank of the paged ROM. *In:* A = a paged ROM bank; r0 = where in it ($A000-$DFFF); r1 = a buffer (not at $A000-$DFFF); r2 = a count. *Out:* the bytes in the buffer. *Errors:* E_PERM. *(Not in the languages.)*
 

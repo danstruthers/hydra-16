@@ -264,6 +264,12 @@ cnt:        .res        1
 .bss
 rx_buf:     .res        RX_PAGES * 256
 tx_buf:     .res        256
+
+.segment "BSSPAGE"                                          ; (On a page of its own: the irq entry's look crosses none)
+rx_kind:    .res        256                                 ; Each byte's kind, the irq entry's: 0, a key; a note's bit
+                                                            ;   (Ctrl-C, Ctrl-\); $80, the prefix (kb_pfx)
+
+.bss
 inq:        .res        WIN_MAX * INQ_SIZE                  ; Each window's keys
 lines:      .res        WIN_MAX * (LINE_MAX + 1)            ; Each window's line, while another's is loaded
 hist:       .res        WIN_MAX * HIST_N * HIST_SIZE        ; Each window's history
@@ -472,6 +478,7 @@ pc_crc:     .res        2                                   ;   a CRC
 .assert     PC_TX_SIZE <= 256 .and PC_RX_SIZE <= 256, error, "/pc's frames: 8-bit indexes"
 .assert     RQ_NAMELEN < RQ_SIZE .and RQ_FLAGS < RQ_NAMELEN, error, "/pc: pc_same's fields"
 .assert     INQ_SIZE = 64 .and WIN_MAX <= 16, error, "iq_at: 64 bytes a window, 4 a page"
+.assert     <rx_kind = 0, lderror, "rx_kind: on a page of its own (the irq entry's look, no page crossed)"
 
 .code
 ; ****************************************************************************
@@ -524,6 +531,17 @@ init:
             stz         scr_rows
             stz         scr_chk
             stz         kw_st
+            ldx         #0                                  ; The irq entry's kinds (rx_kind): keys, but Ctrl-C
+:                                                           ;   and Ctrl-\ (their notes) and the prefix
+            stz         rx_kind,X
+            inx
+            bne         :-
+            lda         #1 << (NOTE_INTERRUPT - 1)
+            sta         rx_kind + CTRL_C
+            lda         #1 << (NOTE_KILL - 1)
+            sta         rx_kind + CTRL_BSL
+            lda         #$80
+            sta         rx_kind + CTRL_RB
             lda         #CTRL_RB                            ; The keys: the defaults (kb_def's)
             sta         kb_pfx
             ldx         #127
@@ -686,8 +704,8 @@ irq_mark:                                                   ; Full: the byte's d
             cpx         rx_mark                             ;   XOFF is asked of timer 2, started to run out soon
             beq         irq_drop                            ;   (serial.inc's FL_POKE: its count, the request, and
             stx         rx_mark                             ;   this entry's answer, no task switch).  No
-            sty         rx_head                             ;   TASK_EVENT, to keep this as short as a Ctrl-C's
-            lda         #FL_POKE                            ;   path: timer 2's idle counts one.  (fl_poke: the
+            sty         rx_head                             ;   TASK_EVENT, to keep this short, the longest of the
+            lda         #FL_POKE                            ;   keys' paths: timer 2's idle counts one.  (fl_poke: the
 fl_poke     = * - 1                                         ;   WDC's count put in as it starts)
             sta         fl_send
             sta         VIA_T2CH
@@ -713,14 +731,26 @@ irq:
             lda         ACIA_DATA
             ldx         pfx
             bne         @after
-            cmp         #CTRL_C
-            beq         @intr
-            cmp         #CTRL_BSL
-            beq         @kill
-            cmp         kb_pfx
-            bne         @store
+            tax                                             ; Its kind (rx_kind): a key, a note's (Ctrl-C, Ctrl-\),
+            ldy         rx_kind,X                           ;   or the prefix (kb_pfx).  One look, not three
+            beq         @store
+            bpl         @note                               ; (.Y: the note's bit)
             sta         pfx                                 ; (Ctrl-]: it goes into the ring too)
-@store:
+            bra         @store
+
+@after:                                                     ; (pfx $FF: /ser's, the bytes as they are)
+            bmi         @ser
+            stz         pfx                                 ; The key after Ctrl-]: a digit is the window that has
+            tax                                             ;   the keys now (its note group Ctrl-C's: the serve
+            eor         #'0'                                ;   entry acts on the rest).  ($30-$39 alone give 0-9)
+            cmp         #10
+            bcs         :+
+            tay
+            lda         w_group,Y
+            sta         win_grp
+:
+            txa                                             ; (On into @store: no bra, the longest of the keys'
+@store:                                                     ;   paths)
             ldy         rx_head                             ; Into the ring
             sta         rx_buf,Y
             iny
@@ -751,31 +781,10 @@ irq:
             beq         @none
             bra         @byte
 
-@after:                                                     ; (pfx $FF: /ser's, the bytes as they are)
-            bmi         @ser
-            stz         pfx                                 ; The key after Ctrl-]: a digit is the window that has
-            tax                                             ;   the keys now (its note group Ctrl-C's: the serve
-            eor         #'0'                                ;   entry acts on the rest).  ($30-$39 alone give 0-9)
-            cmp         #10
-            bcs         :+
-            tay
-            lda         w_group,Y
-            sta         win_grp
-:
-            txa
-            bra         @store
-
-@intr:                                                      ; The notes, to the shown window's group
-            lda         #1 << (NOTE_INTERRUPT - 1)
-            bra         @note
-
-@kill:
-            lda         #1 << (NOTE_KILL - 1)
-@note:
+@note:                                                      ; The notes, to the shown window's group (NOTE_QUEUE's
+            tya                                             ;   .A = 0 is this entry's answer)
             ldx         win_grp
-            jsr         NOTE_QUEUE
-            lda         #0
-            rts
+            jmp         NOTE_QUEUE
 
 @ser:                                                       ; /ser's: into the ring, all its pages
             ldy         rx_head
@@ -806,8 +815,11 @@ irq:
             cmp         rx_tp + 1
             beq         @full
 :
-            sta         rx_hp + 1
-            bra         @put
+            sta         rx_hp + 1                           ; (@put's, here: no bra, the longest of the
+            sty         rx_head                             ;   entry's paths)
+            inc         TASK_EVENT
+            lda         #0
+            rts
 
 .code
 
@@ -7113,7 +7125,12 @@ c_key:
             beq         @inval
             cmp         #LF
             beq         @inval
-            sta         kb_pfx
+            ldx         kb_pfx                              ; (The irq entry's kinds: the old prefix a key again,
+            stz         rx_kind,X                           ;   the new one the prefix)
+            tax
+            lda         #$80
+            sta         rx_kind,X
+            stx         kb_pfx
             clc
             rts
 @inval:

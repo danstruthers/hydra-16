@@ -244,7 +244,8 @@ There's **one path for every interrupt line**:
 **The rules for an interrupt entry:**
 
 * It runs with interrupts off, and **never waits**.
-* It has **about 85 cycles**: the whole path takes about 115 of the 200 that interrupts may be held off.
+* It has **about 89 cycles**: the whole path takes about 111 of the 200 that interrupts may be held off (7 more for
+  the ACIA's when the VIA's comes with it).  It may end with `jmp NOTE_QUEUE`, whose `.A = 0` is its answer.
 * It wakes its clients by **adding 1 to its event count** (`inc TASK_EVENT`), never with `WAKE`, and sends a note to a
   note group with `NOTE_QUEUE` (the console's Ctrl-C).
 * A line must be owned (`IRQ_OWN`) **before** its device interrupts: a line nobody owns is counted and ignored, and, being

@@ -32,8 +32,8 @@
 ; entry makes the mark the tail, and asks for XOFF in fl_send; timer 2 sends fl_send's byte before the ring's next
 ; (t2_flow).  rx_get moves the mark with the tail (rx_marks), and at FL_LO leaves XON.  So "told to stop" is: x1,
 ; and the mark at the tail.
-;   The irq entry has few cycles for this (the kernel's budget for IRQs off: its high-mark path is as long as a
-; Ctrl-C's): what it leaves in fl_send is FL_POKE, which it also writes to timer 2's count's high byte, starting
+;   The irq entry has few cycles for this (the kernel's budget for IRQs off: its high-mark path is its longest
+; but /ser's): what it leaves in fl_send is FL_POKE, which it also writes to timer 2's count's high byte, starting
 ; the timer whether a byte's going or not.  t2_flow sends XON for XON, and XOFF for anything else.
 ; Sending is paced, at every rate, on both chips: the WDC W65C51N's TDRE doesn't work, and on the board the
 ; Rockwell's sending back to back at 115200 loses characters (2 idle bits then; 1 otherwise).  Receiving is each

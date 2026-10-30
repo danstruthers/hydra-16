@@ -385,6 +385,8 @@ K_TASK_SETUP:
             iny
             lda         (r0),Y
             sta         TA_IRQVEC + 1
+            lda         #OP_JMP                             ; (The dispatcher's jsr TA_IRQJMP)
+            sta         TA_IRQJMP
             lda         TA_SERVEVEC + 1                     ; No serve entry: it serves no calls
             bne         :+
             lda         #BUSY_NOSERVE
