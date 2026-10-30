@@ -456,6 +456,8 @@ static void __fastcall__ attack (struct req* r)
     unsigned char mk = r->c;
     signed char g = 0, st = mw & RS_MISSILE ? r->steps - 2 * (r->b & 3) - (mw & MS_COVER ? 4 : 0) +
         (mw & MS_UNAWARE ? 2 : 0) : r->steps - 2 * r->c;
+    signed char ht = RS_HEART (r);              /* (A creature's heart: its courage's steps, the denizens' field and
+                                                **   bonds, HOUSE.md's morale) */
 
     for (k = 1, t = r->x[0]; k < 3; ++k) {      /* (At a thing: its least resistance to a blow) */
         t = r->x[k] < t ? r->x[k] : t;
@@ -523,7 +525,7 @@ static void __fastcall__ attack (struct req* r)
         wound_words (n);
         if (*dw >= t) {
             r->grade = FF_D_DEAD;
-        } else if (d && !G_OK (flat (f & 1 ? -4 : 0))) {
+        } else if (d && !G_OK (flat ((f & 1 ? -4 : 0) + ht))) {
             r->grade = FF_FLEES;
         }
     }

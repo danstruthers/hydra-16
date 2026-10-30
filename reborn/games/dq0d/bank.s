@@ -11,21 +11,21 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
-_ovbank:    .res        2           ; The parts' images' banks (dq0d.cfg's OV1, OV2)
+_ovbank:    .res        3           ; The parts' images' banks (dq0d.cfg's OV1, OV2, OV3)
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
 
             .include    "../dq0/swap.inc"
 
             SWPART      1, 1                ; The populations, the placing
-            SWPART      2, 1                ; The character's ways with a denizen (the UI's sway), and harmed; an
-                                            ;   actor's kin dismayed (2026-10-29)
+            SWPART      2, 1                ; The character's ways with a denizen (the UI's sway), and harmed
             SWPART      3, 2                ; The records paged
             SWPART      4, 2                ; The regions round the character wanted, the records kept; the start
                                             ;   (the kinds read in, popgen loaded);
                                             ;   an actor made, retired, killed, an ally come along,
                                             ;   a cornered one's dart
             SWPART      5, 2                ; The senses' own: a hunter's stalk, a scent followed, one drawn on (slice 4.5's)
+            SWPART      6, 3                ; Morale: the field and the bonds, an actor's kin dismayed (2026-10-30)
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -42,7 +42,9 @@ ovx:        .res        1
             SWFN        enlist, 4
             SWFN        retire, 4
             SWFN        killed, 4
-            SWFN        dismay, 2
             SWFN        shoots, 2           ; (A shot at the character: slice 4.7's)
             SWFN        along, 4
             SWFN        dart, 4
+            SWFN        dismay, 6
+            SWFN        heart, 6
+            SWFN        age, 6

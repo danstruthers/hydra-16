@@ -515,6 +515,9 @@ static void new_beast (void)
     s->attacks = 1;
     s->morale = b->ini;
     s->power = 3 * b->size * b->size + b->w[0].ml / 10;    /* (The game's: by its size, its weapon's skill) */
+    s->lead = b->flags & BF_MINDLESS ? 0 : 3 * cr.att[HARN_WIL];   /* (Its Rhetoric, the house's: the skill base's
+                                                **   three times, the bestiary keeping Will alone of Voice, Intelligence
+                                                **   and Will: HOUSE.md's morale) */
 }
 
 /* A creature's courage tested (Combat 18's Initiative test: its injuries its penalty, steps its situation): steady,
@@ -573,8 +576,9 @@ static void tested (void)
 }
 
 /* What a blow left them in, for the world (rs.h's AF_*: the reply's grade as hub.h's FF_*: it keeps it), and the
-** creature's courage if it was wounded and stands (shy, w2's bit 0 in the request: a cautious one flees too) */
-static void __fastcall__ left (unsigned char shy)
+** creature's courage if it was wounded and stands (shy, w2's bit 0 in the request: a cautious one flees too), its
+** heart the steps (RS_HEART's: the denizens' field and bonds, HOUSE.md's morale) */
+static void __fastcall__ left (unsigned char shy, signed char heart)
 {
     const struct rs_effect* e = (const struct rs_effect*) R->x;
     const struct side* s = A.who ? &A : &D;
@@ -591,7 +595,7 @@ static void __fastcall__ left (unsigned char shy)
         hurt |= e->kind == X_WOUND && e->target == s->who;
     }
     if (hurt && cr.state == HARN_CONSCIOUS) {
-        m = courage (s->b, 0);
+        m = courage (s->b, heart);
         if (m == M_BROKEN || (m == M_CAUTIOUS && shy)) {
             f |= FF_FLEES;
         } else if (m == M_CAUTIOUS) {
@@ -608,6 +612,7 @@ static void __fastcall__ left (unsigned char shy)
 void __fastcall__ o_fight (struct req* r)
 {
     unsigned char shy = r->w2 & 1, sb;
+    signed char heart = RS_HEART (r);           /* (Read before the reply's effects take its place) */
     unsigned sw;
 
     prones = r->w2;
@@ -671,7 +676,7 @@ void __fastcall__ o_fight (struct req* r)
     put (line[1]);
     r->w1 = health_of (A.c) | health_of (D.c) << 8;
     if (r->result != 0xFF) {
-        left (shy);
+        left (shy, heart);
     }
     pack ();
 }

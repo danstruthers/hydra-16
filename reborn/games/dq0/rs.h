@@ -207,6 +207,10 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
                                                 **   blow's (O_FUMBLE a wild shot, the attacker's fumble roll: a
                                                 **   launcher let fall, X_DROP), its words the same four lines (the
                                                 **   attacker's weapon its kind's name) */
+#define RS_HEART(r)     ((signed char) (r)->x[0])  /* (RS_ATTACK's x[0], the request's, before the reply's
+                                                **   effects take its place: the creature's heart, its morale's
+                                                **   steps (the hub's actor's: the denizens' field and bonds, HOUSE.md's
+                                                **   morale), its courage tested with them as it's wounded) */
 #define MS_UNAWARE      0x100
 #define MS_COVER        0x200
 #define MS_STRAY        0x400
@@ -222,8 +226,13 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define AF_AGAIN        0x20                    /* The one knocked senseless out already, struck again as it lies (the
                                                 **   reply's w2 the longer of the two: its black-out told once) */
 
-/* ---- Morale (RS_MORALE): an actor's courage tested (steps: how its fight goes): the grade, and result its state */
+/* ---- Morale (RS_MORALE): an actor's courage tested (steps: how its fight goes): the grade, and result its state.
+** The denizens' (HOUSE.md's morale): steps the field about it and its bonds, its situation besides; a why (MR_*), b the
+** field and c the bonds (points, signed: the referee's to ignore, the tests' to read), w1 the fallen's record (or the
+** leader's lost), w2 its leaders' records reckoned (its band's head, its faction's times 256; 0xFF none) */
 enum { M_STEADY, M_CAUTIOUS, M_BROKEN, M_DESPERATE, M_BERSERK };
+enum { MR_NONE, MR_FELL, MR_LEADER, MR_TOLD };   /* (Why: a friend seen or heard to fall; its leader; told of its
+                                                **   leader's loss) */
 
 /* An effect of a reply: what happened to whom (up to RS_EFFECTS a reply) */
 #define RS_EFFECTS      4
@@ -288,6 +297,9 @@ struct rs_summary {
     unsigned char   mapmind;                    /* Its map in mind (DUNGEON.md, the map kept: slice 4.2's): how well it
                                                 **   keeps what it sees, mapping as it goes (0-100; half that, not), */
     unsigned char   mapfade;                    /*   and the game minutes it takes to lose a tenth of it (1 on) */
+    unsigned char   lead;                       /* Its influence skill: how it sways those about it (HarnMaster's
+                                                **   Oratory or Rhetoric, the better: its mastery, 0-100 and on), the
+                                                **   morale field's (HOUSE.md's morale) */
 };
 #define LB_LEFT         0x01                    /* (A summary's limbs: its main hand the left, left-handed; */
 #define LB_AMBI         0x02                    /*   either, no off hand, ambidextrous; */

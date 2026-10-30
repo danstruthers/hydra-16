@@ -222,7 +222,8 @@ denizens' task is their minds.
   denizens' events' bank: the actors' names, the referee's lines) and tells it (E_FIGHT).  The referee answers and
   writes nothing of the hub's (its words its reply's).  The denizens take each blow to heart as they read it
   (fought): one broken flees a while, unfriendly; its kin, as one falls, test their courage (RS_MORALE, in their own
-  slot); one the character struck at turns on it with its own (harmed); one dead, its record so.  The bleeding lose
+  slot: those that hear it, by the field about each and its bonds, HOUSE.md's morale); one the character struck at turns
+  on it with its own (harmed); one dead, its record so.  The bleeding lose
   blood a minute at a time (RS_TIME, the world's), seen to as the denizens' intents come in (and their turns' ends,
   every five seconds at the real paces); a body dead or gone from the world's keeping isn't reckoned.  The referee
   sees the requests in one order: the character's blow, the morale tests it brings, the bleeding, the denizens'
@@ -350,10 +351,19 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   what's held and worn, and how well made: RS_EQUIP's marks).  Each blow is told (E_FIGHT in the denizens' queue, its
   words in a ring in their bank: the referee's for the wounds and the armour, the UI's for the rest), heard by the
   others (they turn to it) and played (the sound task's *hit, *swish).
-- **After:** a denizen wounded tests its morale (RS_MORALE: HOUSE.md's fights): broken (or a shy one cautious) it
-  flees a minute; cautious, it holds back a round.  As one falls its kin among the actors (its kind and, since
-  2026-10-29, its faction) test their courage, two steps worse, four as their faction's leader falls (HOUSE.md's the
-  peoples).  One knocked senseless falls and lies there till it comes round,
+- **After:** a denizen wounded tests its morale (RS_MORALE: HOUSE.md's fights), its heart its steps (below): broken (or
+  a shy one cautious) it flees a minute; cautious, it holds back a round.  As one falls its kin among the actors (its
+  kind and, since 2026-10-29, its faction) that hear it test their courage (HOUSE.md's morale, since 2026-10-30, in
+  place of the peoples' two steps and four).
+- **Morale** (the user's, 2026-10-29; HOUSE.md's morale, for review): every intelligent actor and the character sway
+  the field about them, by their rank (kinds.txt's) and their influence skill (the referee's summary's lead), for their
+  friends and against their foes, less with distance, by how each is doing; and each mind is bonded to its leaders
+  above it (its band's head, its faction's), wherever they are, by their rank, the time together and the contact (the
+  records' serve and contact, aged by the clock).  Reckoned only as a test is made, or may be: an actor's heart (the
+  hub's: the steps the world's blow carries to the referee) as it engages and as one near it falls (dq0d's part 6).  A
+  leader's fall heard tests its band at once, its influence and bond removed; dead, known lost (the record's D_LOST);
+  unheard (far off, below, senseless), the bond holds till it's told (the hook: a runner's word, a survivor's, to
+  come).  One knocked senseless falls and lies there till it comes round,
   doing nothing meanwhile (its mind's intents and rouses not carried out, words not heard: HOUSE.md's hands and
   limbs, 2026-10-29), and is finished if it's struck meanwhile; come round, its first turn is getting up, or, its last
   shock roll failed, it comes round in shock and does nothing (strikes nothing, defends nothing) till a watch's roll
@@ -457,7 +467,8 @@ What the plans bring later, by the slice or phase that brings it:
   actor's position and gait (the denizens' but prone still to come), their noises by the layer to one another (an
   actor's own still heard as the crow flies).
 - **Fights complete** (slice 4.7): one combat path, missiles (a bow through an arrow slit), allies fighting beside the
-  character, factions fighting each other, morale from the layers (leaders seen or heard, darkness, din).
+  character, factions fighting each other, morale from the layers (leaders seen, darkness; the field, the bonds and a
+  fall heard by its din since 2026-10-30).
 - **Fetching and influence** (slice 4.8): an ally fetching things (tell Grub to fetch the key), gifts, bribes,
   reputation by deeds; an ally moving aside for the character (D10).
 - **Tunnellers and builders** (slice 4.11): denizens that dig their own ways, by the same rules as the character's.
