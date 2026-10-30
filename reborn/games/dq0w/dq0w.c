@@ -2438,6 +2438,32 @@ void s_begin (void)
     }
 }
 
+/* A number, an argument's (atoi's, without the C library's ctype: the main RAM's room, slice 4.2's; part 3's, the
+** start-up's, 2026-10-29) */
+static unsigned char __fastcall__ num (const char* s)
+{
+    unsigned char n = 0;
+
+    while (*s >= '0' && *s <= '9') {
+        n = n * 10 + *s++ - '0';
+    }
+    return n;
+}
+
+/* The world begun (main's, its arguments: the hub's segment, its role, its lib folder): attached to the hub, its long
+** task none yet, started (s_start); 1 if it can't be attached.  Part 3's, as the world's start-up is (the main
+** RAM's room, 2026-10-29) */
+void __fastcall__ s_start (const char* dir);
+unsigned char __fastcall__ s_wstart (char** argv)
+{
+    if (hub_attach (num (argv[1]), num (argv[2]))) {
+        return 1;
+    }
+    memset (&HUB->pc_task, 0, sizeof HUB->pc_task);     /* (No long task yet) */
+    s_start (argv[3]);                          /* (The things asked as the game starts, the dungeon begun) */
+    return 0;
+}
+
 /* The world's start (main's, dir its lib folder: the item store's catalogue there), once it's attached: the things
 ** asked as the game starts (the theme's kinds, the kit ...) till the UI's begun it, then the dungeon begun, the
 ** character arrived, and the UI told (part 3's: the main RAM's room) */
@@ -5025,6 +5051,8 @@ static void clock_run (void)
     }
 }
 
+unsigned char __fastcall__ wstart (char** argv);   /* (Part 3's: the start-up, attached and started) */
+
 /* The swapped parts' images read into banks of its own (dir/dq0w.ovl: dq0w.cfg's OV1 ..., 8K each): 0, or -1 */
 static int __fastcall__ ovl_load (const char* dir)
 {
@@ -5055,27 +5083,15 @@ static int __fastcall__ ovl_load (const char* dir)
     return 0;
 }
 
-/* A number, an argument's (atoi's, without the C library's ctype: the main RAM's room, slice 4.2's) */
-static unsigned char __fastcall__ num (const char* s)
-{
-    unsigned char n = 0;
-
-    while (*s >= '0' && *s <= '9') {
-        n = n * 10 + *s++ - '0';
-    }
-    return n;
-}
 
 int main (int argc, char* argv[])
 {
     static struct msg m;
     unsigned char was_busy = 0, dseq = 0, took;
 
-    if (argc < 4 || ovl_load (argv[3]) || hub_attach (num (argv[1]), num (argv[2]))) {
-        return 1;
+    if (argc < 4 || ovl_load (argv[3]) || wstart (argv)) {
+        return 1;                               /* (Attached, and started: part 3's) */
     }
-    memset (&HUB->pc_task, 0, sizeof HUB->pc_task);     /* (No long task yet) */
-    start (argv[3]);                            /* (The things asked as the game starts, the dungeon begun: part 3's) */
     while (hub_map (0), !HUB->quit) {         /* (The hub at $8000 again, each time round) */
         while (hy_sem_try (HUB->sem[T_WORLD]) == 0) {
         }

@@ -203,10 +203,11 @@ go:
             SWFN        felt_stop, 45
             SWFN        no_exit, 45
             SWFN        unlit_at, 45
-            SWFN        begin, 3
+            SWFN        wstart, 3
             SWFN        toward_middle, 3
             SWFN        grow_below, 3
             SWFN        start, 3
+            SWFN        begin, 3
             SWFN        store_in, 18
             SWFN        store_page, 18
             SWFN        store_save, 18

@@ -111,6 +111,10 @@ int __fastcall__ hub_create (unsigned char banks)
 #endif
 
 #ifdef HUB_ATTACHED                             /* (The UI's room: what it never does left out, here and below) */
+#ifdef HUB_ATTACH_SW3
+#pragma code-name (push, "SW3CODE")             /* (The world's: its start-up's part, the main RAM's room) */
+#pragma rodata-name (push, "SW3RODATA")
+#endif
 int __fastcall__ hub_attach (unsigned char s, unsigned char me)
 {
     seg = s;
@@ -122,6 +126,10 @@ int __fastcall__ hub_attach (unsigned char s, unsigned char me)
     smask = HUB->small ? 1 : MAXSTRATA - 1;     /* (dq0 -C: two of the strata's slots) */
     return 0;
 }
+#ifdef HUB_ATTACH_SW3
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#endif
 #endif
 
 /* The clock, read whole: tick is bumped before now is written and after (the world's), so a read between two

@@ -160,11 +160,9 @@ const struct burn* __fastcall__ burn_of (unsigned char k)
     return 0;
 }
 
-/* The hands a thing wants: both for a two-handed one, or a big one */
-static unsigned char __fastcall__ two (const struct kind* k)
-{
-    return k->flags & K_TWO || k->bulk >= 20 ? 2 : 1;
-}
+/* The hands a thing wants: both for a two-handed one, or a big one (a macro: its parts' own, 48 and 63, the main
+** RAM's room) */
+#define TWO(k)          ((k)->flags & K_TWO || (k)->bulk >= 20 ? 2 : 1)
 
 struct ost ost;                                 /* (The outfits' draw's state: parts 57 and 59's, outfit.h's) */
 unsigned char held_k[2], held_h[2];             /* (What the character holds: part 48's held_kinds) */
@@ -3964,7 +3962,7 @@ static unsigned char __fastcall__ hand_for (unsigned n, unsigned char want)
     const struct kind* k = kind_at (n);
     unsigned char h, off = hmain ^ IH_BOTH;
 
-    htwo = two (k) == 2;
+    htwo = TWO (k) == 2;
     if (htwo && want && want != IH_BOTH) {
         hwhy = HW_TWO;
         return 0;
@@ -4230,6 +4228,7 @@ void s_kit (void)
 {
     unsigned made[NKIT];
     const unsigned char* e;
+    const struct kind* kk;
     unsigned i, box = 0;
     unsigned char k, off, old;
     char* c;
@@ -4267,7 +4266,8 @@ void s_kit (void)
             item_at (i)->where = IW_ACTOR;      /* (No room: held all the same) */
             item_at (i)->x = 0;
             item_at (i)->flags = (item_at (i)->flags & ~(I_WORN | I_HIDDEN)) | I_KNOWN | I_HELD;
-            k = two (kind_at (i)) == 2 ? IH_BOTH : off ^ IH_BOTH;
+            kk = kind_at (i);
+            k = TWO (kk) == 2 ? IH_BOTH : off ^ IH_BOTH;
             item_at (i)->sn = k;                /* (Its hand: both for a two-handed thing, else the main) */
         }
         if (i != 0xFFFF && (k = item_at (i)->kind) == KI_CHEST) {
