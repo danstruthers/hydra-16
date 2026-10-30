@@ -1263,6 +1263,8 @@ band's head, a faction's leader) left by its death is taken by the most influent
 morale's influence: rank and skill; ties by might, then the dice), from the next rank down if there's none left
 directly below; the successor takes the post's rank and weight; the bonds to it begin as a new leader's, but its own
 band's keep what they had with it; those who know of the death know of the successor (the told hook's too); one at
-its post that the character sees or hears rallies its fellows, told ("The small orc rallies its fellows.").
+its post that the character sees or hears rallies its fellows, told ("The small orc rallies its fellows.").  The post a
+successor leaves is filled the same way, on down the chain (the coordinator's reading of the user's words, the
+same day).
 
 **Design:** HOUSE.md's morale; DENIZENS.md's morale.

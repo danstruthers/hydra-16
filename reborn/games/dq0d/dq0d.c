@@ -2941,35 +2941,34 @@ static unsigned char __fastcall__ tenure (unsigned char w)
     return w > FULL_WEEKS ? FULL_WEEKS : w;
 }
 
-/* Record d's leaders (l1, l2): the highest above its rank in its own lair (its band's head), and its faction's highest
-** above that elsewhere (wherever it is); a dead one counted while it doesn't know of a loss (D_LOST), a successor at
+/* Record d's leaders (l1, l2): the nearest rank above its own in its lair (its band's head), and its faction's highest
+** above that (wherever it is); a dead one counted while it doesn't know of a loss (D_LOST), a successor at
 ** its post only once it does; D its record's after, the hub's header in the window */
 static void __fastcall__ chain (unsigned char d)
 {
     register struct den* q = POP->den;
-    static unsigned char i, b1, b2, r, dead;
+    static unsigned char i, b1, b2, r, r0, dead;
 
     den_get (d);
-    b1 = b2 = rank_of (&D, 1);
+    b2 = r0 = rank_of (&D, 1);
+    b1 = 0xFF;
     dead = D.flags & D_LOST ? D_DEAD : 0;       /* (Dead and known: no leader; and its successor known) */
     l1 = l2 = 0xFF;
     hy_bank (pb);
     for (i = 0; i < hd.ndens; ++i, ++q) {
-        if (q->kind && q->fac == D.fac && i != d && !(q->flags & dead)) {
-            r = rank_of (q, dead);
-            if (q->lid == D.lid) {
-                if (r > b1) {
-                    b1 = r;
-                    l1 = i;
-                }
-            } else if (r > b2) {
-                b2 = r;
+        if (q->kind && q->fac == D.fac && i != d && !(q->flags & dead) && (r = rank_of (q, dead)) > r0) {
+            if (q->lid == D.lid && r < b1) {
+                b1 = r;                         /* (Its band's head: the nearest rank above it in its lair) */
+                l1 = i;
+            }
+            if (r > b2) {
+                b2 = r;                         /* (Its faction's: the highest above it, anywhere) */
                 l2 = i;
             }
         }
     }
     hub_map (0);
-    if (b2 <= b1) {
+    if (l1 != 0xFF && b2 <= b1) {
         l2 = 0xFF;                              /* (Not above its band's head) */
     }
 }
@@ -3032,7 +3031,8 @@ static signed char reckon (void)
     if ((smart = K.mind >= M_LOW) != 0) {
         chain (tp.den);
         if (D.flags & D_PROM) {
-            js = tenure (tp.serve);             /* (A successor: its time at its post) */
+            js = FULL_WEEKS;                    /* (A successor: its own service whole, the house's; its serve its post's
+                                                **   week, its tenure) */
         }
     }
     rf = nfr = ndown = nl = 0;
@@ -3086,6 +3086,7 @@ static signed char reckon (void)
     rf = rf < -FIELD_MAX ? -FIELD_MAX : rf > FIELD_MAX ? FIELD_MAX : rf;
     mf = rf;
     mb = b;
+    HUB->actor[rj].bonds = b;                   /* (Its bonds as last reckoned: the hub's, to see) */
     rf += b;
     rf = rf < -FIELD_MAX ? -FIELD_MAX : rf > FIELD_MAX ? FIELD_MAX : rf;
     if (ndown) {
@@ -3166,6 +3167,9 @@ void __fastcall__ s_dismay (unsigned char k)
         }
     }
     if (dead) {
+        den_get (f.den);
+        D.flags |= D_DEAD;                      /* (Dead now, for its successors and the hearts: killed's after) */
+        den_put (f.den);
         succeed (f.den);                        /* (Its post taken, if it held one: the new leader's from now) */
     }
     hearts ();
@@ -3286,11 +3290,13 @@ void s_age (void)
 ** met, none), ties by its might (an actor's power and its arms and armour; a record not met, none), then by the
 ** dice.  The successor takes the post (its rank, D_RANK: its weight) and its tenure begins (D_PROM: a new leader's
 ** bonds, but to its own band); an actor at its post rallies its fellows, told (I_GOTO where it stands: DE_RALLY, a
-** shout, the UI's words).  Part 7's (part 6's room): its kinds' ranks its own.  Those who know of the death know of it; those who don't, not till they're told */
+** shout, the UI's words).  The post a successor left (a captain's made king) is filled the same way, from its own
+** band, and so on down the chain.  Those who know of the death know of the successors; those who don't, not till
+** they're told.  Part 7's (part 6's room): its kinds' ranks its own */
 void __fastcall__ s_succeed (unsigned char x)
 {
     static const unsigned char rankw7[3] = { 2, 5, 10 };   /* (Part 6's rankw) */
-    static unsigned char i, r, n, lev, llev, fac, top, best, ba, k, key, bkey, mt, bmt, ties, pass, kmind[SND_KINDS], kr[SND_KINDS];
+    static unsigned char i, r, n, ob, lev, llev, fac, top, best, ba, k, key, bkey, mt, bmt, ties, pass, kmind[SND_KINDS], kr[SND_KINDS];
     static unsigned lid;
 
     for (i = 0; i < nkinds && i < SND_KINDS; ++i) {
@@ -3302,8 +3308,9 @@ void __fastcall__ s_succeed (unsigned char x)
     den_get (x);
     r = (D_RANK (D.flags) > kr[D.kind & (SND_KINDS - 1)] ? D_RANK (D.flags) : kr[D.kind & (SND_KINDS - 1)]);
     fac = D.fac;
-    lid = D.lid;
     top = 1;
+next:                                           /* (Post r, left by x: its faction's leader's if top, else its band's head's) */
+    lid = D.lid;
     lev = llev = best = ba = 0xFF;
     for (pass = 0; r && pass < 2; ++pass) {     /* (Pass 0: its faction's highest still?  The ranks below it, its
                                                 **   faction's and its lair's.  Pass 1: the best of those directly
@@ -3354,11 +3361,14 @@ void __fastcall__ s_succeed (unsigned char x)
         return;
     }
     den_get (best);
+    ob = D_RANK (D.flags) > kr[D.kind & (SND_KINDS - 1)] ? D_RANK (D.flags) : kr[D.kind & (SND_KINDS - 1)];
     D.flags = (D.flags & 0x9F) | r << 5 | D_PROM;
     D.serve = (unsigned char) (NOW_HI / WEEK_HI);            /* (Its tenure from now) */
     den_put (best);
     if (ba < NACTORS) {
         HUB->actor[ba].mood |= AM_LEADS;        /* (At its post, as its fellows see it) */
+        HUB->actor[ba].serve = (unsigned char) (NOW_HI / WEEK_HI);   /* (Its record's, the hub's the truth while it's an
+                                                **   actor) */
     }
     if (ba < NACTORS && HUB->actor[ba].doing < DO_FLEE) {
         im.x[0] = im.x[1] = 0xFF;               /* (At its post: it rallies its fellows, a shout where it stands) */
@@ -3367,6 +3377,14 @@ void __fastcall__ s_succeed (unsigned char x)
         im.a = DE_RALLY;
         im.b = RALLY_LOUD;
         post (I_GOTO, ba + 1);
+    }
+    if (ob) {
+        x = best;                               /* (The post it left, a band's head's, filled the same way, and on down
+                                                **   the chain) */
+        r = ob;
+        top = 0;
+        den_get (x);
+        goto next;
     }
 }
 

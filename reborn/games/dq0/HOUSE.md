@@ -2154,12 +2154,16 @@ one may be (no standing updates: the 65C02's time).  *(Every number here is for 
   ones about the character are known best); one fleeing or lying senseless only if none else is fit; ties by might (an
   actor's power, and two for each of its arms, armour and mail), then the dice.  The successor takes the post's rank (its
   record's, beside its kind's) and its weight; its tenure begins then, so the bonds to it are a new leader's, but those
-  of its own lair (its band) keep what they had with it.  Those who know of the death (it's heard, or told) know of the
+  of its own lair (its band) keep what they had with it; its own service counts whole (the house's: its record keeps the
+  week it took the post, its tenure, in place of its service).  Those who know of the death (it's heard, or told) know of the
   successor too; those who don't, not till they do.  The band's test on the loss is made without the dead leader, as
   before, the new leader counting from then.  An actor at its post, not fleeing, rallies its fellows: a shout where it
   stands (a moment's), told as the character sees it ("The small orc rallies its fellows.") or hears it ("You hear a
   rallying shout ahead.").  Only a death leaves a post for now: a leader gone off the level for good (the world knows
-  of none yet) would too.  A promotion leaves no post below it to fill: the successor heads its own band still.
+  of none yet) would too.  The post a successor leaves (a captain's made king) is filled the same way, from its own
+  band, and so on down the chain (the coordinator's, 2026-10-30: the user's words' general form).  A band's head is the
+  nearest rank above one in its lair (a new captain under a king who lives among them), its faction's leader the
+  highest above that, wherever it is.
 - **The character's own morale** is the player's: never tested (D14).
 
 *(For review besides the numbers: the character's might is the referee's placeholder (10), so it frightens no one

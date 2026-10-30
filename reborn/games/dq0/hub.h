@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     27                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     28                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -58,7 +58,8 @@
                                                 **   air_s, dsense's noise and cost, the sound layer's grid, SND_*,
                                                 **   I_RISE's w1 a body's position; 26: an actor's body, BD_*;
                                                 **   27: morale, an actor's heart, lead, power, mood, serve and
-                                                **   contact, AM_*, rs.h's summary's lead, RS_ATTACK's x[0]) */
+                                                **   contact, AM_*, rs.h's summary's lead, RS_ATTACK's x[0]; 28, its bonds,
+                                                **   AM_LEADS, DE_RALLY: succession) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -942,6 +943,8 @@ struct actor {
     unsigned char   serve;                      /* Its record's (the truth while it's an actor): the weeks it had served
                                                 **   its leaders as the game began (a leader's, it had led), */
     unsigned char   contact;                    /*   and how much it's been with them, 0-255 (its bonds' growth) */
+    unsigned char   bonds;                      /* Its bonds to its leaders as last reckoned (points: the denizens', to
+                                                **   see; 2026-10-30) */
 };
 #define AM_HURT         0x01                    /* (An actor's mood: wounded, */
 #define AM_BERSERK      0x02                    /*   berserk, its courage's test's; */
@@ -1404,6 +1407,7 @@ struct wsave {
 **   own hub.actor[*].mood denizens
 **   own hub.actor[*].serve denizens
 **   own hub.actor[*].contact denizens
+**   own hub.actor[*].bonds denizens                            (Its bonds as last reckoned, 28)
 **   own hub.dsave denizens +ui
 **   own hub.den_seq world
 **   own hub.agear world                                        (Each actor's things at a look: 2026-10-27)
