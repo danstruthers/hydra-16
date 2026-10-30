@@ -5097,14 +5097,16 @@ int trfd = -1;                                  /* (The traces' kinds' words, ke
 unsigned char ui_first (void)
 {
     static unsigned t0;
-    static unsigned char sq, on;
+    static unsigned char sq;
 
-    on = HUB->tpr && HUB->ui_cmd;
-    if (!on || HUB->cq.seq != sq) {
+    if (!HUB->tpr || !HUB->ui_cmd) {
+        t0 = 0;
+        return 0;
+    }
+    if (HUB->cq.seq != sq) {
         sq = HUB->cq.seq;                       /* (Each line's own quarter second: a line typed as the last's answer
                                                 **   was still owed had its kits drawn meanwhile, 2026-10-30) */
         t0 = 0;
-        return on;
     }
     if (!t0) {
         t0 = hy_ticks () | 1;

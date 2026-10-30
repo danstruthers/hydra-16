@@ -2805,24 +2805,24 @@ void s_list (void)
 {
     char b[6];
     unsigned i = 0;
-    static unsigned n;
-    static unsigned char d, k;
+#define d       ln                              /* (contents' own, j too, free before it: the main RAM's room) */
+#define k       gm
 
     ngot = 0;
     while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
         ge.n = i;
-        ge.x = n = ip->x;
+        ge.x = j = ip->x;
         ge.where = d = ip->where;
         ge.kind = ip->kind;
         for (k = 8; d == IW_ITEM && k; --k) {   /* (The character's alone: on it, or in what it carries, its chain
                                                 **   followed up; the others' things, and what's in things lying
                                                 **   about, left out: the list the shorter, its passes the quicker,
                                                 **   2026-10-30) */
-            cl_p = item_at (n);
+            cl_p = item_at (j);
             d = cl_p->where;
-            n = cl_p->x;
+            j = cl_p->x;
         }
-        if (d != IW_ACTOR || n) {
+        if (d != IW_ACTOR || j) {
             continue;
         }
         if (ngot == GOT_MAX) {
@@ -2836,6 +2836,8 @@ void s_list (void)
         gp->where = ge.where;
         gp->kind = ge.kind;
     }
+#undef d
+#undef k
     text_new ();
     load = 0;
     contents (IW_ACTOR, 0, 0);
