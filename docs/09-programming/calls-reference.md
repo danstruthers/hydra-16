@@ -1478,11 +1478,11 @@ Bytes to the client of the request being served (kcopy).
 | | |
 | :-- | :-- |
 | **In** | IRQs off; .X = a note group (0-15); .A = the note's bit: 1 << (note - 1), for a note 1-8 |
-| **Out** | .X kept |
+| **Out** | .A = 0; .X kept |
 | **Errors** | - |
 | **Waits** | no |
 
-A note to a note group, from an irq entry (a console's Ctrl-C): queued, and posted by the kernel task as soon as it runs.  Short enough for an irq entry: nothing is checked.
+A note to a note group, from an irq entry (a console's Ctrl-C): queued, and posted by the kernel task as soon as it runs.  Short enough for an irq entry: nothing is checked.  Its .A = 0 is an irq entry's answer (no task switch), so an entry may end with jmp NOTE_QUEUE.
 
 ### ROMREAD
 

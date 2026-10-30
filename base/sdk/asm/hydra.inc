@@ -151,7 +151,7 @@ SRV_REPLY       = $F9C5       ; TASK_INBOX's RQ_FID, RQ_DONE, RQ_PERM, RQ_EVENT:
 CLIENT_READ     = $F9C8       ; r0 = here; r1 = there, in the client's view; r2 = a count
 CLIENT_WRITE    = $F9CB       ; r0 = here (the data); r1 = there, in the client's view; r2 = a count
 NOTE_QUEUE      = $F9CE       ; IRQs off; .X = a note group (0-15); .A = the note's bit: 1 << (note - 1), for a note 1-8
-                              ; -> .X kept
+                              ; -> .A = 0; .X kept
 ROMREAD         = $F9D1       ; .A = a paged ROM bank; r0 = where in it ($A000-$DFFF); r1 = a buffer (not at $A000-$DFFF); r2 = a count
                               ; -> the bytes in the buffer
 TASKMEM         = $F9D4       ; .A = a task; .X = TM_READ or TM_WRITE, | TM_BANK; r0 = a buffer; r1 = an address in the task's view, $0000-$DFFF (with TM_BANK: $8000-$9FFF, in its RAM bank r3); r2 = a count (the range ends at $E000, or with TM_BANK at $A000, at most)

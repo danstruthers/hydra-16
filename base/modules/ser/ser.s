@@ -131,11 +131,9 @@ irq:
 
 @kill:
             lda         #1 << (NOTE_KILL - 1)
-@note:
+@note:                                                      ; (NOTE_QUEUE's .A = 0: this entry's answer)
             ldx         grp
-            jsr         NOTE_QUEUE
-            lda         #0
-            rts
+            jmp         NOTE_QUEUE
 
             SER_T2_NEXT
 

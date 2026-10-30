@@ -6,14 +6,16 @@
 ; interrupted task's stack (A, X, W; the CPU's P and PC).  The line's owner (TA_OWNERS: every task has a copy, so
 ; the interrupted task's is read where it is) gets the interrupt in its own task: T switched to it (its zero
 ; page, its stack below its frame, its banks: its module at $A000), its irq entry (TA_IRQVEC) called with .A =
-; the line, .X = the task interrupted.  The entry answers .A = 0, or IRQ_RESCHED for a task switch (the tick
+; the line, .X = the task interrupted (a jsr to TA_IRQJMP, the task's JMP to it: 3 cycles less than a jmp
+; (TA_IRQVEC) of the kernel's).  The entry answers .A = 0, or IRQ_RESCHED for a task switch (the tick
 ; asks every time); the interrupted task is switched out unless it holds preemption (then the switch is noted:
 ; TK_DUE).  Here: what's off that path, a line nobody owns (IRQ_STRAY) and the switch (IRQ_SWITCH).
 ;
 ; The owner can be the interrupted task itself (the tick, in the idle task): the same steps work, on its stack.
-; IRQs stay off throughout, and handlers never wait.  The budget: about 75 cycles from the interrupt to the
-; handler's first instruction, and 115 for the whole path less the handler (sim/test.js measures them: the
-; IRQs-off stretches), so a handler has about 85 of the 200 cycles any IRQs-off stretch may take.
+; IRQs stay off throughout, and handlers never wait.  The budget: about 72 cycles from the interrupt to the
+; handler's first instruction, and 111 for the whole path less the handler (sim/test.js measures them: the
+; IRQs-off stretches), so a handler has about 89 of the 200 cycles any IRQs-off stretch may take (7 fewer for the
+; ACIA's when it comes with the VIA's, through IRQ_VIA).
 ;
 ; VIA timer 2 is a line of its own, LINE_VIA_T2 (16), so its owner (the console: its paced sending) gets it in one
 ; step: the VIA's stub sends its interrupt there (common.s: IRQ_VIA).  Owning the line is owning the timer: IRQ_OWN
@@ -26,10 +28,6 @@
 .include "kdefs.inc"
 
 .segment "KCODE"
-
-; The owner's irq entry (the dispatcher's jsr)
-IRQ_HANDLER:
-            jmp         (TA_IRQVEC)
 
 ; An interrupt's task switch, from the dispatcher: back in the interrupted task (it doesn't hold the CPU), its
 ; frame's Y on its stack.  It's switched out

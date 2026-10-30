@@ -891,11 +891,12 @@ call CLIENT_WRITE server impl=K_CLIENT_WRITE far
 
 call NOTE_QUEUE server impl=K_NOTE_QUEUE
   in:     IRQs off; .X = a note group (0-15); .A = the note's bit: 1 << (note - 1), for a note 1-8
-  out:    .X kept
+  out:    .A = 0; .X kept
   errors: -
   blocks: no
   doc:    A note to a note group, from an irq entry (a console's Ctrl-C): queued, and posted by the kernel task
-  doc:    as soon as it runs.  Short enough for an irq entry: nothing is checked.
+  doc:    as soon as it runs.  Short enough for an irq entry: nothing is checked.  Its .A = 0 is an irq entry's
+  doc:    answer (no task switch), so an entry may end with jmp NOTE_QUEUE.
 
 call ROMREAD server impl=K_ROMREAD
   in:     .A = a paged ROM bank; r0 = where in it ($A000-$DFFF); r1 = a buffer (not at $A000-$DFFF); r2 = a count

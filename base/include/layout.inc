@@ -171,16 +171,20 @@ FR_PCH          = 8
 
 ; ---- A task's OS area ($0200-$03FF)
 TA_INBOX        = $0200         ; (32) A server's request block (docs/design/conventions.md)
-TA_IRQVEC       = $0220         ; (2) Its interrupt handler (for the lines it owns)
-TA_SERVEVEC     = $0222         ; (2) Its serve entry (SCALL)
+TA_IRQJMP       = $0220         ; A JMP (OP_JMP: the task's set up) to ...
+TA_IRQVEC       = $0221         ; (2)   its interrupt handler (for the lines it owns): the dispatcher's jsr TA_IRQJMP
+                                ;   (3 cycles less than a jsr to a jmp (TA_IRQVEC))
+TA_MODBASE      = $0223         ; Its module's header's page in its bank ($A0-$DF: a module packed with others)
 TA_ENTRY        = $0224         ; (2) Where it starts: main, or a driver's init
 TA_MODBANK      = $0226         ; Its module's paged ROM bank (in place), or $FF (a RAM program)
 TA_PUTC         = $0227         ; PUTC's and GETC's byte (to and from fds 1 and 0)
 TA_BRK          = $0228         ; (2) The end of its data area (BREAK) ...
 TA_BRKMIN       = $022A         ; (2)   and the lowest it may go: its module's HX_TOP
 TA_NOTIFY       = $022C         ; (2) Its note handler (NOTIFY), or 0
-TA_MODBASE      = $022E         ; Its module's header's page in its bank ($A0-$DF: a module packed with others)
+TA_SERVEVEC     = $022E         ; (2) Its serve entry (SCALL)
 TA_NAME         = $0230         ; (16) Its name, zero-terminated
+OP_JMP          = $4C           ; (TA_IRQJMP's: JMP absolute)
+.assert     TA_IRQVEC = TA_IRQJMP + 1, error, "TA_IRQJMP: a JMP to TA_IRQVEC"
 TA_OWNERS       = $0240         ; (18: IRQ_LINES) Each IRQ line's owner task ($FF: none): a copy in every task, so
                                 ;   the IRQ dispatcher reads it where it is (IRQ_OWN writes them all)
 TA_PAGEMAP      = $0252         ; (16) Its pages given out by PAGES_ALLOC (bit = page)
