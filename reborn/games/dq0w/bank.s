@@ -119,7 +119,7 @@ go:
             SWPART      31, 11              ; The traces read, in words (wtrword.c)
             SWPART      32, 3               ; The way the character's scent goes, a hunter's (wtrscent.c)
             SWPART      33, 12              ; A walk across a room (dq0w.c's across: the main RAM's room)
-            SWPART      34, 15              ; The rooms' lights by their sconces (wkept.c)
+            SWPART      34, 14              ; The rooms' lights by their sconces (wkept.c)
             SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
             SWPART      37, 4               ; The rest of the UI's intents carried out (dq0w.c's intent_more)
