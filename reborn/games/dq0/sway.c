@@ -1,12 +1,12 @@
 /*
-** sway.c - (overlay 6) the character's ways with the denizens, in words: what the denizens' task answered (the hub's
+** sway.c - (overlay 15; overlay 6's till 2026-10-29, its room) the character's ways with the denizens, in words: what the denizens' task answered (the hub's
 ** sway, copied into the main RAM: main.c's deal) to words that would sway one (talk, persuade, deceive, threaten,
 ** calm, befriend: the referee's grade, its attitude before and after), a request to an ally, a name given, a look
 ** at how one seems, a blow (the commands listed: help.c's)
 */
 
-#pragma code-name ("OV6CODE")
-#pragma rodata-name ("OV6RODATA")
+#pragma code-name ("OV15CODE")
+#pragma rodata-name ("OV15RODATA")
 
 #include <string.h>
 #include "dq0.h"

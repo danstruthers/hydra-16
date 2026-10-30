@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     25                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     26                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -56,7 +56,7 @@
                                                 **   I_WAIT's a (WA_MIN, WA_SLEEP), E_TIME's b, the long task's mins;
                                                 **   25: the sound and the air, pc_noise, pc_mask, pc_bg, air_h,
                                                 **   air_s, dsense's noise and cost, the sound layer's grid, SND_*,
-                                                **   I_RISE's w1 a body's position) */
+                                                **   I_RISE's w1 a body's position; 26: an actor's body, BD_*) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -925,7 +925,10 @@ struct actor {
     unsigned        hx, hy;                     /*   its lair's home square, where its things are filed (the store's
                                                 **   chunk there kept while it's an actor: ipage.c's), */
     unsigned char   hsn;                        /*   on this stratum */
+    unsigned char   body;                       /* Its body (BD_*, its kind's: kinds.txt's): how it gets up, fails to,
+                                                **   and falls, worded (the UI's) */
 };
+enum { BD_TWO, BD_FOUR, BD_SERPENT, BD_MANY, BD_WINGS, BD_NONE, NBODIES };
 enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIED };   /* An attitude, the worst
                                                 **   first (DENIZENS.md): attacks on sight; threatens, keeps off;
                                                 **   watches, won't help; minds its own business; talks, helps; comes
@@ -1376,6 +1379,7 @@ struct wsave {
 **   own hub.actor[*].hx denizens
 **   own hub.actor[*].hy denizens
 **   own hub.actor[*].hsn denizens
+**   own hub.actor[*].body denizens                             (Its kind's body: the words for its getting up, 26)
 **   own hub.dsave denizens +ui
 **   own hub.den_seq world
 **   own hub.agear world                                        (Each actor's things at a look: 2026-10-27)

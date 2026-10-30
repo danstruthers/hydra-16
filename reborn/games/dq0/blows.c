@@ -44,6 +44,20 @@ static void __fastcall__ who (const char* n, unsigned char cap)
 /* A strike's words (its line: a wound, "a ..."; or the armour that stopped it, "your ...", "its ..."; or none: no
 ** harm) after what led to it: ": a serious cut ...", ", but your leather tunic turns the blow", ", but does no harm"
 ** (by the striker: the character's "do") */
+/* A creature's getting up in a fight (the book's Rise), and its fall as it stumbles, by its body (hub.h's BD_*, the
+** actor's: kinds.txt's) */
+static const char* const rises[NBODIES] = { " gets to its feet.", " scrambles to its feet.", " coils itself up again.",
+    " rights itself.", " flutters up again.", " rises again." };
+static const char* const falls[NBODIES] = { " and falls", " and goes down", " and is thrown down",
+    " and is flipped onto its back", " and drops to the floor", " and sinks low" };
+static unsigned char __fastcall__ body_of (unsigned char k)
+{
+    unsigned char b;
+
+    hub_mem (0, &b, &HUB->actor[(k - 1) & 7].body, 1);
+    return b < NBODIES ? b : BD_TWO;
+}
+
 static void __fastcall__ struck (unsigned char n, unsigned char you)
 {
     const char* l = line[n];
@@ -110,7 +124,7 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
     }
     if (out == O_RISE) {
         who (aname, 1);
-        add (pc ? " get to your feet." : " gets to its feet.");
+        add (pc ? " get to your feet." : rises[body_of (m->who)]);
         return 0;
     }
     if (out == O_DISPATCH) {
@@ -203,7 +217,8 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
                     pc ? "; it stumbles" : "; you stumble");
             }
             if ((fl & FF_PRONE) && out == O_STUMBLE) {
-                add ((k & 2 ? !pc : pc) ? " and fall" : " and falls");   /* (The last named) */
+                add ((k & 2 ? !pc : pc) ? " and fall" : falls[body_of (pc ? m->a : m->who)]);   /* (The last
+                                                **   named; a creature's by its body) */
             }
             break;
         case O_ADVANTAGE:

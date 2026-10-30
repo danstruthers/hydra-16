@@ -190,9 +190,13 @@ struct den {
                                                 **   the outfits' phase 3, 2026-10-27) */
 #define NNAMES          8
 #define NDREG           32
-#define GIVE_WAY        20                      /* (Rounds the minds wait for the UI's command in hand: a second) */
-static unsigned char gw;                        /* (The rounds they've waited so far: main's, and tend's between
-                                                **   actors) */
+#define GIVE_WAY        30                      /* (Tenths the minds wait for the UI's command in hand, at most: its
+                                                **   answer's first words before anything they do, its parsing a
+                                                **   second or so as the tasks share the CPU; by the clock, not
+                                                **   their rounds, every event waking them) */
+static unsigned char gw;                        /* (Waiting for it: main's, and tend's between actors) */
+static unsigned long gwt;                       /* (Since when) */
+static unsigned char gsq;                       /* (Its command line's: the parser's request's seq, each line's own) */
 #define DN_MAGIC        0x4E44                  /* "DN": dens.dat's */
 struct head {
     unsigned        magic;
@@ -273,6 +277,7 @@ struct dkx {
     unsigned char   keeps;                      /* KP_*: what it doesn't carry, where */
     unsigned char   standing;                   /* 0-4: its means */
     unsigned char   home[3];                    /* Its home room's uses, the best liked first (world.h's U_*; 0xFF none) */
+    unsigned char   body;                       /* Its body (hub.h's BD_*: how it gets up, and falls, worded) */
 };
 enum { KP_BODY, KP_OPEN, KP_HIDDEN, KP_BOX, KP_TO_LEADER, KP_LEADER };
 static struct dkx X;
@@ -1023,6 +1028,8 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     im.b = (s->cond & C_BLEEDING) != 0;
     strcpy (a.name, (i = name_of (D.id)) < NNAMES ? hd.names[i].name : K.name);
     a.kind = D.kind;
+    kx_get (D.kind);
+    a.body = X.body;                            /* (The words for its getting up and falling: the UI's) */
     a.remains = K.flags & K_BONES ? KI_BONES : KI_BODY;
     a.timid = (K.flags & K_SHY) | (K_HELP (K) & H_KILLS ? RS_KILLER : 0);   /* (K_SHY the referee's 1) */
     hub_map (0);
@@ -1247,7 +1254,11 @@ static void hear (void)
             hub_map (0);
             rface = bearing (m.w1 - q->x, m.w2 - q->y);
             alert[k] = now + 100;
-            sgen[k] = 0;                        /* (It senses again: the character, if it's there to be sensed) */
+            if (!src) {
+                sgen[k] = 0;                    /* (It senses again: the character, if it's there to be sensed; not
+                                                **   at another's noise, a fellow's every step: the senses' work
+                                                **   for each, slice 4.5's, a rat's steps a storm of it) */
+            }
             rouse (k, 1);
         }
     }
@@ -1859,7 +1870,7 @@ static void tend (void)
     lnow = now;
     for (k = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {
         hub_map (0);
-        if (!turns && HUB->ui_cmd && gw < GIVE_WAY) {
+        if (!turns && HUB->ui_cmd && gw) {
             break;                              /* (The UI's command come in meanwhile: the rest decide next time
                                                 **   round, its answer first) */
         }
@@ -2347,10 +2358,20 @@ int main (int argc, char* argv[])
         turns = !HUB->tpr;
         g = HUB->den_go;
         act = !turns || g != gone;              /* (At the turns pace, only in its turn: the world's word, den_go) */
-        if (!turns && HUB->ui_cmd && gw < GIVE_WAY) {
-            ++gw;                               /* (At the real paces, the UI's command in hand answered first: the
-                                                **   minds wait, as the senses' look does, a second at most) */
-            act = 0;
+        if (HUB->cq.seq != gsq) {
+            gsq = HUB->cq.seq;                  /* (A new line: given way to again, though the last's outlasted
+                                                **   the wait, its command not let go in between) */
+            gw = 0;
+        }
+        if (!turns && HUB->ui_cmd && gw != 2) {
+            if (!gw) {
+                gw = 1;                         /* (At the real paces, the UI's command in hand answered first: the
+                                                **   minds wait, three seconds at most) */
+                gwt = hub_now ();
+            } else if (hub_now () - gwt > GIVE_WAY) {
+                gw = 2;                         /* (Waited long enough: on, till the command's let go) */
+            }
+            act = gw == 2;
         } else if (!HUB->ui_cmd) {
             gw = 0;
         }

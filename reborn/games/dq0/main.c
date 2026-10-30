@@ -81,7 +81,7 @@ void __fastcall__ pose_words (unsigned w);      /* (Part 14's: the body's positi
 void __fastcall__ noise_told (const struct msg* m, unsigned char rel);  /* (Part 14's: a denizen's sound, told) */
 unsigned char hold_first (void);
 unsigned char missiles (void);                  /* (Part 13's: the missiles, slice 4.7's) */
-static void __fastcall__ dig_used (unsigned char n);
+void __fastcall__ dig_used (unsigned char n);     /* (Part 14's) */
 static char dug_with[16];                       /* (The tool a dig took, named) */
 unsigned char finds;                            /* (Things a search turned up, told as it ends: the hub's text;
                                                 **   search.c's too) */
@@ -799,10 +799,12 @@ static void __fastcall__ blow (const struct msg* m)
 static void heard (void)
 {
     static struct msg m;
-    unsigned dx, dy;
+    unsigned dx, dy, p;
     unsigned char rel;
 
-    while (hub_dnext (&dplace, &m)) {
+    t_flush ();                                 /* (What's told so far out first: a command's answer's first
+                                                **   words, before the background's held till after them) */
+    while (p = dplace, hub_dnext (&dplace, &m)) {
         if (m.kind == E_FIGHT && (!m.who || !m.a)) {
             blow (&m);
             continue;
@@ -833,12 +835,18 @@ static void heard (void)
             m.t < heard_at + (rel == heard_rel ? 300 : 50)) {
             continue;
         }
+        if (HUB->ui_cmd) {
+            dplace = p;                         /* (Heard as a command's in hand: told, and what's after it, once its
+                                                **   answer's begun) */
+            break;
+        }
         heard_at = m.t;
         heard_rel = rel;
         noise_told (&m, rel);                   /* (Told: part 14's, the main RAM's room) */
     }
 }
 
+static unsigned char stir_due;                  /* (A denizen stirred, its telling held: events') */
 static unsigned char events (void)          /* (How many there were) */
 {
     static struct msg m;
@@ -846,8 +854,9 @@ static unsigned char events (void)          /* (How many there were) */
 
     while (!quit && hub_next (&place, &m)) {
         ++n;
-        if (!m.who) {
-            HUB->ui_cmd = 0;                    /* (The character's news: a command's answer begun) */
+        if (!m.who && busy && (m.kind != E_VIEW || m.w1 != V_STIR)) {
+            HUB->ui_cmd = 0;                    /* (The character's news: a command's answer begun, its intent out;
+                                                **   not a denizen stirring, the background's, held till after it) */
         }
         switch (m.kind) {
         case E_TIME:
@@ -909,7 +918,8 @@ static unsigned char events (void)          /* (How many there were) */
         case E_VIEW:
             if (m.who == 0) {
                 if (m.w1 == V_STIR) {
-                    stir ();                    /* (A denizen it sees moved) */
+                    stir_due = 1;               /* (A denizen it sees moved: told after the events, and after a
+                                                **   command's answer's first words, below) */
                     break;
                 }
                 if (m.w1 == V_FACING) {         /* (A turn's first words, as it's begun: out at once, its look
@@ -995,6 +1005,11 @@ static unsigned char events (void)          /* (How many there were) */
             break;
         }
     }
+    if (stir_due && !HUB->ui_cmd && !quit) {
+        stir_due = 0;                           /* (The background's news: the denizens stirring, as the command's
+                                                **   answer's begun, never before it) */
+        stir ();
+    }
     return n;
 }
 
@@ -1024,8 +1039,17 @@ static void __fastcall__ limb_words (const struct msg* m)
         "\nYou can't run on one leg.", 0,
         "\nYou are on your feet already.", "\nYour legs won't bear you."    /* (WB_RISEN, WB_NOT_UP, the one more) */
     };
+    static const char* const brise[NBODIES] = { "\nThe %s gets to its feet.", "\nThe %s scrambles to its feet.",
+        "\nThe %s coils itself up again.", "\nThe %s rights itself.", "\nThe %s flutters up again.",
+        "\nThe %s rises again." };
+    static const char* const bnoup[NBODIES] = { "\nThe %s struggles, but can't get up.",
+        "\nThe %s scrabbles, but can't get up.", "\nThe %s writhes, but can't right itself.",
+        "\nThe %s flails its legs, but can't right itself.", "\nThe %s flaps, but can't rise.",
+        "\nThe %s wavers, but can't rise." };
+    static const char* const bfall[NBODIES] = { "\nThe %s falls.", "\nThe %s goes down.", "\nThe %s is thrown down.",
+        "\nThe %s is flipped onto its back.", "\nThe %s drops to the floor.", "\nThe %s sinks to the floor." };
     char kn[sizeof CATALOGUE[0].name];
-    unsigned char k = (unsigned char) m->w1 - WB_DROP;
+    unsigned char k = (unsigned char) m->w1 - WB_DROP, b;
     const char* s;
 
     if (k == WB_POSED - WB_DROP) {              /* (The body's position as it said, slice 4.6's: part 13's) */
@@ -1036,6 +1060,12 @@ static void __fastcall__ limb_words (const struct msg* m)
     k = (k == WB_RISEN - WB_DROP || k == WB_NOT_UP - WB_DROP) && m->w1 >> 8 ?
         (WB_NO_RUN - WB_DROP + 1) * 2 + k - (WB_RISEN - WB_DROP) : k * 2 + (m->b != 0);
     if (k < sizeof lwords / sizeof lwords[0] && (s = lwords[k]) != 0) {
+        if (m->b && (k == (WB_RISEN - WB_DROP) * 2 + 1 || k == (WB_NOT_UP - WB_DROP) * 2 + 1 || k == (WB_FALLEN - WB_DROP) * 2 + 1)) {
+            b = HUB->actor[(m->b - 1) & 7].body;    /* (A creature's getting up, failing to, falling, worded by its
+                                                **   body: "The cave adder coils itself up again", kinds.txt's) */
+            b = b < NBODIES ? b : BD_TWO;
+            s = k == (WB_RISEN - WB_DROP) * 2 + 1 ? brise[b] : k == (WB_NOT_UP - WB_DROP) * 2 + 1 ? bnoup[b] : bfall[b];
+        }
         sayf (s, m->b ? HUB->actor[(m->b - 1) & 7].name : kn, kn);
     }
 }
@@ -1480,9 +1510,12 @@ static void to_hand (void)
     referee (RS_EQUIP, 2)->state = REQ_FREE;
 }
 
-/* The tool a dig's spell took (the referee's choice): worn by it, and named as it's first taken up */
+/* The tool a dig's spell took (the referee's choice): worn by it, and named as it's first taken up (part 14's, s_news's
+** alone, through its stub: the main RAM's room) */
 char dig_with[16];
-static void __fastcall__ dig_used (unsigned char n)
+#pragma code-name (push, "SW14CODE")
+#pragma rodata-name (push, "SW14RODATA")
+void __fastcall__ s_dig_used (unsigned char n)
 {
     HUB->ireq.to = HUB->dig_wear[n];
     things (IO_WEAR, HUB->dig_tool[n]);
@@ -1491,6 +1524,8 @@ static void __fastcall__ dig_used (unsigned char n)
         strcpy (dig_with, dug_with);
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
@@ -2346,6 +2381,8 @@ int main (int argc, char* argv[])
                 t_init ();
             } else {
                 t_key (k);
+                quick = 25;                     /* (A line being typed: its Enter looked for twice as often, the
+                                                **   background given way to it the sooner) */
             }
         }
         if (t_next () && (!busy || !held)) {

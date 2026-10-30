@@ -154,7 +154,7 @@ ovl_out:
             OVFN        unknown, 1
             OVFN        parts_in, 6
             OVFN        alias_said, 4
-            OVFN        sway_words, 6
+            OVFN        sway_words, 15
             OVFN        dig_words, 1
             OVFN        task_words, 3
             OVFN        beat_words, 3
@@ -219,10 +219,10 @@ ovl_out:
             SWPART      8, 5                ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
             SWPART      10, 11              ; A search, by its form (search.c)
-            SWPART      11, 3               ; The rarer news, worded (main.c); the hands and limbs
+            SWPART      11, 15              ; The rarer news, worded (main.c); the hands and limbs
             SWPART      12, 15              ; Wounds over time: first aid, in shock, the body's news (tend.c)
             SWPART      13, 1               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
-            SWPART      14, 15              ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
+            SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
 
             SWFN        begin, 1
             SWFN        size, 1
@@ -267,6 +267,7 @@ ovl_out:
             SWFN        pose_words, 14
             SWFN        when_free, 14
             SWFN        noise_told, 14
+            SWFN        dig_used, 14
             SWFN        hold_first, 11
             SWFN        missiles, 13        ; (The missiles: slice 4.7's)
             SWFN        gear_look, 11

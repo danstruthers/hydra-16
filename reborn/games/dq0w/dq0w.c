@@ -3897,8 +3897,9 @@ static unsigned char __fastcall__ engager (unsigned x, unsigned y)
         hub_map (0);
         a = &HUB->actor[k];
         if (!a->state || a->sn != HUB->pc_stratum || a->pos == POS_PRONE || a->doing == DO_DOWN ||
-            a->attitude > AT_UNFRIENDLY) {
-            continue;
+            a->doing == DO_ROAM || a->attitude > AT_UNFRIENDLY) {
+            continue;                           /* (Not one that hasn't noticed the character: roaming, its mind's
+                                                **   doing as it doesn't sense it, DENIZENS.md's; every actor's) */
         }
         ax = a->x;
         ay = a->y;
@@ -5098,8 +5099,9 @@ int main (int argc, char* argv[])
             den_saw = 0;                        /* (A body fallen: looked at again, the things too) */
             see (0);
         }
-        if (HUB->den_seq != dseq) {
-            dseq = HUB->den_seq;
+        if (HUB->den_seq != dseq && !HUB->ui_cmd) {
+            dseq = HUB->den_seq;                /* (Not as the UI's command is in hand: the background's, after its
+                                                **   answer's begun) */
             stirred ();                         /* (The denizens' bodies' changes: what it sees of them) */
             hub_map (0);
         }

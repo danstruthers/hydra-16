@@ -22,7 +22,7 @@ const MINDS = { m: 0, b: 1, l: 2, a: 3, c: 4 }; // dq0d.c's M_*
 const AT = { h: 0, u: 1, w: 2, i: 3, f: 4 };    // hub.h's AT_*
 const KREC = 40, FREC = 32, NFACT = 8, NFILE = 16;   // (dq0d.c's: a kind's record, a faction's, a game's factions at
                                                 //   most; the file's: the history's past a stand-in's, 2026-10-29)
-const XREC = 5, KEEPS = 'bohclH', USES = 'chlvygaskpbreqowitdf';   // (dq0d.c's struct dkx; its KP_*; world.h's U_*)
+const XREC = 6, BODIES = ['two', 'four', 'serpent', 'many', 'wings', 'none'], KEEPS = 'bohclH', USES = 'chlvygaskpbreqowitdf';   // (dq0d.c's struct dkx; its KP_*; world.h's U_*)
 const SND_KINDS = 32;                           // (hub.h's: the kinds at most, the first none; the themes' bits)
 const LANDS = 'mhfscp', CLIMATES = 'ctw';       // lore.h's LA_*, CL_*: a bit each, in order
 const LIGHTS = { '*': 0, d: 1, l: 2 }, NATURES = { a: 0, v: 1, m: 2, f: 3, d: 4 };  // LI_*, NA_*
@@ -102,7 +102,7 @@ function build({ dir, objdir, say = () => {} }) {
   kinds.forEach((f, i) => {
     const at = KREC * (i + 1), pair = s => s.split('-').map(Number), fac = names.indexOf(f[11]) + 1;
     const bad = () => { throw new Error(`dq0d/kinds.txt: line ${i + 1}: ${f.join(' | ')}`); };
-    if (f.length !== 30 || KEEPS.indexOf(f[27]) < 0 || !/^[0-4]$/.test(f[29]) || !(f[28] === '*' || /^[a-z]{1,3}$/.test(f[28]) && [...f[28]].every(c => USES.includes(c))) || !/^[0-9]$/.test(f[22]) || !/^[0-9]$/.test(f[24]) || !/^[0-9]$/.test(f[26]) ||
+    if (f.length !== 31 || BODIES.indexOf(f[30]) < 0 || KEEPS.indexOf(f[27]) < 0 || !/^[0-4]$/.test(f[29]) || !(f[28] === '*' || /^[a-z]{1,3}$/.test(f[28]) && [...f[28]].every(c => USES.includes(c))) || !/^[0-9]$/.test(f[22]) || !/^[0-9]$/.test(f[24]) || !/^[0-9]$/.test(f[26]) ||
         f[23].length > 23 || f[25].length > 23 || f[0].length > 11 || f[1].length > 7 || !fac || !(f[12] in MINDS) || !(f[18] in LIGHTS) ||
         !(f[19] in NATURES) || !/^[1-6]$/.test(f[15]) || !/^(body|bones)$/.test(f[21])) bad();
     out.write(f[0], at, 'latin1');
@@ -149,6 +149,7 @@ function build({ dir, objdir, say = () => {} }) {
     out[at] = KEEPS.indexOf(f[27]);
     out[at + 1] = +f[29];
     for (let k = 0; k < 3; k++) out[at + 2 + k] = f[28] !== '*' && k < f[28].length ? USES.indexOf(f[28][k]) : 0xFF;
+    out[at + 5] = BODIES.indexOf(f[30]);        // (Its body: hub.h's struct actor's body, BD_*)
   });
   fs.writeFileSync(path.join(objdir, '..', 'dq0d.dat'), out);
 
