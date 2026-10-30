@@ -77,8 +77,10 @@ void __fastcall__ news (const struct msg* m);    /* (Part 11's: the rarer news, 
 void __fastcall__ hide (const char* w);
 void hand_said (void);
 void limbs_cmd (void);
-void __fastcall__ pose_words (unsigned w);      /* (Part 13's: the body's position, worded) */
+void __fastcall__ pose_words (unsigned w);      /* (Part 14's: the body's position, worded) */
+void __fastcall__ noise_told (const struct msg* m, unsigned char rel);  /* (Part 14's: a denizen's sound, told) */
 unsigned char hold_first (void);
+unsigned char missiles (void);                  /* (Part 13's: the missiles, slice 4.7's) */
 static void __fastcall__ dig_used (unsigned char n);
 static char dug_with[16];                       /* (The tool a dig took, named) */
 unsigned char finds;                            /* (Things a search turned up, told as it ends: the hub's text;
@@ -833,17 +835,7 @@ static void heard (void)
         }
         heard_at = m.t;
         heard_rel = rel;
-        hub_map (DEN_BANK);                     /* (Its sound's words: the sound task's, if it's put them there) */
-        memcpy (heard_what, SND_AT + (m.x[1] % SND_KINDS * 2 + (m.a == DE_NOISE)) * SND_REC, sizeof heard_what);
-        hub_map (0);
-        heard_what[sizeof heard_what - 1] = 0;
-        heard_words (m.a | (m.x[3] ? 0x80 : 0), rel);
-        msg (lb);
-        if (busy && HUB->pc_task.kind && !asked) {
-            asked = 1;                          /* (The first sound heard as a long task goes: asked, the world's to
-                                                **   pause it) */
-            intend2 (I_ASK, TE_ASK_HEARD, 0);
-        }
+        noise_told (&m, rel);                   /* (Told: part 14's, the main RAM's room) */
     }
 }
 
@@ -902,9 +894,12 @@ static unsigned char events (void)          /* (How many there were) */
                     tell (T_YOU_GO_OVER);
                 }
                 placing = 0;
-                lb_salt = HUB->pc_x + HUB->pc_y;    /* (A look's words said of where it's come to: a journey's
-                                                **   next leg told whole, its things seen before once an answer:
-                                                **   lbsaid.s's) */
+                if (HUB->pc_task.kind == LT_TRAVEL) {
+                    lb_salt = HUB->pc_x + HUB->pc_y;    /* (A journey's leg: its look's words said of where it's
+                                                **   come to, the place told whole, its things and denizens seen
+                                                **   before once an answer, lbsaid.s's; a walk's, the room's words
+                                                **   once: "The ceiling is flat." not again across it) */
+                }
                 k = m.w1 & 0xFF;               /* (As a run or a sprint ends, briefly: the pace not held) */
                 look ((m.w1 >> 8 & 1) | ((k == A_WALKED || k == A_CROSSED || k == A_WENT_TO || k == A_STEPPED) &&
                     HUB->gait > GA_JOG && !(HUB->watch & (WA_TRAPS | WA_LISTEN | WA_MAP)) && !sight_get ()->dark ? 4 :
@@ -1199,6 +1194,140 @@ unsigned char s_hold_first (void)
     }
     return 1;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 13 (slice 4.7's): the missiles (overlay 1's bank, after its own) */
+#pragma code-name (push, "SW13CODE")
+#pragma rodata-name (push, "SW13RODATA")
+
+/* ---- The missiles (slice 4.7's: DUNGEON.md's fights complete), s_command's: a shot ("shoot the bandit", "fire the
+** bow at the rat", "shoot at the rat with my bow"; "shoot", the target), a throw at a denizen ("throw the dagger at
+** it": a missile's attack, the world's shot; at anything else its throw as before, s_command's: 0 back), a launcher
+** loaded ("nock an arrow", "load the crossbow"; "draw the sword", a thing taken in hand), the missiles gathered
+** ("gather the arrows").  A launcher named, or the one carried, taken in hand first if it isn't (hold_first's), sent
+** with the shot (I_ATTACK's x[1] SK_THING | its kind, b AIM_SHOT, fought on as a blow is: the world's) */
+/* A launcher's kind whose name has w (the catalogue's: a sling, the bows, a crossbow), its name in hold_w; 0 none */
+static unsigned char __fastcall__ bow_named (const char* w, unsigned char k)
+{
+    for (; k <= KI_CROSSBOW; ++k) {
+        hub_mem (KIND_BANK, hold_w, CATALOGUE[k].name, sizeof CATALOGUE[0].name);
+        if (!*w || strstr (hold_w, w)) {
+            return k;
+        }
+    }
+    return 0;
+}
+
+/* The launcher named (w: a word of its name: its kind; "" any, the world's to find, held or taken up); 0 none (told) */
+static unsigned char __fastcall__ launcher (const char* w)
+{
+    unsigned char k = *w ? bow_named (w, KI_SLING) : KI_SLING;
+
+    if (!k) {
+        msg ("You can't shoot with that.");
+    }
+    return k;
+}
+
+/* The denizen thing t names that the character sees, near or far: its entry plus 1; 0 none (why in lb) */
+static unsigned char __fastcall__ mark (const struct cthing* t)
+{
+    static struct cmd c;
+    unsigned char d;
+
+    memcpy (&c, &cmd, sizeof c);
+    memcpy (&c.obj, t, sizeof c.obj);
+    c.dir = 0xFF;                               /* (Any way: its aux none, a shot's, a throw's) */
+    d = fight_target (&c);
+    return d == FT_THING ? 0 : d & 0x0F;
+}
+
+static void __fastcall__ shot (unsigned char d, unsigned char s)
+{
+    static struct msg m;
+
+    m.kind = I_ATTACK;
+    m.who = 0;
+    m.a = d;
+    m.b = AIM_SHOT | Z_MID;
+    m.w1 = m.w2 = 0;
+    m.x[1] = s;
+    m.x[2] = 0;                                 /* (Its hand the world's to find) */
+    if (hub_send (&m)) {
+        busy = 1;
+        t_prompt (0);
+    }
+}
+
+unsigned char s_missiles (void)
+{
+    const struct cthing* t = &cmd.obj;
+    const char* w = cmd.other.word;
+    unsigned char d, k;
+
+    switch (cmd.action) {
+    case VB_THROW_OBJECT:
+        if (!cmd.other.x || !cmd.obj.word[0] || !(d = mark (&cmd.other))) {
+            return 0;                           /* (Not at a denizen: the world's throw, as before) */
+        }
+        if (things (IO_FIND, cmd.obj.word) != IR_OK) {
+            msg (tt ());
+            return 1;
+        }
+        if ((k = HUB->ireq.x) >= 0x80) {
+            return 0;
+        }
+        strcpy (hold_w, cmd.obj.word);
+        shand = 0;
+        if (hold_first ()) {
+            shot (d, SK_THING | k);
+        }
+        return 1;
+    case VB_SHOOT_OBJECT:
+        if (cmd.prep == PR_AT) {                /* ("fire the bow at the rat") */
+            t = &cmd.other;
+            w = cmd.obj.word;
+        }
+        if (!(d = mark (t))) {                  /* (None said, none the target: one beside it, else why not) */
+            msg (lb);
+            return 1;
+        }
+        if ((k = launcher (w)) != 0) {
+            shot (d, SK_THING | k);
+        }
+        return 1;
+    case VB_LOAD_OBJECT:                        /* ("nock an arrow", "load the crossbow"; "draw the sword": in hand) */
+        w = cmd.obj.word;
+        k = *w ? bow_named (w, KI_SLING) : 0;
+        if (!k && *w && !strstr (w, "arrow") && !strstr (w, "bolt") && !strstr (w, "stone")) {
+            strcpy (hold_w, w);
+            shand = 0;
+            hold_first ();
+            return 1;
+        }
+        if (k) {
+            shand = k != KI_SLING ? IH_BOTH : 0;   /* (The launcher named: in hand first) */
+            if (!hold_first ()) {
+                return 1;
+            }
+        }
+        intend2 (I_LOAD, 0, 0);
+        return 1;
+    case VB_GATHER_OBJECT:                      /* ("gather the arrows": the world's, each walked over to) */
+        w = cmd.obj.word;
+        intend_a = strstr (w, "arrow") ? FM_ARROW : strstr (w, "bolt") ? FM_BOLT : strstr (w, "stone") ? FM_SHOT : 0;
+        intend2 (I_GATHER, 0, 0);
+        return 1;
+    }
+    return 0;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW11CODE")
+#pragma rodata-name (push, "SW11RODATA")
 
 /* The hands' and limbs' commands (s_command's: slice 4.1b's): what's in its hands changed over ("swap hands", "switch
 ** hands": the things' IO_SWAP, its words, its time); getting up ("get up", "stand", "rise": the world's I_RISE, the
@@ -1667,25 +1796,6 @@ void s_cq_drop (void)
     cq_st = 0;
 }
 
-/* What waited for the character to be free (main's, seldom: part 2's, the main RAM's room, slice 4.2's) */
-void s_when_free (void)
-{
-    if (rebar) {                                /* (A door barred: its bar set in its brackets, on the square the
-                                                **   character stands on, beside it; what it carries anew) */
-        rebar = 0;
-        HUB->ireq.to = 1;
-        HUB->ireq.x = HUB->pc_x;
-        HUB->ireq.y = HUB->pc_y;
-        HUB->ireq.item = HUB->pc_stratum;
-        things (IO_BAR, "");
-        to_hand ();
-    }
-    if (pending[0]) {                           /* (Lifted out, or come to: now taken up) */
-        take (pending);
-        pending[0] = 0;
-    }
-}
-
 /* A command, the parser's, carried out: by its action (actions.h's VB_*), the verb's own value its aux (the things'
 ** request, a door's work, the denizens' sway: commands.verbs') */
 void __fastcall__ s_command (char* l)
@@ -1913,8 +2023,14 @@ portal:
     case VB_EXTINGUISH_OBJECT:
         handle (cmd.aux, cmd.obj.word, cmd.other.word, cmd.prep == PR_ON);
         return;
+    case VB_SHOOT_OBJECT:                       /* (The missiles: part 11's, slice 4.7's; a throw at a denizen too) */
+    case VB_LOAD_OBJECT:
+    case VB_GATHER_OBJECT:
     case VB_THROW_OBJECT:                       /* (Thrown at the thing said, or the target: the world's throw, its
                                                 **   words overlay 11's) */
+        if (missiles ()) {
+            return;
+        }
         d = HUB->pc_light;
         if (cmd.other.x) {
             HUB->ireq.x = cmd.other.x;
@@ -2250,7 +2366,7 @@ int main (int argc, char* argv[])
             status ();
         }
         if (!busy && (rebar || pending[0])) {
-            when_free ();                       /* (A door barred, a thing lifted out: part 2's) */
+            when_free ();                       /* (A door barred, a thing lifted out: part 14's) */
         }
         if (!busy && (reach & 1)) {
             ++reach;                            /* (Walked over to its thing, or its timed work's time up: the command
@@ -2342,9 +2458,48 @@ int main (int argc, char* argv[])
     return 0;
 }
 
-/* ==== Part 13: the body's positions and the background, worded (slices 4.5 and 4.6: overlay 1's bank, part 11's room) */
-#pragma code-name (push, "SW13CODE")
-#pragma rodata-name (push, "SW13RODATA")
+/* ==== Part 14: the body's positions and the background, worded (slices 4.5 and 4.6: overlay 15's bank, the main
+** RAM's room) */
+#pragma code-name (push, "SW14CODE")
+#pragma rodata-name (push, "SW14RODATA")
+
+/* What waited for the character to be free (main's, seldom: part 2's, the main RAM's room, slice 4.2's; part 14's,
+** part 2's room, 2026-10-29) */
+void s_when_free (void)
+{
+    if (rebar) {                                /* (A door barred: its bar set in its brackets, on the square the
+                                                **   character stands on, beside it; what it carries anew) */
+        rebar = 0;
+        HUB->ireq.to = 1;
+        HUB->ireq.x = HUB->pc_x;
+        HUB->ireq.y = HUB->pc_y;
+        HUB->ireq.item = HUB->pc_stratum;
+        things (IO_BAR, "");
+        to_hand ();
+    }
+    if (pending[0]) {                           /* (Lifted out, or come to: now taken up) */
+        take (pending);
+        pending[0] = 0;
+    }
+}
+
+/* A denizen's sound heard (heard's, its weighing the main code's: m its event, rel which way it is), told: in the
+** sound's words, the sound task's if it's put them there; its long task paused at the first (part 14's: seldom, the
+** main RAM's room) */
+void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
+{
+    hub_map (DEN_BANK);                         /* (Its sound's words: the sound task's, if it's put them there) */
+    memcpy (heard_what, SND_AT + (m->x[1] % SND_KINDS * 2 + (m->a == DE_NOISE)) * SND_REC, sizeof heard_what);
+    hub_map (0);
+    heard_what[sizeof heard_what - 1] = 0;
+    heard_words (m->a | (m->x[3] ? 0x80 : 0), rel);
+    msg (lb);
+    if (busy && HUB->pc_task.kind && !asked) {
+        asked = 1;                              /* (The first sound heard as a long task goes: asked, the world's to
+                                                **   pause it) */
+        intend2 (I_ASK, TE_ASK_HEARD, 0);
+    }
+}
 
 /* The body's position as the character said (E_BEAT WB_POSED's w1: the position times 256, | 0x8000 there already) */
 void __fastcall__ s_pose_words (unsigned w)

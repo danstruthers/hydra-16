@@ -187,18 +187,14 @@ static void bdice (void)
 #endif
 
 /* ---- Moving quietly's own dice (rs.h's P_STEALTH, the character's and a creature's: HOUSE.md's sound, the air and
-** moving quietly, every ruleset's): the same way as the bearings' (qdice about the test, before it and after), so the
-** game's other tests roll as they did whether anyone creeps or stalks; its state the referee's qseed */
+** moving quietly, every ruleset's): the game's dice as they stand, mixed (QUIET_MIX: a step of another generator, a
+** linear congruential one's, so not the next roll's own bits), for the test; the game's put back after (QUIET_IN,
+** QUIET_OUT about it), so its other tests roll as they did whether anyone creeps or stalks; nothing kept (the
+** referees' main RAM's room) */
 #if defined (RS_HOUSE_QUIET) && !defined (RS_HOUSE_QUIET_DONE)
 #define RS_HOUSE_QUIET_DONE
 extern unsigned long xs_seed;
-static unsigned long qseed;
-
-static void qdice (void)
-{
-    unsigned long t = xs_seed;
-
-    xs_seed = qseed ? qseed : t ^ 0x51554945UL;
-    qseed = t;
-}
+#define QUIET_MIX(t)    ((t) * 1103515245UL + 12345UL | 1)
+#define QUIET_IN        { unsigned long qt_ = xs_seed; xs_seed = QUIET_MIX (qt_);
+#define QUIET_OUT       xs_seed = qt_; }
 #endif

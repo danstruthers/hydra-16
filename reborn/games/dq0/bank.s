@@ -185,6 +185,7 @@ ovl_out:
             OVFN        taken_next, 11
             OVFN        throw_words, 10
             OVFN        fixt_words, 4
+            OVFN        shot_words, 15      ; (The missiles' words: shots.c, slice 4.7's, overlay 15)
             OVFN        trap_words, 10
             OVFN        trap_name, 10
             OVFN        den_way, 4
@@ -220,7 +221,8 @@ ovl_out:
             SWPART      10, 11              ; A search, by its form (search.c)
             SWPART      11, 3               ; The rarer news, worded (main.c); the hands and limbs
             SWPART      12, 15              ; Wounds over time: first aid, in shock, the body's news (tend.c)
-            SWPART      13, 1               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
+            SWPART      13, 1               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
+            SWPART      14, 15              ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
 
             SWFN        begin, 1
             SWFN        size, 1
@@ -231,7 +233,6 @@ ovl_out:
             SWFN        cq_post, 2
             SWFN        cq_cmd, 2
             SWFN        cq_drop, 2
-            SWFN        when_free, 2
             SWFN        take, 2
             SWFN        took_up, 2
             SWFN        map, 3
@@ -262,9 +263,12 @@ ovl_out:
             SWFN        hide, 11
             SWFN        hand_said, 11
             SWFN        limbs_cmd, 11
-            SWFN        bg_words, 13
-            SWFN        pose_words, 13
+            SWFN        bg_words, 14
+            SWFN        pose_words, 14
+            SWFN        when_free, 14
+            SWFN        noise_told, 14
             SWFN        hold_first, 11
+            SWFN        missiles, 13        ; (The missiles: slice 4.7's)
             SWFN        gear_look, 11
             SWFN        early, 12
             SWFN        tend, 12

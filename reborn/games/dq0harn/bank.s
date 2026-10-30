@@ -181,6 +181,7 @@ ovl_out:
             OVFN        body_state, 7
             OVFN        venom_time, 7
             OVFN        body_line, 7
+            OVFN        shot, 7             ; (A missile's attack, slice 4.7's: missile.c, heal.c's overlay)
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0harn.cfg's SWAP, a part at a time,
 ; copied there from overlay 4's bank as it's called)

@@ -188,6 +188,8 @@ struct item {
                                                 **   or taken out, nothing in it seen */
 #define IS_LOCKED       0x02                    /* Locked (picked, or forced: P_PICKLOCK, P_FORCE) */
 #define IS_LOCK         0x04                    /* It has a lock (a chest's: its lid's) */
+#define IS_NOCKED       0x08                    /* (A launcher's: loaded, its missile set to it, an arrow nocked, a
+                                                **   crossbow spanned and its bolt in it: slice 4.7's) */
 #define IS_BURST        0x08                    /* Its lock forced, burst: it won't lock again */
 #define I_LIT           0x01                    /* A light, lit */
 #define I_HELD          0x02                    /* In a hand (its sn which: IH_*) */

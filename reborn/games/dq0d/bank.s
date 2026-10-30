@@ -43,5 +43,6 @@ ovx:        .res        1
             SWFN        retire, 4
             SWFN        killed, 4
             SWFN        dismay, 2
+            SWFN        shoots, 2           ; (A shot at the character: slice 4.7's)
             SWFN        along, 4
             SWFN        dart, 4

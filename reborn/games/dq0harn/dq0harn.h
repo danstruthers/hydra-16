@@ -91,7 +91,8 @@ void __fastcall__ sheet_get (unsigned char n);  /* Sheet n into bs */
 void __fastcall__ sheet_put (unsigned char n);  /*   and back */
 
 /* sheet.c (overlay 1) */
-#define OVLS    7                               /* (The 4th and 5th: the swapped parts' images; the 6th and 7th heal.c's) */
+#define OVLS    7                               /* (The 4th and 5th: the swapped parts' images; the 6th and 7th heal.c's;
+                                                **   the 7th the missiles' too, missile.c's, slice 4.7's) */
 extern char hurt[200];                          /* The last harm's words */
 void sheet (void);                              /* The sheet, into the reply */
 void brief (void);                              /*   its short lines */
@@ -119,6 +120,10 @@ enum { BY_ASPECT, BY_BITE, BY_CLAWS, BY_STING, BY_HORNS, BY_VENOM };   /* (BY_VE
 extern unsigned char pc_by[HARN_INJMAX];
 #define IF_POOL         0x80                    /* (An injury's flags, the referee's own, the library's never: the
                                                 **   lesser hurts past the record's room, folded together: wound's) */
+
+/* missile.c (overlay 7): a missile's attack (RS_ATTACK's RS_MISSILE: fight.c's, its sides made), and fight.c's that
+** it calls (through their stubs) and shares: the sides, the request, its effects, its words */
+unsigned shot (void);                           /* (Its declarations after struct side's, below) */
 
 /* fight.c (overlay 2) */
 void __fastcall__ fight (struct req* r);        /* RS_NEW_ACTOR, RS_ATTACK, RS_MORALE, RS_TIME, RS_CONTEST (a
@@ -187,6 +192,16 @@ struct side {
     const struct bkind* b;                      /* (A creature's entry; 0: the character) */
     char            word[14];                   /* Its weapon, in a word (a thing named, its kind's name) */
 };
+
+#define SHOT_DROP       0x8000                  /* shot's value: what it shot with let fall (fight.c's effect); else */
+#define SHOT_HIT(n, z, a, loc)  ((n) << 8 | (z) << 10 | (a) << 12 | (loc))  /* a strike of n dice at z (fight.c's
+                                                **   strike, the attacker's aspect a, at location loc); 0 none */
+#define PD_SHIELD       0xFE                    /* pc_defence's f: the best block of the shields the character holds
+                                                **   (their EML; its word in d's), 0 none: a missile's */
+extern struct side A, D;
+extern struct req* R;
+extern unsigned char nfx, prones;
+extern char line[2][72];
 
 /* gear.c (overlay 3): the character's weapons and armour */
 void __fastcall__ hit_thing (struct req* q, struct side* s);   /* A blow at a thing (RS_ATTACK at RS_THING: fight.c's,

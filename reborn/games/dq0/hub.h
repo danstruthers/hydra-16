@@ -112,6 +112,8 @@ struct fight {
                                                 **   initiative test's, the striker the quicker) */
 #define FW_SHIELD       0x20                    /* (which's: the defender, a creature, blocked with its shield: rs.h's
                                                 **   AF_SHIELD, "it fends off the blow with its buckler", 2026-10-29) */
+#define FW_MISSILE      0x10                    /* (which's: a missile's, shot: rs.h's RS_MISSILE, slice 4.7's; */
+#define FW_THROWN       0x08                    /*   | FW_THROWN, a thing thrown) */
 #define FW_AGAIN        0x40                    /* (which's: the one knocked senseless out already, struck as it
                                                 **   lay: rs.h's AF_AGAIN, no new black-out told) */
 
@@ -417,8 +419,25 @@ enum {
                                                 **   find), TRV_KIND | a room's kind (the last of that kind it was in,
                                                 **   the world's to find); a leg at a time, each a walk (LT_TRAVEL);
                                                 **   E_TASK TE_BEGUN, TE_THERE ..., b the same */
+    I_LOAD,                                     /* A launcher loaded ("nock an arrow", "load the crossbow": slice
+                                                **   4.7's): the one in hand, a missile of its family carried set to
+                                                **   it, its load's time; E_TASK TE_LOADED (b 1 already), or
+                                                **   TE_NO_SHOT (b SH_NONE, SH_SPENT) */
+    I_GATHER,                                   /* The missiles lying about gathered again ("gather the arrows":
+                                                **   slice 4.7's): a their family (items.h's FM_*: 0 any), each one
+                                                **   seen within twelve squares walked over to and taken up, into its
+                                                **   carrier (a quiver); E_TASK TE_GATHERED, b how many */
     NINTENTS
 };
+#define AIM_SHOT        0x40                    /* (I_ATTACK's b, | the aim: a shot or a throw, not a blow (slice
+                                                **   4.7's: the world's missiles, the referee's RS_MISSILE), the
+                                                **   UI's with x[1] SK_THING | the launcher's kind or the thing
+                                                **   thrown's; a denizen's, its mind's, with what it carries) */
+enum { SH_OK, SH_NONE, SH_SPENT, SH_RANGE, SH_LINE, SH_WAY, SH_GONE, SH_HANDS, SH_CANT };   /* (E_TASK TE_NO_SHOT's b:
+                                                **   why no shot: nothing to shoot with, no missile for it, out of
+                                                **   range, no clear line (a wall, a door, glass), someone in the way,
+                                                **   the target gone, its hands full for the launcher, the referee's
+                                                **   none) */
 #define TRV_IN          0x3F                    /* (I_TRAVEL's b, E_TASK's: the way in, where the character began; */
 #define TRV_KIND        0x80                    /*   | a room's kind (world.h's U_*); */
 #define TRV_ON          0x40                    /*   E_TASK's | under way, not as it begins) */
@@ -571,9 +590,12 @@ enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN }
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
        TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE, TE_LOW, TE_OUT, TE_ROBBED,
        TE_BEGUN, TE_ASK_SHORT, TE_LEARNT, TE_THERE, TE_FORGOT, TE_UNSURE, TE_ASTRAY, TE_ELSEWHERE,
-       TE_BODY };                               /* (TE_BODY: what time did to its body, a venom's course, a wound
+       TE_BODY,                                 /* (TE_BODY: what time did to its body, a venom's course, a wound
                                                 **   healed, the bleeding: the referee's words, RS_DESCRIBE b 4's,
                                                 **   slice 4.3's) */
+       TE_NO_SHOT, TE_LOADED, TE_GATHERED, TE_READIED };    /* (The missiles', slice 4.7's: no shot, b why, SH_*; a
+                                                **   launcher loaded, b 1 if it was already; the missiles gathered, b how
+                                                **   many; a launcher taken up to shoot, its kind times 256) */
                                                 /* (The last five a journey's, I_TRAVEL's, slice 4.2's, b its place,
                                                 **   | TRV_ON under way: there, or there already; the place or the way
                                                 **   there not remembered, or no longer; its bearings lost, known, so
@@ -1171,6 +1193,10 @@ enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind
 #define AG_ARMOUR       0x02                    /*   armour worn, */
 #define AG_MAIL         0x04                    /*   mail worn over its body: a byrnie, a hauberk, metal body armour,
                                                 **   2026-10-29: "a dwarf in mail") */
+#define AG_SHOOTS       0x10                    /* (A launcher among its things, and its missiles: its mind's to shoot,
+                                                **   slice 4.7's; */
+#define AG_NOSHOT       0x20                    /*   no shot to be had from where it stood, the world's: its mind's
+                                                **   till the character moves) */
 #define GE_OLD          0x01
 #define CH_DRAW         0x01                    /* (pc_chart's: the things to draw a map with to hand, the catalogue's
                                                 **   by their keys: a sheet (paper, parchment) or its map, a pencil or

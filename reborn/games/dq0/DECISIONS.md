@@ -568,6 +568,9 @@ The user played Phase 2's end at 115,200 baud: "it looks okay for now" (reborn e
 A trap told twice in one look's words.  Two causes, both fixed (d806d5a): a door sometimes made twice on one square,
 and the stirs telling every denizen seen again.  A door is made once; a stir tells only what's changed; alike
 denizens and things are told together.  A guard in every dq0 test fails a sentence told twice in one answer.
+Its gap closed (2026-10-29): a denizen told as it stirs is kept as told too (a walk stopped by one coming into sight,
+the look as it stops doesn't tell it again), and a journey's next leg tells its new place whole but nothing seen
+before in the same answer (lbsaid.s: a sentence known by where it's said of; a thing's and a denizen's by nothing).
 
 **Design:** DENIZENS.md, seen and heard.
 

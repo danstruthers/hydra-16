@@ -398,7 +398,10 @@ void s_den_equip (void)
     for (; ki; ki = kit_next (ki)) {
         f = ip->flags;
         n = ip->quality;
-        dkind (ip->kind);
+        dkind (k = ip->kind);
+        if ((unsigned char) (k - KI_SLING) <= KI_CROSSBOW - KI_SLING) {
+            ag |= AG_SHOOTS;                    /* (A launcher: its mind's to shoot, slice 4.7's) */
+        }
         if ((f & I_HELD) && weapon ()) {        /* (How it looks: armed, armoured, the hub's agear) */
             ag |= AG_ARMED;
         } else if ((f & (I_WORN | I_HIDDEN)) == I_WORN && dk.craft == AP_ARMOUR) {
@@ -428,6 +431,9 @@ void s_den_equip (void)
             dkind (k);
             if (weapon ()) {
                 ag |= AG_ARMED;
+            }
+            if ((unsigned char) (k - KI_SLING) <= KI_CROSSBOW - KI_SLING) {
+                ag |= AG_SHOOTS;                /* (A sling at its belt) */
             }
         }
     }

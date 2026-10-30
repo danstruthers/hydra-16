@@ -218,8 +218,15 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     case TE_FREE:                               /* (None: b 0 not engaged, 1 nothing near to flee, 2 no way back) */
         msg (named == 2 ? "There's no way back." : named ? "There's nothing to flee from." : "You aren't engaged.");
         break;
-    case TE_NO_FOE:                             /* (b 1: in shock, in no state to fight on) */
-        msg (named ? "You're in no state to fight." : "No foe is left beside you.");
+    case TE_NO_FOE:                             /* (b 1: in shock, in no state to fight on; 2, a missile's fight) */
+        msg (named == 1 ? "You're in no state to fight." : named ? "No foe is left in your sights." :
+            "No foe is left beside you.");
+        break;
+    case TE_NO_SHOT:                            /* (The missiles', slice 4.7's: overlay 4's, shots.c) */
+    case TE_LOADED:
+    case TE_GATHERED:
+    case TE_READIED:
+        shot_words (w, named);
         break;
     case TE_LOW:                                /* (A light it carries in its last ten minutes: slice 4.1's) */
         p = lamp (named);

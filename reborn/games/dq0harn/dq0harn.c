@@ -201,6 +201,7 @@ void __fastcall__ kind_in (unsigned char k)
 static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char steps);
 #define RS_HOUSE_DIG
 #define RS_HOUSE_DIG_TOOL   s_dig_tool
+#define RS_HOUSE_QUIET                          /* (Moving quietly's own dice: s_quiet_test's) */
 #include "../dq0/rshouse.h"
 
 /* A dig's test (RS_TEST's P_DIG): judged by the tool to hand that suits it best, its rate a spell at a marginal
@@ -208,10 +209,22 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
 void __fastcall__ s_quiet_test (struct req* r);
 static void __fastcall__ dig_of (struct req* r);
 
+/* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
+** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery, stone
+** Masonry, glass Glassworking (part 2's, the main RAM's room, 2026-10-29) */
+static const unsigned char appraiser[NAP] = {
+    HARN_WPN, HARN_WPN, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR,
+    HARN_MSN, HARN_GLA
+};
+
+/* RS_TEST's own tests, through one stub (the main RAM's room): a dig's, moving quietly's, an appraisal's (by the
+** craft that knows the thing) */
 void __fastcall__ s_dig_answer (struct req* r)
 {
     if (r->a == P_STEALTH) {
-        s_quiet_test (r);                       /* (Moving quietly's, through this stub: the main RAM's room) */
+        s_quiet_test (r);
+    } else if (r->a == P_APPRAISE) {
+        r->grade = test_sk (&pc, appraiser[r->b < NAP ? r->b : 0], r->steps);
     } else {
         dig_of (r);
     }
@@ -271,14 +284,6 @@ static const harn_skill own[1] = {
     { "Cartography", { HARN_DEX, HARN_EYE, HARN_EYE }, { HARN_S_SKO << 4 | 1, HARN_S_TAI << 4 | 1 }, 2, 0, HARN_CRAFT, 1 }
 };
 unsigned char drawn_new;                        /* (A skill opened by a map drawn: draw_test's, RS_TEST's result 1) */
-
-/* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
-** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery, stone
-** Masonry, glass Glassworking */
-static const unsigned char appraiser[NAP] = {
-    HARN_WPN, HARN_WPN, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR,
-    HARN_MSN, HARN_GLA
-};
 
 signed char __fastcall__ grade (unsigned char level)
 {
@@ -701,27 +706,16 @@ static signed char __fastcall__ side (unsigned char who, unsigned char p, signed
     return q->grade;
 }
 
-/* Moving quietly's test (RS_TEST's P_STEALTH: slice 4.6's), by its own dice (rshouse.h's RS_HOUSE_QUIET's way, here),
-** so the game's other tests roll as they did: the character's, or a creature's by its sheet (a hunter's stalk, the
-** denizens'); part 2's, the main RAM's room */
-extern unsigned long xs_seed;
-static unsigned long qseed;
-
+/* Moving quietly's test (RS_TEST's P_STEALTH: slice 4.6's), by its own dice (rshouse.h's RS_HOUSE_QUIET's: the game's
+** as they stand, mixed, and put back after), so the game's other tests roll as they did: the character's, or a
+** creature's by its sheet (a hunter's stalk, the denizens'); part 2's, the main RAM's room */
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
-static void qdice (void)
-{
-    unsigned long t = xs_seed;
-
-    xs_seed = qseed ? qseed : t ^ 0x51554945UL;
-    qseed = t;
-}
-
 void __fastcall__ s_quiet_test (struct req* r)
 {
-    qdice ();
+    QUIET_IN
     r->grade = r->actor ? side (r->actor, P_STEALTH, r->steps) : test (&pc, P_STEALTH, r->steps);
-    qdice ();
+    QUIET_OUT
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -774,18 +768,15 @@ static void __fastcall__ answer (struct req* r)
         r->b = watch;
         break;
     case RS_TEST:
-        if (r->a == P_DIG || r->a == P_STEALTH) {   /* (Judged by the tool to hand that suits it best; moving quietly,
-                                                **   by its own dice: part 2's) */
+        if (r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE) {   /* (Judged by the tool to hand that
+                                                **   suits it best; moving quietly, by its own dice; by the craft that
+                                                **   knows the thing: part 2's) */
             dig_answer (r);
             break;
         }
         if (r->a == P_BEARING) {                /* (Its bearings, by its own dice: overlay 3's, bearing.c) */
             r->grade = bearing_of (r->steps);
             r->result = bway;
-            break;
-        }
-        if (r->a == P_APPRAISE) {               /* (By the craft that knows the thing) */
-            r->grade = test_sk (&pc, appraiser[r->b < NAP ? r->b : 0], r->steps);
             break;
         }
         if ((r->a == P_SEARCH || r->a == P_DISARM) && r->b == HIDE_MAGICAL) {   /* (Only by magic: its spells

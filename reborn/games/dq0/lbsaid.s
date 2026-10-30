@@ -4,7 +4,7 @@
 ; but not a sentence a look has said already this answer (the user's: nothing told twice; a light lit, the place told
 ; again as it shows it now: only what's new).  Each sentence, to a full stop and a space or the end, known by a hash
 ; of its letters (but the spaces and new lines before them) and of where it's said of (lb_salt: the character's square
-; as it comes there, main.c's E_ARRIVE; but a thing's sentence, its first letter after a 2, seen.c's, of nothing: the 2
+; as a journey's leg comes there, main.c's E_ARRIVE; but a thing's sentence, its first letter after a 2, seen.c's, of nothing: the 2
 ; left out of the words said; so a place's words are told again where it's elsewhere, a journey's next leg, but the same
 ; thing seen from two places once), kept in
 ; look.c's told (ntold of them, none as a command's taken, main.c's; TOLD at most, then the oldest given up for the

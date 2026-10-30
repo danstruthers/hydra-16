@@ -32,6 +32,8 @@ enum {
     VB_SWAP_HANDS,                              /* (What's in its hands changed over: "swap hands", slice 4.1b's) */
     VB_TEND,                                    /* (First aid, a wound treated: "tend my wounds", "bandage my arm",
                                                 **   "treat the bandit", slice 4.3's) */
+    VB_GATHER_OBJECT,                           /* (The missiles lying about gathered again: "gather the arrows",
+                                                **   slice 4.7's) */
     NACTIONS
 };
 

@@ -634,16 +634,22 @@ function phraseSem(spec, env, ctx) {
       if (ctx.near.length) return question('WHICH', { choices: ctx.near.join(',') });
       return err('NOTHING_HERE');
     }
-    case 'shoot': {
+    case 'shoot': {     // ("shoot the goblin [with the bow]", "fire the bow at the goblin", "shoot at the goblin with the bow")
       const at = kidsOf(spec, 'at-phrase')[0];
       const o = objOf(0);
       if (o.stop) return o.stop;
-      if (!at) return act('VB_SHOOT_OBJECT', { target: o.value });
+      if (!at) {
+        if (!direct[1]) return act('VB_SHOOT_OBJECT', { target: o.value });
+        const u = objOf(1);
+        if (u.stop) return u.stop;
+        return act('VB_SHOOT_OBJECT', { target: o.value, instrument: u.value });
+      }
       const t = objRole(findFirst(at, 'object'), env, ctx);
       if (t.stop) return t.stop;
       return act('VB_SHOOT_OBJECT', { instrument: o.value, target: t.value });
     }
     case 'load': return withObj('VB_LOAD_OBJECT');
+    case 'gather': return direct[0] ? withObj('VB_GATHER_OBJECT') : act('VB_GATHER_OBJECT', {});   // (Slice 4.7's)
     case 'jump': {
       const d = kidsOf(spec, 'direction')[0];
       if (d) return act('VB_JUMP', { direction: dirCode(d, env) });
