@@ -711,12 +711,14 @@ static void stop_world (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The answer's tasks (the world, the command parser, the senses, the referee) in the kernel's foreground while a
-** command's in hand (on 1: the hub's ui_cmd, fore_sync's), or out of it (0); on 2, the UI's own, for good (as its loop
-** begins: so a line's Enter is looked for at the next tick, a tick at most behind the background's work; a driver
-** serving its calls, the console's, with it).  The senses with them: the world waits on their look and their stock
-** (in the background, an inventory's answer was 60,000 cycles the slower).  TASKFORE: base/kernel/sched.s; overlay
-** 6's */
+/* The answer's tasks in the kernel's foreground (TASKFORE: base/kernel/sched.s), at the real paces: the UI for good (FS_UI:
+** so a line's Enter is looked for at the next tick, a tick at most behind the background's work; a driver serving its
+** calls, the console's, with it), and the world, the command parser, the senses and the referee while a command's in
+** hand (FS_CMD: the hub's ui_cmd).  The senses with them: the world waits on their look and their stock (in the
+** background, an inventory's answer was 60,000 cycles the slower).  Not at the turns pace: there the game waits for
+** the player, and its tasks take their turns as they did (fore_sync's; overlay 6's) */
+#define FS_CMD      1
+#define FS_UI       2
 #pragma code-name (push, "OV6CODE")
 #pragma rodata-name (push, "OV6RODATA")
 void __fastcall__ o_fore_set (unsigned char on)
@@ -724,25 +726,30 @@ void __fastcall__ o_fore_set (unsigned char on)
     static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_SENSES, T_REFEREE };
     unsigned char k;
 
-    if (on > 1) {
-        hy_taskfore (hy_task (), 1);
-        return;
-    }
+    hy_taskfore (hy_task (), (on & FS_UI) != 0);
     for (k = 0; k < sizeof fg; ++k) {
         if (task_[fg[k]] > 0) {
-            hy_taskfore (task_[fg[k]], on);
+            hy_taskfore (task_[fg[k]], on & FS_CMD);
         }
     }
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-static unsigned char fored;                     /* (The answer's tasks in the foreground: ui_cmd as it was) */
-static unsigned char iqh, owed;                 /* (The intents' ring as a line's taken; an answer owed, main's) */
+static unsigned char fored;                     /* (The tasks in the foreground: FS_*, fore_sync's) */
+static unsigned char iqh, owed, obeat;          /* (The intents' ring as a line's taken; an answer owed, main's;
+                                                **   the world's heartbeat as it was sent) */
 static void fore_sync (void)
 {
-    if (HUB->ui_cmd != fored) {
-        fore_set (fored = HUB->ui_cmd);
+    static unsigned char f;
+
+    if (owed && !busy && HUB->iq_tail == HUB->iq_head && (unsigned char) (HUB->beat[T_WORLD] - obeat) >= 2) {
+        HUB->ui_cmd = owed = 0;                 /* (Its intent taken and the world round again since: an answer
+                                                **   without news to the character, if any, given) */
+    }
+    f = HUB->tpr ? FS_UI | (HUB->ui_cmd != 0) : 0;
+    if (f != fored) {
+        fore_set (fored = f);
     }
 }
 
@@ -2392,7 +2399,6 @@ int main (int argc, char* argv[])
     find_dirs ();                               /* (The overlays read in, and the swapped parts with them, first) */
     ovl_load ();
     begin (argc, argv);
-    fore_set (2);                               /* (The UI in the foreground: its loop's naps, its Enter seen) */
     while (!quit) {
         hub_map (0);                            /* (The hub at $8000 again: a call may have moved the window) */
         while (t_haskey ()) {
@@ -2414,10 +2420,8 @@ int main (int argc, char* argv[])
         if (t_next () && (!busy || !held)) {
             HUB->ui_cmd = 1;                    /* (A line entered: the senses' look and the minds give way at once,
                                                 **   not after the events and the status line; its answer first) */
+            owed = 0;
             fore_sync ();                       /* (The answer's tasks in the foreground meanwhile) */
-            cq_post (t_next ());                /* (And the command parser at work on it while the events are told:
-                                                **   part 2's, in as a rule; posted once, cq_st's) */
-            t_flush ();                         /* (The line entered, into the story meanwhile: term.c's enter) */
         }
         k = events ();
         heard ();
@@ -2511,6 +2515,7 @@ int main (int argc, char* argv[])
             }
             hub_map (0);
             owed = HUB->iq_head != iqh;
+            obeat = HUB->beat[T_WORLD];
             HUB->ui_cmd = busy | owed;          /* (Its answer the world's, not yet said: the look and the minds
                                                 **   give way till the character's news comes, events'; an intent
                                                 **   sent, the character not busy, its answer owed too: a step that

@@ -250,8 +250,8 @@ void __fastcall__ shot_words (unsigned w, unsigned char named);   /* Overlay 15:
 void __fastcall__ beat_words (unsigned w);
 void __fastcall__ felt_words (unsigned w);      /* (Overlay 7's) A walk in the dark's beat (task.c's) */
 void facing_words (void);                       /* (Overlay 7's) The way it believes it faces (task.c's: slice 4.2's) */
-void __fastcall__ fore_set (unsigned char on);  /* (Overlay 6's) The answer's tasks in the kernel's foreground, or not;
-                                                **   2: the UI (main.c's) */
+void __fastcall__ fore_set (unsigned char on);  /* (Overlay 6's) The UI and the answer's tasks in the kernel's
+                                                **   foreground, or not (main.c's FS_*) */
 unsigned char __fastcall__ stop_kind (const char* word);  /* Overlay 7 (task.c's): the task a stop names */
 unsigned char __fastcall__ answer_of (const char* l);     /*   and a question's answer */
 void __fastcall__ bar_text (char* s, unsigned done, unsigned len);  /* (Overlay 3) */

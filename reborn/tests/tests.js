@@ -3997,7 +3997,7 @@ module.exports = {
     },
     {
       name: 'dq0quiet', meaning: true, what: 'Dingus Quest Zero\'s moving quietly (slice 4.6, D15: Stealth tested as it starts, again as something changes; HOUSE.md\'s sound and stealth, for review), by the referee\'s replies and the hub\'s state: at seed 3 by the way down, a step at a walk as loud as its pace (the senses\' to reckon, the hub\'s pc_noise 0xFF, no Stealth test); creeping, its first step tested (the world\'s slot: RS_TEST, P_STEALTH), its loudness the grade\'s (a critical success 0, a marginal 1, a marginal failure 2, a critical 3), its next not tested again, the same loudness; crouched, tested again (its position changed); a walk again, the senses\' to reckon, no test',
-      init: 't_rc', cycles: 400e6,
+      init: 't_rc', cycles: 440e6,       // (399.4M at reborn-game 85e0144a, its length at the turns pace moving with how the tasks interleave: 400M+ with the answers' work, 2026-10-30)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'step forward', 'creep',
         'step back', 'step forward', 'crouch', 'step back', 'stand', 'walk', 'step forward', 'wait', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
