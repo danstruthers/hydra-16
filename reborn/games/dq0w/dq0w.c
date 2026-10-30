@@ -5092,15 +5092,19 @@ int trfd = -1;                                  /* (The traces' kinds' words, ke
 
 /* A command in hand at the real paces (the hub's ui_cmd, the UI's: Enter to its answer's news): 1, the denizens'
 ** intents wait (they'd copy parts in, and draw outfits, a quarter second and more of the world's time in the
-** kernel's foreground with the UI's), a quarter second at most; then 0, on with them (wbody.c's den_intents looks
-** between them).  The hub's header in the window */
+** kernel's foreground with the UI's), a quarter second at most, each line's own; then 0, on with them (wbody.c's
+** den_intents looks between them).  The hub's header in the window */
 unsigned char ui_first (void)
 {
     static unsigned t0;
+    static unsigned char sq, on;
 
-    if (!HUB->tpr || !HUB->ui_cmd) {
+    on = HUB->tpr && HUB->ui_cmd;
+    if (!on || HUB->cq.seq != sq) {
+        sq = HUB->cq.seq;                       /* (Each line's own quarter second: a line typed as the last's answer
+                                                **   was still owed had its kits drawn meanwhile, 2026-10-30) */
         t0 = 0;
-        return 0;
+        return on;
     }
     if (!t0) {
         t0 = hy_ticks () | 1;

@@ -63,6 +63,7 @@ static unsigned char took;                      /*   and the fight it was in sto
 static unsigned place;                          /* Where this task is in the world's events */
 static int task_[NTASKS];                       /* Each task's number, as it was started (0: not) */
 static unsigned char test_start;
+static unsigned char rolls;                     /* (dq0 -R n: the dice's offset, the tests', 0-252) */
 static unsigned char small;                     /* (dq0 -C: the caches small, the tests') */
 static unsigned char gear;                      /* (dq0 -K: the kit as it was, no outfits drawn, the tests') */
 static const char* kit;                         /* (dq0 -k: things more, as the game starts: a tool, ...) */
@@ -596,6 +597,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     }
     HUB->seed = seed;
     HUB->test_start = test_start;
+    HUB->dice = rolls;
     HUB->small = small;
     HUB->gear = gear;
     hub_map (DEN_BANK);                         /* (The sounds' words: none till the sound task's put them there; the
@@ -2329,6 +2331,9 @@ void __fastcall__ s_args (int argc, char* argv[])
             nobear = 1;                         /* (For the tests: its bearings never tested, as if it knew north) */
         } else if (!strcmp (argv[i], "-I")) {
             noinit = 1;                         /* (For the tests: no engage initiative test, no grope's) */
+        } else if (!strcmp (argv[i], "-R") && i + 1 < argc) {
+            rolls = dnum (argv[++i]);           /* (For the tests: the dice's own offset, 0-252: the same dungeon, other
+                                                **   rolls) */
         } else if (!strcmp (argv[i], "-T")) {
             ++test_start;                       /* (For the tests: the character begins at a way down; -T twice, by
                                                 **   the theme's first piece; three times, four strata down) */

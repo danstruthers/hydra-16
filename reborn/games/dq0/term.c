@@ -85,6 +85,14 @@ static void __fastcall__ go (unsigned char r, unsigned char c)
     out ('H');
 }
 
+/* The line typed's row cleared, the cursor at its start (the main RAM's room: one copy, 2026-10-30) */
+static void clear_line (void)
+{
+    go (th, 1);
+    csi ();
+    out ('K');
+}
+
 /* The cursor hidden while it's away from the line typed (ESC [ ? 25 l: the console's, and its terminals'), and
 ** shown again as it's back (t_done, inl_show) */
 static unsigned char hid;
@@ -275,9 +283,7 @@ void t_away (void)
 {
     csi ();
     out ('r');                                  /* The whole screen scrolls again */
-    go (th, 1);
-    csi ();
-    out ('K');
+    clear_line ();
     unhide ();
     t_flush ();
 }
@@ -482,10 +488,8 @@ void inl_show (void)
 {
     unsigned char from = inn > tw - 4 ? inn - (tw - 4) : 0;
 
-    go (th, 1);                                 /* (Cleared first: with nothing typed, "> " is the last thing out,
+    clear_line ();                              /* (Cleared first: with nothing typed, "> " is the last thing out,
                                                 **   a prompt for a test to wait for) */
-    csi ();
-    out ('K');
     unhide ();
     outs (t_ready && !qlen ? "> " : "  ");   /* (A line entered, not yet taken: no prompt, 2026-10-28) */
     outs (inl + from);
@@ -500,9 +504,7 @@ void t_done (void)
             go (th, 3 + shown);
             unhide ();
         } else {
-            go (th, 1);                         /* (Nothing typed: "> " again, the last thing out, a prompt) */
-            csi ();
-            out ('K');
+            clear_line ();                      /* (Nothing typed: "> " again, the last thing out, a prompt) */
             unhide ();
             outs (t_ready && !qlen ? "> " : "  ");    /* (A line entered and not yet taken up, the
                                                 **   world's or a stir's words out before it: not a prompt, a test's

@@ -206,7 +206,8 @@ extern unsigned long xs_seed;
 ** game's fights went by how the tasks interleaved, dq0cmd's, dq0handy's, with a byte more of code anywhere) */
 #if defined (RS_HOUSE_DICE) && !defined (RS_HOUSE_DICE_DONE)
 #define RS_HOUSE_DICE_DONE
-void __fastcall__ dice_to (unsigned char k);    /* (../dq0/dice.inc's, a referee's .s includes it; : begun) */
-#define DICE_BEGIN      dice_to (0xFF);
+void __fastcall__ dice_to (unsigned char k);    /* (../dq0/dice.inc's, a referee's .s includes it; 3 + n,
+                                                **   the hub's dice, dq0 -R's: begun) */
+#define DICE_BEGIN      dice_to (3 + HUB->dice);
 #define DICE_IN(k)      dice_to (k);
 #endif

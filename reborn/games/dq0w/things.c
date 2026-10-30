@@ -2610,12 +2610,13 @@ void __fastcall__ s_thing_words (const struct item* q)
 }
 
 /* What its words say of a thing's state, in a byte (two alike if theirs are: a thing's words are its kind's, how many,
-** its make's wear and harm, lit, its fuel, closed: words's), tw's */
-static unsigned char sig (void)
+** its make's wear and harm, lit, its fuel, closed: words's), p's (tw, or a record in the store's window: alike's, not
+** copied out, 2026-10-30) */
+static unsigned char __fastcall__ sig (const struct item* p)
 {
-    return (tw.flags & I_LIT) | (tw.dur_max && tw.dur * 10 < tw.dur_max ? 2 : tw.dur_max && tw.dur * 3 < tw.dur_max ?
-        4 : 0) | (tw.wear >= 128 ? 8 : tw.wear >= 32 ? 16 : 0) | (tw.shut & IS_CLOSED ? 32 : 0) | (tw.fuel <= BURN_LOW ?
-        (tw.fuel ? 64 : 128) : 0) | (tw.id ? 0 : 1);
+    return (p->flags & I_LIT) | (p->dur_max && p->dur * 10 < p->dur_max ? 2 : p->dur_max && p->dur * 3 < p->dur_max ?
+        4 : 0) | (p->wear >= 128 ? 8 : p->wear >= 32 ? 16 : 0) | (p->shut & IS_CLOSED ? 32 : 0) | (p->fuel <= BURN_LOW ?
+        (p->fuel ? 64 : 128) : 0) | (p->id ? 0 : 1);
 }
 
 /* What the character carries gathered first, in one pass of the store (the records on an actor, and every record in
@@ -2663,30 +2664,30 @@ static unsigned char gm;
 static unsigned j, jn;
 
 /* Thing jn alike the one worded (tw, its sig lsig, worn lwo, nothing in it lin; i its number): the same kind, one each,
-** worn alike, neither named nor held, nothing in either, the same in what their words say (sig's): 1, tw back as it was
-** (told: its number added to those, nt their count) */
+** worn alike, neither named nor held, nothing in either, the same in what their words say (sig's): 1 (told: its number
+** added to those, nt their count); jn's record read where it is, not copied out (tw left as it is, 2026-10-30) */
 static unsigned char __fastcall__ alike (unsigned i, unsigned* told, unsigned char* nt)
 {
     static unsigned char r;
 
-    fetch (&tw, jn);
-    if (lin == 0xFF) {
+    cl_p = item_at (jn);
+    r = cl_p->qty == 1 && (cl_p->flags & I_WORN) == lwo && !(cl_p->flags & (I_NAMED | I_HELD)) && sig (cl_p) == lsig;
+    if (r && lin == 0xFF) {
         nx_n = 0;
         nx_w = IW_ITEM;
         nx_x = i;
         lin = lkf && next_in () != 0;           /* (Something in it: none alike; asked once, a candidate found) */
-        fetch (&tw, jn);
     }
-    nx_n = 0;
-    nx_w = IW_ITEM;
-    nx_x = jn;
-    r = tw.qty == 1 && (tw.flags & I_WORN) == lwo && !(tw.flags & (I_NAMED | I_HELD)) && sig () == lsig && !lin &&
-        (!lkf || !next_in ());                  /* (Nothing in it: asked only of a kind that holds things, its kind's
+    if (r) {
+        nx_n = 0;
+        nx_w = IW_ITEM;
+        nx_x = jn;
+        r = !lin && (!lkf || !next_in ());      /* (Nothing in it: asked only of a kind that holds things, its kind's
                                                 **   the same; the list not gone through for each, 2026-10-28) */
+    }
     if (r && *nt < 8) {
         told[(*nt)++] = jn;
     }
-    fetch (&tw, i);
     return r;
 }
 
@@ -2740,7 +2741,7 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
                 }
             }
         } else if (tw.qty == 1 && !(tw.flags & (I_NAMED | I_HELD))) {   /* (One that may have others alike: alike's) */
-            lsig = sig ();
+            lsig = sig (&tw);
             lwo = tw.flags & I_WORN;
             lin = 0xFF;                         /* (Whether something's in it: alike's to ask) */
             if (ngot != 0xFF) {
@@ -2804,19 +2805,36 @@ void s_list (void)
 {
     char b[6];
     unsigned i = 0;
+    static unsigned n;
+    static unsigned char d, k;
 
     ngot = 0;
     while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+        ge.n = i;
+        ge.x = n = ip->x;
+        ge.where = d = ip->where;
+        ge.kind = ip->kind;
+        for (k = 8; d == IW_ITEM && k; --k) {   /* (The character's alone: on it, or in what it carries, its chain
+                                                **   followed up; the others' things, and what's in things lying
+                                                **   about, left out: the list the shorter, its passes the quicker,
+                                                **   2026-10-30) */
+            cl_p = item_at (n);
+            d = cl_p->where;
+            n = cl_p->x;
+        }
+        if (d != IW_ACTOR || n) {
+            continue;
+        }
         if (ngot == GOT_MAX) {
             ngot = 0xFF;
             break;
         }
-        ge.n = i;
-        ge.x = ip->x;
-        ge.where = ip->where;
-        ge.kind = ip->kind;
         hub_map (KIND_BANK);
-        memcpy (GOT_AT + ngot++, &ge, sizeof ge);
+        gp = GOT_AT + ngot++;
+        gp->n = ge.n;
+        gp->x = ge.x;
+        gp->where = ge.where;
+        gp->kind = ge.kind;
     }
     text_new ();
     load = 0;

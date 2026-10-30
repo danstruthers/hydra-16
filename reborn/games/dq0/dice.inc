@@ -3,10 +3,12 @@
 ; requester's own stream of dice.h's generator (xorshift.s's xs_seed), the world's slot's (0: the game's own, as the
 ; referee began), the UI's (1) and the denizens' (2: DSLOT), swapped in as each answer begins, so a game's dice go by
 ; its seed and its commands, not by the order the tasks' requests reach the referee.  In assembly, and in an overlay if
-; the referee says (DICE_OVL = 1 and .define DICE_SEG "OVnCODE" before including it: its entry dice_entry, its stub the referee's): the main RAM's room
+; the referee says (DICE_OVL = 1 and .define DICE_SEG "OVnCODE" before including it: its entry dice_entry, its stub
+; the referee's): the main RAM's room
 ;
-;   void __fastcall__ dice_to (unsigned char k);    stream k in xs_seed, the one there kept; k $FF: the streams begun
-;                                                   from the generator's state as it is now, stream 0 in
+;   void __fastcall__ dice_to (unsigned char k);    stream k in xs_seed, the one there kept; k 3 + n: the streams
+;                                                   begun from the generator's state as it is now, mixed with n
+;                                                   (the hub's dice: dq0 -R n, the tests'), stream 0 in
 
             .import     _xs_seed
 
@@ -22,8 +24,11 @@ dice_entry:
             .code
 _dice_to:
 .endif
-            cmp         #$FF
-            bne         @to
+            cmp         #3
+            bcc         @to
+            sbc         #3              ; (The tests' offset: into the state's third byte, C = 1)
+            eor         _xs_seed + 2
+            sta         _xs_seed + 2
             ldx         #7                  ; Begun: streams 1 and 2 the state, their high bytes changed ("UI", "DN")
 :           txa
             and         #3

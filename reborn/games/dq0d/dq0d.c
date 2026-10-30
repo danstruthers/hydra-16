@@ -2370,7 +2370,7 @@ int main (int argc, char* argv[])
     }
     kb = b;
     pb = b + 1;
-    rseed (HUB->seed ^ 0x2B7E1516UL);          /* (The minds' dice, their own: grow's) */
+    rseed (HUB->seed ^ 0x2B7E1516UL ^ (unsigned long) HUB->dice << 16);          /* (The minds' dice, their own: grow's) */
     if (start (argv[3])) {
         return 1;
     }
@@ -3107,7 +3107,7 @@ static signed char reckon (void)
                                                 **   it, desperate: beyond the field's band) */
     }
     kind_get (akind[rj]);
-    return rf;
+    return tp.mood & AM_STEADY ? FIELD_MAX : rf;   /* (Steady: whole) */
 }
 
 /* Every actor's heart anew (rfallen the one fallen: 0xFF none) */
@@ -3126,6 +3126,9 @@ static void hearts (void)
 static void __fastcall__ courage (unsigned char why)
 {
     rq.steps = reckon () / 5;
+    if (tp.mood & AM_STEADY) {
+        return;                                 /* (Steady: untested) */
+    }
     rq.a = why;
     rq.b = mf;
     rq.c = mb;

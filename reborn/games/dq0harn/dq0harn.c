@@ -928,6 +928,7 @@ int main (int argc, char* argv[])
     rseed (HUB->seed ^ 0x5245);                 /* (Its own dice: the game's seed, and its role) */
     harn_own_skills (own, 1);                   /* (Its own skill: Cartography) */
     beasts (2);
+    hub_map (0);
     DICE_BEGIN
     for (;;) {
         hy_sem_acquire (HUB->sem[T_REFEREE]);   /* (Waiting costs nothing) */

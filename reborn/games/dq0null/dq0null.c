@@ -798,6 +798,7 @@ int main (int argc, char* argv[])
         return 1;
     }
     rseed (HUB->seed ^ 0x5245);                 /* (Its own dice: the game's seed, and its role) */
+    hub_map (0);
     DICE_BEGIN
     for (;;) {
         hy_sem_acquire (HUB->sem[T_REFEREE]);

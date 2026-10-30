@@ -1287,5 +1287,14 @@ background is doing.
   (a denizen's kit and its parts' copies could hold the UI's intent back a second).  The turns pace is as it was.
 - **The lib folder's files** a task reads again and again are opened once and kept open (the outfits, the traces'
   words, the help): an open on the card was some 700,000 cycles.
+- **The dice by who asks**: the referee keeps a stream of dice for each requester (the world's slot, the UI's, the
+  denizens'), and the minds keep their own, apart from a stratum's population's and a lair's placing; so a game's
+  fights at the turns pace go by its seed and its commands, not by how the tasks interleave or how the code is laid
+  out.  The tests' `dq0 -R n` (0-252) offsets the dice: the same dungeon, other rolls; the tests whose rolls changed
+  were given the offset that plays their game again, or their scene set (a steady kin, AM_STEADY; a room gone into).
+- **Told once**: a stir's first sentence ("Something stirs.") said whatever, the rest not twice till the next line
+  typed; "Everything goes black again." for the character's second fall.
+- **An inventory's list** gathered of the character's things alone (its chain followed up), its alike things read
+  where they lie; a line typed while the last's answer is owed gets the denizens' quarter second of its own.
 
 **Design:** DENIZENS.md, the tasks giving way to a command in hand; docs/03-base/kernel.md, the scheduler.

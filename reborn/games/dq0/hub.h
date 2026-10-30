@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     28                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     29                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -948,7 +948,9 @@ struct actor {
 };
 #define AM_HURT         0x01                    /* (An actor's mood: wounded, */
 #define AM_BERSERK      0x02                    /*   berserk, its courage's test's; */
-#define AM_LEADS        0x04                    /*   a successor at its leader's post: succession's, 2026-10-30) */
+#define AM_LEADS        0x04                    /*   a successor at its leader's post: succession's, 2026-10-30; */
+#define AM_STEADY       0x08                    /*   steady: its heart whole, its courage never tested (a scene's
+                                                **   setting, a test's: the fights' kin that stands, 2026-10-30) */
 enum { BD_TWO, BD_FOUR, BD_SERPENT, BD_MANY, BD_WINGS, BD_NONE, NBODIES };
 enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIED };   /* An attitude, the worst
                                                 **   first (DENIZENS.md): attacks on sight; threatens, keeps off;
@@ -1009,7 +1011,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   test_start;                 /* (dq0 -T: the character begins at a way down, for the tests; 2,
                                                 **   -T twice: by the theme's first piece on the top stratum) */
     unsigned char   resume;                     /* A game carried on from its save (the world restores, not begins) */
-    char            savedir[40];                /* The save's folder (dq0 -d), or "" (none) */
+    char            savedir[39];                /* The save's folder (dq0 -d), or "" (none) */
+    unsigned char   dice;                       /* (dq0 -R n, the tests': the dice's own offset, the game's seed's the
+                                                **   same: every task's streams mixed with it, the dungeon not) */
     unsigned long   seed;
     char            pcstatus[16];               /* The character's state, the referee's words ("UP 3") */
     volatile unsigned char pc_stratum;          /* Where the character is (the world's): its stratum, */
@@ -1352,6 +1356,7 @@ struct wsave {
 **   own hub.resume ui
 **   own hub.savedir ui
 **   own hub.seed ui
+**   own hub.dice ui
 **   own hub.pcstatus referee                                   (The referee's words)
 **   own hub.pc_stratum world                                   (The character's body: the world's; a game carried
 **                                                                on, its world.dat's)

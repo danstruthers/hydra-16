@@ -232,7 +232,14 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
         who (fl & FF_A_DEAD ? aname : dname, 1);
         add ((fl & FF_A_DEAD ? pc : !pc) ? " are dead." : " falls dead.");
     } else if ((fl & (FF_A_DOWN | FF_D_DOWN)) && !(f->which & FW_AGAIN)) {
-        add ((fl & FF_A_DOWN ? pc : !pc) ? " Everything goes black." : " It falls senseless.");
+        if (fl & FF_A_DOWN ? pc : !pc) {        /* (The character's: once an answer, then "again", as a harm's state
+                                                **   is, harm_told's: a second fall senseless in a long fight's
+                                                **   answer, 2026-10-30) */
+            add (harm_told & C_UNCONSCIOUS ? " Everything goes black again." : " Everything goes black.");
+            harm_told |= C_UNCONSCIOUS;
+        } else {
+            add (" It falls senseless.");
+        }
     }
     if (fl & FF_FLEES) {
         add (" It flees.");
