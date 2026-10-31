@@ -2270,7 +2270,8 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
   minutes gone, a minute at a time while anything's to tell, else as its next level could come; twice as fast at
   vigorous work: running, fighting, swimming, digging, climbing).  Thirst: thirsty at 8 hours, very thirsty at 16, parched at 24, dying of it
   at 48, dead at 72.  Hunger: hungry at 8 hours, very hungry at 24, starving at 3 days, wasting away at 10, dead at
-  30.  Each told as it comes ("You're getting thirsty."), shown on the status line once it matters ("thirsty",
+  30.  Each told as it comes ("You're getting thirsty."), a long task (a wait, a sleep, a walk) asked about then, soft
+  ("Keep waiting?"), as another soft interruption is, shown on the status line once it matters ("thirsty",
   "hungry"; the referee's news, RS_DESCRIBE b 4's).  The want's fatigue (HarnMaster's): no level at the first, then 1, 2 and 4 fatigue
   levels for each of hunger and thirst, not rested off until it eats or drinks (HarnMaster's: a fatigue level the
   universal penalty's, in every test; the null ruleset none).
