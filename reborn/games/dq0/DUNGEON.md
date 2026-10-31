@@ -852,8 +852,8 @@ or a shaft can be jumped down (jump down: a fall of its height).
 - **Fatigue** is the referee's (the book's movement fatigue: HOUSE.md's moving and tiring): walking (or slower) a
   fatigue level a day, jogging one each five minutes, running one each two, sprinting one each minute, the time at
   each pace added up across moves; standing still (waiting, the time between moves) is rest, a level gone each ten
-  minutes of it; strenuous work (a climb's rounds, a dig's spells, a battering's blows; swimming, slice 4.9) the
-  book's rate for it, a level each five minutes, as a jog.  The world tells the referee the time moved at each pace,
+  minutes of it; strenuous work (a climb's rounds, a dig's spells, a battering's blows, a fight's rounds and a pass
+  engaged: HOUSE.md's fighting on; swimming, slice 4.9) the book's rate for it, a level each five minutes, as a jog.  The world tells the referee the time moved at each pace,
   at strenuous work, and the rest (RS_EXERT), and the referee keeps the levels on the sheet: the book's fatigue
   penalty, part of the universal penalty every test pays and of the physical (so a tired character's Move, and every
   pace, slows); kept with the sheet (pc.hm's "pace" line: the pace, the watchfulness, the exertion).  It doesn't

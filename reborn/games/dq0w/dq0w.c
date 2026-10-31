@@ -4685,6 +4685,14 @@ void __fastcall__ s_intent_few (struct msg* m)
                                                 **   task, in minutes past 100 of them) */
         }
         free_at = HUB->now;                     /* (Waiting: rest) */
+        if (!m->w2 && !(m->a & WA_SLEEP) && zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
+            free_at += t = t < HUB->round ? t : HUB->round;     /* (Engaged: a pass, its round active combat, strenuous
+                                                **   work as a round fought is (the book's second variant of combat
+                                                **   fatigue, Combat 7: every round of it, whatever it does; HOUSE.md's,
+                                                **   2026-10-31); a longer wait's rest after it) */
+            spend (GA_WORK, t);
+            hub_map (0);
+        }
         if (!m->w2) {
             evb = m->a;                         /* (Its unit and its sleep, for the words: E_TIME's b) */
             event (E_TIME, 0, m->w1 ? m->w1 : HUB->round);

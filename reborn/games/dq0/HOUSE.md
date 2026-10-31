@@ -337,8 +337,11 @@ silent on all of it.
   badly hurt.  Keep fighting?"), the blows going on as it asks at the real paces, the clock still at the turns pace
   till it's answered; the other soft questions (something seen or heard) don't ask it, nor do a blow, a wound or a
   hostile near stop it.  It tires as strenuous work does (the user's, 2026-10-21: the book's second variant of combat
-  fatigue, a level each five minutes of it): each round it strikes charged so; a level more asked as a hurt is
-  ("You're tiring.  Keep fighting?").  To come, the same task: a missile weapon's (in
+  fatigue, a level each five minutes of active combat): each round it fights charged so, whatever it does in it (a
+  blow, a struggle up from the ground), and a pass while it's engaged too (2026-10-31, for the user's review: the
+  book's variant counts every round of active combat, and a pass defends as it's attacked; a disengage's square is
+  its walk's, at that pace); a level more asked as a hurt is ("You're tiring.  Keep fighting?").  To come, the same
+  task: a missile weapon's (in
   range, seen, a clear line; its next missile each shot, none left the end; an enemy engaging the character ending it,
   the melee's fighting on taking over), a setting widening where it begins ("autoengage with sword at close range"),
   an ally's.  (dq0w.c's part 24.)
@@ -351,7 +354,7 @@ silent on all of it.
   aside, the first open; a passage's four ways alone).  "flee" ("escape", "run away") the same, facing the way
   it goes, then, free of them, a run on that way (none if the way's shut: the disengage enough); not engaged, a run
   from the nearest foe within a dozen squares.  Neither engaged: told ("You aren't engaged.", "There's nothing to
-  flee from.").  "pass" a round given up, defending.  A walk as it's engaged goes as a disengage does: its first
+  flee from.").  "pass" a round given up, defending (engaged, a round of the fight's tiring: fighting on's).  A walk as it's engaged goes as a disengage does: its first
   square stopping it if it's still in the zone, then on.  As it fights, either takes the fight over, its round out
   first.  Not yet: rising first if it's prone (the book's), a foe's free blow (the book has none).  (dq0w.c's part
   26.)
