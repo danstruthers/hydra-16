@@ -473,8 +473,9 @@ static void __fastcall__ attack (struct req* r)
         r->result = bare ? 2 : 0;               /* (A part of it struck the thing) */
         return;
     }
-    if ((a && d) || (a ? sheet[aden[(a - 1) & 7]] >= BTOUGH : wounds >= TOUGH)) {
-        r->result = 0xFF;                       /* (Creatures fighting each other: none; the attacker dead) */
+    if ((a && d && !(mw & MS_STRAY)) || (a ? sheet[aden[(a - 1) & 7]] >= BTOUGH : wounds >= TOUGH)) {
+        r->result = 0xFF;                       /* (Creatures fighting each other: none, but a missile's stray at one
+                                                **   beside its mark, 2026-10-30; the attacker dead) */
         return;
     }
     dw = d ? &sheet[aden[(d - 1) & 7]] : &wounds;

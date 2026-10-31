@@ -863,7 +863,7 @@ static void heard (void)
     unsigned char rel;
 
     while (hub_dnext (&dplace, &m)) {
-        if (m.kind == E_FIGHT && (!m.who || !m.a)) {
+        if (m.kind == E_FIGHT) {                /* (The character's, one at it; or a stray's, between two actors) */
             blow (&m);
             continue;
         }
@@ -1105,6 +1105,10 @@ static void __fastcall__ limb_words (const struct msg* m)
 
     if (k == WB_POSED - WB_DROP) {              /* (The body's position as it said, slice 4.6's: part 13's) */
         pose_words (m->w1);
+        return;
+    }
+    if ((m->b & 0x80) && actor_seen (m->b) == 2) {
+        msg ("You hear something fall.");      /* (A fall unseen, near: the world's b | 0x80, part 8's, 2026-10-30) */
         return;
     }
     hub_mem (KIND_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);

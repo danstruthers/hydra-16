@@ -4352,13 +4352,19 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
     }
     fwant = 0;
     pshoot = 0;
-    if (!(k = fight_foe ()) || (HUB->pcsum.cond & C_STUNNED)) {
+    if (!(k = fight_foe ()) && HUB->pc_auto && (k = pc_shot (PS_AUTO)) != 0) {
+        pshoot = 1;                             /* (None beside it, its auto-target range set: a hostile within it
+                                                **   shot at, what it shoots with taken, part 67's; 2026-10-30) */
+    }
+    if (!k || (HUB->pcsum.cond & C_STUNNED)) {
         return idle ? 3 : 0;                    /* (None; or it's in shock, in no state to fight) */
     }
     fight_begin (h & 2 ? k | TE_STILL : k);    /* (A hostile engaging it: fought back, at the middle, with what it
                                                 **   holds; after a command that took a fight over, turned to) */
     HUB->pc_aim = Z_MID;
-    HUB->pc_strike = in_hand ();
+    if (!pshoot) {
+        HUB->pc_strike = in_hand ();
+    }
     fight_blow (k);
     return 2;
 }

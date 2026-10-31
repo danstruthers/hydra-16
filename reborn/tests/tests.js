@@ -2019,8 +2019,8 @@ const DQ0_REPEATS = [
     why: 'a climb\'s rounds, each told as it ends (a long climb: many rounds to an answer, some the same)' },
   { what: /^(?:(The|A) .* |Something )(bites|claws|strikes|swings|lunges|thrusts|shoots|throws)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge|shoot|throw)\b/,
     why: 'a fight\'s rounds, each blow told as it falls (attack: the rounds till it ends, the same words some of them; in the dark "Something", unseen: dq0traces\' rats)' },
-  { what: /^(?:You get to your feet|The [a-z ]+ (?:gets to its feet|scrambles to its feet|coils itself up again|rights itself|flutters up again|rises again))\.$/,
-    why: 'a fight\'s falls and risings, each told as it gets up (a long fight: a creature down twice, a stumble\'s, a leg\'s wound\'s, up each time; dq0missile\'s rat)' },
+  { what: /^(?:You get to your feet|You fall|You hear something fall|The [a-z ]+ (?:gets to its feet|scrambles to its feet|coils itself up again|rights itself|flutters up again|rises again|falls|goes down|is thrown down|is flipped onto its back|drops to the floor|sinks to the floor))\.$/,
+    why: 'a fight\'s falls and risings, each fall told as it falls and each rise as it gets up (a long fight: a creature down twice, a stumble\'s, a leg\'s wound\'s, up each time; dq0missile\'s rat; every fall told since 2026-10-30)' },
   { what: /^The [a-z ]+ scrabbles, but can't get up\.$/,
     why: 'a fight\'s rounds with a creature down, each try to rise told as it fails (dq0missile\'s rat, its dice by who asks, 2026-10-30)' },
   { what: /^You turn to (?:something|the [a-z ]+)\.$/,
@@ -5126,6 +5126,50 @@ module.exports = {
         const den = T.filter(u => u.k > g2.k).flatMap(u => u.dens).filter(e => e.kind === 'E_FIGHT' && e.who > 0);
         if (!den.length) f.push('no elf\'s blow or shot (E_FIGHT)');
         inTurn(o, ['The elf unslings its hartbow.', 'The elf shoots at you with its hartbow'], f, 'the elf\'s shot: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0throws', outfit: true, asks: true, near: ['fight'], what: 'Dingus Quest Zero\'s fights complete (slice 4.7\'s left, 2026-10-30: DUNGEON.md\'s fights, HOUSE.md\'s missiles, for review), by the words, the fights told and the item store: the character (hmchar seed 23, its Bow 15: missing often) shooting at seed 5\'s giant rats down the ladder, fought on, each miss half the time striking a rat beside its mark (the book\'s, a stray: "Your shot strikes the giant rat instead"), every fall told as it falls and each rise after a fall told (no rise without its fall); its arrows gathered back into its quiver, not its pack; then a hand-written theme\'s soldiers (manarms: a spear in hand and a knife, or a crossbow; seed 4), hostile, waited for: one throwing its spear, or putting it up and shooting its crossbow ("The soldier throws its spear at you", "shoots at you with its crossbow"); then the character set to shoot on its own ("autotarget at medium range"), shot at by the elves (sindwar, hartbows: seed 4) and shooting back unbidden (an E_FIGHT of its own, its shortbow\'s)',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml bow 15 >> /ram/c.hm',
+        'echo ml dge 90 >> /ram/c.hm', 'echo ml swd 90 >> /ram/c.hm',
+        "dq0 -p t -s 5 -c /ram/c.hm -T -k 'gambeson,mail hauberk'", 'wear the gambeson', 'wear the mail hauberk', 'd', 'drop the torch', 'shoot the rat',
+        ...Array(12).fill('wait'), 'gather the arrows', 'quit',
+        'mkdir /ram/g', "echo 'faction | Guards | manarms | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
+        'defend block', ...Array(30).fill('wait'), 'quit',
+        'mkdir /ram/h', "echo 'faction | Wardens | sindwar | 0-0 | 96 | - | 0 | h | -' > /ram/h/theme.txt",
+        "dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/h -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
+        'autotarget at medium range', 'defend block', ...Array(30).fill('wait'), 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out);
+        if (process.env.DQ0SHOW) { console.log(o); for (const t of T) console.log(dq0Evs(t)); }
+        const g1 = T.of("dq0 -p t -s 5 -c /ram/c.hm -T -k 'gambeson,mail hauberk'"), g2 = T.of("dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'"),
+          g3 = T.of("dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/h -k 'sword,gambeson,mail hauberk'");
+        if (g1.k < 0 || g2.k < 0 || g3.k < 0) return ['the games not played'];
+        const s1 = o.slice(o.indexOf("> shoot the rat"), o.indexOf('> gather the arrows')), s2 = o.slice(o.indexOf('/ram/g -k'), o.indexOf('/ram/h -k')),
+          s3 = o.slice(o.indexOf('/ram/h -k'));
+        // (A stray: a miss striking one beside the mark)
+        if (!/Your shot strikes (?:the giant rat|something) instead/.test(s1)) f.push('no stray told (a miss striking a rat beside its mark)');
+        // (Every fall told, each rise after one)
+        const rises = [...s1.matchAll(/The giant rat (?:scrambles to its feet|goes down)\./g)].map(x => x[0]);
+        let down = 0;
+        for (const r of rises) {
+          if (/goes down/.test(r)) down++;
+          else if (down-- <= 0) { f.push('a rat\'s rise with no fall told before it: ' + rises.join(' ')); break; }
+        }
+        // (The arrows gathered into the quiver)
+        const ga = T.of('gather the arrows', g1.k), inQuiver = s => (s ? s.items : []).filter(i => i.name === 'arrows' && i.where === 'IW_ITEM')
+          .filter(i => { const c = s.items.find(j => j.n === i.x || j.i === i.x); return c && c.name === 'quiver'; }).reduce((a, i) => a + i.qty, 0);
+        if (!/You gather up \d+ arrows?\./.test(s1 + o.slice(o.indexOf('> gather the arrows')))) f.push('the gathering not told');
+        if (ga.after && !(inQuiver(ga.after) > inQuiver(ga.at))) f.push('the arrows not gathered into the quiver (' + inQuiver(ga.at) + ', ' + inQuiver(ga.after) + ')');
+        // (The soldiers: a spear thrown, or a crossbow taken up and shot)
+        if (!/The soldier (?:throws its spear at you|shoots at you with its crossbow)/.test(s2)) f.push('no soldier\'s throw or crossbow shot');
+        // (Auto-target: the character shooting back unbidden)
+        inTurn(s3, ['You shoot at hostiles within medium range on your own.', 'You shoot at the elf with your shortbow'], f, 'the auto-target: ');
         return f;
       },
       sdcard: true

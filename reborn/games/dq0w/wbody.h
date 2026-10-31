@@ -34,10 +34,21 @@ extern struct mshot mshot;
 unsigned char __fastcall__ shot_op (unsigned char op, unsigned char k, unsigned char z);   /* (Part 65's: wshoot.c)
                                                 **   The missiles' calls: */
 unsigned char __fastcall__ pc_shot (unsigned char k);  /* (Part 67's) The character's shot at actor k; 0xFF: the
-                                                **   nearest foe it can shoot at, plus 1 (0 none) */
-enum { SO_ARMS, SO_REACH, SO_DEN, SO_UNBOW };  /* what the character shoots with; whether it can shoot at k
-                                                **   (plus 1: 2, 1 senseless, 0 not);
-                                                **   body bd's shot at the character (aim z); its launcher let fall */
+                                                **   nearest foe it can shoot at, plus 1 (0 none); PS_DEN body bd's
+                                                **   shot or throw at the character; PS_UNBOW its launcher let fall */
+#define PS_DEN          0xFE
+#define PS_UNBOW        0xFD
+#define PS_AUTO         0xFC                    /* (The nearest foe within the auto-target range, the hub's pc_auto, its
+                                                **   launcher taken as what it shoots with: plus 1, 0 none) */
+enum { SO_ARMS, SO_REACH, SO_LINE };            /* what an actor shoots with (k: 0 the character, 1 body bd); whether
+                                                **   the character can shoot at k (plus 1: 2, 1 senseless, 0 not);
+                                                **   whether body bd has a shot at the character within z bands of
+                                                **   kind k's range (0 its launcher's) */
+struct stray {                                  /* (A miss's stray's: part 67's, from where it was shot at whom, the
+                                                **   thing thrown) */
+    unsigned char   sn;
+    unsigned        sx, sy, tx, ty, thr;
+};
 unsigned __fastcall__ gath_op (unsigned char op, unsigned char a);  /* (Part 66's) The missiles gathered (begun, a
                                                 **   their family; its next, 2 on) */
 enum { GO_GATHER, GO_ON };
@@ -76,8 +87,10 @@ unsigned char den_legs (void);                  /* (Part 51) Its legs at a move'
 void __fastcall__ den_other (const struct msg* m);  /* (Part 60) A denizen's things made (I_KIT's) */
 void __fastcall__ den_enter (const struct msg* m);  /* (Part 60) Come near (I_ENTER's): its body's from it, its
                                                 **   things in the store, the referee told */
-unsigned char den_draw (void);                  /* (Part 60) Its weapon drawn from its belt, its hands empty of one: 1
-                                                **   (its round's), or 0 */
+unsigned char __fastcall__ den_draw (unsigned char want);  /* (Part 60) Its weapon drawn from its belt (or one it put
+                                                **   up), its hands empty of one: 1 (its round's), or 0; want not 0, a
+                                                **   thing of its own of that kind taken in hand, what it holds put up
+                                                **   (a launcher, a thing to throw: wshoot.c's) */
 void __fastcall__ den_strip (unsigned body);    /* (Part 60) Dead: its things on its body (body, its remains), what
                                                 **   it held beside it */
 void __fastcall__ limb_news (unsigned w, unsigned char b);  /* (Part 49) The limbs' news, the denizens' ring's (E_BEAT's
