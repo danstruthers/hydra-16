@@ -24,7 +24,8 @@ unsigned char __fastcall__ on_pc (unsigned i);   /* (Part 10's stub: carried by 
 #pragma local-strings (on)
 
 extern unsigned char pc_hit;                    /* (dq0w.c's: a hurt stops its long task, hard) */
-static unsigned long body_at;                   /* (The minutes told up to: the last one's end) */
+unsigned long body_at;                          /* (The minutes told up to: the last one's end; the game's start, s_begin's,
+                                                **   hunger and thirst counted from it, slice 4.9's) */
 static unsigned long wdue;                      /* (The referee's next watch: asked then, nothing bleeding) */
 unsigned long body_due = 144000UL;              /* (The same, for the lights' minute: wbody.h's; at first four hours on, so a
                                                 **   game begun asks nothing of its first minutes but a hurt's) */

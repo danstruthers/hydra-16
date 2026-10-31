@@ -2247,7 +2247,8 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
   four at most), from a region of its halls downhill to the lowest neighbour as long as there's one lower, ending in a
   lake.  A chunk's water as it's grown: a cistern full, 5 to 8 feet over its floor's lowest; a cave's chambers in a
   lake's region flooded, 4 to 11 feet; in a stream's region its passages running a foot deep and its chambers' hollows
-  pooled a foot or two; where there's only water under it, one chamber in three a puddle a foot deep in its hollow.
+  pooled a foot or two; where there's only water under it, one chamber in three a puddle a foot deep in its hollow;
+  but a chamber with a way between strata in it (a stair's, a ladder's landing) kept dry, the house's.
   A square under a still pool's surface is as deep as the surface is over its floor.
 - **Wading** *(every ruleset's)*: a foot or two of water makes each step half as long again; waist-deep (3 or 4
   feet), twice as long.  Told as the character comes into it, deeper, shallower and out ("You wade in up to your
@@ -2265,19 +2266,20 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
   to revive it, so it's death at once rather than the book's Endurance times 20 seconds.  Coming up again is told
   ("You come up, gasping.").
 - **Hunger and thirst** *(every ruleset's: the book has none; the user's of 2026-10-21, DECISIONS.md's)*: counted in
-  minutes of want as the bodies' time goes (the world's, a minute at a time, twice as fast at vigorous work: running,
-  fighting, swimming, digging, climbing).  Thirst: thirsty at 8 hours, very thirsty at 16, parched at 24, dying of it
+  minutes of want as the bodies' time goes (the referee's, every one's the same rules, rswant.h: the world tells it the
+  minutes gone, a minute at a time while anything's to tell, else as its next level could come; twice as fast at
+  vigorous work: running, fighting, swimming, digging, climbing).  Thirst: thirsty at 8 hours, very thirsty at 16, parched at 24, dying of it
   at 48, dead at 72.  Hunger: hungry at 8 hours, very hungry at 24, starving at 3 days, wasting away at 10, dead at
   30.  Each told as it comes ("You're getting thirsty."), shown on the status line once it matters ("thirsty",
-  "hungry").  The want's fatigue (the referee's, RS_TIME's x[1]): no level at the first, then 1, 2 and 4 fatigue
+  "hungry"; the referee's news, RS_DESCRIBE b 4's).  The want's fatigue (HarnMaster's): no level at the first, then 1, 2 and 4 fatigue
   levels for each of hunger and thirst, not rested off until it eats or drinks (HarnMaster's: a fatigue level the
   universal penalty's, in every test; the null ruleset none).
 - **Eating** *(every ruleset's)*: a day's rations is three meals; "eat" takes a meal (five minutes), eight hours of
-  hunger off; a new day's ration begun when the last one's meals are eaten.  Not hungry (under two hours of want),
-  refused.
+  hunger off; a new day's ration begun (one of the lot used up) when the last one's meals are eaten.  Not hungry
+  (under two hours of want), refused.
 - **Drinking** *(every ruleset's)*: a pint takes six hours of thirst off; "drink" drinks as many pints as it wants
-  (half a minute each), from the water where it stands (its fill) or a well within reach, else from its waterskin
-  (four pints).  "fill my waterskin" in the water or by a well, a minute.  Not thirsty (under an hour), refused.
+  (half a minute each), from the water where it stands (its fill) or a well within reach, else from its waterskin a
+  pint at a time (four pints; "drink from the waterskin" from it whatever's about).  "fill my waterskin" in the water or by a well, a minute.  Not thirsty (under an hour), refused.
 - **The denizens** *(every ruleset's, for later)*: their hunger, thirst and larders, and a beast keeping out of deep
   water unless it swims, aren't built yet (DENIZENS.md's still to come).
 

@@ -695,8 +695,12 @@ static void __fastcall__ answer (struct req* r)
         r->result = g > (signed char) r->c ? 1 : g < (signed char) r->c ? 2 : 0;
         *tp = 0;
         break;
-    case RS_TIME:                               /* (No bleeding: none dies of it; a wound healed by its rest, a tended
-                                                **   one's eight hours, an untended one's a day: slice 4.3's simple way) */
+    case RS_TIME:                               /* (Its minutes for hunger and thirst, rswant.h's, before its
+                                                **   reply's w1; no bleeding: none dies of it; a wound healed by its
+                                                **   rest, a tended one's eight hours, an untended one's a day: slice
+                                                **   4.3's simple way) */
+        r->x[16] = (unsigned char) r->w1;
+        r->x[17] = r->w1 >> 8;
         if (!r->a && wounds) {
             rest_m += r->w1;                    /* (At rest: toward a wound healed) */
         }

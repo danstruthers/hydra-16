@@ -338,8 +338,12 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
 ** style's), from its region's (the plan's RW_*, its edges' water), by its own numbers (a hash of its place: the
 ** growers' dice as they were): a cistern full (5 to 8 feet over its floor's lowest), a cave's chambers in a lake's
 ** region flooded (4 to 11 feet), in a stream's pooled in their hollows (a foot or two), where there's water under it
-** one in three (a foot); a stream's region's passages running with it, a foot deep.  A square of a room's floor under
+** one in three (a foot), but a chamber with a way between strata in it, kept dry (the house's: the stairs' landing
+** never under water); a stream's region's passages running with it, a foot deep.  A square of a room's floor under
 ** its surface wet (the bits), a passage's square of a stream's */
+#pragma code-name (push, "OV6CODE")           /* (Overlay 6's: 3 full) */
+#pragma rodata-name (push, "OV6RODATA")
+
 static unsigned char __fastcall__ wh (unsigned char k)
 {
     unsigned h = (L->cx * 31 + L->cy * 17 + k * 101) ^ 0x5A5A;
@@ -362,7 +366,10 @@ void __fastcall__ o_wet_chunk (struct chunk* c, const struct edges* e)
         k = wh (r);
         d = p->kind == U_CISTERN ? 5 + (k & 3) : p->kind != U_CAVE ? 0 : w & RW_LAKE ? 4 + (k & 7) : w & RW_STREAM ?
             1 + (k & 1) : k % 3 == 0;
-        if (!d) {
+        for (x = 0; x < e->nland && !(e->lx[x] >= p->x && e->lx[x] < p->x + p->w && e->ly[x] >= p->y &&
+            e->ly[x] < p->y + p->h); ++x) {
+        }
+        if (!d || x < e->nland) {
             continue;
         }
         lo = 120;
@@ -396,3 +403,6 @@ void __fastcall__ o_wet_chunk (struct chunk* c, const struct edges* e)
         }
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)

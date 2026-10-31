@@ -63,7 +63,7 @@ void __fastcall__ grow_built (struct chunk* c, const struct edges* e, unsigned l
 void __fastcall__ grow_caves (struct chunk* c, const struct edges* e, unsigned long seed);  /* (Overlay 3's) */
 void __fastcall__ water_plan (unsigned char n);    /* A stratum's water traced over its plan (overlay 5's: plan.c,
                                                 **   slice 4.9's) */
-void __fastcall__ wet_chunk (struct chunk* c, const struct edges* e);  /* Its water (overlay 3's: slice 4.9's) */
+void __fastcall__ wet_chunk (struct chunk* c, const struct edges* e);  /* Its water (overlay 6's: slice 4.9's) */
 void __fastcall__ fixtures (struct chunk* c);   /* Its materials, windows, portcullises, traps (overlay 5's) */
 void __fastcall__ sconces (struct chunk* c, unsigned x0, unsigned y0);  /* Its rooms' sconces, as it's first stocked
                                                 **   (part 3's, sconce.c: after stock's, in its list) */

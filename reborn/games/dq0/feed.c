@@ -19,7 +19,7 @@
 ** from the water it stands in or a well within reach (the things' IO_FIND), else a pint at a time from its waterskin
 ** (IO_USE, "water": half a minute each), as many as it wants; the referee told (RS_TIME, w1 0: x[14] the meals, | 0x80 a
 ** ration begun, x[15] the pints), its hunger and thirst its own (rswant.h's); not hungry, not thirsty, refused */
-void __fastcall__ s_feed (unsigned char eat)
+static void __fastcall__ feed_do (unsigned char eat)
 {
     struct req* r;
     unsigned w;
@@ -66,4 +66,12 @@ void __fastcall__ s_feed (unsigned char eat)
     r->x[15] = p;
     ask_b (RS_TIME, 0, 0)->state = REQ_FREE;
     intend2 (I_WAIT, w, 1);
+}
+
+void __fastcall__ s_feed (unsigned char eat)
+{
+    unsigned b = hub_here ();                   /* (Called from overlay 2: its window put back) */
+
+    feed_do (eat);
+    hub_back (b);
 }

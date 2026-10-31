@@ -779,6 +779,7 @@ static void __fastcall__ answer (struct req* r)
         strncpy (tpart, r->text, sizeof tpart - 1);
         memcpy (rq, r, sizeof rq);
         memcpy (rq + offsetof (struct req, x) + WANT_X, &HUB->pc_hunger, 6);    /* (The hub's want: slice 4.9's) */
+        memcpy (rq + offsetof (struct req, x) + 16, &r->w1, 2);     /* (Its minutes, the reply's w1 after) */
         body_req ((struct req*) rq);
         if (r->kind == RS_TIME) {
             want ((struct req*) rq);            /* (Hunger and thirst: overlay 7's, want.c) */

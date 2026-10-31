@@ -2,8 +2,8 @@
 ** rswant.h - hunger and thirst (slice 4.9: HOUSE.md's water, hunger and thirst, every ruleset's house rules), the
 ** referee's to keep, each referee including it where its room is (dq0harn's overlay 7, want.c; dq0null's main), with
 ** WANT_SAY (s) its way to put words in its news (RS_DESCRIBE b 4's, the bodies' time's).  Asked with the bodies' time
-** (RS_TIME, the world's: w1 the minutes gone, a what the character was about, 2 vigorous work: twice the want) and as it
-** eats and drinks (RS_TIME, the UI's: w1 0, x[14] the meals eaten, | 0x80 a day's ration begun, x[15] the pints drunk);
+** (RS_TIME, the world's: w1 the minutes gone, copied into x[16..17] by the referee before its reply's w1; a what the
+** character was about, 2 vigorous work: twice the want) and as it eats and drinks (RS_TIME, the UI's: w1 0, x[14] the meals eaten, | 0x80 a day's ration begun, x[15] the pints drunk);
 ** the hub's want in x[8..13] (pc_hunger, pc_thirst, pc_want, pc_meals: the referee's own, copied in and back by its main
 ** code), anew; its levels' rising told; the clock's next ask (the reply's x[4..7]) the sooner for its next level.
 ** want_of's result: the fatigue levels from want, | WANT_DIES dead of it (its words told)
@@ -52,7 +52,7 @@ static unsigned __fastcall__ want_less (unsigned v, unsigned n)
 static unsigned char __fastcall__ want_of (struct req* r, unsigned long now)
 {
     unsigned char* x = r->x + WANT_X;
-    unsigned h = x[0] | x[1] << 8, t = x[2] | x[3] << 8, n = r->w1;
+    unsigned h = x[0] | x[1] << 8, t = x[2] | x[3] << 8, n = r->x[16] | r->x[17] << 8;
     unsigned char w, o = x[4], k, d = 0;
     unsigned long due;
 

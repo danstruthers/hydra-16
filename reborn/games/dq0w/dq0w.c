@@ -2349,6 +2349,7 @@ unsigned char s_travel_on (void)
 
 /* The dungeon begun: the top stratum's record (a stand-in for the theme's say: a few hundred feet each way), its way
 ** in; its plan the maker's */
+extern unsigned long body_at;                   /* (wtend.c's: the bodies' time from the game's start, slice 4.9's) */
 void s_begin (void)
 {
     struct stratum* s;
@@ -2358,6 +2359,7 @@ void s_begin (void)
     struct tplace* p;
 
     hub_map (0);
+    body_at = HUB->now | 1;
     if (HUB->resume) {                          /* (Carried on: the save's strata, the change records' generation,
                                                 **   the maker's seen maps back) */
         move.how = A_RESUMED;
