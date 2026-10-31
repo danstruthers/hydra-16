@@ -2606,9 +2606,10 @@ int main (int argc, char* argv[])
         } else {
             ready ();                           /* (The commands' part back, if another's in) */
         }
-        if (stirs && !inn) {
+        if (stirs && !inn && !HUB->ui_cmd) {
             stirs = 0;
-            stir ();                            /* (A stir held while the line was typed and answered: told now) */
+            stir ();                            /* (A stir held while the line was typed and answered: told now, its
+                                                **   answer begun, ui_cmd's) */
         }
         t_done ();
         fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */
