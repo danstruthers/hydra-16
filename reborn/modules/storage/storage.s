@@ -27,8 +27,9 @@
 ; SPI is bit-banged on the VIA's port B (hw.inc), which only this task touches; and the Vera X's card (v) is on the
 ; VERA's SPI controller (VERA_SPI_DATA and CTRL: 12.5 MHz, 390 kHz while a card starts), which only this task touches
 ; too (vid owns the rest of the chip; those two registers share nothing with its ports).  The loops are the old OS's
-; (drivers/spi.s: 18 cycles a bit in, 33 out), unchanged: their timing is proven on the board; so is the SD card
-; layer (drivers/sd.s).  The ROM disk is read through the kernel's ROMREAD (this module runs in place in its own
+; (drivers/spi.s: 18 cycles a bit in, 33 out), unchanged: their timing is proven on the board (a card's block
+; read, sd_read, clocks its bytes in with the same bits in line, only the gap between bytes the shorter); so is the
+; SD card layer (drivers/sd.s).  The ROM disk is read through the kernel's ROMREAD (this module runs in place in its own
 ; bank: block n is bank n / 32, at $A000 + (n % 32) * 512); a RAM disk's block n is bank n / 16 of its banks, at
 ; $8000 + (n % 16) * 512.
 ;   A data write's block (HydraFS's file data, #d's data file: blk_keep) to a card is kept back in the block buffer,
@@ -85,6 +86,8 @@ bufp:       .res        2                                   ; A block's 512 byte
 l2_ptr:     .res        2                                   ; A cached block ...
 l2_from:    .res        2                                   ;   and a copy's ends
 l2_to:      .res        2
+rd_p:       .res        2                                   ; (sd_read's: where its next byte goes ...
+rd_n:       .res        1                                   ;   and its pairs of bytes to come)
 
 .bss
 spi_open:   .res        SPI_DEVS                            ; Each SPI device: its data file's fids (one open) ...
@@ -370,6 +373,35 @@ spi_recv_n:
             iny
             cpy         n
             bne         :-
+            rts
+
+; A card's block's 512 bytes clocked in at (bufp), on the VIA (sd_read's): the bits SPI_BIT_IN's as spi_recv's (18
+; cycles each, as proven on the board), two bytes at a time in line, only the gap between bytes the shorter: some 164
+; cycles a byte, not 197 (2026-10-31: the game's start, two thirds of it the card's reading).  Modifies: .A, .X, .Y
+spi_block:
+            lda         bufp
+            sta         rd_p
+            lda         bufp + 1
+            sta         rd_p + 1
+            stz         rd_n                                ; (256 pairs)
+            ldy         port                                ; (SCLK low, MOSI high)
+            sty         VIA_PORTB
+@pair:
+            .repeat     2
+            lda         #0
+            .repeat     8
+            SPI_BIT_IN
+            .endrepeat
+            sta         (rd_p)
+            inc         rd_p
+            bne         :+
+            inc         rd_p + 1
+:
+            .endrepeat
+            dec         rd_n
+            beq         :+
+            jmp         @pair
+:
             rts
 
 ; vbus for disk dk: the VERA's (v) or the VIA's.  Modifies: .A
@@ -791,7 +823,13 @@ sd_read:
             jsr         sd_token_wait                       ; The data token
             cmp         #SD_TOKEN_DATA
             bne         sd_refused
-            ldy         #0                                  ; 512 bytes
+            bit         vbus
+            bmi         @vera
+            jsr         spi_block                           ; The VIA's: in line (spi_block)
+            bra         @crc
+
+@vera:                                                      ; The VERA's (disk v): a byte at a time, spi_recv's
+            ldy         #0
 @first:
             jsr         spi_recv
             sta         (bufp),Y
@@ -804,6 +842,7 @@ sd_read:
             iny
             bne         @second
             dec         bufp + 1
+@crc:
             jsr         spi_recv                            ; (The CRC: not checked)
             jsr         spi_recv
             jsr         sd_end
