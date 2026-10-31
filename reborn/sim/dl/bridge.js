@@ -15,6 +15,7 @@ const fs = require('fs');
 const path = require('path');
 const { spawn, spawnSync } = require('child_process');
 const { createVera } = require('../../../base/sim/lib/vera.js');
+const { defaultModules } = require('../../../base/sim/lib/machine.js');
 const images = require('../../../base/tools/images.js');
 
 const ROOT = path.join(__dirname, '..', '..');
@@ -62,7 +63,7 @@ function writeSpec(t, m, opt, dir, extra) {
   if (t.start && keys(m.input).includes(0x400)) set('spec-snap', 'T');   // (Its look at the screen as the keyboard types Ѐ: lookAgain)
   if (m.termSize) set('spec-termsize', dlList(m.termSize));
   set('opt-seed', opt.seed === undefined ? 1 : opt.seed);
-  if (m.modules !== undefined) set('opt-modules', m.modules);
+  set('opt-modules', m.modules !== undefined ? m.modules : defaultModules());   // (A test's own, or HYDRA_MODULES's, or 3)
   if (m.sharedU !== undefined) set('opt-sharedu', m.sharedU);
   if (m.model) set('opt-model', dlStr(m.model));
   if (m.u7Fault) { set('opt-u7', 'T'); set('opt-u7mask', m.u7Fault.mask); set('opt-u7high', m.u7Fault.high ? 'T' : 'NIL'); }

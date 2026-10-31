@@ -161,9 +161,9 @@ HyForth (Forth 2012), bye to end
 ```
 Hydra-16: kernel 0.1, ABI 1
 POST ZP:0 ST:0 OS:0 HI:0 SH:S W:0
-RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00/0000
+RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00/0000 20:0/00/0000
 POST ok
-RAM modules: 02
+RAM modules: 03
 task F: ser
 task E: kdev
 task 1: wozmon

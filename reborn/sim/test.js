@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ****************************************************************************
 // test.js - HydraOS's regression tests (tests/tests.js), and the base's before them: the base's runner
-// (../../base/sim/test.js: its options, -v, -j N, --seed, --build, --dl, are there) with HydraOS's images (its
+// (../../base/sim/test.js: its options, -v, -j N, --seed, --build, --dl, --modules, are there) with HydraOS's images (its
 // modules/rom.txt's modules, less a test's without, and the test's own; the ROM disk), its PC folders (/pc: a test's
 // pc), the danlang emulator (sim/dl) and its build; and the hub writers' check (sim/lib/hubown.js: hub.h's owners'
 // table) in every Dingus Quest Zero test (dq0...): a write to the hub's banks by a task its region doesn't allow, and
@@ -16,8 +16,8 @@
 // The tests a change can affect (--changed [REF], --near AREA, --list: the base's runner's, ../base/sim/select.js, with
 // tests/areas.js's table), and the tiers of checks (--tier report|lead: sim/tiers.js, tests/TESTING.md).
 //
-// Usage: [HUBOWN=0|1] [RULES=NAME] node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...] [--list] [--build]
-//          [-v] [--seed N] [-j N] [--dl]
+// Usage: [HUBOWN=0|1] [RULES=NAME] [HYDRA_MODULES=N] node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...]
+//          [--list] [--build] [-v] [--seed N] [-j N] [--dl] [--modules N]
 //        node sim/test.js --tier report|lead [--changed REF] [-j N] [--seed N] [--list]
 'use strict';
 const fs = require('fs');

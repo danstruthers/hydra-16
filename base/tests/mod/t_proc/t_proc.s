@@ -180,7 +180,7 @@ main:
             SEEK_       $0020                               ; (Bank 0, $20: its bank as it starts)
             WRITE_      s_xyz, 3
             EXPECT_A    3, "ram: 3 bytes written to bank 0"
-            SEEK_       $40000                              ; (Two modules: 32 banks)
+            SEEK_       $60000                              ; (Three modules: 48 banks)
             READ_       16
             EXPECT_A    0, "ram: nothing past the last module's banks"
             lda         fd
@@ -212,7 +212,7 @@ main:
             LDR         r1, stat
             jsr         STAT
             lda         stat + SR_LENGTH + 2
-            EXPECT_A    4, "ram: 256K long (two modules)"
+            EXPECT_A    6, "ram: 384K long (three modules)"
 
 ; ---- regs, env
             PPATH_      s_regs, 0

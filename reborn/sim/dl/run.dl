@@ -12,7 +12,7 @@
 ;   --speed N           interactive: N times real time (default 1; 0: as fast as it goes)
 ;   --clock MHz         the CPU clock (3.579545; 7.15909 with jumper J8: build with --clock 2 too)
 ;   --acia wdc          a WDC W65C51N in the serial port, and its BIOS (bin/bios_wdc.bin)
-;   --modules N         RAM modules installed (default 2)
+;   --modules N         RAM modules installed, 1 to 3 (default 3, the board's: 48 banks, 384K a task)
 ;   --seed N            the power-up's junk RAM and registers (default 1)
 ;   --bios FILE, --prom FILE   other images (--prom: the whole paged ROM, as sim/dl/image.js writes a test's)
 ;   --sd FILE           a card image (sim/tools/hydrafs.js makes them), SD device 0, then 1 ...: read and

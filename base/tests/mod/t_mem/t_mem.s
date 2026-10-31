@@ -1,8 +1,8 @@
 ; ****************************************************************************
-; t_mem - memory (phase 1.8), run as init with t_child and two RAM modules: BREAK, PAGES_ALLOC and PAGES_FREE,
-; BANKS, BANKS_ALLOC and BANKS_FREE, and a shared segment seen by another task (and copied with kcopy), read raw
-; through #r (init's: the segment's bank, this task's RAM), named in #s (the name keeps it), freed when the name and
-; the last task attached are gone.
+; t_mem - memory (phase 1.8), run as init with t_child and three RAM modules (tests.js's machine: the board's): BREAK,
+; PAGES_ALLOC and PAGES_FREE, BANKS, BANKS_ALLOC and BANKS_FREE, and a shared segment seen by another task (and copied
+; with kcopy), read raw through #r (init's: the segment's bank, this task's RAM), named in #s (the name keeps it), freed
+; when the name and the last task attached are gone.
 
 .include "hydra.inc"
 .include "hw.inc"
@@ -100,9 +100,9 @@ main:
             jsr         BANKS
             ldx         r0                                  ; (Before the check: it prints, with r0)
             stx         seg
-            EXPECT_A    $20, "BANKS: 32 (two RAM modules)"
+            EXPECT_A    $30, "BANKS: 48 (three RAM modules)"
             lda         seg
-            EXPECT_A    $03, "BANKS: modules 0 and 1"
+            EXPECT_A    $07, "BANKS: modules 0, 1 and 2"
             lda         #3
             jsr         BANKS_ALLOC
             EXPECT_A    0, "BANKS_ALLOC 3: banks 0-2"
@@ -117,12 +117,12 @@ main:
             ldx         #3
             jsr         BANKS_FREE
             EXPECT_ERR  E_INVAL, "BANKS_FREE of banks not given: E_INVAL"
-            lda         #29
+            lda         #45
             jsr         BANKS_ALLOC
-            EXPECT_ERR  E_NOMEM, "BANKS_ALLOC 29: banks 4-32, but 32 is no module's: E_NOMEM"
-            lda         #28
+            EXPECT_ERR  E_NOMEM, "BANKS_ALLOC 45: banks 4-48, but 48 is no module's: E_NOMEM"
+            lda         #44
             jsr         BANKS_ALLOC
-            EXPECT_A    4, "BANKS_ALLOC 28: banks 4-31, the rest of modules 0 and 1"
+            EXPECT_A    4, "BANKS_ALLOC 44: banks 4-47, the rest of modules 0, 1 and 2"
             lda         #4
             jsr         BANKS_ALLOC
             EXPECT_ERR  E_NOMEM, "BANKS_ALLOC 4 with banks 0-2 left: E_NOMEM"

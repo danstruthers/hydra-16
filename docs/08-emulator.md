@@ -79,7 +79,7 @@ window changes.
 | `--input TEXT` | Keys to type (`\r` Enter, `\w` a wait), one every 20,000 cycles from cycle 200,000; `--paste` as fast as the line goes |
 | `--clock MHz` | The CPU's clock (3.579545; `7.15909` for a J8 board with faster parts than the stated ones, with a `build.js --clock 2` build: the stated parts run at 3.58 MHz or lower) |
 | `--acia wdc` | A WDC W65C51N in the serial port, and its BIOS ROM (`bin/bios_wdc.bin`) |
-| `--modules N` | Memory cards installed (default 2) |
+| `--modules N` | Memory cards installed, 1 to 3 (default 3, as the board has: 48 banks, 384K a task; `HYDRA_MODULES=N` in the environment sets the default) |
 | `--seed N` | The power-up's random RAM and registers, repeatable |
 | `--sd FILE` | A card image in SD device 0 (again for 1, 2 ...), read and written in the file itself.  With none, the system's own card (HydraOS's `bin/sdcard.img`), its writes kept in memory; `--no-sd`: no card |
 | `--pc-dir DIR` | (HydraOS) `/pc` is the folder DIR: the emulator plays the PC tool's part.  `--pc-read-only`, `--pc-log` |
@@ -232,6 +232,7 @@ longest stretch with interrupts off, and its own checks.  They run as many at a 
 | `node sim/test.js --build` | Build first |
 | `node sim/test.js -j 1` | One at a time |
 | `node sim/test.js --dl` | In the danlang emulator ([below](#the-emulator-in-danlang)) |
+| `node sim/test.js --modules 2` | Every test's machine with two memory cards, not three (`HYDRA_MODULES=2` does the same, for the soaks too); a test that sets its own still has its own |
 
 The tests are in `base/tests/tests.js` and `reborn/tests/tests.js`; HyForth's (the Forth 2012 suite), hylang's (danlang's
 suite) and HyBASIC's suites run among them.

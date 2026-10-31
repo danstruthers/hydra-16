@@ -72,6 +72,7 @@ module.exports = {
     {
       name: 'proc', what: '/proc/N\'s mem (its RAM, bank, ROMs, the I/O area), ram (its banks), regs, env, note and fd (FD2PATH, TR_FD); ctl\'s stop and start; the kernel task\'s and a driver\'s refused',
       init: 't_proc', modules: ['t_child'], cycles: 40e6,
+      machine: { modules: 3 },                                // (Its ram's length and end: three RAM modules', the board's, whatever HYDRA_MODULES says)
     },
     {
       name: 'env', what: 'environments: ENV_GET, ENV_PUT, ENV_DEL, ENV_NAME, a child\'s copy, #e (/env) as files',
@@ -84,6 +85,7 @@ module.exports = {
     {
       name: 'mem', what: 'memory: BREAK, pages, banks, a shared segment between tasks (and kcopy from it); #r (raw RAM, init\'s); #s (a segment by name)',
       init: 't_mem', modules: ['t_child'], cycles: 30e6,
+      machine: { modules: 3 },                                // (BANKS and BANKS_ALLOC's limits: three RAM modules', the board's)
     },
     {
       name: 'sem', what: 'semaphores: counts and mutexes, waits ended by a release, a free and a note, a task\'s end; a timed wait (SEM_WAIT), its time come and ended by a release; GETPPID',

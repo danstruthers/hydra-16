@@ -28,6 +28,8 @@ const { createXmodemPeer } = require('../sim/lib/xmpeer.js');
 const numtest = require('./numtest.js');
 const { VT, DEC_ASCII } = require('../../base/sim/lib/vt.js');
 const { createWin32Input } = require('../../base/sim/lib/win32in.js');
+const { defaultModules } = require('../../base/sim/lib/machine.js');
+const MODULES = defaultModules();                              // (The tests' RAM modules: 3, the board's, or HYDRA_MODULES's)
 
 const IRQ_OFF_MAX = 200;                                      // (docs/design/reimplementation-from-scratch.md, §8: 115200)
 const S1_BYTES = 2000;
@@ -296,7 +298,7 @@ const TOOL_LINES = [
     "  4+0A boot     snd",
     "",
   ].join('\n'), true],
-  ["free","ram     256 KB a task (2 modules)\nshared  1024 KB, 256 KB in segments (1), 768 KB free"],
+  ["free","ram     " + MODULES * 128 + " KB a task (" + MODULES + " modules)\nshared  1024 KB, 256 KB in segments (1), 768 KB free"],
   ["sleep 30 & sleep 30 & kill $apid; slay sleep; wait; ps","task  state",true],
   ["kill 8; kill x; echo $status","kill: 8: no such task\nkill: x: invalid argument\n1"],
   ["sleep 1; echo slept","slept"],
@@ -1578,7 +1580,7 @@ const HYHYDRA_G = [
   ['(list ((sysinfo) :abi) (errstr :noent))', '{1 "not found"}'],
   ['(list ((task-info (pid)) :name) (any? (fn {x} {== (x :name) "cons"}) (ps)))', '{"hylang" T}'],
   ['(do (def {b} (bank-alloc 1)) (bank-write b 0 {1 2 3}) (bank-read b 0 3))', '{1 2 3}'],
-  ['(list ((find (fn {e} {== (e :old) "/rom"}) (ns)) :new) ((free) :ram) (hold (list 1 2)))', '{"#fx/" 256 {1 2}}'],
+  ['(list ((find (fn {e} {== (e :old) "/rom"}) (ns)) :new) ((free) :ram) (hold (list 1 2)))', '{"#fx/" ' + MODULES * 128 + ' {1 2}}'],
   ['(list (== (sys-getpid) (pid)) (sys-env-put 255 "hy-g" "gv") (sys-env-get 255 "hy-g") ((sys-stat "hydra.hl") :name) sys-ticks)',
     '{T NIL {2 "gv"} "hydra.hl" <function>(sys :ticks)}'],
   ['(do (sys-puts "put, ") (sys-putc \\s) (sys-puthex 171) (sys-putc 10))', 'NIL', 'put, sAB\n'],
@@ -2484,7 +2486,8 @@ module.exports = {
       name: 'boot', what: 'the kernel boots, POST finds nothing wrong; init runs hello and waits for it',
       init: 'init', cycles: 20e6,
       expect: ['Hydra-16: kernel 0.1, ABI 1', 'HydraOS 1.0 for the Hydra-16', 'POST ZP:0 ST:0 OS:0 HI:0 SH:S W:0',
-        'RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00/0000', 'POST ok', 'RAM modules: 02',
+        'RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 ' + ['00', '10', '20'].slice(0, MODULES).map(b => b + ':0/00/0000').join(' '),
+        'POST ok', 'RAM modules: 0' + MODULES,                // (Each module's first bank tested, and the count: 3, the board's)
         'task F: cons', 'task 1: init', 'init: up in task 01', 'hello, from init', 'init: hello ended: code $07 (bye)'],
     },
     {

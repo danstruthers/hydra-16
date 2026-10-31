@@ -51,10 +51,20 @@ const LINES = 16;                                             // The IRQ lines (
 // straight (measured on the board, 2026-10-13: bank $40 reads the third chip, U34); the model swapped 6 and 7 too
 // until then, and the first ROM to use a third chip read an empty socket.
 const romBank = b => (b & 0xF3) | ((b & 0x04) << 1) | ((b & 0x08) >> 1);
+// The RAM modules installed (16 banks, 128K, each), when opt.modules doesn't say: the board's three (48 banks, 384K a
+// task), or HYDRA_MODULES=N's in Node (so a whole test suite can run with 1, 2 or 3; a test's own machine.modules
+// still wins).  run.js's --modules, the test runners, the browser's worker and the danlang emulator (sim/dl) all
+// default to this
+const DEFAULT_MODULES = 3;
+function defaultModules() {
+  const env = typeof process === 'object' && process.env && process.env.HYDRA_MODULES;
+  return env && /^\d+$/.test(env.trim()) ? +env : DEFAULT_MODULES;
+}
 
 function createMachine(opt) {
   const log = opt.log || (() => {});
   const osrom = opt.osrom, pagedrom = opt.pagedrom;
+  const modules = opt.modules === undefined ? defaultModules() : opt.modules;
   let seed = opt.seed === undefined ? -1 : opt.seed;          // A repeatable power-up (mulberry32)
   const random = seed < 0 ? Math.random : () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -65,7 +75,7 @@ function createMachine(opt) {
   // HYDRA_CORE=js): then the JS's alone (cpu65c02.js and rd, wr).  With it, the memory is in its memory (task RAM,
   // the banks, the vector RAM, the trace's ring: views of it), the JS's ways reading and writing the same bytes
   const coreWanted = opt.core || (typeof process === 'object' && process.env && process.env.HYDRA_CORE) || 'wasm';
-  const coreBanks = Math.max(0, Math.min(240, opt.modules * 16 || 0));
+  const coreBanks = Math.max(0, Math.min(240, modules * 16 || 0));
   const core = coreWanted !== 'js' && coreAvailable() && !opt.model && !opt.u7Fault && !opt.ramFault && !(opt.readWatches || []).length &&
     osrom.length >= 0x20000 ? createCore(coreEnv(), { banks: coreBanks, promLen: pagedrom.length, osromLen: osrom.length,
       ringLen: opt.trace === undefined ? 25 : opt.trace }) : null;
@@ -117,7 +127,7 @@ function createMachine(opt) {
   const tsel = a => plain ? T : model === 'sharedlow' ? 0 : (model === 'zponly' && a >= 0x200) ? 0
     : (model === 'nostack' && a >= 0x100 && a < 0x200) ? 0
     : u7 ? (u7.high ? T | u7.mask : T & ~u7.mask) : T;
-  const bankInstalled = b => b >= 0xF0 ? (model !== 'noshared' && U < opt.sharedU) : b < opt.modules * 16;
+  const bankInstalled = b => b >= 0xF0 ? (model !== 'noshared' && U < opt.sharedU) : b < modules * 16;
   function bankMem(b) {
     if (b >= 0xF0) { const k = U * 16 + (b & 15); return sharedBank[k] || (sharedBanks_[k] = sharedBank[k] = newBank(1, k)); }
     const k = T * 256 + b; return taskBank[k] || (taskBanks[k] = taskBank[k] = newBank(0, k));
@@ -142,7 +152,7 @@ function createMachine(opt) {
   // the paged ROM by the task's $00 and $01 (bankRam: its copy of $0000-$7FFF); the BIOS ROM's page (wBase).  Set
   // again as T, U or W changes, and as a run starts (opt.watches may have changed)
   let ram = null, bankRam = null, lowRd = 0, lowWr = 0, wBase = 0, sharedOn = false;
-  const bankLimit = opt.modules * 16, promLen = pagedrom.length;
+  const bankLimit = modules * 16, promLen = pagedrom.length;
   const romBase = new Float64Array(256).map((_, b) => romBank(b) * 0x4000);
   const taskBanks = new Array(16 * 256).fill(null), sharedBanks_ = new Array(256).fill(null);
   function quick() {
@@ -565,4 +575,4 @@ function createMachine(opt) {
   return m;
 }
 
-module.exports = { createMachine, romBank };
+module.exports = { createMachine, romBank, DEFAULT_MODULES, defaultModules };
