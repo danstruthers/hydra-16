@@ -2203,17 +2203,21 @@ const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
 // the actor's entry, or name: its name, the first so named, set: { field: value }; hub: { the layout's name: a byte },
 // the hub's own, pcSkew say) and the actors' hearts kept after them (m.hearts: { g, line, n, acts: [{ k,
 // name, heart, doing }] }): the hub's actor's heart,
-// lead, power, mood, serve, contact and bonds are its struct's last seven bytes (hub.h's, 2026-10-30), attitude and
-// faction the layout's; and its record's (rec: { or: flags or'd in, serve, contact }: dq0Rec's).  The test's own setting
-// up, as dq0Aware's
+// lead, power, mood, serve, contact and bonds are its struct's last seven bytes (hub.h's, 2026-10-30), attitude,
+// faction, doing, pos, face, state and sn (bytes) and x, y (words) the layout's; and its record's (rec: { or: flags
+// or'd in, serve, contact }: dq0Rec's).  A denizen put somewhere (2026-10-31): beside: a heading (H_N 0 ... H_NW 7,
+// or 'face', the way the character faces), the actor on the square beside the character that way, on its stratum, on
+// its feet; engage: true, hostile and fighting it (AT_HOSTILE, DO_FIGHT); either written to its record too (its square,
+// its stratum, its attitude: dq0d's, so the world and the minds agree) and the world's den_seq bumped (what the
+// character sees of them looked at again).  The test's own setting up, as dq0Aware's
 // The denizens' records (dq0d's pb bank, its label's: the task the hub's task[T_DENIZENS]): { mem, at(i) the record
 // i's offset, and its fields' }: dq0d.c's struct pop (its head 330 bytes since slice 4.8's regard, 64 lairs of 17), struct den (28 bytes: its
-// flags at 1, its id at 4, its serve and contact at 26 and 27)
+// flags at 1, its stratum at 2, its id at 4, its square at 8 and 10, its attitude at 16, its serve and contact at 26 and 27)
 let dq0RecPb = 0;
 function dq0Rec(m) {
   const h = m.dq0.bank(0), t = h[12 + 2], lbl = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
   const pb = dq0RecPb || (dq0RecPb = parseInt(/^al ([0-9A-F]+) \._pb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][pb]) || new Uint8Array(0x2000);
-  return { mem, at: i => 330 + 64 * 17 + 28 * i, FLAGS: 1, ID: 4, SERVE: 26, CONTACT: 27 };
+  return { mem, at: i => 330 + 64 * 17 + 28 * i, FLAGS: 1, SN: 2, ID: 4, X: 8, Y: 10, ATTITUDE: 16, SERVE: 26, CONTACT: 27 };
 }
 
 function dq0Poke(m, pokes) {
@@ -2231,14 +2235,33 @@ function dq0Poke(m, pokes) {
         seen[typed] = (seen[typed] || 0) + 1;
         const h = m.dq0 && m.dq0.bank(0);
         if (h) {
-          const { L } = m.dq0.layout(), at = k => L.actor + k * L.actorSize;
-          const off = f => TAIL.includes(f) ? L.actorSize - 7 + TAIL.indexOf(f) : f === 'attitude' ? L.aAttitude : L.aFaction;
+          const { L, K } = m.dq0.layout(), at = k => L.actor + k * L.actorSize, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+          const off = f => TAIL.includes(f) ? L.actorSize - 7 + TAIL.indexOf(f) : L['a' + f[0].toUpperCase() + f.slice(1)];
           const named = k => { let n = ''; for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]); return n; };
           for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed]) {
             for (const [f, v] of Object.entries(p.hub || {})) h[L[f]] = v;   // (The hub's own bytes, by the layout's names: pcSkew)
             const k = p.name === undefined ? p.k : [...Array(L.nactors).keys()].find(j => named(j) === p.name);   // (By its name: the first)
             if (k === undefined) continue;
-            for (const [f, v] of Object.entries(p.set || {})) h[at(k) + off(f)] = v;
+            for (const [f, v] of Object.entries(p.set || {})) if (f === 'x' || f === 'y') w16(at(k) + off(f), v); else h[at(k) + off(f)] = v;
+            if (p.beside !== undefined || p.engage) {   // (Put beside the character, engaged: the hub's and its record's)
+              const R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]), r16 = (q, v) => { R.mem[o + q] = v & 255; R.mem[o + q + 1] = v >> 8 & 255; };
+              if (p.beside !== undefined) {
+                const d = p.beside === 'face' ? h[L.pcFace] : p.beside, x = (h[L.pcX] | h[L.pcX + 1] << 8) + [0, 1, 1, 1, 0, -1, -1, -1][d & 7],
+                  y = (h[L.pcY] | h[L.pcY + 1] << 8) + [-1, -1, 0, 1, 1, 1, 0, -1][d & 7];
+                w16(at(k) + L.aX, x);
+                w16(at(k) + L.aY, y);
+                h[at(k) + L.aSn] = h[L.pcSn];
+                h[at(k) + L.aPos] = K.POS_STANDING;
+                r16(R.X, x);
+                r16(R.Y, y);
+                R.mem[o + R.SN] = h[L.pcSn];
+              }
+              if (p.engage) {
+                h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_HOSTILE;
+                h[at(k) + L.aDoing] = K.DO_FIGHT;
+              }
+              h[L.denSeq] = h[L.denSeq] + 1 & 255;
+            }
             if (p.rec) {
               const R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]);
               if (p.rec.or) R.mem[o + R.FLAGS] |= p.rec.or;
@@ -2295,15 +2318,17 @@ function dq0Aware(m, line, actor, after) {
 // A line typed as the game's words come, not at a cycle (a test's own: what a player reacting to them types, whatever
 // the code's speed): each { g: the game, 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, words,
 // text }: after that line's Enter, the first time the story shows the words (the escapes left out, spaces and line
-// ends as one), the text typed next, before the input still to come (its waits for a prompt from then on)
+// ends as one), the text typed next, before the input still to come (its waits for a prompt from then on).  One its
+// words never came for let go as its game ends (the screen's scrolling whole again, the game's t_away: ESC [ r) or
+// another begins: never typed into the next (2026-10-31)
 function dq0OnWords(m, list) {
   const a = m.acia, read = a.read, shown = a.shown, norm = s => s.replace(/\s+/g, ' ');
-  let typed = '', g = 0, seen = {}, armed = null, story = '', esc = 0;
+  let typed = '', g = 0, seen = {}, armed = null, story = '', esc = 0, escp = '';
   a.read = (r, t) => {
     if (r === 0 && a.rdrf) {
       const c = a.rx;
       if (c === 13) {
-        if (/^dq0 /.test(typed)) { ++g; seen = {}; }
+        if (/^dq0 /.test(typed)) { ++g; seen = {}; armed = null; }
         seen[typed] = (seen[typed] || 0) + 1;
         const p = list.find(q => q.g === g && q.line === typed && q.n === seen[typed]);
         if (p) { armed = p; story = ''; }
@@ -2314,8 +2339,16 @@ function dq0OnWords(m, list) {
   };
   a.shown = (v, t) => {
     shown(v, t);
-    if (esc === 1) { esc = v === 0x5B ? 2 : 0; return; }
-    if (esc === 2) { if (v >= 0x40 && v <= 0x7E) esc = 0; return; }
+    if (esc === 1) { esc = v === 0x5B ? 2 : 0; escp = ''; return; }
+    if (esc === 2) {
+      if (v < 0x40 || v > 0x7E) {
+        escp += String.fromCharCode(v);
+        return;
+      }
+      esc = 0;
+      if (v === 0x72 && !escp) armed = null;    // (ESC [ r: the game's end)
+      return;
+    }
     if (v === 0x1B) { esc = 1; return; }
     if (!armed) return;
     story = norm(story + (v < 0x20 ? ' ' : String.fromCharCode(v))).slice(-200);
@@ -5752,15 +5785,20 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0disengage', what: "Dingus Quest Zero's disengaging and a fight's tiring (the user's, 2026-10-21: \"For disengaging, try to have it follow the book\"; \"Tiring for combat should happen at the standard strenous work rate\"; HOUSE.md's, the book's Combat 7): seed 7's ghoul, the character weak with its sword (20) in a gambeson and a mail hauberk, two of its three rations put down (its load as it was before a ration weighed a pound: slice 4.1's counted lots), two turns about first (2026-10-26: its armour got out of its pack, the reach's times, its dice as a search of the variants found them); disengage and flee before anything engages it refused, told (not engaged; nothing near to flee); the ghoul fought, a disengage typed as it fights taking the fight over (its round out), the character backing away a square and more, no blow of its own after it, the fight not fought on; pass a round given up, no blow of its own; a flight as the ghoul engages it again, a square back and still engaged (stopped there, told once: \"You stop walking.\"), fought on; a flight at its prompt breaking away into a corner, no run on into the wall (since 2026-10-21 a second game's, the character in shock from the start, as the first's was when it fled: in the first, knocked senseless as it fights on after the flight, it's now finished, the ghoul a killer, the user's helpless character; it came round in shock and fled); every blow it struck charged to the referee as a round of strenuous work (RS_EXERT GA_WORK, 100 tenths)",
+      name: 'dq0disengage', what: "Dingus Quest Zero's disengaging and a fight's tiring (the user's, 2026-10-21: \"For disengaging, try to have it follow the book\"; \"Tiring for combat should happen at the standard strenous work rate\"; HOUSE.md's, the book's Combat 7): seed 7's ghoul, the character weak with its sword (20) in a gambeson and a mail hauberk, two of its three rations put down (its load as it was before a ration weighed a pound: slice 4.1's counted lots), two turns about first (2026-10-26: its armour got out of its pack, the reach's times, its dice as a search of the variants found them); disengage and flee before anything engages it refused, told (not engaged; nothing near to flee); the ghoul fought, a disengage typed as it fights (at its first blow's words) taking the fight over (its round out), the character backing away a square and more, no blow of its own after it, the fight not fought on (the ghoul left behind, out of its sight); a flight as the ghoul engages it again, a square back and still engaged (stopped there, told once: \"You stop walking.\"), fought on; pass typed as it fights (at its next blow's words), a round given up, no blow of its own; a flight at its prompt breaking away into a corner, no run on into the wall (since 2026-10-21 a second game's, the character in shock from the start, as the first's was when it fled: in the first, knocked senseless as it fights on after the pass, it's finished, the ghoul a killer, the user's helpless character); every round it fought charged to the referee as a round of strenuous work (RS_EXERT GA_WORK, 100 tenths: the book's second variant of combat fatigue, every round of active combat, whatever is done in it), each blow it struck, each struggle up from the ground, and the pass (begun engaged, the ghoul beside it).  The scene set (since the turns pace waits for a command being given, 2026-10-31, the ghoul no longer came back after the disengage on its own): the ghoul put back beside the character, facing it, hostile and fighting, as the flight is typed at its prompt (dq0Poke's beside and engage), the disengage and the pass typed on the fight's words (dq0OnWords), a look on the pass's (so the fighting on after the pass is the look's)",
       init: 't_rc', cycles: 2600e6,
       // (-R 1: the dice's offset that gives the game it was written for, since the dice by who asks,
       // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 20 >> /ram/c.hm',
         "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations', 'disengage', 'flee',
-        'd', 'wait']) + 'Ādisengage\r' + dq0Typed(['wait']) + 'Āpass\r' + dq0Typed(['wait']) + 'Āflee\r' +
-        dq0Typed(['quit', 'cp /ram/c.hm /ram/s.hm', 'echo vol 0 0 0 2 0 >> /ram/s.hm', "dq0 -p t -s 7 -c /ram/s.hm -k 'sword,gambeson,mail hauberk' -T -R 1",
+        'd', 'wait', 'flee', 'quit', 'cp /ram/c.hm /ram/s.hm', 'echo vol 0 0 0 2 0 >> /ram/s.hm', "dq0 -p t -s 7 -c /ram/s.hm -k 'sword,gambeson,mail hauberk' -T -R 1",
           'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations', 'd', 'wait', 'flee', 'look', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'wait', n: 1, words: 'You strike at the ghoul', text: 'disengage\r' },
+          { g: 1, line: 'flee', n: 2, words: 'You strike at the ghoul', text: 'pass\r' },
+          { g: 1, line: 'pass', n: 1, words: 'Time passes.', text: 'look\r' }]);
+        dq0Poke(m, [{ g: 1, line: 'flee', n: 2, name: 'ghoul', beside: 'face', engage: true }]);
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], K = m.dq0.layout().K;
@@ -5782,14 +5820,22 @@ module.exports = {
           dq0Need(f, fl2, 'E_TASK', { te: 'TE_ENGAGED' }, 'the flight not stopped, engaged still');
           if (!dq0Ev(fl2, 'E_TASK', { te: 'TE_FIGHT' }).some(e => e.t >= b3[0].t)) f.push('not fought on, engaged still after the flight');
         }
-        const story = dq0Story(out), at2 = story.indexOf('You break away from the ghoul.'), at3 = story.indexOf('You turn to the ghoul.', at2);
+        const story = dq0Story(out), at2 = story.indexOf('You break away from the ghoul.'), m3 = at2 < 0 ? null : /You (turn to|fight back against) the ghoul[.]/.exec(story.slice(at2)),
+          at3 = m3 ? at2 + m3.index : -1;   // (The fight told again after the stop: turned to, or fought back)
         if (at2 < 0 || at3 < 0 || (story.slice(at2, at3).match(/stop walking[.]/gi) || []).length !== 1) f.push('the flight\'s stop not told once: ' + JSON.stringify(story.slice(at2, at3 < 0 ? at2 + 200 : at3)));
         const fl3 = T.of('flee', fl2.k + 1), b4 = brk(fl3);
         if (b4.length !== 1) f.push('the flight at its prompt not begun (' + dq0Evs(fl3) + ')');
         if (dq0Ev(fl3, 'E_NOWAY', {}).length) f.push('a flight cornered run on into the wall (' + dq0Evs(fl3) + ')');
-        const blows = T.reduce((n, t) => n + mine(t).length, 0);
-        const work = T.reduce((n, t) => n + t.replies.filter(r => /^slot/.test(r.req) && r.kind === K.RS_EXERT && r.a === K.GA_WORK && r.w1 === 100).length, 0);
-        if (!blows || work !== blows) f.push('a fight\'s rounds not charged as strenuous work: ' + work + ' charged, ' + blows + ' blows struck');
+        // (Every round fought charged: each blow (a rise, O_RISE, a blow's turn), each struggle up still down, the pass
+        // begun engaged: the ghoul beside it as it was typed, on its feet, fighting it)
+        const rounds = t => t.replies.filter(r => /^slot/.test(r.req) && r.kind === K.RS_EXERT && r.a === K.GA_WORK && r.w1 === 100).length;
+        const blows = T.reduce((n, t) => n + mine(t).length, 0), ups = T.reduce((n, t) => n + dq0Ev(t, 'E_BEAT', { beat: 'WB_NOT_UP', b: 0 }).length, 0);
+        const g = ps.at && ps.at.actors.find(a => a.name === 'ghoul'), engaged = !!g && g.sn === ps.at.pc.sn && g.pos !== K.POS_PRONE && g.doing === 'DO_FIGHT' &&
+          Math.max(Math.abs(g.x - ps.at.pc.x), Math.abs(g.y - ps.at.pc.y)) === 1;
+        if (!engaged) f.push('the pass not begun engaged: ' + JSON.stringify(g || null));
+        else if (rounds(ps) !== 1) f.push('the pass, engaged, not charged as a round of strenuous work: ' + rounds(ps) + ' charged in it');
+        const work = T.reduce((n, t) => n + rounds(t), 0), fought = blows + ups + (engaged ? 1 : 0);
+        if (!blows || work !== fought) f.push('a fight\'s rounds not charged as strenuous work: ' + work + ' charged, ' + fought + ' rounds fought (' + blows + ' blows, ' + ups + ' struggles up, the pass)');
         return f;
       },
       sdcard: true
