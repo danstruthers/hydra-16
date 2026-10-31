@@ -315,6 +315,7 @@ go:
             SWFN        fight_on, 24
             SWFN        disengage_go, 26
             SWFN        flee_on, 26
+            SWFN        passed, 26
             SWFN        sconce_lights, 34
             SWFN        kept_wait, 34
             SWFN        kept_late, 71

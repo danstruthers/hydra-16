@@ -88,6 +88,7 @@ void __fastcall__ fight_go (const struct msg* m);
 unsigned char __fastcall__ fight_on (unsigned char idle);
 void __fastcall__ disengage_go (const struct msg* m);    /* Part 26 */
 unsigned char flee_on (void);                   /* Part 26 */
+void __fastcall__ passed (const struct msg* m); /* Part 26 */
 unsigned char toward_middle (void);            /* Part 3 */
 void __fastcall__ across (unsigned char h, unsigned char r);   /* Part 33 */
 void __fastcall__ intent_more (struct msg* m);  /* Part 37 */
@@ -4687,6 +4688,28 @@ void __fastcall__ s_disengage_go (const struct msg* m)
     runs = 0;
 }
 
+/* A wait begun (I_WAIT's, part 53's, its time busy): engaged (not a sleep, nor a timed work), a pass (the book's,
+** Combat 7), its round active combat, strenuous work as a round fought is (the book's second variant of combat
+** fatigue: every round of it, whatever's done in it; HOUSE.md's fighting on, 2026-10-31), a longer wait's rest after
+** its first round */
+void __fastcall__ s_passed (const struct msg* m)
+{
+    unsigned t;
+
+    hub_map (0);
+    if (m->w2 || (m->a & WA_SLEEP) || !zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
+        return;
+    }
+    hub_map (0);
+    t = HUB->round;
+    if (!(m->a & WA_MIN) && m->w1 && m->w1 < t) {
+        t = m->w1;                              /* (A wait of less than a round said) */
+    }
+    free_at += t;
+    spend (GA_WORK, t);
+    hub_map (0);
+}
+
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -4772,15 +4795,8 @@ void __fastcall__ s_intent_few (struct msg* m)
             task_for (m->a & WA_SLEEP ? LT_SLEEP : LT_WAIT, t);  /* (A wait longer than a round, or a sleep: a long
                                                 **   task, in minutes past 100 of them) */
         }
-        free_at = HUB->now;                     /* (Waiting: rest) */
-        if (!m->w2 && !(m->a & WA_SLEEP) && zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
-            free_at += t = t < HUB->round ? t : HUB->round;     /* (Engaged: a pass, its round active combat, strenuous
-                                                **   work as a round fought is (the book's second variant of combat
-                                                **   fatigue, Combat 7: every round of it, whatever it does; HOUSE.md's,
-                                                **   2026-10-31); a longer wait's rest after it) */
-            spend (GA_WORK, t);
-            hub_map (0);
-        }
+        free_at = HUB->now;                     /* (Waiting: rest; engaged, a pass: part 26's) */
+        passed (m);
         if (!m->w2) {
             evb = m->a;                         /* (Its unit and its sleep, for the words: E_TIME's b) */
             event (E_TIME, 0, m->w1 ? m->w1 : HUB->round);
