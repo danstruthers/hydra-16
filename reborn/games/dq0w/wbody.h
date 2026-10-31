@@ -40,10 +40,15 @@ unsigned char __fastcall__ pc_shot (unsigned char k);  /* (Part 67's) The charac
 #define PS_UNBOW        0xFD
 #define PS_AUTO         0xFC                    /* (The nearest foe within the auto-target range, the hub's pc_auto, its
                                                 **   launcher taken as what it shoots with: plus 1, 0 none) */
-enum { SO_ARMS, SO_REACH, SO_LINE };            /* what an actor shoots with (k: 0 the character, 1 body bd); whether
+enum { SO_ARMS, SO_REACH, SO_DEN };             /* what an actor shoots with (k: 0 the character, 1 body bd); whether
                                                 **   the character can shoot at k (plus 1: 2, 1 senseless, 0 not);
-                                                **   whether body bd has a shot at the character within z bands of
-                                                **   kind k's range (0 its launcher's) */
+                                                **   what body bd has to shoot or throw, and a shot (DS_*) */
+#define DS_BOW          0x01                    /* (SO_DEN's: its launcher and a missile, not in hand; in hand; */
+#define DS_HELD         0x02
+#define DS_THROW        0x04                    /*   a thing to throw in hand; to draw; */
+#define DS_DRAW         0x08
+#define DS_SPENT        0x40                    /*   its launcher spent in its hand; a shot from there) */
+#define DS_LINE         0x80
 struct stray {                                  /* (A miss's stray's: part 67's, from where it was shot at whom, the
                                                 **   thing thrown) */
     unsigned char   sn;

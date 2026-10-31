@@ -311,11 +311,48 @@ static unsigned char __fastcall__ shot_reach (unsigned char k, unsigned char z)
     return d;
 }
 
+/* What body bd throws (slice 4.7's left, 2026-10-30: HOUSE.md's the denizens throwing): a thing made to be thrown (a
+** taburi, a shorkana: the book's), in hand or at its belt; else a dagger, a knife, a spear, a hatchet, an axe in its hand,
+** if it keeps another weapon to fight with; in hand the first.  Its thing (*tk its kind), or 0 none */
+static unsigned __fastcall__ to_throw (unsigned char* tk)
+{
+    unsigned i, best = 0;
+    unsigned char k, f, s, top = 0, nw = 0;
+
+    for (i = 0; (i = items (i, IN_DEN | IN_ITEM, 0)) != 0; ) {
+        k = ip->kind;
+        f = ip->flags & I_HELD;
+        if (!mine (i, 1)) {
+            continue;
+        }
+        hub_map (KIND_BANK);
+        s = CATALOGUE[k].craft == AP_WEAPON && (CATALOGUE[k].flags & (K_HAND | K_WEAR)) == K_HAND;
+        if (!s) {
+            continue;
+        }
+        ++nw;
+        s = k == KI_TABURI || k == KI_SHORKANA ? 3 + (f != 0) : f && (k == KI_DAGGER || k == KI_KNIFE || k == KI_SPEAR ||
+            k == KI_HATCHET || k == KI_AXE) ? 2 : 0;
+        if (s > top) {
+            top = s;
+            best = i;
+            *tk = k;
+        }
+    }
+    return top > 2 || (top && nw > 1) ? best : 0;
+}
+
 /* Part 65's calls: SO_ARMS what an actor shoots with (arms', k who: 0 the character, 1 body bd); SO_REACH whether the
-** character can shoot at k (its entry plus 1); SO_LINE whether body bd has a shot at the character, within z bands of
-** the range of kind k (0: its launcher's, sl_kind) and a clear line (part 66's den_shot); SO_FOE part 67's pc_shot's */
+** character can shoot at k (its entry plus 1), within z bands; SO_DEN what body bd has to shoot or throw (part 67's
+** den_shot, in one look: the part's swap once, 2026-10-30), DS_*: its launcher with a missile for it (sl_*, sm_item),
+** in hand or not, or its launcher spent in its hand (to let fall) and a thing to throw (sm_item, its kind sl_kind: none
+** of a launcher's then), in hand or to draw; DS_LINE, a shot at the character from where it stands (in range: a
+** launcher's bands, a thing thrown's short and medium; a clear line); SO_FOE part 67's pc_shot's */
 unsigned char __fastcall__ s_shot_op (unsigned char op, unsigned char k, unsigned char z)
 {
+    unsigned t;
+    unsigned char r, tk;
+
     hub_map (0);
     switch (op) {
     case SO_ARMS:
@@ -323,10 +360,28 @@ unsigned char __fastcall__ s_shot_op (unsigned char op, unsigned char k, unsigne
     case SO_REACH:
         return shot_reach (k, z);
     }
-    z = span ((int) (bpx - bd.x), (int) (bpy - bd.y)) <= (unsigned) (reach_of (k ? k : sl_kind) << (z - 1)) &&
-        !lof (bd.sn, bd.x, bd.y, bpx, bpy, bk, 0xFE);
+    k = 0;
+    z = BANDS;
+    if ((r = arms (1)) != 0 && sm_item) {
+        r = r == 2 ? DS_HELD : DS_BOW;
+    } else {
+        r = r == 2 ? DS_SPENT : 0;
+        if (!(t = to_throw (&tk))) {
+            hub_map (0);
+            return r;
+        }
+        hub_map (0);
+        r |= item_at (t)->flags & I_HELD ? DS_THROW : DS_DRAW;
+        sm_item = t;
+        sl_kind = k = tk;
+        z = 2;
+    }
+    if (span ((int) (bpx - bd.x), (int) (bpy - bd.y)) <= (unsigned) (reach_of (k ? k : sl_kind) << (z - 1)) &&
+        !lof (bd.sn, bd.x, bd.y, bpx, bpy, bk, 0xFE)) {
+        r |= DS_LINE;
+    }
     hub_map (0);
-    return z;
+    return r;
 }
 
 #pragma code-name (pop)
@@ -501,48 +556,6 @@ static unsigned char __fastcall__ fire (unsigned char att, unsigned char def, un
     return r;
 }
 
-/* Body bd's things (an actor's: IW_DEN, its did's) and what's in them: thing i (ip) one of them */
-static unsigned char __fastcall__ own (unsigned i)
-{
-    struct item* q = item_at (i);
-
-    while (q->where == IW_ITEM) {
-        q = item_at (q->x);
-    }
-    return q->where == IW_DEN && (q->owner | q->hide << 8) == bd.did;
-}
-
-/* What body bd throws (slice 4.7's left, 2026-10-30: HOUSE.md's the denizens throwing): a thing made to be thrown (a
-** taburi, a shorkana: the book's), in hand or at its belt; else a dagger, a knife, a spear, a hatchet, an axe in its hand,
-** if it keeps another weapon to fight with; in hand the first.  Its thing (*tk its kind), or 0 none */
-static unsigned __fastcall__ to_throw (unsigned char* tk)
-{
-    unsigned i, best = 0;
-    unsigned char k, f, s, top = 0, nw = 0;
-
-    for (i = 0; (i = items (i, IN_DEN | IN_ITEM, 0)) != 0; ) {
-        k = ip->kind;
-        f = ip->flags & I_HELD;
-        if (!own (i)) {
-            continue;
-        }
-        hub_map (KIND_BANK);
-        s = CATALOGUE[k].craft == AP_WEAPON && (CATALOGUE[k].flags & (K_HAND | K_WEAR)) == K_HAND;
-        if (!s) {
-            continue;
-        }
-        ++nw;
-        s = k == KI_TABURI || k == KI_SHORKANA ? 3 + (f != 0) : f && (k == KI_DAGGER || k == KI_KNIFE || k == KI_SPEAR ||
-            k == KI_HATCHET || k == KI_AXE) ? 2 : 0;
-        if (s > top) {
-            top = s;
-            best = i;
-            *tk = k;
-        }
-    }
-    return top > 2 || (top && nw > 1) ? best : 0;
-}
-
 /* Body bd about to strike in melee (part 15's den_blow): a launcher it holds let fall at its feet, its hands free for
 ** its weapon (dropped, no time: the book's; told, WB_DROP) */
 static void den_unbow (void)
@@ -564,55 +577,42 @@ static void den_unbow (void)
 }
 
 /* A denizen's shot or throw (body bd, entry bk: its intent's, I_ATTACK's AIM_SHOT, part 15's den_blow) at the character
-** (its aim the middle, its mind's): its launcher taken in hand first, what it holds put up (its round's, part 60's
-** den_draw: the book's grope; a light it holds, no shot: AG_SHOOTS gone till its things change), a missile of its own
-** for it; its missiles spent, its launcher let fall and a thing to throw (to_throw's: drawn first, its round's); the
-** shot (none to be had, out of range, no clear line: AG_NOSHOT, its mind's to close with the character till the
-** character moves: part 14's).  A thing thrown within the medium band (the house's) */
+** (its aim the middle, its mind's): what it has to shoot or throw, and whether it has a shot, part 65's (SO_DEN: one
+** look, its swap once, the answers' time); its launcher taken in hand first, what it holds put up (its round's, part
+** 60's den_draw: the book's grope; a light it holds, no shot: AG_SHOOTS gone till its things change), a missile of its
+** own for it; its missiles spent, its launcher let fall and a thing to throw (to_throw's: drawn first, its round's);
+** none to be had, out of range, no clear line: AG_NOSHOT, its mind's to close with the character till the character
+** moves (part 14's).  A thing thrown within the medium band (the house's) */
 static void den_shot (void)
 {
-    unsigned t;
-    unsigned char g = AG_SHOOTS, r, tk;         /* (What's lost if there's no shot: its shooting, else this shot) */
+    unsigned char g = AG_SHOOTS, r;             /* (What's lost if there's no shot: its shooting, else this shot) */
 
     hub_map (0);
     HUB->agear[bk] &= ~AG_NOSHOT;               /* (A shot looked for: none from here, set again) */
-    if ((r = shot_op (SO_ARMS, 1, 0)) != 0 && sm_item) {
-        g = AG_NOSHOT;
-        if (!shot_op (SO_LINE, 0, BANDS)) {
-            goto none;                          /* (No shot from here: none readied for it) */
-        }
-        if (r < 2) {
-            if (den_draw (sl_kind)) {           /* (Taken in hand, what it holds put up: its round's) */
-                return;
-            }
-            g = AG_SHOOTS;
-            goto none;
-        }
-        if (sm_item != sl_item && sl_kind == KI_CROSSBOW) {
-            hub_map (0);
-            bd.ready += HUB->round;             /* (A crossbow's load a round more) */
-        }
-        t = 0;
-    } else {
-        if (r == 2) {
-            den_unbow ();                       /* (Its missiles spent: its launcher let fall) */
-        }
-        if (!(t = to_throw (&tk))) {
-            goto none;                          /* (Nothing to shoot or throw: it closes with the character) */
-        }
-        g = AG_NOSHOT;
-        if (!shot_op (SO_LINE, tk, 2)) {
-            goto none;
-        }
-        if (!(item_at (t)->flags & I_HELD)) {
-            if (den_draw (tk)) {                /* (Drawn, what it holds put up: its round's) */
-                return;
-            }
-            g = AG_SHOOTS;
-            goto none;
-        }
+    if ((r = shot_op (SO_DEN, 0, 0)) & DS_SPENT) {
+        den_unbow ();                           /* (Its missiles spent: its launcher let fall; then what it throws,
+                                                **   looked at again: den_unbow's arms the main RAM's sl_*) */
+        r = shot_op (SO_DEN, 0, 0);
     }
-    if (fire (bk + 1, 0, Z_MID, bd.sn, bd.x, bd.y, bpx, bpy, t, tk)) {
+    if (!(r & (DS_BOW | DS_HELD | DS_THROW | DS_DRAW))) {
+        goto none;                              /* (Nothing to shoot or throw: it closes with the character) */
+    }
+    g = AG_NOSHOT;
+    if (!(r & DS_LINE)) {
+        goto none;                              /* (No shot from here: none readied for it) */
+    }
+    if (r & (DS_BOW | DS_DRAW)) {
+        if (den_draw (sl_kind)) {               /* (Taken in hand, what it holds put up: its round's) */
+            return;
+        }
+        g = AG_SHOOTS;
+        goto none;
+    }
+    if ((r & DS_HELD) && sm_item != sl_item && sl_kind == KI_CROSSBOW) {
+        hub_map (0);
+        bd.ready += HUB->round;                 /* (A crossbow's load a round more) */
+    }
+    if (fire (bk + 1, 0, Z_MID, bd.sn, bd.x, bd.y, bpx, bpy, r & DS_THROW ? sm_item : 0, sl_kind)) {
         hub_map (0);
         HUB->agear[bk] |= AG_NOSHOT;
     }
