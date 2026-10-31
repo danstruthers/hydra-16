@@ -11,7 +11,8 @@
 **   char ... end               a character: base's lines, then these (a later line over an earlier one), written to
 **                              /ram/t.hm and loaded (RS_LOAD_PC)
 **   case WORDS                 the next case's name: its checks one line, "ok - WORDS" or "not ok - WORDS: why"
-**   set FIELD=V ...            the hub's, the world's own: gait watch going (pc_going) stance strike shand
+**   set FIELD=V ...            the hub's, the world's own: gait watch going (pc_going) stance strike shand; and
+**                              hunger thirst want (pc_hunger, pc_thirst, pc_want: the referee's, slice 4.9's)
 **   dice S:F ... [S:F*] [...]  the next request's dice, in turn: each one's sides and the face it's to show (S:F*:
 **                              that face for every die after; ...: more dice after them, not held to anything); no
 **                              words: no dice at all.  Without it, the dice fall as the seed has them
@@ -379,6 +380,12 @@ static void set (void)
             HUB->pc_shand = n;
         } else if (!strcmp (tok[k], "now")) {
             HUB->now = n;
+        } else if (!strcmp (tok[k], "hunger")) {
+            HUB->pc_hunger = n;
+        } else if (!strcmp (tok[k], "thirst")) {
+            HUB->pc_thirst = n;
+        } else if (!strcmp (tok[k], "want")) {
+            HUB->pc_want = n;
         } else {
             bads ("set: no %s", tok[k]);
         }
