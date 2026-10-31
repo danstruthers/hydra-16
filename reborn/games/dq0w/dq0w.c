@@ -2980,7 +2980,9 @@ void __fastcall__ s_worked (unsigned long t)
 static unsigned char srch;
 unsigned char srch_form;                        /* (Its form, SF_*, | SF_TOUCH, | the wall's heading times 16: the
                                                 **   things' search's too, things.c's) */
-static unsigned char searched (void)
+#pragma code-name (push, "SW48CODE")           /* (Part 48's, with the work it calls: the main RAM's room, 2026-10-31) */
+#pragma rodata-name (push, "SW48RODATA")
+unsigned char s_searched (void)
 {
     srch = 0;
     here ();
@@ -2989,6 +2991,9 @@ static unsigned char searched (void)
     worked (0);
     return 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+unsigned char searched (void);
 
 /* ---- The timed work (HOUSE.md's long tasks, the user's, 2026-10-22: "it would be better if the first half ... comes
 ** out first, followed by, as the task timer expires, the second part"): work that spends time and whose outcome is a
@@ -3970,7 +3975,7 @@ unsigned char __fastcall__ s_zone_step (unsigned ox, unsigned oy, unsigned x, un
     unsigned char e;
 
     if ((ox != x || oy != y) && (HUB->pc_wet || (at (sn_, x, y) && C->wany))) {
-        pt0 += wade (pst);                      /* (A walk's step into water, or in it: its time the more, swimming,
+        pt0 += water (W_WADE, pst);                      /* (A walk's step into water, or in it: its time the more, swimming,
                                                 **   part 72's, slice 4.9's) */
     }
     hub_map (0);

@@ -34,7 +34,8 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "pouch", K_CONTAINER | K_HANG, 1, 1, 3, 16, 0, 0, 1, "", MT_LEATHER, AP_HIDE, 36, SS | KF_TIE },
     { "dagger", K_HAND | K_HANG, 4, 1, 0, 0, FM_KNIFE, 0, 2, "dagger", MT_IRON, AP_WEAPON, 96 },
     { "waterskin", K_CONTAINER | K_HANG, 4, 4, 4, 20, 0, 0, 2, "", MT_LEATHER, AP_HIDE, 40, KF_LIQUID | KF_STOPPER },
-    { "rations", K_PLURAL, 4, 2, 0, 0, 0, 0, 2, "", MT_OTHER, AP_FOOD, 6, 0, KF_COUNT },   /* (A day's: a pound) */
+    { "rations", K_PLURAL, 4, 2, 0, 0, 0, 0, 2, "food", MT_OTHER, AP_FOOD, 6, 0, KF_COUNT },   /* (A day's: a pound;
+                                                **   eaten by its key, a day's at a time, slice 4.9's) */
     { "tinderbox", 0, 1, 1, 0, 0, 0, 0, 1, "tinder", MT_IRON, AP_METAL, 24 },
     { "pick", K_HAND | K_TWO, 24, 6, 0, 0, 0, 0, 4, "pick", MT_IRON, AP_METAL, 32 },
     { "shovel", K_HAND | K_TWO, 20, 8, 0, 0, 0, 0, 4, "shovel", MT_IRON, AP_METAL, 32, 0, KF_LONG },

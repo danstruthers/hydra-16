@@ -161,12 +161,11 @@ go:
             SWPART      69, 12              ; A robbery (wfight.c's: part 67's room, overlay 12's, 2026-10-30)
             SWPART      70, 21              ; Wounds over time: the bodies' time told, a thing used up (wtend.c)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
-            SWPART      72, 15              ; The water: wading, swimming (wwater.c: slice 4.9's)
-            SWPART      73, 5               ; Eating and drinking (wwater.c: slice 4.9's)
-            SWPART      74, 3               ; Hunger and thirst counted (wwater.c: slice 4.9's)
+            SWPART      72, 22              ; The water, hunger and thirst (wwater.c: slice 4.9's, overlay 22 its own)
 
             SWFN        work, 48
             SWFN        worked, 48
+            SWFN        searched, 48        ; (A search's end: the main RAM's room, 2026-10-31)
             SWFN        outfit, 57
             SWFN        den_kit, 57
             SWFN        outmake, 58
@@ -331,9 +330,7 @@ go:
             SWFN        den_rob, 69         ; (Part 15's room, 2026-10-29; 67's, 2026-10-30)
             SWFN        bled, 15
             SWFN        body_ask, 70
-            SWFN        wade, 72            ; (The water, hunger and thirst: slice 4.9's)
-            SWFN        water_op, 73
-            SWFN        want_time, 74
+            SWFN        water, 72           ; (The water, hunger and thirst: slice 4.9's)
             SWFN        use_key, 7
             SWFN        puzzle, 16
             SWFN        take_go, 16

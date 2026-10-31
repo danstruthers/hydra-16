@@ -54,7 +54,7 @@ unsigned s_body_ask (void)
         k == LT_DIG || k == LT_BATTER || k == LT_CLIMB || k == LT_FORCE || k == LT_HEAVE || k == LT_BEND ? 2 : k ==
         LT_NONE ? 0 : 1;                        /* (At rest standing still, or waiting, asleep; vigorous at a run,
                                                 **   swimming, or at strenuous work, a fight; else about) */
-    if (!want_time (n, a) && (!n || (!bleeds && !(HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) &&
+    if (!(unsigned char) water (W_WANT, n | (unsigned) a << 14) && (!n || (!bleeds && !(HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) &&
         HUB->pcsum.health == H_FINE && HUB->now < wdue))) {    /* (Hurt: its rest toward its healing told, a minute at a
                                                 **   time; hunger and thirst's levels changed, or drowned, part 73's:
                                                 **   the referee told, its request's x[1] and x[2] set) */

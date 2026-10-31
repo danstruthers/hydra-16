@@ -1,9 +1,9 @@
 /*
-** wwater.c - (dq0w, swapped parts 72 and 73: ../dq0/swap.inc) the water, and hunger and thirst (slice 4.9: DUNGEON.md's
+** wwater.c - (dq0w, swapped part 72, its image overlay 22's, the world's own for it: ../dq0/swap.inc) the water, and hunger and thirst (slice 4.9: DUNGEON.md's
 ** water, HOUSE.md's water and hunger and thirst).  Part 72: how deep the water is at a square (the chunk's, the
 ** maker's: world.h's wet bits and its rooms' levels); the character come into it as it walks (wading, a step the
 ** longer, then swimming, the referee's P_SWIM each minute: its squares a minute, its breath; going under, drowning; its
-** flames put out as it swims, strenuous work tiring it).  Part 73: its hunger and thirst counted as the bodies' time
+** flames put out as it swims, strenuous work tiring it); its hunger and thirst counted as the bodies' time
 ** goes (part 70's, a minute at a time, twice as fast at vigorous work: their levels, warned, told the referee for its
 ** fatigue from want); eating its rations, drinking from its waterskin or the water where it is, filling its waterskin
 ** there (the things' IO_EAT, IO_DRINK, IO_FILL).  Every actor's in time: the denizens' larders and their thirst later
@@ -84,7 +84,7 @@ static unsigned char __fastcall__ band (unsigned char d)
 ** and each minute after: its grade's distance, a minute's strenuous work, its flames put out as it begins); sinking,
 ** under for the minute, its breath held (the referee's: its seconds), past it drowned (the bodies' time, part 70's:
 ** dead of it) */
-unsigned __fastcall__ s_wade (unsigned step)
+static unsigned __fastcall__ wade (unsigned step)
 {
     struct req* r;
     unsigned char d, was, sq, b;
@@ -155,13 +155,13 @@ unsigned __fastcall__ s_wade (unsigned step)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW74CODE")
-#pragma rodata-name (push, "SW74RODATA")
+#pragma code-name (push, "SW72CODE")
+#pragma rodata-name (push, "SW72RODATA")
 #pragma local-strings (push, on)
 
 /* ---- Hunger and thirst (HOUSE.md's, every ruleset's), the bodies' time's (part 70's s_body_ask: n minutes gone, a
-** what the character was about, 2 vigorous: twice the want): their levels anew, warned as either rises (WB_WANT, both
-** levels times 256), the hub's pc_want, and when they could next change (pc_wdue: the lights' minute asks the bodies'
+** what the character was about, 2 vigorous: twice the want): their levels anew, warned as either rises (WB_WANT, the
+** levels that rose times 256), the hub's pc_want, and when they could next change (pc_wdue: the lights' minute asks the bodies'
 ** time then, part 27's); the referee's request's x[1] its fatigue from want, x[2] dead of it (1 thirst, 2 hunger, 3
 ** drowned); 1 if the referee's to be told */
 static const unsigned hl[5] = { 480, 1440, 4320, 14400, 43200U };    /* (Hungry 8 hours, very 24, starving 3 days,
@@ -186,7 +186,7 @@ static unsigned __fastcall__ till (unsigned m, const unsigned* l)
     return k < 5 ? l[k] - m : 0xFFFF;
 }
 
-unsigned char __fastcall__ s_want_time (unsigned n, unsigned char a)
+static unsigned char __fastcall__ want_time (unsigned n, unsigned char a)
 {
     struct req* r;
     struct msg m;
@@ -214,7 +214,8 @@ unsigned char __fastcall__ s_want_time (unsigned n, unsigned char a)
     if (WANT_HUNGER (w) > WANT_HUNGER (o) || WANT_THIRST (w) > WANT_THIRST (o)) {
         m.kind = E_BEAT;                        /* ("You're getting thirsty.") */
         m.who = m.a = m.b = 0;
-        m.w1 = WB_WANT | w << 8;
+        m.w1 = WB_WANT | (w & (WANT_HUNGER (w) > WANT_HUNGER (o) ? 0x0F : 0) | w & (WANT_THIRST (w) > WANT_THIRST (o) ?
+            0xF0 : 0)) << 8;                    /* (Only what rose: its level) */
         m.t = HUB->now;
         hub_event (&m);
     }
@@ -225,8 +226,8 @@ unsigned char __fastcall__ s_want_time (unsigned n, unsigned char a)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW73CODE")
-#pragma rodata-name (push, "SW73RODATA")
+#pragma code-name (push, "SW72CODE")
+#pragma rodata-name (push, "SW72RODATA")
 #pragma local-strings (push, on)
 
 /* ---- Eating, drinking, a waterskin filled (the things' IO_EAT, IO_DRINK, IO_FILL: the hub's ireq, its name; the
@@ -264,7 +265,7 @@ static struct item* __fastcall__ water_in (unsigned c)
     return items (0, IN_ITEM | IN_X, c) && ip->kind == KI_WATER ? ip : 0;
 }
 
-unsigned char __fastcall__ s_water_op (unsigned char op)
+static unsigned char __fastcall__ water_op (unsigned char op)
 {
     char name[16];                              /* (On the C stack: the main RAM's room) */
     unsigned sk;
@@ -277,13 +278,10 @@ unsigned char __fastcall__ s_water_op (unsigned char op)
         if (HUB->pc_hunger < MEAL / 4) {
             return wsaid ("You're not hungry.", 0);
         }
-        if (!HUB->pc_meals) {
-            if (!(sk = at_hand (*name ? name : "rations")) || item_at (sk)->kind != KI_RATIONS) {
+        if (!HUB->pc_meals) {                   /* (A new day's ration begun: one of the lot used up by its key,
+                                                **   its last told, part 7's) */
+            if ((*name && strcmp (name, "rations") && strcmp (name, "food")) || use_key ("food") != IR_OK) {
                 return wsaid ("You have nothing to eat.", 0);
-            }
-            p = item_at (sk);
-            if (!--p->qty) {
-                p->kind = 0;                    /* (The last of them) */
             }
             hub_map (0);
             HUB->pc_meals = 3;
@@ -330,5 +328,18 @@ unsigned char __fastcall__ s_water_op (unsigned char op)
 }
 
 #pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ---- The part's one way in (its stub, water: the main RAM's room): k what's wanted (W_WADE, the character come onto
+** its square, w its step; W_WANT, w the minutes gone, | its activity times 16384; W_OP, w the things' request's kind) */
+#pragma code-name (push, "SW72CODE")
+#pragma rodata-name (push, "SW72RODATA")
+
+unsigned __fastcall__ s_water (unsigned char k, unsigned w)
+{
+    return k == W_WADE ? wade (w) : k == W_WANT ? want_time (w & 0x3FFF, w >> 14) : water_op ((unsigned char) w);
+}
+
 #pragma code-name (pop)
 #pragma rodata-name (pop)

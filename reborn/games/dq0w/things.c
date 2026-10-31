@@ -774,14 +774,14 @@ unsigned char s_serve (void)
         iq.result = hide (iq.name);
         break;
     case IO_FILL:
-        if ((iq.result = water_op (IO_FILL)) == IR_NONE) {
+        if ((iq.result = water (W_OP, IO_FILL)) == IR_NONE) {
             iq.result = fill ();                /* (A light renewed: its time in the request's x, part 27's; a
                                                 **   waterskin filled, part 72's) */
         }
         break;
     case IO_EAT:                                /* (Eating, drinking: part 72's, slice 4.9's) */
     case IO_DRINK:
-        iq.result = water_op (iq.kind);
+        iq.result = water (W_OP, iq.kind);
         break;
     case IO_THEME:
         theme_kinds ();

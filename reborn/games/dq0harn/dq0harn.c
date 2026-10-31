@@ -221,12 +221,19 @@ static const unsigned char appraiser[NAP] = {
 
 /* RS_TEST's own tests, through one stub (the main RAM's room): a dig's, moving quietly's, an appraisal's (by the
 ** craft that knows the thing) */
+static unsigned char __fastcall__ speaks (const char* t);
 void __fastcall__ s_dig_answer (struct req* r)
 {
     if (r->a == P_STEALTH) {
         s_quiet_test (r);
     } else if (r->a == P_APPRAISE) {
         r->grade = test_sk (&pc, appraiser[r->b < NAP ? r->b : 0], r->steps);
+    } else if (r->a != P_DIG && r->a != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
+        if (!speaks (r->text)) {                /* (Words in a tongue it doesn't speak: nothing) */
+            r->result = 2;
+        } else {
+            r->grade = test (&pc, r->a, r->steps);
+        }
     } else if (r->a == P_SWIM) {                /* (A minute's swimming, the book's, Skills 10: its squares, by the
                                                 **   grade's yards (calm water) times its skill index; it sinks at
                                                 **   a critical failure; its breath held Endurance times 10 seconds) */
@@ -609,7 +616,9 @@ void __fastcall__ s_beasts (unsigned char back)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* Whether it speaks tongue t (a word of tongues, a space before it) */
+/* Whether it speaks tongue t (a word of tongues, a space before it: part 2's, the main RAM's room, 2026-10-31) */
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
 static unsigned char __fastcall__ speaks (const char* t)
 {
     char* p = tongues;
@@ -623,6 +632,8 @@ static unsigned char __fastcall__ speaks (const char* t)
     }
     return 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The character's state in words (RS_DESCRIBE b 3: overlay 1's; a 1, its pace and watchfulness only, the hub's): what
 ** the words need copied for the overlay (the hub's not in the window while it is) */
@@ -802,11 +813,9 @@ static void __fastcall__ answer (struct req* r)
             break;
         }
         if ((r->a == P_PERSUADE || r->a == P_INTIMIDATE || r->a == P_DECEIVE) && r->text[0]) {   /* (Words in a
-                                                **   tongue: one it speaks, or nothing) */
-            if (!speaks (r->text)) {
-                r->result = 2;
-                break;
-            }
+                                                **   tongue: one it speaks, or nothing: part 2's) */
+            dig_answer (r);
+            break;
         }
         if (r->a <= P_NOTICE_SMELL) {           /* (By its state: its pace, its shock; overlay 1's, in a copy) */
             ps.go = HUB->pc_going;

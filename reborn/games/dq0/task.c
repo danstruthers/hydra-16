@@ -380,6 +380,43 @@ void __fastcall__ o_bar_text (char* s, unsigned done, unsigned len)
 #pragma local-strings (push, on)
 
 /* A walk's beat as it goes (E_BEAT's w: WB_*, its side times 256) */
+/* The water's news, hunger's and thirst's (an E_BEAT's, WB_WATER ... WB_WANT: slice 4.9's, limb_words' through beat_words: no stub of its own, the main RAM's room), the character's, worded */
+static void __fastcall__ water_words (unsigned w)
+{
+    static const char* const into[4] = { "You wade out of the water.", "You wade into the water, a foot or two deep.",
+        "You wade in up to your waist.", "You're out of your depth: you swim." };
+    static const char* const thirst[4] = { "You're getting thirsty.", "You're very thirsty.",
+        "You're parched.", "You're dying of thirst." };
+    static const char* const hunger[4] = { "You're getting hungry.", "You're very hungry.", "You're starving.",
+        "You're wasting away with hunger." };
+    unsigned char b = w >> 8;
+
+    switch ((unsigned char) w) {
+    case WB_WATER:
+        msg (into[b & 3]);
+        break;
+    case WB_SWIM:
+        msg (b & 2 ? "You come up, gasping." : b & 1 ? "You swim strongly." : "You struggle to keep afloat.");
+        break;
+    case WB_UNDER:
+        if (!b) {
+            msg ("You go under!");
+        }
+        break;
+    case WB_DOUSED:
+        msg ("The water puts out your light.");
+        break;
+    case WB_WANT:
+        if (WANT_THIRST (b)) {
+            msg (thirst[(WANT_THIRST (b) > 4 ? 4 : WANT_THIRST (b)) - 1]);
+        }
+        if (WANT_HUNGER (b)) {
+            msg (hunger[(WANT_HUNGER (b) > 4 ? 4 : WANT_HUNGER (b)) - 1]);
+        }
+        break;
+    }
+}
+
 void __fastcall__ o_beat_words (unsigned w)
 {
     switch ((unsigned char) w) {
@@ -411,7 +448,11 @@ void __fastcall__ o_beat_words (unsigned w)
         msg ("You keep at it.");
         break;
     default:
-        felt_words (w);                         /* (The dark's: overlay 7's) */
+        if ((unsigned char) w >= WB_WATER && (unsigned char) w <= WB_WANT) {
+            water_words (w);                    /* (The water's, hunger and thirst: slice 4.9's) */
+        } else {
+            felt_words (w);                     /* (The dark's: overlay 7's) */
+        }
         break;
     }
 }
@@ -492,7 +533,8 @@ void __fastcall__ o_felt_words (unsigned w)
         return;
     case WB_SPENT:                              /* (A thing used up, its kind: HOUSE.md's things used up) */
         hub_mem (KIND_BANK, lb, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
-        sayf ("\nYour %s is %s.", lb, b == KI_INK ? "dry" : b == KI_QUILL ? "worn out" : "worn to nothing");
+        sayf (b == KI_RATIONS ? "\nThat was the last of your %s." : "\nYour %s is %s.", lb, b == KI_INK ? "dry" :
+            b == KI_QUILL ? "worn out" : "worn to nothing");    /* (Rations eaten: slice 4.9's) */
         return;
     }
 }
