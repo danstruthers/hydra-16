@@ -110,10 +110,10 @@ by a request or an intent.
   **turns pace** the world gives the denizens their turn (den_go) at each slice of the clock (ten seconds; a long
   wait's longer, to the next actor's moment, HOUSE.md's long waits) and after its own work
   at the same clock, and waits for their I_DONE, carrying out their intents meanwhile: the same game whatever the
-  tasks' timing, the referee's one stream of dice seeing the same requests in the same order.  Nor does it give a turn
-  or move its clock on while the UI's command is being given (the hub's ui_giving, from the line taken till its
-  command's done) or an intent of it waits in its ring: a command of several intents (a throw's taking in hand, then
-  the throw) is taken whole first (2026-10-31: dq0cmd's rats fought otherwise as the start's timing moved; dq0turnsame
+  tasks' timing, the referee's one stream of dice seeing the same requests in the same order.  Nor does it give a
+  turn, move its clock on, or do anything of the character's while the UI's command is being given (the hub's ui_giving,
+  from the line taken till its command's done) or an intent of it waits in its ring: a command of several intents (a
+  throw's taking in hand, then the throw) is taken whole first (2026-10-31: dq0cmd's rats fought otherwise as the start's timing moved; dq0turnsame
   plays a fight twice, its commands typed late the second time, and finds them the same).
 - **The senses** (dq0p) answer for every actor, and own every actor's memory of what it has perceived: what the
   character sees (the look, as the world asks: the hub's look) and what each denizen senses (the denizens ask, for
