@@ -5081,8 +5081,9 @@ static unsigned char turns_run (void)
     unsigned long d;
     unsigned s;
 
-    if (HUB->tpr || HUB->paused || HUB->hold) {
-        return 0;
+    if (HUB->tpr || HUB->paused || HUB->hold || HUB->ui_giving || HUB->iq_head != HUB->iq_tail) {
+        return 0;                               /* (A command being given, or an intent of it not taken yet: no turn,
+                                                **   the clock where it is, ui_giving's, 2026-10-31) */
     }
     if (HUB->eq_head != go_eq) {
         turn ();                                /* (Its own work told: the denizens' turn at it, at this clock) */
@@ -5161,13 +5162,12 @@ static void clock_run (void)
 unsigned char __fastcall__ wstart (char** argv);   /* (Part 3's: the start-up, attached and started) */
 
 /* The swapped parts' images read into banks of its own (dir/dq0w.ovl: dq0w.cfg's OV1 ..., 8K each, as make.js
-** packs them, ../dq0/ovlpack.js: each bank's bytes' count, then them, read straight into it through the window, the
-** linker's fill ($FF) put back after them): 0, or -1 */
+** packs them, ../dq0/ovlpack.js: each bank packed, read and unpacked in place by the unpack library, the linker's fill
+** ($FF) put back after its bytes: ../dq0/ovunpack.inc): 0, or -1 */
+unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
 static int __fastcall__ ovl_load (const char* dir)
 {
     unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Its path in the parts' area: none in it yet) */
-    static unsigned c;
-    unsigned char k, first;
     int fd, n;
 
     strcpy ((char*) b, dir);
@@ -5175,17 +5175,10 @@ static int __fastcall__ ovl_load (const char* dir)
     if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (OVBANKS + 4)) < 0) {
         return -1;
     }
-    for (k = 0, first = n; k < OVBANKS + 4; ++k) {
-        ovbank[k] = first + k;
-    }
-    for (k = 0; read (fd, &c, 2) == 2; ++k) {   /* (OVBANKS banks at most; first + k, not ovbank[k]: cc65's
-                                                **   optimizer dropped hy_bank's index here, hydra.h's) */
-        hy_bank (first + k);
-        read (fd, (void*) 0x8000, c);
-        memset ((void*) (0x8000 + c), 0xFF, 0x2000 - c);
-    }
+    ovbank[0] = n;                              /* (The rest after it: ovl_unpack's) */
+    n = ovl_unpack (fd | ((OVBANKS + 4) << 8));
     close (fd);
-    return 0;
+    return -n;
 }
 
 

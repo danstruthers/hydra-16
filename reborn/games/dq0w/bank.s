@@ -18,6 +18,7 @@
             .import     popax, pushax, _cat_map
 
             .include    "zeropage.inc"
+            .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most

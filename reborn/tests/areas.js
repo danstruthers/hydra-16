@@ -51,6 +51,7 @@ const rules = [
   ['reborn/modules/math/', ['numbers', 'basic', 'forth', 'hylang', 'c', 'layout']],
   ['reborn/modules/numbers/', ['numbers', 'basic', 'forth', 'hylang', 'c', 'layout']],
   ['reborn/modules/play/', ['sound', 'layout']],
+  ['reborn/modules/unpack/', ['dq0', 'layout']],                // (The unpack library: the game's overlays read as it starts)
   ['reborn/modules/', ['*']],                                 // (init, rc, cons, kdev, storage, snd, vid, rom.txt)
   ['reborn/spec/asm.def', ['asm', 'basic', 'forth']],
   ['reborn/spec/numbers.def', ['numbers', 'basic', 'forth', 'hylang', 'c']],
@@ -178,6 +179,7 @@ const CASES = [
   ['reborn/forthlib/double.s', { has: ['forth'], not: ['dq0*'] }],
   ['reborn/modules/hylang/hylang.s', { has: ['hylang', 'hysuite1', 'hyhydra'], not: ['dq0*', 'basic'] }],
   ['reborn/modules/asm/asm.s', { has: ['as', 'dis', 'bsuite', 'forth'], not: ['dq0*'] }],
+  ['reborn/modules/unpack/unpack.s', { has: ['dq0starttime', 'dq0answer'], not: ['bsuite', 'hylang'] }],
   ['reborn/modules/numbers/num.s', { has: ['numbers', 'basic', 'hylang', 'forth', 'cnum', 'dq0'], not: ['task', 'base'] }],
   ['reborn/tests/mod/t_task/t_task.s', { has: ['task'], not: ['dq0*', 'boot'] }],
   ['reborn/tests/ram/t_rules/rules.txt', { has: ['dq0rules'], not: ['boot', 'dq0fight'] }],

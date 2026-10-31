@@ -190,28 +190,26 @@ static int find_dirs (void)
 
 /* ---- The overlays: libdir/dq0.ovl (fd, find_dirs'), an 8K bank each (dq0.cfg's OV1 ...; the file cut after the
 ** last one used: make.js), read into banks of the game's own.  Each bank's bytes in the file as make.js packs them
-** (ovlpack.js): their count, then them, the linker's fill ($FF) after them left out; each read straight into its bank
-** through the window, the fill put back after it.  The game's start's first words, and a dot for each bank (the
-** screen not made yet: 2026-10-30, the start's progress shown) */
+** (ovlpack.js): packed, a bank on its own (LZ4's block), read and unpacked in place by the unpack library
+** (modules/unpack, ovunpack.inc: 2026-10-31), the linker's fill ($FF) put back after its bytes, so each bank's as ld65
+** made it.  The game's start's first words before it (the screen not made yet: 2026-10-30, the start's progress
+** shown) */
 
 static void __fastcall__ ovl_load (int fd)
 {
-    static unsigned n;
     int first;
-    unsigned char k, w = getbank ();
+    unsigned char w = getbank ();
 
-    if (fd < 0 || (first = hy_banks_alloc (sizeof ovbank)) < 0) {
-        hy_exits ("dq0: no overlays (lib/dq0/dq0.ovl), or no RAM banks");
+    write (1, "Dingus Quest Zero is starting ...", 33);
+    if (fd >= 0 && (first = hy_banks_alloc (sizeof ovbank)) >= 0) {
+        ovbank[0] = first;                      /* (The rest after it: ovl_unpack's) */
+        if (!ovl_unpack (fd | (sizeof ovbank << 8))) {
+            setbank (w);
+            close (fd);
+            return;
+        }
     }
-    write (1, "Dingus Quest Zero is starting ", 30);
-    for (k = 0; k < sizeof ovbank && read (fd, &n, 2) == 2; ++k) {
-        setbank (ovbank[k] = first + k);
-        read (fd, (void*) 0x8000, n);
-        memset ((void*) (0x8000 + n), 0xFF, 0x2000 - n);
-        write (1, ".", 1);
-    }
-    setbank (w);
-    close (fd);
+    hy_exits ("dq0: no overlays (lib/dq0/dq0.ovl, the unpack library), or no RAM banks");
 }
 
 /* ---- The character: the ruleset's (hmchar's), its file read by the referee */
@@ -2543,7 +2541,12 @@ int main (int argc, char* argv[])
         if (!busy && (reach & 1)) {
             ++reach;                            /* (Walked over to its thing, or its timed work's time up: the command
                                                 **   kept carried out again, its end; till the next's, s_command's) */
+            hub_map (0);
+            HUB->ui_giving = 1;                 /* (Being given, as a line's command: ui_giving's) */
             command (0);
+            hub_map (0);
+            HUB->ui_giving = 0;
+            hub_ring (T_WORLD);
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
             cq_post (l);                        /* (The command parser at work on it meanwhile) */
@@ -2581,6 +2584,8 @@ int main (int argc, char* argv[])
             l = 0;
         }
         if (l) {
+            HUB->ui_giving = 1;                 /* (Its command being given: the turns pace waits for it, the
+                                                **   world's turns_run) */
             iqh = HUB->iq_head;                 /* (The UI's intents' ring as the line's taken: one sent, its answer
                                                 **   owed, the world's news) */
             f = names_in (l = t_line ());       /* (The line's first look, in the overlays' banks: a part's
@@ -2617,6 +2622,8 @@ int main (int argc, char* argv[])
             hub_map (0);
             owed = HUB->iq_head != iqh;
             obeat = HUB->beat[T_WORLD];
+            HUB->ui_giving = 0;                 /* (Given: the world on, woken to it) */
+            hub_ring (T_WORLD);
             HUB->ui_cmd = busy | owed;          /* (Its answer the world's, not yet said: the look and the minds
                                                 **   give way till the character's news comes, events'; an intent
                                                 **   sent, the character not busy, its answer owed too: a step that
@@ -2624,9 +2631,10 @@ int main (int argc, char* argv[])
         } else {
             ready ();                           /* (The commands' part back, if another's in) */
         }
-        if (stirs && !inn) {
+        if (stirs && !inn && !HUB->ui_cmd) {
             stirs = 0;
-            stir ();                            /* (A stir held while the line was typed and answered: told now) */
+            stir ();                            /* (A stir held while the line was typed and answered: told now, its
+                                                **   answer begun, ui_cmd's) */
         }
         t_done ();
         fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */

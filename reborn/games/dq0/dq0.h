@@ -233,6 +233,7 @@ void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsig
 /* ---- The overlays (bank.s: their stubs) */
 
 void title (void);                              /* Overlay 1: the title, the pace asked */
+unsigned char __fastcall__ ovl_unpack (unsigned fb);    /* (ovunpack.inc: the overlays' file's fd, the banks at most) */
 void __fastcall__ dots (unsigned char k);       /* (Overlay 6's) The game's start's progress (main.c's) */
 extern unsigned char starting;                  /*   while it starts (main.c's) */
 void __fastcall__ entered (unsigned char resumed);  /* Overlay 1: the character come into the dungeon */

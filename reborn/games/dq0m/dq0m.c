@@ -28,30 +28,23 @@ const char* libpath;                            /* (The game's lib folder: its b
 extern char _SWAP_START__[];
 
 /* The overlays: dir/dq0m.ovl, an 8K bank each (dq0m.cfg's OV1 ...; the file cut after the last one used, each bank's
-** bytes' count then them, the linker's fill left out: make.js, ../dq0/ovlpack.js), read into banks of its own, straight
-** through the window, the fill ($FF) put back after them: 0, or -1 */
+** bank packed: make.js, ../dq0/ovlpack.js), read and unpacked in place into banks of its own by the unpack library,
+** the linker's fill ($FF) put back after its bytes (../dq0/ovunpack.inc): 0, or -1 */
+unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
 static int __fastcall__ ovl_load (const char* dir)
 {
     static char path[64];
-    static unsigned c;
     int fd, first;
-    unsigned char k;
 
     strcpy (path, dir);
     strcat (path, "/dq0m.ovl");
     if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (OVLS)) < 0) {
         return -1;
     }
-    for (k = 0; k < OVLS; ++k) {
-        ovbank[k] = first + k;
-    }
-    for (k = 0; k < OVLS && read (fd, &c, 2) == 2; ++k) {
-        hy_bank (first + k);
-        read (fd, (void*) 0x8000, c);
-        memset ((void*) (0x8000 + c), 0xFF, 0x2000 - c);
-    }
+    ovbank[0] = first;                          /* (The rest after it: ovl_unpack's) */
+    first = ovl_unpack (fd | (OVLS << 8));
     close (fd);
-    return 0;
+    return -first;
 }
 
 /* Request i answered: the strata's records copied first (the world bank's are the truth), and back if they changed */

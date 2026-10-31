@@ -1271,6 +1271,19 @@ same day).
 
 ## 2026-10-30
 
+### The start's levers: the card's reads and the overlays packed (2026-10-31)
+
+The user's choices (the lead's, relayed 2026-10-31): yes to the storage driver's read loop quickened (the bits' timing
+proven on the board exactly as it was, only the gap between bytes the shorter), yes to the overlays compressed (a
+small, fast unpacker in a shared ROM library, not in each task's main RAM; the banks the same as today's, checked),
+no to the game on the ROM disk.  Built: the start 208M cycles at seed 1 and 289M at a big seed (58 s and 81 s on the
+board, from 79 s and 104 s).  With the start quicker, dq0cmd's fight at the turns pace went otherwise: a throw's
+two intents (taken in hand, then thrown) let the world move its clock and give the denizens a turn between them as the
+tasks' timing fell.  Fixed generally (the hub's ui_giving, HUB_VERSION 32: no turn and no clock while a command's
+being given or an intent of it waits), not by re-baselining; dq0turnsame guards it.
+
+**Design:** DUNGEON.md, the game's start; who keeps what (the turns pace).
+
 ### The start's time measured, its progress shown
 
 The user's rule (DECISIONS.md, the parser's task: a start of up to ten seconds is fine, shown; start-up work traded

@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     32                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     33                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -62,8 +62,8 @@
                                                 **   AM_LEADS, DE_RALLY: succession; 30, the auto-target range,
                                                 **   pc_auto, WS_AUTO; a stray's FW_STRAY; 31: an ally's errands and gifts,
                                                 **   the sway's item, ix, iy and actor, SW_GIVE, I_ROB's a (FE_*),
-                                                **   TE_FETCHED; 32, hunger and thirst, the
-                                                **   water, pc_hunger ... pc_swat, WB_WATER ... WB_DOUSED) */
+                                                **   TE_FETCHED; 32: ui_giving; 33, hunger and thirst,
+                                                **   the water, pc_hunger ... pc_swat, WB_WATER ... WB_DOUSED) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -1176,6 +1176,12 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char ui_cmd;              /* The UI's: a line taken and its command in hand (its words not yet
                                                 **   all out): the senses' look gives way to it a while (dq0prompt:
                                                 **   the UI answering at once, the world's answers its) */
+    volatile unsigned char ui_giving;           /* The UI's: a line's command being given, its intents not all sent
+                                                **   (from the line taken till its command's done: a throw's taking
+                                                **   in hand, then the throw).  At the turns pace the world gives no
+                                                **   turn and moves its clock on meanwhile, nor with an intent in its
+                                                **   ring: so the game turns on its commands, not on how the tasks'
+                                                **   timing falls between a command's intents (2026-10-31) */
     /* The save folder's region files' versions (world.h's struct vfh: DUNGEON.md's no fixed size), the world's, as it
     ** begins a game and as it keeps one (WQ_SAVE, the save's last step): every file stamped up to vsaved is the last
     ** save's, every one stamped past vbase (this session's floor, the stamps an earlier session may have given at
@@ -1492,6 +1498,7 @@ struct wsave {
 **   own hub.den_go world                                       (The denizens' turn: the turns pace's)
 **   own hub.dsense senses +denizens                            (An actor's senses: the denizens' request)
 **   own hub.ui_cmd ui                                          (A command in hand: the look and the minds give way)
+**   own hub.ui_giving ui                                       (A command being given: the turns pace waits)
 **   own hub.vsaved world                                       (The region files' versions: the world's, as it
 **   own hub.vbase world                                        (begins and keeps a game)
 **   own hub.vlo world
