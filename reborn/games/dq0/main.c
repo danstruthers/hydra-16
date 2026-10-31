@@ -2452,12 +2452,13 @@ int main (int argc, char* argv[])
         heard ();
         now = hub_now ();
         if ((k && !HUB->ui_cmd) || ((now >= next || now < next - 600 || (HUB->pc_task.kind && HUB->pc_task.done != bar_done)) &&
-            hy_ticks () - shown >= (inn ? 1000 : 200))) {
+            hy_ticks () - shown >= (inn ? 1000 : 200) && !t_haskey ())) {
             next = (now / 600 + 1) * 600;       /* (The status line as the events change it, and its clock as a
                                                 **   game minute goes, a real second apart at most, five while a
                                                 **   line's being typed: only what's changed drawn, t_status; the
                                                 **   minute's end kept, not divided for each time round; not as
-                                                **   events come while a command's in hand: its answer first) */
+                                                **   events come while a command's in hand: its answer first; nor
+                                                **   its clock while keys wait, a line typed ahead, 2026-10-30) */
             shown = hy_ticks ();
             status ();
         }
