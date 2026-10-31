@@ -448,7 +448,16 @@ book's; the house's below, each marked.
   the next (the book's: load, or fire).  Fighting on with missiles is a long task as melee is (HOUSE.md's fighting on):
   a shot each round at the target while it's in range, seen and the line clear and a missile's to hand, then the
   nearest hostile it can shoot at; an enemy engaging it, the melee takes over, with what it holds (a bow the book's
-  stick, a sling a soft thing).  The set auto-engage range (the user's, to come) plugs in at dq0w/wshoot.c's SO_FOE.
+  stick, a sling a soft thing).
+- **The auto-target range** *(2026-10-30, the user's of 2026-10-20: "autotarget with bow at medium range"; drafted for
+  review)*: "autotarget at medium range", "set autotarget to short", "autotarget off" (also "auto-target", "autoengage",
+  "autofire"; the bands short or close, medium, long, extreme; "autotarget" alone tells it).  Set, fighting on with
+  missiles turns only to a hostile within it (its target, once chosen, followed to the launcher's own range); and a
+  hostile engaging it from further off than beside it (shooting at it), none beside it, is shot back at, unbidden,
+  with the launcher it carries, if one's within the range (dq0w.c's fight_on, wshoot.c's PS_AUTO: the hub's pc_auto).
+  Under a ceiling a launcher's medium band is its last, whatever's set.  *Not yet: a hostile merely coming into the
+  range begins it (the world's main loop has no room for the look); melee's "autoengage with sword at close range"
+  (the zone and a square more, closed with); the setting kept with a save.*
 - **Ranges** (Combat 16's Missile Data Table, in five-foot squares): a sling 15, a shortbow 20, a longbow 25, a
   hartbow 30, a crossbow 20 the short band, each band twice the last, the medium 20 less, the long 40, the extreme 80.
   *Underground, under a ceiling, a launcher's long and extreme bands none and its medium 15 less* (the book's
@@ -470,20 +479,45 @@ book's; the house's below, each marked.
   other weapon of a skill not its own's).  *(For review.)*
 - **What comes of it** (the missile attack table): wild (the shooter's fumble roll for its launcher: failed, let
   fall), a miss, a block (the shield or the weapon struck, no harm), a strike of n dice and the missile's impact at
-  its range, the armour at the location off it.  *(Left: the book's 20% that a miss strikes one beside the mark, the
-  referee's MS_STRAY there for it, the world's left for room.)*
+  its range, the armour at the location off it.
+- **A miss's stray** *(2026-10-30)*: a miss (or a dodged one) at a mark with others beside it strikes one of them half
+  the time, one chosen at random (the book's: a missile shot at one engaged in melee, a Miss 50% striking a randomly
+  determined adjacent character; the earlier notes' 20% was wrong), the character too, every shooter's and thrower's,
+  never the shooter itself.  *Its strike one die, no test, no defence (the referee's MS_STRAY, both referees: the
+  null's a hit; for review)*; told after the miss ("Your shot strikes the giant rat instead: ...", "Its spear strikes
+  you instead ..."), the one struck the one hurt (its courage, its fall, its kin's dismay); the missile at its feet.
 - **Where it falls**: a hit or a block at the mark's feet; a miss on past it along the line, one to four squares,
   short of what stops it; a wild one somewhere within two squares; known to the character.  *An arrow breaks one time
   in four (kinds.c's snaps, the user's "arrows can break"), a bolt one in seven (the house's: shorter, thicker), a
-  stone never; a thing thrown never.*  *(For review.)*  "gather the arrows" walks over to each missile it knows of
-  within twelve squares, seen, the nearest first, and takes it up into its quiver (joined to the lot there), else as
-  a thing taken up.
+  stone never; a thing thrown never.*  *(For review.)*  One of a lot thrown (a taburi of a handful) goes alone.
+  "gather the arrows" walks over to each missile it knows of within twelve squares, seen, the nearest first, and
+  takes it up into the carrier of its family it has on it (a quiver its arrows, a bolt case its bolts), joined to the
+  lot there, if there's room (2026-10-30); else as a thing taken up (the pack, a hand).
 - **Denizens**: one with a launcher of its own and its missiles, hostile, sensing the character further off than
   beside it, shoots (its mind's: the world says if it can; no shot to be had from there, out of range or no clear
   line, it closes with the character till the character moves); its launcher taken up from its back or its belt first, its
-  round's (not with something else in its hands); its missiles run out, it shoots no more; the character beside it,
-  it lets its launcher fall (no time, the book's) and draws its weapon.  *(For review: a denizen holding a weapon
-  doesn't change it for its bow.)*
+  round's; its missiles run out, it shoots no more; the character beside it, it lets its launcher fall (no time, the
+  book's) and draws its weapon.
+- **A denizen's weapon changed for its bow** *(2026-10-30, for review)*: one holding a weapon (and a shield) puts them
+  up (slung, hung on it) as it takes up its launcher, all of it its round (the book's grope; the house's one round
+  for both); a light in its hand it keeps, and doesn't shoot.  Back to melee, its launcher let fall, the weapon it put
+  up is the first it draws (its round), its shield readied the round after, as ever.
+- **The denizens throwing** *(2026-10-30, for review)*: one with nothing to shoot (none, or its missiles spent: its
+  launcher let fall first) throws, by the character's own path (the same missile attack, Throwing or the weapon's
+  own skill): a thing made to be thrown (a taburi, a shorkana: the book's thrown weapons) from its hand or its belt,
+  else a dagger, a knife, a spear, a hatchet or an axe in its hand if it keeps another weapon to fight with; one at
+  its belt drawn first (its round, what it holds put up); *within the short and medium bands only (the house's: no
+  denizen throws its weapon at a far mark)*.  What it threw lies where it fell, anyone's.  *Not yet: one holding
+  another weapon (a sword, a mankar) with its taburis or shorkanas at its belt (its belt's looked at, as its things
+  are told the referee, only till it's armed: the answers' time); a rock picked up
+  (the dungeon has no loose stones to pick; a denizen taking up a thing it finds is phase 3C's one path).*
+- **Every fall told** *(2026-10-30)*: any actor knocked down in a fight (a stumble, a leg's wound, a missile's), the
+  character too, is told as it falls, after the blow's words ("The giant rat goes down.", by its body; "You fall."),
+  seen, or heard if it's near and out of sight ("You hear something fall.": within eight squares); its rise told once,
+  as it gets up.  Down senseless, or dead, its fall is the blow's own words ("It falls senseless.").
+- **The denizens' positions** beyond prone *(not built)*: a shooter crouched behind cover (a parapet, a slit's wall)
+  would want the cover the world gives only by the slits and windows today, and a position the minds choose; the
+  bodies' positions are the world's for every actor (slice 4.6's), so it's the minds' choice and a cover map to come.
 
 ## Commands
 
@@ -2175,7 +2209,7 @@ has it.)*
 
 The book has an ally fetch nothing and says little of gifts: Rhetoric "in the target's best interest" is the easier
 (Skills 12, Rhetoric), the GM's to judge.  The rest is the house's.  *(Every number here is for review.)*
-(dq0d.c's part 5: s_ally, s_aside, s_gift, s_regard; dq0w/wfetch.c, part 69; things.c's fetch_find.)
+(dq0d.c's part 5: s_ally, s_aside, s_gift, s_regard; dq0w/wfetch.c, part 72; things.c's fetch_find.)
 
 - **Who fetches:** an ally, by its own turn: it walks to the thing, takes it up beside it, brings it back to where it
   last sensed the character and hands it over beside it.  Each a round's work (the world's I_ROB, as a robbery is).

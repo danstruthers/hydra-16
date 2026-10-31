@@ -313,6 +313,9 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   towards it, keeping its distance, going about its business): not at each step, and nothing if it's as it was told
   (dq0/dens.c keeps what was told).  Those alike are told together ("Two giant rats are ahead to your right, 10 feet
   away.").  Not while the character's on its way somewhere (it looks about as it gets there); while it digs, yes.
+  At the real paces a stir that comes while the player types a line is held, and told once the line's entered and
+  answered (or let go), as it is now: the line's echo and its Enter not behind the stir's words (2026-10-30: an
+  inventory typed as the rats stirred was answered 240,000 cycles late).
 - **Heard:** the denizens' events go out as the world moves their bodies (a step quietly, a noise of their own every
   eighth, loud as a squeak; a dash past the character louder; the character sensed, or lost, silently).  The UI tells
   those the character hears and doesn't see (one it sees is told as seen), in each kind's sound's words (SOUND.md):
@@ -505,7 +508,11 @@ What the plans bring later, by the slice or phase that brings it:
   actor's own still heard as the crow flies).
 - **Fights complete** (slice 4.7): one combat path, missiles (a bow through an arrow slit), allies fighting beside the
   character, factions fighting each other, morale from the layers (leaders seen, darkness; the field, the bonds and a
-  fall heard by its din since 2026-10-30).
+  fall heard by its din since 2026-10-30).  Built 2026-10-30 (HOUSE.md's missiles): the denizens throwing (a taburi,
+  a shorkana, a spear or a dagger in hand, another weapon kept), a weapon put up for a bow and drawn again for melee,
+  a miss's stray striking one beside its mark (an actor struck by another's shot: the one blow between two actors the
+  referees take, its mind's dismay and death as any blow's); left: a rock picked up, the denizens' positions but
+  prone (a shooter crouched behind cover).
 - **Fetching and influence** (slice 4.8, built 2026-10-30: fetching, gifts and bribes, reputation, D10, a follower's
   distance, above): left, an ally asked to do other things ("ask the dwarf to open the door": it "doesn't know how"),
   "give the bandit 5 pennies" (the two objects without "to": the parser's), a gift to one that isn't a person (an

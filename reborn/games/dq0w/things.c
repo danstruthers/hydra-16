@@ -711,45 +711,33 @@ void s_light_now (void)
 static unsigned char __fastcall__ fetch_find (const char* fn)
 {
     struct item* p;
-    unsigned n, c, n0;
-    unsigned char to, r;
+    unsigned n, c, x = 0, y = 0;
+    unsigned char r = IR_NONE, g, sn;
 
     hub_map (0);
-    to = HUB->ireq.to;
-    if (to) {                                   /* (A gift: the character's) */
-        if (!(n = pick (fn, HW_CARRIED)) || (r = describe (fn)) != IR_OK) {
-            hub_map (0);
-            return IR_NONE;
+    g = HUB->ireq.to;
+    sn = HUB->pc_stratum;
+    if (g) {                                    /* (A gift: the character's, IO_DESCRIBE's reply) */
+        if ((n = pick (fn, HW_CARRIED)) != 0 && describe (fn) == IR_OK) {
+            r = IR_OK;
         }
-        hub_map (0);
-        HUB->ireq.item = n;
-        return IR_OK;
-    }
-    if (!(n = pick (fn, HW_SEEN))) {
-        hub_map (0);
-        return IR_NONE;
-    }
-    for (c = n; (p = item_at (c))->where == IW_ITEM; c = p->x) {
-        if (c != n && (p->shut & IS_CLOSED)) {
-            hub_map (0);
-            return IR_NO;                       /* (In a thing closed) */
+    } else if ((n = pick (fn, HW_SEEN)) != 0) {
+        for (c = n; (p = item_at (c))->where == IW_ITEM && (c == n || !(p->shut & IS_CLOSED)); c = p->x) {
+        }
+        r = IR_NO;                              /* (In a thing closed, carried, on another stratum) */
+        if (p->where == IW_SQUARE && p->sn == sn) {
+            x = p->x;
+            y = p->y;
+            r = IR_OK;
         }
     }
-    if (p->where != IW_SQUARE) {
-        hub_map (0);
-        return IR_NO;                           /* (Carried, the character's or a denizen's) */
-    }
-    c = p->x;
-    to = p->sn;
-    n0 = p->y;
     hub_map (0);
-    if (to != HUB->pc_stratum) {
-        return IR_NO;
+    if (r == IR_OK) {
+        HUB->ireq.item = n;
+        HUB->ireq.x = x;
+        HUB->ireq.y = y;
     }
-    HUB->ireq.item = n;
-    HUB->ireq.x = c;
-    HUB->ireq.y = n0;
-    return IR_OK;
+    return r;
 }
 
 static unsigned char o_handle (void);

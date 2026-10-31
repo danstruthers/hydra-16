@@ -104,6 +104,13 @@ static void news_ev (void)
     hub_event (&m);
 }
 
+/* One fallen in a blow told (E_BEAT's WB_FALLEN, the limbs' news, in the denizens' ring after the blow's words): b 0 the
+** character, else the actor's entry plus 1, | 0x80 (the UI's: told seen, else heard if it's near) */
+static void __fastcall__ fell (unsigned char b)
+{
+    limb_news (WB_FALLEN, b ? b | 0x80 : 0);
+}
+
 /* A blow (att at def: 0 the character, else an actor's entry plus 1; body bd in it), its aim z: the referee asked
 ** (RS_ATTACK, the world's slot: w2 1 if the creature's shy), its words put in the ring at fring (who struck at whom,
 ** the actors' names, "" the character; the tenths one's senseless for; whose a fumble or a stumble was; the
@@ -115,11 +122,13 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     struct fight* f;
     unsigned char ff, c, out, me, wh, n, i, dh, cd, ra;
     unsigned w2;
-    unsigned char pa, pd;
+    unsigned char pa, pd, fa, fd;
     const struct rs_effect* e;
 
     me = bk + 1;
-    ra = att && bd.arm && den_reach ();         /* (Its weapon let fall, in its reach: taken up, its turn, part 51's) */
+    ra = me == att && bd.arm && den_reach ();   /* (Its weapon let fall, in its reach: taken up, its turn, part 51's.
+                                                **   Body bd the attacker, or the defender: a stray's at an actor,
+                                                **   shot by another, both actors, 2026-10-30) */
     hub_map (0);
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_ATTACK;
@@ -131,14 +140,14 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     r->steps = 0;
     r->x[0] = bd.heart;                         /* (The creature's heart: its courage's steps as it's wounded, the
                                                 **   denizens' field and bonds, rs.h's RS_HEART) */
-    pa = att ? bd.pos : HUB->pc_pos;           /* (Their bodies' positions, the world's: prone, the easier struck) */
-    pd = att ? HUB->pc_pos : bd.pos;
+    pa = me == att ? bd.pos : HUB->pc_pos;     /* (Their bodies' positions, the world's: prone, the easier struck) */
+    pd = me == att ? HUB->pc_pos : bd.pos;
     r->w2 = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0);
     if (mshot.kind) {                           /* (A missile's, shot or thrown: wshoot.c's, slice 4.7's) */
         r->c = mshot.kind;
         r->b = mshot.band;
-        r->w1 = mshot.dist;
-        r->w2 |= RS_MISSILE | mshot.flags;
+        r->w2 = (r->w2 | RS_MISSILE | mshot.flags) & (mshot.flags & MS_STRAY ? ~RS_PRONE_A : 0xFFFF);  /* (A stray's
+                                                **   strike no shooter's: nobody gets up for it) */
     }
     r = hub_ask (SLOT_WORLD);
     if ((out = r->result) == 0xFF) {
@@ -159,6 +168,8 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         }
         pa = POS_STANDING;
     }
+    fa = pa;                                    /* (Their positions before it: a fall told, below) */
+    fd = pd;
     for (cd = dh = i = 0, e = (const struct rs_effect*) r->x; i < RS_EFFECTS && e->kind; ++i, ++e) {
         if (e->kind == X_DROP) {
             if (e->target) {
@@ -179,8 +190,8 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
             }
         }
     }
-    HUB->pc_pos = att ? pd : pa;
-    bd.pos = att ? pa : pd;
+    HUB->pc_pos = me == att ? pd : pa;
+    bd.pos = me == att ? pa : pd;
     if (cd) {
         den_word (r->text, !att);               /* (Its weapon's word, the reply's: part 51's) */
     }
@@ -194,7 +205,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     f->out = w2;
     f->which = wh | (z & FW_FIRST) | (c & AF_AGAIN ? FW_AGAIN : 0) | (c & AF_SHIELD ? FW_SHIELD : 0) |
         (!mshot.kind ? 0 : (unsigned char) (mshot.kind - KI_SLING) <= KI_CROSSBOW - KI_SLING ? FW_MISSILE :
-        FW_MISSILE | FW_THROWN);
+        FW_MISSILE | FW_THROWN) | (mshot.kind && (mshot.flags & MS_STRAY) ? FW_STRAY : 0);
     if (att) {
         to_ring (f->att, HUB->actor[(att - 1) & 7].name, sizeof f->att);
     }
@@ -215,7 +226,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         bd.pos = POS_PRONE;
         bd.ready = HUB->now + w2;
     }
-    if ((ff & (att ? FF_D_DOWN : FF_A_DOWN)) && HUB->pc_ready < HUB->now + w2) {
+    if ((ff & (!def ? FF_D_DOWN : !att ? FF_A_DOWN : 0)) && HUB->pc_ready < HUB->now + w2) {
         HUB->pc_ready = HUB->now + w2;          /* (The character senseless: busy till it comes round, so nothing's
                                                 **   done meanwhile, however the UI's events come) */
     }
@@ -228,6 +239,14 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         bleeds |= 1 << bk;
     }
     told (att, def, out, ff);
+    if (pa == POS_PRONE && fa != POS_PRONE && !(ff & (FF_A_DOWN | FF_A_DEAD))) {
+        fell (att);                             /* (Every fall told as it falls, after the blow's words: a stumble's, a
+                                                **   leg's wound's, a missile's, the attacker's or the defender's, seen
+                                                **   or heard; its rise told once, later: 2026-10-30) */
+    }
+    if (pd == POS_PRONE && fd != POS_PRONE && !(ff & (FF_D_DOWN | FF_D_DEAD))) {
+        fell (def);
+    }
     if (c & AF_NEWS) {
         news_ev ();                             /* (A venomous bite: its venom told after it, slice 4.3's) */
     }
@@ -275,23 +294,24 @@ void s_bled (void)
 void __fastcall__ s_den_blow (unsigned char def, unsigned char z)
 {
     if (z & AIM_SHOT) {
-        shot_op (SO_DEN, def, z & ~AIM_SHOT);
+        pc_shot (PS_DEN);                       /* (Its shot or its throw: part 67's, 2026-10-30) */
         return;
     }
     if (z & AIM_FIRE) {                         /* (A missile's blow, mshot set: wshoot.c's, part 65's; the character's
                                                 **   at actor def, else body bd's at the character; how it came out
                                                 **   bev's, told: 0xFF none) */
         bev.x[1] = 0xFF;
-        blow (def ? 0 : bk + 1, def, z & ~AIM_FIRE);
+        blow (mshot.flags & MS_STRAY ? bev.who : def ? 0 : bk + 1, def, z & ~AIM_FIRE);    /* (A stray's: its
+                                                **   shooter bev's, part 67's) */
         mshot.kind = 0;
         return;
     }
     hub_map (0);
     if (HUB->agear[bk] & AG_SHOOTS) {
-        shot_op (SO_UNBOW, 0, 0);               /* (A launcher in its hands let fall first: part 65's, asked only of one
-                                                **   with a launcher, the part's copy the dearer) */
+        pc_shot (PS_UNBOW);                     /* (A launcher in its hands let fall first: part 67's, asked only of one
+                                                **   with a launcher or a thing to throw, the part's copy the dearer) */
     }
-    if (!den_draw ()) {                         /* (Its weapon drawn first, its hands empty: its round's, part 60's) */
+    if (!den_draw (0)) {                        /* (Its weapon drawn first, its hands empty: its round's, part 60's) */
         blow (bk + 1, def, z);
     }
 }
@@ -319,9 +339,9 @@ void s_pc_blow (void)
     ++HUB->den_seq;                             /* (Changed: the world looks again at what the character sees) */
 }
 
-/* ==== Part 67's (part 15's room, 2026-10-29: the missiles' part, wshoot.c's, dq0w.cfg's SW67): a robbery */
-#pragma code-name ("SW67CODE")
-#pragma rodata-name ("SW67RODATA")
+/* ==== Part 69's (part 15's room, 2026-10-29; part 67's till 2026-10-30, the missiles' room: dq0w.cfg's SW69): a robbery */
+#pragma code-name ("SW69CODE")
+#pragma rodata-name ("SW69RODATA")
 
 static struct item* p;
 
@@ -350,7 +370,7 @@ void __fastcall__ s_den_rob (const struct msg* q)
     unsigned char* s;
 
     if (q->a) {
-        den_fetch (q);                          /* (An ally's errand, a gift: part 69's, slice 4.8's) */
+        den_fetch (q);                          /* (An ally's errand, a gift: part 72's, slice 4.8's) */
         return;
     }
     x = q->w1;

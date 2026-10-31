@@ -7,7 +7,7 @@
 ** off), each told the UI (E_TASK TE_FETCHED).  What an actor carries for the character is its own while it does (the
 ** item store's IW_DEN, filed at its lair's home as its things are).
 **
-** All of it swapped part 69's (../dq0/swap.inc: dq0w.cfg's SW69), called through its stubs (bank.s's).
+** All of it swapped part 72's (../dq0/swap.inc: dq0w.cfg's SW72), called through its stubs (bank.s's).
 */
 
 #include <stddef.h>
@@ -19,8 +19,8 @@
 #include "wbody.h"
 
 #pragma local-strings (on)
-#pragma code-name ("SW69CODE")
-#pragma rodata-name ("SW69RODATA")
+#pragma code-name ("SW72CODE")
+#pragma rodata-name ("SW72RODATA")
 
 unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
 unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);   /* (Part 10's) */
@@ -30,8 +30,8 @@ void light_now (void);                          /* (Part 10's) */
                                                 **   one without hands, in its mouth, 3 lb: HOUSE.md's fetching) */
 #define FETCH_MOUTH     12
 
-#pragma bss-name (push, "SW69RODATA")
-static struct item rec;                         /* (A lot's part split off, a gift's count: part 69's image's, no part
+#pragma bss-name (push, "SW72RODATA")
+static struct item rec;                         /* (A lot's part split off, a gift's count: part 72's image's, no part
                                                 **   called as it's used; the main RAM's room) */
 #pragma bss-name (pop)
 

@@ -1229,6 +1229,33 @@ would be aided if good maps are used."  Its numbers are HOUSE.md's (travel).
   as its intents (an I_GOTO to the way out, then on); the minds keep no journey state now, and the world's travel state
   is the character's alone (tv, TRAV_TK).  Not built: a denizen walks home now as it wanders, within its range.
 
+### The game's start (2026-10-30)
+
+From Enter on the dq0 line to the first prompt, at the normal pace, the start reads the game's programs, overlays
+and data from the SD card, makes the place's history (themegen, for a seed of 65,536 and on: every real game, its
+seed the clock's), starts the tasks, and begins the world (the first chunks, the populations, the senses' first
+look).  On the board (3.58 MHz) it took 79 s at seed 1 and 104 s at a big seed, measured on 2026-10-30 (282M and
+372M cycles); a game without -c runs hmchar too, some 46M cycles more.  The CPU is never idle in it: two thirds of it
+is the storage task reading the card (some 650K bytes at about 275 cycles a byte, spi_recv most of it: the card's
+loops at 18 cycles a bit), the rest the tasks' own work (the world 29M, the UI 14M, the maker 13M, the kernel 9M, the
+denizens 9M, the sound 7M; themegen and themec 23M at a big seed).  So the user's ten seconds (36M cycles) can't be
+had from the card; the levers past the game's own (the overlays compressed, the storage driver's read loop, the game
+on the ROM disk) are the user's to choose (DECISIONS.md).
+
+- **The overlays' files packed** (ovlpack.js, each task's make.js): each bank's bytes' count, then its bytes, the
+  linker's fill ($FF) at its end left out (45K of 462K); each task reads a bank's bytes straight into the bank
+  through the window, one read a bank, and puts the fill back (memset), so its banks are as ld65 made them.  The UI
+  opens dq0.ovl once (find_dirs opened it to look, then ovl_load again).  The start: 252M and 338M cycles (70 s and
+  94 s on the board).
+- **Its progress shown**, no silence longer than about 10 s (the longest now 10M and 15M cycles): "Dingus Quest Zero
+  is starting" and a dot a bank as the UI's overlays are read (before the screen's made); the title; "The place's
+  history is being made" and themegen's dots (-p: a dot a step); "The dungeon is being made ready" and a dot each
+  second or so as the UI waits on the referee's hello and the world's start (their programs and overlays read); the
+  theme's story and the character's entrance; "Nearly ready" and a dot each second or so till the character's first
+  ready (the denizens started, the world begun, the first look); then "Type help for the commands." with the first
+  prompt, not before the look (main.c's o_dots, starting).
+- **The check**: dq0starttime, its budgets 310M (seed 1) and 410M (seed 123456789), its silence 36M at most.
+
 ## Still to come
 
 What the plans bring later, by the slice or phase that brings it (the detailed plan's and the game plan's):
@@ -1285,9 +1312,13 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
 - **Body position and moving quietly** (slice 4.6, built 2026-10-29: HOUSE.md's): crouched, kneeling, sitting, prone;
   a low walk, crawling; moving quietly by Stealth (D15), a hunter's stalk; eye height by position.  Left: the
   denizens' own positions but prone, a missile's target by its height (slice 4.7's).
-- **Fights complete** (slice 4.7): built 2026-10-29 (missiles, above; HOUSE.md's missiles); left: a miss's stray at
-  one beside the mark (the book's 20%: the referee's MS_STRAY there for it), the set auto-engage range (its hook
-  dq0w/wshoot.c's SO_FOE), the denizens throwing things, a denizen changing its weapon for its bow.
+- **Fights complete** (slice 4.7): built 2026-10-29 (missiles, above; HOUSE.md's missiles); 2026-10-30 a miss's stray
+  at one beside the mark (the book's half the time, both referees), the auto-target range ("autotarget at medium
+  range": fighting on with missiles and shooting back), the denizens throwing things (a taburi, a shorkana, a spear
+  or a dagger in hand), a denizen putting up its weapon for its bow, the missiles gathered into their quiver, every
+  fall told (HOUSE.md's missiles).  Left: a hostile coming into the auto-target range beginning a fight by itself,
+  melee's auto-engage, a rock picked up to throw, the denizens' own positions but prone (a shooter crouched behind
+  cover).
 - **Water** (slice 4.9): the plan's rivers, falls and lakes, water levels, swimming and drowning, a well's water from
   the plan; rain where the surface reaches (shafts, the open), washing scents and prints away; hunger and thirst,
   eating and drinking.

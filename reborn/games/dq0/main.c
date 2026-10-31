@@ -58,6 +58,8 @@ static unsigned char asked;                     /* (A sound's question put in th
 static unsigned bar_done;                       /* (The long task's part done as the bar was last drawn) */
 unsigned char busy = 1;                         /* The character's doing something: no command till it's free (nor
                                                 **   till the world's started, and says so: E_READY) */
+unsigned char starting;                         /* The game's starting: its progress shown (dots: hub.c's waits,
+                                                **   main's loop), till the character's first ready */
 static unsigned char held;                      /* (A line typed as it's busy, held till it's free; */
 static unsigned char took;                      /*   and the fight it was in stopped for it, once) */
 static unsigned place;                          /* Where this task is in the world's events */
@@ -159,58 +161,54 @@ unsigned __fastcall__ dnum (const char* s)
     return n;
 }
 
-static void find_dirs (void)
+/* The game's folder (prog's), and its lib/dq0, if its overlays are there; else the card's: the overlays' file opened
+** (its fd: ovl_load's, opened once, 2026-10-30) */
+static int find_dirs (void)
 {
     char pv[sizeof gamedir + 1];
     const char* prog = env ("prog", pv, sizeof pv);
     char* slash;
+    unsigned char k;
     int fd;
 
-    if (prog && strlen (prog) < sizeof gamedir) {
-        strcpy (gamedir, prog);
-        if ((slash = strrchr (gamedir, '/')) != 0) {
+    for (k = 0; k < 2; ++k) {
+        if (k || !prog || strlen (prog) >= sizeof gamedir || (slash = strrchr (strcpy (gamedir, prog), '/')) == 0) {
+            strcpy (gamedir, "/sd/0/games");
+        } else {
             *slash = 0;
-            strcpy (libdir, gamedir);
-            strcat (libdir, "/lib/dq0");
-            strcat (libdir, "/dq0.ovl");
-            fd = open (libdir, O_RDONLY);
-            libdir[strlen (libdir) - 8] = 0;
-            if (fd >= 0) {
-                close (fd);
-                return;
-            }
+        }
+        strcpy (libdir, gamedir);
+        strcat (libdir, "/lib/dq0/dq0.ovl");
+        fd = open (libdir, O_RDONLY);
+        libdir[strlen (libdir) - 8] = 0;
+        if (fd >= 0) {
+            break;
         }
     }
-    strcpy (gamedir, "/sd/0/games");
-    strcpy (libdir, "/sd/0/games/lib/dq0");
+    return fd;
 }
 
-/* ---- The overlays: libdir/dq0.ovl, an 8K bank each (dq0.cfg's OV1 ...; the file cut after the last one used:
-** make.js), read into banks of the game's own */
+/* ---- The overlays: libdir/dq0.ovl (fd, find_dirs'), an 8K bank each (dq0.cfg's OV1 ...; the file cut after the
+** last one used: make.js), read into banks of the game's own.  Each bank's bytes in the file as make.js packs them
+** (ovlpack.js): their count, then them, the linker's fill ($FF) after them left out; each read straight into its bank
+** through the window, the fill put back after it.  The game's start's first words, and a dot for each bank (the
+** screen not made yet: 2026-10-30, the start's progress shown) */
 
-static void ovl_load (void)
+static void __fastcall__ ovl_load (int fd)
 {
-    static char path[56];
-    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (512 bytes of the swapped parts' area: none in it yet) */
-    int fd, first, n;
+    static unsigned n;
+    int first;
     unsigned char k, w = getbank ();
-    unsigned off;
 
-    strcpy (path, libdir);
-    strcat (path, "/dq0.ovl");
-    if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (sizeof ovbank)) < 0) {
+    if (fd < 0 || (first = hy_banks_alloc (sizeof ovbank)) < 0) {
         hy_exits ("dq0: no overlays (lib/dq0/dq0.ovl), or no RAM banks");
     }
-    for (k = 0; k < sizeof ovbank; ++k) {
-        ovbank[k] = first + k;
-        for (off = 0; off < 0x2000; off += 512) {
-            n = read (fd, b, 512);
-            if (n <= 0) {
-                break;
-            }
-            setbank (first + k);             /* (Into its bank through the window: b is the main RAM's) */
-            memcpy ((void*) (0x8000 + off), b, n);
-        }
+    write (1, "Dingus Quest Zero is starting ", 30);
+    for (k = 0; k < sizeof ovbank && read (fd, &n, 2) == 2; ++k) {
+        setbank (ovbank[k] = first + k);
+        read (fd, (void*) 0x8000, n);
+        memset ((void*) (0x8000 + n), 0xFF, 0x2000 - n);
+        write (1, ".", 1);
     }
     setbank (w);
     close (fd);
@@ -256,7 +254,9 @@ unsigned char __fastcall__ s_history (unsigned long seed)
         return (unsigned char) (seed >> 8);
     }
     msg ("The place's history is being made ...");
+    t_flush ();                                 /* (Told now: themegen's dots after it, -p's) */
     strcpy (p, "-q");
+    strcpy (p += 3, "-p");
     strcpy (p += 3, "-s");
     ultoa (seed, p += 3, 10);
     strcpy (p += strlen (p) + 1, "-o");
@@ -577,6 +577,16 @@ static void __fastcall__ start (const char* name, unsigned char t, const char* m
     }
 }
 
+/* A reply waited for as the game starts (q posted already), a dot told every second or so meanwhile (o_dots's: the
+** start's progress, 2026-10-30: the referee's and the world's start, their programs and overlays read from the card,
+** some 10 and 30 s on the board) */
+static void __fastcall__ waited (void* q)
+{
+    while (!hub_wait_t (q, 250)) {
+        dots (0);
+    }
+}
+
 static void world_words (void);
 static char gods[112];                          /* (The world's deities' names, read as the game starts: world_words') */
 
@@ -612,7 +622,11 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     start ("dq0c", T_COMMANDS, libdir);         /* (Its command parser: its tables read as the others start) */
     start ("dq0s", T_SOUND, libdir);            /* (Its sound: SOUND.md) */
     start (sv.referee, T_REFEREE, libdir);      /* (Its rules, the ruleset's referee: its folder, for its overlay) */
-    r = referee (RS_HELLO, 0);
+    r = &HUB->slot[SLOT_UI];                    /* (The referee's hello: its first request, the rest of it 0 as the
+                                                **   hub's made; waited for with the start's dots) */
+    r->kind = RS_HELLO;
+    hub_post (r, T_REFEREE);
+    waited (r);
     round = r->w1;                              /* (The ruleset's round, in tenths: the world's to keep) */
     l = strchr (r->text, '\n');                 /* (Its name, then its character generator's: none, "") */
     character (file, seed, l ? l + 1 : "");     /* (The character: its file, or the generator's) */
@@ -641,7 +655,8 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     HUB->wreq.y = pace | (noinit ? WY_NO_INIT : 0) | (nobear ? WY_NO_BEAR : 0);
     HUB->wreq.a = pc_gait;
     HUB->wreq.b = pc_watch;
-    hub_call (&HUB->wreq, T_WORLD);
+    hub_post (&HUB->wreq, T_WORLD);
+    waited (&HUB->wreq);
     HUB->wreq.state = REQ_FREE;
     things (IO_TOOLS, "");                      /* (The world's catalogue read in: the theme's kinds after it) */
     theme_load (made);                          /* (The game's own, 0xFF; a stand-in's, theme.h: history's) */
@@ -750,6 +765,35 @@ void __fastcall__ o_fore_set (unsigned char on)
             hy_taskfore (task_[fg[k]], on & FS_CMD);
         }
     }
+}
+
+/* The game's start, its progress shown (2026-10-30, the user's: a start of some seconds is fine with its progress
+** shown; on the board the start is a minute and more, the card's reading most of it).  k 2: the world's tasks being
+** started (s_begin's), told; 3: the dungeon begun, the character's first look to come, told.  0: a dot as the start
+** waits on a task's reply (hub.c's hub_wait_t: its doorbell's wait out); 1: main's loop round while the game starts,
+** a dot each second or so; the character ready the first time (its first look told, E_READY), the start over: the
+** help's line said, with the prompt after it */
+void __fastcall__ o_dots (unsigned char k)
+{
+    static unsigned at;
+
+    if (k >= 2) {
+        if (k == 3) {
+            blank ();
+        }
+        msg (k == 2 ? "The dungeon is being made ready ..." : "Nearly ready ...");
+    } else if (k && !busy) {
+        starting = 0;
+        blank ();
+        tell (T_TYPE_HELP_FOR);
+        return;
+    } else if (hy_ticks () - at < 240) {
+        return;
+    } else {
+        say (".");
+    }
+    at = hy_ticks ();
+    t_flush ();
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -865,7 +909,7 @@ static void heard (void)
     unsigned char rel;
 
     while (hub_dnext (&dplace, &m)) {
-        if (m.kind == E_FIGHT && (!m.who || !m.a)) {
+        if (m.kind == E_FIGHT) {                /* (The character's, one at it; or a stray's, between two actors) */
             blow (&m);
             continue;
         }
@@ -972,9 +1016,11 @@ static unsigned char events (void)          /* (How many there were) */
         case E_VIEW:
             if (m.who == 0) {
                 if (m.w1 == V_STIR) {
-                    if (t_next () && HUB->tpr) {
+                    if ((t_next () || inn) && HUB->tpr) {
                         stirs = 1;              /* (A line typed, at the real paces: told after its answer, main's,
-                                                **   the background's news not in its way, 2026-10-30) */
+                                                **   the background's news not in its way, 2026-10-30; or one being
+                                                **   typed: told as it's entered and answered, or let go, its echo
+                                                **   and its Enter not behind the stir's words) */
                     } else {
                         stir ();                /* (A denizen it sees moved) */
                     }
@@ -1107,6 +1153,10 @@ static void __fastcall__ limb_words (const struct msg* m)
 
     if (k == WB_POSED - WB_DROP) {              /* (The body's position as it said, slice 4.6's: part 13's) */
         pose_words (m->w1);
+        return;
+    }
+    if ((m->b & 0x80) && actor_seen (m->b) == 2) {
+        msg ("You hear something fall.");      /* (A fall unseen, near: the world's b | 0x80, part 8's, 2026-10-30) */
         return;
     }
     hub_mem (KIND_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
@@ -2326,6 +2376,8 @@ void __fastcall__ s_args (int argc, char* argv[])
     unsigned char i;
     char* l;
 
+    seed = hy_time () ^ hy_ticks ();            /* (The clock's, unless -s says: here, part 7's, not main's: the main
+                                                **   RAM's room) */
     for (i = 1; i < argc; ++i) {
         if (!strcmp (argv[i], "-s") && i + 1 < argc) {
             for (seed = 0, l = argv[++i]; *l >= '0' && *l <= '9'; ++l) {
@@ -2377,7 +2429,6 @@ void __fastcall__ s_args (int argc, char* argv[])
 /* The game begun: its arguments, a game kept carried on, the title, the character, the world started */
 void __fastcall__ s_begin (int argc, char* argv[])
 {
-    seed = hy_time () ^ hy_ticks ();            /* (The clock's, unless -s says: here, not main's, the main RAM's room) */
     args (argc, argv);
     if (savedir && !load_save ()) {             /* (A game kept there: carried on) */
         resumed = 1;
@@ -2400,14 +2451,17 @@ void __fastcall__ s_begin (int argc, char* argv[])
     signal (SIGINT, interrupted);
     t_init ();
     title ();
+    t_flush ();                                 /* (Its words out now: the start's progress shown, 2026-10-30) */
+    starting = 1;
     made = history (seed);                      /* (The game's own theme, or a stand-in's: which) */
+    dots (2);                                   /* (Its tasks started: told, a dot as each's waited for) */
     start_world (seed, file);                   /* (The character with it: its file, or the ruleset's generator) */
     status ();
     story (resumed);                            /* (The theme's) */
     blank ();
     entered (resumed);
-    blank ();
-    tell (T_TYPE_HELP_FOR);
+    dots (3);                                   /* (Its first look to come: told, main's loop's dots; the help's line
+                                                **   with the first prompt, o_dots') */
     t_done ();
 }
 
@@ -2430,8 +2484,7 @@ int main (int argc, char* argv[])
     unsigned char k, f;
     char* l;
 
-    find_dirs ();                               /* (The overlays read in, and the swapped parts with them, first) */
-    ovl_load ();
+    ovl_load (find_dirs ());                    /* (The overlays read in, and the swapped parts with them, first) */
     begin (argc, argv);
     while (!quit) {
         hub_map (0);                            /* (The hub at $8000 again: a call may have moved the window) */
@@ -2461,6 +2514,9 @@ int main (int argc, char* argv[])
         }
         k = events ();
         heard ();
+        if (starting) {
+            dots (1);                           /* (The game's start: its progress, then the help's line) */
+        }
         now = hub_now ();
         if ((k && !HUB->ui_cmd) || ((now >= next || now < next - 600 || (HUB->pc_task.kind && HUB->pc_task.done != bar_done)) &&
             hy_ticks () - shown >= (inn ? 1000 : 200) && !t_haskey ())) {
@@ -2560,9 +2616,9 @@ int main (int argc, char* argv[])
         } else {
             ready ();                           /* (The commands' part back, if another's in) */
         }
-        if (stirs) {
+        if (stirs && !inn) {
             stirs = 0;
-            stir ();                            /* (A stir held while the line was answered: told now) */
+            stir ();                            /* (A stir held while the line was typed and answered: told now) */
         }
         t_done ();
         fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */
