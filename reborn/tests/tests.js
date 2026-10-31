@@ -3399,7 +3399,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple", "give": you can\'t, yet); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
+      name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple": you can\'t, yet); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T',
         'bribe the rat', 'grapple the rat', 'give the torch to the rat', '?', 'examine the torch carefully', 'status', 'drop pick then take it',
@@ -3410,7 +3410,7 @@ module.exports = {
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         const want = ['> bribe the rat I don\'t know how to bribe.', '> grapple the rat You can\'t grapple in this game yet.',
-          '> give the torch to the rat You can\'t give in this game yet.', '> ? Moving: north,', 'Several at once: north then east;',
+          '> give the torch to the rat', '> ? Moving: north,', 'Several at once: north then east;',
           '> examine the torch carefully', '> status Pace: a walk', 'Watching: nothing in particular.',
           '> drop pick then take it Put down.', 'Taken.', '> drop pick; take it Put down. Taken.',
           '> take the bones and the pick Taken. Taken.', 'a pick', 'bones', '> pick the bones Taken.',
@@ -3424,6 +3424,9 @@ module.exports = {
           at = i + w.length;
         }
         if (/examine the torch carefully[^>]*I don't understand that/.test(o)) f.push('"examine the torch carefully" not understood');
+        if (!/> give the torch to the rat (The giant rat is too far off: you'd need to be within reach\.|You see no rat here\.)/.test(o)) {
+          f.push('the gift not answered as one out of reach (' + (o.match(/> give the torch to the rat[^>]*/) || [''])[0] + ')');
+        }
         return f;
       },
       sdcard: true

@@ -908,6 +908,7 @@ static void __fastcall__ rob_to (unsigned char k)
 {
     unsigned char i, f = K.faction;
 
+    im.a = FE_ROB;                              /* (A robbery, not an errand: slice 4.8's I_ROB a) */
     im.w1 = ahx[k];
     im.w2 = ahy[k];
     im.b = f;
