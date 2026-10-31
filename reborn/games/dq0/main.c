@@ -192,7 +192,7 @@ static void ovl_load (void)
     static char path[56];
     unsigned char* b = (unsigned char*) _SWAP_START__;  /* (512 bytes of the swapped parts' area: none in it yet) */
     int fd, first, n;
-    unsigned char k;
+    unsigned char k, w = getbank ();
     unsigned off;
 
     strcpy (path, libdir);
@@ -207,9 +207,11 @@ static void ovl_load (void)
             if (n <= 0) {
                 break;
             }
-            bwrite (first + k, (void*) (0x8000 + off), b, n);
+            setbank (first + k);             /* (Into its bank through the window: b is the main RAM's) */
+            memcpy ((void*) (0x8000 + off), b, n);
         }
     }
+    setbank (w);
     close (fd);
 }
 
@@ -2555,7 +2557,10 @@ int main (int argc, char* argv[])
         }
         t_done ();
         fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */
-        hub_nap (quick ? (--quick, 1) : 4);     /* (A fiftieth of a second: the keys looked for, the world's
+        hub_nap (t_wrote && t_haskey () ? 0 : quick ? (--quick, 1) : 4);  /* (Keys that came as it said something,
+                                                **   a line typed as an answer or a look went out: no nap, taken at
+                                                **   once, 2026-10-30.  A fiftieth of a second: the keys looked
+                                                **   for, the world's
                                                 **   events told; each look at the keys a call of the console's,
                                                 **   some 9,000 cycles with its own, a quarter of the CPU at two
                                                 **   ticks while nothing happened; a hundredth just after a command,

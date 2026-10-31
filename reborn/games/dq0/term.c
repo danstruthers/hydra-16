@@ -39,11 +39,14 @@ static char sl[128], sn[128];                   /* The status line as it's shown
 
 /* ---- Output */
 
+unsigned char t_wrote;                          /* (Something out since the keys were looked for: main's nap) */
+
 void t_flush (void)
 {
     if (on) {
         write (1, ob, on);
         on = 0;
+        t_wrote = 1;
     }
 }
 
@@ -159,6 +162,7 @@ unsigned char t_haskey (void)
     int n;
 
     keys ();
+    t_wrote = 0;
     if (ki == kn) {
         n = read (nbfd, kb, sizeof kb);
         kn = n > 0 ? n : 0;

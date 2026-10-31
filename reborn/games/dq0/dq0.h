@@ -24,8 +24,8 @@
 **
 ** Memory: the program's code and data from $0800 (its BSS must end 768 bytes or more under $7F00: dq0.cfg); the
 ** overlays' code in banks of their own, put in the window at $8000 as they're called (bank.s).  Code in an overlay
-** can call any function; but what's in the window goes away while bread and bwrite work, so they're only ever
-** given the main RAM's addresses.  And the swapped parts (swap.inc): code that runs in the main RAM's top (dq0.cfg's
+** can call any function (a stub that changes the window never reads or writes what's in it).  And the swapped
+** parts (swap.inc): code that runs in the main RAM's top (dq0.cfg's
 ** SWAP, under the C stack's least room), a part at a time, copied there from its overlay's bank (8, 9) as it's
 ** called: main.c's start and end (part 1) and its commands (part 2), look.c's map (part 3).  A part's code reads and
 ** writes the hub as the main code does: a command more goes in a part (a new one, or one with room), at no cost to
@@ -69,6 +69,7 @@ char* t_line (void);                            /* A line that's been entered (E
 const char* t_next (void);                      /* The next t_line will give, left in the queue, or NULL */
 unsigned char __fastcall__ ask (const char* keys);      /* One of keys typed, waiting (the world stopped): which */
 unsigned char t_haskey (void);                  /* A key's come (conio's kbhit) */
+extern unsigned char t_wrote;                   /* Something out since the keys were last looked for (t_haskey's) */
 unsigned char t_getkey (void);                  /* The next key, waiting (conio's cgetc: Enter '
 ') */
 void __fastcall__ consctl (const char* what);   /* (main.c) A line to the window's consctl (rawon, rawoff) */
@@ -335,8 +336,6 @@ extern unsigned long heard_at;                  /* (main.c's: when a sound was l
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
-void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
 extern unsigned char ovbank[15];
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */

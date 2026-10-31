@@ -1,14 +1,14 @@
 ; ****************************************************************************
 ; bank.s - Dingus Quest Zero's RAM banks: the window at $8000 set and read; bytes copied between a bank and the
-; main RAM; and the overlays' calls.  An overlay is code linked at $8000 (dq0.cfg: OV1 ...), read into a bank of
+; and the overlays' calls.  An overlay is code linked at $8000 (dq0.cfg: OV1 ...), read into a bank of
 ; its own as the game starts (ovbank: overlay n's bank); a call of an overlay's function goes through its stub here
 ; (OVFN): the bank there now kept on a little stack of its own, the overlay's put in, its function called, the bank
 ; put back.  So an overlay can call the main code and other overlays alike, and the main code can call them.  The
-; rule that keeps it right: a function here that changes the window (bread, bwrite) never reads or writes the
-; caller's memory in it, only the main RAM ($0800-$7EFF).  And the swapped parts' calls (swap.inc): code run in the
-; main RAM's top, a part at a time, copied there from its overlay's bank as it's called.
+; rule that keeps it right: a stub that changes the window never reads or writes the caller's memory in it.  And the
+; swapped parts' calls (swap.inc): code run in the main RAM's top, a part at a time, copied there from its overlay's
+; bank as it's called.  (bread and bwrite gone, 2026-10-30: ovl_load's alone used one, the main RAM's room)
 
-            .export     _setbank, _getbank, _bread, _bwrite, _ovbank
+            .export     _setbank, _getbank, _ovbank
             .import     popa, popax
 
             .include    "zeropage.inc"
@@ -38,74 +38,6 @@ _setbank:
 _getbank:
             lda         BANKREG
             ldx         #0
-            rts
-
-; void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n): n bytes from bank's from
-; (in the window) to to (in the main RAM), the window put back as it was
-_bread:
-            jsr         args                ; ptr1 from, ptr2 to, ptr3 n, tmp1 the bank
-            ldy         BANKREG
-            lda         tmp1
-            sta         BANKREG
-            jsr         copy
-            sty         BANKREG
-            rts
-
-; void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n): n bytes from from (in the
-; main RAM) to bank's to (in the window), the window put back as it was
-_bwrite:
-            jsr         args                ; ptr1 to, ptr2 from, ptr3 n, tmp1 the bank
-            lda         ptr1                ; (copy goes from ptr1 to ptr2: swapped)
-            ldx         ptr2
-            sta         ptr2
-            stx         ptr1
-            lda         ptr1 + 1
-            ldx         ptr2 + 1
-            sta         ptr2 + 1
-            stx         ptr1 + 1
-            ldy         BANKREG
-            lda         tmp1
-            sta         BANKREG
-            jsr         copy
-            sty         BANKREG
-            rts
-
-; bread's and bwrite's arguments: n (.A, .X) in ptr3, then the two addresses in ptr2 and ptr1, the bank in tmp1
-args:
-            sta         ptr3
-            stx         ptr3 + 1
-            jsr         popax
-            sta         ptr2
-            stx         ptr2 + 1
-            jsr         popax
-            sta         ptr1
-            stx         ptr1 + 1
-            jsr         popa
-            sta         tmp1
-            rts
-
-; ptr3 bytes from ptr1 to ptr2 (upward).  Keeps .Y
-copy:
-            phy
-            ldy         #0
-            ldx         ptr3 + 1            ; Whole pages first
-            beq         @part
-@page:      lda         (ptr1),y
-            sta         (ptr2),y
-            iny
-            bne         @page
-            inc         ptr1 + 1
-            inc         ptr2 + 1
-            dex
-            bne         @page
-@part:      ldx         ptr3                ; Then what's left
-            beq         @done
-@byte:      lda         (ptr1),y
-            sta         (ptr2),y
-            iny
-            dex
-            bne         @byte
-@done:      ply
             rts
 
 ; ---- The overlays' calls
