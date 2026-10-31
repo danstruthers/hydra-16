@@ -705,6 +705,41 @@ void s_light_now (void)
 
 /* ---- A request (the hub's ireq), answered (but for its state, the caller's: done once it's looked again): 1 if
 ** what lies about has changed */
+/* ---- The thing the UI names for an ally's errand, a gift (slice 4.8's, 2026-10-30; the hub's ireq: IO_FETCH, its name fn,
+** the request's copy; to 0, one seen lying about, its item and where it lies back in item, x, y; to 1, one the character carries, IO_DESCRIBE's reply, its worth in value, its item in item):
+** IR_OK, IR_NONE (none such), IR_NO (in something closed, carried, a denizen's) */
+static unsigned char __fastcall__ fetch_find (const char* fn)
+{
+    struct item* p;
+    unsigned n, c, x = 0, y = 0;
+    unsigned char r = IR_NONE, g, sn;
+
+    hub_map (0);
+    g = HUB->ireq.to;
+    sn = HUB->pc_stratum;
+    if (g) {                                    /* (A gift: the character's, IO_DESCRIBE's reply) */
+        if ((n = pick (fn, HW_CARRIED)) != 0 && describe (fn) == IR_OK) {
+            r = IR_OK;
+        }
+    } else if ((n = pick (fn, HW_SEEN)) != 0) {
+        for (c = n; (p = item_at (c))->where == IW_ITEM && (c == n || !(p->shut & IS_CLOSED)); c = p->x) {
+        }
+        r = IR_NO;                              /* (In a thing closed, carried, on another stratum) */
+        if (p->where == IW_SQUARE && p->sn == sn) {
+            x = p->x;
+            y = p->y;
+            r = IR_OK;
+        }
+    }
+    hub_map (0);
+    if (r == IR_OK) {
+        HUB->ireq.item = n;
+        HUB->ireq.x = x;
+        HUB->ireq.y = y;
+    }
+    return r;
+}
+
 static unsigned char o_handle (void);
 unsigned char s_serve (void)
 {
@@ -752,6 +787,9 @@ unsigned char s_serve (void)
     case IO_SWAP:                               /* (What's in its hands changed over: part 48's) */
         iq.result = swap ();
         break;
+    case IO_FETCH:                              /* (A thing for an ally to fetch, or a gift: slice 4.8's) */
+        iq.result = fetch_find (iq.name);
+        break;
     case IO_USE:                                /* (A thing used up by its key: a bandage, first aid's, part 70's) */
         iq.result = use_key (iq.name);
         break;
@@ -776,10 +814,10 @@ unsigned char s_serve (void)
     case IO_FILL:
         if ((iq.result = water (W_OP, IO_FILL)) == IR_NONE) {
             iq.result = fill ();                /* (A light renewed: its time in the request's x, part 27's; a
-                                                **   waterskin filled, part 72's) */
+                                                **   waterskin filled, part 73's) */
         }
         break;
-    case IO_EAT:                                /* (Eating, drinking: part 72's, slice 4.9's) */
+    case IO_EAT:                                /* (Eating, drinking: part 73's, slice 4.9's) */
     case IO_DRINK:
         iq.result = water (W_OP, iq.kind);
         break;

@@ -2207,13 +2207,13 @@ const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
 // faction the layout's; and its record's (rec: { or: flags or'd in, serve, contact }: dq0Rec's).  The test's own setting
 // up, as dq0Aware's
 // The denizens' records (dq0d's pb bank, its label's: the task the hub's task[T_DENIZENS]): { mem, at(i) the record
-// i's offset, and its fields' }: dq0d.c's struct pop (its head 322 bytes, 64 lairs of 17), struct den (28 bytes: its
+// i's offset, and its fields' }: dq0d.c's struct pop (its head 330 bytes since slice 4.8's regard, 64 lairs of 17), struct den (28 bytes: its
 // flags at 1, its id at 4, its serve and contact at 26 and 27)
 let dq0RecPb = 0;
 function dq0Rec(m) {
   const h = m.dq0.bank(0), t = h[12 + 2], lbl = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
   const pb = dq0RecPb || (dq0RecPb = parseInt(/^al ([0-9A-F]+) \._pb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][pb]) || new Uint8Array(0x2000);
-  return { mem, at: i => 322 + 64 * 17 + 28 * i, FLAGS: 1, ID: 4, SERVE: 26, CONTACT: 27 };
+  return { mem, at: i => 330 + 64 * 17 + 28 * i, FLAGS: 1, ID: 4, SERVE: 26, CONTACT: 27 };
 }
 
 function dq0Poke(m, pokes) {
@@ -3399,7 +3399,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple", "give": you can\'t, yet); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
+      name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple": you can\'t, yet); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T',
         'bribe the rat', 'grapple the rat', 'give the torch to the rat', '?', 'examine the torch carefully', 'status', 'drop pick then take it',
@@ -3410,7 +3410,7 @@ module.exports = {
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         const want = ['> bribe the rat I don\'t know how to bribe.', '> grapple the rat You can\'t grapple in this game yet.',
-          '> give the torch to the rat You can\'t give in this game yet.', '> ? Moving: north,', 'Several at once: north then east;',
+          '> give the torch to the rat', '> ? Moving: north,', 'Several at once: north then east;',
           '> examine the torch carefully', '> status Pace: a walk', 'Watching: nothing in particular.',
           '> drop pick then take it Put down.', 'Taken.', '> drop pick; take it Put down. Taken.',
           '> take the bones and the pick Taken. Taken.', 'a pick', 'bones', '> pick the bones Taken.',
@@ -3424,6 +3424,9 @@ module.exports = {
           at = i + w.length;
         }
         if (/examine the torch carefully[^>]*I don't understand that/.test(o)) f.push('"examine the torch carefully" not understood');
+        if (!/> give the torch to the rat (The giant rat is too far off: you'd need to be within reach\.|You see no rat here\.)/.test(o)) {
+          f.push('the gift not answered as one out of reach (' + (o.match(/> give the torch to the rat[^>]*/) || [''])[0] + ')');
+        }
         return f;
       },
       sdcard: true
@@ -4292,6 +4295,40 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0fetch', near: ['denizens'], what: 'Dingus Quest Zero\'s errands and gifts (slice 4.8, DENIZENS.md\'s fetching and influence; HOUSE.md\'s fetching and gifts, for review): at seed 21 (dq0sway\'s game) a giant rat befriended, won over and named Grub; two rations put down and the character two squares off, turned round to see them; Grub told to fetch the rations ("tell Grub to fetch the rations": the order\'s word not the thing\'s, the parser\'s), going to fetch them, picking them up in its mouth (two pounds: a beast\'s 3 lb at most) and handing them back to the character as it waits (E_TASK TE_FETCHED, FT_TOOK then FT_GAVE; the rations the character\'s again); asked to fetch a thing it can\'t see, refused; offered the tinderbox (no food: a beast has no use for it, SR_CANT); given a ration ("give 1 ration to Grub": its worth and food, the gift taken, a lot\'s one split off, FT_GOT, the character\'s rations one fewer); told to follow at 3 squares (SR_OK)',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -R 117',
+        'befriend the rat', 'befriend the rat', 'name the rat grub', 'drop 2 rations', 'move east 2 squares', 'turn around', 'tell grub to fetch the rations', 'wait', 'wait',
+        'inventory', 'tell grub to fetch the anvil', 'give the tinderbox to grub', 'give 1 ration to grub', 'inventory', 'tell grub to follow me at 3 squares',
+        'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [];
+        const sw = (t, want, what) => { if (!dq0Rep(t, 'sway', want).length) f.push(what + ' (' + JSON.stringify(t.replies.filter(r => r.req === 'sway')) + ')'); };
+        const b = T.filter(t => t.line === 'befriend the rat');
+        if (!b.some(t => dq0Rep(t, 'sway', { now: 'AT_ALLIED' }).length)) f.push('the rat not won over');
+        const rations = s => dq0Carried(s).filter(i => i.name === 'rations').reduce((n, i) => n + i.qty, 0);
+        const d = T.of('drop 2 rations'), had = d.after ? rations(d.after) : 0;
+        const fe = T.of('tell grub to fetch the rations');
+        sw(fe, { kind: 'SW_ORDER', order: 'OR_FETCH', result: 'SR_OK' }, 'Grub not sent to fetch the rations');
+        const ev = T.filter(t => t.k >= fe.k).flatMap(t => dq0Ev(t, 'E_TASK', { te: 'TE_FETCHED' }));
+        if (!ev.some(e => e.ft === 'FT_TOOK')) f.push('Grub never picked the rations up (' + JSON.stringify(ev) + ')');
+        if (!ev.some(e => e.ft === 'FT_GAVE')) f.push('Grub never handed the rations over (' + JSON.stringify(ev) + ')');
+        const inv = T.of('inventory');
+        if (!inv.after || rations(inv.after) !== had + 2) f.push('the rations not the character\'s again (' + (inv.after && rations(inv.after)) + ', ' + had + ' before)');
+        if (dq0Rep(T.of('tell grub to fetch the anvil'), 'sway', {}).length) f.push('a thing not seen asked of the denizens');
+        sw(T.of('give the tinderbox to grub'), { kind: 'SW_GIVE', result: 'SR_CANT' }, 'a beast taking a tinderbox');
+        const g = T.of('give 1 ration to grub');
+        sw(g, { kind: 'SW_GIVE', result: 'SR_OK' }, 'the ration not given');
+        if (!dq0Ev(g, 'E_TASK', { te: 'TE_FETCHED', ft: 'FT_GOT' }).length) f.push('the ration not taken (' + dq0Evs(g) + ')');
+        const inv2 = T.after(g, 'inventory');
+        if (!inv2.after || rations(inv2.after) !== had + 1) f.push('the character\'s rations not one fewer (' + (inv2.after && rations(inv2.after)) + ')');
+        sw(T.of('tell grub to follow me at 3 squares'), { kind: 'SW_ORDER', order: 'OR_FOLLOW', result: 'SR_OK' }, 'Grub not told to follow at a distance');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0starttime', near: ['time'], what: 'Dingus Quest Zero\'s start timed at the normal pace (the user\'s: a start of some seconds is fine with its progress shown; the start agent\'s figures, 2026-10-30: on the board, at 3.58 MHz, a minute and more, the SD card\'s reading two thirds of it), from Enter on the dq0 line to the first prompt: seed 1 (a stand-in\'s theme) and seed 123456789 (its own history made by themegen, as a game whose seed is the clock\'s), each within its budget; the progress shown all the way (no silence on the screen longer than about 10 s at 3.58 MHz); and the help\'s line said with the first prompt, after the first look',
       init: 't_rc', cycles: 1500e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p n -s 1 -c /ram/c.hm', 'quit',
@@ -4341,6 +4378,69 @@ module.exports = {
           if (h < 0 || look < 0 || h < look || w.length - h > 80) f.push('seed ' + s.seed + ': the help\'s line not with the first prompt, after the first look: ' + JSON.stringify(w.slice(-300)));
         });
         this.notes = this.games.map((g, i) => 'seed ' + (this.starts[i] || {}).seed + ': ' + M(g.total) + ' cycles to the first prompt (' + (g.total / 3579545).toFixed(1) + ' s at 3.58 MHz); the longest silence ' + M(g.quiet) + ', ' + M(g.quietAt) + ' after Enter');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0regard', near: ['denizens'], what: 'Dingus Quest Zero\'s gifts, reputation and an ally moving aside (slice 4.8: DENIZENS.md\'s allies and influence, HOUSE.md\'s fetching, gifts and reputation, D10), scenes set by pokes: at seed 21 (dq0fetch\'s game) a giant rat won over and named Grub, the character two squares on and turned round; Grub set in its way as it steps back (the hub\'s actor\'s square, the poke\'s): the step stopped short of it (E_NOWAY, N_DEN), Grub moving aside at once, the step taken again past it; Grub set wary of the character as a ration\'s given it (the poke\'s attitude): its attitude moved by the gift (food, to a beast, the house\'s steps for its worth); set beside the character again (an ally no more, it doesn\'t follow) and given another, its faction\'s regard raised by the two (dq0d\'s head, fatt: a step for its deeds\' points, four)',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -R 117',
+        'befriend the rat', 'befriend the rat', 'name the rat grub', 'move east 2 squares', 'turn around', 'move west 1 square', 'move west 1 square',
+        'give 1 ration to grub', 'give 1 ration to grub', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        // (Its scenes: Grub put ahead of the character as the first step back's typed; set wary as the first gift's; the
+        // denizens' head's factions' attitudes read as the gifts' lines and the quit are typed)
+        const a = m.acia, read = a.read, self = this;
+        let typed = '', seen = {};
+        self.fatt = {};
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf && a.rx === 13 && m.dq0) {
+            seen[typed] = (seen[typed] || 0) + 1;
+            const { L } = m.dq0.layout(), h = m.dq0.bank(0), at = k => L.actor + k * L.actorSize;
+            const grub = h && [...Array(L.nactors).keys()].find(k => String.fromCharCode(...h.subarray(at(k) + L.aName, at(k) + L.aName + 4)) === 'Grub');
+            if (h && grub !== undefined) {
+              const o = at(grub);
+              if (typed === 'move west 1 square' && seen[typed] === 1) {
+                const x = h[L.pcX] | h[L.pcX + 1] << 8, y = h[L.pcY] | h[L.pcY + 1] << 8;
+                h[o + L.aX] = (x - 1) & 0xFF; h[o + L.aX + 1] = (x - 1) >> 8; h[o + L.aY] = y & 0xFF; h[o + L.aY + 1] = y >> 8;
+                self.placed = { x: x - 1, y };
+              }
+              if (typed === 'give 1 ration to grub' && seen[typed] === 1) h[o + L.aAttitude] = 2;   // (AT_WARY)
+              if (typed === 'give 1 ration to grub' && seen[typed] === 2) {   // (Beside it again, where the character was:
+                const x = h[L.pcX] | h[L.pcX + 1] << 8;                         //   an ally no more, it doesn't follow)
+                h[o + L.aX] = (x + 1) & 0xFF; h[o + L.aX + 1] = (x + 1) >> 8;
+                h[o + L.aY] = h[L.pcY]; h[o + L.aY + 1] = h[L.pcY + 1];
+              }
+              self.fac = h[o + L.aFaction];
+            }
+            if (typed === 'give 1 ration to grub' || typed === 'quit') {
+              const tk = h[12 + 2], lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+              const hd = parseInt(/^al ([0-9A-F]+) \._hd$/m.exec(lbl)[1], 16);
+              self.fatt[typed + seen[typed]] = [...Array(16).keys()].map(f => m.taskRam[tk][hd + 4 + f]);
+            }
+          }
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) typed = ''; else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      check(m) {
+        const T = dq0Turns(m), f = [];
+        if (!T.filter(t => t.line === 'befriend the rat').some(t => dq0Rep(t, 'sway', { now: 'AT_ALLIED' }).length)) f.push('the rat not won over');
+        const w = T.filter(t => t.line === 'move west 1 square');
+        if (!this.placed) f.push('Grub not set in the way');
+        dq0Need(f, w[0], 'E_NOWAY', {}, 'the step back not stopped short of Grub');
+        const p0 = w[0] && w[0].after && w[0].after.pc, p1 = w[1] && w[1].after && w[1].after.pc;
+        if (!p0 || !p1 || p1.x !== p0.x - 1) f.push('the step back not taken past Grub, moved aside (' + JSON.stringify([p0 && [p0.x, p0.y], p1 && [p1.x, p1.y]]) + ')');
+        const gs = T.filter(t => t.line === 'give 1 ration to grub');
+        const r0 = gs[0] ? dq0Rep(gs[0], 'sway', { kind: 'SW_GIVE' })[0] : null;
+        if (!r0 || r0.was !== 'AT_WARY' || r0.now === 'AT_WARY' || r0.now === 'AT_UNFRIENDLY') f.push('the wary rat\'s attitude not moved by the gift (' + JSON.stringify(r0) + ')');
+        const b = this.fatt['give 1 ration to grub1'], e = this.fatt['quit1'], k = (this.fac || 0) & 7;
+        if (!b || !e || e[k] !== b[k] + 1) f.push('its faction\'s regard not raised a step by the two gifts (' + JSON.stringify([k, b, e, gs.map(t => t.replies.filter(r => r.req === 'sway'))]) + ')');
         return f;
       },
       sdcard: true

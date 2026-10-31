@@ -3976,7 +3976,7 @@ unsigned char __fastcall__ s_zone_step (unsigned ox, unsigned oy, unsigned x, un
 
     if ((ox != x || oy != y) && (HUB->pc_wet || (at (sn_, x, y) && C->wany))) {
         pt0 += water (W_WADE, pst);                      /* (A walk's step into water, or in it: its time the more, swimming,
-                                                **   part 72's, slice 4.9's) */
+                                                **   part 73's, slice 4.9's) */
     }
     hub_map (0);
     if (pfoe && near_foe (x, y)) {

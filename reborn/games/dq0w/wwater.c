@@ -1,5 +1,5 @@
 /*
-** wwater.c - (dq0w, swapped part 72, its image overlay 22's, the world's own for it: ../dq0/swap.inc) the water, and hunger and thirst (slice 4.9: DUNGEON.md's
+** wwater.c - (dq0w, swapped part 73, its image overlay 22's, the world's own for it: ../dq0/swap.inc) the water, and hunger and thirst (slice 4.9: DUNGEON.md's
 ** water, HOUSE.md's water and hunger and thirst).  Part 72: how deep the water is at a square (the chunk's, the
 ** maker's: world.h's wet bits and its rooms' levels); the character come into it as it walks (wading, a step the
 ** longer, then swimming, the referee's P_SWIM each minute: its squares a minute, its breath; going under, drowning; its
@@ -31,8 +31,8 @@ extern unsigned char put_bank;
 #define MEAL            480                     /* (A meal's want taken off: eight hours') */
 #define PINT            360                     /* (A pint's: six hours') */
 
-#pragma code-name (push, "SW72CODE")
-#pragma rodata-name (push, "SW72RODATA")
+#pragma code-name (push, "SW73CODE")
+#pragma rodata-name (push, "SW73RODATA")
 #pragma local-strings (push, on)
 
 /* An event of the character's, the world's (E_BEAT's w1) */
@@ -155,8 +155,8 @@ static unsigned __fastcall__ wade (unsigned step)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW72CODE")
-#pragma rodata-name (push, "SW72RODATA")
+#pragma code-name (push, "SW73CODE")
+#pragma rodata-name (push, "SW73RODATA")
 #pragma local-strings (push, on)
 
 /* ---- Hunger and thirst (HOUSE.md's, every ruleset's), the bodies' time's (part 70's s_body_ask: n minutes gone, a
@@ -226,8 +226,8 @@ static unsigned char __fastcall__ want_time (unsigned n, unsigned char a)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW72CODE")
-#pragma rodata-name (push, "SW72RODATA")
+#pragma code-name (push, "SW73CODE")
+#pragma rodata-name (push, "SW73RODATA")
 #pragma local-strings (push, on)
 
 /* ---- Eating, drinking, a waterskin filled (the things' IO_EAT, IO_DRINK, IO_FILL: the hub's ireq, its name; the
@@ -251,7 +251,7 @@ static unsigned char __fastcall__ wsaid (const char* s, unsigned t)
     return IR_OK;
 }
 
-/* The water where the character stands (the hub's pc_wet: in it, part 72's), or a well within reach: 1 if there's some
+/* The water where the character stands (the hub's pc_wet: in it, part 73's), or a well within reach: 1 if there's some
 ** to drink, to fill a waterskin from */
 static unsigned char water_here (void)
 {
@@ -333,8 +333,8 @@ static unsigned char __fastcall__ water_op (unsigned char op)
 
 /* ---- The part's one way in (its stub, water: the main RAM's room): k what's wanted (W_WADE, the character come onto
 ** its square, w its step; W_WANT, w the minutes gone, | its activity times 16384; W_OP, w the things' request's kind) */
-#pragma code-name (push, "SW72CODE")
-#pragma rodata-name (push, "SW72RODATA")
+#pragma code-name (push, "SW73CODE")
+#pragma rodata-name (push, "SW73RODATA")
 
 unsigned __fastcall__ s_water (unsigned char k, unsigned w)
 {

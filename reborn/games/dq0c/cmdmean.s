@@ -801,6 +801,7 @@ each:       ldx         wi              ; Each word after the verb
             ldy         cm_cmd + CM_ORDER
             bne         :+
             sta         cm_cmd + CM_ORDER
+            jmp         next            ; (Not the other thing's word: "tell Grub to fetch the key" the key)
 :           jsr         rowp            ; A thing's aspect, the verb taking them ("examine the value of the sword",
             ldy         #R_FLAGS        ;   "check the chest for traps"): all said, the command's own value
             lda         (rp),y

@@ -164,8 +164,8 @@ extern unsigned chart_w[5];                     /* (things.c's: the map making's
 const struct burn* __fastcall__ burn_of (unsigned char k);  /* How kind k burns (a copy), or 0: never (a glow), or no
                                                 **   fuel; the catalogue's bank left in the window */
 unsigned char fill (void);                      /* (Part 27, its room) The hub's ireq, IO_FILL's: a light renewed */
-/* The water, hunger and thirst (part 72's, wwater.c: slice 4.9's) */
-unsigned __fastcall__ water (unsigned char k, unsigned w);  /* (Part 72's one stub, wwater.c's s_water: k W_*) */
+/* The water, hunger and thirst (part 73's, wwater.c: slice 4.9's) */
+unsigned __fastcall__ water (unsigned char k, unsigned w);  /* (Part 73's one stub, wwater.c's s_water: k W_*) */
 enum { W_WADE, W_WANT, W_OP };                  /* (The character come onto its square, w its step: the time more
                                                 **   it takes; its hunger and thirst, w the minutes gone | its
                                                 **   activity times 16384: 1 if the referee's to be told, its

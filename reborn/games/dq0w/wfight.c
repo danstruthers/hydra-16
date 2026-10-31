@@ -369,6 +369,10 @@ void __fastcall__ s_den_rob (const struct msg* q)
     unsigned char kind, f, how, fac;
     unsigned char* s;
 
+    if (q->a) {
+        den_fetch (q);                          /* (An ally's errand, a gift: part 72's, slice 4.8's) */
+        return;
+    }
     x = q->w1;
     y = q->w2;
     how = q->x[2];

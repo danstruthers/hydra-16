@@ -341,6 +341,12 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
 #define IO_USE          (IO_BAR + 14)           /* A thing the character carries used up by its key (name: the
                                                 **   catalogue's tool key, "bandage": a dressing's, the UI's first aid,
                                                 **   slice 4.3's): a lot one less, its last gone, told; IR_NONE none */
+#define IO_FETCH        (IO_BAR + 15)           /* The thing named (slice 4.8's, 2026-10-30): to 0, one seen lying about
+                                                **   for an ally to fetch, its item back in item, where it lies in x, y
+                                                **   (IR_NO: in a thing closed, carried, on another stratum); to 1, one
+                                                **   the character carries, for a gift: IO_DESCRIBE's reply (its worth
+                                                **   in value, a unit's, the appraisal's; its qty, its craft), its item
+                                                **   in item; IR_NONE none */
 enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS };   /* (IO_LOOK's: a look at it; a closer look; its
                                                 **   condition; its weight; its lock; gone over for traps) */
 #define IO_PUZZLE       (IO_BAR + 4)           /* A command of the theme's puzzle's (theme.h), judged by its rules

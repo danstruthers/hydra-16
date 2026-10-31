@@ -125,10 +125,17 @@ static const char* __fastcall__ doing_of (unsigned char k, unsigned char n)
 ** or the foe (TE_FIGHT's), or the health (TE_ASK_HURT's), or a light's kind (TE_LOW's, TE_OUT's), or what it was done
 ** to (a stop's, a question's, a timed work begun: the long task's what).  1 if a question's put; 2 one answered yes
 ** unasked (dq0 -a's, the tests': not put); 4 fighting on begun (the character busy) */
+static const char* const fetched[8] = {         /* (TE_FETCHED's: FT_*) */
+    "\n%s picks up the %s.", "\n%s hands you the %s.", "\n%s can't find the %s where it lay.",
+    "\n%s can't carry the %s.", "\n%s has its hands full: it can't take the %s.",
+    "\n%s sets the %s down at your feet.", "\n%s takes the %s.", "\n%s can't get to the %s."
+};
+
 unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
 {
     unsigned char k = w >> 8, p = (unsigned char) w, n = named, one = 0;
     const char* d;
+    char t[20];                                 /* (On the C stack: a thing's name) */
 
     if (p == TE_OUT) {
         one = k & 0x80;                         /* (Another of its name burning still: the world's) */
@@ -246,6 +253,11 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         } else {
             say (".");
         }
+        break;
+    case TE_FETCHED:                            /* (An ally's errand, a gift taken: slice 4.8's) */
+        lamp (w >> 8);
+        strcpy (t, fn);
+        sayf (fetched[(n >> 4) & 7], foe (n & 15, 1), t);
         break;
     case TE_ROBBED:                             /* (Helpless, robbed: a robber's way, the denizens') */
         sayf ("\n%s goes through your things as you lie helpless, and takes what it finds.", foe (named, 1));
