@@ -2931,6 +2931,9 @@ unsigned char s_fill (void)
     unsigned char takes, k, bk = 0;
     char ln[14], fn[14];
 
+    if ((k = water (W_FILL)) != IR_NONE) {
+        return k;                               /* (A waterskin filled: part 74's, slice 4.9's) */
+    }
     text_new ();
     for (k = 1, room = 0; !(iq.sel & 15) && k < 8; ++k) {   /* (Of several of the name, none said, the one with the
                                                 **   most room for more: the spent torch, not the one lit) */

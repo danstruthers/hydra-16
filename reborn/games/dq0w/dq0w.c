@@ -229,7 +229,7 @@ unsigned char fwant;                            /* (Fighting on's, part 24's: an
 unsigned char flast;                            /* (The last to strike at the character, plus 1: wfight.c's) */
 static unsigned char fheld;                     /* (The enemies the player stopped fighting, a bit each: part 24's) */
 static unsigned char pseen;                     /* (The denizens seen as it began, and since) */
-static unsigned char pc_tired;                  /* (Strenuous work done tired it a level more: asked, the main loop's,
+unsigned char pc_tired;                         /* (Strenuous work done tired it a level more: asked, the main loop's,
                                                 **   TE_ASK_TIRED; or TE_ASK_SHORT, a battering's) */
 static void __fastcall__ task (unsigned char kind, unsigned len)
 {
@@ -766,18 +766,6 @@ static unsigned char __fastcall__ ask_look (unsigned char kind)
 }
 #define dens_seen()     ask_look (LK_DENS)
 
-/* The denizens the character sees looked at again, as they've changed (their task's den_seq, or a step of one's the
-** world made), the UI told if it sees them otherwise (not on its way somewhere: it looks about as it gets there) */
-static void stirred (void)
-{
-    if ((!move.on || move.how == A_DIGGING) && dens_seen ()) {
-        hub_map (0);
-        if (HUB->pc_task.kind && !pon && !HUB->pc_task.asking && task_news ()) {
-            return;                             /* (Something new seen as it digs or waits: told, then asked) */
-        }
-        view (V_STIR);
-    }
-}
 
 /* ---- The things (the item store: things.c): the UI's request of them answered (the chunks stocked first: what it
 ** asks about there), looked about again if what lies about has changed (as the senses did; the denizens it sees
@@ -2361,6 +2349,7 @@ unsigned char s_travel_on (void)
 
 /* The dungeon begun: the top stratum's record (a stand-in for the theme's say: a few hundred feet each way), its way
 ** in; its plan the maker's */
+extern unsigned long body_at;                   /* (wtend.c's: the bodies' time from the game's start, slice 4.9's) */
 void s_begin (void)
 {
     struct stratum* s;
@@ -2370,6 +2359,7 @@ void s_begin (void)
     struct tplace* p;
 
     hub_map (0);
+    body_at = HUB->now | 1;
     if (HUB->resume) {                          /* (Carried on: the save's strata, the change records' generation,
                                                 **   the maker's seen maps back) */
         move.how = A_RESUMED;
@@ -2980,7 +2970,9 @@ void __fastcall__ s_worked (unsigned long t)
 static unsigned char srch;
 unsigned char srch_form;                        /* (Its form, SF_*, | SF_TOUCH, | the wall's heading times 16: the
                                                 **   things' search's too, things.c's) */
-static unsigned char searched (void)
+#pragma code-name (push, "SW48CODE")           /* (Part 48's, with the work it calls: the main RAM's room, 2026-10-31) */
+#pragma rodata-name (push, "SW48RODATA")
+unsigned char s_searched (void)
 {
     srch = 0;
     here ();
@@ -2989,6 +2981,9 @@ static unsigned char searched (void)
     worked (0);
     return 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+unsigned char searched (void);
 
 /* ---- The timed work (HOUSE.md's long tasks, the user's, 2026-10-22: "it would be better if the first half ... comes
 ** out first, followed by, as the task timer expires, the second part"): work that spends time and whose outcome is a
@@ -3969,6 +3964,11 @@ unsigned char __fastcall__ s_zone_step (unsigned ox, unsigned oy, unsigned x, un
 {
     unsigned char e;
 
+    if ((ox != x || oy != y) && (HUB->pc_wet || (at (sn_, x, y) && C->wany))) {
+        pt0 += wade (pst);                      /* (A walk's step into water, or in it: its time the more, swimming,
+                                                **   part 73's, slice 4.9's) */
+    }
+    hub_map (0);
     if (pfoe && near_foe (x, y)) {
         return 0xFF;
     }
@@ -3977,6 +3977,94 @@ unsigned char __fastcall__ s_zone_step (unsigned ox, unsigned oy, unsigned x, un
     }
     return e;
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 73 (slice 4.9's: DUNGEON.md's water, HOUSE.md's water): the character come onto its square as it walks
+** (part 24's zone_step, as its chunk has water or it was in water): the water's told as it comes into it, deeper,
+** shallower, out of it (WB_WATER, its band times 256, | 0x8000 running); the time more its step takes (tenths: the walk's
+** step its pace's, step): wading a foot or two, half again; waist-deep, twice; out of its depth, swimming, a minute's
+** swim's squares (the referee's P_SWIM, tested as it begins and each minute after: its grade's distance, a minute's
+** strenuous work, its flames put out as it begins); sinking, under for the minute, its breath held (the referee's: its
+** seconds), past it drowned (the bodies' time, part 70's: dead of it) */
+#pragma code-name (push, "SW73CODE")
+#pragma rodata-name (push, "SW73RODATA")
+
+unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's stub) */
+#define WADE_FT         3                       /* (Waist-deep: wading hard, the house's) */
+#define SWIM_FT         5                       /* (Over the head: swimming, the book's "deeper than their height",
+                                                **   the house's five feet) */
+static unsigned char __fastcall__ band (unsigned char d)
+{
+    d &= 0x7F;
+    return !d ? 0 : d < WADE_FT ? 1 : d < SWIM_FT ? 2 : 3;
+}
+
+unsigned __fastcall__ s_wade (unsigned step)
+{
+    struct req* r;
+    unsigned i;
+    unsigned char d, b, sq;
+    signed char g;
+
+    d = water_at (0);
+    hub_map (0);
+    b = band (HUB->pc_wet);
+    HUB->pc_wet = d;
+    if (band (d) != b) {
+        event (E_BEAT, 0, WB_WATER | band (d) << 8 | (d & WET_RUNS ? 0x8000 : 0));
+    }
+    if ((b = band (d)) < 3) {
+        HUB->pc_swim = HUB->pc_under = 0;
+        return b == 2 ? step : b ? step / 2 : 0;
+    }
+    if (!HUB->pc_swim || (int) ((unsigned) HUB->now - HUB->pc_swat) >= 0) {
+        if (!HUB->pc_swim) {                    /* (Its flames out as it swims: HOUSE.md's) */
+            for (i = 0, b = 0; (i = items (i, IN_ACTOR | IN_ITEM | IN_FLAGS, I_LIT)) != 0; ) {
+                if (on_pc (i)) {
+                    item_at (i)->flags &= ~I_LIT;
+                    b = 1;
+                }
+            }
+            if (b) {
+                light_now ();
+                hub_map (0);
+                event (E_BEAT, 0, WB_DOUSED);
+            }
+        }
+        wsteps = d & WET_RUNS ? -4 : 0;         /* (A stream's current: four steps harder) */
+        g = ask_w (RS_TEST, P_SWIM, 0);
+        r = &HUB->slot[SLOT_WORLD];             /* (Its reply's w1 its squares, w2 its breath: the slot's still) */
+        sq = r->w1 > 60 ? 60 : (unsigned char) r->w1;
+        HUB->pc_breath = r->w2 > 255 ? 255 : (unsigned char) r->w2;
+        spend (GA_WORK, sq ? 600 : 1800);       /* (A minute's strenuous work; under, three times the book's) */
+        hub_map (0);
+        HUB->pc_swat = (unsigned) HUB->now + 600;
+        if (!sq) {                              /* (It sinks: under for the minute, the book's) */
+            HUB->pc_swim = 1;
+            if ((HUB->pc_under += 60) > HUB->pc_breath || HUB->pc_under < 60) {
+                HUB->pc_under = 0xFF;           /* (Drowned: the bodies' time tells the referee, part 70's) */
+                body_ask ();
+                return 0;
+            }
+            event (E_BEAT, 0, WB_UNDER);
+        } else {
+            if (HUB->pc_under || !HUB->pc_swim) {
+                event (E_BEAT, 0, WB_SWIM | (G_OK (g) ? 0x100 : 0) | (HUB->pc_under ? 0x200 : 0));
+            }
+            HUB->pc_under = 0;
+            HUB->pc_swim = sq;
+        }
+    }
+    i = 600 / HUB->pc_swim;
+    return i > step ? i - step : 0;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW24CODE")
+#pragma rodata-name (push, "SW24RODATA")
 
 unsigned char s_close_on (void);
 static void __fastcall__ fight_begin (unsigned char k);
@@ -5162,7 +5250,14 @@ int main (int argc, char* argv[])
         }
         if (HUB->den_seq != dseq) {
             dseq = HUB->den_seq;
-            stirred ();                         /* (The denizens' bodies' changes: what it sees of them) */
+            if ((!move.on || move.how == A_DIGGING) && dens_seen ()) {  /* (The denizens' bodies' changes: what it
+                                                **   sees of them, looked at again, the UI told if it sees them
+                                                **   otherwise, not on its way somewhere: once stirred's) */
+                hub_map (0);
+                if (!HUB->pc_task.kind || pon || HUB->pc_task.asking || !task_news ()) {
+                    view (V_STIR);              /* (Something new seen as it digs or waits: told, then asked) */
+                }
+            }
             hub_map (0);
         }
         if (HUB->round && (burn_ask || HUB->now >= burn_due)) {

@@ -286,6 +286,10 @@ static void __fastcall__ body_time (struct req* r)
     unsigned char k, dead = 0, bound = 0, n = strlen (news), ninj = pc.ninj, u;
 
     out_t = 0;
+    if (r->x[2] == 3 && pc.state != HARN_DEAD) {    /* (Drowned: the world's, slice 4.9's) */
+        pc.state = HARN_DEAD;
+        nput (" You drown.");
+    }
     if ((!r->actor || r->b) && pc.state != HARN_DEAD) {
         if (!r->a) {
             rest_m = rest_m + m < rest_m ? 0xFFFF : rest_m + m;    /* (At rest: toward its healing rolls) */

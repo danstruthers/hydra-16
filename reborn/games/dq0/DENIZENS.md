@@ -491,6 +491,11 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 
 ## Still to come
 
+- **Hunger and thirst for every actor** (slice 4.9's hook: the character's are the world's, HOUSE.md's water,
+  hunger and thirst): a denizen's want counted as the bodies' time goes, its lair's larder and water (I_KIT's
+  KT_LAIR) eaten and drunk from, a hunter's hunger setting it on; a beast keeping out of water deeper than it wades
+  unless its kind swims (kinds.txt's, the bestiary's Swimming).
+
 What the plans bring later, by the slice or phase that brings it:
 
 - **History and themes** (Phase 3D): a region's history generated first (themegen), its eras, peoples and goal;

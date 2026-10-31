@@ -24,7 +24,9 @@ unsigned char __fastcall__ on_pc (unsigned i);   /* (Part 10's stub: carried by 
 #pragma local-strings (on)
 
 extern unsigned char pc_hit;                    /* (dq0w.c's: a hurt stops its long task, hard) */
-static unsigned long body_at;                   /* (The minutes told up to: the last one's end) */
+extern unsigned char pc_tired;                  /* (dq0w.c's: a soft question owed) */
+unsigned long body_at;                          /* (The minutes told up to: the last one's end; the game's start, s_begin's,
+                                                **   hunger and thirst counted from it, slice 4.9's) */
 static unsigned long wdue;                      /* (The referee's next watch: asked then, nothing bleeding) */
 unsigned long body_due = 144000UL;              /* (The same, for the lights' minute: wbody.h's; at first four hours on, so a
                                                 **   game begun asks nothing of its first minutes but a hurt's) */
@@ -48,8 +50,9 @@ unsigned s_body_ask (void)
         ++n;
     }
     bled_at = (unsigned) body_at;
-    if (!n || (!bleeds && !(HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) && HUB->pcsum.health == H_FINE &&
-        HUB->now < wdue)) {                     /* (Hurt: its rest toward its healing told, a minute at a time) */
+    if ((!n || (!bleeds && !(HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) && HUB->pcsum.health == H_FINE &&
+        HUB->now < wdue)) && HUB->pc_under != 0xFF) {  /* (Hurt: its rest toward its healing told, a minute at a
+                                                **   time; drowned, part 73's, told at once) */
         return 0;
     }
     k = HUB->pc_task.kind;
@@ -72,12 +75,17 @@ unsigned s_body_ask (void)
     r->w1 = n;
     r->w2 = bleeds;
     r->x[0] = x;
+    r->x[2] = HUB->pc_under == 0xFF ? 3 : 0;    /* (Drowned: slice 4.9's) */
     r = hub_ask (SLOT_WORLD);
     memcpy (&wdue, r->x + 4, 4);
     body_due = wdue;
     w = r->w1 | (unsigned) r->c << 8;
     a = r->result | r->grade;
     r->state = REQ_FREE;
+    if ((a & 8) && HUB->pc_task.kind) {
+        pc_tired = TE_ASK_HEARD;                /* (Hungrier, thirstier: its long task asked about, soft, "Keep
+                                                **   waiting?", slice 4.9's: the main loop's) */
+    }
     if (a & 5) {
         pc_hit = 1;                             /* (Hurt anew, a venom's ache, or dead of it: its long task stopped,
                                                 **   hard) */

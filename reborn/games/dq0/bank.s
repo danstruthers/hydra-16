@@ -137,6 +137,7 @@ ovl_out:
             OVFN        felt_words, 7
             OVFN        facing_words, 7
             OVFN        fore_set, 6         ; (The answer's tasks in the foreground: main.c's)
+            OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
             OVFN        dots, 6             ; (The game's start's progress: main.c's)
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)
@@ -159,9 +160,11 @@ ovl_out:
             SWPART      13, 1               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
             SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
             SWPART      15, 6               ; An ally's errands, the character's gifts (errand.c: slice 4.8's)
+            SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
 
             SWFN        errand, 15
             SWFN        begin, 1
+            SWFN        feed, 16            ; (Eating and drinking: feed.c, slice 4.9's)
             SWFN        size, 1
             SWFN        t_init, 1
             SWFN        finish, 1

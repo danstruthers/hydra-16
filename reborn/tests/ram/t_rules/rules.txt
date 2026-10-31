@@ -2638,7 +2638,7 @@ char
 inj 3 0 1 1 5 4
 end
 case five days on (thirty watches): her treated bruise (H5) its healing roll, its rate times Endurance 12 (60), sixty hours' rest of them: 5 a critical success, healed (Physician 4)
-set now=4320000
+set now=4320000 hunger=0 thirst=0 want=0x44
 dice 100:5 ...
 ask TIME w1=3600
 want result=0 grade=2

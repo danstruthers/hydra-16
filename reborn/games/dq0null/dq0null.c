@@ -34,7 +34,7 @@ static unsigned char gait = GA_WALK, watch;     /* (Its file's pace and watchful
 static unsigned char wounds;                    /* The character's, and each creature's (by its record) */
 static unsigned char tended;                    /* (The character's wounds tended: slice 4.3's simple way) */
 static unsigned rest_m;                         /* (Its rest toward the next wound healed: minutes, RS_TIME's) */
-static char news[40];                           /* (What time did to it: RS_DESCRIBE b 4's) */
+static char news[72];                           /* (What time did to it: RS_DESCRIBE b 4's) */
 static unsigned char sheet[NSHEETS];
 static unsigned char aden[NACTORS];             /* (Each actor's record) */
 static unsigned char restored;
@@ -72,6 +72,15 @@ static void __fastcall__ putn (int v)
 #define RS_HOUSE_DICE                           /* (The dice by who asks: main's) */
 unsigned long bseed;                            /* (The bearings' own dice: rshouse.h's) */
 #include "../dq0/rshouse.h"
+
+static void __fastcall__ want_say (const char* s)
+{
+    if (strlen (news) + strlen (s) < sizeof news) {
+        strcat (news, s);
+    }
+}
+#define WANT_SAY(s)     (want_say (s), r->grade = 2)
+#include "../dq0/rswant.h"                 /* (Hunger and thirst, every ruleset's: slice 4.9's) */
 
 /* ---- The flat odds: a d100 at most BASE and 5 a step (5 to 95) a success, critical in the fifth of its band nearest
 ** the end (the low rolls of a success, the high of a failure) */
@@ -621,6 +630,14 @@ static void __fastcall__ answer (struct req* r)
             r->grade = G_MS;                    /* (Getting up: always, the null ruleset's, slice 4.1b's) */
             break;
         }
+        if (r->a == P_SWIM) {                   /* (A minute's swimming, the flat odds: its squares, a middling
+                                                **   swimmer's; it sinks at a critical failure; its breath two
+                                                **   minutes: slice 4.9's) */
+            g = r->grade = flat (r->steps);
+            r->w1 = g == G_CS ? 27 : g == G_MS ? 21 : g == G_MF ? 6 : 0;
+            r->w2 = 120;
+            break;
+        }
         if (r->a == P_BEARING) {                /* (Its bearings: the flat odds, by their own dice, and a failure's
                                                 **   d8 by them too: rshouse.h's, slice 4.2's) */
             bdice ();
@@ -678,8 +695,12 @@ static void __fastcall__ answer (struct req* r)
         r->result = g > (signed char) r->c ? 1 : g < (signed char) r->c ? 2 : 0;
         *tp = 0;
         break;
-    case RS_TIME:                               /* (No bleeding: none dies of it; a wound healed by its rest, a tended
-                                                **   one's eight hours, an untended one's a day: slice 4.3's simple way) */
+    case RS_TIME:                               /* (Its minutes for hunger and thirst, rswant.h's, before its
+                                                **   reply's w1; no bleeding: none dies of it; a wound healed by its
+                                                **   rest, a tended one's eight hours, an untended one's a day: slice
+                                                **   4.3's simple way) */
+        r->x[16] = (unsigned char) r->w1;
+        r->x[17] = r->w1 >> 8;
         if (!r->a && wounds) {
             rest_m += r->w1;                    /* (At rest: toward a wound healed) */
         }
@@ -695,8 +716,19 @@ static void __fastcall__ answer (struct req* r)
             r->grade = 2;
             status ();
         }
+        if (r->x[2] == 3) {                     /* (Drowned: the world's, slice 4.9's) */
+            strcpy (news, "You drown.");
+            r->result = 1;
+            r->grade = 2;
+        }
         r->b = health (wounds, TOUGH);
-        *(unsigned long*) (r->x + 4) = HUB->now + 36000UL;     /* (Asked an hour on, nothing bleeding, unhurt) */
+        *(unsigned long*) (r->x + 4) = HUB->now + 36000UL;
+        memcpy (r->x + WANT_X, &HUB->pc_hunger, 6);    /* (Hunger and thirst, rswant.h's: no fatigue, the null
+                                                **   ruleset's, but dead of it) */
+        if (want_of (r, HUB->now) & WANT_DIES) {
+            r->result = 1;
+        }
+        memcpy (&HUB->pc_hunger, r->x + WANT_X, 6);     /* (Asked an hour on, nothing bleeding, unhurt) */
         *tp = 0;
         break;
     case RS_TREAT:                              /* (First aid, the simple way: five minutes a wound, the character's

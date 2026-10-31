@@ -163,9 +163,13 @@ go:
             SWPART      70, 21              ; Wounds over time: the bodies' time told, a thing used up (wtend.c)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
+            SWPART      73, 3               ; The water: wading, swimming (dq0w.c's: slice 4.9's)
+            SWPART      74, 14              ; A waterskin filled (wwater.c: slice 4.9's)
+            SWPART      75, 16              ; The water's depth where the character stands (wwater.c)
 
             SWFN        work, 48
             SWFN        worked, 48
+            SWFN        searched, 48        ; (A search's end: the main RAM's room, 2026-10-31)
             SWFN        outfit, 57
             SWFN        den_kit, 57
             SWFN        outmake, 58
@@ -331,6 +335,9 @@ go:
             SWFN        den_fetch, 72       ; (Slice 4.8's)
             SWFN        bled, 15
             SWFN        body_ask, 70
+            SWFN        wade, 73            ; (The water, hunger and thirst: slice 4.9's)
+            SWFN        water, 74
+            SWFN        water_at, 75
             SWFN        use_key, 7
             SWFN        puzzle, 16
             SWFN        take_go, 16

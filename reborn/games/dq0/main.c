@@ -400,7 +400,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    26                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    27                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -440,7 +440,8 @@ static void sheet (void)
                                                 **   fuel: the money's, 2026-10-28; 24, the denizens' records' serve
                                                 **   and contact, D_LOST: morale's bonds, 2026-10-30; 25, their
                                                 **   D_RANK and D_PROM: succession; 26, the denizens' head's
-                                                **   deeds, a faction's regard: slice 4.8's) */
+                                                **   deeds, a faction's regard: slice 4.8's; 27, world.dat's
+                                                **   hunger and thirst: slice 4.9's) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -1155,6 +1156,10 @@ static void __fastcall__ limb_words (const struct msg* m)
     }
     if ((m->b & 0x80) && actor_seen (m->b) == 2) {
         msg ("You hear something fall.");      /* (A fall unseen, near: the world's b | 0x80, part 8's, 2026-10-30) */
+        return;
+    }
+    if (k >= WB_WATER - WB_DROP && k <= WB_DOUSED - WB_DROP) {  /* (The water's: slice 4.9's) */
+        water_words (m->w1);                    /* (Overlay 4's, water.c's) */
         return;
     }
     hub_mem (KIND_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
@@ -2390,8 +2395,11 @@ void __fastcall__ s_args (int argc, char* argv[])
         } else if (!strcmp (argv[i], "-C")) {
             small = 1;                          /* (For the tests: the caches small, paged to the save folder soon) */
         } else if (!strcmp (argv[i], "-K")) {
-            gear = GE_OLD;                      /* (For the tests: the kit as it was before the outfits, the denizens
+            gear |= GE_OLD;                     /* (For the tests: the kit as it was before the outfits, the denizens
                                                 **   with none of theirs: their dice as they were) */
+        } else if (!strcmp (argv[i], "-W")) {
+            gear |= GE_DRY;                     /* (For the tests: no water grown in the chunks, the walks' as they
+                                                **   were, slice 4.9's) */
         } else if (!strcmp (argv[i], "-a")) {
             autogo = 1;                         /* (For the tests: a long task goes on at every soft question) */
         } else if (!strcmp (argv[i], "-N")) {
@@ -2413,7 +2421,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C] [-a] [-I] [-N] [-K]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C] [-a] [-I] [-N] [-K] [-W]");
         }
     }
 }

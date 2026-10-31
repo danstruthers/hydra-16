@@ -380,6 +380,10 @@ void __fastcall__ o_bar_text (char* s, unsigned done, unsigned len)
         strcat (s, t);
         strcat (s, "  ");
     }
+    hub_mem (0, &i, &HUB->pc_want, 1);          /* (Hunger and thirst once they matter: slice 4.9's) */
+    if (i && strlen (s) <= 24) {
+        strcat (s, i >= 0x10 ? "thirsty  " : "hungry  ");
+    }
 }
 
 #pragma code-name (push, "OV8CODE")       /* (A walk's beats, a battering's: once overlay 8's, now linked in
@@ -500,7 +504,9 @@ void __fastcall__ o_felt_words (unsigned w)
         return;
     case WB_SPENT:                              /* (A thing used up, its kind: HOUSE.md's things used up) */
         hub_mem (KIND_BANK, lb, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
-        sayf ("\nYour %s is %s.", lb, b == KI_INK ? "dry" : b == KI_QUILL ? "worn out" : "worn to nothing");
+        sayf (b == KI_RATIONS ? "\nThat was the last of your %s." : b == KI_WATER ? "\nYour waterskin is empty." :
+            "\nYour %s is %s.", lb, b == KI_INK ? "dry" :
+            b == KI_QUILL ? "worn out" : "worn to nothing");    /* (Rations eaten: slice 4.9's) */
         return;
     }
 }

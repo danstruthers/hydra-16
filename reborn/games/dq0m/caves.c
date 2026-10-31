@@ -333,3 +333,76 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
         L->open[L->nopen++].link = e->ln[i];
     }
 }
+
+/* ---- The water (slice 4.9: DUNGEON.md's water), as a chunk's grown (make.c's, after its grower and its fixtures: any
+** style's), from its region's (the plan's RW_*, its edges' water), by its own numbers (a hash of its place: the
+** growers' dice as they were): a cistern full (5 to 8 feet over its floor's lowest), a cave's chambers in a lake's
+** region flooded (4 to 11 feet), in a stream's pooled in their hollows (a foot or two), where there's water under it
+** one in three (a foot), but a chamber with a way between strata in it, kept dry (the house's: the stairs' landing
+** never under water); a stream's region's passages running with it, a foot deep.  A square of a room's floor under
+** its surface wet (the bits), a passage's square of a stream's */
+#pragma code-name (push, "OV6CODE")           /* (Overlay 6's: 3 full) */
+#pragma rodata-name (push, "OV6RODATA")
+
+static unsigned char __fastcall__ wh (unsigned char k)
+{
+    unsigned h = (L->cx * 31 + L->cy * 17 + k * 101) ^ 0x5A5A;
+
+    h ^= h >> 7;
+    h *= 0x2F1B;
+    return (unsigned char) (h >> 8);
+}
+
+void __fastcall__ o_wet_chunk (struct chunk* c, const struct edges* e)
+{
+    unsigned char r, x, y, k, d, w = e->water;
+    signed char lo;
+    struct room* p;
+
+    L = c;
+    memset (c->wlev, WL_NONE, sizeof c->wlev);
+    for (r = 0; r < c->nrooms && w; ++r) {
+        p = &c->room[r];
+        k = wh (r);
+        d = p->kind == U_CISTERN ? 5 + (k & 3) : p->kind != U_CAVE ? 0 : w & RW_LAKE ? 4 + (k & 7) : w & RW_STREAM ?
+            1 + (k & 1) : k % 3 == 0;
+        for (x = 0; x < e->nland && !(e->lx[x] >= p->x && e->lx[x] < p->x + p->w && e->ly[x] >= p->y &&
+            e->ly[x] < p->y + p->h); ++x) {
+        }
+        if (!d || x < e->nland) {
+            continue;
+        }
+        lo = 120;
+        for (y = p->y; y < p->y + p->h; ++y) {
+            for (x = p->x; x < p->x + p->w; ++x) {
+                if (TILE (c->tile[y][x]) == T_FLOOR && c->elev[y][x] < lo) {
+                    lo = c->elev[y][x];
+                }
+            }
+        }
+        c->wlev[r] = lo + d;                    /* (The rock within a hundred feet of the datum or so: no more) */
+        for (y = p->y; y < p->y + p->h; ++y) {
+            for (x = p->x; x < p->x + p->w; ++x) {
+                if (TILE (c->tile[y][x]) == T_FLOOR && c->elev[y][x] < c->wlev[r]) {
+                    c->wet[y][x >> 3] |= 1 << (x & 7);
+                }
+            }
+        }
+        c->wany = 1;
+    }
+    if (w & RW_STREAM) {
+        c->wany = 1;
+        c->wlev[NROOMS] = 1;
+        c->wruns = 1 << NROOMS;
+        for (y = 0; y < CW; ++y) {
+            for (x = 0; x < CW; ++x) {
+                if (TILE (c->tile[y][x]) == T_CORR) {
+                    c->wet[y][x >> 3] |= 1 << (x & 7);
+                }
+            }
+        }
+    }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)

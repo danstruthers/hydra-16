@@ -49,6 +49,7 @@ void __fastcall__ dice_set (struct req* r);
 void __fastcall__ outfit_of (struct req* r);    /* (Overlay 1's: outfit.c, RS_OUTFIT) */
 signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 3's) */
 signed char __fastcall__ draw_test (signed char steps);     /* (Overlay 3's: a map drawn, slice 4.2's) */
+unsigned char wantfl;
 char news[NEWS_N];                              /* (What time did to the character, heal.c's: RS_DESCRIBE b 4's) */
 
 char tpart[16];                                 /* (RS_TREAT's part said) */
@@ -220,12 +221,28 @@ static const unsigned char appraiser[NAP] = {
 
 /* RS_TEST's own tests, through one stub (the main RAM's room): a dig's, moving quietly's, an appraisal's (by the
 ** craft that knows the thing) */
+static unsigned char __fastcall__ speaks (const char* t);
 void __fastcall__ s_dig_answer (struct req* r)
 {
     if (r->a == P_STEALTH) {
         s_quiet_test (r);
     } else if (r->a == P_APPRAISE) {
         r->grade = test_sk (&pc, appraiser[r->b < NAP ? r->b : 0], r->steps);
+    } else if (r->a != P_DIG && r->a != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
+        if (!speaks (r->text)) {                /* (Words in a tongue it doesn't speak: nothing) */
+            r->result = 2;
+        } else {
+            r->grade = test (&pc, r->a, r->steps);
+        }
+    } else if (r->a == P_SWIM) {                /* (A minute's swimming, the book's, Skills 10: its squares, by the
+                                                **   grade's yards (calm water) times its skill index; it sinks at
+                                                **   a critical failure; its breath held Endurance times 10 seconds) */
+        r->grade = test_sk (&pc, HARN_SWI, r->steps);
+        r->result = pc.ml[HARN_SWI] < 10 ? 1 : pc.ml[HARN_SWI] / 10;
+        r->w1 = (r->grade == G_CS ? 9 : r->grade == G_MS ? 7 : r->grade == G_MF ? 2 : 0) * r->result * 3 / SQ_FT;
+        r->result = harn_end (&pc);
+        r->w2 = (r->result << 3) + (r->result << 1);    /* (Times ten: no multiplying, the main RAM's) */
+        r->result = 0;
     } else {
         dig_of (r);
     }
@@ -599,7 +616,9 @@ void __fastcall__ s_beasts (unsigned char back)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* Whether it speaks tongue t (a word of tongues, a space before it) */
+/* Whether it speaks tongue t (a word of tongues, a space before it: part 2's, the main RAM's room, 2026-10-31) */
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
 static unsigned char __fastcall__ speaks (const char* t)
 {
     char* p = tongues;
@@ -613,6 +632,8 @@ static unsigned char __fastcall__ speaks (const char* t)
     }
     return 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The character's state in words (RS_DESCRIBE b 3: overlay 1's; a 1, its pace and watchfulness only, the hub's): what
 ** the words need copied for the overlay (the hub's not in the window while it is) */
@@ -757,7 +778,13 @@ static void __fastcall__ answer (struct req* r)
         tnow = HUB->now;
         strncpy (tpart, r->text, sizeof tpart - 1);
         memcpy (rq, r, sizeof rq);
+        memcpy (rq + offsetof (struct req, x) + WANT_X, &HUB->pc_hunger, 6);    /* (The hub's want: slice 4.9's) */
+        memcpy (rq + offsetof (struct req, x) + 16, &r->w1, 2);     /* (Its minutes, the reply's w1 after) */
         body_req ((struct req*) rq);
+        if (r->kind == RS_TIME) {
+            want ((struct req*) rq);            /* (Hunger and thirst: overlay 7's, want.c) */
+            memcpy (&HUB->pc_hunger, rq + offsetof (struct req, x) + WANT_X, 6);
+        }
         memcpy (r, rq, sizeof rq);
         status ();
         break;
@@ -771,7 +798,7 @@ static void __fastcall__ answer (struct req* r)
         r->b = watch;
         break;
     case RS_TEST:
-        if (r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE) {   /* (Judged by the tool to hand that
+        if (r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE || r->a == P_SWIM) {   /* (Judged by the tool to hand that
                                                 **   suits it best; moving quietly, by its own dice; by the craft that
                                                 **   knows the thing: part 2's) */
             dig_answer (r);
@@ -792,11 +819,9 @@ static void __fastcall__ answer (struct req* r)
             break;
         }
         if ((r->a == P_PERSUADE || r->a == P_INTIMIDATE || r->a == P_DECEIVE) && r->text[0]) {   /* (Words in a
-                                                **   tongue: one it speaks, or nothing) */
-            if (!speaks (r->text)) {
-                r->result = 2;
-                break;
-            }
+                                                **   tongue: one it speaks, or nothing: part 2's) */
+            dig_answer (r);
+            break;
         }
         if (r->a <= P_NOTICE_SMELL) {           /* (By its state: its pace, its shock; overlay 1's, in a copy) */
             ps.go = HUB->pc_going;

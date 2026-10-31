@@ -1333,9 +1333,16 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   fall told (HOUSE.md's missiles).  Left: a hostile coming into the auto-target range beginning a fight by itself,
   melee's auto-engage, a rock picked up to throw, the denizens' own positions but prone (a shooter crouched behind
   cover).
-- **Water** (slice 4.9): the plan's rivers, falls and lakes, water levels, swimming and drowning, a well's water from
-  the plan; rain where the surface reaches (shafts, the open), washing scents and prints away; hunger and thirst,
-  eating and drinking.
+- **Water** (slice 4.9, built in part 2026-10-30: HOUSE.md's water, hunger and thirst): the plan's streams and lakes
+  (world.h's RW_*: traced downhill over the regions), a chunk's water (its wet squares, each room's level, a stream's
+  running depth: dq0m/caves.c's wet_chunk), a cistern full, wells from the plan; wading, swimming (the referee's
+  P_SWIM a minute at a time: dq0w.c's part 73), going under and drowning, flames put out; hunger and thirst over time
+  (the referee's, every one's by rswant.h: its news, its next ask), eating and drinking (the UI's feed.c: the things'
+  IO_USE by the keys food and water), a waterskin filled (wwater.c).  Left: falls (a stream's drop told and heard), the sound layer's running water (its background's
+  BG_WATER from the wet squares), running water washing the traces (wtrace.c's hook), the map's water, things soaked (a
+  scroll ruined), a stream's current carrying a swimmer, a minute's swim tested as it waits in deep water, treading water standing still, the denizens' wading and swimming (a beast that won't cross), their
+  hunger and thirst; rain where the surface reaches (shafts, the open), washing scents and prints away; a standing order
+  to eat and drink when needed.
 - **Rock and old places** (slice 4.10): the rock's own kinds and hardness across a stratum, mines and mixed strata
   grown by their own rules, age's collapse and rubble, explosives and sills; caverns across many chunks (the plan's
   features bigger than a chunk, a room followed from chunk to chunk).

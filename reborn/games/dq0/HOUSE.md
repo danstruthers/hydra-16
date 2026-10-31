@@ -2242,6 +2242,51 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
   one of its eyes (a point a blow).  Four points a step, to friendly at most; its newcomers and those of it not met
   yet in the cache take the step with it.  Not lowered by a paltry gift, nor raised past friendly.
 
+## Water, hunger and thirst *(slice 4.9, 2026-10-30: the book's where it speaks, the house's else; drafted for the user to review)*
+
+- **The water in the dungeon** *(every ruleset's)*: traced over a stratum's plan as it's grown (the plan's own
+  numbers: its other dice as they were): water under two regions in three (the regions a built stratum's wells and
+  cisterns were in before: they're the plan's now); in a natural stratum a stream for each 16 regions (one at least,
+  four at most), from a region of its halls downhill to the lowest neighbour as long as there's one lower, ending in a
+  lake.  A chunk's water as it's grown: a cistern full, 5 to 8 feet over its floor's lowest; a cave's chambers in a
+  lake's region flooded, 4 to 11 feet; in a stream's region its passages running a foot deep and its chambers' hollows
+  pooled a foot or two; where there's only water under it, one chamber in three a puddle a foot deep in its hollow;
+  but a chamber with a way between strata in it (a stair's, a ladder's landing) kept dry, the house's.
+  A square under a still pool's surface is as deep as the surface is over its floor.
+- **Wading** *(every ruleset's)*: a foot or two of water makes each step half as long again; waist-deep (3 or 4
+  feet), twice as long.  Told as the character comes into it, deeper, shallower and out ("You wade in up to your
+  waist.").
+- **Swimming** *(the book's, Skills 10, where it speaks)*: water five feet deep or more is over the character's head
+  (the book's "deeper than their height": the house's five feet), and it swims.  The referee tests Swimming as it
+  begins and each minute after (the book's once a minute; calm water, a stream's current four steps harder); its
+  distance a minute the book's yards for the grade (critical success 9, marginal success 7, marginal failure 2) times
+  its skill index, in squares (HarnMaster's; the null ruleset's a middling swimmer's 27, 21, 6); a critical failure
+  sinks it, under for the minute.  A minute's swimming is strenuous work, a minute under three times that (the
+  book's: a level each five minutes, triple under water).  Its flames go out as it starts to swim ("The water puts out
+  your light.").
+- **Drowning** *(the book's)*: the breath held Endurance times 10 seconds (the null ruleset's two minutes); under
+  longer than that, it drowns: dead (the bodies' time, RS_TIME's x[2] 3: "You drown.").  The house's: there's no one
+  to revive it, so it's death at once rather than the book's Endurance times 20 seconds.  Coming up again is told
+  ("You come up, gasping.").
+- **Hunger and thirst** *(every ruleset's: the book has none; the user's of 2026-10-21, DECISIONS.md's)*: counted in
+  minutes of want as the bodies' time goes (the referee's, every one's the same rules, rswant.h: the world tells it the
+  minutes gone, a minute at a time while anything's to tell, else as its next level could come; twice as fast at
+  vigorous work: running, fighting, swimming, digging, climbing).  Thirst: thirsty at 8 hours, very thirsty at 16, parched at 24, dying of it
+  at 48, dead at 72.  Hunger: hungry at 8 hours, very hungry at 24, starving at 3 days, wasting away at 10, dead at
+  30.  Each told as it comes ("You're getting thirsty."), a long task (a wait, a sleep, a walk) asked about then, soft
+  ("Keep waiting?"), as another soft interruption is, shown on the status line once it matters ("thirsty",
+  "hungry"; the referee's news, RS_DESCRIBE b 4's).  The want's fatigue (HarnMaster's): no level at the first, then 1, 2 and 4 fatigue
+  levels for each of hunger and thirst, not rested off until it eats or drinks (HarnMaster's: a fatigue level the
+  universal penalty's, in every test; the null ruleset none).
+- **Eating** *(every ruleset's)*: a day's rations is three meals; "eat" takes a meal (five minutes), eight hours of
+  hunger off; a new day's ration begun (one of the lot used up) when the last one's meals are eaten.  Not hungry
+  (under two hours of want), refused.
+- **Drinking** *(every ruleset's)*: a pint takes six hours of thirst off; "drink" drinks as many pints as it wants
+  (half a minute each), from the water where it stands (its fill) or a well within reach, else from its waterskin a
+  pint at a time (four pints; "drink from the waterskin" from it whatever's about).  "fill my waterskin" in the water or by a well, a minute.  Not thirsty (under an hour), refused.
+- **The denizens** *(every ruleset's, for later)*: their hunger, thirst and larders, and a beast keeping out of deep
+  water unless it swims, aren't built yet (DENIZENS.md's still to come).
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without
@@ -2266,8 +2311,6 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
   once the maker gives faces a grade.  Today it's 10 feet a round at a marginal success and 20 at a critical,
   everywhere.
 
-- **Swimming tires** (the user's, 2026-10-20: "swimming, climbing, running, battering down a door"), strenuous work
-  as climbing, digging and battering are (built: Moving and tiring), once there's water (slice 4.9).
 - **Fighting on with missiles** (the user's, 2026-10-20; slice 4.7, with the missiles): a bow's arrows, a brace of
   throwing daggers, the same way: shot or thrown at the target while it's in range, the next taken each time, the
   next foe in range after it, till none is left, the missiles run out, or an enemy engages the character (then

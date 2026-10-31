@@ -3328,6 +3328,76 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0hunger', asks: true, near: ['time'], what: 'Dingus Quest Zero\'s hunger and thirst (slice 4.9: HOUSE.md\'s water, hunger and thirst, the user\'s of 2026-10-21, DECISIONS.md\'s; the referee\'s, rswant.h), by the words told: at seed 3 in the kitchen, nothing near, its torch put out: "eat the rations" at once refused, not hungry; "wait 9 hours", the want\'s first levels told as they come ("You\'re getting thirsty.", "You\'re getting hungry.") and the status line\'s "thirsty"; over to the kitchen\'s well first ("look into the well"), its torch lit again after the wait, "drink" its fill there; "eat the rations" a meal (a day\'s ration begun, five minutes), again refused; "fill the waterskin" at the well (the old kit\'s, empty); its torch put out, "wait 17 hours", "You\'re very thirsty."; "drink from the waterskin" its pints',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm', 'eat the rations', 'look into the well', 'douse the torch', 'wait 9 hours', 'light the torch', 'drink', 'eat the rations',
+        'eat the rations', 'fill the waterskin', 'douse the torch', 'wait 17 hours', 'drink from the waterskin', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const at = (line, n = 0) => { let i = -1; for (let k = 0; k <= n; k++) i = o.indexOf('> ' + line + ' > ' + line + ' ', i + 1); return i; };   // (A line typed, echoed)
+        const after = (line, words, n = 0) => { const i = at(line, n); return i >= 0 && o.slice(i, i + 2 * line.length + 300).includes(words); };
+        if (!after('eat the rations', 'You\'re not hungry.')) f.push('the first "eat the rations" not refused, not hungry');
+        const w8 = at('wait 9 hours'), ap = at('light the torch'), w8s = w8 >= 0 && ap > w8 ? o.slice(w8, ap) : '';
+        if (!w8s.includes('You\'re getting thirsty.')) f.push('eight hours waited, not told "You\'re getting thirsty."');
+        if (!w8s.includes('You\'re getting hungry.')) f.push('eight hours waited, not told "You\'re getting hungry."');
+        if (o.slice(0, w8).includes('You\'re getting')) f.push('hunger or thirst told before eight hours');
+        if (!/thirsty/.test(w8s.replace(/You're getting thirsty\./g, ''))) f.push('no "thirsty" on the status line');
+        if (!after('drink', 'You drink your fill.')) f.push('"drink" by the well not its fill');
+        if (!after('eat the rations', 'You eat a meal.', 1)) f.push('"eat the rations" after eight hours not a meal');
+        if (!after('eat the rations', 'You\'re not hungry.', 2)) f.push('a meal eaten, "eat the rations" again not refused');
+        if (!after('fill the waterskin', 'You fill your waterskin.')) f.push('"fill the waterskin" at the well not filled');
+        const w16 = at('wait 17 hours'), ds = at('drink from the waterskin');
+        if (!(w16 >= 0 && ds > w16 && o.slice(w16, ds).includes('You\'re very thirsty.'))) f.push('sixteen hours more, not told "You\'re very thirsty."');
+        if (!after('drink from the waterskin', 'You drink from your waterskin.')) f.push('"drink from the waterskin" not drunk from it');
+        if (f.length) this.notes = [o.slice(Math.max(0, w8 - 200), w8 + 2500)];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0swim', near: ['body'], what: 'Dingus Quest Zero\'s water (slice 4.9: DUNGEON.md\'s water, HOUSE.md\'s water: the plan\'s lakes, a chunk\'s water), by the words told and the hub: at seed 2 down the way down (the natural stratum below, a flooded chamber north of its landing, five feet deep), north into it: out of its depth, swimming (its depth in the hub\'s pc_wet, its squares a minute the referee\'s P_SWIM in pc_swim, its breath pc_breath), told "You\'re out of your depth: you swim.", its torch put out ("The water puts out your light."), its swimming told by the referee\'s grade ("You struggle to keep afloat."): in the dark then, the walk stopped',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 2 -c /ram/c.hm -T', 'd', 'n', 'look', 'quit', 'echo $status']) },
+      start(m) {   // (The character's water, as each line's typed: the hub's pc_wet, pc_swim, pc_breath)
+        const a = m.acia, read = a.read;
+        let typed = '';
+        m.wet = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              const h = m.dq0 && m.dq0.bank(0);
+              if (h) {
+                const { L } = m.dq0.layout();
+                m.wet.push({ line: typed, wet: h[L.pcWet], swim: h[L.pcSwim], breath: h[L.pcBreath] });
+              }
+              typed = '';
+            } else if (c >= 32) typed += String.fromCharCode(c);
+          }
+          return read.call(a, r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const at = line => o.indexOf('> ' + line + ' > ' + line + ' ');
+        const n = at('n'), s = at('look');
+        const ns = n >= 0 && s > n ? o.slice(n, s) : '';
+        if (!ns.includes('You\'re out of your depth: you swim.')) f.push('north into the flooded chamber, not told "You\'re out of your depth: you swim."');
+        if (!ns.includes('The water puts out your light.')) f.push('swimming, its torch not put out');
+        if (!/You swim strongly\.|You struggle to keep afloat\./.test(ns)) f.push('its swimming not told (the referee\'s test)');
+        const w = (m.wet || []).find(e => e.line === 'look');
+        if (!w || (w.wet & 0x7F) < 5 || !w.swim || !w.breath) f.push('swimming not in the hub (pc_wet, pc_swim, pc_breath): ' + JSON.stringify(w));
+        this.notes = [JSON.stringify(m.wet)];
+        if (f.length) this.notes.push(o.slice(Math.max(0, n - 300), n + 1500));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0longwait', asks: true, what: 'Dingus Quest Zero\'s long waits (the user\'s, 2026-10-28: "waits should be able to last a full night\'s sleep, so 8 hours at least.  Some spells may take longer than that to cast, so 16-bit minutes would be better."; DECISIONS.md\'s, HOUSE.md\'s long waits), by the world\'s events and the clock: at seed 3 in the kitchen (nothing near), its torch put out, "wait 8 hours" waited whole (its intent in minutes, I_WAIT\'s WA_MIN: the clock 288,000 tenths on, the long task 480 minutes, mins), told "You wait eight hours.", the status after; "wait 3 hours 20 minutes" (200 minutes, its spans added up) and "wait 3 hours and 20 minutes" (one duration, not two commands) told so; "rest" a night\'s sleep (LT_SLEEP, "You settle down to rest for eight hours."), "sleep 8 hours" the same; each in the cycles a bearable wait takes (the coarser ticks while nothing\'s near: ten-minute slices); at the normal pace the same wait as quick (run as the turns pace runs it); at seed 21 below, by the giant rats, a long wait asked about at a sound ("Keep waiting?") and answered no: broken off, hours short of its eight; and with the hand-written theme\'s hostile rats a sleep broken off hard by a bite (dq0tasks\' long tasks)',
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
@@ -4599,10 +4669,10 @@ module.exports = {
     // only with DQ0ANS96=1, to measure)
     ...(process.env.DQ0ANS96 ? [dq0AnswerTest(9600)] : []),
     {
-      name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken (punched bare-handed, as the old code\'s run struck it: the torch in hand would strike it now, the user\'s, 2026-10-22) and climbed through, a weak-eyed character), every reply the senses give (a look\'s, the denizens\' senses\') with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, the old code\'s (DQ0LOOKS=write: written afresh from this run)',
+      name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken (punched bare-handed, as the old code\'s run struck it: the torch in hand would strike it now, the user\'s, 2026-10-22) and climbed through, a weak-eyed character; each dungeon dry, dq0 -W: the looks before the water, slice 4.9\'s), every reply the senses give (a look\'s, the denizens\' senses\') with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, the old code\'s (DQ0LOOKS=write: written afresh from this run)',
       init: 't_rc', cycles: 3000e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm\rācp /ram/c.hm /ram/w.hm\rāecho att eye 4 >> /ram/w.hm\r' +
-        [['dq0 -p t -s 3 -c /ram/c.hm -T -k sword',['look','turn left','turn right','walk to the door ahead to my left','2','look','turn around','turn left','turn right','map','d','look','sw','look']],['dq0 -p t -s 5 -c /ram/c.hm -T',['d','wait','go right','turn left','look','turn around','wait','look']],['dq0 -p t -s 7 -c /ram/w.hm',['open the door behind me','s','move south 4 squares','face north','look','douse the torch','z','z','z','look','light the torch','z','look','turn around','n']],['dq0 -p t -s 3 -c /ram/c.hm -T',['drop the torch','turn around','step forward','look','turn around','step forward','get torch','look']],['dq0 -p t -s 12 -c /ram/c.hm -T',['e','wait','e','wait','e','turn around','lower portcullis','w','look','raise portcullis','w','turn left']],['dq0 -p t -s 12 -c /ram/c.hm',['n','turn around','punch the window','climb through window','turn around','look','turn right']],['dq0 -p t -s 4 -c /ram/c.hm',['open door','3','look','go through the door','look','turn left']],['dq0 -p t -s 517 -c /ram/c.hm',['look','turn left','turn right','turn around','look']]].map(([g, c]) => 'ā' + g + '\r' + c.concat('quit').map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
+        [['dq0 -p t -s 3 -c /ram/c.hm -T -W -k sword',['look','turn left','turn right','walk to the door ahead to my left','2','look','turn around','turn left','turn right','map','d','look','sw','look']],['dq0 -p t -s 5 -c /ram/c.hm -T -W',['d','wait','go right','turn left','look','turn around','wait','look']],['dq0 -p t -s 7 -c /ram/w.hm -W',['open the door behind me','s','move south 4 squares','face north','look','douse the torch','z','z','z','look','light the torch','z','look','turn around','n']],['dq0 -p t -s 3 -c /ram/c.hm -T -W',['drop the torch','turn around','step forward','look','turn around','step forward','get torch','look']],['dq0 -p t -s 12 -c /ram/c.hm -T -W',['e','wait','e','wait','e','turn around','lower portcullis','w','look','raise portcullis','w','turn left']],['dq0 -p t -s 12 -c /ram/c.hm -W',['n','turn around','punch the window','climb through window','turn around','look','turn right']],['dq0 -p t -s 4 -c /ram/c.hm -W',['open door','3','look','go through the door','look','turn left']],['dq0 -p t -s 517 -c /ram/c.hm -W',['look','turn left','turn right','turn around','look']]].map(([g, c]) => 'ā' + g + '\r' + c.concat('quit').map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
       expect: ['% echo $status'],
       // (The senses' task found by its code, dq0p.hyx's at its main; its hub_reply's calls snapped, as the game it's in
       // the quits told so far)
@@ -5586,11 +5656,16 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0tend', what: "Dingus Quest Zero's first aid and healing (slice 4.3: HOUSE.md's wounds over time; Physician 2-4), both referees: at seed 517 the kobold warren's gatehouse, its ledge jumped down, a minor bruise to the shoulder (dq0harm's); \"tend my head\" not the grammar's (no such thing); \"tend my wounds\" the book's treatment for a minor bruise, a cold compress (5d6 minutes: a timed work, its long task LT_TEND, its words at once and its outcome at its end), its healing rate on the wound (the sheet's \"tended\", the state's \"all tended\"), \"first aid\" again nothing to tend (one treatment roll a wound); then a night's sleep, again and again (its torch put out first), till five days' rest have gone by: the book's five-day healing roll (its rate times its Endurance), the wound healed, told as it wakes (\"The minor bruise to your right shoulder (M1) has healed.\"), the sheet's injuries none; and the null referee's simple way, a light wound tended (\"You clean and bind a wound.\") and healed by eight hours' rest (\"A wound has healed.\")",
+      name: 'dq0tend', what: "Dingus Quest Zero's first aid and healing (slice 4.3: HOUSE.md's wounds over time; Physician 2-4), both referees (its hunger and thirst poked low at each sleep: dq0Poke's, slice 4.9's): at seed 517 the kobold warren's gatehouse, its ledge jumped down, a minor bruise to the shoulder (dq0harm's); \"tend my head\" not the grammar's (no such thing); \"tend my wounds\" the book's treatment for a minor bruise, a cold compress (5d6 minutes: a timed work, its long task LT_TEND, its words at once and its outcome at its end), its healing rate on the wound (the sheet's \"tended\", the state's \"all tended\"), \"first aid\" again nothing to tend (one treatment roll a wound); then a night's sleep, again and again (its torch put out first), till five days' rest have gone by: the book's five-day healing roll (its rate times its Endurance), the wound healed, told as it wakes (\"The minor bruise to your right shoulder (M1) has healed.\"), the sheet's injuries none; and the null referee's simple way, a light wound tended (\"You clean and bind a wound.\") and healed by eight hours' rest (\"A wound has healed.\")",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 517 -c /ram/c.hm -d /ram/hurt', 'ne', 'e', 'u', 'u',
         'turn around', 'jump down', 'tend my head', 'tend my wounds', 'status', 'sheet', 'first aid', 'douse the torch', ...Array(20).fill('sleep'), 'sheet', 'quit',
         'dq0 -r null -p t -s 517 -d /ram/h2', 'ne', 'e', 'u', 'u', 'turn around', 'jump down', 'first aid', 'first aid', 'douse the torch', 'sleep', 'status', 'quit', 'echo $status']) },
+      start(m) {   // (Its water and food: a five days\' rest without them its death of thirst, slice 4.9\'s; so the scene\'s want
+        // set low as each sleep\'s typed, its levels as they are at eight hours, none to rise: the wounds\' healing the test\'s)
+        const want = { pcHunger: 0, pcHungerHi: 0, pcThirst: 0, pcThirstHi: 0, pcWant: 0x11 };
+        dq0Poke(m, [...Array(20).keys()].map(k => ({ g: 1, line: 'sleep', n: k + 1, hub: want })).concat([{ g: 2, line: 'sleep', n: 1, hub: want }]));
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Story(out), at = s.indexOf('Dingus, Wanderer'), h = at < 0 ? s : s.slice(0, at), n = at < 0 ? '' : s.slice(at);
@@ -6401,16 +6476,16 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0travel', what: 'Dingus Quest Zero\'s travel to a place it knows (slice 4.2, the user\'s, 2026-10-16: "name this room "The Mausoleum" and then you could say "I want to go back to the mausoleum" and you would be on your way, and the game would move you at your current rate of speed back toward that named place, as long as your direction sense/orientation checks held up.  Orientation checks would be aided if good maps are used"; HOUSE.md\'s travel), by the world\'s events (E_TASK\'s LT_TRAVEL, the legs\' E_ARRIVE), where the character ends, the chunks\' memory (the cache\'s, each chunk\'s kept) and the words: at seed 3\'s caves (dq0 -T, knowing north: -N) the cave by the stairs named the Grotto, three walks west out of its chunk, "go back to the grotto" there a leg at a time (TE_BEGUN, two legs or more, TE_THERE under way: in its room), again there already, "return to the grotto" the same, then the same walks out and "go back to the grotto" again, stopped by a command typed as it begins ("turn around" typed as "You head back toward the Grotto." is told, as a player would: TE_STOPPED, not there); the same walks and two hours\' waits twice (its torch out between), its memory of the Grotto\'s chunk under a tenth: refused (TE_FORGOT, no walk), and again in the light of its spare torch (the chunk it\'s in seen, not the Grotto\'s); a map drawn as it went (paper, charcoal, a lantern lit), its memory gone after four hours\' waits but its map carried showing the Grotto, in light to read it: on its way by the map (begun, walked, not refused: there, or stopped by a giant rat in its way); a wrong belief taking it astray (its bearings tested, the hunter\'s Awareness: a long way walked, its north an eighth off since it last saw the Grotto, not knowing it) its first leg another way than the same walks\' knowing north (-N) take; at seed 4 the kitchen past the barred door named the Gallery, "go back to where I came in" stopped by a shut door it hasn\'t opened, the way nearest the bedchamber (E_NOWAY N_DOOR, no walk); "go back to the kitchen" (a kind of room, the theme\'s word) there already',
+      name: 'dq0travel', what: 'Dingus Quest Zero\'s travel to a place it knows (slice 4.2, the user\'s, 2026-10-16: "name this room "The Mausoleum" and then you could say "I want to go back to the mausoleum" and you would be on your way, and the game would move you at your current rate of speed back toward that named place, as long as your direction sense/orientation checks held up.  Orientation checks would be aided if good maps are used"; HOUSE.md\'s travel), by the world\'s events (E_TASK\'s LT_TRAVEL, the legs\' E_ARRIVE), where the character ends, the chunks\' memory (the cache\'s, each chunk\'s kept) and the words: at seed 3\'s caves (dq0 -T, knowing north: -N) the cave by the stairs named the Grotto, three walks west out of its chunk, "go back to the grotto" there a leg at a time (TE_BEGUN, two legs or more, TE_THERE under way: in its room), again there already, "return to the grotto" the same, then the same walks out and "go back to the grotto" again, stopped by a command typed as it begins ("turn around" typed as "You head back toward the Grotto." is told, as a player would: TE_STOPPED, not there); the same walks and two hours\' waits twice (its torch out between), its memory of the Grotto\'s chunk under a tenth: refused (TE_FORGOT, no walk), and again in the light of its spare torch (the chunk it\'s in seen, not the Grotto\'s); a map drawn as it went (paper, charcoal, a lantern lit), its memory gone after four hours\' waits but its map carried showing the Grotto, in light to read it: on its way by the map (begun, walked, not refused: there, or stopped by a giant rat in its way); a wrong belief taking it astray (its bearings tested, the hunter\'s Awareness: a long way walked, its north an eighth off since it last saw the Grotto, not knowing it) its first leg another way than the same walks\' knowing north (-N) take; at seed 4 the kitchen past the barred door named the Gallery, "go back to where I came in" stopped by a shut door it hasn\'t opened, the way nearest the bedchamber (E_NOWAY N_DOOR, no walk); "go back to the kitchen" (a kind of room, the theme\'s word) there already (its caves dry, dq0 -W: the walks and the journeys as they were before the water, slice 4.9\'s; the test is about travel, not wading)',
       bearings: true, init: 't_rc', cycles: 7000e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -N', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'go back to the grotto', 'go back to the grotto',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -W -N', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'go back to the grotto', 'go back to the grotto',
         'return to the grotto', 'n', 'w', 'w', 'w', 'go back to the grotto', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -N -k torch', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'wait 2 hours', 'wait 2 hours',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -W -N -k torch', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'wait 2 hours', 'wait 2 hours',
         'go back to the grotto', 'light the torch', 'go back to the grotto', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -N -k paper,charcoal,lantern', 'douse the torch', 'drop the torch', 'light the lantern', 'put the charcoal in the pouch', 'map as I go', 'd',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -W -N -k paper,charcoal,lantern', 'douse the torch', 'drop the torch', 'light the lantern', 'put the charcoal in the pouch', 'map as I go', 'd',
         'call this room the Grotto', 'n', 'w', 'w', 'w', 'stop mapping', 'wait 100 minutes', 'wait 100 minutes', 'wait 1 hour', 'go back to the grotto', 'quit',
-        ...['', ' -N'].flatMap(n => ['dq0 -p t -s 3 -c /ram/c.hm -T' + n, 'd', 'call this room the Grotto', 'n', 'w', 'f', 'f', 'f', 'l', 'f', 'r', 'f', 'l', 'f',
+        ...['', ' -N'].flatMap(n => ['dq0 -p t -s 3 -c /ram/c.hm -T -W' + n, 'd', 'call this room the Grotto', 'n', 'w', 'f', 'f', 'f', 'l', 'f', 'r', 'f', 'l', 'f',
           'r', 'f', 'f', 'l', 'f', 'go back to the grotto', 'quit']),
         'dq0 -p t -s 4 -c /ram/c.hm -N', 'take the bar', 'open', 'n', 'e', 'n', 'call this room the Gallery', 'go back to where I came in',
         'go back to the kitchen', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
@@ -6436,7 +6511,7 @@ module.exports = {
         const kept = (st, nm) => { const r = named(st, nm), a = r && chunkOf(st, r.sn, r.x, r.y); return a && a.c; };
         const at = (t, what) => { if (!t.at || !t.after) { f.push(what + ': no state'); return false; } return true; };
         // The Grotto gone back to, knowing north
-        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -N'), b1 = T.after(g, 'go back to the grotto'), b2 = T.after(b1, 'go back to the grotto');
+        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -N'), b1 = T.after(g, 'go back to the grotto'), b2 = T.after(b1, 'go back to the grotto');
         const b3 = T.after(b2, 'return to the grotto');
         if (at(b1, 'the first journey')) {
           if (!tr(b1, 'TE_BEGUN').length || legs(b1) < 2 || !tr(b1, 'TE_THERE').filter(e => e.b & 0x40).length) f.push('"go back to the grotto": not begun, two legs or more, there under way (' + dq0Evs(b1) + ')');
@@ -6454,7 +6529,7 @@ module.exports = {
           'You\'re in the Grotto already.', '> return to the grotto', 'You\'re in the Grotto already.', '> go back to the grotto',
           'You head back toward the Grotto.', '> turn around', 'You stop travelling.'], f, 'the words: ');
         // Forgotten: two hours' waits twice, out of the Grotto's chunk
-        const h = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -N -k torch'), h1 = T.after(h, 'go back to the grotto'), h2 = T.after(h1, 'go back to the grotto');
+        const h = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -N -k torch'), h1 = T.after(h, 'go back to the grotto'), h2 = T.after(h1, 'go back to the grotto');
         for (const [t, l] of [[h1, 'in the dark'], [h2, 'in its torch\'s light']]) {
           if (!at(t, 'forgotten ' + l)) continue;
           const c = kept(t.at, 'the Grotto');
@@ -6464,7 +6539,7 @@ module.exports = {
         if (h2.at && !h2.at.pc.light) f.push('the spare torch not lit');
         inTurn(s.slice(s.indexOf('-k torch')), ['> go back to the grotto', 'You don\'t remember the way to the Grotto.'], f, 'forgotten\'s words: ');
         // A map carried after the memory's gone
-        const p = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -N -k paper,charcoal,lantern'), p1 = T.after(p, 'go back to the grotto');
+        const p = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -N -k paper,charcoal,lantern'), p1 = T.after(p, 'go back to the grotto');
         if (at(p1, 'the map\'s journey')) {
           const c = kept(p1.at, 'the Grotto');
           if (!c || left(p1.at, c) >= 10) f.push('the map\'s: the Grotto still remembered: ' + (c ? left(p1.at, c) : 'no chunk'));
@@ -6475,8 +6550,8 @@ module.exports = {
             f.push('the map\'s: not on its way there by the map (there, or a denizen in its way: ' + dq0Evs(p1) + ')');
         }
         // Astray, by a belief gone wrong since it saw the Grotto: its first leg another way than knowing north takes
-        const a = T.of('dq0 -p t -s 3 -c /ram/c.hm -T'), a1 = T.after(a, 'go back to the grotto');
-        const n = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -N', g.k + 1), n1 = T.after(n, 'go back to the grotto');
+        const a = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W'), a1 = T.after(a, 'go back to the grotto');
+        const n = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -N', g.k + 1), n1 = T.after(n, 'go back to the grotto');
         if (at(a1, 'astray') && at(n1, 'knowing north')) {
           const c = kept(a1.at, 'the Grotto');
           if (!c || a1.at.pc.lost || !((a1.at.pc.skew - c.sk) & 7)) f.push('astray: its belief not off since it saw the Grotto, or known lost: ' + JSON.stringify(c && [a1.at.pc.skew, c.sk, a1.at.pc.lost]));
@@ -6547,10 +6622,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0walkwords', meaning: true, what: 'Dingus Quest Zero\'s walks told as they go (the user\'s playtest, 2026-10-21: "Crossing a room to a door says nothing till the door"; "in a passage two squares wide, every step says the passageway forks here"): at seed 3 the first room\'s doors opened and walked through to the hall, crossed, and back south across it to its door: the room\'s crossing told as the walk leaves it (the world\'s E_BEAT WB_CROSS, "You cross the room.") before the doorway\'s beat (WB_DOOR, "You go through a doorway."); then at seed 3\'s stratum below (caves, dq0 -T) east from the cave by the stairs into the tunnels: a walk set out from a wide fork crosses it (three squares the way said, not a square and a fork again: it was one square a walk)',
+      name: 'dq0walkwords', meaning: true, what: 'Dingus Quest Zero\'s walks told as they go (the user\'s playtest, 2026-10-21: "Crossing a room to a door says nothing till the door"; "in a passage two squares wide, every step says the passageway forks here"): at seed 3 the first room\'s doors opened and walked through to the hall, crossed, and back south across it to its door: the room\'s crossing told as the walk leaves it (the world\'s E_BEAT WB_CROSS, "You cross the room.") before the doorway\'s beat (WB_DOOR, "You go through a doorway."); then at seed 3\'s stratum below (caves, dq0 -T) east from the cave by the stairs into the tunnels: a walk set out from a wide fork crosses it (three squares the way said, not a square and a fork again: it was one square a walk) (its caves dry, dq0 -W: a stream along that passage would have slowed and turned the walk, slice 4.9\'s)',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm',
-        'open the door behind me on my right', 'n', 'open', 'n', 'e', 's', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'n', 'e', 'e', 'e', 'quit',
+        'open the door behind me on my right', 'n', 'open', 'n', 'e', 's', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -W', 'd', 'n', 'e', 'e', 'e', 'quit',
         'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -6562,7 +6637,7 @@ module.exports = {
         if (dq0Ev(so, 'E_ARRIVE', {}).some(x => x.how === 'A_CROSSED')) f.push('the walk south told as a crossing alone');
         const ans = s.slice(s.indexOf('> s', s.indexOf('> e')), s.indexOf('> quit'));
         inTurn(ans, ['You cross the room.', 'You go through a doorway.'], f, 'the walk south\'s words: ');
-        const g2 = T.of('dq0 -p t -s 3 -c /ram/c.hm -T'), e1 = T.after(g2, 'e'), e2 = T.after(e1, 'e'), e3 = T.after(e2, 'e');
+        const g2 = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W'), e1 = T.after(g2, 'e'), e2 = T.after(e1, 'e'), e3 = T.after(e2, 'e');
         if (!e2.after || !e3.after) return f.concat('the cave\'s walks not made');
         const dx = e3.after.pc.x - e2.after.pc.x, dy = e3.after.pc.y - e2.after.pc.y, n = Math.max(Math.abs(dx), Math.abs(dy));
         if (dx < 2 || n < 3) f.push('the walk east from the wide fork not across it: ' + dx + ',' + dy + ' (it was a square)');
