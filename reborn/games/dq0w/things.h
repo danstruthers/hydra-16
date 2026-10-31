@@ -71,7 +71,7 @@ void __fastcall__ keep (unsigned char back);    /* The store kept (items.dat), o
 extern unsigned ilim;                           /* (things.c's: the records used, at most) */
 extern unsigned ihigh;                          /* (things.c's: every record from it on free; raised as one's taken) */
 extern unsigned irs;                            /* (things.c's: a thing's own numbers, made) */
-#define OVBANKS         22                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
+#define OVBANKS         21                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
                                                 **   own: ipage.c's, ovbank[OVBANKS]; the ways across a room's,
                                                 **   dq0w.c's, ovbank[OVBANKS + 1]; the traces' store's, wtrace.c's,
                                                 **   ovbank[OVBANKS + 2] and [OVBANKS + 3]) */
@@ -165,12 +165,13 @@ const struct burn* __fastcall__ burn_of (unsigned char k);  /* How kind k burns 
                                                 **   fuel; the catalogue's bank left in the window */
 unsigned char fill (void);                      /* (Part 27, its room) The hub's ireq, IO_FILL's: a light renewed */
 /* The water, hunger and thirst (part 73's, wwater.c: slice 4.9's) */
-unsigned __fastcall__ water (unsigned char k, unsigned w);  /* (Part 73's one stub, wwater.c's s_water: k W_*) */
-enum { W_WADE, W_WANT, W_OP };                  /* (The character come onto its square, w its step: the time more
-                                                **   it takes; its hunger and thirst, w the minutes gone | its
-                                                **   activity times 16384: 1 if the referee's to be told, its
-                                                **   request's x[1], x[2] set; IO_EAT, IO_DRINK, IO_FILL, w the
-                                                **   request's kind: IR_*, IR_NONE a fill not a waterskin's) */
+unsigned __fastcall__ wade (unsigned step);     /* (Part 73's, dq0w.c's) The character come onto its square: the time
+                                                **   more its step takes (wading, swimming) */
+unsigned __fastcall__ water (unsigned char k);  /* (Part 74's, wwater.c's s_water: W_FILL a waterskin filled, the
+                                                **   things' IO_FILL: IR_*, IR_NONE not a waterskin's) */
+enum { W_AT, W_FILL };
+unsigned char water_at (void);                  /* (Part 75's, wwater.c's: the water's depth where the character
+                                                **   stands, feet, | WET_RUNS; 0 dry) */
 void burns_now (void);                          /* (Part 27: dq0w.c) The lights burnt down by the minutes gone */
 extern unsigned long burn_due;                  /*   (when the next minute's due: the main loop's) */
 extern unsigned char burn_ask;                  /*   (or at once: a light's change) */

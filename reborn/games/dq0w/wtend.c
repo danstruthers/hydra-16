@@ -48,18 +48,17 @@ unsigned s_body_ask (void)
         ++n;
     }
     bled_at = (unsigned) body_at;
-    k = HUB->pc_task.kind;
-    g = HUB->pc_going & 0x3F;
-    a = k == LT_WAIT || k == LT_SLEEP ? 0 : g || HUB->pc_swim ? (g > GA_JOG + 1 || HUB->pc_swim ? 2 : 1) : k == LT_FIGHT ||
-        k == LT_DIG || k == LT_BATTER || k == LT_CLIMB || k == LT_FORCE || k == LT_HEAVE || k == LT_BEND ? 2 : k ==
-        LT_NONE ? 0 : 1;                        /* (At rest standing still, or waiting, asleep; vigorous at a run,
-                                                **   swimming, or at strenuous work, a fight; else about) */
-    if (!(unsigned char) water (W_WANT, n | (unsigned) a << 14) && (!n || (!bleeds && !(HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) &&
-        HUB->pcsum.health == H_FINE && HUB->now < wdue))) {    /* (Hurt: its rest toward its healing told, a minute at a
-                                                **   time; hunger and thirst's levels changed, or drowned, part 73's:
-                                                **   the referee told, its request's x[1] and x[2] set) */
+    if ((!n || (!bleeds && !(HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) && HUB->pcsum.health == H_FINE &&
+        HUB->now < wdue)) && HUB->pc_under != 0xFF) {  /* (Hurt: its rest toward its healing told, a minute at a
+                                                **   time; drowned, part 73's, told at once) */
         return 0;
     }
+    k = HUB->pc_task.kind;
+    g = HUB->pc_going & 0x3F;
+    a = k == LT_WAIT || k == LT_SLEEP ? 0 : g ? (g > GA_JOG + 1 ? 2 : 1) : k == LT_FIGHT || k == LT_DIG ||
+        k == LT_BATTER || k == LT_CLIMB || k == LT_FORCE || k == LT_HEAVE || k == LT_BEND ? 2 : k == LT_NONE ? 0 : 1;   /* (At rest
+                                                **   standing still, or waiting, asleep; vigorous at a run, or at
+                                                **   strenuous work, a fight; else about) */
     for (k = 0; k < NACTORS; ++k) {
         if (HUB->actor[k].state && HUB->actor[k].doing == DO_FIGHT) {
             x |= 1 << k;                        /* (Fighting: no binding its bleeding meanwhile) */
@@ -74,6 +73,7 @@ unsigned s_body_ask (void)
     r->w1 = n;
     r->w2 = bleeds;
     r->x[0] = x;
+    r->x[2] = HUB->pc_under == 0xFF ? 3 : 0;    /* (Drowned: slice 4.9's) */
     r = hub_ask (SLOT_WORLD);
     memcpy (&wdue, r->x + 4, 4);
     body_due = wdue;

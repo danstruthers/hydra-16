@@ -63,7 +63,7 @@
                                                 **   pc_auto, WS_AUTO; a stray's FW_STRAY; 31: an ally's errands and gifts,
                                                 **   the sway's item, ix, iy and actor, SW_GIVE, I_ROB's a (FE_*),
                                                 **   TE_FETCHED; 32, hunger and thirst, the
-                                                **   water, pc_hunger ... pc_wdue, WB_WATER ... WB_WANT, IO_EAT, IO_DRINK) */
+                                                **   water, pc_hunger ... pc_swat, WB_WATER ... WB_DOUSED) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -692,11 +692,10 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   one leg; */
        WB_POSED,                                /*   its body's position changed as it said, the position times 256,
                                                 **   | 0x8000 there already: slice 4.6's); */
-       WB_WATER, WB_SWIM, WB_UNDER, WB_DOUSED, WB_WANT };  /* (The water's, slice 4.9's, the character's: come into
+       WB_WATER, WB_SWIM, WB_UNDER, WB_DOUSED };  /* (The water's, slice 4.9's, the character's: come into
                                                 **   it, its band times 256 (0 out of it, 1 a foot or two, 2 waist-deep, 3
                                                 **   out of its depth), | 0x8000 running; swimming, | 0x100 well, | 0x200
-                                                **   up again from under; gone under, | 0x100 drowned; its flames put out;
-                                                **   its hunger or thirst worse, the hub's pc_want times 256) */
+                                                **   up again from under; gone under, | 0x100 drowned; its flames put out) */
 enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT };   /* (What stops a walk in the dark, met: the
                                                 **   world's ahead) */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
@@ -1247,10 +1246,10 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   "autotarget at medium range"): a missile weapon's bands, 1 short
                                                 **   ... 4 extreme, 0 off; fighting on with missiles turns to a hostile
                                                 **   within it (2026-10-30: dq0w.c's fight_on, wshoot.c's pc_shot) */
-    /* Hunger and thirst (slice 4.9: HOUSE.md's hunger and thirst, every ruleset's), the world's to count as the
-    ** bodies' time goes (wtend.c's, a minute at a time, faster at vigorous work) and to set right as the character
-    ** eats and drinks (wwater.c's), kept with the game (world.dat); the want's levels told the referee (RS_TIME's
-    ** x[1], its fatigue from want) and the UI (E_BEAT WB_WANT; the status line) */
+    /* Hunger and thirst (slice 4.9: HOUSE.md's hunger and thirst, every ruleset's), the referee's to count as the
+    ** bodies' time goes (RS_TIME's, the world's: rswant.h, a minute at a time, faster at vigorous work) and to set right
+    ** as the character eats and drinks (RS_TIME's, the UI's: tend.c's feed), its levels' rising its news; kept with
+    ** the game (the world's world.dat), shown on the status line once they matter (the UI's) */
     unsigned        pc_hunger, pc_thirst;       /* Minutes of want since it last ate its fill, drank its fill */
     unsigned char   pc_want;                    /*   their levels as last told (hunger's the low four bits, thirst's
                                                 **   the high: WANT_*) */
@@ -1262,7 +1261,6 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pc_swim;                    /* Swimming: its squares a minute (0: not swimming) */
     unsigned char   pc_under, pc_breath;        /* Seconds under water, and the most it can hold its breath */
     unsigned        pc_swat;                    /* When its swimming's next tested (tenths, sixteen bits) */
-    unsigned long   pc_wdue;                    /* When its hunger or thirst could next change (the bodies' time asked) */
 };
 #define WANT_HUNGER(w)  ((w) & 0x0F)            /* (pc_want's hunger level, and its thirst's: 0 none, 1 hungry or */
 #define WANT_THIRST(w)  ((w) >> 4)              /*   thirsty, 2 very, 3 starving or parched, 4 dying of it; */
@@ -1509,16 +1507,15 @@ struct wsave {
 **   own hub.pc_qp world                                        (world's, slice 4.6's)
 **   own hub.pc_qg world
 **   own hub.pc_qat world
-**   own hub.pc_hunger world                                    (Hunger and thirst, the water: slice 4.9's)
-**   own hub.pc_thirst world
-**   own hub.pc_want world
-**   own hub.pc_meals world
+**   own hub.pc_hunger referee +world                           (Hunger and thirst, the referee's, the world's to
+**   own hub.pc_thirst referee +world                           (  keep with the game, world.dat: slice 4.9's)
+**   own hub.pc_want referee +world
+**   own hub.pc_meals referee +world
 **   own hub.pc_wet world
 **   own hub.pc_swim world
 **   own hub.pc_under world
 **   own hub.pc_breath world
 **   own hub.pc_swat world
-**   own hub.pc_wdue world
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)

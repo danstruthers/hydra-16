@@ -120,7 +120,8 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "bolt case", K_CONTAINER | K_HANG, 2, 2, 4, 24, FM_BOLT, 0, 2, "", MT_LEATHER, AP_HIDE, 32, KF_SOLID },
     { "sling stones", K_PLURAL, 4, 1, 0, 0, FM_SHOT, 0, 1, "", MT_STONE, AP_STONE, 0, 0, KF_COUNT | KF_TENS },
     { "bolts", K_PLURAL, 4, 1, 0, 0, FM_BOLT, 0, 2, "", MT_WOOD, AP_WEAPON, 5, 0, KF_COUNT | KF_TENS },
-    { "water", K_PLURAL, 5, 1, 0, 0, 0, 0, 1, "", MT_OTHER, AP_FOOD, 0, 0, KF_LIQUID | KF_COUNT },   /* (Pints) */
+    { "water", K_PLURAL, 5, 1, 0, 0, 0, 0, 1, "water", MT_OTHER, AP_FOOD, 0, 0, KF_LIQUID | KF_COUNT },   /* (Pints:
+                                                **   drunk a pint at a time by its key, slice 4.9's) */
     { "knife", K_HAND | K_HANG, 4, 1, 0, 0, FM_KNIFE, 0, 1, "knife", MT_IRON, AP_WEAPON, 24 },
     { "taburi", K_HAND | K_HANG | K_PLURAL, 4, 1, 0, 0, FM_THROWN, 0, 2, "taburi", MT_IRON, AP_WEAPON, 80, 0, KF_COUNT },
     { "shortsword", K_HAND | K_HANG, 8, 2, 0, 0, FM_SWORD, 0, 3, "shortsw", MT_IRON, AP_WEAPON, 360 },

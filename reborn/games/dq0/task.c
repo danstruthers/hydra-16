@@ -504,7 +504,8 @@ void __fastcall__ o_felt_words (unsigned w)
         return;
     case WB_SPENT:                              /* (A thing used up, its kind: HOUSE.md's things used up) */
         hub_mem (KIND_BANK, lb, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
-        sayf (b == KI_RATIONS ? "\nThat was the last of your %s." : "\nYour %s is %s.", lb, b == KI_INK ? "dry" :
+        sayf (b == KI_RATIONS ? "\nThat was the last of your %s." : b == KI_WATER ? "\nYour waterskin is empty." :
+            "\nYour %s is %s.", lb, b == KI_INK ? "dry" :
             b == KI_QUILL ? "worn out" : "worn to nothing");    /* (Rations eaten: slice 4.9's) */
         return;
     }

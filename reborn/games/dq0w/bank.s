@@ -138,7 +138,7 @@ go:
             SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
             SWPART      50, 21              ; The legs: getting up, a move's start prone, how fast; the body's positions,
                                             ;   the steps' loudness (dq0w.c's: overlay 21's, slices 4.5, 4.6)
-            SWPART      51, 22              ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
+            SWPART      51, 5               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
                                             ;   overlay 1's bank, overlay 8's room part 19's, 2026-10-27; 5's,
                                             ;   2026-10-30: 19's room the denizens' throws)
             SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
@@ -162,7 +162,9 @@ go:
             SWPART      70, 21              ; Wounds over time: the bodies' time told, a thing used up (wtend.c)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
-            SWPART      73, 22              ; The water, hunger and thirst (wwater.c: slice 4.9's, overlay 22 its own)
+            SWPART      73, 3               ; The water: wading, swimming (dq0w.c's: slice 4.9's)
+            SWPART      74, 14              ; A waterskin filled (wwater.c: slice 4.9's)
+            SWPART      75, 16              ; The water's depth where the character stands (wwater.c)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -332,7 +334,9 @@ go:
             SWFN        den_fetch, 72       ; (Slice 4.8's)
             SWFN        bled, 15
             SWFN        body_ask, 70
-            SWFN        water, 73           ; (The water, hunger and thirst: slice 4.9's)
+            SWFN        wade, 73            ; (The water, hunger and thirst: slice 4.9's)
+            SWFN        water, 74
+            SWFN        water_at, 75
             SWFN        use_key, 7
             SWFN        puzzle, 16
             SWFN        take_go, 16

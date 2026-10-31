@@ -812,14 +812,7 @@ unsigned char s_serve (void)
         iq.result = hide (iq.name);
         break;
     case IO_FILL:
-        if ((iq.result = water (W_OP, IO_FILL)) == IR_NONE) {
-            iq.result = fill ();                /* (A light renewed: its time in the request's x, part 27's; a
-                                                **   waterskin filled, part 73's) */
-        }
-        break;
-    case IO_EAT:                                /* (Eating, drinking: part 73's, slice 4.9's) */
-    case IO_DRINK:
-        iq.result = water (W_OP, iq.kind);
+        iq.result = fill ();                    /* (A light renewed: its time in the request's x, part 27's) */
         break;
     case IO_THEME:
         theme_kinds ();
@@ -2938,6 +2931,9 @@ unsigned char s_fill (void)
     unsigned char takes, k, bk = 0;
     char ln[14], fn[14];
 
+    if ((k = water (W_FILL)) != IR_NONE) {
+        return k;                               /* (A waterskin filled: part 74's, slice 4.9's) */
+    }
     text_new ();
     for (k = 1, room = 0; !(iq.sel & 15) && k < 8; ++k) {   /* (Of several of the name, none said, the one with the
                                                 **   most room for more: the spent torch, not the one lit) */

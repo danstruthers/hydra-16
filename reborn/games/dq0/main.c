@@ -1160,8 +1160,8 @@ static void __fastcall__ limb_words (const struct msg* m)
         msg ("You hear something fall.");      /* (A fall unseen, near: the world's b | 0x80, part 8's, 2026-10-30) */
         return;
     }
-    if (k >= WB_WATER - WB_DROP && k <= WB_WANT - WB_DROP) {    /* (The water's, hunger and thirst: slice 4.9's) */
-        water_words (m->w1);                    /* (Overlay 6's, water.c's) */
+    if (k >= WB_WATER - WB_DROP && k <= WB_DOUSED - WB_DROP) {  /* (The water's: slice 4.9's) */
+        water_words (m->w1);                    /* (Overlay 4's, water.c's) */
         return;
     }
     hub_mem (KIND_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
