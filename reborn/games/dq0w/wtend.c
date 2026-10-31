@@ -24,6 +24,7 @@ unsigned char __fastcall__ on_pc (unsigned i);   /* (Part 10's stub: carried by 
 #pragma local-strings (on)
 
 extern unsigned char pc_hit;                    /* (dq0w.c's: a hurt stops its long task, hard) */
+extern unsigned char pc_tired;                  /* (dq0w.c's: a soft question owed) */
 unsigned long body_at;                          /* (The minutes told up to: the last one's end; the game's start, s_begin's,
                                                 **   hunger and thirst counted from it, slice 4.9's) */
 static unsigned long wdue;                      /* (The referee's next watch: asked then, nothing bleeding) */
@@ -81,6 +82,10 @@ unsigned s_body_ask (void)
     w = r->w1 | (unsigned) r->c << 8;
     a = r->result | r->grade;
     r->state = REQ_FREE;
+    if ((a & 8) && HUB->pc_task.kind) {
+        pc_tired = TE_ASK_HEARD;                /* (Hungrier, thirstier: its long task asked about, soft, "Keep
+                                                **   waiting?", slice 4.9's: the main loop's) */
+    }
     if (a & 5) {
         pc_hit = 1;                             /* (Hurt anew, a venom's ache, or dead of it: its long task stopped,
                                                 **   hard) */

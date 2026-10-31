@@ -229,7 +229,7 @@ unsigned char fwant;                            /* (Fighting on's, part 24's: an
 unsigned char flast;                            /* (The last to strike at the character, plus 1: wfight.c's) */
 static unsigned char fheld;                     /* (The enemies the player stopped fighting, a bit each: part 24's) */
 static unsigned char pseen;                     /* (The denizens seen as it began, and since) */
-static unsigned char pc_tired;                  /* (Strenuous work done tired it a level more: asked, the main loop's,
+unsigned char pc_tired;                         /* (Strenuous work done tired it a level more: asked, the main loop's,
                                                 **   TE_ASK_TIRED; or TE_ASK_SHORT, a battering's) */
 static void __fastcall__ task (unsigned char kind, unsigned len)
 {

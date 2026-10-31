@@ -2397,8 +2397,11 @@ void __fastcall__ s_args (int argc, char* argv[])
         } else if (!strcmp (argv[i], "-C")) {
             small = 1;                          /* (For the tests: the caches small, paged to the save folder soon) */
         } else if (!strcmp (argv[i], "-K")) {
-            gear = GE_OLD;                      /* (For the tests: the kit as it was before the outfits, the denizens
+            gear |= GE_OLD;                     /* (For the tests: the kit as it was before the outfits, the denizens
                                                 **   with none of theirs: their dice as they were) */
+        } else if (!strcmp (argv[i], "-W")) {
+            gear |= GE_DRY;                     /* (For the tests: no water grown in the chunks, the walks' as they
+                                                **   were, slice 4.9's) */
         } else if (!strcmp (argv[i], "-a")) {
             autogo = 1;                         /* (For the tests: a long task goes on at every soft question) */
         } else if (!strcmp (argv[i], "-N")) {
@@ -2420,7 +2423,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C] [-a] [-I] [-N] [-K]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C] [-a] [-I] [-N] [-K] [-W]");
         }
     }
 }

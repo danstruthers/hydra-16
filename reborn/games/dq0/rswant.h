@@ -5,7 +5,7 @@
 ** (RS_TIME, the world's: w1 the minutes gone, copied into x[16..17] by the referee before its reply's w1; a what the
 ** character was about, 2 vigorous work: twice the want) and as it eats and drinks (RS_TIME, the UI's: w1 0, x[14] the meals eaten, | 0x80 a day's ration begun, x[15] the pints drunk);
 ** the hub's want in x[8..13] (pc_hunger, pc_thirst, pc_want, pc_meals: the referee's own, copied in and back by its main
-** code), anew; its levels' rising told; the clock's next ask (the reply's x[4..7]) the sooner for its next level.
+** code), anew; its levels' rising told (news, grade 2, and 8: the world's long task asked about, soft); the clock's next ask (the reply's x[4..7]) the sooner for its next level.
 ** want_of's result: the fatigue levels from want, | WANT_DIES dead of it (its words told)
 */
 
@@ -75,9 +75,11 @@ static unsigned char __fastcall__ want_of (struct req* r, unsigned long now)
     w = want_level (h, want_hl) | want_level (t, want_tl) << 4;
     if ((w & 15) > (o & 15)) {
         WANT_SAY (want_words[(w & 15) - 1]);
+        r->grade |= 8;                          /* (A level risen: the world's long task asked, soft) */
     }
     if ((w >> 4) > (o >> 4)) {
         WANT_SAY (want_words[(w >> 4) + 4]);
+        r->grade |= 8;
     }
     if ((w & 15) == 5 || (w >> 4) == 5) {
         d = WANT_DIES;

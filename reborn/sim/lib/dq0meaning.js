@@ -114,6 +114,10 @@ const EXPRS = {
   dsWho: F('struct hub', 'dsense.who'), dsNoise: F('struct hub', 'dsense.noise'), dsRes: F('struct hub', 'dsense.res'),
   dsCost: F('struct hub', 'dsense.cost'), pcNoise: F('struct hub', 'pc_noise'), pcMask: F('struct hub', 'pc_mask'),
   pcBg: F('struct hub', 'pc_bg'), airH: F('struct hub', 'air_h'), airS: F('struct hub', 'air_s'),
+  // (Hunger and thirst, the water: slice 4.9's; a sixteen-bit field's high byte its name's Hi, for dq0Poke's hub bytes)
+  pcHunger: F('struct hub', 'pc_hunger'), pcHungerHi: F('struct hub', 'pc_hunger') + ' + 1', pcThirst: F('struct hub', 'pc_thirst'),
+  pcThirstHi: F('struct hub', 'pc_thirst') + ' + 1', pcWant: F('struct hub', 'pc_want'), pcMeals: F('struct hub', 'pc_meals'),
+  pcWet: F('struct hub', 'pc_wet'), pcSwim: F('struct hub', 'pc_swim'), pcUnder: F('struct hub', 'pc_under'), pcBreath: F('struct hub', 'pc_breath'),
   pcTask: F('struct hub', 'pc_task'), ltKind: F('struct ltask', 'kind'), ltLen: F('struct ltask', 'len'), ltDone: F('struct ltask', 'done'),
   ltFoe: F('struct ltask', 'foe'), ltMins: F('struct ltask', 'mins'),
   keptAt: '(unsigned) KEPT_AT - 0x8000', kpN: F('struct kept', 'n'), kpGen: F('struct kept', 'gen'), kpAt: F('struct kept', 'at'),
