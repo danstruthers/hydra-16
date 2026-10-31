@@ -3209,12 +3209,16 @@ module.exports = {
     {
       name: 'dq0dug', meaning: true, what: 'Dingus Quest Zero\'s holes dug part way kept (slice 4.0, HOUSE.md\'s what stopping costs: "a hole half dug stays half dug"; the world\'s change records, DUG: a hole\'s half-feet dug and the way it\'s dug, looked up as a dig begins on its square), by the world\'s events, its change records and its long task: at seed 3 by the stairway (dq0 -T -d, a pick, the character no miner) the wall to the south dug a while and stopped ("stop": its feet dug a DUG record, heading south), then dug again, on from where it was left (E_DIG\'s D_AGAIN, its feet to go the last spell\'s), through; a shaft begun beside the stairway, dug a while, stopped (a DUG record, down); the game kept (quit) and carried on (dq0 -d: the record read back from its region\'s file), the shaft dug again on from where it was left, its bar too (the hub\'s pc_task: its part done the record\'s and more)',
       init: 't_rc', cycles: 1500e6,
-      // (A "stop" typed as the dig goes, after a wait: \u0100's 2M cycles each, a spell or so of the wall's, a few of the
-      // shaft's, the stratum below grown first)
+      // (A "stop" typed as the dig goes, after a wait: \u0100's 2M cycles each, a few spells of the shaft's, the stratum
+      // below grown first; the wall's as its first spell is told, dq0OnWords: its time moved with the code's layout under
+      // RULES=null, 2026-10-30, the stop typed before it)
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick,lantern -T -d /ram/dug',
-        'light the lantern', 'dig south', '!' + '\u0100'.repeat(12) + 'stop', 'dig south', 'dig down', '!' + '\u0100'.repeat(30) + 'stop', 'quit',
+        'light the lantern', 'dig south', 'dig south', 'dig down', '!' + '\u0100'.repeat(30) + 'stop', 'quit',
         'dq0 -d /ram/dug', 'dig down', '!' + '\u0100'.repeat(15) + 'stop', 'quit', 'echo $status']
         .map(l => (l[0] === '!' ? l.slice(1) : '\u0101' + l) + '\r').join('') },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'dig south', n: 1, words: 'You dig with your', text: 'stop\r' }]);   // (Typed as it's told)
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], digs = T.filter(t => /^dig /.test(t.line)), stops = T.filter(t => t.line === 'stop');
