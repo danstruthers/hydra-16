@@ -4377,7 +4377,7 @@ module.exports = {
         while (d < a.length && d < b.length && a[d] === b[d]) d++;
         if (d < a.length || d < b.length) f.push('the late game not the same, from its event ' + d + ' (of ' + a.length + ' and ' + b.length + '): ' + (a[d] || 'none') + ' / ' + (b[d] || 'none'));
         if (a.length < 20) f.push('too little happened: ' + a.length + ' records');
-        this.notes = [a.length + ' records (events, the denizens\' events, the replies), the same in both'];
+        this.notes = [a.length + ' and ' + b.length + ' records (events, the denizens\' events, the replies)' + (f.length ? '' : ', the same in both')];
         return f;
       },
       sdcard: true
