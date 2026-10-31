@@ -479,8 +479,11 @@ void s_den_equip (void)
             strcat (r->text, wb);
         }
     }
-    for (i = 0; (i = items (i, IN_ITEM, 0)) != 0; ) {
-        k = ip->kind;                           /* (A weapon at its belt, in its carrier there or hung from it) */
+    for (i = 0; (!(ag & AG_ARMED) || (th == 1 && nw < 2)) && (i = items (i, IN_ITEM, 0)) != 0; ) {
+        k = ip->kind;                           /* (A weapon at its belt, in its carrier there or hung from it: looked
+                                                **   for till it's armed, or, a thing to throw in hand, till another
+                                                **   weapon's found; not every thing in the store each time, the
+                                                **   answers' time on the denizens' path, 2026-10-30) */
         if ((q = item_at (ip->x))->where == IW_ITEM) {
             q = item_at (q->x);
         }
