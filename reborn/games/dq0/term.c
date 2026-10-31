@@ -595,6 +595,8 @@ char* t_line (void)
     qlen -= n;
     away = 1;                                   /* (The line typed drawn again at t_done: its prompt as the game
                                                 **   stands, none shown while the line waited, 2026-10-28) */
+    soon = 1;                                   /* (Its answer's first words out as they're said, whatever went out
+                                                **   since t_done: a stir's words, told as it was typed, 2026-10-30) */
     memmove (queue, queue + n, qlen);
     return taken;
 }

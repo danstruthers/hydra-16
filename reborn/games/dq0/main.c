@@ -753,6 +753,7 @@ void __fastcall__ o_fore_set (unsigned char on)
 static unsigned char fored;                     /* (The tasks in the foreground: FS_*, fore_sync's) */
 static unsigned char iqh, owed, obeat;          /* (The intents' ring as a line's taken; an answer owed, main's;
                                                 **   the world's heartbeat as it was sent) */
+static unsigned char stirs;                     /* (A denizen's stir held while a line's answered: events', main's) */
 static void fore_sync (void)
 {
     static unsigned char f;
@@ -967,7 +968,12 @@ static unsigned char events (void)          /* (How many there were) */
         case E_VIEW:
             if (m.who == 0) {
                 if (m.w1 == V_STIR) {
-                    stir ();                    /* (A denizen it sees moved) */
+                    if (t_next () && HUB->tpr) {
+                        stirs = 1;              /* (A line typed, at the real paces: told after its answer, main's,
+                                                **   the background's news not in its way, 2026-10-30) */
+                    } else {
+                        stir ();                /* (A denizen it sees moved) */
+                    }
                     break;
                 }
                 if (m.w1 == V_FACING) {         /* (A turn's first words, as it's begun: out at once, its look
@@ -2439,6 +2445,8 @@ int main (int argc, char* argv[])
                                                 **   not after the events and the status line; its answer first) */
             owed = 0;
             fore_sync ();                       /* (The answer's tasks in the foreground meanwhile) */
+            cq_post (t_next ());                /* (The command parser at work on it at once, while the events and
+                                                **   the status line are seen to: not after them, 2026-10-30) */
         }
         k = events ();
         heard ();
@@ -2539,6 +2547,10 @@ int main (int argc, char* argv[])
                                                 **   can't be taken, the world's words) */
         } else {
             ready ();                           /* (The commands' part back, if another's in) */
+        }
+        if (stirs) {
+            stirs = 0;
+            stir ();                            /* (A stir held while the line was answered: told now) */
         }
         t_done ();
         fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */
