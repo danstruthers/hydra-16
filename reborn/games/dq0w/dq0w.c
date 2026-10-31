@@ -5066,11 +5066,13 @@ static void clock_run (void)
 
 unsigned char __fastcall__ wstart (char** argv);   /* (Part 3's: the start-up, attached and started) */
 
-/* The swapped parts' images read into banks of its own (dir/dq0w.ovl: dq0w.cfg's OV1 ..., 8K each): 0, or -1 */
+/* The swapped parts' images read into banks of its own (dir/dq0w.ovl: dq0w.cfg's OV1 ..., 8K each, as make.js
+** packs them, ../dq0/ovlpack.js: each bank's bytes' count, then them, read straight into it through the window, the
+** linker's fill ($FF) put back after them): 0, or -1 */
 static int __fastcall__ ovl_load (const char* dir)
 {
-    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Through the parts' area: none in it yet) */
-    unsigned off;
+    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Its path in the parts' area: none in it yet) */
+    static unsigned c;
     unsigned char k, first;
     int fd, n;
 
@@ -5082,15 +5084,11 @@ static int __fastcall__ ovl_load (const char* dir)
     for (k = 0, first = n; k < OVBANKS + 4; ++k) {
         ovbank[k] = first + k;
     }
-    for (k = off = 0; (n = read (fd, b, 512)) > 0; ) {   /* (The file the build made: OVBANKS banks at most, 8K
-                                                **   each, read 512 bytes at a time; first + k, not ovbank[k]: cc65's
+    for (k = 0; read (fd, &c, 2) == 2; ++k) {   /* (OVBANKS banks at most; first + k, not ovbank[k]: cc65's
                                                 **   optimizer dropped hy_bank's index here, hydra.h's) */
         hy_bank (first + k);
-        memcpy ((void*) (0x8000 + off), b, n);
-        if ((off += n) >= 0x2000) {
-            off = 0;
-            ++k;
-        }
+        read (fd, (void*) 0x8000, c);
+        memset ((void*) (0x8000 + c), 0xFF, 0x2000 - c);
     }
     close (fd);
     return 0;

@@ -1271,6 +1271,21 @@ same day).
 
 ## 2026-10-30
 
+### The start's time measured, its progress shown
+
+The user's rule (DECISIONS.md, the parser's task: a start of up to ten seconds is fine, shown; start-up work traded
+for each command's speed) against the board: the start measured at 79 s (seed 1) and 104 s (a big seed, themegen's
+history: every real game's) at 3.58 MHz, two thirds of it the SD card's reading (DUNGEON.md, the game's start).  Built:
+the overlays' files packed (their fill left out, each bank read straight into its bank, dq0.ovl opened once: 70 s
+and 94 s), and the progress shown throughout, no silence over about 10 s, the help's line with the first prompt.  And at the
+real paces a stir that comes as a line's being typed held till it's entered and answered (the start's timing moved,
+a rats' stir fell on dq0answer's inventory as it was typed: 795,000 cycles; the answers' times kept, D17).
+Asked of the user (the lead's, 2026-10-30), not built: the overlays compressed (about 38M cycles less, 10 s); the
+storage driver's sd_read with its byte loop in line (the bits' timing as it is: about 25M less, and every card read
+quicker); the game on the ROM disk (its reads some 4.5 times as quick: the start some 35-40 s).
+
+**Design:** DUNGEON.md, the game's start.
+
 ### The answers' times held (the kernel's foreground)
 
 The user (2026-10-30): the answer-time checks (D17's, dq0answer's and dq0prompt's) are the user's and never raised;

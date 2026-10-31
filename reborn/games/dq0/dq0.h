@@ -233,6 +233,8 @@ void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsig
 /* ---- The overlays (bank.s: their stubs) */
 
 void title (void);                              /* Overlay 1: the title, the pace asked */
+void __fastcall__ dots (unsigned char k);       /* (Overlay 6's) The game's start's progress (main.c's) */
+extern unsigned char starting;                  /*   while it starts (main.c's) */
 void __fastcall__ entered (unsigned char resumed);  /* Overlay 1: the character come into the dungeon */
 void help (void);                               /* Overlay 1 (help.c's): the commands, listed (help.txt) */
 void __fastcall__ unknown (unsigned char f);    /* Overlay 1: a verb the game doesn't know (f 0), or doesn't do yet

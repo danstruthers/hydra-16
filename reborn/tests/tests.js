@@ -4287,6 +4287,60 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0starttime', near: ['time'], what: 'Dingus Quest Zero\'s start timed at the normal pace (the user\'s: a start of some seconds is fine with its progress shown; the start agent\'s figures, 2026-10-30: on the board, at 3.58 MHz, a minute and more, the SD card\'s reading two thirds of it), from Enter on the dq0 line to the first prompt: seed 1 (a stand-in\'s theme) and seed 123456789 (its own history made by themegen, as a game whose seed is the clock\'s), each within its budget; the progress shown all the way (no silence on the screen longer than about 10 s at 3.58 MHz); and the help\'s line said with the first prompt, after the first look',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p n -s 1 -c /ram/c.hm', 'quit',
+        'dq0 -p n -s 123456789 -c /ram/c.hm', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['Dingus Quest Zero is starting', 'The place\'s history is being made', 'The dungeon is being made ready', 'Nearly ready', '% echo $status'],
+      // (The budgets (the lead's, 2026-10-30): the start's cycles as measured then, 282M and 372M, with a tenth more;
+      // 252M and 338M since the overlays' files are packed, each bank read straight into its bank, dq0.ovl opened once.
+      // The silence's: 36M cycles, 10 s at 3.58 MHz; 10M and 15M now, the longest.  The help's line: after the first
+      // look's words, only the status line's and the prompt after it)
+      starts: [{ seed: 1, max: 310e6 }, { seed: 123456789, max: 410e6 }], quiet: 36e6,
+      start(m) {
+        const a = m.acia, read = a.read, shown = a.shown, self = this;
+        let typed = '', g = null, tail = '', esc = 0, text = '';
+        this.games = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (/^dq0 /.test(typed)) { g = { line: typed, t0: m.cpu.cyc, last: m.cpu.cyc, quiet: 0, quietAt: 0, total: 0, text: '' }; self.games.push(g); tail = ''; text = ''; }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+        a.shown = (v, t) => {
+          shown(v, t);
+          if (!g || g.total) return;
+          const now = m.cpu.cyc;
+          if (now - g.last > g.quiet) { g.quiet = now - g.last; g.quietAt = g.last - g.t0; }
+          g.last = now;
+          if (esc === 1) { esc = v === 0x5B ? 2 : 0; return; }
+          if (esc === 2) { if (v >= 0x40 && v <= 0x7E) esc = 0; return; }
+          if (v === 0x1B) { esc = 1; return; }
+          if (v >= 32 || v === 10) text += String.fromCharCode(v);
+          tail = (tail + String.fromCharCode(v)).slice(-2);
+          if (tail === '> ') { g.total = now - g.t0; g.text = text; }
+        };
+      },
+      check(m) {
+        const f = [], M = n => (n / 1e6).toFixed(1) + 'M';
+        this.starts.forEach((s, i) => {
+          const g = this.games[i];
+          if (!g || !g.total) return f.push('seed ' + s.seed + ': no first prompt');
+          if (g.total > s.max) f.push('seed ' + s.seed + ': its start ' + M(g.total) + ' cycles, over its budget ' + M(s.max));
+          if (g.quiet > this.quiet) f.push('seed ' + s.seed + ': ' + M(g.quiet) + ' cycles with nothing on the screen, ' + M(g.quietAt) + ' after Enter (' + M(this.quiet) + ' at most)');
+          const w = g.text.replace(/\s+/g, ' '), h = w.lastIndexOf('Type help for the commands.'), look = w.lastIndexOf('You ');
+          if (h < 0 || look < 0 || h < look || w.length - h > 80) f.push('seed ' + s.seed + ': the help\'s line not with the first prompt, after the first look: ' + JSON.stringify(w.slice(-300)));
+        });
+        this.notes = this.games.map((g, i) => 'seed ' + (this.starts[i] || {}).seed + ': ' + M(g.total) + ' cycles to the first prompt (' + (g.total / 3579545).toFixed(1) + ' s at 3.58 MHz); the longest silence ' + M(g.quiet) + ', ' + M(g.quietAt) + ' after Enter');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0prompt', what: 'Dingus Quest Zero answering at once at the normal pace while the denizens act (DENIZENS.md: events; the user: "the UI is slow to respond"): the giant rats by the way down moving about on their own (their task\'s, in the background), a while waited, then a turn and what the character carries asked for at once, while the senses look about after the turn (the character still busy): told within a fifth of a second of Enter, before the look\'s done (the senses answer it between the look\'s rows, the UI a command that wants nothing of the character at once), and a step that can\'t be taken (up, with no way up) told as quickly (the world\'s answer); the status line drawn only where it changed, a second at most (the user: the cursor flickered), the cursor hidden while it\'s there',
       meaning: true,
       init: 't_rc', cycles: 900e6,

@@ -279,6 +279,9 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   towards it, keeping its distance, going about its business): not at each step, and nothing if it's as it was told
   (dq0/dens.c keeps what was told).  Those alike are told together ("Two giant rats are ahead to your right, 10 feet
   away.").  Not while the character's on its way somewhere (it looks about as it gets there); while it digs, yes.
+  At the real paces a stir that comes while the player types a line is held, and told once the line's entered and
+  answered (or let go), as it is now: the line's echo and its Enter not behind the stir's words (2026-10-30: an
+  inventory typed as the rats stirred was answered 240,000 cycles late).
 - **Heard:** the denizens' events go out as the world moves their bodies (a step quietly, a noise of their own every
   eighth, loud as a squeak; a dash past the character louder; the character sensed, or lost, silently).  The UI tells
   those the character hears and doesn't see (one it sees is told as seen), in each kind's sound's words (SOUND.md):

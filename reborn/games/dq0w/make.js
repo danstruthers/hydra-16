@@ -1,4 +1,6 @@
-// make.js - (dq0w) the world's data, after its build (build.js calls build): the catalogue's file (obj/games/
+// make.js - (dq0w) the world's data, after its build (build.js calls build): its overlays' file packed
+// (obj/games/dq0w.ovp, ../dq0/ovlpack.js's: ld65's cut after the last overlay that has code, each bank's fill left
+// out, so the world reads no more than it needs as it starts); the catalogue's file (obj/games/
 // dq0w.hyx.cat, ld65's: the kinds' 8K, the hub's KIND_BANK, then the catalogue's bank, CAT_BANK) given the words of the
 // kinds' names, each once, after the kinds (items.h's KIND_WORDS: the UI's world words for the command parser, the
 // parser's lists being words); and the outfits (games/dq0/outfits.txt: the character's starting outfits and the
@@ -21,6 +23,7 @@ function define(file, name) {
 }
 
 function build({ dir, objdir, say = () => {} }) {
+  require('../dq0/ovlpack.js').pack(objdir, 'dq0w');      // (Its overlays' file packed: obj/games/dq0w.ovp)
   const games = path.join(dir, '..');
   const nkinds = define(path.join(games, 'dq0', 'items.h'), 'NKINDS'), ntk = define(path.join(games, 'dq0', 'theme.h'), 'NTKINDS');
   const f = path.join(objdir, '..', 'dq0w.hyx.cat');

@@ -106,14 +106,17 @@ void give_way (void)
     }
 }
 
-/* The swapped parts' images read into banks of its own (dir/dq0p.ovl: dq0p.cfg's OV1 ..., 8K each): 0, or -1 */
+/* The swapped parts' images read into banks of its own (dir/dq0p.ovl: dq0p.cfg's OV1 ..., 8K each, as make.js packs
+** them, ../dq0/ovlpack.js: each bank's bytes' count, then them, read straight into it through the window, the
+** linker's fill ($FF) put back after them): 0, or -1 */
 #define OVBANKS         4
 extern unsigned char ovbank[OVBANKS];
 extern char _SWAP_START__[];
 static int __fastcall__ ovl_load (const char* dir)
 {
-    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Through the parts' area: none in it yet) */
-    unsigned off;
+    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Its path in the parts' area: none in it yet) */
+    static unsigned c;
+    unsigned char k;
     int fd, n;
 
     strcpy ((char*) b, dir);
@@ -121,14 +124,13 @@ static int __fastcall__ ovl_load (const char* dir)
     if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (OVBANKS)) < 0) {
         return -1;
     }
-    ovbank[0] = n;                              /* (In a run: n, n + 1 ...) */
-    ovbank[1] = n + 1;
-    ovbank[2] = n + 2;
-    ovbank[3] = n + 3;
-    for (off = 0; (n = read (fd, b, 512)) > 0; off += n) {    /* (The file the build made: OVBANKS banks at most,
-                                                **   64K at most, off back at 0 only as it ends) */
-        hy_bank (ovbank[off >> 13]);
-        memcpy ((void*) (0x8000 + (off & 0x1FFF)), b, n);
+    for (k = 0; k < OVBANKS; ++k) {             /* (In a run: n, n + 1 ...) */
+        ovbank[k] = n + k;
+        hy_bank (n + k);
+        if (read (fd, &c, 2) == 2) {
+            read (fd, (void*) 0x8000, c);
+            memset ((void*) (0x8000 + c), 0xFF, 0x2000 - c);
+        }
     }
     close (fd);
     return 0;
