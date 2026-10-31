@@ -3264,6 +3264,76 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0hunger', asks: true, near: ['time'], what: 'Dingus Quest Zero\'s hunger and thirst (slice 4.9: HOUSE.md\'s water, hunger and thirst, the user\'s of 2026-10-21, DECISIONS.md\'s; the referee\'s, rswant.h), by the words told: at seed 3 in the kitchen, nothing near, its torch put out: "eat the rations" at once refused, not hungry; "wait 9 hours", the want\'s first levels told as they come ("You\'re getting thirsty.", "You\'re getting hungry.") and the status line\'s "thirsty"; over to the kitchen\'s well first ("look into the well"), its torch lit again after the wait, "drink" its fill there; "eat the rations" a meal (a day\'s ration begun, five minutes), again refused; "fill the waterskin" at the well (the old kit\'s, empty); its torch put out, "wait 17 hours", "You\'re very thirsty."; "drink from the waterskin" its pints',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm', 'eat the rations', 'look into the well', 'douse the torch', 'wait 9 hours', 'light the torch', 'drink', 'eat the rations',
+        'eat the rations', 'fill the waterskin', 'douse the torch', 'wait 17 hours', 'drink from the waterskin', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const at = (line, n = 0) => { let i = -1; for (let k = 0; k <= n; k++) i = o.indexOf('> ' + line + ' > ' + line + ' ', i + 1); return i; };   // (A line typed, echoed)
+        const after = (line, words, n = 0) => { const i = at(line, n); return i >= 0 && o.slice(i, i + 2 * line.length + 300).includes(words); };
+        if (!after('eat the rations', 'You\'re not hungry.')) f.push('the first "eat the rations" not refused, not hungry');
+        const w8 = at('wait 9 hours'), ap = at('light the torch'), w8s = w8 >= 0 && ap > w8 ? o.slice(w8, ap) : '';
+        if (!w8s.includes('You\'re getting thirsty.')) f.push('eight hours waited, not told "You\'re getting thirsty."');
+        if (!w8s.includes('You\'re getting hungry.')) f.push('eight hours waited, not told "You\'re getting hungry."');
+        if (o.slice(0, w8).includes('You\'re getting')) f.push('hunger or thirst told before eight hours');
+        if (!/thirsty/.test(w8s.replace(/You're getting thirsty\./g, ''))) f.push('no "thirsty" on the status line');
+        if (!after('drink', 'You drink your fill.')) f.push('"drink" by the well not its fill');
+        if (!after('eat the rations', 'You eat a meal.', 1)) f.push('"eat the rations" after eight hours not a meal');
+        if (!after('eat the rations', 'You\'re not hungry.', 2)) f.push('a meal eaten, "eat the rations" again not refused');
+        if (!after('fill the waterskin', 'You fill your waterskin.')) f.push('"fill the waterskin" at the well not filled');
+        const w16 = at('wait 17 hours'), ds = at('drink from the waterskin');
+        if (!(w16 >= 0 && ds > w16 && o.slice(w16, ds).includes('You\'re very thirsty.'))) f.push('sixteen hours more, not told "You\'re very thirsty."');
+        if (!after('drink from the waterskin', 'You drink from your waterskin.')) f.push('"drink from the waterskin" not drunk from it');
+        if (f.length) this.notes = [o.slice(Math.max(0, w8 - 200), w8 + 2500)];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0swim', near: ['body'], what: 'Dingus Quest Zero\'s water (slice 4.9: DUNGEON.md\'s water, HOUSE.md\'s water: the plan\'s lakes, a chunk\'s water), by the words told and the hub: at seed 2 down the way down (the natural stratum below, a flooded chamber north of its landing, five feet deep), north into it: out of its depth, swimming (its depth in the hub\'s pc_wet, its squares a minute the referee\'s P_SWIM in pc_swim, its breath pc_breath), told "You\'re out of your depth: you swim.", its torch put out ("The water puts out your light."), its swimming told by the referee\'s grade ("You struggle to keep afloat."): in the dark then, the walk stopped',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 2 -c /ram/c.hm -T', 'd', 'n', 'look', 'quit', 'echo $status']) },
+      start(m) {   // (The character's water, as each line's typed: the hub's pc_wet, pc_swim, pc_breath)
+        const a = m.acia, read = a.read;
+        let typed = '';
+        m.wet = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              const h = m.dq0 && m.dq0.bank(0);
+              if (h) {
+                const { L } = m.dq0.layout(), o = L.pcBg + 15;     // (hub.h: pc_bg, the air, the quiet, pc_auto, the want, then pc_wet)
+                m.wet.push({ line: typed, wet: h[o], swim: h[o + 1], breath: h[o + 3] });
+              }
+              typed = '';
+            } else if (c >= 32) typed += String.fromCharCode(c);
+          }
+          return read.call(a, r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const at = line => o.indexOf('> ' + line + ' > ' + line + ' ');
+        const n = at('n'), s = at('look');
+        const ns = n >= 0 && s > n ? o.slice(n, s) : '';
+        if (!ns.includes('You\'re out of your depth: you swim.')) f.push('north into the flooded chamber, not told "You\'re out of your depth: you swim."');
+        if (!ns.includes('The water puts out your light.')) f.push('swimming, its torch not put out');
+        if (!/You swim strongly\.|You struggle to keep afloat\./.test(ns)) f.push('its swimming not told (the referee\'s test)');
+        const w = (m.wet || []).find(e => e.line === 'look');
+        if (!w || (w.wet & 0x7F) < 5 || !w.swim || !w.breath) f.push('swimming not in the hub (pc_wet, pc_swim, pc_breath): ' + JSON.stringify(w));
+        this.notes = [JSON.stringify(m.wet)];
+        if (f.length) this.notes.push(o.slice(Math.max(0, n - 300), n + 1500));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0longwait', asks: true, what: 'Dingus Quest Zero\'s long waits (the user\'s, 2026-10-28: "waits should be able to last a full night\'s sleep, so 8 hours at least.  Some spells may take longer than that to cast, so 16-bit minutes would be better."; DECISIONS.md\'s, HOUSE.md\'s long waits), by the world\'s events and the clock: at seed 3 in the kitchen (nothing near), its torch put out, "wait 8 hours" waited whole (its intent in minutes, I_WAIT\'s WA_MIN: the clock 288,000 tenths on, the long task 480 minutes, mins), told "You wait eight hours.", the status after; "wait 3 hours 20 minutes" (200 minutes, its spans added up) and "wait 3 hours and 20 minutes" (one duration, not two commands) told so; "rest" a night\'s sleep (LT_SLEEP, "You settle down to rest for eight hours."), "sleep 8 hours" the same; each in the cycles a bearable wait takes (the coarser ticks while nothing\'s near: ten-minute slices); at the normal pace the same wait as quick (run as the turns pace runs it); at seed 21 below, by the giant rats, a long wait asked about at a sound ("Keep waiting?") and answered no: broken off, hours short of its eight; and with the hand-written theme\'s hostile rats a sleep broken off hard by a bite (dq0tasks\' long tasks)',
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
