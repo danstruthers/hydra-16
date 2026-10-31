@@ -198,13 +198,11 @@ static int find_dirs (void)
 static void __fastcall__ ovl_load (int fd)
 {
     int first;
-    unsigned char k, w = getbank ();
+    unsigned char w = getbank ();
 
     write (1, "Dingus Quest Zero is starting ...", 33);
     if (fd >= 0 && (first = hy_banks_alloc (sizeof ovbank)) >= 0) {
-        for (k = 0; k < sizeof ovbank; ++k) {
-            ovbank[k] = first + k;
-        }
+        ovbank[0] = first;                      /* (The rest after it: ovl_unpack's) */
         if (!ovl_unpack (fd | (sizeof ovbank << 8))) {
             setbank (w);
             close (fd);
@@ -2535,7 +2533,12 @@ int main (int argc, char* argv[])
         if (!busy && (reach & 1)) {
             ++reach;                            /* (Walked over to its thing, or its timed work's time up: the command
                                                 **   kept carried out again, its end; till the next's, s_command's) */
+            hub_map (0);
+            HUB->ui_giving = 1;                 /* (Being given, as a line's command: ui_giving's) */
             command (0);
+            hub_map (0);
+            HUB->ui_giving = 0;
+            hub_ring (T_WORLD);
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
             cq_post (l);                        /* (The command parser at work on it meanwhile) */
@@ -2573,6 +2576,8 @@ int main (int argc, char* argv[])
             l = 0;
         }
         if (l) {
+            HUB->ui_giving = 1;                 /* (Its command being given: the turns pace waits for it, the
+                                                **   world's turns_run) */
             iqh = HUB->iq_head;                 /* (The UI's intents' ring as the line's taken: one sent, its answer
                                                 **   owed, the world's news) */
             f = names_in (l = t_line ());       /* (The line's first look, in the overlays' banks: a part's
@@ -2609,6 +2614,8 @@ int main (int argc, char* argv[])
             hub_map (0);
             owed = HUB->iq_head != iqh;
             obeat = HUB->beat[T_WORLD];
+            HUB->ui_giving = 0;                 /* (Given: the world on, woken to it) */
+            hub_ring (T_WORLD);
             HUB->ui_cmd = busy | owed;          /* (Its answer the world's, not yet said: the look and the minds
                                                 **   give way till the character's news comes, events'; an intent
                                                 **   sent, the character not busy, its answer owed too: a step that

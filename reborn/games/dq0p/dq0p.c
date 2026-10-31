@@ -116,7 +116,6 @@ extern char _SWAP_START__[];
 static int __fastcall__ ovl_load (const char* dir)
 {
     unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Its path in the parts' area: none in it yet) */
-    unsigned char k;
     int fd, n;
 
     strcpy ((char*) b, dir);
@@ -124,9 +123,7 @@ static int __fastcall__ ovl_load (const char* dir)
     if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (OVBANKS)) < 0) {
         return -1;
     }
-    for (k = 0; k < OVBANKS; ++k) {             /* (In a run: n, n + 1 ...) */
-        ovbank[k] = n + k;
-    }
+    ovbank[0] = n;                              /* (In a run: n, n + 1 ...: ovl_unpack's) */
     n = ovl_unpack (fd | (OVBANKS << 8));
     close (fd);
     return -n;

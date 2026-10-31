@@ -35,16 +35,13 @@ static int __fastcall__ ovl_load (const char* dir)
 {
     static char path[64];
     int fd, first;
-    unsigned char k;
 
     strcpy (path, dir);
     strcat (path, "/dq0m.ovl");
     if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (OVLS)) < 0) {
         return -1;
     }
-    for (k = 0; k < OVLS; ++k) {
-        ovbank[k] = first + k;
-    }
+    ovbank[0] = first;                          /* (The rest after it: ovl_unpack's) */
     first = ovl_unpack (fd | (OVLS << 8));
     close (fd);
     return -first;

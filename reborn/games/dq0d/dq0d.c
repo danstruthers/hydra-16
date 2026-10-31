@@ -2496,9 +2496,7 @@ static int __fastcall__ ovl_load (const char* dir)
     if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (3)) < 0) {
         return -1;
     }
-    ovbank[0] = n;
-    ovbank[1] = n + 1;
-    ovbank[2] = n + 2;
+    ovbank[0] = n;                              /* (The rest after it: ovl_unpack's) */
     n = ovl_unpack (fd | (3 << 8));
     close (fd);
     return -n;

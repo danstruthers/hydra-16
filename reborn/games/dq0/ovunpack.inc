@@ -5,7 +5,9 @@
 ; UNPACK_BANKS: modules/unpack).  The module's directory entry is looked at in the first bank (its window: the
 ; library fills it after).  2026-10-31: the game's start, the card's read the fewer bytes.
 ;   unsigned char __fastcall__ ovl_unpack (unsigned fb)    fb: the file's fd (low byte), the banks at most (high):
-;                                                           0, or not 0 (no library, or the file not as it should be)
+;                                                           0, or not 0 (no library, or the file not as it should be).
+;                                                           _ovbank[0] the first bank (the caller's): the rest of
+;                                                           them, so many, set here, a run after it
 
             .export     _ovl_unpack
 
@@ -27,6 +29,14 @@ BUF         = $9FE0                                         ; (MODINFO's answer,
 .proc _ovl_unpack
             pha                                             ; (The fd, and the banks)
             phx
+            lda         _ovbank                             ; (_ovbank: the first bank, then the rest after it)
+            ldy         #0
+fill:
+            sta         _ovbank,y
+            ina
+            iny
+            dex
+            bne         fill
             ldy         _ovbank                             ; (The first bank in the window: the buffer's)
             sty         $00
             stz         ovu::BUF + 18

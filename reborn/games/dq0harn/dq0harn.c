@@ -883,16 +883,13 @@ static int __fastcall__ ovl_load (const char* dir)
 {
     static char path[64];
     int fd, first, n;
-    unsigned char k;
 
     strcpy (path, dir);
     strcat (path, "/dq0harn.ovl");
     if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (OVLS)) < 0) {
         return -1;
     }
-    for (k = 0; k < OVLS; ++k) {
-        ovbank[k] = first + k;
-    }
+    ovbank[0] = first;                          /* (The rest after it: ovl_unpack's) */
     n = ovl_unpack (fd | (OVLS << 8));
     close (fd);
     if (n || (n = hy_banks_alloc (1)) < 0) {

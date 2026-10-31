@@ -4360,6 +4360,29 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0turnsame', near: ['time', 'fight'], meaning: true, what: 'Dingus Quest Zero at the turns pace the same game whatever the tasks\' timing (the turns pace: a game turns on its seed and its commands alone): dq0cmd\'s fight at seed 3 (-T, -R 30: three giant rats, a dagger thrown at one, then blows) played twice, the second time its commands typed late (its first some 6M cycles after the prompt, the rest 2M), every event of the world\'s and the denizens\' the same, in the same order, at the same game times; 2026-10-31: a throw\'s two intents (taken in hand, then thrown) let the world\'s clock and the denizens\' turn in between them as the tasks\' timing fell (ui_giving)',
+      init: 't_rc', cycles: 1500e6,
+      get machine() {
+        const g = 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T -R 30', cmds = ['target the rat', '1', 'throw the dagger hard at the closest rat', 'attack', 'attack', 'wait', 'quit'];
+        return { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', g, ...cmds].map(l => '\u0101' + l + '\r').join('') +
+          '\u0101' + g + '\r' + cmds.map((l, i) => '\u0101' + (i ? '\u0100' : '\u0100\u0100\u0100') + l + '\r').join('') + '\u0101echo $status\r' };
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const g = m.dq0.games, f = [];
+        if (g.length !== 2) return ['games played: ' + g.length + ', not 2'];
+        const ev = k => g[k].events.concat(g[k].dens, g[k].replies).map(e => JSON.stringify(Object.assign({}, e, { line: undefined })));
+        const a = ev(0), b = ev(1);
+        let d = 0;
+        while (d < a.length && d < b.length && a[d] === b[d]) d++;
+        if (d < a.length || d < b.length) f.push('the late game not the same, from its event ' + d + ' (of ' + a.length + ' and ' + b.length + '): ' + (a[d] || 'none') + ' / ' + (b[d] || 'none'));
+        if (a.length < 20) f.push('too little happened: ' + a.length + ' records');
+        this.notes = [a.length + ' records (events, the denizens\' events, the replies), the same in both'];
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0starttime', near: ['time'], what: 'Dingus Quest Zero\'s start timed at the normal pace (the user\'s: a start of some seconds is fine with its progress shown; the start agent\'s figures, 2026-10-30: on the board, at 3.58 MHz, a minute and more, the SD card\'s reading two thirds of it), from Enter on the dq0 line to the first prompt: seed 1 (a stand-in\'s theme) and seed 123456789 (its own history made by themegen, as a game whose seed is the clock\'s), each within its budget; the progress shown all the way (no silence on the screen longer than about 10 s at 3.58 MHz); and the help\'s line said with the first prompt, after the first look; and each task\'s overlays in its banks as ld65 made them (read packed from the card and unpacked in place: the unpack library)',
       init: 't_rc', cycles: 1500e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p n -s 1 -c /ram/c.hm', 'quit',

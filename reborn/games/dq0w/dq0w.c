@@ -4993,8 +4993,9 @@ static unsigned char turns_run (void)
     unsigned long d;
     unsigned s;
 
-    if (HUB->tpr || HUB->paused || HUB->hold) {
-        return 0;
+    if (HUB->tpr || HUB->paused || HUB->hold || HUB->ui_giving || HUB->iq_head != HUB->iq_tail) {
+        return 0;                               /* (A command being given, or an intent of it not taken yet: no turn,
+                                                **   the clock where it is, ui_giving's) */
     }
     if (HUB->eq_head != go_eq) {
         turn ();                                /* (Its own work told: the denizens' turn at it, at this clock) */
@@ -5079,7 +5080,6 @@ unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: 
 static int __fastcall__ ovl_load (const char* dir)
 {
     unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Its path in the parts' area: none in it yet) */
-    unsigned char k, first;
     int fd, n;
 
     strcpy ((char*) b, dir);
@@ -5087,10 +5087,8 @@ static int __fastcall__ ovl_load (const char* dir)
     if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (OVBANKS + 4)) < 0) {
         return -1;
     }
-    for (k = 0, first = n; k < OVBANKS + 4; ++k) {
-        ovbank[k] = first + k;
-    }
-    n = ovl_unpack (fd | (OVBANKS << 8));
+    ovbank[0] = n;                              /* (The rest after it: ovl_unpack's) */
+    n = ovl_unpack (fd | ((OVBANKS + 4) << 8));
     close (fd);
     return -n;
 }
