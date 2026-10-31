@@ -4993,17 +4993,9 @@ static unsigned char turns_run (void)
     unsigned long d;
     unsigned s;
 
-    if (HUB->tpr || HUB->paused || HUB->hold) {
-        return 0;
-    }
-    if (HUB->ui_giving || HUB->iq_head != HUB->iq_tail) {
-        if (hub_posted (&HUB->ireq)) {
-            things ();                          /* (Its things meanwhile: the command may ask them) */
-        }
-        hub_sleep (1);
-        return 1;                               /* (A command being given, or an intent of it not taken yet: nothing
-                                                **   done of the character's, no turn, the clock where it is, till
-                                                **   it's all in hand: ui_giving's, 2026-10-31) */
+    if (HUB->tpr || HUB->paused || HUB->hold || HUB->ui_giving || HUB->iq_head != HUB->iq_tail) {
+        return 0;                               /* (A command being given, or an intent of it not taken yet: no turn,
+                                                **   the clock where it is, ui_giving's, 2026-10-31) */
     }
     if (HUB->eq_head != go_eq) {
         turn ();                                /* (Its own work told: the denizens' turn at it, at this clock) */
