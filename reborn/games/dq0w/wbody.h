@@ -24,9 +24,9 @@ extern unsigned char den_saw;                   /* A body fallen: the world to l
 #define BD_PUT()        (hub_map (0), memcpy (&HUB->actor[bk], &bd, offsetof (struct actor, name)))
 
 /* A blow's missile (wfight.c's: RS_MISSILE's, set before part 15's shot_blow by wshoot.c's, 0 after): what it's shot
-** with or the thing thrown, its range's band, its range, MS_* (rs.h's) */
+** with or the thing thrown, its range's band, MS_* (rs.h's; its range none, 2026-10-30: no referee's) */
 struct mshot {
-    unsigned char   kind, band, dist;
+    unsigned char   kind, band;
     unsigned        flags;
 };
 extern struct mshot mshot;

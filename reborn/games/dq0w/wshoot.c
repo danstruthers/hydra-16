@@ -259,7 +259,6 @@ unsigned char __fastcall__ s_mfire (unsigned char att, unsigned char def, unsign
     hub_map (0);
     mshot.kind = mk;
     mshot.band = band;
-    mshot.dist = d;
     mshot.flags = (lcover ? MS_COVER : 0) | ((att ? (*at (sn, sx, sy) & T_VIS) : bd.doing != DO_ROAM) ? 0 :
         MS_UNAWARE);                            /* (The character sees its shooter; a denizen senses the character) */
     den_blow (def, z | AIM_FIRE);               /* (Part 15's blow, the missile's: how it came out, told, bev's) */
@@ -275,10 +274,9 @@ unsigned char __fastcall__ s_mfire (unsigned char att, unsigned char def, unsign
         } else {
             p->kind = 0;
         }
-        mk = sl_kind == KI_SLING ? KI_STONES : sl_kind == KI_CROSSBOW ? KI_BOLTS : KI_ARROWS;
     }
-    mfall (sn, sx, sy, tx, ty, out, mk, thr);   /* (Where it falls: part 67's) */
-    return 0;
+    return 0;                                   /* (Where it falls the caller's, part 67's: mfall, a call less deep,
+                                                **   2026-10-30) */
 }
 
 /* ---- The part's calls */
@@ -489,6 +487,20 @@ static unsigned char __fastcall__ span67 (int dx, int dy)
     return dx > dy ? (dx > 255 ? 255 : dx) : (dy > 255 ? 255 : dy);
 }
 
+/* A shot or a throw (part 65's mfire, its arguments), and where its missile falls after it (part 68's mfall, called
+** from here: a swapped call less deep, 2026-10-30): mfire's value */
+static unsigned char __fastcall__ fire (unsigned char att, unsigned char def, unsigned char z, unsigned char sn,
+    unsigned sx, unsigned sy, unsigned tx, unsigned ty, unsigned thr, unsigned char tk)
+{
+    unsigned char r = mfire (att, def, z, sn, sx, sy, tx, ty, thr, tk), o = bev.x[1];
+
+    if (!r && o != O_RISE && o != O_REARM) {
+        mfall (sn, sx, sy, tx, ty, o, thr ? tk : sl_kind == KI_SLING ? KI_STONES : sl_kind == KI_CROSSBOW ? KI_BOLTS :
+            KI_ARROWS, thr);
+    }
+    return r;
+}
+
 /* Body bd's things (an actor's: IW_DEN, its did's) and what's in them: thing i (ip) one of them */
 static unsigned char __fastcall__ own (unsigned i)
 {
@@ -516,7 +528,6 @@ static unsigned __fastcall__ to_throw (unsigned char* tk)
         }
         hub_map (KIND_BANK);
         s = CATALOGUE[k].craft == AP_WEAPON && (CATALOGUE[k].flags & (K_HAND | K_WEAR)) == K_HAND;
-        hub_map (0);
         if (!s) {
             continue;
         }
@@ -582,7 +593,6 @@ static void den_shot (void)
             bd.ready += HUB->round;             /* (A crossbow's load a round more) */
         }
         t = 0;
-        tk = 0;
     } else {
         if (r == 2) {
             den_unbow ();                       /* (Its missiles spent: its launcher let fall) */
@@ -602,7 +612,7 @@ static void den_shot (void)
             goto none;
         }
     }
-    if (mfire (bk + 1, 0, Z_MID, bd.sn, bd.x, bd.y, bpx, bpy, t, tk)) {
+    if (fire (bk + 1, 0, Z_MID, bd.sn, bd.x, bd.y, bpx, bpy, t, tk)) {
         hub_map (0);
         HUB->agear[bk] |= AG_NOSHOT;
     }
@@ -717,7 +727,7 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
     }
     if (!why) {
         hub_map (0);
-        why = mfire (0, k + 1, HUB->pc_aim, sn, HUB->pc_x, HUB->pc_y, tx, ty, thr, tk);
+        why = fire (0, k + 1, HUB->pc_aim, sn, HUB->pc_x, HUB->pc_y, tx, ty, thr, tk);
         BD_PUT ();
         ++HUB->den_seq;
         if (!why && !thr) {

@@ -146,7 +146,6 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     if (mshot.kind) {                           /* (A missile's, shot or thrown: wshoot.c's, slice 4.7's) */
         r->c = mshot.kind;
         r->b = mshot.band;
-        r->w1 = mshot.dist;
         r->w2 = (r->w2 | RS_MISSILE | mshot.flags) & (mshot.flags & MS_STRAY ? ~RS_PRONE_A : 0xFFFF);  /* (A stray's
                                                 **   strike no shooter's: nobody gets up for it) */
     }

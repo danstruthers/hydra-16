@@ -358,7 +358,8 @@ static const char pace_words[] =                /* (Each word after its length: 
     "\007running\005hurry\006sprint\011sprinting\004dash\006status\004stop\004trap\005traps\011carefully"
     "\007careful\006warily\006listen\011listening\007mapping\003map\006colour\005color\007colours\006colors"
     "\004step\010sidestep\007shuffle\004back\005space\006spaces\006square\007squares\005steps\004pace\005paces"
-    "\004foot\004feet\002ft\004yard\005yards";
+    "\004foot\004feet\002ft\004yard\005yards\012autotarget\013auto-target\012autoengage\013auto-engage\010autofire"
+    "\011autoshoot\004auto";
 
 unsigned char __fastcall__ o_pacing (const char* l)
 {
