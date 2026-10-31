@@ -1357,21 +1357,22 @@ static unsigned char fought (void)
         }
         n = 1;
         f = m.x[2];
-        att = m.who;
-        k = ((att ? att : m.a) - 1) & 7;        /* (The actor in it: the character fights them one at a time) */
+        att = m.a;                              /* (The one struck an actor: the character's blow, or a stray's
+                                                **   between two actors, 2026-10-30; else the one striking) */
+        k = ((att ? att : m.who) - 1) & 7;      /* (The actor in it: the character fights them one at a time) */
         if (m.x[1] != FO_BLED && (f & FF_FLEES)) {
             fled[k] = FLEE_T;                   /* (Broken: it flees, and won't seek the fight again) */
             HUB->actor[k].attitude = AT_UNFRIENDLY;
         }
-        if ((g = f & (att ? FF_A_DEAD | FF_A_DOWN : FF_D_DEAD | FF_D_DOWN)) != 0) {
+        if ((g = f & (att ? FF_D_DEAD | FF_D_DOWN : FF_A_DEAD | FF_A_DOWN)) != 0) {
             dismay (k | g << 4);                /* (Its kin's courage, how it fell in the high bits: part 6's; bled to
                                                 **   death too, a fall all the same) */
         }
-        if (m.x[1] != FO_BLED && !att) {
+        if (m.x[1] != FO_BLED && !m.who) {
             harmed (k);                         /* (Its own, and their foes, think again of the character; its
                                                 **   wound seen) */
         }
-        if (f & (att ? FF_A_DEAD : FF_D_DEAD)) {
+        if (f & (att ? FF_D_DEAD : FF_A_DEAD)) {
             killed (k);
         }
     }

@@ -138,8 +138,9 @@ go:
             SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
             SWPART      50, 21              ; The legs: getting up, a move's start prone, how fast; the body's positions,
                                             ;   the steps' loudness (dq0w.c's: overlay 21's, slices 4.5, 4.6)
-            SWPART      51, 19              ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
-                                            ;   overlay 1's bank, overlay 8's room part 19's, 2026-10-27)
+            SWPART      51, 5               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
+                                            ;   overlay 1's bank, overlay 8's room part 19's, 2026-10-27; 5's,
+                                            ;   2026-10-30: 19's room the denizens' throws)
             SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
             SWPART      53, 16              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
             SWPART      54, 16              ; Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
@@ -154,11 +155,10 @@ go:
             SWPART      63, 21              ; The character's kit (things.c's, part 13's till 2026-10-28; overlay 21's, 2026-10-29)
             SWPART      64, 21              ; The coins' mints (things.c's, 2026-10-28; overlay 21's, 2026-10-29)
             SWPART      65, 20              ; The missiles: a shot, its line, where it falls (wshoot.c: slice 4.7's)
-            SWPART      66, 20              ; The missiles gathered (wshoot.c)
-            SWPART      67, 20              ; The character's shot, where a missile falls (wshoot.c); a robbery
-                                            ;   (wfight.c's, part 15's room)
-            SWPART      68, 14              ; A launcher loaded (wshoot.c: overlay 20's room)
-            SWPART      69, 20              ; (Agent missile's last number, not used: a placeholder, wplace.s)
+            SWPART      66, 15              ; The missiles gathered (wshoot.c; overlay 15's, 2026-10-30)
+            SWPART      67, 20              ; The character's shot, the denizens' shots and throws (wshoot.c)
+            SWPART      68, 20              ; Where a missile falls, a miss's stray; a launcher loaded (wshoot.c)
+            SWPART      69, 12              ; A robbery (wfight.c's: part 67's room, overlay 12's, 2026-10-30)
             SWPART      70, 21              ; Wounds over time: the bodies' time told, a thing used up (wtend.c)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
 
@@ -177,7 +177,7 @@ go:
             SWFN        drop_held, 49
             SWFN        harm_fx, 49
             SWFN        limb_news, 49
-            SWFN        den_reach, 60
+            SWFN        den_reach, 51       ; (Part 60's room, 2026-10-30)
             SWFN        den_took, 60
             SWFN        den_word, 51
             SWFN        den_drop, 60
@@ -186,7 +186,7 @@ go:
             SWFN        old_mint, 51
             SWFN        den_enter, 60
             SWFN        den_draw, 60
-            SWFN        den_strip, 60
+            SWFN        den_strip, 51
             SWFN        legs, 50
             SWFN        bearings, 52
             SWFN        bearings_off, 52
@@ -287,7 +287,7 @@ go:
             SWFN        gath_op, 66
             SWFN        mfire, 65
             SWFN        pc_shot, 67
-            SWFN        mfall, 67
+            SWFN        mfall, 68
             SWFN        load_go, 68
             SWFN        theme_kinds, 61
             SWFN        items_begin, 19
@@ -325,7 +325,7 @@ go:
             SWFN        den_intents, 14
             SWFN        pc_blow, 15
             SWFN        den_blow, 15
-            SWFN        den_rob, 67         ; (Part 15's room, 2026-10-29)
+            SWFN        den_rob, 69         ; (Part 15's room, 2026-10-29; 67's, 2026-10-30)
             SWFN        bled, 15
             SWFN        body_ask, 70
             SWFN        use_key, 7

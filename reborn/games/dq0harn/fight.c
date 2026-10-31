@@ -581,7 +581,7 @@ static void tested (void)
 static void __fastcall__ left (unsigned char shy, signed char heart)
 {
     const struct rs_effect* e = (const struct rs_effect*) R->x;
-    const struct side* s = A.who ? &A : &D;
+    const struct side* s = D.who ? &D : &A;     /* (The creature's: the defender's if it's one, a stray's at one) */
     unsigned char k, f = R->c & (AF_STOPPED | AF_STOPPED_D) ? FF_STOPPED : 0, hurt = 0, m;
 
     for (k = 0; k < RS_EFFECTS && e->kind; ++k, ++e) {
@@ -638,13 +638,19 @@ void __fastcall__ o_fight (struct req* r)
     }
     memset (r->x, 0, sizeof r->x);              /* (RS_ATTACK) */
     line[0][0] = line[1][0] = 0;
-    if (r->actor && r->other) {
-        r->result = 0xFF;                       /* (Creatures fighting each other: later, with allies) */
+    if (r->actor && r->other && !(r->w2 & MS_STRAY)) {
+        r->result = 0xFF;                       /* (Creatures fighting each other: later, with allies; but a missile's
+                                                **   stray, one struck by another's shot, 2026-10-30) */
         return;
     }
     if (r->actor) {
-        beast_side (&A, r->actor);
-        pc_side (&D);
+        beast_side (&A, r->actor);              /* (Both creatures, a stray's: the defender's sheet unpacked last, the
+                                                **   one struck, packed again after) */
+        if (r->other) {
+            beast_side (&D, r->other);
+        } else {
+            pc_side (&D);
+        }
     } else {
         pc_side (&A);
         beast_side (&D, r->other);

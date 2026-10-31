@@ -474,7 +474,11 @@ What the plans bring later, by the slice or phase that brings it:
   actor's own still heard as the crow flies).
 - **Fights complete** (slice 4.7): one combat path, missiles (a bow through an arrow slit), allies fighting beside the
   character, factions fighting each other, morale from the layers (leaders seen, darkness; the field, the bonds and a
-  fall heard by its din since 2026-10-30).
+  fall heard by its din since 2026-10-30).  Built 2026-10-30 (HOUSE.md's missiles): the denizens throwing (a taburi,
+  a shorkana, a spear or a dagger in hand, another weapon kept), a weapon put up for a bow and drawn again for melee,
+  a miss's stray striking one beside its mark (an actor struck by another's shot: the one blow between two actors the
+  referees take, its mind's dismay and death as any blow's); left: a rock picked up, the denizens' positions but
+  prone (a shooter crouched behind cover).
 - **Fetching and influence** (slice 4.8): an ally fetching things (tell Grub to fetch the key), gifts, bribes,
   reputation by deeds; an ally moving aside for the character (D10).
 - **Tunnellers and builders** (slice 4.11): denizens that dig their own ways, by the same rules as the character's.

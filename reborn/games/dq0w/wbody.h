@@ -24,9 +24,9 @@ extern unsigned char den_saw;                   /* A body fallen: the world to l
 #define BD_PUT()        (hub_map (0), memcpy (&HUB->actor[bk], &bd, offsetof (struct actor, name)))
 
 /* A blow's missile (wfight.c's: RS_MISSILE's, set before part 15's shot_blow by wshoot.c's, 0 after): what it's shot
-** with or the thing thrown, its range's band, its range, MS_* (rs.h's) */
+** with or the thing thrown, its range's band, MS_* (rs.h's; its range none, 2026-10-30: no referee's) */
 struct mshot {
-    unsigned char   kind, band, dist;
+    unsigned char   kind, band;
     unsigned        flags;
 };
 extern struct mshot mshot;
@@ -34,10 +34,26 @@ extern struct mshot mshot;
 unsigned char __fastcall__ shot_op (unsigned char op, unsigned char k, unsigned char z);   /* (Part 65's: wshoot.c)
                                                 **   The missiles' calls: */
 unsigned char __fastcall__ pc_shot (unsigned char k);  /* (Part 67's) The character's shot at actor k; 0xFF: the
-                                                **   nearest foe it can shoot at, plus 1 (0 none) */
-enum { SO_ARMS, SO_REACH, SO_DEN, SO_UNBOW };  /* what the character shoots with; whether it can shoot at k
-                                                **   (plus 1: 2, 1 senseless, 0 not);
-                                                **   body bd's shot at the character (aim z); its launcher let fall */
+                                                **   nearest foe it can shoot at, plus 1 (0 none); PS_DEN body bd's
+                                                **   shot or throw at the character; PS_UNBOW its launcher let fall */
+#define PS_DEN          0xFE
+#define PS_UNBOW        0xFD
+#define PS_AUTO         0xFC                    /* (The nearest foe within the auto-target range, the hub's pc_auto, its
+                                                **   launcher taken as what it shoots with: plus 1, 0 none) */
+enum { SO_ARMS, SO_REACH, SO_DEN };             /* what an actor shoots with (k: 0 the character, 1 body bd); whether
+                                                **   the character can shoot at k (plus 1: 2, 1 senseless, 0 not);
+                                                **   what body bd has to shoot or throw, and a shot (DS_*) */
+#define DS_BOW          0x01                    /* (SO_DEN's: its launcher and a missile, not in hand; in hand; */
+#define DS_HELD         0x02
+#define DS_THROW        0x04                    /*   a thing to throw in hand; to draw; */
+#define DS_DRAW         0x08
+#define DS_SPENT        0x40                    /*   its launcher spent in its hand; a shot from there) */
+#define DS_LINE         0x80
+struct stray {                                  /* (A miss's stray's: part 67's, from where it was shot at whom, the
+                                                **   thing thrown) */
+    unsigned char   sn;
+    unsigned        sx, sy, tx, ty, thr;
+};
 unsigned __fastcall__ gath_op (unsigned char op, unsigned char a);  /* (Part 66's) The missiles gathered (begun, a
                                                 **   their family; its next, 2 on) */
 enum { GO_GATHER, GO_ON };
@@ -76,8 +92,10 @@ unsigned char den_legs (void);                  /* (Part 51) Its legs at a move'
 void __fastcall__ den_other (const struct msg* m);  /* (Part 60) A denizen's things made (I_KIT's) */
 void __fastcall__ den_enter (const struct msg* m);  /* (Part 60) Come near (I_ENTER's): its body's from it, its
                                                 **   things in the store, the referee told */
-unsigned char den_draw (void);                  /* (Part 60) Its weapon drawn from its belt, its hands empty of one: 1
-                                                **   (its round's), or 0 */
+unsigned char __fastcall__ den_draw (unsigned char want);  /* (Part 60) Its weapon drawn from its belt (or one it put
+                                                **   up), its hands empty of one: 1 (its round's), or 0; want not 0, a
+                                                **   thing of its own of that kind taken in hand, what it holds put up
+                                                **   (a launcher, a thing to throw: wshoot.c's) */
 void __fastcall__ den_strip (unsigned body);    /* (Part 60) Dead: its things on its body (body, its remains), what
                                                 **   it held beside it */
 void __fastcall__ limb_news (unsigned w, unsigned char b);  /* (Part 49) The limbs' news, the denizens' ring's (E_BEAT's

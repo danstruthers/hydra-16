@@ -44,12 +44,10 @@ static void __fastcall__ who (const char* n, unsigned char cap)
 /* A strike's words (its line: a wound, "a ..."; or the armour that stopped it, "your ...", "its ..."; or none: no
 ** harm) after what led to it: ": a serious cut ...", ", but your leather tunic turns the blow", ", but does no harm"
 ** (by the striker: the character's "do") */
-/* A creature's getting up in a fight (the book's Rise), and its fall as it stumbles, by its body (hub.h's BD_*, the
-** actor's: kinds.txt's) */
+/* A creature's getting up in a fight (the book's Rise), by its body (hub.h's BD_*, the actor's: kinds.txt's); its fall
+** told after the blow, the world's (E_BEAT's WB_FALLEN: main.c's limb_words, every fall, 2026-10-30) */
 static const char* const rises[NBODIES] = { " gets to its feet.", " scrambles to its feet.", " coils itself up again.",
     " rights itself.", " flutters up again.", " rises again." };
-static const char* const falls[NBODIES] = { " and falls", " and goes down", " and is thrown down",
-    " and is flipped onto its back", " and drops to the floor", " and sinks low" };
 static unsigned char __fastcall__ body_of (unsigned char k)
 {
     unsigned char b;
@@ -86,16 +84,19 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
 
     hub_mem (DEN_BANK, f, FIGHT_AT + m->x[3] % NFIGHTS, sizeof *f);
     hub_mem (SIGHT_BANK, &n, &SIGHT->ndens, 1);
-    s = pc ? f->def : f->att;
-    for (k = n; k--; ) {
-        hub_mem (SIGHT_BANK, at, SIGHT->den[k].name, sizeof at);
-        if (!strcmp (at, s)) {
-            break;
+    s = pc || (f->which & FW_STRAY) ? f->def : f->att;     /* (A stray's: the one it struck, seen or not) */
+    if (*s) {
+        for (k = n; k--; ) {
+            hub_mem (SIGHT_BANK, at, SIGHT->den[k].name, sizeof at);
+            if (!strcmp (at, s)) {
+                break;
+            }
         }
-    }
-    if (k == 0xFF) {
-        strcpy (s, "?");                        /* (Not seen: something) */
-        untarget |= !pc;                        /* (Struck at by it: the character turns, its target let go) */
+        if (k == 0xFF) {
+            strcpy (s, "?");                    /* (Not seen: something) */
+            untarget |= !pc && !(f->which & FW_STRAY);  /* (Struck at by it: the character turns, its target let
+                                                **   go) */
+        }
     }
     t = lb;
     *t = 0;
@@ -127,7 +128,18 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
         add (pc ? " get to your feet." : rises[body_of (m->who)]);
         return 0;
     }
-    if (out == O_DISPATCH) {
+    if (f->which & FW_STRAY) {                  /* (A miss's stray at one beside the mark, after the miss's words:
+                                                **   "Your shot strikes the bandit instead: a minor ...", "Its dagger
+                                                **   strikes you instead, but your mail hauberk turns the blow",
+                                                **   2026-10-30) */
+        add (pc ? "Your " : "Its ");
+        add (f->which & FW_THROWN ? aw : "shot");
+        add (" strikes ");
+        who (dname, 0);
+        add (" instead");
+        struck (2, 0);
+        add (".");
+    } else if (out == O_DISPATCH) {
         add ("You finish ");
         who (dname, 0);
         add (" where it lies.");
@@ -216,10 +228,6 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
                 add (out == O_FUMBLE ? (pc ? "; it falters" : "; you fumble your guard") :
                     pc ? "; it stumbles" : "; you stumble");
             }
-            if ((fl & FF_PRONE) && out == O_STUMBLE) {
-                add ((k & 2 ? !pc : pc) ? " and fall" : falls[body_of (pc ? m->a : m->who)]);   /* (The last
-                                                **   named; a creature's by its body) */
-            }
             break;
         case O_ADVANTAGE:
             add (pc ? "; it slips inside your guard" : "; you see an opening");
@@ -227,12 +235,14 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
         }
         add (".");
     }
-    if (fl & (FF_A_DEAD | FF_D_DEAD)) {         /* (What it left them in) */
+    if (fl & (FF_A_DEAD | FF_D_DEAD)) {         /* (What it left them in: the character's, its name none; both
+                                                **   actors a stray's) */
         add (" ");
-        who (fl & FF_A_DEAD ? aname : dname, 1);
-        add ((fl & FF_A_DEAD ? pc : !pc) ? " are dead." : " falls dead.");
+        aw = fl & FF_A_DEAD ? aname : dname;
+        who (aw, 1);
+        add (aw ? " falls dead." : " are dead.");
     } else if ((fl & (FF_A_DOWN | FF_D_DOWN)) && !(f->which & FW_AGAIN)) {
-        if (fl & FF_A_DOWN ? pc : !pc) {        /* (The character's: once an answer, then "again", as a harm's state
+        if (!(fl & FF_A_DOWN ? aname : dname)) {   /* (The character's: once an answer, then "again", as a harm's state
                                                 **   is, harm_told's: a second fall senseless in a long fight's
                                                 **   answer, 2026-10-30) */
             add (harm_told & C_UNCONSCIOUS ? " Everything goes black again." : " Everything goes black.");
@@ -244,7 +254,7 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
     if (fl & FF_FLEES) {
         add (" It flees.");
     }
-    return fl & (pc ? FF_A_DOWN : FF_D_DOWN) ? f->out : 0;
+    return fl & (!aname ? FF_A_DOWN : !dname ? FF_D_DOWN : 0) ? f->out : 0;
 }
 
 /* A word of a fight's, into lb: the stance taken (rs.h's D_*), or why there's no blow (FN_*) */

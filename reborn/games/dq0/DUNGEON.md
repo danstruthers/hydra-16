@@ -1310,9 +1310,13 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
 - **Body position and moving quietly** (slice 4.6, built 2026-10-29: HOUSE.md's): crouched, kneeling, sitting, prone;
   a low walk, crawling; moving quietly by Stealth (D15), a hunter's stalk; eye height by position.  Left: the
   denizens' own positions but prone, a missile's target by its height (slice 4.7's).
-- **Fights complete** (slice 4.7): built 2026-10-29 (missiles, above; HOUSE.md's missiles); left: a miss's stray at
-  one beside the mark (the book's 20%: the referee's MS_STRAY there for it), the set auto-engage range (its hook
-  dq0w/wshoot.c's SO_FOE), the denizens throwing things, a denizen changing its weapon for its bow.
+- **Fights complete** (slice 4.7): built 2026-10-29 (missiles, above; HOUSE.md's missiles); 2026-10-30 a miss's stray
+  at one beside the mark (the book's half the time, both referees), the auto-target range ("autotarget at medium
+  range": fighting on with missiles and shooting back), the denizens throwing things (a taburi, a shorkana, a spear
+  or a dagger in hand), a denizen putting up its weapon for its bow, the missiles gathered into their quiver, every
+  fall told (HOUSE.md's missiles).  Left: a hostile coming into the auto-target range beginning a fight by itself,
+  melee's auto-engage, a rock picked up to throw, the denizens' own positions but prone (a shooter crouched behind
+  cover).
 - **Water** (slice 4.9): the plan's rivers, falls and lakes, water levels, swimming and drowning, a well's water from
   the plan; rain where the surface reaches (shafts, the open), washing scents and prints away; hunger and thirst,
   eating and drinking.
