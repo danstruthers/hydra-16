@@ -140,7 +140,10 @@ static void newline (void)
 
 int __fastcall__ _hy_open (const char* name, unsigned char mode);     /* (The C library's) */
 static int kfd = -1, nbfd = -1;
-static int pend = -1;                           /* A key t_haskey saw */
+static unsigned char kb[8], kn, ki;             /* The keys t_haskey read, how many, the next (all there are, up to
+                                                **   8, a read each: a line typed ahead, or pasted, not a call of
+                                                **   the console's for each key, some 9,000 cycles, its Enter seen
+                                                **   the later, 2026-10-30) */
 
 static void keys (void)
 {
@@ -153,13 +156,15 @@ static void keys (void)
 
 unsigned char t_haskey (void)
 {
-    unsigned char c;
+    int n;
 
     keys ();
-    if (pend < 0 && read (nbfd, &c, 1) == 1) {
-        pend = c;
+    if (ki == kn) {
+        n = read (nbfd, kb, sizeof kb);
+        kn = n > 0 ? n : 0;
+        ki = 0;
     }
-    return pend >= 0;
+    return ki < kn;
 }
 
 unsigned char t_getkey (void)
@@ -167,9 +172,8 @@ unsigned char t_getkey (void)
     unsigned char c;
 
     keys ();
-    if (pend >= 0) {
-        c = pend;
-        pend = -1;
+    if (ki < kn) {
+        c = kb[ki++];
     } else {
         while (read (kfd, &c, 1) != 1) {
             hy_yield ();
