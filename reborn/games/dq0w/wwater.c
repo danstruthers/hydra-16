@@ -29,17 +29,23 @@ extern unsigned char put_bank;
 #pragma rodata-name (push, "SW75RODATA")
 static const unsigned char bit[8] = { 1, 2, 4, 8, 16, 32, 64, 128 };
 
-/* The water at the character's square (the chunk's: world.h's): its depth in feet (0 none), | WET_RUNS running water */
-unsigned char s_water_at (void)
+/* The water at the character's square (the chunk's: world.h's): its depth in feet (0 none), | WET_RUNS running water;
+** well, 1 if there's a well beside it (else none) */
+unsigned char __fastcall__ s_water_at (unsigned char well)
 {
     unsigned char r, sn;
-    unsigned x, y;
+    unsigned x, y, i = 0;
     signed char l, e;
 
     hub_map (0);
     sn = HUB->pc_stratum;
     x = HUB->pc_x;
     y = HUB->pc_y;
+    while (well && (i = items (i, IN_SQUARE, 0)) != 0) {
+        if (ip->kind == KI_WELL && ip->sn == sn && ip->x - x + 1 <= 2 && ip->y - y + 1 <= 2) {
+            return 1;                           /* (A well beside it: to drink from, fill from) */
+        }
+    }
     if (!at (sn, x, y) || !(C->wet[cy_][cx_ >> 3] & bit[cx_ & 7])) {
         return 0;
     }
@@ -83,7 +89,7 @@ static unsigned char fill_skin (void)
         return IR_NONE;
     }
     hub_map (0);
-    if (!HUB->pc_wet && !at_hand ("well")) {
+    if (!HUB->pc_wet && !water_at (1)) {
         return wsaid ("There's no water here.", 0);
     }
     hub_map (KIND_BANK);

@@ -4008,7 +4008,7 @@ unsigned __fastcall__ s_wade (unsigned step)
     unsigned char d, b, sq;
     signed char g;
 
-    d = water_at ();
+    d = water_at (0);
     hub_map (0);
     b = band (HUB->pc_wet);
     HUB->pc_wet = d;

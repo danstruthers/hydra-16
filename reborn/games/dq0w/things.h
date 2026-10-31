@@ -170,8 +170,9 @@ unsigned __fastcall__ wade (unsigned step);     /* (Part 73's, dq0w.c's) The cha
 unsigned __fastcall__ water (unsigned char k);  /* (Part 74's, wwater.c's s_water: W_FILL a waterskin filled, the
                                                 **   things' IO_FILL: IR_*, IR_NONE not a waterskin's) */
 enum { W_AT, W_FILL };
-unsigned char water_at (void);                  /* (Part 75's, wwater.c's: the water's depth where the character
-                                                **   stands, feet, | WET_RUNS; 0 dry) */
+unsigned char __fastcall__ water_at (unsigned char well);  /* (Part 75's, wwater.c's: the water's depth where the
+                                                **   character stands, feet, | WET_RUNS, 0 dry; well, a well beside
+                                                **   it first, 1) */
 void burns_now (void);                          /* (Part 27: dq0w.c) The lights burnt down by the minutes gone */
 extern unsigned long burn_due;                  /*   (when the next minute's due: the main loop's) */
 extern unsigned char burn_ask;                  /*   (or at once: a light's change) */
