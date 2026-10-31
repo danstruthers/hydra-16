@@ -507,7 +507,9 @@ book's; the house's below, each marked.
   own skill): a thing made to be thrown (a taburi, a shorkana: the book's thrown weapons) from its hand or its belt,
   else a dagger, a knife, a spear, a hatchet or an axe in its hand if it keeps another weapon to fight with; one at
   its belt drawn first (its round, what it holds put up); *within the short and medium bands only (the house's: no
-  denizen throws its weapon at a far mark)*.  What it threw lies where it fell, anyone's.  *Not yet: a rock picked up
+  denizen throws its weapon at a far mark)*.  What it threw lies where it fell, anyone's.  *Not yet: one holding
+  another weapon (a sword, a mankar) with its taburis or shorkanas at its belt (its belt's looked at, as its things
+  are told the referee, only till it's armed: the answers' time); a rock picked up
   (the dungeon has no loose stones to pick; a denizen taking up a thing it finds is phase 3C's one path).*
 - **Every fall told** *(2026-10-30)*: any actor knocked down in a fight (a stumble, a leg's wound, a missile's), the
   character too, is told as it falls, after the blow's words ("The giant rat goes down.", by its body; "You fall."),
