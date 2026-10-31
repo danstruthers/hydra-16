@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     30                    /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     32                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -59,8 +59,9 @@
                                                 **   I_RISE's w1 a body's position; 26: an actor's body, BD_*;
                                                 **   27: morale, an actor's heart, lead, power, mood, serve and
                                                 **   contact, AM_*, rs.h's summary's lead, RS_ATTACK's x[0]; 28, its bonds,
-                                                **   AM_LEADS, DE_RALLY: succession; 30, hunger and thirst, the water,
-                                                **   pc_hunger ... pc_swat, WB_WANT ..., IO_EAT, IO_DRINK) */
+                                                **   AM_LEADS, DE_RALLY: succession; 30, the auto-target range,
+                                                **   pc_auto, WS_AUTO; a stray's FW_STRAY; 32, hunger and thirst, the
+                                                **   water, pc_hunger ... pc_wdue, WB_WATER ... WB_WANT, IO_EAT, IO_DRINK) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -117,7 +118,9 @@ struct fight {
 #define FW_SHIELD       0x20                    /* (which's: the defender, a creature, blocked with its shield: rs.h's
                                                 **   AF_SHIELD, "it fends off the blow with its buckler", 2026-10-29) */
 #define FW_MISSILE      0x10                    /* (which's: a missile's, shot: rs.h's RS_MISSILE, slice 4.7's; */
-#define FW_THROWN       0x08                    /*   | FW_THROWN, a thing thrown) */
+#define FW_THROWN       0x08                    /*   | FW_THROWN, a thing thrown; */
+#define FW_STRAY        0x04                    /*   | FW_STRAY, a miss's stray at one beside the mark: rs.h's
+                                                **   MS_STRAY, 2026-10-30) */
 #define FW_AGAIN        0x40                    /* (which's: the one knocked senseless out already, struck as it
                                                 **   lay: rs.h's AF_AGAIN, no new black-out told) */
 
@@ -709,7 +712,7 @@ enum { WQ_SAVE, WQ_EXAMINE, WQ_START, WQ_SET }; /* The hub's wreq's kinds */
                                                 **   a grope's test while engaged: their fights' dice as they were) */
 #define WY_NO_BEAR      0x200                   /* (And dq0 -N, the tests': the character's bearings never tested, as
                                                 **   one that knows north's: their compass words where they went) */
-enum { WS_PACE, WS_STANCE, WS_PAUSE };          /* WQ_SET's what: the character's pace (x, GA_*: 0xFF as it is; |
+enum { WS_PACE, WS_STANCE, WS_PAUSE, WS_AUTO }; /* WQ_SET's what: the character's pace (x, GA_*: 0xFF as it is; |
                                                 **   GA_SAID, said outright) and its watchfulness (y, WA_*); its stance
                                                 **   (x, rs.h's D_*); the game paused (x 1) or going on (x 0) */
 #define GA_SAID         0x80                    /* (A pace said outright, faster than feeling the way: a jog, a run, a
@@ -1221,6 +1224,10 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   tested in (0xFF none yet), */
     signed char     pc_qg;                      /*   the grade, */
     unsigned        pc_qat;                     /*   when (tenths, sixteen bits) */
+    unsigned char   pc_auto;                    /* The auto-target range (the world's, WQ_SET's WS_AUTO, the player's
+                                                **   "autotarget at medium range"): a missile weapon's bands, 1 short
+                                                **   ... 4 extreme, 0 off; fighting on with missiles turns to a hostile
+                                                **   within it (2026-10-30: dq0w.c's fight_on, wshoot.c's pc_shot) */
     /* Hunger and thirst (slice 4.9: HOUSE.md's hunger and thirst, every ruleset's), the world's to count as the
     ** bodies' time goes (wtend.c's, a minute at a time, faster at vigorous work) and to set right as the character
     ** eats and drinks (wwater.c's), kept with the game (world.dat); the want's levels told the referee (RS_TIME's
@@ -1456,6 +1463,7 @@ struct wsave {
 **   own hub.pc_foe world
 **   own hub.pc_aim world
 **   own hub.pc_stance world
+**   own hub.pc_auto world
 **   own hub.pc_strike world                                    (The blow's intent's)
 **   own hub.pc_shand world
 **   own hub.pc_skew world                                      (Its bearings: the world's, by the referee's tests)

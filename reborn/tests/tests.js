@@ -2017,10 +2017,10 @@ const DQ0_REPEATS = [
     why: 'a dig\'s spells, each told as it ends (a long dig: hours of spells between one stir and the next, some the same)' },
   { what: /^You (?:climb on|slip back a little|find no hold yet) \(\d+ feet to go\)\.$/,
     why: 'a climb\'s rounds, each told as it ends (a long climb: many rounds to an answer, some the same)' },
-  { what: /^(?:(The|A) .* |Something )(bites|claws|strikes|swings|lunges|thrusts|shoots|throws)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge|shoot|throw)\b/,
+  { what: /^(?:(The|A) .* |Something )(bites|claws|strikes|swings|lunges|thrusts|shoots|throws)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge|shoot|throw)\b|^(?:Your|Its) [a-z]+ strikes .* instead\b/,
     why: 'a fight\'s rounds, each blow told as it falls (attack: the rounds till it ends, the same words some of them; in the dark "Something", unseen: dq0traces\' rats)' },
-  { what: /^(?:You get to your feet|The [a-z ]+ (?:gets to its feet|scrambles to its feet|coils itself up again|rights itself|flutters up again|rises again))\.$/,
-    why: 'a fight\'s falls and risings, each told as it gets up (a long fight: a creature down twice, a stumble\'s, a leg\'s wound\'s, up each time; dq0missile\'s rat)' },
+  { what: /^(?:You get to your feet|You fall|You hear something fall|The [a-z ]+ (?:gets to its feet|scrambles to its feet|coils itself up again|rights itself|flutters up again|rises again|falls|goes down|is thrown down|is flipped onto its back|drops to the floor|sinks to the floor))\.$/,
+    why: 'a fight\'s falls and risings, each fall told as it falls and each rise as it gets up (a long fight: a creature down twice, a stumble\'s, a leg\'s wound\'s, up each time; dq0missile\'s rat; every fall told since 2026-10-30)' },
   { what: /^The [a-z ]+ scrabbles, but can't get up\.$/,
     why: 'a fight\'s rounds with a creature down, each try to rise told as it fails (dq0missile\'s rat, its dice by who asks, 2026-10-30)' },
   { what: /^You turn to (?:something|the [a-z ]+)\.$/,
@@ -3569,7 +3569,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0kit', outfit: true, what: 'Dingus Quest Zero\'s denizens\' gear (the outfits\' plan\'s phase 1: games/dq0/outfits.txt\'s [role bandit], DENIZENS.md\'s their things, HOUSE.md\'s the denizens\' gear), by the item store\'s records and the blows told: a lair of hostile bandits (a theme of them, as dq0disarm\'s) placed as the game begins, each bandit\'s things made (items.h\'s IW_DEN, its number its own: the hub\'s actor\'s did), clothes and a belt worn, a weapon held or on its belt (in its carrier: a sword in its scabbard), two bandits\' things not the same, the same seed\'s game the same things (kinds, makes, materials); a bandit drawing its weapon from its belt before it strikes (WB_DRAWS, told: "The bandit draws its hatchet."), striking with it (its words that weapon\'s), its weapon let fall the same record (WB_DROP: on the floor); one killed, its things on its body ("look at the body": what it wore, its belt and its sheath\'s knife on it), its vest taken from the body; the game saved and carried on, each denizen\'s things the same records (their numbers, makes, places)',
+      name: 'dq0kit', outfit: true, what: 'Dingus Quest Zero\'s denizens\' gear (the outfits\' plan\'s phase 1: games/dq0/outfits.txt\'s [role bandit], DENIZENS.md\'s their things, HOUSE.md\'s the denizens\' gear), by the item store\'s records and the blows told: a lair of hostile bandits (a theme of them, as dq0disarm\'s) placed as the game begins, each bandit\'s things made (items.h\'s IW_DEN, its number its own: the hub\'s actor\'s did), clothes and a belt worn, a weapon held or on its belt (in its carrier: a sword in its scabbard), two bandits\' things not the same, the same seed\'s game the same things (kinds, makes, materials); a bandit drawing its weapon from its belt before it strikes (WB_DRAWS, told: "The bandit draws its hatchet."), striking with it (its words that weapon\'s), its weapon let fall the same record (WB_DROP: on the floor); one killed, its things on its body ("look at the body": what it wore, its belt and its sheath\'s knife on it), its vest taken from the body; the game saved and carried on, each denizen\'s things the same records (their numbers, makes, places)  (Its scene set by a poke since 2026-10-30, dq0Poke\'s: the bandits wary as the first attack is typed, the one down finished, the other not fighting on.)',
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
         'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
@@ -3577,6 +3577,11 @@ module.exports = {
         'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'drop the backpack', 'drop the torch', 'defend dodge', 'attack', 'attack', 'look at the body',
         'take the leather vest from the body', 'quit', 'dq0 -d /ram/g', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm'", 'quit',
         'echo $status']) },
+      start(m) {   // (The scene set, 2026-10-30: as the first attack's typed, the bandits wary (hub.h's AT_WARY), the one down
+        // finished, the other no longer fighting on: its body's vest taken as the test means; since the denizens throw (a
+        // bandit's spear in hand, its knife kept) the dice had the other knock the character senseless first)
+        dq0Poke(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'attack', n: 1, k, set: { attitude: 2 } })));
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], o = dq0Story(out), I = DQ0_I;
@@ -4282,6 +4287,60 @@ module.exports = {
         const a = T.of('attack the rat');
         if (dq0Ev(a, 'E_FIGHT', { who: 0 }).length) f.push('a blow struck at a rat out of reach');
         sw(T.after(a, 'examine the rat'), { kind: 'SW_LOOK', now: 'AT_WARY' }, 'the rat not as wary as it was');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0starttime', near: ['time'], what: 'Dingus Quest Zero\'s start timed at the normal pace (the user\'s: a start of some seconds is fine with its progress shown; the start agent\'s figures, 2026-10-30: on the board, at 3.58 MHz, a minute and more, the SD card\'s reading two thirds of it), from Enter on the dq0 line to the first prompt: seed 1 (a stand-in\'s theme) and seed 123456789 (its own history made by themegen, as a game whose seed is the clock\'s), each within its budget; the progress shown all the way (no silence on the screen longer than about 10 s at 3.58 MHz); and the help\'s line said with the first prompt, after the first look',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p n -s 1 -c /ram/c.hm', 'quit',
+        'dq0 -p n -s 123456789 -c /ram/c.hm', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['Dingus Quest Zero is starting', 'The place\'s history is being made', 'The dungeon is being made ready', 'Nearly ready', '% echo $status'],
+      // (The budgets (the lead's, 2026-10-30): the start's cycles as measured then, 282M and 372M, with a tenth more;
+      // 252M and 338M since the overlays' files are packed, each bank read straight into its bank, dq0.ovl opened once.
+      // The silence's: 36M cycles, 10 s at 3.58 MHz; 10M and 15M now, the longest.  The help's line: after the first
+      // look's words, only the status line's and the prompt after it)
+      starts: [{ seed: 1, max: 310e6 }, { seed: 123456789, max: 410e6 }], quiet: 36e6,
+      start(m) {
+        const a = m.acia, read = a.read, shown = a.shown, self = this;
+        let typed = '', g = null, tail = '', esc = 0, text = '';
+        this.games = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (/^dq0 /.test(typed)) { g = { line: typed, t0: m.cpu.cyc, last: m.cpu.cyc, quiet: 0, quietAt: 0, total: 0, text: '' }; self.games.push(g); tail = ''; text = ''; }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+        a.shown = (v, t) => {
+          shown(v, t);
+          if (!g || g.total) return;
+          const now = m.cpu.cyc;
+          if (now - g.last > g.quiet) { g.quiet = now - g.last; g.quietAt = g.last - g.t0; }
+          g.last = now;
+          if (esc === 1) { esc = v === 0x5B ? 2 : 0; return; }
+          if (esc === 2) { if (v >= 0x40 && v <= 0x7E) esc = 0; return; }
+          if (v === 0x1B) { esc = 1; return; }
+          if (v >= 32 || v === 10) text += String.fromCharCode(v);
+          tail = (tail + String.fromCharCode(v)).slice(-2);
+          if (tail === '> ') { g.total = now - g.t0; g.text = text; }
+        };
+      },
+      check(m) {
+        const f = [], M = n => (n / 1e6).toFixed(1) + 'M';
+        this.starts.forEach((s, i) => {
+          const g = this.games[i];
+          if (!g || !g.total) return f.push('seed ' + s.seed + ': no first prompt');
+          if (g.total > s.max) f.push('seed ' + s.seed + ': its start ' + M(g.total) + ' cycles, over its budget ' + M(s.max));
+          if (g.quiet > this.quiet) f.push('seed ' + s.seed + ': ' + M(g.quiet) + ' cycles with nothing on the screen, ' + M(g.quietAt) + ' after Enter (' + M(this.quiet) + ' at most)');
+          const w = g.text.replace(/\s+/g, ' '), h = w.lastIndexOf('Type help for the commands.'), look = w.lastIndexOf('You ');
+          if (h < 0 || look < 0 || h < look || w.length - h > 80) f.push('seed ' + s.seed + ': the help\'s line not with the first prompt, after the first look: ' + JSON.stringify(w.slice(-300)));
+        });
+        this.notes = this.games.map((g, i) => 'seed ' + (this.starts[i] || {}).seed + ': ' + M(g.total) + ' cycles to the first prompt (' + (g.total / 3579545).toFixed(1) + ' s at 3.58 MHz); the longest silence ' + M(g.quiet) + ', ' + M(g.quietAt) + ' after Enter');
         return f;
       },
       sdcard: true
@@ -5126,6 +5185,51 @@ module.exports = {
         const den = T.filter(u => u.k > g2.k).flatMap(u => u.dens).filter(e => e.kind === 'E_FIGHT' && e.who > 0);
         if (!den.length) f.push('no elf\'s blow or shot (E_FIGHT)');
         inTurn(o, ['The elf unslings its hartbow.', 'The elf shoots at you with its hartbow'], f, 'the elf\'s shot: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0throws', outfit: true, asks: true, near: ['fight'], what: 'Dingus Quest Zero\'s fights complete (slice 4.7\'s left, 2026-10-30: DUNGEON.md\'s fights, HOUSE.md\'s missiles, for review), by the words, the fights told and the item store: the character (hmchar seed 23, its Bow 15: its outfit a sling) shooting at seed 5\'s giant rats down the ladder, fought on, each miss half the time striking a rat beside its mark (the book\'s, a stray: "Your shot strikes the giant rat instead"), every fall told as it falls and each rise after a fall told (no rise without its fall); a bowman (Bow 90: a shortbow, a quiver) its arrows put down and gathered back into its quiver, not its pack; then a hand-written theme\'s small orcs (arak, hostile: a mankar, a club or a spear in hand, a dagger at the belt, half of them a shortbow; seed 2), waited for: one throwing its spear, or putting up its weapon and shooting its shortbow ("The small orc throws its spear at you", "The small orc shoots at you with its shortbow"); then the character set to shoot on its own ("autotarget at medium range"), shot at by the elves (sindwar, hartbows: seed 4) and shooting back unbidden (it fights back, its shortbow taken up, the round the book\'s grope: the bowman\'s)',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml bow 15 >> /ram/c.hm',
+        'echo ml dge 90 >> /ram/c.hm', 'echo ml swd 90 >> /ram/c.hm',
+        'hmchar -q -s 23 -u feudal -c hunter -o /ram/d.hm', 'echo ml bow 90 >> /ram/d.hm', 'echo ml dge 90 >> /ram/d.hm',
+        "dq0 -p t -s 5 -c /ram/c.hm -T -k 'gambeson,mail hauberk'", 'wear the gambeson', 'wear the mail hauberk',
+        'd', 'drop the torch', 'drop the staff', 'shoot the rat', ...Array(12).fill('wait'), 'quit', 'dq0 -p t -s 5 -c /ram/d.hm -T', 'drop the arrows', 'gather the arrows', 'quit',
+        'mkdir /ram/g', "echo 'faction | Tribe | arak | 0-0 | 20 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
+        'defend block', ...Array(4).fill('wait'), 'quit',
+        'mkdir /ram/h', "echo 'faction | Wardens | sindwar | 0-0 | 96 | - | 0 | h | -' > /ram/h/theme.txt",
+        "dq0 -p t -s 4 -c /ram/d.hm -T -d /ram/h -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
+        'drop the torch', 'drop the staff', 'autotarget at medium range', 'defend block', ...Array(3).fill('wait'), 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out);
+        if (process.env.DQ0SHOW) { console.log(o); for (const t of T) console.log(dq0Evs(t)); }
+        const g1 = T.of("dq0 -p t -s 5 -c /ram/c.hm -T -k 'gambeson,mail hauberk'"), g2 = T.of("dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'"),
+          g3 = T.of("dq0 -p t -s 4 -c /ram/d.hm -T -d /ram/h -k 'sword,gambeson,mail hauberk'");
+        if (g1.k < 0 || g2.k < 0 || g3.k < 0) return ['the games not played'];
+        const s1 = o.slice(o.indexOf("> shoot the rat"), o.indexOf('/ram/g -k')), s2 = o.slice(o.indexOf('/ram/g -k'), o.indexOf('/ram/h -k')),
+          s3 = o.slice(o.indexOf('/ram/h -k'));
+        // (A stray: a miss striking one beside the mark)
+        if (!/Your shot strikes (?:the giant rat|something) instead/.test(s1)) f.push('no stray told (a miss striking a rat beside its mark)');
+        // (Every fall told, each rise after one)
+        const rises = [...s1.matchAll(/The giant rat (?:scrambles to its feet|goes down)\./g)].map(x => x[0]);
+        let down = 0;
+        for (const r of rises) {
+          if (/goes down/.test(r)) down++;
+          else if (down-- <= 0) { f.push('a rat\'s rise with no fall told before it: ' + rises.join(' ')); break; }
+        }
+        // (The arrows gathered into the quiver)
+        const ga = T.of('gather the arrows', T.of('dq0 -p t -s 5 -c /ram/d.hm -T').k), inQuiver = s => (s ? s.items : []).filter(i => i.name === 'arrows' && i.where === 'IW_ITEM')
+          .filter(i => { const c = s.items.find(j => j.n === i.x || j.i === i.x); return c && c.name === 'quiver'; }).reduce((a, i) => a + i.qty, 0);
+        if (!/You gather up \d+ arrows?\./.test(o)) f.push('the gathering not told');
+        if (ga.after && !(inQuiver(ga.after) > inQuiver(ga.at))) f.push('the arrows not gathered into the quiver (' + inQuiver(ga.at) + ', ' + inQuiver(ga.after) + ')');
+        // (The soldiers: a spear thrown, or a crossbow taken up and shot)
+        if (!/The small orc (?:throws its (?:spear|dagger) at you|shoots at you with its shortbow)/.test(s2)) f.push('no small orc\'s throw or shot');
+        // (Auto-target: the character shooting back unbidden)
+        inTurn(s3, ['You shoot at hostiles within medium range on your own.', 'You fight back against the elf.', 'You take up your shortbow.'], f, 'the auto-target: ');
         return f;
       },
       sdcard: true

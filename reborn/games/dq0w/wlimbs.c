@@ -306,6 +306,50 @@ unsigned char s_old_mint (void)
     return 0;
 }
 
+/* Body bd dead (wfight.c's died: its remains, body, put down where it fell, or 0 none): its things on it (worn, hung
+** from it: on its body, what's in them with them), what it held let fall where it lies; its own no longer (the
+** body's, the floor's: anyone's to take).  Part 51's (part 60's till 2026-10-30, its room) */
+void __fastcall__ s_den_strip (unsigned body)
+{
+    unsigned i;
+    unsigned char f;
+
+    for (i = 0; bd.did && (i = items (i, IN_DEN, 0)) != 0; ) {
+        if ((ip->owner | ip->hide << 8) != bd.did) {
+            continue;
+        }
+        f = ip->flags;
+        ip->owner = ip->hide = 0;
+        ip->flags = f & ~(I_HELD | I_WORN);
+        if ((f & I_HELD) || !body) {
+            ip->where = IW_SQUARE;
+            ip->sn = bd.sn;
+            ip->x = bd.x;
+            ip->y = bd.y;
+        } else {
+            ip->where = IW_ITEM;
+            ip->x = body;
+        }
+    }
+    hub_map (0);
+}
+
+/* Its weapon let fall still lying in its reach (its square or beside it): 1, to take it up (its turn); gone (taken,
+** moved off), forgotten */
+unsigned char s_den_reach (void)
+{
+    struct item* p = item_at (bd.dropped);
+
+    if (p->kind == (bd.arm & 0x7F) && p->where == IW_SQUARE && p->sn == bd.sn && (unsigned) (p->x - bd.x + 1) <= 2 &&
+        (unsigned) (p->y - bd.y + 1) <= 2) {
+        hub_map (0);
+        return 1;
+    }
+    hub_map (0);
+    bd.arm = 0;
+    return 0;
+}
+
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -377,6 +421,14 @@ static void __fastcall__ filed (unsigned i, unsigned char held)
     hub_map (0);
 }
 
+/* Kind k a thing to throw (held, 1 in hand): 2 one made to be thrown (a taburi, a shorkana), 1 a dagger, a knife, a
+** spear, a hatchet, an axe in hand (thrown if another weapon's kept), 0 neither (wshoot.c's to_throw's rule) */
+static unsigned char __fastcall__ throwing (unsigned char k, unsigned char held)
+{
+    return k == KI_TABURI || k == KI_SHORKANA ? 2 : held && (k == KI_DAGGER || k == KI_KNIFE || k == KI_SPEAR ||
+        k == KI_HATCHET || k == KI_AXE);
+}
+
 /* What body bd holds and wears told the referee (RS_EQUIP 2, the actor's: the keys of its things held and worn, each
 ** after its mark, < the left hand, > the right, * both, + worn, with its quality after it, as the character's), if it
 ** has things of its own (else the bestiary's, as before) */
@@ -384,14 +436,14 @@ void s_den_equip (void)
 {
     static const char hmark[4] = " <>*";
     static char wb[12];
-    static unsigned char f, n, h, k, ag;
+    static unsigned char f, n, h, k, ag, nw, th;
     static unsigned i;
     static struct item* q;
     struct req* r;
 
     hub_map (0);
     HUB->slot[SLOT_WORLD].text[0] = 0;
-    HUB->agear[bk] = ag = 0;
+    HUB->agear[bk] = ag = nw = th = 0;
     if (!(ki = kit_next (0))) {               /* (Its first: ip its record, its bank in the window) */
         return;
     }
@@ -402,7 +454,12 @@ void s_den_equip (void)
         if ((unsigned char) (k - KI_SLING) <= KI_CROSSBOW - KI_SLING) {
             ag |= AG_SHOOTS;                    /* (A launcher: its mind's to shoot, slice 4.7's) */
         }
-        if ((f & I_HELD) && weapon ()) {        /* (How it looks: armed, armoured, the hub's agear) */
+        if (weapon ()) {                        /* (A weapon held, or one it put up: wshoot.c's to_throw's count, its
+                                                **   things to throw, 2026-10-30) */
+            ++nw;
+            th |= throwing (k, f & I_HELD);
+        }
+        if ((f & (I_HELD | I_WORN)) && weapon ()) {     /* (How it looks: armed, armoured, the hub's agear) */
             ag |= AG_ARMED;
         } else if ((f & (I_WORN | I_HIDDEN)) == I_WORN && dk.craft == AP_ARMOUR) {
             ag |= AG_ARMOUR | ((dk.mat == MT_IRON || dk.mat == MT_STEEL) && dk.bulk >= 8 ? AG_MAIL : 0);
@@ -422,8 +479,11 @@ void s_den_equip (void)
             strcat (r->text, wb);
         }
     }
-    for (i = 0; !(ag & AG_ARMED) && (i = items (i, IN_ITEM, 0)) != 0; ) {
-        k = ip->kind;                           /* (A weapon at its belt, in its carrier there or hung from it) */
+    for (i = 0; (!(ag & AG_ARMED) || (th == 1 && nw < 2)) && (i = items (i, IN_ITEM, 0)) != 0; ) {
+        k = ip->kind;                           /* (A weapon at its belt, in its carrier there or hung from it: looked
+                                                **   for till it's armed, or, a thing to throw in hand, till another
+                                                **   weapon's found; not every thing in the store each time, the
+                                                **   answers' time on the denizens' path, 2026-10-30) */
         if ((q = item_at (ip->x))->where == IW_ITEM) {
             q = item_at (q->x);
         }
@@ -431,11 +491,17 @@ void s_den_equip (void)
             dkind (k);
             if (weapon ()) {
                 ag |= AG_ARMED;
+                ++nw;
+                th |= throwing (k, 0);
             }
             if ((unsigned char) (k - KI_SLING) <= KI_CROSSBOW - KI_SLING) {
                 ag |= AG_SHOOTS;                /* (A sling at its belt) */
             }
         }
+    }
+    if ((th & 2) || (th && nw > 1)) {
+        ag |= AG_SHOOTS;                        /* (A thing to throw: its mind's to throw it, as a shot, wshoot.c's
+                                                **   to_throw's, 2026-10-30) */
     }
     hub_map (0);
     HUB->agear[bk] = ag;
@@ -475,15 +541,30 @@ void __fastcall__ s_den_enter (const struct msg* m)
 ** into its main hand, its round's (the book's grope; the caller's time), told (WB_DRAWS, its kind), the referee told:
 ** 1; a weapon in one hand, a shield slung on its back taken in the other, if it's free, its round's the same (WB_READIES,
 ** 2026-10-29): 1; else 0 (a weapon in hand and its shield too, or none, its own let fall, none on its belt, no things
-** of its own) */
-unsigned char s_den_draw (void)
+** of its own).  A weapon it put up (on it, not in hand: a spear slung as it took its bow) the first drawn.  Want not 0
+** (2026-10-30: wshoot.c's, a launcher or a thing to throw): a thing of its own of that kind taken in hand from its back,
+** its belt, its carrier, what it holds put up first (weapons, a shield: slung, hung on it, I_WORN), its round's; told
+** (WB_READIES a launcher, WB_DRAWS a thing to throw), the referee told: 1; a light in its hand, or none of that kind, 0 */
+unsigned char __fastcall__ s_den_draw (unsigned char want)
 {
     static unsigned i, best, top;
     static struct item* p;
-    static unsigned char k;
+    static unsigned char k, w;
 
+    w = want;
     if ((bd.arm & 0x80) || !kit_next (0)) {    /* (Its own let fall: it takes that up again, its turn: RS_REARM) */
         return 0;
+    }
+    if (w) {
+        for (ki = 0; (ki = kit_next (ki)) != 0; ) {
+            if (ip->flags & I_HELD) {
+                dkind (ip->kind);
+                if (dk.flags & K_LIGHT) {
+                    return 0;                   /* (A light in its hand: kept) */
+                }
+            }
+        }
+        goto take;
     }
     for (ki = 0; (ki = kit_next (ki)) != 0; ) {
         if (ip->flags & I_HELD) {
@@ -524,7 +605,16 @@ unsigned char s_den_draw (void)
         s_den_equip ();
         return 1;
     }
-    for (best = top = 0, i = 0; (i = items (i, IN_ITEM, 0)) != 0; ) {
+take:
+    for (best = 0, ki = 0; (ki = kit_next (ki)) != 0; ) {
+        if ((ip->flags & (I_HELD | I_WORN | I_HIDDEN)) == I_WORN) {
+            dkind (k = ip->kind);               /* (On it, not in hand: slung, put up) */
+            if (w ? k == w : weapon ()) {
+                best = ki;
+            }
+        }
+    }
+    for (top = 0, i = 0; !best && (i = items (i, IN_ITEM, 0)) != 0; ) {
         k = ip->kind;
         p = item_at (ip->x);                    /* (What it's in: the belt, or a carrier on it) */
         if (p->where == IW_ITEM) {
@@ -534,7 +624,7 @@ unsigned char s_den_draw (void)
             continue;
         }
         dkind (k);
-        if (weapon () && dk.value >= top) {
+        if (w ? k == w : weapon () && dk.value >= top) {
             top = dk.value;
             best = i;
         }
@@ -542,35 +632,25 @@ unsigned char s_den_draw (void)
     if (!best) {
         return 0;
     }
-    k = item_at (best)->kind;
-    filed (best, 1);
-    limb_news (WB_DRAWS | (unsigned) k << 8, bk + 1);
-    s_den_equip ();
-    return 1;
-}
-
-/* Body bd dead (wfight.c's died: its remains, body, put down where it fell, or 0 none): its things on it (worn, hung
-** from it: on its body, what's in them with them), what it held let fall where it lies; its own no longer (the
-** body's, the floor's: anyone's to take) */
-void __fastcall__ s_den_strip (unsigned body)
-{
-    static unsigned char f;
-
-    for (ki = 0; (ki = kit_next (ki)) != 0; ) {
-        f = ip->flags;
-        ip->owner = ip->hide = 0;
-        ip->flags = f & ~(I_HELD | I_WORN);
-        if ((f & I_HELD) || !body) {
-            ip->where = IW_SQUARE;
-            ip->sn = bd.sn;
-            ip->x = bd.x;
-            ip->y = bd.y;
-        } else {
-            ip->where = IW_ITEM;
-            ip->x = body;
+    if (w) {                                    /* (What it holds put up: slung, hung on it) */
+        for (ki = 0; (ki = kit_next (ki)) != 0; ) {
+            if (ip->flags & I_HELD) {
+                ip->flags = (ip->flags & ~I_HELD) | I_WORN;
+            }
         }
     }
-    hub_map (0);
+    p = item_at (best);
+    k = p->kind;
+    if (p->where == IW_ITEM) {
+        filed (best, 1);
+    } else {
+        p->flags = (p->flags & ~I_WORN) | I_HELD;
+        hub_map (0);
+    }
+    limb_news ((w && (unsigned char) (k - KI_SLING) <= KI_CROSSBOW - KI_SLING ? WB_READIES : WB_DRAWS) |
+        (unsigned) k << 8, bk + 1);
+    s_den_equip ();
+    return 1;
 }
 
 #pragma bss-name (pop)
@@ -634,22 +714,6 @@ void s_den_drop (void)
     if (i) {
         s_den_equip ();
     }
-}
-
-/* Its weapon let fall still lying in its reach (its square or beside it): 1, to take it up (its turn); gone (taken,
-** moved off), forgotten */
-unsigned char s_den_reach (void)
-{
-    struct item* p = item_at (bd.dropped);
-
-    if (p->kind == (bd.arm & 0x7F) && p->where == IW_SQUARE && p->sn == bd.sn && (unsigned) (p->x - bd.x + 1) <= 2 &&
-        (unsigned) (p->y - bd.y + 1) <= 2) {
-        hub_map (0);
-        return 1;
-    }
-    hub_map (0);
-    bd.arm = 0;
-    return 0;
 }
 
 /* Its weapon taken up again (its turn: the referee's O_REARM): gone from the floor (its record free; its own, in its

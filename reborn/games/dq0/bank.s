@@ -136,6 +136,7 @@ ovl_out:
             OVFN        felt_words, 7
             OVFN        facing_words, 7
             OVFN        fore_set, 6         ; (The answer's tasks in the foreground: main.c's)
+            OVFN        dots, 6             ; (The game's start's progress: main.c's)
             OVFN        water_words, 6      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)

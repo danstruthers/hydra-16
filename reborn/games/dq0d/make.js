@@ -95,6 +95,7 @@ function words(base) {
 }
 
 function build({ dir, objdir, say = () => {} }) {
+  require('../dq0/ovlpack.js').pack(objdir, 'dq0d');    // (Its overlays' file packed: obj/games/dq0d.ovp)
   const facs = lines(path.join(dir, 'factions.txt')), names = facs.map(f => f[0]);
   const kinds = lines(path.join(dir, 'kinds.txt')), keys = kinds.map(f => f[1]);
   if (facs.length >= NFILE) throw new Error('dq0d/factions.txt: more than ' + (NFILE - 1) + ' factions');

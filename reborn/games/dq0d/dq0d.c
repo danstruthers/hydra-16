@@ -1357,21 +1357,22 @@ static unsigned char fought (void)
         }
         n = 1;
         f = m.x[2];
-        att = m.who;
-        k = ((att ? att : m.a) - 1) & 7;        /* (The actor in it: the character fights them one at a time) */
+        att = m.a;                              /* (The one struck an actor: the character's blow, or a stray's
+                                                **   between two actors, 2026-10-30; else the one striking) */
+        k = ((att ? att : m.who) - 1) & 7;      /* (The actor in it: the character fights them one at a time) */
         if (m.x[1] != FO_BLED && (f & FF_FLEES)) {
             fled[k] = FLEE_T;                   /* (Broken: it flees, and won't seek the fight again) */
             HUB->actor[k].attitude = AT_UNFRIENDLY;
         }
-        if ((g = f & (att ? FF_A_DEAD | FF_A_DOWN : FF_D_DEAD | FF_D_DOWN)) != 0) {
+        if ((g = f & (att ? FF_D_DEAD | FF_D_DOWN : FF_A_DEAD | FF_A_DOWN)) != 0) {
             dismay (k | g << 4);                /* (Its kin's courage, how it fell in the high bits: part 6's; bled to
                                                 **   death too, a fall all the same) */
         }
-        if (m.x[1] != FO_BLED && !att) {
+        if (m.x[1] != FO_BLED && !m.who) {
             harmed (k);                         /* (Its own, and their foes, think again of the character; its
                                                 **   wound seen) */
         }
-        if (f & (att ? FF_A_DEAD : FF_D_DEAD)) {
+        if (f & (att ? FF_D_DEAD : FF_A_DEAD)) {
             killed (k);
         }
     }
@@ -2261,11 +2262,14 @@ void s_sway (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1, OV2, OV3): 0, or -1 */
+/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1, OV2, OV3, as make.js packs
+** them, ../dq0/ovlpack.js: each bank's bytes' count, then them, read straight into it through the window, the
+** linker's fill ($FF) put back after them): 0, or -1 */
 static int __fastcall__ ovl_load (const char* dir)
 {
-    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Through the parts' area: none in it yet) */
-    unsigned off;
+    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Its path in the parts' area: none in it yet) */
+    static unsigned c;
+    unsigned char k;
     int fd, n;
 
     strcpy ((char*) b, dir);
@@ -2276,9 +2280,10 @@ static int __fastcall__ ovl_load (const char* dir)
     ovbank[0] = n;
     ovbank[1] = n + 1;
     ovbank[2] = n + 2;
-    for (off = 0; off < 0x6000 && (n = read (fd, b, 512)) > 0; off += n) {
-        hy_bank (ovbank[off >> 13]);
-        memcpy ((void*) (0x8000 + (off & 0x1FFF)), b, n);
+    for (k = 0; k < 3 && read (fd, &c, 2) == 2; ++k) {
+        hy_bank (ovbank[0] + k);
+        read (fd, (void*) 0x8000, c);
+        memset ((void*) (0x8000 + c), 0xFF, 0x2000 - c);
     }
     close (fd);
     return 0;

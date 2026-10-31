@@ -358,6 +358,9 @@ void s_pc_asked (void)
     case WS_STANCE:
         HUB->pc_stance = x;
         break;
+    case WS_AUTO:
+        HUB->pc_auto = x;                       /* (The auto-target range, the player's: 2026-10-30) */
+        break;
     case WS_PAUSE:
         HUB->paused = x;
         break;

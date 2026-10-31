@@ -884,14 +884,16 @@ static void __fastcall__ answer (struct req* r)
     }
 }
 
-/* The overlays: dir/dq0harn.ovl, an 8K bank each (dq0harn.cfg's OV1 ...; the file cut after the last one used:
-** make.js), read into banks of its own, and a bank for the creatures' sheets (cleared): 0, or -1 */
+/* The overlays: dir/dq0harn.ovl, an 8K bank each (dq0harn.cfg's OV1 ...; the file cut after the last one used, each
+** bank's bytes' count then them, the linker's fill left out: make.js, ../dq0/ovlpack.js), read into banks of its own,
+** straight through the window, the fill ($FF) put back after them; and a bank for the creatures' sheets (cleared): 0,
+** or -1 */
 static int __fastcall__ ovl_load (const char* dir)
 {
     static char path[64];
+    static unsigned c;
     int fd, first, n;
     unsigned char k;
-    unsigned off;
 
     strcpy (path, dir);
     strcat (path, "/dq0harn.ovl");
@@ -900,13 +902,11 @@ static int __fastcall__ ovl_load (const char* dir)
     }
     for (k = 0; k < OVLS; ++k) {
         ovbank[k] = first + k;
-        for (off = 0; off < 0x2000; off += sizeof piece) {
-            n = read (fd, piece, sizeof piece);
-            if (n <= 0) {
-                break;
-            }
-            bwrite (first + k, (void*) (0x8000 + off), piece, n);
-        }
+    }
+    for (k = 0; k < OVLS && read (fd, &c, 2) == 2; ++k) {
+        hy_bank (first + k);
+        read (fd, (void*) 0x8000, c);
+        memset ((void*) (0x8000 + c), 0xFF, 0x2000 - c);
     }
     close (fd);
     if ((n = hy_banks_alloc (1)) < 0) {

@@ -141,6 +141,23 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
             "remember dim, what's on your map brown.");
         return 1;
     }
+    if (any ("autotarget\0auto-target\0autoengage\0auto-engage\0autofire\0autoshoot\0") ||
+        (any ("auto\0") && any ("target\0engage\0fire\0shoot\0"))) {   /* (The auto-target range, the user's: "autotarget
+                                                **   with bow at medium range", "set autotarget off"; the world's, WQ_SET's
+                                                **   WS_AUTO, fighting on with missiles: 2026-10-30) */
+        g = any ("off\0none\0no\0never\0stop\0") ? 0 : any ("short\0close\0near\0") ? 1 : any ("medium\0middle\0mid\0") ? 2 :
+            any ("long\0") ? 3 : any ("extreme\0far\0any\0") ? 4 : 0xFF;
+        if (g != 0xFF) {
+            wset (WS_AUTO, g, 0);
+        }
+        if ((g = HUB->pc_auto) != 0) {
+            sayf ("\nYou shoot at hostiles within %s range on your own.", g == 1 ? "short" : g == 2 ? "medium" : g == 3 ?
+                "long" : "extreme");
+        } else {
+            msg ("You don't shoot at hostiles on your own.");
+        }
+        return 1;
+    }
     for (i = 0; i < nw; ++i) {
         for (k = 0; k < sizeof paces / sizeof paces[0]; ++k) {
             if (!strcmp (w[i], paces[k].w)) {
@@ -341,7 +358,8 @@ static const char pace_words[] =                /* (Each word after its length: 
     "\007running\005hurry\006sprint\011sprinting\004dash\006status\004stop\004trap\005traps\011carefully"
     "\007careful\006warily\006listen\011listening\007mapping\003map\006colour\005color\007colours\006colors"
     "\004step\010sidestep\007shuffle\004back\005space\006spaces\006square\007squares\005steps\004pace\005paces"
-    "\004foot\004feet\002ft\004yard\005yards";
+    "\004foot\004feet\002ft\004yard\005yards\012autotarget\013auto-target\012autoengage\013auto-engage\010autofire"
+    "\011autoshoot\004auto";
 
 unsigned char __fastcall__ o_pacing (const char* l)
 {
