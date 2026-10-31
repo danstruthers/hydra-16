@@ -156,7 +156,9 @@ ovl_out:
             SWPART      12, 15              ; Wounds over time: first aid, in shock, the body's news (tend.c)
             SWPART      13, 1               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
             SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
+            SWPART      15, 6               ; An ally's errands, the character's gifts (errand.c: slice 4.8's)
 
+            SWFN        errand, 15
             SWFN        begin, 1
             SWFN        size, 1
             SWFN        t_init, 1

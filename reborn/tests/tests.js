@@ -2207,13 +2207,13 @@ const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
 // faction the layout's; and its record's (rec: { or: flags or'd in, serve, contact }: dq0Rec's).  The test's own setting
 // up, as dq0Aware's
 // The denizens' records (dq0d's pb bank, its label's: the task the hub's task[T_DENIZENS]): { mem, at(i) the record
-// i's offset, and its fields' }: dq0d.c's struct pop (its head 322 bytes, 64 lairs of 17), struct den (28 bytes: its
+// i's offset, and its fields' }: dq0d.c's struct pop (its head 330 bytes since slice 4.8's regard, 64 lairs of 17), struct den (28 bytes: its
 // flags at 1, its id at 4, its serve and contact at 26 and 27)
 let dq0RecPb = 0;
 function dq0Rec(m) {
   const h = m.dq0.bank(0), t = h[12 + 2], lbl = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
   const pb = dq0RecPb || (dq0RecPb = parseInt(/^al ([0-9A-F]+) \._pb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][pb]) || new Uint8Array(0x2000);
-  return { mem, at: i => 322 + 64 * 17 + 28 * i, FLAGS: 1, ID: 4, SERVE: 26, CONTACT: 27 };
+  return { mem, at: i => 330 + 64 * 17 + 28 * i, FLAGS: 1, ID: 4, SERVE: 26, CONTACT: 27 };
 }
 
 function dq0Poke(m, pokes) {
@@ -4282,6 +4282,40 @@ module.exports = {
         const a = T.of('attack the rat');
         if (dq0Ev(a, 'E_FIGHT', { who: 0 }).length) f.push('a blow struck at a rat out of reach');
         sw(T.after(a, 'examine the rat'), { kind: 'SW_LOOK', now: 'AT_WARY' }, 'the rat not as wary as it was');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0fetch', near: ['denizens'], what: 'Dingus Quest Zero\'s errands and gifts (slice 4.8, DENIZENS.md\'s fetching and influence; HOUSE.md\'s fetching and gifts, for review): at seed 21 (dq0sway\'s game) a giant rat befriended, won over and named Grub; two rations put down and the character two squares off, turned round to see them; Grub told to fetch the rations ("tell Grub to fetch the rations": the order\'s word not the thing\'s, the parser\'s), going to fetch them, picking them up in its mouth (two pounds: a beast\'s 3 lb at most) and handing them back to the character as it waits (E_TASK TE_FETCHED, FT_TOOK then FT_GAVE; the rations the character\'s again); asked to fetch a thing it can\'t see, refused; offered the tinderbox (no food: a beast has no use for it, SR_CANT); given a ration ("give 1 ration to Grub": its worth and food, the gift taken, a lot\'s one split off, FT_GOT, the character\'s rations one fewer); told to follow at 3 squares (SR_OK)',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -R 117',
+        'befriend the rat', 'befriend the rat', 'name the rat grub', 'drop 2 rations', 'move east 2 squares', 'turn around', 'tell grub to fetch the rations', 'wait', 'wait',
+        'inventory', 'tell grub to fetch the anvil', 'give the tinderbox to grub', 'give 1 ration to grub', 'inventory', 'tell grub to follow me at 3 squares',
+        'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [];
+        const sw = (t, want, what) => { if (!dq0Rep(t, 'sway', want).length) f.push(what + ' (' + JSON.stringify(t.replies.filter(r => r.req === 'sway')) + ')'); };
+        const b = T.filter(t => t.line === 'befriend the rat');
+        if (!b.some(t => dq0Rep(t, 'sway', { now: 'AT_ALLIED' }).length)) f.push('the rat not won over');
+        const rations = s => dq0Carried(s).filter(i => i.name === 'rations').reduce((n, i) => n + i.qty, 0);
+        const d = T.of('drop 2 rations'), had = d.after ? rations(d.after) : 0;
+        const fe = T.of('tell grub to fetch the rations');
+        sw(fe, { kind: 'SW_ORDER', order: 'OR_FETCH', result: 'SR_OK' }, 'Grub not sent to fetch the rations');
+        const ev = T.filter(t => t.k >= fe.k).flatMap(t => dq0Ev(t, 'E_TASK', { te: 'TE_FETCHED' }));
+        if (!ev.some(e => e.ft === 'FT_TOOK')) f.push('Grub never picked the rations up (' + JSON.stringify(ev) + ')');
+        if (!ev.some(e => e.ft === 'FT_GAVE')) f.push('Grub never handed the rations over (' + JSON.stringify(ev) + ')');
+        const inv = T.of('inventory');
+        if (!inv.after || rations(inv.after) !== had + 2) f.push('the rations not the character\'s again (' + (inv.after && rations(inv.after)) + ', ' + had + ' before)');
+        if (dq0Rep(T.of('tell grub to fetch the anvil'), 'sway', {}).length) f.push('a thing not seen asked of the denizens');
+        sw(T.of('give the tinderbox to grub'), { kind: 'SW_GIVE', result: 'SR_CANT' }, 'a beast taking a tinderbox');
+        const g = T.of('give 1 ration to grub');
+        sw(g, { kind: 'SW_GIVE', result: 'SR_OK' }, 'the ration not given');
+        if (!dq0Ev(g, 'E_TASK', { te: 'TE_FETCHED', ft: 'FT_GOT' }).length) f.push('the ration not taken (' + dq0Evs(g) + ')');
+        const inv2 = T.after(g, 'inventory');
+        if (!inv2.after || rations(inv2.after) !== had + 1) f.push('the character\'s rations not one fewer (' + (inv2.after && rations(inv2.after)) + ')');
+        sw(T.of('tell grub to follow me at 3 squares'), { kind: 'SW_ORDER', order: 'OR_FOLLOW', result: 'SR_OK' }, 'Grub not told to follow at a distance');
         return f;
       },
       sdcard: true

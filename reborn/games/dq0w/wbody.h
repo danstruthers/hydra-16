@@ -54,6 +54,8 @@ void __fastcall__ den_blow (unsigned char def, unsigned char z);  /* (Part 15) B
 void __fastcall__ den_rob (const struct msg* m);    /* (Part 15) The character robbed by body bd, what it takes
                                                 **   put down at m's w1, w2, or in its faction's hoard there, or hidden
                                                 **   there (I_ROB's) */
+void __fastcall__ den_fetch (const struct msg* m);  /* (Part 69: wfetch.c) Body bd's errand: a thing fetched taken
+                                                **   up, handed over; a gift taken (I_ROB's a: slice 4.8's) */
 void bled (void);                               /* (Part 15) The bleeding's bloodloss, a minute at a time */
 extern unsigned long body_due;                  /* (Part 70's: the referee's next watch, wtend.c's) */
 unsigned char __fastcall__ den_first (unsigned char k, unsigned char away);    /* (Part 14) Body k's tactical

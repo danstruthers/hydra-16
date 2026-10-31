@@ -213,7 +213,8 @@ function scan(toks, w, face = 0) {
     const other = () => {                        // (A word for the other thing: a name given the last)
       if (verb === R.get('name') || ((c.prep || order() || verb === R.get('combine')) && !word2)) word2 = t.typed.slice(0, 15);
     };
-    if (order() && (k = get(t, w.orders))) c.order = c.order || k;
+    if (order() && !c.order && (k = get(t, w.orders))) { c.order = k; continue; }   // (A request's word, the first, not
+                                                //   the other thing's: "tell Grub to fetch the key" the key, 2026-10-30)
     if ((w.rows[verb].flags & RF_ASPECTS) && (k = get(t, w.aspects)) !== undefined) { aspect |= k; continue; }
     if (sp(i, 'WITH')) { c.prep = V.PR_WITH; continue; }
     if (two(i, w.special) === 'WAY_OUT') { c.obj.kind = V.OB_WAY_OUT; ++i; continue; }

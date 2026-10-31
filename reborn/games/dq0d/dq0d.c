@@ -93,6 +93,10 @@ void __fastcall__ dismay (unsigned char k);    /* Part 6 (morale) */
 void __fastcall__ heart (unsigned char k);
 void age (void);
 void __fastcall__ succeed (unsigned char x);   /* Part 7 */
+unsigned char __fastcall__ ally (unsigned char k);   /* Part 5 (slice 4.8's: an ally's turn, its errands) */
+void __fastcall__ aside (unsigned char k);
+void __fastcall__ gift (unsigned char k);
+void __fastcall__ regard (unsigned char f, unsigned char pts);
 extern unsigned char ovbank[3];
 extern char _SWAP_START__[];
 
@@ -216,6 +220,8 @@ struct head {
     unsigned        magic;
     unsigned char   nlairs, ndens;              /* The records' places used, up to the last in use */
     unsigned char   fatt[NFACT];                /* Each faction's attitude to the character now (its newcomers') */
+    unsigned char   deeds[NFACT];               /* Each faction's regard: the points of the deeds it knows of, towards
+                                                **   its next step (slice 4.8's reputation: regard) */
     struct { unsigned id; char name[12]; } names[NNAMES];    /* The names the character's given (a denizen's
                                                 **   number; 0: none) */
     unsigned        ids, lids;                  /* The denizens' and the lairs' numbers given */
@@ -940,6 +946,12 @@ static void __fastcall__ rouse (unsigned char k, unsigned w)
 }
 
 static unsigned char aorder[NACTORS];           /* (Each one's request, an ally's: its record's while it's an actor) */
+static unsigned afetch[NACTORS];                /* (Each one's errand, slice 4.8's: the thing it's to fetch, its item, |
+                                                **   FETCH_TRIED as it's taken up or tried, 0 none; where it lay; the
+                                                **   squares it follows at, 0 beside the character) */
+static unsigned afx[NACTORS], afy[NACTORS];
+static unsigned char akeep[NACTORS];
+#define FETCH_TRIED     0x8000
 static unsigned lsx[NACTORS], lsy[NACTORS];     /* (Where each last sensed the character: an ally follows it there) */
 #define DRAWN_N         8                       /* (A hostile one drawn on there, its decisions: drawn) */
 static unsigned char drawn[NACTORS];
@@ -1107,6 +1119,7 @@ static void enlist_near (void)
         }
         den_get (i);
         if (k < NACTORS && apart (D.x - pcx, D.y - pcy) <= ACT_R) {
+            afetch[k] = akeep[k] = 0;           /* (No errand of its own: an errand isn't carried with it) */
             enlist (i, k);
         } else if (nnear < NEAR) {
             nearx[nnear] = D.x;
@@ -1264,6 +1277,9 @@ static void hear (void)
     for (;;) {
         hub_map (0);
         if (hub_next (&wplace, &m)) {           /* (The world's: a noise of the character's, on its stratum) */
+            if (m.kind == E_NOWAY && (unsigned char) m.w1 == N_DEN) {
+                aside (m.w1 >> 8 & 7);          /* (One in its way: aside, if it will: D10's) */
+            }
             if (m.kind != E_NOISE) {
                 continue;
             }
@@ -1439,35 +1455,6 @@ static unsigned char __fastcall__ keep_off (unsigned char k)
     }
     refx = pcx;
     refy = pcy;
-    return d;
-}
-
-/* An ally's (actor k's, the copy's) turn: waiting where it was asked; else following the character, to where it last
-** sensed it, till it's beside it.  The step, or 0xFE (its wait, wt) */
-static unsigned char __fastcall__ ally (unsigned char k)
-{
-    unsigned char d = 0xFE;
-
-    if (sres[k]) {
-        a.face = bearing (ddx, ddy);
-    }
-    if (aorder[k] == OR_WAIT) {
-        a.doing = DO_WAIT;
-        wt = 20 + random (20);
-        return d;
-    }
-    a.doing = DO_FOLLOW;
-    if ((lsx[k] || lsy[k]) && apart (a.x - lsx[k], a.y - lsy[k]) > 1) {
-        refx = lsx[k];
-        refy = lsy[k];
-        d = step_for (k, 0xFFFF, S_TOWARD);
-        refx = pcx;
-        refy = pcy;
-    }
-    if (d >= 4) {
-        wt = 5 + random (10);
-        d = 0xFE;
-    }
     return d;
 }
 
@@ -1969,6 +1956,219 @@ unsigned char __fastcall__ s_draw_on (unsigned char k)
                                                 **   keeps to it, a step or two) */
 }
 
+
+/* ---- An ally's errands and the character's gifts (slice 4.8, 2026-10-30: DENIZENS.md's fetching and influence;
+** HOUSE.md's fetching, gifts and reputation): part 5's */
+
+/* An ally's (actor k's, the copy's) turn: waiting where it was asked; fetching a thing (OR_FETCH: walked to where it
+** lay, taken up there, the world's I_ROB FE_TAKE; brought back to where it last sensed the character, handed over
+** beside it, FE_GIVE: the world's to tell how it went, E_TASK TE_FETCHED; none to be had, or no way nearer, tried
+** from where it is: the world's to refuse; then following again); else following the character, to where it last
+** sensed it, till it's within the distance it's told (keep: beside it, unless "follow me at 3 squares").  The step,
+** or 0xFE (its wait, wt) */
+unsigned char __fastcall__ s_ally (unsigned char k)
+{
+    unsigned char d = 0xFE, n = 1 + akeep[k], w;
+    unsigned x = lsx[k], y = lsy[k], i = afetch[k] & ~FETCH_TRIED;
+
+    if (sres[k]) {
+        a.face = bearing (ddx, ddy);
+    }
+    if (aorder[k] == OR_WAIT) {
+        a.doing = DO_WAIT;
+        wt = 20 + random (20);
+        return d;
+    }
+    a.doing = DO_FOLLOW;
+    if (aorder[k] == OR_FETCH) {
+        n = 1;
+        hub_map (ITEM_BANK (i));
+        w = afetch[k] & FETCH_TRIED && ITEM_AT (i)->where == IW_DEN;   /* (Taken up: its own, the item store's) */
+        hub_map (0);
+        if (w) {                                /* (Brought back: handed over beside the character) */
+            if (a.sn == pcs && dist <= 1) {
+                im.a = FE_GIVE;
+                im.t = i;
+                act (I_ROB, k);
+                afetch[k] = 0;
+                aorder[k] = OR_FOLLOW;
+                wt = 5;
+                return d;
+            }
+        } else if (!i || (afetch[k] & FETCH_TRIED)) {
+            afetch[k] = 0;                      /* (Not taken up: gone, too heavy, its hands full, out of its reach,
+                                                **   the world's to tell; following again) */
+            aorder[k] = OR_FOLLOW;
+        } else {
+            x = afx[k];
+            y = afy[k];
+            if (apart (a.x - x, a.y - y) > 1) {
+                refx = x;
+                refy = y;
+                d = step_for (k, 0xFFFF, S_TOWARD);
+                refx = pcx;
+                refy = pcy;
+            }
+            if (d >= 4) {                       /* (Beside it, or no way nearer: taken up, or tried) */
+                im.a = FE_TAKE;
+                im.w1 = x;
+                im.w2 = y;
+                im.t = i;
+                act (I_ROB, k);
+                afetch[k] |= FETCH_TRIED;
+                wt = 5;
+                return 0xFE;
+            }
+            return d;
+        }
+    }
+    d = 0xFE;
+    if ((x || y) && apart (a.x - x, a.y - y) > n) {
+        refx = x;
+        refy = y;
+        d = step_for (k, 0xFFFF, S_TOWARD);
+        refx = pcx;
+        refy = pcy;
+    }
+    if (d >= 4) {
+        wt = 5 + random (10);
+        d = 0xFE;
+    }
+    return d;
+}
+
+/* Actor k in the character's way (the world's E_NOWAY, N_DEN: its walk stopped short of it), friendly or an ally,
+** perceiving it trying to pass (D10): it moves aside at once, a square off the way the character comes (open, no one
+** on it: not straight on along it), if it can and it's willing (not one told to wait: it may be guarding; not one
+** fighting, fleeing or senseless; none to be had, cornered: it stays) */
+void __fastcall__ s_aside (unsigned char k)
+{
+    struct actor* q = &HUB->actor[k];
+    unsigned char d, j;
+    signed char sx, sy;
+
+    hub_map (0);
+    if (!q->name[0] || q->attitude < AT_FRIENDLY || aorder[k] == OR_WAIT || q->doing >= DO_FIGHT || q->sn != pcs) {
+        return;
+    }
+    memcpy (&a, q, sizeof a);
+    kind_get (akind[k]);
+    sx = a.x > pcx ? 1 : a.x < pcx ? -1 : 0;
+    sy = a.y > pcy ? 1 : a.y < pcy ? -1 : 0;
+    for (j = random (4), d = 0; d < 4; ++d, j = (j + 1) & 3) {
+        if ((dir_x[j] == sx && dir_y[j] == sy) || taken (k, a.x + dir_x[j], a.y + dir_y[j]) ||
+            !step_ok (a.sn, a.x, a.y, j)) {
+            continue;
+        }
+        rouse (k, ROUSE_SET);                   /* (At once, whatever it was about) */
+        im.w1 = H_OF (j);
+        im.w2 = K.dark ? 1 : 1 | STEP_FEELS;
+        im.a = DE_MOVED;
+        im.b = 1;
+        a.face = H_OF (j);
+        a.doing = DO_FOLLOW;
+        act (I_STEP, k);
+        settle ();
+        return;
+    }
+}
+
+/* Faction f's regard for the character raised by a deed it knows of (slice 4.8's reputation: a gift taken by one of
+** its own, a foe of its harmed before its eyes), pts points: each DEED_STEP of them a step of its attitude (its
+** newcomers', and those of it in the cache not met yet: as they first meet the character), to friendly at most */
+#define DEED_STEP       4
+void __fastcall__ s_regard (unsigned char f, unsigned char pts)
+{
+    struct den* r = POP->den;
+    unsigned char j;
+
+    f &= NFACT - 1;
+    if (!f || (hd.deeds[f] += pts) < DEED_STEP) {
+        return;
+    }
+    hd.deeds[f] = 0;
+    if (hd.fatt[f] >= AT_FRIENDLY) {
+        return;
+    }
+    ++hd.fatt[f];
+    for (j = 0; j < hd.ndens; ++j, ++r) {
+        hy_bank (pb);
+        if (r->kind && !(r->flags & (D_ACTOR | D_MET)) && r->fac == f && r->attitude < AT_FRIENDLY) {
+            ++r->attitude;
+        }
+    }
+    hub_map (0);
+}
+
+/* A gift to actor k (sw's: its worth, ix, in farthings, the appraisal's as a local takes it; iy 1 if it's food): by its
+** mind (nothing sways the mindless; a beast takes only food), within reach; its steps by its worth to one of its kind's
+** means (kinds.txt's standing: HOUSE.md's gifts), the book's Rhetoric (a beast's Animalcraft) in the target's
+** interest, at steps by its attitude and its kind too; a critical success two steps, a success one, a critical failure
+** an insult (a step back, the gift refused: grade G_CF), as far as friendly (a gift doesn't make an ally); taken (but
+** refused), the world's to hand over (the UI's), and its faction's regard the more (reputation) */
+static const unsigned means[5] = { 4, 16, 48, 192, 960 };   /* (Farthings: a penny, 4d, 12d, 48d, 240d) */
+
+void __fastcall__ s_gift (unsigned char k)
+{
+    struct req* r;
+    signed char st, g;
+    unsigned char t = sw.was, m;
+    unsigned w = sw.ix, v;
+
+    if (K.mind == M_MINDLESS) {
+        sw.result = SR_MINDLESS;
+        return;
+    }
+    if (dist > 1) {
+        sw.result = SR_FAR;
+        return;
+    }
+    if (sw.beast && !(sw.iy & 1)) {
+        sw.result = SR_CANT;                    /* (A beast has no use for it) */
+        return;
+    }
+    kx_get (akind[k]);
+    v = means[X.standing < 5 ? X.standing : 4];
+    for (g = -1, w = w < 0x4000 ? w << 2 : 0xFFFF; g < 4 && w >= v; ++g, v <<= 1) {
+    }                                           /* (Under a quarter of its means a paltry gift, -1; a quarter 0, a half
+                                                **   1, its means 2, twice 3, four times 4) */
+    if (sw.iy & 1) {
+        g += 2;                                 /* (Food: to a beast, or the hungry, the more welcome) */
+    }
+    st = (signed char) t - 3 + K.sway + g;      /* (Its attitude's steps, as words': hostile -3 ... friendly +1) */
+    hub_map (0);
+    r = DSLOT;
+    r->text[0] = 0;
+    r->kind = RS_TEST;
+    r->actor = 0;
+    r->a = sw.beast ? P_ANIMALS : P_PERSUADE;
+    r->b = 0;
+    r->steps = st;
+    r = hub_call (r, T_REFEREE);
+    sw.grade = r->grade;
+    r->state = REQ_FREE;
+    sw.t = 20;
+    m = sw.grade == G_CS ? 2 : sw.grade == G_MS ? 1 : 0;
+    if (sw.grade == G_CF) {
+        sw.now = t > AT_HOSTILE ? t - 1 : t;    /* (Insulted: refused) */
+    } else {
+        sw.now = t >= AT_FRIENDLY ? t : t + m < AT_FRIENDLY ? t + m : AT_FRIENDLY;
+        im.a = FE_GIFT;                         /* (Taken: the world's to hand over, a count of a lot split off) */
+        im.t = sw.item;
+        im.w1 = sw.iy >> 8;
+        im.x[0] = im.x[1] = 0xFF;
+        post (I_ROB, k + 1);
+        settle ();
+        if (g >= 2) {
+            hub_map (0);
+            s_regard (HUB->actor[k].faction, g - 1);
+        }
+    }
+    hub_map (0);
+    HUB->actor[k].attitude = sw.now;
+}
+
+
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -2027,7 +2227,7 @@ void __fastcall__ s_harmed (unsigned char k)
 {
     struct actor* q = HUB->actor;
     struct den* r = POP->den;
-    unsigned char j, f, n;
+    unsigned char j, f, n, wit = 0;
     unsigned l;
 
     hub_map (0);
@@ -2049,6 +2249,7 @@ void __fastcall__ s_harmed (unsigned char k)
             q->attitude = q->attitude > n ? q->attitude - n : AT_HOSTILE;
         } else if (REL (f, q->faction) == AT_HOSTILE && sres[j] && q->attitude < AT_FRIENDLY) {
             ++q->attitude;
+            wit |= 1 << (q->faction & (NFACT - 1));   /* (Its faction's regard the more: reputation, slice 4.8's) */
         } else {
             continue;
         }
@@ -2074,6 +2275,11 @@ void __fastcall__ s_harmed (unsigned char k)
     hub_map (0);
     if (hd.fatt[f & (NFACT - 1)] > AT_HOSTILE) {
         --hd.fatt[f & (NFACT - 1)];
+    }
+    for (j = 1; j < NFACT; ++j) {
+        if (wit & 1 << j) {
+            regard (j, 1);                      /* (A foe of its harmed before its eyes) */
+        }
     }
 }
 
@@ -2152,7 +2358,8 @@ static void __fastcall__ influence (unsigned char k)
     }
 }
 
-/* A request to ally k (sw's order): follow, wait, go its own way (an ally no more); fetching, not yet */
+/* A request to ally k (sw's order): follow (at a distance, if it's told: ix), wait, go its own way (an ally no more),
+** fetch a thing (the UI's, its item and where it lay: slice 4.8's) */
 static void __fastcall__ order (unsigned char k)
 {
     struct actor* q;
@@ -2163,11 +2370,18 @@ static void __fastcall__ order (unsigned char k)
         sw.result = SR_NOT_ALLY;
         return;
     }
-    if (sw.order == OR_FETCH || !sw.order) {
+    if (!sw.order || (sw.order == OR_FETCH && !sw.item)) {
         sw.result = SR_CANT;
         return;
     }
     sw.t = 20;
+    if (sw.order == OR_FOLLOW) {
+        akeep[k] = sw.ix < 8 ? sw.ix : 8;       /* (Its distance, if it's told one: slice 4.8's) */
+    } else if (sw.order == OR_FETCH) {
+        afetch[k] = sw.item;                    /* (A thing to fetch: the UI's, where it lay) */
+        afx[k] = sw.ix;
+        afy[k] = sw.iy;
+    }
     if (sw.order == OR_HOME) {
         q->attitude = sw.now = AT_FRIENDLY;
         aorder[k] = OR_NONE;
@@ -2214,12 +2428,13 @@ void s_sway (void)
     sw.t = 0;
     sw.name[0] = 0;
     sw.beast = 0;
+    sw.actor = 0;
     if (sw.kind == SW_ORDER && !sw.word[0]) {   /* (To every ally in earshot) */
         for (k = 0; k < NACTORS; ++k) {
             hub_map (0);
             q = &HUB->actor[k];
             if (q->name[0] && q->attitude == AT_ALLIED && q->sn == pcs && apart (q->x - pcx, q->y - pcy) <= 12 &&
-                q->doing != DO_DOWN) {          /* (Not one lying senseless: it hears nothing) */
+                q->doing != DO_DOWN && (!n || sw.order != OR_FETCH)) {   /* (A thing fetched by one: the first) */          /* (Not one lying senseless: it hears nothing) */
                 strcpy (sw.name, ++n == 1 ? q->name : "");
                 order (k);
                 rouse (k, 1 | ROUSE_SET);
@@ -2234,6 +2449,7 @@ void s_sway (void)
         sw.was = sw.now = q->attitude;
         kind_get (akind[k]);
         sw.beast = K.mind == M_BEAST;
+        sw.actor = k + 1;
         switch (q->doing == DO_DOWN && sw.kind ? 0xFF : sw.kind) {
         case 0xFF:
             sw.result = SR_DOWN;                /* (Senseless: it hears nothing, it takes no request, till it comes
@@ -2245,6 +2461,9 @@ void s_sway (void)
             break;
         case SW_ORDER:
             order (k);
+            break;
+        case SW_GIVE:
+            gift (k);
             break;
         default:
             influence (k);

@@ -705,6 +705,53 @@ void s_light_now (void)
 
 /* ---- A request (the hub's ireq), answered (but for its state, the caller's: done once it's looked again): 1 if
 ** what lies about has changed */
+/* ---- The thing the UI names for an ally's errand, a gift (slice 4.8's, 2026-10-30; the hub's ireq: IO_FETCH, its name fn,
+** the request's copy; to 0, one seen lying about, its item and where it lies back in item, x, y; to 1, one the character carries, IO_DESCRIBE's reply, its worth in value, its item in item):
+** IR_OK, IR_NONE (none such), IR_NO (in something closed, carried, a denizen's) */
+static unsigned char __fastcall__ fetch_find (const char* fn)
+{
+    struct item* p;
+    unsigned n, c, n0;
+    unsigned char to, r;
+
+    hub_map (0);
+    to = HUB->ireq.to;
+    if (to) {                                   /* (A gift: the character's) */
+        if (!(n = pick (fn, HW_CARRIED)) || (r = describe (fn)) != IR_OK) {
+            hub_map (0);
+            return IR_NONE;
+        }
+        hub_map (0);
+        HUB->ireq.item = n;
+        return IR_OK;
+    }
+    if (!(n = pick (fn, HW_SEEN))) {
+        hub_map (0);
+        return IR_NONE;
+    }
+    for (c = n; (p = item_at (c))->where == IW_ITEM; c = p->x) {
+        if (c != n && (p->shut & IS_CLOSED)) {
+            hub_map (0);
+            return IR_NO;                       /* (In a thing closed) */
+        }
+    }
+    if (p->where != IW_SQUARE) {
+        hub_map (0);
+        return IR_NO;                           /* (Carried, the character's or a denizen's) */
+    }
+    c = p->x;
+    to = p->sn;
+    n0 = p->y;
+    hub_map (0);
+    if (to != HUB->pc_stratum) {
+        return IR_NO;
+    }
+    HUB->ireq.item = n;
+    HUB->ireq.x = c;
+    HUB->ireq.y = n0;
+    return IR_OK;
+}
+
 static unsigned char o_handle (void);
 unsigned char s_serve (void)
 {
@@ -751,6 +798,9 @@ unsigned char s_serve (void)
         break;
     case IO_SWAP:                               /* (What's in its hands changed over: part 48's) */
         iq.result = swap ();
+        break;
+    case IO_FETCH:                              /* (A thing for an ally to fetch, or a gift: slice 4.8's) */
+        iq.result = fetch_find (iq.name);
         break;
     case IO_USE:                                /* (A thing used up by its key: a bandage, first aid's, part 70's) */
         iq.result = use_key (iq.name);

@@ -100,7 +100,8 @@
 (* ---- Other actions ---- *)
 <jump>           ::= <JUMP> [ <direction> | ( "over" | "onto" ) <object> ]
 <say>            ::= <SAY> <quoted-text> | <VOLUME-SAY> <quoted-text> [ "!" ]   (* yell, scream, whisper *)
-<tell>           ::= <TELL> <object> [ "to" | "about" ] ( <quoted-text> | <object> | <phrase> ) | <TELL> <object> "that" <text> { <text> }   (* "tell the goblin that the bridge is out" *)
+<tell>           ::= <TELL> <object> [ "to" | "about" ] ( <quoted-text> | <object> | <phrase> | <errand> ) | <TELL> <object> "that" <text> { <text> }   (* "tell the goblin that the bridge is out" *)
+<errand>         ::= ( "fetch" | "bring" | "retrieve" ) [ "me" ] <object> | ( "follow" | "come" ) [ "me" ] "at" <number> [ "space" | "spaces" | "square" | "squares" ]   (* an ally's errand (slice 4.8): "tell Grub to fetch the key", "ask the dwarf to bring me the torch", "tell Grub to follow me at 3 squares" *)
 <cast>           ::= <CAST> [ <det> ] [ <spell-word> ] [ "spell" ] [ <at-phrase> ]       (* "concentrate" alone: the spell in use *)
 <eat>            ::= <EAT> <object>
 <drink>          ::= <DRINK> [ "from" <object> | <object> ]

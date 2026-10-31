@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     29                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     30                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -59,7 +59,9 @@
                                                 **   I_RISE's w1 a body's position; 26: an actor's body, BD_*;
                                                 **   27: morale, an actor's heart, lead, power, mood, serve and
                                                 **   contact, AM_*, rs.h's summary's lead, RS_ATTACK's x[0]; 28, its bonds,
-                                                **   AM_LEADS, DE_RALLY: succession) */
+                                                **   AM_LEADS, DE_RALLY: succession; 30: an ally's errands and gifts,
+                                                **   the sway's item, ix, iy and actor, SW_GIVE, I_ROB's a (FE_*),
+                                                **   TE_FETCHED) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -409,7 +411,11 @@ enum {
                                                 **   stratum: or where it stands), a round's work; E_TASK TE_ROBBED;
                                                 **   x[2] RB_HOARD, w1 w2 its faction's leader's home (its hoard
                                                 **   there, b its kind's faction: the takings in it), RB_HIDE, hidden
-                                                **   at its home (kinds.txt's keeps), 2026-10-27 */
+                                                **   at its home (kinds.txt's keeps), 2026-10-27; a FE_ROB.  Or (a,
+                                                **   slice 4.8's) an ally's errand: FE_TAKE, t the thing fetched taken
+                                                **   up where it lies (w1, w2), its own then; FE_GIVE, handed to
+                                                **   the character; FE_GIFT, the character's thing t given it, taken;
+                                                **   E_TASK TE_FETCHED */
     I_RISE,                                     /* Getting up, prone ("get up", "stand", "rise": the book's Rise, a
                                                 **   round, the referee's P_RISE; E_BEAT WB_RISEN or WB_NOT_UP: slice
                                                 **   4.1b's); or to the body's position w1 (POS_*: "crouch", "kneel",
@@ -598,7 +604,9 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
        TE_BODY,                                 /* (TE_BODY: what time did to its body, a venom's course, a wound
                                                 **   healed, the bleeding: the referee's words, RS_DESCRIBE b 4's,
                                                 **   slice 4.3's) */
-       TE_NO_SHOT, TE_LOADED, TE_GATHERED, TE_READIED };    /* (The missiles', slice 4.7's: no shot, b why, SH_*; a
+       TE_NO_SHOT, TE_LOADED, TE_GATHERED, TE_READIED,
+       TE_FETCHED };                            /* (An ally's fetching, a gift taken, slice 4.8's: b the actor plus 1, FT_*
+                                                **   times 16; the thing's kind w1's high byte) */    /* (The missiles', slice 4.7's: no shot, b why, SH_*; a
                                                 **   launcher loaded, b 1 if it was already; the missiles gathered, b how
                                                 **   many; a launcher taken up to shoot, its kind times 256) */
                                                 /* (The last five a journey's, I_TRAVEL's, slice 4.2's, b its place,
@@ -946,6 +954,13 @@ struct actor {
     unsigned char   bonds;                      /* Its bonds to its leaders as last reckoned (points: the denizens', to
                                                 **   see; 2026-10-30) */
 };
+enum { FE_ROB, FE_TAKE, FE_GIVE, FE_GIFT };     /* (I_ROB's a: a robbery; an ally's fetching, the thing (t) taken up
+                                                **   where it lies (w1, w2), handed to the character; a gift, the
+                                                **   character's thing (t) taken by the actor: slice 4.8's) */
+enum { FT_TOOK, FT_GAVE, FT_GONE, FT_HEAVY, FT_HANDS, FT_FEET, FT_GOT, FT_FAR };   /* (E_TASK TE_FETCHED's b's high
+                                                **   bits: taken up, handed over, gone from where it lay, too heavy
+                                                **   for it, its hands full, set down at the character's feet (its own
+                                                **   hands full), a gift taken, no way to it) */
 #define AM_HURT         0x01                    /* (An actor's mood: wounded, */
 #define AM_BERSERK      0x02                    /*   berserk, its courage's test's; */
 #define AM_LEADS        0x04                    /*   a successor at its leader's post: succession's, 2026-10-30; */
@@ -962,8 +977,9 @@ enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIE
 ** referee in the UI's slot, lent it while the UI waits): words to sway it (the referee's test, by the kind's mind:
 ** an animal's by P_ANIMALS alone; words want a tongue in common), a request to an ally, a name given to one, a
 ** look at how it seems, a blow (a stand-in for the fights) */
-enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRIEND, SW_ATTACK, SW_ORDER, SW_NAME };
-                                                /* (dq0.h's V_TALK ... V_NAME in the same order) */
+enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRIEND, SW_ATTACK, SW_ORDER, SW_NAME,
+       SW_GIVE };                               /* (SW_GIVE: a gift, slice 4.8's: the thing's worth and food in the
+                                                **   request, the attitude moved by it; taken, the UI's to hand over) */
 enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH };   /* An ally's request (SW_ORDER's): follow the character,
                                                 **   wait where it is, go back to its own ways, fetch a thing */
 enum { SR_OK, SR_NONE, SR_FAR, SR_TONGUE, SR_BEAST, SR_MINDLESS, SR_AS_FAR, SR_NOT_ALLY, SR_CANT, SR_DOWN };
@@ -984,6 +1000,9 @@ struct sway {
     unsigned char   beast;                      /*   its mind: 1 an animal */
     char            name[12];                   /*   its name (an ally's own, capitalised; else its kind's) */
     unsigned        t;                          /*   the tenths it took the character */
+    unsigned        item, ix, iy;               /* (The UI's: a thing to fetch, its item and where it lies; a gift's
+                                                **   worth in farthings, ix, and 1 if it's food, iy; slice 4.8's) */
+    unsigned char   actor;                      /* (The reply's: the actor it was, plus 1) */
 };
 
 #define IQ_SIZE         16                      /* The UI's intents */

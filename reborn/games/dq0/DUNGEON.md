@@ -1233,6 +1233,8 @@ would be aided if good maps are used."  Its numbers are HOUSE.md's (travel).
 
 What the plans bring later, by the slice or phase that brings it (the detailed plan's and the game plan's):
 
+- **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence): left, other errands
+  ("ask the dwarf to open the door"), "give the bandit 5 pennies" without "to", entertain and bargain.
 - **The command interpreter** (Phase 3C): every command, the player's or a denizen's mind's, one structure of
   abstract actions (VB_*), verbs as data with their defaults, affordances, selectors, a target that persists,
   questions only when unclear; "alias" the command for text aliases ("alias x is dig down"), naming things and rooms

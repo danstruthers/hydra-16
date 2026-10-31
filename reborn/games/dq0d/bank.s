@@ -38,6 +38,10 @@ ovx:        .res        1
             SWFN        stalks, 5
             SWFN        scent, 5
             SWFN        draw_on, 5
+            SWFN        ally, 5             ; (Slice 4.8's: an ally's errands, one in the way, gifts, regard)
+            SWFN        aside, 5
+            SWFN        gift, 5
+            SWFN        regard, 5
             SWFN        sway, 2
             SWFN        start, 4
             SWFN        enlist, 4

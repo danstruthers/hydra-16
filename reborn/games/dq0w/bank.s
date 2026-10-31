@@ -158,7 +158,7 @@ go:
             SWPART      67, 20              ; The character's shot, where a missile falls (wshoot.c); a robbery
                                             ;   (wfight.c's, part 15's room)
             SWPART      68, 14              ; A launcher loaded (wshoot.c: overlay 20's room)
-            SWPART      69, 20              ; (Agent missile's last number, not used: a placeholder, wplace.s)
+            SWPART      69, 15              ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
             SWPART      70, 21              ; Wounds over time: the bodies' time told, a thing used up (wtend.c)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
 
@@ -326,6 +326,7 @@ go:
             SWFN        pc_blow, 15
             SWFN        den_blow, 15
             SWFN        den_rob, 67         ; (Part 15's room, 2026-10-29)
+            SWFN        den_fetch, 69       ; (Slice 4.8's)
             SWFN        bled, 15
             SWFN        body_ask, 70
             SWFN        use_key, 7
