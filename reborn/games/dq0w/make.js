@@ -22,7 +22,19 @@ function define(file, name) {
   return +m[1];
 }
 
+// The overlays' count the same in things.h (OVBANKS, ovbank[OVBANKS + 4]), bank.s (OVBANKS; _ovbank's room OVBANKS +
+// 4) and dq0w.cfg (OV1 ...): a 22nd overlay with bank.s's table left at 25 overran it (2026-10-31: "Nearly ready" hung)
+function checkOverlays(dir) {
+  const hfile = fs.readFileSync(path.join(dir, 'things.h'), 'latin1'), h = define(path.join(dir, 'things.h'), 'OVBANKS');
+  const s = fs.readFileSync(path.join(dir, 'bank.s'), 'latin1'), m = /^OVBANKS\s*=\s*(\d+)/m.exec(s);
+  const ov = (fs.readFileSync(path.join(dir, 'dq0w.cfg'), 'latin1').match(/^\s*OV\d+:/gm) || []).length;
+  if (!m || +m[1] !== h || ov !== h || !/^_ovbank:\s+\.res\s+OVBANKS \+ 4\b/m.test(s) || !/ovbank\[OVBANKS \+ 4\]/.test(hfile))
+    throw new Error('dq0w: the overlays\' count not the same in things.h (' + h + '), bank.s (' + (m ? m[1] : 'none') +
+      ', its _ovbank OVBANKS + 4) and dq0w.cfg (' + ov + ')');
+}
+
 function build({ dir, objdir, say = () => {} }) {
+  checkOverlays(dir);
   require('../dq0/ovlpack.js').pack(objdir, 'dq0w');      // (Its overlays' file packed: obj/games/dq0w.ovp)
   const games = path.join(dir, '..');
   const nkinds = define(path.join(games, 'dq0', 'items.h'), 'NKINDS'), ntk = define(path.join(games, 'dq0', 'theme.h'), 'NTKINDS');
