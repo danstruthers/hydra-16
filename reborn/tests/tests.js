@@ -6949,11 +6949,13 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm',
         'dq0 -p t -s 5 -c /ram/c.hm -k sword -T -a', 'd', 'wait', 'go right', 'attack the rat', 'attack the rat', 'look', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T -a', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait', 'quit',
-        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T -a', 'd', 'wait', 'go right', 'attack the rat']) + 'Ālook\rĀgo left\r' +
+        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T -a', 'd', 'wait', 'go right', 'attack the rat']) +
         dq0Typed(['quit', ...['yes', 'no'].flatMap(ans => ['dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson',
           'wear the mail hauberk', 'defend none', 'd', 'wait', ans, 'quit']), 'echo $status']) },
       start(m) {
         dq0Poke(m, [{ g: 1, line: 'attack the rat', n: 1, k: 0, set: { mood: 8 } }]);   // (The other rat steady: hub.h's AM_STEADY)
+        dq0OnWords(m, [{ g: 3, line: 'attack the rat', n: 1, words: 'You strike at the giant rat', text: 'look\r' },   // (Typed as it fights:
+          { g: 3, line: 'look', n: 1, words: 'You ', text: 'go left\r' }]);   //   the look at its first blow, the walk at the look's words, 2026-10-31)
       },
       expect: ['% echo $status'],
       check(m, out) {
