@@ -3969,6 +3969,11 @@ unsigned char __fastcall__ s_zone_step (unsigned ox, unsigned oy, unsigned x, un
 {
     unsigned char e;
 
+    if ((ox != x || oy != y) && (HUB->pc_wet || (at (sn_, x, y) && C->wany))) {
+        pt0 += wade (pst);                      /* (A walk's step into water, or in it: its time the more, swimming,
+                                                **   part 72's, slice 4.9's) */
+    }
+    hub_map (0);
     if (pfoe && near_foe (x, y)) {
         return 0xFF;
     }
@@ -5845,7 +5850,8 @@ void s_burns_now (void)
         600);                                   /* (The next look a minute on; resting, ten, its light not near burning
                                                 **   low: the long durations' coarser ticks, 2026-10-28; the clock's
                                                 **   slices end there, slice's) */
-    if (bleeds || (HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) || HUB->pcsum.health != H_FINE || HUB->now >= body_due) {
+    if (bleeds || (HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) || HUB->pcsum.health != H_FINE || HUB->now >= body_due ||
+        HUB->now >= HUB->pc_wdue) {        /* (Hunger and thirst's next level: slice 4.9's) */
         bled ();                                /* (The bodies' time with it: the bleeding, the character's wounds,
                                                 **   part 70's, slice 4.3's; nothing to tell, no part swapped in) */
     }

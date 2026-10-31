@@ -620,6 +620,14 @@ static void __fastcall__ answer (struct req* r)
             r->grade = G_MS;                    /* (Getting up: always, the null ruleset's, slice 4.1b's) */
             break;
         }
+        if (r->a == P_SWIM) {                   /* (A minute's swimming, the flat odds: its squares, a middling
+                                                **   swimmer's; it sinks at a critical failure; its breath two
+                                                **   minutes: slice 4.9's) */
+            g = r->grade = flat (r->steps);
+            r->w1 = g == G_CS ? 27 : g == G_MS ? 21 : g == G_MF ? 6 : 0;
+            r->w2 = 120;
+            break;
+        }
         if (r->a == P_BEARING) {                /* (Its bearings: the flat odds, by their own dice, and a failure's
                                                 **   d8 by them too: rshouse.h's, slice 4.2's) */
             bdice ();
@@ -693,6 +701,11 @@ static void __fastcall__ answer (struct req* r)
             strcpy (news, "A wound has healed.");
             r->grade = 2;
             status ();
+        }
+        if (r->x[2]) {                          /* (Dead of thirst, of hunger, drowned: the world's, slice 4.9's) */
+            strcpy (news, r->x[2] == 3 ? "You drown." : r->x[2] == 2 ? "You starve to death." : "You die of thirst.");
+            r->result = 1;
+            r->grade = 2;
         }
         r->b = health (wounds, TOUGH);
         *(unsigned long*) (r->x + 4) = HUB->now + 36000UL;     /* (Asked an hour on, nothing bleeding, unhurt) */

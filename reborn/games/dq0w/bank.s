@@ -161,6 +161,9 @@ go:
             SWPART      69, 20              ; (Agent missile's last number, not used: a placeholder, wplace.s)
             SWPART      70, 21              ; Wounds over time: the bodies' time told, a thing used up (wtend.c)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
+            SWPART      72, 15              ; The water: wading, swimming (wwater.c: slice 4.9's)
+            SWPART      73, 5               ; Eating and drinking (wwater.c: slice 4.9's)
+            SWPART      74, 3               ; Hunger and thirst counted (wwater.c: slice 4.9's)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -328,6 +331,9 @@ go:
             SWFN        den_rob, 67         ; (Part 15's room, 2026-10-29)
             SWFN        bled, 15
             SWFN        body_ask, 70
+            SWFN        wade, 72            ; (The water, hunger and thirst: slice 4.9's)
+            SWFN        water_op, 73
+            SWFN        want_time, 74
             SWFN        use_key, 7
             SWFN        puzzle, 16
             SWFN        take_go, 16

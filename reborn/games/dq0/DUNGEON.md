@@ -1286,9 +1286,15 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
 - **Fights complete** (slice 4.7): built 2026-10-29 (missiles, above; HOUSE.md's missiles); left: a miss's stray at
   one beside the mark (the book's 20%: the referee's MS_STRAY there for it), the set auto-engage range (its hook
   dq0w/wshoot.c's SO_FOE), the denizens throwing things, a denizen changing its weapon for its bow.
-- **Water** (slice 4.9): the plan's rivers, falls and lakes, water levels, swimming and drowning, a well's water from
-  the plan; rain where the surface reaches (shafts, the open), washing scents and prints away; hunger and thirst,
-  eating and drinking.
+- **Water** (slice 4.9, built in part 2026-10-30: HOUSE.md's water, hunger and thirst): the plan's streams and lakes
+  (world.h's RW_*: traced downhill over the regions), a chunk's water (its wet squares, each room's level, a stream's
+  running depth: dq0m/caves.c's wet_chunk), a cistern full, wells from the plan; wading, swimming (the referee's
+  P_SWIM a minute at a time), going under and drowning, flames put out; hunger and thirst over time, eating, drinking,
+  a waterskin filled.  Left: falls (a stream's drop told and heard), the sound layer's running water (its background's
+  BG_WATER from the wet squares), running water washing the traces (wtrace.c's hook), the map's water, things soaked (a
+  scroll ruined), treading water standing still, the denizens' wading and swimming (a beast that won't cross), their
+  hunger and thirst; rain where the surface reaches (shafts, the open), washing scents and prints away; a standing order
+  to eat and drink when needed.
 - **Rock and old places** (slice 4.10): the rock's own kinds and hardness across a stratum, mines and mixed strata
   grown by their own rules, age's collapse and rubble, explosives and sills; caverns across many chunks (the plan's
   features bigger than a chunk, a room followed from chunk to chunk).

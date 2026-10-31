@@ -286,6 +286,15 @@ static void __fastcall__ body_time (struct req* r)
     unsigned char k, dead = 0, bound = 0, n = strlen (news), ninj = pc.ninj, u;
 
     out_t = 0;
+    k = r->x[1];                                /* (Its fatigue from want, the world's hunger and thirst: HOUSE.md's) */
+    if (k > wantfl) {
+        pc.fl += k - wantfl;
+    }
+    wantfl = k;
+    if (r->x[2] && pc.state != HARN_DEAD) {     /* (Dead of thirst, of hunger, drowned: the world's, slice 4.9's) */
+        pc.state = HARN_DEAD;
+        nput (r->x[2] == 3 ? " You drown." : r->x[2] == 2 ? " You starve to death." : " You die of thirst.");
+    }
     if ((!r->actor || r->b) && pc.state != HARN_DEAD) {
         if (!r->a) {
             rest_m = rest_m + m < rest_m ? 0xFFFF : rest_m + m;    /* (At rest: toward its healing rolls) */

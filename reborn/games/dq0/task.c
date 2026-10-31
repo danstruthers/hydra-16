@@ -368,6 +368,10 @@ void __fastcall__ o_bar_text (char* s, unsigned done, unsigned len)
         strcat (s, t);
         strcat (s, "  ");
     }
+    hub_mem (0, &i, &HUB->pc_want, 1);          /* (Hunger and thirst once they matter: slice 4.9's) */
+    if (i && strlen (s) <= 24) {
+        strcat (s, i >= 0x10 ? "thirsty  " : "hungry  ");
+    }
 }
 
 #pragma code-name (push, "OV8CODE")       /* (A walk's beats, a battering's: once overlay 8's, now linked in

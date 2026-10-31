@@ -283,6 +283,8 @@ void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned
 void den_way (void);                            /* Overlay 4: a denizen in the way (its name in lb) */
 struct msg;
 struct fight;
+void __fastcall__ water_words (unsigned w);     /* Overlay 6 (water.c): the water's news, hunger's and thirst's, worded
+                                                **   (an E_BEAT's w1, WB_WATER on: slice 4.9's) */
 unsigned __fastcall__ fight_words (const struct msg* m);    /* Overlay 6: a blow (an E_FIGHT; its record from the
                                                 **   ring copied into lb's end: FIGHT_LB), into lb: the tenths the
                                                 **   character's knocked senseless for, or 0 */

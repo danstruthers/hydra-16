@@ -534,6 +534,10 @@ unsigned char __fastcall__ o_more (unsigned char action)
             worked (action);                    /* (Its lock picked, it forced: a timed work) */
         }
         break;
+    case VB_EAT_OBJECT:                         /* (Eating, drinking: the things' IO_EAT, IO_DRINK, slice 4.9's) */
+    case VB_DRINK:
+        worked (othings (action == VB_DRINK ? IO_DRINK : IO_EAT, cmd.obj.word, "", 0));
+        break;
     case VB_HIDE:                               /* (A thing hidden, begun: main.c's hide, the things' IO_HIDE) */
         worked (IR_OK);
         break;

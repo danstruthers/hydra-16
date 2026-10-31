@@ -206,8 +206,7 @@ static void plan (void)
     if (ring && ring < 4 && !((L->cx * 7 + L->cy * 13 + (unsigned char) s->seed) & 3)) {
         ++ring;                                 /* (A few in four the next ring's, for variety) */
     }
-    /* The water: a hook for the water's step (the plan's own, to come); for now two regions in three have it */
-    uwater = ((L->cx / RCH) * 5 + (L->cy / RCH) * 3 + (unsigned char) (s->seed >> 8)) % 3 != 0;
+    uwater = E->water & RW_WELL;                /* (The water under its region: the plan's, slice 4.9's) */
     k = rings[purpose & 7][ring];
     if (!ring && ufort) {
         k = R_GATE;

@@ -134,6 +134,8 @@ unsigned char __fastcall__ beast_flags (unsigned char kind);   /* (A sheet's kin
 
 /* heal.c (overlay 6): wounds over time (slice 4.3) */
 #define NEWS_N          120
+extern unsigned char wantfl;                    /* (Its fatigue from want: the world's hunger and thirst, RS_TIME's
+                                                **   x[1], slice 4.9's; not rested off) */
 extern char news[NEWS_N];                       /* (What time did to the character, in words: RS_DESCRIBE b 4's) */
 extern char tpart[16];                          /* (RS_TREAT's part said: its text's, copied) */
 struct venom {                                  /* (The character's venom: its healing rate, 0 none; where it's got to;

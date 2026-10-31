@@ -124,6 +124,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
         }
         fixtures (c);                           /* (Its materials, its windows, its traps ...) */
     }
+    wet_chunk (c, &e);                          /* (Its water: slice 4.9's) */
     if (!changes_over (c, x, y) && e.x1 != 0xFF) {
         stock (c, x, y);                        /* (Its things listed, the first time it's made: the world puts them
                                                 **   down and marks it so, STOCKED, as it finds its slot CS_FRESH, in

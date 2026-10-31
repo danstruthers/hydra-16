@@ -106,6 +106,77 @@ static unsigned char __fastcall__ way_at (unsigned char len)
 
 #define VISITED     0x01
 
+/* ---- The water (slice 4.9: DUNGEON.md's water), traced over the plan once its regions are grown, by its own numbers
+** (a hash of the stratum's seed: the plan's dice and the links' after it as they were): water under two regions in
+** three (RW_WELL: a built stratum's wells and cisterns, a cave's lowest hollows pooled: the regions the uses had it in
+** before, uses.c's); and in a natural stratum, streams (one, and one more for each 16 regions, four at most), each
+** from a region of its halls downhill, region by region to the lowest of its neighbours as long as there's one lower,
+** the regions it runs through RW_STREAM, and where it ends, in a hollow of the rock, a lake (RW_LAKE) */
+#pragma code-name (push, "OV5CODE")          /* (Overlay 5's: 4 full) */
+#pragma rodata-name (push, "OV5RODATA")
+
+static unsigned char __fastcall__ wh (unsigned char n, unsigned k)
+{
+    unsigned h = ((unsigned) STRATUM (n).seed ^ 0x5A17) + k * 40503U;
+
+    h ^= h >> 7;
+    h *= 0x2F1B;
+    return (unsigned char) (h >> 8);
+}
+
+void __fastcall__ o_water_plan (unsigned char n)
+{
+    struct stratum* s = &STRATUM (n);
+    unsigned char rx, ry, k, d, bx, by, i, nr;
+    signed char bz;
+
+    for (ry = 0; ry < s->rh; ++ry) {
+        for (rx = 0; rx < s->rw; ++rx) {
+            rg (n, rx, ry);
+            R.water = (rx * 5 + ry * 3 + (unsigned char) (s->seed >> 8)) % 3 ? RW_WELL : 0;
+            rp ();
+        }
+    }
+    if (s->style != ST_NATURAL) {
+        return;
+    }
+    nr = (unsigned) s->rw * s->rh >> 4;
+    for (k = 0; k <= nr && k < 4; ++k) {
+        for (i = 0; i < 8; ++i) {               /* (Its spring: a region of the halls) */
+            rx = wh (n, k * 16 + i * 2) % s->rw;
+            ry = wh (n, k * 16 + i * 2 + 1) % s->rh;
+            if (rg (n, rx, ry)->kind == RG_HALLS) {
+                break;
+            }
+        }
+        while (R.kind == RG_HALLS) {          /* (Downhill only: it ends) */
+            R.water |= RW_STREAM;
+            rp ();
+            bz = R.z;
+            bx = 0xFF;
+            for (d = 0; d < 4; ++d) {
+                if ((unsigned char) (rx + dir_x[d]) < s->rw && (unsigned char) (ry + dir_y[d]) < s->rh &&
+                    rg (n, rx + dir_x[d], ry + dir_y[d])->z < bz) {     /* (Into the rock: it sinks away) */
+                    bz = R.z;
+                    bx = rx + dir_x[d];
+                    by = ry + dir_y[d];
+                }
+            }
+            if (bx == 0xFF) {
+                rg (n, rx, ry)->water |= RW_LAKE;   /* (No lower way on: it pools, a lake) */
+                rp ();
+                break;
+            }
+            rx = bx;
+            ry = by;
+            rg (n, rx, ry);
+        }
+    }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 void __fastcall__ o_plan_stratum (unsigned char n)
 {
     struct stratum* s = &STRATUM (n);
@@ -255,6 +326,7 @@ void __fastcall__ o_plan_stratum (unsigned char n)
             }
         }
     }
+    water_plan (n);
     s->made = 1;
 }
 
@@ -518,7 +590,8 @@ void __fastcall__ o_chunk_edges (unsigned char sn, unsigned cx, unsigned cy, str
             e->ln[e->nland++] = i;
         }
     }
-    if (rg (sn, cx / RCH, cy / RCH)->kind == RG_ROCK && !e->nland) {
+    e->water = rg (sn, cx / RCH, cy / RCH)->water;   /* (Its region's water, the plan's: slice 4.9's) */
+    if (R.kind == RG_ROCK && !e->nland) {
         e->x1 = e->y1 = 0xFF;                   /* (Solid rock: nothing grown) */
     }
 }

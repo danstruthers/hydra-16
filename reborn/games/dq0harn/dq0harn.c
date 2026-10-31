@@ -49,6 +49,7 @@ void __fastcall__ dice_set (struct req* r);
 void __fastcall__ outfit_of (struct req* r);    /* (Overlay 1's: outfit.c, RS_OUTFIT) */
 signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 3's) */
 signed char __fastcall__ draw_test (signed char steps);     /* (Overlay 3's: a map drawn, slice 4.2's) */
+unsigned char wantfl;
 char news[NEWS_N];                              /* (What time did to the character, heal.c's: RS_DESCRIBE b 4's) */
 
 char tpart[16];                                 /* (RS_TREAT's part said) */
@@ -226,6 +227,15 @@ void __fastcall__ s_dig_answer (struct req* r)
         s_quiet_test (r);
     } else if (r->a == P_APPRAISE) {
         r->grade = test_sk (&pc, appraiser[r->b < NAP ? r->b : 0], r->steps);
+    } else if (r->a == P_SWIM) {                /* (A minute's swimming, the book's, Skills 10: its squares, by the
+                                                **   grade's yards (calm water) times its skill index; it sinks at
+                                                **   a critical failure; its breath held Endurance times 10 seconds) */
+        r->grade = test_sk (&pc, HARN_SWI, r->steps);
+        r->result = pc.ml[HARN_SWI] < 10 ? 1 : pc.ml[HARN_SWI] / 10;
+        r->w1 = (r->grade == G_CS ? 9 : r->grade == G_MS ? 7 : r->grade == G_MF ? 2 : 0) * r->result * 3 / SQ_FT;
+        r->result = harn_end (&pc);
+        r->w2 = (r->result << 3) + (r->result << 1);    /* (Times ten: no multiplying, the main RAM's) */
+        r->result = 0;
     } else {
         dig_of (r);
     }
@@ -771,7 +781,7 @@ static void __fastcall__ answer (struct req* r)
         r->b = watch;
         break;
     case RS_TEST:
-        if (r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE) {   /* (Judged by the tool to hand that
+        if (r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE || r->a == P_SWIM) {   /* (Judged by the tool to hand that
                                                 **   suits it best; moving quietly, by its own dice; by the craft that
                                                 **   knows the thing: part 2's) */
             dig_answer (r);

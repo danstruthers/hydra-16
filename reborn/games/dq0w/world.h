@@ -233,7 +233,17 @@ struct chunk {
                                                 **   travel's, slice 4.2's, its way there off by how far its belief's
                                                 **   gone since) */
     }               kept;
+    /* Its water (slice 4.9: DUNGEON.md, water), the maker's from its region's (the plan's RW_*): the squares under it, a
+    ** bit each (wet[y], x's low three bits the bit), and each room's water, then its passages' (wlev[NROOMS]): a still
+    ** pool's surface, feet above the datum, a square under it as deep as that's above its floor; or (its bit in
+    ** wruns) running water, a stream's, its depth in feet wherever it runs; WL_NONE none */
+    unsigned char   wet[CW][CW / 8];
+    signed char     wlev[NROOMS + 1];
+    unsigned char   wruns;
+    unsigned char   wany;                       /* (Any of its squares under water: 1) */
 };
+#define WL_NONE         (-128)
+#define WET_BIT(c, x, y)    ((c)->wet[y][(x) >> 3] & (1 << ((x) & 7)))     /* (Chunk c's square x, y under water) */
 /* (A chunk's kept: the clock in 25.6 seconds, 16 bits, its tenths' middle bytes, no long division (the hub's header in
 ** the window); a passing, seen again 4 minutes or more after it was last; the referee's mapfade, minutes a tenth lost,
 ** in those units (KEPT_UNIT: 60 / 25.6 a minute, near enough, and one more; shifts, no multiplying), twice as long for 4
@@ -264,9 +274,14 @@ struct region {
     signed char     z;                          /* Feet above the datum, halved */
     unsigned char   flags;
     unsigned char   n, w;                       /* Its north edge's way across, its west edge's */
-    unsigned char   spare;
+    unsigned char   water;                      /* RW_*: the water the plan traced through it (slice 4.9's) */
 };
 enum { RG_ROCK, RG_HALLS };
+#define RW_STREAM       0x01                    /* (A region's water: a stream runs along its passages, its chambers'
+                                                **   hollows pooled; */
+#define RW_LAKE         0x02                    /*   its chambers flooded, a lake's, where a stream ends; */
+#define RW_WELL         0x04                    /*   water under it: a built stratum's wells and cisterns sunk to it, a
+                                                **   cave's lowest hollows pooled) */
 #define NO_WAY          0xFF
 
 /* A link: a way between strata (a stairway, a ladder, a shaft), its two ends' squares the same in the frame */
@@ -415,6 +430,7 @@ struct edges {
     unsigned char   x0, y0, x1, y1;             /* The squares in the stratum's bounds (the rest rock) */
     unsigned char   nland;                      /* Links in the chunk: their squares, and their strata.links */
     unsigned char   lx[4], ly[4], ln[4];
+    unsigned char   water;                      /* Its region's water (RW_*: the plan's, slice 4.9's) */
 };
 void __fastcall__ grow_built (struct chunk* c, const struct edges* e, unsigned long seed);
 

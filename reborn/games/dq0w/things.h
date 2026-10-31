@@ -164,6 +164,12 @@ extern unsigned chart_w[5];                     /* (things.c's: the map making's
 const struct burn* __fastcall__ burn_of (unsigned char k);  /* How kind k burns (a copy), or 0: never (a glow), or no
                                                 **   fuel; the catalogue's bank left in the window */
 unsigned char fill (void);                      /* (Part 27, its room) The hub's ireq, IO_FILL's: a light renewed */
+/* The water, hunger and thirst (part 72's, wwater.c: slice 4.9's) */
+unsigned __fastcall__ wade (unsigned step);     /* The character come onto its square: the time more its step takes */
+unsigned char __fastcall__ want_time (unsigned n, unsigned char a);    /* (Part 74's) n minutes' want counted: 1 if
+                                                **   the referee's to be told (its request's x[1], x[2] set) */
+unsigned char __fastcall__ water_op (unsigned char op);     /* (Part 73's) IO_EAT, IO_DRINK, IO_FILL (IR_NONE: not a
+                                                **   waterskin's) */
 void burns_now (void);                          /* (Part 27: dq0w.c) The lights burnt down by the minutes gone */
 extern unsigned long burn_due;                  /*   (when the next minute's due: the main loop's) */
 extern unsigned char burn_ask;                  /*   (or at once: a light's change) */

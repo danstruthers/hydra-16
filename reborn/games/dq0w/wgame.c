@@ -252,7 +252,7 @@ void s_world_keep (void)
     }
     hub_map (0);
     w.magic = WSAVE_MAGIC;
-    w.version = 2;
+    w.version = 3;
     w.sn = HUB->pc_stratum;
     w.face = HUB->pc_face;
     w.pos = HUB->pc_pos;
@@ -265,6 +265,9 @@ void s_world_keep (void)
     w.now = HUB->now;
     w.skew = HUB->pc_skew;
     w.lost = HUB->pc_lost;
+    w.hunger = HUB->pc_hunger;
+    w.thirst = HUB->pc_thirst;
+    w.meals = HUB->pc_meals;
     write (fd, &w, sizeof w);
     hub_map (WORLD_BANK);                       /* (The strata's records, the world bank's) */
     write (fd, WREC->strata, sizeof WREC->strata);
@@ -299,6 +302,9 @@ static void world_back (void)
         HUB->way_open = w.open;
         HUB->pc_skew = w.skew;                  /* (Its bearings as they were: slice 4.2's) */
         HUB->pc_lost = w.lost;
+        HUB->pc_hunger = w.hunger;              /* (Its hunger and thirst: slice 4.9's) */
+        HUB->pc_thirst = w.thirst;
+        HUB->pc_meals = w.meals;
         done_ = w.done;
         hub_map (WORLD_BANK);
         read (fd, WREC->strata, sizeof WREC->strata);

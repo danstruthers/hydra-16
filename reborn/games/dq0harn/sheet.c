@@ -462,11 +462,11 @@ void __fastcall__ o_spent (unsigned t)
             }
             rested += n - tired;
             tired = 0;
-            while (rested >= LEVEL && pc.fl) {
+            while (rested >= LEVEL && pc.fl > wantfl) {   /* (Its want's not rested off: slice 4.9's) */
                 rested -= LEVEL;
                 --pc.fl;
             }
-            if (!pc.fl) {
+            if (pc.fl <= wantfl) {
                 rested = 0;
             }
             continue;
