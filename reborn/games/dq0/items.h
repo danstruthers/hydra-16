@@ -334,10 +334,10 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   its belt; 2 assessed: each one's make and condition too) | the
                                                 **   eyes' sight times 16 (the senses' eye, 0-9); its words in
                                                 **   things_text, IR_NONE none (2026-10-27) */
-#define IO_EAT          (IO_BAR + 15)           /* Eating (name: the rations, "" its own), a meal or its fill;
+#define IO_EAT          (IO_BAR + 16)           /* Eating (name: the rations, "" its own), a meal or its fill;
                                                 **   drinking (IO_DRINK: name its waterskin, the water where it is, ""
                                                 **   either), slice 4.9's: the words in things_text, the time in x */
-#define IO_DRINK        (IO_BAR + 16)
+#define IO_DRINK        (IO_BAR + 17)
 #define IO_USE          (IO_BAR + 14)           /* A thing the character carries used up by its key (name: the
                                                 **   catalogue's tool key, "bandage": a dressing's, the UI's first aid,
                                                 **   slice 4.3's): a lot one less, its last gone, told; IR_NONE none */

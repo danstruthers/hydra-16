@@ -1161,7 +1161,7 @@ static void __fastcall__ limb_words (const struct msg* m)
         return;
     }
     if (k >= WB_WATER - WB_DROP && k <= WB_WANT - WB_DROP) {    /* (The water's, hunger and thirst: slice 4.9's) */
-        beat_words (m->w1);                     /* (Overlay 3's, task.c's) */
+        water_words (m->w1);                    /* (Overlay 6's, water.c's) */
         return;
     }
     hub_mem (KIND_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);

@@ -138,7 +138,7 @@ go:
             SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
             SWPART      50, 21              ; The legs: getting up, a move's start prone, how fast; the body's positions,
                                             ;   the steps' loudness (dq0w.c's: overlay 21's, slices 4.5, 4.6)
-            SWPART      51, 5               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
+            SWPART      51, 22              ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
                                             ;   overlay 1's bank, overlay 8's room part 19's, 2026-10-27; 5's,
                                             ;   2026-10-30: 19's room the denizens' throws)
             SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
