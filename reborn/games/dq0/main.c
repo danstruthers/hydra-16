@@ -83,6 +83,7 @@ void limbs_cmd (void);
 void __fastcall__ pose_words (unsigned w);      /* (Part 14's: the body's position, worded) */
 void __fastcall__ noise_told (const struct msg* m, unsigned char rel);  /* (Part 14's: a denizen's sound, told) */
 unsigned char hold_first (void);
+unsigned char errand (void);                    /* (Part 15's: an ally's errand, a gift, slice 4.8's) */
 unsigned char missiles (void);                  /* (Part 13's: the missiles, slice 4.7's) */
 void __fastcall__ dig_used (unsigned char n);     /* (Part 14's) */
 static char dug_with[16];                       /* (The tool a dig took, named) */
@@ -401,7 +402,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    25                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    26                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -440,7 +441,8 @@ static void sheet (void)
                                                 **   head the longer), a pile of coins' mints in its size, thick and
                                                 **   fuel: the money's, 2026-10-28; 24, the denizens' records' serve
                                                 **   and contact, D_LOST: morale's bonds, 2026-10-30; 25, their
-                                                **   D_RANK and D_PROM: succession) */
+                                                **   D_RANK and D_PROM: succession; 26, the denizens' head's
+                                                **   deeds, a faction's regard: slice 4.8's) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -2223,7 +2225,14 @@ portal:
     case VB_ALLY_DISMISS:
     case VB_NAME_OBJECT:
     case VB_NAME_PLACE:
-        deal (cmd.aux);
+        if (errand ()) {                        /* (A thing to fetch found first, a gift's: part 15's, slice 4.8's) */
+            deal (cmd.aux);
+        }
+        return;
+    case VB_GIVE_OBJECT:
+        if (errand ()) {
+            deal (SW_GIVE);
+        }
         return;
     default:                                    /* (The rest that want nothing but their action; and those the game
                                                 **   doesn't do yet: its verb, as typed) */
@@ -2367,6 +2376,8 @@ void __fastcall__ s_args (int argc, char* argv[])
     unsigned char i;
     char* l;
 
+    seed = hy_time () ^ hy_ticks ();            /* (The clock's, unless -s says: here, part 7's, not main's: the main
+                                                **   RAM's room) */
     for (i = 1; i < argc; ++i) {
         if (!strcmp (argv[i], "-s") && i + 1 < argc) {
             for (seed = 0, l = argv[++i]; *l >= '0' && *l <= '9'; ++l) {
@@ -2473,7 +2484,6 @@ int main (int argc, char* argv[])
     unsigned char k, f;
     char* l;
 
-    seed = hy_time () ^ hy_ticks ();
     ovl_load (find_dirs ());                    /* (The overlays read in, and the swapped parts with them, first) */
     begin (argc, argv);
     while (!quit) {

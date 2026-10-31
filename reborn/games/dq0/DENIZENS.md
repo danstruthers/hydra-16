@@ -158,6 +158,23 @@ moves the attitude two steps, a success one, a critical failure a step back (a l
 hostile), as far as that way goes (talk and deceit to friendly, a threat to wary, calming to indifferent, persuasion
 and befriending to an ally).  A round's work (a threat half that).  The character can also look at how one seems.
 
+**Gifts and bribes** *(slice 4.8, 2026-10-30; HOUSE.md's gifts, for review)*: "give the pennies to the bandit", "give 5
+pennies to the bandit", "offer the dagger to the orc".  The UI finds the thing the character carries (its worth as a
+local takes it, the appraisal's: a unit's times the count; whether it's food) and asks the denizens' task (SW_GIVE):
+within reach (a square) of one with a mind; a beast takes only food.  The book's Rhetoric in the target's interest
+(Skills 12: a persuasion in its interest the easier), the house's steps for the gift's worth to one of its kind's means
+(kinds.txt's standing), food two more; a beast's Animalcraft.  A critical success two steps, a success one, as far as
+friendly (a gift doesn't win an ally); a critical failure an insult, a step back, the gift refused.  Taken, the world
+hands it over (I_ROB FE_GIFT: a count of a lot split off; "The bandit takes the pennies.").
+
+**Reputation** *(slice 4.8; HOUSE.md's reputation, for review)*: each faction keeps its regard for the character, its
+attitude now (the denizens' head's fatt: its newcomers' and those of it not met yet, in the cache, start from it, so it
+colours every member's first attitude) and the points of the deeds it knows of towards its next step (the head's
+deeds).  Harm done to one of its own lowers it at once (above).  A gift worth its means or more to one of it, and harm
+done before its eyes to a foe of its (one of a faction hostile to it, sensing it), raise it: a point each (a gift its
+worth's steps less one), a step each four, to friendly at most (dq0d's s_regard).  A freed prisoner's (no prisoners
+yet) is the hook's.
+
 ### Allies
 
 An ally is still the **denizens' task's**: it moves, fights and acts on its own turn by its own nature, but its goal
@@ -168,6 +185,23 @@ the parser's: follow me, stay here (every ally in earshot), tell Grub to wait, a
 a name given it (name the rat Grub: the head's names, kept) is its own from then on (DUNGEON.md, names).  Left
 waiting out of the character's reach an hour, it goes its own way; harmed, it's hostile.  The party, designed for
 from the start, is the character and its allies.
+
+- **Following at a distance** *(slice 4.8, 2026-10-30)*: "tell Grub to follow me at 3 squares" (the parser's number, the
+  sway's ix): it keeps that far behind (8 at most), not beside; told to follow again without one, beside.
+- **In the way** (D10, slice 4.8): a friendly one or an ally the character's walk stops short of (the world's E_NOWAY,
+  N_DEN) moves aside at once, a square off the way the character comes (not straight on along it), open and no one's,
+  if there's one; not one told to wait (it may be guarding), nor one fighting, fleeing or senseless.  The walk is still
+  stopped ("Grub is in the way."): the character goes on as it's told again.
+- **Fetching** *(slice 4.8; HOUSE.md's fetching, for review)*: "tell Grub to fetch the key", "ask the dwarf to bring
+  me the torch" (the parser's errand: the order's word, the thing its other).  The UI finds the thing first among those
+  the character sees lying about (the world's IO_FETCH: its item, where it lies; not one in a thing closed, carried, or
+  on another stratum: told so, and nobody's asked), then asks the ally (an ally only: the rest "isn't your ally"; the
+  first in earshot if none's named).  The ally walks to it (dq0d's part 5, s_ally: its own errand, not the record's,
+  dropped if it stops being an actor), takes it up beside it (I_ROB FE_TAKE, the world's: still there, within its
+  reach, light enough for it, a free hand), brings it back to where it last sensed the character, and hands it over
+  beside it (FE_GIVE: into the character's hand or pack, else set down at its feet).  Each step told (E_TASK
+  TE_FETCHED: "Grub picks up the key.", "Grub hands you the key.", "Grub can't carry the anvil.", "The dwarf has its
+  hands full: it can't take the torch.").  Failing, it follows again.
 
 ### In the tasks
 
@@ -479,8 +513,10 @@ What the plans bring later, by the slice or phase that brings it:
   a miss's stray striking one beside its mark (an actor struck by another's shot: the one blow between two actors the
   referees take, its mind's dismay and death as any blow's); left: a rock picked up, the denizens' positions but
   prone (a shooter crouched behind cover).
-- **Fetching and influence** (slice 4.8): an ally fetching things (tell Grub to fetch the key), gifts, bribes,
-  reputation by deeds; an ally moving aside for the character (D10).
+- **Fetching and influence** (slice 4.8, built 2026-10-30: fetching, gifts and bribes, reputation, D10, a follower's
+  distance, above): left, an ally asked to do other things ("ask the dwarf to open the door": it "doesn't know how"),
+  "give the bandit 5 pennies" (the two objects without "to": the parser's), a gift to one that isn't a person (an
+  altar), a faction's regard by a freed prisoner, a rescue or a piece of the puzzle, entertain and bargain.
 - **Tunnellers and builders** (slice 4.11): denizens that dig their own ways, by the same rules as the character's.
 - **Psionic and magical denizens** (slices 5.4, 5.7): kinds with talents, shielded minds, casters, the undead.
 

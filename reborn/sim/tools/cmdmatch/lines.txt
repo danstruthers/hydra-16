@@ -326,3 +326,6 @@ hit the door with the bar
 attack the goblin using my sword
 dig down with the dagger
 break the window with the bars
+tell grub to fetch the key
+ask the dwarf to bring me the torch
+tell grub to follow at 3 squares

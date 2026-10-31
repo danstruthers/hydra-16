@@ -127,7 +127,7 @@ go:
             SWPART      38, 16              ; A change record kept and made (store.c's store_put, change)
             SWPART      39, 12              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
-            SWPART      41, 8               ; An opening told with what it shows beyond (dq0w.c's revealed)
+            SWPART      41, 19              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
             SWPART      42, 2               ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 10              ; A walk in the dark set out on: its way felt, a thing stumbled over
             SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
@@ -162,6 +162,7 @@ go:
             SWPART      69, 12              ; A robbery (wfight.c's: part 67's room, overlay 12's, 2026-10-30)
             SWPART      70, 21              ; Wounds over time: the bodies' time told, a thing used up (wtend.c)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
+            SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -327,6 +328,7 @@ go:
             SWFN        pc_blow, 15
             SWFN        den_blow, 15
             SWFN        den_rob, 69         ; (Part 15's room, 2026-10-29; 67's, 2026-10-30)
+            SWFN        den_fetch, 72       ; (Slice 4.8's)
             SWFN        bled, 15
             SWFN        body_ask, 70
             SWFN        use_key, 7

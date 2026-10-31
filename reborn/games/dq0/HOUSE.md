@@ -2205,6 +2205,40 @@ yet: as the creatures' it would be its size and its weapon's skill, weighing on 
 not heard isn't known apart; morale tests only as one's wounded or a fellow falls, not before every action as the book
 has it.)*
 
+## Fetching, gifts and reputation *(slice 4.8, 2026-10-30: drafted for the user to review)*
+
+The book has an ally fetch nothing and says little of gifts: Rhetoric "in the target's best interest" is the easier
+(Skills 12, Rhetoric), the GM's to judge.  The rest is the house's.  *(Every number here is for review.)*
+(dq0d.c's part 5: s_ally, s_aside, s_gift, s_regard; dq0w/wfetch.c, part 72; things.c's fetch_find.)
+
+- **Who fetches:** an ally, by its own turn: it walks to the thing, takes it up beside it, brings it back to where it
+  last sensed the character and hands it over beside it.  Each a round's work (the world's I_ROB, as a robbery is).
+  An errand isn't kept with its record: one that stops being an actor drops it, and follows after.
+- **What it can carry:** one with hands (kinds.txt's body two-legged: folk) up to 50 lb, if a hand's free (it holds
+  fewer than two things); any other in its mouth up to 3 lb (a rat a ration or two, a key, not a sword).
+- **Handed over:** into the character's hand if one's free, else its pack (as a thing taken up is); neither, set down
+  at its feet.
+- **What can be fetched:** a thing the character sees lying about (or on or in an open thing lying there), on its
+  stratum.  Not one in a thing closed, carried by the character or a denizen: told so, and the ally isn't asked.
+- **Moving aside** (D10): a friendly one or an ally a walk stops short of moves a square off the way, at once, unless
+  it was told to wait (guarding), is fighting, fleeing or senseless, or has nowhere to go.  The walk stays stopped: the
+  player walks on.
+- **A gift's worth:** the thing's worth as a local takes it (the appraisal's: coins by their mints), times the count
+  given.  Measured against the receiver's means by its kind's standing (kinds.txt's): none (beasts) a penny, tribal 4d,
+  common folk 12d, people of standing 48d, lords 240d.  Under a quarter of its means a paltry gift, a step against; a
+  quarter none; a half one step for; its means two; twice three; four times or more four.  Food two steps more (all
+  beasts taken as hungry, till hunger comes: slice 4.9).
+- **The test:** Rhetoric (a beast's Animalcraft) at those steps and its attitude's (hostile -3 ... friendly +1, as
+  words') and its kind's sway; no tongue wanted (a gift speaks for itself).  A critical success two steps, a success
+  one, a failure none, as far as friendly (a gift doesn't win an ally: persuasion does); a critical failure an insult:
+  a step back, the gift refused.  Two seconds of the character's time.
+- **Who takes one:** anyone with a mind within reach (a square); the mindless nothing; a beast only food ("The giant
+  rat has no use for it."); one senseless nothing.  A gift taken is the receiver's own (its things, as its kit is).
+- **Reputation:** a faction's regard is its attitude now (as harm done lowers it), raised by deeds it knows of: a
+  gift of its means' worth or more taken by one of it (its steps less one, in points), harm done to a foe of its before
+  one of its eyes (a point a blow).  Four points a step, to friendly at most; its newcomers and those of it not met
+  yet in the cache take the step with it.  Not lowered by a paltry gift, nor raised past friendly.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

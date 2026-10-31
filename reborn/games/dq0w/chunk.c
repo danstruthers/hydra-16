@@ -29,11 +29,18 @@ unsigned char at_bank;
 struct chunk* at_chunk;
 unsigned char* at_tile;
 
+#ifndef CHUNK_READER
+#pragma code-name (push, "SW3CODE")             /* (The world's: its start's alone, part 3's, s_start's: the main RAM's
+                                                **   room, 2026-10-30) */
+#endif
 void __fastcall__ chunks_init (unsigned char who)
 {
     me = who;
     sync_strata ();
 }
+#ifndef CHUNK_READER
+#pragma code-name (pop)
+#endif
 
 void sync_strata (void)
 {
