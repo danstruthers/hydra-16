@@ -189,28 +189,28 @@ static int find_dirs (void)
 
 /* ---- The overlays: libdir/dq0.ovl (fd, find_dirs'), an 8K bank each (dq0.cfg's OV1 ...; the file cut after the
 ** last one used: make.js), read into banks of the game's own.  Each bank's bytes in the file as make.js packs them
-** (ovlpack.js): their count, then them, the linker's fill ($FF) after them left out; each read straight into its bank
-** through the window, the fill put back after it.  The game's start's first words, and a dot for each bank (the
-** screen not made yet: 2026-10-30, the start's progress shown) */
+** (ovlpack.js): packed, a bank on its own (LZ4's block), read and unpacked in place by the unpack library
+** (modules/unpack, ovunpack.inc: 2026-10-31), the linker's fill ($FF) put back after its bytes, so each bank's as ld65
+** made it.  The game's start's first words before it (the screen not made yet: 2026-10-30, the start's progress
+** shown) */
 
 static void __fastcall__ ovl_load (int fd)
 {
-    static unsigned n;
     int first;
     unsigned char k, w = getbank ();
 
-    if (fd < 0 || (first = hy_banks_alloc (sizeof ovbank)) < 0) {
-        hy_exits ("dq0: no overlays (lib/dq0/dq0.ovl), or no RAM banks");
+    write (1, "Dingus Quest Zero is starting ...", 33);
+    if (fd >= 0 && (first = hy_banks_alloc (sizeof ovbank)) >= 0) {
+        for (k = 0; k < sizeof ovbank; ++k) {
+            ovbank[k] = first + k;
+        }
+        if (!ovl_unpack (fd | (sizeof ovbank << 8))) {
+            setbank (w);
+            close (fd);
+            return;
+        }
     }
-    write (1, "Dingus Quest Zero is starting ", 30);
-    for (k = 0; k < sizeof ovbank && read (fd, &n, 2) == 2; ++k) {
-        setbank (ovbank[k] = first + k);
-        read (fd, (void*) 0x8000, n);
-        memset ((void*) (0x8000 + n), 0xFF, 0x2000 - n);
-        write (1, ".", 1);
-    }
-    setbank (w);
-    close (fd);
+    hy_exits ("dq0: no overlays (lib/dq0/dq0.ovl, the unpack library), or no RAM banks");
 }
 
 /* ---- The character: the ruleset's (hmchar's), its file read by the referee */

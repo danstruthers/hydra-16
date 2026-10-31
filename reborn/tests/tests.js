@@ -2327,6 +2327,37 @@ function dq0OnWords(m, list) {
   };
 }
 
+// Dingus Quest Zero's tasks' overlays as they are in their banks (at the first prompt: dq0starttime's), each the same as
+// ld65 made it (obj/games/NAME.hyx.ovl, each bank filled out to 8K with $FF): read from the card packed and unpacked
+// in place by the unpack library (modules/unpack, games/dq0/ovlpack.js, 2026-10-31).  Each task by its name (its task
+// RAM's TA_NAME), its banks by its _ovbank (its labels).  OUT: a line a task, "ok ..." or what's wrong
+function dq0OvlBanks(m) {
+  const out = [], root = path.join(__dirname, '..');
+  for (const name of ['dq0', 'dq0w', 'dq0m', 'dq0harn', 'dq0p', 'dq0d']) {
+    let t = -1;
+    for (let k = 1; k < 16 && t < 0; k++) {
+      let n = '';
+      for (let i = 0; i < 12 && m.taskRam[k][0x230 + i]; i++) n += String.fromCharCode(m.taskRam[k][0x230 + i]);
+      if (n === name) t = k;
+    }
+    if (t < 0) { out.push(name + ': no task'); continue; }
+    const lbl = /^al ([0-9A-F]+) \._ovbank$/m.exec(fs.readFileSync(path.join(root, 'obj', 'games', name, name + '.lbl'), 'latin1'));
+    const ovl = fs.readFileSync(path.join(root, 'obj', 'games', name + '.hyx.ovl'));
+    let n = Math.ceil(ovl.length / 0x2000), bad = 0;
+    const want = k => { const b = Buffer.alloc(0x2000, 0xFF); ovl.copy(b, 0, k * 0x2000, Math.min(ovl.length, (k + 1) * 0x2000)); return b; };
+    while (n > 1 && want(n - 1).every(x => x === 0xFF)) n--;
+    for (let k = 0; k < n; k++) {
+      const b = m.taskBankMem(t, m.taskRam[t][parseInt(lbl[1], 16) + k]), w = want(k);
+      let d = -1;
+      const end = name === 'dq0' && k === 4 ? 0x1000 : 0x2000;  // (dq0's fifth: its second half the theme's, read in as it starts: theme.h's THEME_PLACE)
+      for (let i = 0; i < end && d < 0; i++) if (!b || b[i] !== w[i]) d = i;
+      if (d >= 0) { bad++; out.push(name + '\'s overlay ' + (k + 1) + ' not as ld65 made it, from $' + (0x8000 + d).toString(16).toUpperCase()); }
+    }
+    if (!bad) out.push('ok: ' + name + '\'s ' + n + ' overlays as ld65 made them');
+  }
+  return out;
+}
+
 // Dingus Quest Zero's answers timed (dq0answer's): each command's Enter (the CR as the ACIA has it) to its answer's first
 // letter in the story (want: the words it begins with), and to the story's last letter before the prompt ("> " on
 // the line typed's row) comes back; the status line (reverse video) and the escapes not the story's.  dq0Timer(m),
@@ -4292,16 +4323,19 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0starttime', near: ['time'], what: 'Dingus Quest Zero\'s start timed at the normal pace (the user\'s: a start of some seconds is fine with its progress shown; the start agent\'s figures, 2026-10-30: on the board, at 3.58 MHz, a minute and more, the SD card\'s reading two thirds of it), from Enter on the dq0 line to the first prompt: seed 1 (a stand-in\'s theme) and seed 123456789 (its own history made by themegen, as a game whose seed is the clock\'s), each within its budget; the progress shown all the way (no silence on the screen longer than about 10 s at 3.58 MHz); and the help\'s line said with the first prompt, after the first look',
+      name: 'dq0starttime', near: ['time'], what: 'Dingus Quest Zero\'s start timed at the normal pace (the user\'s: a start of some seconds is fine with its progress shown; the start agent\'s figures, 2026-10-30: on the board, at 3.58 MHz, a minute and more, the SD card\'s reading two thirds of it), from Enter on the dq0 line to the first prompt: seed 1 (a stand-in\'s theme) and seed 123456789 (its own history made by themegen, as a game whose seed is the clock\'s), each within its budget; the progress shown all the way (no silence on the screen longer than about 10 s at 3.58 MHz); and the help\'s line said with the first prompt, after the first look; and each task\'s overlays in its banks as ld65 made them (read packed from the card and unpacked in place: the unpack library)',
       init: 't_rc', cycles: 1500e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p n -s 1 -c /ram/c.hm', 'quit',
         'dq0 -p n -s 123456789 -c /ram/c.hm', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['Dingus Quest Zero is starting', 'The place\'s history is being made', 'The dungeon is being made ready', 'Nearly ready', '% echo $status'],
       // (The budgets (the lead's, 2026-10-30): the start's cycles as measured then, 282M and 372M, with a tenth more;
-      // 252M and 338M since the overlays' files are packed, each bank read straight into its bank, dq0.ovl opened once.
-      // The silence's: 36M cycles, 10 s at 3.58 MHz; 10M and 15M now, the longest.  The help's line: after the first
-      // look's words, only the status line's and the prompt after it)
-      starts: [{ seed: 1, max: 310e6 }, { seed: 123456789, max: 410e6 }], quiet: 36e6,
+      // 252M and 338M since the overlays' files are packed, each bank read straight into its bank, dq0.ovl opened once;
+      // 229M and 311M with the storage driver's quicker block reads; 208M and 289M with the overlays packed (LZ4's
+      // block, the unpack library's: modules/unpack, 2026-10-31), so 229M and 318M now, a tenth more.  The silence's:
+      // 36M cycles, 10 s at 3.58 MHz; 25M now, the longest (the UI's overlays read, before the screen's made).  The
+      // help's line: after the first look's words, only the status line's and the prompt after it.  And every task's
+      // overlays in their banks at the first prompt as ld65 made them (dq0OvlBanks))
+      starts: [{ seed: 1, max: 229e6 }, { seed: 123456789, max: 318e6 }], quiet: 36e6,
       start(m) {
         const a = m.acia, read = a.read, shown = a.shown, self = this;
         let typed = '', g = null, tail = '', esc = 0, text = '';
@@ -4327,7 +4361,7 @@ module.exports = {
           if (v === 0x1B) { esc = 1; return; }
           if (v >= 32 || v === 10) text += String.fromCharCode(v);
           tail = (tail + String.fromCharCode(v)).slice(-2);
-          if (tail === '> ') { g.total = now - g.t0; g.text = text; }
+          if (tail === '> ') { g.total = now - g.t0; g.text = text; if (self.games.length === 1) self.banks = dq0OvlBanks(m); }
         };
       },
       check(m) {
@@ -4340,7 +4374,8 @@ module.exports = {
           const w = g.text.replace(/\s+/g, ' '), h = w.lastIndexOf('Type help for the commands.'), look = w.lastIndexOf('You ');
           if (h < 0 || look < 0 || h < look || w.length - h > 80) f.push('seed ' + s.seed + ': the help\'s line not with the first prompt, after the first look: ' + JSON.stringify(w.slice(-300)));
         });
-        this.notes = this.games.map((g, i) => 'seed ' + (this.starts[i] || {}).seed + ': ' + M(g.total) + ' cycles to the first prompt (' + (g.total / 3579545).toFixed(1) + ' s at 3.58 MHz); the longest silence ' + M(g.quiet) + ', ' + M(g.quietAt) + ' after Enter');
+        f.push(...(this.banks || ['the overlays\' banks not looked at']).filter(x => !/^ok/.test(x)));
+        this.notes = (this.banks || []).filter(x => /^ok/.test(x)).concat(this.games.map((g, i) => 'seed ' + (this.starts[i] || {}).seed + ': ' + M(g.total) + ' cycles to the first prompt (' + (g.total / 3579545).toFixed(1) + ' s at 3.58 MHz); the longest silence ' + M(g.quiet) + ', ' + M(g.quietAt) + ' after Enter'));
         return f;
       },
       sdcard: true

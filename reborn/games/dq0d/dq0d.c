@@ -2263,13 +2263,12 @@ void s_sway (void)
 #pragma rodata-name (pop)
 
 /* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1, OV2, OV3, as make.js packs
-** them, ../dq0/ovlpack.js: each bank's bytes' count, then them, read straight into it through the window, the
-** linker's fill ($FF) put back after them): 0, or -1 */
+** them, ../dq0/ovlpack.js: each bank packed, read and unpacked in place by the unpack library, the linker's fill ($FF)
+** put back after its bytes: ../dq0/ovunpack.inc): 0, or -1 */
+unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
 static int __fastcall__ ovl_load (const char* dir)
 {
     unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Its path in the parts' area: none in it yet) */
-    static unsigned c;
-    unsigned char k;
     int fd, n;
 
     strcpy ((char*) b, dir);
@@ -2280,13 +2279,9 @@ static int __fastcall__ ovl_load (const char* dir)
     ovbank[0] = n;
     ovbank[1] = n + 1;
     ovbank[2] = n + 2;
-    for (k = 0; k < 3 && read (fd, &c, 2) == 2; ++k) {
-        hy_bank (ovbank[0] + k);
-        read (fd, (void*) 0x8000, c);
-        memset ((void*) (0x8000 + c), 0xFF, 0x2000 - c);
-    }
+    n = ovl_unpack (fd | (3 << 8));
     close (fd);
-    return 0;
+    return -n;
 }
 
 #pragma code-name (push, "SW4CODE")

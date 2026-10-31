@@ -1239,22 +1239,32 @@ look).  On the board (3.58 MHz) it took 79 s at seed 1 and 104 s at a big seed, 
 is the storage task reading the card (some 650K bytes at about 275 cycles a byte, spi_recv most of it: the card's
 loops at 18 cycles a bit), the rest the tasks' own work (the world 29M, the UI 14M, the maker 13M, the kernel 9M, the
 denizens 9M, the sound 7M; themegen and themec 23M at a big seed).  So the user's ten seconds (36M cycles) can't be
-had from the card; the levers past the game's own (the overlays compressed, the storage driver's read loop, the game
-on the ROM disk) are the user's to choose (DECISIONS.md).
+had from the card.  Of the levers past the game's own the user chose the storage driver's read loop and the overlays
+packed, not the game on the ROM disk (2026-10-31, DECISIONS.md).  Now: 208M cycles at seed 1 and 289M at the big seed
+(58 s and 81 s on the board).
 
-- **The overlays' files packed** (ovlpack.js, each task's make.js): each bank's bytes' count, then its bytes, the
-  linker's fill ($FF) at its end left out (45K of 462K); each task reads a bank's bytes straight into the bank
-  through the window, one read a bank, and puts the fill back (memset), so its banks are as ld65 made them.  The UI
-  opens dq0.ovl once (find_dirs opened it to look, then ovl_load again).  The start: 252M and 338M cycles (70 s and
-  94 s on the board).
-- **Its progress shown**, no silence longer than about 10 s (the longest now 10M and 15M cycles): "Dingus Quest Zero
-  is starting" and a dot a bank as the UI's overlays are read (before the screen's made); the title; "The place's
+- **The overlays' fill left out** (2026-10-30): the linker's fill ($FF) at each bank's end not on the card (45K of
+  462K); each bank read straight into its bank through the window; the UI opens dq0.ovl once (find_dirs opened it to
+  look, then ovl_load again).  252M and 338M cycles (70 s and 94 s).
+- **The card's block reads quicker** (modules/storage's sd_read, 2026-10-31): a block's 512 bytes clocked in line,
+  the bits as they were (SPI_BIT_IN, 18 cycles each, as proven on the board), only the gap between bytes the shorter:
+  some 164 cycles a byte, not 197 (a file read whole, 305 cycles a byte to 270).  229M and 311M (64 s and 87 s).
+- **The overlays packed** (2026-10-31): each bank on its own in LZ4's block format (ovlpack.js, each task's make.js:
+  421K of bytes to 278K), read and unpacked in place by the unpack library (modules/unpack, a library module of the
+  paged ROM: one copy for every task, none of their main RAM but the call's, games/dq0/ovunpack.inc): a bank's packed
+  bytes read to its end and unpacked from its start, the fill put back after them, so each bank's as ld65 made it (a
+  bank that can't be unpacked in place, or doesn't pack smaller, is stored as it is).  ovlpack.js unpacks each file as
+  the library does as it makes it, and dq0starttime compares every task's banks with ld65's in the emulator.  208M
+  and 289M (58 s and 81 s).
+- **Its progress shown**, no silence longer than about 10 s (the longest now 25M cycles, the UI's own overlays read
+  before its screen's made): "Dingus Quest Zero is starting ..." as the UI's overlays are read; the title; "The place's
   history is being made" and themegen's dots (-p: a dot a step); "The dungeon is being made ready" and a dot each
   second or so as the UI waits on the referee's hello and the world's start (their programs and overlays read); the
   theme's story and the character's entrance; "Nearly ready" and a dot each second or so till the character's first
   ready (the denizens started, the world begun, the first look); then "Type help for the commands." with the first
   prompt, not before the look (main.c's o_dots, starting).
-- **The check**: dq0starttime, its budgets 310M (seed 1) and 410M (seed 123456789), its silence 36M at most.
+- **The check**: dq0starttime, its budgets 229M (seed 1) and 318M (seed 123456789), its silence 36M at most, the
+  banks as ld65 made them.
 
 ## Still to come
 

@@ -11,6 +11,7 @@
             .import     popa, popax
 
             .include    "zeropage.inc"
+            .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 OVMAX       = 7                     ; dq0m.cfg's overlays (the 6th the swapped parts' images, the 7th uses.c)
