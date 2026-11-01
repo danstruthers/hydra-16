@@ -24,11 +24,11 @@ static const char* const relname[8] = {
 };
 static const char* const count[SEE_DENS + 1] = { "", "One", "Two", "Three", "Four" };
 static const char* const few[SEE_DENS + 1] = { "", "one", "two", "three", "four" };
-static const char* const doing[13] = {
-    " feet away.", " feet away, watching you.", " feet away, coming towards you.", " feet away, keeping its distance.",
-    " feet away, following you.", " feet away, waiting.", " feet away, fighting you.", " feet away, fleeing.",
-    " feet away, lying senseless.", " feet away, asleep.", " feet away, eating.", " feet away, at work.",
-    " feet away, on watch."
+static const char* const doing[DO_LEISURE + NPAST] = {   /* (After " feet away") */
+    ".", ", watching you.", ", coming towards you.", ", keeping its distance.", ", following you.", ", waiting.",
+    ", fighting you.", ", fleeing.", ", lying senseless.", ", asleep.", ", eating.", ", at work.", ", on watch.",
+    ", reading.", ", at dice.", ", at a board game.", ", talking.", ", singing.", ", drinking.", ", mending its gear.",
+    ", whittling."                              /* (At leisure, its pastime: 2026-10-31) */
 };
 
 /* The denizens as they're told, alike ones together: each the way it lies (REL8 as the character faces), how far
@@ -123,7 +123,7 @@ static void group (void)
         n = S.den[i].name;
         t.rel = REL8 (bearing (S.den[i].x - S.x, S.den[i].y - S.y), pc_face);
         t.d = apart (S.den[i].x, S.den[i].y);
-        t.doing = S.den[i].doing % 13;
+        t.doing = S.den[i].doing % (DO_LEISURE + NPAST);
         t.n = 1;
         if (REL_BEHIND (t.rel) && n[0] >= 'a') {
             heard |= t.d <= 2;
@@ -195,7 +195,8 @@ static void __fastcall__ tell_one (const struct told* t)
     add (relname[t->rel & 7]);
     add (", ");
     addn (SQ_FT * t->d);
-    add (many && t->doing == DO_SHY ? " feet away, keeping their distance." : doing[t->doing]);
+    add (" feet away");
+    add (many && t->doing == DO_SHY ? ", keeping their distance." : doing[t->doing]);
 }
 
 /* What was told kept: now_'s, its first n */

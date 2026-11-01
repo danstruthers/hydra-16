@@ -558,13 +558,17 @@ enum {
     NEVENTS
 };
 enum { BRG_NONE, BRG_LOST, BRG_KNOWN };
-enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_ALARM };   /* E_DEN's what: a step, a
+enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_ALARM, DE_PASTIME,
+    DE_UP = 16 };                               /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post
                                                 **   (the denizens', a shout: told seen or heard, the UI's, 2026-10-30);
                                                 **   a sleeper's snore, those on watch talking as they go, the alarm
                                                 **   raised by one on its rounds finding a body (the day's, 2026-10-31:
-                                                **   told seen or heard, as a rally) */
+                                                **   told seen or heard, as a rally); a pastime's sound, DE_PASTIME +
+                                                **   its PT_* (dice rattling, a song: heard), a pastime let go as one
+                                                **   rises to act, DE_UP + its PT_* (seen: "The bandit lets the dice
+                                                **   fall."), leisure's, 2026-10-31 */
 enum { NZ_WORK, NZ_BLOW };                      /* E_NOISE's b: work's (a dig's, a door forced ...), a blow at a thing
                                                 **   (a battering's, each blow: the sound task's) */
 enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best it holds (the
@@ -981,7 +985,9 @@ enum { FT_TOOK, FT_GAVE, FT_GONE, FT_HEAVY, FT_HANDS, FT_FEET, FT_GOT, FT_FAR };
 #define AM_BERSERK      0x02                    /*   berserk, its courage's test's; */
 #define AM_LEADS        0x04                    /*   a successor at its leader's post: succession's, 2026-10-30; */
 #define AM_STEADY       0x08                    /*   steady: its heart whole, its courage never tested (a scene's
-                                                **   setting, a test's: the fights' kin that stands, 2026-10-30) */
+                                                **   setting, a test's: the fights' kin that stands, 2026-10-30); */
+#define AM_DRUNK        0x10                    /*   in drink, from its leisure's cups a while (its blows two steps
+                                                **   worse, struck at two easier: the world's, 2026-10-31) */
 enum { BD_TWO, BD_FOUR, BD_SERPENT, BD_MANY, BD_WINGS, BD_NONE, NBODIES };
 enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIED };   /* An attitude, the worst
                                                 **   first (DENIZENS.md): attacks on sight; threatens, keeps off;

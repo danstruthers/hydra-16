@@ -5575,12 +5575,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0shield', outfit: true, asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' shields (the gear3 agent\'s, 2026-10-29; HOUSE.md\'s the denizens\' gear: a shield held blocks, for review), by the denizens\' events, the referee\'s replies and the words: dq0disarm\'s bandits with their own things (the outfits\'), the character (hmchar seed 23, Dodge 90, Sword 90) in a gambeson and a mail hauberk waiting for them: a bandit with its weapon in hand unslinging the shield on its back into its other hand, its round (the world\'s E_BEAT WB_READIES, its kind a shield\'s: "The bandit unslings its round shield."), then blocking the character\'s blow with it (RS_ATTACK\'s reply: the defence D_BLOCK, its c AF_SHIELD, O_BLOCKED: "it fends off the blow with its shield."); a shield\'s block only ever a block (AF_SHIELD with D_BLOCK alone), and by an actor that holds one',
+      name: 'dq0shield', outfit: true, asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' shields (the gear3 agent\'s, 2026-10-29; HOUSE.md\'s the denizens\' gear: a shield held blocks, for review), by the denizens\' events, the referee\'s replies and the words: dq0disarm\'s bandits with their own things (the outfits\'), the character (hmchar seed 23, Dodge 90, Sword 90) in a gambeson and a mail hauberk waiting for them: a bandit with its weapon in hand unslinging the shield on its back into its other hand, its round (the world\'s E_BEAT WB_READIES, its kind a shield\'s: "The bandit unslings its round shield."), then blocking the character\'s blow with it (RS_ATTACK\'s reply: the defence D_BLOCK, its c AF_SHIELD, O_BLOCKED: "it fends off the blow with its shield."); a shield\'s block only ever a block (AF_SHIELD with D_BLOCK alone), and by an actor that holds one.  The scene set (since the denizens\' day and leisure, 2026-10-31: bandits keep watches, and dice and drink at leisure): no day (the environment\'s dq0hour=128, rc\'s), every one about as before',
       init: 't_rc', cycles: 1200e6,
       // (-R 3: the dice's offset that gives the game it was written for, since the dice by who asks,
       // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
-        'echo ml swd 90 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        'echo ml swd 90 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
         "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk' -R 3", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
         'defend block', ...Array(44).fill('wait'), 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -7266,7 +7266,8 @@ module.exports = {
         const show = s => JSON.stringify(men(s).map(a => [a.did, a.doing, a.x, a.y]));
         if (waits.length !== 8 || !waits.every(t => t.after && men(t.after).length >= 3)) f.push('the garrison not about the character as it waits: ' + waits.map(t => show(t.after)).join(' '));
         else {
-          for (const t of waits) if (!on(t.after, 'DO_GUARD').length || !on(t.after, 'DO_SLEEP').length) f.push('not some on watch and some asleep: ' + show(t.after));
+          const both = waits.filter(t => on(t.after, 'DO_GUARD').length && on(t.after, 'DO_SLEEP').length);   // (One on its way to bed, now and then)
+          if (both.length < 6) f.push('not some on watch and some asleep, at most looks: ' + waits.map(t => show(t.after)).join(' '));
           const walked = waits.slice(1).some((t, i) => on(t.after, 'DO_GUARD').some(a => { const b = men(waits[i].after).find(c => c.did === a.did && c.doing === 'DO_GUARD'); return b && (b.x !== a.x || b.y !== a.y); }));
           if (!walked) f.push('those on watch not walking their rounds: ' + waits.map(t => show(t.after)).join(' '));
           const g1 = new Set([0, 1].flatMap(i => on(waits[i].after, 'DO_GUARD').map(a => a.did))), g2 = new Set([5, 6].flatMap(i => on(waits[i].after, 'DO_GUARD').map(a => a.did)));
@@ -7292,6 +7293,69 @@ module.exports = {
         else {
           if (alarms.length !== 1) f.push('the alarm not raised once as the body was found: ' + alarms.length);
           if (!m.body.fatt || m.body.fatt[0] !== 1 || m.body.fatt[m.body.fatt.length - 1] !== 0) f.push('the garrison\'s attitude not a step worse as the body was found: ' + JSON.stringify(m.body.fatt));
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0leisure', near: ['denizens'], what: "Dingus Quest Zero's leisure (the user's, 2026-10-31: \"For what folk are doing, there should be a \\\"leisure time\\\" state where denizens sit around reading, dicing, talking, drinking, playing other games, etc.\"; DENIZENS.md's daily life, HOUSE.md's leisure, for review; dq0d.c's parts 9 and 10), by the actors' records and their events: dq0daily's garrison of men-at-arms (seed 2, their lair south of the start; soldiers keep watches, a third about, its meal then two hours' leisure) watched from the start, half an hour at a time till half past nine: some at leisure (DO_LEISURE and its pastime, one of a soldier's: dice, a board game, talk, song, drink, mending), those of a lair at a social pastime at it together (the same pastime, a few squares apart in the room they gather in), heard at it (DE_PASTIME's events: dice rattling, laughter, singing); one at its cups in drink after (its mood's AM_DRUNK, the hub's, as the next line's typed); then one at leisure put beside the character (a test's scene: its square the hub's and its record's) and struck at, rising to fight and letting its pastime go, told (DE_UP and its pastime); and the garrison's game begun at 13 o'clock (the environment's dq0hour=13), the third with the lair's two (ids 4 and 7) about, at leisure together after its meal",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/s',
+        "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt",
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s', ...Array(7).fill('wait 30 minutes'), 'wait 1 minute', 'attack the soldier', 'quit',
+        'mkdir /ram/u', 'cp /ram/s/theme.txt /ram/u/theme.txt', 'dq0hour=13', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/u', ...Array(3).fill('wait 30 minutes'), 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, []);                                       // (The actors' moods and doings at each line's Enter: m.hearts)
+        const a = m.acia, read = a.read, LEISURE = 13;         // (One at leisure put beside the character as the first wait
+        let typed = '', seen = 0;                             //   of a minute's typed)
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'wait 1 minute' && !seen++ && m.dq0) {
+                const { L, K } = m.dq0.layout(), h = m.dq0.bank(0), at = k => L.actor + k * L.actorSize, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+                const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && h[at(j) + L.aDoing] >= LEISURE);
+                if (k !== undefined) {
+                  const d = h[L.pcFace] & 7, x = (h[L.pcX] | h[L.pcX + 1] << 8) + [0, 1, 1, 1, 0, -1, -1, -1][d], y = (h[L.pcY] | h[L.pcY + 1] << 8) + [-1, -1, 0, 1, 1, 1, 0, -1][d];
+                  const R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]);
+                  w16(at(k) + L.aX, x);
+                  w16(at(k) + L.aY, y);
+                  h[at(k) + L.aSn] = h[L.pcSn];
+                  h[at(k) + L.aPos] = K.POS_STANDING;
+                  R.mem[o + R.X] = x & 255; R.mem[o + R.X + 1] = x >> 8;
+                  R.mem[o + R.Y] = y & 255; R.mem[o + R.Y + 1] = y >> 8;
+                  R.mem[o + R.SN] = h[L.pcSn];
+                  h[L.denSeq] = h[L.denSeq] + 1 & 255;
+                  m.risen = { k, past: h[at(k) + L.aDoing] - LEISURE };
+                }
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], C = require('../sim/lib/dq0meaning.js').constants().names, LEISURE = C.DO_LEISURE, PT = ['read', 'dice', 'game', 'talk', 'sing', 'drink', 'mend', 'whittle'];
+        const waits = T.filter(t => t.line === 'wait 30 minutes'), num = d => typeof d === 'number' ? d : C[d];
+        const men = s => s ? s.actors.filter(a => a.state && a.name === 'soldier') : [], at = s => men(s).filter(a => num(a.doing) >= LEISURE);
+        const show = s => JSON.stringify(men(s).map(a => [a.did, a.doing, a.x, a.y]));
+        const lei = waits.flatMap(t => at(t.after));
+        if (!lei.length) f.push('none at leisure: ' + waits.map(t => show(t.after)).join(' '));
+        if (lei.some(a => !['dice', 'game', 'talk', 'sing', 'drink', 'mend'].includes(PT[num(a.doing) - LEISURE]))) f.push('a pastime not a soldier\'s: ' + JSON.stringify(lei.map(a => a.doing)));
+        const together = waits.some(t => at(t.after).some(a => { const p = num(a.doing) - LEISURE; return p >= 1 && p <= 5 &&
+          at(t.after).some(b => b.did !== a.did && num(b.doing) === num(a.doing) && Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) <= 4); }));
+        if (!together) f.push('no two of a lair at a social pastime together: ' + waits.map(t => show(t.after)).join(' '));
+        const evs = waits.flatMap(t => t.dens.filter(e => e.kind === 'E_DEN'));
+        if (!evs.some(e => e.a > C.DE_PASTIME && e.a < C.DE_UP)) f.push('no pastime heard (DE_PASTIME)');
+        const drinkers = (m.hearts || []).filter(h => h.acts.some(x => x.doing === LEISURE + 5));
+        if (drinkers.length && !(m.hearts || []).some(h => h.acts.some(x => x.mood & 0x10))) f.push('one at its cups never in drink (AM_DRUNK)');
+        if (!m.risen) f.push('none at leisure to put beside the character');
+        else {
+          const ups = T.filter(t => t.line === 'wait 1 minute' || t.line === 'attack the soldier').flatMap(t => t.dens.filter(e => e.kind === 'E_DEN' && e.a === C.DE_UP + m.risen.past));
+          if (!ups.length) f.push('the one put beside the character not told letting its pastime go (DE_UP + ' + PT[m.risen.past] + ')');
         }
         return f;
       },

@@ -93,12 +93,19 @@ struct sight {
 };
 enum { GL_GLOW, GL_LIGHT };                     /* A light far off: a faint glow, a light */
 enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY, DO_FOLLOW, DO_WAIT, DO_FIGHT, DO_FLEE, DO_DOWN, DO_SLEEP, DO_EAT,
-    DO_WORK, DO_GUARD };                        /* A denizen's doing: going about its own business, watching the
+    DO_WORK, DO_GUARD, DO_LEISURE };            /* A denizen's doing: going about its own business, watching the
                                                 **   character, coming towards it, keeping its distance; an ally's:
                                                 **   following it, waiting where it was asked; fighting it, fleeing
                                                 **   it, lying senseless; and its day's (2026-10-31, DENIZENS.md's
                                                 **   daily life: unaware of the character, as roaming is): asleep,
-                                                **   eating, at work, on watch (walking its rounds) */
+                                                **   eating, at work, on watch (walking its rounds), at leisure: its
+                                                **   pastime (PT_*) added, DO_LEISURE + PT_READ ... + PT_WHITTLE */
+enum { PT_READ, PT_DICE, PT_GAME, PT_TALK, PT_SING, PT_DRINK, PT_MEND, PT_WHITTLE, NPAST };   /* A pastime (folk's
+                                                **   leisure, kinds.txt's pastimes: the user's, 2026-10-31): reading,
+                                                **   dicing (and cards, knucklebones: chance), a board game (skill),
+                                                **   talking (and telling stories), singing, drinking, mending its
+                                                **   gear, whittling; dice to drink a lair's together, the rest alone */
+#define PT_SOCIAL(p)    ((unsigned char) ((p) - PT_DICE) < PT_MEND - PT_DICE)
 #define DO_UNAWARE(d)   ((d) == DO_ROAM || (d) > DO_DOWN)   /* (Going about its business, its day's: it hasn't noticed the
                                                 **   character) */
 #define SIGHT_HURRY     0x80

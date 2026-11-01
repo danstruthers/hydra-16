@@ -2401,6 +2401,30 @@ Awareness at half (Skills 11); the rest is the house's.  DENIZENS.md's daily lif
 - **Unaware** *(the house's)*: asleep, eating, at work or on watch, it hasn't noticed the character: it engages no one,
   and one asleep breaks no long wait.
 
+## Leisure *(2026-10-31: the user's words, DECISIONS.md's; drafted for the user to review)*
+
+- **When** *(the house's)*: folk with pastimes (kinds.txt's) have leisure in their time about: a watch-keeper two of its
+  free watch's three hours after its meal (its third's two hours about before its next watch on); a diurnal or nocturnal
+  kind the last four hours of its day before it sleeps (some 4 of its 14 waking hours besides its meals: about a
+  quarter).  The beasts, the dead and folk without pastimes none.
+- **Pastimes** *(the house's, by the peoples)*: reading (the dwarves' elders, the elves, the priests, the lords), dice,
+  cards and knucklebones (bandits, kobolds, orcs, soldiers), a board game (dwarves, soldiers, captains), talking and
+  telling stories, singing (bandits, cultists' hymns, dwarves, elves, soldiers), drinking (kobolds, bandits, orcs,
+  dwarves, soldiers, lords), mending gear, whittling and carving (kobolds, small and white orcs, dwarf miners, elves).
+  Each one's by its number and the day's; a social one (dice to drink) its lair's, the same for all of it at leisure
+  then, by its lair's number and the day's, so they're at it together; reading, mending and whittling alone, at its bed.
+  Not the dice.
+- **Where** *(the house's)*: the social ones gather in a room of their lair's chunk that suits, the first it has of a
+  hall, a guardroom, a barracks, quarters; else at its home.
+- **Less watchful** *(the book's half Awareness for one not paying attention, Skills 19's Legerdemain; the house's
+  reading of it as the senses' layers)*: its sight and hearing halved; at its cups, quartered.
+- **In drink** *(the house's)*: one at its cups is in drink an hour after its last (the hub's AM_DRUNK): its blows two
+  steps worse (10), and blows at it two steps easier, both referees' steps.
+- **Let go** *(the house's)*: risen to act (it senses the character, a foe, harm), its pastime's let go, told as it's
+  seen: "The soldier lets the dice fall.", "The dwarf shuts its book.", "The bandit sets down its cup."
+- **Heard** *(the house's)*: now and then, a third of its moments at it: dice rattling and counters clicking as loud as
+  a snore (2), laughter, singing and cups clinking as loud as talk (3); reading, mending and whittling silent.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

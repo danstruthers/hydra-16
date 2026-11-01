@@ -7,6 +7,7 @@
 #pragma code-name ("OV14CODE")
 #pragma rodata-name ("OV14RODATA")
 
+#include <string.h>
 #include "dq0.h"
 #include "tell.h"
 
@@ -51,9 +52,16 @@ static const char* const said[T_COUNT] = {
     "You're overloaded: you can barely move.",
     "You've lost your bearings: you're no longer sure which way is north.",
     "You know this place: your bearings come back to you.",
+    "dice rattling", "counters clicking", "laughter", "singing", "cups clinking", "", "",
+    "shuts its book", "lets the dice fall", "leaves its game", "stops talking", "stops singing", "sets down its cup",
+    "drops its mending", "drops its knife"
 };
 
 void __fastcall__ o_tell (unsigned char n)
 {
+    if (n & TELL_COPY) {
+        strcpy (heard_what, said[n & ~TELL_COPY]);   /* (A pastime's words, the sounds': leisure's, 2026-10-31) */
+        return;
+    }
     msg (said[n]);
 }
