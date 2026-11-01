@@ -64,10 +64,14 @@ unsigned long pc_out;                           /* (The character senseless till
 unsigned char prones;                           /* (The request's: the attacker prone, RS_PRONE_A; the defender,
                                                 **   RS_PRONE_D: their bodies' positions, the world's) */
 
+/* (A creature's body, its fatigue: tire.c's, overlay 7's) */
+static unsigned char tup;                       /* (The creature in the blow a level more tired by its round: left's) */
+
 static const struct bkind* __fastcall__ unpack (unsigned char who)
 {
     const struct bkind* b;
 
+    tire (aden[(who - 1) & 7], 0);              /* (Its fatigue now, rested since: not kept, only read) */
     sheet_get (crn = aden[(who - 1) & 7]);
     memset (&cr, 0, sizeof cr);
     cr.att[HARN_STR] = bs.att[0];
@@ -85,6 +89,7 @@ static const struct bkind* __fastcall__ unpack (unsigned char who)
     }
     cr.shockhr = cr.state == HARN_SHOCK ? (unsigned char) bs.out : 0;
     cr.bl = bs.bl;
+    cr.fl = bb.fl;                              /* (Its fatigue: in the universal penalty, every test of its) */
     cr.ninj = bs.ninj;
     memcpy (cr.inj, bs.inj, sizeof bs.inj);
     b = beast (bs.kind ? bs.kind - 1 : 0);
@@ -496,6 +501,8 @@ static void new_beast (void)
     }
     b = beast (j);
     sheet_get (n);
+    want_fl (n | (bs.kind != j + 1) << 8, R->c);    /* (Its hunger and thirst's fatigue, the minds'; a new creature
+                                                **   rested: tire.c's) */
     if (bs.kind != j + 1) {
         memset (&bs, 0, sizeof bs);
         bs.kind = j + 1;
@@ -602,6 +609,13 @@ static void __fastcall__ left (unsigned char shy, signed char heart)
             R->c |= AF_CAUTIOUS;
         }
     }
+    if (tup && !(f & FF_FLEES) && cr.state == HARN_CONSCIOUS && !(s->b->flags & (BF_FOLK | BF_MINDLESS))) {
+        m = courage (s->b, heart);              /* (A beast a level more tired by its round: its courage, its fatigue
+                                                **   in it; short of steady, or berserk, it breaks off, HOUSE.md's) */
+        if (m != M_STEADY && m != M_BERSERK) {
+            f |= FF_FLEES;
+        }
+    }
     if (cond_of (&cr) & C_BLEEDING) {
         R->c |= AF_BLEEDING;
     }
@@ -672,6 +686,11 @@ void __fastcall__ o_fight (struct req* r)
         }
     } else {
         attack ();
+    }
+    tup = 0;
+    if (r->result != 0xFF && !(r->w2 & MS_STRAY)) {
+        tup = r->actor ? worked (r->actor) : worked (r->other);    /* (Its round of the fight, the creature's in it:
+                                                **   strenuous work) */
     }
     put (A.word);
     put ("\n");

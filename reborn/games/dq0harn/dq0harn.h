@@ -86,6 +86,27 @@ struct beast {
 #define NSHEETS         256
 typedef char beast_fits[sizeof (struct beast) * NSHEETS <= 0x2000 ? 1 : -1];
 extern struct beast bs;                         /* (A sheet, copied out of the bank) */
+
+/* A creature's body (2026-10-31, every actor's tiring: HOUSE.md's fights): its fatigue, by the character's rules
+** (sheet.c's o_spent: a level 6000 units, strenuous work 2 a tenth, rest a unit a tenth and then a level each ten
+** minutes), kept in a bank of the referee's beside the sheets (fb: 8 bytes each, by the same number), reckoned at
+** need by the clock, never ticked: each round of a fight charged as strenuous work (the book's second variant, a level
+** each five minutes of it), the time since its last round rest */
+struct bbody {
+    unsigned char   fl;                         /* Its fatigue levels (its want's among them: wfl) */
+    unsigned char   wfl;                        /* Those of its hunger and thirst (the minds', RS_NEW_ACTOR's c): not
+                                                **   rested off */
+    unsigned        ex;                         /* Its exertion toward the next level */
+    unsigned long   at;                         /* The clock it was last reckoned at (its last round's end; 0 never) */
+};
+#define BBODIES         (NSHEETS * sizeof (struct bbody))
+typedef char bbody_fits[sizeof (struct bbody) == 8 ? 1 : -1];
+extern unsigned char fb;                        /* (Their bank) */
+extern struct bbody bb;                         /* (tire.c's, overlay 7's: a body, copied out) */
+unsigned char __fastcall__ tire (unsigned char n, unsigned w);  /* Sheet n's body brought up to now (bb), w tenths of
+                                                **   strenuous work ending now: 1 a level more (not kept) */
+unsigned char __fastcall__ worked (unsigned char who);  /* Actor who's round of a fight charged, kept: 1 a level more */
+void __fastcall__ want_fl (unsigned n, unsigned char k);    /* Sheet n's want's fatigue levels k (n | 0x100: anew) */
 extern unsigned char aden[NACTORS];             /* (Each actor's record: its sheet's number) */
 void __fastcall__ sheet_get (unsigned char n);  /* Sheet n into bs */
 void __fastcall__ sheet_put (unsigned char n);  /*   and back */

@@ -400,7 +400,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    27                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    28                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -441,7 +441,9 @@ static void sheet (void)
                                                 **   and contact, D_LOST: morale's bonds, 2026-10-30; 25, their
                                                 **   D_RANK and D_PROM: succession; 26, the denizens' head's
                                                 **   deeds, a faction's regard: slice 4.8's; 27, world.dat's
-                                                **   hunger and thirst: slice 4.9's) */
+                                                **   hunger and thirst: slice 4.9's; 28, the denizens' records' want (ate,
+                                                **   drank), the creatures' bodies after their sheets (beasts.dat:
+                                                **   their fatigue), 2026-10-31) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;

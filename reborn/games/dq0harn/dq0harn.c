@@ -568,6 +568,7 @@ void __fastcall__ s_save_pc (struct req* r)
 ** creature's asked for, a game carried on) */
 
 static unsigned char sb;                        /* Their bank */
+unsigned char fb;                               /* (Their bodies' bank: each one's fatigue, struct bbody, 2026-10-31) */
 static unsigned char piece[256];                /* (The bank through the main RAM, a piece at a time) */
 struct beast bs;
 unsigned char aden[NACTORS];
@@ -601,15 +602,15 @@ void __fastcall__ s_beasts (unsigned char back)
         strcat (path, "/beasts.dat");
         fd = back ? open (path, O_RDONLY) : open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     }
-    for (off = 0; off < 0x2000; off += sizeof piece) {
+    for (off = 0; off < 0x2000 + BBODIES; off += sizeof piece) {     /* (The sheets, then their bodies: fb's) */
         if (!back) {
-            bread (sb, (char*) 0x8000 + off, piece, sizeof piece);
+            bread (off < 0x2000 ? sb : fb, (char*) 0x8000 + (off & 0x1FFF), piece, sizeof piece);
             write (fd, piece, sizeof piece);
         } else {
             if (fd < 0 || read (fd, piece, sizeof piece) != sizeof piece) {
                 memset (piece, 0, sizeof piece);
             }
-            bwrite (sb, (char*) 0x8000 + off, piece, sizeof piece);
+            bwrite (off < 0x2000 ? sb : fb, (char*) 0x8000 + (off & 0x1FFF), piece, sizeof piece);
         }
     }
     if (fd >= 0) {
@@ -667,7 +668,13 @@ static unsigned char dk, drep;                  /*   the next, and the face afte
 static unsigned char dlog[DFIX], dl;            /* The sides of the first dice rolled, how many kept */
 static unsigned drolled;                        /* The dice rolled */
 
-static int __fastcall__ fixed (unsigned sides)
+int __fastcall__ fixed (unsigned sides);        /* (Its stub, bank.s's: part 2's since 2026-10-31, the main RAM's room;
+                                                **   a test's alone) */
+
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
+int __fastcall__ s_fixed (unsigned sides)
 {
     ++drolled;
     if (dl < DFIX) {
@@ -678,9 +685,6 @@ static int __fastcall__ fixed (unsigned sides)
     }
     return drep ? drep : 1 + (int) random (sides);
 }
-
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
 
 void __fastcall__ s_dice_set (struct req* r)
 {
@@ -921,10 +925,11 @@ static int __fastcall__ ovl_load (const char* dir)
     ovbank[0] = first;                          /* (The rest after it: ovl_unpack's) */
     n = ovl_unpack (fd | (OVLS << 8));
     close (fd);
-    if (n || (n = hy_banks_alloc (1)) < 0) {
+    if (n || (n = hy_banks_alloc (2)) < 0) {
         return -1;
     }
     sb = n;
+    fb = n + 1;                                 /* (The bodies' bank after the sheets': hy_banks_alloc's run) */
     return 0;
 }
 
