@@ -33,7 +33,8 @@ unsigned char dens_seen (void)
                 hub_map (SIGHT_BANK);
                 memcpy (&SIGHT->den[n], &sact.x, offsetof (struct sden, gear));
                 SIGHT->den[n++].gear = g;
-                s = 0x8000U | (unsigned) (g & 7) << 12 | sact.doing << 8 | sact.den;
+                s = 0x8000U | ((unsigned) (g & 7) << 12 ^ (unsigned) sact.doing << 8) | sact.den;   /* (Its doing up to
+                                                **   20 since leisure's, 2026-10-31: mixed with its gear, not lost) */
             }
         }
         if (s != sig[k]) {
