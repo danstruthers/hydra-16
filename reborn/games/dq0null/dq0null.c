@@ -36,6 +36,11 @@ static unsigned char tended;                    /* (The character's wounds tende
 static unsigned rest_m;                         /* (Its rest toward the next wound healed: minutes, RS_TIME's) */
 static char news[72];                           /* (What time did to it: RS_DESCRIBE b 4's) */
 static unsigned char sheet[NSHEETS];
+static unsigned char sround[NSHEETS];           /* (Each creature's rounds fought, toward its tiring: the null's simple
+                                                **   way, 2026-10-31: a level each 30, a step the worse in its tests; */
+static unsigned slast[NSHEETS];                 /*   the clock's minute of its last, 30 rounds rested off each ten
+                                                **   minutes since) */
+#define TIRE_N          30
 static unsigned char aden[NACTORS];             /* (Each actor's record) */
 static unsigned char restored;
 static char hurt[80];                           /* The last harm's words */
@@ -341,8 +346,12 @@ static void __fastcall__ sheets (unsigned char back)
     if ((fd = back ? open (path, O_RDONLY) : open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
         if (back) {
             read (fd, sheet, sizeof sheet);
+            read (fd, sround, sizeof sround);   /* (A save before them: none, rested) */
+            read (fd, slast, sizeof slast);
         } else {
             write (fd, sheet, sizeof sheet);
+            write (fd, sround, sizeof sround);
+            write (fd, slast, sizeof slast);
         }
         close (fd);
     }
@@ -457,6 +466,25 @@ static unsigned char pc_shield (void)
 ** A missile's (RS_MISSILE, slice 4.7's, the null's simple way): the same flat test, two steps the worse a range's band
 ** past the short, four behind cover, two the easier unaware of it; a stray's a hit, no test; its words the kind's name */
 
+/* A creature's tiring (the null's simple way, 2026-10-31: every actor's): sheet n's rounds rested off by the clock
+** (30 each ten minutes since its last), and a round more (w 1: a round of a fight); its fatigue levels after */
+static unsigned char __fastcall__ tired (unsigned char n, unsigned char w)
+{
+    unsigned m = (unsigned) (HUB->now / 600), d = m - slast[n];
+
+    if (d >= 10) {
+        d /= 10;
+        sround[n] = d >= TIRE_N || d * TIRE_N >= sround[n] ? 0 : sround[n] - d * TIRE_N;
+    }
+    if (w) {
+        if (sround[n] < 255) {
+            ++sround[n];
+        }
+        slast[n] = m;
+    }
+    return sround[n] / TIRE_N;
+}
+
 static void __fastcall__ attack (struct req* r)
 {
     struct rs_effect* e = (struct rs_effect*) r->x;
@@ -489,6 +517,10 @@ static void __fastcall__ attack (struct req* r)
     }
     dw = d ? &sheet[aden[(d - 1) & 7]] : &wounds;
     t = d ? BTOUGH : TOUGH;
+    if (!(mw & MS_STRAY)) {
+        st += a ? -tired (aden[(a - 1) & 7], 0) : tired (aden[(d - 1) & 7], 0);    /* (A creature tired, the worse at
+                                                **   it: a step a level, attacking or defending) */
+    }
     if (!(f & RS_PRONE_A)) {                    /* (The blow's die; its holder's shield, if it's free this round) */
         k = d ? ((d - 1) & 7) + 1 : 0;
         if ((sh = d ? ashd[k - 1] : pc_shield ()) != 0 && HUB->now >= sfree[k]) {
@@ -538,6 +570,14 @@ static void __fastcall__ attack (struct req* r)
             r->grade = FF_D_DEAD;
         } else if (d && !G_OK (flat ((f & 1 ? -4 : 0) + ht))) {
             r->grade = FF_FLEES;
+        }
+    }
+    if (!(mw & MS_STRAY) && r->result != O_RISE && !(r->grade & (FF_D_DEAD | FF_FLEES))) {
+        k = aden[((a ? a : d) - 1) & 7];        /* (The creature's round fought; a level more, its courage, the worse
+                                                **   by it: failed, it breaks off) */
+        n = tired (k, 0);
+        if (tired (k, 1) > n && !G_OK (flat (ht - n - 1))) {
+            r->grade |= FF_FLEES;
         }
     }
     put ("\n");
@@ -605,7 +645,7 @@ static void __fastcall__ answer (struct req* r)
         }
         aden[k] = r->w1;
         memset (r->x, 0, sizeof (struct rs_summary));
-        ((struct rs_summary*) r->x)->cond = sheet[r->w1] >= BTOUGH ? C_DEAD : 0;
+        ((struct rs_summary*) r->x)->cond = (sheet[r->w1] >= BTOUGH ? C_DEAD : 0) | (tired (r->w1, 0) ? C_FATIGUED : 0);
         ((struct rs_summary*) r->x)->health = health (sheet[r->w1], BTOUGH);
         ((struct rs_summary*) r->x)->attacks = 1;
         ((struct rs_summary*) r->x)->power = 10;

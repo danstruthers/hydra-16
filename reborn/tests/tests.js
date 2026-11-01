@@ -2213,13 +2213,13 @@ const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
 // its stratum, its attitude: dq0d's, so the world and the minds agree) and the world's den_seq bumped (what the
 // character sees of them looked at again).  The test's own setting up, as dq0Aware's
 // The denizens' records (dq0d's pb bank, its label's: the task the hub's task[T_DENIZENS]): { mem, at(i) the record
-// i's offset, and its fields' }: dq0d.c's struct pop (its head 330 bytes since slice 4.8's regard, 64 lairs of 17), struct den (28 bytes: its
+// i's offset, and its fields' }: dq0d.c's struct pop (its head 330 bytes since slice 4.8's regard, 64 lairs of 17), struct den (30 bytes since its want, 2026-10-31: its
 // flags at 1, its stratum at 2, its id at 4, its square at 8 and 10, its attitude at 16, its serve and contact at 26 and 27)
 let dq0RecPb = 0;
 function dq0Rec(m) {
   const h = m.dq0.bank(0), t = h[12 + 2], lbl = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
   const pb = dq0RecPb || (dq0RecPb = parseInt(/^al ([0-9A-F]+) \._pb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][pb]) || new Uint8Array(0x2000);
-  return { mem, at: i => 330 + 64 * 17 + 28 * i, FLAGS: 1, SN: 2, ID: 4, X: 8, Y: 10, ATTITUDE: 16, SERVE: 26, CONTACT: 27 };
+  return { mem, at: i => 330 + 64 * 17 + 30 * i, FLAGS: 1, SN: 2, ID: 4, X: 8, Y: 10, ATTITUDE: 16, SERVE: 26, CONTACT: 27, ATE: 28, DRANK: 29 };
 }
 
 function dq0Poke(m, pokes) {
@@ -2282,6 +2282,54 @@ function dq0Poke(m, pokes) {
             }
           }
           m.hearts.push({ g, line: typed, n: seen[typed], acts });
+        }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+}
+
+// The creatures' bodies in the referee's bank (dq0harn's fb: tire.c's struct bbody, 8 bytes by the sheet's number, a
+// denizen's record's: 2026-10-31, every actor's tiring): { mem, at(n) }, fl at 0, wfl at 1, ex at 2, at (the clock)
+// at 4
+let dq0BodyFb = 0;
+function dq0Body(m) {
+  const h = m.dq0.bank(0), t = h[12 + 3], lbl = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1');
+  const fb = dq0BodyFb || (dq0BodyFb = parseInt(/^al ([0-9A-F]+) \._fb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][fb]) || new Uint8Array(0x2000);
+  return { mem, at: n => 8 * n };
+}
+// At each line's Enter, each actor's body (m.bodies: { g, line, name, den, fl, wfl, ex, at }) after the pokes made then
+// (each { g: the game, 1 on, line, n: its nth time typed in it, name: the actor's, fl, ex, at: its body's set })
+function dq0BodyPoke(m, pokes) {
+  const a = m.acia, read = a.read;
+  let typed = '', g = 0, seen = {};
+  m.bodies = [];
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^dq0 /.test(typed)) { ++g; seen = {}; }
+        seen[typed] = (seen[typed] || 0) + 1;
+        const h = m.dq0 && m.dq0.bank(0);
+        if (h && g) {
+          const { L } = m.dq0.layout(), B = dq0Body(m);
+          for (let k = 0; k < L.nactors; k++) {
+            const o = L.actor + k * L.actorSize;
+            let n = '';
+            for (let i = 0; h[o + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[o + L.aName + i]);
+            if (!n) continue;
+            const den = h[o + L.aName + 12], q = B.at(den), mem = B.mem;
+            let poked = false;
+            for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed] && p.name === n) {
+              if (p.fl !== undefined) mem[q] = p.fl;
+              if (p.ex !== undefined) { mem[q + 2] = p.ex & 255; mem[q + 3] = p.ex >> 8; }
+              if (p.at !== undefined) for (let i = 0; i < 4; i++) mem[q + 4 + i] = p.at >>> (8 * i) & 255;
+              poked = true;
+            }
+            m.bodies.push({ g, line: typed, name: n, den, fl: mem[q], wfl: mem[q + 1], ex: mem[q + 2] | mem[q + 3] << 8,
+              at: (mem[q + 4] | mem[q + 5] << 8 | mem[q + 6] << 16 | mem[q + 7] << 24) >>> 0, poked });
+          }
         }
         typed = '';
       } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
@@ -5914,6 +5962,39 @@ module.exports = {
         else if (rounds(ps) !== 1) f.push('the pass, engaged, not charged as a round of strenuous work: ' + rounds(ps) + ' charged in it');
         const work = T.reduce((n, t) => n + rounds(t), 0), fought = blows + ups + (engaged ? 1 : 0);
         if (!blows || work !== fought) f.push('a fight\'s rounds not charged as strenuous work: ' + work + ' charged, ' + fought + ' rounds fought (' + blows + ' blows, ' + ups + ' struggles up, the pass)');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0bodies', near: ['fight', 'denizens'], what: "Dingus Quest Zero's every actor tiring in a fight (2026-10-31, the brief's every actor's body: HOUSE.md's fights, the denizens' bodies; the character's rules, the book's second variant of combat fatigue, a level each five minutes of active combat): seed 7's ghoul (dq0disengage's scene: the character weak with its sword in a gambeson and a mail hauberk), the fight as the character waits; the ghoul's body in the referee's bank (dq0harn's fb, tire.c's struct bbody by its sheet's number) charged for its rounds (its exertion, 2 units a tenth, a round 100 tenths at most since it was last reckoned), kept between them.  And a tired beast breaking off: a second game the same, the ghoul's body set a breath short of its thirteenth level (dq0BodyPoke's: twelve levels, 5990 units, never reckoned) as the wait's typed; its next round a level more, its courage tested with its fatigue in it, and it breaks off (an E_FIGHT with FF_FLEES, the ghoul fleeing)",
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 20 >> /ram/c.hm',
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
+        'd', 'wait', 'look', 'quit',
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
+        'd', 'wait', 'look', 'quit', 'echo $status']) },
+      start(m) {
+        dq0BodyPoke(m, [{ g: 2, line: 'wait', n: 1, name: 'ghoul', fl: 12, ex: 5990, at: 0 }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], bodies = m.bodies || [];
+        const gh = g => bodies.filter(b => b.g === g && b.name === 'ghoul');
+        // (Game 1: the ghoul's rounds charged: its body reckoned (at), its exertion the more after the fight)
+        const b1 = gh(1), last = b1[b1.length - 1];
+        if (!b1.length) f.push('game 1: no ghoul among the actors');
+        else if (!last.at || last.fl * 6000 + last.ex < 200) f.push('game 1: the ghoul\'s rounds not charged: ' + JSON.stringify(b1));
+        const fights1 = T.filter(t => t.game === 0).reduce((n, t) => n + t.dens.filter(e => e.kind === 'E_FIGHT' && e.out !== 'FO_BLED').length, 0);
+        if (last && last.fl * 6000 + last.ex > 200 * fights1) f.push('game 1: the ghoul charged more than its rounds (' + fights1 + ' blows): ' + JSON.stringify(last));
+        // (Game 2: set a breath short of a level more, its next round tires it, and it breaks off)
+        const p = bodies.find(b => b.g === 2 && b.poked);
+        if (!p) f.push('game 2: the ghoul\'s body not set (not an actor as the wait was typed)');
+        const flee = T.filter(t => t.game === 1).flatMap(t => t.dens).filter(e => e.kind === 'E_FIGHT' && (e.ff & 0x10));
+        if (!flee.length) f.push('game 2: the tired ghoul didn\'t break off (no blow with FF_FLEES): ' + T.filter(t => t.game === 1).map(dq0Evs).join(' | ').slice(0, 1500));
+        const b2 = gh(2), l2 = b2[b2.length - 1];
+        if (p && (!l2 || l2.fl < 13)) f.push('game 2: the ghoul not a level more tired: ' + JSON.stringify(b2));
+        this.notes = [JSON.stringify(bodies)];
         return f;
       },
       sdcard: true

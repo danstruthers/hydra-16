@@ -2284,8 +2284,51 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
 - **Drinking** *(every ruleset's)*: a pint takes six hours of thirst off; "drink" drinks as many pints as it wants
   (half a minute each), from the water where it stands (its fill) or a well within reach, else from its waterskin a
   pint at a time (four pints; "drink from the waterskin" from it whatever's about).  "fill my waterskin" in the water or by a well, a minute.  Not thirsty (under an hour), refused.
-- **The denizens** *(every ruleset's, for later)*: their hunger, thirst and larders, and a beast keeping out of deep
-  water unless it swims, aren't built yet (DENIZENS.md's still to come).
+- **The denizens** *(2026-10-31, every actor's body: below, the denizens' bodies)*.
+
+## The denizens' bodies *(2026-10-31: the character's rules for every actor, the house's where it's cheaper; drafted for the user to review)*
+
+- **Tiring in a fight** *(both referees)*: every actor tires as the character does, by the same rule (Moving and
+  tiring, above; the book's second variant of combat fatigue, the user's of 2026-10-21): each round of a fight it's in
+  (its own blow, a shot, or a blow at it) strenuous work, a level each five minutes of it; the time since its last round
+  rest, its exertion worn off first, then a level each ten minutes, its want's levels never (HarnMaster's: the referee's
+  bank of the creatures' bodies beside their sheets, dq0harn/tire.c, reckoned by the clock as it's wanted, never
+  ticked; a round charged once, however many blows are in it; kept with the sheets in the save's beasts.dat).  Its
+  fatigue levels are in the universal penalty of every test of its (its blows, its defences, its courage, its stealth),
+  and its summary's tired (C_FATIGUED).  A beast (neither folk nor mindless) that its round leaves a level more tired
+  tests its courage, its fatigue in it: short of steady (or gone berserk), it breaks off and flees, as one broken does.
+  The null ruleset's simple way: its rounds fought counted, a level each 30 (a step the worse in its tests, attacking
+  or defending), 30 rested off each ten minutes since its last; a level more, its courage (the flat odds, its heart less
+  its levels) or it breaks off, any creature.  *The house's*: the denizens move at a walk (their paces to come), which
+  tires them a level a day and no more than their rest takes off, so only their fights are counted.
+- **Water** *(every ruleset's)*: each kind's way with it (kinds.txt's water): the deepest it wades, in feet (by its
+  size: a rat 2, a kobold or a small orc 2, the other Gargun and the dwarves 3, men and the dead 4), whether it swims
+  deeper (the bestiary's swimmers: the giant rat, the cave bear, the cave adder, the lindworm, the elf), keeps out of
+  water altogether (the cave spider: 0), or flies over it (the bat, the shade).  It goes onto no square deeper than it
+  wades unless it swims or flies (its steps, its coarse moves, its dart past the character, its placing in its lair,
+  its roaming): so it goes round, or stops at the water's edge.  Its step into water takes half again as long to half
+  its depth, twice as long deeper, a swim twice (the character's wading, its depth by its size).  *Not yet*: a swim
+  tiring it (strenuous work), a denizen drowning (one knocked senseless in water, or forced in over its depth: none is
+  yet, as none goes in), a stream's current.
+- **Hunger and thirst** *(every ruleset's: the user's of 2026-10-21 for every actor; the house's numbers)*: those that
+  eat (not the dead), kept cheaply in each denizen's record: the clock it last ate and drank (in units of the clock's
+  high word, near enough 1.8 hours), reckoned as it's wanted, never ticked.  Hungry about 9 hours on, very hungry a
+  day, starving three days, wasting away ten; thirsty about 9 hours, very 16, parched a day, dying two (the
+  character's, a little coarser).  Away from the character, as it goes about its lair: thirsty, it drinks (its lair's
+  water, or what it finds: *the house's*, there's always some within its range); hungry, folk eat at their larder (the
+  daily round's meals, a slot in the day, to come: its hook), a beast ranges twice as far for prey and finds some now
+  and then (one time in eight, by its number and the clock, not the dice).  Near the character, the same: it drinks
+  standing in water, or at its lair; folk eat at their lair; a hungry beast that doesn't sense the character finds
+  prey now and then, else wanders twice as far; a very hungry hunter (a nose for prey, or a killer) that senses the
+  character hunts it (hostile).  Food given it is the more welcome the hungrier it is (a gift's two steps more hungry,
+  four very hungry, beside food's own two), and it eats it.  The want's fatigue (HarnMaster's, as the character's: 1,
+  2 and 4 levels for each of hunger and thirst past the first) the referee's, told as it's made an actor, never rested
+  off; the null ruleset none.  None dies of it (*the house's*: one unseen a long while has fended for itself, its want
+  held at about fifteen days).
+- **A hurt denizen rests** *(every ruleset's; slice 4.3's leftover)*: one wounded (its mood's hurt, as its fellows see
+  it), not an ally, with nothing after it (not hostile and sensing the character), goes home to its lair and rests
+  there, a minute at a time.  *Not yet*: one tending another's wounds (a folk creature binds its own bleeding only),
+  stings (no stinging kind in the game), creatures envenomed.
 
 ## Decided, not yet built
 
