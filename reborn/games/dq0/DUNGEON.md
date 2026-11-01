@@ -1146,6 +1146,31 @@ often the easier.  The numbers are HOUSE.md's (bearings underground).
   truly diagonals, which a passage won't take but where it's a diagonal way (HOUSE.md's diagonal ways).
 - **The map** goes by the belief too (its turning, its compass): the map's, slice 4.2's.
 
+### The time of day believed (2026-10-31)
+
+The user (2026-10-31): timekeeping fuzzy unless the outside can be seen (a window, a skylight, a shaft); after a sleep
+the hour quite arbitrary, drifting further from known as play goes on, unless the character has absolute timesense;
+corrected whenever the sun can be seen and the direction is known, or by watching it a while (DECISIONS.md's).  The
+numbers are HOUSE.md's (the time of day believed).
+
+- **A true clock and a belief.**  The world's clock (the hub's now) and the hour the game began (dusk; a test's
+  `dq0hour`: the denizens' days go by the same) are the truth; the character's time is the hub's tb, the world's (part
+  76, wtime.c): its error in minutes against the true time (skew) and how far off it knows it may be (unc), kept with
+  the game (world.dat), as its north is (the bearings, above).
+- **What moves it**: each hour awake the referee's test (Awareness: the bearings' P_BEARING, its steps rs.h's TIME_STEPS on), a failure drifting it, the more the longer since
+  it knew; a sleep or a black-out guessed as it wakes or comes round (the harder the longer; a critical failure, no
+  idea); one with absolute timesense (the summary's timesense: hmchar's rare trait) never drifts.
+- **What narrows it**: its own light burning down (it sees its torch), its hunger since its meal; and the sky in sight
+  (an open way out near: the top's up its stairs its light alone, a far exit below the top the open sky): its light the
+  part of the day, the sun or the stars read by the north it believes in (so a wrong north reads a wrong hour), its
+  bearings lost the sun high or low, watched a while the time and north both (E_BEARING BRG_SKY, told).
+- **Reckoned lazily**, never polled: at the lights' burning's look (part 27's), an hour on, five minutes where the sky
+  may be seen, at once (its burn_ask) as a light changes, a wait begins or ends, a black-out, another stratum, the way
+  out opened.
+- **What uses it**: "time", "what time is it" (the UI's time.c, overlay 16: plainly when it knows, else as sure as it
+  is), "sleep until dawn", "wait until morning" (the hour it means by what it believes; the true clock decides what
+  happens), "watch the sun" (a wait in the sky's sight).  The light's minutes left stay true (it sees its torch).
+
 ### The map kept
 
 The user's (2026-10-16 and 2026-10-23: DECISIONS.md's bearings and the map): only what the character sees now plain on
@@ -1397,6 +1422,10 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   scroll ruined), a stream's current carrying a swimmer, a minute's swim tested as it waits in deep water, treading water standing still (the denizens' wading and swimming, a beast that won't cross going
   round, and their hunger and thirst built 2026-10-31: DENIZENS.md's their bodies; left, a denizen drowning); rain where the surface reaches (shafts, the open), washing scents and prints away; a standing order
   to eat and drink when needed.
+- **The time of day believed** (built 2026-10-31: the time of day believed, above; HOUSE.md's): left, the plan's
+  shafts, windows and skylights to the surface (where the rain's hook will find the surface reaches) as more places the
+  sky is seen from, the weather (overcast: its light alone), thirst, tiredness and the denizens' routines learnt as
+  clues, a chain of torches counted, the time on the status line.
 - **Rock and old places** (slice 4.10, built in part 2026-10-31: changing the dungeon's rock, above; HOUSE.md's rock's
   kinds and hardness): the rock's own kinds and hardness across the strata, a dig's rate by it, told as it's dug,
   named by Mining, poor rock coming down on a dig and striking the digger; the rock looked at ("examine the wall");

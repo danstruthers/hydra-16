@@ -97,6 +97,7 @@ unsigned char tripped (void);                   /* Part 43 */
 unsigned char __fastcall__ dark_end (unsigned char how);    /* Part 44 */
 unsigned char __fastcall__ bearings (unsigned w);   /* Part 52 */
 void __fastcall__ bearings_off (unsigned feet); /* (wbody.h's) */
+void tsense (void);                             /* Part 76 (wtime.c) */
 void __fastcall__ travel_go (const struct msg* m);  /* Part 55 */
 unsigned char travel_on (void);
 void way_out (void);                            /* Part 54 */
@@ -492,7 +493,7 @@ static unsigned char cut;                       /* (The way worked out last stop
 static unsigned long cut_t;
 void on_way (void);                             /* (Part 37's) */
 void draw_test (void);                          /* (Part 7's: a stretch of the map drawn, slice 4.2's) */
-static void stopped (void);
+void stopped (void);                            /* (Part 40's) */
 
 
 /* ---- The way across a room, round its ledges: the squares of its chunk (in the window) from the room's floor to
@@ -894,8 +895,8 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW76CODE")            /* (Part 76's since 2026-10-31: part 9's room for the walk) */
-#pragma rodata-name (push, "SW76RODATA")
+#pragma code-name (push, "SW78CODE")            /* (Part 78's since 2026-10-31: part 9's room for the walk) */
+#pragma rodata-name (push, "SW78RODATA")
 
 /* Up to square (x, y) of the character's room (a door's or a passage's mouth: the room's square before it), by the
 ** way it can walk */
@@ -1910,6 +1911,9 @@ unsigned char __fastcall__ s_bearings (unsigned w)
         }                                       /* (One bend four steps the easier, each one more two the harder,
                                                 **   a room crossed in the dark as a bend; the dark four the harder) */
     }
+    if (sn != bsn) {
+        burn_ask |= TS_ASK;                     /* (Another stratum: the time it believes looked at, the sky, part 76's) */
+    }
     bsn = sn;
     broom = r;
     bcx = cx;
@@ -1927,6 +1931,7 @@ void __fastcall__ s_bearings_off (unsigned feet)
 {
     static unsigned char k;
 
+    burn_ask |= TS_ASK;                         /* (The time it believes looked at: a black-out, part 76's) */
     hub_map (0);
     if (!feet) {
         if (W_SLOT.w2) {
@@ -3448,14 +3453,18 @@ unsigned char s_batter_on (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* On the trap on its way (A_STOPPED): set off (wtrap.c's) */
-static void stopped (void)
+/* On the trap on its way (A_STOPPED): set off (wtrap.c's).  Part 40's (the main RAM's room, 2026-10-31) */
+#pragma code-name (push, "SW40CODE")
+#pragma rodata-name (push, "SW40RODATA")
+void s_stopped (void)
 {
     mx = fx_;
     my = fy_;
     work (W_STEP, tx_, ty_, 0);
     worked (0);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 
 /* The character's long task as the clock goes: its part done, if it's a wait; its work, if there's any (part 23's:
@@ -5123,6 +5132,7 @@ void __fastcall__ s_intent_few (struct msg* m)
             break;
         }
         pc_waited = 1;                          /* (Its eyes looked to as it ends: the senses') */
+        burn_ask |= TS_ASK;                     /* (And the time it believes, as it begins and ends: part 76's) */
         if (!m->w2 && t > HUB->round) {
             task_for (m->a & WA_SLEEP ? LT_SLEEP : LT_WAIT, t);  /* (A wait longer than a round, or a sleep: a long
                                                 **   task, in minutes past 100 of them) */
@@ -5641,6 +5651,7 @@ int main (int argc, char* argv[])
         if ((was_busy || (fwant & 1)) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             if (pc_waited) {
                 pc_waited = 0;
+                tsense ();                      /* (Its time believed: woken, part 76's, before it's free) */
                 ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */
             }
             took = take_n ? take_up () : gath ? gath_op (GO_ON, 0) : pfoe ? close_on () : srch ? searched () : lwork ?
@@ -5804,8 +5815,8 @@ void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy
     hub_map (at_bank);
 }
 
-#pragma code-name (push, "SW76CODE")            /* (go_to's own part's, 2026-10-31: part 21's room) */
-#pragma rodata-name (push, "SW76RODATA")
+#pragma code-name (push, "SW78CODE")            /* (go_to's own part's, 2026-10-31: part 21's room) */
+#pragma rodata-name (push, "SW78RODATA")
 /* The square the ways reach nearest chunk square *tx, *ty (go_to's: a place the character can't stand on itself, a
 ** cave's rock about its middle): 1, it in *tx, *ty; 0 none (the chunk in the window after) */
 unsigned char __fastcall__ s_ways_near (unsigned char* tx, unsigned char* ty)
@@ -6185,11 +6196,20 @@ void s_burns_now (void)
     struct item* p;
     unsigned char* sq;
     unsigned i, j, d, left, bf, wx, wy;
-    unsigned char mine, r, best, out, seen, ww, ws, low = 0, more = 0, same = 0;
+    unsigned char mine, r, best, out, seen, ww, ws, low = 0, more = 0, same = 0, asked = burn_ask;
     char ln[14];
 
     hub_map (0);
     burn_ask = 0;
+    if (asked == TS_ASK && HUB->now < burn_due) {
+        HUB->tb.due = 0;                        /* (The time it believes alone, if the burning's look isn't due: no
+                                                **   light looked at, its next look as it was, so nothing else moves
+                                                **   for it; a command in hand, its answer first, at the next look) */
+        if (!HUB->tpr || !HUB->ui_cmd) {
+            tsense ();                          /* (At the real paces; the turns pace's by its clock alone) */
+        }
+        return;
+    }
     if (!burn_on) {
         burn_on = 1;                            /* (The first: a minute from now, the game begun or carried on) */
         burn_at = HUB->now;
@@ -6317,6 +6337,11 @@ void s_burns_now (void)
     if (bleeds || (HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) || HUB->pcsum.health != H_FINE || HUB->now >= body_due) {
         bled ();                                /* (The bodies' time with it: the bleeding, the character's wounds,
                                                 **   part 70's, slice 4.3's; nothing to tell, no part swapped in) */
+    }
+    hub_map (0);
+    if ((asked || HUB->now >= HUB->tb.due) && (!HUB->tpr || !HUB->ui_cmd)) {
+        tsense ();                              /* (The time of day it believes brought up to now, at its due or at
+                                                **   once: a light's change, a wait, a black-out ... part 76's) */
     }
 }
 

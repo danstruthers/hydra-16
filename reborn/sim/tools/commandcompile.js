@@ -133,7 +133,7 @@ const INTRANSITIVE = new Set(['wait', 'rest', 'sleep', 'stop']);
 const PACE = { crawl: 'crawl', hop: 'hop', 'slow walk': 'slowwalk', walk: 'walk', trot: 'trot', run: 'run', sprint: 'sprint' };
 const META = { status: 'VB_META_STATUS', help: 'VB_META_HELP', inventory: 'VB_META_INVENTORY', i: 'VB_META_INVENTORY',
   map: 'VB_META_MAP', save: 'VB_META_SAVE', quit: 'VB_META_QUIT', q: 'VB_META_QUIT', sheet: 'VB_META_SHEET',
-  pause: 'VB_META_PAUSE' };
+  pause: 'VB_META_PAUSE', time: 'VB_META_TIME', what: 'VB_META_TIME' };
 const ATTACK_MANNER = { slash: 'edge', slice: 'edge', chop: 'edge', swing: 'edge', bash: 'blunt', bludgeon: 'blunt',
   thump: 'blunt', club: 'blunt', stab: 'point', poke: 'point', pierce: 'point', punch: 'unarmed', kick: 'unarmed',
   headbutt: 'unarmed', bite: 'unarmed', elbow: 'unarmed', knee: 'unarmed', slap: 'unarmed', butt: 'unarmed' };

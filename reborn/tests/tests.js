@@ -6728,7 +6728,7 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
-        const tests = t => t.replies.filter(q => q.req === 'slot0' && q.kind === K.RS_TEST && q.a === K.P_BEARING);
+        const tests = t => t.replies.filter(q => q.req === 'slot0' && q.kind === K.RS_TEST && q.a === K.P_BEARING && q.steps < 64);   // (Not the time kept's: its steps from rs.h's TIME_STEPS on, 2026-10-31)
         const bear = (t, w) => dq0Ev(t, 'E_BEARING', { brg: w }).length;
         const at = (t, skew, lost, what) => { if (!t.after || t.after.pc.skew !== skew || t.after.pc.lost !== lost) f.push(what + ': its bearings ' + (t.after && [t.after.pc.skew, t.after.pc.lost]) + ', not ' + [skew, lost]); };
         const face = (t, h, what) => { if (!t.after || t.after.pc.face !== h) f.push(what + ': truly facing ' + (t.after && t.after.pc.face) + ', not ' + h); };
@@ -7257,6 +7257,52 @@ module.exports = {
         if (!c4 || c4.rank !== 1 || !c4.prom) f.push('the captain\'s band not headed by its best after (the chain not filled): ' + JSON.stringify(e3 && e3.acts));
         if (c4 && c0 && !(c4.bonds >= 8 && c0.bonds <= 4)) f.push('the bonds to the new king not its own band\'s kept, the rest\'s a new leader\'s: ' + JSON.stringify([c4, c0]));
         if (!c0) f.push('none of the king\'s old band left to see');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0time', near: ['time', 'senses'], what: "Dingus Quest Zero's time of day believed (2026-10-31: DUNGEON.md's the time of day believed, HOUSE.md's, for review; the user's: fuzzy unless the sky's seen, arbitrary after a sleep, set by the sun when north is known or by watching it): the character's belief (the hub's tb: its error from the true clock and its doubt, the world's part 76) and its words: a hand-written theme's garrison of men-at-arms (seed 2, their lair south of the start: dq0daily's, out of earshot), the game begun at 8 o'clock (the environment's dq0hour), \"time\" told plainly (\"It's eight in the morning.\"); its torch put out (so its burning out breaks no long wait), two hours waited (the hours' tests: a doubt, \"about\" or \"some time around\" the hour, not plainly); three hours slept (TG_SLEEP, its doubt an eighth of the sleep more at the least); an hour more waited, then a sky in sight poked (tb.sky's SKY_OPEN, as a far exit's open sky: the afternoon's sun) as the sun's watched (\"watch the sun\", a quarter hour's wait): first read by the north it believes in (\"You see the sun in the sky\"), then watched ten minutes (\"You watch the sun a while\": the time to a quarter of an hour, its error none); the sky gone, then poked in sight again with its north believed a quarter of a turn off (pc_skew 2, unknown to it): the sun read six hours wrong (its error 360 minutes, its doubt half an hour); \"wait until night\" lasting till night as it believes the time (21 o'clock by its belief: the wait's minutes and the believed minute meet there); quit and carried on (dq0 -d), the belief as it was (world.dat's); and a character with absolute timesense (its file's \"timesense\" line, hmchar's rare trait): two hours slept, its time known still, told plainly",
+      init: 't_rc', cycles: 4900e6,   // (4454M, 2026-10-31: the garrison's day as it waits)
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/k.hm', 'echo timesense >> /ram/k.hm', 'dq0hour=8', 'mkdir /ram/s', "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt", 'mkdir /ram/g', 'cp /ram/s/theme.txt /ram/g/theme.txt',
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g', 'time', 'douse the torch', 'wait 2 hours', 'time', 'sleep 3 hours', 'time', 'wait 1 hour',
+        'watch the sun', 'time', 'wait 10 minutes', 'wait 1 minute', 'time', 'wait until night', 'time', 'quit',
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g', 'look', 'quit',
+        'dq0 -p t -s 1 -c /ram/k.hm -T -d /ram/h', 'douse the torch', 'sleep 2 hours', 'time', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        const due = { tbDue: 0, tbDue1: 0, tbDue2: 0, tbDue3: 0 };
+        dq0Poke(m, [{ g: 1, line: 'watch the sun', n: 1, hub: Object.assign({ tbSky: 2 }, due) },   // (The open sky in sight: SKY_OPEN)
+          { g: 1, line: 'wait 10 minutes', n: 1, hub: Object.assign({ tbSky: 0 }, due) },          // (Gone from sight)
+          { g: 1, line: 'wait 1 minute', n: 1, hub: Object.assign({ tbSky: 2, pcSkew: 2, pcLost: 0 }, due) },   // (Its north a quarter off)
+          { g: 1, line: 'wait until night', n: 1, hub: Object.assign({ tbSky: 0 }, due) }]);
+      },
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), P = x => (x && x.pc && x.pc.tb) || null, at = l => T.of(l).at;
+        const after = l => P(T.of(l).after), times = [...s.matchAll(/time ([^>]*?)(?= > |$)/g)].map(x => x[1]);
+        if (!at('quit')) return ['the game not played'];
+        if (!/time It's eight in the morning\./.test(s)) f.push('the start not told plainly: ' + times[0]);
+        const w = after('wait 2 hours'), sl = after('sleep 3 hours');
+        if (!w || !(w.unc > 0) || w.how !== 0) f.push('no doubt after two hours awake: ' + JSON.stringify(w));
+        if (!/time It's (about|some time around) [a-z ]+, you (think|'d guess)\./.test(s)) f.push('the doubt not told: ' + times.join(' | '));
+        if (!sl || !w || sl.how !== 1 || !(sl.unc >= w.unc + 20)) f.push('the sleep not doubted (TG_SLEEP, an eighth of it more): ' + JSON.stringify([w, sl]));
+        if (!/You see the sun in the sky: it's [a-z ]+, you judge\./.test(s)) f.push('the sun not read as seen');
+        if (!/You watch the sun a while, its slow way across the sky: it's [a-z ]+, and you know which way north lies now\./.test(s)) f.push('the sun not watched');
+        const ws = after('watch the sun');
+        if (!ws || ws.skew !== 0 || ws.unc !== 15) f.push('the watched sun not the time to a quarter hour: ' + JSON.stringify(ws));
+        const w1 = after('wait 1 minute');
+        if (!w1 || w1.skew !== 360 || w1.unc !== 30) f.push('the sun not read six hours off by a north a quarter off: ' + JSON.stringify(w1));
+        const ud = T.of('wait until night'), ev = ud.events.filter(e => e.kind === 'E_TIME'), ub = P(ud.at);
+        if (ub && ev.length) {
+          const b = (Math.floor(ud.at.now / 600) + 8 * 60 + 1440 + ub.skew) % 1440;
+          const mins = ev[0].mins ? ev[0].w1 : ev[0].w1 / 600;
+          if ((b + mins) % 1440 !== 1260) f.push('the wait not till night as believed: ' + b + ' + ' + mins);
+        } else f.push('the wait until night not begun');
+        const back = P(at('look')), left = P(T.of('quit').at);
+        if (!back || !left || back.skew !== left.skew || back.unc !== left.unc) f.push('the belief not carried on: ' + JSON.stringify([left, back]));
+        const kt = after('sleep 2 hours');
+        if (!kt || kt.tsense !== 1 || kt.unc !== 0 || kt.skew !== 0) f.push('absolute timesense not kept through a sleep: ' + JSON.stringify(kt));
+        if (!/time It's ten in the morning\.[^]*time It's ten in the morning\./.test(s)) f.push('the timesense character\'s time not told plainly: ' + times.join(' | '));
         return f;
       },
       sdcard: true

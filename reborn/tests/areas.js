@@ -131,7 +131,7 @@ const NEAR = {
     'dq0traces', 'dq0lair', 'dq0robbed', 'dq0finished', 'dq0helpless'],
   theme: ['dq0theme', 'dq0pieces', 'dq0themegen', 'dq0goals', 'dq0themec', 'dq0history', 'dq0layers', 'dq0quest',
     'dq0handtheme', 'dq0plan', 'dq0inhab', 'dq0popgen'],
-  time: ['dq0longwait', 'dq0tasks', 'dq0timed', 'dq0pace', 'dq0steps', 'dq0tiring', 'dq0watch', 'dq0rather', 'dq0stay',
+  time: ['dq0time', 'dq0longwait', 'dq0tasks', 'dq0timed', 'dq0pace', 'dq0steps', 'dq0tiring', 'dq0watch', 'dq0rather', 'dq0stay',
     'dq0usedup', 'dq0answer'],
   body: ['dq0limbs', 'dq0legs', 'dq0hands', 'dq0handy', 'dq0harm', 'dq0tiring', 'dq0senseless', 'dq0helpless', 'dq0disarm', 'dq0venom', 'dq0air', 'dq0tend',
     'dq0pose', 'dq0quiet'],

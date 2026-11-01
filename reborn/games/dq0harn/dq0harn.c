@@ -487,6 +487,10 @@ static void __fastcall__ own_line (char* l)
         wealth = atoi (l + 7);                  /* (Its family's, hmchar's: RS_OUTFIT's) */
     } else if (!strncmp (l, "language ", 9) && strlen (tongues) + strlen (l + 8) < sizeof tongues) {
         strcat (tongues, l + 8);
+    } else if (!strcmp (l, "timesense")) {
+        HUB->pcsum.timesense = 1;               /* (Absolute timesense: hmchar's, the house's rare trait, 2026-10-31:
+                                                **   the world's, the hub's tb; the hub in the window as the file's
+                                                **   read, its request's) */
     }
 }
 
@@ -498,7 +502,7 @@ void __fastcall__ s_load_pc (struct req* r)
     strncpy (path, r->text, sizeof path - 1);
     r->result = 1;
     pv.hr = pd.hr = afffl = 0;                  /* (No venom, no sickness, no rest yet: its file's "body" line's) */
-    rest_m = 0;
+    rest_m = HUB->pcsum.timesense = 0;
     if ((fd = open (path, O_RDONLY)) < 0) {
         return;
     }
@@ -551,6 +555,9 @@ void __fastcall__ s_save_pc (struct req* r)
         strcpy (line, "language");
         strncat (line, p, e - p);
         harn_write_line (fd, line);
+    }
+    if (HUB->pcsum.timesense) {
+        harn_write_line (fd, "timesense");      /* (Its trait, kept: the house's) */
     }
     close (fd);
     r->result = 0;
@@ -808,7 +815,8 @@ static void __fastcall__ answer (struct req* r)
             dig_answer (r);
             break;
         }
-        if (r->a == P_BEARING) {                /* (Its bearings, by its own dice: overlay 3's, bearing.c) */
+        if (r->a == P_BEARING) {                /* (Its bearings, and the time it keeps (rs.h's TIME_STEPS), by
+                                                **   their own dice: overlay 5's, bearing.c) */
             r->grade = bearing_of (r->steps);
             r->result = bway;
             break;

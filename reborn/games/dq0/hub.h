@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     34                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     35                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -64,7 +64,8 @@
                                                 **   the sway's item, ix, iy and actor, SW_GIVE, I_ROB's a (FE_*),
                                                 **   TE_FETCHED; 32: ui_giving; 33, hunger and thirst,
                                                 **   the water, pc_hunger ... pc_swat, WB_WATER ... WB_DOUSED; 34, the air and
-                                                **   the afflictions, pc_air ... pc_dose) */
+                                                **   the afflictions, pc_air ... pc_dose; 35, the time of day believed,
+                                                **   tb, BRG_SKY, rs.h's TIME_STEPS and timesense) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -555,10 +556,25 @@ enum {
                                                 **   side (WS_*) times 256; or its battering's (WB_TELLS ...) */
     E_BEARING,                                  /* who's bearings (slice 4.2's: the hub's pc_skew and pc_lost, the
                                                 **   world's): w1 BRG_LOST, it knows now it's lost them; BRG_KNOWN,
-                                                **   set right, come back into a room it knows */
+                                                **   set right, come back into a room it knows; and the time of day it
+                                                **   believes (the hub's tb, 2026-10-31): BRG_SKY, the sky seen, b its
+                                                **   phase (SKP_*), the time it believes set by it */
     NEVENTS
 };
-enum { BRG_NONE, BRG_LOST, BRG_KNOWN };
+enum { BRG_NONE, BRG_LOST, BRG_KNOWN, BRG_SKY };
+enum { SKP_NONE, SKP_DAWN, SKP_DAY, SKP_DUSK, SKP_NIGHT, SKP_SUN, SKP_STARS, SKP_HIGH, SKP_LOW, SKP_SUN_WATCHED,
+    SKP_STARS_WATCHED };                        /* (E_BEARING BRG_SKY's b: the sky seen, the time read by it: grey light
+                                                **   above, daylight, the light fading, the dark; the sun read by the
+                                                **   north it believes in, the stars; the sun high, low, its bearings
+                                                **   lost; the sun or the stars watched a while, their way across the
+                                                **   sky: the time, and north, known) */
+enum { SKY_NONE, SKY_LIGHT, SKY_OPEN };         /* (The hub's tb.sky: a sky in sight, a test's poke: none; its light
+                                                **   alone, from deep below or overcast, light or dark; the open sky,
+                                                **   the sun or the stars in it) */
+enum { TG_HOURS, TG_SLEEP, TG_OUT };            /* (The hub's tb.how: the hours awake; a sleep, a black-out) */
+#define TB_LOST         360                     /* (The hub's tb.unc: minutes off either way it may be, at which it has
+                                                **   no idea of the hour) */
+#define TB_NONE         0xFFFF                  /* (The hub's tb.lfuel, ahung: no light, no meal, to go by) */
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_ALARM, DE_PASTIME,
     DE_UP = 16 };                               /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
@@ -1157,6 +1173,42 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pc_skew;                    /* Eighths of a turn: its believed heading the true one plus this, & 7
                                                 **   (0 for one that knows north: the referee's summary's northsense) */
     unsigned char   pc_lost;                    /*   and 1 if it knows it's lost its bearings ("facing NE?") */
+    /* The character's time of day believed (DUNGEON.md's the time of day believed; the user's, 2026-10-31: "Timekeeping
+    ** should also be a fuzzy thing, unless there is some place where you can actually see outside"): the hour it
+    ** believes it is against the true one (the world's clock and the hour the game began), the world's to keep from the
+    ** referee's tests (rs.h's TIME_STEPS) as the hours go by awake, a sleep, a black-out, and from the clues (its light's burning,
+    ** its hunger, the sky seen); kept with the game (world.dat).  The UI's words of the time, and its waits "until
+    ** dawn", go by it; the clock, the denizens' days and what happens, by the true one */
+    struct tbelief {
+        int         skew;                       /* Minutes: the hour it believes it is the true one plus this (-720 on,
+                                                **   under 720) */
+        unsigned    unc;                        /*   and how far off it knows it may be, either way (0: it knows;
+                                                **   TB_LOST or more: it has no idea) */
+        unsigned long due;                      /* The clock (tenths) of its next reckoning (the world's part 76: an hour
+                                                **   on, five minutes where the sky may be seen, a minute while it's gone;
+                                                **   or at once, the burning's burn_ask: a light's change, a wait begun
+                                                **   or ended, a black-out, another stratum, the way out opened) */
+        unsigned    at;                         /* The clock's minute it was last reckoned at (0: not yet, a new game) */
+        unsigned    gone;                       /* The clock's minute it fell asleep or senseless at (0: awake) */
+        unsigned    mins;                       /* Minutes awake since its last hour's test */
+        unsigned    hours;                      /* Hours since it last knew the time (the drift's growth) */
+        unsigned    lfuel;                      /* Its light's minutes left as its belief was set by it (TB_NONE: no
+                                                **   light of its own burning down), the clock's minute then, */
+        unsigned    lat;
+        int         lskew;                      /*   and its belief then */
+        unsigned    lunc;
+        unsigned    ahung;                      /* Its hunger as its belief was set by its meal (TB_NONE: none yet), */
+        int         askew;                      /*   and its belief then */
+        unsigned    aunc;
+        unsigned    hung;                       /* Its hunger as last reckoned (a meal seen as it falls) */
+        unsigned char hour0;                    /* The hour of the day the game began (the environment's dq0hour, else
+                                                **   dusk, as dq0d's; 0x80 and more, the denizens' no day: dusk) */
+        unsigned char sky;                      /* A sky in sight by a test's poke (SKY_*; 0: the world's own look) */
+        unsigned char skysn;                    /* The stratum the sky may be seen from (0xFF none): the character's */
+        unsigned char told;                     /* The sky's phase last told (SKP_*: 0, none in sight) */
+        unsigned char watched;                  /* Minutes it's watched the sky (in sight through a wait) */
+        unsigned char how;                      /* What last clouded it (TG_*: TG_HOURS the hours, or a fix since) */
+    } tb;
     /* The denizens' intents to the world (their actors' bodies': hub.h's the denizens' intents), a ring: written at
     ** di_head (the denizens' task: a full one waited on), read at di_tail as each is carried out (the world: it rings
     ** the denizens as it has) */
@@ -1378,7 +1430,7 @@ struct wrec {
 #define WSAVE_MAGIC     0x5744                  /* "DW" */
 struct wsave {
     unsigned        magic;
-    unsigned char   version;                    /* (2: the bearings, slice 4.2's) */
+    unsigned char   version;                    /* (2: the bearings, slice 4.2's; 4: the time believed, tb) */
     unsigned char   sn, face, pos;              /* The character's place (its stratum, its facing, its body's
                                                 **   position), */
     unsigned        x, y;                       /*   its square, */
@@ -1387,8 +1439,9 @@ struct wsave {
                                                 **   each); */
     unsigned long   now;                        /* the clock; */
     unsigned char   skew, lost;                 /* the character's bearings (the hub's pc_skew, pc_lost: slice 4.2's); */
-    unsigned        hunger, thirst;             /* its hunger and thirst, the meals left of its ration (slice 4.9's) */
+    unsigned        hunger, thirst;             /* its hunger and thirst, the meals left of its ration (slice 4.9's); */
     unsigned char   meals;
+    struct tbelief  tb;                         /* the time of day it believes (the hub's tb: 2026-10-31) */
 };
 
 /* Who writes what (Phase 2: one authority on state).  Each region of the hub has an owner, the one task that writes
@@ -1518,6 +1571,7 @@ struct wsave {
 **   own hub.pc_shand world
 **   own hub.pc_skew world                                      (Its bearings: the world's, by the referee's tests)
 **   own hub.pc_lost world
+**   own hub.tb world                                           (The time of day it believes: the world's, 2026-10-31)
 **   own hub.di_head denizens                                   (The denizens' intents: their ring)
 **   own hub.di denizens
 **   own hub.di_tail world                                      (Its reader's place)

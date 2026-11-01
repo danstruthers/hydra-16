@@ -49,7 +49,7 @@ void t_end (void);                              /* The same, as the game ends: t
 void __fastcall__ say (const char* s);          /* Words into the story, wrapped (\n: a new line) */
 void sayf (const char* fmt, ...);               /* The same, with %s, %d, %u, %c (and %%) */
 void __fastcall__ msg (const char* s);          /* A new line of the story, then s */
-void __fastcall__ say_raw (const char* s);      /* A line of the story as it is (not wrapped) */
+void __fastcall__ say_raw (const char* s);      /* A line of the story as it is (not wrapped: overlay 16's) */
 void blank (void);                              /* An empty line in the story (only one in a row) */
 void t_done (void);                             /* The cursor back to the line typed, and everything out */
 void t_flush (void);                            /* What's said so far out now (the cursor left where it is) */
@@ -289,6 +289,10 @@ struct fight;
 void __fastcall__ feed (unsigned char eat);     /* (Part 16's, feed.c: "eat", "drink", slice 4.9's) */
 void __fastcall__ water_words (unsigned w);     /* Overlay 4 (water.c): the water's news, worded
                                                 **   (an E_BEAT's w1, WB_WATER ... WB_DOUSED: slice 4.9's) */
+unsigned __fastcall__ time_ui (unsigned w);     /* Overlay 16 (time.c): the time of day believed, worded (w TU_TELL,
+                                                **   "time"; TU_SKY | its phase times 256, the sky seen; TU_UNTIL, a
+                                                **   wait's minutes "until dawn", "watch the sun", 0 none said) */
+enum { TU_TELL, TU_SKY, TU_UNTIL };
 unsigned __fastcall__ fight_words (const struct msg* m);    /* Overlay 6: a blow (an E_FIGHT; its record from the
                                                 **   ring copied into lb's end: FIGHT_LB), into lb: the tenths the
                                                 **   character's knocked senseless for, or 0 */
@@ -342,7 +346,7 @@ extern unsigned long heard_at;                  /* (main.c's: when a sound was l
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[15];
+extern unsigned char ovbank[16];
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */
 void tend (void);                               /* Part 12: first aid (VB_TEND) */

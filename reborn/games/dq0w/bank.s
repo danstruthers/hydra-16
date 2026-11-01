@@ -167,9 +167,11 @@ go:
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
             SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
             SWPART      74, 14              ; A waterskin filled (wwater.c: slice 4.9's)
-            SWPART      75, 4               ; The water's depth where the character stands (wwater.c)
-            SWPART      76, 23              ; Up to a place in the room (dq0w.c's go_to: part 9's till 2026-10-31,
-                                            ;   its room the walk's)
+            SWPART      75, 22              ; The water's depth where the character stands (wwater.c)
+            SWPART      76, 23              ; The time of day believed (wtime.c: 2026-10-31)
+            SWPART      77, 23              ; The sky seen, the time believed's start (wtime.c)
+            SWPART      78, 23              ; Up to a place in the room (dq0w.c's go_to, ways_near: part 9's till
+                                            ;   2026-10-31, its room the walk's)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -200,6 +202,9 @@ go:
             SWFN        legs, 50
             SWFN        bearings, 52
             SWFN        bearings_off, 52
+            SWFN        tsense, 76
+            SWFN        sky_seen, 77
+            SWFN        stopped, 40         ; (A trap on the way set off: the main RAM's room, 2026-10-31)
             SWFN        intent_few, 53
             SWFN        way_out, 54
             SWFN        travel_go, 55
@@ -234,7 +239,7 @@ go:
             SWFN        portals, 7
             SWFN        traps, 8
             SWFN        go, 9
-            SWFN        go_to, 76           ; (Part 9's till 2026-10-31: its room the walk's)
+            SWFN        go_to, 78           ; (Part 9's till 2026-10-31: its room the walk's)
             SWFN        step_to, 9
             SWFN        walk, 9             ; (A walk along a passage: across's, part 33's; 2026-10-31, the main RAM's room)
             SWFN        serve, 10
@@ -327,7 +332,7 @@ go:
             SWFN        engaged, 25
             SWFN        fumbled, 25
             SWFN        den_first, 14
-            SWFN        ways_near, 76
+            SWFN        ways_near, 78
             SWFN        it_flush, 17
             SWFN        st_out, 22
             SWFN        st_in, 22

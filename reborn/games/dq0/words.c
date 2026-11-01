@@ -497,6 +497,9 @@ unsigned char __fastcall__ o_more (unsigned char action)
     unsigned char d = reach == 4 ? IO_DONE : 0;    /* (A timed work's end: main.c's reach) */
 
     switch (action) {
+    case VB_META_TIME:                          /* (The time it believes: time.c's, 2026-10-31) */
+        time_ui (TU_TELL);
+        break;
     case VB_FILL_OBJECT:                        /* (A light renewed, slice 4.1's: "fill the lantern", "dip the torch in
                                                 **   the oil", the things' IO_FILL; its time, quietly: a timed work) */
         worked (othings (IO_FILL, cmd.obj.word, cmd.other.word, d));
