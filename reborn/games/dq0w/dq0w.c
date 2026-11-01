@@ -67,7 +67,7 @@ extern unsigned char pshoot, gath;              /* (The character's fight a miss
 void __fastcall__ start_dig (unsigned char d);  /* Part 1 */
 void dig_on (void);
 void __fastcall__ climb (unsigned char d);      /* Part 2 */
-void climb_on (void);
+void __fastcall__ climb_on (unsigned char how);
 unsigned __fastcall__ fall (unsigned feet, unsigned char how);
 void begin (void);                              /* Part 3 */
 void __fastcall__ grow_below (unsigned char n);
@@ -1112,8 +1112,26 @@ static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char f
     return 1;
 }
 
+/* A spell of digging done (part 1's dig_on), a round of climbing (climb_round's): its test, then its time the
+** referee's, strenuous work, HOUSE.md's tiring; a fatigue level more asked of if the next is begun (arrive's: part
+** 2's since 2026-11-01, the main RAM's room, the tunnellers') */
+static void climb_round_on (void);
+static void __fastcall__ spend (unsigned char a, unsigned long t);
+void __fastcall__ s_climb_on (unsigned char how)
+{
+    unsigned t = went;
+
+    if (how == A_DIGGING) {
+        dig_on ();
+    } else {
+        climb_round_on ();
+    }
+    spend (GA_WORK, t);
+    pc_tired = wres && move.on ? TE_ASK_TIRED : 0;
+}
+
 /* A round of climbing done: its test, and on, back, fallen, or there */
-void s_climb_on (void)
+static void climb_round_on (void)
 {
     signed char g;
     unsigned t;
@@ -1704,19 +1722,10 @@ static unsigned char went_cut;                 /* (A walk over to a thing stoppe
 static void arrive (void)
 {
     unsigned char first, how = move.how, dw = pon && pfeel, bn;
-    unsigned t = went;
 
     move.on = 0;
-    if (how == A_DIGGING || how == A_CLIMBING) {    /* (A spell of digging done, a round of climbing: its test, then
-                                                **   its time the referee's, strenuous work, HOUSE.md's tiring; a
-                                                **   fatigue level more asked of if the next is begun) */
-        if (how == A_DIGGING) {
-            dig_on ();
-        } else {
-            climb_on ();
-        }
-        spend (GA_WORK, t);
-        pc_tired = wres && move.on ? TE_ASK_TIRED : 0;
+    if (how == A_DIGGING || how == A_CLIMBING) {
+        climb_on (how);                         /* (A spell of digging done, a round of climbing: part 2's) */
         return;
     }
     spend (pace_, went > pspent ? went - pspent : 0);    /* (As it begins, or carries on: none; a walk's, what's
@@ -2548,19 +2557,12 @@ void __fastcall__ look_way (unsigned t);        /* (Its stub, bank.s's) */
 
 #define SPELL           6000                    /* Tenths: ten minutes' work */
 
-static struct {
-    unsigned char   d;                          /* DIR_N ... DIR_W, DIR_DOWN */
-    unsigned char   mat;                        /* What it's into (rs.h's MAT_*: the referee judges the tools) */
-    unsigned char   rock;                       /* The rock last told (rock.h's RK_*: test_dig's; RK_NONE as it's
-                                                **   begun) */
-    unsigned        need, done;                 /* Half-feet (P_DIG's: bare hands half a foot a spell) */
-    unsigned        x, y;                       /* The square dug */
-} dig;
+struct dig dig;                                 /* (work.h's: wdig.c's too, a tunneller's rock asked, part 1's) */
 /* The half-feet of what it's into (mat) before the rock: a shaft's floor (earth or soil two feet, flags or masonry
 ** one, stone none: the rock's at once); a wall, all of it (2026-10-31: worked out, its byte the rock's) */
 #define DIG_TOP         (dig.d != DIR_DOWN ? 0xFF : dig.mat == MAT_EARTH || dig.mat == MAT_SOIL ? 4 : \
                          dig.mat == MAT_STONE ? 0 : 2)
-void __fastcall__ dig_kept (unsigned char begin);   /* (Part 19's: the hole's record, DUG) */
+unsigned char __fastcall__ dig_kept (unsigned char begin);   /* (Part 19's: the hole's record, DUG) */
 #define DIG_DIR(d)      ((d) >= 6 ? (d) - 2 : (d))  /* (A dig's way, dig.d, dir_x's: 6 to 9 the diagonals, the UI's) */
 #define WK_NAMED        0x80                    /* (A wall looked at, dig.rock's for its words: its rock named; too */
 #define WK_DARK         0xF0                    /*   dark to see; no wall near enough; masonry: wall_look's) */
@@ -2943,6 +2945,12 @@ void s_dig_on (void)
     unsigned char l;
     int z;
 
+    if (dig.rock == DIG_ROCK) {                 /* (A tunneller's: the rock at dig.x, dig.y, dig.need's depth, part
+                                                **   79's, wdig.c's) */
+        hub_map (0);
+        dig.rock = rock_kind (HUB->seed, (int) dig.need, dig.x, dig.y);
+        return;
+    }
     here ();
     if (dig.rock == 0xFF) {
         wall_look ();
@@ -3002,9 +3010,12 @@ unsigned char store_get (void);                 /* (Part 19's, wfile.c's) */
 /* The hole's record (DUG, a change record: its half-feet dug, the way it's dug), kept as a spell's done (begin 0); or
 ** (begin 1) looked up as the dig begins, on from where it was left if it's a hole begun before and dug the same way;
 ** and told (E_DIG: D_AGAIN and the feet to go, or D_BEGUN and its feet), its long task begun, its bar the part done
-** (the hub's header in the window after) */
-void __fastcall__ s_dig_kept (unsigned char begin)
+** (the hub's header in the window after); or (begin 2, a tunneller's: wdig.c's) the record rec's looked up, 1 found */
+unsigned char __fastcall__ s_dig_kept (unsigned char begin)
 {
+    if (begin == 2) {
+        return store_get ();
+    }
     rec.sn = sn_;
     rec.x = dig.x;
     rec.y = dig.y;
@@ -3013,7 +3024,7 @@ void __fastcall__ s_dig_kept (unsigned char begin)
     rec.link = DUG;
     if (!begin) {
         store_put ();
-        return;
+        return 0;
     }
     if (store_get () && rec.elev == dig.d && rec.tile < dig.need) {
         dig.done = rec.tile;
@@ -3023,6 +3034,7 @@ void __fastcall__ s_dig_kept (unsigned char begin)
         D_BEGUN << 8 | (dig.need > 510 ? 255 : dig.need / 2));     /* (Told in feet: to go, or of it) */
     task (LT_DIG, dig.need);
     HUB->pc_task.done = dig.done;
+    return 0;
 }
 
 #pragma code-name (pop)

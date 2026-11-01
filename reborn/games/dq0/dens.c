@@ -27,8 +27,8 @@ static const char* const few[SEE_DENS + 1] = { "", "one", "two", "three", "four"
 static const char* const doing[DO_LEISURE + NPAST] = {   /* (After " feet away") */
     ".", ", watching you.", ", coming towards you.", ", keeping its distance.", ", following you.", ", waiting.",
     ", fighting you.", ", fleeing.", ", lying senseless.", ", asleep.", ", eating.", ", at work.", ", on watch.",
-    ", reading.", ", at dice.", ", at a board game.", ", talking.", ", singing.", ", drinking.", ", mending its gear.",
-    ", whittling."                              /* (At leisure, its pastime: 2026-10-31) */
+    ", digging.", ", reading.", ", at dice.", ", at a board game.", ", talking.", ", singing.", ", drinking.",
+    ", mending its gear.", ", whittling."      /* (At leisure, its pastime: 2026-10-31) */
 };
 
 /* The denizens as they're told, alike ones together: each the way it lies (REL8 as the character faces), how far

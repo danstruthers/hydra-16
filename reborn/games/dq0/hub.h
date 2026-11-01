@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     35                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     36                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -65,7 +65,9 @@
                                                 **   TE_FETCHED; 32: ui_giving; 33, hunger and thirst,
                                                 **   the water, pc_hunger ... pc_swat, WB_WATER ... WB_DOUSED; 34, the air and
                                                 **   the afflictions, pc_air ... pc_dose; 35, the time of day believed,
-                                                **   tb, BRG_SKY, rs.h's TIME_STEPS and timesense) */
+                                                **   tb, BRG_SKY, rs.h's TIME_STEPS and timesense; 36, the
+                                                **   tunnellers, I_KIT's KT_DIG, DG_*, dig_t, DE_DIG, DE_DUG, AG_PICK,
+                                                **   AG_SPADE, DO_DIG) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -312,6 +314,14 @@ enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, T_COMMA
 #define KT_ROLE         0x01                    /* (I_KIT's a: its role's things, */
 #define KT_LAIR         0x02                    /*   its lair's own, */
 #define KT_PURSE        0x04                    /*   its personal things) */
+#define KT_DIG          0x80                    /* (I_KIT's a, slice 4.11's: no things, but a tunneller's dig, the
+                                                **   denizens' ring's: who the actor plus 1, b the heading it digs
+                                                **   (H_*), x[2] what it digs with (DG_*), x[0] x[1] as its other
+                                                **   intents'; a spell of digging at a time, the world's, by the
+                                                **   character's rules: dq0w/wdig.c) */
+#define DG_CLAWS        0x01                    /* (KT_DIG's x[2]: its claws, a burrower's (kinds.txt's ways d), */
+#define DG_PICK         0x02                    /*   a pick it carries, */
+#define DG_SPADE        0x04                    /*   a shovel, a spade or a mattock it carries) */
 #define RB_HIDE         1                       /* (I_ROB's x[2]: the takings hidden at its home, */
 #define RB_HOARD        2                       /*   or put in its faction's hoard there) */
 struct msg {
@@ -576,7 +586,7 @@ enum { TG_HOURS, TG_SLEEP, TG_OUT };            /* (The hub's tb.how: the hours 
                                                 **   no idea of the hour) */
 #define TB_NONE         0xFFFF                  /* (The hub's tb.lfuel, ahung: no light, no meal, to go by) */
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_ALARM, DE_PASTIME,
-    DE_UP = 16 };                               /* E_DEN's what: a step, a
+    DE_UP = 16, DE_DIG = 24, DE_DUG, DE_DIGS }; /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post
                                                 **   (the denizens', a shout: told seen or heard, the UI's, 2026-10-30);
@@ -585,7 +595,11 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
                                                 **   told seen or heard, as a rally); a pastime's sound, DE_PASTIME +
                                                 **   its PT_* (dice rattling, a song: heard), a pastime let go as one
                                                 **   rises to act, DE_UP + its PT_* (seen: "The bandit lets the dice
-                                                **   fall."), leisure's, 2026-10-31 */
+                                                **   fall."), leisure's, 2026-10-31; a tunneller's spell of digging
+                                                **   begun (its scraping, heard; seen: "The kobold digs at the wall."),
+                                                **   and its way through (DE_DUG: w1 w2 the square dug, x[2] seen: "A
+                                                **   fresh tunnel opens ..."), its spells after the first (DE_DIGS:
+                                                **   heard by the denizens, not told the player again), slice 4.11's */
 enum { NZ_WORK, NZ_BLOW };                      /* E_NOISE's b: work's (a dig's, a door forced ...), a blow at a thing
                                                 **   (a battering's, each blow: the sound task's) */
 enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best it holds (the
@@ -1122,6 +1136,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     char            dig_tool[4][8];             /* A dig's spells' tools, the referee's choices (their keys), in turn */
     unsigned char   dig_wear[4];                /*   and the wear each spell did (E_DIG's b, which: the world runs on */
                                                 /*   ahead of the UI's reading of its events, the turns pace) */
+    unsigned        dig_t[NACTORS];             /* Each actor's spell of digging begun then (the clock's low word: a
+                                                **   tunneller's, I_KIT's KT_DIG, slice 4.11's: the world's) */
     /* The UI's intents to the world */
     volatile unsigned char iq_head, iq_tail;    /* Written at head (the UI), read at tail (the world) */
     struct msg      iq[IQ_SIZE];
@@ -1354,7 +1370,9 @@ enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind
 #define AG_SHOOTS       0x10                    /* (A launcher among its things, and its missiles: its mind's to shoot,
                                                 **   slice 4.7's; */
 #define AG_NOSHOT       0x20                    /*   no shot to be had from where it stood, the world's: its mind's
-                                                **   till the character moves) */
+                                                **   till the character moves; */
+#define AG_PICK         0x40                    /*   a pick among its things: a miner's to dig rock with; */
+#define AG_SPADE        0x80                    /*   a shovel, a spade or a mattock: earth and soil, slice 4.11's) */
 #define GE_OLD          0x01
 #define GE_DRY          0x02                    /* (dq0 -W, the tests': no water in the chunks, the maker's, slice 4.9's) */
 #define GE_MIXED        0x04                    /* (dq0 -M, the tests': every built stratum mixed, part natural, the
@@ -1522,6 +1540,7 @@ struct wsave {
 **   own hub.pview world                                        (A portal looked at closely: the UI's wreq's)
 **   own hub.dig_tool world
 **   own hub.dig_wear world
+**   own hub.dig_t world
 **   own hub.iq_head ui                                         (The UI's intents: its ring)
 **   own hub.iq ui
 **   own hub.iq_tail world                                      (Its reader's place)

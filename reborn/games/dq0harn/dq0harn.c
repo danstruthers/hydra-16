@@ -224,7 +224,8 @@ static const unsigned char appraiser[NAP] = {
 static unsigned char __fastcall__ speaks (const char* t);
 void __fastcall__ s_dig_answer (struct req* r)
 {
-    if (r->a == P_STEALTH) {
+    if (r->a == P_STEALTH || r->actor) {       /* (Moving quietly; or a creature's own test, a tunneller's dig: its
+                                                **   grade by its sheet, the world's the rest, slice 4.11's) */
         s_quiet_test (r);
     } else if (r->a == P_APPRAISE) {
         r->grade = test_sk (&pc, appraiser[r->b < NAP ? r->b : 0], r->steps);
@@ -749,7 +750,8 @@ static signed char __fastcall__ side (unsigned char who, unsigned char p, signed
 void __fastcall__ s_quiet_test (struct req* r)
 {
     QUIET_IN
-    r->grade = r->actor ? side (r->actor, P_STEALTH, r->steps) : test (&pc, P_STEALTH, r->steps);
+    r->grade = side (r->actor, r->a, r->steps);  /* (The character's, or a creature's by its sheet: a tunneller's
+                                                **   dig too, slice 4.11's) */
     QUIET_OUT
 }
 #pragma code-name (pop)

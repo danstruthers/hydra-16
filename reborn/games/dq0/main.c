@@ -400,7 +400,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    30                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    31                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -445,7 +445,8 @@ static void sheet (void)
                                                 **   drank), the creatures' bodies after their sheets (beasts.dat:
                                                 **   their fatigue), 2026-10-31; 29, world.dat's time of day believed,
                                                 **   the hub's tb, 2026-10-31; 30, the diagonal ways' cut
-                                                **   corners (T_CUT) in the chunks and the change records) */
+                                                **   corners (T_CUT) in the chunks and the change records; 31, the
+                                                **   tunnellers: DO_DIG among the doings, slice 4.11's) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -2734,7 +2735,10 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
                                                 **   day's, 2026-10-31; a pastime heard (dice rattling, singing), or let
                                                 **   go as its denizen rises to act, seen, leisure's, tell.c's words:
                                                 **   seen, by its name, else heard) */
-        if (m->a >= DE_PASTIME) {
+        if (m->a == DE_DIGS) {
+            return;                             /* (A tunneller's spells after its first: told as it began) */
+        }
+        if (m->a >= DE_PASTIME && m->a < DE_DIG) {
             if (m->x[2] ? m->a < DE_UP : m->a >= DE_UP) {
                 return;                         /* (One seen at its pastime: the look's words say it) */
             }
@@ -2742,8 +2746,17 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
             n = heard_what;
         } else {
             n = m->a == DE_RALLY ? "rallies its fellows\0a rallying shout" : m->a == DE_SNORE ? "snores\0snoring" :
-                m->a == DE_TALK ? "says something to its fellow\0voices" : "raises the alarm\0a shout of alarm";
+                m->a == DE_TALK ? "says something to its fellow\0voices" : m->a == DE_DIG ?
+                "digs into the wall\0a scraping in rock" : m->a == DE_DUG ? "\0rock falling" :
+                "raises the alarm\0a shout of alarm";  /* (A tunneller's spell begun, its way through: slice
+                                                **   4.11's) */
             strcpy (heard_what, n + strlen (n) + 1);
+        }
+        if (m->x[2] && m->a == DE_DUG) {
+            heard_words (0, rel);               /* (Its way through seen: where, the heard words' way's) */
+            strcpy (lb + 300, lb + 10 + strlen (heard_what));
+            sayf ("\nA fresh tunnel opens %s Spoil lies heaped by it.", lb + 300);
+            return;
         }
         if (m->x[2]) {
             strcpy (lb + 300, HUB->actor[(m->who - 1) & (NACTORS - 1)].name);   /* (Its name, at the line's far end:

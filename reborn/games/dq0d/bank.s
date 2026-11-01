@@ -12,7 +12,7 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
-_ovbank:    .res        4           ; The parts' images' banks (dq0d.cfg's OV1 ... OV4)
+_ovbank:    .res        5           ; The parts' images' banks (dq0d.cfg's OV1 ... OV5)
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
 
@@ -35,6 +35,8 @@ ovx:        .res        1
                                             ;   found on the rounds, a pastime let go (2026-10-31)
             SWPART      11, 1               ; The denizens near enlisted (2026-10-31: the main RAM's room; small, cheap
                                             ;   to swap in, not while the UI's command is in hand)
+            SWPART      12, 5               ; The tunnellers: a way dug (slice 4.11's, 2026-11-01); the lairs near
+                                            ;   placed (the main RAM's room)
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -73,6 +75,8 @@ ovx:        .res        1
             SWFN        plan, 9             ; (An actor's day and its place, as it changes: leisure's)
             SWFN        roused, 10          ; (A pastime let go as one rises to act)
             SWFN        enlist_near, 11     ; (The main RAM's room, 2026-10-31)
+            SWFN        nearby, 12          ; (The main RAM's room, 2026-11-01: the tunnellers')
+            SWFN        dig_way, 12         ; (A tunneller's way dug: slice 4.11's)
             SWFN        slant, 11           ; (A denizen's diagonal way: slant.s, 2026-10-31, the main RAM's room)
             SWFN        wander, 9
             SWFN        sched, 9

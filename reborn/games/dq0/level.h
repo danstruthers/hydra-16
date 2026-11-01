@@ -96,12 +96,14 @@ struct sight {
 };
 enum { GL_GLOW, GL_LIGHT };                     /* A light far off: a faint glow, a light */
 enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY, DO_FOLLOW, DO_WAIT, DO_FIGHT, DO_FLEE, DO_DOWN, DO_SLEEP, DO_EAT,
-    DO_WORK, DO_GUARD, DO_LEISURE };            /* A denizen's doing: going about its own business, watching the
+    DO_WORK, DO_GUARD, DO_DIG, DO_LEISURE };    /* A denizen's doing: going about its own business, watching the
                                                 **   character, coming towards it, keeping its distance; an ally's:
                                                 **   following it, waiting where it was asked; fighting it, fleeing
                                                 **   it, lying senseless; and its day's (2026-10-31, DENIZENS.md's
                                                 **   daily life: unaware of the character, as roaming is): asleep,
-                                                **   eating, at work, on watch (walking its rounds), at leisure: its
+                                                **   eating, at work, on watch (walking its rounds), digging (a
+                                                **   tunneller's spell, slice 4.11's: busy at it, not roused by the
+                                                **   character's changes), at leisure: its
                                                 **   pastime (PT_*) added, DO_LEISURE + PT_READ ... + PT_WHITTLE */
 enum { PT_READ, PT_DICE, PT_GAME, PT_TALK, PT_SING, PT_DRINK, PT_MEND, PT_WHITTLE, NPAST };   /* A pastime (folk's
                                                 **   leisure, kinds.txt's pastimes: the user's, 2026-10-31): reading,

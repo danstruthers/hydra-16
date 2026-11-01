@@ -277,6 +277,10 @@ static unsigned char __fastcall__ has_role (const struct msg* m)
 
 void __fastcall__ s_den_other (const struct msg* m)
 {
+    if (m->a & KT_DIG) {
+        den_dig (m);                            /* (Not things: a tunneller's dig, part 79's, slice 4.11's) */
+        return;
+    }
     hub_map (0);
     if (!(HUB->gear & GE_OLD) && has_role (m)) {
         ost.did = m->t;
@@ -454,6 +458,8 @@ void s_den_equip (void)
         if ((unsigned char) (k - KI_SLING) <= KI_CROSSBOW - KI_SLING) {
             ag |= AG_SHOOTS;                    /* (A launcher: its mind's to shoot, slice 4.7's) */
         }
+        ag |= k == KI_PICK ? AG_PICK : k == KI_SHOVEL ? AG_SPADE : 0;  /* (A tunneller's tools: its mind's to dig,
+                                                **   slice 4.11's) */
         if (weapon ()) {                        /* (A weapon held, or one it put up: wshoot.c's to_throw's count, its
                                                 **   things to throw, 2026-10-30) */
             ++nw;

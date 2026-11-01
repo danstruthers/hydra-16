@@ -92,6 +92,8 @@ void __fastcall__ den_word (const char* t, unsigned char n);   /* (Part 51) Its 
 void den_drop (void);                           /* (Part 60) Its weapon on the floor, told */
 unsigned char den_legs (void);                  /* (Part 51) Its legs at a move's start: 1 no move */
 void __fastcall__ den_other (const struct msg* m);  /* (Part 60) A denizen's things made (I_KIT's) */
+void __fastcall__ den_dig (const struct msg* m);    /* (Part 79: wdig.c) A tunneller's dig (I_KIT's KT_DIG: slice
+                                                **   4.11's), a spell at a time */
 void __fastcall__ den_enter (const struct msg* m);  /* (Part 60) Come near (I_ENTER's): its body's from it, its
                                                 **   things in the store, the referee told */
 unsigned char __fastcall__ den_draw (unsigned char want);  /* (Part 60) Its weapon drawn from its belt (or one it put

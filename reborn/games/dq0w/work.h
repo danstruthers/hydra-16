@@ -7,6 +7,19 @@
 #ifndef _WORK_H
 #define _WORK_H
 
+/* ---- dq0w.c's digging (the character's, parts 1, 19, 25; a tunneller's rock asked of part 1 too, wdig.c's) */
+struct dig {
+    unsigned char   d;                          /* DIR_N ... DIR_W, DIR_DOWN */
+    unsigned char   mat;                        /* What it's into (rs.h's MAT_*: the referee judges the tools) */
+    unsigned char   rock;                       /* The rock last told (rock.h's RK_*: test_dig's; RK_NONE as it's
+                                                **   begun); DIG_ROCK, a tunneller's asked (dig_on's: its answer) */
+    unsigned        need, done;                 /* Half-feet (P_DIG's: bare hands half a foot a spell) */
+    unsigned        x, y;                       /* The square dug */
+};
+extern struct dig dig;
+#define DIG_ROCK        0xFE
+void dig_on (void);                             /* (Part 1's) */
+
 /* ---- store.c: the change records (world.h's), the world's alone to write */
 void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
     unsigned char link);                        /* Kept, and made in its chunk (the window moved) */

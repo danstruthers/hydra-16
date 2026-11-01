@@ -571,15 +571,16 @@ unsigned char __fastcall__ o_beast_flags (unsigned char kind)
 
 /* A creature's side of two actors' tests (RS_CONTEST's, dq0harn.c's: the actor's test of purpose a, at the steps): by
 ** its sheet, Initiative its bestiary's, Stealth its Agility times 5 (the house's: the bestiary has no Stealth of its
-** own; the book's Stealth is Agility, Hearing and Will, Skills 9), anything else its Dexterity times 5 (a grope's), its
-** injuries' penalty off it
+** own; the book's Stealth is Agility, Hearing and Will, Skills 9), a dig its Strength times 5 (a tunneller's, the
+** house's: the bestiary has no Mining), anything else its Dexterity times 5 (a grope's), its injuries' penalty off it
 ** (one senseless, or in shock, tests nothing: a critical failure); the grade in the reply */
 static void tested (void)
 {
     const struct bkind* b = unpack (R->actor);
 
     R->grade = cr.state != HARN_CONSCIOUS ? G_CF : grade (harn_test ((R->a == P_INITIATIVE ? b->ini :
-        5 * cr.att[R->a == P_STEALTH ? HARN_AGL : HARN_DEX]) - 5 * harn_get_pp (&cr) + STEP_PCT * (signed char) R->steps));
+        5 * cr.att[R->a == P_STEALTH ? HARN_AGL : R->a == P_DIG ? HARN_STR : HARN_DEX]) - 5 * harn_get_pp (&cr) +
+        STEP_PCT * (signed char) R->steps));
 }
 
 /* What a blow left them in, for the world (rs.h's AF_*: the reply's grade as hub.h's FF_*: it keeps it), and the

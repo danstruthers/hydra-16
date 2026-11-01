@@ -160,7 +160,8 @@ ovl_out:
             SWPART      11, 15              ; The rarer news, worded (main.c); the hands and limbs
             SWPART      12, 15              ; Wounds over time: first aid, in shock, the body's news (tend.c)
             SWPART      13, 1               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
-            SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
+            SWPART      14, 16              ; The body's positions and the background, worded (main.c: slices 4.5, 4.6;
+                                            ;   overlay 3's bank till 2026-11-01, the tunnellers' words its room)
             SWPART      15, 6               ; An ally's errands, the character's gifts (errand.c: slice 4.8's)
             SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
 

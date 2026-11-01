@@ -696,7 +696,9 @@ static void __fastcall__ answer (struct req* r)
         ((struct rs_summary*) r->x)->power = 10;
         break;
     case RS_TEST:
-        if (r->a == P_DIG) {                    /* (The tool to hand that suits it best: the house's) */
+        if (r->a == P_DIG && !r->actor) {       /* (The tool to hand that suits it best: the house's; a creature's,
+                                                **   a tunneller's, its grade alone, by its own dice as moving
+                                                **   quietly's, the world's the rest: slice 4.11's) */
             m = r->b > MAT_SOIL ? MAT_STONE : r->b;
             t = dig_tool (m);
             k = digger[t].rate[m];
@@ -752,7 +754,7 @@ static void __fastcall__ answer (struct req* r)
         if (r->a <= P_NOTICE_SMELL) {           /* (By its going and watchfulness: the house's) */
             r->steps += house_notice (r, HUB->pc_going, HUB->watch);
         }
-        if (r->a == P_STEALTH) {
+        if (r->a == P_STEALTH || r->a == P_DIG) {
             QUIET_IN                            /* (Moving quietly, by its own dice: the house's) */
             r->grade = flat (r->steps);
             QUIET_OUT

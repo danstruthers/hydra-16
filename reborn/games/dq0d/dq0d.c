@@ -118,7 +118,9 @@ void hour (void);
 void enlist_near (void);                        /* Part 11 (the main RAM's room, 2026-10-31) */
 unsigned char __fastcall__ plan (unsigned char k);   /* Part 9's: an actor's day and its place (leisure's, 2026-10-31) */
 void __fastcall__ roused (unsigned char k, unsigned char was);   /* Part 10's: a pastime let go */
-extern unsigned char ovbank[4];
+unsigned char __fastcall__ dig_way (unsigned char k);   /* Part 12 (the tunnellers', slice 4.11's) */
+unsigned char nearby (void);                    /*   (and the lairs near placed: the main RAM's room, 2026-11-01) */
+extern unsigned char ovbank[5];
 static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsigned x, unsigned y);  /* (Below) */
 extern char _SWAP_START__[];
 
@@ -162,6 +164,9 @@ struct dkind {
 #define H_KILLS         0x01                    /*   it finishes it (the referee's dispatch); */
 #define H_ROBS          0x02                    /*   it robs it (I_ROB: the world's), and leaves it; neither, it only
                                                 **   defended itself, and goes */
+#define K_DIGS          0x40                    /* (Its styles' high bits too: it digs by nature, a burrower's claws, */
+#define K_MINES         0x80                    /*   or with the tools it carries, a miner: kinds.txt's ways d and m,
+                                                **   slice 4.11's tunnellers) */
 enum { M_MINDLESS, M_BEAST, M_LOW, M_AVERAGE, M_CUNNING };   /* Its mind: nothing sways it; P_ANIMALS only; easily
                                                 **   fooled, hard to reason with; neither; hard to fool */
 #define KINDS           ((struct dkind*) 0x8000)
@@ -808,8 +813,11 @@ static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigne
 }
 
 /* The lairs on the character's stratum whose chunks are its own or beside it, and made (the character's
-** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was */
-static unsigned char nearby (void)
+** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was.  Part 12's (2026-11-01:
+** the main RAM's room, the tunnellers') */
+#pragma code-name (push, "SW12CODE")
+#pragma rodata-name (push, "SW12RODATA")
+unsigned char s_nearby (void)
 {
     struct stratum* s = &STRATUM (pcs);
     unsigned cx = (pcx - s->x0) / CW, cy = (pcy - s->y0) / CW;
@@ -827,6 +835,8 @@ static unsigned char nearby (void)
     }
     return n;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The actors: the denizens near the character, in the hub for the world and the senses */
 
@@ -1360,16 +1370,22 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
     bf = how == S_TOWARD ? toward (a.x - refx, a.y - refy) : apart (a.x - refx, a.y - refy);
 
     for (j = 0; j < 8; ++j) {
-        if (j == 4 && best != 0xFF) {
-            break;                              /* (The diagonal ways only where the four give none: their cost)
-                                                **   */
+        if (j == 4) {
+            if (best != 0xFF) {
+                break;                          /* (The diagonal ways only where the four give none: their cost) */
+            }
+            if (how == S_TOWARD) {
+                bf += apart (a.x - refx, a.y - refy);   /* (A diagonal nearer as the crow flies too, as near across
+                                                **   and down: past a corner, round a door, a tunneller's way dug
+                                                **   round it, slice 4.11's) */
+            }
         }
         d = j < 4 ? (s + j) & 3 : j;            /* (The four, then the diagonal ways: slant's, within its own chunk,
                                                 **   no other made for it) */
         nx = a.x + dir_x[d];
         ny = a.y + dir_y[d];
-        f = how == S_TOWARD ? toward (nx - refx, ny - refy) : apart (nx - refx, ny - refy);   /* (The walk's own
-                                                **   test last: it's the dearest) */
+        f = how == S_TOWARD ? toward (nx - refx, ny - refy) + (j >= 4 ? apart (nx - refx, ny - refy) : 0) :
+            apart (nx - refx, ny - refy);       /* (The walk's own test last: it's the dearest) */
         if (apart (nx - ahx[k], ny - ahy[k]) > lim || (how == S_AWAY && (f < bf || (f == bf && bf > 2))) ||
             (how == S_TOWARD && f >= bf) || taken (k, nx, ny) || !(d < 4 ? step_ok (a.sn, a.x, a.y, d) :
             cut_by (d) && slant (a.sn, a.x, a.y, DH (d))) ||
@@ -1964,8 +1980,9 @@ static unsigned char __fastcall__ decide (unsigned char k)
     } else if (foe && was != DO_SLEEP && (K.flags & K_NOSE) && (d = scent (k)) != 0xFF) {
         a.doing = DO_COMING;                    /* (Its nose to the character's trail: after it, the way the scent
                                                 **   goes; the world's, an older trail: DO_ROAM, if there's none) */
-    } else if (foe && !(K.flags & K_SHY) && drawn[k] && (d = draw_on (k)) != 0xFF) {
-        a.doing = DO_COMING;                    /* (Drawn on to where it last sensed the character, heard it, a while:
+    } else if (foe && !(K.flags & K_SHY) && drawn[k] && ((d = draw_on (k)) != 0xFF ||
+        ((K.styles & (K_DIGS | K_MINES)) && (d = dig_way (k)) != 0xFF))) {
+        a.doing = DO_COMING;                    /* (No way nearer: a tunneller digs one, part 12's, slice 4.11's) */                    /* (Drawn on to where it last sensed the character, heard it, a while:
                                                 **   slice 4.5's, HOUSE.md's: part 5's) */
     } else if ((a.mood & AM_HURT) && a.attitude < AT_ALLIED && !foe) {
         d = rests (k);                          /* (Hurt, and nothing after it: home to its lair, to rest: part 8's) */
@@ -1981,6 +1998,11 @@ static unsigned char __fastcall__ decide (unsigned char k)
     } else if (!pcrest && (K.flags & K_LAIR ? !random (4) : random (3))) {
         d = step_for (k, rng, S_ANY);
     }                                           /* (The character resting: no idle wandering in its sight) */
+    if (d == 0xFF && foe && sres[k] && dist > 1 && (K.styles & (K_DIGS | K_MINES))) {
+        d = dig_way (k);                        /* (A tunneller kept from the character it senses by rock, a wall,
+                                                **   rubble: it digs its way through, part 12's, slice 4.11's; drawn
+                                                **   on, part 5's draw_on asks too) */
+    }
     if (d == 0xFF) {                            /* (Watching: a while, unless it changes; fleeing, a moment; the
                                                 **   character resting, thirty times the while, a watcher's or an idler's:
                                                 **   roused all the same as it changes, tend's) */
@@ -2046,6 +2068,62 @@ static unsigned char __fastcall__ decide (unsigned char k)
     fought ();
     return 0;
 }
+
+/* ---- Tunnellers (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers and builders; HOUSE.md's, for review): actor k (the
+** copy a, its kind K's), hostile, kept by rock, a wall or rubble from the character it senses beyond it, or from where it
+** last sensed it (refx, refy: no step nearer), digs its way there if its kind digs: a burrower by its claws (K_DIGS),
+** a miner by a pick or a shovel it carries (K_MINES: the world's agear, AG_PICK, AG_SPADE).  The square beside it
+** that brings it nearest (the four first, a diagonal only where it's nearer still: the diagonal ways' rules, its corners
+** the world's to cut), within its reach of its home; the one it's digging kept while it's as near.  Posted (I_KIT's
+** KT_DIG: a spell at a time, by the character's rules, the world's: dq0w/wdig.c, which judges what it's into): 0xF9;
+** 0xFF, none.  Part 12's */
+#pragma code-name (push, "SW12CODE")
+#pragma rodata-name (push, "SW12RODATA")
+unsigned char __fastcall__ s_dig_way (unsigned char k)
+{
+    unsigned char j, best = 0xFF, g, t, h;
+    unsigned nx, ny, f, bf, b0;
+    unsigned char* p;
+
+    hub_map (0);
+    t = HUB->agear[k];
+    g = (K.styles & K_DIGS ? DG_CLAWS : 0) | (K.styles & K_MINES ? (t & AG_PICK ? DG_PICK : 0) |
+        (t & AG_SPADE ? DG_SPADE : 0) : 0);
+    h = HUB->actor[k].doing == DO_DIG ? HUB->actor[k].face : 0xFF;   /* (The way it's digging, if it is) */
+    bf = b0 = toward (a.x - refx, a.y - refy) + apart (a.x - refx, a.y - refy);   /* (Nearer by the squares across
+                                                **   and down, or as near so and nearer as the crow flies: a diagonal
+                                                **   round a shut door) */
+    for (j = 0; g && j < 8; ++j) {
+        nx = a.x + dir_x[j];
+        ny = a.y + dir_y[j];
+        if ((f = toward (nx - refx, ny - refy) + apart (nx - refx, ny - refy)) >= (DH (j) == h ? b0 : bf) || apart (nx - ahx[k], ny - ahy[k]) >
+            2 * K.range + 8 || !(p = at (a.sn, nx, ny)) ||
+            ((t = TILE (*p)) != T_WALL && t != T_ROCK && t != T_RUBBLE)) {
+            continue;                           /* (No nearer, too far from home, not a thing it digs) */
+        }
+        bf = f;
+        best = j;
+        if (DH (j) == h) {
+            break;                              /* (The way it's digging: on with it, while it's nearer) */
+        }
+    }
+    hub_map (0);
+    if (best == 0xFF) {
+        return 0xFF;
+    }
+    if (drawn[k] && drawn[k] < DRAWN_N) {
+        ++drawn[k];                             /* (Drawn on still: digging spends none of it) */
+    }
+    a.face = DH (best);
+    a.doing = DO_DIG;
+    im.a = KT_DIG;
+    im.b = a.face;
+    im.x[2] = g;
+    act (I_KIT, k);
+    return 0xF9;
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The denizens away from the character (out, but not actors): moved coarsely, a while at a time, each to a
 ** square of its range about its lair (in a chunk that's made: never made for them), so the dungeon goes on where
@@ -2808,7 +2886,7 @@ void s_sway (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1 ... OV4, as make.js packs
+/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1 ... OV5, as make.js packs
 ** them, ../dq0/ovlpack.js: each bank packed, read and unpacked in place by the unpack library, the linker's fill ($FF)
 ** put back after its bytes: ../dq0/ovunpack.inc): 0, or -1 */
 unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
@@ -2819,11 +2897,11 @@ static int __fastcall__ ovl_load (const char* dir)
 
     strcpy ((char*) b, dir);
     strcat ((char*) b, "/dq0d.ovl");
-    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (4)) < 0) {
+    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (5)) < 0) {
         return -1;
     }
     ovbank[0] = n;                              /* (The rest after it: ovl_unpack's) */
-    n = ovl_unpack (fd | (4 << 8));
+    n = ovl_unpack (fd | (5 << 8));
     close (fd);
     return -n;
 }

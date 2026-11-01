@@ -25,7 +25,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
-OVBANKS     = 23                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
+OVBANKS     = 24                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
             .bss
 _ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
@@ -141,9 +141,10 @@ go:
             SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
             SWPART      50, 21              ; The legs: getting up, a move's start prone, how fast; the body's positions,
                                             ;   the steps' loudness (dq0w.c's: overlay 21's, slices 4.5, 4.6)
-            SWPART      51, 5               ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
+            SWPART      51, 23              ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
                                             ;   overlay 1's bank, overlay 8's room part 19's, 2026-10-27; 5's,
-                                            ;   2026-10-30: 19's room the denizens' throws)
+                                            ;   2026-10-30: 19's room the denizens' throws; 23's, 2026-11-01: 5's
+                                            ;   room, a tunneller's dig asked)
             SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
             SWPART      53, 16              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
             SWPART      54, 16              ; Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
@@ -172,6 +173,7 @@ go:
             SWPART      77, 23              ; The sky seen, the time believed's start (wtime.c)
             SWPART      78, 23              ; Up to a place in the room (dq0w.c's go_to, ways_near: part 9's till
                                             ;   2026-10-31, its room the walk's)
+            SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -195,6 +197,7 @@ go:
             SWFN        den_drop, 60
             SWFN        den_legs, 51
             SWFN        den_other, 51
+            SWFN        den_dig, 79         ; (A tunneller's dig: slice 4.11's)
             SWFN        old_mint, 51
             SWFN        den_enter, 60
             SWFN        den_draw, 60

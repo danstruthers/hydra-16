@@ -15,8 +15,10 @@ const path = require('path');
 
 const WAYS = { s: 0x01, l: 0x02, w: 0x04, a: 0x08, f: 0x20, t: 0x40 };   // dq0d.c's K_SHY, K_LAIR, K_WAYS, K_BOLD, K_LIGHTS, K_SWEEPS
 const K_BONES = 0x10, K_NOSE = 0x80;            //   and K_BONES, K_NOSE (a hunter by smell: its nose 6 or more)
-const HELP = { k: 0x10, r: 0x20 };              // Its way with a foe it's brought down (dq0d.c's H_KILLS, H_ROBS: in its
-                                                //   styles' byte's high bits, the flags full)
+const HELP = { k: 0x10, r: 0x20, d: 0x40, m: 0x80 };   // Its way with a foe it's brought down (dq0d.c's H_KILLS,
+                                                //   H_ROBS: in its styles' byte's high bits, the flags full); and its
+                                                //   digging (slice 4.11's: dq0d.c's K_DIGS a burrower's claws, K_MINES
+                                                //   a miner's tools)
 const TREC = 64, NOSE_HUNTS = 6;                // (wtrace.c's struct tkind: a kind's traces)
 const STYLES = { b: 0, n: 1, m: 2, x: 3 };      // level.h's ST_*: a bit each
 const MINDS = { m: 0, b: 1, l: 2, a: 3, c: 4 }; // dq0d.c's M_*
