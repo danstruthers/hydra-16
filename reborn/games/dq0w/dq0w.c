@@ -6053,9 +6053,10 @@ void s_burns_now (void)
 
     hub_map (0);
     burn_ask = 0;
-    if (asked == TS_ASK) {
-        tsense ();                              /* (The time it believes alone: no light's burning looked at, its
-                                                **   next look as it was, so nothing else moves for it) */
+    if (asked == TS_ASK && HUB->now < burn_due) {
+        tsense ();                              /* (The time it believes alone, if the burning's look isn't due: no
+                                                **   light looked at, its next look as it was, so nothing else moves
+                                                **   for it) */
         return;
     }
     if (!burn_on) {
