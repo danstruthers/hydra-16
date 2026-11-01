@@ -213,10 +213,10 @@ static void __fastcall__ dig_of (struct req* r);
 
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
 ** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery, stone
-** Masonry, glass Glassworking (part 2's, the main RAM's room, 2026-10-29) */
+** Masonry, glass Glassworking, the rock where it lies Mining (part 2's, the main RAM's room, 2026-10-29) */
 static const unsigned char appraiser[NAP] = {
     HARN_WPN, HARN_WPN, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR,
-    HARN_MSN, HARN_GLA
+    HARN_MSN, HARN_GLA, HARN_MIN
 };
 
 /* RS_TEST's own tests, through one stub (the main RAM's room): a dig's, moving quietly's, an appraisal's (by the

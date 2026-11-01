@@ -2643,8 +2643,8 @@ static void spell (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW25CODE")           /* (Part 25's: part 1's room, the rock's, 2026-10-31) */
+#pragma rodata-name (push, "SW25RODATA")
 
 /* A link added to stratum sn's record (the world bank's: it in the window after), its index */
 static unsigned char __fastcall__ add_link (unsigned char sn, unsigned char kind, unsigned char to, unsigned x,
@@ -2667,11 +2667,51 @@ static unsigned char __fastcall__ add_link (unsigned char sn, unsigned char kind
     return s->nlinks++;
 }
 
-#pragma code-name (pop)
-#pragma rodata-name (pop)
+/* The shaft through (s_dig_on's, part 1's, by start_dig (0xFE): its room, 2026-10-31): a way down, if the
+** stratum below reaches under it */
+static void shaft_through (void)
+{
+    struct stratum* b;
+    struct link* q;
+    unsigned char l, u, k;
+    unsigned char* p;
+    int z;
 
-#pragma code-name (push, "SW25CODE")           /* (Part 25's: part 1's room, the rock's, 2026-10-31) */
-#pragma rodata-name (push, "SW25RODATA")
+    stratum_in (sn_ + 1);
+    b = &STRATUM (sn_ + 1);
+    if (b->made && (dig.x - b->x0 >= b->w || dig.y - b->y0 >= b->h)) {
+        hub_map (0);
+        event (E_DIG, 0, D_SOLID << 8);
+        return;
+    }
+    l = add_link (sn_, O_SHAFT_DOWN, sn_ + 1, dig.x, dig.y);
+    if (l == 0xFF) {
+        hub_map (0);
+        event (E_DIG, 0, D_SOLID << 8);
+        return;
+    }
+    sync_strata ();
+    z = elev_at (sn_, dig.x, dig.y);
+    change (sn_, dig.x, dig.y, T_DOWN, z, l);   /* (Its head) */
+    if (!b->made) {
+        grow_below (sn_);                       /* (Grown round it: a link up under each link down, this one's) */
+        for (u = 0xFF, k = 0, q = b->link; k < b->nlinks; ++k, ++q) {
+            if (q->x == dig.x && q->y == dig.y) {
+                u = k;
+            }
+        }
+    } else {
+        u = add_link (sn_ + 1, O_SHAFT_UP, sn_, dig.x, dig.y);
+        sync_strata ();
+    }
+    if (u != 0xFF) {                            /* (Its foot: a hole in the ceiling below, into what's there) */
+        z = (p = at (sn_ + 1, dig.x, dig.y)) != 0 && T_PASS (*p) ? C->elev[cy_][cx_] : 0;
+        change (sn_ + 1, dig.x, dig.y, T_UP, z, u);
+    }
+    hub_map (0);
+    event (E_DIG, 0, D_THROUGH << 8 | 1);
+    see (0);
+}
 
 void __fastcall__ s_start_dig (unsigned char d)
 {
@@ -2679,6 +2719,10 @@ void __fastcall__ s_start_dig (unsigned char d)
     unsigned char t, k;
 
     here ();
+    if (d == 0xFE) {                            /* (The shaft through: s_dig_on's) */
+        shaft_through ();
+        return;
+    }
     dig.d = d;
     dig.done = 0;
     if (d == DIR_DOWN) {
@@ -2745,17 +2789,73 @@ void __fastcall__ s_start_dig (unsigned char d)
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
-/* A spell of work done: its test, its noise, and on, or through */
+/* A wall looked at (I_TRACE's TRC_WALL: part 37's, dig.rock 0xFF for it, the dig's part the rock's): the first wall
+** or rock ahead, within six squares; masonry, or the bare rock, how it looks, and its name if a miner's eye knows it
+** (the referee's P_APPRAISE, AP_ROCK: Mining); worded into the UI bank's trtext and told (E_VIEW's V_TRACED), as the
+** floor's are (wtrword.c's) */
+#pragma data-name (push, "SW1RODATA")
+static char wall_w[80] = "";
+#pragma data-name (pop)
+static void wall_look (void)
+{
+    static const char rocks[] = "shale\0flaky\0sandstone\0buff\0limestone\0pale grey\0slate\0blue-grey\0marble\0"
+        "white\0granite\0speckled grey\0basalt\0black\0quartz\0white-veined\0ironstone\0rusty red\0copper ore\0"
+        "green-stained";
+    const char* r;
+    unsigned char i, t = T_FLOOR, h = HUB->pc_face, k;
+    unsigned x = mx, y = my;
+    unsigned char* p = 0;
+
+    dig.rock = RK_NONE;
+    hub_map (SIGHT_BANK);
+    k = SIGHT->dark;
+    strcpy (wall_w, k ? "It's too dark to make out the wall." : "There's no wall near enough ahead to make out.");
+    for (i = 0; !k && i < 6; ++i) {
+        x += head_x[h];
+        y += head_y[h];
+        if (!(p = at (sn_, x, y)) || (t = TILE (*p)) == T_WALL || t == T_ROCK) {
+            break;
+        }
+    }
+    if (!k && p && i < 6) {
+        if ((k = room_of (sn_, mx, my)) == 0xFF) {
+            k = room_of (sn_, x + head_x[h], y + head_y[h]);
+        }
+        at (sn_, x, y);
+        if (C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL] == MAT_MASONRY) {
+            strcpy (wall_w, "The wall's masonry: dressed stone, set in mortar.");
+        } else {
+            k = rock_kind (HUB->seed, -3 - elev_at (sn_, mx, my) - STRATUM (sn_).datum, x, y);
+            for (r = rocks; --k; r += strlen (r) + 1) {    /* (Its name, then its looks) */
+                r += strlen (r) + 1;
+            }
+            strcpy (wall_w, "The wall's the bare rock, ");
+            strcat (wall_w, r + strlen (r) + 1);
+            if (G_OK (test_w (P_APPRAISE, AP_ROCK))) {
+                strcat (wall_w, ": ");
+                strcat (wall_w, r);
+            }
+            strcat (wall_w, ".");
+        }
+    }
+    hub_map (UI_BANK);
+    strcpy (UIREC->trtext, wall_w);
+    hub_map (0);
+    event (E_VIEW, 0, V_TRACED);
+}
+
+/* A spell of work done: its test, its noise, and on, or through (or a wall looked at: wall_look) */
 void s_dig_on (void)
 {
-    struct stratum* b;
-    struct link* q;
     signed char g;
-    unsigned char l, u, k;
-    unsigned char* p;
+    unsigned char l;
     int z;
 
     here ();
+    if (dig.rock == 0xFF) {
+        wall_look ();
+        return;
+    }
     g = test_dig ();
     if (made == 0xFF) {                         /* (Nothing it has will bite into it) */
         hub_map (0);
@@ -2787,41 +2887,7 @@ void s_dig_on (void)
         see (0);
         return;
     }
-    /* The shaft: a way down, if the stratum below reaches under it */
-    stratum_in (sn_ + 1);
-    b = &STRATUM (sn_ + 1);
-    if (b->made && (dig.x - b->x0 >= b->w || dig.y - b->y0 >= b->h)) {
-        hub_map (0);
-        event (E_DIG, 0, D_SOLID << 8);
-        return;
-    }
-    l = add_link (sn_, O_SHAFT_DOWN, sn_ + 1, dig.x, dig.y);
-    if (l == 0xFF) {
-        hub_map (0);
-        event (E_DIG, 0, D_SOLID << 8);
-        return;
-    }
-    sync_strata ();
-    z = elev_at (sn_, dig.x, dig.y);
-    change (sn_, dig.x, dig.y, T_DOWN, z, l);   /* (Its head) */
-    if (!b->made) {
-        grow_below (sn_);                       /* (Grown round it: a link up under each link down, this one's) */
-        for (u = 0xFF, k = 0, q = b->link; k < b->nlinks; ++k, ++q) {
-            if (q->x == dig.x && q->y == dig.y) {
-                u = k;
-            }
-        }
-    } else {
-        u = add_link (sn_ + 1, O_SHAFT_UP, sn_, dig.x, dig.y);
-        sync_strata ();
-    }
-    if (u != 0xFF) {                            /* (Its foot: a hole in the ceiling below, into what's there) */
-        z = (p = at (sn_ + 1, dig.x, dig.y)) != 0 && T_PASS (*p) ? C->elev[cy_][cx_] : 0;
-        change (sn_ + 1, dig.x, dig.y, T_UP, z, u);
-    }
-    hub_map (0);
-    event (E_DIG, 0, D_THROUGH << 8 | 1);
-    see (0);
+    start_dig (0xFE);                           /* (The shaft through: part 25's shaft_through, the room's) */
 }
 
 #pragma code-name (pop)
@@ -5077,6 +5143,13 @@ void __fastcall__ s_intent_more (struct msg* m)
         hub_map (SIGHT_BANK);
         d = SIGHT->dark;
         hub_map (0);
+        if (k == TRC_WALL) {                    /* (A wall looked at, its rock: the dig's part's wall_look, slice
+                                                **   4.10's; three seconds) */
+            dig.rock = 0xFF;
+            dig_on ();
+            busy (30);
+            break;
+        }
         if (k != TRC_FLOOR && (k == TRC_SMELL ? HUB->pcsum.smell != 0 : !d)) {
             busy (m->w2 ? m->w2 : k == TRC_SMELL ? 30 : 600);   /* (A track's minute, a sniff's three seconds: a
                                                 **   timed work, its test, the reading, at its end: work_done's;

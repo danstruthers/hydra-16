@@ -171,6 +171,8 @@ static unsigned char examine (void)
         inspect (k, cmd.obj.lies, ex);
     } else if (ex) {
         msg ("Which thing? Name it (assess the sword, check the chest for traps ...).");
+    } else if (k == OB_WALL) {
+        intend2 (I_TRACE, TRC_WALL, 0);         /* (The wall ahead, its rock: the world's words, slice 4.10's) */
     } else {
         look (2);                               /* (A close look about: the room's figures) */
     }

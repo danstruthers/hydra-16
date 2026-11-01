@@ -179,8 +179,9 @@ struct trail {
     unsigned        age;                        /* (The world's: how long since, in its TQs, four minutes) */
 };
 #define TR_HEAVY        6                       /* (A scent's strength that hangs heavy, the words') */
-enum { TRC_FLOOR, TRC_TRACK, TRC_SMELL };      /* I_TRACE's how: the floor looked at (sight, no test), the Tracking
-                                                **   test, a smell (a notice test of smell) */
+enum { TRC_FLOOR, TRC_TRACK, TRC_SMELL, TRC_WALL };    /* I_TRACE's how: the floor looked at (sight, no test), the
+                                                **   Tracking test, a smell (a notice test of smell); the wall ahead
+                                                **   looked at (its rock, slice 4.10's: dq0w.c's part 1, wall_look) */
 enum { TRR_OK, TRR_DARK, TRR_NOSE, TRR_NONE };  /* Its result: read; too dark to see the floor; no sense of smell;
                                                 **   nothing found */
 enum { TP_ONE, TP_FEW, TP_SEVERAL, TP_MANY };   /* (A trail's passings: one, two or three, up to eleven, more) */
