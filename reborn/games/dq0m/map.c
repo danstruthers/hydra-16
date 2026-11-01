@@ -161,6 +161,8 @@ static char __fastcall__ glyph (unsigned x, unsigned y, unsigned char* p, unsign
         return '"';
     case T_PIT:
         return 'O';
+    case T_RUBBLE:                              /* (A passage fallen in: slice 4.10's) */
+        return '%';
     case T_WALL:
         return inside (x, y - 1) || inside (x, y + 1) || !(inside (x - 1, y) || inside (x + 1, y)) ? '-' : '|';
     }

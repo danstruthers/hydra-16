@@ -1621,7 +1621,7 @@ function cacheChunks(m, sn) {
   for (const b of cacheBanks(m)) {
     for (let k = 0; k < 3; k++) {
       const o = k * CHUNK_SIZE, nrooms = b[o + 5], tile = b.subarray(o + CK_TILE, o + CK_TILE + 1024);
-      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x0F) > 9)) continue;
+      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x0F) > 10)) continue;
       const rooms = [];
       for (let r = 0; r < nrooms; r++) { const p = o + CK_ROOM + r * 8; rooms.push({ x: b[p], y: b[p + 1], w: b[p + 2], h: b[p + 3], kind: b[p + 5] }); }
       out.set((b[o + 1] | b[o + 2] << 8) + ',' + (b[o + 3] | b[o + 4] << 8), { cx: b[o + 1] | b[o + 2] << 8, cy: b[o + 3] | b[o + 4] << 8, rooms, tile: Array.from(tile, t => t & 0x0F) });
@@ -1853,7 +1853,7 @@ function builtChunks(m, sn) {
     for (let k = 0; k < 3; k++) {
       const o = k * 0xAA0, nr = b[o + 5], nz = b[o + 6], np = b[o + C.portal - 1];
       const tile = b.subarray(o + C.tile, o + C.tile + 1024);
-      if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x0F) > 9)) continue;
+      if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x0F) > 10)) continue;
       const rooms = [], zones = [], portals = [];
       for (let r = 0; r < nr; r++) {
         const p = o + C.room + r * 8;
@@ -3401,6 +3401,50 @@ module.exports = {
         if (begun < 0) f.push('the rock told before the dig began');
         else if (!/The work goes|Your tool slips/.test(s.slice(begun, first))) f.push('the rock told on the dig\'s first spell, the floor\'s flags not dug first: ' + s.slice(begun, first + 80));
         if (!/You dig with your pick\./.test(s.slice(begun, first + 200))) f.push('the pick not named on the first spell');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0rubble', near: ['map'], what: 'Dingus Quest Zero\'s age\'s collapse (slice 4.10: DUNGEON.md\'s rock and old places, HOUSE.md\'s rock\'s kinds and hardness; the maker\'s rubble, caves.c\'s, by the stratum\'s age, twice where the rock is poor; world.h\'s T_RUBBLE), by the hub\'s cache: at seed 3 down the stairway (dq0 -T, d), the chunks of both strata read: rubble in old passages (seed 3\'s nine squares: the top stratum\'s chunk 3,1 and the caves\' 18,11 and 18,12), every square of it a passage\'s, in no room\'s bounds, every square beside it a passage\'s, the rock\'s or rubble (no doorway, no room\'s floor), never on a chunk\'s edge',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'map', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const f = [], ok = new Set([T_CORR, T_ROCK, T_WALL, 10]);
+        let n = 0;
+        for (const sn of [0, 1]) for (const [at, c] of cacheChunks(m, sn)) for (let i = 0; i < 1024; i++) {
+          if (c.tile[i] !== 10) continue;
+          n++;
+          const x = i & 31, y = i >> 5;
+          if (!x || !y || x === 31 || y === 31) f.push(sn + ':' + at + ': rubble on the chunk\'s edge at ' + x + ',' + y);
+          else if (![-32, 1, 32, -1].every(d => ok.has(c.tile[i + d]))) f.push(sn + ':' + at + ': rubble at ' + x + ',' + y + ' beside a room\'s square or a doorway');
+          if (c.rooms.some(r => x + 1 >= r.x && x <= r.x + r.w && y + 1 >= r.y && y <= r.y + r.h)) f.push(sn + ':' + at + ': rubble at ' + x + ',' + y + ' in a room\'s bounds');
+        }
+        if (n < 5) f.push('only ' + n + ' squares of rubble in the cache (seed 3\'s: 9)');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0mixed', near: ['map'], what: 'Dingus Quest Zero\'s mixed strata (slice 4.10: DUNGEON.md\'s growing a chunk, HOUSE.md\'s rock\'s kinds and hardness; the maker\'s cstyle), by the hub\'s cache: at seed 3 with every built stratum made mixed (dq0 -M, the tests\'), by the stairway (dq0 -T) and down it, the top stratum\'s chunks read: part natural (seed 3\'s 3,0 and 3,1: caves, every room a cave\'s chamber) and part built (2,0 and 2,1, the stairway\'s: no cave in them), and where a natural chunk meets a built one their edges\' open squares meet; the stratum below (natural) all caves',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -M', 'd', 'map', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const f = [], ks = cacheChunks(m, 0), open = t => t !== T_ROCK && t !== T_WALL && t !== T_WINDOW;
+        const natural = c => c.rooms.length > 0 && c.rooms.every(r => r.kind === 6), built = c => !c.rooms.some(r => r.kind === 6);
+        const nat = [...ks].filter(([, c]) => natural(c)).map(([at]) => at), bui = [...ks].filter(([, c]) => built(c)).map(([at]) => at);
+        if (!nat.length || !bui.length) f.push('the top stratum not part natural, part built: natural ' + nat.join(' ') + ', built ' + bui.join(' '));
+        for (const [at, c] of ks) for (const [dx, dy] of [[1, 0], [0, 1]]) {
+          const d = ks.get((c.cx + dx) + ',' + (c.cy + dy));
+          if (!d || natural(c) === natural(d)) continue;
+          for (let k = 0; k < 32; k++) {
+            const a = dx ? c.tile[k * 32 + 31] : c.tile[31 * 32 + k], b = dx ? d.tile[k * 32] : d.tile[k];
+            if (open(a) !== open(b)) f.push(at + ': its ' + (dx ? 'east' : 'south') + ' edge\'s square ' + k + ' not met by its neighbour\'s (natural and built)');
+          }
+        }
+        if (![...cacheChunks(m, 1).values()].every(natural)) f.push('the stratum below (natural) not all caves');
         return f;
       },
       sdcard: true

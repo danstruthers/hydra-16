@@ -34,8 +34,11 @@ enum { RH_SOFT, RH_MIDDLING, RH_HARD, RH_VERY_HARD };
 /* The rock at square x, y of the frame, depth feet below the way in (the top stratum's datum less the floor's), from
 ** the game's seed (16 bits of it): RK_* */
 unsigned char __fastcall__ rock_kind (unsigned seed, int depth, unsigned x, unsigned y);
+/* The beds' rock there alone (rock_kind's, but a region's veins, dykes and bosses: the maker's, poor rock's, ROCK_BED
+** for it alone) */
+unsigned char __fastcall__ rock_bed (unsigned seed, int depth, unsigned x, unsigned y);
 
-#if defined (ROCK_CODE)
+#if defined (ROCK_CODE) || defined (ROCK_BED)
 
 /* (16 bits throughout, the 6502's: no long arithmetic.  Every static given a value, so a task can put them in a
 ** part: its DATA a segment of the part's, used only within a call) */
@@ -59,6 +62,28 @@ static unsigned char __fastcall__ rk_mix (unsigned char what, unsigned rx, unsig
     return rk_next ();
 }
 
+unsigned char __fastcall__ rock_bed (unsigned seed, int depth, unsigned x, unsigned y)
+{
+    static int d = 0, e = 0;
+    static unsigned char k = 0;
+
+    /* The beds: the dip (feet a region each way, -16 to 15), the region's swell (0 to 7 feet), 25 feet each */
+    rk_seed = seed;
+    rk_mix (4, 0, 0);
+    d = (signed char) ((rk_next () & 0x1F) - 16);
+    e = (signed char) ((rk_next () & 0x1F) - 16);
+    d = depth + (int) (x >> 5) * d / 8 + (int) (y >> 5) * e / 8 + (rk_mix (5, x >> 8, y >> 8) & 7);
+    k = rk_mix (6, (unsigned) (d + 30000) / 25, 0) % 10;   /* (The bed's kind: shale 4, sandstone 3, limestone 3
+                                                            **   in 10) */
+    k = k < 4 ? RK_SHALE : k < 7 ? RK_SANDSTONE : RK_LIMESTONE;
+    if (depth > 200) {
+        k = k == RK_SHALE ? RK_SLATE : k == RK_LIMESTONE ? RK_MARBLE : k;
+    }
+    return k;
+}
+#endif
+
+#if defined (ROCK_CODE)
 unsigned char __fastcall__ rock_kind (unsigned seed, int depth, unsigned x, unsigned y)
 {
     static int d = 0, e = 0;
@@ -88,18 +113,7 @@ unsigned char __fastcall__ rock_kind (unsigned seed, int depth, unsigned x, unsi
             return RK_GRANITE;
         }
     }
-    /* The beds: the dip (feet a region each way, -16 to 15), the region's swell (0 to 7 feet), 25 feet each */
-    rk_mix (4, 0, 0);
-    d = (signed char) ((rk_next () & 0x1F) - 16);
-    e = (signed char) ((rk_next () & 0x1F) - 16);
-    d = depth + (((int) rx << 8 | x) >> 5) * d / 8 + (((int) ry << 8 | y) >> 5) * e / 8 + (rk_mix (5, rx, ry) & 7);
-    k = rk_mix (6, (unsigned) (d + 30000) / 25, 0) % 10;   /* (The bed's kind: shale 4, sandstone 3, limestone 3
-                                                            **   in 10) */
-    k = k < 4 ? RK_SHALE : k < 7 ? RK_SANDSTONE : RK_LIMESTONE;
-    if (depth > 200) {
-        k = k == RK_SHALE ? RK_SLATE : k == RK_LIMESTONE ? RK_MARBLE : k;
-    }
-    return k;
+    return rock_bed (seed, depth, (unsigned) rx << 8 | x, (unsigned) ry << 8 | y);
 }
 
 #endif

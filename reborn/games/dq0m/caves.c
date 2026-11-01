@@ -353,6 +353,60 @@ static unsigned char __fastcall__ wh (unsigned char k)
     return (unsigned char) (h >> 8);
 }
 
+/* Square x, y of the chunk (L) a passage's that may fall in: a passage's, every square beside it a passage's or the
+** rock's (no room's, no doorway's: they stay as they were made), in no room's bounds (a cave's may take in a tunnel),
+** not on the chunk's edge */
+static const signed char nb[4] = { -CW, 1, CW, -1 };
+static unsigned char __fastcall__ fallen_ok (unsigned char x, unsigned char y)
+{
+    unsigned char d, t;
+    unsigned char* q;
+    struct room* p;
+
+    if ((unsigned char) (x - 1) >= CW - 2 || (unsigned char) (y - 1) >= CW - 2 || TILE (*(q = &L->tile[y][x])) != T_CORR) {
+        return 0;
+    }
+    for (d = 0; d < 4; ++d) {
+        if ((t = TILE (q[nb[d]])) != T_CORR && t != T_ROCK && t != T_WALL && t != T_RUBBLE) {
+            return 0;
+        }
+    }
+    for (d = L->nrooms, p = L->room; d; --d, ++p) {
+        if (x + 1 >= p->x && x <= p->x + p->w && y + 1 >= p->y && y <= p->y + p->h) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/* Age's collapse (HOUSE.md's rock's kinds and hardness, slice 4.10's): an old stratum's passages partly fallen in,
+** a heap of rubble a square and some beside it, by its own dice (the chunk's place: the layout as it was); six tries
+** a chunk, each falling in two centuries old or more, in 20 a chance of its age in centuries (ten at most), twice
+** that where the rock is poor (shale at the chunk's middle: its edges' poor, plan.c's) */
+static void __fastcall__ rubble (unsigned char poor)
+{
+    unsigned char i, d, x, y, n = STRATUM (L->sn).age;
+    unsigned char* q;
+
+    if (n < 2) {
+        return;
+    }
+    n = (n > 10 ? 10 : n) << poor;
+    for (i = 0; i < 6; ++i) {
+        x = wh (40 + i) & (CW - 1);
+        y = wh (50 + i) & (CW - 1);
+        if (!fallen_ok (x, y) || wh (60 + i) % 20 >= n) {
+            continue;
+        }
+        *(q = &L->tile[y][x]) += T_RUBBLE - T_CORR;
+        for (d = 0; d < 4; ++d) {               /* (Some beside it too) */
+            if (wh (70 + i * 4 + d) & 1 && fallen_ok (x + (d == 1) - (d == 3), y + (d == 2) - (d == 0))) {
+                q[nb[d]] += T_RUBBLE - T_CORR;
+            }
+        }
+    }
+}
+
 void __fastcall__ o_wet_chunk (struct chunk* c, const struct edges* e)
 {
     unsigned char r, x, y, k, d, w = e->water;
@@ -360,6 +414,10 @@ void __fastcall__ o_wet_chunk (struct chunk* c, const struct edges* e)
     struct room* p;
 
     L = c;
+    if (w == 0xFF) {                            /* (dq0 -W, the tests': no water; the rubble still) */
+        rubble (e->poor);
+        return;
+    }
     memset (c->wlev, WL_NONE, sizeof c->wlev);
     for (r = 0; r < c->nrooms && w; ++r) {
         p = &c->room[r];
@@ -402,6 +460,7 @@ void __fastcall__ o_wet_chunk (struct chunk* c, const struct edges* e)
             }
         }
     }
+    rubble (e->poor);                        /* (Age's collapse: slice 4.10's, wet or dry) */
 }
 
 #pragma code-name (pop)

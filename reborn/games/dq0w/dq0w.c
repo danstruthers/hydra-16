@@ -2545,6 +2545,10 @@ static struct {
 #define DIG_TOP         (dig.d != DIR_DOWN ? 0xFF : dig.mat == MAT_EARTH || dig.mat == MAT_SOIL ? 4 : \
                          dig.mat == MAT_STONE ? 0 : 2)
 void __fastcall__ dig_kept (unsigned char begin);   /* (Part 19's: the hole's record, DUG) */
+#define WK_NAMED        0x80                    /* (A wall looked at, dig.rock's for its words: its rock named; too */
+#define WK_DARK         0xF0                    /*   dark to see; no wall near enough; masonry: wall_look's) */
+#define WK_NONE         0xF1
+#define WK_MASONRY      0xF2
 
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
@@ -2713,14 +2717,52 @@ static void shaft_through (void)
     see (0);
 }
 
+/* A wall looked at, worded (wall_look's, part 1's: its dig.rock, WK_* or the rock's RK_* | WK_NAMED): into the UI
+** bank's trtext, told (E_VIEW's V_TRACED), as the floor's are (wtrword.c's) */
+#pragma data-name (push, "SW25RODATA")
+static char wall_w[64] = "";
+#pragma data-name (pop)
+static void wall_words (void)
+{
+    static const char rocks[] = "shale\0flaky\0sandstone\0buff\0limestone\0pale grey\0slate\0blue-grey\0marble\0"
+        "white\0granite\0speckled grey\0basalt\0black\0quartz\0white-veined\0ironstone\0rusty red\0copper ore\0"
+        "green-stained";
+    const char* r;
+    unsigned char k = dig.rock, n = k & WK_NAMED;
+
+    dig.rock = RK_NONE;
+    strcpy (wall_w, k == WK_DARK ? "It's too dark to make out the wall." : k == WK_NONE ?
+        "There's no wall near enough ahead to make out." : "The wall's masonry: dressed stone, set in mortar.");
+    if (k < WK_DARK) {
+        for (r = rocks, k &= ~WK_NAMED; --k; r += strlen (r) + 1) {   /* (Its name, then its looks) */
+            r += strlen (r) + 1;
+        }
+        strcpy (wall_w, "The wall's the bare rock, ");
+        strcat (wall_w, r + strlen (r) + 1);
+        if (n) {
+            strcat (wall_w, ": ");
+            strcat (wall_w, r);
+        }
+        strcat (wall_w, ".");
+    }
+    hub_map (UI_BANK);
+    strcpy (UIREC->trtext, wall_w);
+    hub_map (0);
+    event (E_VIEW, 0, V_TRACED);
+}
+
 void __fastcall__ s_start_dig (unsigned char d)
 {
     unsigned char* p;
     unsigned char t, k;
 
     here ();
-    if (d == 0xFE) {                            /* (The shaft through: s_dig_on's) */
-        shaft_through ();
+    if (d >= 0xFC) {                            /* (Part 1's, the room's: the shaft through, a wall's words) */
+        if (d == 0xFE) {
+            shaft_through ();
+        } else {
+            wall_words ();
+        }
         return;
     }
     dig.d = d;
@@ -2767,13 +2809,15 @@ void __fastcall__ s_start_dig (unsigned char d)
         }
         p = at (sn_, dig.x, dig.y);
         t = p ? TILE (*p) : T_PIT;
-        if (t != T_WALL && t != T_ROCK) {
+        if (t != T_WALL && t != T_ROCK && t != T_RUBBLE) {
             hub_map (0);
             no_way (N_NO_DIG);
             return;
         }
-        dig.need = t == T_WALL ? 4 : 10;        /* (A wall, two feet; a square of rock, five) */
-        dig.mat = C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL];   /* (Its room's walls, or the rock) */
+        dig.need = t == T_ROCK ? 10 : 4;        /* (A wall, two feet; a square of rock, five; rubble cleared, two) */
+        dig.mat = t == T_RUBBLE ? MAT_SOIL : C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL];   /* (Its
+                                                **   room's walls, or the rock; rubble shifted as loose soil is,
+                                                **   slice 4.10's) */
     }
     dig.rock = RK_NONE;
     dig_kept (1);                               /* (Told, begun: on from where it was left, a hole begun before) */
@@ -2790,58 +2834,67 @@ void __fastcall__ s_start_dig (unsigned char d)
 #pragma rodata-name (push, "SW1RODATA")
 
 /* A wall looked at (I_TRACE's TRC_WALL: part 37's, dig.rock 0xFF for it, the dig's part the rock's): the first wall
-** or rock ahead, within six squares; masonry, or the bare rock, how it looks, and its name if a miner's eye knows it
-** (the referee's P_APPRAISE, AP_ROCK: Mining); worded into the UI bank's trtext and told (E_VIEW's V_TRACED), as the
-** floor's are (wtrword.c's) */
-#pragma data-name (push, "SW1RODATA")
-static char wall_w[80] = "";
-#pragma data-name (pop)
+** or rock ahead, within six squares: masonry, or the bare rock, its kind and whether a miner's eye knows it (the
+** referee's P_APPRAISE, AP_ROCK: Mining), dig.rock's (WK_*, or its RK_* | WK_NAMED) for part 25's words (start_dig
+** 0xFC: wall_words) */
 static void wall_look (void)
 {
-    static const char rocks[] = "shale\0flaky\0sandstone\0buff\0limestone\0pale grey\0slate\0blue-grey\0marble\0"
-        "white\0granite\0speckled grey\0basalt\0black\0quartz\0white-veined\0ironstone\0rusty red\0copper ore\0"
-        "green-stained";
-    const char* r;
     unsigned char i, t = T_FLOOR, h = HUB->pc_face, k;
     unsigned x = mx, y = my;
     unsigned char* p = 0;
 
-    dig.rock = RK_NONE;
     hub_map (SIGHT_BANK);
-    k = SIGHT->dark;
-    strcpy (wall_w, k ? "It's too dark to make out the wall." : "There's no wall near enough ahead to make out.");
-    for (i = 0; !k && i < 6; ++i) {
+    dig.rock = SIGHT->dark ? WK_DARK : WK_NONE;
+    for (i = 0; dig.rock == WK_NONE && i < 6; ++i) {
         x += head_x[h];
         y += head_y[h];
         if (!(p = at (sn_, x, y)) || (t = TILE (*p)) == T_WALL || t == T_ROCK) {
             break;
         }
     }
-    if (!k && p && i < 6) {
+    if (dig.rock == WK_NONE && p && i < 6) {
         if ((k = room_of (sn_, mx, my)) == 0xFF) {
             k = room_of (sn_, x + head_x[h], y + head_y[h]);
         }
         at (sn_, x, y);
-        if (C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL] == MAT_MASONRY) {
-            strcpy (wall_w, "The wall's masonry: dressed stone, set in mortar.");
-        } else {
-            k = rock_kind (HUB->seed, -3 - elev_at (sn_, mx, my) - STRATUM (sn_).datum, x, y);
-            for (r = rocks; --k; r += strlen (r) + 1) {    /* (Its name, then its looks) */
-                r += strlen (r) + 1;
-            }
-            strcpy (wall_w, "The wall's the bare rock, ");
-            strcat (wall_w, r + strlen (r) + 1);
-            if (G_OK (test_w (P_APPRAISE, AP_ROCK))) {
-                strcat (wall_w, ": ");
-                strcat (wall_w, r);
-            }
-            strcat (wall_w, ".");
+        dig.rock = WK_MASONRY;
+        if (C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL] != MAT_MASONRY) {
+            dig.rock = rock_kind (HUB->seed, -3 - elev_at (sn_, mx, my) - STRATUM (sn_).datum, x, y) |
+                (G_OK (test_w (P_APPRAISE, AP_ROCK)) ? WK_NAMED : 0);
         }
     }
-    hub_map (UI_BANK);
-    strcpy (UIREC->trtext, wall_w);
+    start_dig (0xFC);
+}
+
+/* The roof come down on the digger (D_ROOF's, poor rock's: HOUSE.md's rock's kinds and hardness): a blunt strike from no
+** one at its head and shoulders, the book's falling rock (Skills 8: 1d6 a ten feet's fall, rocky ground 2d6 more:
+** the house's 2d6, a rock from the roof a few feet over it), the referee's (RS_HARM's HC_STRIKE), told (E_HARM: its
+** long task stopped, hard), the time it's out for taken */
+static void roof_harm (void)
+{
+    struct req* r;
+    unsigned out;
+
     hub_map (0);
-    event (E_VIEW, 0, V_TRACED);
+    r = &HUB->slot[SLOT_WORLD];
+    r->kind = RS_HARM;
+    r->actor = 0;
+    r->other = 0;
+    r->a = HC_STRIKE;
+    r->b = AS_BLUNT;
+    r->c = 2;
+    r->w1 = 0;
+    r->w2 = Z_HIGH;
+    r->text[0] = 0;
+    r = hub_ask (SLOT_WORLD);
+    out = r->w2;
+    event (E_HARM, 0, HC_STRIKE | r->b << 8 | (out ? E_OUT : 0));
+    hub_map (0);
+    r->state = REQ_FREE;
+    harm_fx ();
+    if (out) {
+        busy (out);
+    }
 }
 
 /* A spell of work done: its test, its noise, and on, or through (or a wall looked at: wall_look) */
@@ -2876,6 +2929,9 @@ void s_dig_on (void)
         dig_kept (0);                           /* (The feet dug kept: stopped, it goes on from here) */
         event (E_DIG, 0, (g == G_CS || g == G_MS ? D_GOOD : g == G_MF ? D_POOR : g == 0x7F ? D_ROOF : D_SLIP) << 8 |
             (dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2));
+        if (g == 0x7F) {
+            roof_harm ();                       /* (The roof come down on the digger too) */
+        }
         spell ();
         return;
     }
@@ -4095,8 +4151,11 @@ static unsigned char __fastcall__ near_foe (unsigned x, unsigned y)
 ** it's come into plus 1, | TE_STILL if it was in it already; 0 neither */
 unsigned char __fastcall__ s_zone_step (unsigned ox, unsigned oy, unsigned x, unsigned y)
 {
-    unsigned char e;
+    unsigned char e, *p;
 
+    if ((ox != x || oy != y) && (p = at (sn_, x, y)) != 0 && TILE (*p) == T_RUBBLE) {
+        pt0 += pst;                             /* (Rubble clambered over: twice the step's time, slice 4.10's) */
+    }
     if ((ox != x || oy != y) && (HUB->pc_wet || (at (sn_, x, y) && C->wany))) {
         pt0 += wade (pst);                      /* (A walk's step into water, or in it: its time the more, swimming,
                                                 **   part 73's, slice 4.9's) */

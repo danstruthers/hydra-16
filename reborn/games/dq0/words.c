@@ -27,6 +27,8 @@
 #include "hub.h"
 #include "level.h"
 
+#define T_STEPS_        5                       /* (A square's kind: dq0w/world.h's T_STEPS, T_RUBBLE) */
+#define T_RUBBLE_       10
 #define PS_OPEN_        0x01                    /* (A portal's state: open: dq0w/world.h's PS_OPEN) */
 
 static const char* const relname[8] = {
@@ -402,6 +404,7 @@ static void passage (void)
 {
     unsigned char i, n;
     signed char dz;
+    const struct sseen_way* w;
 
     for (i = n = 0; i < S->ndoors; ++i) {     /* (The doors beside it, but behind it) */
         n += !REL_BEHIND (S->door[i].rel);
@@ -410,15 +413,17 @@ static void passage (void)
     add (S->nways <= 1 && n ? "The passage comes to a door; it goes back " : S->nways <= 1 ?
          "The passage ends here; it goes back " : S->nways == 2 ? "You are in a passage. It goes " :
          "The passage forks here. It goes ");
-    for (i = 0; i < S->nways; ++i) {
+    for (i = 0, w = S->way; i < S->nways; ++i, ++w) {
         if (i) {
             add (i + 1 == S->nways ? " and " : ", ");
         }
-        add (relname[S->way[i].rel & 7]);
-        dz = S->way[i].dz;
-        if (S->way[i].steps) {
+        add (relname[w->rel & 7]);
+        dz = w->dz;
+        if (w->steps == T_STEPS_) {
             add (dz > 0 ? " up steps" : " down steps");
-        } else if (dz >= 1 || dz <= -1) {
+        } else if (w->steps == T_RUBBLE_) {   /* (A passage fallen in: slice 4.10's) */
+            add (", over rubble");
+        } else if (dz) {
             add (dz == 1 ? ", rising gently" : dz == -1 ? ", falling gently" : dz > 0 ? ", rising" : ", falling");
         }
     }

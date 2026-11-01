@@ -560,6 +560,11 @@ static unsigned char __fastcall__ edge_way (unsigned char sn, unsigned cx, unsig
     return p > len - 2 ? len - 2 : p;
 }
 
+#define ROCK_BED
+#pragma data-name (push, "OV4RODATA")
+#include "../dq0/rock.h"
+#pragma data-name (pop)
+
 /* Chunk (cx, cy)'s edges: the ways across them, the ground at its corners, its squares in the bounds, the links in
 ** it (x1 and y1 0xFF: solid rock, nothing to grow) */
 void __fastcall__ o_chunk_edges (unsigned char sn, unsigned cx, unsigned cy, struct edges* e)
@@ -591,6 +596,8 @@ void __fastcall__ o_chunk_edges (unsigned char sn, unsigned cx, unsigned cy, str
         }
     }
     e->water = rg (sn, cx / RCH, cy / RCH)->water;   /* (Its region's water, the plan's: slice 4.9's) */
+    hub_get (0, &HUB->seed, &w, 2);
+    e->poor = rock_bed (w, -(s->datum + e->ground[0]), x + CW / 2, y + CW / 2) == RK_SHALE;  /* (Slice 4.10's) */
     if (R.kind == RG_ROCK && !e->nland) {
         e->x1 = e->y1 = 0xFF;                   /* (Solid rock: nothing grown) */
     }
