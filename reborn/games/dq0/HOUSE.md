@@ -135,11 +135,11 @@ failure.  Feet a spell (kept in half-feet), and the wear a spell does the tool:
 
 | Tool             | Soil | Hard-packed earth | Flags | Stone | Masonry | Wear (each)            |
 |------------------|------|-------------------|-------|-------|---------|------------------------|
-| bare hands       | ÃÂ½    | -                 | -     | -     | -       | -                      |
-| a blade, a knife | 1    | ÃÂ½                 | -     | -     | -       | soil, earth 40 (it dulls) |
+| bare hands       | ÃÂÃÂÃÂÃÂ½    | -                 | -     | -     | -       | -                      |
+| a blade, a knife | 1    | ÃÂÃÂÃÂÃÂ½                 | -     | -     | -       | soil, earth 40 (it dulls) |
 | pick             | 2    | 1                 | 3     | 2     | 1       | flags, stone, masonry 1 |
-| shovel, spade    | 3    | 1ÃÂ½                | -     | -     | -       | none                   |
-| mattock          | 3    | 1ÃÂ½                | -     | -     | -       | none                   |
+| shovel, spade    | 3    | 1ÃÂÃÂÃÂÃÂ½                | -     | -     | -       | none                   |
+| mattock          | 3    | 1ÃÂÃÂÃÂÃÂ½                | -     | -     | -       | none                   |
 
 Each spell is strenuous work: two fatigue levels at HarnMaster's rate (Moving and tiring, above), so a long dig wants
 rests between its spells.
@@ -172,11 +172,24 @@ The book's Mining is geology, prospecting and mineworking (Skills 16), but it gi
   makes already; a failure tells only the looks.
 - **Poor rock comes down** (shale: rotten, flaking): a spell of digging in it that fails critically brings part of the
   roof down into the hole, half of what's dug in the rock filled again ("The rotten rock splits, and part of the roof
-  falls into the hole."; E_DIG's D_ROOF).  Nobody's hurt by it yet (a falling rock's harm is left for later).
+  falls into the hole."; E_DIG's D_ROOF), and the rock strikes the digger: a blunt strike at its head and shoulders,
+  2d6 impact.  The book has no falling-rock rule but its falling one (Skills 8: a fall's impact 1d6 for each ten feet,
+  2d6 more on rocky ground); the house's 2d6 is a rock off a roof a few feet up, as a short fall onto rock.  The dig
+  goes on through the knock (the house's exception to a wound's hard interruption: the roof's part of the work going
+  badly), unless it's knocked senseless.
 - **A mixed stratum** (caves that sentient hands have been at): a third of its chunks left as they were found, grown
   as caves by the natural style's rules (soft soil floors, the rock's walls, no doors or windows), the rest hewn by
   the mixed style's; but a chunk with a way between strata in it is always hewn, where the builders' work began
-  (dq0m/make.c's natural).
+  (dq0m/make.c's cstyle; dq0 -M, the tests', makes every built stratum mixed so).
+- **The rock looked at** ("examine the wall": the wall ahead, within six squares): masonry ("The wall's masonry:
+  dressed stone, set in mortar."), or the bare rock, how it looks ("The wall's the bare rock, buff."), and named after a
+  Mining test (the appraisal's AP_ROCK: "...: sandstone."), three seconds.  Too dark, nothing's made out.
+- **Age's collapse and rubble**: an old stratum's passages partly fallen in, heaps of rubble a square and some beside
+  it.  Six tries a chunk (the maker's own dice), each in a stratum two centuries old or more, a chance in 20 of its age
+  in centuries (ten at most), twice that where the rock about is poor (shale at the chunk's middle); never by a room or
+  a doorway, so no way is shut.  Rubble is climbed over at twice a step's time, cleared by digging (two feet of it,
+  shifted as loose soil is: at a tool's soil rate, no test, bare hands too), told as it's seen along a passage ("It goes
+  ahead, over rubble."), drawn on the map as %.  The denizens walk over it at their own pace as yet.
 
 ## Portals
 
@@ -1287,7 +1300,7 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   trap's), or over a thing in its way in the dark, it's prone.  "get up", "stand", "rise" take a round; a walk, a
   step, a climb, a disengage gets up first (a round the later) unless it's crawling; prone in a fight, its round is
   getting up, no blow.  The test: the book's Rise is free but for one seriously or grievously wounded (the book leaves
-  a test to the GM: the house takes it, Agility ÃÂ5); and the house's, with no good arm (the user's, 2026-10-22:
+  a test to the GM: the house takes it, Agility ÃÂÃÂÃÂÃÂ5); and the house's, with no good arm (the user's, 2026-10-22:
   "getting up with no good arms ... should probably require an agility check"), the same test four steps the harder;
   failed, the round's spent, still down ("You struggle, but can't get up.").  No good leg, it can't ("Your legs won't
   bear you.").  The hub's pc_pos is the character's position (POS_PRONE; crouching, kneeling and sitting are slice

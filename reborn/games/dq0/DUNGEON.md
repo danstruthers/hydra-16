@@ -410,8 +410,11 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   same rock at the same place and depth.  A dig's rate is the rock's hardness's (the referee's rate in stone, the
   world's quarters of it by the hardness); the rock's told as a dig comes to it, named after a spell that went well
   (Mining's eye); poor rock (shale) comes down on a spell that goes badly in it, half the hole in it filled again
-  (E_DIG's D_ROOF).  The rock
-  is worked out for the dig only (dq0w.c's dig_rock, part 1's): a look or an examine at a wall doesn't tell it yet.
+  (E_DIG's D_ROOF), the rock striking the digger.  "examine the wall" tells the wall ahead: masonry, or the bare rock,
+  its looks, named by Mining (dq0w.c's wall_look, part 1's, I_TRACE's TRC_WALL; its words part 25's).
+- **Age's collapse** (slice 4.10): an old stratum's passages partly fallen in, rubble (world.h's T_RUBBLE, a square
+  kind of its own) by the stratum's age and its rock (dq0m/caves.c's rubble, after the water, by its own dice: the
+  layout as it was); climbed over slowly, cleared by digging, seen along a passage, drawn on the map.
 - **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) and
   **tunnellers** (creatures that dig by nature, the denizens' task choosing where) are still to come (below).  The
   tunnellers' hook: rock.h's rock_kind (any task can include it, ROCK_CODE, where it wants its code) gives a square's
@@ -1360,15 +1363,26 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   to eat and drink when needed.
 - **Rock and old places** (slice 4.10, built in part 2026-10-31: changing the dungeon's rock, above; HOUSE.md's rock's
   kinds and hardness): the rock's own kinds and hardness across the strata, a dig's rate by it, told as it's dug,
-  named by Mining, poor rock coming down on a dig; a mixed stratum part natural and part built.  Left: the rock told
-  when seen and examined ("examine the wall": the world's look would ask rock_kind for the wall's square; Mining's
-  test to name it), and a vein's ore worth taking; a mine's own rules (its adits, shafts and galleries following a
-  vein: rock_kind's veins are the plan's to follow, a region's line); age's collapse and rubble (an old stratum's
-  passages partly fallen in, rubble to clear or climb: a square kind of its own, T_RUBBLE, the tiles' 10, its readers
-  the walk's step (part 24's zone_step, as wading is), the map's glyph, the looks, a dig clearing it; the chunk has
-  no room for a bitmap of it, 2 bytes free); a falling rock's harm on the digger; explosives and sills; caverns
-  across many chunks (the plan's features bigger than a chunk, a room followed from chunk to chunk); the veins'
-  lines all near north-south (rock.h's: x by y), worth a second way.
+  named by Mining, poor rock coming down on a dig and striking the digger; the rock looked at ("examine the wall");
+  a mixed stratum part natural and part built (dq0 -M); age's collapse and rubble.  Left: a room's walls told in a
+  look about (only "examine the wall" tells them), "look at the wall" (the grammar's: its rule bank full), a vein's
+  ore worth taking; rubble in a room (passages' only), a denizen's step slowed by it, a step onto it told; explosives
+  and sills; the veins' lines all near north-south (rock.h's: x by y), worth a second way.
+  **A mine's own rules** (not built): a mine stratum's chunks grown along the plan's veins, rock_kind's (a region's
+  line: its point and slope, rk_mix (1)'s), an adit in from the way in, a gallery widening where the vein's widest, a
+  shaft at a region's line crossing the stratum's next, timbering in soft rock; the built grower given the vein's
+  squares as its passages' line (built.c's joins), the stopes rooms of U_WORKS's kind.
+  **Caverns across many chunks** (the plan, not built): a region of the plan its RG_CAVERN kind (plan.c's region
+  dice, one in so many of a natural stratum's), its cavern a box in the region's squares (its corner and size, up to
+  the region, from the region's dice), every chunk it touches growing its part of the one room: the cave grower
+  given the box clipped to the chunk as a chamber's bounds, its floor the plan's ground (so the parts meet at the
+  edges, as the crossings do now), its chamber's wanderer started on each side the box crosses so the floor runs to
+  the edges; struct room's x, y, w, h the clipped part, a flag R_CAVERN and the cavern's number (the region's) in its
+  kind's spare bits, so the senses and the ways (dq0w.c's ways across a room, its room's squares a chunk's today: "No
+  fixed size") take the room as going on past the chunk's edge: the senses' look reaching into the neighbour's part
+  ("a vast cavern, its far side beyond your light"), the world's ways joined at the edge (the next chunk's part's
+  squares the way goes on into), the map's room drawn whole.  A lake or a chasm the same, the water's level the
+  cavern's.
 - **Tunnellers and builders** (slice 4.11): denizens that dig, their new ways told when seen (the hook: rock.h's
   rock_kind and RK_HARDNESS, and the world's change records, above).
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical

@@ -2868,8 +2868,8 @@ static void wall_look (void)
 
 /* The roof come down on the digger (D_ROOF's, poor rock's: HOUSE.md's rock's kinds and hardness): a blunt strike from no
 ** one at its head and shoulders, the book's falling rock (Skills 8: 1d6 a ten feet's fall, rocky ground 2d6 more:
-** the house's 2d6, a rock from the roof a few feet over it), the referee's (RS_HARM's HC_STRIKE), told (E_HARM: its
-** long task stopped, hard), the time it's out for taken */
+** the house's 2d6, a rock from the roof a few feet over it), the referee's (RS_HARM's HC_STRIKE), told (E_HARM), the
+** time it's out for taken; the dig goes on, unless it's knocked senseless */
 static void roof_harm (void)
 {
     struct req* r;
@@ -2894,6 +2894,9 @@ static void roof_harm (void)
     harm_fx ();
     if (out) {
         busy (out);
+    } else {
+        pc_hit = 0;                             /* (A knock the dig goes on through, unless it's knocked senseless:
+                                                **   the roof's own spell, the house's) */
     }
 }
 
