@@ -6156,9 +6156,12 @@ void s_burns_now (void)
     hub_map (0);
     burn_ask = 0;
     if (asked == TS_ASK && HUB->now < burn_due) {
-        tsense ();                              /* (The time it believes alone, if the burning's look isn't due: no
+        HUB->tb.due = 0;                        /* (The time it believes alone, if the burning's look isn't due: no
                                                 **   light looked at, its next look as it was, so nothing else moves
-                                                **   for it) */
+                                                **   for it; a command in hand, its answer first, at the next look) */
+        if (!HUB->tpr || !HUB->ui_cmd) {
+            tsense ();                          /* (At the real paces; the turns pace's by its clock alone) */
+        }
         return;
     }
     if (!burn_on) {
@@ -6290,7 +6293,7 @@ void s_burns_now (void)
                                                 **   part 70's, slice 4.3's; nothing to tell, no part swapped in) */
     }
     hub_map (0);
-    if (asked || HUB->now >= HUB->tb.due) {
+    if ((asked || HUB->now >= HUB->tb.due) && (!HUB->tpr || !HUB->ui_cmd)) {
         tsense ();                              /* (The time of day it believes brought up to now, at its due or at
                                                 **   once: a light's change, a wait, a black-out ... part 76's) */
     }
