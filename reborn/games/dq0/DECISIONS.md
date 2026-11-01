@@ -1356,7 +1356,7 @@ Then: "...and the direction is known, or the player spends some time watching it
 
 Built the same day (branch reborn-game-timesense), for review in HOUSE.md's the time of day believed: the character's
 time a belief, as its north is (the hub's tb: its error from the true clock and how sure it is), drifting a little each
-hour awake (the referee's P_TIME, Awareness, its drift the more the longer since it last knew), much after a sleep or a
+hour awake (the referee's test, Awareness, its drift the more the longer since it last knew), much after a sleep or a
 black-out (its length guessed as it wakes), narrowed by its own light burning down and its hunger since its meal; the
 sky in sight (an open way out) setting it: its light alone (dawn, day, dusk, night), the sun or the stars read by the
 north it believes in (wrong if its north is, unknown to it), the sun high or low if it knows it's lost its bearings,

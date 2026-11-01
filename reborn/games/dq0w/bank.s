@@ -25,7 +25,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
-OVBANKS     = 22                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
+OVBANKS     = 23                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
             .bss
 _ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
@@ -168,8 +168,8 @@ go:
             SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
             SWPART      74, 14              ; A waterskin filled (wwater.c: slice 4.9's)
             SWPART      75, 22              ; The water's depth where the character stands (wwater.c)
-            SWPART      76, 1               ; The time of day believed (wtime.c: 2026-10-31)
-            SWPART      77, 22              ; The sky seen, the time believed's start (wtime.c)
+            SWPART      76, 23              ; The time of day believed (wtime.c: 2026-10-31)
+            SWPART      77, 23              ; The sky seen, the time believed's start (wtime.c)
 
             SWFN        work, 48
             SWFN        worked, 48

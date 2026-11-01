@@ -464,7 +464,6 @@ static void status (void)
 ** a digit each in order, "dealt 0100": pc_by's, sheet.c's BY_*) */
 
 static unsigned char gait = GA_WALK, watch;
-unsigned char tsense_;                          /* (Its file's "timesense" line: the house's trait, bearing.c's too) */
 
 static void __fastcall__ own_line (char* l)
 {
@@ -489,7 +488,9 @@ static void __fastcall__ own_line (char* l)
     } else if (!strncmp (l, "language ", 9) && strlen (tongues) + strlen (l + 8) < sizeof tongues) {
         strcat (tongues, l + 8);
     } else if (!strcmp (l, "timesense")) {
-        tsense_ = 1;                            /* (Absolute timesense: hmchar's, the house's rare trait, 2026-10-31) */
+        HUB->pcsum.timesense = 1;               /* (Absolute timesense: hmchar's, the house's rare trait, 2026-10-31:
+                                                **   the world's, the hub's tb; the hub in the window as the file's
+                                                **   read, its request's) */
     }
 }
 
@@ -501,14 +502,13 @@ void __fastcall__ s_load_pc (struct req* r)
     strncpy (path, r->text, sizeof path - 1);
     r->result = 1;
     pv.hr = pd.hr = afffl = 0;                  /* (No venom, no sickness, no rest yet: its file's "body" line's) */
-    rest_m = tsense_ = 0;
+    rest_m = HUB->pcsum.timesense = 0;
     if ((fd = open (path, O_RDONLY)) < 0) {
         return;
     }
     r->result = harn_read (fd, &pc, own_line) < 0;
     close (fd);
     hub_map (0);
-    HUB->pcsum.timesense = tsense_;             /* (The time it always knows: the world's, the hub's tb) */
     put (name);
     put ("\n");
     put (calling);
@@ -815,7 +815,7 @@ static void __fastcall__ answer (struct req* r)
             dig_answer (r);
             break;
         }
-        if ((bwhat = r->a - P_BEARING) < 2) {   /* (Its bearings, the time it keeps (P_TIME, after it), by
+        if (r->a == P_BEARING) {                /* (Its bearings, and the time it keeps (rs.h's TIME_STEPS), by
                                                 **   their own dice: overlay 5's, bearing.c) */
             r->grade = bearing_of (r->steps);
             r->result = bway;

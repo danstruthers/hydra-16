@@ -10,9 +10,9 @@
 **
 ** Reckoned lazily, at the lights' burning's look (part 27's s_burns_now: its due, tb.due, or at once, burn_ask: a
 ** light's change, a wait or a sleep begun or ended, a black-out, another stratum, the way out opened), never polled:
-**   - the hours awake: the referee's P_TIME each hour (the hours since the last, at once), its failure's drift its
+**   - the hours awake: the referee's test of the time kept (rs.h's TIME_STEPS) each hour (the hours since the last, at once), its failure's drift its
 **     way (the referee's d8: odd the earlier), the more the longer since it last knew the time;
-**   - a sleep or a black-out: its length guessed as it wakes, as it comes round (the referee's P_TIME, the harder the
+**   - a sleep or a black-out: its length guessed as it wakes, as it comes round (the referee's test of the time kept (rs.h's TIME_STEPS), the harder the
 **     longer: a failure's drift and doubt a share of the length; a critical failure, no idea);
 **   - the clues that narrow it: its own light burning down (it sees its torch: the minutes it's burned since its belief
 **     was set by it, to a twelfth), its hunger since its last meal (to a quarter);
@@ -67,14 +67,14 @@ static int __fastcall__ norm (int v)
 /* The belief set: skew s, unc u (a macro: both parts') */
 #define set(s, u)       (T.skew = (s), T.unc = (u))
 
-/* The test (the referee's P_TIME, at steps), and its drift (d minutes, if it failed: its way the referee's d8, odd
+/* The test (the referee's test of the time kept (rs.h's TIME_STEPS), at steps), and its drift (d minutes, if it failed: its way the referee's d8, odd
 ** the earlier) */
 static signed char __fastcall__ ttest (signed char steps)
 {
     signed char g;
 
-    wsteps = steps;
-    g = ask_w (RS_TEST, P_TIME, 0);
+    wsteps = steps + TIME_STEPS;               /* (The bearings' purpose, its steps past 64 the time's: rs.h's) */
+    g = ask_w (RS_TEST, P_BEARING, 0);
     hub_map (0);
     return g;
 }

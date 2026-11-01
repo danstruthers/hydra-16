@@ -2439,7 +2439,7 @@ number here is a draft for the user.
 - **Absolute timesense** (the book has none: the house's rare trait): **one character in a hundred** (hmchar's roll,
   after all the rest, so every other die falls as it did; its file's `timesense` line, kept as the game's saved: C's,
   HyForth's and hylang's hmchar alike).  It always knows the hour; nothing below touches it.
-- **The test** (rs.h's P_TIME): **Awareness** (the hours noticed going by, as the turns of a way are: attention, as the
+- **The test** (the bearings' P_BEARING, its steps from rs.h's TIME_STEPS on): **Awareness** (the hours noticed going by, as the turns of a way are: attention, as the
   bearings'), its dice the game's own as they stand, mixed and put back (moving quietly's way), so no other test rolls
   differently for it.  The null ruleset: its flat odds, the same way.
 - **The hours awake**: a test **each hour** (hours gone by together, one test for them all), its drift and doubt each

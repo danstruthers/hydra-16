@@ -1151,7 +1151,7 @@ numbers are HOUSE.md's (the time of day believed).
   `dq0hour`: the denizens' days go by the same) are the truth; the character's time is the hub's tb, the world's (part
   76, wtime.c): its error in minutes against the true time (skew) and how far off it knows it may be (unc), kept with
   the game (world.dat), as its north is (the bearings, above).
-- **What moves it**: each hour awake the referee's P_TIME (Awareness), a failure drifting it, the more the longer since
+- **What moves it**: each hour awake the referee's test (Awareness: the bearings' P_BEARING, its steps rs.h's TIME_STEPS on), a failure drifting it, the more the longer since
   it knew; a sleep or a black-out guessed as it wakes or comes round (the harder the longer; a critical failure, no
   idea); one with absolute timesense (the summary's timesense: hmchar's rare trait) never drifts.
 - **What narrows it**: its own light burning down (it sees its torch), its hunger since its meal; and the sky in sight

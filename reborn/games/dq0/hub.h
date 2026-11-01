@@ -65,7 +65,7 @@
                                                 **   TE_FETCHED; 32: ui_giving; 33, hunger and thirst,
                                                 **   the water, pc_hunger ... pc_swat, WB_WATER ... WB_DOUSED; 34, the air and
                                                 **   the afflictions, pc_air ... pc_dose; 35, the time of day believed,
-                                                **   tb, BRG_SKY, rs.h's P_TIME and timesense) */
+                                                **   tb, BRG_SKY, rs.h's TIME_STEPS and timesense) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -1176,7 +1176,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     /* The character's time of day believed (DUNGEON.md's the time of day believed; the user's, 2026-10-31: "Timekeeping
     ** should also be a fuzzy thing, unless there is some place where you can actually see outside"): the hour it
     ** believes it is against the true one (the world's clock and the hour the game began), the world's to keep from the
-    ** referee's tests (P_TIME) as the hours go by awake, a sleep, a black-out, and from the clues (its light's burning,
+    ** referee's tests (rs.h's TIME_STEPS) as the hours go by awake, a sleep, a black-out, and from the clues (its light's burning,
     ** its hunger, the sky seen); kept with the game (world.dat).  The UI's words of the time, and its waits "until
     ** dawn", go by it; the clock, the denizens' days and what happens, by the true one */
     struct tbelief {
