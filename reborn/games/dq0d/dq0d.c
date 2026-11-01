@@ -119,7 +119,8 @@ void enlist_near (void);                        /* Part 11 (the main RAM's room,
 unsigned char __fastcall__ plan (unsigned char k);   /* Part 9's: an actor's day and its place (leisure's, 2026-10-31) */
 void __fastcall__ roused (unsigned char k, unsigned char was);   /* Part 10's: a pastime let go */
 unsigned char __fastcall__ dig_way (unsigned char k);   /* Part 12 (the tunnellers', slice 4.11's) */
-unsigned char nearby (void);                    /*   (and the lairs near placed: the main RAM's room, 2026-11-01) */
+unsigned char nearby (void);                    /* Part 13: the lairs near placed (the main RAM's room, 2026-11-01) */
+static unsigned char nonear;                    /* (None left near to place: nearby's, till the character moves) */
 extern unsigned char ovbank[5];
 static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsigned x, unsigned y);  /* (Below) */
 extern char _SWAP_START__[];
@@ -813,20 +814,21 @@ static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigne
 }
 
 /* The lairs on the character's stratum whose chunks are its own or beside it, and made (the character's
-** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was.  Part 12's (2026-11-01:
-** the main RAM's room, the tunnellers') */
-#pragma code-name (push, "SW12CODE")
-#pragma rodata-name (push, "SW12RODATA")
+** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was.  Part 13 (2026-11-01:
+** the main RAM's room, the tunnellers'; alone, small: cheap to swap in, as it's called each time round after a move) */
+#pragma code-name (push, "SW13CODE")
+#pragma rodata-name (push, "SW13RODATA")
 unsigned char s_nearby (void)
 {
     struct stratum* s = &STRATUM (pcs);
     unsigned cx = (pcx - s->x0) / CW, cy = (pcy - s->y0) / CW;
     unsigned char i, n = 0;
 
+    nonear = 1;
     for (i = 0; i < hd.nlairs; ++i) {
         lair_get (i);
         if (L.kind && L.sn == pcs && !(L.flags & L_PLACED) && L.cx + 1 - cx <= 2 && L.cy + 1 - cy <= 2 &&
-            made (L.sn, L.cx, L.cy)) {
+            (nonear = 0, made (L.sn, L.cx, L.cy))) {
             minds = xs_seed;
             place (i);                          /* (By the lair's own numbers, the minds' kept: their dice, grow's) */
             xs_seed = minds;
@@ -2272,10 +2274,13 @@ static void tend (void)
         ls = pcs;
         again = 1;
         fresh = 10;
+        nonear = 0;
     }
-    if (fresh) {
+    if (fresh && !nonear && (hub_map (0), turns || !HUB->ui_cmd || gw == 2)) {
         --fresh;
-        again |= nearby ();
+        again |= nearby ();                     /* (Part 13's: not while the UI's command is in hand at the real
+                                                **   paces; none left near to place, not asked again till the
+                                                **   character moves: no swap, the commands' answers' time, 2026-11-01) */
     }
     if (!again && !woke && now == lnow) {
         return;

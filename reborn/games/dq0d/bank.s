@@ -35,8 +35,9 @@ ovx:        .res        1
                                             ;   found on the rounds, a pastime let go (2026-10-31)
             SWPART      11, 1               ; The denizens near enlisted (2026-10-31: the main RAM's room; small, cheap
                                             ;   to swap in, not while the UI's command is in hand)
-            SWPART      12, 5               ; The tunnellers: a way dug (slice 4.11's, 2026-11-01); the lairs near
-                                            ;   placed (the main RAM's room)
+            SWPART      12, 5               ; The tunnellers: a way dug (slice 4.11's, 2026-11-01)
+            SWPART      13, 5               ; The lairs near placed (2026-11-01: the main RAM's room; small, cheap to
+                                            ;   swap in, each time round after a move)
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -75,7 +76,7 @@ ovx:        .res        1
             SWFN        plan, 9             ; (An actor's day and its place, as it changes: leisure's)
             SWFN        roused, 10          ; (A pastime let go as one rises to act)
             SWFN        enlist_near, 11     ; (The main RAM's room, 2026-10-31)
-            SWFN        nearby, 12          ; (The main RAM's room, 2026-11-01: the tunnellers')
+            SWFN        nearby, 13          ; (The main RAM's room, 2026-11-01: the tunnellers')
             SWFN        dig_way, 12         ; (A tunneller's way dug: slice 4.11's)
             SWFN        slant, 11           ; (A denizen's diagonal way: slant.s, 2026-10-31, the main RAM's room)
             SWFN        wander, 9
