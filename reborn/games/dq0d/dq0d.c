@@ -1339,10 +1339,20 @@ static unsigned __fastcall__ toward (int dx, int dy)
     return (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy);
 }
 
+/* Actor a's diagonal d (4 to 7, dir_x's) worth slant's look (part 11's): within its own chunk, one of its corners
+** cut, read there (the cheap tests first, the caller's: its cost on the commands' path) */
+static unsigned char __fastcall__ cut_by (unsigned char d)
+{
+    unsigned char* p = at (a.sn, a.x, a.y);
+
+    return !(((unsigned char) (cx_ + dir_x[d]) | (unsigned char) (cy_ + dir_y[d])) & ~(CW - 1)) &&
+        (TILE (p[dir_x[d]]) == T_CUT || TILE (dir_y[d] < 0 ? p[-CW] : p[CW]) == T_CUT);
+}
+
 #pragma static-locals (push, on)               /* (Its locals static: the main RAM's room, 2026-10-31) */
 static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsigned char how)
 {
-    unsigned char d, j, e, g, best, s;
+    unsigned char d, j, best, s;
     unsigned nx, ny, f, bf;
 
     best = 0xFF;
@@ -1356,22 +1366,13 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
         }
         d = j < 4 ? (s + j) & 3 : j;            /* (The four, then the diagonal ways: slant's, within its own chunk,
                                                 **   no other made for it) */
-        if (d >= 4) {                           /* (A diagonal way only within its own chunk and where one of its
-                                                **   corners is cut: then slant, part 11's) */
-            at (a.sn, a.x, a.y);
-            e = cx_ + dir_x[d];
-            g = cy_ + dir_y[d];
-            if ((e | g) & ~(CW - 1) || (TILE (C->tile[cy_][e]) != T_CUT && TILE (C->tile[g][cx_]) != T_CUT)) {
-                continue;
-            }
-        }
         nx = a.x + dir_x[d];
         ny = a.y + dir_y[d];
         f = how == S_TOWARD ? toward (nx - refx, ny - refy) : apart (nx - refx, ny - refy);   /* (The walk's own
                                                 **   test last: it's the dearest) */
         if (apart (nx - ahx[k], ny - ahy[k]) > lim || (how == S_AWAY && (f < bf || (f == bf && bf > 2))) ||
             (how == S_TOWARD && f >= bf) || taken (k, nx, ny) || !(d < 4 ? step_ok (a.sn, a.x, a.y, d) :
-            slant (a.sn, a.x, a.y, DH (d))) ||
+            cut_by (d) && slant (a.sn, a.x, a.y, DH (d))) ||
             !wades (awater[k], a.sn, nx, ny)) {
             continue;
         }
