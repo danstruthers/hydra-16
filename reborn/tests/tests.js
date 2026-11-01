@@ -7604,7 +7604,7 @@ module.exports = {
         'mkdir /ram/u', 'cp /ram/s/theme.txt /ram/u/theme.txt', 'dq0hour=13', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/u', ...Array(3).fill('wait 30 minutes'), 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, []);                                       // (The actors' moods and doings at each line's Enter: m.hearts)
-        const a = m.acia, read = a.read, LEISURE = 13;         // (One at leisure put beside the character as the first wait
+        const a = m.acia, read = a.read;                      // (One at leisure put beside the character as the first wait
         let typed = '', seen = 0;                             //   of a minute's typed)
         a.read = (r, t) => {
           if (r === 0 && a.rdrf) {
@@ -7612,7 +7612,7 @@ module.exports = {
             if (c === 13) {
               if (typed === 'wait 1 minute' && !seen++ && m.dq0) {
                 const { L, K } = m.dq0.layout(), h = m.dq0.bank(0), at = k => L.actor + k * L.actorSize, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
-                const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && h[at(j) + L.aDoing] >= LEISURE);
+                const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && h[at(j) + L.aDoing] >= K.DO_LEISURE);
                 if (k !== undefined) {
                   const d = h[L.pcFace] & 7, x = (h[L.pcX] | h[L.pcX + 1] << 8) + [0, 1, 1, 1, 0, -1, -1, -1][d], y = (h[L.pcY] | h[L.pcY + 1] << 8) + [-1, -1, 0, 1, 1, 1, 0, -1][d];
                   const R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]);
@@ -7624,7 +7624,7 @@ module.exports = {
                   R.mem[o + R.Y] = y & 255; R.mem[o + R.Y + 1] = y >> 8;
                   R.mem[o + R.SN] = h[L.pcSn];
                   h[L.denSeq] = h[L.denSeq] + 1 & 255;
-                  m.risen = { k, past: h[at(k) + L.aDoing] - LEISURE };
+                  m.risen = { k, past: h[at(k) + L.aDoing] - K.DO_LEISURE };
                 }
               }
               typed = '';

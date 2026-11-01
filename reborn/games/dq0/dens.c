@@ -26,8 +26,8 @@ static const char* const count[SEE_DENS + 1] = { "", "One", "Two", "Three", "Fou
 static const char* const few[SEE_DENS + 1] = { "", "one", "two", "three", "four" };
 static const char* const doing[DO_LEISURE + NPAST] = {   /* (After " feet away") */
     ".", ", watching you.", ", coming towards you.", ", keeping its distance.", ", following you.", ", waiting.",
-    ", fighting you.", ", fleeing.", ", lying senseless.", ", asleep.", ", eating.", ", at work.", ", on watch.",
-    ", digging.", ", reading.", ", at dice.", ", at a board game.", ", talking.", ", singing.", ", drinking.",
+    ", digging.", ", fighting you.", ", fleeing.", ", lying senseless.", ", asleep.", ", eating.", ", at work.",
+    ", on watch.", ", reading.", ", at dice.", ", at a board game.", ", talking.", ", singing.", ", drinking.",
     ", mending its gear.", ", whittling."      /* (At leisure, its pastime: 2026-10-31) */
 };
 

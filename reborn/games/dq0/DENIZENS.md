@@ -584,8 +584,7 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   ruleset's flat odds), the rock's hardness the rate's (rock.h's, part 1 asked), the hole kept (DUG, the character's
   record: either can go on with the other's), and through, the square a passage (a diagonal's corners cut).  The
   spell's feet are reckoned as its mind asks again at its end (the hub's dig_t: when it began); another intent loses
-  it, a rouse sends it back to it.  Its doing DO_DIG ("digging", in the look's words), busy at it: the character's
-  changes don't rouse it.
+  it, a rouse sends it back to it (the rest of its spell).  Its doing DO_DIG ("digging", in the look's words).
 - **Told** (the denizens' events): its first spell (DE_DIG: seen, "The dwarf miner digs into the wall."; heard, "You
   hear a scraping in rock ahead to your left."), its spells after (DE_DIGS: the denizens hear them, the player's not
   told again), the way through (DE_DUG at the square dug: seen as it was, "A fresh tunnel opens ahead.  Spoil lies
