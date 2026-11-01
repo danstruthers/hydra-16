@@ -33,8 +33,8 @@ ovx:        .res        1
                                             ;   the records by it, an actor's plan
             SWPART      10, 4               ; The actors' day kept (their plan, part 9's), their coarse moves, a body
                                             ;   found on the rounds, a pastime let go (2026-10-31)
-            SWPART      11, 1               ; The lairs near placed, the denizens near enlisted (2026-10-31: the main
-                                            ;   RAM's room; small, cheap to swap in)
+            SWPART      11, 1               ; The denizens near enlisted (2026-10-31: the main RAM's room; small, cheap
+                                            ;   to swap in, not while the UI's command is in hand)
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -72,8 +72,7 @@ ovx:        .res        1
             SWFN        daily, 10           ; (The day's, 2026-10-31: an actor's, its plan kept)
             SWFN        plan, 9             ; (An actor's day and its place, as it changes: leisure's)
             SWFN        roused, 10          ; (A pastime let go as one rises to act)
-            SWFN        nearby, 11          ; (The main RAM's room, 2026-10-31)
-            SWFN        enlist_near, 11
+            SWFN        enlist_near, 11     ; (The main RAM's room, 2026-10-31)
             SWFN        wander, 9
             SWFN        sched, 9
             SWFN        coarse, 10

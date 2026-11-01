@@ -115,8 +115,7 @@ void __fastcall__ coarse (unsigned char k, unsigned lim);   /* Part 10 */
 void __fastcall__ told (unsigned char j);      /* Part 6's hook: a loss told (a body found, the day's) */
 unsigned char __fastcall__ found (unsigned char k);
 void hour (void);
-unsigned char nearby (void);                    /* Part 11 (the main RAM's room, 2026-10-31) */
-void enlist_near (void);
+void enlist_near (void);                        /* Part 11 (the main RAM's room, 2026-10-31) */
 unsigned char __fastcall__ plan (unsigned char k);   /* Part 9's: an actor's day and its place (leisure's, 2026-10-31) */
 void __fastcall__ roused (unsigned char k, unsigned char was);   /* Part 10's: a pastime let go */
 extern unsigned char ovbank[4];
@@ -809,11 +808,8 @@ static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigne
 }
 
 /* The lairs on the character's stratum whose chunks are its own or beside it, and made (the character's
-** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was.  Part 11's (2026-10-31:
-** the main RAM's room; a small part, cheap to swap in) */
-#pragma code-name (push, "SW11CODE")
-#pragma rodata-name (push, "SW11RODATA")
-unsigned char s_nearby (void)
+** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was */
+static unsigned char nearby (void)
 {
     struct stratum* s = &STRATUM (pcs);
     unsigned cx = (pcx - s->x0) / CW, cy = (pcy - s->y0) / CW;
@@ -831,8 +827,6 @@ unsigned char s_nearby (void)
     }
     return n;
 }
-#pragma code-name (pop)
-#pragma rodata-name (pop)
 
 /* ---- The actors: the denizens near the character, in the hub for the world and the senses */
 
@@ -2132,6 +2126,7 @@ unsigned char __fastcall__ s_along (unsigned char k)
 ** coarsely.  Nothing, if nothing's changed (the clock, the character, a blow) */
 static unsigned char struck;                    /* (Blows taken to heart since: fought's) */
 
+static unsigned char owe;                       /* (The denizens near owed their enlisting: tend's) */
 static unsigned char lrs = 0xFF;                /* (The region the character's in, as the cache last had those round
                                                 **   it) */
 static unsigned lrx, lry;
@@ -2205,6 +2200,11 @@ static void tend (void)
             lry = (pcy - STRATUM (pcs).y0) >> 8;
             dneed ();
         }
+        owe = 1;
+    }
+    if (owe && (hub_map (0), turns || !HUB->ui_cmd || gw == 2)) {
+        owe = 0;                                /* (The denizens near made actors: not while the UI's command is in hand
+                                                **   at the real paces, part 11's swap off its answer's path) */
         enlist_near ();
     }
 }
