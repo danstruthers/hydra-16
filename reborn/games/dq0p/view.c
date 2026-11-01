@@ -77,9 +77,23 @@ void give_way (void);                           /* (dq0p.c's: the look giving wa
 ** remembered (T_SEEN): as dq0w.c's walk goes them, along a passage (a wide one's breadth beside it no way on), on at
 ** its bends, through a door, into a room (part 2's: its breadth, chunk.c's, there); a walk in the dark (d | 0x80) as it
 ** goes there, by what the character knew: straight on, round a bend only where the way ahead's closed.  A walk in
-** the light, mapping as it goes on paper, drawn too (the view's run_d: the look's view first, dq0p.c's) */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+** the light, mapping as it goes on paper, drawn too (the view's run_d: the look's view first, dq0p.c's).  Part 4's
+** (part 2's room for a passage's runs, sight.c's, 2026-11-01), with a copy of chunk.c's ways of its own (ways.inc's,
+** renamed: the ways part 2's, its look's) */
+#pragma code-name (push, "SW4CODE")
+#pragma rodata-name (push, "SW4RODATA")
+#pragma static-locals (push, on)
+#pragma bss-name (push, "SW4RODATA")
+#pragma data-name (push, "SW4RODATA")
+#define breadth         breadth4
+#define way_ok          way_ok4
+#define ways_from       ways_from4
+#define way_on          way_on4
+#define way_room        way_room4
+#include "../dq0w/ways.inc"
+#pragma data-name (pop)
+#pragma bss-name (pop)
+#pragma static-locals (pop)
 void __fastcall__ s_felt (unsigned char sn, unsigned x, unsigned y, unsigned char d, unsigned char n)
 {
     unsigned char* p;
@@ -268,6 +282,54 @@ static void __fastcall__ fresh (const struct fresh* fr)
 ** believed in then).  And a walk's squares felt in the dark (the look's walk, wd | 0x80: its way felt's, s_felt's,
 ** before it marks them, its bends near enough), each chunk it went through made fresh the same (HOUSE.md's travel: what's felt kept as what's
 ** seen, slice 4.2's) */
+/* A passage's ways' runs (../dq0/run.h's: the user's, 2026-10-31, ways off the compass; HOUSE.md's a passage's
+** heading), for what the character perceives (sight.c's, part 2's: its room), as a look begins: from the character's
+** square in a passage, each way on (way_ok's) followed as a walk goes (its one way on: ways_from's), through the squares
+** seen now (T_VIS), to a door, a room, a fork, its end, or RUN_MAX steps: its run's bearing in sixteenths, by its
+** first heading, into the senses' bank (RUNS) */
+#include "../dq0/run.h"
+typedef char runs_fit[sizeof (struct sight) <= RUN_AT ? 1 : -1];
+#pragma bss-name (push, "SW4RODATA")            /* (Its state the part's own: none kept from one call to the next) */
+static void runs (void)
+{
+    static unsigned char r[8], d, n, h, sn;
+    static unsigned x, y, x0, y0;
+    static unsigned char* p;
+
+    hub_map (0);
+    sn = HUB->pc_stratum;
+    x0 = HUB->pc_x;
+    y0 = HUB->pc_y;
+    if (room_of (sn, x0, y0) != 0xFF) {
+        return;                                 /* (A room's: none) */
+    }
+    for (d = 0; d < 8; ++d) {
+        r[d] = d << 1;
+        if (!way_ok (sn, x0, y0, d)) {
+            continue;
+        }
+        x = x0;
+        y = y0;
+        h = d;
+        way_room = 0xFF;
+        for (n = 0; ; ) {
+            run_s[n++] = h;
+            x += head_x[h];
+            y += head_y[h];
+            if (n == RUN_MAX || !(p = at (sn, x, y)) || (*p & (T_VIS | 0x0F)) != (T_VIS | T_CORR) ||
+                ways_from (sn, x, y, h) != 1) {
+                break;
+            }
+            h = way_on;
+        }
+        r[d] = run_of (n);
+    }
+    hub_map (SIGHT_BANK);
+    memcpy (RUNS, r, sizeof r);
+    hub_map (0);
+}
+#pragma bss-name (pop)
+
 static const unsigned char bend[4] = { 1, 7, 2, 6 };
 void s_kept (void)
 {
@@ -278,6 +340,7 @@ void s_kept (void)
     unsigned char* p;
     struct fresh fr;
 
+    runs ();                                    /* (A passage's ways' runs, for sight.c's: part 2's room) */
     hub_map (0);
     fr.now = KEPT_CLOCK;
     fr.q4 = HUB->pcsum.mapmind;

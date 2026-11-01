@@ -90,7 +90,7 @@ ovl_out:
             OVFN        sway_words, 15
             OVFN        dig_words, 1
             OVFN        task_words, 3
-            OVFN        beat_words, 3
+            OVFN        beat_words, 16          ; (A walk's beats: task.c's, overlay 3's room, 2026-11-01)
             OVFN        stop_kind, 7
             OVFN        answer_of, 7
             OVFN        bar_text, 3
@@ -106,7 +106,7 @@ ovl_out:
             OVFN        appraise, 1
             OVFN        tell, 14
             OVFN        words, 2
-            OVFN        more, 2
+            OVFN        more, 16            ; (The commands past main.c's chores: words.c's, overlay 2's room, 2026-11-01)
             OVFN        stir_words, 9
             OVFN        heard_words, 9
             OVFN        den_words, 9
@@ -149,7 +149,7 @@ ovl_out:
             SWPART      1, 8                ; The start and the end (main.c): the task's arguments, the world
                                             ;   started, the game kept, the world stopped
             SWPART      2, 14               ; The commands (main.c: the map's bank, overlay 3 full at slice 4.2)
-            SWPART      3, 14               ; The map (look.c)
+            SWPART      3, 16               ; The map (look.c; overlay 14's bank till 2026-11-01)
             SWPART      4, 9                ; The pace, the watchfulness, the state, small moves (pace.c)
             SWPART      5, 10               ; The names given (names.c)
             SWPART      6, 12               ; The names said (names.c); looking one way, a close look (way.c)

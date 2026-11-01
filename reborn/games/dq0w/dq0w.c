@@ -3597,8 +3597,44 @@ static void __fastcall__ pc_trod (unsigned char h)
     trod (&s);
 }
 
-/* A walk's beat as it comes onto square x, y heading h (in a passage: E_BEAT): it turns, goes through a doorway,
-** rises or falls, or a quiet stretch (6 squares, 30 feet); 1 if one's told */
+/* The run the walk's step i is in (../dq0/run.h's: a passage's real heading, the user's, 2026-10-31): its bearing in
+** sixteenths, the walk's passage (from its first step, pwalk0) cut into runs from its start, each its steps on the
+** path as far as the walk goes; a last one or two steps of the walk, of the run before's two headings, its own (too
+** few to show a shape of their own: a staircase's last step not a turn) */
+#include "../dq0/run.h"
+#pragma bss-name (push, "SW23RODATA")            /* (Its state the part's own: none kept from one call to the next) */
+static unsigned char __fastcall__ run_at (unsigned char i)
+{
+    static unsigned char j, n, r, a, b, k;
+
+    hy_bank (ovbank[OVBANKS + 1]);
+    for (j = pwalk0 <= i ? pwalk0 : i, a = 0xFF; ; j += run_n) {
+        for (n = 0; n < RUN_MAX && j + n < npath; ++n) {
+            run_s[n] = PATH_AT[3 * (j + n)];
+        }
+        if (n < 3 && j + n == npath && a != 0xFF) {
+            for (k = 0; k < n && (run_s[k] == a || run_s[k] == b); ++k) {
+            }
+            if (k == n) {
+                return r;                       /* (A tail of the run before) */
+            }
+        }
+        r = run_of (n);
+        if (j + run_n > i) {
+            return r;
+        }
+        for (a = b = run_s[0], k = 1; k < run_n; ++k) {
+            if (run_s[k] != a) {
+                b = run_s[k];                   /* (Its two headings, for a tail after it) */
+            }
+        }
+    }
+}
+#pragma bss-name (pop)
+
+/* A walk's beat as it comes onto square x, y heading h (in a passage: E_BEAT): it turns or bends (its runs', the
+** user's: a staircase of steps one slant), goes through a doorway, rises or falls, or a quiet stretch (6 squares, 30
+** feet); 1 if one's told */
 static signed char pz;
 static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
 {
@@ -3620,10 +3656,18 @@ static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
         }
         proom = 0;
         bout = 1;
-        if (h != plast && pprev) {         /* (A turn between two squares of the passage walked) */
+        h = run_at (pnext - 1);                 /* (The passage's run the step's in: its bearing, sixteenths) */
+        if ((z = (h - plast) & 15) != 0 && pprev) {    /* (A turn or a bend between two runs of the passage walked:
+                                                **   a staircase of steps one slant, HOUSE.md's a passage's heading) */
             b = WB_TURN;
-            ++bbends;                           /* (A bend: its bearings') */
-            s = ((h - plast) & 7) < 4 ? WS_RIGHT : WS_LEFT;
+            s = z < 8 ? WS_RIGHT : WS_LEFT;
+            if ((z = z < 8 ? z : 16 - z) >= 2) {
+                ++bbends;                       /* (A bend of an eighth or more: its bearings') */
+            }
+            if (z < 3) {
+                s = 0x10 | h;                   /* (A bend, not a turn: its new bearing told, believed by the UI, "The
+                                                **   passage bends away north-northeast") */
+            }
         } else if (t == T_DOOR) {
             b = WB_DOOR;
         } else if (dz >= 2 || dz <= -2 || t == T_STEPS) {
@@ -3632,11 +3676,11 @@ static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
             b = WB_QUIET;
         }
         pprev = 1;
+        plast = h;
     } else {
         pprev = 0;
         ++proom;
     }
-    plast = h;
     hub_map (0);
     if (b == 0xFF) {
         return 0;
@@ -3826,6 +3870,9 @@ void __fastcall__ s_task_out (unsigned char b)
     }
 }
 
+#pragma code-name (push, "SW78CODE")            /* (Part 78's, go_to's with it: part 23's room for the walk's runs,
+                                                **   2026-11-01) */
+#pragma rodata-name (push, "SW78RODATA")
 /* The way across the room to its chunk's square tx, ty (the ways as worked out last), its squares added to the path
 ** from where it began, in order */
 void __fastcall__ s_path_ways (unsigned char tx, unsigned char ty)
@@ -3852,6 +3899,8 @@ void __fastcall__ s_path_ways (unsigned char tx, unsigned char ty)
     }
     hub_map (at_bank);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)

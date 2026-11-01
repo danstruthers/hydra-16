@@ -170,6 +170,68 @@ static void __fastcall__ make_panel (const char* rules)
 static const char* const sgr[] = { "\x1b[97m", "\x1b[90m", "\x1b[33m", "\x1b[96m", "\x1b[36m" };
 #define LINE        (MAP_W + PANEL + 3 + 160)   /* (A row's line: its letters, its colours' changes, the panel's) */
 
+/* A passage's slant drawn as a slant (the user's, 2026-10-31: ways off the compass; HOUSE.md's a passage's heading),
+** on the map as the maker drew it (the UI bank's rows, as they're turned): a passage's square ('#') that's an elbow (two
+** ways out of it a quarter apart, nothing else beside it but walls and rock) with an elbow turned the same way beside
+** it along one of its two, a staircase of short steps, drawn '/' or '\' along it; a bend's corner alone stays '#' */
+#pragma bss-name (push, "SW3RODATA")            /* (Its state the part's own: none kept from one map to the next) */
+static unsigned char ml[MAP_H], em;
+static const signed char ex[4] = { 0, 1, 0, -1 }, ey[4] = { -1, 0, 1, 0 };
+
+static unsigned char __fastcall__ mc (signed char x, signed char y)    /* (The map's square: ' ' off it) */
+{
+    return (unsigned char) y < MAP_H && (unsigned char) x < ml[y] ? UIREC->map[y][x] : ' ';
+}
+
+static unsigned char __fastcall__ elbow (signed char x, signed char y)    /* (1 '/', 2 '\', its two ways in em) */
+{
+    unsigned char d, n = 0, c = mc (x, y);
+
+    if (c != '#' && c > 2) {
+        return 0;                               /* (Not a passage's square, nor one marked an elbow) */
+    }
+    for (d = em = 0; d < 4; ++d) {
+        c = mc (x + ex[d], y + ey[d]);
+        if (c != ' ' && c != '-' && c != '|' && c != '/' && c != '\\') {
+            em |= 1 << d;
+            ++n;
+        }
+    }
+    return n != 2 ? 0 : em == 6 || em == 9 ? 1 : em == 3 || em == 12 ? 2 : 0;
+}
+
+static void slants (void)
+{
+    static signed char x, y;
+    static unsigned char k, m, d;
+
+    hub_map (UI_BANK);
+    for (y = 0; y < MAP_H; ++y) {
+        ml[y] = strlen (UIREC->map[y]);
+    }
+    for (y = 0; y < MAP_H; ++y) {
+        for (x = 0; x < ml[y]; ++x) {
+            if ((k = elbow (x, y)) != 0) {
+                for (m = em, d = 0; d < 4; ++d) {
+                    if ((m >> d & 1) && elbow (x + ex[d], y + ey[d]) == k) {
+                        UIREC->map[y][x] = k;   /* (Marked, still a passage's square to the others) */
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    for (y = 0; y < MAP_H; ++y) {
+        for (x = 0; x < ml[y]; ++x) {
+            if ((k = UIREC->map[y][x]) <= 2) {
+                UIREC->map[y][x] = k == 1 ? '/' : '\\';
+            }
+        }
+    }
+    hub_map (0);
+}
+#pragma bss-name (pop)
+
 void __fastcall__ s_map (const char* rules)
 {
     static unsigned char lays[MAP_W];
@@ -180,6 +242,7 @@ void __fastcall__ s_map (const char* rules)
 
     make_panel (rules);
     hub_call (&HUB->mapq, T_MAKER);             /* (The maker draws it into the UI bank) */
+    slants ();                                  /* (A passage's slant drawn as one: 2026-11-01) */
     blank ();
     sayf ("The map (you face %s%s; heights in tens of feet against yours):", head_name[(HUB->pc_face + HUB->pc_skew) & 7],
         HUB->pc_lost ? ", or so you think" : "");

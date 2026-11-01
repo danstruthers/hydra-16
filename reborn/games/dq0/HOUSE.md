@@ -2577,9 +2577,37 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
   half-feet: a square's five feet, 10), its two corners cut as it's through, so it's walked; a cut dug as rock.
 - **The believed compass an eighth off** *(the house's, as before)*: "north" a true diagonal: in a passage a way only
   where there's a diagonal way.
-- **Still to come** *(steps 2 and 3, the user's "queue up 1-3")*: a passage told by its run's real heading in sixteenths;
-  built complexes at an angle (a stratum's plan, or one complex in it, laid at 45 degrees); the built grower's
-  diagonal passages; the tunnellers (slice 4.11) digging by the same rules.
+- **Still to come** *(step 3, the user's "queue up 1-3"; step 2 below)*: built complexes at an angle (a stratum's
+  plan, or one complex in it, laid at 45 degrees); the built grower's diagonal passages; the tunnellers (slice 4.11)
+  digging by the same rules.
+
+## A passage's heading *(2026-11-01: the user's words of 2026-10-31, DECISIONS.md's ways off the compass; step 2 of three, drafted for the user to review)*
+
+- **A run** *(the house's)*: a passage's squares from where the character is, as a walk goes along them (its one way on,
+  no fork), within sight (the squares it sees now), eight steps at most: the stretch of them that keeps one shape.  Two
+  headings an eighth or a quarter apart, the one that comes twice running the main one, the other never twice running
+  (a staircase of short steps, a zigzag): a slant, once the other has come twice; its bearing the steps' sum, or, the
+  two by turns with no main one, halfway between them.  Anything else is straight on its first heading as far as that
+  goes, so a bend stays a bend (its corner one step the other way, then on that way).  Its bearing in sixteenths of a
+  turn.  (dq0/run.h, run.inc.)
+- **Told by its shape** *(the house's)*: a passage's ways on worded by their runs' bearings as the character faces, in
+  sixteenths: the eight's words where a run lies on one of them ("ahead to your right"), else the quarter it's nearer
+  and a little the other way ("ahead and a little to your right", "behind you and a little to your left"); a straight
+  passage as before.  So a staircase of steps is told as the slant it is, not by the step it starts with.  (The
+  senses' runs, dq0p/view.c, part 4's; sight.c; words.c.)
+- **A walk along it** *(the house's)*: the walk's passage cut into runs from its start; a turn told where the run's
+  bearing changes, by more than an eighth "The passage turns left." as before, by an eighth or less "The passage bends
+  away north-northeast." (the new run's bearing, by the north the character believes in); none at a staircase's every
+  step.  The walk's last step or two, of the run before's two headings, are that run's (too few to show a shape of
+  their own).  A bend of an eighth or more counts for the bearings as a bend did (Bearings underground, above); a
+  staircase, once a bend at every step, is none.  (dq0w.c's run_at and beat, part 23's.)
+- **The map** *(the house's)*: as drawn, a passage's square that's an elbow (two ways out of it a quarter apart, only
+  walls and rock else beside it) with an elbow turned the same way beside it along one of its two, a staircase's step,
+  drawn "/" or "\" along the slant; a bend's corner alone stays "#".  On the map as it's shown (turned, faded), so what
+  the character's map shows of it is what's drawn so.  (The UI's map, look.c's slants.)
+- **Left** *(for later)*: a wide tunnel's staircase (two or three squares across: the walk's ways there a fork); the
+  facing after a walk along a slant (its last step's, as before); a look one way along a slant (way.c's seen_on: the
+  four's, step 3's).
 
 ## Decided, not yet built
 

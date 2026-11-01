@@ -415,9 +415,20 @@ static void passage (void)
          "The passage forks here. It goes ");
     for (i = 0, w = S->way; i < S->nways; ++i, ++w) {
         if (i) {
-            add (i + 1 == S->nways ? " and " : ", ");
+            add (i + 1 == S->nways ? n & 1 ? ", and " : " and " : ", ");
         }
-        add (relname[w->rel & 7]);
+        n = w->rel >> 4;                        /* (Its run's bearing in sixteenths, as the character faces: its shape,
+                                                **   sight.c's; between two of the eight, the quarter it's nearer and a
+                                                **   little the other way, "ahead and a little to your right": HOUSE.md's
+                                                **   a passage's heading) */
+        if (n & 1) {
+            dz = ((n >> 1) + 1) & 6;
+            add (relname[dz]);
+            add (" and a little ");
+            add (relname[(dz + (n & 2 ? 6 : 2)) & 7]);
+        } else {
+            add (relname[n >> 1]);
+        }
         dz = w->dz;
         if (w->steps == T_STEPS_) {
             add (dz > 0 ? " up steps" : " down steps");
@@ -464,6 +475,10 @@ void o_words (void)
     }
 }
 
+/* (Overlay 16's, through its stub: overlay 2's room, 2026-11-01) */
+#pragma code-name (push, "OV16CODE")
+#pragma rodata-name (push, "OV16RODATA")
+#pragma local-strings (push, on)
 /* A thing worked (the things' IO_FILL, IO_SHUT, IO_HIDE: its words said), its time (the request's x): quietly; a
 ** timed work's (HOUSE.md's long tasks: the reply's qty its long task's kind, item its thing's kind), its first words (a
 ** long task's begun, task.c's) and a long task of the UI's (I_WAIT's kind), its command kept (the UI bank's) and
@@ -557,3 +572,6 @@ unsigned char __fastcall__ o_more (unsigned char action)
     }
     return 1;
 }
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)

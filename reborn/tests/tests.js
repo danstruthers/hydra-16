@@ -2401,6 +2401,60 @@ function dq0Aware(m, line, actor, after) {
   };
 }
 
+// A staircase of short steps made in the rock (a test's scene, HOUSE.md's a passage's heading): after the Enter of a line
+// typed ({ g: the game, 1 on, line, n: its nth time typed in it }), in the chunk of the hub's cache with stratum g's
+// stairway up in it (the character come down to it: dq0 -T, d), from a square of the cave's wall (at: its place from
+// the stairs, the cave's floor north of it) on, each step one of steps (DIR_*: 1 east, 2 south): passages' squares (T_CORR) at the
+// floor's height, each through rock or a wall with nothing open beside it but the steps before and after; the senses'
+// grid made again (dq0p's lgen).  Gives { done, why }
+function dq0CarveStairs(m, p) {
+  const a = m.acia, read = a.read, r = { done: false, why: 'its line never typed' };
+  let typed = '', g = 0, seen = {};
+  const carve = () => {
+    const h = m.dq0 && m.dq0.bank(0);
+    if (!h) return 'no hub';
+    for (const b of cacheBanks(m)) for (let k = 0; k < 3; k++) {
+      const o = k * CHUNK_SIZE, T = (x, y) => o + CK_TILE + y * 32 + x, E = (x, y) => o + CK_TILE + 1024 + y * 32 + x;
+      if (b[o] !== p.sn || !b[o + 5] || b[o + 5] > 6) continue;
+      let u = -1;
+      for (let i = 0; i < 1024 && u < 0; i++) if ((b[o + CK_TILE + i] & 15) === 7) u = i;
+      if (u < 0) continue;
+      let x = (u & 31) + p.at[0], y = (u >> 5) + p.at[1];
+      if ((b[T(x, y)] & 15) !== T_WALL || (b[T(x, y - 1)] & 15) !== T_FLOOR) return 'no wall there, south of the floor';
+      const z = b[E(x, y - 1)], sq = [[x, y]];
+      for (const d of p.steps) { x += d === 1 ? 1 : 0; y += d === 2 ? 1 : 0; sq.push([x, y]); }
+      const on = new Set(sq.map(([i, j]) => i + ',' + j));
+      for (let n = 1; n < sq.length; n++) {
+        const [i, j] = sq[n];
+        if (i < 1 || i > 30 || j < 1 || j > 30) return 'off the chunk';
+        for (const [di, dj] of [[0, -1], [1, 0], [0, 1], [-1, 0], [0, 0]]) {
+          const t = b[T(i + di, j + dj)] & 15;
+          if (t !== 0 && t !== T_WALL && !on.has((i + di) + ',' + (j + dj))) return 'open beside ' + i + ',' + j;
+        }
+      }
+      for (const [i, j] of sq) { b[T(i, j)] = (b[T(i, j)] & 0xF0) | T_CORR; b[E(i, j)] = z; }
+      const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0p', 'dq0p.lbl'), 'latin1');
+      const lg = parseInt(/^al ([0-9A-F]+) \._lgen$/m.exec(lbl)[1], 16), ram = m.taskRam[h[12 + 6]];
+      ram[lg] = (ram[lg] + 1) & 255;
+      return '';
+    }
+    return 'no chunk with the stairway up';
+  };
+  a.read = (rr, t) => {
+    if (rr === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^dq0 /.test(typed)) { ++g; seen = {}; }
+        seen[typed] = (seen[typed] || 0) + 1;
+        if (!r.done && g === p.g && typed === p.line && seen[typed] === p.n) { const w = carve(); r.done = !w; r.why = w; }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(rr, t);
+  };
+  return r;
+}
+
 // A line typed as the game's words come, not at a cycle (a test's own: what a player reacting to them types, whatever
 // the code's speed): each { g: the game, 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, words,
 // text }: after that line's Enter, the first time the story shows the words (the escapes left out, spaces and line
@@ -3512,6 +3566,34 @@ module.exports = {
           if (map.includes('\\')) f.push('a "\\" stroke on the map');
         }
         if (!seg('go southwest', 'quit').includes('You can see part of a cell')) f.push('"go southwest" not back into the cell');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0heading', near: ['map'], what: 'Dingus Quest Zero\'s passages told by their real heading (the user\'s, 2026-10-31: ways off the compass, step 2; HOUSE.md\'s a passage\'s heading), by the words told and the map: at seed 3 down the stairway (dq0 -T, the caves dry and unfallen: -W -U) a staircase of short steps (south, then east and south by turns, eight squares: one square wide, not cut) made in the rock from the cave\'s wall two squares south and two west of the stairs as "look" is typed (dq0CarveStairs: the chunk cache\'s squares, the senses\' grid made again); two steps west, "go south" walks down it to its end without a turn told at every step (one bend at most, "The passage bends away southeast.", and no "The passage turns"); "look" at its end tells the way back by its shape, behind and to the left (its run\'s bearing as far as it\'s seen, northwest, the steps by turns, as it faces east: "it goes back behind you to your left"); the map draws what it shows of it as a slant (strokes of one kind, two or more, as the map\'s turned); "turn around" and "go ahead" walk back up it to the cave',
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -W -U', 'd', 'look', 'face west', 'step forward', 'step forward', 'go south', 'look', 'map', 'turn around', 'go ahead', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) { this.carve = dq0CarveStairs(m, { g: 1, sn: 1, line: 'look', n: 1, at: [-2, 2], steps: [2, 2, 1, 2, 1, 2, 1, 2, 1] }); },
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        if (!this.carve.done) return ['the staircase not made: ' + this.carve.why];
+        const at = l => s.indexOf('> ' + l + ' > ' + l);
+        const seg = (l, n) => at(l) >= 0 ? s.slice(at(l), at(n) > at(l) ? at(n) : undefined) : '';
+        const go = seg('go south', 'look');
+        if (/The passage turns/.test(go)) f.push('"go south" told a turn at its steps: ' + go.slice(0, 300));
+        if ((go.match(/The passage bends away/g) || []).length > 1) f.push('"go south" told more than one bend: ' + go.slice(0, 300));
+        if (/bends away/.test(go) && !go.includes('The passage bends away southeast.')) f.push('its bend not southeast: ' + go.slice(0, 300));
+        if (!/The passage ends here; it goes back/.test(go)) f.push('"go south" not to the staircase\'s end: ' + go.slice(0, 300));
+        const lk = s.slice(s.lastIndexOf('> look > look'), at('map'));
+        if (!lk.includes('The passage ends here; it goes back behind you to your left.')) f.push('the look at its end not "it goes back behind you to your left": ' + lk.slice(0, 200));
+        const raw = out.replace(/\x1b\[[0-9;]*m/g, ''), m0 = raw.indexOf('The map (you face');
+        const map = m0 < 0 ? '' : raw.slice(m0, raw.indexOf('> turn around', m0)), rows = map.split('\n').map(r => r.slice(0, 64));
+        const all = rows.join(''), back = all.split('\\').length - 1, fore = all.split('/').length - 1;
+        if (Math.max(back, fore) < 2 || Math.min(back, fore) > 0) f.push('the staircase not drawn as a slant, two strokes or more of one kind (' + back + ' "\\", ' + fore + ' "/"): ' + rows.filter(r => r.trim()).slice(1, 14).join(' | '));
+        if (!seg('go ahead', 'quit').includes('cave')) f.push('"go ahead" not back up into the cave: ' + seg('go ahead', 'quit').slice(0, 200));
         return f;
       },
       sdcard: true
