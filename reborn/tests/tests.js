@@ -3331,6 +3331,33 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0rock', near: ['map'], what: 'Dingus Quest Zero\'s rock (slice 4.10: DUNGEON.md\'s changing the dungeon, HOUSE.md\'s rock\'s kinds and hardness; dq0/rock.h, the world\'s dig_rock, the UI\'s words), by the words told: a skilled miner (Mining 95) with a pick at seed 3 by the stairway (dq0 -T) digs a shaft down, through the floor\'s flags (a spell) into the rock; the rock\'s told as the dig comes to it, after the floor ("You\'re into flaky rock", its looks one of the rocks\'), named only after a spell that went well ("...: shale." with "The work goes well."); stopped as it\'s told ("stop"), then quit',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml min 95 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -k pick,lantern -T', 'light the lantern', 'dig down', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'dig down', n: 1, words: 'You\'re into', text: 'stop\r' }]);   // (Typed as it's told)
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), first = s.indexOf('You\'re into'), begun = s.lastIndexOf('You set to digging', first);
+        const looks = { shale: 'flaky', sandstone: 'buff', limestone: 'pale grey', slate: 'blue-grey', marble: 'white', granite: 'speckled grey',
+          basalt: 'black', quartz: 'white-veined', ironstone: 'rusty red', 'copper ore': 'green-stained' };
+        const told = [...s.matchAll(/You're into ([a-z -]+?) rock(?:: ([a-z ]+))?\. (?:You dig with your [a-z]+\. )?(The work goes well\.|The work goes slowly\.|Your tool slips|The rotten rock)/g)];
+        if (!told.length) return ['the rock not told as the dig came to it: ' + (s.match(/dig down.{0,600}/) || [''])[0]];
+        for (const [all, look, name, how] of told) {
+          if (!Object.values(looks).includes(look)) f.push('"' + all + '": not a rock\'s looks');
+          if (name && looks[name] !== look) f.push('"' + all + '": ' + name + ' doesn\'t look ' + look);
+          if (!!name !== (how === 'The work goes well.')) f.push('"' + all + '": named ' + (name ? '' : 'not ') + 'after a spell that went ' + (name ? 'badly' : 'well'));
+        }
+        if (begun < 0) f.push('the rock told before the dig began');
+        else if (!/The work goes|Your tool slips/.test(s.slice(begun, first))) f.push('the rock told on the dig\'s first spell, the floor\'s flags not dug first: ' + s.slice(begun, first + 80));
+        if (!/You dig with your pick\./.test(s.slice(begun, first + 200))) f.push('the pick not named on the first spell');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0hunger', asks: true, near: ['time'], what: 'Dingus Quest Zero\'s hunger and thirst (slice 4.9: HOUSE.md\'s water, hunger and thirst, the user\'s of 2026-10-21, DECISIONS.md\'s; the referee\'s, rswant.h), by the words told: at seed 3 in the kitchen, nothing near, its torch put out: "eat the rations" at once refused, not hungry; "wait 9 hours", the want\'s first levels told as they come ("You\'re getting thirsty.", "You\'re getting hungry.") and the status line\'s "thirsty"; over to the kitchen\'s well first ("look into the well"), its torch lit again after the wait, "drink" its fill there; "eat the rations" a meal (a day\'s ration begun, five minutes), again refused; "fill the waterskin" at the well (the old kit\'s, empty); its torch put out, "wait 17 hours", "You\'re very thirsty."; "drink from the waterskin" its pints',
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',

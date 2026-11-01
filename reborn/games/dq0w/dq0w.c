@@ -2535,30 +2535,75 @@ void __fastcall__ look_way (unsigned t);        /* (Its stub, bank.s's) */
 static struct {
     unsigned char   d;                          /* DIR_N ... DIR_W, DIR_DOWN */
     unsigned char   mat;                        /* What it's into (rs.h's MAT_*: the referee judges the tools) */
-    unsigned char   top;                        /*   for its first feet (a shaft: the floor's; the rock's below) */
+    unsigned char   rock;                       /* The rock last told (rock.h's RK_*: test_dig's; RK_NONE as it's
+                                                **   begun) */
     unsigned        need, done;                 /* Half-feet (P_DIG's: bare hands half a foot a spell) */
     unsigned        x, y;                       /* The square dug */
 } dig;
+/* The half-feet of what it's into (mat) before the rock: a shaft's floor (earth or soil two feet, flags or masonry
+** one, stone none: the rock's at once); a wall, all of it (2026-10-31: worked out, its byte the rock's) */
+#define DIG_TOP         (dig.d != DIR_DOWN ? 0xFF : dig.mat == MAT_EARTH || dig.mat == MAT_SOIL ? 4 : \
+                         dig.mat == MAT_STONE ? 0 : 2)
 void __fastcall__ dig_kept (unsigned char begin);   /* (Part 19's: the hole's record, DUG) */
 
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
+/* ---- The rock a dig's into (../dq0/rock.h, slice 4.10's: its kinds where they lie, from the game's seed): its
+** hardness the dig's rate on it (P_DIG's c: HOUSE.md's digging), told as it's come to (E_DIG's b), and poor rock
+** coming down on a dig that goes badly in it (part 1's; its statics in the part, used only within a call) */
+#pragma data-name (push, "SW1RODATA")
+#define ROCK_CODE
+#include "../dq0/rock.h"
+static const unsigned char rk_hard[NRK] = RK_HARDNESS;
+static unsigned char rk = 0;                    /* (The rock of the spell under way: test_dig's; and the feet it
+                                                **   made, made: both read in the same call of the part) */
+static unsigned char made = 0;
+
+/* The rock at the dig's point h half-feet in (RK_*; RK_NONE where it's not the rock: a floor's flags or earth, a
+** wall's masonry): a shaft's, its depth that far below the floor, under the floor's own; a wall's or the rock's, at
+** the height of the character's middle */
+static unsigned char __fastcall__ dig_rock (unsigned h)
+{
+    int d;
+
+    if (dig.d == DIR_DOWN) {
+        if (h < DIG_TOP) {
+            return RK_NONE;
+        }
+        d = (int) ((h - DIG_TOP) >> 1) - elev_at (sn_, dig.x, dig.y);
+    } else {
+        if (dig.mat != MAT_STONE) {
+            return RK_NONE;
+        }
+        d = -3 - elev_at (sn_, mx, my);
+    }
+    hub_map (0);
+    return rock_kind (HUB->seed, d - STRATUM (sn_).datum, dig.x, dig.y);
+}
+#pragma data-name (pop)
+
 /* The referee's test of the character's digging (by what it has equipped): its grade, and the feet it made (made
-** 0xFF: nothing it has can dig that) */
-static unsigned char made;
+** 0xFF: nothing it has can dig that); the rock (rk), and the next event's b: the tool's and its wear's place (the
+** low two bits), the rock's kind times 16, and 8 if it's other than the half-foot's before (a shaft come down to the
+** rock, or into another bed of it) */
 static unsigned char dign;
 static signed char test_dig (void)
 {
     struct req* r;
     signed char g;
+    unsigned char n;
 
+    rk = dig_rock (dig.done);
+    n = rk && rk != dig.rock ? 8 : 0;           /* (A rock new to it: told) */
+    dig.rock = rk;
     hub_map (0);
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_TEST;
     r->actor = 0;
     r->a = P_DIG;
-    r->b = dig.done < dig.top ? dig.mat : MAT_STONE;     /* (Through the floor: the stratum's rock) */
+    r->b = dig.done < DIG_TOP ? dig.mat : MAT_STONE;     /* (Through the floor: the stratum's rock) */
+    r->c = rk ? rk_hard[rk] + 1 : 0;            /* (Its hardness: the rate's, HOUSE.md's digging) */
     r->steps = 0;
     r = hub_ask (SLOT_WORLD);
     g = r->grade;
@@ -2566,6 +2611,7 @@ static signed char test_dig (void)
     evb = ++dign & 3;                           /* (Its tool and its wear, for the next event: E_DIG's) */
     strncpy (HUB->dig_tool[evb], r->text, sizeof HUB->dig_tool[0] - 1);
     HUB->dig_wear[evb] = r->w2;
+    evb |= rk << 4 | n;
     r->state = REQ_FREE;
     return g;
 }
@@ -2617,6 +2663,12 @@ static unsigned char __fastcall__ add_link (unsigned char sn, unsigned char kind
     return s->nlinks++;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+#pragma code-name (push, "SW25CODE")           /* (Part 25's: part 1's room, the rock's, 2026-10-31) */
+#pragma rodata-name (push, "SW25RODATA")
+
 void __fastcall__ s_start_dig (unsigned char d)
 {
     unsigned char* p;
@@ -2653,8 +2705,6 @@ void __fastcall__ s_start_dig (unsigned char d)
             HUB->pc_y = dig.y;
         }
         dig.mat = C->mat[room_of (sn_, dig.x, dig.y)][MP_FLOOR];    /* (The room's floor: the maker's) */
-        dig.top = dig.mat == MAT_EARTH || dig.mat == MAT_SOIL ? 4 : dig.mat == MAT_STONE ? 0 : 2;  /* (Earth or soil
-                                                **   two feet, flags or masonry one) */
         if (!stratum_in (sn_ + 1)) {
             grow_below (sn_);                   /* (Grown now: the shaft goes down to its floors, if it reaches under) */
             mx = dig.x;
@@ -2676,14 +2726,20 @@ void __fastcall__ s_start_dig (unsigned char d)
         }
         dig.need = t == T_WALL ? 4 : 10;        /* (A wall, two feet; a square of rock, five) */
         dig.mat = C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL];   /* (Its room's walls, or the rock) */
-        dig.top = 0xFF;
     }
+    dig.rock = RK_NONE;
     dig_kept (1);                               /* (Told, begun: on from where it was left, a hole begun before) */
     tool_reach ("pick\0shovel\0");              /* (A digger's tool got out first: its reach, HOUSE.md's handy tools,
                                                 **   the first spell's) */
     reach_done (0);
-    spell ();
+    in_place (A_DIGGING, SPELL);               /* (Its first spell: spell ()'s, part 1's) */
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
 
 /* A spell of work done: its test, its noise, and on, or through */
 void s_dig_on (void)
@@ -2699,8 +2755,14 @@ void s_dig_on (void)
     g = test_dig ();
     if (made == 0xFF) {                         /* (Nothing it has will bite into it) */
         hub_map (0);
-        event (E_DIG, 0, D_NO_TOOL << 8 | (dig.done < dig.top ? dig.mat : MAT_STONE) + 1);   /* (What it's into) */
+        event (E_DIG, 0, D_NO_TOOL << 8 | (dig.done < DIG_TOP ? dig.mat : MAT_STONE) + 1);   /* (What it's into) */
         return;
+    }
+    l = dig.d == DIR_DOWN ? DIG_TOP : 0;        /* (Where the rock begins) */
+    if (g == G_CF && RK_POOR (rk) && dig.done > l) {
+        dig.done -= (dig.done - l + 1) >> 1;    /* (Poor rock: the roof come down on a spell gone badly, half the hole
+                                                **   in the rock filled again, HOUSE.md's) */
+        g = 0x7F;
     }
     dig.done += made;
     hub_map (0);
@@ -2708,7 +2770,7 @@ void s_dig_on (void)
     noise (6);
     if (dig.done < dig.need) {
         dig_kept (0);                           /* (The feet dug kept: stopped, it goes on from here) */
-        event (E_DIG, 0, (g == G_CS || g == G_MS ? D_GOOD : g == G_MF ? D_POOR : D_SLIP) << 8 |
+        event (E_DIG, 0, (g == G_CS || g == G_MS ? D_GOOD : g == G_MF ? D_POOR : g == 0x7F ? D_ROOF : D_SLIP) << 8 |
             (dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2));
         spell ();
         return;

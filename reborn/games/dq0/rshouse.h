@@ -29,6 +29,10 @@ static const struct { char key[8]; unsigned char rate[5], wear[5]; } digger[] = 
 };
 #define NDIGGERS        (sizeof digger / sizeof digger[0])
 #define DIG_TESTED(m)   ((m) != MAT_EARTH && (m) != MAT_SOIL)   /* (Earth dug at the tool's rate; the rest a Mining test) */
+/* The rock's hardness (P_DIG's c: rock.h's RH_* + 1, 0 none given): the rate in stone half as much again in soft
+** rock, as it is in middling, half in hard, a quarter in very hard (a half-foot at least; slice 4.10's, HOUSE.md's) */
+static const unsigned char dig_hard[5] = { 4, 6, 4, 2, 1 };    /* (Quarters: none given, soft ... very hard) */
+#define DIG_HARD(k, c)  ((unsigned char) ((unsigned char) ((k) * dig_hard[(c) < 5 ? (c) : 0] + 3) >> 2))
 #endif
 
 /* The tool to hand that suits the material best (bare hands, digger's 0, if none does better; of two as good, the

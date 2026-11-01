@@ -85,7 +85,7 @@ void __fastcall__ noise_told (const struct msg* m, unsigned char rel);  /* (Part
 unsigned char hold_first (void);
 unsigned char errand (void);                    /* (Part 15's: an ally's errand, a gift, slice 4.8's) */
 unsigned char missiles (void);                  /* (Part 13's: the missiles, slice 4.7's) */
-void __fastcall__ dig_used (unsigned char n);     /* (Part 14's) */
+void __fastcall__ dig_used (unsigned bk);        /* (Part 14's) */
 static char dug_with[16];                       /* (The tool a dig took, named) */
 unsigned char finds;                            /* (Things a search turned up, told as it ends: the hub's text;
                                                 **   search.c's too) */
@@ -1193,7 +1193,11 @@ void __fastcall__ s_news (const struct msg* m)
         if (k == D_BEGUN || k == D_AGAIN) {
             dug_with[0] = 0;
         } else if (k != D_NO_TOOL) {
-            dig_used (m->b);
+            dig_used (m->b | k << 8);               /* (And the rock it's into told: slice 4.10's) */
+        }
+        if (k == D_ROOF) {                      /* (Poor rock come down on the hole: slice 4.10's) */
+            msg ("The rotten rock splits, and part of the roof falls into the hole.");
+            k = D_POOR;
         }
         dig_words (k, m->w1 & 0xFF);
         break;
@@ -1617,17 +1621,31 @@ static void to_hand (void)
 }
 
 /* The tool a dig's spell took (the referee's choice): worn by it, and named as it's first taken up (part 14's, s_news's
-** alone, through its stub: the main RAM's room) */
+** alone, through its stub: the main RAM's room); bk an E_DIG's b, its how (D_*) times 256.  And the rock a spell's
+** into (rock.h's RK_*: the b's high four bits, slice 4.10's), told as it's come to (its first spell, or the b's 8: a
+** new rock): how it looks and how it goes, its name too after a spell that went well (Mining's eye: D_GOOD) */
 char dig_with[16];
 #pragma code-name (push, "SW14CODE")
 #pragma rodata-name (push, "SW14RODATA")
-void __fastcall__ s_dig_used (unsigned char n)
+void __fastcall__ s_dig_used (unsigned bk)
 {
+    static const char rocks[] = "shale\0flaky\0sandstone\0buff\0limestone\0pale grey\0slate\0"
+        "blue-grey\0marble\0white\0granite\0speckled grey\0basalt\0black\0quartz\0white-veined\0ironstone\0"
+        "rusty red\0copper ore\0green-stained";
+    const char* r;
+    unsigned char n = bk & 3, i = (unsigned char) bk >> 4, g = bk >> 8 == D_GOOD;
+
     HUB->ireq.to = HUB->dig_wear[n];
     things (IO_WEAR, HUB->dig_tool[n]);
     if (strcmp (dug_with, HUB->ireq.name)) {
         strcpy (dug_with, HUB->ireq.name);
         strcpy (dig_with, dug_with);
+    }
+    if (i && bk >> 8 != D_THROUGH && (dig_with[0] || bk & 8)) {
+        for (r = rocks; --i; r += strlen (r) + 1) {    /* (Its name, then its looks) */
+            r += strlen (r) + 1;
+        }
+        sayf ("\nYou're into %s rock%s%s.", r + strlen (r) + 1, g ? ": " : "", g ? r : "");
     }
 }
 #pragma code-name (pop)

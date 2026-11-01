@@ -37,6 +37,8 @@ struct style {
 };
 extern const struct style* SP;                  /* The chunk's stratum's (make.c's: sty) */
 extern struct style sty;
+extern unsigned char cstyle;                    /* (The chunk's style: its stratum's, or a mixed stratum's natural
+                                                **   part's ST_NATURAL: make.c's) */
 
 /* uses.c (overlay 7's): a built stratum's plan of uses (DUNGEON.md: built to a plan) */
 unsigned char __fastcall__ uses (unsigned char step, unsigned char arg);

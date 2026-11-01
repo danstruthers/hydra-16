@@ -135,11 +135,11 @@ failure.  Feet a spell (kept in half-feet), and the wear a spell does the tool:
 
 | Tool             | Soil | Hard-packed earth | Flags | Stone | Masonry | Wear (each)            |
 |------------------|------|-------------------|-------|-------|---------|------------------------|
-| bare hands       | ½    | -                 | -     | -     | -       | -                      |
-| a blade, a knife | 1    | ½                 | -     | -     | -       | soil, earth 40 (it dulls) |
+| bare hands       | Â½    | -                 | -     | -     | -       | -                      |
+| a blade, a knife | 1    | Â½                 | -     | -     | -       | soil, earth 40 (it dulls) |
 | pick             | 2    | 1                 | 3     | 2     | 1       | flags, stone, masonry 1 |
-| shovel, spade    | 3    | 1½                | -     | -     | -       | none                   |
-| mattock          | 3    | 1½                | -     | -     | -       | none                   |
+| shovel, spade    | 3    | 1Â½                | -     | -     | -       | none                   |
+| mattock          | 3    | 1Â½                | -     | -     | -       | none                   |
 
 Each spell is strenuous work: two fatigue levels at HarnMaster's rate (Moving and tiring, above), so a long dig wants
 rests between its spells.
@@ -150,6 +150,33 @@ in a 'you make no progress' result"; "Hard-packed earth should be harder to dig 
 rate)"; earth takes no Mining, "Anything harder uses mining skill, and rate depends on material (only a pick will
 work for harder materials)".  (rshouse.h's digger table, the tool's choice and DIG_TESTED; dq0harn.c's RS_TEST
 P_DIG.)  *(Every ruleset's.)*
+
+### The rock's kinds and hardness *(slice 4.10, 2026-10-31: drafted for the user to review; every ruleset's)*
+
+The book's Mining is geology, prospecting and mineworking (Skills 16), but it gives no rates; these are the house's.
+
+- **Where each rock lies** (dq0/rock.h, from the game's seed alone, nothing kept): beds 25 feet thick down through
+  every stratum (shale 4 in 10, sandstone 3, limestone 3; below 200 feet the shale slate and the limestone marble),
+  dipping up to 16 feet a region (1,280 feet) each way and swelling up to 7 feet region by region, so the rock
+  changes as a stratum's crossed and as a shaft goes down; a granite boss in one region in six (round, 15 to 78
+  squares in radius); in seven regions in 16 a line straight across the region: a vein a square wide (quartz, or a
+  seam of ironstone or copper ore) or a basalt dyke three squares wide.  A wall of masonry, a floor's flags or earth,
+  aren't the rock; the rock is what's under and behind them, and a cave's or a passage's bare walls.
+- **Hardness**: soft (shale), middling (sandstone, limestone, marble, the ores), hard (granite, basalt, slate), very
+  hard (quartz).  A pick's two feet a spell in stone is three in soft rock, two in middling, one in hard, half a foot
+  in very hard (the rate times 6, 4, 2 or 1 quarters: rshouse.h's DIG_HARD, the world telling the referee the
+  hardness in P_DIG's c).  The Mining test is the same in each: the hardness is in the rate, not the odds.
+- **Told as it's come to** (the UI's): the first spell of a dig in the rock, and a spell that comes into another rock
+  (a shaft down through the beds), say how it looks ("You're into speckled grey rock."); a spell that went well (a
+  Mining success) names it too ("You're into speckled grey rock: granite.").  Mining's eye is the test the spell
+  makes already; a failure tells only the looks.
+- **Poor rock comes down** (shale: rotten, flaking): a spell of digging in it that fails critically brings part of the
+  roof down into the hole, half of what's dug in the rock filled again ("The rotten rock splits, and part of the roof
+  falls into the hole."; E_DIG's D_ROOF).  Nobody's hurt by it yet (a falling rock's harm is left for later).
+- **A mixed stratum** (caves that sentient hands have been at): a third of its chunks left as they were found, grown
+  as caves by the natural style's rules (soft soil floors, the rock's walls, no doors or windows), the rest hewn by
+  the mixed style's; but a chunk with a way between strata in it is always hewn, where the builders' work began
+  (dq0m/make.c's natural).
 
 ## Portals
 
@@ -1260,7 +1287,7 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   trap's), or over a thing in its way in the dark, it's prone.  "get up", "stand", "rise" take a round; a walk, a
   step, a climb, a disengage gets up first (a round the later) unless it's crawling; prone in a fight, its round is
   getting up, no blow.  The test: the book's Rise is free but for one seriously or grievously wounded (the book leaves
-  a test to the GM: the house takes it, Agility ×5); and the house's, with no good arm (the user's, 2026-10-22:
+  a test to the GM: the house takes it, Agility Ã5); and the house's, with no good arm (the user's, 2026-10-22:
   "getting up with no good arms ... should probably require an agility check"), the same test four steps the harder;
   failed, the round's spent, still down ("You struggle, but can't get up.").  No good leg, it can't ("Your legs won't
   bear you.").  The hub's pc_pos is the character's position (POS_PRONE; crouching, kneeling and sitting are slice

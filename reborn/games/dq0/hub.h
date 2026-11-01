@@ -508,7 +508,9 @@ enum {
     E_NOWAY,                                    /* who can't: w1 why (N_*) */
     E_VIEW,                                     /* What who sees has changed: w1 why (V_*) */
     E_DIG,                                      /* who's digging: w1 how it goes (D_*) times 256, and the feet to go
-                                                **   (D_NO_TOOL: what it's into, MAT_* + 1) */
+                                                **   (D_NO_TOOL: what it's into, MAT_* + 1); a spell's b its tool's
+                                                **   place (the hub's dig_tool: the low two bits), the rock it's in
+                                                **   (rock.h's RK_*) times 16, and 8 if that's new to it */
     E_NOISE,                                    /* A noise: a how loud (0-9), b what made it (NZ_*), w1 w2 its square
                                                 **   (the denizens') */
     E_LEDGE,                                    /* who's come to a ledge: w1 its rise (a signed char: a fall less) */
@@ -600,8 +602,10 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8, V_TRACED = 16 };
                                                 **   V_FACING: a turn begun, its look to come, V_TURNED; V_LOOKED: a
                                                 **   look one way's, I_LOOK's: 8, look.c's look (8); V_TRACED: the
                                                 **   traces read, I_TRACE's, the UI bank's tread: look (16)) */
-enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN };  /* E_DIG's how (D_AGAIN: begun on
-                                                **   a hole dug part way before, the world's DUG record's) */
+enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN, D_ROOF };  /* E_DIG's how (D_AGAIN: begun on
+                                                **   a hole dug part way before, the world's DUG record's; D_ROOF:
+                                                **   a spell gone badly in poor rock, the roof come down on the hole,
+                                                **   half of it in the rock filled again: slice 4.10's) */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
        TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE, TE_LOW, TE_OUT, TE_ROBBED,
        TE_BEGUN, TE_ASK_SHORT, TE_LEARNT, TE_THERE, TE_FORGOT, TE_UNSURE, TE_ASTRAY, TE_ELSEWHERE,

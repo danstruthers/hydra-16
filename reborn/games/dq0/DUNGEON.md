@@ -298,9 +298,12 @@ A chunk is grown by its stratum's style, from what the plan gives it (its slope,
   record the bounds of its floor (the squares in them that are floor are its own: its stock, its traps, the walks
   across it go by them); a chamber's floor a hollow or a hump on the ground's unevenness, smoothly (dq0m/caves.c);
 - **mines** and **mixed** strata (caves that sentient hands have been at): grown by the built grower, hewn straight,
-  by their own styles' records (their proportions, their materials), on the rock's lie, not flat; their own rules (a
-  mine's tunnels along a vein, galleries where it widened, shafts and ladders, timbering; natural breaking into
-  built) are still to come.
+  by their own styles' records (their proportions, their materials), on the rock's lie, not flat.  A mixed stratum
+  is part natural and part built (slice 4.10, 2026-10-31: dq0m/make.c's natural): a third of its chunks left as they
+  were found, grown as caves by the natural style's record (cstyle, the chunk's style, the fixtures' materials too),
+  the rest hewn; a chunk with a way between strata in it always hewn, where the builders began; the caves and the
+  hewn chunks meet at the plan's crossings, as any two chunks do.  A mine's own rules (its tunnels along a vein,
+  galleries where it widened, shafts and ladders, timbering) are still to come.
 
 **Every proportion is the style's**: how often a room is lit, in zones, sloping; its ceilings' kinds; how often a
 way out has a door, and the doors' states, locks, bars, hiding and materials; a cave's chambers, its tunnels'
@@ -400,8 +403,19 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   the same.  A wall is two feet, a square of rock five.  A dig stopped keeps the feet it's dug (HOUSE.md's what
   stopping costs: a change record of its own, DUG, the hole's half-feet and the way it's dug), and one begun again on
   its square, the same way, goes on from there ("You set to digging again where you left off.").
+- **The rock** (slice 4.10, 2026-10-31: dq0/rock.h, HOUSE.md's rock's kinds and hardness): what's behind a wall
+  and under a floor is the rock, its kind where it lies worked out from the game's seed alone (rock_kind: beds of
+  shale, sandstone and limestone 25 feet thick, dipping across the frame, slate and marble below 200 feet; granite
+  bosses, basalt dykes, veins of quartz and seams of ore, a region's own), so it's never kept and every task finds the
+  same rock at the same place and depth.  A dig's rate is the rock's hardness's (the world sends it the referee,
+  P_DIG's c); the rock's told as a dig comes to it, named after a spell that went well (Mining's eye); poor rock
+  (shale) comes down on a spell that goes badly in it, half the hole in it filled again (E_DIG's D_ROOF).  The rock
+  is worked out for the dig only (dq0w.c's dig_rock, part 1's): a look or an examine at a wall doesn't tell it yet.
 - **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) and
-  **tunnellers** (creatures that dig by nature, the denizens' task choosing where) are still to come (below).
+  **tunnellers** (creatures that dig by nature, the denizens' task choosing where) are still to come (below).  The
+  tunnellers' hook: rock.h's rock_kind (any task can include it, ROCK_CODE, where it wants its code) gives a square's
+  rock, and its RK_HARDNESS the rate's; a denizen's dig would make the same change records as the character's (the
+  world's change (), a DUG record while it's under way).
 
 **Mining any way**: a dig goes level (a tunnel) or down (a shaft); up (a raise through the ceiling, to the stratum
 above) and slanting (an incline, its floor rising or falling square by square) aren't made.
@@ -1343,10 +1357,19 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   scroll ruined), a stream's current carrying a swimmer, a minute's swim tested as it waits in deep water, treading water standing still, the denizens' wading and swimming (a beast that won't cross), their
   hunger and thirst; rain where the surface reaches (shafts, the open), washing scents and prints away; a standing order
   to eat and drink when needed.
-- **Rock and old places** (slice 4.10): the rock's own kinds and hardness across a stratum, mines and mixed strata
-  grown by their own rules, age's collapse and rubble, explosives and sills; caverns across many chunks (the plan's
-  features bigger than a chunk, a room followed from chunk to chunk).
-- **Tunnellers and builders** (slice 4.11): denizens that dig, their new ways told when seen.
+- **Rock and old places** (slice 4.10, built in part 2026-10-31: changing the dungeon's rock, above; HOUSE.md's rock's
+  kinds and hardness): the rock's own kinds and hardness across the strata, a dig's rate by it, told as it's dug,
+  named by Mining, poor rock coming down on a dig; a mixed stratum part natural and part built.  Left: the rock told
+  when seen and examined ("examine the wall": the world's look would ask rock_kind for the wall's square; Mining's
+  test to name it), and a vein's ore worth taking; a mine's own rules (its adits, shafts and galleries following a
+  vein: rock_kind's veins are the plan's to follow, a region's line); age's collapse and rubble (an old stratum's
+  passages partly fallen in, rubble to clear or climb: a square kind of its own, T_RUBBLE, the tiles' 10, its readers
+  the walk's step (part 24's zone_step, as wading is), the map's glyph, the looks, a dig clearing it; the chunk has
+  no room for a bitmap of it, 2 bytes free); a falling rock's harm on the digger; explosives and sills; caverns
+  across many chunks (the plan's features bigger than a chunk, a room followed from chunk to chunk); the veins'
+  lines all near north-south (rock.h's: x by y), worth a second way.
+- **Tunnellers and builders** (slice 4.11): denizens that dig, their new ways told when seen (the hook: rock.h's
+  rock_kind and RK_HARDNESS, and the world's change records, above).
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
 - **One path for every actor** (Phase 3C): a denizen's mind making the same commands as the player's, so the

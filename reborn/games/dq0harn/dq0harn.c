@@ -252,6 +252,10 @@ static void __fastcall__ dig_of (struct req* r)
 {
     unsigned char m = r->b > MAT_SOIL ? MAT_STONE : r->b, t = s_dig_tool (m), k = digger[t].rate[m];
 
+    if (m == MAT_STONE) {
+        k = DIG_HARD (k, r->c);                 /* (The rock's hardness: slice 4.10's) */
+    }
+
     strcpy (r->text, digger[t].key);
     r->w2 = digger[t].wear[m];
     if (!k) {
