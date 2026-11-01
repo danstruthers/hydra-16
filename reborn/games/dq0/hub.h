@@ -558,10 +558,13 @@ enum {
     NEVENTS
 };
 enum { BRG_NONE, BRG_LOST, BRG_KNOWN };
-enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY };   /* E_DEN's what: a step, a noise of its own (a squeak,
-                                                **   a growl), the character sensed, lost (its senses' own); a
-                                                **   successor rallying its fellows at its post (the denizens', a
-                                                **   shout: told seen or heard, the UI's, 2026-10-30) */
+enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_ALARM };   /* E_DEN's what: a step, a
+                                                **   noise of its own (a squeak, a growl), the character sensed, lost
+                                                **   (its senses' own); a successor rallying its fellows at its post
+                                                **   (the denizens', a shout: told seen or heard, the UI's, 2026-10-30);
+                                                **   a sleeper's snore, those on watch talking as they go, the alarm
+                                                **   raised by one on its rounds finding a body (the day's, 2026-10-31:
+                                                **   told seen or heard, as a rally) */
 enum { NZ_WORK, NZ_BLOW };                      /* E_NOISE's b: work's (a dig's, a door forced ...), a blow at a thing
                                                 **   (a battering's, each blow: the sound task's) */
 enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best it holds (the

@@ -29,6 +29,9 @@ ovx:        .res        1
             SWPART      7, 3                ; Succession (2026-10-30)
             SWPART      8, 4                ; Their bodies: their want, the water, a hurt one's rest, a cornered one's
                                             ;   dart (2026-10-31); a lair's home room, a robber's way, one first met
+            SWPART      9, 4                ; The day: schedules, sleep, meals, work, watches (2026-10-31)
+            SWPART      10, 4               ; The actors' coarse moves (2026-10-31: the main RAM's room), a body found on
+                                            ;   the rounds
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -63,6 +66,13 @@ ovx:        .res        1
             SWFN        met, 8
             SWFN        name_of, 8
             SWFN        kept_file, 8
+            SWFN        daily, 9            ; (The day's, 2026-10-31)
+            SWFN        wander, 9
+            SWFN        sched, 9
+            SWFN        coarse, 10
+            SWFN        found, 10           ; (A body found on the rounds: the day's)
+            SWFN        hour, 10            ; (The hour the game began: the day's, its first)
+            SWFN        told, 6             ; (The hook for a loss told: a body found on the rounds, the day's)
             SWFN        dismay, 6
             SWFN        heart, 6
             SWFN        succeed, 7

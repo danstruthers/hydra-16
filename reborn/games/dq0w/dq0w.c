@@ -4119,7 +4119,7 @@ static unsigned char __fastcall__ engager (unsigned x, unsigned y)
         hub_map (0);
         a = &HUB->actor[k];
         if (!a->state || a->sn != HUB->pc_stratum || a->pos == POS_PRONE || a->doing == DO_DOWN ||
-            a->doing == DO_ROAM || a->attitude > AT_UNFRIENDLY) {
+            DO_UNAWARE (a->doing) || a->attitude > AT_UNFRIENDLY) {
             continue;                           /* (Not one that hasn't noticed the character: roaming, its mind's
                                                 **   doing as it doesn't sense it, DENIZENS.md's; every actor's) */
         }
@@ -4685,7 +4685,7 @@ unsigned char __fastcall__ s_engaged (unsigned char eng, unsigned char def)
     hub_map (0);
     a = &HUB->actor[k];
     if (noinit || (move.on && move.how == A_CLIMBING) || !a->state || a->sn != HUB->pc_stratum ||
-        a->pos == POS_PRONE || a->doing == DO_DOWN || (unsigned) (a->x - HUB->pc_x + 1) > 2 ||
+        a->pos == POS_PRONE || (unsigned char) (a->doing - DO_DOWN) < 2 || (unsigned) (a->x - HUB->pc_x + 1) > 2 ||
         (unsigned) (a->y - HUB->pc_y + 1) > 2) {
         return 0;
     }
@@ -4787,7 +4787,7 @@ static unsigned char near_foe12 (void)
     for (k = f = 0, best = 13; k < NACTORS; ++k) {
         hub_map (0);
         a = &HUB->actor[k];
-        if (!a->state || a->sn != HUB->pc_stratum || a->pos == POS_PRONE || a->doing == DO_DOWN ||
+        if (!a->state || a->sn != HUB->pc_stratum || a->pos == POS_PRONE || (unsigned char) (a->doing - DO_DOWN) < 2 ||
             a->attitude > AT_UNFRIENDLY) {
             continue;
         }

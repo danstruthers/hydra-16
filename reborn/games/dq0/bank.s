@@ -205,8 +205,8 @@ ovl_out:
             SWFN        hand_said, 11
             SWFN        limbs_cmd, 11
             SWFN        bg_words, 14
-            SWFN        pose_words, 14
-            SWFN        when_free, 14
+            SWFN        pose_words, 12
+            SWFN        when_free, 12
             SWFN        noise_told, 14
             SWFN        dig_used, 14
             SWFN        hold_first, 11

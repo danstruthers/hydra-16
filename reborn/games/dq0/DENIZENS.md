@@ -292,6 +292,53 @@ denizens' task is their minds.
   changes (moves, its light, busy or not).  At the real paces they act as the clock runs, the world never waiting for
   them (one fallen behind makes up a few seconds at most).
 
+### Daily life *(2026-10-31: slice 4.5's leftover; HOUSE.md's the denizens' day, for review)*
+
+Each denizen keeps a day by its kind and the game's clock (dq0d.c's part 9): the hour of the day the clock's and the
+hour the game began at, dusk (the house's).
+
+- **Its day** (kinds.txt's day, from the bestiary's habits): diurnal (up at six, asleep at ten at night: the cave
+  basilisk, the cultists and their priest, the bandits' and the soldiers' leaders, the dwarf miners and elders),
+  nocturnal (asleep from eight in the morning to four in the afternoon: the giant rats, the cave spiders, the ghouls,
+  the bats, the small, black, white and red orcs, their king, the kobolds' lord), crepuscular (about at dawn and dusk,
+  asleep at midday and midnight: the cave bear, the adder, the lindworm), or never asleep (the skeletons, the wights,
+  the shade).  Each a little later than its fellows (up to half an hour, by its number), so a lair stirs one by one.
+- **Watches** (kinds.txt's day w: the faction's guards, the kobolds, the bandits, the brown orcs, the dwarf warriors,
+  the elves, the men-at-arms): a lair keeps watch by thirds (its denizens' numbers), each third four hours on watch,
+  four asleep, four about, in turn, so a third is always on watch; the watch changes every four hours (midnight, four,
+  eight ...), the next third relieving it.
+- **Asleep** at its lair's home (its bed: the square, or one beside it), lying still (DO_SLEEP): its senses dulled
+  (its eyes shut, its hearing halved: the book's Awareness at half asleep), so the character can creep past a lair
+  asleep; snoring now and then (DE_SNORE, heard as "snoring" round corners and through doors, muffled; seen, "The kobold
+  snores.").  Woken by a noise it hears, by harm or by sensing the character, it's up ten minutes or so, then back to
+  bed if its day still says so.  One made an actor asleep comes asleep.
+- **Its meals** (folk's: dq0d.c's meal, the bodies' want): a meal as it wakes, the first hour, and another halfway
+  through a long day (the diurnal and the nocturnal), at its lair's home, its larder (DO_EAT, "eating"): fed as it
+  sits down to it (the record's ate, an actor's, the clock's), so folk keep to their meals and seldom go hungry.  A
+  beast's meal is its prey (its want's: below), no slot in the day.
+- **At work** (kinds.txt's work: a room's use): about but not on watch, in its work's room of its lair's chunk if it
+  has one (DO_WORK, "at work"): the cultists and their priest at the chapel's altar, the dwarves and the kobolds at
+  their workshop, the dwarf elder, the bandits' lord, the kobolds' lord and the orc king in their solars, the captain
+  in the guardroom; else about its range, as ever.
+- **On watch** (DO_GUARD, "on watch"): walking its rounds, the rooms of its lair's chunk in turn (a step at a time to
+  each room's middle, greedily: no way nearer, on to the next), and a word with a fellow on watch it comes near
+  (DE_TALK: heard as "voices", seen "The soldier says something to its fellow.").  A body of its own faction's lying
+  near a room of its rounds (within 4 squares), not found before, is found: the alarm raised (DE_ALARM, as loud as a
+  rally: heard as "a shout of alarm", seen "The soldier raises the alarm."), its faction's attitude to the character
+  a step worse (the intruder suspected) and each of its faction's actors' too, each woken and alerted; a leader's body,
+  each told of its leaders' deaths (part 6's hook: known lost, its courage tested).
+- **Lazily, by the clock** (the 65C02's time): nothing's polled.  A record away from the character is looked at as
+  it's due (roam's): asleep, it's put at its bed and due again as it wakes; at a meal, as the meal ends; about, at
+  work or on watch, a square of its range, its work's room or its rounds' room each half minute to a minute as ever.
+  An actor's day is asked as it decides with nothing else to do (no foe, nothing sensed, no noise heard); a sleeper's
+  next decision some fifteen to thirty seconds on (its dulled senses' look).
+- **Seen and heard:** the stir's words say what each does ("Two soldiers are ahead, 30 feet away, on watch.", "A giant
+  rat is to your left, 10 feet away, asleep."), so a player learns the routine by watching it: when the guards pass,
+  when a lair sleeps.
+- **Unaware:** asleep, eating, at work or on watch, an actor hasn't noticed the character (as one going about its
+  business): it engages no one (the world's engagement zones), and one asleep isn't an engaging foe nor a foe in
+  range for a long wait's stop.
+
 ### Events: the denizens in the background
 
 What the denizens' bodies do is **published as events**: a queue of their own in the hub (the denizens' events, in a
@@ -502,14 +549,14 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   8's: roam's fends for those away, hungry's for the actors), never ticked: folk eat at their larder, a beast hunts
   (twice its range, prey found now and then), a very hungry hunter hunts the character; food given the more welcome
   the hungrier (gifts, slice 4.8's), and eaten; the want's fatigue the referee's (RS_NEW_ACTOR's c).  The larders are
-  the daily round's hook: its meals a slot in the day (a meal: the record's ate the clock's).
+  the daily round's: its meals a slot in the day (a meal: the record's ate the clock's: daily life, above).
 - **Hurt:** one wounded with nothing after it goes home to its lair to rest.
 
 ## Still to come
 
 - **Their bodies' rest** (2026-10-31's leftovers, HOUSE.md's the denizens' bodies): a swim tiring a denizen, a denizen
   drowning (knocked senseless in water: none goes in deeper than it wades yet), a stream's current; their larders eaten
-  from (the daily round's meals) and run out; one tending another's wounds; stings and envenomed creatures; an ally's
+  from (the day's meals feed folk, the larder's stores not yet counted) and run out; one tending another's wounds; stings and envenomed creatures; an ally's
   hunger (fed by the character's gifts now) leading it off to eat.
 
 What the plans bring later, by the slice or phase that brings it:
@@ -522,8 +569,10 @@ What the plans bring later, by the slice or phase that brings it:
   (a guardian, a faction's hoard), the strata's ages and sizes, the things lying about by theme.
 - **The command interpreter** (Phase 3C): a denizen's mind making the same command structure as the player's, the
   world applying it the same way (opening and breaking doors, taking things, throwing, attacking).
-- **Daily life** (slice 4.5): schedules by kind and faction, patrols that keep a pattern (the sound layer built,
-  2026-10-29: the denizens hearing the character by it, its steps by its pace).
+- **Daily life** (slice 4.5, built 2026-10-31: above): left, a patrol noticing a door left open (the denizens can't
+  open or shut doors yet: Phase 3C's), the records' patrols finding bodies (only an actor's rounds do), routes between a faction's lairs and its gates (the way-finding the minds lack: their steps are
+  greedy), the character telling the hour (a sleep "until dawn"), a sleeper's defence (the book's Ignore against one
+  asleep), lying down to sleep (the denizens' positions but prone still to come).
 - **Body position and moving quietly** (slice 4.6, built for the character and a hunter's stalk, 2026-10-29): every
   actor's position and gait (the denizens' but prone still to come), their noises by the layer to one another (an
   actor's own still heard as the crow flies).
