@@ -1326,3 +1326,23 @@ background is doing.
   where they lie; a line typed while the last's answer is owed gets the denizens' quarter second of its own.
 
 **Design:** DENIZENS.md, the tasks giving way to a command in hand; docs/03-base/kernel.md, the scheduler.
+
+## 2026-10-31
+
+### Leisure
+
+The user (2026-10-31), after the denizens' daily life: "For what folk are doing, there should be a "leisure time" state
+where denizens sit around reading, dicing, talking, drinking, playing other games, etc."
+
+Built the same day (branch reborn-game-leisure), for review in HOUSE.md's leisure: folk at leisure (DO_LEISURE and its
+pastime) for a part of their time about (a watch-keeper's two hours after its free watch's meal, a long day's last four
+hours); each kind's pastimes (kinds.txt's: reading, dice and other games of chance, a board game, talking and stories,
+singing, drinking, mending its gear, whittling, by what fits each people), chosen by the denizen's number and the day's,
+not the dice; the social ones (dice to drink) its lair's together, in the room they gather in (a hall, a guardroom, a
+barracks, quarters), a reader or one mending alone at its bed; told as seen ("Three soldiers are ahead, 20 feet away, at
+dice.") and heard (dice rattling, laughter, singing, cups clinking); less watchful at it (the book's half Awareness for
+one not paying attention: its sight and hearing halved, quartered at its cups), in drink a while after (its blows two
+steps worse, struck at two easier); its pastime let go as it rises to act, told ("The soldier lets the dice fall.").
+
+**Design:** DENIZENS.md's daily life; HOUSE.md's leisure.
+

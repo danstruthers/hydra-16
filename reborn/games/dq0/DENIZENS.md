@@ -327,6 +327,17 @@ hour the game began at, dusk (the house's).
   rally: heard as "a shout of alarm", seen "The soldier raises the alarm."), its faction's attitude to the character
   a step worse (the intruder suspected) and each of its faction's actors' too, each woken and alerted; a leader's body,
   each told of its leaders' deaths (part 6's hook: known lost, its courage tested).
+- **At leisure** (2026-10-31, the user's: DECISIONS.md's leisure; HOUSE.md's for review): folk with pastimes (kinds.txt's
+  pastimes) spend a part of their time about at them (DO_LEISURE and its pastime): a watch-keeper two hours after its
+  free watch's meal, a long day's last four hours.  The pastime by its number and the day's (dq0d.c's part 9: pastime);
+  a social one (dice, a board game, talk, song, drink) its lair's, so those at leisure together share it, gathered in a
+  hall, guardroom, barracks or quarters of its chunk (else its home); reading, mending and whittling alone at its bed.
+  Seen ("Two soldiers are ahead, 20 feet away, at dice."), heard (DE_PASTIME: dice rattling, counters clicking,
+  laughter, singing, cups clinking; tell.c's words), less watchful (its senses halved, quartered at its cups: doze), in
+  drink an hour after its cups (AM_DRUNK: the world's blow two steps worse for it, two easier at it), and its pastime
+  let go as it rises to act (DE_UP, seen: "The soldier lets the dice fall."; dq0d.c's part 10, roused).  An actor's
+  day and place are kept (dq0d.c's aact, atx, aty: part 9's plan, asked as its day changes and at each room of its
+  rounds), so its moments at leisure cost no swap of part 9.
 - **Lazily, by the clock** (the 65C02's time): nothing's polled.  A record away from the character is looked at as
   it's due (roam's): asleep, it's put at its bed and due again as it wakes; at a meal, as the meal ends; about, at
   work or on watch, a square of its range, its work's room or its rounds' room each half minute to a minute as ever.

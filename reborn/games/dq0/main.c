@@ -2721,15 +2721,26 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
     heard_what[sizeof heard_what - 1] = 0;
     if (m->a >= DE_RALLY) {                     /* (A successor at its post rallying its fellows, HOUSE.md's morale; a
                                                 **   sleeper's snore, those on watch talking, the alarm raised, the
-                                                **   day's, 2026-10-31: seen, by its name, else heard) */
-        n = m->a == DE_RALLY ? "rallies its fellows\0a rallying shout" : m->a == DE_SNORE ? "snores\0snoring" :
-            m->a == DE_TALK ? "says something to its fellow\0voices" : "raises the alarm\0a shout of alarm";
+                                                **   day's, 2026-10-31; a pastime heard (dice rattling, singing), or let
+                                                **   go as its denizen rises to act, seen, leisure's, tell.c's words:
+                                                **   seen, by its name, else heard) */
+        if (m->a >= DE_PASTIME) {
+            if (m->x[2] ? m->a < DE_UP : m->a >= DE_UP) {
+                return;                         /* (One seen at its pastime: the look's words say it) */
+            }
+            tell ((m->a - DE_PASTIME - PT_DICE + T_PAST_HEARD) | TELL_COPY);
+            n = heard_what;
+        } else {
+            n = m->a == DE_RALLY ? "rallies its fellows\0a rallying shout" : m->a == DE_SNORE ? "snores\0snoring" :
+                m->a == DE_TALK ? "says something to its fellow\0voices" : "raises the alarm\0a shout of alarm";
+            strcpy (heard_what, n + strlen (n) + 1);
+        }
         if (m->x[2]) {
-            strcpy (heard_what, HUB->actor[(m->who - 1) & (NACTORS - 1)].name);   /* (Its name) */
-            sayf (*heard_what >= 'a' ? "\nThe %s %s." : "\n%s %s.", heard_what, n);
+            strcpy (lb + 300, HUB->actor[(m->who - 1) & (NACTORS - 1)].name);   /* (Its name, at the line's far end:
+                                                **   sayf's lb its own) */
+            sayf (lb[300] >= 'a' ? "\nThe %s %s." : "\n%s %s.", lb + 300, n);
             return;
         }
-        strcpy (heard_what, n + strlen (n) + 1);
     }
     heard_words (m->a | (m->x[3] ? 0x80 : 0), rel);
     msg (lb);

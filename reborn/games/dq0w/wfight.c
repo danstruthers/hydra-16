@@ -137,7 +137,8 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     r->a = z & ~FW_FIRST;                       /* (Its aim; FW_FIRST, the engage initiative test's: its words') */
     r->b = AS_BEST;
     r->c = 0;
-    r->steps = 0;
+    r->steps = bd.mood & AM_DRUNK ? (me == att ? -2 : 2) : 0;   /* (In drink, from its leisure's cups: its blows two
+                                                **   steps worse, struck at two easier; HOUSE.md's, 2026-10-31) */
     r->x[0] = bd.heart;                         /* (The creature's heart: its courage's steps as it's wounded, the
                                                 **   denizens' field and bonds, rs.h's RS_HEART) */
     pa = me == att ? bd.pos : HUB->pc_pos;     /* (Their bodies' positions, the world's: prone, the easier struck) */
