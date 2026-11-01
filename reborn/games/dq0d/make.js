@@ -1,9 +1,9 @@
 // make.js - (dq0d) the denizens' data files, after its build (build.js calls build): kinds.txt (the game's bestiary)
 // made obj/games/dq0d.dat, 40 bytes a kind (dq0d.c's struct dkind), the first none (its flags the kinds' count, the
 // first too, its styles the factions'; a kind's styles' high bits its way with a foe it's brought down); then
-// factions.txt's factions, 32 bytes each (struct faction), the first none; then each kind's belongings' ways, 7 bytes
+// factions.txt's factions, 32 bytes each (struct faction), the first none; then each kind's belongings' ways, 9 bytes
 // a kind, the first none (dq0d.c's struct dkx: its keeps, its standing, its home's three room uses, 2026-10-27; its
-// body; its rank, 2026-10-30).
+// body; its rank, 2026-10-30; its day and its work's room, 2026-10-31).
 // And the kinds' traces (slice 4.1: their tread, marks, smell, scent and nose) made obj/games/dq0tr.dat, 64 bytes a
 // kind (the world's traces' store, dq0w/wtrace.c's struct tkind), the first the character's own.  And the world's lore
 // (lore.h): peoples.txt made obj/games/dq0f.dat, deities.txt obj/games/dq0g.dat, 64 bytes a
@@ -23,7 +23,7 @@ const MINDS = { m: 0, b: 1, l: 2, a: 3, c: 4 }; // dq0d.c's M_*
 const AT = { h: 0, u: 1, w: 2, i: 3, f: 4 };    // hub.h's AT_*
 const KREC = 40, FREC = 32, NFACT = 8, NFILE = 16;   // (dq0d.c's: a kind's record, a faction's, a game's factions at
                                                 //   most; the file's: the history's past a stand-in's, 2026-10-29)
-const XREC = 7, BODIES = ['two', 'four', 'serpent', 'many', 'wings', 'none'], KEEPS = 'bohclH', USES = 'chlvygaskpbreqowitdf';   // (dq0d.c's struct dkx; its KP_*; world.h's U_*)
+const XREC = 9, DAYS = '-dncw', BODIES = ['two', 'four', 'serpent', 'many', 'wings', 'none'], KEEPS = 'bohclH', USES = 'chlvygaskpbreqowitdf';   // (dq0d.c's struct dkx; its KP_*; world.h's U_*)
 const RANKS = { '-': 0, c: 1, l: 2, s: 2 };     // (dq0d.c's RK_*: a kind's rank in its faction, HOUSE.md's morale; a spiritual
                                                 //   leader as a lord)
 const SND_KINDS = 32;                           // (hub.h's: the kinds at most, the first none; the themes' bits)
@@ -106,7 +106,7 @@ function build({ dir, objdir, say = () => {} }) {
   kinds.forEach((f, i) => {
     const at = KREC * (i + 1), pair = s => s.split('-').map(Number), fac = names.indexOf(f[11]) + 1;
     const bad = () => { throw new Error(`dq0d/kinds.txt: line ${i + 1}: ${f.join(' | ')}`); };
-    if (f.length !== 32 || !(f[31] in RANKS) || BODIES.indexOf(f[30]) < 0 || KEEPS.indexOf(f[27]) < 0 || !/^[0-4]$/.test(f[29]) || !(f[28] === '*' || /^[a-z]{1,3}$/.test(f[28]) && [...f[28]].every(c => USES.includes(c))) || !/^[0-9]$/.test(f[22]) || !/^[0-9]$/.test(f[24]) || !/^[0-9]$/.test(f[26]) ||
+    if (f.length !== 34 || DAYS.indexOf(f[32]) < 0 || !(f[33] === '-' || f[33].length === 1 && USES.includes(f[33])) || !(f[31] in RANKS) || BODIES.indexOf(f[30]) < 0 || KEEPS.indexOf(f[27]) < 0 || !/^[0-4]$/.test(f[29]) || !(f[28] === '*' || /^[a-z]{1,3}$/.test(f[28]) && [...f[28]].every(c => USES.includes(c))) || !/^[0-9]$/.test(f[22]) || !/^[0-9]$/.test(f[24]) || !/^[0-9]$/.test(f[26]) ||
         f[23].length > 23 || f[25].length > 23 || f[0].length > 11 || f[1].length > 7 || !fac || !(f[12] in MINDS) || !(f[18] in LIGHTS) ||
         !(f[19] in NATURES) || !/^[1-6]$/.test(f[15]) || !/^(body|bones)$/.test(f[21])) bad();
     out.write(f[0], at, 'latin1');
@@ -155,6 +155,8 @@ function build({ dir, objdir, say = () => {} }) {
     for (let k = 0; k < 3; k++) out[at + 2 + k] = f[28] !== '*' && k < f[28].length ? USES.indexOf(f[28][k]) : 0xFF;
     out[at + 5] = BODIES.indexOf(f[30]);        // (Its body: hub.h's struct actor's body, BD_*)
     out[at + 6] = RANKS[f[31]];                 // (Its rank: the morale's, 2026-10-30)
+    out[at + 7] = DAYS.indexOf(f[32]);          // (Its day and its work's room: daily life, 2026-10-31: dq0d.c's DY_*,
+    out[at + 8] = f[33] === '-' ? 0xFF : USES.indexOf(f[33]);   //   world.h's U_*, 0xFF none)
   });
   fs.writeFileSync(path.join(objdir, '..', 'dq0d.dat'), out);
 

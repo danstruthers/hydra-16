@@ -12,7 +12,7 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
-_ovbank:    .res        3           ; The parts' images' banks (dq0d.cfg's OV1, OV2, OV3)
+_ovbank:    .res        4           ; The parts' images' banks (dq0d.cfg's OV1 ... OV4)
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
 
@@ -28,6 +28,9 @@ ovx:        .res        1
             SWPART      5, 3                ; The senses' own: a hunter's stalk, a scent followed, one drawn on (slice 4.5's)
             SWPART      6, 3                ; Morale: the field and the bonds, an actor's kin dismayed (2026-10-30)
             SWPART      7, 3                ; Succession (2026-10-30)
+            SWPART      8, 4                ; The day: schedules, sleep, meals, work, watches, a body found (2026-10-31)
+            SWPART      9, 4                ; The actors' coarse moves, a cornered one's dart (2026-10-31: the main RAM's
+                                            ;   room); a body found on the rounds
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -50,7 +53,13 @@ ovx:        .res        1
             SWFN        killed, 4
             SWFN        shoots, 2           ; (A shot at the character: slice 4.7's)
             SWFN        along, 4
-            SWFN        dart, 4
+            SWFN        dart, 9             ; (Part 9's since 2026-10-31: part 4's room)
+            SWFN        daily, 8            ; (The day's, 2026-10-31)
+            SWFN        wander, 8
+            SWFN        sched, 8
+            SWFN        coarse, 9
+            SWFN        found, 9            ; (A body found on the rounds: the day's)
+            SWFN        told, 6             ; (The hook for a loss told: a body found on the rounds, the day's)
             SWFN        dismay, 6
             SWFN        heart, 6
             SWFN        succeed, 7

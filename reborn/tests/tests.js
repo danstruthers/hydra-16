@@ -2290,6 +2290,31 @@ function dq0Poke(m, pokes) {
   };
 }
 
+// The day's hour poked (a test's own setting up: the denizens' hour0, dq0d.c's part 8, the hour of the day the game's
+// clock began at; 0x80, no day, every one about as before the day, 2026-10-31): at a line's Enter, each { g: the game,
+// 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, hour }.  A game's whole (from its start):
+// the environment's dq0hour (a line dq0hour=128 before it, rc's), dq0d's first look at its day
+function dq0Hour(m, list) {
+  const a = m.acia, read = a.read;
+  let typed = '', g = 0, seen = {};
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^dq0 /.test(typed)) { ++g; seen = {}; }
+        seen[typed] = (seen[typed] || 0) + 1;
+        const h = m.dq0 && m.dq0.bank(0), p = list.find(q => q.g === g && q.line === typed && q.n === seen[typed]);
+        if (h && p) {
+          const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+          m.taskRam[h[12 + 2]][parseInt(/^al ([0-9A-F]+) \._hour0$/m.exec(lbl)[1], 16)] = p.hour;
+        }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+}
+
 // A denizen made aware of the character as a line is typed (a test's own setting up: the line's Enter read, the
 // actor named its doing DO_WATCH in the hub, as if it had noticed the character; slice 4.5's, an unaware one engages
 // no one): the first time the line's typed after the one given before it, if given
@@ -3814,11 +3839,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0lair', outfit: true, what: 'Dingus Quest Zero\'s denizens\' belongings and valuables (the outfits\' plan\'s phases 2 and 3: games/dq0/outfits.txt\'s [role bandit] beds, [lair bandit], [purse bandit], DENIZENS.md\'s their things, HOUSE.md\'s the denizens\' belongings; the user\'s answers 6, 9, 10) and what\'s seen of them (the user\'s three levels, 2026-10-27), by the item store\'s records and the words: dq0kit\'s hostile bandits, each one\'s bed (a blanket, lying in its lair\'s home room: its faction\'s), the lair\'s larder (a sack of rations) made as it\'s placed; each one met, its purse (pennies in its pouch); each box at a bed locked, its key in that bandit\'s pouch alone fitting it; a bandit looked at "armed" (the look\'s general words), examined (what it holds and wears), assessed (each one\'s make); one killed, a thing worn beneath its clothes not told as its body\'s looked at, found as it\'s searched; the same seed\'s game the same belongings',
+      name: 'dq0lair', outfit: true, what: 'Dingus Quest Zero\'s denizens\' belongings and valuables (the outfits\' plan\'s phases 2 and 3: games/dq0/outfits.txt\'s [role bandit] beds, [lair bandit], [purse bandit], DENIZENS.md\'s their things, HOUSE.md\'s the denizens\' belongings; the user\'s answers 6, 9, 10) and what\'s seen of them (the user\'s three levels, 2026-10-27), by the item store\'s records and the words: dq0kit\'s hostile bandits, each one\'s bed (a blanket, lying in its lair\'s home room: its faction\'s), the lair\'s larder (a sack of rations) made as it\'s placed; each one met, its purse (pennies in its pouch); each box at a bed locked, its key in that bandit\'s pouch alone fitting it; a bandit looked at "armed" (the look\'s general words), examined (what it holds and wears), assessed (each one\'s make); one killed, a thing worn beneath its clothes not told as its body\'s looked at, found as it\'s searched; the same seed\'s game the same belongings.  The scene set (since the denizens\' day, 2026-10-31: bandits keep watches, a third asleep): no day (the environment\'s dq0hour=128, rc\'s, before its games: dq0d\'s), every one about as before',
       init: 't_rc', cycles: 1700e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
         'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
-        'cp /ram/g/theme.txt /ram/h/theme.txt', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
+        'cp /ram/g/theme.txt /ram/h/theme.txt', 'dq0hour=128', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
         'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'examine the bandit', 'assess the bandit', 'drop the backpack', 'drop the torch', 'attack',
         'attack', 'look at the body', 'search the body', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm'", 'quit',
         'echo $status']) },
@@ -5715,12 +5740,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0hoard', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's robbers' takings carried off (gear3's item 4, left; DENIZENS.md's a robber's takings, HOUSE.md's the denizens' belongings and the peoples): a hand-written theme's hostile giant rats with an orc king as their leader (seed 2: their home by the way down where the character starts, the king with them: popgen's, its own lair things made with the home since 2026-10-29, its hoard a chest beside it), the character poor and undefended with a dagger in hand: knocked senseless and robbed by the king (a robber since 2026-10-29: the tribe's spoils its hoard's), its dagger and its pennies put in the king's hoard (I_ROB's RB_HOARD: the chest marked OW_HOARD, its tribe's), found there (\"open the chest\", \"look in the chest\": unlocked, the house's), and taken back; and a tribe of brown orcs with no king (seed 1, south of the start): robbed by one, the takings hidden at its home (RB_HIDE: a brown orc keeps its things hidden, its mates not trusted), off the character's square, found by searching only (I_HIDDEN)",
+      name: 'dq0hoard', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's robbers' takings carried off (gear3's item 4, left; DENIZENS.md's a robber's takings, HOUSE.md's the denizens' belongings and the peoples): a hand-written theme's hostile giant rats with an orc king as their leader (seed 2: their home by the way down where the character starts, the king with them: popgen's, its own lair things made with the home since 2026-10-29, its hoard a chest beside it), the character poor and undefended with a dagger in hand: knocked senseless and robbed by the king (a robber since 2026-10-29: the tribe's spoils its hoard's), its dagger and its pennies put in the king's hoard (I_ROB's RB_HOARD: the chest marked OW_HOARD, its tribe's), found there (\"open the chest\", \"look in the chest\": unlocked, the house's), and taken back; and a tribe of brown orcs with no king (seed 1, south of the start): robbed by one, the takings hidden at its home (RB_HIDE: a brown orc keeps its things hidden, its mates not trusted), off the character's square, found by searching only (I_HIDDEN).  The scene set (since the denizens' day, 2026-10-31: brown orcs keep watches, a third asleep, a third on watch): the second game's with no day (the environment's dq0hour=128, rc's, before it: dq0d's), every orc about as before",
       init: 't_rc', cycles: 4000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
         'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', "echo 'faction | Tribe | rat | 0-0 | 5 | garking | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -k dagger',
         'defend none', 'hold the dagger', ...Array(16).fill('wait'), 'stand up', 'open the chest', 'open the chest', 'look in the chest', 'take the dagger from the chest', 'quit',
-        "echo 'faction | Tribe | hyeka | 0-0 | 96 | - | 0 | h | -' > /ram/h/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k dagger',
+        "echo 'faction | Tribe | hyeka | 0-0 | 96 | - | 0 | h | -' > /ram/h/theme.txt", 'dq0hour=128', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k dagger',
         'defend none', 'hold the dagger', 'open the door', 's 3', ...Array(20).fill('wait'), 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -5762,11 +5787,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0peoples', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's peoples (Phase 4: the user's answer 11, the HarnWorld Bestiary's Khuzdul, Sindarin, men and Gargun; DENIZENS.md's the peoples, HOUSE.md's for review), each in a hand-written theme's faction on the top stratum (seed 1, south of the start): dwarves wary, seen in mail and armed (\"A dwarf in mail, armed, ...\", \"Two dwarves\" (or three, as many as are told together: the dice by who asks, 2026-10-30): AG_MAIL, the plural), examined their arms and mail (outfits.txt's [role khuzwar]), deaf to the common tongue (\"doesn't speak any tongue you know\"), heard by a character who speaks khuzdul (its file's language line: the faction's tongue, factions.txt's); a tribe of brown orcs and black orcs under a king, hostile, seen armed, their own weapons made (a mankar or a mang: the catalogue's, Combat 3's (G)); elves keeping their distance (shy), a longknife at the belt and a hartbow worn; every one's sheet the referee's from its own key (RS_NEW_ACTOR answered 0: the bestiary's, beasts.c's)",
+      name: 'dq0peoples', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's peoples (Phase 4: the user's answer 11, the HarnWorld Bestiary's Khuzdul, Sindarin, men and Gargun; DENIZENS.md's the peoples, HOUSE.md's for review), each in a hand-written theme's faction on the top stratum (seed 1, south of the start): dwarves wary, seen in mail and armed (\"A dwarf in mail, armed, ...\", \"Two dwarves\" (or three, as many as are told together: the dice by who asks, 2026-10-30): AG_MAIL, the plural), examined their arms and mail (outfits.txt's [role khuzwar]), deaf to the common tongue (\"doesn't speak any tongue you know\"), heard by a character who speaks khuzdul (its file's language line: the faction's tongue, factions.txt's); a tribe of brown orcs and black orcs under a king, hostile, seen armed, their own weapons made (a mankar or a mang: the catalogue's, Combat 3's (G)); elves keeping their distance (shy), a longknife at the belt and a hartbow worn; every one's sheet the referee's from its own key (RS_NEW_ACTOR answered 0: the bestiary's, beasts.c's).  The scene set (since the denizens' day, 2026-10-31: the dwarves, the brown orcs and the elves keep watches, the black orcs asleep by day): no day (the environment's dq0hour=128, rc's, before its games: dq0d's), every one about as before",
       init: 't_rc', cycles: 4000e6,
       // (-R 7: the dice's offset that gives the game it was written for, since the dice by who asks,
       // 2026-10-30: the same dungeon, other rolls)
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/k.hm', 'echo language khuzdul >> /ram/k.hm',
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/k.hm', 'dq0hour=128', 'echo language khuzdul >> /ram/k.hm',
         'mkdir /ram/g', 'mkdir /ram/g2', 'mkdir /ram/h', 'mkdir /ram/e',
         "echo 'faction | Hold | khuzwar | 0-0 | 96 | khuzeld | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/g2/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7',
         'open the door', 'south', 'wait', 'examine the dwarf', 'talk to the dwarf', 'quit',
@@ -5821,12 +5846,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start; the character walking on east toward them, as the dice now fall: they keep to their room, watching), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again (since slice 4.3, come round in shock, a thing not taken up in shock: its torch let fall and not taken up, the load's check that one's alone); and its encumbrance the referee's the same)",
+      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start; the character walking on east toward them, as the dice now fall: they keep to their room, watching), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again (since slice 4.3, come round in shock, a thing not taken up in shock: its torch let fall and not taken up, the load's check that one's alone); and its encumbrance the referee's the same).  The scene set (since the denizens' day, 2026-10-31: bandits keep watches, a third asleep): no day (the environment's dq0hour=128, rc's, before its games: dq0d's), every one about as before",
       init: 't_rc', cycles: 1500e6,
       // (-R 1: the dice's offset that gives the game it was written for, since the dice by who asks,
       // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
-        'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 1',
+        'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 1',
         'defend none', 'hold the dagger', 'open the door', 'south', 'east', ...Array(12).fill('wait'), 'drop the torch', 'take the torch', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -6946,6 +6971,93 @@ module.exports = {
         if (!c4 || c4.rank !== 1 || !c4.prom) f.push('the captain\'s band not headed by its best after (the chain not filled): ' + JSON.stringify(e3 && e3.acts));
         if (c4 && c0 && !(c4.bonds >= 8 && c0.bonds <= 4)) f.push('the bonds to the new king not its own band\'s kept, the rest\'s a new leader\'s: ' + JSON.stringify([c4, c0]));
         if (!c0) f.push('none of the king\'s old band left to see');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0daily', near: ['denizens'], what: "Dingus Quest Zero's daily life (2026-10-31: DENIZENS.md's daily life, HOUSE.md's the denizens' day, for review; dq0d.c's part 8): the denizens' days by their kinds (kinds.txt's day and work) and the game's clock (the game begun at dusk, 18 o'clock, the house's), by the actors' records and their events: a hand-written theme's garrison of men-at-arms (seed 2, their lair south of the start; soldiers keep watches) watched for four hours from the start, half an hour at a time: a third of them on watch, walking their rounds (moving between one look and the next), a third asleep, as the clock goes on; the watch relieved as it changes at 20 o'clock (those on watch before it asleep after, others on watch: none the same); those on watch talking as they go and the sleepers snoring (their events, DE_TALK and DE_SNORE); and the stand-in's giant rats by the way down (seed 3), nocturnal, the character gone down the ladder (out of their senses: those watching it don't sleep) and its torch put out (so its burning out breaks no long wait), the day's hour poked to 10 o'clock as it goes (dq0Hour's), their records (dq0d's, away from the character: decided lazily, by the clock) read as each look is typed: asleep at their lair's home (its square or one beside it) ten minutes on, not looked at again till they wake (due after 16 o'clock: more than five hours on); at their meal there as they wake (16 o'clock, the first hour: due as it ends); about by 18 o'clock (due a minute or so on, as ever); and the garrison again, a body of theirs found on the rounds: the scene set by pokes as the first line's typed (dq0Rec's: a soldier of another lair, away, its record made dead in the near lair's home, as killed: its faction's body not found yet, dq0d's unf), the alarm raised as one on watch comes by it (DE_ALARM), once, its faction's attitude to the character a step worse (unfriendly to hostile: the head's fatt)",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/s',
+        "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt",
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s', ...Array(8).fill('wait 30 minutes'), 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'douse the torch', 'wait 10 minutes', 'look', 'wait 6 hours 30 minutes', 'look', 'wait 2 hours', 'look', 'quit',
+        'mkdir /ram/t', 'cp /ram/s/theme.txt /ram/t/theme.txt', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/t', 'wait 1 minute', ...Array(4).fill('wait 30 minutes'), 'quit', 'echo $status']) },
+      start(m) {
+        dq0Hour(m, [{ g: 2, line: 'd', n: 1, hour: 10 }]);   // (The rats' game at 10 o'clock: asleep by day)
+        const a = m.acia, read = a.read;                      // (The rats' records as each look's typed: dq0Rec's)
+        let typed = '';
+        m.rats = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'wait 1 minute' && m.dq0) {   // (Game 3: a body of the garrison's in its near lair's home)
+                const R = dq0Rec(m), h = m.dq0.bank(0), u16 = o => R.mem[o] | R.mem[o + 1] << 8, w16 = (o, v) => { R.mem[o] = v & 255; R.mem[o + 1] = v >> 8; };
+                const MANARMS = 28, at = [...Array(240).keys()].map(i => R.at(i)).filter(o => R.mem[o] === MANARMS);
+                const near = at.find(o => R.mem[o + R.FLAGS] & 2), far = at.find(o => !(R.mem[o + R.FLAGS] & 6) && u16(o + 21) !== (near ? u16(near + 21) : -1));
+                if (near && far) {
+                  R.mem[far + R.FLAGS] = 4 | 8;               // (D_DEAD, D_MET: killed as an actor)
+                  w16(far + 8, u16(near + 21));
+                  w16(far + 10, u16(near + 23));
+                  R.mem[far + R.SN] = R.mem[near + R.SN];
+                  const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'), tk = h[12 + 2];
+                  m.taskRam[tk][parseInt(/^al ([0-9A-F]+) \._unf$/m.exec(lbl)[1], 16) + (R.mem[far + 25] & 7)] = 1;
+                  m.body = { fac: R.mem[far + 25] };
+                }
+              }
+              if (typed === 'wait 30 minutes' && m.dq0 && m.body) {   // (The faction's attitude to the character, the head's fatt)
+                const h = m.dq0.bank(0), lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+                (m.body.fatt = m.body.fatt || []).push(m.taskRam[h[12 + 2]][parseInt(/^al ([0-9A-F]+) \._hd$/m.exec(lbl)[1], 16) + 4 + (m.body.fac & 7)]);
+              }
+              if (typed === 'look' && m.dq0) {
+                const R = dq0Rec(m), h = m.dq0.bank(0), u16 = o => R.mem[o] | R.mem[o + 1] << 8, recs = [];
+                for (let i = 0; i < 240; i++) {
+                  const o = R.at(i);
+                  if (R.mem[o] === 1 && (R.mem[o + R.FLAGS] & 3) === 1 && R.mem[o + R.SN] === 0)   // (A giant rat, out, not an actor)
+                    recs.push({ id: u16(o + 4), x: u16(o + 8), y: u16(o + 10), hx: u16(o + 21), hy: u16(o + 23), ready: u16(o + 12) + u16(o + 14) * 65536 });
+                }
+                m.rats.push(recs);
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], waits = T.filter(t => t.line === 'wait 30 minutes').slice(0, 8);
+        const men = s => s ? s.actors.filter(a => a.state && a.name === 'soldier') : [], on = (s, d) => men(s).filter(a => a.doing === d);
+        const show = s => JSON.stringify(men(s).map(a => [a.did, a.doing, a.x, a.y]));
+        if (waits.length !== 8 || !waits.every(t => t.after && men(t.after).length >= 3)) f.push('the garrison not about the character as it waits: ' + waits.map(t => show(t.after)).join(' '));
+        else {
+          for (const t of waits) if (!on(t.after, 'DO_GUARD').length || !on(t.after, 'DO_SLEEP').length) f.push('not some on watch and some asleep: ' + show(t.after));
+          const walked = waits.slice(1).some((t, i) => on(t.after, 'DO_GUARD').some(a => { const b = men(waits[i].after).find(c => c.did === a.did && c.doing === 'DO_GUARD'); return b && (b.x !== a.x || b.y !== a.y); }));
+          if (!walked) f.push('those on watch not walking their rounds: ' + waits.map(t => show(t.after)).join(' '));
+          const g1 = new Set([0, 1].flatMap(i => on(waits[i].after, 'DO_GUARD').map(a => a.did))), g2 = new Set([5, 6].flatMap(i => on(waits[i].after, 'DO_GUARD').map(a => a.did)));
+          if (!g1.size || !g2.size || [...g2].some(d => g1.has(d))) f.push('the watch not relieved at 20 o\'clock: before ' + [...g1] + ', after ' + [...g2]);
+          const slept = [5, 6].flatMap(i => men(waits[i].after).filter(a => g1.has(a.did)));   // (Asleep, or on the way to bed: never on watch)
+          if (!slept.some(a => a.doing === 'DO_SLEEP') || slept.some(a => a.doing === 'DO_GUARD')) f.push('those on watch before it not asleep after: ' + show(waits[5].after) + ' ' + show(waits[6].after));
+          const evs = waits.flatMap(t => t.dens.filter(e => e.kind === 'E_DEN'));
+          if (!evs.some(e => e.de === 'DE_TALK')) f.push('those on watch never talking as they go');
+          if (!evs.some(e => e.de === 'DE_SNORE')) f.push('the sleepers never snoring');
+        }
+        const looks = T.filter(t => t.line === 'look'), home = r => Math.max(Math.abs(r.x - r.hx), Math.abs(r.y - r.hy)) <= 1, H = 36000;
+        const rs = i => (looks[i] && looks[i].at ? looks[i].at.now : '?') + ' ' + JSON.stringify((m.rats[i] || []).map(r => [r.id, r.x - r.hx, r.y - r.hy, r.ready, looks[i] && looks[i].at ? r.ready - looks[i].at.now : r.ready]));
+        if (looks.length !== 3 || m.rats.length !== 3 || m.rats.some(l => l.length < 2) || looks.some(t => !t.at)) f.push('the rats\' records not read as the looks were typed: ' + m.rats.length);
+        else {
+          const due = i => m.rats[i].map(r => r.ready - looks[i].at.now);
+          if (!m.rats[0].every(home) || due(0).some(d => d < 5 * H)) f.push('the rats not asleep at home at 10 o\'clock, due as they wake: ' + rs(0));
+          if (!m.rats[1].every(home) || due(1).some(d => d <= 0 || d > H)) f.push('the rats not at their meal at home as they woke, due as it ends: ' + rs(1));
+          if (due(2).some(d => d > 6000)) f.push('the rats not about at 18 o\'clock: ' + rs(2));
+        }
+        const g3 = T.filter(t => t.line === 'wait 30 minutes').slice(8), alarms = g3.flatMap(t => t.dens.filter(e => e.kind === 'E_DEN' && e.de === 'DE_ALARM'));
+        if (!m.body) f.push('the body\'s scene not set: no soldier of another lair away');
+        else {
+          if (alarms.length !== 1) f.push('the alarm not raised once as the body was found: ' + alarms.length);
+          if (!m.body.fatt || m.body.fatt[0] !== 1 || m.body.fatt[m.body.fatt.length - 1] !== 0) f.push('the garrison\'s attitude not a step worse as the body was found: ' + JSON.stringify(m.body.fatt));
+        }
         return f;
       },
       sdcard: true

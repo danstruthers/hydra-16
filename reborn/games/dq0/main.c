@@ -921,8 +921,9 @@ static void heard (void)
             }
             continue;
         }
-        if (m.kind != E_DEN || !m.b || (m.x[2] && m.a != DE_RALLY) || m.x[0] != HUB->pc_stratum) {
-            continue;                           /* (A rally told seen too: its words, part 14's) */
+        if (m.kind != E_DEN || !m.b || (m.x[2] && m.a < DE_RALLY) || m.x[0] != HUB->pc_stratum) {
+            continue;                           /* (A rally told seen too: its words, part 14's; a snore, a word on
+                                                **   watch, the day's) */
         }
         dx = m.w1 - HUB->pc_x;
         dy = m.w2 - HUB->pc_y;
@@ -2696,6 +2697,15 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
             return;
         }
         strcpy (heard_what, "a rallying shout");
+    } else if (m->a >= DE_SNORE) {             /* (A sleeper's snore, those on watch talking, the alarm raised: the
+                                                **   day's, 2026-10-31; seen, by its name) */
+        n = HUB->actor[(m->who - 1) & (NACTORS - 1)].name;
+        if (m->x[2]) {
+            sayf (*n >= 'a' ? "\nThe %s %s." : "\n%s %s.", n, m->a == DE_SNORE ? "snores" :
+                m->a == DE_TALK ? "says something to its fellow" : "raises the alarm");
+            return;
+        }
+        strcpy (heard_what, m->a == DE_SNORE ? "snoring" : m->a == DE_TALK ? "voices" : "a shout of alarm");
     }
     heard_words (m->a | (m->x[3] ? 0x80 : 0), rel);
     msg (lb);

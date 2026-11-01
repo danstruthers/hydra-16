@@ -2287,6 +2287,34 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
 - **The denizens** *(every ruleset's, for later)*: their hunger, thirst and larders, and a beast keeping out of deep
   water unless it swims, aren't built yet (DENIZENS.md's still to come).
 
+## The denizens' day *(2026-10-31: slice 4.5's daily life; drafted for the user to review)*
+
+The book gives the creatures' habits (the Bestiary: nocturnal, diurnal ...), a watch of four hours, and a sleeper's
+Awareness at half (Skills 11); the rest is the house's.  DENIZENS.md's daily life has how it's built (dq0d.c's part 8).
+
+- **The hour** *(the house's)*: the game begins at dusk, six in the evening, its clock's hour from then; the
+  underground has no day the character sees, but its denizens keep one.  (The character can't tell the hour yet.)
+- **The days** *(the house's, by the bestiary's habits; kinds.txt's day, for review)*: diurnal, up 6-22; nocturnal, up
+  16-8; crepuscular, up 4-10 and 16-22; the dead never asleep.  Each denizen up to half an hour later than its
+  fellows (its number's), so a lair wakes one by one.
+- **Watches** *(the house's, on the book's four-hour watch)*: the folk that keep guard (kinds.txt's day w) by thirds,
+  each third four hours on watch, four asleep, four about, in turn; the watch changing at midnight, four, eight, noon,
+  sixteen and twenty o'clock.  So a third of a garrison is always awake on its rounds, a third always asleep.
+- **Sleep** *(the book's Awareness at half asleep; the rest the house's)*: a sleeper's hearing halved and its sight
+  none; woken by a noise it hears, harm or sensing the character, up ten minutes, then back to bed if it's still its
+  time.  A snore now and then, as loud as two (heard within the character's hearing plus three squares).
+- **Meals** *(the house's)*: an hour as it wakes, and an hour halfway through a long day, at its lair's home; the
+  hook for the denizens' hunger and larders (slice 4.9's every actor's, to come).
+- **Work** *(the house's; kinds.txt's work, for review)*: about but not on watch, in its work's room if its lair's chunk
+  has one (the cultists' chapel, the dwarves' and kobolds' workshop, the lords' solars, the captain's guardroom).
+- **Rounds** *(the house's)*: on watch, the rooms of its lair's chunk in turn, a word with a fellow on watch near it
+  (as loud as three).  A body of its own faction's within four squares of a room of its rounds found (once): the alarm
+  raised, a shout as loud as a rally's; its faction's attitude to the character a step worse (the intruder suspected,
+  though nobody saw it), and its fellows near's; each woken and alerted; a leader's body, the leader's loss known
+  (the morale's hook for a loss told).
+- **Unaware** *(the house's)*: asleep, eating, at work or on watch, it hasn't noticed the character: it engages no one,
+  and one asleep breaks no long wait.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

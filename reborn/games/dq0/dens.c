@@ -24,10 +24,11 @@ static const char* const relname[8] = {
 };
 static const char* const count[SEE_DENS + 1] = { "", "One", "Two", "Three", "Four" };
 static const char* const few[SEE_DENS + 1] = { "", "one", "two", "three", "four" };
-static const char* const doing[9] = {
+static const char* const doing[13] = {
     " feet away.", " feet away, watching you.", " feet away, coming towards you.", " feet away, keeping its distance.",
     " feet away, following you.", " feet away, waiting.", " feet away, fighting you.", " feet away, fleeing.",
-    " feet away, lying senseless."
+    " feet away, lying senseless.", " feet away, asleep.", " feet away, eating.", " feet away, at work.",
+    " feet away, on watch."
 };
 
 /* The denizens as they're told, alike ones together: each the way it lies (REL8 as the character faces), how far
@@ -122,7 +123,7 @@ static void group (void)
         n = S.den[i].name;
         t.rel = REL8 (bearing (S.den[i].x - S.x, S.den[i].y - S.y), pc_face);
         t.d = apart (S.den[i].x, S.den[i].y);
-        t.doing = S.den[i].doing % 9;
+        t.doing = S.den[i].doing % 13;
         t.n = 1;
         if (REL_BEHIND (t.rel) && n[0] >= 'a') {
             heard |= t.d <= 2;

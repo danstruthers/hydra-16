@@ -91,11 +91,15 @@ struct sight {
     unsigned char   dazzled;                    /* The eyes dazzled (a bright light after the dark: a while) */
 };
 enum { GL_GLOW, GL_LIGHT };                     /* A light far off: a faint glow, a light */
-enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY, DO_FOLLOW, DO_WAIT, DO_FIGHT, DO_FLEE, DO_DOWN };  /* A denizen's
-                                                **   doing: going about its own business, watching the character,
-                                                **   coming towards it, keeping its distance; an ally's: following it,
-                                                **   waiting where it was asked; fighting it, fleeing it, lying
-                                                **   senseless */
+enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY, DO_FOLLOW, DO_WAIT, DO_FIGHT, DO_FLEE, DO_DOWN, DO_SLEEP, DO_EAT,
+    DO_WORK, DO_GUARD };                        /* A denizen's doing: going about its own business, watching the
+                                                **   character, coming towards it, keeping its distance; an ally's:
+                                                **   following it, waiting where it was asked; fighting it, fleeing
+                                                **   it, lying senseless; and its day's (2026-10-31, DENIZENS.md's
+                                                **   daily life: unaware of the character, as roaming is): asleep,
+                                                **   eating, at work, on watch (walking its rounds) */
+#define DO_UNAWARE(d)   ((d) == DO_ROAM || (d) > DO_DOWN)   /* (Going about its business, its day's: it hasn't noticed the
+                                                **   character) */
 #define SIGHT_HURRY     0x80
 #define MOUTH           0x08
 #define DOORWAY         0x83                    /* (A seen door's state: no door in it, a doorway, open; else its
