@@ -137,13 +137,18 @@ static void count (void)
     }
 }
 
-/* Text t begun with key k (the case aside) up to a word's end there: its length, or 0 */
+/* Text t begun with key k (the case aside) up to a word's end there: its length, or 0 (part 6's alone: the main RAM's
+** room, 2026-11-01) */
+#pragma code-name (push, "SW6CODE")
+#pragma rodata-name (push, "SW6RODATA")
 static unsigned char __fastcall__ at_key (const char* t, const char* k)
 {
     unsigned char n = strlen (k);
 
     return !strnicmp (t, k, n) && (!t[n] || strchr (" ,.!?\"", t[n])) ? n : 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (push, "OV10CODE")           /* ---- Overlay 10: a line's first look */
 #pragma rodata-name (push, "OV10RODATA")

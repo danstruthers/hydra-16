@@ -52,7 +52,9 @@ unsigned char lgen;                             /* (light.h's) */
 static unsigned char k;
 static struct lslot* q;
 
-void light_init (void)
+#pragma code-name (push, "SW3CODE")            /* (Part 3's, the start's: the main RAM's room, 2026-11-01) */
+#pragma rodata-name (push, "SW3RODATA")
+void s_light_init (void)
 {
     run_lb = lbank = hy_banks_alloc (1);
     for (k = 0, q = L; k < LSLOTS; ++k, ++q) {
@@ -61,6 +63,8 @@ void light_init (void)
     hub_map (0);
     place = HUB->eq_head;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 static void all_stale (void)
 {

@@ -5675,7 +5675,9 @@ int main (int argc, char* argv[])
             den_saw = 0;                        /* (A body fallen: looked at again, the things too) */
             see (0);
         }
-        if (HUB->den_seq != dseq) {
+        if (HUB->den_seq != dseq && !ui_first ()) {   /* (Not while the UI's command is in hand at the real paces:
+                                                **   the senses' look of them after its answer's begun, 2026-11-01) */
+            hub_map (0);
             dseq = HUB->den_seq;
             if ((!move.on || move.how == A_DIGGING) && dens_seen ()) {  /* (The denizens' bodies' changes: what it
                                                 **   sees of them, looked at again, the UI told if it sees them

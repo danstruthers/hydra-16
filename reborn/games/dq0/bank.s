@@ -152,7 +152,7 @@ ovl_out:
             SWPART      3, 16               ; The map (look.c; overlay 14's bank till 2026-11-01)
             SWPART      4, 9                ; The pace, the watchfulness, the state, small moves (pace.c)
             SWPART      5, 10               ; The names given (names.c)
-            SWPART      6, 12               ; The names said (names.c); looking one way, a close look (way.c)
+            SWPART      6, 12               ; The names said (names.c)
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
             SWPART      8, 5                ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
@@ -163,6 +163,7 @@ ovl_out:
             SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
             SWPART      15, 6               ; An ally's errands, the character's gifts (errand.c: slice 4.8's)
             SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
+            SWPART      17, 14              ; Looking one way, a close look (way.c: part 6's till 2026-11-01)
 
             SWFN        errand, 15
             SWFN        begin, 1
@@ -200,7 +201,7 @@ ovl_out:
             SWFN        args, 7
             SWFN        reach_go, 7
             SWFN        place_go, 7
-            SWFN        look_way, 6
+            SWFN        look_way, 17
             SWFN        search_go, 10
             SWFN        news, 11
             SWFN        hide, 11
