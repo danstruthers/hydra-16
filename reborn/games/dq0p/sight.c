@@ -290,6 +290,11 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
     things_stocked ();                          /* (A chunk the maker's stocked: its things put down, the world's) */
     things_seen (&S, sn, x, y, face);           /* (The things it sees lying about) */
     hub_map (SIGHT_BANK);                       /* (The record the senses' bank's) */
+    for (k = 0; k < S.nways; ++k) {             /* (Each way's run's bearing as the character faces, in sixteenths, the
+                                                **   high four bits: its shape, view.c's runs; words.c's words) */
+        d = (RUNS[(S.way[k].rel + face) & 7] - (face << 1)) << 4;
+        S.way[k].rel |= d;
+    }
     memcpy (SIGHT, &S, sizeof S);
     hub_map (0);
     return first;

@@ -386,20 +386,32 @@ void __fastcall__ o_bar_text (char* s, unsigned done, unsigned len)
     }
 }
 
-#pragma code-name (push, "OV8CODE")       /* (A walk's beats, a battering's: once overlay 8's, now linked in
-                                                **   overlay 3, dq0.cfg's, overlay 8's room part 1's, 2026-10-27) */
+#pragma code-name (push, "OV8CODE")       /* (A walk's beats, a battering's: once overlay 8's, linked in overlay 3,
+                                                **   overlay 8's room part 1's, 2026-10-27; in overlay 16 since
+                                                **   2026-11-01, overlay 3's room, dq0.cfg's) */
 #pragma rodata-name (push, "OV8RODATA")
 #pragma local-strings (push, on)
 
-/* A walk's beat as it goes (E_BEAT's w: WB_*, its side times 256) */
+/* A walk's beat as it goes (E_BEAT's w: WB_*, its side times 256; a passage's bend, its run's new bearing in
+** sixteenths | 0x10, the world's, by the north the character believes in: "The passage bends away north-northeast",
+** HOUSE.md's a passage's heading) */
 void __fastcall__ o_beat_words (unsigned w)
 {
+    unsigned char r, sk;
+
     switch ((unsigned char) w) {
     case WB_QUIET:
         msg ("You go on down the passage.");
         break;
     case WB_TURN:
-        msg (w >> 8 == WS_LEFT ? "The passage turns left." : "The passage turns right.");
+        if ((r = w >> 8) & 0x10) {
+            hub_mem (0, &sk, &HUB->pc_skew, 1);
+            r = (r + (sk << 1)) & 15;
+            sayf ("\nThe passage bends away %s%s%s.", head_name[r & 1 ? ((r >> 1) + 1) & 6 : r >> 1], r & 1 ? "-" : "",
+                r & 1 ? head_name[(r >> 1) | 1] : "");
+            break;
+        }
+        msg (r == WS_LEFT ? "The passage turns left." : "The passage turns right.");
         break;
     case WB_DOOR:
         msg ("You go through a doorway.");

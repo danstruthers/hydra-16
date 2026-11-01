@@ -138,7 +138,8 @@ go:
             SWPART      47, 13              ; What's on a thing or in it, searched (things.c)
             SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
                                             ;   (things.c: slice 4.1b's)
-            SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
+            SWPART      49, 23              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c; overlay
+                                            ;   11's till 2026-11-01)
             SWPART      50, 21              ; The legs: getting up, a move's start prone, how fast; the body's positions,
                                             ;   the steps' loudness (dq0w.c's: overlay 21's, slices 4.5, 4.6)
             SWPART      51, 23              ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
@@ -320,7 +321,7 @@ go:
             SWFN        step_on, 23
             SWFN        task_news, 23
             SWFN        task_word, 23
-            SWFN        path_ways, 23
+            SWFN        path_ways, 78       ; (Part 78's since 2026-11-01: part 23's room, the walk's runs)
             SWFN        close_go, 24
             SWFN        close_on, 24
             SWFN        zone_step, 24

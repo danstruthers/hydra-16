@@ -28,7 +28,7 @@ ovx:        .res        1
             SWPART      6, 4                ; The denizens' senses answered, the sound layer read (sense.c, sound.c)
 
             SWFN        view, 1
-            SWFN        felt, 2
+            SWFN        felt, 4
             SWFN        things_lamps, 1
             SWFN        lamp_on, 1
             SWFN        perceive, 2

@@ -937,6 +937,11 @@ or a shaft can be jumped down (jump down: a fall of its height).
   Walked by every actor (the walk's ways on of the eight, none behind; the ways across a room; the denizens' steps; a
   hunter's scent), seen past and told among a passage's ways, drawn ("/", "\"), dug ("dig northeast"); the caves'
   zigzag tunnels cut as they're grown (dq0m/caves.c's slants).
+- **A passage's heading** (the user's, 2026-10-31: step 2 of three; HOUSE.md's a passage's heading): a passage's ways on
+  told by their runs' real bearings in sixteenths, as the character faces ("It goes ahead and a little to your right"),
+  smoothed over the squares it sees along them (a staircase of short steps one slant, a bend a bend); a walk along one
+  tells a bend by the new run's bearing ("The passage bends away north-northeast.") and a turn as before, not a turn at
+  every step; the map draws a staircase's steps as a slant ("/", "\").
 
 **Harm** (rs.h's RS_HARM, the referee's): a fall (its height, the floor it lands on, whether it's clear or past holds
 to grab), a trap's strike (its aspect, its dice, where it strikes), a burn, a striker's own hurt by its blow at a
@@ -1347,11 +1352,10 @@ packed, not the game on the ROM disk (2026-10-31, DECISIONS.md).  Now: 208M cycl
 
 What the plans bring later, by the slice or phase that brings it (the detailed plan's and the game plan's):
 
-- **Ways off the compass, steps 2 and 3** (the user's "queue up 1-3", 2026-10-31; step 1, the diagonal ways, built): a
-  passage told by its run's real heading in sixteenths, smoothed over its squares ("the tunnel bends away
-  north-northeast"), the map drawing a run's diagonals as such; built complexes at an angle (a stratum's plan, or one
-  complex in it, laid at 45 degrees to the compass, its rooms and passages on the diagonal grid; other angles stepped
-  and told by step 2's words); the built grower's diagonal passages.
+- **Ways off the compass, step 3** (the user's "queue up 1-3", 2026-10-31; steps 1 and 2, the diagonal ways and a
+  passage's heading, built): built complexes at an angle (a stratum's plan, or one complex in it, laid at 45 degrees to
+  the compass, its rooms and passages on the diagonal grid; other angles stepped and told by step 2's words); the built
+  grower's diagonal passages; a wide tunnel's staircase told as one slant (step 2's runs follow a one-wide passage).
 - **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence): left, other errands
   ("ask the dwarf to open the door"), "give the bandit 5 pennies" without "to", entertain and bargain.
 - **The command interpreter** (Phase 3C): every command, the player's or a denizen's mind's, one structure of
