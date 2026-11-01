@@ -1621,7 +1621,7 @@ function cacheChunks(m, sn) {
   for (const b of cacheBanks(m)) {
     for (let k = 0; k < 3; k++) {
       const o = k * CHUNK_SIZE, nrooms = b[o + 5], tile = b.subarray(o + CK_TILE, o + CK_TILE + 1024);
-      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x0F) > 10)) continue;
+      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x0F) > 11)) continue;   // (A kind past T_CUT, 11: the diagonal ways', 2026-10-31)
       const rooms = [];
       for (let r = 0; r < nrooms; r++) { const p = o + CK_ROOM + r * 8; rooms.push({ x: b[p], y: b[p + 1], w: b[p + 2], h: b[p + 3], kind: b[p + 5] }); }
       out.set((b[o + 1] | b[o + 2] << 8) + ',' + (b[o + 3] | b[o + 4] << 8), { cx: b[o + 1] | b[o + 2] << 8, cy: b[o + 3] | b[o + 4] << 8, rooms, tile: Array.from(tile, t => t & 0x0F) });
@@ -1853,7 +1853,7 @@ function builtChunks(m, sn) {
     for (let k = 0; k < 3; k++) {
       const o = k * 0xAA0, nr = b[o + 5], nz = b[o + 6], np = b[o + C.portal - 1];
       const tile = b.subarray(o + C.tile, o + C.tile + 1024);
-      if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x0F) > 10)) continue;
+      if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x0F) > 11)) continue;   // (T_CUT, 11, the diagonal ways')
       const rooms = [], zones = [], portals = [];
       for (let r = 0; r < nr; r++) {
         const p = o + C.room + r * 8;

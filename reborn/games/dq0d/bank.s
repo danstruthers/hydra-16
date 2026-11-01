@@ -73,6 +73,7 @@ ovx:        .res        1
             SWFN        plan, 9             ; (An actor's day and its place, as it changes: leisure's)
             SWFN        roused, 10          ; (A pastime let go as one rises to act)
             SWFN        enlist_near, 11     ; (The main RAM's room, 2026-10-31)
+            SWFN        slant, 11           ; (A denizen's diagonal way: slant.s, 2026-10-31, the main RAM's room)
             SWFN        wander, 9
             SWFN        sched, 9
             SWFN        coarse, 10

@@ -4,7 +4,11 @@
 ; corners neither of which can be stood on, one of them cut (T_CUT); step8 (), a heading's step, the four's by
 ; step_ok, a diagonal by slant; and the squares' kinds (t_kinds: world.h's T_PASS).
 
+.ifdef SLANT_IN_PART                        ; (The denizens': slant a swapped part's, SLANT_SEG, its stub
+            .export     _s_slant, _t_kinds, _cornk  ;   bank.s's; no step8)
+.else
             .export     _slant, _step8, _t_kinds, _cornk
+.endif
             .import     _at, _step_ok, _head_x, _head_y, pusha, pushax, incsp5
             .importzp   sp, ptr1
 
@@ -22,6 +26,9 @@ sx:         .res        2
 sh:         .res        1
 ca:         .res        1                   ; (The first corner's)
 
+.ifdef SLANT_IN_PART
+            .segment    SLANT_SEG
+.else
             .code
 
 ; unsigned char __fastcall__ step8 (unsigned char sn, unsigned x, unsigned y, unsigned char h): h in .A, the rest on
@@ -32,11 +39,16 @@ _step8:
             jmp         _step_ok
 @diag:      rol         a                   ; (h again: the carry its low bit)
             jmp         _slant
+.endif
 
 ; unsigned char __fastcall__ slant (unsigned char sn, unsigned x, unsigned y, unsigned char h): from x, y heading h (a
 ; diagonal) a diagonal way: corners (x + head_x[h], y) and (x, y + head_y[h]) neither one that can be stood on, one
 ; of them cut, and its square walkable (step_ok's rule, by dir_x's diagonals: 4 + h / 2)
+.ifdef SLANT_IN_PART
+_s_slant:
+.else
 _slant:
+.endif
             sta         sh
             ldy         #4
             lda         (sp),y
