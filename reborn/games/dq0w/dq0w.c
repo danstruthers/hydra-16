@@ -5619,7 +5619,7 @@ int main (int argc, char* argv[])
         if ((was_busy || (fwant & 1)) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             if (pc_waited) {
                 pc_waited = 0;
-                burn_ask |= TS_ASK;             /* (Its time believed: woken, part 76's) */
+                tsense ();                      /* (Its time believed: woken, part 76's, before it's free) */
                 ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */
             }
             took = take_n ? take_up () : gath ? gath_op (GO_ON, 0) : pfoe ? close_on () : srch ? searched () : lwork ?

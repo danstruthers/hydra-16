@@ -327,7 +327,9 @@ void s_tsense (void)
     if (HUB->pcsum.timesense) {
         set (0, 0);                             /* (Absolute timesense: it always knows) */
         T.gone = 0;
-    } else if (HUB->pc_task.kind == LT_SLEEP || (HUB->pcsum.cond & C_UNCONSCIOUS)) {
+    } else if ((HUB->pc_task.kind == LT_SLEEP && HUB->now < HUB->pc_ready) || (HUB->pcsum.cond & C_UNCONSCIOUS)) {
+                                                /* (Asleep till it's free: its sleep's end, the main loop's, asks
+                                                **   as it ends) */
         if (!T.gone) {
             T.gone = n ? n : 1;                 /* (Asleep, or senseless: from now, as near as it's seen) */
             T.how = HUB->pc_task.kind == LT_SLEEP ? TG_SLEEP : TG_OUT;
