@@ -71,6 +71,7 @@ ovx:        .res        1
             SWFN        sched, 9
             SWFN        coarse, 10
             SWFN        found, 10           ; (A body found on the rounds: the day's)
+            SWFN        hour, 10            ; (The hour the game began: the day's, its first)
             SWFN        told, 6             ; (The hook for a loss told: a body found on the rounds, the day's)
             SWFN        dismay, 6
             SWFN        heart, 6

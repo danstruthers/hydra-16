@@ -114,6 +114,7 @@ unsigned char __fastcall__ sched (unsigned char k, unsigned id);
 void __fastcall__ coarse (unsigned char k, unsigned lim);   /* Part 10 */
 void __fastcall__ told (unsigned char j);      /* Part 6's hook: a loss told (a body found, the day's) */
 unsigned char __fastcall__ found (unsigned char k);
+void hour (void);
 extern unsigned char ovbank[4];
 static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsigned x, unsigned y);  /* (Below) */
 extern char _SWAP_START__[];
@@ -2033,6 +2034,11 @@ static unsigned char roam (void)
             }
             continue;
         }
+        if (hub_map (0), !turns && HUB->ui_cmd && gw != 2) {
+            roam_at = now;                      /* (The UI's command in hand: the rest after its answer, as tend's
+                                                **   actors; their days are part 9's) */
+            break;
+        }
         den_get (i);
         kind_get (D.kind);
         if (D.attitude == AT_ALLIED && D.order == OR_WAIT) {
@@ -3891,6 +3897,8 @@ next:                                           /* (Post r, left by x: its facti
 #define DAY_START       18                      /* The hour the game begins (the house's: at dusk) */
 static unsigned char hour0, hset;              /* (hset: hour0 had, as the first's asked: the environment's) */
 static unsigned smins;                          /* (sched's: the minutes till what it does changes) */
+static unsigned long snow;                      /* (sched's: the clock it last reckoned the day's minute at, m0) */
+static unsigned m0;
 static unsigned rhx, rhy, tx, ty;               /* (room_at's: the home whose chunk it looks in, the square found) */
 static unsigned char dsn;
 static unsigned char pway[NACTORS];             /* (Each one's room on its rounds, the next it walks to: its lair's
@@ -3915,28 +3923,17 @@ unsigned char __fastcall__ s_sched (unsigned char k, unsigned id)
     unsigned m, t, p;
 
     kx_get (k);
-    if (!hset) {                                /* (The environment's dq0hour, a test's scene, else dusk) */
-        static struct hy_regs r;
-        static char b[4];
-        char* p;
-
-        hset = 1;
-        hour0 = DAY_START;
-        r.a = 0xFF;
-        r.r[0] = (unsigned) "dq0hour";
-        r.r[1] = (unsigned) b;
-        r.r[2] = 3;
-        r.r[3] = 0;
-        if (!hy_call (HY_ENV_GET, &r)) {
-            for (hour0 = 0, p = b; *p >= '0' && *p <= '9'; ++p) {
-                hour0 = hour0 * 10 + *p - '0';
-            }
-        }
+    if (!hset) {
+        hour ();                                /* (The hour the game began, its first: part 10's) */
     }
     if (hour0 & 0x80) {
         return SC_ABOUT;                        /* (No day: a test's scene, every one about as ever) */
     }
-    m = (unsigned) ((now / 600 + hour0 * 60 + 1440 - (id * 13 & 31)) % 1440);
+    if (now != snow) {                          /* (The day's minute, once a moment: the records due together) */
+        snow = now;
+        m0 = (unsigned) ((now / 600 + hour0 * 60) % 1440);
+    }
+    m = (m0 + 1440 - (id * 13 & 31)) % 1440;
     smins = 240;
     if (X.day == DY_ALWAYS) {
         return X.work != 0xFF ? SC_WORK : SC_ABOUT;
@@ -4016,6 +4013,31 @@ static void __fastcall__ meal (unsigned char k)
         D.ate = NOW_U;
     }
 }
+
+/* The hour the game began at (hour0), as the day's first asked (sched's): the environment's dq0hour, a test's scene,
+** else dusk (the house's).  Part 10's (part 9's room) */
+#pragma code-name (push, "SW10CODE")
+#pragma rodata-name (push, "SW10RODATA")
+void s_hour (void)
+{
+    static struct hy_regs r;
+    static char b[4];
+    char* p;
+
+    hset = 1;
+    hour0 = DAY_START;
+    r.a = 0xFF;
+    r.r[0] = (unsigned) "dq0hour";
+    r.r[1] = (unsigned) b;
+    r.r[2] = 3;                                 /* (r.r[3] 0: BSS) */
+    if (!hy_call (HY_ENV_GET, &r)) {
+        for (hour0 = 0, p = b; *p >= '0' && *p <= '9'; ++p) {
+            hour0 = hour0 * 10 + *p - '0';
+        }
+    }
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Actor k (the copy a) on its rounds, come to a room of them: a body of its own faction's lying near (a record dead,
 ** on its stratum, within 4 squares), not found before (its record's D_MET, every dead one's as it was an actor,
