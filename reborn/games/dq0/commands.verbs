@@ -81,6 +81,7 @@ quit        alone=VB_META_QUIT
 save        alone=VB_META_SAVE
 inventory   alone=VB_META_INVENTORY
 status      alone=VB_META_STATUS
+time        alone=VB_META_TIME                                       # (new, 2026-10-31: the time of day believed)
 attack      thing=VB_ATTACK_OBJECT unsaid=target aux=SK_BEST
 punch       thing=VB_ATTACK_OBJECT unsaid=target aux=SK_PUNCH
 kick        thing=VB_ATTACK_OBJECT unsaid=target aux=SK_KICK
@@ -319,6 +320,11 @@ inventory = inventory
 inv = inventory
 i = inventory
 status = status
+time = time
+what time is it = time
+watch the sun = wait
+watch the sky = wait
+watch the stars = wait
 hide = hide
 conceal = hide
 stash = hide

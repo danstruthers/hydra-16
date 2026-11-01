@@ -289,6 +289,10 @@ struct fight;
 void __fastcall__ feed (unsigned char eat);     /* (Part 16's, feed.c: "eat", "drink", slice 4.9's) */
 void __fastcall__ water_words (unsigned w);     /* Overlay 4 (water.c): the water's news, worded
                                                 **   (an E_BEAT's w1, WB_WATER ... WB_DOUSED: slice 4.9's) */
+unsigned __fastcall__ time_ui (unsigned w);     /* Overlay 16 (time.c): the time of day believed, worded (w TU_TELL,
+                                                **   "time"; TU_SKY | its phase times 256, the sky seen; TU_UNTIL, a
+                                                **   wait's minutes "until dawn", "watch the sun", 0 none said) */
+enum { TU_TELL, TU_SKY, TU_UNTIL };
 unsigned __fastcall__ fight_words (const struct msg* m);    /* Overlay 6: a blow (an E_FIGHT; its record from the
                                                 **   ring copied into lb's end: FIGHT_LB), into lb: the tenths the
                                                 **   character's knocked senseless for, or 0 */

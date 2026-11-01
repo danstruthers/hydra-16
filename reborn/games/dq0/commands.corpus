@@ -298,6 +298,9 @@ stop waiting	VB_STOP	task=waiting	-	stops the wait
 sleep	VB_SLEEP	-	-	length not typed: the rest is set by the character's state
 short rest	VB_SLEEP	short=yes	-	a short rest: 30 to 60 minutes, may become a full sleep
 short sleep	VB_SLEEP	short=yes	-	the same as short rest
+sleep until dawn	VB_SLEEP	short=no	-	until an hour the character believes (the UI reads it from the line, 2026-10-31)
+wait until morning	VB_WAIT	duration=1min	-	a wait until an hour (the UI's length, from the line)
+watch the sun	VB_WAIT	duration=1min	-	a wait in the sky's sight (the UI's: a quarter of an hour)
 rest	VB_SLEEP	short=no	-	a full rest, not short
 chuck the apple north	QUESTION:DISTANCE	object=apple;direction=N	near=apple	chuck: a synonym of throw
 hurl the stone at the goblin	VB_THROW_OBJECT	object=stone;target=goblin	near=stone,goblin	hurl: a synonym of throw
@@ -583,6 +586,8 @@ dismiss the dog	VB_ALLY_DISMISS	target=dog	near=dog	an ally dismissed
 sheet	VB_META_SHEET	-	-	the character sheet
 skills	VB_META_SHEET	-	-	skills an alias of sheet
 pause	VB_META_PAUSE	-	-	the clock paused
+time	VB_META_TIME	-	-	the time of day as the character believes it (2026-10-31)
+what time is it	VB_META_TIME	-	-	the same, asked
 turn half left	VB_FACE_DIRECTION	direction=L;half=1	facing=N	an eighth turn
 defend parry	VB_DEFEND	defence=parry	-	defend with a stance
 hide the pouch	VB_HIDE	object=pouch	near=pouch	a thing hidden

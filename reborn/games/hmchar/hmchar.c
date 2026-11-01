@@ -503,7 +503,16 @@ int main (int argc, char* argv[])
     harn_write_line (fd, line);
     strcpy (line, "wealth ");
     harn_write_line (fd, strcat (line, utoa (wealth (), line + 40, 10)));
+    if ((i = !random (100)) != 0) {           /* (Absolute timesense: one in a hundred, rolled after all the rest so
+                                                **   the character's dice fall as they did; the book has none, the
+                                                **   house's, 2026-10-31: Dingus Quest Zero's time of day believed) */
+        harn_write_line (fd, "timesense");
+    }
     close (fd);
+    if (i) {
+        s ("Absolute timesense: you always know the hour.
+");
+    }
     s ("Written to ");
     s (out);
     s ("\n");

@@ -576,7 +576,7 @@ unsigned char __fastcall__ o_answer_of (const char* l)
 ** time takes over, its round out first) */
 unsigned char __fastcall__ o_free_cmd (const char* l)
 {
-    static const unsigned char now_[] = { VB_META_INVENTORY, VB_META_SHEET, VB_META_MAP, VB_META_HELP, VB_STOP,
+    static const unsigned char now_[] = { VB_META_INVENTORY, VB_META_SHEET, VB_META_MAP, VB_META_HELP, VB_META_TIME, VB_STOP,
                                           VB_OBSERVE_LOCALE, VB_OBSERVE_AROUND, VB_FIND_OBJECT, VB_DEFEND };
     unsigned char a = cmd.action, i;
 
@@ -708,9 +708,12 @@ static unsigned __fastcall__ wait_of (const char* l, unsigned char n)
 ** (the house's); its intent in tenths, or in minutes past 100 of them (WA_MIN), asleep for a sleep (WA_SLEEP) */
 void __fastcall__ o_wait_go (unsigned char action)
 {
-    unsigned m = wait_of (cl, cmd.n);
+    unsigned m = time_ui (TU_UNTIL);            /* ("until dawn", "watch the sun": time.c's, 2026-10-31) */
     unsigned char a = 0;
 
+    if (!m) {
+        m = wait_of (cl, cmd.n);
+    }
     if (action == VB_SLEEP) {
         rest_ = strstr (cl, "rest") != 0;
         if (!m) {

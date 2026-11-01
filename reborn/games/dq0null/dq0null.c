@@ -623,6 +623,7 @@ static unsigned tlim = REQ_TEXT;
 static void __fastcall__ answer (struct req* r)
 {
     unsigned char k, m, t;
+    unsigned long xt;
     signed char g;
 
     tp = r->text;
@@ -684,6 +685,15 @@ static void __fastcall__ answer (struct req* r)
             g = r->grade = flat (r->steps);
             r->result = g < 0 ? random (8) : 0;
             bdice ();
+            break;
+        }
+        if (r->a == P_TIME) {                   /* (The time kept: the flat odds, by the game's dice mixed and put
+                                                **   back, a failure's d8 by them too: 2026-10-31) */
+            xt = xs_seed;
+            xs_seed = (xt * 1103515245UL + 12345UL) ^ 0x54494D45UL;
+            g = r->grade = flat (r->steps);
+            r->result = g < 0 ? random (8) : 0;
+            xs_seed = xt;
             break;
         }
         if (((r->a == P_SEARCH || r->a == P_DISARM) && r->b == HIDE_MAGICAL) ||

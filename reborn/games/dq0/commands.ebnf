@@ -122,8 +122,8 @@
 <smell>          ::= <SMELL> [ <look-target> ]
 <track>          ::= <TRACK> [ "for" ] [ <object> ]
 <target>         ::= <TARGET> [ <object> ] | "clear target" | "untarget"
-<wait>           ::= <WAIT> [ "for" ] [ <duration> ] | "pass" "the" "time"   (* "wait", "wait for 10 minutes"; "pass the time" is a wait *)
-<rest>           ::= [ "short" ] ( <REST> | <SLEEP> ) [ [ "for" ] <duration> | ( "in" | "on" ) <object> ]   (* rest and sleep are the same: VB_SLEEP, the player unaware. "short rest" is a sleep of 30 to 60 minutes, which fatigue, illness and injury may turn into a full sleep. Its length is not typed (fatigue, injury, sickness); a duration overrides it ("sleep 8 hours", "rest for an hour").  (One rule, rest's and sleep's: the rules' room, 2026-10-28) *)
+<wait>           ::= <WAIT> [ "for" ] [ <duration> ] | <WAIT> "until" <time-of-day> | "pass" "the" "time" | "watch" "the" ( "sun" | "sky" | "stars" )   (* "wait", "wait for 10 minutes"; "pass the time" is a wait; "wait until dawn", the hour as the character believes the time (the UI's, from the line); "watch the sun", a wait in the sky's sight (2026-10-31) *)
+<rest>           ::= [ "short" ] ( <REST> | <SLEEP> ) [ [ "for" ] <duration> | "until" <time-of-day> | ( "in" | "on" ) <object> ]   (* rest and sleep are the same: VB_SLEEP, the player unaware. "short rest" is a sleep of 30 to 60 minutes, which fatigue, illness and injury may turn into a full sleep. Its length is not typed (fatigue, injury, sickness); a duration overrides it ("sleep 8 hours", "rest for an hour").  (One rule, rest's and sleep's: the rules' room, 2026-10-28) *)
 <stop>           ::= <STOP> [ <task-name> ]                     (* question 9: "stop" alone, or "stop digging" *)
 <step>           ::= "step" <direction>                 (* one square; facing unchanged: "step r" *)
 <pace-set>       ::= "pace" [ <pace-word> | "walk" ] | "double time" [ "!" ]  (* sets the default pace; "double time!" is a run *)
@@ -144,6 +144,7 @@
 <loc-prep>       ::= "in" | "on" | "at" | "under" | "behind" | "beside" | "near" | "by" | "against"
                    | "through" | "around" | "over" | "across"
 <manner>         ::= "carefully" | "slowly" | "quickly" | "quietly" | "hard" | "gently" | "lightly" | "firmly"
+<time-of-day>    ::= "midnight" | "dawn" | "daybreak" | "sunrise" | "morning" | "noon" | "midday" | "afternoon" | "dusk" | "sunset" | "evening" | "nightfall" | "night"   (* a wait's end, the hour the character means (2026-10-31: the time of day believed) *)
 <duration>       ::= ( <number> | "an" | "a" | "half" "an" ) ( "minute" | "minutes" | "hour" | "hours" ) [ [ "and" ] <duration> ]   (* "an hour", "half an hour", "3 hours 20 minutes", "3 hours and 20 minutes": its spans added up (the long durations, 2026-10-28) *)
 <here-ref>       ::= "me" | "myself"        (* question 14: "me" only, never "you" *)
 
@@ -225,7 +226,7 @@
 <NAME>       ::= "name" | "call"
 <ALIAS>      ::= "alias"
 <UNALIAS>    ::= "unalias" | "forget alias"
-<META-WORD>  ::= "status" | "help" | "i" | "map" | "m" | "save" | "q" | "sheet" | "pause"
+<META-WORD>  ::= "status" | "help" | "i" | "map" | "m" | "save" | "q" | "sheet" | "pause" | "time" | "what time is it"
 
 (* ---- Fire (added 2026-10-19) ---- *)
 <light>          ::= <LIGHT> [ "a" ] "fire" | <LIGHT> <object> [ <in-phrase> ] [ <USING> <object> ] | "turn" <object> "on"   (* "light the torch", "start a fire", "turn it on", "light the torch in the sconce" *)

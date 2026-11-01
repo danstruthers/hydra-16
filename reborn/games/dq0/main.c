@@ -1189,7 +1189,12 @@ void __fastcall__ s_news (const struct msg* m)
     case E_BEAT:
         limb_words (m);
         break;
-    case E_BEARING:                             /* (Its bearings: lost, known, or set right, a room it knows) */
+    case E_BEARING:                             /* (Its bearings: lost, known, or set right, a room it knows; the sky
+                                                **   seen, the time it believes, time.c's) */
+        if (m->w1 == BRG_SKY) {
+            time_ui (TU_SKY | m->b << 8);
+            break;
+        }
         tell (m->w1 == BRG_LOST ? T_LOST_BEARINGS : T_BEARINGS_BACK);
         break;
     case E_DIG:

@@ -1346,3 +1346,23 @@ steps worse, struck at two easier); its pastime let go as it rises to act, told 
 
 **Design:** DENIZENS.md's daily life; HOUSE.md's leisure.
 
+
+### The time of day believed
+
+The user (2026-10-31): "Timekeeping should also be a fuzzy thing, unless there is some place where you can actually see
+outside through a window, skylight, vertical shaft, or the like.  Unless a person has absolute timesense, then
+especially after sleeping the current time-of-day should be quite arbitrary to the player, and should drift further and
+further away from known as the play progresses."  Then: "Time-of-day would be corrected whenever the sun can be seen."
+Then: "...and the direction is known, or the player spends some time watching it."
+
+Built the same day (branch reborn-game-timesense), for review in HOUSE.md's the time of day believed: the character's
+time a belief, as its north is (the hub's tb: its error from the true clock and how sure it is), drifting a little each
+hour awake (the referee's P_TIME, Awareness, its drift the more the longer since it last knew), much after a sleep or a
+black-out (its length guessed as it wakes), narrowed by its own light burning down and its hunger since its meal; the
+sky in sight (an open way out) setting it: its light alone (dawn, day, dusk, night), the sun or the stars read by the
+north it believes in (wrong if its north is, unknown to it), the sun high or low if it knows it's lost its bearings,
+and the sun or the stars watched a while showing the time and north both.  Absolute timesense a rare trait (one in a
+hundred, hmchar's: the house's).  Told by "time", "what time is it" as believed and as sure as it is; "sleep until
+dawn", "wait until morning", "watch the sun" go by it.
+
+**Design:** DUNGEON.md's the time of day believed; HOUSE.md's.

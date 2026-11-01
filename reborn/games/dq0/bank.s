@@ -15,7 +15,7 @@
             .include    "ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 15                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 16                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
@@ -138,6 +138,7 @@ ovl_out:
             OVFN        facing_words, 7
             OVFN        fore_set, 6         ; (The answer's tasks in the foreground: main.c's)
             OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
+            OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
             OVFN        dots, 6             ; (The game's start's progress: main.c's)
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)

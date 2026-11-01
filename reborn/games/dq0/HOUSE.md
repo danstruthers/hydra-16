@@ -32,7 +32,7 @@ plays them as HarnMaster's referee does.
   poison Endurance times 5; resisting the mind Will times 5; dodging a hazard Dodge; first aid Physician; lore Lore;
   tracking Tracking; persuading and intimidating Rhetoric; animals Animalcraft; digging Mining; guile Intrigue;
   throwing Throwing; keeping one's bearings underground Awareness, or Mining if it's the higher (Bearings
-  underground, below: bearing.c's).
+  underground, below: bearing.c's); keeping count of the hours Awareness (the time of day believed, below).
   (dq0harn.c's purpose table.)  Why: the game's code stays the same whatever the ruleset; only the referee knows
   skills.
 - **A skill never opened is tried at its opening level,** less five a point of its group's penalty, as an opened
@@ -2408,6 +2408,62 @@ Awareness at half (Skills 11); the rest is the house's.  DENIZENS.md's daily lif
   seen: "The soldier lets the dice fall.", "The dwarf shuts its book.", "The bandit sets down its cup."
 - **Heard** *(the house's)*: now and then, a third of its moments at it: dice rattling and counters clicking as loud as
   a snore (2), laughter, singing and cups clinking as loud as talk (3); reading, mending and whittling silent.
+
+## The time of day believed *(2026-10-31: the user's words, DECISIONS.md's; drafted for the user to review)*
+
+The user's (DECISIONS.md's the time of day believed, 2026-10-31: timekeeping fuzzy unless the sky can be seen; after
+sleeping quite arbitrary; drifting further from known as play goes on; corrected whenever the sun can be seen and the
+direction is known, or by watching it a while).  The world keeps the true clock (the denizens' days and all that happens
+go by it); the character's time is a belief, as its north is: the hub's tb, its error from the true time (skew, minutes)
+and how sure it is (unc, minutes either way), the world's (wtime.c, part 76), kept with the game (world.dat).  Every
+number here is a draft for the user.
+
+- **The start**: walked in at dusk, it knows the time (the denizens' start, 18 o'clock; a test's `dq0hour`).  Come round
+  below from a fall (the theme's start | fell), as a black-out of an hour (below).
+- **Absolute timesense** (the book has none: the house's rare trait): **one character in a hundred** (hmchar's roll,
+  after all the rest, so every other die falls as it did; its file's `timesense` line, kept as the game's saved: C's,
+  HyForth's and hylang's hmchar alike).  It always knows the hour; nothing below touches it.
+- **The test** (rs.h's P_TIME): **Awareness** (the hours noticed going by, as the turns of a way are: attention, as the
+  bearings'), its dice the game's own as they stand, mixed and put back (moving quietly's way), so no other test rolls
+  differently for it.  The null ruleset: its flat odds, the same way.
+- **The hours awake**: a test **each hour** (hours gone by together, one test for them all), its drift and doubt each
+  hour: a critical success none and **3** minutes' doubt; a marginal success **3** off and **5**; a marginal failure
+  **8** and **10**; a critical failure **15** and **20**; its way the referee's d8 (odd the earlier).  The longer since
+  it last knew the time, the more: **times one for the first four hours, two for the next four, three, then four**.
+  Not asleep or senseless.
+- **A sleep or a black-out**, guessed as it wakes or comes round: the test **two steps the harder each hour asleep**
+  (twenty at most), a black-out's **ten** the harder.  A critical success: no error, doubt an eighth of the length; a
+  marginal success off by **a sixth** and doubt **a quarter**; a marginal failure **a third** and **a half**; a critical
+  failure **two thirds**, and **no idea at all** (doubt six hours: any hour).  A black-out's failure half an hour more
+  off; a quarter of an hour's doubt at least.  (So eight hours' sleep: a marginal success off 80 minutes, doubting two
+  hours.)
+- **Clues that narrow it** (each a belief of its own; taken when it's surer than the one it has):
+  - **its own light burning down** (it sees its torch: a light's minutes left stay true on the status line): the
+    minutes burned since its belief was set by that light (as it was lit, or a reckoning found it lit), **read to a
+    twelfth**; a light burnt out to the end, the whole of it.  A light changed, or put out part burned, starts afresh.
+  - **its hunger** since its last meal (the referee's want: minutes of hunger), **read to a quarter**.
+  - Noted, not built: thirst, tiredness, the denizens' routines learnt (the watch changing, meals), a chain of torches
+    counted.
+- **The sky in sight** (an open way out within **two squares**: the top stratum's way out, opened, up its stairs, shows
+  **its light alone**; a far exit below the top, out into the open, **the sun or the stars**; later the plan's shafts
+  and skylights, where the rain's hook finds the surface reaches): its light narrows the belief to its part of the day
+  (dawn 5-7, day 7-17, dusk 17-19, night 19-5: the house's even day); **the sun or the stars read by the north it
+  believes in**: the time to **half an hour** (the stars an hour), **wrong by three hours each eighth its north is
+  off**, unknown to it; its bearings known lost, the sun **high** (10-14) or **low** (morning or afternoon by what it
+  believes), the stars night alone; **watched** (in its sight through a wait, or "watch the sun": **ten minutes**, the
+  stars **twenty**), their way across the sky: the time to a quarter of an hour (the stars half an hour), and **north
+  known** (its bearings set right).  Told as what's seen changes ("Daylight shows above: it's day.", "You see the sun in
+  the sky: it's about four in the afternoon, you judge.").  Weather (overcast: its light alone) not yet.
+- **How it's told** ("time", "what time is it"): doubt ten minutes or less, plainly to the quarter hour ("It's half past
+  six in the evening."); 45 or less, "about" the hour, "you think"; two and a half hours or less, "some time around";
+  more, the part of the day, "you'd guess, but you can't be sure"; six hours or more, no idea ("You've no idea how long
+  you slept: it could be morning.").  No time on the status line.
+- **Waits by it**: "sleep until dawn", "wait until morning" (midnight 0, dawn 6, morning 7, noon 12, afternoon 14,
+  dusk and evening 18, nightfall 19, night 21) last till that hour **as it believes the time now**; what happens goes by
+  the true clock.  "watch the sun" (the sky, the stars) is a wait of a quarter of an hour (the stars half an hour).
+- **When it's reckoned** (never polled: the lights' burning's look, part 27's): an hour on; every five minutes on a
+  stratum the sky may be seen from; at once as a light changes, a wait begins or ends, it's knocked senseless or falls,
+  goes to another stratum, or the way out opens; a minute at a time while it's gone.
 
 ## Decided, not yet built
 

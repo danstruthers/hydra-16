@@ -1182,12 +1182,12 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   under 720) */
         unsigned    unc;                        /*   and how far off it knows it may be, either way (0: it knows;
                                                 **   TB_LOST or more: it has no idea) */
-        unsigned long at, due;                  /* The clock (tenths) it was last reckoned at (0: not yet, a new game),
-                                                **   and its next reckoning's (the world's part 76: an hour on, five
-                                                **   minutes where the sky may be seen, a minute while it's gone; or
-                                                **   at once, the burning's burn_ask: a light's change, a wait begun
+        unsigned long due;                      /* The clock (tenths) of its next reckoning (the world's part 76: an hour
+                                                **   on, five minutes where the sky may be seen, a minute while it's gone;
+                                                **   or at once, the burning's burn_ask: a light's change, a wait begun
                                                 **   or ended, a black-out, another stratum, the way out opened) */
-        unsigned long gone;                     /* The clock it fell asleep or senseless at (0: awake) */
+        unsigned    at;                         /* The clock's minute it was last reckoned at (0: not yet, a new game) */
+        unsigned    gone;                       /* The clock's minute it fell asleep or senseless at (0: awake) */
         unsigned    mins;                       /* Minutes awake since its last hour's test */
         unsigned    hours;                      /* Hours since it last knew the time (the drift's growth) */
         unsigned    lfuel;                      /* Its light's minutes left as its belief was set by it (TB_NONE: no
