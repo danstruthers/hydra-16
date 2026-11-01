@@ -409,7 +409,7 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   bosses, basalt dykes, veins of quartz and seams of ore, a region's own), so it's never kept and every task finds the
   same rock at the same place and depth.  A dig's rate is the rock's hardness's (the referee's rate in stone, the
   world's quarters of it by the hardness); the rock's told as a dig comes to it, named after a spell that went well
-  (Mining's eye); poor rock (shale) comes down on a spell that goes badly in it, half the hole in it filled again
+  (Mining's eye); poor rock (shale) comes down on a spell that goes badly in it, two feet of the hole in it filled again
   (E_DIG's D_ROOF), the rock striking the digger.  "examine the wall" tells the wall ahead: masonry, or the bare rock,
   its looks, named by Mining (dq0w.c's wall_look, part 1's, I_TRACE's TRC_WALL; its words part 25's).
 - **Age's collapse** (slice 4.10): an old stratum's passages partly fallen in, rubble (world.h's T_RUBBLE, a square

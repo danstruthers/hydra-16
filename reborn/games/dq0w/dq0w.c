@@ -2923,8 +2923,8 @@ void s_dig_on (void)
     }
     l = dig.d == DIR_DOWN ? DIG_TOP : 0;        /* (Where the rock begins) */
     if (g == G_CF && RK_POOR (rk) && dig.done > l) {
-        dig.done -= (dig.done - l + 1) >> 1;    /* (Poor rock: the roof come down on a spell gone badly, half the hole
-                                                **   in the rock filled again, HOUSE.md's) */
+        dig.done -= dig.done - l > 4 ? 4 : dig.done - l;    /* (Poor rock: the roof come down on a spell gone badly,
+                                                **   two feet of the hole in the rock filled again, HOUSE.md's) */
         g = 0x7F;
     }
     dig.done += made;
