@@ -25,7 +25,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
-OVBANKS     = 21                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
+OVBANKS     = 22                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
             .bss
 _ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
@@ -84,7 +84,7 @@ go:
 
             .include    "../dq0/swap.inc"
 
-            SWPART      1, 1                ; Digging
+            SWPART      1, 22               ; Digging, and the rock it's into (overlay 22's, slice 4.10's)
             SWPART      2, 3                ; Climbing
             SWPART      3, 1                ; The dungeon begun, the strata below grown
             SWPART      4, 2                ; The change records' rarer work (store.c), the UI's requests; a thing of
@@ -112,7 +112,8 @@ go:
             SWPART      22, 17              ; The strata's records out of the hub, back (sfile.c)
             SWPART      23, 11              ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 12              ; Engagement, a blow's close-in, fighting on (dq0w.c's)
-            SWPART      25, 13              ; The engage initiative test, a grope's (dq0w.c's; overlay 6's till 2026-10-28)
+            SWPART      25, 22              ; The engage initiative test, a grope's (dq0w.c's; overlay 6's till 2026-10-28,
+                                            ;   13's till 2026-10-31); a dig begun (part 1's room)
             SWPART      26, 9               ; Disengaging (dq0w.c's)
             SWPART      27, 9               ; The lights burning down (dq0w.c's: slice 4.1's)
             SWPART      28, 9               ; The traces' store: the journal taken in, kept (wtrace.c)
@@ -201,7 +202,7 @@ go:
             SWFN        way_out, 54
             SWFN        travel_go, 55
             SWFN        travel_on, 55
-            SWFN        start_dig, 1
+            SWFN        start_dig, 25
             SWFN        dig_on, 1
             SWFN        climb, 2
             SWFN        climb_on, 2

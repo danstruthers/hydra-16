@@ -46,8 +46,9 @@ static unsigned char __fastcall__ dr (unsigned char n)
 static void materials (void)
 {
     struct stratum* s = &STRATUM (L->sn);
-    unsigned char r, bare = s->style == ST_BUILT || s->style == ST_MIXED ? MAT_FLAGS : MAT_STONE;    /* (A floor's) */
-    unsigned char old = s->age / 4, earth = s->style == ST_NATURAL ? MAT_SOIL : MAT_EARTH;  /* (A cave's soft, the
+    unsigned char r, bare = cstyle == ST_BUILT || cstyle == ST_MIXED ? MAT_FLAGS : MAT_STONE;    /* (A floor's: the
+                                                **   chunk's style, a mixed stratum's natural part's a cave's) */
+    unsigned char old = s->age / 4, earth = cstyle == ST_NATURAL ? MAT_SOIL : MAT_EARTH;  /* (A cave's soft, the
                                                 **   rest trodden hard) */
     unsigned char* m;
 
