@@ -3599,6 +3599,39 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0slant', near: ['map'], what: 'Dingus Quest Zero\'s built passages on the diagonal (the user\'s, 2026-10-31: ways off the compass, step 3; HOUSE.md\'s built passages on the diagonal), by the chunks made and the words told: at seed 3 every built stratum\'s passages on the diagonal (dq0 -A, the tests\'), the dungeon made and entered as ever (its first look told); the chunks the cache has of its top stratum have rooms and passages with cut corners (T_CUT, three or more), each between two of a passage\'s squares that share only a corner with it on either side (a diagonal way\'s, chunk.c\'s slant: a staircase cut as the caves\' are, caves.c\'s slants), none in a room\'s bounds; "go east" from the kitchen by the way in walks a passage on the diagonal, told as it bends ("The passage bends away northeast.", HOUSE.md\'s a passage\'s heading), to its end; the map draws a cut corner ("/" or "\\")',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -A', 'look', 'go east', 'map', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        if (!/You (can see|are in)/.test(s)) f.push('no first look told');
+        const i = s.indexOf('> go east > go east'), go = i < 0 ? '' : s.slice(i, s.indexOf('> map', i));
+        if (!go.includes('The passage bends away northeast.') || !/The passage (comes to a door|ends here|forks here)|You are in a passage/.test(go)) f.push('"go east" not along a passage on the diagonal to its end ("The passage bends away northeast."): ' + go.slice(0, 300));
+        const raw = out.replace(/\x1b\[[0-9;]*m/g, ''), m0 = raw.indexOf('The map (you face');
+        if (m0 < 0 || !/[/\\]/.test(raw.slice(m0, raw.indexOf('> quit', m0)))) f.push('no cut corner drawn on the map ("/" or "\\")');
+        let cuts = 0, bad = 0;
+        for (const c of cacheChunks(m, 0).values()) {
+          if (!c.rooms.length) continue;
+          const t = (x, y) => x < 0 || y < 0 || x > 31 || y > 31 ? 0 : c.tile[y * 32 + x];
+          const pass = v => v === T_CORR || v === 3 || v === 5 || v === 10;
+          for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+            if (t(x, y) !== 11) continue;
+            cuts++;
+            const inRoom = c.rooms.some(r => x >= r.x - 1 && x <= r.x + r.w && y >= r.y - 1 && y <= r.y + r.h);
+            const diag = (pass(t(x - 1, y)) && pass(t(x, y + 1))) || (pass(t(x + 1, y)) && pass(t(x, y - 1))) ||
+              (pass(t(x - 1, y)) && pass(t(x, y - 1))) || (pass(t(x + 1, y)) && pass(t(x, y + 1)));
+            if (inRoom || !diag) bad++;
+          }
+        }
+        if (cuts < 3) f.push('fewer than three cut corners in the top stratum\'s built chunks: ' + cuts);
+        if (bad) f.push(bad + ' cut corner(s) in a room\'s bounds or not between two of a passage\'s squares');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0rockwall', near: ['map'], what: 'Dingus Quest Zero\'s rock looked at (slice 4.10: "examine the wall", the world\'s wall_look, I_TRACE\'s TRC_WALL; HOUSE.md\'s rock\'s kinds and hardness), by the words told: at seed 3 by the stairway (dq0 -T) a cell\'s wall ahead masonry ("The wall\'s masonry"); down the stairway (natural caves) a skilled miner (Mining 95) examines the wall ahead and round it (the last "look at the wall", the verbs\' walllook), the bare rock, how it looks, and named (its Mining test, the appraisal\'s AP_ROCK: "The wall\'s the bare rock, buff: sandstone."), the name always the looks\' rock\'s',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml min 95 >> /ram/c.hm',

@@ -2577,9 +2577,9 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
   half-feet: a square's five feet, 10), its two corners cut as it's through, so it's walked; a cut dug as rock.
 - **The believed compass an eighth off** *(the house's, as before)*: "north" a true diagonal: in a passage a way only
   where there's a diagonal way.
-- **Still to come** *(step 3, the user's "queue up 1-3"; step 2 below)*: built complexes at an angle (a stratum's
-  plan, or one complex in it, laid at 45 degrees); the built grower's diagonal passages; the tunnellers (slice 4.11)
-  digging by the same rules.
+- **Still to come** *(step 3's rest, the user's "queue up 1-3"; step 2 and the built passages below)*: a built
+  stratum's rooms, or one complex (a temple, a keep), laid at 45 degrees; the tunnellers (slice 4.11) digging by the
+  same rules.
 
 ## A passage's heading *(2026-11-01: the user's words of 2026-10-31, DECISIONS.md's ways off the compass; step 2 of three, drafted for the user to review)*
 
@@ -2608,6 +2608,20 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
 - **Left** *(for later)*: a wide tunnel's staircase (two or three squares across: the walk's ways there a fork); the
   facing after a walk along a slant (its last step's, as before); a look one way along a slant (way.c's seen_on: the
   four's, step 3's).
+
+## Built passages on the diagonal *(2026-11-01: step 3 of the user's three, in part; drafted for the user to review)*
+
+- **Which strata** *(the house's)*: a fifth of the built strata (and the built parts of the mixed ones) lay their
+  passages on the diagonal, by the stratum's own seed (a byte of it no other die reads: the same dungeon for the same
+  seed but in those strata); dq0 -A, the tests', all of them (hub.h's GE_SLANT).  (dq0m/pass.c's leg, uses.c's
+  US_STYLE.)
+- **How** *(the house's)*: a passage between two doors (or from a chunk's edge) sets out from its door a square, then
+  goes a step each way by turns while both are still to go, then straight on: a staircase of squares, cut once the
+  chunk's grown as the caves' zigzags are (caves.c's slants: each other square of it the corner the diagonal cuts,
+  T_CUT), so it's walked corner to corner (HOUSE.md's diagonal ways).  A cut in a built stratum is the passage's
+  dressed corner, masonry as its walls are; its rooms stay square to the compass.  The chunk's reach (built.c's
+  connected) is tried before the cut, by the four.
+- **Its words**: as any diagonal passage's (a passage's heading, above: "The passage bends away northeast.").
 
 ## Decided, not yet built
 

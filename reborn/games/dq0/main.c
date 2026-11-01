@@ -2422,16 +2422,13 @@ void __fastcall__ s_args (int argc, char* argv[])
             kit = argv[++i];                    /* (A tool to begin with: till the items layer, the tests') */
         } else if (!strcmp (argv[i], "-C")) {
             small = 1;                          /* (For the tests: the caches small, paged to the save folder soon) */
-        } else if (!strcmp (argv[i], "-K")) {
-            gear |= GE_OLD;                     /* (For the tests: the kit as it was before the outfits, the denizens
-                                                **   with none of theirs: their dice as they were) */
-        } else if (!strcmp (argv[i], "-W")) {
-            gear |= GE_DRY;                     /* (For the tests: no water grown in the chunks, the walks' as they
-                                                **   were, slice 4.9's) */
-        } else if (!strcmp (argv[i], "-M")) {
-            gear |= GE_MIXED;                   /* (For the tests: every built stratum mixed, slice 4.10's) */
-        } else if (!strcmp (argv[i], "-U")) {
-            gear |= GE_UNFALLEN;                /* (For the tests: no rubble, the passages as they were made) */
+        } else if (argv[i][0] == '-' && argv[i][1] && !argv[i][2] && (l = strchr (GE_FLAGS, argv[i][1])) != 0) {
+            gear |= 1 << (l - GE_FLAGS);        /* (For the tests, hub.h's GE_*: -K the kit as it was before the outfits,
+                                                **   the denizens with none of theirs, their dice as they were; -W no
+                                                **   water grown in the chunks, the walks' as they were, slice 4.9's;
+                                                **   -M every built stratum mixed, slice 4.10's; -U no rubble, the
+                                                **   passages as they were made; -A every built stratum's passages on
+                                                **   the diagonal, 2026-11-01) */
         } else if (!strcmp (argv[i], "-a")) {
             autogo = 1;                         /* (For the tests: a long task goes on at every soft question) */
         } else if (!strcmp (argv[i], "-N")) {
@@ -2453,7 +2450,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d dir] [-t theme] [-k kit] [-r rs] [-T..]");    /* (Not the tests' own: the room's) */
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d dir] [-t theme] [-r rs] [-T..]");    /* (Not the tests' own: the room's) */
         }
     }
 }

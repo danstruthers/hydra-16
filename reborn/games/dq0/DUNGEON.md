@@ -938,6 +938,9 @@ or a shaft can be jumped down (jump down: a fall of its height).
   smoothed over the squares it sees along them (a staircase of short steps one slant, a bend a bend); a walk along one
   tells a bend by the new run's bearing ("The passage bends away north-northeast.") and a turn as before, not a turn at
   every step; the map draws a staircase's steps as a slant ("/", "\").
+- **Built passages on the diagonal** (step 3, in part; HOUSE.md's built passages on the diagonal): a fifth of the built
+  strata, by the stratum's seed (dq0 -A, the tests': all), run their passages from door to door on the diagonal, cut
+  corner to corner as the caves' zigzags are; their rooms square to the compass.
 
 **Harm** (rs.h's RS_HARM, the referee's): a fall (its height, the floor it lands on, whether it's clear or past holds
 to grab), a trap's strike (its aspect, its dice, where it strikes), a burn, a striker's own hurt by its blow at a
@@ -1348,10 +1351,10 @@ packed, not the game on the ROM disk (2026-10-31, DECISIONS.md).  Now: 208M cycl
 
 What the plans bring later, by the slice or phase that brings it (the detailed plan's and the game plan's):
 
-- **Ways off the compass, step 3** (the user's "queue up 1-3", 2026-10-31; steps 1 and 2, the diagonal ways and a
-  passage's heading, built): built complexes at an angle (a stratum's plan, or one complex in it, laid at 45 degrees to
-  the compass, its rooms and passages on the diagonal grid; other angles stepped and told by step 2's words); the built
-  grower's diagonal passages; a wide tunnel's staircase told as one slant (step 2's runs follow a one-wide passage).
+- **Ways off the compass, step 3's rest** (the user's "queue up 1-3", 2026-10-31; steps 1 and 2, the diagonal ways and
+  a passage's heading, and the built grower's diagonal passages, built): built complexes at an angle (a stratum's
+  rooms, or one complex in it, laid at 45 degrees to the compass; other angles stepped and told by step 2's words); a
+  wide tunnel's staircase told as one slant (step 2's runs follow a one-wide passage).
 - **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence): left, other errands
   ("ask the dwarf to open the door"), "give the bandit 5 pennies" without "to", entertain and bargain.
 - **The command interpreter** (Phase 3C): every command, the player's or a denizen's mind's, one structure of

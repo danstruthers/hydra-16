@@ -387,6 +387,9 @@ void __fastcall__ o_grow_built (struct chunk* c, const struct edges* e, unsigned
             break;
         }
     }
+    if (SP->slant) {
+        slants ();                              /* (Its passages on the diagonal: their staircases cut, caves.c's) */
+    }
     /* The links' squares: stairways and ladders, up and down (the way out, at the top) */
     for (i = 0; i < e->nland && L->nopen < NOPEN; ++i) {
         x = e->lx[i];

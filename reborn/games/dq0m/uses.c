@@ -381,8 +381,16 @@ static unsigned char __fastcall__ under (unsigned char r)
 unsigned char __fastcall__ o_uses (unsigned char step, unsigned char arg)
 {
     switch (step) {
-    case US_STYLE:
+    case US_STYLE:                              /* (arg: the style, the hub's gear times 4: the tests' flags) */
         memcpy (&sty, &styles[arg & 3], sizeof sty);
+        if (arg & GE_DRY << 2) {
+            me.water = 0xFF;                    /* (dq0 -W's, the tests': no water) */
+        }
+        if (arg & GE_UNFALLEN << 2) {
+            me.poor = 0xFF;                     /* (dq0 -U's, the tests': no rubble) */
+        }
+        sty.slant = (arg & GE_SLANT << 2) != 0;  /* (dq0 -A's, the tests': every built stratum's passages on the diagonal;
+                                                **   else a fifth of them, built.c's, by the stratum's seed) */
         ufort = uwater = ulayer = unl = 0;
         uruin = 0xFF;
         break;
