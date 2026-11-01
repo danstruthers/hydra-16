@@ -154,6 +154,9 @@ void __fastcall__ s_change (unsigned char sn, unsigned x, unsigned y, unsigned c
                     q->parts = elev;
                 }
             }
+        } else if (link == AIR_STATE) {         /* (Its air's pocket: burnt off, its afterdamp, 2026-10-31) */
+            C->air = tile;
+            C->aat = elev;
         } else if (link == TRAP_STATE) {        /* (A trap's: tile it) */
             for (i = C->ntraps, t = C->trap; i; --i, ++t) {
                 if (t->x == cx_ && t->y == cy_) {
@@ -174,7 +177,7 @@ void __fastcall__ s_change (unsigned char sn, unsigned x, unsigned y, unsigned c
         }
     }
     hub_map (0);
-    if (link != TRAP_STATE && link != PORTAL_HARM && link != STOCKED) {
+    if (link != TRAP_STATE && link != PORTAL_HARM && link != STOCKED && link != AIR_STATE) {
         lm.kind = E_LIGHT;
         lm.a = sn;
         lm.w1 = x;

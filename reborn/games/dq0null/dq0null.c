@@ -785,6 +785,13 @@ static void __fastcall__ answer (struct req* r)
                                                 **   4.3's simple way) */
         r->x[16] = (unsigned char) r->w1;
         r->x[17] = r->w1 >> 8;
+        if (r->actor != 0xFF) {                 /* (The UI's: a drink of still water, the flux's; no air, nothing else,
+                                                **   2026-10-31) */
+            r->x[18] = r->x[15] & 0x80 ? AK_FLUX : 0;
+            r->x[19] = 1;
+            r->x[20] = r->x[21] = 0;
+        }
+        r->x[15] &= 0x7F;
         if (!r->a && wounds) {
             rest_m += r->w1;                    /* (At rest: toward a wound healed) */
         }

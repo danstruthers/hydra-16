@@ -351,7 +351,7 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
 ** measures' gas) one chunk in four; blackdamp (stale air pooled where nothing stirs it) 100 feet down or more, one
 ** chunk in eight, 200 feet one in four; strength 1, 2 from 200 feet, a step more one time in four; none where there's
 ** a way between strata in the chunk (the air moves there).  A test's scene (the environment's dq0air, rc's, read
-** once: "0" no bad air; "KS" a pocket of kind K, rs.h's AQ_*, strength S, in every chunk's first room) */
+** once: "0" no bad air; "KS" every chunk a pocket of kind K, rs.h's AQ_*, strength S, from end to end) */
 static unsigned char tair = 0xFF;               /* (The environment's: 0x80 | kind times 16 | strength; 0 none said) */
 
 void __fastcall__ o_air_pocket (struct chunk* c, const struct edges* e)
@@ -397,7 +397,7 @@ void __fastcall__ o_air_pocket (struct chunk* c, const struct edges* e)
     p = &c->room[(unsigned char) h % c->nrooms];
     c->ax = p->x + (p->w >> 1);
     c->ay = p->y + (p->h >> 1);
-    c->ar = ((p->w > p->h ? p->w : p->h) >> 1) + 1;
+    c->ar = tair ? 100 : ((p->w > p->h ? p->w : p->h) >> 1) + 1;     /* (A test's: the whole chunk) */
 }
 
 #pragma code-name (push, "OV6CODE")           /* (Overlay 6's: 3 full) */

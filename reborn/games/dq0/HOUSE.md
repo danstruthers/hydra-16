@@ -2425,6 +2425,79 @@ Awareness at half (Skills 11); the rest is the house's.  DENIZENS.md's daily lif
 - **Heard** *(the house's)*: now and then, a third of its moments at it: dice rattling and counters clicking as loud as
   a snore (2), laughter, singing and cups clinking as loud as talk (3); reading, mending and whittling silent.
 
+## Poison, bad air and disease *(2026-10-31: the user's words, DECISIONS.md's; the book's where it speaks, drafted for the user to review)*
+
+The book's (Physician 4): a disease has a Contagion Index (C1 highly contagious ... C7 barely) and a healing rate (H1
+the plague ... H5 influenza); one exposed tests CI times Endurance (95 at most), failing it catches it, then a recovery
+roll each day on the Infection table (a critical failure two worse, a marginal one one; a marginal success one better,
+a critical two), recovered at H6, dead at H0; its symptoms a special penalty of 10 to 30 to physical skills.  A poison
+is an infection whose intervals are shortened to the toxin (a large dose of a deadly one H1, a small dose of a mild one
+H5).  The HarnWorld Bestiary's venoms (wounds over time, above) and its grave-wight's grave rot (H4, 2d6 hours'
+incubation, a universal penalty of 20 till healed).  What the house adds, every ruleset's where it says so:
+
+- **One course for each** *(HarnMaster's: dq0harn/afflict.c, overlay 8)*: the character carries a toxin (a venom or a
+  poison) and a disease at once, each its kind, its rate, its interval's minutes; the venoms one case of it, their tests
+  and dice as they were.  Its symptoms the book's special penalty as fatigue levels (5 points each), held, not rested
+  off till it's over (as the want's are): a dart's poison 2, a contact smear's 2, spoiled food's 3, the flux 3, rat-bite
+  fever 2, grave rot 4, a level more for each step its rate is worse than it began.  Poisoned (C_POISONED, the status's
+  "poisoned"), the bodies' time is asked a minute at a time; a disease shown, its status "feverish".
+- **The poisons** *(for review)*: a dart's or a needle's (H4 at a middling dose, ten minutes), a contact smear's (H4,
+  twenty), spoiled food's (H4, an hour, never deadly: held at H1); a dose a step the stronger or the weaker its rate a
+  point worse or better.  Taken, its first roll at once ("The dart's poison burns in the wound."), then one an interval
+  (at rest the whole, about half, vigorous a quarter, the bestiary's), worse "You feel sick and dizzy.", gone at H6
+  ("The poison's hold on you passes."), dead at H0 ("The poison stops your heart.").  Poisoned again, the worse kept.
+- **A dart trap's poison** *(for review)*: one dart trap in four (by its square) is poisoned, its dart's wound drawn
+  (wtrap.c's, the world's: the referee told with the bodies' time, at its next minute).  *Not yet*: a door's needle's
+  contact poison (the doors' part has no room: overlay 2's), a chest's; a denizen's poisoned blade (the outfits'
+  factions to say who uses them); food that's spoiled (the book's critical failure tasting it: food found, the market's).
+- **The diseases** *(for review)*: the flux (still water drunk where it stands: a pool, a puddle, a cistern; a stream's
+  running water and a well's clean; C5/H4, a day's incubation), rat-bite fever (a giant rat's bite that wounds: C5/H4,
+  two days), grave rot (a ghoul's bite or claws that wound, the bestiary's grave-wight's: C3/H4, seven hours).  Caught,
+  nothing's told (the character doesn't know it's caught something) till its incubation's over: "Your belly gripes and
+  cramps: you have the flux.", "A fever's on you, and the old bite throbs.", "A wound the ghoul gave you festers: a
+  fever's on you." (a hard stop of a long task); then its daily roll ("The fever burns higher.", "... eases a little.",
+  "... holds."), "The sickness leaves you." at H6, "The sickness takes you." at H0.  Its dice the body's own (rshouse.h's
+  way), so a fight's roll as they did whether a bite carries anything.  *Not yet*: corpses handled (no handling of a body
+  but a search), the undead's touch but a ghoul's (the wight's drains), a lair's sickness spreading among its folk.
+- **A remedy** *(the hook, for review)*: an antidote taken makes the toxin's rate the better by its power (a theriac 2),
+  the lindworm's numbing venom only by a strong one (afflict.c's o_aff_cure, no command yet: the market brings the
+  antidotes, Treasure 4's potions, Khalmet's Theriac).
+- **The air** *(every ruleset's, rsair.h; its figures for review)*: blackdamp (stale air, too little in it to breathe:
+  choke-damp, a mine's CO2), whitedamp (a fire's or a blast's smoke: carbon monoxide, poison that gives no warning),
+  firedamp (marsh gas, in the coal and shale beds: it burns).  Strength 1 a little to 3 much.  Blackdamp felt at once:
+  1 short of breath (a fatigue level; stale air never kills), 2 gasping (2 levels), dizzy at ten minutes (4), the legs
+  failing at thirty (6), dead at an hour; 3 the head swimming at once (3), the legs failing at two minutes (6), dead at
+  five.  Whitedamp builds up in the blood, its strength squared a minute (1, 4, 9): the head aching at 30 (a level),
+  dizzy and sick at 60 (3), the legs failing at 120 (6), dead at 180; in good air it clears two a minute ("Your head
+  clears.").  Firedamp only chokes when it's thick (3: as blackdamp 2).  Out of it, "You breathe freely again."  Each
+  worsening told and a hard stop of a long task.  The null ruleset the same, its levels none.
+- **A flame's warnings** *(the miners' old ones, for review)*: told as the character comes into the air with a flame
+  lit: in blackdamp it burns low (1), shrinks to a blue-edged bead (2), and in thick blackdamp goes out (3: the world
+  puts its lights out, "The air's too foul to keep your light burning."); in firedamp a pale blue cap trembles over it
+  (1), leaps up tall (2, a lantern's); in whitedamp nothing at all.  Out of blackdamp, "Your flame brightens again."
+- **Firedamp's burst** *(for review)*: firedamp of 2 or more at a naked flame (a torch, a candle), or of 3 at a
+  lantern's, bursts into flame ("The air ignites with a roar: a sheet of blue fire rolls along the roof!"): a burn
+  (3d6, 4d6 at 3: HC_FIRE), the lights out, a noise as loud as any (9: the denizens hear it), the pocket burnt off,
+  its afterdamp left (whitedamp 2, about seven hours: the clock's high word, four of them). *Not yet*: stones falling
+  from the roof where the rock's poor (a second harm's words want the UI's room), the denizens near harmed, rubble
+  left in the passage.
+- **Where the air's bad** *(the maker's, every ruleset's; for review)*: a pocket in one room of a chunk, round its
+  middle, its reach the room's half and a square, from the chunk's place alone (no dice: the layouts as they were):
+  firedamp where the rock at the chunk's middle is shale (one chunk in four); blackdamp 100 feet down or more (one in
+  eight; 200 feet one in four, its strength 2); a step stronger one time in four; none where there's a way between
+  strata in the chunk (the air moves there).  A draught of 2 or more thins it a step where the character breathes.  A
+  dig into a pocket's rock comes into it as it steps there.  *Not yet*: old mines' own (their works still to come), the
+  angles' diagonal ways and the draughts meeting.
+- **The denizens** *(for review)*: they know where the air's bad and keep out of it (the minds' steps, their placing,
+  their roaming: dq0d.c's wades), the dead too.  *Not yet*: one that blunders in (hunting the character into it) choking
+  or dying of it; their own poisons and diseases (none bites another; a lair's sickness spreading among its folk, by
+  the clock, at need, the plan's); the explosion's harm to those near.
+- **The null ruleset's simple way** (dq0null.c): a poison sickens it a while (a dart's or a smear's half an hour a point
+  of its dose, spoiled food's two hours: "You feel sick: there was poison in it.", "The sickness passes."), the flux
+  caught on a flat test shows a day on and lasts three; neither kills; the air rsair.h's, its levels none.
+- **What it costs** *(the emulator)*: the air's looked at only as the character steps in a chunk that has a pocket, or
+  out of one (part 73's, the water's, swapped in as wading is); the minds' steps a chunk's pocket's test each.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

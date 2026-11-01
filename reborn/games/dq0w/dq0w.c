@@ -4204,8 +4204,8 @@ static unsigned char __fastcall__ band (unsigned char d)
 ** the maker's, caves.c's air_pocket: within its reach of its middle; an explosion's afterdamp gone four of the clock's
 ** high words on), thinned a step by a draught of 2 or more (the senses' air_s); as it changes, the referee told at once
 ** (the bodies' time, part 70's: its flame's way in it, the breath's), its flames put out in thick blackdamp; firedamp
-** at a naked flame (a lantern's only when it's thick) bursts into flame: harm (a burn, stones falling where the rock's
-** poor), its lights out, a noise as loud as any, the pocket burnt off, its afterdamp (whitedamp) left (AIR_STATE) */
+** at a naked flame (a lantern's only when it's thick) bursts into flame: a burn (stones falling where the rock's
+** poor not yet), its lights out, a noise as loud as any, the pocket burnt off, its afterdamp (whitedamp) left (AIR_STATE) */
 static unsigned char air_q (void)
 {
     unsigned char q, r, t;
@@ -4293,12 +4293,9 @@ static void air_here (void)
         hub_event (&am);
         k = ((unsigned char*) &HUB->now)[2] & 0x7F;
         if (at (HUB->pc_stratum, x, y)) {       /* (Burnt off: its afterdamp left, kept) */
-            C->air = AQ_WHITE << 4 | 2;
-            C->aat = k ? k : 1;
             change (HUB->pc_stratum, x - cx_ + C->ax, y - cy_ + C->ay, AQ_WHITE << 4 | 2, k ? k : 1, AIR_STATE);
         }
         air_harm (HC_FIRE, 0, s + 1);           /* (A burn, 3d6 or 4d6: the house's) */
-        air_harm (HC_STRIKE, AS_BLUNT, 2);      /* (Stones from the roof: the rock's poor where there's firedamp) */
         hub_map (0);
         HUB->pc_air = AQ_WHITE << 4 | 2;
     }
@@ -6267,10 +6264,10 @@ void s_burns_now (void)
         left_words (bf);
     }
     hub_map (0);
-    burn_due = burn_at + (wait_on () && !(HUB->pc_light && HUB->pc_fuel <= BURN_LOW + WAIT_SLICE / 600) ? WAIT_SLICE :
-        600);                                   /* (The next look a minute on; resting, ten, its light not near burning
-                                                **   low: the long durations' coarser ticks, 2026-10-28; the clock's
-                                                **   slices end there, slice's) */
+    burn_due = burn_at + (wait_on () && !HUB->pc_air && !(HUB->pc_light && HUB->pc_fuel <= BURN_LOW + WAIT_SLICE / 600) ?
+        WAIT_SLICE : 600);                      /* (The next look a minute on; resting, ten, its light not near burning
+                                                **   low, nor the air bad: the long durations' coarser ticks, 2026-10-28;
+                                                **   the clock's slices end there, slice's) */
     if (bleeds || (HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) || HUB->pcsum.health != H_FINE || HUB->now >= body_due) {
         bled ();                                /* (The bodies' time with it: the bleeding, the character's wounds,
                                                 **   part 70's, slice 4.3's; nothing to tell, no part swapped in) */

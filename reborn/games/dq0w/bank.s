@@ -167,7 +167,7 @@ go:
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
             SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
             SWPART      74, 14              ; A waterskin filled (wwater.c: slice 4.9's)
-            SWPART      75, 16              ; The water's depth where the character stands (wwater.c)
+            SWPART      75, 22              ; The water's depth where the character stands (wwater.c)
 
             SWFN        work, 48
             SWFN        worked, 48

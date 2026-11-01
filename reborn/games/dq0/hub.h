@@ -1569,6 +1569,8 @@ struct wsave {
 **   own chunk.elev maker +world                                (a harm, a square dug, an opening: dq0w/store.c)
 **   own chunk.nopen maker +world
 **   own chunk.open maker +world
+**   own chunk.air maker +world                                 (Its bad air: AIR_STATE, store.c's, 2026-10-31)
+**   own chunk.aat maker +world
 **   own bank(CAT_BANK) world                                   (The catalogue: the world's)
 **   own bank(KIND_BANK) world                                  (Its kinds: the world's, the theme's after them)
 **   own banks(KIND_BANK+1,ITEM_BANKS) world                    (The items' places and states)
