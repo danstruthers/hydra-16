@@ -931,8 +931,9 @@ or a shaft can be jumped down (jump down: a fall of its height).
   step between two squares that share only a corner, where neither corner can be stood on and one of them is cut
   (world.h's T_CUT, chunk.c's slant, slant.s), never squeezed between two solid corners; seven feet corner to corner.
   Walked by every actor (the walk's ways on of the eight, none behind; the ways across a room; the denizens' steps; a
-  hunter's scent), seen past and told among a passage's ways, drawn ("/", "\"), dug ("dig northeast"); the caves'
-  zigzag tunnels cut as they're grown (dq0m/caves.c's slants).
+  hunter's scent; a denizen's coarse wander, 2026-11-01), seen past and told among a passage's ways, looked along (a
+  look one way's), drawn ("/", "\"), dug ("dig northeast"); the caves' zigzag tunnels cut as they're grown
+  (dq0m/caves.c's slants).
 - **A passage's heading** (the user's, 2026-10-31: step 2 of three; HOUSE.md's a passage's heading): a passage's ways on
   told by their runs' real bearings in sixteenths, as the character faces ("It goes ahead and a little to your right"),
   smoothed over the squares it sees along them (a staircase of short steps one slant, a bend a bend); a walk along one

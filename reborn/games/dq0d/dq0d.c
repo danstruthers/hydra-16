@@ -1399,16 +1399,18 @@ void __fastcall__ s_coarse (unsigned char k, unsigned lim)
 
     for (t = 0; t < 4; ++t) {
         d = random (4);
+        if (!step_ok (a.sn, a.x, a.y, d) && (!cut_by (d += 4) || !slant (a.sn, a.x, a.y, DH (d)))) {
+            continue;                           /* (The four's step closed: the diagonal way an eighth round from it, if
+                                                **   one of its corners is cut, step_for's; the same dice, 2026-11-01) */
+        }
         x = a.x + dir_x[d];
         y = a.y + dir_y[d];
-        if (apart (x - ahx[k], y - ahy[k]) > lim || !step_ok (a.sn, a.x, a.y, d) || taken (k, x, y) ||
-            !wades (awater[k], a.sn, x, y)) {
+        if (apart (x - ahx[k], y - ahy[k]) > lim || taken (k, x, y) || !wades (awater[k], a.sn, x, y)) {
             continue;
         }
         a.x = x;
         a.y = y;
-        a.face = H_OF (d);
-        im.w1 = H_OF (d) | STEP_COARSE;
+        im.w1 = (a.face = DH (d)) | STEP_COARSE;
         im.w2 = 1;
         act (I_STEP, k);
         if ((p = at (a.sn, x, y)) != 0 && (*p & T_VIS)) {

@@ -2606,8 +2606,11 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
   drawn "/" or "\" along the slant; a bend's corner alone stays "#".  On the map as it's shown (turned, faded), so what
   the character's map shows of it is what's drawn so.  (The UI's map, look.c's slants.)
 - **Left** *(for later)*: a wide tunnel's staircase (two or three squares across: the walk's ways there a fork); the
-  facing after a walk along a slant (its last step's, as before); a look one way along a slant (way.c's seen_on: the
-  four's, step 3's).
+  facing after a walk along a slant (its last step's, as before).
+- **Built since** *(2026-11-01, the house's)*: a look one way goes on along a diagonal way (way.c's seen_on: the eight,
+  a diagonal only past its cut corner: "Down the passage ahead you see into the cell"); a denizen's coarse wander (out
+  of the character's sight, the turns pace's catching up) takes the diagonal way an eighth round from the four's step
+  it rolled where that step's closed and a corner's cut (the same dice: dq0d.c's s_coarse).
 
 ## Built passages on the diagonal *(2026-11-01: step 3 of the user's three, in part; drafted for the user to review)*
 
