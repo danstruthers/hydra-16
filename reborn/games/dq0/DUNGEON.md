@@ -415,11 +415,15 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
 - **Age's collapse** (slice 4.10): an old stratum's passages partly fallen in, rubble (world.h's T_RUBBLE, a square
   kind of its own) by the stratum's age and its rock (dq0m/caves.c's rubble, after the water, by its own dice: the
   layout as it was); climbed over slowly, cleared by digging, seen along a passage, drawn on the map.
-- **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) and
-  **tunnellers** (creatures that dig by nature, the denizens' task choosing where) are still to come (below).  The
-  tunnellers' hook: rock.h's rock_kind (any task can include it, ROCK_CODE, where it wants its code) gives a square's
-  rock, and its RK_HARDNESS the rate's; a denizen's dig would make the same change records as the character's (the
-  world's change (), a DUG record while it's under way).
+- **Tunnellers** (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers, HOUSE.md's): a denizen that digs (a burrower's
+  claws, a miner's pick or shovel) digs its way where rock, a wall or rubble keeps it from the character it senses, or
+  from where it last sensed it, round a shut door or a portcullis by a diagonal: the world's dq0w/wdig.c, by the
+  character's rules (a spell at a time, the tool's rate, the rock's hardness: part 1 asked, its rock_kind; its own
+  test by its sheet), the same change records (a DUG record while it's under way, the character's: either goes on
+  with the other's hole; the square a passage through it), told when seen ("A fresh tunnel opens ahead.  Spoil lies
+  heaped by it.") and heard while it's dug ("a scraping in rock": the rock carrying a pick's knock).
+- **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) is still
+  to come (below).
 
 **Mining any way**: a dig goes level (a tunnel) or down (a shaft); up (a raise through the ceiling, to the stratum
 above) and slanting (an incline, its floor rising or falling square by square) aren't made.
@@ -1448,8 +1452,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   ("a vast cavern, its far side beyond your light"), the world's ways joined at the edge (the next chunk's part's
   squares the way goes on into), the map's room drawn whole.  A lake or a chasm the same, the water's level the
   cavern's.
-- **Tunnellers and builders** (slice 4.11): denizens that dig, their new ways told when seen (the hook: rock.h's
-  rock_kind and RK_HARDNESS, and the world's change records, above).
+- **Tunnellers and builders** (slice 4.11, built in part 2026-11-01: changing the dungeon, above; DENIZENS.md's
+  tunnellers): left, a burrow dug from a lair, a faction's mine following a vein, the denizens away from the character
+  digging, poor rock on a tunneller, the spoil as a thing; builders (shoring, walling up a way, a door put up).
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
 - **One path for every actor** (Phase 3C): a denizen's mind making the same commands as the player's, so the

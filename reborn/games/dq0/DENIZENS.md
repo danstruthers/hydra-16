@@ -566,6 +566,31 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   dead too.
 - **Hurt:** one wounded with nothing after it goes home to its lair to rest.
 
+### Tunnellers *(2026-11-01: slice 4.11; HOUSE.md's tunnellers, for review)*
+
+- **Who digs:** kinds.txt's ways d (a burrower, by its claws: the giant rat, the ghoul) and m (a miner, by the tools it
+  carries: the dwarf miner, the kobold, the brown orc; a pick, a shovel, a spade or a mattock among its things, the
+  world's agear AG_PICK and AG_SPADE, as it tells the referee its things).
+- **The minds choose where** (dq0d.c's dig_way, part 12, at need: no polling): a hostile tunneller kept by rock, a
+  wall or rubble from the character it senses beyond it, or from where it last sensed it (drawn on), no step nearer,
+  digs the square beside it that brings it nearest (the four first; a diagonal nearer as the crow flies: round a shut
+  door or a portcullis), within its reach of its home; it keeps to the way it's digging while that's nearer, and
+  digging spends none of its being drawn on.  Its intent's I_KIT KT_DIG (b the heading, x[2] its tools: DG_*), the
+  world's to carry out.  A step on a diagonal way nearer as the crow flies (as near across and down) is a step nearer
+  for every denizen, so it comes through what it dug.
+- **The world digs it** (dq0w/wdig.c, part 79): by the character's rules (DUNGEON.md's digging): a spell of ten
+  minutes, the tool's rate on what's there (the claws the house's), the actor's own test by its sheet for anything
+  harder than earth (the referee's RS_TEST P_DIG with the actor: HarnMaster's its Strength times five, the null
+  ruleset's flat odds), the rock's hardness the rate's (rock.h's, part 1 asked), the hole kept (DUG, the character's
+  record: either can go on with the other's), and through, the square a passage (a diagonal's corners cut).  The
+  spell's feet are reckoned as its mind asks again at its end (the hub's dig_t: when it began); another intent loses
+  it, a rouse sends it back to it.  Its doing DO_DIG ("digging", in the look's words), busy at it: the character's
+  changes don't rouse it.
+- **Told** (the denizens' events): its first spell (DE_DIG: seen, "The dwarf miner digs into the wall."; heard, "You
+  hear a scraping in rock ahead to your left."), its spells after (DE_DIGS: the denizens hear them, the player's not
+  told again), the way through (DE_DUG at the square dug: seen as it was, "A fresh tunnel opens ahead.  Spoil lies
+  heaped by it."; heard, "You hear rock falling ..."); the rock carrying a pick's knock where the air doesn't.
+
 ## Still to come
 
 - **Their bodies' rest** (2026-10-31's leftovers, HOUSE.md's the denizens' bodies): a swim tiring a denizen, a denizen
@@ -604,7 +629,11 @@ What the plans bring later, by the slice or phase that brings it:
   distance, above): left, an ally asked to do other things ("ask the dwarf to open the door": it "doesn't know how"),
   "give the bandit 5 pennies" (the two objects without "to": the parser's), a gift to one that isn't a person (an
   altar), a faction's regard by a freed prisoner, a rescue or a piece of the puzzle, entertain and bargain.
-- **Tunnellers and builders** (slice 4.11): denizens that dig their own ways, by the same rules as the character's.
+- **Tunnellers and builders** (slice 4.11, built in part 2026-11-01: tunnellers, above): left, the minds' other reasons
+  to dig (a burrow from a lair, a faction's mine following a vein: rock.h's veins; a way round rubble is dug now), the
+  records away from the character digging (only actors dig), poor rock coming down on a tunneller, the spoil as a thing,
+  a dig's sound played, a kobold's pick (its outfit has none); builders: a faction's folk shoring a passage, walling up
+  a way, putting up a door.
 - **Psionic and magical denizens** (slices 5.4, 5.7): kinds with talents, shielded minds, casters, the undead.
 
 Designed, but in no slice of the plans yet (DECISIONS.md has the user's words for most):

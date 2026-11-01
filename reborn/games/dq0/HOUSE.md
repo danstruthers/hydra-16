@@ -2579,7 +2579,52 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
   where there's a diagonal way.
 - **Still to come** *(steps 2 and 3, the user's "queue up 1-3")*: a passage told by its run's real heading in sixteenths;
   built complexes at an angle (a stratum's plan, or one complex in it, laid at 45 degrees); the built grower's
-  diagonal passages; the tunnellers (slice 4.11) digging by the same rules.
+  diagonal passages.  The tunnellers (slice 4.11) dig by the same rules (Tunnellers, below; 2026-11-01).
+
+## Tunnellers *(slice 4.11, 2026-11-01: the book's where it speaks, the house's else; drafted for the user to review)*
+
+The HarnWorld Bestiary calls rats efficient diggers that excavate burrow systems, and has its grave-wights dig rapidly
+through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rates.  These are the house's.
+
+- **Who digs** *(the house's)*: kinds.txt's ways **d**, digging by nature with its claws (a burrower: the giant rat, the
+  ghoul, after the bestiary's rats and grave-wights), and **m**, digging with the tools it carries (a miner: the dwarf
+  miner, the kobold, the brown orc).  A miner digs only with a pick, or with a shovel, a spade or a mattock, among its
+  things (the world's agear, AG_PICK and AG_SPADE).  Today a dwarf miner always carries a pick and a brown orc
+  sometimes does; a kobold carries none yet (its outfit has none), so it digs nothing.
+- **A burrower's claws** *(the house's)*: two feet a spell in soft soil, one in hard-packed earth (two thirds of a
+  shovel's), nothing in masonry or flags; in the rock only the soft rock (shale), half a foot a spell, times the rock's
+  hardness (a foot a spell in shale, rounded as the character's is).  So a rat burrows through earth and shale,
+  never through sandstone or a dressed wall.
+- **The character's rules** *(every actor's: DUNGEON.md's digging)*: a spell of ten minutes at a time; the tool's rate
+  on what it's into (rshouse.h's digger table, the character's); earth and rubble at the tool's rate, untested;
+  anything harder a test each spell, its rate at a marginal success, twice at a critical, half at a marginal failure,
+  none at a critical failure; the rock's hardness the rate's (rock.h's); a wall two feet, a square of rock five, corner
+  to corner seven, rubble two; the hole kept as it goes (the change record DUG, the character's: the character can
+  go on with a hole a denizen began, and the other way about); through, the square a passage (a diagonal's corners
+  cut, as the character's).
+- **A creature's test** *(the house's, both referees)*: the bestiary has no Mining, so a creature's dig is its
+  Strength times five (HarnMaster's, its sheet's: as its Stealth is its Agility times five), its injuries' penalty off
+  it, on dice of its own (moving quietly's: the game's other rolls as they were); the null ruleset's flat odds.
+- **Its spell reckoned as it ends** *(the house's)*: the feet a spell makes are reckoned when its mind asks again at
+  its end, the same way; a spell cut short by anything else it does (a step, a blow) is lost, as the character's part
+  spell is; roused meanwhile (a noise), it goes back to it for the rest of the spell.  Nothing it has bites into what's
+  there: it gives up for five minutes.
+- **Where it digs** *(the house's)*: a hostile tunneller kept from the character by rock, a wall or rubble (no step
+  nearer: the character sensed beyond it, or where it last sensed it, drawn on) digs the square beside it that brings
+  it nearest, the four first, a diagonal where it's nearer as the crow flies (round a shut door or a portcullis it
+  can't open: a way round it), within its reach of its home (twice its range and eight squares); the one it's digging
+  kept while it's nearer.  Digging spends none of its being drawn on.  A step on a diagonal way nearer as the crow
+  flies, as near across and down, is a step nearer too (every denizen's: so it comes through what it dug).
+- **Heard and seen** *(the house's)*: a spell's noise as loud as the character's (6), the way through louder (7, its
+  spoil falling); the rock carries a pick's knock where the air doesn't (each four squares between them as a square of
+  wall to the sound).  The player's told its first spell ("The dwarf miner digs into the wall.", or "You hear a
+  scraping in rock ahead."), not each spell after (the denizens hear every one); the way through seen ("A fresh tunnel
+  opens ahead. Spoil lies heaped by it.") or heard ("You hear rock falling to your left.").
+- **Not yet** *(the plan's)*: the minds' other reasons to dig (a burrow made from a lair, a faction's mine following a
+  vein of ore, rock.h's veins), the denizens away from the character digging (only actors dig: the records' coarse
+  moves dig nothing), poor rock coming down on a tunneller, the spoil as a thing (rubble beside the way), a dig's sound
+  played (the sound task's), builders (a faction shoring a passage, walling up a way, putting up a door), a kobold's
+  pick.
 
 ## Decided, not yet built
 
