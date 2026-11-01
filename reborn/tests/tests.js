@@ -2104,8 +2104,9 @@ function dq0Check(name, m) {
 // slice, the world's journal and its store's taking it in: cycles; measured 1,460,275 a square on its walk back across the
 // cell, 5 squares; the same walks at seed 3 with no traces, the slice before, within 0.2-0.6% of them: the journal's
 // entry a step, the store's taking 24 in a part's swap; 1,800,000 since 2026-10-29: the sound layer's pulse, once a
-// denizens' turn after a step, and the denizens' senses' own part, slices 4.5 and 4.6)
-const TRACE_STEP = 1800000;
+// denizens' turn after a step, and the denizens' senses' own part, slices 4.5 and 4.6); 1,900,000 since 2026-10-31
+// (1,863,195: the minds' steps looking at each square's chunk for its bad air, a swimmer's too, the giant rats')
+const TRACE_STEP = 1900000;
 
 // What a dq0 test's lines did, by their meaning (Phase 3A: tests cut to meaning, not words): sim/lib/dq0meaning.js's
 // record (m.dq0, in every dq0 test: the world's events, the denizens', the requests' replies, the state each line
