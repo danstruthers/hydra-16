@@ -294,7 +294,7 @@ denizens' task is their minds.
 
 ### Daily life *(2026-10-31: slice 4.5's leftover; HOUSE.md's the denizens' day, for review)*
 
-Each denizen keeps a day by its kind and the game's clock (dq0d.c's part 8): the hour of the day the clock's and the
+Each denizen keeps a day by its kind and the game's clock (dq0d.c's part 9): the hour of the day the clock's and the
 hour the game began at, dusk (the house's).
 
 - **Its day** (kinds.txt's day, from the bestiary's habits): diurnal (up at six, asleep at ten at night: the cave
@@ -312,9 +312,10 @@ hour the game began at, dusk (the house's).
   asleep; snoring now and then (DE_SNORE, heard as "snoring" round corners and through doors, muffled; seen, "The kobold
   snores.").  Woken by a noise it hears, by harm or by sensing the character, it's up ten minutes or so, then back to
   bed if its day still says so.  One made an actor asleep comes asleep.
-- **Its meals** (the bodies' hook: dq0d.c's meal, the hunger of every actor slice 4.9's to come): a meal as it wakes,
-  the first hour, and another halfway through a long day (the diurnal and the nocturnal), at its lair's home
-  (DO_EAT, "eating").
+- **Its meals** (folk's: dq0d.c's meal, the bodies' want): a meal as it wakes, the first hour, and another halfway
+  through a long day (the diurnal and the nocturnal), at its lair's home, its larder (DO_EAT, "eating"): fed as it
+  sits down to it (the record's ate, an actor's, the clock's), so folk keep to their meals and seldom go hungry.  A
+  beast's meal is its prey (its want's: below), no slot in the day.
 - **At work** (kinds.txt's work: a room's use): about but not on watch, in its work's room of its lair's chunk if it
   has one (DO_WORK, "at work"): the cultists and their priest at the chapel's altar, the dwarves and the kobolds at
   their workshop, the dwarf elder, the bandits' lord, the kobolds' lord and the orc king in their solars, the captain
@@ -535,12 +536,28 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 - **A robber's stash:** a brown orc's takings hidden at its home (RB_HIDE: its kind's keeps h, no king of its tribe's
   placed on the stratum), found there by searching; a kobold's its lord's (RB_HOARD).
 
+### Their bodies *(2026-10-31: every actor's, HOUSE.md's the denizens' bodies, for review)*
+
+- **Tiring:** every actor tires in a fight as the character does (each round it's in strenuous work, the rest between
+  its rounds rest), the referee's (dq0harn/tire.c: a bank of the creatures' bodies beside their sheets, reckoned by the
+  clock as it's wanted; the null ruleset's rounds counted), its fatigue in every test of its; a beast a level more
+  tired by its round tests its courage, and may break off (FF_FLEES: its mind's flight, as one broken).
+- **Water:** each kind's way with it (kinds.txt's water: the deepest it wades, swims, flies over); the minds keep it off
+  squares deeper than that (dq0d's wades: their steps, coarse moves, darts, placing, roaming), so it goes round; a step
+  into water the longer (a wait after it, the world's), by its depth over its kind's.
+- **Hunger and thirst:** each record's ate and drank (the clock as it last did, coarse), reckoned as it's wanted (part
+  8's: roam's fends for those away, hungry's for the actors), never ticked: folk eat at their larder, a beast hunts
+  (twice its range, prey found now and then), a very hungry hunter hunts the character; food given the more welcome
+  the hungrier (gifts, slice 4.8's), and eaten; the want's fatigue the referee's (RS_NEW_ACTOR's c).  The larders are
+  the daily round's: its meals a slot in the day (a meal: the record's ate the clock's: daily life, above).
+- **Hurt:** one wounded with nothing after it goes home to its lair to rest.
+
 ## Still to come
 
-- **Hunger and thirst for every actor** (slice 4.9's hook: the character's are the world's, HOUSE.md's water,
-  hunger and thirst): a denizen's want counted as the bodies' time goes, its lair's larder and water (I_KIT's
-  KT_LAIR) eaten and drunk from, a hunter's hunger setting it on; a beast keeping out of water deeper than it wades
-  unless its kind swims (kinds.txt's, the bestiary's Swimming).
+- **Their bodies' rest** (2026-10-31's leftovers, HOUSE.md's the denizens' bodies): a swim tiring a denizen, a denizen
+  drowning (knocked senseless in water: none goes in deeper than it wades yet), a stream's current; their larders eaten
+  from (the day's meals feed folk, the larder's stores not yet counted) and run out; one tending another's wounds; stings and envenomed creatures; an ally's
+  hunger (fed by the character's gifts now) leading it off to eat.
 
 What the plans bring later, by the slice or phase that brings it:
 

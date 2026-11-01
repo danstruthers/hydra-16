@@ -23,14 +23,15 @@ ovx:        .res        1
             SWPART      3, 2                ; The records paged
             SWPART      4, 2                ; The regions round the character wanted, the records kept; the start
                                             ;   (the kinds read in, popgen loaded);
-                                            ;   an actor made, retired, killed, an ally come along,
-                                            ;   a cornered one's dart
+                                            ;   an actor made, retired, killed, an ally come along
             SWPART      5, 3                ; The senses' own: a hunter's stalk, a scent followed, one drawn on (slice 4.5's)
             SWPART      6, 3                ; Morale: the field and the bonds, an actor's kin dismayed (2026-10-30)
             SWPART      7, 3                ; Succession (2026-10-30)
-            SWPART      8, 4                ; The day: schedules, sleep, meals, work, watches, a body found (2026-10-31)
-            SWPART      9, 4                ; The actors' coarse moves, a cornered one's dart (2026-10-31: the main RAM's
-                                            ;   room); a body found on the rounds
+            SWPART      8, 4                ; Their bodies: their want, the water, a hurt one's rest, a cornered one's
+                                            ;   dart (2026-10-31); a lair's home room, a robber's way, one first met
+            SWPART      9, 4                ; The day: schedules, sleep, meals, work, watches (2026-10-31)
+            SWPART      10, 4               ; The actors' coarse moves (2026-10-31: the main RAM's room), a body found on
+                                            ;   the rounds
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -53,12 +54,23 @@ ovx:        .res        1
             SWFN        killed, 4
             SWFN        shoots, 2           ; (A shot at the character: slice 4.7's)
             SWFN        along, 4
-            SWFN        dart, 9             ; (Part 9's since 2026-10-31: part 4's room)
-            SWFN        daily, 8            ; (The day's, 2026-10-31)
-            SWFN        wander, 8
-            SWFN        sched, 8
-            SWFN        coarse, 9
-            SWFN        found, 9            ; (A body found on the rounds: the day's)
+            SWFN        dart, 8
+            SWFN        hungry, 8
+            SWFN        want_fl, 8
+            SWFN        fed, 8
+            SWFN        depth, 8
+            SWFN        rests, 8
+            SWFN        fends, 8
+            SWFN        home_room, 8
+            SWFN        rob_to, 8
+            SWFN        met, 8
+            SWFN        name_of, 8
+            SWFN        kept_file, 8
+            SWFN        daily, 9            ; (The day's, 2026-10-31)
+            SWFN        wander, 9
+            SWFN        sched, 9
+            SWFN        coarse, 10
+            SWFN        found, 10           ; (A body found on the rounds: the day's)
             SWFN        told, 6             ; (The hook for a loss told: a body found on the rounds, the day's)
             SWFN        dismay, 6
             SWFN        heart, 6

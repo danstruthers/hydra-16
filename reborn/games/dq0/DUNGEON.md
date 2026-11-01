@@ -1340,8 +1340,8 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   (the referee's, every one's by rswant.h: its news, its next ask), eating and drinking (the UI's feed.c: the things'
   IO_USE by the keys food and water), a waterskin filled (wwater.c).  Left: falls (a stream's drop told and heard), the sound layer's running water (its background's
   BG_WATER from the wet squares), running water washing the traces (wtrace.c's hook), the map's water, things soaked (a
-  scroll ruined), a stream's current carrying a swimmer, a minute's swim tested as it waits in deep water, treading water standing still, the denizens' wading and swimming (a beast that won't cross), their
-  hunger and thirst; rain where the surface reaches (shafts, the open), washing scents and prints away; a standing order
+  scroll ruined), a stream's current carrying a swimmer, a minute's swim tested as it waits in deep water, treading water standing still (the denizens' wading and swimming, a beast that won't cross going
+  round, and their hunger and thirst built 2026-10-31: DENIZENS.md's their bodies; left, a denizen drowning); rain where the surface reaches (shafts, the open), washing scents and prints away; a standing order
   to eat and drink when needed.
 - **Rock and old places** (slice 4.10): the rock's own kinds and hardness across a stratum, mines and mixed strata
   grown by their own rules, age's collapse and rubble, explosives and sills; caverns across many chunks (the plan's

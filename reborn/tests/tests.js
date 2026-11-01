@@ -2213,13 +2213,13 @@ const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
 // its stratum, its attitude: dq0d's, so the world and the minds agree) and the world's den_seq bumped (what the
 // character sees of them looked at again).  The test's own setting up, as dq0Aware's
 // The denizens' records (dq0d's pb bank, its label's: the task the hub's task[T_DENIZENS]): { mem, at(i) the record
-// i's offset, and its fields' }: dq0d.c's struct pop (its head 330 bytes since slice 4.8's regard, 64 lairs of 17), struct den (28 bytes: its
+// i's offset, and its fields' }: dq0d.c's struct pop (its head 330 bytes since slice 4.8's regard, 64 lairs of 17), struct den (30 bytes since its want, 2026-10-31: its
 // flags at 1, its stratum at 2, its id at 4, its square at 8 and 10, its attitude at 16, its serve and contact at 26 and 27)
 let dq0RecPb = 0;
 function dq0Rec(m) {
   const h = m.dq0.bank(0), t = h[12 + 2], lbl = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
   const pb = dq0RecPb || (dq0RecPb = parseInt(/^al ([0-9A-F]+) \._pb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][pb]) || new Uint8Array(0x2000);
-  return { mem, at: i => 330 + 64 * 17 + 28 * i, FLAGS: 1, SN: 2, ID: 4, X: 8, Y: 10, ATTITUDE: 16, SERVE: 26, CONTACT: 27 };
+  return { mem, at: i => 330 + 64 * 17 + 30 * i, FLAGS: 1, SN: 2, ID: 4, X: 8, Y: 10, ATTITUDE: 16, SERVE: 26, CONTACT: 27, ATE: 28, DRANK: 29 };
 }
 
 function dq0Poke(m, pokes) {
@@ -2290,7 +2290,55 @@ function dq0Poke(m, pokes) {
   };
 }
 
-// The day's hour poked (a test's own setting up: the denizens' hour0, dq0d.c's part 8, the hour of the day the game's
+// The creatures' bodies in the referee's bank (dq0harn's fb: tire.c's struct bbody, 8 bytes by the sheet's number, a
+// denizen's record's: 2026-10-31, every actor's tiring): { mem, at(n) }, its levels at 0, wfl at 1, ex at 2, at (the clock)
+// at 4
+let dq0BodyFb = 0;
+function dq0Body(m) {
+  const h = m.dq0.bank(0), t = h[12 + 3], lbl = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1');
+  const fb = dq0BodyFb || (dq0BodyFb = parseInt(/^al ([0-9A-F]+) \._fb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][fb]) || new Uint8Array(0x2000);
+  return { mem, at: n => 8 * n };
+}
+// At each line's Enter, each actor's body (m.bodies: { g, line, name, den, lv: its levels, wfl, ex, at }) after the pokes made then
+// (each { g: the game, 1 on, line, n: its nth time typed in it, name: the actor's, lv: its levels, ex, at: its body's set })
+function dq0BodyPoke(m, pokes) {
+  const a = m.acia, read = a.read;
+  let typed = '', g = 0, seen = {};
+  m.bodies = [];
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^dq0 /.test(typed)) { ++g; seen = {}; }
+        seen[typed] = (seen[typed] || 0) + 1;
+        const h = m.dq0 && m.dq0.bank(0);
+        if (h && g) {
+          const { L } = m.dq0.layout(), B = dq0Body(m);
+          for (let k = 0; k < L.nactors; k++) {
+            const o = L.actor + k * L.actorSize;
+            let n = '';
+            for (let i = 0; h[o + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[o + L.aName + i]);
+            if (!n) continue;
+            const den = h[o + L.aName + 12], q = B.at(den), mem = B.mem;
+            let poked = false;
+            for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed] && p.name === n) {
+              if (p.lv !== undefined) mem[q] = p.lv;
+              if (p.ex !== undefined) { mem[q + 2] = p.ex & 255; mem[q + 3] = p.ex >> 8; }
+              if (p.at !== undefined) for (let i = 0; i < 4; i++) mem[q + 4 + i] = p.at >>> (8 * i) & 255;
+              poked = true;
+            }
+            m.bodies.push({ g, line: typed, name: n, den, lv: mem[q], wfl: mem[q + 1], ex: mem[q + 2] | mem[q + 3] << 8,
+              at: (mem[q + 4] | mem[q + 5] << 8 | mem[q + 6] << 16 | mem[q + 7] << 24) >>> 0, poked });
+          }
+        }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+}
+
+// The day's hour poked (a test's own setting up: the denizens' hour0, dq0d.c's part 9, the hour of the day the game's
 // clock began at; 0x80, no day, every one about as before the day, 2026-10-31): at a line's Enter, each { g: the game,
 // 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, hour }.  A game's whole (from its start):
 // the environment's dq0hour (a line dq0hour=128 before it, rc's), dq0d's first look at its day
@@ -5944,6 +5992,80 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0bodies', near: ['fight', 'denizens'], what: "Dingus Quest Zero's every actor tiring in a fight (2026-10-31, the brief's every actor's body: HOUSE.md's fights, the denizens' bodies; the character's rules, the book's second variant of combat fatigue, a level each five minutes of active combat): seed 7's ghoul (dq0disengage's scene: the character weak with its sword in a gambeson and a mail hauberk), the fight as the character waits; the ghoul's body in the referee's bank (dq0harn's fb, tire.c's struct bbody by its sheet's number) charged for its rounds (its exertion, 2 units a tenth, a round 100 tenths at most since it was last reckoned), kept between them.  And a tired beast breaking off: a second game the same, the ghoul's body set a breath short of its thirteenth level (dq0BodyPoke's: twelve levels, 5990 units, never reckoned) as the wait's typed; its next round a level more, its courage tested with its fatigue in it, and it breaks off (an E_FIGHT with FF_FLEES, the ghoul fleeing)",
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 20 >> /ram/c.hm',
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
+        'd', 'wait', 'look', 'quit',
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
+        'd', 'wait', 'look', 'quit', 'echo $status']) },
+      start(m) {
+        dq0BodyPoke(m, [{ g: 2, line: 'wait', n: 1, name: 'ghoul', lv: 12, ex: 5990, at: 0 }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], bodies = m.bodies || [];
+        const gh = g => bodies.filter(b => b.g === g && b.name === 'ghoul');
+        // (Game 1: the ghoul's rounds charged: its body reckoned (at), its exertion the more after the fight)
+        const b1 = gh(1), last = b1[b1.length - 1];
+        if (!b1.length) f.push('game 1: no ghoul among the actors');
+        else if (!last.at || last.lv * 6000 + last.ex < 200) f.push('game 1: the ghoul\'s rounds not charged: ' + JSON.stringify(b1));
+        const fights1 = T.filter(t => t.game === 0).reduce((n, t) => n + t.dens.filter(e => e.kind === 'E_FIGHT' && e.out !== 'FO_BLED').length, 0);
+        if (last && last.lv * 6000 + last.ex > 200 * fights1) f.push('game 1: the ghoul charged more than its rounds (' + fights1 + ' blows): ' + JSON.stringify(last));
+        // (Game 2: set a breath short of a level more, its next round tires it, and it breaks off)
+        const p = bodies.find(b => b.g === 2 && b.poked);
+        if (!p) f.push('game 2: the ghoul\'s body not set (not an actor as the wait was typed)');
+        const flee = T.filter(t => t.game === 1).flatMap(t => t.dens).filter(e => e.kind === 'E_FIGHT' && (e.ff & 0x10));
+        if (!flee.length) f.push('game 2: the tired ghoul didn\'t break off (no blow with FF_FLEES): ' + T.filter(t => t.game === 1).map(dq0Evs).join(' | ').slice(0, 1500));
+        const b2 = gh(2), l2 = b2[b2.length - 1];
+        if (p && (!l2 || l2.lv < 13)) f.push('game 2: the ghoul not a level more tired: ' + JSON.stringify(b2));
+        this.notes = [JSON.stringify(bodies)];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0hungry', near: ['denizens'], what: "Dingus Quest Zero's denizens' hunger (2026-10-31, the brief's every actor's body: HOUSE.md's the denizens' bodies, for review): seed 3's giant rats round the way down (dq0 -T, dq0denizens' scene: wary vermin, hunters by smell), fed lately as the game begins, none hostile through a minute's search; then each rat made very hungry as the second search is typed (its want, the minds' aate: the clock's high word less 20, some 36 hours), and a very hungry hunter that senses the character hunts it: hostile (its attitude in the hub), coming at it",
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'search', 'search', 'quit', 'echo $status']) },
+      start(m) {   // (The rats made very hungry as the second search is typed: dq0d's aate, each actor's, by its label)
+        const a = m.acia, read = a.read;
+        let typed = '', n = 0;
+        m.hungered = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'search' && ++n === 2 && m.dq0) {
+                const h = m.dq0.bank(0), { L } = m.dq0.layout(), tk = h[12 + 2];
+                const ad = parseInt(/^al ([0-9A-F]+) \._aate$/m.exec(fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'))[1], 16);
+                const nowU = h[L.now + 2];
+                for (let k = 0; k < L.nactors; k++) {
+                  const o = L.actor + k * L.actorSize;
+                  let s = '';
+                  for (let i = 0; h[o + L.aName + i] && i < 12; i++) s += String.fromCharCode(h[o + L.aName + i]);
+                  if (s === 'giant rat') { m.taskRam[tk][ad + k] = nowU - 20 & 255; m.hungered.push(k); }
+                }
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], s1 = T.of('search'), s2 = T.of('search', s1.k + 1);
+        const rats = s => s && s.actors ? s.actors.filter(x => x.name === 'giant rat') : [];
+        if (!rats(s1.after).length) return ['no giant rats about the way down: ' + JSON.stringify(s1.after && s1.after.actors)];
+        if (rats(s1.after).some(x => x.attitude === 'AT_HOSTILE')) f.push('a rat hostile before it hungered: ' + JSON.stringify(rats(s1.after)));
+        if (!m.hungered.length) f.push('no rat made hungry');
+        if (!rats(s2.after).some(x => x.attitude === 'AT_HOSTILE')) f.push('no very hungry rat hunting the character (hostile): ' + JSON.stringify(rats(s2.after)));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0kept', meaning: true, what: "Dingus Quest Zero's lights kept (DUNGEON.md: light kept; the user's, 2026-10-16: \"why would all of the torches in the wall sconces be lit if no one is there to light them?\"): the kobold warren's Dung Tunnels (a mine, dq0 -T -T -T: four strata grown, the character on the second) at seed 527, the kobolds' keeping (their lair's chunk and their range, the denizens' places kept, KEPT_AT) lighting the room the character comes in to: lit by its sconce (\"On the wall to your right is a sconce, a lit torch in it.\"), the torch lit and tended (I_TENDED), the room's light kept (ROOM_LIT); the torch taken from it (a step nearer first), the room dark, a torch put back, the room's light as that torch is; at seed 535, a storeroom away from the kobolds dark, its sconce's torch cold, \"a torch in it\", lit there (light the torch in the sconce: the room lit by it, not tended), put out (dark again), lit again, kept in the save (-d) and carried on lit; every sconce in the item store at each lit and tended if and only if a keeping whose keepers live reaches it, each of those rooms' light kept; and the same seed again the same sconces, the same torches, the same places kept (a chunk always stocked the same: the world waits for a stratum's populations)",
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
@@ -6869,7 +6991,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0morale', near: ['fight', 'denizens'], what: "Dingus Quest Zero's morale (the user's, 2026-10-29: every intelligent creature sways the morale field about it, by its rank and its influence skills, for its friends and against its foes; bonds upward to its leaders regardless of distance, growing with time served and contact; a leader's loss, known, a morale check at once with its influence removed; HOUSE.md's morale, for review), by the denizens' morale tests (RS_MORALE in their slot: steps, why, the field, the bonds and the leaders reckoned) and a strong character (its attributes 99) in mail, among a hand-written theme's small orcs (a shy, wary people) at seed 2, their home by the way down where the character starts (popgen's, its leader with its band), another band of them by it, a third on the stratum below.  Their king their leader: struck down, senseless, then dead, every small orc that heard it fall tests at once, its leader's loss (its band's head for its own band, the faction's for the other, wherever it is), its bond to it taken away, the band beside it the worse (the book's bad situation, a friend fallen about it); after its death those that heard it are led by its successor (since 2026-10-30: the most influential of those below it, dq0succession's), while the band below, that didn't hear it, keeps its bond to the dead king, its fall unfelt.  The band hostile, fighting beside its king, a fellow's fall weighed with its king's presence and its bond (the field and the bonds above nothing).  A black orc their band's head (a captain), kings above it in the tribe: its fall the home band's leader's loss, its bond to the kings holding; an old band (long served, often with its leaders) the steadier at its fall than a new one, by those bonds.  An ally of the character's heartened by it; a fearsome foe beside a band (a mighty one of a faction hostile to it) weighing on it.  (The test's own setting up: pokes of the actors' hub fields at a line's Enter, dq0Poke's)",
+      name: 'dq0morale', near: ['fight', 'denizens'], what: "Dingus Quest Zero's morale (the user's, 2026-10-29: every intelligent creature sways the morale field about it, by its rank and its influence skills, for its friends and against its foes; bonds upward to its leaders regardless of distance, growing with time served and contact; a leader's loss, known, a morale check at once with its influence removed; HOUSE.md's morale, for review), by the denizens' morale tests (RS_MORALE in their slot: steps, why, the field, the bonds and the leaders reckoned) and a strong character (its attributes 99) in mail, among a hand-written theme's small orcs (a shy, wary people) at seed 2, their home by the way down where the character starts (popgen's, its leader with its band), another band of them by it, a third on the stratum below.  Their king their leader: struck down, senseless, then dead, every small orc that heard it fall tests at once, its leader's loss (its band's head for its own band, the faction's for the other, wherever it is), its bond to it taken away, the band beside it the worse (the book's bad situation, a friend fallen about it); after its death those that heard it are led by its successor (since 2026-10-30: the most influential of those below it, dq0succession's), while the band below, that didn't hear it, keeps its bond to the dead king, its fall unfelt.  The band hostile, fighting beside its king, a fellow's fall weighed with its king's presence and its bond (the field and the bonds above nothing).  A black orc their band's head (a captain), kings above it in the tribe: its fall the home band's leader's loss, its bond to the kings holding; an old band (long served, often with its leaders) the steadier at its fall than a new one, by those bonds.  An ally of the character's heartened by it; a fearsome foe beside a band (a mighty one of a faction hostile to it) weighing on it.  (The test's own setting up: pokes of the actors' hub fields at a line's Enter, dq0Poke's; since the denizens' water, 2026-10-31, the band below's small orc put beside the character as it's attacked, dq0Poke's beside: the band no longer wades where it did)",
       init: 't_rc', cycles: 4000e6,
       // (-R 79: the dice's offset that gives the game it was written for, since the dice by who asks,
       // 2026-10-30: the same dungeon, other rolls)
@@ -6892,7 +7014,10 @@ module.exports = {
           ...[0, 1, 2].map(k => ({ g: 2, line: 'hold the sword', n: 1, k, set: { attitude: 0 } })),    // (Game 2: the band and its king hostile)
           ...band(3, { serve: 255, contact: 255 }), ...band(4, { serve: 0, contact: 0 }),             // (Games 3, 4: an old band, a new one)
           { g: 5, line: 'attack the orc king', n: 1, k: 1, set: { attitude: 5 } },                    // (Game 5: one the character's ally)
-          { g: 6, line: 'attack the orc king', n: 1, k: 1, set: { faction: 2, power: 250 } }]);       // (Game 6: one a fearsome foe)
+          { g: 6, line: 'attack the orc king', n: 1, k: 1, set: { faction: 2, power: 250 } },         // (Game 6: one a fearsome foe)
+          { g: 1, line: 'attack the small orc', n: 2, name: 'small orc', beside: 'face' }]);          // (Game 1: one of the band below beside
+                                                                                                      //   the character as it's attacked, since
+                                                                                                      //   their water, 2026-10-31)
       },
       expect: ['% echo $status'],
       check(m) {
@@ -6976,7 +7101,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0daily', near: ['denizens'], what: "Dingus Quest Zero's daily life (2026-10-31: DENIZENS.md's daily life, HOUSE.md's the denizens' day, for review; dq0d.c's part 8): the denizens' days by their kinds (kinds.txt's day and work) and the game's clock (the game begun at dusk, 18 o'clock, the house's), by the actors' records and their events: a hand-written theme's garrison of men-at-arms (seed 2, their lair south of the start; soldiers keep watches) watched for four hours from the start, half an hour at a time: a third of them on watch, walking their rounds (moving between one look and the next), a third asleep, as the clock goes on; the watch relieved as it changes at 20 o'clock (those on watch before it asleep after, others on watch: none the same); those on watch talking as they go and the sleepers snoring (their events, DE_TALK and DE_SNORE); and the stand-in's giant rats by the way down (seed 3), nocturnal, the character gone down the ladder (out of their senses: those watching it don't sleep) and its torch put out (so its burning out breaks no long wait), the day's hour poked to 10 o'clock as it goes (dq0Hour's), their records (dq0d's, away from the character: decided lazily, by the clock) read as each look is typed: asleep at their lair's home (its square or one beside it) ten minutes on, not looked at again till they wake (due after 16 o'clock: more than five hours on); at their meal there as they wake (16 o'clock, the first hour: due as it ends); about by 18 o'clock (due a minute or so on, as ever); and the garrison again, a body of theirs found on the rounds: the scene set by pokes as the first line's typed (dq0Rec's: a soldier of another lair, away, its record made dead in the near lair's home, as killed: its faction's body not found yet, dq0d's unf), the alarm raised as one on watch comes by it (DE_ALARM), once, its faction's attitude to the character a step worse (unfriendly to hostile: the head's fatt)",
+      name: 'dq0daily', near: ['denizens'], what: "Dingus Quest Zero's daily life (2026-10-31: DENIZENS.md's daily life, HOUSE.md's the denizens' day, for review; dq0d.c's part 9): the denizens' days by their kinds (kinds.txt's day and work) and the game's clock (the game begun at dusk, 18 o'clock, the house's), by the actors' records and their events: a hand-written theme's garrison of men-at-arms (seed 2, their lair south of the start; soldiers keep watches) watched for four hours from the start, half an hour at a time: a third of them on watch, walking their rounds (moving between one look and the next), a third asleep, as the clock goes on, the third that wakes at its meal (folk, at their larder: fed, the bodies' want); the watch relieved as it changes at 20 o'clock (those on watch before it asleep after, others on watch: none the same); those on watch talking as they go and the sleepers snoring (their events, DE_TALK and DE_SNORE); and the stand-in's giant rats by the way down (seed 3), nocturnal, the character gone down the ladder (out of their senses: those watching it don't sleep) and its torch put out (so its burning out breaks no long wait), the day's hour poked to 10 o'clock as it goes (dq0Hour's), their records (dq0d's, away from the character: decided lazily, by the clock) read as each look is typed: asleep at their lair's home (its square or one beside it) ten minutes on, not looked at again till they wake (due after 16 o'clock: more than five hours on); up as they wake (16 o'clock: a beast's meal its prey, the bodies' want, no meal of the day's), and about by 18 o'clock (due a minute or so on, as ever); and the garrison again, a body of theirs found on the rounds: the scene set by pokes as the first line's typed (dq0Rec's: a soldier of another lair, away, its record made dead in the near lair's home, as killed: its faction's body not found yet, dq0d's unf), the alarm raised as one on watch comes by it (DE_ALARM), once, its faction's attitude to the character a step worse (unfriendly to hostile: the head's fatt)",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/s',
         "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt",
@@ -6994,7 +7119,7 @@ module.exports = {
             if (c === 13) {
               if (typed === 'wait 1 minute' && m.dq0) {   // (Game 3: a body of the garrison's in its near lair's home)
                 const R = dq0Rec(m), h = m.dq0.bank(0), u16 = o => R.mem[o] | R.mem[o + 1] << 8, w16 = (o, v) => { R.mem[o] = v & 255; R.mem[o + 1] = v >> 8; };
-                const MANARMS = 28, at = [...Array(240).keys()].map(i => R.at(i)).filter(o => R.mem[o] === MANARMS);
+                const MANARMS = 28, at = [...Array(224).keys()].map(i => R.at(i)).filter(o => R.mem[o] === MANARMS);
                 const near = at.find(o => R.mem[o + R.FLAGS] & 2), far = at.find(o => !(R.mem[o + R.FLAGS] & 6) && u16(o + 21) !== (near ? u16(near + 21) : -1));
                 if (near && far) {
                   R.mem[far + R.FLAGS] = 4 | 8;               // (D_DEAD, D_MET: killed as an actor)
@@ -7012,7 +7137,7 @@ module.exports = {
               }
               if (typed === 'look' && m.dq0) {
                 const R = dq0Rec(m), h = m.dq0.bank(0), u16 = o => R.mem[o] | R.mem[o + 1] << 8, recs = [];
-                for (let i = 0; i < 240; i++) {
+                for (let i = 0; i < 224; i++) {
                   const o = R.at(i);
                   if (R.mem[o] === 1 && (R.mem[o + R.FLAGS] & 3) === 1 && R.mem[o + R.SN] === 0)   // (A giant rat, out, not an actor)
                     recs.push({ id: u16(o + 4), x: u16(o + 8), y: u16(o + 10), hx: u16(o + 21), hy: u16(o + 23), ready: u16(o + 12) + u16(o + 14) * 65536 });
@@ -7042,6 +7167,7 @@ module.exports = {
           const evs = waits.flatMap(t => t.dens.filter(e => e.kind === 'E_DEN'));
           if (!evs.some(e => e.de === 'DE_TALK')) f.push('those on watch never talking as they go');
           if (!evs.some(e => e.de === 'DE_SNORE')) f.push('the sleepers never snoring');
+          if (!waits.some(t => on(t.after, 'DO_EAT').length)) f.push('none of its third at its meal as it wakes: ' + waits.map(t => show(t.after)).join(' '));
         }
         const looks = T.filter(t => t.line === 'look'), home = r => Math.max(Math.abs(r.x - r.hx), Math.abs(r.y - r.hy)) <= 1, H = 36000;
         const rs = i => (looks[i] && looks[i].at ? looks[i].at.now : '?') + ' ' + JSON.stringify((m.rats[i] || []).map(r => [r.id, r.x - r.hx, r.y - r.hy, r.ready, looks[i] && looks[i].at ? r.ready - looks[i].at.now : r.ready]));
@@ -7049,7 +7175,7 @@ module.exports = {
         else {
           const due = i => m.rats[i].map(r => r.ready - looks[i].at.now);
           if (!m.rats[0].every(home) || due(0).some(d => d < 5 * H)) f.push('the rats not asleep at home at 10 o\'clock, due as they wake: ' + rs(0));
-          if (!m.rats[1].every(home) || due(1).some(d => d <= 0 || d > H)) f.push('the rats not at their meal at home as they woke, due as it ends: ' + rs(1));
+          if (due(1).some(d => d > 6000)) f.push('the rats not up as they woke, past sixteen hours: ' + rs(1));
           if (due(2).some(d => d > 6000)) f.push('the rats not about at 18 o\'clock: ' + rs(2));
         }
         const g3 = T.filter(t => t.line === 'wait 30 minutes').slice(8), alarms = g3.flatMap(t => t.dens.filter(e => e.kind === 'E_DEN' && e.de === 'DE_ALARM'));

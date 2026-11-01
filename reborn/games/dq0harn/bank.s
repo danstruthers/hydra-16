@@ -184,6 +184,9 @@ ovl_out:
             OVFN        body_line, 7
             OVFN        shot, 7             ; (A missile's attack, slice 4.7's: missile.c, heal.c's overlay)
             OVFN        want, 7             ; (Hunger and thirst, slice 4.9's: want.c)
+            OVFN        tire, 7             ; (A creature's fatigue, 2026-10-31: tire.c)
+            OVFN        worked, 7
+            OVFN        want_fl, 7
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0harn.cfg's SWAP, a part at a time,
 ; copied there from overlay 4's bank as it's called)
@@ -203,6 +206,7 @@ ovl_out:
             SWFN        harn_sunsign_name, 2
             SWFN        dig_answer, 2
             SWFN        dice_set, 2
+            SWFN        fixed, 2            ; (A test's dice hook, 2026-10-31: the main RAM's room)
 
 ; The dice by who asks (rshouse.h's RS_HOUSE_DICE: ../dq0/dice.inc), overlay 7's, through its stub (OVFN's, by hand)
             .export     _dice_to
