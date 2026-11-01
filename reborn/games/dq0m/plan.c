@@ -595,7 +595,8 @@ void __fastcall__ o_chunk_edges (unsigned char sn, unsigned cx, unsigned cy, str
     }
     e->water = rg (sn, cx / RCH, cy / RCH)->water;   /* (Its region's water, the plan's: slice 4.9's) */
     hub_get (0, &HUB->seed, &w, 2);
-    e->poor = rock_bed (w, -(s->datum + e->ground[0]), x + CW / 2, y + CW / 2) == RK_SHALE;  /* (Slice 4.10's) */
+    e->depth = -(s->datum + e->ground[0]);      /* (Its depth: the air's, 2026-10-31) */
+    e->poor = rock_bed (w, e->depth, x + CW / 2, y + CW / 2) == RK_SHALE;  /* (Slice 4.10's) */
     if (R.kind == RG_ROCK && !e->nland) {
         e->x1 = e->y1 = 0xFF;                   /* (Solid rock: nothing grown) */
     }

@@ -283,7 +283,7 @@ static unsigned char __fastcall__ binds (harn_char* c)
 static void __fastcall__ body_time (struct req* r)
 {
     unsigned m = r->w1;
-    unsigned char k, dead = 0, bound = 0, n = strlen (news), ninj = pc.ninj, u;
+    unsigned char k, dead = 0, bound = 0, n = strlen (news), ninj = pc.ninj, u, ag = 0;
 
     out_t = 0;
     if (r->x[2] == 3 && pc.state != HARN_DEAD) {    /* (Drowned: the world's, slice 4.9's) */
@@ -295,9 +295,10 @@ static void __fastcall__ body_time (struct req* r)
             rest_m = rest_m + m < rest_m ? 0xFFFF : rest_m + m;    /* (At rest: toward its healing rolls) */
         }
         bleed (&pc, m);
-        if (pv.hr && pc.state != HARN_DEAD) {
-            venom_time (m * (r->a == 2 ? 4 : r->a ? 2 : 1));    /* (Its venom's course: its interval at rest, half
-                                                **   that about, a quarter at vigorous work: overlay 7's) */
+        if (pc.state != HARN_DEAD) {
+            ag = aff_time (r);                  /* (Its afflictions' course: a venom's interval at rest, half
+                                                **   that about, a quarter at vigorous work; a disease's, a poison's,
+                                                **   the air it breathes: overlay 8's, afflict.c) */
         }
     }
     for (k = 0; k < NACTORS; ++k) {
@@ -330,7 +331,7 @@ static void __fastcall__ body_time (struct req* r)
     r->w2 = out_t;
     r->b = health_of (&pc);
     r->result = pc.state == HARN_DEAD;
-    r->grade = (strlen (news) != n ? 2 : 0) | (pc.ninj > ninj ? 4 : 0);
+    r->grade = (strlen (news) != n ? 2 : 0) | (pc.ninj > ninj ? 4 : 0) | ag;
 }
 
 /* ---- First aid and treatment (RS_TREAT: Physician 2-3, the Treatment table): the character the healer, the patient
@@ -533,240 +534,3 @@ void __fastcall__ o_body_req (struct req* r)
     }
 }
 
-/* ==== Overlay 7's (its room: overlay 6 full, 5 the bestiary's): a venom's course, and the status's words of the body */
-#pragma code-name (push, "OV7CODE")
-#pragma rodata-name (push, "OV7RODATA")
-
-static void vdice5 (void)                       /* (vdice's, overlay 7's own) */
-{
-    unsigned long t = xs_seed;
-
-    xs_seed = vseed ? vseed : t ^ 0x56454E4FUL;
-    vseed = t;
-}
-
-static void __fastcall__ nput5 (const char* s)  /* (nput's, overlay 7's own) */
-{
-    unsigned char n = strlen (news);
-
-    if (n + strlen (s) >= NEWS_N - 1) {
-        n = 0;                                  /* (Full, its words not told yet: the latest kept) */
-    }
-    strcpy (news + n, s);
-}
-#define nput    nput5
-
-/* ---- Venom (the HarnWorld Bestiary's venomous bites and stings: an infection's course, Physician 4): the kinds that
-** have one, its healing rate and its recovery interval (minutes, at rest), what it does as it spreads (V_ACHE an M1
-** to each place it reaches, the adder's; V_NUMB each place made useless, its chest or belly reached its breath
-** stopped, the lindworm's) and whether its bite bleeds (V_BLEED: the adder's B1 bleeder) */
-
-#define V_ACHE          0x01
-#define V_NUMB          0x02
-#define V_BLEED         0x04
-static const struct vkind {
-    char            key[8];
-    unsigned char   hr, mins, how;
-} venoms[] = {
-    { "adder", 3, 60, V_ACHE | V_BLEED },       /* (Snakes 2-3, p88: the heath adder's) */
-    { "basilsk", 2, 10, 0 },                    /* (Dragons 13, p36) */
-    { "lindwrm", 3, 10, V_NUMB },               /* (Dragons 14, p37) */
-};
-#define NVENOMS         (sizeof venoms / sizeof venoms[0])
-
-struct venom pv;                                /* (The character's: dq0harn.h's) */
-
-/* The places a venom spreads to, the next nearer the heart, a limb's side kept (the trunk's up to the skull, there
-** at the last) */
-static const unsigned char toward[HARN_NLOCATIONS] = {
-    HARN_SKULL, HARN_SKULL, HARN_FACE, HARN_THORAX, HARN_SHOULDER, HARN_UPPERARM, HARN_ELBOW, HARN_FOREARM,
-    HARN_NECK, HARN_THORAX, HARN_ABDOMEN, HARN_GROIN, HARN_HIP, HARN_THIGH, HARN_KNEE, HARN_CALF
-};
-
-static char lw[16];
-static const char* __fastcall__ place (unsigned char loc)
-{
-    strcpy (lw, harn_is_limb (loc) ? (loc & HARN_RIGHT ? "right " : "left ") : "");
-    strcat (lw, harn_location_name (loc));
-    return lw;
-}
-
-
-/* The venom spread to the next place (the character's): its ache, or the place numb (its breath stopped, the chest or
-** the belly: dead) */
-static void spread (void)
-{
-    const struct vkind* v = &venoms[pv.kind];
-    unsigned char l = pv.loc & 0x7F, w, k;
-
-    l = toward[l] | (harn_is_limb (toward[l]) ? pv.loc & HARN_RIGHT : 0);
-    if (l == pv.loc) {
-        return;                                 /* (At the skull: nowhere further) */
-    }
-    pv.loc = l;
-    nput (" It spreads to your ");
-    nput (place (l));
-    nput (".");
-    if ((v->how & V_NUMB) && (HARN_LOC (l) == HARN_THORAX || HARN_LOC (l) == HARN_ABDOMEN)) {
-        pc.state = HARN_DEAD;                   /* (Its breath stopped: the book's "likely dead of asphyxiation") */
-        nput (" You can't breathe.");
-        return;
-    }
-    if (v->how & (V_ACHE | V_NUMB)) {
-        k = pc.state;
-        w = wound (&pc, l, HARN_BLUNT, 1, BY_VENOM);   /* (Its M1: the book's for the adder; a numb place's too, its
-                                                **   levels the house's; no senselessness of it, the house's) */
-        pc.state = k;
-        if ((w & HARN_W_INJURED) && pc.ninj) {
-            pc.inj[pc.ninj - 1].il = 1;
-            pc.inj[pc.ninj - 1].sev = HARN_MINOR;
-            pc.inj[pc.ninj - 1].flags = v->how & V_NUMB && harn_is_limb (l) ? HARN_IF_LIMB : 0;
-            if (v->how & V_NUMB) {
-                nput (" It goes numb.");
-            }
-        }
-    }
-}
-
-/* The venom's roll (the Infection table, Physician 4: its rate times the Endurance), its course: the worse, spread (a
-** critical failure twice, the bestiary's option); the better; gone at H6 (its aches heal at H6, its numbness lifts),
-** dead at H0 */
-static void venom_roll (void)
-{
-    unsigned char r = harn_test ((int) pv.hr * harn_end (&pc)), k;
-    signed char hr = (signed char) pv.hr + (r == HARN_CF ? -2 : r == HARN_MF ? -1 : r == HARN_MS ? 1 : 2);
-
-    if (hr < (signed char) pv.hr) {
-        nput (r == HARN_CF ? " The venom burns fiercely." : " The venom burns.");
-        spread ();
-        if (r == HARN_CF && pc.state != HARN_DEAD) {
-            spread ();
-        }
-    }
-    if (pc.state == HARN_DEAD) {
-        return;
-    }
-    if (hr <= 0) {
-        pc.state = HARN_DEAD;
-        pv.hr = 0;
-        nput (" The venom reaches your heart.");
-        return;
-    }
-    if (hr >= 6) {
-        pv.hr = 0;
-        for (k = 0; k < pc.ninj; ++k) {
-            if (pc_by[k] == BY_VENOM) {
-                pc.inj[k].flags = HARN_IF_TREATED;
-                pc.inj[k].hr = 6;               /* (Its aches heal at H6, the book's; numbness gone with it) */
-            }
-        }
-        nput (" The venom's fire dies away: you've thrown it off.");
-        return;
-    }
-    pv.hr = hr;
-}
-
-/* A venomous creature's bite at the character (fight.c's strike: key its kind's, the bestiary's; at loc, its effective
-** impact): the venom in it, unless a minor bite's too weak to carry it (its rate a point more for each point of impact
-** under 5, over 5 none: the bestiary's option), and its first roll at once; 1 if it's told (news) */
-unsigned char __fastcall__ o_envenom (const char* key, unsigned char loc, int impact)
-{
-    unsigned char k, hr;
-
-    for (k = 0; k < NVENOMS && strcmp (venoms[k].key, key); ++k) {
-    }
-    if (k == NVENOMS || pc.state == HARN_DEAD) {
-        return 0;
-    }
-    hr = venoms[k].hr + (impact < 5 ? 5 - impact : 0);
-    if (hr > 5) {
-        return 0;
-    }
-    if ((venoms[k].how & V_BLEED) && pc.ninj) {
-        pc.inj[pc.ninj - 1].flags |= HARN_IF_BLEEDER;  /* (The adder's: its bite a B1 bleeder) */
-    }
-    if (pv.hr) {                                /* (Bitten again: the worse kept, its course as it was, the house's) */
-        if (hr < pv.hr) {
-            pv.hr = hr;
-            pv.kind = k;
-        }
-        return 0;
-    }
-    pv.hr = hr;
-    pv.kind = k;
-    pv.left = 0;
-    pv.loc = loc;
-    out_t = 0;
-    nput (" The bite burns: there's venom in it.");
-    vdice5 ();
-    venom_roll ();
-    vdice5 ();
-    return 1;
-}
-
-/* The venom's course for m minutes at rest's (RS_TIME's: the body's time, its rolls at its interval) */
-void __fastcall__ o_venom_time (unsigned m)
-{
-    const struct vkind* v = &venoms[pv.kind];
-
-    m += pv.left;
-    while (m >= v->mins && pv.hr && pc.state != HARN_DEAD) {
-        m -= v->mins;
-        venom_roll ();
-    }
-    pv.left = m;
-}
-
-/* The save's line of the body (the character's file's "body": its venom, its rest toward its healing in minutes,
-** "body 3 14 0 25 1200"), into l (rd 0); or read back from l (rd 1: after "body ") */
-void __fastcall__ o_body_line (char* l, unsigned char rd)
-{
-    char b[8];
-    unsigned v[5];
-    unsigned char k;
-
-    if (!rd) {
-        strcpy (l, "body");
-        for (k = 0; k < 5; ++k) {
-            strcat (l, " ");
-            strcat (l, utoa (k == 0 ? pv.hr : k == 1 ? pv.loc : k == 2 ? pv.kind : k == 3 ? pv.left : rest_m, b, 10));
-        }
-        return;
-    }
-    memset (v, 0, sizeof v);
-    for (k = 0; l && k < 5; ++k) {
-        v[k] = atoi (l);
-        if ((l = strchr (l, ' ')) != 0) {
-            ++l;
-        }
-    }
-    pv.hr = v[0];
-    pv.loc = v[1];
-    pv.kind = v[2] < NVENOMS ? v[2] : 0;
-    pv.left = v[3];
-    rest_m = v[4];
-}
-
-/* The status's (sheet.c's o_state's): the venom in it, the blood it's lost, a wound treated (HOUSE.md's wounds over
-** time) */
-void o_body_state (void)
-{
-    unsigned char k, n = 0;
-
-    for (k = 0; k < pc.ninj; ++k) {
-        n += (pc.inj[k].flags & HARN_IF_TREATED) != 0;
-    }
-    if (n) {
-        put (n == pc.ninj ? "; all tended" : "; some tended");
-    }
-    if (pv.hr) {
-        put ("; poisoned, the venom in your ");
-        put (place (pv.loc));
-    }
-    if (pc.bl) {
-        put (2 * pc.bl > harn_end (&pc) ? "; faint from the loss of blood" : "; weak from the loss of blood");
-    }
-}
-
-#pragma code-name (pop)
-#pragma rodata-name (pop)

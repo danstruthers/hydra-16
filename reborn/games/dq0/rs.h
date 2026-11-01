@@ -268,6 +268,26 @@ enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREA
 ** tenths the actor's out for (knocked senseless), result 1 a fall stopped (a hold grabbed); its words in the text,
 ** a line (and RS_DESCRIBE b 2's: the last harm's) */
 enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_STRUCK };
+
+/* ---- Afflictions (2026-10-31: HOUSE.md's poison, bad air and disease, every ruleset's to keep): what the world exposes
+** the character to (RS_TIME's x[18], its dose x[19]), the ruleset's to judge (resisted, caught, its course, its cure):
+** a poisoned dart's or needle's (a trap's), a contact poison's (a lock's, a chest's), spoiled food's, foul water's (a
+** still pool drunk from: the flux).  A creature's bite that carries venom or disease the ruleset's own (its bestiary) */
+enum { AK_NONE, AK_DART, AK_CONTACT, AK_FOOD, AK_FLUX, NAK };
+/* The air (the world's, as it moves: the hub's pc_air, RS_TIME's x[20]): its kind times 16, and its strength (1 a little
+** ... 3 much: the draught's thinned it): blackdamp (stale air: too little to breathe, choke-damp), whitedamp (the
+** smoke of fire and of a blast: poisonous, giving no warning), firedamp (marsh gas, in the coal and shale beds: it burns,
+** a pocket bursting into flame at a naked one) */
+enum { AQ_GOOD, AQ_BLACK, AQ_WHITE, AQ_FIRE };
+#define AQ_KIND(q)      ((q) >> 4)
+#define AQ_STR(q)       ((q) & 3)
+#define FLM_LIT         0x01                    /* (RS_TIME's x[21]: a naked flame lit, carried (a torch, a candle), */
+#define FLM_LAMP        0x02                    /*   a lantern lit, */
+#define FLM_NEW         0x80                    /*   the air changed as it came there (its words told: a flame's way in
+                                                **   it, the breath's), */
+#define FLM_OUT         0x20                    /*   its flames put out by the air (blackdamp's: the world's), */
+#define FLM_BURST       0x40                    /*   the air burst into flame at its own (firedamp's: the world's harm
+                                                **   after) */
 enum { AS_BLUNT, AS_EDGE, AS_POINT, AS_FIRE, AS_BEST };     /* (items.h's DM_* in the same order) */
 enum { Z_MID, Z_HIGH, Z_LOW };
 enum { GR_FLOOR, GR_DEEP_WATER, GR_SHALLOW_WATER, GR_SOFT, GR_HARD, GR_ROCKY };    /* Earth; water; mud; paving;
@@ -347,8 +367,12 @@ enum {
                                                 **   b its health, grade 2 news of it (its words RS_DESCRIBE b 4's) | 4
                                                 **   hurt anew (a hard stop: a venom's ache), w2 the tenths it's
                                                 **   senseless (0), x[4..7] the clock when it's next to be asked if
-                                                **   nothing bleeds (a long's: the ruleset's next mark) */
-    RS_EXERT,                                   /* Time passed (w1 tenths) moving at a pace (a: GA_*), at strenuous
+                                                **   nothing bleeds (a long's: the ruleset's next mark); the
+                                                **   afflictions' (2026-10-31: below, AK_*): x[18] one the character's
+                                                **   exposed to now (AK_*, 0 none), x[19] its dose (1 slight ... 3
+                                                **   strong), x[20] the air it breathes (AQ_*: its kind times 16, its
+                                                **   strength), x[21] its flame (FLM_* below) */
+    RS_EXERT,                                  /* Time passed (w1 tenths) moving at a pace (a: GA_*), at strenuous
                                                 **   work (GA_WORK), or standing still (GA_REST): fatigue gained, or
                                                 **   rested off (its summary anew; result 1, a level more) */
     RS_REST,                                    /* Hours resting: healing, advancement -> effects, words */

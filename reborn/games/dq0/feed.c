@@ -23,7 +23,7 @@ static void __fastcall__ feed_do (unsigned char eat)
 {
     struct req* r;
     unsigned w;
-    unsigned char m = 0, p = 0, n;
+    unsigned char m = 0, p = 0, n, f = 0;
 
     hub_map (0);
     w = eat ? HUB->pc_hunger : HUB->pc_thirst;
@@ -46,6 +46,9 @@ static void __fastcall__ feed_do (unsigned char eat)
         n = (unsigned char) ((w + 359) / 360);
         if (strcmp (cmd.obj.word, "waterskin") && (HUB->pc_wet || othings (IO_FIND, "well", "", 0) == IR_OK)) {
             p = n;
+            hub_map (0);
+            f = (unsigned char) (HUB->pc_wet - 1) < 0x7F ? 0x80 : 0;     /* (Still water where it stands: foul,
+                                                **   the referee's flux, 2026-10-31) */
             msg ("You drink your fill.");
         } else {
             while (p < n && othings (IO_USE, "water", "", 0) == IR_OK) {
@@ -63,7 +66,7 @@ static void __fastcall__ feed_do (unsigned char eat)
     r->w1 = r->w2 = 0;
     r->x[0] = r->x[2] = 0;
     r->x[14] = m;
-    r->x[15] = p;
+    r->x[15] = p | f;
     ask_b (RS_TIME, 0, 0)->state = REQ_FREE;
     intend2 (I_WAIT, w, 1);
 }

@@ -163,7 +163,9 @@ enum { PM_WOOD, PM_IRONBOUND, PM_IRON, PM_STONE };
                                                 **   the world's to read, nothing in the chunk) */
 #define ROOM_LIT        0xF9                    /* (And a room's light, its sconce's, on its square: tile R_LIT or 0,
                                                 **   the room it's in its own light or not) */
-#define CH_TILE(l)      ((l) < ROOM_LIT || (l) == 0xFF)    /* (A square's record: its kind, its floor, its link) */
+#define AIR_STATE       0xF8                    /* (And a chunk's air, its pocket's, on its middle square: tile its air
+                                                **   now, AQ_*, 0 burnt off; elev its aat, 2026-10-31) */
+#define CH_TILE(l)      ((l) < AIR_STATE || (l) == 0xFF)   /* (A square's record: its kind, its floor, its link) */
 /* A window (T_WINDOW, PK_WINDOW) and an arrow slit (T_WINDOW, PK_SLIT, always open) are seen through (the senses'),
 ** but a window's closed shutters; a portcullis (T_DOOR, PK_PORTCULLIS) is seen through, up or down.  A window's glass
 ** and bars are items of their own (a pane, bars: items.h's IW_PORTAL, on its square), as a door's bar is (on the
@@ -242,6 +244,13 @@ struct chunk {
     signed char     wlev[NROOMS + 1];
     unsigned char   wruns;
     unsigned char   wany;                       /* (Any of its squares under water: 1) */
+    /* Its air (2026-10-31: DUNGEON.md's bad air), the maker's from the chunk's place (caves.c's air_pocket), the change
+    ** records' after (AIR_STATE: a pocket burnt off, its afterdamp): a pocket of bad air in one of its rooms, round
+    ** its middle */
+    unsigned char   air;                        /* (rs.h's AQ_*: its kind times 16, its strength; 0 none) */
+    unsigned char   ax, ay, ar;                 /* (Its middle, the chunk's square, and its reach, squares) */
+    unsigned char   aat;                        /* (Whitedamp's: the clock's high word, its low 7 bits, as it was left:
+                                                **   an explosion's afterdamp clears four of them on) */
 };
 #define WL_NONE         (-128)
 #define WET_BIT(c, x, y)    ((c)->wet[y][(x) >> 3] & (1 << ((x) & 7)))     /* (Chunk c's square x, y under water) */
@@ -435,6 +444,7 @@ struct edges {
                                                 **   dq0 -W's, the maker's wet_chunk passing it over) */
     unsigned char   poor;                       /* The rock poor about it (shale at its middle: rock.h's rock_bed,
                                                 **   slice 4.10's, the more fallen in) */
+    int             depth;                      /* (Its feet below the way in at its north-west corner: the air's) */
 };
 void __fastcall__ grow_built (struct chunk* c, const struct edges* e, unsigned long seed);
 

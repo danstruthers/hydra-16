@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     33                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     34                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -63,7 +63,8 @@
                                                 **   pc_auto, WS_AUTO; a stray's FW_STRAY; 31: an ally's errands and gifts,
                                                 **   the sway's item, ix, iy and actor, SW_GIVE, I_ROB's a (FE_*),
                                                 **   TE_FETCHED; 32: ui_giving; 33, hunger and thirst,
-                                                **   the water, pc_hunger ... pc_swat, WB_WATER ... WB_DOUSED) */
+                                                **   the water, pc_hunger ... pc_swat, WB_WATER ... WB_DOUSED; 34, the air and
+                                                **   the afflictions, pc_air ... pc_dose) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -1281,6 +1282,13 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pc_swim;                    /* Swimming: its squares a minute (0: not swimming) */
     unsigned char   pc_under, pc_breath;        /* Seconds under water, and the most it can hold its breath */
     unsigned        pc_swat;                    /* When its swimming's next tested (tenths, sixteen bits) */
+    /* The air where the character stands and what it's exposed to (2026-10-31: HOUSE.md's bad air, poison and
+    ** disease), the world's, told the referee with the bodies' time (RS_TIME's x[18..21]: a minute at a time while the
+    ** air's bad), the exposure and the flame's news once */
+    unsigned char   pc_air;                     /* The air (rs.h's AQ_*: its kind times 16, its strength; 0 good) */
+    unsigned char   pc_flm;                     /* Its flame's news for the next ask (rs.h's FLM_*), */
+    unsigned char   pc_aff;                     /*   and what it's been exposed to (rs.h's AK_*; 0 none), */
+    unsigned char   pc_dose;                    /*   its dose */
 };
 #define WANT_HUNGER(w)  ((w) & 0x0F)            /* (pc_want's hunger level, and its thirst's: 0 none, 1 hungry or */
 #define WANT_THIRST(w)  ((w) >> 4)              /*   thirsty, 2 very, 3 starving or parched, 4 dying of it; */
@@ -1542,6 +1550,10 @@ struct wsave {
 **   own hub.pc_under world
 **   own hub.pc_breath world
 **   own hub.pc_swat world
+**   own hub.pc_air world                                       (The air, the afflictions: 2026-10-31)
+**   own hub.pc_flm world
+**   own hub.pc_aff world
+**   own hub.pc_dose world
 **   own banks(1,PLAN_BANKS) maker                              (The plans: grown from the seed)
 **   own banks(CACHE_BANK(0),CACHE_BANKS) none                  (The chunks' cache: its room past three chunks)
 **   own chunk maker                                            (A chunk: made from the seed)

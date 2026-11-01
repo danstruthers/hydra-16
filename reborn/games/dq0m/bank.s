@@ -153,6 +153,7 @@ ovl_out:
             OVFN        crossings, 2
             OVFN        grow_caves, 3
             OVFN        wet_chunk, 6        ; (The water: slice 4.9's, caves.c's in overlay 6, 3's room)
+            OVFN        air_pocket, 3       ; (The air: 2026-10-31)
             OVFN        water_plan, 5
             OVFN        stock, 7
             OVFN        plan_stratum, 4

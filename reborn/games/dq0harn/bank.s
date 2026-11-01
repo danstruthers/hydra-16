@@ -14,7 +14,7 @@
             .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 7                     ; dq0harn.cfg's overlays (the 4th and 5th the swapped parts' images)
+OVMAX       = 8                     ; dq0harn.cfg's overlays (the 4th and 5th the swapped parts' images; the 8th afflict.c's)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
@@ -178,10 +178,10 @@ ovl_out:
             OVFN        bearing_of, 5
             OVFN        beast_flags, 2
             OVFN        body_req, 6
-            OVFN        envenom, 7
-            OVFN        body_state, 7
-            OVFN        venom_time, 7
-            OVFN        body_line, 7
+            OVFN        envenom, 8          ; (The afflictions, 2026-10-31: afflict.c)
+            OVFN        body_state, 8
+            OVFN        aff_time, 8
+            OVFN        body_line, 8
             OVFN        shot, 7             ; (A missile's attack, slice 4.7's: missile.c, heal.c's overlay)
             OVFN        want, 7             ; (Hunger and thirst, slice 4.9's: want.c)
             OVFN        tire, 7             ; (A creature's fatigue, 2026-10-31: tire.c)

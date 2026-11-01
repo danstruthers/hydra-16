@@ -125,7 +125,7 @@ go:
             SWPART      34, 14              ; The rooms' lights by their sconces (wkept.c)
             SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
-            SWPART      37, 4               ; The rest of the UI's intents carried out (dq0w.c's intent_more)
+            SWPART      37, 13              ; The rest of the UI's intents carried out (dq0w.c's intent_more)
             SWPART      38, 16              ; A change record kept and made (store.c's store_put, change)
             SWPART      39, 12              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
@@ -165,7 +165,7 @@ go:
             SWPART      70, 21              ; Wounds over time: the bodies' time told, a thing used up (wtend.c)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
-            SWPART      73, 3               ; The water: wading, swimming (dq0w.c's: slice 4.9's)
+            SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
             SWPART      74, 14              ; A waterskin filled (wwater.c: slice 4.9's)
             SWPART      75, 16              ; The water's depth where the character stands (wwater.c)
 

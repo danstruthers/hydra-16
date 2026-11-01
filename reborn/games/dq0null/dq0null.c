@@ -87,6 +87,50 @@ static void __fastcall__ want_say (const char* s)
 #define WANT_SAY(s)     (want_say (s), r->grade = 2)
 #include "../dq0/rswant.h"                 /* (Hunger and thirst, every ruleset's: slice 4.9's) */
 
+#define AIR_SAY(s)      (want_say (s))
+#define AIR_LEVELS(n)
+#include "../dq0/rsair.h"                   /* (The air it breathes, every ruleset's: 2026-10-31) */
+
+/* ---- Its afflictions, the simple way (2026-10-31: HOUSE.md's poison and disease, the null ruleset's): a poison taken
+** sickens it a while (a dart's or a smear's half an hour a point of its dose, spoiled food's two hours), a disease
+** caught on a flat test (the flux) shows a day on and lasts three; neither kills; told as they come and go */
+static unsigned aff_m, sick_m;                  /* (A poison's minutes left; a disease's, its last three days the fever's) */
+
+static signed char __fastcall__ flat (signed char steps);
+
+static void __fastcall__ aff_null (struct req* r)
+{
+    unsigned m = r->w1;
+    unsigned char k = r->x[18];
+
+    if (k == AK_FLUX) {
+        if (!sick_m && !G_OK (flat (r->x[19] > 1 ? -4 : 0))) {
+            sick_m = 5760;                      /* (Four days: a day hidden, three of fever) */
+        }
+    } else if (k && k < NAK) {
+        if (!aff_m) {
+            want_say (k == AK_FOOD ? " Your belly cramps: the food was bad." : " You feel sick: there was poison in it.");
+        }
+        aff_m = k == AK_FOOD ? 120 : 30 * (r->x[19] ? r->x[19] : 1);
+    } else if (aff_m) {
+        if (m >= aff_m) {
+            aff_m = 0;
+            want_say (" The sickness passes.");
+        } else {
+            aff_m -= m;
+        }
+    }
+    if (sick_m && m) {
+        k = sick_m > 4320;
+        sick_m = m >= sick_m ? 0 : sick_m - m;
+        if (k && sick_m <= 4320) {
+            want_say (" Your belly gripes and cramps: you have the flux.");
+        } else if (!sick_m) {
+            want_say (" The sickness leaves you.");
+        }
+    }
+}
+
 /* ---- The flat odds: a d100 at most BASE and 5 a step (5 to 95) a success, critical in the fifth of its band nearest
 ** the end (the low rolls of a success, the high of a failure) */
 
@@ -769,6 +813,21 @@ static void __fastcall__ answer (struct req* r)
             r->result = 1;
         }
         memcpy (&HUB->pc_hunger, r->x + WANT_X, 6);     /* (Asked an hour on, nothing bleeding, unhurt) */
+        r->w1 = r->x[16] | r->x[17] << 8;
+        g = strlen (news);
+        aff_null (r);                           /* (Its afflictions, the simple way; the air it breathes, every
+                                                **   ruleset's: rsair.h's, dead of it) */
+        if (r->x[20] || r->x[21] || air_lv || air_co) {
+            k = air_of (r->x[20], r->x[21], r->w1);
+            if (k & 1) {
+                wounds = TOUGH;
+                r->result = 1;
+                status ();
+            }
+            r->grade |= k & 4;
+        }
+        r->grade |= strlen (news) != (unsigned char) g ? 2 : 0;
+        r->w1 = 0;
         *tp = 0;
         break;
     case RS_TREAT:                              /* (First aid, the simple way: five minutes a wound, the character's

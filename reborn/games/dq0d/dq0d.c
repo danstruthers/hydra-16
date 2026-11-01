@@ -866,10 +866,25 @@ static unsigned char __fastcall__ deep_at (unsigned char sn, unsigned x, unsigne
     return at (sn, x, y) && WET_BIT (C, cx_, cy_) ? depth () : 0;     /* (Dry, at once: the water's depth part 8's) */
 }
 
-/* Whether one of water ways w may go onto square x, y of stratum sn (no deeper than it wades, or it swims, flies) */
+/* Whether square x, y of stratum sn is in its chunk's pocket of bad air (2026-10-31: HOUSE.md's bad air, the
+** maker's air_pocket: the denizens know where the air's bad, and keep out of it) */
+static unsigned char __fastcall__ foul_at (unsigned char sn, unsigned x, unsigned y)
+{
+    signed char dx, dy;
+
+    if (!at (sn, x, y) || !C->air) {
+        return 0;
+    }
+    dx = cx_ - C->ax;
+    dy = cy_ - C->ay;
+    return dx * dx + dy * dy <= C->ar * C->ar;
+}
+
+/* Whether one of water ways w may go onto square x, y of stratum sn (no deeper than it wades, or it swims, flies; not
+** into bad air) */
 static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsigned x, unsigned y)
 {
-    return (w & (WA_SWIMS | WA_FLIES)) || deep_at (sn, x, y) <= (w & WA_DEEP);
+    return ((w & (WA_SWIMS | WA_FLIES)) || deep_at (sn, x, y) <= (w & WA_DEEP)) && !foul_at (sn, x, y);
 }
 static unsigned char turns;                     /* The turns pace */
 static unsigned char nnear;                     /* The denizens out near the character but not actors (more than
