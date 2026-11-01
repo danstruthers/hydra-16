@@ -132,7 +132,7 @@ unsigned char s_puzzle (void)
         hub_map (0);
         if (k == TE_OPEN) {
             HUB->way_open = 1;                  /* (The way out opened: the mission's, E_LEFT as it goes up) */
-            burn_ask = 1;                       /* (The sky through it: the time it believes, part 76's) */
+            burn_ask |= TS_ASK;                 /* (The sky through it: the time it believes, part 76's) */
         }
     }
     hub_map (0);

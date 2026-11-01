@@ -582,8 +582,10 @@ What the plans bring later, by the slice or phase that brings it:
   world applying it the same way (opening and breaking doors, taking things, throwing, attacking).
 - **Daily life** (slice 4.5, built 2026-10-31: above): left, a patrol noticing a door left open (the denizens can't
   open or shut doors yet: Phase 3C's), the records' patrols finding bodies (only an actor's rounds do), routes between a faction's lairs and its gates (the way-finding the minds lack: their steps are
-  greedy), the character telling the hour (a sleep "until dawn"), a sleeper's defence (the book's Ignore against one
-  asleep), lying down to sleep (the denizens' positions but prone still to come).
+  greedy), a sleeper's defence (the book's Ignore against one
+  asleep), lying down to sleep (the denizens' positions but prone still to come). (The character telling the hour, "sleep until
+  dawn": built 2026-10-31, DUNGEON.md's the time of day believed; the denizens' routines learnt as its clues still to
+  come.)
 - **Body position and moving quietly** (slice 4.6, built for the character and a hunter's stalk, 2026-10-29): every
   actor's position and gait (the denizens' but prone still to come), their noises by the layer to one another (an
   actor's own still heard as the crow flies).

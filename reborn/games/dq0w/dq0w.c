@@ -1901,7 +1901,7 @@ unsigned char __fastcall__ s_bearings (unsigned w)
                                                 **   a room crossed in the dark as a bend; the dark four the harder) */
     }
     if (sn != bsn) {
-        burn_ask = 1;                           /* (Another stratum: the time it believes looked at, the sky, part 76's) */
+        burn_ask |= TS_ASK;                     /* (Another stratum: the time it believes looked at, the sky, part 76's) */
     }
     bsn = sn;
     broom = r;
@@ -1920,7 +1920,7 @@ void __fastcall__ s_bearings_off (unsigned feet)
 {
     static unsigned char k;
 
-    burn_ask = 1;                               /* (The time it believes looked at: a black-out, part 76's) */
+    burn_ask |= TS_ASK;                         /* (The time it believes looked at: a black-out, part 76's) */
     hub_map (0);
     if (!feet) {
         if (W_SLOT.w2) {
@@ -4998,7 +4998,7 @@ void __fastcall__ s_intent_few (struct msg* m)
             break;
         }
         pc_waited = 1;                          /* (Its eyes looked to as it ends: the senses') */
-        burn_ask = 1;                           /* (And the time it believes, as it begins and ends: part 76's) */
+        burn_ask |= TS_ASK;                     /* (And the time it believes, as it begins and ends: part 76's) */
         if (!m->w2 && t > HUB->round) {
             task_for (m->a & WA_SLEEP ? LT_SLEEP : LT_WAIT, t);  /* (A wait longer than a round, or a sleep: a long
                                                 **   task, in minutes past 100 of them) */
@@ -5517,7 +5517,7 @@ int main (int argc, char* argv[])
         if ((was_busy || (fwant & 1)) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             if (pc_waited) {
                 pc_waited = 0;
-                burn_ask = 1;                   /* (Its time believed: woken, part 76's) */
+                burn_ask |= TS_ASK;             /* (Its time believed: woken, part 76's) */
                 ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */
             }
             took = take_n ? take_up () : gath ? gath_op (GO_ON, 0) : pfoe ? close_on () : srch ? searched () : lwork ?
@@ -6053,6 +6053,11 @@ void s_burns_now (void)
 
     hub_map (0);
     burn_ask = 0;
+    if (asked == TS_ASK) {
+        tsense ();                              /* (The time it believes alone: no light's burning looked at, its
+                                                **   next look as it was, so nothing else moves for it) */
+        return;
+    }
     if (!burn_on) {
         burn_on = 1;                            /* (The first: a minute from now, the game begun or carried on) */
         burn_at = HUB->now;
