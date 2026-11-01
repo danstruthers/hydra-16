@@ -142,6 +142,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
         e.poor = 0xFF;                          /* (dq0 -U's, the tests': no rubble) */
     }
     wet_chunk (c, &e);                          /* (Its water: slice 4.9's; then age's rubble, slice 4.10's) */
+    air_pocket (c, &e);                         /* (Its air: 2026-10-31) */
     u = 1;
     if (!changes_over (c, x, y) && e.x1 != 0xFF) {
         stock (c, x, y);                        /* (Its things listed, the first time it's made: the world puts them

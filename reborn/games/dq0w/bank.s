@@ -25,7 +25,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
-OVBANKS     = 22                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
+OVBANKS     = 23                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
             .bss
 _ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
@@ -108,7 +108,7 @@ go:
             SWPART      18, 7               ; The change records' files, the save's stamps (wfile.c)
             SWPART      19, 8               ; The game's files begun, the item store kept (wfile.c); a hole dug kept
             SWPART      20, 7               ; The things' files: a chunk's put out, read in (ipage.c)
-            SWPART      21, 1               ; The ways across a room worked out (dq0w.c's ways; overlay 5's till 2026-10-28, 6's till 2026-10-31)
+            SWPART      21, 6               ; The ways across a room worked out (dq0w.c's ways; overlay 5's till 2026-10-28)
             SWPART      22, 17              ; The strata's records out of the hub, back (sfile.c)
             SWPART      23, 11              ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 12              ; Engagement, a blow's close-in, fighting on (dq0w.c's)
@@ -125,7 +125,7 @@ go:
             SWPART      34, 14              ; The rooms' lights by their sconces (wkept.c)
             SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
-            SWPART      37, 13              ; The rest of the UI's intents carried out (dq0w.c's intent_more; overlay 4's till 2026-10-31)
+            SWPART      37, 13              ; The rest of the UI's intents carried out (dq0w.c's intent_more)
             SWPART      38, 16              ; A change record kept and made (store.c's store_put, change)
             SWPART      39, 12              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
@@ -165,10 +165,10 @@ go:
             SWPART      70, 21              ; Wounds over time: the bodies' time told, a thing used up (wtend.c)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
-            SWPART      73, 3               ; The water: wading, swimming (dq0w.c's: slice 4.9's)
+            SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
             SWPART      74, 14              ; A waterskin filled (wwater.c: slice 4.9's)
-            SWPART      75, 16              ; The water's depth where the character stands (wwater.c)
-            SWPART      76, 22              ; Up to a place in the room (dq0w.c's go_to: part 9's till 2026-10-31,
+            SWPART      75, 4               ; The water's depth where the character stands (wwater.c)
+            SWPART      76, 23              ; Up to a place in the room (dq0w.c's go_to: part 9's till 2026-10-31,
                                             ;   its room the walk's)
 
             SWFN        work, 48
@@ -327,7 +327,7 @@ go:
             SWFN        engaged, 25
             SWFN        fumbled, 25
             SWFN        den_first, 14
-            SWFN        ways_near, 21
+            SWFN        ways_near, 76
             SWFN        it_flush, 17
             SWFN        st_out, 22
             SWFN        st_in, 22

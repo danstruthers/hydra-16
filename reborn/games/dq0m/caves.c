@@ -16,6 +16,9 @@
 
 #include <string.h>
 #include <dice.h>
+#include <hydra.h>
+#include "../dq0/hub.h"
+#include "../dq0/rs.h"
 #include "../dq0w/world.h"
 #include "grow.h"
 
@@ -247,57 +250,59 @@ static void __fastcall__ hollow (const struct room* p)
     }
 }
 
-static const signed char sb[4] = { -CW, 1, CW, -1 };    /* (The four ways, as offsets in the chunk) */
+#pragma code-name (push, "OV1CODE")            /* (Overlay 1's: 3's room, the air's) */
+#pragma rodata-name (push, "OV1RODATA")
+static const int o8[8] = { -CW, 1 - CW, 1, CW + 1, CW, CW - 1, -1, -CW - 1 };    /* (The eight ways, as offsets in
+                                                **   the chunk: N, NE ... NW) */
 /* A tunnel's zigzag made the diagonal it is (the user's, 2026-10-31: tunnels off the compass): a tunnel's square in no
 ** chamber, its two ways on a quarter apart (the rest beside it rock, and the two squares across its corners), the
 ** zigzag going on past it (a square across its other corners a tunnel's, or cut), the rise between them a step's: the
 ** corner the diagonal cuts (T_CUT), the squares either side walked between (chunk.c's slant).  A bend alone stays a
 ** bend.  No dice: the layout as it was grown */
-static void slants (void)
+#pragma static-locals (push, on)
+void o_slants (void)
 {
-    unsigned char x, y, d, a, b, m, t;
-    unsigned char* q;
-    signed char* z;
-    struct room* p;
+    static unsigned char x, y, k, a, m, t, n[8];
+    static unsigned i;
+    static struct room* p;
 
-    for (y = 1; y < CW - 1; ++y) {
-        for (x = 1; x < CW - 1; ++x) {
-            if (TILE (*(q = &L->tile[y][x])) != T_CORR) {
-                continue;
-            }
-            for (d = m = 0; d < 4; ++d) {
-                if ((t = TILE (q[sb[d]])) == T_CORR) {
-                    m |= 1 << d;
+    for (i = CW + 1; i < CW * (CW - 1) - 1; ++i) {
+        x = i & (CW - 1);
+        y = i >> CW_BITS;
+        if (!x || x == CW - 1 || TILE (L->tile[0][i]) != T_CORR) {
+            continue;
+        }
+        for (k = m = 0; k < 8; ++k) {
+            n[k] = t = TILE (L->tile[0][i + o8[k]]);
+            if (!(k & 1)) {
+                if (t == T_CORR) {
+                    m |= 1 << (k >> 1);
                 } else if (t != T_ROCK) {
                     m = 0xF0;
                 }
             }
-            if (m != 3 && m != 6 && m != 12 && m != 9) {
-                continue;                       /* (Not two ways on a quarter apart, the rest rock) */
+        }
+        a = m == 3 ? 0 : m == 6 ? 2 : m == 12 ? 4 : m == 9 ? 6 : 0xFF;   /* (Its two ways on a quarter apart: the
+                                                **   first's heading, the second's two on) */
+        if (a == 0xFF || n[a + 1] != T_ROCK || n[(a + 5) & 7] != T_ROCK ||
+            ((t = n[(a + 3) & 7]) != T_CORR && t != T_CUT && (t = n[(a + 7) & 7]) != T_CORR && t != T_CUT) ||
+            (unsigned char) (L->elev[0][i + o8[a]] - L->elev[0][i + o8[(a + 2) & 7]] + STEP_MAX) > 2 * STEP_MAX) {
+            continue;
+        }
+        for (k = L->nrooms, p = L->room; k; --k, ++p) {
+            if (x + 1 >= p->x && x <= p->x + p->w && y + 1 >= p->y && y <= p->y + p->h) {
+                break;
             }
-            a = m == 9 ? 3 : m == 12 ? 2 : m == 6 ? 1 : 0;
-            b = (a + 1) & 3;
-            if (TILE (q[sb[a] + sb[b]]) != T_ROCK || TILE (q[-sb[a] - sb[b]]) != T_ROCK ||
-                ((t = TILE (q[sb[a] - sb[b]])) != T_CORR && t != T_CUT && (t = TILE (q[sb[b] - sb[a]])) != T_CORR &&
-                t != T_CUT)) {
-                continue;
-            }
-            z = &L->elev[y][x];
-            t = z[sb[a]] - z[sb[b]] + STEP_MAX;
-            if (t > 2 * STEP_MAX) {
-                continue;
-            }
-            for (d = L->nrooms, p = L->room; d; --d, ++p) {
-                if (x + 1 >= p->x && x <= p->x + p->w && y + 1 >= p->y && y <= p->y + p->h) {
-                    break;
-                }
-            }
-            if (!d) {
-                *q = T_CUT;
-            }
+        }
+        if (!k) {
+            L->tile[0][i] = T_CUT;
         }
     }
 }
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+void slants (void);                             /* (Overlay 1's, its stub) */
 
 void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned long seed)
 {
@@ -394,6 +399,62 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
 ** one in three (a foot), but a chamber with a way between strata in it, kept dry (the house's: the stairs' landing
 ** never under water); a stream's region's passages running with it, a foot deep.  A square of a room's floor under
 ** its surface wet (the bits), a passage's square of a stream's */
+
+/* Its air (2026-10-31: DUNGEON.md's bad air, HOUSE.md's for review: overlay 3's, make_chunk's after its water), from the
+** chunk's place alone (no dice of the maker's: the layouts as they were): a pocket in one of its rooms, round its
+** middle, its reach the room's half and a square: firedamp where the rock's poor (shale at its middle: the coal
+** measures' gas) one chunk in four; blackdamp (stale air pooled where nothing stirs it) 100 feet down or more, one
+** chunk in eight, 200 feet one in four; strength 1, 2 from 200 feet, a step more one time in four; none where there's
+** a way between strata in the chunk (the air moves there).  A test's scene (the environment's dq0air, rc's, read
+** once: "0" no bad air; "KS" every chunk a pocket of kind K, rs.h's AQ_*, strength S, from end to end) */
+static unsigned char tair = 0xFF;               /* (The environment's: 0x80 | kind times 16 | strength; 0 none said) */
+
+void __fastcall__ o_air_pocket (struct chunk* c, const struct edges* e)
+{
+    static struct hy_regs r;
+    static char b[4];
+    unsigned h = (c->cx * 57 + c->cy * 23 + c->sn * 101) ^ 0x2C6B, s;
+    unsigned char k;
+    struct room* p;
+
+    if (tair == 0xFF) {
+        tair = 0;
+        r.a = 0xFF;
+        r.r[0] = (unsigned) "dq0air";
+        r.r[1] = (unsigned) b;
+        r.r[2] = 3;
+        if (!hy_call (HY_ENV_GET, &r)) {
+            tair = 0x80 | (b[0] & 3) << 4 | (b[1] & 3);
+        }
+    }
+    h ^= h >> 7;
+    h *= 0x2F1B;
+    h >>= 8;
+    if (!c->nrooms || tair == 0x80) {
+        return;
+    }
+    s = e->depth >= 200 ? 2 : 1;
+    if (tair) {
+        c->air = tair & 0x3F;                   /* (A test's: its first room) */
+        h = 0;
+    } else {
+        if (e->nland) {
+            return;
+        } else if (e->poor == 1 && !(h & 3)) {
+            k = AQ_FIRE;
+        } else if (e->depth >= 100 && (h >> 2 & 7) < s) {
+            k = AQ_BLACK;
+        } else {
+            return;
+        }
+        c->air = k << 4 | (s + !(h & 0x60));
+    }
+    p = &c->room[(unsigned char) h % c->nrooms];
+    c->ax = p->x + (p->w >> 1);
+    c->ay = p->y + (p->h >> 1);
+    c->ar = tair ? 100 : ((p->w > p->h ? p->w : p->h) >> 1) + 1;     /* (A test's: the whole chunk) */
+}
+
 #pragma code-name (push, "OV6CODE")           /* (Overlay 6's: 3 full) */
 #pragma rodata-name (push, "OV6RODATA")
 

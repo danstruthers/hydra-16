@@ -99,6 +99,11 @@ static void __fastcall__ change_put (struct chunk* k, unsigned char lx, unsigned
         }
         return;
     }
+    if (link == AIR_STATE) {                    /* (Its air's pocket: burnt off, its afterdamp, 2026-10-31) */
+        k->air = tile;
+        k->aat = elev;
+        return;
+    }
     if (link == TRAP_STATE) {                   /* (A trap's: tile it) */
         for (i = 0; i < k->ntraps; ++i) {
             if (k->trap[i].x == lx && k->trap[i].y == ly) {
