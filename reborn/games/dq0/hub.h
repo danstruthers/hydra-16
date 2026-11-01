@@ -1136,8 +1136,6 @@ struct hub {                                    /* Bank 0, at $8000 */
     char            dig_tool[4][8];             /* A dig's spells' tools, the referee's choices (their keys), in turn */
     unsigned char   dig_wear[4];                /*   and the wear each spell did (E_DIG's b, which: the world runs on */
                                                 /*   ahead of the UI's reading of its events, the turns pace) */
-    unsigned        dig_t[NACTORS];             /* Each actor's spell of digging begun then (the clock's low word: a
-                                                **   tunneller's, I_KIT's KT_DIG, slice 4.11's: the world's) */
     /* The UI's intents to the world */
     volatile unsigned char iq_head, iq_tail;    /* Written at head (the UI), read at tail (the world) */
     struct msg      iq[IQ_SIZE];
@@ -1357,6 +1355,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pc_flm;                     /* Its flame's news for the next ask (rs.h's FLM_*), */
     unsigned char   pc_aff;                     /*   and what it's been exposed to (rs.h's AK_*; 0 none), */
     unsigned char   pc_dose;                    /*   its dose */
+    unsigned        dig_t[NACTORS];             /* Each actor's spell of digging begun then (the clock's low word: a
+                                                **   tunneller's, I_KIT's KT_DIG, slice 4.11's: the world's; last, the
+                                                **   rest where they were) */
 };
 #define WANT_HUNGER(w)  ((w) & 0x0F)            /* (pc_want's hunger level, and its thirst's: 0 none, 1 hungry or */
 #define WANT_THIRST(w)  ((w) >> 4)              /*   thirsty, 2 very, 3 starving or parched, 4 dying of it; */

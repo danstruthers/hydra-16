@@ -2093,13 +2093,20 @@ unsigned char __fastcall__ s_dig_way (unsigned char k)
     bf = b0 = toward (a.x - refx, a.y - refy) + apart (a.x - refx, a.y - refy);   /* (Nearer by the squares across
                                                 **   and down, or as near so and nearer as the crow flies: a diagonal
                                                 **   round a shut door) */
+    for (j = 0; g && j < 4; ++j) {
+        if (toward (a.x + dir_x[j] - refx, a.y + dir_y[j] - refy) + apart (a.x + dir_x[j] - refx, a.y + dir_y[j] - refy) <
+            b0 && step_ok (a.sn, a.x, a.y, j)) {
+            return 0xFF;                        /* (A way nearer it could walk but for one on it: no dig, it waits) */
+        }
+    }
     for (j = 0; g && j < 8; ++j) {
         nx = a.x + dir_x[j];
         ny = a.y + dir_y[j];
         if ((f = toward (nx - refx, ny - refy) + apart (nx - refx, ny - refy)) >= (DH (j) == h ? b0 : bf) || apart (nx - ahx[k], ny - ahy[k]) >
             2 * K.range + 8 || !(p = at (a.sn, nx, ny)) ||
-            ((t = TILE (*p)) != T_WALL && t != T_ROCK && t != T_RUBBLE)) {
-            continue;                           /* (No nearer, too far from home, not a thing it digs) */
+            ((t = TILE (*p)) != T_WALL && t != T_ROCK && t != T_RUBBLE) || (t == T_WALL && g == DG_CLAWS)) {
+            continue;                           /* (No nearer, too far from home, not a thing it digs: claws alone
+                                                **   never a wall, masonry or stone, the house's) */
         }
         bf = f;
         best = j;
