@@ -2291,7 +2291,7 @@ function dq0Poke(m, pokes) {
 }
 
 // The creatures' bodies in the referee's bank (dq0harn's fb: tire.c's struct bbody, 8 bytes by the sheet's number, a
-// denizen's record's: 2026-10-31, every actor's tiring): { mem, at(n) }, fl at 0, wfl at 1, ex at 2, at (the clock)
+// denizen's record's: 2026-10-31, every actor's tiring): { mem, at(n) }, its levels at 0, wfl at 1, ex at 2, at (the clock)
 // at 4
 let dq0BodyFb = 0;
 function dq0Body(m) {
@@ -2299,8 +2299,8 @@ function dq0Body(m) {
   const fb = dq0BodyFb || (dq0BodyFb = parseInt(/^al ([0-9A-F]+) \._fb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][fb]) || new Uint8Array(0x2000);
   return { mem, at: n => 8 * n };
 }
-// At each line's Enter, each actor's body (m.bodies: { g, line, name, den, fl, wfl, ex, at }) after the pokes made then
-// (each { g: the game, 1 on, line, n: its nth time typed in it, name: the actor's, fl, ex, at: its body's set })
+// At each line's Enter, each actor's body (m.bodies: { g, line, name, den, lv: its levels, wfl, ex, at }) after the pokes made then
+// (each { g: the game, 1 on, line, n: its nth time typed in it, name: the actor's, lv: its levels, ex, at: its body's set })
 function dq0BodyPoke(m, pokes) {
   const a = m.acia, read = a.read;
   let typed = '', g = 0, seen = {};
@@ -2322,12 +2322,12 @@ function dq0BodyPoke(m, pokes) {
             const den = h[o + L.aName + 12], q = B.at(den), mem = B.mem;
             let poked = false;
             for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed] && p.name === n) {
-              if (p.fl !== undefined) mem[q] = p.fl;
+              if (p.lv !== undefined) mem[q] = p.lv;
               if (p.ex !== undefined) { mem[q + 2] = p.ex & 255; mem[q + 3] = p.ex >> 8; }
               if (p.at !== undefined) for (let i = 0; i < 4; i++) mem[q + 4 + i] = p.at >>> (8 * i) & 255;
               poked = true;
             }
-            m.bodies.push({ g, line: typed, name: n, den, fl: mem[q], wfl: mem[q + 1], ex: mem[q + 2] | mem[q + 3] << 8,
+            m.bodies.push({ g, line: typed, name: n, den, lv: mem[q], wfl: mem[q + 1], ex: mem[q + 2] | mem[q + 3] << 8,
               at: (mem[q + 4] | mem[q + 5] << 8 | mem[q + 6] << 16 | mem[q + 7] << 24) >>> 0, poked });
           }
         }
@@ -5975,7 +5975,7 @@ module.exports = {
         "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
         'd', 'wait', 'look', 'quit', 'echo $status']) },
       start(m) {
-        dq0BodyPoke(m, [{ g: 2, line: 'wait', n: 1, name: 'ghoul', fl: 12, ex: 5990, at: 0 }]);
+        dq0BodyPoke(m, [{ g: 2, line: 'wait', n: 1, name: 'ghoul', lv: 12, ex: 5990, at: 0 }]);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -5984,17 +5984,58 @@ module.exports = {
         // (Game 1: the ghoul's rounds charged: its body reckoned (at), its exertion the more after the fight)
         const b1 = gh(1), last = b1[b1.length - 1];
         if (!b1.length) f.push('game 1: no ghoul among the actors');
-        else if (!last.at || last.fl * 6000 + last.ex < 200) f.push('game 1: the ghoul\'s rounds not charged: ' + JSON.stringify(b1));
+        else if (!last.at || last.lv * 6000 + last.ex < 200) f.push('game 1: the ghoul\'s rounds not charged: ' + JSON.stringify(b1));
         const fights1 = T.filter(t => t.game === 0).reduce((n, t) => n + t.dens.filter(e => e.kind === 'E_FIGHT' && e.out !== 'FO_BLED').length, 0);
-        if (last && last.fl * 6000 + last.ex > 200 * fights1) f.push('game 1: the ghoul charged more than its rounds (' + fights1 + ' blows): ' + JSON.stringify(last));
+        if (last && last.lv * 6000 + last.ex > 200 * fights1) f.push('game 1: the ghoul charged more than its rounds (' + fights1 + ' blows): ' + JSON.stringify(last));
         // (Game 2: set a breath short of a level more, its next round tires it, and it breaks off)
         const p = bodies.find(b => b.g === 2 && b.poked);
         if (!p) f.push('game 2: the ghoul\'s body not set (not an actor as the wait was typed)');
         const flee = T.filter(t => t.game === 1).flatMap(t => t.dens).filter(e => e.kind === 'E_FIGHT' && (e.ff & 0x10));
         if (!flee.length) f.push('game 2: the tired ghoul didn\'t break off (no blow with FF_FLEES): ' + T.filter(t => t.game === 1).map(dq0Evs).join(' | ').slice(0, 1500));
         const b2 = gh(2), l2 = b2[b2.length - 1];
-        if (p && (!l2 || l2.fl < 13)) f.push('game 2: the ghoul not a level more tired: ' + JSON.stringify(b2));
+        if (p && (!l2 || l2.lv < 13)) f.push('game 2: the ghoul not a level more tired: ' + JSON.stringify(b2));
         this.notes = [JSON.stringify(bodies)];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0hungry', near: ['denizens'], what: "Dingus Quest Zero's denizens' hunger (2026-10-31, the brief's every actor's body: HOUSE.md's the denizens' bodies, for review): seed 3's giant rats round the way down (dq0 -T, dq0denizens' scene: wary vermin, hunters by smell), fed lately as the game begins, none hostile through a minute's search; then each rat made very hungry as the second search is typed (its want, the minds' aate: the clock's high word less 20, some 36 hours), and a very hungry hunter that senses the character hunts it: hostile (its attitude in the hub), coming at it",
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'search', 'search', 'quit', 'echo $status']) },
+      start(m) {   // (The rats made very hungry as the second search is typed: dq0d's aate, each actor's, by its label)
+        const a = m.acia, read = a.read;
+        let typed = '', n = 0;
+        m.hungered = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'search' && ++n === 2 && m.dq0) {
+                const h = m.dq0.bank(0), { L } = m.dq0.layout(), tk = h[12 + 2];
+                const ad = parseInt(/^al ([0-9A-F]+) \._aate$/m.exec(fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'))[1], 16);
+                const nowU = h[L.now + 2];
+                for (let k = 0; k < L.nactors; k++) {
+                  const o = L.actor + k * L.actorSize;
+                  let s = '';
+                  for (let i = 0; h[o + L.aName + i] && i < 12; i++) s += String.fromCharCode(h[o + L.aName + i]);
+                  if (s === 'giant rat') { m.taskRam[tk][ad + k] = nowU - 20 & 255; m.hungered.push(k); }
+                }
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], s1 = T.of('search'), s2 = T.of('search', s1.k + 1);
+        const rats = s => s && s.actors ? s.actors.filter(x => x.name === 'giant rat') : [];
+        if (!rats(s1.after).length) return ['no giant rats about the way down: ' + JSON.stringify(s1.after && s1.after.actors)];
+        if (rats(s1.after).some(x => x.attitude === 'AT_HOSTILE')) f.push('a rat hostile before it hungered: ' + JSON.stringify(rats(s1.after)));
+        if (!m.hungered.length) f.push('no rat made hungry');
+        if (!rats(s2.after).some(x => x.attitude === 'AT_HOSTILE')) f.push('no very hungry rat hunting the character (hostile): ' + JSON.stringify(rats(s2.after)));
         return f;
       },
       sdcard: true
