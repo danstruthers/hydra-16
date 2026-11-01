@@ -52,8 +52,9 @@ extern unsigned char smask;
 
 /* Squares: the low four bits a kind; T_SEEN: the character has seen it; T_VIS: it sees it now; T_HOLE: a shaft in
 ** the ceiling above; T_DRAWN: on the map it draws (the senses', as it sees it, mapping as it goes on paper: DUNGEON.md,
-** the map kept; the map its chunk's kept.map) */
-enum { T_ROCK, T_FLOOR, T_WALL, T_DOOR, T_CORR, T_STEPS, T_WINDOW, T_UP, T_DOWN, T_PIT };
+** the map kept; the map its chunk's kept.map).  T_RUBBLE: a passage's square fallen in (age's, slice 4.10's: the
+** maker's, a passage's, never by a room or a doorway), climbed over slowly, cleared by digging */
+enum { T_ROCK, T_FLOOR, T_WALL, T_DOOR, T_CORR, T_STEPS, T_WINDOW, T_UP, T_DOWN, T_PIT, T_RUBBLE };
 #define T_SEEN          0x80
 #define T_VIS           0x40
 #define T_MARK          0x40                    /* (A grower's, the same bit: a square reached) */
@@ -430,7 +431,10 @@ struct edges {
     unsigned char   x0, y0, x1, y1;             /* The squares in the stratum's bounds (the rest rock) */
     unsigned char   nland;                      /* Links in the chunk: their squares, and their strata.links */
     unsigned char   lx[4], ly[4], ln[4];
-    unsigned char   water;                      /* Its region's water (RW_*: the plan's, slice 4.9's) */
+    unsigned char   water;                      /* Its region's water (RW_*: the plan's, slice 4.9's; 0xFF none,
+                                                **   dq0 -W's, the maker's wet_chunk passing it over) */
+    unsigned char   poor;                       /* The rock poor about it (shale at its middle: rock.h's rock_bed,
+                                                **   slice 4.10's, the more fallen in) */
 };
 void __fastcall__ grow_built (struct chunk* c, const struct edges* e, unsigned long seed);
 

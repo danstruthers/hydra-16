@@ -180,8 +180,9 @@ struct trail {
     unsigned        age;                        /* (The world's: how long since, in its TQs, four minutes) */
 };
 #define TR_HEAVY        6                       /* (A scent's strength that hangs heavy, the words') */
-enum { TRC_FLOOR, TRC_TRACK, TRC_SMELL };      /* I_TRACE's how: the floor looked at (sight, no test), the Tracking
-                                                **   test, a smell (a notice test of smell) */
+enum { TRC_FLOOR, TRC_TRACK, TRC_SMELL, TRC_WALL };    /* I_TRACE's how: the floor looked at (sight, no test), the
+                                                **   Tracking test, a smell (a notice test of smell); the wall ahead
+                                                **   looked at (its rock, slice 4.10's: dq0w.c's part 1, wall_look) */
 enum { TRR_OK, TRR_DARK, TRR_NOSE, TRR_NONE };  /* Its result: read; too dark to see the floor; no sense of smell;
                                                 **   nothing found */
 enum { TP_ONE, TP_FEW, TP_SEVERAL, TP_MANY };   /* (A trail's passings: one, two or three, up to eleven, more) */
@@ -628,7 +629,7 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8, V_TRACED = 16 };
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN, D_ROOF };  /* E_DIG's how (D_AGAIN: begun on
                                                 **   a hole dug part way before, the world's DUG record's; D_ROOF:
                                                 **   a spell gone badly in poor rock, the roof come down on the hole,
-                                                **   half of it in the rock filled again: slice 4.10's) */
+                                                **   two feet of it in the rock filled again: slice 4.10's) */
 enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE_IDLE, TE_CANT, TE_ASK_HEARD,
        TE_ENGAGED, TE_FAR, TE_AWAY, TE_ASK_HURT, TE_FIGHT, TE_NO_FOE, TE_BREAK, TE_FREE, TE_LOW, TE_OUT, TE_ROBBED,
        TE_BEGUN, TE_ASK_SHORT, TE_LEARNT, TE_THERE, TE_FORGOT, TE_UNSURE, TE_ASTRAY, TE_ELSEWHERE,
@@ -1348,6 +1349,10 @@ enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind
                                                 **   till the character moves) */
 #define GE_OLD          0x01
 #define GE_DRY          0x02                    /* (dq0 -W, the tests': no water in the chunks, the maker's, slice 4.9's) */
+#define GE_MIXED        0x04                    /* (dq0 -M, the tests': every built stratum mixed, part natural, the
+                                                **   maker's, slice 4.10's) */
+#define GE_UNFALLEN     0x08                    /* (dq0 -U, the tests': no rubble, the passages as they were made
+                                                **   before slice 4.10, the maker's) */
 #define CH_DRAW         0x01                    /* (pc_chart's: the things to draw a map with to hand, the catalogue's
                                                 **   by their keys: a sheet (paper, parchment) or its map, a pencil or
                                                 **   charcoal or a quill and ink, and a hand free; HOUSE.md's the map

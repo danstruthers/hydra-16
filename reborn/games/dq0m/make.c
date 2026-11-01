@@ -86,23 +86,11 @@ static unsigned char pick (void)
     return best == 0xFF ? 0 : best;
 }
 
-/* A mixed stratum's chunk natural (DUNGEON.md's rock and old places, slice 4.10's): caves that sentient hands have
-** been at, so a third of its chunks left as they were found, grown as caves (their own style's), the rest hewn; but
-** a chunk with a way between strata in it (the way in, a way down) built, where the builders' work began */
+/* The chunk's style (grow.h's cstyle): its stratum's; but a mixed stratum's (DUNGEON.md's rock and old places,
+** slice 4.10's: caves that sentient hands have been at) a third of its chunks left as they were found, grown as caves
+** by the natural style, the rest hewn; a chunk with a way between strata in it (the way in, a way down) hewn, where
+** the builders' work began.  (dq0 -M, the tests': every built stratum mixed so) */
 unsigned char cstyle;
-static unsigned char __fastcall__ natural (const struct stratum* s, unsigned cx, unsigned cy)
-{
-    const struct link* l = s->link;
-    unsigned char k = s->nlinks;
-
-    for (; k; --k, ++l) {
-        if ((l->x - s->x0) >> CW_BITS == cx && (l->y - s->y0) >> CW_BITS == cy) {
-            return 0;
-        }
-    }
-    return (unsigned char) (((const unsigned char*) &s->seed)[1] + (unsigned char) cx * 73 +
-        (unsigned char) cy * 151) % 3 == 0;   /* (A third, by the stratum's seed and the chunk's place) */
-}
 
 unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned cy)
 {
@@ -133,7 +121,10 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     c->cx = cx;
     c->cy = cy;
     SP = &sty;
-    cstyle = s->style == ST_MIXED && natural (s, cx, cy) ? ST_NATURAL : s->style;
+    hub_get (0, &HUB->gear, &u, 1);            /* (u its slot's use after: CS_FRESH, or 1) */
+    cstyle = (s->style == ST_MIXED || (u & GE_MIXED && s->style == ST_BUILT)) && !e.nland &&
+        (unsigned char) (((const unsigned char*) &s->seed)[1] + (unsigned char) cx * 73 + (unsigned char) cy * 151) %
+        3 == 0 ? ST_NATURAL : s->style;        /* (A third, by the stratum's seed and the chunk's place) */
     uses (US_STYLE, cstyle);
     if (e.x1 != 0xFF) {                         /* (By its stratum's style, or its part's) */
         if (cstyle == ST_NATURAL) {
@@ -143,10 +134,13 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
         }
         fixtures (c);                           /* (Its materials, its windows, its traps ...) */
     }
-    hub_get (0, &HUB->gear, &u, 1);            /* (u its slot's use after: CS_FRESH, or 1) */
-    if (!(u & GE_DRY)) {
-        wet_chunk (c, &e);                      /* (Its water: slice 4.9's; dq0 -W's, the tests', none) */
+    if (u & GE_DRY) {
+        e.water = 0xFF;                         /* (dq0 -W's, the tests': no water) */
     }
+    if (u & GE_UNFALLEN) {
+        e.poor = 0xFF;                          /* (dq0 -U's, the tests': no rubble) */
+    }
+    wet_chunk (c, &e);                          /* (Its water: slice 4.9's; then age's rubble, slice 4.10's) */
     u = 1;
     if (!changes_over (c, x, y) && e.x1 != 0xFF) {
         stock (c, x, y);                        /* (Its things listed, the first time it's made: the world puts them

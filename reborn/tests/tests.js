@@ -1621,7 +1621,7 @@ function cacheChunks(m, sn) {
   for (const b of cacheBanks(m)) {
     for (let k = 0; k < 3; k++) {
       const o = k * CHUNK_SIZE, nrooms = b[o + 5], tile = b.subarray(o + CK_TILE, o + CK_TILE + 1024);
-      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x0F) > 9)) continue;
+      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x0F) > 10)) continue;
       const rooms = [];
       for (let r = 0; r < nrooms; r++) { const p = o + CK_ROOM + r * 8; rooms.push({ x: b[p], y: b[p + 1], w: b[p + 2], h: b[p + 3], kind: b[p + 5] }); }
       out.set((b[o + 1] | b[o + 2] << 8) + ',' + (b[o + 3] | b[o + 4] << 8), { cx: b[o + 1] | b[o + 2] << 8, cy: b[o + 3] | b[o + 4] << 8, rooms, tile: Array.from(tile, t => t & 0x0F) });
@@ -1853,7 +1853,7 @@ function builtChunks(m, sn) {
     for (let k = 0; k < 3; k++) {
       const o = k * 0xAA0, nr = b[o + 5], nz = b[o + 6], np = b[o + C.portal - 1];
       const tile = b.subarray(o + C.tile, o + C.tile + 1024);
-      if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x0F) > 9)) continue;
+      if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x0F) > 10)) continue;
       const rooms = [], zones = [], portals = [];
       for (let r = 0; r < nr; r++) {
         const p = o + C.room + r * 8;
@@ -2015,7 +2015,7 @@ const DQ0_REPEATS = [
   { what: /^The [a-z ]+ (unslings|draws) its [a-z ]+\.$/,
     why: 'several of a kind readying their weapons in one answer, each one\'s told (slice 4.7\'s: three elves unslinging their hartbows)' },
   { what: /^\(\d+ feet to go\.\)/, why: 'a dig\'s spells, each told as it ends (dig down: many spells to an answer)' },
-  { what: /^(?:The work goes (?:well|slowly)|Your tool slips and turns; little comes of that spell of work)\.$/,
+  { what: /^(?:The work goes (?:well|slowly)|Your tool slips and turns; little comes of that spell of work|The rotten rock splits, and part of the roof falls into the hole)\.$/,
     why: 'a dig\'s spells, each told as it ends (a long dig: hours of spells between one stir and the next, some the same)' },
   { what: /^You (?:climb on|slip back a little|find no hold yet) \(\d+ feet to go\)\.$/,
     why: 'a climb\'s rounds, each told as it ends (a long climb: many rounds to an answer, some the same)' },
@@ -2242,6 +2242,16 @@ function dq0Poke(m, pokes) {
           const named = k => { let n = ''; for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]); return n; };
           for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed]) {
             for (const [f, v] of Object.entries(p.hub || {})) h[L[f]] = v;   // (The hub's own bytes, by the layout's names: pcSkew)
+            for (const [kn, v] of Object.entries(p.fuel || {})) {   // (A thing's fuel left, minutes, by its kind's name: the
+              const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);   //   first in the store, 2026-10-31)
+              for (let i = 0; cat && i < L.nitems; i++) {
+                const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+                if (!b || !b[o + L.iKind]) continue;
+                let n = '';
+                for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
+                if (n === kn) { b[o + L.iFuel] = v & 255; b[o + L.iFuel + 1] = v >> 8 & 255; break; }
+              }
+            }
             const k = p.name === undefined ? p.k : [...Array(L.nactors).keys()].find(j => named(j) === p.name);   // (By its name: the first)
             if (k === undefined) continue;
             for (const [f, v] of Object.entries(p.set || {})) if (f === 'x' || f === 'y') w16(at(k) + off(f), v); else h[at(k) + off(f)] = v;
@@ -3310,11 +3320,16 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0dig', meaning: true, what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, by a lantern\'s light (slice 4.1: its six hours, the shaft longer; the light gone, in the dark, the dig stopped, the lantern filled and lit again, and dug on from where it was left), through to the stratum below (tiring as it goes, strenuous work: two fatigue levels a spell, the referee\'s, its Mining tests the harder for them, so more spells), and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 1\'s hard-packed earth floor (untested: the tool\'s rate, a foot and a half a spell) till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all (only a pick lifts flags); bare hands (the dagger in the kit, a knife that would dig it, put down first) make no progress in seed 1\'s hard-packed earth (the user\'s, 2026-10-20: hands only in soft soil) (dq0earth\'s and dq0tools\' digs, these together)',
-      init: 't_rc', cycles: 3600e6,
+      name: 'dq0dig', meaning: true, what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, by a lantern\'s light (slice 4.1; the scene set, slice 4.10\'s, as the shaft\'s rock now differs by the referee\'s pace: its oil two hours\' as it\'s first lit, dq0Poke\'s, the shaft longer under either referee, and twelve hours\' as it\'s lit again, the shaft through by it; the light gone, in the dark, the dig stopped, the lantern filled and lit again, and dug on from where it was left), through to the stratum below (tiring as it goes, strenuous work: two fatigue levels a spell, the referee\'s, its Mining tests the harder for them, so more spells), and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 1\'s hard-packed earth floor (untested: the tool\'s rate, a foot and a half a spell) till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all (only a pick lifts flags); bare hands (the dagger in the kit, a knife that would dig it, put down first) make no progress in seed 1\'s hard-packed earth (the user\'s, 2026-10-20: hands only in soft soil) (dq0earth\'s and dq0tools\' digs, these together)',
+      init: 't_rc', cycles: 3800e6,                // (3600e6 till slice 4.10; 2026-10-31 3415M under HarnMaster's referee, 2721M the null's)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm',
         'dq0 -p t -s 3 -c /ram/m.hm -k pick,lantern -T', 'light the lantern', 'dig down', 'fill the lantern', 'light the lantern', 'dig down', 'd', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -k shovel -T', 'dig down', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'dig down', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'drop the dagger', 'dig down', 'quit', 'echo $status']) },
+      start(m) {                                  // (The scene set, slice 4.10's: its lantern's oil two hours' as it's first lit,
+        dq0Poke(m, [{ g: 1, line: 'light the lantern', n: 1, fuel: { lantern: 120 } },   //   the light out in the dig's
+          { g: 1, line: 'light the lantern', n: 2, fuel: { lantern: 720 } }]);   //   first part, under either referee; filled, twelve
+      },                                          //   hours', the shaft through by its light: the rock harder in parts and
+                                                  //   poor rock coming down into it, its spells as many as they come)
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], digs = T.filter(t => t.line === 'dig down');
@@ -3426,6 +3441,73 @@ module.exports = {
         if (begun < 0) f.push('the rock told before the dig began');
         else if (!/The work goes|Your tool slips/.test(s.slice(begun, first))) f.push('the rock told on the dig\'s first spell, the floor\'s flags not dug first: ' + s.slice(begun, first + 80));
         if (!/You dig with your pick\./.test(s.slice(begun, first + 200))) f.push('the pick not named on the first spell');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0rubble', near: ['map'], what: 'Dingus Quest Zero\'s age\'s collapse (slice 4.10: DUNGEON.md\'s rock and old places, HOUSE.md\'s rock\'s kinds and hardness; the maker\'s rubble, caves.c\'s, by the stratum\'s age, twice where the rock is poor; world.h\'s T_RUBBLE), by the hub\'s cache: at seed 3 down the stairway (dq0 -T, d), the chunks of both strata read: rubble in old passages (seed 3\'s nine squares: the top stratum\'s chunk 3,1 and the caves\' 18,11 and 18,12), every square of it a passage\'s, in no room\'s bounds, every square beside it a passage\'s, the rock\'s or rubble (no doorway, no room\'s floor), never on a chunk\'s edge',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'map', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const f = [], ok = new Set([T_CORR, T_ROCK, T_WALL, 10]);
+        let n = 0;
+        for (const sn of [0, 1]) for (const [at, c] of cacheChunks(m, sn)) for (let i = 0; i < 1024; i++) {
+          if (c.tile[i] !== 10) continue;
+          n++;
+          const x = i & 31, y = i >> 5;
+          if (!x || !y || x === 31 || y === 31) f.push(sn + ':' + at + ': rubble on the chunk\'s edge at ' + x + ',' + y);
+          else if (![-32, 1, 32, -1].every(d => ok.has(c.tile[i + d]))) f.push(sn + ':' + at + ': rubble at ' + x + ',' + y + ' beside a room\'s square or a doorway');
+          if (c.rooms.some(r => x + 1 >= r.x && x <= r.x + r.w && y + 1 >= r.y && y <= r.y + r.h)) f.push(sn + ':' + at + ': rubble at ' + x + ',' + y + ' in a room\'s bounds');
+        }
+        if (n < 5) f.push('only ' + n + ' squares of rubble in the cache (seed 3\'s: 9)');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0mixed', near: ['map'], what: 'Dingus Quest Zero\'s mixed strata (slice 4.10: DUNGEON.md\'s growing a chunk, HOUSE.md\'s rock\'s kinds and hardness; the maker\'s cstyle), by the hub\'s cache: at seed 3 with every built stratum made mixed (dq0 -M, the tests\'), by the stairway (dq0 -T) and down it, the top stratum\'s chunks read: part natural (seed 3\'s 3,0 and 3,1: caves, every room a cave\'s chamber) and part built (2,0 and 2,1, the stairway\'s: no cave in them), and where a natural chunk meets a built one their edges\' open squares meet; the stratum below (natural) all caves',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -M', 'd', 'map', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const f = [], ks = cacheChunks(m, 0), open = t => t !== T_ROCK && t !== T_WALL && t !== T_WINDOW;
+        const natural = c => c.rooms.length > 0 && c.rooms.every(r => r.kind === 6), built = c => !c.rooms.some(r => r.kind === 6);
+        const nat = [...ks].filter(([, c]) => natural(c)).map(([at]) => at), bui = [...ks].filter(([, c]) => built(c)).map(([at]) => at);
+        if (!nat.length || !bui.length) f.push('the top stratum not part natural, part built: natural ' + nat.join(' ') + ', built ' + bui.join(' '));
+        for (const [at, c] of ks) for (const [dx, dy] of [[1, 0], [0, 1]]) {
+          const d = ks.get((c.cx + dx) + ',' + (c.cy + dy));
+          if (!d || natural(c) === natural(d)) continue;
+          for (let k = 0; k < 32; k++) {
+            const a = dx ? c.tile[k * 32 + 31] : c.tile[31 * 32 + k], b = dx ? d.tile[k * 32] : d.tile[k];
+            if (open(a) !== open(b)) f.push(at + ': its ' + (dx ? 'east' : 'south') + ' edge\'s square ' + k + ' not met by its neighbour\'s (natural and built)');
+          }
+        }
+        if (![...cacheChunks(m, 1).values()].every(natural)) f.push('the stratum below (natural) not all caves');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0rockwall', near: ['map'], what: 'Dingus Quest Zero\'s rock looked at (slice 4.10: "examine the wall", the world\'s wall_look, I_TRACE\'s TRC_WALL; HOUSE.md\'s rock\'s kinds and hardness), by the words told: at seed 3 by the stairway (dq0 -T) a cell\'s wall ahead masonry ("The wall\'s masonry"); down the stairway (natural caves) a skilled miner (Mining 95) examines the wall ahead and round it (the last "look at the wall", the verbs\' walllook), the bare rock, how it looks, and named (its Mining test, the appraisal\'s AP_ROCK: "The wall\'s the bare rock, buff: sandstone."), the name always the looks\' rock\'s',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml min 95 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'examine the wall', 'd', 'examine the wall', 'turn left', 'examine the wall', 'turn left', 'look at the wall', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out);
+        const looks = { shale: 'flaky', sandstone: 'buff', limestone: 'pale grey', slate: 'blue-grey', marble: 'white', granite: 'speckled grey',
+          basalt: 'black', quartz: 'white-veined', ironstone: 'rusty red', 'copper ore': 'green-stained' };
+        const said = [...s.matchAll(/(?:examine|look at) the wall (The wall's masonry|The wall's the bare rock, ([a-z -]+?)(?:: ([a-z ]+))?\.|It's too dark|There's no wall)/g)];
+        if (said.length !== 4) return ['the walls not told, four times: ' + said.map(x => x[1]).join(' / ')];
+        if (said[0][1] !== 'The wall\'s masonry') f.push('the cell\'s wall not masonry: ' + said[0][0]);
+        for (const [all, w, look, name] of said.slice(1)) {
+          if (!look) { f.push('a cave\'s wall not the bare rock: ' + all); continue; }
+          if (!Object.values(looks).includes(look)) f.push('"' + all + '": not a rock\'s looks');
+          if (name && looks[name] !== look) f.push('"' + all + '": ' + name + ' doesn\'t look ' + look);
+        }
+        if (!said.slice(1).some(x => x[3])) f.push('the miner never named the rock');
         return f;
       },
       sdcard: true
@@ -6653,16 +6735,16 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0travel', what: 'Dingus Quest Zero\'s travel to a place it knows (slice 4.2, the user\'s, 2026-10-16: "name this room "The Mausoleum" and then you could say "I want to go back to the mausoleum" and you would be on your way, and the game would move you at your current rate of speed back toward that named place, as long as your direction sense/orientation checks held up.  Orientation checks would be aided if good maps are used"; HOUSE.md\'s travel), by the world\'s events (E_TASK\'s LT_TRAVEL, the legs\' E_ARRIVE), where the character ends, the chunks\' memory (the cache\'s, each chunk\'s kept) and the words: at seed 3\'s caves (dq0 -T, knowing north: -N) the cave by the stairs named the Grotto, three walks west out of its chunk, "go back to the grotto" there a leg at a time (TE_BEGUN, two legs or more, TE_THERE under way: in its room), again there already, "return to the grotto" the same, then the same walks out and "go back to the grotto" again, stopped by a command typed as it begins ("turn around" typed as "You head back toward the Grotto." is told, as a player would: TE_STOPPED, not there); the same walks and two hours\' waits twice (its torch out between), its memory of the Grotto\'s chunk under a tenth: refused (TE_FORGOT, no walk), and again in the light of its spare torch (the chunk it\'s in seen, not the Grotto\'s); a map drawn as it went (paper, charcoal, a lantern lit), its memory gone after four hours\' waits but its map carried showing the Grotto, in light to read it: on its way by the map (begun, walked, not refused: there, or stopped by a giant rat in its way); a wrong belief taking it astray (its bearings tested, the hunter\'s Awareness: a long way walked, its north an eighth off since it last saw the Grotto, not knowing it) its first leg another way than the same walks\' knowing north (-N) take; at seed 4 the kitchen past the barred door named the Gallery, "go back to where I came in" stopped by a shut door it hasn\'t opened, the way nearest the bedchamber (E_NOWAY N_DOOR, no walk); "go back to the kitchen" (a kind of room, the theme\'s word) there already (its caves dry, dq0 -W: the walks and the journeys as they were before the water, slice 4.9\'s; the test is about travel, not wading)',
+      name: 'dq0travel', what: 'Dingus Quest Zero\'s travel to a place it knows (slice 4.2, the user\'s, 2026-10-16: "name this room "The Mausoleum" and then you could say "I want to go back to the mausoleum" and you would be on your way, and the game would move you at your current rate of speed back toward that named place, as long as your direction sense/orientation checks held up.  Orientation checks would be aided if good maps are used"; HOUSE.md\'s travel), by the world\'s events (E_TASK\'s LT_TRAVEL, the legs\' E_ARRIVE), where the character ends, the chunks\' memory (the cache\'s, each chunk\'s kept) and the words: at seed 3\'s caves (dq0 -T, knowing north: -N) the cave by the stairs named the Grotto, three walks west out of its chunk, "go back to the grotto" there a leg at a time (TE_BEGUN, two legs or more, TE_THERE under way: in its room), again there already, "return to the grotto" the same, then the same walks out and "go back to the grotto" again, stopped by a command typed as it begins ("turn around" typed as "You head back toward the Grotto." is told, as a player would: TE_STOPPED, not there); the same walks and two hours\' waits twice (its torch out between), its memory of the Grotto\'s chunk under a tenth: refused (TE_FORGOT, no walk), and again in the light of its spare torch (the chunk it\'s in seen, not the Grotto\'s); a map drawn as it went (paper, charcoal, a lantern lit), its memory gone after four hours\' waits but its map carried showing the Grotto, in light to read it: on its way by the map (begun, walked, not refused: there, or stopped by a giant rat in its way); a wrong belief taking it astray (its bearings tested, the hunter\'s Awareness: a long way walked, its north an eighth off since it last saw the Grotto, not knowing it) its first leg another way than the same walks\' knowing north (-N) take; at seed 4 the kitchen past the barred door named the Gallery, "go back to where I came in" stopped by a shut door it hasn\'t opened, the way nearest the bedchamber (E_NOWAY N_DOOR, no walk); "go back to the kitchen" (a kind of room, the theme\'s word) there already (its caves dry and unfallen, dq0 -W -U: the walks and the journeys as they were before the water, slice 4.9\'s, and before the rubble, slice 4.10\'s: at seed 3 the caves\' rubble made the astray walk\'s first leg the one knowing north takes, so -U keeps the scene the comparison was made for; the test is about travel, not wading or clambering)',
       bearings: true, init: 't_rc', cycles: 7000e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -W -N', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'go back to the grotto', 'go back to the grotto',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'go back to the grotto', 'go back to the grotto',
         'return to the grotto', 'n', 'w', 'w', 'w', 'go back to the grotto', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -W -N -k torch', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'wait 2 hours', 'wait 2 hours',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N -k torch', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'wait 2 hours', 'wait 2 hours',
         'go back to the grotto', 'light the torch', 'go back to the grotto', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -W -N -k paper,charcoal,lantern', 'douse the torch', 'drop the torch', 'light the lantern', 'put the charcoal in the pouch', 'map as I go', 'd',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N -k paper,charcoal,lantern', 'douse the torch', 'drop the torch', 'light the lantern', 'put the charcoal in the pouch', 'map as I go', 'd',
         'call this room the Grotto', 'n', 'w', 'w', 'w', 'stop mapping', 'wait 100 minutes', 'wait 100 minutes', 'wait 1 hour', 'go back to the grotto', 'quit',
-        ...['', ' -N'].flatMap(n => ['dq0 -p t -s 3 -c /ram/c.hm -T -W' + n, 'd', 'call this room the Grotto', 'n', 'w', 'f', 'f', 'f', 'l', 'f', 'r', 'f', 'l', 'f',
+        ...['', ' -N'].flatMap(n => ['dq0 -p t -s 3 -c /ram/c.hm -T -W -U' + n, 'd', 'call this room the Grotto', 'n', 'w', 'f', 'f', 'f', 'l', 'f', 'r', 'f', 'l', 'f',
           'r', 'f', 'f', 'l', 'f', 'go back to the grotto', 'quit']),
         'dq0 -p t -s 4 -c /ram/c.hm -N', 'take the bar', 'open', 'n', 'e', 'n', 'call this room the Gallery', 'go back to where I came in',
         'go back to the kitchen', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
@@ -6688,7 +6770,7 @@ module.exports = {
         const kept = (st, nm) => { const r = named(st, nm), a = r && chunkOf(st, r.sn, r.x, r.y); return a && a.c; };
         const at = (t, what) => { if (!t.at || !t.after) { f.push(what + ': no state'); return false; } return true; };
         // The Grotto gone back to, knowing north
-        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -N'), b1 = T.after(g, 'go back to the grotto'), b2 = T.after(b1, 'go back to the grotto');
+        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N'), b1 = T.after(g, 'go back to the grotto'), b2 = T.after(b1, 'go back to the grotto');
         const b3 = T.after(b2, 'return to the grotto');
         if (at(b1, 'the first journey')) {
           if (!tr(b1, 'TE_BEGUN').length || legs(b1) < 2 || !tr(b1, 'TE_THERE').filter(e => e.b & 0x40).length) f.push('"go back to the grotto": not begun, two legs or more, there under way (' + dq0Evs(b1) + ')');
@@ -6706,7 +6788,7 @@ module.exports = {
           'You\'re in the Grotto already.', '> return to the grotto', 'You\'re in the Grotto already.', '> go back to the grotto',
           'You head back toward the Grotto.', '> turn around', 'You stop travelling.'], f, 'the words: ');
         // Forgotten: two hours' waits twice, out of the Grotto's chunk
-        const h = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -N -k torch'), h1 = T.after(h, 'go back to the grotto'), h2 = T.after(h1, 'go back to the grotto');
+        const h = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N -k torch'), h1 = T.after(h, 'go back to the grotto'), h2 = T.after(h1, 'go back to the grotto');
         for (const [t, l] of [[h1, 'in the dark'], [h2, 'in its torch\'s light']]) {
           if (!at(t, 'forgotten ' + l)) continue;
           const c = kept(t.at, 'the Grotto');
@@ -6716,7 +6798,7 @@ module.exports = {
         if (h2.at && !h2.at.pc.light) f.push('the spare torch not lit');
         inTurn(s.slice(s.indexOf('-k torch')), ['> go back to the grotto', 'You don\'t remember the way to the Grotto.'], f, 'forgotten\'s words: ');
         // A map carried after the memory's gone
-        const p = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -N -k paper,charcoal,lantern'), p1 = T.after(p, 'go back to the grotto');
+        const p = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N -k paper,charcoal,lantern'), p1 = T.after(p, 'go back to the grotto');
         if (at(p1, 'the map\'s journey')) {
           const c = kept(p1.at, 'the Grotto');
           if (!c || left(p1.at, c) >= 10) f.push('the map\'s: the Grotto still remembered: ' + (c ? left(p1.at, c) : 'no chunk'));
@@ -6727,8 +6809,8 @@ module.exports = {
             f.push('the map\'s: not on its way there by the map (there, or a denizen in its way: ' + dq0Evs(p1) + ')');
         }
         // Astray, by a belief gone wrong since it saw the Grotto: its first leg another way than knowing north takes
-        const a = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W'), a1 = T.after(a, 'go back to the grotto');
-        const n = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -N', g.k + 1), n1 = T.after(n, 'go back to the grotto');
+        const a = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -U'), a1 = T.after(a, 'go back to the grotto');
+        const n = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N', g.k + 1), n1 = T.after(n, 'go back to the grotto');
         if (at(a1, 'astray') && at(n1, 'knowing north')) {
           const c = kept(a1.at, 'the Grotto');
           if (!c || a1.at.pc.lost || !((a1.at.pc.skew - c.sk) & 7)) f.push('astray: its belief not off since it saw the Grotto, or known lost: ' + JSON.stringify(c && [a1.at.pc.skew, c.sk, a1.at.pc.lost]));
@@ -7372,9 +7454,12 @@ module.exports = {
         const hs = dq0Thing(h.after, 'sword');
         if (!seq.some(r => r.kind === 'IO_GET' && r.result === 'IR_OK') || !dq0Carried(h.after).some(i => i.name === 'sword')) f.push('the sword not taken up at last: ' + (hs && hs.where));
         // (Since slice 4.1b the ghoul, its knee broken by the torch, falls and fails its Rise (the book's test, seriously
-        // wounded) as the commands go on: down, it engages no one, the take after the fumble and the hold no gropes)
+        // wounded) as the commands go on: down, it engages no one, the take after the fumble and the hold no gropes; up, the
+        // hold a grope, unless the take just before it, a grope, put the sword in hand already: nothing left for the hold to
+        // do, 2026-10-31, the commands typed ahead meeting the fight's rounds as its timing has it)
         const hi = seq.findIndex(r => r.kind === 'IO_HOLD'), down = /The ghoul struggles, but can't get up\./.test(dq0Story(out));
-        if (!down && (hi < 1 || seq[hi - 1].req !== 'slot0')) f.push('the hold not a grope, the ghoul up: ' + JSON.stringify(seq));
+        const inhand = hi >= 2 && seq[hi - 1].kind === 'IO_GET' && seq[hi - 1].result === 'IR_OK' && seq[hi - 2].req === 'slot0';
+        if (!down && !inhand && (hi < 1 || seq[hi - 1].req !== 'slot0')) f.push('the hold not a grope, the ghoul up: ' + JSON.stringify(seq));
         // (A quick character the ghoul comes up to: the character the quicker, its blow first)
         const w = T.filter(t => t.line === 'wait'), q = w[1], qg = q && actor(q, 'ghoul'), qc = q ? contests(q) : [];
         if (w.length !== 4 || !qg) return [...f, 'the waits not typed, or no ghoul'];

@@ -280,7 +280,7 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                 dz = C->elev[cy_][cx_] - myz;
                 S.way[S.nways].rel = REL8 (H_OF (d), face);
                 S.way[S.nways].dz = fz (dz);
-                S.way[S.nways++].steps = TILE (*p) == T_STEPS;
+                S.way[S.nways++].steps = TILE (*p);    /* (Its square's kind: steps, rubble) */
             }
         }
     }

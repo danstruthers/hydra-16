@@ -112,7 +112,8 @@ enum { HIDE_MECHANICAL, HIDE_MAGICAL };
 
 /* The crafts that know things (P_APPRAISE's b): a warrior knows weapons and armour, not books of magic */
 enum { AP_WEAPON, AP_ARMOUR, AP_METAL, AP_WOOD, AP_HIDE, AP_CLOTH, AP_POTTERY, AP_JEWEL, AP_BOOK, AP_FOOD, AP_BONE,
-    AP_STONE, AP_GLASS, NAP };                  /* (Stone: a mason's; glass: a glazier's) */
+    AP_STONE, AP_GLASS, AP_ROCK, NAP };         /* (Stone: a mason's; glass: a glazier's; the rock where it lies:
+                                                **   a miner's, slice 4.10's) */
 
 /* What a dig is into (and what a fall lands on): a floor's flags (the user: a material of their own) are lifted, not
 ** cut */

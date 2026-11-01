@@ -66,7 +66,8 @@ struct sight {
     unsigned char   nopen;                      /* Stairways, ladders, shafts, windows seen */
     struct { unsigned char rel, kind; signed char dz; unsigned x, y; } open[SEE_OPEN];    /* kind: O_* */
     unsigned char   nways;                      /* A passage's ways on */
-    struct { unsigned char rel; signed char dz; unsigned char steps; } way[4];
+    struct sseen_way { unsigned char rel; signed char dz; unsigned char steps; } way[4];  /* (steps: the next square's kind,
+                                                **   world.h's T_*: steps, rubble, slice 4.10's) */
     unsigned char   nitems;                     /* The things it sees lying about (the things', named) */
     struct sitem { char name[14]; unsigned char qty, plural, rel, hid; unsigned n, x, y; } item[SEE_ITEMS];
                                                 /* (hid: 1 it hid it, 2 on the surface before it, 4 lit; its high
