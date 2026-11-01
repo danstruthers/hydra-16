@@ -1346,7 +1346,6 @@ steps worse, struck at two easier); its pastime let go as it rises to act, told 
 
 **Design:** DENIZENS.md's daily life; HOUSE.md's leisure.
 
-
 ### The time of day believed
 
 The user (2026-10-31): "Timekeeping should also be a fuzzy thing, unless there is some place where you can actually see
@@ -1366,3 +1365,18 @@ hundred, hmchar's: the house's).  Told by "time", "what time is it" as believed 
 dawn", "wait until morning", "watch the sun" go by it.
 
 **Design:** DUNGEON.md's the time of day believed; HOUSE.md's.
+
+### Poison, bad air and disease
+
+The user (2026-10-31): "What about poisoning, chemical exposure, and disease?"  Then: "Should also include poor air
+quality (CO or CO2 excess, low oxygen levels, gas pockets--which could explode!)."
+
+Built the same day (branch reborn-game-afflictions), for review in HOUSE.md's poison, bad air and disease: one course
+for every affliction, the book's (Physician 4: a poison an infection with its intervals shortened to the toxin, a
+disease a Contagion Index and a healing rate, its recovery rolled daily), the venoms one case of it (their tests as
+they were); poisons (a dart trap's, a contact smear's, spoiled food's), diseases (foul water's flux, a giant rat's
+rat-bite fever, a ghoul's grave rot: the HarnWorld Bestiary's grave-wight's), caught unknowing and shown after their
+incubation; the air in pockets (blackdamp pooled deep, firedamp in the shale, whitedamp an explosion's afterdamp), a
+flame's warnings, firedamp bursting at a naked flame; the denizens keeping out of the bad air they know.
+
+**Design:** HOUSE.md's poison, bad air and disease; DUNGEON.md's bad air; DENIZENS.md; RULESETS.md's RS_TIME.

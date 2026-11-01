@@ -51,8 +51,10 @@ unsigned s_body_ask (void)
     }
     bled_at = (unsigned) body_at;
     if ((!n || (!bleeds && !(HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) && HUB->pcsum.health == H_FINE &&
-        HUB->now < wdue)) && HUB->pc_under != 0xFF) {  /* (Hurt: its rest toward its healing told, a minute at a
-                                                **   time; drowned, part 73's, told at once) */
+        !HUB->pc_air && HUB->now < wdue)) && HUB->pc_under != 0xFF && !HUB->pc_aff && !HUB->pc_flm) {   /* (Hurt:
+                                                **   its rest toward its healing told, a minute at a time; in bad air,
+                                                **   the same; drowned, part 73's, exposed or its flame's news, told
+                                                **   at once) */
         return 0;
     }
     k = HUB->pc_task.kind;
@@ -76,6 +78,11 @@ unsigned s_body_ask (void)
     r->w2 = bleeds;
     r->x[0] = x;
     r->x[2] = HUB->pc_under == 0xFF ? 3 : 0;    /* (Drowned: slice 4.9's) */
+    r->x[18] = HUB->pc_aff;                     /* (Exposed, the air, its flame: 2026-10-31, told once) */
+    r->x[19] = HUB->pc_dose;
+    r->x[20] = HUB->pc_air;
+    r->x[21] = HUB->pc_flm;
+    HUB->pc_aff = HUB->pc_flm = 0;
     r = hub_ask (SLOT_WORLD);
     memcpy (&wdue, r->x + 4, 4);
     body_due = wdue;

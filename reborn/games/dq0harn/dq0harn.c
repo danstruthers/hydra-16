@@ -500,7 +500,7 @@ void __fastcall__ s_load_pc (struct req* r)
 
     strncpy (path, r->text, sizeof path - 1);
     r->result = 1;
-    pv.hr = 0;                                  /* (No venom, no rest yet: its file's "body" line's, if any) */
+    pv.hr = pd.hr = afffl = 0;                  /* (No venom, no sickness, no rest yet: its file's "body" line's) */
     rest_m = tsense_ = 0;
     if ((fd = open (path, O_RDONLY)) < 0) {
         return;

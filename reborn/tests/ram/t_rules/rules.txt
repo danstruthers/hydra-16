@@ -2213,10 +2213,10 @@ dice
 ask NEW_ACTOR actor=5 w1=14 text="rat"
 want result=0
 set now=20000 stance=D_AUTO
-case in shock, bitten: no defence, a minor bite; its shock roll over Endurance: senseless a round (a killer's: one in shock held from any other, slice 4.3's)
-dice 100:41 6:2 6:2 6:2 100:50 6:6 6:6 6:6 6:1 6:1 6:1 6:6 6:6 6:6
+case in shock, bitten: no defence, a minor bite; its shock roll over Endurance: senseless a round (a killer's: one in shock held from any other, slice 4.3's); the bite's rat-bite fever its ninth die, after its shock roll (its exposure, 30 against 60: not caught, 2026-10-31)
+dice 100:41 6:2 6:2 6:2 100:50 6:6 6:6 6:6 100:30 6:1 6:1 6:1 6:6 6:6 6:6
 ask ATTACK actor=5 other=0 a=Z_MID b=AS_BEST w2=RS_KILLER
-want result=O_HIT b=D_NONE w2=100 text~"a minor bite to your thorax (M1)" status="UP 3 OUT" dice=14
+want result=O_HIT b=D_NONE w2=100 text~"a minor bite to your thorax (M1)" status="UP 3 OUT" dice=15
 set now=20100
 dice
 ask EQUIP a=2 text=""
@@ -2656,3 +2656,151 @@ want result=0 grade=0
 dice
 ask DESCRIBE b=0
 want text~"left shoulder M1 (bruise), tended"
+
+# ---- Afflictions (2026-10-31: HOUSE.md's poison, bad air and disease, the book's Physician 4: a poison an infection
+# with its intervals shortened, a disease its Contagion Index and healing rate): the world's exposure (RS_TIME's x18,
+# its dose x19), the air it breathes (x20: its kind times 16 and its strength), its flame (x21: FLM_*)
+
+char
+end
+case a poisoned dart (the house's: H4 at its middling dose), its first roll at once: 31 against 48 a marginal success, H5; its words, its symptoms two fatigue levels, poisoned
+set now=10000000 hunger=0 thirst=0 want=0
+dice ...
+ask TIME w1=1
+dice
+ask DESCRIBE b=4
+dice 100:31
+ask TIME w1=0 actor=255 b=1 x18=AK_DART x19=2
+want result=0 grade=2 sum.cond&C_POISONED=C_POISONED sum.cond&C_FATIGUED=C_FATIGUED
+dice
+ask DESCRIBE b=4
+want text~"The dart's poison burns in the wound."
+case its interval (ten minutes at rest): 91 a marginal failure, H4, sick and dizzy
+dice 100:91
+ask TIME w1=10 actor=255 b=1
+want result=0 grade=2
+dice
+ask DESCRIBE b=4
+want text~"You feel sick and dizzy."
+case ten minutes more: 5 a critical success, H6, the poison's hold passes, its fatigue gone with it
+dice 100:5
+ask TIME w1=10 actor=255 b=1
+want result=0 grade=2 sum.cond&C_POISONED=0 sum.cond&C_FATIGUED=0
+dice
+ask DESCRIBE b=4
+want text~"The poison's hold on you passes."
+char
+end
+case spoiled food (a slight dose, H5): 100 a critical failure, H3, cramps and shaking
+dice 100:100
+ask TIME w1=0 actor=255 b=1 x18=AK_FOOD x19=1
+want result=0 grade=2 sum.cond&C_POISONED=C_POISONED
+dice
+ask DESCRIBE b=4
+want text~"Your belly cramps: the food was bad." text~"you shake and sweat"
+char
+end
+case foul water drunk (the flux, the house's C5/H4): its Contagion Index times Endurance 12, 60; 70 fails, caught, nothing told
+dice 100:70
+ask TIME w1=0 actor=255 b=1 x18=AK_FLUX x19=1
+want result=0 grade=0
+dice
+ask DESCRIBE b=4
+want text=""
+case a day on its incubation's over: it shows, the first she knows of it (a hard stop); her hunger and thirst held (their levels at their worst already, nothing to tell)
+set hunger=0 thirst=0 want=0x44
+dice
+ask TIME w1=1440 actor=255 b=1
+want result=0 grade=6
+dice
+ask DESCRIBE b=4
+want text~"you have the flux"
+case its daily roll (the Infection table): 5 a critical success, H6, recovered
+set hunger=0 thirst=0 want=0x44
+dice 100:5
+ask TIME w1=1440 actor=255 b=1
+want result=0 grade=2
+dice
+ask DESCRIBE b=4
+want text~"The sickness leaves you."
+char
+end
+case foul water's exposure resisted: 20 against 60, not caught; a day on nothing shows
+set hunger=0 thirst=0 want=0x44
+dice 100:20
+ask TIME w1=0 actor=255 b=1 x18=AK_FLUX x19=1
+want result=0 grade=0
+set hunger=0 thirst=0 want=0x44
+dice
+ask TIME w1=1440 actor=255 b=1
+want grade=0
+dice
+ask DESCRIBE b=4
+want text=""
+char
+end
+case thick blackdamp come into with a torch lit (the world's: put out), her breath short at once: no dice
+set hunger=0 thirst=0 want=0
+dice
+ask TIME w1=0 actor=255 b=1 x20=0x13 x21=FLM_NEW|FLM_OUT|FLM_LIT
+want result=0 grade=6 sum.cond&C_POISONED=C_POISONED
+dice
+ask DESCRIBE b=4
+want text~"The air's too foul to keep your light burning." text~"Your head swims"
+case two minutes in it: her legs failing
+dice
+ask TIME w1=2 actor=255 b=1 x20=0x13
+want result=0 grade=6
+dice
+ask DESCRIBE b=4
+want text~"Your legs are failing you"
+case three minutes more: dead of it
+dice
+ask TIME w1=3 actor=255 b=1 x20=0x13
+want result=1 b=H_DEAD
+dice
+ask DESCRIBE b=4
+want text~"You can't get your breath"
+char
+end
+case good air again (her breath, the last case's, back), then firedamp come into with a naked flame: it bursts (the world's harm after)
+dice
+ask TIME w1=1 actor=255 b=1
+dice
+ask DESCRIBE b=4
+dice
+ask TIME w1=0 actor=255 b=1 x20=0x32 x21=FLM_NEW|FLM_BURST|FLM_LIT
+want result=0 grade=6
+dice
+ask DESCRIBE b=4
+want text~"The air ignites with a roar"
+case thin firedamp with a lantern: the flame's blue cap, the miners' warning; nothing to breathe
+dice
+ask TIME w1=0 actor=255 b=1 x20=0x31 x21=FLM_NEW|FLM_LAMP
+want result=0 grade=2 sum.cond&C_POISONED=0
+dice
+ask DESCRIBE b=4
+want text~"a pale blue cap"
+case thick whitedamp (an explosion's afterdamp): no warning from the flame; four minutes, 36 doses, her head aching
+dice
+ask TIME w1=0 actor=255 b=1 x20=0x23 x21=FLM_NEW|FLM_LAMP
+want grade=0
+dice
+ask TIME w1=4 actor=255 b=1 x20=0x23
+want result=0 grade=6
+dice
+ask DESCRIBE b=4
+want text~"Your head aches."
+case four minutes more (72): dizzy and sick; then half an hour in good air (12): her head clears
+dice
+ask TIME w1=4 actor=255 b=1 x20=0x23
+want result=0 grade=6
+dice
+ask DESCRIBE b=4
+want text~"You feel dizzy and sick."
+dice
+ask TIME w1=30 actor=255 b=1
+want result=0 grade=2
+dice
+ask DESCRIBE b=4
+want text~"Your head clears."

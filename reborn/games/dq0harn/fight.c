@@ -284,7 +284,7 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
         o_effect (t->who, X_DEATH, C_DEAD, HARN_KILL, loc, aspect);
         return;
     }
-    if (s->b && !t->who && by == BY_BITE) {
+    if (s->b && !t->who && (by == BY_BITE || by == BY_CLAWS)) {    /* (A venom, a disease: afflict.c's) */
         strcpy (bkey, s->b->key);               /* (Its kind's key into the main RAM: the bestiary's the window's) */
         if (envenom (bkey, loc, impact - p)) {
             R->c |= AF_NEWS;                    /* (A venomous bite: its venom's course, heal.c's, told after) */

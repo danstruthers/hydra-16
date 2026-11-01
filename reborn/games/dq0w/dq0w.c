@@ -4172,7 +4172,7 @@ unsigned char __fastcall__ s_zone_step (unsigned ox, unsigned oy, unsigned x, un
     if ((ox != x || oy != y) && (p = at (sn_, x, y)) != 0 && TILE (*p) == T_RUBBLE) {
         pt0 += pst;                             /* (Rubble clambered over: twice the step's time, slice 4.10's) */
     }
-    if ((ox != x || oy != y) && (HUB->pc_wet || (at (sn_, x, y) && C->wany))) {
+    if ((ox != x || oy != y) && (HUB->pc_wet || HUB->pc_air || (at (sn_, x, y) && (C->wany || C->air)))) {
         pt0 += wade (pst);                      /* (A walk's step into water, or in it: its time the more, swimming,
                                                 **   part 73's, slice 4.9's) */
     }
@@ -4209,6 +4209,107 @@ static unsigned char __fastcall__ band (unsigned char d)
     return !d ? 0 : d < WADE_FT ? 1 : d < SWIM_FT ? 2 : 3;
 }
 
+/* ---- The air (2026-10-31: DUNGEON.md's bad air, HOUSE.md's): the air where the character stands (its chunk's pocket,
+** the maker's, caves.c's air_pocket: within its reach of its middle; an explosion's afterdamp gone four of the clock's
+** high words on), thinned a step by a draught of 2 or more (the senses' air_s); as it changes, the referee told at once
+** (the bodies' time, part 70's: its flame's way in it, the breath's), its flames put out in thick blackdamp; firedamp
+** at a naked flame (a lantern's only when it's thick) bursts into flame: a burn (stones falling where the rock's
+** poor not yet), its lights out, a noise as loud as any, the pocket burnt off, its afterdamp (whitedamp) left (AIR_STATE) */
+static unsigned char air_q (void)
+{
+    unsigned char q, r, t;
+    signed char dx, dy;
+
+    hub_map (0);
+    t = ((unsigned char*) &HUB->now)[2];
+    r = HUB->air_s >> 1;
+    if (!at (HUB->pc_stratum, HUB->pc_x, HUB->pc_y) || !(q = C->air)) {
+        return 0;
+    }
+    dx = cx_ - C->ax;
+    dy = cy_ - C->ay;
+    if (dx * dx + dy * dy > C->ar * C->ar || (AQ_KIND (q) == AQ_WHITE && C->aat && (unsigned char) (t - C->aat) >= 4)) {
+        return 0;
+    }
+    return AQ_STR (q) > r ? q - r : 0;
+}
+
+static void __fastcall__ air_harm (unsigned char a, unsigned char b, unsigned char c)
+{
+    struct req* r;
+
+    hub_map (0);
+    r = &HUB->slot[SLOT_WORLD];
+    r->kind = RS_HARM;
+    r->actor = r->other = 0;
+    r->a = a;
+    r->b = b;
+    r->c = c;
+    r->w1 = 0;
+    r->w2 = Z_HIGH;
+    r->text[0] = 0;
+    r = hub_ask (SLOT_WORLD);
+    b = r->b;
+    r->state = REQ_FREE;
+    event (E_HARM, 0, a | b << 8);
+    harm_fx ();                                 /* (What it dropped, fallen: part 49's) */
+}
+
+static void air_here (void)
+{
+    struct msg am;                              /* (On the C stack: the main RAM's room) */
+    unsigned char q = air_q (), f = 0, k, s;
+    unsigned i, x, y;
+
+    hub_map (0);
+    if (q == HUB->pc_air) {
+        return;
+    }
+    for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM | IN_FLAGS, I_LIT)) != 0; ) {
+        if (on_pc (i)) {
+            k = item_at (i)->kind;
+            hub_map (KIND_BANK);
+            f |= CATALOGUE[k].flags & K_HANG ? FLM_LAMP : FLM_LIT;     /* (A lantern's flame; else a naked one) */
+        }
+    }
+    k = AQ_KIND (q);
+    s = AQ_STR (q);
+    if (k == AQ_FIRE && (f & FLM_LIT ? s >= 2 : f && s == 3)) {
+        f |= FLM_BURST;
+    } else if (f && k == AQ_BLACK && s == 3) {
+        f |= FLM_OUT;
+    }
+    if (f & (FLM_BURST | FLM_OUT)) {            /* (Its lights out: the swim's way) */
+        for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM | IN_FLAGS, I_LIT)) != 0; ) {
+            if (on_pc (i)) {
+                item_at (i)->flags &= ~I_LIT;
+            }
+        }
+        light_now ();
+    }
+    hub_map (0);
+    HUB->pc_air = q;
+    HUB->pc_flm = f | FLM_NEW;
+    body_ask ();                                /* (Its words: the referee's, rsair.h's) */
+    if (f & FLM_BURST) {
+        hub_map (0);
+        am.kind = E_NOISE;                      /* (As loud as anything: the denizens hear it) */
+        am.who = 0;
+        am.a = 9;
+        am.w1 = x = HUB->pc_x;
+        am.w2 = y = HUB->pc_y;
+        am.t = HUB->now;
+        hub_event (&am);
+        k = ((unsigned char*) &HUB->now)[2] & 0x7F;
+        if (at (HUB->pc_stratum, x, y)) {       /* (Burnt off: its afterdamp left, kept) */
+            change (HUB->pc_stratum, x - cx_ + C->ax, y - cy_ + C->ay, AQ_WHITE << 4 | 2, k ? k : 1, AIR_STATE);
+        }
+        air_harm (HC_FIRE, 0, s + 1);           /* (A burn, 3d6 or 4d6: the house's) */
+        hub_map (0);
+        HUB->pc_air = AQ_WHITE << 4 | 2;
+    }
+}
+
 unsigned __fastcall__ s_wade (unsigned step)
 {
     struct req* r;
@@ -4216,6 +4317,7 @@ unsigned __fastcall__ s_wade (unsigned step)
     unsigned char d, b, sq;
     signed char g;
 
+    air_here ();                                /* (The air: 2026-10-31) */
     d = water_at (0);
     hub_map (0);
     b = band (HUB->pc_wet);
@@ -6179,10 +6281,10 @@ void s_burns_now (void)
         left_words (bf);
     }
     hub_map (0);
-    burn_due = burn_at + (wait_on () && !(HUB->pc_light && HUB->pc_fuel <= BURN_LOW + WAIT_SLICE / 600) ? WAIT_SLICE :
-        600);                                   /* (The next look a minute on; resting, ten, its light not near burning
-                                                **   low: the long durations' coarser ticks, 2026-10-28; the clock's
-                                                **   slices end there, slice's) */
+    burn_due = burn_at + (wait_on () && !HUB->pc_air && !(HUB->pc_light && HUB->pc_fuel <= BURN_LOW + WAIT_SLICE / 600) ?
+        WAIT_SLICE : 600);                      /* (The next look a minute on; resting, ten, its light not near burning
+                                                **   low, nor the air bad: the long durations' coarser ticks, 2026-10-28;
+                                                **   the clock's slices end there, slice's) */
     if (bleeds || (HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) || HUB->pcsum.health != H_FINE || HUB->now >= body_due) {
         bled ();                                /* (The bodies' time with it: the bleeding, the character's wounds,
                                                 **   part 70's, slice 4.3's; nothing to tell, no part swapped in) */

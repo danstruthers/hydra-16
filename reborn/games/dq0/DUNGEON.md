@@ -568,6 +568,26 @@ fumbles can be deadly); magic only by magical means; a pit not at all.  Their st
 kept in the world's change records (TRAP_STATE), a pit's square a pit once it's given way; the ones the character knows
 of in what it perceives.  A trap sprung is an event, heard.
 
+### Bad air (2026-10-31)
+
+The user's (DECISIONS.md: "poor air quality (CO or CO2 excess, low oxygen levels, gas pockets--which could
+explode!)").  A chunk may have a **pocket of bad air** in one of its rooms (world.h's struct chunk: its air, rs.h's
+AQ_*, its kind times 16 and its strength 1-3; its middle and its reach), the maker's as it grows the chunk (dq0m/
+caves.c's air_pocket, overlay 3's), from the chunk's place alone so its other dice fall as they did: **firedamp** where
+the rock at the chunk's middle is shale (rock.h's: the beds' gas), **blackdamp** pooled deep and still (100 feet down
+or more), none where a way between strata is in the chunk.  **Whitedamp** is an explosion's afterdamp.  What becomes of
+a pocket is kept in the change records (AIR_STATE: on its middle square, its air now and when, so a burnt-off pocket's
+afterdamp clears hours on).  A test sets its own (the environment's dq0air: "0" none, "KS" every chunk one of kind K
+and strength S from end to end).
+
+The world looks at the air where the character stands as it steps in a chunk with a pocket, or out of one (dq0w.c's
+part 73, the water's: air_here): within the pocket's reach it breathes it, a draught of 2 or more thinning it a step
+(the senses' air_s); as it changes the referee is told at once (the bodies' time, RS_TIME's x[20], its flame x[21]:
+the hub's pc_air, pc_flm), then a minute at a time while it's bad.  Its lights go out in thick blackdamp; firedamp at a
+naked flame bursts: a burn (RS_HARM's HC_FIRE), its lights out, a noise as loud as any (E_NOISE 9), the pocket
+burnt off and its afterdamp left (AIR_STATE).  What the character feels and its flame's warnings are the referee's
+words, every ruleset's (rsair.h: HOUSE.md's bad air).  The denizens keep out of it (dq0d.c's wades).
+
 ### Items: the dungeon's layer of things
 
 Items are a layer of their own over the strata (items.h, the world's item store): each item a record (what it is:
@@ -1361,6 +1381,11 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   a half move; a creature come round in shock; the venoms of the adder, the basilisk and the lindworm (the bestiary's,
   an infection's course); a folk denizen binding its own bleeding.  Not yet: antidotes (with the market), the minds'
   way with a wounded or shocked denizen (resting in its lair, tending another), stings.
+- **Poison, bad air and disease** (2026-10-31, the user's: HOUSE.md's): one course for every affliction (the book's
+  Infection table), poisons (a dart trap's), diseases (foul water's flux, rat-bite fever, a ghoul's grave rot) shown
+  after their incubation; the air's pockets (blackdamp, whitedamp, firedamp) and a flame's warnings, firedamp's burst.
+  Left: a door's needle and a chest's (contact poison), poisoned blades, spoiled food, antidotes (with the market), a
+  lair's sickness, the denizens' own afflictions and their choking, old mines' air, the explosion's harm to those near.
 - **The sound layer and the denizens' hearing by pace** (slice 4.5, built 2026-10-29: perception as layers, above):
   a pulse over the squares and openings, a background that masks, the character's steps heard by its pace and its
   armour; the air with it, a stratum's draught carrying the character's scent downwind.  Left: a fight's din heard

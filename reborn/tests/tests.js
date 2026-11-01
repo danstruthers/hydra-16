@@ -2104,8 +2104,9 @@ function dq0Check(name, m) {
 // slice, the world's journal and its store's taking it in: cycles; measured 1,460,275 a square on its walk back across the
 // cell, 5 squares; the same walks at seed 3 with no traces, the slice before, within 0.2-0.6% of them: the journal's
 // entry a step, the store's taking 24 in a part's swap; 1,800,000 since 2026-10-29: the sound layer's pulse, once a
-// denizens' turn after a step, and the denizens' senses' own part, slices 4.5 and 4.6)
-const TRACE_STEP = 1800000;
+// denizens' turn after a step, and the denizens' senses' own part, slices 4.5 and 4.6); 1,900,000 since 2026-10-31
+// (1,863,195: the minds' steps looking at each square's chunk for its bad air, a swimmer's too, the giant rats')
+const TRACE_STEP = 1900000;
 
 // What a dq0 test's lines did, by their meaning (Phase 3A: tests cut to meaning, not words): sim/lib/dq0meaning.js's
 // record (m.dq0, in every dq0 test: the world's events, the denizens', the requests' replies, the state each line
@@ -5836,6 +5837,30 @@ module.exports = {
           f.push('its state not poisoned, nor weak from the loss of blood: ' + JSON.stringify((s.match(/Condition: [^.]*\./) || [''])[0]));
         if (!/You bleed to death\. You are dead\./.test(s)) f.push('not bled to death');
         if (!T.some(t => dq0Ev(t, 'E_BYE', {}).length)) f.push('the game not ended by the death');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0air', near: ['body'], what: "Dingus Quest Zero's bad air (2026-10-31, the user's: \"poor air quality (CO or CO2 excess, low oxygen levels, gas pockets--which could explode!)\"; HOUSE.md's bad air, rsair.h's, every ruleset's), its scenes the environment's dq0air (rc's: every chunk a pocket from end to end, the maker's caves.c's air_pocket), the character tough (STR, STA and WIL 99), its torch lit: at seed 1 (dq0 -T) thick blackdamp (dq0air=13) as it steps south through the door, its torch put out by the foul air (the world's, part 73's), its head swimming at once, its legs failing two minutes in, dead of it five minutes in (\"You can't get your breath\"), the game ended; firedamp (dq0air=32) at its naked flame bursting (\"The air ignites with a roar\"), a burn told after (the world's harm: HC_FIRE), its torch out; thin firedamp under the null referee (dq0air=31: its flame's blue cap, the miners' warning, nothing to breathe)",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm',
+        'dq0air=13', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'open the door', 'south', 'wait 10 minutes', 'wait 10 minutes', 'wait 10 minutes',
+        'dq0air=32', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'open the door', 'south', 'status', 'quit',
+        'dq0air=31', 'dq0 -r null -p t -s 1 -T', 'open the door', 'south', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), a = s.indexOf('dq0air=32'), b = s.indexOf('dq0air=31');
+        const g1 = a < 0 ? s : s.slice(0, a), g2 = a < 0 || b < 0 ? '' : s.slice(a, b), g3 = b < 0 ? '' : s.slice(b);
+        if (!/The air's too foul to keep your light burning\./.test(g1)) f.push('blackdamp: its torch not put out');
+        if (!/Your head swims; your heart pounds\./.test(g1)) f.push('blackdamp: its breath not told at once');
+        if (!/Your legs are failing you/.test(g1)) f.push('blackdamp: its legs not failing: ' + JSON.stringify(g1.slice(-1200)));
+        if (!/You can't get your breath: the dark takes you\./.test(g1)) f.push('blackdamp: not dead of it');
+        if (!/The air ignites with a roar/.test(g2)) f.push('firedamp: no burst at the naked flame');
+        if (!/It hurts you: [^.]*burn/.test(g2)) f.push('firedamp: no burn after the burst: ' + JSON.stringify(g2.slice(0, 600)));
+        if (!/a pale blue cap trembling over it\./.test(g3)) f.push('thin firedamp, the null referee: no blue cap on its flame');
+        if (/The air ignites/.test(g3)) f.push('thin firedamp burst');
         return f;
       },
       sdcard: true

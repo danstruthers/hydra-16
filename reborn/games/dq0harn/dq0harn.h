@@ -115,7 +115,7 @@ void __fastcall__ sheet_get (unsigned char n);  /* Sheet n into bs */
 void __fastcall__ sheet_put (unsigned char n);  /*   and back */
 
 /* sheet.c (overlay 1) */
-#define OVLS    7                               /* (The 4th and 5th: the swapped parts' images; the 6th and 7th heal.c's;
+#define OVLS    8                               /* (The 4th and 5th: the swapped parts' images; the 6th and 7th heal.c's;
                                                 **   the 7th the missiles' too, missile.c's, slice 4.7's) */
 extern char hurt[200];                          /* The last harm's words */
 void sheet (void);                              /* The sheet, into the reply */
@@ -164,19 +164,30 @@ extern unsigned char wantfl;                    /* (Its fatigue from want: the w
                                                 **   x[1], slice 4.9's; not rested off) */
 extern char news[NEWS_N];                       /* (What time did to the character, in words: RS_DESCRIBE b 4's) */
 extern char tpart[16];                          /* (RS_TREAT's part said: its text's, copied) */
-struct venom {                                  /* (The character's venom: its healing rate, 0 none; where it's got to;
-                                                **   its kind, heal.c's; its interval's minutes gone, at rest's) */
+struct venom {                                  /* (The character's toxin, a venom or a poison: its healing rate, 0 none;
+                                                **   where it's got to; its kind, afflict.c's; its interval's minutes
+                                                **   gone, at rest's) */
     unsigned char   hr, loc, kind;
     unsigned        left;
 };
 extern struct venom pv;
+struct sick {                                   /* (Its disease: its healing rate, 0 none; its kind, afflict.c's; its
+                                                **   day's minutes gone; its incubation's minutes left, 0 shown) */
+    unsigned char   hr, kind;
+    unsigned        left, inc;
+};
+extern struct sick pd;
+extern unsigned char afffl;                     /* (Its afflictions' fatigue levels: its symptoms', its breath's; held,
+                                                **   not rested off) */
+extern unsigned char aff_breath;                /* (Its breath's among them: bad air, rsair.h's) */
 extern unsigned rest_m;                         /* (Its rest toward its healing rolls, minutes: RS_TIME's at rest) */
 void __fastcall__ body_req (struct req* r);     /* RS_HARM, RS_TIME, RS_TREAT (r a copy) */
 unsigned char __fastcall__ envenom (const char* key, unsigned char loc, int impact);   /* (fight.c's: a venomous
-                                                **   bite; 1 told) */
+                                                **   bite, 1 told; a sickly one's, its disease caught or not) */
 void body_state (void);                         /* (The status's: sheet.c's o_state's) */
-void __fastcall__ venom_time (unsigned m);      /* (Overlay 7's: the venom's course, m minutes at rest's) */
-void __fastcall__ body_line (char* l, unsigned char rd);    /* (Overlay 7's: the save's "body" line made, or read) */
+unsigned char __fastcall__ aff_time (struct req* r);    /* (Overlay 8's: its afflictions' course, RS_TIME's, r a
+                                                **   copy: the grade's bits) */
+void __fastcall__ body_line (char* l, unsigned char rd);    /* (Overlay 8's: the save's "body" line made, or read) */
 extern unsigned out_t;                          /* (Knocked senseless by a venom's ache: RS_TIME's w2) */
 
 /* The bestiary (beasts.c's, overlay 5's read-only data since 2026-10-29: the peoples' room in overlay 2): by the kinds'

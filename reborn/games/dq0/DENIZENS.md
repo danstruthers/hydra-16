@@ -561,13 +561,17 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   (twice its range, prey found now and then), a very hungry hunter hunts the character; food given the more welcome
   the hungrier (gifts, slice 4.8's), and eaten; the want's fatigue the referee's (RS_NEW_ACTOR's c).  The larders are
   the daily round's: its meals a slot in the day (a meal: the record's ate the clock's: daily life, above).
+- **Bad air** (2026-10-31: HOUSE.md's poison, bad air and disease): the minds know where the air's bad (a chunk's
+  pocket, the maker's) and keep their steps, their placing and their roaming out of it (dq0d's wades: foul_at), the
+  dead too.
 - **Hurt:** one wounded with nothing after it goes home to its lair to rest.
 
 ## Still to come
 
 - **Their bodies' rest** (2026-10-31's leftovers, HOUSE.md's the denizens' bodies): a swim tiring a denizen, a denizen
   drowning (knocked senseless in water: none goes in deeper than it wades yet), a stream's current; their larders eaten
-  from (the day's meals feed folk, the larder's stores not yet counted) and run out; one tending another's wounds; stings and envenomed creatures; an ally's
+  from (the day's meals feed folk, the larder's stores not yet counted) and run out; one tending another's wounds; stings and envenomed creatures; a denizen's own poisons and diseases (a lair's
+  sickness spreading among its folk, by the clock), one blundering into bad air choking or dying of it, the explosion's harm; an ally's
   hunger (fed by the character's gifts now) leading it off to eat.
 
 What the plans bring later, by the slice or phase that brings it:

@@ -16,6 +16,9 @@
 
 #include <string.h>
 #include <dice.h>
+#include <hydra.h>
+#include "../dq0/hub.h"
+#include "../dq0/rs.h"
 #include "../dq0w/world.h"
 #include "grow.h"
 
@@ -341,6 +344,62 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
 ** one in three (a foot), but a chamber with a way between strata in it, kept dry (the house's: the stairs' landing
 ** never under water); a stream's region's passages running with it, a foot deep.  A square of a room's floor under
 ** its surface wet (the bits), a passage's square of a stream's */
+
+/* Its air (2026-10-31: DUNGEON.md's bad air, HOUSE.md's for review: overlay 3's, make_chunk's after its water), from the
+** chunk's place alone (no dice of the maker's: the layouts as they were): a pocket in one of its rooms, round its
+** middle, its reach the room's half and a square: firedamp where the rock's poor (shale at its middle: the coal
+** measures' gas) one chunk in four; blackdamp (stale air pooled where nothing stirs it) 100 feet down or more, one
+** chunk in eight, 200 feet one in four; strength 1, 2 from 200 feet, a step more one time in four; none where there's
+** a way between strata in the chunk (the air moves there).  A test's scene (the environment's dq0air, rc's, read
+** once: "0" no bad air; "KS" every chunk a pocket of kind K, rs.h's AQ_*, strength S, from end to end) */
+static unsigned char tair = 0xFF;               /* (The environment's: 0x80 | kind times 16 | strength; 0 none said) */
+
+void __fastcall__ o_air_pocket (struct chunk* c, const struct edges* e)
+{
+    static struct hy_regs r;
+    static char b[4];
+    unsigned h = (c->cx * 57 + c->cy * 23 + c->sn * 101) ^ 0x2C6B, s;
+    unsigned char k;
+    struct room* p;
+
+    if (tair == 0xFF) {
+        tair = 0;
+        r.a = 0xFF;
+        r.r[0] = (unsigned) "dq0air";
+        r.r[1] = (unsigned) b;
+        r.r[2] = 3;
+        if (!hy_call (HY_ENV_GET, &r)) {
+            tair = 0x80 | (b[0] & 3) << 4 | (b[1] & 3);
+        }
+    }
+    h ^= h >> 7;
+    h *= 0x2F1B;
+    h >>= 8;
+    if (!c->nrooms || tair == 0x80) {
+        return;
+    }
+    s = e->depth >= 200 ? 2 : 1;
+    if (tair) {
+        c->air = tair & 0x3F;                   /* (A test's: its first room) */
+        h = 0;
+    } else {
+        if (e->nland) {
+            return;
+        } else if (e->poor == 1 && !(h & 3)) {
+            k = AQ_FIRE;
+        } else if (e->depth >= 100 && (h >> 2 & 7) < s) {
+            k = AQ_BLACK;
+        } else {
+            return;
+        }
+        c->air = k << 4 | (s + !(h & 0x60));
+    }
+    p = &c->room[(unsigned char) h % c->nrooms];
+    c->ax = p->x + (p->w >> 1);
+    c->ay = p->y + (p->h >> 1);
+    c->ar = tair ? 100 : ((p->w > p->h ? p->w : p->h) >> 1) + 1;     /* (A test's: the whole chunk) */
+}
+
 #pragma code-name (push, "OV6CODE")           /* (Overlay 6's: 3 full) */
 #pragma rodata-name (push, "OV6RODATA")
 
