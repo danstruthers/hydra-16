@@ -4,7 +4,7 @@
 ; corners neither of which can be stood on, one of them cut (T_CUT); step8 (), a heading's step, the four's by
 ; step_ok, a diagonal by slant; and the squares' kinds (t_kinds: world.h's T_PASS).
 
-            .export     _slant, _step8, _t_kinds
+            .export     _slant, _step8, _t_kinds, _cornk
             .import     _at, _step_ok, _head_x, _head_y, pusha, pushax, incsp5
             .importzp   sp, ptr1
 
@@ -12,6 +12,7 @@
 ; Each kind's (world.h's T_ROCK ... T_CUT): 1 it can be stood on (T_PASS)
 _t_kinds:   .byte       0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 0, 0, 0, 0
 ; A diagonal's corner, by its kind: 0 one that can be stood on (not a door), 1 one that can't, 2 a cut
+_cornk:
 cornk:      .byte       1, 0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 2, 1, 1, 1, 1
 
             .bss

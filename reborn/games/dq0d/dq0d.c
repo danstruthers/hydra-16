@@ -1331,7 +1331,12 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
     unsigned nx, ny, f, bf = how == S_TOWARD ? toward (a.x - refx, a.y - refy) : apart (a.x - refx, a.y - refy);
 
     for (j = 0; j < 8; ++j) {
-        d = j < 4 ? (s + j) & 3 : j;            /* (The four, then the diagonal ways: slant's) */
+        d = j < 4 ? (s + j) & 3 : j;            /* (The four, then the diagonal ways: slant's, within its own chunk,
+                                                **   no other made for it) */
+        if (d >= 4 && ((((unsigned char) (a.x - STRATUM (a.sn).x0) & (CW - 1)) + dir_x[d]) |
+            (((unsigned char) (a.y - STRATUM (a.sn).y0) & (CW - 1)) + dir_y[d])) & ~(CW - 1)) {
+            continue;
+        }
         nx = a.x + dir_x[d];
         ny = a.y + dir_y[d];
         f = how == S_TOWARD ? toward (nx - refx, ny - refy) : apart (nx - refx, ny - refy);   /* (The walk's own

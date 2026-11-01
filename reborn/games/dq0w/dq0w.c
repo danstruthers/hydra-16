@@ -2165,15 +2165,15 @@ void s_way_out (void)
         }
         teh = bearing ((int) (tex - mx), (int) (tey - my));
     } else {
-        for (d = 0; d < 4; ++d) {
+        for (d = 0; d < 8; ++d) {               /* (The four, then the diagonal ways: 4 to 7, dir_x's) */
             nx = mx + dir_x[d];
             ny = my + dir_y[d];
-            t = (sq = at (sn_, nx, ny)) != 0 && TILE (*sq) == T_DOOR;   /* (A door that way, shut or not: a
-                                                **   passage's, the walk stopped before it) */
-            if ((t || (step_ok (sn_, mx, my, d) && !breadth (sn_, mx, my, d))) && (!feel_ || known_at (nx, ny))) {
+            t = d < 4 && (sq = at (sn_, nx, ny)) != 0 && TILE (*sq) == T_DOOR;   /* (A door that way, shut or not:
+                                                **   a passage's, the walk stopped before it) */
+            if ((t || way_ok (sn_, mx, my, DH (d))) && (!feel_ || known_at (nx, ny))) {
                 weigh (nx, ny);
                 if (tex == nx && tey == ny) {
-                    teh = H_OF (d);             /* (Its heading, if it's the one) */
+                    teh = DH (d);               /* (Its heading, if it's the one) */
                 }
             }
         }
@@ -2210,7 +2210,7 @@ static unsigned char leg (void)
         evb = tv.what;
         event (E_TASK, 0, TE_BEGUN | LT_TRAVEL << 8);  /* ("You head back toward the Mausoleum.") */
     }
-    if ((tgx = room_of (sn_, mx, my) != 0xFF ? tex : 0) == 0 && !step_ok (sn_, mx, my, teh >> 1)) {
+    if ((tgx = room_of (sn_, mx, my) != 0xFF ? tex : 0) == 0 && !step8 (sn_, mx, my, teh)) {
         at (sn_, tex, tey);                     /* (A passage's door that way, shut: open it first, as a room's that
                                                 **   it hasn't handled, the walk's) */
         how = portal_at (cx_, cy_) && portal_at (cx_, cy_)->kind == PK_PORTCULLIS ? N_CLOSED : N_DOOR;
@@ -5600,15 +5600,23 @@ static struct trap* __fastcall__ trap_at21 (unsigned char x, unsigned char y)
 ** time, or 0xFFFF (it can't: rock, a wall, a ledge too high, a denizen on it, a trap known of); wtrap 1 if there's
 ** one that's set on the square stepped onto (the chunk in the window) */
 static unsigned char wtrap;
+extern const unsigned char cornk[16];           /* (slant.s's: a diagonal's corner by its kind, 0 stood on, 2 cut) */
 static unsigned __fastcall__ step_by (unsigned char x, unsigned char y, unsigned char d)
 {
     unsigned char nx = x + dir_x[d], ny = y + dir_y[d], t = C->tile[y][x], u;
     struct trap* q;
     int dz;
 
-    if (nx >= CW || ny >= CW || (unsigned char) (nx - wox) >= wow || (unsigned char) (ny - woy) >= woh ||
-        (d >= 4 && !slant (sn_, rx0 + x, ry0 + y, DH (d)))) {
-        return 0xFFFF;                          /* (A diagonal only a diagonal way: slant's) */
+    if (nx >= CW || ny >= CW || (unsigned char) (nx - wox) >= wow || (unsigned char) (ny - woy) >= woh) {
+        return 0xFFFF;
+    }
+    if (d >= 4) {                               /* (A diagonal only a diagonal way: slant.s's corners, in the chunk) */
+        u = cornk[TILE (C->tile[y][nx])];
+        t = cornk[TILE (C->tile[ny][x])];
+        if (!u || !t || !((u | t) & 2)) {
+            return 0xFFFF;
+        }
+        t = C->tile[y][x];
     }
     u = C->tile[ny][nx];
     q = trap_at21 (nx, ny);

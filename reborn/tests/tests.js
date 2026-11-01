@@ -6776,6 +6776,7 @@ module.exports = {
         'go back to the kitchen', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
       start(m) {
         dq0OnWords(m, [{ g: 1, line: 'go back to the grotto', n: 3, words: 'You head back toward the Grotto.', text: 'turn around\r' }]);   // (Typed as it's told)
+        dq0Poke(m, [{ g: 4, line: 'go back to the grotto', n: 1, hub: { pcSkew: 1 } }]);   // (Astray: its north an eighth off as it sets out, the scene set: the cave's diagonal ways, 2026-10-31, left its long walk's bearings tests true)
       },
       expect: ['% echo $status'],
       check(m, out) {
