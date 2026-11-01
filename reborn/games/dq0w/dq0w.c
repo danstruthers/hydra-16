@@ -2866,15 +2866,18 @@ static void wall_look (void)
     start_dig (0xFC);
 }
 
-/* The roof come down on the digger (D_ROOF's, poor rock's: HOUSE.md's rock's kinds and hardness): a blunt strike from no
-** one at its head and shoulders, the book's falling rock (Skills 8: 1d6 a ten feet's fall, rocky ground 2d6 more:
-** the house's 2d6, a rock from the roof a few feet over it), the referee's (RS_HARM's HC_STRIKE), told (E_HARM), the
+/* The roof come down on the digger (D_ROOF's, poor rock's: HOUSE.md's rock's kinds and hardness): dodged (the
+** referee's P_DODGE_HAZARD, as a trap's), else a blunt strike from no one at its head and shoulders, the book's
+** falling (Skills 8: 1d6 a ten feet's fall: the house's 1d6, stones off the roof a few feet over it), the referee's (RS_HARM's HC_STRIKE), told (E_HARM), the
 ** time it's out for taken; the dig goes on, unless it's knocked senseless */
 static void roof_harm (void)
 {
     struct req* r;
     unsigned out;
 
+    if (G_OK (test_w (P_DODGE_HAZARD, 0))) {
+        return;                                 /* (Out of its way in time, as from a trap's: the referee's) */
+    }
     hub_map (0);
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_HARM;
@@ -2882,7 +2885,7 @@ static void roof_harm (void)
     r->other = 0;
     r->a = HC_STRIKE;
     r->b = AS_BLUNT;
-    r->c = 2;
+    r->c = 1;
     r->w1 = 0;
     r->w2 = Z_HIGH;
     r->text[0] = 0;
@@ -2932,8 +2935,9 @@ void s_dig_on (void)
         dig_kept (0);                           /* (The feet dug kept: stopped, it goes on from here) */
         event (E_DIG, 0, (g == G_CS || g == G_MS ? D_GOOD : g == G_MF ? D_POOR : g == 0x7F ? D_ROOF : D_SLIP) << 8 |
             (dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2));
-        if (g == 0x7F) {
-            roof_harm ();                       /* (The roof come down on the digger too) */
+        if (g == 0x7F && dig.d != DIR_DOWN) {
+            roof_harm ();                       /* (A tunnel's roof come down on the digger too; a shaft's sides
+                                                **   fall into the hole below it) */
         }
         spell ();
         return;
