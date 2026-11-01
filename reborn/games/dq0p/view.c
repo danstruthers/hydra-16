@@ -284,7 +284,8 @@ static void __fastcall__ fresh (const struct fresh* fr)
 ** seen, slice 4.2's) */
 /* A passage's ways' runs (../dq0/run.h's: the user's, 2026-10-31, ways off the compass; HOUSE.md's a passage's
 ** heading), for what the character perceives (sight.c's, part 2's: its room), as a look begins: from the character's
-** square in a passage, each way on (way_ok's) followed as a walk goes (its one way on: ways_from's), through the squares
+** square in a passage, each heading it can step (step8's) followed as a walk goes (its one way on, none behind: a wide
+** passage's breadth a way, its run's end), through the squares
 ** seen now (T_VIS), to a door, a room, a fork, its end, or RUN_MAX steps: its run's bearing in sixteenths, by its
 ** first heading, into the senses' bank (RUNS) */
 #include "../dq0/run.h"
@@ -292,7 +293,7 @@ typedef char runs_fit[sizeof (struct sight) <= RUN_AT ? 1 : -1];
 #pragma bss-name (push, "SW4RODATA")            /* (Its state the part's own: none kept from one call to the next) */
 static void runs (void)
 {
-    static unsigned char r[8], d, n, h, sn;
+    static unsigned char r[8], d, n, h, sn, k, w, nh;
     static unsigned x, y, x0, y0;
     static unsigned char* p;
 
@@ -305,22 +306,29 @@ static void runs (void)
     }
     for (d = 0; d < 8; ++d) {
         r[d] = d << 1;
-        if (!way_ok (sn, x0, y0, d)) {
+        if (!step8 (sn, x0, y0, d)) {
             continue;
         }
         x = x0;
         y = y0;
         h = d;
-        way_room = 0xFF;
         for (n = 0; ; ) {
             run_s[n++] = h;
             x += head_x[h];
             y += head_y[h];
-            if (n == RUN_MAX || !(p = at (sn, x, y)) || (*p & (T_VIS | 0x0F)) != (T_VIS | T_CORR) ||
-                ways_from (sn, x, y, h) != 1) {
+            if (n == RUN_MAX || !(p = at (sn, x, y)) || (*p & (T_VIS | 0x0F)) != (T_VIS | T_CORR)) {
                 break;
             }
-            h = way_on;
+            for (k = w = 0; k < 8; ++k) {       /* (Its ways on, none behind: one, or the run's end) */
+                if (!REL_BEHIND (k - h) && step8 (sn, x, y, k)) {
+                    ++w;
+                    nh = k;
+                }
+            }
+            if (w != 1) {
+                break;
+            }
+            h = nh;
         }
         r[d] = run_of (n);
     }

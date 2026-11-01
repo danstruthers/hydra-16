@@ -3606,11 +3606,12 @@ static void __fastcall__ pc_trod (unsigned char h)
 static unsigned char __fastcall__ run_at (unsigned char i)
 {
     static unsigned char j, n, r, a, b, k;
+    static unsigned char* p;
 
     hy_bank (ovbank[OVBANKS + 1]);
     for (j = pwalk0 <= i ? pwalk0 : i, a = 0xFF; ; j += run_n) {
-        for (n = 0; n < RUN_MAX && j + n < npath; ++n) {
-            run_s[n] = PATH_AT[3 * (j + n)];
+        for (n = 0, p = PATH_AT + 3 * j; n < RUN_MAX && j + n < npath; ++n, p += 3) {
+            run_s[n] = *p;
         }
         if (n < 3 && j + n == npath && a != 0xFF) {
             for (k = 0; k < n && (run_s[k] == a || run_s[k] == b); ++k) {
