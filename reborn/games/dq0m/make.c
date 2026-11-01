@@ -137,6 +137,9 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     if (u & GE_DRY) {
         e.water = 0xFF;                         /* (dq0 -W's, the tests': no water) */
     }
+    if (u & GE_UNFALLEN) {
+        e.poor = 0xFF;                          /* (dq0 -U's, the tests': no rubble) */
+    }
     wet_chunk (c, &e);                          /* (Its water: slice 4.9's; then age's rubble, slice 4.10's) */
     u = 1;
     if (!changes_over (c, x, y) && e.x1 != 0xFF) {

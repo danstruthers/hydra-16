@@ -1365,7 +1365,7 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   kinds and hardness): the rock's own kinds and hardness across the strata, a dig's rate by it, told as it's dug,
   named by Mining, poor rock coming down on a dig and striking the digger; the rock looked at ("examine the wall");
   a mixed stratum part natural and part built (dq0 -M); age's collapse and rubble.  Left: a room's walls told in a
-  look about (only "examine the wall" tells them), "look at the wall" (the grammar's: its rule bank full), a vein's
+  look about (only "examine the wall" and "look at the wall" tell them), a vein's
   ore worth taking; rubble in a room (passages' only), a denizen's step slowed by it, a step onto it told; explosives
   and sills; the veins' lines all near north-south (rock.h's: x by y), worth a second way.
   **A mine's own rules** (not built): a mine stratum's chunks grown along the plan's veins, rock_kind's (a region's

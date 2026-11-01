@@ -572,7 +572,7 @@ static void __fastcall__ start (const char* name, unsigned char t, const char* m
     strcat (path, name);
     if ((task_[t] = hub_spawn (path, t, more)) < 0 && t != T_SOUND) {
         t_end ();
-        strcpy (path, "dq0: this can't be started: lib/dq0/");
+        strcpy (path, "dq0: can't start lib/dq0/");
         strcat (path, name);
         hy_exits (path);
     }
@@ -608,7 +608,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     close (w);
     if (hub_create (HUB_BANKS)) {
         t_end ();
-        hy_exits ("dq0: no shared segment or semaphores for its tasks");
+        hy_exits ("dq0: no shared segment or semaphores");
     }
     HUB->seed = seed;
     HUB->test_start = test_start;
@@ -2423,6 +2423,8 @@ void __fastcall__ s_args (int argc, char* argv[])
                                                 **   were, slice 4.9's) */
         } else if (!strcmp (argv[i], "-M")) {
             gear |= GE_MIXED;                   /* (For the tests: every built stratum mixed, slice 4.10's) */
+        } else if (!strcmp (argv[i], "-U")) {
+            gear |= GE_UNFALLEN;                /* (For the tests: no rubble, the passages as they were made) */
         } else if (!strcmp (argv[i], "-a")) {
             autogo = 1;                         /* (For the tests: a long task goes on at every soft question) */
         } else if (!strcmp (argv[i], "-N")) {
@@ -2444,7 +2446,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d dir] [-t theme] [-k kit] [-r rs] [-T..] [-C -a -I -N -K -W -M]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d dir] [-t theme] [-k kit] [-r rs] [-T..]");    /* (Not the tests' own: the room's) */
         }
     }
 }

@@ -120,6 +120,7 @@ listen      alone=VB_LISTEN thing=VB_LISTEN way=VB_LISTEN skill=P_NOTICE_SOUND
 smell       alone=VB_SMELL thing=VB_SMELL way=VB_SMELL skill=P_NOTICE_SMELL
 track       alone=VB_TRACK thing=VB_TRACK skill=P_TRACK task=LT_WALK aux=TRC_TRACK
 floorlook   alone=VB_TRACK thing=VB_TRACK aux=TRC_FLOOR    # (new, slice 4.1: the floor looked at, its traces seen)
+walllook    alone=VB_TRACK thing=VB_TRACK aux=TRC_WALL     # (new, slice 4.10: the wall ahead looked at, its rock)
 sleep       alone=VB_SLEEP thing=VB_SLEEP task=LT_SLEEP
 sit         alone=VB_SIT thing=VB_SIT
 stand       alone=VB_STAND
@@ -442,6 +443,12 @@ look at floor = floorlook
 look at the ground = floorlook
 look at ground = floorlook
 look at the dust = floorlook
+look at the wall = walllook
+look at wall = walllook
+look at the walls = walllook
+look at the rock = walllook
+examine the rock = walllook
+study the wall = walllook
 study the floor = floorlook
 look for tracks = track
 look for prints = track

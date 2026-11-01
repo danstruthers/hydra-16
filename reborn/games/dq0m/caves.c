@@ -388,7 +388,7 @@ static void __fastcall__ rubble (unsigned char poor)
     unsigned char i, d, x, y, n = STRATUM (L->sn).age;
     unsigned char* q;
 
-    if (n < 2) {
+    if (n < 2 || poor == 0xFF) {                /* (Young; or dq0 -U's, the tests': none) */
         return;
     }
     n = (n > 10 ? 10 : n) << poor;
