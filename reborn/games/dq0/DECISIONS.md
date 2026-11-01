@@ -1346,3 +1346,19 @@ steps worse, struck at two easier); its pastime let go as it rises to act, told 
 
 **Design:** DENIZENS.md's daily life; HOUSE.md's leisure.
 
+### Ways off the compass
+
+The user (2026-10-31): "Is tunnelling sideways a thing?"  Then: "What about passeges, tunnells, rooms, etc. that are not
+set on the 4 main compass coordinates?  Tunnells and natural caverns especially, or grids that are not aligned to the
+compass are exmaples."  Offered the lead's three steps (diagonal passages as true ways; a passage told by its real
+heading; built complexes at an angle; free angles advised against), the user: "Yes, please queue up 1-3".
+
+Built (branch reborn-game-angles), step 1 first, for review in HOUSE.md's diagonal ways: a diagonal way, a step between
+two squares that share only a corner, open where the grid says so (a corner cut, world.h's T_CUT: rock a diagonal way's
+corner cuts through, neither corner a square to stand on, never squeezed between two solid corners), walked by every
+actor (the character's walks, its ways across a room and its journeys, the denizens' steps, a hunter's scent), seen
+along, told among a passage's ways ("ahead to your right"), drawn on the map ("/" and "\"), and dug ("dig northeast":
+a square corner to corner, seven feet); the cave grower's zigzag tunnels made the diagonals they are.
+
+**Design:** DUNGEON.md's diagonal ways; HOUSE.md's diagonal ways.
+

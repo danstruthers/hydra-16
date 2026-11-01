@@ -247,6 +247,58 @@ static void __fastcall__ hollow (const struct room* p)
     }
 }
 
+static const signed char sb[4] = { -CW, 1, CW, -1 };    /* (The four ways, as offsets in the chunk) */
+/* A tunnel's zigzag made the diagonal it is (the user's, 2026-10-31: tunnels off the compass): a tunnel's square in no
+** chamber, its two ways on a quarter apart (the rest beside it rock, and the two squares across its corners), the
+** zigzag going on past it (a square across its other corners a tunnel's, or cut), the rise between them a step's: the
+** corner the diagonal cuts (T_CUT), the squares either side walked between (chunk.c's slant).  A bend alone stays a
+** bend.  No dice: the layout as it was grown */
+static void slants (void)
+{
+    unsigned char x, y, d, a, b, m, t;
+    unsigned char* q;
+    signed char* z;
+    struct room* p;
+
+    for (y = 1; y < CW - 1; ++y) {
+        for (x = 1; x < CW - 1; ++x) {
+            if (TILE (*(q = &L->tile[y][x])) != T_CORR) {
+                continue;
+            }
+            for (d = m = 0; d < 4; ++d) {
+                if ((t = TILE (q[sb[d]])) == T_CORR) {
+                    m |= 1 << d;
+                } else if (t != T_ROCK) {
+                    m = 0xF0;
+                }
+            }
+            if (m != 3 && m != 6 && m != 12 && m != 9) {
+                continue;                       /* (Not two ways on a quarter apart, the rest rock) */
+            }
+            a = m == 9 ? 3 : m == 12 ? 2 : m == 6 ? 1 : 0;
+            b = (a + 1) & 3;
+            if (TILE (q[sb[a] + sb[b]]) != T_ROCK || TILE (q[-sb[a] - sb[b]]) != T_ROCK ||
+                ((t = TILE (q[sb[a] - sb[b]])) != T_CORR && t != T_CUT && (t = TILE (q[sb[b] - sb[a]])) != T_CORR &&
+                t != T_CUT)) {
+                continue;
+            }
+            z = &L->elev[y][x];
+            t = z[sb[a]] - z[sb[b]] + STEP_MAX;
+            if (t > 2 * STEP_MAX) {
+                continue;
+            }
+            for (d = L->nrooms, p = L->room; d; --d, ++p) {
+                if (x + 1 >= p->x && x <= p->x + p->w && y + 1 >= p->y && y <= p->y + p->h) {
+                    break;
+                }
+            }
+            if (!d) {
+                *q = T_CUT;
+            }
+        }
+    }
+}
+
 void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned long seed)
 {
     struct stratum* s = &STRATUM (c->sn);
@@ -302,6 +354,7 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
     for (i = 0; i < L->nrooms; ++i) {
         hollow (&L->room[i]);
     }
+    slants ();
     for (y = 0; y < CW; ++y) {
         for (x = 0; x < CW; ++x) {
             if (L->tile[y][x] != T_ROCK) {

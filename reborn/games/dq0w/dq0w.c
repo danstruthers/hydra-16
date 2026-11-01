@@ -466,83 +466,10 @@ static unsigned char __fastcall__ known_at (unsigned x, unsigned y)
     return p && kept_tile (*p);
 }
 
-/* A way off to the side of the passage at (mx, my), heading d, that the character knows of: 1 (a fork it knows) */
-static unsigned char __fastcall__ side_known (unsigned char d)
-{
-    unsigned char e = (d + 1) & 3, k;
-
-    for (k = 0; k < 2; ++k, e ^= 2) {
-        if (step_ok (sn_, mx, my, e) && !breadth (sn_, mx, my, e) && known_at (mx + dir_x[e], my + dir_y[e])) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-/* From (mx, my), heading d, to the next place: the time it takes (mx, my where it ends, mface its heading; walked
-** its squares: the senses remember them felt, the look's walk).  In the dark (feel_), by what the character knows:
-** straight on the way said, stopped by a way off it it knows of; round a bend only one it knows (else it meets the
-** wall ahead: told as it gets there, part 43's), never toward an opening it hasn't seen or felt (the senses' felt
-** goes the same way: the look's wd | 0x80) */
 static unsigned char walked;
-static unsigned long __fastcall__ walk (unsigned char d)
-{
-    unsigned long t = 0;
-    unsigned char n = 0, inside, cross, h0 = d, nd;
-    unsigned char* p;
-    int z;
+static unsigned long walk_t;                    /* (walk's: the time it takes) */
+void __fastcall__ walk (unsigned char d);       /* (Part 9's, its stub: across's, part 33's) */
 
-    pwalk0 = npath;
-    way_room = 0xFF;
-    cross = room_of (sn_, mx, my) == 0xFF && ways_from (sn_, mx, my, d) > 1 ? 3 : 0;   /* (Set out from a fork:
-                                                **   three squares the way said, a wide one crossed, not each of its
-                                                **   squares a fork again) */
-    while (n < lim_) {
-        if (!step_ok (sn_, mx, my, d) || (blocked = den_on (mx + dir_x[d], my + dir_y[d])) != 0) {
-            break;
-        }
-        z = elev_at (sn_, mx, my);
-        mx += dir_x[d];
-        my += dir_y[d];
-        ++n;
-        p = at (sn_, mx, my);
-        t += cost (C->elev[cy_][cx_] - z, TILE (*p) == T_STEPS);
-        path_add (H_OF (d), pbase + t);
-        inside = TILE (*p) != T_DOOR && room_of (sn_, mx, my) != 0xFF;
-        if (inside) {                           /* (Through a door, into a room) */
-            break;
-        }
-        if (TILE (*at (sn_, mx, my)) == T_DOOR) {
-            continue;
-        }
-        if (feel_) {                            /* (In the dark: on as it goes, by what it knows) */
-            if (step_ok (sn_, mx, my, d)) {
-                if (side_known (d)) {
-                    break;
-                }
-                continue;
-            }
-            if (ways_from (sn_, mx, my, d) == 1 && known_at (mx + dir_x[way_on], my + dir_y[way_on])) {
-                d = way_on;
-                continue;
-            }
-            break;
-        }
-        if (cross && (--cross, step_ok (sn_, mx, my, h0))) {
-            d = h0;
-            continue;
-        }
-        if ((nd = ways_from (sn_, mx, my, d)) == 1) {
-            d = way_on;                         /* (On: its one way, a wide passage's breadth none) */
-        } else if (nd || !step_ok (sn_, mx, my, d)) {
-            break;                              /* (A fork, or the passage's end: a wide one's last squares on to
-                                                **   it) */
-        }
-    }
-    mface = d;
-    walked = n;
-    return t;
-}
 
 static void __fastcall__ no_way (unsigned why)
 {
@@ -880,19 +807,20 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
         st = TILE (*p) == T_STEPS;
         z = C->elev[cy_][cx_];
         if (room_of (sn_, nx, ny) != r || !(p = at (sn_, nx, ny)) || !T_PASS (*p)) {
-            if (lim_ == 250 && !(h & 1) && p && (TILE (*p) == T_CORR || TILE (*p) == T_DOOR) &&
-                step_ok (sn_, mx, my, h >> 1)) {
-                hub_map (0);                    /* (A passage's mouth: on along it, to the next place) */
+            if (lim_ == 250 && p && (TILE (*p) == T_CORR || TILE (*p) == T_DOOR) && step8 (sn_, mx, my, h)) {
+                hub_map (0);                    /* (A passage's mouth: on along it, to the next place; a diagonal
+                                                **   way's too) */
                 move.on = 1;
                 move.how = A_WALKED;
-                move.dir = h >> 1;
+                move.dir = h;
                 move.sn = sn_;
                 move.x = mx;
                 move.y = my;
                 pbase = t;
-                t += walk (h >> 1);
+                walk (h);
+                t += walk_t;
                 pbase = 0;
-                move.face = H_OF (mface);
+                move.face = mface;
                 hub_map (0);
                 if (!n && blocked && mx == move.x && my == move.y) {
                     move.on = 0;
@@ -965,8 +893,8 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW9CODE")
-#pragma rodata-name (push, "SW9RODATA")
+#pragma code-name (push, "SW76CODE")            /* (Part 76's since 2026-10-31: part 9's room for the walk) */
+#pragma rodata-name (push, "SW76RODATA")
 
 /* Up to square (x, y) of the character's room (a door's or a passage's mouth: the room's square before it), by the
 ** way it can walk */
@@ -1244,6 +1172,85 @@ static unsigned tgx, tgy;
 #pragma code-name (push, "SW9CODE")
 #pragma rodata-name (push, "SW9RODATA")
 
+/* A way off to the side of the passage at (mx, my), heading h, that the character knows of: 1 (a fork it knows) */
+static unsigned char __fastcall__ side_known (unsigned char h)
+{
+    unsigned char e = (h + 2) & 7, k;
+
+    for (k = 0; k < 2; ++k, e ^= 4) {
+        if (way_ok (sn_, mx, my, e) && known_at (mx + head_x[e], my + head_y[e])) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* From (mx, my), heading d (of the eight: a diagonal way's too), to the next place: the time it takes (mx, my where it ends, mface its heading; walked
+** its squares: the senses remember them felt, the look's walk).  In the dark (feel_), by what the character knows:
+** straight on the way said, stopped by a way off it it knows of; round a bend only one it knows (else it meets the
+** wall ahead: told as it gets there, part 43's), never toward an opening it hasn't seen or felt (the senses' felt
+** goes the same way: the look's wd | 0x80) */
+void __fastcall__ s_walk (unsigned char d)
+{
+    unsigned long t = 0;
+    unsigned char n = 0, inside, cross, h0 = d, nd;
+    unsigned char* p;
+    unsigned c;
+    int z;
+
+    pwalk0 = npath;
+    way_room = 0xFF;
+    cross = room_of (sn_, mx, my) == 0xFF && ways_from (sn_, mx, my, d) > 1 ? 3 : 0;   /* (Set out from a fork:
+                                                **   three squares the way said, a wide one crossed, not each of its
+                                                **   squares a fork again) */
+    while (n < lim_) {
+        if (!STEP8 (sn_, mx, my, d) || (blocked = den_on (mx + head_x[d], my + head_y[d])) != 0) {
+            break;
+        }
+        z = elev_at (sn_, mx, my);
+        mx += head_x[d];
+        my += head_y[d];
+        ++n;
+        p = at (sn_, mx, my);
+        c = cost (C->elev[cy_][cx_] - z, TILE (*p) == T_STEPS);
+        t += d & 1 ? c + (c << 1) / 5 : c;      /* (A diagonal: seven feet) */
+        path_add (d, pbase + t);
+        inside = TILE (*p) != T_DOOR && room_of (sn_, mx, my) != 0xFF;
+        if (inside) {                           /* (Through a door, into a room) */
+            break;
+        }
+        if (TILE (*at (sn_, mx, my)) == T_DOOR) {
+            continue;
+        }
+        if (feel_) {                            /* (In the dark: on as it goes, by what it knows) */
+            if (STEP8 (sn_, mx, my, d)) {
+                if (side_known (d)) {
+                    break;
+                }
+                continue;
+            }
+            if (ways_from (sn_, mx, my, d) == 1 && known_at (mx + head_x[way_on], my + head_y[way_on])) {
+                d = way_on;
+                continue;
+            }
+            break;
+        }
+        if (cross && (--cross, STEP8 (sn_, mx, my, h0))) {
+            d = h0;
+            continue;
+        }
+        if ((nd = ways_from (sn_, mx, my, d)) == 1) {
+            d = way_on;                         /* (On: its one way, a wide passage's breadth none) */
+        } else if (nd || !STEP8 (sn_, mx, my, d)) {
+            break;                              /* (A fork, or the passage's end: a wide one's last squares on to
+                                                **   it) */
+        }
+    }
+    mface = d;
+    walked = n;
+    walk_t = t;
+}
+
 /* The character sets out on heading h (north, northeast ...): its time, and where it'll be.  From a room: north,
 ** east, south or west by a door in that wall (the nearest it can walk to); a diagonal, by the door that lies that
 ** way; across the room by the way it can walk; the UI's door or mouth, if it means one (tgx).  A passage goes only by
@@ -1307,11 +1314,12 @@ void __fastcall__ s_go (unsigned char h)
             path_ways (k - dir_x[best], d - dir_y[best]);
             mx = ox + k - dir_x[best];          /* (From the room's square before it, walked on) */
             my = oy + d - dir_y[best];
-            d = best;
+            d = DH (best);
             move.x = mx;
             move.y = my;
             pbase = bt;
-            t = bt + walk (d);
+            s_walk (d);
+            t = bt + walk_t;
             pbase = 0;
             goto set_out;
         }
@@ -1337,19 +1345,21 @@ void __fastcall__ s_go (unsigned char h)
         path_ways (bx, by);
         mx = ox + bx;
         my = oy + by;
-        d = best;
+        d = H_OF (best);
         move.x = mx;
         move.y = my;
         pbase = bt;
-        t = bt + walk (d);
+        s_walk (d);
+        t = bt + walk_t;
         pbase = 0;
-    } else if ((h & 1) || !step_ok (sn_, mx, my, d)) {
+    } else if (!STEP8 (sn_, mx, my, h)) {
         no_exit (h);                            /* (In the dark: what its hands meet, told) */
         return;
     } else {
         move.x = mx;
         move.y = my;
-        t = walk (d);
+        s_walk (d = h);
+        t = walk_t;
         if (blocked && mx == move.x && my == move.y) {
             hub_map (0);
             den_way ();
@@ -1362,7 +1372,7 @@ set_out:
     move.how = A_WALKED;
     move.dir = d;
     move.sn = sn_;
-    move.face = H_OF (mface);
+    move.face = mface;
     set_off (t);
     bound_for (mx, my);
 }
@@ -2545,6 +2555,7 @@ static struct {
 #define DIG_TOP         (dig.d != DIR_DOWN ? 0xFF : dig.mat == MAT_EARTH || dig.mat == MAT_SOIL ? 4 : \
                          dig.mat == MAT_STONE ? 0 : 2)
 void __fastcall__ dig_kept (unsigned char begin);   /* (Part 19's: the hole's record, DUG) */
+#define DIG_DIR(d)      ((d) >= 6 ? (d) - 2 : (d))  /* (A dig's way, dig.d, dir_x's: 6 to 9 the diagonals, the UI's) */
 #define WK_NAMED        0x80                    /* (A wall looked at, dig.rock's for its words: its rock named; too */
 #define WK_DARK         0xF0                    /*   dark to see; no wall near enough; masonry: wall_look's) */
 #define WK_NONE         0xF1
@@ -2765,6 +2776,9 @@ void __fastcall__ s_start_dig (unsigned char d)
         }
         return;
     }
+    if (d >= 8) {                               /* (A heading, the UI's: N, E, S, W 0 to 3, a diagonal 6 to 9) */
+        d = (d & 1 ? 6 : 0) + (d - 8 >> 1);
+    }
     dig.d = d;
     dig.done = 0;
     if (d == DIR_DOWN) {
@@ -2802,6 +2816,7 @@ void __fastcall__ s_start_dig (unsigned char d)
         }
         dig.need = 2 * abs (STRATUM (sn_).datum - STRATUM (sn_ + 1).datum);
     } else {
+        d = DIG_DIR (d);                        /* (A diagonal, 6 to 9: dir_x's 4 to 7) */
         dig.x = mx + dir_x[d];
         dig.y = my + dir_y[d];
         if ((k = room_of (sn_, mx, my)) == 0xFF) {  /* (A wall's room: its side's, or the far side's; in its chunk) */
@@ -2809,12 +2824,13 @@ void __fastcall__ s_start_dig (unsigned char d)
         }
         p = at (sn_, dig.x, dig.y);
         t = p ? TILE (*p) : T_PIT;
-        if (t != T_WALL && t != T_ROCK && t != T_RUBBLE) {
+        if (t != T_WALL && t != T_ROCK && t != T_RUBBLE && t != T_CUT) {
             hub_map (0);
             no_way (N_NO_DIG);
             return;
         }
-        dig.need = t == T_ROCK ? 10 : 4;        /* (A wall, two feet; a square of rock, five; rubble cleared, two) */
+        dig.need = t == T_WALL ? 4 : t == T_RUBBLE ? 4 : d >= 4 ? 14 : 10;  /* (A wall, two feet; a square of rock,
+                                                **   five, corner to corner seven; rubble cleared, two) */
         dig.mat = t == T_RUBBLE ? MAT_SOIL : C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL];   /* (Its
                                                 **   room's walls, or the rock; rubble shifted as loose soil is,
                                                 **   slice 4.10's) */
@@ -2904,6 +2920,17 @@ static void roof_harm (void)
 }
 
 /* A spell of work done: its test, its noise, and on, or through (or a wall looked at: wall_look) */
+/* A diagonal dig's corner, square x, y, cut (T_CUT) if it's rock or a wall: the way through walked corner to corner
+** (chunk.c's slant) */
+static void __fastcall__ cut_corner (unsigned x, unsigned y)
+{
+    unsigned char* p = at (sn_, x, y);
+
+    if (p && (TILE (*p) == T_ROCK || TILE (*p) == T_WALL)) {
+        change (sn_, x, y, T_CUT, C->elev[cy_][cx_], 0xFF);
+    }
+}
+
 void s_dig_on (void)
 {
     signed char g;
@@ -2945,6 +2972,10 @@ void s_dig_on (void)
     if (dig.d != DIR_DOWN) {                    /* (Through: the square a passage, at the character's floor) */
         z = elev_at (sn_, mx, my);
         change (sn_, dig.x, dig.y, T_CORR, z, 0xFF);
+        if (dig.d >= 6) {
+            cut_corner (dig.x, my);             /* (A diagonal: its corners cut, the way walked corner to corner) */
+            cut_corner (mx, dig.y);
+        }
         hub_map (0);
         event (E_DIG, 0, D_THROUGH << 8);
         see (0);
@@ -3795,16 +3826,16 @@ void __fastcall__ s_path_ways (unsigned char tx, unsigned char ty)
     unsigned char* p;
 
     hy_bank (ovbank[OVBANKS + 1]);
-    for (n = 0, i = (unsigned) ty * CW + tx; (d = WAYS_AT[i].from) < 4 && n < PATH_MAX; ++n) {
+    for (n = 0, i = (unsigned) ty * CW + tx; (d = WAYS_AT[i].from) < 8 && n < PATH_MAX; ++n) {
         i -= dir_x[d] + (int) dir_y[d] * CW;
     }
     if (npath + n > PATH_MAX) {
         n = PATH_MAX - npath;
     }
     npath = k = npath + n;
-    for (i = (unsigned) ty * CW + tx; n && (d = (w = &WAYS_AT[i])->from) < 4; --n) {
+    for (i = (unsigned) ty * CW + tx; n && (d = (w = &WAYS_AT[i])->from) < 8; --n) {
         p = PATH_AT + 3 * --k;
-        p[0] = H_OF (d);
+        p[0] = DH (d);
         p[1] = (unsigned char) w->t;
         p[2] = (unsigned char) (w->t >> 8);
         i -= dir_x[d] + (int) dir_y[d] * CW;
@@ -5575,8 +5606,9 @@ static unsigned __fastcall__ step_by (unsigned char x, unsigned char y, unsigned
     struct trap* q;
     int dz;
 
-    if (nx >= CW || ny >= CW || (unsigned char) (nx - wox) >= wow || (unsigned char) (ny - woy) >= woh) {
-        return 0xFFFF;
+    if (nx >= CW || ny >= CW || (unsigned char) (nx - wox) >= wow || (unsigned char) (ny - woy) >= woh ||
+        (d >= 4 && !slant (sn_, rx0 + x, ry0 + y, DH (d)))) {
+        return 0xFFFF;                          /* (A diagonal only a diagonal way: slant's) */
     }
     u = C->tile[ny][nx];
     q = trap_at21 (nx, ny);
@@ -5588,7 +5620,8 @@ static unsigned __fastcall__ step_by (unsigned char x, unsigned char y, unsigned
     if ((dz < 0 ? -dz : dz) > (TILE (t) == T_STEPS || TILE (u) == T_STEPS ? STAIR_MAX : STEP_MAX)) {
         return 0xFFFF;
     }
-    return cost (dz, TILE (u) == T_STEPS);
+    dz = cost (dz, TILE (u) == T_STEPS);
+    return d >= 4 ? dz + (dz << 1) / 5 : dz;    /* (A diagonal: seven feet) */
 }
 
 /* The ways from (fx, fy) to every square of room r's floor and walls it can walk to (a search a step at a time, in the
@@ -5596,8 +5629,8 @@ static unsigned __fastcall__ step_by (unsigned char x, unsigned char y, unsigned
 ** the window after */
 void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy)
 {
-    static unsigned c[4];
-    static unsigned char tr[4];
+    static unsigned c[8];
+    static unsigned char tr[8];
     struct room* p;
     struct wcell* w;
     unsigned head = 0, tail = 0, i, n, t, q;
@@ -5626,7 +5659,7 @@ void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy
     }
     i = (unsigned) fy * CW + fx;
     w = &WAYS_AT[i];
-    w->from = 4;
+    w->from = 8;
     w->t = 0;
     w->trap = 0xFFFF;
     WAYS_Q[tail++] = i;
@@ -5637,12 +5670,12 @@ void __fastcall__ s_ways_go (unsigned char r, unsigned char fx, unsigned char fy
         x = i & (CW - 1);
         y = i >> CW_BITS;
         hub_map (at_bank);
-        for (d = 0; d < 4; ++d) {
+        for (d = 0; d < 8; ++d) {
             c[d] = step_by (x, y, d);
             tr[d] = wtrap;
         }
         hy_bank (b);
-        for (d = 0; d < 4; ++d) {
+        for (d = 0; d < 8; ++d) {
             if (c[d] == 0xFFFF) {
                 continue;
             }

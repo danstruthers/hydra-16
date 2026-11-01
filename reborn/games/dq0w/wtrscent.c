@@ -82,6 +82,9 @@ unsigned char __fastcall__ s_tr_scent (unsigned char nose)
         }
     }
 done:
+    if ((way & 1) && way <= H_NW && !slant (bd.sn, bd.x, bd.y, way)) {
+        way &= 6;                               /* (A diagonal only a diagonal way: else the four's, as ever) */
+    }
     hub_map (0);
     return way;
 }

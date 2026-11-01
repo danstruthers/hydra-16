@@ -108,7 +108,7 @@ go:
             SWPART      18, 7               ; The change records' files, the save's stamps (wfile.c)
             SWPART      19, 8               ; The game's files begun, the item store kept (wfile.c); a hole dug kept
             SWPART      20, 7               ; The things' files: a chunk's put out, read in (ipage.c)
-            SWPART      21, 6               ; The ways across a room worked out (dq0w.c's ways; overlay 5's till 2026-10-28)
+            SWPART      21, 1               ; The ways across a room worked out (dq0w.c's ways; overlay 5's till 2026-10-28, 6's till 2026-10-31)
             SWPART      22, 17              ; The strata's records out of the hub, back (sfile.c)
             SWPART      23, 11              ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 12              ; Engagement, a blow's close-in, fighting on (dq0w.c's)
@@ -125,7 +125,7 @@ go:
             SWPART      34, 14              ; The rooms' lights by their sconces (wkept.c)
             SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
-            SWPART      37, 4               ; The rest of the UI's intents carried out (dq0w.c's intent_more)
+            SWPART      37, 13              ; The rest of the UI's intents carried out (dq0w.c's intent_more; overlay 4's till 2026-10-31)
             SWPART      38, 16              ; A change record kept and made (store.c's store_put, change)
             SWPART      39, 12              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
@@ -168,6 +168,8 @@ go:
             SWPART      73, 3               ; The water: wading, swimming (dq0w.c's: slice 4.9's)
             SWPART      74, 14              ; A waterskin filled (wwater.c: slice 4.9's)
             SWPART      75, 16              ; The water's depth where the character stands (wwater.c)
+            SWPART      76, 22              ; Up to a place in the room (dq0w.c's go_to: part 9's till 2026-10-31,
+                                            ;   its room the walk's)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -232,8 +234,9 @@ go:
             SWFN        portals, 7
             SWFN        traps, 8
             SWFN        go, 9
-            SWFN        go_to, 9
+            SWFN        go_to, 76           ; (Part 9's till 2026-10-31: its room the walk's)
             SWFN        step_to, 9
+            SWFN        walk, 9             ; (A walk along a passage: across's, part 33's; 2026-10-31, the main RAM's room)
             SWFN        serve, 10
             SWFN        named, 10
             SWFN        on_pc, 10

@@ -6,8 +6,14 @@
 
 #include "level.h"
 
+#ifdef LEVEL_DIAG                               /* (The diagonals, a diagonal way's: the world's, the senses', the
+                                                **   denizens') */
+const signed char dir_x[8] = { 0, 1, 0, -1, 1, 1, -1, -1 };
+const signed char dir_y[8] = { -1, 0, 1, 0, -1, 1, 1, -1 };
+#else
 const signed char dir_x[4] = { 0, 1, 0, -1 };
 const signed char dir_y[4] = { -1, 0, 1, 0 };
+#endif
 #ifndef LEVEL_NO_NAMES
 const char* const dir_name[6] = { "north", "east", "south", "west", "up", "down" };
 #endif

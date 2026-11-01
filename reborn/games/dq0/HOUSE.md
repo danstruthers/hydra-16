@@ -1385,7 +1385,8 @@ the game (world.dat).  Every ruleset's but the test itself (the referee's).  Eac
   status line's facing with a ? after it ("facing NE?").  Which way it drifts is the bearings' own d8 (odd the other
   way).
 - **An eighth off, the compass misleads in a passage:** the four ways the character believes in are truly
-  diagonals, and a passage goes only by the four, so "north" there is "You can't go that way."; the ways as it faces
+  diagonals, and a passage goes by the four but where a diagonal way goes on (2026-10-31: HOUSE.md's diagonal ways), so
+  "north" there is "You can't go that way."; the ways as it faces
   (forward, back, left, right) still go where it means.  The game's choice: the believed way is taken as said, not
   nudged to the nearest passage (at an eighth off both of the nearest are as near).
 - **Landmarks:** coming back into a room it has been in before (the senses' R_VISITED: come into, not only seen;
@@ -2424,6 +2425,32 @@ Awareness at half (Skills 11); the rest is the house's.  DENIZENS.md's daily lif
   seen: "The soldier lets the dice fall.", "The dwarf shuts its book.", "The bandit sets down its cup."
 - **Heard** *(the house's)*: now and then, a third of its moments at it: dice rattling and counters clicking as loud as
   a snore (2), laughter, singing and cups clinking as loud as talk (3); reading, mending and whittling silent.
+
+## Diagonal ways *(2026-10-31: the user's words, DECISIONS.md's; step 1 of three, drafted for the user to review)*
+
+- **What makes a diagonal a way** *(the house's)*: a step between two squares that share only a corner, where neither
+  corner is a square to stand on and one of them is cut (world.h's T_CUT: rock, or a wall, a diagonal way's corner cuts
+  through, half of it open); never squeezed between two solid corners (the engagement zone's rule, "not round a
+  corner").  Where a corner can be stood on, the way's the four's round it, as ever: so a room's eight ways, and every
+  passage made before, are as they were.
+- **Its length** *(the house's)*: corner to corner, seven feet: a walk's square on a diagonal way takes its time and
+  two fifths more, the denizens' too, the ways across a room's search the same.
+- **Every actor** *(the house's)*: the character's walks along a passage (its ways on, a fork, a bend: the eight, none
+  behind), its ways across a room and a journey's legs; the denizens' steps (the four first, then the diagonal ways,
+  the same dice); a hunter's scent (a diagonal it follows only as a way, else the four's as before); engagement round
+  a cut corner (a cut's not solid).
+- **Seen and told** *(the house's)*: a cut is seen past (the eye's line along the way), a passage's ways on told with
+  the diagonal ones ("ahead to your right"), the map's stroke along the way ("/" or "\", turned with the map).
+- **The caves** *(the house's)*: a tunnel's zigzag, one square wide, its corner square's two ways on a quarter apart,
+  the rock about it, the zigzag going on past it, is the corner its diagonal cuts: the tunnel walked corner to corner.
+  A bend alone stays a bend; a wider tunnel stays as grown.  No dice: the same caves for the same seed, cut.
+- **Digging** *(the house's)*: "dig northeast" (any diagonal): the square corner to corner, seven feet of rock (14
+  half-feet: a square's five feet, 10), its two corners cut as it's through, so it's walked; a cut dug as rock.
+- **The believed compass an eighth off** *(the house's, as before)*: "north" a true diagonal: in a passage a way only
+  where there's a diagonal way.
+- **Still to come** *(steps 2 and 3, the user's "queue up 1-3")*: a passage told by its run's real heading in sixteenths;
+  built complexes at an angle (a stratum's plan, or one complex in it, laid at 45 degrees); the built grower's
+  diagonal passages; the tunnellers (slice 4.11) digging by the same rules.
 
 ## Decided, not yet built
 

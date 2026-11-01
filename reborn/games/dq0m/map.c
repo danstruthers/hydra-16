@@ -114,14 +114,16 @@ static void memory (void)
     mdy = head_y[w] * n;
 }
 
-/* Square x, y inside a room (world.h's T_INSIDE: a floor, steps, a stair, a pit) */
-static const unsigned char inside_[16] = { 0, 1, 0, 0, 0, 1, 0, 1, 1, 1 };
-static unsigned char __fastcall__ inside (unsigned x, unsigned y)
+/* Square x, y inside a room (world.h's T_INSIDE: a floor, steps, a stair, a pit): 1; one to stand on (a floor, a
+** passage's, a doorway, rubble: a diagonal way's corner's stroke, T_CUT's) 2 */
+static const unsigned char inside_[16] = { 0, 3, 0, 2, 2, 3, 0, 3, 3, 1, 2 };
+static unsigned char __fastcall__ what_at (unsigned x, unsigned y)
 {
     unsigned char* p = peek (sn_, x, y);
 
-    return p && inside_[TILE (*p)];
+    return p ? inside_[TILE (*p)] : 0;
 }
+#define inside(x, y)    (what_at (x, y) & 1)
 
 /* Square x, y's glyph (p: peek ()'s, its chunk K; faint: remembered, a floor a comma, no heights) */
 static char __fastcall__ glyph (unsigned x, unsigned y, unsigned char* p, unsigned char faint)
@@ -163,6 +165,9 @@ static char __fastcall__ glyph (unsigned x, unsigned y, unsigned char* p, unsign
         return 'O';
     case T_RUBBLE:                              /* (A passage fallen in: slice 4.10's) */
         return '%';
+    case T_CUT:                                 /* (A diagonal way's corner: its stroke along the way, the squares it
+                                                **   cuts between south and east, or north and west, a '/') */
+        return (what_at (x, y + 1) ^ what_at (x + 1, y)) & 2 ? '\\' : '/';
     case T_WALL:
         return inside (x, y - 1) || inside (x, y + 1) || !(inside (x - 1, y) || inside (x + 1, y)) ? '-' : '|';
     }
@@ -263,7 +268,7 @@ void s_draw_map (void)
             } else {
                 c = known (x, y);
                 if (up & 1) {                   /* (Turned a quarter: the walls' strokes too) */
-                    c = c == '-' ? '|' : c == '|' ? '-' : c;
+                    c = c == '-' ? '|' : c == '|' ? '-' : c == '/' ? '\\' : c == '\\' ? '/' : c;
                 }
             }
             row[i] = c;

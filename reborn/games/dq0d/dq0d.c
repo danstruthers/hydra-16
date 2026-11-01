@@ -1318,7 +1318,7 @@ static unsigned char __fastcall__ senses (unsigned char k)
 ** S_ANY (the way it faces, or another), S_AWAY (only one that takes it further from refx, refy (the character, or a
 ** foe): the furthest; close by it, cornered, one no nearer: a way round it, out), S_TOWARD (only one that takes it
 ** nearer, by the squares across and down together, so a step that's no nearer as the crow flies still counts: the
-** nearest).  Its direction, or 0xFF */
+** nearest).  Its direction (4 to 7: a diagonal way's, dir_x's), or 0xFF */
 enum { S_ANY, S_AWAY, S_TOWARD };
 static unsigned __fastcall__ toward (int dx, int dy)
 {
@@ -1330,14 +1330,15 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
     unsigned char d, j, best = 0xFF, s = random (2) ? a.face >> 1 : random (4);
     unsigned nx, ny, f, bf = how == S_TOWARD ? toward (a.x - refx, a.y - refy) : apart (a.x - refx, a.y - refy);
 
-    for (j = 0; j < 4; ++j) {
-        d = (s + j) & 3;
+    for (j = 0; j < 8; ++j) {
+        d = j < 4 ? (s + j) & 3 : j;            /* (The four, then the diagonal ways: slant's) */
         nx = a.x + dir_x[d];
         ny = a.y + dir_y[d];
         f = how == S_TOWARD ? toward (nx - refx, ny - refy) : apart (nx - refx, ny - refy);   /* (The walk's own
                                                 **   test last: it's the dearest) */
         if (apart (nx - ahx[k], ny - ahy[k]) > lim || (how == S_AWAY && (f < bf || (f == bf && bf > 2))) ||
-            (how == S_TOWARD && f >= bf) || taken (k, nx, ny) || !step_ok (a.sn, a.x, a.y, d) ||
+            (how == S_TOWARD && f >= bf) || taken (k, nx, ny) || !(d < 4 ? step_ok (a.sn, a.x, a.y, d) :
+            slant (a.sn, a.x, a.y, DH (d))) ||
             !wades (awater[k], a.sn, nx, ny)) {
             continue;
         }
@@ -1966,10 +1967,10 @@ static unsigned char __fastcall__ decide (unsigned char k)
     if (was >= DO_LEISURE && ((unsigned char) (a.doing - DO_WATCH) < DO_DOWN - DO_WATCH || d == 0xFC || d == 0xFA)) {
         roused (k, was);                        /* (Its pastime let go as it rises to act, told: part 10's) */
     }
-    if (d < 4 || d == 0xFB) {                   /* (A step, now and then a noise of its own; its kind with no
+    if (d < 8 || d == 0xFB) {                   /* (A step, now and then a noise of its own; its kind with no
                                                 **   darkvision, feeling its way in the dark: the world's, STEP_FEELS;
                                                 **   the way the scent goes, the world's to find) */
-        im.w1 = d == 0xFB ? STEP_SCENT : H_OF (d);
+        im.w1 = d == 0xFB ? STEP_SCENT : DH (d);
         im.w2 = K.dark ? 1 : 1 | STEP_FEELS;
         if (d == 0xFB) {
             im.x[2] = knose[akind[k] % SND_KINDS];
@@ -4309,8 +4310,8 @@ unsigned char __fastcall__ s_daily (unsigned char k)
             for (j = 0; j < 4 && (d = step_for (k, 2 * K.range + 8, S_TOWARD)) != 0xFF; ++j) {
                 a.x += dir_x[d];                /* (Unseen: a few squares at once, of no time, as coarse's) */
                 a.y += dir_y[d];
-                a.face = H_OF (d);
-                im.w1 = H_OF (d) | STEP_COARSE;
+                a.face = DH (d);
+                im.w1 = DH (d) | STEP_COARSE;
                 im.w2 = 1;
                 act (I_STEP, k);
             }

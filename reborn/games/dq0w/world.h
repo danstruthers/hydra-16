@@ -53,15 +53,18 @@ extern unsigned char smask;
 /* Squares: the low four bits a kind; T_SEEN: the character has seen it; T_VIS: it sees it now; T_HOLE: a shaft in
 ** the ceiling above; T_DRAWN: on the map it draws (the senses', as it sees it, mapping as it goes on paper: DUNGEON.md,
 ** the map kept; the map its chunk's kept.map).  T_RUBBLE: a passage's square fallen in (age's, slice 4.10's: the
-** maker's, a passage's, never by a room or a doorway), climbed over slowly, cleared by digging */
-enum { T_ROCK, T_FLOOR, T_WALL, T_DOOR, T_CORR, T_STEPS, T_WINDOW, T_UP, T_DOWN, T_PIT, T_RUBBLE };
+** maker's, a passage's, never by a room or a doorway), climbed over slowly, cleared by digging.  T_CUT: rock a
+** diagonal way's corner cuts through (the user's, 2026-10-31: passages off the compass): not stood on, seen past, the
+** two squares of the diagonal it's a corner of walked between (chunk.c's slant) */
+enum { T_ROCK, T_FLOOR, T_WALL, T_DOOR, T_CORR, T_STEPS, T_WINDOW, T_UP, T_DOWN, T_PIT, T_RUBBLE, T_CUT };
 #define T_SEEN          0x80
 #define T_VIS           0x40
 #define T_MARK          0x40                    /* (A grower's, the same bit: a square reached) */
 #define T_HOLE          0x20
 #define T_DRAWN         0x10
 #define TILE(t)         ((t) & 0x0F)
-#define T_PASS(t)       (TILE (t) != T_ROCK && TILE (t) != T_WALL && TILE (t) != T_WINDOW && TILE (t) != T_PIT)
+extern const unsigned char t_kinds[16];         /* (Each kind's: 1 it can be stood on; slant.s's, the maker's make.c) */
+#define T_PASS(t)       (t_kinds[TILE (t)] & 1) /* Not rock, a wall, a window, a pit, a cut */
 #define T_INSIDE(t)     (TILE (t) == T_FLOOR || TILE (t) == T_STEPS || TILE (t) == T_UP || TILE (t) == T_DOWN || \
                          TILE (t) == T_PIT)
 #define T_CLEAR(t)      (TILE (t) != T_ROCK && TILE (t) != T_WALL)  /* The eye sees past it (a window too) */
@@ -414,8 +417,16 @@ signed char __fastcall__ elev_at (unsigned char sn, unsigned x, unsigned y);
 unsigned char __fastcall__ step_ok (unsigned char sn, unsigned x, unsigned y, unsigned char d);   /* Walkable to d */
 unsigned char __fastcall__ breadth (unsigned char sn, unsigned x, unsigned y, unsigned char d);   /* That step a wide
                                                 **   passage's breadth alone, no way on (the senses' part 2's) */
-unsigned char __fastcall__ ways_from (unsigned char sn, unsigned x, unsigned y, unsigned char d);    /* The ways on
-                                                **   heading d, not back nor breadth: how many, one in way_on */
+unsigned char __fastcall__ slant (unsigned char sn, unsigned x, unsigned y, unsigned char h);    /* Heading h (odd)
+                                                **   a diagonal way: past two corners not stood on, one a cut */
+unsigned char __fastcall__ step8 (unsigned char sn, unsigned x, unsigned y, unsigned char h);  /* Walkable heading h:
+                                                **   the four as step_ok, a diagonal a diagonal way's */
+#define STEP8(sn, x, y, h)  step8 (sn, x, y, h)
+unsigned char __fastcall__ way_ok (unsigned char sn, unsigned x, unsigned y, unsigned char h);  /* A way on heading
+                                                **   h: walkable, not a wide passage's breadth (the senses' part 2's) */
+unsigned char __fastcall__ ways_from (unsigned char sn, unsigned x, unsigned y, unsigned char h);    /* The ways on
+                                                **   heading h (of the eight), not behind nor breadth: how many, one
+                                                **   in way_on (a heading) */
 extern unsigned char way_on, way_room;
 unsigned char __fastcall__ room_of (unsigned char sn, unsigned x, unsigned y);  /* Its room in C (0xFF: none) */
 unsigned char __fastcall__ zone_of (unsigned char sn, unsigned x, unsigned y);  /* Its zone in C (0xFF: none) */

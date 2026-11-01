@@ -162,6 +162,8 @@ unsigned char __fastcall__ step_ok (unsigned char sn, unsigned x, unsigned y, un
     return dz <= (TILE (t) == T_STEPS || TILE (u) == T_STEPS ? STAIR_MAX : STEP_MAX);
 }
 
+/* (slant.s: slant, a diagonal way past two corners not stood on, one cut; step8, the four's or a diagonal way) */
+
 #ifndef CHUNK_NO_ROOMS
 /* The step from (x, y) to the square beside it d only its passage's breadth, no way on (the user's, 2026-10-21: a wide
 ** passage is one passage, a fork only where a way truly branches off): that square and this one going on side by side
@@ -196,17 +198,23 @@ unsigned char __fastcall__ breadth (unsigned char sn, unsigned x, unsigned y, un
     return 0;                                   /* (Wider than three: a way) */
 }
 
-/* The ways on from (x, y) heading d (a walk's: of the four, not back, nor a wide passage's breadth, nor an opening
-** into the room the square before opened into, way_room: a passage along a room's side one way into it): how many;
-** one of them in way_on; the room it opens into now in way_room */
+/* A way on from (x, y) heading h: one of the four walkable and not a wide passage's breadth, or a diagonal way */
+unsigned char __fastcall__ way_ok (unsigned char sn, unsigned x, unsigned y, unsigned char h)
+{
+    return h & 1 ? slant (sn, x, y, h) : step_ok (sn, x, y, h >> 1) && !breadth (sn, x, y, h >> 1);
+}
+
+/* The ways on from (x, y) heading h (a walk's: of the eight, none behind, nor a wide passage's breadth, nor an opening
+** into the room the square before opened into, way_room: a passage along a room's side one way into it; a diagonal a
+** diagonal way's, slant's): how many; one of them in way_on (its heading); the room it opens into now in way_room */
 unsigned char way_on, way_room = 0xFF;
-unsigned char __fastcall__ ways_from (unsigned char sn, unsigned x, unsigned y, unsigned char d)
+unsigned char __fastcall__ ways_from (unsigned char sn, unsigned x, unsigned y, unsigned char h)
 {
     unsigned char k, nd = 0, r, rm = 0xFF;
 
-    for (k = 0; k < 4; ++k) {
-        if (k != ((d + 2) & 3) && step_ok (sn, x, y, k) && !breadth (sn, x, y, k)) {
-            if ((r = room_of (sn, x + dir_x[k], y + dir_y[k])) != 0xFF && (rm = r) == way_room) {
+    for (k = 0; k < 8; ++k) {
+        if (!REL_BEHIND (k - h) && way_ok (sn, x, y, k)) {
+            if ((r = room_of (sn, x + head_x[k], y + head_y[k])) != 0xFF && (rm = r) == way_room) {
                 continue;
             }
             ++nd;

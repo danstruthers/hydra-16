@@ -85,21 +85,21 @@ void __fastcall__ s_felt (unsigned char sn, unsigned x, unsigned y, unsigned cha
     unsigned char* p;
     unsigned char h0 = d, cross, m = d & 0x80 ? T_SEEN : T_SEEN | run_d;    /* (h0: in the dark, | 0x80) */
 
-    d &= 3;
+    d &= 7;                                     /* (A heading: the diagonal ways' too) */
     way_room = 0xFF;
     cross = !(h0 & 0x80) && room_of (sn, x, y) == 0xFF && ways_from (sn, x, y, d) > 1 ? 3 : 0;   /* (As the walk does:
                                                 **   dq0w.c's) */
     while (n--) {
-        x += dir_x[d];
-        y += dir_y[d];
+        x += head_x[d];
+        y += head_y[d];
         if (!(p = at (sn, x, y))) {
             return;
         }
         *p |= m;
-        if (!n || TILE (*p) == T_DOOR || ((h0 & 0x80) && step_ok (sn, x, y, d))) {
+        if (!n || TILE (*p) == T_DOOR || ((h0 & 0x80) && step8 (sn, x, y, d))) {
             continue;
         }
-        if (cross && (--cross, step_ok (sn, x, y, h0))) {
+        if (cross && (--cross, step8 (sn, x, y, h0))) {
             d = h0;                             /* (A fork it set out from crossed the way said) */
         } else if (ways_from (sn, x, y, d) == 1) {
             d = way_on;                         /* (On: the one way that isn't back, the walk's) */
@@ -268,6 +268,7 @@ static void __fastcall__ fresh (const struct fresh* fr)
 ** believed in then).  And a walk's squares felt in the dark (the look's walk, wd | 0x80: its way felt's, s_felt's,
 ** before it marks them, its bends near enough), each chunk it went through made fresh the same (HOUSE.md's travel: what's felt kept as what's
 ** seen, slice 4.2's) */
+static const unsigned char bend[4] = { 1, 7, 2, 6 };
 void s_kept (void)
 {
     unsigned age, map, x, y;                    /* (On the C stack: the main RAM's room) */
@@ -318,11 +319,11 @@ void s_kept (void)
         }
     }
     if (n && (d & 0x80)) {                      /* (A walk felt in the dark: its way as s_felt goes it) */
-        d &= 3;
+        d &= 7;
         lb = 0;
         while (n--) {
-            x += dir_x[d];
-            y += dir_y[d];
+            x += head_x[d];
+            y += head_y[d];
             if (!(p = at (sn, x, y))) {
                 break;
             }
@@ -332,15 +333,17 @@ void s_kept (void)
                 lcy = (unsigned char) C->cy;
                 fresh (&fr);
             }
-            if (TILE (*p) == T_DOOR || step_ok (sn, x, y, d)) {
+            if (TILE (*p) == T_DOOR || step8 (sn, x, y, d)) {
                 continue;
             }
-            i0 = step_ok (sn, x, y, (d + 1) & 3);   /* (Round a bend: its one way to the side; ways_from's, near
-                                                **   enough, the chunks it went through all that's wanted) */
-            if (i0 == step_ok (sn, x, y, (d + 3) & 3)) {
+            for (i0 = 0; i0 < 4 && !step8 (sn, x, y, (d + bend[i0]) & 7); ++i0) {
+            }                                   /* (Round a bend: the first way to the side, an eighth, then a
+                                                **   quarter; ways_from's, near enough, the chunks it went through
+                                                **   all that's wanted) */
+            if (i0 == 4) {
                 break;
             }
-            d = (d + (i0 ? 1 : 3)) & 3;
+            d = (d + bend[i0]) & 7;
         }
     }
 }

@@ -25,6 +25,7 @@ static unsigned stocks;                         /* (The chunks stocked, counted:
 
 struct style sty;                               /* (The chunk's stratum's: uses.c copies it from its styles) */
 const struct style* SP;
+const unsigned char t_kinds[16] = { 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1 };  /* (world.h's T_PASS: the world's slant.s's, the same) */
 
 /* A hub's bank's bytes copied to the main RAM (hub_get), or from it (hub_put), or set (hub_set), the window put back
 ** as it was: the hub reached from an overlay's code (which the hub's bank in the window would put out) */
