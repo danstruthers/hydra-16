@@ -407,8 +407,8 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   and under a floor is the rock, its kind where it lies worked out from the game's seed alone (rock_kind: beds of
   shale, sandstone and limestone 25 feet thick, dipping across the frame, slate and marble below 200 feet; granite
   bosses, basalt dykes, veins of quartz and seams of ore, a region's own), so it's never kept and every task finds the
-  same rock at the same place and depth.  A dig's rate is the rock's hardness's (the world sends it the referee,
-  P_DIG's c); the rock's told as a dig comes to it, named after a spell that went well (Mining's eye); poor rock
+  same rock at the same place and depth.  A dig's rate is the rock's hardness's (the referee's rate in stone, the world's
+  quarters of it by the hardness); the rock's told as a dig comes to it, named after a spell that went well (Mining's eye); poor rock
   (shale) comes down on a spell that goes badly in it, half the hole in it filled again (E_DIG's D_ROOF).  The rock
   is worked out for the dig only (dq0w.c's dig_rock, part 1's): a look or an examine at a wall doesn't tell it yet.
 - **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) and

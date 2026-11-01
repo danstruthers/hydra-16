@@ -2550,12 +2550,13 @@ void __fastcall__ dig_kept (unsigned char begin);   /* (Part 19's: the hole's re
 #pragma rodata-name (push, "SW1RODATA")
 
 /* ---- The rock a dig's into (../dq0/rock.h, slice 4.10's: its kinds where they lie, from the game's seed): its
-** hardness the dig's rate on it (P_DIG's c: HOUSE.md's digging), told as it's come to (E_DIG's b), and poor rock
+** hardness the dig's rate on it (the referee's rate in stone, in quarters by it: HOUSE.md's), told as it's come to (E_DIG's b), and poor rock
 ** coming down on a dig that goes badly in it (part 1's; its statics in the part, used only within a call) */
 #pragma data-name (push, "SW1RODATA")
 #define ROCK_CODE
 #include "../dq0/rock.h"
 static const unsigned char rk_hard[NRK] = RK_HARDNESS;
+static const unsigned char rk_quarters[4] = RK_QUARTERS;
 static unsigned char rk = 0;                    /* (The rock of the spell under way: test_dig's; and the feet it
                                                 **   made, made: both read in the same call of the part) */
 static unsigned char made = 0;
@@ -2603,11 +2604,14 @@ static signed char test_dig (void)
     r->actor = 0;
     r->a = P_DIG;
     r->b = dig.done < DIG_TOP ? dig.mat : MAT_STONE;     /* (Through the floor: the stratum's rock) */
-    r->c = rk ? rk_hard[rk] + 1 : 0;            /* (Its hardness: the rate's, HOUSE.md's digging) */
     r->steps = 0;
     r = hub_ask (SLOT_WORLD);
     g = r->grade;
     made = r->result ? 0xFF : r->w1;
+    if (rk && !r->result) {                     /* (The rock's hardness: the rate in it, every ruleset's, HOUSE.md's
+                                                **   rock's kinds and hardness) */
+        made = (unsigned char) ((unsigned char) (made * rk_quarters[rk_hard[rk]] + 3) >> 2);
+    }
     evb = ++dign & 3;                           /* (Its tool and its wear, for the next event: E_DIG's) */
     strncpy (HUB->dig_tool[evb], r->text, sizeof HUB->dig_tool[0] - 1);
     HUB->dig_wear[evb] = r->w2;

@@ -26,6 +26,8 @@ enum { RK_NONE, RK_SHALE, RK_SANDSTONE, RK_LIMESTONE, RK_SLATE, RK_MARBLE, RK_GR
 enum { RH_SOFT, RH_MIDDLING, RH_HARD, RH_VERY_HARD };
 #define RK_HARDNESS     { RH_MIDDLING, RH_SOFT, RH_MIDDLING, RH_MIDDLING, RH_HARD, RH_MIDDLING, RH_HARD, RH_HARD, \
                           RH_VERY_HARD, RH_MIDDLING, RH_MIDDLING }
+#define RK_QUARTERS     { 6, 4, 2, 1 }          /* (The rate in it, by its hardness: quarters of the tool's in
+                                                **   stone, the world's, every ruleset's) */
 #define RK_POOR(k)      ((k) == RK_SHALE)       /* (Rotten rock: it splits and falls) */
 #define RK_VEIN(k)      ((k) >= RK_QUARTZ)      /* (A vein's, or a seam of ore's) */
 
