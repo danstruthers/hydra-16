@@ -10,6 +10,7 @@
                                                 **   denizens') */
 const signed char dir_x[8] = { 0, 1, 0, -1, 1, 1, -1, -1 };
 const signed char dir_y[8] = { -1, 0, 1, 0, -1, 1, 1, -1 };
+const unsigned char dir_h[8] = { 0, 2, 4, 6, 1, 3, 5, 7 };
 #else
 const signed char dir_x[4] = { 0, 1, 0, -1 };
 const signed char dir_y[4] = { -1, 0, 1, 0 };

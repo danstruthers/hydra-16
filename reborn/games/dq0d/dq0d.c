@@ -1339,10 +1339,15 @@ static unsigned __fastcall__ toward (int dx, int dy)
     return (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy);
 }
 
+#pragma static-locals (push, on)               /* (Its locals static: the main RAM's room, 2026-10-31) */
 static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsigned char how)
 {
-    unsigned char d, j, best = 0xFF, s = random (2) ? a.face >> 1 : random (4);
-    unsigned nx, ny, f, bf = how == S_TOWARD ? toward (a.x - refx, a.y - refy) : apart (a.x - refx, a.y - refy);
+    unsigned char d, j, e, g, best, s;
+    unsigned nx, ny, f, bf;
+
+    best = 0xFF;
+    s = random (2) ? a.face >> 1 : random (4);
+    bf = how == S_TOWARD ? toward (a.x - refx, a.y - refy) : apart (a.x - refx, a.y - refy);
 
     for (j = 0; j < 8; ++j) {
         if (j == 4 && best != 0xFF) {
@@ -1351,9 +1356,14 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
         }
         d = j < 4 ? (s + j) & 3 : j;            /* (The four, then the diagonal ways: slant's, within its own chunk,
                                                 **   no other made for it) */
-        if (d >= 4 && ((((unsigned char) (a.x - STRATUM (a.sn).x0) & (CW - 1)) + dir_x[d]) |
-            (((unsigned char) (a.y - STRATUM (a.sn).y0) & (CW - 1)) + dir_y[d])) & ~(CW - 1)) {
-            continue;
+        if (d >= 4) {                           /* (A diagonal way only within its own chunk and where one of its
+                                                **   corners is cut: then slant, part 11's) */
+            at (a.sn, a.x, a.y);
+            e = cx_ + dir_x[d];
+            g = cy_ + dir_y[d];
+            if ((e | g) & ~(CW - 1) || (TILE (C->tile[cy_][e]) != T_CUT && TILE (C->tile[g][cx_]) != T_CUT)) {
+                continue;
+            }
         }
         nx = a.x + dir_x[d];
         ny = a.y + dir_y[d];
@@ -1373,6 +1383,7 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
     }
     return best;
 }
+#pragma static-locals (pop)
 
 /* Actor a (the copy), out of the character's sight and not sensing it, moved coarsely (the turns pace's, catching
 ** up): a few squares' wander at a time, each a step of no time (I_STEP's STEP_COARSE: the world's), a while for them

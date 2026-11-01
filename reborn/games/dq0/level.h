@@ -17,7 +17,8 @@
 ** 7: NE, SE, SW, NW, a diagonal way's), DH a direction's heading */
 enum { DIR_N, DIR_E, DIR_S, DIR_W, DIR_UP, DIR_DOWN };
 extern const signed char dir_x[], dir_y[];
-#define DH(d)           ((d) < 4 ? (d) << 1 : ((d) << 1) - 7)
+extern const unsigned char dir_h[8];
+#define DH(d)           (dir_h[d])      /* (The diagonals' tasks': LEVEL_DIAG's) */
 extern const char* const dir_name[6];
 
 /* Headings: the eight ways of the compass, the way the character faces or sets out (a direction d is heading
