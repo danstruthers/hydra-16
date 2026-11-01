@@ -2679,7 +2679,11 @@ int main (int argc, char* argv[])
 #pragma rodata-name (push, "SW14RODATA")
 
 /* What waited for the character to be free (main's, seldom: part 2's, the main RAM's room, slice 4.2's; part 14's,
-** part 2's room, 2026-10-29) */
+** part 2's room, 2026-10-29; part 12's, overlay 3 full, 2026-10-31) */
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW12CODE")
+#pragma rodata-name (push, "SW12RODATA")
 void s_when_free (void)
 {
     if (rebar) {                                /* (A door barred: its bar set in its brackets, on the square the
@@ -2698,6 +2702,11 @@ void s_when_free (void)
     }
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW14CODE")
+#pragma rodata-name (push, "SW14RODATA")
+
 /* A denizen's sound heard (heard's, its weighing the main code's: m its event, rel which way it is), told: in the
 ** sound's words, the sound task's if it's put them there; its long task paused at the first (part 14's: seldom, the
 ** main RAM's room) */
@@ -2709,23 +2718,17 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
     memcpy (heard_what, SND_AT + (m->x[1] % SND_KINDS * 2 + (m->a == DE_NOISE)) * SND_REC, sizeof heard_what);
     hub_map (0);
     heard_what[sizeof heard_what - 1] = 0;
-    if (m->a == DE_RALLY) {                     /* (A successor at its post rallying its fellows, HOUSE.md's morale:
-                                                **   seen, by its name; else its shout) */
-        n = HUB->actor[(m->who - 1) & (NACTORS - 1)].name;
+    if (m->a >= DE_RALLY) {                     /* (A successor at its post rallying its fellows, HOUSE.md's morale; a
+                                                **   sleeper's snore, those on watch talking, the alarm raised, the
+                                                **   day's, 2026-10-31: seen, by its name, else heard) */
+        n = m->a == DE_RALLY ? "rallies its fellows\0a rallying shout" : m->a == DE_SNORE ? "snores\0snoring" :
+            m->a == DE_TALK ? "says something to its fellow\0voices" : "raises the alarm\0a shout of alarm";
         if (m->x[2]) {
-            sayf (*n >= 'a' ? "\nThe %s rallies its fellows." : "\n%s rallies its fellows.", n);
+            strcpy (heard_what, HUB->actor[(m->who - 1) & (NACTORS - 1)].name);   /* (Its name) */
+            sayf (*heard_what >= 'a' ? "\nThe %s %s." : "\n%s %s.", heard_what, n);
             return;
         }
-        strcpy (heard_what, "a rallying shout");
-    } else if (m->a >= DE_SNORE) {             /* (A sleeper's snore, those on watch talking, the alarm raised: the
-                                                **   day's, 2026-10-31; seen, by its name) */
-        n = HUB->actor[(m->who - 1) & (NACTORS - 1)].name;
-        if (m->x[2]) {
-            sayf (*n >= 'a' ? "\nThe %s %s." : "\n%s %s.", n, m->a == DE_SNORE ? "snores" :
-                m->a == DE_TALK ? "says something to its fellow" : "raises the alarm");
-            return;
-        }
-        strcpy (heard_what, m->a == DE_SNORE ? "snoring" : m->a == DE_TALK ? "voices" : "a shout of alarm");
+        strcpy (heard_what, n + strlen (n) + 1);
     }
     heard_words (m->a | (m->x[3] ? 0x80 : 0), rel);
     msg (lb);
@@ -2736,7 +2739,12 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
     }
 }
 
-/* The body's position as the character said (E_BEAT WB_POSED's w1: the position times 256, | 0x8000 there already) */
+/* The body's position as the character said (E_BEAT WB_POSED's w1: the position times 256, | 0x8000 there already).
+** Part 12's since 2026-10-31 (part 14's bank, overlay 3, full) */
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW12CODE")
+#pragma rodata-name (push, "SW12RODATA")
 void __fastcall__ s_pose_words (unsigned w)
 {
     static const char pdo[5][10] = { "", "lie down", "crouch", "kneel", "sit down" };
@@ -2745,6 +2753,11 @@ void __fastcall__ s_pose_words (unsigned w)
 
     sayf (w & 0x8000 ? "\nYou are %s already." : "\nYou %s.", w & 0x8000 ? pis[k] : pdo[k]);
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW14CODE")
+#pragma rodata-name (push, "SW14RODATA")
 
 /* The background and the air, worded (way.c's, slices 4.5's: the senses' sound layer's, the hub's pc_bg, air_h,
 ** air_s): a listen's end (what 0: heard nothing, what it hears behind it all; 1, heard something, the background
