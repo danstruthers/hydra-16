@@ -49,7 +49,7 @@ void t_end (void);                              /* The same, as the game ends: t
 void __fastcall__ say (const char* s);          /* Words into the story, wrapped (\n: a new line) */
 void sayf (const char* fmt, ...);               /* The same, with %s, %d, %u, %c (and %%) */
 void __fastcall__ msg (const char* s);          /* A new line of the story, then s */
-void __fastcall__ say_raw (const char* s);      /* A line of the story as it is (not wrapped) */
+void __fastcall__ say_raw (const char* s);      /* A line of the story as it is (not wrapped: overlay 16's) */
 void blank (void);                              /* An empty line in the story (only one in a row) */
 void t_done (void);                             /* The cursor back to the line typed, and everything out */
 void t_flush (void);                            /* What's said so far out now (the cursor left where it is) */
@@ -346,7 +346,7 @@ extern unsigned long heard_at;                  /* (main.c's: when a sound was l
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[15];
+extern unsigned char ovbank[16];
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */
 void tend (void);                               /* Part 12: first aid (VB_TEND) */

@@ -22,8 +22,8 @@
 unsigned long bseed;                            /* (The bearings' dice: rshouse.h's) */
 unsigned char bway;                             /* (A failure's d8 less one, 0-7: the world's, a drift's way, or where
                                                 **   a north astray lies) */
-unsigned char bwhat;                            /* (The test: 0 the bearings; 1 the time kept, 2 by one that always knows
-                                                **   it: the main RAM's, from the request) */
+unsigned char bwhat;                            /* (The test: 0 the bearings; 1 the time kept: the main RAM's, from the
+                                                **   request) */
 
 #define RS_HOUSE_BEARING
 #include "../dq0/rshouse.h"
@@ -48,7 +48,7 @@ signed char __fastcall__ o_bearing_of (signed char steps)
 
     bway = 0;
     if (bwhat) {
-        if (bwhat > 1) {
+        if (tsense_) {
             return G_CS;                        /* (It always knows the hour: no test) */
         }
         t = xs_seed;

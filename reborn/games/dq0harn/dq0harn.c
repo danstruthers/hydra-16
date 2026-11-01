@@ -463,7 +463,8 @@ static void status (void)
 ** to RS_LOAD_PC and written back as the hub has them, the exertion the referee's own; and what dealt each injury,
 ** a digit each in order, "dealt 0100": pc_by's, sheet.c's BY_*) */
 
-static unsigned char gait = GA_WALK, watch, tsense_;   /* (tsense_: its file's "timesense" line, the house's trait) */
+static unsigned char gait = GA_WALK, watch;
+unsigned char tsense_;                          /* (Its file's "timesense" line: the house's trait, bearing.c's too) */
 
 static void __fastcall__ own_line (char* l)
 {
@@ -814,9 +815,8 @@ static void __fastcall__ answer (struct req* r)
             dig_answer (r);
             break;
         }
-        if (r->a == P_BEARING || r->a == P_TIME) {  /* (Its bearings, the time it keeps, by their own dice:
-                                                **   overlay 5's, bearing.c) */
-            bwhat = r->a == P_TIME ? 1 + HUB->pcsum.timesense : 0;
+        if ((bwhat = r->a - P_BEARING) < 2) {   /* (Its bearings, the time it keeps (P_TIME, after it), by
+                                                **   their own dice: overlay 5's, bearing.c) */
             r->grade = bearing_of (r->steps);
             r->result = bway;
             break;

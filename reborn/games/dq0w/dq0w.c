@@ -566,7 +566,7 @@ static unsigned char cut;                       /* (The way worked out last stop
 static unsigned long cut_t;
 void on_way (void);                             /* (Part 37's) */
 void draw_test (void);                          /* (Part 7's: a stretch of the map drawn, slice 4.2's) */
-static void stopped (void);
+void stopped (void);                            /* (Part 40's) */
 
 
 /* ---- The way across a room, round its ledges: the squares of its chunk (in the window) from the room's floor to
@@ -3421,14 +3421,18 @@ unsigned char s_batter_on (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* On the trap on its way (A_STOPPED): set off (wtrap.c's) */
-static void stopped (void)
+/* On the trap on its way (A_STOPPED): set off (wtrap.c's).  Part 40's (the main RAM's room, 2026-10-31) */
+#pragma code-name (push, "SW40CODE")
+#pragma rodata-name (push, "SW40RODATA")
+void s_stopped (void)
 {
     mx = fx_;
     my = fy_;
     work (W_STEP, tx_, ty_, 0);
     worked (0);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 
 /* The character's long task as the clock goes: its part done, if it's a wait; its work, if there's any (part 23's:

@@ -510,8 +510,7 @@ int main (int argc, char* argv[])
     }
     close (fd);
     if (i) {
-        s ("Absolute timesense: you always know the hour.
-");
+        s ("Absolute timesense: you always know the hour.\n");
     }
     s ("Written to ");
     s (out);

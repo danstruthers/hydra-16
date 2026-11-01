@@ -22,7 +22,8 @@ signed char __fastcall__ bearing_of (signed char steps);   /* (Overlay 5's, bear
                                                 **   (P_BEARING), or the time it keeps (bwhat: P_TIME's): its grade,
                                                 **   bway a failure's d8 less one */
 extern unsigned char bway;                      /* (A failure's d8 less one: the world's) */
-extern unsigned char bwhat;                     /* (0 the bearings; 1 the time kept, 2 by one with absolute timesense) */
+extern unsigned char bwhat;                     /* (0 the bearings; 1 the time kept) */
+extern unsigned char tsense_;                   /* (Absolute timesense: its file's "timesense" line) */
 extern unsigned char lhurt[4];                  /* (The injuries' levels on its left arm, its right, its left leg, its
                                                 **   right) */
 extern unsigned char cplan;                     /* (A creature's body, cond_of's: BF_*, the bestiary's) */

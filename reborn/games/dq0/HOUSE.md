@@ -2468,7 +2468,7 @@ number here is a draft for the user.
   off**, unknown to it; its bearings known lost, the sun **high** (10-14) or **low** (morning or afternoon by what it
   believes), the stars night alone; **watched** (in its sight through a wait, or "watch the sun": **ten minutes**, the
   stars **twenty**), their way across the sky: the time to a quarter of an hour (the stars half an hour), and **north
-  known** (its bearings set right).  Told as what's seen changes ("Daylight shows above: it's day.", "You see the sun in
+  known** (its bearings set right), and kept so while it stays in sight.  Told as what's seen changes ("Daylight shows above: it's day.", "You see the sun in
   the sky: it's about four in the afternoon, you judge.").  Weather (overcast: its light alone) not yet.
 - **How it's told** ("time", "what time is it"): doubt ten minutes or less, plainly to the quarter hour ("It's half past
   six in the evening."); 45 or less, "about" the hour, "you think"; two and a half hours or less, "some time around";

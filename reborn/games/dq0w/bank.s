@@ -169,6 +169,7 @@ go:
             SWPART      74, 14              ; A waterskin filled (wwater.c: slice 4.9's)
             SWPART      75, 16              ; The water's depth where the character stands (wwater.c)
             SWPART      76, 1               ; The time of day believed (wtime.c: 2026-10-31)
+            SWPART      77, 22              ; The sky seen, the time believed's start (wtime.c)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -200,6 +201,8 @@ go:
             SWFN        bearings, 52
             SWFN        bearings_off, 52
             SWFN        tsense, 76
+            SWFN        sky_seen, 77
+            SWFN        stopped, 40         ; (A trap on the way set off: the main RAM's room, 2026-10-31)
             SWFN        intent_few, 53
             SWFN        way_out, 54
             SWFN        travel_go, 55

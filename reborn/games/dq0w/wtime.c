@@ -38,7 +38,6 @@ extern signed char wsteps;
 
 #pragma code-name ("SW76CODE")
 #pragma rodata-name ("SW76RODATA")
-#pragma static-locals (on)
 #pragma local-strings (on)
 
 #define TB_START        18                      /* (The hour the game begins, as the denizens': at dusk, dq0d.c's) */
@@ -65,12 +64,8 @@ static int __fastcall__ norm (int v)
     return v;
 }
 
-/* The belief set: skew s, unc u */
-static void __fastcall__ set (int s, unsigned u)
-{
-    T.skew = s;
-    T.unc = u;
-}
+/* The belief set: skew s, unc u (a macro: both parts') */
+#define set(s, u)       (T.skew = (s), T.unc = (u))
 
 /* The test (the referee's P_TIME, at steps), and its drift (d minutes, if it failed: its way the referee's d8, odd
 ** the earlier) */
@@ -178,6 +173,13 @@ static void clues (void)
     T.hung = f;
 }
 
+void __fastcall__ sky_seen (unsigned char kind);  /* (Part 77's, below: its stub, bank.s's; SKY_BEGUN, the start) */
+#define SKY_BEGUN       0xFF
+
+/* ---- Part 77 (overlay 22's room): the sky seen, the game's start */
+#pragma code-name (push, "SW77CODE")
+#pragma rodata-name (push, "SW77RODATA")
+
 /* The belief narrowed to the true time lying between minutes lo and hi of the day (the sky's light): where its own
 ** doubt and that meet, or that alone if they don't */
 static void narrow (void)
@@ -198,35 +200,21 @@ static void narrow (void)
     set ((l + h) / 2, (h - l) / 2);
 }
 
-/* The sky in sight (SKY_*): a test's poke; else an open way out within SKY_NEAR squares on the character's stratum (the
-** top's up its stairs, its light alone; a far exit below the top, out into the open).  T.skysn the stratum, if it has
-** one (its looks the more often) */
-static unsigned char sky_here (void)
-{
-    struct link* l;
-    unsigned char sn = HUB->pc_stratum, k, s = SKY_NONE;
+static void begun (void);
 
-    T.skysn = 0xFF;
-    for (k = 0; k < STRATUM (sn).nlinks; ++k) {
-        l = &STRATUM (sn).link[k];
-        if (l->kind == O_WAY_OUT && (HUB->way_open || sn)) {
-            T.skysn = sn;
-            if (l->x - HUB->pc_x + SKY_NEAR <= 2 * SKY_NEAR && l->y - HUB->pc_y + SKY_NEAR <= 2 * SKY_NEAR) {
-                s = sn ? SKY_OPEN : SKY_LIGHT;
-            }
-        }
-    }
-    return T.sky ? T.sky : s;
-}
-
-/* The sky seen (kind): the time it believes set or narrowed by it (the file's head), told as what's seen changes */
-static void __fastcall__ sky_seen (unsigned char kind)
+/* The sky seen (kind; SKY_BEGUN, a new game's start): the time it believes set or narrowed by it (the file's head),
+** told as what's seen changes */
+void __fastcall__ s_sky_seen (unsigned char kind)
 {
-    static struct msg e;
+    struct msg e;
     static const int edge[5] = { 1140, 300, 420, 1020, 1140 };   /* (The parts' edges: night, dawn, day, dusk) */
     unsigned char p, night;
     signed char s;
 
+    if (kind == SKY_BEGUN) {
+        begun ();                               /* (A new game's first look) */
+        return;
+    }
     p = m < 300 || m >= 1140 ? SKP_NIGHT : m < 420 ? SKP_DAWN : m < 1020 ? SKP_DAY : SKP_DUSK;
     night = p == SKP_NIGHT;
     lo = edge[night ? 0 : p];
@@ -258,6 +246,7 @@ static void __fastcall__ sky_seen (unsigned char kind)
     if (p != T.told) {
         T.told = p;
         e.kind = E_BEARING;
+        e.who = 0;
         e.b = p;
         e.w1 = BRG_SKY;
         e.t = HUB->now;
@@ -269,8 +258,8 @@ static void __fastcall__ sky_seen (unsigned char kind)
 ** else dusk; come round from a fall, a black-out's guess to make */
 static void begun (void)
 {
-    static struct hy_regs r;
-    static char b[4];
+    struct hy_regs r;
+    char b[4];
     char* p;
     unsigned char h = TB_START;
 
@@ -278,6 +267,7 @@ static void begun (void)
     r.r[0] = (unsigned) "dq0hour";
     r.r[1] = (unsigned) b;
     r.r[2] = 3;
+    r.r[3] = 0;
     if (!hy_call (HY_ENV_GET, &r)) {
         for (h = 0, p = b; *p >= '0' && *p <= '9'; ++p) {
             h = h * 10 + *p - '0';
@@ -295,6 +285,30 @@ static void begun (void)
     }
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* The sky in sight (SKY_*): a test's poke; else an open way out within SKY_NEAR squares on the character's stratum (the
+** top's up its stairs, its light alone; a far exit below the top, out into the open).  T.skysn the stratum, if it has
+** one (its looks the more often) */
+static unsigned char sky_here (void)
+{
+    struct link* l;
+    unsigned char sn = HUB->pc_stratum, k, s = SKY_NONE;
+
+    T.skysn = 0xFF;
+    for (k = 0; k < STRATUM (sn).nlinks; ++k) {
+        l = &STRATUM (sn).link[k];
+        if (l->kind == O_WAY_OUT && (HUB->way_open || sn)) {
+            T.skysn = sn;
+            if (l->x - HUB->pc_x + SKY_NEAR <= 2 * SKY_NEAR && l->y - HUB->pc_y + SKY_NEAR <= 2 * SKY_NEAR) {
+                s = sn ? SKY_OPEN : SKY_LIGHT;
+            }
+        }
+    }
+    return T.sky ? T.sky : s;
+}
+
 /* The reckoning (part 27's, at its due or at once): the time it believes brought up to now, its next due */
 void s_tsense (void)
 {
@@ -304,7 +318,7 @@ void s_tsense (void)
     hub_map (0);
     n = (unsigned) (HUB->now / 600);
     if (!T.at) {
-        begun ();
+        sky_seen (SKY_BEGUN);
         T.at = n + 1;
     }
     e = n + 1 - T.at;
@@ -329,8 +343,10 @@ void s_tsense (void)
     clues ();
     s = sky_here ();
     if (s && !HUB->pcsum.timesense) {
-        e = T.watched + (e > 60 ? 60 : e);
-        T.watched = HUB->pc_task.kind == LT_WAIT && T.told ? (e > 200 ? 200 : e) : 0;
+        if (HUB->pc_task.kind == LT_WAIT && T.told) {
+            e = T.watched + (e > 60 ? 60 : e);  /* (Watched through a wait, as long as it's in sight) */
+            T.watched = e > 200 ? 200 : e;
+        }
         sky_seen (s);
     } else {
         T.told = T.watched = 0;
@@ -338,5 +354,6 @@ void s_tsense (void)
     if (T.unc > 720) {
         T.unc = 720;
     }
-    T.due = HUB->now + (T.skysn == HUB->pc_stratum ? 3000 : (60 - T.mins) * 600UL);
+    T.due = HUB->now + (s || T.skysn == HUB->pc_stratum ? 3000 : (60 - T.mins) * 600UL);   /* (The sky in sight,
+                                                **   or maybe: five minutes on, to see it watched) */
 }

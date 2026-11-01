@@ -398,7 +398,9 @@ void __fastcall__ say (const char* s)
 #pragma register-vars (pop)
 
 /* A line of the story as it is (the map's): not wrapped, cut at the screen's width */
-void __fastcall__ say_raw (const char* s)
+#pragma code-name (push, "OV16CODE")            /* (Overlay 16's, through its stub: the main RAM's room, 2026-10-31) */
+#pragma rodata-name (push, "OV16RODATA")
+void __fastcall__ o_say_raw (const char* s)
 {
     if (col) {
         newline ();
@@ -418,6 +420,8 @@ void __fastcall__ say_raw (const char* s)
     blanked = 0;
     newline ();
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 void __fastcall__ msg (const char* s)
 {
