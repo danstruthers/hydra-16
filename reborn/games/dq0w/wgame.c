@@ -132,6 +132,7 @@ unsigned char s_puzzle (void)
         hub_map (0);
         if (k == TE_OPEN) {
             HUB->way_open = 1;                  /* (The way out opened: the mission's, E_LEFT as it goes up) */
+            burn_ask = 1;                       /* (The sky through it: the time it believes, part 76's) */
         }
     }
     hub_map (0);
@@ -252,7 +253,7 @@ void s_world_keep (void)
     }
     hub_map (0);
     w.magic = WSAVE_MAGIC;
-    w.version = 3;
+    w.version = 4;
     w.sn = HUB->pc_stratum;
     w.face = HUB->pc_face;
     w.pos = HUB->pc_pos;
@@ -268,6 +269,7 @@ void s_world_keep (void)
     w.hunger = HUB->pc_hunger;
     w.thirst = HUB->pc_thirst;
     w.meals = HUB->pc_meals;
+    memcpy (&w.tb, &HUB->tb, sizeof w.tb);
     write (fd, &w, sizeof w);
     hub_map (WORLD_BANK);                       /* (The strata's records, the world bank's) */
     write (fd, WREC->strata, sizeof WREC->strata);
@@ -305,6 +307,7 @@ static void world_back (void)
         HUB->pc_hunger = w.hunger;              /* (Its hunger and thirst: slice 4.9's) */
         HUB->pc_thirst = w.thirst;
         HUB->pc_meals = w.meals;
+        memcpy (&HUB->tb, &w.tb, sizeof w.tb); /* (The time of day it believes: part 76's) */
         done_ = w.done;
         hub_map (WORLD_BANK);
         read (fd, WREC->strata, sizeof WREC->strata);

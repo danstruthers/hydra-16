@@ -463,7 +463,7 @@ static void status (void)
 ** to RS_LOAD_PC and written back as the hub has them, the exertion the referee's own; and what dealt each injury,
 ** a digit each in order, "dealt 0100": pc_by's, sheet.c's BY_*) */
 
-static unsigned char gait = GA_WALK, watch;
+static unsigned char gait = GA_WALK, watch, tsense_;   /* (tsense_: its file's "timesense" line, the house's trait) */
 
 static void __fastcall__ own_line (char* l)
 {
@@ -487,6 +487,8 @@ static void __fastcall__ own_line (char* l)
         wealth = atoi (l + 7);                  /* (Its family's, hmchar's: RS_OUTFIT's) */
     } else if (!strncmp (l, "language ", 9) && strlen (tongues) + strlen (l + 8) < sizeof tongues) {
         strcat (tongues, l + 8);
+    } else if (!strcmp (l, "timesense")) {
+        tsense_ = 1;                            /* (Absolute timesense: hmchar's, the house's rare trait, 2026-10-31) */
     }
 }
 
@@ -498,13 +500,14 @@ void __fastcall__ s_load_pc (struct req* r)
     strncpy (path, r->text, sizeof path - 1);
     r->result = 1;
     pv.hr = 0;                                  /* (No venom, no rest yet: its file's "body" line's, if any) */
-    rest_m = 0;
+    rest_m = tsense_ = 0;
     if ((fd = open (path, O_RDONLY)) < 0) {
         return;
     }
     r->result = harn_read (fd, &pc, own_line) < 0;
     close (fd);
     hub_map (0);
+    HUB->pcsum.timesense = tsense_;             /* (The time it always knows: the world's, the hub's tb) */
     put (name);
     put ("\n");
     put (calling);
@@ -551,6 +554,9 @@ void __fastcall__ s_save_pc (struct req* r)
         strcpy (line, "language");
         strncat (line, p, e - p);
         harn_write_line (fd, line);
+    }
+    if (HUB->pcsum.timesense) {
+        harn_write_line (fd, "timesense");      /* (Its trait, kept: the house's) */
     }
     close (fd);
     r->result = 0;
@@ -808,7 +814,9 @@ static void __fastcall__ answer (struct req* r)
             dig_answer (r);
             break;
         }
-        if (r->a == P_BEARING) {                /* (Its bearings, by its own dice: overlay 3's, bearing.c) */
+        if (r->a == P_BEARING || r->a == P_TIME) {  /* (Its bearings, the time it keeps, by their own dice:
+                                                **   overlay 5's, bearing.c) */
+            bwhat = r->a == P_TIME ? 1 + HUB->pcsum.timesense : 0;
             r->grade = bearing_of (r->steps);
             r->result = bway;
             break;

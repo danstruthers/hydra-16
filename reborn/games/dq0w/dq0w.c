@@ -97,6 +97,7 @@ unsigned char tripped (void);                   /* Part 43 */
 unsigned char __fastcall__ dark_end (unsigned char how);    /* Part 44 */
 unsigned char __fastcall__ bearings (unsigned w);   /* Part 52 */
 void __fastcall__ bearings_off (unsigned feet); /* (wbody.h's) */
+void tsense (void);                             /* Part 76 (wtime.c) */
 void __fastcall__ travel_go (const struct msg* m);  /* Part 55 */
 unsigned char travel_on (void);
 void way_out (void);                            /* Part 54 */
@@ -1899,6 +1900,9 @@ unsigned char __fastcall__ s_bearings (unsigned w)
         }                                       /* (One bend four steps the easier, each one more two the harder,
                                                 **   a room crossed in the dark as a bend; the dark four the harder) */
     }
+    if (sn != bsn) {
+        burn_ask = 1;                           /* (Another stratum: the time it believes looked at, the sky, part 76's) */
+    }
     bsn = sn;
     broom = r;
     bcx = cx;
@@ -1916,6 +1920,7 @@ void __fastcall__ s_bearings_off (unsigned feet)
 {
     static unsigned char k;
 
+    burn_ask = 1;                               /* (The time it believes looked at: a black-out, part 76's) */
     hub_map (0);
     if (!feet) {
         if (W_SLOT.w2) {
@@ -4857,6 +4862,7 @@ void __fastcall__ s_intent_few (struct msg* m)
             break;
         }
         pc_waited = 1;                          /* (Its eyes looked to as it ends: the senses') */
+        burn_ask = 1;                           /* (And the time it believes, as it begins and ends: part 76's) */
         if (!m->w2 && t > HUB->round) {
             task_for (m->a & WA_SLEEP ? LT_SLEEP : LT_WAIT, t);  /* (A wait longer than a round, or a sleep: a long
                                                 **   task, in minutes past 100 of them) */
@@ -5368,6 +5374,7 @@ int main (int argc, char* argv[])
         if ((was_busy || (fwant & 1)) && !move.on && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
             if (pc_waited) {
                 pc_waited = 0;
+                burn_ask = 1;                   /* (Its time believed: woken, part 76's) */
                 ask_look (LK_EYES);             /* (A wait's end: its eyes, as time's gone, the senses') */
             }
             took = take_n ? take_up () : gath ? gath_op (GO_ON, 0) : pfoe ? close_on () : srch ? searched () : lwork ?
@@ -5898,7 +5905,7 @@ void s_burns_now (void)
     struct item* p;
     unsigned char* sq;
     unsigned i, j, d, left, bf, wx, wy;
-    unsigned char mine, r, best, out, seen, ww, ws, low = 0, more = 0, same = 0;
+    unsigned char mine, r, best, out, seen, ww, ws, low = 0, more = 0, same = 0, asked = burn_ask;
     char ln[14];
 
     hub_map (0);
@@ -6030,6 +6037,11 @@ void s_burns_now (void)
     if (bleeds || (HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) || HUB->pcsum.health != H_FINE || HUB->now >= body_due) {
         bled ();                                /* (The bodies' time with it: the bleeding, the character's wounds,
                                                 **   part 70's, slice 4.3's; nothing to tell, no part swapped in) */
+    }
+    hub_map (0);
+    if (asked || HUB->now >= HUB->tb.due) {
+        tsense ();                              /* (The time of day it believes brought up to now, at its due or at
+                                                **   once: a light's change, a wait, a black-out ... part 76's) */
     }
 }
 

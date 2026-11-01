@@ -93,7 +93,16 @@ enum {
                                                 **   its dice the referee's own, apart from its other tests', so they
                                                 **   roll as they did; one whose species knows north (its summary's
                                                 **   northsense) isn't asked, and never fails */
-    P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
+    P_TIME,                                     /* Keeping count of the time underground, out of the sun's sight (the
+                                                **   world's: DUNGEON.md's the time of day believed, 2026-10-31; its
+                                                **   steps HOUSE.md's): an hour's or more awake gone by, a sleep's length
+                                                **   or a black-out's guessed as it wakes; the reply's result on a
+                                                **   failure a d8 less one, the world's to make the drift's way of (odd
+                                                **   the earlier); the time it believes the world's to keep (the hub's
+                                                **   tb); its dice the referee's own, mixed from the game's and put
+                                                **   back, so its other tests roll as they did; one with absolute
+                                                **   timesense (its summary's timesense) never fails */
+    P_THEME,                                   /* A theme's own, P_THEME + n (named in its data) */
 };
 
 /* How a hidden thing's hidden (P_SEARCH's b): found by searching, or only by magical means (the referee's: a spell,
@@ -300,6 +309,8 @@ struct rs_summary {
     unsigned char   lead;                       /* Its influence skill: how it sways those about it (HarnMaster's
                                                 **   Oratory or Rhetoric, the better: its mastery, 0-100 and on), the
                                                 **   morale field's (HOUSE.md's morale) */
+    unsigned char   timesense;                  /* 1: absolute timesense, it always knows the hour (a rare trait, the
+                                                **   house's: hmchar's "timesense" line); 0: it keeps count (P_TIME) */
 };
 #define LB_LEFT         0x01                    /* (A summary's limbs: its main hand the left, left-handed; */
 #define LB_AMBI         0x02                    /*   either, no off hand, ambidextrous; */

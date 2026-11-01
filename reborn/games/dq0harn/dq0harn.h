@@ -19,8 +19,10 @@ unsigned char __fastcall__ limbs_of (const harn_char* c);  /* Its limbs (rs.h's 
 signed char __fastcall__ rise_of (const harn_char* h);  /* (Overlay 5's, limbs.c's) Getting up, prone: its grade (the
                                                 **   book's Rise, the house's test) */
 signed char __fastcall__ bearing_of (signed char steps);   /* (Overlay 5's, bearing.c's) The character's bearings kept
-                                                **   (P_BEARING): its grade, bway a failure's d8 less one */
+                                                **   (P_BEARING), or the time it keeps (bwhat: P_TIME's): its grade,
+                                                **   bway a failure's d8 less one */
 extern unsigned char bway;                      /* (A failure's d8 less one: the world's) */
+extern unsigned char bwhat;                     /* (0 the bearings; 1 the time kept, 2 by one with absolute timesense) */
 extern unsigned char lhurt[4];                  /* (The injuries' levels on its left arm, its right, its left leg, its
                                                 **   right) */
 extern unsigned char cplan;                     /* (A creature's body, cond_of's: BF_*, the bestiary's) */

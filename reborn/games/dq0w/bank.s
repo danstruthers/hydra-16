@@ -168,6 +168,7 @@ go:
             SWPART      73, 3               ; The water: wading, swimming (dq0w.c's: slice 4.9's)
             SWPART      74, 14              ; A waterskin filled (wwater.c: slice 4.9's)
             SWPART      75, 16              ; The water's depth where the character stands (wwater.c)
+            SWPART      76, 1               ; The time of day believed (wtime.c: 2026-10-31)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -198,6 +199,7 @@ go:
             SWFN        legs, 50
             SWFN        bearings, 52
             SWFN        bearings_off, 52
+            SWFN        tsense, 76
             SWFN        intent_few, 53
             SWFN        way_out, 54
             SWFN        travel_go, 55
