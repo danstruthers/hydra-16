@@ -93,16 +93,16 @@ static unsigned char pick (void)
 ** the builders' work began.  (dq0 -M, the tests': every built stratum mixed so) */
 unsigned char cstyle;
 
+struct edges me;                                /* (The chunk's edges: uses.c's US_STYLE sets the tests' flags in them) */
 unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned cy)
 {
-    static struct edges e;
     struct stratum* s = &STRATUM (sn);
     unsigned x = s->x0 + cx * CW, y = s->y0 + cy * CW;
     unsigned char k, u = 1;
     struct chunk* c;
     struct cslot* sl;
 
-    chunk_edges (sn, cx, cy, &e);
+    chunk_edges (sn, cx, cy, &me);
     hub_map (0);
     k = pick ();
     if (WREC->cslot[k].used) {                  /* (What's been seen of the one made way for, kept) */
@@ -123,28 +123,23 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
     c->cy = cy;
     SP = &sty;
     hub_get (0, &HUB->gear, &u, 1);            /* (u its slot's use after: CS_FRESH, or 1) */
-    cstyle = (s->style == ST_MIXED || (u & GE_MIXED && s->style == ST_BUILT)) && !e.nland &&
+    cstyle = (s->style == ST_MIXED || (u & GE_MIXED && s->style == ST_BUILT)) && !me.nland &&
         (unsigned char) (((const unsigned char*) &s->seed)[1] + (unsigned char) cx * 73 + (unsigned char) cy * 151) %
         3 == 0 ? ST_NATURAL : s->style;        /* (A third, by the stratum's seed and the chunk's place) */
-    uses (US_STYLE, cstyle);
-    if (e.x1 != 0xFF) {                         /* (By its stratum's style, or its part's) */
+    uses (US_STYLE, cstyle | u << 2);          /* (The style, and the tests' flags: no water, no rubble, the passages
+                                                **   on the diagonal) */
+    if (me.x1 != 0xFF) {                         /* (By its stratum's style, or its part's) */
         if (cstyle == ST_NATURAL) {
-            grow_caves (c, &e, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
+            grow_caves (c, &me, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
         } else {
-            grow_built (c, &e, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
+            grow_built (c, &me, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
         }
         fixtures (c);                           /* (Its materials, its windows, its traps ...) */
     }
-    if (u & GE_DRY) {
-        e.water = 0xFF;                         /* (dq0 -W's, the tests': no water) */
-    }
-    if (u & GE_UNFALLEN) {
-        e.poor = 0xFF;                          /* (dq0 -U's, the tests': no rubble) */
-    }
-    wet_chunk (c, &e);                          /* (Its water: slice 4.9's; then age's rubble, slice 4.10's) */
-    air_pocket (c, &e);                         /* (Its air: 2026-10-31) */
+    wet_chunk (c, &me);                          /* (Its water: slice 4.9's; then age's rubble, slice 4.10's) */
+    air_pocket (c, &me);                         /* (Its air: 2026-10-31) */
     u = 1;
-    if (!changes_over (c, x, y) && e.x1 != 0xFF) {
+    if (!changes_over (c, x, y) && me.x1 != 0xFF) {
         stock (c, x, y);                        /* (Its things listed, the first time it's made: the world puts them
                                                 **   down and marks it so, STOCKED, as it finds its slot CS_FRESH, in
                                                 **   the order they were stocked) */

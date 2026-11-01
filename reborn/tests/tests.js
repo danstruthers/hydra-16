@@ -3545,10 +3545,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0angles', near: ['map'], what: 'Dingus Quest Zero\'s diagonal ways (the user\'s, 2026-10-31: passages off the compass, step 1; HOUSE.md\'s diagonal ways), by the words told and the map: at seed 3 in the cell by the stairway (dq0 -T) a skilled miner (Mining 95) with a pick faces north, goes to the far right corner and digs northeast (the cell\'s corner wall, two feet: "You break through."), the square corner to corner a passage, its two corners cut (T_CUT); "go northeast" walks into it (a diagonal way from a room\'s floor: across\'s mouth), its end told ("The passage ends here; it goes back behind you."); the map draws the two cut corners as strokes along the way ("/" beside the @ and below it, no "\\"); "go southwest" walks back into the cell',
+      name: 'dq0angles', near: ['map'], what: 'Dingus Quest Zero\'s diagonal ways (the user\'s, 2026-10-31: passages off the compass, step 1; HOUSE.md\'s diagonal ways), by the words told and the map: at seed 3 in the cell by the stairway (dq0 -T) a skilled miner (Mining 95) with a pick faces north, goes to the far right corner and digs northeast (the cell\'s corner wall, two feet: "You break through."), the square corner to corner a passage, its two corners cut (T_CUT); "go northeast" walks into it (a diagonal way from a room\'s floor: across\'s mouth), its end told ("The passage ends here; it goes back behind you."); the map draws the two cut corners as strokes along the way ("/" beside the @ and below it, no "\\"); "look southwest" sees back along the diagonal way into the cell (a look one way\'s, way.c\'s seen_on: "Down the passage ahead you see into the cell", 2026-11-01); "go southwest" walks back into the cell',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm',
-        'dq0 -p t -s 3 -c /ram/m.hm -k pick -T', 'face north', 'go to the far right corner', 'dig northeast', 'go northeast', 'map', 'look', 'go southwest', 'quit', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/m.hm -k pick -T', 'face north', 'go to the far right corner', 'dig northeast', 'go northeast', 'map', 'look', 'look southwest', 'go southwest', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
@@ -3565,6 +3565,7 @@ module.exports = {
           if (rows[i][c - 1] !== '/' || !rows[i + 1] || rows[i + 1][c] !== '/') f.push('the cut corners not drawn "/" beside the @ and below it: ' + rows.slice(i - 1, i + 2).join(' | '));
           if (map.includes('\\')) f.push('a "\\" stroke on the map');
         }
+        if (!seg('look southwest', 'go southwest').includes('Down the passage ahead you see into the cell')) f.push('"look southwest" not along the diagonal way into the cell (way.c seen_on): ' + seg('look southwest', 'go southwest').slice(0, 200));
         if (!seg('go southwest', 'quit').includes('You can see part of a cell')) f.push('"go southwest" not back into the cell');
         return f;
       },
@@ -3594,6 +3595,39 @@ module.exports = {
         const all = rows.join(''), back = all.split('\\').length - 1, fore = all.split('/').length - 1;
         if (Math.max(back, fore) < 2 || Math.min(back, fore) > 0) f.push('the staircase not drawn as a slant, two strokes or more of one kind (' + back + ' "\\", ' + fore + ' "/"): ' + rows.filter(r => r.trim()).slice(1, 14).join(' | '));
         if (!seg('go ahead', 'quit').includes('cave')) f.push('"go ahead" not back up into the cave: ' + seg('go ahead', 'quit').slice(0, 200));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0slant', near: ['map'], what: 'Dingus Quest Zero\'s built passages on the diagonal (the user\'s, 2026-10-31: ways off the compass, step 3; HOUSE.md\'s built passages on the diagonal), by the chunks made and the words told: at seed 3 every built stratum\'s passages on the diagonal (dq0 -A, the tests\'), the dungeon made and entered as ever (its first look told); the chunks the cache has of its top stratum have rooms and passages with cut corners (T_CUT, three or more), each between two of a passage\'s squares that share only a corner with it on either side (a diagonal way\'s, chunk.c\'s slant: a staircase cut as the caves\' are, caves.c\'s slants), none in a room\'s bounds; "go east" from the kitchen by the way in walks a passage on the diagonal, told as it bends ("The passage bends away northeast.", HOUSE.md\'s a passage\'s heading), to its end; the map draws a cut corner ("/" or "\\")',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -A', 'look', 'go east', 'map', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        if (!/You (can see|are in)/.test(s)) f.push('no first look told');
+        const i = s.indexOf('> go east > go east'), go = i < 0 ? '' : s.slice(i, s.indexOf('> map', i));
+        if (!go.includes('The passage bends away northeast.') || !/The passage (comes to a door|ends here|forks here)|You are in a passage/.test(go)) f.push('"go east" not along a passage on the diagonal to its end ("The passage bends away northeast."): ' + go.slice(0, 300));
+        const raw = out.replace(/\x1b\[[0-9;]*m/g, ''), m0 = raw.indexOf('The map (you face');
+        if (m0 < 0 || !/[/\\]/.test(raw.slice(m0, raw.indexOf('> quit', m0)))) f.push('no cut corner drawn on the map ("/" or "\\")');
+        let cuts = 0, bad = 0;
+        for (const c of cacheChunks(m, 0).values()) {
+          if (!c.rooms.length) continue;
+          const t = (x, y) => x < 0 || y < 0 || x > 31 || y > 31 ? 0 : c.tile[y * 32 + x];
+          const pass = v => v === T_CORR || v === 3 || v === 5 || v === 10;
+          for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+            if (t(x, y) !== 11) continue;
+            cuts++;
+            const inRoom = c.rooms.some(r => x >= r.x - 1 && x <= r.x + r.w && y >= r.y - 1 && y <= r.y + r.h);
+            const diag = (pass(t(x - 1, y)) && pass(t(x, y + 1))) || (pass(t(x + 1, y)) && pass(t(x, y - 1))) ||
+              (pass(t(x - 1, y)) && pass(t(x, y - 1))) || (pass(t(x + 1, y)) && pass(t(x, y + 1)));
+            if (inRoom || !diag) bad++;
+          }
+        }
+        if (cuts < 3) f.push('fewer than three cut corners in the top stratum\'s built chunks: ' + cuts);
+        if (bad) f.push(bad + ' cut corner(s) in a room\'s bounds or not between two of a passage\'s squares');
         return f;
       },
       sdcard: true
@@ -5529,12 +5563,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0batter', what: 'Dingus Quest Zero\'s doors battered (the user\'s, 2026-10-15 and 16: "model it after unarmed combat": a blow at a thing an attack it ignores, by Unarmed, its impact less the door\'s resistance off its body; the striker hurt as a blow goes wrong, less with skill and armour; boots for a kick, a helm for a head butt; the tool to hand that hits hardest; the user\'s, 2026-10-22: a part\'s blow the house\'s Unarmed test, a marginal failure harming neither, a critical failure the part, and a bare part\'s first hurt at a door stopped short, asked), by the world\'s events (the referee\'s, HarnMaster\'s, at these seeds; each game\'s first blow the same roll): at seed 14\'s sound iron-bound door, bare fists making no mark, the first blow that would hurt them stopped short (asked: "Keep at it?", dq0 -a\'s yes), unhurt; punched again, not asked again at that door, and by the third the hand hurt seriously, the blows stopped as the character\'s too hurt; a kick in knee boots and a head butt in an iron helm not stopped short (not bare), hurt by their blows gone wrong; at seed 19\'s rotten door one of Unarmed 95 (hmchar\'s file) breaking it down unhurt; at seed 15 a pick battering a door till it gives way (its torch put down first: its hands empty, the pick offered and taken, dq0 -a\'s yes, the user\'s, 2026-10-22), broken down for good: it won\'t shut (dq0hands\' and dq0kick\'s, and dq0doors\' blows, these together; the injuries\' words the referee\'s)',
+      name: 'dq0batter', what: 'Dingus Quest Zero\'s doors battered (the user\'s, 2026-10-15 and 16: "model it after unarmed combat": a blow at a thing an attack it ignores, by Unarmed, its impact less the door\'s resistance off its body; the striker hurt as a blow goes wrong, less with skill and armour; boots for a kick, a helm for a head butt; the tool to hand that hits hardest; the user\'s, 2026-10-22: a part\'s blow the house\'s Unarmed test, a marginal failure harming neither, a critical failure the part, and a bare part\'s first hurt at a door stopped short, asked), by the world\'s events (the referee\'s, HarnMaster\'s, at these seeds; each game\'s first blow the same roll): at seed 14\'s sound iron-bound door, bare fists making no mark, the first blow that would hurt them stopped short (asked: "Keep at it?", dq0 -a\'s yes), unhurt; punched again, not asked again at that door, and by the third the hand hurt seriously, the blows stopped as the character\'s too hurt; a kick in knee boots and a head butt in an iron helm not stopped short (not bare), hurt by their blows gone wrong; at seed 23 (seed 19\'s rotten door till 2026-11-01, its stratum\'s passages on the diagonal since) a door one of Unarmed 95 (hmchar\'s file) breaks down unhurt; at seed 15 a pick battering a door till it gives way (its torch put down first: its hands empty, the pick offered and taken, dq0 -a\'s yes, the user\'s, 2026-10-22), broken down for good: it won\'t shut (dq0hands\' and dq0kick\'s, and dq0doors\' blows, these together; the injuries\' words the referee\'s)',
       init: 't_rc', cycles: 1700e6,   // (1,393M at slice 4.2's travel, more to start a game since: the world's 16th overlay read in; past 1,500M
                                      // at slice 4.3's, its overlays more: the UI's 15th, the world's 20th and 21st, the referee's 6th)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/u.hm', 'echo ml una 95 >> /ram/u.hm',
         'dq0 -p t -s 14 -c /ram/c.hm', 'punch the door', 'punch the door', 'punch the door', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'', 'wear the knee boots', 'kick the door', 'quit',
-        'dq0 -p t -s 14 -c /ram/c.hm -k \'iron helm\'', 'wear the iron helm', 'head butt the door', 'quit', 'dq0 -p t -s 19 -c /ram/u.hm', 'punch the door', 'quit',
+        'dq0 -p t -s 14 -c /ram/c.hm -k \'iron helm\'', 'wear the iron helm', 'head butt the door', 'quit', 'dq0 -p t -s 23 -c /ram/u.hm', 'punch the door', 'quit',
         'dq0 -p t -s 15 -c /ram/c.hm -k pick', 'drop the torch', 'break the door ahead to my left', 'close', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {

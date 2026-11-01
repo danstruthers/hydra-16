@@ -1380,6 +1380,9 @@ enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind
                                                 **   maker's, slice 4.10's) */
 #define GE_UNFALLEN     0x08                    /* (dq0 -U, the tests': no rubble, the passages as they were made
                                                 **   before slice 4.10, the maker's) */
+#define GE_SLANT        0x10                    /* (dq0 -A, the tests': every built stratum's passages on the diagonal,
+                                                **   the maker's, 2026-11-01: ways off the compass, step 3) */
+#define GE_FLAGS        "KWMUA"                 /* (dq0's flags for them, a bit each in order: main.c's) */
 #define CH_DRAW         0x01                    /* (pc_chart's: the things to draw a map with to hand, the catalogue's
                                                 **   by their keys: a sheet (paper, parchment) or its map, a pencil or
                                                 **   charcoal or a quill and ink, and a hand free; HOUSE.md's the map

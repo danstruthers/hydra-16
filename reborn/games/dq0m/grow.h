@@ -34,8 +34,11 @@ struct style {
     unsigned char   traps, t_pit;               /* A trap in a room: in 20; a pit (open or covered): in 4 */
     unsigned char   t_hidden, t_magic;          /* A trap hidden: in 10; of those, by magic: in 10 */
     unsigned char   d_trap;                     /* A closed door trapped: in 20 */
+    unsigned char   slant;                      /* (Not the styles': the chunk's) its passages on the diagonal (the
+                                                **   user's, 2026-10-31: ways off the compass, step 3; uses.c's, built.c's) */
 };
 extern const struct style* SP;                  /* The chunk's stratum's (make.c's: sty) */
+extern struct edges me;                         /* (make.c's: the chunk's being made) */
 extern struct style sty;
 extern unsigned char cstyle;                    /* (The chunk's style: its stratum's, or a mixed stratum's natural
                                                 **   part's ST_NATURAL: make.c's) */
@@ -63,6 +66,8 @@ unsigned char __fastcall__ join (unsigned char a, unsigned char b);    /* (Stubs
 unsigned char crossings (void);
 void __fastcall__ grow_built (struct chunk* c, const struct edges* e, unsigned long seed);  /* (Overlay 1's) */
 void __fastcall__ grow_caves (struct chunk* c, const struct edges* e, unsigned long seed);  /* (Overlay 3's) */
+void slants (void);                             /* A tunnel's zigzag cut (overlay 1's, caves.c's: the caves', and a built
+                                                **   stratum's passages on the diagonal) */
 void __fastcall__ water_plan (unsigned char n);    /* A stratum's water traced over its plan (overlay 5's: plan.c,
                                                 **   slice 4.9's) */
 void __fastcall__ wet_chunk (struct chunk* c, const struct edges* e);  /* Its water (overlay 6's: slice 4.9's) */
