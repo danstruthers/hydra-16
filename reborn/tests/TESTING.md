@@ -39,6 +39,15 @@ With RULES=NAME and no tests named, the runner still takes only the meaning chec
 
 After a run, `obj/testtimes.json` has each test's wall time and cycles.
 
+## The machine's memory: `HYDRA_MODULES`
+
+Each test's machine has three RAM modules (48 banks, 384K a task), as the user's board has (`DEFAULT_MODULES` in
+`base/sim/lib/machine.js`, which `sim/run.js`, the test runners, the soaks, the browser's emulator and the danlang
+emulator all use). To run a whole suite with fewer, set `HYDRA_MODULES=N` (1 to 3) in the environment, or give
+`--modules N` to `sim/test.js`: `HYDRA_MODULES=2 node sim/test.js --tier lead`. The tests' processes, the tiers' steps
+and the soaks inherit it, and the summary line names it. A test that sets its own `machine.modules` keeps its own.
+`sim/run.js --modules N` sets one run's.
+
 ## The tiers
 
 **1. While working**: the agent's own tests, and `--near` its area:

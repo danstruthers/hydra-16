@@ -34,8 +34,13 @@ static unsigned char gait = GA_WALK, watch;     /* (Its file's pace and watchful
 static unsigned char wounds;                    /* The character's, and each creature's (by its record) */
 static unsigned char tended;                    /* (The character's wounds tended: slice 4.3's simple way) */
 static unsigned rest_m;                         /* (Its rest toward the next wound healed: minutes, RS_TIME's) */
-static char news[40];                           /* (What time did to it: RS_DESCRIBE b 4's) */
+static char news[72];                           /* (What time did to it: RS_DESCRIBE b 4's) */
 static unsigned char sheet[NSHEETS];
+static unsigned char sround[NSHEETS];           /* (Each creature's rounds fought, toward its tiring: the null's simple
+                                                **   way, 2026-10-31: a level each 30, a step the worse in its tests; */
+static unsigned slast[NSHEETS];                 /*   the clock's minute of its last, 30 rounds rested off each ten
+                                                **   minutes since) */
+#define TIRE_N          30
 static unsigned char aden[NACTORS];             /* (Each actor's record) */
 static unsigned char restored;
 static char hurt[80];                           /* The last harm's words */
@@ -69,8 +74,62 @@ static void __fastcall__ putn (int v)
 #define RS_HOUSE_STATE
 #define RS_HOUSE_BEARING
 #define RS_HOUSE_QUIET
+#define RS_HOUSE_DICE                           /* (The dice by who asks: main's) */
 unsigned long bseed;                            /* (The bearings' own dice: rshouse.h's) */
 #include "../dq0/rshouse.h"
+
+static void __fastcall__ want_say (const char* s)
+{
+    if (strlen (news) + strlen (s) < sizeof news) {
+        strcat (news, s);
+    }
+}
+#define WANT_SAY(s)     (want_say (s), r->grade = 2)
+#include "../dq0/rswant.h"                 /* (Hunger and thirst, every ruleset's: slice 4.9's) */
+
+#define AIR_SAY(s)      (want_say (s))
+#define AIR_LEVELS(n)
+#include "../dq0/rsair.h"                   /* (The air it breathes, every ruleset's: 2026-10-31) */
+
+/* ---- Its afflictions, the simple way (2026-10-31: HOUSE.md's poison and disease, the null ruleset's): a poison taken
+** sickens it a while (a dart's or a smear's half an hour a point of its dose, spoiled food's two hours), a disease
+** caught on a flat test (the flux) shows a day on and lasts three; neither kills; told as they come and go */
+static unsigned aff_m, sick_m;                  /* (A poison's minutes left; a disease's, its last three days the fever's) */
+
+static signed char __fastcall__ flat (signed char steps);
+
+static void __fastcall__ aff_null (struct req* r)
+{
+    unsigned m = r->w1;
+    unsigned char k = r->x[18];
+
+    if (k == AK_FLUX) {
+        if (!sick_m && !G_OK (flat (r->x[19] > 1 ? -4 : 0))) {
+            sick_m = 5760;                      /* (Four days: a day hidden, three of fever) */
+        }
+    } else if (k && k < NAK) {
+        if (!aff_m) {
+            want_say (k == AK_FOOD ? " Your belly cramps: the food was bad." : " You feel sick: there was poison in it.");
+        }
+        aff_m = k == AK_FOOD ? 120 : 30 * (r->x[19] ? r->x[19] : 1);
+    } else if (aff_m) {
+        if (m >= aff_m) {
+            aff_m = 0;
+            want_say (" The sickness passes.");
+        } else {
+            aff_m -= m;
+        }
+    }
+    if (sick_m && m) {
+        k = sick_m > 4320;
+        sick_m = m >= sick_m ? 0 : sick_m - m;
+        if (k && sick_m <= 4320) {
+            want_say (" Your belly gripes and cramps: you have the flux.");
+        } else if (!sick_m) {
+            want_say (" The sickness leaves you.");
+        }
+    }
+}
 
 /* ---- The flat odds: a d100 at most BASE and 5 a step (5 to 95) a success, critical in the fifth of its band nearest
 ** the end (the low rolls of a success, the high of a failure) */
@@ -331,8 +390,12 @@ static void __fastcall__ sheets (unsigned char back)
     if ((fd = back ? open (path, O_RDONLY) : open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
         if (back) {
             read (fd, sheet, sizeof sheet);
+            read (fd, sround, sizeof sround);   /* (A save before them: none, rested) */
+            read (fd, slast, sizeof slast);
         } else {
             write (fd, sheet, sizeof sheet);
+            write (fd, sround, sizeof sround);
+            write (fd, slast, sizeof slast);
         }
         close (fd);
     }
@@ -447,6 +510,25 @@ static unsigned char pc_shield (void)
 ** A missile's (RS_MISSILE, slice 4.7's, the null's simple way): the same flat test, two steps the worse a range's band
 ** past the short, four behind cover, two the easier unaware of it; a stray's a hit, no test; its words the kind's name */
 
+/* A creature's tiring (the null's simple way, 2026-10-31: every actor's): sheet n's rounds rested off by the clock
+** (30 each ten minutes since its last), and a round more (w 1: a round of a fight); its fatigue levels after */
+static unsigned char __fastcall__ tired (unsigned char n, unsigned char w)
+{
+    unsigned m = (unsigned) (HUB->now / 600), d = m - slast[n];
+
+    if (d >= 10) {
+        d /= 10;
+        sround[n] = d >= TIRE_N || d * TIRE_N >= sround[n] ? 0 : sround[n] - d * TIRE_N;
+    }
+    if (w) {
+        if (sround[n] < 255) {
+            ++sround[n];
+        }
+        slast[n] = m;
+    }
+    return sround[n] / TIRE_N;
+}
+
 static void __fastcall__ attack (struct req* r)
 {
     struct rs_effect* e = (struct rs_effect*) r->x;
@@ -456,6 +538,8 @@ static void __fastcall__ attack (struct req* r)
     unsigned char mk = r->c;
     signed char g = 0, st = mw & RS_MISSILE ? r->steps - 2 * (r->b & 3) - (mw & MS_COVER ? 4 : 0) +
         (mw & MS_UNAWARE ? 2 : 0) : r->steps - 2 * r->c;
+    signed char ht = RS_HEART (r);              /* (A creature's heart: its courage's steps, the denizens' field and
+                                                **   bonds, HOUSE.md's morale) */
 
     for (k = 1, t = r->x[0]; k < 3; ++k) {      /* (At a thing: its least resistance to a blow) */
         t = r->x[k] < t ? r->x[k] : t;
@@ -470,12 +554,17 @@ static void __fastcall__ attack (struct req* r)
         r->result = bare ? 2 : 0;               /* (A part of it struck the thing) */
         return;
     }
-    if ((a && d) || (a ? sheet[aden[(a - 1) & 7]] >= BTOUGH : wounds >= TOUGH)) {
-        r->result = 0xFF;                       /* (Creatures fighting each other: none; the attacker dead) */
+    if ((a && d && !(mw & MS_STRAY)) || (a ? sheet[aden[(a - 1) & 7]] >= BTOUGH : wounds >= TOUGH)) {
+        r->result = 0xFF;                       /* (Creatures fighting each other: none, but a missile's stray at one
+                                                **   beside its mark, 2026-10-30; the attacker dead) */
         return;
     }
     dw = d ? &sheet[aden[(d - 1) & 7]] : &wounds;
     t = d ? BTOUGH : TOUGH;
+    if (!(mw & MS_STRAY)) {
+        st += a ? -tired (aden[(a - 1) & 7], 0) : tired (aden[(d - 1) & 7], 0);    /* (A creature tired, the worse at
+                                                **   it: a step a level, attacking or defending) */
+    }
     if (!(f & RS_PRONE_A)) {                    /* (The blow's die; its holder's shield, if it's free this round) */
         k = d ? ((d - 1) & 7) + 1 : 0;
         if ((sh = d ? ashd[k - 1] : pc_shield ()) != 0 && HUB->now >= sfree[k]) {
@@ -523,8 +612,16 @@ static void __fastcall__ attack (struct req* r)
         wound_words (n);
         if (*dw >= t) {
             r->grade = FF_D_DEAD;
-        } else if (d && !G_OK (flat (f & 1 ? -4 : 0))) {
+        } else if (d && !G_OK (flat ((f & 1 ? -4 : 0) + ht))) {
             r->grade = FF_FLEES;
+        }
+    }
+    if (!(mw & MS_STRAY) && r->result != O_RISE && !(r->grade & (FF_D_DEAD | FF_FLEES))) {
+        k = aden[((a ? a : d) - 1) & 7];        /* (The creature's round fought; a level more, its courage, the worse
+                                                **   by it: failed, it breaks off) */
+        n = tired (k, 0);
+        if (tired (k, 1) > n && !G_OK (flat (ht - n - 1))) {
+            r->grade |= FF_FLEES;
         }
     }
     put ("\n");
@@ -570,6 +667,7 @@ static unsigned tlim = REQ_TEXT;
 static void __fastcall__ answer (struct req* r)
 {
     unsigned char k, m, t;
+    unsigned long xt;
     signed char g;
 
     tp = r->text;
@@ -592,13 +690,15 @@ static void __fastcall__ answer (struct req* r)
         }
         aden[k] = r->w1;
         memset (r->x, 0, sizeof (struct rs_summary));
-        ((struct rs_summary*) r->x)->cond = sheet[r->w1] >= BTOUGH ? C_DEAD : 0;
+        ((struct rs_summary*) r->x)->cond = (sheet[r->w1] >= BTOUGH ? C_DEAD : 0) | (tired (r->w1, 0) ? C_FATIGUED : 0);
         ((struct rs_summary*) r->x)->health = health (sheet[r->w1], BTOUGH);
         ((struct rs_summary*) r->x)->attacks = 1;
         ((struct rs_summary*) r->x)->power = 10;
         break;
     case RS_TEST:
-        if (r->a == P_DIG) {                    /* (The tool to hand that suits it best: the house's) */
+        if (r->a == P_DIG && !r->actor) {       /* (The tool to hand that suits it best: the house's; a creature's,
+                                                **   a tunneller's, its grade alone, by its own dice as moving
+                                                **   quietly's, the world's the rest: slice 4.11's) */
             m = r->b > MAT_SOIL ? MAT_STONE : r->b;
             t = dig_tool (m);
             k = digger[t].rate[m];
@@ -617,12 +717,29 @@ static void __fastcall__ answer (struct req* r)
             r->grade = G_MS;                    /* (Getting up: always, the null ruleset's, slice 4.1b's) */
             break;
         }
+        if (r->a == P_SWIM) {                   /* (A minute's swimming, the flat odds: its squares, a middling
+                                                **   swimmer's; it sinks at a critical failure; its breath two
+                                                **   minutes: slice 4.9's) */
+            g = r->grade = flat (r->steps);
+            r->w1 = g == G_CS ? 27 : g == G_MS ? 21 : g == G_MF ? 6 : 0;
+            r->w2 = 120;
+            break;
+        }
         if (r->a == P_BEARING) {                /* (Its bearings: the flat odds, by their own dice, and a failure's
                                                 **   d8 by them too: rshouse.h's, slice 4.2's) */
             bdice ();
             g = r->grade = flat (r->steps);
             r->result = g < 0 ? random (8) : 0;
             bdice ();
+            break;
+        }
+        if (r->a == P_BEARING && r->steps >= 64) {  /* (The time kept, rs.h's TIME_STEPS: the flat odds, by the game's
+                                                **   dice mixed and put back, a failure's d8 by them too: 2026-10-31) */
+            xt = xs_seed;
+            xs_seed = (xt * 1103515245UL + 12345UL) ^ 0x54494D45UL;
+            g = r->grade = flat (r->steps - TIME_STEPS);
+            r->result = g < 0 ? random (8) : 0;
+            xs_seed = xt;
             break;
         }
         if (((r->a == P_SEARCH || r->a == P_DISARM) && r->b == HIDE_MAGICAL) ||
@@ -637,7 +754,7 @@ static void __fastcall__ answer (struct req* r)
         if (r->a <= P_NOTICE_SMELL) {           /* (By its going and watchfulness: the house's) */
             r->steps += house_notice (r, HUB->pc_going, HUB->watch);
         }
-        if (r->a == P_STEALTH) {
+        if (r->a == P_STEALTH || r->a == P_DIG) {
             QUIET_IN                            /* (Moving quietly, by its own dice: the house's) */
             r->grade = flat (r->steps);
             QUIET_OUT
@@ -674,8 +791,19 @@ static void __fastcall__ answer (struct req* r)
         r->result = g > (signed char) r->c ? 1 : g < (signed char) r->c ? 2 : 0;
         *tp = 0;
         break;
-    case RS_TIME:                               /* (No bleeding: none dies of it; a wound healed by its rest, a tended
-                                                **   one's eight hours, an untended one's a day: slice 4.3's simple way) */
+    case RS_TIME:                               /* (Its minutes for hunger and thirst, rswant.h's, before its
+                                                **   reply's w1; no bleeding: none dies of it; a wound healed by its
+                                                **   rest, a tended one's eight hours, an untended one's a day: slice
+                                                **   4.3's simple way) */
+        r->x[16] = (unsigned char) r->w1;
+        r->x[17] = r->w1 >> 8;
+        if (r->actor != 0xFF) {                 /* (The UI's: a drink of still water, the flux's; no air, nothing else,
+                                                **   2026-10-31) */
+            r->x[18] = r->x[15] & 0x80 ? AK_FLUX : 0;
+            r->x[19] = 1;
+            r->x[20] = r->x[21] = 0;
+        }
+        r->x[15] &= 0x7F;
         if (!r->a && wounds) {
             rest_m += r->w1;                    /* (At rest: toward a wound healed) */
         }
@@ -691,8 +819,34 @@ static void __fastcall__ answer (struct req* r)
             r->grade = 2;
             status ();
         }
+        if (r->x[2] == 3) {                     /* (Drowned: the world's, slice 4.9's) */
+            strcpy (news, "You drown.");
+            r->result = 1;
+            r->grade = 2;
+        }
         r->b = health (wounds, TOUGH);
-        *(unsigned long*) (r->x + 4) = HUB->now + 36000UL;     /* (Asked an hour on, nothing bleeding, unhurt) */
+        *(unsigned long*) (r->x + 4) = HUB->now + 36000UL;
+        memcpy (r->x + WANT_X, &HUB->pc_hunger, 6);    /* (Hunger and thirst, rswant.h's: no fatigue, the null
+                                                **   ruleset's, but dead of it) */
+        if (want_of (r, HUB->now) & WANT_DIES) {
+            r->result = 1;
+        }
+        memcpy (&HUB->pc_hunger, r->x + WANT_X, 6);     /* (Asked an hour on, nothing bleeding, unhurt) */
+        r->w1 = r->x[16] | r->x[17] << 8;
+        g = strlen (news);
+        aff_null (r);                           /* (Its afflictions, the simple way; the air it breathes, every
+                                                **   ruleset's: rsair.h's, dead of it) */
+        if (r->x[20] || r->x[21] || air_lv || air_co) {
+            k = air_of (r->x[20], r->x[21], r->w1);
+            if (k & 1) {
+                wounds = TOUGH;
+                r->result = 1;
+                status ();
+            }
+            r->grade |= k & 4;
+        }
+        r->grade |= strlen (news) != (unsigned char) g ? 2 : 0;
+        r->w1 = 0;
         *tp = 0;
         break;
     case RS_TREAT:                              /* (First aid, the simple way: five minutes a wound, the character's
@@ -795,6 +949,8 @@ int main (int argc, char* argv[])
         return 1;
     }
     rseed (HUB->seed ^ 0x5245);                 /* (Its own dice: the game's seed, and its role) */
+    hub_map (0);
+    DICE_BEGIN
     for (;;) {
         hy_sem_acquire (HUB->sem[T_REFEREE]);
         hub_map (0);
@@ -803,12 +959,14 @@ int main (int argc, char* argv[])
         }
         for (s = 0; s < NSLOTS; ++s) {
             if (hub_posted (&HUB->slot[s])) {
+                DICE_IN (s)
                 answer (&HUB->slot[s]);
                 hub_reply (&HUB->slot[s]);
             }
         }
         if (hub_posted (DSLOT)) {               /* (The denizens' task's, its own: DTEXT of its text) */
             tlim = DTEXT;
+            DICE_IN (NSLOTS)
             answer (DSLOT);
             tlim = REQ_TEXT;
             hub_reply (DSLOT);

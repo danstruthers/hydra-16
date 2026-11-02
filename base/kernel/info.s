@@ -501,6 +501,61 @@ K_TASKSTOP:
 @perm:
             FAIL        E_PERM
 
+; TASKFORE: task .A in the foreground (.X <> 0: TF_FORE, which the scheduler picks first: sched.s) or out of it
+; (.X = 0).  This task's own, or a task it started (its parent this one); not the kernel task's or a driver's.  The
+; flag goes with the task: cleared as it ends, or EXECs.  OUT: C = 0; or C = 1, .A = E_PERM, E_SRCH (free, or not
+; started).  Modifies .A, .X, .Y, K_TASK, K_TMP
+K_TASKFORE:
+            sta         K_TASK
+            stz         K_TMP                               ; K_TMP: the flag, set or not
+            txa
+            beq         :+
+            lda         #TF_FORE
+            sta         K_TMP
+:
+            ldx         K_TASK
+            beq         @perm                               ; (The kernel task)
+            cpx         #TASKS
+            bcs         @srch
+            ldy         T_REGISTER
+            php
+            sei
+            QL_GET      TK_STATE
+            beq         @srch_back                          ; (Free)
+            cmp         #ST_NEW
+            beq         @srch_back
+            cpx         T_REGISTER                          ; (Itself)
+            beq         :+
+            stz         T_REGISTER                          ; ---- The kernel task's: its parent?
+            tya
+            cmp         K_PARENT,X
+            sty         T_REGISTER                          ; ---- Back
+            bne         @perm_back
+:
+            QL_GET      TK_FLAGS
+            bit         #TF_DRIVER
+            bne         @perm_back
+            and         #$FF ^ TF_FORE
+            ora         K_TMP
+            QL_PUT      TK_FLAGS
+            lda         K_TMP
+            stz         T_REGISTER                          ; ---- The kernel task's: there may be some now
+            tsb         K0_FORES
+            sty         T_REGISTER
+            plp
+            clc
+            rts
+
+@srch_back:
+            plp
+@srch:
+            FAIL        E_SRCH
+
+@perm_back:
+            plp
+@perm:
+            FAIL        E_PERM
+
 ; DBG_PS: a line for each task in use: "T ST FL PA CPU    NAME" (its number, state, flags, parent, CPU time in
 ; ticks, all hex; its name).  Its scratch: K_TASK, and PS_INFO (its TA_PATH: it makes no request) for
 ; TASKINFO's answers

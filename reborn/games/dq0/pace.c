@@ -90,7 +90,7 @@ static unsigned char __fastcall__ count_of (const char* s)
     unsigned char k;
 
     if (*s >= '0' && *s <= '9') {
-        k = atoi (s);
+        k = dnum (s);
         return k ? k : 1;
     }
     for (p = counts, k = 1; *p; p += strlen (p) + 1, ++k) {
@@ -139,6 +139,23 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
         plain = any ("off\0no\0plain\0none\0") != 0;
         msg (plain ? "The map in plain letters, no colours." : "The map in colours: what you see now bright, what you "
             "remember dim, what's on your map brown.");
+        return 1;
+    }
+    if (any ("autotarget\0auto-target\0autoengage\0auto-engage\0autofire\0autoshoot\0") ||
+        (any ("auto\0") && any ("target\0engage\0fire\0shoot\0"))) {   /* (The auto-target range, the user's: "autotarget
+                                                **   with bow at medium range", "set autotarget off"; the world's, WQ_SET's
+                                                **   WS_AUTO, fighting on with missiles: 2026-10-30) */
+        g = any ("off\0none\0no\0never\0stop\0") ? 0 : any ("short\0close\0near\0") ? 1 : any ("medium\0middle\0mid\0") ? 2 :
+            any ("long\0") ? 3 : any ("extreme\0far\0any\0") ? 4 : 0xFF;
+        if (g != 0xFF) {
+            wset (WS_AUTO, g, 0);
+        }
+        if ((g = HUB->pc_auto) != 0) {
+            sayf ("\nYou shoot at hostiles within %s range on your own.", g == 1 ? "short" : g == 2 ? "medium" : g == 3 ?
+                "long" : "extreme");
+        } else {
+            msg ("You don't shoot at hostiles on your own.");
+        }
         return 1;
     }
     for (i = 0; i < nw; ++i) {
@@ -335,14 +352,14 @@ unsigned char __fastcall__ s_travel_go (const char* l)
 ** s_pace_cmd's words that matter: a pace's (paces), "status", the colours', the watchfulness's (without one, wa is the
 ** hub's), a small move's, a count's unit (a count is only a square's with one, or a figure at the end); so a word it comes
 ** to match must be here too */
-static const char pace_words[] =
-    "creep\0creeping\0sneak\0sneaking\0tiptoe\0crawl\0hop\0quietly\0stealthily\0slowly\0slow\0walk\0"
-    "walking\0normal\0"
-    "normally\0quickly\0jog\0jogging\0trot\0briskly\0run\0running\0hurry\0sprint\0sprinting\0dash\0"
-    "status\0stop\0trap\0traps\0carefully\0careful\0warily\0listen\0listening\0mapping\0map\0"
-    "colour\0color\0colours\0colors\0"
-    "step\0sidestep\0shuffle\0back\0"
-    "space\0spaces\0square\0squares\0steps\0pace\0paces\0foot\0feet\0ft\0yard\0yards\0";
+static const char pace_words[] =                /* (Each word after its length: no strlen of each, each time) */
+    "\005creep\010creeping\005sneak\010sneaking\006tiptoe\005crawl\003hop\007quietly\012stealthily\006slowly"
+    "\004slow\004walk\007walking\006normal\010normally\007quickly\003jog\007jogging\004trot\007briskly\003run"
+    "\007running\005hurry\006sprint\011sprinting\004dash\006status\004stop\004trap\005traps\011carefully"
+    "\007careful\006warily\006listen\011listening\007mapping\003map\006colour\005color\007colours\006colors"
+    "\004step\010sidestep\007shuffle\004back\005space\006spaces\006square\007squares\005steps\004pace\005paces"
+    "\004foot\004feet\002ft\004yard\005yards\012autotarget\013auto-target\012autoengage\013auto-engage\010autofire"
+    "\011autoshoot\004auto";
 
 unsigned char __fastcall__ o_pacing (const char* l)
 {
@@ -361,8 +378,8 @@ unsigned char __fastcall__ o_pacing (const char* l)
         }
         for (n = 0; l[n] && l[n] != ' ' && l[n] != ',' && l[n] != '.' && l[n] != '!'; ++n) {
         }
-        for (p = pace_words; *p; p += k + 1) {   /* (Each word's length once, its first letter first) */
-            if ((k = strlen (p)) == n && *p == (*l | 0x20) && !strnicmp (l, p, n)) {
+        for (p = pace_words; (k = *p) != 0; p += k + 1) {  /* (Each word's length, then its first letter) */
+            if (k == n && p[1] == (*l | 0x20) && !strnicmp (l, p + 1, n)) {
                 return 1;
             }
         }

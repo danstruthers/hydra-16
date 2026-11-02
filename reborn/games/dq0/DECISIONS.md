@@ -1217,3 +1217,183 @@ minutes would be better."
   waits eight hours, "sleep 8 hours" and "rest" sleep a night, and the words tell it back ("You wait eight hours.").
   The house's ways of it (the parser's durations, a night's sleep unsaid, the long wait's speed, the coarser ticks
   while the character rests) are in HOUSE.md's long waits, for review.
+
+### Morale: a field about every mind, and bonds to its leaders
+
+The user (2026-10-29), on the peoples' note that a fallen leader dismays its faction four steps worse: "I read your
+comment on morale, and the effect of a falled leader should be more generic.  Any intelligent creature should modify
+the morale field around itself.  The strength of that effect should be based on their importance/rank as well as their
+own influence skills.  A chieftan or spiritual leader has a much larger influence (positive to their own
+subordinates/friends, negative to their foes), but there should also be some heirarchical influence, regardless of
+distance, that trickles down from leaders to subordinates no matter how close.  That passive influence would increase
+with time (new leaders having less influence than old ones, and frequency of contact reinforcing that bond).  So, there
+are upward bonds to leaders above you, and environmental bonds based on how close other friendly units are to you, and
+how they are doing.  The loss of a leader (that the subordinate knows about) would instantly cause a morale check with
+that leader's influence removed.  The local morale field and any morale bonds act as morale check bonuses or
+penalties."  Then: "Queue up the new morale work."
+
+Built 2026-10-30 (branch reborn-game-morale), the lead's defaults where the user didn't say, for review in HOUSE.md's
+morale:
+
+- **The field:** each intelligent actor (a mind low, average or cunning; no beast, nothing mindless) and the character
+  sway the courage of every actor within eight squares by their influence: their rank in their faction (kinds.txt's new
+  rank: the rank and file, a captain, a lord or a spiritual leader) and their influence skill (Oratory or Rhetoric, the
+  referee's), for their friends and against their foes (a mighty foe the more: its fearsomeness), less with distance, by
+  how each is doing (wounded, berserk, fleeing, fallen).  A friend counts the more as one's band is old and close.
+- **The bonds:** each subordinate's to its band's head and to its faction's leader above that, wherever they are, by
+  the leader's rank, the time they've had together (a new leader's the less) and their contact (a band living with
+  its leader every day; others as they meet), aged by the clock.
+- **Reckoned only as a test is made** (the 65C02's time), or as one may be: an actor's heart as it engages (the
+  world's blow carries it to the referee, its courage tested with it as it's wounded) and as one near it falls; held
+  to the book's band (Combat 18: twenty points either way), the book's bad and desperate situations beyond it.
+- **A leader's loss known:** one that hears it fall (the fight's din) tests at once with that leader's influence and
+  bond removed; one that doesn't (out of hearing, below, senseless) keeps its bond till it's told (a runner's or a
+  survivor's word: the hook, to come).  It replaces the peoples' fixed two steps and four.
+- **The character** sways its allies and its foes by its own rank and skill; its own morale stays the player's (D14).
+
+**Design:** HOUSE.md's morale; DENIZENS.md's fights and attitudes.
+
+### Succession
+
+The user (2026-10-30), after the morale work: "When a leader dies, the next one below him in the heirarchy
+(strongest/most influential of the those directly below them) should take over."
+
+Built the same day (branch reborn-game-morale2), for review in HOUSE.md's morale: every leader's post in the chain (a
+band's head, a faction's leader) left by its death is taken by the most influential of those directly below it (the
+morale's influence: rank and skill; ties by might, then the dice), from the next rank down if there's none left
+directly below; the successor takes the post's rank and weight; the bonds to it begin as a new leader's, but its own
+band's keep what they had with it; those who know of the death know of the successor (the told hook's too); one at
+its post that the character sees or hears rallies its fellows, told ("The small orc rallies its fellows.").  The post a
+successor leaves is filled the same way, on down the chain (the coordinator's reading of the user's words, the
+same day).
+
+**Design:** HOUSE.md's morale; DENIZENS.md's morale.
+
+## 2026-10-30
+
+### The start's levers: the card's reads and the overlays packed (2026-10-31)
+
+The user's choices (the lead's, relayed 2026-10-31): yes to the storage driver's read loop quickened (the bits' timing
+proven on the board exactly as it was, only the gap between bytes the shorter), yes to the overlays compressed (a
+small, fast unpacker in a shared ROM library, not in each task's main RAM; the banks the same as today's, checked),
+no to the game on the ROM disk.  Built: the start 208M cycles at seed 1 and 289M at a big seed (58 s and 81 s on the
+board, from 79 s and 104 s).  With the start quicker, dq0cmd's fight at the turns pace went otherwise: a throw's
+two intents (taken in hand, then thrown) let the world move its clock and give the denizens a turn between them as the
+tasks' timing fell.  Fixed generally (the hub's ui_giving, HUB_VERSION 32: no turn and no clock while a command's
+being given or an intent of it waits), not by re-baselining; dq0turnsame guards it.
+
+**Design:** DUNGEON.md, the game's start; who keeps what (the turns pace).
+
+### The start's time measured, its progress shown
+
+The user's rule (DECISIONS.md, the parser's task: a start of up to ten seconds is fine, shown; start-up work traded
+for each command's speed) against the board: the start measured at 79 s (seed 1) and 104 s (a big seed, themegen's
+history: every real game's) at 3.58 MHz, two thirds of it the SD card's reading (DUNGEON.md, the game's start).  Built:
+the overlays' files packed (their fill left out, each bank read straight into its bank, dq0.ovl opened once: 70 s
+and 94 s), and the progress shown throughout, no silence over about 10 s, the help's line with the first prompt.  And at the
+real paces a stir that comes as a line's being typed held till it's entered and answered (the start's timing moved,
+a rats' stir fell on dq0answer's inventory as it was typed: 795,000 cycles; the answers' times kept, D17).
+Asked of the user (the lead's, 2026-10-30), not built: the overlays compressed (about 38M cycles less, 10 s); the
+storage driver's sd_read with its byte loop in line (the bits' timing as it is: about 25M less, and every card read
+quicker); the game on the ROM disk (its reads some 4.5 times as quick: the start some 35-40 s).
+
+**Design:** DUNGEON.md, the game's start.
+
+### The answers' times held (the kernel's foreground)
+
+The user (2026-10-30): the answer-time checks (D17's, dq0answer's and dq0prompt's) are the user's and never raised;
+they swung 100,000-250,000 cycles with any change in how the tasks interleaved.  Their times are to hold whatever the
+background is doing.
+
+- **The kernel's foreground** (base/kernel/sched.s, TASKFORE: a general, opt-in hint any program can use): a task in
+  it is picked before the others whenever it can run, a tick at most after it can, and a driver serving its call with
+  it; the foreground has eight ticks at most, then the background the rest of a tick, so nothing starves.
+- **The UI** is in it for good; **the world, the command parser, the senses and the referee** while a command's in
+  hand (the hub's ui_cmd, from its Enter till the character's news; held while an intent's answer is owed).  The
+  denizens' minds, the maker and the sound are the background.
+- **The world** leaves the denizens' intents while a command's in hand at the real paces, a quarter second at most
+  (a denizen's kit and its parts' copies could hold the UI's intent back a second).  The turns pace is as it was.
+- **The lib folder's files** a task reads again and again are opened once and kept open (the outfits, the traces'
+  words, the help): an open on the card was some 700,000 cycles.
+- **The dice by who asks**: the referee keeps a stream of dice for each requester (the world's slot, the UI's, the
+  denizens'), and the minds keep their own, apart from a stratum's population's and a lair's placing; so a game's
+  fights at the turns pace go by its seed and its commands, not by how the tasks interleave or how the code is laid
+  out.  The tests' `dq0 -R n` (0-252) offsets the dice: the same dungeon, other rolls; the tests whose rolls changed
+  were given the offset that plays their game again, or their scene set (a steady kin, AM_STEADY; a room gone into).
+- **Told once**: a stir's first sentence ("Something stirs.") said whatever, the rest not twice till the next line
+  typed; "Everything goes black again." for the character's second fall.
+- **An inventory's list** gathered of the character's things alone (its chain followed up), its alike things read
+  where they lie; a line typed while the last's answer is owed gets the denizens' quarter second of its own.
+
+**Design:** DENIZENS.md, the tasks giving way to a command in hand; docs/03-base/kernel.md, the scheduler.
+
+## 2026-10-31
+
+### Leisure
+
+The user (2026-10-31), after the denizens' daily life: "For what folk are doing, there should be a "leisure time" state
+where denizens sit around reading, dicing, talking, drinking, playing other games, etc."
+
+Built the same day (branch reborn-game-leisure), for review in HOUSE.md's leisure: folk at leisure (DO_LEISURE and its
+pastime) for a part of their time about (a watch-keeper's two hours after its free watch's meal, a long day's last four
+hours); each kind's pastimes (kinds.txt's: reading, dice and other games of chance, a board game, talking and stories,
+singing, drinking, mending its gear, whittling, by what fits each people), chosen by the denizen's number and the day's,
+not the dice; the social ones (dice to drink) its lair's together, in the room they gather in (a hall, a guardroom, a
+barracks, quarters), a reader or one mending alone at its bed; told as seen ("Three soldiers are ahead, 20 feet away, at
+dice.") and heard (dice rattling, laughter, singing, cups clinking); less watchful at it (the book's half Awareness for
+one not paying attention: its sight and hearing halved, quartered at its cups), in drink a while after (its blows two
+steps worse, struck at two easier); its pastime let go as it rises to act, told ("The soldier lets the dice fall.").
+
+**Design:** DENIZENS.md's daily life; HOUSE.md's leisure.
+
+### The time of day believed
+
+The user (2026-10-31): "Timekeeping should also be a fuzzy thing, unless there is some place where you can actually see
+outside through a window, skylight, vertical shaft, or the like.  Unless a person has absolute timesense, then
+especially after sleeping the current time-of-day should be quite arbitrary to the player, and should drift further and
+further away from known as the play progresses."  Then: "Time-of-day would be corrected whenever the sun can be seen."
+Then: "...and the direction is known, or the player spends some time watching it."
+
+Built the same day (branch reborn-game-timesense), for review in HOUSE.md's the time of day believed: the character's
+time a belief, as its north is (the hub's tb: its error from the true clock and how sure it is), drifting a little each
+hour awake (the referee's test, Awareness, its drift the more the longer since it last knew), much after a sleep or a
+black-out (its length guessed as it wakes), narrowed by its own light burning down and its hunger since its meal; the
+sky in sight (an open way out) setting it: its light alone (dawn, day, dusk, night), the sun or the stars read by the
+north it believes in (wrong if its north is, unknown to it), the sun high or low if it knows it's lost its bearings,
+and the sun or the stars watched a while showing the time and north both.  Absolute timesense a rare trait (one in a
+hundred, hmchar's: the house's).  Told by "time", "what time is it" as believed and as sure as it is; "sleep until
+dawn", "wait until morning", "watch the sun" go by it.
+
+**Design:** DUNGEON.md's the time of day believed; HOUSE.md's.
+
+### Poison, bad air and disease
+
+The user (2026-10-31): "What about poisoning, chemical exposure, and disease?"  Then: "Should also include poor air
+quality (CO or CO2 excess, low oxygen levels, gas pockets--which could explode!)."
+
+Built the same day (branch reborn-game-afflictions), for review in HOUSE.md's poison, bad air and disease: one course
+for every affliction, the book's (Physician 4: a poison an infection with its intervals shortened to the toxin, a
+disease a Contagion Index and a healing rate, its recovery rolled daily), the venoms one case of it (their tests as
+they were); poisons (a dart trap's, a contact smear's, spoiled food's), diseases (foul water's flux, a giant rat's
+rat-bite fever, a ghoul's grave rot: the HarnWorld Bestiary's grave-wight's), caught unknowing and shown after their
+incubation; the air in pockets (blackdamp pooled deep, firedamp in the shale, whitedamp an explosion's afterdamp), a
+flame's warnings, firedamp bursting at a naked flame; the denizens keeping out of the bad air they know.
+
+**Design:** HOUSE.md's poison, bad air and disease; DUNGEON.md's bad air; DENIZENS.md; RULESETS.md's RS_TIME.
+
+### Ways off the compass
+
+The user (2026-10-31): "Is tunnelling sideways a thing?"  Then: "What about passeges, tunnells, rooms, etc. that are not
+set on the 4 main compass coordinates?  Tunnells and natural caverns especially, or grids that are not aligned to the
+compass are exmaples."  Offered the lead's three steps (diagonal passages as true ways; a passage told by its real
+heading; built complexes at an angle; free angles advised against), the user: "Yes, please queue up 1-3".
+
+Built (branch reborn-game-angles), step 1 first, for review in HOUSE.md's diagonal ways: a diagonal way, a step between
+two squares that share only a corner, open where the grid says so (a corner cut, world.h's T_CUT: rock a diagonal way's
+corner cuts through, neither corner a square to stand on, never squeezed between two solid corners), walked by every
+actor (the character's walks, its ways across a room and its journeys, the denizens' steps, a hunter's scent), seen
+along, told among a passage's ways ("ahead to your right"), drawn on the map ("/" and "\"), and dug ("dig northeast":
+a square corner to corner, seven feet); the cave grower's zigzag tunnels made the diagonals they are.
+
+**Design:** DUNGEON.md's diagonal ways; HOUSE.md's diagonal ways.
+

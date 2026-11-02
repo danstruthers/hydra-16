@@ -34,6 +34,8 @@ enum {
                                                 **   "treat the bandit", slice 4.3's) */
     VB_GATHER_OBJECT,                           /* (The missiles lying about gathered again: "gather the arrows",
                                                 **   slice 4.7's) */
+    VB_META_TIME,                               /* (The time of day as the character believes it: "time", "what time
+                                                **   is it", 2026-10-31) */
     NACTIONS
 };
 

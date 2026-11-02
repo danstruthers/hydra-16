@@ -39,11 +39,14 @@ static char sl[128], sn[128];                   /* The status line as it's shown
 
 /* ---- Output */
 
+unsigned char t_wrote;                          /* (Something out since the keys were looked for: main's nap) */
+
 void t_flush (void)
 {
     if (on) {
         write (1, ob, on);
         on = 0;
+        t_wrote = 1;
     }
 }
 
@@ -83,6 +86,14 @@ static void __fastcall__ go (unsigned char r, unsigned char c)
     out (';');
     outn (c);
     out ('H');
+}
+
+/* The line typed's row cleared, the cursor at its start (the main RAM's room: one copy, 2026-10-30) */
+static void clear_line (void)
+{
+    go (th, 1);
+    csi ();
+    out ('K');
 }
 
 /* The cursor hidden while it's away from the line typed (ESC [ ? 25 l: the console's, and its terminals'), and
@@ -132,7 +143,10 @@ static void newline (void)
 
 int __fastcall__ _hy_open (const char* name, unsigned char mode);     /* (The C library's) */
 static int kfd = -1, nbfd = -1;
-static int pend = -1;                           /* A key t_haskey saw */
+static unsigned char kb[8], kn, ki;             /* The keys t_haskey read, how many, the next (all there are, up to
+                                                **   8, a read each: a line typed ahead, or pasted, not a call of
+                                                **   the console's for each key, some 9,000 cycles, its Enter seen
+                                                **   the later, 2026-10-30) */
 
 static void keys (void)
 {
@@ -145,13 +159,16 @@ static void keys (void)
 
 unsigned char t_haskey (void)
 {
-    unsigned char c;
+    int n;
 
     keys ();
-    if (pend < 0 && read (nbfd, &c, 1) == 1) {
-        pend = c;
+    t_wrote = 0;
+    if (ki == kn) {
+        n = read (nbfd, kb, sizeof kb);
+        kn = n > 0 ? n : 0;
+        ki = 0;
     }
-    return pend >= 0;
+    return ki < kn;
 }
 
 unsigned char t_getkey (void)
@@ -159,9 +176,8 @@ unsigned char t_getkey (void)
     unsigned char c;
 
     keys ();
-    if (pend >= 0) {
-        c = pend;
-        pend = -1;
+    if (ki < kn) {
+        c = kb[ki++];
     } else {
         while (read (kfd, &c, 1) != 1) {
             hy_yield ();
@@ -204,20 +220,20 @@ void s_size (void)
             kbd = 1;
         }
         if (!strncmp (p, "size ", 5)) {
-            tw = atoi (p + 5);
+            tw = dnum (p + 5);
             if ((p = strchr (p + 5, ' ')) != 0) {
-                th = atoi (p + 1);
+                th = dnum (p + 1);
             }
         }
     }
     if (tw != 80 || th != 24) {
         return;                                 /* (The console's) */
     }
-    if ((p = env ("COLUMNS", eb, sizeof eb)) != 0 && atoi (p) > 0) {
-        tw = atoi (p);
+    if ((p = env ("COLUMNS", eb, sizeof eb)) != 0 && dnum (p) > 0) {
+        tw = dnum (p);
     }
-    if ((p = env ("LINES", eb, sizeof eb)) != 0 && atoi (p) > 0) {
-        th = atoi (p);
+    if ((p = env ("LINES", eb, sizeof eb)) != 0 && dnum (p) > 0) {
+        th = dnum (p);
     }
 }
 
@@ -275,9 +291,7 @@ void t_away (void)
 {
     csi ();
     out ('r');                                  /* The whole screen scrolls again */
-    go (th, 1);
-    csi ();
-    out ('K');
+    clear_line ();
     unhide ();
     t_flush ();
 }
@@ -384,7 +398,9 @@ void __fastcall__ say (const char* s)
 #pragma register-vars (pop)
 
 /* A line of the story as it is (the map's): not wrapped, cut at the screen's width */
-void __fastcall__ say_raw (const char* s)
+#pragma code-name (push, "OV16CODE")            /* (Overlay 16's, through its stub: the main RAM's room, 2026-10-31) */
+#pragma rodata-name (push, "OV16RODATA")
+void __fastcall__ o_say_raw (const char* s)
 {
     if (col) {
         newline ();
@@ -404,6 +420,8 @@ void __fastcall__ say_raw (const char* s)
     blanked = 0;
     newline ();
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 void __fastcall__ msg (const char* s)
 {
@@ -482,10 +500,8 @@ void inl_show (void)
 {
     unsigned char from = inn > tw - 4 ? inn - (tw - 4) : 0;
 
-    go (th, 1);                                 /* (Cleared first: with nothing typed, "> " is the last thing out,
+    clear_line ();                              /* (Cleared first: with nothing typed, "> " is the last thing out,
                                                 **   a prompt for a test to wait for) */
-    csi ();
-    out ('K');
     unhide ();
     outs (t_ready && !qlen ? "> " : "  ");   /* (A line entered, not yet taken: no prompt, 2026-10-28) */
     outs (inl + from);
@@ -500,9 +516,7 @@ void t_done (void)
             go (th, 3 + shown);
             unhide ();
         } else {
-            go (th, 1);                         /* (Nothing typed: "> " again, the last thing out, a prompt) */
-            csi ();
-            out ('K');
+            clear_line ();                      /* (Nothing typed: "> " again, the last thing out, a prompt) */
             unhide ();
             outs (t_ready && !qlen ? "> " : "  ");    /* (A line entered and not yet taken up, the
                                                 **   world's or a stir's words out before it: not a prompt, a test's
@@ -593,6 +607,8 @@ char* t_line (void)
     qlen -= n;
     away = 1;                                   /* (The line typed drawn again at t_done: its prompt as the game
                                                 **   stands, none shown while the line waited, 2026-10-28) */
+    soon = 1;                                   /* (Its answer's first words out as they're said, whatever went out
+                                                **   since t_done: a stir's words, told as it was typed, 2026-10-30) */
     memmove (queue, queue + n, qlen);
     return taken;
 }

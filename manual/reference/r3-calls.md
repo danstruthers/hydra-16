@@ -35,7 +35,7 @@ can be made from each language:
 | Group | From | Calls |
 |---|---|---|
 | The system | $F800 | `SYSINFO` `ERRSTR` `KMESG` `REBOOT` `XCALL` |
-| Tasks | $F830 | `EXITS` `WAIT` `SPAWN` `GETPID` `YIELD` `SLEEP` `SLEEP_UNTIL` `TICKS` `PREEMPT_OFF` `PREEMPT_ON` `TASKINFO` `NOTIFY` `NOTE` `MODINFO` `ENV_GET` `ENV_PUT` `ENV_DEL` `ENV_NAME` `TASKREAD` `GETPPID` `SEM_NEW` `SEM_ACQUIRE` `SEM_TRY` `SEM_RELEASE` `SEM_FREE` `EXEC` `SEM_WAIT` `RUN` |
+| Tasks | $F830 | `EXITS` `WAIT` `SPAWN` `GETPID` `YIELD` `SLEEP` `SLEEP_UNTIL` `TICKS` `PREEMPT_OFF` `PREEMPT_ON` `TASKINFO` `NOTIFY` `NOTE` `MODINFO` `ENV_GET` `ENV_PUT` `ENV_DEL` `ENV_NAME` `TASKREAD` `GETPPID` `SEM_NEW` `SEM_ACQUIRE` `SEM_TRY` `SEM_RELEASE` `SEM_FREE` `EXEC` `SEM_WAIT` `RUN` `TASKFORE` |
 | Memory | $F890 | `BREAK` `PAGES_ALLOC` `PAGES_FREE` `BANKS` `BANKS_ALLOC` `BANKS_FREE` `SEG_CREATE` `SEG_ATTACH` `SEG_DETACH` `SEG_MAP` `SEGINFO` `BANKS_ALLOC_IN` `SEG_CREATE_IN` `BANK_LOAD` `BANK_FLUSH` |
 | Files | $F8C0 | `OPEN` `CREATE` `CLOSE` `READ` `WRITE` `SEEK` `STAT` `FSTAT` `WSTAT` `FWSTAT` `REMOVE` `DUP` `DUP2` `CHDIR` `GETCWD` `PIPE` `FD2PATH` |
 | Namespaces | $F920 | `BIND` `MOUNT` `UNMOUNT` `NSINFO` |
@@ -749,7 +749,7 @@ HyForth: `sys-env-del`. HyBASIC: `SYS "ENV_DEL"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## ENV_GET
 
@@ -800,7 +800,7 @@ HyForth: `sys-env-get`. HyBASIC: `SYS "ENV_GET"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## ENV_NAME
 
@@ -843,7 +843,7 @@ HyForth: `sys-env-name`. HyBASIC: `SYS "ENV_NAME"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## ENV_PUT
 
@@ -892,7 +892,7 @@ HyForth: `sys-env-put`. HyBASIC: `SYS "ENV_PUT"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## ERRSTR
 
@@ -968,7 +968,7 @@ HyForth: `sys-exec`. HyBASIC: `SYS "EXEC"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## EXITS
 
@@ -1002,7 +1002,7 @@ HyForth: `sys-exits`. HyBASIC: `SYS "EXITS"`.
 
 #### See also
 
-The other calls for tasks: `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## FD2PATH
 
@@ -1210,7 +1210,7 @@ HyForth: `sys-getpid`. HyBASIC: `SYS "GETPID"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## GETPPID
 
@@ -1241,7 +1241,7 @@ HyForth: `sys-getppid`. HyBASIC: `SYS "GETPPID"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## INIT_RUN
 
@@ -1411,7 +1411,7 @@ HyForth: `sys-modinfo`. HyBASIC: `SYS "MODINFO"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## MOUNT
 
@@ -1495,7 +1495,7 @@ HyForth: `sys-note`. HyBASIC: `SYS "NOTE"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## NOTE_POST
 
@@ -1549,11 +1549,14 @@ IRQs off.
 
 #### Result
 
+A
+: 0.
+
 X kept.
 
 #### Description
 
-A note to a note group, from an irq entry (a console's Ctrl-C): queued, and posted by the kernel task as soon as it runs. Short enough for an irq entry: nothing is checked.
+A note to a note group, from an irq entry (a console's Ctrl-C): queued, and posted by the kernel task as soon as it runs. Short enough for an irq entry: nothing is checked. Its A = 0 is an irq entry's answer (no task switch), so an entry may end with jmp `NOTE_QUEUE`.
 
 #### Errors
 
@@ -1594,7 +1597,7 @@ Not in the languages: it is a call for drivers, or for the debugger.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## NSINFO
 
@@ -1902,7 +1905,7 @@ HyForth: `sys-preempt-off`. HyBASIC: `SYS "PREEMPT_OFF"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## PREEMPT_ON
 
@@ -1932,7 +1935,7 @@ HyForth: `sys-preempt-on`. HyBASIC: `SYS "PREEMPT_ON"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## PUTC
 
@@ -2319,7 +2322,7 @@ HyForth: `sys-run`. HyBASIC: `SYS "RUN"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `TASKFORE`.
 
 ## SEEK
 
@@ -2615,7 +2618,7 @@ HyForth: `sys-sem-acquire`. HyBASIC: `SYS "SEM_ACQUIRE"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## SEM_FREE
 
@@ -2648,7 +2651,7 @@ HyForth: `sys-sem-free`. HyBASIC: `SYS "SEM_FREE"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## SEM_NEW
 
@@ -2685,7 +2688,7 @@ HyForth: `sys-sem-new`. HyBASIC: `SYS "SEM_NEW"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## SEM_RELEASE
 
@@ -2720,7 +2723,7 @@ HyForth: `sys-sem-release`. HyBASIC: `SYS "SEM_RELEASE"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## SEM_TRY
 
@@ -2755,7 +2758,7 @@ HyForth: `sys-sem-try`. HyBASIC: `SYS "SEM_TRY"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## SEM_WAIT
 
@@ -2794,7 +2797,7 @@ HyForth: `sys-sem-wait`. HyBASIC: `SYS "SEM_WAIT"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `RUN`, `TASKFORE`.
 
 ## SLEEP
 
@@ -2827,7 +2830,7 @@ HyForth: `sys-sleep`. HyBASIC: `SYS "SLEEP"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## SLEEP_UNTIL
 
@@ -2860,7 +2863,7 @@ HyForth: `sys-sleep-until`. HyBASIC: `SYS "SLEEP_UNTIL"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## SPAWN
 
@@ -2911,7 +2914,7 @@ HyForth: `sys-spawn`. HyBASIC: `SYS "SPAWN"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## SRV_NAP
 
@@ -3116,6 +3119,43 @@ HyForth: `sys-sysinfo`. HyBASIC: `SYS "SYSINFO"`.
 
 The other calls for the system: `ERRSTR`, `KMESG`, `REBOOT`, `XCALL`.
 
+## TASKFORE
+
+System call $F884, one of those for tasks. It never waits.
+
+#### Arguments
+
+A
+: A task: this one, or one it started.
+
+X
+: 1 to put it in the foreground, 0 to take it out.
+
+#### Result
+
+Nothing, but the carry: C = 0 for success.
+
+#### Description
+
+Put a task in the foreground, or take it out. The scheduler picks a task in the foreground before the others whenever it can run: at the next switch (a tick at most), not after a round of everything else that's busy; and a driver serving its call goes first with it, and for `FORE_SRV` ticks from the call (the work it left the driver: a console's words out at once). For a program whose answer to a key runs through tasks of its own while others work in the background (a game's: its UI, parser and world first; its monsters' minds after). It can't starve the rest: the foreground has `FORE_RUN` ticks at most, then the background the rest of a tick (its tasks in turn), so every task gets its turn. A task waits in the foreground as any task waits (sleeping, on a semaphore: no CPU). `TASKINFO`'s `TI_FLAGS` has `TF_FORE` while it's in. It goes with the task: gone when the task ends, or EXECs another program.
+
+#### Errors
+
+| Code | Name | Message | Cause |
+|---|---|---|---|
+| $01 | `E_PERM` | not allowed | The kernel task, a driver, or another program's task |
+| $41 | `E_SRCH` | no such task | Not a task, or not started |
+
+#### From the languages
+
+hylang: `(sys-taskfore A X)`, where *A* is a number; *X* is a number. It returns `NIL`.
+
+HyForth: `sys-taskfore`. HyBASIC: `SYS "TASKFORE"`.
+
+#### See also
+
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+
 ## TASKINFO
 
 System call $F84E, one of those for tasks. It never waits.
@@ -3150,7 +3190,7 @@ HyForth: `sys-taskinfo`. HyBASIC: `SYS "TASKINFO"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## TASKMEM
 
@@ -3245,7 +3285,7 @@ HyForth: `sys-taskread`. HyBASIC: `SYS "TASKREAD"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## TASKSTEP
 
@@ -3350,7 +3390,7 @@ HyForth: `sys-ticks`. HyBASIC: `SYS "TICKS"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## TIME
 
@@ -3494,7 +3534,7 @@ HyForth: `sys-wait`. HyBASIC: `SYS "WAIT"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `SPAWN`, `GETPID`, `YIELD`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## WAKE
 
@@ -3670,7 +3710,7 @@ HyForth: `sys-yield`. HyBASIC: `SYS "YIELD"`.
 
 #### See also
 
-The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`.
+The other calls for tasks: `EXITS`, `WAIT`, `SPAWN`, `GETPID`, `SLEEP`, `SLEEP_UNTIL`, `TICKS`, `PREEMPT_OFF`, `PREEMPT_ON`, `TASKINFO`, `NOTIFY`, `NOTE`, `MODINFO`, `ENV_GET`, `ENV_PUT`, `ENV_DEL`, `ENV_NAME`, `TASKREAD`, `GETPPID`, `SEM_NEW`, `SEM_ACQUIRE`, `SEM_TRY`, `SEM_RELEASE`, `SEM_FREE`, `EXEC`, `SEM_WAIT`, `RUN`, `TASKFORE`.
 
 ## Constants
 
@@ -3745,7 +3785,7 @@ Every constant that `hydra.inc` defines for programs, by family. A value with a 
 | `ME_PAGE` | 15 | `MODINFO`: its header's page in its first bank, 0-63 ($A000 + 256 * it: a module of a bank, packed with others) |
 | `ME_SIZE` | 16 |  |
 | `TI_STATE` | 0 | `TASKINFO`'s answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked, 8 event) |
-| `TI_FLAGS` | 1 | `TASKINFO`: its flags (`TF_DRIVER`, `TF_STOPPED`) |
+| `TI_FLAGS` | 1 | `TASKINFO`: its flags (`TF_DRIVER`, `TF_FORE`, `TF_STOPPED`) |
 | `TI_PARENT` | 2 | `TASKINFO`: its parent ($FF: none) |
 | `TI_CPU` | 3 | `TASKINFO`: its CPU time, in ticks (3 bytes) |
 | `TI_BANK` | 6 | `TASKINFO`: its module's paged ROM bank ($FF: none) |
@@ -3755,6 +3795,7 @@ Every constant that `hydra.inc` defines for programs, by family. A value with a 
 | `TI_SIZE` | 25 | `TASKINFO`: the answer's size |
 | `TF_DRIVER` | $01 | `TI_FLAGS`: a driver |
 | `TF_STOPPED` | $80 | `TI_FLAGS`: stopped (`/proc`'s ctl: `TASKSTOP`) |
+| `TF_FORE` | $02 | `TI_FLAGS`: in the foreground (`TASKFORE`): the scheduler picks it first |
 | `TF_STATE` | 0 | `TR_FRAME`'s: the task's state (0 free, 1 ready, 2 waiting, 3 calling, 4 idle, 5 new, 6 sleeping, 7 blocked, 8 waiting for an event) |
 | `TF_S` | 1 | `TR_FRAME`'s: its stack pointer, as it was before the frame |
 | `TF_U` | 2 | `TR_FRAME`'s: the frame: U |
@@ -3767,6 +3808,8 @@ Every constant that `hydra.inc` defines for programs, by family. A value with a 
 | `TF_RAM` | 10 | `TR_FRAME`'s: its RAM bank register ($00) |
 | `TF_ROM` | 11 | `TR_FRAME`'s: its paged ROM bank register ($01) |
 | `TF_SIZE` | 12 |  |
+| `FORE_RUN` | 8 | The foreground's turn at most, in ticks (`TASKFORE`): then the background has the rest of a tick |
+| `FORE_SRV` | 2 | A driver's time in the foreground from a foreground task's call to it, in ticks (`TASKFORE`) |
 | `NOTE_INTERRUPT` | 1 | Notes: Ctrl-C (default: the end, 130) |
 | `NOTE_KILL` | 2 | Notes: kill, never caught (137) |
 | `NOTE_HANGUP` | 3 | Notes: hangup (129) |

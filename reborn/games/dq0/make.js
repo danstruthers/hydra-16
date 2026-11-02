@@ -1,6 +1,6 @@
-// make.js - Dingus Quest Zero's data files, after its build (build.js calls build): its overlays' file
-// (obj/games/dq0.hyx.ovl, ld65's: each overlay filled out to 8K with $FF) cut after the last overlay that has code,
-// so the game reads no more than it needs as it starts; and its stand-in themes (themes/*.txt, in their files' order:
+// make.js - Dingus Quest Zero's data files, after its build (build.js calls build): its overlays' file packed
+// (obj/games/dq0.ovp, ovlpack.js's: ld65's cut after the last overlay that has code, each bank's fill left out), so
+// the game reads no more than it needs as it starts; and its stand-in themes (themes/*.txt, in their files' order:
 // the format's in the first) made obj/games/dq0t.dat, THEME_SIZE bytes a theme (theme.h's struct theme, then its
 // words), each one checked first (the theme checker: every goal reachable, every faction placed).  A game's own theme,
 // its history's, is themegen's (games/themegen), made as the game begins in the same format and into the same record:
@@ -342,11 +342,7 @@ function check(t, beasts, f) {
 }
 
 function build({ dir, objdir, say = () => {} }) {
-  const f = path.join(objdir, '..', 'dq0.hyx.ovl');
-  const data = fs.readFileSync(f);
-  let n = data.length / 0x2000;
-  while (n > 1 && data.subarray((n - 1) * 0x2000, n * 0x2000).every(b => b === 0xFF)) n--;
-  if (n * 0x2000 !== data.length) fs.writeFileSync(f, data.subarray(0, n * 0x2000));
+  const n = require('./ovlpack.js').pack(objdir, 'dq0').banks;
   const beasts = bestiary(dir);
   const files = fs.readdirSync(path.join(dir, 'themes')).filter(t => t.endsWith('.txt')).sort();
   const themes = files.map(t => compile(fs.readFileSync(path.join(dir, 'themes', t), 'latin1'), t, beasts, files.length));

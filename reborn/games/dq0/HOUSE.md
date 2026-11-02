@@ -32,7 +32,7 @@ plays them as HarnMaster's referee does.
   poison Endurance times 5; resisting the mind Will times 5; dodging a hazard Dodge; first aid Physician; lore Lore;
   tracking Tracking; persuading and intimidating Rhetoric; animals Animalcraft; digging Mining; guile Intrigue;
   throwing Throwing; keeping one's bearings underground Awareness, or Mining if it's the higher (Bearings
-  underground, below: bearing.c's).
+  underground, below: bearing.c's); keeping count of the hours Awareness (the time of day believed, below).
   (dq0harn.c's purpose table.)  Why: the game's code stays the same whatever the ruleset; only the referee knows
   skills.
 - **A skill never opened is tried at its opening level,** less five a point of its group's penalty, as an opened
@@ -135,11 +135,11 @@ failure.  Feet a spell (kept in half-feet), and the wear a spell does the tool:
 
 | Tool             | Soil | Hard-packed earth | Flags | Stone | Masonry | Wear (each)            |
 |------------------|------|-------------------|-------|-------|---------|------------------------|
-| bare hands       | ½    | -                 | -     | -     | -       | -                      |
-| a blade, a knife | 1    | ½                 | -     | -     | -       | soil, earth 40 (it dulls) |
+| bare hands       | ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½    | -                 | -     | -     | -       | -                      |
+| a blade, a knife | 1    | ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½                 | -     | -     | -       | soil, earth 40 (it dulls) |
 | pick             | 2    | 1                 | 3     | 2     | 1       | flags, stone, masonry 1 |
-| shovel, spade    | 3    | 1½                | -     | -     | -       | none                   |
-| mattock          | 3    | 1½                | -     | -     | -       | none                   |
+| shovel, spade    | 3    | 1ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½                | -     | -     | -       | none                   |
+| mattock          | 3    | 1ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½                | -     | -     | -       | none                   |
 
 Each spell is strenuous work: two fatigue levels at HarnMaster's rate (Moving and tiring, above), so a long dig wants
 rests between its spells.
@@ -150,6 +150,49 @@ in a 'you make no progress' result"; "Hard-packed earth should be harder to dig 
 rate)"; earth takes no Mining, "Anything harder uses mining skill, and rate depends on material (only a pick will
 work for harder materials)".  (rshouse.h's digger table, the tool's choice and DIG_TESTED; dq0harn.c's RS_TEST
 P_DIG.)  *(Every ruleset's.)*
+
+### The rock's kinds and hardness *(slice 4.10, 2026-10-31: drafted for the user to review; every ruleset's)*
+
+The book's Mining is geology, prospecting and mineworking (Skills 16), but it gives no rates; these are the house's.
+
+- **Where each rock lies** (dq0/rock.h, from the game's seed alone, nothing kept): beds 25 feet thick down through
+  every stratum (shale 4 in 10, sandstone 3, limestone 3; below 200 feet the shale slate and the limestone marble),
+  dipping up to 16 feet a region (1,280 feet) each way and swelling up to 7 feet region by region, so the rock
+  changes as a stratum's crossed and as a shaft goes down; a granite boss in one region in six (round, 15 to 78
+  squares in radius); in seven regions in 16 a line straight across the region: a vein a square wide (quartz, or a
+  seam of ironstone or copper ore) or a basalt dyke three squares wide.  A wall of masonry, a floor's flags or earth,
+  aren't the rock; the rock is what's under and behind them, and a cave's or a passage's bare walls.
+- **Hardness**: soft (shale), middling (sandstone, limestone, marble, the ores), hard (granite, basalt, slate), very
+  hard (quartz).  A pick's two feet a spell in stone is three in soft rock, two in middling, one in hard, half a foot
+  in very hard (the referee's rate in stone times 6, 4, 2 or 1 quarters, the world's: rock.h's RK_QUARTERS,
+  dq0w.c's test_dig, so every ruleset's alike).  The Mining test is the same in each: the hardness is in the rate, not the odds.
+- **Told as it's come to** (the UI's): the first spell of a dig in the rock, and a spell that comes into another rock
+  (a shaft down through the beds), say how it looks ("You're into speckled grey rock."); a spell that went well (a
+  Mining success) names it too ("You're into speckled grey rock: granite.").  Mining's eye is the test the spell
+  makes already; a failure tells only the looks.
+- **Poor rock comes down** (shale: rotten, flaking): a spell of digging in it that fails critically brings part of the
+  roof down into the hole, two feet of what's dug in the rock filled again ("The rotten rock splits, and part of the roof
+  falls into the hole."; E_DIG's D_ROOF).  In a tunnel the roof falls on the digger (a shaft's sides fall into the
+  hole below it, not on it): dodged (the referee's Dodge, as a trap's
+  strike is), else a blunt strike at its head and shoulders, 1d6 impact.  The book has no falling-rock rule but its
+  falling one (Skills 8: a fall's impact 1d6 for each ten feet); the house's 1d6 is stones off a roof a few feet up,
+  as a fall of up to ten feet.  The dig
+  goes on through the knock (the house's exception to a wound's hard interruption: the roof's part of the work going
+  badly), unless it's knocked senseless.
+- **A mixed stratum** (caves that sentient hands have been at): a third of its chunks left as they were found, grown
+  as caves by the natural style's rules (soft soil floors, the rock's walls, no doors or windows), the rest hewn by
+  the mixed style's; but a chunk with a way between strata in it is always hewn, where the builders' work began
+  (dq0m/make.c's cstyle; dq0 -M, the tests', makes every built stratum mixed so).
+- **The rock looked at** ("examine the wall", "look at the wall": the wall ahead, within six squares): masonry ("The wall's masonry:
+  dressed stone, set in mortar."), or the bare rock, how it looks ("The wall's the bare rock, buff."), and named after a
+  Mining test (the appraisal's AP_ROCK: "...: sandstone."), three seconds.  Too dark, nothing's made out.
+- **Age's collapse and rubble**: an old stratum's passages partly fallen in, heaps of rubble a square and some beside
+  it.  Six tries a chunk (the maker's own dice), each in a stratum two centuries old or more, a chance in 20 of its age
+  in centuries (ten at most), twice that where the rock about is poor (shale at the chunk's middle); never by a room or
+  a doorway, so no way is shut.  Rubble is climbed over at twice a step's time, cleared by digging (two feet of it,
+  shifted as loose soil is: at a tool's soil rate, no test, bare hands too), told as it's seen along a passage ("It goes
+  ahead, over rubble."), drawn on the map as %.  The denizens walk over it at their own pace as yet.  (dq0 -U, the tests': none made, the
+  passages as they were before it.)
 
 ## Portals
 
@@ -337,8 +380,11 @@ silent on all of it.
   badly hurt.  Keep fighting?"), the blows going on as it asks at the real paces, the clock still at the turns pace
   till it's answered; the other soft questions (something seen or heard) don't ask it, nor do a blow, a wound or a
   hostile near stop it.  It tires as strenuous work does (the user's, 2026-10-21: the book's second variant of combat
-  fatigue, a level each five minutes of it): each round it strikes charged so; a level more asked as a hurt is
-  ("You're tiring.  Keep fighting?").  To come, the same task: a missile weapon's (in
+  fatigue, a level each five minutes of active combat): each round it fights charged so, whatever it does in it (a
+  blow, a struggle up from the ground), and a pass while it's engaged too (2026-10-31, for the user's review: the
+  book's variant counts every round of active combat, and a pass defends as it's attacked; a disengage's square is
+  its walk's, at that pace); a level more asked as a hurt is ("You're tiring.  Keep fighting?").  To come, the same
+  task: a missile weapon's (in
   range, seen, a clear line; its next missile each shot, none left the end; an enemy engaging the character ending it,
   the melee's fighting on taking over), a setting widening where it begins ("autoengage with sword at close range"),
   an ally's.  (dq0w.c's part 24.)
@@ -351,7 +397,7 @@ silent on all of it.
   aside, the first open; a passage's four ways alone).  "flee" ("escape", "run away") the same, facing the way
   it goes, then, free of them, a run on that way (none if the way's shut: the disengage enough); not engaged, a run
   from the nearest foe within a dozen squares.  Neither engaged: told ("You aren't engaged.", "There's nothing to
-  flee from.").  "pass" a round given up, defending.  A walk as it's engaged goes as a disengage does: its first
+  flee from.").  "pass" a round given up, defending (engaged, a round of the fight's tiring: fighting on's).  A walk as it's engaged goes as a disengage does: its first
   square stopping it if it's still in the zone, then on.  As it fights, either takes the fight over, its round out
   first.  Not yet: rising first if it's prone (the book's), a foe's free blow (the book has none).  (dq0w.c's part
   26.)
@@ -365,7 +411,8 @@ silent on all of it.
   reach their Endurance; so too the death god's mindless dead, the wights (the book's: Bestiary p78).  (fight.c.)
 - **A creature's courage** is its Initiative test, its injuries its penalty: a marginal failure holds it back a
   round; a critical failure breaks it, a d100: berserk (1-25), desperate (26-50), broken (51-75), cautious (76-100).
-  A wounded creature still standing is tested; a shy one that holds back flees.  (fight.c's courage, left.)
+  A wounded creature still standing is tested; a shy one that holds back flees.  Its situation's steps are its heart
+  since 2026-10-30 (the field about it and its bonds: morale, below).  (fight.c's courage, left.)
 - **Bleeding** loses a point of blood a minute for each bleeding wound; past the Endurance, death.  (heal.c's bleed,
   every actor's: wounds over time, below.)
 - **Wounds, as built** (the user's adder playtest, 2026-10-21: "the wounds just kept getting worse and worse", and
@@ -447,7 +494,16 @@ book's; the house's below, each marked.
   the next (the book's: load, or fire).  Fighting on with missiles is a long task as melee is (HOUSE.md's fighting on):
   a shot each round at the target while it's in range, seen and the line clear and a missile's to hand, then the
   nearest hostile it can shoot at; an enemy engaging it, the melee takes over, with what it holds (a bow the book's
-  stick, a sling a soft thing).  The set auto-engage range (the user's, to come) plugs in at dq0w/wshoot.c's SO_FOE.
+  stick, a sling a soft thing).
+- **The auto-target range** *(2026-10-30, the user's of 2026-10-20: "autotarget with bow at medium range"; drafted for
+  review)*: "autotarget at medium range", "set autotarget to short", "autotarget off" (also "auto-target", "autoengage",
+  "autofire"; the bands short or close, medium, long, extreme; "autotarget" alone tells it).  Set, fighting on with
+  missiles turns only to a hostile within it (its target, once chosen, followed to the launcher's own range); and a
+  hostile engaging it from further off than beside it (shooting at it), none beside it, is shot back at, unbidden,
+  with the launcher it carries, if one's within the range (dq0w.c's fight_on, wshoot.c's PS_AUTO: the hub's pc_auto).
+  Under a ceiling a launcher's medium band is its last, whatever's set.  *Not yet: a hostile merely coming into the
+  range begins it (the world's main loop has no room for the look); melee's "autoengage with sword at close range"
+  (the zone and a square more, closed with); the setting kept with a save.*
 - **Ranges** (Combat 16's Missile Data Table, in five-foot squares): a sling 15, a shortbow 20, a longbow 25, a
   hartbow 30, a crossbow 20 the short band, each band twice the last, the medium 20 less, the long 40, the extreme 80.
   *Underground, under a ceiling, a launcher's long and extreme bands none and its medium 15 less* (the book's
@@ -469,20 +525,45 @@ book's; the house's below, each marked.
   other weapon of a skill not its own's).  *(For review.)*
 - **What comes of it** (the missile attack table): wild (the shooter's fumble roll for its launcher: failed, let
   fall), a miss, a block (the shield or the weapon struck, no harm), a strike of n dice and the missile's impact at
-  its range, the armour at the location off it.  *(Left: the book's 20% that a miss strikes one beside the mark, the
-  referee's MS_STRAY there for it, the world's left for room.)*
+  its range, the armour at the location off it.
+- **A miss's stray** *(2026-10-30)*: a miss (or a dodged one) at a mark with others beside it strikes one of them half
+  the time, one chosen at random (the book's: a missile shot at one engaged in melee, a Miss 50% striking a randomly
+  determined adjacent character; the earlier notes' 20% was wrong), the character too, every shooter's and thrower's,
+  never the shooter itself.  *Its strike one die, no test, no defence (the referee's MS_STRAY, both referees: the
+  null's a hit; for review)*; told after the miss ("Your shot strikes the giant rat instead: ...", "Its spear strikes
+  you instead ..."), the one struck the one hurt (its courage, its fall, its kin's dismay); the missile at its feet.
 - **Where it falls**: a hit or a block at the mark's feet; a miss on past it along the line, one to four squares,
   short of what stops it; a wild one somewhere within two squares; known to the character.  *An arrow breaks one time
   in four (kinds.c's snaps, the user's "arrows can break"), a bolt one in seven (the house's: shorter, thicker), a
-  stone never; a thing thrown never.*  *(For review.)*  "gather the arrows" walks over to each missile it knows of
-  within twelve squares, seen, the nearest first, and takes it up into its quiver (joined to the lot there), else as
-  a thing taken up.
+  stone never; a thing thrown never.*  *(For review.)*  One of a lot thrown (a taburi of a handful) goes alone.
+  "gather the arrows" walks over to each missile it knows of within twelve squares, seen, the nearest first, and
+  takes it up into the carrier of its family it has on it (a quiver its arrows, a bolt case its bolts), joined to the
+  lot there, if there's room (2026-10-30); else as a thing taken up (the pack, a hand).
 - **Denizens**: one with a launcher of its own and its missiles, hostile, sensing the character further off than
   beside it, shoots (its mind's: the world says if it can; no shot to be had from there, out of range or no clear
   line, it closes with the character till the character moves); its launcher taken up from its back or its belt first, its
-  round's (not with something else in its hands); its missiles run out, it shoots no more; the character beside it,
-  it lets its launcher fall (no time, the book's) and draws its weapon.  *(For review: a denizen holding a weapon
-  doesn't change it for its bow.)*
+  round's; its missiles run out, it shoots no more; the character beside it, it lets its launcher fall (no time, the
+  book's) and draws its weapon.
+- **A denizen's weapon changed for its bow** *(2026-10-30, for review)*: one holding a weapon (and a shield) puts them
+  up (slung, hung on it) as it takes up its launcher, all of it its round (the book's grope; the house's one round
+  for both); a light in its hand it keeps, and doesn't shoot.  Back to melee, its launcher let fall, the weapon it put
+  up is the first it draws (its round), its shield readied the round after, as ever.
+- **The denizens throwing** *(2026-10-30, for review)*: one with nothing to shoot (none, or its missiles spent: its
+  launcher let fall first) throws, by the character's own path (the same missile attack, Throwing or the weapon's
+  own skill): a thing made to be thrown (a taburi, a shorkana: the book's thrown weapons) from its hand or its belt,
+  else a dagger, a knife, a spear, a hatchet or an axe in its hand if it keeps another weapon to fight with; one at
+  its belt drawn first (its round, what it holds put up); *within the short and medium bands only (the house's: no
+  denizen throws its weapon at a far mark)*.  What it threw lies where it fell, anyone's.  *Not yet: one holding
+  another weapon (a sword, a mankar) with its taburis or shorkanas at its belt (its belt's looked at, as its things
+  are told the referee, only till it's armed: the answers' time); a rock picked up
+  (the dungeon has no loose stones to pick; a denizen taking up a thing it finds is phase 3C's one path).*
+- **Every fall told** *(2026-10-30)*: any actor knocked down in a fight (a stumble, a leg's wound, a missile's), the
+  character too, is told as it falls, after the blow's words ("The giant rat goes down.", by its body; "You fall."),
+  seen, or heard if it's near and out of sight ("You hear something fall.": within eight squares); its rise told once,
+  as it gets up.  Down senseless, or dead, its fall is the blow's own words ("It falls senseless.").
+- **The denizens' positions** beyond prone *(not built)*: a shooter crouched behind cover (a parapet, a slit's wall)
+  would want the cover the world gives only by the slits and windows today, and a position the minds choose; the
+  bodies' positions are the world's for every actor (slice 4.6's), so it's the minds' choice and a cover map to come.
 
 ## Commands
 
@@ -1222,7 +1303,7 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   trap's), or over a thing in its way in the dark, it's prone.  "get up", "stand", "rise" take a round; a walk, a
   step, a climb, a disengage gets up first (a round the later) unless it's crawling; prone in a fight, its round is
   getting up, no blow.  The test: the book's Rise is free but for one seriously or grievously wounded (the book leaves
-  a test to the GM: the house takes it, Agility ×5); and the house's, with no good arm (the user's, 2026-10-22:
+  a test to the GM: the house takes it, Agility ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ5); and the house's, with no good arm (the user's, 2026-10-22:
   "getting up with no good arms ... should probably require an agility check"), the same test four steps the harder;
   failed, the round's spent, still down ("You struggle, but can't get up.").  No good leg, it can't ("Your legs won't
   bear you.").  The hub's pc_pos is the character's position (POS_PRONE; crouching, kneeling and sitting are slice
@@ -1304,7 +1385,8 @@ the game (world.dat).  Every ruleset's but the test itself (the referee's).  Eac
   status line's facing with a ? after it ("facing NE?").  Which way it drifts is the bearings' own d8 (odd the other
   way).
 - **An eighth off, the compass misleads in a passage:** the four ways the character believes in are truly
-  diagonals, and a passage goes only by the four, so "north" there is "You can't go that way."; the ways as it faces
+  diagonals, and a passage goes by the four but where a diagonal way goes on (2026-10-31: HOUSE.md's diagonal ways), so
+  "north" there is "You can't go that way."; the ways as it faces
   (forward, back, left, right) still go where it means.  The game's choice: the believed way is taken as said, not
   nudged to the nearest passage (at an eighth off both of the nearest are as near).
 - **Landmarks:** coming back into a room it has been in before (the senses' R_VISITED: come into, not only seen;
@@ -2063,7 +2145,8 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
   the elf wary and aloof, keeping its distance (shy), two steps against swaying; the soldiers unfriendly, keeping to
   their posts.  A faction's kin dismayed as one falls (each of its kind and, since this, of its faction among the
   actors, its courage tested two steps worse), and four worse as its leader falls (the king above all: the book's
-  Gargun submit only to a strength they've seen).
+  Gargun submit only to a strength they've seen); since 2026-10-30 the field and the bonds instead (morale, below: a
+  friend's fall the book's bad situation, a leader's its influence and bond removed).
 - **Their tongues** (factions.txt): the dwarves' khuzdul, the elves' sindarin, the soldiers' common; the Gargun one,
   "gargun" (the book's: five tongues and a sign language every Gargun knows; the house's one for them all, the sign
   language's).  A word to one wants its tongue (a character's file's "language khuzdul").
@@ -2096,6 +2179,498 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
   attitude by the character's power: DENIZENS.md's more of the attitudes); the elves' barter (the user's answer 9
   gives them coins); a captor leading the character away (the soldiers'); the Gargun's sub-species' own tongues.
 
+## Morale *(2026-10-30: the user's of 2026-10-29, DECISIONS.md's; its numbers and the rest drafted for the user to review)*
+
+The book's morale is the Initiative test (Combat 18), its modifiers the GM's reading of the situation, a bad one ten
+worse, a desperate one twenty, a good one ten better, an excellent one twenty.  The house reckons that situation from
+the field about the one tested and its bonds to its leaders (the user's).  It is reckoned only as a test is made, or as
+one may be (no standing updates: the 65C02's time).  *(Every number here is for review.)*  (dq0d.c's part 6.)
+
+- **Who sways, who's swayed.**  Every intelligent creature sways the minds about it: a mind low, average or cunning
+  (kinds.txt's); no beast, nothing mindless.  A beast isn't swayed by rank or words: it feels only a foe's might over
+  its own and its fellows' falls (the book's situations); the mindless fear nothing (the referee's).  *(For review: a
+  pack's lead beast swaying its pack, the brief's choice, left out.)*
+- **Influence** (points, 5 to a step): its rank's weight, the rank and file 2, a captain 5 (a band's head: a black orc,
+  the soldiers' captain), a lord or a spiritual leader 10 (a chieftain, a king, a high priest, a dwarf elder, a shade
+  over the dead: kinds.txt's new rank), and a sixteenth of its influence skill (the book's Oratory or Rhetoric, the
+  better).  A creature's skill is the house's, three times its Will (Rhetoric's base, Skills 12's three attributes, the
+  bestiary keeping only Will of them); the null ruleset gives none.  The character is the rank and file, its own skill
+  on top.
+- **The field:** every actor within eight squares on its stratum, and the character, its influence the less with
+  distance (all of it beside one, half at five squares, a third at eight: four over the distance and three).  A
+  friend (its faction, or its kind not of a faction hostile to it) for it, a foe (a faction hostile to its own; the
+  character to one hostile or unfriendly to it, not while it lies helpless) against it.  A friend's counts half to
+  whole by how familiar one's own band is (its time served and contact, the bonds' measure below).  How each is doing:
+  wounded, half; berserk, twice (a test of ours came out so); fleeing, a friend's turned against one; fallen
+  (senseless or dead), its influence gone and the book's bad situation (ten worse, once, however many), desperate if
+  none of one's friends is left standing about one (twenty).  A foe's weight is its influence and an eighth of its might
+  over one's own (the game's power, the referee's: a fearsome foe the heavier), wounded half, fleeing or fallen none.
+  The character's allies are its friends, swayed by it for them.
+- **Bonds upward:** each subordinate's to its band's head (the highest above its rank in its own lair: popgen's leader
+  with its home) and to its faction's highest above that (in any lair, wherever it is: the records kept).  A bond is its
+  leader's rank's weight by the time they've had together and their contact, half each: the time the lesser of its
+  weeks served and the leader's own (a new leader's the less), whole at 128 weeks; the contact 0-255.  As the
+  populations are made each band has an age, 8 to 135 weeks by its lair's number (not the dice, so the dice are as
+  they were), each of it about that; the game's weeks are added as they pass.  Contact: a band living with its leader
+  starts at 200 and is whole each day; others start at 64 and lose an eighth a day (eight days at most at a time: the
+  clock's, a long wait's too), and gain 16 each time one's reckoned near its leader.  Only the minds have bonds.
+- **The band:** the field held to twenty points either way, the field and the bonds together held the same, the
+  situation beyond (a desperate one lower); the steps the points over five, towards nothing.
+- **When:** an actor's heart is reckoned as it engages (the steps the world's blow carries to the referee: its courage
+  tested with them as it's wounded, both rulesets) and anew for every actor as one near falls.  A morale test is made
+  as before: one wounded and standing (the referee's, its heart its steps), and the kin of one fallen (below).
+- **A fall known** (replacing the peoples' fixed two steps and four): each of the fallen's kin (its kind, its faction)
+  that hears it fall tests its courage at once: within its hearing of a fight's din (the world's blows' loudness, 5: its
+  hearing's squares times that, over two, as it hears another's noise; within its sight the din always reaches it, so
+  sight isn't reckoned apart); not one senseless (it hears nothing); not one fleeing already (it knows, and flees on).
+  Its friend's fall is the book's bad situation (above).  If the fallen was its leader (its band's head or its
+  faction's), that leader's influence and its bond are removed for the test; dead, it's known lost from then (no bond to a dead
+  leader after).  One that doesn't hear it (out of hearing, on another stratum, not an actor, senseless) keeps its bond
+  to the dead leader till it's told: a runner's word or a survivor's (dq0d.c's s_told, the hook: nothing calls it yet).
+- **Succession** *(the user's, 2026-10-30, DECISIONS.md's; the rest for review)*: a leader's death leaves its post (a
+  band's head, a faction's leader: any rank above the rank and file) to the most influential of those directly below
+  it: if it was its faction's highest (none left as high), of its faction's next rank down, wherever they are (a king's,
+  its captains); else of its own lair's (a band's head's, its band).  The next rank down from that if none's left;
+  minds only.  Influence as the field's (rank and a sixteenth of the skill; a record not met yet, its rank alone: the
+  ones about the character are known best); one fleeing or lying senseless only if none else is fit; ties by might (an
+  actor's power, and two for each of its arms, armour and mail), then the dice.  The successor takes the post's rank (its
+  record's, beside its kind's) and its weight; its tenure begins then, so the bonds to it are a new leader's, but those
+  of its own lair (its band) keep what they had with it; its own service counts whole (the house's: its record keeps the
+  week it took the post, its tenure, in place of its service).  Those who know of the death (it's heard, or told) know of the
+  successor too; those who don't, not till they do.  The band's test on the loss is made without the dead leader, as
+  before, the new leader counting from then.  An actor at its post, not fleeing, rallies its fellows: a shout where it
+  stands (a moment's), told as the character sees it ("The small orc rallies its fellows.") or hears it ("You hear a
+  rallying shout ahead.").  Only a death leaves a post for now: a leader gone off the level for good (the world knows
+  of none yet) would too.  The post a successor leaves (a captain's made king) is filled the same way, from its own
+  band, and so on down the chain (the coordinator's, 2026-10-30: the user's words' general form).  A band's head is the
+  nearest rank above one in its lair (a new captain under a king who lives among them), its faction's leader the
+  highest above that, wherever it is.
+- **The character's own morale** is the player's: never tested (D14).
+
+*(For review besides the numbers: the character's might is the referee's placeholder (10), so it frightens no one
+yet: as the creatures' it would be its size and its weapon's skill, weighing on every beast it fights; a fall seen but
+not heard isn't known apart; morale tests only as one's wounded or a fellow falls, not before every action as the book
+has it.)*
+
+## Fetching, gifts and reputation *(slice 4.8, 2026-10-30: drafted for the user to review)*
+
+The book has an ally fetch nothing and says little of gifts: Rhetoric "in the target's best interest" is the easier
+(Skills 12, Rhetoric), the GM's to judge.  The rest is the house's.  *(Every number here is for review.)*
+(dq0d.c's part 5: s_ally, s_aside, s_gift, s_regard; dq0w/wfetch.c, part 72; things.c's fetch_find.)
+
+- **Who fetches:** an ally, by its own turn: it walks to the thing, takes it up beside it, brings it back to where it
+  last sensed the character and hands it over beside it.  Each a round's work (the world's I_ROB, as a robbery is).
+  An errand isn't kept with its record: one that stops being an actor drops it, and follows after.
+- **What it can carry:** one with hands (kinds.txt's body two-legged: folk) up to 50 lb, if a hand's free (it holds
+  fewer than two things); any other in its mouth up to 3 lb (a rat a ration or two, a key, not a sword).
+- **Handed over:** into the character's hand if one's free, else its pack (as a thing taken up is); neither, set down
+  at its feet.
+- **What can be fetched:** a thing the character sees lying about (or on or in an open thing lying there), on its
+  stratum.  Not one in a thing closed, carried by the character or a denizen: told so, and the ally isn't asked.
+- **Moving aside** (D10): a friendly one or an ally a walk stops short of moves a square off the way, at once, unless
+  it was told to wait (guarding), is fighting, fleeing or senseless, or has nowhere to go.  The walk stays stopped: the
+  player walks on.
+- **A gift's worth:** the thing's worth as a local takes it (the appraisal's: coins by their mints), times the count
+  given.  Measured against the receiver's means by its kind's standing (kinds.txt's): none (beasts) a penny, tribal 4d,
+  common folk 12d, people of standing 48d, lords 240d.  Under a quarter of its means a paltry gift, a step against; a
+  quarter none; a half one step for; its means two; twice three; four times or more four.  Food two steps more (all
+  beasts taken as hungry, till hunger comes: slice 4.9).
+- **The test:** Rhetoric (a beast's Animalcraft) at those steps and its attitude's (hostile -3 ... friendly +1, as
+  words') and its kind's sway; no tongue wanted (a gift speaks for itself).  A critical success two steps, a success
+  one, a failure none, as far as friendly (a gift doesn't win an ally: persuasion does); a critical failure an insult:
+  a step back, the gift refused.  Two seconds of the character's time.
+- **Who takes one:** anyone with a mind within reach (a square); the mindless nothing; a beast only food ("The giant
+  rat has no use for it."); one senseless nothing.  A gift taken is the receiver's own (its things, as its kit is).
+- **Reputation:** a faction's regard is its attitude now (as harm done lowers it), raised by deeds it knows of: a
+  gift of its means' worth or more taken by one of it (its steps less one, in points), harm done to a foe of its before
+  one of its eyes (a point a blow).  Four points a step, to friendly at most; its newcomers and those of it not met
+  yet in the cache take the step with it.  Not lowered by a paltry gift, nor raised past friendly.
+
+## Water, hunger and thirst *(slice 4.9, 2026-10-30: the book's where it speaks, the house's else; drafted for the user to review)*
+
+- **The water in the dungeon** *(every ruleset's)*: traced over a stratum's plan as it's grown (the plan's own
+  numbers: its other dice as they were): water under two regions in three (the regions a built stratum's wells and
+  cisterns were in before: they're the plan's now); in a natural stratum a stream for each 16 regions (one at least,
+  four at most), from a region of its halls downhill to the lowest neighbour as long as there's one lower, ending in a
+  lake.  A chunk's water as it's grown: a cistern full, 5 to 8 feet over its floor's lowest; a cave's chambers in a
+  lake's region flooded, 4 to 11 feet; in a stream's region its passages running a foot deep and its chambers' hollows
+  pooled a foot or two; where there's only water under it, one chamber in three a puddle a foot deep in its hollow;
+  but a chamber with a way between strata in it (a stair's, a ladder's landing) kept dry, the house's.
+  A square under a still pool's surface is as deep as the surface is over its floor.
+- **Wading** *(every ruleset's)*: a foot or two of water makes each step half as long again; waist-deep (3 or 4
+  feet), twice as long.  Told as the character comes into it, deeper, shallower and out ("You wade in up to your
+  waist.").
+- **Swimming** *(the book's, Skills 10, where it speaks)*: water five feet deep or more is over the character's head
+  (the book's "deeper than their height": the house's five feet), and it swims.  The referee tests Swimming as it
+  begins and each minute after (the book's once a minute; calm water, a stream's current four steps harder); its
+  distance a minute the book's yards for the grade (critical success 9, marginal success 7, marginal failure 2) times
+  its skill index, in squares (HarnMaster's; the null ruleset's a middling swimmer's 27, 21, 6); a critical failure
+  sinks it, under for the minute.  A minute's swimming is strenuous work, a minute under three times that (the
+  book's: a level each five minutes, triple under water).  Its flames go out as it starts to swim ("The water puts out
+  your light.").
+- **Drowning** *(the book's)*: the breath held Endurance times 10 seconds (the null ruleset's two minutes); under
+  longer than that, it drowns: dead (the bodies' time, RS_TIME's x[2] 3: "You drown.").  The house's: there's no one
+  to revive it, so it's death at once rather than the book's Endurance times 20 seconds.  Coming up again is told
+  ("You come up, gasping.").
+- **Hunger and thirst** *(every ruleset's: the book has none; the user's of 2026-10-21, DECISIONS.md's)*: counted in
+  minutes of want as the bodies' time goes (the referee's, every one's the same rules, rswant.h: the world tells it the
+  minutes gone, a minute at a time while anything's to tell, else as its next level could come; twice as fast at
+  vigorous work: running, fighting, swimming, digging, climbing).  Thirst: thirsty at 8 hours, very thirsty at 16, parched at 24, dying of it
+  at 48, dead at 72.  Hunger: hungry at 8 hours, very hungry at 24, starving at 3 days, wasting away at 10, dead at
+  30.  Each told as it comes ("You're getting thirsty."), a long task (a wait, a sleep, a walk) asked about then, soft
+  ("Keep waiting?"), as another soft interruption is, shown on the status line once it matters ("thirsty",
+  "hungry"; the referee's news, RS_DESCRIBE b 4's).  The want's fatigue (HarnMaster's): no level at the first, then 1, 2 and 4 fatigue
+  levels for each of hunger and thirst, not rested off until it eats or drinks (HarnMaster's: a fatigue level the
+  universal penalty's, in every test; the null ruleset none).
+- **Eating** *(every ruleset's)*: a day's rations is three meals; "eat" takes a meal (five minutes), eight hours of
+  hunger off; a new day's ration begun (one of the lot used up) when the last one's meals are eaten.  Not hungry
+  (under two hours of want), refused.
+- **Drinking** *(every ruleset's)*: a pint takes six hours of thirst off; "drink" drinks as many pints as it wants
+  (half a minute each), from the water where it stands (its fill) or a well within reach, else from its waterskin a
+  pint at a time (four pints; "drink from the waterskin" from it whatever's about).  "fill my waterskin" in the water or by a well, a minute.  Not thirsty (under an hour), refused.
+- **The denizens** *(2026-10-31, every actor's body: below, the denizens' bodies)*.
+
+## The denizens' bodies *(2026-10-31: the character's rules for every actor, the house's where it's cheaper; drafted for the user to review)*
+
+- **Tiring in a fight** *(both referees)*: every actor tires as the character does, by the same rule (Moving and
+  tiring, above; the book's second variant of combat fatigue, the user's of 2026-10-21): each round of a fight it's in
+  (its own blow, a shot, or a blow at it) strenuous work, a level each five minutes of it; the time since its last round
+  rest, its exertion worn off first, then a level each ten minutes, its want's levels never (HarnMaster's: the referee's
+  bank of the creatures' bodies beside their sheets, dq0harn/tire.c, reckoned by the clock as it's wanted, never
+  ticked; a round charged once, however many blows are in it; kept with the sheets in the save's beasts.dat).  Its
+  fatigue levels are in the universal penalty of every test of its (its blows, its defences, its courage, its stealth),
+  and its summary's tired (C_FATIGUED).  A beast (neither folk nor mindless) that its round leaves a level more tired
+  tests its courage, its fatigue in it: short of steady (or gone berserk), it breaks off and flees, as one broken does.
+  The null ruleset's simple way: its rounds fought counted, a level each 30 (a step the worse in its tests, attacking
+  or defending), 30 rested off each ten minutes since its last; a level more, its courage (the flat odds, its heart less
+  its levels) or it breaks off, any creature.  *The house's*: the denizens move at a walk (their paces to come), which
+  tires them a level a day and no more than their rest takes off, so only their fights are counted.
+- **Water** *(every ruleset's)*: each kind's way with it (kinds.txt's water): the deepest it wades, in feet (by its
+  size: a rat 2, a kobold or a small orc 2, the other Gargun and the dwarves 3, men and the dead 4), whether it swims
+  deeper (the bestiary's swimmers: the giant rat, the cave bear, the cave adder, the lindworm, the elf), keeps out of
+  water altogether (the cave spider: 0), or flies over it (the bat, the shade).  It goes onto no square deeper than it
+  wades unless it swims or flies (its steps, its coarse moves, its dart past the character, its placing in its lair,
+  its roaming): so it goes round, or stops at the water's edge.  Its step into water takes half again as long to half
+  its depth, twice as long deeper, a swim twice (the character's wading, its depth by its size).  *Not yet*: a swim
+  tiring it (strenuous work), a denizen drowning (one knocked senseless in water, or forced in over its depth: none is
+  yet, as none goes in), a stream's current.
+- **Hunger and thirst** *(every ruleset's: the user's of 2026-10-21 for every actor; the house's numbers)*: those that
+  eat (not the dead), kept cheaply in each denizen's record: the clock it last ate and drank (in units of the clock's
+  high word, near enough 1.8 hours), reckoned as it's wanted, never ticked.  Hungry about 9 hours on, very hungry a
+  day, starving three days, wasting away ten; thirsty about 9 hours, very 16, parched a day, dying two (the
+  character's, a little coarser).  Away from the character, as it goes about its lair: thirsty, it drinks (its lair's
+  water, or what it finds: *the house's*, there's always some within its range); hungry, folk eat at their larder (and at
+  the day's meals, a slot in the day: the denizens' day, below), a beast ranges twice as far for prey and finds some now
+  and then (one time in eight, by its number and the clock, not the dice).  Near the character, the same: it drinks
+  standing in water, or at its lair; folk eat at their lair; a hungry beast that doesn't sense the character finds
+  prey now and then, else wanders twice as far; a very hungry hunter (a nose for prey, or a killer) that senses the
+  character hunts it (hostile).  Food given it is the more welcome the hungrier it is (a gift's two steps more hungry,
+  four very hungry, beside food's own two), and it eats it.  The want's fatigue (HarnMaster's, as the character's: 1,
+  2 and 4 levels for each of hunger and thirst past the first) the referee's, told as it's made an actor, never rested
+  off; the null ruleset none.  None dies of it (*the house's*: one unseen a long while has fended for itself, its want
+  held at about fifteen days).
+- **A hurt denizen rests** *(every ruleset's; slice 4.3's leftover)*: one wounded (its mood's hurt, as its fellows see
+  it), not an ally, with nothing after it (not hostile and sensing the character), goes home to its lair and rests
+  there, a minute at a time.  *Not yet*: one tending another's wounds (a folk creature binds its own bleeding only),
+  stings (no stinging kind in the game), creatures envenomed.
+
+## The denizens' day *(2026-10-31: slice 4.5's daily life; drafted for the user to review)*
+
+The book gives the creatures' habits (the Bestiary: nocturnal, diurnal ...), a watch of four hours, and a sleeper's
+Awareness at half (Skills 11); the rest is the house's.  DENIZENS.md's daily life has how it's built (dq0d.c's part 9).
+
+- **The hour** *(the house's)*: the game begins at dusk, six in the evening, its clock's hour from then; the
+  underground has no day the character sees, but its denizens keep one.  (The character can't tell the hour yet.)
+- **The days** *(the house's, by the bestiary's habits; kinds.txt's day, for review)*: diurnal, up 6-22; nocturnal, up
+  16-8; crepuscular, up 4-10 and 16-22; the dead never asleep.  Each denizen up to half an hour later than its
+  fellows (its number's), so a lair wakes one by one.
+- **Watches** *(the house's, on the book's four-hour watch)*: the folk that keep guard (kinds.txt's day w) by thirds,
+  each third four hours on watch, four asleep, four about, in turn; the watch changing at midnight, four, eight, noon,
+  sixteen and twenty o'clock.  So a third of a garrison is always awake on its rounds, a third always asleep.
+- **Sleep** *(the book's Awareness at half asleep; the rest the house's)*: a sleeper's hearing halved and its sight
+  none; woken by a noise it hears, harm or sensing the character, up ten minutes, then back to bed if it's still its
+  time.  A snore now and then, as loud as two (heard within the character's hearing plus three squares).
+- **Meals** *(the house's)*: folk's, an hour as it wakes and an hour halfway through a long day, at its lair's home,
+  fed as it sits down (the bodies' want: hunger and thirst, above); a beast's meal its prey, no slot in the day.
+- **Work** *(the house's; kinds.txt's work, for review)*: about but not on watch, in its work's room if its lair's chunk
+  has one (the cultists' chapel, the dwarves' and kobolds' workshop, the lords' solars, the captain's guardroom).
+- **Rounds** *(the house's)*: on watch, the rooms of its lair's chunk in turn, a word with a fellow on watch near it
+  (as loud as three).  A body of its own faction's within four squares of a room of its rounds found (once): the alarm
+  raised, a shout as loud as a rally's; its faction's attitude to the character a step worse (the intruder suspected,
+  though nobody saw it), and its fellows near's; each woken and alerted; a leader's body, the leader's loss known
+  (the morale's hook for a loss told).
+- **Unaware** *(the house's)*: asleep, eating, at work or on watch, it hasn't noticed the character: it engages no one,
+  and one asleep breaks no long wait.
+
+## Leisure *(2026-10-31: the user's words, DECISIONS.md's; drafted for the user to review)*
+
+- **When** *(the house's)*: folk with pastimes (kinds.txt's) have leisure in their time about: a watch-keeper two of its
+  free watch's three hours after its meal (its third's two hours about before its next watch on); a diurnal or nocturnal
+  kind the last four hours of its day before it sleeps (some 4 of its 14 waking hours besides its meals: about a
+  quarter).  The beasts, the dead and folk without pastimes none.
+- **Pastimes** *(the house's, by the peoples)*: reading (the dwarves' elders, the elves, the priests, the lords), dice,
+  cards and knucklebones (bandits, kobolds, orcs, soldiers), a board game (dwarves, soldiers, captains), talking and
+  telling stories, singing (bandits, cultists' hymns, dwarves, elves, soldiers), drinking (kobolds, bandits, orcs,
+  dwarves, soldiers, lords), mending gear, whittling and carving (kobolds, small and white orcs, dwarf miners, elves).
+  Each one's by its number and the day's; a social one (dice to drink) its lair's, the same for all of it at leisure
+  then, by its lair's number and the day's, so they're at it together; reading, mending and whittling alone, at its bed.
+  Not the dice.
+- **Where** *(the house's)*: the social ones gather in a room of their lair's chunk that suits, the first it has of a
+  hall, a guardroom, a barracks, quarters; else at its home.
+- **Less watchful** *(the book's half Awareness for one not paying attention, Skills 19's Legerdemain; the house's
+  reading of it as the senses' layers)*: its sight and hearing halved; at its cups, quartered.
+- **In drink** *(the house's)*: one at its cups is in drink an hour after its last (the hub's AM_DRUNK): its blows two
+  steps worse (10), and blows at it two steps easier, both referees' steps.
+- **Let go** *(the house's)*: risen to act (it senses the character, a foe, harm), its pastime's let go, told as it's
+  seen: "The soldier lets the dice fall.", "The dwarf shuts its book.", "The bandit sets down its cup."
+- **Heard** *(the house's)*: now and then, a third of its moments at it: dice rattling and counters clicking as loud as
+  a snore (2), laughter, singing and cups clinking as loud as talk (3); reading, mending and whittling silent.
+
+## The time of day believed *(2026-10-31: the user's words, DECISIONS.md's; drafted for the user to review)*
+
+The user's (DECISIONS.md's the time of day believed, 2026-10-31: timekeeping fuzzy unless the sky can be seen; after
+sleeping quite arbitrary; drifting further from known as play goes on; corrected whenever the sun can be seen and the
+direction is known, or by watching it a while).  The world keeps the true clock (the denizens' days and all that happens
+go by it); the character's time is a belief, as its north is: the hub's tb, its error from the true time (skew, minutes)
+and how sure it is (unc, minutes either way), the world's (wtime.c, part 76), kept with the game (world.dat).  Every
+number here is a draft for the user.
+
+- **The start**: walked in at dusk, it knows the time (the denizens' start, 18 o'clock; a test's `dq0hour`).  Come round
+  below from a fall (the theme's start | fell), as a black-out of an hour (below).
+- **Absolute timesense** (the book has none: the house's rare trait): **one character in a hundred** (hmchar's roll,
+  after all the rest, so every other die falls as it did; its file's `timesense` line, kept as the game's saved: C's,
+  HyForth's and hylang's hmchar alike).  It always knows the hour; nothing below touches it.
+- **The test** (the bearings' P_BEARING, its steps from rs.h's TIME_STEPS on): **Awareness** (the hours noticed going by, as the turns of a way are: attention, as the
+  bearings'), its dice the game's own as they stand, mixed and put back (moving quietly's way), so no other test rolls
+  differently for it.  The null ruleset: its flat odds, the same way.
+- **The hours awake**: a test **each hour** (hours gone by together, one test for them all), its drift and doubt each
+  hour: a critical success none and **3** minutes' doubt; a marginal success **3** off and **5**; a marginal failure
+  **8** and **10**; a critical failure **15** and **20**; its way the referee's d8 (odd the earlier).  The longer since
+  it last knew the time, the more: **times one for the first four hours, two for the next four, three, then four**.
+  Not asleep or senseless.
+- **A sleep or a black-out**, guessed as it wakes or comes round: the test **two steps the harder each hour asleep**
+  (twenty at most), a black-out's **ten** the harder.  A critical success: no error, doubt an eighth of the length; a
+  marginal success off by **a sixth** and doubt **a quarter**; a marginal failure **a third** and **a half**; a critical
+  failure **two thirds**, and **no idea at all** (doubt six hours: any hour).  A black-out's failure half an hour more
+  off; a quarter of an hour's doubt at least.  (So eight hours' sleep: a marginal success off 80 minutes, doubting two
+  hours.)
+- **Clues that narrow it** (each a belief of its own; taken when it's surer than the one it has):
+  - **its own light burning down** (it sees its torch: a light's minutes left stay true on the status line): the
+    minutes burned since its belief was set by that light (as it was lit, or a reckoning found it lit), **read to a
+    twelfth**; a light burnt out to the end, the whole of it.  A light changed, or put out part burned, starts afresh.
+  - **its hunger** since its last meal (the referee's want: minutes of hunger), **read to a quarter**.
+  - Noted, not built: thirst, tiredness, the denizens' routines learnt (the watch changing, meals), a chain of torches
+    counted.
+- **The sky in sight** (an open way out within **two squares**: the top stratum's way out, opened, up its stairs, shows
+  **its light alone**; a far exit below the top, out into the open, **the sun or the stars**; later the plan's shafts
+  and skylights, where the rain's hook finds the surface reaches): its light narrows the belief to its part of the day
+  (dawn 5-7, day 7-17, dusk 17-19, night 19-5: the house's even day); **the sun or the stars read by the north it
+  believes in**: the time to **half an hour** (the stars an hour), **wrong by three hours each eighth its north is
+  off**, unknown to it; its bearings known lost, the sun **high** (10-14) or **low** (morning or afternoon by what it
+  believes), the stars night alone; **watched** (in its sight through a wait, or "watch the sun": **ten minutes**, the
+  stars **twenty**), their way across the sky: the time to a quarter of an hour (the stars half an hour), and **north
+  known** (its bearings set right), and kept so while it stays in sight.  Told as what's seen changes ("Daylight shows above: it's day.", "You see the sun in
+  the sky: it's about four in the afternoon, you judge.").  Weather (overcast: its light alone) not yet.
+- **How it's told** ("time", "what time is it"): doubt ten minutes or less, plainly to the quarter hour ("It's half past
+  six in the evening."); 45 or less, "about" the hour, "you think"; two and a half hours or less, "some time around";
+  more, the part of the day, "you'd guess, but you can't be sure"; six hours or more, no idea ("You've no idea how long
+  you slept: it could be morning.").  No time on the status line.
+- **Waits by it**: "sleep until dawn", "wait until morning" (midnight 0, dawn 6, morning 7, noon 12, afternoon 14,
+  dusk and evening 18, nightfall 19, night 21) last till that hour **as it believes the time now**; what happens goes by
+  the true clock.  "watch the sun" (the sky, the stars) is a wait of a quarter of an hour (the stars half an hour).
+- **When it's reckoned** (never polled: the lights' burning's look, part 27's): an hour on; every five minutes on a
+  stratum the sky may be seen from; at once as a light changes, a wait begins or ends, it's knocked senseless or falls,
+  goes to another stratum, or the way out opens; a minute at a time while it's gone.
+
+## Poison, bad air and disease *(2026-10-31: the user's words, DECISIONS.md's; the book's where it speaks, drafted for the user to review)*
+
+The book's (Physician 4): a disease has a Contagion Index (C1 highly contagious ... C7 barely) and a healing rate (H1
+the plague ... H5 influenza); one exposed tests CI times Endurance (95 at most), failing it catches it, then a recovery
+roll each day on the Infection table (a critical failure two worse, a marginal one one; a marginal success one better,
+a critical two), recovered at H6, dead at H0; its symptoms a special penalty of 10 to 30 to physical skills.  A poison
+is an infection whose intervals are shortened to the toxin (a large dose of a deadly one H1, a small dose of a mild one
+H5).  The HarnWorld Bestiary's venoms (wounds over time, above) and its grave-wight's grave rot (H4, 2d6 hours'
+incubation, a universal penalty of 20 till healed).  What the house adds, every ruleset's where it says so:
+
+- **One course for each** *(HarnMaster's: dq0harn/afflict.c, overlay 8)*: the character carries a toxin (a venom or a
+  poison) and a disease at once, each its kind, its rate, its interval's minutes; the venoms one case of it, their tests
+  and dice as they were.  Its symptoms the book's special penalty as fatigue levels (5 points each), held, not rested
+  off till it's over (as the want's are): a dart's poison 2, a contact smear's 2, spoiled food's 3, the flux 3, rat-bite
+  fever 2, grave rot 4, a level more for each step its rate is worse than it began.  Poisoned (C_POISONED, the status's
+  "poisoned"), the bodies' time is asked a minute at a time; a disease shown, its status "feverish".
+- **The poisons** *(for review)*: a dart's or a needle's (H4 at a middling dose, ten minutes), a contact smear's (H4,
+  twenty), spoiled food's (H4, an hour, never deadly: held at H1); a dose a step the stronger or the weaker its rate a
+  point worse or better.  Taken, its first roll at once ("The dart's poison burns in the wound."), then one an interval
+  (at rest the whole, about half, vigorous a quarter, the bestiary's), worse "You feel sick and dizzy.", gone at H6
+  ("The poison's hold on you passes."), dead at H0 ("The poison stops your heart.").  Poisoned again, the worse kept.
+- **A dart trap's poison** *(for review)*: one dart trap in four (by its square) is poisoned, its dart's wound drawn
+  (wtrap.c's, the world's: the referee told with the bodies' time, at its next minute).  *Not yet*: a door's needle's
+  contact poison (the doors' part has no room: overlay 2's), a chest's; a denizen's poisoned blade (the outfits'
+  factions to say who uses them); food that's spoiled (the book's critical failure tasting it: food found, the market's).
+- **The diseases** *(for review)*: the flux (still water drunk where it stands: a pool, a puddle, a cistern; a stream's
+  running water and a well's clean; C5/H4, a day's incubation), rat-bite fever (a giant rat's bite that wounds: C5/H4,
+  two days), grave rot (a ghoul's bite or claws that wound, the bestiary's grave-wight's: C3/H4, seven hours).  Caught,
+  nothing's told (the character doesn't know it's caught something) till its incubation's over: "Your belly gripes and
+  cramps: you have the flux.", "A fever's on you, and the old bite throbs.", "A wound the ghoul gave you festers: a
+  fever's on you." (a hard stop of a long task); then its daily roll ("The fever burns higher.", "... eases a little.",
+  "... holds."), "The sickness leaves you." at H6, "The sickness takes you." at H0.  Its dice the body's own (rshouse.h's
+  way), so a fight's roll as they did whether a bite carries anything.  *Not yet*: corpses handled (no handling of a body
+  but a search), the undead's touch but a ghoul's (the wight's drains), a lair's sickness spreading among its folk.
+- **A remedy** *(the hook, for review)*: an antidote taken makes the toxin's rate the better by its power (a theriac 2),
+  the lindworm's numbing venom only by a strong one (afflict.c's o_aff_cure, no command yet: the market brings the
+  antidotes, Treasure 4's potions, Khalmet's Theriac).
+- **The air** *(every ruleset's, rsair.h; its figures for review)*: blackdamp (stale air, too little in it to breathe:
+  choke-damp, a mine's CO2), whitedamp (a fire's or a blast's smoke: carbon monoxide, poison that gives no warning),
+  firedamp (marsh gas, in the coal and shale beds: it burns).  Strength 1 a little to 3 much.  Blackdamp felt at once:
+  1 short of breath (a fatigue level; stale air never kills), 2 gasping (2 levels), dizzy at ten minutes (4), the legs
+  failing at thirty (6), dead at an hour; 3 the head swimming at once (3), the legs failing at two minutes (6), dead at
+  five.  Whitedamp builds up in the blood, its strength squared a minute (1, 4, 9): the head aching at 30 (a level),
+  dizzy and sick at 60 (3), the legs failing at 120 (6), dead at 180; in good air it clears two a minute ("Your head
+  clears.").  Firedamp only chokes when it's thick (3: as blackdamp 2).  Out of it, "You breathe freely again."  Each
+  worsening told and a hard stop of a long task.  The null ruleset the same, its levels none.
+- **A flame's warnings** *(the miners' old ones, for review)*: told as the character comes into the air with a flame
+  lit: in blackdamp it burns low (1), shrinks to a blue-edged bead (2), and in thick blackdamp goes out (3: the world
+  puts its lights out, "The air's too foul to keep your light burning."); in firedamp a pale blue cap trembles over it
+  (1), leaps up tall (2, a lantern's); in whitedamp nothing at all.  Out of blackdamp, "Your flame brightens again."
+- **Firedamp's burst** *(for review)*: firedamp of 2 or more at a naked flame (a torch, a candle), or of 3 at a
+  lantern's, bursts into flame ("The air ignites with a roar: a sheet of blue fire rolls along the roof!"): a burn
+  (3d6, 4d6 at 3: HC_FIRE), the lights out, a noise as loud as any (9: the denizens hear it), the pocket burnt off,
+  its afterdamp left (whitedamp 2, about seven hours: the clock's high word, four of them). *Not yet*: stones falling
+  from the roof where the rock's poor (a second harm's words want the UI's room), the denizens near harmed, rubble
+  left in the passage.
+- **Where the air's bad** *(the maker's, every ruleset's; for review)*: a pocket in one room of a chunk, round its
+  middle, its reach the room's half and a square, from the chunk's place alone (no dice: the layouts as they were):
+  firedamp where the rock at the chunk's middle is shale (one chunk in four); blackdamp 100 feet down or more (one in
+  eight; 200 feet one in four, its strength 2); a step stronger one time in four; none where there's a way between
+  strata in the chunk (the air moves there).  A draught of 2 or more thins it a step where the character breathes.  A
+  dig into a pocket's rock comes into it as it steps there.  *Not yet*: old mines' own (their works still to come), the
+  angles' diagonal ways and the draughts meeting.
+- **The denizens** *(for review)*: they know where the air's bad and keep out of it (the minds' steps, their placing,
+  their roaming: dq0d.c's wades), the dead too.  *Not yet*: one that blunders in (hunting the character into it) choking
+  or dying of it; their own poisons and diseases (none bites another; a lair's sickness spreading among its folk, by
+  the clock, at need, the plan's); the explosion's harm to those near.
+- **The null ruleset's simple way** (dq0null.c): a poison sickens it a while (a dart's or a smear's half an hour a point
+  of its dose, spoiled food's two hours: "You feel sick: there was poison in it.", "The sickness passes."), the flux
+  caught on a flat test shows a day on and lasts three; neither kills; the air rsair.h's, its levels none.
+- **What it costs** *(the emulator)*: the air's looked at only as the character steps in a chunk that has a pocket, or
+  out of one (part 73's, the water's, swapped in as wading is); the minds' steps a chunk's pocket's test each.
+
+## Diagonal ways *(2026-10-31: the user's words, DECISIONS.md's; step 1 of three, drafted for the user to review)*
+
+- **What makes a diagonal a way** *(the house's)*: a step between two squares that share only a corner, where neither
+  corner is a square to stand on and one of them is cut (world.h's T_CUT: rock, or a wall, a diagonal way's corner cuts
+  through, half of it open); never squeezed between two solid corners (the engagement zone's rule, "not round a
+  corner").  Where a corner can be stood on, the way's the four's round it, as ever: so a room's eight ways, and every
+  passage made before, are as they were.
+- **Its length** *(the house's)*: corner to corner, seven feet: a walk's square on a diagonal way takes its time and
+  two fifths more, the denizens' too, the ways across a room's search the same.
+- **Every actor** *(the house's)*: the character's walks along a passage (its ways on, a fork, a bend: the eight, none
+  behind), its ways across a room and a journey's legs; the denizens' steps (the four first, then the diagonal ways,
+  the same dice); a hunter's scent (a diagonal it follows only as a way, else the four's as before); engagement round
+  a cut corner (a cut's not solid).
+- **Seen and told** *(the house's)*: a cut is seen past (the eye's line along the way), a passage's ways on told with
+  the diagonal ones ("ahead to your right"), the map's stroke along the way ("/" or "\", turned with the map).
+- **The caves** *(the house's)*: a tunnel's zigzag, one square wide, its corner square's two ways on a quarter apart,
+  the rock about it, the zigzag going on past it, is the corner its diagonal cuts: the tunnel walked corner to corner.
+  A bend alone stays a bend; a wider tunnel stays as grown.  No dice: the same caves for the same seed, cut.
+- **Digging** *(the house's)*: "dig northeast" (any diagonal): the square corner to corner, seven feet of rock (14
+  half-feet: a square's five feet, 10), its two corners cut as it's through, so it's walked; a cut dug as rock.
+- **The believed compass an eighth off** *(the house's, as before)*: "north" a true diagonal: in a passage a way only
+  where there's a diagonal way.
+- **Still to come** *(step 3's rest, the user's "queue up 1-3"; step 2 and the built passages below)*: a built
+  stratum's rooms, or one complex (a temple, a keep), laid at 45 degrees.  The tunnellers (slice 4.11) dig by the same
+  rules (Tunnellers, below; 2026-11-01).
+
+## A passage's heading *(2026-11-01: the user's words of 2026-10-31, DECISIONS.md's ways off the compass; step 2 of three, drafted for the user to review)*
+
+- **A run** *(the house's)*: a passage's squares from where the character is, as a walk goes along them (its one way on,
+  no fork), within sight (the squares it sees now), eight steps at most: the stretch of them that keeps one shape.  Two
+  headings an eighth or a quarter apart, the one that comes twice running the main one, the other never twice running
+  (a staircase of short steps, a zigzag): a slant, once the other has come twice; its bearing the steps' sum, or, the
+  two by turns with no main one, halfway between them.  Anything else is straight on its first heading as far as that
+  goes, so a bend stays a bend (its corner one step the other way, then on that way).  Its bearing in sixteenths of a
+  turn.  (dq0/run.h, run.inc.)
+- **Told by its shape** *(the house's)*: a passage's ways on worded by their runs' bearings as the character faces, in
+  sixteenths: the eight's words where a run lies on one of them ("ahead to your right"), else the quarter it's nearer
+  and a little the other way ("ahead and a little to your right", "behind you and a little to your left"); a straight
+  passage as before.  So a staircase of steps is told as the slant it is, not by the step it starts with.  (The
+  senses' runs, dq0p/view.c, part 4's; sight.c; words.c.)
+- **A walk along it** *(the house's)*: the walk's passage cut into runs from its start; a turn told where the run's
+  bearing changes, by more than an eighth "The passage turns left." as before, by an eighth or less "The passage bends
+  away north-northeast." (the new run's bearing, by the north the character believes in); none at a staircase's every
+  step.  The walk's last step or two, of the run before's two headings, are that run's (too few to show a shape of
+  their own).  A bend of an eighth or more counts for the bearings as a bend did (Bearings underground, above); a
+  staircase, once a bend at every step, is none.  (dq0w.c's run_at and beat, part 23's.)
+- **The map** *(the house's)*: as drawn, a passage's square that's an elbow (two ways out of it a quarter apart, only
+  walls and rock else beside it) with an elbow turned the same way beside it along one of its two, a staircase's step,
+  drawn "/" or "\" along the slant; a bend's corner alone stays "#".  On the map as it's shown (turned, faded), so what
+  the character's map shows of it is what's drawn so.  (The UI's map, look.c's slants.)
+- **Left** *(for later)*: a wide tunnel's staircase (two or three squares across: the walk's ways there a fork); the
+  facing after a walk along a slant (its last step's, as before).
+- **Built since** *(2026-11-01, the house's)*: a look one way goes on along a diagonal way (way.c's seen_on: the eight,
+  a diagonal only past its cut corner: "Down the passage ahead you see into the cell"); a denizen's coarse wander (out
+  of the character's sight, the turns pace's catching up) takes the diagonal way an eighth round from the four's step
+  it rolled where that step's closed and a corner's cut (the same dice: dq0d.c's s_coarse).
+
+## Built passages on the diagonal *(2026-11-01: step 3 of the user's three, in part; drafted for the user to review)*
+
+- **Which strata** *(the house's)*: a fifth of the built strata (and the built parts of the mixed ones) lay their
+  passages on the diagonal, by the stratum's own seed (a byte of it no other die reads: the same dungeon for the same
+  seed but in those strata); dq0 -A, the tests', all of them (hub.h's GE_SLANT).  (dq0m/pass.c's leg, uses.c's
+  US_STYLE.)
+- **How** *(the house's)*: a passage between two doors (or from a chunk's edge) sets out from its door a square, then
+  goes a step each way by turns while both are still to go, then straight on: a staircase of squares, cut once the
+  chunk's grown as the caves' zigzags are (caves.c's slants: each other square of it the corner the diagonal cuts,
+  T_CUT), so it's walked corner to corner (HOUSE.md's diagonal ways).  A cut in a built stratum is the passage's
+  dressed corner, masonry as its walls are; its rooms stay square to the compass.  The chunk's reach (built.c's
+  connected) is tried before the cut, by the four.
+- **Its words**: as any diagonal passage's (a passage's heading, above: "The passage bends away northeast.").
+
+## Tunnellers *(slice 4.11, 2026-11-01: the book's where it speaks, the house's else; drafted for the user to review)*
+
+The HarnWorld Bestiary calls rats efficient diggers that excavate burrow systems, and has its grave-wights dig rapidly
+through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rates.  These are the house's.
+
+- **Who digs** *(the house's)*: kinds.txt's ways **d**, digging by nature with its claws (a burrower: the giant rat, the
+  ghoul, after the bestiary's rats and grave-wights), and **m**, digging with the tools it carries (a miner: the dwarf
+  miner, the kobold, the brown orc).  A miner digs only with a pick, or with a shovel, a spade or a mattock, among its
+  things (the world's agear, AG_PICK and AG_SPADE).  Today a dwarf miner always carries a pick and a brown orc
+  sometimes does; a kobold carries none yet (its outfit has none), so it digs nothing.
+- **A burrower's claws** *(the house's)*: two feet a spell in soft soil, one in hard-packed earth (two thirds of a
+  shovel's), nothing in masonry or flags; in the rock only the soft rock (shale), half a foot a spell, times the rock's
+  hardness (a foot a spell in shale, rounded as the character's is).  So a rat burrows through earth and shale,
+  never through sandstone or a dressed wall.
+- **The character's rules** *(every actor's: DUNGEON.md's digging)*: a spell of ten minutes at a time; the tool's rate
+  on what it's into (rshouse.h's digger table, the character's); earth and rubble at the tool's rate, untested;
+  anything harder a test each spell, its rate at a marginal success, twice at a critical, half at a marginal failure,
+  none at a critical failure; the rock's hardness the rate's (rock.h's); a wall two feet, a square of rock five, corner
+  to corner seven, rubble two; the hole kept as it goes (the change record DUG, the character's: the character can
+  go on with a hole a denizen began, and the other way about); through, the square a passage (a diagonal's corners
+  cut, as the character's).
+- **A creature's test** *(the house's, both referees)*: the bestiary has no Mining, so a creature's dig is its
+  Strength times five (HarnMaster's, its sheet's: as its Stealth is its Agility times five), its injuries' penalty off
+  it, on dice of its own (moving quietly's: the game's other rolls as they were); the null ruleset's flat odds.
+- **Its spell reckoned as it ends** *(the house's)*: the feet a spell makes are reckoned when its mind asks again at
+  its end, the same way; a spell cut short by anything else it does (a step, a blow) is lost, as the character's part
+  spell is; roused meanwhile (a noise), it goes back to it for the rest of the spell.  Nothing it has bites into what's
+  there: it gives up for five minutes.
+- **Where it digs** *(the house's)*: a hostile tunneller kept from the character by rock, a wall or rubble (no step
+  nearer: the character sensed beyond it, or where it last sensed it, drawn on) digs the square beside it that brings
+  it nearest, the four first, a diagonal where it's nearer as the crow flies (round a shut door or a portcullis it
+  can't open: a way round it), within its reach of its home (twice its range and eight squares); the one it's digging
+  kept while it's nearer.  Digging spends none of its being drawn on.  A step on a diagonal way nearer as the crow
+  flies, as near across and down, is a step nearer too (every denizen's: so it comes through what it dug).
+- **Heard and seen** *(the house's)*: a spell's noise as loud as the character's (6), the way through louder (7, its
+  spoil falling); the rock carries a pick's knock where the air doesn't (each four squares between them as a square of
+  wall to the sound).  The player's told its first spell ("The dwarf miner digs into the wall.", or "You hear a
+  scraping in rock ahead."), not each spell after (the denizens hear every one); the way through seen ("A fresh tunnel
+  opens ahead. Spoil lies heaped by it.") or heard ("You hear rock falling to your left.").
+- **Not yet** *(the plan's)*: the minds' other reasons to dig (a burrow made from a lair, a faction's mine following a
+  vein of ore, rock.h's veins), the denizens away from the character digging (only actors dig: the records' coarse
+  moves dig nothing), poor rock coming down on a tunneller, the spoil as a thing (rubble beside the way), a dig's sound
+  played (the sound task's), builders (a faction shoring a passage, walling up a way, putting up a door), a kobold's
+  pick.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without
@@ -2120,8 +2695,6 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
   once the maker gives faces a grade.  Today it's 10 feet a round at a marginal success and 20 at a critical,
   everywhere.
 
-- **Swimming tires** (the user's, 2026-10-20: "swimming, climbing, running, battering down a door"), strenuous work
-  as climbing, digging and battering are (built: Moving and tiring), once there's water (slice 4.9).
 - **Fighting on with missiles** (the user's, 2026-10-20; slice 4.7, with the missiles): a bow's arrows, a brace of
   throwing daggers, the same way: shot or thrown at the target while it's in range, the next taken each time, the
   next foe in range after it, till none is left, the missiles run out, or an enemy engages the character (then

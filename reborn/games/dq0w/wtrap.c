@@ -25,6 +25,7 @@
 #define W_TRAPS
 #define W_HARM
 #define W_SPRING
+#define W_POISON                                /* (A dart's poison: 2026-10-31) */
 #include "workpart.h"
 
 /* A trap stepped onto (W_STEP: tq's square; from fx, fy): noticed in time (a magical one never), or set off; the

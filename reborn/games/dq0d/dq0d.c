@@ -44,8 +44,11 @@
 ** copied there from the overlays' file's banks, LIBDIR/dq0d.ovl, as it's called; bank.s's stubs): part 1, the
 ** populations, the placing; part 2, the character's ways with a denizen, and harmed; part 3, the records paged; part
 ** 4, the regions round the character wanted, the records kept, the task's start (the kinds read in, popgen loaded),
-** and what its actors seldom do (one made an actor or no longer one, killed, its kin dismayed, an ally come along, a
-** cornered one's dart).
+** and what its actors seldom do (one made an actor or no longer one, killed, an ally come along, a cornered one's
+** dart); part 5, the senses' own (a hunter's stalk, a scent followed, one drawn on); part 6, morale (HOUSE.md's: the
+** field about an actor and its bonds to its leaders, reckoned as it engages and as one near it falls; its kin
+** dismayed, a leader's loss known); part 7, succession, and the bonds aged by the clock (a dead leader's
+** post taken by the most influential of those below it).
 ** The blows its actors strike and take are the world's, told as the denizens' events (E_FIGHT): it takes them to heart
 ** (fought: fleeing, dismay, harmed, a death recorded).
 */
@@ -84,10 +87,42 @@ int __fastcall__ start (const char* dir);      /* Part 4 */
 void __fastcall__ enlist (unsigned char i, unsigned char k);
 void __fastcall__ retire (unsigned char k);
 void __fastcall__ killed (unsigned char k);
-void __fastcall__ dismay (unsigned char k);
 unsigned char __fastcall__ along (unsigned char k);
-unsigned char __fastcall__ dart (unsigned char k);
-extern unsigned char ovbank[2];
+unsigned char __fastcall__ dart (unsigned char k);    /* Part 8 (its bodies, 2026-10-31; part 4's room) */
+unsigned char __fastcall__ hungry (unsigned char k);
+unsigned char __fastcall__ home_room (unsigned char k, unsigned char sn, unsigned ox, unsigned oy);
+void __fastcall__ rob_to (unsigned char k);
+void met (void);
+unsigned char __fastcall__ name_of (unsigned id);
+void __fastcall__ kept_file (int fd, unsigned char back);
+unsigned char depth (void);
+unsigned char __fastcall__ rests (unsigned char k);
+unsigned char __fastcall__ fends (unsigned char lim);
+unsigned char __fastcall__ want_fl (unsigned char k);
+signed char __fastcall__ fed (unsigned char k, unsigned char ate);
+void __fastcall__ dismay (unsigned char k);    /* Part 6 (morale) */
+void __fastcall__ heart (unsigned char k);
+void age (void);
+void __fastcall__ succeed (unsigned char x);   /* Part 7 */
+unsigned char __fastcall__ ally (unsigned char k);   /* Part 5 (slice 4.8's: an ally's turn, its errands) */
+void __fastcall__ aside (unsigned char k);
+void __fastcall__ gift (unsigned char k);
+void __fastcall__ regard (unsigned char f, unsigned char pts);
+unsigned char __fastcall__ daily (unsigned char k);  /* Part 9 (the day's, 2026-10-31) */
+unsigned char __fastcall__ wander (unsigned char lim);
+unsigned char __fastcall__ sched (unsigned char k, unsigned id);
+void __fastcall__ coarse (unsigned char k, unsigned lim);   /* Part 10 */
+void __fastcall__ told (unsigned char j);      /* Part 6's hook: a loss told (a body found, the day's) */
+unsigned char __fastcall__ found (unsigned char k);
+void hour (void);
+void enlist_near (void);                        /* Part 11 (the main RAM's room, 2026-10-31) */
+unsigned char __fastcall__ plan (unsigned char k);   /* Part 9's: an actor's day and its place (leisure's, 2026-10-31) */
+void __fastcall__ roused (unsigned char k, unsigned char was);   /* Part 10's: a pastime let go */
+unsigned char __fastcall__ dig_way (unsigned char k);   /* Part 12 (the tunnellers', slice 4.11's) */
+unsigned char nearby (void);                    /* Part 13: the lairs near placed (the main RAM's room, 2026-11-01) */
+static unsigned char nonear;                    /* (None left near to place: nearby's, till the character moves) */
+extern unsigned char ovbank[5];
+static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsigned x, unsigned y);  /* (Below) */
 extern char _SWAP_START__[];
 
 /* ---- The kinds: the data file's (make.js's, from kinds.txt: the game's bestiary), in a bank of their own */
@@ -130,6 +165,9 @@ struct dkind {
 #define H_KILLS         0x01                    /*   it finishes it (the referee's dispatch); */
 #define H_ROBS          0x02                    /*   it robs it (I_ROB: the world's), and leaves it; neither, it only
                                                 **   defended itself, and goes */
+#define K_DIGS          0x40                    /* (Its styles' high bits too: it digs by nature, a burrower's claws, */
+#define K_MINES         0x80                    /*   or with the tools it carries, a miner: kinds.txt's ways d and m,
+                                                **   slice 4.11's tunnellers) */
 enum { M_MINDLESS, M_BEAST, M_LOW, M_AVERAGE, M_CUNNING };   /* Its mind: nothing sways it; P_ANIMALS only; easily
                                                 **   fooled, hard to reason with; neither; hard to fool */
 #define KINDS           ((struct dkind*) 0x8000)
@@ -155,7 +193,7 @@ static unsigned char fatt0[NFACT], frel[NFACT][NFACT];
 ** or a region's that's in it) */
 
 #define NLAIRS          64
-#define NDENS           240
+#define NDENS           224                     /* (240 till their want, 2026-10-31: two bytes each more) */
 struct lair {
     unsigned char   sn, kind, n;                /* Its stratum, its kind, its denizens */
     unsigned char   flags;                      /* L_* */
@@ -182,12 +220,22 @@ struct den {
                                                 **   lair's rx, ry) */
     unsigned        hx, hy;                     /* Its lair's home square (placed) */
     unsigned char   fac;                        /* Its faction (its kind's, the stand-in's; or the theme's) */
+    unsigned char   serve;                      /* The weeks it had served its leaders as the game began (a leader's,
+                                                **   it had led: its band's age), */
+    unsigned char   contact;                    /*   and how much it's with them, 0-255 (part 6's: its bonds' growth) */
+    unsigned char   ate, drank;                 /* The clock (NOW_U's) it last ate, and drank (its want: 2026-10-31) */
 };
 #define D_OUT           0x01                    /* On a square of its own */
 #define D_ACTOR         0x02                    /* An actor now (the hub's entry the truth while it is) */
 #define D_DEAD          0x04                    /* Dead (its body left where it fell: an item) */
 #define D_MET           0x08                    /* Met (made an actor once: its personal things made, I_KIT's KT_PURSE,
                                                 **   the outfits' phase 3, 2026-10-27) */
+#define D_LOST          0x10                    /* It knows a leader of its is lost (dead): no bond to a dead one after
+                                                **   (part 6's; one it doesn't know of holds), and of the one after it */
+#define D_RANK(f)       ((f) >> 5 & 3)          /* A successor's rank, its post's (RK_*: its kind's the less; part 6's
+                                                **   succession, 2026-10-30), */
+#define D_PROM          0x80                    /*   a successor: its serve the week it took its post (its tenure) */
+#define NOW_U           ((unsigned char) ((unsigned*) &now)[1])    /* (The want's clock: their bodies', below) */
 #define NNAMES          8
 #define NDREG           32
 #define GIVE_WAY        30                      /* (Tenths the minds wait for the UI's command in hand, at most: its
@@ -202,6 +250,8 @@ struct head {
     unsigned        magic;
     unsigned char   nlairs, ndens;              /* The records' places used, up to the last in use */
     unsigned char   fatt[NFACT];                /* Each faction's attitude to the character now (its newcomers') */
+    unsigned char   deeds[NFACT];               /* Each faction's regard: the points of the deeds it knows of, towards
+                                                **   its next step (slice 4.8's reputation: regard) */
     struct { unsigned id; char name[12]; } names[NNAMES];    /* The names the character's given (a denizen's
                                                 **   number; 0: none) */
     unsigned        ids, lids;                  /* The denizens' and the lairs' numbers given */
@@ -278,8 +328,20 @@ struct dkx {
     unsigned char   standing;                   /* 0-4: its means */
     unsigned char   home[3];                    /* Its home room's uses, the best liked first (world.h's U_*; 0xFF none) */
     unsigned char   body;                       /* Its body (hub.h's BD_*: how it gets up, and falls, worded) */
+    unsigned char   rank;                       /* Its rank in its faction (RK_*: kinds.txt's, 2026-10-30) */
+    unsigned char   water;                      /* Its way with water (WA_*: kinds.txt's, 2026-10-31) */
+    unsigned char   day;                        /* Its day (DY_*: kinds.txt's, 2026-10-31: part 9's), */
+    unsigned char   work;                       /*   and the room it works in (world.h's U_*; 0xFF none) */
+    unsigned char   past;                       /* Its pastimes at leisure (a bit each, level.h's PT_*: kinds.txt's,
+                                                **   2026-10-31: 0 no leisure) */
 };
 enum { KP_BODY, KP_OPEN, KP_HIDDEN, KP_BOX, KP_TO_LEADER, KP_LEADER };
+enum { DY_ALWAYS, DY_DAY, DY_NIGHT, DY_TWILIGHT, DY_WATCHES };   /* (Its day: never asleep, diurnal, nocturnal,
+                                                **   crepuscular, keeping watches; kinds.txt's -dncw) */
+enum { SC_ABOUT, SC_SLEEP, SC_MEAL, SC_WORK, SC_WATCH, SC_LEISURE };   /* (SC_LEISURE + its pastime, PT_*) */   /* (What it does by its day now, sched's: about its
+                                                **   range, asleep, at a meal, at work, on watch; DO_SLEEP on in order) */
+enum { RK_FILE, RK_CAPTAIN, RK_LORD };          /* (The rank and file; a band's head; a chieftain or a spiritual
+                                                **   leader: part 6's morale) */
 static struct dkx X;
 static void __fastcall__ kx_get (unsigned char k)
 {
@@ -290,7 +352,9 @@ static void __fastcall__ kx_get (unsigned char k)
 
 /* The room of the chunk at ox, oy (stratum sn: a lair's, kind k's) its home's in: one of the uses its kind likes best
 ** (its home's, kinds.txt's: of the first of them the chunk has, one by the dice), else any; the chunk in the window */
-static unsigned char __fastcall__ home_room (unsigned char k, unsigned char sn, unsigned ox, unsigned oy)
+#pragma code-name (push, "SW8CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
+#pragma rodata-name (push, "SW8RODATA")
+unsigned char __fastcall__ s_home_room (unsigned char k, unsigned char sn, unsigned ox, unsigned oy)
 {
     unsigned char u, r, n, j;
 
@@ -308,6 +372,8 @@ static unsigned char __fastcall__ home_room (unsigned char k, unsigned char sn, 
     }
     return random (C->nrooms);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (push, "SW4CODE")
 #pragma rodata-name (push, "SW4RODATA")
@@ -479,11 +545,16 @@ static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, un
     D.lrx = L.rx;
     D.lry = L.ry;
     D.attitude = hd.fatt[lf & (NFACT - 1)];    /* (Its faction's, as the character stands with it) */
+    D.contact = ll ? 200 : 64;                  /* (With its leader in its lair, often; else seldom: part 6's bonds) */
+    rx = 8 + ((unsigned char) (L.id * 5 ^ L.id >> 1) & 127);  /* (The band's age, weeks: by its number, not the dice, so the
+                                                **   populations' dice are as they were) */
     for (i = 0; i < L.n + (ll != 0) && (u = rec_new (0)) != 0xFF; ++i) {
         if (i == L.n) {
             D.kind = ll;                        /* (Its leader, the last) */
         }
         D.id = ++hd.ids;
+        D.serve = rx - ((unsigned char) D.id & rx >> 3);   /* (Each its own, about the band's age) */
+        D.ate = D.drank = NOW_U - ((unsigned char) D.id & 3);  /* (Fed lately, each its own while) */
         den_put (u);
     }
     L.n = i;
@@ -565,6 +636,14 @@ void __fastcall__ s_populate (unsigned char n)
 
 /* The strata grown since the last look, populated (none while the world's asking the maker: a plan may be half
 ** copied into the world bank), whatever the pace (the world waits for them: KEPT_AT) */
+/* The minds' dice (their decisions', every random () but a stratum's population's and a lair's placing): a stream of
+** their own, from the game's seed, kept round populate's and place's own (each rseeds the generator by its stratum's
+** numbers, a lair's).  Those come as the maker's chunks are made, in the background: with one stream, the minds'
+** next numbers were the last placing's, so a game's fights at the turns pace went by how the tasks interleaved (dq0cmd's
+** rats, with a byte more of code here, 2026-10-30) */
+extern unsigned long xs_seed;                   /* (xorshift.s's state) */
+static unsigned long minds;
+
 static void grow (void)
 {
     static unsigned char ms[MAXSTRATA], ns[MAXSTRATA];
@@ -582,7 +661,9 @@ static void grow (void)
     for (k = 0; k < MAXSTRATA; ++k) {
         if (ms[k] && !DONE (ns[k]) && !hub_posted (&HUB->mreq[ASK_WORLD])) {
             sync_strata ();
-            populate (ns[k]);
+            minds = xs_seed;
+            populate (ns[k]);                   /* (By the stratum's own numbers, the minds' kept: their dice, grow's) */
+            xs_seed = minds;
         }
     }
 }
@@ -612,7 +693,7 @@ void __fastcall__ s_place (unsigned char i)
     struct stratum* s;
     struct room* q;
     unsigned x0, y0, x, y, ox, oy;
-    unsigned char w = 7, h = 7, j, t, k, kd = 0;
+    unsigned char w = 7, h = 7, j, t, k, kd = 0, wk;
 
     lair_get (i);
     s = &STRATUM (L.sn);
@@ -639,13 +720,15 @@ void __fastcall__ s_place (unsigned char i)
         L.hx = ox + 16;
         L.hy = oy + 16;
     }
+    kx_get (L.kind);
+    wk = X.water;                               /* (Not put in water deeper than it wades: 2026-10-31) */
     for (j = 0, k = 0; j < L.n; ++j, ++k) {
         for (; k < hd.ndens && (den_get (k), D.lid != L.id || !D.kind); ++k) {
         }                                       /* (Its next denizen, in its records' order) */
         for (t = 0; t < 32; ++t) {
             x = x0 + random (w);
             y = y0 + random (h);
-            if (open_sq (at (L.sn, x, y)) && (L.link == 0xFF || apart (x - L.hx, y - L.hy) > 1) &&
+            if (open_sq (at (L.sn, x, y)) && wades (wk, L.sn, x, y) && (L.link == 0xFF || apart (x - L.hx, y - L.hy) > 1) &&
                 apart (x - pcx, y - pcy) > 1 && !rec_on (L.sn, x, y) && !taken (0xFF, x, y)) {
                 break;                          /* (Not on another's, nor on the way or the character's square or
                                                 **   beside them: the character comes out there, not boxed in) */
@@ -731,23 +814,31 @@ static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigne
 }
 
 /* The lairs on the character's stratum whose chunks are its own or beside it, and made (the character's
-** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was */
-static unsigned char nearby (void)
+** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was.  Part 13 (2026-11-01:
+** the main RAM's room, the tunnellers'; alone, small: cheap to swap in, as it's called each time round after a move) */
+#pragma code-name (push, "SW13CODE")
+#pragma rodata-name (push, "SW13RODATA")
+unsigned char s_nearby (void)
 {
     struct stratum* s = &STRATUM (pcs);
     unsigned cx = (pcx - s->x0) / CW, cy = (pcy - s->y0) / CW;
     unsigned char i, n = 0;
 
+    nonear = 1;
     for (i = 0; i < hd.nlairs; ++i) {
         lair_get (i);
         if (L.kind && L.sn == pcs && !(L.flags & L_PLACED) && L.cx + 1 - cx <= 2 && L.cy + 1 - cy <= 2 &&
-            made (L.sn, L.cx, L.cy)) {
-            place (i);
+            (nonear = 0, made (L.sn, L.cx, L.cy))) {
+            minds = xs_seed;
+            place (i);                          /* (By the lair's own numbers, the minds' kept: their dice, grow's) */
+            xs_seed = minds;
             n = 1;
         }
     }
     return n;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The actors: the denizens near the character, in the hub for the world and the senses */
 
@@ -757,6 +848,55 @@ static unsigned char nearby (void)
 static struct actor a;
 static unsigned char akind[NACTORS];            /* Each actor's kind, and its lair's home */
 static unsigned ahx[NACTORS], ahy[NACTORS];
+
+/* ---- Their bodies (2026-10-31, every actor's: HOUSE.md's the denizens' bodies).  Water: each kind's way with it
+** (kinds.txt's water, the dkx's: the deepest it wades, feet, WA_DEEP; and whether it swims deeper, or flies over), the
+** water's depth on a square the chunk's (the maker's, world.h's: as the world's s_water_at has the character's): it
+** goes into no water deeper than it wades unless it swims (its steps, its coarse moves, its placing, its roaming: so it
+** goes round), its step in water the longer (a wade to half its depth half again, deeper twice; a swim twice).  Its
+** want (hunger and thirst, those that eat: not the dead), kept cheaply in its record (ate, drank: the clock's high
+** word, NOW_U, 65536 tenths, near enough 1.8 hours, as it last ate and drank), reckoned as it's wanted, never ticked */
+#define WA_DEEP         0x0F
+#define WA_SWIMS        0x10
+#define WA_FLIES        0x20
+static unsigned char awater[NACTORS];           /* (Each actor's, its kind's: enlist's) */
+static unsigned char aate[NACTORS], adrank[NACTORS];   /* (Each actor's want: its record's ate and drank, the truth
+                                                **   while it's an actor, enlist's and write_back's; the dead's never
+                                                **   hungry, as if fed now and then: enlist's) */
+#define W_HUNGRY        5                       /* (Its want's levels, in NOW_U's units: hungry about 9 hours on, very */
+#define W_VERY          13                      /*   about a day, starving three days, wasting ten; thirsty about 9 */
+#define W_STARVE        40                      /*   hours, very 16, parched a day, dying two; past W_MAX held there: */
+#define W_WASTE         132                     /*   one unseen a long while has fended for itself, the house's) */
+#define T_THIRSTY       5
+#define T_VERY          9
+#define T_PARCHED       13
+#define T_DYING         26
+#define W_MAX           200
+
+static unsigned char __fastcall__ deep_at (unsigned char sn, unsigned x, unsigned y)
+{
+    return at (sn, x, y) && WET_BIT (C, cx_, cy_) ? depth () : 0;     /* (Dry, at once: the water's depth part 8's) */
+}
+
+/* Whether one of water ways w may go onto square x, y of stratum sn (no deeper than it wades, or it swims, flies; not
+** into its chunk's pocket of bad air, 2026-10-31: HOUSE.md's bad air, the maker's air_pocket: the denizens know where
+** the air's bad, and keep out of it), its chunk looked at once */
+static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsigned x, unsigned y)
+{
+    signed char dx, dy;
+
+    if (!at (sn, x, y)) {
+        return 1;
+    }
+    if (C->air) {
+        dx = cx_ - C->ax;
+        dy = cy_ - C->ay;
+        if (dx * dx + dy * dy <= C->ar * C->ar) {
+            return 0;
+        }
+    }
+    return (w & (WA_SWIMS | WA_FLIES)) || !WET_BIT (C, cx_, cy_) || depth () <= (w & WA_DEEP);
+}
 static unsigned char turns;                     /* The turns pace */
 static unsigned char nnear;                     /* The denizens out near the character but not actors (more than
                                                 **   there are entries for): their squares, each time round */
@@ -865,10 +1005,13 @@ static void settle (void)
 ** 2026-10-29, its theme's faction the robber's) placed on its stratum (RB_HOARD: the world puts the takings in the
 ** hoard there, b its kind's faction); else its own home, hidden there if its kind hides its things (RB_HIDE), else
 ** lying there (HOUSE.md's the robbers' takings, 2026-10-27); K its own again after */
-static void __fastcall__ rob_to (unsigned char k)
+#pragma code-name (push, "SW8CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
+#pragma rodata-name (push, "SW8RODATA")
+void __fastcall__ s_rob_to (unsigned char k)
 {
     unsigned char i, f = K.faction;
 
+    im.a = FE_ROB;                              /* (A robbery, not an errand: slice 4.8's I_ROB a) */
     im.w1 = ahx[k];
     im.w2 = ahy[k];
     im.b = f;
@@ -887,6 +1030,8 @@ static void __fastcall__ rob_to (unsigned char k)
     }
     kind_get (akind[k]);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 static void __fastcall__ act (unsigned char kind, unsigned char k)
 {
@@ -895,9 +1040,24 @@ static void __fastcall__ act (unsigned char kind, unsigned char k)
     post (kind, k + 1);
 }
 
-/* Actor k roused: free w tenths from now at the latest (| ROUSE_SET: then, whenever it was), facing rface */
+/* Actor k roused: free w tenths from now at the latest (| ROUSE_SET: then, whenever it was), facing rface; asleep,
+** woken (up a while: upto, part 9's) */
+static unsigned upto[NACTORS];                  /* (Each one up till then, woken or sensing the character: the clock's
+                                                **   high bytes, 25.6 seconds each; part 8's sleeper up meanwhile) */
+#define UP_T            24                      /* (Some ten minutes) */
+static unsigned char unf[NFACT];                /* (Each faction's bodies not found yet, since the task began: the
+                                                **   rounds look for them only while there are any, part 10's found) */
+static unsigned char aact[NACTORS];             /* (Each one's day's doing, SC_* (SC_LEISURE + its pastime), and
+                                                **   where it does it, till aday: part 9's plan, 2026-10-31) */
+static unsigned atx[NACTORS], aty[NACTORS];
+static unsigned drunk[NACTORS];                 /* (Each one's last cup, the clock's high bytes: AM_DRUNK a while
+                                                **   after, DRUNK_T) */
+#define DRUNK_T         140                     /* (Some hour) */
+static unsigned aday[NACTORS];                  /* (Each one's day not asked again till then, its time about: as
+                                                **   upto, part 9's) */
 static void __fastcall__ rouse (unsigned char k, unsigned w)
 {
+    upto[k] = (unsigned) (now >> 8) + UP_T;
     im.x[0] = 0xFF;
     im.x[1] = rface;
     rface = 0xFF;
@@ -907,6 +1067,12 @@ static void __fastcall__ rouse (unsigned char k, unsigned w)
 }
 
 static unsigned char aorder[NACTORS];           /* (Each one's request, an ally's: its record's while it's an actor) */
+static unsigned afetch[NACTORS];                /* (Each one's errand, slice 4.8's: the thing it's to fetch, its item, |
+                                                **   FETCH_TRIED as it's taken up or tried, 0 none; where it lay; the
+                                                **   squares it follows at, 0 beside the character) */
+static unsigned afx[NACTORS], afy[NACTORS];
+static unsigned char akeep[NACTORS];
+#define FETCH_TRIED     0x8000
 static unsigned lsx[NACTORS], lsy[NACTORS];     /* (Where each last sensed the character: an ally follows it there) */
 #define DRAWN_N         8                       /* (A hostile one drawn on there, its decisions: drawn) */
 static unsigned char drawn[NACTORS];
@@ -918,7 +1084,8 @@ static unsigned refx, refy;                     /* (The square step_for's S_AWAY
                                                 **   a foe's, the one an ally follows to) */
 
 /* The name the character gave denizen number id (its entry in the head's names; id 0: a free one), or NNAMES */
-static unsigned char __fastcall__ name_of (unsigned id)
+#pragma code-name (push, "SW8CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
+unsigned char __fastcall__ s_name_of (unsigned id)
 {
     unsigned char n;
 
@@ -926,11 +1093,14 @@ static unsigned char __fastcall__ name_of (unsigned id)
     }
     return n;
 }
+#pragma code-name (pop)
 
 /* Denizen D (its kind's record K) first met, as it's first made an actor: its personal things made (I_KIT's
 ** KT_PURSE, the world's draw: its purse, its trinkets, its valuables by its standing, the user's answer 6: made as it's
 ** first met, then kept), folk's only, if it has any standing (kinds.txt's) */
-static void met (void)
+#pragma code-name (push, "SW8CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
+#pragma rodata-name (push, "SW8RODATA")
+void s_met (void)
 {
     unsigned char k = D.kind, f = K.faction;
 
@@ -947,6 +1117,8 @@ static void met (void)
     im.t = D.id;
     kitted ();
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (push, "SW4CODE")
 #pragma rodata-name (push, "SW4RODATA")
@@ -964,6 +1136,10 @@ static void __fastcall__ write_back (unsigned char k)
     D.ready = a.ready;
     D.attitude = a.attitude;
     D.order = aorder[k];
+    D.serve = a.serve;                          /* (Its bonds: part 6's) */
+    D.contact = a.contact;
+    D.ate = aate[k];                            /* (Its want) */
+    D.drank = adrank[k];
 }
 
 /* Actor k no longer one (far from the character): its record its own again, its body gone from the world's keeping
@@ -985,6 +1161,7 @@ void __fastcall__ s_retire (unsigned char k)
 /* Denizen i made an actor, in free entry k (its time from now: the coarse moves have kept it while it wasn't one):
 ** its mind's fields written, its body given the world (I_ENTER: its place, its step, its time, bleeding or not); its
 ** sheet the referee's (RS_NEW_ACTOR, by its kind's key: made the first time, the same one after) */
+static unsigned char esl;                       /* (Asleep by its day as it comes: enlist_near's, part 9's) */
 void __fastcall__ s_enlist (unsigned char i, unsigned char k)
 {
     struct rs_summary* s = (struct rs_summary*) rq.x;
@@ -1007,7 +1184,8 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     a.face = D.face;
     a.x = D.x;
     a.y = D.y;
-    a.ready = D.ready > now ? D.ready : now;
+    a.ready = D.ready > now && D.ready < now + 6000 ? D.ready : now;   /* (As it was due; due long hence, asleep or
+                                                **   at its meal, its day's, now) */
     a.step = K.step;
     a.attitude = D.attitude;
     a.faction = D.fac;
@@ -1024,17 +1202,25 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     fled[k] = 0;
     strcpy (rq.text, K.key);
     rq.w1 = i;
+    rq.c = want_fl (k);                         /* (Its want, and its fatigue levels, part 8's: the referee's) */
     ask (RS_NEW_ACTOR, k + 1, 0);
+    a.lead = s->lead;                           /* (Its influence and might, the referee's; its bonds its record's: part
+                                                **   6's morale) */
+    a.power = s->power;
+    a.serve = D.serve;
+    a.contact = D.contact;
     im.b = (s->cond & C_BLEEDING) != 0;
     strcpy (a.name, (i = name_of (D.id)) < NNAMES ? hd.names[i].name : K.name);
     a.kind = D.kind;
     kx_get (D.kind);
     a.body = X.body;                            /* (The words for its getting up and falling: the UI's) */
+    awater[k] = X.water;
     a.remains = K.flags & K_BONES ? KI_BONES : KI_BODY;
     a.timid = (K.flags & K_SHY) | (K_HELP (K) & H_KILLS ? RS_KILLER : 0);   /* (K_SHY the referee's 1) */
     hub_map (0);
     memcpy (HUB->actor[k].name, a.name, sizeof a - offsetof (struct actor, name));
-    im.x[0] = s->cond & C_UNCONSCIOUS ? DO_DOWN : 0;   /* (Left senseless, and senseless still: it lies there) */
+    im.x[0] = s->cond & C_UNCONSCIOUS ? DO_DOWN : esl ? DO_SLEEP : 0;   /* (Left senseless, and senseless still: it lies
+                                                **   there) */
     im.x[1] = a.face;
     im.x[2] = a.sn;
     im.x[3] = s->cond >> 12 & 7;                /* (Its legs, the referee's C_MOVE: slice 4.1b's) */
@@ -1050,7 +1236,9 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
 #pragma rodata-name (pop)
 
 /* The denizens out near the character made actors, as there are entries free; those left over noted (nearx ...) */
-static void enlist_near (void)
+#pragma code-name (push, "SW11CODE")          /* (Part 11's, 2026-10-31: the main RAM's room) */
+#pragma rodata-name (push, "SW11RODATA")
+void s_enlist_near (void)
 {
     struct den* q = POP->den;
     unsigned char i, k = 0;
@@ -1067,6 +1255,12 @@ static void enlist_near (void)
         }
         den_get (i);
         if (k < NACTORS && apart (D.x - pcx, D.y - pcy) <= ACT_R) {
+            afetch[k] = akeep[k] = 0;           /* (No errand of its own: an errand isn't carried with it) */
+            aday[k] = upto[k] = (unsigned) (now >> 8);   /* (Its day asked as it first decides: part 9's; asleep by
+                                                **   it, it comes asleep) */
+            aact[k] = SC_ABOUT;
+            kind_get (D.kind);
+            esl = sched (D.kind, D.id) == SC_SLEEP;
             enlist (i, k);
         } else if (nnear < NEAR) {
             nearx[nnear] = D.x;
@@ -1075,6 +1269,8 @@ static void enlist_near (void)
     }
     hub_map (0);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Anyone but actor me on square x, y: the character (or where it's going), another actor, a denizen out near it (the
 ** hub's header in the window after) */
@@ -1098,6 +1294,26 @@ static unsigned char __fastcall__ taken (unsigned char me, unsigned x, unsigned 
         }
     }
     return 0;
+}
+
+/* A sleeper's senses dulled (actor q, its kind's record K, copied: the book's, Skills 11's Awareness at half asleep;
+** its eyes shut): its hearing halved, no sight (2026-10-31, part 9's day); one at leisure, not paying attention (the
+** book's half Awareness, Skills 19's Legerdemain), its sight and hearing halved, at its cups quartered (the house's:
+** HOUSE.md's leisure) */
+static void __fastcall__ doze (const struct actor* q)
+{
+    unsigned char d = q->doing;
+
+    if (d == DO_SLEEP) {
+        K.sight = K.dark = 0;
+        K.hear >>= 1;
+    } else if (d >= DO_LEISURE) {
+        for (d = d == DO_LEISURE + PT_DRINK ? 2 : 1; d; --d) {
+            K.sight >>= 1;
+            K.dark >>= 1;
+            K.hear >>= 1;
+        }
+    }
 }
 
 /* Its senses: whether actor k (the copy a, its kind K's) senses the character: the senses asked (the hub's dsense:
@@ -1128,26 +1344,54 @@ static unsigned char __fastcall__ senses (unsigned char k)
 ** S_ANY (the way it faces, or another), S_AWAY (only one that takes it further from refx, refy (the character, or a
 ** foe): the furthest; close by it, cornered, one no nearer: a way round it, out), S_TOWARD (only one that takes it
 ** nearer, by the squares across and down together, so a step that's no nearer as the crow flies still counts: the
-** nearest).  Its direction, or 0xFF */
+** nearest).  Its direction (4 to 7: a diagonal way's, dir_x's), or 0xFF */
 enum { S_ANY, S_AWAY, S_TOWARD };
 static unsigned __fastcall__ toward (int dx, int dy)
 {
     return (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy);
 }
 
+/* Actor a's diagonal d (4 to 7, dir_x's) worth slant's look (part 11's): within its own chunk, one of its corners
+** cut, read there (the cheap tests first, the caller's: its cost on the commands' path) */
+static unsigned char __fastcall__ cut_by (unsigned char d)
+{
+    unsigned char* p = at (a.sn, a.x, a.y);
+
+    return !(((unsigned char) (cx_ + dir_x[d]) | (unsigned char) (cy_ + dir_y[d])) & ~(CW - 1)) &&
+        (TILE (p[dir_x[d]]) == T_CUT || TILE (dir_y[d] < 0 ? p[-CW] : p[CW]) == T_CUT);
+}
+
+#pragma static-locals (push, on)               /* (Its locals static: the main RAM's room, 2026-10-31) */
 static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsigned char how)
 {
-    unsigned char d, j, best = 0xFF, s = random (2) ? a.face >> 1 : random (4);
-    unsigned nx, ny, f, bf = how == S_TOWARD ? toward (a.x - refx, a.y - refy) : apart (a.x - refx, a.y - refy);
+    unsigned char d, j, best, s;
+    unsigned nx, ny, f, bf;
 
-    for (j = 0; j < 4; ++j) {
-        d = (s + j) & 3;
+    best = 0xFF;
+    s = random (2) ? a.face >> 1 : random (4);
+    bf = how == S_TOWARD ? toward (a.x - refx, a.y - refy) : apart (a.x - refx, a.y - refy);
+
+    for (j = 0; j < 8; ++j) {
+        if (j == 4) {
+            if (best != 0xFF) {
+                break;                          /* (The diagonal ways only where the four give none: their cost) */
+            }
+            if (how == S_TOWARD) {
+                bf += apart (a.x - refx, a.y - refy);   /* (A diagonal nearer as the crow flies too, as near across
+                                                **   and down: past a corner, round a door, a tunneller's way dug
+                                                **   round it, slice 4.11's) */
+            }
+        }
+        d = j < 4 ? (s + j) & 3 : j;            /* (The four, then the diagonal ways: slant's, within its own chunk,
+                                                **   no other made for it) */
         nx = a.x + dir_x[d];
         ny = a.y + dir_y[d];
-        f = how == S_TOWARD ? toward (nx - refx, ny - refy) : apart (nx - refx, ny - refy);   /* (The walk's own
-                                                **   test last: it's the dearest) */
+        f = how == S_TOWARD ? toward (nx - refx, ny - refy) + (j >= 4 ? apart (nx - refx, ny - refy) : 0) :
+            apart (nx - refx, ny - refy);       /* (The walk's own test last: it's the dearest) */
         if (apart (nx - ahx[k], ny - ahy[k]) > lim || (how == S_AWAY && (f < bf || (f == bf && bf > 2))) ||
-            (how == S_TOWARD && f >= bf) || taken (k, nx, ny) || !step_ok (a.sn, a.x, a.y, d)) {
+            (how == S_TOWARD && f >= bf) || taken (k, nx, ny) || !(d < 4 ? step_ok (a.sn, a.x, a.y, d) :
+            cut_by (d) && slant (a.sn, a.x, a.y, DH (d))) ||
+            !wades (awater[k], a.sn, nx, ny)) {
             continue;
         }
         if (how == S_ANY) {
@@ -1158,11 +1402,14 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
     }
     return best;
 }
+#pragma static-locals (pop)
 
 /* Actor a (the copy), out of the character's sight and not sensing it, moved coarsely (the turns pace's, catching
 ** up): a few squares' wander at a time, each a step of no time (I_STEP's STEP_COARSE: the world's), a while for them
-** after (stopped as it comes into the character's sight) */
-static void __fastcall__ coarse (unsigned char k, unsigned lim)
+** after (stopped as it comes into the character's sight).  Part 10's (2026-10-31: the main RAM's room) */
+#pragma code-name (push, "SW10CODE")
+#pragma rodata-name (push, "SW10RODATA")
+void __fastcall__ s_coarse (unsigned char k, unsigned lim)
 {
     unsigned char t, d;
     unsigned char* p;
@@ -1170,15 +1417,18 @@ static void __fastcall__ coarse (unsigned char k, unsigned lim)
 
     for (t = 0; t < 4; ++t) {
         d = random (4);
+        if (!step_ok (a.sn, a.x, a.y, d) && (!cut_by (d += 4) || !slant (a.sn, a.x, a.y, DH (d)))) {
+            continue;                           /* (The four's step closed: the diagonal way an eighth round from it, if
+                                                **   one of its corners is cut, step_for's; the same dice, 2026-11-01) */
+        }
         x = a.x + dir_x[d];
         y = a.y + dir_y[d];
-        if (apart (x - ahx[k], y - ahy[k]) > lim || !step_ok (a.sn, a.x, a.y, d) || taken (k, x, y)) {
+        if (apart (x - ahx[k], y - ahy[k]) > lim || taken (k, x, y) || !wades (awater[k], a.sn, x, y)) {
             continue;
         }
         a.x = x;
         a.y = y;
-        a.face = H_OF (d);
-        im.w1 = H_OF (d) | STEP_COARSE;
+        im.w1 = (a.face = DH (d)) | STEP_COARSE;
         im.w2 = 1;
         act (I_STEP, k);
         if ((p = at (a.sn, x, y)) != 0 && (*p & T_VIS)) {
@@ -1189,17 +1439,142 @@ static void __fastcall__ coarse (unsigned char k, unsigned lim)
                                                 **   minutes apart, as those away from it move, roam's: the long
                                                 **   durations' coarser ticks, 2026-10-28) */
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW8CODE")             /* (Part 8's since 2026-10-31: part 4's room) */
+#pragma rodata-name (push, "SW8RODATA")
 
 /* Actor a (the copy), shy and cornered beside the character: it darts past it, to the square beyond (open, no one
-** on it: dsx, dsy), a moment's dash; 1 if it can */
+** on it, no deeper water than it wades: dsx, dsy), a moment's dash; 1 if it can */
 unsigned char __fastcall__ s_dart (unsigned char k)
 {
     dsx = pcx + (pcx - a.x);
     dsy = pcy + (pcy - a.y);
-    return open_sq (at (a.sn, dsx, dsy)) && !taken (k, dsx, dsy);
+    return open_sq (at (a.sn, dsx, dsy)) && wades (awater[k], a.sn, dsx, dsy) && !taken (k, dsx, dsy);
+}
+
+/* Actor k (the copy a, its kind K's) hungry or thirsty (wh, wd: its record's want now, decide's): it drinks standing
+** in water, or at its lair (folk: their lair's water); eats at its lair (folk: their larder; and their meals, a slot in the
+** day: part 9's); a beast unaware of the character finds prey now and then (by its number and the clock, as
+** roam's), else ranges twice as far for it; a very hungry hunter (a nose for prey, or a killer) that senses the
+** character hunts it (hostile).  Its record's want kept; its wandering's reach back */
+unsigned char __fastcall__ s_hungry (unsigned char k)
+{
+    unsigned char r = K.flags & K_LAIR ? 2 : K.range, f = KF_NATURE (K.form) == NA_FOLK, u = NOW_U,
+        home = apart (a.x - ahx[k], a.y - ahy[k]) <= 2, wh = u - aate[k];
+
+    if (KF_NATURE (K.form) >= NA_DEAD) {
+        aate[k] = adrank[k] = u;                /* (The dead want nothing) */
+        return r;
+    }
+    if ((unsigned char) (u - adrank[k]) >= T_THIRSTY && (deep_at (a.sn, a.x, a.y) || (f && home))) {
+        adrank[k] = u;
+    }
+    if (wh >= W_HUNGRY) {
+        if (f ? home && a.attitude < AT_ALLIED : !sres[k] && !((unsigned char) (a.den * 5 + u) & 7)) {
+            aate[k] = u;
+        } else if (!f) {
+            r <<= 1;
+            if (wh >= W_VERY && ((K.flags & K_NOSE) || (K_HELP (K) & H_KILLS)) && sres[k] && a.attitude > AT_HOSTILE &&
+                a.attitude < AT_FRIENDLY) {
+                a.attitude = AT_HOSTILE;        /* (Hunting: the character its prey) */
+            }
+        }
+    }
+    return r;
+}
+
+/* Record D (its kind K's) hungry or thirsty as it goes about its lair, away from the character (roam's: lim its
+** reach): thirsty, it drinks (its lair's water, or what it finds); hungry, folk eat at their larder, a beast ranges
+** twice as far for prey, finding some now and then (by its number and the clock, not the dice); one unseen a long
+** while has fended for itself (its want held at W_MAX).  Its reach back */
+unsigned char __fastcall__ s_fends (unsigned char lim)
+{
+    unsigned char u = NOW_U;
+
+    if ((unsigned char) (u - D.ate) > W_MAX) {
+        D.ate = u - W_MAX;
+    }
+    if ((unsigned char) (u - D.drank) >= T_THIRSTY) {
+        D.drank = u;
+    }
+    if ((unsigned char) (u - D.ate) >= W_HUNGRY) {
+        if (KF_NATURE (K.form) == NA_FOLK || !((unsigned char) (D.id * 5 + u) & 7)) {
+            D.ate = u;
+        } else {
+            lim <<= 1;
+        }
+    }
+    return lim;
+}
+
+/* Actor k (the copy a) hurt, nothing after it (decide's): home to its lair (its home square), there to rest a minute at
+** a time (wt).  The step, or 0xFE */
+unsigned char __fastcall__ s_rests (unsigned char k)
+{
+    unsigned char d = 0xFE;
+
+    refx = ahx[k];
+    refy = ahy[k];
+    if (apart (a.x - refx, a.y - refy) <= 1 || (d = step_for (k, 0xFFFF, S_TOWARD)) == 0xFF) {
+        d = 0xFE;
+        wt = 600;
+    }
+    return d;
+}
+
+/* The water's depth on the square at () found (C, cx_, cy_; under water: deep_at's), feet: a still pool's surface over
+** its floor, or a stream's depth where it runs (the chunk's, the maker's: as the world's s_water_at has it) */
+unsigned char s_depth (void)
+{
+    unsigned char r, n;
+    struct room* p;
+    signed char l, e;
+
+    for (r = 0, p = C->room, n = C->nrooms; r < n; ++r, ++p) {
+        if (cx_ >= p->x && cx_ < p->x + p->w && cy_ >= p->y && cy_ < p->y + p->h) {
+            break;
+        }
+    }
+    if (r == n || TILE (C->tile[cy_][cx_]) == T_CORR) {
+        r = NROOMS;                             /* (A passage's water: the world's room_of's) */
+    }
+    l = C->wlev[r];
+    if (C->wruns & 1 << r) {
+        return l;                               /* (Running: its depth wherever it runs) */
+    }
+    e = C->elev[cy_][cx_];
+    return l > e ? l - e : 0;
+}
+
+/* Record D (its kind K's) made actor k: its want the actor's (aate, adrank), and its want's fatigue levels back (the
+** referee's, RS_NEW_ACTOR's c: HarnMaster's, the character's rswant.h's): none hungry or thirsty, then 1, 2 and 4 for
+** each of hunger and thirst; the dead none */
+unsigned char __fastcall__ s_want_fl (unsigned char k)
+{
+    unsigned char h = NOW_U - D.ate, t = NOW_U - D.drank;
+
+    aate[k] = D.ate;
+    adrank[k] = D.drank;
+    if (KF_NATURE (K.form) >= NA_DEAD) {
+        aate[k] = adrank[k] = NOW_U;
+        return 0;
+    }
+    return (h >= W_WASTE ? 4 : h >= W_STARVE ? 2 : h >= W_VERY) + (t >= T_DYING ? 4 : t >= T_PARCHED ? 2 : t >= T_VERY);
+}
+
+/* Food given actor k (a gift: s_gift's): ate 0, the steps more it's welcome by its hunger (hungry 2, very hungry 4);
+** ate 1, it's eaten it */
+signed char __fastcall__ s_fed (unsigned char k, unsigned char ate)
+{
+    unsigned char h;
+
+    h = NOW_U - aate[k];
+    if (ate) {
+        aate[k] = NOW_U;
+    }
+    return h >= W_VERY ? 4 : h >= W_HUNGRY ? 2 : 0;
 }
 
 #pragma code-name (pop)
@@ -1224,6 +1599,9 @@ static void hear (void)
     for (;;) {
         hub_map (0);
         if (hub_next (&wplace, &m)) {           /* (The world's: a noise of the character's, on its stratum) */
+            if (m.kind == E_NOWAY && (unsigned char) m.w1 == N_DEN) {
+                aside (m.w1 >> 8 & 7);          /* (One in its way: aside, if it will: D10's) */
+            }
             if (m.kind != E_NOISE) {
                 continue;
             }
@@ -1244,10 +1622,14 @@ static void hear (void)
             hub_map (0);
             q = &HUB->actor[k];
             if (!q->name[0] || k + 1 == src || q->sn != sn || (m.w1 == q->x && m.w2 == q->y) ||
-                q->doing >= DO_FIGHT) {
-                continue;                       /* (Not those fighting, fleeing, or senseless: nothing turns them) */
+                (unsigned char) (q->doing - DO_FIGHT) < 3 ||
+                (q->doing == DO_SLEEP && src && HUB->actor[src - 1].faction == q->faction)) {
+                continue;                       /* (Not those fighting, fleeing, or senseless: nothing turns them; a
+                                                **   sleeper by its senses dulled, doze's, and not by its fellows'
+                                                **   sounds, their steps, their words, their snores: the day's) */
             }
             kind_get (akind[k]);
+            doze (q);
             if (src ? apart (q->x - m.w1, q->y - m.w2) > K.hear * loud / 2 : !(senses (k) & 1)) {
                 continue;                       /* (The character's: the senses' to say, loud as it is) */
             }
@@ -1302,41 +1684,14 @@ void __fastcall__ s_killed (unsigned char k)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW2CODE")            /* (Part 2's since 2026-10-29: part 4's room for the peoples) */
-#pragma rodata-name (push, "SW2RODATA")
-
-/* Actor k fallen (dead, senseless): its kin among the actors (its kind, and its faction's: 2026-10-29) test their
-** courage (RS_MORALE, a bad situation, two steps worse: a friend seen slain; four, its faction's leader: HOUSE.md's
-** the peoples, the Gargun's king above all), and those it breaks (or shakes, a shy kind) flee; K its own again after */
-void __fastcall__ s_dismay (unsigned char k)
-{
-    unsigned char j, f = HUB->actor[k].faction;
-    signed char st;
-
-    kx_get (akind[k]);
-    st = X.keeps == KP_LEADER ? -4 : -2;
-    for (j = 0; j < NACTORS; ++j) {
-        if (j != k && HUB->actor[j].name[0] && (akind[j] == akind[k] || HUB->actor[j].faction == f) && !fled[j]) {
-            kind_get (akind[j]);
-            rq.steps = st;
-            ask (RS_MORALE, j + 1, 0);
-            if (rq.result == M_BROKEN || (rq.result == M_CAUTIOUS && (K.flags & K_SHY))) {
-                fled[j] = FLEE_T;               /* (Its doing and its attitude its next turn's: fleeing) */
-            }
-        }
-    }
-    kind_get (akind[k]);
-}
-
-#pragma code-name (pop)
-#pragma rodata-name (pop)
 
 /* The blows the world's struck since the last look (E_FIGHT, the denizens' events), taken to heart, in turn: 1 if
 ** there were any */
+static struct msg fm;                           /* (The blow at hand: harmed reads it) */
+#define m fm
 static unsigned char fought (void)
 {
-    static struct msg m;
-    unsigned char k, f, att, n = 0;
+    unsigned char k, f, att, n = 0, g;
 
     while (hub_dnext (&fplace, &m)) {
         if (m.kind != E_FIGHT) {
@@ -1344,27 +1699,29 @@ static unsigned char fought (void)
         }
         n = 1;
         f = m.x[2];
-        att = m.who;
-        k = ((att ? att : m.a) - 1) & 7;        /* (The actor in it: the character fights them one at a time) */
-        if (m.x[1] != FO_BLED) {
-            if (f & FF_FLEES) {
-                fled[k] = FLEE_T;               /* (Broken: it flees, and won't seek the fight again) */
-                HUB->actor[k].attitude = AT_UNFRIENDLY;
-            }
-            if (f & (att ? FF_A_DEAD | FF_A_DOWN : FF_D_DEAD | FF_D_DOWN)) {
-                kind_get (akind[k]);
-                dismay (k);
-            }
-            if (!att) {
-                harmed (k);                     /* (Its own, and their foes, think again of the character) */
-            }
+        att = m.a;                              /* (The one struck an actor: the character's blow, or a stray's
+                                                **   between two actors, 2026-10-30; else the one striking) */
+        k = ((att ? att : m.who) - 1) & 7;      /* (The actor in it: the character fights them one at a time) */
+        if (m.x[1] != FO_BLED && (f & FF_FLEES)) {
+            fled[k] = FLEE_T;                   /* (Broken: it flees, and won't seek the fight again) */
+            HUB->actor[k].attitude = AT_UNFRIENDLY;
         }
-        if (f & (att ? FF_A_DEAD : FF_D_DEAD)) {
+        if ((g = f & (att ? FF_D_DEAD | FF_D_DOWN : FF_A_DEAD | FF_A_DOWN)) != 0) {
+            dismay (k | g << 4);                /* (Its kin's courage, how it fell in the high bits: part 6's; bled to
+                                                **   death too, a fall all the same) */
+        }
+        if (m.x[1] != FO_BLED && !m.who) {
+            harmed (k);                         /* (Its own, and their foes, think again of the character; its
+                                                **   wound seen) */
+        }
+        if (f & (att ? FF_D_DEAD : FF_A_DEAD)) {
             killed (k);
+            ++unf[HUB->actor[k].faction & (NFACT - 1)];   /* (A body of its faction's to be found: part 9's rounds) */
         }
     }
     return n;
 }
+#undef m
 
 /* ---- Attitudes (DENIZENS.md): each denizen's to the character (hub.h's AT_*), its faction's to begin with, moved by
 ** what happens: its lair intruded on (a kind that keeps to it: the character beside its home), the character seen
@@ -1426,35 +1783,6 @@ static unsigned char __fastcall__ keep_off (unsigned char k)
     }
     refx = pcx;
     refy = pcy;
-    return d;
-}
-
-/* An ally's (actor k's, the copy's) turn: waiting where it was asked; else following the character, to where it last
-** sensed it, till it's beside it.  The step, or 0xFE (its wait, wt) */
-static unsigned char __fastcall__ ally (unsigned char k)
-{
-    unsigned char d = 0xFE;
-
-    if (sres[k]) {
-        a.face = bearing (ddx, ddy);
-    }
-    if (aorder[k] == OR_WAIT) {
-        a.doing = DO_WAIT;
-        wt = 20 + random (20);
-        return d;
-    }
-    a.doing = DO_FOLLOW;
-    if ((lsx[k] || lsy[k]) && apart (a.x - lsx[k], a.y - lsy[k]) > 1) {
-        refx = lsx[k];
-        refy = lsy[k];
-        d = step_for (k, 0xFFFF, S_TOWARD);
-        refx = pcx;
-        refy = pcy;
-    }
-    if (d >= 4) {
-        wt = 5 + random (10);
-        d = 0xFE;
-    }
     return d;
 }
 
@@ -1583,7 +1911,7 @@ unsigned char __fastcall__ s_shoots (unsigned char k, unsigned char ag)
 ** will be free, as the world will have it) */
 static unsigned char __fastcall__ decide (unsigned char k)
 {
-    unsigned char d = 0xFF, was, foe, ag;
+    unsigned char d = 0xFF, was, foe, ag, w, rng;
 
     kind_get (akind[k]);
     memcpy (&a, &HUB->actor[k], sizeof a);
@@ -1597,6 +1925,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
     ddy = pcy - a.y;
     dist = apart (ddx, ddy);
     a.doing = DO_ROAM;
+    doze (&HUB->actor[k]);                      /* (Asleep, or at leisure: its senses dulled, part 9's day's) */
     if (sgen[k] != sense_gen || apart (a.x - sax[k], a.y - say[k]) > slk[k]) {
         sgen[k] = sense_gen;                    /* (Sensed again only as the character has changed, or it's gone
                                                 **   further than the senses' answer stands for) */
@@ -1609,9 +1938,15 @@ static unsigned char __fastcall__ decide (unsigned char k)
         lsx[k] = pcx;
         lsy[k] = pcy;
         drawn[k] = DRAWN_N;
+        upto[k] = (unsigned) (now >> 8) + UP_T; /* (Up: not back to sleep a while, part 9's) */
         feel (k);
     }
     anear[k] = a.sn == pcs && dist <= 3;
+    rng = K.flags & K_LAIR ? 2 : K.range;       /* (Its wandering's reach) */
+    if ((unsigned char) (NOW_U - aate[k]) >= W_HUNGRY || (unsigned char) (NOW_U - adrank[k]) >= T_THIRSTY) {
+        rng = hungry (k);                       /* (Its want, those that eat: hungry or thirsty, part 8's, its eating,
+                                                **   drinking, hunting, ranging further) */
+    }
     if (foe && pchelp && !(K_HELP (K) & H_KILLS)) {
         foe = 0;                                /* (Its foe down, helpless: by its nature (the user's, 2026-10-21), a
                                                 **   killer strikes on (the referee finishes one senseless); a robber
@@ -1646,21 +1981,32 @@ static unsigned char __fastcall__ decide (unsigned char k)
         d = ally (k);
     } else if (sres[k]) {
         d = meets (k, was);
-    } else if (foe && (K.flags & K_NOSE) && (d = scent (k)) != 0xFF) {
+    } else if (foe && was != DO_SLEEP && (K.flags & K_NOSE) && (d = scent (k)) != 0xFF) {
         a.doing = DO_COMING;                    /* (Its nose to the character's trail: after it, the way the scent
                                                 **   goes; the world's, an older trail: DO_ROAM, if there's none) */
-    } else if (foe && !(K.flags & K_SHY) && drawn[k] && (d = draw_on (k)) != 0xFF) {
-        a.doing = DO_COMING;                    /* (Drawn on to where it last sensed the character, heard it, a while:
+    } else if (foe && !(K.flags & K_SHY) && drawn[k] && ((d = draw_on (k)) != 0xFF ||
+        ((K.styles & (K_DIGS | K_MINES)) && (d = dig_way (k)) != 0xFF))) {
+        a.doing = DO_COMING;                    /* (No way nearer: a tunneller digs one, part 12's, slice 4.11's) */                    /* (Drawn on to where it last sensed the character, heard it, a while:
                                                 **   slice 4.5's, HOUSE.md's: part 5's) */
+    } else if ((a.mood & AM_HURT) && a.attitude < AT_ALLIED && !foe) {
+        d = rests (k);                          /* (Hurt, and nothing after it: home to its lair, to rest: part 8's) */
     } else if (alert[k] > now) {
         d = 0xFE;                               /* (A noise heard: still, facing the way it came, a while) */
         wt = 10 + random (20);
+    } else if ((aact[k] || (int) (aday[k] - (unsigned) (now >> 8)) <= 0) && (d = daily (k)) != 0xFF) {
+                                                /* (Its day's: to bed and asleep, at a meal, at work, on watch: part
+                                                **   8's, 2026-10-31) */
     } else if (turns && !(*at (a.sn, a.x, a.y) & T_VIS)) {
-        coarse (k, K.flags & K_LAIR ? 2 : K.range);
+        coarse (k, rng);
         d = 0xFE;                               /* (Unseen, unaware: a coarse move) */
     } else if (!pcrest && (K.flags & K_LAIR ? !random (4) : random (3))) {
-        d = step_for (k, K.flags & K_LAIR ? 2 : K.range, S_ANY);
+        d = step_for (k, rng, S_ANY);
     }                                           /* (The character resting: no idle wandering in its sight) */
+    if (d == 0xFF && foe && sres[k] && dist > 1 && (K.styles & (K_DIGS | K_MINES))) {
+        d = dig_way (k);                        /* (A tunneller kept from the character it senses by rock, a wall,
+                                                **   rubble: it digs its way through, part 12's, slice 4.11's; drawn
+                                                **   on, part 5's draw_on asks too) */
+    }
     if (d == 0xFF) {                            /* (Watching: a while, unless it changes; fleeing, a moment; the
                                                 **   character resting, thirty times the while, a watcher's or an idler's:
                                                 **   roused all the same as it changes, tend's) */
@@ -1679,13 +2025,20 @@ static unsigned char __fastcall__ decide (unsigned char k)
     } else if (!stalk[k]) {
         stalk[k] = stalks (k);
     }
-    if (d < 4 || d == 0xFB) {                   /* (A step, now and then a noise of its own; its kind with no
+    if (was >= DO_LEISURE && ((unsigned char) (a.doing - DO_WATCH) < DO_DOWN - DO_WATCH || d == 0xFC || d == 0xFA)) {
+        roused (k, was);                        /* (Its pastime let go as it rises to act, told: part 10's) */
+    }
+    if (d < 8 || d == 0xFB) {                   /* (A step, now and then a noise of its own; its kind with no
                                                 **   darkvision, feeling its way in the dark: the world's, STEP_FEELS;
                                                 **   the way the scent goes, the world's to find) */
-        im.w1 = d == 0xFB ? STEP_SCENT : H_OF (d);
+        im.w1 = d == 0xFB ? STEP_SCENT : DH (d);
         im.w2 = K.dark ? 1 : 1 | STEP_FEELS;
         if (d == 0xFB) {
             im.x[2] = knose[akind[k] % SND_KINDS];
+        } else if (!(awater[k] & WA_FLIES) && (w = deep_at (a.sn, a.x + dir_x[d], a.y + dir_y[d])) != 0) {
+            wt = 2 * w > (awater[k] & WA_DEEP) ? K.step : K.step >> 1;    /* (Into water: a wade to half its
+                                                **   depth its step half again, deeper (a swim too) twice: a wait
+                                                **   after it, the world's) */
         }
         im.a = ++steps[k] & 7 || stalk[k] ? DE_MOVED : DE_NOISE;
         im.b = stalk[k] ? stalk[k] - 1 : steps[k] & 7 ? 1 : 3;
@@ -1697,6 +2050,11 @@ static unsigned char __fastcall__ decide (unsigned char k)
         im.b = 2;
         act (I_GOTO, k);
     } else if (d >= 0xFA && d <= 0xFC && d != 0xFB) {   /* (A round's blow, or a shot: outnumbering it, later) */
+        if (was != DO_FIGHT && K.mind >= M_LOW) {
+            heart (k);                          /* (A mind's heart as it engages: the field about it, its bonds; part
+                                                **   6's.  A beast's is reckoned as one near it falls: it feels only a
+                                                **   foe's might, and its fellows' falls) */
+        }
         a.doing = DO_FIGHT;
         im.a = 0;
         im.b = d == 0xFA ? Z_MID | AIM_SHOT : Z_MID;
@@ -1714,6 +2072,69 @@ static unsigned char __fastcall__ decide (unsigned char k)
     fought ();
     return 0;
 }
+
+/* ---- Tunnellers (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers and builders; HOUSE.md's, for review): actor k (the
+** copy a, its kind K's), hostile, kept by rock, a wall or rubble from the character it senses beyond it, or from where it
+** last sensed it (refx, refy: no step nearer), digs its way there if its kind digs: a burrower by its claws (K_DIGS),
+** a miner by a pick or a shovel it carries (K_MINES: the world's agear, AG_PICK, AG_SPADE).  The square beside it
+** that brings it nearest (the four first, a diagonal only where it's nearer still: the diagonal ways' rules, its corners
+** the world's to cut), within its reach of its home; the one it's digging kept while it's as near.  Posted (I_KIT's
+** KT_DIG: a spell at a time, by the character's rules, the world's: dq0w/wdig.c, which judges what it's into): 0xF9;
+** 0xFF, none.  Part 12's */
+#pragma code-name (push, "SW12CODE")
+#pragma rodata-name (push, "SW12RODATA")
+unsigned char __fastcall__ s_dig_way (unsigned char k)
+{
+    unsigned char j, best = 0xFF, g, t, h;
+    unsigned nx, ny, f, bf, b0;
+    unsigned char* p;
+
+    hub_map (0);
+    t = HUB->agear[k];
+    g = (K.styles & K_DIGS ? DG_CLAWS : 0) | (K.styles & K_MINES ? (t & AG_PICK ? DG_PICK : 0) |
+        (t & AG_SPADE ? DG_SPADE : 0) : 0);
+    h = HUB->actor[k].doing == DO_DIG ? HUB->actor[k].face : 0xFF;   /* (The way it's digging, if it is) */
+    bf = b0 = toward (a.x - refx, a.y - refy) + apart (a.x - refx, a.y - refy);   /* (Nearer by the squares across
+                                                **   and down, or as near so and nearer as the crow flies: a diagonal
+                                                **   round a shut door) */
+    for (j = 0; g && j < 4; ++j) {
+        if (toward (a.x + dir_x[j] - refx, a.y + dir_y[j] - refy) + apart (a.x + dir_x[j] - refx, a.y + dir_y[j] - refy) <
+            b0 && step_ok (a.sn, a.x, a.y, j)) {
+            return 0xFF;                        /* (A way nearer it could walk but for one on it: no dig, it waits) */
+        }
+    }
+    for (j = 0; g && j < 8; ++j) {
+        nx = a.x + dir_x[j];
+        ny = a.y + dir_y[j];
+        if ((f = toward (nx - refx, ny - refy) + apart (nx - refx, ny - refy)) >= (DH (j) == h ? b0 : bf) || apart (nx - ahx[k], ny - ahy[k]) >
+            2 * K.range + 8 || !(p = at (a.sn, nx, ny)) ||
+            ((t = TILE (*p)) != T_WALL && t != T_ROCK && t != T_RUBBLE) || (t == T_WALL && g == DG_CLAWS)) {
+            continue;                           /* (No nearer, too far from home, not a thing it digs: claws alone
+                                                **   never a wall, masonry or stone, the house's) */
+        }
+        bf = f;
+        best = j;
+        if (DH (j) == h) {
+            break;                              /* (The way it's digging: on with it, while it's nearer) */
+        }
+    }
+    hub_map (0);
+    if (best == 0xFF) {
+        return 0xFF;
+    }
+    if (drawn[k] && drawn[k] < DRAWN_N) {
+        ++drawn[k];                             /* (Drawn on still: digging spends none of it) */
+    }
+    a.face = DH (best);
+    a.doing = DO_DIG;
+    im.a = KT_DIG;
+    im.b = a.face;
+    im.x[2] = g;
+    act (I_KIT, k);
+    return 0xF9;
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The denizens away from the character (out, but not actors): moved coarsely, a while at a time, each to a
 ** square of its range about its lair (in a chunk that's made: never made for them), so the dungeon goes on where
@@ -1740,15 +2161,20 @@ static unsigned char __fastcall__ rec_on (unsigned char sn, unsigned x, unsigned
 
 /* Those due moved: 1 if any was */
 static unsigned long roam_at;                   /* (The soonest one's due) */
+#define NOW_HI          (((unsigned*) &now)[1]) /* (The clock's high word: 65536 tenths, near enough two hours) */
+#define DAY_HI          13                      /* (A day of them, near enough) */
+static unsigned aged;                           /* (The bonds aged to then, the high word: part 6's age) */
 
 static unsigned char roam (void)
 {
     struct den* q = POP->den;
     unsigned char i, lim, n = 0;
-    unsigned x, y;
 
     if (now < roam_at) {
         return 0;
+    }
+    if (NOW_HI - aged >= DAY_HI) {
+        age ();                                 /* (The bonds aged by the clock, a day at a time: part 7's) */
     }
     roam_at = now + ROAM_T;
     for (i = 0; i < hd.ndens; ++i, ++q) {
@@ -1762,6 +2188,11 @@ static unsigned char roam (void)
             }
             continue;
         }
+        if (hub_map (0), !turns && HUB->ui_cmd && gw != 2) {
+            roam_at = now;                      /* (The UI's command in hand: the rest after its answer, as tend's
+                                                **   actors; their days are part 9's) */
+            break;
+        }
         den_get (i);
         kind_get (D.kind);
         if (D.attitude == AT_ALLIED && D.order == OR_WAIT) {
@@ -1770,24 +2201,10 @@ static unsigned char roam (void)
         }
         lim = D.sn == D.lsn ? (K.flags & K_LAIR ? 2 : K.range) : 0;  /* (Come along with the character off its
                                                 **   lair's stratum: it stays where it is) */
-        x = D.hx + random (2 * lim + 1) - lim;
-        y = D.hy + random (2 * lim + 1) - lim;
-        if (lim && made_at (D.sn, x, y) && open_sq (at (D.sn, x, y)) && !taken (0xFF, x, y) && !rec_on (D.sn, x, y)) {
-            D.x = x;
-            D.y = y;
-            D.face = random (4) * 2;
-            n |= D.sn == pcs && apart (x - pcx, y - pcy) <= ACT_R + 16;    /* (Near the character now) */
-            im.x[1] = D.kind;                   /* (Its passing: the world's traces, kept where it holds the chunk) */
-            im.x[2] = D.sn;
-            im.w1 = x;
-            im.w2 = y;
-            im.a = D.face;
-            im.b = 0;                           /* (A passing, no stay) */
-            trodden ();
+        if ((unsigned char) (NOW_U - D.ate) >= W_HUNGRY || (unsigned char) (NOW_U - D.drank) >= T_THIRSTY) {
+            lim = fends (lim);                  /* (Its want, as it goes about its lair: part 8's) */
         }
-        x = pcrest ? 10 * ROAM_T : ROAM_T;      /* (The character resting: ten times the while, the long durations'
-                                                **   coarser ticks) */
-        D.ready = now + x + random (x);
+        n |= wander (lim);                      /* (By its day: part 9's, 2026-10-31) */
         if (D.ready < roam_at) {
             roam_at = D.ready;
         }
@@ -1834,6 +2251,7 @@ unsigned char __fastcall__ s_along (unsigned char k)
 ** coarsely.  Nothing, if nothing's changed (the clock, the character, a blow) */
 static unsigned char struck;                    /* (Blows taken to heart since: fought's) */
 
+static unsigned char owe;                       /* (The denizens near owed their enlisting: tend's) */
 static unsigned char lrs = 0xFF;                /* (The region the character's in, as the cache last had those round
                                                 **   it) */
 static unsigned lrx, lry;
@@ -1856,10 +2274,13 @@ static void tend (void)
         ls = pcs;
         again = 1;
         fresh = 10;
+        nonear = 0;
     }
-    if (fresh) {
+    if (fresh && !nonear && (hub_map (0), turns || !HUB->ui_cmd || gw == 2)) {
         --fresh;
-        again |= nearby ();
+        again |= nearby ();                     /* (Part 13's: not while the UI's command is in hand at the real
+                                                **   paces; none left near to place, not asked again till the
+                                                **   character moves: no swap, the commands' answers' time, 2026-11-01) */
     }
     if (!again && !woke && now == lnow) {
         return;
@@ -1907,6 +2328,11 @@ static void tend (void)
             lry = (pcy - STRATUM (pcs).y0) >> 8;
             dneed ();
         }
+        owe = 1;
+    }
+    if (owe && (hub_map (0), turns || !HUB->ui_cmd || gw == 2)) {
+        owe = 0;                                /* (The denizens near made actors: not while the UI's command is in hand
+                                                **   at the real paces, part 11's swap off its answer's path) */
         enlist_near ();
     }
 }
@@ -1944,6 +2370,223 @@ unsigned char __fastcall__ s_draw_on (unsigned char k)
     return step_for (k, K.flags & K_LAIR ? 2 : 2 * K.range + 8, S_TOWARD);   /* (Not far from its lair: one that
                                                 **   keeps to it, a step or two) */
 }
+
+
+/* ---- An ally's errands and the character's gifts (slice 4.8, 2026-10-30: DENIZENS.md's fetching and influence;
+** HOUSE.md's fetching, gifts and reputation): part 5's */
+
+/* An ally's (actor k's, the copy's) turn: waiting where it was asked; fetching a thing (OR_FETCH: walked to where it
+** lay, taken up there, the world's I_ROB FE_TAKE; brought back to where it last sensed the character, handed over
+** beside it, FE_GIVE: the world's to tell how it went, E_TASK TE_FETCHED; none to be had, or no way nearer, tried
+** from where it is: the world's to refuse; then following again); else following the character, to where it last
+** sensed it, till it's within the distance it's told (keep: beside it, unless "follow me at 3 squares").  The step,
+** or 0xFE (its wait, wt) */
+unsigned char __fastcall__ s_ally (unsigned char k)
+{
+    unsigned char d = 0xFE, n = 1 + akeep[k], w;
+    unsigned x = lsx[k], y = lsy[k], i = afetch[k] & ~FETCH_TRIED;
+
+    if (sres[k]) {
+        a.face = bearing (ddx, ddy);
+    }
+    if (aorder[k] == OR_WAIT) {
+        a.doing = DO_WAIT;
+        wt = 20 + random (20);
+        return d;
+    }
+    a.doing = DO_FOLLOW;
+    if (aorder[k] == OR_FETCH) {
+        n = 1;
+        hub_map (ITEM_BANK (i));
+        w = afetch[k] & FETCH_TRIED && ITEM_AT (i)->where == IW_DEN;   /* (Taken up: its own, the item store's) */
+        hub_map (0);
+        if (w) {                                /* (Brought back: handed over beside the character) */
+            if (a.sn == pcs && dist <= 1) {
+                im.a = FE_GIVE;
+                im.t = i;
+                act (I_ROB, k);
+                afetch[k] = 0;
+                aorder[k] = OR_FOLLOW;
+                wt = 5;
+                return d;
+            }
+        } else if (!i || (afetch[k] & FETCH_TRIED)) {
+            afetch[k] = 0;                      /* (Not taken up: gone, too heavy, its hands full, out of its reach,
+                                                **   the world's to tell; following again) */
+            aorder[k] = OR_FOLLOW;
+        } else {
+            x = afx[k];
+            y = afy[k];
+            if (apart (a.x - x, a.y - y) > 1) {
+                refx = x;
+                refy = y;
+                d = step_for (k, 0xFFFF, S_TOWARD);
+                refx = pcx;
+                refy = pcy;
+            }
+            if (d >= 4) {                       /* (Beside it, or no way nearer: taken up, or tried) */
+                im.a = FE_TAKE;
+                im.w1 = x;
+                im.w2 = y;
+                im.t = i;
+                act (I_ROB, k);
+                afetch[k] |= FETCH_TRIED;
+                wt = 5;
+                return 0xFE;
+            }
+            return d;
+        }
+    }
+    d = 0xFE;
+    if ((x || y) && apart (a.x - x, a.y - y) > n) {
+        refx = x;
+        refy = y;
+        d = step_for (k, 0xFFFF, S_TOWARD);
+        refx = pcx;
+        refy = pcy;
+    }
+    if (d >= 4) {
+        wt = 5 + random (10);
+        d = 0xFE;
+    }
+    return d;
+}
+
+/* Actor k in the character's way (the world's E_NOWAY, N_DEN: its walk stopped short of it), friendly or an ally,
+** perceiving it trying to pass (D10): it moves aside at once, a square off the way the character comes (open, no one
+** on it: not straight on along it), if it can and it's willing (not one told to wait: it may be guarding; not one
+** fighting, fleeing or senseless; none to be had, cornered: it stays) */
+void __fastcall__ s_aside (unsigned char k)
+{
+    struct actor* q = &HUB->actor[k];
+    unsigned char d, j;
+    signed char sx, sy;
+
+    hub_map (0);
+    if (!q->name[0] || q->attitude < AT_FRIENDLY || aorder[k] == OR_WAIT || q->doing >= DO_FIGHT || q->sn != pcs) {
+        return;
+    }
+    memcpy (&a, q, sizeof a);
+    kind_get (akind[k]);
+    sx = a.x > pcx ? 1 : a.x < pcx ? -1 : 0;
+    sy = a.y > pcy ? 1 : a.y < pcy ? -1 : 0;
+    for (j = random (4), d = 0; d < 4; ++d, j = (j + 1) & 3) {
+        if ((dir_x[j] == sx && dir_y[j] == sy) || taken (k, a.x + dir_x[j], a.y + dir_y[j]) ||
+            !step_ok (a.sn, a.x, a.y, j)) {
+            continue;
+        }
+        rouse (k, ROUSE_SET);                   /* (At once, whatever it was about) */
+        im.w1 = H_OF (j);
+        im.w2 = K.dark ? 1 : 1 | STEP_FEELS;
+        im.a = DE_MOVED;
+        im.b = 1;
+        a.face = H_OF (j);
+        a.doing = DO_FOLLOW;
+        act (I_STEP, k);
+        settle ();
+        return;
+    }
+}
+
+/* Faction f's regard for the character raised by a deed it knows of (slice 4.8's reputation: a gift taken by one of
+** its own, a foe of its harmed before its eyes), pts points: each DEED_STEP of them a step of its attitude (its
+** newcomers', and those of it in the cache not met yet: as they first meet the character), to friendly at most */
+#define DEED_STEP       4
+void __fastcall__ s_regard (unsigned char f, unsigned char pts)
+{
+    struct den* r = POP->den;
+    unsigned char j;
+
+    f &= NFACT - 1;
+    if (!f || (hd.deeds[f] += pts) < DEED_STEP) {
+        return;
+    }
+    hd.deeds[f] = 0;
+    if (hd.fatt[f] >= AT_FRIENDLY) {
+        return;
+    }
+    ++hd.fatt[f];
+    for (j = 0; j < hd.ndens; ++j, ++r) {
+        hy_bank (pb);
+        if (r->kind && !(r->flags & (D_ACTOR | D_MET)) && r->fac == f && r->attitude < AT_FRIENDLY) {
+            ++r->attitude;
+        }
+    }
+    hub_map (0);
+}
+
+/* A gift to actor k (sw's: its worth, ix, in farthings, the appraisal's as a local takes it; iy 1 if it's food): by its
+** mind (nothing sways the mindless; a beast takes only food), within reach; its steps by its worth to one of its kind's
+** means (kinds.txt's standing: HOUSE.md's gifts), the book's Rhetoric (a beast's Animalcraft) in the target's
+** interest, at steps by its attitude and its kind too; a critical success two steps, a success one, a critical failure
+** an insult (a step back, the gift refused: grade G_CF), as far as friendly (a gift doesn't make an ally); taken (but
+** refused), the world's to hand over (the UI's), and its faction's regard the more (reputation) */
+static const unsigned means[5] = { 4, 16, 48, 192, 960 };   /* (Farthings: a penny, 4d, 12d, 48d, 240d) */
+
+void __fastcall__ s_gift (unsigned char k)
+{
+    struct req* r;
+    signed char st, g;
+    unsigned char t = sw.was, m;
+    unsigned w = sw.ix, v;
+
+    if (K.mind == M_MINDLESS) {
+        sw.result = SR_MINDLESS;
+        return;
+    }
+    if (dist > 1) {
+        sw.result = SR_FAR;
+        return;
+    }
+    if (sw.beast && !(sw.iy & 1)) {
+        sw.result = SR_CANT;                    /* (A beast has no use for it) */
+        return;
+    }
+    kx_get (akind[k]);
+    v = means[X.standing < 5 ? X.standing : 4];
+    for (g = -1, w = w < 0x4000 ? w << 2 : 0xFFFF; g < 4 && w >= v; ++g, v <<= 1) {
+    }                                           /* (Under a quarter of its means a paltry gift, -1; a quarter 0, a half
+                                                **   1, its means 2, twice 3, four times 4) */
+    if (sw.iy & 1) {
+        g += 2 + fed (k, 0);                    /* (Food: to a beast, or the hungry, the more welcome; the hungrier
+                                                **   the more, part 8's) */
+    }
+    st = (signed char) t - 3 + K.sway + g;      /* (Its attitude's steps, as words': hostile -3 ... friendly +1) */
+    hub_map (0);
+    r = DSLOT;
+    r->text[0] = 0;
+    r->kind = RS_TEST;
+    r->actor = 0;
+    r->a = sw.beast ? P_ANIMALS : P_PERSUADE;
+    r->b = 0;
+    r->steps = st;
+    r = hub_call (r, T_REFEREE);
+    sw.grade = r->grade;
+    r->state = REQ_FREE;
+    sw.t = 20;
+    m = sw.grade == G_CS ? 2 : sw.grade == G_MS ? 1 : 0;
+    if (sw.grade == G_CF) {
+        sw.now = t > AT_HOSTILE ? t - 1 : t;    /* (Insulted: refused) */
+    } else {
+        sw.now = t >= AT_FRIENDLY ? t : t + m < AT_FRIENDLY ? t + m : AT_FRIENDLY;
+        im.a = FE_GIFT;                         /* (Taken: the world's to hand over, a count of a lot split off) */
+        im.t = sw.item;
+        im.w1 = sw.iy >> 8;
+        im.x[0] = im.x[1] = 0xFF;
+        post (I_ROB, k + 1);
+        settle ();
+        if (sw.iy & 1) {
+            fed (k, 1);                         /* (Food taken: it eats it) */
+        }
+        if (g >= 2) {
+            hub_map (0);
+            s_regard (HUB->actor[k].faction, g - 1);
+        }
+    }
+    hub_map (0);
+    HUB->actor[k].attitude = sw.now;
+}
+
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -2003,10 +2646,13 @@ void __fastcall__ s_harmed (unsigned char k)
 {
     struct actor* q = HUB->actor;
     struct den* r = POP->den;
-    unsigned char j, f, n;
+    unsigned char j, f, n, wit = 0;
     unsigned l;
 
     hub_map (0);
+    if ((fm.x[1] == O_HIT || fm.x[1] == O_BOTH_HIT) && !(fm.x[2] & FF_STOPPED)) {
+        q[k].mood |= AM_HURT;                   /* (Wounded, as its fellows see it: part 6's field) */
+    }
     f = q[k].faction;
     den_get (q[k].den);
     l = D.lid;
@@ -2022,14 +2668,16 @@ void __fastcall__ s_harmed (unsigned char k)
             q->attitude = q->attitude > n ? q->attitude - n : AT_HOSTILE;
         } else if (REL (f, q->faction) == AT_HOSTILE && sres[j] && q->attitude < AT_FRIENDLY) {
             ++q->attitude;
+            wit |= 1 << (q->faction & (NFACT - 1));   /* (Its faction's regard the more: reputation, slice 4.8's) */
         } else {
             continue;
         }
         if (q->attitude < AT_ALLIED) {
             aorder[j] = OR_NONE;
         }
-        if (q->doing < DO_FIGHT && q->ready > now) {
-            rouse (j, 0);                       /* (At once: not one fighting, its own time; not put off) */
+        if ((unsigned char) (q->doing - DO_FIGHT) >= 3 && q->ready > now) {
+            rouse (j, 0);                       /* (At once: not one fighting, its own time; not put off; asleep,
+                                                **   woken) */
         }
         sgen[j] = 0;
     }
@@ -2047,6 +2695,11 @@ void __fastcall__ s_harmed (unsigned char k)
     hub_map (0);
     if (hd.fatt[f & (NFACT - 1)] > AT_HOSTILE) {
         --hd.fatt[f & (NFACT - 1)];
+    }
+    for (j = 1; j < NFACT; ++j) {
+        if (wit & 1 << j) {
+            regard (j, 1);                      /* (A foe of its harmed before its eyes) */
+        }
     }
 }
 
@@ -2125,7 +2778,8 @@ static void __fastcall__ influence (unsigned char k)
     }
 }
 
-/* A request to ally k (sw's order): follow, wait, go its own way (an ally no more); fetching, not yet */
+/* A request to ally k (sw's order): follow (at a distance, if it's told: ix), wait, go its own way (an ally no more),
+** fetch a thing (the UI's, its item and where it lay: slice 4.8's) */
 static void __fastcall__ order (unsigned char k)
 {
     struct actor* q;
@@ -2136,11 +2790,18 @@ static void __fastcall__ order (unsigned char k)
         sw.result = SR_NOT_ALLY;
         return;
     }
-    if (sw.order == OR_FETCH || !sw.order) {
+    if (!sw.order || (sw.order == OR_FETCH && !sw.item)) {
         sw.result = SR_CANT;
         return;
     }
     sw.t = 20;
+    if (sw.order == OR_FOLLOW) {
+        akeep[k] = sw.ix < 8 ? sw.ix : 8;       /* (Its distance, if it's told one: slice 4.8's) */
+    } else if (sw.order == OR_FETCH) {
+        afetch[k] = sw.item;                    /* (A thing to fetch: the UI's, where it lay) */
+        afx[k] = sw.ix;
+        afy[k] = sw.iy;
+    }
     if (sw.order == OR_HOME) {
         q->attitude = sw.now = AT_FRIENDLY;
         aorder[k] = OR_NONE;
@@ -2187,12 +2848,13 @@ void s_sway (void)
     sw.t = 0;
     sw.name[0] = 0;
     sw.beast = 0;
+    sw.actor = 0;
     if (sw.kind == SW_ORDER && !sw.word[0]) {   /* (To every ally in earshot) */
         for (k = 0; k < NACTORS; ++k) {
             hub_map (0);
             q = &HUB->actor[k];
             if (q->name[0] && q->attitude == AT_ALLIED && q->sn == pcs && apart (q->x - pcx, q->y - pcy) <= 12 &&
-                q->doing != DO_DOWN) {          /* (Not one lying senseless: it hears nothing) */
+                q->doing != DO_DOWN && (!n || sw.order != OR_FETCH)) {   /* (A thing fetched by one: the first) */          /* (Not one lying senseless: it hears nothing) */
                 strcpy (sw.name, ++n == 1 ? q->name : "");
                 order (k);
                 rouse (k, 1 | ROUSE_SET);
@@ -2207,6 +2869,7 @@ void s_sway (void)
         sw.was = sw.now = q->attitude;
         kind_get (akind[k]);
         sw.beast = K.mind == M_BEAST;
+        sw.actor = k + 1;
         switch (q->doing == DO_DOWN && sw.kind ? 0xFF : sw.kind) {
         case 0xFF:
             sw.result = SR_DOWN;                /* (Senseless: it hears nothing, it takes no request, till it comes
@@ -2218,6 +2881,9 @@ void s_sway (void)
             break;
         case SW_ORDER:
             order (k);
+            break;
+        case SW_GIVE:
+            gift (k);
             break;
         default:
             influence (k);
@@ -2234,26 +2900,24 @@ void s_sway (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1, OV2): 0, or -1 */
+/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1 ... OV5, as make.js packs
+** them, ../dq0/ovlpack.js: each bank packed, read and unpacked in place by the unpack library, the linker's fill ($FF)
+** put back after its bytes: ../dq0/ovunpack.inc): 0, or -1 */
+unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
 static int __fastcall__ ovl_load (const char* dir)
 {
-    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Through the parts' area: none in it yet) */
-    unsigned off;
+    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Its path in the parts' area: none in it yet) */
     int fd, n;
 
     strcpy ((char*) b, dir);
     strcat ((char*) b, "/dq0d.ovl");
-    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (2)) < 0) {
+    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (5)) < 0) {
         return -1;
     }
-    ovbank[0] = n;
-    ovbank[1] = n + 1;
-    for (off = 0; off < 0x4000 && (n = read (fd, b, 512)) > 0; off += n) {
-        hy_bank (ovbank[off >> 13]);
-        memcpy ((void*) (0x8000 + (off & 0x1FFF)), b, n);
-    }
+    ovbank[0] = n;                              /* (The rest after it: ovl_unpack's) */
+    n = ovl_unpack (fd | (5 << 8));
     close (fd);
-    return 0;
+    return -n;
 }
 
 #pragma code-name (push, "SW4CODE")
@@ -2342,6 +3006,7 @@ int main (int argc, char* argv[])
     }
     kb = b;
     pb = b + 1;
+    rseed (HUB->seed ^ 0x2B7E1516UL ^ (unsigned long) HUB->dice << 16);          /* (The minds' dice, their own: grow's) */
     if (start (argv[3])) {
         return 1;
     }
@@ -2718,10 +3383,11 @@ void s_dneed (void)
     }
 }
 
-/* (The main RAM's: part 4's room) The places kept lit (the hub's KEPT_AT) written to the save's dens.dat, after the
-** records' bank (fd), a piece at a time through the main RAM; or read back (back: nothing there, none) */
-#pragma code-name (push, "CODE")
-static void __fastcall__ kept_file (int fd, unsigned char back)
+/* (Part 8's since 2026-10-31: part 4's room, then the main RAM's) The places kept lit (the hub's KEPT_AT) written to the
+** save's dens.dat, after the records' bank (fd), a piece at a time through the main RAM; or read back (back: nothing
+** there, none) */
+#pragma code-name (push, "SW8CODE")
+void __fastcall__ s_kept_file (int fd, unsigned char back)
 {
     unsigned off, n;
 
@@ -2802,6 +3468,1041 @@ void __fastcall__ s_keep (unsigned char back)
     }
     hub_map (0);
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 6: morale (HOUSE.md's morale, for review; DECISIONS.md's the user's of 2026-10-29: "any intelligent
+** creature should modify the morale field around itself").  Each intelligent actor (a mind low, average or cunning:
+** no beast, nothing mindless) sways the courage of those about it by its influence: its rank in its faction (kinds.txt's:
+** the rank and file, a captain, a lord or a spiritual leader) and its influence skill (the referee's summary's lead:
+** Oratory or Rhetoric), for its friends (its kind, its faction) and against its foes (a faction hostile to theirs: and
+** any foe mightier than one, by its power, its fearsomeness), less with distance, by how it's doing (wounded, half;
+** berserk, twice; fleeing, a friend's turned against them; fallen, gone; a foe's either, none); the character too, by
+** its own (its allies its friends, those hostile to it its foes).  A friend's counts the more as one has been long with its
+** band (its time served and its contact: the bonds about it).  And bonds upward: each subordinate's to its leaders
+** (its band's head in its lair, its faction's above that, wherever they are), by the leader's rank, the time they've
+** had together (the leader's own a new leader's less) and how much they're together (contact: a band living with its
+** leader every day, others each time they're near; aged by the clock).  All of it is reckoned only as a test is made
+** (or may be: an actor's heart, as it engages, and as one near it falls), never kept up as things go: the field and
+** the bonds held to the book's band (twenty points either way), the situation besides (a friend fallen about it, the
+** book's bad situation; none left standing, desperate).  A fall (dismay): each of the fallen's kin that knows of it
+** (hears the fight's din: its hearing, a fight as loud as the world's blows; not one senseless) tests at once (not one
+** fleeing already), the fallen's influence gone, its bond to it gone if it was its leader (dead: known lost from then,
+** its record's D_LOST; one that doesn't know of it keeps its bond, the fall unfelt till it's known: told, the hook). */
+#pragma code-name (push, "SW6CODE")
+#pragma rodata-name (push, "SW6RODATA")
+#pragma bss-name (push, "SW6RODATA")            /* (Its locals the part's own: the main RAM's room) */
+#pragma register-vars (push, on)                /* (Its records' pointers in the zero page) */
+
+#define FIELD_R         8                       /* Squares an actor's influence reaches (all of it beside one, half at
+                                                **   five, falling off with distance: falloff) */
+#define FALL_LOUD       5                       /* A fall's din (the world's blows', wfight.c's LOUD_FIGHT) */
+#define WEEK_HI         92                      /* A week, the clock's high words (65536 tenths each) */
+#define FULL_WEEKS      128                     /* The weeks together that make a bond's time whole (some two and a
+                                                **   half years: the bonds' scale, 0-128) */
+#define CONTACT_UP      16                      /* A bond's contact the more each time an actor's near its leader */
+#define FIELD_MAX       20                      /* The field and the bonds held to the book's band (points) */
+#define SEEN_SLAIN      10                      /* A friend seen to fall: the book's bad situation (points), */
+#define DESPERATE       20                      /*   none of its friends left standing about it, desperate */
+#define RALLY_LOUD      6                       /* A successor's rallying shout (a fight's din is 5) */
+
+static const unsigned char rankw[3] = { 2, 5, 10 };    /* A rank's weight (points): the rank and file, a captain, a lord
+                                                **   or a spiritual leader (its influence, a sixteenth of its skill
+                                                **   more; and its bonds' whole) */
+static const unsigned char falloff[FIELD_R + 1] = { 255, 255, 205, 171, 146, 128, 114, 102, 93 };   /* (An
+                                                **   influence's 256ths at each distance: four over the squares and
+                                                **   three) */
+static unsigned tb;                             /* (times') */
+static unsigned char krank[SND_KINDS];          /* (Each kind's rank: ranks') */
+static unsigned weeks;                          /* (The game's weeks gone) */
+static unsigned char l1, l2;                    /* (A record's leaders, chain's: its band's head, its faction's above it;
+                                                **   0xFF none) */
+static struct actor tp, tq;                     /* (The one reckoned for, and another about it: copied out) */
+static unsigned char gi;                        /* (The actor grab copies) */
+static unsigned char rj, rfallen, rgone;        /* (reckon's: the one reckoned for, the one fallen, the bond gone) */
+static unsigned char js, jc, jq;                /* (Its time served and its contact, 0-128 each, and its band's
+                                                **   familiar: their mean) */
+static unsigned char fw, fd;                    /* (An influence's weight, points, and its distance) */
+static int rf;                                  /* (The field as it's reckoned) */
+static signed char mf, mb;                      /* (The last reckoning's field and bonds, points) */
+static unsigned char nfr, ndown;                /* (And its friends standing about it, and down) */
+
+/* Each kind's rank, and the weeks gone (each entry's first: the part's data are its own while it's in) */
+static void ranks (void)
+{
+    static unsigned char k;
+
+    for (k = 0; k < nkinds && k < SND_KINDS; ++k) {
+        kx_get (k);
+        krank[k] = X.rank;
+    }
+    weeks = NOW_HI / WEEK_HI;
+}
+
+/* a times tb (16 bits: no library multiplying for the main RAM to keep) */
+static unsigned __fastcall__ times (unsigned char a)
+{
+    static unsigned r, s;
+
+    for (r = 0, s = a; tb; tb >>= 1, s <<= 1) {
+        if (tb & 1) {
+            r += s;
+        }
+    }
+    return r;
+}
+
+/* A bond's time (0-128): w weeks served as the game began, the game's weeks since on them, FULL_WEEKS at most */
+static unsigned char __fastcall__ tpart (unsigned char w)
+{
+    static unsigned t;
+
+    t = w + weeks;
+    return t >= FULL_WEEKS ? FULL_WEEKS : t;
+}
+
+/* Actor gi copied out (into t), the hub's header in the window */
+static void __fastcall__ grab (struct actor* t)
+{
+    hub_map (0);
+    memcpy (t, &HUB->actor[gi], sizeof *t);
+}
+
+/* Record q's rank: its kind's, or a successor's post's if it's known (see) */
+static unsigned char __fastcall__ rank_of (const struct den* q, unsigned char see)
+{
+    return see && D_RANK (q->flags) > krank[q->kind & (SND_KINDS - 1)] ? D_RANK (q->flags) : krank[q->kind & (SND_KINDS - 1)];
+}
+
+/* Record d's rank, its post's (the field's: an actor seen at its post) */
+static unsigned char __fastcall__ rrank (unsigned char d)
+{
+    hy_bank (pb);
+    d = rank_of (&POP->den[d], 1);
+    hub_map (0);
+    return d;
+}
+
+/* A successor's tenure (0-128): the weeks since it took its post (its serve the week it did) */
+static unsigned char __fastcall__ tenure (unsigned char w)
+{
+    w = (unsigned char) weeks - w;
+    return w > FULL_WEEKS ? FULL_WEEKS : w;
+}
+
+/* Record d's leaders (l1, l2): the nearest rank above its own in its lair (its band's head), and its faction's highest
+** above that (wherever it is); a dead one counted while it doesn't know of a loss (D_LOST), a successor at
+** its post only once it does; D its record's after, the hub's header in the window */
+static void __fastcall__ chain (unsigned char d)
+{
+    register struct den* q = POP->den;
+    static unsigned char i, b1, b2, r, r0, dead;
+
+    den_get (d);
+    b2 = r0 = rank_of (&D, 1);
+    b1 = 0xFF;
+    dead = D.flags & D_LOST ? D_DEAD : 0;       /* (Dead and known: no leader; and its successor known) */
+    l1 = l2 = 0xFF;
+    hy_bank (pb);
+    for (i = 0; i < hd.ndens; ++i, ++q) {
+        if (q->kind && q->fac == D.fac && i != d && !(q->flags & dead) && (r = rank_of (q, dead)) > r0) {
+            if (q->lid == D.lid && r < b1) {
+                b1 = r;                         /* (Its band's head: the nearest rank above it in its lair) */
+                l1 = i;
+            }
+            if (r > b2) {
+                b2 = r;                         /* (Its faction's: the highest above it, anywhere) */
+                l2 = i;
+            }
+        }
+    }
+    hub_map (0);
+    if (l1 != 0xFF && b2 <= b1) {
+        l2 = 0xFF;                              /* (Not above its band's head) */
+    }
+}
+
+/* The bond (points) to leader record l (0xFF none, or rgone: 0) of the one reckoned for (js, jc): the leader's rank's
+** weight by the time they've had together (the lesser of its service and the leader's own: a successor's, since it
+** took its post, but to its own band's) and how much they're together; D the one reckoned for's record */
+static unsigned char __fastcall__ bond (unsigned char l)
+{
+    register struct den* q;
+    static unsigned char t;
+
+    if (l == 0xFF || l == rgone) {
+        return 0;
+    }
+    hy_bank (pb);
+    q = &POP->den[l];
+    t = q->flags & D_PROM ? (q->lid == D.lid ? FULL_WEEKS : tenure (q->serve)) : tpart (q->serve);   /* (A successor's:
+                                                **   a new leader's, but to its own band, what they had with it) */
+    fw = rankw[rank_of (q, 1)];
+    hub_map (0);
+    tb = (t < js ? t : js) + jc;
+    return times (fw) >> 8;
+}
+
+/* A friend's influence fw (points) at fd, for the one reckoned for (turned: against it), its band's familiar the more */
+static void __fastcall__ by (unsigned char turned)
+{
+    tb = 128 + jq;
+    fw = times (fw) >> 8;
+    tb = falloff[fd];
+    fw = times (fw) >> 8;
+    rf += turned ? -fw : fw;
+}
+
+/* A foe's weight (points) against the one reckoned for: its influence fw, and an eighth of its might (power pw) over
+** the other's; wounded, half */
+static void __fastcall__ against (unsigned char pw)
+{
+    fw += pw > tp.power ? (unsigned char) (pw - tp.power) >> 3 : 0;
+    tb = falloff[fd];
+    fw = times (fw) >> 8;
+    rf -= fw;
+}
+
+/* Actor rj's heart (points): the field about it and its bonds, held to the book's band, the situation besides (a friend
+** fallen: rfallen the actor fallen, 0xFF none, or one lying senseless); rgone a leader's record whose bond's taken away
+** (0xFF none).  mf, mb, nfr after; K its kind's, the hub's header in the window */
+static signed char reckon (void)
+{
+    static unsigned char smart, nl, b;
+
+    gi = rj;
+    grab (&tp);
+    js = tpart (tp.serve);
+    jc = tp.contact >> 1;
+    jq = (js + jc) >> 1;                        /* (Its bonds about it: how familiar its band is) */
+    kind_get (akind[rj]);
+    l1 = l2 = 0xFF;
+    if ((smart = K.mind >= M_LOW) != 0) {
+        chain (tp.den);
+        if (D.flags & D_PROM) {
+            js = FULL_WEEKS;                    /* (A successor: its own service whole, the house's; its serve its post's
+                                                **   week, its tenure) */
+        }
+    }
+    rf = nfr = ndown = nl = 0;
+    for (gi = 0; gi < NACTORS; ++gi) {
+        grab (&tq);
+        if (gi == rj || !tq.name[0] || tq.sn != tp.sn || (fd = apart (tq.x - tp.x, tq.y - tp.y)) > FIELD_R) {
+            continue;
+        }
+        kind_get (akind[gi]);
+        fw = smart && K.mind >= M_LOW ? rankw[rrank (tq.den)] + (tq.lead >> 4) : 0;   /* (A mind
+                                                **   sways a mind: a beast feels only a foe's might, and its fellows'
+                                                **   falls) */
+        if (tq.mood & AM_BERSERK) {
+            fw <<= 1;                           /* (Berserk, twice; wounded, half) */
+        }
+        if (tq.mood & AM_HURT) {
+            fw >>= 1;
+        }
+        b = gi == rfallen || tq.doing == DO_DOWN ? 2 : tq.doing == DO_FLEE || fled[gi];   /* (Fallen, 2; fleeing) */
+        if (tq.faction == tp.faction || (akind[gi] == akind[rj] && REL (tp.faction, tq.faction) != AT_HOSTILE)) {
+            if (b == 2) {
+                ++ndown;                        /* (A friend fallen: its influence gone, the book's bad situation) */
+            } else {
+                by (b);                         /* (A friend: fleeing, its influence turned) */
+                if (!b) {
+                    ++nfr;
+                    nl |= tq.den == l1 || tq.den == l2;
+                }
+            }
+        } else if (!b && REL (tp.faction, tq.faction) == AT_HOSTILE) {
+            against (tq.power);
+        }
+    }
+    hub_map (0);
+    if (!pcdead && pcs == tp.sn && (fd = apart (pcx - tp.x, pcy - tp.y)) <= FIELD_R) {
+        fw = smart ? rankw[RK_FILE] + (HUB->pcsum.lead >> 4) : 0;   /* (The character's: the rank and file's, its own
+                                                **   skill) */
+        if (tp.attitude == AT_ALLIED) {
+            by (0);
+        } else if (tp.attitude <= AT_UNFRIENDLY && !pchelp) {
+            against (HUB->pcsum.power);
+        }
+    }
+    b = 0;
+    if (smart) {
+        if (nl && tp.contact < 255 - CONTACT_UP) {
+            HUB->actor[rj].contact = tp.contact + CONTACT_UP;  /* (With its leader again: the bond the stronger) */
+        }
+        b = bond (l1) + bond (l2);
+    }
+    rf = rf < -FIELD_MAX ? -FIELD_MAX : rf > FIELD_MAX ? FIELD_MAX : rf;
+    mf = rf;
+    mb = b;
+    HUB->actor[rj].bonds = b;                   /* (Its bonds as last reckoned: the hub's, to see) */
+    rf += b;
+    rf = rf < -FIELD_MAX ? -FIELD_MAX : rf > FIELD_MAX ? FIELD_MAX : rf;
+    if (ndown) {
+        rf -= nfr ? SEEN_SLAIN : DESPERATE;     /* (A friend fallen: the book's bad situation; none left standing about
+                                                **   it, desperate: beyond the field's band) */
+    }
+    kind_get (akind[rj]);
+    return tp.mood & AM_STEADY ? FIELD_MAX : rf;   /* (Steady: whole) */
+}
+
+/* Every actor's heart anew (rfallen the one fallen: 0xFF none) */
+static void hearts (void)
+{
+    rgone = 0xFF;
+    for (rj = 0; rj < NACTORS; ++rj) {
+        if (rj != rfallen && (hub_map (0), HUB->actor[rj].name[0])) {
+            HUB->actor[rj].heart = reckon () / 5;
+        }
+    }
+}
+
+/* Actor rj's courage tested (RS_MORALE, in the task's own slot): its heart (rfallen, rgone: reckon's), why (MR_*): broken
+** (or shaken, a shy kind), it flees; berserk, so its fellows see it */
+static void __fastcall__ courage (unsigned char why)
+{
+    rq.steps = reckon () / 5;
+    if (tp.mood & AM_STEADY) {
+        return;                                 /* (Steady: untested) */
+    }
+    rq.a = why;
+    rq.b = mf;
+    rq.c = mb;
+    rq.w1 = rgone != 0xFF ? rgone : rfallen;
+    rq.w2 = l1 | l2 << 8;
+    ask (RS_MORALE, rj + 1, 0);
+    if (rq.result == M_BROKEN || (rq.result == M_CAUTIOUS && (K.flags & K_SHY))) {
+        fled[rj] = FLEE_T;                      /* (Its doing and its attitude its next turn's: fleeing) */
+    } else if (rq.result == M_BERSERK) {
+        HUB->actor[rj].mood |= AM_BERSERK;
+    }
+}
+
+/* Actor k fallen (its high bits how, FF_* << 4: dead, else senseless): each of its kin among the actors (its kind, its
+** faction) that knows of it (hears the fight's din: within its hearing of a fight's loudness, as it hears another's
+** noise; its sight never reaches further; not one senseless) tests its courage (not one fleeing already): its friend's
+** fall the book's bad situation (desperate, none left standing about it), the fallen's influence gone; its leader's
+** (its band's head, its faction's), its bond to it gone (dead: known lost from then, and its successor known).  Dead,
+** its post taken (succeed).  Then every actor's heart anew.  K its own after */
+void __fastcall__ s_dismay (unsigned char k)
+{
+    static unsigned char j, dead, why;
+    static struct actor f;
+
+    dead = k & (FF_A_DEAD | FF_D_DEAD) << 4;   /* (Dead, else senseless) */
+    rfallen = gi = k & 7;
+    ranks ();
+    grab (&f);
+    for (j = 0; j < NACTORS; ++j) {
+        gi = j;
+        grab (&tp);
+        if (j == rfallen || !tp.name[0] || (akind[j] != akind[rfallen] && tp.faction != f.faction) || tp.sn != f.sn ||
+            tp.doing == DO_DOWN || (kind_get (akind[j]), apart (tp.x - f.x, tp.y - f.y) > (unsigned) K.hear * FALL_LOUD / 2)) {
+            continue;                           /* (Unheard, or senseless: unfelt, its bond to it holding, till it's
+                                                **   known) */
+        }
+        why = MR_FELL;
+        if (K.mind >= M_LOW) {
+            chain (tp.den);
+            if (f.den == l1 || f.den == l2) {
+                why = MR_LEADER;
+                if (dead) {
+                    D.flags |= D_LOST;          /* (Known lost: no bond to it from now) */
+                    den_put (tp.den);
+                }
+            }
+        }
+        if (!fled[j]) {
+            rj = j;                             /* (Fleeing already: it knows, and flees on) */
+            rgone = f.den;
+            courage (why);
+        }
+    }
+    if (dead) {
+        den_get (f.den);
+        D.flags |= D_DEAD;                      /* (Dead now, for its successors and the hearts: killed's after) */
+        den_put (f.den);
+        succeed (f.den);                        /* (Its post taken, if it held one: the new leader's from now) */
+    }
+    hearts ();
+    kind_get (akind[rfallen]);
+}
+
+
+/* Actor k's heart as it engages (decide's: the field about it and its bonds, its steps the world's blow carries to the
+** referee, its courage tested with them as it's wounded); K its own after */
+void __fastcall__ s_heart (unsigned char k)
+{
+    rj = k;
+    rfallen = rgone = 0xFF;
+    ranks ();
+    HUB->actor[k].heart = reckon () / 5;
+}
+
+/* Record l (0xFF none) if it's dead, else 0xFF */
+static unsigned char __fastcall__ dead_of (unsigned char l)
+{
+    if (l != 0xFF) {
+        hy_bank (pb);
+        l = POP->den[l].flags & D_DEAD ? l : 0xFF;
+        hub_map (0);
+    }
+    return l;
+}
+
+/* The hook for a loss told (a runner's word, a survivor's, to come: through a stub, SWFN told, 6): actor j learns of
+** its leaders' deaths it didn't know of: known lost from then (D_LOST), its courage tested at once (MR_TOLD), its
+** bond to the first of them gone.  K its own after */
+void __fastcall__ s_told (unsigned char j)
+{
+    static unsigned char d;
+
+    rj = j;
+    rfallen = 0xFF;
+    ranks ();
+    hub_map (0);
+    chain (d = HUB->actor[j].den);
+    if ((rgone = dead_of (l1)) == 0xFF) {
+        rgone = dead_of (l2);
+    }
+    if (rgone != 0xFF) {
+        D.flags |= D_LOST;
+        den_put (d);
+        courage (MR_TOLD);
+    }
+    kind_get (akind[j]);
+}
+
+
+#pragma register-vars (pop)
+#pragma bss-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 7 again: the bonds aged (part 6's room, 2026-10-30; not part 5, the hunters' own, copied in at every scent) */
+#pragma code-name (push, "SW7CODE")
+#pragma rodata-name (push, "SW7RODATA")
+#pragma bss-name (push, "SW7RODATA")
+#pragma register-vars (push, on)
+
+/* The bonds aged by the clock (roam's, a day or more gone since they last were): each record not an actor (an
+** actor's its own while it is, each time it's near its leader), living with its leader (a lair with its faction's
+** leader in it: L_LEADER) its contact whole (with it every day); else the less, an eighth a day (eight days at most) */
+void s_age (void)
+{
+    register struct den* q;
+    static unsigned lids[8];
+    static unsigned char i, j, m, dn;
+
+    if (!aged) {
+        aged = NOW_HI;                          /* (The first time: from now) */
+        return;
+    }
+    for (dn = 0; NOW_HI - aged >= DAY_HI; ++dn) {
+        aged += DAY_HI;
+    }
+    dn = dn > 8 ? 8 : dn;
+    for (i = m = 0; i < hd.nlairs; ++i) {
+        lair_get (i);
+        if (L.kind && (L.flags & L_LEADER) && m < 8) {
+            lids[m++] = L.id;
+        }
+    }
+    hy_bank (pb);
+    for (i = 0, q = POP->den; i < hd.ndens; ++i, ++q) {
+        if (q->kind && !(q->flags & (D_DEAD | D_ACTOR))) {
+            for (j = 0; j < m && lids[j] != q->lid; ++j) {
+            }
+            if (j < m) {
+                q->contact = 255;               /* (With its leader every day: as much as can be) */
+            } else {
+                for (j = dn; j; --j) {
+                    q->contact -= q->contact >> 3;
+                }
+            }
+        }
+    }
+    hub_map (0);
+}
+
+#pragma register-vars (pop)
+#pragma bss-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 7: succession (the user's, 2026-10-30: part 6's room) */
+#pragma code-name (push, "SW7CODE")
+#pragma rodata-name (push, "SW7RODATA")
+#pragma bss-name (push, "SW7RODATA")
+
+/* A leader dead (record x, its rank above the rank and file): its post taken by the most influential of those
+** directly below it (the user's, 2026-10-30): of its faction's next rank down if it was the faction's highest (none
+** left as high: the faction's leader), else of its own lair's (its band's head); the next rank down from that if none's
+** left; minds only.  Influence its rank's weight and a sixteenth of its skill (an actor's, the referee's; a record not
+** met, none), ties by its might (an actor's power and its arms and armour; a record not met, none), then by the
+** dice.  The successor takes the post (its rank, D_RANK: its weight) and its tenure begins (D_PROM: a new leader's
+** bonds, but to its own band); an actor at its post rallies its fellows, told (I_GOTO where it stands: DE_RALLY, a
+** shout, the UI's words).  The post a successor left (a captain's made king) is filled the same way, from its own
+** band, and so on down the chain.  Those who know of the death know of the successors; those who don't, not till
+** they're told.  Part 7's (part 6's room): its kinds' ranks its own */
+void __fastcall__ s_succeed (unsigned char x)
+{
+    static const unsigned char rankw7[3] = { 2, 5, 10 };   /* (Part 6's rankw) */
+    static unsigned char i, r, n, ob, lev, llev, fac, top, best, ba, k, key, bkey, mt, bmt, ties, pass, kmind[SND_KINDS], kr[SND_KINDS];
+    static unsigned lid;
+
+    for (i = 0; i < nkinds && i < SND_KINDS; ++i) {
+        kind_get (i);
+        kmind[i] = K.mind >= M_LOW;
+        kx_get (i);
+        kr[i] = X.rank;
+    }
+    den_get (x);
+    r = (D_RANK (D.flags) > kr[D.kind & (SND_KINDS - 1)] ? D_RANK (D.flags) : kr[D.kind & (SND_KINDS - 1)]);
+    fac = D.fac;
+    top = 1;
+next:                                           /* (Post r, left by x: its faction's leader's if top, else its band's head's) */
+    lid = D.lid;
+    lev = llev = best = ba = 0xFF;
+    for (pass = 0; r && pass < 2; ++pass) {     /* (Pass 0: its faction's highest still?  The ranks below it, its
+                                                **   faction's and its lair's.  Pass 1: the best of those directly
+                                                **   below it) */
+        for (i = 0; i < hd.ndens; ++i) {
+            den_get (i);
+            if (!D.kind || i == x || D.fac != fac || (D.flags & D_DEAD) || !kmind[D.kind & (SND_KINDS - 1)]) {
+                continue;
+            }
+            n = (D_RANK (D.flags) > kr[D.kind & (SND_KINDS - 1)] ? D_RANK (D.flags) : kr[D.kind & (SND_KINDS - 1)]);
+            if (!pass) {
+                if (n >= r) {
+                    top = 0;
+                } else {
+                    lev = lev == 0xFF || n > lev ? n : lev;
+                    llev = D.lid == lid && (llev == 0xFF || n > llev) ? n : llev;
+                }
+                continue;
+            }
+            if (n != lev || (!top && D.lid != lid)) {
+                continue;
+            }
+            key = rankw7[n] + 64;               /* (Fit to take it now: not fleeing, nor senseless) */
+            mt = 0;
+            for (k = 0; k < NACTORS; ++k) {
+                if (HUB->actor[k].name[0] && HUB->actor[k].den == i) {
+                    key += (HUB->actor[k].lead >> 4) - ((unsigned char) (HUB->actor[k].doing - DO_FLEE) < 2 || fled[k] ? 64 : 0);   /* (Met:
+                                                **   its own, the referee's; one broken or senseless only if none's
+                                                **   fit) */
+                    mt = HUB->actor[k].power + (HUB->agear[k] & (AG_ARMED | AG_ARMOUR | AG_MAIL)) * 2;
+                    break;
+                }
+            }
+            if (best == 0xFF || key > bkey || (key == bkey && mt > bmt)) {
+                best = i;
+                ba = k;
+                bkey = key;
+                bmt = mt;
+                ties = 1;
+            } else if (key == bkey && mt == bmt && !random (++ties)) {
+                best = i;                       /* (Alike: the dice) */
+                ba = k;
+            }
+        }
+        lev = top ? lev : llev;
+    }
+    if (best == 0xFF) {
+        return;
+    }
+    den_get (best);
+    ob = D_RANK (D.flags) > kr[D.kind & (SND_KINDS - 1)] ? D_RANK (D.flags) : kr[D.kind & (SND_KINDS - 1)];
+    D.flags = (D.flags & 0x9F) | r << 5 | D_PROM;
+    D.serve = (unsigned char) (NOW_HI / WEEK_HI);            /* (Its tenure from now) */
+    den_put (best);
+    if (ba < NACTORS) {
+        HUB->actor[ba].mood |= AM_LEADS;        /* (At its post, as its fellows see it) */
+        HUB->actor[ba].serve = (unsigned char) (NOW_HI / WEEK_HI);   /* (Its record's, the hub's the truth while it's an
+                                                **   actor) */
+    }
+    if (ba < NACTORS && HUB->actor[ba].doing < DO_FLEE) {
+        im.x[0] = im.x[1] = 0xFF;               /* (At its post: it rallies its fellows, a shout where it stands) */
+        im.w1 = HUB->actor[ba].x;
+        im.w2 = HUB->actor[ba].y;
+        im.a = DE_RALLY;
+        im.b = RALLY_LOUD;
+        post (I_GOTO, ba + 1);
+    }
+    if (ob) {
+        x = best;                               /* (The post it left, a band's head's, filled the same way, and on down
+                                                **   the chain) */
+        r = ob;
+        top = 0;
+        den_get (x);
+        goto next;
+    }
+}
+
+#pragma bss-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 9: the day (DENIZENS.md's daily life, 2026-10-31; HOUSE.md's, for review): what each denizen does by the
+** game's clock and its kind's day (kinds.txt's day and work: a diurnal one asleep at night, a nocturnal one by day, a
+** crepuscular one at midday and midnight; a lair that keeps watches by thirds, each third on watch four hours,
+** asleep four, about four, by turns, so a third's always on watch, walking its rounds, relieved by the next as the
+** watch changes; a meal as it wakes, and another halfway through a long day; at work in its work's room, if its
+** lair's chunk has one).  Decided lazily, by the clock, never polled: a record away from the character as it's due
+** (roam's: a sleeper's due as it wakes, a meal's as it ends, so none's looked at meanwhile), an actor as it decides
+** (decide's, as it's free and about nothing else); one made an actor asleep comes asleep (s_enlist's).  The day's
+** hour the clock's and the hour the game began at (hour0: the house's, the character goes down at dusk; a test's
+** scene the environment's dq0hour, or a poke, the label's: 0x80 and more, no day, every one about as ever).  And the actors' coarse moves and a cornered
+** one's dart (the main RAM's room) */
+
+#define DAY_START       18                      /* The hour the game begins (the house's: at dusk) */
+static unsigned char hour0, hset;              /* (hset: hour0 had, as the first's asked: the environment's) */
+static unsigned smins;                          /* (sched's: the minutes till what it does changes) */
+static unsigned long snow;                      /* (sched's: the clock it last reckoned the day's minute at, m0, and
+                                                **   the day's number, dday) */
+static unsigned m0, dday;
+static unsigned rhx, rhy, tx, ty;               /* (room_at's: the home whose chunk it looks in, the square found) */
+static unsigned char dsn;
+static unsigned char pway[NACTORS];             /* (Each one's room on its rounds, the next it walks to: its lair's
+                                                **   chunk's rooms in turn) */
+#define TALK_LOUD       3                       /* (Those on watch talking as they go: heard as a squeak is) */
+#define SNORE_LOUD      2
+#define ALARM_LOUD      6                       /* (A body found: the alarm's shout, as loud as a rally) */
+static unsigned char __fastcall__ pastime (unsigned id);   /* (Below) */
+#define SOCIAL          0x3E                    /* (The pastimes a lair's at leisure share: dice to drink, PT_SOCIAL's) */
+
+#pragma code-name (push, "SW9CODE")
+#pragma rodata-name (push, "SW9RODATA")
+
+static const unsigned cyc[3][3] = {             /* (A day's period, its waking and its waking hours, minutes from
+                                                **   midnight: diurnal, nocturnal, crepuscular) */
+    { 1440, 360, 960 }, { 1440, 960, 960 }, { 720, 240, 360 }
+};
+
+/* What a denizen of kind k (its ways X, copied out; K its kind's record, the caller's), number id, does now by its day
+** (SC_*), smins the minutes till it changes: each a little later than its fellows (its number's, up to half an hour), the same whenever it's asked */
+unsigned char __fastcall__ s_sched (unsigned char k, unsigned id)
+{
+    const unsigned* c;
+    unsigned m, t, p;
+
+    kx_get (k);
+    if (!hset) {
+        hour ();                                /* (The hour the game began, its first: part 10's) */
+    }
+    if (hour0 & 0x80) {
+        return SC_ABOUT;                        /* (No day: a test's scene, every one about as ever) */
+    }
+    if (now != snow) {                          /* (The day's minute, once a moment: the records due together) */
+        snow = now;
+        m0 = (unsigned) ((snow = now / 600 + hour0 * 60) % 1440);
+        dday = (unsigned) (snow / 1440);
+        snow = now;
+    }
+    m = (m0 + 1440 - (id * 13 & 31)) % 1440;
+    smins = 240;
+    if (X.day == DY_ALWAYS) {
+        return X.work != 0xFF ? SC_WORK : SC_ABOUT;
+    }
+    if (X.day == DY_WATCHES) {                  /* (Its third: id's, on watch the watches of its own, 0-4 and 12-16
+                                                **   o'clock the first's, asleep the next, about the next) */
+        t = (m + 720 - 240 * (id % 3)) % 720;
+        if (t < 480) {
+            smins = 240 - t % 240;
+            return t < 240 ? SC_WATCH : SC_SLEEP;
+        }
+        t -= 480;
+        p = 240;
+    } else {
+        c = cyc[X.day - DY_DAY];
+        t = (m + 1440 - c[1]) % c[0];
+        if (t >= (p = c[2])) {
+            smins = c[0] - t;
+            return SC_SLEEP;
+        }
+    }
+    if (t < 60 && KF_NATURE (K.form) == NA_FOLK) {   /* (Its meal as it wakes, an hour; and halfway through a long
+                                                **   day: folk's, at their larder; a beast's its prey, its want's) */
+        smins = 60 - t;
+        return SC_MEAL;
+    }
+    if (X.past && (p == 240 ? t < 180 : t >= p - 240)) {   /* (Its leisure: a watch-keeper's two hours after its free
+                                                **   watch's meal; a long day's last four hours; HOUSE.md's) */
+        smins = (p == 240 ? 180 : p) - t;
+        return SC_LEISURE + pastime (id);
+    }
+    if (p >= 720) {
+        if (t - p / 2 < 60 && KF_NATURE (K.form) == NA_FOLK) {
+            smins = p / 2 + 60 - t;
+            return SC_MEAL;
+        }
+        if (t < p / 2) {
+            p /= 2;
+        } else if (X.past) {
+            p -= 240;
+        }
+    }
+    smins = p - t;
+    return X.work != 0xFF ? SC_WORK : SC_ABOUT;
+}
+
+/* The pastime of denizen D (number id; its kind's ways X) at its leisure today: one of its kind's (X.past), by its
+** number and the day's; a social one (dice to drink) its lair's, the same for all of it, by its lair's number and the
+** day's, so they're at it together.  Not the dice */
+static unsigned char nb;                        /* (nth's: the pastimes, a bit each, and which of them) */
+static unsigned ni;
+static unsigned char nth (void)
+{
+    unsigned char p, n, m;
+
+    for (n = 0, m = 1; m; m <<= 1) {
+        n += (nb & m) != 0;
+    }
+    for (ni %= n, p = 0, m = 1; !(nb & m) || ni--; ++p, m <<= 1) {
+    }
+    return p;
+}
+
+static unsigned char __fastcall__ pastime (unsigned id)
+{
+    unsigned char p;
+
+    nb = X.past;
+    ni = id + dday;
+    if (PT_SOCIAL (p = nth ())) {
+        nb &= SOCIAL;
+        ni = D.lid + dday;
+        p = nth ();
+    }
+    return p;
+}
+
+/* A room of the chunk home (rhx, rhy, on stratum dsn) is in: of use u, else (u 0xFF) its j'th, round; its square v (a
+** denizen's number's: each its own place in it; 0xFF its middle) in tx, ty.  0 if there's none, or the chunk isn't
+** made (never made for it) */
+static unsigned char __fastcall__ room_at (unsigned char u, unsigned char j, unsigned char v)
+{
+    struct stratum* s = &STRATUM (dsn);
+    struct room* r;
+    unsigned ox = rhx - s->x0, oy = rhy - s->y0;
+    unsigned char n;
+
+    if (!made (dsn, ox >> CW_BITS, oy >> CW_BITS)) {
+        return 0;
+    }
+    ox = rhx - (ox & (CW - 1));
+    oy = rhy - (oy & (CW - 1));
+    at (dsn, ox, oy);
+    if ((n = C->nrooms) != 0 && u != 0xFF) {
+        for (j = 0; j < n && C->room[j].kind != u; ++j) {
+        }
+        n = j < n ? n : 0;
+    }
+    if (n) {
+        r = &C->room[j % n];
+        tx = ox + r->x + (v == 0xFF ? r->w / 2 : v % r->w);
+        ty = oy + r->y + (v == 0xFF ? r->h / 2 : (v >> 3) % r->h);
+    }
+    hub_map (0);
+    return n != 0;
+}
+
+/* Where denizen D (number v; its home rhx, rhy on dsn; its kind's ways X) does s, its day's (SC_*): tx, ty: its work's
+** room; on its rounds, its j'th; at a social pastime, a room its lair's at leisure gather in (its chunk's hall,
+** guardroom, barracks or quarters, the first it has; else its home); else its home.  0 if there's no such room (work,
+** rounds: about instead) */
+static const unsigned char gather[4] = { U_HALL, U_GUARDROOM, U_BARRACKS, U_QUARTERS };
+static unsigned char __fastcall__ target (unsigned char s, unsigned char j, unsigned char v)
+{
+    tx = rhx;
+    ty = rhy;
+    if (s == SC_WORK) {
+        return room_at (X.work, 0, v);
+    }
+    if (s == SC_WATCH) {
+        return room_at (0xFF, j, 0xFF);
+    }
+    if (s > SC_LEISURE + PT_READ && s < SC_LEISURE + PT_MEND) {
+        for (j = 0; j < 4 && !room_at (gather[j], 0, v); ++j) {
+        }
+    }
+    return 1;
+}
+
+/* Actor k (the copy a; D its record) on its lair's stratum: its day's doing (aact: SC_*) and its place (atx, aty), till
+** what it does changes (aday), its rounds' room by its pway; else about.  Part 10's daily asks it (as its day changes,
+** and at each room of its rounds) */
+unsigned char __fastcall__ s_plan (unsigned char k)
+{
+    unsigned char s = SC_ABOUT;
+
+    aday[k] = (unsigned) (now >> 8) + 4;        /* (About a while: its day asked again) */
+    if ((unsigned) (aday[k] - drunk[k]) > DRUNK_T + 4) {
+        HUB->actor[k].mood &= ~AM_DRUNK;        /* (Its drink worn off, an hour after its last cup) */
+    }
+    if (a.sn == D.lsn) {
+        s = s_sched (akind[k], D.id);
+        dsn = a.sn;
+        rhx = ahx[k];
+        rhy = ahy[k];
+        if (!s || target (s, pway[k], D.id)) {
+            aday[k] += (unsigned) ((unsigned long) smins * 600 >> 8) - 4;
+        } else {
+            s = SC_ABOUT;
+        }
+    }
+    atx[k] = tx;
+    aty[k] = ty;
+    return aact[k] = s;
+}
+
+/* Denizen D (a record, or actor k's: NACTORS none), folk, sits down to a meal, its day's (as it begins it: once a
+** meal): fed, at its larder (its want's: the record's ate, an actor's aate, now) */
+static void __fastcall__ meal (unsigned char k)
+{
+    if (k < NACTORS) {
+        aate[k] = NOW_U;
+    } else {
+        D.ate = NOW_U;
+    }
+}
+
+/* The hour the game began at (hour0), as the day's first asked (sched's): the environment's dq0hour, a test's scene,
+** else dusk (the house's).  Part 3's (part 9's room, and 10's) */
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
+void s_hour (void)
+{
+    static struct hy_regs r;
+    static char b[4];
+    char* p;
+
+    hset = 1;
+    hour0 = DAY_START;
+    r.a = 0xFF;
+    r.r[0] = (unsigned) "dq0hour";
+    r.r[1] = (unsigned) b;
+    r.r[2] = 3;                                 /* (r.r[3] 0: BSS) */
+    if (!hy_call (HY_ENV_GET, &r)) {
+        for (hour0 = 0, p = b; *p >= '0' && *p <= '9'; ++p) {
+            hour0 = hour0 * 10 + *p - '0';
+        }
+    }
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* Actor k (the copy a) on its rounds, come to a room of them: a body of its own faction's lying near (a record dead,
+** on its stratum, within 4 squares), not found before (its record's D_MET, every dead one's as it was an actor,
+** cleared), found: 1, the alarm raised (the caller's shout).  Its faction's attitude to the character a step worse
+** (the house's: the intruder suspected), and each of its faction's actors' too, each woken, alerted (facing the
+** shout, sensing again: a while still); a leader's body, each told of its leaders' deaths (part 6's hook, told: known
+** lost, its courage tested).  K its own after.  Part 10's (asked only while its faction has a body not found: unf) */
+#pragma code-name (push, "SW10CODE")
+#pragma rodata-name (push, "SW10RODATA")
+unsigned char __fastcall__ s_found (unsigned char k)
+{
+    struct den* r = POP->den;
+    struct actor* q;
+    unsigned char i, f = a.faction & (NFACT - 1), lead;
+
+    for (i = 0; i < hd.ndens; ++i, ++r) {
+        hy_bank (pb);
+        if ((r->flags & (D_DEAD | D_MET)) == (D_DEAD | D_MET) && r->fac == a.faction && r->sn == a.sn &&
+            apart (r->x - a.x, r->y - a.y) <= 4) {
+            r->flags &= ~D_MET;
+            --unf[f];
+            lead = D_RANK (r->flags) || (kx_get (r->kind), X.rank);
+            if (hd.fatt[f] > AT_HOSTILE) {
+                --hd.fatt[f];
+            }
+            for (i = 0, q = HUB->actor; i < NACTORS; ++i, ++q) {
+                hub_map (0);
+                if (q->name[0] && q->faction == a.faction && (unsigned char) (q->doing - DO_FIGHT) >= 3) {
+                    if (q->attitude > AT_HOSTILE && q->attitude < AT_ALLIED) {
+                        --q->attitude;
+                    }
+                    alert[i] = now + 100;
+                    sgen[i] = 0;
+                    if (i != k) {
+                        rface = bearing (a.x - q->x, a.y - q->y);
+                        rouse (i, 1);
+                    }
+                    if (lead) {
+                        told (i);
+                    }
+                }
+            }
+            a.attitude = HUB->actor[k].attitude;
+            settle ();
+            kind_get (akind[k]);
+            return 1;
+        }
+    }
+    hub_map (0);
+    return 0;
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* Record D (its kind's K), out but not an actor, moved by its day as it's due (roam's: lim squares about its home it
+** may go, 0 none, off its lair's stratum): asleep at its bed or at its meal (its lair's home, or a square beside it),
+** due again as it wakes or its meal's done; at leisure where its pastime's had (target's), due as it ends; at work in its work's room; on watch, in the room of its rounds the clock
+** says; else about, a square of its range, as ever (the same dice).  1 if it's come near the character */
+unsigned char __fastcall__ s_wander (unsigned char lim)
+{
+    unsigned char s, j, n = 0;
+    unsigned x, y;
+
+    s = sched (D.kind, D.id);
+    dsn = D.sn;
+    rhx = tx = D.hx;
+    rhy = ty = D.hy;
+    if (!target (s, (unsigned) (now >> 11) + D.id, D.id)) {
+        s = SC_ABOUT;                           /* (No such room made: about) */
+    }
+    x = tx;
+    y = ty;
+    if (s == SC_ABOUT) {
+        x = D.hx + random (2 * lim + 1) - lim;
+        y = D.hy + random (2 * lim + 1) - lim;
+    } else if (s == SC_MEAL && apart (D.x - x, D.y - y) > 1) {
+        meal (NACTORS);
+    }
+    for (j = s == SC_ABOUT ? 8 : 0; lim && j < 9; ++j) {   /* (Its place, or a square beside it) */
+        if (x == D.x && y == D.y) {
+            break;                              /* (There already) */
+        }
+        if (made_at (D.sn, x, y) && open_sq (at (D.sn, x, y)) && (!deep_at (D.sn, x, y) ||
+            (kx_get (D.kind), wades (X.water, D.sn, x, y))) && !taken (0xFF, x, y) && !rec_on (D.sn, x, y)) {
+            D.x = x;
+            D.y = y;
+            D.face = random (4) * 2;
+            n = D.sn == pcs && apart (x - pcx, y - pcy) <= ACT_R + 16;    /* (Near the character now) */
+            im.x[1] = D.kind;                   /* (Its passing: the world's traces, kept where it holds the chunk) */
+            im.x[2] = D.sn;
+            im.w1 = x;
+            im.w2 = y;
+            im.a = D.face;
+            im.b = 0;                           /* (A passing, no stay) */
+            trodden ();
+            break;
+        }
+        x = tx + head_x[(j + D.id) & 7];
+        y = ty + head_y[(j + D.id) & 7];
+    }
+    x = pcrest ? 10 * ROAM_T : ROAM_T;          /* (The character resting: ten times the while, the long durations'
+                                                **   coarser ticks) */
+    D.ready = now + (s == SC_SLEEP || s == SC_MEAL || s >= SC_LEISURE ? (unsigned long) smins * 600 : x + random (x));
+    return n;
+}
+
+/* Actor k (the copy a, its kind's K) by its day, as it's about nothing else (decide's: nothing sensed, no foe, no
+** noise heard), on its lair's stratum: to its bed and asleep there (its home), snoring now and then; to its meal there;
+** to its work's room and at work; on watch, walking its rounds (its lair's chunk's rooms in turn, a fellow on watch
+** near talked to as it gets to each); out of the character's sight at the turns pace, coarsely, a few squares at a
+** time.  Its step, 0xFE a wait (wt), or 0xFF (about: decide's own idle ways, as ever) */
+#pragma code-name (push, "SW10CODE")
+#pragma rodata-name (push, "SW10RODATA")
+unsigned char __fastcall__ s_daily (unsigned char k)
+{
+    struct actor* q;
+    unsigned char s, d, j, was;
+
+    hub_map (0);
+    q = &HUB->actor[k];
+    was = q->doing;
+    if ((int) (aday[k] - (unsigned) (now >> 8)) <= 0) {
+        den_get (a.den);
+        plan (k);                               /* (Its day, and its place: part 9's, as it changes) */
+    }
+    if ((s = aact[k]) == SC_ABOUT || (s == SC_SLEEP && (int) (upto[k] - (unsigned) (now >> 8)) > 0)) {
+        return 0xFF;                            /* (About; or woken a while, up) */
+    }
+    if (s == SC_LEISURE + PT_DRINK) {
+        q->mood |= AM_DRUNK;                    /* (At its cups: in drink a while after, doze's) */
+        drunk[k] = (unsigned) (now >> 8);
+    }
+    a.doing = s + DO_SLEEP - SC_SLEEP;
+    d = 0xFF;
+    if (apart (a.x - atx[k], a.y - aty[k]) > 1 + (s >= SC_WORK && s != SC_WATCH)) {
+        if (s != SC_WATCH) {
+            a.doing = DO_ROAM;                  /* (On its way: about its business) */
+        }
+        refx = atx[k];
+        refy = aty[k];
+        if (turns && !(*at (a.sn, a.x, a.y) & T_VIS)) {
+            for (j = 0; j < 4 && (d = step_for (k, 2 * K.range + 8, S_TOWARD)) != 0xFF; ++j) {
+                a.x += dir_x[d];                /* (Unseen: a few squares at once, of no time, as coarse's) */
+                a.y += dir_y[d];
+                a.face = DH (d);
+                im.w1 = DH (d) | STEP_COARSE;
+                im.w2 = 1;
+                act (I_STEP, k);
+            }
+            d = j ? 0xFE : 0xFF;
+            wt = pcrest ? 6000 + random (6000) : 60 + random (60);
+        } else {
+            d = step_for (k, 2 * K.range + 8, S_TOWARD);
+        }
+        refx = pcx;
+        refy = pcy;
+        if (d != 0xFF) {
+            return d;
+        }
+        a.doing = s + DO_SLEEP - SC_SLEEP;      /* (No way nearer: there, as near as it gets; on watch, on to the
+                                                **   next room) */
+    }
+    if (s == SC_WATCH && unf[a.faction & (NFACT - 1)] && found (k)) {
+        d = DE_ALARM;                           /* (A body found: the alarm raised) */
+    } else if (s == SC_WATCH) {
+        ++pway[k];                              /* (On to the next room: its place asked again) */
+        aday[k] = (unsigned) (now >> 8);
+        hub_map (0);
+        for (j = 0, q = HUB->actor; j < NACTORS; ++j, ++q) {
+            if (j != k && q->name[0] && q->doing == DO_GUARD && q->faction == a.faction && q->sn == a.sn &&
+                apart (q->x - a.x, q->y - a.y) <= 3 && !random (2)) {
+                d = DE_TALK;                    /* (A fellow on watch near: a word with it as they go) */
+            }
+        }
+    } else if (s == SC_MEAL && was != DO_EAT) {
+        aate[k] = NOW_U;                        /* (Fed, at its larder: its want's) */
+    } else if (s == SC_SLEEP && !random (4)) {
+        d = DE_SNORE;
+    } else if (s > SC_LEISURE + PT_READ && s < SC_LEISURE + PT_MEND && !random (3)) {
+        d = s - SC_LEISURE + DE_PASTIME;        /* (Its pastime heard: dice rattling, a song, voices ...) */
+    }
+    if (d != 0xFF) {                            /* (Heard, or seen: where it stands, as a rally's, the world's) */
+        im.x[0] = im.x[1] = 0xFF;
+        im.w1 = a.x;
+        im.w2 = a.y;
+        im.a = d;
+        im.b = d == DE_ALARM ? ALARM_LOUD : d == DE_TALK || d >= DE_PASTIME + PT_TALK ? TALK_LOUD : SNORE_LOUD;
+        post (I_GOTO, k + 1);
+    }
+    wt = (s == SC_SLEEP ? 150 : s == SC_WATCH ? 20 : 100) + random (100);
+    if (pcrest) {
+        wt *= 10;                               /* (The character resting: the coarser ticks) */
+    }
+    return 0xFE;
+}
+
+/* Actor k at leisure (was: its doing, DO_LEISURE + its pastime) risen to act (decide's: it's sensed the character, or
+** a foe, or flees): its pastime let go, where it stands (DE_UP + its pastime: "The bandit lets the dice fall."), seen
+** (the UI's; heard, nothing), as a rally's */
+void __fastcall__ s_roused (unsigned char k, unsigned char was)
+{
+    im.x[0] = im.x[1] = 0xFF;
+    im.w1 = a.x;
+    im.w2 = a.y;
+    im.a = was - DO_LEISURE + DE_UP;
+    im.b = 1;
+    post (I_GOTO, k + 1);
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)

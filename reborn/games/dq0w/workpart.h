@@ -181,6 +181,14 @@ static void __fastcall__ spring (unsigned char on)
     trap_told (o);
     if (o == TO_SPRUNG && k < TK_GAS) {
         harm (HC_STRIKE, trap_harm[k], trap_dice[k], wk.tq.power);
+#ifdef W_POISON
+        if (k == TK_DARTS && HUB->slot[SLOT_WORLD].b && !((wk.tx ^ wk.ty) & 3)) {
+            HUB->pc_aff = AK_DART;              /* (Poisoned, one dart trap in four by its square, a wound drawn: the
+                                                **   referee told with the bodies' time, at its next minute, part
+                                                **   70's; a door's needle not yet: part 5's room) */
+            HUB->pc_dose = 2;
+        }
+#endif
     }
 }
 #endif

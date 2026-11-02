@@ -1,9 +1,9 @@
 # Libraries
 
 A **library module** is code in the paged ROM that other programs call, in their own tasks, with their own RAM: it has no
-data, BSS or entries of its own.  The system has three: **`numbers`** and **`math`** (the number system every language
-shares) and **`asm`** (the W65C02S's instructions: the assembler and the disassembler).  This page is how a library is
-called, and each of the system's.
+data, BSS or entries of its own.  The system has four: **`numbers`** and **`math`** (the number system every language
+shares), **`asm`** (the W65C02S's instructions: the assembler and the disassembler) and **`unpack`** (packed banks read
+from a file and unpacked in place).  This page is how a library is called, and each of the system's.
 
 ## Contents
 
@@ -11,6 +11,7 @@ called, and each of the system's.
 2. [Writing a library](#writing-a-library)
 3. [The number libraries](#the-number-libraries): the stored format, calling them, the entries, errors, bases and text
 4. [The asm library](#the-asm-library)
+5. [The unpack library](#the-unpack-library)
 
 ---
 
@@ -191,3 +192,26 @@ blocks.  It's one bank: the assembler and the disassembler.
 It has no RAM of its own: the assembler's state is in RAM its caller lends it while it runs (`ASM_RAM`, `$5000-$7DFF`),
 and its zero page (`$22` on) is the caller's, put back as each call ends.  In assembly, `asmlib.inc` has the entries and
 the macro `ASMCALL`; in C, `asm.h` has `dis_insn` and the symbol files' `lbl_load`.
+
+---
+
+## The unpack library
+
+**`unpack`** (`reborn/modules/unpack`) reads a file of RAM banks, each packed on its own, into a program's banks, and
+unpacks each where it lands.  Dingus Quest Zero's tasks read their overlays with it as the game starts: packed, the card
+reads about a third fewer bytes, and the card's reading is most of the start's time
+([the game's start](../../reborn/games/dq0/DUNGEON.md)).  It's one entry, at `$A030`:
+
+| Entry | In | Out |
+| :---- | :- | :-- |
+| `UNPACK_BANKS` | `.A` the file's fd (at its first bank), `.X` the banks at most, `.Y` the first bank (the rest after it) | `C` = 0; or `C` = 1, `.A` the error (`READ`'s, or `E_IO`: the file not as its headers say) |
+
+* **The file**: a bank after another, each a 4-byte header, `L` (the bank's bytes, 0-8192) and `C` (their packed length;
+  0: stored as they are), low bytes first, then its `C` bytes (or `L`).  The packed form is LZ4's block format: a token
+  (a run of literals' length, a match's length less 4), the literals, then the match's offset back and its length.
+* **In place**: a bank's packed bytes are read to the bank's end (`$A000` less `C`) and unpacked from `$8000` up, so no
+  buffer is needed; the packer (`reborn/games/dq0/ovlpack.js`) stores a bank whose unpacking would write over bytes not
+  yet read.  The rest of each bank, from `L` on, is filled with `$FF`, ld65's fill: the banks are as the linker made them.
+* It has no RAM of its own: its pointers are the call registers (`r2`-`r12`), and each bank its buffer.  It leaves the
+  last bank read at `$8000`.  A C program finds it with `MODINFO` and calls it with `XCALL`, as
+  `reborn/games/dq0/ovunpack.inc` does.

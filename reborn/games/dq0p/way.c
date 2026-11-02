@@ -38,7 +38,7 @@ static unsigned char __fastcall__ past (const unsigned char* p)
         !(q->state & PS_OPEN) && q->kind != PK_PORTCULLIS);
 }
 
-/* On from (ox, oy), its first way od (DIR_*), into b: along the way the eye sees past, straight on through the dark,
+/* On from (ox, oy), its first way od (a heading, H_*: a diagonal way's too, 2026-11-01), into b: along the way the eye sees past, straight on through the dark,
 ** round a bend only where it sees the square (the one way on that isn't back), as far as the look reaches; how far
 ** along it it sees (the last square it sees now, T_VIS), and the first square it sees in a room but the character's
 ** (its floor's first square rx, ry) ends it, the room's kind and light noted */
@@ -50,17 +50,18 @@ static void seen_on (void)
 
     b->what = WB_DARK;
     for (n = 0; n < 2 * WAY_R && ox - px + WAY_R <= 2 * WAY_R && oy - py + WAY_R <= 2 * WAY_R; ) {
-        for (k = 0, w = 0xFF; k < 4; ++k) {     /* (Straight on, else the first way seen that isn't back) */
-            if (k != ((od + 2) & 3) && (w == 0xFF || k == od) && past (p = at (osn, ox + dir_x[k], oy + dir_y[k])) &&
-                (k == od || (*p & T_VIS))) {
+        for (k = 0, w = 0xFF; k < 8; ++k) {     /* (Straight on, else the first way seen that isn't back; a diagonal
+                                                **   only a diagonal way, slant's: past its cut corner) */
+            if (!REL_BEHIND (k - od) && (w == 0xFF || k == od) && (!(k & 1) || slant (osn, ox, oy, k)) &&
+                past (p = at (osn, ox + head_x[k], oy + head_y[k])) && (k == od || (*p & T_VIS))) {
                 w = k;
             }
         }
         if (w == 0xFF) {
             break;
         }
-        ox += dir_x[od = w];
-        oy += dir_y[od];
+        ox += head_x[od = w];
+        oy += head_y[od];
         ++n;
         if (!(*at (osn, ox, oy) & T_VIS)) {
             continue;                           /* (Dark: on, as the eye goes) */
@@ -130,8 +131,8 @@ void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
         }
         ox = d.x;                               /* (Out of its room, or out of its passage that way) */
         oy = d.y;
-        od = s->where != W_ROOM ? ((face + d.rel) & 7) >> 1 : oy < ry ? DIR_N : oy >= ry + s->rh ? DIR_S :
-            ox < rx ? DIR_W : DIR_E;
+        od = s->where != W_ROOM ? (face + d.rel) & 7 : oy < ry ? H_N : oy >= ry + s->rh ? H_S :
+            ox < rx ? H_W : H_E;
         seen_on ();
     }
     if (s->where == W_PASSAGE) {
@@ -141,7 +142,7 @@ void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
             if (ahead (BN_PASSAGE)) {
                 ox = s->x;
                 oy = s->y;
-                od = ((face + d.rel) & 7) >> 1;
+                od = (face + d.rel) & 7;
                 seen_on ();
             }
         }

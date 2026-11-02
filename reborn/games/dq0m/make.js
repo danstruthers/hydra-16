@@ -1,16 +1,10 @@
-// make.js - (dq0m) the maker's data files, after its build (build.js calls build): its overlays' file
-// (obj/games/dq0m.hyx.ovl, ld65's: each overlay filled out to 8K with $FF) cut after the last overlay that has code,
-// so the maker reads no more than it needs as it starts.
+// make.js - (dq0m) the maker's data files, after its build (build.js calls build): its overlays' file packed
+// (obj/games/dq0m.ovp, ../dq0/ovlpack.js's: ld65's cut after the last overlay that has code, each bank's fill left
+// out), so the maker reads no more than it needs as it starts.
 'use strict';
-const fs = require('fs');
-const path = require('path');
 
 function build({ objdir, say = () => {} }) {
-  const f = path.join(objdir, '..', 'dq0m.hyx.ovl');
-  const data = fs.readFileSync(f);
-  let n = data.length / 0x2000;
-  while (n > 1 && data.subarray((n - 1) * 0x2000, n * 0x2000).every(b => b === 0xFF)) n--;
-  if (n * 0x2000 !== data.length) fs.writeFileSync(f, data.subarray(0, n * 0x2000));
+  const n = require('../dq0/ovlpack.js').pack(objdir, 'dq0m').banks;
   return { overlays: n };
 }
 

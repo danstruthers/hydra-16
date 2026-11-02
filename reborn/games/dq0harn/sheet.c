@@ -462,11 +462,11 @@ void __fastcall__ o_spent (unsigned t)
             }
             rested += n - tired;
             tired = 0;
-            while (rested >= LEVEL && pc.fl) {
+            while (rested >= LEVEL && pc.fl > wantfl + afffl) {    /* (Its want's, its afflictions' not rested off) */
                 rested -= LEVEL;
                 --pc.fl;
             }
-            if (!pc.fl) {
+            if (pc.fl <= wantfl + afffl) {
                 rested = 0;
             }
             continue;

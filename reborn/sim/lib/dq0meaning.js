@@ -49,7 +49,7 @@ const EXPRS = {
   gait: F('struct hub', 'gait'), watch: F('struct hub', 'watch'), pcPos: F('struct hub', 'pc_pos'), pcGoing: F('struct hub', 'pc_going'),
   pcReady: F('struct hub', 'pc_ready'), hubNow: F('struct hub', 'now'),
   pcChart: F('struct hub', 'pc_chart'), pcMap: F('struct hub', 'pc_map'),
-  pcStance: F('struct hub', 'pc_stance'), pcStrike: F('struct hub', 'pc_strike'), pcShand: F('struct hub', 'pc_shand'), pcSkew: F('struct hub', 'pc_skew'), pcLost: F('struct hub', 'pc_lost'), wayOpen: F('struct hub', 'way_open'), digTool: F('struct hub', 'dig_tool'),
+  pcStance: F('struct hub', 'pc_stance'), pcStrike: F('struct hub', 'pc_strike'), pcShand: F('struct hub', 'pc_shand'), pcSkew: F('struct hub', 'pc_skew'), pcLost: F('struct hub', 'pc_lost'), tbSkew: F('struct hub', 'tb.skew'), tbSkewHi: F('struct hub', 'tb.skew') + ' + 1', tbUnc: F('struct hub', 'tb.unc'), tbUncHi: F('struct hub', 'tb.unc') + ' + 1', tbSky: F('struct hub', 'tb.sky'), tbHour0: F('struct hub', 'tb.hour0'), tbHow: F('struct hub', 'tb.how'), tbHours: F('struct hub', 'tb.hours'), tbDue: F('struct hub', 'tb.due'), tbDue1: F('struct hub', 'tb.due') + ' + 1', tbDue2: F('struct hub', 'tb.due') + ' + 2', tbDue3: F('struct hub', 'tb.due') + ' + 3', tsense: F('struct hub', 'pcsum.timesense'), wayOpen: F('struct hub', 'way_open'), digTool: F('struct hub', 'dig_tool'),
   sCond: F('struct rs_summary', 'cond'), sHealth: F('struct rs_summary', 'health'), sLoad: F('struct rs_summary', 'load'),
   sSight: F('struct rs_summary', 'sight'), sStep: F('struct rs_summary', 'step'), sGstep: F('struct rs_summary', 'gstep'), ngaits: 'NGAITS',
   sLimbs: F('struct rs_summary', 'limbs'), sLimp: F('struct rs_summary', 'limp'), sNorth: F('struct rs_summary', 'northsense'),
@@ -58,6 +58,7 @@ const EXPRS = {
   aState: F('struct actor', 'state'), aSn: F('struct actor', 'sn'), aFace: F('struct actor', 'face'), aPos: F('struct actor', 'pos'),
   aX: F('struct actor', 'x'), aY: F('struct actor', 'y'), aDoing: F('struct actor', 'doing'), aName: F('struct actor', 'name'),
   aAttitude: F('struct actor', 'attitude'), aFaction: F('struct actor', 'faction'), aKind: F('struct actor', 'kind'), aDid: F('struct actor', 'did'),
+  aReady: F('struct actor', 'ready'), denSeq: F('struct hub', 'den_seq'),
   themeBank: 'THEME_BANK', thName: F('struct theme', 'name'), thStratum: F('struct theme', 'stratum'), tstrata: 'TSTRATA',
   tSname: F('struct sight', 'sname'),
   namesAt: '(unsigned) NAMES_AT - 0x8000', tnames: 'TNAMES', tname: 'sizeof (struct tname)', nmWhat: F('struct tname', 'what'),
@@ -114,6 +115,10 @@ const EXPRS = {
   dsWho: F('struct hub', 'dsense.who'), dsNoise: F('struct hub', 'dsense.noise'), dsRes: F('struct hub', 'dsense.res'),
   dsCost: F('struct hub', 'dsense.cost'), pcNoise: F('struct hub', 'pc_noise'), pcMask: F('struct hub', 'pc_mask'),
   pcBg: F('struct hub', 'pc_bg'), airH: F('struct hub', 'air_h'), airS: F('struct hub', 'air_s'),
+  // (Hunger and thirst, the water: slice 4.9's; a sixteen-bit field's high byte its name's Hi, for dq0Poke's hub bytes)
+  pcHunger: F('struct hub', 'pc_hunger'), pcHungerHi: F('struct hub', 'pc_hunger') + ' + 1', pcThirst: F('struct hub', 'pc_thirst'),
+  pcThirstHi: F('struct hub', 'pc_thirst') + ' + 1', pcWant: F('struct hub', 'pc_want'), pcMeals: F('struct hub', 'pc_meals'),
+  pcWet: F('struct hub', 'pc_wet'), pcSwim: F('struct hub', 'pc_swim'), pcUnder: F('struct hub', 'pc_under'), pcBreath: F('struct hub', 'pc_breath'),
   pcTask: F('struct hub', 'pc_task'), ltKind: F('struct ltask', 'kind'), ltLen: F('struct ltask', 'len'), ltDone: F('struct ltask', 'done'),
   ltFoe: F('struct ltask', 'foe'), ltMins: F('struct ltask', 'mins'),
   keptAt: '(unsigned) KEPT_AT - 0x8000', kpN: F('struct kept', 'n'), kpGen: F('struct kept', 'gen'), kpAt: F('struct kept', 'at'),
@@ -219,6 +224,7 @@ function createRecorder() {
         else if (e.te === 'TE_FREE') e.none = ['engaged', 'near', 'way'][e.b];   // (None: not engaged, nothing near to flee, no way back)
         else if (e.te === 'TE_LOW' || e.te === 'TE_OUT') { e.lamp = e.b & 0x7F; e.seen = !!(e.b & 0x80); }   // (A light's kind; one lying there seen)
         else if (e.te === 'TE_ROBBED') e.by = e.b - 1;                     // (The robber: its entry)
+        else if (e.te === 'TE_FETCHED') { e.by = (e.b & 15) - 1; e.ft = name('FT_TOOK', e.b >> 4); e.thing = w >> 8; delete e.task; }   // (An errand's, a gift's: slice 4.8's)
         else if (e.te === 'TE_BEGUN' || e.te === 'TE_ASK_SHORT') e.what = e.b;   // (A timed work's, a battering's: what it's done to)
         else e.named = name('LT_NONE', e.b);
         break;
@@ -242,6 +248,7 @@ function createRecorder() {
       status: str(h, L.pcstatus, 16), digTool: [0, 1, 2, 3].map(i => str(h, L.digTool + i * 8, 8)),
       pc: { sn: h[L.pcSn], x: w16(h, L.pcX), y: w16(h, L.pcY), face: h[L.pcFace], light: h[L.pcLight], lamp: str(h, L.pcLamp, 14), fuel: w16(h, L.pcFuel), left: str(h, L.pcLeft, 20),
         pos: h[L.pcPos], gait: h[L.gait], watch: h[L.watch], going: h[L.pcGoing], stance: name('D_NONE', h[L.pcStance]), strike: name('SK_BEST', h[L.pcStrike]), shand: h[L.pcShand],
+        tb: { skew: w16(h, L.tbSkew) << 16 >> 16, unc: w16(h, L.tbUnc), sky: h[L.tbSky], hour0: h[L.tbHour0], how: h[L.tbHow], hours: w16(h, L.tbHours), tsense: h[L.tsense] },
         skew: h[L.pcSkew], lost: h[L.pcLost], noise: h[L.pcNoise], mask: h[L.pcMask], bg: h[L.pcBg], airH: h[L.airH], airS: h[L.airS],
         task: { kind: name('LT_NONE', h[L.pcTask]), asking: h[L.pcTask + 1], len: w16(h, L.pcTask + 2), done: w16(h, L.pcTask + 4), foe: h[L.pcTask + L.ltFoe] - 1, mins: h[L.pcTask + L.ltMins] },
         ready: w16(h, L.pcReady) + w16(h, L.pcReady + 2) * 65536, now: w16(h, L.hubNow) + w16(h, L.hubNow + 2) * 65536,

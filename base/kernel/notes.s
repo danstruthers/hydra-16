@@ -82,7 +82,8 @@ K_NOTE_POST:
 
 ; NOTE_QUEUE: a note to a note group, from an irq entry (a console's Ctrl-C): queued in the kernel task, which posts
 ; it as soon as it runs (the scheduler runs it then: sched.s).  As short as can be: nothing is checked.  IN: IRQs
-; off; .X = the group (0-15); .A = the note's bit: 1 << (note - 1), for a note 1-8.  Keeps .X
+; off; .X = the group (0-15); .A = the note's bit: 1 << (note - 1), for a note 1-8.  OUT: .A = 0 (an irq entry's
+; answer, no task switch: an entry may end with jmp NOTE_QUEUE).  Keeps .X
 K_NOTE_QUEUE:
             ldy         T_REGISTER
             stz         T_REGISTER                          ; ---- The kernel task
@@ -90,6 +91,7 @@ K_NOTE_QUEUE:
             sta         K0_NQ,X
             sta         K0_NQ_ANY                           ; (Not 0)
             sty         T_REGISTER                          ; ---- Back
+            lda         #0
             rts
 
 ; The notes irq entries queued, posted (and the tasks woken): in the kernel task, IRQs on (its idle loop)

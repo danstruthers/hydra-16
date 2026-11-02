@@ -2,7 +2,7 @@
 ** sway.c - (overlay 15; overlay 6's till 2026-10-29, its room) the character's ways with the denizens, in words: what the denizens' task answered (the hub's
 ** sway, copied into the main RAM: main.c's deal) to words that would sway one (talk, persuade, deceive, threaten,
 ** calm, befriend: the referee's grade, its attitude before and after), a request to an ally, a name given, a look
-** at how one seems, a blow (the commands listed: help.c's)
+** at how one seems, a blow, a gift (the commands listed: help.c's)
 */
 
 #pragma code-name ("OV15CODE")
@@ -69,7 +69,7 @@ void __fastcall__ o_sway_words (const struct sway* s)
         return;
     case SR_FAR:
         who (1);
-        add (s->beast ? " is too far off: you'd need to be within reach." : " is too far off to hear you.");
+        add (s->beast || h == SW_GIVE ? " is too far off: you'd need to be within reach." : " is too far off to hear you.");
         return;
     case SR_TONGUE:
         who (1);
@@ -97,7 +97,10 @@ void __fastcall__ o_sway_words (const struct sway* s)
              " isn't your ally, to take requests from you.");
         return;
     case SR_CANT:
-        if (h == SW_NAME) {
+        if (h == SW_GIVE) {
+            who (1);
+            add (" has no use for it.");        /* (A beast offered what isn't food: slice 4.8's) */
+        } else if (h == SW_NAME) {
             add (s->word2[0] ? "You've given names enough." : "Name it what?");
         } else if (s->order) {
             who (1);
@@ -119,7 +122,12 @@ void __fastcall__ o_sway_words (const struct sway* s)
         add (" now.");
         return;
     case SW_ORDER:
-        if (s->name[0]) {
+        if (s->order == OR_FETCH) {             /* (An errand: slice 4.8's, one ally's) */
+            who (1);
+            add (" goes to fetch the ");
+            add (s->word2);
+            add (".");
+        } else if (s->name[0]) {
             who (1);
             add (done1[(s->order - OR_FOLLOW) % 3]);
         } else {
@@ -128,9 +136,21 @@ void __fastcall__ o_sway_words (const struct sway* s)
         }
         return;
     }
-    add (tried[h]);                             /* (Words: the referee's test, and what came of it) */
-    who (0);
-    add (". ");
+    if (h == SW_GIVE) {                         /* (A gift: slice 4.8's) */
+        add ("You offer ");
+        who (0);
+        add (" the ");
+        add (s->word2);
+        add (". ");
+        if (s->grade == G_CF) {
+            seeming ("It won't take it: it takes offence, and seems ", " now.");
+            return;
+        }
+    } else {
+        add (tried[h]);                         /* (Words: the referee's test, and what came of it) */
+        who (0);
+        add (". ");
+    }
     if (s->now > s->was) {
         if (s->now == AT_ALLIED) {
             add ("It's won over: it will follow you now.");

@@ -29,7 +29,7 @@ name:
 .endmacro
 
 .macro COMMON_BLOCK
-.local      stubs
+.local      stubs, restore
 stubs:
 .repeat 16, I
             CLABEL      .ident(.sprintf("IRQ_STUB_%X", I))
@@ -78,7 +78,7 @@ stubs:
             tsx
             stx         TK_SP                               ; The interrupted task's stack pointer, for the way back
             ldx         TA_OWNERS,Y                         ; .X = the line's owner
-            bmi         :++                                 ; (Nobody's: IRQ_STRAY)
+            bmi         :+                                  ; (Nobody's: IRQ_STRAY)
             lda         T_REGISTER                          ; .A = the interrupted task
             stx         T_REGISTER                          ; ---- The owner: its zero page and stack page (not S yet)
             ldx         TK_SP
@@ -86,19 +86,16 @@ stubs:
             pha                                             ;   interrupted task).  The interrupted task, for later
             tax                                             ; .X = the interrupted task
             tya                                             ; .A = the line
-            jsr         IRQ_HANDLER
+            jsr         TA_IRQJMP                           ; (Its JMP to the owner's irq entry, TA_IRQVEC)
             ply                                             ; ---- Back to the interrupted task
             sty         T_REGISTER
             ldx         TK_SP
             txs
-            and         #IRQ_RESCHED                        ; A task switch, please?
-            beq         :+
-            ldx         TK_PREEMPT                          ; Not while it holds the CPU (or is in the scheduler):
-            beq         :+++                                ;   then it's noted, for PREEMPT_ON or the next YIELD
-            sta         TK_DUE                              ;   (.A = IRQ_RESCHED: not 0).  Else IRQ_SWITCH
+            and         #IRQ_RESCHED                        ; A task switch, please?  (None: straight on)
+            bne         :++
 
 ; The end of an interrupt with no task switch (IRQ_STRAY's too): the frame's Y ...
-:
+restore:                                                    ; (This copy's, for the branch to it)
             CLABEL      IRQ_RESTORE
             ply
 
@@ -113,7 +110,12 @@ stubs:
 :
             jmp         IRQ_STRAY
 :
-            jmp         IRQ_SWITCH
+            ldx         TK_PREEMPT                          ; A switch: not while it holds the CPU (or is in the
+            bne         :+                                  ;   scheduler): then it's noted, for PREEMPT_ON or the
+            jmp         IRQ_SWITCH                          ;   next YIELD (.A = IRQ_RESCHED: not 0)
+:
+            sta         TK_DUE
+            bra         restore
 
             CLABEL      NMI_ENTRY
             pha

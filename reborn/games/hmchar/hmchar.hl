@@ -464,6 +464,12 @@
 ?(quiet (make-name) (while {eq name ""} {do (print) (set! {name} (ask "A name: "))}))
 (profile)
 ?(out NIL (set! {out} (+ name ".hm")))
-(try (harn.write out h (list (+ "name " name) (+ "occupation " occname) (+ "wealth " (wealth))))
+; Absolute timesense (C's: one in a hundred, rolled after all the rest, its file's "timesense" line; the house's,
+; 2026-10-31)
+(def {wl} (+ "wealth " (wealth)))
+(def {ts} (eq (harn.d 100) 1))
+(try ?(ts (harn.write out h (list (+ "name " name) (+ "occupation " occname) wl "timesense"))
+    (harn.write out h (list (+ "name " name) (+ "occupation " occname) wl)))
   {do (print-to stderr (+ "hmchar.hl: " out ": can't write it")) (exit 1)})
+?(ts (print "Absolute timesense: you always know the hour.") NIL)
 (print (+ "Written to " out))

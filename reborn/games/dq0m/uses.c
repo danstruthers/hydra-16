@@ -206,8 +206,7 @@ static void plan (void)
     if (ring && ring < 4 && !((L->cx * 7 + L->cy * 13 + (unsigned char) s->seed) & 3)) {
         ++ring;                                 /* (A few in four the next ring's, for variety) */
     }
-    /* The water: a hook for the water's step (the plan's own, to come); for now two regions in three have it */
-    uwater = ((L->cx / RCH) * 5 + (L->cy / RCH) * 3 + (unsigned char) (s->seed >> 8)) % 3 != 0;
+    uwater = E->water & RW_WELL;                /* (The water under its region: the plan's, slice 4.9's) */
     k = rings[purpose & 7][ring];
     if (!ring && ufort) {
         k = R_GATE;
@@ -382,8 +381,16 @@ static unsigned char __fastcall__ under (unsigned char r)
 unsigned char __fastcall__ o_uses (unsigned char step, unsigned char arg)
 {
     switch (step) {
-    case US_STYLE:
+    case US_STYLE:                              /* (arg: the style, the hub's gear times 4: the tests' flags) */
         memcpy (&sty, &styles[arg & 3], sizeof sty);
+        if (arg & GE_DRY << 2) {
+            me.water = 0xFF;                    /* (dq0 -W's, the tests': no water) */
+        }
+        if (arg & GE_UNFALLEN << 2) {
+            me.poor = 0xFF;                     /* (dq0 -U's, the tests': no rubble) */
+        }
+        sty.slant = (arg & GE_SLANT << 2) != 0;  /* (dq0 -A's, the tests': every built stratum's passages on the diagonal;
+                                                **   else a fifth of them, built.c's, by the stratum's seed) */
         ufort = uwater = ulayer = unl = 0;
         uruin = 0xFF;
         break;

@@ -27,6 +27,8 @@
 #include "hub.h"
 #include "level.h"
 
+#define T_STEPS_        5                       /* (A square's kind: dq0w/world.h's T_STEPS, T_RUBBLE) */
+#define T_RUBBLE_       10
 #define PS_OPEN_        0x01                    /* (A portal's state: open: dq0w/world.h's PS_OPEN) */
 
 static const char* const relname[8] = {
@@ -402,6 +404,7 @@ static void passage (void)
 {
     unsigned char i, n;
     signed char dz;
+    const struct sseen_way* w;
 
     for (i = n = 0; i < S->ndoors; ++i) {     /* (The doors beside it, but behind it) */
         n += !REL_BEHIND (S->door[i].rel);
@@ -410,15 +413,28 @@ static void passage (void)
     add (S->nways <= 1 && n ? "The passage comes to a door; it goes back " : S->nways <= 1 ?
          "The passage ends here; it goes back " : S->nways == 2 ? "You are in a passage. It goes " :
          "The passage forks here. It goes ");
-    for (i = 0; i < S->nways; ++i) {
+    for (i = 0, w = S->way; i < S->nways; ++i, ++w) {
         if (i) {
-            add (i + 1 == S->nways ? " and " : ", ");
+            add (i + 1 == S->nways ? n & 1 ? ", and " : " and " : ", ");
         }
-        add (relname[S->way[i].rel & 7]);
-        dz = S->way[i].dz;
-        if (S->way[i].steps) {
+        n = w->rel >> 4;                        /* (Its run's bearing in sixteenths, as the character faces: its shape,
+                                                **   sight.c's; between two of the eight, the quarter it's nearer and a
+                                                **   little the other way, "ahead and a little to your right": HOUSE.md's
+                                                **   a passage's heading) */
+        if (n & 1) {
+            dz = ((n >> 1) + 1) & 6;
+            add (relname[dz]);
+            add (" and a little ");
+            add (relname[(dz + (n & 2 ? 6 : 2)) & 7]);
+        } else {
+            add (relname[n >> 1]);
+        }
+        dz = w->dz;
+        if (w->steps == T_STEPS_) {
             add (dz > 0 ? " up steps" : " down steps");
-        } else if (dz >= 1 || dz <= -1) {
+        } else if (w->steps == T_RUBBLE_) {   /* (A passage fallen in: slice 4.10's) */
+            add (", over rubble");
+        } else if (dz) {
             add (dz == 1 ? ", rising gently" : dz == -1 ? ", falling gently" : dz > 0 ? ", rising" : ", falling");
         }
     }
@@ -459,6 +475,10 @@ void o_words (void)
     }
 }
 
+/* (Overlay 16's, through its stub: overlay 2's room, 2026-11-01) */
+#pragma code-name (push, "OV16CODE")
+#pragma rodata-name (push, "OV16RODATA")
+#pragma local-strings (push, on)
 /* A thing worked (the things' IO_FILL, IO_SHUT, IO_HIDE: its words said), its time (the request's x): quietly; a
 ** timed work's (HOUSE.md's long tasks: the reply's qty its long task's kind, item its thing's kind), its first words (a
 ** long task's begun, task.c's) and a long task of the UI's (I_WAIT's kind), its command kept (the UI bank's) and
@@ -492,6 +512,9 @@ unsigned char __fastcall__ o_more (unsigned char action)
     unsigned char d = reach == 4 ? IO_DONE : 0;    /* (A timed work's end: main.c's reach) */
 
     switch (action) {
+    case VB_META_TIME:                          /* (The time it believes: time.c's, 2026-10-31) */
+        time_ui (TU_TELL);
+        break;
     case VB_FILL_OBJECT:                        /* (A light renewed, slice 4.1's: "fill the lantern", "dip the torch in
                                                 **   the oil", the things' IO_FILL; its time, quietly: a timed work) */
         worked (othings (IO_FILL, cmd.obj.word, cmd.other.word, d));
@@ -534,6 +557,10 @@ unsigned char __fastcall__ o_more (unsigned char action)
             worked (action);                    /* (Its lock picked, it forced: a timed work) */
         }
         break;
+    case VB_EAT_OBJECT:                         /* (Eating, drinking: part 12's, slice 4.9's) */
+    case VB_DRINK:
+        feed (action == VB_EAT_OBJECT);
+        break;
     case VB_HIDE:                               /* (A thing hidden, begun: main.c's hide, the things' IO_HIDE) */
         worked (IR_OK);
         break;
@@ -545,3 +572,6 @@ unsigned char __fastcall__ o_more (unsigned char action)
     }
     return 1;
 }
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)

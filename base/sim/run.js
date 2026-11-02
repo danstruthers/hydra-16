@@ -23,7 +23,8 @@
 //   --speed N           interactive: N times real time (0: as fast as it goes)
 //   --clock MHz         the CPU clock (3.579545; 7.15909 with jumper J8: build with --clock 2 too)
 //   --acia wdc          a WDC W65C51N in the serial port, and its BIOS (bin/bios_wdc.bin)
-//   --modules N         RAM modules installed (default 2)
+//   --modules N         RAM modules installed, 1 to 3, 16 banks (128K) each (default 3, the board's: 48 banks, 384K a
+//                       task; or HYDRA_MODULES=N's, the environment's: sim/lib/machine.js's DEFAULT_MODULES)
 //   --seed N            the power-up's random RAM and registers, repeatable (default: random)
 //   --trace N           the last N instructions in the report (default 25)
 //   --watch-pc ADDR     log each time the PC reaches ADDR (hex, or a kernel label), on BIOS page 0
@@ -70,7 +71,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { createMachine, romBank } = require('./lib/machine.js');
+const { createMachine, romBank, defaultModules } = require('./lib/machine.js');
 const images = require('../tools/images.js');
 const { encodePng } = require('./lib/png.js');
 const { createWin32Input, ENABLE: W32_ENABLE, DISABLE: W32_DISABLE } = require('./lib/win32in.js');
@@ -125,7 +126,7 @@ function boot(opt = {}) {
   const bios = opt.bios instanceof Uint8Array ? opt.bios : opt.bios ? fs.readFileSync(opt.bios) : images.bios(root, acia);
   const prom = opt.prom instanceof Uint8Array ? opt.prom : opt.prom ? fs.readFileSync(opt.prom) : chips(root, acia);
   return createMachine(Object.assign({
-    modules: 2, sharedU: 16, aciaLine: 1, stuckIrq: -1, acia: 'rockwell', clock: CLOCK, trace: 25,
+    modules: defaultModules(), sharedU: 16, aciaLine: 1, stuckIrq: -1, acia: 'rockwell', clock: CLOCK, trace: 25,
     pcWatches: [], watches: [], marks: [], log: s => console.log('[sim] ' + s),
   }, opt, { osrom: bios, pagedrom: prom }));
 }

@@ -18,13 +18,17 @@
             .import     popax, pushax, _cat_map
 
             .include    "zeropage.inc"
+            .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
+SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
+                                    ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
+OVBANKS     = 24                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
             .bss
-_ovbank:    .res        25          ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
+_ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
                                     ;   world's own banks (its paging's tables: ipage.c's; the ways across a room;
                                     ;   the traces' store, two: wtrace.c's)
 ova:        .res        1           ; (.A and .X kept through a stub)
@@ -80,7 +84,7 @@ go:
 
             .include    "../dq0/swap.inc"
 
-            SWPART      1, 1                ; Digging
+            SWPART      1, 22               ; Digging, and the rock it's into (overlay 22's, slice 4.10's)
             SWPART      2, 3                ; Climbing
             SWPART      3, 1                ; The dungeon begun, the strata below grown
             SWPART      4, 2                ; The change records' rarer work (store.c), the UI's requests; a thing of
@@ -108,7 +112,8 @@ go:
             SWPART      22, 17              ; The strata's records out of the hub, back (sfile.c)
             SWPART      23, 11              ; The long task as it goes: a walk a square at a time (dq0w.c's)
             SWPART      24, 12              ; Engagement, a blow's close-in, fighting on (dq0w.c's)
-            SWPART      25, 13              ; The engage initiative test, a grope's (dq0w.c's; overlay 6's till 2026-10-28)
+            SWPART      25, 22              ; The engage initiative test, a grope's (dq0w.c's; overlay 6's till 2026-10-28,
+                                            ;   13's till 2026-10-31); a dig begun (part 1's room)
             SWPART      26, 9               ; Disengaging (dq0w.c's)
             SWPART      27, 9               ; The lights burning down (dq0w.c's: slice 4.1's)
             SWPART      28, 9               ; The traces' store: the journal taken in, kept (wtrace.c)
@@ -117,14 +122,14 @@ go:
             SWPART      31, 11              ; The traces read, in words (wtrword.c)
             SWPART      32, 3               ; The way the character's scent goes, a hunter's (wtrscent.c)
             SWPART      33, 12              ; A walk across a room (dq0w.c's across: the main RAM's room)
-            SWPART      34, 15              ; The rooms' lights by their sconces (wkept.c)
+            SWPART      34, 14              ; The rooms' lights by their sconces (wkept.c)
             SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
-            SWPART      37, 4               ; The rest of the UI's intents carried out (dq0w.c's intent_more)
+            SWPART      37, 13              ; The rest of the UI's intents carried out (dq0w.c's intent_more)
             SWPART      38, 16              ; A change record kept and made (store.c's store_put, change)
             SWPART      39, 12              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
-            SWPART      41, 8               ; An opening told with what it shows beyond (dq0w.c's revealed)
+            SWPART      41, 19              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
             SWPART      42, 2               ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 10              ; A walk in the dark set out on: its way felt, a thing stumbled over
             SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
@@ -133,11 +138,14 @@ go:
             SWPART      47, 13              ; What's on a thing or in it, searched (things.c)
             SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
                                             ;   (things.c: slice 4.1b's)
-            SWPART      49, 11              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c)
+            SWPART      49, 23              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c; overlay
+                                            ;   11's till 2026-11-01)
             SWPART      50, 21              ; The legs: getting up, a move's start prone, how fast; the body's positions,
                                             ;   the steps' loudness (dq0w.c's: overlay 21's, slices 4.5, 4.6)
-            SWPART      51, 19              ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
-                                            ;   overlay 1's bank, overlay 8's room part 19's, 2026-10-27)
+            SWPART      51, 23              ; The denizens' limbs: a weapon let fall, taken up; legs (wlimbs.c:
+                                            ;   overlay 1's bank, overlay 8's room part 19's, 2026-10-27; 5's,
+                                            ;   2026-10-30: 19's room the denizens' throws; 23's, 2026-11-01: 5's
+                                            ;   room, a tunneller's dig asked)
             SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
             SWPART      53, 16              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
             SWPART      54, 16              ; Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
@@ -152,15 +160,25 @@ go:
             SWPART      63, 21              ; The character's kit (things.c's, part 13's till 2026-10-28; overlay 21's, 2026-10-29)
             SWPART      64, 21              ; The coins' mints (things.c's, 2026-10-28; overlay 21's, 2026-10-29)
             SWPART      65, 20              ; The missiles: a shot, its line, where it falls (wshoot.c: slice 4.7's)
-            SWPART      66, 20              ; The missiles gathered (wshoot.c)
-            SWPART      67, 20              ; The character's shot, where a missile falls (wshoot.c); a robbery
-                                            ;   (wfight.c's, part 15's room)
-            SWPART      68, 14              ; A launcher loaded (wshoot.c: overlay 20's room)
-            SWPART      69, 20              ; (Agent missile's last number, not used: a placeholder, wplace.s)
+            SWPART      66, 15              ; The missiles gathered (wshoot.c; overlay 15's, 2026-10-30)
+            SWPART      67, 20              ; The character's shot, the denizens' shots and throws (wshoot.c)
+            SWPART      68, 20              ; Where a missile falls, a miss's stray; a launcher loaded (wshoot.c)
+            SWPART      69, 12              ; A robbery (wfight.c's: part 67's room, overlay 12's, 2026-10-30)
             SWPART      70, 21              ; Wounds over time: the bodies' time told, a thing used up (wtend.c)
+            SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
+            SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
+            SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
+            SWPART      74, 14              ; A waterskin filled (wwater.c: slice 4.9's)
+            SWPART      75, 22              ; The water's depth where the character stands (wwater.c)
+            SWPART      76, 23              ; The time of day believed (wtime.c: 2026-10-31)
+            SWPART      77, 23              ; The sky seen, the time believed's start (wtime.c)
+            SWPART      78, 23              ; Up to a place in the room (dq0w.c's go_to, ways_near: part 9's till
+                                            ;   2026-10-31, its room the walk's)
+            SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
 
             SWFN        work, 48
             SWFN        worked, 48
+            SWFN        searched, 48        ; (A search's end: the main RAM's room, 2026-10-31)
             SWFN        outfit, 57
             SWFN        den_kit, 57
             SWFN        outmake, 58
@@ -174,24 +192,28 @@ go:
             SWFN        drop_held, 49
             SWFN        harm_fx, 49
             SWFN        limb_news, 49
-            SWFN        den_reach, 60
+            SWFN        den_reach, 51       ; (Part 60's room, 2026-10-30)
             SWFN        den_took, 60
             SWFN        den_word, 51
             SWFN        den_drop, 60
             SWFN        den_legs, 51
             SWFN        den_other, 51
+            SWFN        den_dig, 79         ; (A tunneller's dig: slice 4.11's)
             SWFN        old_mint, 51
             SWFN        den_enter, 60
             SWFN        den_draw, 60
-            SWFN        den_strip, 60
+            SWFN        den_strip, 51
             SWFN        legs, 50
             SWFN        bearings, 52
             SWFN        bearings_off, 52
+            SWFN        tsense, 76
+            SWFN        sky_seen, 77
+            SWFN        stopped, 40         ; (A trap on the way set off: the main RAM's room, 2026-10-31)
             SWFN        intent_few, 53
             SWFN        way_out, 54
             SWFN        travel_go, 55
             SWFN        travel_on, 55
-            SWFN        start_dig, 1
+            SWFN        start_dig, 25
             SWFN        dig_on, 1
             SWFN        climb, 2
             SWFN        climb_on, 2
@@ -221,8 +243,9 @@ go:
             SWFN        portals, 7
             SWFN        traps, 8
             SWFN        go, 9
-            SWFN        go_to, 9
+            SWFN        go_to, 78           ; (Part 9's till 2026-10-31: its room the walk's)
             SWFN        step_to, 9
+            SWFN        walk, 9             ; (A walk along a passage: across's, part 33's; 2026-10-31, the main RAM's room)
             SWFN        serve, 10
             SWFN        named, 10
             SWFN        on_pc, 10
@@ -284,7 +307,7 @@ go:
             SWFN        gath_op, 66
             SWFN        mfire, 65
             SWFN        pc_shot, 67
-            SWFN        mfall, 67
+            SWFN        mfall, 68
             SWFN        load_go, 68
             SWFN        theme_kinds, 61
             SWFN        items_begin, 19
@@ -298,7 +321,7 @@ go:
             SWFN        step_on, 23
             SWFN        task_news, 23
             SWFN        task_word, 23
-            SWFN        path_ways, 23
+            SWFN        path_ways, 78       ; (Part 78's since 2026-11-01: part 23's room, the walk's runs)
             SWFN        close_go, 24
             SWFN        close_on, 24
             SWFN        zone_step, 24
@@ -306,12 +329,14 @@ go:
             SWFN        fight_on, 24
             SWFN        disengage_go, 26
             SWFN        flee_on, 26
+            SWFN        passed, 26
             SWFN        sconce_lights, 34
             SWFN        kept_wait, 34
+            SWFN        kept_late, 71
             SWFN        engaged, 25
             SWFN        fumbled, 25
             SWFN        den_first, 14
-            SWFN        ways_near, 21
+            SWFN        ways_near, 78
             SWFN        it_flush, 17
             SWFN        st_out, 22
             SWFN        st_in, 22
@@ -321,9 +346,13 @@ go:
             SWFN        den_intents, 14
             SWFN        pc_blow, 15
             SWFN        den_blow, 15
-            SWFN        den_rob, 67         ; (Part 15's room, 2026-10-29)
+            SWFN        den_rob, 69         ; (Part 15's room, 2026-10-29; 67's, 2026-10-30)
+            SWFN        den_fetch, 72       ; (Slice 4.8's)
             SWFN        bled, 15
             SWFN        body_ask, 70
+            SWFN        wade, 73            ; (The water, hunger and thirst: slice 4.9's)
+            SWFN        water, 74
+            SWFN        water_at, 75
             SWFN        use_key, 7
             SWFN        puzzle, 16
             SWFN        take_go, 16

@@ -123,6 +123,8 @@ BOOT:
             sta         TK_SP
             stz         TA_IRQVEC + 1                       ; (No irq entry, no serve entry)
             stz         TA_SERVEVEC + 1
+            lda         #OP_JMP                             ; (The dispatcher's jsr TA_IRQJMP: a JMP to the entry)
+            sta         TA_IRQJMP
             ldy         #LINES - 1                          ; Its copy of the lines' owners: nobody; its fds closed
             lda         #$FF
 :

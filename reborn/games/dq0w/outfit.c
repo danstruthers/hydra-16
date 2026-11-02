@@ -98,8 +98,11 @@ static unsigned char __fastcall__ skills (unsigned char from, unsigned char want
     return k;
 }
 
-/* The outfits' file opened (ost's fd), its index in the kinds' bank (read the first time), the draw begun (ost's
-** state but a denizen's, the list empty): 1, or 0 (none, or not this version's: closed) */
+/* The outfits' file opened (ost's fd: opened the first time and kept open, as the world goes on: an open of the
+** game's lib folder on the card some 700,000 cycles, a denizen's kit's, 2026-10-30), its index in the kinds' bank
+** (read the first time), the draw begun (ost's state but a denizen's, the list empty): 1, or 0 (none, or not this
+** version's: closed) */
+static int ofd = -1;
 static unsigned char opened (void)
 {
     unsigned char k;
@@ -108,16 +111,20 @@ static unsigned char opened (void)
 
     memset (&ost, 0, offsetof (struct ost, did));
     ost.want = 0xFF;
-    hy_bank (ovbank[OVBANKS]);
-    strcpy (b, TR_DIR);
-    strcat (b, "/dq0o.dat");
-    hub_map (0);
-    if ((ost.fd = open (b, O_RDONLY)) < 0) {
-        return 0;
+    if (ofd < 0) {
+        hy_bank (ovbank[OVBANKS]);
+        strcpy (b, TR_DIR);
+        strcat (b, "/dq0o.dat");
+        hub_map (0);
+        if ((ofd = open (b, O_RDONLY)) < 0) {
+            return 0;
+        }
     }
+    ost.fd = ofd;
     hub_map (CAT_BANK);                         /* (Its index into the catalogue's bank, the first time) */
     if ((OF_INDEX[0] | OF_INDEX[1] << 8) != OF_MAGIC) {     /* (Its head, its entries, 5 bytes each, their
                                                 **   sections' lengths) */
+        lseek (ofd, 0, SEEK_SET);
         for (boff = 0, k = 0; boff < 4 + 6 * (unsigned) k && (n = read (ost.fd, b, sizeof b)) > 0; boff += n) {
             hub_map (CAT_BANK);
             memcpy (OF_INDEX + boff, b, n);
@@ -128,7 +135,8 @@ static unsigned char opened (void)
     OF_N = 0;                                   /* (The list empty) */
     hub_map (CAT_BANK);
     if ((OF_INDEX[0] | OF_INDEX[1] << 8) != OF_MAGIC || OF_INDEX[2] != OF_VERSION) {
-        close (ost.fd);
+        close (ofd);
+        ofd = -1;
         return 0;
     }
     hub_map (0);
@@ -183,7 +191,6 @@ void __fastcall__ s_den_kit (const struct msg* m)
         }
         draw_at (off, MD_ALL);
     }
-    close (ost.fd);
     hub_map (KIND_BANK);
     if (OF_N) {
         outmake (1);
@@ -209,7 +216,6 @@ unsigned char s_outfit (void)
     r = hub_ask (SLOT_UI);
     if (r->result) {
         r->state = REQ_FREE;
-        close (ost.fd);
         return 0;
     }
     ost.budget = r->w1;
@@ -274,7 +280,6 @@ unsigned char s_outfit (void)
     }
     hub_map (0);
     HUB->slot[SLOT_UI].state = REQ_FREE;
-    close (ost.fd);
     ost.budget += ost.kept;                     /* (The money: in the pouch, silver pennies in lots of 250 at most (a
                                                 **   lot's count a byte, joined to 250), all of it, told together; its
                                                 **   odd farthings farthings, cut pennies: the user's, 2026-10-28,

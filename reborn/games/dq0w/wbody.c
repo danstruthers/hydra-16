@@ -179,6 +179,9 @@ void s_den_intents (void)
     static int z;
 
     for (any = 0, hub_map (0); (t = HUB->di_tail) != HUB->di_head; hub_map (0), HUB->di_tail = (t + 1) % DI_SIZE) {
+        if (ui_first ()) {
+            break;                              /* (The rest after the UI's command's answer) */
+        }
         memcpy (&m, &HUB->di[t], sizeof m);
         help = HUB->pcsum.cond & (C_STUNNED | C_UNCONSCIOUS);   /* (The character helpless: no one engages it, the
                                                 **   minds' to say what's done to it) */
@@ -240,10 +243,10 @@ void s_den_intents (void)
                 bd.ready += 10;
                 break;
             }
-            d = (m.w1 & 7) >> 1;
-            x = bd.x + dir_x[d];
-            y = bd.y + dir_y[d];
-            if ((((bd.move & 4) | bd.pos) && den_legs ()) || taken (x, y) || !step_ok (bd.sn, bd.x, bd.y, d)) {
+            d = m.w1 & 7;                       /* (Its heading: a diagonal a diagonal way's, slant's) */
+            x = bd.x + head_x[d];
+            y = bd.y + head_y[d];
+            if ((((bd.move & 4) | bd.pos) && den_legs ()) || taken (x, y) || !step8 (bd.sn, bd.x, bd.y, d)) {
                 bd.ready += 10;
                 break;
             }

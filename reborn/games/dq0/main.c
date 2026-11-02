@@ -58,11 +58,14 @@ static unsigned char asked;                     /* (A sound's question put in th
 static unsigned bar_done;                       /* (The long task's part done as the bar was last drawn) */
 unsigned char busy = 1;                         /* The character's doing something: no command till it's free (nor
                                                 **   till the world's started, and says so: E_READY) */
+unsigned char starting;                         /* The game's starting: its progress shown (dots: hub.c's waits,
+                                                **   main's loop), till the character's first ready */
 static unsigned char held;                      /* (A line typed as it's busy, held till it's free; */
 static unsigned char took;                      /*   and the fight it was in stopped for it, once) */
 static unsigned place;                          /* Where this task is in the world's events */
 static int task_[NTASKS];                       /* Each task's number, as it was started (0: not) */
 static unsigned char test_start;
+static unsigned char rolls;                     /* (dq0 -R n: the dice's offset, the tests', 0-252) */
 static unsigned char small;                     /* (dq0 -C: the caches small, the tests') */
 static unsigned char gear;                      /* (dq0 -K: the kit as it was, no outfits drawn, the tests') */
 static const char* kit;                         /* (dq0 -k: things more, as the game starts: a tool, ...) */
@@ -80,8 +83,9 @@ void limbs_cmd (void);
 void __fastcall__ pose_words (unsigned w);      /* (Part 14's: the body's position, worded) */
 void __fastcall__ noise_told (const struct msg* m, unsigned char rel);  /* (Part 14's: a denizen's sound, told) */
 unsigned char hold_first (void);
+unsigned char errand (void);                    /* (Part 15's: an ally's errand, a gift, slice 4.8's) */
 unsigned char missiles (void);                  /* (Part 13's: the missiles, slice 4.7's) */
-void __fastcall__ dig_used (unsigned char n);     /* (Part 14's) */
+void __fastcall__ dig_used (unsigned bk);        /* (Part 14's) */
 static char dug_with[16];                       /* (The tool a dig took, named) */
 unsigned char finds;                            /* (Things a search turned up, told as it ends: the hub's text;
                                                 **   search.c's too) */
@@ -146,59 +150,66 @@ char* __fastcall__ env (const char* name, char* buf, unsigned char size)
     return buf;
 }
 
-static void find_dirs (void)
+/* A number, a word's (atoi's, without the C library's atol and ctype: the main RAM's room, 2026-10-30) */
+unsigned __fastcall__ dnum (const char* s)
+{
+    unsigned n = 0;
+
+    while (*s >= '0' && *s <= '9') {
+        n = n * 10 + *s++ - '0';
+    }
+    return n;
+}
+
+/* The game's folder (prog's), and its lib/dq0, if its overlays are there; else the card's: the overlays' file opened
+** (its fd: ovl_load's, opened once, 2026-10-30) */
+static int find_dirs (void)
 {
     char pv[sizeof gamedir + 1];
     const char* prog = env ("prog", pv, sizeof pv);
     char* slash;
+    unsigned char k;
     int fd;
 
-    if (prog && strlen (prog) < sizeof gamedir) {
-        strcpy (gamedir, prog);
-        if ((slash = strrchr (gamedir, '/')) != 0) {
+    for (k = 0; k < 2; ++k) {
+        if (k || !prog || strlen (prog) >= sizeof gamedir || (slash = strrchr (strcpy (gamedir, prog), '/')) == 0) {
+            strcpy (gamedir, "/sd/0/games");
+        } else {
             *slash = 0;
-            strcpy (libdir, gamedir);
-            strcat (libdir, "/lib/dq0");
-            strcat (libdir, "/dq0.ovl");
-            fd = open (libdir, O_RDONLY);
-            libdir[strlen (libdir) - 8] = 0;
-            if (fd >= 0) {
-                close (fd);
-                return;
-            }
+        }
+        strcpy (libdir, gamedir);
+        strcat (libdir, "/lib/dq0/dq0.ovl");
+        fd = open (libdir, O_RDONLY);
+        libdir[strlen (libdir) - 8] = 0;
+        if (fd >= 0) {
+            break;
         }
     }
-    strcpy (gamedir, "/sd/0/games");
-    strcpy (libdir, "/sd/0/games/lib/dq0");
+    return fd;
 }
 
-/* ---- The overlays: libdir/dq0.ovl, an 8K bank each (dq0.cfg's OV1 ...; the file cut after the last one used:
-** make.js), read into banks of the game's own */
+/* ---- The overlays: libdir/dq0.ovl (fd, find_dirs'), an 8K bank each (dq0.cfg's OV1 ...; the file cut after the
+** last one used: make.js), read into banks of the game's own.  Each bank's bytes in the file as make.js packs them
+** (ovlpack.js): packed, a bank on its own (LZ4's block), read and unpacked in place by the unpack library
+** (modules/unpack, ovunpack.inc: 2026-10-31), the linker's fill ($FF) put back after its bytes, so each bank's as ld65
+** made it.  The game's start's first words before it (the screen not made yet: 2026-10-30, the start's progress
+** shown) */
 
-static void ovl_load (void)
+static void __fastcall__ ovl_load (int fd)
 {
-    static char path[56];
-    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (512 bytes of the swapped parts' area: none in it yet) */
-    int fd, first, n;
-    unsigned char k;
-    unsigned off;
+    int first;
+    unsigned char w = getbank ();
 
-    strcpy (path, libdir);
-    strcat (path, "/dq0.ovl");
-    if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (sizeof ovbank)) < 0) {
-        hy_exits ("dq0: no overlays (lib/dq0/dq0.ovl), or no RAM banks");
-    }
-    for (k = 0; k < sizeof ovbank; ++k) {
-        ovbank[k] = first + k;
-        for (off = 0; off < 0x2000; off += 512) {
-            n = read (fd, b, 512);
-            if (n <= 0) {
-                break;
-            }
-            bwrite (first + k, (void*) (0x8000 + off), b, n);
+    write (1, "Dingus Quest Zero is starting ...", 33);
+    if (fd >= 0 && (first = hy_banks_alloc (sizeof ovbank)) >= 0) {
+        ovbank[0] = first;                      /* (The rest after it: ovl_unpack's) */
+        if (!ovl_unpack (fd | (sizeof ovbank << 8))) {
+            setbank (w);
+            close (fd);
+            return;
         }
     }
-    close (fd);
+    hy_exits ("dq0: no overlays (lib/dq0/dq0.ovl, the unpack library), or no RAM banks");
 }
 
 /* ---- The character: the ruleset's (hmchar's), its file read by the referee */
@@ -241,7 +252,9 @@ unsigned char __fastcall__ s_history (unsigned long seed)
         return (unsigned char) (seed >> 8);
     }
     msg ("The place's history is being made ...");
+    t_flush ();                                 /* (Told now: themegen's dots after it, -p's) */
     strcpy (p, "-q");
+    strcpy (p += 3, "-p");
     strcpy (p += 3, "-s");
     ultoa (seed, p += 3, 10);
     strcpy (p += strlen (p) + 1, "-o");
@@ -387,7 +400,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    23                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    31                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -424,7 +437,16 @@ static void sheet (void)
                                                 **   belongings where it sleeps, its record's D_MET, its kinds past
                                                 **   128; 23, worth in farthings, a theme's mints (its record's
                                                 **   head the longer), a pile of coins' mints in its size, thick and
-                                                **   fuel: the money's, 2026-10-28) */
+                                                **   fuel: the money's, 2026-10-28; 24, the denizens' records' serve
+                                                **   and contact, D_LOST: morale's bonds, 2026-10-30; 25, their
+                                                **   D_RANK and D_PROM: succession; 26, the denizens' head's
+                                                **   deeds, a faction's regard: slice 4.8's; 27, world.dat's
+                                                **   hunger and thirst: slice 4.9's; 28, the denizens' records' want (ate,
+                                                **   drank), the creatures' bodies after their sheets (beasts.dat:
+                                                **   their fatigue), 2026-10-31; 29, world.dat's time of day believed,
+                                                **   the hub's tb, 2026-10-31; 30, the diagonal ways' cut
+                                                **   corners (T_CUT) in the chunks and the change records; 31, the
+                                                **   tunnellers: DO_DIG among the doings, slice 4.11's) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -553,9 +575,19 @@ static void __fastcall__ start (const char* name, unsigned char t, const char* m
     strcat (path, name);
     if ((task_[t] = hub_spawn (path, t, more)) < 0 && t != T_SOUND) {
         t_end ();
-        strcpy (path, "dq0: this can't be started: lib/dq0/");
+        strcpy (path, "dq0: can't start lib/dq0/");
         strcat (path, name);
         hy_exits (path);
+    }
+}
+
+/* A reply waited for as the game starts (q posted already), a dot told every second or so meanwhile (o_dots's: the
+** start's progress, 2026-10-30: the referee's and the world's start, their programs and overlays read from the card,
+** some 10 and 30 s on the board) */
+static void __fastcall__ waited (void* q)
+{
+    while (!hub_wait_t (q, 250)) {
+        dots (0);
     }
 }
 
@@ -579,10 +611,11 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     close (w);
     if (hub_create (HUB_BANKS)) {
         t_end ();
-        hy_exits ("dq0: no shared segment or semaphores for its tasks");
+        hy_exits ("dq0: no shared segment or semaphores");
     }
     HUB->seed = seed;
     HUB->test_start = test_start;
+    HUB->dice = rolls;
     HUB->small = small;
     HUB->gear = gear;
     hub_map (DEN_BANK);                         /* (The sounds' words: none till the sound task's put them there; the
@@ -593,7 +626,11 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     start ("dq0c", T_COMMANDS, libdir);         /* (Its command parser: its tables read as the others start) */
     start ("dq0s", T_SOUND, libdir);            /* (Its sound: SOUND.md) */
     start (sv.referee, T_REFEREE, libdir);      /* (Its rules, the ruleset's referee: its folder, for its overlay) */
-    r = referee (RS_HELLO, 0);
+    r = &HUB->slot[SLOT_UI];                    /* (The referee's hello: its first request, the rest of it 0 as the
+                                                **   hub's made; waited for with the start's dots) */
+    r->kind = RS_HELLO;
+    hub_post (r, T_REFEREE);
+    waited (r);
     round = r->w1;                              /* (The ruleset's round, in tenths: the world's to keep) */
     l = strchr (r->text, '\n');                 /* (Its name, then its character generator's: none, "") */
     character (file, seed, l ? l + 1 : "");     /* (The character: its file, or the generator's) */
@@ -622,7 +659,8 @@ static void __fastcall__ start_world (unsigned long seed, const char* file)
     HUB->wreq.y = pace | (noinit ? WY_NO_INIT : 0) | (nobear ? WY_NO_BEAR : 0);
     HUB->wreq.a = pc_gait;
     HUB->wreq.b = pc_watch;
-    hub_call (&HUB->wreq, T_WORLD);
+    hub_post (&HUB->wreq, T_WORLD);
+    waited (&HUB->wreq);
     HUB->wreq.state = REQ_FREE;
     things (IO_TOOLS, "");                      /* (The world's catalogue read in: the theme's kinds after it) */
     theme_load (made);                          /* (The game's own, 0xFF; a stand-in's, theme.h: history's) */
@@ -709,6 +747,78 @@ static void stop_world (void)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
+
+/* The answer's tasks in the kernel's foreground (TASKFORE: base/kernel/sched.s), at the real paces: the UI for good (FS_UI:
+** so a line's Enter is looked for at the next tick, a tick at most behind the background's work; a driver serving its
+** calls, the console's, with it), and the world, the command parser, the senses and the referee while a command's in
+** hand (FS_CMD: the hub's ui_cmd).  The senses with them: the world waits on their look and their stock (in the
+** background, an inventory's answer was 60,000 cycles the slower).  Not at the turns pace: there the game waits for
+** the player, and its tasks take their turns as they did (fore_sync's; overlay 6's) */
+#define FS_CMD      1
+#define FS_UI       2
+#pragma code-name (push, "OV6CODE")
+#pragma rodata-name (push, "OV6RODATA")
+void __fastcall__ o_fore_set (unsigned char on)
+{
+    static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_SENSES, T_REFEREE };
+    unsigned char k;
+
+    hy_taskfore (hy_task (), (on & FS_UI) != 0);
+    for (k = 0; k < sizeof fg; ++k) {
+        if (task_[fg[k]] > 0) {
+            hy_taskfore (task_[fg[k]], on & FS_CMD);
+        }
+    }
+}
+
+/* The game's start, its progress shown (2026-10-30, the user's: a start of some seconds is fine with its progress
+** shown; on the board the start is a minute and more, the card's reading most of it).  k 2: the world's tasks being
+** started (s_begin's), told; 3: the dungeon begun, the character's first look to come, told.  0: a dot as the start
+** waits on a task's reply (hub.c's hub_wait_t: its doorbell's wait out); 1: main's loop round while the game starts,
+** a dot each second or so; the character ready the first time (its first look told, E_READY), the start over: the
+** help's line said, with the prompt after it */
+void __fastcall__ o_dots (unsigned char k)
+{
+    static unsigned at;
+
+    if (k >= 2) {
+        if (k == 3) {
+            blank ();
+        }
+        msg (k == 2 ? "The dungeon is being made ready ..." : "Nearly ready ...");
+    } else if (k && !busy) {
+        starting = 0;
+        blank ();
+        tell (T_TYPE_HELP_FOR);
+        return;
+    } else if (hy_ticks () - at < 240) {
+        return;
+    } else {
+        say (".");
+    }
+    at = hy_ticks ();
+    t_flush ();
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+static unsigned char fored;                     /* (The tasks in the foreground: FS_*, fore_sync's) */
+static unsigned char iqh, owed, obeat;          /* (The intents' ring as a line's taken; an answer owed, main's;
+                                                **   the world's heartbeat as it was sent) */
+static unsigned char stirs;                     /* (A denizen's stir held while a line's answered: events', main's) */
+static void fore_sync (void)
+{
+    static unsigned char f;
+
+    if (owed && !busy && HUB->iq_tail == HUB->iq_head && (unsigned char) (HUB->beat[T_WORLD] - obeat) >= 2) {
+        HUB->ui_cmd = owed = 0;                 /* (Its intent taken and the world round again since: an answer
+                                                **   without news to the character, if any, given) */
+    }
+    f = HUB->tpr ? FS_UI | (HUB->ui_cmd != 0) : 0;
+    if (f != fored) {
+        fore_set (fored = f);
+    }
+}
 
 static unsigned char cq_st;                     /* The line posted to the command parser: none (0), its reply not
                                                 **   taken (CQ_OUT), or taken (CQ_IN: its struct cmd in CMD_BANK) */
@@ -803,7 +913,7 @@ static void heard (void)
     unsigned char rel;
 
     while (hub_dnext (&dplace, &m)) {
-        if (m.kind == E_FIGHT && (!m.who || !m.a)) {
+        if (m.kind == E_FIGHT) {                /* (The character's, one at it; or a stray's, between two actors) */
             blow (&m);
             continue;
         }
@@ -816,8 +926,9 @@ static void heard (void)
             }
             continue;
         }
-        if (m.kind != E_DEN || !m.b || m.x[2] || m.x[0] != HUB->pc_stratum) {
-            continue;
+        if (m.kind != E_DEN || !m.b || (m.x[2] && m.a < DE_RALLY) || m.x[0] != HUB->pc_stratum) {
+            continue;                           /* (A rally told seen too: its words, part 14's; a snore, a word on
+                                                **   watch, the day's) */
         }
         dx = m.w1 - HUB->pc_x;
         dy = m.w2 - HUB->pc_y;
@@ -846,8 +957,8 @@ static unsigned char events (void)          /* (How many there were) */
 
     while (!quit && hub_next (&place, &m)) {
         ++n;
-        if (!m.who && busy && (m.kind != E_VIEW || m.w1 != V_STIR)) {
-            HUB->ui_cmd = 0;                    /* (The character's news: a command's answer begun, its intent out;
+        if (!m.who && (busy | owed) && (m.kind != E_VIEW || m.w1 != V_STIR)) {
+            HUB->ui_cmd = owed = 0;             /* (The character's news: a command's answer begun, its intent out;
                                                 **   not a denizen stirring, the background's, held till after it) */
         }
         switch (m.kind) {
@@ -910,7 +1021,14 @@ static unsigned char events (void)          /* (How many there were) */
         case E_VIEW:
             if (m.who == 0) {
                 if (m.w1 == V_STIR) {
-                    stir ();                    /* (A denizen it sees moved) */
+                    if ((t_next () || inn) && HUB->tpr) {
+                        stirs = 1;              /* (A line typed, at the real paces: told after its answer, main's,
+                                                **   the background's news not in its way, 2026-10-30; or one being
+                                                **   typed: told as it's entered and answered, or let go, its echo
+                                                **   and its Enter not behind the stir's words) */
+                    } else {
+                        stir ();                /* (A denizen it sees moved) */
+                    }
                     break;
                 }
                 if (m.w1 == V_FACING) {         /* (A turn's first words, as it's begun: out at once, its look
@@ -1042,6 +1160,14 @@ static void __fastcall__ limb_words (const struct msg* m)
         pose_words (m->w1);
         return;
     }
+    if ((m->b & 0x80) && actor_seen (m->b) == 2) {
+        msg ("You hear something fall.");      /* (A fall unseen, near: the world's b | 0x80, part 8's, 2026-10-30) */
+        return;
+    }
+    if (k >= WB_WATER - WB_DROP && k <= WB_DOUSED - WB_DROP) {  /* (The water's: slice 4.9's) */
+        water_words (m->w1);                    /* (Overlay 4's, water.c's) */
+        return;
+    }
     hub_mem (KIND_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
     k = (k == WB_RISEN - WB_DROP || k == WB_NOT_UP - WB_DROP) && m->w1 >> 8 ?
         (WB_NO_RUN - WB_DROP + 1) * 2 + k - (WB_RISEN - WB_DROP) : k * 2 + (m->b != 0);
@@ -1065,7 +1191,12 @@ void __fastcall__ s_news (const struct msg* m)
     case E_BEAT:
         limb_words (m);
         break;
-    case E_BEARING:                             /* (Its bearings: lost, known, or set right, a room it knows) */
+    case E_BEARING:                             /* (Its bearings: lost, known, or set right, a room it knows; the sky
+                                                **   seen, the time it believes, time.c's) */
+        if (m->w1 == BRG_SKY) {
+            time_ui (TU_SKY | m->b << 8);
+            break;
+        }
         tell (m->w1 == BRG_LOST ? T_LOST_BEARINGS : T_BEARINGS_BACK);
         break;
     case E_DIG:
@@ -1073,7 +1204,11 @@ void __fastcall__ s_news (const struct msg* m)
         if (k == D_BEGUN || k == D_AGAIN) {
             dug_with[0] = 0;
         } else if (k != D_NO_TOOL) {
-            dig_used (m->b);
+            dig_used (m->b | k << 8);               /* (And the rock it's into told: slice 4.10's) */
+        }
+        if (k == D_ROOF) {                      /* (Poor rock come down on the hole: slice 4.10's) */
+            msg ("The rotten rock splits, and part of the roof falls into the hole.");
+            k = D_POOR;
         }
         dig_words (k, m->w1 & 0xFF);
         break;
@@ -1497,17 +1632,31 @@ static void to_hand (void)
 }
 
 /* The tool a dig's spell took (the referee's choice): worn by it, and named as it's first taken up (part 14's, s_news's
-** alone, through its stub: the main RAM's room) */
+** alone, through its stub: the main RAM's room); bk an E_DIG's b, its how (D_*) times 256.  And the rock a spell's
+** into (rock.h's RK_*: the b's high four bits, slice 4.10's), told as it's come to (its first spell, or the b's 8: a
+** new rock): how it looks and how it goes, its name too after a spell that went well (Mining's eye: D_GOOD) */
 char dig_with[16];
 #pragma code-name (push, "SW14CODE")
 #pragma rodata-name (push, "SW14RODATA")
-void __fastcall__ s_dig_used (unsigned char n)
+void __fastcall__ s_dig_used (unsigned bk)
 {
+    static const char rocks[] = "shale\0flaky\0sandstone\0buff\0limestone\0pale grey\0slate\0"
+        "blue-grey\0marble\0white\0granite\0speckled grey\0basalt\0black\0quartz\0white-veined\0ironstone\0"
+        "rusty red\0copper ore\0green-stained";
+    const char* r;
+    unsigned char n = bk & 3, i = (unsigned char) bk >> 4, g = bk >> 8 == D_GOOD;
+
     HUB->ireq.to = HUB->dig_wear[n];
     things (IO_WEAR, HUB->dig_tool[n]);
     if (strcmp (dug_with, HUB->ireq.name)) {
         strcpy (dug_with, HUB->ireq.name);
         strcpy (dig_with, dug_with);
+    }
+    if (i && bk >> 8 != D_THROUGH && (dig_with[0] || bk & 8)) {
+        for (r = rocks; --i; r += strlen (r) + 1) {    /* (Its name, then its looks) */
+            r += strlen (r) + 1;
+        }
+        sayf ("\nYou're into %s rock%s%s.", r + strlen (r) + 1, g ? ": " : "", g ? r : "");
     }
 }
 #pragma code-name (pop)
@@ -1993,8 +2142,8 @@ portal:
         d = cmd.dir;
         if (d == GO_DOWN) {
             intend (I_DIG, DIR_DOWN);
-        } else if (d <= H_NW && !(d & 1)) {
-            intend (I_DIG, d >> 1);
+        } else if (d <= H_NW) {
+            intend (I_DIG, d + 8);              /* (A heading, 8 on: the world's, a diagonal too) */
         } else {
             tell (T_DIG_WHICH_WAY);
         }
@@ -2108,7 +2257,14 @@ portal:
     case VB_ALLY_DISMISS:
     case VB_NAME_OBJECT:
     case VB_NAME_PLACE:
-        deal (cmd.aux);
+        if (errand ()) {                        /* (A thing to fetch found first, a gift's: part 15's, slice 4.8's) */
+            deal (cmd.aux);
+        }
+        return;
+    case VB_GIVE_OBJECT:
+        if (errand ()) {
+            deal (SW_GIVE);
+        }
         return;
     default:                                    /* (The rest that want nothing but their action; and those the game
                                                 **   doesn't do yet: its verb, as typed) */
@@ -2252,6 +2408,8 @@ void __fastcall__ s_args (int argc, char* argv[])
     unsigned char i;
     char* l;
 
+    seed = hy_time () ^ hy_ticks ();            /* (The clock's, unless -s says: here, part 7's, not main's: the main
+                                                **   RAM's room) */
     for (i = 1; i < argc; ++i) {
         if (!strcmp (argv[i], "-s") && i + 1 < argc) {
             for (seed = 0, l = argv[++i]; *l >= '0' && *l <= '9'; ++l) {
@@ -2265,15 +2423,22 @@ void __fastcall__ s_args (int argc, char* argv[])
             kit = argv[++i];                    /* (A tool to begin with: till the items layer, the tests') */
         } else if (!strcmp (argv[i], "-C")) {
             small = 1;                          /* (For the tests: the caches small, paged to the save folder soon) */
-        } else if (!strcmp (argv[i], "-K")) {
-            gear = GE_OLD;                      /* (For the tests: the kit as it was before the outfits, the denizens
-                                                **   with none of theirs: their dice as they were) */
+        } else if (argv[i][0] == '-' && argv[i][1] && !argv[i][2] && (l = strchr (GE_FLAGS, argv[i][1])) != 0) {
+            gear |= 1 << (l - GE_FLAGS);        /* (For the tests, hub.h's GE_*: -K the kit as it was before the outfits,
+                                                **   the denizens with none of theirs, their dice as they were; -W no
+                                                **   water grown in the chunks, the walks' as they were, slice 4.9's;
+                                                **   -M every built stratum mixed, slice 4.10's; -U no rubble, the
+                                                **   passages as they were made; -A every built stratum's passages on
+                                                **   the diagonal, 2026-11-01) */
         } else if (!strcmp (argv[i], "-a")) {
             autogo = 1;                         /* (For the tests: a long task goes on at every soft question) */
         } else if (!strcmp (argv[i], "-N")) {
             nobear = 1;                         /* (For the tests: its bearings never tested, as if it knew north) */
         } else if (!strcmp (argv[i], "-I")) {
             noinit = 1;                         /* (For the tests: no engage initiative test, no grope's) */
+        } else if (!strcmp (argv[i], "-R") && i + 1 < argc) {
+            rolls = dnum (argv[++i]);           /* (For the tests: the dice's own offset, 0-252: the same dungeon, other
+                                                **   rolls) */
         } else if (!strcmp (argv[i], "-T")) {
             ++test_start;                       /* (For the tests: the character begins at a way down; -T twice, by
                                                 **   the theme's first piece; three times, four strata down) */
@@ -2286,7 +2451,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]] [-C] [-a] [-I] [-N] [-K]");
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d dir] [-t theme] [-r rs] [-T..]");    /* (Not the tests' own: the room's) */
         }
     }
 }
@@ -2322,14 +2487,17 @@ void __fastcall__ s_begin (int argc, char* argv[])
     signal (SIGINT, interrupted);
     t_init ();
     title ();
+    t_flush ();                                 /* (Its words out now: the start's progress shown, 2026-10-30) */
+    starting = 1;
     made = history (seed);                      /* (The game's own theme, or a stand-in's: which) */
+    dots (2);                                   /* (Its tasks started: told, a dot as each's waited for) */
     start_world (seed, file);                   /* (The character with it: its file, or the ruleset's generator) */
     status ();
     story (resumed);                            /* (The theme's) */
     blank ();
     entered (resumed);
-    blank ();
-    tell (T_TYPE_HELP_FOR);
+    dots (3);                                   /* (Its first look to come: told, main's loop's dots; the help's line
+                                                **   with the first prompt, o_dots') */
     t_done ();
 }
 
@@ -2352,9 +2520,7 @@ int main (int argc, char* argv[])
     unsigned char k, f;
     char* l;
 
-    seed = hy_time () ^ hy_ticks ();
-    find_dirs ();                               /* (The overlays read in, and the swapped parts with them, first) */
-    ovl_load ();
+    ovl_load (find_dirs ());                    /* (The overlays read in, and the swapped parts with them, first) */
     begin (argc, argv);
     while (!quit) {
         hub_map (0);                            /* (The hub at $8000 again: a call may have moved the window) */
@@ -2369,22 +2535,35 @@ int main (int argc, char* argv[])
                 t_key (k);
                 quick = 25;                     /* (A line being typed: its Enter looked for twice as often, the
                                                 **   background given way to it the sooner) */
+                if (k == 10) {                  /* (Enter: t_getkey's) */
+                    break;                      /* (A line entered: taken up at once, the keys after it next time) */
+                }
             }
         }
         if (t_next () && (!busy || !held)) {
             HUB->ui_cmd = 1;                    /* (A line entered: the senses' look and the minds give way at once,
                                                 **   not after the events and the status line; its answer first) */
+            owed = 0;
+            fore_sync ();                       /* (The answer's tasks in the foreground meanwhile) */
+            cq_post (t_next ());                /* (The command parser at work on it at once, while the events and
+                                                **   the status line are seen to: not after them, 2026-10-30) */
         }
         k = events ();
         heard ();
+        if (starting) {
+            dots (1);                           /* (The game's start: its progress, then the help's line) */
+        }
         now = hub_now ();
-        if ((k && !HUB->ui_cmd) || ((now >= next || now < next - 600 || (HUB->pc_task.kind && HUB->pc_task.done != bar_done)) &&
-            hy_ticks () - shown >= (inn ? 1000 : 200))) {
+        if (HUB->ui_cmd) {
+        } else if (k || ((now >= next || now < next - 600 || (HUB->pc_task.kind && HUB->pc_task.done != bar_done)) &&
+            hy_ticks () - shown >= (inn ? 1000 : 200) && !t_haskey ())) {
             next = (now / 600 + 1) * 600;       /* (The status line as the events change it, and its clock as a
                                                 **   game minute goes, a real second apart at most, five while a
                                                 **   line's being typed: only what's changed drawn, t_status; the
                                                 **   minute's end kept, not divided for each time round; not as
-                                                **   events come while a command's in hand: its answer first) */
+                                                **   events come while a command's in hand: its answer first, nor
+                                                **   its clock then, 2026-11-01; nor its clock while keys wait, a
+                                                **   line typed ahead, 2026-10-30) */
             shown = hy_ticks ();
             status ();
         }
@@ -2394,7 +2573,12 @@ int main (int argc, char* argv[])
         if (!busy && (reach & 1)) {
             ++reach;                            /* (Walked over to its thing, or its timed work's time up: the command
                                                 **   kept carried out again, its end; till the next's, s_command's) */
+            hub_map (0);
+            HUB->ui_giving = 1;                 /* (Being given, as a line's command: ui_giving's) */
             command (0);
+            hub_map (0);
+            HUB->ui_giving = 0;
+            hub_ring (T_WORLD);
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
             cq_post (l);                        /* (The command parser at work on it meanwhile) */
@@ -2432,6 +2616,10 @@ int main (int argc, char* argv[])
             l = 0;
         }
         if (l) {
+            HUB->ui_giving = 1;                 /* (Its command being given: the turns pace waits for it, the
+                                                **   world's turns_run) */
+            iqh = HUB->iq_head;                 /* (The UI's intents' ring as the line's taken: one sent, its answer
+                                                **   owed, the world's news) */
             f = names_in (l = t_line ());       /* (The line's first look, in the overlays' banks: a part's
                                                 **   copied in only for a line that may be its; an ordinary
                                                 **   command's only part 2, the commands') */
@@ -2464,13 +2652,28 @@ int main (int argc, char* argv[])
                 status ();                      /* (A world's answer to come: the status line after it, events') */
             }
             hub_map (0);
-            HUB->ui_cmd = busy;                 /* (Its answer the world's, not yet said: the look and the minds
-                                                **   give way till the character's news comes, events') */
+            owed = HUB->iq_head != iqh;
+            obeat = HUB->beat[T_WORLD];
+            HUB->ui_giving = 0;                 /* (Given: the world on, woken to it) */
+            hub_ring (T_WORLD);
+            HUB->ui_cmd = busy | owed;          /* (Its answer the world's, not yet said: the look and the minds
+                                                **   give way till the character's news comes, events'; an intent
+                                                **   sent, the character not busy, its answer owed too: a step that
+                                                **   can't be taken, the world's words) */
         } else {
             ready ();                           /* (The commands' part back, if another's in) */
         }
+        if (stirs && !inn && !HUB->ui_cmd) {
+            stirs = 0;
+            stir ();                            /* (A stir held while the line was typed and answered: told now, its
+                                                **   answer begun, ui_cmd's) */
+        }
         t_done ();
-        hub_nap (quick ? (--quick, 1) : 4);     /* (A fiftieth of a second: the keys looked for, the world's
+        fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */
+        hub_nap (t_wrote && t_haskey () ? 0 : quick ? (--quick, 1) : 4);  /* (Keys that came as it said something,
+                                                **   a line typed as an answer or a look went out: no nap, taken at
+                                                **   once, 2026-10-30.  A fiftieth of a second: the keys looked
+                                                **   for, the world's
                                                 **   events told; each look at the keys a call of the console's,
                                                 **   some 9,000 cycles with its own, a quarter of the CPU at two
                                                 **   ticks while nothing happened; a hundredth just after a command,
@@ -2487,7 +2690,11 @@ int main (int argc, char* argv[])
 #pragma rodata-name (push, "SW14RODATA")
 
 /* What waited for the character to be free (main's, seldom: part 2's, the main RAM's room, slice 4.2's; part 14's,
-** part 2's room, 2026-10-29) */
+** part 2's room, 2026-10-29; part 12's, overlay 3 full, 2026-10-31) */
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW12CODE")
+#pragma rodata-name (push, "SW12RODATA")
 void s_when_free (void)
 {
     if (rebar) {                                /* (A door barred: its bar set in its brackets, on the square the
@@ -2506,15 +2713,57 @@ void s_when_free (void)
     }
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW14CODE")
+#pragma rodata-name (push, "SW14RODATA")
+
 /* A denizen's sound heard (heard's, its weighing the main code's: m its event, rel which way it is), told: in the
 ** sound's words, the sound task's if it's put them there; its long task paused at the first (part 14's: seldom, the
 ** main RAM's room) */
 void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 {
+    static const char* n;
+
     hub_map (DEN_BANK);                         /* (Its sound's words: the sound task's, if it's put them there) */
     memcpy (heard_what, SND_AT + (m->x[1] % SND_KINDS * 2 + (m->a == DE_NOISE)) * SND_REC, sizeof heard_what);
     hub_map (0);
     heard_what[sizeof heard_what - 1] = 0;
+    if (m->a >= DE_RALLY) {                     /* (A successor at its post rallying its fellows, HOUSE.md's morale; a
+                                                **   sleeper's snore, those on watch talking, the alarm raised, the
+                                                **   day's, 2026-10-31; a pastime heard (dice rattling, singing), or let
+                                                **   go as its denizen rises to act, seen, leisure's, tell.c's words:
+                                                **   seen, by its name, else heard) */
+        if (m->a == DE_DIGS) {
+            return;                             /* (A tunneller's spells after its first: told as it began) */
+        }
+        if (m->a >= DE_PASTIME && m->a < DE_DIG) {
+            if (m->x[2] ? m->a < DE_UP : m->a >= DE_UP) {
+                return;                         /* (One seen at its pastime: the look's words say it) */
+            }
+            tell ((m->a - DE_PASTIME - PT_DICE + T_PAST_HEARD) | TELL_COPY);
+            n = heard_what;
+        } else {
+            n = m->a == DE_RALLY ? "rallies its fellows\0a rallying shout" : m->a == DE_SNORE ? "snores\0snoring" :
+                m->a == DE_TALK ? "says something to its fellow\0voices" : m->a == DE_DIG ?
+                "digs into the wall\0a scraping in rock" : m->a == DE_DUG ? "\0rock falling" :
+                "raises the alarm\0a shout of alarm";  /* (A tunneller's spell begun, its way through: slice
+                                                **   4.11's) */
+            strcpy (heard_what, n + strlen (n) + 1);
+        }
+        if (m->x[2] && m->a == DE_DUG) {
+            heard_words (0, rel);               /* (Its way through seen: where, the heard words' way's) */
+            strcpy (lb + 300, lb + 10 + strlen (heard_what));
+            sayf ("\nA fresh tunnel opens %s Spoil lies heaped by it.", lb + 300);
+            return;
+        }
+        if (m->x[2]) {
+            strcpy (lb + 300, HUB->actor[(m->who - 1) & (NACTORS - 1)].name);   /* (Its name, at the line's far end:
+                                                **   sayf's lb its own) */
+            sayf (lb[300] >= 'a' ? "\nThe %s %s." : "\n%s %s.", lb + 300, n);
+            return;
+        }
+    }
     heard_words (m->a | (m->x[3] ? 0x80 : 0), rel);
     msg (lb);
     if (busy && HUB->pc_task.kind && !asked) {
@@ -2524,7 +2773,12 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
     }
 }
 
-/* The body's position as the character said (E_BEAT WB_POSED's w1: the position times 256, | 0x8000 there already) */
+/* The body's position as the character said (E_BEAT WB_POSED's w1: the position times 256, | 0x8000 there already).
+** Part 12's since 2026-10-31 (part 14's bank, overlay 3, full) */
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW12CODE")
+#pragma rodata-name (push, "SW12RODATA")
 void __fastcall__ s_pose_words (unsigned w)
 {
     static const char pdo[5][10] = { "", "lie down", "crouch", "kneel", "sit down" };
@@ -2533,6 +2787,11 @@ void __fastcall__ s_pose_words (unsigned w)
 
     sayf (w & 0x8000 ? "\nYou are %s already." : "\nYou %s.", w & 0x8000 ? pis[k] : pdo[k]);
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW14CODE")
+#pragma rodata-name (push, "SW14RODATA")
 
 /* The background and the air, worded (way.c's, slices 4.5's: the senses' sound layer's, the hub's pc_bg, air_h,
 ** air_s): a listen's end (what 0: heard nothing, what it hears behind it all; 1, heard something, the background

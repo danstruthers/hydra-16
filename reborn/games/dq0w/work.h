@@ -7,11 +7,25 @@
 #ifndef _WORK_H
 #define _WORK_H
 
+/* ---- dq0w.c's digging (the character's, parts 1, 19, 25; a tunneller's rock asked of part 1 too, wdig.c's) */
+struct dig {
+    unsigned char   d;                          /* DIR_N ... DIR_W, DIR_DOWN */
+    unsigned char   mat;                        /* What it's into (rs.h's MAT_*: the referee judges the tools) */
+    unsigned char   rock;                       /* The rock last told (rock.h's RK_*: test_dig's; RK_NONE as it's
+                                                **   begun); DIG_ROCK, a tunneller's asked (dig_on's: its answer) */
+    unsigned        need, done;                 /* Half-feet (P_DIG's: bare hands half a foot a spell) */
+    unsigned        x, y;                       /* The square dug */
+};
+extern struct dig dig;
+#define DIG_ROCK        0xFE
+void dig_on (void);                             /* (Part 1's) */
+
 /* ---- store.c: the change records (world.h's), the world's alone to write */
 void __fastcall__ change (unsigned char sn, unsigned x, unsigned y, unsigned char tile, signed char elev,
     unsigned char link);                        /* Kept, and made in its chunk (the window moved) */
 void stocks (void);                             /* The chunks the maker stocked marked so (STOCKED) */
 void __fastcall__ kept_wait (unsigned char n);  /* (Part 28's) Stratum n's populations waited for (the denizens') */
+void __fastcall__ kept_late (unsigned char sn);  /* (Part 71's, wkept.c) Its populations done late: its stocked kept rooms lit */
 unsigned char __fastcall__ sconce_lights (unsigned char reach);  /* (Part 28's: wkept.c) The rooms' lights by their
                                                 **   sconces' (the chunks round the character, reach 0xFF; the chunk just
                                                 **   stocked, SL_STOCKED, its first square rec's; else those within

@@ -17,12 +17,15 @@
 ** (bare hands half a foot of soft soil, nothing of hard-packed earth; every tool half as far in hard-packed earth
 ** as in soil); anything harder only with a pick, a Mining test each spell: its rate at a marginal success, twice at
 ** a critical, half at a marginal failure, none at a critical failure */
+#define RS_DIG_SHOVEL   { 3, 0, 0, 0, 6 }       /* (A shovel's rates and a pick's, the table's: a tunneller's too, the
+                                                **   world's, dq0w/wdig.c, slice 4.11's) */
+#define RS_DIG_PICK     { 2, 4, 2, 6, 4 }
 #if defined (RS_HOUSE_DIG) && !defined (RS_HOUSE_DIG_DONE)
 #define RS_HOUSE_DIG_DONE
 static const struct { char key[8]; unsigned char rate[5], wear[5]; } digger[] = {   /* Earth, stone, masonry, flags,
                                                                                     **   soil */
-    { "hands", { 0, 0, 0, 0, 1 }, { 0, 0, 0, 0, 0 } }, { "shovel", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } },
-    { "spade", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } }, { "pick", { 2, 4, 2, 6, 4 }, { 0, 1, 1, 1, 0 } },
+    { "hands", { 0, 0, 0, 0, 1 }, { 0, 0, 0, 0, 0 } }, { "shovel", RS_DIG_SHOVEL, { 0, 0, 0, 0, 0 } },
+    { "spade", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } }, { "pick", RS_DIG_PICK, { 0, 1, 1, 1, 0 } },
     { "mattock", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } },
     { "blade", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } }, { "dagger", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } },
     { "knife", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } },
@@ -197,4 +200,17 @@ extern unsigned long xs_seed;
 #define QUIET_MIX(t)    ((t) * 1103515245UL + 12345UL | 1)
 #define QUIET_IN        { unsigned long qt_ = xs_seed; xs_seed = QUIET_MIX (qt_);
 #define QUIET_OUT       xs_seed = qt_; }
+#endif
+
+/* ---- The dice by who asks (RS_HOUSE_DICE: every referee's main loop, 2026-10-30): each requester's dice its own stream,
+** the world's slot's (0: the game's own as it began, after the referee's start), the UI's (1) and the denizens' (DSLOT:
+** NSLOTS), the generator's state (xs_seed) swapped in round each answer; so a game's dice go by its seed and its
+** commands, not by the order the tasks' requests reach the referee (one stream answered as they came: a turns pace
+** game's fights went by how the tasks interleaved, dq0cmd's, dq0handy's, with a byte more of code anywhere) */
+#if defined (RS_HOUSE_DICE) && !defined (RS_HOUSE_DICE_DONE)
+#define RS_HOUSE_DICE_DONE
+void __fastcall__ dice_to (unsigned char k);    /* (../dq0/dice.inc's, a referee's .s includes it; 3 + n,
+                                                **   the hub's dice, dq0 -R's: begun) */
+#define DICE_BEGIN      dice_to (3 + HUB->dice);
+#define DICE_IN(k)      dice_to (k);
 #endif

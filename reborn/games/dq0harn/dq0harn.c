@@ -49,6 +49,7 @@ void __fastcall__ dice_set (struct req* r);
 void __fastcall__ outfit_of (struct req* r);    /* (Overlay 1's: outfit.c, RS_OUTFIT) */
 signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 3's) */
 signed char __fastcall__ draw_test (signed char steps);     /* (Overlay 3's: a map drawn, slice 4.2's) */
+unsigned char wantfl;
 char news[NEWS_N];                              /* (What time did to the character, heal.c's: RS_DESCRIBE b 4's) */
 
 char tpart[16];                                 /* (RS_TREAT's part said) */
@@ -202,6 +203,7 @@ static signed char __fastcall__ test (harn_char* c, unsigned char p, signed char
 #define RS_HOUSE_DIG
 #define RS_HOUSE_DIG_TOOL   s_dig_tool
 #define RS_HOUSE_QUIET                          /* (Moving quietly's own dice: s_quiet_test's) */
+#define RS_HOUSE_DICE                           /* (The dice by who asks: main's) */
 #include "../dq0/rshouse.h"
 
 /* A dig's test (RS_TEST's P_DIG): judged by the tool to hand that suits it best, its rate a spell at a marginal
@@ -211,20 +213,37 @@ static void __fastcall__ dig_of (struct req* r);
 
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
 ** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery, stone
-** Masonry, glass Glassworking (part 2's, the main RAM's room, 2026-10-29) */
+** Masonry, glass Glassworking, the rock where it lies Mining (part 2's, the main RAM's room, 2026-10-29) */
 static const unsigned char appraiser[NAP] = {
     HARN_WPN, HARN_WPN, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR,
-    HARN_MSN, HARN_GLA
+    HARN_MSN, HARN_GLA, HARN_MIN
 };
 
 /* RS_TEST's own tests, through one stub (the main RAM's room): a dig's, moving quietly's, an appraisal's (by the
 ** craft that knows the thing) */
+static unsigned char __fastcall__ speaks (const char* t);
 void __fastcall__ s_dig_answer (struct req* r)
 {
-    if (r->a == P_STEALTH) {
+    if (r->a == P_STEALTH || r->actor) {       /* (Moving quietly; or a creature's own test, a tunneller's dig: its
+                                                **   grade by its sheet, the world's the rest, slice 4.11's) */
         s_quiet_test (r);
     } else if (r->a == P_APPRAISE) {
         r->grade = test_sk (&pc, appraiser[r->b < NAP ? r->b : 0], r->steps);
+    } else if (r->a != P_DIG && r->a != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
+        if (!speaks (r->text)) {                /* (Words in a tongue it doesn't speak: nothing) */
+            r->result = 2;
+        } else {
+            r->grade = test (&pc, r->a, r->steps);
+        }
+    } else if (r->a == P_SWIM) {                /* (A minute's swimming, the book's, Skills 10: its squares, by the
+                                                **   grade's yards (calm water) times its skill index; it sinks at
+                                                **   a critical failure; its breath held Endurance times 10 seconds) */
+        r->grade = test_sk (&pc, HARN_SWI, r->steps);
+        r->result = pc.ml[HARN_SWI] < 10 ? 1 : pc.ml[HARN_SWI] / 10;
+        r->w1 = (r->grade == G_CS ? 9 : r->grade == G_MS ? 7 : r->grade == G_MF ? 2 : 0) * r->result * 3 / SQ_FT;
+        r->result = harn_end (&pc);
+        r->w2 = (r->result << 3) + (r->result << 1);    /* (Times ten: no multiplying, the main RAM's) */
+        r->result = 0;
     } else {
         dig_of (r);
     }
@@ -427,6 +446,8 @@ static void status (void)
     s->morale = pc.att[HARN_MOR];
     s->load = !ep ? 0 : ep <= 2 ? 1 : ep <= 4 ? 2 : 3;   /* (Its encumbrance: a little burdened, heavily, overloaded) */
     s->power = 10;
+    s->lead = pc.ml[HARN_ORA] > pc.ml[HARN_RHE] ? pc.ml[HARN_ORA] : pc.ml[HARN_RHE];   /* (Its influence: the
+                                                **   morale field's, HOUSE.md's) */
     s->northsense = pc.att[HARN_SP] == HARN_KHU;    /* (The species' trait: the Khuzdul live below, and always know
                                                 **   north there) */
     s->mapmind = pc.att[HARN_INT] >= 20 ? 100 : 5 * pc.att[HARN_INT];  /* (Its map in mind, the house's: five times its
@@ -467,6 +488,10 @@ static void __fastcall__ own_line (char* l)
         wealth = atoi (l + 7);                  /* (Its family's, hmchar's: RS_OUTFIT's) */
     } else if (!strncmp (l, "language ", 9) && strlen (tongues) + strlen (l + 8) < sizeof tongues) {
         strcat (tongues, l + 8);
+    } else if (!strcmp (l, "timesense")) {
+        HUB->pcsum.timesense = 1;               /* (Absolute timesense: hmchar's, the house's rare trait, 2026-10-31:
+                                                **   the world's, the hub's tb; the hub in the window as the file's
+                                                **   read, its request's) */
     }
 }
 
@@ -477,8 +502,8 @@ void __fastcall__ s_load_pc (struct req* r)
 
     strncpy (path, r->text, sizeof path - 1);
     r->result = 1;
-    pv.hr = 0;                                  /* (No venom, no rest yet: its file's "body" line's, if any) */
-    rest_m = 0;
+    pv.hr = pd.hr = afffl = 0;                  /* (No venom, no sickness, no rest yet: its file's "body" line's) */
+    rest_m = HUB->pcsum.timesense = 0;
     if ((fd = open (path, O_RDONLY)) < 0) {
         return;
     }
@@ -532,6 +557,9 @@ void __fastcall__ s_save_pc (struct req* r)
         strncat (line, p, e - p);
         harn_write_line (fd, line);
     }
+    if (HUB->pcsum.timesense) {
+        harn_write_line (fd, "timesense");      /* (Its trait, kept: the house's) */
+    }
     close (fd);
     r->result = 0;
 }
@@ -544,6 +572,7 @@ void __fastcall__ s_save_pc (struct req* r)
 ** creature's asked for, a game carried on) */
 
 static unsigned char sb;                        /* Their bank */
+unsigned char fb;                               /* (Their bodies' bank: each one's fatigue, struct bbody, 2026-10-31) */
 static unsigned char piece[256];                /* (The bank through the main RAM, a piece at a time) */
 struct beast bs;
 unsigned char aden[NACTORS];
@@ -577,15 +606,15 @@ void __fastcall__ s_beasts (unsigned char back)
         strcat (path, "/beasts.dat");
         fd = back ? open (path, O_RDONLY) : open (path, O_WRONLY | O_CREAT | O_TRUNC, 0644);
     }
-    for (off = 0; off < 0x2000; off += sizeof piece) {
+    for (off = 0; off < 0x2000 + BBODIES; off += sizeof piece) {     /* (The sheets, then their bodies: fb's) */
         if (!back) {
-            bread (sb, (char*) 0x8000 + off, piece, sizeof piece);
+            bread (off < 0x2000 ? sb : fb, (char*) 0x8000 + (off & 0x1FFF), piece, sizeof piece);
             write (fd, piece, sizeof piece);
         } else {
             if (fd < 0 || read (fd, piece, sizeof piece) != sizeof piece) {
                 memset (piece, 0, sizeof piece);
             }
-            bwrite (sb, (char*) 0x8000 + off, piece, sizeof piece);
+            bwrite (off < 0x2000 ? sb : fb, (char*) 0x8000 + (off & 0x1FFF), piece, sizeof piece);
         }
     }
     if (fd >= 0) {
@@ -596,7 +625,9 @@ void __fastcall__ s_beasts (unsigned char back)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* Whether it speaks tongue t (a word of tongues, a space before it) */
+/* Whether it speaks tongue t (a word of tongues, a space before it: part 2's, the main RAM's room, 2026-10-31) */
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
 static unsigned char __fastcall__ speaks (const char* t)
 {
     char* p = tongues;
@@ -610,6 +641,8 @@ static unsigned char __fastcall__ speaks (const char* t)
     }
     return 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The character's state in words (RS_DESCRIBE b 3: overlay 1's; a 1, its pace and watchfulness only, the hub's): what
 ** the words need copied for the overlay (the hub's not in the window while it is) */
@@ -639,7 +672,13 @@ static unsigned char dk, drep;                  /*   the next, and the face afte
 static unsigned char dlog[DFIX], dl;            /* The sides of the first dice rolled, how many kept */
 static unsigned drolled;                        /* The dice rolled */
 
-static int __fastcall__ fixed (unsigned sides)
+int __fastcall__ fixed (unsigned sides);        /* (Its stub, bank.s's: part 2's since 2026-10-31, the main RAM's room;
+                                                **   a test's alone) */
+
+#pragma code-name (push, "SW2CODE")
+#pragma rodata-name (push, "SW2RODATA")
+
+int __fastcall__ s_fixed (unsigned sides)
 {
     ++drolled;
     if (dl < DFIX) {
@@ -650,9 +689,6 @@ static int __fastcall__ fixed (unsigned sides)
     }
     return drep ? drep : 1 + (int) random (sides);
 }
-
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
 
 void __fastcall__ s_dice_set (struct req* r)
 {
@@ -714,7 +750,8 @@ static signed char __fastcall__ side (unsigned char who, unsigned char p, signed
 void __fastcall__ s_quiet_test (struct req* r)
 {
     QUIET_IN
-    r->grade = r->actor ? side (r->actor, P_STEALTH, r->steps) : test (&pc, P_STEALTH, r->steps);
+    r->grade = side (r->actor, r->a, r->steps);  /* (The character's, or a creature's by its sheet: a tunneller's
+                                                **   dig too, slice 4.11's) */
     QUIET_OUT
 }
 #pragma code-name (pop)
@@ -754,7 +791,13 @@ static void __fastcall__ answer (struct req* r)
         tnow = HUB->now;
         strncpy (tpart, r->text, sizeof tpart - 1);
         memcpy (rq, r, sizeof rq);
+        memcpy (rq + offsetof (struct req, x) + WANT_X, &HUB->pc_hunger, 6);    /* (The hub's want: slice 4.9's) */
+        memcpy (rq + offsetof (struct req, x) + 16, &r->w1, 2);     /* (Its minutes, the reply's w1 after) */
         body_req ((struct req*) rq);
+        if (r->kind == RS_TIME) {
+            want ((struct req*) rq);            /* (Hunger and thirst: overlay 7's, want.c) */
+            memcpy (&HUB->pc_hunger, rq + offsetof (struct req, x) + WANT_X, 6);
+        }
         memcpy (r, rq, sizeof rq);
         status ();
         break;
@@ -768,13 +811,14 @@ static void __fastcall__ answer (struct req* r)
         r->b = watch;
         break;
     case RS_TEST:
-        if (r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE) {   /* (Judged by the tool to hand that
+        if (r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE || r->a == P_SWIM) {   /* (Judged by the tool to hand that
                                                 **   suits it best; moving quietly, by its own dice; by the craft that
                                                 **   knows the thing: part 2's) */
             dig_answer (r);
             break;
         }
-        if (r->a == P_BEARING) {                /* (Its bearings, by its own dice: overlay 3's, bearing.c) */
+        if (r->a == P_BEARING) {                /* (Its bearings, and the time it keeps (rs.h's TIME_STEPS), by
+                                                **   their own dice: overlay 5's, bearing.c) */
             r->grade = bearing_of (r->steps);
             r->result = bway;
             break;
@@ -789,11 +833,9 @@ static void __fastcall__ answer (struct req* r)
             break;
         }
         if ((r->a == P_PERSUADE || r->a == P_INTIMIDATE || r->a == P_DECEIVE) && r->text[0]) {   /* (Words in a
-                                                **   tongue: one it speaks, or nothing) */
-            if (!speaks (r->text)) {
-                r->result = 2;
-                break;
-            }
+                                                **   tongue: one it speaks, or nothing: part 2's) */
+            dig_answer (r);
+            break;
         }
         if (r->a <= P_NOTICE_SMELL) {           /* (By its state: its pace, its shock; overlay 1's, in a copy) */
             ps.go = HUB->pc_going;
@@ -871,35 +913,29 @@ static void __fastcall__ answer (struct req* r)
     }
 }
 
-/* The overlays: dir/dq0harn.ovl, an 8K bank each (dq0harn.cfg's OV1 ...; the file cut after the last one used:
-** make.js), read into banks of its own, and a bank for the creatures' sheets (cleared): 0, or -1 */
+/* The overlays: dir/dq0harn.ovl, an 8K bank each (dq0harn.cfg's OV1 ...; the file cut after the last one used, each
+** bank packed: make.js, ../dq0/ovlpack.js), read and unpacked in place into banks of its own by the unpack library,
+** the linker's fill ($FF) put back after its bytes (../dq0/ovunpack.inc); and a bank for the creatures' sheets
+** (cleared): 0, or -1 */
+unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
 static int __fastcall__ ovl_load (const char* dir)
 {
     static char path[64];
     int fd, first, n;
-    unsigned char k;
-    unsigned off;
 
     strcpy (path, dir);
     strcat (path, "/dq0harn.ovl");
     if ((fd = open (path, O_RDONLY)) < 0 || (first = hy_banks_alloc (OVLS)) < 0) {
         return -1;
     }
-    for (k = 0; k < OVLS; ++k) {
-        ovbank[k] = first + k;
-        for (off = 0; off < 0x2000; off += sizeof piece) {
-            n = read (fd, piece, sizeof piece);
-            if (n <= 0) {
-                break;
-            }
-            bwrite (first + k, (void*) (0x8000 + off), piece, n);
-        }
-    }
+    ovbank[0] = first;                          /* (The rest after it: ovl_unpack's) */
+    n = ovl_unpack (fd | (OVLS << 8));
     close (fd);
-    if ((n = hy_banks_alloc (1)) < 0) {
+    if (n || (n = hy_banks_alloc (2)) < 0) {
         return -1;
     }
     sb = n;
+    fb = n + 1;                                 /* (The bodies' bank after the sheets': hy_banks_alloc's run) */
     return 0;
 }
 
@@ -925,6 +961,8 @@ int main (int argc, char* argv[])
     rseed (HUB->seed ^ 0x5245);                 /* (Its own dice: the game's seed, and its role) */
     harn_own_skills (own, 1);                   /* (Its own skill: Cartography) */
     beasts (2);
+    hub_map (0);
+    DICE_BEGIN
     for (;;) {
         hy_sem_acquire (HUB->sem[T_REFEREE]);   /* (Waiting costs nothing) */
         hub_map (0);
@@ -933,10 +971,12 @@ int main (int argc, char* argv[])
         }
         for (s = 0; s < NSLOTS; ++s) {
             if (hub_posted (&HUB->slot[s])) {
+                DICE_IN (s)
                 answer (&HUB->slot[s]);
                 hub_reply (&HUB->slot[s]);
             }
         }
+        DICE_IN (NSLOTS)
         den_slot ();
     }
     return 0;

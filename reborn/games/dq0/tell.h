@@ -47,9 +47,15 @@ enum {
     T_OVERLOADED,
     T_LOST_BEARINGS,                            /* (Its bearings, E_BEARING's: slice 4.2's) */
     T_BEARINGS_BACK,
-    T_COUNT
+    T_PAST_HEARD,                               /* (A pastime heard, DE_PASTIME's, by its PT_* less PT_DICE (the social
+                                                **   ones: leisure's, 2026-10-31); one let go as its denizen rises to
+                                                **   act, DE_UP's, by its PT_*: heard_what's, TELL_COPY) */
+    T_PAST_UP = T_PAST_HEARD + 7,
+    T_COUNT = T_PAST_UP + 8
 };
+#define TELL_COPY       0x80                    /* (tell's n | it: the words copied into heard_what, 19 letters at most,
+                                                **   not said) */
 
-void __fastcall__ tell (unsigned char n);       /* Overlay 1: the message, said (msg's: on a line of its own) */
+void __fastcall__ tell (unsigned char n);       /* Overlay 14: the message, said (msg's: on a line of its own) */
 
 #endif

@@ -51,6 +51,7 @@ const rules = [
   ['reborn/modules/math/', ['numbers', 'basic', 'forth', 'hylang', 'c', 'layout']],
   ['reborn/modules/numbers/', ['numbers', 'basic', 'forth', 'hylang', 'c', 'layout']],
   ['reborn/modules/play/', ['sound', 'layout']],
+  ['reborn/modules/unpack/', ['dq0', 'layout']],                // (The unpack library: the game's overlays read as it starts)
   ['reborn/modules/', ['*']],                                 // (init, rc, cons, kdev, storage, snd, vid, rom.txt)
   ['reborn/spec/asm.def', ['asm', 'basic', 'forth']],
   ['reborn/spec/numbers.def', ['numbers', 'basic', 'forth', 'hylang', 'c']],
@@ -130,9 +131,9 @@ const NEAR = {
     'dq0traces', 'dq0lair', 'dq0robbed', 'dq0finished', 'dq0helpless'],
   theme: ['dq0theme', 'dq0pieces', 'dq0themegen', 'dq0goals', 'dq0themec', 'dq0history', 'dq0layers', 'dq0quest',
     'dq0handtheme', 'dq0plan', 'dq0inhab', 'dq0popgen'],
-  time: ['dq0longwait', 'dq0tasks', 'dq0timed', 'dq0pace', 'dq0steps', 'dq0tiring', 'dq0watch', 'dq0rather', 'dq0stay',
+  time: ['dq0time', 'dq0longwait', 'dq0tasks', 'dq0timed', 'dq0pace', 'dq0steps', 'dq0tiring', 'dq0watch', 'dq0rather', 'dq0stay',
     'dq0usedup', 'dq0answer'],
-  body: ['dq0limbs', 'dq0legs', 'dq0hands', 'dq0handy', 'dq0harm', 'dq0tiring', 'dq0senseless', 'dq0helpless', 'dq0disarm', 'dq0venom', 'dq0tend',
+  body: ['dq0limbs', 'dq0legs', 'dq0hands', 'dq0handy', 'dq0harm', 'dq0tiring', 'dq0senseless', 'dq0helpless', 'dq0disarm', 'dq0venom', 'dq0air', 'dq0tend',
     'dq0pose', 'dq0quiet'],
   save: ['dq0save', 'dq0kept', 'dq0soak', 'dq0quest', 'dq0vast'],
   screen: ['dq0vera', 'dq0veraplain', 'dq0veraserial', 'dq0prompt', 'dq0sound', 'dq0soundx', 'dq0answer', 'dq0mapturn'],
@@ -178,6 +179,7 @@ const CASES = [
   ['reborn/forthlib/double.s', { has: ['forth'], not: ['dq0*'] }],
   ['reborn/modules/hylang/hylang.s', { has: ['hylang', 'hysuite1', 'hyhydra'], not: ['dq0*', 'basic'] }],
   ['reborn/modules/asm/asm.s', { has: ['as', 'dis', 'bsuite', 'forth'], not: ['dq0*'] }],
+  ['reborn/modules/unpack/unpack.s', { has: ['dq0starttime', 'dq0answer'], not: ['bsuite', 'hylang'] }],
   ['reborn/modules/numbers/num.s', { has: ['numbers', 'basic', 'hylang', 'forth', 'cnum', 'dq0'], not: ['task', 'base'] }],
   ['reborn/tests/mod/t_task/t_task.s', { has: ['task'], not: ['dq0*', 'boot'] }],
   ['reborn/tests/ram/t_rules/rules.txt', { has: ['dq0rules'], not: ['boot', 'dq0fight'] }],

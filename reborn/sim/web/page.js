@@ -21,7 +21,7 @@ const CLOCK = 3.579545e6;
 
 // ---- The setup, kept
 
-const DEFAULTS = { vera: true, smc: false, rtc: true, modules: 3, size: '80x24', speed: '1' };
+const DEFAULTS = { vera: true, smc: false, rtc: true, modules: 3, size: '80x24', speed: '1' };   // (modules: sim/lib/machine.js's DEFAULT_MODULES, the board's)
 const store = {
   get: () => { try { return Object.assign({}, DEFAULTS, JSON.parse(localStorage.getItem('hydra16.setup') || '{}')); } catch (e) { return Object.assign({}, DEFAULTS); } },
   set: s => { try { localStorage.setItem('hydra16.setup', JSON.stringify(s)); } catch (e) { /* (Not kept: a private window) */ } },

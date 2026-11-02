@@ -52,15 +52,19 @@ extern unsigned char smask;
 
 /* Squares: the low four bits a kind; T_SEEN: the character has seen it; T_VIS: it sees it now; T_HOLE: a shaft in
 ** the ceiling above; T_DRAWN: on the map it draws (the senses', as it sees it, mapping as it goes on paper: DUNGEON.md,
-** the map kept; the map its chunk's kept.map) */
-enum { T_ROCK, T_FLOOR, T_WALL, T_DOOR, T_CORR, T_STEPS, T_WINDOW, T_UP, T_DOWN, T_PIT };
+** the map kept; the map its chunk's kept.map).  T_RUBBLE: a passage's square fallen in (age's, slice 4.10's: the
+** maker's, a passage's, never by a room or a doorway), climbed over slowly, cleared by digging.  T_CUT: rock a
+** diagonal way's corner cuts through (the user's, 2026-10-31: passages off the compass): not stood on, seen past, the
+** two squares of the diagonal it's a corner of walked between (chunk.c's slant) */
+enum { T_ROCK, T_FLOOR, T_WALL, T_DOOR, T_CORR, T_STEPS, T_WINDOW, T_UP, T_DOWN, T_PIT, T_RUBBLE, T_CUT };
 #define T_SEEN          0x80
 #define T_VIS           0x40
 #define T_MARK          0x40                    /* (A grower's, the same bit: a square reached) */
 #define T_HOLE          0x20
 #define T_DRAWN         0x10
 #define TILE(t)         ((t) & 0x0F)
-#define T_PASS(t)       (TILE (t) != T_ROCK && TILE (t) != T_WALL && TILE (t) != T_WINDOW && TILE (t) != T_PIT)
+extern const unsigned char t_kinds[16];         /* (Each kind's: 1 it can be stood on; slant.s's, the maker's make.c) */
+#define T_PASS(t)       (t_kinds[TILE (t)] & 1) /* Not rock, a wall, a window, a pit, a cut */
 #define T_INSIDE(t)     (TILE (t) == T_FLOOR || TILE (t) == T_STEPS || TILE (t) == T_UP || TILE (t) == T_DOWN || \
                          TILE (t) == T_PIT)
 #define T_CLEAR(t)      (TILE (t) != T_ROCK && TILE (t) != T_WALL)  /* The eye sees past it (a window too) */
@@ -162,7 +166,9 @@ enum { PM_WOOD, PM_IRONBOUND, PM_IRON, PM_STONE };
                                                 **   the world's to read, nothing in the chunk) */
 #define ROOM_LIT        0xF9                    /* (And a room's light, its sconce's, on its square: tile R_LIT or 0,
                                                 **   the room it's in its own light or not) */
-#define CH_TILE(l)      ((l) < ROOM_LIT || (l) == 0xFF)    /* (A square's record: its kind, its floor, its link) */
+#define AIR_STATE       0xF8                    /* (And a chunk's air, its pocket's, on its middle square: tile its air
+                                                **   now, AQ_*, 0 burnt off; elev its aat, 2026-10-31) */
+#define CH_TILE(l)      ((l) < AIR_STATE || (l) == 0xFF)   /* (A square's record: its kind, its floor, its link) */
 /* A window (T_WINDOW, PK_WINDOW) and an arrow slit (T_WINDOW, PK_SLIT, always open) are seen through (the senses'),
 ** but a window's closed shutters; a portcullis (T_DOOR, PK_PORTCULLIS) is seen through, up or down.  A window's glass
 ** and bars are items of their own (a pane, bars: items.h's IW_PORTAL, on its square), as a door's bar is (on the
@@ -233,7 +239,24 @@ struct chunk {
                                                 **   travel's, slice 4.2's, its way there off by how far its belief's
                                                 **   gone since) */
     }               kept;
+    /* Its water (slice 4.9: DUNGEON.md, water), the maker's from its region's (the plan's RW_*): the squares under it, a
+    ** bit each (wet[y], x's low three bits the bit), and each room's water, then its passages' (wlev[NROOMS]): a still
+    ** pool's surface, feet above the datum, a square under it as deep as that's above its floor; or (its bit in
+    ** wruns) running water, a stream's, its depth in feet wherever it runs; WL_NONE none */
+    unsigned char   wet[CW][CW / 8];
+    signed char     wlev[NROOMS + 1];
+    unsigned char   wruns;
+    unsigned char   wany;                       /* (Any of its squares under water: 1) */
+    /* Its air (2026-10-31: DUNGEON.md's bad air), the maker's from the chunk's place (caves.c's air_pocket), the change
+    ** records' after (AIR_STATE: a pocket burnt off, its afterdamp): a pocket of bad air in one of its rooms, round
+    ** its middle */
+    unsigned char   air;                        /* (rs.h's AQ_*: its kind times 16, its strength; 0 none) */
+    unsigned char   ax, ay, ar;                 /* (Its middle, the chunk's square, and its reach, squares) */
+    unsigned char   aat;                        /* (Whitedamp's: the clock's high word, its low 7 bits, as it was left:
+                                                **   an explosion's afterdamp clears four of them on) */
 };
+#define WL_NONE         (-128)
+#define WET_BIT(c, x, y)    ((c)->wet[y][(x) >> 3] & (1 << ((x) & 7)))     /* (Chunk c's square x, y under water) */
 /* (A chunk's kept: the clock in 25.6 seconds, 16 bits, its tenths' middle bytes, no long division (the hub's header in
 ** the window); a passing, seen again 4 minutes or more after it was last; the referee's mapfade, minutes a tenth lost,
 ** in those units (KEPT_UNIT: 60 / 25.6 a minute, near enough, and one more; shifts, no multiplying), twice as long for 4
@@ -264,9 +287,14 @@ struct region {
     signed char     z;                          /* Feet above the datum, halved */
     unsigned char   flags;
     unsigned char   n, w;                       /* Its north edge's way across, its west edge's */
-    unsigned char   spare;
+    unsigned char   water;                      /* RW_*: the water the plan traced through it (slice 4.9's) */
 };
 enum { RG_ROCK, RG_HALLS };
+#define RW_STREAM       0x01                    /* (A region's water: a stream runs along its passages, its chambers'
+                                                **   hollows pooled; */
+#define RW_LAKE         0x02                    /*   its chambers flooded, a lake's, where a stream ends; */
+#define RW_WELL         0x04                    /*   water under it: a built stratum's wells and cisterns sunk to it, a
+                                                **   cave's lowest hollows pooled) */
 #define NO_WAY          0xFF
 
 /* A link: a way between strata (a stairway, a ladder, a shaft), its two ends' squares the same in the frame */
@@ -398,8 +426,16 @@ signed char __fastcall__ elev_at (unsigned char sn, unsigned x, unsigned y);
 unsigned char __fastcall__ step_ok (unsigned char sn, unsigned x, unsigned y, unsigned char d);   /* Walkable to d */
 unsigned char __fastcall__ breadth (unsigned char sn, unsigned x, unsigned y, unsigned char d);   /* That step a wide
                                                 **   passage's breadth alone, no way on (the senses' part 2's) */
-unsigned char __fastcall__ ways_from (unsigned char sn, unsigned x, unsigned y, unsigned char d);    /* The ways on
-                                                **   heading d, not back nor breadth: how many, one in way_on */
+unsigned char __fastcall__ slant (unsigned char sn, unsigned x, unsigned y, unsigned char h);    /* Heading h (odd)
+                                                **   a diagonal way: past two corners not stood on, one a cut */
+unsigned char __fastcall__ step8 (unsigned char sn, unsigned x, unsigned y, unsigned char h);  /* Walkable heading h:
+                                                **   the four as step_ok, a diagonal a diagonal way's */
+#define STEP8(sn, x, y, h)  step8 (sn, x, y, h)
+unsigned char __fastcall__ way_ok (unsigned char sn, unsigned x, unsigned y, unsigned char h);  /* A way on heading
+                                                **   h: walkable, not a wide passage's breadth (the senses' part 2's) */
+unsigned char __fastcall__ ways_from (unsigned char sn, unsigned x, unsigned y, unsigned char h);    /* The ways on
+                                                **   heading h (of the eight), not behind nor breadth: how many, one
+                                                **   in way_on (a heading) */
 extern unsigned char way_on, way_room;
 unsigned char __fastcall__ room_of (unsigned char sn, unsigned x, unsigned y);  /* Its room in C (0xFF: none) */
 unsigned char __fastcall__ zone_of (unsigned char sn, unsigned x, unsigned y);  /* Its zone in C (0xFF: none) */
@@ -415,6 +451,11 @@ struct edges {
     unsigned char   x0, y0, x1, y1;             /* The squares in the stratum's bounds (the rest rock) */
     unsigned char   nland;                      /* Links in the chunk: their squares, and their strata.links */
     unsigned char   lx[4], ly[4], ln[4];
+    unsigned char   water;                      /* Its region's water (RW_*: the plan's, slice 4.9's; 0xFF none,
+                                                **   dq0 -W's, the maker's wet_chunk passing it over) */
+    unsigned char   poor;                       /* The rock poor about it (shale at its middle: rock.h's rock_bed,
+                                                **   slice 4.10's, the more fallen in) */
+    int             depth;                      /* (Its feet below the way in at its north-west corner: the air's) */
 };
 void __fastcall__ grow_built (struct chunk* c, const struct edges* e, unsigned long seed);
 

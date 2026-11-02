@@ -1,20 +1,21 @@
 ; ****************************************************************************
 ; bank.s - Dingus Quest Zero's RAM banks: the window at $8000 set and read; bytes copied between a bank and the
-; main RAM; and the overlays' calls.  An overlay is code linked at $8000 (dq0.cfg: OV1 ...), read into a bank of
+; and the overlays' calls.  An overlay is code linked at $8000 (dq0.cfg: OV1 ...), read into a bank of
 ; its own as the game starts (ovbank: overlay n's bank); a call of an overlay's function goes through its stub here
 ; (OVFN): the bank there now kept on a little stack of its own, the overlay's put in, its function called, the bank
 ; put back.  So an overlay can call the main code and other overlays alike, and the main code can call them.  The
-; rule that keeps it right: a function here that changes the window (bread, bwrite) never reads or writes the
-; caller's memory in it, only the main RAM ($0800-$7EFF).  And the swapped parts' calls (swap.inc): code run in the
-; main RAM's top, a part at a time, copied there from its overlay's bank as it's called.
+; rule that keeps it right: a stub that changes the window never reads or writes the caller's memory in it.  And the
+; swapped parts' calls (swap.inc): code run in the main RAM's top, a part at a time, copied there from its overlay's
+; bank as it's called.  (bread and bwrite gone, 2026-10-30: ovl_load's alone used one, the main RAM's room)
 
-            .export     _setbank, _getbank, _bread, _bwrite, _ovbank
+            .export     _setbank, _getbank, _ovbank
             .import     popa, popax
 
             .include    "zeropage.inc"
+            .include    "ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 15                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 16                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
@@ -38,74 +39,6 @@ _setbank:
 _getbank:
             lda         BANKREG
             ldx         #0
-            rts
-
-; void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n): n bytes from bank's from
-; (in the window) to to (in the main RAM), the window put back as it was
-_bread:
-            jsr         args                ; ptr1 from, ptr2 to, ptr3 n, tmp1 the bank
-            ldy         BANKREG
-            lda         tmp1
-            sta         BANKREG
-            jsr         copy
-            sty         BANKREG
-            rts
-
-; void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n): n bytes from from (in the
-; main RAM) to bank's to (in the window), the window put back as it was
-_bwrite:
-            jsr         args                ; ptr1 to, ptr2 from, ptr3 n, tmp1 the bank
-            lda         ptr1                ; (copy goes from ptr1 to ptr2: swapped)
-            ldx         ptr2
-            sta         ptr2
-            stx         ptr1
-            lda         ptr1 + 1
-            ldx         ptr2 + 1
-            sta         ptr2 + 1
-            stx         ptr1 + 1
-            ldy         BANKREG
-            lda         tmp1
-            sta         BANKREG
-            jsr         copy
-            sty         BANKREG
-            rts
-
-; bread's and bwrite's arguments: n (.A, .X) in ptr3, then the two addresses in ptr2 and ptr1, the bank in tmp1
-args:
-            sta         ptr3
-            stx         ptr3 + 1
-            jsr         popax
-            sta         ptr2
-            stx         ptr2 + 1
-            jsr         popax
-            sta         ptr1
-            stx         ptr1 + 1
-            jsr         popa
-            sta         tmp1
-            rts
-
-; ptr3 bytes from ptr1 to ptr2 (upward).  Keeps .Y
-copy:
-            phy
-            ldy         #0
-            ldx         ptr3 + 1            ; Whole pages first
-            beq         @part
-@page:      lda         (ptr1),y
-            sta         (ptr2),y
-            iny
-            bne         @page
-            inc         ptr1 + 1
-            inc         ptr2 + 1
-            dex
-            bne         @page
-@part:      ldx         ptr3                ; Then what's left
-            beq         @done
-@byte:      lda         (ptr1),y
-            sta         (ptr2),y
-            iny
-            dex
-            bne         @byte
-@done:      ply
             rts
 
 ; ---- The overlays' calls
@@ -157,7 +90,7 @@ ovl_out:
             OVFN        sway_words, 15
             OVFN        dig_words, 1
             OVFN        task_words, 3
-            OVFN        beat_words, 3
+            OVFN        beat_words, 16          ; (A walk's beats: task.c's, overlay 3's room, 2026-11-01)
             OVFN        stop_kind, 7
             OVFN        answer_of, 7
             OVFN        bar_text, 3
@@ -173,7 +106,7 @@ ovl_out:
             OVFN        appraise, 1
             OVFN        tell, 14
             OVFN        words, 2
-            OVFN        more, 2
+            OVFN        more, 16            ; (The commands past main.c's chores: words.c's, overlay 2's room, 2026-11-01)
             OVFN        stir_words, 9
             OVFN        heard_words, 9
             OVFN        den_words, 9
@@ -203,6 +136,11 @@ ovl_out:
             OVFN        focus_words, 13
             OVFN        felt_words, 7
             OVFN        facing_words, 7
+            OVFN        fore_set, 6         ; (The answer's tasks in the foreground: main.c's)
+            OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
+            OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
+            OVFN        say_raw, 16         ; (A line as it is, the map's: term.c, the main RAM's room)
+            OVFN        dots, 6             ; (The game's start's progress: main.c's)
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)
 
@@ -211,10 +149,10 @@ ovl_out:
             SWPART      1, 8                ; The start and the end (main.c): the task's arguments, the world
                                             ;   started, the game kept, the world stopped
             SWPART      2, 14               ; The commands (main.c: the map's bank, overlay 3 full at slice 4.2)
-            SWPART      3, 14               ; The map (look.c)
+            SWPART      3, 16               ; The map (look.c; overlay 14's bank till 2026-11-01)
             SWPART      4, 9                ; The pace, the watchfulness, the state, small moves (pace.c)
             SWPART      5, 10               ; The names given (names.c)
-            SWPART      6, 12               ; The names said (names.c); looking one way, a close look (way.c)
+            SWPART      6, 12               ; The names said (names.c)
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
             SWPART      8, 5                ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
@@ -223,8 +161,13 @@ ovl_out:
             SWPART      12, 15              ; Wounds over time: first aid, in shock, the body's news (tend.c)
             SWPART      13, 1               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
             SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
+            SWPART      15, 6               ; An ally's errands, the character's gifts (errand.c: slice 4.8's)
+            SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
+            SWPART      17, 14              ; Looking one way, a close look (way.c: part 6's till 2026-11-01)
 
+            SWFN        errand, 15
             SWFN        begin, 1
+            SWFN        feed, 16            ; (Eating and drinking: feed.c, slice 4.9's)
             SWFN        size, 1
             SWFN        t_init, 1
             SWFN        finish, 1
@@ -258,15 +201,15 @@ ovl_out:
             SWFN        args, 7
             SWFN        reach_go, 7
             SWFN        place_go, 7
-            SWFN        look_way, 6
+            SWFN        look_way, 17
             SWFN        search_go, 10
             SWFN        news, 11
             SWFN        hide, 11
             SWFN        hand_said, 11
             SWFN        limbs_cmd, 11
             SWFN        bg_words, 14
-            SWFN        pose_words, 14
-            SWFN        when_free, 14
+            SWFN        pose_words, 12
+            SWFN        when_free, 12
             SWFN        noise_told, 14
             SWFN        dig_used, 14
             SWFN        hold_first, 11

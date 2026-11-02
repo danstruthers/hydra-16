@@ -19,7 +19,8 @@ unsigned char __fastcall__ limbs_of (const harn_char* c);  /* Its limbs (rs.h's 
 signed char __fastcall__ rise_of (const harn_char* h);  /* (Overlay 5's, limbs.c's) Getting up, prone: its grade (the
                                                 **   book's Rise, the house's test) */
 signed char __fastcall__ bearing_of (signed char steps);   /* (Overlay 5's, bearing.c's) The character's bearings kept
-                                                **   (P_BEARING): its grade, bway a failure's d8 less one */
+                                                **   (P_BEARING), or the time it keeps (its steps from 64 on: rs.h's
+                                                **   TIME_STEPS): its grade, bway a failure's d8 less one */
 extern unsigned char bway;                      /* (A failure's d8 less one: the world's) */
 extern unsigned char lhurt[4];                  /* (The injuries' levels on its left arm, its right, its left leg, its
                                                 **   right) */
@@ -86,12 +87,33 @@ struct beast {
 #define NSHEETS         256
 typedef char beast_fits[sizeof (struct beast) * NSHEETS <= 0x2000 ? 1 : -1];
 extern struct beast bs;                         /* (A sheet, copied out of the bank) */
+
+/* A creature's body (2026-10-31, every actor's tiring: HOUSE.md's fights): its fatigue, by the character's rules
+** (sheet.c's o_spent: a level 6000 units, strenuous work 2 a tenth, rest a unit a tenth and then a level each ten
+** minutes), kept in a bank of the referee's beside the sheets (fb: 8 bytes each, by the same number), reckoned at
+** need by the clock, never ticked: each round of a fight charged as strenuous work (the book's second variant, a level
+** each five minutes of it), the time since its last round rest */
+struct bbody {
+    unsigned char   fl;                         /* Its fatigue levels (its want's among them: wfl) */
+    unsigned char   wfl;                        /* Those of its hunger and thirst (the minds', RS_NEW_ACTOR's c): not
+                                                **   rested off */
+    unsigned        ex;                         /* Its exertion toward the next level */
+    unsigned long   at;                         /* The clock it was last reckoned at (its last round's end; 0 never) */
+};
+#define BBODIES         (NSHEETS * sizeof (struct bbody))
+typedef char bbody_fits[sizeof (struct bbody) == 8 ? 1 : -1];
+extern unsigned char fb;                        /* (Their bank) */
+extern struct bbody bb;                         /* (tire.c's, overlay 7's: a body, copied out) */
+unsigned char __fastcall__ tire (unsigned char n, unsigned w);  /* Sheet n's body brought up to now (bb), w tenths of
+                                                **   strenuous work ending now: 1 a level more (not kept) */
+unsigned char __fastcall__ worked (unsigned char who);  /* Actor who's round of a fight charged, kept: 1 a level more */
+void __fastcall__ want_fl (unsigned n, unsigned char k);    /* Sheet n's want's fatigue levels k (n | 0x100: anew) */
 extern unsigned char aden[NACTORS];             /* (Each actor's record: its sheet's number) */
 void __fastcall__ sheet_get (unsigned char n);  /* Sheet n into bs */
 void __fastcall__ sheet_put (unsigned char n);  /*   and back */
 
 /* sheet.c (overlay 1) */
-#define OVLS    7                               /* (The 4th and 5th: the swapped parts' images; the 6th and 7th heal.c's;
+#define OVLS    8                               /* (The 4th and 5th: the swapped parts' images; the 6th and 7th heal.c's;
                                                 **   the 7th the missiles' too, missile.c's, slice 4.7's) */
 extern char hurt[200];                          /* The last harm's words */
 void sheet (void);                              /* The sheet, into the reply */
@@ -134,21 +156,36 @@ unsigned char __fastcall__ beast_flags (unsigned char kind);   /* (A sheet's kin
 
 /* heal.c (overlay 6): wounds over time (slice 4.3) */
 #define NEWS_N          120
+void __fastcall__ want (struct req* r);         /* (Overlay 7's, want.c: hunger and thirst, RS_TIME's, r a copy) */
+#define WANT_X          8                       /* (rswant.h's: the request's x, the hub's want) */
+extern unsigned char wantfl;                    /* (Its fatigue from want: the world's hunger and thirst, RS_TIME's
+                                                **   x[1], slice 4.9's; not rested off) */
 extern char news[NEWS_N];                       /* (What time did to the character, in words: RS_DESCRIBE b 4's) */
 extern char tpart[16];                          /* (RS_TREAT's part said: its text's, copied) */
-struct venom {                                  /* (The character's venom: its healing rate, 0 none; where it's got to;
-                                                **   its kind, heal.c's; its interval's minutes gone, at rest's) */
+struct venom {                                  /* (The character's toxin, a venom or a poison: its healing rate, 0 none;
+                                                **   where it's got to; its kind, afflict.c's; its interval's minutes
+                                                **   gone, at rest's) */
     unsigned char   hr, loc, kind;
     unsigned        left;
 };
 extern struct venom pv;
+struct sick {                                   /* (Its disease: its healing rate, 0 none; its kind, afflict.c's; its
+                                                **   day's minutes gone; its incubation's minutes left, 0 shown) */
+    unsigned char   hr, kind;
+    unsigned        left, inc;
+};
+extern struct sick pd;
+extern unsigned char afffl;                     /* (Its afflictions' fatigue levels: its symptoms', its breath's; held,
+                                                **   not rested off) */
+extern unsigned char aff_breath;                /* (Its breath's among them: bad air, rsair.h's) */
 extern unsigned rest_m;                         /* (Its rest toward its healing rolls, minutes: RS_TIME's at rest) */
 void __fastcall__ body_req (struct req* r);     /* RS_HARM, RS_TIME, RS_TREAT (r a copy) */
 unsigned char __fastcall__ envenom (const char* key, unsigned char loc, int impact);   /* (fight.c's: a venomous
-                                                **   bite; 1 told) */
+                                                **   bite, 1 told; a sickly one's, its disease caught or not) */
 void body_state (void);                         /* (The status's: sheet.c's o_state's) */
-void __fastcall__ venom_time (unsigned m);      /* (Overlay 7's: the venom's course, m minutes at rest's) */
-void __fastcall__ body_line (char* l, unsigned char rd);    /* (Overlay 7's: the save's "body" line made, or read) */
+unsigned char __fastcall__ aff_time (struct req* r);    /* (Overlay 8's: its afflictions' course, RS_TIME's, r a
+                                                **   copy: the grade's bits) */
+void __fastcall__ body_line (char* l, unsigned char rd);    /* (Overlay 8's: the save's "body" line made, or read) */
 extern unsigned out_t;                          /* (Knocked senseless by a venom's ache: RS_TIME's w2) */
 
 /* The bestiary (beasts.c's, overlay 5's read-only data since 2026-10-29: the peoples' room in overlay 2): by the kinds'

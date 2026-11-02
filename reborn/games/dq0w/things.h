@@ -71,7 +71,7 @@ void __fastcall__ keep (unsigned char back);    /* The store kept (items.dat), o
 extern unsigned ilim;                           /* (things.c's: the records used, at most) */
 extern unsigned ihigh;                          /* (things.c's: every record from it on free; raised as one's taken) */
 extern unsigned irs;                            /* (things.c's: a thing's own numbers, made) */
-#define OVBANKS         21                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
+#define OVBANKS         24                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
                                                 **   own: ipage.c's, ovbank[OVBANKS]; the ways across a room's,
                                                 **   dq0w.c's, ovbank[OVBANKS + 1]; the traces' store's, wtrace.c's,
                                                 **   ovbank[OVBANKS + 2] and [OVBANKS + 3]) */
@@ -164,8 +164,18 @@ extern unsigned chart_w[5];                     /* (things.c's: the map making's
 const struct burn* __fastcall__ burn_of (unsigned char k);  /* How kind k burns (a copy), or 0: never (a glow), or no
                                                 **   fuel; the catalogue's bank left in the window */
 unsigned char fill (void);                      /* (Part 27, its room) The hub's ireq, IO_FILL's: a light renewed */
+/* The water, hunger and thirst (part 73's, wwater.c: slice 4.9's) */
+unsigned __fastcall__ wade (unsigned step);     /* (Part 73's, dq0w.c's) The character come onto its square: the time
+                                                **   more its step takes (wading, swimming) */
+unsigned __fastcall__ water (unsigned char k);  /* (Part 74's, wwater.c's s_water: W_FILL a waterskin filled, the
+                                                **   things' IO_FILL: IR_*, IR_NONE not a waterskin's) */
+enum { W_AT, W_FILL };
+unsigned char __fastcall__ water_at (unsigned char well);  /* (Part 75's, wwater.c's: the water's depth where the
+                                                **   character stands, feet, | WET_RUNS, 0 dry; well, a well beside
+                                                **   it first, 1) */
 void burns_now (void);                          /* (Part 27: dq0w.c) The lights burnt down by the minutes gone */
 extern unsigned long burn_due;                  /*   (when the next minute's due: the main loop's) */
-extern unsigned char burn_ask;                  /*   (or at once: a light's change) */
+extern unsigned char burn_ask;                  /*   (or at once: a light's change; | TS_ASK, the time's */
+#define TS_ASK          2                       /*   alone: a wait begun or ended, a black-out ..., part 76's) */
 #define CLOCK_256       (*(unsigned*) ((unsigned char*) &HUB->now + 1))   /* (The clock in 25.6 seconds, 16 bits: its
                                                 **   tenths' middle bytes, no long division: ipage.c's stamps) */

@@ -64,10 +64,14 @@ unsigned long pc_out;                           /* (The character senseless till
 unsigned char prones;                           /* (The request's: the attacker prone, RS_PRONE_A; the defender,
                                                 **   RS_PRONE_D: their bodies' positions, the world's) */
 
+/* (A creature's body, its fatigue: tire.c's, overlay 7's) */
+static unsigned char tup;                       /* (The creature in the blow a level more tired by its round: left's) */
+
 static const struct bkind* __fastcall__ unpack (unsigned char who)
 {
     const struct bkind* b;
 
+    tire (aden[(who - 1) & 7], 0);              /* (Its fatigue now, rested since: not kept, only read) */
     sheet_get (crn = aden[(who - 1) & 7]);
     memset (&cr, 0, sizeof cr);
     cr.att[HARN_STR] = bs.att[0];
@@ -85,6 +89,7 @@ static const struct bkind* __fastcall__ unpack (unsigned char who)
     }
     cr.shockhr = cr.state == HARN_SHOCK ? (unsigned char) bs.out : 0;
     cr.bl = bs.bl;
+    cr.fl = bb.fl;                              /* (Its fatigue: in the universal penalty, every test of its) */
     cr.ninj = bs.ninj;
     memcpy (cr.inj, bs.inj, sizeof bs.inj);
     b = beast (bs.kind ? bs.kind - 1 : 0);
@@ -279,7 +284,7 @@ void __fastcall__ o_strike (struct side* s, struct side* t, unsigned char n, uns
         o_effect (t->who, X_DEATH, C_DEAD, HARN_KILL, loc, aspect);
         return;
     }
-    if (s->b && !t->who && by == BY_BITE) {
+    if (s->b && !t->who && (by == BY_BITE || by == BY_CLAWS)) {    /* (A venom, a disease: afflict.c's) */
         strcpy (bkey, s->b->key);               /* (Its kind's key into the main RAM: the bestiary's the window's) */
         if (envenom (bkey, loc, impact - p)) {
             R->c |= AF_NEWS;                    /* (A venomous bite: its venom's course, heal.c's, told after) */
@@ -496,6 +501,8 @@ static void new_beast (void)
     }
     b = beast (j);
     sheet_get (n);
+    want_fl (n | (bs.kind != j + 1) << 8, R->c);    /* (Its hunger and thirst's fatigue, the minds'; a new creature
+                                                **   rested: tire.c's) */
     if (bs.kind != j + 1) {
         memset (&bs, 0, sizeof bs);
         bs.kind = j + 1;
@@ -515,6 +522,9 @@ static void new_beast (void)
     s->attacks = 1;
     s->morale = b->ini;
     s->power = 3 * b->size * b->size + b->w[0].ml / 10;    /* (The game's: by its size, its weapon's skill) */
+    s->lead = b->flags & BF_MINDLESS ? 0 : 3 * cr.att[HARN_WIL];   /* (Its Rhetoric, the house's: the skill base's
+                                                **   three times, the bestiary keeping Will alone of Voice, Intelligence
+                                                **   and Will: HOUSE.md's morale) */
 }
 
 /* A creature's courage tested (Combat 18's Initiative test: its injuries its penalty, steps its situation): steady,
@@ -561,23 +571,25 @@ unsigned char __fastcall__ o_beast_flags (unsigned char kind)
 
 /* A creature's side of two actors' tests (RS_CONTEST's, dq0harn.c's: the actor's test of purpose a, at the steps): by
 ** its sheet, Initiative its bestiary's, Stealth its Agility times 5 (the house's: the bestiary has no Stealth of its
-** own; the book's Stealth is Agility, Hearing and Will, Skills 9), anything else its Dexterity times 5 (a grope's), its
-** injuries' penalty off it
+** own; the book's Stealth is Agility, Hearing and Will, Skills 9), a dig its Strength times 5 (a tunneller's, the
+** house's: the bestiary has no Mining), anything else its Dexterity times 5 (a grope's), its injuries' penalty off it
 ** (one senseless, or in shock, tests nothing: a critical failure); the grade in the reply */
 static void tested (void)
 {
     const struct bkind* b = unpack (R->actor);
 
     R->grade = cr.state != HARN_CONSCIOUS ? G_CF : grade (harn_test ((R->a == P_INITIATIVE ? b->ini :
-        5 * cr.att[R->a == P_STEALTH ? HARN_AGL : HARN_DEX]) - 5 * harn_get_pp (&cr) + STEP_PCT * (signed char) R->steps));
+        5 * cr.att[R->a == P_STEALTH ? HARN_AGL : R->a == P_DIG ? HARN_STR : HARN_DEX]) - 5 * harn_get_pp (&cr) +
+        STEP_PCT * (signed char) R->steps));
 }
 
 /* What a blow left them in, for the world (rs.h's AF_*: the reply's grade as hub.h's FF_*: it keeps it), and the
-** creature's courage if it was wounded and stands (shy, w2's bit 0 in the request: a cautious one flees too) */
-static void __fastcall__ left (unsigned char shy)
+** creature's courage if it was wounded and stands (shy, w2's bit 0 in the request: a cautious one flees too), its
+** heart the steps (RS_HEART's: the denizens' field and bonds, HOUSE.md's morale) */
+static void __fastcall__ left (unsigned char shy, signed char heart)
 {
     const struct rs_effect* e = (const struct rs_effect*) R->x;
-    const struct side* s = A.who ? &A : &D;
+    const struct side* s = D.who ? &D : &A;     /* (The creature's: the defender's if it's one, a stray's at one) */
     unsigned char k, f = R->c & (AF_STOPPED | AF_STOPPED_D) ? FF_STOPPED : 0, hurt = 0, m;
 
     for (k = 0; k < RS_EFFECTS && e->kind; ++k, ++e) {
@@ -591,11 +603,18 @@ static void __fastcall__ left (unsigned char shy)
         hurt |= e->kind == X_WOUND && e->target == s->who;
     }
     if (hurt && cr.state == HARN_CONSCIOUS) {
-        m = courage (s->b, 0);
+        m = courage (s->b, heart);
         if (m == M_BROKEN || (m == M_CAUTIOUS && shy)) {
             f |= FF_FLEES;
         } else if (m == M_CAUTIOUS) {
             R->c |= AF_CAUTIOUS;
+        }
+    }
+    if (tup && !(f & FF_FLEES) && cr.state == HARN_CONSCIOUS && !(s->b->flags & (BF_FOLK | BF_MINDLESS))) {
+        m = courage (s->b, heart);              /* (A beast a level more tired by its round: its courage, its fatigue
+                                                **   in it; short of steady, or berserk, it breaks off, HOUSE.md's) */
+        if (m != M_STEADY && m != M_BERSERK) {
+            f |= FF_FLEES;
         }
     }
     if (cond_of (&cr) & C_BLEEDING) {
@@ -608,6 +627,7 @@ static void __fastcall__ left (unsigned char shy)
 void __fastcall__ o_fight (struct req* r)
 {
     unsigned char shy = r->w2 & 1, sb;
+    signed char heart = RS_HEART (r);           /* (Read before the reply's effects take its place) */
     unsigned sw;
 
     prones = r->w2;
@@ -633,13 +653,19 @@ void __fastcall__ o_fight (struct req* r)
     }
     memset (r->x, 0, sizeof r->x);              /* (RS_ATTACK) */
     line[0][0] = line[1][0] = 0;
-    if (r->actor && r->other) {
-        r->result = 0xFF;                       /* (Creatures fighting each other: later, with allies) */
+    if (r->actor && r->other && !(r->w2 & MS_STRAY)) {
+        r->result = 0xFF;                       /* (Creatures fighting each other: later, with allies; but a missile's
+                                                **   stray, one struck by another's shot, 2026-10-30) */
         return;
     }
     if (r->actor) {
-        beast_side (&A, r->actor);
-        pc_side (&D);
+        beast_side (&A, r->actor);              /* (Both creatures, a stray's: the defender's sheet unpacked last, the
+                                                **   one struck, packed again after) */
+        if (r->other) {
+            beast_side (&D, r->other);
+        } else {
+            pc_side (&D);
+        }
     } else {
         pc_side (&A);
         beast_side (&D, r->other);
@@ -662,6 +688,11 @@ void __fastcall__ o_fight (struct req* r)
     } else {
         attack ();
     }
+    tup = 0;
+    if (r->result != 0xFF && !(r->w2 & MS_STRAY)) {
+        tup = r->actor ? worked (r->actor) : worked (r->other);    /* (Its round of the fight, the creature's in it:
+                                                **   strenuous work) */
+    }
     put (A.word);
     put ("\n");
     put (D.word);
@@ -671,7 +702,7 @@ void __fastcall__ o_fight (struct req* r)
     put (line[1]);
     r->w1 = health_of (A.c) | health_of (D.c) << 8;
     if (r->result != 0xFF) {
-        left (shy);
+        left (shy, heart);
     }
     pack ();
 }

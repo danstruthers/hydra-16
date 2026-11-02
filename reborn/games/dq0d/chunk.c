@@ -3,4 +3,5 @@
 */
 
 #define CHUNK_NO_ROOMS                          /* (No rooms' nor walls' asked: its room) */
+#define CHUNK_READER                            /* (A reader's: chunks_init in the main RAM) */
 #include "../dq0w/chunk.c"

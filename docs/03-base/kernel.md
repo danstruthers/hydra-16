@@ -130,6 +130,15 @@ waiting.
 * **The scheduler ends three kinds of wait itself**, as it looks for the next task: `SLEEP` once the time has come (so
   the tick's interrupt only counts), `BLOCKED` once the task it wants to call is free, and `EVENT` once the server's
   event count has changed (so an interrupt handler wakes its clients by adding 1 to a byte).
+* **The foreground** (`TASKFORE`, opt-in): a program can put itself, or a task it started, in the foreground
+  (`TF_FORE`).  The scheduler picks a foreground task that can run before the round robin's, at the next switch (a tick
+  at most) rather than after a round of every busy task, and a driver serving a foreground task's call counts as one
+  with it, and for `FORE_SRV` (2) ticks from the call (the work the call left it, a console's words, out at
+  once rather than behind the background's).  Its turns go by the ticks: the foreground has `FORE_RUN` (8) ticks at most, then the background the rest
+  of a tick, its tasks in turn, so a foreground task busy for good still leaves every other task its turn.  It's for a
+  program whose answer to a key runs through tasks of its own while others work in the background (Dingus Quest Zero:
+  its UI, parser, world and senses while a command is in hand; its denizens' minds after).  The flag goes with the task:
+  cleared as it ends or `EXEC`s.  With no task in the foreground the scheduler is the round robin alone, as before.
 * **Task 0** runs only when nothing else can (its idle loop: `WAI`), or when interrupt handlers have queued notes for it
   to deliver.
 * **`PREEMPT_OFF`** holds the CPU for timing-critical work (interrupts still run; a switch that comes due waits for
@@ -235,7 +244,8 @@ There's **one path for every interrupt line**:
 **The rules for an interrupt entry:**
 
 * It runs with interrupts off, and **never waits**.
-* It has **about 85 cycles**: the whole path takes about 115 of the 200 that interrupts may be held off.
+* It has **about 89 cycles**: the whole path takes about 111 of the 200 that interrupts may be held off (7 more for
+  the ACIA's when the VIA's comes with it).  It may end with `jmp NOTE_QUEUE`, whose `.A = 0` is its answer.
 * It wakes its clients by **adding 1 to its event count** (`inc TASK_EVENT`), never with `WAKE`, and sends a note to a
   note group with `NOTE_QUEUE` (the console's Ctrl-C).
 * A line must be owned (`IRQ_OWN`) **before** its device interrupts: a line nobody owns is counted and ignored, and, being

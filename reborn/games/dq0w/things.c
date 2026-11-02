@@ -214,35 +214,22 @@ void owned (void)
     }
 }
 
-/* ---- The hub's text (things_text, the UI bank's): the words put after what's there, the text begun again */
-static char* tp;
-static char* tq;                                /* (Or into the main RAM, on to tqe: things' words compared, alike:
+/* ---- The hub's text (things_text, the UI bank's): the words put after what's there (tlist.s's put, in assembly: an
+** inventory's every word, 2026-10-30), the text begun again */
+void __fastcall__ put (const char* s);
+extern char* tp;                                /* (tlist.s's: the text's end so far, and how far it may go, its bank) */
+extern char* tpe;
+extern unsigned char put_bank;
+extern char* tq;                                /* (Or into the main RAM, on to tqe: things' words compared, alike:
                                                 **   part 11's) */
-static char* tqe;
-static void __fastcall__ put (const char* s)
-{
-    static unsigned n, r;
-
-    if (tq) {
-        while (*s && tq < tqe) {
-            *tq++ = *s++;
-        }
-        *tq = 0;
-        return;
-    }
-    n = strlen (s);                             /* (Copied whole, the library's: an inventory's every word, quicker
-                                                **   than a byte at a time, 2026-10-27) */
-    hub_map (UI_BANK);                          /* (The text the UI bank's: the header back after) */
-    r = UIREC->things_text + sizeof UIREC->things_text - 1 - tp;
-    memcpy (tp, s, n = n < r ? n : r);
-    *(tp += n) = 0;
-    hub_map (0);
-}
+extern char* tqe;
 
 static void text_new (void)
 {
+    put_bank = UI_BANK;
     hub_map (UI_BANK);
     tp = UIREC->things_text;
+    tpe = tp + sizeof UIREC->things_text - 1;
     *tp = 0;
     hub_map (0);
 }
@@ -718,6 +705,41 @@ void s_light_now (void)
 
 /* ---- A request (the hub's ireq), answered (but for its state, the caller's: done once it's looked again): 1 if
 ** what lies about has changed */
+/* ---- The thing the UI names for an ally's errand, a gift (slice 4.8's, 2026-10-30; the hub's ireq: IO_FETCH, its name fn,
+** the request's copy; to 0, one seen lying about, its item and where it lies back in item, x, y; to 1, one the character carries, IO_DESCRIBE's reply, its worth in value, its item in item):
+** IR_OK, IR_NONE (none such), IR_NO (in something closed, carried, a denizen's) */
+static unsigned char __fastcall__ fetch_find (const char* fn)
+{
+    struct item* p;
+    unsigned n, c, x = 0, y = 0;
+    unsigned char r = IR_NONE, g, sn;
+
+    hub_map (0);
+    g = HUB->ireq.to;
+    sn = HUB->pc_stratum;
+    if (g) {                                    /* (A gift: the character's, IO_DESCRIBE's reply) */
+        if ((n = pick (fn, HW_CARRIED)) != 0 && describe (fn) == IR_OK) {
+            r = IR_OK;
+        }
+    } else if ((n = pick (fn, HW_SEEN)) != 0) {
+        for (c = n; (p = item_at (c))->where == IW_ITEM && (c == n || !(p->shut & IS_CLOSED)); c = p->x) {
+        }
+        r = IR_NO;                              /* (In a thing closed, carried, on another stratum) */
+        if (p->where == IW_SQUARE && p->sn == sn) {
+            x = p->x;
+            y = p->y;
+            r = IR_OK;
+        }
+    }
+    hub_map (0);
+    if (r == IR_OK) {
+        HUB->ireq.item = n;
+        HUB->ireq.x = x;
+        HUB->ireq.y = y;
+    }
+    return r;
+}
+
 static unsigned char o_handle (void);
 unsigned char s_serve (void)
 {
@@ -764,6 +786,9 @@ unsigned char s_serve (void)
         break;
     case IO_SWAP:                               /* (What's in its hands changed over: part 48's) */
         iq.result = swap ();
+        break;
+    case IO_FETCH:                              /* (A thing for an ally to fetch, or a gift: slice 4.8's) */
+        iq.result = fetch_find (iq.name);
         break;
     case IO_USE:                                /* (A thing used up by its key: a bandage, first aid's, part 70's) */
         iq.result = use_key (iq.name);
@@ -2623,12 +2648,13 @@ void __fastcall__ s_thing_words (const struct item* q)
 }
 
 /* What its words say of a thing's state, in a byte (two alike if theirs are: a thing's words are its kind's, how many,
-** its make's wear and harm, lit, its fuel, closed: words's), tw's */
-static unsigned char sig (void)
+** its make's wear and harm, lit, its fuel, closed: words's), p's (tw, or a record in the store's window: alike's, not
+** copied out, 2026-10-30) */
+static unsigned char __fastcall__ sig (const struct item* p)
 {
-    return (tw.flags & I_LIT) | (tw.dur_max && tw.dur * 10 < tw.dur_max ? 2 : tw.dur_max && tw.dur * 3 < tw.dur_max ?
-        4 : 0) | (tw.wear >= 128 ? 8 : tw.wear >= 32 ? 16 : 0) | (tw.shut & IS_CLOSED ? 32 : 0) | (tw.fuel <= BURN_LOW ?
-        (tw.fuel ? 64 : 128) : 0) | (tw.id ? 0 : 1);
+    return (p->flags & I_LIT) | (p->dur_max && p->dur * 10 < p->dur_max ? 2 : p->dur_max && p->dur * 3 < p->dur_max ?
+        4 : 0) | (p->wear >= 128 ? 8 : p->wear >= 32 ? 16 : 0) | (p->shut & IS_CLOSED ? 32 : 0) | (p->fuel <= BURN_LOW ?
+        (p->fuel ? 64 : 128) : 0) | (p->id ? 0 : 1);
 }
 
 /* What the character carries gathered first, in one pass of the store (the records on an actor, and every record in
@@ -2640,36 +2666,24 @@ static unsigned char sig (void)
 #define GOT_MAX         200
 static struct got { unsigned n, x; unsigned char where, kind; } ge;
 #define GOT_AT          ((struct got*) 0x9B00)
-static unsigned char ngot;
-static unsigned char gcur;                      /* (The entry next_in gave last: the next looked for after it, a
+extern unsigned char ngot;                      /* (tlist.s's, as next_got's are) */
+extern unsigned char gcur;                      /* (The entry next_in gave last: the next looked for after it, a
                                                 **   container's things in turn, not the list again for each,
                                                 **   2026-10-27, the outfits' more things) */
 
-/* The next record after i at where, x (IN_X's: items ()'s order, the records' own) */
+/* The next record after i at where, x (IN_X's: items ()'s order, the records' own): the list gathered, tlist.s's
+** next_got (in assembly: an inventory's every thing, 2026-10-30) */
 #pragma static-locals (push, on)
-static unsigned nx_n, nx_x;                     /* (next_in's arguments: the caller's, set in these, no C stack's) */
-static unsigned char nx_w;
+extern unsigned nx_n, nx_x;                     /* (next_in's arguments: the caller's, set in these, no C stack's) */
+extern unsigned char nx_w;
+unsigned next_got (void);
 static unsigned next_in (void)
 {
-    struct got* g;
-    unsigned char k, w;
-    unsigned n, at;
-
     if (ngot == 0xFF) {
         return items (nx_n, IN_X | 1 << nx_w, nx_x);
     }
     hub_map (KIND_BANK);                        /* (The list's bank) */
-    n = nx_n;
-    w = nx_w;
-    at = nx_x;
-    k = n && gcur < ngot && GOT_AT[gcur].n == n ? gcur + 1 : 0;
-    for (g = GOT_AT + k; k < ngot; ++k, ++g) {
-        if (g->x == at && g->where == w && g->n > n) {
-            gcur = k;
-            return g->n;
-        }
-    }
-    return 0;
+    return next_got ();
 }
 #pragma static-locals (pop)
 
@@ -2688,30 +2702,30 @@ static unsigned char gm;
 static unsigned j, jn;
 
 /* Thing jn alike the one worded (tw, its sig lsig, worn lwo, nothing in it lin; i its number): the same kind, one each,
-** worn alike, neither named nor held, nothing in either, the same in what their words say (sig's): 1, tw back as it was
-** (told: its number added to those, nt their count) */
+** worn alike, neither named nor held, nothing in either, the same in what their words say (sig's): 1 (told: its number
+** added to those, nt their count); jn's record read where it is, not copied out (tw left as it is, 2026-10-30) */
 static unsigned char __fastcall__ alike (unsigned i, unsigned* told, unsigned char* nt)
 {
     static unsigned char r;
 
-    fetch (&tw, jn);
-    if (lin == 0xFF) {
+    cl_p = item_at (jn);
+    r = cl_p->qty == 1 && (cl_p->flags & I_WORN) == lwo && !(cl_p->flags & (I_NAMED | I_HELD)) && sig (cl_p) == lsig;
+    if (r && lin == 0xFF) {
         nx_n = 0;
         nx_w = IW_ITEM;
         nx_x = i;
         lin = lkf && next_in () != 0;           /* (Something in it: none alike; asked once, a candidate found) */
-        fetch (&tw, jn);
     }
-    nx_n = 0;
-    nx_w = IW_ITEM;
-    nx_x = jn;
-    r = tw.qty == 1 && (tw.flags & I_WORN) == lwo && !(tw.flags & (I_NAMED | I_HELD)) && sig () == lsig && !lin &&
-        (!lkf || !next_in ());                  /* (Nothing in it: asked only of a kind that holds things, its kind's
+    if (r) {
+        nx_n = 0;
+        nx_w = IW_ITEM;
+        nx_x = jn;
+        r = !lin && (!lkf || !next_in ());      /* (Nothing in it: asked only of a kind that holds things, its kind's
                                                 **   the same; the list not gone through for each, 2026-10-28) */
+    }
     if (r && *nt < 8) {
         told[(*nt)++] = jn;
     }
-    fetch (&tw, i);
     return r;
 }
 
@@ -2765,7 +2779,7 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
                 }
             }
         } else if (tw.qty == 1 && !(tw.flags & (I_NAMED | I_HELD))) {   /* (One that may have others alike: alike's) */
-            lsig = sig ();
+            lsig = sig (&tw);
             lwo = tw.flags & I_WORN;
             lin = 0xFF;                         /* (Whether something's in it: alike's to ask) */
             if (ngot != 0xFF) {
@@ -2829,20 +2843,39 @@ void s_list (void)
 {
     char b[6];
     unsigned i = 0;
+#define d       ln                              /* (contents' own, j too, free before it: the main RAM's room) */
+#define k       gm
 
     ngot = 0;
     while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+        ge.n = i;
+        ge.x = j = ip->x;
+        ge.where = d = ip->where;
+        ge.kind = ip->kind;
+        for (k = 8; d == IW_ITEM && k; --k) {   /* (The character's alone: on it, or in what it carries, its chain
+                                                **   followed up; the others' things, and what's in things lying
+                                                **   about, left out: the list the shorter, its passes the quicker,
+                                                **   2026-10-30) */
+            cl_p = item_at (j);
+            d = cl_p->where;
+            j = cl_p->x;
+        }
+        if (d != IW_ACTOR || j) {
+            continue;
+        }
         if (ngot == GOT_MAX) {
             ngot = 0xFF;
             break;
         }
-        ge.n = i;
-        ge.x = ip->x;
-        ge.where = ip->where;
-        ge.kind = ip->kind;
         hub_map (KIND_BANK);
-        memcpy (GOT_AT + ngot++, &ge, sizeof ge);
+        gp = GOT_AT + ngot++;
+        gp->n = ge.n;
+        gp->x = ge.x;
+        gp->where = ge.where;
+        gp->kind = ge.kind;
     }
+#undef d
+#undef k
     text_new ();
     load = 0;
     contents (IW_ACTOR, 0, 0);
@@ -2898,6 +2931,9 @@ unsigned char s_fill (void)
     unsigned char takes, k, bk = 0;
     char ln[14], fn[14];
 
+    if ((k = water (W_FILL)) != IR_NONE) {
+        return k;                               /* (A waterskin filled: part 74's, slice 4.9's) */
+    }
     text_new ();
     for (k = 1, room = 0; !(iq.sel & 15) && k < 8; ++k) {   /* (Of several of the name, none said, the one with the
                                                 **   most room for more: the spent torch, not the one lit) */

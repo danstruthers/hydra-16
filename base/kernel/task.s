@@ -385,6 +385,8 @@ K_TASK_SETUP:
             iny
             lda         (r0),Y
             sta         TA_IRQVEC + 1
+            lda         #OP_JMP                             ; (The dispatcher's jsr TA_IRQJMP)
+            sta         TA_IRQJMP
             lda         TA_SERVEVEC + 1                     ; No serve entry: it serves no calls
             bne         :+
             lda         #BUSY_NOSERVE
@@ -709,6 +711,10 @@ K_INIT_RUN:
 ; they've started (K_BOOT_STARTED), init (the directory's MD_INIT: K_TASK_BOOT_INIT).  Each said on the console:
 ; "task F: cons", or "module NAME: error $xx"
 K_TASK_BOOT:
+            ldx         #K0_SCHED_END - K0_FORES - 1        ; (The scheduler's bytes, POST's till now: no
+:           stz         K0_FORES,X                          ;   foreground yet, its place task 0's)
+            dex
+            bpl         :-
             jsr         K_MD_VALID
             bcc         :+
             TPRINT      T_S_NOMODS

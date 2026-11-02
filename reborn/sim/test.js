@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // ****************************************************************************
 // test.js - HydraOS's regression tests (tests/tests.js), and the base's before them: the base's runner
-// (../../base/sim/test.js: its options, -v, -j N, --seed, --build, --dl, are there) with HydraOS's images (its
+// (../../base/sim/test.js: its options, -v, -j N, --seed, --build, --dl, --modules, are there) with HydraOS's images (its
 // modules/rom.txt's modules, less a test's without, and the test's own; the ROM disk), its PC folders (/pc: a test's
 // pc), the danlang emulator (sim/dl) and its build; and the hub writers' check (sim/lib/hubown.js: hub.h's owners'
 // table) in every Dingus Quest Zero test (dq0...): a write to the hub's banks by a task its region doesn't allow, and
@@ -16,8 +16,8 @@
 // The tests a change can affect (--changed [REF], --near AREA, --list: the base's runner's, ../base/sim/select.js, with
 // tests/areas.js's table), and the tiers of checks (--tier report|lead: sim/tiers.js, tests/TESTING.md).
 //
-// Usage: [HUBOWN=0|1] [RULES=NAME] node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...] [--list] [--build]
-//          [-v] [--seed N] [-j N] [--dl]
+// Usage: [HUBOWN=0|1] [RULES=NAME] [HYDRA_MODULES=N] node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...]
+//          [--list] [--build] [-v] [--seed N] [-j N] [--dl] [--modules N]
 //        node sim/test.js --tier report|lead [--changed REF] [-j N] [--seed N] [--list]
 'use strict';
 const fs = require('fs');
@@ -195,6 +195,32 @@ function kitOf(t) {
   } });
 }
 for (const t of tests) if (/^dq0/.test(t.name) && !t.outfit) kitOf(t);
+// DQ0_ROLLS=N: every dq0 line typed with -R N (the dice's own offset: the same dungeon, other rolls), to find again
+// the rolls a test was written for when the dice change (the dice by who asks, 2026-10-30); a test's own -R kept.
+// DQ0_ROLLS=A-B: each dq0 test once more for each N from A to B, named NAME@N (node sim/test.js dq0cmd@1 dq0cmd@2 ...)
+// DQ0_ROLL_LINE=K as well: only the test's K'th dq0 line (from 1) given -R N, its others as written (a test of several
+// games, each game's rolls found in turn)
+function rollsOf(t, n) {
+  if (!(+n >= 0 && +n <= 252)) throw new Error('DQ0_ROLLS: an offset 0 to 252 (dq0 -R\'s, rshouse.h\'s DICE_BEGIN: 3 + n a byte)');
+  const d = Object.getOwnPropertyDescriptor(t, 'machine'), only = +(process.env.DQ0_ROLL_LINE || 0);
+  Object.defineProperty(t, 'machine', { configurable: true, enumerable: true, get() {
+    const m = d ? (d.get ? d.get.call(this) : d.value) : {};
+    if (typeof m.input !== 'string') return m;
+    let k = 0;
+    return Object.assign({}, m, { input: m.input.replace(/(ādq0(?: [^\r]*)?)\r/g, (l, c) => (++k, only && k !== only) || / -R \d/.test(c) ? l : c + ' -R ' + n + '\r') });
+  } });
+  return t;
+}
+if (/^\d+$/.test(process.env.DQ0_ROLLS || '')) for (const t of tests) if (/^dq0/.test(t.name)) rollsOf(t, process.env.DQ0_ROLLS);
+if (/^\d+-\d+$/.test(process.env.DQ0_ROLLS || '')) {
+  const [a, b] = process.env.DQ0_ROLLS.split('-').map(Number), more = [];
+  for (const t of tests.filter(t => /^dq0/.test(t.name))) for (let n = a; n <= b; n++) {
+    const c = Object.defineProperties(Object.create(Object.getPrototypeOf(t)), Object.getOwnPropertyDescriptors(t));
+    c.name = t.name + '@' + n;
+    more.push(rollsOf(c, n));
+  }
+  tests.push(...more);
+}
 // RULES=NAME and no test named: of the list (all, or --near's), the meaning checks (the runner's restrict)
 function meaningOf(list) {
   if (!RULES) return list;

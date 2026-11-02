@@ -7,7 +7,7 @@
 // base's (system: 'base') boots the base's image: modules/rom.txt's modules (ser, wozmon), less its without, and its
 // own (tests/mod's: obj/tests), its init.
 //
-// Usage: node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...] [--list] [--build] [-v] [--seed N] [-j N] [--dl]
+// Usage: node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...] [--list] [--build] [-v] [--seed N] [-j N] [--dl] [--modules N]
 //   NAME      only these tests (default: all)
 //   --changed [REF]  of those, only the ones what's changed since REF can affect (sim/select.js: the files changed
 //             since REF's merge base with HEAD, committed or not, and the new ones, each mapped to areas by the
@@ -21,6 +21,9 @@
 //   --seed N  the power-up's random RAM (default 1: the same each run)
 //   -j N      N tests at a time, each in a process of its own (default: the CPU's cores; -j 1, one after another
 //             here).  The reports come in the list's order either way
+//   --modules N  the RAM modules installed in each test's machine, 1 to 3 (default 3, the board's: sim/lib/machine.js's
+//             DEFAULT_MODULES), as HYDRA_MODULES=N does (the environment's, which the tests' processes and the soaks
+//             inherit); a test's own machine.modules still wins
 //   --dl      in the danlang emulator (HydraOS's: reborn/sim/dl), not sim/lib's; judged the same way.  A test marked
 //             jsOnly (its reason: the sound, which sim/dl doesn't make) is skipped there, and said so (SKIP)
 // From Node: setup(env) gives the runner a system: { root (its folder: obj/build.json's options), tests, IRQ_OFF_MAX,
@@ -213,7 +216,7 @@ function parallel(list, opt) {
   });
 }
 
-const USAGE = 'usage: node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...] [--list] [--build] [-v] [--seed N] [-j N] [--dl]';
+const USAGE = 'usage: node sim/test.js [NAME ...] [--changed [REF]] [--near AREA,...] [--list] [--build] [-v] [--seed N] [-j N] [--dl] [--modules N]';
 
 // The selector's view of the system (sim/select.js): its top, its tests, its tests files, its areas
 function selectorOf(tests, opt) {
@@ -271,6 +274,7 @@ async function main(argv) {
     else if (argv[i] === '-j') opt.jobs = Math.max(1, Math.floor(+argv[++i]) || 1);
     else if (argv[i] === '--one') opt.one = argv[++i];        // (parallel's: one test, its report, its status)
     else if (argv[i] === '--dl') opt.dl = true;
+    else if (argv[i] === '--modules') process.env.HYDRA_MODULES = String(+argv[++i]);   // (The tests' processes inherit it)
     else if (argv[i] === '--list') opt.list = true;
     else if (argv[i] === '--near') opt.near.push(...String(argv[++i] || '').split(',').filter(Boolean));
     else if (argv[i].startsWith('--changed=')) opt.changed = argv[i].slice(10);
@@ -312,7 +316,8 @@ async function main(argv) {
       wall: Date.now() - t0, rules: process.env.RULES || '', tests: opt.times }, null, 1));
   } catch (e) { /* (No record) */ }
   if (env.summary) env.summary(list, opt);
-  console.log(failed ? failed + ' of ' + list.length + ' tests failed' : 'all ' + list.length + ' tests passed');
+  console.log((failed ? failed + ' of ' + list.length + ' tests failed' : 'all ' + list.length + ' tests passed') +
+    (process.env.HYDRA_MODULES ? ' (HYDRA_MODULES=' + process.env.HYDRA_MODULES + ')' : ''));
   process.exit(failed ? 1 : 0);
 }
 

@@ -11,6 +11,7 @@
             .import     popa, popax
 
             .include    "zeropage.inc"
+            .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 OVMAX       = 7                     ; dq0m.cfg's overlays (the 6th the swapped parts' images, the 7th uses.c)
@@ -150,7 +151,11 @@ ovl_out:
             OVFN        grow_built, 1
             OVFN        join, 2
             OVFN        crossings, 2
+            OVFN        slants, 1           ; (The caves' diagonal ways: 2026-10-31, overlay 3's room)
             OVFN        grow_caves, 3
+            OVFN        wet_chunk, 6        ; (The water: slice 4.9's, caves.c's in overlay 6, 3's room)
+            OVFN        air_pocket, 3       ; (The air: 2026-10-31)
+            OVFN        water_plan, 5
             OVFN        stock, 7
             OVFN        plan_stratum, 4
             OVFN        links_down, 4
@@ -171,7 +176,8 @@ ovl_out:
             .include    "../dq0/swap.inc"
 
             SWPART      1, 6                ; The map (map.c)
-            SWPART      2, 6                ; The seen maps' save (changes.c)
+            SWPART      2, 2                ; The seen maps' save (changes.c; overlay 2's since 2026-10-31: 6's room
+                                            ;   for the diagonal ways' map)
             SWPART      3, 6                ; The rooms' sconces (sconce.c)
 
             SWFN        draw_map, 1

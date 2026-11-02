@@ -11,7 +11,8 @@
 **   char ... end               a character: base's lines, then these (a later line over an earlier one), written to
 **                              /ram/t.hm and loaded (RS_LOAD_PC)
 **   case WORDS                 the next case's name: its checks one line, "ok - WORDS" or "not ok - WORDS: why"
-**   set FIELD=V ...            the hub's, the world's own: gait watch going (pc_going) stance strike shand
+**   set FIELD=V ...            the hub's, the world's own: gait watch going (pc_going) stance strike shand; and
+**                              hunger thirst want (pc_hunger, pc_thirst, pc_want: the referee's, slice 4.9's)
 **   dice S:F ... [S:F*] [...]  the next request's dice, in turn: each one's sides and the face it's to show (S:F*:
 **                              that face for every die after; ...: more dice after them, not held to anything); no
 **                              words: no dice at all.  Without it, the dice fall as the seed has them
@@ -237,7 +238,9 @@ static const struct sym syms[] = {
     S (MAT_EARTH), S (MAT_STONE), S (MAT_MASONRY), S (MAT_FLAGS), S (MAT_SOIL),
     S (GA_CREEP), S (GA_SLOW), S (GA_WALK), S (GA_JOG), S (GA_RUN), S (GA_SPRINT), S (GA_REST), S (GA_WORK),
     S (C_PRONE), S (C_UNCONSCIOUS), S (C_DEAD), S (C_STUNNED), S (C_BLEEDING), S (C_FATIGUED), S (C_ARM_USELESS),
-    S (C_LEG_USELESS), S (C_LAME), S (C_CRAWLS), S (C_STUCK),
+    S (C_LEG_USELESS), S (C_LAME), S (C_CRAWLS), S (C_STUCK), S (C_POISONED),
+    S (AK_DART), S (AK_CONTACT), S (AK_FOOD), S (AK_FLUX), S (FLM_LIT), S (FLM_LAMP), S (FLM_NEW),
+    S (FLM_OUT), S (FLM_BURST),
     S (LB_LEFT), S (LB_AMBI), S (LB_ARM_L), S (LB_ARM_R), S (LB_LEG_L), S (LB_LEG_R), S (LB_HURT), S (DH_LEFT),
     S (DH_RIGHT),
     S (IH_LEFT), S (IH_RIGHT), S (IH_BOTH),
@@ -379,6 +382,12 @@ static void set (void)
             HUB->pc_shand = n;
         } else if (!strcmp (tok[k], "now")) {
             HUB->now = n;
+        } else if (!strcmp (tok[k], "hunger")) {
+            HUB->pc_hunger = n;
+        } else if (!strcmp (tok[k], "thirst")) {
+            HUB->pc_thirst = n;
+        } else if (!strcmp (tok[k], "want")) {
+            HUB->pc_want = n;
         } else {
             bads ("set: no %s", tok[k]);
         }
@@ -448,8 +457,8 @@ static void request (void)
             q.w1 = n;
         } else if (!strcmp (tok[k], "w2")) {
             q.w2 = n;
-        } else if (tok[k][0] == 'x' && tok[k][1] >= '0' && tok[k][1] <= '9' && !tok[k][2]) {
-            q.x[tok[k][1] - '0'] = n;
+        } else if (tok[k][0] == 'x' && tok[k][1] >= '0' && tok[k][1] <= '9' && atoi (tok[k] + 1) < 32) {
+            q.x[atoi (tok[k] + 1)] = n;          /* (x0 ... x31: the afflictions' x18 ..., 2026-10-31) */
         } else {
             bads ("ask: no %s", tok[k]);
         }

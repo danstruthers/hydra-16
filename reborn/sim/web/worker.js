@@ -19,7 +19,7 @@
 //   status { cyc, rate, clock } (twice a second: the cycle, and the cycles a second lately), card { slot, bytes },
 //   written { slot } (a card was written: its image has changed since it was last asked for), halted { why }.
 'use strict';
-const { createMachine } = require('../../../base/sim/lib/machine.js');
+const { createMachine, DEFAULT_MODULES } = require('../../../base/sim/lib/machine.js');
 
 const CLOCK = 3.579545;
 const now = () => performance.now() / 1000;
@@ -48,7 +48,7 @@ function boot(msg) {
     vera = { version: [47, 0, 2] };
     if (msg.cards && msg.cards.verasd) vera.sd = card('verasd', 0, msg.cards.verasd);
   }
-  m = createMachine({ modules: opt.modules || 2, sharedU: 16, aciaLine: 1, stuckIrq: -1, acia: 'rockwell', clock: CLOCK, trace: 0,
+  m = createMachine({ modules: opt.modules || DEFAULT_MODULES, sharedU: 16, aciaLine: 1, stuckIrq: -1, acia: 'rockwell', clock: CLOCK, trace: 0,
     pcWatches: [], watches: [], marks: [], log: () => {}, seed: opt.seed, rtc: opt.rtc ? 'now' : undefined,
     vera, smc: !!(opt.vera && opt.smc), sound: true, sd,
     osrom: new Uint8Array(msg.bios), pagedrom: new Uint8Array(msg.prom) });

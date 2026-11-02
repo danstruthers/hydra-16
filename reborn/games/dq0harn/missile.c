@@ -24,7 +24,7 @@
 ** with let fall), a miss, a block (on the shield or the weapon, no harm; a bare arm struck), a strike of n dice (the
 ** missile's impact added, the armour at the location off it: fight.c's strike).  Behind cover (MS_COVER: a slit's or a
 ** window's stone up to its head, the world's), a strike below the neck strikes the stone (Combat 17's cover).  A
-** stray's (MS_STRAY, the world's: a miss that struck one beside its mark, the book's 20%) a strike of one die, no test.
+** stray's (MS_STRAY, the world's: a miss that struck one beside its mark, the book's half the time) a strike of one die, no test.
 */
 
 #pragma code-name ("OV7CODE")
@@ -103,8 +103,9 @@ unsigned o_shot (void)
     mod = STEP_PCT * (signed char) R->steps;
     k = R->c;
     R->a = R->c = 0;
-    if (A.c->state != HARN_CONSCIOUS || (!A.who && pc_out > tnow)) {
-        R->result = 0xFF;                       /* (It can't) */
+    if (!(f & (MS_STRAY >> 8)) && (A.c->state != HARN_CONSCIOUS || (!A.who && pc_out > tnow))) {
+        R->result = 0xFF;                       /* (It can't; a stray's struck already, its shooter's own state
+                                                **   none of it: both creatures', the sheet the one struck's) */
         return 0;
     }
     if (prones & RS_PRONE_A) {                  /* (Fallen: it gets up first, its turn spent, as a blow's) */

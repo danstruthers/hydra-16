@@ -8,9 +8,11 @@
 ; left out of the words said; so a place's words are told again where it's elsewhere, a journey's next leg, but the same
 ; thing seen from two places once), kept in
 ; look.c's told (ntold of them, none as a command's taken, main.c's; TOLD at most, then the oldest given up for the
-; newest); lb made of the ones not said yet, then said; lb begun again.  lb_tell (dq0.h's): lb's words all said, but
-; each kept as told, as lb_said's are (look.c's stir: a denizen come into sight told as it stirs, so the look after, a
-; walk stopped by it, doesn't tell it again; its words news, said even if told before this answer).
+; newest); lb made of the ones not said yet, then said; lb begun again.  lb_tell (dq0.h's): lb's first sentence said
+; whatever (a stir's "Something stirs."), the rest but those said already this answer (a denizen gone off and back,
+; its words the same: the told-once rule whatever the tasks' interleaving, 2026-10-30), each kept as told, as lb_said's
+; are (look.c's stir: a denizen come into sight told as it stirs, so the look after, a walk stopped by it, doesn't
+; tell it again).
 ; ****************************************************************************
 
             .setcpu     "65C02"
@@ -27,7 +29,7 @@ h:          .res        2           ; A sentence's hash
 _lb_salt:   .res        2           ; (Where it's said of: its hash begun with it)
 tnext:      .res        1           ; (The told list full: the next to give up, the oldest)
 lead:       .res        1           ; (Its spaces before it still)
-all:        .res        1           ; (lb_tell's: $80, all said)
+all:        .res        1           ; (lb_tell's: $80, its first sentence said whatever)
 
             .code
 _lb_tell:   lda         #$80
@@ -90,8 +92,11 @@ next:       inc         ptr1
 stop:       inc         ptr1                ; (Its full stop with it)
             bne         ended
             inc         ptr1 + 1
-ended:      bit         all                 ; (lb_tell's: said, and kept as told)
-            bmi         @new
+ended:      bit         all                 ; (lb_tell's first sentence, a stir's "Something stirs.": said, and kept
+            bpl         @check              ;   as told; the rest as a look's: none told already this answer
+            stz         all                 ;   said again, the told-once rule whatever the interleaving,
+            bra         @new                ;   2026-10-30)
+@check:
             ldy         #0                  ; Said already?
             ldx         _ntold
 @told:      beq         @new

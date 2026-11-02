@@ -72,7 +72,25 @@ static unsigned char __fastcall__ leg (unsigned char x, unsigned char y, unsigne
     if (!dig (x, y)) {
         return 0;
     }
-    if (across) {
+    if (!(((const unsigned char*) &STRATUM (L->sn).seed)[3] % 5)) {
+        sty.slant = 1;                          /* (A fifth of the built strata's passages on the diagonal, by the
+                                                **   stratum's seed: its plan's; dq0 -A's all, uses.c's) */
+    }
+    if (sty.slant) {                            /* (On the diagonal, a step each way by turns, the first out of its door:
+                                                **   a staircase, cut once the chunk's grown, caves.c's slants; then
+                                                **   straight on) */
+        while (x != tx && y != ty) {
+            if (across) {
+                x += x < tx ? 1 : -1;
+            } else {
+                y += y < ty ? 1 : -1;
+            }
+            across ^= 1;
+            if (!dig (x, y)) {
+                return 0;
+            }
+        }
+    } else if (across) {
         m = (x + tx) / 2;
         while (x != m) {
             x += x < m ? 1 : -1;

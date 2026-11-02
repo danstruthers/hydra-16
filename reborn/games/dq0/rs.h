@@ -95,6 +95,18 @@ enum {
                                                 **   northsense) isn't asked, and never fails */
     P_THEME,                                    /* A theme's own, P_THEME + n (named in its data) */
 };
+#define TIME_STEPS      100                     /* (P_BEARING's steps from 64 on: keeping count of the time underground,
+                                                **   out of the sun's sight, its steps these less TIME_STEPS (the
+                                                **   world's: DUNGEON.md's the time of day believed, 2026-10-31; its
+                                                **   steps HOUSE.md's): an hour's or more awake gone by, a sleep's length
+                                                **   or a black-out's guessed as it wakes; the reply's result on a
+                                                **   failure a d8 less one, the world's to make the drift's way of (odd
+                                                **   the earlier); the time it believes the world's to keep (the hub's
+                                                **   tb); its dice the referee's own, mixed from the game's and put
+                                                **   back, so its other tests roll as they did; one with absolute
+                                                **   timesense (its summary's timesense) never fails.  The bearings'
+                                                **   purpose, so the referee's tables and its main RAM are as they
+                                                **   were) */
 
 /* How a hidden thing's hidden (P_SEARCH's b): found by searching, or only by magical means (the referee's: a spell,
 ** a power, an ability; its result 1 if the searcher has none); and how a trap's set (P_DISARM's b: magic only
@@ -103,7 +115,8 @@ enum { HIDE_MECHANICAL, HIDE_MAGICAL };
 
 /* The crafts that know things (P_APPRAISE's b): a warrior knows weapons and armour, not books of magic */
 enum { AP_WEAPON, AP_ARMOUR, AP_METAL, AP_WOOD, AP_HIDE, AP_CLOTH, AP_POTTERY, AP_JEWEL, AP_BOOK, AP_FOOD, AP_BONE,
-    AP_STONE, AP_GLASS, NAP };                  /* (Stone: a mason's; glass: a glazier's) */
+    AP_STONE, AP_GLASS, AP_ROCK, NAP };         /* (Stone: a mason's; glass: a glazier's; the rock where it lies:
+                                                **   a miner's, slice 4.10's) */
 
 /* What a dig is into (and what a fall lands on): a floor's flags (the user: a material of their own) are lifted, not
 ** cut */
@@ -207,6 +220,10 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
                                                 **   blow's (O_FUMBLE a wild shot, the attacker's fumble roll: a
                                                 **   launcher let fall, X_DROP), its words the same four lines (the
                                                 **   attacker's weapon its kind's name) */
+#define RS_HEART(r)     ((signed char) (r)->x[0])  /* (RS_ATTACK's x[0], the request's, before the reply's
+                                                **   effects take its place: the creature's heart, its morale's
+                                                **   steps (the hub's actor's: the denizens' field and bonds, HOUSE.md's
+                                                **   morale), its courage tested with them as it's wounded) */
 #define MS_UNAWARE      0x100
 #define MS_COVER        0x200
 #define MS_STRAY        0x400
@@ -222,8 +239,13 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define AF_AGAIN        0x20                    /* The one knocked senseless out already, struck again as it lies (the
                                                 **   reply's w2 the longer of the two: its black-out told once) */
 
-/* ---- Morale (RS_MORALE): an actor's courage tested (steps: how its fight goes): the grade, and result its state */
+/* ---- Morale (RS_MORALE): an actor's courage tested (steps: how its fight goes): the grade, and result its state.
+** The denizens' (HOUSE.md's morale): steps the field about it and its bonds, its situation besides; a why (MR_*), b the
+** field and c the bonds (points, signed: the referee's to ignore, the tests' to read), w1 the fallen's record (or the
+** leader's lost), w2 its leaders' records reckoned (its band's head, its faction's times 256; 0xFF none) */
 enum { M_STEADY, M_CAUTIOUS, M_BROKEN, M_DESPERATE, M_BERSERK };
+enum { MR_NONE, MR_FELL, MR_LEADER, MR_TOLD };   /* (Why: a friend seen or heard to fall; its leader; told of its
+                                                **   leader's loss) */
 
 /* An effect of a reply: what happened to whom (up to RS_EFFECTS a reply) */
 #define RS_EFFECTS      4
@@ -258,6 +280,26 @@ enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREA
 ** tenths the actor's out for (knocked senseless), result 1 a fall stopped (a hold grabbed); its words in the text,
 ** a line (and RS_DESCRIBE b 2's: the last harm's) */
 enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_STRUCK };
+
+/* ---- Afflictions (2026-10-31: HOUSE.md's poison, bad air and disease, every ruleset's to keep): what the world exposes
+** the character to (RS_TIME's x[18], its dose x[19]), the ruleset's to judge (resisted, caught, its course, its cure):
+** a poisoned dart's or needle's (a trap's), a contact poison's (a lock's, a chest's), spoiled food's, foul water's (a
+** still pool drunk from: the flux).  A creature's bite that carries venom or disease the ruleset's own (its bestiary) */
+enum { AK_NONE, AK_DART, AK_CONTACT, AK_FOOD, AK_FLUX, NAK };
+/* The air (the world's, as it moves: the hub's pc_air, RS_TIME's x[20]): its kind times 16, and its strength (1 a little
+** ... 3 much: the draught's thinned it): blackdamp (stale air: too little to breathe, choke-damp), whitedamp (the
+** smoke of fire and of a blast: poisonous, giving no warning), firedamp (marsh gas, in the coal and shale beds: it burns,
+** a pocket bursting into flame at a naked one) */
+enum { AQ_GOOD, AQ_BLACK, AQ_WHITE, AQ_FIRE };
+#define AQ_KIND(q)      ((q) >> 4)
+#define AQ_STR(q)       ((q) & 3)
+#define FLM_LIT         0x01                    /* (RS_TIME's x[21]: a naked flame lit, carried (a torch, a candle), */
+#define FLM_LAMP        0x02                    /*   a lantern lit, */
+#define FLM_NEW         0x80                    /*   the air changed as it came there (its words told: a flame's way in
+                                                **   it, the breath's), */
+#define FLM_OUT         0x20                    /*   its flames put out by the air (blackdamp's: the world's), */
+#define FLM_BURST       0x40                    /*   the air burst into flame at its own (firedamp's: the world's harm
+                                                **   after) */
 enum { AS_BLUNT, AS_EDGE, AS_POINT, AS_FIRE, AS_BEST };     /* (items.h's DM_* in the same order) */
 enum { Z_MID, Z_HIGH, Z_LOW };
 enum { GR_FLOOR, GR_DEEP_WATER, GR_SHALLOW_WATER, GR_SOFT, GR_HARD, GR_ROCKY };    /* Earth; water; mud; paving;
@@ -288,6 +330,12 @@ struct rs_summary {
     unsigned char   mapmind;                    /* Its map in mind (DUNGEON.md, the map kept: slice 4.2's): how well it
                                                 **   keeps what it sees, mapping as it goes (0-100; half that, not), */
     unsigned char   mapfade;                    /*   and the game minutes it takes to lose a tenth of it (1 on) */
+    unsigned char   lead;                       /* Its influence skill: how it sways those about it (HarnMaster's
+                                                **   Oratory or Rhetoric, the better: its mastery, 0-100 and on), the
+                                                **   morale field's (HOUSE.md's morale) */
+    unsigned char   timesense;                  /* 1: absolute timesense, it always knows the hour (a rare trait, the
+                                                **   house's: hmchar's "timesense" line); 0: it keeps count (rs.h's
+                                                **   TIME_STEPS) */
 };
 #define LB_LEFT         0x01                    /* (A summary's limbs: its main hand the left, left-handed; */
 #define LB_AMBI         0x02                    /*   either, no off hand, ambidextrous; */
@@ -334,8 +382,12 @@ enum {
                                                 **   b its health, grade 2 news of it (its words RS_DESCRIBE b 4's) | 4
                                                 **   hurt anew (a hard stop: a venom's ache), w2 the tenths it's
                                                 **   senseless (0), x[4..7] the clock when it's next to be asked if
-                                                **   nothing bleeds (a long's: the ruleset's next mark) */
-    RS_EXERT,                                   /* Time passed (w1 tenths) moving at a pace (a: GA_*), at strenuous
+                                                **   nothing bleeds (a long's: the ruleset's next mark); the
+                                                **   afflictions' (2026-10-31: below, AK_*): x[18] one the character's
+                                                **   exposed to now (AK_*, 0 none), x[19] its dose (1 slight ... 3
+                                                **   strong), x[20] the air it breathes (AQ_*: its kind times 16, its
+                                                **   strength), x[21] its flame (FLM_* below) */
+    RS_EXERT,                                  /* Time passed (w1 tenths) moving at a pace (a: GA_*), at strenuous
                                                 **   work (GA_WORK), or standing still (GA_REST): fatigue gained, or
                                                 **   rested off (its summary anew; result 1, a level more) */
     RS_REST,                                    /* Hours resting: healing, advancement -> effects, words */

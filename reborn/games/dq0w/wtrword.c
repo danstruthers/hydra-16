@@ -99,11 +99,15 @@ unsigned __fastcall__ s_tr_words (unsigned w)
     hub_map (0);
     n = 0;
     face = HUB->pc_face;
-    hy_bank (ovbank[OVBANKS]);                  /* (The kinds' words: the lib folder's dq0tr.dat) */
-    strcpy (path, TR_DIR);
-    hub_map (0);
-    strcat (path, "/dq0tr.dat");
-    fd = open (path, O_RDONLY);
+    if (trfd < 0) {
+        hy_bank (ovbank[OVBANKS]);              /* (The kinds' words: the lib folder's dq0tr.dat, opened the first
+                                                **   time and kept open: an open on the card some 700,000 cycles) */
+        strcpy (path, TR_DIR);
+        hub_map (0);
+        strcat (path, "/dq0tr.dat");
+        trfd = open (path, O_RDONLY);
+    }
+    fd = trfd;
     for (i = 0, t = R.tr; i < R.ntr; ++i, ++t) {
         if (fd >= 0 && lseek (fd, (unsigned) (t->kind * TREC), SEEK_SET) >= 0 && read (fd, buf, TREC) == TREC) {
             memcpy (t->name, buf, sizeof t->name);
@@ -122,9 +126,6 @@ unsigned __fastcall__ s_tr_words (unsigned w)
             t->head ^= t->head <= H_NW ? 4 : 0;     /* (Misread: the way it went wrong, how long ago) */
             t->ago = (t->ago + 2) % 5;
         }
-    }
-    if (fd >= 0) {
-        close (fd);
     }
     soil = R.floor == MAT_EARTH || R.floor == MAT_SOIL;
     d = soil && R.dust != TD_SWEPT ? 0 : R.dust & 7;

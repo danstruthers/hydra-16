@@ -452,6 +452,9 @@ create wealth-t  40 , 40 , 40 ,  40 , 80 , 160 ,  60 , 120 , 240 ,  90 , 180 , 3
   line{ s" name " line+ name name-n line+ line} drop
   line{ s" occupation " line+ occname occ-n line+ line} drop
   line{ s" wealth" line+ wealth line+n line} drop
-  close-file drop
+  ( absolute timesense, as C's: one in a hundred, rolled after all the rest; the house's, 2026-10-31 )
+  d100 1 = dup if line{ s" timesense" line+ line} drop then
+  swap close-file drop
+  if ." Absolute timesense: you always know the hour." cr then
   ." Written to " out out-n type cr ;
 hmchar

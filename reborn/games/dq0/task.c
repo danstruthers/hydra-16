@@ -125,10 +125,17 @@ static const char* __fastcall__ doing_of (unsigned char k, unsigned char n)
 ** or the foe (TE_FIGHT's), or the health (TE_ASK_HURT's), or a light's kind (TE_LOW's, TE_OUT's), or what it was done
 ** to (a stop's, a question's, a timed work begun: the long task's what).  1 if a question's put; 2 one answered yes
 ** unasked (dq0 -a's, the tests': not put); 4 fighting on begun (the character busy) */
+static const char* const fetched[8] = {         /* (TE_FETCHED's: FT_*) */
+    "\n%s picks up the %s.", "\n%s hands you the %s.", "\n%s can't find the %s where it lay.",
+    "\n%s can't carry the %s.", "\n%s has its hands full: it can't take the %s.",
+    "\n%s sets the %s down at your feet.", "\n%s takes the %s.", "\n%s can't get to the %s."
+};
+
 unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
 {
     unsigned char k = w >> 8, p = (unsigned char) w, n = named, one = 0;
     const char* d;
+    char t[20];                                 /* (On the C stack: a thing's name) */
 
     if (p == TE_OUT) {
         one = k & 0x80;                         /* (Another of its name burning still: the world's) */
@@ -246,6 +253,11 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         } else {
             say (".");
         }
+        break;
+    case TE_FETCHED:                            /* (An ally's errand, a gift taken: slice 4.8's) */
+        lamp (w >> 8);
+        strcpy (t, fn);
+        sayf (fetched[(n >> 4) & 7], foe (n & 15, 1), t);
         break;
     case TE_ROBBED:                             /* (Helpless, robbed: a robber's way, the denizens') */
         sayf ("\n%s goes through your things as you lie helpless, and takes what it finds.", foe (named, 1));
@@ -368,22 +380,38 @@ void __fastcall__ o_bar_text (char* s, unsigned done, unsigned len)
         strcat (s, t);
         strcat (s, "  ");
     }
+    hub_mem (0, &i, &HUB->pc_want, 1);          /* (Hunger and thirst once they matter: slice 4.9's) */
+    if (i && strlen (s) <= 24) {
+        strcat (s, i >= 0x10 ? "thirsty  " : "hungry  ");
+    }
 }
 
-#pragma code-name (push, "OV8CODE")       /* (A walk's beats, a battering's: once overlay 8's, now linked in
-                                                **   overlay 3, dq0.cfg's, overlay 8's room part 1's, 2026-10-27) */
+#pragma code-name (push, "OV8CODE")       /* (A walk's beats, a battering's: once overlay 8's, linked in overlay 3,
+                                                **   overlay 8's room part 1's, 2026-10-27; in overlay 16 since
+                                                **   2026-11-01, overlay 3's room, dq0.cfg's) */
 #pragma rodata-name (push, "OV8RODATA")
 #pragma local-strings (push, on)
 
-/* A walk's beat as it goes (E_BEAT's w: WB_*, its side times 256) */
+/* A walk's beat as it goes (E_BEAT's w: WB_*, its side times 256; a passage's bend, its run's new bearing in
+** sixteenths | 0x10, the world's, by the north the character believes in: "The passage bends away north-northeast",
+** HOUSE.md's a passage's heading) */
 void __fastcall__ o_beat_words (unsigned w)
 {
+    unsigned char r, sk;
+
     switch ((unsigned char) w) {
     case WB_QUIET:
         msg ("You go on down the passage.");
         break;
     case WB_TURN:
-        msg (w >> 8 == WS_LEFT ? "The passage turns left." : "The passage turns right.");
+        if ((r = w >> 8) & 0x10) {
+            hub_mem (0, &sk, &HUB->pc_skew, 1);
+            r = (r + (sk << 1)) & 15;
+            sayf ("\nThe passage bends away %s%s%s.", head_name[r & 1 ? ((r >> 1) + 1) & 6 : r >> 1], r & 1 ? "-" : "",
+                r & 1 ? head_name[(r >> 1) | 1] : "");
+            break;
+        }
+        msg (r == WS_LEFT ? "The passage turns left." : "The passage turns right.");
         break;
     case WB_DOOR:
         msg ("You go through a doorway.");
@@ -488,7 +516,9 @@ void __fastcall__ o_felt_words (unsigned w)
         return;
     case WB_SPENT:                              /* (A thing used up, its kind: HOUSE.md's things used up) */
         hub_mem (KIND_BANK, lb, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
-        sayf ("\nYour %s is %s.", lb, b == KI_INK ? "dry" : b == KI_QUILL ? "worn out" : "worn to nothing");
+        sayf (b == KI_RATIONS ? "\nThat was the last of your %s." : b == KI_WATER ? "\nYour waterskin is empty." :
+            "\nYour %s is %s.", lb, b == KI_INK ? "dry" :
+            b == KI_QUILL ? "worn out" : "worn to nothing");    /* (Rations eaten: slice 4.9's) */
         return;
     }
 }
@@ -558,7 +588,7 @@ unsigned char __fastcall__ o_answer_of (const char* l)
 ** time takes over, its round out first) */
 unsigned char __fastcall__ o_free_cmd (const char* l)
 {
-    static const unsigned char now_[] = { VB_META_INVENTORY, VB_META_SHEET, VB_META_MAP, VB_META_HELP, VB_STOP,
+    static const unsigned char now_[] = { VB_META_INVENTORY, VB_META_SHEET, VB_META_MAP, VB_META_HELP, VB_META_TIME, VB_STOP,
                                           VB_OBSERVE_LOCALE, VB_OBSERVE_AROUND, VB_FIND_OBJECT, VB_DEFEND };
     unsigned char a = cmd.action, i;
 
@@ -660,7 +690,7 @@ static unsigned __fastcall__ wait_of (const char* l, unsigned char n)
         }
         c = *p | 0x20;
         if (c >= '0' && c <= '9') {
-            v = atoi (p);
+            v = dnum (p);
         } else if (c == 'h' && p[1] == 'a') {
             half = 1;                           /* ("half") */
         } else if (c == 'h' || (c == 'm' && p[1] == 'i')) {
@@ -690,9 +720,12 @@ static unsigned __fastcall__ wait_of (const char* l, unsigned char n)
 ** (the house's); its intent in tenths, or in minutes past 100 of them (WA_MIN), asleep for a sleep (WA_SLEEP) */
 void __fastcall__ o_wait_go (unsigned char action)
 {
-    unsigned m = wait_of (cl, cmd.n);
+    unsigned m = time_ui (TU_UNTIL);            /* ("until dawn", "watch the sun": time.c's, 2026-10-31) */
     unsigned char a = 0;
 
+    if (!m) {
+        m = wait_of (cl, cmd.n);
+    }
     if (action == VB_SLEEP) {
         rest_ = strstr (cl, "rest") != 0;
         if (!m) {

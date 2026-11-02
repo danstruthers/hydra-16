@@ -16,6 +16,9 @@
 
 #include <string.h>
 #include <dice.h>
+#include <hydra.h>
+#include "../dq0/hub.h"
+#include "../dq0/rs.h"
 #include "../dq0w/world.h"
 #include "grow.h"
 
@@ -247,6 +250,60 @@ static void __fastcall__ hollow (const struct room* p)
     }
 }
 
+#pragma code-name (push, "OV1CODE")            /* (Overlay 1's: 3's room, the air's) */
+#pragma rodata-name (push, "OV1RODATA")
+static const int o8[8] = { -CW, 1 - CW, 1, CW + 1, CW, CW - 1, -1, -CW - 1 };    /* (The eight ways, as offsets in
+                                                **   the chunk: N, NE ... NW) */
+/* A tunnel's zigzag made the diagonal it is (the user's, 2026-10-31: tunnels off the compass): a tunnel's square in no
+** chamber, its two ways on a quarter apart (the rest beside it rock, and the two squares across its corners), the
+** zigzag going on past it (a square across its other corners a tunnel's, or cut), the rise between them a step's: the
+** corner the diagonal cuts (T_CUT), the squares either side walked between (chunk.c's slant).  A bend alone stays a
+** bend.  No dice: the layout as it was grown */
+#pragma static-locals (push, on)
+void o_slants (void)
+{
+    static unsigned char x, y, k, a, m, t, n[8];
+    static unsigned i;
+    static struct room* p;
+
+    for (i = CW + 1; i < CW * (CW - 1) - 1; ++i) {
+        x = i & (CW - 1);
+        y = i >> CW_BITS;
+        if (!x || x == CW - 1 || TILE (L->tile[0][i]) != T_CORR) {
+            continue;
+        }
+        for (k = m = 0; k < 8; ++k) {
+            n[k] = t = TILE (L->tile[0][i + o8[k]]);
+            if (!(k & 1)) {
+                if (t == T_CORR) {
+                    m |= 1 << (k >> 1);
+                } else if (t != T_ROCK) {
+                    m = 0xF0;
+                }
+            }
+        }
+        a = m == 3 ? 0 : m == 6 ? 2 : m == 12 ? 4 : m == 9 ? 6 : 0xFF;   /* (Its two ways on a quarter apart: the
+                                                **   first's heading, the second's two on) */
+        if (a == 0xFF || n[a + 1] != T_ROCK || n[(a + 5) & 7] != T_ROCK ||
+            ((t = n[(a + 3) & 7]) != T_CORR && t != T_CUT && (t = n[(a + 7) & 7]) != T_CORR && t != T_CUT) ||
+            (unsigned char) (L->elev[0][i + o8[a]] - L->elev[0][i + o8[(a + 2) & 7]] + STEP_MAX) > 2 * STEP_MAX) {
+            continue;
+        }
+        for (k = L->nrooms, p = L->room; k; --k, ++p) {
+            if (x + 1 >= p->x && x <= p->x + p->w && y + 1 >= p->y && y <= p->y + p->h) {
+                break;
+            }
+        }
+        if (!k) {
+            L->tile[0][i] = T_CUT;
+        }
+    }
+}
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+void slants (void);                             /* (Overlay 1's, its stub) */
+
 void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned long seed)
 {
     struct stratum* s = &STRATUM (c->sn);
@@ -302,6 +359,7 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
     for (i = 0; i < L->nrooms; ++i) {
         hollow (&L->room[i]);
     }
+    slants ();
     for (y = 0; y < CW; ++y) {
         for (x = 0; x < CW; ++x) {
             if (L->tile[y][x] != T_ROCK) {
@@ -333,3 +391,191 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
         L->open[L->nopen++].link = e->ln[i];
     }
 }
+
+/* ---- The water (slice 4.9: DUNGEON.md's water), as a chunk's grown (make.c's, after its grower and its fixtures: any
+** style's), from its region's (the plan's RW_*, its edges' water), by its own numbers (a hash of its place: the
+** growers' dice as they were): a cistern full (5 to 8 feet over its floor's lowest), a cave's chambers in a lake's
+** region flooded (4 to 11 feet), in a stream's pooled in their hollows (a foot or two), where there's water under it
+** one in three (a foot), but a chamber with a way between strata in it, kept dry (the house's: the stairs' landing
+** never under water); a stream's region's passages running with it, a foot deep.  A square of a room's floor under
+** its surface wet (the bits), a passage's square of a stream's */
+
+/* Its air (2026-10-31: DUNGEON.md's bad air, HOUSE.md's for review: overlay 3's, make_chunk's after its water), from the
+** chunk's place alone (no dice of the maker's: the layouts as they were): a pocket in one of its rooms, round its
+** middle, its reach the room's half and a square: firedamp where the rock's poor (shale at its middle: the coal
+** measures' gas) one chunk in four; blackdamp (stale air pooled where nothing stirs it) 100 feet down or more, one
+** chunk in eight, 200 feet one in four; strength 1, 2 from 200 feet, a step more one time in four; none where there's
+** a way between strata in the chunk (the air moves there).  A test's scene (the environment's dq0air, rc's, read
+** once: "0" no bad air; "KS" every chunk a pocket of kind K, rs.h's AQ_*, strength S, from end to end) */
+static unsigned char tair = 0xFF;               /* (The environment's: 0x80 | kind times 16 | strength; 0 none said) */
+
+void __fastcall__ o_air_pocket (struct chunk* c, const struct edges* e)
+{
+    static struct hy_regs r;
+    static char b[4];
+    unsigned h = (c->cx * 57 + c->cy * 23 + c->sn * 101) ^ 0x2C6B, s;
+    unsigned char k;
+    struct room* p;
+
+    if (tair == 0xFF) {
+        tair = 0;
+        r.a = 0xFF;
+        r.r[0] = (unsigned) "dq0air";
+        r.r[1] = (unsigned) b;
+        r.r[2] = 3;
+        if (!hy_call (HY_ENV_GET, &r)) {
+            tair = 0x80 | (b[0] & 3) << 4 | (b[1] & 3);
+        }
+    }
+    h ^= h >> 7;
+    h *= 0x2F1B;
+    h >>= 8;
+    if (!c->nrooms || tair == 0x80) {
+        return;
+    }
+    s = e->depth >= 200 ? 2 : 1;
+    if (tair) {
+        c->air = tair & 0x3F;                   /* (A test's: its first room) */
+        h = 0;
+    } else {
+        if (e->nland) {
+            return;
+        } else if (e->poor == 1 && !(h & 3)) {
+            k = AQ_FIRE;
+        } else if (e->depth >= 100 && (h >> 2 & 7) < s) {
+            k = AQ_BLACK;
+        } else {
+            return;
+        }
+        c->air = k << 4 | (s + !(h & 0x60));
+    }
+    p = &c->room[(unsigned char) h % c->nrooms];
+    c->ax = p->x + (p->w >> 1);
+    c->ay = p->y + (p->h >> 1);
+    c->ar = tair ? 100 : ((p->w > p->h ? p->w : p->h) >> 1) + 1;     /* (A test's: the whole chunk) */
+}
+
+#pragma code-name (push, "OV6CODE")           /* (Overlay 6's: 3 full) */
+#pragma rodata-name (push, "OV6RODATA")
+
+static unsigned char __fastcall__ wh (unsigned char k)
+{
+    unsigned h = (L->cx * 31 + L->cy * 17 + k * 101) ^ 0x5A5A;
+
+    h ^= h >> 7;
+    h *= 0x2F1B;
+    return (unsigned char) (h >> 8);
+}
+
+/* Square x, y of the chunk (L) a passage's that may fall in: a passage's, every square beside it a passage's or the
+** rock's (no room's, no doorway's: they stay as they were made), in no room's bounds (a cave's may take in a tunnel),
+** not on the chunk's edge */
+static const signed char nb[4] = { -CW, 1, CW, -1 };
+static unsigned char __fastcall__ fallen_ok (unsigned char x, unsigned char y)
+{
+    unsigned char d, t;
+    unsigned char* q;
+    struct room* p;
+
+    if ((unsigned char) (x - 1) >= CW - 2 || (unsigned char) (y - 1) >= CW - 2 || TILE (*(q = &L->tile[y][x])) != T_CORR) {
+        return 0;
+    }
+    for (d = 0; d < 4; ++d) {
+        if ((t = TILE (q[nb[d]])) != T_CORR && t != T_ROCK && t != T_WALL && t != T_RUBBLE) {
+            return 0;
+        }
+    }
+    for (d = L->nrooms, p = L->room; d; --d, ++p) {
+        if (x + 1 >= p->x && x <= p->x + p->w && y + 1 >= p->y && y <= p->y + p->h) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
+/* Age's collapse (HOUSE.md's rock's kinds and hardness, slice 4.10's): an old stratum's passages partly fallen in,
+** a heap of rubble a square and some beside it, by its own dice (the chunk's place: the layout as it was); six tries
+** a chunk, each falling in two centuries old or more, in 20 a chance of its age in centuries (ten at most), twice
+** that where the rock is poor (shale at the chunk's middle: its edges' poor, plan.c's) */
+static void __fastcall__ rubble (unsigned char poor)
+{
+    unsigned char i, d, x, y, n = STRATUM (L->sn).age;
+    unsigned char* q;
+
+    if (n < 2 || poor == 0xFF) {                /* (Young; or dq0 -U's, the tests': none) */
+        return;
+    }
+    n = (n > 10 ? 10 : n) << poor;
+    for (i = 0; i < 6; ++i) {
+        x = wh (40 + i) & (CW - 1);
+        y = wh (50 + i) & (CW - 1);
+        if (!fallen_ok (x, y) || wh (60 + i) % 20 >= n) {
+            continue;
+        }
+        *(q = &L->tile[y][x]) += T_RUBBLE - T_CORR;
+        for (d = 0; d < 4; ++d) {               /* (Some beside it too) */
+            if (wh (70 + i * 4 + d) & 1 && fallen_ok (x + (d == 1) - (d == 3), y + (d == 2) - (d == 0))) {
+                q[nb[d]] += T_RUBBLE - T_CORR;
+            }
+        }
+    }
+}
+
+void __fastcall__ o_wet_chunk (struct chunk* c, const struct edges* e)
+{
+    unsigned char r, x, y, k, d, w = e->water;
+    signed char lo;
+    struct room* p;
+
+    L = c;
+    if (w == 0xFF) {                            /* (dq0 -W, the tests': no water; the rubble still) */
+        rubble (e->poor);
+        return;
+    }
+    memset (c->wlev, WL_NONE, sizeof c->wlev);
+    for (r = 0; r < c->nrooms && w; ++r) {
+        p = &c->room[r];
+        k = wh (r);
+        d = p->kind == U_CISTERN ? 5 + (k & 3) : p->kind != U_CAVE ? 0 : w & RW_LAKE ? 4 + (k & 7) : w & RW_STREAM ?
+            1 + (k & 1) : k % 3 == 0;
+        for (x = 0; x < e->nland && !(e->lx[x] >= p->x && e->lx[x] < p->x + p->w && e->ly[x] >= p->y &&
+            e->ly[x] < p->y + p->h); ++x) {
+        }
+        if (!d || x < e->nland) {
+            continue;
+        }
+        lo = 120;
+        for (y = p->y; y < p->y + p->h; ++y) {
+            for (x = p->x; x < p->x + p->w; ++x) {
+                if (TILE (c->tile[y][x]) == T_FLOOR && c->elev[y][x] < lo) {
+                    lo = c->elev[y][x];
+                }
+            }
+        }
+        c->wlev[r] = lo + d;                    /* (The rock within a hundred feet of the datum or so: no more) */
+        for (y = p->y; y < p->y + p->h; ++y) {
+            for (x = p->x; x < p->x + p->w; ++x) {
+                if (TILE (c->tile[y][x]) == T_FLOOR && c->elev[y][x] < c->wlev[r]) {
+                    c->wet[y][x >> 3] |= 1 << (x & 7);
+                }
+            }
+        }
+        c->wany = 1;
+    }
+    if (w & RW_STREAM) {
+        c->wany = 1;
+        c->wlev[NROOMS] = 1;
+        c->wruns = 1 << NROOMS;
+        for (y = 0; y < CW; ++y) {
+            for (x = 0; x < CW; ++x) {
+                if (TILE (c->tile[y][x]) == T_CORR) {
+                    c->wet[y][x >> 3] |= 1 << (x & 7);
+                }
+            }
+        }
+    }
+    rubble (e->poor);                        /* (Age's collapse: slice 4.10's, wet or dry) */
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)

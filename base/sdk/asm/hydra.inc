@@ -58,6 +58,7 @@ EXEC            = $F87B       ; r0 = the program's path (as SPAWN's); r1 = its a
 SEM_WAIT        = $F87E       ; .A = a semaphore; .X = the most ticks to wait (TICK_HZ a second; 0: none, as SEM_TRY)
 RUN             = $F881       ; r0 = a bank program's path (as SPAWN's); r1 = its arguments (as SPAWN's), or 0; .A = flags (SPAWN_FDMAP, RUN_LEND); r2 = an fd map (with SPAWN_FDMAP, as SPAWN's).  None of them in the window ($8000-$9FFF)
                               ; -> .A = its exit code; r0 = its exit message (31 characters at most: TA_SCRATCH, "" for none)
+TASKFORE        = $F884       ; .A = a task: this one, or one it started; .X = 1 to put it in the foreground, 0 to take it out
 
 ; ---- memory: Memory: the break, pages, banks, shared segments (phase 1.8)
 BREAK           = $F890       ; r0 = the new end of the program's data (the first byte past it), or 0 to ask
@@ -150,7 +151,7 @@ SRV_REPLY       = $F9C5       ; TASK_INBOX's RQ_FID, RQ_DONE, RQ_PERM, RQ_EVENT:
 CLIENT_READ     = $F9C8       ; r0 = here; r1 = there, in the client's view; r2 = a count
 CLIENT_WRITE    = $F9CB       ; r0 = here (the data); r1 = there, in the client's view; r2 = a count
 NOTE_QUEUE      = $F9CE       ; IRQs off; .X = a note group (0-15); .A = the note's bit: 1 << (note - 1), for a note 1-8
-                              ; -> .X kept
+                              ; -> .A = 0; .X kept
 ROMREAD         = $F9D1       ; .A = a paged ROM bank; r0 = where in it ($A000-$DFFF); r1 = a buffer (not at $A000-$DFFF); r2 = a count
                               ; -> the bytes in the buffer
 TASKMEM         = $F9D4       ; .A = a task; .X = TM_READ or TM_WRITE, | TM_BANK; r0 = a buffer; r1 = an address in the task's view, $0000-$DFFF (with TM_BANK: $8000-$9FFF, in its RAM bank r3); r2 = a count (the range ends at $E000, or with TM_BANK at $A000, at most)
@@ -266,9 +267,12 @@ ME_NAME         = 4           ; MODINFO: its name (11 bytes, zero-padded: 10 cha
 ME_PAGE         = 15          ; MODINFO: its header's page in its first bank, 0-63 ($A000 + 256 * it: a module of a bank, packed with others)
 ME_SIZE         = 16          
 TI_STATE        = 0           ; TASKINFO's answer: the task's state (0: free, 1 ready, 2 wait, 3 call, 4 idle, 5 new, 6 sleep, 7 blocked, 8 event)
-TI_FLAGS        = 1           ; TASKINFO: its flags (TF_DRIVER, TF_STOPPED)
+TI_FLAGS        = 1           ; TASKINFO: its flags (TF_DRIVER, TF_FORE, TF_STOPPED)
 TF_DRIVER       = $01         ; TI_FLAGS: a driver
 TF_STOPPED      = $80         ; TI_FLAGS: stopped (/proc's ctl: TASKSTOP)
+TF_FORE         = $02         ; TI_FLAGS: in the foreground (TASKFORE): the scheduler picks it first
+FORE_RUN        = 8           ; The foreground's turn at most, in ticks (TASKFORE): then the background has the rest of a tick
+FORE_SRV        = 2           ; A driver's time in the foreground from a foreground task's call to it, in ticks (TASKFORE)
 TI_PARENT       = 2           ; TASKINFO: its parent ($FF: none)
 TI_CPU          = 3           ; TASKINFO: its CPU time, in ticks (3 bytes)
 TI_BANK         = 6           ; TASKINFO: its module's paged ROM bank ($FF: none)

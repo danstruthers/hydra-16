@@ -24,8 +24,8 @@
 **
 ** Memory: the program's code and data from $0800 (its BSS must end 768 bytes or more under $7F00: dq0.cfg); the
 ** overlays' code in banks of their own, put in the window at $8000 as they're called (bank.s).  Code in an overlay
-** can call any function; but what's in the window goes away while bread and bwrite work, so they're only ever
-** given the main RAM's addresses.  And the swapped parts (swap.inc): code that runs in the main RAM's top (dq0.cfg's
+** can call any function (a stub that changes the window never reads or writes what's in it).  And the swapped
+** parts (swap.inc): code that runs in the main RAM's top (dq0.cfg's
 ** SWAP, under the C stack's least room), a part at a time, copied there from its overlay's bank (8, 9) as it's
 ** called: main.c's start and end (part 1) and its commands (part 2), look.c's map (part 3).  A part's code reads and
 ** writes the hub as the main code does: a command more goes in a part (a new one, or one with room), at no cost to
@@ -49,7 +49,7 @@ void t_end (void);                              /* The same, as the game ends: t
 void __fastcall__ say (const char* s);          /* Words into the story, wrapped (\n: a new line) */
 void sayf (const char* fmt, ...);               /* The same, with %s, %d, %u, %c (and %%) */
 void __fastcall__ msg (const char* s);          /* A new line of the story, then s */
-void __fastcall__ say_raw (const char* s);      /* A line of the story as it is (not wrapped) */
+void __fastcall__ say_raw (const char* s);      /* A line of the story as it is (not wrapped: overlay 16's) */
 void blank (void);                              /* An empty line in the story (only one in a row) */
 void t_done (void);                             /* The cursor back to the line typed, and everything out */
 void t_flush (void);                            /* What's said so far out now (the cursor left where it is) */
@@ -69,6 +69,7 @@ char* t_line (void);                            /* A line that's been entered (E
 const char* t_next (void);                      /* The next t_line will give, left in the queue, or NULL */
 unsigned char __fastcall__ ask (const char* keys);      /* One of keys typed, waiting (the world stopped): which */
 unsigned char t_haskey (void);                  /* A key's come (conio's kbhit) */
+extern unsigned char t_wrote;                   /* Something out since the keys were last looked for (t_haskey's) */
 unsigned char t_getkey (void);                  /* The next key, waiting (conio's cgetc: Enter '
 ') */
 void __fastcall__ consctl (const char* what);   /* (main.c) A line to the window's consctl (rawon, rawoff) */
@@ -232,6 +233,9 @@ void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsig
 /* ---- The overlays (bank.s: their stubs) */
 
 void title (void);                              /* Overlay 1: the title, the pace asked */
+unsigned char __fastcall__ ovl_unpack (unsigned fb);    /* (ovunpack.inc: the overlays' file's fd, the banks at most) */
+void __fastcall__ dots (unsigned char k);       /* (Overlay 6's) The game's start's progress (main.c's) */
+extern unsigned char starting;                  /*   while it starts (main.c's) */
 void __fastcall__ entered (unsigned char resumed);  /* Overlay 1: the character come into the dungeon */
 void help (void);                               /* Overlay 1 (help.c's): the commands, listed (help.txt) */
 void __fastcall__ unknown (unsigned char f);    /* Overlay 1: a verb the game doesn't know (f 0), or doesn't do yet
@@ -249,7 +253,10 @@ unsigned char __fastcall__ task_words (unsigned w, unsigned char named);   /* Ov
 void __fastcall__ shot_words (unsigned w, unsigned char named);   /* Overlay 15: the missiles' (shots.c: slice 4.7's) */
 void __fastcall__ beat_words (unsigned w);
 void __fastcall__ felt_words (unsigned w);      /* (Overlay 7's) A walk in the dark's beat (task.c's) */
+unsigned __fastcall__ dnum (const char* s);     /* (main.c's) A number, a word's (atoi's) */
 void facing_words (void);                       /* (Overlay 7's) The way it believes it faces (task.c's: slice 4.2's) */
+void __fastcall__ fore_set (unsigned char on);  /* (Overlay 6's) The UI and the answer's tasks in the kernel's
+                                                **   foreground, or not (main.c's FS_*) */
 unsigned char __fastcall__ stop_kind (const char* word);  /* Overlay 7 (task.c's): the task a stop names */
 unsigned char __fastcall__ answer_of (const char* l);     /*   and a question's answer */
 void __fastcall__ bar_text (char* s, unsigned done, unsigned len);  /* (Overlay 3) */
@@ -279,6 +286,13 @@ void __fastcall__ trap_name (unsigned char kind, unsigned char trigger, unsigned
 void den_way (void);                            /* Overlay 4: a denizen in the way (its name in lb) */
 struct msg;
 struct fight;
+void __fastcall__ feed (unsigned char eat);     /* (Part 16's, feed.c: "eat", "drink", slice 4.9's) */
+void __fastcall__ water_words (unsigned w);     /* Overlay 4 (water.c): the water's news, worded
+                                                **   (an E_BEAT's w1, WB_WATER ... WB_DOUSED: slice 4.9's) */
+unsigned __fastcall__ time_ui (unsigned w);     /* Overlay 16 (time.c): the time of day believed, worded (w TU_TELL,
+                                                **   "time"; TU_SKY | its phase times 256, the sky seen; TU_UNTIL, a
+                                                **   wait's minutes "until dawn", "watch the sun", 0 none said) */
+enum { TU_TELL, TU_SKY, TU_UNTIL };
 unsigned __fastcall__ fight_words (const struct msg* m);    /* Overlay 6: a blow (an E_FIGHT; its record from the
                                                 **   ring copied into lb's end: FIGHT_LB), into lb: the tenths the
                                                 **   character's knocked senseless for, or 0 */
@@ -332,9 +346,7 @@ extern unsigned long heard_at;                  /* (main.c's: when a sound was l
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
-void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[15];
+extern unsigned char ovbank[16];
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */
 void tend (void);                               /* Part 12: first aid (VB_TEND) */

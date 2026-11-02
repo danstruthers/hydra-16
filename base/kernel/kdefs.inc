@@ -14,7 +14,7 @@
 .global     IRQ_ENTRY, IRQ_RESTORE, IRQ_EXIT, NMI_ENTRY
 .global     IRQ_STUB_0, IRQ_STUB_F, IRQ_VIA, K_FAR, K_FAR_GO, K_PEEK_PAGE
 ; ---- irq.s: interrupts
-.global     IRQ_HANDLER, IRQ_SWITCH, IRQ_STRAY, IRQ_BRK_NOTE, IRQ_INIT, IRQ_SET_OWNER, IRQ_RELEASE_ALL, NMI_HANDLER
+.global     IRQ_SWITCH, IRQ_STRAY, IRQ_BRK_NOTE, IRQ_INIT, IRQ_SET_OWNER, IRQ_RELEASE_ALL, NMI_HANDLER
 .global     K_KIRQ
 ; ---- sched.s: the scheduler, waiting, time
 .global     K_SCHED_SWITCH, K_SCHED_RESUME, K_YIELD, K_PAUSE, K_TPAUSE, K_WAKE, K_EVWAIT, K_PREEMPT_OFF, K_PREEMPT_ON
@@ -52,7 +52,7 @@
 ; ---- env.s: environments (page 2)
 .global     K_ENV_GET, K_ENV_PUT, K_ENV_DEL, K_ENV_NAME, K_ENV_INHERIT, K_ENV_CLEAR, K_ENV_INIT, K_ENV_READ
 ; ---- info.s: what the kernel knows of the tasks (page 1)
-.global     K_TASKINFO, K_DBG_PS, K_TASKREAD, K_TASKMEM, K_TASKSTOP, K_FD2PATH, K_KMESG
+.global     K_TASKINFO, K_DBG_PS, K_TASKREAD, K_TASKMEM, K_TASKSTOP, K_TASKFORE, K_FD2PATH, K_KMESG
 ; ---- time.s: the clock, and the DS1747 (page 1)
 .global     K_TIME, K_TIME_SET, K_RTC
 ; ---- far.s: the jump table's way to calls on other pages

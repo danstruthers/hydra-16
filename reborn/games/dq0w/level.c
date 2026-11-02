@@ -3,4 +3,5 @@
 ** task compiles the same.
 */
 
+#define LEVEL_DIAG                              /* (The diagonals too: dir_x's 4 to 7) */
 #include "../dq0/level.c"

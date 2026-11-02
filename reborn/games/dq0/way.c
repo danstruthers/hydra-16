@@ -1,7 +1,7 @@
 /*
 ** way.c - Dingus Quest Zero's looking one way, and listening and sniffing one way (HOUSE.md's slice 4.0: "look
 ** north", "look left", "look at the door", "look through the window"; "listen at the door", "sniff at the grating"):
-** the command carried out (part 6), and a look one way's words (overlay 11).  The way is the one said, or the one a
+** the command carried out (part 17), and a look one way's words (overlay 11).  The way is the one said, or the one a
 ** door, a window, a portcullis, a passage, the stairs the character sees lies (as it faces, never the compass); it
 ** turns to face it first (the turn's look), then looks, listens or sniffs, 3 seconds:
 **
@@ -40,11 +40,11 @@
                                                 **   OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_WAY_OUT,
                                                 **   OB_WINDOW, OB_PORTC: pick's) */
 
-/* ==== Part 6: the command (main.c's chores: the parser's VB_OBSERVE_DIRECTION, VB_OBSERVE_OBJECT,
+/* ==== Part 17: the command (main.c's chores: the parser's VB_OBSERVE_DIRECTION, VB_OBSERVE_OBJECT,
 ** VB_OBSERVE_THROUGH, VB_LISTEN, VB_SMELL; and VB_TRACK, the traces read, slice 4.1's) */
 
-#pragma code-name (push, "SW6CODE")
-#pragma rodata-name (push, "SW6RODATA")
+#pragma code-name (push, "SW17CODE")           /* (Part 17's: part 6's till 2026-11-01) */
+#pragma rodata-name (push, "SW17RODATA")
 
 unsigned char __fastcall__ things (unsigned char op, const char* name);    /* (main.c's) */
 extern struct ireq judged;
@@ -171,6 +171,8 @@ static unsigned char examine (void)
         inspect (k, cmd.obj.lies, ex);
     } else if (ex) {
         msg ("Which thing? Name it (assess the sword, check the chest for traps ...).");
+    } else if (k == OB_WALL) {
+        intend2 (I_TRACE, TRC_WALL, 0);         /* (The wall ahead, its rock: the world's words, slice 4.10's) */
     } else {
         look (2);                               /* (A close look about: the room's figures) */
     }

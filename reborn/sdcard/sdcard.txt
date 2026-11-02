@@ -27,23 +27,23 @@ sample/c/philo      ../obj/samples/c/philo.hyx
 sample/c/prodcons   ../obj/samples/c/prodcons.hyx
 sample/c/round      ../obj/samples/c/round.hyx
 games/dq0           ../obj/games/dq0.hyx        ; The games (games/: not in the card's bin, which the books' labs
-games/lib/dq0/dq0.ovl ../obj/games/dq0.hyx.ovl  ;   have the reader make): Dingus Quest Zero, its overlays, and its
+games/lib/dq0/dq0.ovl ../obj/games/dq0.ovp      ;   have the reader make): Dingus Quest Zero, its overlays, and its
 games/lib/dq0/dq0t.dat ../obj/games/dq0t.dat
 games/lib/dq0/help.txt ../games/dq0/help.txt ;   the help's words (help, "?")
 games/lib/dq0/aliases.txt ../games/dq0/commands.aliases ;   the game's own shortcut words (alias)
 games/lib/dq0/dq0w  ../obj/games/dq0w.hyx       ;   tasks: its world, its rules (HarnMaster's referee) and its maker
-games/lib/dq0/dq0w.ovl ../obj/games/dq0w.hyx.ovl
+games/lib/dq0/dq0w.ovl ../obj/games/dq0w.ovp
 games/lib/dq0/dq0w.cat ../obj/games/dq0w.hyx.cat
 games/lib/dq0/dq0o.dat ../obj/games/dq0o.dat ;   the outfits (games/dq0/outfits.txt: the world's to draw)
 games/lib/dq0/dq0harn ../obj/games/dq0harn.hyx ;   (the dungeon grown); /sd/0/games/dq0, or dq0 with bind -a
-games/lib/dq0/dq0harn.ovl ../obj/games/dq0harn.hyx.ovl
+games/lib/dq0/dq0harn.ovl ../obj/games/dq0harn.ovp
 games/lib/dq0/dq0null ../obj/games/dq0null.hyx ;   (the null ruleset's referee, flat odds: dq0 -r null)
 games/lib/dq0/dq0m  ../obj/games/dq0m.hyx       ;   /sd/0/games /bin; and hmchar, a HarnMaster character made
-games/lib/dq0/dq0m.ovl ../obj/games/dq0m.hyx.ovl
+games/lib/dq0/dq0m.ovl ../obj/games/dq0m.ovp
 games/lib/dq0/dq0p  ../obj/games/dq0p.hyx
-games/lib/dq0/dq0p.ovl ../obj/games/dq0p.hyx.ovl
+games/lib/dq0/dq0p.ovl ../obj/games/dq0p.ovp
 games/lib/dq0/dq0d  ../obj/games/dq0d.hyx
-games/lib/dq0/dq0d.ovl ../obj/games/dq0d.hyx.ovl
+games/lib/dq0/dq0d.ovl ../obj/games/dq0d.ovp
 games/lib/dq0/dq0d.dat ../obj/games/dq0d.dat
 games/lib/dq0/dq0tr.dat ../obj/games/dq0tr.dat ;   the kinds' traces (their marks, their smells: the world's)
 games/lib/dq0/dq0d.exp ../obj/games/dq0d.exp ;   its exports, for its bank program: popgen, its

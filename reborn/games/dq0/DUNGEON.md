@@ -110,7 +110,11 @@ by a request or an intent.
   **turns pace** the world gives the denizens their turn (den_go) at each slice of the clock (ten seconds; a long
   wait's longer, to the next actor's moment, HOUSE.md's long waits) and after its own work
   at the same clock, and waits for their I_DONE, carrying out their intents meanwhile: the same game whatever the
-  tasks' timing, the referee's one stream of dice seeing the same requests in the same order.
+  tasks' timing, the referee's one stream of dice seeing the same requests in the same order.  Nor does it give a
+  turn or move its clock on while the UI's command is being given (the hub's ui_giving, from the line taken till its
+  command's done) or an intent of it waits in its ring: a command of several intents (a
+  throw's taking in hand, then the throw) is taken whole first (2026-10-31: dq0cmd's rats fought otherwise as the start's timing moved; dq0turnsame
+  plays a fight twice, its commands typed late the second time, and finds them the same).
 - **The senses** (dq0p) answer for every actor, and own every actor's memory of what it has perceived: what the
   character sees (the look, as the world asks: the hub's look) and what each denizen senses (the denizens ask, for
   their minds, as one decides: the hub's dsense), by the layers below (perception as layers); the squares the
@@ -294,9 +298,12 @@ A chunk is grown by its stratum's style, from what the plan gives it (its slope,
   record the bounds of its floor (the squares in them that are floor are its own: its stock, its traps, the walks
   across it go by them); a chamber's floor a hollow or a hump on the ground's unevenness, smoothly (dq0m/caves.c);
 - **mines** and **mixed** strata (caves that sentient hands have been at): grown by the built grower, hewn straight,
-  by their own styles' records (their proportions, their materials), on the rock's lie, not flat; their own rules (a
-  mine's tunnels along a vein, galleries where it widened, shafts and ladders, timbering; natural breaking into
-  built) are still to come.
+  by their own styles' records (their proportions, their materials), on the rock's lie, not flat.  A mixed stratum
+  is part natural and part built (slice 4.10, 2026-10-31: dq0m/make.c's natural): a third of its chunks left as they
+  were found, grown as caves by the natural style's record (cstyle, the chunk's style, the fixtures' materials too),
+  the rest hewn; a chunk with a way between strata in it always hewn, where the builders began; the caves and the
+  hewn chunks meet at the plan's crossings, as any two chunks do.  A mine's own rules (its tunnels along a vein,
+  galleries where it widened, shafts and ladders, timbering) are still to come.
 
 **Every proportion is the style's**: how often a room is lit, in zones, sloping; its ceilings' kinds; how often a
 way out has a door, and the doors' states, locks, bars, hiding and materials; a cave's chambers, its tunnels'
@@ -396,8 +403,27 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   the same.  A wall is two feet, a square of rock five.  A dig stopped keeps the feet it's dug (HOUSE.md's what
   stopping costs: a change record of its own, DUG, the hole's half-feet and the way it's dug), and one begun again on
   its square, the same way, goes on from there ("You set to digging again where you left off.").
-- **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) and
-  **tunnellers** (creatures that dig by nature, the denizens' task choosing where) are still to come (below).
+- **The rock** (slice 4.10, 2026-10-31: dq0/rock.h, HOUSE.md's rock's kinds and hardness): what's behind a wall
+  and under a floor is the rock, its kind where it lies worked out from the game's seed alone (rock_kind: beds of
+  shale, sandstone and limestone 25 feet thick, dipping across the frame, slate and marble below 200 feet; granite
+  bosses, basalt dykes, veins of quartz and seams of ore, a region's own), so it's never kept and every task finds the
+  same rock at the same place and depth.  A dig's rate is the rock's hardness's (the referee's rate in stone, the
+  world's quarters of it by the hardness); the rock's told as a dig comes to it, named after a spell that went well
+  (Mining's eye); poor rock (shale) comes down on a spell that goes badly in it, two feet of the hole in it filled again
+  (E_DIG's D_ROOF), the rock striking the digger.  "examine the wall" tells the wall ahead: masonry, or the bare rock,
+  its looks, named by Mining (dq0w.c's wall_look, part 1's, I_TRACE's TRC_WALL; its words part 25's).
+- **Age's collapse** (slice 4.10): an old stratum's passages partly fallen in, rubble (world.h's T_RUBBLE, a square
+  kind of its own) by the stratum's age and its rock (dq0m/caves.c's rubble, after the water, by its own dice: the
+  layout as it was); climbed over slowly, cleared by digging, seen along a passage, drawn on the map.
+- **Tunnellers** (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers, HOUSE.md's): a denizen that digs (a burrower's
+  claws, a miner's pick or shovel) digs its way where rock, a wall or rubble keeps it from the character it senses, or
+  from where it last sensed it, round a shut door or a portcullis by a diagonal: the world's dq0w/wdig.c, by the
+  character's rules (a spell at a time, the tool's rate, the rock's hardness: part 1 asked, its rock_kind; its own
+  test by its sheet), the same change records (a DUG record while it's under way, the character's: either goes on
+  with the other's hole; the square a passage through it), told when seen ("A fresh tunnel opens ahead.  Spoil lies
+  heaped by it.") and heard while it's dug ("a scraping in rock": the rock carrying a pick's knock).
+- **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) is still
+  to come (below).
 
 **Mining any way**: a dig goes level (a tunnel) or down (a shaft); up (a raise through the ceiling, to the stratum
 above) and slanting (an incline, its floor rising or falling square by square) aren't made.
@@ -545,6 +571,26 @@ success makes the disarm easier), then disarmed (P_DISARM, Lockcraft, a minute a
 fumbles can be deadly); magic only by magical means; a pit not at all.  Their states (sprung, disarmed, found) are
 kept in the world's change records (TRAP_STATE), a pit's square a pit once it's given way; the ones the character knows
 of in what it perceives.  A trap sprung is an event, heard.
+
+### Bad air (2026-10-31)
+
+The user's (DECISIONS.md: "poor air quality (CO or CO2 excess, low oxygen levels, gas pockets--which could
+explode!)").  A chunk may have a **pocket of bad air** in one of its rooms (world.h's struct chunk: its air, rs.h's
+AQ_*, its kind times 16 and its strength 1-3; its middle and its reach), the maker's as it grows the chunk (dq0m/
+caves.c's air_pocket, overlay 3's), from the chunk's place alone so its other dice fall as they did: **firedamp** where
+the rock at the chunk's middle is shale (rock.h's: the beds' gas), **blackdamp** pooled deep and still (100 feet down
+or more), none where a way between strata is in the chunk.  **Whitedamp** is an explosion's afterdamp.  What becomes of
+a pocket is kept in the change records (AIR_STATE: on its middle square, its air now and when, so a burnt-off pocket's
+afterdamp clears hours on).  A test sets its own (the environment's dq0air: "0" none, "KS" every chunk one of kind K
+and strength S from end to end).
+
+The world looks at the air where the character stands as it steps in a chunk with a pocket, or out of one (dq0w.c's
+part 73, the water's: air_here): within the pocket's reach it breathes it, a draught of 2 or more thinning it a step
+(the senses' air_s); as it changes the referee is told at once (the bodies' time, RS_TIME's x[20], its flame x[21]:
+the hub's pc_air, pc_flm), then a minute at a time while it's bad.  Its lights go out in thick blackdamp; firedamp at a
+naked flame bursts: a burn (RS_HARM's HC_FIRE), its lights out, a noise as loud as any (E_NOISE 9), the pocket
+burnt off and its afterdamp left (AIR_STATE).  What the character feels and its flame's warnings are the referee's
+words, every ruleset's (rsair.h: HOUSE.md's bad air).  The denizens keep out of it (dq0d.c's wades).
 
 ### Items: the dungeon's layer of things
 
@@ -848,8 +894,8 @@ or a shaft can be jumped down (jump down: a fall of its height).
 - **Fatigue** is the referee's (the book's movement fatigue: HOUSE.md's moving and tiring): walking (or slower) a
   fatigue level a day, jogging one each five minutes, running one each two, sprinting one each minute, the time at
   each pace added up across moves; standing still (waiting, the time between moves) is rest, a level gone each ten
-  minutes of it; strenuous work (a climb's rounds, a dig's spells, a battering's blows; swimming, slice 4.9) the
-  book's rate for it, a level each five minutes, as a jog.  The world tells the referee the time moved at each pace,
+  minutes of it; strenuous work (a climb's rounds, a dig's spells, a battering's blows, a fight's rounds and a pass
+  engaged: HOUSE.md's fighting on; swimming, slice 4.9) the book's rate for it, a level each five minutes, as a jog.  The world tells the referee the time moved at each pace,
   at strenuous work, and the rest (RS_EXERT), and the referee keeps the levels on the sheet: the book's fatigue
   penalty, part of the universal penalty every test pays and of the physical (so a tired character's Move, and every
   pace, slows); kept with the sheet (pc.hm's "pace" line: the pace, the watchfulness, the exertion).  It doesn't
@@ -884,7 +930,22 @@ or a shaft can be jumped down (jump down: a fall of its height).
   run, four at a sprint); the time each square's at the pace (the world's step, slopes, diagonals as across a room).
   It faces the way it goes, but backing up and stepping to the side keep its facing.  In a room it goes straight,
   stopping at the floor's edge, a ledge, a denizen in its way or a trap (as a walk across does: one it knows of
-  stopped short of); in a passage, along it by the four (a corner stops it).  (I_STEP.)
+  stopped short of); in a passage, along it by the four (a corner stops it), or a diagonal way.  (I_STEP.)
+- **Diagonal ways** (the user's, 2026-10-31: passages off the compass; HOUSE.md's diagonal ways, step 1 of three): a
+  step between two squares that share only a corner, where neither corner can be stood on and one of them is cut
+  (world.h's T_CUT, chunk.c's slant, slant.s), never squeezed between two solid corners; seven feet corner to corner.
+  Walked by every actor (the walk's ways on of the eight, none behind; the ways across a room; the denizens' steps; a
+  hunter's scent; a denizen's coarse wander, 2026-11-01), seen past and told among a passage's ways, looked along (a
+  look one way's), drawn ("/", "\"), dug ("dig northeast"); the caves' zigzag tunnels cut as they're grown
+  (dq0m/caves.c's slants).
+- **A passage's heading** (the user's, 2026-10-31: step 2 of three; HOUSE.md's a passage's heading): a passage's ways on
+  told by their runs' real bearings in sixteenths, as the character faces ("It goes ahead and a little to your right"),
+  smoothed over the squares it sees along them (a staircase of short steps one slant, a bend a bend); a walk along one
+  tells a bend by the new run's bearing ("The passage bends away north-northeast.") and a turn as before, not a turn at
+  every step; the map draws a staircase's steps as a slant ("/", "\").
+- **Built passages on the diagonal** (step 3, in part; HOUSE.md's built passages on the diagonal): a fifth of the built
+  strata, by the stratum's seed (dq0 -A, the tests': all), run their passages from door to door on the diagonal, cut
+  corner to corner as the caves' zigzags are; their rooms square to the compass.
 
 **Harm** (rs.h's RS_HARM, the referee's): a fall (its height, the floor it lands on, whether it's clear or past holds
 to grab), a trap's strike (its aspect, its dice, where it strikes), a burn, a striker's own hurt by its blow at a
@@ -1095,8 +1156,33 @@ often the easier.  The numbers are HOUSE.md's (bearings underground).
   character believes in (the parser's compass made as it believes it faces, the UI's cq_cmd making it the true way
   it means for the world).  The relative words (ahead, left, behind right ...) are always true, the body's own; so
   are the things the senses word as lying ahead or to the right.  An eighth off, the four ways it believes in are
-  truly diagonals, which a passage won't take.
+  truly diagonals, which a passage won't take but where it's a diagonal way (HOUSE.md's diagonal ways).
 - **The map** goes by the belief too (its turning, its compass): the map's, slice 4.2's.
+
+### The time of day believed (2026-10-31)
+
+The user (2026-10-31): timekeeping fuzzy unless the outside can be seen (a window, a skylight, a shaft); after a sleep
+the hour quite arbitrary, drifting further from known as play goes on, unless the character has absolute timesense;
+corrected whenever the sun can be seen and the direction is known, or by watching it a while (DECISIONS.md's).  The
+numbers are HOUSE.md's (the time of day believed).
+
+- **A true clock and a belief.**  The world's clock (the hub's now) and the hour the game began (dusk; a test's
+  `dq0hour`: the denizens' days go by the same) are the truth; the character's time is the hub's tb, the world's (part
+  76, wtime.c): its error in minutes against the true time (skew) and how far off it knows it may be (unc), kept with
+  the game (world.dat), as its north is (the bearings, above).
+- **What moves it**: each hour awake the referee's test (Awareness: the bearings' P_BEARING, its steps rs.h's TIME_STEPS on), a failure drifting it, the more the longer since
+  it knew; a sleep or a black-out guessed as it wakes or comes round (the harder the longer; a critical failure, no
+  idea); one with absolute timesense (the summary's timesense: hmchar's rare trait) never drifts.
+- **What narrows it**: its own light burning down (it sees its torch), its hunger since its meal; and the sky in sight
+  (an open way out near: the top's up its stairs its light alone, a far exit below the top the open sky): its light the
+  part of the day, the sun or the stars read by the north it believes in (so a wrong north reads a wrong hour), its
+  bearings lost the sun high or low, watched a while the time and north both (E_BEARING BRG_SKY, told).
+- **Reckoned lazily**, never polled: at the lights' burning's look (part 27's), an hour on, five minutes where the sky
+  may be seen, at once (its burn_ask) as a light changes, a wait begins or ends, a black-out, another stratum, the way
+  out opened.
+- **What uses it**: "time", "what time is it" (the UI's time.c, overlay 16: plainly when it knows, else as sure as it
+  is), "sleep until dawn", "wait until morning" (the hour it means by what it believes; the true clock decides what
+  happens), "watch the sun" (a wait in the sky's sight).  The light's minutes left stay true (it sees its torch).
 
 ### The map kept
 
@@ -1229,10 +1315,53 @@ would be aided if good maps are used."  Its numbers are HOUSE.md's (travel).
   as its intents (an I_GOTO to the way out, then on); the minds keep no journey state now, and the world's travel state
   is the character's alone (tv, TRAV_TK).  Not built: a denizen walks home now as it wanders, within its range.
 
+### The game's start (2026-10-30)
+
+From Enter on the dq0 line to the first prompt, at the normal pace, the start reads the game's programs, overlays
+and data from the SD card, makes the place's history (themegen, for a seed of 65,536 and on: every real game, its
+seed the clock's), starts the tasks, and begins the world (the first chunks, the populations, the senses' first
+look).  On the board (3.58 MHz) it took 79 s at seed 1 and 104 s at a big seed, measured on 2026-10-30 (282M and
+372M cycles); a game without -c runs hmchar too, some 46M cycles more.  The CPU is never idle in it: two thirds of it
+is the storage task reading the card (some 650K bytes at about 275 cycles a byte, spi_recv most of it: the card's
+loops at 18 cycles a bit), the rest the tasks' own work (the world 29M, the UI 14M, the maker 13M, the kernel 9M, the
+denizens 9M, the sound 7M; themegen and themec 23M at a big seed).  So the user's ten seconds (36M cycles) can't be
+had from the card.  Of the levers past the game's own the user chose the storage driver's read loop and the overlays
+packed, not the game on the ROM disk (2026-10-31, DECISIONS.md).  Now: 208M cycles at seed 1 and 289M at the big seed
+(58 s and 81 s on the board).
+
+- **The overlays' fill left out** (2026-10-30): the linker's fill ($FF) at each bank's end not on the card (45K of
+  462K); each bank read straight into its bank through the window; the UI opens dq0.ovl once (find_dirs opened it to
+  look, then ovl_load again).  252M and 338M cycles (70 s and 94 s).
+- **The card's block reads quicker** (modules/storage's sd_read, 2026-10-31): a block's 512 bytes clocked in line,
+  the bits as they were (SPI_BIT_IN, 18 cycles each, as proven on the board), only the gap between bytes the shorter:
+  some 164 cycles a byte, not 197 (a file read whole, 305 cycles a byte to 270).  229M and 311M (64 s and 87 s).
+- **The overlays packed** (2026-10-31): each bank on its own in LZ4's block format (ovlpack.js, each task's make.js:
+  421K of bytes to 278K), read and unpacked in place by the unpack library (modules/unpack, a library module of the
+  paged ROM: one copy for every task, none of their main RAM but the call's, games/dq0/ovunpack.inc): a bank's packed
+  bytes read to its end and unpacked from its start, the fill put back after them, so each bank's as ld65 made it (a
+  bank that can't be unpacked in place, or doesn't pack smaller, is stored as it is).  ovlpack.js unpacks each file as
+  the library does as it makes it, and dq0starttime compares every task's banks with ld65's in the emulator.  208M
+  and 289M (58 s and 81 s).
+- **Its progress shown**, no silence longer than about 10 s (the longest now 25M cycles, the UI's own overlays read
+  before its screen's made): "Dingus Quest Zero is starting ..." as the UI's overlays are read; the title; "The place's
+  history is being made" and themegen's dots (-p: a dot a step); "The dungeon is being made ready" and a dot each
+  second or so as the UI waits on the referee's hello and the world's start (their programs and overlays read); the
+  theme's story and the character's entrance; "Nearly ready" and a dot each second or so till the character's first
+  ready (the denizens started, the world begun, the first look); then "Type help for the commands." with the first
+  prompt, not before the look (main.c's o_dots, starting).
+- **The check**: dq0starttime, its budgets 229M (seed 1) and 318M (seed 123456789), its silence 36M at most, the
+  banks as ld65 made them.
+
 ## Still to come
 
 What the plans bring later, by the slice or phase that brings it (the detailed plan's and the game plan's):
 
+- **Ways off the compass, step 3's rest** (the user's "queue up 1-3", 2026-10-31; steps 1 and 2, the diagonal ways and
+  a passage's heading, and the built grower's diagonal passages, built): built complexes at an angle (a stratum's
+  rooms, or one complex in it, laid at 45 degrees to the compass; other angles stepped and told by step 2's words); a
+  wide tunnel's staircase told as one slant (step 2's runs follow a one-wide passage).
+- **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence): left, other errands
+  ("ask the dwarf to open the door"), "give the bandit 5 pennies" without "to", entertain and bargain.
 - **The command interpreter** (Phase 3C): every command, the player's or a denizen's mind's, one structure of
   abstract actions (VB_*), verbs as data with their defaults, affordances, selectors, a target that persists,
   questions only when unclear; "alias" the command for text aliases ("alias x is dig down"), naming things and rooms
@@ -1275,6 +1404,11 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   a half move; a creature come round in shock; the venoms of the adder, the basilisk and the lindworm (the bestiary's,
   an infection's course); a folk denizen binding its own bleeding.  Not yet: antidotes (with the market), the minds'
   way with a wounded or shocked denizen (resting in its lair, tending another), stings.
+- **Poison, bad air and disease** (2026-10-31, the user's: HOUSE.md's): one course for every affliction (the book's
+  Infection table), poisons (a dart trap's), diseases (foul water's flux, rat-bite fever, a ghoul's grave rot) shown
+  after their incubation; the air's pockets (blackdamp, whitedamp, firedamp) and a flame's warnings, firedamp's burst.
+  Left: a door's needle and a chest's (contact poison), poisoned blades, spoiled food, antidotes (with the market), a
+  lair's sickness, the denizens' own afflictions and their choking, old mines' air, the explosion's harm to those near.
 - **The sound layer and the denizens' hearing by pace** (slice 4.5, built 2026-10-29: perception as layers, above):
   a pulse over the squares and openings, a background that masks, the character's steps heard by its pace and its
   armour; the air with it, a stratum's draught carrying the character's scent downwind.  Left: a fight's din heard
@@ -1283,16 +1417,52 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
 - **Body position and moving quietly** (slice 4.6, built 2026-10-29: HOUSE.md's): crouched, kneeling, sitting, prone;
   a low walk, crawling; moving quietly by Stealth (D15), a hunter's stalk; eye height by position.  Left: the
   denizens' own positions but prone, a missile's target by its height (slice 4.7's).
-- **Fights complete** (slice 4.7): built 2026-10-29 (missiles, above; HOUSE.md's missiles); left: a miss's stray at
-  one beside the mark (the book's 20%: the referee's MS_STRAY there for it), the set auto-engage range (its hook
-  dq0w/wshoot.c's SO_FOE), the denizens throwing things, a denizen changing its weapon for its bow.
-- **Water** (slice 4.9): the plan's rivers, falls and lakes, water levels, swimming and drowning, a well's water from
-  the plan; rain where the surface reaches (shafts, the open), washing scents and prints away; hunger and thirst,
-  eating and drinking.
-- **Rock and old places** (slice 4.10): the rock's own kinds and hardness across a stratum, mines and mixed strata
-  grown by their own rules, age's collapse and rubble, explosives and sills; caverns across many chunks (the plan's
-  features bigger than a chunk, a room followed from chunk to chunk).
-- **Tunnellers and builders** (slice 4.11): denizens that dig, their new ways told when seen.
+- **Fights complete** (slice 4.7): built 2026-10-29 (missiles, above; HOUSE.md's missiles); 2026-10-30 a miss's stray
+  at one beside the mark (the book's half the time, both referees), the auto-target range ("autotarget at medium
+  range": fighting on with missiles and shooting back), the denizens throwing things (a taburi, a shorkana, a spear
+  or a dagger in hand), a denizen putting up its weapon for its bow, the missiles gathered into their quiver, every
+  fall told (HOUSE.md's missiles).  Left: a hostile coming into the auto-target range beginning a fight by itself,
+  melee's auto-engage, a rock picked up to throw, the denizens' own positions but prone (a shooter crouched behind
+  cover).
+- **Water** (slice 4.9, built in part 2026-10-30: HOUSE.md's water, hunger and thirst): the plan's streams and lakes
+  (world.h's RW_*: traced downhill over the regions), a chunk's water (its wet squares, each room's level, a stream's
+  running depth: dq0m/caves.c's wet_chunk), a cistern full, wells from the plan; wading, swimming (the referee's
+  P_SWIM a minute at a time: dq0w.c's part 73), going under and drowning, flames put out; hunger and thirst over time
+  (the referee's, every one's by rswant.h: its news, its next ask), eating and drinking (the UI's feed.c: the things'
+  IO_USE by the keys food and water), a waterskin filled (wwater.c).  Left: falls (a stream's drop told and heard), the sound layer's running water (its background's
+  BG_WATER from the wet squares), running water washing the traces (wtrace.c's hook), the map's water, things soaked (a
+  scroll ruined), a stream's current carrying a swimmer, a minute's swim tested as it waits in deep water, treading water standing still (the denizens' wading and swimming, a beast that won't cross going
+  round, and their hunger and thirst built 2026-10-31: DENIZENS.md's their bodies; left, a denizen drowning); rain where the surface reaches (shafts, the open), washing scents and prints away; a standing order
+  to eat and drink when needed.
+- **The time of day believed** (built 2026-10-31: the time of day believed, above; HOUSE.md's): left, the plan's
+  shafts, windows and skylights to the surface (where the rain's hook will find the surface reaches) as more places the
+  sky is seen from, the weather (overcast: its light alone), thirst, tiredness and the denizens' routines learnt as
+  clues, a chain of torches counted, the time on the status line.
+- **Rock and old places** (slice 4.10, built in part 2026-10-31: changing the dungeon's rock, above; HOUSE.md's rock's
+  kinds and hardness): the rock's own kinds and hardness across the strata, a dig's rate by it, told as it's dug,
+  named by Mining, poor rock coming down on a dig and striking the digger; the rock looked at ("examine the wall");
+  a mixed stratum part natural and part built (dq0 -M); age's collapse and rubble.  Left: a room's walls told in a
+  look about (only "examine the wall" and "look at the wall" tell them), a vein's
+  ore worth taking; rubble in a room (passages' only), a denizen's step slowed by it, a step onto it told; explosives
+  and sills; the veins' lines all near north-south (rock.h's: x by y), worth a second way.
+  **A mine's own rules** (not built): a mine stratum's chunks grown along the plan's veins, rock_kind's (a region's
+  line: its point and slope, rk_mix (1)'s), an adit in from the way in, a gallery widening where the vein's widest, a
+  shaft at a region's line crossing the stratum's next, timbering in soft rock; the built grower given the vein's
+  squares as its passages' line (built.c's joins), the stopes rooms of U_WORKS's kind.
+  **Caverns across many chunks** (the plan, not built): a region of the plan its RG_CAVERN kind (plan.c's region
+  dice, one in so many of a natural stratum's), its cavern a box in the region's squares (its corner and size, up to
+  the region, from the region's dice), every chunk it touches growing its part of the one room: the cave grower
+  given the box clipped to the chunk as a chamber's bounds, its floor the plan's ground (so the parts meet at the
+  edges, as the crossings do now), its chamber's wanderer started on each side the box crosses so the floor runs to
+  the edges; struct room's x, y, w, h the clipped part, a flag R_CAVERN and the cavern's number (the region's) in its
+  kind's spare bits, so the senses and the ways (dq0w.c's ways across a room, its room's squares a chunk's today: "No
+  fixed size") take the room as going on past the chunk's edge: the senses' look reaching into the neighbour's part
+  ("a vast cavern, its far side beyond your light"), the world's ways joined at the edge (the next chunk's part's
+  squares the way goes on into), the map's room drawn whole.  A lake or a chasm the same, the water's level the
+  cavern's.
+- **Tunnellers and builders** (slice 4.11, built in part 2026-11-01: changing the dungeon, above; DENIZENS.md's
+  tunnellers): left, a burrow dug from a lair, a faction's mine following a vein, the denizens away from the character
+  digging, poor rock on a tunneller, the spoil as a thing; builders (shoring, walling up a way, a door put up).
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
 - **One path for every actor** (Phase 3C): a denizen's mind making the same commands as the player's, so the

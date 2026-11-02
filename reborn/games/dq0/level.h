@@ -13,9 +13,12 @@
 ** and the asker's number for it */
 #define RQH             volatile unsigned char state; unsigned char kind, from, seq
 
-/* Directions: the four of the walls and the passages, then up and down */
+/* Directions: the four of the walls and the passages, then up and down.  dir_x, dir_y go on with the diagonals (4 to
+** 7: NE, SE, SW, NW, a diagonal way's), DH a direction's heading */
 enum { DIR_N, DIR_E, DIR_S, DIR_W, DIR_UP, DIR_DOWN };
-extern const signed char dir_x[4], dir_y[4];
+extern const signed char dir_x[], dir_y[];
+extern const unsigned char dir_h[8];
+#define DH(d)           (dir_h[d])      /* (The diagonals' tasks': LEVEL_DIAG's) */
 extern const char* const dir_name[6];
 
 /* Headings: the eight ways of the compass, the way the character faces or sets out (a direction d is heading
@@ -66,7 +69,10 @@ struct sight {
     unsigned char   nopen;                      /* Stairways, ladders, shafts, windows seen */
     struct { unsigned char rel, kind; signed char dz; unsigned x, y; } open[SEE_OPEN];    /* kind: O_* */
     unsigned char   nways;                      /* A passage's ways on */
-    struct { unsigned char rel; signed char dz; unsigned char steps; } way[4];
+    struct sseen_way { unsigned char rel; signed char dz; unsigned char steps; } way[4];  /* (steps: the next square's kind,
+                                                **   world.h's T_*: steps, rubble, slice 4.10's; rel's high four bits
+                                                **   its run's bearing as the character faces, in sixteenths: its
+                                                **   shape, ../dq0/run.h's, 2026-11-01) */
     unsigned char   nitems;                     /* The things it sees lying about (the things', named) */
     struct sitem { char name[14]; unsigned char qty, plural, rel, hid; unsigned n, x, y; } item[SEE_ITEMS];
                                                 /* (hid: 1 it hid it, 2 on the surface before it, 4 lit; its high
@@ -91,11 +97,23 @@ struct sight {
     unsigned char   dazzled;                    /* The eyes dazzled (a bright light after the dark: a while) */
 };
 enum { GL_GLOW, GL_LIGHT };                     /* A light far off: a faint glow, a light */
-enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY, DO_FOLLOW, DO_WAIT, DO_FIGHT, DO_FLEE, DO_DOWN };  /* A denizen's
-                                                **   doing: going about its own business, watching the character,
-                                                **   coming towards it, keeping its distance; an ally's: following it,
-                                                **   waiting where it was asked; fighting it, fleeing it, lying
-                                                **   senseless */
+enum { DO_ROAM, DO_WATCH, DO_COMING, DO_SHY, DO_FOLLOW, DO_WAIT, DO_DIG, DO_FIGHT, DO_FLEE, DO_DOWN, DO_SLEEP,
+    DO_EAT, DO_WORK, DO_GUARD, DO_LEISURE };    /* A denizen's doing: going about its own business, watching the
+                                                **   character, coming towards it, keeping its distance; an ally's:
+                                                **   following it, waiting where it was asked; digging (a tunneller's
+                                                **   spell, slice 4.11's: roused, back to it); fighting it, fleeing
+                                                **   it, lying senseless; and its day's (2026-10-31, DENIZENS.md's
+                                                **   daily life: unaware of the character, as roaming is): asleep,
+                                                **   eating, at work, on watch (walking its rounds), at leisure: its
+                                                **   pastime (PT_*) added, DO_LEISURE + PT_READ ... + PT_WHITTLE */
+enum { PT_READ, PT_DICE, PT_GAME, PT_TALK, PT_SING, PT_DRINK, PT_MEND, PT_WHITTLE, NPAST };   /* A pastime (folk's
+                                                **   leisure, kinds.txt's pastimes: the user's, 2026-10-31): reading,
+                                                **   dicing (and cards, knucklebones: chance), a board game (skill),
+                                                **   talking (and telling stories), singing, drinking, mending its
+                                                **   gear, whittling; dice to drink a lair's together, the rest alone */
+#define PT_SOCIAL(p)    ((unsigned char) ((p) - PT_DICE) < PT_MEND - PT_DICE)
+#define DO_UNAWARE(d)   ((d) == DO_ROAM || (d) > DO_DOWN)   /* (Going about its business, its day's: it hasn't noticed the
+                                                **   character) */
 #define SIGHT_HURRY     0x80
 #define MOUTH           0x08
 #define DOORWAY         0x83                    /* (A seen door's state: no door in it, a doorway, open; else its

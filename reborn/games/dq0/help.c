@@ -7,22 +7,29 @@
 #pragma rodata-name ("OV1RODATA")
 
 #include <fcntl.h>
+#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include "dq0.h"
 
-/* The commands, listed: help.txt's lines, each read into lb (400 bytes: a longer line cut) */
+/* The commands, listed: help.txt's lines, each read into lb (400 bytes: a longer line cut); the file opened the first
+** time and kept open (hfd: its fd + 1), read from its start each time (an open on the card some 700,000 cycles) */
 void o_help (void)
 {
-    static int fd, n;
+    static int fd, n, hfd;
     static unsigned k, i;
 
-    strcpy (lb, libdir);
-    strcat (lb, "/help.txt");
-    if ((fd = open (lb, O_RDONLY)) < 0) {
-        msg ("The help isn't here (help.txt, beside the game's overlays).");
-        return;
+    if (!hfd) {
+        strcpy (lb, libdir);
+        strcat (lb, "/help.txt");
+        if ((fd = open (lb, O_RDONLY)) < 0) {
+            msg ("The help isn't here (help.txt, beside the game's overlays).");
+            return;
+        }
+        hfd = fd + 1;
     }
+    fd = hfd - 1;
+    lseek (fd, 0, SEEK_SET);
     for (k = 0;;) {
         n = read (fd, lb + k, sizeof lb - 1 - k);
         if (n > 0) {
@@ -47,7 +54,6 @@ void o_help (void)
         memmove (lb, lb + i, k - i);
         k -= i;
     }
-    close (fd);
 }
 
 /* The command's first word said: "I don't know how to bribe." (f 0: no verb of the game's), or one the game has but

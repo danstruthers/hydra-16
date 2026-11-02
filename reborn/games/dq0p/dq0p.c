@@ -106,14 +106,16 @@ void give_way (void)
     }
 }
 
-/* The swapped parts' images read into banks of its own (dir/dq0p.ovl: dq0p.cfg's OV1 ..., 8K each): 0, or -1 */
+/* The swapped parts' images read into banks of its own (dir/dq0p.ovl: dq0p.cfg's OV1 ..., 8K each, as make.js packs
+** them, ../dq0/ovlpack.js: each bank packed, read and unpacked in place by the unpack library, the linker's fill ($FF)
+** put back after its bytes: ../dq0/ovunpack.inc): 0, or -1 */
+unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
 #define OVBANKS         4
 extern unsigned char ovbank[OVBANKS];
 extern char _SWAP_START__[];
 static int __fastcall__ ovl_load (const char* dir)
 {
-    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Through the parts' area: none in it yet) */
-    unsigned off;
+    unsigned char* b = (unsigned char*) _SWAP_START__;  /* (Its path in the parts' area: none in it yet) */
     int fd, n;
 
     strcpy ((char*) b, dir);
@@ -121,21 +123,17 @@ static int __fastcall__ ovl_load (const char* dir)
     if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (OVBANKS)) < 0) {
         return -1;
     }
-    ovbank[0] = n;                              /* (In a run: n, n + 1 ...) */
-    ovbank[1] = n + 1;
-    ovbank[2] = n + 2;
-    ovbank[3] = n + 3;
-    for (off = 0; (n = read (fd, b, 512)) > 0; off += n) {    /* (The file the build made: OVBANKS banks at most,
-                                                **   64K at most, off back at 0 only as it ends) */
-        hy_bank (ovbank[off >> 13]);
-        memcpy ((void*) (0x8000 + (off & 0x1FFF)), b, n);
-    }
+    ovbank[0] = n;                              /* (In a run: n, n + 1 ...: ovl_unpack's) */
+    n = ovl_unpack (fd | (OVBANKS << 8));
     close (fd);
-    return 0;
+    return -n;
 }
 
-/* A number, an argument's (atoi's, without the C library's ctype) */
-static unsigned char __fastcall__ num (const char* s)
+/* A number, an argument's (atoi's, without the C library's ctype): part 3's, read in by then (the main RAM's room,
+** 2026-11-01: the denizens' senses held) */
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
+unsigned char __fastcall__ s_num (const char* s)
 {
     unsigned char n = 0;
 
@@ -144,6 +142,17 @@ static unsigned char __fastcall__ num (const char* s)
     }
     return n;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+unsigned char __fastcall__ num (const char* s);
+
+/* A denizen's senses held (held: the ticks of it) while the UI's command is in hand at the real paces (the hub's
+** ui_cmd: Enter to its answer's first news), the character's look and the world's first, so a mind's ask doesn't ride
+** on the answer's priority (the senses in the foreground meanwhile, the kernel's TASKFORE); answered as the answer's
+** begun, after GIVE_WAY ticks at most, or at once if the UI's asked the minds something (the sway: it waits on them).
+** The mind waits on it in its hub_call, and carries on as it's answered; at the turns pace never (the minds have no
+** turn while a command's given): 2026-11-01 */
+static unsigned char held;
 
 int main (int argc, char* argv[])
 {
@@ -154,7 +163,11 @@ int main (int argc, char* argv[])
     light_init ();
     for (;;) {
         hub_map (0);
-        hy_sem_acquire (HUB->sem[T_SENSES]);    /* (Waiting costs nothing) */
+        if (held) {
+            hy_sleep_ticks (1);                 /* (A denizen's ask held: looked at again each tick) */
+        } else {
+            hy_sem_acquire (HUB->sem[T_SENSES]);    /* (Waiting costs nothing) */
+        }
         hub_map (0);
         if (HUB->quit) {
             break;
@@ -180,8 +193,15 @@ int main (int argc, char* argv[])
             hub_map (0);
             HUB->look.ch = sees;
             hub_reply (&HUB->look);
+            if (HUB->tpr) {
+                snd_need ();                    /* (At the real paces, the sound layer for where the character is
+                                                **   now, as its look's answered: not as the minds first ask, which may
+                                                **   be in the next command's answer, 2026-11-01) */
+            }
         }
-        if (hub_posted (&HUB->dsense)) {        /* (A denizen's senses, its mind asking: sense.c's; after the
+        held = hub_posted (&HUB->dsense) && HUB->tpr && HUB->ui_cmd && held < GIVE_WAY &&
+            HUB->sway.state != REQ_POSTED ? held + 1 : 0;
+        if (!held && hub_posted (&HUB->dsense)) {   /* (A denizen's senses, its mind asking: sense.c's; after the
                                                 **   character's look, if both are asked: its answer first, the sound
                                                 **   layer's pulse, the dearer, after it) */
             light_events ();

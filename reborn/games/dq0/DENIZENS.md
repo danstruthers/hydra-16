@@ -158,6 +158,23 @@ moves the attitude two steps, a success one, a critical failure a step back (a l
 hostile), as far as that way goes (talk and deceit to friendly, a threat to wary, calming to indifferent, persuasion
 and befriending to an ally).  A round's work (a threat half that).  The character can also look at how one seems.
 
+**Gifts and bribes** *(slice 4.8, 2026-10-30; HOUSE.md's gifts, for review)*: "give the pennies to the bandit", "give 5
+pennies to the bandit", "offer the dagger to the orc".  The UI finds the thing the character carries (its worth as a
+local takes it, the appraisal's: a unit's times the count; whether it's food) and asks the denizens' task (SW_GIVE):
+within reach (a square) of one with a mind; a beast takes only food.  The book's Rhetoric in the target's interest
+(Skills 12: a persuasion in its interest the easier), the house's steps for the gift's worth to one of its kind's means
+(kinds.txt's standing), food two more; a beast's Animalcraft.  A critical success two steps, a success one, as far as
+friendly (a gift doesn't win an ally); a critical failure an insult, a step back, the gift refused.  Taken, the world
+hands it over (I_ROB FE_GIFT: a count of a lot split off; "The bandit takes the pennies.").
+
+**Reputation** *(slice 4.8; HOUSE.md's reputation, for review)*: each faction keeps its regard for the character, its
+attitude now (the denizens' head's fatt: its newcomers' and those of it not met yet, in the cache, start from it, so it
+colours every member's first attitude) and the points of the deeds it knows of towards its next step (the head's
+deeds).  Harm done to one of its own lowers it at once (above).  A gift worth its means or more to one of it, and harm
+done before its eyes to a foe of its (one of a faction hostile to it, sensing it), raise it: a point each (a gift its
+worth's steps less one), a step each four, to friendly at most (dq0d's s_regard).  A freed prisoner's (no prisoners
+yet) is the hook's.
+
 ### Allies
 
 An ally is still the **denizens' task's**: it moves, fights and acts on its own turn by its own nature, but its goal
@@ -168,6 +185,23 @@ the parser's: follow me, stay here (every ally in earshot), tell Grub to wait, a
 a name given it (name the rat Grub: the head's names, kept) is its own from then on (DUNGEON.md, names).  Left
 waiting out of the character's reach an hour, it goes its own way; harmed, it's hostile.  The party, designed for
 from the start, is the character and its allies.
+
+- **Following at a distance** *(slice 4.8, 2026-10-30)*: "tell Grub to follow me at 3 squares" (the parser's number, the
+  sway's ix): it keeps that far behind (8 at most), not beside; told to follow again without one, beside.
+- **In the way** (D10, slice 4.8): a friendly one or an ally the character's walk stops short of (the world's E_NOWAY,
+  N_DEN) moves aside at once, a square off the way the character comes (not straight on along it), open and no one's,
+  if there's one; not one told to wait (it may be guarding), nor one fighting, fleeing or senseless.  The walk is still
+  stopped ("Grub is in the way."): the character goes on as it's told again.
+- **Fetching** *(slice 4.8; HOUSE.md's fetching, for review)*: "tell Grub to fetch the key", "ask the dwarf to bring
+  me the torch" (the parser's errand: the order's word, the thing its other).  The UI finds the thing first among those
+  the character sees lying about (the world's IO_FETCH: its item, where it lies; not one in a thing closed, carried, or
+  on another stratum: told so, and nobody's asked), then asks the ally (an ally only: the rest "isn't your ally"; the
+  first in earshot if none's named).  The ally walks to it (dq0d's part 5, s_ally: its own errand, not the record's,
+  dropped if it stops being an actor), takes it up beside it (I_ROB FE_TAKE, the world's: still there, within its
+  reach, light enough for it, a free hand), brings it back to where it last sensed the character, and hands it over
+  beside it (FE_GIVE: into the character's hand or pack, else set down at its feet).  Each step told (E_TASK
+  TE_FETCHED: "Grub picks up the key.", "Grub hands you the key.", "Grub can't carry the anvil.", "The dwarf has its
+  hands full: it can't take the torch.").  Failing, it follows again.
 
 ### In the tasks
 
@@ -183,7 +217,10 @@ from the start, is the character and its allies.
   darkvision, hearing and eyes); allies by the character's requests; and says so, its intents to the world, as the UI
   says the character's (minds and bodies, below).  The populations, the records and the denizens away from the
   character are its own.  At the real paces its minds wait while the UI has a command in hand (the hub's ui_cmd, a
-  second at most), as the senses' look does, so a command's answer doesn't wait for them.
+  second at most), as the senses' look does, so a command's answer doesn't wait for them.  And the kernel's
+  foreground (TASKFORE) puts the answer's tasks first meanwhile: the UI for good, the world, the command parser, the
+  senses and the referee while a command's in hand; the minds, the maker and the sound are the background, their
+  turn the rest of a tick after eight of the foreground's (DECISIONS.md, 2026-10-30).
 - **The referee** answers the tests and contests (influence, morale, combat), and keeps each creature's sheet.
 - **The UI** words it all, and passes the player's influence and requests to the denizens ("persuade the goblin",
   "tell Grub to wait").
@@ -219,7 +256,8 @@ denizens' task is their minds.
   denizens' events' bank: the actors' names, the referee's lines) and tells it (E_FIGHT).  The referee answers and
   writes nothing of the hub's (its words its reply's).  The denizens take each blow to heart as they read it
   (fought): one broken flees a while, unfriendly; its kin, as one falls, test their courage (RS_MORALE, in their own
-  slot); one the character struck at turns on it with its own (harmed); one dead, its record so.  The bleeding lose
+  slot: those that hear it, by the field about each and its bonds, HOUSE.md's morale); one the character struck at turns
+  on it with its own (harmed); one dead, its record so.  The bleeding lose
   blood a minute at a time (RS_TIME, the world's), seen to as the denizens' intents come in (and their turns' ends,
   every five seconds at the real paces); a body dead or gone from the world's keeping isn't reckoned.  The referee
   sees the requests in one order: the character's blow, the morale tests it brings, the bleeding, the denizens'
@@ -254,6 +292,64 @@ denizens' task is their minds.
   changes (moves, its light, busy or not).  At the real paces they act as the clock runs, the world never waiting for
   them (one fallen behind makes up a few seconds at most).
 
+### Daily life *(2026-10-31: slice 4.5's leftover; HOUSE.md's the denizens' day, for review)*
+
+Each denizen keeps a day by its kind and the game's clock (dq0d.c's part 9): the hour of the day the clock's and the
+hour the game began at, dusk (the house's).
+
+- **Its day** (kinds.txt's day, from the bestiary's habits): diurnal (up at six, asleep at ten at night: the cave
+  basilisk, the cultists and their priest, the bandits' and the soldiers' leaders, the dwarf miners and elders),
+  nocturnal (asleep from eight in the morning to four in the afternoon: the giant rats, the cave spiders, the ghouls,
+  the bats, the small, black, white and red orcs, their king, the kobolds' lord), crepuscular (about at dawn and dusk,
+  asleep at midday and midnight: the cave bear, the adder, the lindworm), or never asleep (the skeletons, the wights,
+  the shade).  Each a little later than its fellows (up to half an hour, by its number), so a lair stirs one by one.
+- **Watches** (kinds.txt's day w: the faction's guards, the kobolds, the bandits, the brown orcs, the dwarf warriors,
+  the elves, the men-at-arms): a lair keeps watch by thirds (its denizens' numbers), each third four hours on watch,
+  four asleep, four about, in turn, so a third is always on watch; the watch changes every four hours (midnight, four,
+  eight ...), the next third relieving it.
+- **Asleep** at its lair's home (its bed: the square, or one beside it), lying still (DO_SLEEP): its senses dulled
+  (its eyes shut, its hearing halved: the book's Awareness at half asleep), so the character can creep past a lair
+  asleep; snoring now and then (DE_SNORE, heard as "snoring" round corners and through doors, muffled; seen, "The kobold
+  snores.").  Woken by a noise it hears, by harm or by sensing the character, it's up ten minutes or so, then back to
+  bed if its day still says so.  One made an actor asleep comes asleep.
+- **Its meals** (folk's: dq0d.c's meal, the bodies' want): a meal as it wakes, the first hour, and another halfway
+  through a long day (the diurnal and the nocturnal), at its lair's home, its larder (DO_EAT, "eating"): fed as it
+  sits down to it (the record's ate, an actor's, the clock's), so folk keep to their meals and seldom go hungry.  A
+  beast's meal is its prey (its want's: below), no slot in the day.
+- **At work** (kinds.txt's work: a room's use): about but not on watch, in its work's room of its lair's chunk if it
+  has one (DO_WORK, "at work"): the cultists and their priest at the chapel's altar, the dwarves and the kobolds at
+  their workshop, the dwarf elder, the bandits' lord, the kobolds' lord and the orc king in their solars, the captain
+  in the guardroom; else about its range, as ever.
+- **On watch** (DO_GUARD, "on watch"): walking its rounds, the rooms of its lair's chunk in turn (a step at a time to
+  each room's middle, greedily: no way nearer, on to the next), and a word with a fellow on watch it comes near
+  (DE_TALK: heard as "voices", seen "The soldier says something to its fellow.").  A body of its own faction's lying
+  near a room of its rounds (within 4 squares), not found before, is found: the alarm raised (DE_ALARM, as loud as a
+  rally: heard as "a shout of alarm", seen "The soldier raises the alarm."), its faction's attitude to the character
+  a step worse (the intruder suspected) and each of its faction's actors' too, each woken and alerted; a leader's body,
+  each told of its leaders' deaths (part 6's hook: known lost, its courage tested).
+- **At leisure** (2026-10-31, the user's: DECISIONS.md's leisure; HOUSE.md's for review): folk with pastimes (kinds.txt's
+  pastimes) spend a part of their time about at them (DO_LEISURE and its pastime): a watch-keeper two hours after its
+  free watch's meal, a long day's last four hours.  The pastime by its number and the day's (dq0d.c's part 9: pastime);
+  a social one (dice, a board game, talk, song, drink) its lair's, so those at leisure together share it, gathered in a
+  hall, guardroom, barracks or quarters of its chunk (else its home); reading, mending and whittling alone at its bed.
+  Seen ("Two soldiers are ahead, 20 feet away, at dice."), heard (DE_PASTIME: dice rattling, counters clicking,
+  laughter, singing, cups clinking; tell.c's words), less watchful (its senses halved, quartered at its cups: doze), in
+  drink an hour after its cups (AM_DRUNK: the world's blow two steps worse for it, two easier at it), and its pastime
+  let go as it rises to act (DE_UP, seen: "The soldier lets the dice fall."; dq0d.c's part 10, roused).  An actor's
+  day and place are kept (dq0d.c's aact, atx, aty: part 9's plan, asked as its day changes and at each room of its
+  rounds), so its moments at leisure cost no swap of part 9.
+- **Lazily, by the clock** (the 65C02's time): nothing's polled.  A record away from the character is looked at as
+  it's due (roam's): asleep, it's put at its bed and due again as it wakes; at a meal, as the meal ends; about, at
+  work or on watch, a square of its range, its work's room or its rounds' room each half minute to a minute as ever.
+  An actor's day is asked as it decides with nothing else to do (no foe, nothing sensed, no noise heard); a sleeper's
+  next decision some fifteen to thirty seconds on (its dulled senses' look).
+- **Seen and heard:** the stir's words say what each does ("Two soldiers are ahead, 30 feet away, on watch.", "A giant
+  rat is to your left, 10 feet away, asleep."), so a player learns the routine by watching it: when the guards pass,
+  when a lair sleeps.
+- **Unaware:** asleep, eating, at work or on watch, an actor hasn't noticed the character (as one going about its
+  business): it engages no one (the world's engagement zones), and one asleep isn't an engaging foe nor a foe in
+  range for a long wait's stop.
+
 ### Events: the denizens in the background
 
 What the denizens' bodies do is **published as events**: a queue of their own in the hub (the denizens' events, in a
@@ -275,6 +371,9 @@ task, an ally's mind one day) reads either and applies its own senses, and the h
   towards it, keeping its distance, going about its business): not at each step, and nothing if it's as it was told
   (dq0/dens.c keeps what was told).  Those alike are told together ("Two giant rats are ahead to your right, 10 feet
   away.").  Not while the character's on its way somewhere (it looks about as it gets there); while it digs, yes.
+  At the real paces a stir that comes while the player types a line is held, and told once the line's entered and
+  answered (or let go), as it is now: the line's echo and its Enter not behind the stir's words (2026-10-30: an
+  inventory typed as the rats stirred was answered 240,000 cycles late).
 - **Heard:** the denizens' events go out as the world moves their bodies (a step quietly, a noise of their own every
   eighth, loud as a squeak; a dash past the character louder; the character sensed, or lost, silently).  The UI tells
   those the character hears and doesn't see (one it sees is told as seen), in each kind's sound's words (SOUND.md):
@@ -347,10 +446,22 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   what's held and worn, and how well made: RS_EQUIP's marks).  Each blow is told (E_FIGHT in the denizens' queue, its
   words in a ring in their bank: the referee's for the wounds and the armour, the UI's for the rest), heard by the
   others (they turn to it) and played (the sound task's *hit, *swish).
-- **After:** a denizen wounded tests its morale (RS_MORALE: HOUSE.md's fights): broken (or a shy one cautious) it
-  flees a minute; cautious, it holds back a round.  As one falls its kin among the actors (its kind and, since
-  2026-10-29, its faction) test their courage, two steps worse, four as their faction's leader falls (HOUSE.md's the
-  peoples).  One knocked senseless falls and lies there till it comes round,
+- **After:** a denizen wounded tests its morale (RS_MORALE: HOUSE.md's fights), its heart its steps (below): broken (or
+  a shy one cautious) it flees a minute; cautious, it holds back a round.  As one falls its kin among the actors (its
+  kind and, since 2026-10-29, its faction) that hear it test their courage (HOUSE.md's morale, since 2026-10-30, in
+  place of the peoples' two steps and four).
+- **Morale** (the user's, 2026-10-29; HOUSE.md's morale, for review): every intelligent actor and the character sway
+  the field about them, by their rank (kinds.txt's) and their influence skill (the referee's summary's lead), for their
+  friends and against their foes, less with distance, by how each is doing; and each mind is bonded to its leaders
+  above it (its band's head, its faction's), wherever they are, by their rank, the time together and the contact (the
+  records' serve and contact, aged by the clock).  Reckoned only as a test is made, or may be: an actor's heart (the
+  hub's: the steps the world's blow carries to the referee) as it engages and as one near it falls (dq0d's part 6).  A
+  leader's fall heard tests its band at once, its influence and bond removed; dead, known lost (the record's D_LOST);
+  unheard (far off, below, senseless), the bond holds till it's told (the hook: a runner's word, a survivor's, to
+  come).  A dead leader's post is taken by the most influential of those directly below it (the user's,
+  2026-10-30: succession, dq0d's part 7; the record's D_RANK and D_PROM), a new leader's bonds to it but its own
+  band's, rallying its fellows where the character sees or hears it (DE_RALLY); the post a successor leaves filled the
+  same way, on down the chain.  One knocked senseless falls and lies there till it comes round,
   doing nothing meanwhile (its mind's intents and rouses not carried out, words not heard: HOUSE.md's hands and
   limbs, 2026-10-29), and is finished if it's struck meanwhile; come round, its first turn is getting up, or, its last
   shock roll failed, it comes round in shock and does nothing (strikes nothing, defends nothing) till a watch's roll
@@ -436,7 +547,56 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 - **A robber's stash:** a brown orc's takings hidden at its home (RB_HIDE: its kind's keeps h, no king of its tribe's
   placed on the stratum), found there by searching; a kobold's its lord's (RB_HOARD).
 
+### Their bodies *(2026-10-31: every actor's, HOUSE.md's the denizens' bodies, for review)*
+
+- **Tiring:** every actor tires in a fight as the character does (each round it's in strenuous work, the rest between
+  its rounds rest), the referee's (dq0harn/tire.c: a bank of the creatures' bodies beside their sheets, reckoned by the
+  clock as it's wanted; the null ruleset's rounds counted), its fatigue in every test of its; a beast a level more
+  tired by its round tests its courage, and may break off (FF_FLEES: its mind's flight, as one broken).
+- **Water:** each kind's way with it (kinds.txt's water: the deepest it wades, swims, flies over); the minds keep it off
+  squares deeper than that (dq0d's wades: their steps, coarse moves, darts, placing, roaming), so it goes round; a step
+  into water the longer (a wait after it, the world's), by its depth over its kind's.
+- **Hunger and thirst:** each record's ate and drank (the clock as it last did, coarse), reckoned as it's wanted (part
+  8's: roam's fends for those away, hungry's for the actors), never ticked: folk eat at their larder, a beast hunts
+  (twice its range, prey found now and then), a very hungry hunter hunts the character; food given the more welcome
+  the hungrier (gifts, slice 4.8's), and eaten; the want's fatigue the referee's (RS_NEW_ACTOR's c).  The larders are
+  the daily round's: its meals a slot in the day (a meal: the record's ate the clock's: daily life, above).
+- **Bad air** (2026-10-31: HOUSE.md's poison, bad air and disease): the minds know where the air's bad (a chunk's
+  pocket, the maker's) and keep their steps, their placing and their roaming out of it (dq0d's wades: foul_at), the
+  dead too.
+- **Hurt:** one wounded with nothing after it goes home to its lair to rest.
+
+### Tunnellers *(2026-11-01: slice 4.11; HOUSE.md's tunnellers, for review)*
+
+- **Who digs:** kinds.txt's ways d (a burrower, by its claws: the giant rat, the ghoul) and m (a miner, by the tools it
+  carries: the dwarf miner, the kobold, the brown orc; a pick, a shovel, a spade or a mattock among its things, the
+  world's agear AG_PICK and AG_SPADE, as it tells the referee its things).
+- **The minds choose where** (dq0d.c's dig_way, part 12, at need: no polling): a hostile tunneller kept by rock, a
+  wall or rubble from the character it senses beyond it, or from where it last sensed it (drawn on), no step nearer,
+  digs the square beside it that brings it nearest (the four first; a diagonal nearer as the crow flies: round a shut
+  door or a portcullis), within its reach of its home; it keeps to the way it's digging while that's nearer, and
+  digging spends none of its being drawn on.  Its intent's I_KIT KT_DIG (b the heading, x[2] its tools: DG_*), the
+  world's to carry out.  A step on a diagonal way nearer as the crow flies (as near across and down) is a step nearer
+  for every denizen, so it comes through what it dug.
+- **The world digs it** (dq0w/wdig.c, part 79): by the character's rules (DUNGEON.md's digging): a spell of ten
+  minutes, the tool's rate on what's there (the claws the house's), the actor's own test by its sheet for anything
+  harder than earth (the referee's RS_TEST P_DIG with the actor: HarnMaster's its Strength times five, the null
+  ruleset's flat odds), the rock's hardness the rate's (rock.h's, part 1 asked), the hole kept (DUG, the character's
+  record: either can go on with the other's), and through, the square a passage (a diagonal's corners cut).  The
+  spell's feet are reckoned as its mind asks again at its end (the hub's dig_t: when it began); another intent loses
+  it, a rouse sends it back to it (the rest of its spell).  Its doing DO_DIG ("digging", in the look's words).
+- **Told** (the denizens' events): its first spell (DE_DIG: seen, "The dwarf miner digs into the wall."; heard, "You
+  hear a scraping in rock ahead to your left."), its spells after (DE_DIGS: the denizens hear them, the player's not
+  told again), the way through (DE_DUG at the square dug: seen as it was, "A fresh tunnel opens ahead.  Spoil lies
+  heaped by it."; heard, "You hear rock falling ..."); the rock carrying a pick's knock where the air doesn't.
+
 ## Still to come
+
+- **Their bodies' rest** (2026-10-31's leftovers, HOUSE.md's the denizens' bodies): a swim tiring a denizen, a denizen
+  drowning (knocked senseless in water: none goes in deeper than it wades yet), a stream's current; their larders eaten
+  from (the day's meals feed folk, the larder's stores not yet counted) and run out; one tending another's wounds; stings and envenomed creatures; a denizen's own poisons and diseases (a lair's
+  sickness spreading among its folk, by the clock), one blundering into bad air choking or dying of it, the explosion's harm; an ally's
+  hunger (fed by the character's gifts now) leading it off to eat.
 
 What the plans bring later, by the slice or phase that brings it:
 
@@ -448,16 +608,31 @@ What the plans bring later, by the slice or phase that brings it:
   (a guardian, a faction's hoard), the strata's ages and sizes, the things lying about by theme.
 - **The command interpreter** (Phase 3C): a denizen's mind making the same command structure as the player's, the
   world applying it the same way (opening and breaking doors, taking things, throwing, attacking).
-- **Daily life** (slice 4.5): schedules by kind and faction, patrols that keep a pattern (the sound layer built,
-  2026-10-29: the denizens hearing the character by it, its steps by its pace).
+- **Daily life** (slice 4.5, built 2026-10-31: above): left, a patrol noticing a door left open (the denizens can't
+  open or shut doors yet: Phase 3C's), the records' patrols finding bodies (only an actor's rounds do), routes between a faction's lairs and its gates (the way-finding the minds lack: their steps are
+  greedy), a sleeper's defence (the book's Ignore against one
+  asleep), lying down to sleep (the denizens' positions but prone still to come). (The character telling the hour, "sleep until
+  dawn": built 2026-10-31, DUNGEON.md's the time of day believed; the denizens' routines learnt as its clues still to
+  come.)
 - **Body position and moving quietly** (slice 4.6, built for the character and a hunter's stalk, 2026-10-29): every
   actor's position and gait (the denizens' but prone still to come), their noises by the layer to one another (an
   actor's own still heard as the crow flies).
 - **Fights complete** (slice 4.7): one combat path, missiles (a bow through an arrow slit), allies fighting beside the
-  character, factions fighting each other, morale from the layers (leaders seen or heard, darkness, din).
-- **Fetching and influence** (slice 4.8): an ally fetching things (tell Grub to fetch the key), gifts, bribes,
-  reputation by deeds; an ally moving aside for the character (D10).
-- **Tunnellers and builders** (slice 4.11): denizens that dig their own ways, by the same rules as the character's.
+  character, factions fighting each other, morale from the layers (leaders seen, darkness; the field, the bonds and a
+  fall heard by its din since 2026-10-30).  Built 2026-10-30 (HOUSE.md's missiles): the denizens throwing (a taburi,
+  a shorkana, a spear or a dagger in hand, another weapon kept), a weapon put up for a bow and drawn again for melee,
+  a miss's stray striking one beside its mark (an actor struck by another's shot: the one blow between two actors the
+  referees take, its mind's dismay and death as any blow's); left: a rock picked up, the denizens' positions but
+  prone (a shooter crouched behind cover).
+- **Fetching and influence** (slice 4.8, built 2026-10-30: fetching, gifts and bribes, reputation, D10, a follower's
+  distance, above): left, an ally asked to do other things ("ask the dwarf to open the door": it "doesn't know how"),
+  "give the bandit 5 pennies" (the two objects without "to": the parser's), a gift to one that isn't a person (an
+  altar), a faction's regard by a freed prisoner, a rescue or a piece of the puzzle, entertain and bargain.
+- **Tunnellers and builders** (slice 4.11, built in part 2026-11-01: tunnellers, above): left, the minds' other reasons
+  to dig (a burrow from a lair, a faction's mine following a vein: rock.h's veins; a way round rubble is dug now), the
+  records away from the character digging (only actors dig), poor rock coming down on a tunneller, the spoil as a thing,
+  a dig's sound played, a kobold's pick (its outfit has none); builders: a faction's folk shoring a passage, walling up
+  a way, putting up a door.
 - **Psionic and magical denizens** (slices 5.4, 5.7): kinds with talents, shielded minds, casters, the undead.
 
 Designed, but in no slice of the plans yet (DECISIONS.md has the user's words for most):

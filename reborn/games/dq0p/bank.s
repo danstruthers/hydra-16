@@ -7,6 +7,7 @@
             .export     _ovbank
 
             .include    "zeropage.inc"
+            .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 SWDEPTH     = 4                     ; Swapped parts' calls in calls, at most
@@ -27,7 +28,7 @@ ovx:        .res        1
             SWPART      6, 4                ; The denizens' senses answered, the sound layer read (sense.c, sound.c)
 
             SWFN        view, 1
-            SWFN        felt, 2
+            SWFN        felt, 4
             SWFN        things_lamps, 1
             SWFN        lamp_on, 1
             SWFN        perceive, 2
@@ -36,3 +37,5 @@ ovx:        .res        1
             SWFN        pulse, 5
             SWFN        sense_actor, 6
             SWFN        snd_mask, 6
+            SWFN        num, 3              ; (An argument's number: the main RAM's room, 2026-11-01)
+            SWFN        light_init, 3       ; (The light layer begun: the main RAM's room, 2026-11-01)

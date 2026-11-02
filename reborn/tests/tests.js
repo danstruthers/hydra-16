@@ -28,6 +28,8 @@ const { createXmodemPeer } = require('../sim/lib/xmpeer.js');
 const numtest = require('./numtest.js');
 const { VT, DEC_ASCII } = require('../../base/sim/lib/vt.js');
 const { createWin32Input } = require('../../base/sim/lib/win32in.js');
+const { defaultModules } = require('../../base/sim/lib/machine.js');
+const MODULES = defaultModules();                              // (The tests' RAM modules: 3, the board's, or HYDRA_MODULES's)
 
 const IRQ_OFF_MAX = 200;                                      // (docs/design/reimplementation-from-scratch.md, §8: 115200)
 const S1_BYTES = 2000;
@@ -296,7 +298,7 @@ const TOOL_LINES = [
     "  4+0A boot     snd",
     "",
   ].join('\n'), true],
-  ["free","ram     256 KB a task (2 modules)\nshared  1024 KB, 256 KB in segments (1), 768 KB free"],
+  ["free","ram     " + MODULES * 128 + " KB a task (" + MODULES + " modules)\nshared  1024 KB, 256 KB in segments (1), 768 KB free"],
   ["sleep 30 & sleep 30 & kill $apid; slay sleep; wait; ps","task  state",true],
   ["kill 8; kill x; echo $status","kill: 8: no such task\nkill: x: invalid argument\n1"],
   ["sleep 1; echo slept","slept"],
@@ -1578,7 +1580,7 @@ const HYHYDRA_G = [
   ['(list ((sysinfo) :abi) (errstr :noent))', '{1 "not found"}'],
   ['(list ((task-info (pid)) :name) (any? (fn {x} {== (x :name) "cons"}) (ps)))', '{"hylang" T}'],
   ['(do (def {b} (bank-alloc 1)) (bank-write b 0 {1 2 3}) (bank-read b 0 3))', '{1 2 3}'],
-  ['(list ((find (fn {e} {== (e :old) "/rom"}) (ns)) :new) ((free) :ram) (hold (list 1 2)))', '{"#fx/" 256 {1 2}}'],
+  ['(list ((find (fn {e} {== (e :old) "/rom"}) (ns)) :new) ((free) :ram) (hold (list 1 2)))', '{"#fx/" ' + MODULES * 128 + ' {1 2}}'],
   ['(list (== (sys-getpid) (pid)) (sys-env-put 255 "hy-g" "gv") (sys-env-get 255 "hy-g") ((sys-stat "hydra.hl") :name) sys-ticks)',
     '{T NIL {2 "gv"} "hydra.hl" <function>(sys :ticks)}'],
   ['(do (sys-puts "put, ") (sys-putc \\s) (sys-puthex 171) (sys-putc 10))', 'NIL', 'put, sAB\n'],
@@ -1619,7 +1621,7 @@ function cacheChunks(m, sn) {
   for (const b of cacheBanks(m)) {
     for (let k = 0; k < 3; k++) {
       const o = k * CHUNK_SIZE, nrooms = b[o + 5], tile = b.subarray(o + CK_TILE, o + CK_TILE + 1024);
-      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x0F) > 9)) continue;
+      if (b[o] !== sn || !nrooms || nrooms > 6 || b[o + 6] > 12 || b[o + 7] > 6 || tile.some(t => (t & 0x0F) > 11)) continue;   // (A kind past T_CUT, 11: the diagonal ways', 2026-10-31)
       const rooms = [];
       for (let r = 0; r < nrooms; r++) { const p = o + CK_ROOM + r * 8; rooms.push({ x: b[p], y: b[p + 1], w: b[p + 2], h: b[p + 3], kind: b[p + 5] }); }
       out.set((b[o + 1] | b[o + 2] << 8) + ',' + (b[o + 3] | b[o + 4] << 8), { cx: b[o + 1] | b[o + 2] << 8, cy: b[o + 3] | b[o + 4] << 8, rooms, tile: Array.from(tile, t => t & 0x0F) });
@@ -1851,7 +1853,7 @@ function builtChunks(m, sn) {
     for (let k = 0; k < 3; k++) {
       const o = k * 0xAA0, nr = b[o + 5], nz = b[o + 6], np = b[o + C.portal - 1];
       const tile = b.subarray(o + C.tile, o + C.tile + 1024);
-      if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x0F) > 9)) continue;
+      if (b[o] !== sn || !nr || nr > 6 || nz > 12 || b[o + 7] > 6 || np > 16 || tile.some(t => (t & 0x0F) > 11)) continue;   // (T_CUT, 11, the diagonal ways')
       const rooms = [], zones = [], portals = [];
       for (let r = 0; r < nr; r++) {
         const p = o + C.room + r * 8;
@@ -2013,17 +2015,21 @@ const DQ0_REPEATS = [
   { what: /^The [a-z ]+ (unslings|draws) its [a-z ]+\.$/,
     why: 'several of a kind readying their weapons in one answer, each one\'s told (slice 4.7\'s: three elves unslinging their hartbows)' },
   { what: /^\(\d+ feet to go\.\)/, why: 'a dig\'s spells, each told as it ends (dig down: many spells to an answer)' },
-  { what: /^(?:The work goes (?:well|slowly)|Your tool slips and turns; little comes of that spell of work)\.$/,
+  { what: /^(?:The work goes (?:well|slowly)|Your tool slips and turns; little comes of that spell of work|The rotten rock splits, and part of the roof falls into the hole)\.$/,
     why: 'a dig\'s spells, each told as it ends (a long dig: hours of spells between one stir and the next, some the same)' },
   { what: /^You (?:climb on|slip back a little|find no hold yet) \(\d+ feet to go\)\.$/,
     why: 'a climb\'s rounds, each told as it ends (a long climb: many rounds to an answer, some the same)' },
-  { what: /^(?:(The|A) .* |Something )(bites|claws|strikes|swings|lunges|thrusts|shoots|throws)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge|shoot|throw)\b/,
+  { what: /^(?:(The|A) .* |Something )(bites|claws|strikes|swings|lunges|thrusts|shoots|throws)\b.*\bat you\b|^You (strike|swing|thrust|punch|kick|lunge|shoot|throw)\b|^(?:Your|Its) [a-z]+ strikes .* instead\b/,
     why: 'a fight\'s rounds, each blow told as it falls (attack: the rounds till it ends, the same words some of them; in the dark "Something", unseen: dq0traces\' rats)' },
-  { what: /^(?:You get to your feet|The [a-z ]+ (?:gets to its feet|scrambles to its feet|coils itself up again|rights itself|flutters up again|rises again))\.$/,
-    why: 'a fight\'s falls and risings, each told as it gets up (a long fight: a creature down twice, a stumble\'s, a leg\'s wound\'s, up each time; dq0missile\'s rat)' },
+  { what: /^(?:You get to your feet|You fall|You hear something fall|The [a-z ]+ (?:gets to its feet|scrambles to its feet|coils itself up again|rights itself|flutters up again|rises again|falls|goes down|is thrown down|is flipped onto its back|drops to the floor|sinks to the floor))\.$/,
+    why: 'a fight\'s falls and risings, each fall told as it falls and each rise as it gets up (a long fight: a creature down twice, a stumble\'s, a leg\'s wound\'s, up each time; dq0missile\'s rat; every fall told since 2026-10-30)' },
+  { what: /^The [a-z ]+ scrabbles, but can't get up\.$/,
+    why: 'a fight\'s rounds with a creature down, each try to rise told as it fails (dq0missile\'s rat, its dice by who asks, 2026-10-30)' },
+  { what: /^You turn to (?:something|the [a-z ]+)\.$/,
+    why: 'a fight\'s turns to a foe, each told as it turns (fighting on: struck from another side again and again; in the dark "something": dq0scent\'s rats, their dice by who asks, 2026-10-30)' },
   { what: /^You hear /, why: 'a sound heard each time it\'s made (main.c\'s heard: half a minute apart the same way, five seconds any; a search\'s or a wait\'s minute hears several)' },
-  { what: /^(The passage turns (left|right)|You go through a doorway|You go on down the passage|The way (rises|falls away))\.$/,
-    why: 'a walk\'s beats as it goes (slice 4.0): a winding passage turns the same way more than once, has more than one doorway, goes on quietly every 30 feet' },
+  { what: /^(The passage turns (left|right)|The passage bends away [a-z-]+|You go through a doorway|You go on down the passage|The way (rises|falls away))\.$/,
+    why: 'a walk\'s beats as it goes (slice 4.0): a winding passage turns or bends the same way more than once (a bend\'s heading, 2026-11-01: the soak\'s seed 200), has more than one doorway, goes on quietly every 30 feet' },
   { what: /^(?:It falls senseless|It flees|The .+ falls dead|The .+ gets to its feet|You get to your feet|You turn to the .+|You fight back against the .+)\.$/,
     why: 'fighting on (the user\'s, 2026-10-20): one attack fights its foes in turn, each falling, fleeing, getting up, fought back or turned to told as it comes (two of a name, the same words)' },
   { what: /^(?:Your .+ falls from your hand|The .+ drops its .+|The .+ snatches up its .+)\.$/,
@@ -2033,8 +2039,8 @@ const DQ0_REPEATS = [
   { what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
   { what: /^You keep at it\.$/,
     why: 'a battering\'s beat every fourth blow once its blows tell (the user\'s, 2026-10-22: told as it goes), twice or more in a dozen' },
-  { what: /^Everything goes black\.$/, tests: /^dq0(?:finished|strike|helpless|venom)$/,
-    why: 'knocked senseless, come round in shock a round later, struck senseless again, all in one wait\'s answer (the UI waiting it out): two black-outs, each told (dq0strike\'s rats, fought with a bar, three)' },
+  { what: /^Everything goes black\.$/, tests: /^dq0(?:finished|strike|helpless|venom|morale)$/,
+    why: 'knocked senseless, come round in shock a round later, struck senseless again, all in one wait\'s answer (the UI waiting it out): two black-outs, each told (dq0strike\'s rats, fought with a bar, three; dq0morale\'s small orcs, a knife in the hand of each)' },
   { what: /^(?:You struggle|The .+ struggles), but can't get up\.$/,
     why: 'a fall\'s Rise tried each round and failed (the book\'s test for one seriously or grievously wounded, slice 4.1b\'s), each try told' },
   { what: /^(?:The passage (?:forks here|ends here; it goes back behind you|comes to a door; it goes back behind you)|You are in a passage|It goes .+)\.$/,
@@ -2098,8 +2104,9 @@ function dq0Check(name, m) {
 // slice, the world's journal and its store's taking it in: cycles; measured 1,460,275 a square on its walk back across the
 // cell, 5 squares; the same walks at seed 3 with no traces, the slice before, within 0.2-0.6% of them: the journal's
 // entry a step, the store's taking 24 in a part's swap; 1,800,000 since 2026-10-29: the sound layer's pulse, once a
-// denizens' turn after a step, and the denizens' senses' own part, slices 4.5 and 4.6)
-const TRACE_STEP = 1800000;
+// denizens' turn after a step, and the denizens' senses' own part, slices 4.5 and 4.6); 1,900,000 since 2026-10-31
+// (1,863,195: the minds' steps looking at each square's chunk for its bad air, a swimmer's too, the giant rats')
+const TRACE_STEP = 1900000;
 
 // What a dq0 test's lines did, by their meaning (Phase 3A: tests cut to meaning, not words): sim/lib/dq0meaning.js's
 // record (m.dq0, in every dq0 test: the world's events, the denizens', the requests' replies, the state each line
@@ -2113,8 +2120,11 @@ function dq0Turns(m) {
   const r = m.dq0 || { games: [], lines: [], final: () => null }, all = { events: [], dens: [], replies: [], snaps: [] };   // (None: sim/dl's)
   r.games.forEach((g, gi) => { for (const k of Object.keys(all)) for (const e of g[k]) all[k].push(Object.assign({ game: gi }, e)); });
   const fin = r.final(), of = (list, k) => list.filter(e => e.line === k + 1);
-  // (A dq0 line as the test wrote it: sim/test.js's -K, -N, -I and -a, and RULES=NAME's -r NAME, taken off)
-  const T = r.lines.map(l => l.replace(/^(dq0(?: .*)?) -K$/, '$1').replace(/^(dq0(?: .*)?) -N$/, '$1').replace(/^(dq0(?: .*)?) -I$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1').replace(/^(dq0(?: .*)?) -r \S+$/, '$1').replace(/^(dq0(?: .*)?) -a$/, '$1')).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
+  // (A dq0 line as the test wrote it: sim/test.js's -K, -N, -I and -a, RULES=NAME's -r NAME, and the dice's offset,
+  // -R N (DQ0_ROLLS's, or a test's own: not a game's command), taken off: each once, the last added first, as sim/test.js
+  // adds them, so a test's own flag before them is kept (dq0travel's -N; a test's own -R last of its own, taken off)
+  const bare = l => !/^dq0( |$)/.test(l) ? l : [/ -R \d+$/, / -K$/, / -N$/, / -I$/, / -a$/, / -r \S+$/, / -R \d+$/].reduce((x, re) => x.replace(re, ''), l);
+  const T = r.lines.map(bare).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
     at: all.snaps.find(s => s.line === k + 1) || null }));
   T.forEach((t, k) => {
     t.after = k + 1 < T.length ? T[k + 1].at || fin : fin;
@@ -2191,6 +2201,179 @@ const passings = n => Array(n).fill(['douse the torch', 'wait 5 minutes', 'light
 // A dq0 test's lines typed, each at its prompt (rc's "% ", the game's "> ")
 const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
 
+// Dingus Quest Zero's morale's own (dq0morale): at each line's Enter (the CR as the ACIA has it, the game still as it
+// stands), the pokes made (each { g: the game, 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, k:
+// the actor's entry, or name: its name, the first so named, set: { field: value }; hub: { the layout's name: a byte },
+// the hub's own, pcSkew say) and the actors' hearts kept after them (m.hearts: { g, line, n, acts: [{ k,
+// name, heart, doing }] }): the hub's actor's heart,
+// lead, power, mood, serve, contact and bonds are its struct's last seven bytes (hub.h's, 2026-10-30), attitude,
+// faction, doing, pos, face, state and sn (bytes) and x, y (words) the layout's; and its record's (rec: { or: flags
+// or'd in, serve, contact }: dq0Rec's).  A denizen put somewhere (2026-10-31): beside: a heading (H_N 0 ... H_NW 7,
+// or 'face', the way the character faces), the actor on the square beside the character that way, on its stratum, on
+// its feet; engage: true, hostile and fighting it (AT_HOSTILE, DO_FIGHT); either written to its record too (its square,
+// its stratum, its attitude: dq0d's, so the world and the minds agree) and the world's den_seq bumped (what the
+// character sees of them looked at again).  The test's own setting up, as dq0Aware's
+// The denizens' records (dq0d's pb bank, its label's: the task the hub's task[T_DENIZENS]): { mem, at(i) the record
+// i's offset, and its fields' }: dq0d.c's struct pop (its head 330 bytes since slice 4.8's regard, 64 lairs of 17), struct den (30 bytes since its want, 2026-10-31: its
+// flags at 1, its stratum at 2, its id at 4, its square at 8 and 10, its attitude at 16, its serve and contact at 26 and 27)
+let dq0RecPb = 0;
+function dq0Rec(m) {
+  const h = m.dq0.bank(0), t = h[12 + 2], lbl = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+  const pb = dq0RecPb || (dq0RecPb = parseInt(/^al ([0-9A-F]+) \._pb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][pb]) || new Uint8Array(0x2000);
+  return { mem, at: i => 330 + 64 * 17 + 30 * i, FLAGS: 1, SN: 2, ID: 4, X: 8, Y: 10, ATTITUDE: 16, SERVE: 26, CONTACT: 27, ATE: 28, DRANK: 29 };
+}
+
+function dq0Poke(m, pokes) {
+  const a = m.acia, read = a.read, TAIL = ['heart', 'lead', 'power', 'mood', 'serve', 'contact', 'bonds'];
+  let typed = '', g = 0, seen = {};
+  m.hearts = [];
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^dq0 /.test(typed)) {
+          ++g;
+          seen = {};
+        }
+        seen[typed] = (seen[typed] || 0) + 1;
+        const h = m.dq0 && m.dq0.bank(0);
+        if (h) {
+          const { L, K } = m.dq0.layout(), at = k => L.actor + k * L.actorSize, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+          const off = f => TAIL.includes(f) ? L.actorSize - 7 + TAIL.indexOf(f) : L['a' + f[0].toUpperCase() + f.slice(1)];
+          const named = k => { let n = ''; for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]); return n; };
+          for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed]) {
+            for (const [f, v] of Object.entries(p.hub || {})) h[L[f]] = v;   // (The hub's own bytes, by the layout's names: pcSkew)
+            for (const [kn, v] of Object.entries(p.fuel || {})) {   // (A thing's fuel left, minutes, by its kind's name: the
+              const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);   //   first in the store, 2026-10-31)
+              for (let i = 0; cat && i < L.nitems; i++) {
+                const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+                if (!b || !b[o + L.iKind]) continue;
+                let n = '';
+                for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
+                if (n === kn) { b[o + L.iFuel] = v & 255; b[o + L.iFuel + 1] = v >> 8 & 255; break; }
+              }
+            }
+            const k = p.name === undefined ? p.k : [...Array(L.nactors).keys()].find(j => named(j) === p.name);   // (By its name: the first)
+            if (k === undefined) continue;
+            for (const [f, v] of Object.entries(p.set || {})) if (f === 'x' || f === 'y') w16(at(k) + off(f), v); else h[at(k) + off(f)] = v;
+            if (p.beside !== undefined || p.engage) {   // (Put beside the character, engaged: the hub's and its record's)
+              const R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]), r16 = (q, v) => { R.mem[o + q] = v & 255; R.mem[o + q + 1] = v >> 8 & 255; };
+              if (p.beside !== undefined) {
+                const d = p.beside === 'face' ? h[L.pcFace] : p.beside, x = (h[L.pcX] | h[L.pcX + 1] << 8) + [0, 1, 1, 1, 0, -1, -1, -1][d & 7],
+                  y = (h[L.pcY] | h[L.pcY + 1] << 8) + [-1, -1, 0, 1, 1, 1, 0, -1][d & 7];
+                w16(at(k) + L.aX, x);
+                w16(at(k) + L.aY, y);
+                h[at(k) + L.aSn] = h[L.pcSn];
+                h[at(k) + L.aPos] = K.POS_STANDING;
+                r16(R.X, x);
+                r16(R.Y, y);
+                R.mem[o + R.SN] = h[L.pcSn];
+              }
+              if (p.engage) {
+                h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_HOSTILE;
+                h[at(k) + L.aDoing] = K.DO_FIGHT;
+              }
+              h[L.denSeq] = h[L.denSeq] + 1 & 255;
+            }
+            if (p.rec) {
+              const R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]);
+              if (p.rec.or) R.mem[o + R.FLAGS] |= p.rec.or;
+              if (p.rec.serve !== undefined) R.mem[o + R.SERVE] = p.rec.serve;
+              if (p.rec.contact !== undefined) R.mem[o + R.CONTACT] = p.rec.contact;
+            }
+          }
+          const acts = [];
+          for (let k = 0; k < L.nactors; k++) {
+            let n = '';
+            for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]);
+            if (n) {
+              const t = h.subarray(at(k) + L.actorSize - 7, at(k) + L.actorSize), R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]);
+              acts.push({ k, name: n, heart: (t[0] << 24) >> 24, lead: t[1], power: t[2], mood: t[3], bonds: t[6], doing: h[at(k) + L.aDoing],
+                rank: R.mem[o + R.FLAGS] >> 5 & 3, prom: !!(R.mem[o + R.FLAGS] & 0x80) });
+            }
+          }
+          m.hearts.push({ g, line: typed, n: seen[typed], acts });
+        }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+}
+
+// The creatures' bodies in the referee's bank (dq0harn's fb: tire.c's struct bbody, 8 bytes by the sheet's number, a
+// denizen's record's: 2026-10-31, every actor's tiring): { mem, at(n) }, its levels at 0, wfl at 1, ex at 2, at (the clock)
+// at 4
+let dq0BodyFb = 0;
+function dq0Body(m) {
+  const h = m.dq0.bank(0), t = h[12 + 3], lbl = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1');
+  const fb = dq0BodyFb || (dq0BodyFb = parseInt(/^al ([0-9A-F]+) \._fb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][fb]) || new Uint8Array(0x2000);
+  return { mem, at: n => 8 * n };
+}
+// At each line's Enter, each actor's body (m.bodies: { g, line, name, den, lv: its levels, wfl, ex, at }) after the pokes made then
+// (each { g: the game, 1 on, line, n: its nth time typed in it, name: the actor's, lv: its levels, ex, at: its body's set })
+function dq0BodyPoke(m, pokes) {
+  const a = m.acia, read = a.read;
+  let typed = '', g = 0, seen = {};
+  m.bodies = [];
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^dq0 /.test(typed)) { ++g; seen = {}; }
+        seen[typed] = (seen[typed] || 0) + 1;
+        const h = m.dq0 && m.dq0.bank(0);
+        if (h && g) {
+          const { L } = m.dq0.layout(), B = dq0Body(m);
+          for (let k = 0; k < L.nactors; k++) {
+            const o = L.actor + k * L.actorSize;
+            let n = '';
+            for (let i = 0; h[o + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[o + L.aName + i]);
+            if (!n) continue;
+            const den = h[o + L.aName + 12], q = B.at(den), mem = B.mem;
+            let poked = false;
+            for (const p of pokes) if (p.g === g && p.line === typed && p.n === seen[typed] && p.name === n) {
+              if (p.lv !== undefined) mem[q] = p.lv;
+              if (p.ex !== undefined) { mem[q + 2] = p.ex & 255; mem[q + 3] = p.ex >> 8; }
+              if (p.at !== undefined) for (let i = 0; i < 4; i++) mem[q + 4 + i] = p.at >>> (8 * i) & 255;
+              poked = true;
+            }
+            m.bodies.push({ g, line: typed, name: n, den, lv: mem[q], wfl: mem[q + 1], ex: mem[q + 2] | mem[q + 3] << 8,
+              at: (mem[q + 4] | mem[q + 5] << 8 | mem[q + 6] << 16 | mem[q + 7] << 24) >>> 0, poked });
+          }
+        }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+}
+
+// The day's hour poked (a test's own setting up: the denizens' hour0, dq0d.c's part 9, the hour of the day the game's
+// clock began at; 0x80, no day, every one about as before the day, 2026-10-31): at a line's Enter, each { g: the game,
+// 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, hour }.  A game's whole (from its start):
+// the environment's dq0hour (a line dq0hour=128 before it, rc's), dq0d's first look at its day
+function dq0Hour(m, list) {
+  const a = m.acia, read = a.read;
+  let typed = '', g = 0, seen = {};
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^dq0 /.test(typed)) { ++g; seen = {}; }
+        seen[typed] = (seen[typed] || 0) + 1;
+        const h = m.dq0 && m.dq0.bank(0), p = list.find(q => q.g === g && q.line === typed && q.n === seen[typed]);
+        if (h && p) {
+          const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+          m.taskRam[h[12 + 2]][parseInt(/^al ([0-9A-F]+) \._hour0$/m.exec(lbl)[1], 16)] = p.hour;
+        }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+}
+
 // A denizen made aware of the character as a line is typed (a test's own setting up: the line's Enter read, the
 // actor named its doing DO_WATCH in the hub, as if it had noticed the character; slice 4.5's, an unaware one engages
 // no one): the first time the line's typed after the one given before it, if given
@@ -2216,6 +2399,136 @@ function dq0Aware(m, line, actor, after) {
     }
     return read(r, t);
   };
+}
+
+// A staircase of short steps made in the rock (a test's scene, HOUSE.md's a passage's heading): after the Enter of a line
+// typed ({ g: the game, 1 on, line, n: its nth time typed in it }), in the chunk of the hub's cache with stratum g's
+// stairway up in it (the character come down to it: dq0 -T, d), from a square of the cave's wall (at: its place from
+// the stairs, the cave's floor north of it) on, each step one of steps (DIR_*: 1 east, 2 south): passages' squares (T_CORR) at the
+// floor's height, each through rock or a wall with nothing open beside it but the steps before and after; the senses'
+// grid made again (dq0p's lgen).  Gives { done, why }
+function dq0CarveStairs(m, p) {
+  const a = m.acia, read = a.read, r = { done: false, why: 'its line never typed' };
+  let typed = '', g = 0, seen = {};
+  const carve = () => {
+    const h = m.dq0 && m.dq0.bank(0);
+    if (!h) return 'no hub';
+    for (const b of cacheBanks(m)) for (let k = 0; k < 3; k++) {
+      const o = k * CHUNK_SIZE, T = (x, y) => o + CK_TILE + y * 32 + x, E = (x, y) => o + CK_TILE + 1024 + y * 32 + x;
+      if (b[o] !== p.sn || !b[o + 5] || b[o + 5] > 6) continue;
+      let u = -1;
+      for (let i = 0; i < 1024 && u < 0; i++) if ((b[o + CK_TILE + i] & 15) === 7) u = i;
+      if (u < 0) continue;
+      let x = (u & 31) + p.at[0], y = (u >> 5) + p.at[1];
+      if ((b[T(x, y)] & 15) !== T_WALL || (b[T(x, y - 1)] & 15) !== T_FLOOR) return 'no wall there, south of the floor';
+      const z = b[E(x, y - 1)], sq = [[x, y]];
+      for (const d of p.steps) { x += d === 1 ? 1 : 0; y += d === 2 ? 1 : 0; sq.push([x, y]); }
+      const on = new Set(sq.map(([i, j]) => i + ',' + j));
+      for (let n = 1; n < sq.length; n++) {
+        const [i, j] = sq[n];
+        if (i < 1 || i > 30 || j < 1 || j > 30) return 'off the chunk';
+        for (const [di, dj] of [[0, -1], [1, 0], [0, 1], [-1, 0], [0, 0]]) {
+          const t = b[T(i + di, j + dj)] & 15;
+          if (t !== 0 && t !== T_WALL && !on.has((i + di) + ',' + (j + dj))) return 'open beside ' + i + ',' + j;
+        }
+      }
+      for (const [i, j] of sq) { b[T(i, j)] = (b[T(i, j)] & 0xF0) | T_CORR; b[E(i, j)] = z; }
+      const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0p', 'dq0p.lbl'), 'latin1');
+      const lg = parseInt(/^al ([0-9A-F]+) \._lgen$/m.exec(lbl)[1], 16), ram = m.taskRam[h[12 + 6]];
+      ram[lg] = (ram[lg] + 1) & 255;
+      return '';
+    }
+    return 'no chunk with the stairway up';
+  };
+  a.read = (rr, t) => {
+    if (rr === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^dq0 /.test(typed)) { ++g; seen = {}; }
+        seen[typed] = (seen[typed] || 0) + 1;
+        if (!r.done && g === p.g && typed === p.line && seen[typed] === p.n) { const w = carve(); r.done = !w; r.why = w; }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(rr, t);
+  };
+  return r;
+}
+
+// A line typed as the game's words come, not at a cycle (a test's own: what a player reacting to them types, whatever
+// the code's speed): each { g: the game, 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, words,
+// text }: after that line's Enter, the first time the story shows the words (the escapes left out, spaces and line
+// ends as one), the text typed next, before the input still to come (its waits for a prompt from then on).  One its
+// words never came for let go as its game ends (the screen's scrolling whole again, the game's t_away: ESC [ r) or
+// another begins: never typed into the next (2026-10-31)
+function dq0OnWords(m, list) {
+  const a = m.acia, read = a.read, shown = a.shown, norm = s => s.replace(/\s+/g, ' ');
+  let typed = '', g = 0, seen = {}, armed = null, story = '', esc = 0, escp = '';
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^dq0 /.test(typed)) { ++g; seen = {}; armed = null; }
+        seen[typed] = (seen[typed] || 0) + 1;
+        const p = list.find(q => q.g === g && q.line === typed && q.n === seen[typed]);
+        if (p) { armed = p; story = ''; }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+  a.shown = (v, t) => {
+    shown(v, t);
+    if (esc === 1) { esc = v === 0x5B ? 2 : 0; escp = ''; return; }
+    if (esc === 2) {
+      if (v < 0x40 || v > 0x7E) {
+        escp += String.fromCharCode(v);
+        return;
+      }
+      esc = 0;
+      if (v === 0x72 && !escp) armed = null;    // (ESC [ r: the game's end)
+      return;
+    }
+    if (v === 0x1B) { esc = 1; return; }
+    if (!armed) return;
+    story = norm(story + (v < 0x20 ? ' ' : String.fromCharCode(v))).slice(-200);
+    if (story.includes(norm(armed.words))) {
+      a.rxQueue.unshift(...armed.text);
+      a.promptFrom = -1;
+      armed = null;
+    }
+  };
+}
+
+// Dingus Quest Zero's tasks' overlays as they are in their banks (at the first prompt: dq0starttime's), each the same as
+// ld65 made it (obj/games/NAME.hyx.ovl, each bank filled out to 8K with $FF): read from the card packed and unpacked
+// in place by the unpack library (modules/unpack, games/dq0/ovlpack.js, 2026-10-31).  Each task by its name (its task
+// RAM's TA_NAME), its banks by its _ovbank (its labels).  OUT: a line a task, "ok ..." or what's wrong
+function dq0OvlBanks(m) {
+  const out = [], root = path.join(__dirname, '..');
+  for (const name of ['dq0', 'dq0w', 'dq0m', 'dq0harn', 'dq0p', 'dq0d']) {
+    let t = -1;
+    for (let k = 1; k < 16 && t < 0; k++) {
+      let n = '';
+      for (let i = 0; i < 12 && m.taskRam[k][0x230 + i]; i++) n += String.fromCharCode(m.taskRam[k][0x230 + i]);
+      if (n === name) t = k;
+    }
+    if (t < 0) { out.push(name + ': no task'); continue; }
+    const lbl = /^al ([0-9A-F]+) \._ovbank$/m.exec(fs.readFileSync(path.join(root, 'obj', 'games', name, name + '.lbl'), 'latin1'));
+    const ovl = fs.readFileSync(path.join(root, 'obj', 'games', name + '.hyx.ovl'));
+    let n = Math.ceil(ovl.length / 0x2000), bad = 0;
+    const want = k => { const b = Buffer.alloc(0x2000, 0xFF); ovl.copy(b, 0, k * 0x2000, Math.min(ovl.length, (k + 1) * 0x2000)); return b; };
+    while (n > 1 && want(n - 1).every(x => x === 0xFF)) n--;
+    for (let k = 0; k < n; k++) {
+      const b = m.taskBankMem(t, m.taskRam[t][parseInt(lbl[1], 16) + k]), w = want(k);
+      let d = -1;
+      const end = name === 'dq0' && k === 4 ? 0x1000 : 0x2000;  // (dq0's fifth: its second half the theme's, read in as it starts: theme.h's THEME_PLACE)
+      for (let i = 0; i < end && d < 0; i++) if (!b || b[i] !== w[i]) d = i;
+      if (d >= 0) { bad++; out.push(name + '\'s overlay ' + (k + 1) + ' not as ld65 made it, from $' + (0x8000 + d).toString(16).toUpperCase()); }
+    }
+    if (!bad) out.push('ok: ' + name + '\'s ' + n + ' overlays as ld65 made them');
+  }
+  return out;
 }
 
 // Dingus Quest Zero's answers timed (dq0answer's): each command's Enter (the CR as the ACIA has it) to its answer's first
@@ -2311,7 +2624,8 @@ module.exports = {
       name: 'boot', what: 'the kernel boots, POST finds nothing wrong; init runs hello and waits for it',
       init: 'init', cycles: 20e6,
       expect: ['Hydra-16: kernel 0.1, ABI 1', 'HydraOS 1.0 for the Hydra-16', 'POST ZP:0 ST:0 OS:0 HI:0 SH:S W:0',
-        'RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 00:0/00/0000 10:0/00/0000', 'POST ok', 'RAM modules: 02',
+        'RAM U:0 F0:0/00/0000 F4:0/00/0000 F8:0/00/0000 FC:0/00/0000 ' + ['00', '10', '20'].slice(0, MODULES).map(b => b + ':0/00/0000').join(' '),
+        'POST ok', 'RAM modules: 0' + MODULES,                // (Each module's first bank tested, and the count: 3, the board's)
         'task F: cons', 'task 1: init', 'init: up in task 01', 'hello, from init', 'init: hello ended: code $07 (bye)'],
     },
     {
@@ -3061,11 +3375,16 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0dig', meaning: true, what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, by a lantern\'s light (slice 4.1: its six hours, the shaft longer; the light gone, in the dark, the dig stopped, the lantern filled and lit again, and dug on from where it was left), through to the stratum below (tiring as it goes, strenuous work: two fatigue levels a spell, the referee\'s, its Mining tests the harder for them, so more spells), and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 1\'s hard-packed earth floor (untested: the tool\'s rate, a foot and a half a spell) till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all (only a pick lifts flags); bare hands (the dagger in the kit, a knife that would dig it, put down first) make no progress in seed 1\'s hard-packed earth (the user\'s, 2026-10-20: hands only in soft soil) (dq0earth\'s and dq0tools\' digs, these together)',
-      init: 't_rc', cycles: 3600e6,
+      name: 'dq0dig', meaning: true, what: 'Dingus Quest Zero digging (the referee\'s: the tools equipped, P_DIG by what\'s dug, Mining tests a spell at a time, HarnMaster\'s; the maker\'s materials: a room\'s floor, then the stratum\'s rock), by the world\'s events: a skilled miner (Mining 95, hmchar\'s file) with a pick (dq0 -k pick -T: the tool the referee takes) digs a shaft down from a room by its stairway, spell by spell, by a lantern\'s light (slice 4.1; the scene set, slice 4.10\'s, as the shaft\'s rock now differs by the referee\'s pace: its oil two hours\' as it\'s first lit, dq0Poke\'s, the shaft longer under either referee, and twelve hours\' as it\'s lit again, the shaft through by it; the light gone, in the dark, the dig stopped, the lantern filled and lit again, and dug on from where it was left), through to the stratum below (tiring as it goes, strenuous work: two fatigue levels a spell, the referee\'s, its Mining tests the harder for them, so more spells), and climbs down it (grown round it then); the giant rats by the stairway living through every spell of it (the turns pace: hours of it, the denizens kept up a slice at a time); a shovel digs seed 1\'s hard-packed earth floor (untested: the tool\'s rate, a foot and a half a spell) till the rock under it stops it (the user: the floor, then the rock); a sword won\'t dig seed 5\'s flagged floor at all (only a pick lifts flags); bare hands (the dagger in the kit, a knife that would dig it, put down first) make no progress in seed 1\'s hard-packed earth (the user\'s, 2026-10-20: hands only in soft soil) (dq0earth\'s and dq0tools\' digs, these together)',
+      init: 't_rc', cycles: 3800e6,                // (3600e6 till slice 4.10; 2026-10-31 3415M under HarnMaster's referee, 2721M the null's)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm',
         'dq0 -p t -s 3 -c /ram/m.hm -k pick,lantern -T', 'light the lantern', 'dig down', 'fill the lantern', 'light the lantern', 'dig down', 'd', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -k shovel -T', 'dig down', 'quit',
         'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'dig down', 'quit', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'drop the dagger', 'dig down', 'quit', 'echo $status']) },
+      start(m) {                                  // (The scene set, slice 4.10's: its lantern's oil two hours' as it's first lit,
+        dq0Poke(m, [{ g: 1, line: 'light the lantern', n: 1, fuel: { lantern: 120 } },   //   the light out in the dig's
+          { g: 1, line: 'light the lantern', n: 2, fuel: { lantern: 720 } }]);   //   first part, under either referee; filled, twelve
+      },                                          //   hours', the shaft through by its light: the rock harder in parts and
+                                                  //   poor rock coming down into it, its spells as many as they come)
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], digs = T.filter(t => t.line === 'dig down');
@@ -3100,12 +3419,16 @@ module.exports = {
     {
       name: 'dq0dug', meaning: true, what: 'Dingus Quest Zero\'s holes dug part way kept (slice 4.0, HOUSE.md\'s what stopping costs: "a hole half dug stays half dug"; the world\'s change records, DUG: a hole\'s half-feet dug and the way it\'s dug, looked up as a dig begins on its square), by the world\'s events, its change records and its long task: at seed 3 by the stairway (dq0 -T -d, a pick, the character no miner) the wall to the south dug a while and stopped ("stop": its feet dug a DUG record, heading south), then dug again, on from where it was left (E_DIG\'s D_AGAIN, its feet to go the last spell\'s), through; a shaft begun beside the stairway, dug a while, stopped (a DUG record, down); the game kept (quit) and carried on (dq0 -d: the record read back from its region\'s file), the shaft dug again on from where it was left, its bar too (the hub\'s pc_task: its part done the record\'s and more)',
       init: 't_rc', cycles: 1500e6,
-      // (A "stop" typed as the dig goes, after a wait: \u0100's 2M cycles each, a spell or so of the wall's, a few of the
-      // shaft's, the stratum below grown first)
+      // (A "stop" typed as the dig goes, after a wait: \u0100's 2M cycles each, a few spells of the shaft's, the stratum
+      // below grown first; the wall's as its first spell is told, dq0OnWords: its time moved with the code's layout under
+      // RULES=null, 2026-10-30, the stop typed before it)
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick,lantern -T -d /ram/dug',
-        'light the lantern', 'dig south', '!' + '\u0100'.repeat(12) + 'stop', 'dig south', 'dig down', '!' + '\u0100'.repeat(30) + 'stop', 'quit',
+        'light the lantern', 'dig south', 'dig south', 'dig down', '!' + '\u0100'.repeat(30) + 'stop', 'quit',
         'dq0 -d /ram/dug', 'dig down', '!' + '\u0100'.repeat(15) + 'stop', 'quit', 'echo $status']
         .map(l => (l[0] === '!' ? l.slice(1) : '\u0101' + l) + '\r').join('') },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'dig south', n: 1, words: 'You dig with your', text: 'stop\r' }]);   // (Typed as it's told)
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], digs = T.filter(t => /^dig /.test(t.line)), stops = T.filter(t => t.line === 'stop');
@@ -3146,6 +3469,338 @@ module.exports = {
         // (The UI's words for it, both times: the UI's own, whatever the referee)
         const again = dq0Story(out).match(/You set to digging again where you left off\. \((?:A foot|\d+ feet) to go\.\)/g) || [];
         if (again.length !== 2) f.push('"You set to digging again where you left off." said ' + again.length + ' times, not 2');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0rock', near: ['map'], what: 'Dingus Quest Zero\'s rock (slice 4.10: DUNGEON.md\'s changing the dungeon, HOUSE.md\'s rock\'s kinds and hardness; dq0/rock.h, the world\'s dig_rock, the UI\'s words), by the words told: a skilled miner (Mining 95) with a pick at seed 3 by the stairway (dq0 -T) digs a shaft down, through the floor\'s flags (a spell) into the rock; the rock\'s told as the dig comes to it, after the floor ("You\'re into flaky rock", its looks one of the rocks\'), named only after a spell that went well ("...: shale." with "The work goes well."); stopped as it\'s told ("stop"), then quit',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml min 95 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -k pick,lantern -T', 'light the lantern', 'dig down', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'dig down', n: 1, words: 'You\'re into', text: 'stop\r' }]);   // (Typed as it's told)
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), first = s.indexOf('You\'re into'), begun = s.lastIndexOf('You set to digging', first);
+        const looks = { shale: 'flaky', sandstone: 'buff', limestone: 'pale grey', slate: 'blue-grey', marble: 'white', granite: 'speckled grey',
+          basalt: 'black', quartz: 'white-veined', ironstone: 'rusty red', 'copper ore': 'green-stained' };
+        const told = [...s.matchAll(/You're into ([a-z -]+?) rock(?:: ([a-z ]+))?\. (?:You dig with your [a-z]+\. )?(The work goes well\.|The work goes slowly\.|Your tool slips|The rotten rock)/g)];
+        if (!told.length) return ['the rock not told as the dig came to it: ' + (s.match(/dig down.{0,600}/) || [''])[0]];
+        for (const [all, look, name, how] of told) {
+          if (!Object.values(looks).includes(look)) f.push('"' + all + '": not a rock\'s looks');
+          if (name && looks[name] !== look) f.push('"' + all + '": ' + name + ' doesn\'t look ' + look);
+          if (!!name !== (how === 'The work goes well.')) f.push('"' + all + '": named ' + (name ? '' : 'not ') + 'after a spell that went ' + (name ? 'badly' : 'well'));
+        }
+        if (begun < 0) f.push('the rock told before the dig began');
+        else if (!/The work goes|Your tool slips/.test(s.slice(begun, first))) f.push('the rock told on the dig\'s first spell, the floor\'s flags not dug first: ' + s.slice(begun, first + 80));
+        if (!/You dig with your pick\./.test(s.slice(begun, first + 200))) f.push('the pick not named on the first spell');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0rubble', near: ['map'], what: 'Dingus Quest Zero\'s age\'s collapse (slice 4.10: DUNGEON.md\'s rock and old places, HOUSE.md\'s rock\'s kinds and hardness; the maker\'s rubble, caves.c\'s, by the stratum\'s age, twice where the rock is poor; world.h\'s T_RUBBLE), by the hub\'s cache: at seed 3 down the stairway (dq0 -T, d), the chunks of both strata read: rubble in old passages (seed 3\'s nine squares: the top stratum\'s chunk 3,1 and the caves\' 18,11 and 18,12), every square of it a passage\'s, in no room\'s bounds, every square beside it a passage\'s, the rock\'s or rubble (no doorway, no room\'s floor), never on a chunk\'s edge',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'map', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const f = [], ok = new Set([T_CORR, T_ROCK, T_WALL, 10]);
+        let n = 0;
+        for (const sn of [0, 1]) for (const [at, c] of cacheChunks(m, sn)) for (let i = 0; i < 1024; i++) {
+          if (c.tile[i] !== 10) continue;
+          n++;
+          const x = i & 31, y = i >> 5;
+          if (!x || !y || x === 31 || y === 31) f.push(sn + ':' + at + ': rubble on the chunk\'s edge at ' + x + ',' + y);
+          else if (![-32, 1, 32, -1].every(d => ok.has(c.tile[i + d]))) f.push(sn + ':' + at + ': rubble at ' + x + ',' + y + ' beside a room\'s square or a doorway');
+          if (c.rooms.some(r => x + 1 >= r.x && x <= r.x + r.w && y + 1 >= r.y && y <= r.y + r.h)) f.push(sn + ':' + at + ': rubble at ' + x + ',' + y + ' in a room\'s bounds');
+        }
+        if (n < 5) f.push('only ' + n + ' squares of rubble in the cache (seed 3\'s: 9)');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0mixed', near: ['map'], what: 'Dingus Quest Zero\'s mixed strata (slice 4.10: DUNGEON.md\'s growing a chunk, HOUSE.md\'s rock\'s kinds and hardness; the maker\'s cstyle), by the hub\'s cache: at seed 3 with every built stratum made mixed (dq0 -M, the tests\'), by the stairway (dq0 -T) and down it, the top stratum\'s chunks read: part natural (seed 3\'s 3,0 and 3,1: caves, every room a cave\'s chamber) and part built (2,0 and 2,1, the stairway\'s: no cave in them), and where a natural chunk meets a built one their edges\' open squares meet; the stratum below (natural) all caves',
+      init: 't_rc', cycles: 600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -M', 'd', 'map', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const f = [], ks = cacheChunks(m, 0), open = t => t !== T_ROCK && t !== T_WALL && t !== T_WINDOW;
+        const natural = c => c.rooms.length > 0 && c.rooms.every(r => r.kind === 6), built = c => !c.rooms.some(r => r.kind === 6);
+        const nat = [...ks].filter(([, c]) => natural(c)).map(([at]) => at), bui = [...ks].filter(([, c]) => built(c)).map(([at]) => at);
+        if (!nat.length || !bui.length) f.push('the top stratum not part natural, part built: natural ' + nat.join(' ') + ', built ' + bui.join(' '));
+        for (const [at, c] of ks) for (const [dx, dy] of [[1, 0], [0, 1]]) {
+          const d = ks.get((c.cx + dx) + ',' + (c.cy + dy));
+          if (!d || natural(c) === natural(d)) continue;
+          for (let k = 0; k < 32; k++) {
+            const a = dx ? c.tile[k * 32 + 31] : c.tile[31 * 32 + k], b = dx ? d.tile[k * 32] : d.tile[k];
+            if (open(a) !== open(b)) f.push(at + ': its ' + (dx ? 'east' : 'south') + ' edge\'s square ' + k + ' not met by its neighbour\'s (natural and built)');
+          }
+        }
+        if (![...cacheChunks(m, 1).values()].every(natural)) f.push('the stratum below (natural) not all caves');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0angles', near: ['map'], what: 'Dingus Quest Zero\'s diagonal ways (the user\'s, 2026-10-31: passages off the compass, step 1; HOUSE.md\'s diagonal ways), by the words told and the map: at seed 3 in the cell by the stairway (dq0 -T) a skilled miner (Mining 95) with a pick faces north, goes to the far right corner and digs northeast (the cell\'s corner wall, two feet: "You break through."), the square corner to corner a passage, its two corners cut (T_CUT); "go northeast" walks into it (a diagonal way from a room\'s floor: across\'s mouth), its end told ("The passage ends here; it goes back behind you."); the map draws the two cut corners as strokes along the way ("/" beside the @ and below it, no "\\"); "look southwest" sees back along the diagonal way into the cell (a look one way\'s, way.c\'s seen_on: "Down the passage ahead you see into the cell", 2026-11-01); "go southwest" walks back into the cell',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/m.hm', 'echo ml min 95 >> /ram/m.hm',
+        'dq0 -p t -s 3 -c /ram/m.hm -k pick -T', 'face north', 'go to the far right corner', 'dig northeast', 'go northeast', 'map', 'look', 'look southwest', 'go southwest', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const at = l => s.indexOf('> ' + l + ' > ' + l);
+        const seg = (l, n) => at(l) >= 0 ? s.slice(at(l), at(n) > at(l) ? at(n) : undefined) : '';
+        if (!seg('dig northeast', 'go northeast').includes('You break through.')) f.push('the dig northeast not through');
+        const go = seg('go northeast', 'map');
+        if (!go.includes('The passage ends here; it goes back behind you.')) f.push('"go northeast" not into the dug square: ' + go.slice(0, 200));
+        const raw = out.replace(/\x1b\[[0-9;]*m/g, ''), m0 = raw.indexOf('The map (you face northeast');
+        const map = m0 < 0 ? '' : raw.slice(m0, raw.indexOf('> look', m0)), rows = map.split('\n'), i = rows.findIndex(r => r.includes('@'));
+        if (i < 0) f.push('no map');
+        else {
+          const c = rows[i].indexOf('@');
+          if (rows[i][c - 1] !== '/' || !rows[i + 1] || rows[i + 1][c] !== '/') f.push('the cut corners not drawn "/" beside the @ and below it: ' + rows.slice(i - 1, i + 2).join(' | '));
+          if (map.includes('\\')) f.push('a "\\" stroke on the map');
+        }
+        if (!seg('look southwest', 'go southwest').includes('Down the passage ahead you see into the cell')) f.push('"look southwest" not along the diagonal way into the cell (way.c seen_on): ' + seg('look southwest', 'go southwest').slice(0, 200));
+        if (!seg('go southwest', 'quit').includes('You can see part of a cell')) f.push('"go southwest" not back into the cell');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0heading', near: ['map'], what: 'Dingus Quest Zero\'s passages told by their real heading (the user\'s, 2026-10-31: ways off the compass, step 2; HOUSE.md\'s a passage\'s heading), by the words told and the map: at seed 3 down the stairway (dq0 -T, the caves dry and unfallen: -W -U) a staircase of short steps (south, then east and south by turns, eight squares: one square wide, not cut) made in the rock from the cave\'s wall two squares south and two west of the stairs as "look" is typed (dq0CarveStairs: the chunk cache\'s squares, the senses\' grid made again); two steps west, "go south" walks down it to its end without a turn told at every step (one bend at most, "The passage bends away southeast.", and no "The passage turns"); "look" at its end tells the way back by its shape, behind and to the left (its run\'s bearing as far as it\'s seen, northwest, the steps by turns, as it faces east: "it goes back behind you to your left"); the map draws what it shows of it as a slant (strokes of one kind, two or more, as the map\'s turned); "turn around" and "go ahead" walk back up it to the cave',
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -W -U', 'd', 'look', 'face west', 'step forward', 'step forward', 'go south', 'look', 'map', 'turn around', 'go ahead', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) { this.carve = dq0CarveStairs(m, { g: 1, sn: 1, line: 'look', n: 1, at: [-2, 2], steps: [2, 2, 1, 2, 1, 2, 1, 2, 1] }); },
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        if (!this.carve.done) return ['the staircase not made: ' + this.carve.why];
+        const at = l => s.indexOf('> ' + l + ' > ' + l);
+        const seg = (l, n) => at(l) >= 0 ? s.slice(at(l), at(n) > at(l) ? at(n) : undefined) : '';
+        const go = seg('go south', 'look');
+        if (/The passage turns/.test(go)) f.push('"go south" told a turn at its steps: ' + go.slice(0, 300));
+        if ((go.match(/The passage bends away/g) || []).length > 1) f.push('"go south" told more than one bend: ' + go.slice(0, 300));
+        if (/bends away/.test(go) && !go.includes('The passage bends away southeast.')) f.push('its bend not southeast: ' + go.slice(0, 300));
+        if (!/The passage ends here; it goes back/.test(go)) f.push('"go south" not to the staircase\'s end: ' + go.slice(0, 300));
+        const lk = s.slice(s.lastIndexOf('> look > look'), at('map'));
+        if (!lk.includes('The passage ends here; it goes back behind you to your left.')) f.push('the look at its end not "it goes back behind you to your left": ' + lk.slice(0, 200));
+        const raw = out.replace(/\x1b\[[0-9;]*m/g, ''), m0 = raw.indexOf('The map (you face');
+        const map = m0 < 0 ? '' : raw.slice(m0, raw.indexOf('> turn around', m0)), rows = map.split('\n').map(r => r.slice(0, 64));
+        const all = rows.join(''), back = all.split('\\').length - 1, fore = all.split('/').length - 1;
+        if (Math.max(back, fore) < 2 || Math.min(back, fore) > 0) f.push('the staircase not drawn as a slant, two strokes or more of one kind (' + back + ' "\\", ' + fore + ' "/"): ' + rows.filter(r => r.trim()).slice(1, 14).join(' | '));
+        if (!seg('go ahead', 'quit').includes('cave')) f.push('"go ahead" not back up into the cave: ' + seg('go ahead', 'quit').slice(0, 200));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0slant', near: ['map'], what: 'Dingus Quest Zero\'s built passages on the diagonal (the user\'s, 2026-10-31: ways off the compass, step 3; HOUSE.md\'s built passages on the diagonal), by the chunks made and the words told: at seed 3 every built stratum\'s passages on the diagonal (dq0 -A, the tests\'), the dungeon made and entered as ever (its first look told); the chunks the cache has of its top stratum have rooms and passages with cut corners (T_CUT, three or more), each between two of a passage\'s squares that share only a corner with it on either side (a diagonal way\'s, chunk.c\'s slant: a staircase cut as the caves\' are, caves.c\'s slants), none in a room\'s bounds; "go east" from the kitchen by the way in walks a passage on the diagonal, told as it bends ("The passage bends away northeast.", HOUSE.md\'s a passage\'s heading), to its end; the map draws a cut corner ("/" or "\\")',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -A', 'look', 'go east', 'map', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        if (!/You (can see|are in)/.test(s)) f.push('no first look told');
+        const i = s.indexOf('> go east > go east'), go = i < 0 ? '' : s.slice(i, s.indexOf('> map', i));
+        if (!go.includes('The passage bends away northeast.') || !/The passage (comes to a door|ends here|forks here)|You are in a passage/.test(go)) f.push('"go east" not along a passage on the diagonal to its end ("The passage bends away northeast."): ' + go.slice(0, 300));
+        const raw = out.replace(/\x1b\[[0-9;]*m/g, ''), m0 = raw.indexOf('The map (you face');
+        if (m0 < 0 || !/[/\\]/.test(raw.slice(m0, raw.indexOf('> quit', m0)))) f.push('no cut corner drawn on the map ("/" or "\\")');
+        let cuts = 0, bad = 0;
+        for (const c of cacheChunks(m, 0).values()) {
+          if (!c.rooms.length) continue;
+          const t = (x, y) => x < 0 || y < 0 || x > 31 || y > 31 ? 0 : c.tile[y * 32 + x];
+          const pass = v => v === T_CORR || v === 3 || v === 5 || v === 10;
+          for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+            if (t(x, y) !== 11) continue;
+            cuts++;
+            const inRoom = c.rooms.some(r => x >= r.x - 1 && x <= r.x + r.w && y >= r.y - 1 && y <= r.y + r.h);
+            const diag = (pass(t(x - 1, y)) && pass(t(x, y + 1))) || (pass(t(x + 1, y)) && pass(t(x, y - 1))) ||
+              (pass(t(x - 1, y)) && pass(t(x, y - 1))) || (pass(t(x + 1, y)) && pass(t(x, y + 1)));
+            if (inRoom || !diag) bad++;
+          }
+        }
+        if (cuts < 3) f.push('fewer than three cut corners in the top stratum\'s built chunks: ' + cuts);
+        if (bad) f.push(bad + ' cut corner(s) in a room\'s bounds or not between two of a passage\'s squares');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0rockwall', near: ['map'], what: 'Dingus Quest Zero\'s rock looked at (slice 4.10: "examine the wall", the world\'s wall_look, I_TRACE\'s TRC_WALL; HOUSE.md\'s rock\'s kinds and hardness), by the words told: at seed 3 by the stairway (dq0 -T) a cell\'s wall ahead masonry ("The wall\'s masonry"); down the stairway (natural caves) a skilled miner (Mining 95) examines the wall ahead and round it (the last "look at the wall", the verbs\' walllook), the bare rock, how it looks, and named (its Mining test, the appraisal\'s AP_ROCK: "The wall\'s the bare rock, buff: sandstone."), the name always the looks\' rock\'s',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml min 95 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'examine the wall', 'd', 'examine the wall', 'turn left', 'examine the wall', 'turn left', 'look at the wall', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out);
+        const looks = { shale: 'flaky', sandstone: 'buff', limestone: 'pale grey', slate: 'blue-grey', marble: 'white', granite: 'speckled grey',
+          basalt: 'black', quartz: 'white-veined', ironstone: 'rusty red', 'copper ore': 'green-stained' };
+        const said = [...s.matchAll(/(?:examine|look at) the wall (The wall's masonry|The wall's the bare rock, ([a-z -]+?)(?:: ([a-z ]+))?\.|It's too dark|There's no wall)/g)];
+        if (said.length !== 4) return ['the walls not told, four times: ' + said.map(x => x[1]).join(' / ')];
+        if (said[0][1] !== 'The wall\'s masonry') f.push('the cell\'s wall not masonry: ' + said[0][0]);
+        for (const [all, w, look, name] of said.slice(1)) {
+          if (!look) { f.push('a cave\'s wall not the bare rock: ' + all); continue; }
+          if (!Object.values(looks).includes(look)) f.push('"' + all + '": not a rock\'s looks');
+          if (name && looks[name] !== look) f.push('"' + all + '": ' + name + ' doesn\'t look ' + look);
+        }
+        if (!said.slice(1).some(x => x[3])) f.push('the miner never named the rock');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0tunnel', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's tunnellers (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers and builders, HOUSE.md's tunnellers, for review): a hand-written theme's dwarf miners (seed 1, south of the start, wary; a miner digs with the tools it carries, kinds.txt's ways m: its pick, outfits.txt's [role khuzmin]), the character in their guardroom, the portcullis it came in by let down behind it ('close the door'); one of them put in the passage beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked).  A portcullis it can't raise, no way nearer: it digs its way round it (dq0d's dig_way, a diagonal round the door: nearer as the crow flies; I_KIT's KT_DIG, the world's wdig.c a spell of ten minutes at a time by the character's rules: a pick's rate on the wall, a Strength test by its sheet), its first spell seen through the portcullis (E_DEN's DE_DIG: \"The dwarf miner digs into the wall.\", or heard, a scraping in rock), the hole kept as it goes (DUG), and through (DE_DUG: the square a passage, told seen, \"A fresh tunnel opens ...\", or heard, rock falling); the dwarf come through it after; both referees",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7',
+        'open the door', 'south', 'turn around', 'close the door', 'wait', 'wait 2 hours', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const a = m.acia, read = a.read;
+        let typed = '', done = false;
+        m.tun = null;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'wait' && !done && m.dq0) {   // (The scene: one dwarf miner beyond the shut door ahead, hostile, drawn on)
+                const { L, K } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
+                const w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+                const px = u16(L.pcX), py = u16(L.pcY), sn = h[L.pcSn], S = stratumRec(m, sn), ch = liveChunks(m, sn);
+                const tile = (x, y) => {
+                  const b = S && liveChunks(m, sn)[((x - S.x0) >> 5) + ',' + ((y - S.y0) >> 5)];
+                  return b ? b[443 + ((y - S.y0) & 31) * 32 + ((x - S.x0) & 31)] & 15 : -1;
+                };
+                const at = k => L.actor + k * L.actorSize, named = k => {
+                  let n = '';
+                  for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]);
+                  return n;
+                };
+                const f = h[L.pcFace], dx = [0, 1, 1, 1, 0, -1, -1, -1][f], dy = [-1, -1, 0, 1, 1, 1, 0, -1][f];
+                const k = [...Array(L.nactors).keys()].find(j => named(j) === 'dwarf miner');
+                if (k !== undefined && ch && tile(px + dx, py + dy) === 3 && [1, 4].includes(tile(px + 2 * dx, py + 2 * dy))) {
+                  const x = px + 2 * dx, y = py + 2 * dy, o = at(k);
+                  w16(o + L.aX, x);
+                  w16(o + L.aY, y);
+                  h[o + L.aSn] = sn;
+                  h[o + L.aAttitude] = K.AT_HOSTILE;
+                  h[o + L.aDoing] = 0;
+                  const R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+                  R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8;
+                  R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
+                  R.mem[q + R.SN] = sn;
+                  R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
+                  const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+                  const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+                  ram[ad('drawn') + k] = 8;
+                  ram[ad('lsx') + 2 * k] = px & 255; ram[ad('lsx') + 2 * k + 1] = px >> 8;
+                  ram[ad('lsy') + 2 * k] = py & 255; ram[ad('lsy') + 2 * k + 1] = py >> 8;
+                  h[L.denSeq] = h[L.denSeq] + 1 & 255;
+                  m.tun = { k, door: [px + dx, py + dy], beyond: [x, y], pc: [px, py], tile };
+                }
+                done = true;
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), DE_DIG = 24, DE_DUG = 25;
+        if (!m.tun) return ['the scene not set: no dwarf miner near, or no portcullis ahead with a floor beyond it'];
+        const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.tun.k + 1);
+        const digs = dens.filter(e => e.a === DE_DIG), dug = dens.filter(e => e.a === DE_DUG);
+        if (!digs.length) f.push('no spell of digging begun (E_DEN DE_DIG)');
+        if (!dug.length) f.push('never through (E_DEN DE_DUG)');
+        for (const e of dug) {
+          const t = m.tun.tile(e.w1, e.w2);
+          if (t !== 4) f.push('a square dug through not a passage now: ' + [e.w1, e.w2] + ', tile ' + t);
+          if (Math.max(Math.abs(e.w1 - m.tun.pc[0]), Math.abs(e.w2 - m.tun.pc[1])) > 3) f.push('dug far from the way round the door: ' + [e.w1, e.w2]);
+        }
+        if (m.tun.tile(m.tun.door[0], m.tun.door[1]) !== 3) f.push('the door itself dug');
+        if (!/scraping in rock|The dwarf miner digs into the wall/.test(s)) f.push('its digging neither seen nor heard');
+        if (!/A fresh tunnel opens|rock falling/.test(s)) f.push('the way through not told');
+        const fin = T.of('quit').at, me = fin && fin.actors.find(a => a.k === m.tun.k);
+        if (!me || (me.x === m.tun.beyond[0] && me.y === m.tun.beyond[1])) f.push('the dwarf never came on from beyond the door: ' + JSON.stringify(me));
+        if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> close the door'), s.indexOf('> close the door') + 1500));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0hunger', asks: true, near: ['time'], what: 'Dingus Quest Zero\'s hunger and thirst (slice 4.9: HOUSE.md\'s water, hunger and thirst, the user\'s of 2026-10-21, DECISIONS.md\'s; the referee\'s, rswant.h), by the words told: at seed 3 in the kitchen, nothing near, its torch put out: "eat the rations" at once refused, not hungry; "wait 9 hours", the want\'s first levels told as they come ("You\'re getting thirsty.", "You\'re getting hungry.") and the status line\'s "thirsty"; over to the kitchen\'s well first ("look into the well"), its torch lit again after the wait, "drink" its fill there; "eat the rations" a meal (a day\'s ration begun, five minutes), again refused; "fill the waterskin" at the well (the old kit\'s, empty); its torch put out, "wait 17 hours", "You\'re very thirsty."; "drink from the waterskin" its pints',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm', 'eat the rations', 'look into the well', 'douse the torch', 'wait 9 hours', 'light the torch', 'drink', 'eat the rations',
+        'eat the rations', 'fill the waterskin', 'douse the torch', 'wait 17 hours', 'drink from the waterskin', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const at = (line, n = 0) => { let i = -1; for (let k = 0; k <= n; k++) i = o.indexOf('> ' + line + ' > ' + line + ' ', i + 1); return i; };   // (A line typed, echoed)
+        const after = (line, words, n = 0) => { const i = at(line, n); return i >= 0 && o.slice(i, i + 2 * line.length + 300).includes(words); };
+        if (!after('eat the rations', 'You\'re not hungry.')) f.push('the first "eat the rations" not refused, not hungry');
+        const w8 = at('wait 9 hours'), ap = at('light the torch'), w8s = w8 >= 0 && ap > w8 ? o.slice(w8, ap) : '';
+        if (!w8s.includes('You\'re getting thirsty.')) f.push('eight hours waited, not told "You\'re getting thirsty."');
+        if (!w8s.includes('You\'re getting hungry.')) f.push('eight hours waited, not told "You\'re getting hungry."');
+        if (o.slice(0, w8).includes('You\'re getting')) f.push('hunger or thirst told before eight hours');
+        if (!/thirsty/.test(w8s.replace(/You're getting thirsty\./g, ''))) f.push('no "thirsty" on the status line');
+        if (!after('drink', 'You drink your fill.')) f.push('"drink" by the well not its fill');
+        if (!after('eat the rations', 'You eat a meal.', 1)) f.push('"eat the rations" after eight hours not a meal');
+        if (!after('eat the rations', 'You\'re not hungry.', 2)) f.push('a meal eaten, "eat the rations" again not refused');
+        if (!after('fill the waterskin', 'You fill your waterskin.')) f.push('"fill the waterskin" at the well not filled');
+        const w16 = at('wait 17 hours'), ds = at('drink from the waterskin');
+        if (!(w16 >= 0 && ds > w16 && o.slice(w16, ds).includes('You\'re very thirsty.'))) f.push('sixteen hours more, not told "You\'re very thirsty."');
+        if (!after('drink from the waterskin', 'You drink from your waterskin.')) f.push('"drink from the waterskin" not drunk from it');
+        if (f.length) this.notes = [o.slice(Math.max(0, w8 - 200), w8 + 2500)];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0swim', near: ['body'], what: 'Dingus Quest Zero\'s water (slice 4.9: DUNGEON.md\'s water, HOUSE.md\'s water: the plan\'s lakes, a chunk\'s water), by the words told and the hub: at seed 2 down the way down (the natural stratum below, a flooded chamber north of its landing, five feet deep), north into it: out of its depth, swimming (its depth in the hub\'s pc_wet, its squares a minute the referee\'s P_SWIM in pc_swim, its breath pc_breath), told "You\'re out of your depth: you swim.", its torch put out ("The water puts out your light."), its swimming told by the referee\'s grade ("You struggle to keep afloat."): in the dark then, the walk stopped',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 2 -c /ram/c.hm -T', 'd', 'n', 'look', 'quit', 'echo $status']) },
+      start(m) {   // (The character's water, as each line's typed: the hub's pc_wet, pc_swim, pc_breath)
+        const a = m.acia, read = a.read;
+        let typed = '';
+        m.wet = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              const h = m.dq0 && m.dq0.bank(0);
+              if (h) {
+                const { L } = m.dq0.layout();
+                m.wet.push({ line: typed, wet: h[L.pcWet], swim: h[L.pcSwim], breath: h[L.pcBreath] });
+              }
+              typed = '';
+            } else if (c >= 32) typed += String.fromCharCode(c);
+          }
+          return read.call(a, r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const at = line => o.indexOf('> ' + line + ' > ' + line + ' ');
+        const n = at('n'), s = at('look');
+        const ns = n >= 0 && s > n ? o.slice(n, s) : '';
+        if (!ns.includes('You\'re out of your depth: you swim.')) f.push('north into the flooded chamber, not told "You\'re out of your depth: you swim."');
+        if (!ns.includes('The water puts out your light.')) f.push('swimming, its torch not put out');
+        if (!/You swim strongly\.|You struggle to keep afloat\./.test(ns)) f.push('its swimming not told (the referee\'s test)');
+        const w = (m.wet || []).find(e => e.line === 'look');
+        if (!w || (w.wet & 0x7F) < 5 || !w.swim || !w.breath) f.push('swimming not in the hub (pc_wet, pc_swim, pc_breath): ' + JSON.stringify(w));
+        this.notes = [JSON.stringify(m.wet)];
+        if (f.length) this.notes.push(o.slice(Math.max(0, n - 300), n + 1500));
         return f;
       },
       sdcard: true
@@ -3257,7 +3912,9 @@ module.exports = {
     {
       name: 'dq0cmd', what: 'Dingus Quest Zero\'s command interpreter (Phase 3C, the user\'s DesignIdeas.md): at seed 3 (-T), three giant rats near, the target set by a choice ("target the rat": which, in their order from the left round to the right, two the same way and as far told apart by their side, answered by number) and shown; a dagger thrown hard at the closest of them (a missile\'s attack since slice 4.7: taken in hand, thrown, the referee\'s Throwing; it misses, the rats come on, one killed as its bite\'s fended off with the torch); a bare take, the last thing named carried, asking which of the things near (the dead rat\'s body among them), answered by a name, then by a selector; take all, hands and pack full; a bare drop, nothing carried of those; it; a throw with no mark, the target lost from sight; a bare attack, the senseless rat finished; the target cleared; a look one way (turned to), a look round the corner, N alone going north',
       init: 't_rc', cycles: 1500e6,
-      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T\r' +
+      // (-R 30: the dice's offset that gives the game it was written for, a rat killed for its body, since the dice by
+      // who asks, 2026-10-30: the same dungeon, other rolls)
+      machine: { input: '\u0101bind -a /sd/0/games /bin\r\u0101hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm\r\u0101dq0 -p t -s 3 -c /ram/c.hm -k pick -T -R 30\r' +
         ['target the rat', '1', 'target', 'throw the dagger hard at the closest rat', 'drop pick', 'examine the torch', 'take', 'the bones', 'take',
           'the closest', 'take all', 'i', 'drop', 'take it', 'throw the dagger', 'attack', 'clear target', 'target', 'look north',
           'look around the corner', 'n', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
@@ -3284,7 +3941,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple", "give": you can\'t, yet); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
+      name: 'dq0parse', what: 'Dingus Quest Zero\'s parser honest (a review of the commands, 2026-10-22): a verb it doesn\'t know named ("bribe": I don\'t know how to bribe), one the grammar has but the game doesn\'t do yet ("grapple": you can\'t, yet); a gift the game takes since slice 4.8 ("give the torch to the rat": the rat out of reach, or out of sight); "?" the help; several commands in a line, each in turn ("then", ";", "and": "take the bones and the pick", the verb carried); "north and east" one way; a manner word not taking the command ("examine the torch carefully" an examining, not a watch for traps); "pick the bones" taken, not a lock picked; "defend counter" and "defend best"; "run away" a flight, not a run',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T',
         'bribe the rat', 'grapple the rat', 'give the torch to the rat', '?', 'examine the torch carefully', 'status', 'drop pick then take it',
@@ -3295,7 +3952,7 @@ module.exports = {
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         const want = ['> bribe the rat I don\'t know how to bribe.', '> grapple the rat You can\'t grapple in this game yet.',
-          '> give the torch to the rat You can\'t give in this game yet.', '> ? Moving: north,', 'Several at once: north then east;',
+          '> give the torch to the rat', '> ? Moving: north,', 'Several at once: north then east;',
           '> examine the torch carefully', '> status Pace: a walk', 'Watching: nothing in particular.',
           '> drop pick then take it Put down.', 'Taken.', '> drop pick; take it Put down. Taken.',
           '> take the bones and the pick Taken. Taken.', 'a pick', 'bones', '> pick the bones Taken.',
@@ -3309,6 +3966,9 @@ module.exports = {
           at = i + w.length;
         }
         if (/examine the torch carefully[^>]*I don't understand that/.test(o)) f.push('"examine the torch carefully" not understood');
+        if (!/> give the torch to the rat (The giant rat is too far off: you'd need to be within reach\.|You see no rat here\.)/.test(o)) {
+          f.push('the gift not answered as one out of reach (' + (o.match(/> give the torch to the rat[^>]*/) || [''])[0] + ')');
+        }
         return f;
       },
       sdcard: true
@@ -3454,14 +4114,19 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0kit', outfit: true, what: 'Dingus Quest Zero\'s denizens\' gear (the outfits\' plan\'s phase 1: games/dq0/outfits.txt\'s [role bandit], DENIZENS.md\'s their things, HOUSE.md\'s the denizens\' gear), by the item store\'s records and the blows told: a lair of hostile bandits (a theme of them, as dq0disarm\'s) placed as the game begins, each bandit\'s things made (items.h\'s IW_DEN, its number its own: the hub\'s actor\'s did), clothes and a belt worn, a weapon held or on its belt (in its carrier: a sword in its scabbard), two bandits\' things not the same, the same seed\'s game the same things (kinds, makes, materials); a bandit drawing its weapon from its belt before it strikes (WB_DRAWS, told: "The bandit draws its hatchet."), striking with it (its words that weapon\'s), its weapon let fall the same record (WB_DROP: on the floor); one killed, its things on its body ("look at the body": what it wore, its belt and its sheath\'s knife on it), its vest taken from the body; the game saved and carried on, each denizen\'s things the same records (their numbers, makes, places)',
+      name: 'dq0kit', outfit: true, what: 'Dingus Quest Zero\'s denizens\' gear (the outfits\' plan\'s phase 1: games/dq0/outfits.txt\'s [role bandit], DENIZENS.md\'s their things, HOUSE.md\'s the denizens\' gear), by the item store\'s records and the blows told: a lair of hostile bandits (a theme of them, as dq0disarm\'s) placed as the game begins, each bandit\'s things made (items.h\'s IW_DEN, its number its own: the hub\'s actor\'s did), clothes and a belt worn, a weapon held or on its belt (in its carrier: a sword in its scabbard), two bandits\' things not the same, the same seed\'s game the same things (kinds, makes, materials); a bandit drawing its weapon from its belt before it strikes (WB_DRAWS, told: "The bandit draws its hatchet."), striking with it (its words that weapon\'s), its weapon let fall the same record (WB_DROP: on the floor); one killed, its things on its body ("look at the body": what it wore, its belt and its sheath\'s knife on it), its vest taken from the body; the game saved and carried on, each denizen\'s things the same records (their numbers, makes, places)  (Its scene set by a poke since 2026-10-30, dq0Poke\'s: the bandits wary as the first attack is typed, the one down finished, the other not fighting on; since the denizens\' day, 2026-10-31, with no day: the environment\'s dq0hour=128, rc\'s, the bandits about, none asleep or on watch.)',
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
-        'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
+        'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
         'cp /ram/g/theme.txt /ram/h/theme.txt', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
         'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'drop the backpack', 'drop the torch', 'defend dodge', 'attack', 'attack', 'look at the body',
         'take the leather vest from the body', 'quit', 'dq0 -d /ram/g', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm'", 'quit',
         'echo $status']) },
+      start(m) {   // (The scene set, 2026-10-30: as the first attack's typed, the bandits wary (hub.h's AT_WARY), the one down
+        // finished, the other no longer fighting on: its body's vest taken as the test means; since the denizens throw (a
+        // bandit's spear in hand, its knife kept) the dice had the other knock the character senseless first)
+        dq0Poke(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'attack', n: 1, k, set: { attitude: 2 } })));
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], o = dq0Story(out), I = DQ0_I;
@@ -3554,11 +4219,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0lair', outfit: true, what: 'Dingus Quest Zero\'s denizens\' belongings and valuables (the outfits\' plan\'s phases 2 and 3: games/dq0/outfits.txt\'s [role bandit] beds, [lair bandit], [purse bandit], DENIZENS.md\'s their things, HOUSE.md\'s the denizens\' belongings; the user\'s answers 6, 9, 10) and what\'s seen of them (the user\'s three levels, 2026-10-27), by the item store\'s records and the words: dq0kit\'s hostile bandits, each one\'s bed (a blanket, lying in its lair\'s home room: its faction\'s), the lair\'s larder (a sack of rations) made as it\'s placed; each one met, its purse (pennies in its pouch); each box at a bed locked, its key in that bandit\'s pouch alone fitting it; a bandit looked at "armed" (the look\'s general words), examined (what it holds and wears), assessed (each one\'s make); one killed, a thing worn beneath its clothes not told as its body\'s looked at, found as it\'s searched; the same seed\'s game the same belongings',
+      name: 'dq0lair', outfit: true, what: 'Dingus Quest Zero\'s denizens\' belongings and valuables (the outfits\' plan\'s phases 2 and 3: games/dq0/outfits.txt\'s [role bandit] beds, [lair bandit], [purse bandit], DENIZENS.md\'s their things, HOUSE.md\'s the denizens\' belongings; the user\'s answers 6, 9, 10) and what\'s seen of them (the user\'s three levels, 2026-10-27), by the item store\'s records and the words: dq0kit\'s hostile bandits, each one\'s bed (a blanket, lying in its lair\'s home room: its faction\'s), the lair\'s larder (a sack of rations) made as it\'s placed; each one met, its purse (pennies in its pouch); each box at a bed locked, its key in that bandit\'s pouch alone fitting it; a bandit looked at "armed" (the look\'s general words), examined (what it holds and wears), assessed (each one\'s make); one killed, a thing worn beneath its clothes not told as its body\'s looked at, found as it\'s searched; the same seed\'s game the same belongings.  The scene set (since the denizens\' day, 2026-10-31: bandits keep watches, a third asleep): no day (the environment\'s dq0hour=128, rc\'s, before its games: dq0d\'s), every one about as before',
       init: 't_rc', cycles: 1700e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
         'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
-        'cp /ram/g/theme.txt /ram/h/theme.txt', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
+        'cp /ram/g/theme.txt /ram/h/theme.txt', 'dq0hour=128', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
         'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'examine the bandit', 'assess the bandit', 'drop the backpack', 'drop the torch', 'attack',
         'attack', 'look at the body', 'search the body', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm'", 'quit',
         'echo $status']) },
@@ -3738,8 +4403,9 @@ module.exports = {
     {
       name: 'dq0save', meaning: true, what: 'Dingus Quest Zero kept (dq0 -d: the save on a card, here /ram), by the game\'s state: a thing put down, down a stairway, quit (kept as it ends: the world\'s save), the folder listed (the UI\'s game, the things, the world\'s change records, the denizens\', the maker\'s seen maps), then the game carried on: in the stratum below, where it stood and as it faced, seeing what it saw, carrying what it carried, each thing where it was (worn, held, in what)',
       // (850M, not 800M, 2026-10-29: two games begun, the referee's and the world's code the more for the shields and
-      // the dens (some 4M more to load); it was at 799.4M)
-      init: 't_rc', cycles: 850e6,
+      // the dens (some 4M more to load); it was at 799.4M; 940M, 2026-10-30: 851.0M with the answers' work, the budget
+      // some 10% over it)
+      init: 't_rc', cycles: 940e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept', 'drop the dagger',
         'd', 'quit', 'ls /ram/kept', 'dq0 -d /ram/kept', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -3903,8 +4569,10 @@ module.exports = {
     },    {
       name: 'dq0scent', what: 'Dingus Quest Zero\'s denizens following a scent (slice 4.1, DENIZENS.md\'s a scent followed; the user\'s, 2026-10-21: keen noses follow a scent far longer than an hour), by their bodies: at seed 3 with the hand-written theme\'s hostile giant rats (a keen nose, 7: K_NOSE), the first of them fought off by the way down, the character gone out of the room in the dark, through its doorway and round the corner into the passage west, and still there five minutes: the rats come after it along the squares it walked, round the corner (the world\'s journal of its squares, its store\'s older trail: from the room none of them can see it in the dark, nor go straight at it through the wall), two of them on its trail within four squares of it at the end (before the traces, they went back to the room and their lair) (since slice 4.1b, the kit\'s torch in its off hand, the worse for it, a blow at its arm letting it fall: Club 60 in its file so the rats are fought off as they were, the torch put out where it lies, "douse the lit torch") (since 2026-10-29 its first move a step south, not a walk: the rat beside it not noticed it yet, an unaware denizen engaging no one, the walk went on past where it stopped)',
       init: 't_rc', cycles: 2500e6,
+      // (-R 22: the dice's offset that gives the game it was written for, since the dice by who asks,
+      // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt', 'echo ml clu 60 >> /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'turn left', 'step forward', 'douse the lit torch', 'go south', 'go west', 'go west', 'wait 1 minute',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -R 22', 'turn left', 'step forward', 'douse the lit torch', 'go south', 'go west', 'go west', 'wait 1 minute',
         'wait 1 minute', 'wait 1 minute', 'wait 1 minute', 'wait 1 minute', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
@@ -3932,7 +4600,7 @@ module.exports = {
 
     {
       name: 'dq0pose', meaning: true, what: 'Dingus Quest Zero\'s body positions (slice 4.6, HOUSE.md\'s body position, for review), by the hub\'s state and the words: at seed 3 by the way down the character crouches ("You crouch.", a second, the status line\'s CROUCHED), is told it\'s crouching already, kneels (the grammar\'s "kneel", the UI\'s by the word), sits, stands ("You get to your feet."), is told it\'s on its feet already, lies down, gets up (the book\'s Rise), crouches and steps forward crouched (a low walk: still crouched, a slow walk\'s pace), sits and steps forward (up first, a moment: "You get to your feet.", standing after)',
-      init: 't_rc', cycles: 400e6,
+      init: 't_rc', cycles: 440e6,   // (400e6 till 2026-10-30: 398.6M with the answers' work, the budget some 10% over it)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'crouch', 'crouch', 'kneel',
         'sit', 'stand', 'stand', 'lie down', 'get up', 'crouch', 'step forward', 'sit', 'step forward', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -3958,7 +4626,7 @@ module.exports = {
     },
     {
       name: 'dq0quiet', meaning: true, what: 'Dingus Quest Zero\'s moving quietly (slice 4.6, D15: Stealth tested as it starts, again as something changes; HOUSE.md\'s sound and stealth, for review), by the referee\'s replies and the hub\'s state: at seed 3 by the way down, a step at a walk as loud as its pace (the senses\' to reckon, the hub\'s pc_noise 0xFF, no Stealth test); creeping, its first step tested (the world\'s slot: RS_TEST, P_STEALTH), its loudness the grade\'s (a critical success 0, a marginal 1, a marginal failure 2, a critical 3), its next not tested again, the same loudness; crouched, tested again (its position changed); a walk again, the senses\' to reckon, no test',
-      init: 't_rc', cycles: 400e6,
+      init: 't_rc', cycles: 450e6,   // (400e6 till 2026-10-30: 399.4M at the morale's merge, over it with succession's parts)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'step forward', 'creep',
         'step back', 'step forward', 'crouch', 'step back', 'stand', 'walk', 'step forward', 'wait', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -4128,9 +4796,11 @@ module.exports = {
     {
       name: 'dq0sway', what: 'Dingus Quest Zero\'s attitudes and influence (DENIZENS.md; the user: "skills like animal husbandry could influence animals encountered"), by the denizens\' replies to the character\'s ways with them (the hub\'s sway: the result, the attitude before and after) and the actors\' records (the referee\'s Animalcraft tests in their order at this seed: HarnMaster\'s): a character good with animals (Animalcraft 90, hmchar\'s file) at seed 21\'s giant rats (wary, the vermin faction\'s), words refused (an animal: persuasion doesn\'t reach it), how one seems (examined: wary), befriended a test at a time (indifferent, then won over: an ally, following; then asked no more), named Grub, asked to wait and seen waiting as the character turns round, then to follow, following it across the room (seen beside it as it turns round again) and down the stairway (come along to the stratum below); the game kept (dq0 -d) and carried on, Grub its ally still; then a fresh game, a blow at a rat out of reach not struck, the rat as wary as it was',
       init: 't_rc', cycles: 1400e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -d /ram/kept',
+      // (-R 117: the dice's offset that gives the game it was written for, since the dice by who asks,
+      // 2026-10-30: the same dungeon, other rolls)
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -d /ram/kept -R 117',
         'persuade the rat', 'examine the rat', 'befriend the rat', 'befriend the rat', 'befriend the rat', 'name the rat grub', 'tell grub to wait', 'turn around',
-        'follow me', 'go east', 'turn around', 'd', 'quit', 'dq0 -d /ram/kept', 'examine grub', 'quit', 'dq0 -p t -s 3 -c /ram/a.hm -T', 'attack the rat',
+        'follow me', 'go east', 'turn around', 'd', 'quit', 'dq0 -d /ram/kept -R 117', 'examine grub', 'quit', 'dq0 -p t -s 3 -c /ram/a.hm -T -R 117', 'attack the rat',
         'examine the rat', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
@@ -4162,6 +4832,184 @@ module.exports = {
         const a = T.of('attack the rat');
         if (dq0Ev(a, 'E_FIGHT', { who: 0 }).length) f.push('a blow struck at a rat out of reach');
         sw(T.after(a, 'examine the rat'), { kind: 'SW_LOOK', now: 'AT_WARY' }, 'the rat not as wary as it was');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0fetch', near: ['denizens'], what: 'Dingus Quest Zero\'s errands and gifts (slice 4.8, DENIZENS.md\'s fetching and influence; HOUSE.md\'s fetching and gifts, for review): at seed 21 (dq0sway\'s game) a giant rat befriended, won over and named Grub; two rations put down and the character two squares off, turned round to see them; Grub told to fetch the rations ("tell Grub to fetch the rations": the order\'s word not the thing\'s, the parser\'s), going to fetch them, picking them up in its mouth (two pounds: a beast\'s 3 lb at most) and handing them back to the character as it waits (E_TASK TE_FETCHED, FT_TOOK then FT_GAVE; the rations the character\'s again); asked to fetch a thing it can\'t see, refused; offered the tinderbox (no food: a beast has no use for it, SR_CANT); given a ration ("give 1 ration to Grub": its worth and food, the gift taken, a lot\'s one split off, FT_GOT, the character\'s rations one fewer); told to follow at 3 squares (SR_OK)',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -R 117',
+        'befriend the rat', 'befriend the rat', 'name the rat grub', 'drop 2 rations', 'move east 2 squares', 'turn around', 'tell grub to fetch the rations', 'wait', 'wait',
+        'inventory', 'tell grub to fetch the anvil', 'give the tinderbox to grub', 'give 1 ration to grub', 'inventory', 'tell grub to follow me at 3 squares',
+        'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [];
+        const sw = (t, want, what) => { if (!dq0Rep(t, 'sway', want).length) f.push(what + ' (' + JSON.stringify(t.replies.filter(r => r.req === 'sway')) + ')'); };
+        const b = T.filter(t => t.line === 'befriend the rat');
+        if (!b.some(t => dq0Rep(t, 'sway', { now: 'AT_ALLIED' }).length)) f.push('the rat not won over');
+        const rations = s => dq0Carried(s).filter(i => i.name === 'rations').reduce((n, i) => n + i.qty, 0);
+        const d = T.of('drop 2 rations'), had = d.after ? rations(d.after) : 0;
+        const fe = T.of('tell grub to fetch the rations');
+        sw(fe, { kind: 'SW_ORDER', order: 'OR_FETCH', result: 'SR_OK' }, 'Grub not sent to fetch the rations');
+        const ev = T.filter(t => t.k >= fe.k).flatMap(t => dq0Ev(t, 'E_TASK', { te: 'TE_FETCHED' }));
+        if (!ev.some(e => e.ft === 'FT_TOOK')) f.push('Grub never picked the rations up (' + JSON.stringify(ev) + ')');
+        if (!ev.some(e => e.ft === 'FT_GAVE')) f.push('Grub never handed the rations over (' + JSON.stringify(ev) + ')');
+        const inv = T.of('inventory');
+        if (!inv.after || rations(inv.after) !== had + 2) f.push('the rations not the character\'s again (' + (inv.after && rations(inv.after)) + ', ' + had + ' before)');
+        if (dq0Rep(T.of('tell grub to fetch the anvil'), 'sway', {}).length) f.push('a thing not seen asked of the denizens');
+        sw(T.of('give the tinderbox to grub'), { kind: 'SW_GIVE', result: 'SR_CANT' }, 'a beast taking a tinderbox');
+        const g = T.of('give 1 ration to grub');
+        sw(g, { kind: 'SW_GIVE', result: 'SR_OK' }, 'the ration not given');
+        if (!dq0Ev(g, 'E_TASK', { te: 'TE_FETCHED', ft: 'FT_GOT' }).length) f.push('the ration not taken (' + dq0Evs(g) + ')');
+        const inv2 = T.after(g, 'inventory');
+        if (!inv2.after || rations(inv2.after) !== had + 1) f.push('the character\'s rations not one fewer (' + (inv2.after && rations(inv2.after)) + ')');
+        sw(T.of('tell grub to follow me at 3 squares'), { kind: 'SW_ORDER', order: 'OR_FOLLOW', result: 'SR_OK' }, 'Grub not told to follow at a distance');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0turnsame', near: ['time', 'fight'], meaning: true, what: 'Dingus Quest Zero at the turns pace the same game whatever the tasks\' timing (the turns pace: a game turns on its seed and its commands alone): dq0cmd\'s fight at seed 3 (-T, -R 30: three giant rats, a dagger thrown at one, then blows) played twice, the second time its commands typed late (its first some 6M cycles after the prompt, the rest 2M), every event of the world\'s and the denizens\' the same, in the same order, at the same game times; 2026-10-31: a throw\'s two intents (taken in hand, then thrown) let the world\'s clock and the denizens\' turn in between them as the tasks\' timing fell (ui_giving)',
+      init: 't_rc', cycles: 1500e6,
+      get machine() {
+        const g = 'dq0 -p t -s 3 -c /ram/c.hm -k pick -T -R 30', cmds = ['target the rat', '1', 'throw the dagger hard at the closest rat', 'attack', 'attack', 'wait', 'quit'];
+        return { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', g, ...cmds].map(l => '\u0101' + l + '\r').join('') +
+          '\u0101' + g + '\r' + cmds.map((l, i) => '\u0101' + (i ? '\u0100' : '\u0100\u0100\u0100') + l + '\r').join('') + '\u0101echo $status\r' };
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const g = m.dq0.games, f = [];
+        if (g.length !== 2) return ['games played: ' + g.length + ', not 2'];
+        const ev = k => g[k].events.concat(g[k].dens, g[k].replies).map(e => JSON.stringify(Object.assign({}, e, { line: undefined })));
+        const a = ev(0), b = ev(1);
+        let d = 0;
+        while (d < a.length && d < b.length && a[d] === b[d]) d++;
+        if (d < a.length || d < b.length) f.push('the late game not the same, from its event ' + d + ' (of ' + a.length + ' and ' + b.length + '): ' + (a[d] || 'none') + ' / ' + (b[d] || 'none'));
+        if (a.length < 20) f.push('too little happened: ' + a.length + ' records');
+        this.notes = [a.length + ' and ' + b.length + ' records (events, the denizens\' events, the replies)' + (f.length ? '' : ', the same in both')];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0starttime', near: ['time'], what: 'Dingus Quest Zero\'s start timed at the normal pace (the user\'s: a start of some seconds is fine with its progress shown; the start agent\'s figures, 2026-10-30: on the board, at 3.58 MHz, a minute and more, the SD card\'s reading two thirds of it), from Enter on the dq0 line to the first prompt: seed 1 (a stand-in\'s theme) and seed 123456789 (its own history made by themegen, as a game whose seed is the clock\'s), each within its budget; the progress shown all the way (no silence on the screen longer than about 10 s at 3.58 MHz); and the help\'s line said with the first prompt, after the first look; and each task\'s overlays in its banks as ld65 made them (read packed from the card and unpacked in place: the unpack library)',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p n -s 1 -c /ram/c.hm', 'quit',
+        'dq0 -p n -s 123456789 -c /ram/c.hm', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
+      expect: ['Dingus Quest Zero is starting', 'The place\'s history is being made', 'The dungeon is being made ready', 'Nearly ready', '% echo $status'],
+      // (The budgets (the lead's, 2026-10-30): the start's cycles as measured then, 282M and 372M, with a tenth more;
+      // 252M and 338M since the overlays' files are packed, each bank read straight into its bank, dq0.ovl opened once;
+      // 229M and 311M with the storage driver's quicker block reads; 208M and 289M with the overlays packed (LZ4's
+      // block, the unpack library's: modules/unpack, 2026-10-31), so 229M and 318M now, a tenth more.  The silence's:
+      // 36M cycles, 10 s at 3.58 MHz; 25M now, the longest (the UI's overlays read, before the screen's made).  The
+      // help's line: after the first look's words, only the status line's and the prompt after it.  And every task's
+      // overlays in their banks at the first prompt as ld65 made them (dq0OvlBanks))
+      starts: [{ seed: 1, max: 229e6 }, { seed: 123456789, max: 318e6 }], quiet: 36e6,
+      start(m) {
+        const a = m.acia, read = a.read, shown = a.shown, self = this;
+        let typed = '', g = null, tail = '', esc = 0, text = '';
+        this.games = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (/^dq0 /.test(typed)) { g = { line: typed, t0: m.cpu.cyc, last: m.cpu.cyc, quiet: 0, quietAt: 0, total: 0, text: '' }; self.games.push(g); tail = ''; text = ''; }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+        a.shown = (v, t) => {
+          shown(v, t);
+          if (!g || g.total) return;
+          const now = m.cpu.cyc;
+          if (now - g.last > g.quiet) { g.quiet = now - g.last; g.quietAt = g.last - g.t0; }
+          g.last = now;
+          if (esc === 1) { esc = v === 0x5B ? 2 : 0; return; }
+          if (esc === 2) { if (v >= 0x40 && v <= 0x7E) esc = 0; return; }
+          if (v === 0x1B) { esc = 1; return; }
+          if (v >= 32 || v === 10) text += String.fromCharCode(v);
+          tail = (tail + String.fromCharCode(v)).slice(-2);
+          if (tail === '> ') { g.total = now - g.t0; g.text = text; if (self.games.length === 1) self.banks = dq0OvlBanks(m); }
+        };
+      },
+      check(m) {
+        const f = [], M = n => (n / 1e6).toFixed(1) + 'M';
+        this.starts.forEach((s, i) => {
+          const g = this.games[i];
+          if (!g || !g.total) return f.push('seed ' + s.seed + ': no first prompt');
+          if (g.total > s.max) f.push('seed ' + s.seed + ': its start ' + M(g.total) + ' cycles, over its budget ' + M(s.max));
+          if (g.quiet > this.quiet) f.push('seed ' + s.seed + ': ' + M(g.quiet) + ' cycles with nothing on the screen, ' + M(g.quietAt) + ' after Enter (' + M(this.quiet) + ' at most)');
+          const w = g.text.replace(/\s+/g, ' '), h = w.lastIndexOf('Type help for the commands.'), look = w.lastIndexOf('You ');
+          if (h < 0 || look < 0 || h < look || w.length - h > 80) f.push('seed ' + s.seed + ': the help\'s line not with the first prompt, after the first look: ' + JSON.stringify(w.slice(-300)));
+        });
+        f.push(...(this.banks || ['the overlays\' banks not looked at']).filter(x => !/^ok/.test(x)));
+        this.notes = (this.banks || []).filter(x => /^ok/.test(x)).concat(this.games.map((g, i) => 'seed ' + (this.starts[i] || {}).seed + ': ' + M(g.total) + ' cycles to the first prompt (' + (g.total / 3579545).toFixed(1) + ' s at 3.58 MHz); the longest silence ' + M(g.quiet) + ', ' + M(g.quietAt) + ' after Enter'));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0regard', near: ['denizens'], what: 'Dingus Quest Zero\'s gifts, reputation and an ally moving aside (slice 4.8: DENIZENS.md\'s allies and influence, HOUSE.md\'s fetching, gifts and reputation, D10), scenes set by pokes: at seed 21 (dq0fetch\'s game) a giant rat won over and named Grub, the character two squares on and turned round; Grub set in its way as it steps back (the hub\'s actor\'s square, the poke\'s): the step stopped short of it (E_NOWAY, N_DEN), Grub moving aside at once, the step taken again past it; Grub set wary of the character as a ration\'s given it (the poke\'s attitude): its attitude moved by the gift (food, to a beast, the house\'s steps for its worth); set beside the character again (an ally no more, it doesn\'t follow) and given another, its faction\'s regard raised by the two (dq0d\'s head, fatt: a step for its deeds\' points, four)',
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/a.hm', 'echo ml ani 90 >> /ram/a.hm', 'dq0 -p t -s 21 -c /ram/a.hm -T -R 117',
+        'befriend the rat', 'befriend the rat', 'name the rat grub', 'move east 2 squares', 'turn around', 'move west 1 square', 'move west 1 square',
+        'give 1 ration to grub', 'give 1 ration to grub', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        // (Its scenes: Grub put ahead of the character as the first step back's typed; set wary as the first gift's; the
+        // denizens' head's factions' attitudes read as the gifts' lines and the quit are typed)
+        const a = m.acia, read = a.read, self = this;
+        let typed = '', seen = {};
+        self.fatt = {};
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf && a.rx === 13 && m.dq0) {
+            seen[typed] = (seen[typed] || 0) + 1;
+            const { L } = m.dq0.layout(), h = m.dq0.bank(0), at = k => L.actor + k * L.actorSize;
+            const grub = h && [...Array(L.nactors).keys()].find(k => String.fromCharCode(...h.subarray(at(k) + L.aName, at(k) + L.aName + 4)) === 'Grub');
+            if (h && grub !== undefined) {
+              const o = at(grub);
+              if (typed === 'move west 1 square' && seen[typed] === 1) {
+                const x = h[L.pcX] | h[L.pcX + 1] << 8, y = h[L.pcY] | h[L.pcY + 1] << 8;
+                h[o + L.aX] = (x - 1) & 0xFF; h[o + L.aX + 1] = (x - 1) >> 8; h[o + L.aY] = y & 0xFF; h[o + L.aY + 1] = y >> 8;
+                self.placed = { x: x - 1, y };
+              }
+              if (typed === 'give 1 ration to grub' && seen[typed] === 1) h[o + L.aAttitude] = 2;   // (AT_WARY)
+              if (typed === 'give 1 ration to grub' && seen[typed] === 2) {   // (Beside it again, where the character was:
+                const x = h[L.pcX] | h[L.pcX + 1] << 8;                         //   an ally no more, it doesn't follow)
+                h[o + L.aX] = (x + 1) & 0xFF; h[o + L.aX + 1] = (x + 1) >> 8;
+                h[o + L.aY] = h[L.pcY]; h[o + L.aY + 1] = h[L.pcY + 1];
+              }
+              self.fac = h[o + L.aFaction];
+            }
+            if (typed === 'give 1 ration to grub' || typed === 'quit') {
+              const tk = h[12 + 2], lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+              const hd = parseInt(/^al ([0-9A-F]+) \._hd$/m.exec(lbl)[1], 16);
+              self.fatt[typed + seen[typed]] = [...Array(16).keys()].map(f => m.taskRam[tk][hd + 4 + f]);
+            }
+          }
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) typed = ''; else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      check(m) {
+        const T = dq0Turns(m), f = [];
+        if (!T.filter(t => t.line === 'befriend the rat').some(t => dq0Rep(t, 'sway', { now: 'AT_ALLIED' }).length)) f.push('the rat not won over');
+        const w = T.filter(t => t.line === 'move west 1 square');
+        if (!this.placed) f.push('Grub not set in the way');
+        dq0Need(f, w[0], 'E_NOWAY', {}, 'the step back not stopped short of Grub');
+        const p0 = w[0] && w[0].after && w[0].after.pc, p1 = w[1] && w[1].after && w[1].after.pc;
+        if (!p0 || !p1 || p1.x !== p0.x - 1) f.push('the step back not taken past Grub, moved aside (' + JSON.stringify([p0 && [p0.x, p0.y], p1 && [p1.x, p1.y]]) + ')');
+        const gs = T.filter(t => t.line === 'give 1 ration to grub');
+        const r0 = gs[0] ? dq0Rep(gs[0], 'sway', { kind: 'SW_GIVE' })[0] : null;
+        if (!r0 || r0.was !== 'AT_WARY' || r0.now === 'AT_WARY' || r0.now === 'AT_UNFRIENDLY') f.push('the wary rat\'s attitude not moved by the gift (' + JSON.stringify(r0) + ')');
+        const b = this.fatt['give 1 ration to grub1'], e = this.fatt['quit1'], k = (this.fac || 0) & 7;
+        if (!b || !e || e[k] !== b[k] + 1) f.push('its faction\'s regard not raised a step by the two gifts (' + JSON.stringify([k, b, e, gs.map(t => t.replies.filter(r => r.req === 'sway'))]) + ')');
         return f;
       },
       sdcard: true
@@ -4229,10 +5077,10 @@ module.exports = {
     // only with DQ0ANS96=1, to measure)
     ...(process.env.DQ0ANS96 ? [dq0AnswerTest(9600)] : []),
     {
-      name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken (punched bare-handed, as the old code\'s run struck it: the torch in hand would strike it now, the user\'s, 2026-10-22) and climbed through, a weak-eyed character), every reply the senses give (a look\'s, the denizens\' senses\') with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, the old code\'s (DQ0LOOKS=write: written afresh from this run)',
+      name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken (punched bare-handed, as the old code\'s run struck it: the torch in hand would strike it now, the user\'s, 2026-10-22) and climbed through, a weak-eyed character; each dungeon dry, dq0 -W: the looks before the water, slice 4.9\'s), every reply the senses give (a look\'s, the denizens\' senses\') with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, the old code\'s (DQ0LOOKS=write: written afresh from this run)',
       init: 't_rc', cycles: 3000e6,
       machine: { input: 'ābind -a /sd/0/games /bin\rāhmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm\rācp /ram/c.hm /ram/w.hm\rāecho att eye 4 >> /ram/w.hm\r' +
-        [['dq0 -p t -s 3 -c /ram/c.hm -T -k sword',['look','turn left','turn right','walk to the door ahead to my left','2','look','turn around','turn left','turn right','map','d','look','sw','look']],['dq0 -p t -s 5 -c /ram/c.hm -T',['d','wait','go right','turn left','look','turn around','wait','look']],['dq0 -p t -s 7 -c /ram/w.hm',['open the door behind me','s','move south 4 squares','face north','look','douse the torch','z','z','z','look','light the torch','z','look','turn around','n']],['dq0 -p t -s 3 -c /ram/c.hm -T',['drop the torch','turn around','step forward','look','turn around','step forward','get torch','look']],['dq0 -p t -s 12 -c /ram/c.hm -T',['e','wait','e','wait','e','turn around','lower portcullis','w','look','raise portcullis','w','turn left']],['dq0 -p t -s 12 -c /ram/c.hm',['n','turn around','punch the window','climb through window','turn around','look','turn right']],['dq0 -p t -s 4 -c /ram/c.hm',['open door','3','look','go through the door','look','turn left']],['dq0 -p t -s 517 -c /ram/c.hm',['look','turn left','turn right','turn around','look']]].map(([g, c]) => 'ā' + g + '\r' + c.concat('quit').map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
+        [['dq0 -p t -s 3 -c /ram/c.hm -T -W -k sword',['look','turn left','turn right','walk to the door ahead to my left','2','look','turn around','turn left','turn right','map','d','look','sw','look']],['dq0 -p t -s 5 -c /ram/c.hm -T -W',['d','wait','go right','turn left','look','turn around','wait','look']],['dq0 -p t -s 7 -c /ram/w.hm -W',['open the door behind me','s','move south 4 squares','face north','look','douse the torch','z','z','z','look','light the torch','z','look','turn around','n']],['dq0 -p t -s 3 -c /ram/c.hm -T -W',['drop the torch','turn around','step forward','look','turn around','step forward','get torch','look']],['dq0 -p t -s 12 -c /ram/c.hm -T -W',['e','wait','e','wait','e','turn around','lower portcullis','w','look','raise portcullis','w','turn left']],['dq0 -p t -s 12 -c /ram/c.hm -W',['n','turn around','punch the window','climb through window','turn around','look','turn right']],['dq0 -p t -s 4 -c /ram/c.hm -W',['open door','3','look','go through the door','look','turn left']],['dq0 -p t -s 517 -c /ram/c.hm -W',['look','turn left','turn right','turn around','look']]].map(([g, c]) => 'ā' + g + '\r' + c.concat('quit').map(l => 'ā' + l + '\r').join('')).join('') + 'āecho $status\r' },
       expect: ['% echo $status'],
       // (The senses' task found by its code, dq0p.hyx's at its main; its hub_reply's calls snapped, as the game it's in
       // the quits told so far)
@@ -4571,7 +5419,7 @@ module.exports = {
     },
     {
       name: 'dq0choose', meaning: true, what: 'Dingus Quest Zero asking which, of several (the user\'s, 2026-10-16: "If I say open door and there are three closed doors in the room, it should give me a numbered list of choices if one is not directly in front of me"), by what each answer did: at seed 4, three doors on the bedchamber\'s north and west walls, none ahead: open door asks (nothing done), and 3 opens the one behind it to its right (turned to: facing north); then a fresh game, examine door asked again, answered with a way (right: the one to its right, examined); go through the door asked, a command not a choice (look) letting it go (1 then a word it doesn\'t know: nothing done), asked again and 1 going through the one ahead to its right; at seed 3 (dq0 -T) a portcullis and a door behind it, the first, the portcullis, walked up to (the lists\' words: dq0wordsfix, dq0wordsthings)',
-      init: 't_rc', cycles: 1000e6,
+      init: 't_rc', cycles: 1100e6,   // (1000e6 till 2026-10-30: 994M then, over it with morale's bigger actors and parts)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 4 -c /ram/c.hm', 'open door', '3', 'quit',
         'dq0 -p t -s 4 -c /ram/c.hm', 'examine door', 'right', 'go through the door', 'look', '1', 'go through the door', '1', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'face north and east', 'walk to the door behind me', '1', 'quit', 'echo $status']) },
@@ -4715,12 +5563,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0batter', what: 'Dingus Quest Zero\'s doors battered (the user\'s, 2026-10-15 and 16: "model it after unarmed combat": a blow at a thing an attack it ignores, by Unarmed, its impact less the door\'s resistance off its body; the striker hurt as a blow goes wrong, less with skill and armour; boots for a kick, a helm for a head butt; the tool to hand that hits hardest; the user\'s, 2026-10-22: a part\'s blow the house\'s Unarmed test, a marginal failure harming neither, a critical failure the part, and a bare part\'s first hurt at a door stopped short, asked), by the world\'s events (the referee\'s, HarnMaster\'s, at these seeds; each game\'s first blow the same roll): at seed 14\'s sound iron-bound door, bare fists making no mark, the first blow that would hurt them stopped short (asked: "Keep at it?", dq0 -a\'s yes), unhurt; punched again, not asked again at that door, and by the third the hand hurt seriously, the blows stopped as the character\'s too hurt; a kick in knee boots and a head butt in an iron helm not stopped short (not bare), hurt by their blows gone wrong; at seed 19\'s rotten door one of Unarmed 95 (hmchar\'s file) breaking it down unhurt; at seed 15 a pick battering a door till it gives way (its torch put down first: its hands empty, the pick offered and taken, dq0 -a\'s yes, the user\'s, 2026-10-22), broken down for good: it won\'t shut (dq0hands\' and dq0kick\'s, and dq0doors\' blows, these together; the injuries\' words the referee\'s)',
+      name: 'dq0batter', what: 'Dingus Quest Zero\'s doors battered (the user\'s, 2026-10-15 and 16: "model it after unarmed combat": a blow at a thing an attack it ignores, by Unarmed, its impact less the door\'s resistance off its body; the striker hurt as a blow goes wrong, less with skill and armour; boots for a kick, a helm for a head butt; the tool to hand that hits hardest; the user\'s, 2026-10-22: a part\'s blow the house\'s Unarmed test, a marginal failure harming neither, a critical failure the part, and a bare part\'s first hurt at a door stopped short, asked), by the world\'s events (the referee\'s, HarnMaster\'s, at these seeds; each game\'s first blow the same roll): at seed 14\'s sound iron-bound door, bare fists making no mark, the first blow that would hurt them stopped short (asked: "Keep at it?", dq0 -a\'s yes), unhurt; punched again, not asked again at that door, and by the third the hand hurt seriously, the blows stopped as the character\'s too hurt; a kick in knee boots and a head butt in an iron helm not stopped short (not bare), hurt by their blows gone wrong; at seed 23 (seed 19\'s rotten door till 2026-11-01, its stratum\'s passages on the diagonal since) a door one of Unarmed 95 (hmchar\'s file) breaks down unhurt; at seed 15 a pick battering a door till it gives way (its torch put down first: its hands empty, the pick offered and taken, dq0 -a\'s yes, the user\'s, 2026-10-22), broken down for good: it won\'t shut (dq0hands\' and dq0kick\'s, and dq0doors\' blows, these together; the injuries\' words the referee\'s)',
       init: 't_rc', cycles: 1700e6,   // (1,393M at slice 4.2's travel, more to start a game since: the world's 16th overlay read in; past 1,500M
                                      // at slice 4.3's, its overlays more: the UI's 15th, the world's 20th and 21st, the referee's 6th)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/u.hm', 'echo ml una 95 >> /ram/u.hm',
         'dq0 -p t -s 14 -c /ram/c.hm', 'punch the door', 'punch the door', 'punch the door', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -k \'knee boots\'', 'wear the knee boots', 'kick the door', 'quit',
-        'dq0 -p t -s 14 -c /ram/c.hm -k \'iron helm\'', 'wear the iron helm', 'head butt the door', 'quit', 'dq0 -p t -s 19 -c /ram/u.hm', 'punch the door', 'quit',
+        'dq0 -p t -s 14 -c /ram/c.hm -k \'iron helm\'', 'wear the iron helm', 'head butt the door', 'quit', 'dq0 -p t -s 23 -c /ram/u.hm', 'punch the door', 'quit',
         'dq0 -p t -s 15 -c /ram/c.hm -k pick', 'drop the torch', 'break the door ahead to my left', 'close', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
@@ -4864,16 +5712,26 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s melee, RS_ATTACK, dq0harn/fight.c), by the blows told (the denizens\' events, E_FIGHT: who struck whom, how it came out, what it left them in; the referee\'s dice the commands\', in their order, at the turns pace: HarnMaster\'s at this seed): a fight with seed 5\'s giant rats won (down its ladder, a sword in hand, dq0 -k sword; the character\'s Sword 80, hmchar\'s file), one attack fought on (HOUSE.md\'s fighting on, the user\'s, 2026-10-20): the rat struck at, and its lair\'s kin, turn on the character, both striking at it; three blows dodged, the fourth knocking the rat senseless; then the other turned to and knocked senseless too, the fight over; each finished where it lies, an attack each, their bodies left (seen as the world looks about again); the character hurt by their blows (since fighting on, the blows typed one by one before)',
-      init: 't_rc', cycles: 900e6,
+      name: 'dq0fight', what: 'Dingus Quest Zero\'s fights (DENIZENS.md: fights; the referee\'s melee, RS_ATTACK, dq0harn/fight.c), by the blows told (the denizens\' events, E_FIGHT: who struck whom, how it came out, what it left them in; the referee\'s dice the commands\', in their order, at the turns pace: HarnMaster\'s at this seed): a fight with seed 5\'s giant rats won (down its ladder, a sword in hand, dq0 -k sword; the character\'s Sword 80, hmchar\'s file), one attack fought on (HOUSE.md\'s fighting on, the user\'s, 2026-10-20): the rat struck at, and its lair\'s kin, turn on the character, both striking at it; three blows dodged, the fourth knocking the rat senseless; then the other turned to and knocked senseless too, the fight over; each finished where it lies, an attack each, their bodies left (seen as the world looks about again); the character hurt by their blows (since fighting on, the blows typed one by one before).  The scene set (since morale, 2026-10-29, and the dice by who asks, 2026-10-30, a kin seeing its fellow fall runs off, as a rule): the kin steady (dq0Poke\'s, at the attack: its mood AM_STEADY, its courage never tested), so the fight goes on to it; and the game played again as it stands, the kin running off as its fellow falls senseless beside it (part 6\'s dismay: no blow from it after, none at it, the fight\'s end told), morale\'s own small check',
+      init: 't_rc', cycles: 1200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -k sword -T',
-        'd', 'wait', 'go right', 'attack the rat', 'attack the rat', 'attack the rat', 'look', 'quit', 'echo $status']) },
+        'd', 'wait', 'go right', 'attack the rat', 'attack the rat', 'attack the rat', 'look', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T', 'd', 'wait', 'go right', 'attack the rat', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'attack the rat', n: 1, k: 0, set: { mood: 8 } }]);   // (The kin steady: hub.h's AM_STEADY)
+      },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], FF_D_DOWN = 4, FF_D_DEAD = 8;
         const mine = t => dq0Ev(t, 'E_FIGHT', { who: 0 }), theirs = t => dq0Ev(t, 'E_FIGHT', { def: 0, who: w => w > 0 });
-        const a = T.filter(t => t.line === 'attack the rat');
+        const q1 = T.of('quit'), a = T.filter(t => t.line === 'attack the rat' && t.k < q1.k);
         if (a.length !== 3) return ['the attacks not typed'];
+        // (Played again, the kin as it is: running off as its fellow falls, morale's)
+        const a2 = T.after(T.of('dq0 -p t -s 5 -c /ram/c.hm -k sword -T', q1.k), 'attack the rat'), b2 = mine(a2);
+        const down2 = b2.find(e => e.ff & FF_D_DOWN), kin = down2 && theirs(a2).find(e => e.who !== down2.def);
+        if (!down2 || !kin) f.push('again: the rat not felled with its kin beside it (' + dq0Evs(a2) + ')');
+        else if (theirs(a2).some(e => e.who === kin.who && e.t > down2.t) || b2.some(e => e.def === kin.who) ||
+          !dq0Ev(a2, 'E_TASK', { te: 'TE_NO_FOE' }).length) f.push('again: the kin not running off as its fellow fell (' + dq0Evs(a2) + ')');
         const b = mine(a[0]);
         if (b.length < 5) return ['the attack not fought on (' + dq0Evs(a[0]) + ')'];
         if (new Set(theirs(a[0]).map(e => e.who)).size < 2) f.push('the rat and its kin not both striking at the character');
@@ -4896,22 +5754,30 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0disarm', asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' limbs: a denizen\'s fumble (slice 4.1b, the brief\'s: "The same rules for every actor with hands and legs: a denizen\'s fumble drops its weapon (the world\'s floor, seen and taken up)"), by the denizens\' events, the item store and the words (HarnMaster\'s dice as they fall here: no -a, no -I, asks and initiative, the game as a search found it): the hand-written theme\'s hostile bandits (dq0robbed\'s, seed 1, south of the start), the character (hmchar seed 23, Dodge 90, Sword 60) its pack dropped (2026-10-26: its armour from it there, the reach\'s times, the dice as a search of the variants found them), in a gambeson and a mail hauberk, blocking, waiting for them: a bandit knocked senseless by its blow ("It falls senseless.", "lying senseless"), doing nothing as it lies there, deaf to words ("talk to the bandit": "The bandit lies senseless: it can\'t hear you.", the denizens\' SR_DOWN, the rouse the talk sends it ignored), its first turn as it comes round getting to its feet (the referee\'s O_RISE, "The bandit gets to its feet.": it fell as it was knocked out, 2026-10-29), and only then fighting on; a bandit\'s sword fumbled (its blow\'s, "The bandit strikes at you with its sword, but fumbles the blow.", or its guard\'s, "; it falters.": since 2026-10-29 its guard\'s, the fight\'s dice another fall), let fall (the world\'s E_BEAT WB_DROP in the denizens\' ring, its kind the sword\'s, its b the bandit\'s entry plus 1: "The bandit drops its sword."), taken up again at its next turn (WB_PICKS, the referee\'s RS_REARM and O_REARM: "The bandit snatches up its sword."), gone from the floor (as many swords in the store after as before)',
+      name: 'dq0disarm', asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' limbs: a denizen\'s fumble (slice 4.1b, the brief\'s: "The same rules for every actor with hands and legs: a denizen\'s fumble drops its weapon (the world\'s floor, seen and taken up)"), by the denizens\' events, the item store and the words (HarnMaster\'s dice as they fall here: no -a, no -I, asks and initiative, the game as a search found it): the hand-written theme\'s hostile bandits (dq0robbed\'s, seed 1, south of the start), the character (hmchar seed 23, Dodge 90, Sword 60) its pack dropped (2026-10-26: its armour from it there, the reach\'s times, the dice as a search of the variants found them), in a gambeson and a mail hauberk, blocking, waiting for them: a bandit knocked senseless by its blow ("It falls senseless.", "lying senseless"), doing nothing as it lies there, deaf to words ("talk to the bandit": "The bandit lies senseless: it can\'t hear you.", the denizens\' SR_DOWN, the rouse the talk sends it ignored), its first turn as it comes round getting to its feet (the referee\'s O_RISE, "The bandit gets to its feet.": it fell as it was knocked out, 2026-10-29), and only then fighting on; a bandit\'s sword fumbled (its blow\'s, "The bandit strikes at you with its sword, but fumbles the blow.", or its guard\'s, "; it falters.": since 2026-10-29 its guard\'s, the fight\'s dice another fall), let fall (the world\'s E_BEAT WB_DROP in the denizens\' ring, its kind the sword\'s, its b the bandit\'s entry plus 1: "The bandit drops its sword."), taken up again at its next turn (WB_PICKS, the referee\'s RS_REARM and O_REARM: "The bandit snatches up its sword."), gone from the floor (as many swords in the store after as before).  The scene set (since the dice by who asks, 2026-10-30, the bandits roam with their door open, and come for no one waiting): the character goes into their room, two steps south through the door, and waits there; two games, each in its own folder: -R 21\'s the fumble, -R 48\'s the bandit knocked senseless as it\'s talked to (talked to again as it lies there).  The scene set (since the denizens\' day, 2026-10-31: bandits keep watches, a third asleep): no day (the environment\'s dq0hour=128, rc\'s, before its games: dq0d\'s), every one about as before',
       init: 't_rc', cycles: 1500e6,
       // (hmchar's seed 26, not 23, 2026-10-27: the bandits' lairs in the rooms they like, the belongings', their fight's dice
       // another fall, the fumble in another bout)
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 26 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
-        'echo ml swd 60 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
-        'defend block', 'wait', 'open the door', ...Array(17).fill('wait'), 'talk to the bandit', ...Array(3).fill('wait'), 'quit', 'echo $status']) },
+      // (The scene set since the dice by who asks, 2026-10-30: the bandits' room gone into, two squares south through the
+      // door, their own door opened already as they roam; two games, each in a folder of its own (a game's folder its save:
+      // the second would go on with the first), the dice's offsets each its own: -R 21's a fumble, -R 48's a bandit knocked
+      // senseless as it's talked to, talked to again as it lies there)
+      machine: { input: (() => {
+        const game = (d, r, talks) => ["dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/" + d + " -k 'sword,gambeson,mail hauberk' -R " + r, 'drop the backpack', 'wear the gambeson',
+          'wear the mail hauberk', 'defend block', 'wait', 'close the door', 'open the door', 'go south', 'go south', ...Array(15).fill('wait'),
+          ...Array(talks).fill('talk to the bandit'), ...Array(3).fill('wait'), 'quit'];
+        return dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 26 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
+          'echo ml swd 60 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+          'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt', ...game('g', 21, 1), ...game('h', 48, 2), 'echo $status']);
+      })() },
       expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [];
-        const g = T.of("dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'");
-        if (g.k < 0) return ['the game not played'];
-        const beats = T.filter(u => u.k > g.k).flatMap(u => [...u.events, ...u.dens]).filter(e => e.kind === 'E_BEAT');
+        const T = dq0Turns(m), f = [], line = "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'";
+        const g = T.of(line), end = T.of('quit', g.k), g2 = T.of(line.replace('/ram/g', '/ram/h'), end.k);
+        if (g.k < 0 || g2.k < 0) return ['the games not played'];
+        const beats = T.filter(u => u.k > g.k && u.k < end.k).flatMap(u => [...u.events, ...u.dens]).filter(e => e.kind === 'E_BEAT');
         const drop = beats.find(e => e.beat === 'WB_DROP' && e.b > 0), pick = beats.find(e => e.beat === 'WB_PICKS' && e.b > 0);
-        const end = T.of('quit', g.k), w0 = T.after(g, 'wear the gambeson'), sword = w0.after && w0.after.items.find(i => i.name === 'sword');
+        const w0 = T.after(g, 'wear the gambeson'), sword = w0.after && w0.after.items.find(i => i.name === 'sword');
         if (!drop || !sword || drop.thing !== sword.kind) f.push('no bandit\'s sword let fall (' + JSON.stringify(drop) + ')');
         else if (!pick || pick.b !== drop.b || pick.thing !== drop.thing) f.push('the bandit\'s sword not taken up again (' + JSON.stringify(pick) + ')');
         const swords = s => s ? s.items.filter(i => i.name === 'sword').length : -1;
@@ -4920,23 +5786,25 @@ module.exports = {
         if (fum < 0) f.push('the bandit\'s fumble not told');
         else inTurn(said.slice(fum), ['The bandit drops its sword.', 'The bandit snatches up its sword.'], f, 'the bandit\'s fumble\'s words: ');
         // (Knocked senseless, it lies there doing nothing, and comes round on the floor: its first turn after, up)
-        const fights = T.filter(u => u.k > g.k).flatMap(u => u.dens).filter(e => e.kind === 'E_FIGHT');
+        const fights = T.filter(u => u.k > g2.k).flatMap(u => u.dens).filter(e => e.kind === 'E_FIGHT');
         const out1 = fights.findIndex(e => e.who === 0 && e.a > 0 && (e.ff & 4)), by = out1 < 0 ? 0 : fights[out1].a;
         const next = fights.slice(out1 + 1).find(e => e.who === by);
         if (out1 < 0) f.push('no bandit knocked senseless');
         else if (!next || next.out !== 'O_RISE') f.push('the bandit come round not getting to its feet first (' + JSON.stringify(next) + ')');
-        inTurn(said, ['falls senseless.', 'lying senseless.', 'The bandit lies senseless: it can\'t hear you.', 'The bandit gets to its feet.'], f,
+        inTurn(said.slice(said.lastIndexOf('dq0 -p t -s 1 -c /ram/c.hm')), ['falls senseless.', 'lying senseless.', 'The bandit lies senseless: it can\'t hear you.', 'The bandit gets to its feet.'], f,
           'the bandit knocked senseless: ');
         return f;
       },
       sdcard: true
     },
     {
-      name: 'dq0shield', outfit: true, asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' shields (the gear3 agent\'s, 2026-10-29; HOUSE.md\'s the denizens\' gear: a shield held blocks, for review), by the denizens\' events, the referee\'s replies and the words: dq0disarm\'s bandits with their own things (the outfits\'), the character (hmchar seed 23, Dodge 90, Sword 90) in a gambeson and a mail hauberk waiting for them: a bandit with its weapon in hand unslinging the shield on its back into its other hand, its round (the world\'s E_BEAT WB_READIES, its kind a shield\'s: "The bandit unslings its round shield."), then blocking the character\'s blow with it (RS_ATTACK\'s reply: the defence D_BLOCK, its c AF_SHIELD, O_BLOCKED: "it fends off the blow with its shield."); a shield\'s block only ever a block (AF_SHIELD with D_BLOCK alone), and by an actor that holds one',
+      name: 'dq0shield', outfit: true, asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' shields (the gear3 agent\'s, 2026-10-29; HOUSE.md\'s the denizens\' gear: a shield held blocks, for review), by the denizens\' events, the referee\'s replies and the words: dq0disarm\'s bandits with their own things (the outfits\'), the character (hmchar seed 23, Dodge 90, Sword 90) in a gambeson and a mail hauberk waiting for them: a bandit with its weapon in hand unslinging the shield on its back into its other hand, its round (the world\'s E_BEAT WB_READIES, its kind a shield\'s: "The bandit unslings its round shield."), then blocking the character\'s blow with it (RS_ATTACK\'s reply: the defence D_BLOCK, its c AF_SHIELD, O_BLOCKED: "it fends off the blow with its shield."); a shield\'s block only ever a block (AF_SHIELD with D_BLOCK alone), and by an actor that holds one.  The scene set (since the denizens\' day and leisure, 2026-10-31: bandits keep watches, and dice and drink at leisure): no day (the environment\'s dq0hour=128, rc\'s), every one about as before',
       init: 't_rc', cycles: 1200e6,
+      // (-R 3: the dice's offset that gives the game it was written for, since the dice by who asks,
+      // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
-        'echo ml swd 90 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
+        'echo ml swd 90 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk' -R 3", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
         'defend block', ...Array(44).fill('wait'), 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -4986,6 +5854,51 @@ module.exports = {
         const den = T.filter(u => u.k > g2.k).flatMap(u => u.dens).filter(e => e.kind === 'E_FIGHT' && e.who > 0);
         if (!den.length) f.push('no elf\'s blow or shot (E_FIGHT)');
         inTurn(o, ['The elf unslings its hartbow.', 'The elf shoots at you with its hartbow'], f, 'the elf\'s shot: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0throws', outfit: true, asks: true, near: ['fight'], what: 'Dingus Quest Zero\'s fights complete (slice 4.7\'s left, 2026-10-30: DUNGEON.md\'s fights, HOUSE.md\'s missiles, for review), by the words, the fights told and the item store: the character (hmchar seed 23, its Bow 15: its outfit a sling) shooting at seed 5\'s giant rats down the ladder, fought on, each miss half the time striking a rat beside its mark (the book\'s, a stray: "Your shot strikes the giant rat instead"), every fall told as it falls and each rise after a fall told (no rise without its fall); a bowman (Bow 90: a shortbow, a quiver) its arrows put down and gathered back into its quiver, not its pack; then a hand-written theme\'s small orcs (arak, hostile: a mankar, a club or a spear in hand, a dagger at the belt, half of them a shortbow; seed 2), waited for: one throwing its spear, or putting up its weapon and shooting its shortbow ("The small orc throws its spear at you", "The small orc shoots at you with its shortbow"); then the character set to shoot on its own ("autotarget at medium range"), shot at by the elves (sindwar, hartbows: seed 4) and shooting back unbidden (it fights back, its shortbow taken up, the round the book\'s grope: the bowman\'s)',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml bow 15 >> /ram/c.hm',
+        'echo ml dge 90 >> /ram/c.hm', 'echo ml swd 90 >> /ram/c.hm',
+        'hmchar -q -s 23 -u feudal -c hunter -o /ram/d.hm', 'echo ml bow 90 >> /ram/d.hm', 'echo ml dge 90 >> /ram/d.hm',
+        "dq0 -p t -s 5 -c /ram/c.hm -T -k 'gambeson,mail hauberk'", 'wear the gambeson', 'wear the mail hauberk',
+        'd', 'drop the torch', 'drop the staff', 'shoot the rat', ...Array(12).fill('wait'), 'quit', 'dq0 -p t -s 5 -c /ram/d.hm -T', 'drop the arrows', 'gather the arrows', 'quit',
+        'mkdir /ram/g', "echo 'faction | Tribe | arak | 0-0 | 20 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
+        'defend block', ...Array(4).fill('wait'), 'quit',
+        'mkdir /ram/h', "echo 'faction | Wardens | sindwar | 0-0 | 96 | - | 0 | h | -' > /ram/h/theme.txt",
+        "dq0 -p t -s 4 -c /ram/d.hm -T -d /ram/h -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
+        'drop the torch', 'drop the staff', 'autotarget at medium range', 'defend block', ...Array(3).fill('wait'), 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out);
+        if (process.env.DQ0SHOW) { console.log(o); for (const t of T) console.log(dq0Evs(t)); }
+        const g1 = T.of("dq0 -p t -s 5 -c /ram/c.hm -T -k 'gambeson,mail hauberk'"), g2 = T.of("dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'"),
+          g3 = T.of("dq0 -p t -s 4 -c /ram/d.hm -T -d /ram/h -k 'sword,gambeson,mail hauberk'");
+        if (g1.k < 0 || g2.k < 0 || g3.k < 0) return ['the games not played'];
+        const s1 = o.slice(o.indexOf("> shoot the rat"), o.indexOf('/ram/g -k')), s2 = o.slice(o.indexOf('/ram/g -k'), o.indexOf('/ram/h -k')),
+          s3 = o.slice(o.indexOf('/ram/h -k'));
+        // (A stray: a miss striking one beside the mark)
+        if (!/Your shot strikes (?:the giant rat|something) instead/.test(s1)) f.push('no stray told (a miss striking a rat beside its mark)');
+        // (Every fall told, each rise after one)
+        const rises = [...s1.matchAll(/The giant rat (?:scrambles to its feet|goes down)\./g)].map(x => x[0]);
+        let down = 0;
+        for (const r of rises) {
+          if (/goes down/.test(r)) down++;
+          else if (down-- <= 0) { f.push('a rat\'s rise with no fall told before it: ' + rises.join(' ')); break; }
+        }
+        // (The arrows gathered into the quiver)
+        const ga = T.of('gather the arrows', T.of('dq0 -p t -s 5 -c /ram/d.hm -T').k), inQuiver = s => (s ? s.items : []).filter(i => i.name === 'arrows' && i.where === 'IW_ITEM')
+          .filter(i => { const c = s.items.find(j => j.n === i.x || j.i === i.x); return c && c.name === 'quiver'; }).reduce((a, i) => a + i.qty, 0);
+        if (!/You gather up \d+ arrows?\./.test(o)) f.push('the gathering not told');
+        if (ga.after && !(inQuiver(ga.after) > inQuiver(ga.at))) f.push('the arrows not gathered into the quiver (' + inQuiver(ga.at) + ', ' + inQuiver(ga.after) + ')');
+        // (The soldiers: a spear thrown, or a crossbow taken up and shot)
+        if (!/The small orc (?:throws its (?:spear|dagger) at you|shoots at you with its shortbow)/.test(s2)) f.push('no small orc\'s throw or shot');
+        // (Auto-target: the character shooting back unbidden)
+        inTurn(s3, ['You shoot at hostiles within medium range on your own.', 'You fight back against the elf.', 'You take up your shortbow.'], f, 'the auto-target: ');
         return f;
       },
       sdcard: true
@@ -5096,9 +6009,11 @@ module.exports = {
     {
       name: 'dq0helpless', what: "Dingus Quest Zero's wounds and a foe that only defends itself (the user's adder playtest, 2026-10-21: \"For some reason the wounds just kept getting worse and worse\", and its bites worded stabs; DECISIONS.md's a helpless character): a theme's hostile cave adders (written by hand: a faction of them on the top stratum; seed 1, a room of them south of the start), the character tough (STR, STA and WIL 99: Endurance 99, its shock rolls holding long) and undefended (defend none, Dodge 5, Unarmed 5), its torch put down, walking in among them: each bite worded a bite, never a stab (a creature's own part: HOUSE.md's wounds), each wound's own level (M1 to G5, the book's: it was the running total past the record's twelve, S12 ... S37), more than twelve of them, every level of them in the universal penalty; its shock roll failed at last, senseless (\"Everything goes black.\", OUT on the status line); the adders then going, fleeing, with not another blow (one that only defends itself: kinds.txt's ways, the user's by its nature), one posted as it fell held (the referee's: no killer, RS_KILLER); come round in shock, in no state to fight, left be; its state's words the record's real injuries, the lesser hurts never named the worst (\"in shock: 11 injuries and lesser hurts, the worst a serious bite to ...\"), the same as the game's carried on (what dealt each injury kept with its sheet)",
       init: 't_rc', cycles: 1500e6,
+      // (-R 3: the dice's offset that gives the game it was written for, since the dice by who asks,
+      // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
         'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'defend none', 'open the door', 'south', 'drop the torch', 'south', ...Array(24).fill('wait'), 'status', 'quit', 'dq0 -d /ram/g', 'status', 'quit', 'echo $status']) },
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 3', 'defend none', 'open the door', 'south', 'drop the torch', 'south', ...Array(24).fill('wait'), 'status', 'quit', 'dq0 -d /ram/g -R 3', 'status', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4, s = dq0Story(out);
@@ -5149,11 +6064,40 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0tend', what: "Dingus Quest Zero's first aid and healing (slice 4.3: HOUSE.md's wounds over time; Physician 2-4), both referees: at seed 517 the kobold warren's gatehouse, its ledge jumped down, a minor bruise to the shoulder (dq0harm's); \"tend my head\" not the grammar's (no such thing); \"tend my wounds\" the book's treatment for a minor bruise, a cold compress (5d6 minutes: a timed work, its long task LT_TEND, its words at once and its outcome at its end), its healing rate on the wound (the sheet's \"tended\", the state's \"all tended\"), \"first aid\" again nothing to tend (one treatment roll a wound); then a night's sleep, again and again (its torch put out first), till five days' rest have gone by: the book's five-day healing roll (its rate times its Endurance), the wound healed, told as it wakes (\"The minor bruise to your right shoulder (M1) has healed.\"), the sheet's injuries none; and the null referee's simple way, a light wound tended (\"You clean and bind a wound.\") and healed by eight hours' rest (\"A wound has healed.\")",
+      name: 'dq0air', near: ['body'], what: "Dingus Quest Zero's bad air (2026-10-31, the user's: \"poor air quality (CO or CO2 excess, low oxygen levels, gas pockets--which could explode!)\"; HOUSE.md's bad air, rsair.h's, every ruleset's), its scenes the environment's dq0air (rc's: every chunk a pocket from end to end, the maker's caves.c's air_pocket), the character tough (STR, STA and WIL 99), its torch lit: at seed 1 (dq0 -T) thick blackdamp (dq0air=13) as it steps south through the door, its torch put out by the foul air (the world's, part 73's), its head swimming at once, its legs failing two minutes in, dead of it five minutes in (\"You can't get your breath\"), the game ended; firedamp (dq0air=32) at its naked flame bursting (\"The air ignites with a roar\"), a burn told after (the world's harm: HC_FIRE), its torch out; thin firedamp under the null referee (dq0air=31: its flame's blue cap, the miners' warning, nothing to breathe)",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm',
+        'dq0air=13', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'open the door', 'south', 'wait 10 minutes', 'wait 10 minutes', 'wait 10 minutes',
+        'dq0air=32', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'open the door', 'south', 'status', 'quit',
+        'dq0air=31', 'dq0 -r null -p t -s 1 -T', 'open the door', 'south', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), a = s.indexOf('dq0air=32'), b = s.indexOf('dq0air=31');
+        const g1 = a < 0 ? s : s.slice(0, a), g2 = a < 0 || b < 0 ? '' : s.slice(a, b), g3 = b < 0 ? '' : s.slice(b);
+        if (!/The air's too foul to keep your light burning\./.test(g1)) f.push('blackdamp: its torch not put out');
+        if (!/Your head swims; your heart pounds\./.test(g1)) f.push('blackdamp: its breath not told at once');
+        if (!/Your legs are failing you/.test(g1)) f.push('blackdamp: its legs not failing: ' + JSON.stringify(g1.slice(-1200)));
+        if (!/You can't get your breath: the dark takes you\./.test(g1)) f.push('blackdamp: not dead of it');
+        if (!/The air ignites with a roar/.test(g2)) f.push('firedamp: no burst at the naked flame');
+        if (!/It hurts you: [^.]*burn/.test(g2)) f.push('firedamp: no burn after the burst: ' + JSON.stringify(g2.slice(0, 600)));
+        if (!/a pale blue cap trembling over it\./.test(g3)) f.push('thin firedamp, the null referee: no blue cap on its flame');
+        if (/The air ignites/.test(g3)) f.push('thin firedamp burst');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0tend', what: "Dingus Quest Zero's first aid and healing (slice 4.3: HOUSE.md's wounds over time; Physician 2-4), both referees (its hunger and thirst poked low at each sleep: dq0Poke's, slice 4.9's): at seed 517 the kobold warren's gatehouse, its ledge jumped down, a minor bruise to the shoulder (dq0harm's); \"tend my head\" not the grammar's (no such thing); \"tend my wounds\" the book's treatment for a minor bruise, a cold compress (5d6 minutes: a timed work, its long task LT_TEND, its words at once and its outcome at its end), its healing rate on the wound (the sheet's \"tended\", the state's \"all tended\"), \"first aid\" again nothing to tend (one treatment roll a wound); then a night's sleep, again and again (its torch put out first), till five days' rest have gone by: the book's five-day healing roll (its rate times its Endurance), the wound healed, told as it wakes (\"The minor bruise to your right shoulder (M1) has healed.\"), the sheet's injuries none; and the null referee's simple way, a light wound tended (\"You clean and bind a wound.\") and healed by eight hours' rest (\"A wound has healed.\")",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 517 -c /ram/c.hm -d /ram/hurt', 'ne', 'e', 'u', 'u',
         'turn around', 'jump down', 'tend my head', 'tend my wounds', 'status', 'sheet', 'first aid', 'douse the torch', ...Array(20).fill('sleep'), 'sheet', 'quit',
         'dq0 -r null -p t -s 517 -d /ram/h2', 'ne', 'e', 'u', 'u', 'turn around', 'jump down', 'first aid', 'first aid', 'douse the torch', 'sleep', 'status', 'quit', 'echo $status']) },
+      start(m) {   // (Its water and food: a five days\' rest without them its death of thirst, slice 4.9\'s; so the scene\'s want
+        // set low as each sleep\'s typed, its levels as they are at eight hours, none to rise: the wounds\' healing the test\'s)
+        const want = { pcHunger: 0, pcHungerHi: 0, pcThirst: 0, pcThirstHi: 0, pcWant: 0x11 };
+        dq0Poke(m, [...Array(20).keys()].map(k => ({ g: 1, line: 'sleep', n: k + 1, hub: want })).concat([{ g: 2, line: 'sleep', n: 1, hub: want }]));
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], s = dq0Story(out), at = s.indexOf('Dingus, Wanderer'), h = at < 0 ? s : s.slice(0, at), n = at < 0 ? '' : s.slice(at);
@@ -5200,12 +6144,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0hoard', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's robbers' takings carried off (gear3's item 4, left; DENIZENS.md's a robber's takings, HOUSE.md's the denizens' belongings and the peoples): a hand-written theme's hostile giant rats with an orc king as their leader (seed 2: their home by the way down where the character starts, the king with them: popgen's, its own lair things made with the home since 2026-10-29, its hoard a chest beside it), the character poor and undefended with a dagger in hand: knocked senseless and robbed by the king (a robber since 2026-10-29: the tribe's spoils its hoard's), its dagger and its pennies put in the king's hoard (I_ROB's RB_HOARD: the chest marked OW_HOARD, its tribe's), found there (\"open the chest\", \"look in the chest\": unlocked, the house's), and taken back; and a tribe of brown orcs with no king (seed 1, south of the start): robbed by one, the takings hidden at its home (RB_HIDE: a brown orc keeps its things hidden, its mates not trusted), off the character's square, found by searching only (I_HIDDEN)",
+      name: 'dq0hoard', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's robbers' takings carried off (gear3's item 4, left; DENIZENS.md's a robber's takings, HOUSE.md's the denizens' belongings and the peoples): a hand-written theme's hostile giant rats with an orc king as their leader (seed 2: their home by the way down where the character starts, the king with them: popgen's, its own lair things made with the home since 2026-10-29, its hoard a chest beside it), the character poor and undefended with a dagger in hand: knocked senseless and robbed by the king (a robber since 2026-10-29: the tribe's spoils its hoard's), its dagger and its pennies put in the king's hoard (I_ROB's RB_HOARD: the chest marked OW_HOARD, its tribe's), found there (\"open the chest\", \"look in the chest\": unlocked, the house's), and taken back; and a tribe of brown orcs with no king (seed 1, south of the start): robbed by one, the takings hidden at its home (RB_HIDE: a brown orc keeps its things hidden, its mates not trusted), off the character's square, found by searching only (I_HIDDEN).  The scene set (since the denizens' day, 2026-10-31: brown orcs keep watches, a third asleep, a third on watch): the second game's with no day (the environment's dq0hour=128, rc's, before it: dq0d's), every orc about as before",
       init: 't_rc', cycles: 4000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
         'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', "echo 'faction | Tribe | rat | 0-0 | 5 | garking | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -k dagger',
         'defend none', 'hold the dagger', ...Array(16).fill('wait'), 'stand up', 'open the chest', 'open the chest', 'look in the chest', 'take the dagger from the chest', 'quit',
-        "echo 'faction | Tribe | hyeka | 0-0 | 96 | - | 0 | h | -' > /ram/h/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k dagger',
+        "echo 'faction | Tribe | hyeka | 0-0 | 96 | - | 0 | h | -' > /ram/h/theme.txt", 'dq0hour=128', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k dagger',
         'defend none', 'hold the dagger', 'open the door', 's 3', ...Array(20).fill('wait'), 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -5247,17 +6191,22 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0peoples', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's peoples (Phase 4: the user's answer 11, the HarnWorld Bestiary's Khuzdul, Sindarin, men and Gargun; DENIZENS.md's the peoples, HOUSE.md's for review), each in a hand-written theme's faction on the top stratum (seed 1, south of the start): dwarves wary, seen in mail and armed (\"A dwarf in mail, armed, ...\", \"Two dwarves\": AG_MAIL, the plural), examined their arms and mail (outfits.txt's [role khuzwar]), deaf to the common tongue (\"doesn't speak any tongue you know\"), heard by a character who speaks khuzdul (its file's language line: the faction's tongue, factions.txt's); a tribe of brown orcs and black orcs under a king, hostile, seen armed, their own weapons made (a mankar or a mang: the catalogue's, Combat 3's (G)); elves keeping their distance (shy), a longknife at the belt and a hartbow worn; every one's sheet the referee's from its own key (RS_NEW_ACTOR answered 0: the bestiary's, beasts.c's)",
+      name: 'dq0peoples', outfit: true, near: ['denizens', 'gear'], what: "Dingus Quest Zero's peoples (Phase 4: the user's answer 11, the HarnWorld Bestiary's Khuzdul, Sindarin, men and Gargun; DENIZENS.md's the peoples, HOUSE.md's for review), each in a hand-written theme's faction on the top stratum (seed 1, south of the start): dwarves wary, seen in mail and armed (\"A dwarf in mail, armed, ...\", \"Two dwarves\" (or three, as many as are told together: the dice by who asks, 2026-10-30): AG_MAIL, the plural), examined their arms and mail (outfits.txt's [role khuzwar]), deaf to the common tongue (\"doesn't speak any tongue you know\"), heard by a character who speaks khuzdul (its file's language line: the faction's tongue, factions.txt's); a tribe of brown orcs and black orcs under a king, hostile, seen armed, their own weapons made (a mankar or a mang: the catalogue's, Combat 3's (G)); elves keeping their distance (shy), a longknife at the belt and a hartbow worn; every one's sheet the referee's from its own key (RS_NEW_ACTOR answered 0: the bestiary's, beasts.c's).  The scene set (since the denizens' day, 2026-10-31: the dwarves, the brown orcs and the elves keep watches, the black orcs asleep by day): no day (the environment's dq0hour=128, rc's, before its games: dq0d's), every one about as before; and an elf put beside the character, keeping its distance, as it first waits (dq0Poke, 2026-11-01: the elves' wariness, not where a walk's beats happen to look about: the walk south, its jog told as one bend since a passage's heading, step 2 of the ways off the compass, met them at another moment)",
       init: 't_rc', cycles: 4000e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/k.hm', 'echo language khuzdul >> /ram/k.hm',
+      // (-R 7: the dice's offset that gives the game it was written for, since the dice by who asks,
+      // 2026-10-30: the same dungeon, other rolls)
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/k.hm', 'dq0hour=128', 'echo language khuzdul >> /ram/k.hm',
         'mkdir /ram/g', 'mkdir /ram/g2', 'mkdir /ram/h', 'mkdir /ram/e',
-        "echo 'faction | Hold | khuzwar | 0-0 | 96 | khuzeld | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/g2/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        "echo 'faction | Hold | khuzwar | 0-0 | 96 | khuzeld | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/g2/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7',
         'open the door', 'south', 'wait', 'examine the dwarf', 'talk to the dwarf', 'quit',
-        'dq0 -p t -s 1 -c /ram/k.hm -T -d /ram/g2', 'open the door', 'south', 'wait', 'talk to the dwarf', 'quit',
-        "echo 'faction | Tribe | hyeka khanu | 0-0 | 96 | garking | 0 | h | -' > /ram/h/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h',
+        'dq0 -p t -s 1 -c /ram/k.hm -T -d /ram/g2 -R 7', 'open the door', 'south', 'wait', 'talk to the dwarf', 'quit',
+        "echo 'faction | Tribe | hyeka khanu | 0-0 | 96 | garking | 0 | h | -' > /ram/h/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -R 7',
         'open the door', 'south', ...Array(8).fill('wait'), 'quit',
-        "echo 'faction | Wardens | sindwar | 0-0 | 96 | - | 0 | w | -' > /ram/e/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/e',
+        "echo 'faction | Wardens | sindwar | 0-0 | 96 | - | 0 | w | -' > /ram/e/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/e -R 7',
         'open the door', 'south', 'wait', 'wait', 'examine the elf', 'quit', 'echo $status']) },
+      start(m) {                                  // (The elves' scene set, 2026-11-01: an elf put beside the character as it waits,
+        dq0Poke(m, [{ g: 4, line: 'wait', n: 1, name: 'elf', beside: 2, set: { doing: m.dq0.layout().K.DO_SHY } }]);   //   keeping its distance: their
+      },                                          //   wariness, not where a walk's beats happen to look)
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
@@ -5265,7 +6214,7 @@ module.exports = {
         if (games.length !== 4) return ['not four games: ' + games.length];
         const [dw, dk, or, el] = games;
         if (!/A dwarf in mail, armed, is /.test(dw)) f.push('no dwarf in mail, armed, seen');
-        if (!/Two dwarves in mail/.test(dw)) f.push('no "Two dwarves" told');
+        if (!/(Two|Three|Four|Five|Six) dwarves in mail/.test(dw)) f.push('no "Two dwarves" (or more) told');
         const ex = dw.slice(dw.indexOf('> examine the dwarf'), dw.indexOf('> talk to the dwarf'));
         if (!/seems wary/.test(ex) || !/mail byrnie|scale byrnie/.test(ex) || !/axe|warhammer|battleaxe/.test(ex)) f.push('the dwarf not examined wary, in mail, armed: ' + JSON.stringify(ex.slice(0, 300)));
         if (!/The dwarf doesn't speak any tongue you know\./.test(dw)) f.push('the dwarf understood the common tongue');
@@ -5304,10 +6253,12 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start; the character walking on east toward them, as the dice now fall: they keep to their room, watching), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again (since slice 4.3, come round in shock, a thing not taken up in shock: its torch let fall and not taken up, the load's check that one's alone); and its encumbrance the referee's the same)",
+      name: 'dq0robbed', what: "Dingus Quest Zero's helpless character and a robber (the user's, 2026-10-21: by its nature, a cunning foe may rob it; HOUSE.md's: what it holds, but a light lit, and its pennies, off to its lair, and it goes): a theme's hostile bandits (written by hand: seed 1, south of the start; the character walking on east toward them, as the dice now fall: they keep to their room, watching), the character poor (Dodge 5, Unarmed 5, Dagger 5) and undefended (defend none), a dagger in hand beside its lit torch: struck senseless, robbed (\"The bandit goes through your things as you lie helpless, and takes what it finds.\": E_TASK TE_ROBBED, the robber's), the dagger and its pennies taken off to one square away from it (the bandits' lair's), its torch still in its hand, still lit; no blow at it after; it lives; the referee told its load left at once (the user's, 2026-10-22: \"Weight should be recounted immediately after a robbery\": the world's RS_EQUIP 2 as it's robbed, its load less the dagger and the pennies, the same as the UI's own once it's come round, puts its torch down and takes it up again (since slice 4.3, come round in shock, a thing not taken up in shock: its torch let fall and not taken up, the load's check that one's alone); and its encumbrance the referee's the same).  The scene set (since the denizens' day, 2026-10-31: bandits keep watches, a third asleep): no day (the environment's dq0hour=128, rc's, before its games: dq0d's), every one about as before",
       init: 't_rc', cycles: 1500e6,
+      // (-R 1: the dice's offset that gives the game it was written for, since the dice by who asks,
+      // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
-        'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        'echo ml dag 5 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 1',
         'defend none', 'hold the dagger', 'open the door', 'south', 'east', ...Array(12).fill('wait'), 'drop the torch', 'take the torch', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -5344,13 +6295,20 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0disengage', what: "Dingus Quest Zero's disengaging and a fight's tiring (the user's, 2026-10-21: \"For disengaging, try to have it follow the book\"; \"Tiring for combat should happen at the standard strenous work rate\"; HOUSE.md's, the book's Combat 7): seed 7's ghoul, the character weak with its sword (20) in a gambeson and a mail hauberk, two of its three rations put down (its load as it was before a ration weighed a pound: slice 4.1's counted lots), two turns about first (2026-10-26: its armour got out of its pack, the reach's times, its dice as a search of the variants found them); disengage and flee before anything engages it refused, told (not engaged; nothing near to flee); the ghoul fought, a disengage typed as it fights taking the fight over (its round out), the character backing away a square and more, no blow of its own after it, the fight not fought on; pass a round given up, no blow of its own; a flight as the ghoul engages it again, a square back and still engaged (stopped there, told once: \"You stop walking.\"), fought on; a flight at its prompt breaking away into a corner, no run on into the wall (since 2026-10-21 a second game's, the character in shock from the start, as the first's was when it fled: in the first, knocked senseless as it fights on after the flight, it's now finished, the ghoul a killer, the user's helpless character; it came round in shock and fled); every blow it struck charged to the referee as a round of strenuous work (RS_EXERT GA_WORK, 100 tenths)",
+      name: 'dq0disengage', what: "Dingus Quest Zero's disengaging and a fight's tiring (the user's, 2026-10-21: \"For disengaging, try to have it follow the book\"; \"Tiring for combat should happen at the standard strenous work rate\"; HOUSE.md's, the book's Combat 7): seed 7's ghoul, the character weak with its sword (20) in a gambeson and a mail hauberk, two of its three rations put down (its load as it was before a ration weighed a pound: slice 4.1's counted lots), two turns about first (2026-10-26: its armour got out of its pack, the reach's times, its dice as a search of the variants found them); disengage and flee before anything engages it refused, told (not engaged; nothing near to flee); the ghoul fought, a disengage typed as it fights (at its first blow's words) taking the fight over (its round out), the character backing away a square and more, no blow of its own after it, the fight not fought on (the ghoul left behind, out of its sight); a flight as the ghoul engages it again, a square back and still engaged (stopped there, told once: \"You stop walking.\"), fought on; pass typed as it fights (at its next blow's words), a round given up, no blow of its own; a flight at its prompt breaking away into a corner, no run on into the wall (since 2026-10-21 a second game's, the character in shock from the start, as the first's was when it fled: in the first, knocked senseless as it fights on after the pass, it's finished, the ghoul a killer, the user's helpless character); every round it fought charged to the referee as a round of strenuous work (RS_EXERT GA_WORK, 100 tenths: the book's second variant of combat fatigue, every round of active combat, whatever is done in it), each blow it struck, each struggle up from the ground, and the pass (begun engaged, the ghoul beside it).  The scene set (since the turns pace waits for a command being given, 2026-10-31, the ghoul no longer came back after the disengage on its own): the ghoul put back beside the character, facing it, hostile and fighting, as the flight is typed at its prompt (dq0Poke's beside and engage), the disengage and the pass typed on the fight's words (dq0OnWords), a look on the pass's (so the fighting on after the pass is the look's)",
       init: 't_rc', cycles: 2600e6,
+      // (-R 1: the dice's offset that gives the game it was written for, since the dice by who asks,
+      // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 20 >> /ram/c.hm',
-        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations', 'disengage', 'flee',
-        'd', 'wait']) + 'Ādisengage\r' + dq0Typed(['wait']) + 'Āpass\r' + dq0Typed(['wait']) + 'Āflee\r' +
-        dq0Typed(['quit', 'cp /ram/c.hm /ram/s.hm', 'echo vol 0 0 0 2 0 >> /ram/s.hm', "dq0 -p t -s 7 -c /ram/s.hm -k 'sword,gambeson,mail hauberk' -T",
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations', 'disengage', 'flee',
+        'd', 'wait', 'flee', 'quit', 'cp /ram/c.hm /ram/s.hm', 'echo vol 0 0 0 2 0 >> /ram/s.hm', "dq0 -p t -s 7 -c /ram/s.hm -k 'sword,gambeson,mail hauberk' -T -R 1",
           'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations', 'd', 'wait', 'flee', 'look', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'wait', n: 1, words: 'You strike at the ghoul', text: 'disengage\r' },
+          { g: 1, line: 'flee', n: 2, words: 'You strike at the ghoul', text: 'pass\r' },
+          { g: 1, line: 'pass', n: 1, words: 'Time passes.', text: 'look\r' }]);
+        dq0Poke(m, [{ g: 1, line: 'flee', n: 2, name: 'ghoul', beside: 'face', engage: true }]);
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], K = m.dq0.layout().K;
@@ -5372,14 +6330,96 @@ module.exports = {
           dq0Need(f, fl2, 'E_TASK', { te: 'TE_ENGAGED' }, 'the flight not stopped, engaged still');
           if (!dq0Ev(fl2, 'E_TASK', { te: 'TE_FIGHT' }).some(e => e.t >= b3[0].t)) f.push('not fought on, engaged still after the flight');
         }
-        const story = dq0Story(out), at2 = story.indexOf('You break away from the ghoul.'), at3 = story.indexOf('You turn to the ghoul.', at2);
+        const story = dq0Story(out), at2 = story.indexOf('You break away from the ghoul.'), m3 = at2 < 0 ? null : /You (turn to|fight back against) the ghoul[.]/.exec(story.slice(at2)),
+          at3 = m3 ? at2 + m3.index : -1;   // (The fight told again after the stop: turned to, or fought back)
         if (at2 < 0 || at3 < 0 || (story.slice(at2, at3).match(/stop walking[.]/gi) || []).length !== 1) f.push('the flight\'s stop not told once: ' + JSON.stringify(story.slice(at2, at3 < 0 ? at2 + 200 : at3)));
         const fl3 = T.of('flee', fl2.k + 1), b4 = brk(fl3);
         if (b4.length !== 1) f.push('the flight at its prompt not begun (' + dq0Evs(fl3) + ')');
         if (dq0Ev(fl3, 'E_NOWAY', {}).length) f.push('a flight cornered run on into the wall (' + dq0Evs(fl3) + ')');
-        const blows = T.reduce((n, t) => n + mine(t).length, 0);
-        const work = T.reduce((n, t) => n + t.replies.filter(r => /^slot/.test(r.req) && r.kind === K.RS_EXERT && r.a === K.GA_WORK && r.w1 === 100).length, 0);
-        if (!blows || work !== blows) f.push('a fight\'s rounds not charged as strenuous work: ' + work + ' charged, ' + blows + ' blows struck');
+        // (Every round fought charged: each blow (a rise, O_RISE, a blow's turn), each struggle up still down, the pass
+        // begun engaged: the ghoul beside it as it was typed, on its feet, fighting it)
+        const rounds = t => t.replies.filter(r => /^slot/.test(r.req) && r.kind === K.RS_EXERT && r.a === K.GA_WORK && r.w1 === 100).length;
+        const blows = T.reduce((n, t) => n + mine(t).length, 0), ups = T.reduce((n, t) => n + dq0Ev(t, 'E_BEAT', { beat: 'WB_NOT_UP', b: 0 }).length, 0);
+        const g = ps.at && ps.at.actors.find(a => a.name === 'ghoul'), engaged = !!g && g.sn === ps.at.pc.sn && g.pos !== K.POS_PRONE && g.doing === 'DO_FIGHT' &&
+          Math.max(Math.abs(g.x - ps.at.pc.x), Math.abs(g.y - ps.at.pc.y)) === 1;
+        if (!engaged) f.push('the pass not begun engaged: ' + JSON.stringify(g || null));
+        else if (rounds(ps) !== 1) f.push('the pass, engaged, not charged as a round of strenuous work: ' + rounds(ps) + ' charged in it');
+        const work = T.reduce((n, t) => n + rounds(t), 0), fought = blows + ups + (engaged ? 1 : 0);
+        if (!blows || work !== fought) f.push('a fight\'s rounds not charged as strenuous work: ' + work + ' charged, ' + fought + ' rounds fought (' + blows + ' blows, ' + ups + ' struggles up, the pass)');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0bodies', near: ['fight', 'denizens'], what: "Dingus Quest Zero's every actor tiring in a fight (2026-10-31, the brief's every actor's body: HOUSE.md's fights, the denizens' bodies; the character's rules, the book's second variant of combat fatigue, a level each five minutes of active combat): seed 7's ghoul (dq0disengage's scene: the character weak with its sword in a gambeson and a mail hauberk), the fight as the character waits; the ghoul's body in the referee's bank (dq0harn's fb, tire.c's struct bbody by its sheet's number) charged for its rounds (its exertion, 2 units a tenth, a round 100 tenths at most since it was last reckoned), kept between them.  And a tired beast breaking off: a second game the same, the ghoul's body set a breath short of its thirteenth level (dq0BodyPoke's: twelve levels, 5990 units, never reckoned) as the wait's typed; its next round a level more, its courage tested with its fatigue in it, and it breaks off (an E_FIGHT with FF_FLEES, the ghoul fleeing)",
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 20 >> /ram/c.hm',
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
+        'd', 'wait', 'look', 'quit',
+        "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
+        'd', 'wait', 'look', 'quit', 'echo $status']) },
+      start(m) {
+        dq0BodyPoke(m, [{ g: 2, line: 'wait', n: 1, name: 'ghoul', lv: 12, ex: 5990, at: 0 }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], bodies = m.bodies || [];
+        const gh = g => bodies.filter(b => b.g === g && b.name === 'ghoul');
+        // (Game 1: the ghoul's rounds charged: its body reckoned (at), its exertion the more after the fight)
+        const b1 = gh(1), last = b1[b1.length - 1];
+        if (!b1.length) f.push('game 1: no ghoul among the actors');
+        else if (!last.at || last.lv * 6000 + last.ex < 200) f.push('game 1: the ghoul\'s rounds not charged: ' + JSON.stringify(b1));
+        const fights1 = T.filter(t => t.game === 0).reduce((n, t) => n + t.dens.filter(e => e.kind === 'E_FIGHT' && e.out !== 'FO_BLED').length, 0);
+        if (last && last.lv * 6000 + last.ex > 200 * fights1) f.push('game 1: the ghoul charged more than its rounds (' + fights1 + ' blows): ' + JSON.stringify(last));
+        // (Game 2: set a breath short of a level more, its next round tires it, and it breaks off)
+        const p = bodies.find(b => b.g === 2 && b.poked);
+        if (!p) f.push('game 2: the ghoul\'s body not set (not an actor as the wait was typed)');
+        const flee = T.filter(t => t.game === 1).flatMap(t => t.dens).filter(e => e.kind === 'E_FIGHT' && (e.ff & 0x10));
+        if (!flee.length) f.push('game 2: the tired ghoul didn\'t break off (no blow with FF_FLEES): ' + T.filter(t => t.game === 1).map(dq0Evs).join(' | ').slice(0, 1500));
+        const b2 = gh(2), l2 = b2[b2.length - 1];
+        if (p && (!l2 || l2.lv < 13)) f.push('game 2: the ghoul not a level more tired: ' + JSON.stringify(b2));
+        this.notes = [JSON.stringify(bodies)];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0hungry', near: ['denizens'], what: "Dingus Quest Zero's denizens' hunger (2026-10-31, the brief's every actor's body: HOUSE.md's the denizens' bodies, for review): seed 3's giant rats round the way down (dq0 -T, dq0denizens' scene: wary vermin, hunters by smell), fed lately as the game begins, none hostile through a minute's search; then each rat made very hungry as the second search is typed (its want, the minds' aate: the clock's high word less 20, some 36 hours), and a very hungry hunter that senses the character hunts it: hostile (its attitude in the hub), coming at it",
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'search', 'search', 'quit', 'echo $status']) },
+      start(m) {   // (The rats made very hungry as the second search is typed: dq0d's aate, each actor's, by its label)
+        const a = m.acia, read = a.read;
+        let typed = '', n = 0;
+        m.hungered = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'search' && ++n === 2 && m.dq0) {
+                const h = m.dq0.bank(0), { L } = m.dq0.layout(), tk = h[12 + 2];
+                const ad = parseInt(/^al ([0-9A-F]+) \._aate$/m.exec(fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'))[1], 16);
+                const nowU = h[L.now + 2];
+                for (let k = 0; k < L.nactors; k++) {
+                  const o = L.actor + k * L.actorSize;
+                  let s = '';
+                  for (let i = 0; h[o + L.aName + i] && i < 12; i++) s += String.fromCharCode(h[o + L.aName + i]);
+                  if (s === 'giant rat') { m.taskRam[tk][ad + k] = nowU - 20 & 255; m.hungered.push(k); }
+                }
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], s1 = T.of('search'), s2 = T.of('search', s1.k + 1);
+        const rats = s => s && s.actors ? s.actors.filter(x => x.name === 'giant rat') : [];
+        if (!rats(s1.after).length) return ['no giant rats about the way down: ' + JSON.stringify(s1.after && s1.after.actors)];
+        if (rats(s1.after).some(x => x.attitude === 'AT_HOSTILE')) f.push('a rat hostile before it hungered: ' + JSON.stringify(rats(s1.after)));
+        if (!m.hungered.length) f.push('no rat made hungry');
+        if (!rats(s2.after).some(x => x.attitude === 'AT_HOSTILE')) f.push('no very hungry rat hunting the character (hostile): ' + JSON.stringify(rats(s2.after)));
         return f;
       },
       sdcard: true
@@ -5707,7 +6747,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0handy', what: 'Dingus Quest Zero\'s reach, how readily a thing comes to hand (the user\'s, 2026-10-23: "Handy would be readily available, so in a backpack that is being worn is not as readily available as one in a belt pouch.  In a sack, in a backpack is two-containers deep, so should require longer for each level of container.  A backpack on the ground or in hand (not worn) is more readily available ... Searching a worn backpack takes it off first, then if it was on, puts it back on, each taking time.  Just shrugging it off/dropping it before battle should not require time"; HOUSE.md\'s reach, handy tools and things used up), by the clock between one line and the next, the things\' replies (the reach owed in the reply\'s y, tenths) and the words: at seed 3 (dq0 -T, dq0 -k sack: the sack in its main hand) the rations from the worn pack into the sack held (the pack off and on again, 10 seconds, and each level 2: told, "You take off your backpack for it, and put it on again."), the sack stowed in the worn pack, the rations from the sack in it (two deep: 15 seconds), dropped at no time, the pennies from the belt\'s pouch (a quick draw, a second), the worn pack looked in (15 seconds) and searched (its minute: off and on within it), dropped ("drop the pack": no time), the tinderbox taken from it on the ground (a level: 4 seconds), the pack put on ("put on the pack", 5 seconds), its torch put down, the pack taken off and left off ("take off the pack": in both hands), looked in held (5 seconds), put on again; at seed 7 (the ghoul engaging it at once, armoured) a grope in a fight a round a step (the book\'s, Combat 7, a turn): its sword fumbled (a hand free), the dagger drawn from the belt a round, stowed in the worn pack three (off, in, on), the pack dropped, the rations taken from it on the ground a round',
+      name: 'dq0handy', what: 'Dingus Quest Zero\'s reach, how readily a thing comes to hand (the user\'s, 2026-10-23: "Handy would be readily available, so in a backpack that is being worn is not as readily available as one in a belt pouch.  In a sack, in a backpack is two-containers deep, so should require longer for each level of container.  A backpack on the ground or in hand (not worn) is more readily available ... Searching a worn backpack takes it off first, then if it was on, puts it back on, each taking time.  Just shrugging it off/dropping it before battle should not require time"; HOUSE.md\'s reach, handy tools and things used up), by the clock between one line and the next, the things\' replies (the reach owed in the reply\'s y, tenths) and the words: at seed 3 (dq0 -T, dq0 -k sack: the sack in its main hand) the rations from the worn pack into the sack held (the pack off and on again, 10 seconds, and each level 2: told, "You take off your backpack for it, and put it on again."), the sack stowed in the worn pack, the rations from the sack in it (two deep: 15 seconds), dropped at no time, the pennies from the belt\'s pouch (a quick draw, a second), the worn pack looked in (15 seconds) and searched (its minute: off and on within it), dropped ("drop the pack": no time), the tinderbox taken from it on the ground (a level: 4 seconds), the pack put on ("put on the pack", 5 seconds), its torch put down, the pack taken off and left off ("take off the pack": in both hands), looked in held (5 seconds), put on again; at seed 7 (the ghoul engaging it at once, armoured) a grope in a fight a round a step (the book\'s, Combat 7, a turn): its sword fumbled (a hand free), the dagger drawn from the belt a round, stowed in the worn pack three (off, in, on), the pack dropped, the rations taken from it on the ground a round, each line typed ahead as the wait begins (held, the first taking the fight over as it begins, each after it the fight fought on in between, its round out first), the quit last (the fight taken over by it, not fought to the end): the scene set, the ghoul steady (dq0Poke\'s, at the wait: its mood AM_STEADY, so morale never takes it out of the fight before the lines are done)',
       init: 't_rc', cycles: 3200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sack', 'put the rations in the sack', 'stow the sack', 'take the rations from the sack',
@@ -5715,7 +6755,10 @@ module.exports = {
         'drop the pack', 'take the tinderbox from the backpack', 'drop the tinderbox', 'put on the pack', 'drop the torch',
         'take off the pack', 'look in the pack', 'put on the pack', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait']) +
-        'hold the dagger\rstow the dagger\rdrop the backpack\rtake the rations from the backpack\r' + dq0Typed(['quit', 'echo $status']) },
+        'hold the dagger\rstow the dagger\rdrop the backpack\rtake the rations from the backpack\rquit\r' + dq0Typed(['echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 2, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } }]);   // (The ghoul steady: hub.h's AM_STEADY)
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out);
@@ -5761,6 +6804,8 @@ module.exports = {
         fight('stow the dagger', 'IO_STOW', 300, 'into the worn pack: off, in, on, a round each');
         fight('take the rations from the backpack', 'IO_TAKE', 100, 'from the pack dropped on the ground: a round');
         if (!late.some(t => rep(t, 'IO_DROP'))) f.push('the pack not dropped in the fight');
+        const hw = (m.hearts || []).find(h => h.g === 2 && h.line === 'wait');
+        if (!hw || !hw.acts.some(a => a.name === 'ghoul' && a.mood === 8)) f.push('the ghoul not set steady');
         return f;
       },
       sdcard: true
@@ -5882,7 +6927,7 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
-        const tests = t => t.replies.filter(q => q.req === 'slot0' && q.kind === K.RS_TEST && q.a === K.P_BEARING);
+        const tests = t => t.replies.filter(q => q.req === 'slot0' && q.kind === K.RS_TEST && q.a === K.P_BEARING && q.steps < 64);   // (Not the time kept's: its steps from rs.h's TIME_STEPS on, 2026-10-31)
         const bear = (t, w) => dq0Ev(t, 'E_BEARING', { brg: w }).length;
         const at = (t, skew, lost, what) => { if (!t.after || t.after.pc.skew !== skew || t.after.pc.lost !== lost) f.push(what + ': its bearings ' + (t.after && [t.after.pc.skew, t.after.pc.lost]) + ', not ' + [skew, lost]); };
         const face = (t, h, what) => { if (!t.after || t.after.pc.face !== h) f.push(what + ': truly facing ' + (t.after && t.after.pc.face) + ', not ' + h); };
@@ -5940,19 +6985,23 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0travel', what: 'Dingus Quest Zero\'s travel to a place it knows (slice 4.2, the user\'s, 2026-10-16: "name this room "The Mausoleum" and then you could say "I want to go back to the mausoleum" and you would be on your way, and the game would move you at your current rate of speed back toward that named place, as long as your direction sense/orientation checks held up.  Orientation checks would be aided if good maps are used"; HOUSE.md\'s travel), by the world\'s events (E_TASK\'s LT_TRAVEL, the legs\' E_ARRIVE), where the character ends, the chunks\' memory (the cache\'s, each chunk\'s kept) and the words: at seed 3\'s caves (dq0 -T, knowing north: -N) the cave by the stairs named the Grotto, three walks west out of its chunk, "go back to the grotto" there a leg at a time (TE_BEGUN, two legs or more, TE_THERE under way: in its room), again there already, "return to the grotto" the same; the same walks and two hours\' waits twice (its torch out between), its memory of the Grotto\'s chunk under a tenth: refused (TE_FORGOT, no walk), and again in the light of its spare torch (the chunk it\'s in seen, not the Grotto\'s); a map drawn as it went (paper, charcoal, a lantern lit), its memory gone after four hours\' waits but its map carried showing the Grotto, in light to read it: on its way by the map (begun, walked, not refused: there, or stopped by a giant rat in its way); a wrong belief taking it astray (its bearings tested, the hunter\'s Awareness: a long way walked, its north an eighth off since it last saw the Grotto, not knowing it) its first leg another way than the same walks\' knowing north (-N) take, the one stopped by a command typed as it goes (TE_STOPPED); at seed 4 the kitchen past the barred door named the Gallery, "go back to where I came in" stopped by a shut door it hasn\'t opened, the way nearest the bedchamber (E_NOWAY N_DOOR, no walk); "go back to the kitchen" (a kind of room, the theme\'s word) there already',
+      name: 'dq0travel', what: 'Dingus Quest Zero\'s travel to a place it knows (slice 4.2, the user\'s, 2026-10-16: "name this room "The Mausoleum" and then you could say "I want to go back to the mausoleum" and you would be on your way, and the game would move you at your current rate of speed back toward that named place, as long as your direction sense/orientation checks held up.  Orientation checks would be aided if good maps are used"; HOUSE.md\'s travel), by the world\'s events (E_TASK\'s LT_TRAVEL, the legs\' E_ARRIVE), where the character ends, the chunks\' memory (the cache\'s, each chunk\'s kept) and the words: at seed 3\'s caves (dq0 -T, knowing north: -N) the cave by the stairs named the Grotto, three walks west out of its chunk, "go back to the grotto" there a leg at a time (TE_BEGUN, two legs or more, TE_THERE under way: in its room), again there already, "return to the grotto" the same, then the same walks out and "go back to the grotto" again, stopped by a command typed as it begins ("turn around" typed as "You head back toward the Grotto." is told, as a player would: TE_STOPPED, not there); the same walks and two hours\' waits twice (its torch out between), its memory of the Grotto\'s chunk under a tenth: refused (TE_FORGOT, no walk), and again in the light of its spare torch (the chunk it\'s in seen, not the Grotto\'s); a map drawn as it went (paper, charcoal, a lantern lit), its memory gone after four hours\' waits but its map carried showing the Grotto, in light to read it: on its way by the map (begun, walked, not refused: there, or stopped by a giant rat in its way); a wrong belief taking it astray (its bearings tested, the hunter\'s Awareness: a long way walked, its north an eighth off since it last saw the Grotto, not knowing it) its first leg another way than the same walks\' knowing north (-N) take; at seed 4 the kitchen past the barred door named the Gallery, "go back to where I came in" stopped by a shut door it hasn\'t opened, the way nearest the bedchamber (E_NOWAY N_DOOR, no walk); "go back to the kitchen" (a kind of room, the theme\'s word) there already (its caves dry and unfallen, dq0 -W -U: the walks and the journeys as they were before the water, slice 4.9\'s, and before the rubble, slice 4.10\'s: at seed 3 the caves\' rubble made the astray walk\'s first leg the one knowing north takes, so -U keeps the scene the comparison was made for; the test is about travel, not wading or clambering)',
       bearings: true, init: 't_rc', cycles: 7000e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -N', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'go back to the grotto', 'go back to the grotto',
-        'return to the grotto', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -N -k torch', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'wait 2 hours', 'wait 2 hours',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'go back to the grotto', 'go back to the grotto',
+        'return to the grotto', 'n', 'w', 'w', 'w', 'go back to the grotto', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N -k torch', 'd', 'call this room the Grotto', 'n', 'w', 'w', 'w', 'wait 2 hours', 'wait 2 hours',
         'go back to the grotto', 'light the torch', 'go back to the grotto', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -N -k paper,charcoal,lantern', 'douse the torch', 'drop the torch', 'light the lantern', 'put the charcoal in the pouch', 'map as I go', 'd',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N -k paper,charcoal,lantern', 'douse the torch', 'drop the torch', 'light the lantern', 'put the charcoal in the pouch', 'map as I go', 'd',
         'call this room the Grotto', 'n', 'w', 'w', 'w', 'stop mapping', 'wait 100 minutes', 'wait 100 minutes', 'wait 1 hour', 'go back to the grotto', 'quit',
-        ...['', ' -N'].flatMap(n => ['dq0 -p t -s 3 -c /ram/c.hm -T' + n, 'd', 'call this room the Grotto', 'n', 'w', 'f', 'f', 'f', 'l', 'f', 'r', 'f', 'l', 'f',
-          'r', 'f', 'f', 'l', 'f', 'go back to the grotto', ...(n ? ['!' + 'Ā'.repeat(6) + 'turn around'] : []), 'quit']),
+        ...['', ' -N'].flatMap(n => ['dq0 -p t -s 3 -c /ram/c.hm -T -W -U' + n, 'd', 'call this room the Grotto', 'n', 'w', 'f', 'f', 'f', 'l', 'f', 'r', 'f', 'l', 'f',
+          'r', 'f', 'f', 'l', 'f', 'go back to the grotto', 'quit']),
         'dq0 -p t -s 4 -c /ram/c.hm -N', 'take the bar', 'open', 'n', 'e', 'n', 'call this room the Gallery', 'go back to where I came in',
-        'go back to the kitchen', 'quit', 'echo $status'].map(l => (l[0] === '!' ? l.slice(1) : 'ā' + l) + '\r').join('') },
+        'go back to the kitchen', 'quit', 'echo $status'].map(l => 'ā' + l + '\r').join('') },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'go back to the grotto', n: 3, words: 'You head back toward the Grotto.', text: 'turn around\r' }]);   // (Typed as it's told)
+        dq0Poke(m, [{ g: 4, line: 'go back to the grotto', n: 1, hub: { pcSkew: 1 } }]);   // (Astray: its north an eighth off as it sets out, the scene set: the cave's diagonal ways, 2026-10-31, left its long walk's bearings tests true)
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out);
@@ -5972,7 +7021,7 @@ module.exports = {
         const kept = (st, nm) => { const r = named(st, nm), a = r && chunkOf(st, r.sn, r.x, r.y); return a && a.c; };
         const at = (t, what) => { if (!t.at || !t.after) { f.push(what + ': no state'); return false; } return true; };
         // The Grotto gone back to, knowing north
-        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -N'), b1 = T.after(g, 'go back to the grotto'), b2 = T.after(b1, 'go back to the grotto');
+        const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N'), b1 = T.after(g, 'go back to the grotto'), b2 = T.after(b1, 'go back to the grotto');
         const b3 = T.after(b2, 'return to the grotto');
         if (at(b1, 'the first journey')) {
           if (!tr(b1, 'TE_BEGUN').length || legs(b1) < 2 || !tr(b1, 'TE_THERE').filter(e => e.b & 0x40).length) f.push('"go back to the grotto": not begun, two legs or more, there under way (' + dq0Evs(b1) + ')');
@@ -5982,10 +7031,15 @@ module.exports = {
         for (const [t, l] of [[b2, 'again'], [b3, '"return to the grotto"']]) {
           if (!tr(t, 'TE_THERE').filter(e => !(e.b & 0x40)).length || legs(t)) f.push(l + ': not there already, no walk (' + dq0Evs(t) + ')');
         }
+        // Stopped by a command typed as it begins, the same walks out again
+        const b4 = T.after(b3, 'go back to the grotto'), bt = T.after(b4, 'turn around'), stops = [...tr(b4, 'TE_STOPPED'), ...tr(bt, 'TE_STOPPED')];
+        if (bt.k < 0 || bt.game !== b4.game) f.push('"turn around" not typed as the journey began');
+        else if (!tr(b4, 'TE_BEGUN').length || !stops.length || tr(b4, 'TE_THERE').length || tr(bt, 'TE_THERE').length) f.push('a command typed as it goes: the journey not stopped (' + dq0Evs(b4) + ' ' + dq0Evs(bt) + ')');
         inTurn(s, ['> go back to the grotto', 'You head back toward the Grotto.', 'You\'re back in the Grotto.', '> go back to the grotto',
-          'You\'re in the Grotto already.', '> return to the grotto', 'You\'re in the Grotto already.'], f, 'the words: ');
+          'You\'re in the Grotto already.', '> return to the grotto', 'You\'re in the Grotto already.', '> go back to the grotto',
+          'You head back toward the Grotto.', '> turn around', 'You stop travelling.'], f, 'the words: ');
         // Forgotten: two hours' waits twice, out of the Grotto's chunk
-        const h = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -N -k torch'), h1 = T.after(h, 'go back to the grotto'), h2 = T.after(h1, 'go back to the grotto');
+        const h = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N -k torch'), h1 = T.after(h, 'go back to the grotto'), h2 = T.after(h1, 'go back to the grotto');
         for (const [t, l] of [[h1, 'in the dark'], [h2, 'in its torch\'s light']]) {
           if (!at(t, 'forgotten ' + l)) continue;
           const c = kept(t.at, 'the Grotto');
@@ -5995,7 +7049,7 @@ module.exports = {
         if (h2.at && !h2.at.pc.light) f.push('the spare torch not lit');
         inTurn(s.slice(s.indexOf('-k torch')), ['> go back to the grotto', 'You don\'t remember the way to the Grotto.'], f, 'forgotten\'s words: ');
         // A map carried after the memory's gone
-        const p = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -N -k paper,charcoal,lantern'), p1 = T.after(p, 'go back to the grotto');
+        const p = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N -k paper,charcoal,lantern'), p1 = T.after(p, 'go back to the grotto');
         if (at(p1, 'the map\'s journey')) {
           const c = kept(p1.at, 'the Grotto');
           if (!c || left(p1.at, c) >= 10) f.push('the map\'s: the Grotto still remembered: ' + (c ? left(p1.at, c) : 'no chunk'));
@@ -6006,8 +7060,8 @@ module.exports = {
             f.push('the map\'s: not on its way there by the map (there, or a denizen in its way: ' + dq0Evs(p1) + ')');
         }
         // Astray, by a belief gone wrong since it saw the Grotto: its first leg another way than knowing north takes
-        const a = T.of('dq0 -p t -s 3 -c /ram/c.hm -T'), a1 = T.after(a, 'go back to the grotto');
-        const n = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -N', g.k + 1), n1 = T.after(n, 'go back to the grotto');
+        const a = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -U'), a1 = T.after(a, 'go back to the grotto');
+        const n = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W -U -N', g.k + 1), n1 = T.after(n, 'go back to the grotto');
         if (at(a1, 'astray') && at(n1, 'knowing north')) {
           const c = kept(a1.at, 'the Grotto');
           if (!c || a1.at.pc.lost || !((a1.at.pc.skew - c.sk) & 7)) f.push('astray: its belief not off since it saw the Grotto, or known lost: ' + JSON.stringify(c && [a1.at.pc.skew, c.sk, a1.at.pc.lost]));
@@ -6015,9 +7069,6 @@ module.exports = {
           const first = t => (dq0Ev(t, 'E_ARRIVE')[0] || {}).t;
           if (!tr(a1, 'TE_BEGUN').length || !first(a1) || first(a1) === first(n1)) f.push('astray: its first leg the one knowing north takes (' + dq0Evs(a1) + ' | ' + dq0Evs(n1) + ')');
         }
-        const nt = T.after(n1, 'turn around'), stops = [...tr(n1, 'TE_STOPPED'), ...tr(nt, 'TE_STOPPED')];
-        if (!stops.length || tr(n1, 'TE_THERE').length || tr(nt, 'TE_THERE').length) f.push('a command typed as it goes: the journey not stopped (' + dq0Evs(n1) + ' ' + dq0Evs(nt) + ')');
-        inTurn(s.slice(s.lastIndexOf('-T -N')), ['You head back toward the Grotto.', 'You stop travelling.'], f, 'the stop\'s words: ');
         // A shut door it hasn't opened, the way nearest; a kind of room
         const d = T.of('dq0 -p t -s 4 -c /ram/c.hm -N'), d1 = T.after(d, 'go back to where I came in'), d2 = T.after(d1, 'go back to the kitchen');
         if (at(d1, 'the shut door')) {
@@ -6027,7 +7078,7 @@ module.exports = {
         if (!tr(d2, 'TE_THERE').filter(e => e.b === (0x80 | 8)).length) f.push('"go back to the kitchen": not there already, the kitchen\'s kind (' + dq0Evs(d2) + ')');
         inTurn(s.slice(s.indexOf('-s 4')), ['> go back to where I came in', 'You head back toward where you came in.', 'The door is shut: open it first.',
           '> go back to the kitchen', 'You\'re in the kitchen already.'], f, 'the shut door\'s words: ');
-        this.notes = [b1, h1, h2, p1, a1, n1, d1].map(t => t.line + ': ' + dq0Evs(t).slice(0, 300));
+        this.notes = [b1, b4, h1, h2, p1, a1, n1, d1].map(t => t.line + ': ' + dq0Evs(t).slice(0, 300));
         return f;
       },
       sdcard: true
@@ -6081,10 +7132,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0walkwords', meaning: true, what: 'Dingus Quest Zero\'s walks told as they go (the user\'s playtest, 2026-10-21: "Crossing a room to a door says nothing till the door"; "in a passage two squares wide, every step says the passageway forks here"): at seed 3 the first room\'s doors opened and walked through to the hall, crossed, and back south across it to its door: the room\'s crossing told as the walk leaves it (the world\'s E_BEAT WB_CROSS, "You cross the room.") before the doorway\'s beat (WB_DOOR, "You go through a doorway."); then at seed 3\'s stratum below (caves, dq0 -T) east from the cave by the stairs into the tunnels: a walk set out from a wide fork crosses it (three squares the way said, not a square and a fork again: it was one square a walk)',
+      name: 'dq0walkwords', meaning: true, what: 'Dingus Quest Zero\'s walks told as they go (the user\'s playtest, 2026-10-21: "Crossing a room to a door says nothing till the door"; "in a passage two squares wide, every step says the passageway forks here"): at seed 3 the first room\'s doors opened and walked through to the hall, crossed, and back south across it to its door: the room\'s crossing told as the walk leaves it (the world\'s E_BEAT WB_CROSS, "You cross the room.") before the doorway\'s beat (WB_DOOR, "You go through a doorway."); then at seed 3\'s stratum below (caves, dq0 -T) east from the cave by the stairs into the tunnels: a walk set out from a wide fork crosses it (three squares the way said, not a square and a fork again: it was one square a walk) (its caves dry, dq0 -W: a stream along that passage would have slowed and turned the walk, slice 4.9\'s)',
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm',
-        'open the door behind me on my right', 'n', 'open', 'n', 'e', 's', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'n', 'e', 'e', 'e', 'quit',
+        'open the door behind me on my right', 'n', 'open', 'n', 'e', 's', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -W', 'd', 'n', 'e', 'e', 'e', 'quit',
         'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -6096,7 +7147,7 @@ module.exports = {
         if (dq0Ev(so, 'E_ARRIVE', {}).some(x => x.how === 'A_CROSSED')) f.push('the walk south told as a crossing alone');
         const ans = s.slice(s.indexOf('> s', s.indexOf('> e')), s.indexOf('> quit'));
         inTurn(ans, ['You cross the room.', 'You go through a doorway.'], f, 'the walk south\'s words: ');
-        const g2 = T.of('dq0 -p t -s 3 -c /ram/c.hm -T'), e1 = T.after(g2, 'e'), e2 = T.after(e1, 'e'), e3 = T.after(e2, 'e');
+        const g2 = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -W'), e1 = T.after(g2, 'e'), e2 = T.after(e1, 'e'), e3 = T.after(e2, 'e');
         if (!e2.after || !e3.after) return f.concat('the cave\'s walks not made');
         const dx = e3.after.pc.x - e2.after.pc.x, dy = e3.after.pc.y - e2.after.pc.y, n = Math.max(Math.abs(dx), Math.abs(dy));
         if (dx < 2 || n < 3) f.push('the walk east from the wide fork not across it: ' + dx + ',' + dy + ' (it was a square)');
@@ -6252,7 +7303,9 @@ module.exports = {
         dq0Never(f, w2, 'E_TASK', { te: 'TE_OUT' }, 'the torch out before the hour');
         const out1 = dq0Ev(w3, 'E_TASK', { te: 'TE_OUT', lamp: K.KI_TORCH, task: 'LT_WAIT' });
         if (out1.length !== 1) f.push('the torch not gone out at the hour, the wait stopped with it (' + dq0Evs(w3) + ')');
-        else if (out1[0].t !== 36000) f.push('the torch out at ' + out1[0].t + ' tenths, not the hour');
+        else if (out1[0].t < 36000 || out1[0].t > 36010) f.push('the torch out at ' + out1[0].t + ' tenths, not the hour');   // (Within a
+        // second of it: the turns pace moves the clock a slice at a time, the denizens' turns its slices, 36003 with their
+        // dice by who asks, 2026-10-30)
         dq0Need(f, w3, 'E_VIEW', { why: 'V_DARK' }, 'no look in the dark as it went out');
         const spent = w3.after && named(w3.after, 'torch').find(i => !i.fuel);
         if (!w3.after || w3.after.pc.light || !w3.after.sight || !w3.after.sight.dark) f.push('the character not in the dark, its only light gone');
@@ -6298,7 +7351,315 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0flee', what: 'Dingus Quest Zero\'s unarmed blows and morale (the user\'s, 2026-10-16: punching, kicking, head butts, the referee\'s gear.c, by Unarmed; RS_MORALE, HarnMaster\'s Initiative test, Combat 18), by the blows told and the denizens\' state (the referee\'s dice at this seed): at seed 5\'s giant rats (bare fists: the character\'s Unarmed 80) a punch fought on (HOUSE.md\'s fighting on, the user\'s, 2026-10-20: every blow of it a punch, the hub\'s pc_strike), the rat and its kin turning on the character, a punch felling one; its kin shaken and, shy, fleeing (fighting no more, no foe left beside it); the one down finished with a kick; the other gone out of reach, a head butt at it not struck (dq0unarmed\'s, in it; a kick, a head butt and punches typed one by one before fighting on)',
+      name: 'dq0morale', near: ['fight', 'denizens'], what: "Dingus Quest Zero's morale (the user's, 2026-10-29: every intelligent creature sways the morale field about it, by its rank and its influence skills, for its friends and against its foes; bonds upward to its leaders regardless of distance, growing with time served and contact; a leader's loss, known, a morale check at once with its influence removed; HOUSE.md's morale, for review), by the denizens' morale tests (RS_MORALE in their slot: steps, why, the field, the bonds and the leaders reckoned) and a strong character (its attributes 99) in mail, among a hand-written theme's small orcs (a shy, wary people) at seed 2, their home by the way down where the character starts (popgen's, its leader with its band), another band of them by it, a third on the stratum below.  Their king their leader: struck down, senseless, then dead, every small orc that heard it fall tests at once, its leader's loss (its band's head for its own band, the faction's for the other, wherever it is), its bond to it taken away, the band beside it the worse (the book's bad situation, a friend fallen about it); after its death those that heard it are led by its successor (since 2026-10-30: the most influential of those below it, dq0succession's), while the band below, that didn't hear it, keeps its bond to the dead king, its fall unfelt.  The band hostile, fighting beside its king, a fellow's fall weighed with its king's presence and its bond (the field and the bonds above nothing).  A black orc their band's head (a captain), kings above it in the tribe: its fall the home band's leader's loss, its bond to the kings holding; an old band (long served, often with its leaders) the steadier at its fall than a new one, by those bonds.  An ally of the character's heartened by it; a fearsome foe beside a band (a mighty one of a faction hostile to it) weighing on it.  (The test's own setting up: pokes of the actors' hub fields at a line's Enter, dq0Poke's; since the denizens' water, 2026-10-31, the band below's small orc put beside the character as it's attacked, dq0Poke's beside: the band no longer wades where it did)",
+      init: 't_rc', cycles: 4000e6,
+      // (-R 79: the dice's offset that gives the game it was written for, since the dice by who asks,
+      // 2026-10-30: the same dungeon, other rolls)
+      machine: { input: (() => {
+        const kit = "-k 'sword,gambeson,mail hauberk,mail cowl,great helm'", dress = ['wear the gambeson', 'wear the mail hauberk', 'wear the mail cowl', 'wear the great helm', 'hold the sword'];
+        const game = d => ['dq0 -p t -s 2 -c /ram/c.hm -T -R 79 -d /ram/' + d + ' ' + kit, ...dress], king = "'faction | Tribe | arak | 0-1 | 20 | garking | 0 | w | -'";
+        return dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 100 >> /ram/c.hm', 'echo ml ini 100 >> /ram/c.hm',
+          'echo ml dge 100 >> /ram/c.hm', 'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm',
+          ...['h', 'p', 'b', 'c', 'd', 'e'].flatMap(d => ['mkdir /ram/' + d, 'echo ' + king + ' > /ram/' + d + '/theme.txt']),
+          ...['b', 'c'].map(d => "echo 'faction | Tribe | arak garking | 0-1 | 30 | khanu | 0 | w | -' > /ram/" + d + '/theme.txt'),
+          "echo 'faction | Tribe | arak | 0-1 | 20 | garking | 0 | w | Beasts h' > /ram/e/theme.txt", "echo 'faction | Beasts | bear | 1-1 | 1 | - | 1 | w | -' >> /ram/e/theme.txt",
+          ...game('h'), 'attack the small orc', 'wait', 'wait', 'attack the orc king', 'wait', 'attack the orc king', 'wait', 'd', 'wait', 'attack the small orc', 'wait', 'wait', 'quit',
+          ...game('p'), 'wait', 'wait', 'quit',
+          ...['b', 'c'].flatMap(d => [...game(d), 'attack the black orc', 'wait', 'attack the black orc', 'quit']),
+          ...['d', 'e'].flatMap(d => [...game(d), 'attack the orc king', 'quit']), 'echo $status']);
+      })() },
+      start(m) {
+        const band = (g, set) => [0, 1].map(k => ({ g, line: 'attack the black orc', n: 1, k, set }));
+        dq0Poke(m, [
+          ...[0, 1, 2].map(k => ({ g: 2, line: 'hold the sword', n: 1, k, set: { attitude: 0 } })),    // (Game 2: the band and its king hostile)
+          ...band(3, { serve: 255, contact: 255 }), ...band(4, { serve: 0, contact: 0 }),             // (Games 3, 4: an old band, a new one)
+          { g: 5, line: 'attack the orc king', n: 1, k: 1, set: { attitude: 5 } },                    // (Game 5: one the character's ally)
+          { g: 6, line: 'attack the orc king', n: 1, k: 1, set: { faction: 2, power: 250 } },         // (Game 6: one a fearsome foe)
+          { g: 1, line: 'attack the small orc', n: 2, name: 'small orc', beside: 'face' }]);          // (Game 1: one of the band below beside
+                                                                                                      //   the character as it's attacked, since
+                                                                                                      //   their water, 2026-10-31)
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), C = require('../sim/lib/dq0meaning.js').constants().names, f = [], MR_FELL = 1, MR_LEADER = 2, NONE = 0xFF;
+        const tests = g => { const seen = new Set(); return T.filter(t => t.game === g).flatMap(t => dq0Rep(t, 'dslot', { kind: C.RS_MORALE }).map(r => Object.assign({ cmd: t.line, at: t.k }, r)))
+          .filter(r => { const k = JSON.stringify(r); return !seen.has(k) && seen.add(k); }); };
+        const games = [...new Set(T.map(t => t.game).filter(g => g >= 0))].sort((a, b) => a - b);
+        if (games.length !== 6) return ['not six games: ' + games.length];
+        const [gk, gp, gb, gc, gd, ge] = games, K = tests(gk), say = r => JSON.stringify({ cmd: r.cmd, actor: r.actor, a: r.a, b: r.b, c: r.c, l1: r.w2 & NONE, l2: r.w2 >> 8, steps: r.steps });
+        const l1 = r => r.w2 & NONE, l2 = r => r.w2 >> 8;
+        // (The king's fall: every small orc that heard it, its leader's loss, the bond taken away; the band beside it the worse)
+        const first = K.filter(r => r.a === MR_LEADER && r.cmd === 'attack the orc king'), fa = first.filter(r => r.w1 === first[0].w1);
+        const own = fa.filter(r => l1(r) === r.w1), other = fa.filter(r => l1(r) === NONE && l2(r) === r.w1);
+        if (new Set(fa.map(r => r.actor)).size < 4 || !own.length || !other.length) f.push('not every small orc tested at the king\'s fall, the king its band\'s head and the other band\'s faction head: ' + fa.map(say).join(' '));
+        if (K.some(r => r.a === MR_LEADER && r.c !== 0)) f.push('a bond to the fallen king not taken away: ' + K.filter(r => r.a === MR_LEADER).map(say).join(' '));
+        if (own.length && other.length && Math.max(...own.map(r => r.steps)) >= Math.min(...other.map(r => r.steps))) f.push('the band beside the fallen king not the worse: ' + fa.map(say).join(' '));
+        // (After its death: those that heard it led by no one; the band below keeps its bond, the fall unfelt)
+        const d = T.find(t => t.game === gk && t.line === 'd'), after = K.filter(r => r.a === MR_FELL && r.w1 !== (fa[0] || {}).w1);
+        const kingRec = (fa[0] || {}).w1, lastK = Math.max(...K.filter(r => r.a === MR_LEADER).map(r => r.at)), up = after.filter(r => d && r.at >= lastK && r.at < d.k), below = after.filter(r => d && r.at > d.k);
+        if (up.some(r => l1(r) === kingRec || l2(r) === kingRec) || new Set(up.filter(r => l1(r) === NONE && l2(r) === NONE).map(r => r.actor)).size > 1) f.push('a small orc that heard the king die still led by it, or by no successor (but the successor itself): ' + up.map(say).join(' '));
+        if (!below.length || below.some(r => l2(r) === NONE || r.c < 1)) f.push('the band below not keeping its bond to the dead king (unheard): ' + below.map(say).join(' '));
+        // (The king's presence: a fellow's fall weighed with the king standing beside its band, the field and the bond above nothing)
+        const P = tests(gp), kp = P.find(r => r.a === MR_LEADER), pf = P.filter(r => r.a === MR_FELL && l1(r) !== NONE && (!kp || r.at <= kp.at));
+        if (!pf.length || pf.some(r => r.b <= 0 || r.c <= 0)) f.push('the king\'s band not steadied by its presence: ' + P.map(say).join(' '));
+        // (The black orc's fall, its bond to the kings holding; the old band the steadier, the new the less)
+        const at = (g, k, why) => tests(g).find(r => r.a === why && r.actor === k + 1), ob = [0, 1].map(k => at(gb, k, MR_LEADER)), nb = [0, 1].map(k => at(gc, k, MR_LEADER));
+        if (ob.some(r => !r || l2(r) === NONE || r.c < 1)) f.push('the black orc\'s fall not its band\'s leader\'s loss, its bond to the kings above holding: ' + tests(gb).map(say).join(' '));
+        else if (nb.some(r => !r) || ob.some((r, i) => r.steps <= nb[i].steps || r.c <= nb[i].c)) f.push('the old band not the steadier than the new: ' + [...ob, ...nb].filter(Boolean).map(say).join(' '));
+        // (An ally heartened; a fearsome foe weighing)
+        const ad = at(gd, 1, MR_LEADER), aa = fa.find(r => r.actor === 2);
+        if (!ad || !aa || ad.b <= aa.b) f.push('the ally not heartened by the character: ' + [ad, aa].filter(Boolean).map(say).join(' '));
+        const fe = at(ge, 0, MR_LEADER), ff = fa.find(r => r.actor === 1);
+        if (!fe || !ff || fe.b >= ff.b - 3) f.push('the fearsome foe beside the band not weighing on it: ' + [fe, ff].filter(Boolean).map(say).join(' '));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0succession', near: ['fight', 'denizens'], what: "Dingus Quest Zero's succession (the user's, 2026-10-30: \"When a leader dies, the next one below him in the heirarchy (strongest/most influential of the those directly below them) should take over\"; the chain filled all the way down, the coordinator's; HOUSE.md's morale, for review), dq0morale's small orcs at seed 2 and a strong character in mail, each scene set by pokes of the actors' hub fields and the denizens' records at a line's Enter (dq0Poke's, dq0Rec's), its outcome the records' and the hub's, not the dice's: a black orc its band's head, two of its band kept out of the fight (another faction's in the hub for the while: no test of their courage, no fleeing), one the more influential (its skill), the other the mightier: the black orc slain, the more influential at its head (its record's rank a captain's, AM_LEADS), rallying them, told as the character sees it (\"The small orc rallies its fellows.\"); the same in the dark, the torch doused, told as heard (\"You hear a rallying shout ...\"); and a king its tribe's leader, a captain below it (its record's rank) heading a band of its own: the king slain, the captain king after and its band's best its head (the chain filled), the captain's own band's bond to it kept, the king's old band's to it a new leader's",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: (() => {
+        const kit = "-k 'sword,gambeson,mail hauberk,mail cowl,great helm'", dress = ['wear the gambeson', 'wear the mail hauberk', 'wear the mail cowl', 'wear the great helm', 'hold the sword'];
+        const game = d => ['dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/' + d + ' ' + kit, ...dress], head = "'faction | Tribe | arak garking | 0-1 | 30 | khanu | 0 | w | -'";
+        return dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 100 >> /ram/c.hm', 'echo ml ini 100 >> /ram/c.hm',
+          'echo ml dge 100 >> /ram/c.hm', 'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm',
+          ...['b', 'd', 'k'].map(d => 'mkdir /ram/' + d), 'echo ' + head + ' > /ram/b/theme.txt', 'echo ' + head + ' > /ram/d/theme.txt',
+          "echo 'faction | Tribe | arak | 0-1 | 20 | garking | 0 | w | -' > /ram/k/theme.txt",
+          ...game('b'), ...Array(5).fill(['attack the black orc', 'wait']).flat(), 'quit',
+          ...game('d'), 'attack the black orc', 'wait', 'attack the black orc', 'douse the torch', ...Array(4).fill(['attack the black orc', 'wait']).flat(), 'quit',
+          ...game('k'), 'attack the orc king', 'wait', 'attack the orc king', 'wait', 'quit', 'echo $status']);
+      })() },
+      start(m) {
+        const apart = g => [{ g, line: 'attack the black orc', n: 1, k: 0, set: { faction: 7, lead: 255, power: 0 } },   // (The more influential,
+          { g, line: 'attack the black orc', n: 1, k: 1, set: { faction: 7, lead: 0, power: 250 } }];              //   the mightier: out of the fight)
+        dq0Poke(m, [...apart(1), ...apart(2),
+          { g: 3, line: 'attack the orc king', n: 1, k: 3, set: { serve: 255, contact: 255 }, rec: { or: 0x20 } },   // (A captain, its band's head)
+          { g: 3, line: 'attack the orc king', n: 1, k: 4, set: { serve: 255, contact: 255 } },                     // (Its band: long with it)
+          ...[0, 1].map(k => ({ g: 3, line: 'attack the orc king', n: 1, k, set: { serve: 255, contact: 255 }, rec: { or: 0x10 } }))]);   // (The king's
+                                                // band, long with it too; they know (D_LOST): so they know of its successor)
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], DE_RALLY = 4, AM_LEADS = 4, H = m.hearts || [];
+        const games = [...new Set(T.map(t => t.game).filter(g => g >= 0))].sort((a, b) => a - b);
+        if (games.length !== 3) return ['not three games: ' + games.length];
+        const last = g => H.filter(x => x.g === g).slice(-1)[0], st = dq0Story(out).split('% dq0 -p t').slice(1);
+        const rallies = gi => T.filter(t => t.game === games[gi]).flatMap(t => dq0Ev(t, 'E_DEN', { a: DE_RALLY }));
+        for (const [gi, g, how] of [[0, 1, 'seen'], [1, 2, 'heard']]) {
+          const e = last(g), b0 = e && e.acts.find(a => a.k === 0), b1 = e && e.acts.find(a => a.k === 1), r = rallies(gi);
+          if (!b0 || !(b0.mood & AM_LEADS) || b0.rank !== 1 || !b0.prom || (b1 && ((b1.mood & AM_LEADS) || b1.rank))) f.push('game ' + g + ': the more influential not at the black orc\'s post over the mightier: ' + JSON.stringify(e && e.acts));
+          if (r.length !== 1 || r[0].who !== 1 || r[0].seen !== (how === 'seen')) f.push('game ' + g + ': not one rally by it, ' + how + ': ' + JSON.stringify(r));
+          if (!(how === 'seen' ? /The small orc rallies its fellows\./ : /You hear a rallying shout/).test(st[gi] || '')) f.push('game ' + g + ': the rally ' + how + ' not told');
+        }
+        const e3 = H.find(x => x.g === 3 && x.line === 'wait' && x.n === 2), act = k => e3 && e3.acts.find(a => a.k === k), c3 = act(3), c4 = act(4), c0 = act(0) || act(1);
+        if (!c3 || c3.rank !== 2 || !c3.prom) f.push('the captain not king after the king: ' + JSON.stringify(e3 && e3.acts));
+        if (!c4 || c4.rank !== 1 || !c4.prom) f.push('the captain\'s band not headed by its best after (the chain not filled): ' + JSON.stringify(e3 && e3.acts));
+        if (c4 && c0 && !(c4.bonds >= 8 && c0.bonds <= 4)) f.push('the bonds to the new king not its own band\'s kept, the rest\'s a new leader\'s: ' + JSON.stringify([c4, c0]));
+        if (!c0) f.push('none of the king\'s old band left to see');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0time', near: ['time', 'senses'], what: "Dingus Quest Zero's time of day believed (2026-10-31: DUNGEON.md's the time of day believed, HOUSE.md's, for review; the user's: fuzzy unless the sky's seen, arbitrary after a sleep, set by the sun when north is known or by watching it): the character's belief (the hub's tb: its error from the true clock and its doubt, the world's part 76) and its words: a hand-written theme's garrison of men-at-arms (seed 2, their lair south of the start: dq0daily's, out of earshot), the game begun at 8 o'clock (the environment's dq0hour), \"time\" told plainly (\"It's eight in the morning.\"); its torch put out (so its burning out breaks no long wait), two hours waited (the hours' tests: a doubt, \"about\" or \"some time around\" the hour, not plainly); three hours slept (TG_SLEEP, its doubt an eighth of the sleep more at the least); an hour more waited, then a sky in sight poked (tb.sky's SKY_OPEN, as a far exit's open sky: the afternoon's sun) as the sun's watched (\"watch the sun\", a quarter hour's wait): first read by the north it believes in (\"You see the sun in the sky\"), then watched ten minutes (\"You watch the sun a while\": the time to a quarter of an hour, its error none); the sky gone, then poked in sight again with its north believed a quarter of a turn off (pc_skew 2, unknown to it): the sun read six hours wrong (its error 360 minutes, its doubt half an hour); \"wait until night\" lasting till night as it believes the time (21 o'clock by its belief: the wait's minutes and the believed minute meet there); quit and carried on (dq0 -d), the belief as it was (world.dat's); and a character with absolute timesense (its file's \"timesense\" line, hmchar's rare trait): two hours slept, its time known still, told plainly",
+      init: 't_rc', cycles: 4900e6,   // (4454M, 2026-10-31: the garrison's day as it waits)
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/k.hm', 'echo timesense >> /ram/k.hm', 'dq0hour=8', 'mkdir /ram/s', "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt", 'mkdir /ram/g', 'cp /ram/s/theme.txt /ram/g/theme.txt',
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g', 'time', 'douse the torch', 'wait 2 hours', 'time', 'sleep 3 hours', 'time', 'wait 1 hour',
+        'watch the sun', 'time', 'wait 10 minutes', 'wait 1 minute', 'time', 'wait until night', 'time', 'quit',
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g', 'look', 'quit',
+        'dq0 -p t -s 1 -c /ram/k.hm -T -d /ram/h', 'douse the torch', 'sleep 2 hours', 'time', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        const due = { tbDue: 0, tbDue1: 0, tbDue2: 0, tbDue3: 0 };
+        dq0Poke(m, [{ g: 1, line: 'watch the sun', n: 1, hub: Object.assign({ tbSky: 2 }, due) },   // (The open sky in sight: SKY_OPEN)
+          { g: 1, line: 'wait 10 minutes', n: 1, hub: Object.assign({ tbSky: 0 }, due) },          // (Gone from sight)
+          { g: 1, line: 'wait 1 minute', n: 1, hub: Object.assign({ tbSky: 2, pcSkew: 2, pcLost: 0 }, due) },   // (Its north a quarter off)
+          { g: 1, line: 'wait until night', n: 1, hub: Object.assign({ tbSky: 0 }, due) }]);
+      },
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), P = x => (x && x.pc && x.pc.tb) || null, at = l => T.of(l).at;
+        const after = l => P(T.of(l).after), times = [...s.matchAll(/time ([^>]*?)(?= > |$)/g)].map(x => x[1]);
+        if (!at('quit')) return ['the game not played'];
+        if (!/time It's eight in the morning\./.test(s)) f.push('the start not told plainly: ' + times[0]);
+        const w = after('wait 2 hours'), sl = after('sleep 3 hours');
+        if (!w || !(w.unc > 0) || w.how !== 0) f.push('no doubt after two hours awake: ' + JSON.stringify(w));
+        if (!/time It's (about|some time around) [a-z ]+, you (think|'d guess)\./.test(s)) f.push('the doubt not told: ' + times.join(' | '));
+        if (!sl || !w || sl.how !== 1 || !(sl.unc >= w.unc + 20)) f.push('the sleep not doubted (TG_SLEEP, an eighth of it more): ' + JSON.stringify([w, sl]));
+        if (!/You see the sun in the sky: it's [a-z ]+, you judge\./.test(s)) f.push('the sun not read as seen');
+        if (!/You watch the sun a while, its slow way across the sky: it's [a-z ]+, and you know which way north lies now\./.test(s)) f.push('the sun not watched');
+        const ws = after('watch the sun');
+        if (!ws || ws.skew !== 0 || ws.unc !== 15) f.push('the watched sun not the time to a quarter hour: ' + JSON.stringify(ws));
+        const w1 = after('wait 1 minute');
+        if (!w1 || w1.skew !== 360 || w1.unc !== 30) f.push('the sun not read six hours off by a north a quarter off: ' + JSON.stringify(w1));
+        const ud = T.of('wait until night'), ev = ud.events.filter(e => e.kind === 'E_TIME'), ub = P(ud.at);
+        if (ub && ev.length) {
+          const b = (Math.floor(ud.at.now / 600) + 8 * 60 + 1440 + ub.skew) % 1440;
+          const mins = ev[0].mins ? ev[0].w1 : ev[0].w1 / 600;
+          if ((b + mins) % 1440 !== 1260) f.push('the wait not till night as believed: ' + b + ' + ' + mins);
+        } else f.push('the wait until night not begun');
+        const back = P(at('look')), left = P(T.of('quit').at);
+        if (!back || !left || back.skew !== left.skew || back.unc !== left.unc) f.push('the belief not carried on: ' + JSON.stringify([left, back]));
+        const kt = after('sleep 2 hours');
+        if (!kt || kt.tsense !== 1 || kt.unc !== 0 || kt.skew !== 0) f.push('absolute timesense not kept through a sleep: ' + JSON.stringify(kt));
+        if (!/time It's ten in the morning\.[^]*time It's ten in the morning\./.test(s)) f.push('the timesense character\'s time not told plainly: ' + times.join(' | '));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0daily', near: ['denizens'], what: "Dingus Quest Zero's daily life (2026-10-31: DENIZENS.md's daily life, HOUSE.md's the denizens' day, for review; dq0d.c's part 9): the denizens' days by their kinds (kinds.txt's day and work) and the game's clock (the game begun at dusk, 18 o'clock, the house's), by the actors' records and their events: a hand-written theme's garrison of men-at-arms (seed 2, their lair south of the start; soldiers keep watches) watched for four hours from the start, half an hour at a time: a third of them on watch, walking their rounds (moving between one look and the next), a third asleep, as the clock goes on, the third that wakes at its meal (folk, at their larder: fed, the bodies' want); the watch relieved as it changes at 20 o'clock (those on watch before it asleep after, others on watch: none the same); those on watch talking as they go and the sleepers snoring (their events, DE_TALK and DE_SNORE); and the stand-in's giant rats by the way down (seed 3), nocturnal, the character gone down the ladder (out of their senses: those watching it don't sleep) and its torch put out (so its burning out breaks no long wait), the day's hour poked to 10 o'clock as it goes (dq0Hour's), their records (dq0d's, away from the character: decided lazily, by the clock) read as each look is typed: asleep at their lair's home (its square or one beside it) ten minutes on, not looked at again till they wake (due after 16 o'clock: more than five hours on); up as they wake (16 o'clock: a beast's meal its prey, the bodies' want, no meal of the day's), and about by 18 o'clock (due a minute or so on, as ever); and the garrison again, a body of theirs found on the rounds: the scene set by pokes as the first line's typed (dq0Rec's: a soldier of another lair, away, its record made dead in the near lair's home, as killed: its faction's body not found yet, dq0d's unf), the alarm raised as one on watch comes by it (DE_ALARM), once, its faction's attitude to the character a step worse (unfriendly to hostile: the head's fatt)",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/s',
+        "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt",
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s', ...Array(8).fill('wait 30 minutes'), 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'douse the torch', 'wait 10 minutes', 'look', 'wait 6 hours 30 minutes', 'look', 'wait 2 hours', 'look', 'quit',
+        'mkdir /ram/t', 'cp /ram/s/theme.txt /ram/t/theme.txt', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/t', 'wait 1 minute', ...Array(4).fill('wait 30 minutes'), 'quit', 'echo $status']) },
+      start(m) {
+        dq0Hour(m, [{ g: 2, line: 'd', n: 1, hour: 10 }]);   // (The rats' game at 10 o'clock: asleep by day)
+        const a = m.acia, read = a.read;                      // (The rats' records as each look's typed: dq0Rec's)
+        let typed = '';
+        m.rats = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'wait 1 minute' && m.dq0) {   // (Game 3: a body of the garrison's in its near lair's home)
+                const R = dq0Rec(m), h = m.dq0.bank(0), u16 = o => R.mem[o] | R.mem[o + 1] << 8, w16 = (o, v) => { R.mem[o] = v & 255; R.mem[o + 1] = v >> 8; };
+                const MANARMS = 28, at = [...Array(224).keys()].map(i => R.at(i)).filter(o => R.mem[o] === MANARMS);
+                const near = at.find(o => R.mem[o + R.FLAGS] & 2), far = at.find(o => !(R.mem[o + R.FLAGS] & 6) && u16(o + 21) !== (near ? u16(near + 21) : -1));
+                if (near && far) {
+                  R.mem[far + R.FLAGS] = 4 | 8;               // (D_DEAD, D_MET: killed as an actor)
+                  w16(far + 8, u16(near + 21));
+                  w16(far + 10, u16(near + 23));
+                  R.mem[far + R.SN] = R.mem[near + R.SN];
+                  const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'), tk = h[12 + 2];
+                  m.taskRam[tk][parseInt(/^al ([0-9A-F]+) \._unf$/m.exec(lbl)[1], 16) + (R.mem[far + 25] & 7)] = 1;
+                  m.body = { fac: R.mem[far + 25] };
+                }
+              }
+              if (typed === 'wait 30 minutes' && m.dq0 && m.body) {   // (The faction's attitude to the character, the head's fatt)
+                const h = m.dq0.bank(0), lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+                (m.body.fatt = m.body.fatt || []).push(m.taskRam[h[12 + 2]][parseInt(/^al ([0-9A-F]+) \._hd$/m.exec(lbl)[1], 16) + 4 + (m.body.fac & 7)]);
+              }
+              if (typed === 'look' && m.dq0) {
+                const R = dq0Rec(m), h = m.dq0.bank(0), u16 = o => R.mem[o] | R.mem[o + 1] << 8, recs = [];
+                for (let i = 0; i < 224; i++) {
+                  const o = R.at(i);
+                  if (R.mem[o] === 1 && (R.mem[o + R.FLAGS] & 3) === 1 && R.mem[o + R.SN] === 0)   // (A giant rat, out, not an actor)
+                    recs.push({ id: u16(o + 4), x: u16(o + 8), y: u16(o + 10), hx: u16(o + 21), hy: u16(o + 23), ready: u16(o + 12) + u16(o + 14) * 65536 });
+                }
+                m.rats.push(recs);
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], waits = T.filter(t => t.line === 'wait 30 minutes').slice(0, 8);
+        const men = s => s ? s.actors.filter(a => a.state && a.name === 'soldier') : [], on = (s, d) => men(s).filter(a => a.doing === d);
+        const show = s => JSON.stringify(men(s).map(a => [a.did, a.doing, a.x, a.y]));
+        if (waits.length !== 8 || !waits.every(t => t.after && men(t.after).length >= 3)) f.push('the garrison not about the character as it waits: ' + waits.map(t => show(t.after)).join(' '));
+        else {
+          const both = waits.filter(t => on(t.after, 'DO_GUARD').length && on(t.after, 'DO_SLEEP').length);   // (One on its way to bed, now and then)
+          if (both.length < 6) f.push('not some on watch and some asleep, at most looks: ' + waits.map(t => show(t.after)).join(' '));
+          const walked = waits.slice(1).some((t, i) => on(t.after, 'DO_GUARD').some(a => { const b = men(waits[i].after).find(c => c.did === a.did && c.doing === 'DO_GUARD'); return b && (b.x !== a.x || b.y !== a.y); }));
+          if (!walked) f.push('those on watch not walking their rounds: ' + waits.map(t => show(t.after)).join(' '));
+          const g1 = new Set([0, 1].flatMap(i => on(waits[i].after, 'DO_GUARD').map(a => a.did))), g2 = new Set([5, 6].flatMap(i => on(waits[i].after, 'DO_GUARD').map(a => a.did)));
+          if (!g1.size || !g2.size || [...g2].some(d => g1.has(d))) f.push('the watch not relieved at 20 o\'clock: before ' + [...g1] + ', after ' + [...g2]);
+          const slept = [5, 6].flatMap(i => men(waits[i].after).filter(a => g1.has(a.did)));   // (Asleep, or on the way to bed: never on watch)
+          if (!slept.some(a => a.doing === 'DO_SLEEP') || slept.some(a => a.doing === 'DO_GUARD')) f.push('those on watch before it not asleep after: ' + show(waits[5].after) + ' ' + show(waits[6].after));
+          const evs = waits.flatMap(t => t.dens.filter(e => e.kind === 'E_DEN'));
+          if (!evs.some(e => e.de === 'DE_TALK')) f.push('those on watch never talking as they go');
+          if (!evs.some(e => e.de === 'DE_SNORE')) f.push('the sleepers never snoring');
+          if (!waits.some(t => on(t.after, 'DO_EAT').length)) f.push('none of its third at its meal as it wakes: ' + waits.map(t => show(t.after)).join(' '));
+        }
+        const looks = T.filter(t => t.line === 'look'), home = r => Math.max(Math.abs(r.x - r.hx), Math.abs(r.y - r.hy)) <= 1, H = 36000;
+        const rs = i => (looks[i] && looks[i].at ? looks[i].at.now : '?') + ' ' + JSON.stringify((m.rats[i] || []).map(r => [r.id, r.x - r.hx, r.y - r.hy, r.ready, looks[i] && looks[i].at ? r.ready - looks[i].at.now : r.ready]));
+        if (looks.length !== 3 || m.rats.length !== 3 || m.rats.some(l => l.length < 2) || looks.some(t => !t.at)) f.push('the rats\' records not read as the looks were typed: ' + m.rats.length);
+        else {
+          const due = i => m.rats[i].map(r => r.ready - looks[i].at.now);
+          if (!m.rats[0].every(home) || due(0).some(d => d < 5 * H)) f.push('the rats not asleep at home at 10 o\'clock, due as they wake: ' + rs(0));
+          if (due(1).some(d => d > 6000)) f.push('the rats not up as they woke, past sixteen hours: ' + rs(1));
+          if (due(2).some(d => d > 6000)) f.push('the rats not about at 18 o\'clock: ' + rs(2));
+        }
+        const g3 = T.filter(t => t.line === 'wait 30 minutes').slice(8), alarms = g3.flatMap(t => t.dens.filter(e => e.kind === 'E_DEN' && e.de === 'DE_ALARM'));
+        if (!m.body) f.push('the body\'s scene not set: no soldier of another lair away');
+        else {
+          if (alarms.length !== 1) f.push('the alarm not raised once as the body was found: ' + alarms.length);
+          if (!m.body.fatt || m.body.fatt[0] !== 1 || m.body.fatt[m.body.fatt.length - 1] !== 0) f.push('the garrison\'s attitude not a step worse as the body was found: ' + JSON.stringify(m.body.fatt));
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0leisure', near: ['denizens'], what: "Dingus Quest Zero's leisure (the user's, 2026-10-31: \"For what folk are doing, there should be a \\\"leisure time\\\" state where denizens sit around reading, dicing, talking, drinking, playing other games, etc.\"; DENIZENS.md's daily life, HOUSE.md's leisure, for review; dq0d.c's parts 9 and 10), by the actors' records and their events: dq0daily's garrison of men-at-arms (seed 2, their lair south of the start; soldiers keep watches, a third about, its meal then two hours' leisure) watched from the start, half an hour at a time till half past nine: some at leisure (DO_LEISURE and its pastime, one of a soldier's: dice, a board game, talk, song, drink, mending), those of a lair at a social pastime at it together (the same pastime, a few squares apart in the room they gather in), heard at it (DE_PASTIME's events: dice rattling, laughter, singing); one at its cups in drink after (its mood's AM_DRUNK, the hub's, as the next line's typed); then one at leisure put beside the character (a test's scene: its square the hub's and its record's) and struck at, rising to fight and letting its pastime go, told (DE_UP and its pastime); and the garrison's game begun at 13 o'clock (the environment's dq0hour=13), the third with the lair's two (ids 4 and 7) about, at leisure together after its meal",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/s',
+        "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt",
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s', ...Array(7).fill('wait 30 minutes'), 'wait 1 minute', 'attack the soldier', 'quit',
+        'mkdir /ram/u', 'cp /ram/s/theme.txt /ram/u/theme.txt', 'dq0hour=13', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/u', ...Array(3).fill('wait 30 minutes'), 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, []);                                       // (The actors' moods and doings at each line's Enter: m.hearts)
+        const a = m.acia, read = a.read;                      // (One at leisure put beside the character as the first wait
+        let typed = '', seen = 0;                             //   of a minute's typed)
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'wait 1 minute' && !seen++ && m.dq0) {
+                const { L, K } = m.dq0.layout(), h = m.dq0.bank(0), at = k => L.actor + k * L.actorSize, w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+                const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && h[at(j) + L.aDoing] >= K.DO_LEISURE);
+                if (k !== undefined) {
+                  const d = h[L.pcFace] & 7, x = (h[L.pcX] | h[L.pcX + 1] << 8) + [0, 1, 1, 1, 0, -1, -1, -1][d], y = (h[L.pcY] | h[L.pcY + 1] << 8) + [-1, -1, 0, 1, 1, 1, 0, -1][d];
+                  const R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]);
+                  w16(at(k) + L.aX, x);
+                  w16(at(k) + L.aY, y);
+                  h[at(k) + L.aSn] = h[L.pcSn];
+                  h[at(k) + L.aPos] = K.POS_STANDING;
+                  R.mem[o + R.X] = x & 255; R.mem[o + R.X + 1] = x >> 8;
+                  R.mem[o + R.Y] = y & 255; R.mem[o + R.Y + 1] = y >> 8;
+                  R.mem[o + R.SN] = h[L.pcSn];
+                  h[L.denSeq] = h[L.denSeq] + 1 & 255;
+                  m.risen = { k, past: h[at(k) + L.aDoing] - K.DO_LEISURE };
+                }
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [], C = require('../sim/lib/dq0meaning.js').constants().names, LEISURE = C.DO_LEISURE, PT = ['read', 'dice', 'game', 'talk', 'sing', 'drink', 'mend', 'whittle'];
+        const waits = T.filter(t => t.line === 'wait 30 minutes'), num = d => typeof d === 'number' ? d : C[d];
+        const men = s => s ? s.actors.filter(a => a.state && a.name === 'soldier') : [], at = s => men(s).filter(a => num(a.doing) >= LEISURE);
+        const show = s => JSON.stringify(men(s).map(a => [a.did, a.doing, a.x, a.y]));
+        const lei = waits.flatMap(t => at(t.after));
+        if (!lei.length) f.push('none at leisure: ' + waits.map(t => show(t.after)).join(' '));
+        if (lei.some(a => !['dice', 'game', 'talk', 'sing', 'drink', 'mend'].includes(PT[num(a.doing) - LEISURE]))) f.push('a pastime not a soldier\'s: ' + JSON.stringify(lei.map(a => a.doing)));
+        const together = waits.some(t => at(t.after).some(a => { const p = num(a.doing) - LEISURE; return p >= 1 && p <= 5 &&
+          at(t.after).some(b => b.did !== a.did && num(b.doing) === num(a.doing) && Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y)) <= 4); }));
+        if (!together) f.push('no two of a lair at a social pastime together: ' + waits.map(t => show(t.after)).join(' '));
+        const evs = waits.flatMap(t => t.dens.filter(e => e.kind === 'E_DEN'));
+        if (!evs.some(e => e.a > C.DE_PASTIME && e.a < C.DE_UP)) f.push('no pastime heard (DE_PASTIME)');
+        const drinkers = (m.hearts || []).filter(h => h.acts.some(x => x.doing === LEISURE + 5));
+        if (drinkers.length && !(m.hearts || []).some(h => h.acts.some(x => x.mood & 0x10))) f.push('one at its cups never in drink (AM_DRUNK)');
+        if (!m.risen) f.push('none at leisure to put beside the character');
+        else {
+          const ups = T.filter(t => t.line === 'wait 1 minute' || t.line === 'attack the soldier').flatMap(t => t.dens.filter(e => e.kind === 'E_DEN' && e.a === C.DE_UP + m.risen.past));
+          if (!ups.length) f.push('the one put beside the character not told letting its pastime go (DE_UP + ' + PT[m.risen.past] + ')');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0flee', what: 'Dingus Quest Zero\'s unarmed blows and morale (the user\'s, 2026-10-16: punching, kicking, head butts, the referee\'s gear.c, by Unarmed; RS_MORALE, HarnMaster\'s Initiative test, Combat 18), by the blows told and the denizens\' state (the referee\'s dice at this seed): at seed 5\'s giant rats (bare fists: the character\'s Unarmed 80) a punch fought on (HOUSE.md\'s fighting on, the user\'s, 2026-10-20: every blow of it a punch, the hub\'s pc_strike), the rat and its kin turning on the character, a punch felling one; its kin that heard it fall shaken and, shy, fleeing (fighting no more, no foe left beside it), those out of hearing untested (since 2026-10-30, HOUSE.md\'s morale: a fall unfelt till it\'s known); the one down finished with a kick; the other gone out of reach, a head butt at it not struck (dq0unarmed\'s, in it; a kick, a head butt and punches typed one by one before fighting on)',
       init: 't_rc', cycles: 900e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml una 80 >> /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -T', 'd',
         'wait', 'go right', 'punch the rat', 'kick the rat', 'head butt the rat', 'quit', 'echo $status']) },
@@ -6312,8 +7673,13 @@ module.exports = {
         if (new Set(dq0Ev(p, 'E_FIGHT', { def: 0, who: w => w > 0 }).map(e => e.who)).size < 2) f.push('the rat and its kin not both striking at the character');
         const felled = mine(p).find(e => e.out === 'O_HIT' && (e.ff & FF_D_DOWN)), rat = felled && felled.def;
         if (!felled) f.push('no punch felled a rat (' + dq0Evs(p) + ')');
-        const kin = p.after ? p.after.actors.filter(a => a.k + 1 !== rat) : [];
-        if (!kin.length || kin.some(a => a.doing !== 'DO_FLEE')) f.push('its kin not fleeing: ' + kin.map(a => a.doing).join(', '));
+        // (Its kin that heard it fall tested and fleeing; those out of their hearing of a fight's din, 15 squares, not
+        // tested: the fall unfelt till it's known, HOUSE.md's morale, 2026-10-30)
+        const C = require('../sim/lib/dq0meaning.js').constants().names, tested = new Set(dq0Rep(p, 'dslot', { kind: C.RS_MORALE }).map(r => r.actor));
+        const down = p.after && p.after.actors.find(a => a.k + 1 === rat), kin = p.after ? p.after.actors.filter(a => a.k + 1 !== rat) : [];
+        const heard = kin.filter(a => tested.has(a.k + 1)), far = a => !down || Math.max(Math.abs(a.x - down.x), Math.abs(a.y - down.y)) > 15;
+        if (!heard.length || heard.some(a => a.doing !== 'DO_FLEE')) f.push('its kin not fleeing: ' + kin.map(a => a.doing + (tested.has(a.k + 1) ? ' (tested)' : '')).join(', '));
+        if (kin.some(a => !tested.has(a.k + 1) && !far(a))) f.push('a kin within its hearing not tested: ' + JSON.stringify(kin.map(a => [a.k, a.x, a.y])) + ' ' + JSON.stringify(down));
         dq0Need(f, p, 'E_TASK', { te: 'TE_NO_FOE' }, 'the fight not over, no foe left');
         if (!mine(k).some(e => e.def === rat && e.out === 'O_DISPATCH' && (e.ff & FF_D_DEAD))) f.push('the one down not finished (' + dq0Evs(k) + ')');
         if (!k.after || k.after.pc.strike !== 'SK_KICK') f.push('not finished with a kick: ' + (k.after && k.after.pc.strike));
@@ -6385,9 +7751,12 @@ module.exports = {
         const hs = dq0Thing(h.after, 'sword');
         if (!seq.some(r => r.kind === 'IO_GET' && r.result === 'IR_OK') || !dq0Carried(h.after).some(i => i.name === 'sword')) f.push('the sword not taken up at last: ' + (hs && hs.where));
         // (Since slice 4.1b the ghoul, its knee broken by the torch, falls and fails its Rise (the book's test, seriously
-        // wounded) as the commands go on: down, it engages no one, the take after the fumble and the hold no gropes)
+        // wounded) as the commands go on: down, it engages no one, the take after the fumble and the hold no gropes; up, the
+        // hold a grope, unless the take just before it, a grope, put the sword in hand already: nothing left for the hold to
+        // do, 2026-10-31, the commands typed ahead meeting the fight's rounds as its timing has it)
         const hi = seq.findIndex(r => r.kind === 'IO_HOLD'), down = /The ghoul struggles, but can't get up\./.test(dq0Story(out));
-        if (!down && (hi < 1 || seq[hi - 1].req !== 'slot0')) f.push('the hold not a grope, the ghoul up: ' + JSON.stringify(seq));
+        const inhand = hi >= 2 && seq[hi - 1].kind === 'IO_GET' && seq[hi - 1].result === 'IR_OK' && seq[hi - 2].req === 'slot0';
+        if (!down && !inhand && (hi < 1 || seq[hi - 1].req !== 'slot0')) f.push('the hold not a grope, the ghoul up: ' + JSON.stringify(seq));
         // (A quick character the ghoul comes up to: the character the quicker, its blow first)
         const w = T.filter(t => t.line === 'wait'), q = w[1], qg = q && actor(q, 'ghoul'), qc = q ? contests(q) : [];
         if (w.length !== 4 || !qg) return [...f, 'the waits not typed, or no ghoul'];
@@ -6410,14 +7779,19 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0fighton', asks: true, what: 'Dingus Quest Zero\'s fighting on (the user\'s, 2026-10-20: "once engaged in combat, you should continue to attack your target as you can, without actively having to say "attack" each time"; HOUSE.md\'s, as built: the world\'s long task LT_FIGHT, a blow each round as the character\'s free), by the hub\'s events and the long task\'s record (the referee\'s dice at these seeds): at seed 5 one attack at the giant rats fought on, blow after blow, till its target falls senseless, then turned to the other rat engaging it ("You turn to the giant rat.") and fought till it falls too, then ended ("No foe is left beside you."), the senseless left lying and "attack the rat" finishing one, a blow alone; the status line\'s "Fighting the giant rat" as it fights; at seed 7 the hostile ghoul coming up and striking at the character as it waits fought back ("You fight back against the ghoul."), no attack typed; at seed 5 again a look typed as it fights carried out at once, the fight going on, then a walk taking it over (its round out, "You stop fighting.", the walk), fought on after it while a rat engages it still; and at seed 7 in armour but undefended (defend none), badly hurt as it fights, asked ("You\'re badly hurt.  Keep fighting?", the clock still at the turns pace), "yes" fighting on, "no" stopping it',
+      name: 'dq0fighton', asks: true, what: 'Dingus Quest Zero\'s fighting on (the user\'s, 2026-10-20: "once engaged in combat, you should continue to attack your target as you can, without actively having to say "attack" each time"; HOUSE.md\'s, as built: the world\'s long task LT_FIGHT, a blow each round as the character\'s free), by the hub\'s events and the long task\'s record (the referee\'s dice at these seeds): at seed 5 one attack at the giant rats fought on, blow after blow, till its target falls senseless, then turned to the other rat engaging it ("You turn to the giant rat.") and fought till it falls too, then ended ("No foe is left beside you."), the senseless left lying and "attack the rat" finishing one, a blow alone; the status line\'s "Fighting the giant rat" as it fights; at seed 7 the hostile ghoul coming up and striking at the character as it waits fought back ("You fight back against the ghoul."), no attack typed; at seed 5 again a look typed as it fights carried out at once, the fight going on, then a walk taking it over (its round out, "You stop fighting.", the walk), fought on after it while a rat engages it still; and at seed 7 in armour but undefended (defend none), badly hurt as it fights, asked ("You\'re badly hurt.  Keep fighting?", the clock still at the turns pace), "yes" fighting on, "no" stopping it.  The scene set (since morale, 2026-10-29, and the dice by who asks, 2026-10-30, a kin seeing its fellow fall runs off, as a rule): at the first game the other rat steady (dq0Poke\'s, at the attack: its mood AM_STEADY, its courage never tested), so the fight goes on to it (dq0fight\'s the kin running off as it stands)',
       init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm',
         'dq0 -p t -s 5 -c /ram/c.hm -k sword -T -a', 'd', 'wait', 'go right', 'attack the rat', 'attack the rat', 'look', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T -a', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait', 'quit',
-        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T -a', 'd', 'wait', 'go right', 'attack the rat']) + 'Ālook\rĀgo left\r' +
+        'dq0 -p t -s 5 -c /ram/c.hm -k sword -T -a', 'd', 'wait', 'go right', 'attack the rat']) +
         dq0Typed(['quit', ...['yes', 'no'].flatMap(ans => ['dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson',
           'wear the mail hauberk', 'defend none', 'd', 'wait', ans, 'quit']), 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'attack the rat', n: 1, k: 0, set: { mood: 8 } }]);   // (The other rat steady: hub.h's AM_STEADY)
+        dq0OnWords(m, [{ g: 3, line: 'attack the rat', n: 1, words: 'You strike at the giant rat', text: 'look\r' },   // (Typed as it fights:
+          { g: 3, line: 'look', n: 1, words: 'You ', text: 'go left\r' }]);   //   the look at its first blow, the walk at the look's words, 2026-10-31)
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], FF_D_DOWN = 4, FF_D_DEAD = 8;

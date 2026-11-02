@@ -38,7 +38,15 @@
 static const char* tfile;
 static const char* outdir;
 static char lib[48];
-static unsigned char quiet, bad;
+static unsigned char quiet, bad, progress;
+
+/* A step of the history's making done: a dot, with -p (the game's start's progress, dq0's: 2026-10-30) */
+static void step (void)
+{
+    if (progress) {
+        write (1, ".", 1);
+    }
+}
 static int ofd = -1;
 
 /* ---- The history, as it's made (the bank programs') */
@@ -491,8 +499,10 @@ int main (int argc, char* argv[])
             }
         } else if (!strcmp (argv[i], "-q")) {
             quiet = 1;
+        } else if (!strcmp (argv[i], "-p")) {
+            progress = 1;
         } else {
-            say ("usage: themegen [-s seed] [-t theme] [-o folder] [-l lib] [-q]\n");
+            say ("usage: themegen [-s seed] [-t theme] [-o folder] [-l lib] [-q] [-p]\n");
             return 1;
         }
     }
@@ -510,11 +520,16 @@ int main (int argc, char* argv[])
         return 1;
     }
     bestiary ();
+    step ();
     bank_setup (strcpy (expath, in (lib, "themegen.exp")), 0x60, 16);
     namer = child (0, "namegen.bp", "_name");
+    step ();
     hist = child (1, "histgen.bp", "_make");
+    step ();
     goal = child (2, "goalgen.bp", "_make");
+    step ();
     lines = child (3, "linegen.bp", "_make");
+    step ();
     if (tfile) {
         given_each (GROUPS, 0);                 /* (The groups it gives) */
     }
@@ -527,9 +542,12 @@ int main (int argc, char* argv[])
     }
     rseed (seed ^ 0x48495354UL);
     bank_call (hist, void (*)(void));           /* (The region, the eras, the strata, the inhabitants) */
+    step ();
     bank_call (goal, void (*)(void));           /* (The goal) */
     bank_call (lines, void (*)(void));          /* (The theme's lines) */
+    step ();
     check_layers ();
+    step ();
     if (ofd >= 0) {
         close (ofd);
     }

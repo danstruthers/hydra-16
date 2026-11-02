@@ -142,7 +142,8 @@ ST_SLEEP        = 6             ; Sleeping till a tick count (K_WAKE_LO/HI, the 
 ST_BLOCKED      = 7             ; Waiting to SCALL a busy task (TK_BLOCKEDON)
 ST_EVENT        = 8             ; Waiting for its server's event count to change (TK_EVTASK, TK_EVV), or a wake
 TF_DRIVER       = $01           ; TK_FLAGS: a driver ...
-TF_TIMED        = $08           ;   sleeping in a timed wait (SEM_WAIT's: K_TPAUSE): a WAKE ends the sleep too ...
+TF_FORE         = $02           ;   in the foreground (TASKFORE): the scheduler picks it first (sched.s) ...
+TF_TIMED       = $08           ;   sleeping in a timed wait (SEM_WAIT's: K_TPAUSE): a WAKE ends the sleep too ...
 TF_HOLD         = $10           ;   started by SPAWN_STOPPED: it stops at its entry point (task.s) ...
 TF_BREAKS       = $20           ;   the debugger's breakpoints: any BRK stops it (TASKSTEP's TS_BREAKS) ...
 TF_TRAP         = $40           ;   a BRK goes to K_TRAP (a step out, or TF_BREAKS: debug.s) ...
@@ -170,16 +171,20 @@ FR_PCH          = 8
 
 ; ---- A task's OS area ($0200-$03FF)
 TA_INBOX        = $0200         ; (32) A server's request block (docs/design/conventions.md)
-TA_IRQVEC       = $0220         ; (2) Its interrupt handler (for the lines it owns)
-TA_SERVEVEC     = $0222         ; (2) Its serve entry (SCALL)
+TA_IRQJMP       = $0220         ; A JMP (OP_JMP: the task's set up) to ...
+TA_IRQVEC       = $0221         ; (2)   its interrupt handler (for the lines it owns): the dispatcher's jsr TA_IRQJMP
+                                ;   (3 cycles less than a jsr to a jmp (TA_IRQVEC))
+TA_MODBASE      = $0223         ; Its module's header's page in its bank ($A0-$DF: a module packed with others)
 TA_ENTRY        = $0224         ; (2) Where it starts: main, or a driver's init
 TA_MODBANK      = $0226         ; Its module's paged ROM bank (in place), or $FF (a RAM program)
 TA_PUTC         = $0227         ; PUTC's and GETC's byte (to and from fds 1 and 0)
 TA_BRK          = $0228         ; (2) The end of its data area (BREAK) ...
 TA_BRKMIN       = $022A         ; (2)   and the lowest it may go: its module's HX_TOP
 TA_NOTIFY       = $022C         ; (2) Its note handler (NOTIFY), or 0
-TA_MODBASE      = $022E         ; Its module's header's page in its bank ($A0-$DF: a module packed with others)
+TA_SERVEVEC     = $022E         ; (2) Its serve entry (SCALL)
 TA_NAME         = $0230         ; (16) Its name, zero-terminated
+OP_JMP          = $4C           ; (TA_IRQJMP's: JMP absolute)
+.assert     TA_IRQVEC = TA_IRQJMP + 1, error, "TA_IRQJMP: a JMP to TA_IRQVEC"
 TA_OWNERS       = $0240         ; (18: IRQ_LINES) Each IRQ line's owner task ($FF: none): a copy in every task, so
                                 ;   the IRQ dispatcher reads it where it is (IRQ_OWN writes them all)
 TA_PAGEMAP      = $0252         ; (16) Its pages given out by PAGES_ALLOC (bit = page)
@@ -246,11 +251,25 @@ K0_ENL          = $6F           ;   and the name's length
 K0_END          = $70
 K0_POST         = $70           ; (16) POST's scratch, at boot only
 K0_STEP         = $70           ; (8) TASKSTEP's (debug.s), in its KCALL: POST's bytes, after the boot
+K0_FORES        = $78           ; The scheduler's (sched.s; POST's bytes, cleared after it): <> 0, there may be
+                                ;   foreground tasks (TASKFORE sets it; a look that finds none clears it) ...
+K0_FTICK        = $79           ;   the tick its turn began (the foreground's, or the background's: K0_FMODE) ...
+K0_FMODE        = $7A           ;   0: the foreground's turn (FORE_RUN ticks at most); 1, the background's (a tick) ...
+K0_FPICK        = $7B           ;   the task the foreground's last pick was ($FF: the round robin's was the last) ...
+K0_RR           = $7C           ;   the round robin's place: the task it picks after ...
+K0_FSEEN        = $7D           ;   and <> 0, a look at the foreground found a task in it
+K0_FSRV         = $7E           ;   the task a foreground task last called (SCALL; 0: none) ...
+K0_FSRVT        = $7F           ;   and the tick it called
+K0_SCHED_END    = $80
+FORE_RUN        = 8             ; The foreground's turn at most, in ticks: then the background's, the rest of a tick
+FORE_SRV        = 2             ; A server in the foreground from a foreground task's call to it, in ticks (the
+                                ;   console's words out at once; in the foreground's turn, as any of it)
 PF_T            = $01           ; K0_POSTFAULT: a T line (tasks' memory not apart)
 PF_SHARED       = $02           ;   shared RAM not shared between tasks
 PF_W            = $04           ;   a W line (BIOS ROM pages)
 PF_RAM          = $08           ;   a RAM module or shared chip with bad lines (left unused)
 .assert     K0_END <= PROG_ZP_END, error, "The kernel task's zero page runs past $7F"
+.assert     K0_STEP + 8 <= K0_FORES && K0_SCHED_END <= PROG_ZP_END, error, "The scheduler's bytes overlap"
 
 TICK_HZ         = 200
 TICK_LATCH      = (CLK_CPS + TICK_HZ / 2) / TICK_HZ - 2     ; Timer 1 free-running: latch + 2 cycles a period

@@ -142,6 +142,7 @@ VB_OBSERVE_IN           object
 VB_SWAP_HANDS                                   (* what's in the hands changed over, left to right (slice 4.1b) *)
 VB_TEND                 object                  (* first aid, a wound treated: one's own, or another's (slice 4.3) *)
 VB_GATHER_OBJECT        object                  (* the missiles lying about gathered again, each walked to (slice 4.7) *)
+VB_META_TIME                                    (* the time of day as the character believes it (2026-10-31) *)
 
 [results]
 ERROR:NOT_UNDERSTOOD
