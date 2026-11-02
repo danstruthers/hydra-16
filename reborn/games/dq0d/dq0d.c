@@ -2250,12 +2250,10 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
             d = step_for (k, 2 * K.range + 8, S_TOWARD);
             refx = pcx;
             refy = pcy;
-            hub_map (0);
-            if (d == 0xFF) {
-                HUB->dig_t[k] = 0;              /* (No way nearer: given up) */
-            }
             a.doing = DO_ROAM;
-            aloot[k] = NOW_T - 1;               /* (On to it as it decides next) */
+            if (d != 0xFF) {
+                aloot[k] = NOW_T - 1;           /* (On to it as it decides next; no way nearer, tried */
+            }                                   /*   again the next tick: the world's dig_t its own) */
             return d;
         }
     }
