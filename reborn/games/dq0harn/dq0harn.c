@@ -811,7 +811,8 @@ static void __fastcall__ answer (struct req* r)
         r->b = watch;
         break;
     case RS_TEST:
-        if (r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE || r->a == P_SWIM) {   /* (Judged by the tool to hand that
+        if (r->actor || r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE || r->a == P_SWIM) {   /* (A creature's
+                                                **   by its sheet, any test (Phase 3C's: a door forced); judged by the tool to hand that
                                                 **   suits it best; moving quietly, by its own dice; by the craft that
                                                 **   knows the thing: part 2's) */
             dig_answer (r);

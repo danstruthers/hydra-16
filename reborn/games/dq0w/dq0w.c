@@ -1040,7 +1040,7 @@ signed char __fastcall__ ask_w (unsigned char kind, unsigned char a, unsigned ch
     hub_map (0);
     r = &HUB->slot[SLOT_WORLD];
     r->kind = kind;
-    r->actor = 0;
+    r->actor = wk.who;                          /* (The character's work, or an actor's: wport.c's) */
     r->a = a;
     r->b = b;
     r->w1 = ww1;

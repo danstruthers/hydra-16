@@ -282,7 +282,13 @@ void __fastcall__ s_den_other (const struct msg* m)
         return;
     }
     hub_map (0);
-    if (!(HUB->gear & GE_OLD) && has_role (m)) {
+    if (HUB->gear & GE_OLD) {
+        return;                                 /* (dq0 -K's, the tests': none of theirs) */
+    }
+    if (m->a & KT_LAIR) {
+        door_keys (m);                          /* (Its lair's locked doors' keys, its first denizen's: part 80's) */
+    }
+    if (has_role (m)) {
         ost.did = m->t;
         ost.hx = m->w1;
         ost.hy = m->w2;

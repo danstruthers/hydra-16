@@ -63,7 +63,7 @@ static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
     wk.tt = BLOW_T;
     r = &HUB->slot[SLOT_WORLD];
     r->kind = RS_ATTACK;
-    r->actor = 0;
+    r->actor = wk.who;                          /* (The character's blows, or an actor's: wport.c's) */
     r->other = RS_THING;
     r->c = n;
     r->w2 = wk.qs == wk.sn + 1 && wk.qx == wk.px && wk.qy == wk.py ? 0 : RS_SHORT;  /* (A bare part's hurt stopped

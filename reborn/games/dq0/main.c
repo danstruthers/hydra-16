@@ -82,6 +82,8 @@ void hand_said (void);
 void limbs_cmd (void);
 void __fastcall__ pose_words (unsigned w);      /* (Part 14's: the body's position, worded) */
 void __fastcall__ noise_told (const struct msg* m, unsigned char rel);  /* (Part 14's: a denizen's sound, told) */
+void __fastcall__ door_words (unsigned char a);  /* (Part 6's: a denizen's door's words, E_DEN's DE_OPENS ..., into
+                                                **   lb + 340: seen, then heard) */
 unsigned char hold_first (void);
 unsigned char errand (void);                    /* (Part 15's: an ally's errand, a gift, slice 4.8's) */
 unsigned char missiles (void);                  /* (Part 13's: the missiles, slice 4.7's) */
@@ -2082,6 +2084,7 @@ again:
     case VB_OPEN_OBJECT:                        /* (A door's work: the verb's, PA_*) */
     case VB_CLOSE_OBJECT:
     case VB_UNLOCK_OBJECT:
+    case VB_LOCK_OBJECT:                        /* (A door locked with its key: Phase 3C's) */
     case VB_FORCE_OBJECT:
     case VB_RAISE_OBJECT:
     case VB_LOWER_OBJECT:
@@ -2092,7 +2095,7 @@ again:
         if (!cmd.obj.kind && more (cmd.action)) {
             return;                             /* (A thing that closes: a chest, a sack, a flask: overlay 2's) */
         }
-        pa = cmd.aux;
+        pa = cmd.action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux;
         if (pa == PA_RAISE && cmd.obj.word[0]) {
             pa = PA_LIFT;                       /* ("Lift the bar": a portal's part lifted out) */
         } else if (pa == PA_RAISE || pa == PA_LOWER) {
@@ -2743,6 +2746,10 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
             }
             tell ((m->a - DE_PASTIME - PT_DICE + T_PAST_HEARD) | TELL_COPY);
             n = heard_what;
+        } else if (m->a >= DE_OPENS) {
+            door_words (m->a);                  /* (A door worked by a denizen, Phase 3C's: part 6's words) */
+            n = lb + 340;
+            strcpy (heard_what, n + strlen (n) + 1);
         } else {
             n = m->a == DE_RALLY ? "rallies its fellows\0a rallying shout" : m->a == DE_SNORE ? "snores\0snoring" :
                 m->a == DE_TALK ? "says something to its fellow\0voices" : m->a == DE_DIG ?
@@ -2772,6 +2779,28 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
         intend2 (I_ASK, TE_ASK_HEARD, 0);
     }
 }
+
+/* A door worked by a denizen (E_DEN's a, DE_OPENS ...: Phase 3C's one path), its words into lb + 340: what it's seen
+** doing (after its name), then what's heard (heard_what's: 19 letters at most).  Part 6's (overlay 12's room) */
+#pragma code-name (push, "SW6CODE")
+#pragma rodata-name (push, "SW6RODATA")
+void __fastcall__ s_door_words (unsigned char a)
+{
+    static const char* const said[DE_BREAKS + 1 - DE_OPENS] = {
+        "opens the door\0a door opening", "shuts the door\0a door shutting", "slams the door shut\0a door slamming",
+        "unlocks the door\0a key in a lock", "locks the door\0a key in a lock",
+        "drops a bar across the door\0a bar dropping", "lifts the door's bar\0a bar scraping",
+        "strains at the door\0a door creaking", "bursts the door open\0a door bursting",
+        "can't force the door\0a door creaking", "batters at the door\0blows on a door",
+        "breaks the door down\0a door crashing in"
+    };
+    const char* s = said[a - DE_OPENS];
+
+    strcpy (lb + 340, s);
+    strcpy (lb + 341 + strlen (s), s + strlen (s) + 1);
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The body's position as the character said (E_BEAT WB_POSED's w1: the position times 256, | 0x8000 there already).
 ** Part 12's since 2026-10-31 (part 14's bank, overlay 3, full) */

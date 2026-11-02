@@ -211,6 +211,7 @@ ovl_out:
             SWFN        pose_words, 12
             SWFN        when_free, 12
             SWFN        noise_told, 14
+            SWFN        door_words, 6       ; (A denizen's door's words: Phase 3C's)
             SWFN        dig_used, 14
             SWFN        hold_first, 11
             SWFN        missiles, 13        ; (The missiles: slice 4.7's)

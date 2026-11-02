@@ -31,13 +31,14 @@ ovx:        .res        1
                                             ;   dart (2026-10-31); a lair's home room, a robber's way, one first met
             SWPART      9, 4                ; The day: schedules, sleep, meals, work, watches, leisure (2026-10-31);
                                             ;   the records by it, an actor's plan
-            SWPART      10, 4               ; The actors' day kept (their plan, part 9's), their coarse moves, a body
+            SWPART      10, 5               ; The actors' day kept (their plan, part 9's), their coarse moves, a body
                                             ;   found on the rounds, a pastime let go (2026-10-31)
             SWPART      11, 1               ; The denizens near enlisted (2026-10-31: the main RAM's room; small, cheap
                                             ;   to swap in, not while the UI's command is in hand)
             SWPART      12, 5               ; The tunnellers: a way dug (slice 4.11's, 2026-11-01)
             SWPART      13, 5               ; The lairs near placed (2026-11-01: the main RAM's room; small, cheap to
                                             ;   swap in, each time round after a move)
+            SWPART      14, 5               ; Doors worked (Phase 3C's one path, 2026-11-02)
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -78,6 +79,7 @@ ovx:        .res        1
             SWFN        enlist_near, 11     ; (The main RAM's room, 2026-10-31)
             SWFN        nearby, 13          ; (The main RAM's room, 2026-11-01: the tunnellers')
             SWFN        dig_way, 12         ; (A tunneller's way dug: slice 4.11's)
+            SWFN        door_way, 14        ; (A door worked: Phase 3C's one path)
             SWFN        slant, 11           ; (A denizen's diagonal way: slant.s, 2026-10-31, the main RAM's room)
             SWFN        wander, 9
             SWFN        sched, 9

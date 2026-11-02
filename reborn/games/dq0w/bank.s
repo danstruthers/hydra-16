@@ -130,7 +130,7 @@ go:
             SWPART      39, 12              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
             SWPART      41, 19              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
-            SWPART      42, 2               ; What a closer look at a thing shows; its condition (things.c)
+            SWPART      42, 24              ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 10              ; A walk in the dark set out on: its way felt, a thing stumbled over
             SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
             SWPART      45, 17              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
@@ -168,13 +168,14 @@ go:
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
             SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
-            SWPART      74, 14              ; A waterskin filled (wwater.c: slice 4.9's)
+            SWPART      74, 24              ; A waterskin filled (wwater.c: slice 4.9's)
             SWPART      75, 22              ; The water's depth where the character stands (wwater.c)
             SWPART      76, 23              ; The time of day believed (wtime.c: 2026-10-31)
             SWPART      77, 23              ; The sky seen, the time believed's start (wtime.c)
             SWPART      78, 23              ; Up to a place in the room (dq0w.c's go_to, ways_near: part 9's till
                                             ;   2026-10-31, its room the walk's)
             SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
+            SWPART      80, 24              ; One path: a denizen's doors, the doors' keys (wport.c: Phase 3C's)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -199,6 +200,9 @@ go:
             SWFN        den_legs, 51
             SWFN        den_other, 51
             SWFN        den_dig, 79         ; (A tunneller's dig: slice 4.11's)
+            SWFN        den_more, 80        ; (One path: Phase 3C's)
+            SWFN        door_key, 80
+            SWFN        door_keys, 80
             SWFN        old_mint, 51
             SWFN        den_enter, 60
             SWFN        den_draw, 60

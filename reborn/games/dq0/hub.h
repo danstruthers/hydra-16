@@ -586,7 +586,14 @@ enum { TG_HOURS, TG_SLEEP, TG_OUT };            /* (The hub's tb.how: the hours 
                                                 **   no idea of the hour) */
 #define TB_NONE         0xFFFF                  /* (The hub's tb.lfuel, ahung: no light, no meal, to go by) */
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_ALARM, DE_PASTIME,
-    DE_UP = 16, DE_DIG = 24, DE_DUG, DE_DIGS }; /* E_DEN's what: a step, a
+    DE_UP = 16, DE_DIG = 24, DE_DUG, DE_DIGS,
+    DE_OPENS, DE_SHUTS, DE_SLAMS, DE_UNLOCKS, DE_LOCKS, DE_BARS, DE_UNBARS, DE_STRAINS, DE_BURSTS, DE_HOLDS,
+    DE_BATTERS, DE_BREAKS };                    /* (A door worked by a denizen, Phase 3C's one path, the world's
+                                                **   wport.c: opened, shut, slammed shut as it flees, unlocked and
+                                                **   locked with its key, barred, its bar lifted out, forced (its
+                                                **   strain begun, burst open, holding), battered (a blow), broken
+                                                **   down: w1 w2 the door's square) */
+                                                /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post
                                                 **   (the denizens', a shout: told seen or heard, the UI's, 2026-10-30);
@@ -798,7 +805,10 @@ enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARR
                                                 **   short to span it; */
        PO_GAP, PO_JAMMED,                       /*   a portcullis's bars broken through, its bars forced apart (it
                                                 **   won't move); */
-       PO_SOFT };                               /*   a blow at it with a soft thing, one attempt, no harm (the thing
+       PO_SOFT,
+       PO_KEYED, PO_KEY_LOCKED, PO_NO_KEY, PO_IS_LOCKED };  /* (A door's key, every actor's, Phase 3C's: unlocked
+                                                **   with its key, locked with it, no key that fits (a lock), locked
+                                                **   already) */                               /*   a blow at it with a soft thing, one attempt, no harm (the thing
                                                 **   the hub's pc_strike's, the user's, 2026-10-22) */
 #define PO_SHOWS        0x8000                  /* (E_PORTAL's w1, an opening's: what it shows beyond told with it, as
                                                 **   the look after it found it, 2026-10-22: a what, WB_*, | 4 lit; b

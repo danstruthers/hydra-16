@@ -296,13 +296,10 @@ void s_den_intents (void)
             bd.ready += 2 * bd.step;
             told_den (m.a, m.b);
             break;
-        case I_CLIMB:                           /* (An ally come along with the character: beside it) */
-            if (open_sq (at (m.x[2], m.w1, m.w2)) && !taken (m.w1, m.w2)) {
-                bd.sn = m.x[2];
-                bd.x = m.w1;
-                bd.y = m.w2;
-                bd.ready = HUB->now + 10;
-            }
+        case I_CLIMB:                           /* (The rarer: an ally come along with the character; a robbery; */
+        case I_ROB:                             /*   a door worked, the character's code, Phase 3C's: part 80's) */
+        case I_PORTAL:
+            den_more (&m);
             break;
         case I_WAIT:
             bd.ready += m.w1;
@@ -312,14 +309,9 @@ void s_den_intents (void)
                 bd.ready = HUB->now + m.w1;
             }
             break;
-        case I_ATTACK:                          /* (A round's blow; a robbery, a round's work) */
-        case I_ROB:
+        case I_ATTACK:                          /* (A round's blow) */
             bd.ready += HUB->round;
-            if (m.kind == I_ROB) {
-                den_rob (&m);
-            } else {
-                den_blow (m.a, m.b);
-            }
+            den_blow (m.a, m.b);
             break;
         }
         if (bd.doing != was && (!was || !bd.doing)) {

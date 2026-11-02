@@ -2461,6 +2461,68 @@ function dq0CarveStairs(m, p) {
 // ends as one), the text typed next, before the input still to come (its waits for a prompt from then on).  One its
 // words never came for let go as its game ends (the screen's scrolling whole again, the game's t_away: ESC [ r) or
 // another begins: never typed into the next (2026-10-31)
+// The scene-setter shared by the door tests (Phase 3C's): on the typed line `on` (its first), the actor named `who`
+// put on the square beyond the door the character faces (the door beside it), hostile, drawn on to the character's
+// square (the minds' drawn and last-sensed square), its record moved with it; m.door = { k, door, beyond, pc, tile,
+// state } after.  `how`: extra pokes (h, o, L, K) for the scene
+function dq0DoorScene(m, on, who, how) {
+  const a = m.acia, read = a.read;
+  let typed = '', done = false;
+  m.door = null;
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (typed === on && !done && m.dq0) {
+          const { L, K } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
+          const w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+          const px = u16(L.pcX), py = u16(L.pcY), sn = h[L.pcSn], S = stratumRec(m, sn);
+          const chunk = (x, y) => S && liveChunks(m, sn)[((x - S.x0) >> 5) + ',' + ((y - S.y0) >> 5)];
+          const tile = (x, y) => { const b = chunk(x, y); return b ? b[443 + ((y - S.y0) & 31) * 32 + ((x - S.x0) & 31)] & 15 : -1; };
+          const state = (x, y) => {   // (The door's state, its portal record's: struct chunk's portal[], 14 bytes each)
+            const b = chunk(x, y);
+            if (!b) return -1;
+            for (let i = 0; i < b[218]; i++) if (b[219 + i * 14] === ((x - S.x0) & 31) && b[220 + i * 14] === ((y - S.y0) & 31)) return b[222 + i * 14];
+            return -1;
+          };
+          const at = k => L.actor + k * L.actorSize, named = k => {
+            let n = '';
+            for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]);
+            return n;
+          };
+          const f = h[L.pcFace], dx = [0, 1, 1, 1, 0, -1, -1, -1][f], dy = [-1, -1, 0, 1, 1, 1, 0, -1][f];
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === who);
+          m.doorWhy = { names: [...Array(L.nactors).keys()].map(named), face: f, ahead: tile(px + dx, py + dy), beyond: tile(px + 2 * dx, py + 2 * dy) };
+          if (k !== undefined && tile(px + dx, py + dy) === 3 && [1, 4].includes(tile(px + 2 * dx, py + 2 * dy))) {
+            const x = px + 2 * dx, y = py + 2 * dy, o = at(k);
+            w16(o + L.aX, x);
+            w16(o + L.aY, y);
+            h[o + L.aSn] = sn;
+            h[o + L.aAttitude] = K.AT_HOSTILE;
+            h[o + L.aDoing] = 0;
+            const R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+            R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8;
+            R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
+            R.mem[q + R.SN] = sn;
+            R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
+            const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+            const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+            ram[ad('drawn') + k] = 8;
+            ram[ad('lsx') + 2 * k] = px & 255; ram[ad('lsx') + 2 * k + 1] = px >> 8;
+            ram[ad('lsy') + 2 * k] = py & 255; ram[ad('lsy') + 2 * k + 1] = py >> 8;
+            if (how) how(h, o, L, K);
+            h[L.denSeq] = h[L.denSeq] + 1 & 255;
+            m.door = { k, door: [px + dx, py + dy], beyond: [x, y], pc: [px, py], tile, state };
+          }
+          done = true;
+        }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+}
+
 function dq0OnWords(m, list) {
   const a = m.acia, read = a.read, shown = a.shown, norm = s => s.replace(/\s+/g, ' ');
   let typed = '', g = 0, seen = {}, armed = null, story = '', esc = 0, escp = '';
@@ -3730,6 +3792,34 @@ module.exports = {
         if (!/A fresh tunnel opens|rock falling/.test(s)) f.push('the way through not told');
         const fin = T.of('quit').at, me = fin && fin.actors.find(a => a.k === m.tun.k);
         if (!me || (me.x === m.tun.beyond[0] && me.y === m.tun.beyond[1])) f.push('the dwarf never came on from beyond the door: ' + JSON.stringify(me));
+        if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> close the door'), s.indexOf('> close the door') + 1500));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0denportal', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's one path for every actor (Phase 3C, 2026-11-02: DUNGEON.md's one path, DENIZENS.md's doors, HOUSE.md's denizens and doors, for review): a denizen's mind posts the character's own intent (I_PORTAL) and the world carries it out by the character's parts (wdoor.c's, by the world's wport.c).  A hand-written theme's wary bandits (seed 1, dq0kit's); the character opens the door ahead and shuts it again, and a bandit is put beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked): no step nearer but through the shut door, it opens it (E_DEN DE_OPENS at the door's square: 'The bandit opens the door.'), comes through and fights the character, robs it as it lies senseless (a robber's way, kinds.txt's), and, off with its takings to its lair, fleeing, slams the door shut behind it (DE_SLAMS: 'The bandit slams the door shut.', the character beyond the door; the door shut in its chunk at the end)",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        'open the door', 'close the door', 'wait', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
+      start(m) {
+        dq0DoorScene(m, 'wait', 'bandit');
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), DE_OPENS = 27, DE_SLAMS = 29;
+        if (!m.door) return ['the scene not set: no bandit near, or no door ahead with a floor beyond it: ' + JSON.stringify(m.doorWhy)];
+        const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.door.k + 1);
+        const opens = dens.filter(e => e.a === DE_OPENS), slams = dens.filter(e => e.a === DE_SLAMS);
+        if (!opens.length) f.push('the bandit never opened the door (E_DEN DE_OPENS)');
+        if (!slams.length) f.push('the bandit never slammed the door shut as it fled (E_DEN DE_SLAMS)');
+        for (const e of [...opens, ...slams]) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door worked not the one between them: ' + [e.a, e.w1, e.w2]);
+        if (opens.length && slams.length && slams[0].t < opens[0].t) f.push('slammed before it was opened');
+        if (m.door.state(...m.door.door) & 1) f.push('the door open in its chunk at the end');
+        if (!/The bandit opens the door\./.test(s)) f.push('its opening not seen: "The bandit opens the door."');
+        if (!/The bandit slams the door shut\./.test(s)) f.push('its slam not seen: "The bandit slams the door shut."');
+        if (!T.flatMap(t => t.dens).some(e => e.kind === 'E_FIGHT' && e.who === m.door.k + 1)) f.push('the bandit never came through to fight');
         if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> close the door'), s.indexOf('> close the door') + 1500));
         return f;
       },

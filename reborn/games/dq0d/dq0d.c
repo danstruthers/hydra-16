@@ -120,6 +120,8 @@ unsigned char __fastcall__ plan (unsigned char k);   /* Part 9's: an actor's day
 void __fastcall__ roused (unsigned char k, unsigned char was);   /* Part 10's: a pastime let go */
 unsigned char __fastcall__ dig_way (unsigned char k);   /* Part 12 (the tunnellers', slice 4.11's) */
 unsigned char nearby (void);                    /* Part 13: the lairs near placed (the main RAM's room, 2026-11-01) */
+unsigned char __fastcall__ door_way (unsigned char k);  /* Part 14: a door worked (Phase 3C's one path, 2026-11-02) */
+static unsigned char door_by (void);            /* (Below) */
 static unsigned char nonear;                    /* (None left near to place: nearby's, till the character moves) */
 extern unsigned char ovbank[5];
 static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsigned x, unsigned y);  /* (Below) */
@@ -803,14 +805,6 @@ static unsigned char __fastcall__ made (unsigned char sn, unsigned cx, unsigned 
     }
     hub_map (0);
     return k != 0;
-}
-
-/* Square x, y of stratum sn in a chunk that's made already */
-static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigned y)
-{
-    struct stratum* s = &STRATUM (sn);
-
-    return x - s->x0 < s->w && y - s->y0 < s->h && made (sn, (x - s->x0) >> CW_BITS, (y - s->y0) >> CW_BITS);
 }
 
 /* The lairs on the character's stratum whose chunks are its own or beside it, and made (the character's
@@ -1985,7 +1979,8 @@ static unsigned char __fastcall__ decide (unsigned char k)
         a.doing = DO_COMING;                    /* (Its nose to the character's trail: after it, the way the scent
                                                 **   goes; the world's, an older trail: DO_ROAM, if there's none) */
     } else if (foe && !(K.flags & K_SHY) && drawn[k] && ((d = draw_on (k)) != 0xFF ||
-        ((K.styles & (K_DIGS | K_MINES)) && (d = dig_way (k)) != 0xFF))) {
+        (door_by () && (d = door_way (k | 0x80)) != 0xFF) || ((K.styles & (K_DIGS | K_MINES)) &&
+        (d = dig_way (k)) != 0xFF))) {          /* (A shut door the way nearer: worked, part 14's, Phase 3C's) */
         a.doing = DO_COMING;                    /* (No way nearer: a tunneller digs one, part 12's, slice 4.11's) */                    /* (Drawn on to where it last sensed the character, heard it, a while:
                                                 **   slice 4.5's, HOUSE.md's: part 5's) */
     } else if ((a.mood & AM_HURT) && a.attitude < AT_ALLIED && !foe) {
@@ -2002,6 +1997,10 @@ static unsigned char __fastcall__ decide (unsigned char k)
     } else if (!pcrest && (K.flags & K_LAIR ? !random (4) : random (3))) {
         d = step_for (k, rng, S_ANY);
     }                                           /* (The character resting: no idle wandering in its sight) */
+    if ((d == 0xFF || d < 8) && a.doing && door_by () && (w = door_way (k | (d == 0xFF) << 7)) != 0xFF) {
+        d = w;                                  /* (A door beside it worked: opened toward its foe, shut against it,
+                                                **   one left open shut on its rounds: part 14's, Phase 3C's) */
+    }
     if (d == 0xFF && foe && sres[k] && dist > 1 && (K.styles & (K_DIGS | K_MINES))) {
         d = dig_way (k);                        /* (A tunneller kept from the character it senses by rock, a wall,
                                                 **   rubble: it digs its way through, part 12's, slice 4.11's; drawn
@@ -2072,6 +2071,142 @@ static unsigned char __fastcall__ decide (unsigned char k)
     fought ();
     return 0;
 }
+
+/* A door beside actor a (the copy), the four ways, in its own chunk (one across a chunk's edge not looked for: the
+** cheap test, the main RAM's): 1, its part to be asked (door_way's) */
+static unsigned char door_by (void)
+{
+    unsigned char* p = at (a.sn, a.x, a.y);
+
+    return (unsigned char) (cx_ - 1) < CW - 2 && (unsigned char) (cy_ - 1) < CW - 2 && (TILE (p[1]) == T_DOOR ||
+        TILE (p[-1]) == T_DOOR || TILE (p[CW]) == T_DOOR || TILE (p[-CW]) == T_DOOR);
+}
+
+/* ---- Doors (Phase 3C's one path, 2026-11-02: DUNGEON.md's one path for every actor; DENIZENS.md's doors; HOUSE.md's
+** denizens and doors, for review): actor k (the copy a, its kind's K) works a door beside it by the character's rules,
+** its intent the character's own (I_PORTAL: the door's square, PA_*; the world's wport.c carries it out by the
+** character's parts).  Coming at its foe (or following the character, an ally), no step nearer but through a shut
+** door: it opens it; barred on its side, it lifts the bar first; locked, it tries its key (the world's: one of its
+** lair's keys, if it has it); hostile, still shut, it forces it (two tries, ten seconds each) and then batters it (a
+** dozen blows), then gives it up; one with no hands (a beast) can't open one, but a large hostile one batters it
+** (the house's).  Fleeing, shy, or watching the character, an open door between them (the character beyond it,
+** sensed, no one in the doorway): it shuts it (fleeing, slammed).  On its rounds (on watch), a door the character has
+** handled (PP_KNOWN) left open: it shuts it, and stands alert a while.  Each actor's tries at a door kept in atry (its
+** way, the stage, the count); a door's lock or bar it can't get past turns it round, its steps' own way (greedy, as
+** yet).  k's high bit: no step was found.  0xF8 (the intent posted), or 0xFF.  Part 14's */
+static unsigned char atry[NACTORS];             /* (Each one's tries at a door: its way, the low two bits; the stage,
+                                                **   times 4 (0 none, 1 its key tried, 2 forcing, 3 battering); how
+                                                **   many, times 16) */
+#pragma code-name (push, "SW14CODE")
+#pragma rodata-name (push, "SW14RODATA")
+#pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
+unsigned char __fastcall__ s_door_way (unsigned char k)
+{
+    unsigned char j, st, n, what, mode, none = k & 0x80, s;
+    unsigned x, y, bx, by;
+    unsigned char* p;
+    struct portal* q;
+    int dx, dy;
+
+    k &= 7;
+    mode = a.doing == DO_FLEE || a.doing == DO_SHY ? 2 : a.attitude == AT_HOSTILE ? (sres[k] || drawn[k] ? 1 : 0) :
+        a.doing == DO_FOLLOW || a.doing == DO_COMING ? 1 : a.doing == DO_WATCH ? 2 : a.doing == DO_GUARD ? 3 : 0;
+    if (!mode || (mode == 1 && !none) || (mode != 1 && a.body != BD_TWO) || (mode == 2 && !sres[k])) {
+        return 0xFF;
+    }
+    for (j = 0; j < 4; ++j) {
+        x = a.x + dir_x[j];
+        y = a.y + dir_y[j];
+        if (!(p = at (a.sn, x, y)) || TILE (*p) != T_DOOR || !(q = portal_at (cx_, cy_)) || q->kind != PK_DOOR ||
+            (q->state & (PS_HIDDEN | PS_WRECKED))) {
+            continue;
+        }
+        s = q->state;
+        bx = x + dir_x[j];
+        by = y + dir_y[j];
+        what = 0xFF;
+        if (mode == 1) {                        /* (Toward its foe, or the one it follows: shut, the way nearer) */
+            if ((s & PS_OPEN) || toward (bx - refx, by - refy) >= toward (a.x - refx, a.y - refy)) {
+                continue;
+            }
+            st = atry[k];
+            if ((st & 3) != j) {
+                st = j;                         /* (Another door: begun again) */
+            }
+            n = st >> 4;
+            st = st >> 2 & 3;
+            if (a.body != BD_TWO) {             /* (No hands: a large hostile beast batters it, the house's) */
+                if (a.attitude != AT_HOSTILE || KF_SIZE (K.form) < 5) {
+                    return 0xFF;
+                }
+                if (st != 3) {
+                    st = 3;
+                    n = 0;
+                }
+            } else if ((s & PS_BARRED) && q->bar == ((j + 2) & 3)) {
+                what = PA_LIFT;                 /* (Its bar on its side: lifted out first) */
+            } else if (!(s & (PS_LOCKED | PS_BARRED))) {
+                what = PA_OPEN;
+                st = n = 0;
+            } else if (!st && (s & PS_LOCKED)) {
+                what = PA_UNLOCK;               /* (Its key, if it has one: the world's) */
+                st = 1;
+            } else if (a.attitude != AT_HOSTILE) {
+                return 0xFF;                    /* (Locked or barred against it: no further, round, as it can) */
+            }
+            if (what == 0xFF && st < 2) {
+                st = 2;
+                n = 0;
+            }
+            if (what == 0xFF && st == 2) {      /* (Forced: its strain begun, then its test, twice at most) */
+                if (n < 4) {
+                    what = PA_FORCE;
+                    im.t = n++ & 1;
+                } else {
+                    st = 3;
+                    n = 0;
+                }
+            }
+            if (what == 0xFF) {                 /* (Battered, a blow at a time, a dozen at most) */
+                if (n >= 12) {
+                    return 0xFF;
+                }
+                what = PA_BREAK;
+                im.t = n++;
+            }
+            atry[k] = j | st << 2 | n << 4;
+        } else {                                /* (Shut against the character: it's beyond the door, sensed; or one
+                                                **   left open, the character's handling, found on its rounds) */
+            if (!(s & PS_OPEN) || taken (k, x, y)) {
+                continue;
+            }
+            if (mode == 2) {
+                dx = pcx - x;
+                dy = pcy - y;
+                if (dx * dir_x[j] + dy * dir_y[j] <= 0 || apart (dx, dy) > 8) {
+                    continue;                   /* (The character on its own side, or far: left open) */
+                }
+            } else if (!(q->parts & PP_KNOWN)) {
+                continue;
+            } else {
+                alert[k] = now + 600;           /* (Alert a while: still, looking about, a minute) */
+            }
+            what = PA_CLOSE;
+            im.t = 0;
+        }
+        im.a = what;
+        im.b = PW_DOOR;
+        im.w1 = x;
+        im.w2 = y;
+        a.face = DH (j);
+        act (I_PORTAL, k);
+        return 0xF8;
+    }
+    return 0xFF;
+}
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- Tunnellers (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers and builders; HOUSE.md's, for review): actor k (the
 ** copy a, its kind K's), hostile, kept by rock, a wall or rubble from the character it senses beyond it, or from where it
@@ -4346,6 +4481,15 @@ unsigned char __fastcall__ s_found (unsigned char k)
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
+
+/* Square x, y of stratum sn in a chunk that's made already (wander's alone: part 9's since 2026-11-02, the main RAM's
+** room) */
+static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigned y)
+{
+    struct stratum* s = &STRATUM (sn);
+
+    return x - s->x0 < s->w && y - s->y0 < s->h && made (sn, (x - s->x0) >> CW_BITS, (y - s->y0) >> CW_BITS);
+}
 
 /* Record D (its kind's K), out but not an actor, moved by its day as it's due (roam's: lim squares about its home it
 ** may go, 0 none, off its lair's stratum): asleep at its bed or at its meal (its lair's home, or a square beside it),

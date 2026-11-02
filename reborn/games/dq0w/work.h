@@ -39,6 +39,11 @@ void store_put (void);                          /* (The record in rec kept: part
 
 /* ---- The work: what's to be done (dq0w.c's work () sets it), and what came of it (the parts') */
 struct work {
+    unsigned char   who;                        /* Whose work (Phase 3C's one path, 2026-11-02): 0 the character's, else
+                                                **   an actor's entry plus 1 (wport.c's: body bd, its intent's I_PORTAL,
+                                                **   by the same parts; the referee asked of it, nothing told the UI but
+                                                **   out, the parts' E_PORTAL outcome, no trap sprung, PP_KNOWN not set) */
+    unsigned char   out;
     unsigned char   sn;                         /* The character's stratum */
     unsigned char   what;                       /* PA_*, or W_STEP; a battering's W_BLOW, W_GONE as it goes */
     unsigned char   pd;                         /* The way from where the character stands to the portal */
