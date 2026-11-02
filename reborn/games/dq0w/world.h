@@ -402,6 +402,10 @@ enum { M_PLAN, M_CHUNK, M_SAVE, M_RESTORE,     /* A stratum's plan and links dow
                                                 **   more, what's seen of them kept) and its plan grown again (its
                                                 **   record in the slot already, made: none of its links added) */
 #define NO_SQ           0xFFFF
+#define DOOR_KEY(sn, x, y)  (0x8000U | (((unsigned) (x) * 37U + (unsigned) (y) * 101U + (sn) * 4099U) & 0x7FFF))
+                                                /* (A door's key: the number in its size and thick, by the locked
+                                                **   door's stratum and square, the high bit a door's; a box's key its
+                                                **   box's own number, under it: Phase 3C's, wport.c's) */
 #define W_STEP          0xFF                    /* (The world's work: a trap stepped onto, from where it came) */
 enum { ASK_WORLD, ASK_DENIZENS, ASK_SENSES, ASK_UI, NASK };
 

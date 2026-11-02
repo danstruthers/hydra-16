@@ -131,7 +131,7 @@ ovl_out:
             OVFN        puzzle, 5
             OVFN        fight_words, 6
             OVFN        fight_target, 6
-            OVFN        pacing, 3
+            OVFN        pacing, 16
             OVFN        names_in, 10
             OVFN        focus_words, 13
             OVFN        felt_words, 7

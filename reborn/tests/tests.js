@@ -2461,6 +2461,87 @@ function dq0CarveStairs(m, p) {
 // ends as one), the text typed next, before the input still to come (its waits for a prompt from then on).  One its
 // words never came for let go as its game ends (the screen's scrolling whole again, the game's t_away: ESC [ r) or
 // another begins: never typed into the next (2026-10-31)
+// The scene-setter shared by the door tests (Phase 3C's): on the typed line `on` (its first), the actor named `who`
+// put on the square beyond the door the character faces (the door beside it), hostile, drawn on to the character's
+// square (the minds' drawn and last-sensed square), its record moved with it; m.door = { k, door, beyond, pc, tile,
+// state } after.  `how`: extra pokes (h, o, L, K) for the scene
+function dq0DoorScene(m, on, who, how) {
+  const a = m.acia, read = a.read;
+  let typed = '', done = false;
+  m.door = null;
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (typed === on && !done && m.dq0) {
+          const { L, K } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
+          const w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+          const px = u16(L.pcX), py = u16(L.pcY), sn = h[L.pcSn], S = stratumRec(m, sn);
+          const chunk = (x, y) => S && liveChunks(m, sn)[((x - S.x0) >> 5) + ',' + ((y - S.y0) >> 5)];
+          const tile = (x, y) => { const b = chunk(x, y); return b ? b[443 + ((y - S.y0) & 31) * 32 + ((x - S.x0) & 31)] & 15 : -1; };
+          const state = (x, y) => {   // (The door's state, its portal record's: struct chunk's portal[], 14 bytes each)
+            const b = chunk(x, y);
+            if (!b) return -1;
+            for (let i = 0; i < b[218]; i++) if (b[219 + i * 14] === ((x - S.x0) & 31) && b[220 + i * 14] === ((y - S.y0) & 31)) return b[222 + i * 14];
+            return -1;
+          };
+          const at = k => L.actor + k * L.actorSize, named = k => {
+            let n = '';
+            for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]);
+            return n;
+          };
+          const f = h[L.pcFace], dx = [0, 1, 1, 1, 0, -1, -1, -1][f], dy = [-1, -1, 0, 1, 1, 1, 0, -1][f];
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === who);
+          m.doorWhy = { names: [...Array(L.nactors).keys()].map(named), face: f, ahead: tile(px + dx, py + dy), beyond: tile(px + 2 * dx, py + 2 * dy) };
+          if (k !== undefined && tile(px + dx, py + dy) === 3 && [1, 4].includes(tile(px + 2 * dx, py + 2 * dy))) {
+            const x = px + 2 * dx, y = py + 2 * dy, o = at(k);
+            w16(o + L.aX, x);
+            w16(o + L.aY, y);
+            h[o + L.aSn] = sn;
+            h[o + L.aAttitude] = K.AT_HOSTILE;
+            h[o + L.aDoing] = 0;
+            const R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+            R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8;
+            R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
+            R.mem[q + R.SN] = sn;
+            R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
+            const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+            const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+            ram[ad('drawn') + k] = 8;
+            ram[ad('lsx') + 2 * k] = px & 255; ram[ad('lsx') + 2 * k + 1] = px >> 8;
+            ram[ad('lsy') + 2 * k] = py & 255; ram[ad('lsy') + 2 * k + 1] = py >> 8;
+            if (how) how(h, o, L, K);
+            h[L.denSeq] = h[L.denSeq] + 1 & 255;
+            m.door = { k, door: [px + dx, py + dy], beyond: [x, y], pc: [px, py], tile, state };
+          }
+          done = true;
+        }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+}
+
+// A portal's record in the live chunk cache (struct chunk's portal[], 14 bytes each: x, y, kind, state, lock ...): { b
+// its bank, o its offset } of stratum sn's square x, y, or null (the scene's pokes: dq0denkey's lock)
+function dq0PortalAt(m, sn, x, y) {
+  const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
+  const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51), S = stratumRec(m, sn);
+  if (hub === undefined || !S || !banks[hub + WORLD_BANK_N]) return null;
+  const w = banks[hub + WORLD_BANK_N], cx = (x - S.x0) >> 5, cy = (y - S.y0) >> 5;
+  for (let k = 0; k < 24; k++) {
+    const s = CSLOT_AT + k * 8, b = banks[hub + 5 + Math.floor(k / 3)];
+    if (!w[s] || w[s + 1] !== sn || !b || (w[s + 2] | w[s + 3] << 8) !== cx || (w[s + 4] | w[s + 5] << 8) !== cy) continue;
+    const c = (k % 3) * 0xAA0;
+    for (let i = 0; i < b[c + 218]; i++) {
+      const o = c + 219 + i * 14;
+      if (b[o] === ((x - S.x0) & 31) && b[o + 1] === ((y - S.y0) & 31)) return { b, o };
+    }
+  }
+  return null;
+}
+
 function dq0OnWords(m, list) {
   const a = m.acia, read = a.read, shown = a.shown, norm = s => s.replace(/\s+/g, ' ');
   let typed = '', g = 0, seen = {}, armed = null, story = '', esc = 0, escp = '';
@@ -3731,6 +3812,163 @@ module.exports = {
         const fin = T.of('quit').at, me = fin && fin.actors.find(a => a.k === m.tun.k);
         if (!me || (me.x === m.tun.beyond[0] && me.y === m.tun.beyond[1])) f.push('the dwarf never came on from beyond the door: ' + JSON.stringify(me));
         if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> close the door'), s.indexOf('> close the door') + 1500));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0denportal', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's one path for every actor (Phase 3C, 2026-11-02: DUNGEON.md's one path, DENIZENS.md's doors, HOUSE.md's denizens and doors, for review): a denizen's mind posts the character's own intent (I_PORTAL) and the world carries it out by the character's parts (wdoor.c's, by the world's wport.c).  A hand-written theme's wary bandits (seed 1, dq0kit's); the character opens the door ahead and shuts it again, and a bandit is put beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked): no step nearer but through the shut door, it opens it (E_DEN DE_OPENS at the door's square: 'The bandit opens the door.'), comes through and fights the character; and a bandit fleeing beyond the door (that one, off to its lair with the character's things as it lay senseless, a robber's way, kinds.txt's; or, as the referee's fight goes, a fellow come after it), the character beyond it, slams the door shut behind it (DE_SLAMS at the door: 'The bandit slams the door shut.'; the door shut in its chunk at the end)",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        'open the door', 'close the door', 'wait', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
+      start(m) {
+        dq0DoorScene(m, 'wait', 'bandit');
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), DE_OPENS = 27, DE_SLAMS = 29;
+        if (!m.door) return ['the scene not set: no bandit near, or no door ahead with a floor beyond it: ' + JSON.stringify(m.doorWhy)];
+        const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.door.k + 1);
+        const opens = dens.filter(e => e.a === DE_OPENS);
+        if (!opens.length) f.push('the bandit never opened the door (E_DEN DE_OPENS)');
+        const slammed = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.a === DE_SLAMS && e.w1 === m.door.door[0] && e.w2 === m.door.door[1]);
+        if (!slammed.length) f.push('no bandit slammed the door shut as it fled (E_DEN DE_SLAMS)');
+        for (const e of [...opens, ...slammed]) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door worked not the one between them: ' + [e.a, e.w1, e.w2]);
+        if (opens.length && slammed.length && slammed[0].t < opens[0].t) f.push('slammed before it was opened');
+        if (m.door.state(...m.door.door) & 1) f.push('the door open in its chunk at the end');
+        if (!/The bandit opens the door\./.test(s)) f.push('its opening not seen: "The bandit opens the door."');
+        if (!/The bandit slams the door shut\./.test(s)) f.push('its slam not seen: "The bandit slams the door shut."');
+        if (!T.flatMap(t => t.dens).some(e => e.kind === 'E_FIGHT' && e.who === m.door.k + 1)) f.push('the bandit never came through to fight');
+        if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> close the door'), s.indexOf('> close the door') + 1500));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0denkey', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's doors' keys and a denizen forcing a locked door (Phase 3C's one path, 2026-11-02: HOUSE.md's keys that fit, every actor's; DENIZENS.md's doors): at seed 1 (dq0denportal's wary bandits, the character with an iron key, dq0 -k), the character opens the door ahead and shuts it again; the door given a lock and the key made its own (the scene set as 'lock the door' is typed: the chunk's portal record's lock, the key's size and thick DOOR_KEY's), 'lock the door' locks it ('You lock it with its key.'); a bandit put beyond it, hostile, drawn on (dq0denportal's scene); it has no key, so it strains at the door (E_DEN DE_STRAINS: 'The bandit strains at the door.', or a door creaking) by the character's forcing (the referee's Strength test, its own sheet's), and, held, batters it (DE_BATTERS), each told seen or heard, till it's through or it gives up",
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'iron key'",
+        'open the door', 'close the door', 'lock the door', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
+      start(m) {
+        dq0DoorScene(m, 'wait', 'bandit');
+        const a = m.acia, read = a.read;
+        let typed = '';
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'lock the door' && m.dq0 && !m.keyed) {   // (The door ahead given a lock, the key the character's)
+                const { L, K } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
+                const px = u16(L.pcX), py = u16(L.pcY), sn = h[L.pcSn], f = h[L.pcFace];
+                const x = px + [0, 1, 1, 1, 0, -1, -1, -1][f], y = py + [-1, -1, 0, 1, 1, 1, 0, -1][f], P = dq0PortalAt(m, sn, x, y);
+                const id = 0x8000 | ((x * 37 + y * 101 + sn * 4099) & 0x7FFF), per = Math.floor(0x2000 / L.itemSize);
+                let key = -1;
+                for (let i = 1; P && i < L.nitems && key < 0; i++) {
+                  const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+                  if (b && b[o + L.iKind] === K.KI_KEY && b[o + L.iWhere] !== K.IW_DEN && b[o + L.iWhere] !== K.IW_SQUARE) {
+                    b[o + L.iSize] = id & 255;
+                    b[o + L.iThick] = id >> 8;
+                    key = i;
+                  }
+                }
+                if (P && key > 0) {
+                  if (!P.b[P.o + 4]) P.b[P.o + 4] = 3;   // (Its lock: three steps worse to pick)
+                  m.keyed = { door: [x, y], sn, key };
+                }
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), { K } = m.dq0.layout();
+        if (!m.keyed) return ['the key not made the door\'s: no door ahead, or no iron key carried'];
+        if (!m.door) return ['the scene not set: no bandit near, or no door ahead with a floor beyond it: ' + JSON.stringify(m.doorWhy)];
+        if (!/> lock the door[^>]*You lock it with its key\./.test(s)) f.push('"lock the door" not "You lock it with its key."');
+        const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.door.k + 1);
+        const strains = dens.filter(e => e.a === K.DE_STRAINS), opens = dens.filter(e => e.a === K.DE_OPENS);
+        if (!strains.length) f.push('the bandit never strained at the locked door (E_DEN DE_STRAINS)');
+        if (opens.length && strains.length && opens[0].t < strains[0].t) f.push('the locked door opened before it was forced');
+        if (!/The bandit strains at the door\.|a door creaking/.test(s)) f.push('its forcing neither seen nor heard');
+        if (!dens.some(e => e.a === K.DE_BURSTS || e.a === K.DE_BATTERS)) f.push('its forcing neither burst the door nor, held, went on to battering');
+        if (process.env.DQ0SHOW) f.push(s.slice(s.indexOf('> lock the door'), s.indexOf('> lock the door') + 2500));
+        for (const e of dens.filter(e => e.a >= K.DE_OPENS)) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door worked not the one between them: ' + [e.a, e.w1, e.w2]);
+        if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> lock the door'), s.indexOf('> lock the door') + 1800));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0dentake', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's denizens taking things by the character's take (Phase 3C's one path, 2026-11-02: DUNGEON.md's one path, DENIZENS.md's things taken, HOUSE.md's denizens taking things, for review): at seed 1 (dq0denportal's wary bandits), the character, given a sword (dq0 -k), drops it at its feet; a bandit is put beside it with no weapon to hand (the scene set as the first wait's typed: the hub's actor and its record, its agear's AG_ARMED off, as the world has it for one unarmed), so its mind wants a weapon and posts the character's own intent (I_TAKE, a its wants: TW_ARMS), and the world takes the sword up for it by the take rule (wtake.c: within its reach, not fixed, its hands), held, its own (the item store's IW_DEN, its number's), told ('The bandit snatches up its sword.': E_BEAT WB_PICKS, its kind)",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k sword",
+        'drop the sword', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const a = m.acia, read = a.read;
+        let typed = '', done = false;
+        m.take = null;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'wait' && !done && m.dq0) {   // (A bandit put beside the character, its agear unarmed)
+                const { L, K } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
+                const w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+                const px = u16(L.pcX), py = u16(L.pcY), sn = h[L.pcSn], S = stratumRec(m, sn);
+                const tile = (x, y) => { const b = S && liveChunks(m, sn)[((x - S.x0) >> 5) + ',' + ((y - S.y0) >> 5)]; return b ? b[443 + ((y - S.y0) & 31) * 32 + ((x - S.x0) & 31)] & 15 : -1; };
+                const at = k => L.actor + k * L.actorSize, named = k => {
+                  let n = '';
+                  for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]);
+                  return n;
+                };
+                const busy = (x, y) => [...Array(L.nactors).keys()].some(j => h[at(j) + L.aState] && u16(at(j) + L.aX) === x && u16(at(j) + L.aY) === y);
+                const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+                const d = [[0, -1], [1, 0], [0, 1], [-1, 0]].find(([dx, dy]) => [1, 4].includes(tile(px + dx, py + dy)) && !busy(px + dx, py + dy));
+                if (k !== undefined && d) {
+                  const x = px + d[0], y = py + d[1], o = at(k);
+                  w16(o + L.aX, x);
+                  w16(o + L.aY, y);
+                  h[o + L.aSn] = sn;
+                  h[o + L.aDoing] = 0;
+                  h[L.agear + k] &= ~1;           // (AG_ARMED: none to hand)
+                  const R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+                  R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8;
+                  R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
+                  R.mem[q + R.SN] = sn;
+                  h[L.denSeq] = h[L.denSeq] + 1 & 255;
+                  m.take = { k, did: u16(o + L.aDid) };
+                }
+                done = true;
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), { L, K } = m.dq0.layout();
+        if (!m.take) return ['the scene not set: no bandit near, or no open square beside the character'];
+        if (!/> drop the sword[^>]*Put down./.test(s)) f.push('the sword not put down');
+        const picks = T.flatMap(t => [...t.events, ...t.dens]).filter(e => e.kind === 'E_BEAT' && e.beat === 'WB_PICKS' && e.b === m.take.k + 1);
+        if (!picks.length) f.push('the bandit never took up a thing (E_BEAT WB_PICKS)');
+        if (!/The bandit snatches up its sword\./.test(s)) f.push('not told "The bandit snatches up its sword."');
+        const per = Math.floor(0x2000 / L.itemSize);
+        let sword = null;
+        for (let i = 1; i < L.nitems; i++) {
+          const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+          if (b && b[o + L.iWhere] === K.IW_DEN && b[o + L.iOwner] === (m.take.did & 255) && b[o + L.iKind] === ((picks[0] || {}).w1 >> 8)) sword = { i, flags: b[o + L.iFlags] };
+        }
+        if (picks.length && !sword) f.push('the thing taken not the bandit\'s own in the store (IW_DEN, its number)');
+        if (sword && !(sword.flags & K.I_HELD)) f.push('the sword not held');
+        if (f.length) f.push(JSON.stringify(picks) + ' ' + s.slice(s.indexOf('> drop the sword'), s.indexOf('> drop the sword') + 1200));
         return f;
       },
       sdcard: true
@@ -7693,15 +7931,18 @@ module.exports = {
       name: 'dq0engage', initiative: true, what: 'Dingus Quest Zero\'s engage initiative test and a grope while engaged (the user\'s, 2026-10-20; HOUSE.md\'s, as built: the book\'s optional rule, the referee\'s RS_CONTEST of P_INITIATIVE, and P_GROPE), on (initiative: true: the runner gives the other dq0 tests -I), by the referee\'s requests, the hub\'s events and the words (HarnMaster\'s dice at these seeds): at seed 7, in a gambeson and a mail hauberk, the walk toward the far side stopped by the ghoul\'s zone, both tested, the ghoul the quicker: its blow first ("Quicker, the ghoul bites at you"), the ghoul fought back (HOUSE.md\'s fighting on), and the walk again taking the fight over, engaged still, a square, no test; the ghoul closed with (attack, a walk), the ghoul the quicker, its blow first, then the character\'s; the sword dropped beside the ghoul as it fights (the commands typed ahead taking the fight over, one by one) and taken up, a grope: fumbled ("You fumble for the sword.", the sword where it lay), and held at last; then a quick character (Initiative 80, no armour) the ghoul comes up to, the character the quicker: its blow first ("Quicker, you strike at the ghoul with your sword"); at seed 21 a wary giant rat closed with, the rat the quicker, backing away (TE_AWAY: "Quicker, the giant rat backs away from you."); and at seed 7 again with dq0 -I, no test at all (since fighting on, the walk again and the gropes typed as the character fights) (since 2026-10-29: the ghoul made aware of the character as the walk past it, two squares off, is typed: dq0Aware, the test\'s own setting up, an unaware denizen engaging no one; the walk into its zone the engage initiative test\'s)',
       init: 't_rc', cycles: 3600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm',
-        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'go to the far side']) +
-        'Āgo to the far side\r' + dq0Typed(['quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'go to the far side', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'attack the ghoul', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait']) +
         'drop the sword\rtake the sword\rtake the sword\rtake the sword\rhold the sword\r' + dq0Typed(['quit',
         'echo ml ini 80 >> /ram/c.hm', 'dq0 -p t -s 7 -c /ram/c.hm -k sword -T', 'd', 'wait', 'quit',
         'hmchar -q -s 5 -u feudal -c hunter -o /ram/d.hm', 'dq0 -p t -s 21 -c /ram/d.hm -T', 'attack the rat', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k sword -T -I', 'd', 'wait', 'wait', 'quit', 'echo $status']) },
-      start(m) { dq0Aware(m, 'go to the far side', 'ghoul'); },   // (Its ghoul aware of the character as the walk past it begins: slice 4.5's, an unaware one engages no one)
+      start(m) {
+        dq0Aware(m, 'go to the far side', 'ghoul');   // (Its ghoul aware of the character as the walk past it begins: slice 4.5's, an unaware one engages no one)
+        dq0OnWords(m, [{ g: 1, line: 'go to the far side', n: 1, words: 'Quicker, the ghoul bites at you', text: 'go to the far side\r' }]);   // (The walk again
+                                                //   typed as it's told, as it fights: 2026-11-02, not at a fixed gap of cycles)
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), C = require('../sim/lib/dq0meaning.js').constants().names, f = [];

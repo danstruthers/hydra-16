@@ -20,7 +20,12 @@
 /* A portal's state kept (handled: a walk may open it again, the user's) */
 static void __fastcall__ door_state (unsigned char st)
 {
+#ifdef W_FRONT
+    keep (wk.px, wk.py, st, wk.pq.parts | (wk.who ? 0 : PP_KNOWN), PORTAL_STATE);  /* (An actor's handling not the
+                                                **   character's: wport.c's) */
+#else
     keep (wk.px, wk.py, st, wk.pq.parts | PP_KNOWN, PORTAL_STATE);
+#endif
 }
 
 #ifdef W_TRAPS
@@ -33,6 +38,14 @@ static void __fastcall__ trap_state (unsigned char st)
 /* An event, the world's (the hub's header in the window after) */
 static void __fastcall__ told (unsigned char kind, unsigned w1, unsigned char a)
 {
+#ifdef W_FRONT
+    if (wk.who) {                               /* (An actor's work: its outcome kept, the rest wport.c's to tell) */
+        if (kind == E_PORTAL) {
+            wk.out = w1;
+        }
+        return;
+    }
+#endif
     hub_map (0);
     wk.m.kind = kind;
     wk.m.a = a;
@@ -134,7 +147,8 @@ static void front (void)
     for (k = 0; k < C->nportals && (C->portal[k].x != cx_ || C->portal[k].y != cy_); ++k) {
     }
     wk.pq = C->portal[k];
-    wk.armed = trap_on (wk.px, wk.py, 1) ? 1 | (wk.tq.state & TS_HIDDEN) : 0;
+    wk.armed = !wk.who && trap_on (wk.px, wk.py, 1) ? 1 | (wk.tq.state & TS_HIDDEN) : 0;  /* (An actor's: never
+                                                **   sprung, the house's: wport.c's) */
     wk.through = 0;
     wk.hb = 0;
     wk.hw = 0;

@@ -17,6 +17,7 @@
 #include "../dq0/hub.h"
 #include "world.h"
 #include "work.h"
+#include "wbody.h"
 
 #pragma code-name ("SW5CODE")
 #pragma rodata-name ("SW5RODATA")
@@ -29,6 +30,7 @@
 #define W_SPRING
 #include "workpart.h"
 
+unsigned char door_key (void);                  /* (Part 80's, wport.c: a key that fits it, the actor's) */
 void __fastcall__ tool_reach (const char* keys);    /* (things.c's parts 4 and 10: a tool got out first, HOUSE.md's */
 unsigned __fastcall__ reach_done (unsigned char said);  /*   handy tools, its time owed the next spell) */
 
@@ -39,7 +41,7 @@ void s_doors (void)
 
     front ();
     hub_map (0);
-    st = HUB->pcsum.step ? HUB->pcsum.step : 10;
+    st = wk.who ? bd.step : HUB->pcsum.step ? HUB->pcsum.step : 10;  /* (An actor's, its own: wport.c's) */
     mine = wk.pq.bar == ((wk.pd + 2) & 3);      /* (The character on its bar's side) */
     if (what == PA_BEND) {
         what = PA_FORCE;                        /* (Bent: forced) */
@@ -103,6 +105,16 @@ void s_doors (void)
                 out = PO_NO_LOCK;
                 break;
             }
+            if (door_key ()) {                  /* (Its key to hand: no test, three seconds, every actor's) */
+                wk.tt += 30;
+                out = PO_KEYED;
+                door_state (wk.pq.state & ~PS_LOCKED);
+                break;
+            }
+            if (wk.who) {
+                out = PO_NO_KEY;                /* (A denizen picks no lock: the house's, as yet) */
+                break;
+            }
             g = test (P_PICKLOCK, wk.pq.lock, -(signed char) wk.pq.lock);
             if (wres) {
                 out = PO_NO_PICKS;
@@ -141,6 +153,14 @@ void s_doors (void)
                 part_moved (KI_BAR, AT_BAR, KI_BAR, AT_BAR);    /* (Its bar, burst, fallen where it was) */
             } else {
                 out = PO_HELD;
+            }
+            break;
+        case PA_LOCK:                           /* (Locked with its key, shut, every actor's: Phase 3C's) */
+            wk.tt += 30;
+            out = !wk.pq.lock || (wk.pq.state & PS_BROKEN) ? PO_NO_LOCK : wk.pq.state & PS_LOCKED ? PO_IS_LOCKED :
+                wk.pq.state & PS_OPEN ? PO_SHUT_FIRST : door_key () ? PO_KEY_LOCKED : PO_NO_KEY;
+            if (out == PO_KEY_LOCKED) {
+                door_state (wk.pq.state | PS_LOCKED);
             }
             break;
         default:

@@ -23,6 +23,8 @@
 #pragma rodata-name ("SW72RODATA")
 
 unsigned __fastcall__ weight_of (unsigned i);   /* (Part 10's) */
+unsigned char __fastcall__ take_rule (unsigned n);  /* (Part 81's, wtake.c: the take rule, tk_x, tk_y) */
+extern unsigned tk_x, tk_y;
 unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);   /* (Part 10's) */
 void light_now (void);                          /* (Part 10's) */
 
@@ -69,43 +71,23 @@ static void __fastcall__ hold (unsigned n)
 void __fastcall__ s_den_fetch (const struct msg* q)
 {
     struct item* p;
-    unsigned n = q->t, c, x, y, w;
-    unsigned char kind, h, how = q->a, k;
+    unsigned n = q->t, c;
+    unsigned char kind, how = q->a;
 
     p = item_at (n);
     kind = p->kind;
-    if (how == FE_TAKE) {                       /* (Taken up where it lies: still there, within its reach) */
-        for (c = n; (p = item_at (c))->where == IW_ITEM; c = p->x) {
+    if (how == FE_TAKE) {                       /* (Taken up where it lies: still there, within its reach, by the take
+                                                **   rule) */
+        c = take_rule (n);
+        if (c == IR_NOT_HERE && (!kind || tk_x != q->w1 || tk_y != q->w2 || item_at (n)->kind != kind)) {
+            c = 0xFF;                           /* (Gone from where it lay) */
         }
-        x = p->x;
-        y = p->y;
-        if (!kind || p->where != IW_SQUARE || p->sn != bd.sn || x != q->w1 || y != q->w2) {
-            told (FT_GONE, kind);
-            return;
-        }
-        if ((unsigned) (x - bd.x + 1) > 2 || (unsigned) (y - bd.y + 1) > 2) {
-            hub_map (0);
-            told (FT_FAR, kind);
-            return;
-        }
-        w = weight_of (n);
-        h = bd.body == BD_TWO;                  /* (Hands: folk's; else its mouth) */
-        if (w > (h ? FETCH_HANDS : FETCH_MOUTH)) {
-            told (FT_HEAVY, kind);
-            return;
-        }
-        for (k = 0, c = 0; bd.did && (c = items (c, IN_DEN, 0)) != 0; ) {
-            if (ip->owner == (unsigned char) bd.did && ip->hide == bd.did >> 8 && (ip->flags & I_HELD)) {
-                ++k;                            /* (Its hands: what it holds already) */
-            }
+        if (c == IR_OK) {
+            hold (n);
         }
         hub_map (0);
-        if (k >= 2) {
-            told (FT_HANDS, kind);
-            return;
-        }
-        hold (n);
-        told (FT_TOOK, kind);
+        told (c == IR_OK ? FT_TOOK : c == 0xFF ? FT_GONE : c == IR_NOT_HERE ? FT_FAR : c == IR_FULL ? FT_HANDS :
+            FT_HEAVY, kind);
         return;
     }
     if (how == FE_GIVE) {                       /* (Handed over, beside the character: its hand or its pack, else at

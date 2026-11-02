@@ -72,6 +72,8 @@ void __fastcall__ den_rob (const struct msg* m);    /* (Part 15) The character r
                                                 **   there (I_ROB's) */
 void __fastcall__ den_fetch (const struct msg* m);  /* (Part 72: wfetch.c) Body bd's errand: a thing fetched taken
                                                 **   up, handed over; a gift taken (I_ROB's a: slice 4.8's) */
+void __fastcall__ den_take (const struct msg* m);   /* (Part 81: wtake.c) Body bd's own take, by the take rule (I_TAKE's: a
+                                                **   its wants, TW_*; Phase 3C's one path) */
 void bled (void);                               /* (Part 15) The bleeding's bloodloss, a minute at a time */
 extern unsigned long body_due;                  /* (Part 70's: the referee's next watch, wtend.c's) */
 unsigned char __fastcall__ den_first (unsigned char k, unsigned char away);    /* (Part 14) Body k's tactical
@@ -92,6 +94,10 @@ void __fastcall__ den_word (const char* t, unsigned char n);   /* (Part 51) Its 
 void den_drop (void);                           /* (Part 60) Its weapon on the floor, told */
 unsigned char den_legs (void);                  /* (Part 51) Its legs at a move's start: 1 no move */
 void __fastcall__ den_other (const struct msg* m);  /* (Part 60) A denizen's things made (I_KIT's) */
+void __fastcall__ den_more (const struct msg* m);    /* (Part 80: wport.c) Body bd's rarer intents (part 14's room):
+                                                **   come along (I_CLIMB), a robbery (I_ROB), its door work (I_PORTAL:
+                                                **   Phase 3C's one path, the character's parts); and a lair's doors'
+                                                **   keys made (I_KIT's KT_LAIR: part 51's) */
 void __fastcall__ den_dig (const struct msg* m);    /* (Part 79: wdig.c) A tunneller's dig (I_KIT's KT_DIG: slice
                                                 **   4.11's), a spell at a time */
 void __fastcall__ den_enter (const struct msg* m);  /* (Part 60) Come near (I_ENTER's): its body's from it, its

@@ -648,6 +648,10 @@ void __fastcall__ o_fight (struct req* r)
         return;
     }
     if (r->other == RS_THING) {
+        if (r->actor) {
+            beast_side (&A, r->actor);          /* (A creature's blow at a door: its sheet's, read, not kept; Phase
+                                                **   3C's one path) */
+        }
         hit_thing (r, &A);                      /* (Gear.c's: overlay 3's) */
         return;
     }

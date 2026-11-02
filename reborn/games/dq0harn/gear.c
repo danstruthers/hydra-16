@@ -592,7 +592,12 @@ void __fastcall__ o_hit_thing (struct req* q, struct side* s)
 
     memcpy (res, q->x, sizeof res);
     memset (q->x, 0, sizeof q->x);
-    o_pc_side (s);
+    if (q->actor) {
+        s->part = 0xFF;                         /* (A creature's: its own weapon or body, never hurt by it, the
+                                                **   house's: fight.c's beast_side) */
+    } else {
+        o_pc_side (s);
+    }
     for (k = 0; k < 3; ++k) {
         if (s->imp[k] >= 0 && (v = s->imp[k] - res[k]) > top) {
             top = v;

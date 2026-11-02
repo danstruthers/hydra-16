@@ -213,6 +213,10 @@ void __fastcall__ o_fixt_words (const struct msg* m)
         "The bars buckle and break under your blows: there's a gap to get through.",
         "Its bars are forced apart, and it's jammed where it is: there's a gap to get through."
     };
+    static const char* const keyed[PO_IS_LOCKED + 1 - PO_KEYED] = {     /* (A door's key, Phase 3C's) */
+        "You unlock it with its key.", "You lock it with its key.", "You have no key that fits its lock.",
+        "It's locked already."
+    };
     unsigned w = m->w1;
     unsigned char out = w & 0xFF, kind = w >> 8 & 7;
 
@@ -224,6 +228,8 @@ void __fastcall__ o_fixt_words (const struct msg* m)
         hub_mem (0, &out, &HUB->pc_strike, 1);
         hub_mem (KIND_BANK, lb + strlen (lb), CATALOGUE[out & 0x7F].name, sizeof CATALOGUE[0].name);
         strcat (lb, ", but it seems ineffectual.");
+    } else if (out > PO_SOFT) {
+        strcpy (lb, keyed[out - PO_KEYED]);
     } else if (out > PO_FOUND_TRAP) {
         strcpy (lb, blows[out - PO_BROKE_DOWN]);
     } else if (out >= PO_RAISED) {
