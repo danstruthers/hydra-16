@@ -71,11 +71,12 @@ unsigned char s_door_key (void)
     return r;
 }
 
-/* What body bd did at the door, by its outcome (PO_NONE ... PO_HOLDS): its DE_*, | how loud times 32; 0 nothing
-** done (a refusal: its mind's to see in the door's state) */
+/* What body bd did at the door, by its outcome (PO_NONE ... PO_HELD): its DE_* (less DE_OPENS), | how loud times 16;
+** 0 nothing done (a refusal: its mind's to see in the door's state) */
+#define DE(d, loud)     ((d) - DE_OPENS | (loud) << 4)
 static const unsigned char de_of[PO_HELD + 1] = {
-    0, DE_OPENS | 2 << 5, DE_SHUTS | 3 << 5, 0, 0, 0, 0, DE_UNBARS | 3 << 5, 0, 0, 0, 0, DE_BURSTS | 7 << 5,
-    DE_HOLDS | 7 << 5
+    0, DE (DE_OPENS, 2), DE (DE_SHUTS, 3), 0, 0, 0, 0, DE (DE_UNBARS, 3), 0, 0, 0, 0, DE (DE_BURSTS, 7),
+    DE (DE_HOLDS, 7)
 };
 
 /* Body bd's event (DE_* what, how loud), at the door's square x, y (E_DEN: seen if the door or the body is; what lies
@@ -124,9 +125,11 @@ static unsigned char __fastcall__ taken (unsigned x, unsigned y)
 }
 
 static void __fastcall__ den_portal (const struct msg* m);
+static void __fastcall__ door_keys (const struct msg* m);
 
 /* Body bd's rarer intents (part 14's room): an ally come along with the character, beside it (I_CLIMB: w1 w2 x[2]);
-** a robbery, a round's work (I_ROB); its door work (I_PORTAL) */
+** a robbery, a round's work (I_ROB); its door work (I_PORTAL); a lair's doors' keys (I_KIT's KT_LAIR, part 51's: no
+** body) */
 void __fastcall__ s_den_more (const struct msg* m)
 {
     unsigned char* p;
@@ -144,6 +147,8 @@ void __fastcall__ s_den_more (const struct msg* m)
         hub_map (0);
         bd.ready += HUB->round;
         den_rob (m);
+    } else if (m->kind == I_KIT) {
+        door_keys (m);
     } else {
         den_portal (m);
     }
@@ -223,8 +228,8 @@ static void __fastcall__ den_portal (const struct msg* m)
         de = o == PO_LIFTED ? DE_UNBARS : DE_BARS;
         loud = 3;
     } else if (o <= PO_HELD && de_of[o]) {
-        de = de_of[o] & 0x1F;
-        loud = de_of[o] >> 5;
+        de = (de_of[o] & 15) + DE_OPENS;
+        loud = de_of[o] >> 4;
         if (de == DE_SHUTS && bd.doing == DO_FLEE) {
             de = DE_SLAMS;                      /* (Shut behind it as it flees: slammed, louder) */
             loud = 5;
@@ -247,7 +252,7 @@ back:
 /* The keys of a lair's locked doors (I_KIT's KT_LAIR: m's t its first denizen's number, w1 w2 its lair's home
 ** square, x[2] its stratum): each locked door of the home's chunk (a lock it can be locked by) a key (KEYS_MAX at
 ** most), that denizen's own (IW_DEN, filed at its home) */
-void __fastcall__ s_door_keys (const struct msg* m)
+static void __fastcall__ door_keys (const struct msg* m)
 {
     unsigned px[KEYS_MAX], py[KEYS_MAX];
     struct portal* q;

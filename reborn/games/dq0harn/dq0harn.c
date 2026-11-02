@@ -500,6 +500,13 @@ void __fastcall__ s_load_pc (struct req* r)
     static char path[64];
     int fd;
 
+    if (r->kind == RS_HELLO) {
+        r->w1 = 100;                            /* (A round: 10 seconds, Combat 7) */
+        put ("HarnMaster 3.5\nhmchar");         /* (Its character generator: hmchar's files, RS_LOAD_PC's) */
+        return;
+    }
+    r->a = gait;                                /* (Its file's pace and watchfulness: the world's to set) */
+    r->b = watch;
     strncpy (path, r->text, sizeof path - 1);
     r->result = 1;
     pv.hr = pd.hr = afffl = 0;                  /* (No venom, no sickness, no rest yet: its file's "body" line's) */
@@ -514,6 +521,8 @@ void __fastcall__ s_load_pc (struct req* r)
     put ("\n");
     put (calling);
     status ();
+    r->a = gait;
+    r->b = watch;
 }
 
 /* The character's sheet written (r's text a path): 0, or 1 */
@@ -801,14 +810,9 @@ static void __fastcall__ answer (struct req* r)
         memcpy (r, rq, sizeof rq);
         status ();
         break;
-    case RS_HELLO:
-        r->w1 = 100;                            /* (A round: 10 seconds, Combat 7) */
-        put ("HarnMaster 3.5\nhmchar");         /* (Its character generator: hmchar's files, RS_LOAD_PC's) */
-        break;
+    case RS_HELLO:                              /* (Part 1's, as the game's begun: the main RAM's room, 2026-11-02) */
     case RS_LOAD_PC:
         load_pc (r);
-        r->a = gait;                            /* (Its file's pace and watchfulness: the world's to set) */
-        r->b = watch;
         break;
     case RS_TEST:
         if (r->actor || r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE || r->a == P_SWIM) {   /* (A creature's

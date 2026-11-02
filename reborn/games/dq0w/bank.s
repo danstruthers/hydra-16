@@ -202,7 +202,6 @@ go:
             SWFN        den_dig, 79         ; (A tunneller's dig: slice 4.11's)
             SWFN        den_more, 80        ; (One path: Phase 3C's)
             SWFN        door_key, 80
-            SWFN        door_keys, 80
             SWFN        old_mint, 51
             SWFN        den_enter, 60
             SWFN        den_draw, 60

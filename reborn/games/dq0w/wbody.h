@@ -94,8 +94,8 @@ unsigned char den_legs (void);                  /* (Part 51) Its legs at a move'
 void __fastcall__ den_other (const struct msg* m);  /* (Part 60) A denizen's things made (I_KIT's) */
 void __fastcall__ den_more (const struct msg* m);    /* (Part 80: wport.c) Body bd's rarer intents (part 14's room):
                                                 **   come along (I_CLIMB), a robbery (I_ROB), its door work (I_PORTAL:
-                                                **   Phase 3C's one path, the character's parts) */
-void __fastcall__ door_keys (const struct msg* m);   /* (Part 80) A lair's doors' keys (I_KIT's KT_LAIR) */
+                                                **   Phase 3C's one path, the character's parts); and a lair's doors'
+                                                **   keys made (I_KIT's KT_LAIR: part 51's) */
 void __fastcall__ den_dig (const struct msg* m);    /* (Part 79: wdig.c) A tunneller's dig (I_KIT's KT_DIG: slice
                                                 **   4.11's), a spell at a time */
 void __fastcall__ den_enter (const struct msg* m);  /* (Part 60) Come near (I_ENTER's): its body's from it, its

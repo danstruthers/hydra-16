@@ -3244,8 +3244,15 @@ static unsigned char lw_d;                      /* (Its portal's way from the ch
 static unsigned lw_x, lw_y;                     /*   a trace's I_TRACE w1 and w2) */
 static struct msg lw_m;
 
+/* A door (or a portcullis, a window, a slit) the character faces worked, walked up to first; or about it: a search,
+** a trap in reach disarmed (else the door ahead's) (part 12's); broken with a soft thing (the hub's pc_strike, the
+** house's: rshouse.h's), one attempt, no harm, a blow's time, told (barw_ 1, wblow.c's: the user's, 2026-10-22) */
+#pragma code-name (push, "SW12CODE")
+#pragma rodata-name (push, "SW12RODATA")
+
 /* The timed work (or a battering) begun: its long task of kind k (the time the character's busy for, its length), its
-** thing's words (what: the long task's), its first words told; its end what x, y, d say (lwork's) */
+** thing's words (what: the long task's), its first words told; its end what x, y, d say (lwork's).  Part 12's (the main
+** RAM's room, 2026-11-02: a trace's its own, part 37's) */
 static void __fastcall__ begun (unsigned char k, unsigned char what)
 {
     task (k, k == LT_BATTER ? BLOWS : went);
@@ -3254,12 +3261,6 @@ static void __fastcall__ begun (unsigned char k, unsigned char what)
     evb = what;
     event (E_TASK, 0, TE_BEGUN | k << 8);
 }
-
-/* A door (or a portcullis, a window, a slit) the character faces worked, walked up to first; or about it: a search,
-** a trap in reach disarmed (else the door ahead's) (part 12's); broken with a soft thing (the hub's pc_strike, the
-** house's: rshouse.h's), one attempt, no harm, a blow's time, told (barw_ 1, wblow.c's: the user's, 2026-10-22) */
-#pragma code-name (push, "SW12CODE")
-#pragma rodata-name (push, "SW12RODATA")
 
 #define RS_HOUSE_SWING  door_swing
 #include "../dq0/rshouse.h"
@@ -5430,7 +5431,12 @@ void __fastcall__ s_intent_more (struct msg* m)
             lw_x = m->w1;
             lw_y = m->w2;
             lw_m.kind = I_TRACE;
-            begun (k == TRC_SMELL ? LT_SNIFF : LT_TRACK, 0);
+            k = k == TRC_SMELL ? LT_SNIFF : LT_TRACK;   /* (Begun, as part 12's begun: its first words told) */
+            task (k, went);
+            HUB->pc_task.what = 0;
+            pc_cut = 0;
+            evb = 0;
+            event (E_TASK, 0, TE_BEGUN | k << 8);
             break;
         }
         busy (traced (m));

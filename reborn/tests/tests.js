@@ -2523,6 +2523,25 @@ function dq0DoorScene(m, on, who, how) {
   };
 }
 
+// A portal's record in the live chunk cache (struct chunk's portal[], 14 bytes each: x, y, kind, state, lock ...): { b
+// its bank, o its offset } of stratum sn's square x, y, or null (the scene's pokes: dq0denkey's lock)
+function dq0PortalAt(m, sn, x, y) {
+  const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
+  const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51), S = stratumRec(m, sn);
+  if (hub === undefined || !S || !banks[hub + WORLD_BANK_N]) return null;
+  const w = banks[hub + WORLD_BANK_N], cx = (x - S.x0) >> 5, cy = (y - S.y0) >> 5;
+  for (let k = 0; k < 24; k++) {
+    const s = CSLOT_AT + k * 8, b = banks[hub + 5 + Math.floor(k / 3)];
+    if (!w[s] || w[s + 1] !== sn || !b || (w[s + 2] | w[s + 3] << 8) !== cx || (w[s + 4] | w[s + 5] << 8) !== cy) continue;
+    const c = (k % 3) * 0xAA0;
+    for (let i = 0; i < b[c + 218]; i++) {
+      const o = c + 219 + i * 14;
+      if (b[o] === ((x - S.x0) & 31) && b[o + 1] === ((y - S.y0) & 31)) return { b, o };
+    }
+  }
+  return null;
+}
+
 function dq0OnWords(m, list) {
   const a = m.acia, read = a.read, shown = a.shown, norm = s => s.replace(/\s+/g, ' ');
   let typed = '', g = 0, seen = {}, armed = null, story = '', esc = 0, escp = '';
@@ -3821,6 +3840,64 @@ module.exports = {
         if (!/The bandit slams the door shut\./.test(s)) f.push('its slam not seen: "The bandit slams the door shut."');
         if (!T.flatMap(t => t.dens).some(e => e.kind === 'E_FIGHT' && e.who === m.door.k + 1)) f.push('the bandit never came through to fight');
         if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> close the door'), s.indexOf('> close the door') + 1500));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0denkey', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's doors' keys and a denizen forcing a locked door (Phase 3C's one path, 2026-11-02: HOUSE.md's keys that fit, every actor's; DENIZENS.md's doors): at seed 1 (dq0denportal's wary bandits, the character with an iron key, dq0 -k), the character opens the door ahead and shuts it again; the door given a lock and the key made its own (the scene set as 'lock the door' is typed: the chunk's portal record's lock, the key's size and thick DOOR_KEY's), 'lock the door' locks it ('You lock it with its key.'); a bandit put beyond it, hostile, drawn on (dq0denportal's scene); it has no key, so it strains at the door (E_DEN DE_STRAINS: 'The bandit strains at the door.', or a door creaking) by the character's forcing (the referee's Strength test, its own sheet's), and, held, batters it (DE_BATTERS), each told seen or heard, till it's through or it gives up",
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'iron key'",
+        'open the door', 'close the door', 'lock the door', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
+      start(m) {
+        dq0DoorScene(m, 'wait', 'bandit');
+        const a = m.acia, read = a.read;
+        let typed = '';
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'lock the door' && m.dq0 && !m.keyed) {   // (The door ahead given a lock, the key the character's)
+                const { L, K } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
+                const px = u16(L.pcX), py = u16(L.pcY), sn = h[L.pcSn], f = h[L.pcFace];
+                const x = px + [0, 1, 1, 1, 0, -1, -1, -1][f], y = py + [-1, -1, 0, 1, 1, 1, 0, -1][f], P = dq0PortalAt(m, sn, x, y);
+                const id = 0x8000 | ((x * 37 + y * 101 + sn * 4099) & 0x7FFF), per = Math.floor(0x2000 / L.itemSize);
+                let key = -1;
+                for (let i = 1; P && i < L.nitems && key < 0; i++) {
+                  const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+                  if (b && b[o + L.iKind] === K.KI_KEY && b[o + L.iWhere] !== K.IW_DEN && b[o + L.iWhere] !== K.IW_SQUARE) {
+                    b[o + L.iSize] = id & 255;
+                    b[o + L.iThick] = id >> 8;
+                    key = i;
+                  }
+                }
+                if (P && key > 0) {
+                  if (!P.b[P.o + 4]) P.b[P.o + 4] = 3;   // (Its lock: three steps worse to pick)
+                  m.keyed = { door: [x, y], sn, key };
+                }
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), { K } = m.dq0.layout();
+        if (!m.keyed) return ['the key not made the door\'s: no door ahead, or no iron key carried'];
+        if (!m.door) return ['the scene not set: no bandit near, or no door ahead with a floor beyond it: ' + JSON.stringify(m.doorWhy)];
+        if (!/> lock the door[^>]*You lock it with its key\./.test(s)) f.push('"lock the door" not "You lock it with its key."');
+        const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.door.k + 1);
+        const strains = dens.filter(e => e.a === K.DE_STRAINS), opens = dens.filter(e => e.a === K.DE_OPENS);
+        if (!strains.length) f.push('the bandit never strained at the locked door (E_DEN DE_STRAINS)');
+        if (opens.length && strains.length && opens[0].t < strains[0].t) f.push('the locked door opened before it was forced');
+        if (!/The bandit strains at the door\.|a door creaking/.test(s)) f.push('its forcing neither seen nor heard');
+        if (!dens.some(e => e.a === K.DE_BURSTS || e.a === K.DE_BATTERS)) f.push('its forcing neither burst the door nor, held, went on to battering');
+        if (process.env.DQ0SHOW) f.push(s.slice(s.indexOf('> lock the door'), s.indexOf('> lock the door') + 2500));
+        for (const e of dens.filter(e => e.a >= K.DE_OPENS)) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door worked not the one between them: ' + [e.a, e.w1, e.w2]);
+        if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> lock the door'), s.indexOf('> lock the door') + 1800));
         return f;
       },
       sdcard: true

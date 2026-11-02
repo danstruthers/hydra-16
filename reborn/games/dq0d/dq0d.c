@@ -793,8 +793,14 @@ void __fastcall__ s_place (unsigned char i)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* The lairs on the character's stratum whose chunks are its own or beside it, and made (the character's
+** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was.  Part 13 (2026-11-01:
+** the main RAM's room, the tunnellers'; alone, small: cheap to swap in, as it's called each time round after a move) */
+#pragma code-name (push, "SW13CODE")
+#pragma rodata-name (push, "SW13RODATA")
+
 /* Chunk (cx, cy) of stratum sn made already (in the cache: its table the world bank's; the hub's header in the
-** window after) */
+** window after).  Part 13's, and part 9's own copy, made9 (the main RAM's room, 2026-11-02) */
 static unsigned char __fastcall__ made (unsigned char sn, unsigned cx, unsigned cy)
 {
     struct cslot* q = WREC->cslot;
@@ -807,11 +813,6 @@ static unsigned char __fastcall__ made (unsigned char sn, unsigned cx, unsigned 
     return k != 0;
 }
 
-/* The lairs on the character's stratum whose chunks are its own or beside it, and made (the character's
-** surroundings detailed: this task never makes a chunk to place a lair), placed: 1 if any was.  Part 13 (2026-11-01:
-** the main RAM's room, the tunnellers'; alone, small: cheap to swap in, as it's called each time round after a move) */
-#pragma code-name (push, "SW13CODE")
-#pragma rodata-name (push, "SW13RODATA")
 unsigned char s_nearby (void)
 {
     struct stratum* s = &STRATUM (pcs);
@@ -4317,6 +4318,18 @@ static unsigned char __fastcall__ pastime (unsigned id)
 /* A room of the chunk home (rhx, rhy, on stratum dsn) is in: of use u, else (u 0xFF) its j'th, round; its square v (a
 ** denizen's number's: each its own place in it; 0xFF its middle) in tx, ty.  0 if there's none, or the chunk isn't
 ** made (never made for it) */
+static unsigned char __fastcall__ made9 (unsigned char sn, unsigned cx, unsigned cy)   /* (Part 13's made) */
+{
+    struct cslot* q = WREC->cslot;
+    unsigned char k;
+
+    hub_map (WORLD_BANK);
+    for (k = NCSLOTS; k && !(q->used && q->sn == sn && q->cx == cx && q->cy == cy); --k, ++q) {
+    }
+    hub_map (0);
+    return k != 0;
+}
+
 static unsigned char __fastcall__ room_at (unsigned char u, unsigned char j, unsigned char v)
 {
     struct stratum* s = &STRATUM (dsn);
@@ -4324,7 +4337,7 @@ static unsigned char __fastcall__ room_at (unsigned char u, unsigned char j, uns
     unsigned ox = rhx - s->x0, oy = rhy - s->y0;
     unsigned char n;
 
-    if (!made (dsn, ox >> CW_BITS, oy >> CW_BITS)) {
+    if (!made9 (dsn, ox >> CW_BITS, oy >> CW_BITS)) {
         return 0;
     }
     ox = rhx - (ox & (CW - 1));
@@ -4488,7 +4501,7 @@ static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigne
 {
     struct stratum* s = &STRATUM (sn);
 
-    return x - s->x0 < s->w && y - s->y0 < s->h && made (sn, (x - s->x0) >> CW_BITS, (y - s->y0) >> CW_BITS);
+    return x - s->x0 < s->w && y - s->y0 < s->h && made9 (sn, (x - s->x0) >> CW_BITS, (y - s->y0) >> CW_BITS);
 }
 
 /* Record D (its kind's K), out but not an actor, moved by its day as it's due (roam's: lim squares about its home it
