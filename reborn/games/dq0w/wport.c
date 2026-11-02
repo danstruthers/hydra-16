@@ -149,6 +149,8 @@ void __fastcall__ s_den_more (const struct msg* m)
         den_rob (m);
     } else if (m->kind == I_KIT) {
         door_keys (m);
+    } else if (m->kind == I_TAKE) {
+        den_take (m);                           /* (A thing taken up by the take rule: part 72's) */
     } else {
         den_portal (m);
     }
@@ -275,8 +277,14 @@ static void __fastcall__ door_keys (const struct msg* m)
         if (!(i = lay_body (KI_KEY, m->x[2], m->w1, m->w2))) {
             break;
         }
-        id = DOOR_KEY (m->x[2], px[k], py[k]);
+        ip = item_at (0);                       /* (Made its own, as an outfit's things are: its number, its make) */
+        id = ++ip->x;
         ip = item_at (i);
+        ip->id = id;
+        ip->quality = 4;
+        ip->mat = MT_IRON;
+        ip->dur = ip->dur_max = 60;
+        id = DOOR_KEY (m->x[2], px[k], py[k]);
         ip->where = IW_DEN;
         ip->owner = (unsigned char) m->t;
         ip->hide = m->t >> 8;

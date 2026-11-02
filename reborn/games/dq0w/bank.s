@@ -176,6 +176,7 @@ go:
                                             ;   2026-10-31, its room the walk's)
             SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
             SWPART      80, 24              ; One path: a denizen's doors, the doors' keys (wport.c: Phase 3C's)
+            SWPART      81, 2               ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -351,6 +352,8 @@ go:
             SWFN        den_blow, 15
             SWFN        den_rob, 69         ; (Part 15's room, 2026-10-29; 67's, 2026-10-30)
             SWFN        den_fetch, 72       ; (Slice 4.8's)
+            SWFN        den_take, 81        ; (One path: Phase 3C's)
+            SWFN        take_rule, 81
             SWFN        bled, 15
             SWFN        body_ask, 70
             SWFN        wade, 73            ; (The water, hunger and thirst: slice 4.9's)

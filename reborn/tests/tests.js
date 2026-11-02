@@ -3817,7 +3817,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0denportal', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's one path for every actor (Phase 3C, 2026-11-02: DUNGEON.md's one path, DENIZENS.md's doors, HOUSE.md's denizens and doors, for review): a denizen's mind posts the character's own intent (I_PORTAL) and the world carries it out by the character's parts (wdoor.c's, by the world's wport.c).  A hand-written theme's wary bandits (seed 1, dq0kit's); the character opens the door ahead and shuts it again, and a bandit is put beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked): no step nearer but through the shut door, it opens it (E_DEN DE_OPENS at the door's square: 'The bandit opens the door.'), comes through and fights the character, robs it as it lies senseless (a robber's way, kinds.txt's), and, off with its takings to its lair, fleeing, slams the door shut behind it (DE_SLAMS: 'The bandit slams the door shut.', the character beyond the door; the door shut in its chunk at the end)",
+      name: 'dq0denportal', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's one path for every actor (Phase 3C, 2026-11-02: DUNGEON.md's one path, DENIZENS.md's doors, HOUSE.md's denizens and doors, for review): a denizen's mind posts the character's own intent (I_PORTAL) and the world carries it out by the character's parts (wdoor.c's, by the world's wport.c).  A hand-written theme's wary bandits (seed 1, dq0kit's); the character opens the door ahead and shuts it again, and a bandit is put beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked): no step nearer but through the shut door, it opens it (E_DEN DE_OPENS at the door's square: 'The bandit opens the door.'), comes through and fights the character; and a bandit fleeing beyond the door (that one, off to its lair with the character's things as it lay senseless, a robber's way, kinds.txt's; or, as the referee's fight goes, a fellow come after it), the character beyond it, slams the door shut behind it (DE_SLAMS at the door: 'The bandit slams the door shut.'; the door shut in its chunk at the end)",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
@@ -3830,11 +3830,12 @@ module.exports = {
         const T = dq0Turns(m), f = [], s = dq0Story(out), DE_OPENS = 27, DE_SLAMS = 29;
         if (!m.door) return ['the scene not set: no bandit near, or no door ahead with a floor beyond it: ' + JSON.stringify(m.doorWhy)];
         const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.door.k + 1);
-        const opens = dens.filter(e => e.a === DE_OPENS), slams = dens.filter(e => e.a === DE_SLAMS);
+        const opens = dens.filter(e => e.a === DE_OPENS);
         if (!opens.length) f.push('the bandit never opened the door (E_DEN DE_OPENS)');
-        if (!slams.length) f.push('the bandit never slammed the door shut as it fled (E_DEN DE_SLAMS)');
+        const slammed = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.a === DE_SLAMS && e.w1 === m.door.door[0] && e.w2 === m.door.door[1]);
+        if (!slammed.length) f.push('no bandit slammed the door shut as it fled (E_DEN DE_SLAMS)');
         for (const e of [...opens, ...slams]) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door worked not the one between them: ' + [e.a, e.w1, e.w2]);
-        if (opens.length && slams.length && slams[0].t < opens[0].t) f.push('slammed before it was opened');
+        if (opens.length && slammed.length && slammed[0].t < opens[0].t) f.push('slammed before it was opened');
         if (m.door.state(...m.door.door) & 1) f.push('the door open in its chunk at the end');
         if (!/The bandit opens the door\./.test(s)) f.push('its opening not seen: "The bandit opens the door."');
         if (!/The bandit slams the door shut\./.test(s)) f.push('its slam not seen: "The bandit slams the door shut."');
@@ -3898,6 +3899,76 @@ module.exports = {
         if (process.env.DQ0SHOW) f.push(s.slice(s.indexOf('> lock the door'), s.indexOf('> lock the door') + 2500));
         for (const e of dens.filter(e => e.a >= K.DE_OPENS)) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door worked not the one between them: ' + [e.a, e.w1, e.w2]);
         if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> lock the door'), s.indexOf('> lock the door') + 1800));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0dentake', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's denizens taking things by the character's take (Phase 3C's one path, 2026-11-02: DUNGEON.md's one path, DENIZENS.md's things taken, HOUSE.md's denizens taking things, for review): at seed 1 (dq0denportal's wary bandits), the character, given a sword (dq0 -k), drops it at its feet; a bandit is put beside it with no weapon to hand (the scene set as the first wait's typed: the hub's actor and its record, its agear's AG_ARMED off, as the world has it for one unarmed), so its mind wants a weapon and posts the character's own intent (I_TAKE, a its wants: TW_ARMS), and the world takes the sword up for it by the take rule (wtake.c: within its reach, not fixed, its hands), held, its own (the item store's IW_DEN, its number's), told ('The bandit snatches up its sword.': E_BEAT WB_PICKS, its kind)",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k sword",
+        'drop the sword', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const a = m.acia, read = a.read;
+        let typed = '', done = false;
+        m.take = null;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'wait' && !done && m.dq0) {   // (A bandit put beside the character, its agear unarmed)
+                const { L, K } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
+                const w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+                const px = u16(L.pcX), py = u16(L.pcY), sn = h[L.pcSn], S = stratumRec(m, sn);
+                const tile = (x, y) => { const b = S && liveChunks(m, sn)[((x - S.x0) >> 5) + ',' + ((y - S.y0) >> 5)]; return b ? b[443 + ((y - S.y0) & 31) * 32 + ((x - S.x0) & 31)] & 15 : -1; };
+                const at = k => L.actor + k * L.actorSize, named = k => {
+                  let n = '';
+                  for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]);
+                  return n;
+                };
+                const busy = (x, y) => [...Array(L.nactors).keys()].some(j => h[at(j) + L.aState] && u16(at(j) + L.aX) === x && u16(at(j) + L.aY) === y);
+                const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+                const d = [[0, -1], [1, 0], [0, 1], [-1, 0]].find(([dx, dy]) => [1, 4].includes(tile(px + dx, py + dy)) && !busy(px + dx, py + dy));
+                if (k !== undefined && d) {
+                  const x = px + d[0], y = py + d[1], o = at(k);
+                  w16(o + L.aX, x);
+                  w16(o + L.aY, y);
+                  h[o + L.aSn] = sn;
+                  h[o + L.aDoing] = 0;
+                  h[L.agear + k] &= ~1;           // (AG_ARMED: none to hand)
+                  const R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+                  R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8;
+                  R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
+                  R.mem[q + R.SN] = sn;
+                  h[L.denSeq] = h[L.denSeq] + 1 & 255;
+                  m.take = { k, did: u16(o + L.aDid) };
+                }
+                done = true;
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), { L, K } = m.dq0.layout();
+        if (!m.take) return ['the scene not set: no bandit near, or no open square beside the character'];
+        if (!/> drop the sword[^>]*Put down./.test(s)) f.push('the sword not put down');
+        const picks = T.flatMap(t => [...t.events, ...t.dens]).filter(e => e.kind === 'E_BEAT' && e.beat === 'WB_PICKS' && e.b === m.take.k + 1);
+        if (!picks.length) f.push('the bandit never took up a thing (E_BEAT WB_PICKS)');
+        if (!/The bandit snatches up its sword\./.test(s)) f.push('not told "The bandit snatches up its sword."');
+        const per = Math.floor(0x2000 / L.itemSize);
+        let sword = null;
+        for (let i = 1; i < L.nitems; i++) {
+          const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+          if (b && b[o + L.iWhere] === K.IW_DEN && b[o + L.iOwner] === (m.take.did & 255) && b[o + L.iKind] === ((picks[0] || {}).w1 >> 8)) sword = { i, flags: b[o + L.iFlags] };
+        }
+        if (picks.length && !sword) f.push('the thing taken not the bandit\'s own in the store (IW_DEN, its number)');
+        if (sword && !(sword.flags & K.I_HELD)) f.push('the sword not held');
+        if (f.length) f.push(JSON.stringify(picks) + ' ' + s.slice(s.indexOf('> drop the sword'), s.indexOf('> drop the sword') + 1200));
         return f;
       },
       sdcard: true

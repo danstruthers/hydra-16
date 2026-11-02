@@ -82,8 +82,6 @@ void hand_said (void);
 void limbs_cmd (void);
 void __fastcall__ pose_words (unsigned w);      /* (Part 14's: the body's position, worded) */
 void __fastcall__ noise_told (const struct msg* m, unsigned char rel);  /* (Part 14's: a denizen's sound, told) */
-void __fastcall__ door_words (unsigned char a);  /* (Part 6's: a denizen's door's words, E_DEN's DE_OPENS ..., into
-                                                **   lb + 340: seen, then heard) */
 unsigned char hold_first (void);
 unsigned char errand (void);                    /* (Part 15's: an ally's errand, a gift, slice 4.8's) */
 unsigned char missiles (void);                  /* (Part 13's: the missiles, slice 4.7's) */
@@ -2724,6 +2722,7 @@ void s_when_free (void)
 /* A denizen's sound heard (heard's, its weighing the main code's: m its event, rel which way it is), told: in the
 ** sound's words, the sound task's if it's put them there; its long task paused at the first (part 14's: seldom, the
 ** main RAM's room) */
+static void __fastcall__ door_words (unsigned char a);  /* (Below: a denizen's door's words) */
 void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 {
     static const char* n;
@@ -2747,7 +2746,7 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
             tell ((m->a - DE_PASTIME - PT_DICE + T_PAST_HEARD) | TELL_COPY);
             n = heard_what;
         } else if (m->a >= DE_OPENS) {
-            door_words (m->a);                  /* (A door worked by a denizen, Phase 3C's: part 6's words) */
+            door_words (m->a);                  /* (A door worked by a denizen, Phase 3C's: its words below) */
             n = lb + 340;
             strcpy (heard_what, n + strlen (n) + 1);
         } else {
@@ -2781,10 +2780,10 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 }
 
 /* A door worked by a denizen (E_DEN's a, DE_OPENS ...: Phase 3C's one path), its words into lb + 340: what it's seen
-** doing (after its name), then what's heard (heard_what's: 19 letters at most).  Part 6's (overlay 12's room) */
-#pragma code-name (push, "SW6CODE")
-#pragma rodata-name (push, "SW6RODATA")
-void __fastcall__ s_door_words (unsigned char a)
+** doing (after its name), then what's heard (heard_what's: 19 letters at most).  Part 14's (noise_told's) */
+#pragma code-name (push, "SW14CODE")
+#pragma rodata-name (push, "SW14RODATA")
+static void __fastcall__ door_words (unsigned char a)
 {
     static const char* const said[DE_BREAKS + 1 - DE_OPENS] = {
         "opens the door\0a door opening", "shuts the door\0a door shutting", "slams the door shut\0a door slamming",

@@ -80,6 +80,7 @@ ovx:        .res        1
             SWFN        nearby, 13          ; (The main RAM's room, 2026-11-01: the tunnellers')
             SWFN        dig_way, 12         ; (A tunneller's way dug: slice 4.11's)
             SWFN        door_way, 14        ; (A door worked: Phase 3C's one path)
+            SWFN        take_way, 14        ; (A thing taken up: Phase 3C's one path)
             SWFN        slant, 11           ; (A denizen's diagonal way: slant.s, 2026-10-31, the main RAM's room)
             SWFN        wander, 9
             SWFN        sched, 9

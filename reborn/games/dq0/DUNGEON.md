@@ -465,8 +465,17 @@ what works it (a portcullis its winch, on its room's side; a door from either si
 sight (but a window's glass or a portcullis's bars let sight through), and dulls sound; open, it joins its two areas.
 The referee judges every way through: a key, picking, forcing (Strength), breaking (a blow's impact against its
 toughness), climbing (a window's sill); magic (unwarding, a knock) is the powers'.  Its state changes are kept as any
-change is.  Denizens don't work portals: a denizen at a door it can't walk through goes no further (DENIZENS.md, still
-to come).
+change is.  Every actor works a door by the same rules (the one path, below): a denizen opens, shuts, bars, unlocks
+and locks one with its key, forces and batters one (DENIZENS.md's doors); windows and portcullises are the
+character's alone as yet.
+
+**Keys** (every actor's: HOUSE.md's keys that fit): a locked door's key fits it alone, its number (world.h's DOOR_KEY,
+by the door's stratum and square, its high bit a door's) in the key's size and thick, as a box's key carries its box's
+own number.  "unlock the door" with its key carried opens its lock in three seconds, no test ("You unlock it with its
+key."); "lock the door" locks it, shut, with its key ("You lock it with its key."; no key that fits: "You have no key
+that fits its lock."; locked already, open, no lock, as the words say).  Each locked door of a lair's chunk has a key,
+two at most, made with the lair's own things and carried by its first denizen (I_KIT's KT_LAIR: the world's wport.c):
+found on its body.
 
 Windows, arrow slits and portcullises are grown by the style's say (dq0m/fixtures.c): windows, their parts any of
 glass, shutters and bars, and arrow slits, in a room's wall where a passage runs beside it (PK_WINDOW, PK_SLIT on a
@@ -1352,6 +1361,30 @@ packed, not the game on the ROM disk (2026-10-31, DECISIONS.md).  Now: 208M cycl
 - **The check**: dq0starttime, its budgets 229M (seed 1) and 318M (seed 123456789), its silence 36M at most, the
   banks as ld65 made them.
 
+## One path for every actor
+
+The user's (2026-11-02, DECISIONS.md's): every actor's action is one intent, the character's and a denizen's mind's
+alike (hub.h's I_*: the action and its roles, its square, its record), and the world carries it out by the same code.
+The player's line is parsed into a command (struct cmd, the catalogue's VB_* and its words), which the UI resolves
+into the world's intents; a mind posts the intents itself (DECISIONS.md's table, the actions and their intents).
+
+- **One code already:** the blows (wfight.c: the character's and a denizen's, the referee's RS_ATTACK), the missiles
+  (wshoot.c), and since 2026-11-02 the doors (I_PORTAL: wdoor.c's and wblow.c's parts work for the work's actor,
+  work.h's wk.who, the referee asked of it, its own tests by its sheet; the world's wport.c, part 80, carries a
+  denizen's out and tells it, E_DEN's DE_OPENS ...).  A denizen's timed work as a tunneller's (forcing begun, its
+  strain heard, the test as its mind posts it again ten seconds on; a battering a blow a post), so nothing changes
+  before its time's up.
+- **Two codes, the rules shared:** steps, digging and climbing.  The character's are long tasks, a walk of many
+  squares with its beats, its words, its traps, its bearings, a shaft dug with its roof falls and its stairs; a
+  denizen's are a square, a spell, a place beside the character, carried out between the UI's commands.  They share
+  the rules' tables and records (a step's time uphill and down, on steps, lame, in the dark; the diggers' rates,
+  rock.h's hardness, the DUG records either can go on with), so they come out the same; one code would put a
+  denizen's work on the commands' path or the character's long tasks into the world's main RAM, and buy nothing the
+  player sees.
+- **The things:** the character's take (the things' IO_GET: in reach, not fixed, a hand or the pack, a grope while
+  engaged) and a denizen's (an ally's errand, wfetch.c; its own weapon taken up again, wlimbs.c) are still two; one
+  take rule for both is next.
+
 ## Still to come
 
 What the plans bring later, by the slice or phase that brings it (the detailed plan's and the game plan's):
@@ -1465,8 +1498,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   digging, poor rock on a tunneller, the spoil as a thing; builders (shoring, walling up a way, a door put up).
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
-- **One path for every actor** (Phase 3C): a denizen's mind making the same commands as the player's, so the
-  denizens open, shut, lock and break portals, and take things, by the same rules.
+- **One path for every actor** (Phase 3C, begun 2026-11-02: below): left, taking things by the character's take (a
+  denizen picking up a weapon it lacks, loot, food), a denizen working windows and portcullises, picking a lock, an
+  ally asked to open a door ("ask the dwarf to open the door").
 - **The house rules decided, not yet built** (HOUSE.md): Strength and weapons, free pounds, a wrecked portal appraised
   by its state, the pit climb (D13).
 - **The market** (when trading comes: DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a

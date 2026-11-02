@@ -1397,3 +1397,42 @@ a square corner to corner, seven feet); the cave grower's zigzag tunnels made th
 
 **Design:** DUNGEON.md's diagonal ways; HOUSE.md's diagonal ways.
 
+## 2026-11-02
+
+### One path for every actor: the common structure (Phase 3C)
+
+The user (2026-11-02): "Go ahead and start the command interpreter changes now".  On the lead's survey (the
+character's line becomes a command, struct cmd, which the UI resolves into the world's intents, struct msg's I_*;
+a denizen's mind posts those same intents), the user chose the intent as the common structure: a denizen's mind posts
+the character's own intent for the same action (its kind and its roles: the door's square and what's done to it, the
+thing's square and its record), and the world carries it out by the same code for every actor.  The verbs and the
+words (struct cmd, VB_*: selectors, "it", questions) stay the player's: a mind names things by their squares and
+their records, not by words.  How the catalogue's actions become the world's intents (the UI's, main.c's command):
+
+| Actions (VB_*) | Intent (I_*), its roles | The minds post it |
+|---|---|---|
+| MOVE_DIRECTION, MOVE_TOWARD, APPROACH_OBJECT | I_GO (a heading, the door or mouth meant), I_GOTO (a square), I_TRAVEL (a place named) | I_STEP a square at a time, I_GOTO a dash |
+| STEP_DIRECTION | I_STEP (a heading, squares) | I_STEP |
+| FACE_DIRECTION | I_TURN | (its face, every intent's x[1]) |
+| CLIMB, JUMP | I_CLIMB (up, down; I_JUMP) | I_CLIMB (an ally come along) |
+| DIG | I_DIG (a way) | I_KIT's KT_DIG (a tunneller's spell) |
+| OPEN, CLOSE, UNLOCK, LOCK, FORCE, BREAK, BAR, RAISE, LOWER, BEND, DISARM, SEARCH, EXAMINE (a portal) | I_PORTAL (PA_*, which, its square) | I_PORTAL (a door: PA_OPEN ... PA_BREAK) |
+| RETRIEVE_OBJECT (out of reach) | I_TAKE (its square, its record) | (I_ROB's FE_TAKE, an ally's errand) |
+| ATTACK_OBJECT, ENGAGE | I_ATTACK (whom, the aim), I_CLOSE (walked up to first) | I_ATTACK |
+| THROW_OBJECT, SHOOT_OBJECT | I_ATTACK, AIM_SHOT | I_ATTACK, AIM_SHOT |
+| LOAD_OBJECT, GATHER_OBJECT | I_LOAD, I_GATHER | |
+| DISENGAGE, FLEE | I_DISENGAGE | (its steps away) |
+| WAIT, SLEEP | I_WAIT | I_WAIT |
+| STAND, SIT, LIE_DOWN, CROUCH | I_RISE | |
+| LIGHT_OBJECT, EXTINGUISH_OBJECT | I_LIGHT | |
+| OBSERVE_DIRECTION, TRACK, SMELL | I_LOOK, I_TRACE | |
+| STOP, META_QUIT | I_STOP, I_QUIT | |
+| the rest (things handled, words, the meta) | the things' requests (IO_*), the sway (SW_*), the UI's own | I_ROB (a robbery, an errand) |
+
+Built (branch reborn-game-onepath) in the brief's order: first what the denizens lacked, the doors (opened, shut,
+a bar lifted and set, unlocked and locked with their keys, forced, battered: the character's parts, wdoor.c and
+wblow.c, with the actor's own tests), and the doors' keys for every actor; the minds using them.  Taking things by
+the character's take is next.  Steps, digging and climbing stay two codes, the rules' tables shared (DUNGEON.md's one
+path for every actor says why).
+
+**Design:** DUNGEON.md's one path for every actor and its portals; DENIZENS.md's doors; HOUSE.md's denizens and doors.

@@ -2671,6 +2671,37 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   played (the sound task's), builders (a faction shoring a passage, walling up a way, putting up a door), a kobold's
   pick.
 
+## Denizens and doors *(2026-11-02: Phase 3C's one path; drafted for the user to review)*
+
+The book has creatures open doors as anyone does; it says nothing of who carries which key, or of beasts and doors.
+These are the house's.
+
+- **The character's rules, every actor's:** a denizen opens, shuts, bars and unbars a door, forces it (its Strength,
+  its own sheet's, against the door as the character's is) and batters it (each blow the character's attack at a thing
+  the door ignores, by its own weapon or body, off the door's body), by the character's code; its time its own.
+- **No trap sprung** *(the house's, for now)*: a denizen never sets off a door's trap as it opens it, as it never sets
+  off one underfoot.  A faction knowing its own traps (and being caught by another's) is a planned item; till then
+  none is.
+- **No lock picked** *(the house's, as yet)*: a denizen opens a locked door only with its key, by force, or by
+  battering; picking is the character's alone.
+- **Hands** *(the house's)*: only a denizen with hands (a two-legged body, kinds.txt's) opens, shuts, bars or unlocks
+  a door.  A beast opens none; a large hostile beast (its size 5 or more: a bear) batters one that keeps it from its
+  prey.  So a rat or a wolf stops at a shut door, and a bear breaks it down.
+- **How far it tries** *(the house's)*: its key first (if the door's locked), then, hostile, two forcings (ten seconds
+  each), then a dozen blows; then it gives up and goes round as its steps can.  One not hostile (an ally) only opens
+  and unlocks.
+- **Shut against the character** *(the house's)*: one fleeing, shy, or watching the character shuts an open door
+  between them (the character beyond it, within eight squares, no one in the doorway); fleeing, it slams it, louder
+  (5, a door shut 3).
+- **A door left open** *(the house's: DENIZENS.md's daily life)*: one on watch, walking its rounds, that finds open a
+  door the character has handled (the world's PP_KNOWN) shuts it and stands alert a minute.  A door the denizens open
+  or shut themselves isn't noticed so.
+- **Keys** *(the house's: keys that fit, every actor's)*: each locked door of a lair's chunk has a key, two at most,
+  made with its lair's own things and carried by its first denizen (a theme's leader, with its home, one too); a
+  door's key opens its lock in three seconds, no test, and locks it again, shut; another key doesn't fit.
+- **Heard** *(the house's)*: a door opened 2, shut 3, slammed 5, a key turned 1, a bar lifted or set 3, forcing and a
+  battering's blows 7, a door broken down 8.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without

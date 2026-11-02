@@ -247,7 +247,7 @@ denizens' task is their minds.
   nor the character, nor where the character's move ends (the hub's pc_tx, pc_ty); its time its step's, more uphill,
   steeply down, on steps, as the character's.  It tells what the bodies do (E_DEN, the denizens' events), and bumps
   den_seq for the senses to look at them again (those the character sees in what it perceives).  A denizen doesn't
-  set off a trap underfoot, nor open a door it can't walk through.
+  set off a trap underfoot, nor a door's as it opens it.  A door it works by the character's parts (its doors, below).
 - **The blows** (dq0w/wfight.c): the character's (I_ATTACK, the hub's pc_foe: struck at once at the real paces; at
   the turns pace as the clock moves on, before it, so the denizens see it first in the slice) and a denizen's (its
   I_ATTACK) alike, the referee asked RS_ATTACK in the world's own slot.  The world keeps what the blow left the body
@@ -590,6 +590,28 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   told again), the way through (DE_DUG at the square dug: seen as it was, "A fresh tunnel opens ahead.  Spoil lies
   heaped by it."; heard, "You hear rock falling ..."); the rock carrying a pick's knock where the air doesn't.
 
+### Doors *(2026-11-02: Phase 3C's one path; HOUSE.md's denizens and doors, for review)*
+
+- **The minds** (dq0d.c's door_way, part 14, asked only when a door's beside the actor in its own chunk: door_by, the
+  main RAM's cheap test): its intent the character's own, I_PORTAL (a its PA_*, b PW_DOOR, w1 w2 the door's square,
+  t a forcing's end or a battering's blows), the world's to carry out (wport.c by wdoor.c and wblow.c, DUNGEON.md's one
+  path).  Each actor's tries at a door kept (atry: the door's way, the stage, the count).
+  - **Through it, toward its foe** (hostile, sensing the character or drawn on where it last sensed it; an ally
+    following it): no step nearer but through a shut door, it opens it; barred on its side, it lifts the bar first;
+    locked, it tries its key (one of its lair's, if it carries it: the world's); still shut and hostile, it forces it
+    (two tries, ten seconds' straining each) and then batters it (a dozen blows), then gives it up and goes round as
+    its steps can.  Without hands (body BD_TWO's), a beast opens none, but a large hostile one (its size 5 or more)
+    batters it.
+  - **Against the character** (fleeing, shy, or watching it, the character beyond the door and sensed, no one in the
+    doorway): it shuts it, fleeing slammed ("The bandit slams the door shut.").
+  - **On its rounds** (on watch): a door the character has handled (PP_KNOWN) left open, it shuts it, and stands alert
+    a minute.
+- **Told** (E_DEN at the door's square: seen if the door or the denizen is, by its name; else heard): DE_OPENS ("The
+  bandit opens the door.", a door opening), DE_SHUTS, DE_SLAMS, DE_UNLOCKS and DE_LOCKS (a key in a lock), DE_BARS,
+  DE_UNBARS, DE_STRAINS ("strains at the door", a door creaking), DE_BURSTS, DE_HOLDS, DE_BATTERS ("batters at the
+  door", blows on a door), DE_BREAKS ("breaks the door down", a door crashing in): the UI's words, part 6's.
+- **Keys:** each locked door of a lair's chunk has its key, two at most, its first denizen's own (DUNGEON.md's keys).
+
 ## Still to come
 
 - **Their bodies' rest** (2026-10-31's leftovers, HOUSE.md's the denizens' bodies): a swim tiring a denizen, a denizen
@@ -606,10 +628,10 @@ What the plans bring later, by the slice or phase that brings it:
   evil cleared, a prisoner rescued, a way through); the theme checker.
   The theme format completed (Phase 7): factions and tongues, the bestiary's kinds and numbers, the pieces' keepers
   (a guardian, a faction's hoard), the strata's ages and sizes, the things lying about by theme.
-- **The command interpreter** (Phase 3C): a denizen's mind making the same command structure as the player's, the
-  world applying it the same way (opening and breaking doors, taking things, throwing, attacking).
-- **Daily life** (slice 4.5, built 2026-10-31: above): left, a patrol noticing a door left open (the denizens can't
-  open or shut doors yet: Phase 3C's), the records' patrols finding bodies (only an actor's rounds do), routes between a faction's lairs and its gates (the way-finding the minds lack: their steps are
+- **The command interpreter** (Phase 3C, begun 2026-11-02: the doors, above; DUNGEON.md's one path): left, taking things
+  by the character's take (a weapon it lacks, loot, food), windows and portcullises, a lock picked.
+- **Daily life** (slice 4.5, built 2026-10-31: above): left (a patrol noticing a door left open: built
+  2026-11-02, the doors' above), the records' patrols finding bodies (only an actor's rounds do), routes between a faction's lairs and its gates (the way-finding the minds lack: their steps are
   greedy), a sleeper's defence (the book's Ignore against one
   asleep), lying down to sleep (the denizens' positions but prone still to come). (The character telling the hour, "sleep until
   dawn": built 2026-10-31, DUNGEON.md's the time of day believed; the denizens' routines learnt as its clues still to

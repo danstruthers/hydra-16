@@ -297,8 +297,9 @@ void s_den_intents (void)
             told_den (m.a, m.b);
             break;
         case I_CLIMB:                           /* (The rarer: an ally come along with the character; a robbery; */
-        case I_ROB:                             /*   a door worked, the character's code, Phase 3C's: part 80's) */
-        case I_PORTAL:
+        case I_ROB:                             /*   a door worked, the character's code, a thing taken, Phase 3C's: */
+        case I_PORTAL:                          /*   part 80's) */
+        case I_TAKE:
             den_more (&m);
             break;
         case I_WAIT:

@@ -1015,6 +1015,14 @@ struct actor {
     unsigned char   bonds;                      /* Its bonds to its leaders as last reckoned (points: the denizens', to
                                                 **   see; 2026-10-30) */
 };
+#define TW_ARMS         0x01                    /* (A denizen's I_TAKE's a, what it wants, Phase 3C's one path: a weapon
+                                                **   in hand, it having none; */
+#define TW_FOOD         0x02                    /*   food, hungry; */
+#define TW_LOOT         0x04                    /*   coins, jewels, a robber's: the world's to choose the first lying in
+                                                **   its reach by the take rule, wfetch.c's; none, the nearest within
+                                                **   four squares told its mind in the hub's dig_t, TW_SEEN | its
+                                                **   offsets, dx + 8 and dy + 8 times 16) */
+#define TW_SEEN         0xFE00
 enum { FE_ROB, FE_TAKE, FE_GIVE, FE_GIFT };     /* (I_ROB's a: a robbery; an ally's fetching, the thing (t) taken up
                                                 **   where it lies (w1, w2), handed to the character; a gift, the
                                                 **   character's thing (t) taken by the actor: slice 4.8's) */
