@@ -1417,7 +1417,7 @@ their records, not by words.  How the catalogue's actions become the world's int
 | CLIMB, JUMP | I_CLIMB (up, down; I_JUMP) | I_CLIMB (an ally come along) |
 | DIG | I_DIG (a way) | I_KIT's KT_DIG (a tunneller's spell) |
 | OPEN, CLOSE, UNLOCK, LOCK, FORCE, BREAK, BAR, RAISE, LOWER, BEND, DISARM, SEARCH, EXAMINE (a portal) | I_PORTAL (PA_*, which, its square) | I_PORTAL (a door: PA_OPEN ... PA_BREAK) |
-| RETRIEVE_OBJECT (out of reach) | I_TAKE (its square, its record) | (I_ROB's FE_TAKE, an ally's errand) |
+| RETRIEVE_OBJECT (out of reach) | I_TAKE (its square, its record) | I_TAKE (its wants: the world takes the first in its reach); I_ROB's FE_TAKE (an ally's errand) |
 | ATTACK_OBJECT, ENGAGE | I_ATTACK (whom, the aim), I_CLOSE (walked up to first) | I_ATTACK |
 | THROW_OBJECT, SHOOT_OBJECT | I_ATTACK, AIM_SHOT | I_ATTACK, AIM_SHOT |
 | LOAD_OBJECT, GATHER_OBJECT | I_LOAD, I_GATHER | |
@@ -1431,8 +1431,8 @@ their records, not by words.  How the catalogue's actions become the world's int
 
 Built (branch reborn-game-onepath) in the brief's order: first what the denizens lacked, the doors (opened, shut,
 a bar lifted and set, unlocked and locked with their keys, forced, battered: the character's parts, wdoor.c and
-wblow.c, with the actor's own tests), and the doors' keys for every actor; the minds using them.  Taking things by
-the character's take is next.  Steps, digging and climbing stay two codes, the rules' tables shared (DUNGEON.md's one
-path for every actor says why).
+wblow.c, with the actor's own tests), and the doors' keys for every actor; the minds using them; then taking things by the
+character's take (one take rule, the minds' I_TAKE).  Steps, digging and climbing stay two codes, the rules' tables
+shared (DUNGEON.md's one path for every actor says why).
 
 **Design:** DUNGEON.md's one path for every actor and its portals; DENIZENS.md's doors; HOUSE.md's denizens and doors.

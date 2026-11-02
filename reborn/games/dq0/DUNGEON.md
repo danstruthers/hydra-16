@@ -1381,9 +1381,12 @@ into the world's intents; a mind posts the intents itself (DECISIONS.md's table,
   rock.h's hardness, the DUG records either can go on with), so they come out the same; one code would put a
   denizen's work on the commands' path or the character's long tasks into the world's main RAM, and buy nothing the
   player sees.
-- **The things:** the character's take (the things' IO_GET: in reach, not fixed, a hand or the pack, a grope while
-  engaged) and a denizen's (an ally's errand, wfetch.c; its own weapon taken up again, wlimbs.c) are still two; one
-  take rule for both is next.
+- **The things:** one take rule (the world's wtake.c, part 81): a thing lying on the taker's square or one beside it (or
+  on what lies there), not a portal's part, not fixed where it stands; then the taker's own room for it (the
+  character's pack or hands, its grope while engaged: things.c's get, the same tests; a denizen's hands, two things,
+  or its mouth, one, and what it lifts: HOUSE.md's).  A denizen's mind posts the character's own I_TAKE (a its wants,
+  TW_*: DENIZENS.md's things taken), an ally's errand takes by the rule too, and a weapon taken is in its hand as its
+  own let fall is taken up again (wlimbs.c's den_took: the referee told).
 
 ## Still to come
 
@@ -1498,9 +1501,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   digging, poor rock on a tunneller, the spoil as a thing; builders (shoring, walling up a way, a door put up).
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
-- **One path for every actor** (Phase 3C, begun 2026-11-02: below): left, taking things by the character's take (a
-  denizen picking up a weapon it lacks, loot, food), a denizen working windows and portcullises, picking a lock, an
-  ally asked to open a door ("ask the dwarf to open the door").
+- **One path for every actor** (Phase 3C, begun 2026-11-02: below): left, a denizen working windows and
+  portcullises, picking a lock, an ally asked to open a door ("ask the dwarf to open the door"), a denizen eating the
+  food it takes up, its lift by its size, the things' put down, given and thrown by the minds as the character's are.
 - **The house rules decided, not yet built** (HOUSE.md): Strength and weapons, free pounds, a wrecked portal appraised
   by its state, the pit climb (D13).
 - **The market** (when trading comes: DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a

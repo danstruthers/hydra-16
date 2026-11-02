@@ -612,6 +612,19 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   door", blows on a door), DE_BREAKS ("breaks the door down", a door crashing in): the UI's words, part 6's.
 - **Keys:** each locked door of a lair's chunk has its key, two at most, its first denizen's own (DUNGEON.md's keys).
 
+### Things taken *(2026-11-02: Phase 3C's one path; HOUSE.md's denizens taking things, for review)*
+
+- **The minds** (dq0d.c's take_way, part 14, once a 25-second tick at most, as it isn't fighting, fleeing or keeping
+  off a foe): what it wants (TW_*): a weapon, a folk denizen with none to hand (its agear's AG_ARMED off: its own let
+  fall and gone, none of its own); food, hungry; coins and jewels, a robber (kinds.txt's ways r); an ally none (its
+  errands its own).  Its intent the character's own, I_TAKE (a its wants), the world's to carry out.
+- **The world** (wtake.c, part 81): the first thing lying within its reach it wants (a weapon held in a hand, not a lot
+  counted; food; pennies, jewels), by the take rule (DUNGEON.md's one path): taken up (two seconds), its own (the
+  store's IW_DEN, filed at its lair's home), held; a weapon in hand as its own let fall is taken up again (the referee
+  told, its agear's AG_ARMED), "The bandit snatches up its sword." (E_BEAT WB_PICKS).  None in its reach, the nearest
+  it sees within four squares told its mind (the hub's dig_t, TW_SEEN | its offsets): it steps toward it and asks again
+  beside it; no way nearer, it gives it up.
+
 ## Still to come
 
 - **Their bodies' rest** (2026-10-31's leftovers, HOUSE.md's the denizens' bodies): a swim tiring a denizen, a denizen
@@ -628,8 +641,8 @@ What the plans bring later, by the slice or phase that brings it:
   evil cleared, a prisoner rescued, a way through); the theme checker.
   The theme format completed (Phase 7): factions and tongues, the bestiary's kinds and numbers, the pieces' keepers
   (a guardian, a faction's hoard), the strata's ages and sizes, the things lying about by theme.
-- **The command interpreter** (Phase 3C, begun 2026-11-02: the doors, above; DUNGEON.md's one path): left, taking things
-  by the character's take (a weapon it lacks, loot, food), windows and portcullises, a lock picked.
+- **The command interpreter** (Phase 3C, begun 2026-11-02: the doors and things taken, above; DUNGEON.md's one path):
+  left, windows and portcullises, a lock picked, the food it takes eaten, things put down, given and thrown.
 - **Daily life** (slice 4.5, built 2026-10-31: above): left (a patrol noticing a door left open: built
   2026-11-02, the doors' above), the records' patrols finding bodies (only an actor's rounds do), routes between a faction's lairs and its gates (the way-finding the minds lack: their steps are
   greedy), a sleeper's defence (the book's Ignore against one

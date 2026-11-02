@@ -2702,6 +2702,20 @@ These are the house's.
 - **Heard** *(the house's)*: a door opened 2, shut 3, slammed 5, a key turned 1, a bar lifted or set 3, forcing and a
   battering's blows 7, a door broken down 8.
 
+## Denizens taking things *(2026-11-02: Phase 3C's one path; drafted for the user to review)*
+
+- **The take rule, every actor's:** a thing lying on the taker's square or beside it (or on what lies there), not a
+  door's part (lifted out first), not fixed where it stands (a theme's altar); then the taker's room for it: the
+  character's pack or hands, as ever; a denizen's hands (a two-legged body's), two things held at most, or its mouth
+  (a beast's), one.
+- **What it lifts** *(the house's, the fetching numbers as they were)*: in its hands 50 lb, in its mouth 3 lb.  The
+  user's lift by size (a larger beast lifting more) is decided, not yet built.
+- **What it wants** *(the house's)*: a folk denizen with no weapon to hand takes up one lying near (a sword, an axe, a
+  club: the catalogue's weapons held in a hand); a hungry one food (taken, not yet eaten); a robber (kinds.txt's ways
+  r) coins and jewels.  It looks once in 25 seconds, as it isn't fighting, fleeing or keeping off a foe; one it sees
+  within four squares, it goes to (its steps), and takes up beside it.  An ally takes nothing of its own accord.
+- **Two seconds** *(the house's)*: stooped, taken up, as the character's handling of a thing in reach.
+
 ## Decided, not yet built
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without
