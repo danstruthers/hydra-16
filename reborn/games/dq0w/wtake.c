@@ -92,11 +92,11 @@ void __fastcall__ s_den_take (const struct msg* m)
     unsigned char want = m->a, k, f, c, d, best = 5;
     int dx, dy;
 
-    hub_map (0);
-    HUB->dig_t[bk] = 0;
     for (i = 0; (i = items (i, IN_SQUARE, 0)) != 0; ) {
-        if (ip->sn != bd.sn || (unsigned) ((dx = ip->x - bd.x) + 4) > 8 || (unsigned) ((dy = ip->y - bd.y) + 4) > 8) {
-            continue;
+        if (ip->sn != bd.sn || (unsigned) ((dx = ip->x - bd.x) + 4) > 8 || (unsigned) ((dy = ip->y - bd.y) + 4) > 8 ||
+            (ip->sn == bd.hsn && (unsigned) (ip->x - bd.hx + 1) <= 2 && (unsigned) (ip->y - bd.hy + 1) <= 2)) {
+            continue;                           /* (Out of its sight's four squares; at its own home, its lair's own
+                                                **   or its takings, left there) */
         }
         k = ip->kind;
         hub_map (KIND_BANK);
@@ -121,8 +121,10 @@ void __fastcall__ s_den_take (const struct msg* m)
         }
         bd.ready += 20;                         /* (Two seconds: stooped, taken up) */
         if (c == AP_WEAPON) {
-            bd.dropped = i;                     /* (A weapon: in its hand as its own let fall is */
-            bd.arm = k | 0x80;                  /*   taken up again, part 60's den_took) */
+            if (i != bd.dropped || !bd.arm) {   /* (A weapon: in its hand as its own let fall is */
+                bd.dropped = i;                 /*   taken up again, part 60's den_took; that one, */
+                bd.arm = k | 0x80;              /*   as it is) */
+            }
             den_took ();
         } else {
             hold (i);
@@ -134,7 +136,9 @@ void __fastcall__ s_den_take (const struct msg* m)
         return;
     }
     hub_map (0);
-    HUB->dig_t[bk] = seen;
-    bd.ready += 10;
+    if (bd.doing != DO_DIG) {
+        HUB->dig_t[bk] = seen;                  /* (Nothing done, no time: what it saw, or none, told its mind; a
+                                                **   tunneller's dig_t its spell's) */
+    }
 }
 

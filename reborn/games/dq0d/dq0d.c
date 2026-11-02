@@ -122,7 +122,7 @@ unsigned char __fastcall__ dig_way (unsigned char k);   /* Part 12 (the tunnelle
 unsigned char nearby (void);                    /* Part 13: the lairs near placed (the main RAM's room, 2026-11-01) */
 unsigned char __fastcall__ door_way (unsigned char k);  /* Part 14: a door worked (Phase 3C's one path, 2026-11-02) */
 unsigned char __fastcall__ take_way (unsigned char k);  /*   a thing taken up */
-static unsigned char aloot[NACTORS];            /* (Each one's last look for a thing it wants: the clock's, NOW_T) */
+static unsigned char aloot[NACTORS];            /* (Each one's next look for a thing it wants: the clock's, NOW_T) */
 #define NOW_T           (((unsigned char*) &now)[1])    /* (The clock's 25.6-second ticks, a byte: now >> 8's) */
 static unsigned char door_by (void);            /* (Below) */
 static unsigned char nonear;                    /* (None left near to place: nearby's, till the character moves) */
@@ -1975,9 +1975,6 @@ static unsigned char __fastcall__ decide (unsigned char k)
                                                 **   only of one with a launcher, the part's copy the dearer) */
     } else if ((d = keep_off (k)) != 0xFF) {
         a.doing = sres[k] ? DO_WATCH : DO_ROAM;
-    } else if (NOW_T != aloot[k] && (d = take_way (k)) != 0xFF) {   /* (A thing it wants lying near, taken up, or
-                                                **   gone to: part 14's, Phase 3C's; looked for once a 25-second tick
-                                                **   at most, each tick on its way to one) */
     } else if (a.attitude == AT_ALLIED) {
         d = ally (k);
     } else if (sres[k]) {
@@ -2004,6 +2001,11 @@ static unsigned char __fastcall__ decide (unsigned char k)
     } else if (!pcrest && (K.flags & K_LAIR ? !random (4) : random (3))) {
         d = step_for (k, rng, S_ANY);
     }                                           /* (The character resting: no idle wandering in its sight) */
+    if ((signed char) (NOW_T - aloot[k]) >= 0 && (w = take_way (d == 0xFF ? k | 0x80 : k)) != 0xFF) {
+        d = w;                                  /* (A thing it wants lying in its reach taken up, the world's, as it
+                                                **   goes on with what it decided; idle, to one it saw: part 14's,
+                                                **   Phase 3C's; looked for once in four 25-second ticks at most) */
+    }
     if ((d == 0xFF || d < 8) && door_by () && (w = door_way (d == 0xFF ? k | 0x80 : k)) != 0xFF) {
         d = w;                                  /* (A door beside it worked: opened toward its foe, shut against it,
                                                 **   one left open shut on its rounds: part 14's, Phase 3C's) */
@@ -2213,22 +2215,28 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
 }
 
 /* Actor k (the copy a, its kind's K) taking up a thing it wants, by the character's take (the world's take rule:
-** wfetch.c's), its intent the character's own (I_TAKE: a its wants, TW_*; the world chooses the first lying in its
-** reach): a weapon, a folk denizen with none (its agear's AG_ARMED); food, hungry; coins and jewels, a robber (kinds.txt's
-** ways r).  None in its reach, the world tells it the nearest it sees within four squares (the hub's dig_t, TW_SEEN | its
-** offsets): it steps toward it, and asks again beside it.  Not an ally (its errands its own).  Its step (d), 0xF7 the
-** intent posted, or 0xFF (nothing wanted: looked for again 50 seconds on) */
+** wtake.c's), its intent the character's own (I_TAKE: a its wants, TW_*; the world takes the first lying in its reach,
+** if there's one, and nothing else changes: the actor goes on with what it decided, its doing and its face kept): a
+** weapon, a folk denizen with none (its agear's AG_ARMED); food, hungry; coins and jewels, a robber (kinds.txt's ways r).
+** None in its reach, the world tells it the nearest it sees within four squares (the hub's dig_t, TW_SEEN | its
+** offsets): idle (k's high bit: no step decided), it steps toward it, and asks again beside it.  Not an ally (its
+** errands its own), nor a tunneller at its digging (dig_t its spell's).  Its step, or 0xFF */
 unsigned char __fastcall__ s_take_way (unsigned char k)
 {
-    unsigned char want = 0, d;
+    unsigned char want = 0, d, idle = k & 0x80;
     unsigned w, x, y;
 
-    aloot[k] = NOW_T;
-    hub_map (0);
-    if (a.attitude == AT_ALLIED) {
+    k &= 7;
+    aloot[k] = NOW_T + 4;                       /* (Looked for again in a hundred seconds) */
+    if (a.doing == DO_DIG || a.doing == DO_FIGHT) {
         return 0xFF;
     }
-    if (a.body == BD_TWO && KF_NATURE (K.form) == NA_FOLK && !(HUB->agear[k] & AG_ARMED)) {
+    hub_map (0);
+    if (a.attitude == AT_ALLIED || a.body != BD_TWO || KF_NATURE (K.form) != NA_FOLK) {
+        aloot[k] = NOW_T + 120;                 /* (Not folk, or an ally: none, asked again */
+        return 0xFF;                            /*   in an hour: a beast takes nothing up) */
+    }
+    if (!(HUB->agear[k] & AG_ARMED)) {
         want = TW_ARMS;
     }
     if ((unsigned char) (NOW_U - aate[k]) >= W_HUNGRY) {
@@ -2241,7 +2249,7 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
     if (!want) {
         return 0xFF;
     }
-    if (w >> 8 == TW_SEEN >> 8) {               /* (One seen out of its reach, the world's: to it) */
+    if (idle && w >> 8 == TW_SEEN >> 8) {       /* (One seen out of its reach, the world's: to it) */
         x = a.x + (w & 15) - 8;
         y = a.y + (w >> 4 & 15) - 8;
         if (apart (x - a.x, y - a.y) > 1) {
@@ -2252,8 +2260,8 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
             refy = pcy;
             a.doing = DO_ROAM;
             if (d != 0xFF) {
-                aloot[k] = NOW_T - 1;           /* (On to it as it decides next; no way nearer, tried */
-            }                                   /*   again the next tick: the world's dig_t its own) */
+                aloot[k] = NOW_T;               /* (On to it as it decides next; no way nearer, tried */
+            }                                   /*   again later: the world's dig_t its own) */
             return d;
         }
     }
@@ -2262,8 +2270,9 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
     im.t = 0;
     im.w1 = a.x;
     im.w2 = a.y;
-    act (I_TAKE, k);
-    return 0xF7;
+    im.x[0] = im.x[1] = 0xFF;                   /* (Its doing and its face as they are) */
+    post (I_TAKE, k + 1);
+    return 0xFF;
 }
 #pragma static-locals (pop)
 #pragma code-name (pop)

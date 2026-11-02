@@ -614,16 +614,17 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 
 ### Things taken *(2026-11-02: Phase 3C's one path; HOUSE.md's denizens taking things, for review)*
 
-- **The minds** (dq0d.c's take_way, part 14, once a 25-second tick at most, as it isn't fighting, fleeing or keeping
-  off a foe): what it wants (TW_*): a weapon, a folk denizen with none to hand (its agear's AG_ARMED off: its own let
-  fall and gone, none of its own); food, hungry; coins and jewels, a robber (kinds.txt's ways r); an ally none (its
-  errands its own).  Its intent the character's own, I_TAKE (a its wants), the world's to carry out.
+- **The minds** (dq0d.c's take_way, part 14, once in a hundred seconds at most, as it isn't fighting or digging):
+  what it wants (TW_*), a folk denizen's (a beast takes nothing up: it hunts): a weapon, none to hand (its
+  agear's AG_ARMED off: its own let fall and gone, none of its own); food, hungry; coins and jewels, a robber
+  (kinds.txt's ways r); an ally none (its errands its own).  Its intent the character's own, I_TAKE (a its wants), the world's to carry out, as it goes on
+  with what it decided (its doing and its face kept: nothing else changes if there's nothing to take).
 - **The world** (wtake.c, part 81): the first thing lying within its reach it wants (a weapon held in a hand, not a lot
   counted; food; pennies, jewels), by the take rule (DUNGEON.md's one path): taken up (two seconds), its own (the
   store's IW_DEN, filed at its lair's home), held; a weapon in hand as its own let fall is taken up again (the referee
-  told, its agear's AG_ARMED), "The bandit snatches up its sword." (E_BEAT WB_PICKS).  None in its reach, the nearest
-  it sees within four squares told its mind (the hub's dig_t, TW_SEEN | its offsets): it steps toward it and asks again
-  beside it; no way nearer, it gives it up.
+  told, its agear's AG_ARMED), "The bandit snatches up its sword." (E_BEAT WB_PICKS).  Nothing at its own home (its
+  lair's own, a robber's takings put down there).  None in its reach, the nearest it sees within four squares told its
+  mind (the hub's dig_t, TW_SEEN | its offsets): idle, it steps toward it and asks again beside it.
 
 ## Still to come
 

@@ -2710,10 +2710,11 @@ These are the house's.
   (a beast's), one.
 - **What it lifts** *(the house's, the fetching numbers as they were)*: in its hands 50 lb, in its mouth 3 lb.  The
   user's lift by size (a larger beast lifting more) is decided, not yet built.
-- **What it wants** *(the house's)*: a folk denizen with no weapon to hand takes up one lying near (a sword, an axe, a
-  club: the catalogue's weapons held in a hand); a hungry one food (taken, not yet eaten); a robber (kinds.txt's ways
-  r) coins and jewels.  It looks once in 25 seconds, as it isn't fighting, fleeing or keeping off a foe; one it sees
-  within four squares, it goes to (its steps), and takes up beside it.  An ally takes nothing of its own accord.
+- **What it wants** *(the house's)*: only folk take things up (a beast hunts, and takes nothing); one with no weapon
+  to hand takes up one lying near (a sword, an axe, a club: the catalogue's weapons held in a hand); a hungry one food
+  (taken, not yet eaten); a robber (kinds.txt's ways r) coins and jewels; nothing lying at its own home (its lair's own things, a robber's takings put down there).  It
+  looks once in a hundred seconds, as it isn't fighting or digging, going on with what it was doing; one it sees within
+  four squares, idle, it goes to (its steps), and takes up beside it.  An ally takes nothing of its own accord.
 - **Two seconds** *(the house's)*: stooped, taken up, as the character's handling of a thing in reach.
 
 ## Decided, not yet built
