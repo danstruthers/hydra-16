@@ -2142,7 +2142,7 @@ function dq0Check(name, m) {
 // entry a step, the store's taking 24 in a part's swap; 1,800,000 since 2026-10-29: the sound layer's pulse, once a
 // denizens' turn after a step, and the denizens' senses' own part, slices 4.5 and 4.6); 1,900,000 since 2026-10-31
 // (1,863,195: the minds' steps looking at each square's chunk for its bad air, a swimmer's too, the giant rats')
-const TRACE_STEP = 1910000;
+const TRACE_STEP = 1925000;   // (1910000 till 2026-11-02: its measure a few thousand either way by the tasks' timing; part 14's some 30 bytes more, digs told why)
 
 // What a dq0 test's lines did, by their meaning (Phase 3A: tests cut to meaning, not words): sim/lib/dq0meaning.js's
 // record (m.dq0, in every dq0 test: the world's events, the denizens', the requests' replies, the state each line
