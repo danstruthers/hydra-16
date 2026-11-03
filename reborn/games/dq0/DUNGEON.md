@@ -423,7 +423,12 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   character's rules (a spell at a time, the tool's rate, the rock's hardness: part 1 asked, its rock_kind; its own
   test by its sheet), the same change records (a DUG record while it's under way, the character's: either goes on
   with the other's hole; the square a passage through it), told when seen ("A fresh tunnel opens ahead.  Spoil lies
-  heaped by it.") and heard while it's dug ("a scraping in rock": the rock carrying a pick's knock).
+  heaped by it.") and heard while it's dug ("a scraping in rock": the rock carrying a pick's knock).  And at their work
+  (2026-11-02): a faction's miners dig its mine from their lair's home across to their region's vein and along it, a
+  burrower its lair's burrow, by the clock, near the character or away from it (away, coarse: the same change
+  records); poor rock comes down on a tunneller's spell gone badly; a faction's miners put up again a door broken down
+  in their home's chunk (its PORTAL_STATE and PORTAL_HARM records), and wall up a way dug into a room there by others
+  (the square T_WALL again, a change record).
 - **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) is still
   to come (below).
 
@@ -1423,8 +1428,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   diamonds, built 2026-11-02: HOUSE.md's rooms on the diagonal): left, rooms truly turned (a long room on the
   slant, not its corners cut; a diamond's own words, its places), other angles stepped and told by step 2's words; a
   wide tunnel's staircase told as one slant (step 2's runs follow a one-wide passage).
-- **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence): left, other errands
-  ("ask the dwarf to open the door"), "give the bandit 5 pennies" without "to", entertain and bargain.
+- **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence; 2026-11-02 an ally's
+  errands at a door, "give the bandit 5 pennies" without "to", entertaining and bargaining): left, the other errands (a
+  lock picked, a door forced for the character, a thing given to another).
 - **The command interpreter** (Phase 3C): every command, the player's or a denizen's mind's, one structure of
   abstract actions (VB_*), verbs as data with their defaults, affordances, selectors, a target that persists,
   questions only when unclear; "alias" the command for text aliases ("alias x is dig down"), naming things and rooms
@@ -1465,12 +1471,13 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   bandit": the book's treatment, a timed work, bandages used up); healing over days of rest (the book's five-day
   rolls, infection, a treatment's EE), told as it wakes; shock's recovery each watch, and in shock only rest, a look and
   a half move; a creature come round in shock; the venoms of the adder, the basilisk and the lindworm (the bestiary's,
-  an infection's course); a folk denizen binding its own bleeding.  Not yet: antidotes (with the market), the minds'
+  an infection's course); a folk denizen binding its own bleeding; antidotes (built 2026-11-02).  Not yet: the minds'
   way with a wounded or shocked denizen (resting in its lair, tending another), stings.
 - **Poison, bad air and disease** (2026-10-31, the user's: HOUSE.md's): one course for every affliction (the book's
   Infection table), poisons (a dart trap's), diseases (foul water's flux, rat-bite fever, a ghoul's grave rot) shown
   after their incubation; the air's pockets (blackdamp, whitedamp, firedamp) and a flame's warnings, firedamp's burst.
-  Left: a door's needle and a chest's (contact poison), poisoned blades, spoiled food, antidotes (with the market), a
+  Antidotes and remedies built 2026-11-02 (HOUSE.md's the market, entertaining and remedies).
+  Left: a door's needle and a chest's (contact poison), poisoned blades, spoiled food, a
   lair's sickness, the denizens' own afflictions and their choking, old mines' air, the explosion's harm to those near.
 - **The sound layer and the denizens' hearing by pace** (slice 4.5, built 2026-10-29: perception as layers, above):
   a pulse over the squares and openings, a background that masks, the character's steps heard by its pace and its
@@ -1524,9 +1531,8 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   a long slope between strata; a walk's beats telling a rise or a fall of 4 feet ("The way rises."), its climb
   strenuous work.  Left: a raise or a ramp joining two parts of a stratum (these are ways to a chamber of their own),
   a long slope's own length walked square by square (taken at once, as a stairway is), the denizens tiring uphill.
-- **Tunnellers and builders** (slice 4.11, built in part 2026-11-01: changing the dungeon, above; DENIZENS.md's
-  tunnellers): left, a burrow dug from a lair, a faction's mine following a vein, the denizens away from the character
-  digging, poor rock on a tunneller, the spoil as a thing; builders (shoring, walling up a way, a door put up).
+- **Tunnellers and builders** (slice 4.11, built 2026-11-01 and 2026-11-02: changing the dungeon, above; DENIZENS.md's
+  tunnellers): left, builders shoring a passage, the spoil as a thing, a mine past its lair's chunk.
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
 - **One path for every actor** (Phase 3C, begun 2026-11-02: below): left, a denizen working windows and
@@ -1534,7 +1540,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   food it takes up, its lift by its size, the things' put down, given and thrown by the minds as the character's are.
 - **The character carries on** (slice 4.4, built 2026-11-02: above): left, the autosave before danger, the denizens'
   weapons' versions (the outfits' gear's), a thing's wear and fuel carried as they were.
-- **The market** (when trading comes: DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a
+- **The market** (built in part 2026-11-02: HOUSE.md's the market, entertaining and remedies; DENIZENS.md's trading):
+  buying, selling, a price asked, haggling, with any folk denizen, in pennies; remedies (antidotes, a physician's
+  draught) for sale, in kits and purses, drunk.  Left, from the plan (DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a
   mercantyler's 10% buying and 50% selling to the source, second-hand clothes 30-60% of new, haggling), the coins'
   metal value and their discount outside their own land in the trade itself (the appraisal tells it now), farthings
   for change; paying with the lowest-worth coins first unless the seller asks for the local or the dwarves', and the

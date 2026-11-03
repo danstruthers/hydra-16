@@ -143,6 +143,7 @@ VB_SWAP_HANDS                                   (* what's in the hands changed o
 VB_TEND                 object                  (* first aid, a wound treated: one's own, or another's (slice 4.3) *)
 VB_GATHER_OBJECT        object                  (* the missiles lying about gathered again, each walked to (slice 4.7) *)
 VB_META_TIME                                    (* the time of day as the character believes it (2026-10-31) *)
+VB_TRADE                object source           (* the market and entertaining (2026-11-02): bought, sold, a price asked, haggled over, one entertained: the verb's aux, the sway's SW_* *)
 
 [results]
 ERROR:NOT_UNDERSTOOD

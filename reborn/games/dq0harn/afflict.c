@@ -320,6 +320,9 @@ unsigned char __fastcall__ o_envenom (const char* key, unsigned char loc, int im
 ** air it breathes (x[20], its flame x[21]: rsair.h's), its toxin's course for w1 minutes at what it's about (a: its
 ** interval at rest, half that about, a quarter at vigorous work, the bestiary's), its disease's (shown after its
 ** incubation, then daily); the grade's bits (2 news, 4 worse: a hard stop) */
+signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 5's stub) */
+static void __fastcall__ remedy (unsigned char k);
+unsigned char __fastcall__ o_aff_cure (unsigned char power);
 unsigned char __fastcall__ o_aff_time (struct req* r)
 {
     static const unsigned char of[NAK] = { 0, VK_DART, VK_CONTACT, VK_FOOD, VK_FLUX };
@@ -338,6 +341,9 @@ unsigned char __fastcall__ o_aff_time (struct req* r)
     } else if (r->x[15] & 0x80) {               /* (Still water drunk where it stands: foul, the flux's) */
         r->x[15] &= 0x7F;
         k = AK_FLUX;
+    } else if (r->x[15] & RT_TAKEN) {           /* (A remedy taken, 2026-11-02: HOUSE.md's remedies) */
+        remedy (r->x[15] & 3);
+        r->x[15] = 0;
     }
     if (k && k < NAK) {                         /* (Exposed: a poison taken at once, a disease caught or not) */
         k = of[k];
@@ -385,8 +391,33 @@ unsigned char __fastcall__ o_aff_time (struct req* r)
     return o | (strlen (news) != n ? 2 : 0);
 }
 
-/* A remedy taken (a remedy's hook: an antidote, the market's to bring): the toxin's rate the better by its power (a
-** theriac's 2), its words; 1 if it did anything */
+/* A remedy taken (RS_TIME's RT_TAKEN, the UI's: k 1 an antidote, against the toxin, its power 2; 2 a remedy, against
+** the disease, its power 1), dosed by the taker's Physician (the book's, Physician 4: medicine combats an infection;
+** the house's: a critical success a point the more, a critical failure a point the less), the rate the better by it;
+** nothing for it, told so (HOUSE.md's remedies, 2026-11-02) */
+static void __fastcall__ remedy (unsigned char k)
+{
+    signed char g = test_sk (&pc, HARN_PHY, 2);
+    unsigned char p = (k == 1 ? 2 : 1) + (g == G_CS) - (g == G_CF);
+
+    if (k == 1 ? !o_aff_cure (p) : !pd.hr || !p) {
+        nput (k == 1 ? " It does nothing for you: there's no poison in you that it can reach." :
+            " It does nothing for you.");
+        return;
+    }
+    if (k == 2) {
+        if ((pd.hr += p) >= 6) {
+            pd.hr = 0;
+            nput (" The remedy works: the sickness leaves you.");
+        } else {
+            nput (" The remedy eases the fever a little.");
+        }
+        levels ();
+    }
+}
+
+/* A remedy's hook (remedy's: an antidote): the toxin's rate the better by its power (a theriac's 2), its words; 1 if it
+** did anything */
 unsigned char __fastcall__ o_aff_cure (unsigned char power)
 {
     if (!pv.hr || pv.kind < VK_DART && venoms[pv.kind].how & V_NUMB && power < 2) {

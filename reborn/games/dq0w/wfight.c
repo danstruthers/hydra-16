@@ -164,7 +164,13 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
                                                 **   a: the limbs' news, no blow's record, slice 4.1b's) */
         if (r->a) {
             r->state = REQ_FREE;
-            limb_news (WB_NOT_UP, att);
+            if (me != att || !(bd.move & BM_NOT_UP)) {   /* (A creature's told once as it lies there: the round's
+                                                **   spent every time, its words not; 2026-11-02) */
+                limb_news (WB_NOT_UP, att);
+            }
+            if (me == att) {
+                bd.move |= BM_NOT_UP;
+            }
             return 0;
         }
         pa = POS_STANDING;
@@ -192,6 +198,9 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         }
     }
     HUB->pc_pos = me == att ? pd : pa;
+    if (bd.pos != (me == att ? pa : pd)) {
+        bd.move &= ~BM_NOT_UP;                  /* (Risen, or fallen: its next failed try told) */
+    }
     bd.pos = me == att ? pa : pd;
     if (cd) {
         den_word (r->text, !att);               /* (Its weapon's word, the reply's: part 51's) */

@@ -27,6 +27,8 @@ unsigned char __fastcall__ take_rule (unsigned n);  /* (Part 81's, wtake.c: the 
 extern unsigned tk_x, tk_y;
 unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);   /* (Part 10's) */
 void light_now (void);                          /* (Part 10's) */
+unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's) */
+void __fastcall__ mix_join (unsigned i, unsigned n);   /* (Part 64's: two piles of coins' mints) */
 
 #define FETCH_HANDS     200                     /* (Quarter pounds: the most a folk denizen fetches in its hands, 50 lb;
                                                 **   one without hands, in its mouth, 3 lb: HOUSE.md's fetching) */
@@ -67,7 +69,32 @@ static void __fastcall__ hold (unsigned n)
     hub_map (0);
 }
 
-/* Body bd's errand (its intent, I_ROB with a: FE_TAKE, FE_GIVE, FE_GIFT; t the thing, w1 w2 where it lay) */
+/* A count k of lot n split off (a gift's, a trade's: its own record, the rest left where it was): the part's number,
+** or 0 (the store full) */
+static unsigned __fastcall__ lot (unsigned n, unsigned k)
+{
+    unsigned c;
+
+    for (c = 1; c < ilim && item_at (c)->kind; ++c) {
+    }
+    if (c >= ilim) {
+        return 0;
+    }
+    memcpy (&rec, item_at (n), sizeof rec);
+    item_at (n)->qty -= k;
+    rec.qty = k;
+    rec.flags &= ~I_NAMED;
+    rec.id = 0;                                 /* (Its own number as it's next looked at: make_own's; its coins' mints
+                                                **   the lot's, in the same shares) */
+    memcpy (item_at (c), &rec, sizeof rec);
+    if (c >= ihigh) {
+        ihigh = c + 1;
+    }
+    return c;
+}
+
+/* Body bd's errand (its intent, I_ROB with a: FE_TAKE, FE_GIVE, FE_GIFT; t the thing, w1 w2 where it lay; a gift's,
+** a trade's, w1 a count of a lot split off, FE_GIFT's w2 1 kept, not held: the market's coins and goods, 2026-11-02) */
 void __fastcall__ s_den_fetch (const struct msg* q)
 {
     struct item* p;
@@ -91,14 +118,20 @@ void __fastcall__ s_den_fetch (const struct msg* q)
         return;
     }
     if (how == FE_GIVE) {                       /* (Handed over, beside the character: its hand or its pack, else at
-                                                **   its feet) */
-        if (!kind || p->where != IW_DEN) {
+                                                **   its feet; its own, or in a thing it carries: a trade's, its coins
+                                                **   in its pouch, a count of them split off) */
+        for (c = n; item_at (c)->where == IW_ITEM; c = item_at (c)->x) {
+        }
+        p = item_at (c);
+        if (!kind || p->where != IW_DEN || (p->owner | p->hide << 8) != bd.did ||
+            (q->w1 && q->w1 < item_at (n)->qty && !(n = lot (n, q->w1)))) {
             hub_map (0);
             return;
         }
+        p = item_at (n);
         p->flags &= ~I_HELD;
         if ((unsigned) (bd.x - bpx + 1) > 2 || (unsigned) (bd.y - bpy + 1) > 2 || bd.sn != bps ||
-            !carry (n, 1)) {
+            !carry (n, q->w2 != 1)) {   /* (Kept: into its pack first, the market's) */
             p = item_at (n);
             p->where = IW_SQUARE;
             p->sn = bd.sn;
@@ -108,6 +141,18 @@ void __fastcall__ s_den_fetch (const struct msg* q)
             hub_map (0);
             told (FT_FEET, kind);
             return;
+        }
+        if (q->w2 == 1 && kind == KI_PENNIES) {   /* (Coins kept: joined to a pile of the character's alike, the
+                                                **   market's, 2026-11-02) */
+            for (c = 0; (c = items (c, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
+                if (c != n && item_at (c)->kind == kind && !(item_at (c)->flags & I_NAMED) && on_pc (c) &&
+                    (unsigned) item_at (c)->qty + item_at (n)->qty <= 250) {
+                    mix_join (c, n);
+                    item_at (c)->qty += item_at (n)->qty;
+                    item_at (n)->kind = 0;
+                    break;
+                }
+            }
         }
         equip_now ();                           /* (What's to hand now, and its load: the referee's) */
         light_now ();
@@ -119,26 +164,14 @@ void __fastcall__ s_den_fetch (const struct msg* q)
             hub_map (0);
             return;
         }
-        if (q->w1 && q->w1 < p->qty) {
-            for (c = 1; c < ilim && item_at (c)->kind; ++c) {
-            }
-            if (c >= ilim) {
-                hub_map (0);
-                return;
-            }
-            memcpy (&rec, item_at (n), sizeof rec);
-            item_at (n)->qty -= q->w1;
-            rec.qty = q->w1;
-            rec.flags &= ~I_NAMED;
-            rec.id = 0;                         /* (Its own number as it's next looked at: make_own's; its coins'
-                                                **   mints the lot's, in the same shares) */
-            memcpy (item_at (c), &rec, sizeof rec);
-            if (c >= ihigh) {
-                ihigh = c + 1;
-            }
-            n = c;
+        if (q->w1 && q->w1 < p->qty && !(n = lot (n, q->w1))) {
+            hub_map (0);
+            return;
         }
         hold (n);
+        if (q->w2 == 1) {
+            item_at (n)->flags &= ~I_HELD;      /* (Kept, not held: the market's, 2026-11-02) */
+        }
         equip_now ();
         light_now ();
         told (FT_GOT, kind);

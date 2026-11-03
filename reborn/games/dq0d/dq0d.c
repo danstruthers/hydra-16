@@ -119,6 +119,7 @@ void enlist_near (void);                        /* Part 11 (the main RAM's room,
 unsigned char __fastcall__ plan (unsigned char k);   /* Part 9's: an actor's day and its place (leisure's, 2026-10-31) */
 void __fastcall__ roused (unsigned char k, unsigned char was);   /* Part 10's: a pastime let go */
 unsigned char __fastcall__ dig_way (unsigned char k);   /* Part 12 (the tunnellers', slice 4.11's) */
+unsigned char __fastcall__ work_dig (unsigned char k);  /* Part 15 (their work's digs, the builders', slice 4.11's rest) */
 unsigned char nearby (void);                    /* Part 13: the lairs near placed (the main RAM's room, 2026-11-01) */
 unsigned char __fastcall__ door_way (unsigned char k);  /* Part 14: a door worked (Phase 3C's one path, 2026-11-02) */
 unsigned char __fastcall__ take_way (unsigned char k);  /*   a thing taken up */
@@ -126,7 +127,7 @@ static unsigned char aloot[NACTORS];            /* (Each one's next look for a t
 #define NOW_T           (((unsigned char*) &now)[1])    /* (The clock's 25.6-second ticks, a byte: now >> 8's) */
 static unsigned char door_by (void);            /* (Below) */
 static unsigned char nonear;                    /* (None left near to place: nearby's, till the character moves) */
-extern unsigned char ovbank[5];
+extern unsigned char ovbank[6];
 static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsigned x, unsigned y);  /* (Below) */
 extern char _SWAP_START__[];
 
@@ -273,6 +274,10 @@ struct pop {
     struct head     h;
     struct lair     lair[NLAIRS];
     struct den      den[NDENS];
+    unsigned char   nowork[32];                 /* (A lair's number's, its low bits: the clock's high byte plus 1 when
+                                                **   its diggers last found no dig to do, part 9's target: not asked
+                                                **   again till it moves, near enough two hours: part 15's a dearer
+                                                **   swap than a record's move) */
 };
 #define POP             ((struct pop*) 0x8000)
 typedef char pop_fits[sizeof (struct pop) <= 0x2000 ? 1 : -1];
@@ -2007,10 +2012,11 @@ static unsigned char __fastcall__ decide (unsigned char k)
         d = w;                                  /* (A door beside it worked: opened toward its foe, shut against it,
                                                 **   one left open shut on its rounds: part 14's, Phase 3C's) */
     }
-    if (d == 0xFF && foe && sres[k] && dist > 1 && (K.styles & (K_DIGS | K_MINES))) {
+    if (d == 0xFF && foe && sres[k] && (K.styles & (K_DIGS | K_MINES))) {
         d = dig_way (k);                        /* (A tunneller kept from the character it senses by rock, a wall,
                                                 **   rubble: it digs its way through, part 12's, slice 4.11's; drawn
-                                                **   on, part 5's draw_on asks too) */
+                                                **   on, part 5's draw_on asks too.  Beside it, it struck, above: no
+                                                **   dig) */
     }
     if (d == 0xFF) {                            /* (Watching: a while, unless it changes; fleeing, a moment; the
                                                 **   character resting, thirty times the while, a watcher's or an idler's:
@@ -2275,6 +2281,261 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+static unsigned rhx, rhy, tx, ty;               /* (Part 9's room_at's: the home whose chunk it looks in, the square
+                                                **   found; part 12's dig at work, its face's stand) */
+static unsigned char dsn;
+#define SPELL           6000                    /* (Tenths: a spell of digging, ten minutes, the world's) */
+
+/* ---- The minds' other reasons to dig, and the builders (slice 4.11's rest, 2026-11-02: DENIZENS.md's tunnellers and
+** builders; HOUSE.md's tunnellers and builders, for review): a digger at its work (part 9's sched, SC_WORK, by the
+** clock: never polled) works on its lair's own ways, within its home's chunk (made: part 9's target asks).  A miner
+** (K_MINES), its faction's builder, first puts up again a door broken down there; then walls up a way dug into a room
+** there by others (way_in below); then, a pick among its things (an actor's the world's agear; a record's, its kind's
+** miners' if they work, the house's), digs its faction's mine: from its lair's home straight across to the vein of its
+** region (rock.h's rock_vein: a seam of ore or quartz, its middle on the home's row within its home's chunk), then along
+** it, north or south by its lair's number, its middle followed row by row (a diagonal where it slants a square, across
+** where it slants more), MINE_LEN squares at most, the open ones and doorways on it walked through.  A burrower
+** (K_DIGS) its lair's burrow: from its home one of the four ways by its lair's number, BURROW squares, as far as its
+** claws bite (rubble, earth, soil, the soft rock's beds, a room's bare wall in them: never masonry).  Nothing of it
+** kept: the way is worked out again from the dungeon as it is each time it's asked, its face the first square that's a
+** wall, the rock or rubble, its stand the square before it; none where it comes to anything else (water, a pit, a
+** portcullis let down, the chunk's edge) or runs out.  k: the actor, NACTORS a record (D, its kind's K); | 0x40, the
+** face alone: its stand in tx, ty, its heading; | 0x80, the work posted there (I_KIT's KT_DIG, a spell of digging, or
+** KT_BUILD, w1 w2 its face: an actor's by its own test, the world's wdig.c; a record's coarse, untested), an actor
+** stepped toward its stand first (a shut door on the way opened, part 14's), else 0xF9; a record beside a stand that's
+** another's 0xF8; 0xFF none.  Part 15's: its statics in the part, not the main RAM's (read again from its image as a
+** call of another part comes back: none used after it) */
+#define MINE_LEN        64                      /* (Squares a mine goes, its way across and along, at most) */
+#define BURROW          8                       /* (Squares a burrow goes from its home) */
+#pragma code-name (push, "SW15CODE")
+#pragma rodata-name (push, "SW15RODATA")
+#pragma data-name (push, "SW15RODATA")         /* (rock.h's statics in the part, used only within a call) */
+#pragma bss-name (push, "SW15RODATA")
+#define ROCK_BED
+#define ROCK_VEIN
+#define ROCK_LEAN
+#include "../dq0/rock.h"
+
+static unsigned wox, woy, why;                  /* (Its home's chunk's first square, its home's row) */
+static unsigned char wvein, wvx, waw;           /* (A vein through the chunk: its middle on the home's row, its width) */
+static signed char wvw;
+static struct change wc;
+
+/* A way dug into a room of its home's chunk by others: a square a dig made a passage (a change record of its region,
+** the character's or a tunneller's: T_CORR is only ever made so) that's still one, a room's floor beside it, the
+** character not on it, and not of its own mine (the home's row, or within the vein): its heading, wc the square, tx, ty the floor beside
+** it; 0xFF none.  Found again as it's asked: nothing kept but the records, read as they stand */
+static unsigned char __fastcall__ way_in (unsigned char sn)
+{
+    struct cpage* q;
+    struct stratum* r = &STRATUM (sn);
+    unsigned char p, i, n, h, rrx, rry;
+
+    rrx = (wox - r->x0) >> 8;
+    rry = (woy - r->y0) >> 8;
+    for (p = 0; p < NCPAGES; ++p) {
+        hub_map (WORLD_BANK);
+        q = &WREC->cpage[p];
+        if (!q->used || q->sn != sn || q->rx != rrx || q->ry != rry) {
+            continue;
+        }
+        for (n = q->n, i = 0; i < n; ++i) {
+            hub_map (CHANGE_BANK (p));
+            memcpy (&wc, CHANGE_AT (p) + i, sizeof wc);
+            if (wc.link != 0xFF || wc.tile != T_CORR || wc.x - wox >= CW || wc.y - woy >= CW ||
+                (wvein && (wc.y == why || (unsigned) (wc.x - wox - wvx - wvw * (int) (wc.y - why) + waw) <= 2 * waw)) ||
+                TILE (*at (sn, wc.x, wc.y)) != T_CORR || (sn == pcs && wc.x == pcx && wc.y == pcy)) {
+                continue;
+            }
+            for (h = 0; h < 8; h += 2) {
+                tx = wc.x - head_x[h];
+                ty = wc.y - head_y[h];
+                if (tx - wox < CW && ty - woy < CW && TILE (*at (sn, tx, ty)) == T_FLOOR) {
+                    return h;
+                }
+            }
+        }
+    }
+    return 0xFF;
+}
+
+unsigned char __fastcall__ s_work_dig (unsigned char k)
+{
+    unsigned char i, sn, g, t, n, h, x, y, nx, ny, nvx;
+    signed char vs, dx, dy;
+    unsigned sd;
+    int z;
+    unsigned char* p;
+    struct portal* q;
+    struct room* rm;
+    struct stratum* r;
+
+    i = k & 0x3F;
+    if (i < NACTORS) {
+        den_get (a.den);                        /* (Its record: its lair's number, its kind) */
+        sn = a.sn;
+        wox = ahx[i];
+        why = ahy[i];
+    } else {
+        sn = D.sn;
+        wox = D.hx;
+        why = D.hy;
+    }
+    kx_get (D.kind);                            /* (The hub's header in the window after) */
+    sd = (unsigned) HUB->seed;
+    t = i < NACTORS ? HUB->agear[i] : X.work != 0xFF ? AG_PICK : 0;   /* (Away from the character, a miner that
+                                                **   works digs as its kind's miners are outfitted: the house's) */
+    if (sn != D.lsn) {
+        return 0xFF;
+    }
+    r = &STRATUM (sn);
+    x = (wox - r->x0) & (CW - 1);               /* (Its home in its chunk, the chunk's first square) */
+    y = (why - r->y0) & (CW - 1);
+    z = -3 - r->datum;
+    wox -= x;
+    woy = why - y;
+    g = K.styles & K_MINES && (t & AG_PICK) ? DG_PICK : K.styles & K_DIGS ? DG_CLAWS : 0;
+    wvein = 0;
+    if (K.styles & K_MINES) {
+        if (rock_vein (sd, wox + x, woy + y) != RK_NONE && (unsigned) (rk_vx - wox) < CW) {
+            wvein = 1;
+            wvx = rk_vx - wox;
+            wvw = rk_vw;
+            waw = wvw < 0 ? -wvw : wvw;
+        }
+        at (sn, wox, woy);                      /* (A door broken down in its home's chunk put up again first) */
+        for (n = C->nportals, q = C->portal; n; --n, ++q) {
+            if (q->kind == PK_DOOR && (q->state & PS_WRECKED)) {
+                nx = q->x;
+                ny = q->y;
+                for (h = 0; h < 8; h += 2) {    /* (Its stand: a square beside it, the four) */
+                    x = nx - head_x[h];
+                    y = ny - head_y[h];
+                    if (!((x | y) & ~(CW - 1)) && open_sq (at (sn, wox + x, woy + y))) {
+                        t = KT_BUILD;
+                        goto stand;
+                    }
+                }
+                return 0xFF;
+            }
+        }
+        if ((h = way_in (sn)) != 0xFF) {        /* (Then a way dug in by others walled up) */
+            x = tx - wox;
+            y = ty - woy;
+            t = KT_BUILD;
+            goto stand;
+        }
+    }
+    h = (D.lid & 3) << 1;                       /* (A burrow: one of the four, by its lair's number) */
+    vs = D.lid & 1 ? 1 : -1;
+    dy = 0;
+    if (!g || (g == DG_PICK && !wvein)) {
+        return 0xFF;                            /* (No vein through its home's chunk on its row: its workshop) */
+    }
+    for (n = g == DG_PICK ? MINE_LEN : BURROW; n; --n) {
+        if (g == DG_PICK) {                     /* (Across to the vein, then along it, its middle row by row) */
+            dy = 0;
+            nvx = vs > 0 ? wvx + wvw : wvx - wvw;
+            if ((unsigned char) (wvx - x + waw) > 2 * waw) {
+                dx = (signed char) (wvx - x) > 0 ? 1 : -1;
+            } else if ((unsigned char) (nvx - x + 1) <= 2) {
+                dx = nvx - x;
+                dy = vs;
+            } else {
+                dx = (signed char) (nvx - x) > 0 ? 1 : -1;
+            }
+            h = bearing (dx, dy);
+        }
+        nx = x + head_x[h];
+        ny = y + head_y[h];
+        if ((nx | ny) & ~(CW - 1)) {
+            break;                              /* (Never out of its home's chunk) */
+        }
+        p = at (sn, wox + nx, woy + ny);
+        if (open_sq (p) || (TILE (*p) == T_DOOR && (!(q = portal_at (cx_, cy_)) || q->kind == PK_DOOR ||
+            (q->state & PS_OPEN)))) {
+            x = nx;                             /* (Dug already, or open, or a doorway (a door, or a portcullis
+                                                **   raised): on along it) */
+            y = ny;
+            if (dy) {
+                wvx = nvx;
+            }
+            continue;
+        }
+        if ((t = TILE (*p)) != T_WALL && t != T_ROCK && t != T_RUBBLE) {
+            break;
+        }
+        if (g == DG_CLAWS && t != T_RUBBLE) {   /* (Claws: earth, soil or the soft rock: a room's wall by its own
+                                                **   stuff, the room it's standing in, as the world's) */
+            g = NROOMS;
+            if (t == T_WALL) {
+                for (t = 0, rm = C->room; t < C->nrooms; ++t, ++rm) {
+                    if ((unsigned char) (x - rm->x) < rm->w && (unsigned char) (y - rm->y) < rm->h) {
+                        g = t;
+                    }
+                }
+            }
+            t = C->mat[0][(unsigned char) (g + g + g) + MP_WALL];
+            g = DG_CLAWS;
+            if (t != MAT_EARTH && t != MAT_SOIL && (t != MAT_STONE || !RK_POOR (rock_bed (sd, z - elev_at (sn, wox + x,
+                woy + y), wox + nx, woy + ny)))) {
+                break;
+            }
+        }
+        t = KT_DIG;
+stand:
+        tx = wox + x;
+        ty = woy + y;
+        if (!(k & 0x80)) {
+            return h;
+        }
+        im.a = t;
+        im.b = h;
+        im.w1 = tx + head_x[h];                 /* (Its face: the square dug, the door put up, the way walled up) */
+        im.w2 = ty + head_y[h];
+        if (i < NACTORS) {
+            if (a.x != tx || a.y != ty) {       /* (To its stand first) */
+                refx = tx;
+                refy = ty;
+                h = step_for (i, 2 * K.range + 8, S_TOWARD);
+                if (h == 0xFF && door_by ()) {
+                    a.doing = DO_COMING;        /* (A shut door the way to it: opened, the doors' own, part 14's) */
+                    if ((h = door_way (i | 0x80)) == 0xFF) {
+                        a.doing = SC_WORK + DO_SLEEP - SC_SLEEP;
+                    }
+                }
+                refx = pcx;
+                refy = pcy;
+                if (h == 0xFF) {
+                    wt = 600 + random (600);    /* (No way nearer, its stand another's: it waits a minute or two,
+                                                **   at its work) */
+                    h = 0xFE;
+                }
+                return h;
+            }
+            a.face = h;
+            if (t == KT_DIG) {
+                a.doing = DO_DIG;
+            }
+            im.x[2] = g;
+            act (I_KIT, i);
+            return 0xF9;
+        }
+        if (D.x != tx || D.y != ty) {
+            return 0xF8;                        /* (Beside it, its stand another's: due again a spell on) */
+        }
+        im.x[0] = g;                            /* (A record's spell, coarse: the world's, untested) */
+        im.x[2] = sn;
+        kitted ();
+        return 0xF9;
+    }
+    return 0xFF;
+}
+#pragma bss-name (pop)
+#pragma data-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* ---- Tunnellers (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers and builders; HOUSE.md's, for review): actor k (the
 ** copy a, its kind K's), hostile, kept by rock, a wall or rubble from the character it senses beyond it, or from where it
 ** last sensed it (refx, refy: no step nearer), digs its way there if its kind digs: a burrower by its claws (K_DIGS),
@@ -2285,6 +2546,7 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
 ** 0xFF, none.  Part 12's */
 #pragma code-name (push, "SW12CODE")
 #pragma rodata-name (push, "SW12RODATA")
+#pragma bss-name (push, "SW12RODATA")          /* (Its locals in the part: the main RAM's room, 2026-11-02) */
 unsigned char __fastcall__ s_dig_way (unsigned char k)
 {
     unsigned char j, best = 0xFF, g, t, h;
@@ -2335,6 +2597,7 @@ unsigned char __fastcall__ s_dig_way (unsigned char k)
     act (I_KIT, k);
     return 0xF9;
 }
+#pragma bss-name (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -2597,6 +2860,34 @@ unsigned char __fastcall__ s_ally (unsigned char k)
         return d;
     }
     a.doing = DO_FOLLOW;
+    if (aorder[k] >= OR_OPEN) {                 /* (A door's errand, 2026-11-02: walked to beside it, the four ways,
+                                                **   then its work, the character's code for every actor: the world's
+                                                **   I_PORTAL, wport.c's; following again) */
+        x = afx[k];
+        y = afy[k];
+        if ((a.x > x ? a.x - x : x - a.x) + (a.y > y ? a.y - y : y - a.y) != 1) {
+            refx = x;
+            refy = y;
+            d = step_for (k, 0xFFFF, S_TOWARD);
+            refx = pcx;
+            refy = pcy;
+            if (d < 4) {
+                return d;
+            }
+            aorder[k] = OR_FOLLOW;              /* (No way to it: given up) */
+            return 0xFE;
+        }
+        im.a = aorder[k] == OR_OPEN ? PA_OPEN : aorder[k] == OR_CLOSE ? PA_CLOSE : PA_UNLOCK;
+        im.b = PW_DOOR;
+        im.w1 = x;
+        im.w2 = y;
+        im.t = 0;
+        a.face = bearing (x - a.x, y - a.y);
+        act (I_PORTAL, k);
+        aorder[k] = OR_FOLLOW;
+        wt = 5;
+        return 0xFE;
+    }
     if (aorder[k] == OR_FETCH) {
         n = 1;
         hub_map (ITEM_BANK (i));
@@ -2606,6 +2897,7 @@ unsigned char __fastcall__ s_ally (unsigned char k)
             if (a.sn == pcs && dist <= 1) {
                 im.a = FE_GIVE;
                 im.t = i;
+                im.w1 = im.w2 = 0;              /* (Whole, into its hand first) */
                 act (I_ROB, k);
                 afetch[k] = 0;
                 aorder[k] = OR_FOLLOW;
@@ -2723,7 +3015,148 @@ void __fastcall__ s_regard (unsigned char f, unsigned char pts)
 ** interest, at steps by its attitude and its kind too; a critical success two steps, a success one, a critical failure
 ** an insult (a step back, the gift refused: grade G_CF), as far as friendly (a gift doesn't make an ally); taken (but
 ** refused), the world's to hand over (the UI's), and its faction's regard the more (reputation) */
+#pragma code-name (push, "SW16CODE")            /* (Part 16's since 2026-11-02: part 5's room, the market's beside it;
+                                                **   a part of its own, seldom called) */
+#pragma rodata-name (push, "SW16RODATA")
+#pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
 static const unsigned means[5] = { 4, 16, 48, 192, 960 };   /* (Farthings: a penny, 4d, 12d, 48d, 240d) */
+
+/* The referee's test of the character's words with actor k, purpose p (b its own: entertaining's, P_APPRAISE's past
+** the crafts, the performing skill), at steps st, in its tongue (t 1: none wanted): the grade, or 0x7F (no tongue in
+** common: SR_TONGUE) */
+static signed char __fastcall__ words_test (unsigned char k, unsigned char p, unsigned char b, signed char st,
+    unsigned char t)
+{
+    struct req* r;
+    signed char g;
+    unsigned char f;
+
+    hub_map (0);
+    f = HUB->actor[k].faction & (NFACT - 1);
+    r = DSLOT;
+    r->text[0] = 0;
+    if (!t) {
+        if (!ftongue[f][0]) {
+            return 0x7F;
+        }
+        strcpy (r->text, ftongue[f]);
+    }
+    r->kind = RS_TEST;
+    r->actor = 0;
+    r->a = p;
+    r->b = b;
+    r->steps = st;
+    r = hub_call (r, T_REFEREE);
+    g = r->result == 2 ? 0x7F : r->grade;
+    r->state = REQ_FREE;
+    return g;
+}
+
+/* ---- The market and entertaining (2026-11-02: DENIZENS.md's trading and entertaining; HOUSE.md's the market, for
+** review): actor k (the copy's, its kind's K; sw the UI's request, the goods found, the coins each side has) */
+
+/* Entertained (SW_ENTERTAIN: sung to, played or danced for, sw.order the skill said, PF_*): within earshot, by the
+** referee's performing skill (P_APPRAISE's past the crafts, NAP + the skill: the best of them unsaid), no tongue wanted,
+** at steps by its attitude and its kind's sway; a critical success two steps, a success one, a critical failure a step
+** back, as far as friendly (a song doesn't win an ally); a minute's work */
+static void __fastcall__ entertain (unsigned char k)
+{
+    signed char g;
+    unsigned char t = sw.was;
+
+    if (t >= AT_FRIENDLY) {
+        sw.result = SR_AS_FAR;
+        return;
+    }
+    g = sw.grade = words_test (k, P_APPRAISE, NAP + sw.order, (signed char) t - 3 + K.sway, 1);
+    sw.t = 600;
+    t = g == G_CS ? t + 2 : g == G_MS ? t + 1 : g == G_CF && t ? t - 1 : t;
+    hub_map (0);
+    HUB->actor[k].attitude = sw.now = t < AT_FRIENDLY ? t : AT_FRIENDLY;
+}
+
+/* A trade (SW_BUY, SW_SELL, SW_PRICE, SW_OFFER, SW_HAGGLE: sw.order 1, the character's thing sold): with one of its
+** mind (folk: not a beast, not the mindless), indifferent or better to the character; its price from the goods' worth
+** (sw.ix, farthings, its condition's: the UI's), by its attitude: it sells at five quarters of it indifferent, the
+** whole friendly, three quarters to an ally; it buys at two fifths, a half, three fifths (the book's: a seller "lucky
+** to receive half"); haggled, the book's Rhetoric in its tongue, at steps by its attitude, its kind's sway and its
+** mind (the cunning the harder), the price a quarter better at a critical success, a tenth at a success, as asked at a
+** failure, a critical failure an offence (a step back, no deal); rounded to the penny, a penny at least (sw.ix the
+** reply's).  A price asked within earshot; the deal within reach, the money there (the payer's pennies), then its
+** intents, the character's own way with things for every actor (the world's wfetch.c: the payer's coins or the goods
+** sold taken, FE_GIFT, kept; its own handed over, FE_GIVE) */
+static unsigned __fastcall__ pct (unsigned v, unsigned char q)   /* (v's q in a hundred, sixteen bits: no long
+                                                **   arithmetic, the main RAM's room) */
+{
+    return v < 500 ? v * q / 100 : v / 100 * q;
+}
+
+static void __fastcall__ trade (unsigned char k)
+{
+    unsigned char t = sw.was, h = sw.kind, sell = sw.order & 1, q;
+    signed char g;
+    unsigned p, n;
+
+    if (K.mind == M_BEAST) {
+        sw.result = SR_BEAST;
+        return;
+    }
+    if (t < AT_INDIFFERENT) {
+        sw.result = SR_WONT;
+        return;
+    }
+    if (!sw.item) {
+        sw.result = SR_NO_GOODS;
+        return;
+    }
+    p = pct (sw.ix, sell ? (t == AT_INDIFFERENT ? 40 : t == AT_FRIENDLY ? 50 : 60) :
+        (t == AT_INDIFFERENT ? 125 : t == AT_FRIENDLY ? 100 : 75));   /* (Farthings) */
+    sw.t = 20;
+    if (h == SW_HAGGLE) {
+        g = sw.grade = words_test (k, P_PERSUADE, 0, (signed char) t - 3 + K.sway + (K.mind == M_CUNNING ? -1 :
+            K.mind == M_LOW ? 1 : 0), 0);
+        if (g == 0x7F) {
+            sw.result = SR_TONGUE;
+            sw.grade = 0;
+            return;
+        }
+        sw.t = 300;
+        if (g == G_CF) {
+            sw.result = SR_SPURNED;
+            hub_map (0);
+            HUB->actor[k].attitude = sw.now = t - 1;
+            return;
+        }
+        q = g == G_CS ? 25 : g == G_MS ? 10 : 0;
+        p = pct (p, sell ? 100 + q : 100 - q);
+    }
+    n = (p + 2) >> 2;
+    sw.ix = n = n ? n : 1;
+    if (h == SW_PRICE || h == SW_OFFER) {
+        return;
+    }
+    if (dist > 1) {
+        sw.result = SR_FAR;
+        return;
+    }
+    if (sell ? SW_NITS (&sw) < n : SW_NCOIN (&sw) < n) {
+        sw.result = sell ? SR_BROKE : SR_POOR;
+        return;
+    }
+    im.a = FE_GIFT;                             /* (The payer's coins, or the goods sold: taken, kept) */
+    im.t = sell ? sw.item : SW_COIN (&sw);
+    im.w1 = sell ? sw.iy >> 8 : n;
+    im.w2 = 1;
+    im.x[0] = im.x[1] = 0xFF;
+    post (I_ROB, k + 1);
+    im.a = FE_GIVE;                             /* (Its own handed over: the goods bought, or its coins) */
+    im.t = sell ? SW_ITS (&sw) : sw.item;
+    im.w1 = sell ? n : sw.iy >> 8;
+    im.w2 = 1;
+    im.x[0] = im.x[1] = 0xFF;
+    post (I_ROB, k + 1);
+    settle ();
+}
 
 void __fastcall__ s_gift (unsigned char k)
 {
@@ -2734,6 +3167,18 @@ void __fastcall__ s_gift (unsigned char k)
 
     if (K.mind == M_MINDLESS) {
         sw.result = SR_MINDLESS;
+        return;
+    }
+    if (sw.kind > SW_GIVE) {                    /* (The market, entertaining: within earshot, 2026-11-02) */
+        if (sw.beast) {
+            sw.result = SR_BEAST;
+        } else if (dist > 12) {
+            sw.result = SR_FAR;
+        } else if (sw.kind == SW_ENTERTAIN) {
+            entertain (k);
+        } else {
+            trade (k);
+        }
         return;
     }
     if (dist > 1) {
@@ -2774,6 +3219,7 @@ void __fastcall__ s_gift (unsigned char k)
         im.a = FE_GIFT;                         /* (Taken: the world's to hand over, a count of a lot split off) */
         im.t = sw.item;
         im.w1 = sw.iy >> 8;
+        im.w2 = 0;
         im.x[0] = im.x[1] = 0xFF;
         post (I_ROB, k + 1);
         settle ();
@@ -2782,12 +3228,15 @@ void __fastcall__ s_gift (unsigned char k)
         }
         if (g >= 2) {
             hub_map (0);
-            s_regard (HUB->actor[k].faction, g - 1);
+            regard (HUB->actor[k].faction, g - 1);   /* (Part 5's, its stub: part 13's since 2026-11-02) */
         }
     }
     hub_map (0);
     HUB->actor[k].attitude = sw.now;
 }
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 
 #pragma code-name (pop)
@@ -2795,6 +3244,7 @@ void __fastcall__ s_gift (unsigned char k)
 
 /* Whether name n (an actor's, or a kind's) is meant by w (the parser's word, in lower case): the start of one of its
 ** words ("rat", "giant", "grub") */
+#pragma bss-name (push, "SW2RODATA")           /* (Its buffer the part's own: the main RAM's room, 2026-11-02) */
 static unsigned char __fastcall__ called (const char* n, const char* w)
 {
     static char b[12];
@@ -2811,6 +3261,7 @@ static unsigned char __fastcall__ called (const char* n, const char* w)
     }
     return 0;
 }
+#pragma bss-name (pop)
 
 /* The actor meant by w ("": any): the nearest of them on the character's stratum, on a square it sees or within four
 ** of it; its distance in dist.  The actor, or 0xFF */
@@ -2992,16 +3443,16 @@ static void __fastcall__ order (unsigned char k)
         sw.result = SR_NOT_ALLY;
         return;
     }
-    if (!sw.order || (sw.order == OR_FETCH && !sw.item)) {
+    if (!sw.order || (sw.order == OR_FETCH && !sw.item) || (sw.order >= OR_OPEN && (!sw.ix || q->body != BD_TWO))) {
         sw.result = SR_CANT;
         return;
     }
     sw.t = 20;
     if (sw.order == OR_FOLLOW) {
         akeep[k] = sw.ix < 8 ? sw.ix : 8;       /* (Its distance, if it's told one: slice 4.8's) */
-    } else if (sw.order == OR_FETCH) {
-        afetch[k] = sw.item;                    /* (A thing to fetch: the UI's, where it lay) */
-        afx[k] = sw.ix;
+    } else if (sw.order >= OR_FETCH) {
+        afetch[k] = sw.item;                    /* (A thing to fetch: the UI's, where it lay; a door's errand, its */
+        afx[k] = sw.ix;                         /*   square: 2026-11-02) */
         afy[k] = sw.iy;
     }
     if (sw.order == OR_HOME) {
@@ -3045,6 +3496,9 @@ void s_sway (void)
 
     hub_map (0);
     memcpy (&sw, &HUB->sway, sizeof sw);
+    if (sw.kind > SW_GIVE) {
+        n = sw.actor;                           /* (The market's: its actor found, plus 1, 2026-11-02) */
+    }
     sw.result = SR_OK;
     sw.grade = 0;
     sw.t = 0;
@@ -3056,17 +3510,20 @@ void s_sway (void)
             hub_map (0);
             q = &HUB->actor[k];
             if (q->name[0] && q->attitude == AT_ALLIED && q->sn == pcs && apart (q->x - pcx, q->y - pcy) <= 12 &&
-                q->doing != DO_DOWN && (!n || sw.order != OR_FETCH)) {   /* (A thing fetched by one: the first) */          /* (Not one lying senseless: it hears nothing) */
+                q->doing != DO_DOWN && (!n || sw.order < OR_FETCH)) {   /* (A thing fetched, a door seen to, by one: the first) */          /* (Not one lying senseless: it hears nothing) */
                 strcpy (sw.name, ++n == 1 ? q->name : "");
                 order (k);
                 rouse (k, 1 | ROUSE_SET);
             }
         }
         sw.result = n ? sw.result : SR_NONE;
-    } else if ((k = meant (sw.word)) == 0xFF) {
+    } else if ((k = n ? n - 1 : meant (sw.word)) == 0xFF) {   /* (The market's: the one the goods were found on) */
         sw.result = SR_NONE;
     } else {
         q = &HUB->actor[k];
+        if (n) {
+            dist = apart (q->x - pcx, q->y - pcy);
+        }
         strcpy (sw.name, q->name);
         sw.was = sw.now = q->attitude;
         kind_get (akind[k]);
@@ -3084,11 +3541,12 @@ void s_sway (void)
         case SW_ORDER:
             order (k);
             break;
-        case SW_GIVE:
-            gift (k);
-            break;
         default:
-            influence (k);
+            if (sw.kind >= SW_GIVE) {
+                gift (k);                       /* (A gift; the market, entertaining: part 13's, 2026-11-02) */
+            } else {
+                influence (k);
+            }
             break;
         }
         rouse (k, 1 | ROUSE_SET);               /* (It sees to what's changed at once) */
@@ -3102,7 +3560,7 @@ void s_sway (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1 ... OV5, as make.js packs
+/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1 ... OV6, as make.js packs
 ** them, ../dq0/ovlpack.js: each bank packed, read and unpacked in place by the unpack library, the linker's fill ($FF)
 ** put back after its bytes: ../dq0/ovunpack.inc): 0, or -1 */
 unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
@@ -3113,11 +3571,11 @@ static int __fastcall__ ovl_load (const char* dir)
 
     strcpy ((char*) b, dir);
     strcat ((char*) b, "/dq0d.ovl");
-    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (5)) < 0) {
+    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (6)) < 0) {
         return -1;
     }
     ovbank[0] = n;                              /* (The rest after it: ovl_unpack's) */
-    n = ovl_unpack (fd | (5 << 8));
+    n = ovl_unpack (fd | (6 << 8));
     close (fd);
     return -n;
 }
@@ -4265,9 +4723,7 @@ static unsigned smins;                          /* (sched's: the minutes till wh
 static unsigned long snow;                      /* (sched's: the clock it last reckoned the day's minute at, m0, and
                                                 **   the day's number, dday) */
 static unsigned m0, dday;
-static unsigned rhx, rhy, tx, ty;               /* (room_at's: the home whose chunk it looks in, the square found) */
-static unsigned char dsn;
-static unsigned char pway[NACTORS];             /* (Each one's room on its rounds, the next it walks to: its lair's
+static unsigned char pway[NACTORS];            /* (Each one's room on its rounds, the next it walks to: its lair's
                                                 **   chunk's rooms in turn) */
 #define TALK_LOUD       3                       /* (Those on watch talking as they go: heard as a squeak is) */
 #define SNORE_LOUD      2
@@ -4306,7 +4762,7 @@ unsigned char __fastcall__ s_sched (unsigned char k, unsigned id)
     m = (m0 + 1440 - (id * 13 & 31)) % 1440;
     smins = 240;
     if (X.day == DY_ALWAYS) {
-        return X.work != 0xFF ? SC_WORK : SC_ABOUT;
+        return X.work != 0xFF || ((K.styles & (K_DIGS | K_MINES)) && (id & 1)) ? SC_WORK : SC_ABOUT;
     }
     if (X.day == DY_WATCHES) {                  /* (Its third: id's, on watch the watches of its own, 0-4 and 12-16
                                                 **   o'clock the first's, asleep the next, about the next) */
@@ -4347,7 +4803,7 @@ unsigned char __fastcall__ s_sched (unsigned char k, unsigned id)
         }
     }
     smins = p - t;
-    return X.work != 0xFF ? SC_WORK : SC_ABOUT;
+    return X.work != 0xFF || ((K.styles & (K_DIGS | K_MINES)) && (id & 1)) ? SC_WORK : SC_ABOUT;
 }
 
 /* The pastime of denizen D (number id; its kind's ways X) at its leisure today: one of its kind's (X.past), by its
@@ -4428,12 +4884,28 @@ static unsigned char __fastcall__ room_at (unsigned char u, unsigned char j, uns
 ** guardroom, barracks or quarters, the first it has; else its home); else its home.  0 if there's no such room (work,
 ** rounds: about instead) */
 static const unsigned char gather[4] = { U_HALL, U_GUARDROOM, U_BARRACKS, U_QUARTERS };
+static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigned y);   /* (Below) */
 static unsigned char __fastcall__ target (unsigned char s, unsigned char j, unsigned char v)
 {
     tx = rhx;
     ty = rhy;
-    if (s == SC_WORK) {
-        return room_at (X.work, 0, v);
+    if (s == SC_WORK) {                         /* (A digger's work its lair's dig, if it has one to go on with: its
+                                                **   face's, part 12's, j the actor or NACTORS, a record, its home's
+                                                **   chunk made; else its work's room) */
+        if (K.styles & (K_DIGS | K_MINES)) {
+            hy_bank (pb);
+            s = POP->nowork[D.lid & 31];
+            hub_map (0);
+            if (s != (unsigned char) (NOW_U + 1) && made_at (dsn, rhx, rhy)) {
+                if (work_dig (0x40 | j) != 0xFF) {
+                    return 1;
+                }
+                hy_bank (pb);
+                POP->nowork[D.lid & 31] = NOW_U + 1;
+                hub_map (0);
+            }
+        }
+        return X.work != 0xFF && room_at (X.work, 0, v);
     }
     if (s == SC_WATCH) {
         return room_at (0xFF, j, 0xFF);
@@ -4461,7 +4933,7 @@ unsigned char __fastcall__ s_plan (unsigned char k)
         dsn = a.sn;
         rhx = ahx[k];
         rhy = ahy[k];
-        if (!s || target (s, pway[k], D.id)) {
+        if (!s || target (s, s == SC_WORK ? k : pway[k], D.id)) {
             aday[k] += (unsigned) ((unsigned long) smins * 600 >> 8) - 4;
         } else {
             s = SC_ABOUT;
@@ -4583,7 +5055,7 @@ unsigned char __fastcall__ s_wander (unsigned char lim)
     dsn = D.sn;
     rhx = tx = D.hx;
     rhy = ty = D.hy;
-    if (!target (s, (unsigned) (now >> 11) + D.id, D.id)) {
+    if (!target (s, s == SC_WORK ? NACTORS : (unsigned) (now >> 11) + D.id, D.id)) {
         s = SC_ABOUT;                           /* (No such room made: about) */
     }
     x = tx;
@@ -4619,6 +5091,10 @@ unsigned char __fastcall__ s_wander (unsigned char lim)
     x = pcrest ? 10 * ROAM_T : ROAM_T;          /* (The character resting: ten times the while, the long durations'
                                                 **   coarser ticks) */
     D.ready = now + (s == SC_SLEEP || s == SC_MEAL || s >= SC_LEISURE ? (unsigned long) smins * 600 : x + random (x));
+    if (s == SC_WORK && (K.styles & (K_DIGS | K_MINES)) && work_dig (0x80 | NACTORS) != 0xFF) {
+        D.ready = now + SPELL;                  /* (At its lair's dig's face: a spell of it, the world's, coarse:
+                                                **   part 12's) */
+    }
     return n;
 }
 
@@ -4649,6 +5125,10 @@ unsigned char __fastcall__ s_daily (unsigned char k)
         drunk[k] = (unsigned) (now >> 8);
     }
     a.doing = s + DO_SLEEP - SC_SLEEP;
+    if (s == SC_WORK && (K.styles & (K_DIGS | K_MINES)) && (d = work_dig (0x80 | k)) != 0xFF) {
+        return d;                               /* (At its lair's dig: a spell at its face, or a step to it: part
+                                                **   12's) */
+    }
     d = 0xFF;
     if (apart (a.x - atx[k], a.y - aty[k]) > 1 + (s >= SC_WORK && s != SC_WATCH)) {
         if (s != SC_WATCH) {
