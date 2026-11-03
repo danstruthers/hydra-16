@@ -25,7 +25,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
-OVBANKS     = 24                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
+OVBANKS     = 25                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
             .bss
 _ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
@@ -164,7 +164,7 @@ go:
             SWPART      67, 20              ; The character's shot, the denizens' shots and throws (wshoot.c)
             SWPART      68, 20              ; Where a missile falls, a miss's stray; a launcher loaded (wshoot.c)
             SWPART      69, 5               ; A robbery (wfight.c's: part 67's room, overlay 5's, 2026-10-30; 12's room, 2026-11-02)
-            SWPART      70, 22              ; Wounds over time: the bodies' time told, a thing used up (wtend.c; overlay 21's room, slice 4.4)
+            SWPART      70, 25              ; Wounds over time: the bodies' time told, a thing used up (wtend.c; overlay 21's room, slice 4.4)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
             SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
@@ -177,7 +177,7 @@ go:
             SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
             SWPART      80, 24              ; One path: a denizen's doors, the doors' keys (wport.c: Phase 3C's)
             SWPART      81, 2               ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
-            SWPART      82, 4               ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
+            SWPART      82, 25              ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
 
             SWFN        work, 48
             SWFN        worked, 48

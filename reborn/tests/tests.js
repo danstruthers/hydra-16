@@ -4094,11 +4094,11 @@ module.exports = {
         if (!/You'd need a hammer to drive the chisel./.test(s)) f.push('no chisel\'s words');
         dq0Need(f, d4, 'E_DIG', { how: 'D_BEGUN' }, 'the seeming wall not dug at');
         dq0Need(f, d4, 'E_DIG', { how: 'D_FOUND' }, 'the hidden door not found by the pick');
-        if (!/Your pick strikes [a-z ,-]*: there's a door behind the facing/.test(s)) f.push('no door found told');
+        if (!/Your pick strikes [a-z ,-]*: a door, behind the facing/.test(s)) f.push('no door found told');
         const rec = T.of('quit', d5.k).at && T.of('quit', d5.k).at.changes.find(c => c.what === 'PORTAL_STATE' && c.x === m.door[3].x && c.y === m.door[3].y);
         if (!rec || rec.tile & 0x20) f.push('the door still hidden after: ' + JSON.stringify(rec));
         dq0Need(f, d5, 'E_DIG', { how: 'D_PORTAL' }, 'a door in sight not told so');
-        if (!/That's a door: it wants opening/.test(s)) f.push('no door\'s words');
+        if (!/That's a door: open it/.test(s)) f.push('no door\'s words');
         if (!dq0Ev(d6, 'E_DIG', { how: h => h === 'D_GOOD' || h === 'D_POOR' || h === 'D_SLIP' || h === 'D_THROUGH' }).length) f.push('a hammer and chisel not at work on the wall: ' + dq0Evs(d6));
         if (dq0Ev(d7, 'E_DIG', { how: 'D_FOUND' }).length) f.push('a door hidden by magic found by digging');
         if (!/This isn't getting anywhere/.test(s)) f.push('nothing told after two spells with nothing to show');

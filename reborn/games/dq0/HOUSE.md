@@ -162,25 +162,25 @@ referee's room, 2026-11-02; back as the kinds come.)
 
 - **A chisel and a hammer** *(the house's, 2026-11-02, for review)*: a chisel works stone, masonry and flags slowly,
   a Mining test each spell as a pick's; it takes a hammer in the other hand (carried, the referee's table asks): none,
-  it's no tool ("You'd need a hammer to drive the chisel."); an arm useless, the same ("It takes both hands to drive a
-  chisel with a hammer.").  A pick to hand is the better tool and is taken.  A marginal failure with one makes nothing
+  it's no tool ("You'd need a hammer to drive the chisel."); an arm useless, the same ("A chisel and a
+  hammer take both hands.").  A pick to hand is the better tool and is taken.  A marginal failure with one makes nothing
   (half of its half a foot), so a poor miner's chisel soon comes to the question below.  The denizens' tools stay a
   pick and a shovel.
 - **Told why** *(the house's, 2026-11-02, for review; the user's playtest, DECISIONS.md)*: a dig nothing it carries bites
   into is told at once, no spell spent, by what it can judge: its hands ("You need better tools: your hands make no
-  mark on the stone."), a blade ("Your dagger only scratches at the masonry: this isn't getting anywhere."), a shovel
-  ("Your shovel only skids off the stone: that wants a pick."), a chisel alone.  A try that's slow says so with its feet
+  mark on the stone."), a blade ("Your dagger only scratches at the masonry: this isn't getting anywhere."), a shovel the same,
+  a chisel alone.  A try that's slow says so with its feet
   to go, each spell, as ever.  **Two spells running with nothing to show** (a poor digger's failures): asked, soft ("This
   isn't getting anywhere.  Keep at it?"), once a dig, as a long task's question; yes goes on.  (Each actor's rule stays the
   character's; only the character is told words: a denizen gives up as before.)
-- **What isn't there to dig** *(the house's, 2026-11-02, for review)*: a door in sight ("That's a door: it wants opening
-  or breaking down, not digging."), a window or a slit ("That's a window: ..."), a portcullis, a gate, a grate ("Those are
-  iron bars ..."), no time spent; open floor as before ("There's nothing there to dig ...").  A wall beside a door is a wall.
+- **What isn't there to dig** *(the house's, 2026-11-02, for review)*: a door in sight ("That's a door: open it,
+  or break it down."), a window or a slit ("That's a window: there's no digging it."), a portcullis, a gate, a grate ("Those are
+  iron bars: they won't dig."), no time spent; open floor as before ("There's nothing there to dig ...").  A wall beside a door is a wall.
 - **A hidden door** *(the house's, 2026-11-02, for review; the user's playtest)*: it's dug at as the wall it seems, by its
   wall's stuff and two feet told, with the same refusal if nothing bites: nothing about the dig shows it till the tool's
   at it.  As the tool comes through the facing (half a foot for a wooden door, a foot for an iron-bound one, two for
   iron or stone) it's found, a find as a search's, the door still whole, its lock as it was ("Your pick strikes wood:
-  there's a door behind the facing."); the dig stops there.  The chunk's change record the door's own state.  One hidden
+  a door, behind the facing."); the dig stops there.  The chunk's change record the door's own state.  One hidden
   by magic turns any tool: no mark, no door told, and the question after two spells (found only by magical means, as
   a search's).  "examine the wall" takes it for a wall too.  (There's no other hidden thing in the walls: a secret panel
   is a hidden door; portcullises and windows are never hidden.)

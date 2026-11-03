@@ -74,7 +74,7 @@ unsigned char hard;                             /* (Hard mode: dq0 -H's, the sav
 const char* savedir;                            /* (dq0 -d: the save's folder; task.c's meta too) */
 unsigned char __fastcall__ things (unsigned char op, const char* name);   /* (way.c's too, part 6's) */
 void gear_look (void);                          /* (Part 11: a denizen's things made out) */
-static void to_hand (void);
+void to_hand (void);
 void __fastcall__ came (const struct msg* m);    /* (Part 6's: come into a stratum, told and kept) */
 void __fastcall__ news (const struct msg* m);    /* (Part 11's: the rarer news, worded; a thing hidden; the hands' and
                                                 **   limbs': slice 4.1b's) */
@@ -1690,7 +1690,7 @@ unsigned char __fastcall__ othings (unsigned char op, const char* name, const ch
 
 /* What's to hand, told the referee (the keys of the tools it carries: a skill used takes the tool that suits), and
 ** the load it carries (the things' weight, all told: the referee's encumbrance, in its summary) */
-static void to_hand (void)
+void to_hand (void)
 {
     things (IO_TOOLS, "");
     strcpy (HUB->slot[SLOT_UI].text, tt ());
@@ -1714,31 +1714,8 @@ void __fastcall__ s_dig_used (unsigned bk)
     const char* r;
     unsigned char n = bk & 3, i = (unsigned char) bk >> 4, g = bk >> 8 == D_GOOD;
 
-    if (bk >> 8 == D_NO_TOOL) {                 /* (Told why, for what it can judge: HOUSE.md's, 2026-11-02; bk what it's
-                                                **   into, MAT_* + 1) */
-        to_hand ();                             /* (What it carries: the tools' list, fresh) */
-        hub_map (UI_BANK);
-        strncpy (lb + 200, UIREC->things_text, 180);
-        hub_map (0);
-        lb[380] = 0;
-        n = (unsigned char) bk - 1;
-        r = n == MAT_EARTH ? "hard-packed earth" : n == MAT_MASONRY ? "masonry" : n == MAT_FLAGS ? "flagstones" :
-            n == MAT_SOIL ? "earth" : "stone";
-        strcpy (lb + 180, r);
-        r = strstr (lb + 200, "shovel") ? "shovel" : strstr (lb + 200, "blade") ? "blade" : strstr (lb + 200, "dagger") ?
-            "dagger" : strstr (lb + 200, "knife") ? "knife" : "";
-        if (n != MAT_EARTH && n != MAT_SOIL && strstr (lb + 200, "chisel")) {
-            msg (strstr (lb + 200, "hammer") ? "It takes both hands to drive a chisel with a hammer." :
-                "You'd need a hammer to drive the chisel.");
-        } else if (*r == 's') {
-            sayf ("\nYour shovel only skids off the %s: that wants a pick.", lb + 180);
-        } else if (*r) {
-            strcpy (lb + 200, r);
-            sayf ("\nYour %s only scratches at the %s: this isn't getting anywhere.", lb + 200, lb + 180);
-        } else {
-            sayf ("\nYou need better tools: your hands make no mark on the %s.", lb + 180);
-        }
-        return;
+    if (bk >> 8 == D_NO_TOOL) {
+        return;                                 /* (Why told by what it carries: dig_words's) */
     }
     HUB->ireq.to = HUB->dig_wear[n];
     things (IO_WEAR, HUB->dig_tool[n]);

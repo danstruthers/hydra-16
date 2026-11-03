@@ -2749,7 +2749,6 @@ static unsigned char __fastcall__ dig_rock (unsigned h)
 ** 0xFF: nothing it has can dig that); the rock (rk), and the next event's b: the tool's and its wear's place (the
 ** low two bits), the rock's kind times 16, and 8 if it's other than the half-foot's before (a shaft come down to the
 ** rock, or into another bed of it) */
-static unsigned char dign;
 static signed char test_dig (void)
 {
     struct req* r;
@@ -2773,7 +2772,7 @@ static signed char test_dig (void)
                                                 **   rock's kinds and hardness) */
         made = (unsigned char) ((unsigned char) (made * rk_quarters[rk_hard[rk]] + 3) >> 2);
     }
-    evb = ++dign & 3;                           /* (Its tool and its wear, for the next event: E_DIG's) */
+    evb = dig.done & 3;                           /* (Its tool and its wear, for the next event: E_DIG's) */
     strncpy (HUB->dig_tool[evb], r->text, sizeof HUB->dig_tool[0] - 1);
     HUB->dig_wear[evb] = r->w2;
     evb |= rk << 4 | n;
