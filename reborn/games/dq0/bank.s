@@ -18,7 +18,7 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 OVMAX       = 17                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
-SWDEPTH     = 15                    ; Swapped parts' calls in calls, at most (15 since 2026-11-02: overlay 17's byte; a few deep at most)
+SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
 
             .bss
 _ovbank:    .res        OVMAX       ; Overlay n's bank: _ovbank[n - 1] (main.c's ovl_load sets them)

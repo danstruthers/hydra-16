@@ -2056,8 +2056,8 @@ const DQ0_REPEATS = [
     why: 'a fight\'s rounds, each blow told as it falls (attack: the rounds till it ends, the same words some of them; in the dark "Something", unseen: dq0traces\' rats)' },
   { what: /^(?:You get to your feet|You fall|You hear something fall|The [a-z ]+ (?:gets to its feet|scrambles to its feet|coils itself up again|rights itself|flutters up again|rises again|falls|goes down|is thrown down|is flipped onto its back|drops to the floor|sinks to the floor))\.$/,
     why: 'a fight\'s falls and risings, each fall told as it falls and each rise as it gets up (a long fight: a creature down twice, a stumble\'s, a leg\'s wound\'s, up each time; dq0missile\'s rat; every fall told since 2026-10-30)' },
-  { what: /^The [a-z ]+ scrabbles, but can't get up\.$/,
-    why: 'a fight\'s rounds with a creature down, each try to rise told as it fails (dq0missile\'s rat, its dice by who asks, 2026-10-30)' },
+  { what: /^The [a-z ]+ (?:struggles|scrabbles|writhes|flails its legs|flaps|wavers), but can't (?:get up|right itself|rise)\.$/,
+    why: 'creatures down: each told once as it lies there (2026-11-02), so only two of a name in one answer, or one wounded between (dq0downonce holds it to that)' },
   { what: /^You turn to (?:something|the [a-z ]+)\.$/,
     why: 'a fight\'s turns to a foe, each told as it turns (fighting on: struck from another side again and again; in the dark "something": dq0scent\'s rats, their dice by who asks, 2026-10-30)' },
   { what: /^You hear /, why: 'a sound heard each time it\'s made (main.c\'s heard: half a minute apart the same way, five seconds any; a search\'s or a wait\'s minute hears several)' },
@@ -2074,8 +2074,8 @@ const DQ0_REPEATS = [
     why: 'a battering\'s beat every fourth blow once its blows tell (the user\'s, 2026-10-22: told as it goes), twice or more in a dozen' },
   { what: /^Everything goes black\.$/, tests: /^dq0(?:finished|strike|helpless|venom|morale)$/,
     why: 'knocked senseless, come round in shock a round later, struck senseless again, all in one wait\'s answer (the UI waiting it out): two black-outs, each told (dq0strike\'s rats, fought with a bar, three; dq0morale\'s small orcs, a knife in the hand of each)' },
-  { what: /^(?:You struggle|The .+ struggles), but can't get up\.$/,
-    why: 'a fall\'s Rise tried each round and failed (the book\'s test for one seriously or grievously wounded, slice 4.1b\'s), each try told' },
+  { what: /^You struggle, but can't get up\.$/,
+    why: 'the character\'s own Rise tried each round and failed (the book\'s test for one seriously or grievously wounded, slice 4.1b\'s), each try told' },
   { what: /^(?:The passage (?:forks here|ends here; it goes back behind you|comes to a door; it goes back behind you)|You are in a passage|It goes .+)\.$/,
     tests: /^dq0travel$/,
     why: 'a journey\'s legs (slice 4.2\'s travel), each place it comes to told whole as it gets there (the UI\'s told begun again each leg, a look of its own): one fork or stretch of passage much like another in words' },
@@ -5298,13 +5298,13 @@ module.exports = {
     {
       name: 'dq0trade', outfit: true, near: ['denizens', 'money'], what: "Dingus Quest Zero's market and entertaining (2026-11-02: DENIZENS.md's trading, HOUSE.md's the market, for review), by the denizens' sway, the things changing hands and the words: a hand-written theme's bandits (seed 1, dq0kit's), one put beside the character, friendly, at each command (dq0Poke's); given 2 pennies without a \"to\" (\"give the bandit 2 pennies\": the one given it the line's first word, SW_GIVE, taken); what it would give for the flask of oil asked (SW_OFFER, half its worth friendly: 'would give you 1 penny'); the oil sold to it (SW_SELL: it takes the oil, FT_GOT, and hands over its pennies, FT_GAVE, by the character's own way with things, the world's wfetch.c; the character's flask gone, its pennies one more); its price asked back (SW_PRICE: 'asks'), named Bob and bought back from it (SW_BUY, by the name given: the character's pennies taken, the oil handed over, the flask the character's again); haggled over (SW_HAGGLE, the book's Rhetoric in its tongue: agreed, or an offence); sung to (SW_ENTERTAIN: Singing, the referee's; pleased, unmoved, or friendly already)",
       init: 't_rc', cycles: 2500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
-        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
-        'inventory', 'give the bandit 2 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'inventory', 'how much for the oil',
-        'name the bandit bob', 'buy the oil from bob', 'inventory', 'haggle for the oil', 'sing to bob', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml rhe 95 >> /ram/c.hm', 'echo wealth 6000 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k rope',
+        'inventory', 'give the bandit 8 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'inventory', 'how much for the oil',
+        'name the bandit bob', 'buy the oil from bob', 'inventory', 'sell the rope to bob', 'how much for the rope', 'inventory', 'haggle for the rope', 'inventory', 'sing to bob', 'quit', 'echo $status']) },
       start(m) {
-        dq0Poke(m, ['inventory', 'give the bandit 2 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'how much for the oil', 'name the bandit bob'].map(line => ({ g: 1, line, n: 1, name: 'bandit', set: { attitude: 4, doing: 0 }, beside: 4 }))
-          .concat(['buy the oil from bob', 'haggle for the oil', 'sing to bob'].map(line => ({ g: 1, line, n: 1, name: 'Bob', set: { attitude: line[0] === 's' ? 3 : 4, doing: 0 }, beside: 4 }))));
+        dq0Poke(m, ['inventory', 'give the bandit 8 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'how much for the oil', 'name the bandit bob'].map(line => ({ g: 1, line, n: 1, name: 'bandit', set: { attitude: 4, doing: 0 }, beside: 4 }))
+          .concat(['buy the oil from bob', 'sell the rope to bob', 'how much for the rope', 'haggle for the rope', 'sing to bob'].map(line => ({ g: 1, line, n: 1, name: 'Bob', set: { attitude: line[1] === 'i' ? 3 : 4, doing: 0 }, beside: 4 }))));
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -5314,7 +5314,7 @@ module.exports = {
         const pennies = st => dq0Carried(st).filter(i => i.name === 'pennies').reduce((n, i) => n + i.qty, 0);
         const i0 = T.of('inventory');
         if (!i0 || !i0.after || !oil(i0.after)) return ['no flask of oil to trade at the start'];
-        const g = sw('give the bandit 2 pennies', { kind: 'SW_GIVE', result: 'SR_OK' }, 'the pennies not given without "to"');
+        const g = sw('give the bandit 8 pennies', { kind: 'SW_GIVE', result: 'SR_OK' }, 'the pennies not given without "to"');
         if (g && !dq0Ev(g, 'E_TASK', { te: 'TE_FETCHED', ft: 'FT_GOT' }).length) f.push('the gift not taken (' + dq0Evs(g) + ')');
         sw('what will you give for the oil', { kind: 'SW_OFFER', result: 'SR_OK' }, 'no offer for the oil');
         if (!/The bandit would give you \d+ penn(y|ies) for your oil\./.test(s)) f.push('the offer not told');
@@ -5323,17 +5323,25 @@ module.exports = {
         if (se && (!evs(se).includes('FT_GOT') || !evs(se).includes('FT_GAVE'))) f.push('the sale\'s things not changing hands: ' + JSON.stringify(evs(se)));
         const i1 = T.after(se, 'inventory');
         if (!i1 || !i1.after || oil(i1.after) !== oil(i0.after) - 1) f.push('the oil still the character\'s after the sale');
-        if (i1 && i1.after && pennies(i1.after) <= pennies(i0.after) - 5) f.push('no pennies for the oil: ' + pennies(i1.after));
+        if (i1 && i1.after && pennies(i1.after) <= pennies(i0.after) - 8) f.push('no pennies for the oil: ' + pennies(i1.after));
         sw('how much for the oil', { kind: 'SW_PRICE', result: 'SR_OK' }, 'no price asked for the oil');
         if (!/The bandit asks \d+ penn(y|ies) for the oil\./.test(s)) f.push('the price not told');
         const b = sw('buy the oil from bob', { kind: 'SW_BUY', result: 'SR_OK' }, 'the oil not bought back (from one by the name it was given)');
         if (b && (!evs(b).includes('FT_GOT') || !evs(b).includes('FT_GAVE'))) f.push('the purchase\'s things not changing hands: ' + JSON.stringify(evs(b)));
         const i2 = T.after(b, 'inventory');
         if (!i2 || !i2.after || oil(i2.after) !== oil(i0.after)) f.push('the oil not the character\'s again');
-        sw('haggle for the oil', { kind: 'SW_HAGGLE', result: r => r === 'SR_OK' || r === 'SR_SPURNED' }, 'not haggled over');
+        // (A haggle's price, Rhetoric 95: the rope sold it, its price asked, haggled down; the money paid the price agreed)
+        sw('sell the rope to bob', { kind: 'SW_SELL', result: 'SR_OK' }, 'the rope not sold');
+        const h = sw('haggle for the rope', { kind: 'SW_HAGGLE', result: 'SR_OK', grade: v => v > 0 }, 'not haggled down');
+        const ask = /Bob asks (\d+) penn(?:y|ies) for the rope\./.exec(s), got = /Bob (?:gives way|gives a little), and agrees: (\d+) penn(?:y|ies) for the rope\./.exec(s);
+        if (!ask || !got || +got[1] >= +ask[1]) f.push('the haggled price not under the price asked: ' + (ask && ask[1]) + ', ' + (got && got[1]));
+        const before = T.after(T.of('how much for the rope'), 'inventory'), after = T.after(h, 'inventory');
+        if (got && before && after && before.after && after.after && pennies(before.after) - pennies(after.after) !== +got[1])
+          f.push('not the haggled price paid: ' + pennies(before.after) + ' then ' + pennies(after.after) + ', agreed ' + got[1]);
+        if (after && after.after && !dq0Carried(after.after).some(i => i.name === 'rope')) f.push('the rope not bought back');
         sw('sing to bob', { kind: 'SW_ENTERTAIN', result: 'SR_OK' }, 'not sung to');   // (Indifferent: the referee's Singing tested)
         if (!/You sing for Bob\. (It's delighted|It's pleased|It's bored|It isn't moved)/.test(s)) f.push('the song not told');
-        if (f.length) f.push(s.slice(s.indexOf('> give the bandit'), s.indexOf('> give the bandit') + 2500));
+        if (f.length) f.push(s.slice(s.indexOf('> buy the oil'), s.indexOf('> buy the oil') + 2500));
         return f;
       },
       sdcard: true
@@ -5370,7 +5378,8 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
         'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k antidote,remedy', 'stow the antidote', 'open the door', 'south', 'inventory', 'drink the remedy', 'quit',
-        'dq0 -r null -p t -s 1 -T -k antidote', 'drink the antidote', 'quit', 'echo $status']) },
+        'dq0 -r null -p t -s 1 -T -k antidote', 'drink the antidote', 'quit',
+        'hmchar -q -s 5 -u feudal -c hunter -o /ram/d.hm', 'echo body 0 0 0 0 0 4 6 0 0 0 0 >> /ram/d.hm', 'dq0 -p t -s 1 -c /ram/d.hm -T -k remedy,remedy', 'status', 'drink the remedy', 'drink the remedy', 'status', 'quit', 'echo $status']) },
       start(m) {
         dq0OnWords(m, [{ g: 1, line: 'south', n: 1, words: "there's venom in it.", text: 'drink the antidote\r' }]);
       },
@@ -5382,9 +5391,41 @@ module.exports = {
         if (i >= 0 && !/The remedy works|The remedy eases you/.test(g.slice(i, i + 600))) f.push('the antidote did nothing: ' + JSON.stringify(g.slice(i, i + 600)));
         if (!/You drink the remedy\. It does nothing for you/.test(g)) f.push('the remedy, nothing to treat: ' + JSON.stringify(g.slice(g.indexOf('> drink the remedy'), g.indexOf('> drink the remedy') + 300)));
         if (!/You drink the antidote\. It does nothing for you/.test(n)) f.push('the null referee: ' + JSON.stringify(n.slice(0, 400)));
+        // (A disease cured: the flux shown, H4, in the character's file's body line; each remedy a point the better)
+        const z = s.slice(s.indexOf('-k remedy,remedy')), z1 = z.indexOf('> drink the remedy'), z2 = z.lastIndexOf('> status');
+        if (!/feverish/.test(z.slice(0, z1))) f.push('the disease not on it: ' + JSON.stringify(z.slice(0, 500)));
+        if (!/You drink the remedy\. The remedy eases the fever a little\./.test(z)) f.push('the first remedy not easing the fever: ' + JSON.stringify(z.slice(z1, z1 + 400)));
+        if (!/You drink the remedy\. The remedy works: the sickness leaves you\./.test(z)) f.push('the second remedy not curing it: ' + JSON.stringify(z.slice(z1, z1 + 400)));
+        if (/feverish/.test(z.slice(z2))) f.push('still feverish after: ' + JSON.stringify(z.slice(z2, z2 + 300)));
         const inv = T.of('inventory');
         if (inv && inv.after && dq0Carried(inv.after).some(j => j.name === 'antidote')) f.push('the antidote still carried');
         if (f.length) f.push(g.slice(g.indexOf('> open the door'), g.indexOf('> open the door') + 2500));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0downonce', near: ['fight'], what: "Dingus Quest Zero's creature down, its failed tries to rise told once (2026-11-02, the lead's, a fault found in dq0antidote's scene: \"The cave adder writhes, but can't right itself.\" four times in one answer): dq0venom's hostile cave adders (seed 1, the character tough), the character walking in among them and waiting beside them; a creature that fails its Rise (the referee's O_RISE, its round spent as ever) told at its first failure (E_BEAT WB_NOT_UP), not again till something changes: it rises, falls again or is wounded",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k antidote,remedy', 'stow the antidote', 'open the door', 'south', 'drop the torch', 'south', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), told = {};
+        let tries = 0;
+        for (const t of T) for (const e of t.events.concat(t.dens).sort((a, b) => a.t - b.t)) {
+          if (e.kind === 'E_FIGHT') told[e.def] = 0;   // (A blow at it: its wound changes it)
+          if (e.kind !== 'E_BEAT' || !e.b) continue;
+          if (e.beat === 'WB_RISEN' || e.beat === 'WB_FALLEN') told[e.b] = 0;
+          if (e.beat === 'WB_NOT_UP') {
+            ++tries;
+            if (told[e.b]) f.push('actor ' + e.b + ' told failing to rise again with nothing changed, at ' + e.t);
+            told[e.b] = 1;
+          }
+        }
+        if (!tries || !/writhes, but can't right itself\./.test(s)) f.push('no adder failed to rise: the scene not set');
+        this.notes = [tries + ' failed rises told'];
         return f;
       },
       sdcard: true

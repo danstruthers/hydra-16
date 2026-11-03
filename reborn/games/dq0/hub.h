@@ -978,6 +978,8 @@ struct actor {
     unsigned char   move;                       /* How its legs move it (rs.h's C_MOVE bits, the referee's, down 12: 1
                                                 **   lame, half its pace; 2 crawling or hopping, a third; 4 stuck: slice
                                                 **   4.1b's) */
+#define BM_NOT_UP       0x80                    /* (Its move's: down, a failed try to rise told: not again till it
+                                                **   rises, falls or is wounded, the world's wfight.c, 2026-11-02) */
     unsigned char   arm;                        /* Its weapon let fall, its kind (0 none), */
     unsigned        dropped;                    /*   and where it lies (an item: to take up again) */
     unsigned        x, y;                       /* (These, its doing and its name as struct sight's den: copied whole) */
