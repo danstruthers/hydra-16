@@ -749,6 +749,7 @@ free 20: sling@belt, pouch@belt, sling stones@in 10-20
 free 50: heap of straw@bed
 free 25: pennies@stash 1d6 | farthings@stash 1d6 | talisman@stash
 free 50: pouch@belt
+free: pick@belt
 [role koblord] free make 2 3
 free: axe@hand *60 | falchion@hand *15 | shortsword@hand *10 | battleaxe@hand *15
 free: hide jerkin@worn

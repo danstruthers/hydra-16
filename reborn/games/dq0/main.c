@@ -2808,13 +2808,14 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 #pragma rodata-name (push, "SW14RODATA")
 static void __fastcall__ door_words (unsigned char a)
 {
-    static const char* const said[DE_BREAKS + 1 - DE_OPENS] = {
+    static const char* const said[DE_WALLS + 1 - DE_OPENS] = {
         "opens the door\0a door opening", "shuts the door\0a door shutting", "slams the door shut\0a door slamming",
         "unlocks the door\0a key in a lock", "locks the door\0a key in a lock",
         "drops a bar across the door\0a bar dropping", "lifts the door's bar\0a bar scraping",
         "strains at the door\0a door creaking", "bursts the door open\0a door bursting",
         "can't force the door\0a door creaking", "batters at the door\0blows on a door",
-        "breaks the door down\0a door crashing in"
+        "breaks the door down\0a door crashing in", "is showered with rock from the roof\0rock falling",
+        "hangs a new door\0hammering", "walls up the way\0stones being laid"
     };
     const char* s = said[a - DE_OPENS];
 

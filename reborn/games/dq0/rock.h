@@ -37,14 +37,20 @@ unsigned char __fastcall__ rock_kind (unsigned seed, int depth, unsigned x, unsi
 /* The beds' rock there alone (rock_kind's, but a region's veins, dykes and bosses: the maker's, poor rock's, ROCK_BED
 ** for it alone) */
 unsigned char __fastcall__ rock_bed (unsigned seed, int depth, unsigned x, unsigned y);
+/* The vein across the region of square x, y (a seam of ore or quartz: not a dyke), where it crosses row y: its kind
+** (RK_QUARTZ, RK_IRONSTONE, RK_COPPER), its middle there (rk_vx, the frame's square: rock_kind's vein is the row's
+** squares rk_vx - |rk_vw| to rk_vx + |rk_vw|) and the squares its middle moves across a row down (rk_vw, -4 to 3);
+** RK_NONE if the region has none, or it's not in the region on that row (ROCK_VEIN's: the miners', slice 4.11's) */
+unsigned char __fastcall__ rock_vein (unsigned seed, unsigned x, unsigned y);
 
-#if defined (ROCK_CODE) || defined (ROCK_BED)
+#if defined (ROCK_CODE) || defined (ROCK_BED) || defined (ROCK_VEIN)
 
 /* (16 bits throughout, the 6502's: no long arithmetic.  Every static given a value, so a task can put them in a
 ** part: its DATA a segment of the part's, used only within a call) */
 static unsigned rk_h = 0, rk_seed = 0;
 
 /* The dice: the next of them, and a region's first (what, which region) */
+#if !defined (ROCK_LEAN)
 static unsigned char rk_next (void)
 {
     rk_h ^= rk_h << 4;                          /* (Shifts the tasks link already: no runtime added to
@@ -61,6 +67,40 @@ static unsigned char __fastcall__ rk_mix (unsigned char what, unsigned rx, unsig
     rk_next ();
     return rk_next ();
 }
+#else
+/* (ROCK_LEAN's, the denizens' part 12's: the same dice, by shifts, adds and single shifts their main RAM links
+** already, no multiplying, xoring nor triple shift of the runtime's added to it) */
+static unsigned rk_t = 0, rk_u = 0;
+
+static unsigned char rk_next (void)
+{
+    rk_h ^= rk_h << 4;
+    rk_t = rk_h >> 1;
+    rk_t >>= 1;
+    rk_t >>= 1;
+    rk_h ^= rk_t;
+    rk_h ^= rk_h << 8;
+    return (unsigned char) (rk_h ^ rk_h >> 8);
+}
+
+static unsigned char __fastcall__ rk_mix (unsigned char what, unsigned rx, unsigned ry)
+{
+    rk_h = rk_seed;
+    rk_t = (rx << 5) - rx;                      /* (rx * 31) */
+    rk_h ^= rk_t;
+    rk_t = ry << 4;
+    rk_u = (ry << 10) - (rk_t << 1) - rk_t + ry;   /* (ry * 977) */
+    rk_h ^= rk_u;
+    for (rk_t = 0; what; --what) {
+        rk_t += 7919;                           /* (what * 7919) */
+    }
+    rk_h ^= rk_t;
+    rk_h |= 1;
+    rk_next ();
+    rk_next ();
+    return rk_next ();
+}
+#endif
 
 unsigned char __fastcall__ rock_bed (unsigned seed, int depth, unsigned x, unsigned y)
 {
@@ -80,6 +120,31 @@ unsigned char __fastcall__ rock_bed (unsigned seed, int depth, unsigned x, unsig
         k = k == RK_SHALE ? RK_SLATE : k == RK_LIMESTONE ? RK_MARBLE : k;
     }
     return k;
+}
+#endif
+
+#if defined (ROCK_VEIN)
+static unsigned rk_vx = 0;
+static signed char rk_vw = 0;
+
+unsigned char __fastcall__ rock_vein (unsigned seed, unsigned x, unsigned y)
+{
+    static unsigned char k = 0;
+    static int c = 0;
+
+    rk_seed = seed;
+    k = rk_mix (1, x >> 8, y >> 8) & 15;        /* (rock_kind's line, its dice in the same order) */
+    if (k >= 5) {
+        return RK_NONE;
+    }
+    rk_vw = (signed char) ((rk_next () & 7) - 4);
+    c = rk_next ();
+    c += rk_vw * ((int) (y & 0xFF) - rk_next ());
+    if ((unsigned) c > 255) {
+        return RK_NONE;
+    }
+    rk_vx = (x & 0xFF00) | c;
+    return k < 3 ? RK_QUARTZ : k < 4 ? RK_IRONSTONE : RK_COPPER;
 }
 #endif
 

@@ -12,7 +12,7 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
-_ovbank:    .res        5           ; The parts' images' banks (dq0d.cfg's OV1 ... OV5)
+_ovbank:    .res        6           ; The parts' images' banks (dq0d.cfg's OV1 ... OV6)
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
 
@@ -35,12 +35,13 @@ ovx:        .res        1
                                             ;   found on the rounds, a pastime let go (2026-10-31)
             SWPART      11, 1               ; The denizens near enlisted (2026-10-31: the main RAM's room; small, cheap
                                             ;   to swap in, not while the UI's command is in hand)
-            SWPART      12, 5               ; The tunnellers: a way dug (slice 4.11's, 2026-11-01)
+            SWPART      12, 6               ; The tunnellers: a way dug (slice 4.11's, 2026-11-01); their work's,
+                                            ;   the builders' (overlay 6's, 2026-11-02)
             SWPART      13, 5               ; The lairs near placed (2026-11-01: the main RAM's room; small, cheap to
                                             ;   swap in, each time round after a move)
             SWPART      14, 5               ; Doors worked (Phase 3C's one path, 2026-11-02)
-            SWPART      15, 4               ; Gifts, the market, entertaining (2026-11-02: seldom called, apart from the busy parts)
-            SWPART      15, 4               ; Gifts, the market, entertaining (2026-11-02: seldom called, apart from the busy parts)
+            SWPART      15, 6               ; The tunnellers' work: mines, burrows; the builders (2026-11-02)
+            SWPART      16, 6               ; Gifts, the market, entertaining (2026-11-02: seldom called, apart from the busy parts)
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -54,7 +55,7 @@ ovx:        .res        1
             SWFN        draw_on, 5
             SWFN        ally, 5             ; (Slice 4.8's: an ally's errands, one in the way, gifts, regard)
             SWFN        aside, 5
-            SWFN        gift, 15            ; (Part 15's since 2026-11-02: a part of its own, the market's beside it)
+            SWFN        gift, 16            ; (Part 16's since 2026-11-02: a part of its own, the market's beside it)
             SWFN        regard, 5
             SWFN        sway, 2
             SWFN        start, 4
@@ -81,6 +82,7 @@ ovx:        .res        1
             SWFN        enlist_near, 11     ; (The main RAM's room, 2026-10-31)
             SWFN        nearby, 13          ; (The main RAM's room, 2026-11-01: the tunnellers')
             SWFN        dig_way, 12         ; (A tunneller's way dug: slice 4.11's)
+            SWFN        work_dig, 15        ; (Its work: a mine, a burrow, a builder's, slice 4.11's rest)
             SWFN        door_way, 14        ; (A door worked: Phase 3C's one path)
             SWFN        take_way, 14        ; (A thing taken up: Phase 3C's one path)
             SWFN        slant, 11           ; (A denizen's diagonal way: slant.s, 2026-10-31, the main RAM's room)

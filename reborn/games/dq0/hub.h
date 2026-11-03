@@ -319,7 +319,13 @@ enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, T_COMMA
                                                 **   denizens' ring's: who the actor plus 1, b the heading it digs
                                                 **   (H_*), x[2] what it digs with (DG_*), x[0] x[1] as its other
                                                 **   intents'; a spell of digging at a time, the world's, by the
-                                                **   character's rules: dq0w/wdig.c) */
+                                                **   character's rules: dq0w/wdig.c; w1 w2 the square it digs.  Who
+                                                **   0, a record's, away from the character: its spell at once,
+                                                **   untested, x[2] its stratum, x[0] its tools, slice 4.11's rest) */
+#define KT_BUILD        0xC0                    /* (I_KIT's a, a builder's (slice 4.11's rest): a door broken down put
+                                                **   up again, or a way dug in walled up: w1 w2 its square, b the
+                                                **   heading to it; who as KT_DIG's, a record's x[2] its stratum: the
+                                                **   world's wdig.c, a spell, a wall six) */
 #define DG_CLAWS        0x01                    /* (KT_DIG's x[2]: its claws, a burrower's (kinds.txt's ways d), */
 #define DG_PICK         0x02                    /*   a pick it carries, */
 #define DG_SPADE        0x04                    /*   a shovel, a spade or a mattock it carries) */
@@ -589,11 +595,17 @@ enum { TG_HOURS, TG_SLEEP, TG_OUT };            /* (The hub's tb.how: the hours 
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_ALARM, DE_PASTIME,
     DE_UP = 16, DE_DIG = 24, DE_DUG, DE_DIGS,
     DE_OPENS, DE_SHUTS, DE_SLAMS, DE_UNLOCKS, DE_LOCKS, DE_BARS, DE_UNBARS, DE_STRAINS, DE_BURSTS, DE_HOLDS,
-    DE_BATTERS, DE_BREAKS };                    /* (A door worked by a denizen, Phase 3C's one path, the world's
+    DE_BATTERS, DE_BREAKS,                      /* (A door worked by a denizen, Phase 3C's one path, the world's
                                                 **   wport.c: opened, shut, slammed shut as it flees, unlocked and
                                                 **   locked with its key, barred, its bar lifted out, forced (its
                                                 **   strain begun, burst open, holding), battered (a blow), broken
                                                 **   down: w1 w2 the door's square) */
+    DE_ROOF,                                    /* (Poor rock come down on a tunneller's spell gone badly, slice
+                                                **   4.11's rest: its hole two feet less, the rock showering it; told
+                                                **   as a door's are, at its square) */
+    DE_HANGS,                                   /* (A door broken down put up again by a builder: at the door's
+                                                **   square, slice 4.11's rest) */
+    DE_WALLS };                                 /* (A way dug into its home walled up by a builder: at its square) */
                                                 /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post

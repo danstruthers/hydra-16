@@ -2710,8 +2710,8 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
 - **Who digs** *(the house's)*: kinds.txt's ways **d**, digging by nature with its claws (a burrower: the giant rat, the
   ghoul, after the bestiary's rats and grave-wights), and **m**, digging with the tools it carries (a miner: the dwarf
   miner, the kobold, the brown orc).  A miner digs only with a pick, or with a shovel, a spade or a mattock, among its
-  things (the world's agear, AG_PICK and AG_SPADE).  Today a dwarf miner always carries a pick and a brown orc
-  sometimes does; a kobold carries none yet (its outfit has none), so it digs nothing.
+  things (the world's agear, AG_PICK and AG_SPADE).  A dwarf miner always carries a pick, a brown orc sometimes does,
+  and a kobold always has one at its belt (2026-11-02, outfits.txt's [role kobold]: the folk tales' mine-kobolds).
 - **A burrower's claws** *(the house's)*: two feet a spell in soft soil, one in hard-packed earth (two thirds of a
   shovel's), nothing in masonry or flags; in the rock only the soft rock (shale), half a foot a spell, times the rock's
   hardness (a foot a spell in shale, rounded as the character's is).  So a rat burrows through earth and shale,
@@ -2741,11 +2741,46 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   wall to the sound).  The player's told its first spell ("The dwarf miner digs into the wall.", or "You hear a
   scraping in rock ahead."), not each spell after (the denizens hear every one); the way through seen ("A fresh tunnel
   opens ahead. Spoil lies heaped by it.") or heard ("You hear rock falling to your left.").
-- **Not yet** *(the plan's)*: the minds' other reasons to dig (a burrow made from a lair, a faction's mine following a
-  vein of ore, rock.h's veins), the denizens away from the character digging (only actors dig: the records' coarse
-  moves dig nothing), poor rock coming down on a tunneller, the spoil as a thing (rubble beside the way), a dig's sound
-  played (the sound task's), builders (a faction shoring a passage, walling up a way, putting up a door), a kobold's
-  pick.
+- **Its work's dig** *(the house's, 2026-11-02)*: a tunneller's other reason to dig is its work, as its day says (the
+  day's work hours, DENIZENS.md's daily life: decided by the clock, never polled).  A miner (ways m, with a pick) digs
+  its faction's mine: from its lair's home straight across to the vein of its region (rock.h's veins: a seam of ore
+  or of quartz; a dyke of basalt isn't mined), its middle on the home's row no more than a chunk's breadth away, then
+  along the vein (north or south by its lair's number) row by row, keeping to its middle (a diagonal step where the
+  vein slants a square a row, across it where it slants more), 64 squares at most.  A burrower (ways d) digs its
+  lair's burrow: from its home one of the four ways (by its lair's number), eight squares, as far as its claws bite
+  (rubble, earth, soil and the soft rock, shale; a room's bare stone wall where the rock's soft, never masonry; coming
+  at prey it digs no wall, as before: doubtful, the two might be one rule).  A kind that has its own work (a smith's forge) digs
+  when there's a vein; one with none (a rat, a brown orc) half of them dig through their waking hours, the other half
+  go about as before.  Nothing of the mine is kept but the dungeon itself: its way is worked out again each time
+  (the squares dug already, the open ones and the doorways on its line walked through), and it digs the first square
+  that's a wall, the rock or rubble, from the square before it, a spell at a time by the character's rules (above);
+  a shut door on its way to it opened as one following the character opens one (its key if it's locked; never
+  forced).
+  Within its home's chunk only, and only where that chunk's made; it stops at water, a pit, a portcullis let down
+  (the minds raise none yet), the chunk's edge.  None near: its work's room, as ever.
+- **Away from the character** *(the house's, 2026-11-02)*: a denizen out of the character's reach (not an actor: its
+  record moved coarsely) digs its work's spell all at once as it's due, untested (a marginal success's rate: no dice
+  of its own), the hole kept and the way through made as an actor's are; it's never told (the character isn't near).
+  Its tools aren't looked at away from the character: a kind whose miners work (the dwarf miner, the kobold) digs as
+  if with its pick; a brown orc digs only when near.
+- **Poor rock on a tunneller** *(the house's, 2026-11-02)*: a tunneller's spell gone badly (a critical failure) in
+  shale brings the roof down as the character's does: two feet of the hole filled again, the rock showering it ("The
+  dwarf miner is showered with rock from the roof.", heard: rock falling).  No harm comes to it: the referees keep the
+  character's sheet alone (a denizen's wounds are the fights' only).
+- **Its sound played** *(2026-11-02)*: a tunneller's spell (begun, each one after) the sound task's dig, its way
+  through and rock coming down a smash, by the rock's carrying (the noise's x[3]) as any denizen's sound.
+- **Builders** *(the house's, 2026-11-02, for review)*: a faction's miners are its builders too.  At work, a miner
+  first puts up again a door broken down in its home's chunk (a door's leaf burst from its frame, the wrecked door):
+  from a square beside it, a spell's work, the door shut, its lock and bar whole again, its harm gone (the portal's
+  change records, as any door's: "The dwarf miner hangs a new door.", heard: hammering).  Away from the character, at
+  once as it's due.  Then it walls up a way dug into a room of its home's chunk by others (a passage a dig made, the
+  character's or a tunneller's, a room's floor beside it, not of its own mine): from the floor beside it, an hour's
+  work, the square a wall again ("The dwarf miner walls up the way.", heard: stones being laid).  One square, at the
+  room: the way behind it stays; its wall can be dug again (two feet).
+- **Not yet** *(the plan's)*: builders shoring a passage (timbering in the soft rock: nothing yet comes down on a
+  passage, only on a dig's face, so it would change nothing), the materials as things (timber, a door's leaf, stone
+  carried), the spoil as a thing (rubble beside the way: no such thing in the catalogue yet), harm from rock falling
+  on a denizen (the referees' sheets are the character's), a mine past its home's chunk.
 
 ## Denizens and doors *(2026-11-02: Phase 3C's one path; drafted for the user to review)*
 
@@ -2799,7 +2834,7 @@ The book (HarnWorld's prices): the listed prices are retail at the named source,
 little as 10% of these prices and sell them for roughly 50%", "the seller, with a shrewd eye on the size of the buyer's
 purse, sets a price. Haggling follows and the final transaction can vary 25% or more"; a jeweller or a mercantyler buying
 a jewel, "lucky to receive half" (Treasure 5).  Rhetoric is the mercantyler's first skill (Character 17).  The rest is
-the house's.  *(Every number here is for review.)*  (dq0d.c's part 15: s_gift's trade and entertain; dq0w's things.c
+the house's.  *(Every number here is for review.)*  (dq0d.c's part 16: s_gift's trade and entertain; dq0w's things.c
 part 62, goods, and wfetch.c part 72; the UI's errand.c, part 15, in overlay 17's bank.)
 
 - **Who trades:** any denizen with a mind that isn't a beast (folk), indifferent to the character or better ("The
