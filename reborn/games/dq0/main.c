@@ -2417,13 +2417,13 @@ void s_step_go (void)
             UIREC->things_text[0] = 0;
             hub_map (0);
         }
-        task_words (TE_BEGUN | (unsigned) k << 8, n | 0x80);
+        task_words (TE_BEGUN | (unsigned) k << 8, n);
     }
     if (HUB->ireq.y & 2) {
         intend2 (I_WAIT, t, 1);                 /* (Engaged: the round's action, a blow no stop of it) */
         return;
     }
-    intend2 (I_WAIT, t, (unsigned) k << 8 | n << 1 | 1);
+    intend2 (I_WAIT, t, (unsigned) k << 8 | (n & 0x80 ? 0 : n << 1) | 1);    /* (A kind past 127: stopped, not named) */
     if (k == LT_BLOWDARK) {
         intend2 (I_ASK, TE_ASK_HEARD, 0);       /* (Asked: "no" stops it, the torch still lit) */
     }
@@ -2458,7 +2458,7 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
         othings (IO_CUT, "", "", 0);
         return;
     }
-    hub_mem (KIND_BANK, t, CATALOGUE[named & 0x7F].name, sizeof t);
+    hub_mem (KIND_BANK, t, CATALOGUE[(unsigned char) w == TE_PACKED ? named & 0x7F : named].name, sizeof t);
     sayf ((unsigned char) w == TE_FUMBLE ? "\nYou fumble for your %s." : (unsigned char) w == TE_PACKED ? (named & 0x80 ?
         " Your %s lies at your feet." : " Your %s is in your hand.") : first[(w >> 8) - LT_PACKOFF], t);
 }

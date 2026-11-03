@@ -1233,7 +1233,11 @@ static unsigned char rs_hone (void)
     }
     while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
         if (!strcmp (kind_at (i)->tool, "whet") && on_pc (i)) {
-            return reach_step (i, RS_TOOL) ? IR_NO : 0xFE;
+            if (reach_step (i, RS_TOOL)) {
+                return IR_NO;
+            }
+            handled = n;                        /* (What's sharpened, the tool's search over) */
+            return 0xFE;
         }
     }
     return rs_no (n, SA_NO_STONE);
@@ -1274,7 +1278,9 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         }
         HUB->ireq.x = 600;
         HUB->ireq.qty = LT_HONE;
-        HUB->ireq.item = item_kind (handled);
+        w = item_kind (handled);                /* (The item's bank in the window: then the hub's again) */
+        hub_map (0);
+        HUB->ireq.item = w;
         return IR_OK;
     case RO_REPLY:
         if (rs_using && (item_at (rs_tool)->flags & I_HELD)) {
@@ -1298,6 +1304,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         if (rs_ok == IO_STEP) {
             HUB->ireq.y = (rs_k == LT_BLOWDARK) | (rs_t == HUB->round ? 2 : 0);    /* (Its question put, the UI's; 2, engaged:
                                                 **   the round's action, no long task for a blow to stop) */
+            HUB->pc_ready = HUB->now + rs_t;    /* (Not free till the UI's wait comes: engaged, fwant's, its end not looked at first) */
             HUB->ireq.x = rs_t;
             HUB->ireq.qty = rs_k;
             HUB->ireq.item = rs_what;
@@ -1333,7 +1340,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         wk.m.kind = I_WAIT;
         wk.m.a = 0;
         wk.m.w1 = rs_t;
-        wk.m.w2 = rs_t == HUB->round ? 1 : (unsigned) rs_k << 8 | rs_what << 1 | 1;  /* (Engaged, the round's action) */
+        wk.m.w2 = rs_t == HUB->round ? 1 : (unsigned) rs_k << 8 | (rs_what & 0x80 ? 0 : rs_what << 1) | 1;  /* (Engaged, the round's action) */
         intent_few (&wk.m);
         return 0;
     }

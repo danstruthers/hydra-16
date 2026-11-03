@@ -532,10 +532,13 @@ static void __fastcall__ worked (unsigned char action)
         }
         return;
     }
-    task_words (TE_BEGUN | k << 8, n |= 0x80);
+    task_words (TE_BEGUN | k << 8, k < LT_PACKOFF ? n | 0x80 : n);    /* (The steps' kinds, 8 bits: a mang sharpened) */
+    if (n & 0x80) {
+        n = 0;
+    }
     hub_mem (UI_BANK, &UIREC->kept, &cmd, sizeof cmd);
     reach = 3;
-    intend2 (I_WAIT, t, k << 8 | (n & 0x7F) << 1 | 1);
+    intend2 (I_WAIT, t, k << 8 | n << 1 | 1);
 }
 
 /* The commands that want nothing but their action, past main.c's chores (its default's: part 2 has no room): 1 if
