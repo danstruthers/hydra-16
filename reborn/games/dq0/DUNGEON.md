@@ -1501,8 +1501,8 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   digging, poor rock on a tunneller, the spoil as a thing; builders (shoring, walling up a way, a door put up).
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
-- **One path for every actor** (Phase 3C, begun 2026-11-02: below): left, a denizen working windows and
-  portcullises, picking a lock, an ally asked to open a door ("ask the dwarf to open the door"), a denizen eating the
+- **One path for every actor** (Phase 3C, begun 2026-11-02: below; a denizen's portcullises and a robber's lock
+  picking built 2026-11-02, DENIZENS.md's): left, a denizen working windows, an ally asked to open a door ("ask the dwarf to open the door"), a denizen eating the
   food it takes up, its lift by its size, the things' put down, given and thrown by the minds as the character's are.
 - **The house rules decided, not yet built** (HOUSE.md): Strength and weapons, free pounds, a wrecked portal appraised
   by its state, the pit climb (D13).

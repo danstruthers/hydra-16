@@ -2779,19 +2779,23 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
     }
 }
 
-/* A door worked by a denizen (E_DEN's a, DE_OPENS ...: Phase 3C's one path), its words into lb + 340: what it's seen
+/* A door worked by a denizen (E_DEN's a, DE_OPENS ...: Phase 3C's one path; a portcullis, a lock picked, 2026-11-02), its words into lb + 340: what it's seen
 ** doing (after its name), then what's heard (heard_what's: 19 letters at most).  Part 14's (noise_told's) */
 #pragma code-name (push, "SW14CODE")
 #pragma rodata-name (push, "SW14RODATA")
 static void __fastcall__ door_words (unsigned char a)
 {
-    static const char* const said[DE_BREAKS + 1 - DE_OPENS] = {
+    static const char* const said[DE_PICKS + 1 - DE_OPENS] = {
         "opens the door\0a door opening", "shuts the door\0a door shutting", "slams the door shut\0a door slamming",
         "unlocks the door\0a key in a lock", "locks the door\0a key in a lock",
         "drops a bar across the door\0a bar dropping", "lifts the door's bar\0a bar scraping",
         "strains at the door\0a door creaking", "bursts the door open\0a door bursting",
         "can't force the door\0a door creaking", "batters at the door\0blows on a door",
-        "breaks the door down\0a door crashing in"
+        "breaks the door down\0a door crashing in",
+        "winds the portcullis's winch\0a winch cranking", "heaves at the portcullis\0iron scraping",
+        "raises the portcullis\0a portcullis rattling", "lets the portcullis fall\0a portcullis crashing",
+        "strains at the bars\0iron groaning", "bends the bars apart\0iron groaning",
+        "works at the lock\0a faint scratching", "picks the lock\0a lock clicking"
     };
     const char* s = said[a - DE_OPENS];
 

@@ -203,6 +203,8 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define RS_PRONE_D      0x04                    /*   the defender) */
 #define RS_KILLER       0x08                    /* (RS_ATTACK's w2: the attacker a killer, the character senseless finished
                                                 **   where it lies; else the blow held: the minds', by its nature) */
+#define RS_ASLEEP       0x80                    /* (RS_ATTACK's w2: the defender, a creature, asleep: it ignores the
+                                                **   blow, the book's Ignore (Combat 9: one unaware); 2026-11-02) */
 #define RS_REARM        0x20                    /* (RS_ATTACK's w2: the attacker, its weapon let fall, takes it up again,
                                                 **   its turn: O_REARM, slice 4.1b's) */
 #define RS_SHORT        0x10                    /* (RS_ATTACK at RS_THING's w2: a bare part (no armour on it: the

@@ -143,7 +143,9 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
                                                 **   denizens' field and bonds, rs.h's RS_HEART) */
     pa = me == att ? bd.pos : HUB->pc_pos;     /* (Their bodies' positions, the world's: prone, the easier struck) */
     pd = me == att ? HUB->pc_pos : bd.pos;
-    r->w2 = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0);
+    r->w2 = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0) |
+        (me != att && bd.doing == DO_SLEEP ? RS_ASLEEP : 0);   /* (A sleeper struck at: no defence, the book's
+                                                **   Ignore, 2026-11-02) */
     if (mshot.kind) {                           /* (A missile's, shot or thrown: wshoot.c's, slice 4.7's) */
         r->c = mshot.kind;
         r->b = mshot.band;

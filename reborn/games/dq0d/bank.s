@@ -12,7 +12,7 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
-_ovbank:    .res        5           ; The parts' images' banks (dq0d.cfg's OV1 ... OV5)
+_ovbank:    .res        6           ; The parts' images' banks (dq0d.cfg's OV1 ... OV6)
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
 
@@ -39,6 +39,10 @@ ovx:        .res        1
             SWPART      13, 5               ; The lairs near placed (2026-11-01: the main RAM's room; small, cheap to
                                             ;   swap in, each time round after a move)
             SWPART      14, 5               ; Doors worked (Phase 3C's one path, 2026-11-02)
+            SWPART      15, 6               ; The ways followed; what an actor does as it senses the character
+                                            ;   (meets, feel: the main RAM's room, 2026-11-02)
+            SWPART      16, 6               ; A way found (2026-11-02)
+            SWPART      17, 6               ; A body found on a record's rounds (2026-11-02)
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -81,11 +85,16 @@ ovx:        .res        1
             SWFN        dig_way, 12         ; (A tunneller's way dug: slice 4.11's)
             SWFN        door_way, 14        ; (A door worked: Phase 3C's one path)
             SWFN        take_way, 14        ; (A thing taken up: Phase 3C's one path)
+            SWFN        feel, 15            ; (The main RAM's room, 2026-11-02)
+            SWFN        meets, 15
+            SWFN        way, 15             ; (A way followed: step_for's, 2026-11-02)
+            SWFN        wfind, 16           ; (A way found)
             SWFN        slant, 11           ; (A denizen's diagonal way: slant.s, 2026-10-31, the main RAM's room)
             SWFN        wander, 9
             SWFN        sched, 9
             SWFN        coarse, 10
             SWFN        found, 10           ; (A body found on the rounds: the day's)
+            SWFN        rfound, 17          ; (A body found on a record's rounds, 2026-11-02)
             SWFN        hour, 3             ; (The hour the game began: the day's, its first)
             SWFN        told, 6             ; (The hook for a loss told: a body found on the rounds, the day's)
             SWFN        dismay, 6

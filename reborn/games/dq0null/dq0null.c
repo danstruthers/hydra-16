@@ -537,7 +537,8 @@ static void __fastcall__ attack (struct req* r)
     unsigned mw = r->w2;
     unsigned char mk = r->c;
     signed char g = 0, st = mw & RS_MISSILE ? r->steps - 2 * (r->b & 3) - (mw & MS_COVER ? 4 : 0) +
-        (mw & MS_UNAWARE ? 2 : 0) : r->steps - 2 * r->c;
+        (mw & MS_UNAWARE ? 2 : 0) : r->steps - 2 * r->c + (f & RS_ASLEEP ? 2 : 0);   /* (A sleeper struck at: two
+                                                **   steps easier, as one unaware of a shot, 2026-11-02) */
     signed char ht = RS_HEART (r);              /* (A creature's heart: its courage's steps, the denizens' field and
                                                 **   bonds, HOUSE.md's morale) */
 

@@ -332,8 +332,8 @@ static unsigned char defence (void)
 {
     unsigned char k = (D.who - 1) & 7;
 
-    if (D.c->state != HARN_CONSCIOUS || (!D.who && pc_out > tnow)) {
-        return HARN_IGNORE;
+    if (D.c->state != HARN_CONSCIOUS || (!D.who && pc_out > tnow) || (D.who && (prones & RS_ASLEEP))) {
+        return HARN_IGNORE;                     /* (Senseless, in shock, or asleep: the book's Ignore) */
     }
     if (D.who) {
         if (D.dslot && D.dml >= D.aml && D.dml >= D.dodge && tnow >= dbt[k]) {

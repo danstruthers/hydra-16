@@ -3780,6 +3780,8 @@ module.exports = {
                   const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
                   const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
                   ram[ad('drawn') + k] = 8;
+                  if (!m.portc) ram[ad('atry') + k] = ((f >> 1) + 2 & 3) | 3 << 2;   // (Its tries at the portcullis given up already (the minds'
+                  // atry: its way, stage 3), 2026-11-02: so it digs round; dq0portc's the portcullis worked)
                   ram[ad('lsx') + 2 * k] = px & 255; ram[ad('lsx') + 2 * k + 1] = px >> 8;
                   ram[ad('lsy') + 2 * k] = py & 255; ram[ad('lsy') + 2 * k + 1] = py >> 8;
                   h[L.denSeq] = h[L.denSeq] + 1 & 255;
@@ -3811,6 +3813,80 @@ module.exports = {
         if (!/A fresh tunnel opens|rock falling/.test(s)) f.push('the way through not told');
         const fin = T.of('quit').at, me = fin && fin.actors.find(a => a.k === m.tun.k);
         if (!me || (me.x === m.tun.beyond[0] && me.y === m.tun.beyond[1])) f.push('the dwarf never came on from beyond the door: ' + JSON.stringify(me));
+        if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> close the door'), s.indexOf('> close the door') + 1500));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0denportc', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's portcullis worked by a denizen (2026-11-02: the minds' leftovers of Phase 3C's one path, DENIZENS.md's a portcullis and a lock, HOUSE.md's denizens and doors, for review): dq0tunnel's scene, the dwarf's tries at the portcullis not given up: kept from the character by the portcullis let down (from the character's side, its winch's), it heaves at it from the far side (E_DEN DE_HEAVES, the character's code: wwin.c's heave, P_LIFT by its sheet), and raises it (DE_RAISES) or, held twice, strains at its bars (DE_BENDS), each told seen or heard; its way there found (the minds' ways: a field made, dq0d's rb).  [dq0tunnel's what, for the scene:] Dingus Quest Zero's tunnellers (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers and builders, HOUSE.md's tunnellers, for review): a hand-written theme's dwarf miners (seed 1, south of the start, wary; a miner digs with the tools it carries, kinds.txt's ways m: its pick, outfits.txt's [role khuzmin]), the character in their guardroom, the portcullis it came in by let down behind it ('close the door'); one of them put in the passage beyond it, hostile, drawn on to where it last sensed the character (the scene set as the first wait's typed: the hub's actor and its record, the minds' drawn and last-sensed square poked).  A portcullis it can't raise, no way nearer: it digs its way round it (dq0d's dig_way, a diagonal round the door: nearer as the crow flies; I_KIT's KT_DIG, the world's wdig.c a spell of ten minutes at a time by the character's rules: a pick's rate on the wall, a Strength test by its sheet), its first spell seen through the portcullis (E_DEN's DE_DIG: \"The dwarf miner digs into the wall.\", or heard, a scraping in rock), the hole kept as it goes (DUG), and through (DE_DUG: the square a passage, told seen, \"A fresh tunnel opens ...\", or heard, rock falling); the dwarf come through it after; both referees",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7',
+        'open the door', 'south', 'turn around', 'close the door', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
+      start(m) {
+        m.portc = true;
+        const a = m.acia, read = a.read;
+        let typed = '', done = false;
+        m.tun = null;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'wait' && !done && m.dq0) {   // (The scene: one dwarf miner beyond the shut door ahead, hostile, drawn on)
+                const { L, K } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
+                const w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+                const px = u16(L.pcX), py = u16(L.pcY), sn = h[L.pcSn], S = stratumRec(m, sn), ch = liveChunks(m, sn);
+                const tile = (x, y) => {
+                  const b = S && liveChunks(m, sn)[((x - S.x0) >> 5) + ',' + ((y - S.y0) >> 5)];
+                  return b ? b[443 + ((y - S.y0) & 31) * 32 + ((x - S.x0) & 31)] & 15 : -1;
+                };
+                const at = k => L.actor + k * L.actorSize, named = k => {
+                  let n = '';
+                  for (let i = 0; h[at(k) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(k) + L.aName + i]);
+                  return n;
+                };
+                const f = h[L.pcFace], dx = [0, 1, 1, 1, 0, -1, -1, -1][f], dy = [-1, -1, 0, 1, 1, 1, 0, -1][f];
+                const k = [...Array(L.nactors).keys()].find(j => named(j) === 'dwarf miner');
+                if (k !== undefined && ch && tile(px + dx, py + dy) === 3 && [1, 4].includes(tile(px + 2 * dx, py + 2 * dy))) {
+                  const x = px + 2 * dx, y = py + 2 * dy, o = at(k);
+                  w16(o + L.aX, x);
+                  w16(o + L.aY, y);
+                  h[o + L.aSn] = sn;
+                  h[o + L.aAttitude] = K.AT_HOSTILE;
+                  h[o + L.aDoing] = 0;
+                  const R = dq0Rec(m), q = R.at(h[o + L.aName + 12]);
+                  R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8;
+                  R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8;
+                  R.mem[q + R.SN] = sn;
+                  R.mem[q + R.ATTITUDE] = K.AT_HOSTILE;
+                  const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+                  const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
+                  ram[ad('drawn') + k] = 8;
+                  ram[ad('lsx') + 2 * k] = px & 255; ram[ad('lsx') + 2 * k + 1] = px >> 8;
+                  ram[ad('lsy') + 2 * k] = py & 255; ram[ad('lsy') + 2 * k + 1] = py >> 8;
+                  h[L.denSeq] = h[L.denSeq] + 1 & 255;
+                  m.tun = { k, door: [px + dx, py + dy], beyond: [x, y], pc: [px, py], tile };
+                }
+                done = true;
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), DE_DIG = 24, DE_DUG = 25;
+        if (!m.tun) return ['the scene not set: no dwarf miner near, or no portcullis ahead with a floor beyond it'];
+        const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.tun.k + 1), { K } = m.dq0.layout();
+        if (!dens.some(e => e.a === K.DE_HEAVES)) f.push('the dwarf never heaved at the portcullis (E_DEN DE_HEAVES)');
+        if (!dens.some(e => e.a === K.DE_RAISES || e.a === K.DE_BENDS)) f.push('the portcullis neither raised nor its bars strained at (DE_RAISES, DE_BENDS)');
+        if (!/The dwarf miner heaves at the portcullis\.|iron scraping/.test(s)) f.push('its heaving neither seen nor heard');
+        for (const e of dens.filter(e => e.a >= K.DE_OPENS)) if (e.w1 !== m.tun.door[0] || e.w2 !== m.tun.door[1]) f.push('a portal worked not the portcullis: ' + [e.a, e.w1, e.w2]);
+        const h = m.dq0.bank(0), lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
+        if (!m.taskRam[h[12 + 2]][parseInt(/^al ([0-9A-F]+) \._rb$/m.exec(lbl)[1], 16)]) f.push('no way found (dq0d\'s rb: the ways\' bank never had)');
         if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> close the door'), s.indexOf('> close the door') + 1500));
         return f;
       },
@@ -3892,10 +3968,13 @@ module.exports = {
         if (!/> lock the door[^>]*You lock it with its key\./.test(s)) f.push('"lock the door" not "You lock it with its key."');
         const dens = T.flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.door.k + 1);
         const strains = dens.filter(e => e.a === K.DE_STRAINS), opens = dens.filter(e => e.a === K.DE_OPENS);
-        if (!strains.length) f.push('the bandit never strained at the locked door (E_DEN DE_STRAINS)');
-        if (opens.length && strains.length && opens[0].t < strains[0].t) f.push('the locked door opened before it was forced');
-        if (!/The bandit strains at the door\.|a door creaking/.test(s)) f.push('its forcing neither seen nor heard');
-        if (!dens.some(e => e.a === K.DE_BURSTS || e.a === K.DE_BATTERS)) f.push('its forcing neither burst the door nor, held, went on to battering');
+        const picks = dens.filter(e => e.a === K.DE_PICKING), picked = dens.some(e => e.a === K.DE_PICKS);   // (A robber's kind picks it first, 2026-11-02)
+        if (!picks.length) f.push('the bandit never worked at the lock (E_DEN DE_PICKING: a robber\'s kind picks first)');
+        if (!picked && !strains.length) f.push('the bandit, the lock not picked, never strained at the locked door (E_DEN DE_STRAINS)');
+        if (opens.length && !picked && strains.length && opens[0].t < strains[0].t) f.push('the locked door opened before it was picked or forced');
+        if (!/The bandit works at the lock\.|a faint scratching/.test(s)) f.push('its picking neither seen nor heard');
+        if (!picked && !/The bandit strains at the door\.|a door creaking/.test(s)) f.push('its forcing neither seen nor heard');
+        if (!picked && !dens.some(e => e.a === K.DE_BURSTS || e.a === K.DE_BATTERS)) f.push('its forcing neither burst the door nor, held, went on to battering');
         if (process.env.DQ0SHOW) f.push(s.slice(s.indexOf('> lock the door'), s.indexOf('> lock the door') + 2500));
         for (const e of dens.filter(e => e.a >= K.DE_OPENS)) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door worked not the one between them: ' + [e.a, e.w1, e.w2]);
         if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> lock the door'), s.indexOf('> lock the door') + 1800));
@@ -4968,13 +5047,32 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'look', 'examine the rat', 'search', 'quit', 'dq0 -d /ram/g', 'examine the rat', 'quit',
         'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['Two giant rats are ahead to your left, 15 feet away.', 'The giant rat seems hostile.', 'The giant rat bites at you',
-        '% dq0 -d /ram/g', 'The giant rat seems hostile.', '% echo $status'],
+        '% dq0 -d /ram/g', '% echo $status'],
       // (The theme's five by the way down, its home: two of them in sight as the game begins, the rest round the
       // corner; the stand-in's at seed 3 are wary, and keep their distance)
+      start(m) {   // (The rats' records as the kept game's 'examine the rat' is typed: their attitudes the save's; 2026-11-02, the
+        const a = m.acia, read = a.read;   //   rats out of sight by then as the dice fall since the ways found)
+        let typed = '', g = 0;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (/^dq0 /.test(typed)) ++g;
+              if (g === 2 && typed === 'examine the rat' && m.dq0 && m.dq0.bank(0)) {
+                const R = dq0Rec(m);
+                m.ratAtt = [...Array(224).keys()].map(i => R.at(i)).filter(o => R.mem[o] === 1 && !(R.mem[o + R.FLAGS] & 4)).map(o => R.mem[o + R.ATTITUDE]);
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         inTurn(o, ['> examine the rat', 'The giant rat seems hostile.', '> search', 'The giant rat bites at you', '> quit',
-          '% dq0 -d /ram/g', '> examine the rat', 'The giant rat seems ', '> quit'], f);   // (Hostile, or unfriendly after it, the character helpless: the fight's dice since slice 4.5's hearing)
+          '% dq0 -d /ram/g', '> examine the rat', '> quit'], f);   // (Hostile, or unfriendly after it, the character helpless: the fight's dice since slice 4.5's hearing)
+        if (!m.ratAtt || !m.ratAtt.length || !m.ratAtt.some(t => t <= 1)) f.push('the kept game\'s rats not hostile still (their records\' attitudes: ' + JSON.stringify(m.ratAtt) + ')');   // (Hostile, or unfriendly after it, the character helpless: the fight's dice since slice 4.5's hearing)
         const want = Buffer.from(' \0\0' + fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0g.txt'), 'latin1') + '\0', 'latin1');
         if (!m.taskRam.some(r => Buffer.from(r.buffer, r.byteOffset, r.length).includes(want)))
           f.push('the deities\' names not the command parser\'s words (no task\'s RAM has them as CQ_WORLD\'s third list)');
@@ -7829,6 +7927,23 @@ module.exports = {
           if (alarms.length !== 1) f.push('the alarm not raised once as the body was found: ' + alarms.length);
           if (!m.body.fatt || m.body.fatt[0] !== 1 || m.body.fatt[m.body.fatt.length - 1] !== 0) f.push('the garrison\'s attitude not a step worse as the body was found: ' + JSON.stringify(m.body.fatt));
         }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0asleep', near: ['denizens'], meaning: true, what: "Dingus Quest Zero's sleepers lying down (2026-11-02: the minds' leftovers of slices 4.5-4.7; DENIZENS.md's ways, positions, bodies found, HOUSE.md's lying down to sleep, for review): dq0daily's garrison of men-at-arms (seed 2, their lair south of the start), watched for two hours from the start, ten minutes at a time: those asleep at their beds lying prone (the hub's actors' pos, POS_PRONE, I_RISE's: the world's), none of them standing asleep for long, and the snores still heard (an event told where a sleeper lies: not got up for)",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/t',
+        "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/t/theme.txt",
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/t', ...Array(12).fill('wait 10 minutes'), 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m) {
+        const T = dq0Turns(m), f = [];
+        const sleepers = T.flatMap(t => t.after ? t.after.actors.filter(a => a.state && a.name === 'soldier' && a.doing === 'DO_SLEEP') : []);
+        if (!sleepers.length) f.push('none of the garrison near the character asleep at a look');
+        else if (sleepers.filter(a => a.pos === 1).length * 2 < sleepers.length) f.push('the sleepers not lying prone: ' + JSON.stringify(sleepers.map(a => [a.did, a.pos])));
+        if (!T.flatMap(t => t.dens).some(e => e.kind === 'E_DEN' && e.de === 'DE_SNORE')) f.push('the sleepers never snoring');
         return f;
       },
       sdcard: true

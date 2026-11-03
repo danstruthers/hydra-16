@@ -588,7 +588,10 @@ enum { TG_HOURS, TG_SLEEP, TG_OUT };            /* (The hub's tb.how: the hours 
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_ALARM, DE_PASTIME,
     DE_UP = 16, DE_DIG = 24, DE_DUG, DE_DIGS,
     DE_OPENS, DE_SHUTS, DE_SLAMS, DE_UNLOCKS, DE_LOCKS, DE_BARS, DE_UNBARS, DE_STRAINS, DE_BURSTS, DE_HOLDS,
-    DE_BATTERS, DE_BREAKS };                    /* (A door worked by a denizen, Phase 3C's one path, the world's
+    DE_BATTERS, DE_BREAKS, DE_WINDS, DE_HEAVES, DE_RAISES, DE_LOWERS, DE_BENDS, DE_BENT, DE_PICKING, DE_PICKS };
+                                                /* (2026-11-02: a portcullis's winch wound, heaved at, raised, let
+                                                **   fall, its bars strained at, bent apart; a lock worked at, picked)
+                                                ** (A door worked by a denizen, Phase 3C's one path, the world's
                                                 **   wport.c: opened, shut, slammed shut as it flees, unlocked and
                                                 **   locked with its key, barred, its bar lifted out, forced (its
                                                 **   strain begun, burst open, holding), battered (a blow), broken

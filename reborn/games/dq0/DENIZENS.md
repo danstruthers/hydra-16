@@ -626,6 +626,26 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   lair's own, a robber's takings put down there).  None in its reach, the nearest it sees within four squares told its
   mind (the hub's dig_t, TW_SEEN | its offsets): idle, it steps toward it and asks again beside it.
 
+### Ways, positions, bodies found *(2026-11-02: the minds' leftovers; HOUSE.md's, for review)*
+
+- **Ways found** (dq0d.c's parts 15 and 16): every S_TOWARD step of the minds (step_for's: a hunter after its foe,
+  one drawn on, an ally following, a hurt one home, one to its bed, its meal or its rounds, a thing seen) that finds
+  no step nearer has a way found (a field over the squares about it and its mark, in a bank of the ways' own, each
+  square's step toward the mark), and follows it a step at a time till it's there, the greedy step's dice as ever; a
+  shut door on the way worked (door_way, wayj: for one about its day too).  The other agents' code gets it by calling
+  step_for (k, lim, S_TOWARD) with refx, refy set (the builders': no entry of its own).
+- **Positions:** a sleeper lies down at its bed (I_RISE's POS_PRONE, the world's wbody.c), up as it next acts (a
+  step's or a blow's Rise as before, else I_RISE's POS_STANDING: wlimbs.c's den_legs); a sleeper struck at ignores the
+  blow (rs.h's RS_ASLEEP: the book's Ignore).
+- **A portcullis and a lock** (door_way, part 14; the world's wport.c by wwin.c and wdoor.c): one with hands raises a
+  portcullis down in its way by its winch, or heaves it from the far side, then (hostile) bends its bars, then gives up;
+  lets one fall against the character from its winch's side; a robber's kind picks a lock it has no key to before it
+  forces it.  Told (E_DEN): DE_WINDS ("winds the portcullis's winch"), DE_HEAVES, DE_RAISES, DE_LOWERS, DE_BENDS,
+  DE_BENT, DE_PICKING ("works at the lock"), DE_PICKS.
+- **Bodies found on the records' rounds** (part 17's rfound, wander's): a record on watch that comes on a body of its
+  faction's: the faction's attitude a step worse, its others about the body gathered to it, each less well disposed,
+  a leader's loss known to them (D_LOST).
+
 ## Still to come
 
 - **Their bodies' rest** (2026-10-31's leftovers, HOUSE.md's the denizens' bodies): a swim tiring a denizen, a denizen
@@ -643,11 +663,12 @@ What the plans bring later, by the slice or phase that brings it:
   The theme format completed (Phase 7): factions and tongues, the bestiary's kinds and numbers, the pieces' keepers
   (a guardian, a faction's hoard), the strata's ages and sizes, the things lying about by theme.
 - **The command interpreter** (Phase 3C, begun 2026-11-02: the doors and things taken, above; DUNGEON.md's one path):
-  left, windows and portcullises, a lock picked, the food it takes eaten, things put down, given and thrown.
+  left (portcullises and a lock picked built 2026-11-02, above), windows, the food it takes eaten, things put down,
+  given and thrown.
 - **Daily life** (slice 4.5, built 2026-10-31: above): left (a patrol noticing a door left open: built
-  2026-11-02, the doors' above), the records' patrols finding bodies (only an actor's rounds do), routes between a faction's lairs and its gates (the way-finding the minds lack: their steps are
-  greedy), a sleeper's defence (the book's Ignore against one
-  asleep), lying down to sleep (the denizens' positions but prone still to come). (The character telling the hour, "sleep until
+  2026-11-02, the doors' above; the records' patrols finding bodies, ways found, a sleeper lying down and its
+  defence, built 2026-11-02: above), routes kept between a faction's lairs and its gates for the records away (they
+  move coarsely, no way wanted yet). (The character telling the hour, "sleep until
   dawn": built 2026-10-31, DUNGEON.md's the time of day believed; the denizens' routines learnt as its clues still to
   come.)
 - **Body position and moving quietly** (slice 4.6, built for the character and a hunter's stalk, 2026-10-29): every
@@ -659,7 +680,7 @@ What the plans bring later, by the slice or phase that brings it:
   a shorkana, a spear or a dagger in hand, another weapon kept), a weapon put up for a bow and drawn again for melee,
   a miss's stray striking one beside its mark (an actor struck by another's shot: the one blow between two actors the
   referees take, its mind's dismay and death as any blow's); left: a rock picked up, the denizens' positions but
-  prone (a shooter crouched behind cover).
+  prone (a shooter crouched behind cover: a cover map wanted; HOUSE.md's ways, positions).
 - **Fetching and influence** (slice 4.8, built 2026-10-30: fetching, gifts and bribes, reputation, D10, a follower's
   distance, above): left, an ally asked to do other things ("ask the dwarf to open the door": it "doesn't know how"),
   "give the bandit 5 pennies" (the two objects without "to": the parser's), a gift to one that isn't a person (an
