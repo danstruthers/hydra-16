@@ -317,8 +317,18 @@ unsigned char __fastcall__ s_room_on (unsigned char go)
                 continue;
             }
         }
-        if (rs_item) {
+        if (rs_item) {                          /* (What came of the thing: the UI's to ask, its tests and what they
+                                                **   found the things', and waited for, so what's found is lying there
+                                                **   for the next look, whatever the tasks' timing) */
+            c = rs_said;
             rs_say (RSW_END, touch, rs_item, 0);
+            for (w = 0; c == rs_said && w < 100; ++w) {
+                hub_sleep (1);
+                if (hub_posted (&HUB->ireq)) {
+                    things ();
+                }
+            }
+            hub_map (0);
         }
         rs_block (&i, &j);                      /* (The next thing lying in the block, in plain sight) */
         x = rs_x + i * 3;

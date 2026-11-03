@@ -3984,12 +3984,14 @@ unsigned char s_seek (void)
 ** it ("You find a dagger.", "You find no dagger here."); on or in one, part 47's on_it, a heap's poked; a wall's, none
 ** (the walls' alone).  And a room searched whole's, by the request's to (IOS_*: the world's at a stop, wroom.inc's) */
 static unsigned char __fastcall__ poked (unsigned n, unsigned char touch);
+extern unsigned char rs_said;
 unsigned char s_search (void)
 {
     unsigned char f = srch_form & 7, touch = srch_form & SF_TOUCH, n;
 
     text_new ();
     if (iq.to & IOS_THING) {
+        ++rs_said;                              /* (The world waits on it: wroom.inc's) */
         sitem = iq.item;
         touch = iq.to & SF_TOUCH;
         f = SF_ON;

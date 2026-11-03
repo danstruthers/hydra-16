@@ -105,6 +105,7 @@ unsigned char trav;                             /* (A journey under way: part 54
 unsigned char __fastcall__ room_on (unsigned char go);   /* Part 82 (wroom.inc): a room searched whole */
 unsigned char __fastcall__ room_tests (unsigned char touch);   /* Part 83 (wroom.c) */
 void __fastcall__ make_own (unsigned i);        /* (Part 13's) */
+unsigned char rs_said;                          /* (A room searched whole's: what came of a thing asked, things.c's) */
 unsigned char kowed;                            /* (A stratum's populations owed at a real pace, its number plus 1:
                                                 **   wkept.c's, its kept rooms lit as they're done, kept_late: the
                                                 **   lights' minute's) */

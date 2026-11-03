@@ -5872,7 +5872,7 @@ module.exports = {
       // 36M cycles, 10 s at 3.58 MHz; 25M now, the longest (the UI's overlays read, before the screen's made).  The
       // help's line: after the first look's words, only the status line's and the prompt after it.  And every task's
       // overlays in their banks at the first prompt as ld65 made them (dq0OvlBanks))
-      starts: [{ seed: 1, max: 236e6 }, { seed: 123456789, max: 318e6 }], quiet: 36e6,
+      starts: [{ seed: 1, max: 237e6 }, { seed: 123456789, max: 318e6 }], quiet: 36e6,
       start(m) {
         const a = m.acia, read = a.read, shown = a.shown, self = this;
         let typed = '', g = null, tail = '', esc = 0, text = '';
@@ -8261,11 +8261,13 @@ module.exports = {
         'dq0 -p t -s 7 -c /ram/c.hm -T', 'search the room', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -V', 'd', 'search the room', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm', 'open the door behind me', 's', 'search the room', 'quit',
-        'dq0 -p t -s 7 -c /ram/c.hm', 'open the door behind me', 's', 'search the room', 'quit', 'echo $status']) },
+        'dq0 -p t -s 7 -c /ram/c.hm', 'open the door behind me', 's', 'search the room', 'quit',
+        'mkdir /ram/h', 'dq0 -p t -s 7 -c /ram/c.hm -d /ram/h', 'search the room', 'dq0 -d /ram/h', 'status', 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, [{ g: 1, line: 'search the straw', n: 1, item: { 'iron key': { clear: 0x20, hide: 0 } } }, { g: 4, line: 'search the room', n: 1, traps: { hide: 0 } },
           { g: 5, line: 'search the room', n: 1, name: 'ghoul', beside: 'face', engage: true }, { g: 8, line: 'search the room', n: 1, traps: { hide: 0, plates: true } }]);
-        dq0OnWords(m, [{ g: 1, line: 'search the room', n: 1, words: 'You turn the corner', text: 'stop\r' }, { g: 7, line: 's', n: 1, words: 'You go through a doorway', text: 'stop\r' }]);   // (Typed as it's told)
+        dq0OnWords(m, [{ g: 1, line: 'search the room', n: 1, words: 'You turn the corner', text: 'stop\r' }, { g: 7, line: 's', n: 1, words: 'You go through a doorway', text: 'stop\r' },
+          { g: 9, line: 'search the room', n: 1, words: 'You work along', text: 'quit\r' }]);   // (Typed as it's told)
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -8279,10 +8281,11 @@ module.exports = {
         if (!key(st1.at) || !(key(st1.at).flags & 0x08)) f.push('the key not hidden under the straw: ' + JSON.stringify(key(st1.at)));
         if (took(st1) !== 600 || took(st2) !== 600) f.push('a heap\'s search not a minute: ' + took(st1) + ', ' + took(st2));
         const k1 = key(st1.after);
-        if (!k1 || (k1.flags & 0x08) || !(k1.flags & 0x20)) f.push('the key in the straw not found and known: ' + JSON.stringify(k1));
+        const bookish = !process.env.RULES;      // (HarnMaster's Awareness 95; another referee's chance its own: the things' test made, its find not looked for)
+        if (bookish && (!k1 || (k1.flags & 0x08) || !(k1.flags & 0x20))) f.push('the key in the straw not found and known: ' + JSON.stringify(k1));
         const things = said('> search the straw', '> search the room');
         if (/trap/.test(things)) f.push('a thing searched told of traps: ' + things.slice(0, 300));
-        inTurn(things, ['You poke through the heap of straw...', 'You find an iron key in the straw.', '> search the straw', 'You poke through the heap of straw...', 'You find nothing in the straw.',
+        inTurn(things, ['You poke through the heap of straw...', bookish ? 'You find an iron key in the straw.' : ' the straw.', '> search the straw', 'You poke through the heap of straw...', bookish ? 'You find nothing in the straw.' : ' the straw.',
           '> search the table', 'You search the table...', 'There\'s nothing on the table.', '> search the dagger', 'You look the dagger over...', 'You find nothing hidden about the dagger.'], f, 'a thing searched: ');
         // (The hall searched whole, stopped at its first corner, gone on with, done)
         const ww = t => dq0Ev(t, 'E_BEAT', { beat: 'WB_SEARCH' });
@@ -8320,9 +8323,11 @@ module.exports = {
         // (Traps underfoot: hidden plates about it, noticed as it comes to one and gone round, or set off, and it stops there)
         const g7 = T.after(p6, 'dq0 -p t -s 7 -c /ram/c.hm'), u7 = T.after(g7, 'search the room'), tu = dq0Ev(u7, 'E_TRAP', {}), su = dq0Ev(u7, 'E_TRAP', { to: 'TO_SPRUNG' });
         if (!tu.some(e => e.to === 'TO_NOTICED' || e.to === 'TO_SPRUNG')) f.push('no plate met underfoot: ' + dq0Evs(u7));
-        if (!dq0Ev(u7, 'E_PORTAL', { po: 'PO_FOUND' }).length) f.push('no hidden door found as a stop came to it: ' + dq0Evs(u7));
-        const uw = s.slice(s.lastIndexOf('> search the room'));
-        if (su.length ? !uw.includes('You stop searching.') : !uw.includes('You\'ve been over the whole room.')) f.push('after the plates: ' + uw.slice(0, 500));
+        if (bookish && !dq0Ev(u7, 'E_PORTAL', { po: 'PO_FOUND' }).length) f.push('no hidden door found as a stop came to it: ' + dq0Evs(u7));
+        const uw2 = s.slice(s.lastIndexOf('> search the room', s.lastIndexOf('mkdir /ram/h')));
+        if (su.length ? !uw2.includes('You stop searching.') : !uw2.includes('You\'ve been over the whole room.')) f.push('after the plates: ' + uw2.slice(0, 500));
+        // (Quit part way, the watch as it was, carried on)
+        if (!/> status[^>]*Watching: nothing in particular/.test(s)) f.push('the search\'s watch kept with the game: ' + s.slice(s.lastIndexOf('> status'), s.lastIndexOf('> status') + 200));
         return f;
       },
       sdcard: true
