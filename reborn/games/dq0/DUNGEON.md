@@ -1398,8 +1398,8 @@ packed, not the game on the ROM disk (2026-10-31, DECISIONS.md).  Now: 208M cycl
   second's nap as the game starts (its look at the keys and the console's had a quarter of the CPU), the sound a quarter
   second's (the hub's starting), the world's waits on its doorbell.  Measured as a game's played (the outfits drawn: the
   check's -K had left out some 8M): see dq0starttime's budgets in tests.js.  Lazy reading of the banks was measured and
-  not built: by the first prompt 120K of 359K packed bytes aren't touched, but dq0answer's dozen commands alone touch all
-  but 41K (some 13M cycles), each bank holding parts used at once and parts seldom used; a cold bank's first use would cost
+  not built: by the first prompt 119K of 359K packed bytes aren't touched, but eighteen everyday commands touch all but
+  39K (some 10M cycles), each bank holding parts used at once and parts seldom used; a cold bank's first use would cost
   1.5M cycles and more in a typed answer, against the user's D17.  What's left is the card: some 535K bytes at about 270
   cycles each (164 clocking the bits in, as proven on the board).  What stands between this and ten seconds is that, and
   the user's to choose: the game on the ROM disk (reads some 4.5 times as quick, DECISIONS.md's, not chosen on
