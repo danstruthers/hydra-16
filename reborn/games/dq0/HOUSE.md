@@ -2723,7 +2723,7 @@ The book (HarnWorld's prices): the listed prices are retail at the named source,
 little as 10% of these prices and sell them for roughly 50%", "the seller, with a shrewd eye on the size of the buyer's
 purse, sets a price. Haggling follows and the final transaction can vary 25% or more"; a jeweller or a mercantyler buying
 a jewel, "lucky to receive half" (Treasure 5).  Rhetoric is the mercantyler's first skill (Character 17).  The rest is
-the house's.  *(Every number here is for review.)*  (dq0d.c's part 13: s_gift's trade and entertain; dq0w's things.c
+the house's.  *(Every number here is for review.)*  (dq0d.c's part 15: s_gift's trade and entertain; dq0w's things.c
 part 62, goods, and wfetch.c part 72; the UI's errand.c, part 15, in overlay 17's bank.)
 
 - **Who trades:** any denizen with a mind that isn't a beast (folk), indifferent to the character or better ("The

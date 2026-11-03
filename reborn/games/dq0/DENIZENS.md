@@ -179,7 +179,7 @@ yet) is the hook's.
 rope from the dwarf", "sell my dagger", "how much for the lantern?", "what will you give for this?", "haggle for the
 rope", "sing to the bandit".  The UI finds the goods (the character's, or the trader's: the world's IO_GEAR's goods, the
 nearest named, or any, carrying them) and each side's pennies, and asks the denizens' task (SW_BUY, SW_SELL, SW_PRICE,
-SW_OFFER, SW_HAGGLE, SW_ENTERTAIN: dq0d's part 13): any folk denizen indifferent or better trades, its price from the
+SW_OFFER, SW_HAGGLE, SW_ENTERTAIN: dq0d's part 15): any folk denizen indifferent or better trades, its price from the
 goods' worth by its attitude, haggled by the book's Rhetoric in its tongue; the deal done by the one path (its own
 I_ROB intents, FE_GIFT the coins or the goods it takes, FE_GIVE its own handed over: the world's wfetch.c).  Entertained
 by the referee's performing skill, its attitude moved as words move it, as far as friendly.
