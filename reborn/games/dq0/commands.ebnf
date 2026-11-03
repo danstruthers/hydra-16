@@ -34,7 +34,7 @@
                    | <break> | <raise> | <lower> | <bend> | <force> | <disarm> | <rebar> | <hang> | <combine>
                    | <appraise>
                    | <deceive> | <threaten> | <calm> | <befriend> | <approach> | <ally>
-                   | <swap> | <tend>
+                   | <swap> | <tend> | <trade>
 
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ] | <LOOK> <object> "over" | <LOOK> "over" <object>   (* "look the torch over":
@@ -77,6 +77,13 @@
 <tend>           ::= <TEND> [ <object> ]       (* first aid (slice 4.3): "tend my wounds", "bandage my left arm", "treat the
                                                  bandit", "first aid"; none said, its own wounds *)
 <TEND>           ::= "tend" [ "to" ] | "treat" | "bandage" | "dress" | "bind" | "staunch" | "first" "aid" [ "to" | "for" ]
+<trade>          ::= ( "buy" | "purchase" ) <object> [ "from" <object> ] | "sell" <object> [ "to" <object> ]
+                   | "how" "much" [ "will" "you" "give" ] [ "for" | "is" | "are" ] <object> | "what" ( "will" | "would" ) "you" "give" [ "me" ] "for" <object>
+                   | ( "haggle" | "bargain" | "barter" ) [ ( "for" | "over" ) <object> ] [ "with" <object> ]
+                   | "entertain" [ <object> ] | ( "sing" | "play" | "dance" ) [ ( "to" | "for" | "with" ) <object> ]   (* the market and
+                                                 entertaining (2026-11-02): "buy the rope from the dwarf", "sell my dagger", "how much for the
+                                                 lantern", "what will you give for this", "haggle for the rope", "sing to the dwarf": VB_TRADE,
+                                                 its verb's aux the sway's SW_* *)
 <unequip>        ::= <UNEQUIP> [ <object> ] | "put" <object> "away" | "take" <object> "off"   (* "put away the sword", "put the sword away", "take the helm off" *)
 <open>           ::= "o" [ <thing> [ <USING> <object> ] ]   (* "open" alone: what's in front *)
 <close>          ::= "close" [ <thing> ]           (* "close look" is <DETAIL> <LOOK>, not this *)
@@ -101,7 +108,8 @@
 <jump>           ::= <JUMP> [ <direction> | ( "over" | "onto" ) <object> ]
 <say>            ::= <SAY> <quoted-text> | <VOLUME-SAY> <quoted-text> [ "!" ]   (* yell, scream, whisper *)
 <tell>           ::= <TELL> <object> [ "to" | "about" ] ( <quoted-text> | <object> | <phrase> | <errand> ) | <TELL> <object> "that" <text> { <text> }   (* "tell the goblin that the bridge is out" *)
-<errand>         ::= ( "fetch" | "bring" | "retrieve" ) [ "me" ] <object> | ( "follow" | "come" ) [ "me" ] "at" <number> [ "space" | "spaces" | "square" | "squares" ]   (* an ally's errand (slice 4.8): "tell Grub to fetch the key", "ask the dwarf to bring me the torch", "tell Grub to follow me at 3 squares" *)
+<errand>         ::= ( "fetch" | "bring" | "retrieve" ) [ "me" ] <object> | ( "follow" | "come" ) [ "me" ] "at" <number> [ "space" | "spaces" | "square" | "squares" ]
+                   | ( "open" | "close" | "shut" | "unlock" ) <thing>   (* an errand at a door, 2026-11-02: "ask the dwarf to open the door" *)   (* an ally's errand (slice 4.8): "tell Grub to fetch the key", "ask the dwarf to bring me the torch", "tell Grub to follow me at 3 squares" *)
 <cast>           ::= <CAST> [ <det> ] [ <spell-word> ] [ "spell" ] [ <at-phrase> ]       (* "concentrate" alone: the spell in use *)
 <eat>            ::= <EAT> <object>
 <drink>          ::= <DRINK> [ "from" <object> | <object> ]
@@ -264,7 +272,7 @@
 <PUSH>           ::= "push"
 <pull>           ::= <PULL> <object>
 <PULL>           ::= "pull"
-<give>           ::= <GIVE> <object> ( "to" | "for" ) <object>
+<give>           ::= <GIVE> <object> ( "to" | "for" ) <object> | <GIVE> <object> <object>   (* "give the bandit 5 pennies", "offer the orc my dagger": the one given it first (2026-11-02) *)
 <GIVE>           ::= "g"
 <grab>           ::= ( "grab" | "hold" ) <object> [ <from-phrase> ] [ <hand-phrase> ]   (* a grapple when the object is engaged; else a get, or a carry for hold; "hold the spear in both hands" *)
 <lock>           ::= "lock" <thing> [ <USING> <object> ]

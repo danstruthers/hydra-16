@@ -94,7 +94,7 @@ void __fastcall__ o_sway_words (const struct sway* s)
     case SR_NOT_ALLY:
         who (1);
         add (h == SW_NAME ? " isn't friendly enough to take a name from you." :
-             " isn't your ally, to take requests from you.");
+             " isn't your ally.");
         return;
     case SR_CANT:
         if (h == SW_GIVE) {
@@ -106,7 +106,7 @@ void __fastcall__ o_sway_words (const struct sway* s)
             who (1);
             add (" doesn't know how to do that.");
         } else {
-            add ("Ask it to do what? (follow me, wait, go home)");
+            add ("Ask it to do what? (follow me, wait, open the door, go home)");
         }
         return;
     }
@@ -122,9 +122,9 @@ void __fastcall__ o_sway_words (const struct sway* s)
         add (" now.");
         return;
     case SW_ORDER:
-        if (s->order == OR_FETCH) {             /* (An errand: slice 4.8's, one ally's) */
+        if (s->order >= OR_FETCH) {             /* (An errand: slice 4.8's, one ally's; at a door, 2026-11-02) */
             who (1);
-            add (" goes to fetch the ");
+            add (s->order > OR_FETCH ? " goes to the door" : " goes to fetch the ");
             add (s->word2);
             add (".");
         } else if (s->name[0]) {
@@ -143,7 +143,7 @@ void __fastcall__ o_sway_words (const struct sway* s)
         add (s->word2);
         add (". ");
         if (s->grade == G_CF) {
-            seeming ("It won't take it: it takes offence, and seems ", " now.");
+            seeming ("It won't take it: it's offended, and seems ", " now.");
             return;
         }
     } else {

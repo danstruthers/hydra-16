@@ -2063,6 +2063,59 @@ static unsigned char __fastcall__ gthing (unsigned i, const char* pre, unsigned 
     return 1;
 }
 
+/* ---- The market's goods (IO_GEAR's to | GR_GOODS, 2026-11-02: DENIZENS.md's trading): the thing named into that actor
+** k (its did) carries, not what it wears or holds itself (its own gear in use), in what it carries (its pouch, its
+** pack: what's at its belt): its item, its worth a unit's (as describe's, the appraisal's: a kind written in silver by
+** its material, coins by their mints, as a local takes them), its count, its condition (dur, dur_max); the actor plus 1
+** in x, its name in name.  IR_OK, or IR_NO (it has none) */
+#define GR_GOODS        0x80
+static unsigned char __fastcall__ goods (unsigned did, unsigned char k, const char* nm)
+{
+    const struct kind* kp;
+    struct ireq* r;
+    unsigned i, j, n = 0, v;
+    char w[16];
+
+    strcpy (w, iq.into);
+    for (i = 0; !n && (i = items (i, IN_DEN | IN_ITEM, 0)) != 0; ) {
+        for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {
+        }
+        fetch (&gr, j);
+        if (gr.where != IW_DEN || (gr.owner | gr.hide << 8) != did) {
+            continue;
+        }
+        fetch (&gr, i);
+        if ((i != j || !(gr.flags & (I_WORN | I_HELD)) || gr.kind == KI_PENNIES) && named (kind_of (gr.kind)->name, w)) {
+            n = i;
+        }
+    }
+    hub_map (0);
+    r = &HUB->ireq;
+    r->x = k + 1;
+    strcpy (r->name, nm);
+    if (!n) {
+        return IR_NO;
+    }
+    fetch (&gr, n);
+    kp = kind_of (gr.kind);
+    v = kp->value;
+    if (kp->mat == MT_SILVER && gr.mat != MT_SILVER) {
+        v = gr.mat == MT_GOLD ? v * 20 : gr.mat == MT_STONE ? v * 8 : gr.mat == MT_GLASS ? v / 10 : v / 60;
+    }
+    if ((kp->form & (KF_SMALL | KF_COUNT)) == (KF_SMALL | KF_COUNT)) {
+        v = (unsigned) ((unsigned long) v * mix_worth (n) / 100);
+        fetch (&gr, n);
+        gr.dur = gr.dur_max = 0;
+    }
+    hub_map (0);
+    r->item = n;
+    r->value = v;
+    r->qty = gr.qty;
+    r->dur = gr.dur;
+    r->dur_max = gr.dur_max;
+    return IR_OK;
+}
+
 unsigned char s_gear_words (void)
 {
     struct actor* a;
@@ -2072,7 +2125,9 @@ unsigned char s_gear_words (void)
     char nm[12];
     char* t0;
 
-    text_new ();
+    if (!(iq.to & GR_GOODS)) {
+        text_new ();
+    }
     glv = iq.to & 3;
     geye = iq.to >> 4;
     for (gd = 0xFF, k = 0; k < NACTORS; ++k) {  /* (The nearest of that name on its stratum) */
@@ -2095,6 +2150,9 @@ unsigned char s_gear_words (void)
     }
     if (best == 0xFF) {
         return IR_NONE;
+    }
+    if (iq.to & GR_GOODS) {
+        return goods (did, best, nm);           /* (The market's: a thing it carries, 2026-11-02) */
     }
     put (nm[0] < 'a' ? "" : "The ");
     put (nm);

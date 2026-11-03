@@ -288,6 +288,10 @@ enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_STRUCK };
 ** a poisoned dart's or needle's (a trap's), a contact poison's (a lock's, a chest's), spoiled food's, foul water's (a
 ** still pool drunk from: the flux).  A creature's bite that carries venom or disease the ruleset's own (its bestiary) */
 enum { AK_NONE, AK_DART, AK_CONTACT, AK_FOOD, AK_FLUX, NAK };
+#define AK_CURE         0x10                    /* (The UI's RS_TIME, a remedy taken, 2026-11-02: its x[15] RT_TAKEN | 1 an */
+#define AK_REMEDY       0x20                    /*   antidote, against the toxin; | 2 a remedy, against the disease; the
+                                                **   null ruleset's x[18] these: HOUSE.md's remedies) */
+#define RT_TAKEN        0x40
 /* The air (the world's, as it moves: the hub's pc_air, RS_TIME's x[20]): its kind times 16, and its strength (1 a little
 ** ... 3 much: the draught's thinned it): blackdamp (stale air: too little to breathe, choke-damp), whitedamp (the
 ** smoke of fire and of a blast: poisonous, giving no warning), firedamp (marsh gas, in the coal and shale beds: it burns,

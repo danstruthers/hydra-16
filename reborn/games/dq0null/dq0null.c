@@ -103,7 +103,19 @@ static void __fastcall__ aff_null (struct req* r)
     unsigned m = r->w1;
     unsigned char k = r->x[18];
 
-    if (k == AK_FLUX) {
+    if (k == AK_CURE || k == AK_REMEDY) {       /* (A remedy taken, 2026-11-02: the poison's sickness, or the
+                                                **   disease's, gone) */
+        if (k == AK_CURE ? aff_m : sick_m) {
+            want_say (" The remedy works: the sickness passes.");
+        } else {
+            want_say (" It does nothing for you.");
+        }
+        if (k == AK_CURE) {
+            aff_m = 0;
+        } else {
+            sick_m = 0;
+        }
+    } else if (k == AK_FLUX) {
         if (!sick_m && !G_OK (flat (r->x[19] > 1 ? -4 : 0))) {
             sick_m = 5760;                      /* (Four days: a day hidden, three of fever) */
         }
@@ -801,11 +813,11 @@ static void __fastcall__ answer (struct req* r)
         r->x[17] = r->w1 >> 8;
         if (r->actor != 0xFF) {                 /* (The UI's: a drink of still water, the flux's; no air, nothing else,
                                                 **   2026-10-31) */
-            r->x[18] = r->x[15] & 0x80 ? AK_FLUX : 0;
+            r->x[18] = r->x[15] & 0x80 ? AK_FLUX : r->x[15] & RT_TAKEN ? (r->x[15] & 1 ? AK_CURE : AK_REMEDY) : 0;
             r->x[19] = 1;
             r->x[20] = r->x[21] = 0;
         }
-        r->x[15] &= 0x7F;
+        r->x[15] &= r->x[15] & RT_TAKEN ? 0 : 0x7F;
         if (!r->a && wounds) {
             rest_m += r->w1;                    /* (At rest: toward a wound healed) */
         }

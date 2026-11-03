@@ -2282,6 +2282,7 @@ portal:
             deal (cmd.aux);
         }
         return;
+    case VB_TRADE:                              /* (The market, entertaining: part 15's whole, 2026-11-02) */
     case VB_GIVE_OBJECT:
         if (errand ()) {
             deal (SW_GIVE);

@@ -1404,8 +1404,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   diamonds, built 2026-11-02: HOUSE.md's rooms on the diagonal): left, rooms truly turned (a long room on the
   slant, not its corners cut; a diamond's own words, its places), other angles stepped and told by step 2's words; a
   wide tunnel's staircase told as one slant (step 2's runs follow a one-wide passage).
-- **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence): left, other errands
-  ("ask the dwarf to open the door"), "give the bandit 5 pennies" without "to", entertain and bargain.
+- **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence; 2026-11-02 an ally's
+  errands at a door, "give the bandit 5 pennies" without "to", entertaining and bargaining): left, the other errands (a
+  lock picked, a door forced for the character, a thing given to another).
 - **The command interpreter** (Phase 3C): every command, the player's or a denizen's mind's, one structure of
   abstract actions (VB_*), verbs as data with their defaults, affordances, selectors, a target that persists,
   questions only when unclear; "alias" the command for text aliases ("alias x is dig down"), naming things and rooms
@@ -1446,12 +1447,13 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   bandit": the book's treatment, a timed work, bandages used up); healing over days of rest (the book's five-day
   rolls, infection, a treatment's EE), told as it wakes; shock's recovery each watch, and in shock only rest, a look and
   a half move; a creature come round in shock; the venoms of the adder, the basilisk and the lindworm (the bestiary's,
-  an infection's course); a folk denizen binding its own bleeding.  Not yet: antidotes (with the market), the minds'
+  an infection's course); a folk denizen binding its own bleeding; antidotes (built 2026-11-02).  Not yet: the minds'
   way with a wounded or shocked denizen (resting in its lair, tending another), stings.
 - **Poison, bad air and disease** (2026-10-31, the user's: HOUSE.md's): one course for every affliction (the book's
   Infection table), poisons (a dart trap's), diseases (foul water's flux, rat-bite fever, a ghoul's grave rot) shown
   after their incubation; the air's pockets (blackdamp, whitedamp, firedamp) and a flame's warnings, firedamp's burst.
-  Left: a door's needle and a chest's (contact poison), poisoned blades, spoiled food, antidotes (with the market), a
+  Antidotes and remedies built 2026-11-02 (HOUSE.md's the market, entertaining and remedies).
+  Left: a door's needle and a chest's (contact poison), poisoned blades, spoiled food, a
   lair's sickness, the denizens' own afflictions and their choking, old mines' air, the explosion's harm to those near.
 - **The sound layer and the denizens' hearing by pace** (slice 4.5, built 2026-10-29: perception as layers, above):
   a pulse over the squares and openings, a background that masks, the character's steps heard by its pace and its
@@ -1514,7 +1516,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   food it takes up, its lift by its size, the things' put down, given and thrown by the minds as the character's are.
 - **The house rules decided, not yet built** (HOUSE.md): Strength and weapons, free pounds, a wrecked portal appraised
   by its state, the pit climb (D13).
-- **The market** (when trading comes: DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a
+- **The market** (built in part 2026-11-02: HOUSE.md's the market, entertaining and remedies; DENIZENS.md's trading):
+  buying, selling, a price asked, haggling, with any folk denizen, in pennies; remedies (antidotes, a physician's
+  draught) for sale, in kits and purses, drunk.  Left, from the plan (DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a
   mercantyler's 10% buying and 50% selling to the source, second-hand clothes 30-60% of new, haggling), the coins'
   metal value and their discount outside their own land in the trade itself (the appraisal tells it now), farthings
   for change; paying with the lowest-worth coins first unless the seller asks for the local or the dwarves', and the

@@ -242,6 +242,7 @@ need: vial@pack 2, herbs@pack 2
 [Apothecary]
 need: herbs@pack 3, vial@pack 2, bandages@pack 3
 40: parchment@pack, quill@pack, horn of ink@pack
+50: antidote@pack, remedy@pack 2                ; (The remedies, 2026-11-02: HOUSE.md's)
 [Astrologer]
 need: paper@pouch, pencil@pouch
 40: quill@pack, horn of ink@pack
@@ -947,6 +948,7 @@ free 20: crowns@pouch 1d3
 free 5: jewel@worn 1d3
 free: chest@bed, pennies@in 6d6, iron key@pouch
 free: ring@worn                                 ; (The ring of its rank, Religion 9's: not its jewelry)
+free 30: remedy@pouch 1-2                       ; (A temple's remedies, the house's: 2026-11-02)
 ; ---- The HarnWorld Bestiary's folk (DECISIONS.md's answer 11: the Khuzdul, the Sindarin, men and the Gargun), their
 ; kinds in the game since 2026-10-29 (Phase 4's peoples, kinds.txt's).  The Gargun by the book's Equipment (HarnMaster
 ; 3.5's Gargun 4-8, each sub-species its own: their own make, the house's crude to middling; a Kyani's finer, Gargun
@@ -1111,6 +1113,7 @@ free 50: lantern@home
 free: cask@home full
 free: chest@hoard, pennies@in 40-200, crowns@in 1d6, jewel@in 1d4, goblet@in, iron key@pouch
 free 30: gem@hoard
+free 30: antidote@home                          ; (2026-11-02: the remedies found)
 [lair sindwar]
 free: basket@home, rations@in 4-8
 free 50: cask@home full
@@ -1146,6 +1149,7 @@ free 50: chest@bed, pennies@in 3d6, iron key@pouch
 free 90: pennies@pouch 7d6
 free 30: crowns@pouch 1d3
 free 15: jewel@worn 1d3
+free 40: antidote@pouch, remedy@pouch           ; (An elder's remedies, the house's: 2026-11-02, the market's)
 [purse sindwar]
 free 90: pennies@pouch 7d6
 free 30: crowns@pouch 1d3

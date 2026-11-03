@@ -623,3 +623,19 @@ pick the sword	VB_RETRIEVE_OBJECT	object=sword	near=sword	pick alone is pick up,
 ignite the torch	VB_LIGHT_OBJECT	object=torch	near=torch	ignite lights it
 bolt the door	VB_BAR_OBJECT	object=door	near=door	bolt bars it
 lie on the bed	VB_LIE_DOWN	object=bed	near=bed	lying on a thing, not a lie told
+give the goblin the apple	VB_GIVE_OBJECT	object=apple;target=goblin	near=apple,goblin	give without to: the one given it first (2026-11-02)
+offer the goblin my apple	VB_GIVE_OBJECT	object=apple;target=goblin	near=apple,goblin	offer, my
+# --- the market and entertaining (2026-11-02) ---
+buy the rope from the goblin	VB_TRADE	object=rope;source=goblin	near=rope,goblin	bought from one
+buy the rope	VB_TRADE	object=rope	near=rope	from whoever has it
+sell the apple to the goblin	VB_TRADE	object=apple;source=goblin	near=apple,goblin	sold to one
+sell my apple	VB_TRADE	object=apple	near=apple	sold, my
+how much for the rope	VB_TRADE	object=rope	near=rope	its price asked
+how much is the rope	VB_TRADE	object=rope	near=rope	its price asked, is
+what will you give for the apple	VB_TRADE	object=apple	near=apple	what one would give
+haggle for the rope with the goblin	VB_TRADE	object=rope;source=goblin	near=rope,goblin	haggled over
+bargain over the rope	VB_TRADE	object=rope	near=rope	bargain, haggle
+entertain the goblin	VB_TRADE	object=goblin	near=goblin	one entertained
+sing to the goblin	VB_TRADE	object=goblin	near=goblin	sung to
+dance	VB_TRADE	-	-	danced for the nearest
+ask the goblin to open the door	VB_TELL_OBJECT	object=goblin;topic=open the door	near=goblin,door	an errand at a door
