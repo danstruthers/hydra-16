@@ -27,6 +27,8 @@ unsigned char __fastcall__ take_rule (unsigned n);  /* (Part 81's, wtake.c: the 
 extern unsigned tk_x, tk_y;
 unsigned char __fastcall__ carry (unsigned n, unsigned char hand_first);   /* (Part 10's) */
 void light_now (void);                          /* (Part 10's) */
+unsigned char __fastcall__ on_pc (unsigned i);  /* (Part 10's) */
+void __fastcall__ mix_join (unsigned i, unsigned n);   /* (Part 64's: two piles of coins' mints) */
 
 #define FETCH_HANDS     200                     /* (Quarter pounds: the most a folk denizen fetches in its hands, 50 lb;
                                                 **   one without hands, in its mouth, 3 lb: HOUSE.md's fetching) */
@@ -139,6 +141,18 @@ void __fastcall__ s_den_fetch (const struct msg* q)
             hub_map (0);
             told (FT_FEET, kind);
             return;
+        }
+        if (q->w2 == 1 && kind == KI_PENNIES) {   /* (Coins kept: joined to a pile of the character's alike, the
+                                                **   market's, 2026-11-02) */
+            for (c = 0; (c = items (c, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
+                if (c != n && item_at (c)->kind == kind && !(item_at (c)->flags & I_NAMED) && on_pc (c) &&
+                    (unsigned) item_at (c)->qty + item_at (n)->qty <= 250) {
+                    mix_join (c, n);
+                    item_at (c)->qty += item_at (n)->qty;
+                    item_at (n)->kind = 0;
+                    break;
+                }
+            }
         }
         equip_now ();                           /* (What's to hand now, and its load: the referee's) */
         light_now ();

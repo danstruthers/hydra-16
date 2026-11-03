@@ -81,6 +81,9 @@ told:
     r->x[14] = m;
     r->x[15] = p | f;
     ask_b (RS_TIME, 0, 0)->state = REQ_FREE;
+    if (p & RT_TAKEN) {
+        body_words ();                          /* (The remedy's work told at once: the referee's news) */
+    }
     intend2 (I_WAIT, w, 1);
 }
 

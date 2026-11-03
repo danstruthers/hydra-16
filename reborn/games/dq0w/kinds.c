@@ -201,10 +201,10 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "mankar", K_HAND | K_HANG, 8, 2, 0, 0, 0, 0, 3, "mankar", MT_IRON, AP_WEAPON, 336 },   /* (The Gargun's: Combat 3's
                                                 **   (G), 84d and 110d, hung from the belt as an axe is) */
     { "mang", K_HAND | K_HANG, 12, 3, 0, 0, 0, 0, 3, "mang", MT_IRON, AP_WEAPON, 440 },
-    { "antidote", K_HAND, 1, 1, 0, 0, 0, 0, 1, "antidote", MT_GLASS, AP_FOOD, 192 },   /* (A vial of theriac, 48d, and a
+    { "antidote", 0, 1, 1, 0, 0, 0, 0, 1, "antidote", MT_GLASS, AP_FOOD, 192 },   /* (A vial of theriac, 48d, and a
                                                 **   physician's draught, 12d: the house's prices, HOUSE.md's remedies,
                                                 **   2026-11-02) */
-    { "remedy", K_HAND, 1, 1, 0, 0, 0, 0, 1, "remedy", MT_GLASS, AP_FOOD, 48 },
+    { "remedy", 0, 1, 1, 0, 0, 0, 0, 1, "remedy", MT_GLASS, AP_FOOD, 48 },
 };
 #pragma rodata-name (pop)
 

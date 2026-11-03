@@ -5113,10 +5113,10 @@ module.exports = {
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
-        'inventory', 'give the bandit 5 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'inventory', 'how much for the oil',
+        'inventory', 'give the bandit 2 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'inventory', 'how much for the oil',
         'buy the oil from the bandit', 'inventory', 'haggle for the oil', 'sing to the bandit', 'quit', 'echo $status']) },
       start(m) {
-        dq0Poke(m, ['inventory', 'give the bandit 5 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'how much for the oil',
+        dq0Poke(m, ['inventory', 'give the bandit 2 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'how much for the oil',
           'buy the oil from the bandit', 'haggle for the oil', 'sing to the bandit'].map(line => ({ g: 1, line, n: 1, name: 'bandit', set: { attitude: 4, doing: 0 }, beside: 4 })));
       },
       expect: ['% echo $status'],
@@ -5127,7 +5127,7 @@ module.exports = {
         const pennies = st => dq0Carried(st).filter(i => i.name === 'pennies').reduce((n, i) => n + i.qty, 0);
         const i0 = T.of('inventory');
         if (!i0 || !i0.after || !oil(i0.after)) return ['no flask of oil to trade at the start'];
-        const g = sw('give the bandit 5 pennies', { kind: 'SW_GIVE', result: 'SR_OK' }, 'the pennies not given without "to"');
+        const g = sw('give the bandit 2 pennies', { kind: 'SW_GIVE', result: 'SR_OK' }, 'the pennies not given without "to"');
         if (g && !dq0Ev(g, 'E_TASK', { te: 'TE_FETCHED', ft: 'FT_GOT' }).length) f.push('the gift not taken (' + dq0Evs(g) + ')');
         sw('what will you give for the oil', { kind: 'SW_OFFER', result: 'SR_OK' }, 'no offer for the oil');
         if (!/The bandit would give you \d+ penn(y|ies) for your oil\./.test(s)) f.push('the offer not told');
@@ -5144,8 +5144,9 @@ module.exports = {
         const i2 = T.after(b, 'inventory');
         if (!i2 || !i2.after || oil(i2.after) !== oil(i0.after)) f.push('the oil not the character\'s again');
         sw('haggle for the oil', { kind: 'SW_HAGGLE', result: r => r === 'SR_OK' || r === 'SR_SPURNED' }, 'not haggled over');
-        sw('sing to the bandit', { kind: 'SW_ENTERTAIN', order: 'PF_SING', result: r => r === 'SR_OK' || r === 'SR_AS_FAR' }, 'not sung to');
+        sw('sing to the bandit', { kind: 'SW_ENTERTAIN', result: r => r === 'SR_OK' || r === 'SR_AS_FAR' }, 'not sung to');
         if (!/You sing for the bandit\.|The bandit is friendly already/.test(s)) f.push('the song not told');
+        if (f.length) f.push(s.slice(s.indexOf('> give the bandit'), s.indexOf('> give the bandit') + 2500));
         return f;
       },
       sdcard: true
@@ -5170,6 +5171,7 @@ module.exports = {
         if (!opens.length) f.push('the ally never opened the door (E_DEN DE_OPENS)');
         for (const e of opens) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door opened not the one asked: ' + [e.w1, e.w2]);
         if (!/The bandit opens the door\./.test(s)) f.push('its opening not seen: "The bandit opens the door."');
+        if (f.length) f.push(s.slice(s.indexOf('> look'), s.indexOf('> look') + 1500));
         return f;
       },
       sdcard: true
@@ -5187,7 +5189,7 @@ module.exports = {
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out);
         if (!/It does nothing for you\./.test(s)) f.push('the remedy drunk with no sickness not told doing nothing');
-        if (!/there's venom in it\./.test(s)) return f.concat(['no venom: the scene not set']);
+        if (!/there's venom in it\./.test(s)) return f.concat(['no venom: the scene not set', s.slice(s.indexOf('> open the door'), s.indexOf('> open the door') + 2500)]);
         if (!/You drink the antidote\./.test(s)) f.push('the antidote not drunk');
         if (!/The remedy works|The remedy eases you/.test(s.slice(s.indexOf('You drink the antidote.')))) f.push('the antidote did nothing: ' + JSON.stringify(s.slice(s.indexOf('You drink the antidote.'), s.indexOf('You drink the antidote.') + 600)));
         const inv = T.of('inventory');

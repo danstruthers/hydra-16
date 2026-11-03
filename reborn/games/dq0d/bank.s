@@ -9,7 +9,7 @@
             .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
+SWDEPTH     = 7                     ; Swapped parts' calls in calls, at most (7 since 2026-11-02: the market's byte; four deep at most)
 
             .bss
 _ovbank:    .res        5           ; The parts' images' banks (dq0d.cfg's OV1 ... OV5)

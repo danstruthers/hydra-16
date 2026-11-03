@@ -67,8 +67,8 @@
                                                 **   the afflictions, pc_air ... pc_dose; 35, the time of day believed,
                                                 **   tb, BRG_SKY, rs.h's TIME_STEPS and timesense; 36, the
                                                 **   tunnellers, I_KIT's KT_DIG, DG_*, dig_t, DE_DIG, DE_DUG, AG_PICK,
-                                                **   AG_SPADE, DO_DIG; 37, the market's: the sway's coin, its, ncoin
-                                                **   and nits, SW_BUY ... SW_ENTERTAIN, OR_OPEN ..., SR_WONT ...) */
+                                                **   AG_SPADE, DO_DIG; 37, the market's: the sway's word2 its coins
+                                                **   (SW_COIN ...), SW_BUY ... SW_ENTERTAIN, OR_OPEN ..., SR_WONT ...) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -1090,9 +1090,11 @@ struct sway {
                                                 **   worth in farthings, ix, and 1 if it's food, iy; slice 4.8's) */
     unsigned char   actor;                      /* (The reply's: the actor it was, plus 1; the market's request: the
                                                 **   one the goods were found on, plus 1) */
-    unsigned        coin, its;                  /* (The market's: the character's pennies and the actor's, their */
-    unsigned char   ncoin, nits;                /*   counts: 2026-11-02) */
 };
+#define SW_COIN(s)      (((unsigned*) (s)->word2)[0])   /* (The market's, in word2, its words the UI's own: the */
+#define SW_ITS(s)       (((unsigned*) (s)->word2)[1])   /*   character's pennies and the actor's, their counts: */
+#define SW_NCOIN(s)     ((s)->word2[4])                 /*   2026-11-02, the denizens' main RAM's room) */
+#define SW_NITS(s)      ((s)->word2[5])
 
 #define IQ_SIZE         16                      /* The UI's intents */
 #define DI_SIZE         8                       /* The denizens' (their actors': hub.h's struct actor) */

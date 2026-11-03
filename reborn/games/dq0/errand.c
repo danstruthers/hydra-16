@@ -125,14 +125,13 @@ ask:
     S.order = o;
     S.actor = r;
     strcpy (S.word, wh);
-    strcpy (S.word2, gd);
     S.item = item;
     S.ix = w;
     S.iy = it | sell;
-    S.coin = c;
-    S.ncoin = ni;
-    S.its = its;
-    S.nits = nits;
+    SW_COIN (&S) = c;
+    SW_NCOIN (&S) = ni;
+    SW_ITS (&S) = its;
+    SW_NITS (&S) = nits;
     hub_call (&S, T_DENIZENS);
     S.state = REQ_FREE;
     strcpy (nl, S.name[0] >= 'A' && S.name[0] <= 'Z' ? "" : "the ");    /* (Its name: "the dwarf", "Grub") */

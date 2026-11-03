@@ -2824,12 +2824,17 @@ static void __fastcall__ entertain (unsigned char k)
 ** reply's).  A price asked within earshot; the deal within reach, the money there (the payer's pennies), then its
 ** intents, the character's own way with things for every actor (the world's wfetch.c: the payer's coins or the goods
 ** sold taken, FE_GIFT, kept; its own handed over, FE_GIVE) */
+static unsigned __fastcall__ pct (unsigned v, unsigned char q)   /* (v's q in a hundred, sixteen bits: no long
+                                                **   arithmetic, the main RAM's room) */
+{
+    return v < 500 ? v * q / 100 : v / 100 * q;
+}
+
 static void __fastcall__ trade (unsigned char k)
 {
     unsigned char t = sw.was, h = sw.kind, sell = sw.order & 1, q;
     signed char g;
-    unsigned long p;
-    unsigned n;
+    unsigned p, n;
 
     if (K.mind == M_BEAST) {
         sw.result = SR_BEAST;
@@ -2843,8 +2848,8 @@ static void __fastcall__ trade (unsigned char k)
         sw.result = SR_NO_GOODS;
         return;
     }
-    p = (unsigned long) sw.ix * (sell ? (t == AT_INDIFFERENT ? 40 : t == AT_FRIENDLY ? 50 : 60) :
-        (t == AT_INDIFFERENT ? 125 : t == AT_FRIENDLY ? 100 : 75));
+    p = pct (sw.ix, sell ? (t == AT_INDIFFERENT ? 40 : t == AT_FRIENDLY ? 50 : 60) :
+        (t == AT_INDIFFERENT ? 125 : t == AT_FRIENDLY ? 100 : 75));   /* (Farthings) */
     sw.t = 20;
     if (h == SW_HAGGLE) {
         g = sw.grade = words_test (k, P_PERSUADE, 0, (signed char) t - 3 + K.sway + (K.mind == M_CUNNING ? -1 :
@@ -2862,9 +2867,9 @@ static void __fastcall__ trade (unsigned char k)
             return;
         }
         q = g == G_CS ? 25 : g == G_MS ? 10 : 0;
-        p = p / 100 * (sell ? 100 + q : 100 - q);
+        p = pct (p, sell ? 100 + q : 100 - q);
     }
-    n = (unsigned) ((p + 200) / 400);
+    n = (p + 2) >> 2;
     sw.ix = n = n ? n : 1;
     if (h == SW_PRICE || h == SW_OFFER) {
         return;
@@ -2873,18 +2878,18 @@ static void __fastcall__ trade (unsigned char k)
         sw.result = SR_FAR;
         return;
     }
-    if (sell ? sw.nits < n : sw.ncoin < n) {
+    if (sell ? SW_NITS (&sw) < n : SW_NCOIN (&sw) < n) {
         sw.result = sell ? SR_BROKE : SR_POOR;
         return;
     }
     im.a = FE_GIFT;                             /* (The payer's coins, or the goods sold: taken, kept) */
-    im.t = sell ? sw.item : sw.coin;
+    im.t = sell ? sw.item : SW_COIN (&sw);
     im.w1 = sell ? sw.iy >> 8 : n;
     im.w2 = 1;
     im.x[0] = im.x[1] = 0xFF;
     post (I_ROB, k + 1);
     im.a = FE_GIVE;                             /* (Its own handed over: the goods bought, or its coins) */
-    im.t = sell ? sw.its : sw.item;
+    im.t = sell ? SW_ITS (&sw) : sw.item;
     im.w1 = sell ? n : sw.iy >> 8;
     im.w2 = 1;
     im.x[0] = im.x[1] = 0xFF;

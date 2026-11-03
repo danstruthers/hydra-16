@@ -2085,7 +2085,7 @@ static unsigned char __fastcall__ goods (unsigned did, unsigned char k, const ch
             continue;
         }
         fetch (&gr, i);
-        if ((i != j || !(gr.flags & (I_WORN | I_HELD))) && named (kind_of (gr.kind)->name, w)) {
+        if ((i != j || !(gr.flags & (I_WORN | I_HELD)) || gr.kind == KI_PENNIES) && named (kind_of (gr.kind)->name, w)) {
             n = i;
         }
     }
