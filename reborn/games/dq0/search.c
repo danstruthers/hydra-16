@@ -74,9 +74,12 @@ unsigned char s_search_go (void)
     }
     if (f >= SF_FOR) {                          /* (The thing: the things' to find, and keep) */
         HUB->ireq.to = f | (d ? SF_TOUCH : 0);
-        k = things (IO_SEEK, w);
+        k = things (IO_SEEK | IO_STEPS, w);
         if (k == IR_NOT_HERE && reach_go ()) {
             return 0;                           /* (Out of reach: walked over to it first, then again) */
+        }
+        if (k == IR_NO) {
+            return 0;                           /* (A step of the reach first: part 18's) */
         }
         if (k != IR_OK) {
             if (d) {

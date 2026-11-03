@@ -594,6 +594,8 @@ void __fastcall__ o_throw_words (unsigned r)
         sayf ("\nYou throw the %s%s at the %s%s", w, cmd.manner & MN_HARD ? " hard" : "", cmd.other.word,
             how[r >> 8 & 3]);
         return;
+    case IR_FIXED:                              /* (A step of the reach first: part 18's) */
+        return;
     case IR_NO:
         sayf ("\nThe %s isn't a thing you can throw.", w);
         return;

@@ -508,6 +508,21 @@ static void __fastcall__ worked (unsigned char action)
         if (action == IR_OK && reach != 4) {
             intend2 (I_WAIT, t, 1);
         }
+        if (action == IR_OK && reach == 4) {    /* (A timed work's end, the reach's steps to come: the UI waits for them;
+                                                **   the torch to light again by its own steps: HOUSE.md's) */
+            hub_mem (0, &k, &HUB->ireq.y, 1);
+            if (k >= 0xFD) {
+                if (k == 0xFE) {
+                    cmd.action = VB_LIGHT_OBJECT;
+                    cmd.aux = IO_LIGHT;
+                    cmd.other.word[0] = 0;
+                    cmd.obj.sel = 0;
+                    hub_mem (UI_BANK, &UIREC->kept, &cmd, sizeof cmd);
+                    reach = 5;
+                }
+                intend2 (I_WAIT, 1, 1);
+            }
+        }
         return;
     }
     task_words (TE_BEGUN | k << 8, n |= 0x80);
@@ -528,7 +543,7 @@ unsigned char __fastcall__ o_more (unsigned char action)
         break;
     case VB_FILL_OBJECT:                        /* (A light renewed, slice 4.1's: "fill the lantern", "dip the torch in
                                                 **   the oil", the things' IO_FILL; its time, quietly: a timed work) */
-        worked (othings (IO_FILL, cmd.obj.word, cmd.other.word, d));
+        worked (othings (IO_FILL | IO_STEPS, cmd.obj.word, cmd.other.word, d));
         break;
     case VB_OBSERVE_IN:                         /* (Looked into a thing, onto it: "look in the sack", "look on the */
                                                 /*   table", "look into the well", the user's, 2026-10-21; the */
@@ -538,12 +553,12 @@ unsigned char __fastcall__ o_more (unsigned char action)
             look_way (VB_OBSERVE_THROUGH);
             break;
         }
-        action = othings (IO_INSIDE, cmd.obj.word, "", 0);
+        action = othings (IO_INSIDE | IO_STEPS, cmd.obj.word, "", 0);
         if (action == IR_NOT_HERE) {
             reach_go ();                        /* (Out of reach: walked over to first, then again) */
-        } else if (action != IR_OK) {
+        } else if (action == IR_NONE) {
             sayf ("\nYou see no %s here.", cmd.obj.word);
-        } else {
+        } else if (action == IR_OK) {           /* (IR_NO: a step of the reach first, part 18's) */
             msg (lb);
             intend2 (I_WAIT, 30, 1);            /* (A look's three seconds) */
         }
@@ -556,7 +571,7 @@ unsigned char __fastcall__ o_more (unsigned char action)
         if (!cmd.obj.word[0] || cmd.obj.kind) {
             return 0;
         }
-        action = othings (IO_SHUT, cmd.obj.word, "", (action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux) | d);
+        action = othings (IO_SHUT | IO_STEPS, cmd.obj.word, "", (action == VB_LOCK_OBJECT ? PA_LOCK : cmd.aux) | d);
         if (action == IR_NONE) {
             if (cmd.action != VB_LOCK_OBJECT) {
                 return 0;

@@ -658,7 +658,8 @@ measure, the thing's own (a flask's oil: light, below).
 **Light** (the character's): from the lit things it carries, the brightest's reach (a torch 20 feet, a candle 10, a
 lantern 30: the kinds'), in a hand, worn or hung from the belt; lit (light X, or the first unlit) with a tinderbox
 carried or another flame (one carried, or lit within reach), put out (douse X); a thing lit in the pack taken into a
-hand first.  Put down lit, it lights the squares round it it has a clear line to (the senses' light layer: perception
+hand first; "light a new torch" the old one in a hand let fall first, a spare got out by the reach's steps (HOUSE.md's a
+new light; "new", "fresh", "another" a selector of any handling).  Put down lit, it lights the squares round it it has a clear line to (the senses' light layer: perception
 as layers, below), seen from where the character stands, and its own glow is seen much further off in the dark; the
 room's words name what gives its light ("by the light of your candle").  The world keeps it in the hub (pc_light,
 pc_lamp), its item store's; it takes the time and looks again (I_LIGHT).
@@ -707,8 +708,13 @@ how readily a thing comes to hand is where it is, one rule for every taking out,
 tool's use, every actor's (the character's, a robber's rifling it): in hand at once; on the body (worn, hung from a
 belt, in what's open to the hand: a pouch, a quiver) or lying within reach a quick draw; each container's level more
 (held, set down, in another); a pack worn on the back (its kind's, KF_BACK) taken off and put on again; engaged, a
-round a step (the book's grope); dropping, or a pack shrugged off, no time.  The time owed is the item store's, added
-to the character's next spell of time (things.c's reach, dq0w.c's pextra).  A tool is handy in hand or on the body:
+round a step (the book's grope); dropping, or a pack shrugged off, no time.  A reach is a sequence of timed steps
+(2026-11-02, the user's: "Grope (take off backpack) followed by Grope (get something from backpack) then grope (put
+the pack back on), each one taking its time"), told as each begins, each a long task of its own (its bar, a stop, hard
+and soft interruptions), the world changed at each's end, so stopped part way the pack stays off and told; the handling
+waits, asked again as each step's up (things.c's reach_step, IO_STEP, the UI's reach 5), and the pack goes back on as
+it's done.  A robber's rifling, a load and a blow's weapon named keep the time in a lump (reach_done, dq0w.c's pextra).
+A tool is handy in hand or on the body:
 mapping as it goes draws only with its things handy.  What's used up is each kind's data, as a light's fuel: the
 things drawn with (the catalogue's burns, FU_DRAW: charcoal, chalk, a pencil, ink, a quill) a drawing's minutes off
 each, gone and told when spent; a lot's one used up, and a missile's chance to break (slice 4.7's: an arrow one

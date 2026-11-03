@@ -221,6 +221,9 @@ open = SL_OPEN
 closed = SL_SHUT
 shut = SL_SHUT
 empty = SL_EMPTY
+new = SL_NEW                                # (2026-11-02, the user's "light a new torch": not in a hand, not burning)
+fresh = SL_NEW
+another = SL_NEW
 
 [manners]
 carefully = MN_CAREFUL

@@ -22,7 +22,9 @@ static const char* const doing[] = {           /* (By LT_*) */
     "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering",
     "fighting", "travelling", "studying the mechanism", "disarming the trap", "picking the lock", "forcing", "heaving at",
     "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
-    "hiding", "tending the wound"
+    "hiding", "tending the wound", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
+    "letting fall", "letting fall", "putting away", "blowing out", "blowing out", "lighting", "setting down", "taking up",
+    "striking a spark"
 };
 #define NDOING          (sizeof doing / sizeof doing[0])
 
@@ -114,7 +116,7 @@ static const char* __fastcall__ doing_of (unsigned char k, unsigned char n)
     static const char* const struck[4] = { "battering", "punching", "kicking", "butting" };    /* (By SK_*) */
 
     strcpy (dn, k == LT_BATTER ? struck[n >> 4 & 3] : doing[k < NDOING ? k : 0]);
-    if (n && (k == LT_BATTER || k == LT_FORCE || k == LT_HEAVE || k == LT_FILL || k == LT_HIDE)) {
+    if (n && (k == LT_BATTER || k == LT_FORCE || k == LT_HEAVE || k == LT_FILL || k == LT_HIDE || (k >= LT_PACKOFF && k != LT_KINDLE))) {
         strcat (dn, " ");
         strcat (dn, noun (n));
     }
@@ -262,6 +264,11 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     case TE_ROBBED:                             /* (Helpless, robbed: a robber's way, the denizens') */
         sayf ("\n%s goes through your things as you lie helpless, and takes what it finds.", foe (named, 1));
         break;
+    case TE_PACKED:                             /* (The reach's: part 18's) */
+    case TE_FUMBLE:
+    case TE_KINDLED:
+        reach_said (w, named);
+        break;
     case TE_LEARNT:                             /* (A skill opened as it's used: Drawing, the first map, slice 4.2's) */
         msg ("You start to learn drawing.");
         break;
@@ -269,6 +276,10 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
                                                 **   outcome as its time's done, HOUSE.md's long tasks; the user's,
                                                 **   2026-10-22) */
         p = w >> 8;
+        if (p >= LT_PACKOFF) {
+            reach_said (w, named);              /* (A step of the reach: part 18's) */
+            break;
+        }
         if (p == LT_TRAVEL) {                   /* (A journey: slice 4.2's) */
             sayf ("\nYou head back toward %s.", place (named));
             break;

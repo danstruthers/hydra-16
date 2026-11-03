@@ -796,8 +796,8 @@ climb's test to hold on).
   walked over to), holding one (drawing, wielding, swapping a weapon), stowing it, putting it in or on another, or
   taking it out of one, while the character's in an enemy's zone, is a test of its hands (the referee's P_GROPE:
   HarnMaster's Dexterity times 5); failed, nothing's done and the round's wasted ("You fumble for the sword.").
-  Wearing and taking off, dropping, lighting and putting out aren't gropes.  Its time the reach's (2026-10-26, Reach,
-  handy tools and things used up: a round a step, the readiest a round, a worn pack's off and on a round each).
+  Wearing and taking off (but a pack on the back: 2026-11-02, below), dropping, lighting and putting out aren't gropes.
+  Its time the reach's (Reach, handy tools and things used up: a round a step, each step its own test).
 - **Going places, as built:** the place's square worked out from the room's floor as the character faces (the floor
   in thirds for the centre, its edge rows for a side or a corner, the nearer end of each when a corner's not said);
   where it's rock (a cave's), the nearest square the way reaches; "You're there already." if it is.  The search's
@@ -1528,11 +1528,56 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   in hand, two to put away).  **A container's level** (held, set down, in another: a sack, a chest, a pack in hand or on
   the ground): two seconds more each, so a thing in a sack in a chest four.  **A pack worn on the back** (the
   catalogue's: a kind worn on the back, KF_BACK, the backpack's; not names in code): taken off first and put on again
-  after, ten seconds more, and its level's two, once a handling however often it's reached into ("You take off your
-  backpack for it, and put it on again.", after the handling's words; a thing taken up into it or put down from it
-  quietly).  So a thing from a belt pouch a second, from the worn pack thirteen, from a sack in the worn pack fifteen,
-  from a pack on the ground four; a thing taken up into the worn pack fourteen.  (things.c's part 10: reach_from,
-  reach_to, its time owed the character's next spell, dq0w.c's pextra.)  *(For review: every number.)*
+  after, five seconds each, and its level's two, once a handling however often it's reached into.  So a thing from a
+  belt pouch a second, from the worn pack thirteen, from a sack in the worn pack fifteen, from a pack on the ground
+  four; a thing taken up into the worn pack fourteen.  *(For review: every number.)*
+- **A reach is a sequence of steps** *(2026-11-02: the user's words, DECISIONS.md's; drafted for review: the words, the
+  hands, the tools' order)*: each told as it begins, each its own time, then the next; the long tasks' own (a bar for
+  each, "stop", hard and soft interruptions), the world changed at each's end.  In the user's order:
+  1. "You take off your backpack." (5 seconds), into a hand; or, no hand left to reach with, "You take off your
+     backpack, and set it down at your feet."  A thing to get out wants two hands free (the pack in one, the thing in
+     the other); a thing held already, or a look in, one; a two-handed thing, or fewer, its feet.
+  2. A level each, 2 seconds, the outermost first: "You reach into the backpack." on the way, then "You get out the rope."
+     (a thing got out) or "You hold the sack open." (a thing put in, a look in, a search, a lid of what's in it).
+  3. The handling, its own words and time as they were ("You take the rope in your right hand.", a second; "You put
+     the rope in the sack.", two; "In the backpack lie ...", three; a search's minute).
+  4. "You put your backpack back on." (5 seconds), as the character's free; after a timed work's end, its outcome first.
+  A pack on the ground or in hand has steps 2 and 3 alone; a thing on the body, or lying within reach, 3 alone.  One
+  taking off and one putting on a handling, however many things it moves ("take all from the pack", "drop 3 torches":
+  the first thing's steps, each thing after it its level's two seconds, untold); a run of commands each its own.  What
+  it can't do is refused first, in no time (no hand for it, no room, closed: the pack stays on).  For everything the
+  rule covers: a thing taken out, put away, taken up into the pack, worn, let fall from a pack, thrown, filled from, a
+  lid worked, a look in, a search of it.  (things.c's parts 82, 83, 84: reach_step, called by each handling just before
+  it changes anything; the reply's IO_STEP, the UI's first words and wait, the command asked again as it's up: main.c's
+  reach 5, part 18's step_go.)  The time out of a fight is the house's seconds: the book gives a grope no time but in
+  combat, a turn.
+- **Stopped part way the world stays true**: a step not finished hasn't happened; those before it have.  Stopped with the
+  pack off (hard: a blow, a wound, a hostile near; soft answered no; "stop"), it's off, told ("You stop getting out the
+  rope. Your backpack is in your hand.", "... lies at your feet."), the thing out if it got that far; "put on the pack"
+  finishes it, the same command again goes on from where it stands (no taking off).  A pack at its feet can be left, or
+  taken by a denizen (its take rule): then it's not put on, and nothing's said.  Soft questions read "Keep taking off
+  the backpack?".
+- **Every use of a tool, one routine** *(2026-11-02: the user's words, DECISIONS.md's; drafted for review)*: the pack off,
+  at its feet, if the tool's in it; its levels ("You reach into the backpack."); "You get out the pick." (a second; in hand
+  already, none; from a belt pouch, this and no pack); the use, its own long task and words; "You put away the pick." (two
+  seconds); "You put your backpack back on."  Each a grope engaged.  Stopped at any point, the pack off told; the tool isn't
+  moved in the store (the house's as before: it goes back as it's stopped; *for review*: in a hand, if one's free, would be
+  truer, and asks a place to put it back).  As built: a dig's pick or shovel (the first spell's), lockpicks for a door or
+  a chest, a chest's own key, a flask for a light filled or a torch dipped, a bandage for first aid, a fire-maker below.
+  Not by it: a door's key (no reach at all as yet: door_key finds it, three seconds), the drawing things (handy or not:
+  no drawing from a pack, the map kept's rule), a blow's weapon named from the pack, a load from the pack and a robber's
+  rifling (the lump, untold, reach_done's); eating and drinking have no reach yet.  A whetstone: not built (HOUSE.md's
+  decided, not yet built).
+- **Lighting by a fire-maker** *(2026-11-02: the user's words, DECISIONS.md's; for review: the numbers, and the test)*: for
+  anything lit with no flame to hand (a lit thing carried or within reach lights it, as ever, no fire-maker).  That routine,
+  its use the tries: "You strike a spark.", 5 seconds, its test at its end, whether engaged or not: the referee's grope
+  (P_GROPE: Dexterity times 5 in HarnMaster, the null referee's own, *not a skill of its own: one more purpose takes room in
+  the referee's tables, its main RAM at the floor*), 20 less in the dark; "It doesn't catch.", and again, till "It
+  catches." or it's stopped or hurt; then "You light the torch.", put away, the pack back on.  **Empty** (a tinderbox thirty
+  lightings, one off as it catches: the catalogue's burns, FU_DRAW, a closer look's "half used"): told as it comes to the
+  tries, "The tinderbox is empty.", put away, the pack back on, and known from then on (the thing's IS_SPENT): refused at
+  once, no steps, the next time; another tinderbox carried tried first.  No hand is asked for the striking *(for
+  review: sword and shield in hand, a torch still lights)*.
 - **"take off the pack" leaves it off** (in a hand: none free, refused) till "put on the pack" (five
   seconds each, as any worn thing's).  "the pack" names the backpack (the chooser's: a name of one word's end, four
   letters or more: "pack", "skin" a waterskin, 2026-10-26); "drop the pack" lets it fall ("shrug off", the user's
@@ -1541,12 +1586,50 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   shrugged off; a thing in a pack or a pouch got out first (its reach); worn armour taken off first (a doff's five
   seconds).
 - **Looking in a thing, or searching it, is its reach**: a look in the worn pack takes it off and puts it on again
-  (fifteen seconds, the look's three with it), searching it within the search's minute; a look in a sack held five
-  seconds.  "look at" a thing isn't (the plain look).
-- **Engaged, a round a step** (the book's grope, a turn): the readiest (on the body, lying within reach) a round; each
-  container's level a round more; a pack on the back taken off a round, and put on again a round (so a thing stowed in
-  the worn pack in a fight three rounds: drop the pack first, at no time); a thing in hand none.  The grope's test once,
-  as before (failed, the round wasted).  Dropping no round.  (part 10's reach_done, by part 24's engagement.)
+  (fifteen seconds, the look's three with it), searching it a minute more than those (the search's minute itself
+  whole: *for review*); a look in a sack held five seconds.  "look at" a thing isn't (the plain look).
+- **A torch redipped** *(2026-11-02: the user's words, DECISIONS.md's; drafted for review: the order, the hands, every
+  number)*: "refresh the torch", "redip the torch", "dip the torch" (and "dip the torch in the oil", "fill" a lantern as
+  ever): refused first, in no time, if it has all it can take, or there's no fuel.  **Never dipped burning.**  By kinds of
+  case: (1) *Another light* (another lit thing carried or within reach; the room's own): "You blow out the torch.", the
+  flask, the dip, by that light; put away after if the other's carried.  (2) *Still lit, a spare, no other light: the
+  preferred order, chosen for the player*: off with the pack, "You get out the torch.", "You light the torch from the
+  burning one." (3 seconds), "You blow out the torch." (a second), "You set the torch down at your feet." (the lit one: the
+  hands' rule), "You get out the flask of oil.", "You set to soaking the torch." (its time, the oil moved at its end),
+  "You put away the flask of oil.", "You put away the torch." (the old one), "You take up the torch." (the lit one), the
+  pack back on.  (3) *No spare, no other light*: "You go to blow out the torch: that will leave you in the dark.", asked
+  ("Keep blowing out the torch?": no leaves it lit, as any soft stop); then the same by touch: the dip's end tested, the
+  dark's (the referee's grope, 20 less): failed, "Your hands slip in the dark: oil spills, and the torch takes none of
+  it.", half the flask's oil gone, nothing dipped; the flask put away; then "light the torch" by the fire-maker's own
+  steps, in the dark, tries at 20 less; the pack back on.
+  **The hands** *(what the lead was asked to be told)*: a torch dipped asks both hands, the torch in one and the flask in
+  the other; so whatever's in the other hand, a burning spare, a shield, a sword, is set down at its feet first, told, no
+  time and no grope (the book's discarding), and taken up again at the end, a second, a grope engaged ("You take up the
+  sword."): stopped first it lies there, as the look says.  A spare lit wants a hand as well: the other hand's set down
+  for that.  One arm useless: refused first, "You need two good hands to dip the torch."  The torch not in hand is taken
+  in hand first.  Interrupted part way the world stays true: oil moved only at the dip's end, a torch left unlit is unlit,
+  what's down is down.
+- **A new light** *(2026-11-02: the user's words, DECISIONS.md's; drafted for review)*: "light a new torch", "light a fresh
+  torch", "light another torch", any light of that name: the old one in a hand let fall, free (the book's discarding: no
+  test, no time), told ("You let the torch fall, still burning.", lit, burning on where it lies by the lights' rules; "You
+  let the torch fall.", spent), then a spare got out by the reach's steps from wherever it is, into the hand (the one
+  that suits it, its other a shield or a weapon left as it is; a useless arm's never), then lit by the lighting's rule
+  and time, then the pack back on.  No spare (none carried or within reach that isn't in a hand, nor burning, nor spent):
+  "You have no other torch.", nothing dropped.  No flame to light it with: told first, nothing dropped (the old one
+  still lit is a flame for it, as it lies within reach).  Hands full with no old one: refused first, as a hold's.
+  Interrupted part way: the old one where it fell, the pack as it stands.  **"New", "fresh", "another"** are a selector
+  for any handling: the thing of that name not in a hand and not burning ("take a fresh torch", "hold another torch":
+  into a hand, from wherever it is).  (commands.words' SL_NEW; the catalogue's bank's light, part 4's pick; part 82's
+  RS_FALL.)
+- **Engaged, a round a step, each a grope** (the book's grope, Combat 7, a turn; the user's, 2026-11-02): the readiest
+  (on the body, lying within reach) a round; each step above a round in place of its seconds (so a thing stowed in the
+  worn pack in a fight three rounds: drop the pack first, at no time).  Each step its own test (the referee's P_GROPE);
+  failed, "You fumble for the rope.", the round wasted, the step not done, and the sequence over: the world as it stands,
+  the pack off told, and the player chooses again (it isn't tried again by itself: the fight may have changed).
+- **A pack dropped in a fight is automatic, taking it in hand is a grope** (the user's, 2026-11-02; every kind worn on
+  the back, KF_BACK): "drop the pack" no test and no time, as the book's discarding; taking it off the back into a hand
+  ("take off the pack", a reach's first step), up from the ground ("take the pack", "hold the pack") and putting it on
+  ("put on the pack") its test, failed the round wasted.
 - **A robber's** the same (every actor's): its rifling the helpless character a round a step, its round's own the
   first, a pack taken off and not put on again (wfight.c's den_rob).  A denizen's weapon taken up again, its turn, as
   before.
@@ -2829,6 +2912,12 @@ These are the house's.
 - **Two seconds** *(the house's)*: stooped, taken up, as the character's handling of a thing in reach.
 
 ## Decided, not yet built
+
+- **A whetstone, and "sharpen"** (the user's, 2026-11-02, DECISIONS.md's: "like sharpening your sword (if you have a
+  whetstone)"): the routine's there (HOUSE.md's every use of a tool); it wants a kind (the catalogue's NKINDS 144 is full:
+  a kind's slot to free, or the kinds' 8K's table made larger, its words' bank's limit checked by dq0w/make.js), a verb
+  (commands.verbs, an action), and a rule: the book has no whetstone (hm-core's text: no such word), so the house's: a
+  blade's wear (the wear a dig or a blow does it, a closer look's "dulled") made less by a long task, the routine's use.
 
 - **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without
   penalty; heavier versions hit harder, and strong characters are made with heavier weapons.  Today the weapons

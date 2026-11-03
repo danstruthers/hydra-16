@@ -187,6 +187,7 @@ struct item {
 #define IS_CLOSED       0x01                    /* Closed (its lid down, its tie tied, its stopper in): nothing put in
                                                 **   or taken out, nothing in it seen */
 #define IS_LOCKED       0x02                    /* Locked (picked, or forced: P_PICKLOCK, P_FORCE) */
+#define IS_SPENT        0x10                    /* (A fire-maker found empty: it knows, refused at once from now on) */
 #define IS_LOCK         0x04                    /* It has a lock (a chest's: its lid's) */
 #define IS_NOCKED       0x08                    /* (A launcher's: loaded, its missile set to it, an arrow nocked, a
                                                 **   crossbow spanned and its bolt in it: slice 4.7's) */
@@ -305,6 +306,13 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   thing's kind: the UI's to word and wait as a long task), then its
                                                 **   test made and its outcome told as it's done (to | IO_DONE: the
                                                 **   UI's again as its time's up, not stopped) */
+#define IO_STEPS        0x40                    /* (A request's kind |: the UI goes by the reach's steps, a step's reply
+                                                **   IO_STEP's; HOUSE.md's, part 82's) */
+#define IO_STEP         0x3F                    /* (The reply's kind: a step of the reach begun, result IR_NO, no words;
+                                                **   its long task's kind in qty, its thing's kind in item, its time in
+                                                **   x: the UI's first words, its wait, the command kept and asked again
+                                                **   as it's up: main.c's reach 5.  qty 0: a grope failed, the things'
+                                                **   words, x the round wasted) */
 #define IO_DONE         0x80                    /* (IO_HIDE's too: a thing hidden a minute's work, begun, x its time,
                                                 **   qty LT_HIDE, item its kind; done, its hiding in qty) */
 #define IO_INSIDE       (IO_BAR + 8)            /* What's in a thing, or on it (name: carried, or seen within reach; a

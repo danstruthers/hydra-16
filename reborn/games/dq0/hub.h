@@ -672,6 +672,9 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
                                                 **   healed, the bleeding: the referee's words, RS_DESCRIBE b 4's,
                                                 **   slice 4.3's) */
        TE_NO_SHOT, TE_LOADED, TE_GATHERED, TE_READIED,
+       TE_PACKED, TE_FUMBLE, TE_KINDLED,        /* (The reach's: a pack left off as it's stopped part way, b its kind,
+                                                **   0x80 at its feet; a step's grope failed, the world's own, b its kind;
+                                                **   a fire-maker's try's end, b 1 it caught) */
        TE_FETCHED };                            /* (An ally's fetching, a gift taken, slice 4.8's: b the actor plus 1, FT_*
                                                 **   times 16; the thing's kind w1's high byte) */    /* (The missiles', slice 4.7's: no shot, b why, SH_*; a
                                                 **   launcher loaded, b 1 if it was already; the missiles gathered, b how
@@ -887,7 +890,10 @@ struct cthing {
                                                 **   "" */
 };
 enum { SL_THE, SL_ANY, SL_IT, SL_ALL, SL_CLOSEST, SL_LARGEST, SL_SMALLEST, SL_LEAD, SL_NTH, SL_ME,
-    SL_OTHER, SL_LIT, SL_UNLIT, SL_OPEN, SL_SHUT, SL_EMPTY };
+    SL_OTHER, SL_LIT, SL_UNLIT, SL_OPEN, SL_SHUT, SL_EMPTY,
+    SL_NEW = 28 };                              /* (SL_NEW, "a new torch", "a fresh torch", "another torch" (the user's,
+                                                **   2026-11-02): not in a hand, not burning: the world's, its low bits
+                                                **   SL_UNLIT, the request's n 1) */
                                                 /* (Which: the one there is, or the one meant; any one; it, the last
                                                 **   thing named; all of them; the closest, the largest, the smallest,
                                                 **   the one in the lead; the nth; the character; the other, one not
@@ -904,8 +910,14 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
        LT_TRAVEL,                               /*   a journey to a place named, a leg at a time (I_TRAVEL's: each leg
                                                 **   a walk, slice 4.2's); */
        LT_STUDY, LT_DISARM, LT_PICK, LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_PRISE, LT_TRACK, LT_SNIFF, LT_FILL,
-       LT_HIDE, LT_TEND };                      /* (LT_TEND: first aid, a wound treated, the UI's timed work: slice
+       LT_HIDE, LT_TEND,                        /* (LT_TEND: first aid, a wound treated, the UI's timed work: slice
                                                 **   4.3's) */
+       LT_PACKOFF, LT_PACKDOWN, LT_REACHIN, LT_OPENUP, LT_GETOUT, LT_PACKON, LT_LETFALL, LT_LETBURN, LT_PUTAWAY, LT_BLOWOUT, LT_BLOWDARK, LT_LIGHTFROM, LT_SETDOWN, LT_TAKEUP,
+       LT_KINDLE };   /* (The reach's
+                                                **   steps, each its own time, HOUSE.md's: a pack on the back taken off,
+                                                **   into a hand, or set at its feet; a container's level reached into,
+                                                **   held open, a thing got out; the pack put back on: things.c's part
+                                                **   82; the old light let fall, lit or not, "light a new torch") */
                                                 /*   the timed work (HOUSE.md's long tasks, the user's, 2026-10-22:
                                                 **   its first words at once, its outcome as its time's done, decided
                                                 **   then): a trap's mechanism made out, a trap disarmed, a lock

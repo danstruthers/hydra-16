@@ -186,11 +186,21 @@ unsigned char s_take_up (void)
         }
         r = IR_NOT_HERE;
     } else {
+        rs_ok = 1;                              /* (Into the worn pack: by the reach's steps, part 82's, the UI's to take
+                                                **   it again, IR_FIXED's) */
+        rs_live = rs_paid = rs_using = 0;
+        rs_pack = 0;
         if ((r = take_rest ()) == IR_NONE) {    /* (A count, taken up as it gets there: the request as it was, part
                                                 **   4's: "take 4 rations", the user's) */
             hub_map (KIND_BANK);
             r = w == IW_PORTAL || (CATALOGUE[k].keeps & KF_FIXED) ? IR_FIXED : !noinit && fumbled (k) ? IR_FUMBLED :
                 carry (n, 0) ? IR_OK : IR_FULL; /* (Engaged, a grope failed: the round wasted, its words) */
+        }
+        rs_ok = 0;
+        if (rs_st) {
+            r = rs_st == 2 ? IR_FUMBLED : IR_FIXED;
+            rs_st = 0;
+            lwork = 0;
         }
         if (r == IR_OK) {
             reach_done (0);                     /* (Its reach owed, things.c's: the UI's wait for it after) */

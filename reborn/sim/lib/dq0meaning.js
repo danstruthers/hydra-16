@@ -69,7 +69,7 @@ const EXPRS = {
   iWhere: F('struct item', 'where'), iSn: F('struct item', 'sn'), iX: F('struct item', 'x'), iY: F('struct item', 'y'),
   iQty: F('struct item', 'qty'), iId: F('struct item', 'id'), iFuel: F('struct item', 'fuel'), iShut: F('struct item', 'shut'), iSize: F('struct item', 'size'), iThick: F('struct item', 'thick'),
   iMat: F('struct item', 'mat'), iQuality: F('struct item', 'quality'), iOwner: F('struct item', 'owner'), iDur: F('struct item', 'dur'), iDurMax: F('struct item', 'dur_max'), iHide: F('struct item', 'hide'), pcFuel: F('struct hub', 'pc_fuel'), pcLeft: F('struct hub', 'pc_left'),
-  ioName: 'IO_NAME', ioTheme: 'IO_THEME', ioBegin: 'IO_BEGIN', ioPuzzle: 'IO_PUZZLE', ioThrow: 'IO_THROW', ioFill: 'IO_FILL', ioShut: 'IO_SHUT', ioInside: 'IO_INSIDE', ioLook: 'IO_LOOK', ioSeek: 'IO_SEEK',
+  ioStep: 'IO_STEP', ioName: 'IO_NAME', ioTheme: 'IO_THEME', ioBegin: 'IO_BEGIN', ioPuzzle: 'IO_PUZZLE', ioThrow: 'IO_THROW', ioFill: 'IO_FILL', ioShut: 'IO_SHUT', ioInside: 'IO_INSIDE', ioLook: 'IO_LOOK', ioSeek: 'IO_SEEK',
   ioHands: 'IO_HANDS', sightBank: 'SIGHT_BANK', tSeq: F('struct sight', 'seq'), tWhere: F('struct sight', 'where'), tDark: F('struct sight', 'dark'),
   tKind: F('struct sight', 'kind'), tSize: F('struct sight', 'size'), tRw: F('struct sight', 'rw'), tRh: F('struct sight', 'rh'), tRx: F('struct sight', 'rx'), tRy: F('struct sight', 'ry'),
   tLit: F('struct sight', 'lit'), tCeil: F('struct sight', 'ceil'), tFirst: F('struct sight', 'first'), tZ: F('struct sight', 'z'),
@@ -182,7 +182,7 @@ function layout() {
   for (const b of C.blocks) for (const n of b) if (!blockOf[n]) blockOf[n] = b;
   const name = (member, v) => { const b = blockOf[member] || []; const n = b.find(x => byName[x] === v); return n === undefined ? v : n; };
   // (A things' request's kind: items.h's IO_*, the enum's or those #defined after it, IO_NAME ... IO_FILL)
-  const D = j.L, ioDefs = { [D.ioName]: 'IO_NAME', [D.ioTheme]: 'IO_THEME', [D.ioBegin]: 'IO_BEGIN', [D.ioPuzzle]: 'IO_PUZZLE', [D.ioThrow]: 'IO_THROW', [D.ioFill]: 'IO_FILL',
+  const D = j.L, ioDefs = { [D.ioStep]: 'IO_STEP', [D.ioName]: 'IO_NAME', [D.ioTheme]: 'IO_THEME', [D.ioBegin]: 'IO_BEGIN', [D.ioPuzzle]: 'IO_PUZZLE', [D.ioThrow]: 'IO_THROW', [D.ioFill]: 'IO_FILL',
     [D.ioShut]: 'IO_SHUT', [D.ioInside]: 'IO_INSIDE', [D.ioLook]: 'IO_LOOK', [D.ioSeek]: 'IO_SEEK', [D.ioHands]: 'IO_HANDS' };
   const ioName = v => { const n = name('IO_KIT', v); return typeof n === 'number' && ioDefs[v] ? ioDefs[v] : n; };
   return (LAYOUT = { L: j.L, K: byName, name, ioName });

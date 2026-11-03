@@ -31,8 +31,6 @@
 #include "workpart.h"
 
 unsigned char door_key (void);                  /* (Part 80's, wport.c: a key that fits it, the actor's) */
-void __fastcall__ tool_reach (const char* keys);    /* (things.c's parts 4 and 10: a tool got out first, HOUSE.md's */
-unsigned __fastcall__ reach_done (unsigned char said);  /*   handy tools, its time owed the next spell) */
 
 void s_doors (void)
 {
@@ -123,8 +121,8 @@ void s_doors (void)
             if (wk.plan) {                      /* (Begun, the means to hand (the referee's): a minute a try, the
                                                 **   test made again at its end, its outcome then; the lockpicks
                                                 **   got out first) */
-                tool_reach ("picks\0");
-                timed (LT_PICK, 600 + reach_done (2));  /* (Its reach its length's, RD_LONG) */
+                timed (LT_PICK, 600);           /* (Its reach, the lockpicks got out, the world's steps first:
+                                                **   s_door_work's, reach_tool) */
                 return;
             }
             if (g > 0) {

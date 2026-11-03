@@ -106,14 +106,45 @@ unsigned __fastcall__ handy (unsigned i);       /* (Whether thing i is handy: 0,
                                                 **   to the hand) */
 void __fastcall__ reach_from (unsigned n);      /* (Thing n got out, to hand) */
 void __fastcall__ reach_to (unsigned c);        /* (Container c reached into: a thing put in it, looked for in it) */
-void __fastcall__ tool_reach (const char* keys);    /* (Part 4's: a tool used got out, the first carried of one of
-                                                **   those keys, each 0-ended, an empty one last) */
+unsigned char __fastcall__ tool_reach (const char* keys);    /* (Part 4's: a tool used got out, the first carried of one
+                                                **   of those keys, each 0-ended, an empty one last: 1 a step begun) */
 unsigned __fastcall__ reach_done (unsigned char said);  /* (What's owed added, its time back; said, a pack taken off
                                                 **   for it told; then none owed) */
 #define RD_SAID         0x01                    /* (reach_done's: a pack taken off for it told; */
 #define RD_LONG         0x02                    /*   a long task's, not added: its length the more, the caller's) */
 extern unsigned rtime, roff, pextra;            /* (What's owed: its time, tenths; the pack taken off for it) */
 extern unsigned char rsteps, rbody;             /* (Its steps, a fight's rounds: its levels; one, on the body) */
+/* The reach's steps (part 82's, 2026-11-02, the user's: each its words, its time, its grope; HOUSE.md's) */
+unsigned char __fastcall__ reach_step (unsigned n, unsigned c);   /* (Thing n got out, container c reached into: 1 if a
+                                                **   step's begun, the handling to wait, its caller's nothing done;
+                                                **   0 go on.  c RS_TOOL: n a tool, got out, put away after its use) */
+#define RS_TOOL         0xFFFF
+unsigned char __fastcall__ reach_do (unsigned w);   /* (Part 83's: RO_*, or an intent's tool's keys: s_reach_do's) */
+enum { RO_END, RO_ASK, RO_REPLY, RO_FUMBLED, RO_GO, RO_SEEN };
+#define RS_GO           0xFFFB                  /* (reach_step's c: the step rs_do, rs_k, rs_what, rs_t, begun, the caller's) */
+#define RS_FIRE         0xFFFC                  /* (reach_step's c: n a fire-maker, a tool's steps and its tries; 2 empty) */
+#define RS_BACK         0xFFFE                  /* (reach_step's c: the pack back on, its own step) */
+unsigned char __fastcall__ rs_for (unsigned n);  /* (Part 84's: the hand the pack goes in; or RF_*) */
+#define RF_DRAW         0xFFF0                  /* (A tool's next step set: 1; 0 on with its use) */
+#define RF_FIRE         0xFFF1                  /* (A fire-maker's: the same, its tries; 2 empty) */
+#define RF_TRIED        0xFFF2                  /* (A try's end: its roll, told) */
+#define RF_CUT          0xFFF3                  /* (The sequence over part way: the pack off told) */
+#define RF_PICKS        0xFFF4                  /* (An intent's tool got out first: lockpicks; a digger's) */
+#define RF_DIGGERS      0xFFF5
+#define RF_ROLL         0xFFF6                  /* (The dark's test of the hands, its grade's good: 1; in the light 1) */
+#define RF_TELL         0x8000                  /* (| TE_* | its kind times 256: a word to the UI, E_TASK's, b rs_what) */
+extern unsigned rs_tool;                        /* (The tool in use; a fire-maker to hand, part 10's flame's) */
+extern unsigned char rs_using;                  /* (A tool's: 1 out; 2 caught, a fire-maker's) */
+#define LW_REACH        0xFE                    /* (lwork's: a step of the reach, its end RO_END's) */
+extern unsigned rs_pack;                        /* (The pack off for this handling) */
+extern unsigned char rs_ok, rs_st, rs_what, rs_paid, rs_on, rs_live;
+extern unsigned char lwork;
+extern unsigned lw_x, lw_y;                     /* (dq0w.c's: a timed work's square; a redip's, things.c's rs_old, rs_down) */
+extern unsigned char den_saw;                   /* (wbody.h's: the world to look about again) */
+extern struct msg lw_m;
+void equip_now (void);                          /* (wlimbs.c's) */
+void __fastcall__ intent_more (struct msg* m);  /* (dq0w.c's part 37) */
+void __fastcall__ intent_few (struct msg* m);   /* (dq0w.c's part 53) */
 extern unsigned char held_k[2], held_h[2];      /* (The main RAM's, things.c's: what the character holds, the main
                                                 **   hand's kind first, and the hands they're in, IH_*: held_kinds') */
 void held_kinds (void);
@@ -128,7 +159,7 @@ enum {
     SA_NO_SLOT, SA_NO_BELT, SA_NOT_HOLDER, SA_RUN_OUT, SA_WONT_GO, SA_ITSELF, SA_PUT_OUT, SA_NO_ROOM, SA_TOO_HEAVY,
     SA_TAKE, SA_NOT_IN, SA_DON, SA_WORN, SA_WEAR_ONE, SA_NO_WEAR, SA_DOFF, SA_NOT_WORN, SA_LIGHT, SA_LIT,
     SA_NO_FLAME, SA_NO_LIGHT, SA_DOUSE, SA_NOT_LIT, SA_NONE_TO_LIGHT, SA_NONE_LIT, SA_NO_SUCH, SA_NO_OTHER, SA_REACH,
-    SA_WHERE, SA_WHAT, SA_IN_HAND, SA_IN_PACK, SA_FIXED, SA_BURNT, SA_NO_OIL, SA_SHUT, SA_COUNT
+    SA_WHERE, SA_WHAT, SA_IN_HAND, SA_IN_PACK, SA_FIXED, SA_BURNT, SA_NO_OIL, SA_SHUT, SA_NO_SPARE, SA_EMPTY, SA_TWO_HANDS, SA_SPILT, SA_COUNT
 };
 extern const char* const said[SA_COUNT];
 
@@ -141,7 +172,7 @@ struct burn {
     unsigned char   fuels;                      /* FU_*: a light's, those that renew it (0: none, it burns away); a
                                                 **   fuel's, what it is */
 };
-#define NBURNS          11
+#define NBURNS          12
 #define FU_OIL          0x01
 #define FU_PITCH        0x02
 #define FU_DRAW         0x04                    /* (Used up as it's drawn with: charcoal, chalk, a pencil, a quill, ink;

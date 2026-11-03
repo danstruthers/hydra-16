@@ -135,7 +135,7 @@ go:
             SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
             SWPART      45, 17              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
             SWPART      46, 7               ; A search's thing, for or on; what a search turns up (things.c)
-            SWPART      47, 13              ; What's on a thing or in it, searched (things.c)
+            SWPART      47, 8               ; What's on a thing or in it, searched (things.c)
             SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
                                             ;   (things.c: slice 4.1b's)
             SWPART      49, 23              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c; overlay
@@ -177,10 +177,14 @@ go:
             SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
             SWPART      80, 24              ; One path: a denizen's doors, the doors' keys (wport.c: Phase 3C's)
             SWPART      81, 2               ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
+            SWPART      82, 4               ; The reach's steps (things.c's, 2026-11-02: HOUSE.md's reach)
+            SWPART      83, 12              ; Their other half
+            SWPART      84, 1               ; And the hand the pack goes in, a tool's use, the words
+            SWPART      85, 22              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
 
             SWFN        work, 48
             SWFN        worked, 48
-            SWFN        searched, 48        ; (A search's end: the main RAM's room, 2026-10-31)
+            SWFN        searched, 37        ; (A search's end: the main RAM's room, 2026-10-31)
             SWFN        outfit, 57
             SWFN        den_kit, 57
             SWFN        outmake, 58
@@ -274,6 +278,10 @@ go:
             SWFN        reach_from, 56      ; (The reach, 2026-10-26: HOUSE.md's)
             SWFN        reach_to, 56
             SWFN        reach_done, 56
+            SWFN        reach_step, 82      ; (The reach's steps, 2026-11-02)
+            SWFN        reach_do, 83
+            SWFN        rs_for, 84
+            SWFN        hub_attach, 85
             SWFN        handy, 56
             SWFN        tool_reach, 4
             SWFN        flame, 10

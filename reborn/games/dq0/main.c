@@ -831,7 +831,8 @@ static unsigned char cq_st;                     /* The line posted to the comman
 static signed char cq_res;                      /* (Its verdict, cq_cmd's) */
 unsigned char cq_again;                         /* The line changed since it was posted (names_subst's): posted again */
 struct cmd cmd;                                 /* The command being carried out (the parser's, cq_cmd's) */
-unsigned char reach;                            /* (1: walking over, the command kept (the UI bank's) to carry out
+unsigned char reach;                            /* (5: a step of the reach under way, the command kept and asked again as
+                                                **   it's up, 6; part 18's step_go.  1: walking over, the command kept (the UI bank's) to carry out
                                                 **   again as it's free; 2: carried out again; 0 again as a long task's
                                                 **   stopped, task.c's, or a line's command begun; 3: a thing's timed
                                                 **   work under way, words.c's, the command kept the same, 4: carried
@@ -1280,7 +1281,9 @@ void __fastcall__ s_hide (const char* w)
 
     if (!*w) {
         tell (T_HIDE_WHAT_HIDING);
-    } else if ((HUB->ireq.to = reach == 4 ? IO_DONE : 0, things (IO_HIDE, w)) == IR_OK) {
+    } else if ((HUB->ireq.to = reach == 4 ? IO_DONE : 0, d = things (IO_HIDE | IO_STEPS, w)) == IR_NO) {
+        return;                                 /* (A step of the reach first: part 18's) */
+    } else if (d == IR_OK) {
         if (reach != 4) {
             more (VB_HIDE);                     /* (Begun: a minute's work, a timed work, the things' IO_DONE at its
                                                 **   end, words.c's) */
@@ -1620,6 +1623,9 @@ unsigned char __fastcall__ things (unsigned char op, const char* name)
     q->name[sizeof q->name - 1] = 0;
     hub_call (q, T_WORLD);                      /* (Asleep till the world rings with the reply) */
     q->state = REQ_FREE;
+    if (q->kind == IO_STEP) {
+        step_go ();                             /* (A step of the reach begun, HOUSE.md's: part 18's) */
+    }
     return q->result;
 }
 
@@ -1705,7 +1711,7 @@ static void __fastcall__ handle (unsigned char op, const char* x, const char* y,
 
     strcpy (HUB->ireq.into, y);
     HUB->ireq.to = on | shand;                  /* (A hold's: the hand said, slice 4.1b's) */
-    things (op, x);
+    things (op | IO_STEPS, x);
     if (HUB->ireq.result == IR_NOT_HERE && reach_go ()) {
         return;                                 /* (Out of reach: walked over to it first, then again) */
     }
@@ -1769,7 +1775,7 @@ void __fastcall__ s_took_up (unsigned r)
 void __fastcall__ s_take (const char* name)
 {
     static struct msg m;
-    unsigned char was = HUB->pc_light, r = things (IO_GET, name);
+    unsigned char was = HUB->pc_light, r = things (IO_GET | IO_STEPS, name);
 
     strcpy (taking, name);
     pending[0] = 0;
@@ -2181,7 +2187,7 @@ portal:
     case VB_DROP_OBJECT:
         if (!cmd.obj.word[0]) {
             tell (T_PUT_DOWN_WHAT);
-        } else if (d = HUB->pc_light, (pa = things (IO_DROP, cmd.obj.word)) == IR_OK) {
+        } else if (d = HUB->pc_light, (pa = things (IO_DROP | IO_STEPS, cmd.obj.word)) == IR_OK) {
             if (*tt ()) {
                 msg (lb);                       /* (By the count: "You put down two sacks.", the world's) */
             } else {
@@ -2227,7 +2233,7 @@ portal:
             HUB->ireq.x = cmd.other.x;
             HUB->ireq.y = cmd.other.y;
             HUB->ireq.to = cmd.manner;
-            pa = things (IO_THROW, cmd.obj.word);
+            pa = things (IO_THROW | IO_STEPS, cmd.obj.word);
         } else {
             pa = cmd.other.word[0] ? IR_NOT_HERE : IR_FULL;   /* (No mark it sees; none said) */
         }
@@ -2305,6 +2311,75 @@ static const char* rules = "harn";              /* (The ruleset, if none's given
 
 #pragma code-name (push, "SW7CODE")
 #pragma rodata-name (push, "SW7RODATA")
+
+#pragma code-name (push, "SW18CODE")
+#pragma rodata-name (push, "SW18RODATA")
+#pragma local-strings (push, on)
+
+/* A step of the reach begun by the world (the reply's IO_STEP, HOUSE.md's reach, the user's, 2026-11-02: each its words, its
+** time, its grope): its first words, its long task (I_WAIT's kind, its bar, its stop), the command kept and asked
+** again as it's up (reach 5: the world's done the step's change at its end, lwork's); qty 0, a grope failed,
+** the things' words the caller's, the round wasted */
+void s_step_go (void)
+{
+    unsigned char k, n;
+    unsigned t;
+
+    hub_map (UI_BANK);
+    memcpy (&UIREC->kept, &cmd, sizeof cmd);
+    hub_map (0);
+    k = HUB->ireq.qty;
+    n = HUB->ireq.item;
+    t = HUB->ireq.x;
+    if (k) {
+        reach = 5;
+        if (k == LT_PACKON || k == LT_PUTAWAY) {    /* (Refused with the pack off: its words first, nothing asked again) */
+            reach = 0;
+            msg (tt ());
+            hub_map (UI_BANK);
+            UIREC->things_text[0] = 0;
+            hub_map (0);
+        }
+        task_words (TE_BEGUN | (unsigned) k << 8, n | 0x80);
+    }
+    intend2 (I_WAIT, t, (unsigned) k << 8 | n << 1 | 1);
+    if (k == LT_BLOWDARK) {
+        intend2 (I_ASK, TE_ASK_HEARD, 0);       /* (Asked: "no" stops it, the torch still lit) */
+    }
+}
+
+/* A bandage got out for its use (first aid's, tend.c's: a tool's steps, the things'): 1 if a step's begun first, the
+** command asked again as it's up */
+unsigned char s_bandage_out (void)
+{
+    return things (IO_USE | IO_STEPS, "bandage") != IR_OK;
+}
+
+/* The reach's words (task.c's: w an E_TASK's, TE_BEGUN with a step's kind; TE_PACKED, TE_FUMBLE; named its thing's kind):
+** the step's first words; the pack left off, stopped part way; the world's own step's grope failed */
+void __fastcall__ s_reach_said (unsigned w, unsigned char named)
+{
+    static const char* const first[LT_KINDLE - LT_PACKOFF + 1] = {
+        "\nYou take off your %s.", "\nYou take off your %s, and set it down at your feet.", "\nYou reach into the %s.",
+        "\nYou hold the %s open.", "\nYou get out the %s.", "\nYou put your %s back on.", "\nYou let the %s fall.",
+        "\nYou let the %s fall, still burning.", "\nYou put away the %s.", "\nYou blow out the %s.",
+        "\nYou go to blow out the %s: that will leave you in the dark.", "\nYou light the %s from the burning one.",
+        "\nYou set the %s down at your feet.", "\nYou take up the %s.", "\nYou strike a spark."
+    };
+    char t[sizeof CATALOGUE[0].name];
+
+    if ((unsigned char) w == TE_KINDLED) {
+        msg (named ? "It catches." : "It doesn't catch.");
+        return;
+    }
+    hub_mem (KIND_BANK, t, CATALOGUE[named & 0x7F].name, sizeof t);
+    sayf ((unsigned char) w == TE_FUMBLE ? "\nYou fumble for your %s." : (unsigned char) w == TE_PACKED ? (named & 0x80 ?
+        " Your %s lies at your feet." : " Your %s is in your hand.") : first[(w >> 8) - LT_PACKOFF], t);
+}
+
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* A command whose thing is out of reach (the things' IR_NOT_HERE, the puzzle's PZ_FAR: where it is in the hub's ireq,
 ** its words not said): walked over to it first (I_TAKE's walk alone), the command kept and carried out again as the

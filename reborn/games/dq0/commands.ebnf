@@ -272,7 +272,7 @@
                    | ( "unlock" | "pick" ) ( "the" | "its" ) "lock" ( "of" | "on" ) <thing> [ <USING> <object> ]   (* "pick
                                                    the lock of the chest", slice 4.1's; "... with the lockpicks" *)
 <fill>           ::= "fill" <object> [ <from-phrase> | "with" <object> ]   (* "fill the lantern", "fill the lantern with oil" (a light renewed, slice 4.1's) *)
-<dip>            ::= ( "dip" | "soak" ) <object> ( "in" | "into" ) <object>   (* "dip the torch in the oil", "soak the torch in pitch" *)
+<dip>            ::= ( "dip" | "soak" ) <object> [ ( "in" | "into" ) <object> ]   (* "dip the torch in the oil", "soak the torch in pitch"; "dip the torch": the first fuel carried *)
 <read>           ::= "read" [ <object> ]   (* bare: the last thing named *)
 <taste>          ::= "taste" <object>
 <touch>          ::= ( "touch" | "feel" ) <object>

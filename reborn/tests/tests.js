@@ -2070,6 +2070,7 @@ const DQ0_REPEATS = [
   { what: /^(?:You stop fighting|You fumble for the .+)\.$/,
     why: 'commands typed ahead as the character fights, each taking the fight over in turn, fought on between them (fighting on), their answers one' },
   { what: /^Something stirs\.$/, why: 'each stir\'s first words: one for each time what it sees of the denizens changes (a long command\'s answer has several)' },
+  { what: /^(?:You strike a spark|It doesn't catch)\.$/, why: 'a fire-maker\'s tries, each told as it goes (the user\'s, 2026-11-02: "continue until successful, reporting as it goes along")' },
   { what: /^You keep at it\.$/,
     why: 'a battering\'s beat every fourth blow once its blows tell (the user\'s, 2026-10-22: told as it goes), twice or more in a dozen' },
   { what: /^Everything goes black\.$/, tests: /^dq0(?:finished|strike|helpless|venom|morale)$/,
@@ -7435,24 +7436,26 @@ module.exports = {
           if (owed !== undefined && r.y !== owed) f.push(line + ': its reach ' + r.y + ' tenths, not ' + owed + ' (' + what + ')');
           if (time !== undefined && dt(t) !== time) f.push(line + ': ' + dt(t) + ' tenths, not ' + time + ' (' + what + ')');
         };
-        want('put the rations in the sack', 'IO_PUT', 160, 140, 'from the worn pack, off and on, into the sack held, a level');
-        want('stow the sack', 'IO_STOW', 140, 120, 'into the worn pack');
-        want('take the rations from the sack', 'IO_TAKE', 150, 140, 'from a sack in the worn pack: two deep');
+        // (By the steps since 2026-11-02, dq0packsteps': the time the same, what's owed in the reply none)
+        want('put the rations in the sack', 'IO_PUT', 160, undefined, 'from the worn pack, off and on, into the sack held, a level');
+        want('stow the sack', 'IO_STOW', 140, undefined, 'into the worn pack');
+        want('take the rations from the sack', 'IO_TAKE', 150, undefined, 'from a sack in the worn pack: two deep');
         want('drop the rations', 'IO_DROP', 1, undefined, 'let fall: no time');
         want('take the pennies from the pouch', 'IO_TAKE', 10, undefined, 'the belt\'s pouch: a quick draw');
-        want('look in the backpack', 'IO_INSIDE', 150, 120, 'the worn pack taken off to look in, and put on again');
-        want('search the backpack', 'IO_SEEK', 600, undefined, 'searched: off and on within its minute');
+        want('look in the backpack', 'IO_INSIDE', 150, undefined, 'the worn pack taken off to look in, and put on again');
+        want('search the backpack', 'IO_SEEK', 720, undefined, 'searched: off, its level, its minute, on');
         want('drop the pack', 'IO_DROP', 1, undefined, 'a pack worn let fall: no time');
-        want('take the tinderbox from the backpack', 'IO_TAKE', 40, 20, 'from the pack on the ground: a level, no taking off');
+        want('take the tinderbox from the backpack', 'IO_TAKE', 40, undefined, 'from the pack on the ground: a level, no taking off');
         want('put on the pack', 'IO_DON', 50, undefined, 'worn');
         want('take off the pack', 'IO_DOFF', 50, undefined, 'taken off, left off');
-        want('look in the pack', 'IO_INSIDE', 50, 20, 'the pack held: a level');
+        want('look in the pack', 'IO_INSIDE', 50, undefined, 'the pack held: a level');
         const off = T.of('take off the pack', g.k), pk = off.after && dq0Thing(off.after, 'backpack');
         if (!pk || (pk.flags & DQ0_I.WORN) || !(pk.flags & DQ0_I.HELD)) f.push('the pack not left off, in a hand: ' + JSON.stringify(pk));
         const on2 = T.after(T.of('look in the pack', g.k), 'put on the pack'), pk2 = on2.after && dq0Thing(on2.after, 'backpack');
         if (!pk2 || !(pk2.flags & DQ0_I.WORN)) f.push('the pack not put on again: ' + JSON.stringify(pk2));
-        inTurn(s, ['> put the rations in the sack', 'You put the rations in the sack. You take off your backpack for it, and put it on again.',
-          '> look in the backpack', 'You take off your backpack for it, and put it on again.', '> drop the pack', 'Put down.',
+        inTurn(s, ['> put the rations in the sack', 'You take off your backpack', 'You get out the rations.', 'You hold the sack open.',
+          'You put the rations in the sack.', 'You put your backpack back on.',
+          '> look in the backpack', 'You take off your backpack', 'You hold the backpack open.', 'In the backpack lie', 'You put your backpack back on.', '> drop the pack', 'Put down.',
           '> put on the pack', 'You put on the backpack.', '> take off the pack', 'You take off the backpack.'], f, 'the words: ');
         // A grope in a fight (the referee's round, 100 tenths: HarnMaster's), its reach a round a step
         const g2 = T.of('dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T');
@@ -7464,11 +7467,46 @@ module.exports = {
           if (!r || r.y !== owed) f.push(line + ', engaged: its reach ' + (r ? r.y : 'none done') + ', not ' + owed + ' (' + what + ')');
         };
         fight('hold the dagger', 'IO_HOLD', 100, 'from the belt: a round');
-        fight('stow the dagger', 'IO_STOW', 300, 'into the worn pack: off, in, on, a round each');
-        fight('take the rations from the backpack', 'IO_TAKE', 100, 'from the pack dropped on the ground: a round');
+        // (The worn pack: its steps a round each, dq0packsteps': off, held open, the stowing, on; and from the pack on the ground, a level)
+        const steps = late.flatMap(t => dq0Rep(t, 'ireq', { kind: 'IO_STEP' }));
+        if (steps.length < 3 || steps.some(r => r.x !== 100)) f.push('engaged, the steps not a round each: ' + JSON.stringify(steps.map(r => [r.qty, r.x])));
+        if (!late.some(t => rep(t, 'IO_STOW'))) f.push('the dagger not stowed in the fight');
+        if (!late.some(t => rep(t, 'IO_TAKE'))) f.push('the rations not taken from the pack on the ground in the fight');
         if (!late.some(t => rep(t, 'IO_DROP'))) f.push('the pack not dropped in the fight');
         const hw = (m.hearts || []).find(h => h.g === 2 && h.line === 'wait');
         if (!hw || !hw.acts.some(a => a.name === 'ghoul' && a.mood === 8)) f.push('the ghoul not set steady');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0packsteps', what: 'scenes', near: ['gear'],
+      init: 't_rc', cycles: 9000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k sack', 'put the rations in the sack', 'stow the sack', 'take the rations from the sack', 'drop the rations',
+        'look in the backpack', 'search the backpack', 'drop the pack', 'take the tinderbox from the backpack', 'drop the tinderbox', 'put on the pack',
+        'drop the torch', 'take the flask from the backpack', 'drop the flask', 'take the torch from the backpack', 'inventory', 'take the torch from the backpack', 'inventory', 'put on the pack', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'light a new torch', 'inventory', 'light a new torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take a fresh torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'hold another torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'light a new torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick', 'stow the pick', 'dig down', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'douse the torch', 'light the torch', 'douse the torch', 'light the torch', 'douse the torch', 'hang the tinderbox on the belt', 'take the tinderbox from the backpack', 'put the tinderbox in the pouch', 'light the torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'douse the torch', 'light the torch', 'inventory', 'light the torch', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'wait 20 minutes', 'refresh the torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'wait 20 minutes', 'redip the torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'drop a fresh torch', 'wait 20 minutes', 'dip the torch', 'inventory', 'quit',
+        'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 8, line: 'douse the torch', n: 1, fuel: { tinderbox: 0 } }]);
+        dq0OnWords(m, [{ g: 1, line: 'take the torch from the backpack', n: 1, words: 'You get out the torch', text: 'stop\r' },
+          { g: 5, line: 'light a new torch', n: 1, words: 'You let the torch fall', text: 'stop\r' }, { g: 6, line: 'dig down', n: 1, words: 'You dig', text: 'stop\r' }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        f.push(s.slice(s.indexOf('Type help')).replace(/Dingus Quest Zero is starting.*?Type help for the commands\./g, '[start]'));
+        for (const t of T) f.push(t.line + ': ' + JSON.stringify(t.replies.filter(r => r.req === 'ireq' && r.kind !== 'IO_FIND' && r.kind !== 'IO_TOOLS').map(r => [r.kind, r.result, r.x, r.qty, r.item])) + ' dt ' + (t.at && t.after ? t.after.now - t.at.now : ''));
         return f;
       },
       sdcard: true

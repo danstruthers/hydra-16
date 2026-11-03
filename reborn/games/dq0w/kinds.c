@@ -217,7 +217,8 @@ const struct burn burns[NBURNS] = {
     { KI_TORCH, 6, FU_OIL | FU_PITCH }, { KI_CANDLE, 24, 0 }, { KI_LANTERN, 36, FU_OIL }, { KI_STUBS, 3, 0 },
     { KI_OIL, 36, FU_OIL }, { KI_PITCH, 24, FU_PITCH },
     { KI_CHARCOAL, 24, FU_DRAW }, { KI_CHALK, 18, FU_DRAW }, { KI_PENCIL, 120, FU_DRAW }, { KI_INK, 60, FU_DRAW },
-    { KI_QUILL, 180, FU_DRAW }
+    { KI_QUILL, 180, FU_DRAW },
+    { KI_TINDERBOX, 3, FU_DRAW }                /* (Thirty lightings, one off as it catches: HOUSE.md's fire-maker) */
 };
 
 /* What breaks as it's used (slice 4.7's missiles to use, the user's, 2026-10-23: "arrows can break"), its kind and its
@@ -308,4 +309,8 @@ const char* const said[SA_COUNT] = {
     "The % is burnt out.",
     "The % is out of oil.",
     "The # is closed.",                        /* (A lid, a tie, a stopper: opened first, the user's) */
+    "You have no other %.",                    /* ("Light a new torch", the user's, 2026-11-02) */
+    "The # is empty.",                         /* (A fire-maker: as it's reached for, or known) */
+    "You need two good hands to dip the %.",   /* (A torch redipped: HOUSE.md's) */
+    "Your hands slip in the dark: oil spills, and the % takes none of it.",
 };

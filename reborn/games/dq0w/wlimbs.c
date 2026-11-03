@@ -39,7 +39,7 @@ static unsigned char __fastcall__ on_me (void)
 {
     for (lp = ip; lp->where == IW_ITEM; lp = item_at (lp->x)) {
     }
-    return lp->where == IW_ACTOR && !lp->x;
+    return (lp->where == IW_ACTOR && !lp->x) || lp == item_at (rs_pack);   /* (A pack off for a handling: part 82's) */
 }
 
 /* What's to hand told the referee at once (RS_EQUIP 2, as the UI's to_hand tells it a thing handled): the keys of the

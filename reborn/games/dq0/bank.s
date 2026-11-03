@@ -164,6 +164,7 @@ ovl_out:
             SWPART      15, 6               ; An ally's errands, the character's gifts (errand.c: slice 4.8's)
             SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
             SWPART      17, 14              ; Looking one way, a close look (way.c: part 6's till 2026-11-01)
+            SWPART      18, 12              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)
 
             SWFN        errand, 15
             SWFN        begin, 1
@@ -201,6 +202,10 @@ ovl_out:
             SWFN        history, 7
             SWFN        args, 7
             SWFN        reach_go, 7
+            SWFN        step_go, 18
+            SWFN        bandage_out, 18
+            SWFN        find_banks, 18
+            SWFN        reach_said, 18
             SWFN        place_go, 7
             SWFN        look_way, 17
             SWFN        search_go, 10

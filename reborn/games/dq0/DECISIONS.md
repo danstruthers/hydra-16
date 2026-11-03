@@ -1436,3 +1436,35 @@ character's take (one take rule, the minds' I_TAKE).  Steps, digging and climbin
 shared (DUNGEON.md's one path for every actor says why).
 
 **Design:** DUNGEON.md's one path for every actor and its portals; DENIZENS.md's doors; HOUSE.md's denizens and doors.
+
+### Reach told and timed a step at a time
+
+The user (2026-11-02, a playtest): "Also, when you have to take off your backpack to get something from it, it should
+read "Taking off backpack", pause, "retrieving <item>", pause, then "putting your backpack back on".  Taking just as
+long as it might take when really doing it.  Grope (take off backpack) followed by Grope (get something from backpack)
+then grope (put the pack back on), each one taking its time."
+
+The user (2026-11-02): "Dropping your pack in a fight should be automatic (no grope test), but taking it in hand should
+be."
+
+The user (2026-11-02, a playtest): "Also, `light a new torch` should drop the old one and get a new one and light it."
+
+The user (2026-11-02): "oh, and lighting a torch is a grope (take off backpack, if necessary), grope (take the tinder box),
+grope (to use the tinder box, penalized roll in the dark, continue until successful, reporting as it goes along), then
+grope (put away the tinderbox), then grope (put backpack back on).  If the tinderbox is empty, then say so once you get to
+that step (or if remembered), and if the tinderbox is in your belt pouch, no first and last grope to take on/off
+backpack."
+
+The user (2026-11-02): "Applies to any tool use, like sharpening your sword (if you have a whetstone), and similar tasks."
+
+The user (2026-11-02): "Fumbling about in the dark should be difficult, so re-dipping a torch (`refresh torch` or
+`dip/redip torch` should work), but you need to blow out the torch first unless you have another, and then re-dip (in the
+dark), then re-light it (in the dark), all appropriately done.  So lighting a new torch, blowing out the old one,
+re-dipping, putting it away, etc. should be the preferred way to "redip|refresh" your torch, if it is still lit and you
+have a spare."
+
+Built as the general kind: every reach is a sequence of timed steps, told as each begins, the world changed at each's
+end, for everything the reach rule covers; "new", "fresh" and "another" a selector (the thing not in a hand, not
+burning) for every handling, and a light's own run (the old let fall, a spare got out, lit).  **Design:** HOUSE.md's
+reach, handy tools and things used up; DUNGEON.md's reach.  The whetstone isn't built (no room in the catalogue, its 144
+kinds full, and no verb): HOUSE.md's "Decided, not yet built".

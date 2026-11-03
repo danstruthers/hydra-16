@@ -101,6 +101,7 @@ void tsense (void);                             /* Part 76 (wtime.c) */
 void __fastcall__ travel_go (const struct msg* m);  /* Part 55 */
 unsigned char travel_on (void);
 void way_out (void);                            /* Part 54 */
+#define TRV_TOOL        0xFF                    /* (trav: no journey, a dig's tool to put away, travel_on's) */
 unsigned char trav;                             /* (A journey under way: part 54's, its next leg as the last is done) */
 unsigned char kowed;                            /* (A stratum's populations owed at a real pace, its number plus 1:
                                                 **   wkept.c's, its kept rooms lit as they're done, kept_late: the
@@ -2374,6 +2375,10 @@ void __fastcall__ s_travel_go (const struct msg* m)
 unsigned char s_travel_on (void)
 {
     hub_map (0);
+    if (trav == TRV_TOOL) {
+        trav = 0;
+        return reach_do (RO_END);
+    }
     if (HUB->pc_task.kind != LT_TRAVEL || HUB->pc_x != tv.lx || HUB->pc_y != tv.ly || HUB->pc_stratum != tv.sn) {
         trav_end (0);                           /* (Stopped, or short of the leg's end) */
         return 0;
@@ -2861,11 +2866,15 @@ void __fastcall__ s_start_dig (unsigned char d)
                                                 **   room's walls, or the rock; rubble shifted as loose soil is,
                                                 **   slice 4.10's) */
     }
+    if (rs_for (RF_DIGGERS)) {
+        return;                                 /* (A digger's tool got out first, the world's steps, HOUSE.md's handy
+                                                **   tools: its intent asked again, lw_m) */
+    }
+    if (rs_on) {
+        trav = TRV_TOOL;                        /* (Put away, the pack on, as the dig's over: travel_on's) */
+    }
     dig.rock = RK_NONE;
     dig_kept (1);                               /* (Told, begun: on from where it was left, a hole begun before) */
-    tool_reach ("pick\0shovel\0");              /* (A digger's tool got out first: its reach, HOUSE.md's handy tools,
-                                                **   the first spell's) */
-    reach_done (0);
     in_place (A_DIGGING, SPELL);               /* (Its first spell: spell ()'s, part 1's) */
 }
 
@@ -3233,8 +3242,8 @@ void __fastcall__ s_worked (unsigned long t)
 static unsigned char srch;
 unsigned char srch_form;                        /* (Its form, SF_*, | SF_TOUCH, | the wall's heading times 16: the
                                                 **   things' search's too, things.c's) */
-#pragma code-name (push, "SW48CODE")           /* (Part 48's, with the work it calls: the main RAM's room, 2026-10-31) */
-#pragma rodata-name (push, "SW48RODATA")
+#pragma code-name (push, "SW37CODE")           /* (Part 37's, overlay 15's room, 2026-11-02; part 48's till then) */
+#pragma rodata-name (push, "SW37RODATA")
 unsigned char s_searched (void)
 {
     srch = 0;
@@ -3242,7 +3251,7 @@ unsigned char s_searched (void)
     work (PA_SEARCH, NO_SQ, NO_SQ, srch_form);
     wk.tt = 0;                                  /* (Its minute spent already, the long task's) */
     worked (0);
-    return 0;
+    return lwork ? work_done () : 0;            /* (A pack off to search it: back on, the reach's) */
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -3256,11 +3265,11 @@ unsigned char searched (void);
 ** once, TE_BEGUN, its bar its time), done as its time's up (work_done: the test made then, the world changed then,
 ** its outcome told then), or stopped first (pc_cut: no outcome, the stop told).  The things' own (a chest's lock, a
 ** light filled) the UI's (I_WAIT's kind) */
-static unsigned char lwork;                     /* (What's to be done at its end: PA_*, or LW_TRACE; 0 none) */
+unsigned char lwork;                            /* (What's to be done at its end: PA_*, LW_TRACE, LW_REACH; 0 none) */
 #define LW_TRACE        0xFF
 static unsigned char lw_d;                      /* (Its portal's way from the character, its square: NO_SQ, about it; */
-static unsigned lw_x, lw_y;                     /*   a trace's I_TRACE w1 and w2) */
-static struct msg lw_m;
+unsigned lw_x, lw_y;                            /*   a trace's I_TRACE w1 and w2; things.c's rs_old, rs_down) */
+struct msg lw_m;                                /* (A trace's; an intent kept through the reach's steps, things.c's) */
 
 /* A door (or a portcullis, a window, a slit) the character faces worked, walked up to first; or about it: a search,
 ** a trap in reach disarmed (else the door ahead's) (part 12's); broken with a soft thing (the hub's pc_strike, the
@@ -3345,6 +3354,9 @@ void __fastcall__ s_door_work (unsigned char what)
                                                 **   task, a blow at a time as it's free, its first words at once, the
                                                 **   user's: the striker's, a part of it or the thing named) */
     } else if (wk.task) {
+        if (wk.task == LT_PICK && rs_for (RF_PICKS)) {
+            return;                             /* (The lockpicks got out first, the world's steps: lw_m again) */
+        }
         lwork = what;                           /* (The timed work: done as its time's up, work_done) */
         lw_x = px_;
         lw_y = py_;
@@ -3435,8 +3447,15 @@ unsigned char s_work_done (void)
     unsigned char w = lwork;
 
     lwork = 0;
+    if (w == LW_REACH) {
+        if ((w = reach_do (RO_END)) != 3) {     /* (A step of the reach, things.c's part 83) */
+            return w;
+        }
+        intent_more (&lw_m);                    /* (Its tool got out: the dig, the lock, asked again) */
+        return 2;
+    }
     if (pc_cut) {
-        return 0;                               /* (Stopped first: no outcome, the stop told) */
+        goto last;                              /* (Stopped first: no outcome, the stop told) */
     }
     here ();
     HUB->pc_task.kind = LT_NONE;
@@ -3450,7 +3469,15 @@ unsigned char s_work_done (void)
     work (w, lw_x, lw_y, lw_d);
     w = wk.tt != 0;
     worked (0);
-    return w << 1;
+    if (!rs_on) {
+        return w << 1;
+    }
+last:
+    if (rs_on) {
+        lwork = LW_REACH;                       /* (A tool's use over: put away, the pack back on: things.c's) */
+        return 2;
+    }
+    return 0;
 }
 
 /* A battering's next blow as the character's free (the main loop's, while its long task's LT_BATTER: part 6's
@@ -3864,6 +3891,7 @@ void __fastcall__ s_task_word (const struct msg* m)
         return;
     }
     if (!k) {
+        pc_cut = 1;                             /* (Between two steps of the reach: it stops them, things.c's rs_begin) */
         if (!m->w1) {
             event (E_TASK, 0, TE_IDLE);         /* (The player's stop, nothing to stop; a command's, nothing said) */
         }
@@ -4796,6 +4824,9 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
     struct msg q;                               /* (Not static: a part's statics the main RAM's) */
     static unsigned char k, h;
 
+    if (rs_live) {
+        return idle ? 3 : 0;                    /* (The reach's steps under way, its command asked again first) */
+    }
     hub_map (0);
     if (HUB->pc_task.kind == LT_FIGHT) {
         if (pc_cut) {
@@ -4972,8 +5003,8 @@ unsigned char __fastcall__ s_fumbled (unsigned char k)
     signed char g;
 
     hub_map (0);
-    if (noinit || !zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
-        return 0;
+    if (noinit || rs_live || !zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
+        return 0;                               /* (rs_live: the reach's steps' last, tested as each began) */
     }
     hub_map (0);
     r = &HUB->slot[SLOT_WORLD];
@@ -5384,6 +5415,7 @@ void __fastcall__ s_intent_more (struct msg* m)
 {
     unsigned char k, d;
 
+    memcpy (&lw_m, m, sizeof lw_m);             /* (Kept: a tool's reach first, things.c's part 83) */
     switch (m->kind) {
     case I_DIG:
         start_dig (m->a);
