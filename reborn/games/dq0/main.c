@@ -1509,22 +1509,30 @@ unsigned char s_missiles (void)
         go_thing ();
         return 1;
     case VB_THROW_OBJECT:
-        if (!cmd.other.x || !cmd.obj.word[0] || !(d = mark (&cmd.other))) {
-            return 0;                           /* (Not at a denizen: the world's throw, as before) */
+        if (cmd.other.x && cmd.obj.word[0] && (d = mark (&cmd.other)) != 0) {
+            if (things (IO_FIND, cmd.obj.word) != IR_OK) {
+                msg (tt ());
+                return 1;
+            }
+            if ((k = HUB->ireq.x) < 0x80) {
+                strcpy (hold_w, cmd.obj.word);
+                shand = 0;
+                if (hold_first ()) {
+                    shot (d, SK_OF (k));
+                }
+                return 1;
+            }
         }
-        if (things (IO_FIND, cmd.obj.word) != IR_OK) {
-            msg (tt ());
-            return 1;
+        if (cmd.other.x) {                      /* (Not at a denizen: the world's throw, at a thing) */
+            HUB->ireq.x = cmd.other.x;
+            HUB->ireq.y = cmd.other.y;
+            HUB->ireq.to = cmd.manner;
+            d = things (IO_THROW | IO_STEPS, cmd.obj.word);
+        } else {
+            d = cmd.other.word[0] ? IR_NOT_HERE : IR_FULL;   /* (No mark it sees; none said) */
         }
-        if ((k = HUB->ireq.x) >= 0x80) {
-            return 0;
-        }
-        strcpy (hold_w, cmd.obj.word);
-        shand = 0;
-        if (hold_first ()) {
-            shot (d, SK_OF (k));
-        }
-        return 1;
+        throw_words (d | HUB->ireq.qty << 8);
+        return d == IR_OK ? 2 : 1;
     case VB_SHOOT_OBJECT:
         if (cmd.prep == PR_AT) {                /* ("fire the bow at the rat") */
             t = &cmd.other;
@@ -1936,9 +1944,19 @@ static unsigned char __fastcall__ chores (unsigned char action)
     case VB_TRACK:                              /*   the traces read, slice 4.1's: the floor looked at, a track) */
         look_way (action);
         break;
-    case VB_OBSERVE_LOCALE:
-    case VB_OBSERVE_AROUND:
+    case VB_OBSERVE_LOCALE:                     /* (In the dark, or blind, the character free, its hands: what's told at
+                                                **   once, then the feel around, search.c's: the user's, 2026-11-03) */
     case VB_FIND_OBJECT:
+        if (!busy && !(HUB->pcsum.cond & C_STUNNED) && sight_get ()->dark) {
+            if (action == VB_OBSERVE_LOCALE) {
+                look (0);
+            }
+            cmd.aux = SR_FOR;
+            search_go ();
+            break;
+        }
+        /* Fall through */
+    case VB_OBSERVE_AROUND:
     case VB_WHERE:
         look (0);
         break;
@@ -2158,7 +2176,9 @@ again:
                 goto portal;
             } else if ((cmd.how == HOW_THROUGH || cmd.action == VB_ENTER) &&
                 (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_PASSAGE)) {
-                intend (I_GO, bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y));
+                if (!door_go ()) {
+                    intend (I_GO, bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y));
+                }
             } else {
                 walk_says (0);                  /* (Told at once) */
                 intend2 (I_GOTO, tx, ty);
@@ -2218,6 +2238,9 @@ portal:
             return;                             /* (Which, asked) */
         }
         if (cmd.obj.kind && d) {
+            if (door_go ()) {
+                return;                         /* (Round a bend: walked up to first, then again, part 13's) */
+            }
             cmd.obj.lies = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y);    /* (The one it sees: faced) */
         }
         if (hold_w[0] && (!cmd.obj.kind || d) && !hold_first ()) {
@@ -2310,20 +2333,8 @@ portal:
     case VB_GATHER_OBJECT:
     case VB_THROW_OBJECT:                       /* (Thrown at the thing said, or the target: the world's throw, its
                                                 **   words overlay 11's) */
-        if (missiles ()) {
-            return;
-        }
         d = HUB->pc_light;
-        if (cmd.other.x) {
-            HUB->ireq.x = cmd.other.x;
-            HUB->ireq.y = cmd.other.y;
-            HUB->ireq.to = cmd.manner;
-            pa = things (IO_THROW | IO_STEPS, cmd.obj.word);
-        } else {
-            pa = cmd.other.word[0] ? IR_NOT_HERE : IR_FULL;   /* (No mark it sees; none said) */
-        }
-        throw_words (pa | HUB->ireq.qty << 8);
-        if (pa == IR_OK) {
+        if (missiles () == 2) {                 /* (Thrown at a thing: part 13's) */
             after (d, 20, IO_DROP);             /* (Its time; a light thrown, the world's look in the new light) */
         }
         return;
@@ -2503,6 +2514,7 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
 ** character's free (HOUSE.md's out of reach, walked to first); 1 if so, or if it's the command again and the thing's
 ** out of reach still (told) */
 static struct msg pm;                           /* (reach_go's, place_go's) */
+static unsigned char pm_kind = I_TAKE;          /* (reach_go's walk: door_go's I_GOTO, to the door's square) */
 
 /* A walk over told as it begins, at once (the user's D17, a command answers at once: 2026-11-02), by the thing's name, or
 ** the command's thing (0); its arrival not "You go over to it." (placing, or a command's walk's reach, E_ARRIVE's) */
@@ -2543,7 +2555,7 @@ unsigned char s_reach_go (void)
         hub_map (0);
         s_walk_says (0);
         hub_map (0);
-        pm.kind = I_TAKE;
+        pm.kind = pm_kind;
         pm.who = 0;
         pm.a = 1;
         pm.w1 = HUB->ireq.x;
@@ -2555,8 +2567,32 @@ unsigned char s_reach_go (void)
             t_prompt (0);
         }
     }
+    pm_kind = I_TAKE;
     hub_back (b);
     return r;
+}
+
+/* A door, a window, a portcullis or a passage's mouth meant (find's tx, ty) that the world's door work can't reach from
+** here: it works one beside the character by the four ways, and one on the walls of the room it stands in; one round a
+** bend, diagonal to it, or down a passage beyond the room is walked up to first (I_GOTO: it ends before it), then the
+** command again (the user's, 2026-10-20: "any action that needs its thing within reach walks over first"): 1 if so, or
+** still out of reach (told) */
+unsigned char s_door_go (void)
+{
+    const struct sight* s = sight_get ();
+    int dx = (int) tx - HUB->pc_x, dy = (int) ty - HUB->pc_y;
+
+    if (cmd.obj.kind != OB_DOOR && cmd.obj.kind != OB_WINDOW && cmd.obj.kind != OB_PORTC && cmd.obj.kind != OB_PASSAGE) {
+        return 0;
+    }
+    if ((dx * dx + dy * dy) == 1 || (s->where == W_ROOM && tx + 1 >= s->rx && tx <= s->rx + s->rw && ty + 1 >= s->ry &&
+        ty <= s->ry + s->rh)) {
+        return 0;
+    }
+    HUB->ireq.x = tx;
+    HUB->ireq.y = ty;
+    pm_kind = I_GOTO;
+    return s_reach_go ();
 }
 
 #pragma code-name (pop)

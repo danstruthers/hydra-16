@@ -461,7 +461,9 @@ static void __fastcall__ place (unsigned n, unsigned char where, unsigned x, uns
 }
 
 /* Thing n carried: into the pack if it fits, else in a hand, the one that suits it (part 48's: hand first, the other
-** way about): 1 in the pack, 2 in a hand, 0 neither (full; or a step of the reach begun first, rs_st) */
+** way about; and a thing taken from a fixture, a sconce's torch, the user's, 2026-11-03: the hand, the pack only with both
+** full): 1 in the pack, 2 in a hand, 0 neither (full; or a step of the reach begun first, rs_st) */
+#define HF_FIXT         0x80                    /* (hand_free's: thing n's in a fixture) */
 unsigned char __fastcall__ hand_free (unsigned n);
 unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 {
@@ -469,6 +471,10 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
 
     s_about ();
     h = hand_free (n);
+    if (h & HF_FIXT) {
+        hand_first = 1;                         /* (From a fixture: the hand, part 48's) */
+        h &= ~HF_FIXT;
+    }
     if ((!hand_first || !h) && pack && !fits (n, pack)) {
         if (reach_step (n, pack)) {
             return 0;                           /* (A step of the reach first: part 85's) */
@@ -1263,7 +1269,8 @@ static unsigned char rs_after (void)
 ** spilt, half the flask's less, told: 1 */
 static unsigned char rs_spill (void)
 {
-    if (rs_for (RF_ROLL)) {
+    hub_map (SIGHT_BANK);
+    if (!SIGHT->dark || rs_for (RF_ROLL)) {     /* (By touch alone: in the light nothing's spilt) */
         return 0;
     }
     fetch (&rec, handled);
@@ -5364,11 +5371,14 @@ static unsigned char __fastcall__ hand_for (unsigned n, unsigned char want)
 }
 
 /* The hand thing n would go in, the one that suits it (carry's: a thing taken up, its hand first, else the pack); 0
-** none free */
+** none free; | HF_FIXT, it's in a fixture */
 unsigned char __fastcall__ s_hand_free (unsigned n)
 {
+    const struct item* p = item_at (n);
+    unsigned char f = p->where == IW_ITEM && (kind_at (p->x)->keeps & KF_FIXED) ? HF_FIXT : 0;
+
     hands_now (n);
-    return hand_for (n, 0);
+    return hand_for (n, 0) | f;
 }
 
 /* A hand's words ("your left hand", "both hands") */

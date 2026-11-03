@@ -473,6 +473,7 @@ static unsigned char __fastcall__ known_at (unsigned x, unsigned y)
     return p && kept_tile (*p);
 }
 
+static unsigned tgx, tgy;                       /* (The door meant: go's, below) */
 static unsigned char walked;
 static unsigned long walk_t;                    /* (walk's: the time it takes) */
 void __fastcall__ walk (unsigned char d);       /* (Part 9's, its stub: across's, part 33's) */
@@ -480,6 +481,7 @@ void __fastcall__ walk (unsigned char d);       /* (Part 9's, its stub: across's
 
 static void __fastcall__ no_way (unsigned why)
 {
+    hub_map (0);                                /* (A chunk may be in the window, its portal just read: a journey's leg's) */
     event (E_NOWAY, 0, why);
     HUB->pc_ready = HUB->now;
     HUB->pc_going = IDLE;
@@ -868,6 +870,12 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
         nx = mx + head_x[h];
         ny = my + head_y[h];
         walk_t = at (sn_, nx, ny) ? door_on (nx, ny) : 0;
+        return;
+    }
+    if (tgx && lim_ == 250 && (blocked = den_on (tgx, tgy)) != 0) {
+        den_way ();                             /* (s_go's: a door meant, no way to it, and a denizen standing in it: it's
+                                                **   in the way, no walk over the room to the wall beside it; a step's
+                                                **   lim_ its own, tgx not its) */
         return;
     }
     blocked = 0;
@@ -1332,7 +1340,6 @@ static void climb_round_on (void)
 
 /* The door or the passage's mouth the UI means (I_GO's and I_PORTAL's w1, w2: its square, the frame's; tgx 0, any:
 ** the nearest that way, the one faced) */
-static unsigned tgx, tgy;
 #define TARGET(x, y)    (tgx ? (x) != tgx || (y) != tgy : 0)   /* (Square x, y not the one meant) */
 
 #pragma code-name (push, "SW9CODE")
@@ -1470,7 +1477,7 @@ void __fastcall__ s_go (unsigned char h)
                     d = by;
                 }
             }
-            if (best == 0xFF) {                 /* (None: across the room) */
+            if (best == 0xFF) {                 /* (None: across the room; a denizen in the door meant told, its part's) */
                 across (h, r);
                 return;
             }

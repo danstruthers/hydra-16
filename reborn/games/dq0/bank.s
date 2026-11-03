@@ -165,7 +165,7 @@ ovl_out:
             SWPART      10, 18              ; A search, by its form (search.c)
             SWPART      11, 15              ; The rarer news, worded (main.c); the hands and limbs
             SWPART      12, 16              ; Wounds over time: first aid, in shock, the body's news (tend.c)
-            SWPART      13, 18              ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
+            SWPART      13, 19              ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
             SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
             SWPART      15, 17              ; An ally's errands, the character's gifts, the market (errand.c: slice 4.8's; 2026-11-02)
             SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
@@ -215,6 +215,7 @@ ovl_out:
             SWFN        find_banks, 19
             SWFN        reach_said, 19
             SWFN        walk_says, 13
+            SWFN        door_go, 13         ; (A door round a bend walked up to first: main.c, 2026-11-03)
             SWFN        place_go, 7
             SWFN        look_way, 17
             SWFN        search_go, 10
