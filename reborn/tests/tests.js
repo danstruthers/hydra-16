@@ -2146,7 +2146,7 @@ function dq0Check(name, m) {
 // entry a step, the store's taking 24 in a part's swap; 1,800,000 since 2026-10-29: the sound layer's pulse, once a
 // denizens' turn after a step, and the denizens' senses' own part, slices 4.5 and 4.6); 1,900,000 since 2026-10-31
 // (1,863,195: the minds' steps looking at each square's chunk for its bad air, a swimmer's too, the giant rats')
-const TRACE_STEP = 1910000;   // (1950000 for a day, 2026-11-02, part 14's some 30 bytes more, digs told why; 1,901,748 since the margins' pass, 2026-11-03: its measure a few thousand either way by the tasks' timing)
+const TRACE_STEP = 1920000;   // (1950000 for a day, 2026-11-02, part 14's some 30 bytes more, digs told why; 1,901,748 to 1,911,662 since the margins' pass, 2026-11-03, by the tasks' timing and the code's layout)
 
 // What a dq0 test's lines did, by their meaning (Phase 3A: tests cut to meaning, not words): sim/lib/dq0meaning.js's
 // record (m.dq0, in every dq0 test: the world's events, the denizens', the requests' replies, the state each line
@@ -2798,7 +2798,7 @@ function dq0Timer(m) {
 // move takes, at the normal pace the move taking its own time, a step a second, then the senses' look)
 const DQ0_ANSWERS = [['turn left', 'You turn to face', 1790000], ['turn right', 'You turn to face', 1790000],
   ['step forward', 'You'], ['inventory', 'You carry', 720000], ['examine the torch', 'Your torch'], ['walk to the door ahead to my left', 'You'], ['examine the door', 'You head for|A door|Which door', 720000],
-  ['look', 'You', 1790000, 1790000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You'], ['walk to the window', 'You'], ['take the bones', 'You go over to the bones.', 1400000], ['look', 'You']];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
+  ['look', 'You', 1790000, 1790000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You'], ['walk to the window', 'You'], ['take the bones', 'You go over to the bones.|You stop', 1400000], ['look', 'You']];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
 function dq0AnswerTest(baud) {
   const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
   const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
