@@ -2824,7 +2824,7 @@ void s_when_free (void)
 /* A denizen's sound heard (heard's, its weighing the main code's: m its event, rel which way it is), told: in the
 ** sound's words, the sound task's if it's put them there; its long task paused at the first (part 14's: seldom, the
 ** main RAM's room) */
-static void __fastcall__ door_words (unsigned char a);  /* (Below: a denizen's door's words) */
+void __fastcall__ door_words (unsigned char a);  /* (Below, part 18's: a denizen's door's words) */
 void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 {
     static const char* n;
@@ -2881,20 +2881,24 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
     }
 }
 
-/* A door worked by a denizen (E_DEN's a, DE_OPENS ...: Phase 3C's one path), its words into lb + 340: what it's seen
-** doing (after its name), then what's heard (heard_what's: 19 letters at most).  Part 14's (noise_told's) */
-#pragma code-name (push, "SW14CODE")
-#pragma rodata-name (push, "SW14RODATA")
-static void __fastcall__ door_words (unsigned char a)
+/* A door worked by a denizen (E_DEN's a, DE_OPENS ...: Phase 3C's one path; a portcullis, a lock picked, 2026-11-02), its words into lb + 340: what it's seen
+** doing (after its name), then what's heard (heard_what's: 19 letters at most).  Part 18 (noise_told's: 2026-11-02, overlay 3 full, these a rare few) */
+#pragma code-name (push, "SW18CODE")
+#pragma rodata-name (push, "SW18RODATA")
+void __fastcall__ s_door_words (unsigned char a)
 {
-    static const char* const said[DE_WALLS + 1 - DE_OPENS] = {
+    static const char* const said[DE_PICKS + 1 - DE_OPENS] = {
         "opens the door\0a door opening", "shuts the door\0a door shutting", "slams the door shut\0a door slamming",
         "unlocks the door\0a key in a lock", "locks the door\0a key in a lock",
         "drops a bar across the door\0a bar dropping", "lifts the door's bar\0a bar scraping",
         "strains at the door\0a door creaking", "bursts the door open\0a door bursting",
         "can't force the door\0a door creaking", "batters at the door\0blows on a door",
         "breaks the door down\0a door crashing in", "is showered with rock from the roof\0rock falling",
-        "hangs a new door\0hammering", "walls up the way\0stones being laid"
+        "hangs a new door\0hammering", "walls up the way\0stones being laid",
+        "winds the portcullis's winch\0a winch cranking", "heaves at the portcullis\0iron scraping",
+        "raises the portcullis\0chains rattling", "lets the portcullis fall\0iron crashing down",
+        "strains at the bars\0iron groaning", "bends the bars apart\0iron groaning",
+        "works at the lock\0a faint scratching", "picks the lock\0a lock clicking"
     };
     const char* s = said[a - DE_OPENS];
 

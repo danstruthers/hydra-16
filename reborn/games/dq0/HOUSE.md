@@ -2825,14 +2825,25 @@ These are the house's.
 - **No trap sprung** *(the house's, for now)*: a denizen never sets off a door's trap as it opens it, as it never sets
   off one underfoot.  A faction knowing its own traps (and being caught by another's) is a planned item; till then
   none is.
-- **No lock picked** *(the house's, as yet)*: a denizen opens a locked door only with its key, by force, or by
-  battering; picking is the character's alone.
+- **A lock picked** *(2026-11-02, the house's)*: a robber's kind (kinds.txt's ways r: a bandit) with no key to a
+  locked door picks its lock, by the character's code (a minute a try, its test the lock's steps worse), two tries,
+  before it forces it; its tools its own (none in its things: the house's), its test by its sheet (the bestiary has no
+  Lockcraft: its Dexterity times five, as a creature's other tests; the null ruleset's flat odds).  Heard working at
+  the lock 1 ("a faint scratching"), picked 1 ("a lock clicking").  Other kinds pick none.
 - **Hands** *(the house's)*: only a denizen with hands (a two-legged body, kinds.txt's) opens, shuts, bars or unlocks
   a door.  A beast opens none; a large hostile beast (its size 5 or more: a bear) batters one that keeps it from its
   prey.  So a rat or a wolf stops at a shut door, and a bear breaks it down.
-- **How far it tries** *(the house's)*: its key first (if the door's locked), then, hostile, two forcings (ten seconds
-  each), then a dozen blows; then it gives up and goes round as its steps can.  One not hostile (an ally) only opens
-  and unlocks.
+- **How far it tries** *(the house's)*: its key first (if the door's locked), a robber's picking next, then, hostile,
+  two forcings (ten seconds each), then a dozen blows; then it gives up and goes round as its steps can (its way found:
+  DENIZENS.md's ways).  One not hostile (an ally, one going about its day) only opens and unlocks.  A hostile one
+  drawn on loses none of its while for working at a door, as digging loses none (2026-11-02).
+- **A portcullis** *(2026-11-02, the house's; the character's code, wwin.c's)*: one with hands, its way through a
+  portcullis that's down, raises it by its winch on its side (half a minute's winding, loud) or heaves it up from the
+  far side (a round, its test by its sheet, P_LIFT six steps worse), two tries; then, hostile, it bends the bars
+  apart (ten seconds' straining each, the bars' thickness the harder), two tries; then it gives up (and a tunneller
+  digs round).  Against the character (fleeing, shy, or watching it, beyond the portcullis), from its winch's side it
+  lets it fall (no one under it).  Beasts work none.  Heard: winding and heaving 7, raised or let fall 8, bars bent 8.
+  Windows are left alone (to come: shutters, glass, a climb through).
 - **Shut against the character** *(the house's)*: one fleeing, shy, or watching the character shuts an open door
   between them (the character beyond it, within eight squares, no one in the doorway); fleeing, it slams it, louder
   (5, a door shut 3).
@@ -2859,6 +2870,31 @@ These are the house's.
   looks once in a hundred seconds, as it isn't fighting or digging, going on with what it was doing; one it sees within
   four squares, idle, it goes to (its steps), and takes up beside it.  An ally takes nothing of its own accord.
 - **Two seconds** *(the house's)*: stooped, taken up, as the character's handling of a thing in reach.
+
+## Ways found, positions, bodies found on the rounds *(2026-11-02: the minds' leftovers; drafted for the user to review)*
+
+- **A way found** *(the house's: no book rule)*: an actor that can't step nearer to where it's going (its foe, where
+  it last sensed it, its bed, its rounds, the character an ally follows) finds a way there, once: a field over the 32
+  squares each way about it and its mark (the chunks made only), each square's step toward the mark, searched outward
+  from it the four ways and the diagonal ways (past their corners as the walk's rule), no rise or fall more than a step
+  takes (on steps, a stair's), a shut door a way for hands (worked as it comes to it), not for a beast; and follows it
+  a step at a time till it's there.  Four fields kept, shared by every actor bound for the same mark (the character: within four squares of it);
+  another found ten seconds after the last at most; a mark further than the field reaches, its edge nearest the mark.
+  None to be had, the old greedy step, and a tunneller digs.  Water, bad air and a ledge's rise are the step's own
+  tests as it goes, not the field's.
+- **Lying down to sleep** *(the house's)*: a denizen asleep at its bed lies prone (a moment's), and gets up as it
+  next acts (a step's or a blow's Rise, the referee's or the world's round, as one knocked down; else a Rise alone).
+- **A sleeper struck at** *(the book's Ignore, Combat 9; the null ruleset's two steps easier)*: a creature asleep
+  doesn't defend the blow that wakes it; prone, it's the easier struck as any prone.
+- **A body found on a record's rounds** *(the house's)*: one away from the character (not an actor), on watch at its
+  rounds' place, that finds a body of its faction's not found yet within four squares: its faction's attitude to the
+  character a step worse (as an actor's finding); the alarm raised out of the character's hearing: each of its
+  faction's others within 24 squares of the body gathered to it (a square of its own about it), each a step less well
+  disposed, staying a while (ten minutes), their day after; a leader's body (its rank), each known lost to them all
+  (D_LOST: their bonds to it gone as they next reckon), no test of courage till they're actors.
+- **Not yet**: a shooter crouched behind cover (the world gives cover only by the slits and windows: a cover map, and
+  a missile's mark by its height, to come); a rock picked up to throw (the dungeon has no loose stones; the spoil as a
+  thing, slice 4.11's, would give them); windows worked by a denizen.
 
 ## The market, entertaining and remedies *(2026-11-02: the book's where it speaks, the house's else; drafted for the user to review)*
 

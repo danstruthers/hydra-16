@@ -549,7 +549,8 @@ static void __fastcall__ attack (struct req* r)
     unsigned mw = r->w2;
     unsigned char mk = r->c;
     signed char g = 0, st = mw & RS_MISSILE ? r->steps - 2 * (r->b & 3) - (mw & MS_COVER ? 4 : 0) +
-        (mw & MS_UNAWARE ? 2 : 0) : r->steps - 2 * r->c;
+        (mw & MS_UNAWARE ? 2 : 0) : r->steps - 2 * r->c + (f & RS_ASLEEP ? 2 : 0);   /* (A sleeper struck at: two
+                                                **   steps easier, as one unaware of a shot, 2026-11-02) */
     signed char ht = RS_HEART (r);              /* (A creature's heart: its courage's steps, the denizens' field and
                                                 **   bonds, HOUSE.md's morale) */
 
@@ -758,8 +759,9 @@ static void __fastcall__ answer (struct req* r)
             break;
         }
         if (((r->a == P_SEARCH || r->a == P_DISARM) && r->b == HIDE_MAGICAL) ||
-            (r->a == P_PICKLOCK && !has ("picks"))) {
-            r->result = 1;                      /* (No magic; no lockpicks) */
+            (r->a == P_PICKLOCK && !r->actor && !has ("picks"))) {
+            r->result = 1;                      /* (No magic; no lockpicks: the character's, a robber's kind its own, as the
+                                                **   HarnMaster referee's, 2026-11-02) */
             break;
         }
         if ((r->a == P_PERSUADE || r->a == P_INTIMIDATE || r->a == P_DECEIVE) && r->text[0] && !speaks (r->text)) {

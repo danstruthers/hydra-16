@@ -163,15 +163,16 @@ static void __fastcall__ den_portal (const struct msg* m)
     struct work keep;                           /* (The character's work, kept round it: a battering under way) */
     struct portal* q;
     unsigned char* p;
-    unsigned char d, what = m->a, o, was, cut, de = 0, loud = 0;
+    unsigned char d, what = m->a, o, was, cut, de = 0, loud = 0, lng, pc;
     unsigned done, x = m->w1, y = m->w2;
 
     for (d = 0; d < 4 && (bd.x + dir_x[d] != x || bd.y + dir_y[d] != y); ++d) {
     }
     p = at (bd.sn, x, y);
     q = d < 4 && p && TILE (*p) == T_DOOR ? portal_at (cx_, cy_) : 0;
-    if (!q || q->kind != PK_DOOR || (q->state & PS_HIDDEN) || what == PA_SEARCH || what == PA_DISARM ||
-        what == PA_RAISE || what == PA_LOWER || what == PA_THROUGH || what == PA_BEND || what >= PA_CHECK) {
+    pc = q && q->kind == PK_PORTCULLIS;         /* (A portcullis: raised, heaved, lowered, its bars bent, 2026-11-02) */
+    if (!q || (q->kind != PK_DOOR && !pc) || (q->state & PS_HIDDEN) || what == PA_SEARCH || what == PA_DISARM ||
+        (!pc && (what == PA_RAISE || what == PA_LOWER || what == PA_BEND)) || what == PA_THROUGH || what >= PA_CHECK) {
         hub_map (0);
         bd.ready += 10;                         /* (No door of its beside it: a moment, its mind to see) */
         return;
@@ -190,11 +191,13 @@ static void __fastcall__ den_portal (const struct msg* m)
     wk.fx = bd.x;
     wk.fy = bd.y;
     wk.what = what;
-    if (what == PA_FORCE && !m->t) {
+    wk.link = (unsigned char) m->t >> 1;    /* (PA_UNLOCK's: it picks locks, its mind's: wdoor.c's) */
+    lng = what == PA_FORCE || what == PA_RAISE || what == PA_BEND || (what == PA_UNLOCK && wk.link);   /* (Timed
+                                                **   work: begun, then done as it's posted again, t 1) */
+    if (lng && !(m->t & 1)) {
         wk.plan = 1;                            /* (Begun: its time, its strain heard; its test as it's posted again) */
-        HUB->dig_t[bk] = (unsigned) HUB->now;
-    } else if (what == PA_FORCE && (unsigned) HUB->now - HUB->dig_t[bk] < FORCE_T) {
-        bd.ready += FORCE_T - ((unsigned) HUB->now - HUB->dig_t[bk]);   /* (Its time not up: on at it) */
+    } else if (lng && (int) (HUB->dig_t[bk] - (unsigned) HUB->now) > 0) {
+        bd.ready += HUB->dig_t[bk] - (unsigned) HUB->now;   /* (Its time not up: on at it) */
         goto back;
     }
     if (what == PA_BREAK) {                     /* (A blow, the next of its battering: at the door as it is) */
@@ -212,14 +215,24 @@ static void __fastcall__ den_portal (const struct msg* m)
             de = DE_BATTERS;
             loud = 7;
         }
+    } else if (pc) {
+        portals ();                             /* (The character's parts: wwin.c's, by the winch on its side) */
     } else {
         doors ();
     }
     bd.ready += wk.tt > 600 ? 600 : (unsigned) wk.tt;
+    if (wk.plan && wk.task) {
+        HUB->dig_t[bk] = (unsigned) HUB->now + (unsigned) wk.tt;   /* (When its time's up) */
+    }
     o = wk.open ? wk.open : wk.out;
     if (wk.plan && wk.task) {
-        de = DE_STRAINS;                        /* (Forcing begun: ten seconds' straining, loud) */
-        loud = 7;
+        de = what == PA_FORCE ? DE_STRAINS : what == PA_BEND ? DE_BENDS : what == PA_UNLOCK ? DE_PICKING :
+            wk.pq.bar == ((d + 2) & 3) ? DE_WINDS : DE_HEAVES;     /* (Forcing, bending, picking, winding, heaving
+                                                **   begun: loud, but a pick's scratching) */
+        loud = what == PA_UNLOCK ? 1 : 7;
+    } else if (o == PO_RAISED || o == PO_HEAVED || o == PO_LOWERED || o == PO_BENT || o == PO_PICKED) {
+        de = o == PO_LOWERED ? DE_LOWERS : o == PO_BENT ? DE_BENT : o == PO_PICKED ? DE_PICKS : DE_RAISES;
+        loud = o == PO_PICKED ? 1 : 8;
     } else if (o == PO_BROKE_DOWN) {
         de = DE_BREAKS;
         loud = 8;
