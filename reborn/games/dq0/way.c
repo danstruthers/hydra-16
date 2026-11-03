@@ -374,7 +374,7 @@ void o_focus_words (void)
             }
             sayf (" You can't see past the %s%s %s: %s.", noun[k], !n ? "" : k == BN_PORTCULLIS ? "es" : "s",
                 rel_w[(b->rel + 1) & 3], k == BN_WINDOW ? (n ? "their shutters are closed" : "its shutters are closed") :
-                n ? "they're closed" : "it's closed");
+                n ? "they're closed" : b->kind & PS_BARRED_ ? "it's barred" : b->kind & PS_LOCKED_ ? "it's locked" : "it's closed");
             continue;
         }
         for (n = 0; i + 1 < W.nbeyond && twin (b); ++n, ++i, ++b) {

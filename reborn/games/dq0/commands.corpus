@@ -612,14 +612,14 @@ walk to the pot	VB_MOVE_TOWARD	object=pot	near=pot	the pace's word a verb here
 walk over to the pot	VB_MOVE_TOWARD	object=pot	near=pot	over to
 go up to the pot	VB_MOVE_TOWARD	object=pot	near=pot	up to
 head for the pot	VB_MOVE_TOWARD	object=pot	near=pot	head: walk's alias; for
-go near the pot	VB_MOVE_TOWARD	object=pot	near=pot	near
-go next to the pot	VB_MOVE_TOWARD	object=pot	near=pot	next to
 move to the rat	VB_MOVE_TOWARD	object=rat	near=rat	move: walk's alias; a denizen, no blow
 cross the room	VB_MOVE_TOWARD	object=room	near=room	cross: its far side
 go across the room	VB_MOVE_TOWARD	object=room	near=room	across it
-cross the hall	VB_MOVE_TOWARD	object=hall	near=hall	the hall it's in
 walk to the door on the left	VB_MOVE_TOWARD	object=door;lies=L	near=door	where it lies
 leave	VB_LEAVE	-	-	out of the room, which asked
+
+unbar the door	VB_BAR_OBJECT	object=door	near=door	its bar lifted out
+unbar	VB_BAR_OBJECT	-	-	the door in front
 
 # --- travel to a place it knows (slice 4.2: the UI makes a move to a room named, or the way in, a journey) ---
 go back to the mausoleum	VB_MOVE_TOWARD	object=mausoleum;direction=B	names=mausoleum	a room named, gone back to

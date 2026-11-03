@@ -1411,6 +1411,19 @@ move to an object yet, it is hard to inspect things."
 Asked whether the compass words should walk the same as the relative ones: "Answering your question, yes, all
 directions by themselves should work the same".
 
+More from the same playtest: "if you cannot see something (it is outside your light bubble), you may still be able to
+walk to, inspect, etc. even though it is not seen.  Doors you can't see can also be enumerated in the `which door...`
+response.  One last thing, if you say `walk to the door on the left` it doesn't always do what you expect."
+
+And: "When you go to something to pick it up, if you have to walk to it, it says "You walk up to <item>", then it gives
+a full look, then says "there is a <object> at your feet" and then says "Taken." or the appropriate "You are
+overburdened" if you are carrying too much."
+
+And: "Playtesting, I see that a barred door is not shown as such, just closed.  You also can't `unbar the door`."
+
+The lead's reading, built: what it sees now, or has seen and remembers, can be named and walked to (a door out of the
+light listed in "which door?", the look not telling it); what it has never perceived is neither listed nor found.
+
 **Design:** HOUSE.md's going places (straight walks); DUNGEON.md's going places in a room.
 
 ### One path for every actor: the common structure (Phase 3C)

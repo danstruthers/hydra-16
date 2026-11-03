@@ -51,6 +51,7 @@ static unsigned char __fastcall__ zone_index (unsigned char x, unsigned char y)
 #pragma data-name (push, "SW2RODATA")           /* (The look's own, set as it begins: in the part, no main RAM) */
 static unsigned char e_ = 0;                    /* (The next door[]: those seen, ndoors of them, then those remembered) */
 static unsigned char kn_ = 0;                   /* (The rel's KNOWN_REL, as it's those remembered) */
+static unsigned char mine_ = 0;                 /* (The door's bar's side the character's: its wall's, or its passage's) */
 static int fzz = 0;                             /* (door_add's: its height, the chunk's first square in the frame, its */
 static unsigned fox = 0, foy = 0;               /*   square, its facing) */
 static unsigned char flx = 0, fly = 0, ffc = 0;
@@ -81,9 +82,19 @@ static unsigned char __fastcall__ mouth (unsigned char i, unsigned char j)
 }
 
 /* A seen door's portal (q: or NULL, a doorway): its kind and parts (a window's; a door's or a portcullis's, its
-** features, as they're seen from afar: two leaves ...) */
+** features, as they're seen from afar: two leaves ...), and shut, what's plain of it: its bar, on the side the character's
+** on (mine), or found from the far side; its lock, found (PP_FOUND: the world's, as it's tried) */
 static void __fastcall__ portal_seen (const struct portal* q)
 {
+    if (!q) {
+        S.door[e_].state = DOORWAY;
+    } else if (q->state & (PS_OPEN | PS_WRECKED)) {
+        S.door[e_].state = q->state & (PS_OPEN | PS_WRECKED);
+    } else if (q->parts & PP_FOUND) {
+        S.door[e_].state = q->state & (PS_BARRED | PS_LOCKED);
+    } else if (mine_ && q->bar == mine_ - 1) {
+        S.door[e_].state = q->state & PS_BARRED;
+    }
     S.door[e_].kind = q ? q->kind : PK_DOOR;
     S.door[e_].parts = !q ? 0 : q->kind == PK_WINDOW ? q->parts : q->feat;
 }
@@ -116,7 +127,6 @@ static signed char __fastcall__ fz (int dz)
 static void __fastcall__ door_add (unsigned char i, unsigned char j, const struct portal* q)
 {
     S.door[e_].rel = REL8 (bearing ((int) i - flx, (int) j - fly), ffc) | kn_;
-    S.door[e_].state = q ? q->state & (PS_OPEN | PS_WRECKED) : DOORWAY;
     portal_seen (q);                            /* (A portcullis, a window, a slit: its kind and parts) */
     S.door[e_].x = fox + i;
     S.door[e_].y = foy + j;
@@ -259,7 +269,9 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                     i = C->tile[wall_y][wall_x];
                     if ((TILE (i) == T_DOOR || TILE (i) == T_WINDOW) && (kn_ ? (i & (T_VIS | T_SEEN)) == T_SEEN : i & T_VIS) &&
                         !((q = portal_at (wall_x, wall_y)) != 0 && (q->state & PS_HIDDEN))) {
+                        mine_ = ((d + 2) & 3) + 1;  /* (Its bar seen, on the room's side) */
                         door_add (wall_x, wall_y, q);
+                        mine_ = 0;
                     }
                 }
             }
@@ -300,8 +312,9 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                 S.ndoors < SEE_DOORS && !((q = portal_at (cx_, cy_)) != 0 && (q->state & PS_HIDDEN))) {
                 S.door[S.ndoors].rel = REL8 (H_OF (d), face);
                 e_ = S.ndoors++;
-                S.door[e_].state = q ? q->state & (PS_OPEN | PS_WRECKED) : DOORWAY;
+                mine_ = ((d + 2) & 3) + 1;
                 portal_seen (q);
+                mine_ = 0;
                 S.door[e_].x = x + dir_x[d];
                 S.door[e_].y = y + dir_y[d];
                 S.door[e_].dz = fz (C->elev[cy_][cx_] - myz);
@@ -311,8 +324,8 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                                                 **   telling them) */
         e_ = S.ndoors;
         kn_ = KNOWN_REL;
-        for (j = cy_ > 5 ? cy_ - 5 : 0; j < cy_ + 6 && j < CW; ++j) {
-            for (i = cx_ > 5 ? cx_ - 5 : 0; i < cx_ + 6 && i < CW && e_ < SEE_DOORS; ++i) {
+        for (j = cy_ > 5 ? cy_ - 5 : 0; j < (unsigned char) (cy_ + 6) && j < CW; ++j) {
+            for (i = cx_ > 5 ? cx_ - 5 : 0; i < (unsigned char) (cx_ + 6) && i < CW && e_ < SEE_DOORS; ++i) {
                 d = C->tile[j][i];
                 if ((TILE (d) == T_DOOR || TILE (d) == T_WINDOW) && (d & (T_VIS | T_SEEN)) &&
                     abs_ ((int) i - cx_) + abs_ ((int) j - cy_) > 1 && !((q = portal_at (i, j)) != 0 && (q->state & PS_HIDDEN))) {

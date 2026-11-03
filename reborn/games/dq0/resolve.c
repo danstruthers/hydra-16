@@ -508,6 +508,11 @@ unsigned char o_resolve (void)
         goto named;
     }
     nall = 0;
+    if (a == VB_UNEQUIP_OBJECT && !strcmp (cmd.obj.word, "bar")) {
+        cmd.action = a = VB_BAR_OBJECT;         /* ("Take the bar off", "remove the bar": unbarred, its lifting out) */
+        cmd.aux = PA_LIFT;
+        cmd.obj.kind = OB_DOOR;
+    }
     if ((unsigned char) (a - VB_MOVE_DIRECTION) < 2 && !cmd.obj.kind) {
         if (cmd.how == HOW_ACROSS) {
             cmd.obj.kind = OB_ROOM;             /* ("Cross the kitchen": the room it's in, its far side) */

@@ -771,6 +771,27 @@ climb's test to hold on).
   or holding it.  A plain "look at" stays a look from where it stands, as far as it can see (too far to make out, its
   size alone).  Out of the light, what's done beside a remembered thing goes by touch, no worse (a doubt: a close look
   in the dark tells as much as in the light).
+- **What can be named** *(the user's, 2026-11-02; as built, for review)*: one rule for "which door?", go to, inspect and
+  the rest: what the character sees now, or has seen and remembers. Doors, windows, portcullises, passages' mouths and
+  the stairs and shafts of the room it's in, on squares it knows (the senses' record's KNOWN_REL, after those it sees;
+  in a passage, doors seen within five squares), things in this room it has looked at (the store's pick), and a denizen
+  only where it was last seen as a command was given, in this room.  It walks over and sees it properly as its light
+  reaches it.  What it has never perceived: "You haven't seen a door here."  The look still tells only what it sees.
+- **The way a thing lies** *(the user's, 2026-11-02; as built, for review)*: "the door on the left", "the door ahead",
+  "behind me on my right" mean what the look's words mean, by the facing at that moment: its bearing in the look's
+  eighths.  None exactly so, any on that side of the character (half the room; a door along the left wall far ahead is
+  "on the left"), of several the question or the one directly ahead; none on that side, "You haven't seen a door that
+  way."  "A door" is a door before a portcullis (the look's words), a portcullis only if it sees no door.
+- **A walk over for a command** *(the user's, 2026-11-02; as built, for review)*: take, hold, wear, put, light, examine
+  and the aspects, a blow's close-in, gathering: the walk's own words ("You go over to it."), what's new since the
+  command began (a thing just come into the light, a denizen new in sight), a beat, then the command's outcome.  No look
+  on arrival, no "at your feet" for what it came for.  Stopped short (engaged, a trap), why, and the command dropped.  A
+  plain "go to the pot" keeps its look.
+- **A door's state as it's plain** *(the user's, 2026-11-02; as built, for review)*: the look, "which door?" and a look
+  one way say "(closed, barred)" with the bar on the character's side, once it can see the door; a window's shutters
+  the same.  A bar on the far side, or a lock, isn't seen: told as an attempt finds it, and remembered ("(closed,
+  locked)": PP_FOUND, kept with the door's state).  "unbar the door", "unbolt", "lift the bar", "take the bar off",
+  "remove the bar": its bar lifted out, the door left shut; "It isn't barred." with none; the far side's refused.
 - **Out of reach, walked to first** (the user's, 2026-10-20): an action that needs its thing within reach (taking it
   up, holding it, wearing it, putting it in or on something, opening a chest; a blow) walks over to it first, a long
   task like any walk, then does it; a blow at a denizen out of reach closes with it first (the walk ends beside it,

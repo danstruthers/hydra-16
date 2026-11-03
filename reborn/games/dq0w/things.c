@@ -1216,8 +1216,8 @@ unsigned __fastcall__ s_at_hand (const char* name)
 /* A tool used, got out first (HOUSE.md's handy tools: its reach owed, part 10's; part 4's, its room): the first the
 ** character carries whose key (the catalogue's: the referee's to choose by) is one of keys ("pick\0shovel\0": each
 ** 0-ended, an empty one last: a dig begun, a lock's picking) */
-#pragma code-name (push, "SW81CODE")            /* (Part 81's since 2026-11-02: part 4's room) */
-#pragma rodata-name (push, "SW81RODATA")
+#pragma code-name (push, "SW74CODE")            /* (Part 74's since 2026-11-02: part 4's room, overlay 2's) */
+#pragma rodata-name (push, "SW74RODATA")
 void __fastcall__ s_tool_reach (const char* keys)
 {
     const char* k;

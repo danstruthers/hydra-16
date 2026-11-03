@@ -58,8 +58,13 @@ void s_doors (void)
                 out = PO_IS_OPEN;
             } else if ((wk.pq.state & PS_BARRED) && !mine) {
                 out = PO_BARRED;                /* (Barred from the far side) */
+                goto found;
             } else if (wk.pq.state & PS_LOCKED) {
                 out = PO_LOCKED;
+found:
+                if (!wk.who) {                  /* (Known from now on, the look's: "(closed, locked)") */
+                    keep (wk.px, wk.py, wk.pq.state, wk.pq.parts | PP_FOUND, PORTAL_STATE);
+                }
             } else if (wk.armed == 1) {
                 out = PO_TRAPPED;               /* (A trap on it it knows of: left alone) */
             } else {

@@ -8297,6 +8297,108 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0doorlies', meaning: true, near: ['map', 'parser'], what: 'Dingus Quest Zero\'s "the door on the left" (the user\'s playtest, 2026-11-02: "if you say walk to the door on the left it doesn\'t always do what you expect"; HOUSE.md\'s going to anything): at seed 5, in a hall of four doors, from the centre and two corners, facing each of the four ways, each way a door can be said to lie: it means what the look\'s words mean by the facing at that moment (the record\'s rel its bearing as it faces, doors remembered too); the one that lies exactly so is walked up to, the nearest ahead of several; none exactly so, the one on that side (half the room), of several the question; none on that side, "You haven\'t seen a door that way." and no step',
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm', 'go to the far left corner', 'go to the far right corner', 'go to the near left corner',
+        ...['go to the centre', 'go to the near left corner', 'go to the far right corner'].flatMap(p => ['face north', 'face east', 'face south', 'face west'].flatMap(q =>
+          ['on the left', 'on the right', 'ahead', 'behind me', 'ahead to my left', 'behind me on my right'].flatMap(w => [p, q, 'walk to the door ' + w]))),
+        'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], ans = dq0Answers(out), WANT = { 'on the left': 6, 'on the right': 2, 'ahead': 0, 'behind me': 4, 'ahead to my left': 7, 'behind me on my right': 3 };
+        const HX = [0, 1, 1, 1, 0, -1, -1, -1], HY = [-1, -1, 0, 1, 1, 1, 0, -1], seen = {}, kinds = { one: 0, side: 0, asked: 0, none: 0 };
+        const bearing = (dx, dy) => { const ax = Math.abs(dx), ay = Math.abs(dy); return ax * 5 < ay * 2 ? (dy < 0 ? 0 : 4) : ay * 5 < ax * 2 ? (dx > 0 ? 2 : 6) : dx > 0 ? (dy < 0 ? 1 : 3) : dy > 0 ? 5 : 7; };
+        const apart = (a, b) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
+        for (const t of T) {
+          const w = /^walk to the door (.*)$/.exec(t.line);
+          if (!w) continue;
+          const n = seen[t.line] = (seen[t.line] || 0) + 1, text = (ans.filter(y => y.cmd === t.line)[n - 1] || { text: '' }).text, pc = t.at && t.at.pc, s = t.at && t.at.sight;
+          if (!pc || !s || !t.after) { f.push(t.line + ': not played'); continue; }
+          const doors = [...s.doors, ...s.known].filter(d => !(d.rel & 8) && d.kind === 'PK_DOOR'), to = (d) => (bearing(d.x - pc.x, d.y - pc.y) - pc.face) & 7, want = WANT[w[1]], h = (pc.face + want) & 7, at = 'at ' + pc.x + ',' + pc.y + ' facing ' + pc.face + ': ' + t.line;
+          for (const d of doors) if ((d.rel & 7) !== to(d)) f.push(at + ': the look\'s record has a door at ' + (d.rel & 7) + ', its bearing as it faces ' + to(d));
+          const exact = doors.filter(d => to(d) === want), side = doors.filter(d => (d.x - pc.x) * HX[h] + (d.y - pc.y) * HY[h] > 0), cand = exact.length ? exact : side;
+          const ahead = cand.filter(d => to(d) === 0).sort((a, b) => apart(a, pc) - apart(b, pc)), one = cand.length === 1 ? cand[0] : ahead[0];
+          if (!cand.length) {
+            ++kinds.none;
+            if (!text.includes('You haven\'t seen a door that way.') || apart(t.after.pc, pc)) f.push(at + ': none that way, but: ' + text.slice(0, 120));
+          } else if (one) {
+            ++kinds[exact.length ? 'one' : 'side'];
+            if (apart(t.after.pc, one) > 1) f.push(at + ': not walked up to the door at ' + one.x + ',' + one.y + ' (at ' + t.after.pc.x + ',' + t.after.pc.y + '): ' + text.slice(0, 120));
+          } else {
+            ++kinds.asked;
+            if (!text.includes('Which door') || apart(t.after.pc, pc)) f.push(at + ': several that way, not asked: ' + text.slice(0, 120));
+          }
+        }
+        if (!kinds.one || !kinds.side || !kinds.asked || !kinds.none) f.push('not every kind of answer met: ' + JSON.stringify(kinds));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0moving', meaning: true, near: ['map', 'parser'], what: 'Dingus Quest Zero\'s moving (the user\'s playtest, 2026-11-02: DECISIONS.md; HOUSE.md\'s straight walks, going to anything, crossing, inspecting walks over first), by the words told and the hub: at seed 8 a way word walks straight: north to the wall, told; south to a closed door, told; again, refused beside it; a door off to the side never walked to; a shut door it has handled opened as it goes, and on through; at seed 7 go to the centre (its sum near $8000), cross the room, go across the room, approach, walk to (no pace words), walk over to, head for, which asked of two pots, beside it not on it, "You haven\'t seen a rat here."; examine, assess out of reach walked over to, their words short; a plain look at from where it stands; things and doors remembered in the dark, named, walked to; leave, which asked; a walked-to take told short, no look, no "at your feet", and with hands and pack full refused as it gets there; a denizen gone up to with no blow, and where it was last seen (seed 2)',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 8 -c /ram/c.hm', 'n', 's', 's', 'e', 'go through the door to the south', 'open', 'close', 'n', 's', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm', 'go to the centre', 'cross the room', 'go across the room', 'leave', 'go to the rat', 'go to the far right corner', 'approach the pot', 'go to the far right corner', 'walk to the pot', 'go to the far right corner', 'head for the pot', '1',
+        'go to the far left corner', 'walk over to the sconce', 'go to the far left corner', 'examine the sconce', 'go to the far left corner', 'assess the sconce', 'drop the backpack', 'go to the far left corner', 'take the pot', 'go to the far right corner', 'take the pot', 'drop the pot',
+        'douse the torch', 'go to the door', 'go to the far left corner', 'go to the sconce', 'quit',
+        'dq0 -p t -s 2 -c /ram/c.hm', 'go to the closest rat', 'douse the torch', 'go to the window', 'go to the rat', 'quit',
+        'dq0 -p t -s 15 -c /ram/c.hm', 'bar the door', 'look at the door ahead to my left', 'go to the door ahead to my left', 'unbar the door', 'unbolt the door', 'bar the door', 'take the bar off', 'lift the bar', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm', 'go through the door to the east', 'open', 'look', 'look at the door', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], ans = dq0Answers(out), T = dq0Turns(m), g = {};
+        const said = (line, want, not) => {           // (Each line's answer, the nth of it in turn)
+          const n = g[line] = (g[line] || 0) + 1, a = ans.filter(y => y.cmd === line)[n - 1], x = a ? a.text : '';
+          for (const w of [].concat(want)) if (!x.includes(w)) f.push(line + ' (' + n + '): not "' + w + '": ' + x.slice(0, 200));
+          for (const w of [].concat(not || [])) if (x.includes(w)) f.push(line + ' (' + n + '): "' + w + '" told: ' + x.slice(0, 200));
+        };
+        said('n', 'You come to the wall.');
+        said('s', 'You come to a closed door.');
+        said('s', 'The door is shut: open it first.');
+        said('e', 'You come to a closed door.', 'You go through');    // (The door to its south, off to its side, not walked to)
+        said('go through the door to the south', 'You come to a closed door.');
+        said('n', 'You come to the wall.');
+        said('s', ['You open the door.', 'You go through a doorway.']);
+        said('go to the centre', 'You are in the middle of a kitchen');
+        said('cross the room', 'You are');
+        said('go across the room', ['You']);
+        said('leave', 'Which exit:');
+        said('go to the rat', 'You haven\'t seen a rat here.');
+        said('approach the pot', 'You go over to it.');
+        said('walk to the pot', 'You go over to it.', 'Pace:');
+        said('head for the pot', 'Which do you mean');
+        said('1', 'The iron pot is beside you.');
+        said('walk over to the sconce', 'You go over to it.');
+        said('examine the sconce', ['You go over to it.', 'The sconce is'], ['A barrel vault', 'by the light of', 'On the iron pot lies']);
+        said('assess the sconce', ['You go over to it.', 'You judge it'], ['A barrel vault', 'by the light of']);
+        said('take the pot', ['You go over to it.', 'Taken.'], ['A barrel vault', 'by the light of', 'at your feet', 'At your feet', 'lies an iron pot']);
+        said('take the pot', ['You go over to it.', 'Your hands are full, and your pack too.'], ['A barrel vault', 'by the light of', 'at your feet', 'At your feet', 'lies an iron pot']);
+        said('go to the door', 'You go over to it.');
+        said('go to the sconce', 'You go over to it.');
+        said('go to the window', 'You haven\'t seen a window here.');
+        said('go to the rat', 'You go over to it.', 'You haven\'t seen');
+        said('bar the door', 'Which door: 1. the door ahead to your left (closed, barred)');    // (Its bar plain on this side, the look's words too: the user's)
+        said('look at the door ahead to my left', 'it\'s barred');
+        said('go to the door ahead to my left', 'There is a door ahead (closed, barred).');
+        said('unbar the door', 'You lift the bar out of its brackets');
+        said('unbolt the door', 'It isn\'t barred.');
+        said('bar the door', 'the door is barred');
+        said('take the bar off', 'You lift the bar out of its brackets');
+        said('lift the bar', 'It isn\'t barred.');
+        said('open', 'You open the door');
+        said('open', 'It won\'t open: it\'s locked.');   // (A lock not seen till it's tried: then told)
+        said('look', 'There is a door ahead (closed, locked).');
+        said('look at the door', 'it\'s locked');
+        const r = T.of('go to the closest rat');
+        if (r.k < 0) f.push('no rat gone to');
+        dq0Never(f, r, 'E_FIGHT', { who: 0, def: -1 }, 'a blow struck, going up to a rat');
+        if (r.events.some(e => e.kind === 'E_FIGHT' && e.who === 0)) f.push('the character struck, only going up to a rat');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0steps', meaning: true, what: 'Dingus Quest Zero\'s small moves (the user\'s, 2026-10-16: "move left one space"; a square 5 feet, the game\'s), by where the character stands and faces (the hub\'s): at seed 12\'s first room (a small storeroom), facing northeast, a step forward (a square that way, its facing kept), a move to the right three spaces stopped by the wall (not moved), backing up 10 feet (the room\'s one square behind it, still facing northeast), a sidestep left into the wall; turned about, "run 2 squares east" (its pace set to a run, east one square to the wall, facing east) (a step stopped by a denizen in the way: dq0denizens; the look as a run ends, brief: dq0wordsthings)',
       init: 't_rc', cycles: 600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 12 -c /ram/c.hm', 'step forward',

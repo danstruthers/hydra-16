@@ -275,7 +275,7 @@ go:
             SWFN        reach_to, 56
             SWFN        reach_done, 56
             SWFN        handy, 56
-            SWFN        tool_reach, 81
+            SWFN        tool_reach, 74
             SWFN        flame, 10
             SWFN        drop, 35
             SWFN        throw_at, 4

@@ -56,6 +56,7 @@ break       thing=VB_BREAK_OBJECT unsaid=front aux=PA_BREAK task=LT_BATTER
 bend        thing=VB_BEND_OBJECT unsaid=front aux=PA_BEND skill=P_FORCE
 disarm      thing=VB_DISARM_OBJECT unsaid=front aux=PA_DISARM skill=P_DISARM
 bar         thing=VB_BAR_OBJECT unsaid=front aux=PA_BAR
+unbar       thing=VB_BAR_OBJECT alone=VB_BAR_OBJECT unsaid=front aux=PA_LIFT     # (new, 2026-11-02: its bar lifted out, the door left shut)
 dig         thing=VB_DIG way=VB_DIG unsaid=none skill=P_DIG task=LT_DIG
 get         thing=VB_RETRIEVE_OBJECT unsaid=near aux=IO_GET
 drop        thing=VB_DROP_OBJECT unsaid=last aux=IO_DROP
@@ -342,6 +343,8 @@ disarm = disarm
 disable = disarm
 bar = bar
 rebar = bar
+unbar = unbar
+unbolt = unbar
 read = read
 use = use
 apply = use

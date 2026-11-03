@@ -121,8 +121,8 @@ static void __fastcall__ doors (unsigned char mouths)
             if ((S->door[i].rel & 7) == d && is (i, mouths)) {
                 if (!mouths) {
                     add (S->door[i].state == DOORWAY ? " (a doorway)" : S->door[i].state & PS_WRECKED ?
-                         " (broken down)" : S->door[i].state & PS_OPEN_ ? " (open)" :
-                         " (closed)");
+                         " (broken down)" : S->door[i].state & PS_OPEN_ ? " (open)" : S->door[i].state & PS_BARRED_ ?
+                         " (closed, barred)" : S->door[i].state & PS_LOCKED_ ? " (closed, locked)" : " (closed)");
                 }
                 if (S->door[i].dz >= 3 || S->door[i].dz <= -3) {
                     add (",");
@@ -157,7 +157,8 @@ static void portals (void)
             add (S->door[i].state & PS_WRECKED ? " (its bars forced apart)" : S->door[i].state & PS_OPEN_ ? " (raised)" :
                  " (down)");
         } else if (k == PK_WINDOW && (p & PP_SHUTTERS)) {
-            add (S->door[i].state & PS_OPEN_ ? " (its shutters open)" : " (its shutters closed)");
+            add (S->door[i].state & PS_OPEN_ ? " (its shutters open)" : S->door[i].state & PS_BARRED_ ?
+                 " (its shutters closed, barred)" : " (its shutters closed)");
         }
         height (S->door[i].dz);
         add (".");

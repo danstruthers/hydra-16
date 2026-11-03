@@ -462,14 +462,17 @@ static void new_words (void)
 {
     struct sight* s = &sight_copy;
     unsigned before[SEE_ITEMS + SEE_DENS];      /* (On the C stack: the hub's bank in the window as it's copied) */
-    unsigned char i, k, n;
+    unsigned char i, j, k, n;
 
     hub_mem (UI_BANK, before, UIREC->before, sizeof before);
-    for (i = n = 0; i < s->nitems; ++i) {
+    for (i = n = 0, j = 0; i < s->nitems; ++i) {
         for (k = 0; k < SEE_ITEMS && before[k] != s->item[i].n; ++k) {
         }
-        if (k == SEE_ITEMS && !(cmd.obj.word[0] && strstr (s->item[i].name, cmd.obj.word))) {
+        if (s->item[i].hid & 2 ? j : k == SEE_ITEMS && !(cmd.obj.word[0] && strstr (s->item[i].name, cmd.obj.word))) {
             memcpy (&s->item[n++], &s->item[i], sizeof s->item[0]);
+            j = 1;                              /* (One on the surface before it told with that, and only so) */
+        } else {
+            j = 0;
         }
     }
     s->nitems = n;

@@ -887,6 +887,10 @@ or a shaft can be jumped down (jump down: a fall of its height).
   item store's pick, HW_GONE; I_GOTO, a 2: beside it); "You haven't seen a pot here." only for what it hasn't.  Crossing
   ("cross the room", "go across the hall") its far side; a closer look, an appraisal, looking in a thing or searching
   it, out of reach, walked over to first.
+- **What can be named** (the user's, 2026-11-02: HOUSE.md's): what it sees or has seen and remembers, by one rule: named
+  and walked to, in "which door?", though it's out of the light; never what it hasn't perceived.  "The door on the left"
+  by the look's own words, then that side of the room.  A walk over for a command told short: its words, what's new, the
+  outcome.  A bar on its side and what it has found of a lock told with the door ("(closed, barred)"); "unbar the door".
 - **Going places in a room**, by the facing: the centre, the far side (the other side, the far end, the wall ahead),
   the near, left or right side, a corner ("go to the far left corner", "walk forward to the other side"); where the
   place itself is rock (a cave's), the nearest square the way reaches.  And where you are said the same way: "You are

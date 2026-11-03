@@ -122,7 +122,8 @@ static void __fastcall__ named (unsigned char k, unsigned char n)
     }
     if (i < s->ndoors && !(r & MOUTH)) {
         add (st == DOORWAY ? " (a doorway)" : st & PS_WRECKED ? " (broken down)" : s->door[i].kind == PK_PORTCULLIS ?
-             (st & PS_OPEN ? " (raised)" : " (down)") : st & PS_OPEN ? " (open)" : " (closed)");
+             (st & PS_OPEN ? " (raised)" : " (down)") : st & PS_OPEN ? " (open)" : st & PS_BARRED_ ? " (closed, barred)" :
+             st & PS_LOCKED_ ? " (closed, locked)" : " (closed)");
     }
 }
 
