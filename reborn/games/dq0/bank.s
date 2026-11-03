@@ -15,7 +15,7 @@
             .include    "ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 18                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 19                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
@@ -149,17 +149,17 @@ ovl_out:
             SWPART      1, 8                ; The start and the end (main.c): the task's arguments, the world
                                             ;   started, the game kept, the world stopped
             SWPART      2, 14               ; The commands (main.c: the map's bank, overlay 3 full at slice 4.2)
-            SWPART      3, 18               ; The map (look.c; overlay 14's bank till 2026-11-01)
+            SWPART      3, 19               ; The map (look.c; overlay 14's bank till 2026-11-01)
             SWPART      4, 9                ; The pace, the watchfulness, the state, small moves (pace.c)
             SWPART      5, 10               ; The names given (names.c)
             SWPART      6, 12               ; The names said (names.c)
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
-            SWPART      8, 5                ; Where in its room the character is, and the things (look.c)
+            SWPART      8, 18                ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
             SWPART      10, 18              ; A search, by its form (search.c)
             SWPART      11, 15              ; The rarer news, worded (main.c); the hands and limbs
             SWPART      12, 16              ; Wounds over time: first aid, in shock, the body's news (tend.c)
-            SWPART      13, 7               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
+            SWPART      13, 18              ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
             SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
             SWPART      15, 17              ; An ally's errands, the character's gifts, the market (errand.c: slice 4.8's; 2026-11-02)
             SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
@@ -208,6 +208,7 @@ ovl_out:
             SWFN        bandage_out, 19
             SWFN        find_banks, 19
             SWFN        reach_said, 19
+            SWFN        walk_says, 13
             SWFN        place_go, 7
             SWFN        look_way, 17
             SWFN        search_go, 10

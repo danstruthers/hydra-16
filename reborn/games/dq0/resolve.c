@@ -513,10 +513,21 @@ unsigned char o_resolve (void)
         cmd.aux = PA_LIFT;
         cmd.obj.kind = OB_DOOR;
     }
+    if (((unsigned char) (a - VB_MOVE_DIRECTION) < 2 || a == VB_APPROACH_OBJECT) &&
+        (cmd.obj.kind == OB_TRAP || cmd.obj.kind == OB_LEDGE)) {   /* ("Go to the pit": the world's, as any thing's,
+                                                **   way.c's go_thing; "go to the ledge": straight at the part of the room
+                                                **   the look told, its ledge stops it) */
+        strcpy (cmd.obj.word, cmd.obj.kind == OB_TRAP ? "trap" : "ledge");
+        if (cmd.obj.kind == OB_LEDGE && s->nzones) {
+            cmd.dir = (pc_face + s->zone[0].rel) & 7;
+            cmd.obj.word[0] = 0;
+        }
+        cmd.obj.kind = 0;
+    }
     if ((unsigned char) (a - VB_MOVE_DIRECTION) < 2 && !cmd.obj.kind) {
         if (cmd.how == HOW_ACROSS) {
             cmd.obj.kind = OB_ROOM;             /* ("Cross the kitchen": the room it's in, its far side) */
-        } else if (cmd.obj.word[0]) {
+        } else if (cmd.obj.word[0] && (cmd.how || a != VB_MOVE_DIRECTION)) {
             cmd.dir = 0xFF;                     /* ("Go up to the pot", "go back to the pot": to it) */
         }
     }

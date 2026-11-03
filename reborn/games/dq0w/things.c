@@ -97,7 +97,7 @@ void __fastcall__ listed (unsigned n);          /* Part 11 */
 
 extern const struct kind kinds[];               /* (kinds.c's: in the catalogue's bank) */
 extern const unsigned char throws[];            /* (kinds.c's: a kind's reach, thrown) */
-unsigned char __fastcall__ throw_at (const char* name);    /* Part 4 */
+unsigned char __fastcall__ throw_at (const char* name);    /* Part 88 */
 
 /* A buffer in the main RAM (the words said, the kit's names, the store kept a piece at a time) */
 static char tbuf[80];
@@ -1662,8 +1662,8 @@ unsigned char s_serve (void)
         }
         break;
     }
-    if (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE || iq.kind == IO_THROW ||
-        (iq.kind >= IO_HOLD && iq.kind <= IO_NAME)) {
+    if (iq.result != IR_NOT_HERE && (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE ||
+        iq.kind == IO_THROW || (iq.kind >= IO_HOLD && iq.kind <= IO_NAME))) {   /* (Out of reach: nothing's moved yet) */
         s_light_now ();                         /* (Its light: what it holds lit) */
         changed |= iq.result == IR_OK;
     }
@@ -1768,8 +1768,8 @@ void s_chart_now (void)
 #pragma rodata-name (pop)
 
 /* ==== Part 4 (store.c's, its room): a thing thrown */
-#pragma code-name (push, "SW4CODE")
-#pragma rodata-name (push, "SW4RODATA")
+#pragma code-name (push, "SW88CODE")           /* (Part 4 full, 2026-11-03) */
+#pragma rodata-name (push, "SW88RODATA")
 
 /* A thing thrown (the UI's IO_THROW, the character's: the same for every actor, as their minds come to throw), the
 ** one named that it carries ("": the first in its hands), at a mark (the request's x, y: a square it sees, a denizen's
@@ -1924,7 +1924,20 @@ static unsigned char __fastcall__ chain (unsigned i)
 ** win already (a count's put there).  Its number, or 0 (HW_HAND's: one seen but out of reach, afar, far_n where it
 ** is); seen_d how far off, in squares; csum how many there were to choose from, all told (a lot its count) */
 #define NCAND           8
+static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigned char* no);
+#pragma static-locals (push, off)
 unsigned __fastcall__ s_pick (const char* name, unsigned char how)
+{
+    unsigned char no[NK];                       /* (The kinds this name's no name of: asked once a kind, a world's every
+                                                **   thing passed over at a look, the user's D17: a command that names a
+                                                **   thing answers at once; on the C stack, the main RAM's room) */
+
+    memset (no, 0, NK);
+    return pick_ (name, how, no);
+}
+#pragma static-locals (pop)
+
+static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigned char* no)
 {
     struct { unsigned n; unsigned char r; } c[NCAND];
     unsigned char* t;
@@ -1943,8 +1956,17 @@ unsigned __fastcall__ s_pick (const char* name, unsigned char how)
     x = HUB->pc_x;
     y = HUB->pc_y;
     while ((i = items (i, IN_SQUARE | IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {
+        p = item_at (i);
+        pk = p->kind;
+        if (no[pk] || (p->flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN) {
+            continue;
+        }
         fetch (&rec, i);
-        if ((rec.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN || !is_named (name) || (d = chain (i), cnot && s != SL_NTH)) {
+        if (!is_named (name)) {
+            no[pk] = *name != '#';
+            continue;
+        }
+        if (d = chain (i), cnot && s != SL_NTH) {
             continue;                           /* (Not the first, nor in it, unless it's the nth said: "the second
                                                 **   sack" of them all, not of the rest) */
         }
@@ -3151,6 +3173,10 @@ unsigned char s_look_at (void)
     if (!(n = pick (iq.name, mode == LM_AT ? HW_ANY : mode == LM_GO ? HW_GONE : HW_KNOWN))) {    /* (Carried, or seen: the
                                                 **   one most to hand, of several; all but a plain look, remembered too,
                                                 **   walked to; gone to: lying about) */
+        if (mode == LM_GO) {
+            closer (LM_GO);                     /* (A trap it knows of: part 42's room, its reply in ld) */
+            return ld;
+        }
         return IR_NONE;
     }
     ld = seen_d > 99 ? 99 : seen_d;
@@ -3526,10 +3552,61 @@ static void worn_words (void)
 /* What a closer look shows (mode LM_CLOSE: "It's made of wood; it's little worn, half burnt down. Its lock is a simple
 ** one."; a portal's part's measure, "It's made of glass, 2 by 3 feet, a quarter inch thick"); its condition alone
 ** (LM_COND: after its name, "... is battered, its edge dulled.") */
+/* Gone to a trap it knows of, the nearest in the chunk it's in ("go to the pit": the UI's resolve.c): where it is, as a
+** thing's out of reach (the walk beside it, as near as it gets): ld the reply, IR_NOT_HERE; beside it, IR_OK; IR_NONE none */
+#pragma bss-name (push, "SW42RODATA")
+static void spot_at (void)
+{
+    static unsigned ox, oy;
+    static unsigned char k, b, d, e, bx, by;
+    struct trap* t;
+
+    hub_map (0);
+    ox = HUB->pc_x;
+    oy = HUB->pc_y;
+    ld = IR_NONE;
+    if (*iq.name != 't' || !at (HUB->pc_stratum, ox, oy)) {
+        return;
+    }
+    ox -= cx_;
+    oy -= cy_;
+    b = 0xFF;
+    for (k = C->ntraps, t = C->trap; k; --k, ++t) {
+        if (!(t->state & TS_HIDDEN)) {
+            d = t->x > cx_ ? t->x - cx_ : cx_ - t->x;
+            e = t->y > cy_ ? t->y - cy_ : cy_ - t->y;
+            if (e > d) {
+                d = e;
+            }
+            if (d < b) {
+                b = d;
+                bx = t->x;
+                by = t->y;
+            }
+        }
+    }
+    hub_map (0);
+    if (b < 2) {
+        put ("It's beside you.");
+        ld = IR_OK;
+    } else if (b != 0xFF) {
+        HUB->ireq.x = ox + bx;
+        HUB->ireq.y = oy + by;
+        HUB->ireq.item = 0;
+        ld = IR_NOT_HERE;
+    }
+}
+#pragma bss-name (pop)
+
 void __fastcall__ s_closer (unsigned char mode)
 {
     unsigned char k;
     char b[6];
+
+    if (mode == LM_GO) {
+        spot_at ();
+        return;
+    }
 
     lnw = 0;
     if (mode == LM_COND) {

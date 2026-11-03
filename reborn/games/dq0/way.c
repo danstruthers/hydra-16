@@ -231,12 +231,14 @@ void go_thing (void)
     } else {
         for (k = 0, a = HUB->actor; k < NACTORS; ++k, ++a) {
             if (a->state && a->x == x && a->y == y && a->sn == HUB->pc_stratum) {
+                walk_says (cmd.obj.word);
                 intend_a = k + 1;
                 intend2 (I_CLOSE, 1, 0);
                 return;
             }
         }
     }
+    walk_says (cmd.obj.word);                   /* (Told at once, the user's D17) */
     intend_a = 2;
     intend2 (I_TAKE, x, y);
 }

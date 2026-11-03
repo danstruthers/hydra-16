@@ -796,6 +796,21 @@ static struct trap* __fastcall__ trap_at (unsigned char x, unsigned char y)
     return 0;
 }
 
+/* What's on heading h of (mx, my) to its hands (sides' above, a dark walk's): 0 nothing, 1 a wall, 2 a shut door */
+static unsigned char __fastcall__ side_k (unsigned char h)
+{
+    unsigned char* p = at (sn_, mx + head_x[h], my + head_y[h]);
+    struct portal* o;
+
+    if (!p) {
+        return 1;
+    }
+    if (TILE (*p) == T_DOOR && (o = portal_at (cx_, cy_)) != 0 && !(o->state & PS_OPEN)) {
+        return o->state & PS_HIDDEN ? 1 : 2;
+    }
+    return !T_PASS (*p) && TILE (*p) != T_PIT;
+}
+
 /* Square nx, ny a shut door it has handled (at ()'s square, and in the chunk's window): opened as it goes, its time */
 static unsigned __fastcall__ door_on (unsigned nx, unsigned ny)
 {
@@ -834,6 +849,20 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
     unsigned nx, ny;
     int z, dz;
 
+    if (r == 0xFE) {                            /* (Part 24's: a step of a dark walk, what its hands find as it changes) */
+        mx = HUB->pc_x;
+        my = HUB->pc_y;
+        h = HUB->pc_face;
+        n = side_k ((h + 6) & 7);
+        n |= side_k ((h + 2) & 7) << 2;
+        hub_map (0);
+        st = HUB->pc_sides;
+        HUB->pc_sides = n | h << 4;
+        if (st >> 4 == h && (st & 15) != n && pnext > 1) {
+            event (E_BEAT, 0, WB_SIDES | (unsigned) (n | st << 4) << 8);
+        }
+        return;
+    }
     if (r == 0xFF) {                            /* (Part 9's: along a passage, a shut door straight on) */
         nx = mx + head_x[h];
         ny = my + head_y[h];
@@ -997,7 +1026,7 @@ void __fastcall__ s_go_to (unsigned x, unsigned y)
         if (go_near && s_ways_near (&tx, &ty)) {
             tt = way (tx, ty);                  /* (A place it can't stand on itself: the nearest it can) */
         }
-    } else if (go_near == 2 && last_d < 8) {    /* (A thing gone to: the square before it on the way, beside it) */
+    } else if (go_near >= 2 && last_d < 8) {    /* (A thing gone to: the square before it on the way, beside it) */
         tx -= dir_x[last_d];
         ty -= dir_y[last_d];
         tt = way (tx, ty);
@@ -1022,8 +1051,12 @@ void __fastcall__ s_go_to (unsigned x, unsigned y)
         on_way ();                              /* (A trap on its way) */
         return;
     }
-    if (go_near == 2 && !tt) {
+    if (go_near >= 2 && !tt) {
         hub_map (0);                            /* (Gone to, and it can't get any nearer) */
+        if (go_near == 3) {                     /* (A later leg of it, no nearer: that walk's done, take_up's) */
+            go_near = 0xFF;
+            return;
+        }
         no_way (N_NO_EXIT);
         return;
     }
@@ -4582,12 +4615,18 @@ unsigned char __fastcall__ s_zone_step (unsigned ox, unsigned oy, unsigned x, un
 {
     unsigned char e, *p;
 
-    if ((ox != x || oy != y) && (p = at (sn_, x, y)) != 0 && TILE (*p) == T_RUBBLE) {
-        pt0 += pst;                             /* (Rubble clambered over: twice the step's time, slice 4.10's) */
+    if (pfeel) {
+        across (0, 0xFE);                       /* (In the dark: as what its hands find changes, told) */
     }
-    if ((ox != x || oy != y) && (HUB->pc_wet || HUB->pc_air || (at (sn_, x, y) && (C->wany || C->air)))) {
-        pt0 += wade (pst);                      /* (A walk's step into water, or in it: its time the more, swimming,
+
+    if (ox != x || oy != y) {
+        if ((p = at (sn_, x, y)) != 0 && TILE (*p) == T_RUBBLE) {
+            pt0 += pst;                         /* (Rubble clambered over: twice the step's time, slice 4.10's) */
+        }
+        if (HUB->pc_wet || HUB->pc_air || (at (sn_, x, y) && (C->wany || C->air))) {
+            pt0 += wade (pst);                  /* (A walk's step into water, or in it: its time the more, swimming,
                                                 **   part 73's, slice 4.9's) */
+        }
     }
     hub_map (0);
     if (pfoe && near_foe (x, y)) {

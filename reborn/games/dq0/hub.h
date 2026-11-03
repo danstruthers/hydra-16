@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     40                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     41                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -734,7 +734,7 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
        WB_TELLS, WB_GIVES, WB_ON,                /*   a battering's as it goes (the user's, 2026-10-22): the first blow
                                                 **   that marks it, the one that leaves it giving, every fourth blow
                                                 **   else; */
-       WB_FEEL, WB_FELT, WB_THING, WB_TRIP, WB_STUMBLE, WB_HIT, WB_OFF, WB_SHORT,     /* (The dark's, 2026-10-22:
+       WB_FEEL, WB_FELT, WB_THING, WB_TRIP, WB_STUMBLE, WB_HIT, WB_OFF, WB_SHORT, WB_SIDES,     /* (The dark's, 2026-10-22:
                                                 **   HOUSE.md's walking in the dark: a walk set out on, its heading
                                                 **   times 256 and its gait faster than feeling its way times 4096 (0:
                                                 **   feeling its way); what its hands met, FA_* times 256; its foot on a
@@ -1276,7 +1276,11 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** task that works the place uses the true facing, the UI's words, the parser's compass and the map the believed */
     unsigned char   pc_skew;                    /* Eighths of a turn: its believed heading the true one plus this, & 7
                                                 **   (0 for one that knows north: the referee's summary's northsense) */
-    unsigned char   pc_lost;                    /*   and 1 if it knows it's lost its bearings ("facing NE?") */
+    unsigned char   pc_lost;                    /*   and 1 if it knows it's lost its bearings ("facing NE?"): right after
+                                                **   pc_skew, task.c's o_facing_words reads the two at once */
+    unsigned char   pc_sides;                   /* A dark walk's: what its hands found at its last step, left and right
+                                                **   (2 bits each, 0 nothing, 1 a wall, 2 a shut door) and its heading (bits
+                                                **   4-6): E_BEAT's WB_SIDES as they change (2026-11-02) */
     /* The character's time of day believed (DUNGEON.md's the time of day believed; the user's, 2026-10-31: "Timekeeping
     ** should also be a fuzzy thing, unless there is some place where you can actually see outside"): the hour it
     ** believes it is against the true one (the world's clock and the hour the game began), the world's to keep from the
@@ -1695,6 +1699,7 @@ struct wsave {
 **   own hub.pc_shand world
 **   own hub.pc_skew world                                      (Its bearings: the world's, by the referee's tests)
 **   own hub.pc_lost world
+**   own hub.pc_sides world                                     (What a dark walk's felt either side, its beats' WB_SIDES)
 **   own hub.tb world                                           (The time of day it believes: the world's, 2026-10-31)
 **   own hub.di_head denizens                                   (The denizens' intents: their ring)
 **   own hub.di denizens

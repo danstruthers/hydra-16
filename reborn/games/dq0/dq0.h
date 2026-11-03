@@ -353,7 +353,7 @@ extern unsigned long heard_at;                  /* (main.c's: when a sound was l
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[18];
+extern unsigned char ovbank[19];
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */
 void tend (void);                               /* Part 12: first aid (VB_TEND) */
@@ -389,6 +389,7 @@ unsigned char reach_go (void);
 unsigned char bandage_out (void);               /* Part 19: a bandage got out, a tool's steps */
 void step_go (void);                            /* Part 19: a step of the reach begun by the world (IO_STEP's) */
 void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 19: the reach's words */
+void __fastcall__ walk_says (const char* name);    /* (A walk over told as it begins, at once: "You go over to the pot."; 0: the command's thing) */
 unsigned char search_go (void);                 /* (Part 10's) A search begun, by its form (search.c) */
 void __fastcall__ search_said (const struct msg* m);   /* (A room searched whole's, as it goes: an E_BEAT's WB_SEARCH) */
 unsigned char __fastcall__ place_go (const struct cmd* c);   /* Part 7: a place in the room walked to */                  /* Part 7: a command's thing out of reach walked over to first */

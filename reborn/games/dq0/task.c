@@ -446,6 +446,8 @@ void __fastcall__ o_beat_words (unsigned w)
         msg ("The way falls away.");
         break;
     case WB_CROSS:
+        hub_mem (SIGHT_BANK, &r, &SIGHT->dark, 1);
+        if (!r)                                 /* (In the dark, no room's told) */
         tell (T_YOU_CROSS_THE);                 /* (A room crossed to a door, a passage: "You cross the room.") */
         break;
     case WB_TELLS:                              /* (A battering's as it goes: the user's, 2026-10-22) */
@@ -526,7 +528,8 @@ static void touch_words (void)
     struct sight* s = &sight_copy;
     unsigned char c = s->cmid, i, k, n, m, said = 0;
 
-    strcat (lb, "It is dark. You feel ");
+    hub_mem (0, &k, (char*) &HUB->pcsum.cond + 1, 1);   /* (C_BLINDED, its high byte: the window's not the hub's here) */
+    strcat (lb, k & C_BLINDED >> 8 ? "You can't see. You feel " : "It is dark. You feel ");
     for (i = 0; i < 4; ++i) {
         k = order_[i];
         for (n = m = 0; m < 3; ++m) {
@@ -574,7 +577,7 @@ void __fastcall__ o_felt_words (unsigned w)
     };
     static const char* const into[FA_PIT + 1] = { "", "a wall", "a door", "iron bars", "", "a rise in the floor", "" };
     static const char* const gait[4] = { "walk", "jog", "run", "sprint" };
-    unsigned char b = w >> 8, k = b & 7, g = (b >> 4) - GA_WALK & 3, sk;
+    unsigned char b = w >> 8, k = b & 7, g = (b >> 4) - GA_WALK & 3, sk, r_;
 
     if (w == FW_NEW) {
         new_words ();
@@ -585,6 +588,22 @@ void __fastcall__ o_felt_words (unsigned w)
         return;
     }
     switch ((unsigned char) w) {
+    case WB_SIDES:                              /* (A dark walk, as what its hands find on either side changes: its low
+                                                **   four bits now, left then right; its high four as they were) */
+        for (k = 0; k < 2; ++k, b >>= 2) {
+            sk = (b >> 4) & 3;
+            r_ = b & 3;
+            if (sk != r_) {
+                if (!r_) {
+                    sayf ("\nThe wall to your %s ends.", k ? "right" : "left");
+                } else if (r_ == 2) {
+                    sayf ("\nYou feel a door to your %s.", k ? "right" : "left");
+                } else if (sk != 2) {
+                    sayf ("\nA wall begins to your %s.", k ? "right" : "left");
+                }
+            }
+        }
+        return;
     case WB_FEEL:
         hub_mem (0, &sk, &HUB->pc_skew, 1);     /* (The way by the north it believes in: slice 4.2's) */
         k = (k + sk) & 7;

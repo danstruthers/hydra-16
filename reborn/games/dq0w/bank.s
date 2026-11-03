@@ -89,7 +89,7 @@ go:
             SWPART      3, 1                ; The dungeon begun, the strata below grown
             SWPART      4, 2                ; The change records' rarer work (store.c), the UI's requests; a thing of
                                             ;   several, things moved by the count, what closes worked (things.c)
-            SWPART      5, 2                ; Doors (wdoor.c)
+            SWPART      5, 16                ; Doors (wdoor.c)
             SWPART      6, 3                ; Blows (wblow.c)
             SWPART      7, 14               ; Portcullises and windows (wwin.c); the map drawn as it goes (dq0w.c's
                                             ;   draw_test: slice 4.2's)
@@ -122,7 +122,7 @@ go:
             SWPART      31, 11              ; The traces read, in words (wtrword.c)
             SWPART      32, 3               ; The way the character's scent goes, a hunter's (wtrscent.c)
             SWPART      33, 12              ; A walk across a room (dq0w.c's across: the main RAM's room)
-            SWPART      34, 14              ; The rooms' lights by their sconces (wkept.c)
+            SWPART      34, 24              ; The rooms' lights by their sconces (wkept.c)
             SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
             SWPART      37, 13              ; The rest of the UI's intents carried out (dq0w.c's intent_more)
@@ -130,7 +130,7 @@ go:
             SWPART      39, 12              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
             SWPART      41, 19              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
-            SWPART      42, 24              ; What a closer look at a thing shows; its condition (things.c)
+            SWPART      42, 21              ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 7              ; A walk in the dark set out on: its way felt, a thing stumbled over
             SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
             SWPART      45, 5              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
@@ -149,7 +149,7 @@ go:
             SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
             SWPART      53, 16              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
             SWPART      54, 16              ; Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
-            SWPART      55, 16              ; Travel to a place it knows (dq0w.c's: slice 4.2's)
+            SWPART      55, 2              ; Travel to a place it knows (dq0w.c's: slice 4.2's)
             SWPART      56, 17              ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
             SWPART      57, 18              ; The outfits drawn: the character's, a denizen's (outfit.c, 2026-10-27)
             SWPART      58, 19              ; The outfits made (outmake.c)
@@ -157,7 +157,7 @@ go:
             SWPART      60, 19              ; The denizens' things; a weapon let fall, taken up (wlimbs.c, 2026-10-27)
             SWPART      61, 18              ; What's in a thing (things.c's s_inside: part 36's room, 2026-10-27)
             SWPART      62, 17              ; A denizen's things made out (things.c's s_gear_words, 2026-10-27)
-            SWPART      63, 21              ; The character's kit (things.c's, part 13's till 2026-10-28; overlay 21's, 2026-10-29)
+            SWPART      63, 14              ; The character's kit (things.c's, part 13's till 2026-10-28; overlay 21's, 2026-10-29)
             SWPART      64, 21              ; The coins' mints (things.c's, 2026-10-28; overlay 21's, 2026-10-29)
             SWPART      65, 20              ; The missiles: a shot, its line, where it falls (wshoot.c: slice 4.7's)
             SWPART      66, 26              ; The missiles gathered (wshoot.c; overlay 15's, 2026-10-30)
@@ -183,7 +183,7 @@ go:
             SWPART      85, 26              ; The reach's steps (things.c's, 2026-11-02: HOUSE.md's reach)
             SWPART      86, 26              ; Their other half
             SWPART      87, 26              ; And the hand the pack goes in, a tool's use, the words
-            SWPART      88, 26              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
+            SWPART      88, 15              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -292,7 +292,7 @@ go:
             SWFN        tool_reach, 72
             SWFN        flame, 87
             SWFN        drop, 35
-            SWFN        throw_at, 4
+            SWFN        throw_at, 88
             SWFN        list, 11
             SWFN        wear, 40
             SWFN        make_own, 13
