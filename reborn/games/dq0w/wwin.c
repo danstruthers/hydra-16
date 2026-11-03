@@ -130,6 +130,9 @@ static unsigned char __fastcall__ window (unsigned char what)
     if (shut || (wk.pq.parts & (PP_GLASS | PP_BARS))) {
         return PO_IN_WAY;
     }
+    if (wk.pq.parts & PP_SKY) {
+        return PO_NO_CLIMB;                     /* (A window on the surface: a light well beyond it, its sill no way out) */
+    }
     if (wk.plan) {                              /* (A round's climb, a long task: its test at its end, no stopping
                                                 **   it part way, a climb's) */
         timed (LT_CLIMB, 100);

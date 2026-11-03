@@ -50,8 +50,8 @@ extern unsigned char smask;
 #define CACHE_BANK(k)   (1 + PLAN_BANKS + (k) / 3)
 #define CHUNK_AT(k)     ((struct chunk*) (0x8000 + ((k) % 3) * CHUNK_SIZE))
 
-/* Squares: the low four bits a kind; T_SEEN: the character has seen it; T_VIS: it sees it now; T_HOLE: a shaft in
-** the ceiling above; T_DRAWN: on the map it draws (the senses', as it sees it, mapping as it goes on paper: DUNGEON.md,
+/* Squares: the low four bits a kind; T_SEEN: the character has seen it; T_VIS: it sees it now; T_HOLE: under or beside what
+** shows the sky (sky.c's, 2026-11-03; on a T_UP, a skylight, no way up: the map's mark); T_DRAWN: on the map it draws (the senses', as it sees it, mapping as it goes on paper: DUNGEON.md,
 ** the map kept; the map its chunk's kept.map).  T_RUBBLE: a passage's square fallen in (age's, slice 4.10's: the
 ** maker's, a passage's, never by a room or a doorway), climbed over slowly, cleared by digging.  T_CUT: rock a
 ** diagonal way's corner cuts through (the user's, 2026-10-31: passages off the compass): not stood on, seen past, the
@@ -138,6 +138,8 @@ enum { PK_DOOR, PK_WINDOW, PK_PORTCULLIS, PK_DRAWBRIDGE, PK_GATE, PK_GRATE, PK_H
 #define PP_GLASS        0x01                    /* (Sight through, not missiles; till it's broken) */
 #define PP_SHUTTERS     0x02                    /* (Open or closed: PS_OPEN; barred, as a door is) */
 #define PP_BARS         0x04                    /* (Sight and missiles through, not movement) */
+#define PP_SKY          0x08                    /* (A window on the surface, the top stratum's alone, up a light well: the
+                                                **   sky seen through it, never climbed through: 2026-11-03) */
 #define PP_FOUND        0x40                    /* (Its lock or its far side's bar found by the character, tried: told as it
                                                 **   lies from then on, the user's, 2026-11-02) */
 #define PP_KNOWN        0x80                    /* (A door the character has opened or shut: a walk out of a room
@@ -308,9 +310,14 @@ struct link {
     unsigned char   kind;                       /* O_STAIRS_DOWN, O_LADDER_DOWN ... (this stratum's end of it) */
     unsigned char   to;                         /* The other stratum */
     unsigned        x, y;                       /* Its square */
-    unsigned char   dug;                        /* Made by someone in the dungeon (a shaft dug): the grower leaves its
-                                                **   square alone (the change records have it) */
+    unsigned char   dug;                        /* Made by someone in the dungeon (LD_DUG, a shaft dug): the grower leaves
+                                                **   its square alone (the change records have it); or a shaft open to the
+                                                **   sky (LD_SKY, the maker's by the seed: sky_links, 2026-11-03), grown as
+                                                **   any link is, but no stratum's bounds go round it */
 };
+#define SKY_DEEP        2                       /* (The deepest stratum a shaft open to the sky reaches: three in all) */
+#define LD_DUG          1
+#define LD_SKY          2
 
 struct stratum {
     unsigned char   made, n;

@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     44                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     45                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -583,11 +583,19 @@ enum {
 };
 enum { BRG_NONE, BRG_LOST, BRG_KNOWN, BRG_SKY };
 enum { SKP_NONE, SKP_DAWN, SKP_DAY, SKP_DUSK, SKP_NIGHT, SKP_SUN, SKP_STARS, SKP_HIGH, SKP_LOW, SKP_SUN_WATCHED,
-    SKP_STARS_WATCHED };                        /* (E_BEARING BRG_SKY's b: the sky seen, the time read by it: grey light
+    SKP_STARS_WATCHED,                          /* (E_BEARING BRG_SKY's b: the sky seen, the time read by it: grey light
                                                 **   above, daylight, the light fading, the dark; the sun read by the
                                                 **   north it believes in, the stars; the sun high, low, its bearings
                                                 **   lost; the sun or the stars watched a while, their way across the
-                                                **   sky: the time, and north, known) */
+                                                **   sky: the time, and north, known; b's high four bits, SKS_*, what
+                                                **   showed it */
+    SKP_TOO_HIGH, SKP_GRATE, SKP_CHOKED, SKP_LET_FALL };    /* (And, w1's high byte, b none, a shaft's refusals, the
+                                                **   time.c words' room: its mouth too high to reach, barred at the top,
+                                                **   choked below; a thing let fall down it) */
+#define SKY_LAMPS       4
+enum { SKS_WAY, SKS_WINDOW, SKS_SKYLIGHT, SKS_SHAFT, SKS_DEEP };    /* (What shows the sky, E_BEARING BRG_SKY's b's high
+                                                **   four bits: the way out, a window on the surface, a skylight, a shaft
+                                                **   from the top stratum, one below it: its light alone) */
 enum { SKY_NONE, SKY_LIGHT, SKY_OPEN };         /* (The hub's tb.sky: a sky in sight, a test's poke: none; its light
                                                 **   alone, from deep below or overcast, light or dark; the open sky,
                                                 **   the sun or the stars in it) */
@@ -1328,6 +1336,13 @@ struct hub {                                    /* Bank 0, at $8000 */
         unsigned char told;                     /* The sky's phase last told (SKP_*: 0, none in sight) */
         unsigned char watched;                  /* Minutes it's watched the sky (in sight through a wait) */
         unsigned char how;                      /* What last clouded it (TG_*: TG_HOURS the hours, or a fix since) */
+        unsigned char sun;                      /* The daylight's reach now, squares (0 night; 2 dawn, dusk; 4 day: the
+                                                **   lamps' at the skylights, the windows and the shafts, the senses',
+                                                **   as the true clock has it: part 76's, at the parts' edges) */
+        unsigned char nsky;                     /* The sky's openings near it, as it last moved (part 17's: the emitters */
+        unsigned    skx[SKY_LAMPS], sky_[SKY_LAMPS];    /*   of the daylight falling in: their squares, the senses' lamps) */
+        unsigned char nigh;                     /* The sky's opening it's come by since the last reckoning, SKS_*, as a
+                                                **   move ended or a look went by it (0 none; part 17's) */
     } tb;
     /* The denizens' intents to the world (their actors' bodies': hub.h's the denizens' intents), a ring: written at
     ** di_head (the denizens' task: a full one waited on), read at di_tail as each is carried out (the world: it rings

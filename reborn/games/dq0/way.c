@@ -385,6 +385,8 @@ void o_focus_words (void)
             rel_w[(b->rel + 1) & 3]);
         if (b->what == WB_DARK) {
             say ("only darkness");
+        } else if (b->what == WB_SKY) {
+            say ("the sky, up a light well");
         } else if (b->what == WB_PASSAGE) {
             sayf (k ? "a passage, %u feet of it" : n ? "%u feet of them" : "%u feet of it", SQ_FT * b->dist);
         } else {

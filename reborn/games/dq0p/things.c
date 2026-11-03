@@ -159,13 +159,45 @@ void __fastcall__ things_seen (struct sight* s, unsigned char sn, unsigned x, un
 #define LAMP_R          28
 #pragma code-name (push, "SW1CODE")             /* (Part 1's: once a look, bank.s's stub) */
 #pragma rodata-name (push, "SW1RODATA")
+#pragma bss-name (push, "SW1RODATA")            /* (Its statics its own: the code the less, no main RAM) */
+#pragma static-locals (push, on)
 void give_way (void);                           /* (dq0p.c's: the look giving way to the UI's command in hand) */
+
+/* A lamp of reach r on square lx, ly: the light layer's, and view.c's if it's near the character */
+static void __fastcall__ lamp_put (unsigned lx, unsigned ly, unsigned char r)
+{
+    struct lamp* l;
+
+    light_lamp (lx, ly, r);
+    if (nlamps < NLAMPS && lx - near_x + LAMP_R <= 2 * LAMP_R && ly - near_y + LAMP_R <= 2 * LAMP_R) {
+        l = &lamp[nlamps++];
+        l->x = lx;
+        l->y = ly;
+        l->r = r;
+    }
+}
+
+/* Daylight falling in (2026-11-03: HOUSE.md's what shows the sky, for review): the world's emitters of it, near the
+** character (the hub's tb.skx, sky: the skylights, the windows on the surface with shutters open, the shafts open to the
+** sky), each a lamp, the light layer's, for every actor alike, of the world's reach now (tb.sun, by the true clock):
+** by day 4, at dawn and dusk 2, by night none */
+static void sky_lamps (void)
+{
+    unsigned char n, r;
+
+    hub_map (0);
+    r = HUB->tb.sun;
+    for (n = r ? HUB->tb.nsky : 0; n--; ) {
+        lamp_put (HUB->tb.skx[n], HUB->tb.sky_[n], r);
+    }
+}
+#pragma static-locals (pop)
+#pragma bss-name (pop)
+
 void __fastcall__ s_things_lamps (unsigned char sn, unsigned x, unsigned y)
 {
     const struct item* s;
-    struct lamp* l = lamp;
     unsigned i = 0;
-    unsigned char r;
 
     give_way ();
     nlamps = 0;
@@ -178,6 +210,7 @@ void __fastcall__ s_things_lamps (unsigned char sn, unsigned x, unsigned y)
     near_sn = sn;
     near_x = x;
     near_y = y;
+    sky_lamps ();
     while ((i = items (i, IN_SQUARE | IN_ITEM | IN_PORTAL, 0)) != 0) {
         if (ip->where == IW_SQUARE && ip->sn == sn && ip->x - x + 20 <= 40 && ip->y - y + 20 <= 40) {
             if (nnear < NNEAR) {                /* (One near: things_seen's) */
@@ -194,15 +227,7 @@ void __fastcall__ s_things_lamps (unsigned char sn, unsigned x, unsigned y)
             s->y - y + LAMP_FAR > 2 * LAMP_FAR || s->kind == KI_SCONCE) {
             continue;                           /* (A sconce's torch lit: its room's own light, R_LIT, the world's) */
         }
-        r = kind_of (rec.kind)->light;
-        light_lamp (s->x, s->y, r);
-        if (nlamps < NLAMPS && s->x - x + LAMP_R <= 2 * LAMP_R && s->y - y + LAMP_R <= 2 * LAMP_R) {
-            l->x = s->x;
-            l->y = s->y;
-            l->r = r;
-            ++l;
-            ++nlamps;
-        }
+        lamp_put (s->x, s->y, kind_of (rec.kind)->light);
     }
     light_lamps_end (sn);
 }

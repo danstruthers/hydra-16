@@ -22,9 +22,10 @@
 
 struct stratum strata[MAXSTRATA];               /* (This task's copy of the hub's) */
 const char* libpath;                            /* (The game's lib folder: its bank programs', stratagen's) */
-#define OVLS    8                               /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c; the
+#define OVLS    9                               /* Its overlays: built.c, pass.c, caves.c, plan.c, fixtures.c; the
                                                 **   swapped parts' images (../dq0/swap.inc: map.c's, changes.c's);
-                                                **   uses.c; the great caverns (caves.c's cavern) */
+                                                **   uses.c; the great caverns (caves.c's cavern); what shows the sky
+                                                **   (sky.c) */
 extern char _SWAP_START__[];
 
 /* The overlays: dir/dq0m.ovl, an 8K bank each (dq0m.cfg's OV1 ...; the file cut after the last one used, each bank's
@@ -49,25 +50,31 @@ static int __fastcall__ ovl_load (const char* dir)
 
 /* Request i answered: the strata's records copied first (the world bank's are the truth), and back if they changed */
 /* The chunks in the cache of strata no longer in the hub's records (their slots made way for another's: M_PLAN's,
-** M_SLOT's) theirs no more, what's been seen of them kept (but those a task's reading, or stocked, not yet marked) */
-static void stale (void)
+** M_SLOT's) theirs no more, what's been seen of them kept (but those a task's reading, or stocked, not yet marked;
+** part 3's since 2026-11-03: the main RAM's room, the sky's stub) */
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
+void s_stale (void)
 {
-    struct cslot c;
+    struct cslot* c;
     unsigned char k, j, busy;
 
     for (k = 0; k < NCSLOTS; ++k) {
-        hub_get (WORLD_BANK, &WREC->cslot[k], &c, sizeof c);
-        for (j = 0, busy = c.used == CS_FRESH; j < NASK; ++j) {
-            hub_map (WORLD_BANK);
+        hub_map (WORLD_BANK);
+        c = &WREC->cslot[k];
+        for (j = 0, busy = c->used == CS_FRESH; j < NASK; ++j) {
             busy |= WREC->inuse[j] == k;
         }
-        hub_map (0);
-        if (c.used && !busy && (STRATUM (c.sn).n != c.sn || !STRATUM (c.sn).made)) {
+        if (c->used && !busy && (STRATUM (c->sn).n != c->sn || !STRATUM (c->sn).made)) {
             seen_keep (k);
             hub_set (WORLD_BANK, &WREC->cslot[k].used, 0, 1);
         }
     }
+    hub_map (0);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+void stale (void);                              /* (Its stub: bank.s's) */
 
 static void __fastcall__ serve (unsigned char i)
 {
@@ -86,6 +93,7 @@ static void __fastcall__ serve (unsigned char i)
         stale ();
         plan_stratum (q.sn);
         links_down (q.sn);
+        sky (0, q.sn);                          /* (Its shafts open to the sky: sky.c's) */
         place_pieces (q.sn);                    /* (The theme's pieces in it: theme.h) */
         pl_flush ();                            /* (A big plan's pages in its file: the denizens read it) */
         hub_put (WORLD_BANK, &WREC->grown, &STRATUM (q.sn), sizeof STRATUM (0));    /* (Its record grown: the world's

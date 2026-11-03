@@ -352,6 +352,9 @@ void __fastcall__ o_portal_look (const struct portal* p, signed char g, unsigned
         add (p->parts & PP_GLASS ? " It's glazed, in small leaded panes." : "");
         add (p->parts & PP_BARS ? " Iron bars an inch thick are set across it." : "");
         add (p->parts & (PP_GLASS | PP_BARS | PP_SHUTTERS) ? "" : " It's an empty frame.");
+        if (p->parts & PP_SKY) {
+            add (" It looks on the sky.");
+        }
     }
     if (k == PK_DOOR) {
         add (f & PF_STUDS ? " It's studded with iron." : "");

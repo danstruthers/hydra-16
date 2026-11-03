@@ -40,7 +40,7 @@ static unsigned ri;
 #pragma code-name (push, "CODE")
 #pragma rodata-name (push, "RODATA")
 
-static struct region* __fastcall__ rg (unsigned char sn, unsigned char rx, unsigned char ry)
+struct region* __fastcall__ rg (unsigned char sn, unsigned char rx, unsigned char ry)
 {
     ri = (unsigned) ry * STRATUM (sn).rw + rx;
     rsn = sn;
@@ -594,7 +594,7 @@ void __fastcall__ o_chunk_edges (unsigned char sn, unsigned cx, unsigned cy, str
     e->y1 = w >= CW ? CW - 1 : w - 1;
     e->nland = 0;
     for (i = 0; i < s->nlinks && e->nland < 4; ++i) {
-        if (!s->link[i].dug && s->link[i].x - x < CW && s->link[i].y - y < CW) {   /* (A dug one's the records') */
+        if (!(s->link[i].dug & LD_DUG) && s->link[i].x - x < CW && s->link[i].y - y < CW) {   /* (A dug one's the records') */
             e->lx[e->nland] = s->link[i].x - x;
             e->ly[e->nland] = s->link[i].y - y;
             e->ln[e->nland++] = i;

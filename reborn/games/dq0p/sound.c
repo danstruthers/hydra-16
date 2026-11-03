@@ -231,9 +231,14 @@ static void __fastcall__ sources (unsigned x0, unsigned y0, unsigned char wind)
     }
     for (i = m = 0; wind && i < c->nopen; ++i) {
         k = c->open[i].kind;
-        if (k == O_SHAFT_UP || k == O_SHAFT_DOWN || k == O_WAY_OUT) {
+        if (k == O_SHAFT_UP || k == O_SHAFT_DOWN || k == O_WAY_OUT || k == O_SKYSHAFT) {
             ox[m] = c->open[i].x;
             oy[m++] = c->open[i].y;
+            if (k == O_SKYSHAFT && n < NROOMS) {
+                rx[n] = ox[m - 1];              /* (A shaft open to the sky drips: a little water's noise under it,
+                                                **   the weather's place when there's weather: 2026-11-03) */
+                ry[n++] = oy[m - 1];
+            }
         }
     }
     for (i = 0; i < n; ++i) {

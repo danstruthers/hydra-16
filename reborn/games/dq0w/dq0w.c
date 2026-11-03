@@ -1136,6 +1136,7 @@ static struct {
     unsigned char   up;
     unsigned        need, done;                 /* Feet */
     unsigned        x, y;                       /* The square at its top (up) or its foot (down) */
+    unsigned char   sh;                         /* (A shaft's: its link and one, the climb's end another stratum) */
 } cl;
 
 #pragma code-name (pop)
@@ -1310,6 +1311,11 @@ static void climb_round_on (void)
         }
         hub_map (0);
         if (!cl.up) {
+            if (cl.sh) {
+                sky_ask (SA_END | O_FELL);      /* (Down a shaft: at its foot, the stratum below, part 89's) */
+                busy (t);
+                return;
+            }
             HUB->pc_x = cl.x;
             HUB->pc_y = cl.y;
         }
@@ -1333,11 +1339,18 @@ static void climb_round_on (void)
         climb_round ();
         return;
     }
+    if (cl.sh) {                                /* (A shaft climbed: the stratum at its end, or out of it, the way out's) */
+        if (sky_ask (SA_END)) {
+            busy (stept);
+        }
+        return;
+    }
     HUB->pc_x = cl.x;
     HUB->pc_y = cl.y;
     event (E_CLIMB, 0, (cl.up ? K_UP : K_DOWN) << 8);
     see (0);
 }
+
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -1674,6 +1687,292 @@ static unsigned char __fastcall__ slot_for (unsigned char m)
     return 1;
 }
 
+/* ==== Part 89 (2026-11-03: overlay 27's; HOUSE.md's what shows the sky, climbing and falling, for review): a shaft's
+** going (its mouth, its foot, a climb's beginning and end), a thing let fall down one, the daylight's emitters near the
+** character */
+#pragma code-name (push, "SW89CODE")
+#pragma rodata-name (push, "SW89RODATA")
+#pragma bss-name (push, "SW89RODATA")
+#pragma static-locals (push, on)
+#define SHAFT_REACH     9                       /* (Feet: a roof's height a mouth in it's reached at, a jump and a pull) */
+#define SKY_SHAFT       20                      /* (Feet: a shaft from the top stratum to the surface) */
+
+/* The sky's opening within a square of the character (a window with shutters open, a skylight, a shaft open to the sky):
+** SKS_*, 0 none */
+static unsigned char sky_near (void)
+{
+    static struct opening* o;
+    static struct portal* q;
+    static unsigned char k, s, sn;
+
+    hub_map (0);
+    sn = HUB->pc_stratum;
+    s = 0;
+    if (sn <= SKY_DEEP && at (sn, HUB->pc_x, HUB->pc_y)) {
+        for (k = C->nopen, o = C->open; k; --k, ++o) {
+            if ((unsigned char) (o->x - cx_ + 1) <= 2 && (unsigned char) (o->y - cy_ + 1) <= 2) {
+                if (o->kind == O_WINDOW) {
+                    q = &C->portal[o->sill];
+                    if (!(q->parts & PP_SHUTTERS) || (q->state & (PS_OPEN | PS_WRECKED))) {
+                        s = SKS_WINDOW;
+                    }
+                } else if (o->kind == O_SKYLIGHT) {
+                    s = SKS_SKYLIGHT;
+                } else if (o->kind == O_SKYSHAFT) {
+                    s = sn ? SKS_DEEP : SKS_SHAFT;
+                }
+            }
+        }
+    }
+    hub_map (0);
+    return s;
+}
+
+/* The emitters of the daylight near the character, the hub's (tb.skx): the shafts open to the sky on its stratum (its
+** links'), and on the top stratum the skylights and the windows on the surface, shutters open, in the four chunks
+** nearest it the cache has (none made for them: the maker's order the look's) */
+static void sky_list (void)
+{
+    static struct stratum* s;
+    static struct link* l;
+    static struct opening* o;
+    static struct cslot* c;
+    static const signed char dxs[5] = { 0, -16, 16, -16, 16 }, dys[5] = { 0, -16, -16, 16, 16 };
+    static unsigned lx[SKY_LAMPS], ly[SKY_LAMPS], x, y, px, py, ox, oy, ax, ay;
+    static unsigned char n, k, sn, t;
+
+    hub_map (0);
+    n = 0;
+    sn = HUB->pc_stratum;
+    x = HUB->pc_x;
+    y = HUB->pc_y;
+    if (sn <= SKY_DEEP) {
+        s = &STRATUM (sn);
+        for (k = s->nlinks, l = s->link; k; --k, ++l) {
+            if (l->kind == O_SHAFT_UP && l->dug == LD_SKY && n < SKY_LAMPS && l->x - x + 32 <= 64 && l->y - y + 32 <= 64) {
+                lx[n] = l->x;
+                ly[n++] = l->y;
+            }
+        }
+        ax = (x - s->x0) >> CW_BITS;
+        ay = (y - s->y0) >> CW_BITS;
+        for (t = 0; !sn && t < 5; ++t) {        /* (Its own chunk first) */
+            px = x + dxs[t];
+            py = y + dys[t];
+            ox = (px - s->x0) >> CW_BITS;
+            oy = (py - s->y0) >> CW_BITS;
+            if (t && ox == ax && oy == ay) {
+                continue;
+            }
+            hub_map (WORLD_BANK);
+            for (k = NCSLOTS, c = WREC->cslot; k && (!c->used || c->sn || c->cx != ox || c->cy != oy); --k, ++c) {
+            }
+            if (!k || !at (0, px, py)) {
+                continue;
+            }
+            for (k = C->nopen, o = C->open; k; --k, ++o) {
+                if (n < SKY_LAMPS && (o->kind == O_SKYLIGHT || (o->kind == O_WINDOW &&
+                    (!(C->portal[o->sill].parts & PP_SHUTTERS) || (C->portal[o->sill].state & (PS_OPEN | PS_WRECKED)))))) {
+                    lx[n] = px - cx_ + o->x;
+                    ly[n++] = py - cy_ + o->y;
+                }
+            }
+        }
+    }
+    hub_map (0);
+    HUB->tb.nsky = n;
+    while (n--) {
+        HUB->tb.skx[n] = lx[n];
+        HUB->tb.sky_[n] = ly[n];
+    }
+}
+
+/* A shaft open to the sky's down its foot: the stratum below in its slot (grown now, if it isn't yet), and a link there
+** on its square, the maker's sky_links', or none: choked.  A dug one's always there */
+static unsigned char __fastcall__ shaft_foot (const struct link* lk)
+{
+    static unsigned char k;
+
+    if (!stratum_in (lk->to)) {
+        grow_below (HUB->pc_stratum);
+    }
+    if (lk->dug != LD_SKY) {
+        return 1;
+    }
+    for (k = STRATUM (lk->to).nlinks; k--; ) {
+        if (STRATUM (lk->to).link[k].x == lk->x && STRATUM (lk->to).link[k].y == lk->y) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* Thing n, just put down: on a square with a shaft down in it, it falls to the shaft's foot (told; a shaft choked, or
+** a thing with no room in the store below: it lies where it is); any shaft's, a dug one's too */
+#pragma static-locals (push, off)               /* (A stub called: the part copied back, its statics as they were) */
+static void __fastcall__ let_fall (unsigned n)
+{
+    struct opening* o;
+    struct stratum* b;
+    struct link* lk;
+    unsigned x, y;
+    unsigned char k;
+
+    hub_map (0);
+    k = HUB->pc_stratum;
+    x = HUB->pc_x;
+    y = HUB->pc_y;
+    lk = 0;
+    if (at (k, x, y) && TILE (C->tile[cy_][cx_]) == T_DOWN) {
+        b = &STRATUM (k);
+        for (k = C->nopen, o = C->open; k; --k, ++o) {
+            if (o->kind == O_SHAFT_DOWN && o->x == cx_ && o->y == cy_) {
+                lk = &b->link[o->link];
+            }
+        }
+    }
+    hub_map (0);
+    if (lk && shaft_foot (lk)) {
+        b = &STRATUM (lk->to);
+        if (it_need (lk->to, (x - b->x0) >> CW_BITS, (y - b->y0) >> CW_BITS)) {
+            item_at (n)->sn = lk->to;
+            hub_map (0);
+            event (E_BEARING, 0, BRG_SKY | (unsigned) SKP_LET_FALL << 8);
+        }
+    }
+    hub_map (0);
+}
+
+/* A climb up or down shaft link l begun (w's its bits: SA_UP, SA_JUMP): a shaft open to the sky its mouth out of reach
+** over a high roof, at the top barred till the way out's open, below choked if its foot isn't there; any shaft climbed
+** as a ledge is, a round at a time (the rules that exist).  1 if that's all (told, or a climb begun), 0 if it's on as
+** it was (a jump down, a way that's no shaft) */
+static unsigned char __fastcall__ shaft_go (unsigned w)
+{
+    struct link* lk = &STRATUM (sn_).link[(unsigned char) w];
+    unsigned char r = 0, up = (w & SA_UP) != 0, z;
+
+    if (lk->dug == LD_SKY) {
+        if (up) {
+            if ((z = room_of (sn_, mx, my)) == 0xFF || C->zone[C->room[z].z0].cmid > SHAFT_REACH) {
+                r = SKP_TOO_HIGH;
+            }
+            hub_map (0);
+            if (!r && lk->to == 0xFF && !HUB->way_open) {
+                r = SKP_GRATE;
+            }
+        } else if (!shaft_foot (lk)) {
+            r = SKP_CHOKED;
+        }
+    }
+    hub_map (0);
+    if (r) {
+        event (E_BEARING, 0, BRG_SKY | (unsigned) r << 8);
+        HUB->pc_ready = HUB->now;
+        HUB->pc_going = IDLE;
+        return 1;
+    }
+    if (w & SA_JUMP || (lk->kind != O_SHAFT_UP && lk->kind != O_SHAFT_DOWN)) {
+        return 0;
+    }
+    if (lk->to != 0xFF && !stratum_in (lk->to)) {
+        grow_below (sn_);
+    }
+    hub_map (0);
+    cl.up = up;
+    cl.need = lk->to == 0xFF ? SKY_SHAFT : abs (STRATUM (sn_).datum - STRATUM (lk->to).datum);
+    cl.done = 0;
+    cl.sh = (unsigned char) w + 1;
+    event (E_CLIMB, 0, K_BEGUN << 8 | (cl.need > 255 ? 255 : cl.need));
+    task (LT_CLIMB, cl.need);
+    climb_round ();
+    return 1;
+}
+#pragma static-locals (pop)
+
+/* A shaft climbed to its end (dir, its way down fallen: O_FELL; 0 the link's kind): the move to its other stratum, or out
+** of the dungeon, the way out's: 1 if it's a move (the climb's arrive), 0 out */
+static unsigned char __fastcall__ shaft_end (unsigned char dir)
+{
+    static struct link* lk;
+
+    lk = &STRATUM (sn_).link[cl.sh - 1];
+    cl.sh = 0;
+    hub_map (0);
+    if (dir == O_FELL) {
+        HUB->pc_task.kind = LT_NONE;            /* (Fallen: the climb over, it arrives below whatever struck it) */
+        pc_hit = 0;
+    }
+    if (lk->to == 0xFF) {
+        event (E_LEFT, 0, 0);
+        return 0;
+    }
+    move.on = 1;
+    move.how = cl.up ? A_UP : A_DOWN;
+    move.sn = lk->to;
+    move.x = lk->x;
+    move.y = lk->y;
+    move.face = HUB->pc_face;
+    move.dir = dir ? dir : lk->kind;
+    return 1;
+}
+
+/* The way between strata on the character's own square, up or down (w's SA_UP), in a passage (a room's record not made for
+** it: a shaft's foot beside another way): its link, or 0xFF */
+static unsigned char __fastcall__ way_here (unsigned w)
+{
+    const struct opening* o;
+    unsigned char k, m;
+
+    at (sn_, mx, my);
+    for (k = C->nopen, o = C->open; k; --k, ++o) {
+        m = o->kind;
+        if (o->x == cx_ && o->y == cy_ && o->link != 0xFF && !(w & SA_UP) == !(m == O_STAIRS_UP || m == O_LADDER_UP ||
+            m == O_WAY_OUT || m == O_SHAFT_UP || m == O_SKYSHAFT || m == O_RAMP_UP)) {
+            return o->link;
+        }
+    }
+    return 0xFF;
+}
+
+/* (Its stub's, the one: SA_HERE a way on its own square; SA_LIST the daylight's emitters made again; SA_GO a shaft's going; SA_END a climb's end; else
+** thing w let fall) */
+unsigned char __fastcall__ s_sky_ask (unsigned w)
+{
+    if (w & SA_LIST) {
+        sky_list ();
+        return 0;
+    }
+    if (w & SA_NEAR) {
+        return sky_near ();
+    }
+    if (w & SA_NOTE) {                          /* (Come by one, its square's mark, as it's looked at, part 17's: kept for
+                                                **   the reckoning, part 76's, and that at once if it isn't told) */
+        if ((w = sky_near ()) != 0) {
+            HUB->tb.nigh = w;
+            if (!HUB->tb.told) {
+                burn_ask |= TS_ASK;
+            }
+        }
+        return 0;
+    }
+    if (w & SA_HERE) {
+        return way_here (w);
+    }
+    if (w & SA_GO) {
+        return shaft_go (w);
+    }
+    if (w & SA_END) {
+        return shaft_end ((unsigned char) w);
+    }
+    let_fall (w);
+    return 0;
+}
+#pragma static-locals (pop)
+#pragma bss-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* Stratum m in its slot (the character or a shaft come to it): its record read back from its file if it's been put
 ** out (the one there put out for it: slot_for; the maker told, its plan grown again, M_SLOT): 1, or 0 (not made yet,
 ** the slot free for it: the caller grows it; or no room, no folder) */
@@ -1720,8 +2019,9 @@ void __fastcall__ s_grow_below (unsigned char n)
     b->name = n + 1;
     b->datum = s->datum - 30 - random (40);
     for (i = s->nlinks, l = s->link, k = b->link; i; --i, ++l) {   /* (A link up under each link down to it) */
-        if (l->to != n + 1) {
-            continue;
+        if (l->to != n + 1 || (l->dug & LD_SKY)) {
+            continue;                           /* (A shaft open to the sky: no bounds go round it, its foot the maker's,
+                                                **   sky_links, if the stratum's plan reaches it) */
         }
         x = l->x;
         y = l->y;
@@ -1756,14 +2056,15 @@ static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
 
     cut = 0;
     if ((r = room_of (sn_, mx, my)) == 0xFF) {
-        return 0xFF;
+        *t = 0;                                 /* (A passage's: only one where it stands, part 89's) */
+        return sky_ask (SA_HERE | (d == DIR_UP ? SA_UP : 0));
     }
     ways (r, cx_, cy_);
     for (k = 0; k < C->nopen; ++k) {
         kind = C->open[k].kind;
-        if ((d == DIR_UP) != (kind == O_STAIRS_UP || kind == O_LADDER_UP || kind == O_WAY_OUT || kind == O_SHAFT_UP ||
-            kind == O_RAMP_UP)) {
-            continue;
+        if (C->open[k].link == 0xFF || (d == DIR_UP) != (kind == O_STAIRS_UP || kind == O_LADDER_UP || kind == O_WAY_OUT ||
+            kind == O_SHAFT_UP || kind == O_SKYSHAFT || kind == O_RAMP_UP)) {
+            continue;                           /* (A skylight, a window on the surface: no way anywhere) */
         }
         if ((u = way (C->open[k].x, C->open[k].y)) < bt) {
             bt = u;
@@ -1792,6 +2093,7 @@ void __fastcall__ s_climb (unsigned char d)
     face = HUB->pc_face;
     paced ();
     d &= ~I_JUMP;
+    cl.sh = 0;
     if (d == DIR_UP && pit_climb (face)) {
         return;                                 /* (In a pit: climbed out of, D13's) */
     }
@@ -1821,6 +2123,13 @@ void __fastcall__ s_climb (unsigned char d)
             no_way (N_SHUT);
         }
         return;
+    }
+    if (lk->dug == LD_SKY || lk->kind == O_SHAFT_UP || lk->kind == O_SHAFT_DOWN) {   /* (A shaft: part 89's) */
+        if (sky_ask (SA_GO | (d == DIR_UP ? SA_UP : 0) | (jump ? SA_JUMP : 0) | l)) {
+            return;
+        }
+        hub_map (0);
+        lk = &STRATUM (sn_).link[l];
     }
     if (!stratum_in (lk->to)) {                 /* (Its record in its slot: from its file, or grown now) */
         grow_below (sn_);
@@ -3770,7 +4079,8 @@ void s_revealed (void)
     wk.m.who = 0;
     wk.m.a = what | lit << 2;
     wk.m.b = kind;
-    wk.m.w1 = wk.open | wk.pq.kind << 8 | PO_SHOWS;
+    wk.m.w1 = wk.open | wk.pq.kind << 8 | (wk.pq.parts & PP_SKY ? 0 : PO_SHOWS);   /* (A window on the surface: its sky
+                                                **   told by part 76's, as it's reckoned) */
     wk.m.w2 = dist;
     wk.m.t = HUB->now;
     hub_event (&wk.m);

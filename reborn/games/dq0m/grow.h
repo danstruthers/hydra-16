@@ -72,6 +72,9 @@ void __fastcall__ water_plan (unsigned char n);    /* A stratum's water traced o
                                                 **   slice 4.9's) */
 void __fastcall__ wet_chunk (struct chunk* c, const struct edges* e);  /* Its water (overlay 6's: slice 4.9's) */
 void __fastcall__ air_pocket (struct chunk* c, const struct edges* e);  /* Its air (overlay 3's: 2026-10-31) */
+void __fastcall__ sky (struct chunk* c, unsigned char n);  /* What shows the sky (overlay 9's: sky.c): chunk c's skylights
+                                                **   and windows on the surface, or (c 0) stratum n's shafts */
+struct region* __fastcall__ rg (unsigned char sn, unsigned char rx, unsigned char ry);  /* (plan.c's, the main RAM's) */
 void __fastcall__ fixtures (struct chunk* c);   /* Its materials, windows, portcullises, traps (overlay 5's) */
 void __fastcall__ sconces (struct chunk* c, unsigned x0, unsigned y0);  /* Its rooms' sconces, as it's first stocked
                                                 **   (part 3's, sconce.c: after stock's, in its list) */
@@ -103,7 +106,7 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[8];
+extern unsigned char ovbank[9];
 
 /* make.c: a hub's bank reached from an overlay (its bytes copied to the main RAM, or from it, or set) */
 void __fastcall__ hub_get (unsigned char bank, const void* from, void* to, unsigned n);

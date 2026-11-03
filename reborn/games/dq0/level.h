@@ -136,7 +136,14 @@ enum { S_PART, S_SMALL, S_MID, S_LARGE, S_LONG, S_VAST, S_VASTW };    /* (A room
 enum { Z_STEPS, Z_SLOPE, Z_LEDGE };
 enum { C_FLAT, C_BARREL, C_DOME, C_CATHEDRAL, C_SLOPED, C_ROUGH, C_UNSEEN };
 enum { O_STAIRS_UP, O_STAIRS_DOWN, O_LADDER_UP, O_LADDER_DOWN, O_WINDOW, O_SHAFT_UP, O_SHAFT_DOWN, O_WAY_OUT,
-       O_RAMP_UP, O_RAMP_DOWN };                /* (A long slope between strata, walked: slice 4.10's, 2026-11-02) */
+       O_RAMP_UP, O_RAMP_DOWN,                  /* (A long slope between strata, walked: slice 4.10's, 2026-11-02) */
+       O_SKYLIGHT, O_SKYSHAFT };                /* (The sky's, 2026-11-03: HOUSE.md's what shows the sky: a skylight in a
+                                                **   room's roof, its square under it, no link; a chunk's O_WINDOW the
+                                                **   floor square beside a window on the surface, its sill the portal's
+                                                **   number in the chunk, no link; O_SKYSHAFT a chunk's opening of a shaft
+                                                **   up open to the sky, its stratum's link's O_SHAFT_UP, LD_SKY: sky.c's) */
+#define O_DAYLIT        0x10                    /* (The senses' record's kind: a skylight's or such a shaft's, daylight
+                                                **   falling from it now) */
 enum { ST_BUILT, ST_NATURAL, ST_MINE, ST_MIXED };
 
 /* A look one way's own (HOUSE.md's looking one way: the hub's LK_WAY, the senses', in SIGHT_BANK after the record of
@@ -160,7 +167,7 @@ struct wayseen {
     unsigned char   nglows;
     struct sglow    glow[SEE_GLOWS];
 };
-enum { WB_DARK, WB_PASSAGE, WB_ROOM, WB_SHUT };
+enum { WB_DARK, WB_PASSAGE, WB_ROOM, WB_SHUT, WB_SKY };
 enum { BN_PASSAGE, BN_DOORWAY, BN_OPEN, BN_BROKEN, BN_DOOR, BN_PORTCULLIS, BN_WINDOW, BN_SLIT };
 
 /* The map's window: the stratum round the character, a square a character, drawn by the world into the hub

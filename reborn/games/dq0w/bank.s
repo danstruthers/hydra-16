@@ -25,7 +25,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
-OVBANKS     = 26                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
+OVBANKS     = 27                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
             .bss
 _ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
@@ -104,7 +104,7 @@ go:
             SWPART      14, 6               ; The denizens' bodies: their intents carried out (wbody.c)
             SWPART      15, 14              ; The blows, the bleeding (wfight.c)
             SWPART      16, 17              ; The game's own rules: the puzzle judged, a thing walked to (wgame.c)
-            SWPART      17, 12               ; The things' files: their chunks paged (ipage.c)
+            SWPART      17, 27              ; The things' files: their chunks paged (ipage.c)
             SWPART      18, 7               ; The change records' files, the save's stamps (wfile.c)
             SWPART      19, 8               ; The game's files begun, the item store kept (wfile.c); a hole dug kept
             SWPART      20, 7               ; The things' files: a chunk's put out, read in (ipage.c)
@@ -120,8 +120,8 @@ go:
             SWPART      29, 10              ; The traces read: the floor, a track, a smell (wtrace.c)
             SWPART      30, 12              ; The traces' store's files: a chunk's records put out, read in (wtrfile.c)
             SWPART      31, 11              ; The traces read, in words (wtrword.c)
-            SWPART      32, 3               ; The way the character's scent goes, a hunter's (wtrscent.c)
-            SWPART      33, 6              ; A walk across a room (dq0w.c's across: the main RAM's room)
+            SWPART      32, 6               ; The way the character's scent goes, a hunter's (wtrscent.c)
+            SWPART      33, 12              ; A walk across a room (dq0w.c's across: the main RAM's room)
             SWPART      34, 24              ; The rooms' lights by their sconces (wkept.c)
             SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
@@ -172,7 +172,7 @@ go:
             SWPART      75, 4               ; The water's depth where the character stands (wwater.c)
             SWPART      76, 23              ; The time of day believed (wtime.c: 2026-10-31)
             SWPART      77, 23              ; The sky seen, the time believed's start (wtime.c)
-            SWPART      78, 23              ; Up to a place in the room (dq0w.c's go_to, ways_near: part 9's till
+            SWPART      78, 27             ; Up to a place in the room (dq0w.c's go_to, ways_near: part 9's till
                                             ;   2026-10-31, its room the walk's)
             SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
             SWPART      80, 24              ; One path: a denizen's doors, the doors' keys (wport.c: Phase 3C's)
@@ -184,6 +184,7 @@ go:
             SWPART      86, 26              ; Their other half
             SWPART      87, 26              ; And the hand the pack goes in, a tool's use, the words
             SWPART      88, 15              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
+            SWPART      89, 27              ; A shaft's going, a thing let fall, the daylight's emitters (dq0w.c: 2026-11-03)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -221,6 +222,7 @@ go:
             SWFN        bearings, 52
             SWFN        bearings_off, 52
             SWFN        tsense, 76
+            SWFN        sky_ask, 89         ; (The daylight's emitters, a shaft's going, a thing let fall: dq0w.c's)
             SWFN        rest_go, 53
             SWFN        sky_seen, 77
             SWFN        stopped, 40         ; (A trap on the way set off: the main RAM's room, 2026-10-31)

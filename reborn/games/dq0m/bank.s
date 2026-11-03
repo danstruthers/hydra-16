@@ -14,7 +14,7 @@
             .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 8                     ; dq0m.cfg's overlays (the 6th the swapped parts' images, the 7th uses.c, the 8th the great caverns)
+OVMAX       = 9                     ; dq0m.cfg's overlays (the 6th the swapped parts' images, the 7th uses.c, the 8th the great caverns, the 9th sky.c)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
@@ -170,6 +170,7 @@ ovl_out:
             OVFN        layer_at, 7
             OVFN        uses, 7
             OVFN        coin_mint, 5
+            OVFN        sky, 9              ; (What shows the sky: sky.c, 2026-11-03)
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0m.cfg's SWAP, a part at a time, copied
 ; there from overlay 6's bank as it's called)
@@ -185,3 +186,4 @@ ovl_out:
             SWFN        changes_save, 2
             SWFN        changes_restore, 2
             SWFN        sconces, 3
+            SWFN        stale, 3            ; (Its slots' chunks given up: dq0m.c's, the main RAM's room)

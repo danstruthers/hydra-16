@@ -116,6 +116,7 @@ staircase = OB_STAIRS
 steps = OB_STAIRS
 ladder = OB_LADDER
 shaft = OB_SHAFT
+skylight = OB_SHAFT
 hole = OB_SHAFT
 ledge = OB_LEDGE
 exit = OB_WAY_OUT

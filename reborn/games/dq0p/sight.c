@@ -51,6 +51,7 @@ static unsigned char __fastcall__ zone_index (unsigned char x, unsigned char y)
 #pragma data-name (push, "SW2RODATA")           /* (The look's own, set as it begins: in the part, no main RAM) */
 static unsigned char mx_[SEE_DOORS] = { 0 }, my_[SEE_DOORS] = { 0 };     /* (The mouths' squares, as they're counted) */
 static unsigned char e_ = 0;                    /* (The next door[]: those seen, ndoors of them, then those remembered) */
+static unsigned char sun_ = 0;                  /* (The daylight's reach now: the hub's tb.sun) */
 static unsigned char kn_ = 0;                   /* (The rel's KNOWN_REL, as it's those remembered) */
 static unsigned char some_ = 0;                 /* (A door or an opening only remembered, this look's first pass) */
 static unsigned char mine_ = 0;                 /* (The door's bar's side the character's: its wall's, or its passage's) */
@@ -263,12 +264,18 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
     struct stratum* s = &STRATUM (sn);
     struct room rp;
     struct zone* z;
-    unsigned char* p = at (sn, x, y);
+    unsigned char* p;
     struct portal* q;
-    unsigned char r, k, i, j, lx = cx_, ly = cy_, whole, d, arrive = first & LF_ARRIVE;
-    int myz = C->elev[ly][lx], dz;
+    unsigned char r, k, i, j, lx, ly, whole, d, arrive = first & LF_ARRIVE;
+    int myz, dz;
     unsigned area;
 
+    hub_map (0);
+    sun_ = HUB->tb.sun;
+    p = at (sn, x, y);
+    lx = cx_;
+    ly = cy_;
+    myz = C->elev[ly][lx];
     memset (&S, 0, sizeof S);
     S.seq = ++seq;
     S.stratum = sn;
@@ -367,9 +374,11 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                 i = C->open[k].x;
                 j = C->open[k].y;
                 d = C->tile[j][i];
-                if (i >= rp.x && i < rp.x + rp.w && j >= rp.y && j < rp.y + rp.h && shown (d)) {
+                if (i >= rp.x && i < rp.x + rp.w && j >= rp.y && j < rp.y + rp.h && shown (d) && C->open[k].kind != O_WINDOW) {
                     S.open[r].rel = i == lx && j == ly ? 0xFF : REL8 (bearing ((int) i - lx, (int) j - ly), face) | kn_;
-                    S.open[r].kind = C->open[k].kind;
+                    d = C->open[k].kind;                /* (A window on the surface: told as a window, the doors' pass;
+                                                        **   a skylight, a shaft open to the sky, as they're lit now) */
+                    S.open[r].kind = d >= O_SKYLIGHT && sun_ ? d | O_DAYLIT : d;
                     S.open[r].x = x - lx + i;
                     S.open[r].y = y - ly + j;
                     S.open[r++].dz = fz (C->elev[j][i] - myz);
