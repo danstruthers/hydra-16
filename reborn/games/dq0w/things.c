@@ -368,7 +368,11 @@ unsigned __fastcall__ s_weight_of (unsigned i)
     unsigned char v;
 
     if (k->craft == AP_WEAPON && (v = item_at (i)->size) != 0 && v <= WV_HEAVY) {
-        w += (v == WV_HEAVY ? w : -w) >> 2;     /* (A weapon's version: a quarter heavier, or lighter, D13's) */
+        if (v == WV_HEAVY) {                    /* (A weapon's version: a quarter heavier, or lighter, D13's) */
+            w += w >> 2;
+        } else {
+            w -= w >> 2;
+        }
     }
 
     if (k->form & KF_TENS) {

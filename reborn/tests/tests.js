@@ -2356,7 +2356,7 @@ function dq0Poke(m, pokes) {
                 if (!b || !b[o + L.iKind]) continue;
                 let n = '';
                 for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
-                if (n === kn) { b[o + L.iFlags] = b[o + L.iFlags] & ~(v.clear || 0) | (v.or || 0); if (v.hide !== undefined) b[o + L.iHide] = v.hide; break; }
+                if (n === kn) { b[o + L.iFlags] = b[o + L.iFlags] & ~(v.clear || 0) | (v.or || 0); if (v.hide !== undefined) b[o + L.iHide] = v.hide; if (v.size !== undefined) b[o + L.iSize] = v.size; break; }
               }
             }
             if (p.traps) {                      // (The cached chunks' hidden traps' hiding set, a scene's, 2026-11-02; and on its own
@@ -9409,6 +9409,31 @@ module.exports = {
           if (!g.length || (g[0] >> 4) !== 1 || sum !== 15) f.push('the pile\'s groups not kept (the first Cendra\'s, fifteen shares): ' + JSON.stringify(g));
           if (p.qty !== 12 || p.weight !== 1) f.push('the kit\'s pennies: ' + p.qty + ', weight ' + p.weight + ' (a dram each, 12)');
         }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0versions', near: ['gear'], what: 'Dingus Quest Zero\'s weapon versions by weight (D13\'s: the book\'s custom weapons, a light one a quarter lighter, a heavy one a quarter heavier; 2026-11-03, a light one\'s negated weight shifted unsigned made a Strength 5 character\'s sword about 4,098 pounds, unplayable): at seed 3 a warhammer (5 lb, 20 quarter pounds), hefted, and its load on the sheet: average 5 lb, made light (dq0Poke, its size) under 4, made heavy over 6, the sheet\'s load the same way, never thousands',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k warhammer',
+        'heft the warhammer', 'sheet', 'wait', 'drop the warhammer', 'take the warhammer', 'heft the warhammer', 'sheet', 'wait', 'drop the warhammer', 'take the warhammer', 'heft the warhammer', 'sheet', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, item: { warhammer: { size: 1 } } }, { g: 1, line: 'wait', n: 2, item: { warhammer: { size: 2 } } }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out);
+        const hefts = [...o.matchAll(/Your warhammer weighs about ([\d,]+) pounds?|Your warhammer weighs (under a pound|about a pound)/g)].map(x => +(x[1] || '1').replace(/,/g, ''));
+        const loads = [...o.matchAll(/load ([\d,]+) lb/g)].map(x => +x[1].replace(/,/g, ''));
+        this.notes = ['hefted ' + hefts.join(', ') + ' lb; the sheet\'s load ' + loads.join(', ') + ' lb'];
+        if (hefts.length !== 3) return ['not hefted three times: ' + hefts.join(', ') + ': ' + o.slice(-1500)];
+        if (hefts[0] !== 5) f.push('an average warhammer ' + hefts[0] + ' lb, not 5');
+        if (!(hefts[1] >= 3 && hefts[1] <= 4)) f.push('a light warhammer ' + hefts[1] + ' lb, not a quarter under 5');
+        if (!(hefts[2] >= 6 && hefts[2] <= 7)) f.push('a heavy warhammer ' + hefts[2] + ' lb, not a quarter over 5');
+        if (loads.length !== 3) return f.concat(['the sheet\'s load not told three times: ' + loads.join(', ')]);
+        if (!(loads[1] < loads[0] && loads[0] - loads[1] <= 2)) f.push('the sheet\'s load, light: ' + loads[1] + ' lb, average ' + loads[0]);
+        if (!(loads[2] > loads[0] && loads[2] - loads[0] <= 2)) f.push('the sheet\'s load, heavy: ' + loads[2] + ' lb, average ' + loads[0]);
         return f;
       },
       sdcard: true
