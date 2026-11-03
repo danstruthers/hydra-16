@@ -1612,6 +1612,7 @@ struct wsave {
 **   own hub.hold world
 **   own hub.quit world
 **   own hub.pace world
+**   own hub.pc_lump ui                                         (dq0 -J, the tests's: the reach in one lump)
 **   own hub.test_start ui                                      (The game's start: dq0's arguments)
 **   own hub.resume ui
 **   own hub.savedir ui
