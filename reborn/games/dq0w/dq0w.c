@@ -1411,8 +1411,8 @@ void __fastcall__ s_go (unsigned char h)
                     go_to (ox + bx, oy + by);   /* (Not beside it: walked up to it, told as it gets there) */
                     hub_map (0);
                     if (move.on && move.how == A_WENT_TO) {
-                        move.how = A_STEPPED;
-                        move.ledge = LEDGE_MET + (k == N_CLOSED ? FA_BARS : FA_DOOR);
+                        move.how = A_STEPPED;   /* (A journey's leg: the next leg's refusal says so) */
+                        move.ledge = trav ? 0 : LEDGE_MET + (k == N_CLOSED ? FA_BARS : FA_DOOR);
                     }
                     return;
                 }
@@ -1488,7 +1488,7 @@ void __fastcall__ s_step_to (unsigned char h, unsigned char n, unsigned char kee
     }
     lim_ = 250;
     hub_map (0);
-    if (move.on && (move.how == A_CROSSED || move.how == A_WALKED)) {
+    if (move.on && (move.how == A_CROSSED || move.how == A_WALKED || move.how == A_STEPPED)) {
         move.how = A_STEPPED;
         if (keep) {
             move.face = HUB->pc_face;

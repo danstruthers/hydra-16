@@ -352,6 +352,8 @@ function createRecorder() {
         lit: t[L.tLit], ceil: t[L.tCeil], sname: t[L.tSname], first: t[L.tFirst], z: w16(t, L.tZ) << 16 >> 16, stratum: t[L.tStratum], x: w16(t, L.tX), y: w16(t, L.tY), nways: t[L.tNways], dazzled: t[L.tDazzled],
         doors: list(L.tNdoors, L.seeDoors, d0, L.tDoorSize, o => ({ rel: t[L.dRel + o], state: t[L.dState + o], x: w16(t, L.dX + o),
           y: w16(t, L.dY + o), kind: name('PK_DOOR', t[L.dKind + o]), parts: t[L.dParts + o] })),
+        known: Array.from({ length: L.seeDoors - Math.min(t[L.tNdoors], L.seeDoors) }, (_, i) => (i + Math.min(t[L.tNdoors], L.seeDoors)) * L.tDoorSize)   // (Those it remembers, after them: KNOWN_REL's, 0x40)
+          .filter(o => t[L.dRel + o] & 0x40).map(o => ({ rel: t[L.dRel + o], state: t[L.dState + o], x: w16(t, L.dX + o), y: w16(t, L.dY + o), kind: name('PK_DOOR', t[L.dKind + o]) })),
         open: list(L.tNopen, L.seeOpen, o0, L.tOpenSize, o => ({ rel: t[L.oRel + o], kind: name('O_STAIRS_UP', t[L.oKind + o]) })),
         items: list(L.tNitems, L.seeItems, i0, L.tItemSize, o => ({ name: str(t, L.sName + o, 14), qty: t[L.sQty + o], rel: t[L.sRel + o],
           hid: t[L.sHid + o] })),

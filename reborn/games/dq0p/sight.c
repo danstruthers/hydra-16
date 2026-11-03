@@ -311,8 +311,8 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                                                 **   telling them) */
         e_ = S.ndoors;
         kn_ = KNOWN_REL;
-        for (j = cy_ > 8 ? cy_ - 8 : 0; j < cy_ + 9 && j < CW; ++j) {
-            for (i = cx_ > 8 ? cx_ - 8 : 0; i < cx_ + 9 && i < CW && e_ < SEE_DOORS; ++i) {
+        for (j = cy_ > 5 ? cy_ - 5 : 0; j < cy_ + 6 && j < CW; ++j) {
+            for (i = cx_ > 5 ? cx_ - 5 : 0; i < cx_ + 6 && i < CW && e_ < SEE_DOORS; ++i) {
                 d = C->tile[j][i];
                 if ((TILE (d) == T_DOOR || TILE (d) == T_WINDOW) && (d & (T_VIS | T_SEEN)) &&
                     abs_ ((int) i - cx_) + abs_ ((int) j - cy_) > 1 && !((q = portal_at (i, j)) != 0 && (q->state & PS_HIDDEN))) {

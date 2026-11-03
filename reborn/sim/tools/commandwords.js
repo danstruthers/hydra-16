@@ -221,7 +221,7 @@ function scan(toks, w, face = 0) {
     if (said && !c.prep && (k = get(t, w.preps)) !== undefined) { c.prep = k; continue; }
     if (verb === R.get('put') && sp(i, 'AWAY')) { verb = R.get('stow'); continue; }
     if (verb === R.get('put') && sp(i, 'BACK')) continue;
-    if ((k = get(t, w.how)) !== undefined) { c.how = k; continue; }
+    if ((k = get(t, w.how)) !== undefined) { c.how = c.how || k; continue; }   // (The first said: "go through the door to the east")
     if (sp(i, 'HALF')) { c.flags |= CF_HALF; continue; }
     if (sp(i, 'AROUND')) { around = 1; continue; }
     if ((k = get(t, w.selectors)) !== undefined) {

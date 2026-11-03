@@ -35,7 +35,7 @@ static const char* const relname[8] = {
     "behind you to your left", "to your left", "ahead to your left"
 };
 
-static const char* const thing[] = { "", "door", "way on", "stairway", "ladder", "shaft", "ledge", "way out", "wall",
+static const char* const thing[] = { "", "door", "passage", "stairway", "ladder", "shaft", "ledge", "way out", "wall",
     "window", "trap", "portcullis", "exit", "corner", "pillar" };   /* (OB_ROOM's: leaving it, way.c's) */
 
 static struct cmd* cur = 0;                     /* The command being carried out (main.c's: choose's) */
@@ -169,21 +169,24 @@ static unsigned char known (unsigned char* p, unsigned char n, unsigned char m, 
 unsigned char __fastcall__ o_pick (unsigned char obj, unsigned char orel)
 {
     struct sight* s = &sight_copy;
-    unsigned char i, k, h, r, n = 0, how = obj & (PICK_TELL | PICK_ANY), best = 0xFF, bd = 0xFF, fit = 0;
+    unsigned char i, k, h, r, n = 0, how = obj & (PICK_TELL | PICK_ANY), best = 0xFF, bd = 0xFF, fit = 0, bars = 0;
     unsigned x, y;
 
     obj &= ~(PICK_TELL | PICK_ANY);
     hub_mem (SIGHT_BANK, s, SIGHT, sizeof *s);  /* (The senses' record as it is now; in the copy, those it remembers,
                                                 **   KNOWN_REL, after those it sees: one rule for what can be named, the
                                                 **   user's, 2026-11-02) */
-    s->ndoors = known (&s->door[0].rel, s->ndoors, SEE_DOORS, sizeof s->door[0]);
-    s->nopen = known (&s->open[0].rel, s->nopen, SEE_OPEN, sizeof s->open[0]);
+    if (!(how & PICK_ANY)) {                    /* (PICK_ANY: is there one it sees) */
+        s->ndoors = known (&s->door[0].rel, s->ndoors, SEE_DOORS, sizeof s->door[0]);
+        s->nopen = known (&s->open[0].rel, s->nopen, SEE_OPEN, sizeof s->open[0]);
+    }
 again:
     for (i = n = 0; i < s->ndoors + s->nopen && n < NPICK; ++i) {
         if (i < s->ndoors) {
             r = s->door[i].rel;
             k = s->door[i].kind == PK_WINDOW || s->door[i].kind == PK_SLIT;    /* (A window, or a slit) */
-            if (!(obj == OB_ROOM ? !k : obj == OB_DOOR ? !(r & MOUTH) && !k : obj == OB_WINDOW ? k : obj == OB_PORTC ?
+            if (!(obj == OB_ROOM ? !k : obj == OB_DOOR ? !(r & MOUTH) && !k && (bars || s->door[i].kind != PK_PORTCULLIS) :
+                obj == OB_WINDOW ? k : obj == OB_PORTC ?
                 s->door[i].kind == PK_PORTCULLIS : obj == OB_PASSAGE && (r & MOUTH))) {
                 continue;
             }
@@ -215,6 +218,11 @@ again:
     }
     if (!n && !fit && orel <= H_NW) {
         fit = 1;
+        goto again;
+    }
+    if (!n && !bars && obj == OB_DOOR) {        /* (A door: one that is, as the look's words have it; none, a portcullis) */
+        bars = 1;
+        fit = 0;
         goto again;
     }
     if (!n) {
