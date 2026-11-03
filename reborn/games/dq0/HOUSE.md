@@ -1691,6 +1691,8 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   it changes anything; the reply's IO_STEP, the UI's first words and wait, the command asked again as it's up: main.c's
   reach 5, part 19's step_go.)  The time out of a fight is the house's seconds: the book gives a grope no time but in
   combat, a turn.
+- **A step stopped, a kind past 127's not named** (the long task's what has seven bits for a kind): "You stop getting out." for a
+  whetstone or a goblet; its first words name it (eight bits, the UI's).  Not worth the hub's byte; for review.
 - **For the tests, dq0 -J** (as -I and -N are): the reach in one lump, untold, as it was: the runner gives every dq0 test -J but those
   about it (reach: true: dq0handy, dq0packsteps, dq0packgrope, dq0packasks), so their games stay as they were; the soak plays
   the steps.
