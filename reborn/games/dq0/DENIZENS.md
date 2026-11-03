@@ -598,7 +598,9 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   from the square before it (its stand: an actor steps to it, a shut door on the way opened by the doors' own, part
   14's door_way, as one following the character; then posts its spell, I_KIT's KT_DIG, w1 w2 the face), within its
   home's chunk; its stand another's, it waits a minute or two (a record's due again a spell on).  A kind with work of its own digs when there's a vein;
-  one with none, half of them (by their numbers) dig through their waking hours (sched's SC_WORK).
+  one with none, half of them (by their numbers) dig through their waking hours (sched's SC_WORK).  A lair that finds
+  nothing to do asks again as the clock's high word moves, near enough two hours (the records' nowork, by its number:
+  part 15's a dear swap for each one due, so a door broken down or a way dug in is seen to within two hours).
 - **Away from the character** (roam's records, part 9's wander): one at its dig's stand posts its spell coarse (I_KIT's
   KT_DIG, who 0: w1 w2 its face, x[2] its stratum, x[0] its tools), due again a spell on; the world digs it at once,
   untested, untold (wdig.c's), the hole and the way through kept as an actor's.

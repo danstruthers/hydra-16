@@ -274,6 +274,10 @@ struct pop {
     struct head     h;
     struct lair     lair[NLAIRS];
     struct den      den[NDENS];
+    unsigned char   nowork[32];                 /* (A lair's number's, its low bits: the clock's high byte plus 1 when
+                                                **   its diggers last found no dig to do, part 9's target: not asked
+                                                **   again till it moves, near enough two hours: part 15's a dearer
+                                                **   swap than a record's move) */
 };
 #define POP             ((struct pop*) 0x8000)
 typedef char pop_fits[sizeof (struct pop) <= 0x2000 ? 1 : -1];
@@ -4688,6 +4692,7 @@ static unsigned char __fastcall__ room_at (unsigned char u, unsigned char j, uns
 ** guardroom, barracks or quarters, the first it has; else its home); else its home.  0 if there's no such room (work,
 ** rounds: about instead) */
 static const unsigned char gather[4] = { U_HALL, U_GUARDROOM, U_BARRACKS, U_QUARTERS };
+static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigned y);   /* (Below) */
 static unsigned char __fastcall__ target (unsigned char s, unsigned char j, unsigned char v)
 {
     tx = rhx;
@@ -4695,8 +4700,20 @@ static unsigned char __fastcall__ target (unsigned char s, unsigned char j, unsi
     if (s == SC_WORK) {                         /* (A digger's work its lair's dig, if it has one to go on with: its
                                                 **   face's, part 12's, j the actor or NACTORS, a record, its home's
                                                 **   chunk made; else its work's room) */
-        return ((K.styles & (K_DIGS | K_MINES)) && made9 (dsn, (rhx - STRATUM (dsn).x0) >> CW_BITS, (rhy -
-            STRATUM (dsn).y0) >> CW_BITS) && work_dig (0x40 | j) != 0xFF) || (X.work != 0xFF && room_at (X.work, 0, v));
+        if (K.styles & (K_DIGS | K_MINES)) {
+            hy_bank (pb);
+            s = POP->nowork[D.lid & 31];
+            hub_map (0);
+            if (s != (unsigned char) (NOW_U + 1) && made_at (dsn, rhx, rhy)) {
+                if (work_dig (0x40 | j) != 0xFF) {
+                    return 1;
+                }
+                hy_bank (pb);
+                POP->nowork[D.lid & 31] = NOW_U + 1;
+                hub_map (0);
+            }
+        }
+        return X.work != 0xFF && room_at (X.work, 0, v);
     }
     if (s == SC_WATCH) {
         return room_at (0xFF, j, 0xFF);
