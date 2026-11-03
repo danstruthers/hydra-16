@@ -1339,7 +1339,8 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   creature on neither (a spider, a snake, a bat) none of it.  (gear.c's cond_of; wbody.c's step, its time.)
 - **A creature prone gets up as the character does**: in a fight its turn (the book's Rise, with the house's test,
   above: seriously or grievously wounded, an Agility test, failed still down, "The ghoul struggles, but can't get
-  up."; no leg to stand on, never); out of a fight, at its next move, a round (no test: a creature's moves are its
+  up.", told once as it lies there, 2026-11-02, the round spent at each try, told again as it rises, falls or is
+  wounded; no leg to stand on, never); out of a fight, at its next move, a round (no test: a creature's moves are its
   mind's, unfought), unless it crawls on (its legs won't bear it as they should).  ("The kobold gets to its feet.":
   wlimbs.c's part 51, den_legs.)
 - **Knocked senseless, an actor falls, and does nothing till it comes round** *(every actor's; 2026-10-29, drafted
