@@ -678,7 +678,7 @@ character's own, or one it sees lying there: E_TASK's TE_LOW, TE_OUT, the UI's w
 again (E_LIGHT) and the look with it.  A candle burns away; a lantern's dry and a torch spent till they're renewed: a
 lantern filled from a flask of oil, a torch dipped in oil or pitch (IO_FILL: "fill the lantern", "dip the torch in
 the oil").  Left in the dark by it, the character stops its long task (a climb part way, a fight, go on).  The kit
-has its light by the family's money (HOUSE.md's outfits: a lantern and two flasks, or a torch, three spare and a flask); the status line shows the minutes left of the light carried (the hub's
+has its light by the family's money (HOUSE.md's outfits: a lantern and two flasks, or a torch, two spare and a flask); the status line shows the minutes left of the light carried (the hub's
 pc_fuel, its words pc_left).
 
 **What closes, and looking in** (slice 4.1, the user's playtest, 2026-10-21: "look in the sack", "open the chest"): a

@@ -44,12 +44,14 @@ free: backpack@worn
 free: belt@worn
 free: pouch@belt
 free if guilded,noble: letter@pouch
-; (Its light by the family's money, the user's, 2026-11-03: "Light source by available money"; a family of 80 pennies
-; or more, a lantern lit and two flasks of oil; less, the poorest, a slave's 40 among them, a torch lit, three spare and a
-; flask of oil; HOUSE.md's)
-need if average,rich,guilded,noble not slave: lantern@off lit, flask of oil@pack 2
-need not average,rich,guilded,noble: torch@off lit, torch@pack 3, flask of oil@pack
-need if slave: torch@off lit, torch@pack 3, flask of oil@pack
+; (Its light by the family's money, the user's, 2026-11-03: "Light source by available money"; a rich family's, a guilded
+; or a noble one's, a lantern lit and two flasks of oil; the rest's, a torch lit, two spare and a flask of oil; HOUSE.md's)
+; (Three lines, a lantern and its flasks: each of the old kit's three lights' draws made, so the draws after them fall as they did)
+need if rich,noble,guilded: lantern@off lit
+need if rich,noble,guilded: flask of oil@pack
+need if rich,noble,guilded: flask of oil@pack
+need not rich,noble,guilded: torch@off lit, torch@pack 2
+need not rich,noble,guilded: flask of oil@pack
 need: tinderbox@pack
 need: rations@pack 3
 need: waterskin@belt full

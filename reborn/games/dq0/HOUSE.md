@@ -2110,10 +2110,10 @@ character begins with), Combat 2-4 (weapons, armour), Character 27-29 (the units
 HarnWorld's price list.  What the house adds, every number the house's (and outfits.txt's every chance and weight):
 
 - **Its light by the family's money** *(the user's, 2026-11-03: "Light source by available money"; the thresholds the house's,
-  for review)*: a family of 80 pennies or more (Character 17's: average or rich in any class, all guilded and noble families)
-  a lantern lit in the off hand and two flasks of oil, some 20 pennies; less (a poor serf's or slave's 40, a poor
-  unguilded's 60; the null ruleset's 49) a torch lit, three spare and a flask of oil, some 3 pennies.  All within their money, the
-  rest for what comes after; every family can pay for the poor's light, so none starts in the dark.  An occupation's chance of a
+  for review)*: a rich family of any class (Character 17's: a serf's 160, an unguilded one's 240), and every guilded and noble family
+  (90 pennies at the least, 600) a lantern lit in the off hand and two flasks of oil, some 20 pennies; the rest (a serf's 40 or 80, a
+  slave's 40, an unguilded family's 60 or 120; the null ruleset's 49) a torch lit, two spare and a flask of oil, some 3 pennies (the
+  light's bought first, so at 120 a lantern, or a third spare, left no money for a bow and its arrows).  All within their money, the rest for what comes after; every family can pay for the poor's light, so none starts in the dark.  An occupation's chance of a
   lantern isn't drawn on top of the kit's.  Words as a light runs low: its last ten minutes, a lantern's and a torch's alike
   (Light and traces).
 - **What starts full:** every vessel in an outfit starts with what it's for: a waterskin its four pints of water (a lair's cask
