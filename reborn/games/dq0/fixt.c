@@ -379,6 +379,10 @@ void __fastcall__ o_portal_look (const struct portal* p, signed char g, unsigned
     if (!(ex & EX_QUALITY)) {
         return;                                 /* (A closer look: no judgement, no test) */
     }
+    if (p->state & PS_WRECKED) {
+        add (" You judge it ruined, past mending.");   /* (Judged by its state, its make no matter now: D13's) */
+        return;
+    }
     switch (g) {
     case G_CS:
         break;

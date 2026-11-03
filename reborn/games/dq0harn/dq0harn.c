@@ -102,13 +102,15 @@ unsigned char tflag[NTOOLS], tqual[NTOOLS];
 unsigned wealth;                                /* (The family's wealth, its file's "wealth" line: 0 none) */
 
 /* All that's to hand, anew: the keys in the text, each after its mark (held: < in the left hand, > the right, * both;
-** + worn; a space neither) and its quality after it (a digit) */
+** + worn; a space neither) and its quality after it (a digit), a weapon's version after that (L light, H heavy, none
+** average: tqual's high bits, TQ_*, D13's) */
 static void __fastcall__ equip_all (const char* keys)
 {
     unsigned char k = 0, n, f, j;
 
     memset (tools, 0, sizeof tools);
     while (*keys) {
+        j = NTOOLS;
         f = *keys == '*' ? T_HELD | T_LEFT | T_RIGHT : *keys == '<' ? T_HELD | T_LEFT : *keys == '>' ? T_HELD | T_RIGHT :
             *keys == '+' ? T_WORN : 0;
         if (*keys < 'a') {
@@ -136,37 +138,22 @@ static void __fastcall__ equip_all (const char* keys)
         if (*keys >= '0' && *keys <= '9') {
             ++keys;
         }
-    }
-}
-
-static void __fastcall__ equip (const char* key, unsigned char on)
-{
-    unsigned char k;
-
-    for (k = 0; k < NTOOLS; ++k) {
-        if (on ? !tools[k][0] : !strcmp (tools[k], key)) {
-            if (on) {
-                strncpy (tools[k], key, sizeof tools[k] - 1);
-                tflag[k] = 0;
-            } else {
-                tools[k][0] = 0;
+        if (*keys == 'L' || *keys == 'H') {
+            if (j < NTOOLS) {
+                tqual[j] |= *keys == 'L' ? TQ_LIGHT : TQ_HEAVY;
             }
-            return;
+            ++keys;
         }
     }
 }
 
-/* The load the character carries (the game's things, all told: quarter pounds), its equipment as harn.h has it, one
-** entry its whole weight (tenths of a pound): so its encumbrance (EP, the load over endurance) is the book's, and
-** with it the physical penalty that tests of the body and its move are the worse for (Skills 6, Combat 6) */
-static harn_equip carried = { "load", "load", 0, 0xFF, 0 };
-
-static void __fastcall__ set_load (unsigned qp)
-{
-    carried.wt = qp > 13000U ? 65000U : qp * 5 / 2;
-    pc.eq[0] = &carried;
-    pc.neq = 1;
-}
+/* The load the character carries, its equipment as harn.h has it (skills.c's set_load: one entry, its encumbering
+** part, past its free pounds, D13's), so its encumbrance (EP) is the book's on it; and its skills used since their
+** development rolls, its rest toward them, words not flagged yet (skills.c's: slice 4.4's) */
+harn_equip carried = { "load", "load", 0, 0xFF, 0 };
+unsigned char marks[MARKS];
+unsigned dev_m;
+unsigned char fresh;
 
 /* A tool equipped (Lockcraft's picks) */
 unsigned char __fastcall__ has (const char* key)
@@ -214,9 +201,11 @@ static void __fastcall__ dig_of (struct req* r);
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
 ** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery, stone
 ** Masonry, glass Glassworking, the rock where it lies Mining (part 2's, the main RAM's room, 2026-10-29) */
-static const unsigned char appraiser[NAP] = {
+static const unsigned char appraiser[NAP + 4] = {
     HARN_WPN, HARN_WPN, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR,
-    HARN_MSN, HARN_GLA, HARN_MIN
+    HARN_MSN, HARN_GLA, HARN_MIN,
+    HARN_SNG, HARN_SNG, HARN_MUS, HARN_DAN      /* (Past the crafts, NAP + PF_*: a performance, entertaining one, its
+                                                **   skill said, unsaid Singing's (every one's, the book's automatic skill): 2026-11-02) */
 };
 
 /* RS_TEST's own tests, through one stub (the main RAM's room): a dig's, moving quietly's, an appraisal's (by the
@@ -228,7 +217,7 @@ void __fastcall__ s_dig_answer (struct req* r)
                                                 **   grade by its sheet, the world's the rest, slice 4.11's) */
         s_quiet_test (r);
     } else if (r->a == P_APPRAISE) {
-        r->grade = test_sk (&pc, appraiser[r->b < NAP ? r->b : 0], r->steps);
+        r->grade = test_sk (&pc, appraiser[r->b < NAP + 4 ? r->b : 0], r->steps);
     } else if (r->a != P_DIG && r->a != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
         if (!speaks (r->text)) {                /* (Words in a tongue it doesn't speak: nothing) */
             r->result = 2;
@@ -323,6 +312,10 @@ signed char __fastcall__ o_test_sk (harn_char* c, unsigned char sk, signed char 
 
     if (sk & ATTR) {
         return grade (harn_test_attr (c, sk & ~ATTR, 5, mod));
+    }
+    if (c == &pc) {
+        skill_used (sk);                        /* (Marked for its development roll; a [First Use] one opened: slice
+                                                **   4.4's, skills.c) */
     }
     if (!c->ml[sk]) {
         return grade (harn_test (harn_get_oml (c, sk) + harn_eml (c, sk) + mod));
@@ -509,7 +502,8 @@ void __fastcall__ s_load_pc (struct req* r)
     r->b = watch;
     strncpy (path, r->text, sizeof path - 1);
     r->result = 1;
-    pv.hr = pd.hr = afffl = 0;                  /* (No venom, no sickness, no rest yet: its file's "body" line's) */
+    pv.hr = pd.hr = afffl = dev_m = 0;         /* (No venom, no sickness, no rest yet: its file's "body" line's; */
+    memset (marks, 0, MARKS);                  /*   no skills used yet, its second one's) */
     rest_m = HUB->pcsum.timesense = 0;
     if ((fd = open (path, O_RDONLY)) < 0) {
         return;
@@ -552,6 +546,8 @@ void __fastcall__ s_save_pc (struct req* r)
     strcat (line, utoa (tired, b, 10));
     harn_write_line (fd, line);
     body_line (line, 0);                        /* (Its venom, its rest: heal.c's) */
+    harn_write_line (fd, line);
+    body_line (line, 2);                        /* (Its skills used: slice 4.4's) */
     harn_write_line (fd, line);
     strcpy (line, "dealt ");                    /* (What dealt each injury: its words') */
     for (g = 0; g < pc.ninj; ++g) {
@@ -863,16 +859,18 @@ static void __fastcall__ answer (struct req* r)
         status ();
         break;
     case RS_EQUIP:
-        if (r->actor) {                         /* (An actor's things held and worn: the outfits' gear, gear.c's) */
-            strncpy (dtext, r->text, sizeof dtext - 1);
-            den_equip ((r->actor - 1) & 7);
-        } else if (r->a == 2) {
+        if (r->a == 2 && !r->actor) {
             equip_all (r->text);
             hheld = r->w2;                      /* (The hands that hold something, any thing: slice 4.1b's) */
             set_load (r->w1);                   /* (And its load: its summary anew) */
             status ();
+            break;
+        }
+        strncpy (dtext, r->text, sizeof dtext - 1);
+        if (r->actor) {                         /* (An actor's things held and worn: the outfits' gear, gear.c's) */
+            den_equip ((r->actor - 1) & 7);
         } else {
-            equip (r->text, r->a);
+            equip (dtext, r->a);                /* (A tool to hand, or not: skills.c's, the main RAM's room) */
         }
         break;
 

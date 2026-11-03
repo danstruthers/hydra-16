@@ -99,7 +99,7 @@ ovl_out:
             OVFN        state_words, 7
             OVFN        free_cmd, 7
             OVFN        meta, 7
-            OVFN        climb_words, 1
+            OVFN        climb_words, 12     ; (Overlay 1's room, slice 4.4's)
             OVFN        entered, 1
             OVFN        portal_words, 10
             OVFN        harm_words, 1
@@ -135,7 +135,7 @@ ovl_out:
             OVFN        names_in, 10
             OVFN        focus_words, 13
             OVFN        felt_words, 17
-            OVFN        facing_words, 7
+            OVFN        facing_words, 1
             OVFN        fore_set, 6         ; (The answer's tasks in the foreground: main.c's)
             OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
@@ -156,12 +156,12 @@ ovl_out:
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
             SWPART      8, 5                ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
-            SWPART      10, 17              ; A search, by its form (search.c)
+            SWPART      10, 1               ; A search, by its form (search.c)
             SWPART      11, 15              ; The rarer news, worded (main.c); the hands and limbs
             SWPART      12, 15              ; Wounds over time: first aid, in shock, the body's news (tend.c)
-            SWPART      13, 17              ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
+            SWPART      13, 7               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
             SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
-            SWPART      15, 6               ; An ally's errands, the character's gifts (errand.c: slice 4.8's)
+            SWPART      15, 17              ; An ally's errands, the character's gifts, the market (errand.c: slice 4.8's; 2026-11-02)
             SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
             SWPART      17, 14              ; Looking one way, a close look (way.c: part 6's till 2026-11-01)
 
@@ -171,7 +171,7 @@ ovl_out:
             SWFN        size, 1
             SWFN        t_init, 1
             SWFN        finish, 1
-            SWFN        save_game, 1
+            SWFN        save_game, 3         ; (Part 3's: part 1's room, slice 4.4's)
             SWFN        command, 2
             SWFN        ready, 2
             SWFN        cq_post, 2
@@ -191,6 +191,7 @@ ovl_out:
             SWFN        names_subst, 6
             SWFN        names_say, 6
             SWFN        names_look, 6
+            SWFN        came, 6             ; (Come into a stratum, told: main.c's, 2026-11-02)
             SWFN        names_keep, 6
             SWFN        alias_line, 9
             SWFN        alias_expand, 9

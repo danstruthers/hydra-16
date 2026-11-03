@@ -241,7 +241,8 @@ chunk; were they the senses', the maker would ask the senses then, as the senses
 
 **Rooms across a room's squares** (dq0w.c's ways): the ways from a square to every square of a room are worked out
 at once in the world's own bank (no fixed room size, as large as its chunk), so a room is walked across whatever its
-size.  A room is a chunk's (struct room's squares, 0-31): a cavern across many chunks is still to come (below).
+size.  A room is a chunk's (struct room's squares, 0-31): a great cavern across many chunks is a room in each,
+its part (R_CAVERN: a walk across it goes on over the edges; HOUSE.md's great caverns).
 
 **dq0 -C** (the tests'): the caches small, so a short game pages them (twelve of the chunks' slots; a change page; 24
 of the store's records, only the character's chunk kept round it; two of the denizens' regions, only the
@@ -386,7 +387,8 @@ for anyone who reads it (the lights', the denizens', the senses').
 
 An opening that isn't a plain doorway is a record (world.h's struct opening, level.h's O_*): a window (its sill's height
 above the floor), a stairway or a ladder up or down, a shaft in the ceiling or the floor, the way out; where it leads
-(the stratum's link: a stratum, a place there) and how far.  A long ramp between strata isn't made.  A stratum below is
+(the stratum's link: a stratum, a place there) and how far.  A long slope between strata (a sloping tunnel, walked: O_RAMP_DOWN, O_RAMP_UP) is a
+natural stratum's or a mine's stairway one time in three (HOUSE.md's long slopes, 2026-11-02).  A stratum below is
 made when the character first takes a way down to it: its bounds and style (a storm cellar is a stratum one chunk, 10 by
 10, with a ladder down; the catacombs under it miles each way), and the chunk where the way comes out first.
 
@@ -421,7 +423,12 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   character's rules (a spell at a time, the tool's rate, the rock's hardness: part 1 asked, its rock_kind; its own
   test by its sheet), the same change records (a DUG record while it's under way, the character's: either goes on
   with the other's hole; the square a passage through it), told when seen ("A fresh tunnel opens ahead.  Spoil lies
-  heaped by it.") and heard while it's dug ("a scraping in rock": the rock carrying a pick's knock).
+  heaped by it.") and heard while it's dug ("a scraping in rock": the rock carrying a pick's knock).  And at their work
+  (2026-11-02): a faction's miners dig its mine from their lair's home across to their region's vein and along it, a
+  burrower its lair's burrow, by the clock, near the character or away from it (away, coarse: the same change
+  records); poor rock comes down on a tunneller's spell gone badly; a faction's miners put up again a door broken down
+  in their home's chunk (its PORTAL_STATE and PORTAL_HARM records), and wall up a way dug into a room there by others
+  (the square T_WALL again, a change record).
 - **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) is still
   to come (below).
 
@@ -1375,6 +1382,30 @@ packed, not the game on the ROM disk (2026-10-31, DECISIONS.md).  Now: 208M cycl
 - **The check**: dq0starttime, its budgets 229M (seed 1) and 318M (seed 123456789), its silence 36M at most, the
   banks as ld65 made them.
 
+### The character carries on (slice 4.4, 2026-11-02)
+
+The user's D7 and D8 (DECISIONS.md): death is permanent, with autosaves before danger a setting (off, hard mode); the
+character carries on into a new dungeon with its skills, wounds and gear.  And the plan's "skill improvement by use and
+rest".  Built (HOUSE.md's the character carries on has the numbers):
+
+- **Skills by use:** every skill the character uses (a test of it, its weapon in a fight, its dodge, a shot) is marked
+  for a development roll, success or failure alike (the book's); the marked ones are rolled after a night's rest, each
+  that rose told as it wakes ("Your Climbing skill has improved (46)."), the sheet showing the new figure.  A [First
+  Use] skill (Swimming, Acrobatics, Physician, Cookery; a weapon's in a fight) opens the first time it's used, told at
+  once ("You've begun to learn Swimming by doing it (12)."); one learnt by study doesn't.  The referee's alone
+  (dq0harn/skills.c): the marks and the rest toward the rolls kept with the sheet in the save (pc.hm).
+- **The ending:** the theme's words, then what's next, then the character's sheet as it ends.  Alive (the goal reached
+  or the way out taken), "Your character carries on": the game started again with the same folder (dq0 -d) begins a new
+  dungeon (a new seed: a new history and theme) with the same character, its sheet as it ended (its skills, its wounds
+  healing on), and the things it carried out (the world's kit.dat, kept with every save, made its outfit there).
+- **Death and the autosave:** the game is kept as the character comes into a stratum and as it's quit; a death isn't
+  kept, so the last save is there to go back to.  Hard mode (dq0 -H, kept in the save) keeps the death: the folder's
+  next game is a new one, a new character.  The autosave before danger (a fight's start) is to come.
+- **D13's rules:** the free pounds of encumbrance by Strength; a weapon's version (the book's light, average and heavy:
+  its impact and its weight by it), the heaviest wielded without penalty by Strength, a strong character made with
+  heavy weapons; a wrecked door, window or portcullis appraised by its state; a slip climbing out of a pit ending the
+  climb, the player's to say what next ("climb up" again).
+
 ## One path for every actor
 
 The user's (2026-11-02, DECISIONS.md's): every actor's action is one intent, the character's and a denizen's mind's
@@ -1407,11 +1438,13 @@ into the world's intents; a mind posts the intents itself (DECISIONS.md's table,
 What the plans bring later, by the slice or phase that brings it (the detailed plan's and the game plan's):
 
 - **Ways off the compass, step 3's rest** (the user's "queue up 1-3", 2026-10-31; steps 1 and 2, the diagonal ways and
-  a passage's heading, and the built grower's diagonal passages, built): built complexes at an angle (a stratum's
-  rooms, or one complex in it, laid at 45 degrees to the compass; other angles stepped and told by step 2's words); a
+  a passage's heading, and the built grower's diagonal passages, built; the slanted strata's rooms cut to their
+  diamonds, built 2026-11-02: HOUSE.md's rooms on the diagonal): left, rooms truly turned (a long room on the
+  slant, not its corners cut; a diamond's own words, its places), other angles stepped and told by step 2's words; a
   wide tunnel's staircase told as one slant (step 2's runs follow a one-wide passage).
-- **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence): left, other errands
-  ("ask the dwarf to open the door"), "give the bandit 5 pennies" without "to", entertain and bargain.
+- **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence; 2026-11-02 an ally's
+  errands at a door, "give the bandit 5 pennies" without "to", entertaining and bargaining): left, the other errands (a
+  lock picked, a door forced for the character, a thing given to another).
 - **The command interpreter** (Phase 3C): every command, the player's or a denizen's mind's, one structure of
   abstract actions (VB_*), verbs as data with their defaults, affordances, selectors, a target that persists,
   questions only when unclear; "alias" the command for text aliases ("alias x is dig down"), naming things and rooms
@@ -1452,12 +1485,13 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   bandit": the book's treatment, a timed work, bandages used up); healing over days of rest (the book's five-day
   rolls, infection, a treatment's EE), told as it wakes; shock's recovery each watch, and in shock only rest, a look and
   a half move; a creature come round in shock; the venoms of the adder, the basilisk and the lindworm (the bestiary's,
-  an infection's course); a folk denizen binding its own bleeding.  Not yet: antidotes (with the market), the minds'
+  an infection's course); a folk denizen binding its own bleeding; antidotes (built 2026-11-02).  Not yet: the minds'
   way with a wounded or shocked denizen (resting in its lair, tending another), stings.
 - **Poison, bad air and disease** (2026-10-31, the user's: HOUSE.md's): one course for every affliction (the book's
   Infection table), poisons (a dart trap's), diseases (foul water's flux, rat-bite fever, a ghoul's grave rot) shown
   after their incubation; the air's pockets (blackdamp, whitedamp, firedamp) and a flame's warnings, firedamp's burst.
-  Left: a door's needle and a chest's (contact poison), poisoned blades, spoiled food, antidotes (with the market), a
+  Antidotes and remedies built 2026-11-02 (HOUSE.md's the market, entertaining and remedies).
+  Left: a door's needle and a chest's (contact poison), poisoned blades, spoiled food, a
   lair's sickness, the denizens' own afflictions and their choking, old mines' air, the explosion's harm to those near.
 - **The sound layer and the denizens' hearing by pace** (slice 4.5, built 2026-10-29: perception as layers, above):
   a pulse over the squares and openings, a background that masks, the character's steps heard by its pace and its
@@ -1499,28 +1533,30 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   line: its point and slope, rk_mix (1)'s), an adit in from the way in, a gallery widening where the vein's widest, a
   shaft at a region's line crossing the stratum's next, timbering in soft rock; the built grower given the vein's
   squares as its passages' line (built.c's joins), the stopes rooms of U_WORKS's kind.
-  **Caverns across many chunks** (the plan, not built): a region of the plan its RG_CAVERN kind (plan.c's region
-  dice, one in so many of a natural stratum's), its cavern a box in the region's squares (its corner and size, up to
-  the region, from the region's dice), every chunk it touches growing its part of the one room: the cave grower
-  given the box clipped to the chunk as a chamber's bounds, its floor the plan's ground (so the parts meet at the
-  edges, as the crossings do now), its chamber's wanderer started on each side the box crosses so the floor runs to
-  the edges; struct room's x, y, w, h the clipped part, a flag R_CAVERN and the cavern's number (the region's) in its
-  kind's spare bits, so the senses and the ways (dq0w.c's ways across a room, its room's squares a chunk's today: "No
-  fixed size") take the room as going on past the chunk's edge: the senses' look reaching into the neighbour's part
-  ("a vast cavern, its far side beyond your light"), the world's ways joined at the edge (the next chunk's part's
-  squares the way goes on into), the map's room drawn whole.  A lake or a chasm the same, the water's level the
-  cavern's.
-- **Tunnellers and builders** (slice 4.11, built in part 2026-11-01: changing the dungeon, above; DENIZENS.md's
-  tunnellers): left, a burrow dug from a lair, a faction's mine following a vein, the denizens away from the character
-  digging, poor rock on a tunneller, the spoil as a thing; builders (shoring, walling up a way, a door put up).
+  **Caverns across many chunks** (built 2026-11-02: changing the dungeon's rock, above; HOUSE.md's great caverns):
+  one natural region in three a cavern, every chunk it touches growing its part of the one room from the seed alone
+  (dq0m/caves.c's cavern, overlay 8: R_CAVERN rooms), told "vast", its walls beyond the light or in sight, walked
+  across over the chunks' edges, drawn whole as it's seen.  Left: its own places ("go to the centre" is the part's,
+  "the far side" the part's), the look reaching into the neighbour's part (each part a room of its chunk's: the
+  ways across a room are a chunk's), a lake or a chasm in one (the water's level the cavern's: dry now), a cavern in
+  a region a way between strata comes into (none, so the strata's ways in are as they were).
+  **Raises and inclines** (built 2026-11-02: HOUSE.md's moving and tiring, long slopes between strata): a sloping
+  tunnel off a cave's passage, a raise in a mine, each to a small chamber on its own level (dq0m/caves.c's incline);
+  a long slope between strata; a walk's beats telling a rise or a fall of 4 feet ("The way rises."), its climb
+  strenuous work.  Left: a raise or a ramp joining two parts of a stratum (these are ways to a chamber of their own),
+  a long slope's own length walked square by square (taken at once, as a stairway is), the denizens tiring uphill.
+- **Tunnellers and builders** (slice 4.11, built 2026-11-01 and 2026-11-02: changing the dungeon, above; DENIZENS.md's
+  tunnellers): left, builders shoring a passage, the spoil as a thing, a mine past its lair's chunk.
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
 - **One path for every actor** (Phase 3C, begun 2026-11-02: below): left, a denizen working windows and
   portcullises, picking a lock, an ally asked to open a door ("ask the dwarf to open the door"), a denizen eating the
   food it takes up, its lift by its size, the things' put down, given and thrown by the minds as the character's are.
-- **The house rules decided, not yet built** (HOUSE.md): Strength and weapons, free pounds, a wrecked portal appraised
-  by its state, the pit climb (D13).
-- **The market** (when trading comes: DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a
+- **The character carries on** (slice 4.4, built 2026-11-02: above): left, the autosave before danger, the denizens'
+  weapons' versions (the outfits' gear's), a thing's wear and fuel carried as they were.
+- **The market** (built in part 2026-11-02: HOUSE.md's the market, entertaining and remedies; DENIZENS.md's trading):
+  buying, selling, a price asked, haggling, with any folk denizen, in pennies; remedies (antidotes, a physician's
+  draught) for sale, in kits and purses, drunk.  Left, from the plan (DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a
   mercantyler's 10% buying and 50% selling to the source, second-hand clothes 30-60% of new, haggling), the coins'
   metal value and their discount outside their own land in the trade itself (the appraisal tells it now), farthings
   for change; paying with the lowest-worth coins first unless the seller asks for the local or the dwarves', and the
@@ -1531,7 +1567,8 @@ Designed, but in no slice of the plans yet (DECISIONS.md has the user's words fo
 
 - **Chunks made for the denizens** as they go where nobody has been, a stratum grown by their movements as well as the
   character's, and what they disturb there an event the disturbed act on.
-- **Mining up and slanting**: a raise through the ceiling to the stratum above, an incline.
+- **Mining up and slanting**: a raise through the ceiling to the stratum above, an incline (dug: the grown ones,
+  below, built).
 - **Things hidden by other things or on someone**: under a body, a cloak, a fallen beam (seen once it's moved, freed
   by a strength test); in a container's secret part (a false
   bottom, a hollow heel).  **Holes** as containers: a hole dug in a floor, filled in, a concealed one, dug out again

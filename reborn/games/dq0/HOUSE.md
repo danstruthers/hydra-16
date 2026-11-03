@@ -99,9 +99,24 @@ plays them as HarnMaster's referee does.
   4.9).  The null ruleset tires nothing.  (dq0w.c's arrive, stop and s_batter_on; sheet.c's o_spent, WORK.)  Why:
   the book's rate; a run's (a level each two minutes) would leave one spell of digging five levels down, every
   physical test 25 the worse.
+- **An incline told** *(the house's, 2026-11-02, slice 4.10's: for review)*: a walk along a passage tells "The way
+  rises." or "The way falls away." once its floor's risen or fallen 4 feet or more since the last beat told (a turn, a
+  doorway, a quiet stretch, a rise), steps at once.  Before, a step of 2 feet or more was told each time and a gentle
+  incline never; now a sloping tunnel's told as it climbs, about every 20 feet at a foot a square, a rough floor's
+  ups and downs not.  Uphill is slower for every actor, as it was (half again a step's time a foot of rise).  The
+  character's climb told is strenuous work too, half a step's time a foot, 4 feet at each telling (its walk's beat:
+  a rise under 4 feet costs no more than the walk); the denizens' walks tire them no more uphill than on the level
+  (the house's, the denizens' bodies, below: only their fights are counted).  (dq0w.c's beat.)
+- **Ways that climb, grown** *(the house's, 2026-11-02, slice 4.10's: for review)*: one chunk in eight of a natural
+  stratum's or a mine's, with no way between strata in it, by its own numbers (none of the grower's dice; dq0 -P, the
+  tests', every chunk that has room, hub.h's GE_RAMP): off a passage, a straight way through the rock to a small
+  chamber on its own level (5 squares by 4, a room of the chunk's): in natural rock a sloping tunnel, a foot a
+  square up or down for 10 to 16 squares; in a mine a raise, two feet a square for 8 to 12 (a walk's steepest step).
+  Walked, not climbed, by every actor, told as any incline is, the map's heights showing it.  (dq0m/caves.c's
+  incline, overlay 8.)
 - **Encumbrance** is the book's (the load over Endurance, rounded), told in words: none, a little burdened (1-2), heavily
-  burdened (3-4), overloaded (5 or more).  (harn.c's harn_get_ep; dq0harn.c's status.)  See D13 below: free pounds
-  by Strength are decided, not built.
+  burdened (3-4), overloaded (5 or more), on what's carried past its free pounds by Strength (D13's: the character
+  carries on, below).  (harn.c's harn_get_ep; skills.c's set_load; dq0harn.c's status.)
 
 ## Climbing and falling
 
@@ -122,7 +137,8 @@ plays them as HarnMaster's referee does.
   senseless or in shock is a miss, not the Ignore table's tactical advantage: it can't take one.  (fight.c's
   attack.)  Why: the advantage is an action, and it has none.
 - **A window's sill is climbed through** with a Climbing test; a critical failure is a slip and a fall.  (wwin.c.)
-- **A pit is climbed out of** as a ledge is.  (wtrap.c, dq0w.c.)  See D13: a slip is to end the climb.
+- **A pit is climbed out of** as a ledge is, but a slip ends the climb (D13's: the character carries on, below).
+  (wtrap.c, dq0w.c.)
 
 ## Digging
 
@@ -690,6 +706,8 @@ requests; the house's rules above marked *(every ruleset's)* it plays as HarnMas
   steps worse), else it flees.  A blow at a thing does 6, less the thing's least resistance.  What strikes (Fights')
   the house's: a thing named strikes, its words its name, whatever it is (a soft one the house's single attempt);
   nothing named, the first thing in its hands; never a better thing carried asked about (none's better).
+- **No skills to open or develop** (slice 4.4): nothing marked, nothing rolled after a rest; its character carries on into
+  a new dungeon as HarnMaster's does (its file, its wounds).
 - **No fatigue, no bleeding, no shock, no senselessness, no encumbrance.**  Senses all 5 (hearing 7 listening as it
   goes); a square takes 4.5, 3, 1.5, 0.8, 0.4 and 0.3 seconds at a creep, a slow walk, a walk, a jog, a run and a
   sprint.
@@ -1374,7 +1392,8 @@ hand's (Combat 3), the fumble and stumble rolls (Skills 21-22) and a grievous li
   creature on neither (a spider, a snake, a bat) none of it.  (gear.c's cond_of; wbody.c's step, its time.)
 - **A creature prone gets up as the character does**: in a fight its turn (the book's Rise, with the house's test,
   above: seriously or grievously wounded, an Agility test, failed still down, "The ghoul struggles, but can't get
-  up."; no leg to stand on, never); out of a fight, at its next move, a round (no test: a creature's moves are its
+  up.", told once as it lies there, 2026-11-02, the round spent at each try, told again as it rises, falls or is
+  wounded; no leg to stand on, never); out of a fight, at its next move, a round (no test: a creature's moves are its
   mind's, unfought), unless it crawls on (its legs won't bear it as they should).  ("The kobold gets to its feet.":
   wlimbs.c's part 51, den_legs.)
 - **Knocked senseless, an actor falls, and does nothing till it comes round** *(every actor's; 2026-10-29, drafted
@@ -2566,9 +2585,9 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
   "... holds."), "The sickness leaves you." at H6, "The sickness takes you." at H0.  Its dice the body's own (rshouse.h's
   way), so a fight's roll as they did whether a bite carries anything.  *Not yet*: corpses handled (no handling of a body
   but a search), the undead's touch but a ghoul's (the wight's drains), a lair's sickness spreading among its folk.
-- **A remedy** *(the hook, for review)*: an antidote taken makes the toxin's rate the better by its power (a theriac 2),
-  the lindworm's numbing venom only by a strong one (afflict.c's o_aff_cure, no command yet: the market brings the
-  antidotes, Treasure 4's potions, Khalmet's Theriac).
+- **A remedy** *(for review; built 2026-11-02: the market, entertaining and remedies, below)*: an antidote taken makes
+  the toxin's rate the better by its power (a theriac 2), the lindworm's numbing venom only by a strong one (afflict.c's
+  o_aff_cure, by remedy: "drink the antidote"); a remedy the disease's.
 - **The air** *(every ruleset's, rsair.h; its figures for review)*: blackdamp (stale air, too little in it to breathe:
   choke-damp, a mine's CO2), whitedamp (a fire's or a blast's smoke: carbon monoxide, poison that gives no warning),
   firedamp (marsh gas, in the coal and shale beds: it burns).  Strength 1 a little to 3 much.  Blackdamp felt at once:
@@ -2676,6 +2695,67 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
   connected) is tried before the cut, by the four.
 - **Its words**: as any diagonal passage's (a passage's heading, above: "The passage bends away northeast.").
 
+## Great caverns *(slice 4.10's rest, 2026-11-02: DUNGEON.md's caverns across many chunks; drafted for the user to review)*
+
+- **Where** *(the house's)*: a natural stratum's region (1,280 feet each way) holds a great cavern one time in three,
+  by its own numbers (a hash of the stratum's seed and the region's place: no die of the grower's, so the chunks
+  round it are as they were); none in a region a way between strata comes into (a stairway's foot, a ladder's), so
+  each stratum's way in stays a cave's chamber; none in a mixed stratum's natural part (its hewn chunks would cut it).
+  dq0 -V, the tests', gives every region of a natural stratum one, its middle as near the region's first way's square
+  as the region lets it (hub.h's GE_CAVERN).  (dq0m/caves.c's cavern, overlay 8.)
+- **Its shape** *(the house's)*: a box in its region, 10 squares or more off the region's edges (so no two meet), its
+  half-breadths 24 to 63 squares east and west and 20 to 55 north and south (240 to 630 feet across, 200 to 550
+  feet deep), cut down to the region; its floor an ellipse in the box, its edge wandering in and out by up to a
+  quarter of the way (a lattice of numbers 40 feet apart, evenly between), here and there a pillar of rock 10 feet
+  square well inside it (one lattice point in six); its floor a hollow 2 to 8 feet deep at its middle, nothing at its
+  edge, so a walk across it rises and falls gently; its roof rough stone 40 to 99 feet up at the middle, half that at
+  the walls.  Dry: no lake or pool in it yet.
+- **One room across the chunks** *(the house's)*: each chunk it touches grows its part of it from the seed and the
+  square alone (the walls at a chunk's edge too, beside the next chunk's part), so the parts meet at the edges and a
+  chunk made again is as it was; the part is a room of its own in its chunk (world.h's R_CAVERN), the chunk's other
+  chambers kept clear of it and its tunnels meeting in it.  Walking across it ("go north", "walk forward") goes on
+  over the chunks' edges to its far wall; a place in it ("go to the centre") is the part's, in the chunk the
+  character stands in (a cavern's own places are still to come).  The map draws it as it's seen, whole.
+- **Its words** *(the house's: HOUSE.md's where you are)*: "You are somewhere in a vast cavern, its walls beyond your
+  light." while fewer than six squares of its walls are in sight (a pillar or two doesn't count); "You are in a vast
+  cavern, by the light of your torch." once more are; where in it never told (the thirds have no meaning there), nor
+  its figures on a close look ("Its far side is lost in the dark."), nor where things lie in it; its roof told as any
+  ceiling, "Above, the dark hides the ceiling." while the light doesn't reach it.  (dq0p/sight.c's S_VAST, S_VASTW;
+  dq0/words.c's room.)
+
+## Long slopes between strata *(slice 4.10's rest, 2026-11-02: raises and inclines; drafted for the user to review)*
+
+- **Where** *(the house's)*: a stairway down from a natural stratum or a mine is a long slope instead one time in
+  three (a sloping tunnel worn or cut down to the stratum below), by its own numbers (a hash of the stratum's seed and
+  the way's square: no die of the plan's, so the strata are laid out as they were); a ladder stays a ladder.  dq0 -P,
+  the tests', makes every stairway down a long slope, any style (hub.h's GE_RAMP).  Its foot below is a long slope
+  up, on the same square, as a stairway's is.  (dq0m/plan.c's links_down; level.h's O_RAMP_DOWN, O_RAMP_UP.)
+- **Walked, not climbed** *(the house's)*: "d" and "u" take it as they take a stairway, from anywhere in its room;
+  it's four feet along for each foot of the drop between the strata (a grade of one in four), so it takes longer
+  than a stairway: down, eight tenths of a step's time a foot of the drop (a stairway half a step's); up, thirteen
+  tenths (a stairway one): the walk's squares at the pace, and uphill half again a step's time a foot of rise, as
+  any walk's (dq0w.c's cost).  Going up it is strenuous work for the time over a level walk's (half a step's time
+  a foot), tiring as a climb does (Moving and tiring, above); going down isn't.  (dq0w.c's s_climb.)
+- **Its words**: "a long slope leading down" (or up) where a stairway's would be; "You walk down the long slope."
+  and "You trudge up the long slope." as the stairway's "You go down the stairway, a long flight."; on the map its
+  square drawn as a stairway's.  An ally following comes along as it does on a stairway.
+
+## Rooms on the diagonal *(2026-11-02: step 3's rest of the user's three, ways off the compass; drafted for the user to review)*
+
+- **Which** *(the house's)*: the built strata whose passages run on the diagonal (a fifth of them, by the stratum's
+  seed: built passages on the diagonal, above) have their rooms' walls on the diagonal too, so the whole complex lies
+  at 45 degrees to the compass; dq0 -D, the tests', every built stratum's (hub.h's GE_DIAMOND).  A room under four
+  squares either way, and a room a way between strata comes out in, stays square.  (dq0m/caves.c's diamonds, overlay
+  8, called by built.c as the chunk's grown.)
+- **How** *(the house's)*: each room cut to the diamond its box holds: a square of its floor kept while its distances
+  from the box's middle, east-west and north-south, add to no more than half its longer side (in a square box a
+  diamond, its points at the walls' middles; in a long one, its four corners cut off on the slant); the squares cut
+  become its walls (masonry, as its others), a staircase of them along each slant.  A door's, a doorway's or a
+  window's square in its old walls is kept joined to the floor by the squares straight in from it (a short alcove),
+  its steps kept, so it's walked as it was; its things, traps and sconces are put on its floor as ever.  Its words and
+  its size are its box's (the thirds of "the far left corner" by the box; a diamond's own words are still to come).
+  The passages to it are the slanted strata's.
+
 ## Tunnellers *(slice 4.11, 2026-11-01: the book's where it speaks, the house's else; drafted for the user to review)*
 
 The HarnWorld Bestiary calls rats efficient diggers that excavate burrow systems, and has its grave-wights dig rapidly
@@ -2684,8 +2764,8 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
 - **Who digs** *(the house's)*: kinds.txt's ways **d**, digging by nature with its claws (a burrower: the giant rat, the
   ghoul, after the bestiary's rats and grave-wights), and **m**, digging with the tools it carries (a miner: the dwarf
   miner, the kobold, the brown orc).  A miner digs only with a pick, or with a shovel, a spade or a mattock, among its
-  things (the world's agear, AG_PICK and AG_SPADE).  Today a dwarf miner always carries a pick and a brown orc
-  sometimes does; a kobold carries none yet (its outfit has none), so it digs nothing.
+  things (the world's agear, AG_PICK and AG_SPADE).  A dwarf miner always carries a pick, a brown orc sometimes does,
+  and a kobold always has one at its belt (2026-11-02, outfits.txt's [role kobold]: the folk tales' mine-kobolds).
 - **A burrower's claws** *(the house's)*: two feet a spell in soft soil, one in hard-packed earth (two thirds of a
   shovel's), nothing in masonry or flags; in the rock only the soft rock (shale), half a foot a spell, times the rock's
   hardness (a foot a spell in shale, rounded as the character's is).  So a rat burrows through earth and shale,
@@ -2715,11 +2795,46 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   wall to the sound).  The player's told its first spell ("The dwarf miner digs into the wall.", or "You hear a
   scraping in rock ahead."), not each spell after (the denizens hear every one); the way through seen ("A fresh tunnel
   opens ahead. Spoil lies heaped by it.") or heard ("You hear rock falling to your left.").
-- **Not yet** *(the plan's)*: the minds' other reasons to dig (a burrow made from a lair, a faction's mine following a
-  vein of ore, rock.h's veins), the denizens away from the character digging (only actors dig: the records' coarse
-  moves dig nothing), poor rock coming down on a tunneller, the spoil as a thing (rubble beside the way), a dig's sound
-  played (the sound task's), builders (a faction shoring a passage, walling up a way, putting up a door), a kobold's
-  pick.
+- **Its work's dig** *(the house's, 2026-11-02)*: a tunneller's other reason to dig is its work, as its day says (the
+  day's work hours, DENIZENS.md's daily life: decided by the clock, never polled).  A miner (ways m, with a pick) digs
+  its faction's mine: from its lair's home straight across to the vein of its region (rock.h's veins: a seam of ore
+  or of quartz; a dyke of basalt isn't mined), its middle on the home's row no more than a chunk's breadth away, then
+  along the vein (north or south by its lair's number) row by row, keeping to its middle (a diagonal step where the
+  vein slants a square a row, across it where it slants more), 64 squares at most.  A burrower (ways d) digs its
+  lair's burrow: from its home one of the four ways (by its lair's number), eight squares, as far as its claws bite
+  (rubble, earth, soil and the soft rock, shale; a room's bare stone wall where the rock's soft, never masonry; coming
+  at prey it digs no wall, as before: doubtful, the two might be one rule).  A kind that has its own work (a smith's forge) digs
+  when there's a vein; one with none (a rat, a brown orc) half of them dig through their waking hours, the other half
+  go about as before.  Nothing of the mine is kept but the dungeon itself: its way is worked out again each time
+  (the squares dug already, the open ones and the doorways on its line walked through), and it digs the first square
+  that's a wall, the rock or rubble, from the square before it, a spell at a time by the character's rules (above);
+  a shut door on its way to it opened as one following the character opens one (its key if it's locked; never
+  forced).
+  Within its home's chunk only, and only where that chunk's made; it stops at water, a pit, a portcullis let down
+  (the minds raise none yet), the chunk's edge.  None near: its work's room, as ever.
+- **Away from the character** *(the house's, 2026-11-02)*: a denizen out of the character's reach (not an actor: its
+  record moved coarsely) digs its work's spell all at once as it's due, untested (a marginal success's rate: no dice
+  of its own), the hole kept and the way through made as an actor's are; it's never told (the character isn't near).
+  Its tools aren't looked at away from the character: a kind whose miners work (the dwarf miner, the kobold) digs as
+  if with its pick; a brown orc digs only when near.
+- **Poor rock on a tunneller** *(the house's, 2026-11-02)*: a tunneller's spell gone badly (a critical failure) in
+  shale brings the roof down as the character's does: two feet of the hole filled again, the rock showering it ("The
+  dwarf miner is showered with rock from the roof.", heard: rock falling).  No harm comes to it: the referees keep the
+  character's sheet alone (a denizen's wounds are the fights' only).
+- **Its sound played** *(2026-11-02)*: a tunneller's spell (begun, each one after) the sound task's dig, its way
+  through and rock coming down a smash, by the rock's carrying (the noise's x[3]) as any denizen's sound.
+- **Builders** *(the house's, 2026-11-02, for review)*: a faction's miners are its builders too.  At work, a miner
+  first puts up again a door broken down in its home's chunk (a door's leaf burst from its frame, the wrecked door):
+  from a square beside it, a spell's work, the door shut, its lock and bar whole again, its harm gone (the portal's
+  change records, as any door's: "The dwarf miner hangs a new door.", heard: hammering).  Away from the character, at
+  once as it's due.  Then it walls up a way dug into a room of its home's chunk by others (a passage a dig made, the
+  character's or a tunneller's, a room's floor beside it, not of its own mine): from the floor beside it, an hour's
+  work, the square a wall again ("The dwarf miner walls up the way.", heard: stones being laid).  One square, at the
+  room: the way behind it stays; its wall can be dug again (two feet).
+- **Not yet** *(the plan's)*: builders shoring a passage (timbering in the soft rock: nothing yet comes down on a
+  passage, only on a dig's face, so it would change nothing), the materials as things (timber, a door's leaf, stone
+  carried), the spoil as a thing (rubble beside the way: no such thing in the catalogue yet), harm from rock falling
+  on a denizen (the referees' sheets are the character's), a mine past its home's chunk.
 
 ## Denizens and doors *(2026-11-02: Phase 3C's one path; drafted for the user to review)*
 
@@ -2767,16 +2882,145 @@ These are the house's.
   four squares, idle, it goes to (its steps), and takes up beside it.  An ally takes nothing of its own accord.
 - **Two seconds** *(the house's)*: stooped, taken up, as the character's handling of a thing in reach.
 
-## Decided, not yet built
+## The market, entertaining and remedies *(2026-11-02: the book's where it speaks, the house's else; drafted for the user to review)*
 
-- **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without
-  penalty; heavier versions hit harder, and strong characters are made with heavier weapons.  Today the weapons
-  have one weight each and Strength does nothing in a blow.
-- **D13, free pounds:** the first X pounds carried are free of encumbrance, X 10 at Strength 10 and doubling each 4
-  points (4 lb at 5, 14 at 12, 24 at 15, 40 at 18, 57 at 20, 134 at 25).  Today it's the book's: every pound counts.
-- **D13, a wrecked door, window or portcullis appraises by its state.**  Today appraisal doesn't see the damage.
-- **D13, the pit climb:** a slip climbing out of a pit ends the climb, and the player chooses what next.  Today a
-  slip slides 5 feet back and the climb goes on.
+The book (HarnWorld's prices): the listed prices are retail at the named source, "a mercantyler would buy items for as
+little as 10% of these prices and sell them for roughly 50%", "the seller, with a shrewd eye on the size of the buyer's
+purse, sets a price. Haggling follows and the final transaction can vary 25% or more"; a jeweller or a mercantyler buying
+a jewel, "lucky to receive half" (Treasure 5).  Rhetoric is the mercantyler's first skill (Character 17).  The rest is
+the house's.  *(Every number here is for review.)*  (dq0d.c's part 16: s_gift's trade and entertain; dq0w's things.c
+part 62, goods, and wfetch.c part 72; the UI's errand.c, part 15, in overlay 17's bank.)
+
+- **Who trades:** any denizen with a mind that isn't a beast (folk), indifferent to the character or better ("The
+  bandit won't trade with you." if it's wary or worse); no merchant kind yet (the peoples have none): every folk denizen
+  trades what it carries.
+- **What it sells:** what it carries but what it wears and what it holds itself (its own gear in use): its pouch's, its
+  pack's, what hangs at its belt (the world's goods, IO_GEAR's GR_GOODS, the nearest named or any).  What it buys:
+  anything the character carries.
+- **The price:** the thing's worth as a local takes it (the appraisal's: by its material, coins by their mints), times
+  the count, by its condition (its life left in tenths).  It sells at five quarters of that indifferent, the whole
+  friendly, three quarters to an ally; it buys at two fifths, a half, three fifths.  Rounded to the penny, a penny at
+  least.
+- **Haggling** ("haggle for the rope", "bargain over my dagger": selling if the character carries it, else buying):
+  the book's Rhetoric in the trader's tongue (none in common, no haggling), at steps by its attitude (hostile -3 ...
+  friendly +1), its kind's sway and its mind (the cunning one the harder, the low one the easier); a critical success
+  a quarter better, a success a tenth, a failure as asked, a critical failure an offence (a step back, no deal).  The
+  deal done at once if it's paid.  Half a minute's work.
+- **Asking** ("how much for the lantern", "what will you give for this"): within earshot (12 squares), no time but a
+  moment's.  **The deal** ("buy the rope from the dwarf", "sell my dagger"): within reach (a square).
+- **The money:** pennies only (the payer's one pile of them, at face), so a price is whole pennies; the character
+  without enough: "You haven't the money: the dwarf asks 12 pennies."; the trader: "The dwarf hasn't the money".
+  *Not yet* (DECISIONS.md's, the user's of 2026-10-28): paying with farthings and crowns and change given, the
+  lowest-worth coins first, the seller asking for the local or the dwarves' coin, "pay with Kanday pennies", the coins'
+  worth abroad in the trade itself (it's at face now).
+- **The exchange** (the one path): the trader's own intents, the character's way with things for every actor (the
+  world's wfetch.c): it takes the payer's coins or the goods sold (FE_GIFT, a count split off, kept in its things, not
+  held), and hands over its own (FE_GIVE, a count of a lot split off, from its pouch or its pack: into the character's
+  pack first), each told ("The dwarf takes the pennies.", "The dwarf hands you the rope.").
+- **Entertaining** ("entertain the dwarf", "sing to the bandit", "play for", "dance for"): within earshot, no tongue
+  wanted; the referee's performing skill (HarnMaster's Singing, unsaid: the book's automatic skill, everyone's;
+  Musician; Dancing), at steps by its attitude and its kind's sway; a critical success two steps, a success one, a
+  critical failure a step back (it's bored), as far as friendly (a song doesn't win an ally).  A minute.  Not a beast,
+  nor the mindless.  The null ruleset a flat test.
+- **Remedies** (the afflictions' cure, HOUSE.md's poison above): an **antidote** (a theriac: the house's 48d, a
+  vial's dose) against a toxin (a venom, a poison), its power 2; a **remedy** (a physician's draught: 12d) against a
+  disease, its power 1.  Drunk ("drink the antidote", "eat the remedy": the things' IO_USE by its key, used up), the
+  referee told (RS_TIME's RT_TAKEN): dosed by the taker's Physician (the book's: medicine combats an infection; the
+  house's: a critical success a point the more, a critical failure a point the less), the toxin's or the disease's
+  healing rate the better by its power (at H6 gone: "The remedy works"); nothing on it to treat, "It does nothing for
+  you."; the lindworm's numbing venom only by a strong one (power 2).  Given to another, a gift (the denizens have no
+  afflictions of their own yet).  Found: an apothecary's kit, a Khuzan elder's purse, a high priest's (outfits.txt);
+  for sale by whoever carries them.  The null ruleset: a poison's sickness or a disease's gone at once.
+
+## The character carries on *(slice 4.4, 2026-11-02: the book's where it speaks, the house's else; drafted for the user to review)*
+
+The plan's slice 4.4 (referee: improvement rolls; UI: save; "skill improvement by use and rest"; a save that keeps the
+character) and the user's D7 and D8 (DECISIONS.md: death permanent, with autosaves before danger as a setting, off
+hard mode; the character carries on into a new dungeon with its skills, wounds and gear), and the user's of 2026-10-23
+([First Use] skills open on first use and are told).  The referee's (dq0harn/skills.c, overlay 7), the world's asking
+for its words (wtend.c), the UI's start and end (main.c).
+
+- **A skill used is marked for a development roll** (the book's Skills 7: a stressful use earns one, success or
+  failure alike: one learns as much from failing).  Used: any test of a skill the referee makes for the character (a
+  purpose's skill, test_sk's: climbing, searching, picking a lock, first aid ...); in a fight, the skill of the weapon
+  it strikes with, or of the one it fights with when it blocks or counters (the house's: a shield's block marks the
+  weapon's skill, not Shield, for now), and Dodge when it dodges; a missile's skill as it shoots or throws.  An
+  attribute's test (Strength, Will) marks nothing: the book develops skills.  A bit a skill (marks, kept in the save:
+  pc.hm's second "body" line, "body u", the marks in hex, then the rest toward the rolls).
+- **The rolls come after a night's rest** *(the house's)*: eight hours of rest since the last rolls (sleep, a wait,
+  standing still: the time the world tells the referee of, RS_TIME's at rest; every minute while it's hurt, else at the
+  clock's four-hour watches, so a rest is counted in those pieces), each marked skill one roll, the book's: d100 and its
+  skill base over its mastery, a point more, never past 100 and the base.  Then the marks are cleared; the rest past
+  the night isn't carried.  Told ("Your Climbing skill has improved (46).") as the referee's other news is, as it wakes
+  (held while it sleeps).  The rolls by their own dice (QUIET's: the game's other dice roll as they would).  Why rest:
+  the plan's "by use and rest"; the book's stress rolls are the GM's to grant at once and its practice rolls monthly,
+  and a night's sleep is a natural time between, out of the player's way.  Why one roll a skill: the book's, more only
+  for a hard time of it.
+- **Not yet:** the book's monthly practice (SMPs) and teachers (no study in the dungeon); its skill decline (optional:
+  not used).  Its limits on weapons (past 70 only by combat) and Initiative (only by combat) hold of themselves, all
+  the game's marks of them being a fight's.
+- **Every actor:** a denizen's sheet (fight.c's struct beast) has no skills of its own, its kind's figures the
+  bestiary's, so it neither marks nor develops; the hook (skill_used) is the character's sheet's.
+- **[First Use] skills open as they're first used** (the user's, 2026-10-23; the book's skill table: those with no
+  months of teaching, Religion's rituals excepted): opened at their opening level as the test is made (its figure the
+  same: a skill not opened was tried at its opening level already) and told, "You've begun to learn Swimming by doing it
+  (12)."  The skills the game tests that open so: Swimming (P_SWIM), Acrobatics (P_BALANCE), Physician (first aid),
+  Cookery (appraising food); and a weapon's skill the first time it's used in a fight (the book's, Combat 19).  Those
+  learnt by study stay unopened, tried at their opening level as before: Lockcraft, Lore, Tracking, Animalcraft,
+  Mining, appraising's crafts; Drawing the house's exception as before (the map kept).
+- **Told as soon as the world asks** *(the house's)*: a skill opened mid-test is news the referee holds (RS_DESCRIBE b
+  4's), flagged in the character's conditions (rs.h's C_NEWS) so the world asks for the time's news within the minute
+  (wtend.c), as it does for what time did to the body.
+- **Free pounds** (D13, the user's): the first pounds carried are free of encumbrance, ten at Strength 10, doubling each
+  four points (tenths of a pound: 100, 119, 141 and 168 at Strength 10 to 13, twice those each four more: 4 lb at 5,
+  14 at 12, 24 at 15, 40 at 18, 57 at 20, 134 at 25).  The book's encumbrance (the load over Endurance) is on the rest.
+  The sheet tells the whole load and the free part: "load 68 lb (14 free), encumbrance 5".  (skills.c's set_load.)
+  Every actor where it applies: a denizen's load isn't counted (its sheet has none), so it bears its things freely as
+  before.  The null ruleset has no encumbrance.
+- **A weapon's version, and Strength** (D13, the user's: Strength doesn't add to impact; it sets how heavy a weapon can
+  be wielded without penalty; heavier versions hit harder; strong characters are made with heavier weapons).  The
+  book's custom weapons (Combat 3): a weapon light (a quarter lighter), average, or heavy (a quarter heavier), its
+  item's own (items.h's WV_*, in its size; its weight the world's, so its load).  Its impacts by its version, the book's
+  table at Strength 9-12 for every Strength (the user's: Strength adds nothing): light 80%, average 100%, heavy 120%
+  of each aspect's, rounded *(the house's reading)*.  The heaviest version wielded without penalty *(the house's
+  numbers, for review)*: light at any Strength, average from 6, heavy from 13 (the book's table's row boundaries);
+  each version heavier two steps (10) worse to strike and to block with it.  The character made with its weapons the
+  heaviest its Strength wields freely: heavy at 13 or more, light at 5 or less (the referee's RS_OUTFIT x[2], the
+  world's kit).  Appraised: "It's a heavy one." (plain to the hand).  The referee told by RS_EQUIP's marks (L or H after
+  a weapon's quality).  Every actor: a denizen's weapon is average (the outfits' gear's versions to come), its Strength
+  its sheet's, rolled about its kind's (the book's less 7 and 2d6), so one under 6 is two steps the worse with it: one
+  kobold in six (its kind's 8), one in 36 of the kinds at 10, none of those at 11 or more.  A blow at a thing, a
+  missile, are as before.
+  (skills.c's heft, fight.c; things.c's tools, s_weight_of, s_kit.)
+- **A wrecked door, window or portcullis appraises by its state** (D13): its quality asked, "You judge it ruined, past
+  mending.", its make no matter now; a closer look and its condition tell it broken down as before.  (fixt.c's
+  o_portal_look.)
+- **A slip climbing out of a pit ends the climb** (D13): a marginal failure off its floor slides it back to the floor
+  ("You slip, and slide back down to the pit's floor: 10 feet to climb (climb up to try again)."), the climb over, the
+  player's to say what next; "climb up" (u) in a pit climbs out again, to where it fell in from (or the square it faces,
+  a game carried on since).  A critical failure is a fall, as before; a ledge's slip slides 5 feet back and goes on, as
+  before.  (dq0w.c's climb_round_on, pit_climb.)
+- **Death, and the autosave** (D7): the game is kept as the character comes into a stratum, and as it's quit (the
+  autosaves); a death is not kept: the last save stays, to go back to by starting the game again with its folder ("Your
+  last save is kept: start the game again with its folder to go back to it.").  **Hard mode** (dq0 -H, kept in the
+  save: the user's "turned off, it's hard mode"): a death ends the save, "Hard mode: there's no save to go back to.",
+  and the folder begins a new game, a new character.  *(For review: the autosaves are as they were, at a stratum and a
+  quit; "before danger" (a fight's start, a trap) is to come, each a save's time on the card.)*
+- **The ending** (death, the theme's goal reached, the way out taken): the theme's words, what's next (above, or "Your
+  character carries on: start the game again with this save's folder, and go on into a new dungeon."), the character's
+  sheet as it ends.
+- **Carrying on** (D8): the game begun again with the folder of one ended alive (the goal reached, or the way out
+  taken) begins a new dungeon (its seed -s's, or the clock's: a new history and theme) with the same character: its
+  sheet as it ended (its skills, its wounds as they are, healing on, its fatigue, its skills used since their rolls),
+  and its gear: the things it carried out, its money among them, kept with the save (the world's kit.dat, written
+  with every save: an outfit's list of them, what's worn and held, then what's in each) and made as its outfit in
+  the new dungeon in place of one drawn.  *(The house's, for review:)* each thing made anew as an outfit's is (whole,
+  its light's fuel and its oil renewed, its coins the new region's; left behind, a key, its lock the old dungeon's,
+  and the old theme's own things, its puzzle's pieces, with what's in them;
+  its weapons the version its Strength wields freely, as a new character's); 64 things at most.  A game begun in the
+  folder that isn't carried on empties kit.dat first.  Its ruleset the one dq0 -r names (harn if none).
+
+## Decided, not yet built
 
 - **Mental maps** (DUNGEON.md: a map in the character's head that fades): slice 4.2's map (its bearings, by
   Awareness or Mining, built: Bearings underground, above).
@@ -2802,19 +3046,6 @@ These are the house's.
 
 ## Open
 
-- **Skills opened as they're used** (slice 4.2's, the user's, 2026-10-23: [First Use] skills open at their OML on
-  first use and are told; those learnt by study don't open on the spot).  Today a skill not open is tested at its
-  opening level less its group's penalty and stays unopened (the user's, 2026-10-20), but Drawing, opened by the first
-  map drawn (the map kept).  The skills the game tests that a character may not have: on first use, Swimming
-  (P_SWIM), Acrobatics (P_BALANCE), Physician (P_FIRST_AID), Cookery (appraising food); by study, Lockcraft (2 months:
-  P_PICKLOCK, P_DISARM, P_ASSESS), Lore (1: P_LORE, appraising books and bones), Tracking (1: P_TRACK), Animalcraft
-  (1: P_ANIMALS), Mining (1: P_DIG), Drawing (1: P_DRAW, the house's exception), and appraising's crafts: Weaponcraft
-  (4), Metalcraft (2), Timbercraft (1), Hidework (1), Textilecraft (1), Ceramics (2), Jewelcraft (2), Masonry (1),
-  Glassworking (3).  Every other the game tests every character has.  Opening the first-use ones is a few bytes in the
-  referee's test (dq0harn.c's test_sk), but each test's asker would have to tell it: the user's to choose.
-- **Skills developed by use** (the book's development rolls): not in the game.  The hook would be easy: every skill
-  test passes through dq0harn.c's test_sk, where a success could mark the skill (a bit each), the book's roll
-  (harn.h's harn_develop) made for the marked ones when the game gives them (a rest, a day's end).
 - **Sight's detail by distance** (the user's, 2026-10-20): the light limits what's seen more than distance does,
   but within it the eyes set how much detail is made out (movement only, then a shape, humanoid or not, then the
   race), by the sight attribute, unless blind; modelled if it can be, perhaps later.  For now a look one way's

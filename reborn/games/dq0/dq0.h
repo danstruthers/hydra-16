@@ -83,6 +83,9 @@ void __fastcall__ ask_line (char* b, unsigned char max);  /* A line typed, waiti
 #define PACE_TURNS      3                       /* The world moves only as the character does (a turn game) */
 extern unsigned long now;                       /* The game's time */
 extern unsigned char pace, paused;
+extern unsigned char hard;                      /* Hard mode (dq0 -H, D7's setting: no autosave to go back to, a
+                                                **   death the save's end; kept in the save's pace, its top bit: slice
+                                                **   4.4's) */
 extern unsigned char plain;                     /* The map in plain letters, no colours (the player's: "colour off",
                                                 **   pace.c's; kept with the game: main.c's save) */
 extern const char* savedir;                     /* (main.c's: dq0 -d's, the save's folder) */

@@ -70,11 +70,12 @@ static unsigned char small;                     /* (dq0 -C: the caches small, th
 static unsigned char gear;                      /* (dq0 -K: the kit as it was, no outfits drawn, the tests') */
 static const char* kit;                         /* (dq0 -k: things more, as the game starts: a tool, ...) */
 static const char* tfile;                       /* (dq0 -t: a theme written by hand) */
-static unsigned char made;                      /* (The theme to read: 0xFF the game's own, themegen's; theme.h) */
+unsigned char hard;                             /* (Hard mode: dq0 -H's, the save's pace's top bit) */
 const char* savedir;                            /* (dq0 -d: the save's folder; task.c's meta too) */
 unsigned char __fastcall__ things (unsigned char op, const char* name);   /* (way.c's too, part 6's) */
 void gear_look (void);                          /* (Part 11: a denizen's things made out) */
 static void to_hand (void);
+void __fastcall__ came (const struct msg* m);    /* (Part 6's: come into a stratum, told and kept) */
 void __fastcall__ news (const struct msg* m);    /* (Part 11's: the rarer news, worded; a thing hidden; the hands' and
                                                 **   limbs': slice 4.1b's) */
 void __fastcall__ hide (const char* w);
@@ -400,7 +401,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    31                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    32                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -446,7 +447,10 @@ static void sheet (void)
                                                 **   their fatigue), 2026-10-31; 29, world.dat's time of day believed,
                                                 **   the hub's tb, 2026-10-31; 30, the diagonal ways' cut
                                                 **   corners (T_CUT) in the chunks and the change records; 31, the
-                                                **   tunnellers: DO_DIG among the doings, slice 4.11's) */
+                                                **   tunnellers: DO_DIG among the doings, slice 4.11's; 32: the same seed's
+                                                **   natural chunks not as they were, great caverns and sloping tunnels
+                                                **   in them, a dungeon's change records laid on what they were made
+                                                **   for, 2026-11-02) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -463,17 +467,19 @@ unsigned char plain;
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
+static char spath[56];                          /* (A path in the save's folder: save_path's, part 3's save_at's) */
+
 static char* __fastcall__ save_path (const char* name)
 {
-    static char p[56];
-
-    strcpy (p, savedir);
-    strcat (p, "/");
-    strcat (p, name);
-    return p;
+    strcpy (spath, savedir);
+    strcat (spath, "/");
+    strcat (spath, name);
+    return spath;
 }
 
-/* A game kept in the folder: its state read (0), or -1 (none) */
+/* A game kept in the folder: its state read (0); 1, one ended, its character alive (the theme's goal reached, or the
+** way out taken), to carry on into a new dungeon, its sheet the character's (D8's, slice 4.4's); or -1 (none, or one
+** ended in its death: a new game, a new character) */
 static int load_save (void)
 {
     int fd = open (save_path ("game.dat"), O_RDONLY), n;
@@ -483,7 +489,29 @@ static int load_save (void)
     }
     n = read (fd, &sv, sizeof sv);
     close (fd);
-    return n == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER && !sv.q.done ? 0 : -1;
+    if (n == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER) {
+        if (!sv.q.done) {
+            return 0;
+        }
+        if (sv.q.done != END_DIED) {
+            return 1;
+        }
+    }
+    return -1;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW3CODE")             /* (Part 3's, the map's: part 1's room, slice 4.4's; none of the commands'
+                                                **   path the longer for it, part 13's copied in at every command) */
+#pragma rodata-name (push, "SW3RODATA")
+
+static char* __fastcall__ save_at (const char* name)
+{
+    strcpy (spath, savedir);
+    strcat (spath, "/");
+    strcat (spath, name);
+    return spath;
 }
 
 /* The game kept: the referee's sheet, the maker's seen maps, the denizens' records, the world's (its change records,
@@ -498,7 +526,7 @@ void s_save_game (void)
     if (!savedir) {
         return;
     }
-    strcpy (HUB->slot[SLOT_UI].text, save_path ("pc.hm"));
+    strcpy (HUB->slot[SLOT_UI].text, save_at ("pc.hm"));
     r = referee (RS_SAVE, 0);
     r->state = REQ_FREE;
     q = &HUB->mreq[ASK_UI];                     /* (The maker's seen maps: asked, and waited for) */
@@ -517,18 +545,23 @@ void s_save_game (void)
     }
     sv.magic = SAVE_MAGIC;
     sv.version = SAVE_VER;
-    sv.pace = pace;
+    sv.pace = pace | hard << 7;                 /* (Hard mode, its top bit: slice 4.4's) */
     sv.seed = HUB->seed;
     sv.pc = P;
     sv.q = Q;
     sv.plain = plain;
-    if ((fd = open (save_path ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
+    if ((fd = open (save_at ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
         write (fd, &sv, sizeof sv);
         names_keep (fd, 0);                     /* (The names given: the theme bank's) */
         alias_keep (fd, 0);                     /* (The shortcuts: the theme bank's too) */
         close (fd);
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
 
 /* The save's names given (after its header) */
 static void __fastcall__ load_names (void)
@@ -594,7 +627,7 @@ static void __fastcall__ waited (void* q)
 static void world_words (void);
 static char gods[112];                          /* (The world's deities' names, read as the game starts: world_words') */
 
-static void __fastcall__ start_world (unsigned long seed, const char* file)
+static void __fastcall__ start_world (unsigned long seed, const char* file, unsigned char made)
 {
     struct req* r;
     unsigned char k;
@@ -992,14 +1025,7 @@ static unsigned char events (void)          /* (How many there were) */
         case E_ARRIVE:
             if (m.who == 0) {
                 if ((m.w1 & 0xFF) == A_DOWN || (m.w1 & 0xFF) == A_UP) {
-                    k = m.w1 >> 12;             /* (The link's kind: a ladder, or a stairway) */
-                    tell ((m.w1 & 0xFF) == A_DOWN ? (k == O_LADDER_DOWN ? T_YOU_CLIMB_DOWN :
-                        k == O_SHAFT_DOWN ? T_YOU_CLIMB_DOWN_2 : k & O_FELL ? T_PICK_YOURSELF_UP : T_YOU_GO_DOWN) :
-                        k == O_LADDER_UP ? T_YOU_CLIMB_THE : k == O_SHAFT_UP ? T_YOU_CLIMB_UP :
-                        T_YOU_CLIMB_THE_2);
-                    theme_named (TN_STRATUM, sight_get ()->sname);
-                    sayf (" You come into the %s.", tname);
-                    save_game ();               /* (Kept as it comes into a stratum) */
+                    came (&m);                  /* (Come into a stratum: told and kept, part 6's) */
                 }
                 k = m.w1 & 0xFF;
                 if (k == A_CROSSED) {
@@ -1126,6 +1152,29 @@ static unsigned char events (void)          /* (How many there were) */
     }
     return n;
 }
+
+/* The character come down or up a way between strata (E_ARRIVE's A_DOWN, A_UP: the link's kind in w1's high four bits:
+** a ladder, a stairway, a shaft, a long slope, slice 4.10's), told, and the game kept (main's events' till 2026-11-02:
+** the main RAM's room; part 6's, its room) */
+#pragma code-name (push, "SW6CODE")
+#pragma rodata-name (push, "SW6RODATA")
+void __fastcall__ s_came (const struct msg* m)
+{
+    unsigned char k = m->w1 >> 12;
+
+    if (k == O_RAMP_DOWN || k == O_RAMP_UP) {
+        msg (k == O_RAMP_DOWN ? "You walk down the long slope." : "You trudge up the long slope.");
+    } else {
+        tell ((m->w1 & 0xFF) == A_DOWN ? (k == O_LADDER_DOWN ? T_YOU_CLIMB_DOWN :
+            k == O_SHAFT_DOWN ? T_YOU_CLIMB_DOWN_2 : k == O_FELL ? T_PICK_YOURSELF_UP : T_YOU_GO_DOWN) :
+            k == O_LADDER_UP ? T_YOU_CLIMB_THE : k == O_SHAFT_UP ? T_YOU_CLIMB_UP : T_YOU_CLIMB_THE_2);
+    }
+    theme_named (TN_STRATUM, sight_get ()->sname);
+    sayf (" You come into the %s.", tname);
+    save_game ();                               /* (Kept as it comes into a stratum) */
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ==== Part 11: the rarer news of the world's, worded (events()'s, the character's: a dig, a ledge, a climb, a harm, a
 ** portal worked; its own part, the main RAM's room: slice 4.1b's) */
@@ -2289,6 +2338,7 @@ portal:
             deal (cmd.aux);
         }
         return;
+    case VB_TRADE:                              /* (The market, entertaining: part 15's whole, 2026-11-02) */
     case VB_GIVE_OBJECT:
         if (errand ()) {
             deal (SW_GIVE);
@@ -2467,7 +2517,11 @@ void __fastcall__ s_args (int argc, char* argv[])
                                                 **   water grown in the chunks, the walks' as they were, slice 4.9's;
                                                 **   -M every built stratum mixed, slice 4.10's; -U no rubble, the
                                                 **   passages as they were made; -A every built stratum's passages on
-                                                **   the diagonal, 2026-11-01) */
+                                                **   the diagonal, 2026-11-01; -V a great cavern in every region of a
+                                                **   natural stratum, -P every stairway down a long slope, -D every
+                                                **   built stratum's rooms at 45 degrees, 2026-11-02) */
+        } else if (!strcmp (argv[i], "-H")) {
+            hard = 1;                           /* (Hard mode: D7's, no autosave to go back to; kept in its save) */
         } else if (!strcmp (argv[i], "-a")) {
             autogo = 1;                         /* (For the tests: a long task goes on at every soft question) */
         } else if (!strcmp (argv[i], "-N")) {
@@ -2489,7 +2543,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d dir] [-t theme] [-r rs] [-T..]");    /* (Not the tests' own: the room's) */
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d dir] [-H] [-t theme] [-r rs] [-T..]");    /* (Not the tests' own: the room's) */
         }
     }
 }
@@ -2503,18 +2557,27 @@ void __fastcall__ s_args (int argc, char* argv[])
 /* The game begun: its arguments, a game kept carried on, the title, the character, the world started */
 void __fastcall__ s_begin (int argc, char* argv[])
 {
+    signed char n = -1;
+
     args (argc, argv);
-    if (savedir && !load_save ()) {             /* (A game kept there: carried on) */
+    if (savedir && !(n = load_save ())) {      /* (A game kept there: carried on) */
         resumed = 1;
         seed = sv.seed;
         Q = sv.q;
         plain = sv.plain;
+        hard = sv.pace >> 7;                    /* (Its hard mode its save's: slice 4.4's) */
         if (pace == 0xFF) {
-            pace = sv.pace;
+            pace = sv.pace & 0x7F;
         }
         file = save_path ("pc.hm");
     } else if (savedir) {
         mkdir (savedir, 0755);                  /* (A new game: its folder) */
+        if (n > 0) {
+            file = save_path ("pc.hm");         /* (Its character carried on, into a new dungeon: D8's; its kit, the
+                                                **   world's kit.dat, its outfit) */
+        } else if ((n = open (save_path ("kit.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
+            close (n);                          /* (Not carried on: no kit kept to take up, slice 4.4's) */
+        }
     }
     if (!resumed) {                             /* (Its ruleset's referee: a game carried on keeps its own) */
         strcpy (sv.referee, "dq0");             /* (strncpy, not strncat: the library's in the main RAM) */
@@ -2527,9 +2590,9 @@ void __fastcall__ s_begin (int argc, char* argv[])
     title ();
     t_flush ();                                 /* (Its words out now: the start's progress shown, 2026-10-30) */
     starting = 1;
-    made = history (seed);                      /* (The game's own theme, or a stand-in's: which) */
+    n = history (seed);                         /* (The game's own theme, or a stand-in's: which) */
     dots (2);                                   /* (Its tasks started: told, a dot as each's waited for) */
-    start_world (seed, file);                   /* (The character with it: its file, or the ruleset's generator) */
+    start_world (seed, file, n);                /* (The character with it: its file, or the ruleset's generator) */
     status ();
     story (resumed);                            /* (The theme's) */
     blank ();
@@ -2539,10 +2602,22 @@ void __fastcall__ s_begin (int argc, char* argv[])
     t_done ();
 }
 
-/* The game's end: kept (as it ends: the game's quit, not lost), the world stopped */
+/* The game's end: kept (as it ends: the game's quit, not lost), the world stopped.  An ending's, the character's sheet
+** told as it ends; a death's not kept (its last save, the autosave as it came into its stratum, left to go back to: D7's)
+** unless it's hard mode (dq0 -H: the save marked ended, the character gone; slice 4.4's) */
 void s_finish (void)
 {
-    save_game ();
+    struct req* r;
+
+    if (Q.done) {
+        r = referee (RS_DESCRIBE, 0);
+        say (r->text);
+        blank ();
+        r->state = REQ_FREE;
+    }
+    if (Q.done != END_DIED || hard) {
+        save_game ();
+    }
     stop_world ();
     t_end ();
 }
@@ -2822,13 +2897,14 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 #pragma rodata-name (push, "SW14RODATA")
 static void __fastcall__ door_words (unsigned char a)
 {
-    static const char* const said[DE_BREAKS + 1 - DE_OPENS] = {
+    static const char* const said[DE_WALLS + 1 - DE_OPENS] = {
         "opens the door\0a door opening", "shuts the door\0a door shutting", "slams the door shut\0a door slamming",
         "unlocks the door\0a key in a lock", "locks the door\0a key in a lock",
         "drops a bar across the door\0a bar dropping", "lifts the door's bar\0a bar scraping",
         "strains at the door\0a door creaking", "bursts the door open\0a door bursting",
         "can't force the door\0a door creaking", "batters at the door\0blows on a door",
-        "breaks the door down\0a door crashing in"
+        "breaks the door down\0a door crashing in", "is showered with rock from the roof\0rock falling",
+        "hangs a new door\0hammering", "walls up the way\0stones being laid"
     };
     const char* s = said[a - DE_OPENS];
 

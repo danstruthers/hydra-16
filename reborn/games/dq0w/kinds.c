@@ -201,6 +201,10 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "mankar", K_HAND | K_HANG, 8, 2, 0, 0, 0, 0, 3, "mankar", MT_IRON, AP_WEAPON, 336 },   /* (The Gargun's: Combat 3's
                                                 **   (G), 84d and 110d, hung from the belt as an axe is) */
     { "mang", K_HAND | K_HANG, 12, 3, 0, 0, 0, 0, 3, "mang", MT_IRON, AP_WEAPON, 440 },
+    { "antidote", 0, 1, 1, 0, 0, 0, 0, 1, "cure", MT_GLASS, AP_FOOD, 192 },   /* (A vial of theriac, 48d, and a
+                                                **   physician's draught, 12d: the house's prices, HOUSE.md's remedies,
+                                                **   2026-11-02) */
+    { "remedy", 0, 1, 1, 0, 0, 0, 0, 1, "remedy", MT_GLASS, AP_FOOD, 48 },
 };
 #pragma rodata-name (pop)
 
@@ -255,7 +259,8 @@ const unsigned char throws[KI_COUNT] = {
     0, 0, 0, 0, 0, 0, 0, 0,                     /* (the theme's eight) */
     1, 1, 0, 2, 2, 2, 2, 2, 2, 2, 2,            /* furs, blanket, cask, crowns, brooch, necklace, pendant, goblet, gem,
                                                 **   talisman, dice */
-    2, 1, 1                                     /* farthings, mankar, mang */
+    2, 1, 1,                                    /* farthings, mankar, mang */
+    2, 2                                        /* antidote, remedy */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 

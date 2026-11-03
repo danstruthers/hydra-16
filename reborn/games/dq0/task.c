@@ -556,8 +556,11 @@ void __fastcall__ o_felt_words (unsigned w)
             "\nYou set to battering %s%s with the %s.", *lb >= 'a' ? "the " : "", lb, lb + 32);
         return;
     case WB_SPENT:                              /* (A thing used up, its kind: HOUSE.md's things used up) */
+        if (b >= KI_ANTIDOTE) {
+            return;                             /* (A remedy drunk: told as it's drunk, 2026-11-02) */
+        }
         hub_mem (KIND_BANK, lb, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
-        sayf (b == KI_RATIONS ? "\nThat was the last of your %s." : b == KI_WATER ? "\nYour waterskin is empty." :
+        sayf (b == KI_RATIONS || b == KI_BANDAGES ? "\nThat was the last of your %s." : b == KI_WATER ? "\nYour waterskin is empty." :
             "\nYour %s is %s.", lb, b == KI_INK ? "dry" :
             b == KI_QUILL ? "worn out" : "worn to nothing");    /* (Rations eaten: slice 4.9's) */
         return;
@@ -565,8 +568,8 @@ void __fastcall__ o_felt_words (unsigned w)
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "OV7CODE")
-#pragma rodata-name (push, "OV7RODATA")
+#pragma code-name (push, "OV1CODE")             /* (Overlay 1's since 2026-11-02: overlay 7's room) */
+#pragma rodata-name (push, "OV1RODATA")
 
 /* The way the character believes it faces, said (the status command's, after the referee's words of its state: slice
 ** 4.2's bearings, the north it believes in; unsure of it, said so) */
@@ -578,6 +581,10 @@ void o_facing_words (void)
     hub_mem (0, b, &HUB->pc_skew, 2);           /* (pc_skew and pc_lost) */
     sayf ("\nFacing: %s%s.", head_name[(f + b[0]) & 7], b[1] ? ", you think; you've lost your bearings" : "");
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "OV7CODE")
+#pragma rodata-name (push, "OV7RODATA")
 
 
 /* The task a stop names, by its word ("digging"; "": none, LT_NONE) */

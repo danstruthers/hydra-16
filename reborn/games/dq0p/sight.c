@@ -55,6 +55,7 @@ static unsigned char mine_ = 0;                 /* (The door's bar's side the ch
 static int fzz = 0;                             /* (door_add's: its height, the chunk's first square in the frame, its */
 static unsigned fox = 0, foy = 0;               /*   square, its facing) */
 static unsigned char flx = 0, fly = 0, ffc = 0;
+static struct sdoor* dp = 0;                    /* (door[e_]) */
 #pragma data-name (pop)
 
 static unsigned char __fastcall__ mouth (unsigned char i, unsigned char j)
@@ -86,17 +87,21 @@ static unsigned char __fastcall__ mouth (unsigned char i, unsigned char j)
 ** on (mine), or found from the far side; its lock, found (PP_FOUND: the world's, as it's tried) */
 static void __fastcall__ portal_seen (const struct portal* q)
 {
+    dp = &S.door[e_];
+    dp->kind = PK_DOOR;
     if (!q) {
-        S.door[e_].state = DOORWAY;
-    } else if (q->state & (PS_OPEN | PS_WRECKED)) {
-        S.door[e_].state = q->state & (PS_OPEN | PS_WRECKED);
-    } else if (q->parts & PP_FOUND) {
-        S.door[e_].state = q->state & (PS_BARRED | PS_LOCKED);
-    } else if (mine_ && q->bar == mine_ - 1) {
-        S.door[e_].state = q->state & PS_BARRED;
+        dp->state = DOORWAY;
+        return;
     }
-    S.door[e_].kind = q ? q->kind : PK_DOOR;
-    S.door[e_].parts = !q ? 0 : q->kind == PK_WINDOW ? q->parts : q->feat;
+    if (q->state & (PS_OPEN | PS_WRECKED)) {
+        dp->state = q->state & (PS_OPEN | PS_WRECKED);
+    } else if (q->parts & PP_FOUND) {
+        dp->state = q->state & (PS_BARRED | PS_LOCKED);
+    } else if (mine_ && q->bar == mine_ - 1) {
+        dp->state = q->state & PS_BARRED;
+    }
+    dp->kind = q->kind;
+    dp->parts = q->kind == PK_WINDOW ? q->parts : q->feat;
 }
 
 /* The traps the character knows of (found, or never hidden: an open pit) on the squares of its chunk it sees now */
@@ -122,15 +127,22 @@ static signed char __fastcall__ fz (int dz)
     return dz > 127 ? 127 : dz < -127 ? -127 : dz;
 }
 
+/* Tile t as this pass goes: those it sees, then those it only remembers */
+static unsigned char __fastcall__ shown (unsigned char t)
+{
+    return kn_ ? (t & (T_VIS | T_SEEN)) == T_SEEN : t & T_VIS;
+}
+
 /* The door[] e_ (and on to the next) filled in, of the chunk's square (i, j), q its portal: as it's seen or remembered
 ** (flx, fly the character's square, ffc its facing, fox, foy the chunk's first in the frame, fzz its height) */
 static void __fastcall__ door_add (unsigned char i, unsigned char j, const struct portal* q)
 {
-    S.door[e_].rel = REL8 (bearing ((int) i - flx, (int) j - fly), ffc) | kn_;
     portal_seen (q);                            /* (A portcullis, a window, a slit: its kind and parts) */
-    S.door[e_].x = fox + i;
-    S.door[e_].y = foy + j;
-    S.door[e_++].dz = fz (C->elev[j][i] - fzz);
+    dp->rel = REL8 (bearing ((int) i - flx, (int) j - fly), ffc) | kn_;
+    dp->x = fox + i;
+    dp->y = foy + j;
+    dp->dz = fz (C->elev[j][i] - fzz);
+    ++e_;
 }
 
 /* A room's, in the chunk in the window: its zones but z (the character's), seen now: where, how high, and how one
@@ -232,8 +244,12 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
         S.kind = rp.kind;
         S.lit = (rp.flags & R_LIT) != 0;
         whole = 1;
+        d = 0;                                  /* (A great cavern's walls seen: how many, to 6) */
         for (j = rp.y; j < (unsigned char) (rp.y + rp.h); ++j) {
             for (i = rp.x; i < (unsigned char) (rp.x + rp.w); ++i) {
+                if ((C->tile[j][i] & (T_VIS | 0x0F)) == (T_VIS | T_WALL)) {
+                    d += d < 6;
+                }
                 if ((C->tile[j][i] & (T_SEEN | 0x0F)) == T_FLOOR) {   /* (Its floor's: a cave's bounds take in rock) */
                     whole = 0;
                 }
@@ -244,8 +260,9 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
         S.rh = rp.h;
         S.rx = x - lx + rp.x;
         S.ry = y - ly + rp.y;
-        S.size = !whole ? S_PART : area <= 8 ? S_SMALL : area >= 30 ? S_LARGE : rp.w >= 3 * rp.h ||
-            rp.h >= 3 * rp.w ? S_LONG : S_MID;
+        S.size = rp.flags & R_CAVERN ? S_VAST + (d >= 6) : !whole ? S_PART : area <= 8 ? S_SMALL : area >= 30 ? S_LARGE :
+            rp.w >= 3 * rp.h || rp.h >= 3 * rp.w ? S_LONG : S_MID;     /* (A great cavern's part: vast, its walls
+                                                **   beyond the light or not, S_VASTW, slice 4.10's) */
         if ((k = zone_index (lx, ly)) != 0xFF) {
             z = &C->zone[k];
             if (z->gx) {
@@ -267,7 +284,7 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
             for (d = 0; d < 4; ++d) {           /* (Its doors seen) */
                 for (k = 0; wall_tile (&rp, d, k) && e_ < SEE_DOORS; ++k) {
                     i = C->tile[wall_y][wall_x];
-                    if ((TILE (i) == T_DOOR || TILE (i) == T_WINDOW) && (kn_ ? (i & (T_VIS | T_SEEN)) == T_SEEN : i & T_VIS) &&
+                    if ((TILE (i) == T_DOOR || TILE (i) == T_WINDOW) && shown (i) &&
                         !((q = portal_at (wall_x, wall_y)) != 0 && (q->state & PS_HIDDEN))) {
                         mine_ = ((d + 2) & 3) + 1;  /* (Its bar seen, on the room's side) */
                         door_add (wall_x, wall_y, q);
@@ -278,10 +295,10 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
             for (j = rp.y ? rp.y - 1 : 0; j <= rp.y + rp.h && j < CW; ++j) {     /* (Its passages' mouths seen) */
                 for (i = rp.x ? rp.x - 1 : 0; i <= rp.x + rp.w && i < CW && e_ < SEE_DOORS; ++i) {
                     d = C->tile[j][i];
-                    if (TILE (d) == T_CORR && (kn_ ? (d & (T_VIS | T_SEEN)) == T_SEEN : d & T_VIS) && mouth (i, j)) {
+                    if (TILE (d) == T_CORR && shown (d) && mouth (i, j)) {
                         door_add (i, j, 0);
-                        S.door[e_ - 1].rel |= MOUTH;
-                        S.door[e_ - 1].state = PS_OPEN;
+                        dp->rel |= MOUTH;
+                        dp->state = PS_OPEN;
                     }
                 }
             }
@@ -289,8 +306,7 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                 i = C->open[k].x;
                 j = C->open[k].y;
                 d = C->tile[j][i];
-                if (i >= rp.x && i < rp.x + rp.w && j >= rp.y && j < rp.y + rp.h &&
-                    (kn_ ? (d & (T_VIS | T_SEEN)) == T_SEEN : d & T_VIS)) {
+                if (i >= rp.x && i < rp.x + rp.w && j >= rp.y && j < rp.y + rp.h && shown (d)) {
                     S.open[r].rel = i == lx && j == ly ? 0xFF : REL8 (bearing ((int) i - lx, (int) j - ly), face) | kn_;
                     S.open[r].kind = C->open[k].kind;
                     S.open[r].x = x - lx + i;
@@ -310,14 +326,14 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
         for (d = 0; d < 4; ++d) {               /* (A door beside it, open or shut) */
             if ((p = at (sn, x + dir_x[d], y + dir_y[d])) != 0 && (TILE (*p) == T_DOOR || TILE (*p) == T_WINDOW) &&
                 S.ndoors < SEE_DOORS && !((q = portal_at (cx_, cy_)) != 0 && (q->state & PS_HIDDEN))) {
-                S.door[S.ndoors].rel = REL8 (H_OF (d), face);
                 e_ = S.ndoors++;
                 mine_ = ((d + 2) & 3) + 1;
                 portal_seen (q);
                 mine_ = 0;
-                S.door[e_].x = x + dir_x[d];
-                S.door[e_].y = y + dir_y[d];
-                S.door[e_].dz = fz (C->elev[cy_][cx_] - myz);
+                dp->rel = REL8 (H_OF (d), face);
+                dp->x = x + dir_x[d];
+                dp->y = y + dir_y[d];
+                dp->dz = fz (C->elev[cy_][cx_] - myz);
             }
         }
         at (sn, x, y);                          /* (The doors further along it, seen or remembered: named, the look not

@@ -50,7 +50,7 @@ unsigned s_body_ask (void)
         ++n;
     }
     bled_at = (unsigned) body_at;
-    if ((!n || (!bleeds && !(HUB->pcsum.cond & (C_BLEEDING | C_POISONED)) && HUB->pcsum.health == H_FINE &&
+    if ((!n || (!bleeds && !(HUB->pcsum.cond & (C_BLEEDING | C_POISONED | C_NEWS)) && HUB->pcsum.health == H_FINE &&
         !HUB->pc_air && HUB->now < wdue)) && HUB->pc_under != 0xFF && !HUB->pc_aff && !HUB->pc_flm) {   /* (Hurt:
                                                 **   its rest toward its healing told, a minute at a time; in bad air,
                                                 **   the same; drowned, part 73's, exposed or its flame's news, told

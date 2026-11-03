@@ -96,6 +96,8 @@ struct room {
                                                 **   world's, ROOM_LIT: DUNGEON.md, light kept) */
 #define R_MURDER        0x04                    /* (A gatehouse's: murder holes in its vault) */
 #define R_SCONCE        0x08                    /* (Built with sconces on its walls: the style's odds, stock.c's) */
+#define R_CAVERN        0x10                    /* (A great cavern's part: the one room across the chunks its region's
+                                                **   cavern touches, each chunk's its part, slice 4.10's: caves.c's) */
 /* A room's use, its kind (the theme's words: its rooms' eight, then its uses'); a cave's chamber U_CAVE (kept in 8
 ** bytes, struct room: the tasks index their rooms by a shift) */
 enum { U_CHAMBER, U_HALL, U_CELL, U_VAULT, U_CRYPT, U_GALLERY, U_CAVE, U_STORE, U_KITCHEN, U_PANTRY, U_BARRACKS,

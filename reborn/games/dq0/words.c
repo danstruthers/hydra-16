@@ -325,7 +325,8 @@ static void __fastcall__ opening (unsigned char i)
     add (k == O_WAY_OUT ? "the stairs up to the way out" : k == O_STAIRS_UP ? "a stairway leading up" :
          k == O_STAIRS_DOWN ? "a stairway leading down" : k == O_LADDER_UP ? "a ladder going up" :
          k == O_LADDER_DOWN ? "a ladder going down" : k == O_SHAFT_UP ? "a shaft in the ceiling" :
-         k == O_SHAFT_DOWN ? "a shaft in the floor" : "a window");
+         k == O_SHAFT_DOWN ? "a shaft in the floor" : k == O_RAMP_UP ? "a long slope leading up" : k == O_RAMP_DOWN ?
+         "a long slope leading down" : "a window");
     if (rel != 0xFF) {
         add (" ");
         add (relname[rel & 7]);
@@ -343,6 +344,14 @@ static void room (void)
         add ("It is dark. You can see nothing, but you feel the floor of a room about you.");
         return;
     }
+    if (S->size >= S_VAST) {                    /* (A great cavern: where in it untold, its walls beyond the light or
+                                                **   not, slice 4.10's) */
+        add (S->size == S_VAST ? "You are somewhere in a vast cavern, its walls beyond your light." :
+            "You are in a vast cavern");
+        if (S->size == S_VAST) {
+            goto told;
+        }
+    } else {
     if (S->size != S_PART) {                    /* (Where in it, its size and shape: slice 4.0's, part 8's) */
         art = lbe + room_where ();              /* (Its words put in lb, at its end: part 8's) */
         lbe += strlen (lbe);
@@ -358,6 +367,7 @@ static void room (void)
         *art = 'n';
         ++lbe;
     }
+    }
     if (S->lit || !sight_light) {
         if (S->lit) {
             add (", ");
@@ -370,7 +380,8 @@ static void room (void)
         add (sight_lamp);
         add (".");
     }
-    if (sight_close && S->size != S_PART) {      /* (Its figures, a close look's: what it's seen of it) */
+told:
+    if (sight_close && S->size != S_PART && S->size < S_VAST) {  /* (Its figures, a close look's: what it's seen of it) */
         add (" It is ");
         addn (SQ_FT * S->rw);
         add (" feet by ");

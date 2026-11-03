@@ -67,7 +67,8 @@
                                                 **   the afflictions, pc_air ... pc_dose; 35, the time of day believed,
                                                 **   tb, BRG_SKY, rs.h's TIME_STEPS and timesense; 36, the
                                                 **   tunnellers, I_KIT's KT_DIG, DG_*, dig_t, DE_DIG, DE_DUG, AG_PICK,
-                                                **   AG_SPADE, DO_DIG) */
+                                                **   AG_SPADE, DO_DIG; 37, the market's: the sway's word2 its coins
+                                                **   (SW_COIN ...), SW_BUY ... SW_ENTERTAIN, OR_OPEN ..., SR_WONT ...) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -318,7 +319,13 @@ enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, T_COMMA
                                                 **   denizens' ring's: who the actor plus 1, b the heading it digs
                                                 **   (H_*), x[2] what it digs with (DG_*), x[0] x[1] as its other
                                                 **   intents'; a spell of digging at a time, the world's, by the
-                                                **   character's rules: dq0w/wdig.c) */
+                                                **   character's rules: dq0w/wdig.c; w1 w2 the square it digs.  Who
+                                                **   0, a record's, away from the character: its spell at once,
+                                                **   untested, x[2] its stratum, x[0] its tools, slice 4.11's rest) */
+#define KT_BUILD        0xC0                    /* (I_KIT's a, a builder's (slice 4.11's rest): a door broken down put
+                                                **   up again, or a way dug in walled up: w1 w2 its square, b the
+                                                **   heading to it; who as KT_DIG's, a record's x[2] its stratum: the
+                                                **   world's wdig.c, a spell, a wall six) */
 #define DG_CLAWS        0x01                    /* (KT_DIG's x[2]: its claws, a burrower's (kinds.txt's ways d), */
 #define DG_PICK         0x02                    /*   a pick it carries, */
 #define DG_SPADE        0x04                    /*   a shovel, a spade or a mattock it carries) */
@@ -588,11 +595,17 @@ enum { TG_HOURS, TG_SLEEP, TG_OUT };            /* (The hub's tb.how: the hours 
 enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_ALARM, DE_PASTIME,
     DE_UP = 16, DE_DIG = 24, DE_DUG, DE_DIGS,
     DE_OPENS, DE_SHUTS, DE_SLAMS, DE_UNLOCKS, DE_LOCKS, DE_BARS, DE_UNBARS, DE_STRAINS, DE_BURSTS, DE_HOLDS,
-    DE_BATTERS, DE_BREAKS };                    /* (A door worked by a denizen, Phase 3C's one path, the world's
+    DE_BATTERS, DE_BREAKS,                      /* (A door worked by a denizen, Phase 3C's one path, the world's
                                                 **   wport.c: opened, shut, slammed shut as it flees, unlocked and
                                                 **   locked with its key, barred, its bar lifted out, forced (its
                                                 **   strain begun, burst open, holding), battered (a blow), broken
                                                 **   down: w1 w2 the door's square) */
+    DE_ROOF,                                    /* (Poor rock come down on a tunneller's spell gone badly, slice
+                                                **   4.11's rest: its hole two feet less, the rock showering it; told
+                                                **   as a door's are, at its square) */
+    DE_HANGS,                                   /* (A door broken down put up again by a builder: at the door's
+                                                **   square, slice 4.11's rest) */
+    DE_WALLS };                                 /* (A way dug into its home walled up by a builder: at its square) */
                                                 /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post
@@ -634,7 +647,8 @@ enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's
 #define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
 #define E_STOPPED       0x8000                  /*   (an HC_STRUCK's: the blows stopped, the striker too hurt) */
-#define O_FELL          8                       /* (E_ARRIVE's link kind, or'd: fallen down it, jumped) */
+#define O_FELL          15                      /* (E_ARRIVE's link kind: fallen down a shaft, jumped; a kind of its
+                                                **   own since the long slopes, 8 and 9, 2026-11-02) */
 
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED,
        A_STOPPED, A_STEPPED };                  /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
@@ -752,10 +766,11 @@ enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT, FA_TRAP }; 
 #define LEDGE_MET       120                     /* (E_LEDGE's w1, as a signed byte, past it: what a straight walk came
                                                 **   to, FA_* (2026-11-02); a ledge's feet at most it) */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
-enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD, K_HELD };    /* E_CLIMB's how: begun, on, slipped
+enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD, K_HELD, K_SLID };    /* E_CLIMB's how: begun, on, slipped
                                                 **   back, fallen, up, down; jumped down (a ledge, a shaft); no hold
                                                 **   found yet (at its foot: nothing to slip back, nor to fall); its
-                                                **   grip kept, struck or hurt part way (HOUSE.md: holding on) */
+                                                **   grip kept, struck or hurt part way (HOUSE.md: holding on); slid back
+                                                **   to a pit's floor, the climb ended (D13's, slice 4.4's) */
 enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: what's done (a door's opened, ... */
        PA_RAISE, PA_LOWER, PA_BREAK, PA_THROUGH, PA_DISARM,    /*   a portcullis raised, a window's glass broken,
                                                 **   climbed through, a trap disarmed: one in reach, or the door's; */
@@ -979,6 +994,8 @@ struct actor {
     unsigned char   move;                       /* How its legs move it (rs.h's C_MOVE bits, the referee's, down 12: 1
                                                 **   lame, half its pace; 2 crawling or hopping, a third; 4 stuck: slice
                                                 **   4.1b's) */
+#define BM_NOT_UP       0x80                    /* (Its move's: down, a failed try to rise told: not again till it
+                                                **   rises, falls or is wounded, the world's wfight.c, 2026-11-02) */
     unsigned char   arm;                        /* Its weapon let fall, its kind (0 none), */
     unsigned        dropped;                    /*   and where it lies (an item: to take up again) */
     unsigned        x, y;                       /* (These, its doing and its name as struct sight's den: copied whole) */
@@ -1052,11 +1069,25 @@ enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIE
 ** an animal's by P_ANIMALS alone; words want a tongue in common), a request to an ally, a name given to one, a
 ** look at how it seems, a blow (a stand-in for the fights) */
 enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRIEND, SW_ATTACK, SW_ORDER, SW_NAME,
-       SW_GIVE };                               /* (SW_GIVE: a gift, slice 4.8's: the thing's worth and food in the
+       SW_GIVE,                                 /* (SW_GIVE: a gift, slice 4.8's: the thing's worth and food in the
                                                 **   request, the attitude moved by it; taken, the UI's to hand over) */
-enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH };   /* An ally's request (SW_ORDER's): follow the character,
-                                                **   wait where it is, go back to its own ways, fetch a thing */
-enum { SR_OK, SR_NONE, SR_FAR, SR_TONGUE, SR_BEAST, SR_MINDLESS, SR_AS_FAR, SR_NOT_ALLY, SR_CANT, SR_DOWN };
+       SW_BUY, SW_SELL, SW_PRICE, SW_OFFER, SW_HAGGLE,  /* (The market, 2026-11-02: a thing bought from one, sold to
+                                                **   one, its price asked, what it would give, haggled over (order 1:
+                                                **   the character's, sold); the goods the sway's item, its worth ix
+                                                **   (farthings, its condition's), its count iy; the coins, each side's
+                                                **   pennies, coin and its, their counts ncoin and nits; the reply's ix
+                                                **   the price, pennies) */
+       SW_ENTERTAIN };                          /* (One entertained: sung to, played or danced for, the referee's
+                                                **   performing skill by the order: PF_*) */
+enum { PF_ANY, PF_SING, PF_PLAY, PF_DANCE };    /* (SW_ENTERTAIN's order: the best of them, or the one said) */
+enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH, OR_OPEN, OR_CLOSE, OR_UNLOCK };   /* An ally's request (SW_ORDER's):
+                                                **   follow the character, wait where it is, go back to its own ways,
+                                                **   fetch a thing; a door opened, shut, unlocked (its square ix, iy:
+                                                **   2026-11-02, the minds' I_PORTAL) */
+enum { SR_OK, SR_NONE, SR_FAR, SR_TONGUE, SR_BEAST, SR_MINDLESS, SR_AS_FAR, SR_NOT_ALLY, SR_CANT, SR_DOWN,
+       SR_WONT, SR_NO_GOODS, SR_POOR, SR_BROKE, SR_SPURNED };   /* (The market's, 2026-11-02: it won't trade with the
+                                                **   character, it has no such thing to sell, the character hasn't
+                                                **   the money, it hasn't, it takes offence at the haggling) */
                                                 /* A sway's result: done (a test's: grade, was, now), none such in
                                                 **   sight, too far (an animal's out of reach), no tongue in common,
                                                 **   an animal (words don't reach it), mindless, as far as that way
@@ -1076,8 +1107,13 @@ struct sway {
     unsigned        t;                          /*   the tenths it took the character */
     unsigned        item, ix, iy;               /* (The UI's: a thing to fetch, its item and where it lies; a gift's
                                                 **   worth in farthings, ix, and 1 if it's food, iy; slice 4.8's) */
-    unsigned char   actor;                      /* (The reply's: the actor it was, plus 1) */
+    unsigned char   actor;                      /* (The reply's: the actor it was, plus 1; the market's request: the
+                                                **   one the goods were found on, plus 1) */
 };
+#define SW_COIN(s)      (((unsigned*) (s)->word2)[0])   /* (The market's, in word2, its words the UI's own: the */
+#define SW_ITS(s)       (((unsigned*) (s)->word2)[1])   /*   character's pennies and the actor's, their counts: */
+#define SW_NCOIN(s)     ((s)->word2[4])                 /*   2026-11-02, the denizens' main RAM's room) */
+#define SW_NITS(s)      ((s)->word2[5])
 
 #define IQ_SIZE         16                      /* The UI's intents */
 #define DI_SIZE         8                       /* The denizens' (their actors': hub.h's struct actor) */
@@ -1403,7 +1439,14 @@ enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind
                                                 **   before slice 4.10, the maker's) */
 #define GE_SLANT        0x10                    /* (dq0 -A, the tests': every built stratum's passages on the diagonal,
                                                 **   the maker's, 2026-11-01: ways off the compass, step 3) */
-#define GE_FLAGS        "KWMUA"                 /* (dq0's flags for them, a bit each in order: main.c's) */
+#define GE_CAVERN       0x20                    /* (dq0 -V, the tests': a great cavern in every region of a natural
+                                                **   stratum, its middle by the region's way between strata, the
+                                                **   maker's, slice 4.10's: caves.c's) */
+#define GE_RAMP         0x40                    /* (dq0 -P, the tests': every stairway down a long slope, any style's, every chunk a sloping way,
+                                                **   the maker's, slice 4.10's: plan.c's links_down) */
+#define GE_DIAMOND      0x80                    /* (dq0 -D, the tests': every built stratum's rooms at 45 degrees, the
+                                                **   maker's, ways off the compass, step 3's rest: caves.c's diamonds) */
+#define GE_FLAGS        "KWMUAVPD"             /* (dq0's flags for them, a bit each in order: main.c's) */
 #define CH_DRAW         0x01                    /* (pc_chart's: the things to draw a map with to hand, the catalogue's
                                                 **   by their keys: a sheet (paper, parchment) or its map, a pencil or
                                                 **   charcoal or a quill and ink, and a hand free; HOUSE.md's the map

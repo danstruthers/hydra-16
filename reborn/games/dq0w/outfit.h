@@ -81,7 +81,8 @@ enum { MD_ALL, MD_NEED, MD_CHANCE, MD_HEAD };   /* (A section's lines drawn: all
                                                 **   only read) */
 
 unsigned char outfit (void);                    /* (Part 57) The character's outfit drawn (the referee asked): its
-                                                **   things in the list, 0 none (the kit as it was) */
+                                                **   things in the list, 0 none (the kit as it was); else 1 and its
+                                                **   weapons' version (WV_*: a strong character's heavy, D13's) */
 unsigned char __fastcall__ draw_at (unsigned off, unsigned char mode);   /* (Part 59) The outfits' section at off
                                                 **   read, its head kept (ost), drawn as mode says if its flags are
                                                 **   ost.want's: 1 drawn, 0 not (none there, not wanted) */

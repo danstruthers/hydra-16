@@ -337,8 +337,10 @@ void o_sheet (void)
     put (", Move ");
     putn (harn_move (&pc));
     put ("; load ");
-    putn (harn_get_load (&pc));
-    put (" lb, encumbrance ");
+    putn (carried.cost / 10);                   /* (All of it, its free pounds told: D13's, skills.c's set_load) */
+    put (" lb (");
+    putn ((carried.cost - carried.wt) / 10);
+    put (" free), encumbrance ");
     putn (harn_get_ep (&pc));
     put ("; universal penalty ");
     putn (harn_get_up (&pc));

@@ -33,6 +33,10 @@ void __fastcall__ o_entered (unsigned char resumed)
     sayf (resumed ? "%s, %s, takes up where they left off." : "%s, %s, enters the dungeon.", P.name, P.occupation);
 }
 
+#pragma code-name (push, "OV12CODE")            /* (Overlay 12's: overlay 1's room, slice 4.4's; its strings with it) */
+#pragma rodata-name (push, "OV12RODATA")
+#pragma local-strings (push, on)
+
 /* Climbing's words: how a round went, and the feet to go (and a ledge come to: CW_RISES, CW_FALLS, its feet) */
 void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
 {
@@ -60,6 +64,9 @@ void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
     case K_NOHOLD:
         sayf ("\nYou find no hold yet (%u feet to go).", feet);
         return;
+    case K_SLID:                                /* (Out of a pit: the climb ended, D13's) */
+        sayf ("\nYou slip, and slide back down to the pit's floor: %u feet to climb (climb up to try again).", feet);
+        return;
     case K_FELL:
         if (!feet) {
             msg ("Your hold gives way before you're off the ground.");
@@ -75,6 +82,10 @@ void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
         return;
     }
 }
+
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Harm's words: what came of it (w: an E_HARM's, its cause and the worst wound's band), the referee's words of the
 ** wounds (in lb), and what they've left the character in (cond: its conditions, rs.h's C_*) */
