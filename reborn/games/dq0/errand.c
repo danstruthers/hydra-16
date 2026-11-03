@@ -86,6 +86,11 @@ static unsigned char trade (void)
     q->x = 0;
     strcpy (q->into, sell ? "pennies" : gd);
     r = things (IO_GEAR, wh);
+    if (r == IR_NONE && wh[0]) {                /* (A name given is capitalised: "from Grub") */
+        wh[0] &= 0xDF;
+        r = things (IO_GEAR, wh);
+        wh[0] |= 0x20;
+    }
     if (r == IR_NONE) {
         sayf (wh[0] ? "\nYou see no %s here." : "\nThere's no one here to trade with.", wh);
         return 0;

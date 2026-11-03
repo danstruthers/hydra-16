@@ -5114,10 +5114,10 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
         'inventory', 'give the bandit 2 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'inventory', 'how much for the oil',
-        'buy the oil from the bandit', 'inventory', 'haggle for the oil', 'sing to the bandit', 'quit', 'echo $status']) },
+        'name the bandit bob', 'buy the oil from bob', 'inventory', 'haggle for the oil', 'sing to bob', 'quit', 'echo $status']) },
       start(m) {
-        dq0Poke(m, ['inventory', 'give the bandit 2 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'how much for the oil',
-          'buy the oil from the bandit', 'haggle for the oil', 'sing to the bandit'].map(line => ({ g: 1, line, n: 1, name: 'bandit', set: { attitude: 4, doing: 0 }, beside: 4 })));
+        dq0Poke(m, ['inventory', 'give the bandit 2 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'how much for the oil', 'name the bandit bob'].map(line => ({ g: 1, line, n: 1, name: 'bandit', set: { attitude: 4, doing: 0 }, beside: 4 }))
+          .concat(['buy the oil from bob', 'haggle for the oil', 'sing to bob'].map(line => ({ g: 1, line, n: 1, name: 'Bob', set: { attitude: line[0] === 's' ? 3 : 4, doing: 0 }, beside: 4 }))));
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -5139,13 +5139,13 @@ module.exports = {
         if (i1 && i1.after && pennies(i1.after) <= pennies(i0.after) - 5) f.push('no pennies for the oil: ' + pennies(i1.after));
         sw('how much for the oil', { kind: 'SW_PRICE', result: 'SR_OK' }, 'no price asked for the oil');
         if (!/The bandit asks \d+ penn(y|ies) for the oil\./.test(s)) f.push('the price not told');
-        const b = sw('buy the oil from the bandit', { kind: 'SW_BUY', result: 'SR_OK' }, 'the oil not bought back');
+        const b = sw('buy the oil from bob', { kind: 'SW_BUY', result: 'SR_OK' }, 'the oil not bought back (from one by the name it was given)');
         if (b && (!evs(b).includes('FT_GOT') || !evs(b).includes('FT_GAVE'))) f.push('the purchase\'s things not changing hands: ' + JSON.stringify(evs(b)));
         const i2 = T.after(b, 'inventory');
         if (!i2 || !i2.after || oil(i2.after) !== oil(i0.after)) f.push('the oil not the character\'s again');
         sw('haggle for the oil', { kind: 'SW_HAGGLE', result: r => r === 'SR_OK' || r === 'SR_SPURNED' }, 'not haggled over');
-        sw('sing to the bandit', { kind: 'SW_ENTERTAIN', result: r => r === 'SR_OK' || r === 'SR_AS_FAR' }, 'not sung to');
-        if (!/You sing for the bandit\.|The bandit is friendly already/.test(s)) f.push('the song not told');
+        sw('sing to bob', { kind: 'SW_ENTERTAIN', result: 'SR_OK' }, 'not sung to');   // (Indifferent: the referee's Singing tested)
+        if (!/You sing for Bob\. (It's delighted|It's pleased|It's bored|It isn't moved)/.test(s)) f.push('the song not told');
         if (f.length) f.push(s.slice(s.indexOf('> give the bandit'), s.indexOf('> give the bandit') + 2500));
         return f;
       },
@@ -5167,6 +5167,7 @@ module.exports = {
         if (!m.door) return ['the scene not set: no bandit near, or no door ahead with a floor beyond it: ' + JSON.stringify(m.doorWhy)];
         const a = T.of('ask the bandit to open the door');
         if (!a || !dq0Rep(a, 'sway', { kind: 'SW_ORDER', order: 'OR_OPEN', result: 'SR_OK' }).length) f.push('the ally not asked to open the door (' + JSON.stringify(a && a.replies.filter(r => r.req === 'sway')) + ')');
+        if (!/The bandit goes to the door\./.test(s)) f.push('its going not told: "The bandit goes to the door."');
         const opens = T.filter(t => a && t.k >= a.k).flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.door.k + 1 && e.a === DE_OPENS);
         if (!opens.length) f.push('the ally never opened the door (E_DEN DE_OPENS)');
         for (const e of opens) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door opened not the one asked: ' + [e.w1, e.w2]);

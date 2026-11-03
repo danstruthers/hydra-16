@@ -3250,7 +3250,7 @@ void s_sway (void)
             hub_map (0);
             q = &HUB->actor[k];
             if (q->name[0] && q->attitude == AT_ALLIED && q->sn == pcs && apart (q->x - pcx, q->y - pcy) <= 12 &&
-                q->doing != DO_DOWN && (!n || sw.order != OR_FETCH)) {   /* (A thing fetched by one: the first) */          /* (Not one lying senseless: it hears nothing) */
+                q->doing != DO_DOWN && (!n || sw.order < OR_FETCH)) {   /* (A thing fetched, a door seen to, by one: the first) */          /* (Not one lying senseless: it hears nothing) */
                 strcpy (sw.name, ++n == 1 ? q->name : "");
                 order (k);
                 rouse (k, 1 | ROUSE_SET);
