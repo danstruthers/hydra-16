@@ -6993,7 +6993,7 @@ module.exports = {
     },
     {
       name: 'dq0throws', outfit: true, asks: true, near: ['fight'], what: 'Dingus Quest Zero\'s fights complete (slice 4.7\'s left, 2026-10-30: DUNGEON.md\'s fights, HOUSE.md\'s missiles, for review), by the words, the fights told and the item store: the character (hmchar seed 23, its Bow 15: its outfit a sling) shooting at seed 5\'s giant rats down the ladder, fought on, each miss half the time striking a rat beside its mark (the book\'s, a stray: "Your shot strikes the giant rat instead"), every fall told as it falls and each rise after a fall told (no rise without its fall); a bowman (Bow 90: a shortbow, a quiver) its arrows put down and gathered back into its quiver, not its pack; then a hand-written theme\'s small orcs (arak, hostile: a mankar, a club or a spear in hand, a dagger at the belt, half of them a shortbow; seed 2), waited for: one throwing its spear, or putting up its weapon and shooting its shortbow ("The small orc throws its spear at you", "The small orc shoots at you with its shortbow"); then the character set to shoot on its own ("autotarget at medium range"), shot at by the elves (sindwar, hartbows: seed 4) and shooting back unbidden (it fights back, its shortbow taken up, the round the book\'s grope: the bowman\'s)',
-      init: 't_rc', cycles: 2400e6,
+      init: 't_rc', cycles: 3400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml bow 15 >> /ram/c.hm',
         'echo ml dge 90 >> /ram/c.hm', 'echo ml swd 90 >> /ram/c.hm',
         'hmchar -q -s 23 -u feudal -c hunter -o /ram/d.hm', 'echo ml bow 90 >> /ram/d.hm', 'echo ml dge 90 >> /ram/d.hm',
@@ -7016,7 +7016,13 @@ module.exports = {
                 const { L } = m.dq0.layout(), at = q => L.actor + q * L.actorSize, u = o => h[o] | h[o + 1] << 8;
                 const name = q => { let n = ''; for (let i = 0; h[at(q) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(q) + L.aName + i]); return n; };
                 const rats = [...Array(L.nactors).keys()].filter(q => h[at(q) + L.aState] && name(q) === 'giant rat');
-                if (rats.length > 1) { const x = u(at(rats[0]) + L.aX) + 1, y = u(at(rats[0]) + L.aY); h[at(rats[1]) + L.aX] = x & 255; h[at(rats[1]) + L.aX + 1] = x >> 8; h[at(rats[1]) + L.aY] = y & 255; h[at(rats[1]) + L.aY + 1] = y >> 8; h[at(rats[1]) + L.aSn] = h[at(rats[0]) + L.aSn]; }
+                if (rats.length > 1) {   // (On open floor beside it: dq0dentake's way)
+                  const sn = h[at(rats[0]) + L.aSn], S = stratumRec(m, sn), x0 = u(at(rats[0]) + L.aX), y0 = u(at(rats[0]) + L.aY);
+                  const tile = (x, y) => { const c = S && liveChunks(m, sn)[((x - S.x0) >> 5) + ',' + ((y - S.y0) >> 5)]; return c ? c[443 + ((y - S.y0) & 31) * 32 + ((x - S.x0) & 31)] & 15 : -1; };
+                  const busy = (x, y) => [...Array(L.nactors).keys()].some(q => h[at(q) + L.aState] && u(at(q) + L.aX) === x && u(at(q) + L.aY) === y) || (u(L.pcX) === x && u(L.pcY) === y);
+                  const d = [[0, -1], [1, 0], [0, 1], [-1, 0]].find(([dx, dy]) => [1, 4].includes(tile(x0 + dx, y0 + dy)) && !busy(x0 + dx, y0 + dy));
+                  if (d) { const x = x0 + d[0], y = y0 + d[1], o = at(rats[1]); h[o + L.aX] = x & 255; h[o + L.aX + 1] = x >> 8; h[o + L.aY] = y & 255; h[o + L.aY + 1] = y >> 8; h[o + L.aSn] = sn; const R = dq0Rec(m), q = R.at(h[o + L.aName + 12]); R.mem[q + R.X] = x & 255; R.mem[q + R.X + 1] = x >> 8; R.mem[q + R.Y] = y & 255; R.mem[q + R.Y + 1] = y >> 8; h[L.denSeq] = h[L.denSeq] + 1 & 255; }
+                }
               }
               typed = '';
             } else if (a.rx >= 32) typed += String.fromCharCode(a.rx);
