@@ -729,7 +729,7 @@ What the plans bring later, by the slice or phase that brings it:
   distance, above): left,
   a gift to one that isn't a person (an altar), a faction's regard by a freed prisoner, a rescue or a piece of the
   puzzle, other errands (fetching built, doors built 2026-11-02: a lock picked, a door forced or barred for the
-  character, a thing put down or given to another); the market's left (HOUSE.md's: change, farthings and crowns, coins
+  character, a thing put down or given to another); the market's left (HOUSE.md's: change, crowns, farthings over a penny (a price under one is in farthings, 2026-11-03), coins
   by mint, a merchant kind).  ("give the bandit 5 pennies", entertaining and bargaining built 2026-11-02.)
 - **Tunnellers and builders** (slice 4.11, built 2026-11-01 and 2026-11-02: tunnellers, above): left, builders
   shoring a passage, the materials as things, the spoil as a thing, harm from falling rock on a

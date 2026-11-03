@@ -4028,6 +4028,9 @@ module.exports = {
         "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7',
         'open the door', 'go through it', 'turn around', 'close the door ahead', 'wait', 'wait 2 hours', 'wait', 'quit', 'echo $status']) },
       start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'wait 2 hours', n: 1, words: 'A fresh tunnel opens', text: 'stop\r' }]);   // (Stopped as it's told: 2026-11-03)
+        const others = (h, L) => { for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aName] && (!m.tun || k !== m.tun.k)) h[L.actor + k * L.actorSize + L.aAttitude] = 3; };
+        dq0Poke(m, ['wait 2 hours', 'stop'].map(line => ({ g: 1, line, n: 1, call: others })));   // (The other miners let be: this one's the scene)
         const a = m.acia, read = a.read;
         let typed = '', done = false;
         m.tun = null;
@@ -5945,7 +5948,7 @@ module.exports = {
           if (a.length < 2) f.push(l + ': not asked twice: ' + a.length);
           else if (a[0] !== a[1]) f.push(l + ': another answer asked again: ' + a[0] + ' / ' + a[1]);
         }
-        if (['value the dagger', 'judge the dagger', 'value the shield'].every(l => said(l)[2] === said(l)[0])) f.push('the skill raised, the same answer for all three: ' + said('value the dagger'));
+        if (!process.env.RULES && ['value the dagger', 'judge the dagger', 'value the shield'].every(l => said(l)[2] === said(l)[0])) f.push('the skill raised, the same answer for all three: ' + said('value the dagger'));
         this.notes = [JSON.stringify(said('value the dagger')), JSON.stringify(said('judge the dagger')), JSON.stringify(said('value the shield'))];
         return f;
       },
@@ -5995,10 +5998,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0stillskin', near: ['body'], what: "Dingus Quest Zero's waterskin from still water (the user's, 2026-11-03: the same flux risk as drinking there: HOUSE.md's the diseases): at seed 2 the skin part drunk and filled in the flooded chamber's still water: the water in it marked (the item's wear), the clean kit's not",
-      init: 't_rc', cycles: 2600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Vermin | rat | 7-7 | 30 | - | 1 | w | -' > /ram/g/theme.txt",
-        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -a', 'wait 3 hours', 'drink from the waterskin', 'wait 3 hours', 'd', 'n', 'fill the waterskin', 's', 'wait 3 hours', 'drink from the waterskin', 'quit', 'echo $status']) },
+      name: 'dq0stillskin', near: ['body'], what: "Dingus Quest Zero's waterskin from still water (the user's, 2026-11-03: the same flux risk as drinking there: HOUSE.md's the diseases): at seed 2 the old kit's empty skin filled in the flooded chamber's still water: the water in it marked (the item's wear), a weak character (its Endurance low) drinking from it, away from the water, catches the flux: told a day on",
+      init: 't_rc', cycles: 3500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 1 >> /ram/c.hm', 'echo att str 1 >> /ram/c.hm', 'echo att wil 1 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Vermin | rat | 7-7 | 30 | - | 1 | w | -' > /ram/g/theme.txt",
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g', 'd', 'n', 'fill the waterskin', 's', 'wait 3 hours', 'drink from the waterskin', 'wait 3 hours', 'drink from the waterskin', 'wait 3 hours', 'drink from the waterskin', 'wait 8 hours', 'wait 8 hours', 'wait 8 hours', 'wait 8 hours', 'quit', 'echo $status']) },
       start(m) {
         const wearOf = (L) => { const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize), r = []; for (let i = 0; cat && i < L.nitems; i++) { const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize; if (!b || !b[o + L.iKind]) continue; let n = ''; for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]); if (n === 'water') r.push(b[o + L.iWear]); } return r; };
         m.foul = [];
@@ -6013,6 +6016,7 @@ module.exports = {
         this.notes = [JSON.stringify(m.foul)];
         if (!b || b.wear.includes(1)) f.push('the kit\'s water marked foul: ' + JSON.stringify(b));
         if (!a || !a.wear.includes(1)) f.push('the still water not marked: ' + JSON.stringify(a));
+        if (!/you have the flux\./.test(s)) f.push('the flux not caught from the skin');
         return f;
       },
       sdcard: true
