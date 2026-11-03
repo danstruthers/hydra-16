@@ -164,7 +164,7 @@ ovl_out:
             SWPART      15, 17              ; An ally's errands, the character's gifts, the market (errand.c: slice 4.8's; 2026-11-02)
             SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
             SWPART      17, 14              ; Looking one way, a close look (way.c: part 6's till 2026-11-01)
-            SWPART      18, 17              ; A denizen's door's words (2026-11-02: overlay 3's room)
+            SWPART      18, 11              ; A denizen's door's words (2026-11-02: overlay 3's room)
 
             SWFN        errand, 15
             SWFN        begin, 1

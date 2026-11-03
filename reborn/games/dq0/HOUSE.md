@@ -1268,7 +1268,7 @@ are drafts, the user's as they are for now (2026-10-22).
     what's left), a stop each: the ring of blocks along the walls first, clockwise from the corner nearest it (so a wall
     on its left hand, "You work along the wall to your left.", "You turn the corner, and work along the east wall."), then
     the rings inside them ("You work back and forth over the floor in the middle of the room.").  A block it can't reach
-    any of (a cave's rock in the room's rectangle) is passed over, its squares tested from where it stands.
+    any of (a cave's rock in the room's rectangle) isn't walked to; what's there is tested all the same.
   - **At a stop, each thing lying in the block**, by its time: a heap poked through **20 seconds** ("You poke through
     the straw.", then "You find a silver ring in the straw." or "You find nothing in the straw."); a body gone through
     **30 seconds**; an open container **10 seconds** ("You go through the sack.", what's in it); anything else, a surface
@@ -1278,7 +1278,8 @@ are drafts, the user's as they are for now (2026-10-22).
   - **Then the block itself, 10 seconds** (the search's own rate: a minute the 49 squares about it, a block's 9 a sixth of
     that): its tests as its time's up: each hidden trap in the block's squares, each hidden door and door's trap in
     the walls beside them, and each thing hidden there (a second chance at what's in a heap), by the referee's
-    P_SEARCH at the steps a search's are, told as found.  A hidden door found in a wall it's working along is a door from then on.
+    P_SEARCH at the steps a search's are, told as found.  A hidden door found in a wall it's working along is a door from
+    then on.
   - **By touch** (its square dark, or the character blind, as it comes to each stop): "You feel along the wall to your
     left.", "You feel through the straw.", "Your hands find ..."; each thing's time twice, the block's **30 seconds**, the
     tests 2 steps the harder, as a search by touch's.  Its pace the dark's, feeling its way.
