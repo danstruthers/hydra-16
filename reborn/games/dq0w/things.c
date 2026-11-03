@@ -1345,8 +1345,11 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         return 0;
     }
     if (pc_cut) {                               /* (RO_END) */
-        rs_for (RF_CUT);
-        return 0;
+        if (HUB->pc_task.kind != LT_FIGHT) {
+            rs_for (RF_CUT);
+            return 0;
+        }
+        pc_cut = 0;                             /* (A fight begun as it came free, its line a step in hand, stopped: that the stop, not the step) */
     }
     w = 0;
     if (rs_do != RS_IN && rs_do != RS_TRY && rs_do) {   /* (What it changes changed) */
