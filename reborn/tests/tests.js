@@ -4109,12 +4109,12 @@ module.exports = {
         'dq0 -p t -s 374 -c /ram/c.hm -T', 'look', 'dig east', 'drop the knife', 'dig east', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k chisel -T', 'look', 'dig east', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'wait', 'dig east', 'look', 'dig east', 'quit',
-        'dq0 -p t -s 374 -c /ram/c.hm -k chisel,hammer -T', 'drop the lantern', 'hold the chisel', 'hold the hammer', 'dig north', 'quit',
+        'dq0 -p t -s 374 -c /ram/c.hm -k chisel,hammer -T', 'drop the torch', 'hold the chisel', 'hold the hammer', 'dig north', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'dig east', 'quit',
         'mkdir /ram/g', "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -k pick -T -d /ram/g -R 7',
         'open the door', 'south', 'turn around', 'close the door', 'dig north', 'quit', 'echo $status']) },
       start(m) {
-        dq0OnWords(m, [{ g: 5, line: 'dig east', n: 1, words: 'anywhere', text: 'stop\r' }, { g: 4, line: 'dig north', n: 1, words: 'You dig with your chisel', text: 'stop\r' }]);   // (Typed as it's told; the chisel's by a lantern, six hours of it: its first spell enough)
+        dq0OnWords(m, [{ g: 5, line: 'dig east', n: 1, words: 'anywhere', text: 'stop\r' }, { g: 4, line: 'dig north', n: 1, words: 'You dig with your chisel', text: 'stop\r' }]);   // (Typed as it's told; the chisel's first spell enough)
         const a = m.acia, read = a.read;
         let typed = '', g = 0;
         m.door = {};
@@ -9454,11 +9454,11 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0loadtire', outfit: true, near: ['body'], what: 'Dingus Quest Zero\'s load and tiring (the user\'s, 2026-11-03, DECISIONS.md\'s: "I seem to acquire fatigue if overburdened even when sleeping", "if you are awake and standing with the burden, you should still get fatigued"; HOUSE.md\'s a load borne, for review): overloaded (dq0 -k), 40 minutes standing tires it (status\'s fatigue), a level or more; lying down, sitting and asleep no more tired, its fatigue less, overloaded or not; a sleeper lies down by itself; heavily burdened standing no rest; hunger and thirst told by status, and their share of the fatigue, after a long sleep; a light load (the kit alone) standing rests as ever',
+      name: 'dq0loadtire', outfit: true, near: ['body'], what: 'Dingus Quest Zero\'s load and tiring (the user\'s, 2026-11-03, DECISIONS.md\'s: "I seem to acquire fatigue if overburdened even when sleeping", "if you are awake and standing with the burden, you should still get fatigued"; HOUSE.md\'s a load borne, for review): overloaded (dq0 -k), 70 minutes standing tires it (status\'s fatigue), a level or more; lying down, sitting and asleep no more tired, its fatigue less, overloaded or not; a sleeper lies down by itself; heavily burdened standing no rest; hunger and thirst told by status, and their share of the fatigue, after a long sleep; a light load (the kit alone) standing rests as ever',
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick,shovel,rope,sword,bones,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword', 'douse the lantern', 'status', 'wait 40 minutes', 'status',
-        'lie down', 'wait 40 minutes', 'status', 'stand up', 'wait 40 minutes', 'status', 'sit', 'wait 40 minutes', 'status', 'stand up', 'wait 40 minutes', 'status', 'sleep 40 minutes', 'status', 'stand up', 'wait 40 minutes', 'status',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick,shovel,rope,sword,bones,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword', 'douse the torch', 'status', 'wait 70 minutes', 'status',
+        'lie down', 'wait 40 minutes', 'status', 'stand up', 'wait 70 minutes', 'status', 'sit', 'wait 40 minutes', 'status', 'stand up', 'wait 70 minutes', 'status', 'sleep 40 minutes', 'status', 'stand up', 'wait 70 minutes', 'status',
         'drop the pack', 'drop the pick', 'drop the sword', 'drop the rope', 'drop the bones', 'drop the sword', 'drop the pick', 'drop the shovel', 'status', 'wait 15 minutes', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
@@ -9468,7 +9468,7 @@ module.exports = {
         this.notes = ['fatigue at each status: ' + F.join(', ')];
         if (F.length !== 13) return ['status told ' + F.length + ' times: ' + o.slice(-800)];
         if (F[0] !== 0) f.push('rested at first, fatigue ' + F[0]);
-        if (!(F[1] >= 1)) f.push('overloaded, 40 minutes standing: fatigue ' + F[1] + ', not tired by it');
+        if (!(F[1] >= 1)) f.push('overloaded, 70 minutes standing: fatigue ' + F[1] + ', not tired by it');
         if (!(F[2] < F[1])) f.push('lying down 40 minutes, overloaded: fatigue ' + F[2] + ' from ' + F[1] + ', not rested');
         if (!(F[3] > F[2])) f.push('standing again half an hour: fatigue ' + F[3] + ' from ' + F[2]);
         if (!(F[4] < F[3])) f.push('sitting 40 minutes, overloaded: fatigue ' + F[4] + ' from ' + F[3] + ', not rested');

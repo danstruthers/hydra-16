@@ -3766,7 +3766,11 @@ static void words (void)
         put (" ");
     }
     q = tw_sum ? tw_sum : tw.qty;
-    if (tw_n > 1 || (q == 1 && (twk->form & KF_COUNT))) {
+    if (tw_n > 1 && tw_n < 4 && (tw.kind == KI_TORCH || tw.kind == KI_OIL)) {   /* (The kit's own spares: every character's list,
+                                                **   no part swapped for them, 50K cycles: dq0answer's D17, 2026-11-03) */
+        put (tw_n == 2 ? "two " : "three ");
+        put (tw.kind == KI_TORCH ? "torches" : "flasks of oil");
+    } else if (tw_n > 1 || (q == 1 && (twk->form & KF_COUNT))) {
         many (tbuf, tw_n > 1 ? tw_n : 1, tw.kind);   /* (Alike, told together; one of a lot, "a ration") */
         put (tbuf);
     } else {
@@ -3965,7 +3969,10 @@ static void __fastcall__ contents (unsigned char where, unsigned x, unsigned cha
         tw_sum = 0;
         if (lkf && (twk->keeps & KF_CLOSES) == KF_STOPPER && (tw.shut & IS_CLOSED)) {   /* (A vessel stoppered: how full,
                                                 **   by its heft, 2026-11-03) */
-            put (!items (0, IN_ITEM | IN_X, i) ? " (empty)" : ip->qty >= twk->cap_bulk ? " (full)" : "");
+            nx_n = 0;                           /* (By the list gathered, not the store gone through: dq0answer's) */
+            nx_w = IW_ITEM;
+            nx_x = i;
+            put (!(jn = next_in ()) ? " (empty)" : item_at (jn)->qty >= twk->cap_bulk ? " (full)" : "");
         }
         if (!depth) {
             put (tw.flags & I_HELD ? hands_in[tw.sn & IH_BOTH] : tw.flags & I_WORN ? ", worn" : "");  /* (The hand
