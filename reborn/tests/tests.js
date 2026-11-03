@@ -4102,7 +4102,7 @@ module.exports = {
         if (dq0Ev(d7, 'E_DIG', { how: 'D_FOUND' }).length) f.push('a door hidden by magic found by digging');
         if (!/This isn't getting anywhere/.test(s)) f.push('nothing told after two spells with nothing to show');
         dq0Need(f, T.of('dig north', d7.k), 'E_DIG', { how: 'D_PORTAL' }, 'a portcullis not told so');
-        if (!/Those are iron bars/.test(s)) f.push('no bars' words');
+        if (!/Those are iron bars/.test(s)) f.push("no bars' words");
         dq0Need(f, d7, 'E_TASK', { te: 'TE_ASK_SHORT', task: 'LT_DIG' }, 'the hopeless dig not asked about');
         if (f.length) f.push(JSON.stringify(dq0Ev(d7, 'E_TASK').map(e => e.te + ' ' + e.task)), s.slice(s.indexOf('-k pick'), s.indexOf('-k pick') + 2600));
         return f;
