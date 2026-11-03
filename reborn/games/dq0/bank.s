@@ -191,6 +191,7 @@ ovl_out:
             SWFN        names_subst, 6
             SWFN        names_say, 6
             SWFN        names_look, 6
+            SWFN        came, 6             ; (Come into a stratum, told: main.c's, 2026-11-02)
             SWFN        names_keep, 6
             SWFN        alias_line, 9
             SWFN        alias_expand, 9

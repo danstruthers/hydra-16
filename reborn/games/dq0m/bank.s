@@ -14,7 +14,7 @@
             .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 7                     ; dq0m.cfg's overlays (the 6th the swapped parts' images, the 7th uses.c)
+OVMAX       = 8                     ; dq0m.cfg's overlays (the 6th the swapped parts' images, the 7th uses.c, the 8th the great caverns)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
@@ -153,6 +153,7 @@ ovl_out:
             OVFN        crossings, 2
             OVFN        slants, 1           ; (The caves' diagonal ways: 2026-10-31, overlay 3's room)
             OVFN        grow_caves, 3
+            OVFN        cavern, 8           ; (The great caverns: slice 4.10's, caves.c's in overlay 8, 3's room)
             OVFN        wet_chunk, 6        ; (The water: slice 4.9's, caves.c's in overlay 6, 3's room)
             OVFN        air_pocket, 3       ; (The air: 2026-10-31)
             OVFN        water_plan, 5
