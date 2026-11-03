@@ -241,7 +241,8 @@ chunk; were they the senses', the maker would ask the senses then, as the senses
 
 **Rooms across a room's squares** (dq0w.c's ways): the ways from a square to every square of a room are worked out
 at once in the world's own bank (no fixed room size, as large as its chunk), so a room is walked across whatever its
-size.  A room is a chunk's (struct room's squares, 0-31): a cavern across many chunks is still to come (below).
+size.  A room is a chunk's (struct room's squares, 0-31): a great cavern across many chunks is a room in each,
+its part (R_CAVERN: a walk across it goes on over the edges; HOUSE.md's great caverns).
 
 **dq0 -C** (the tests'): the caches small, so a short game pages them (twelve of the chunks' slots; a change page; 24
 of the store's records, only the character's chunk kept round it; two of the denizens' regions, only the
@@ -386,7 +387,8 @@ for anyone who reads it (the lights', the denizens', the senses').
 
 An opening that isn't a plain doorway is a record (world.h's struct opening, level.h's O_*): a window (its sill's height
 above the floor), a stairway or a ladder up or down, a shaft in the ceiling or the floor, the way out; where it leads
-(the stratum's link: a stratum, a place there) and how far.  A long ramp between strata isn't made.  A stratum below is
+(the stratum's link: a stratum, a place there) and how far.  A long slope between strata (a sloping tunnel, walked: O_RAMP_DOWN, O_RAMP_UP) is a
+natural stratum's or a mine's stairway one time in three (HOUSE.md's long slopes, 2026-11-02).  A stratum below is
 made when the character first takes a way down to it: its bounds and style (a storm cellar is a stratum one chunk, 10 by
 10, with a ladder down; the catacombs under it miles each way), and the chunk where the way comes out first.
 
@@ -1393,8 +1395,9 @@ into the world's intents; a mind posts the intents itself (DECISIONS.md's table,
 What the plans bring later, by the slice or phase that brings it (the detailed plan's and the game plan's):
 
 - **Ways off the compass, step 3's rest** (the user's "queue up 1-3", 2026-10-31; steps 1 and 2, the diagonal ways and
-  a passage's heading, and the built grower's diagonal passages, built): built complexes at an angle (a stratum's
-  rooms, or one complex in it, laid at 45 degrees to the compass; other angles stepped and told by step 2's words); a
+  a passage's heading, and the built grower's diagonal passages, built; the slanted strata's rooms cut to their
+  diamonds, built 2026-11-02: HOUSE.md's rooms on the diagonal): left, rooms truly turned (a long room on the
+  slant, not its corners cut; a diamond's own words, its places), other angles stepped and told by step 2's words; a
   wide tunnel's staircase told as one slant (step 2's runs follow a one-wide passage).
 - **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence): left, other errands
   ("ask the dwarf to open the door"), "give the bandit 5 pennies" without "to", entertain and bargain.
@@ -1485,17 +1488,18 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   line: its point and slope, rk_mix (1)'s), an adit in from the way in, a gallery widening where the vein's widest, a
   shaft at a region's line crossing the stratum's next, timbering in soft rock; the built grower given the vein's
   squares as its passages' line (built.c's joins), the stopes rooms of U_WORKS's kind.
-  **Caverns across many chunks** (the plan, not built): a region of the plan its RG_CAVERN kind (plan.c's region
-  dice, one in so many of a natural stratum's), its cavern a box in the region's squares (its corner and size, up to
-  the region, from the region's dice), every chunk it touches growing its part of the one room: the cave grower
-  given the box clipped to the chunk as a chamber's bounds, its floor the plan's ground (so the parts meet at the
-  edges, as the crossings do now), its chamber's wanderer started on each side the box crosses so the floor runs to
-  the edges; struct room's x, y, w, h the clipped part, a flag R_CAVERN and the cavern's number (the region's) in its
-  kind's spare bits, so the senses and the ways (dq0w.c's ways across a room, its room's squares a chunk's today: "No
-  fixed size") take the room as going on past the chunk's edge: the senses' look reaching into the neighbour's part
-  ("a vast cavern, its far side beyond your light"), the world's ways joined at the edge (the next chunk's part's
-  squares the way goes on into), the map's room drawn whole.  A lake or a chasm the same, the water's level the
-  cavern's.
+  **Caverns across many chunks** (built 2026-11-02: changing the dungeon's rock, above; HOUSE.md's great caverns):
+  one natural region in three a cavern, every chunk it touches growing its part of the one room from the seed alone
+  (dq0m/caves.c's cavern, overlay 8: R_CAVERN rooms), told "vast", its walls beyond the light or in sight, walked
+  across over the chunks' edges, drawn whole as it's seen.  Left: its own places ("go to the centre" is the part's,
+  "the far side" the part's), the look reaching into the neighbour's part (each part a room of its chunk's: the
+  ways across a room are a chunk's), a lake or a chasm in one (the water's level the cavern's: dry now), a cavern in
+  a region a way between strata comes into (none, so the strata's ways in are as they were).
+  **Raises and inclines** (built 2026-11-02: HOUSE.md's moving and tiring, long slopes between strata): a sloping
+  tunnel off a cave's passage, a raise in a mine, each to a small chamber on its own level (dq0m/caves.c's incline);
+  a long slope between strata; a walk's beats telling a rise or a fall of 4 feet ("The way rises."), its climb
+  strenuous work.  Left: a raise or a ramp joining two parts of a stratum (these are ways to a chamber of their own),
+  a long slope's own length walked square by square (taken at once, as a stairway is), the denizens tiring uphill.
 - **Tunnellers and builders** (slice 4.11, built in part 2026-11-01: changing the dungeon, above; DENIZENS.md's
   tunnellers): left, a burrow dug from a lair, a faction's mine following a vein, the denizens away from the character
   digging, poor rock on a tunneller, the spoil as a thing; builders (shoring, walling up a way, a door put up).
@@ -1517,7 +1521,8 @@ Designed, but in no slice of the plans yet (DECISIONS.md has the user's words fo
 
 - **Chunks made for the denizens** as they go where nobody has been, a stratum grown by their movements as well as the
   character's, and what they disturb there an event the disturbed act on.
-- **Mining up and slanting**: a raise through the ceiling to the stratum above, an incline.
+- **Mining up and slanting**: a raise through the ceiling to the stratum above, an incline (dug: the grown ones,
+  below, built).
 - **Things hidden by other things or on someone**: under a body, a cloak, a fallen beam (seen once it's moved, freed
   by a strength test); in a container's secret part (a false
   bottom, a hollow heel).  **Holes** as containers: a hole dug in a floor, filled in, a concealed one, dug out again

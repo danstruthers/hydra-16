@@ -637,7 +637,8 @@ enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's
 #define E_OUT           0x4000                  /* (E_HARM's: knocked senseless a while) */
 #define E_CAUGHT        0x8000                  /*   (and a fall stopped, a hold grabbed) */
 #define E_STOPPED       0x8000                  /*   (an HC_STRUCK's: the blows stopped, the striker too hurt) */
-#define O_FELL          8                       /* (E_ARRIVE's link kind, or'd: fallen down it, jumped) */
+#define O_FELL          15                      /* (E_ARRIVE's link kind: fallen down a shaft, jumped; a kind of its
+                                                **   own since the long slopes, 8 and 9, 2026-11-02) */
 
 enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIMBED, A_WENT_TO, A_RESUMED,
        A_STOPPED, A_STEPPED };                  /* E_ARRIVE's how (A_DIGGING, A_CLIMBING: the world's own, a spell
@@ -1403,7 +1404,14 @@ enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind
                                                 **   before slice 4.10, the maker's) */
 #define GE_SLANT        0x10                    /* (dq0 -A, the tests': every built stratum's passages on the diagonal,
                                                 **   the maker's, 2026-11-01: ways off the compass, step 3) */
-#define GE_FLAGS        "KWMUA"                 /* (dq0's flags for them, a bit each in order: main.c's) */
+#define GE_CAVERN       0x20                    /* (dq0 -V, the tests': a great cavern in every region of a natural
+                                                **   stratum, its middle by the region's way between strata, the
+                                                **   maker's, slice 4.10's: caves.c's) */
+#define GE_RAMP         0x40                    /* (dq0 -P, the tests': every stairway down a long slope, any style's, every chunk a sloping way,
+                                                **   the maker's, slice 4.10's: plan.c's links_down) */
+#define GE_DIAMOND      0x80                    /* (dq0 -D, the tests': every built stratum's rooms at 45 degrees, the
+                                                **   maker's, ways off the compass, step 3's rest: caves.c's diamonds) */
+#define GE_FLAGS        "KWMUAVPD"             /* (dq0's flags for them, a bit each in order: main.c's) */
 #define CH_DRAW         0x01                    /* (pc_chart's: the things to draw a map with to hand, the catalogue's
                                                 **   by their keys: a sheet (paper, parchment) or its map, a pencil or
                                                 **   charcoal or a quill and ink, and a hand free; HOUSE.md's the map

@@ -79,6 +79,7 @@ struct sthing* __fastcall__ put_down (unsigned char kind, unsigned char sn, unsi
     unsigned char qty, unsigned char hide);    /* (stock.c's: a thing listed in sk) */
 void __fastcall__ place_pieces (unsigned char n);   /* The theme's pieces in stratum n given their places, as its plan
                                                 **   is grown (overlay 4's: plan.c) */
+unsigned char __fastcall__ cavern (unsigned char m);    /* A great cavern's part (overlay 8's: caves.c, slice 4.10's) */
 
 /* changes.c: the change records (world.h's: the world's) laid over a chunk made again; what's been seen, kept */
 void changes_init (void);
@@ -102,7 +103,7 @@ void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
 void __fastcall__ bread (unsigned char bank, const void* from, void* to, unsigned n);
 void __fastcall__ bwrite (unsigned char bank, void* to, const void* from, unsigned n);
-extern unsigned char ovbank[7];
+extern unsigned char ovbank[8];
 
 /* make.c: a hub's bank reached from an overlay (its bytes copied to the main RAM, or from it, or set) */
 void __fastcall__ hub_get (unsigned char bank, const void* from, void* to, unsigned n);
