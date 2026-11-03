@@ -126,7 +126,7 @@ static unsigned char aloot[NACTORS];            /* (Each one's next look for a t
 #define NOW_T           (((unsigned char*) &now)[1])    /* (The clock's 25.6-second ticks, a byte: now >> 8's) */
 static unsigned char door_by (void);            /* (Below) */
 static unsigned char nonear;                    /* (None left near to place: nearby's, till the character moves) */
-extern unsigned char ovbank[5];
+extern unsigned char ovbank[6];
 static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsigned x, unsigned y);  /* (Below) */
 extern char _SWAP_START__[];
 
@@ -2010,10 +2010,11 @@ static unsigned char __fastcall__ decide (unsigned char k)
         d = w;                                  /* (A door beside it worked: opened toward its foe, shut against it,
                                                 **   one left open shut on its rounds: part 14's, Phase 3C's) */
     }
-    if (d == 0xFF && foe && sres[k] && dist > 1 && (K.styles & (K_DIGS | K_MINES))) {
+    if (d == 0xFF && foe && sres[k] && (K.styles & (K_DIGS | K_MINES))) {
         d = dig_way (k);                        /* (A tunneller kept from the character it senses by rock, a wall,
                                                 **   rubble: it digs its way through, part 12's, slice 4.11's; drawn
-                                                **   on, part 5's draw_on asks too) */
+                                                **   on, part 5's draw_on asks too.  Beside it, it struck, above: no
+                                                **   dig) */
     }
     if (d == 0xFF) {                            /* (Watching: a while, unless it changes; fleeing, a moment; the
                                                 **   character resting, thirty times the while, a watcher's or an idler's:
@@ -2278,6 +2279,185 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+static unsigned rhx, rhy, tx, ty;               /* (Part 9's room_at's: the home whose chunk it looks in, the square
+                                                **   found; part 12's dig at work, its face's stand) */
+static unsigned char dsn;
+#define SPELL           6000                    /* (Tenths: a spell of digging, ten minutes, the world's) */
+
+/* ---- The minds' other reasons to dig (slice 4.11's rest, 2026-11-02: DENIZENS.md's tunnellers and builders; HOUSE.md's
+** tunnellers, for review): a digger at its work (part 9's sched, SC_WORK, by the clock: never polled) digs its lair's
+** own way, within its home's chunk (made: part 9's target asks).  A miner (K_MINES, a pick among its things: an actor's
+** the world's agear; a record's, its kind's miners' if they work, the house's) its faction's mine: from its lair's
+** home straight across to the vein of its region (rock.h's rock_vein: a seam of ore or quartz, its middle on the
+** home's row within a chunk's breadth), then along it, north or south by its lair's number, its middle followed row by
+** row (a diagonal where it slants a square, across where it slants more), MINE_LEN squares at most.  A burrower
+** (K_DIGS) its lair's burrow: from its home one of the four ways by its lair's number, BURROW squares, as far as its
+** claws bite (rubble, earth, soil, the soft rock's beds: never a wall).  Nothing of it kept: the way is worked out
+** again from the dungeon as it is each time it's asked, the squares already dug walked through, its face the first
+** that isn't open (a wall, the rock, rubble), its stand the square before it; none where it comes to anything else (a
+** door, water, a pit, the chunk's edge) or runs out.  k: the actor, NACTORS a record (D, its kind's K); | 0x40, the
+** face alone: its stand in tx, ty, its heading; | 0x80, a spell posted there (I_KIT's KT_DIG: an actor's as the
+** tunnellers', its own test, the world's wdig.c; a record's coarse, w1 w2 its stand, untested), an actor stepped
+** toward its stand first (its step), else 0xF9; 0xFF none.  Part 12's (dig_way's k | 0x40 or 0x80; its statics in the
+** part, not the main RAM's) */
+#define MINE_LEN        48                      /* (Squares a mine goes, its way across and along, at most) */
+#define BURROW          8                       /* (Squares a burrow goes from its home) */
+#pragma code-name (push, "SW12CODE")
+#pragma rodata-name (push, "SW12RODATA")
+#pragma data-name (push, "SW12RODATA")         /* (rock.h's statics in the part, used only within a call) */
+#pragma bss-name (push, "SW12RODATA")          /* (Its locals, static, in the part too: not the main RAM's) */
+#define ROCK_BED
+#define ROCK_VEIN
+#define ROCK_LEAN
+#include "../dq0/rock.h"
+
+static unsigned char __fastcall__ work_dig (unsigned char k)
+{
+    unsigned char i, sn, g, t, n, h, x, y, nx, ny, vx, nvx, aw;
+    signed char vw, vs, dx, dy;
+    unsigned ox, oy, sd;
+    int z;
+    unsigned char* p;
+    struct portal* q;
+    struct stratum* r;
+
+    i = k & 0x3F;
+    if (i < NACTORS) {
+        den_get (a.den);                        /* (Its record: its lair's number, its kind) */
+        sn = a.sn;
+        ox = ahx[i];
+        oy = ahy[i];
+    } else {
+        sn = D.sn;
+        ox = D.hx;
+        oy = D.hy;
+    }
+    kx_get (D.kind);                            /* (The hub's header in the window after) */
+    sd = (unsigned) HUB->seed;
+    t = i < NACTORS ? HUB->agear[i] : X.work != 0xFF ? AG_PICK : 0;   /* (Away from the character, a miner that
+                                                **   works digs as its kind's miners are outfitted: the house's) */
+    if (sn != D.lsn) {
+        return 0xFF;
+    }
+    r = &STRATUM (sn);
+    x = (ox - r->x0) & (CW - 1);                /* (Its home in its chunk, the chunk's first square) */
+    y = (oy - r->y0) & (CW - 1);
+    z = -3 - r->datum;
+    ox -= x;
+    oy -= y;
+    if (K.styles & K_MINES) {                   /* (A miner its faction's builder too: a door broken down in its
+                                                **   home's chunk put up again first) */
+        at (sn, ox, oy);
+        for (n = C->nportals, q = C->portal; n; --n, ++q) {
+            if (q->kind == PK_DOOR && (q->state & PS_WRECKED)) {
+                nx = q->x;
+                ny = q->y;
+                for (h = 0; h < 8; h += 2) {    /* (Its stand: a square beside it, the four) */
+                    x = nx - head_x[h];
+                    y = ny - head_y[h];
+                    if (!((x | y) & ~(CW - 1)) && open_sq (at (sn, ox + x, oy + y))) {
+                        t = KT_BUILD;
+                        g = 0;
+                        goto stand;
+                    }
+                }
+                return 0xFF;
+            }
+        }
+    }
+    g = K.styles & K_MINES && (t & AG_PICK) ? DG_PICK : K.styles & K_DIGS ? DG_CLAWS : 0;
+    h = (D.lid & 3) << 1;                       /* (A burrow: one of the four, by its lair's number) */
+    vs = D.lid & 1 ? 1 : -1;
+    dy = 0;
+    if (g == DG_PICK) {
+        if (rock_vein (sd, ox + x, oy + y) == RK_NONE || (unsigned) (rk_vx - ox) >= CW) {
+            return 0xFF;                        /* (No vein through its home's chunk on its row: its workshop) */
+        }
+        vx = rk_vx - ox;
+        vw = rk_vw;
+        aw = vw < 0 ? -vw : vw;
+    } else if (!g) {
+        return 0xFF;
+    }
+    for (n = g == DG_PICK ? MINE_LEN : BURROW; n; --n) {
+        if (g == DG_PICK) {                     /* (Across to the vein, then along it, its middle row by row) */
+            dy = 0;
+            nvx = vs > 0 ? vx + vw : vx - vw;
+            if ((unsigned char) (vx - x + aw) > 2 * aw) {
+                dx = (signed char) (vx - x) > 0 ? 1 : -1;
+            } else if ((unsigned char) (nvx - x + 1) <= 2) {
+                dx = nvx - x;
+                dy = vs;
+            } else {
+                dx = (signed char) (nvx - x) > 0 ? 1 : -1;
+            }
+            h = bearing (dx, dy);
+        }
+        nx = x + head_x[h];
+        ny = y + head_y[h];
+        if ((nx | ny) & ~(CW - 1)) {
+            break;                              /* (Never out of its home's chunk) */
+        }
+        p = at (sn, ox + nx, oy + ny);
+        if (open_sq (p)) {
+            x = nx;                             /* (Dug already, or open: on along it) */
+            y = ny;
+            if (dy) {
+                vx = nvx;
+            }
+            continue;
+        }
+        if ((t = TILE (*p)) != T_WALL && t != T_ROCK && t != T_RUBBLE) {
+            break;
+        }
+        if (g == DG_CLAWS && t != T_RUBBLE && (t == T_WALL || ((t = C->mat[NROOMS][MP_WALL]) != MAT_EARTH &&
+            t != MAT_SOIL && (t != MAT_STONE || !RK_POOR (rock_bed (sd, z - elev_at (sn, ox + x, oy + y),
+            ox + nx, oy + ny)))))) {
+            break;                              /* (Claws: never a wall; in the rock, earth, soil or the soft rock) */
+        }
+        t = KT_DIG;
+stand:
+        tx = ox + x;
+        ty = oy + y;
+        if (!(k & 0x80)) {
+            return h;
+        }
+        im.a = t;
+        im.b = h;
+        im.w1 = tx + head_x[h];                 /* (Its face: the square dug, the door put up) */
+        im.w2 = ty + head_y[h];
+        if (i < NACTORS) {
+            if (a.x != tx || a.y != ty) {       /* (To its stand first) */
+                refx = tx;
+                refy = ty;
+                h = step_for (i, 2 * K.range + 8, S_TOWARD);
+                refx = pcx;
+                refy = pcy;
+                return h;
+            }
+            a.face = h;
+            if (t == KT_DIG) {
+                a.doing = DO_DIG;
+            }
+            im.x[2] = g;
+            act (I_KIT, i);
+            return 0xF9;
+        }
+        if (D.x != tx || D.y != ty) {
+            break;
+        }
+        im.x[0] = g;                            /* (A record's spell, coarse: the world's, untested) */
+        im.x[2] = sn;
+        kitted ();
+        return 0xF9;
+    }
+    return 0xFF;
+}
+#pragma bss-name (pop)
+#pragma data-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* ---- Tunnellers (slice 4.11, 2026-11-01: DENIZENS.md's tunnellers and builders; HOUSE.md's, for review): actor k (the
 ** copy a, its kind K's), hostile, kept by rock, a wall or rubble from the character it senses beyond it, or from where it
 ** last sensed it (refx, refy: no step nearer), digs its way there if its kind digs: a burrower by its claws (K_DIGS),
@@ -2294,6 +2474,9 @@ unsigned char __fastcall__ s_dig_way (unsigned char k)
     unsigned nx, ny, f, bf, b0;
     unsigned char* p;
 
+    if (k & 0xC0) {
+        return work_dig (k);                    /* (A digger at its work: its lair's dig, above) */
+    }
     hub_map (0);
     t = HUB->agear[k];
     g = (K.styles & K_DIGS ? DG_CLAWS : 0) | (K.styles & K_MINES ? (t & AG_PICK ? DG_PICK : 0) |
@@ -3105,7 +3288,7 @@ void s_sway (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1 ... OV5, as make.js packs
+/* The swapped parts' images read into banks of its own (dir/dq0d.ovl: dq0d.cfg's OV1 ... OV6, as make.js packs
 ** them, ../dq0/ovlpack.js: each bank packed, read and unpacked in place by the unpack library, the linker's fill ($FF)
 ** put back after its bytes: ../dq0/ovunpack.inc): 0, or -1 */
 unsigned char __fastcall__ ovl_unpack (unsigned fb);   /* (../dq0/ovunpack.inc: the file's fd, the banks at most) */
@@ -3116,11 +3299,11 @@ static int __fastcall__ ovl_load (const char* dir)
 
     strcpy ((char*) b, dir);
     strcat ((char*) b, "/dq0d.ovl");
-    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (5)) < 0) {
+    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (6)) < 0) {
         return -1;
     }
     ovbank[0] = n;                              /* (The rest after it: ovl_unpack's) */
-    n = ovl_unpack (fd | (5 << 8));
+    n = ovl_unpack (fd | (6 << 8));
     close (fd);
     return -n;
 }
@@ -4268,9 +4451,7 @@ static unsigned smins;                          /* (sched's: the minutes till wh
 static unsigned long snow;                      /* (sched's: the clock it last reckoned the day's minute at, m0, and
                                                 **   the day's number, dday) */
 static unsigned m0, dday;
-static unsigned rhx, rhy, tx, ty;               /* (room_at's: the home whose chunk it looks in, the square found) */
-static unsigned char dsn;
-static unsigned char pway[NACTORS];             /* (Each one's room on its rounds, the next it walks to: its lair's
+static unsigned char pway[NACTORS];            /* (Each one's room on its rounds, the next it walks to: its lair's
                                                 **   chunk's rooms in turn) */
 #define TALK_LOUD       3                       /* (Those on watch talking as they go: heard as a squeak is) */
 #define SNORE_LOUD      2
@@ -4309,7 +4490,7 @@ unsigned char __fastcall__ s_sched (unsigned char k, unsigned id)
     m = (m0 + 1440 - (id * 13 & 31)) % 1440;
     smins = 240;
     if (X.day == DY_ALWAYS) {
-        return X.work != 0xFF ? SC_WORK : SC_ABOUT;
+        return X.work != 0xFF || ((K.styles & (K_DIGS | K_MINES)) && (id & 1)) ? SC_WORK : SC_ABOUT;
     }
     if (X.day == DY_WATCHES) {                  /* (Its third: id's, on watch the watches of its own, 0-4 and 12-16
                                                 **   o'clock the first's, asleep the next, about the next) */
@@ -4350,7 +4531,7 @@ unsigned char __fastcall__ s_sched (unsigned char k, unsigned id)
         }
     }
     smins = p - t;
-    return X.work != 0xFF ? SC_WORK : SC_ABOUT;
+    return X.work != 0xFF || ((K.styles & (K_DIGS | K_MINES)) && (id & 1)) ? SC_WORK : SC_ABOUT;
 }
 
 /* The pastime of denizen D (number id; its kind's ways X) at its leisure today: one of its kind's (X.past), by its
@@ -4435,8 +4616,11 @@ static unsigned char __fastcall__ target (unsigned char s, unsigned char j, unsi
 {
     tx = rhx;
     ty = rhy;
-    if (s == SC_WORK) {
-        return room_at (X.work, 0, v);
+    if (s == SC_WORK) {                         /* (A digger's work its lair's dig, if it has one to go on with: its
+                                                **   face's, part 12's, j the actor or NACTORS, a record, its home's
+                                                **   chunk made; else its work's room) */
+        return ((K.styles & (K_DIGS | K_MINES)) && made9 (dsn, (rhx - STRATUM (dsn).x0) >> CW_BITS, (rhy -
+            STRATUM (dsn).y0) >> CW_BITS) && dig_way (0x40 | j) != 0xFF) || (X.work != 0xFF && room_at (X.work, 0, v));
     }
     if (s == SC_WATCH) {
         return room_at (0xFF, j, 0xFF);
@@ -4464,7 +4648,7 @@ unsigned char __fastcall__ s_plan (unsigned char k)
         dsn = a.sn;
         rhx = ahx[k];
         rhy = ahy[k];
-        if (!s || target (s, pway[k], D.id)) {
+        if (!s || target (s, s == SC_WORK ? k : pway[k], D.id)) {
             aday[k] += (unsigned) ((unsigned long) smins * 600 >> 8) - 4;
         } else {
             s = SC_ABOUT;
@@ -4586,7 +4770,7 @@ unsigned char __fastcall__ s_wander (unsigned char lim)
     dsn = D.sn;
     rhx = tx = D.hx;
     rhy = ty = D.hy;
-    if (!target (s, (unsigned) (now >> 11) + D.id, D.id)) {
+    if (!target (s, s == SC_WORK ? NACTORS : (unsigned) (now >> 11) + D.id, D.id)) {
         s = SC_ABOUT;                           /* (No such room made: about) */
     }
     x = tx;
@@ -4622,6 +4806,10 @@ unsigned char __fastcall__ s_wander (unsigned char lim)
     x = pcrest ? 10 * ROAM_T : ROAM_T;          /* (The character resting: ten times the while, the long durations'
                                                 **   coarser ticks) */
     D.ready = now + (s == SC_SLEEP || s == SC_MEAL || s >= SC_LEISURE ? (unsigned long) smins * 600 : x + random (x));
+    if (s == SC_WORK && (K.styles & (K_DIGS | K_MINES)) && dig_way (0x80 | NACTORS) != 0xFF) {
+        D.ready = now + SPELL;                  /* (At its lair's dig's face: a spell of it, the world's, coarse:
+                                                **   part 12's) */
+    }
     return n;
 }
 
@@ -4652,6 +4840,10 @@ unsigned char __fastcall__ s_daily (unsigned char k)
         drunk[k] = (unsigned) (now >> 8);
     }
     a.doing = s + DO_SLEEP - SC_SLEEP;
+    if (s == SC_WORK && (K.styles & (K_DIGS | K_MINES)) && (d = dig_way (0x80 | k)) != 0xFF) {
+        return d;                               /* (At its lair's dig: a spell at its face, or a step to it: part
+                                                **   12's) */
+    }
     d = 0xFF;
     if (apart (a.x - atx[k], a.y - aty[k]) > 1 + (s >= SC_WORK && s != SC_WATCH)) {
         if (s != SC_WATCH) {

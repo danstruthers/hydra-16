@@ -589,6 +589,23 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   hear a scraping in rock ahead to your left."), its spells after (DE_DIGS: the denizens hear them, the player's not
   told again), the way through (DE_DUG at the square dug: seen as it was, "A fresh tunnel opens ahead.  Spoil lies
   heaped by it."; heard, "You hear rock falling ..."); the rock carrying a pick's knock where the air doesn't.
+- **At its work** (2026-11-02, slice 4.11's rest: dq0d.c's work_dig, part 12's, asked by the day's, part 9's target
+  and part 10's daily, as its work's hours come: never polled): a miner digs its faction's mine (from its lair's home
+  across to its region's vein, rock.h's rock_vein, then along it), a burrower its lair's burrow (one of the four ways
+  from its home, eight squares, as far as its claws bite); the way worked out each time from the dungeon as it is (no
+  record of it kept), the first square not open its face, dug from the square before it (its stand: an actor steps to
+  it, then posts its spell, I_KIT's KT_DIG, w1 w2 the face).  A kind with work of its own digs when there's a vein;
+  one with none, half of them (by their numbers) dig through their waking hours (sched's SC_WORK).
+- **Away from the character** (roam's records, part 9's wander): one at its dig's stand posts its spell coarse (I_KIT's
+  KT_DIG, who 0: w1 w2 its face, x[2] its stratum, x[0] its tools), due again a spell on; the world digs it at once,
+  untested, untold (wdig.c's), the hole and the way through kept as an actor's.
+- **Poor rock** (wdig.c): a tunneller's spell critically failed in shale fills two feet of its hole again, told
+  (DE_ROOF: "The dwarf miner is showered with rock from the roof.", heard rock falling; no harm: the referees' sheets
+  are the character's).  Its spells and its way through played by the sound task (dq0s: a dig, a smash).
+- **Builders** (2026-11-02: HOUSE.md's builders, for review): a miner at work first puts up again a door broken down
+  in its home's chunk (PS_WRECKED), from a square beside it: I_KIT's KT_BUILD (w1 w2 the door), the world's wdig.c a
+  spell's work, the door's change records (PORTAL_STATE shut and whole, PORTAL_HARM none), told (DE_HANGS: "The dwarf
+  miner hangs a new door.", heard hammering).
 
 ### Doors *(2026-11-02: Phase 3C's one path; HOUSE.md's denizens and doors, for review)*
 
@@ -664,11 +681,9 @@ What the plans bring later, by the slice or phase that brings it:
   distance, above): left, an ally asked to do other things ("ask the dwarf to open the door": it "doesn't know how"),
   "give the bandit 5 pennies" (the two objects without "to": the parser's), a gift to one that isn't a person (an
   altar), a faction's regard by a freed prisoner, a rescue or a piece of the puzzle, entertain and bargain.
-- **Tunnellers and builders** (slice 4.11, built in part 2026-11-01: tunnellers, above): left, the minds' other reasons
-  to dig (a burrow from a lair, a faction's mine following a vein: rock.h's veins; a way round rubble is dug now), the
-  records away from the character digging (only actors dig), poor rock coming down on a tunneller, the spoil as a thing,
-  a dig's sound played, a kobold's pick (its outfit has none); builders: a faction's folk shoring a passage, walling up
-  a way, putting up a door.
+- **Tunnellers and builders** (slice 4.11, built 2026-11-01 and 2026-11-02: tunnellers, above): left, builders
+  shoring a passage and walling up a way, the materials as things, the spoil as a thing, harm from falling rock on a
+  denizen, a mine past its home's chunk.
 - **Psionic and magical denizens** (slices 5.4, 5.7): kinds with talents, shielded minds, casters, the undead.
 
 Designed, but in no slice of the plans yet (DECISIONS.md has the user's words for most):

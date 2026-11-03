@@ -387,6 +387,11 @@ static void listen (void)
     while (hub_dnext (&dplace, &m)) {
         if (m.kind == E_DEN && m.b && m.x[0] == sn && (m.a == DE_MOVED || m.a == DE_NOISE)) {
             heard (m.who, m.x[1] % SND_KINDS * 2 + (m.a == DE_NOISE), m.b, m.w1 - px, m.w2 - py, m.x[3]);
+        } else if (m.kind == E_DEN && m.b && m.x[0] == sn && (unsigned char) (m.a - DE_DIG) <= DE_DIGS - DE_DIG) {
+            heard (m.who, WORLD (m.a == DE_DUG ? WS_SMASH : WS_DIG), m.b, m.w1 - px, m.w2 - py, m.x[3]);
+                                                /* (A tunneller's spell, its way through: slice 4.11's rest) */
+        } else if (m.kind == E_DEN && m.b && m.x[0] == sn && (m.a == DE_ROOF || m.a == DE_HANGS)) {
+            heard (m.who, WORLD (m.a == DE_ROOF ? WS_SMASH : WS_BLOW), m.b, m.w1 - px, m.w2 - py, m.x[3]);
         } else if (m.kind == E_FIGHT && m.x[0] == sn && m.x[1] < FO_BLED) {   /* (A blow: landing, or not) */
             heard (m.who, WORLD (m.x[1] == O_HIT || m.x[1] == O_BOTH_HIT || m.x[1] == O_COUNTER_HIT ||
                 m.x[1] == O_DISPATCH ? WS_HIT : WS_SWISH), m.b, m.w1 - px, m.w2 - py, 0);

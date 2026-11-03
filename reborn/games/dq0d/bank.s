@@ -12,7 +12,7 @@ BANKREG     = $00                   ; The task's RAM bank register (written: the
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
             .bss
-_ovbank:    .res        5           ; The parts' images' banks (dq0d.cfg's OV1 ... OV5)
+_ovbank:    .res        6           ; The parts' images' banks (dq0d.cfg's OV1 ... OV6)
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
 
@@ -35,7 +35,8 @@ ovx:        .res        1
                                             ;   found on the rounds, a pastime let go (2026-10-31)
             SWPART      11, 1               ; The denizens near enlisted (2026-10-31: the main RAM's room; small, cheap
                                             ;   to swap in, not while the UI's command is in hand)
-            SWPART      12, 5               ; The tunnellers: a way dug (slice 4.11's, 2026-11-01)
+            SWPART      12, 6               ; The tunnellers: a way dug (slice 4.11's, 2026-11-01); their work's,
+                                            ;   the builders' (overlay 6's, 2026-11-02)
             SWPART      13, 5               ; The lairs near placed (2026-11-01: the main RAM's room; small, cheap to
                                             ;   swap in, each time round after a move)
             SWPART      14, 5               ; Doors worked (Phase 3C's one path, 2026-11-02)
