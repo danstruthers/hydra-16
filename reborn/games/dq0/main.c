@@ -511,6 +511,11 @@ void __fastcall__ s_sheet_map (unsigned char what)
     r->state = REQ_FREE;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW14CODE")            /* (Part 14's since 2026-11-03: overlay 19's bank's room) */
+#pragma rodata-name (push, "SW14RODATA")
+
 static char* __fastcall__ save_at (const char* name)
 {
     strcpy (spath, savedir);

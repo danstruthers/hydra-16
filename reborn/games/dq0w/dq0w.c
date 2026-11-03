@@ -3564,28 +3564,26 @@ static void wall_look (void)
 ** time it's out for taken; the dig goes on, unless it's knocked senseless */
 static void roof_harm (void)
 {
-    struct req* r;
     unsigned out;
 
     if (G_OK (test_w (P_DODGE_HAZARD, 0))) {
         return;                                 /* (Out of its way in time, as from a trap's: the referee's) */
     }
     hub_map (0);
-    r = &HUB->slot[SLOT_WORLD];
-    r->kind = RS_HARM;
-    r->actor = 0;
-    r->other = 0;
-    r->a = HC_STRIKE;
-    r->b = AS_BLUNT;
-    r->c = 1;
-    r->w1 = 0;
-    r->w2 = Z_HIGH;
-    r->text[0] = 0;
-    r = hub_ask (SLOT_WORLD);
-    out = r->w2;
-    event (E_HARM, 0, HC_STRIKE | r->b << 8 | (out ? E_OUT : 0));
+    HUB->slot[SLOT_WORLD].kind = RS_HARM;
+    HUB->slot[SLOT_WORLD].actor = 0;
+    HUB->slot[SLOT_WORLD].other = 0;
+    HUB->slot[SLOT_WORLD].a = HC_STRIKE;
+    HUB->slot[SLOT_WORLD].b = AS_BLUNT;
+    HUB->slot[SLOT_WORLD].c = 1;
+    HUB->slot[SLOT_WORLD].w1 = 0;
+    HUB->slot[SLOT_WORLD].w2 = Z_HIGH;
+    HUB->slot[SLOT_WORLD].text[0] = 0;
+    hub_ask (SLOT_WORLD);
+    out = HUB->slot[SLOT_WORLD].w2;
+    event (E_HARM, 0, HC_STRIKE | HUB->slot[SLOT_WORLD].b << 8 | (out ? E_OUT : 0));
     hub_map (0);
-    r->state = REQ_FREE;
+    HUB->slot[SLOT_WORLD].state = REQ_FREE;
     harm_fx ();
     if (out) {
         busy (out);
