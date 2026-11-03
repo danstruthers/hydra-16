@@ -593,8 +593,11 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   and part 10's daily, as its work's hours come: never polled): a miner digs its faction's mine (from its lair's home
   across to its region's vein, rock.h's rock_vein, then along it), a burrower its lair's burrow (one of the four ways
   from its home, eight squares, as far as its claws bite); the way worked out each time from the dungeon as it is (no
-  record of it kept), the first square not open its face, dug from the square before it (its stand: an actor steps to
-  it, then posts its spell, I_KIT's KT_DIG, w1 w2 the face).  A kind with work of its own digs when there's a vein;
+  record of it kept: the open squares and doorways on it walked through, a door or a portcullis raised), the first
+  wall, rock or rubble its face, dug
+  from the square before it (its stand: an actor steps to it, a shut door on the way opened by the doors' own, part
+  14's door_way, as one following the character; then posts its spell, I_KIT's KT_DIG, w1 w2 the face), within its
+  home's chunk; its stand another's, it waits a minute or two (a record's due again a spell on).  A kind with work of its own digs when there's a vein;
   one with none, half of them (by their numbers) dig through their waking hours (sched's SC_WORK).
 - **Away from the character** (roam's records, part 9's wander): one at its dig's stand posts its spell coarse (I_KIT's
   KT_DIG, who 0: w1 w2 its face, x[2] its stratum, x[0] its tools), due again a spell on; the world digs it at once,

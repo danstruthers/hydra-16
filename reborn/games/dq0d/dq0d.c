@@ -2289,8 +2289,9 @@ static unsigned char dsn;
 ** own way, within its home's chunk (made: part 9's target asks).  A miner (K_MINES, a pick among its things: an actor's
 ** the world's agear; a record's, its kind's miners' if they work, the house's) its faction's mine: from its lair's
 ** home straight across to the vein of its region (rock.h's rock_vein: a seam of ore or quartz, its middle on the
-** home's row within a chunk's breadth), then along it, north or south by its lair's number, its middle followed row by
-** row (a diagonal where it slants a square, across where it slants more), MINE_LEN squares at most.  A burrower
+** home's row within its home's chunk), then along it, north or south by its lair's number, its middle followed row by
+** row (a diagonal where it slants a square, across where it slants more), MINE_LEN squares at most, the open ones and
+** doorways on it walked through.  A burrower
 ** (K_DIGS) its lair's burrow: from its home one of the four ways by its lair's number, BURROW squares, as far as its
 ** claws bite (rubble, earth, soil, the soft rock's beds: never a wall).  Nothing of it kept: the way is worked out
 ** again from the dungeon as it is each time it's asked, the squares already dug walked through, its face the first
@@ -2300,7 +2301,7 @@ static unsigned char dsn;
 ** tunnellers', its own test, the world's wdig.c; a record's coarse, w1 w2 its stand, untested), an actor stepped
 ** toward its stand first (its step), else 0xF9; 0xFF none.  Part 12's (dig_way's k | 0x40 or 0x80; its statics in the
 ** part, not the main RAM's) */
-#define MINE_LEN        48                      /* (Squares a mine goes, its way across and along, at most) */
+#define MINE_LEN        64                      /* (Squares a mine goes, its way across and along, at most) */
 #define BURROW          8                       /* (Squares a burrow goes from its home) */
 #pragma code-name (push, "SW12CODE")
 #pragma rodata-name (push, "SW12RODATA")
@@ -2399,8 +2400,10 @@ static unsigned char __fastcall__ work_dig (unsigned char k)
             break;                              /* (Never out of its home's chunk) */
         }
         p = at (sn, ox + nx, oy + ny);
-        if (open_sq (p)) {
-            x = nx;                             /* (Dug already, or open: on along it) */
+        if (open_sq (p) || (TILE (*p) == T_DOOR && (!(q = portal_at (cx_, cy_)) || q->kind == PK_DOOR ||
+            (q->state & PS_OPEN)))) {
+            x = nx;                             /* (Dug already, or open, or a doorway (a door, or a portcullis
+                                                **   raised): on along it) */
             y = ny;
             if (dy) {
                 vx = nvx;
@@ -2431,8 +2434,20 @@ stand:
                 refx = tx;
                 refy = ty;
                 h = step_for (i, 2 * K.range + 8, S_TOWARD);
+                if (h == 0xFF && door_by ()) {
+                    t = a.doing;
+                    a.doing = DO_COMING;        /* (A shut door the way to it: opened, the doors' own, part 14's) */
+                    if ((h = door_way (i | 0x80)) == 0xFF) {
+                        a.doing = t;
+                    }
+                }
                 refx = pcx;
                 refy = pcy;
+                if (h == 0xFF) {
+                    wt = 600 + random (600);    /* (No way nearer, its stand another's: it waits a minute or two,
+                                                **   at its work) */
+                    h = 0xFE;
+                }
                 return h;
             }
             a.face = h;
@@ -2444,7 +2459,7 @@ stand:
             return 0xF9;
         }
         if (D.x != tx || D.y != ty) {
-            break;
+            return 0xF8;                        /* (Beside it, its stand another's: due again a spell on) */
         }
         im.x[0] = g;                            /* (A record's spell, coarse: the world's, untested) */
         im.x[2] = sn;

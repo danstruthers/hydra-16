@@ -2670,14 +2670,17 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   its faction's mine: from its lair's home straight across to the vein of its region (rock.h's veins: a seam of ore
   or of quartz; a dyke of basalt isn't mined), its middle on the home's row no more than a chunk's breadth away, then
   along the vein (north or south by its lair's number) row by row, keeping to its middle (a diagonal step where the
-  vein slants a square a row, across it where it slants more), 48 squares at most.  A burrower (ways d) digs its
+  vein slants a square a row, across it where it slants more), 64 squares at most.  A burrower (ways d) digs its
   lair's burrow: from its home one of the four ways (by its lair's number), eight squares, as far as its claws bite
   (rubble, earth, soil and the soft rock, shale; never a wall).  A kind that has its own work (a smith's forge) digs
   when there's a vein; one with none (a rat, a brown orc) half of them dig through their waking hours, the other half
   go about as before.  Nothing of the mine is kept but the dungeon itself: its way is worked out again each time
-  (the squares dug already walked through), and it digs the first square that isn't open, from the square before it,
-  a spell at a time by the character's rules (above).  Within its home's chunk only, and only where that chunk's
-  made; it stops at a door, water, a pit, the chunk's edge.  None near: its work's room, as ever.
+  (the squares dug already, the open ones and the doorways on its line walked through), and it digs the first square
+  that's a wall, the rock or rubble, from the square before it, a spell at a time by the character's rules (above);
+  a shut door on its way to it opened as one following the character opens one (its key if it's locked; never
+  forced).
+  Within its home's chunk only, and only where that chunk's made; it stops at water, a pit, a portcullis let down
+  (the minds raise none yet), the chunk's edge.  None near: its work's room, as ever.
 - **Away from the character** *(the house's, 2026-11-02)*: a denizen out of the character's reach (not an actor: its
   record moved coarsely) digs its work's spell all at once as it's due, untested (a marginal success's rate: no dice
   of its own), the hole kept and the way through made as an actor's are; it's never told (the character isn't near).
