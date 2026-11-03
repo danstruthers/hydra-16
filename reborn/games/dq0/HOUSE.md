@@ -1119,8 +1119,7 @@ and 2026-10-21: keen noses follow a scent far longer than an hour, a hound's esp
   (the character's own: its sweat's smell 3, its prints by what it wears on its feet, the user's, 2026-11-03, "build it":
   bare feet 2, sandals or shoes 3, knee boots 4, hobnailed boots 6, *the house's numbers, for review: a third of a tread
   shows, so bare feet leave the fainter prints and hobnails the clearer (5 would show no clearer than boots)*; as it's
-  shod when they're read, not when they were made, as the words have it; weighed as it next moves, wlimbs.c's equip_now,
-  the hub's pc_feet).
+  shod when they're read, not when they were made, as the words have it: wtrword.c's feet).
 - **Examine the floor** ("look at the ground"): sight alone, no test, 5 seconds, the floor where it stands and the
   squares two each way: its material, its dust, and "It's been trodden" if any trail there shows 4 or more.  In the
   dark it can't be done.

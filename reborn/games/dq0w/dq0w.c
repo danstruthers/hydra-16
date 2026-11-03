@@ -6605,12 +6605,7 @@ void s_step_loud (void)
     unsigned i;
 
     hub_map (0);
-    g = 0;
     for (i = 0, q = 0; HUB->pc_clank == 0xFF && (i = items (i, IN_X | IN_ACTOR, 0)) != 0; ) {
-        if (ip->flags & I_WORN) {               /* (What's on its feet, its prints': the hub's pc_feet) */
-            k = ip->kind;
-            g = k == KI_BOOTS ? 1 : k == KI_SANDALS ? 2 : k == KI_SHOES ? 3 : k == KI_HOBNAIL ? 4 : g;
-        }
         if ((ip->flags & I_WORN) && (unsigned char) (ip->mat - MT_IRON) < 3 && (k = ip->kind) != 0) {
             hub_map (KIND_BANK);
             q |= CATALOGUE[k].weight >= 24;     /* (Metal armour worn, six pounds of it: mail, plate) */
@@ -6620,7 +6615,6 @@ void s_step_loud (void)
     hub_map (0);
     if (HUB->pc_clank == 0xFF) {
         HUB->pc_clank = q;                      /* (Weighed once as what's worn changes: wlimbs.c's equip_now) */
-        HUB->pc_feet = g;
     }
     g = pace_;
     q = HUB->pc_qp;

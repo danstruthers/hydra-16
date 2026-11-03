@@ -498,8 +498,9 @@ static void sniff (void)
     hub_map (0);
 }
 
-/* (Its prints' tread by its footwear, the hub's pc_feet: bare feet 2, boots 4, sandals or shoes 3, hobnails 6: HOUSE.md's,
-** the user's, 2026-11-03) */
+/* (Its prints' tread by its footwear, feet's: bare feet 2, boots 4, sandals or shoes 3, hobnails 6: HOUSE.md's, the user's,
+** 2026-11-03) */
+unsigned char feet (void);
 static const unsigned char feet_tread[5] = { 2, 4, 3, 3, 6 };
 
 unsigned __fastcall__ s_traced (const struct msg* m)
@@ -511,6 +512,7 @@ unsigned __fastcall__ s_traced (const struct msg* m)
     static signed char st, dx, dy;
     static unsigned char i, j, k, best;
 
+    ptread = feet_tread[feet ()];               /* (Part 31's) */
     how = (unsigned char) m->w1;                /* (The journal taken in first, the chunks round the character too:
                                                 **   the caller's, tr_flush) */
     way = m->w1 >> 8;
@@ -522,7 +524,6 @@ unsigned __fastcall__ s_traced (const struct msg* m)
     now = (unsigned) (HUB->now / TQ);
     pnose = HUB->pcsum.smell >> 2;              /* (The character's nose: a quarter of its smell sense, the
                                                 **   referee's) */
-    ptread = feet_tread[HUB->pc_feet];
     R.how = how;
     i = STRATUM (ws).age;
     dust = i < 3 ? i : 3 + 1 + (i >= 6) + (i >= 12);   /* (Its centuries': none of no age, a skin in one or two, the

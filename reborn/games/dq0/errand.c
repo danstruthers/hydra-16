@@ -150,7 +150,7 @@ unsigned char s_trade (void)
         q->sel = 0;
         if (things (IO_FETCH, "farthings") == IR_OK) {
             fc = q->item;
-            fn = q->qty;
+            fn = q->qty ? q->qty : 1;
         }
     }
     if (w < 16 && sell) {                       /* (Its farthings) */
@@ -165,7 +165,7 @@ unsigned char s_trade (void)
         }
         if (o == IR_OK) {
             fi = q->item;
-            fm = q->qty;
+            fm = q->qty ? q->qty : 1;
         }
         o = sell;
     }

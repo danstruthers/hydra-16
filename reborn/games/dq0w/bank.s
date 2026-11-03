@@ -387,6 +387,7 @@ go:
             SWFN        tr_file, 30
             SWFN        traced, 29
             SWFN        tr_words, 31
+            SWFN        feet, 31            ; (Its footwear: its prints' tread, part 29's, 2026-11-03)
             SWFN        tr_scent, 32
             SWFN        across, 33
             SWFN        intent_more, 37

@@ -27,6 +27,23 @@
 #pragma bss-name (push, "SW31RODATA")
 
 static struct tread R;
+
+/* What the character wears on its feet: 0 bare, 1 boots, 2 sandals, 3 shoes, 4 hobnails (its prints' words: shod's; their
+** tread, part 29's through its stub, feet: the user's, 2026-11-03) */
+unsigned char s_feet (void)
+{
+    static unsigned i;
+    static unsigned char f, k;
+
+    for (i = f = 0; (i = items (i, IN_ACTOR | IN_X, 0)) != 0; ) {
+        k = ip->kind;
+        if (ip->flags & I_WORN) {
+            f = k == KI_BOOTS ? 1 : k == KI_SANDALS ? 2 : k == KI_SHOES ? 3 : k == KI_HOBNAIL ? 4 : f;
+        }
+    }
+    hub_map (0);
+    return f;
+}
 static unsigned n;                              /* (The words so far: their length) */
 /* Words added (the UI bank's trtext, as far as it holds) */
 static void __fastcall__ add (const char* s)
@@ -99,8 +116,7 @@ unsigned __fastcall__ s_tr_words (unsigned w)
         }
         if (!t->kind) {
             t->name[0] = 0;                     /* (The character's own: its footwear's marks) */
-            hub_map (0);
-            strcpy (t->what, shod[HUB->pc_feet]);
+            strcpy (t->what, shod[s_feet ()]);
         }
         for (d = TP_ONE; d < TP_MANY && t->n >= n_at[d]; ++d) {
         }

@@ -1463,8 +1463,6 @@ struct hub {                                    /* Bank 0, at $8000 */
     /* The water where the character is (slice 4.9: DUNGEON.md's water), the world's as it moves: how deep it is, its
     ** swimming (the referee's P_SWIM: its squares a minute), its breath held (the seconds it's been under, the most it
     ** can hold it: the referee's) */
-    unsigned char   pc_feet;                    /* What's on its feet (0 bare, 1 boots, 2 sandals, 3 shoes, 4 hobnails: its
-                                                **   prints, the world's, weighed with pc_clank as it next moves: 2026-11-03) */
     unsigned char   pc_wet;                     /* The water's depth where it stands, feet (0: dry), | WET_RUNS */
     unsigned char   pc_swim;                    /* Swimming: its squares a minute (0: not swimming) */
     unsigned char   pc_under, pc_breath;        /* Seconds under water, and the most it can hold its breath */
@@ -1752,7 +1750,7 @@ struct wsave {
 **   own hub.pc_bg senses                                       (layer's; the stratum's draught, the air's)
 **   own hub.air_h senses
 **   own hub.air_s senses
-**   own hub.pc_clank world +ui                                     (The character's armour, its creep's Stealth: the
+**   own hub.pc_clank world                                     (The character's armour, its creep's Stealth: the
 **   own hub.pc_qp world                                        (world's, slice 4.6's)
 **   own hub.pc_qg world
 **   own hub.pc_qat world
@@ -1760,7 +1758,6 @@ struct wsave {
 **   own hub.pc_thirst referee +world                           (  keep with the game, world.dat: slice 4.9's)
 **   own hub.pc_want referee +world
 **   own hub.pc_meals referee +world
-**   own hub.pc_feet world
 **   own hub.pc_wet world
 **   own hub.pc_swim world
 **   own hub.pc_under world

@@ -1734,8 +1734,6 @@ static void to_hand (void)
     HUB->slot[SLOT_UI].w1 = HUB->ireq.x;
     HUB->slot[SLOT_UI].w2 = HUB->ireq.y;        /* (The hands that hold something: slice 4.1b's) */
     referee (RS_EQUIP, 2)->state = REQ_FREE;
-    HUB->pc_clank = 0xFF;                       /* (What it wears weighed again as it next moves: its armour, what's on its
-                                                **   feet, the world's part 50's) */
 }
 
 /* The tool a dig's spell took (the referee's choice): worn by it, and named as it's first taken up (part 14's, s_news's
