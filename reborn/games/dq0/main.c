@@ -2399,6 +2399,7 @@ void __fastcall__ s_walk_says (const char* name)
     } else {
         msg ("You go over to it.");
     }
+    t_flush ();                                 /* (Out before the world's walk starts: the user's D17) */
     placing = 1;
 }
 
@@ -2410,6 +2411,7 @@ unsigned char s_reach_go (void)
     if (reach) {
         msg ("You can't get any nearer to it.");
     } else {
+        cmd.obj.lies = 0xFF;                    /* (Kept without the side it lay on, said from where it was: it's come to it) */
         hub_map (UI_BANK);
         memcpy (&UIREC->kept, &cmd, sizeof cmd);
         hub_map (0);

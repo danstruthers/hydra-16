@@ -857,8 +857,8 @@ unsigned char s_serve (void)
         }
         break;
     }
-    if (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE || iq.kind == IO_THROW ||
-        (iq.kind >= IO_HOLD && iq.kind <= IO_NAME)) {
+    if (iq.result != IR_NOT_HERE && (iq.kind == IO_KIT || iq.kind == IO_GET || iq.kind == IO_DROP || iq.kind == IO_HIDE ||
+        iq.kind == IO_THROW || (iq.kind >= IO_HOLD && iq.kind <= IO_NAME))) {   /* (Out of reach: nothing's moved yet) */
         s_light_now ();                         /* (Its light: what it holds lit) */
         changed |= iq.result == IR_OK;
     }
@@ -1113,7 +1113,20 @@ static unsigned char __fastcall__ chain (unsigned i)
 ** win already (a count's put there).  Its number, or 0 (HW_HAND's: one seen but out of reach, afar, far_n where it
 ** is); seen_d how far off, in squares; csum how many there were to choose from, all told (a lot its count) */
 #define NCAND           8
+static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigned char* no);
+#pragma static-locals (push, off)
 unsigned __fastcall__ s_pick (const char* name, unsigned char how)
+{
+    unsigned char no[NK];                       /* (The kinds this name's no name of: asked once a kind, a world's every
+                                                **   thing passed over at a look, the user's D17: a command that names a
+                                                **   thing answers at once; on the C stack, the main RAM's room) */
+
+    memset (no, 0, NK);
+    return pick_ (name, how, no);
+}
+#pragma static-locals (pop)
+
+static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigned char* no)
 {
     struct { unsigned n; unsigned char r; } c[NCAND];
     unsigned char* t;
@@ -1132,8 +1145,17 @@ unsigned __fastcall__ s_pick (const char* name, unsigned char how)
     x = HUB->pc_x;
     y = HUB->pc_y;
     while ((i = items (i, IN_SQUARE | IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {
+        p = item_at (i);
+        pk = p->kind;
+        if (no[pk] || (p->flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN) {
+            continue;
+        }
         fetch (&rec, i);
-        if ((rec.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN || !is_named (name) || (d = chain (i), cnot && s != SL_NTH)) {
+        if (!is_named (name)) {
+            no[pk] = *name != '#';
+            continue;
+        }
+        if (d = chain (i), cnot && s != SL_NTH) {
             continue;                           /* (Not the first, nor in it, unless it's the nth said: "the second
                                                 **   sack" of them all, not of the rest) */
         }

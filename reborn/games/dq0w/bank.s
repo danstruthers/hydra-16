@@ -89,7 +89,7 @@ go:
             SWPART      3, 1                ; The dungeon begun, the strata below grown
             SWPART      4, 2                ; The change records' rarer work (store.c), the UI's requests; a thing of
                                             ;   several, things moved by the count, what closes worked (things.c)
-            SWPART      5, 2                ; Doors (wdoor.c)
+            SWPART      5, 16                ; Doors (wdoor.c)
             SWPART      6, 3                ; Blows (wblow.c)
             SWPART      7, 14               ; Portcullises and windows (wwin.c); the map drawn as it goes (dq0w.c's
                                             ;   draw_test: slice 4.2's)
@@ -149,7 +149,7 @@ go:
             SWPART      52, 16              ; The character's bearings underground (dq0w.c's: slice 4.2's)
             SWPART      53, 16              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
             SWPART      54, 16              ; Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
-            SWPART      55, 16              ; Travel to a place it knows (dq0w.c's: slice 4.2's)
+            SWPART      55, 2              ; Travel to a place it knows (dq0w.c's: slice 4.2's)
             SWPART      56, 11              ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
             SWPART      57, 18              ; The outfits drawn: the character's, a denizen's (outfit.c, 2026-10-27)
             SWPART      58, 19              ; The outfits made (outmake.c)

@@ -2776,7 +2776,7 @@ function dq0Timer(m) {
 // move takes, at the normal pace the move taking its own time, a step a second, then the senses' look)
 const DQ0_ANSWERS = [['turn left', 'You turn to face', 1790000], ['turn right', 'You turn to face', 1790000],
   ['step forward', 'You'], ['inventory', 'You carry', 720000], ['examine the torch', 'Your torch'], ['walk to the door ahead to my left', 'You'], ['examine the door', 'You head for|A door|Which door', 720000],
-  ['look', 'You', 1790000, 1790000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You'], ['walk to the window', 'You'], ['take the bones', 'You go over to the bones.', 720000]];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
+  ['look', 'You', 1790000, 1790000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You'], ['walk to the window', 'You'], ['take the bones', 'You go over to the bones.', 1250000], ['look', 'You']];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
 function dq0AnswerTest(baud) {
   const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
   const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
@@ -9245,7 +9245,8 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm', 'go through the door to the east', 'open', 'look', 'look at the door', 'quit',
         'dq0 -p t -s 16 -c /ram/c.hm -T', 'go to the pit', 'go to the ledge', 'face east', 'force', 'e', 'force', 'force', 'e', 'e', 'go west', 'go to the trap', 'go west', 'go to the pit', 'quit',
         'dq0 -p t -s 517 -c /ram/c.hm', 'ne', 'e', 'go to the ledge', 'quit',
-        'dq0 -p t -s 2 -c /ram/c.hm -T', 'read the door', 'read the sconce', 'douse the torch', 'read the sconce', 'quit', 'echo $status']) },
+        'dq0 -p t -s 2 -c /ram/c.hm -T', 'read the door', 'read the sconce', 'douse the torch', 'read the sconce', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'step forward', 'examine the door ahead', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], ans = dq0Answers(out), T = dq0Turns(m), g = {};
@@ -9301,6 +9302,7 @@ module.exports = {
         said('read the door', 'There\'s nothing written on it.');
         said('read the sconce', ['You go over to the sconce.', 'There\'s nothing written on the sconce.']);   // (Walked over to first, as any inspecting)
         said('read the sconce', 'You can\'t see to read.', 'You go over');   // (In the dark, nothing's read: where it lies or not)
+        said('examine the door ahead', ['You head for the door.', 'A door of '], 'You haven\'t seen');   // (The side said from where it was: gone to, it's that one)
         const r = T.of('go to the closest rat');
         if (r.k < 0) f.push('no rat gone to');
         dq0Never(f, r, 'E_FIGHT', { who: 0, def: -1 }, 'a blow struck, going up to a rat');
