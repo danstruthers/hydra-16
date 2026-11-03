@@ -546,6 +546,9 @@ void o_state (void)
         k = (k + 1) / 2;                        /* (In shock, half its Move, a walk at most: dq0harn.c's status) */
         h = h > GA_WALK ? GA_WALK : h;
     }
+    if (k < 4) {
+        k = h > GA_WALK && (unsigned) k * feet[h][0] >= 10 ? k : 4;   /* (A Move under 4 walks as Move 4: dq0harn.c's step) */
+    }
     putn (k * feet[h][0] / feet[h][1]);
     put (" feet a round)");
     house_watching (ps.watch);

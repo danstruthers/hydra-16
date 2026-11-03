@@ -103,7 +103,8 @@ void __fastcall__ s_den_take (const struct msg* m)
         c = CATALOGUE[k].craft;
         f = CATALOGUE[k].flags;
         if (!((want & TW_ARMS) && c == AP_WEAPON && (f & K_HAND) && !(CATALOGUE[k].form & KF_COUNT)) &&
-            !((want & TW_FOOD) && c == AP_FOOD) && !((want & TW_LOOT) && (k == KI_PENNIES || c == AP_JEWEL))) {
+            !((want & TW_FOOD) && !strcmp (CATALOGUE[k].tool, "food")) &&
+            !((want & TW_LOOT) && (k == KI_PENNIES || k == KI_CROWNS || k == KI_FARTHINGS || c == AP_JEWEL))) {
             continue;
         }
         d = dx < 0 ? -dx : dx;

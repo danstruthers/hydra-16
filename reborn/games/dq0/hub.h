@@ -464,6 +464,7 @@ enum {
                                                 **   carrier (a quiver); E_TASK TE_GATHERED, b how many */
     NINTENTS
 };
+#define AIM_HARD        0x10                    /* (I_ATTACK's b: a throw, thrown hard: twice as far, 10 less) */
 #define AIM_SHOT        0x40                    /* (I_ATTACK's b, | the aim: a shot or a throw, not a blow (slice
                                                 **   4.7's: the world's missiles, the referee's RS_MISSILE), the
                                                 **   UI's with x[1] SK_OF the launcher's kind or the thing

@@ -1039,18 +1039,19 @@ static unsigned __fastcall__ rs_held (unsigned n)
 static unsigned char __fastcall__ rs_lit_from (unsigned sp, unsigned old)
 {
     unsigned i;
+    unsigned char h = item_at (sp)->flags & I_HELD ? item_at (sp)->sn : 0;   /* (In its other hand already: lit there) */
 
-    if (!hand_free (sp) && (i = rs_held (old)) != 0) {
+    if (!h && !hand_free (sp) && (i = rs_held (old)) != 0) {
         return rs_set_down (i);
     }
     rs_redo |= RR_TWO;
-    if (reach_step (sp, 0)) {
+    if (!h && reach_step (sp, 0)) {
         if (rs_k == LT_GETOUT) {
             rs_k = LT_GETNEW;
         }
         return IR_NO;
     }
-    rs_hand = hand_free (sp);
+    rs_hand = h ? h : hand_free (sp) & ~HF_FIXT;
     rs_c = sp;
     rs_do = RS_LIGHT;
     rs_k = LT_LIGHTNEW;
@@ -3342,8 +3343,11 @@ unsigned char s_look_at (void)
     } else if (rec.where == IW_PORTAL) {
         put (rec.kind == KI_BAR ? "set in its door" : "set in its window");
     } else if (ld > 1) {
+        put ("some ");
+        goto feet;
 off:
         put (" is some ");
+feet:
         put (utoa (SQ_FT * ld, b, 10));
         put (" feet off");
     } else {
@@ -3465,6 +3469,7 @@ unsigned char __fastcall__ s_describe (const char* name)
     strcpy (r->name, k->name);
     r->item = rec.id;
     r->craft = k->craft;
+    r->to = !strcmp (k->tool, "food");          /* (Food: what's eaten, by its key, not the appraisal's craft, a candle's) */
     r->quality = rec.quality;
     r->mat = rec.mat;
     r->plural = (k->flags & K_PLURAL) != 0;
@@ -3647,6 +3652,10 @@ static void worn_words (void)
     }
     if (rec.id && (b = burn_of (rec.kind)) != 0) {
         w = b->life * 10;                       /* (A whole one's minutes: the quarters left) */
+        if ((lk.flags & K_LIGHT) && !b->fuels) {
+            w = w / 6 * rec.thick * (rec.mat == MT_WAX ? 3 : 2) / 2 * (15 + rec.quality) / 19;   /* (A candle: its own, as
+                                                **   it was made, part 28's) */
+        }
         word (left[lk.flags & K_LIGHT ? rec.kind == KI_LANTERN : (b->fuels & FU_DRAW) && rec.kind != KI_INK ? 3 : 2]
             [!rec.fuel ? 0 : rec.fuel >= w ? 5 : 1 + rec.fuel * 4 / w]);
     }
@@ -4126,15 +4135,16 @@ unsigned char s_fill (void)
         }
         wsel = bk ? SL_NTH | bk << 4 : iq.sel;
         if (!(n = at_hand (iq.name))) {
-            put (*iq.name ? "You have no such thing to hand." : "Fill what?");
+            put (*iq.name ? "You have no such thing." : "Fill what?");
             return IR_NO;
         }
     }
     make_own (n);
     fetch (&l, n);
     strcpy (ln, kind_of (l.kind)->name);
-    if (!(kind_of (l.kind)->flags & K_LIGHT)) {
-        handled = n;                            /* (A blade sharpened, "fill" its words' verb: part 85's: HOUSE.md's) */
+    if (!(kind_of (l.kind)->flags & K_LIGHT) || (iq.to & IO_SHARP)) {
+        handled = n;                            /* (A blade sharpened, "fill" its words' verb, said so of anything: part
+                                                **   85's: HOUSE.md's) */
         return reach_do (RO_HONE);
     }
     if (!(b = burn_of (l.kind)) || !(takes = b->fuels)) {
@@ -4288,12 +4298,13 @@ void __fastcall__ s_make_own (unsigned i)
             q.thick = 4 + 2 * (h & 3);
             life = life / 6 * q.thick * (m == MT_WAX ? 3 : 2) / 2 * (15 + q.quality) / 19;
         }
-        if (q.where == IW_SQUARE) {             /* (Found lying: part of it used before it was left, a sixteenth less a
-                                                **   century of its stratum's age; a candle some left still, a
+        if (q.where == IW_SQUARE || (q.where == IW_ITEM && !(q.flags & I_TENDED) && item_at (q.x)->kind == KI_SCONCE)) {
+                                                /* (Found lying, or cold in a sconce: part of it used before it was left, a
+                                                **   sixteenth less a century of its stratum's age; a candle some left still, a
                                                 **   lantern's oil dried, a torch's pitch crumbled) */
             a = STRATUM (q.sn).age;
             h = h % 12 + 2;
-            h = h > a ? h - a : !b->fuels;
+            h = h > a ? h - a : !b->fuels || q.where != IW_SQUARE;   /* (A sconce's part burnt, its last sixteenth) */
             life = life * h / 16;
         }
         q.fuel = life;
@@ -4764,9 +4775,10 @@ static unsigned char spent (void)
 ** named: a spare torch, not the one burnt out; or one within reach, named) */
 static unsigned char __fastcall__ light (unsigned char on)
 {
-    static unsigned n, c;
-    static unsigned char r, x, fr, f;
+    static unsigned n, c, nf;
+    static unsigned char r, x, fr, f, hh;
 
+    c = 0;
     fr = on && wsel == SL_NEW;                  /* ("Light a new torch", the user's, 2026-11-02: HOUSE.md's */
     if (fr && (rs_redo & RR_NEW)) {             /*   a new light lit from the old one, its next step, part 86's) */
         m0 (text_new);
@@ -4775,12 +4787,18 @@ static unsigned char __fastcall__ light (unsigned char on)
     for (n = 1; n < NITEMS && *iq.name != '#' && !*iq.into; ++n) {  /*   a new light: the old let fall, a spare got out, lit) */
         FETCH (n);
         if (o.kind && (KFLAGS (o.kind) & K_LIGHT) && !(o.flags & I_LIT) == on && (!on || !spent ()) &&
-            !(fr && (o.flags & I_HELD)) &&
             (!*iq.name || named (KIND_K (o.kind)->name, iq.name)) && B (m1 (on_pc, n))) {
-            break;
+            if (!fr || (o.flags & I_HELD)) {
+                break;                          /* (New: one in a hand first, no pack off for it) */
+            }
+            if (!c) {
+                c = n;
+            }
         }
     }
-    if (n >= NITEMS || *iq.name == '#' || *iq.into) {
+    if (n >= NITEMS && c) {
+        n = c;
+    } else if (n >= NITEMS || *iq.name == '#' || *iq.into) {
         if (!*iq.name) {
             return no (on ? SA_NONE_TO_LIGHT : SA_NONE_LIT);
         }
@@ -4801,6 +4819,9 @@ static unsigned char __fastcall__ light (unsigned char on)
 spare:
     name_of (n, 1);
     FETCH (n);
+    nf = o.where == IW_SQUARE && o.id ? o.fuel : 0xFFFF;   /* (One lying within reach: new only if it has more left
+                                                **   than the one burning, the old one let fall no spare yet) */
+    hh = o.flags & I_HELD;
     r = o.flags & I_LIT;
     x = o.where == IW_ITEM && !(KIND (o.x)->flags & K_BELT);  /* (In a container: the pack ...) */
     if (!(KFLAGS (o.kind) & K_LIGHT)) {
@@ -4833,8 +4854,11 @@ spare:
     if (fr) {                                   /* (The old one in a hand let fall first, a step of its own) */
         for (c = 1; c < NITEMS; ++c) {
             FETCH (c);
-            if (o.kind && o.where == IW_ACTOR && !o.x && (o.flags & I_HELD) && (KFLAGS (o.kind) & K_LIGHT) &&
+            if (c != n && o.kind && o.where == IW_ACTOR && !o.x && (o.flags & I_HELD) && (KFLAGS (o.kind) & K_LIGHT) &&
                 named (KIND_K (o.kind)->name, iq.name)) {
+                if ((o.flags & I_LIT) && o.fuel >= nf) {
+                    return no (SA_NO_SPARE);
+                }
                 if ((o.flags & I_LIT) && rs_ok == 1) {  /* (Burning, by the steps: lit from it, part 86's) */
                     rs_old = c;
                     rs_tool = n;
@@ -4855,7 +4879,7 @@ spare:
             }
         }
     }
-    x = fr || (x && B (m1 (on_pc, n)));
+    x = !hh && (fr || (x && B (m1 (on_pc, n))));
     if (x && B (m1 (hand_free, n)) && B (m2 (reach_step, n, 0))) {
         return IR_NO;                           /* (The spare got out first, past its hands' refusal, hold's) */
     }
@@ -5067,7 +5091,7 @@ unsigned char s_seek (void)
     HUB->ireq.x = 0;
     if (f == SF_ON && !touch) {
         if ((sitem = pick (sname, HW_HAND)) != 0) {
-            if (reach_step (0, sitem)) {
+            if (item_at (sitem)->shut & IS_CLOSED ? reach_step (sitem, 0) : reach_step (0, sitem)) {
                 return IR_NO;                   /* (A pack worn taken off to search it, its levels, each its time first,
                                                 **   and put on again after the search's minute, HOUSE.md's reach) */
             }

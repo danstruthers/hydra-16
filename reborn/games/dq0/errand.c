@@ -260,7 +260,7 @@ unsigned char s_errand (void)
         w = v && n > 0xFFFFU / v ? 0xFFFFU : v * n;
         HUB->sway.item = q->item;
         HUB->sway.ix = w;
-        HUB->sway.iy |= q->craft == AP_FOOD;
+        HUB->sway.iy |= q->to;                  /* (Food: IO_DESCRIBE's reply, by its key) */
         strcpy (t, cmd.obj.word);
         strcpy (cmd.obj.word, cmd.other.word);
         strcpy (cmd.other.word, t);

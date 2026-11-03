@@ -235,6 +235,7 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define MS_UNAWARE      0x100
 #define MS_COVER        0x200
 #define MS_STRAY        0x400
+#define MS_HARD         0x800                   /* (The world's own: a throw's, two steps the harder in the request's steps) */
 #define AF_STOPPED      0x01                    /* The attacker's strike stopped by armour (its line the armour's) */
 #define AF_STOPPED_D    0x02                    /*   the defender's */
 #define AF_TA           0x04                    /* The defender's tactical advantage: an action more, at once */

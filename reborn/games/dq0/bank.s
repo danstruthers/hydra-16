@@ -188,6 +188,7 @@ ovl_out:
             SWFN        take, 2
             SWFN        took_up, 2
             SWFN        map, 3
+            SWFN        sheet_map, 3        ; (The sheet, the map's lines: part 2's room, 2026-11-03)
             SWFN        lie_words, 8
             SWFN        door_words, 18      ; (A denizen's door's words: overlay 3's room, 2026-11-02)
             SWFN        room_where, 8

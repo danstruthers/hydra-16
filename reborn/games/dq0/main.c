@@ -383,22 +383,6 @@ static void load_pc (void)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
-
-/* The character's sheet, the referee's words */
-static void sheet (void)
-{
-    struct req* r = referee (RS_DESCRIBE, 0);
-
-    blank ();
-    say (r->text);
-    blank ();
-    r->state = REQ_FREE;
-}
-
-#pragma code-name (pop)
-#pragma rodata-name (pop)
 
 /* ---- The save (DUNGEON.md): game.dat, the UI's (the game's state, the strata's records), beside the things' items.dat
 ** (dq0p's), the referee's pc.hm, the world's change records (changes.dat and the regions' rg*.dat: world.h's) and
@@ -509,6 +493,22 @@ static int load_save (void)
 #pragma code-name (push, "SW3CODE")             /* (Part 3's, the map's: part 1's room, slice 4.4's; none of the commands'
                                                 **   path the longer for it, part 13's copied in at every command) */
 #pragma rodata-name (push, "SW3RODATA")
+
+/* The character's sheet (0), the referee's words; or the map (1), with its side's lines (part 2's room, 2026-11-03) */
+void __fastcall__ s_sheet_map (unsigned char what)
+{
+    struct req* r = ask_b (RS_DESCRIBE, 0, what);
+
+    if (what) {
+        map (r->text);                          /* (Its lines read where they are, in the hub's header, before the
+                                                **   map's drawn) */
+    } else {
+        blank ();
+        say (r->text);
+        blank ();
+    }
+    r->state = REQ_FREE;
+}
 
 static char* __fastcall__ save_at (const char* name)
 {
@@ -1484,7 +1484,7 @@ static void __fastcall__ shot (unsigned char d, unsigned char s)
     m.kind = I_ATTACK;
     m.who = 0;
     m.a = d;
-    m.b = AIM_SHOT | Z_MID;
+    m.b = AIM_SHOT | Z_MID | (cmd.action == VB_THROW_OBJECT && (cmd.manner & MN_HARD) ? AIM_HARD : 0);
     m.w1 = m.w2 = 0;
     m.x[1] = s;
     m.x[2] = 0;                                 /* (Its hand the world's to find) */
@@ -1514,14 +1514,13 @@ unsigned char s_missiles (void)
                 msg (tt ());
                 return 1;
             }
-            if ((k = HUB->ireq.x) < 0x80) {
-                strcpy (hold_w, cmd.obj.word);
-                shand = 0;
-                if (hold_first ()) {
-                    shot (d, SK_OF (k));
-                }
-                return 1;
+            k = HUB->ireq.x;
+            strcpy (hold_w, cmd.obj.word);
+            shand = 0;
+            if (hold_first ()) {
+                shot (d, SK_OF (k));
             }
+            return 1;
         }
         if (cmd.other.x) {                      /* (Not at a denizen: the world's throw, at a thing) */
             HUB->ireq.x = cmd.other.x;
@@ -1784,7 +1783,8 @@ static void __fastcall__ after (unsigned char was, unsigned t, unsigned char op)
 {
     to_hand ();
     if (op == IO_LIGHT || op == IO_DOUSE || HUB->pc_light != was) {
-        intend (I_LIGHT, op == IO_LIGHT || HUB->pc_light > was);
+        intend_a = op == IO_LIGHT || HUB->pc_light > was;
+        intend2 (I_LIGHT, op == IO_LIGHT ? 0 : t ? t : 1, 0);   /* (Its own time, the handling's; lit, the lighting's) */
     } else {
         intend2 (I_WAIT, t, 1);
     }
@@ -1887,15 +1887,6 @@ void __fastcall__ s_take (const char* name)
 
 
 /* The map, and beside it the referee's short lines (the attributes as they are now) */
-static void show_map (void)
-{
-    struct req* r = ask_b (RS_DESCRIBE, 0, 1);
-
-    map (r->text);                              /* (Its lines read where they are, in the hub's header, before the
-                                                **   map's drawn) */
-    r->state = REQ_FREE;
-}
-
 /* A thing it sees, the parser's (its kind, | PICK_TELL to say so if there's none; and the heading it lies, if one
 ** was said): 1, its square in tx, ty; 0, none; 2, several and none ahead, which asked (overlay 7's pick) */
 unsigned tx, ty;
@@ -1961,7 +1952,7 @@ static unsigned char __fastcall__ chores (unsigned char action)
         look (0);
         break;
     case VB_META_MAP:
-        show_map ();
+        sheet_map (1);
         break;
     case VB_WAIT:                               /* (A round, or as long as it says: "wait 10 minutes"; engaged, */
     case VB_PASS:                               /*   "pass": a round given up, defending; a sleep or a rest, a */
@@ -1976,7 +1967,7 @@ static unsigned char __fastcall__ chores (unsigned char action)
         intend (I_STOP, stop_kind (cmd.obj.word));
         break;
     case VB_META_SHEET:
-        sheet ();
+        sheet_map (0);
         break;
     case VB_META_PAUSE:
     case VB_META_SAVE:

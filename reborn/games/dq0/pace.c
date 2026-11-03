@@ -177,7 +177,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
             n = (3 * d + 2) / 5;
         }
     }
-    said = g != 0xFF && (g & 7) > GA_WALK ? GA_SAID : 0;  /* (Outright, GA_SAID's or faster than a walk: for the dark;
+    said = g != 0xFF && ((g & 7) > GA_WALK || (g & GA_SAID)) ? GA_SAID : 0;  /* (Outright, GA_SAID's or faster than a walk: for the dark;
                                                 **   the legs' way, crawling or hopping, the world's: slice 4.1b's) */
     g = g == 0xFF ? g : g & ~GA_SAID;
     wa = HUB->watch;

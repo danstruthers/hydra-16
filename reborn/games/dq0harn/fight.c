@@ -610,7 +610,7 @@ static void __fastcall__ left (unsigned char shy, signed char heart)
             R->c |= AF_CAUTIOUS;
         }
     }
-    if (tup && !(f & FF_FLEES) && cr.state == HARN_CONSCIOUS && !(s->b->flags & (BF_FOLK | BF_MINDLESS))) {
+    if (tup && !(f & FF_FLEES) && cr.state == HARN_CONSCIOUS && !(s->b->flags & (BF_FOLK | BF_BIPED | BF_MINDLESS))) {
         m = courage (s->b, heart);              /* (A beast a level more tired by its round: its courage, its fatigue
                                                 **   in it; short of steady, or berserk, it breaks off, HOUSE.md's) */
         if (m != M_STEADY && m != M_BERSERK) {

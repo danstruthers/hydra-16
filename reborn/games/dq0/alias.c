@@ -1,8 +1,8 @@
 /*
 ** alias.c - (part 9) the player's shortcuts (the user, 2026-10-22: "alias should be for shortcuts, and name for naming
-** things"; the command grammar's alias-cmd, commandcompile.js's alias): "alias x is dig down" (or "alias x = dig
-** down") a word standing for a line, asked before one's replaced; "alias x" one shown; "alias" them all, and the
-** game's own words (its lib folder's aliases.txt: commands.aliases, the parser's); "unalias x" (or "forget alias x")
+** things"; the command grammar's alias-cmd, commandcompile.js's alias): "alias dd is dig down" (or "alias dd = dig
+** down") a word standing for a line, asked before one's replaced; "alias dd" one shown; "alias" them all, and the
+** game's own words (its lib folder's aliases.txt: commands.aliases, the parser's); "unalias dd" (or "forget alias dd")
 ** one removed.  A word of the commands' ("look", "take") can't be one; "alias the sword as Linda" is sent to name.  A
 ** line typed whose first word is one (term.c's enter, as it's entered, before its parts: so a shortcut may hold
 ** several commands, "north then dig down") is made its line, the rest typed after it, once: a shortcut in its line not
@@ -187,7 +187,7 @@ static void list (void)
     if (n) {
         say (".");
     } else {
-        msg ("You've made no shortcuts (alias x is dig down makes one).");
+        msg ("You've made no shortcuts (alias dd is dig down makes one).");
     }
     msg ("The game's own words:");
     own (0);
@@ -219,7 +219,7 @@ static void __fastcall__ line_of (const char* r)
 }
 
 /* A line the shortcuts' own (main.c's, the line's first look alias_said's; or any line, as a replacement's asked
-** about): "alias x is dig down", "alias x", "alias", "unalias x", "forget alias x"; a replacement's yes or no.  1: done
+** about): "alias dd is dig down", "alias dd", "alias", "unalias dd", "forget alias dd"; a replacement's yes or no.  1: done
 ** here; 0: the line's another's (the command's) */
 unsigned char __fastcall__ s_alias_line (char* l)
 {
@@ -285,14 +285,14 @@ unsigned char __fastcall__ s_alias_line (char* l)
         }
         return 1;
     }
-    if (*r == '=') {                            /* ("alias x = dig down", "alias x is dig down") */
+    if (*r == '=') {                            /* ("alias dd = dig down", "alias dd is dig down") */
         for (++r; *r == ' '; ++r) {
         }
     } else if ((r[0] | 0x20) == 'i' && (r[1] | 0x20) == 's' && r[2] == ' ') {
         for (r += 3; *r == ' '; ++r) {
         }
     } else {
-        msg (strstr (l, " as ") ? "To name a thing, use name: name the sword Linda." : "Say it as: alias x is dig down.");
+        msg (strstr (l, " as ") ? "To name a thing, use name: name the sword Linda." : "Say it as: alias dd is dig down.");
         return 1;
     }
     if (!*r) {

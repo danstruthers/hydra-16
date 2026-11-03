@@ -551,6 +551,9 @@ unsigned char __fastcall__ o_more (unsigned char action)
         break;
     case VB_FILL_OBJECT:                        /* (A light renewed, slice 4.1's: "fill the lantern", "dip the torch in
                                                 **   the oil", the things' IO_FILL; its time, quietly: a timed work) */
+        if (strstr (cl, "sharpen") || strstr (cl, "hone") || strstr (cl, "whet")) {
+            d |= IO_SHARP;                      /* (A blade's words: a light has no edge, the things') */
+        }
         worked (othings (IO_FILL | IO_STEPS, cmd.obj.word, cmd.other.word, d));
         break;
     case VB_OBSERVE_IN:                         /* (Looked into a thing, onto it: "look in the sack", "look on the */

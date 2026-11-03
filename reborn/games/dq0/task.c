@@ -742,17 +742,19 @@ void o_facing_words (void)
 /* The task a stop names, by its word ("digging"; "": none, LT_NONE) */
 unsigned char __fastcall__ o_stop_kind (const char* word)
 {
-    static const char* const word_[] = { "walking", "going", "moving", "climbing", "digging", "working", "searching",
+    static const char* const word_[] = { "walking", "going", "moving", "climbing", "digging", "searching",
                                          "waiting", "resting", "sleeping", "talking", "battering", "breaking",
                                          "smashing", "fighting", "attacking", "kicking", "punching", "butting",
                                          "studying", "disarming", "picking", "forcing", "heaving", "bending",
-                                         "winding", "tracking", "sniffing", "filling", "soaking", "hiding",
-                                         "travelling", "returning", "heading", "tending", "treating", "bandaging" };
-    static const unsigned char kind_[] = { LT_WALK, LT_WALK, LT_WALK, LT_CLIMB, LT_DIG, LT_DIG, LT_SEARCH, LT_WAIT,
+                                         "winding", "tracking", "sniffing", "filling", "soaking", "dipping", "hiding",
+                                         "travelling", "returning", "heading", "tending", "treating", "bandaging",
+                                         "prising", "freeing", "sharpening", "honing" };
+    static const unsigned char kind_[] = { LT_WALK, LT_WALK, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT,
                                            LT_SLEEP, LT_SLEEP, LT_TALK, LT_BATTER, LT_BATTER, LT_BATTER, LT_FIGHT,
                                            LT_FIGHT, LT_BATTER, LT_BATTER, LT_BATTER, LT_STUDY, LT_DISARM, LT_PICK,
                                            LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_TRACK, LT_SNIFF, LT_FILL,
-                                           LT_FILL, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL, LT_TEND, LT_TEND, LT_TEND };
+                                           LT_FILL, LT_FILL, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL, LT_TEND, LT_TEND, LT_TEND,
+                                           LT_PRISE, LT_PRISE, LT_FILL, LT_FILL };   /* ("working" none: whatever the work is) */
     unsigned char i;
 
     for (i = 0; i < sizeof kind_; ++i) {

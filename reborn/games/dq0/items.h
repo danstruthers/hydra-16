@@ -329,6 +329,7 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   x: the UI's first words, its wait, the command kept and asked again
                                                 **   as it's up: main.c's reach 5.  qty 0: a grope failed, the things'
                                                 **   words, x the round wasted) */
+#define IO_SHARP        0x40                    /* (IO_FILL's to: said as sharpening, "sharpen the torch": a light's no edge) */
 #define IO_DONE         0x80                    /* (IO_HIDE's too: a thing hidden a minute's work, begun, x its time,
                                                 **   qty LT_HIDE, item its kind; done, its hiding in qty) */
 #define IO_INSIDE       (IO_BAR + 8)            /* What's in a thing, or on it (name: carried, or seen within reach; a

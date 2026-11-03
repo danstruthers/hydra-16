@@ -248,6 +248,9 @@ unsigned char __fastcall__ s_mfire (unsigned char att, unsigned char def, unsign
 
     mk = thr ? tk : sl_kind;
     c = reach_of (mk);
+    if (thr && (z & AIM_HARD)) {
+        c <<= 1;                                /* (Thrown hard: twice as far, 10 less, as a throw at a thing: HOUSE.md's) */
+    }
     for (band = 0; band < 4 && d > (unsigned) (c << band); ++band) {
     }
     if (band >= (thr ? 4 : BANDS)) {
@@ -260,8 +263,8 @@ unsigned char __fastcall__ s_mfire (unsigned char att, unsigned char def, unsign
     mshot.kind = mk;
     mshot.band = band;
     mshot.flags = (lcover ? MS_COVER : 0) | ((att ? (*at (sn, sx, sy) & T_VIS) : bd.doing != DO_ROAM) ? 0 :
-        MS_UNAWARE);                            /* (The character sees its shooter; a denizen senses the character) */
-    den_blow (def, z | AIM_FIRE);               /* (Part 15's blow, the missile's: how it came out, told, bev's) */
+        MS_UNAWARE) | (thr && (z & AIM_HARD) ? MS_HARD : 0);   /* (The character sees its shooter; a denizen senses the character) */
+    den_blow (def, (z & ~AIM_HARD) | AIM_FIRE);               /* (Part 15's blow, the missile's: how it came out, told, bev's) */
     if ((out = bev.x[1]) == 0xFF || out == O_RISE || out == O_REARM) {
         return out == 0xFF ? SH_CANT : 0;       /* (None struck; or its turn went getting up, taking up its weapon) */
     }

@@ -155,7 +155,7 @@ unsigned __fastcall__ o_fight_words (const struct msg* m)
                                                 **   shoots at you with its sling") */
             add (pc ? " throw your " : " throws its ");
             add (aw);
-            add (" at ");
+            add (pc && (cmd.manner & MN_HARD) ? " hard at " : " at ");
             who (dname, 0);
         } else if (f->which & FW_MISSILE) {
             add (pc ? " shoot at " : " shoots at ");

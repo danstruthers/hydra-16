@@ -26,7 +26,7 @@ static const char* const said[T_COUNT] = {
     "There's nothing there to dig (a wall, or the rock; a shaft from a room's floor).",
     "You can't go that way.",
     "Taken.",
-    "Your hands are full, and your pack too.",
+    "Your hands are full, and there's nowhere to put it.",
     "You see none of those here.",
     "Go which way?",
     "Which way? (left, right, half left, half right, around, or north, northeast ... northwest)",

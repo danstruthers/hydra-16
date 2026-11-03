@@ -4940,7 +4940,7 @@ module.exports = {
       // (Its words checked with the screen's codes and the lines' wrapping taken out, each in its turn)
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        const want = ['> alias You\'ve made no shortcuts (alias x is dig down makes one).', 'The game\'s own words: peer (look), gaze (look),',
+        const want = ['> alias You\'ve made no shortcuts (alias dd is dig down makes one).', 'The game\'s own words: peer (look), gaze (look),',
           '> alias st is status st now stands for: status', '> st Pace: a walk', '> alias st st stands for: status',
           '> alias st is i st stands for: status. Replace it? (yes or no)', '> no It stands as it was.', '> st Pace: a walk',
           '> alias look is status look is one of the game\'s own command words: choose another.',

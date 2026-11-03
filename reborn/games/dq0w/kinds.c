@@ -329,7 +329,7 @@ const char* const said[SA_COUNT] = {
     "The # is empty.",                         /* (A fire-maker: as it's reached for, or known) */
     "You need two good hands to dip the %.",   /* (A torch redipped: HOUSE.md's) */
     "Your hands slip in the dark: oil spills, and the % takes none of it.",
-    "You can't fill the %.",
+    "The % can't be filled or sharpened.",
     "You have nothing to sharpen the % with.",
     "The % is as sharp as it will go.",
     "You put a fresh edge on the %.",

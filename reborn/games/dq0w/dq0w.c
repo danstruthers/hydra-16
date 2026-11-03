@@ -432,6 +432,9 @@ static void paced (void)
     w = HUB->pcsum.gstep[g < GA_WALK ? GA_WALK : g];
     pst = w ? w : 10;
     HUB->pc_going = g + 1 | (dk ? GOING_DARK : 0);
+    if (g) {
+        HUB->pc_qp = 0xFF;                      /* (Not moving quietly: tested again as it begins, D15's) */
+    }
     HUB->pc_noise = 0xFF;                       /* (Its steps by its pace, the senses' to reckon; but creeping, or its
                                                 **   legs not whole, not standing: part 50's, slices 4.5, 4.6) */
     if (HUB->pc_pos || HUB->pcsum.limp || (HUB->pcsum.limbs & (LB_LEG_L | LB_LEG_R)) || pmode || lsaid || !g ||
@@ -481,7 +484,6 @@ void __fastcall__ walk (unsigned char d);       /* (Part 9's, its stub: across's
 
 static void __fastcall__ no_way (unsigned why)
 {
-    hub_map (0);                                /* (A chunk may be in the window, its portal just read: a journey's leg's) */
     event (E_NOWAY, 0, why);
     HUB->pc_ready = HUB->now;
     HUB->pc_going = IDLE;
@@ -2413,6 +2415,7 @@ static unsigned char leg (void)
         at (sn_, tex, tey);                     /* (A passage's door that way, shut: open it first, as a room's that
                                                 **   it hasn't handled, the walk's) */
         how = portal_at (cx_, cy_) && portal_at (cx_, cy_)->kind == PK_PORTCULLIS ? N_CLOSED : N_DOOR;
+        hub_map (0);                            /* (Its portal read: the chunk out of the window, the hub's to be told) */
         no_way (how);
         trav_end (0);
         return 0;
@@ -2758,6 +2761,8 @@ unsigned char __fastcall__ dig_kept (unsigned char begin);   /* (Part 19's: the 
 #define WK_DARK         0xF0                    /*   dark to see; no wall near enough; masonry: wall_look's) */
 #define WK_NONE         0xF1
 #define WK_MASONRY      0xF2
+#define WK_DOOR         0xF3                    /*   (a shut door before any wall) */
+#define WK_DOOR         0xF3                    /*   (a shut door before any wall) */
 
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
@@ -2942,7 +2947,8 @@ static void wall_words (void)
 
     dig.rock = RK_NONE;
     strcpy (wall_w, k == WK_DARK ? "It's too dark to make out the wall." : k == WK_NONE ?
-        "There's no wall near enough ahead to make out." : "The wall's masonry: dressed stone, set in mortar.");
+        "There's no wall near enough ahead to make out." : k == WK_DOOR ? "That's a door: shut, and no wall." :
+        "The wall's masonry: dressed stone, set in mortar.");
     if (k < WK_DARK) {
         for (r = rocks, k &= ~WK_NAMED; --k; r += strlen (r) + 1) {   /* (Its name, then its looks) */
             r += strlen (r) + 1;
@@ -3185,20 +3191,31 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
 ** or rock ahead, within six squares: masonry, or the bare rock, its kind and whether a miner's eye knows it (the
 ** referee's P_APPRAISE, AP_ROCK: Mining), dig.rock's (WK_*, or its RK_* | WK_NAMED) for part 25's words (start_dig
 ** 0xFC: wall_words) */
+static unsigned char wall_rock;                 /* (The rock last looked at, | WK_NAMED) */
+static unsigned char wall_rock;                 /* (The rock last looked at, | WK_NAMED) */
 static void wall_look (void)
 {
     unsigned char i, t = T_FLOOR, h = HUB->pc_face, k;
     unsigned x = mx, y = my;
     unsigned char* p = 0;
+    const struct portal* q;
 
     hub_map (SIGHT_BANK);
     dig.rock = SIGHT->dark ? WK_DARK : WK_NONE;
     for (i = 0; dig.rock == WK_NONE && i < 6; ++i) {
         x += head_x[h];
         y += head_y[h];
-        if (!(p = at (sn_, x, y)) || (t = TILE (*p)) == T_WALL || t == T_ROCK || (t == T_DOOR && portal_at (cx_, cy_) &&
-            (portal_at (cx_, cy_)->state & PS_HIDDEN) && (t = T_WALL))) {
+        if (!(p = at (sn_, x, y)) || (t = TILE (*p)) == T_WALL || t == T_ROCK) {
             break;
+        }
+        if (t == T_DOOR && (q = portal_at (cx_, cy_)) != 0) {
+            if (q->state & PS_HIDDEN) {
+                t = T_WALL;
+                break;
+            }
+            if (q->kind == PK_DOOR && !(q->state & PS_OPEN)) {
+                dig.rock = WK_DOOR;             /* (A shut door: it says so, nothing told through it) */
+            }
         }
     }
     if (dig.rock == WK_NONE && p && i < 6) {
@@ -3208,8 +3225,11 @@ static void wall_look (void)
         at (sn_, x, y);
         dig.rock = WK_MASONRY;
         if (C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL] != MAT_MASONRY) {
-            dig.rock = rock_kind (HUB->seed, -3 - elev_at (sn_, mx, my) - STRATUM (sn_).datum, x, y) |
-                (G_OK (test_w (P_APPRAISE, AP_ROCK)) ? WK_NAMED : 0);
+            k = rock_kind (HUB->seed, -3 - elev_at (sn_, mx, my) - STRATUM (sn_).datum, x, y);
+            if ((wall_rock & ~WK_NAMED) != k) { /* (One test of a rock: looked at again, the same answer, till another's looked at) */
+                wall_rock = k | (G_OK (test_w (P_APPRAISE, AP_ROCK)) ? WK_NAMED : 0);
+            }
+            dig.rock = wall_rock;
         }
     }
     start_dig (0xFC);
@@ -5793,7 +5813,7 @@ void __fastcall__ s_intent_more (struct msg* m)
         break;
     case I_LIGHT:
         burn_ask = 1;                           /* (Its light's minutes left, the hub's, at once: part 27's) */
-        busy (m->a ? 3 * stept : stept);
+        busy (m->w1 ? m->w1 : 3 * stept);
         see (0);
         view (m->a ? V_LIT : V_DARK);
         break;
@@ -6604,8 +6624,10 @@ void s_step_loud (void)
     g = pace_;
     q = HUB->pc_qp;
     if (g == GA_CREEP) {
-        if (q != HUB->pc_pos || !HUB->pc_qg || (unsigned) HUB->now - HUB->pc_qat >= QUIET_T) {
-            HUB->pc_qp = q = HUB->pc_pos;
+        l = HUB->pc_stratum << 3 | HUB->pc_pos; /* (Its position and its stratum, D15's: a stair tested anew) */
+        if (q != l || !HUB->pc_qg || (unsigned) HUB->now - HUB->pc_qat >= QUIET_T) {
+            HUB->pc_qp = l;
+            q = HUB->pc_pos;
             HUB->pc_qat = (unsigned) HUB->now;
             wsteps = q == POS_PRONE ? 2 : q == POS_CROUCHED ? 1 : 0;
             l = test_w (P_STEALTH, 0);

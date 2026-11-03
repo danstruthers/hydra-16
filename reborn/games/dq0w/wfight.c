@@ -147,6 +147,9 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         (me != att && bd.doing == DO_SLEEP ? RS_ASLEEP : 0);   /* (A sleeper struck at: no defence, the book's
                                                 **   Ignore, 2026-11-02) */
     if (mshot.kind) {                           /* (A missile's, shot or thrown: wshoot.c's, slice 4.7's) */
+        if (mshot.flags & MS_HARD) {
+            r->steps -= 2;
+        }
         r->c = mshot.kind;
         r->b = mshot.band;
         r->w2 = (r->w2 | RS_MISSILE | mshot.flags) & (mshot.flags & MS_STRAY ? ~RS_PRONE_A : 0xFFFF);  /* (A stray's
