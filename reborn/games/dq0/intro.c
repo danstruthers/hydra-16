@@ -151,15 +151,18 @@ void __fastcall__ o_portal_words (unsigned char out)
 
 /* ---- Digging's words: how a spell of work went, and the feet to go */
 
+static unsigned char dig_feet;                  /* (The feet to go last told) */
 void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
 {
     const char* s;
 
     switch (how) {
     case D_BEGUN:
+        dig_feet = 0;
         sayf ("\nYou set to digging: some %u feet of it, by the look of it.", feet);
         return;
     case D_AGAIN:                               /* (A hole dug part way before: on from there) */
+        dig_feet = 0;
         msg ("You set to digging again where you left off.");
         break;
     case D_GOOD:
@@ -210,7 +213,8 @@ void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
         msg ("Beneath the shaft is only solid rock, with nothing under it to break into.");
         return;
     }
-    if (feet) {
+    if (feet != dig_feet) {                     /* (Told only as it changes: a slow tool's half-feet) */
         sayf (feet == 1 ? " (A foot to go.)" : " (%u feet to go.)", feet);
     }
+    dig_feet = feet;
 }

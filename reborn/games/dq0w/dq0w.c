@@ -3015,8 +3015,7 @@ void __fastcall__ s_start_dig (unsigned char d)
 ** nothing it has bites into dig.mat (the referee's RS_DIG_QUERY: no dice, no wear), or its best a chisel and no hammer,
 ** or an arm useless (the UI to word it, by what it carries): 1.  2, a spell's feet added (dig.done, the hub's
 ** pc_task.done as it was): into a hidden door, as the wall it seems, its facing off (half a foot wooden, a foot
-** iron-bound, two feet else): found, its state's record, 0x10 | its stuff; hidden by magic: no mark made, 0x20; no foot less
-** to tell 0x40; two spells running with nothing to show (the hub's foe a dig's count): asked, soft, 1.  3, a dig begun at a portal's
+** iron-bound, two feet else): found, its state's record, 0x10 | its stuff; hidden by magic: no mark made, 0x20; two spells running with nothing to show (the hub's foe a dig's count): asked, soft, 1.  3, a dig begun at a portal's
 ** square (dig.x, dig.y): 0 one hidden, as the wall it seems; else what it is, its kind plus 1 */
 #pragma code-name (push, "SW84CODE")
 #pragma rodata-name (push, "SW84RODATA")
@@ -3097,9 +3096,6 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
             st = 3;
             n |= 1;
         }
-    }
-    if (((dig.need - dig.done + 1) >> 1) == ((dig.need - HUB->pc_task.done + 1) >> 1)) {
-        n |= 0x40;                              /* (No foot less to tell: a half-foot's, a slow tool's, none told again) */
     }
     HUB->pc_task.foe = st;
     return n;
@@ -3240,7 +3236,7 @@ void s_dig_on (void)
     if (dig.done < dig.need) {
         dig_kept (0);                           /* (The feet dug kept: stopped, it goes on from here) */
         event (E_DIG, 0, (g == G_CS || g == G_MS ? D_GOOD : g == G_MF ? D_POOR : g == 0x7F ? D_ROOF : D_SLIP) << 8 |
-            (l & 0x40 ? 0 : dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2));
+            (dig.need - dig.done > 510 ? 255 : (dig.need - dig.done + 1) / 2));
         if (l & 1) {
             event (E_DIG, 0, D_PORTAL << 8 | 0xFE);   /* (Asked after it, soft) */
         }
