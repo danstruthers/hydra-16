@@ -74,7 +74,8 @@ unsigned __fastcall__ o_cond_of (const harn_char* h)
 {
     static const unsigned state[4] = { 0, C_UNCONSCIOUS, C_STUNNED, C_DEAD };
     unsigned c = state[h->state & 3] | (h->fl || (h == &pc && tired) ? C_FATIGUED : 0) |  /* (Tired, or tiring; */
-        (h == &pc && (pv.hr || aff_breath) ? C_POISONED : 0);   /*   a venom in it, bad air */
+        (h == &pc && (pv.hr || aff_breath) ? C_POISONED : 0) |   /*   a venom in it, bad air; */
+        (h == &pc && fresh ? C_NEWS : 0);       /*   words for it, a skill opened: slice 4.4's) */
     unsigned char k, l = o_limbs_of (h), arms, legs, b = h == &pc ? BF_BIPED : cplan;
 
     for (k = 0; k < h->ninj; ++k) {

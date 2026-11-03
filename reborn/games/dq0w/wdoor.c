@@ -56,8 +56,13 @@ void s_doors (void)
                 out = PO_IS_OPEN;
             } else if ((wk.pq.state & PS_BARRED) && !mine) {
                 out = PO_BARRED;                /* (Barred from the far side) */
+                goto found;
             } else if (wk.pq.state & PS_LOCKED) {
                 out = PO_LOCKED;
+found:
+                if (!wk.who) {                  /* (Known from now on, the look's: "(closed, locked)") */
+                    keep (wk.px, wk.py, wk.pq.state, wk.pq.parts | PP_FOUND, PORTAL_STATE);
+                }
             } else if (wk.armed == 1) {
                 out = PO_TRAPPED;               /* (A trap on it it knows of: left alone) */
             } else {
@@ -109,8 +114,9 @@ void s_doors (void)
                 door_state (wk.pq.state & ~PS_LOCKED);
                 break;
             }
-            if (wk.who) {
-                out = PO_NO_KEY;                /* (A denizen picks no lock: the house's, as yet) */
+            if (wk.who && !wk.link) {
+                out = PO_NO_KEY;                /* (A denizen picks a lock only if its kind can (a robber's: its mind's,
+                                                **   wport.c's wk.link), its tools its own: the house's, 2026-11-02) */
                 break;
             }
             g = test (P_PICKLOCK, wk.pq.lock, -(signed char) wk.pq.lock);

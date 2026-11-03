@@ -71,6 +71,8 @@ function build({ dir, objdir, say = () => {} }) {
   if (!(body.length <= lim.RULES_MAX)) throw new Error('obj/games/dq0c.dat: the rules ' + body.length + " bytes, more than dq0c.s's RULES_MAX (" + lim.RULES_MAX + ')');
   if (!(w.length <= lim.WORDS_MAX)) throw new Error('obj/games/dq0c.dat: the words ' + w.length + " bytes, more than dq0c.s's WORDS_MAX (" + lim.WORDS_MAX + ')');
   const match = incNames(fs.readFileSync(path.join(dir, 'cmdmatch.s'), 'latin1'));   // (Its rules counted, and its open
+  const ient = i[9] | i[10] << 8;                // (The index's entries, past which cm_init refuses it, the task gone silently)
+  if (!(ient <= match.MAXENT - match.MAXDYN)) throw new Error('obj/games/dq0c.dat: ' + ient + " dictionary entries, more than cmdmatch.s's MAXENT - MAXDYN (" + (match.MAXENT - match.MAXDYN) + ')');
   if (!((g[5] | g[6] << 8) <= match.MAXRULES && (g[7] | g[8] << 8) - (g[5] | g[6] << 8) <= 255))   //   names: cmdmatch.s's)
     throw new Error('games/dq0/commands.ebnf: ' + (g[5] | g[6] << 8) + " rules, more than cmdmatch.s's MAXRULES (" + match.MAXRULES + ')');
   fs.mkdirSync(objdir, { recursive: true });

@@ -88,7 +88,9 @@ void __fastcall__ listed (unsigned n);          /* Part 11 */
                                                 **   or to hand, within reach (afar else); in win) */
 #define HW_SEEN         2
 #define HW_ANY          3
-#define HW_HAND         4
+#define HW_HAND         4                       /* (HW_HAND and after: remembered in the room too, out of the light) */
+#define HW_KNOWN        6                       /* (Carried, or seen or remembered) */
+#define HW_GONE         7                       /* (Lying about, seen or remembered) */
 #define HW_IN           5
 
 #define NK      NKINDS                          /* (The catalogue's, and the theme's after them: theme.h) */
@@ -363,6 +365,11 @@ unsigned __fastcall__ s_weight_of (unsigned i)
     const struct kind* k = kind_at (i);
     unsigned w = (unsigned) k->weight * (k->flags & K_PLURAL && !(k->form & KF_COUNT) ? 1 : item_at (i)->qty);  /* (A
                                                 **   lot counted, its count's: "drop two rations") */
+    unsigned char v;
+
+    if (k->craft == AP_WEAPON && (v = item_at (i)->size) != 0 && v <= WV_HEAVY) {
+        w += (v == WV_HEAVY ? w : -w) >> 2;     /* (A weapon's version: a quarter heavier, or lighter, D13's) */
+    }
 
     if (k->form & KF_TENS) {
         w = LOT_WT (k->form, w);                /* (A lot by the ten: the missiles', a tenth of a pound each; coins
@@ -1157,6 +1164,10 @@ static void tools (void)
                 strcat (t, k->tool);
                 m[0] = '0' + rec.quality;
                 strcat (t, m);
+                if (k->craft == AP_WEAPON && rec.size && rec.size <= WV_HEAVY) {
+                    m[0] = rec.size == WV_HEAVY ? 'H' : 'L';    /* (Its version: D13's, RS_EQUIP's) */
+                    strcat (t, m);
+                }
             }
         }
     }
@@ -1656,14 +1667,16 @@ unsigned __fastcall__ s_pick (const char* name, unsigned char how)
         } else if (rec.where == IW_ITEM && rec.x == win) {
             continue;                           /* (In the one a count's put in already) */
         } else if (pw == IW_ACTOR) {
-            if (px || how == HW_SEEN) {
+            if (px || how == HW_SEEN || how == HW_GONE) {
                 continue;                       /* (Another's: a denizen's) */
             }
             r = d ? 1 + (d > 6 ? 6 : d) : rec.flags & I_HELD ? 0 : 1;
         } else {
             if (how == HW_CARRIED || d > 1 || ps != sn || (dx = px - x + 20) > 40 || (dy = py - y + 20) > 40 ||
-                (d && !(kind_of (pk)->keeps & KF_ON)) || !(t = at (sn, px, py)) || !(*t & T_VIS)) {
-                continue;                       /* (Lying about, or on a surface there, in sight; not in a thing) */
+                (d && !(kind_of (pk)->keeps & KF_ON)) || !(t = at (sn, px, py)) || (!(*t & T_VIS) &&
+                (how < HW_HAND || !(*t & T_SEEN) || !rec.id || room_of (sn, px, py) != room_of (sn, x, y)))) {
+                continue;                       /* (Lying about, or on a surface there, in sight, or remembered there
+                                                **   in the room it's in, as HW_HAND and those after it ask; not in a thing) */
             }
             dx = dx > 20 ? dx - 20 : 20 - dx;
             dy = dy > 20 ? dy - 20 : 20 - dy;
@@ -1729,6 +1742,8 @@ unsigned __fastcall__ s_at_hand (const char* name)
 /* A tool used, got out first (HOUSE.md's handy tools: its reach owed, part 10's; part 4's, its room): the first the
 ** character carries whose key (the catalogue's: the referee's to choose by) is one of keys ("pick\0shovel\0": each
 ** 0-ended, an empty one last: a dig begun, a lock's picking) */
+#pragma code-name (push, "SW72CODE")            /* (Part 72's since 2026-11-02: part 4's room, overlay 2's) */
+#pragma rodata-name (push, "SW72RODATA")
 unsigned char __fastcall__ s_tool_reach (const char* keys)
 {
     const char* k;
@@ -1744,6 +1759,8 @@ unsigned char __fastcall__ s_tool_reach (const char* keys)
     }
     return 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma static-locals (pop)
 #pragma code-name (pop)
@@ -1964,7 +1981,7 @@ unsigned char __fastcall__ s_moved (unsigned char op)
         }
         wsel = iq.sel;
     }
-    mode = op == IO_GET ? HW_SEEN : op == IO_DROP ? HW_CARRIED : op == IO_TAKE ? (win ? HW_IN : HW_HAND) : HW_HAND;
+    mode = op == IO_GET ? HW_GONE : op == IO_DROP ? HW_CARRIED : op == IO_TAKE ? (win ? HW_IN : HW_HAND) : HW_HAND;
     text_new ();
     for (;;) {
         wforce = 0;
@@ -2604,6 +2621,59 @@ static unsigned char __fastcall__ gthing (unsigned i, const char* pre, unsigned 
     return 1;
 }
 
+/* ---- The market's goods (IO_GEAR's to | GR_GOODS, 2026-11-02: DENIZENS.md's trading): the thing named into that actor
+** k (its did) carries, not what it wears or holds itself (its own gear in use), in what it carries (its pouch, its
+** pack: what's at its belt): its item, its worth a unit's (as describe's, the appraisal's: a kind written in silver by
+** its material, coins by their mints, as a local takes them), its count, its condition (dur, dur_max); the actor plus 1
+** in x, its name in name.  IR_OK, or IR_NO (it has none) */
+#define GR_GOODS        0x80
+static unsigned char __fastcall__ goods (unsigned did, unsigned char k, const char* nm)
+{
+    const struct kind* kp;
+    struct ireq* r;
+    unsigned i, j, n = 0, v;
+    char w[16];
+
+    strcpy (w, iq.into);
+    for (i = 0; !n && (i = items (i, IN_DEN | IN_ITEM, 0)) != 0; ) {
+        for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {
+        }
+        fetch (&gr, j);
+        if (gr.where != IW_DEN || (gr.owner | gr.hide << 8) != did) {
+            continue;
+        }
+        fetch (&gr, i);
+        if ((i != j || !(gr.flags & (I_WORN | I_HELD)) || gr.kind == KI_PENNIES) && named (kind_of (gr.kind)->name, w)) {
+            n = i;
+        }
+    }
+    hub_map (0);
+    r = &HUB->ireq;
+    r->x = k + 1;
+    strcpy (r->name, nm);
+    if (!n) {
+        return IR_NO;
+    }
+    fetch (&gr, n);
+    kp = kind_of (gr.kind);
+    v = kp->value;
+    if (kp->mat == MT_SILVER && gr.mat != MT_SILVER) {
+        v = gr.mat == MT_GOLD ? v * 20 : gr.mat == MT_STONE ? v * 8 : gr.mat == MT_GLASS ? v / 10 : v / 60;
+    }
+    if ((kp->form & (KF_SMALL | KF_COUNT)) == (KF_SMALL | KF_COUNT)) {
+        v = (unsigned) ((unsigned long) v * mix_worth (n) / 100);
+        fetch (&gr, n);
+        gr.dur = gr.dur_max = 0;
+    }
+    hub_map (0);
+    r->item = n;
+    r->value = v;
+    r->qty = gr.qty;
+    r->dur = gr.dur;
+    r->dur_max = gr.dur_max;
+    return IR_OK;
+}
+
 unsigned char s_gear_words (void)
 {
     struct actor* a;
@@ -2613,7 +2683,9 @@ unsigned char s_gear_words (void)
     char nm[12];
     char* t0;
 
-    text_new ();
+    if (!(iq.to & GR_GOODS)) {
+        text_new ();
+    }
     glv = iq.to & 3;
     geye = iq.to >> 4;
     for (gd = 0xFF, k = 0; k < NACTORS; ++k) {  /* (The nearest of that name on its stratum) */
@@ -2636,6 +2708,9 @@ unsigned char s_gear_words (void)
     }
     if (best == 0xFF) {
         return IR_NONE;
+    }
+    if (iq.to & GR_GOODS) {
+        return goods (did, best, nm);           /* (The market's: a thing it carries, 2026-11-02) */
     }
     put (nm[0] < 'a' ? "" : "The ");
     put (nm);
@@ -2774,7 +2849,9 @@ unsigned char s_look_at (void)
     char b[6];
 
     text_new ();
-    if (!(n = pick (iq.name, HW_ANY))) {        /* (Carried, or seen: the one most to hand, of several) */
+    if (!(n = pick (iq.name, mode == LM_AT ? HW_ANY : mode == LM_GO ? HW_GONE : HW_KNOWN))) {    /* (Carried, or seen: the
+                                                **   one most to hand, of several; all but a plain look, remembered too,
+                                                **   walked to; gone to: lying about) */
         return IR_NONE;
     }
     ld = seen_d > 99 ? 99 : seen_d;
@@ -2793,12 +2870,16 @@ unsigned char s_look_at (void)
     mine = p->where == IW_ACTOR && !p->x;
     px = p->x;
     py = p->y;
-    if (ld > 1 && (mode == LM_WEIGHT || mode == LM_TRAPS)) {
-        hub_map (0);                            /* (Out of reach: walked over to first, where it lies, the UI's) */
+    if (ld > 1 && mode) {
+        hub_map (0);                            /* (Out of reach, all but a plain look: walked over to first, where it
+                                                **   lies, the UI's) */
         HUB->ireq.x = px;
         HUB->ireq.y = py;
         HUB->ireq.item = n;
         return IR_NOT_HERE;
+    }
+    if (mode == LM_GO) {
+        mode = LM_AT;                           /* (Gone to, within reach already: where it lies) */
     }
     make_own (n);                               /* (Its make its own: its lid, its lock, its fuel decided) */
     fetch (&rec, n);
@@ -2844,10 +2925,6 @@ off:
     put (".");
     if (k) {
         return IR_OK;                           /* (Something, too far off to make out) */
-    }
-    if (ld > NEAR_SQ && mode) {                 /* (Seen from afar: no closer look) */
-        put (" You'd have to go closer to make out more.");
-        return IR_OK;
     }
     tq = tbuf;                                  /* Its state, at a glance: the words gathered first (none, none said) */
     tqe = tbuf + sizeof tbuf - 1;
@@ -2926,11 +3003,22 @@ unsigned char __fastcall__ s_describe (const char* name)
 {
     const struct kind* k;
     struct ireq* r;
-    unsigned n = pick (name, HW_ANY);         /* (Carried, or seen: the one most to hand, of several) */
+    unsigned n = pick (name, iq.to ? HW_KNOWN : HW_ANY);    /* (Carried, or seen: the one most to hand, of several; an
+                                                **   appraisal's, remembered too; a name given's not) */
     unsigned char c = 100;
 
     if (!n) {
         return IR_NONE;
+    }
+    if (iq.to && seen_d > 1) {
+        hub_map (0);                            /* (An appraisal, out of reach: walked over to first, the UI's) */
+        HUB->ireq.item = n;
+        for (fetch (&rec, n); rec.where == IW_ITEM; fetch (&rec, rec.x)) {
+        }
+        hub_map (0);
+        HUB->ireq.x = rec.x;
+        HUB->ireq.y = rec.y;
+        return IR_NOT_HERE;
     }
     make_own (n);
     fetch (&rec, n);
@@ -2970,6 +3058,76 @@ unsigned char __fastcall__ s_describe (const char* name)
     return IR_OK;
 }
 
+#pragma bss-name (push, "SW40RODATA")           /* (Its own data, wanted only while it runs: not the main RAM's) */
+#pragma static-locals (push, on)
+/* The character's things as an outfit's list (outfit.h's struct ofit), its kit to carry on into a new dungeon (D8's,
+** slice 4.4's): kit.dat in the save folder, written with the game (wgame.c's, LM_KIT: part 40's, none of
+** the commands' path), read as a carried-on game's outfit (part 57's).  Each thing on it: what it wears and holds first
+** (worn, in its main hand, its other, both), then what's in each in turn, its container's entry before it (PL_IN;
+** KQ things that hold others at most); how many, its make, its material, lit; NOFIT at most; not a key (its lock the old dungeon's), nor the old
+** theme's own things (its kind's number another thing's in the next theme's: its puzzle's pieces) */
+#define KQ      12                              /* (The things it's listed that hold others, at most) */
+static struct item kr;
+static struct ofit ke;
+static unsigned kq[KQ];                         /* (Each one's number, */
+static unsigned char kqe[KQ], kn, kqn, kmh;     /*   its entry; the entries so far; how many of them; its main hand) */
+static int kfd;
+static char kp[56];
+
+/* Thing i (ip's record), in entry in less one (0: on the character), listed */
+static void __fastcall__ kit_put (unsigned i, unsigned char in)
+{
+    memcpy (&kr, ip, sizeof kr);
+    if (kn >= NOFIT || kr.kind == KI_KEY || (kr.kind >= KI_THEME && kr.kind < KI_THEME + NTKINDS)) {
+        return;
+    }
+    ke.kind = kr.kind;
+    ke.qty = kr.qty;
+    ke.quality = kr.quality;
+    ke.place = in ? PL_IN : !(kr.flags & I_HELD) ? PL_WORN : (kr.sn & IH_BOTH) == IH_BOTH ? PL_BOTH :
+        kr.sn & kmh ? PL_HAND : PL_OFF;
+    ke.in = in;
+    ke.flags = kr.flags & I_LIT ? TF_LIT : 0;
+    ke.mat = kr.mat;
+    write (kfd, &ke, sizeof ke);
+    hub_map (KIND_BANK);
+    if (kqn < KQ && (CATALOGUE[kr.kind].flags & (K_CONTAINER | K_BELT) || CATALOGUE[kr.kind].keeps & KF_ON)) {
+        kq[kqn] = i;
+        kqe[kqn++] = kn;
+    }
+    ++kn;
+}
+
+static void kit_keep (void)
+{
+    static unsigned i;
+    static unsigned char k;
+
+    hub_map (0);
+    if (!HUB->savedir[0]) {
+        return;
+    }
+    strcpy (kp, HUB->savedir);
+    strcat (kp, "/kit.dat");
+    if ((kfd = open (kp, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
+        return;
+    }
+    kmh = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
+    kn = kqn = 0;
+    for (i = 0; (i = items (i, IN_X | IN_ACTOR, 0)) != 0; ) {
+        kit_put (i, 0);
+    }
+    for (k = 0; k < kqn; ++k) {
+        for (i = 0; (i = items (i, IN_X | IN_ITEM, kq[k])) != 0; ) {
+            kit_put (i, kqe[k] + 1);
+        }
+    }
+    close (kfd);
+}
+
+#pragma static-locals (pop)
+#pragma bss-name (pop)
+
 /* Its weight, its lock, it gone over for traps (thing n, rec its record, lk its kind; its name said) */
 unsigned char __fastcall__ s_look_more (unsigned n, unsigned char mode)
 {
@@ -2977,6 +3135,10 @@ unsigned char __fastcall__ s_look_more (unsigned n, unsigned char mode)
     unsigned char sh = rec.shut, k;
     char b[6];
 
+    if (mode == LM_KIT) {
+        kit_keep ();                            /* (The character's things kept: the world's save, wgame.c's) */
+        return IR_OK;
+    }
     if (mode == LM_LOCK) {
         k = 1 + rec.quality / 3;
         put (!(sh & IS_LOCK) ? (lpl ? " have no lock." : " has no lock.") : sh & IS_BURST ?
@@ -5107,8 +5269,41 @@ void s_kit (void)
     char* more = tbuf;
 
     hub_map (0);
-    if (!(old = (HUB->gear & GE_OLD) || !outfit ())) {
+    k = HUB->gear & GE_OLD ? 0 : outfit ();
+    if (!(old = !k)) {
+        hub_map (KIND_BANK);                    /* (The money: in the pouch, silver pennies in lots of 250 at most (a
+                                                **   lot's count a byte, joined to 250), all of it, told together; its
+                                                **   odd farthings farthings, cut pennies: the user's, 2026-10-28,
+                                                **   "Please keep farthings": part 57's till slice 4.4, its room) */
+        for (i = ost.budget >> 2; i && (off = OF_N) < NOFIT; i -= box) {
+            box = i > 250 ? 250 : i;
+            memset (OF_LIST + off, 0, sizeof *OF_LIST);
+            OF_LIST[off].kind = KI_PENNIES;
+            OF_LIST[off].qty = box;
+            OF_LIST[off].quality = 4;
+            OF_LIST[off].place = PL_POUCH;
+            OF_N = off + 1;
+        }
+        if ((box = ost.budget & 3) != 0 && (off = OF_N) < NOFIT) {
+            memset (OF_LIST + off, 0, sizeof *OF_LIST);
+            OF_LIST[off].kind = KI_FARTHINGS;
+            OF_LIST[off].qty = box;
+            OF_LIST[off].quality = 4;
+            OF_LIST[off].place = PL_POUCH;
+            OF_N = off + 1;
+        }
+        box = 0;
+        hub_map (0);
         outmake (0);                            /* (Its outfit drawn: its things made) */
+        if (--k) {                              /* (Its weapons their version: the referee's, by its Strength, D13's;
+                                                **   the character's alone, on it) */
+            for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
+                kk = kind_at (i);
+                if (kk->craft == AP_WEAPON && (kk->flags & K_HAND) && on_pc (i)) {
+                    item_at (i)->size = k;
+                }
+            }
+        }
     }
 
     hub_map (UI_BANK);

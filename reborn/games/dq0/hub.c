@@ -24,9 +24,9 @@ static unsigned char seq;                       /* Its requests, counted (each o
 static unsigned char pend;                      /* A ring taken while it waited for a reply, not the reply's */
 
 /* Each bank's U and $00, kept, and bank 0 put at $8000 */
-#ifndef HUB_ATTACHED                            /* (The UI's: part 18's, the main RAM's room, 2026-11-02; */
-#pragma code-name (push, "SW18CODE")            /*   only as it starts: part 1's hub_create, through its stub) */
-#pragma rodata-name (push, "SW18RODATA")
+#ifndef HUB_ATTACHED                            /* (The UI's: part 19's, the main RAM's room, 2026-11-02; */
+#pragma code-name (push, "SW19CODE")            /*   only as it starts: part 1's hub_create, through its stub) */
+#pragma rodata-name (push, "SW19RODATA")
 int s_find_banks (void)
 #else
 #ifdef HUB_ATTACH_SW3                           /* (The world's: part 85's, with hub_attach, its start-up's) */

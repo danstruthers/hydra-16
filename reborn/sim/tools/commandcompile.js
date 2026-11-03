@@ -797,7 +797,15 @@ function phraseSem(spec, env, ctx) {
       const a = objOf(0), b = objOf(1);
       if (a.stop) return a.stop;
       if (b.stop) return b.stop;
+      const w = wordsOf(spec, env);             // ("give the bandit 5 pennies": no "to", the one given it first, 2026-11-02)
+      if (!w.includes('to') && !w.includes('for')) return act('VB_GIVE_OBJECT', { object: b.value, target: a.value });
       return act('VB_GIVE_OBJECT', { object: a.value, target: b.value });
+    }
+    case 'trade': {                             // (The market and entertaining, 2026-11-02: the thing, and the one
+      const a = direct[0] ? objOf(0) : { value: undefined }, b = direct[1] ? objOf(1) : { value: undefined };   //   it's done
+      if (a.stop) return a.stop;                //   with: bought from, sold to, haggled with; entertained, the one)
+      if (b.stop) return b.stop;
+      return act('VB_TRADE', { object: a.value, source: b.value });
     }
     case 'unlock': return withTool('VB_UNLOCK_OBJECT');
     case 'fill': {

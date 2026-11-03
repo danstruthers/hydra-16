@@ -79,7 +79,7 @@ unsigned char s_search_go (void)
             return 0;                           /* (Out of reach: walked over to it first, then again) */
         }
         if (k == IR_NO) {
-            return 0;                           /* (A step of the reach first: part 18's) */
+            return 0;                           /* (A step of the reach first: part 19's) */
         }
         if (k != IR_OK) {
             if (d) {

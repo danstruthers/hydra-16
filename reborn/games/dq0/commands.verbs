@@ -56,6 +56,7 @@ break       thing=VB_BREAK_OBJECT unsaid=front aux=PA_BREAK task=LT_BATTER
 bend        thing=VB_BEND_OBJECT unsaid=front aux=PA_BEND skill=P_FORCE
 disarm      thing=VB_DISARM_OBJECT unsaid=front aux=PA_DISARM skill=P_DISARM
 bar         thing=VB_BAR_OBJECT unsaid=front aux=PA_BAR
+unbar       thing=VB_BAR_OBJECT alone=VB_BAR_OBJECT unsaid=front aux=PA_LIFT     # (new, 2026-11-02: its bar lifted out, the door left shut)
 dig         thing=VB_DIG way=VB_DIG unsaid=none skill=P_DIG task=LT_DIG
 get         thing=VB_RETRIEVE_OBJECT unsaid=near aux=IO_GET
 drop        thing=VB_DROP_OBJECT unsaid=last aux=IO_DROP
@@ -170,6 +171,12 @@ link        thing=VB_LINK_MIND unsaid=none
 orate       alone=VB_ORATE thing=VB_ORATE
 swap        alone=VB_SWAP_HANDS thing=VB_SWAP_HANDS                  # (new, slice 4.1b: what's in the hands changed over)
 tend        alone=VB_TEND thing=VB_TEND unsaid=none skill=P_FIRST_AID task=LT_TEND   # (new, slice 4.3: first aid)
+buy         thing=VB_TRADE unsaid=none aux=SW_BUY                    # (new, 2026-11-02: the market, DENIZENS.md's
+sell        thing=VB_TRADE unsaid=last aux=SW_SELL                   #   trading: bought from one, sold to one, its
+quote       thing=VB_TRADE unsaid=last aux=SW_PRICE                  #   price asked, what it would give, haggled
+bid         thing=VB_TRADE unsaid=last aux=SW_OFFER                  #   over; one entertained: sung to, played
+haggle      thing=VB_TRADE alone=VB_TRADE unsaid=last aux=SW_HAGGLE  #   for, danced for, the verb said the skill)
+entertain   thing=VB_TRADE alone=VB_TRADE aux=SW_ENTERTAIN
 
 [words]
 change facing = face
@@ -323,6 +330,10 @@ i = inventory
 status = status
 time = time
 what time is it = time
+how much will you give = bid
+what will you give = bid
+what would you give = bid
+how much = quote
 watch the sun = wait
 watch the sky = wait
 watch the stars = wait
@@ -342,6 +353,8 @@ disarm = disarm
 disable = disarm
 bar = bar
 rebar = bar
+unbar = unbar
+unbolt = unbar
 read = read
 use = use
 apply = use
@@ -359,7 +372,16 @@ convince = persuade
 recruit = persuade
 reason = persuade
 win = persuade
-bargain = persuade
+bargain = haggle
+haggle = haggle
+barter = haggle
+buy = buy
+purchase = buy
+sell = sell
+entertain = entertain
+sing = entertain
+play = entertain
+dance = entertain
 deceive = deceive
 trick = deceive
 fool = deceive
@@ -504,6 +526,8 @@ kneel = crouch
 squat = crouch
 pretend = pretend
 exit = leave
+go out = leave
+go outside = leave
 wake = wake
 rouse = wake
 awaken = wake

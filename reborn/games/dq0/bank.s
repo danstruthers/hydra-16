@@ -15,7 +15,7 @@
             .include    "ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 16                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 18                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
@@ -99,7 +99,7 @@ ovl_out:
             OVFN        state_words, 7
             OVFN        free_cmd, 7
             OVFN        meta, 7
-            OVFN        climb_words, 1
+            OVFN        climb_words, 12     ; (Overlay 1's room, slice 4.4's)
             OVFN        entered, 1
             OVFN        portal_words, 10
             OVFN        harm_words, 1
@@ -134,8 +134,8 @@ ovl_out:
             OVFN        pacing, 16
             OVFN        names_in, 10
             OVFN        focus_words, 13
-            OVFN        felt_words, 7
-            OVFN        facing_words, 7
+            OVFN        felt_words, 17
+            OVFN        facing_words, 1
             OVFN        fore_set, 6         ; (The answer's tasks in the foreground: main.c's)
             OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
@@ -156,15 +156,16 @@ ovl_out:
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
             SWPART      8, 5                ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
-            SWPART      10, 11              ; A search, by its form (search.c)
+            SWPART      10, 1               ; A search, by its form (search.c)
             SWPART      11, 15              ; The rarer news, worded (main.c); the hands and limbs
             SWPART      12, 15              ; Wounds over time: first aid, in shock, the body's news (tend.c)
-            SWPART      13, 1               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
+            SWPART      13, 7               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
             SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
-            SWPART      15, 6               ; An ally's errands, the character's gifts (errand.c: slice 4.8's)
+            SWPART      15, 17              ; An ally's errands, the character's gifts, the market (errand.c: slice 4.8's; 2026-11-02)
             SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
             SWPART      17, 14              ; Looking one way, a close look (way.c: part 6's till 2026-11-01)
-            SWPART      18, 12              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)
+            SWPART      18, 18              ; A denizen's door's words (2026-11-02: overlay 3's room)
+            SWPART      19, 12              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)
 
             SWFN        errand, 15
             SWFN        begin, 1
@@ -172,7 +173,7 @@ ovl_out:
             SWFN        size, 1
             SWFN        t_init, 1
             SWFN        finish, 1
-            SWFN        save_game, 1
+            SWFN        save_game, 3         ; (Part 3's: part 1's room, slice 4.4's)
             SWFN        command, 2
             SWFN        ready, 2
             SWFN        cq_post, 2
@@ -182,6 +183,7 @@ ovl_out:
             SWFN        took_up, 2
             SWFN        map, 3
             SWFN        lie_words, 8
+            SWFN        door_words, 18      ; (A denizen's door's words: overlay 3's room, 2026-11-02)
             SWFN        room_where, 8
             SWFN        den_seen, 8
             SWFN        actor_seen, 8
@@ -201,11 +203,11 @@ ovl_out:
             SWFN        room_named, 6
             SWFN        history, 7
             SWFN        args, 7
-            SWFN        reach_go, 7
-            SWFN        step_go, 18
-            SWFN        bandage_out, 18
-            SWFN        find_banks, 18
-            SWFN        reach_said, 18
+            SWFN        reach_go, 13
+            SWFN        step_go, 19
+            SWFN        bandage_out, 19
+            SWFN        find_banks, 19
+            SWFN        reach_said, 19
             SWFN        place_go, 7
             SWFN        look_way, 17
             SWFN        search_go, 10

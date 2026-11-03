@@ -264,7 +264,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     case TE_ROBBED:                             /* (Helpless, robbed: a robber's way, the denizens') */
         sayf ("\n%s goes through your things as you lie helpless, and takes what it finds.", foe (named, 1));
         break;
-    case TE_PACKED:                             /* (The reach's: part 18's) */
+    case TE_PACKED:                             /* (The reach's: part 19's) */
     case TE_FUMBLE:
     case TE_KINDLED:
         reach_said (w, named);
@@ -277,7 +277,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
                                                 **   2026-10-22) */
         p = w >> 8;
         if (p >= LT_PACKOFF) {
-            reach_said (w, named);              /* (A step of the reach: part 18's) */
+            reach_said (w, named);              /* (A step of the reach: part 19's) */
             break;
         }
         if (p == LT_TRAVEL) {                   /* (A journey: slice 4.2's) */
@@ -412,9 +412,16 @@ void __fastcall__ o_beat_words (unsigned w)
 
     switch ((unsigned char) w) {
     case WB_QUIET:
-        msg ("You go on down the passage.");
+        hub_mem (SIGHT_BANK, &r, &SIGHT->dark, 1);
+        msg (r ? "You feel your way on." : "You go on down the passage.");
         break;
     case WB_TURN:
+        hub_mem (SIGHT_BANK, &sk, &SIGHT->dark, 1);
+        if (sk) {                               /* (In the dark: as its feet go, no passage's name, no bearing) */
+            r = w >> 8;
+            msg (r & 0x10 ? "The way bends." : r == WS_LEFT ? "The way turns left." : "The way turns right.");
+            break;
+        }
         if ((r = w >> 8) & 0x10) {
             hub_mem (0, &sk, &HUB->pc_skew, 1);
             r = (r + (sk << 1)) & 15;
@@ -456,8 +463,8 @@ void __fastcall__ o_beat_words (unsigned w)
 #pragma rodata-name (pop)
 
 /* (Overlay 7's, its room: the dark's words, 2026-10-22) */
-#pragma code-name (push, "OV7CODE")
-#pragma rodata-name (push, "OV7RODATA")
+#pragma code-name (push, "OV17CODE")            /* (Overlay 17's since 2026-11-02: overlay 7's room, what can be named) */
+#pragma rodata-name (push, "OV17RODATA")
 #pragma local-strings (push, on)
 
 /* A walk in the dark's beat (E_BEAT's w, WB_FEEL ... WB_SHORT: HOUSE.md's walking in the dark): set out on, feeling
@@ -466,6 +473,92 @@ void __fastcall__ o_beat_words (unsigned w)
 ** thing (WB_SWAT: its actor plus 1, the thing the hub's pc_strike's), one attempt; a battering's first words, struck
 ** with the thing named (FW_BATTER, task_words': its what), "You set to battering the door with the bar." (the user's,
 ** 2026-10-22) */
+/* A walk over for a command just done (look's LOOK_NEW, E_ARRIVE's): the things and the denizens it sees that it didn't
+** as the command began (UIREC's before, resolve.c's), and not the thing it came for; nothing else: the command's outcome
+** comes next (the user's, 2026-11-02) */
+static void new_words (void)
+{
+    struct sight* s = &sight_copy;
+    unsigned before[SEE_ITEMS + SEE_DENS];      /* (On the C stack: the hub's bank in the window as it's copied) */
+    unsigned char i, j, k, n;
+
+    hub_mem (UI_BANK, before, UIREC->before, sizeof before);
+    for (i = n = 0, j = 0; i < s->nitems; ++i) {
+        for (k = 0; k < SEE_ITEMS && before[k] != s->item[i].n; ++k) {
+        }
+        if (s->item[i].hid & 2 ? j : k == SEE_ITEMS && !(cmd.obj.word[0] && strstr (s->item[i].name, cmd.obj.word))) {
+            memcpy (&s->item[n++], &s->item[i], sizeof s->item[0]);
+            j = 1;                              /* (One on the surface before it told with that, and only so) */
+        } else {
+            j = 0;
+        }
+    }
+    s->nitems = n;
+    for (i = n = 0; i < s->ndens; ++i) {
+        for (k = 0; k < SEE_DENS && before[SEE_ITEMS + k] != *(unsigned*) s->den[i].name; ++k) {
+        }
+        if (k == SEE_DENS) {
+            memcpy (&s->den[n++], &s->den[i], sizeof s->den[0]);
+        }
+    }
+    s->ndens = n;
+    lbn = 1;                                    /* (Said as a look's are) */
+    *(lbe = lb) = 0;
+    seen_words ();
+    if (lb_stream) {
+        lb_said ();
+    }
+}
+
+/* In the dark, what its hands and feet can tell (the look's, every walk's end; the user's, 2026-11-02: HOUSE.md's walking
+** in the dark): "You feel a wall ahead and to your left; nothing to your right."  No name for the place, no way told,
+** unless it's been on this square before and not forgotten it ("This should be the kitchen.") */
+static void touch_words (void)
+{
+    static const char* const kind_w[4] = { "nothing", "a wall", "a door", "iron bars" };
+    static const char* const side_w[3] = { "ahead", "to your left", "to your right" };
+    static const unsigned char order_[4] = { 1, 2, 3, 0 };
+    struct sight* s = &sight_copy;
+    unsigned char c = s->cmid, i, k, n, m, said = 0;
+
+    strcat (lb, "It is dark. You feel ");
+    for (i = 0; i < 4; ++i) {
+        k = order_[i];
+        for (n = m = 0; m < 3; ++m) {
+            n += TOUCHED (c, m) == k;
+        }
+        if (!n) {
+            continue;
+        }
+        if (said++) {
+            strcat (lb, "; ");
+        }
+        strcat (lb, kind_w[k]);
+        for (m = 0; m < 3; ++m) {
+            if (TOUCHED (c, m) == k) {
+                strcat (lb, " ");
+                strcat (lb, side_w[m]);
+                if (--n) {
+                    strcat (lb, n == 1 ? " and" : ",");
+                }
+            }
+        }
+    }
+    strcat (lb, ".");
+    lbe = lb + strlen (lb);
+    if (s->cwall) {
+        if (s->where == W_ROOM) {
+            strcat (lb, " This should be the ");
+            lbe = lb + strlen (lb);
+            theme_named (TN_ROOM, s->kind);
+            strcat (lb, ".");
+        } else {
+            strcat (lb, " You've been along this passage.");
+        }
+        lbe = lb + strlen (lb);
+    }
+}
+
 void __fastcall__ o_felt_words (unsigned w)
 {
     static const char* const met[FA_PIT + 1] = {
@@ -478,6 +571,14 @@ void __fastcall__ o_felt_words (unsigned w)
     static const char* const gait[4] = { "walk", "jog", "run", "sprint" };
     unsigned char b = w >> 8, k = b & 7, g = (b >> 4) - GA_WALK & 3, sk;
 
+    if (w == FW_NEW) {
+        new_words ();
+        return;
+    }
+    if (w == FW_TOUCH) {
+        touch_words ();
+        return;
+    }
     switch ((unsigned char) w) {
     case WB_FEEL:
         hub_mem (0, &sk, &HUB->pc_skew, 1);     /* (The way by the north it believes in: slice 4.2's) */
@@ -526,13 +627,21 @@ void __fastcall__ o_felt_words (unsigned w)
             "\nYou set to battering %s%s with the %s.", *lb >= 'a' ? "the " : "", lb, lb + 32);
         return;
     case WB_SPENT:                              /* (A thing used up, its kind: HOUSE.md's things used up) */
+        if (b >= KI_ANTIDOTE) {
+            return;                             /* (A remedy drunk: told as it's drunk, 2026-11-02) */
+        }
         hub_mem (KIND_BANK, lb, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
-        sayf (b == KI_RATIONS ? "\nThat was the last of your %s." : b == KI_WATER ? "\nYour waterskin is empty." :
+        sayf (b == KI_RATIONS || b == KI_BANDAGES ? "\nThat was the last of your %s." : b == KI_WATER ? "\nYour waterskin is empty." :
             "\nYour %s is %s.", lb, b == KI_INK ? "dry" :
             b == KI_QUILL ? "worn out" : "worn to nothing");    /* (Rations eaten: slice 4.9's) */
         return;
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "OV1CODE")             /* (Overlay 1's since 2026-11-02: overlay 7's room) */
+#pragma rodata-name (push, "OV1RODATA")
+
 /* The way the character believes it faces, said (the status command's, after the referee's words of its state: slice
 ** 4.2's bearings, the north it believes in; unsure of it, said so) */
 void o_facing_words (void)
@@ -543,6 +652,10 @@ void o_facing_words (void)
     hub_mem (0, b, &HUB->pc_skew, 2);           /* (pc_skew and pc_lost) */
     sayf ("\nFacing: %s%s.", head_name[(f + b[0]) & 7], b[1] ? ", you think; you've lost your bearings" : "");
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "OV7CODE")
+#pragma rodata-name (push, "OV7RODATA")
 
 
 /* The task a stop names, by its word ("digging"; "": none, LT_NONE) */

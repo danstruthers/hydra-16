@@ -31,7 +31,7 @@ void __fastcall__ o_theme_load (unsigned char t)
     char* path = lb + 300;
     unsigned off;
     unsigned char k, own = t == 0xFF;
-    int fd, n;
+    int fd;
 
     if (own) {
         hub_mem (0, path, (const void*) HUB->savedir, sizeof HUB->savedir);
@@ -47,11 +47,9 @@ void __fastcall__ o_theme_load (unsigned char t)
         t_end ();
         hy_exits ("dq0: its themes (lib/dq0/dq0t.dat) not found");
     }
-    for (k = 0; ; ++k) {
-        for (off = 0; off < THEME_SIZE && (n = read (fd, lb, 256)) > 0; off += n) {
-            memcpy ((char*) T + off, lb, n);
-            hub_mem (THEME_BANK, (char*) THEME + off, lb, n);
-        }
+    for (k = 0; ; ++k) {                        /* (Read straight into the overlay's copy, one read a theme: the
+                                                **   start's time, slice 4.4's) */
+        read (fd, T, THEME_SIZE);
         if (!k) {
             t %= T->count;
         }
@@ -60,6 +58,10 @@ void __fastcall__ o_theme_load (unsigned char t)
         }
     }
     close (fd);
+    for (off = 0; off < THEME_SIZE; off += 256) {
+        memcpy (lb, (char*) T + off, 256);
+        hub_mem (THEME_BANK, (char*) THEME + off, lb, 256);
+    }
     Q.theme = own ? 0xFF : t;                   /* (Its kinds the world's to put in the catalogue: IO_THEME) */
 }
 
@@ -110,6 +112,11 @@ void __fastcall__ o_ending (unsigned char how)
     blank ();
     words_at (T->end[how & 3]);
     blank ();
+    if (savedir) {                              /* (What's next: D7's, D8's, slice 4.4's) */
+        msg (how != END_DIED ? "Your character carries on: start the game again with this save's folder, and go on into a new dungeon." :
+            hard ? "Hard mode: there's no save to go back to." :
+            "Your last save is kept: start the game again with its folder to go back to it.");
+    }
     msg ("The game is over.");
     blank ();
 }

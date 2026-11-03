@@ -127,6 +127,7 @@ void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
         if (!(st & (PS_OPEN | PS_WRECKED)) && (d.kind == PK_WINDOW ? d.parts & PP_SHUTTERS :
             d.kind != PK_PORTCULLIS && d.kind != PK_SLIT)) {
             b->what = WB_SHUT;                  /* (A door shut, a window's shutters: not seen past) */
+            b->kind = st;                       /* (Barred, locked, as it's plain: words) */
             continue;
         }
         ox = d.x;                               /* (Out of its room, or out of its passage that way) */

@@ -415,6 +415,7 @@ void __fastcall__ o_pc_side (struct side* s)
         s->imp[0] += worn (more);
     }
     strcpy (s->word, named ? wk.name : w->word);
+    s->sk = w->sk;                              /* (Its skill, used: fight.c's, slice 4.4's) */
 }
 
 /* RS_WIELD (rs.h's): what the character would strike with, nothing named (the user's, 2026-10-22: "I don't think it

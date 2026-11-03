@@ -151,6 +151,9 @@ enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
                                                 **   walk) or none (crawling, its arms enough); */
 #define C_STUCK         0x4000                  /*   not at all (no leg to stand on, nor arms enough to crawl) */
 #define C_MOVE          (C_LAME | C_CRAWLS | C_STUCK)
+#define C_NEWS          0x8000                  /* (The character's alone: the referee has words for it not told yet,
+                                                **   a skill opened by its use: the world's to ask for them, RS_TIME,
+                                                **   as it does for what time did, slice 4.4's) */
 
 /* ---- Health: how hurt an actor is, in words any ruleset can say */
 enum { H_FINE, H_HURT, H_BADLY, H_CRITICAL, H_DOWN, H_DEAD };
@@ -203,6 +206,8 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define RS_PRONE_D      0x04                    /*   the defender) */
 #define RS_KILLER       0x08                    /* (RS_ATTACK's w2: the attacker a killer, the character senseless finished
                                                 **   where it lies; else the blow held: the minds', by its nature) */
+#define RS_ASLEEP       0x80                    /* (RS_ATTACK's w2: the defender, a creature, asleep: it ignores the
+                                                **   blow, the book's Ignore (Combat 9: one unaware); 2026-11-02) */
 #define RS_REARM        0x20                    /* (RS_ATTACK's w2: the attacker, its weapon let fall, takes it up again,
                                                 **   its turn: O_REARM, slice 4.1b's) */
 #define RS_SHORT        0x10                    /* (RS_ATTACK at RS_THING's w2: a bare part (no armour on it: the
@@ -286,6 +291,10 @@ enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_STRUCK };
 ** a poisoned dart's or needle's (a trap's), a contact poison's (a lock's, a chest's), spoiled food's, foul water's (a
 ** still pool drunk from: the flux).  A creature's bite that carries venom or disease the ruleset's own (its bestiary) */
 enum { AK_NONE, AK_DART, AK_CONTACT, AK_FOOD, AK_FLUX, NAK };
+#define AK_CURE         0x10                    /* (The UI's RS_TIME, a remedy taken, 2026-11-02: its x[15] RT_TAKEN | 1 an */
+#define AK_REMEDY       0x20                    /*   antidote, against the toxin; | 2 a remedy, against the disease; the
+                                                **   null ruleset's x[18] these: HOUSE.md's remedies) */
+#define RT_TAKEN        0x40
 /* The air (the world's, as it moves: the hub's pc_air, RS_TIME's x[20]): its kind times 16, and its strength (1 a little
 ** ... 3 much: the draught's thinned it): blackdamp (stale air: too little to breathe, choke-damp), whitedamp (the
 ** smoke of fire and of a blast: poisonous, giving no warning), firedamp (marsh gas, in the coal and shale beds: it burns,

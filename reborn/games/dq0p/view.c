@@ -73,6 +73,8 @@ static unsigned gsx0, gsy0, gsw, gsh;           /*   lgen then, the stratum's bo
 void give_way (void);                           /* (dq0p.c's: the look giving way to the UI's command in hand) */
 
 
+extern unsigned char here_known;                /* (dq0p.c's: come to a square it knew before this look: sight.c's) */
+
 /* The squares a walk went (the world's: from x, y its first way d, n squares; the look's walk), felt in the dark,
 ** remembered (T_SEEN): as dq0w.c's walk goes them, along a passage (a wide one's breadth beside it no way on), on at
 ** its bends, through a door, into a room (part 2's: its breadth, chunk.c's, there); a walk in the dark (d | 0x80) as it
@@ -99,6 +101,7 @@ void __fastcall__ s_felt (unsigned char sn, unsigned x, unsigned y, unsigned cha
     unsigned char* p;
     unsigned char h0 = d, cross, m = d & 0x80 ? T_SEEN : T_SEEN | run_d;    /* (h0: in the dark, | 0x80) */
 
+    here_known |= 0x80;                         /* (On a walk: sight.c's, no doors looked for along it till it arrives) */
     d &= 7;                                     /* (A heading: the diagonal ways' too) */
     way_room = 0xFF;
     cross = !(h0 & 0x80) && room_of (sn, x, y) == 0xFF && ways_from (sn, x, y, d) > 1 ? 3 : 0;   /* (As the walk does:
@@ -433,7 +436,11 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
     hub_map (0);
     k = HUB->pc_pos;                            /* (Its eyes by its body's position: crouched, kneeling, sitting three
                                                 **   feet, prone one, HOUSE.md's, slice 4.6's) */
+    j = HUB->look.first;
     own = at (sn, x, y) != 0;
+    if ((j & LF_ARRIVE) && own) {
+        here_known = (C->tile[cy_][cx_] & T_SEEN) != 0;
+    }
     z = (own ? C->elev[cy_][cx_] : 0) + (k ? (k == POS_PRONE ? 1 : 3) : EYE);
     run_d = 0;
     mark_rows (1);                              /* The last view's seen now unmarked (its rows' marks): this one's are

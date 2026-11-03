@@ -131,7 +131,7 @@ void s_tend (void)
         strcpy (lb, r->text);
         r->state = REQ_FREE;
         if (!res && bandage_out ()) {
-            goto out;                           /* (A bandage got out first: a tool's steps, part 18's) */
+            goto out;                           /* (A bandage got out first: a tool's steps, part 19's) */
         }
         msg (lb);
         if (!res) {

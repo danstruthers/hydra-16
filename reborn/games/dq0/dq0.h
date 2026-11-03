@@ -83,6 +83,9 @@ void __fastcall__ ask_line (char* b, unsigned char max);  /* A line typed, waiti
 #define PACE_TURNS      3                       /* The world moves only as the character does (a turn game) */
 extern unsigned long now;                       /* The game's time */
 extern unsigned char pace, paused;
+extern unsigned char hard;                      /* Hard mode (dq0 -H, D7's setting: no autosave to go back to, a
+                                                **   death the save's end; kept in the save's pace, its top bit: slice
+                                                **   4.4's) */
 extern unsigned char plain;                     /* The map in plain letters, no colours (the player's: "colour off",
                                                 **   pace.c's; kept with the game: main.c's save) */
 extern const char* savedir;                     /* (main.c's: dq0 -d's, the save's folder) */
@@ -114,7 +117,7 @@ void __fastcall__ map (const char* rules);      /* Part 3: the map of what it's 
 enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL, OB_WINDOW, OB_TRAP,
     OB_PORTC, OB_ROOM, OB_CORNER, OB_PILLAR, OB_CENTRE, OB_SIDE };  /* (OB_ROOM: the room, its ceiling: looked at closely; a corner, a
                                                 **   pillar: looked round, "look around the corner") */
-enum { HOW_ANY, HOW_TO, HOW_THROUGH };
+enum { HOW_ANY, HOW_TO, HOW_THROUGH, HOW_ACROSS };
 enum { PR_NONE, PR_IN, PR_ON, PR_FROM, PR_WITH, PR_AT, PR_TO };    /* (The other thing: in it, on it, from it, with
                                                 **   it, at it, to it) */
 #define GO_UP       8                           /* (A direction: up, down; else a heading, H_N ...) */
@@ -167,6 +170,9 @@ extern unsigned char strike;                    /* (main.c's) What the character
                                                 **   with each blow (I_ATTACK's, I_PORTAL's x[1]) */
 /* ---- choose.c (overlay 7): the thing meant, of those the character perceives; of several, which, asked */
 
+#define LOOK_NEW    32                          /* (look's: only what's new since the command began) */
+#define FW_NEW      0xFFFF                      /* (felt_words': that, task.c's) */
+#define FW_TOUCH    0xFFFE                      /* (felt_words': what its hands find, in the dark, the look's: task.c's) */
 #define PICK_TELL   0x80                        /* (pick's obj |: "You see no door here", if there's none) */
 #define PICK_ANY    0x40                        /* (Any one: none asked) */
 unsigned char __fastcall__ pick (unsigned char obj, unsigned char orel);   /* The thing of kind obj (OB_*), lying
@@ -346,7 +352,7 @@ extern unsigned long heard_at;                  /* (main.c's: when a sound was l
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[16];
+extern unsigned char ovbank[18];
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */
 void tend (void);                               /* Part 12: first aid (VB_TEND) */
@@ -379,9 +385,9 @@ unsigned char __fastcall__ den_seen (unsigned x, unsigned y);   /* Part 8: an ac
 unsigned char __fastcall__ actor_seen (unsigned char b);        /* Part 8: an event's actor seen (b: 0 the character) */                /* Part 8: the character's place in the room, and the room's size */
 unsigned char __fastcall__ lie_words (unsigned char i);   /* Part 8: a thing's place in the room (its sight_copy's) */
 unsigned char reach_go (void);
-unsigned char bandage_out (void);               /* Part 18: a bandage got out, a tool's steps */
-void step_go (void);                            /* Part 18: a step of the reach begun by the world (IO_STEP's) */
-void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 18: the reach's words */
+unsigned char bandage_out (void);               /* Part 19: a bandage got out, a tool's steps */
+void step_go (void);                            /* Part 19: a step of the reach begun by the world (IO_STEP's) */
+void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 19: the reach's words */
 unsigned char search_go (void);                 /* (Part 10's) A search begun, by its form (search.c) */
 unsigned char __fastcall__ place_go (const struct cmd* c);   /* Part 7: a place in the room walked to */                  /* Part 7: a command's thing out of reach walked over to first */
 void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the

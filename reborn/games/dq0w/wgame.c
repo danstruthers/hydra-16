@@ -23,6 +23,7 @@
 #include "things.h"
 
 extern unsigned char pmode;                     /* (dq0w.c's: the legs' way said) */
+extern unsigned char go_near;                   /* (dq0w.c's: a walk's end as near as it gets, or beside it, 2) */
 extern unsigned char nobear;                    /* (dq0w.c's: dq0 -N, the tests', its bearings never tested) */
 #include "work.h"
 
@@ -163,7 +164,9 @@ unsigned char s_take_up (void)
             (HUB->pc_x != take_fx || HUB->pc_y != take_fy)) {
             take_fx = HUB->pc_x;
             take_fy = HUB->pc_y;
+            go_near = take_only & 2;            /* (Gone to: beside it, as near as it gets, and on as it gets nearer) */
             go_to (take_x, take_y);
+            go_near = 0;
             return 2;
         }
         take_n = 0;
@@ -228,7 +231,9 @@ void __fastcall__ s_take_go (const struct msg* m)
     hub_map (0);
     take_fx = HUB->pc_x;
     take_fy = HUB->pc_y;
+    go_near = take_only & 2;                    /* (a 2: gone to, "go to the pot", stopping beside it: the UI's way.c) */
     go_to (take_x, take_y);
+    go_near = 0;
 }
 
 /* ---- The character's state, and the game's (move 2.7: the character's state home): the UI's requests of them (the
@@ -251,6 +256,9 @@ static int __fastcall__ world_dat (unsigned char out)
     strcat (p, "/world.dat");
     return out ? open (p, O_WRONLY | O_CREAT | O_TRUNC, 0644) : open (p, O_RDONLY);
 }
+
+
+unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);    /* (Part 40's: its LM_KIT, kit.dat) */
 
 /* The world's part of the game kept (WQ_SAVE's, after the change records) */
 void s_world_keep (void)
@@ -285,6 +293,7 @@ void s_world_keep (void)
     write (fd, WREC->strata, sizeof WREC->strata);
     hub_map (0);
     close (fd);
+    look_more (0, LM_KIT);                      /* (Its things, kit.dat: to carry on, part 40's, slice 4.4's) */
 }
 
 /* A game carried on: the world's part of its save read back (the clock, the character's place, state and bearings, the

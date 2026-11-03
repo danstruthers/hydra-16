@@ -241,6 +241,7 @@ unsigned char s_den_legs (void)
     if (bd.pos == POS_PRONE && !(bd.move & 2)) {
         hub_map (0);
         bd.pos = POS_STANDING;
+        bd.move &= ~BM_NOT_UP;
         bd.ready += HUB->round;
         limb_news (WB_RISEN, bk + 1);
         return 1;

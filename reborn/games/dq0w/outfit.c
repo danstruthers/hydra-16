@@ -198,12 +198,39 @@ void __fastcall__ s_den_kit (const struct msg* m)
     hub_map (0);
 }
 
+/* A carried-on game's kit (kit.dat in the save folder, the world's save's: wgame.c's kit_keep, slice 4.4's, D8's) in the
+** list in place of the one drawn: 1; or 0 (none there, or empty: a new game's, the UI's emptied it) */
+static unsigned char kit_read (void)
+{
+    char p[56];
+    int fd, n;
+
+    hub_map (0);
+    if (!HUB->savedir[0]) {
+        return 0;
+    }
+    strcpy (p, HUB->savedir);
+    strcat (p, "/kit.dat");
+    if ((fd = open (p, O_RDONLY)) < 0) {
+        return 0;
+    }
+    hub_map (KIND_BANK);
+    n = read (fd, OF_LIST, NOFIT * sizeof *OF_LIST);
+    close (fd);
+    if (n < (int) sizeof *OF_LIST) {
+        return 0;
+    }
+    hub_map (KIND_BANK);
+    OF_N = n / sizeof *OF_LIST;
+    return 1;
+}
+
 /* ---- The character's outfit: the referee asked (RS_OUTFIT, the UI's slot: the UI waits on the kit), drawn into the
 ** list; 0 if there's none (no file, a referee that hasn't one: the kit as it was) */
 unsigned char s_outfit (void)
 {
     struct req* r;
-    unsigned char occ = 0, k, first, okeep = 0, obent = 0, olen;
+    unsigned char occ = 0, k, first, okeep = 0, obent = 0, olen, wv;
     unsigned off = 0, boff;
 
     if (!opened ()) {
@@ -220,6 +247,7 @@ unsigned char s_outfit (void)
     }
     ost.budget = r->w1;
     ost.rs = r->w2 | 1;
+    wv = r->x[2];                               /* (Its weapons' version, by its Strength: the referee's, D13's) */
     ost.tags = r->x[0] | r->x[1] << 8;
     ost.level = r->a;
     if (reply_line (0, "")) {                   /* (Its occupation's section: the culture's own first, NAME/c) */
@@ -280,27 +308,9 @@ unsigned char s_outfit (void)
     }
     hub_map (0);
     HUB->slot[SLOT_UI].state = REQ_FREE;
-    ost.budget += ost.kept;                     /* (The money: in the pouch, silver pennies in lots of 250 at most (a
-                                                **   lot's count a byte, joined to 250), all of it, told together; its
-                                                **   odd farthings farthings, cut pennies: the user's, 2026-10-28,
-                                                **   "Please keep farthings") */
-    hub_map (KIND_BANK);
-    for (boff = ost.budget >> 2; boff && (k = OF_N) < NOFIT; boff -= olen) {
-        olen = boff > 250 ? 250 : boff;
-        memset (OF_LIST + k, 0, sizeof *OF_LIST);
-        OF_LIST[k].kind = KI_PENNIES;
-        OF_LIST[k].qty = olen;
-        OF_LIST[k].quality = 4;
-        OF_LIST[k].place = PL_POUCH;
-        OF_N = k + 1;
+    ost.budget += ost.kept;                     /* (The money: s_kit's, part 63's, the room of this one's image) */
+    if (kit_read ()) {
+        ost.budget = 0;                         /* (Its kit carried on: its own money in it, slice 4.4's) */
     }
-    if ((olen = ost.budget & 3) != 0 && (k = OF_N) < NOFIT) {
-        memset (OF_LIST + k, 0, sizeof *OF_LIST);
-        OF_LIST[k].kind = KI_FARTHINGS;
-        OF_LIST[k].qty = olen;
-        OF_LIST[k].quality = 4;
-        OF_LIST[k].place = PL_POUCH;
-        OF_N = k + 1;
-    }
-    return 1;
+    return 1 + (wv < 3 ? wv : 0);               /* (Drawn; its weapons' version too, the kit's to make: s_kit's) */
 }

@@ -139,6 +139,9 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_MANKAR, KI_MANG,                         /* The Gargun's weapons (Combat 3's (G): Phase 4's peoples, 2026-10-29;
                                                 **   past the theme's, the own kinds' room full: struck with as the
                                                 **   best held, never named as the striker) */
+    KI_ANTIDOTE, KI_REMEDY,                     /* (The remedies, 2026-11-02: an antidote, a theriac against poisons
+                                                **   and venoms; a remedy, a physician's draught against a disease;
+                                                **   drunk, their keys the things' IO_USE's: HOUSE.md's remedies) */
     KI_COUNT };
 
 #define KIND_WORDS      ((const char*) (CATALOGUE + NKINDS))     /* (In the kinds' bank after them: the words of
@@ -147,6 +150,9 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
 
 /* An item */
 #define NITEMS          (ITEM_BANKS * (0x2000 / sizeof (struct item)))
+#define WV_LIGHT        1                       /* (A weapon's version, its item's size: light, a quarter lighter; */
+#define WV_HEAVY        2                       /*   heavy, a quarter heavier; 0 average: the book's custom weapons,
+                                                **   Combat 3; D13's, slice 4.4's) */
 struct item {
     unsigned char   kind;                       /* 0: a free record; else the catalogue's (1 on) */
     unsigned char   flags;                      /* I_* */
@@ -169,7 +175,8 @@ struct item {
     unsigned        dur, dur_max;               /* Its durability: the harm it can take before it breaks, what's
                                                 **   left (its most by its quality, its material, its weight) */
     unsigned char   size;                       /* Its measure, where it matters (a portal's part's: its portal's
-                                                **   opening, world.h's: feet, its width the low four bits; or 0) */
+                                                **   opening, world.h's: feet, its width the low four bits; or 0; a
+                                                **   weapon's version, WV_*) */
     unsigned char   thick;                      /*   and its thickness, in eighths of an inch (or 0) */
     unsigned        fuel;                       /* A light's burning left, minutes (0: burnt out; or not its own yet,
                                                 **   its life decided as it's made its own), the world's as it burns
@@ -351,8 +358,9 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   the character carries, for a gift: IO_DESCRIBE's reply (its worth
                                                 **   in value, a unit's, the appraisal's; its qty, its craft), its item
                                                 **   in item; IR_NONE none */
-enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS };   /* (IO_LOOK's: a look at it; a closer look; its
-                                                **   condition; its weight; its lock; gone over for traps) */
+enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS, LM_KIT, LM_GO };   /* (IO_LOOK's: a look at it; a closer look; its
+                                                **   condition; its weight; its lock; gone over for traps; LM_KIT the
+                                                **   world's own, the character's things kept, kit.dat: slice 4.4's; LM_GO, gone to, walking there) */
 #define IO_PUZZLE       (IO_BAR + 4)           /* A command of the theme's puzzle's (theme.h), judged by its rules
                                                 **   (the world's): to its verb (TR_*), name the thing (into the other:
                                                 **   combine name with into, put name on into; read name; use name on

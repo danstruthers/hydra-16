@@ -33,12 +33,22 @@ void __fastcall__ o_entered (unsigned char resumed)
     sayf (resumed ? "%s, %s, takes up where they left off." : "%s, %s, enters the dungeon.", P.name, P.occupation);
 }
 
+#pragma code-name (push, "OV12CODE")            /* (Overlay 12's: overlay 1's room, slice 4.4's; its strings with it) */
+#pragma rodata-name (push, "OV12RODATA")
+#pragma local-strings (push, on)
+
 /* Climbing's words: how a round went, and the feet to go (and a ledge come to: CW_RISES, CW_FALLS, its feet) */
 void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
 {
     switch (how) {
     case CW_RISES:
     case CW_FALLS:
+        if (feet > LEDGE_MET) {                 /* (What a straight walk came to, E_LEDGE's: dq0w.c's across) */
+            static const char met[][24] = { "the wall", "a closed door", "a portcullis, down", "a drop", "a rise",
+                "the edge of a pit", "a trap you know of" };
+            sayf ("\nYou come to %s.", met[feet - LEDGE_MET - 1]);
+            return;
+        }
         sayf (how == CW_RISES ? "\nThe floor rises %u feet at a ledge ahead: climb it (u) to go on." :
               "\nThe floor falls %u feet at a ledge ahead: climb down it (d) to go on.", feet);
         return;
@@ -53,6 +63,9 @@ void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
         return;
     case K_NOHOLD:
         sayf ("\nYou find no hold yet (%u feet to go).", feet);
+        return;
+    case K_SLID:                                /* (Out of a pit: the climb ended, D13's) */
+        sayf ("\nYou slip, and slide back down to the pit's floor: %u feet to climb (climb up to try again).", feet);
         return;
     case K_FELL:
         if (!feet) {
@@ -69,6 +82,10 @@ void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
         return;
     }
 }
+
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Harm's words: what came of it (w: an E_HARM's, its cause and the worst wound's band), the referee's words of the
 ** wounds (in lb), and what they've left the character in (cond: its conditions, rs.h's C_*) */

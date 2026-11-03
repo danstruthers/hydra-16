@@ -890,6 +890,20 @@ or a shaft can be jumped down (jump down: a fall of its height).
   carried out as the character gets there; a blow at a denizen out of reach ("attack the goblin", "attack" with a
   target) closes with it first, the walk ending beside it and the blow struck (the denizen's own blow as it comes up
   no stop), or engaged by another first, no blow; engaged already, refused.
+- **Straight walks** (the user's, 2026-11-02: HOUSE.md's): a way word alone, any of the twelve, walks straight from a
+  room's floor until a wall, a closed door or another obstacle stops it, told what stopped it ("You come to a closed
+  door.", E_LEDGE's LEDGE_MET and the world's ahead's FA_*), refused only with it directly in front; an open door or a
+  passage's mouth straight ahead, on through it; a shut door it has handled opened as it goes.  A door off to the side
+  isn't walked to by one: "go through the door", "go to the door", "open the door", "leave" (which, asked).
+- **Going to anything** (the user's, 2026-11-02: HOUSE.md's): approach, go to, walk to, walk over to, head for and
+  their kin, for a thing, a fixture, a denizen (no blow: I_CLOSE, w1) or a body it sees or remembers in this room (the
+  item store's pick, HW_GONE; I_GOTO, a 2: beside it); "You haven't seen a pot here." only for what it hasn't.  Crossing
+  ("cross the room", "go across the hall") its far side; a closer look, an appraisal, looking in a thing or searching
+  it, out of reach, walked over to first.
+- **What can be named** (the user's, 2026-11-02: HOUSE.md's): what it sees or has seen and remembers, by one rule: named
+  and walked to, in "which door?", though it's out of the light; never what it hasn't perceived.  "The door on the left"
+  by the look's own words, then that side of the room.  A walk over for a command told short: its words, what's new, the
+  outcome.  A bar on its side and what it has found of a lock told with the door ("(closed, barred)"); "unbar the door".
 - **Going places in a room**, by the facing: the centre, the far side (the other side, the far end, the wall ahead),
   the near, left or right side, a corner ("go to the far left corner", "walk forward to the other side"); where the
   place itself is rock (a cave's), the nearest square the way reaches.  And where you are said the same way: "You are
@@ -907,12 +921,15 @@ or a shaft can be jumped down (jump down: a fall of its height).
   edge); the world takes that pace's step for every square.
 - **In the dark** (the user's playtest, 2026-10-22: HOUSE.md's walking and searching in the dark) a walk goes by what
   the character knows (the squares it's seen and those it's felt walking: the senses' memory), never turned toward an
-  opening it hasn't seen or felt: from a room by a door it knows of, else straight on the way said; along a passage
+  opening it hasn't seen or felt: from a room straight on the way said (a door meant, one it knows of); along a passage
   straight on, round a bend only where it knows the way, a fork it knows of stopping it.  Its cautious walk feels
   ahead and stops short of what it meets, told by touch (a wall, a door, a drop, a rise, a thing in the way, known
   after); a faster one blunders into it, the world's to judge by what's really there (the stumble the referee's, the
   book's stumble roll; a blow, a fall).  A denizen whose kind has no darkvision feels its way on a dark square too, at
   half its pace.
+- **Feeling its way** (the user's, 2026-11-02: HOUSE.md's): the look in the dark, and a dark walk's end, only what the
+  hands and feet can tell: "You feel a wall ahead and to your left; nothing to your right."  No name for the place, no
+  ways, no slope ahead, unless it's been on the square before and hasn't forgotten it ("This should be the kitchen.").
 - **Fatigue** is the referee's (the book's movement fatigue: HOUSE.md's moving and tiring): walking (or slower) a
   fatigue level a day, jogging one each five minutes, running one each two, sprinting one each minute, the time at
   each pace added up across moves; standing still (waiting, the time between moves) is rest, a level gone each ten
@@ -1374,6 +1391,30 @@ packed, not the game on the ROM disk (2026-10-31, DECISIONS.md).  Now: 208M cycl
 - **The check**: dq0starttime, its budgets 229M (seed 1) and 318M (seed 123456789), its silence 36M at most, the
   banks as ld65 made them.
 
+### The character carries on (slice 4.4, 2026-11-02)
+
+The user's D7 and D8 (DECISIONS.md): death is permanent, with autosaves before danger a setting (off, hard mode); the
+character carries on into a new dungeon with its skills, wounds and gear.  And the plan's "skill improvement by use and
+rest".  Built (HOUSE.md's the character carries on has the numbers):
+
+- **Skills by use:** every skill the character uses (a test of it, its weapon in a fight, its dodge, a shot) is marked
+  for a development roll, success or failure alike (the book's); the marked ones are rolled after a night's rest, each
+  that rose told as it wakes ("Your Climbing skill has improved (46)."), the sheet showing the new figure.  A [First
+  Use] skill (Swimming, Acrobatics, Physician, Cookery; a weapon's in a fight) opens the first time it's used, told at
+  once ("You've begun to learn Swimming by doing it (12)."); one learnt by study doesn't.  The referee's alone
+  (dq0harn/skills.c): the marks and the rest toward the rolls kept with the sheet in the save (pc.hm).
+- **The ending:** the theme's words, then what's next, then the character's sheet as it ends.  Alive (the goal reached
+  or the way out taken), "Your character carries on": the game started again with the same folder (dq0 -d) begins a new
+  dungeon (a new seed: a new history and theme) with the same character, its sheet as it ended (its skills, its wounds
+  healing on), and the things it carried out (the world's kit.dat, kept with every save, made its outfit there).
+- **Death and the autosave:** the game is kept as the character comes into a stratum and as it's quit; a death isn't
+  kept, so the last save is there to go back to.  Hard mode (dq0 -H, kept in the save) keeps the death: the folder's
+  next game is a new one, a new character.  The autosave before danger (a fight's start) is to come.
+- **D13's rules:** the free pounds of encumbrance by Strength; a weapon's version (the book's light, average and heavy:
+  its impact and its weight by it), the heaviest wielded without penalty by Strength, a strong character made with
+  heavy weapons; a wrecked door, window or portcullis appraised by its state; a slip climbing out of a pit ending the
+  climb, the player's to say what next ("climb up" again).
+
 ## One path for every actor
 
 The user's (2026-11-02, DECISIONS.md's): every actor's action is one intent, the character's and a denizen's mind's
@@ -1410,8 +1451,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   diamonds, built 2026-11-02: HOUSE.md's rooms on the diagonal): left, rooms truly turned (a long room on the
   slant, not its corners cut; a diamond's own words, its places), other angles stepped and told by step 2's words; a
   wide tunnel's staircase told as one slant (step 2's runs follow a one-wide passage).
-- **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence): left, other errands
-  ("ask the dwarf to open the door"), "give the bandit 5 pennies" without "to", entertain and bargain.
+- **Fetching and influence** (slice 4.8, built 2026-10-30: DENIZENS.md's allies and influence; 2026-11-02 an ally's
+  errands at a door, "give the bandit 5 pennies" without "to", entertaining and bargaining): left, the other errands (a
+  lock picked, a door forced for the character, a thing given to another).
 - **The command interpreter** (Phase 3C): every command, the player's or a denizen's mind's, one structure of
   abstract actions (VB_*), verbs as data with their defaults, affordances, selectors, a target that persists,
   questions only when unclear; "alias" the command for text aliases ("alias x is dig down"), naming things and rooms
@@ -1452,12 +1494,13 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   bandit": the book's treatment, a timed work, bandages used up); healing over days of rest (the book's five-day
   rolls, infection, a treatment's EE), told as it wakes; shock's recovery each watch, and in shock only rest, a look and
   a half move; a creature come round in shock; the venoms of the adder, the basilisk and the lindworm (the bestiary's,
-  an infection's course); a folk denizen binding its own bleeding.  Not yet: antidotes (with the market), the minds'
+  an infection's course); a folk denizen binding its own bleeding; antidotes (built 2026-11-02).  Not yet: the minds'
   way with a wounded or shocked denizen (resting in its lair, tending another), stings.
 - **Poison, bad air and disease** (2026-10-31, the user's: HOUSE.md's): one course for every affliction (the book's
   Infection table), poisons (a dart trap's), diseases (foul water's flux, rat-bite fever, a ghoul's grave rot) shown
   after their incubation; the air's pockets (blackdamp, whitedamp, firedamp) and a flame's warnings, firedamp's burst.
-  Left: a door's needle and a chest's (contact poison), poisoned blades, spoiled food, antidotes (with the market), a
+  Antidotes and remedies built 2026-11-02 (HOUSE.md's the market, entertaining and remedies).
+  Left: a door's needle and a chest's (contact poison), poisoned blades, spoiled food, a
   lair's sickness, the denizens' own afflictions and their choking, old mines' air, the explosion's harm to those near.
 - **The sound layer and the denizens' hearing by pace** (slice 4.5, built 2026-10-29: perception as layers, above):
   a pulse over the squares and openings, a background that masks, the character's steps heard by its pace and its
@@ -1515,12 +1558,14 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   tunnellers): left, builders shoring a passage, the spoil as a thing, a mine past its lair's chunk.
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
-- **One path for every actor** (Phase 3C, begun 2026-11-02: below): left, a denizen working windows and
-  portcullises, picking a lock, an ally asked to open a door ("ask the dwarf to open the door"), a denizen eating the
+- **One path for every actor** (Phase 3C, begun 2026-11-02: below; a denizen's portcullises and a robber's lock
+  picking built 2026-11-02, DENIZENS.md's): left, a denizen working windows, an ally asked to open a door ("ask the dwarf to open the door"), a denizen eating the
   food it takes up, its lift by its size, the things' put down, given and thrown by the minds as the character's are.
-- **The house rules decided, not yet built** (HOUSE.md): Strength and weapons, free pounds, a wrecked portal appraised
-  by its state, the pit climb (D13).
-- **The market** (when trading comes: DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a
+- **The character carries on** (slice 4.4, built 2026-11-02: above): left, the autosave before danger, the denizens'
+  weapons' versions (the outfits' gear's), a thing's wear and fuel carried as they were.
+- **The market** (built in part 2026-11-02: HOUSE.md's the market, entertaining and remedies; DENIZENS.md's trading):
+  buying, selling, a price asked, haggling, with any folk denizen, in pennies; remedies (antidotes, a physician's
+  draught) for sale, in kits and purses, drunk.  Left, from the plan (DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a
   mercantyler's 10% buying and 50% selling to the source, second-hand clothes 30-60% of new, haggling), the coins'
   metal value and their discount outside their own land in the trade itself (the appraisal tells it now), farthings
   for change; paying with the lowest-worth coins first unless the seller asks for the local or the dwarves', and the

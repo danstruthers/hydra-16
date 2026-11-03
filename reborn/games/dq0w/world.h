@@ -138,6 +138,8 @@ enum { PK_DOOR, PK_WINDOW, PK_PORTCULLIS, PK_DRAWBRIDGE, PK_GATE, PK_GRATE, PK_H
 #define PP_GLASS        0x01                    /* (Sight through, not missiles; till it's broken) */
 #define PP_SHUTTERS     0x02                    /* (Open or closed: PS_OPEN; barred, as a door is) */
 #define PP_BARS         0x04                    /* (Sight and missiles through, not movement) */
+#define PP_FOUND        0x40                    /* (Its lock or its far side's bar found by the character, tried: told as it
+                                                **   lies from then on, the user's, 2026-11-02) */
 #define PP_KNOWN        0x80                    /* (A door the character has opened or shut: a walk out of a room
                                                 **   opens it again, as it goes; any other it must open, asked) */
 #define PS_OPEN         0x01

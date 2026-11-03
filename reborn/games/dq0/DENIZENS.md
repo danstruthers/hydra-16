@@ -175,6 +175,15 @@ done before its eyes to a foe of its (one of a faction hostile to it, sensing it
 worth's steps less one), a step each four, to friendly at most (dq0d's s_regard).  A freed prisoner's (no prisoners
 yet) is the hook's.
 
+**Trading and entertaining** *(2026-11-02; HOUSE.md's the market, entertaining and remedies, for review)*: "buy the
+rope from the dwarf", "sell my dagger", "how much for the lantern?", "what will you give for this?", "haggle for the
+rope", "sing to the bandit".  The UI finds the goods (the character's, or the trader's: the world's IO_GEAR's goods, the
+nearest named, or any, carrying them) and each side's pennies, and asks the denizens' task (SW_BUY, SW_SELL, SW_PRICE,
+SW_OFFER, SW_HAGGLE, SW_ENTERTAIN: dq0d's part 16): any folk denizen indifferent or better trades, its price from the
+goods' worth by its attitude, haggled by the book's Rhetoric in its tongue; the deal done by the one path (its own
+I_ROB intents, FE_GIFT the coins or the goods it takes, FE_GIVE its own handed over: the world's wfetch.c).  Entertained
+by the referee's performing skill, its attitude moved as words move it, as far as friendly.
+
 ### Allies
 
 An ally is still the **denizens' task's**: it moves, fights and acts on its own turn by its own nature, but its goal
@@ -202,6 +211,14 @@ from the start, is the character and its allies.
   beside it (FE_GIVE: into the character's hand or pack, else set down at its feet).  Each step told (E_TASK
   TE_FETCHED: "Grub picks up the key.", "Grub hands you the key.", "Grub can't carry the anvil.", "The dwarf has its
   hands full: it can't take the torch.").  Failing, it follows again.
+- **Errands at a door** *(2026-11-02, the one path)*: "ask the dwarf to open the door", "tell Grub to shut the door",
+  "ask the dwarf to unlock the door" (the parser's order words open, close, shut, unlock: OR_OPEN, OR_CLOSE, OR_UNLOCK).
+  The UI finds the door as the character's own command does (its square), and asks the ally (one with hands: a beast
+  "doesn't know how"); it walks to beside the door (the four ways), and posts the character's own intent, I_PORTAL (its
+  PA_OPEN, PA_CLOSE, PA_UNLOCK: its key if it carries one), the world's to carry out (wport.c, told E_DEN DE_OPENS ...);
+  then it follows again.  No way to it, it gives up and follows.
+- **A gift without "to"** *(2026-11-02)*: "give the bandit 5 pennies", "offer the orc my dagger": the one given it the
+  line's first word after the verb that isn't the thing's, a number or a little word (the UI's, errand.c).
 
 ### In the tasks
 
@@ -651,6 +668,26 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   lair's own, a robber's takings put down there).  None in its reach, the nearest it sees within four squares told its
   mind (the hub's dig_t, TW_SEEN | its offsets): idle, it steps toward it and asks again beside it.
 
+### Ways, positions, bodies found *(2026-11-02: the minds' leftovers; HOUSE.md's, for review)*
+
+- **Ways found** (dq0d.c's parts 17 and 18): every S_TOWARD step of the minds (step_for's: a hunter after its foe,
+  one drawn on, an ally following, a hurt one home, one to its bed, its meal or its rounds, a thing seen) that finds
+  no step nearer has a way found (a field over the squares about it and its mark, in a bank of the ways' own, each
+  square's step toward the mark), and follows it a step at a time till it's there, the greedy step's dice as ever; a
+  shut door on the way worked (door_way, wayj: for one about its day too).  The other agents' code gets it by calling
+  step_for (k, lim, S_TOWARD) with refx, refy set (the builders': no entry of its own).
+- **Positions:** a sleeper lies down at its bed (I_RISE's POS_PRONE, the world's wbody.c), up as it next acts (a
+  step's or a blow's Rise as before, else I_RISE's POS_STANDING: wlimbs.c's den_legs); a sleeper struck at ignores the
+  blow (rs.h's RS_ASLEEP: the book's Ignore).
+- **A portcullis and a lock** (door_way, part 14; the world's wport.c by wwin.c and wdoor.c): one with hands raises a
+  portcullis down in its way by its winch, or heaves it from the far side, then (hostile) bends its bars, then gives up;
+  lets one fall against the character from its winch's side; a robber's kind picks a lock it has no key to before it
+  forces it.  Told (E_DEN): DE_WINDS ("winds the portcullis's winch"), DE_HEAVES, DE_RAISES, DE_LOWERS, DE_BENDS,
+  DE_BENT, DE_PICKING ("works at the lock"), DE_PICKS.
+- **Bodies found on the records' rounds** (part 19's rfound, wander's): a record on watch that comes on a body of its
+  faction's: the faction's attitude a step worse, its others about the body gathered to it, each less well disposed,
+  a leader's loss known to them (D_LOST).
+
 ## Still to come
 
 - **Their bodies' rest** (2026-10-31's leftovers, HOUSE.md's the denizens' bodies): a swim tiring a denizen, a denizen
@@ -668,11 +705,12 @@ What the plans bring later, by the slice or phase that brings it:
   The theme format completed (Phase 7): factions and tongues, the bestiary's kinds and numbers, the pieces' keepers
   (a guardian, a faction's hoard), the strata's ages and sizes, the things lying about by theme.
 - **The command interpreter** (Phase 3C, begun 2026-11-02: the doors and things taken, above; DUNGEON.md's one path):
-  left, windows and portcullises, a lock picked, the food it takes eaten, things put down, given and thrown.
+  left (portcullises and a lock picked built 2026-11-02, above), windows, the food it takes eaten, things put down,
+  given and thrown.
 - **Daily life** (slice 4.5, built 2026-10-31: above): left (a patrol noticing a door left open: built
-  2026-11-02, the doors' above), the records' patrols finding bodies (only an actor's rounds do), routes between a faction's lairs and its gates (the way-finding the minds lack: their steps are
-  greedy), a sleeper's defence (the book's Ignore against one
-  asleep), lying down to sleep (the denizens' positions but prone still to come). (The character telling the hour, "sleep until
+  2026-11-02, the doors' above; the records' patrols finding bodies, ways found, a sleeper lying down and its
+  defence, built 2026-11-02: above), routes kept between a faction's lairs and its gates for the records away (they
+  move coarsely, no way wanted yet). (The character telling the hour, "sleep until
   dawn": built 2026-10-31, DUNGEON.md's the time of day believed; the denizens' routines learnt as its clues still to
   come.)
 - **Body position and moving quietly** (slice 4.6, built for the character and a hunter's stalk, 2026-10-29): every
@@ -684,11 +722,13 @@ What the plans bring later, by the slice or phase that brings it:
   a shorkana, a spear or a dagger in hand, another weapon kept), a weapon put up for a bow and drawn again for melee,
   a miss's stray striking one beside its mark (an actor struck by another's shot: the one blow between two actors the
   referees take, its mind's dismay and death as any blow's); left: a rock picked up, the denizens' positions but
-  prone (a shooter crouched behind cover).
+  prone (a shooter crouched behind cover: a cover map wanted; HOUSE.md's ways, positions).
 - **Fetching and influence** (slice 4.8, built 2026-10-30: fetching, gifts and bribes, reputation, D10, a follower's
-  distance, above): left, an ally asked to do other things ("ask the dwarf to open the door": it "doesn't know how"),
-  "give the bandit 5 pennies" (the two objects without "to": the parser's), a gift to one that isn't a person (an
-  altar), a faction's regard by a freed prisoner, a rescue or a piece of the puzzle, entertain and bargain.
+  distance, above): left,
+  a gift to one that isn't a person (an altar), a faction's regard by a freed prisoner, a rescue or a piece of the
+  puzzle, other errands (fetching built, doors built 2026-11-02: a lock picked, a door forced or barred for the
+  character, a thing put down or given to another); the market's left (HOUSE.md's: change, farthings and crowns, coins
+  by mint, a merchant kind).  ("give the bandit 5 pennies", entertaining and bargaining built 2026-11-02.)
 - **Tunnellers and builders** (slice 4.11, built 2026-11-01 and 2026-11-02: tunnellers, above): left, builders
   shoring a passage, the materials as things, the spoil as a thing, harm from falling rock on a
   denizen, a mine past its home's chunk.

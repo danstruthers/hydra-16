@@ -332,8 +332,8 @@ static unsigned char defence (void)
 {
     unsigned char k = (D.who - 1) & 7;
 
-    if (D.c->state != HARN_CONSCIOUS || (!D.who && pc_out > tnow)) {
-        return HARN_IGNORE;
+    if (D.c->state != HARN_CONSCIOUS || (!D.who && pc_out > tnow) || (D.who && (prones & RS_ASLEEP))) {
+        return HARN_IGNORE;                     /* (Senseless, in shock, or asleep: the book's Ignore) */
     }
     if (D.who) {
         if (D.dslot && D.dml >= D.aml && D.dml >= D.dodge && tnow >= dbt[k]) {
@@ -690,7 +690,14 @@ void __fastcall__ o_fight (struct req* r)
             R->b = sb;
         }
     } else {
+        heft (&A);                              /* (Their weapons' versions: D13's) */
+        heft (&D);
         attack ();
+        if (r->result != 0xFF) {                /* (The character's skill used in it, marked for its development
+                                                **   roll, opened its first time, the book's, Combat 19: its weapon,
+                                                **   striking or blocking, or its dodge; skills.c's, slice 4.4's) */
+            skill_used (!r->actor ? A.sk : r->b == D_DODGE ? HARN_DGE : r->b != D_NONE ? D.sk : 0xFF);
+        }
     }
     tup = 0;
     if (r->result != 0xFF && !(r->w2 & MS_STRAY)) {

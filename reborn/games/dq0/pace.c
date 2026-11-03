@@ -240,7 +240,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
         return 0;
     }
     k = (cmd.action == VB_MOVE_DIRECTION || cmd.action == VB_MOVE_TOWARD || cmd.action == VB_ENTER ||
-        cmd.action == VB_APPROACH_OBJECT) && (cmd.dir != 0xFF || cmd.obj.kind);
+        cmd.action == VB_APPROACH_OBJECT) && (cmd.dir != 0xFF || cmd.obj.kind || cmd.how);   /* ("walk to the pot") */
     st = st && (!k || n || g != HUB->gait || wa != HUB->watch);    /* (Said, unless it goes on as it was) */
     mw = HUB->pc_map;
     wset (WS_PACE, g == 0xFF ? g : g | said, wa);   /* (The world's, set: its request) */
@@ -256,7 +256,7 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     } else if (d == 0xFF && n) {
         d = HUB->pc_face;                       /* ("Step": ahead) */
     }
-    if (n && d <= H_NW && !cmd.obj.kind) {             /* (A small move: its facing kept backing up, or a step aside) */
+    if (n && d <= H_NW && !cmd.obj.kind && !cmd.how) {   /* (A small move: its facing kept backing up, or a step aside) */
         keep = any ("left\0right\0l\0r\0back\0backward\0backwards\0behind\0b\0aside\0sideways\0sidestep\0") &&
             !any ("forward\0forwards\0fwd\0ahead\0front\0f\0");
         if (n == 0xFF) {                        /* (By the pace: a square at a walk or slower, two at a jog, three
@@ -302,8 +302,8 @@ unsigned char __fastcall__ s_travel_go (const char* l)
     char k[16];
     unsigned char e, o = cmd.obj.kind, back, n, best = 0;
 
-    if (o && o != OB_WAY_OUT && o != OB_ROOM) {
-        return 0;                               /* (A thing it sees: walked to, as it was) */
+    if ((o && o != OB_WAY_OUT && o != OB_ROOM) || cmd.how == HOW_ACROSS) {
+        return 0;                               /* (A thing it sees: walked to, as it was; across the room it's in) */
     }
     strncpy (b, l, INMAX);
     split ();

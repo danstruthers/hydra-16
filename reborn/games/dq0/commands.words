@@ -42,6 +42,10 @@ fetch = OR_FETCH
 bring = OR_FETCH
 get = OR_FETCH
 retrieve = OR_FETCH
+open = OR_OPEN                              # (new, 2026-11-02: an ally's errands at a door, "ask the dwarf to
+close = OR_CLOSE                            #   open the door", its one path: the minds' I_PORTAL)
+shut = OR_CLOSE
+unlock = OR_UNLOCK
 
 [dirs]
 n = H_N
@@ -173,6 +177,9 @@ near = HOW_TO
 by = HOW_TO
 through = HOW_THROUGH
 into = HOW_THROUGH
+for = HOW_TO                                # (new, 2026-11-02: "head for the pot")
+beside = HOW_TO
+across = HOW_ACROSS                         # (new, 2026-11-02: "cross the room", "go across the hall": its far side)
 in = HOW_THROUGH
 out = HOW_THROUGH
 thru = HOW_THROUGH
@@ -263,6 +270,7 @@ ten = 10
 both = 2                                    # (new, slice 4.1's: "drop both sacks")
 
 [little]
+next
 for
 the
 a

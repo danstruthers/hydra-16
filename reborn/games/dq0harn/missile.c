@@ -85,8 +85,11 @@ static const unsigned char mtab[2][4][4] = {
 };
 static const unsigned char mign[4] = { WLD_, MS__, MH_ (2), MH_ (3) };
 
+void __fastcall__ o_skill_used (unsigned char sk);  /* (skills.c's, this overlay's too) */
+
 static int __fastcall__ eml (unsigned char sk)
 {
+    o_skill_used (sk);                          /* (The character's shot: its skill used, slice 4.4's) */
     return pc.ml[sk] ? harn_eml (&pc, sk) : harn_get_oml (&pc, sk) - 5 * harn_get_pp (&pc);
 }
 
