@@ -52,6 +52,7 @@ static unsigned char asking;                    /* (A long task's soft question 
 const char* cl;                                 /* (The command's line, s_command's: chores' words of it; help.c's) */
 unsigned char harm_told;                        /* (The states a harm's words told in this answer: intro.c's) */
 unsigned char autogo;                           /* (dq0 -a: every soft question answered yes, unasked: the tests') */
+static unsigned char nosteps;                   /* (dq0 -J: the reach's steps none, the tests') */
 static unsigned char noinit;                    /* (dq0 -I: no engage initiative test, no grope's: the tests') */
 static unsigned char nobear;                    /* (dq0 -N: its bearings never tested: the tests', slice 4.2's) */
 static unsigned char asked;                     /* (A sound's question put in this command's long task) */
@@ -690,6 +691,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file, unsi
                                                 **   a game carried on, its save's, the world's) */
     HUB->wreq.x = round;
     HUB->wreq.y = pace | (noinit ? WY_NO_INIT : 0) | (nobear ? WY_NO_BEAR : 0);
+    HUB->pc_lump = nosteps;
     HUB->wreq.a = pc_gait;
     HUB->wreq.b = pc_watch;
     hub_post (&HUB->wreq, T_WORLD);
@@ -2447,7 +2449,7 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
     }
     if ((unsigned char) w == TE_IDLE) {
         reach = 0;
-        things (IO_CUT, "");
+        othings (IO_CUT, "", "", 0);
         return;
     }
     hub_mem (KIND_BANK, t, CATALOGUE[named & 0x7F].name, sizeof t);
@@ -2622,6 +2624,8 @@ void __fastcall__ s_args (int argc, char* argv[])
             autogo = 1;                         /* (For the tests: a long task goes on at every soft question) */
         } else if (!strcmp (argv[i], "-N")) {
             nobear = 1;                         /* (For the tests: its bearings never tested, as if it knew north) */
+        } else if (!strcmp (argv[i], "-J")) {
+            nosteps = 1;                        /* (For the tests: the reach in one lump, untold: their games as they were) */
         } else if (!strcmp (argv[i], "-I")) {
             noinit = 1;                         /* (For the tests: no engage initiative test, no grope's) */
         } else if (!strcmp (argv[i], "-R") && i + 1 < argc) {

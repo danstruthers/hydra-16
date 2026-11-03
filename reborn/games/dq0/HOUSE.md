@@ -1663,6 +1663,9 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   it changes anything; the reply's IO_STEP, the UI's first words and wait, the command asked again as it's up: main.c's
   reach 5, part 19's step_go.)  The time out of a fight is the house's seconds: the book gives a grope no time but in
   combat, a turn.
+- **For the tests, dq0 -J** (as -I and -N are): the reach in one lump, untold, as it was: the runner gives every dq0 test -J but those
+  about it (reach: true: dq0handy, dq0packsteps, dq0packgrope, dq0packasks), so their games stay as they were; the soak plays
+  the steps.
 - **Stopped part way the world stays true**: a step not finished hasn't happened; those before it have.  Stopped with the
   pack off (hard: a blow, a wound, a hostile near; soft answered no; "stop"), it's off, told ("You stop getting out the
   rope. Your backpack is in your hand.", "... lies at your feet."), the thing out if it got that far; "put on the pack"

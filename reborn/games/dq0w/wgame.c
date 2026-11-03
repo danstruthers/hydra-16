@@ -189,8 +189,9 @@ unsigned char s_take_up (void)
         }
         r = IR_NOT_HERE;
     } else {
-        rs_ok = 1;                              /* (Into the worn pack: by the reach's steps, part 82's, the UI's to take
-                                                **   it again, IR_FIXED's) */
+        hub_map (0);
+        rs_ok = !HUB->pc_lump;                  /* (Into the worn pack: by the reach's steps, the UI's to take it again,
+                                                **   IR_FIXED's) */
         rs_live = rs_paid = rs_using = 0;
         rs_pack = 0;
         if ((r = take_rest ()) == IR_NONE) {    /* (A count, taken up as it gets there: the request as it was, part

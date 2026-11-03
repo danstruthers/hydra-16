@@ -900,6 +900,12 @@ unsigned char __fastcall__ s_rs_for (unsigned n)
                 rs_pack = 0;
             }
             memcpy (yn, n == RF_PICKS ? "picks\0" : "pick\0shovel\0", 13);
+            hub_map (0);
+            if (HUB->pc_lump) {
+                tool_reach (yn);                /* (dq0 -J's: its time owed the next spell) */
+                reach_done (0);
+                return 0;
+            }
             rs_ok = 2;
             rs_keep = 1;
             f = tool_reach (yn);
@@ -1245,7 +1251,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
     hub_map (0);
     switch ((unsigned char) w) {
     case RO_ASK:
-        rs_ok = 1;
+        rs_ok = HUB->pc_lump ? 8 : 1;           /* (8: asked by the steps, dq0 -J's the lump) */
         HUB->ireq.kind &= ~IO_STEPS;
         if (rs_after_on == 2) {
             rs_after_on = 0;                          /* (A timed work's end, the torch lit again: its sequence going on) */
@@ -1255,9 +1261,9 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         }
         return 0;
     case RO_REDIP:
-        return rs_redip (handled);
+        return rs_ok == 1 ? rs_redip (handled) : IR_OK;
     case RO_SPILL:
-        return rs_spill ();
+        return rs_ok == 1 ? rs_spill () : 0;
     case RO_HONE:
         w = rs_hone ();
         hub_map (0);
@@ -1588,7 +1594,7 @@ unsigned char s_serve (void)
         break;
     case IO_USE:                                /* (A thing used up by its key: a bandage, first aid's, part 70's; by the
                                                 **   steps, got out for its use, a tool's, part 84's: IR_NO a step first) */
-        iq.result = rs_ok ? (tool_reach (iq.name) ? IR_NO : IR_OK) : use_key (iq.name);
+        iq.result = rs_ok == 1 ? (tool_reach (iq.name) ? IR_NO : IR_OK) : rs_ok ? IR_OK : use_key (iq.name);
         break;
     case IO_WEAR:
         wear (iq.name, iq.to);
@@ -4657,6 +4663,9 @@ spare:
     x = fr || (x && B (m1 (on_pc, n)));
     if (x && B (m1 (hand_free, n)) && B (m2 (reach_step, n, 0))) {
         return IR_NO;                           /* (The spare got out first, past its hands' refusal, hold's) */
+    }
+    if (f == 3) {
+        m1 (reach_from, rs_tool);
     }
     if (f == 3 && (f = B (m2 (reach_step, rs_tool, RS_FIRE))) != 0) {
         if (f == 2) {
