@@ -2846,7 +2846,7 @@ These are the house's.
   squares each way about it and its mark (the chunks made only), each square's step toward the mark, searched outward
   from it the four ways and the diagonal ways (past their corners as the walk's rule), no rise or fall more than a step
   takes (on steps, a stair's), a shut door a way for hands (worked as it comes to it), not for a beast; and follows it
-  a step at a time till it's there.  Four fields kept, shared by every actor bound within four squares of the same mark;
+  a step at a time till it's there.  Four fields kept, shared by every actor bound for the same mark (the character: within four squares of it);
   another found ten seconds after the last at most; a mark further than the field reaches, its edge nearest the mark.
   None to be had, the old greedy step, and a tunneller digs.  Water, bad air and a ledge's rise are the step's own
   tests as it goes, not the field's.

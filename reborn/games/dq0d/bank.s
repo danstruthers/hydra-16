@@ -89,6 +89,7 @@ ovx:        .res        1
             SWFN        take_way, 14        ; (A thing taken up: Phase 3C's one path)
             SWFN        feel, 8             ; (The main RAM's room, 2026-11-02)
             SWFN        robs, 8
+            SWFN        shies, 8
             SWFN        way, 16             ; (A way followed: step_for's, 2026-11-02)
             SWFN        wfind, 17           ; (A way found)
             SWFN        slant, 11           ; (A denizen's diagonal way: slant.s, 2026-10-31, the main RAM's room)
