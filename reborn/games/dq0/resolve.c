@@ -429,6 +429,10 @@ unsigned char o_resolve (void)
                                                 **   copied) */
     unsigned char k, n, a = cmd.action;
 
+    if (reach < 5) {                            /* (A line's own: no run of handlings yet, part 19's) */
+        take_more = 0;
+        hub_mem (0, &HUB->pc_lump, &nosteps, 1);
+    }
     if (cmd.flags & CF_ASKED) {
         return RV_DONE;                         /* (A blow's question put: choose.c's) */
     }
@@ -573,6 +577,7 @@ unsigned char o_resolve (void)
                 cx[n] = cy[n] = 0xFFFF;
             }
             iall = 1;
+            take_more = nall > 1;
             strcpy (cmd.obj.word, all[0]);
             cmd.obj.sel = SL_THE;               /* (Each by its name in turn: not all of a name at once) */
         } else if (!find_thing (&cmd.obj, a == VB_ATTACK_OBJECT ? 2 : a == VB_THROW_OBJECT ? 1 : 3, 0,
@@ -623,6 +628,7 @@ void __fastcall__ o_taken_next (char* w)
     if (iall < nall) {
         strcpy (w, all[iall++]);
     }
+    take_more = iall < nall;
 }
 
 #pragma code-name (push, "OV10CODE")           /* (Overlay 10's: this one's room) */

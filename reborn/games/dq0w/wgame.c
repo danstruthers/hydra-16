@@ -193,7 +193,7 @@ unsigned char s_take_up (void)
         r = IR_NOT_HERE;
     } else {
         hub_map (0);
-        rs_ok = !HUB->pc_lump;                  /* (Into the worn pack: by the reach's steps, the UI's to take it again,
+        rs_ok = !(HUB->pc_lump & (PL_NOSTEPS | PL_TOLD));                  /* (Into the worn pack: by the reach's steps, the UI's to take it again,
                                                 **   IR_FIXED's) */
         rs_live = rs_paid = rs_using = 0;
         rs_pack = 0;

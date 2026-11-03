@@ -387,6 +387,7 @@ unsigned char __fastcall__ actor_seen (unsigned char b);        /* Part 8: an ev
 unsigned char __fastcall__ lie_words (unsigned char i);   /* Part 8: a thing's place in the room (its sight_copy's) */
 unsigned char reach_go (void);
 unsigned char bandage_out (void);               /* Part 19: a bandage got out, a tool's steps */
+extern unsigned char what_hi, take_more, nosteps;    /* (main.c's) */
 void step_go (void);                            /* Part 19: a step of the reach begun by the world (IO_STEP's) */
 void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 19: the reach's words */
 void __fastcall__ walk_says (const char* name);    /* (A walk over told as it begins, at once: "You go over to the pot."; 0: the command's thing) */

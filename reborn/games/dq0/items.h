@@ -314,6 +314,10 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   thing's kind: the UI's to word and wait as a long task), then its
                                                 **   test made and its outcome told as it's done (to | IO_DONE: the
                                                 **   UI's again as its time's up, not stopped) */
+#define PL_NOSTEPS      1                       /* (hub.pc_lump: dq0 -J's; a run on one line, more things to come, the pack left off;
+                                                **   its pack told off and on already, the rest of the line by the lump) */
+#define PL_MORE         2
+#define PL_TOLD         4
 #define IO_STEPS        0x40                    /* (A request's kind |: the UI goes by the reach's steps, a step's reply
                                                 **   IO_STEP's; HOUSE.md's, part 82's) */
 #define IO_CUT          0x3E                    /* (The reach's steps stopped, between two of them: the UI's, a stop told as

@@ -650,7 +650,7 @@ enum { RS_OFF = 1, RS_IN, RS_ON, RS_DROP, RS_TRY, RS_OUT, RS_LIGHT, RS_STOW, RS_
 #define rs_down         lw_y                    /* (Things it set down: taken up again after) */
 #define rs_down2        far_x
 unsigned char rs_redo;                          /* (A redip's, RR_*: its end's steps) */
-enum { RR_ON = 1, RR_STOW = 2, RR_RELIGHT = 4, RR_D1 = 8, RR_D2 = 16 };   /* (RR_D*: rs_down, rs_down2 in use) */
+enum { RR_ON = 1, RR_STOW = 2, RR_RELIGHT = 4, RR_D1 = 8, RR_D2 = 16, RR_DIP = 32, RR_TWO = 64 };   /* (RR_D*: rs_down, rs_down2 in use) */
 
 /* The containers a reach comes to, out from c (level_of's rule, its own copy: open to the hand, none; a pack on the back,
 ** rs_c; any other, or closed, a level): how many, and rs_hit the one rs_want from the innermost */
@@ -902,7 +902,7 @@ unsigned char __fastcall__ s_rs_for (unsigned n)
             }
             memcpy (rs_keys, n == RF_PICKS ? "picks\0" : "pick\0shovel\0chisel\0", 20);
             hub_map (0);
-            if (HUB->pc_lump) {
+            if (HUB->pc_lump & (PL_NOSTEPS | PL_TOLD)) {
                 tool_reach (rs_keys);                /* (dq0 -J's: its time owed the next spell) */
                 reach_done (0);
                 return 0;
@@ -990,6 +990,10 @@ static unsigned char __fastcall__ rs_set_down (unsigned i)
     rs_hand = 0;
     rs_k = LT_SETDOWN;
     rs_what = item_kind (i);
+    if (rs_what == item_kind (rs_old)) {
+        rs_redo |= RR_TWO;
+        rs_k = LT_DOWNNEW;
+    }
     rs_t = 1;
     if (rs_redo & RR_D1) {
         rs_down2 = i;
@@ -1025,6 +1029,8 @@ static unsigned char __fastcall__ rs_redip (unsigned n)
     if (HUB->pcsum.limbs & (LB_ARM_L | LB_ARM_R)) {
         return rs_no (n, SA_TWO_HANDS);
     }
+    rs_old = n;                                 /* (The one dipped, kept to its end: each step asks again) */
+    rs_redo |= RR_DIP;
     fetch (&rec, n);
     kn = rec.kind;
     if (rec.flags & I_LIT) {
@@ -1045,14 +1051,17 @@ static unsigned char __fastcall__ rs_redip (unsigned n)
             if (!hand_free (sp) && (i = rs_held (n)) != 0) {
                 return rs_set_down (i);
             }
+            rs_redo |= RR_TWO;
             if (reach_step (sp, 0)) {
+                if (rs_k == LT_GETOUT) {
+                    rs_k = LT_GETNEW;
+                }
                 return IR_NO;
             }
             rs_hand = hand_free (sp);
             rs_c = sp;
-            rs_old = n;
             rs_do = RS_LIGHT;
-            rs_k = LT_LIGHTFROM;
+            rs_k = LT_LIGHTNEW;
             rs_what = kn;
             rs_t = 30;
             rs_redo |= RR_ON | RR_STOW;
@@ -1063,10 +1072,13 @@ static unsigned char __fastcall__ rs_redip (unsigned n)
         rs_what = kn;
         rs_t = 10;
         rs_k = LT_BLOWOUT;
-        rs_old = n;
         rs_redo |= RR_ON;
         if (ot) {
             rs_redo |= RR_STOW;
+            if (item_kind (ot) == kn) {         /* (Two of a kind: each step about the one it means) */
+                rs_redo |= RR_TWO;
+                rs_k = LT_BLOWOLD;
+            }
         } else if (!s) {
             rs_k = LT_BLOWDARK;
             rs_redo |= RR_RELIGHT;
@@ -1099,6 +1111,7 @@ static void rs_did (void)
     unsigned char h;
     unsigned n = rs_do == RS_ON ? rs_pack : rs_c;
 
+    den_saw = 1;                                /* (What lies about changed: the senses' look of it, the things taken all from) */
     if (rs_do == RS_OFF) {
         rs_pack = rs_c;
     }
@@ -1171,22 +1184,22 @@ static unsigned char rs_after (void)
     if (rs_redo & RR_STOW) {
         rs_redo &= ~RR_STOW;
         fetch (&rec, rs_old);
-        if (rec.kind && (rec.flags & I_HELD)) {
+        if (rec.kind && (rec.flags & I_HELD) && rs_pack) {   /* (The pack off for it already; else it stays in its hand) */
             rs_c = rs_old;
             rs_do = RS_STOW;
-            rs_k = LT_PUTAWAY;
+            rs_k = rs_redo & RR_TWO ? LT_PUTOLD : LT_PUTAWAY;
             rs_what = rec.kind;
             rs_t = 20;
             return 1;
         }
     }
     if (rs_redo & (RR_D1 | RR_D2)) {
-        i = rs_redo & RR_D1 ? rs_down : rs_down2;
-        rs_redo &= rs_redo & RR_D1 ? ~RR_D1 : ~RR_D2;
+        i = rs_redo & RR_D2 ? rs_down2 : rs_down;   /* (The last set down first: the burning torch before a sword) */
+        rs_redo &= rs_redo & RR_D2 ? ~RR_D2 : ~RR_D1;
         rs_c = i;
         rs_do = RS_UP;
-        rs_k = LT_TAKEUP;
         rs_what = item_kind (i);
+        rs_k = rs_redo & RR_TWO && rs_what == item_kind (rs_old) ? LT_TAKENEW : LT_TAKEUP;
         rs_t = 10;
         return 1;
     }
@@ -1256,7 +1269,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
     hub_map (0);
     switch ((unsigned char) w) {
     case RO_ASK:
-        rs_ok = HUB->pc_lump ? 8 : 1;           /* (8: asked by the steps, dq0 -J's the lump) */
+        rs_ok = HUB->pc_lump & (PL_NOSTEPS | PL_TOLD) ? 8 : 1;   /* (8: asked by the steps, the lump's) */
         HUB->ireq.kind &= ~IO_STEPS;
         if (rs_after_on == 2) {
             rs_after_on = 0;                          /* (A timed work's end, the torch lit again: its sequence going on) */
@@ -1311,7 +1324,14 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             rs_st = rs_ok = 0;
             return 1;
         }
-        if (rs_pack || rs_using) {               /* (The handling done: the pack back on as it's free, past a timed
+        if (rs_pack && !rs_using && (HUB->pc_lump & PL_MORE) && iq.kind == IO_GET && iq.result == IR_OK) {
+            rs_ok = 0;                          /* (More on this line to come, "take all": the pack left off, rs_live) */
+            return 0;
+        }
+        if (HUB->ireq.qty == LT_FILL && (rs_redo & RR_TWO)) {
+            HUB->ireq.qty = LT_DIPOLD;
+        }
+        if (rs_pack || rs_using || (rs_redo & (RR_STOW | RR_D1 | RR_D2 | RR_RELIGHT))) {   /* (The handling done: the pack back on as it's free, past a timed
                                                 **   work's end if that's what's begun) */
             rs_after_on = (iq.kind == IO_SHUT || iq.kind == IO_FILL || iq.kind == IO_HIDE) && iq.result == IR_OK && HUB->ireq.qty ?
                 2 : 1;
@@ -1340,7 +1360,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         wk.m.kind = I_WAIT;
         wk.m.a = 0;
         wk.m.w1 = rs_t;
-        wk.m.w2 = rs_t == HUB->round ? 1 : (unsigned) rs_k << 8 | (rs_what & 0x80 ? 0 : rs_what << 1) | 1;  /* (Engaged, the round's action) */
+        wk.m.w2 = rs_t == HUB->round ? 1 : (unsigned) rs_k << 8 | (rs_what & 0x7F) << 1 | 1;  /* (Engaged, the round's action) */
         intent_few (&wk.m);
         return 0;
     }
@@ -1408,7 +1428,8 @@ back:
         rs_keep = 0;
         return 3;                               /* (Its intent asked again: work_done's, the parts' stack shallower) */
     }
-    return 0;
+    return den_saw ? 2 : 0;                     /* (The senses' look of what's changed first, the main loop's: then free, the next line's
+                                                **   look at what lies about true) */
 }
 
 #pragma register-vars (pop)
@@ -4017,22 +4038,26 @@ unsigned char s_fill (void)
         return k;                               /* (A waterskin filled: part 74's, slice 4.9's) */
     }
     text_new ();
-    for (k = 1, room = 0; !(iq.sel & 15) && k < 8; ++k) {   /* (Of several of the name, none said, the one with the
+    if (rs_redo & RR_DIP) {
+        n = rs_old;                             /* (Its steps under way: the one they began on, whatever's burnt since) */
+    } else {
+        for (k = 1, room = 0; !(iq.sel & 15) && k < 8; ++k) {   /* (Of several of the name, none said, the one with the
                                                 **   most room for more: the spent torch, not the one lit) */
-        wsel = SL_NTH | k << 4;
+            wsel = SL_NTH | k << 4;
+            if (!(n = at_hand (iq.name))) {
+                break;
+            }
+            fetch (&l, n);
+            if ((b = burn_of (l.kind)) != 0 && l.fuel < b->life * 10 && b->life * 10 - l.fuel > room) {
+                room = b->life * 10 - l.fuel;
+                bk = k;
+            }
+        }
+        wsel = bk ? SL_NTH | bk << 4 : iq.sel;
         if (!(n = at_hand (iq.name))) {
-            break;
+            put (*iq.name ? "You have no such thing to hand." : "Fill what?");
+            return IR_NO;
         }
-        fetch (&l, n);
-        if ((b = burn_of (l.kind)) != 0 && l.fuel < b->life * 10 && b->life * 10 - l.fuel > room) {
-            room = b->life * 10 - l.fuel;
-            bk = k;
-        }
-    }
-    wsel = bk ? SL_NTH | bk << 4 : iq.sel;
-    if (!(n = at_hand (iq.name))) {
-        put (*iq.name ? "You have no such thing to hand." : "Fill what?");
-        return IR_NO;
     }
     make_own (n);
     fetch (&l, n);
@@ -4093,7 +4118,7 @@ unsigned char s_fill (void)
     hub_map (0);
     HUB->ireq.x = takes == FU_OIL ? 200 : 100;
     if (!(iq.to & IO_DONE)) {
-        HUB->ireq.qty = LT_FILL;                /* (Begun: its first words the UI's) */
+        HUB->ireq.qty = LT_FILL;                /* (Begun: its first words the UI's; two torches, part 86's the old) */
         HUB->ireq.item = l.kind;
         return IR_OK;
     }

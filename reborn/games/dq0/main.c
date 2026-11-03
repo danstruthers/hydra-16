@@ -52,7 +52,9 @@ static unsigned char asking;                    /* (A long task's soft question 
 const char* cl;                                 /* (The command's line, s_command's: chores' words of it; help.c's) */
 unsigned char harm_told;                        /* (The states a harm's words told in this answer: intro.c's) */
 unsigned char autogo;                           /* (dq0 -a: every soft question answered yes, unasked: the tests') */
-static unsigned char nosteps;                   /* (dq0 -J: the reach's steps none, the tests') */
+unsigned char what_hi;                          /* (The thing's kind's top bit, the long task's what its other seven: task.c's noun) */
+unsigned char take_more;                        /* ("Take all": things still to come after this one, resolve.c's) */
+unsigned char nosteps;                   /* (dq0 -J: the reach's steps none, the tests') */
 static unsigned char noinit;                    /* (dq0 -I: no engage initiative test, no grope's: the tests') */
 static unsigned char nobear;                    /* (dq0 -N: its bearings never tested: the tests', slice 4.2's) */
 static unsigned char asked;                     /* (A sound's question put in this command's long task) */
@@ -691,7 +693,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file, unsi
                                                 **   a game carried on, its save's, the world's) */
     HUB->wreq.x = round;
     HUB->wreq.y = pace | (noinit ? WY_NO_INIT : 0) | (nobear ? WY_NO_BEAR : 0);
-    HUB->pc_lump = nosteps;
+    HUB->pc_lump = nosteps;                     /* (PL_NOSTEPS) */
     HUB->wreq.a = pc_gait;
     HUB->wreq.b = pc_watch;
     hub_post (&HUB->wreq, T_WORLD);
@@ -1095,7 +1097,7 @@ static unsigned char events (void)          /* (How many there were) */
                     busy = 1;                   /* (Fighting on begun by the world: busy till it's done, E_READY; a
                                                 **   line held taking it over) */
                     t_prompt (0);
-                    if (held && !took) {
+                    if (held && !took && reach != 5) {   /* (Not in a step of the reach: as they're done) */
                         took = 1;
                         intend2 (I_STOP, 1, 0);
                     }
@@ -2412,9 +2414,19 @@ void s_step_go (void)
     k = HUB->ireq.qty;
     n = HUB->ireq.item;
     t = HUB->ireq.x;
+    what_hi = n & 0x80;
+    took = 0;                                   /* (Its line under way: the next line held may stop a fight in its turn) */
+    HUB->pc_lump = (HUB->pc_lump & ~PL_MORE) | (take_more ? PL_MORE : 0);
     if (k) {
         reach = 5;
-        if (k == LT_PACKON || k == LT_PUTAWAY) {    /* (Refused with the pack off: its words first, nothing asked again) */
+        if (HUB->ireq.result == IR_NOT_HERE) {  /* ("Take all"'s next is a walk off: the pack on first, the command again
+                                                **   after it, told no more on this line: the lump's) */
+            HUB->ireq.result = IR_NO;
+            HUB->pc_lump |= PL_TOLD;
+            hub_map (UI_BANK);
+            UIREC->things_text[0] = 0;
+            hub_map (0);
+        } else if (k == LT_PACKON || k == LT_PUTAWAY) {    /* (Refused with the pack off: its words first, nothing asked again) */
             reach = 0;
             msg (tt ());
             hub_map (UI_BANK);
@@ -2427,7 +2439,7 @@ void s_step_go (void)
         intend2 (I_WAIT, t, 1);                 /* (Engaged: the round's action, a blow no stop of it) */
         return;
     }
-    intend2 (I_WAIT, t, (unsigned) k << 8 | (n & 0x80 ? 0 : n << 1) | 1);    /* (A kind past 127: stopped, not named) */
+    intend2 (I_WAIT, t, (unsigned) k << 8 | (n & 0x7F) << 1 | 1);
     if (k == LT_BLOWDARK) {
         intend2 (I_ASK, TE_ASK_HEARD, 0);       /* (Asked: "no" stops it, the torch still lit) */
     }
@@ -2444,12 +2456,14 @@ unsigned char s_bandage_out (void)
 ** the step's first words; the pack left off, stopped part way; the world's own step's grope failed */
 void __fastcall__ s_reach_said (unsigned w, unsigned char named)
 {
-    static const char* const first[LT_KINDLE - LT_PACKOFF + 1] = {
+    static const char* const first[LT_DIPOLD - LT_PACKOFF + 1] = {
         "\nYou take off your %s.", "\nYou take off your %s, and set it down at your feet.", "\nYou reach into the %s.",
         "\nYou hold the %s open.", "\nYou get out the %s.", "\nYou put your %s back on.", "\nYou let the %s fall.",
         "\nYou let the %s fall, still burning.", "\nYou put away the %s.", "\nYou blow out the %s.",
         "\nYou go to blow out the %s: that will leave you in the dark.", "\nYou light the %s from the burning one.",
-        "\nYou set the %s down at your feet.", "\nYou take up the %s.", "\nYou set to sharpening the %s.", "\nYou strike a spark."
+        "\nYou set the %s down at your feet.", "\nYou take up the %s.", "\nYou set to sharpening the %s.", "\nYou strike a spark.",
+        "\nYou get out the new %s.", "\nYou put away the old %s.", "\nYou take up the new %s.", "\nYou set the new %s down at your feet.",
+        "\nYou blow out the old %s.", "\nYou light the new %s from the burning one.", "\nYou set to dipping the old %s."
     };
     char t[sizeof CATALOGUE[0].name];
 
@@ -2462,7 +2476,11 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
         othings (IO_CUT, "", "", 0);
         return;
     }
-    hub_mem (KIND_BANK, t, CATALOGUE[(unsigned char) w == TE_PACKED ? named & 0x7F : named].name, sizeof t);
+    if ((unsigned char) w != TE_PACKED) {
+        what_hi = named & 0x80;
+    }
+    hub_mem (KIND_BANK, t, CATALOGUE[(unsigned char) w == TE_PACKED ? named & 0x7F : named].name, sizeof t);   /* (A pack's top bit
+                                                **   where it lies) */
     sayf ((unsigned char) w == TE_FUMBLE ? "\nYou fumble for your %s." : (unsigned char) w == TE_PACKED ? (named & 0x80 ?
         " Your %s lies at your feet." : " Your %s is in your hand.") : first[(w >> 8) - LT_PACKOFF], t);
 }
@@ -2955,8 +2973,10 @@ void s_when_free (void)
         to_hand ();
     }
     if (pending[0]) {                           /* (Lifted out, or come to: now taken up) */
-        take (pending);
-        pending[0] = 0;
+        strcpy (cmd.obj.word, pending);         /* (Its steps ask this one again, "take all"'s next; a thing of that name) */
+        cmd.obj.kind = 0;
+        HUB->pc_lump = (HUB->pc_lump & ~PL_MORE) | (take_more ? PL_MORE : 0);
+        take (pending);                         /* (Its own to clear: "take all"'s next may be put there as it's done) */
     }
 }
 

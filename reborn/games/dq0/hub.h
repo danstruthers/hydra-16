@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     41                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     42                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -938,7 +938,7 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
        LT_HIDE, LT_TEND,                        /* (LT_TEND: first aid, a wound treated, the UI's timed work: slice
                                                 **   4.3's) */
        LT_PACKOFF, LT_PACKDOWN, LT_REACHIN, LT_OPENUP, LT_GETOUT, LT_PACKON, LT_LETFALL, LT_LETBURN, LT_PUTAWAY, LT_BLOWOUT, LT_BLOWDARK, LT_LIGHTFROM, LT_SETDOWN, LT_TAKEUP, LT_HONE,
-       LT_KINDLE };   /* (The reach's
+       LT_KINDLE, LT_GETNEW, LT_PUTOLD, LT_TAKENEW, LT_DOWNNEW, LT_BLOWOLD, LT_LIGHTNEW, LT_DIPOLD };   /* (The reach's
                                                 **   steps, each its own time, HOUSE.md's: a pack on the back taken off,
                                                 **   into a hand, or set at its feet; a container's level reached into,
                                                 **   held open, a thing got out; the pack put back on: things.c's part
@@ -1256,7 +1256,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** the referee says it's fallen, or got up: POS_*) */
     unsigned char   gait;                       /* rs.h's GA_* */
     unsigned char   watch;                      /* WA_* */
-    unsigned char   pc_lump;                    /* (dq0 -J, the tests': the reach in one lump, no steps, things.c's part 85) */
+    unsigned char   pc_lump;                    /* (dq0 -J, the tests': the reach in one lump, no steps, things.c's part 85, PL_*) */
     unsigned char   pc_pos;                     /* POS_* */
     volatile unsigned char pc_going;            /* The pace it's going at plus 1 (0: not moving), | GOING_DARK: by
                                                 **   feel; not moving, GOING_BOLD, a pace said outright in the dark */

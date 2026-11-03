@@ -1699,8 +1699,16 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   it changes anything; the reply's IO_STEP, the UI's first words and wait, the command asked again as it's up: main.c's
   reach 5, part 19's step_go.)  The time out of a fight is the house's seconds: the book gives a grope no time but in
   combat, a turn.
-- **A step stopped, a kind past 127's not named** (the long task's what has seven bits for a kind): "You stop getting out." for a
-  whetstone or a goblet; its first words name it (eight bits, the UI's).  Not worth the hub's byte; for review.
+- **A run of handlings on one line** *(the soak's first play, 2026-11-03; for review)*: "take all" takes its pack off once and puts it on once,
+  after the last thing, each thing "Taken." between.  The next thing out of reach: the pack on first (never left behind at the feet), then
+  the walk, and the rest of the line by the lump, untold, its time as ever (told once; the character doesn't shrug it off and on again in words).
+  A count's later things went by the lump already.
+- **Two torches dipped** *(the same: the user's "each step about a named one"; for review)*: which one is chosen as the sequence begins (the most
+  room for more, as ever) and kept to its end: "the old torch"; another of its kind in play is "the new torch".  Two lit: "You blow out the old
+  torch.", "You set the new torch down at your feet.", the flask, "You set to dipping the old torch.", the flask away, "You put away the old
+  torch." (only if the pack's off for the flask: else it stays in its hand), "You take up the new torch."  The old one already spent: nothing to
+  blow out, the same after.  One torch alone keeps its plain words.  Taken up, the burning one before a sword.
+- **Kinds past 127** named as they're stopped as well as begun: the long task's what has seven bits, the UI keeps the top one (what_hi).
 - **For the tests, dq0 -J** (as -I and -N are): the reach in one lump, untold, as it was: the runner gives every dq0 test -J but those
   about it (reach: true: dq0handy, dq0packsteps, dq0packgrope, dq0packasks), so their games stay as they were; the soak plays
   the steps.

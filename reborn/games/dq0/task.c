@@ -24,7 +24,7 @@ static const char* const doing[] = {           /* (By LT_*) */
     "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
     "hiding", "tending the wound", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
     "letting fall", "letting fall", "putting away", "blowing out", "blowing out", "lighting", "setting down", "taking up", "sharpening",
-    "striking a spark"
+    "striking a spark", "getting out", "putting away", "taking up", "setting down", "blowing out", "lighting", "dipping"
 };
 #define NDOING          (sizeof doing / sizeof doing[0])
 
@@ -101,7 +101,8 @@ static const char* __fastcall__ noun (unsigned char n)
     static const char* const pk[3] = { "the door", "the window", "the portcullis" };    /* (By PK_*) */
 
     if (n & 0x80) {
-        lamp (n);                               /* (A thing's kind's name: the catalogue's) */
+        hub_mem (KIND_BANK, fn, CATALOGUE[(n & 0x7F) | what_hi].name, sizeof CATALOGUE[0].name);   /* (A thing's kind's name: the
+                                                **   catalogue's: past 127, the UI's top bit) */
         strcpy (nb, "the ");
         strcat (nb, fn);
         return nb;
@@ -116,7 +117,7 @@ static const char* __fastcall__ doing_of (unsigned char k, unsigned char n)
     static const char* const struck[4] = { "battering", "punching", "kicking", "butting" };    /* (By SK_*) */
 
     strcpy (dn, k == LT_BATTER ? struck[n >> 4 & 3] : doing[k < NDOING ? k : 0]);
-    if ((n & 0x7F) && (k == LT_BATTER || k == LT_FORCE || k == LT_HEAVE || k == LT_FILL || k == LT_HIDE || (k >= LT_PACKOFF && k != LT_KINDLE))) {
+    if (n && (k == LT_BATTER || k == LT_FORCE || k == LT_HEAVE || k == LT_FILL || k == LT_HIDE || (k >= LT_PACKOFF && k != LT_KINDLE))) {
         strcat (dn, " ");
         strcat (dn, noun (n));
     }

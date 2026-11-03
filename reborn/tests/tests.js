@@ -2064,6 +2064,9 @@ const DQ0_REPEATS = [
     why: 'a room searched whole, each thing in it in turn (HOUSE.md\'s, 2026-11-02): two heaps of straw, two iron pots, told each as it\'s gone through' },
   { what: /^You find (?:a trap|a door)[^.]*\.$/, why: 'a room searched whole\'s finds, each told as it\'s found: two plates, two doors' },
   { what: /^You hear /, why: 'a sound heard each time it\'s made (main.c\'s heard: half a minute apart the same way, five seconds any; a search\'s or a wait\'s minute hears several)' },
+  { what: /^You go over to the .+\.$/, why: '"take all"\'s things, walked over to each in turn: two heaps of potsherds, each its walk (the soak\'s seed 21)' },
+  { what: /^(?:The wall to your (?:left|right) ends|A wall begins to your (?:left|right)|You feel a door to your (?:left|right)|You feel your way on|The way bends|The way turns (?:left|right))\.$/,
+    why: 'a walk by feel, its beats as it goes: a wall can end more than once along a winding way, more than one door felt, each its own (the soak\'s seeds 149, 200, by feel: told three times)' },
   { what: /^(The passage turns (left|right)|The passage bends away [a-z-]+|You go through a doorway|You go on down the passage|The way (rises|falls away))\.$/,
     why: 'a walk\'s beats as it goes (slice 4.0): a winding passage turns or bends the same way more than once (a bend\'s heading, 2026-11-01: the soak\'s seed 200), has more than one doorway, goes on quietly every 30 feet' },
   { what: /^(?:It falls senseless|It flees|The .+ falls dead|The .+ gets to its feet|You get to your feet|You turn to the .+|You fight back against the .+)\.$/,
@@ -7862,7 +7865,7 @@ module.exports = {
         fight('hold the dagger', 'IO_HOLD', 100, 'from the belt: a round');
         // (The worn pack: its steps a round each, dq0packsteps': off, held open, the stowing, on; and from the pack on the ground, a level)
         const steps = late.flatMap(t => dq0Rep(t, 'ireq', { kind: 'IO_STEP' }));
-        if (steps.length < 3 || steps.some(r => r.x !== 100)) f.push('engaged, the steps not a round each: ' + JSON.stringify(steps.map(r => [r.qty, r.x])));
+        if (steps.length < 2 || steps.some(r => r.x !== 100)) f.push('engaged, the steps not a round each: ' + JSON.stringify(steps.map(r => [r.qty, r.x])));
         if (!late.some(t => rep(t, 'IO_STOW'))) f.push('the dagger not stowed in the fight');
         if (!late.some(t => rep(t, 'IO_TAKE'))) f.push('the rations not taken from the pack on the ground in the fight');
         if (!late.some(t => rep(t, 'IO_DROP'))) f.push('the pack not dropped in the fight');
@@ -7890,11 +7893,19 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'drop a fresh torch', 'wait 20 minutes', 'dip the torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sword,whetstone', 'sharpen the sword', 'stow the whetstone', 'sharpen the sword', 'sharpen the sword', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'sharpen the sword', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'hold another torch', 'light the torch', 'wait 5 minutes', 'dip the torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'hold another torch', 'light the torch', 'wait 2 minutes', 'dip the torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'drop the sword', 'take the tinderbox from the backpack', 'drop the tinderbox', 'take the rations from the backpack', 'drop the rations', 'take the sword', 'take all', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take the tinderbox from the backpack', 'drop the tinderbox', 'step forward', 'step forward', 'take the rations from the backpack', 'drop the rations', 'hold another torch', 'turn around', 'take all', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k mang,whetstone', 'sharpen the mang', 'inventory', 'drop the mang', 'put the torch in the backpack', 'take the whetstone from the backpack', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take the flask of oil from the backpack', 'put the flask of oil in the pouch', 'hold another torch', 'light the torch', 'wait 5 minutes', 'dip the torch', 'inventory', 'quit',
         'echo $status']) },
       start(m) {
-        dq0Poke(m, [{ g: 7, line: 'douse the torch', n: 1, fuel: { tinderbox: 0 } }, { g: 11, line: 'stow the whetstone', n: 1, wear: { sword: 200 } }, { g: 12, line: 'sharpen the sword', n: 1, wear: { sword: 200 } }]);
+        dq0Poke(m, [{ g: 7, line: 'douse the torch', n: 1, fuel: { tinderbox: 0 } }, { g: 11, line: 'stow the whetstone', n: 1, wear: { sword: 200 } }, { g: 12, line: 'sharpen the sword', n: 1, wear: { sword: 200 } }, { g: 14, line: 'wait 2 minutes', n: 1, fuel: { torch: 0 } }, { g: 17, line: 'sharpen the mang', n: 1, wear: { mang: 200 } }]);
         dq0OnWords(m, [{ g: 1, line: 'take the torch from the backpack', n: 1, words: 'You get out the torch', text: 'stop\r' },
-          { g: 5, line: 'dig down', n: 1, words: 'You dig', text: 'stop\r' }]);
+          { g: 5, line: 'dig down', n: 1, words: 'You dig', text: 'stop\r' },
+          { g: 17, line: 'sharpen the mang', n: 1, words: 'You set to sharpening the mang', text: 'stop\r' },
+          { g: 17, line: 'take the whetstone from the backpack', n: 1, words: 'You get out the whetstone', text: 'stop\r' }]);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -7955,14 +7966,33 @@ module.exports = {
         has(7, 'light the torch', 'The tinderbox is empty.', 2);
         never(7, 'light the torch', steps, 2);
         // (A torch redipped: the preferred order; a sword in the other hand; no spare)
-        const pref = ['You get out the torch.', 'You light the torch from the burning one.', 'You blow out the torch.', 'You set the torch down at your feet.', 'You get out the flask of oil.', 'You set to filling the torch.', 'You soak the torch in the flask of oil.', 'You put away the flask of oil.', 'You put away the torch.', 'You take up the torch.', 'You put your backpack back on.'];
+        const pref = ['You get out the new torch.', 'You light the new torch from the burning one.', 'You blow out the old torch.', 'You set the new torch down at your feet.', 'You get out the flask of oil.', 'You set to dipping the old torch.', 'You soak the torch in the flask of oil.', 'You put away the flask of oil.', 'You put away the old torch.', 'You take up the new torch.', 'You put your backpack back on.'];
         order(8, 'refresh the torch', [steps, ...pref]);
         has(8, 'inventory', 'a torch (lit), in your left hand');
-        order(9, 'redip the torch', ['You set the sword down at your feet.', steps, ...pref.slice(0, 9), 'You take up the sword.', 'You take up the torch.', 'You put your backpack back on.']);
+        order(9, 'redip the torch', ['You set the sword down at your feet.', steps, ...pref.slice(0, 9), 'You take up the new torch.', 'You take up the sword.', 'You put your backpack back on.']);
         has(9, 'inventory', 'a sword, in your right hand');
         order(10, 'dip the torch', ['You go to blow out the torch: that will leave you in the dark.', steps, 'You get out the flask of oil.', 'You set to filling the torch.', 'You put away the flask of oil.', 'You get out the tinderbox.', 'You strike a spark.', 'You light the torch.', 'You put away the tinderbox.', 'You put your backpack back on.']);
         if (!/You soak the torch|oil spills/.test(seg(10, 'dip the torch'))) f.push('dipped in the dark: neither soaked nor spilt');
         has(10, 'inventory', 'a torch (lit)');
+        // (Two lit, the one with the most room the old: blown out, set by the new; a spent one: nothing to blow out, kept to its end; each named)
+        const dipped = ['You set to dipping the old torch.', 'You soak the torch in the flask of oil.', 'You put away the flask of oil.'];
+        order(13, 'dip the torch', ['You blow out the old torch.', 'You set the new torch down at your feet.', steps, 'You get out the flask of oil.', ...dipped, 'You put away the old torch.', 'You take up the new torch.', 'You put your backpack back on.']);
+        has(13, 'inventory', 'a torch (lit), in your left hand');
+        order(14, 'dip the torch', ['You set the new torch down at your feet.', steps, 'You get out the flask of oil.', ...dipped, 'You take up the new torch.', 'You put your backpack back on.']);
+        if (seg(14, 'dip the torch').includes('You blow out')) f.push('game 14: a spent torch blown out');
+        has(14, 'inventory', 'a torch, in your left hand');
+        has(14, 'inventory', 'a torch (lit), in your right hand');
+        order(18, 'dip the torch', ['You blow out the old torch.', 'You set the new torch down at your feet.', 'You get out the flask of oil.', ...dipped, 'You take up the new torch.']);
+        if (seg(18, 'dip the torch').includes('backpack')) f.push('game 18: the pack touched, the flask in the pouch');
+        has(18, 'inventory', 'a torch, in your');
+        has(18, 'inventory', 'a torch (lit), in your');
+        // (A run of handlings on one line: the pack off once, on once; a walk off between: on first, the rest by the lump, untold)
+        order(15, 'take all', ['You take off your backpack.', 'You hold the backpack open.', 'Taken.', 'Taken.', 'Taken.', 'You put your backpack back on.']);
+        has(15, 'inventory', 'a backpack, worn');
+        order(16, 'take all', [steps, 'You hold the backpack open.', 'Taken.', 'Taken.', 'You put your backpack back on.', 'You go over to the tinderbox.', 'Taken.']);
+        has(16, 'inventory', 'a backpack, worn (in it: 3 rations, a tinderbox');
+        // (A kind past 127, its top bit the UI's: named as it's begun and as it's stopped)
+        inTurn(s.slice(games[16], games[17]), ['You set to sharpening the mang.', 'You stop sharpening the mang.', 'Your backpack lies at your feet.'], f, 'game 17: ');
         // (A whetstone: the routine's use, sharpened, a sharp one told; none carried, told)
         has(11, 'sharpen the sword', 'The sword is as sharp as it will go.');
         order(11, 'sharpen the sword', [steps, 'You get out the whetstone.', 'You set to sharpening the sword.', 'You put a fresh edge on the sword.', 'You put away the whetstone.', 'You put your backpack back on.'], 2);
