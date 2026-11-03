@@ -799,6 +799,23 @@ static struct trap* __fastcall__ trap_at (unsigned char x, unsigned char y)
     return 0;
 }
 
+/* Square nx, ny a shut door it has handled (at ()'s square, and in the chunk's window): opened as it goes, its time */
+static unsigned __fastcall__ door_on (unsigned nx, unsigned ny)
+{
+    struct portal* o;
+    unsigned char s, d;
+
+    if (TILE (C->tile[cy_][cx_]) != T_DOOR || !(o = portal_at (cx_, cy_)) || (o->state & PS_OPEN) || o->kind != PK_DOOR ||
+        !(o->parts & PP_KNOWN) || (o->state & (PS_LOCKED | PS_BARRED | PS_WARDED | PS_HIDDEN))) {
+        return 0;
+    }
+    s = o->state;
+    d = o->parts;
+    change (sn_, nx, ny, s | PS_OPEN, d, PORTAL_STATE);
+    event (E_PORTAL, 0, PO_OPENED);
+    return 2 * stept;
+}
+
 void __fastcall__ s_across (unsigned char h, unsigned char r)
 {
     unsigned long t = 0;
@@ -806,10 +823,15 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
     signed char ledge = 0;
     unsigned char* p;
     struct trap* q;
-    struct portal* o;
     unsigned nx, ny;
     int z, dz;
 
+    if (r == 0xFF) {                            /* (Part 9's: along a passage, a shut door straight on) */
+        nx = mx + head_x[h];
+        ny = my + head_y[h];
+        walk_t = at (sn_, nx, ny) ? door_on (nx, ny) : 0;
+        return;
+    }
     blocked = 0;
     while (n < lim_) {
         nx = mx + head_x[h];
@@ -819,13 +841,8 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
         z = C->elev[cy_][cx_];
         e = room_of (sn_, nx, ny);
         if (!(p = at (sn_, nx, ny)) || e != r || !T_PASS (*p) || TILE (*p) == T_DOOR) {
-            if (lim_ == 250 && p && TILE (*p) == T_DOOR && (o = portal_at (cx_, cy_)) != 0 && !(o->state & PS_OPEN) &&
-                o->kind == PK_DOOR && (o->parts & PP_KNOWN) && !(o->state & (PS_LOCKED | PS_BARRED | PS_WARDED | PS_HIDDEN))) {
-                e = o->state;                   /* (Shut, and it has handled it: opened as it goes, the user's) */
-                st = o->parts;
-                change (sn_, nx, ny, e | PS_OPEN, st, PORTAL_STATE);
-                event (E_PORTAL, 0, PO_OPENED);
-                t += 2 * stept;
+            if (lim_ == 250 && p) {
+                t += door_on (nx, ny);          /* (Shut, and it has handled it: opened as it goes, the user's) */
             }
             if (lim_ == 250 && p && step8 (sn_, mx, my, h)) {
                 hub_map (0);                    /* (An open door, a passage's mouth: on through it, to the next place;
@@ -891,8 +908,9 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
         if (!blocked && feel_ && felt_stop (h)) {
             return;                             /* (In the dark: what its hands meet there, told) */
         }
-        if (HUB->pc_face != h) {
-            HUB->pc_face = h;                   /* (It turns to face what's stopped it, the look with it) */
+        if (HUB->pc_face != h && (blocked || k != FA_WALL)) {
+            HUB->pc_face = h;                   /* (It turns to face what's stopped it, the look with it; not a bare wall:
+                                                **   its left and right as they were) */
             see (0);
         }
         if (blocked) {
@@ -1308,25 +1326,6 @@ void __fastcall__ s_walk (unsigned char d)
     walk_t = t;
 }
 
-/* Along a passage, a shut door straight on that it has handled opened as it goes (as across's from a room, the user's) */
-static unsigned char __fastcall__ way_open (unsigned char h, unsigned long* t)
-{
-    struct portal* o;
-    unsigned nx = mx + head_x[h], ny = my + head_y[h];
-    unsigned char s, q;
-
-    *t = 0;
-    if (at (sn_, nx, ny) && (o = portal_at (cx_, cy_)) != 0 && !(o->state & PS_OPEN) && o->kind == PK_DOOR &&
-        (o->parts & PP_KNOWN) && !(o->state & (PS_LOCKED | PS_BARRED | PS_WARDED | PS_HIDDEN))) {
-        s = o->state;
-        q = o->parts;
-        change (sn_, nx, ny, s | PS_OPEN, q, PORTAL_STATE);
-        event (E_PORTAL, 0, PO_OPENED);
-        *t = 2 * stept;
-    }
-    return 0;
-}
-
 /* The character sets out on heading h (north, northeast ...): its time, and where it'll be.  From a room: straight
 ** across it (across's, every way word alike: the user's, 2026-11-02); the UI's door or mouth, if it means one (tgx: "go
 ** through the door", a journey's leg), by the way it can walk to it, a shut one it hasn't handled walked up to first
@@ -1441,7 +1440,7 @@ void __fastcall__ s_go (unsigned char h)
         s_walk (d);
         t = bt + walk_t;
         pbase = 0;
-    } else if (!way_open (h, &t) && !STEP8 (sn_, mx, my, h)) {
+    } else if (across (h, 0xFF), t = walk_t, !STEP8 (sn_, mx, my, h)) {   /* (A shut door it has handled opened: its time) */
         no_exit (h);                            /* (In the dark: what its hands meet, told) */
         return;
     } else {

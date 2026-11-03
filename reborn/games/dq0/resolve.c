@@ -425,6 +425,8 @@ unsigned char __fastcall__ o_answer (unsigned char chosen)
 unsigned char o_resolve (void)
 {
     struct sight* s = &sight_copy;
+    unsigned before[SEE_ITEMS + SEE_DENS];      /* (UIREC's before: on the C stack, the hub's bank in the window as it's
+                                                **   copied) */
     unsigned char k, n, a = cmd.action;
 
     if (cmd.flags & CF_ASKED) {
@@ -446,6 +448,14 @@ unsigned char o_resolve (void)
             target.word[0] = 0;
         }
     }
+    for (k = 0; k < SEE_ITEMS; ++k) {           /* (What it sees as the command begins: a walk over for it tells only
+                                                **   what's new after it, way.c's) */
+        before[k] = k < s->nitems ? s->item[k].n : 0;
+    }
+    for (k = 0; k < SEE_DENS; ++k) {
+        before[SEE_ITEMS + k] = k < s->ndens ? *(unsigned*) s->den[k].name : 0;
+    }
+    hub_mem (UI_BANK, UIREC->before, before, sizeof before);
     if ((n = s->ndens) != 0) {
         ndens = n;
         memcpy (dens, s->den, sizeof dens);

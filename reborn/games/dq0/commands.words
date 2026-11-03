@@ -263,6 +263,7 @@ ten = 10
 both = 2                                    # (new, slice 4.1's: "drop both sacks")
 
 [little]
+next
 for
 the
 a

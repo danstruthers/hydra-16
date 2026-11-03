@@ -455,6 +455,40 @@ void __fastcall__ o_beat_words (unsigned w)
 ** thing (WB_SWAT: its actor plus 1, the thing the hub's pc_strike's), one attempt; a battering's first words, struck
 ** with the thing named (FW_BATTER, task_words': its what), "You set to battering the door with the bar." (the user's,
 ** 2026-10-22) */
+/* A walk over for a command just done (look's LOOK_NEW, E_ARRIVE's): the things and the denizens it sees that it didn't
+** as the command began (UIREC's before, resolve.c's), and not the thing it came for; nothing else: the command's outcome
+** comes next (the user's, 2026-11-02) */
+static void new_words (void)
+{
+    struct sight* s = &sight_copy;
+    unsigned before[SEE_ITEMS + SEE_DENS];      /* (On the C stack: the hub's bank in the window as it's copied) */
+    unsigned char i, k, n;
+
+    hub_mem (UI_BANK, before, UIREC->before, sizeof before);
+    for (i = n = 0; i < s->nitems; ++i) {
+        for (k = 0; k < SEE_ITEMS && before[k] != s->item[i].n; ++k) {
+        }
+        if (k == SEE_ITEMS && !(cmd.obj.word[0] && strstr (s->item[i].name, cmd.obj.word))) {
+            memcpy (&s->item[n++], &s->item[i], sizeof s->item[0]);
+        }
+    }
+    s->nitems = n;
+    for (i = n = 0; i < s->ndens; ++i) {
+        for (k = 0; k < SEE_DENS && before[SEE_ITEMS + k] != *(unsigned*) s->den[i].name; ++k) {
+        }
+        if (k == SEE_DENS) {
+            memcpy (&s->den[n++], &s->den[i], sizeof s->den[0]);
+        }
+    }
+    s->ndens = n;
+    lbn = 1;                                    /* (Said as a look's are) */
+    *(lbe = lb) = 0;
+    seen_words ();
+    if (lb_stream) {
+        lb_said ();
+    }
+}
+
 void __fastcall__ o_felt_words (unsigned w)
 {
     static const char* const met[FA_PIT + 1] = {
@@ -467,6 +501,10 @@ void __fastcall__ o_felt_words (unsigned w)
     static const char* const gait[4] = { "walk", "jog", "run", "sprint" };
     unsigned char b = w >> 8, k = b & 7, g = (b >> 4) - GA_WALK & 3, sk;
 
+    if (w == FW_NEW) {
+        new_words ();
+        return;
+    }
     switch ((unsigned char) w) {
     case WB_FEEL:
         hub_mem (0, &sk, &HUB->pc_skew, 1);     /* (The way by the north it believes in: slice 4.2's) */

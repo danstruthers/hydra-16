@@ -831,7 +831,8 @@ unsigned char reach;                            /* (1: walking over, the command
                                                 **   again as it's free; 2: carried out again; 0 again as a long task's
                                                 **   stopped, task.c's, or a line's command begun; 3: a thing's timed
                                                 **   work under way, words.c's, the command kept the same, 4: carried
-                                                **   out again, its end) */
+                                                **   out again, its end; 6: walking over for a command the world carries
+                                                **   out as it gets there: a thing taken, a blow) */
 static unsigned char placing;                   /* (A place in the room walked to: place_go's, its arrival not "over
                                                 **   to it") */
 unsigned char untarget;                         /* (The target let go at the next command: resolve.c's) */
@@ -1000,9 +1001,10 @@ static unsigned char events (void)          /* (How many there were) */
                     sayf (" You come into the %s.", tname);
                     save_game ();               /* (Kept as it comes into a stratum) */
                 }
-                if ((m.w1 & 0xFF) == A_CROSSED) {
+                k = m.w1 & 0xFF;
+                if (k == A_CROSSED) {
                     tell (T_YOU_CROSS_THE);
-                } else if ((m.w1 & 0xFF) == A_WENT_TO && !placing && !(m.w1 & 0x200)) {   /* (0x200: stopped short) */
+                } else if (k == A_WENT_TO && !placing && !(m.w1 & 0x200)) {   /* (0x200: stopped short) */
                     tell (T_YOU_GO_OVER);
                 }
                 placing = 0;
@@ -1012,7 +1014,12 @@ static unsigned char events (void)          /* (How many there were) */
                                                 **   before once an answer, lbsaid.s's; a walk's, the room's words
                                                 **   once: "The ceiling is flat." not again across it) */
                 }
-                k = m.w1 & 0xFF;               /* (As a run or a sprint ends, briefly: the pace not held) */
+                if (reach) {
+                    look (LOOK_NEW);            /* (Walked over for a command: only what's new, its outcome after it,
+                                                **   the user's, 2026-11-02) */
+                    break;
+                }
+                                                /* (As a run or a sprint ends, briefly: the pace not held) */
                 look ((m.w1 >> 8 & 1) | ((k == A_WALKED || k == A_CROSSED || k == A_WENT_TO || k == A_STEPPED) &&
                     HUB->gait > GA_JOG && !(HUB->watch & (WA_TRAPS | WA_LISTEN | WA_MAP)) && !sight_get ()->dark ? 4 :
                     0));
@@ -1479,6 +1486,7 @@ unsigned char s_missiles (void)
     case VB_GATHER_OBJECT:                      /* ("gather the arrows": the world's, each walked over to) */
         w = cmd.obj.word;
         intend_a = strstr (w, "arrow") ? FM_ARROW : strstr (w, "bolt") ? FM_BOLT : strstr (w, "stone") ? FM_SHOT : 0;
+        reach = 6;                              /* (Walked to, each: its arrivals' words short) */
         intend2 (I_GATHER, 0, 0);
         return 1;
     }
@@ -1764,6 +1772,7 @@ void __fastcall__ s_take (const char* name)
     strcpy (taking, name);
     pending[0] = 0;
     if (r == IR_NOT_HERE) {
+        reach = 6;                              /* (Walked over for it: its arrival's words short, E_ARRIVE's) */
         m.kind = I_TAKE;
         m.w1 = HUB->ireq.x;
         m.w2 = HUB->ireq.y;
@@ -2013,8 +2022,9 @@ void __fastcall__ s_command (char* l)
         return;
     }
     if ((cmd.obj.word[0] || cmd.n) && (cmd.action == VB_MOVE_TOWARD || cmd.action == VB_MOVE_DIRECTION) &&
-        cmd.dir == 0xFF && !cmd.obj.kind && !cmd.how) {     /* (A word alone, or a number, that's no way: "foo", "1") */
-        sayf ("\nI don't know how to %s.", cmd.obj.word[0] ? cmd.obj.word : l);
+        cmd.dir == 0xFF && !cmd.obj.kind && !cmd.how && (cmd.flags & CF_NOVERB)) {   /* (A word alone, or a number, that's no
+                                                **   way: "foo", "1") */
+        unknown (0);
         return;
     }
     if (!d && !ok) {                            /* (Words the game knows, but not a command the grammar has) */
@@ -2243,7 +2253,12 @@ portal:
         }
         if (d) {
             if (!hold_w[0] || hold_first ()) {  /* (Its thing in hand first, slice 4.1b's) */
-                intend (d & FT_CLOSE ? I_CLOSE : I_ATTACK, d & 0x0F);   /* (Out of reach: closed with first) */
+                if (d & FT_CLOSE) {
+                    reach = 6;                  /* (Closed with first, its arrival's words short) */
+                    intend (I_CLOSE, d & 0x0F);
+                    return;
+                }
+                intend (I_ATTACK, d);           /* (Beside it: d its number alone) */
             }
             return;
         }

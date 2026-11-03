@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     36                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     37                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -1439,6 +1439,9 @@ struct uirec {
                                                 **   squares' layers) */
     char            things_text[400];           /* The things' words for the UI (what's carried: ireq's reply), and
                                                 **   the UI's to the things (dq0 -k's: the things more) */
+    unsigned        before[SEE_ITEMS + SEE_DENS];   /* What it saw as the command began (resolve.c's): the things' numbers,
+                                                **   the denizens' first letters; a walk over for it tells only what's
+                                                **   new (way.c's, 2026-11-02) */
     struct cmd      kept;                       /* A command whose thing was out of reach, kept while the character
                                                 **   walks over to it (the UI's reach_go) */
     struct tread    tread;                      /* The traces read (I_TRACE's reply: the world's), */
