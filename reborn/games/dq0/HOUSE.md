@@ -2428,10 +2428,12 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
   orc's finer, the book's: they make finer things), the cloth tunic the catalogue's clothes, a cowl a leather cap, a
   plate halfhelm an iron helm; the mankar and the mang their own weapons (Combat 3's (G): the catalogue's past the
   theme's, its own kinds' room full, so named in "strike with the mang" the best held is struck with); a white orc's
-  silver now and then (the book's: they treasure it above all); their nests' straw, a small, brown or red orc's stash at its
+  silver now and then (the book's: they treasure it above all); their nests' straw, a small, brown or red orc's stash
+  at its
   bed; their lairs the bones of what they've eaten, their king's hoard.  The dwarves' fine (a warrior's mail, an
   axe or a warhammer, a shield; a miner's pick, hammer, chisel and lantern), their stores and their elder's hoard (the
-  dwarves' gold in it, crowns, in a purse only by the purse's own chance: the user's), a locked box at a warrior's or a miner's bed; an elf's
+  dwarves' gold in it, crowns, in a purse only by the purse's own chance: the user's), a locked box at a warrior's or
+  a miner's bed; an elf's
   longknife and hartbow (Combat 3's (S)), its stores; the soldiers' a unit's issue, their stores and spare arms, their
   captain's strongbox.
 - **A leader's things in a theme's home** (all the themes', 2026-10-29: found building the hoard's test): popgen puts a
@@ -2442,7 +2444,8 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
   else "armoured" as before.
 - **Left for later** (written down, not built): the black orcs' slaves (the book's hybrid colonies: brown and small
   orcs ruled, a faction within a faction), the red and black orcs' feuds within a tribe, a swarm and a civil war; the
-  white orcs' trade in silver and the dwarves' own trade (the market, below, has no merchant kind yet); the Gargun cowed by a strength they see (an
+  white orcs' trade in silver and the dwarves' own trade (the market, below, has no merchant kind yet); the Gargun
+  cowed by a strength they see (an
   attitude by the character's power: DENIZENS.md's more of the attitudes); the elves' barter (the user's answer 9
   gives them coins); a captor leading the character away (the soldiers'); the Gargun's sub-species' own tongues.
 
@@ -2501,7 +2504,8 @@ one may be (no standing updates: the 65C02's time).  *(Every number here is for 
   its captains); else of its own lair's (a band's head's, its band).  The next rank down from that if none's left;
   minds only.  Influence as the field's (rank and a sixteenth of the skill; a record not met yet, its rank alone: the
   ones about the character are known best); one fleeing or lying senseless only if none else is fit; ties by might (an
-  actor's power, and two for its arms, four for armour, eight for mail), then the dice.  The successor takes the post's rank (its
+  actor's power, and two for its arms, four for armour, eight for mail), then the dice.  The successor takes the
+  post's rank (its
   record's, beside its kind's) and its weight; its tenure begins then, so the bonds to it are a new leader's, but those
   of its own lair (its band) keep what they had with it; its own service counts whole (the house's: its record keeps the
   week it took the post, its tenure, in place of its service).  Those who know of the death (it's heard, or told) know of the
