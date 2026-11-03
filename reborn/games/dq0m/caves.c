@@ -730,6 +730,7 @@ void __fastcall__ o_air_pocket (struct chunk* c, const struct edges* e)
         AR.r[0] = (unsigned) "dq0air";
         AR.r[1] = (unsigned) b;
         AR.r[2] = 3;
+        AR.r[3] = 0;                            /* (From the value's start: the scratch room isn't cleared) */
         if (!hy_call (HY_ENV_GET, &AR)) {
             tair = 0x80 | (b[0] & 3) << 4 | (b[1] & 3);
         }
