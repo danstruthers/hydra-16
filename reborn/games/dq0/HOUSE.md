@@ -20,18 +20,20 @@ hard (an iron door to force), 6 to 8 very hard (a sound lock, a thing hidden wel
 but beyond most (a thing hidden cunningly).
 
 The rules marked *(every ruleset's)* are the game's own whatever the ruleset: their code is games/dq0/rshouse.h,
-which each referee includes (RULESETS.md), so the null ruleset (dq0 -r null: its own rules are the last section's)
+which each referee includes (RULESETS.md), or the world's, so the null ruleset (dq0 -r null: its own rules are The null ruleset's, below)
 plays them as HarnMaster's referee does.
 
 ## Tests
 
 - **A purpose names one skill.**  The game asks for a purpose, never a skill (rs.h's P_*); the referee picks the
-  skill a GM would call for: sight, sound, smell and searching Awareness; stealth and hiding oneself Stealth;
+  skill a GM would call for: sight, sound, smell and searching Awareness; stealth, hiding oneself and hiding a thing Stealth;
   climbing Climbing; jumping Jumping; swimming Swimming; balance Acrobatics; forcing and lifting Strength (an
   attribute times 5); picking a lock, disarming and making out a mechanism Lockcraft; enduring Condition; resisting
   poison Endurance times 5; resisting the mind Will times 5; dodging a hazard Dodge; first aid Physician; lore Lore;
   tracking Tracking; persuading and intimidating Rhetoric; animals Animalcraft; digging Mining; guile Intrigue;
-  throwing Throwing; keeping one's bearings underground Awareness, or Mining if it's the higher (Bearings
+  throwing Throwing; quickness Initiative; a thing groped for Dexterity times 5; keeping one's feet Agility (the book's
+  stumble roll), getting up the same (the Rise, if it's tested: limbs.c's); a map drawn Drawing; keeping one's bearings
+  underground Awareness, or Mining if it's the higher (Bearings
   underground, below: bearing.c's); keeping count of the hours Awareness (the time of day believed, below).
   (dq0harn.c's purpose table.)  Why: the game's code stays the same whatever the ruleset; only the referee knows
   skills.
@@ -95,8 +97,8 @@ plays them as HarnMaster's referee does.
   spell of digging two levels, a climb's round a thirtieth of one, a blow a hundredth.  Each is charged as it's done
   (after its own test: a spell's Mining, a round's Climbing, a blow), a spell given up part way for the part of it
   done; a level more is asked of as the work goes on, soft ("You're tiring.  Keep digging?"), as a walk's is (a
-  climb's, answered no, goes on: there's no stopping part way up).  Swimming the same, when there's water (slice
-  4.9).  The null ruleset tires nothing.  (dq0w.c's arrive, stop and s_batter_on; sheet.c's o_spent, WORK.)  Why:
+  climb's, answered no, goes on: there's no stopping part way up).  Swimming the same (a minute's swim: slice
+  4.9's).  The null ruleset tires the character nothing.  (dq0w.c's arrive, stop and s_batter_on; sheet.c's o_spent, WORK.)  Why:
   the book's rate; a run's (a level each two minutes) would leave one spell of digging five levels down, every
   physical test 25 the worse.
 - **An incline told** *(the house's, 2026-11-02, slice 4.10's: for review)*: a walk along a passage tells "The way
@@ -144,8 +146,8 @@ plays them as HarnMaster's referee does.
 
 The book has no digging rules.  A spell of work is ten minutes, with the tool to hand that suits the material best
 (bare hands if none does better; of two as good, the one it wears less).  Earth, soft soil or hard-packed, is dug at
-the tool's rate, no test: hard-packed earth half as far as soft soil, and never with bare hands ("you make no
-progress").  Anything harder (a floor's flags, masonry, stone) only a pick bites into, or a chisel and a hammer, and each spell is a Mining
+the tool's rate, no test: hard-packed earth half as far as soft soil, and never with bare hands ("You need better
+tools: your hands make no mark on the hard-packed earth.").  Anything harder (a floor's flags, masonry, stone) only a pick bites into, or a chisel and a hammer, and each spell is a Mining
 test: the rate at a marginal success, twice at a critical, half at a marginal failure, nothing at a critical
 failure.  Feet a spell (kept in half-feet), and the wear a spell does the tool:
 
@@ -343,7 +345,7 @@ silent on all of it.
 - **The creatures' sheets come from the referee's bestiary** (fight.c's, by the kinds' keys): the first six (the
   giant rat, the cave spider, the ghoul, the skeleton, the cave bear, the kobold) a stand-in of the game's own; the
   rest the HarnWorld Bestiary's averages for the like creature (the page each came from beside it), and for folk the
-  book's for men (attributes about 10 to 12, skills by their trade); each attribute varied as the book suggests: less
+  book's for men (attributes about 10 to 12, skills by their trade), the peoples' by the book's own (The peoples, below); each attribute varied as the book suggests: less
   7, and 2d6, at least 1 and at most twice its own; by a die of its own, the same creature each time.  Why: the game's
   own world (G3), its creatures modelled on the book's (the user: "for denizens, read the harnmaster bestiary"); the
   first six keep their numbers till the tests are cut to meaning (the ghoul is the book's grave-wight, the cave bear
@@ -371,10 +373,10 @@ silent on all of it.
     straw).  It's tried, once: a blow's time (a round at a denizen, 3 seconds at a door), no harm, told ("You attempt
     to batter the door with the rope, but it seems ineffectual.", "You swat at the giant rat with the cloak, but it
     seems ineffectual."); no battering goes on of it, no fight begins of it (a fight it was in ends with it).
-  - *Nothing named*: what's in its hands strikes (of two, the better by the ruleset's reckoning: HarnMaster's, at a
-    denizen its attack mastery, at a thing the impact it does; a soft thing the least), never a better thing it
-    carries, unasked: a torch in hand, the torch.  Its hands empty and something better carried (by the same
-    reckoning: at a denizen the best weapon, but a shield or a torch, carried for its light; at a thing the tool that
+  - *Nothing named*: what's in its hands strikes (of two, its main hand's, but a soft thing: the other's then, slice
+    4.1b's), never a better thing it
+    carries, unasked: a torch in hand, the torch.  Its hands empty and something better carried (by the ruleset's
+    reckoning: HarnMaster's, at a denizen the best weapon by its attack mastery, but a shield or a torch, carried for its light; at a thing the tool that
     hits it hardest, not a weapon a thing would spoil), it's asked first ("You can try battering it with your hands, but would you rather use your
     pick?", "You can fight it with your fists, but would you rather draw your sword?"): yes takes it in hand and
     strikes with it, as if it were named; no, or any other answer, bare-handed; a command typed instead, the blow let
@@ -387,7 +389,7 @@ silent on all of it.
     stick, a lantern, a skull, bones; a theme's, a stone tablet and a totem the club, a chalice, a seal, a brass key
     the stick; soft, a rope, a sack, a cloak, a candle and candle stubs, a backpack, a belt, a pouch, a waterskin, a
     quiver, a basket, rations, pennies, arrows, a tinderbox, lockpicks, an iron key, potsherds, a pane of glass and its
-    shards, a flask of oil, a pot of pitch, a heap of sand or of straw, a body, every piece of armour and clothing.
+    shards, a flask of oil, a pot of pitch, a heap of sand or of straw, a body, every piece of armour and clothing; the rest by their data (a crowbar the club, a hammer the stick).
     The book's staff (Spear, 20, 15, blunt 4) is for a theme's pole or staff (its key "staff": its data can't tell a
     pole from a club, it has no length).
   - Why: the user's; a ruleset's own weapons as they are, and a thing that isn't one as the book treats one (its
@@ -395,7 +397,8 @@ silent on all of it.
     form, whether it's worn).  Not yet: the book's weapon damage (a weapon that strikes something hard may break, its
     quality's test: Combat 12), a thing's own quality and wear in its blow.  (gear.c's row_of, o_pc_side, o_pc_wield;
     rshouse.h's RS_HOUSE_SWING; choose.c's wield; resolve.c's tool_ok; dq0w.c's door_work, swatted, in_hand.)
-- **A creature defends** by dodging, or by counterstriking if it's better at that, as the book advises for animals.
+- **A creature defends** by dodging, or by counterstriking if it's better at that, as the book advises for animals;
+  one holding a shield blocks with it if that's the best of the three, once a round (2026-10-29: fight.c's defence).
 - **The character's defences are chosen for it, a round's at a time** (the user's, 2026-10-20: the game is real
   time): against each blow the better of a block and a dodge it has left that round; each thing it holds that
   blocks blocks one foe a round (a sword one, a shield another), a bare arm if it holds none, and the dodge one
@@ -427,10 +430,8 @@ silent on all of it.
   fatigue, a level each five minutes of active combat): each round it fights charged so, whatever it does in it (a
   blow, a struggle up from the ground), and a pass while it's engaged too (2026-10-31, for the user's review: the
   book's variant counts every round of active combat, and a pass defends as it's attacked; a disengage's square is
-  its walk's, at that pace); a level more asked as a hurt is ("You're tiring.  Keep fighting?").  To come, the same
-  task: a missile weapon's (in
-  range, seen, a clear line; its next missile each shot, none left the end; an enemy engaging the character ending it,
-  the melee's fighting on taking over), a setting widening where it begins ("autoengage with sword at close range"),
+  its walk's, at that pace); a level more asked as a hurt is ("You're tiring.  Keep fighting?").  A missile weapon's the same
+  task (Missiles, below).  To come, the same task: a setting widening where melee's begins ("autoengage with sword at close range"),
   an ally's.  (dq0w.c's part 24.)
 - **Disengaging, the book's** (the user's, 2026-10-21: "try to have it follow the book"; Combat 7): an engaged
   character moves a square, and then, if it's no longer engaged, a half-move more (its walk's squares a round),
@@ -443,13 +444,13 @@ silent on all of it.
   from the nearest foe within a dozen squares.  Neither engaged: told ("You aren't engaged.", "There's nothing to
   flee from.").  "pass" a round given up, defending (engaged, a round of the fight's tiring: fighting on's).  A walk as it's engaged goes as a disengage does: its first
   square stopping it if it's still in the zone, then on.  As it fights, either takes the fight over, its round out
-  first.  Not yet: rising first if it's prone (the book's), a foe's free blow (the book has none).  (dq0w.c's part
+  first.  Prone, it gets up first, the move a round the later (the book's: Hands and limbs, below).  No foe's free blow (the book has none).  (dq0w.c's part
   26.)
 - **The fatigue rates** (the user's, 2026-10-21: running more than strenuous work, sprinting more again): a sprint a
   level a minute, a run each two minutes, strenuous work and a jog each five, a walk a day (the book's, Combat 6 and
   Skills 6).  (sheet.c's o_spent.)
 - **Aiming high or low** is two steps worse (10); **a prone defender** four steps easier to strike (20);
-  **outnumbered,** two steps worse for each enemy more.  (fight.c.)
+  **outnumbered,** two steps worse for each enemy more.  (fight.c.)  No command says an aim yet: a blow or a shot goes at the middle.
 - **Armour's quality:** a poor piece a point less protection, a fine one a point more.  (fight.c.)
 - **Bones that move** (mindless) feel no shock, bleed nothing, fear nothing, and fall apart when their injuries
   reach their Endurance; so too the death god's mindless dead, the wights (the book's: Bestiary p78).  (fight.c.)
@@ -481,41 +482,41 @@ silent on all of it.
   else but rest, a look, a word called out (wounds over time, below: slice 4.3's).  (dq0harn.c's status.)
 - **A helpless character and its foes, by their nature** (the user's choice, 2026-10-21; helpless: senseless, or in
   shock).  Each kind's way is kinds.txt's (its ways k and r).  A killer (k: the ghoul, the skeleton, the cave bear,
-  the basilisk, the lindworm, the wight, the shade, the cultists and their high priest) strikes on, and one senseless
+  the basilisk, the lindworm, the wight, the shade, the cultists and their high priest, the small, black and red orcs) strikes on, and one senseless
   it finishes where it lies, as the character finishes a creature (the book's dispatch: a mortal wound to its neck,
   to its skull by a blunt weapon; "The ghoul bites at you: a mortal deep bite to your neck. You are dead.": the game's
-  end).  A robber (r: the kobolds and their lord, the bandits and their lord) comes up to it and takes what it holds
-  (but a light lit: it leaves it its light) and every penny it has, a round's work, off to its lair (put down on its
-  lair's home square, a stash to be found; where it stands, if that can't be had), and goes ("The bandit goes through
+  end).  A robber (r: the kobolds and their lord, the bandits and their lord, the brown orcs, the orc king) comes up to it and takes what it holds
+  (but a light lit: it leaves it its light) and every penny it has, a round's work, off to its lair (into its faction's
+  hoard, or at its home, hidden if its kind hides its things: Outfits' the robbers' takings, below; where it stands, if that can't be had), and goes ("The bandit goes through
   your things as you lie helpless, and takes what it finds."); it doesn't strike at it.  One that only defended itself
-  (neither: the giant rat, the cave spider, the bat, the cave adder) stops once the threat is down and goes, fleeing
+  (neither: the giant rat, the cave spider, the bat, the cave adder, the white orcs, the dwarves, the elves, the soldiers and their captain) stops once the threat is down and goes, fleeing
   a while (24 of its turns) and unfriendly after: it keeps a few squares off, and strikes only if the character,
   itself again, comes beside it.  Nobody engages a helpless character (no engage initiative test): what's done to it
   is each one's mind's; a blow at it senseless from any but a killer is held (one posted as it fell: the referee's,
   RS_KILLER).  The referee is told what's to hand and the load left at once, as it's robbed (the user's, 2026-10-22:
   "Weight should be recounted immediately after a robbery": its encumbrance the less as the robber goes).  (dq0d.c's
   decide, K_HELP; dq0w's wfight.c, s_den_rob; fight.c's attack.)  Not yet: being led away (by an ally, or a captor),
-  a captive's fate, the robbers' stash hidden, a defender cornered fighting back (the user's, 2026-10-22: "Rats
-  should attack if cornered": defence only for now).
+  a captive's fate, a shy creature cornered fighting back (the user's, 2026-10-22: "Rats
+  should attack if cornered": defence only for now: it darts past the character; one fleeing, cornered beside a character itself again, does strike).
 - **Health in words,** for every ruleset: fine with no injuries; hurt while the injury points are under a third of
   the Endurance; badly hurt under two thirds; critical past that; down when senseless or in shock.  (dq0harn.c's
   health_of.)
 
 ## Throwing
 
-- **Anything thrown goes by Throwing** (P_THROW), whatever it is, at the book's missile ranges (Combat 15): a
+- **Anything thrown at a thing or a place goes by Throwing** (P_THROW), whatever it is, at the book's missile ranges (Combat 15): a
   short band, then medium, long and extreme, each twice as far as the last, at 0, 20, 40 and 80 less (0, 4, 8 and 16
   steps).  (dq0harn.c's purpose table; dq0w/things.c's s_throw_at.)
 - **A kind's reach is its short band, in squares** (5 feet each): 2 for a thing a hand throws well (a dagger, a
   torch, rations, a key, a skull, bones, pennies, a candle), 1 for a heavy or an awkward one (a pick, a shovel, a
-  sword, a mace, a shield, a helm, boots, a basket, a rope, a pane), 4 for a spear (a javelin's), 0 for what isn't
+  sword, a mace, a shield, a helm, boots, a basket, a rope, a pane), 4 for a spear (a javelin's) or a taburi, 3 for a shorkana, 0 for what isn't
   thrown (a chest, a table, a chair, a cloak, body armour, a backpack, a belt, a body, a well); a theme's own kinds
   none yet.  (dq0w/kinds.c's throws: the plan's affordances in the kinds' data.)  Why: the book gives thrown
   weapons' ranges; other things are judged by their weight and their shape.
 - **Thrown hard: twice as far, and 10 less** (2 steps).  ("throw the dagger hard at the rat": struct cmd's manner.)
 - **Beyond the extreme band it falls short**, at the band's end on the line to the mark; **a miss lands beside the
   mark** (on its square, as yet).  The thing lands out of the thrower's hands, where it falls.  A thing thrown at a
-  denizen is a missile's attack (below, slice 4.7's): it strikes, or it misses, by the book.
+  denizen is a missile's attack (below, slice 4.7's): it strikes, or it misses, by the book (beyond the extreme band it isn't thrown: "It's out of range.").
 
 ## Missiles *(slice 4.7, 2026-10-29: drafted for the user to review)*
 
@@ -531,14 +532,14 @@ book's; the house's below, each marked.
   thing the stick's, a hefty one the club's: Combat 8), all of it at the short and medium ranges, half at the long and
   extreme (Combat 16's Melee row); its aspect by the d6 (Combat 17's Random Aspect).
 - **Its missile**: the launcher's loaded one, else one of its family carried (a quiver's arrows, a bolt case's bolts,
-  a pouch's sling stones), the handiest first; one in the pack its reach owed (HOUSE.md's reach).  "nock an arrow",
+  a pouch's sling stones), the handiest first; one in the pack its reach owed (Reach, handy tools and things used up, below).  "nock an arrow",
   "load the crossbow" load it ahead (a bow's or a sling's half a round, a crossbow's a round).  *(For review: the
   loading's times.)*
 - **Its time**: a round a shot, the book's load and fire (a bow, a sling); a crossbow's load a round more, its shot
-  the next (the book's: load, or fire).  Fighting on with missiles is a long task as melee is (HOUSE.md's fighting on):
+  the next (the book's: load, or fire).  Fighting on with missiles is a long task as melee is (Fights' fighting on, above):
   a shot each round at the target while it's in range, seen and the line clear and a missile's to hand, then the
-  nearest hostile it can shoot at; an enemy engaging it, the melee takes over, with what it holds (a bow the book's
-  stick, a sling a soft thing).
+  nearest hostile it can shoot at; an enemy engaging it, the melee takes over, with what it holds (by its weight, a shortbow or a hartbow the book's
+  stick, a longbow or a crossbow its club; a sling a soft thing).
 - **The auto-target range** *(2026-10-30, the user's of 2026-10-20: "autotarget with bow at medium range"; drafted for
   review)*: "autotarget at medium range", "set autotarget to short", "autotarget off" (also "auto-target", "autoengage",
   "autofire"; the bands short or close, medium, long, extreme; "autotarget" alone tells it).  Set, fighting on with
@@ -572,7 +573,7 @@ book's; the house's below, each marked.
   its range, the armour at the location off it.
 - **A miss's stray** *(2026-10-30)*: a miss (or a dodged one) at a mark with others beside it strikes one of them half
   the time, one chosen at random (the book's: a missile shot at one engaged in melee, a Miss 50% striking a randomly
-  determined adjacent character; the earlier notes' 20% was wrong), the character too, every shooter's and thrower's,
+  determined adjacent character: Combat 15; Combat 17's results give a nearby target 20%, not used: the game's half is for any mark), the character too, every shooter's and thrower's,
   never the shooter itself.  *Its strike one die, no test, no defence (the referee's MS_STRAY, both referees: the
   null's a hit; for review)*; told after the miss ("Your shot strikes the giant rat instead: ...", "Its spear strikes
   you instead ..."), the one struck the one hurt (its courage, its fall, its kin's dismay); the missile at its feet.
@@ -600,7 +601,7 @@ book's; the house's below, each marked.
   denizen throws its weapon at a far mark)*.  What it threw lies where it fell, anyone's.  *Not yet: one holding
   another weapon (a sword, a mankar) with its taburis or shorkanas at its belt (its belt's looked at, as its things
   are told the referee, only till it's armed: the answers' time); a rock picked up
-  (the dungeon has no loose stones to pick; a denizen taking up a thing it finds is phase 3C's one path).*
+  (the dungeon has no loose stones to pick: Ways found, positions, below).*
 - **Every fall told** *(2026-10-30)*: any actor knocked down in a fight (a stumble, a leg's wound, a missile's), the
   character too, is told as it falls, after the blow's words ("The giant rat goes down.", by its body; "You fall."),
   seen, or heard if it's near and out of sight ("You hear something fall.": within eight squares); its rise told once,
@@ -615,7 +616,7 @@ book's; the house's below, each marked.
   "Take it" with nothing named yet says so.  (resolve.c.)
 - **A verb said alone takes its own thing** (commands.verbs' unsaid): drop, put, wear, wield, hold, read, use the
   last thing named; take the last thing named if it lies near, else the thing near, asking which of several, and
-  saying so when there's none (the user's answer 8); attack and throw the target; open, close, break ... what's in
+  saying so when there's none (the user's answer 8); attack the target; throw what's in its hand, at the target; light and douse what's in its hand; open, close, break ... what's in
   front; look and examine the place.  (resolve.c; main.c.)
 - **"Take all"** takes each thing it sees lying about, the nearest first (those in reach before those walked to),
   in turn; one it can't take, or no longer sees, ends it.  (resolve.c's taken_next.)
@@ -628,15 +629,13 @@ book's; the house's below, each marked.
   where it lies); else it's refused, the things' words ("You have no bar to hand.", "The bar is out of reach: go over
   to it first."), never done with bare hands or another thing instead.  A blow's thing is taken in hand first ("You take
   the bar in both hands.", its time), as a named weapon was (names.c's); no hand free for it, refused, the things' words
-  ("Your hands are full: stow something, or put it down."); what strikes is then the referee's to choose, as ever, from
-  what's held (a weapon held; at a door, the best tool to hand).  A part after "with"
+  ("Your hands are full: stow something, or put it down."); that thing strikes, and no other (Fights' what strikes).  A part after "with"
   is what it's done with, not the door's ("hit the rat with the bar" no longer batters a door).  (resolve.c's tool_ok;
-  cmdmean.s.)  Not yet: a thing the referee has no weapon for (a bar, a rope) struck with as itself (it strikes with its
-  fists); a named tool chosen over a better one for a dig or a blow at a door.
+  cmdmean.s.)  Not yet: a named tool chosen over a better one for a dig (it takes the one that suits the stuff best).
 - **Which of several:** the closest by squares (and the lead, as yet, the closest); the largest and the smallest by
   a thing's size (how easily it's seen); the second as they lie from the character's left round to its right; any,
   the closest.  Several of a name and none said: the one the world's services choose, as ever (the nearest thing,
-  the denizen beside it), but a throw's mark and a target set must be one: then which, asked.  (resolve.c.)
+  the denizen beside it), but a throw's mark, a target set and a thing gone to must be one: then which, asked.  (resolve.c.)
 - **A question** lists the choices from the left round to the right, how far off each is where two lie the same
   way, and takes a number, a way ("left"), a selector ("the closest", "the second") or a name; any other line lets
   it go (the user's answer 13).  (resolve.c; the doors' and the stairs' own, choose.c.)
@@ -729,14 +728,14 @@ requests; the house's rules above marked *(every ruleset's)* it plays as HarnMas
   the same, its steps the darkness's, the thing's and the pace's (Walking and searching in the dark): seldom kept.
 - **The character takes 10 wounds** (dead at 10), **a creature 6.**  A fall does a wound each 10 feet, a trap's
   strike or a burn 2.  Health: hurt under a third, badly hurt under two thirds, critical past that.
-- **A blow** is a flat test (a prone defender four steps easier, two harder for each other foe); a hit 2 wounds, a
+- **A blow** is a flat test (a prone defender four steps easier, two harder for each other foe; a shield held two harder, once a round: a blow that would have hit but for it, blocked); a hit 2 wounds, a
   critical 4.  A prone attacker gets up instead.  A creature wounded that stands holds on a flat test (a shy one four
-  steps worse), else it flees.  A blow at a thing does 6, less the thing's least resistance.  What strikes (Fights')
+  steps worse), else it flees.  A blow at a thing does 6, less the thing's least resistance.  A missile the same flat test, two steps worse a band past the short, four behind cover, two easier unaware of it; a stray a hit, no test.  What strikes (Fights')
   the house's: a thing named strikes, its words its name, whatever it is (a soft one the house's single attempt);
   nothing named, the first thing in its hands; never a better thing carried asked about (none's better).
 - **No skills to open or develop** (slice 4.4): nothing marked, nothing rolled after a rest; its character carries on into
   a new dungeon as HarnMaster's does (its file, its wounds).
-- **No fatigue, no bleeding, no shock, no senselessness, no encumbrance.**  Senses all 5 (hearing 7 listening as it
+- **No fatigue (but a creature's simple count: the denizens' bodies, below), no bleeding, no shock, no senselessness, no encumbrance.**  Senses all 5 (hearing 7 listening as it
   goes); a square takes 4.5, 3, 1.5, 0.8, 0.4 and 0.3 seconds at a creep, a slow walk, a walk, a jog, a run and a
   sprint.
 - **Its character** is any file's name, occupation, pace and language lines (hmchar's will do), with its wounds;
@@ -763,7 +762,7 @@ requests; the house's rules above marked *(every ruleset's)* it plays as HarnMas
   a third to two thirds of the way from the way in to the stratum's far side, by its seed) isn't.  Why: a ruin's a
   ruin in places, and those who came after mended what they took.
 - **The evil's goal won where it's done:** the relic laid on the curse's altar ends the game, the curse broken (the
-  ruled ending's words); its dead aren't stilled first.  Why: the denizens' answer to it is popgen's, to come.
+  ruled ending's words); its dead aren't stilled first.  Why: the denizens' answer to it is still to come.
 - **A faction's others are the theme's own:** themegen writes how a faction stands with the factions the region has
   (the bestiary's factions.txt lists them all), and only a game of its own writes faction lines in the save folder
   (theme.txt: popgen's), a stand-in's game none.  Why: popgen reads every name it's given, and the stand-ins' games
@@ -778,9 +777,9 @@ climb's test to hold on).
 - **Where you are is told by the facing alone**, never the compass (the user's).  A room's floor is taken in thirds
   each way by the character's facing: far (ahead), middle, near (behind), and left, middle, right.  The character is
   "in the middle of" a room, "on the right side of" it, "at the far end of" it, "in the near left corner of" it, and
-  so on; a thing or a denizen the same ("a rat in the far corner"), and "against the wall" ahead, behind, to the left
-  or right when it's within a square of it.  Only what's known: with the walls beyond the light, "somewhere in a
-  cavern, its walls beyond your light".
+  so on; a thing lying at the room's edge the same ("In the far left corner lies ...", "Against the wall to your left
+  lies ..."); a denizen by its bearing and distance ("A giant rat is ahead to your right, 10 feet away": the user's,
+  2026-10-20).  Only what's known: with the walls beyond the light, "You are somewhere in a vast cavern, its walls beyond your light."
 - **A room's size and shape words**, by its floor: small under 150 square feet, a plain room to 600, large to 2,500,
   vast beyond; long when it's at least twice as long as it's wide, and narrow too if it's 10 feet across or less;
   wide when it's 40 feet across or more ("a long, narrow hall", "a wide hall", "a vast cavern").
@@ -858,7 +857,7 @@ climb's test to hold on).
   no blow, and the player says what next (a hostile one fought: Fights' fighting on).  Engaged already, a blow at
   one out of reach isn't closed with (the user's).  The denizens move by the same rule: one coming at the character
   stops in its zone.  Not used: the book's
-  long-reach weapons' two squares (with the missiles, slice 4.7) and its reaction zones (the game's 30 feet stands for
+  long-reach weapons' two squares (not built) and its reaction zones (the game's 30 feet stands for
   them: a hostile seen that near stops a long task).  As built: a close-in's target
   struck at the character as it comes beside it is no stop (it's the fight it went for: the character's blow follows);
   "attack the rat" with several in sight and none beside the character closes with the nearest; a bare "attack" with
@@ -881,7 +880,8 @@ climb's test to hold on).
   walked over to), holding one (drawing, wielding, swapping a weapon), stowing it, putting it in or on another, or
   taking it out of one, while the character's in an enemy's zone, is a test of its hands (the referee's P_GROPE:
   HarnMaster's Dexterity times 5); failed, nothing's done and the round's wasted ("You fumble for the sword.").
-  Wearing and taking off (but a pack on the back: 2026-11-02, below), dropping, lighting and putting out aren't gropes.
+  Wearing and taking off (but a pack on the back: Reach, handy tools and things used up, below), dropping, lighting from a
+  flame to hand and putting out aren't gropes; a fire-maker's steps and a tool's are (the same).
   Its time the reach's (Reach, handy tools and things used up: a round a step, each step its own test).
 - **Going places, as built:** the place's square worked out from the room's floor as the character faces (the floor
   in thirds for the centre, its edge rows for a side or a corner, the nearer end of each when a corner's not said);
@@ -940,12 +940,12 @@ climb's test to hold on).
   none ("You go on down the passage."; the user's: about every 30 feet).
 - **Interruptions, hard** (the task stops at once, and says why): any wound taken (the user's: all wounds), a blow at
   the character, a trap sprung, a fall, its light going out, a hostile denizen coming into sight within 30 feet.
-  **Soft** (it asks, "A rat comes into the light.  Keep digging?"; yes carries on, anything else stops it, and a new
+  **Soft** (it asks, "Something stirs. A giant rat is ahead, 40 feet away."  "Keep digging?"; yes carries on, anything else stops it, and a new
   command typed instead stops it and runs): something new seen, heard or smelled (a denizen not hostile, a hostile
   one farther off than 30 feet, a sound), a fatigue level more.
 - **Stopping**: "stop" stops what can be stopped; "stop digging" (battering, kicking, punching, climbing, searching,
   walking, waiting, and the timed work's: studying, disarming, picking, forcing, heaving, bending, winding, tracking,
-  sniffing, filling, hiding) names it, and a name that isn't the task's is refused ("You aren't digging.").  What's
+  sniffing, filling, hiding) names it, and a name that isn't the task's is refused ("You aren't digging: you're walking."; none under way, "You aren't doing anything to stop.").  What's
   imposed can't be stopped: senseless, a fall under way.  A question's answered yes by "y", "yes", "go on", "carry
   on", "continue", or "keep" and anything ("keep at it", "keep kicking").
 - **What stopping costs**: a walk stops where the character is; a dig keeps the feet dug (the change record: a hole
@@ -959,8 +959,8 @@ climb's test to hold on).
   through what lets sight through (a doorway, a window, a grating, bars, a slit, a hole), what lies beyond.  Listening
   or sniffing one way ("listen at the door", "sniff at the grating") the same, through what lets sound or air through.
 - **Things told as found**: whatever a test finds (a search, a trap noticed underfoot, a hidden door, a sound heard by
-  listening) is told after what's plain at a glance, as its own line, saying how it was found: "You arrive at a
-  closed door.", "Searching about...", "You find a gas trap, set to go off when the door is opened."
+  listening) is told after what's plain at a glance, as its own line, saying how it was found: "You come to a
+  closed door.", "Searching about...", "You find a trap: a gas trap, set to go off as its door opens."
 
 ## Light and traces *(slice 4.1: drafted 2026-10-21; reviewed by the user, 2026-10-22: as it is for now)*
 
