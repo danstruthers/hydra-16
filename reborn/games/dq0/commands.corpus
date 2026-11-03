@@ -605,6 +605,22 @@ walk forward to the other side	VB_MOVE_TOWARD	object=side;direction=F	near=side	
 go to the near side	VB_MOVE_TOWARD	object=side	near=side	near: the side behind
 go to the far end of the hall	VB_MOVE_TOWARD	object=end	near=end	the far end: the far side
 
+# --- going to anything, crossing, leaving (the user's, 2026-11-02: HOUSE.md's straight walks and going to anything) ---
+approach the pot	VB_APPROACH_OBJECT	object=pot	near=pot	up to a thing
+go to the pot	VB_MOVE_TOWARD	object=pot	near=pot	a thing gone to
+walk to the pot	VB_MOVE_TOWARD	object=pot	near=pot	the pace's word a verb here
+walk over to the pot	VB_MOVE_TOWARD	object=pot	near=pot	over to
+go up to the pot	VB_MOVE_TOWARD	object=pot	near=pot	up to
+head for the pot	VB_MOVE_TOWARD	object=pot	near=pot	head: walk's alias; for
+go near the pot	VB_MOVE_TOWARD	object=pot	near=pot	near
+go next to the pot	VB_MOVE_TOWARD	object=pot	near=pot	next to
+move to the rat	VB_MOVE_TOWARD	object=rat	near=rat	move: walk's alias; a denizen, no blow
+cross the room	VB_MOVE_TOWARD	object=room	near=room	cross: its far side
+go across the room	VB_MOVE_TOWARD	object=room	near=room	across it
+cross the hall	VB_MOVE_TOWARD	object=hall	near=hall	the hall it's in
+walk to the door on the left	VB_MOVE_TOWARD	object=door;lies=L	near=door	where it lies
+leave	VB_LEAVE	-	-	out of the room, which asked
+
 # --- travel to a place it knows (slice 4.2: the UI makes a move to a room named, or the way in, a journey) ---
 go back to the mausoleum	VB_MOVE_TOWARD	object=mausoleum;direction=B	names=mausoleum	a room named, gone back to
 go to the mausoleum	VB_MOVE_TOWARD	object=mausoleum	names=mausoleum	a room named, gone to

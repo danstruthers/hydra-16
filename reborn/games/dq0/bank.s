@@ -15,7 +15,7 @@
             .include    "ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 16                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 17                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
@@ -134,7 +134,7 @@ ovl_out:
             OVFN        pacing, 16
             OVFN        names_in, 10
             OVFN        focus_words, 13
-            OVFN        felt_words, 7
+            OVFN        felt_words, 17
             OVFN        facing_words, 7
             OVFN        fore_set, 6         ; (The answer's tasks in the foreground: main.c's)
             OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
@@ -156,10 +156,10 @@ ovl_out:
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
             SWPART      8, 5                ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
-            SWPART      10, 11              ; A search, by its form (search.c)
+            SWPART      10, 17              ; A search, by its form (search.c)
             SWPART      11, 15              ; The rarer news, worded (main.c); the hands and limbs
             SWPART      12, 15              ; Wounds over time: first aid, in shock, the body's news (tend.c)
-            SWPART      13, 12              ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
+            SWPART      13, 17              ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
             SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
             SWPART      15, 6               ; An ally's errands, the character's gifts (errand.c: slice 4.8's)
             SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)

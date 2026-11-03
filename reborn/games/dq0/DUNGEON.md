@@ -877,6 +877,16 @@ or a shaft can be jumped down (jump down: a fall of its height).
   carried out as the character gets there; a blow at a denizen out of reach ("attack the goblin", "attack" with a
   target) closes with it first, the walk ending beside it and the blow struck (the denizen's own blow as it comes up
   no stop), or engaged by another first, no blow; engaged already, refused.
+- **Straight walks** (the user's, 2026-11-02: HOUSE.md's): a way word alone, any of the twelve, walks straight from a
+  room's floor until a wall, a closed door or another obstacle stops it, told what stopped it ("You come to a closed
+  door.", E_LEDGE's LEDGE_MET and the world's ahead's FA_*), refused only with it directly in front; an open door or a
+  passage's mouth straight ahead, on through it; a shut door it has handled opened as it goes.  A door off to the side
+  isn't walked to by one: "go through the door", "go to the door", "open the door", "leave" (which, asked).
+- **Going to anything** (the user's, 2026-11-02: HOUSE.md's): approach, go to, walk to, walk over to, head for and
+  their kin, for a thing, a fixture, a denizen (no blow: I_CLOSE, w1) or a body it sees or remembers in this room (the
+  item store's pick, HW_GONE; I_GOTO, a 2: beside it); "You haven't seen a pot here." only for what it hasn't.  Crossing
+  ("cross the room", "go across the hall") its far side; a closer look, an appraisal, looking in a thing or searching
+  it, out of reach, walked over to first.
 - **Going places in a room**, by the facing: the centre, the far side (the other side, the far end, the wall ahead),
   the near, left or right side, a corner ("go to the far left corner", "walk forward to the other side"); where the
   place itself is rock (a cave's), the nearest square the way reaches.  And where you are said the same way: "You are
@@ -894,7 +904,7 @@ or a shaft can be jumped down (jump down: a fall of its height).
   edge); the world takes that pace's step for every square.
 - **In the dark** (the user's playtest, 2026-10-22: HOUSE.md's walking and searching in the dark) a walk goes by what
   the character knows (the squares it's seen and those it's felt walking: the senses' memory), never turned toward an
-  opening it hasn't seen or felt: from a room by a door it knows of, else straight on the way said; along a passage
+  opening it hasn't seen or felt: from a room straight on the way said (a door meant, one it knows of); along a passage
   straight on, round a bend only where it knows the way, a fork it knows of stopping it.  Its cautious walk feels
   ahead and stops short of what it meets, told by touch (a wall, a door, a drop, a rise, a thing in the way, known
   after); a faster one blunders into it, the world's to judge by what's really there (the stumble the referee's, the

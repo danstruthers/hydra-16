@@ -521,8 +521,9 @@ static unsigned char last_d;                    /* (way's: the way into its squa
 void __fastcall__ ways_go (unsigned char r, unsigned char fx, unsigned char fy);    /* (Part 21's) */
 unsigned char __fastcall__ ways_near (unsigned char* tx, unsigned char* ty);
 unsigned char __fastcall__ s_ways_near (unsigned char* tx, unsigned char* ty);
-static unsigned char go_near;                   /* (I_GOTO's a: the nearest square the way reaches, if it can't reach
-                                                **   the one said: a place in the room, the UI's) */
+unsigned char go_near;                          /* (I_GOTO's a: the nearest square the way reaches, if it can't reach
+                                                **   the one said: a place in the room, the UI's; 2 the square before
+                                                **   it, beside it: a thing gone to, I_TAKE's a 2, wgame.c's) */
 static unsigned char wr, wfx, wfy, wneed;       /* (The ways wanted: worked out as the first is looked up) */
 
 /* ---- The path (above: a move's way, a square at a time) kept in the ways' bank, after their queue: three bytes a
@@ -665,9 +666,12 @@ unsigned char __fastcall__ s_felt_stop (unsigned char h)
 
 void __fastcall__ s_no_exit (unsigned char h)
 {
+    unsigned char k;
+
     if ((h & 1) || !s_felt_stop (h)) {
+        k = s_ahead (h);                        /* (A shut door straight on along a passage: says so, 2026-11-02) */
         hub_map (0);
-        no_way (N_NO_EXIT);
+        no_way (k == FA_DOOR ? N_DOOR : k == FA_BARS ? N_CLOSED : N_NO_EXIT);
     }
 }
 
@@ -806,6 +810,7 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
     unsigned nx, ny;
     int z, dz;
 
+    blocked = 0;
     while (n < lim_) {
         nx = mx + head_x[h];
         ny = my + head_y[h];
@@ -886,7 +891,10 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
         if (!blocked && feel_ && felt_stop (h)) {
             return;                             /* (In the dark: what its hands meet there, told) */
         }
-        HUB->pc_face = h;                       /* (It turns to face what's stopped it) */
+        if (HUB->pc_face != h) {
+            HUB->pc_face = h;                   /* (It turns to face what's stopped it, the look with it) */
+            see (0);
+        }
         if (blocked) {
             den_way ();
         } else if (k && k < FA_DROP) {          /* (A wall, a door: refused, directly in front) */
@@ -981,6 +989,11 @@ void __fastcall__ s_go_to (unsigned x, unsigned y)
     if (cut) {
         path_ways (tx_, ty_);
         on_way ();                              /* (A trap on its way) */
+        return;
+    }
+    if (go_near == 2 && !tt) {
+        hub_map (0);                            /* (Gone to, and it can't get any nearer) */
+        no_way (N_NO_EXIT);
         return;
     }
     path_ways (tx, ty);
@@ -1295,6 +1308,25 @@ void __fastcall__ s_walk (unsigned char d)
     walk_t = t;
 }
 
+/* Along a passage, a shut door straight on that it has handled opened as it goes (as across's from a room, the user's) */
+static unsigned char __fastcall__ way_open (unsigned char h, unsigned long* t)
+{
+    struct portal* o;
+    unsigned nx = mx + head_x[h], ny = my + head_y[h];
+    unsigned char s, q;
+
+    *t = 0;
+    if (at (sn_, nx, ny) && (o = portal_at (cx_, cy_)) != 0 && !(o->state & PS_OPEN) && o->kind == PK_DOOR &&
+        (o->parts & PP_KNOWN) && !(o->state & (PS_LOCKED | PS_BARRED | PS_WARDED | PS_HIDDEN))) {
+        s = o->state;
+        q = o->parts;
+        change (sn_, nx, ny, s | PS_OPEN, q, PORTAL_STATE);
+        event (E_PORTAL, 0, PO_OPENED);
+        *t = 2 * stept;
+    }
+    return 0;
+}
+
 /* The character sets out on heading h (north, northeast ...): its time, and where it'll be.  From a room: straight
 ** across it (across's, every way word alike: the user's, 2026-11-02); the UI's door or mouth, if it means one (tgx: "go
 ** through the door", a journey's leg), by the way it can walk to it, a shut one it hasn't handled walked up to first
@@ -1386,6 +1418,7 @@ void __fastcall__ s_go (unsigned char h)
                     return;
                 }
                 HUB->pc_face = H_OF (best);     /* (Faced, as it's told) */
+                see (0);
                 no_way (k);
                 return;
             }
@@ -1408,14 +1441,16 @@ void __fastcall__ s_go (unsigned char h)
         s_walk (d);
         t = bt + walk_t;
         pbase = 0;
-    } else if (!STEP8 (sn_, mx, my, h)) {
+    } else if (!way_open (h, &t) && !STEP8 (sn_, mx, my, h)) {
         no_exit (h);                            /* (In the dark: what its hands meet, told) */
         return;
     } else {
         move.x = mx;
         move.y = my;
+        pbase = t;
         s_walk (d = h);
-        t = walk_t;
+        t += walk_t;
+        pbase = 0;
         if (blocked && mx == move.x && my == move.y) {
             hub_map (0);
             den_way ();

@@ -35,8 +35,8 @@ static const char* const relname[8] = {
     "behind you to your left", "to your left", "ahead to your left"
 };
 
-static const char* const thing[] = { "", "door", "way on", "stairs", "ladder", "shaft", "ledge", "way out", "wall",
-    "window", "trap", "portcullis", "room", "corner", "pillar" };
+static const char* const thing[] = { "", "door", "way on", "stairway", "ladder", "shaft", "ledge", "way out", "wall",
+    "window", "trap", "portcullis", "exit", "corner", "pillar" };   /* (OB_ROOM's: leaving it, way.c's) */
 
 static struct cmd* cur = 0;                     /* The command being carried out (main.c's: choose's) */
 static struct cmd kept = { 0 };                 /* The command a choice was asked for, */
@@ -148,19 +148,42 @@ static void __fastcall__ sort (unsigned char n)
     }
 }
 
+/* Square dx, dy off not on the side of heading h */
+static unsigned char toward (int dx, int dy, unsigned char h)
+{
+    return dx * head_x[h] + dy * head_y[h] <= 0;
+}
+
+/* Those it remembers (KNOWN_REL, after the n it sees of the m in the record, sz apart, the first's rel at p) made as
+** those it sees, in the copy: their number and those it sees */
+static unsigned char known (unsigned char* p, unsigned char n, unsigned char m, unsigned char sz)
+{
+    for (p += n * sz; n < m && (*p & KNOWN_REL); ++n, p += sz) {
+        if (*p != 0xFF) {
+            *p &= ~KNOWN_REL;
+        }
+    }
+    return n;
+}
+
 unsigned char __fastcall__ o_pick (unsigned char obj, unsigned char orel)
 {
     struct sight* s = &sight_copy;
-    unsigned char i, k, h, r, n = 0, how = obj & (PICK_TELL | PICK_ANY), best = 0xFF, bd = 0xFF;
+    unsigned char i, k, h, r, n = 0, how = obj & (PICK_TELL | PICK_ANY), best = 0xFF, bd = 0xFF, fit = 0;
     unsigned x, y;
 
     obj &= ~(PICK_TELL | PICK_ANY);
-    hub_mem (SIGHT_BANK, s, SIGHT, sizeof *s);  /* (The senses' record as it is now) */
-    for (i = 0; i < s->ndoors + s->nopen && n < NPICK; ++i) {
+    hub_mem (SIGHT_BANK, s, SIGHT, sizeof *s);  /* (The senses' record as it is now; in the copy, those it remembers,
+                                                **   KNOWN_REL, after those it sees: one rule for what can be named, the
+                                                **   user's, 2026-11-02) */
+    s->ndoors = known (&s->door[0].rel, s->ndoors, SEE_DOORS, sizeof s->door[0]);
+    s->nopen = known (&s->open[0].rel, s->nopen, SEE_OPEN, sizeof s->open[0]);
+again:
+    for (i = n = 0; i < s->ndoors + s->nopen && n < NPICK; ++i) {
         if (i < s->ndoors) {
             r = s->door[i].rel;
             k = s->door[i].kind == PK_WINDOW || s->door[i].kind == PK_SLIT;    /* (A window, or a slit) */
-            if (!(obj == OB_DOOR ? !(r & MOUTH) && !k : obj == OB_WINDOW ? k : obj == OB_PORTC ?
+            if (!(obj == OB_ROOM ? !k : obj == OB_DOOR ? !(r & MOUTH) && !k : obj == OB_WINDOW ? k : obj == OB_PORTC ?
                 s->door[i].kind == PK_PORTCULLIS : obj == OB_PASSAGE && (r & MOUTH))) {
                 continue;
             }
@@ -177,9 +200,10 @@ unsigned char __fastcall__ o_pick (unsigned char obj, unsigned char orel)
             x = s->open[i - s->ndoors].x;
             y = s->open[i - s->ndoors].y;
         }
-        h = r == 0xFF ? 0xFF : (pc_face + (r & 7)) & 7;
-        if (orel != 0xFF && h != orel) {
-            continue;
+        h = r == 0xFF ? 0xFF : bearing ((int) x - s->x, (int) y - s->y);    /* (By its square: the facing now's) */
+        if (orel != 0xFF && (fit ? r == 0xFF || toward (x - s->x, y - s->y, orel) : h != orel)) {
+            continue;                           /* (Not that way: first exactly as the look's words have it; none, any
+                                                **   on that side, "the door on the left" ahead of it to its left) */
         }
         if (cx && x == cx && y == cy) {         /* (The one chosen from the list) */
             best = n;
@@ -189,9 +213,13 @@ unsigned char __fastcall__ o_pick (unsigned char obj, unsigned char orel)
         ph[n] = h;
         pi[n++] = i;
     }
+    if (!n && !fit && orel <= H_NW) {
+        fit = 1;
+        goto again;
+    }
     if (!n) {
         if (how & PICK_TELL) {
-            sayf ("\nYou see no %s %s.", thing[obj], orel == 0xFF ? "here" : "that way");
+            sayf ("\nYou haven't seen a%s %s %s.", *thing[obj] == 'e' ? "n" : "", thing[obj], orel == 0xFF ? "here" : "that way");
         }
         return 0;
     }

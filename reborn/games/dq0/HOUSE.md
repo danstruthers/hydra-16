@@ -742,6 +742,35 @@ climb's test to hold on).
   side"), the near side, the left or right side, a corner ("the far left corner"), a wall, a feature or a thing seen
   ("the door ahead to my left", the pillar, the body).  The way goes round what's in it through squares the
   character knows; one it doesn't know of is found as it's met.  The small moves stay for fine work.
+- **Straight walks** *(the user's, 2026-11-02: DECISIONS.md; as built, for review)*: every way word said alone
+  (forward, back, left, right, the eight of the compass: one rule for all, the user's) walks straight from a room's
+  floor along that heading until something stops it, and says what: "You come to the wall.", "You come to a closed
+  door.", a portcullis that's down, the edge of a pit, a trap it knows of, a ledge's words, a denizen in the way.  An
+  open door, a doorway or a passage's mouth straight ahead: on through it.  A shut door it has handled (opened or shut
+  before): opened as it goes, as a door was by a way word till then.  Refused without moving only with what stops it
+  directly in front ("The door is shut: open it first.", "You can't go that way." at a wall), turned to face it.  A
+  door off to the side is never walked to by a way word: `go through the door`, `go to the door`, `open the door`,
+  `leave` are the way to it.  `go through the door` at a shut door it hasn't handled walks up to it first, and
+  says so.  Passages keep their forks and bends; a journey's legs (the door they mean) keep their path.  A walk of a
+  square or two isn't "You cross the room."  In the dark it goes the same way, its hands telling what it meets.
+- **Going to anything** *(the user's, 2026-11-02; as built, for review)*: approach, go to, walk to, walk over to, head
+  for, move to, go near, go beside, and their kin, for a thing, a fixture, a denizen (up to it, no blow; the walk
+  follows it as it moves) or a body: anything it sees, or remembers seeing in the room it's in though that's out of
+  the light now (a thing it has looked at, on a square it knows).  Of several of the name, asked which ("the closest"
+  chooses).  It stops beside it (facing it) by the ordinary walk: its stops, engagement and traps as ever.  Within
+  reach already, told where it is.  "You haven't seen a pot here." only for what it hasn't.  A denizen's zone doesn't
+  stop a walk up to the one gone to (a close-in's); others' do.
+- **Crossing** *(the user's, 2026-11-02)*: "cross the room", "go across the hall", "cross the floor", "cross the
+  kitchen": the far side by its facing (the going places' far side); in the dark, straight on, as any place in a room
+  it can't see is.
+- **Leaving a room** *(2026-11-02, for review)*: "leave", "exit", "leave the room": by the door or the passage's mouth
+  it sees, the one ahead, or asked which ("Which exit: 1. the door ... 2. the passage ..."); "exit north": a way word.
+- **Inspecting walks over first** *(the user's, 2026-11-02; as built, for review)*: a closer look at a thing (examine,
+  check), any aspect of it (assess, judge, appraise, heft, its condition, its lock, its traps), looking in it and
+  searching it, out of reach: walked over to first, then done; things remembered in the room too, as is taking one up
+  or holding it.  A plain "look at" stays a look from where it stands, as far as it can see (too far to make out, its
+  size alone).  Out of the light, what's done beside a remembered thing goes by touch, no worse (a doubt: a close look
+  in the dark tells as much as in the light).
 - **Out of reach, walked to first** (the user's, 2026-10-20): an action that needs its thing within reach (taking it
   up, holding it, wearing it, putting it in or on something, opening a chest; a blow) walks over to it first, a long
   task like any walk, then does it; a blow at a denizen out of reach closes with it first (the walk ends beside it,

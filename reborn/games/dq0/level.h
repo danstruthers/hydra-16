@@ -116,6 +116,9 @@ enum { PT_READ, PT_DICE, PT_GAME, PT_TALK, PT_SING, PT_DRINK, PT_MEND, PT_WHITTL
                                                 **   character) */
 #define SIGHT_HURRY     0x80
 #define MOUTH           0x08
+#define KNOWN_REL       0x40                    /* (A door's or an opening's rel: one it remembers, or seen further along a
+                                                **   passage: named, not told by the look: after ndoors and nopen, in
+                                                **   door[] and open[]: choose.c's, the user's, 2026-11-02) */
 #define DOORWAY         0x83                    /* (A seen door's state: no door in it, a doorway, open; else its
                                                 **   portal's PS_OPEN and PS_WRECKED) */
 #define SD_DOUBLE       0x20                    /* (A seen door's parts: two leaves, world.h's PF_DOUBLE) */

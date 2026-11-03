@@ -1399,6 +1399,20 @@ a square corner to corner, seven feet); the cave grower's zigzag tunnels made th
 
 ## 2026-11-02
 
+### Moving: walking straight, going to anything seen, inspecting from afar
+
+The user's words (a playtest): "Can you please go [over] how moving around works?  It is still difficult to navigate
+without saying `15 feet west`, etc. and I still can't approach things other than doors and window, or say `cross the
+room`.  It is frustrating to be on one side of a room facing the far side, and if there is a closed door on that side
+(even if I can't see it) it says "the door is closed, you have to open it first" (or something like that) and I do not
+move.  I would like `f` to move me forward until I reach a wall, closed door, or other obstacle.  Also, since I can't
+move to an object yet, it is hard to inspect things."
+
+Asked whether the compass words should walk the same as the relative ones: "Answering your question, yes, all
+directions by themselves should work the same".
+
+**Design:** HOUSE.md's going places (straight walks); DUNGEON.md's going places in a room.
+
 ### One path for every actor: the common structure (Phase 3C)
 
 The user (2026-11-02): "Go ahead and start the command interpreter changes now".  On the lead's survey (the

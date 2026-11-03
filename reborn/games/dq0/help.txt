@@ -8,7 +8,8 @@ The map: what you see now bright, what you remember dim (fading as time goes, th
 The puzzle's pieces: read (a tablet), combine the one with the other, put the one on the other, use the key on the way out (or open the way out with it).
 Several at once: north then east; open the door; go through it; take the sword and the shield (each in turn).
 Pace: creep (sneak), walk slowly, walk, jog, run, sprint (set pace to jog; run north); search for traps as you go (move carefully), listen as you go, map as you go; stop searching (listening, mapping, running).
-Small moves: step forward, move left one space, go north 20 feet, back up two squares (a square 5 feet). Places: go to the centre, the far left corner, the other side. Look north, listen at the door; stop.
+Going: a way word alone walks straight on till something stops it (f, n ...); go through the door, leave; go to (approach, head for) anything you've seen here: the pot, the rat, the door, the centre, the far left corner; cross the room.
+Small moves: step forward, move left one space, go north 20 feet, back up two squares (a square 5 feet). Look north, listen at the door; stop.
 Fights: attack the rat (hit, fight), with what you hold; defend (dodge, block, counter, none, best); disengage (back away), flee (run away), pass.
 Names: name my sword Linda (or name the sword as Linda), then drop Linda, attack the rat with Linda; call this room the Mausoleum; forget the name Linda.
 Shortcuts: alias x is north then dig down makes x stand for that line (words typed after x go after its line); alias x shows it, alias lists them and the game's own words, unalias x removes it.

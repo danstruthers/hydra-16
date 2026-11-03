@@ -1076,12 +1076,15 @@ static unsigned char events (void)          /* (How many there were) */
             }
             break;
         case E_NOWAY:                           /* (A way refused: told at once, the main RAM's) */
-            if (m.who == 0 && (m.w1 & 0xFF) == N_DEN) {
+            if (m.who != 0) {
+                break;
+            }
+            if ((m.w1 & 0xFF) == N_DEN) {
                 strcpy (lb, HUB->actor[(m.w1 >> 8) & 7].name);  /* (A denizen's: its name, for overlay 4) */
                 den_way ();
-            } else if (m.who == 0 && m.w1 == N_SHUT) {
+            } else if (m.w1 == N_SHUT) {
                 way_words ();                   /* (The theme's: its lock) */
-            } else if (m.who == 0) {
+            } else {
                 tell (m.w1 == N_NO_STAIRS ? T_THERE_S_NO : m.w1 == N_NO_DIG ? T_THERE_S_NOTHING : m.w1 == N_CLOSED ?
                     T_THE_PORTCULLIS_IS : m.w1 == N_DOOR ? T_DOOR_SHUT : T_YOU_CAN_T);
             }
@@ -1412,6 +1415,7 @@ static void __fastcall__ shot (unsigned char d, unsigned char s)
     }
 }
 
+void go_thing (void);                           /* (way.c's, this part's) */
 unsigned char s_missiles (void)
 {
     const struct cthing* t = &cmd.obj;
@@ -1419,6 +1423,12 @@ unsigned char s_missiles (void)
     unsigned char d, k;
 
     switch (cmd.action) {
+    case VB_MOVE_DIRECTION:                     /* (Gone to a thing: command's move, no stub of its own) */
+    case VB_MOVE_TOWARD:
+    case VB_ENTER:
+    case VB_APPROACH_OBJECT:
+        go_thing ();
+        return 1;
     case VB_THROW_OBJECT:
         if (!cmd.other.x || !cmd.obj.word[0] || !(d = mark (&cmd.other))) {
             return 0;                           /* (Not at a denizen: the world's throw, as before) */
@@ -1826,6 +1836,7 @@ static unsigned char __fastcall__ chores (unsigned char action)
     case VB_OBSERVE_THROUGH:
     case VB_LISTEN:
     case VB_SMELL:
+    case VB_LEAVE:                              /*   the way out of a room, 2026-11-02; */
     case VB_TRACK:                              /*   the traces read, slice 4.1's: the floor looked at, a track) */
         look_way (action);
         break;
@@ -2058,7 +2069,8 @@ again:
         } else if (cmd.dir != 0xFF) {
             intend (I_GO, cmd.dir);
         } else {
-            look_way (VB_APPROACH_OBJECT);      /* (Anything else it has seen, or which way: way.c's) */
+            missiles ();                        /* (Anything else it has seen, or which way: way.c's go_thing,
+                                                **   part 13's, the action a move: no stub of its own, the main RAM's) */
         }
         return;
     case VB_CLIMB:

@@ -74,6 +74,13 @@ static void __fastcall__ inspect (unsigned char obj, unsigned char orel, unsigne
     if (pick (obj | PICK_TELL, orel) != 1) {
         return;
     }
+    if (tx - HUB->pc_x + 1 > 2 || ty - HUB->pc_y + 1 > 2) {
+        HUB->ireq.x = tx;                       /* (Out of reach, seen or remembered: walked over to first, then again) */
+        HUB->ireq.y = ty;
+        HUB->ireq.item = 0;
+        reach_go ();
+        return;
+    }
     if (REL_BEHIND (REL8 (g = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y), HUB->pc_face))) {
         turn_to (g);                            /* (One behind it, that it knows of: turned to, to see it) */
     }
@@ -191,9 +198,11 @@ static unsigned char examine (void)
 /* Gone to a thing, a denizen, a body: anything it sees, or remembers seeing in this room though it's out of the light
 ** now (the user's, 2026-11-02: HOUSE.md's going places; main.c's move, VB_APPROACH_OBJECT its way here): the one found
 ** (resolve.c's: asked which, of several, its square in cmd.obj), else the nearest of that name (the world's IO_LOOK,
-** LM_GO).  Walked to by the world's walk, stopping beside it (I_GOTO's a 2; a denizen, I_CLOSE's w1 1: up to it, as it
-** moves, no blow); refused only for what it hasn't seen */
-static void go_thing (void)
+** LM_GO).  Walked to by the world's walk, stopping beside it (I_TAKE's a 2, walked on as it gets nearer: through a door
+** it's seen through; a denizen, I_CLOSE's w1 1: up to it, as it moves, no blow); refused only for what it hasn't seen */
+#pragma code-name (push, "SW13CODE")           /* (Part 13's, called by its s_missiles: part 17's room) */
+#pragma rodata-name (push, "SW13RODATA")
+void go_thing (void)
 {
     unsigned x = cmd.obj.x, y = cmd.obj.y;
     unsigned char k;
@@ -229,8 +238,10 @@ static void go_thing (void)
         }
     }
     intend_a = 2;
-    intend2 (I_GOTO, x, y);
+    intend2 (I_TAKE, x, y);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 unsigned char __fastcall__ s_look_way (unsigned char action)
 {
@@ -239,8 +250,15 @@ unsigned char __fastcall__ s_look_way (unsigned char action)
     if (action == VB_EXAMINE_OBJECT) {
         return examine ();
     }
-    if (action == VB_APPROACH_OBJECT) {
-        go_thing ();
+    if (action == VB_LEAVE) {                   /* ("Leave", "exit", "leave the room": by the door or the passage's mouth
+                                                **   it means, which, asked; "exit north": that way) */
+        tx = 0;
+        k = cmd.obj.kind && cmd.obj.kind != OB_ROOM ? cmd.obj.kind : OB_ROOM;
+        if (cmd.dir > H_NW && pick (k | PICK_TELL, cmd.obj.lies) != 1) {
+            return 0;
+        }
+        intend_a = tx ? bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y) : cmd.dir;
+        intend2 (I_GO, tx, ty);
         return 0;
     }
     if (action == VB_NONE) {                    /* (A listen's or a sniff's end: what came of it) */

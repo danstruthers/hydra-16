@@ -445,8 +445,8 @@ void __fastcall__ o_beat_words (unsigned w)
 #pragma rodata-name (pop)
 
 /* (Overlay 7's, its room: the dark's words, 2026-10-22) */
-#pragma code-name (push, "OV7CODE")
-#pragma rodata-name (push, "OV7RODATA")
+#pragma code-name (push, "OV17CODE")            /* (Overlay 17's since 2026-11-02: overlay 7's room, what can be named) */
+#pragma rodata-name (push, "OV17RODATA")
 #pragma local-strings (push, on)
 
 /* A walk in the dark's beat (E_BEAT's w, WB_FEEL ... WB_SHORT: HOUSE.md's walking in the dark): set out on, feeling
@@ -522,6 +522,11 @@ void __fastcall__ o_felt_words (unsigned w)
         return;
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "OV7CODE")
+#pragma rodata-name (push, "OV7RODATA")
+
 /* The way the character believes it faces, said (the status command's, after the referee's words of its state: slice
 ** 4.2's bearings, the north it believes in; unsure of it, said so) */
 void o_facing_words (void)
