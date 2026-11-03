@@ -404,7 +404,8 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   in the stratum below (grown then, if no one has been there): a new link between the strata, its two ends' squares
   the same.  A wall is two feet, a square of rock five.  A dig stopped keeps the feet it's dug (HOUSE.md's what
   stopping costs: a change record of its own, DUG, the hole's half-feet and the way it's dug), and one begun again on
-  its square, the same way, goes on from there ("You set to digging again where you left off.").
+  its square, the same way, goes on from there ("You set to digging again where you left off.").  Nothing it has that bites is told at once, by what it carries; a hidden door is dug at as the wall it seems, found as the
+  tool comes through its facing (HOUSE.md's digging, 2026-11-02).
 - **The rock** (slice 4.10, 2026-10-31: dq0/rock.h, HOUSE.md's rock's kinds and hardness): what's behind a wall
   and under a floor is the rock, its kind where it lies worked out from the game's seed alone (rock_kind: beds of
   shale, sandstone and limestone 25 feet thick, dipping across the frame, slate and marble below 200 feet; granite
@@ -1551,6 +1552,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   a long slope between strata; a walk's beats telling a rise or a fall of 4 feet ("The way rises."), its climb
   strenuous work.  Left: a raise or a ramp joining two parts of a stratum (these are ways to a chamber of their own),
   a long slope's own length walked square by square (taken at once, as a stairway is), the denizens tiring uphill.
+- **A mason's chisel and a wood chisel** (the user's, 2026-11-02, DECISIONS.md: "Stone chisel versus wood chisel might be a
+  good distinction for future items"): the catalogue's one chisel works stone (HOUSE.md's digging); a wood chisel its own
+  kind, for joinery, no use on stone.  The catalogue's full (NKINDS 144).
 - **Tunnellers and builders** (slice 4.11, built 2026-11-01 and 2026-11-02: changing the dungeon, above; DENIZENS.md's
   tunnellers): left, builders shoring a passage, the spoil as a thing, a mine past its lair's chunk.
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical

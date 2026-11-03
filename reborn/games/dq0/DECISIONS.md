@@ -1484,3 +1484,9 @@ character's take (one take rule, the minds' I_TAKE).  Steps, digging and climbin
 shared (DUNGEON.md's one path for every actor says why).
 
 **Design:** DUNGEON.md's one path for every actor and its portals; DENIZENS.md's doors; HOUSE.md's denizens and doors.
+
+### Digs told why (the user's playtest, 2026-11-02)
+
+The user (2026-11-02): "One other thing I notices is that tunnelling at the end of a passage doesn't seem to work if there is a hidden door there that hasn't been discovered.  `dig f` does work some times, but without the right tools, especially trying to do so through stone walls, seems like it needs a "doesn't seem to be working" type of response, or "You need better tools".  Maybe a chisel would work, but without a hammer, seems moot.  Stone chisel versus wood chisel might be a good distinction for future items."
+
+**Design:** HOUSE.md's digging (a chisel and a hammer, told why, what isn't there to dig, a hidden door); DUNGEON.md's still to come (the two chisels).

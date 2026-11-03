@@ -277,6 +277,7 @@ extern unsigned char harm_told;                 /* (The states a harm's words to
 char* __fastcall__ env (const char* name, char* buf, unsigned char size);  /* The environment's (main.c) */
 void __fastcall__ appraise (const struct ireq* q, signed char g, unsigned char ex);   /* Overlay 1: a thing judged
                                                 **   (its value, its quality, both: ex's EX_*) */
+extern char dug_with[16];                       /* The tool a dig took: main.c's */
 extern char dig_with[16];                       /* The tool a dig's taken up, to name (then ""): main.c's */
 void __fastcall__ climb_words (unsigned char how, unsigned char feet); /* Overlay 1: climbing's (a ledge's:
                                                                         **   CW_*) */

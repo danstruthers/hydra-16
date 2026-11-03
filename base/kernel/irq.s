@@ -15,7 +15,10 @@
 ; IRQs stay off throughout, and handlers never wait.  The budget: about 72 cycles from the interrupt to the
 ; handler's first instruction, and 111 for the whole path less the handler (sim/test.js measures them: the
 ; IRQs-off stretches), so a handler has about 89 of the 200 cycles any IRQs-off stretch may take (7 fewer for the
-; ACIA's when it comes with the VIA's, through IRQ_VIA).
+; ACIA's when it comes with the VIA's, through IRQ_VIA).  The longest ways, every branch counted, whatever the suite
+; happens to meet: the tick's 198 (all its carries, and a switch noted: TK_PREEMPT), timer 2's 199 (t2_idle's nap);
+; the console's 200 (the ACIA's through IRQ_VIA: the prefix key on a full ring, its count's carry); the VERA's 200 (a
+; VSYNC's carries and the blink).  An entry that has more to do can leave it: a level comes straight back.
 ;
 ; VIA timer 2 is a line of its own, LINE_VIA_T2 (16), so its owner (the console: its paced sending) gets it in one
 ; step: the VIA's stub sends its interrupt there (common.s: IRQ_VIA).  Owning the line is owning the timer: IRQ_OWN
@@ -122,13 +125,12 @@ IRQ_INIT:
             lda         #KERNEL_TASK
             jmp         IRQ_SET_OWNER
 
-; The kernel task's irq entry: the VIA's timer 1, the tick (the only line it owns).  The tick count (32 bits: the
-; clock will be the boot's time and the ticks since), and the tick charged to the task it interrupted (its CPU
-; time); a task switch every tick (the scheduler wakes the sleepers whose time has come).  It's in every tick's
-; IRQs-off time: keep it short.  IN: .X = the task interrupted.  OUT: .A = IRQ_RESCHED or 0
+; The kernel task's irq entry: the VIA's timer 1, the tick (the only line it owns: IRQ_VIA has seen its flag).  The
+; tick count (32 bits: the clock will be the boot's time and the ticks since), and the tick charged to the task it
+; interrupted (its CPU time); a task switch every tick (the scheduler wakes the sleepers whose time has come).  It's
+; in every tick's IRQs-off time, its carries the longest of the budget's paths: keep it short.  IN: .X = the task
+; interrupted.  OUT: .A = IRQ_RESCHED
 K_KIRQ:
-            bit         VIA_IFR                             ; (V: timer 1's flag)
-            bvc         @not
             lda         VIA_T1CL                            ; (Clears its flag)
             inc         K_CPU_LO,X
             bne         :+
@@ -145,10 +147,6 @@ K_KIRQ:
             inc         K0_TICKS + 3
 @resched:
             lda         #IRQ_RESCHED
-            rts
-
-@not:
-            lda         #0
             rts
 
 ; Timer 2 its owner's: one-shot, its flag cleared, its interrupt on (T2_ON); or nobody's: its interrupt off, its

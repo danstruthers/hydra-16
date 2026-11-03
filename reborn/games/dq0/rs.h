@@ -285,6 +285,8 @@ enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREA
 ** tenths the actor's out for (knocked senseless), result 1 a fall stopped (a hold grabbed); its words in the text,
 ** a line (and RS_DESCRIBE b 2's: the last harm's) */
 enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_STRUCK };
+#define RS_DIG_QUERY    127                     /* (P_DIG's steps: only what would bite into it, the tool and its rate
+                                                **   asked, no test and no wear: told at once, a dig begun) */
 
 /* ---- Afflictions (2026-10-31: HOUSE.md's poison, bad air and disease, every ruleset's to keep): what the world exposes
 ** the character to (RS_TIME's x[18], its dose x[19]), the ruleset's to judge (resisted, caught, its course, its cure):
