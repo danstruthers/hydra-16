@@ -256,7 +256,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         } else {
             sayf ("\n%s %s gutter%s and go%s out", one & TO_SEEN ? "The" : "Your", fn, p ? "" : "s", p ? "" : "es");
         }
-        if (w >> 8 & 0x7F) {                    /* (Its long task stopped with it: k is the code here) */
+        if (w >> 8 & 0x3F) {                    /* (Its long task stopped with it: k is the code here) */
             sayf (": you stop %s.", d);
         } else {
             say (".");
