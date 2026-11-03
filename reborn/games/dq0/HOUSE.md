@@ -2672,7 +2672,8 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   along the vein (north or south by its lair's number) row by row, keeping to its middle (a diagonal step where the
   vein slants a square a row, across it where it slants more), 64 squares at most.  A burrower (ways d) digs its
   lair's burrow: from its home one of the four ways (by its lair's number), eight squares, as far as its claws bite
-  (rubble, earth, soil and the soft rock, shale; never a wall).  A kind that has its own work (a smith's forge) digs
+  (rubble, earth, soil and the soft rock, shale; a room's bare stone wall where the rock's soft, never masonry; coming
+  at prey it digs no wall, as before: doubtful, the two might be one rule).  A kind that has its own work (a smith's forge) digs
   when there's a vein; one with none (a rat, a brown orc) half of them dig through their waking hours, the other half
   go about as before.  Nothing of the mine is kept but the dungeon itself: its way is worked out again each time
   (the squares dug already, the open ones and the doorways on its line walked through), and it digs the first square
@@ -2696,10 +2697,14 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   first puts up again a door broken down in its home's chunk (a door's leaf burst from its frame, the wrecked door):
   from a square beside it, a spell's work, the door shut, its lock and bar whole again, its harm gone (the portal's
   change records, as any door's: "The dwarf miner hangs a new door.", heard: hammering).  Away from the character, at
-  once as it's due.
-- **Not yet** *(the plan's)*: builders shoring a passage (timbering in the soft rock) and walling up a way (a way dug
-  into their home, or one they want shut), the materials as things (timber, a door's leaf carried), the spoil as a
-  thing (rubble beside the way), harm from rock falling on a denizen (its sheet), a mine past its home's chunk.
+  once as it's due.  Then it walls up a way dug into a room of its home's chunk by others (a passage a dig made, the
+  character's or a tunneller's, a room's floor beside it, not of its own mine): from the floor beside it, an hour's
+  work, the square a wall again ("The dwarf miner walls up the way.", heard: stones being laid).  One square, at the
+  room: the way behind it stays; its wall can be dug again (two feet).
+- **Not yet** *(the plan's)*: builders shoring a passage (timbering in the soft rock: nothing yet comes down on a
+  passage, only on a dig's face, so it would change nothing), the materials as things (timber, a door's leaf, stone
+  carried), the spoil as a thing (rubble beside the way: no such thing in the catalogue yet), harm from rock falling
+  on a denizen (the referees' sheets are the character's), a mine past its home's chunk.
 
 ## Denizens and doors *(2026-11-02: Phase 3C's one path; drafted for the user to review)*
 

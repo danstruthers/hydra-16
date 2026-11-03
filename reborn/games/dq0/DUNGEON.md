@@ -425,7 +425,8 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   (2026-11-02): a faction's miners dig its mine from their lair's home across to their region's vein and along it, a
   burrower its lair's burrow, by the clock, near the character or away from it (away, coarse: the same change
   records); poor rock comes down on a tunneller's spell gone badly; a faction's miners put up again a door broken down
-  in their home's chunk (its PORTAL_STATE and PORTAL_HARM records).
+  in their home's chunk (its PORTAL_STATE and PORTAL_HARM records), and wall up a way dug into a room there by others
+  (the square T_WALL again, a change record).
 - **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) is still
   to come (below).
 
@@ -1501,7 +1502,7 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   squares the way goes on into), the map's room drawn whole.  A lake or a chasm the same, the water's level the
   cavern's.
 - **Tunnellers and builders** (slice 4.11, built 2026-11-01 and 2026-11-02: changing the dungeon, above; DENIZENS.md's
-  tunnellers): left, builders shoring and walling up a way, the spoil as a thing, a mine past its lair's chunk.
+  tunnellers): left, builders shoring a passage, the spoil as a thing, a mine past its lair's chunk.
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
 - **One path for every actor** (Phase 3C, begun 2026-11-02: below): left, a denizen working windows and

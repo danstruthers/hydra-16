@@ -168,7 +168,7 @@ go:
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
             SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
-            SWPART      74, 24              ; A waterskin filled (wwater.c: slice 4.9's)
+            SWPART      74, 5              ; A waterskin filled (wwater.c: slice 4.9's)
             SWPART      75, 22              ; The water's depth where the character stands (wwater.c)
             SWPART      76, 23              ; The time of day believed (wtime.c: 2026-10-31)
             SWPART      77, 23              ; The sky seen, the time believed's start (wtime.c)

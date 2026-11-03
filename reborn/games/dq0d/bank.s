@@ -40,6 +40,7 @@ ovx:        .res        1
             SWPART      13, 5               ; The lairs near placed (2026-11-01: the main RAM's room; small, cheap to
                                             ;   swap in, each time round after a move)
             SWPART      14, 5               ; Doors worked (Phase 3C's one path, 2026-11-02)
+            SWPART      15, 6               ; The tunnellers' work: mines, burrows; the builders (2026-11-02)
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -80,6 +81,7 @@ ovx:        .res        1
             SWFN        enlist_near, 11     ; (The main RAM's room, 2026-10-31)
             SWFN        nearby, 13          ; (The main RAM's room, 2026-11-01: the tunnellers')
             SWFN        dig_way, 12         ; (A tunneller's way dug: slice 4.11's)
+            SWFN        work_dig, 15        ; (Its work: a mine, a burrow, a builder's, slice 4.11's rest)
             SWFN        door_way, 14        ; (A door worked: Phase 3C's one path)
             SWFN        take_way, 14        ; (A thing taken up: Phase 3C's one path)
             SWFN        slant, 11           ; (A denizen's diagonal way: slant.s, 2026-10-31, the main RAM's room)

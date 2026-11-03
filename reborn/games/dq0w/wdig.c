@@ -68,8 +68,8 @@ static void __fastcall__ told (unsigned char what, unsigned char loud, unsigned 
     unsigned char* p;
     unsigned e;
 
-    bev.w1 = what == DE_DUG || what == DE_HANGS ? dx : bd.x;
-    bev.w2 = what == DE_DUG || what == DE_HANGS ? dy : bd.y;
+    bev.w1 = what == DE_DUG || what >= DE_HANGS ? dx : bd.x;
+    bev.w2 = what == DE_DUG || what >= DE_HANGS ? dy : bd.y;
     e = apart (bd.x - bpx, bd.y - bpy) >> 2;
     bev.x[3] = e > 15 ? 15 : e;
     p = at (bd.sn, bev.w1, bev.w2);
@@ -97,17 +97,25 @@ static void __fastcall__ cut_corner (unsigned x, unsigned y)
     }
 }
 
-/* A builder's work (I_KIT's KT_BUILD, slice 4.11's rest: HOUSE.md's builders, for review): the door broken down at m's
-** w1, w2 put up again, a spell's work (the house's: its frame stands, a new leaf hung in it, shut, its lock and bar
-** whole), the change records the portal's own (PORTAL_STATE, PORTAL_HARM); an actor's told (DE_HANGS: "The dwarf
-** miner hangs a new door.", heard hammering), a record's not (the character's never near) */
+/* A builder's work (I_KIT's KT_BUILD, slice 4.11's rest: HOUSE.md's builders, for review): at m's w1, w2, a door broken
+** down put up again, a spell's work (the house's: its frame stands, a new leaf hung in it, shut, its lock and bar
+** whole; the change records the portal's own, PORTAL_STATE, PORTAL_HARM), or a way dug walled up (the square a wall,
+** an hour's work); an actor's told (DE_HANGS: "The dwarf miner hangs a new door.", heard hammering; DE_WALLS: "The
+** dwarf miner walls up the way.", heard stones being laid), a record's not (the character's never near) */
 static void __fastcall__ build (const struct msg* m)
 {
     struct portal* q;
     unsigned x = m->w1, y = m->w2;
-    unsigned char pt;
+    unsigned char pt, *p;
 
-    if (at (bd.sn, x, y) && (q = portal_at (cx_, cy_)) != 0 && (q->state & PS_WRECKED)) {
+    if ((p = at (bd.sn, x, y)) != 0 && TILE (*p) == T_CORR) {
+        change (bd.sn, x, y, T_WALL, C->elev[cy_][cx_], 0xFF);
+        if (m->who) {
+            bd.ready += 6 * (unsigned long) SPELL;
+            den_saw = 1;
+            told (DE_WALLS, 4, x, y);
+        }
+    } else if (p && (q = portal_at (cx_, cy_)) != 0 && (q->state & PS_WRECKED)) {
         pt = q->parts;                          /* (Read while its chunk's in the window) */
         change (bd.sn, x, y, 0, pt, PORTAL_STATE);
         change (bd.sn, x, y, 0, 0, PORTAL_HARM);

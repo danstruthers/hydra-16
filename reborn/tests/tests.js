@@ -3931,6 +3931,49 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0burrow', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's burrowers at their work (slice 4.11's rest, 2026-11-02: DENIZENS.md's tunnellers and builders, HOUSE.md's tunnellers, for review): a hand-written theme's giant rats, wary (a burrower digs with its claws, kinds.txt's ways d), the game begun at dusk (their waking hours); the character goes down the stairway and waits six hours, the rats away from it (records, moved coarsely by the clock).  Half of them at their work dig their lair's burrow (dq0d's work_dig, part 12's: from its home one of the four ways, by its lair's number, eight squares at most, as far as its claws bite: never a wall; in the rock the soft rock alone, shale, rock.h's rock_bed), coarse (I_KIT's KT_DIG who 0, the world's wdig.c): its holes and its ways through (DUG, a square's change records) on that line and no other",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g',
+        "echo 'faction | Vermin | rat | 1-1 | 30 | - | 1 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s ' + (process.env.DQ0BURROW_SEED || 3) + ' -c /ram/c.hm -T -d /ram/g',
+        'd', 'u', 'wait 3 hours', 'wait 3 hours', 'quit', 'echo $status']) },
+      start(m) {
+        const a = m.acia, read = a.read;
+        let typed = '';
+        m.burrow = null;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (typed === 'quit' && !m.burrow && m.dq0) {   // (The rats' lairs placed: their records' numbers and homes)
+                const R = dq0Rec(m), u = o => R.mem[o] | R.mem[o + 1] << 8, homes = new Map();
+                for (let i = 0; i < 224; i++) {
+                  const q = R.at(i);
+                  if (R.mem[q + R.FLAGS] & 1) homes.set(u(q + 6), { lid: u(q + 6), sn: R.mem[q + 18], hx: u(q + 21), hy: u(q + 23) });
+                }
+                const S = stratumRec(m, 1), ch = liveChunks(m, 1), tile = (x, y) => { const c = S && ch[((x - S.x0) >> 5) + ',' + ((y - S.y0) >> 5)]; return c ? c[443 + ((y - S.y0) & 31) * 32 + ((x - S.x0) & 31)] & 15 : -1; };
+                const HX = [0, 1, 0, -1], HY = [-1, 0, 1, 0];
+                m.burrow = { homes: [...homes.values()].map(h => Object.assign(h, { line: [...Array(10).keys()].map(n => tile(h.hx + n * HX[h.lid & 3], h.hy + n * HY[h.lid & 3])) })) };
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], fin = T.of('quit').at, HX = [0, 1, 0, -1], HY = [-1, 0, 1, 0];
+        if (!m.burrow || !m.burrow.homes.length) return ['no lair placed: ' + JSON.stringify(m.burrow)];
+        const dug = (fin ? fin.changes : []).filter(c => c.what === 'DUG' || (c.what === 'SQUARE' && c.tile === 4));
+        if (!dug.length) f.push('nothing of a burrow dug');
+        const on = c => m.burrow.homes.some(h => { const d = h.lid & 3; for (let n = 1; n <= 8; n++) if (c.sn === h.sn && c.x === h.hx + n * HX[d] && c.y === h.hy + n * HY[d]) return true; return false; });
+        for (const c of dug) if (!on(c)) f.push('a square dug off its burrow: ' + [c.sn, c.x, c.y, c.what, c.tile]);
+        if (f.length) f.push(JSON.stringify(m.burrow) + ' ' + JSON.stringify(dug));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0builder', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's builders (slice 4.11's rest, 2026-11-02: DENIZENS.md's tunnellers and builders, HOUSE.md's builders, for review): a hand-written theme's dwarf miners (seed 374, their home south-west of the start, wary), the hour 8 in the morning (dq0hour: their working hours).  The closed door beside the character, in the miners' home's chunk, broken down, and the portcullis on their mine's way across raised (the scene set as the first wait's typed: their portals' states in the chunks' cache poked, PS_WRECKED, PS_OPEN); the character goes down the stairway and waits two hours, the miners away from it (records, moved coarsely by the clock): at their work a miner, its faction's builder, puts the door up again (dq0d's work_dig, part 12's: the door its work before its mine; its spell coarse, I_KIT's KT_BUILD who 0: the world's wdig.c), by the door's own change records (PORTAL_STATE: shut and whole; PORTAL_HARM: none); back up, the character finds the door shut ('one to your left (closed)'); and the others meanwhile dig their mine away from the character, coarse (I_KIT's KT_DIG who 0: a spell at once, untested), its holes and its ways through (DUG, a square's change records) on its line (the home's row across to the copper seam, or the seam's own squares)",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=8',
@@ -3988,6 +4031,27 @@ module.exports = {
         }
         const back = s.slice(s.lastIndexOf('> look'), s.lastIndexOf('> quit'));
         if (!/door[^.]*[(]closed[)]|one [^.]*[(]closed[)]/.test(back)) f.push('the door not seen shut, back up: ' + back);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0wallup', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's builders walling up a way (slice 4.11's rest, 2026-11-02: DENIZENS.md's tunnellers and builders, HOUSE.md's builders, for review): a hand-written theme's dwarf miners (seed 374), the hour 8 in the morning (their working hours).  The character, with a pick, digs out through the cell's wall, a way into a room of the miners' home's chunk (the wall's square a passage, its change record); it goes down the stairway and waits two hours, the miners away from it: at their work a miner, its faction's builder, walls the way up (dq0d's way_in, part 15's: a square a dig made a passage, a room's floor beside it, not of their own mine; its work coarse, I_KIT's KT_BUILD who 0: the world's wdig.c), the square a wall again by the world's change record",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=8',
+        "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 374 -c /ram/c.hm -k pick -T -d /ram/g',
+        'dig north', 'wait', 'd', 'wait 2 hours', 'u', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), at = T.of('wait').at, fin = T.of('quit').at, d = T.of('dig north');
+        if (!dq0Ev(d, 'E_DIG', { how: 'D_THROUGH' }).length && !dq0Ev(T.of('wait'), 'E_DIG', { how: 'D_THROUGH' }).length) f.push('the character not through the wall: ' + dq0Evs(d));
+        const dug = at ? at.changes.filter(c => c.what === 'SQUARE' && c.tile === 4 && c.sn === at.pc.sn) : [];
+        if (!dug.length) f.push('no square dug a passage, before the miners');
+        for (const c of dug) {
+          const now = (fin ? fin.changes : []).find(e => e.what === 'SQUARE' && e.sn === c.sn && e.x === c.x && e.y === c.y);
+          if (!now || now.tile !== 2) f.push('the way not walled up: ' + JSON.stringify([c, now]));
+        }
+        if (f.length) f.push(s.slice(s.indexOf('> dig north'), s.indexOf('> dig north') + 700));
         return f;
       },
       sdcard: true

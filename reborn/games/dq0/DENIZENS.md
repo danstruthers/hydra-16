@@ -608,7 +608,10 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 - **Builders** (2026-11-02: HOUSE.md's builders, for review): a miner at work first puts up again a door broken down
   in its home's chunk (PS_WRECKED), from a square beside it: I_KIT's KT_BUILD (w1 w2 the door), the world's wdig.c a
   spell's work, the door's change records (PORTAL_STATE shut and whole, PORTAL_HARM none), told (DE_HANGS: "The dwarf
-  miner hangs a new door.", heard hammering).
+  miner hangs a new door.", heard hammering).  Then walls up a way dug into a room there by others (dq0d's way_in: a
+  change record of its region, T_CORR, still a passage, a room's floor beside it, the character not on it, not of its
+  own mine; nothing kept but the records): KT_BUILD again, an hour's work, the square T_WALL by the world's change
+  (DE_WALLS: "The dwarf miner walls up the way.", heard stones being laid).
 
 ### Doors *(2026-11-02: Phase 3C's one path; HOUSE.md's denizens and doors, for review)*
 
@@ -685,7 +688,7 @@ What the plans bring later, by the slice or phase that brings it:
   "give the bandit 5 pennies" (the two objects without "to": the parser's), a gift to one that isn't a person (an
   altar), a faction's regard by a freed prisoner, a rescue or a piece of the puzzle, entertain and bargain.
 - **Tunnellers and builders** (slice 4.11, built 2026-11-01 and 2026-11-02: tunnellers, above): left, builders
-  shoring a passage and walling up a way, the materials as things, the spoil as a thing, harm from falling rock on a
+  shoring a passage, the materials as things, the spoil as a thing, harm from falling rock on a
   denizen, a mine past its home's chunk.
 - **Psionic and magical denizens** (slices 5.4, 5.7): kinds with talents, shielded minds, casters, the undead.
 

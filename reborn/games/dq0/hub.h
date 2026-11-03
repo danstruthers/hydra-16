@@ -322,8 +322,9 @@ enum { T_UI, T_WORLD, T_DENIZENS, T_REFEREE, T_SOUND, T_MAKER, T_SENSES, T_COMMA
                                                 **   0, a record's, away from the character: its spell at once,
                                                 **   untested, x[2] its stratum, x[0] its tools, slice 4.11's rest) */
 #define KT_BUILD        0xC0                    /* (I_KIT's a, a builder's (slice 4.11's rest): a door broken down put
-                                                **   up again, w1 w2 its square, b the heading to it; who as KT_DIG's,
-                                                **   a record's x[2] its stratum: the world's wdig.c, a spell) */
+                                                **   up again, or a way dug in walled up: w1 w2 its square, b the
+                                                **   heading to it; who as KT_DIG's, a record's x[2] its stratum: the
+                                                **   world's wdig.c, a spell, a wall six) */
 #define DG_CLAWS        0x01                    /* (KT_DIG's x[2]: its claws, a burrower's (kinds.txt's ways d), */
 #define DG_PICK         0x02                    /*   a pick it carries, */
 #define DG_SPADE        0x04                    /*   a shovel, a spade or a mattock it carries) */
@@ -601,8 +602,9 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
     DE_ROOF,                                    /* (Poor rock come down on a tunneller's spell gone badly, slice
                                                 **   4.11's rest: its hole two feet less, the rock showering it; told
                                                 **   as a door's are, at its square) */
-    DE_HANGS };                                 /* (A door broken down put up again by a builder: at the door's
+    DE_HANGS,                                   /* (A door broken down put up again by a builder: at the door's
                                                 **   square, slice 4.11's rest) */
+    DE_WALLS };                                 /* (A way dug into its home walled up by a builder: at its square) */
                                                 /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post
