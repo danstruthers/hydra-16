@@ -4142,6 +4142,7 @@ module.exports = {
         if (!/Your pick strikes [a-z ,-]*: a door, behind the facing/.test(s)) f.push('no door found told');
         const rec = T.of('quit', d5.k).at && T.of('quit', d5.k).at.changes.find(c => c.what === 'PORTAL_STATE' && c.x === m.door[3].x && c.y === m.door[3].y);
         if (!rec || rec.tile & 0x20) f.push('the door still hidden after: ' + JSON.stringify(rec));
+        else if (!(rec.elev & 0x80)) f.push('the door found not marked handled as a search finds it (PP_KNOWN): ' + JSON.stringify(rec));
         dq0Need(f, d5, 'E_DIG', { how: 'D_PORTAL' }, 'a door in sight not told so');
         if (!/That's a door: open it/.test(s)) f.push('no door\'s words');
         if (!dq0Ev(d6, 'E_DIG', { how: h => h === 'D_GOOD' || h === 'D_POOR' || h === 'D_SLIP' || h === 'D_THROUGH' }).length) f.push('a hammer and chisel not at work on the wall: ' + dq0Evs(d6));

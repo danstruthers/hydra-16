@@ -179,7 +179,7 @@ go:
             SWPART      81, 2               ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
             SWPART      82, 25              ; A room searched whole (wroom.inc: the user's playtest, 2026-11-02)
             SWPART      83, 25              ; Its tests at a stop (wroom.c)
-            SWPART      84, 25              ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
+            SWPART      84, 22              ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
 
             SWFN        work, 48
             SWFN        worked, 48

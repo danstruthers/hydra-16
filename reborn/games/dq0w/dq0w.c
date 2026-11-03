@@ -3011,7 +3011,7 @@ void __fastcall__ s_start_dig (unsigned char d)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The character's dig's own (part 84's, overlay 25's, through its stub, HOUSE.md's digging, 2026-11-02).  0, a dig begun:
+/* The character's dig's own (part 84's, overlay 22's, through its stub, HOUSE.md's digging, 2026-11-02).  0, a dig begun:
 ** nothing it has bites into dig.mat (the referee's RS_DIG_QUERY: no dice, no wear), or its best a chisel and no hammer,
 ** or an arm useless (the UI to word it, by what it carries): 1.  2, a spell's feet added (dig.done, the hub's
 ** pc_task.done as it was): into a hidden door, as the wall it seems, its facing off (half a foot wooden, a foot
@@ -3084,7 +3084,7 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
             dig.done = HUB->pc_task.done;
             n = 0x20;
         } else if (st & PS_HIDDEN && dig.done >= (hm == PM_WOOD ? 1 : hm == PM_IRONBOUND ? 2 : 4)) {
-            change (sn, dig.x, dig.y, st & ~PS_HIDDEN, pt, PORTAL_STATE);
+            change (sn, dig.x, dig.y, st & ~PS_HIDDEN, pt | PP_KNOWN, PORTAL_STATE);   /* (Handled, as a search's find) */
             return 0x10 | hm;
         }
     }
