@@ -2329,6 +2329,16 @@ function dq0Poke(m, pokes) {
                 if (n === kn) { b[o + L.iFuel] = v & 255; b[o + L.iFuel + 1] = v >> 8 & 255; break; }
               }
             }
+            for (const [kn, v] of Object.entries(p.wear || {})) {   // (A thing's wear, by its kind's name: the first in the store, 2026-11-02)
+              const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);
+              for (let i = 0; cat && i < L.nitems; i++) {
+                const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+                if (!b || !b[o + L.iKind]) continue;
+                let n = '';
+                for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
+                if (n === kn) { b[o + L.iWear] = v; break; }
+              }
+            }
             for (const [kn, v] of Object.entries(p.item || {})) {   // (A thing, by its kind's name: the first in the store, its flags and
               const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);   //   its hiding set, a scene's, 2026-11-02)
               for (let i = 0; cat && i < L.nitems; i++) {
@@ -7799,9 +7809,11 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'wait 20 minutes', 'refresh the torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'wait 20 minutes', 'redip the torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'drop a fresh torch', 'wait 20 minutes', 'dip the torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k sword,whetstone', 'sharpen the sword', 'stow the whetstone', 'sharpen the sword', 'sharpen the sword', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'sharpen the sword', 'quit',
         'echo $status']) },
       start(m) {
-        dq0Poke(m, [{ g: 7, line: 'douse the torch', n: 1, fuel: { tinderbox: 0 } }]);
+        dq0Poke(m, [{ g: 7, line: 'douse the torch', n: 1, fuel: { tinderbox: 0 } }, { g: 11, line: 'stow the whetstone', n: 1, wear: { sword: 200 } }, { g: 12, line: 'sharpen the sword', n: 1, wear: { sword: 200 } }]);
         dq0OnWords(m, [{ g: 1, line: 'take the torch from the backpack', n: 1, words: 'You get out the torch', text: 'stop\r' },
           { g: 5, line: 'dig down', n: 1, words: 'You dig', text: 'stop\r' }]);
       },
@@ -7872,6 +7884,10 @@ module.exports = {
         order(10, 'dip the torch', ['You go to blow out the torch: that will leave you in the dark.', steps, 'You get out the flask of oil.', 'You set to filling the torch.', 'You put away the flask of oil.', 'You get out the tinderbox.', 'You strike a spark.', 'You light the torch.', 'You put away the tinderbox.', 'You put your backpack back on.']);
         if (!/You soak the torch|oil spills/.test(seg(10, 'dip the torch'))) f.push('dipped in the dark: neither soaked nor spilt');
         has(10, 'inventory', 'a torch (lit)');
+        // (A whetstone: the routine's use, sharpened, a sharp one told; none carried, told)
+        has(11, 'sharpen the sword', 'The sword is as sharp as it will go.');
+        order(11, 'sharpen the sword', [steps, 'You get out the whetstone.', 'You set to sharpening the sword.', 'You put a fresh edge on the sword.', 'You put away the whetstone.', 'You put your backpack back on.'], 2);
+        has(12, 'sharpen the sword', 'You have nothing to sharpen the sword with.');
         return f;
       },
       sdcard: true

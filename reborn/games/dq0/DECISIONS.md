@@ -1514,5 +1514,4 @@ have a spare."
 Built as the general kind: every reach is a sequence of timed steps, told as each begins, the world changed at each's
 end, for everything the reach rule covers; "new", "fresh" and "another" a selector (the thing not in a hand, not
 burning) for every handling, and a light's own run (the old let fall, a spare got out, lit).  **Design:** HOUSE.md's
-reach, handy tools and things used up; DUNGEON.md's reach.  The whetstone isn't built (no room in the catalogue, its 144
-kinds full, and no verb): HOUSE.md's "Decided, not yet built".
+reach, handy tools and things used up; DUNGEON.md's reach.  A whetstone built, the kinds made 146, "sharpen" the fill's verb: HOUSE.md's.

@@ -59,6 +59,7 @@ need: flask of oil@pack
 need: sheath@belt, dagger@in instead knife
 15: bandolier@worn, taburi@in 3-5
 [skill Sword] weapon
+free 25: whetstone@pack
 need: scabbard@belt, shortsword@in *35 sindarin*0 | scabbard@belt, sword@in *30 sindarin*0 | scabbard@belt, falchion@in *15 sindarin*0 | scabbard@belt, bastard sword@in *15 sindarin*0 | scabbard@belt, longknife@in *5 sindarin*100
 [skill Club] weapon
 need: mace@belt *45 | club@belt *40

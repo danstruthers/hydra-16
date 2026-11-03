@@ -35,11 +35,11 @@ enum { PL_NONE, PL_WORN, PL_HAND, PL_OFF, PL_BOTH, PL_BELT, PL_POUCH, PL_PACK, P
 #define SF_ARMED        0x10                    /*   its own lines its weapons: no weapon skill's drawn, */
 #define SF_FOUND        0x20                    /*   a lair's leavings, lost or left: Treasure 1's Found column, */
 #define SF_OLD          0x40                    /*   of old, grave goods: the stratum's age, its oldest era's mint) */
-#define OF_INDEX        ((unsigned char*) 0x9480)    /* (The outfits' file's head and its sections' index, read into
+#define OF_INDEX        ((unsigned char*) 0x9900)    /* (The outfits' file's head and its sections' index, read into
                                                 **   the catalogue's bank after its code the first time (CAT_BANK):
                                                 **   4 bytes, then 5 a section, then each one's length, 250 at most:
-                                                **   outfits.js's, 2026-10-27; to $9A80 at most, 2026-10-29, the
-                                                **   peoples: the bank's code ends at $944A) */
+                                                **   outfits.js's, 2026-10-27; to $9F00 at most, 2026-10-29, the
+                                                **   peoples: the bank's code ends before it, make.js checks, 2026-11-02) */
 
 /* A thing drawn: its kind, how many (of a lot counted; else one), its make, where it goes, the thing it goes in (PL_IN:
 ** the list's entry plus 1), its flags, its material (MT_*: 0 its kind's) */

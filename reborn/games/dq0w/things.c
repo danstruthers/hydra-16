@@ -620,7 +620,7 @@ unsigned __fastcall__ s_reach_done (unsigned char said)
 ** begins the next step owed, and they answer nothing done (IR_NO, no words): the reply's IO_STEP, main.c's things' the
 ** UI's first words and wait (a long task of the step's kind, the world's lwork LW_REACH), the command kept and asked
 ** again as it's up (reach 5, 6); with none owed the handling goes on, its levels paid, as it was.  After the handling
-** the pack goes back on as the character's free (rs_on, lwork's: the world's own step).  An intent's
+** the pack goes back on as the character's free (rs_after_on, lwork's: the world's own step).  An intent's
 ** tool the same by the world alone (reach_do with its keys: lw_m asked again).  The requests that don't ask for the
 ** steps (IO_STEPS: a blow's weapon, a denizen's) keep the lump, reach_done's */
 #pragma code-name (push, "SW84CODE")
@@ -638,7 +638,7 @@ unsigned char rs_ok;                            /* (This request's: 1 by the ste
 unsigned char rs_st;                            /* (A step begun: 1; 2 a grope failed; the request's reply) */
 unsigned char rs_what;                          /* (The step's thing's kind) */
 unsigned char rs_paid;                          /* (The levels reached into so far) */
-unsigned char rs_on;                            /* (The pack to go back on as it's free: 1; 2 past a timed work's end) */
+unsigned char rs_after_on;                            /* (The pack to go back on as it's free: 1; 2 past a timed work's end) */
 unsigned char rs_live;                          /* (A step done, its handling asked again next) */
 unsigned char rs_using;                          /* (A fire-maker's: 1 out; 2 caught) */
 static unsigned char rs_do;                     /* (What the step's end does, RS_*) */
@@ -649,7 +649,7 @@ enum { RS_OFF = 1, RS_IN, RS_ON, RS_DROP, RS_TRY, RS_OUT, RS_LIGHT, RS_STOW, RS_
 #define rs_down         lw_y                    /* (Things it set down: taken up again after) */
 #define rs_down2        far_x
 unsigned char rs_redo;                          /* (A redip's, RR_*: its end's steps) */
-enum { RR_ON = 1, RR_STOW = 2, RR_RELIGHT = 4, RR_WARN = 8 };
+enum { RR_ON = 1, RR_STOW = 2, RR_RELIGHT = 4, RR_D1 = 8, RR_D2 = 16 };   /* (RR_D*: rs_down, rs_down2 in use) */
 
 /* The containers a reach comes to, out from c (level_of's rule, its own copy: open to the hand, none; a pack on the back,
 ** rs_c; any other, or closed, a level): how many, and rs_hit the one rs_want from the innermost */
@@ -680,11 +680,6 @@ static unsigned char rs_begin (void)
 {
     unsigned char s = rs_live;
 
-    if (s && pc_cut) {
-        rs_st = 3;                              /* (Stopped between two steps: the sequence over) */
-        reach_do (RO_FUMBLED);
-        return 1;
-    }
     if (rs_do == RS_DROP) {
         goto go;                                /* (Let fall, set down: no grope, no round, the book's) */
     }
@@ -739,7 +734,7 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
     if (d == (unsigned char) RS_BACK) {
         if (rs_using) {                          /* (The fire-maker put away first) */
             rs_using = 0;
-            rs_on = 1;
+            rs_after_on = 1;
             rs_do = RS_IN;
             rs_k = LT_PUTAWAY;
             rs_what = item_kind (rs_tool);
@@ -822,7 +817,7 @@ static void rs_cut (void)
         rs_tell (TE_PACKED);
     }
     rs_pack = 0;
-    rs_on = rs_do = rs_paid = rs_live = rs_keep = rs_using = rs_redo = 0;
+    rs_after_on = rs_do = rs_paid = rs_live = rs_keep = rs_using = rs_redo = 0;
 }
 
 /* A tool's next step (rs_tool: the user's, 2026-11-02, "grope (take the tinder box), grope (to use the tinder box,
@@ -915,7 +910,7 @@ unsigned char __fastcall__ s_rs_for (unsigned n)
                     rs_using = 0;
                 }
                 if (rs_pack || rs_using) {
-                    rs_on = 1;
+                    rs_after_on = 1;
                     pc_cut = 0;
                 }
             }
@@ -955,10 +950,288 @@ unsigned char __fastcall__ s_rs_for (unsigned n)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-static void o_did (void);                       /* (The catalogue's bank's: a redip's) */
-static unsigned char o_after (void);
+static void __fastcall__ name_of (unsigned n, unsigned char first);     /* (The catalogue's bank's: its words, its checks) */
+static unsigned char __fastcall__ no (unsigned char n);
+static unsigned char __fastcall__ yes (unsigned char n, unsigned char t);
+static unsigned char __fastcall__ hold (unsigned n);
 #pragma code-name (push, "SW85CODE")
 #pragma rodata-name (push, "SW85RODATA")
+
+/* ---- A torch dipped (HOUSE.md's a torch redipped: the user's, 2026-11-02, "Fumbling about in the dark should be
+** difficult ..."; part 27's fill, past its refusals, each ask; RO_REDIP, handled the torch): the next step of what comes
+** before the dipping, begun: IR_NO; or IR_OK, on with it (its fuel got out, the timed work).  The torch never dipped
+** burning: another light by it, put out and dipped by that; none, a spare lit from it, then put out; no spare, put out,
+** asked first, dipped in the dark and lit again after.  Dipping asks both hands, the torch and the flask: what's in the
+** other set down at its feet.  Part 85's: its own words the catalogue's bank's no, name_of */
+#pragma static-locals (push, off)
+static unsigned char __fastcall__ rs_no (unsigned n, unsigned char sa)
+{
+    cat_map ();
+    name_of (n, 1);
+    return no (sa);
+}
+
+static unsigned char rs_go (void)
+{
+    return reach_step (0, RS_GO) ? IR_NO : IR_OK;
+}
+
+static unsigned char __fastcall__ rs_set_down (unsigned i)
+{
+    rs_c = i;
+    rs_do = RS_DROP;
+    rs_hand = 0;
+    rs_k = LT_SETDOWN;
+    rs_what = item_kind (i);
+    rs_t = 1;
+    if (rs_redo & RR_D1) {
+        rs_down2 = i;
+        rs_redo |= RR_ON | RR_D2;
+    } else {
+        rs_down = i;
+        rs_redo |= RR_ON | RR_D1;
+    }
+    return rs_go ();
+}
+
+/* The other thing in a hand, not n: 0 none */
+static unsigned __fastcall__ rs_held (unsigned n)
+{
+    unsigned i = 0;
+
+    while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
+        if ((ip->flags & I_HELD) && i != n) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+static unsigned char __fastcall__ rs_redip (unsigned n)
+{
+    unsigned i = 0, sp = 0, ot = 0;
+    unsigned char s, kn;
+
+    hub_map (SIGHT_BANK);
+    s = SIGHT->lit;
+    hub_map (0);
+    if (HUB->pcsum.limbs & (LB_ARM_L | LB_ARM_R)) {
+        return rs_no (n, SA_TWO_HANDS);
+    }
+    fetch (&rec, n);
+    kn = rec.kind;
+    if (rec.flags & I_LIT) {
+        while ((i = items (i, IN_SQUARE | IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {   /* (Another light; a spare, not
+                                                **   spent, of its kind) */
+            if (i == n) {
+                continue;
+            }
+            if (ip->flags & I_LIT) {
+                if (kind_flags (ip->kind) & K_LIGHT && (on_pc (i) || in_reach (i))) {
+                    ot = i;
+                }
+            } else if (ip->kind == kn && !sp && (!ip->id || ip->fuel) && on_pc (i)) {
+                sp = i;
+            }
+        }
+        if (!ot && !s && sp) {                  /* (The preferred order: a spare lit from it first) */
+            if (!hand_free (sp) && (i = rs_held (n)) != 0) {
+                return rs_set_down (i);
+            }
+            if (reach_step (sp, 0)) {
+                return IR_NO;
+            }
+            rs_hand = hand_free (sp);
+            rs_c = sp;
+            rs_old = n;
+            rs_do = RS_LIGHT;
+            rs_k = LT_LIGHTFROM;
+            rs_what = kn;
+            rs_t = 30;
+            rs_redo |= RR_ON | RR_STOW;
+            return rs_go ();
+        }
+        rs_c = n;                               /* (Put out: by another light, or to the dark, asked first) */
+        rs_do = RS_OUT;
+        rs_what = kn;
+        rs_t = 10;
+        rs_k = LT_BLOWOUT;
+        rs_old = n;
+        rs_redo |= RR_ON;
+        if (ot) {
+            rs_redo |= RR_STOW;
+        } else if (!s) {
+            rs_k = LT_BLOWDARK;
+            rs_redo |= RR_RELIGHT;
+        }
+        return rs_go ();
+    }
+    if (!(rec.flags & I_HELD)) {                /* (In a hand, to dip it) */
+        if (!hand_free (n) && (i = rs_held (n)) != 0) {
+            return rs_set_down (i);
+        }
+        if (reach_step (n, 0)) {
+            return IR_NO;
+        }
+        cat_map ();
+        name_of (n, 1);
+        if (hold (n) != IR_OK) {
+            return IR_NO;
+        }
+    }
+    if ((i = rs_held (n)) != 0) {               /* (Both hands to it: the other's set down) */
+        return rs_set_down (i);
+    }
+    return IR_OK;
+}
+
+/* A step's end (rs_do, rs_c): what it changes changed: a pack, a thing let fall; a redip's: put out, lit from the old,
+** put away, taken up again */
+static void rs_did (void)
+{
+    unsigned char h;
+    unsigned n = rs_do == RS_ON ? rs_pack : rs_c;
+
+    if (rs_do == RS_OFF) {
+        rs_pack = rs_c;
+    }
+    fetch (&rec, n);
+    if (rs_do == RS_OUT) {
+        rec.flags &= ~I_LIT;
+        den_saw = 1;
+    } else if (rs_do == RS_LIGHT) {
+        make_own (n);
+        fetch (&rec, n);
+        rec.where = IW_ACTOR;
+        rec.x = 0;
+        rec.flags = (rec.flags & ~(I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | I_HELD | I_LIT;
+        rec.sn = rs_hand;
+    } else if (rs_do == RS_STOW) {
+        about ();
+        fetch (&rec, n);                        /* (Back in the pack; no room, or none, it stays in its hand) */
+        cat_map ();
+        if (pack && !o_fits (n, pack)) {
+            fetch (&rec, n);
+            rec.where = IW_ITEM;
+            rec.x = pack;
+            rec.flags &= ~(I_WORN | I_HELD);
+        } else {
+            fetch (&rec, n);
+        }
+    } else if (rs_do == RS_UP) {
+        if (!rec.kind || rec.where != IW_SQUARE || !(h = hand_free (n))) {
+            return;
+        }
+        fetch (&rec, n);
+        rec.where = IW_ACTOR;
+        rec.x = 0;
+        rec.sn = h;
+        rec.flags = (rec.flags & ~(I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | I_HELD;
+    } else {                                    /* (A pack taken off, put on; a thing let fall, set down) */
+        rec.flags &= ~(I_WORN | I_HELD);
+        if (rs_do == RS_ON) {
+            rec.where = IW_ACTOR;
+            rec.x = 0;
+            rec.sn = 0;
+            rec.flags |= I_WORN;
+            rs_pack = 0;
+        } else if (rs_hand) {
+            rec.flags |= I_HELD;
+            rec.sn = rs_hand;
+        } else {
+            hub_map (0);
+            rec.where = IW_SQUARE;
+            rec.sn = HUB->pc_stratum;
+            rec.x = HUB->pc_x;
+            rec.y = HUB->pc_y;
+            den_saw = 1;                        /* (The world to look about again: it seen lying there, its light) */
+        }
+    }
+    store (&rec, n);
+}
+
+/* What's next as a dipping's over, the fuel put away: the torch to light again (2: rs_after_on 2, the UI's IO_LIGHT, then here
+** again); the old one put away; what was set down taken up (1: the step set, RS_GO's); 0 no more */
+static unsigned char rs_after (void)
+{
+    unsigned i;
+
+    if (rs_redo & RR_RELIGHT) {
+        rs_redo &= ~RR_RELIGHT;
+        rs_after_on = 2;
+        return 2;
+    }
+    if (rs_redo & RR_STOW) {
+        rs_redo &= ~RR_STOW;
+        fetch (&rec, rs_old);
+        if (rec.kind && (rec.flags & I_HELD)) {
+            rs_c = rs_old;
+            rs_do = RS_STOW;
+            rs_k = LT_PUTAWAY;
+            rs_what = rec.kind;
+            rs_t = 20;
+            return 1;
+        }
+    }
+    if (rs_redo & (RR_D1 | RR_D2)) {
+        i = rs_redo & RR_D1 ? rs_down : rs_down2;
+        rs_redo &= rs_redo & RR_D1 ? ~RR_D1 : ~RR_D2;
+        rs_c = i;
+        rs_do = RS_UP;
+        rs_k = LT_TAKEUP;
+        rs_what = item_kind (i);
+        rs_t = 10;
+        return 1;
+    }
+    rs_redo = 0;
+    return 0;
+}
+
+/* A filling's or a dipping's end in the dark, by touch (the dark's test: "a fumble can spill oil"; handled the fuel):
+** spilt, half the flask's less, told: 1 */
+static unsigned char rs_spill (void)
+{
+    if (rs_for (RF_ROLL)) {
+        return 0;
+    }
+    fetch (&rec, handled);
+    rec.fuel >>= 1;
+    store (&rec, handled);
+    strcpy (xn, iq.name);
+    cat_map ();
+    no (SA_SPILT);
+    return 1;
+}
+
+/* A thing sharpened with a whetstone (the user's, 2026-11-02, "like sharpening your sword (if you have a whetstone)"; the
+** book has none: the house's; a tool's use, part 84's; handled the thing): a metal weapon, the whetstone carried, wear on
+** it: its steps (IR_NO); begun, 0xFE (a minute's timed work); done (IO_DONE), half its wear gone, told */
+static unsigned char rs_hone (void)
+{
+    unsigned n = handled, i = 0;
+
+    fetch (&rec, n);
+    if (kind_at (n)->craft != AP_WEAPON || !(rec.mat == MT_IRON || rec.mat == MT_STEEL || rec.mat == MT_BRONZE)) {
+        return rs_no (n, SA_NO_FILL);
+    }
+    if (iq.to & IO_DONE) {
+        rec.wear >>= 1;
+        store (&rec, n);
+        cat_map ();
+        name_of (n, 1);
+        return yes (SA_HONED, 0);
+    }
+    if (!rec.wear) {
+        return rs_no (n, SA_SHARP);
+    }
+    while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+        if (!strcmp (kind_at (i)->tool, "whet") && on_pc (i)) {
+            return reach_step (i, RS_TOOL) ? IR_NO : 0xFE;
+        }
+    }
+    return rs_no (n, SA_NO_STONE);
+}
+#pragma static-locals (pop)
 
 /* What the reach's steps want of this part, by w: RO_*, or an intent's tool's keys.  RO_ASK a request by the steps taken
 ** up; RO_REPLY its reply made (1: a step's, no more); RO_END a step's time up, or the character free after its handling
@@ -974,18 +1247,28 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
     case RO_ASK:
         rs_ok = 1;
         HUB->ireq.kind &= ~IO_STEPS;
-        if (rs_on == 2) {
-            rs_on = 0;                          /* (A timed work's end, the torch lit again: its sequence going on) */
+        if (rs_after_on == 2) {
+            rs_after_on = 0;                          /* (A timed work's end, the torch lit again: its sequence going on) */
         } else if (!rs_live) {
             rs_paid = rs_using = rs_redo = 0;
             rs_pack = 0;
         }
         return 0;
-    case RO_SEEN:                               /* (A redip's: 1 dark, 2 the room's own light, 4 an arm useless) */
-        hub_map (SIGHT_BANK);
-        w = SIGHT->dark | (SIGHT->lit ? 2 : 0);
+    case RO_REDIP:
+        return rs_redip (handled);
+    case RO_SPILL:
+        return rs_spill ();
+    case RO_HONE:
+        w = rs_hone ();
         hub_map (0);
-        return w | (HUB->pcsum.limbs & (LB_ARM_L | LB_ARM_R) ? 4 : 0);
+        HUB->ireq.x = HUB->ireq.qty = 0;
+        if ((unsigned char) w != 0xFE) {
+            return w;
+        }
+        HUB->ireq.x = 600;
+        HUB->ireq.qty = LT_HONE;
+        HUB->ireq.item = item_kind (handled);
+        return IR_OK;
     case RO_REPLY:
         if (rs_using && (item_at (rs_tool)->flags & I_HELD)) {
             rs_using = 0;                        /* (In hand: none to put away) */
@@ -997,7 +1280,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             hub_map (0);
             rs_ok = HUB->ireq.kind = IO_STEP;
         } else if (rs_st) {
-            if (rs_st != 2) {
+            if (rs_st == 1) {
                 hub_map (UI_BANK);
                 UIREC->things_text[0] = 0;      /* (No words of the handling's: the step's its own) */
                 hub_map (0);
@@ -1008,7 +1291,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         if (rs_ok == IO_STEP) {
             HUB->ireq.y = (rs_k == LT_BLOWDARK) | (rs_t == HUB->round ? 2 : 0);    /* (Its question put, the UI's; 2, engaged:
                                                 **   the round's action, no long task for a blow to stop) */
-            HUB->ireq.x = rs_st == 3 ? 1 : rs_t;
+            HUB->ireq.x = rs_t;
             HUB->ireq.qty = rs_k;
             HUB->ireq.item = rs_what;
             rs_st = rs_ok = 0;
@@ -1016,11 +1299,11 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         }
         if (rs_pack || rs_using) {               /* (The handling done: the pack back on as it's free, past a timed
                                                 **   work's end if that's what's begun) */
-            rs_on = (iq.kind == IO_SHUT || iq.kind == IO_FILL || iq.kind == IO_HIDE) && iq.result == IR_OK && HUB->ireq.qty ?
+            rs_after_on = (iq.kind == IO_SHUT || iq.kind == IO_FILL || iq.kind == IO_HIDE) && iq.result == IR_OK && HUB->ireq.qty ?
                 2 : 1;
             pc_cut = 0;
             lwork = LW_REACH;
-            if (rs_on == 1 && (iq.kind == IO_SHUT || iq.kind == IO_FILL || iq.kind == IO_HIDE)) {
+            if (rs_after_on == 1 && (iq.kind == IO_SHUT || iq.kind == IO_FILL || iq.kind == IO_HIDE)) {
                 HUB->ireq.y = rs_redo & RR_RELIGHT ? 0xFE : 0xFD;   /* (A timed work's end: more to come, the UI to wait
                                                 **   for it; and the torch to light again, words.c's worked) */
             }
@@ -1052,30 +1335,25 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         return 0;
     }
     w = 0;
-    if (rs_do != RS_IN && rs_do != RS_TRY && rs_do) {   /* (What it changes changed: the catalogue's bank's) */
+    if (rs_do != RS_IN && rs_do != RS_TRY && rs_do) {   /* (What it changes changed) */
         w = rs_do == RS_ON;
-        wk.fx = HUB->pc_x;
-        wk.fy = HUB->pc_y;
-        wk.sn = HUB->pc_stratum;
-        cat_map ();
-        o_did ();
+        rs_did ();
         rs_do = 0;
         light_now ();                           /* (What's handy with it) */
         equip_now ();                           /* (The referee told what's in its hands) */
     }
-    if (rs_on) {                                /* (The character free, its handling done) */
-        if (rs_on == 2) {
+    if (rs_after_on) {                                /* (The character free, its handling done) */
+        if (rs_after_on == 2) {
             return 0;
         }
         if (rs_using) {
             goto back;                          /* (The tool put away first, the pack after it) */
         }
         if (rs_redo) {
-            cat_map ();
-            w = o_after ();
+            w = rs_after ();
             hub_map (0);
             if (w == 2) {
-                return 0;                       /* (The torch to light again: the UI's, rs_on 2 meanwhile) */
+                return 0;                       /* (The torch to light again: the UI's, rs_after_on 2 meanwhile) */
             }
             if (w) {
                 rs_ok = 2;
@@ -1084,7 +1362,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
                 return 2;
             }
         }
-        rs_on = 0;
+        rs_after_on = 0;
         if (!rs_pack) {
             return 0;
         }
@@ -1337,6 +1615,10 @@ unsigned char s_serve (void)
         theme_kinds ();
         break;
     case IO_BEGIN:
+        break;
+    case IO_CUT:
+        pc_cut = 1;
+        rs_for (RF_CUT);
         break;
     default:                                    /* (A thing handled: IO_HOLD ...) */
         afar = 0;
@@ -3629,8 +3911,6 @@ static void __fastcall__ put3 (const char* a, const char* b, const char* c)
 ** gave (a flask of oil a lantern's whole fill); one that burns away (a candle) takes none.  Its words in the hub's text,
 ** its time in the request's x (a lantern filled, 20 seconds; a torch dipped, 10): timed work (HOUSE.md's long tasks),
 ** begun (LT_FILL in qty, its thing's kind in item: its first words the UI's), the fuel moved as it's done (IO_DONE) */
-static unsigned char __fastcall__ o_redip (unsigned n);
-static unsigned char __fastcall__ o_spill (unsigned c);
 unsigned char s_fill (void)
 {
     struct item l, f;                           /* (On the C stack: the main RAM's room) */
@@ -3664,8 +3944,8 @@ unsigned char s_fill (void)
     fetch (&l, n);
     strcpy (ln, kind_of (l.kind)->name);
     if (!(kind_of (l.kind)->flags & K_LIGHT)) {
-        put3 ("You can't fill the ", ln, ".");
-        return IR_NO;
+        handled = n;                            /* (A blade sharpened, "fill" its words' verb: part 85's: HOUSE.md's) */
+        return reach_do (RO_HONE);
     }
     if (!(b = burn_of (l.kind)) || !(takes = b->fuels)) {
         put3 ("The ", ln, " takes no fuel: it burns away.");
@@ -3704,9 +3984,9 @@ unsigned char s_fill (void)
         return IR_NO;
     }
     if (!(iq.to & IO_DONE)) {
-        if (takes & FU_PITCH) {                 /* (A torch dipped: what comes first, the catalogue's bank's) */
-            cat_map ();
-            if (o_redip (n) != IR_OK) {
+        if (takes & FU_PITCH) {                 /* (A torch dipped: what comes first, part 85's) */
+            handled = n;
+            if (reach_do (RO_REDIP) != IR_OK) {
                 return IR_NO;
             }
         }
@@ -3724,8 +4004,8 @@ unsigned char s_fill (void)
         return IR_OK;
     }
     HUB->ireq.x = HUB->ireq.qty = 0;            /* (Done: its time spent already) */
-    cat_map ();
-    if (o_spill (c)) {
+    handled = c;
+    if (reach_do (RO_SPILL)) {
         return IR_OK;                           /* (In the dark, spilt: nothing filled) */
     }
     give = room < f.fuel ? room : f.fuel;
@@ -4393,230 +4673,6 @@ spare:
     return yes (SA_LIGHT, 0);
 }
 
-
-/* ---- A torch dipped (HOUSE.md's a torch redipped: the user's, 2026-11-02, "Fumbling about in the dark should be
-** difficult ..."; part 27's fill, past its refusals, each ask): the next step of what comes before the dipping, begun:
-** IR_NO; or IR_OK, on with it (its fuel got out, the timed work).  The torch n never dipped burning: another light by it,
-** put out and dipped by that; none, a spare lit from it, then put out; no spare, put out, asked first, dipped in the dark
-** and lit again after.  Dipping asks both hands, the torch and the flask: what's in the other set down at its feet */
-static unsigned char __fastcall__ o_set_down (unsigned i)
-{
-    FETCH (i);
-    rs_c = i;
-    rs_do = RS_DROP;
-    rs_hand = 0;
-    rs_k = LT_SETDOWN;
-    rs_what = o.kind;
-    rs_t = 1;
-    rs_redo |= RR_ON;
-    if (rs_down) {
-        rs_down2 = i;
-    } else {
-        rs_down = i;
-    }
-    return B (m2 (reach_step, 0, RS_GO)) ? IR_NO : IR_OK;
-}
-
-#pragma data-name (push, "CATRODATA")           /* (Their scratch in the bank: the main RAM's none; only here, the bank in the window) */
-static unsigned i = 0, sp = 0, ot = 0;
-static unsigned char sn_ = 0, lit = 0;
-#pragma data-name (pop)
-
-static unsigned __fastcall__ o_held_other (unsigned n)
-{
-    for (i = 1; i < NITEMS; ++i) {
-        FETCH (i);
-        if (o.kind && o.where == IW_ACTOR && !o.x && (o.flags & I_HELD) && i != n) {
-            return i;
-        }
-    }
-    return 0;
-}
-
-static unsigned char __fastcall__ o_redip (unsigned n)
-{
-    sn_ = B (m1 (reach_do, RO_SEEN));
-    if (sn_ & 4) {
-        name_of (n, 1);
-        return no (SA_TWO_HANDS);
-    }
-    FETCH (n);
-    lit = o.flags & I_LIT;
-    if (lit) {
-        for (sp = ot = 0, i = 1; i < NITEMS; ++i) {     /* (Another light; a spare, not spent, of its kind) */
-            FETCH (i);
-            if (!o.kind || i == n || !(KFLAGS (o.kind) & K_LIGHT)) {
-                continue;
-            }
-            if (o.flags & I_LIT) {
-                if (B (m1 (on_pc, i)) || B (m1 (in_reach, i))) {
-                    ot = i;
-                }
-            } else if (!spent () && !sp && B (m1 (on_pc, i)) && o.kind == B (m1 (item_kind, n))) {
-                sp = i;
-            }
-        }
-        if (!ot && !(sn_ & 2) && sp) {            /* (The preferred order: a spare lit from it first) */
-            if (!B (m1 (hand_free, sp)) && (i = o_held_other (n)) != 0) {
-                return o_set_down (i);
-            }
-            if (B (m2 (reach_step, sp, 0))) {
-                return IR_NO;
-            }
-            rs_hand = B (m1 (hand_free, sp));
-            rs_c = sp;
-            rs_old = n;
-            rs_do = RS_LIGHT;
-            rs_k = LT_LIGHTFROM;
-            rs_what = B (m1 (item_kind, sp));
-            rs_t = 30;
-            rs_redo |= RR_ON | RR_STOW;
-            return B (m2 (reach_step, 0, RS_GO)) ? IR_NO : IR_OK;
-        }
-        rs_c = n;                               /* (Put out: by another light, or to the dark, asked first) */
-        rs_do = RS_OUT;
-        FETCH (n);
-        rs_what = o.kind;
-        rs_t = 10;
-        rs_k = LT_BLOWOUT;
-        rs_old = n;
-        rs_redo |= RR_ON;
-        if (ot) {
-            rs_redo |= RR_STOW;
-        } else if (!(sn_ & 2)) {
-            rs_k = LT_BLOWDARK;
-            rs_redo |= RR_RELIGHT;
-        }
-        return B (m2 (reach_step, 0, RS_GO)) ? IR_NO : IR_OK;
-    }
-    if (!(o.flags & I_HELD)) {                  /* (In a hand, to dip it) */
-        if (!B (m1 (hand_free, n)) && (i = o_held_other (n)) != 0) {
-            return o_set_down (i);
-        }
-        if (B (m2 (reach_step, n, 0))) {
-            return IR_NO;
-        }
-        name_of (n, 1);
-        if (hold (n) != IR_OK) {
-            return IR_NO;
-        }
-    }
-    if ((i = o_held_other (n)) != 0) {          /* (Both hands to it: the other's set down) */
-        return o_set_down (i);
-    }
-    return IR_OK;
-}
-
-/* A step's end (rs_do, rs_c; the bank's own record; wk's fx, fy, sn where it stands): what it changes changed: a pack, a
-** thing let fall; a redip's: put out, lit from the old, put away, taken up again */
-static void o_did (void)
-{
-    if (rs_do <= RS_DROP) {                     /* (A pack taken off, put on; a thing let fall, set down) */
-        if (rs_do == RS_OFF) {
-            rs_pack = rs_c;
-        }
-        FETCH (rs_do == RS_ON ? rs_pack : rs_c);
-        o.flags &= ~(I_WORN | I_HELD);
-        if (rs_do == RS_ON) {
-            o.where = IW_ACTOR;
-            o.x = 0;
-            o.sn = 0;
-            o.flags |= I_WORN;
-            m2 (store, (unsigned) &o, rs_pack);
-            rs_pack = 0;
-            return;
-        }
-        if (rs_hand) {
-            o.flags |= I_HELD;
-            o.sn = rs_hand;
-        } else {
-            o.where = IW_SQUARE;
-            o.sn = wk.sn;
-            o.x = wk.fx;
-            o.y = wk.fy;
-            den_saw = 1;                        /* (The world to look about again: it seen lying there, its light) */
-        }
-        m2 (store, (unsigned) &o, rs_c);
-        return;
-    }
-    if (rs_do == RS_OUT) {
-        o_flags (rs_c, 0, I_LIT);
-        den_saw = 1;
-    } else if (rs_do == RS_LIGHT) {
-        m1 (make_own, rs_c);
-        o_place (rs_c, IW_ACTOR, 0, I_HELD);
-        FETCH (rs_c);
-        o.sn = rs_hand;
-        o.flags |= I_LIT;
-        m2 (store, (unsigned) &o, rs_c);
-    } else if (rs_do == RS_STOW) {
-        m0 (about);
-        if (pack && !o_fits (rs_c, pack)) {
-            o_place (rs_c, IW_ITEM, pack, 0);
-        }
-    } else {                                    /* (RS_UP) */
-        FETCH (rs_c);
-        if (o.kind && o.where == IW_SQUARE && (rs_hand = B (m1 (hand_free, rs_c))) != 0) {
-            o_place (rs_c, IW_ACTOR, 0, I_HELD);
-            FETCH (rs_c);
-            o.sn = rs_hand;
-            m2 (store, (unsigned) &o, rs_c);
-        }
-    }
-}
-
-/* What's next as a dipping's over, the fuel put away: the torch to light again (2: rs_on 2, the UI's IO_LIGHT, then here
-** again); the old one put away; what was set down taken up (1: the step set, RS_GO's); 0 no more */
-static unsigned char o_after (void)
-{
-    if (rs_redo & RR_RELIGHT) {
-        rs_redo &= ~RR_RELIGHT;
-        rs_on = 2;
-        return 2;
-    }
-    if (rs_redo & RR_STOW) {
-        rs_redo &= ~RR_STOW;
-        FETCH (rs_old);
-        if (o.kind && (o.flags & I_HELD)) {
-            rs_c = rs_old;
-            rs_do = RS_STOW;
-            rs_k = LT_PUTAWAY;
-            rs_what = o.kind;
-            rs_t = 20;
-            return 1;
-        }
-    }
-    if ((i = rs_down) != 0 || (i = rs_down2) != 0) {
-        if (rs_down) {
-            rs_down = 0;
-        } else {
-            rs_down2 = 0;
-        }
-        FETCH (i);
-        rs_c = i;
-        rs_do = RS_UP;
-        rs_k = LT_TAKEUP;
-        rs_what = o.kind;
-        rs_t = 10;
-        return 1;
-    }
-    rs_redo = 0;
-    return 0;
-}
-
-/* A filling's or a dipping's end in the dark, by touch (the dark's test: "a fumble can spill oil"): spilt, half the flask's less, told: 1 */
-static unsigned char __fastcall__ o_spill (unsigned c)
-{
-    if (B (m1 (rs_for, RF_ROLL))) {
-        return 0;
-    }
-    FETCH (c);
-    o.fuel >>= 1;
-    m2 (store, (unsigned) &o, c);
-    strcpy (xn, iq.name);
-    no (SA_SPILT);
-    return 1;
-}
 
 /* A thing handled, as the request (iq) asks: IR_OK, or IR_NO (refused: the words why) */
 static unsigned char o_handle (void)

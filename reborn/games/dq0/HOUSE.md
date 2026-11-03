@@ -1678,8 +1678,12 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   a chest, a chest's own key, a flask for a light filled or a torch dipped, a bandage for first aid, a fire-maker below.
   Not by it: a door's key (no reach at all as yet: door_key finds it, three seconds), the drawing things (handy or not:
   no drawing from a pack, the map kept's rule), a blow's weapon named from the pack, a load from the pack and a robber's
-  rifling (the lump, untold, reach_done's); eating and drinking have no reach yet.  A whetstone: not built (HOUSE.md's
-  decided, not yet built).
+  rifling (the lump, untold, reach_done's); eating and drinking have no reach yet.
+- **A whetstone** *(2026-11-02: the user's "like sharpening your sword (if you have a whetstone)"; the book has none: all
+  the house's, for review)*: "sharpen the sword", "hone", "whet" (the fill's verb, the rules' bank spared): a metal
+  weapon, the whetstone carried (6d, a quarter pound; one in four with Sword's skill have one): that routine, its use a
+  minute's timed work, "You set to sharpening the sword.", at its end half its wear gone, "You put a fresh edge on the
+  sword."; no wear on it, "The sword is as sharp as it will go."  None carried, told.
 - **Lighting by a fire-maker** *(2026-11-02: the user's words, DECISIONS.md's; for review: the numbers, and the test)*: for
   anything lit with no flame to hand (a lit thing carried or within reach lights it, as ever, no fire-maker).  That routine,
   its use the tries: "You strike a spark.", 5 seconds, its test at its end, whether engaged or not: the referee's grope
@@ -3201,13 +3205,6 @@ for its words (wtend.c), the UI's start and end (main.c).
   folder that isn't carried on empties kit.dat first.  Its ruleset the one dq0 -r names (harn if none).
 
 ## Decided, not yet built
-
-- **A whetstone, and "sharpen"** (the user's, 2026-11-02, DECISIONS.md's: "like sharpening your sword (if you have a
-  whetstone)"): the routine's there (HOUSE.md's every use of a tool); it wants a kind (the catalogue's NKINDS 144 is full:
-  KI_COUNT 144; NKINDS 146 would fit, 37 bytes a kind and the kinds' words under make.js's 0x1580, with throws' and its
-  tables a row more, its price and where it's found in outfits.txt), a verb
-  (commands.verbs, an action), and a rule: the book has no whetstone (hm-core's text: no such word), so the house's: a
-  blade's wear (the wear a dig or a blow does it, a closer look's "dulled") made less by a long task, the routine's use.
 
 - **Mental maps** (DUNGEON.md: a map in the character's head that fades): slice 4.2's map (its bearings, by
   Awareness or Mining, built: Bearings underground, above).

@@ -120,7 +120,7 @@ unsigned char __fastcall__ reach_step (unsigned n, unsigned c);   /* (Thing n go
                                                 **   0 go on.  c RS_TOOL: n a tool, got out, put away after its use) */
 #define RS_TOOL         0xFFFF
 unsigned char __fastcall__ reach_do (unsigned w);   /* (Part 85's: RO_*, or an intent's tool's keys: s_reach_do's) */
-enum { RO_END, RO_ASK, RO_REPLY, RO_FUMBLED, RO_GO, RO_SEEN };
+enum { RO_END, RO_ASK, RO_REPLY, RO_FUMBLED, RO_GO, RO_REDIP, RO_SPILL, RO_HONE };
 #define RS_GO           0xFFFB                  /* (reach_step's c: the step rs_do, rs_k, rs_what, rs_t, begun, the caller's) */
 #define RS_FIRE         0xFFFC                  /* (reach_step's c: n a fire-maker, a tool's steps and its tries; 2 empty) */
 #define RS_BACK         0xFFFE                  /* (reach_step's c: the pack back on, its own step) */
@@ -137,7 +137,7 @@ extern unsigned rs_tool;                        /* (The tool in use; a fire-make
 extern unsigned char rs_using;                  /* (A tool's: 1 out; 2 caught, a fire-maker's) */
 #define LW_REACH        0xFE                    /* (lwork's: a step of the reach, its end RO_END's) */
 extern unsigned rs_pack;                        /* (The pack off for this handling) */
-extern unsigned char rs_ok, rs_st, rs_what, rs_paid, rs_on, rs_live;
+extern unsigned char rs_ok, rs_st, rs_what, rs_paid, rs_after_on, rs_live;
 extern unsigned char lwork;
 extern unsigned lw_x, lw_y;                     /* (dq0w.c's: a timed work's square; a redip's, things.c's rs_old, rs_down) */
 extern unsigned char den_saw;                   /* (wbody.h's: the world to look about again) */
@@ -159,7 +159,7 @@ enum {
     SA_NO_SLOT, SA_NO_BELT, SA_NOT_HOLDER, SA_RUN_OUT, SA_WONT_GO, SA_ITSELF, SA_PUT_OUT, SA_NO_ROOM, SA_TOO_HEAVY,
     SA_TAKE, SA_NOT_IN, SA_DON, SA_WORN, SA_WEAR_ONE, SA_NO_WEAR, SA_DOFF, SA_NOT_WORN, SA_LIGHT, SA_LIT,
     SA_NO_FLAME, SA_NO_LIGHT, SA_DOUSE, SA_NOT_LIT, SA_NONE_TO_LIGHT, SA_NONE_LIT, SA_NO_SUCH, SA_NO_OTHER, SA_REACH,
-    SA_WHERE, SA_WHAT, SA_IN_HAND, SA_IN_PACK, SA_FIXED, SA_BURNT, SA_NO_OIL, SA_SHUT, SA_NO_SPARE, SA_EMPTY, SA_TWO_HANDS, SA_SPILT, SA_COUNT
+    SA_WHERE, SA_WHAT, SA_IN_HAND, SA_IN_PACK, SA_FIXED, SA_BURNT, SA_NO_OIL, SA_SHUT, SA_NO_SPARE, SA_EMPTY, SA_TWO_HANDS, SA_SPILT, SA_NO_FILL, SA_NO_STONE, SA_SHARP, SA_HONED, SA_COUNT
 };
 extern const char* const said[SA_COUNT];
 

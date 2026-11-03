@@ -201,6 +201,7 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "mankar", K_HAND | K_HANG, 8, 2, 0, 0, 0, 0, 3, "mankar", MT_IRON, AP_WEAPON, 336 },   /* (The Gargun's: Combat 3's
                                                 **   (G), 84d and 110d, hung from the belt as an axe is) */
     { "mang", K_HAND | K_HANG, 12, 3, 0, 0, 0, 0, 3, "mang", MT_IRON, AP_WEAPON, 440 },
+    { "whetstone", 0, 1, 1, 0, 0, 0, 0, 2, "whet", MT_STONE, AP_METAL, 24 },   /* (The house's: 6d, HOUSE.md's) */
     { "antidote", 0, 1, 1, 0, 0, 0, 0, 1, "cure", MT_GLASS, AP_FOOD, 192 },   /* (A vial of theriac, 48d, and a
                                                 **   physician's draught, 12d: the house's prices, HOUSE.md's remedies,
                                                 **   2026-11-02) */
@@ -261,6 +262,7 @@ const unsigned char throws[KI_COUNT] = {
     1, 1, 0, 2, 2, 2, 2, 2, 2, 2, 2,            /* furs, blanket, cask, crowns, brooch, necklace, pendant, goblet, gem,
                                                 **   talisman, dice */
     2, 1, 1,                                    /* farthings, mankar, mang */
+    2,                                          /* whetstone */
     2, 2                                        /* antidote, remedy */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
@@ -318,4 +320,8 @@ const char* const said[SA_COUNT] = {
     "The # is empty.",                         /* (A fire-maker: as it's reached for, or known) */
     "You need two good hands to dip the %.",   /* (A torch redipped: HOUSE.md's) */
     "Your hands slip in the dark: oil spills, and the % takes none of it.",
+    "You can't fill the %.",
+    "You have nothing to sharpen the % with.",
+    "The % is as sharp as it will go.",
+    "You put a fresh edge on the %.",
 };

@@ -937,7 +937,7 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
        LT_STUDY, LT_DISARM, LT_PICK, LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_PRISE, LT_TRACK, LT_SNIFF, LT_FILL,
        LT_HIDE, LT_TEND,                        /* (LT_TEND: first aid, a wound treated, the UI's timed work: slice
                                                 **   4.3's) */
-       LT_PACKOFF, LT_PACKDOWN, LT_REACHIN, LT_OPENUP, LT_GETOUT, LT_PACKON, LT_LETFALL, LT_LETBURN, LT_PUTAWAY, LT_BLOWOUT, LT_BLOWDARK, LT_LIGHTFROM, LT_SETDOWN, LT_TAKEUP,
+       LT_PACKOFF, LT_PACKDOWN, LT_REACHIN, LT_OPENUP, LT_GETOUT, LT_PACKON, LT_LETFALL, LT_LETBURN, LT_PUTAWAY, LT_BLOWOUT, LT_BLOWDARK, LT_LIGHTFROM, LT_SETDOWN, LT_TAKEUP, LT_HONE,
        LT_KINDLE };   /* (The reach's
                                                 **   steps, each its own time, HOUSE.md's: a pack on the back taken off,
                                                 **   into a hand, or set at its feet; a container's level reached into,

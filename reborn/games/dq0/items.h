@@ -25,7 +25,7 @@ struct material {
 };
 
 /* A kind of thing (the catalogue's: a stand-in for the theme's data), in rs.h's units */
-#define NKINDS          144                     /* (In a bank of their own, the hub's KIND_BANK: 144 x 37
+#define NKINDS          146                     /* (In a bank of their own, the hub's KIND_BANK: 146 x 37
                                                 **   bytes; a kind's number kept in seven bits in places, a thing struck
                                                 **   with's, a light's: rs.h's SK_THING, E_TASK's; so the kinds from 128
                                                 **   on, past the theme's (theme.h's KI_THEME, 120 to 127), are none of
@@ -139,6 +139,7 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_MANKAR, KI_MANG,                         /* The Gargun's weapons (Combat 3's (G): Phase 4's peoples, 2026-10-29;
                                                 **   past the theme's, the own kinds' room full: struck with as the
                                                 **   best held, never named as the striker) */
+    KI_WHETSTONE,                               /* (A blade's edge renewed: HOUSE.md's every use of a tool, 2026-11-02) */
     KI_ANTIDOTE, KI_REMEDY,                     /* (The remedies, 2026-11-02: an antidote, a theriac against poisons
                                                 **   and venoms; a remedy, a physician's draught against a disease;
                                                 **   drunk, their keys the things' IO_USE's: HOUSE.md's remedies) */
@@ -315,6 +316,8 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   UI's again as its time's up, not stopped) */
 #define IO_STEPS        0x40                    /* (A request's kind |: the UI goes by the reach's steps, a step's reply
                                                 **   IO_STEP's; HOUSE.md's, part 82's) */
+#define IO_CUT          0x3E                    /* (The reach's steps stopped, between two of them: the UI's, a stop told as
+                                                **   nothing to stop, its reach 5, part 19's) */
 #define IO_STEP         0x3F                    /* (The reply's kind: a step of the reach begun, result IR_NO, no words;
                                                 **   its long task's kind in qty, its thing's kind in item, its time in
                                                 **   x: the UI's first words, its wait, the command kept and asked again

@@ -2992,7 +2992,7 @@ void __fastcall__ s_start_dig (unsigned char d)
         return;                                 /* (A digger's tool got out first, the world's steps, HOUSE.md's handy
                                                 **   tools: its intent asked again, lw_m) */
     }
-    if (rs_on) {
+    if (rs_after_on) {
         trav = TRV_TOOL;                        /* (Put away, the pack on, as the dig's over: travel_on's) */
     }
     dig.rock = RK_NONE;
@@ -3599,11 +3599,11 @@ unsigned char s_work_done (void)
     work (w, lw_x, lw_y, lw_d);
     w = wk.tt != 0;
     worked (0);
-    if (!rs_on) {
+    if (!rs_after_on) {
         return w << 1;
     }
 last:
-    if (rs_on) {
+    if (rs_after_on) {
         lwork = LW_REACH;                       /* (A tool's use over: put away, the pack back on: things.c's) */
         return 2;
     }
@@ -4024,7 +4024,6 @@ void __fastcall__ s_task_word (const struct msg* m)
         return;
     }
     if (!k) {
-        pc_cut = 1;                             /* (Between two steps of the reach: it stops them, things.c's rs_begin) */
         if (!m->w1) {
             event (E_TASK, 0, TE_IDLE);         /* (The player's stop, nothing to stop; a command's, nothing said) */
         }

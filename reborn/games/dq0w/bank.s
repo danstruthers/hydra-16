@@ -133,7 +133,7 @@ go:
             SWPART      42, 24              ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 7              ; A walk in the dark set out on: its way felt, a thing stumbled over
             SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
-            SWPART      45, 17              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
+            SWPART      45, 5              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
             SWPART      46, 25               ; A search's thing, for or on; what a search turns up (things.c)
             SWPART      47, 10              ; What's on a thing or in it, searched (things.c)
             SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
@@ -150,7 +150,7 @@ go:
             SWPART      53, 16              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
             SWPART      54, 16              ; Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
             SWPART      55, 16              ; Travel to a place it knows (dq0w.c's: slice 4.2's)
-            SWPART      56, 26              ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
+            SWPART      56, 17              ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
             SWPART      57, 18              ; The outfits drawn: the character's, a denizen's (outfit.c, 2026-10-27)
             SWPART      58, 19              ; The outfits made (outmake.c)
             SWPART      59, 18              ; An outfit's section drawn (outdraw.c)
@@ -160,7 +160,7 @@ go:
             SWPART      63, 21              ; The character's kit (things.c's, part 13's till 2026-10-28; overlay 21's, 2026-10-29)
             SWPART      64, 21              ; The coins' mints (things.c's, 2026-10-28; overlay 21's, 2026-10-29)
             SWPART      65, 20              ; The missiles: a shot, its line, where it falls (wshoot.c: slice 4.7's)
-            SWPART      66, 15              ; The missiles gathered (wshoot.c; overlay 15's, 2026-10-30)
+            SWPART      66, 26              ; The missiles gathered (wshoot.c; overlay 15's, 2026-10-30)
             SWPART      67, 20              ; The character's shot, the denizens' shots and throws (wshoot.c)
             SWPART      68, 20              ; Where a missile falls, a miss's stray; a launcher loaded (wshoot.c)
             SWPART      69, 26               ; A robbery (wfight.c's: part 67's room, overlay 5's, 2026-10-30; 12's room, 2026-11-02)
@@ -168,7 +168,7 @@ go:
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
             SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
-            SWPART      74, 26              ; A waterskin filled (wwater.c: slice 4.9's)
+            SWPART      74, 11              ; A waterskin filled (wwater.c: slice 4.9's)
             SWPART      75, 4               ; The water's depth where the character stands (wwater.c)
             SWPART      76, 23              ; The time of day believed (wtime.c: 2026-10-31)
             SWPART      77, 23              ; The sky seen, the time believed's start (wtime.c)

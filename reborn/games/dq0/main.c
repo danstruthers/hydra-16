@@ -401,7 +401,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    32                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    33                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -1337,6 +1337,9 @@ void __fastcall__ s_hide (const char* w)
         d = HUB->ireq.qty;
         tell (d >= 10 ? T_HID_CUNNINGLY : d >= 4 ? T_HID_WELL : T_HID_POORLY);
         to_hand ();
+        if (HUB->ireq.y >= 0xFD) {
+            intend2 (I_WAIT, 1, 1);             /* (The reach's steps to come: the UI waits for them) */
+        }
     } else {
         tell (T_YOU_CARRY_NONE);
     }
@@ -2434,12 +2437,17 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
         "\nYou hold the %s open.", "\nYou get out the %s.", "\nYou put your %s back on.", "\nYou let the %s fall.",
         "\nYou let the %s fall, still burning.", "\nYou put away the %s.", "\nYou blow out the %s.",
         "\nYou go to blow out the %s: that will leave you in the dark.", "\nYou light the %s from the burning one.",
-        "\nYou set the %s down at your feet.", "\nYou take up the %s.", "\nYou strike a spark."
+        "\nYou set the %s down at your feet.", "\nYou take up the %s.", "\nYou set to sharpening the %s.", "\nYou strike a spark."
     };
     char t[sizeof CATALOGUE[0].name];
 
     if ((unsigned char) w == TE_KINDLED) {
         msg (named ? "It catches." : "It doesn't catch.");
+        return;
+    }
+    if ((unsigned char) w == TE_IDLE) {
+        reach = 0;
+        things (IO_CUT, "");
         return;
     }
     hub_mem (KIND_BANK, t, CATALOGUE[named & 0x7F].name, sizeof t);

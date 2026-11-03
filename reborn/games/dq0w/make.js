@@ -55,6 +55,7 @@ function build({ dir, objdir, say = () => {} }) {
   const at = nkinds * KIND, kin = (at + text.length + 63) & ~63;   // (The kinds' part of the file, whole pieces: wfile.c's)
   if (kin > 0x1580) throw new Error('dq0w.cat: the kinds\' words past the kinds\' bank (' + (at + text.length) + ' bytes)');
   if (text.length > 1024 - 200) throw new Error('dq0w.cat: the kinds\' words ' + text.length + ' bytes, past the parser\'s room less the theme\'s (hub.h\'s CQ_WORDS)');
+  if (cat.length - at > 0x1900) throw new Error('dq0w.cat: the catalogue\'s bank\'s code ' + (cat.length - at) + ' bytes, into the outfits\' index (outfit.h\'s OF_INDEX)');
   if (cat.readUInt16LE(18)) throw new Error('dq0w.cat: the first kind\'s cap_weight not 0 (the kinds\' length goes there)');
   const file = Buffer.concat([cat.subarray(0, at), text, Buffer.alloc(kin - at - text.length), cat.subarray(at)]);
   file.writeUInt16LE(kin, 18);                          // (The kinds' length, in the first's (none's) cap_weight: wfile.c's)

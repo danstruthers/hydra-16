@@ -23,7 +23,7 @@ static const char* const doing[] = {           /* (By LT_*) */
     "fighting", "travelling", "studying the mechanism", "disarming the trap", "picking the lock", "forcing", "heaving at",
     "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
     "hiding", "tending the wound", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
-    "letting fall", "letting fall", "putting away", "blowing out", "blowing out", "lighting", "setting down", "taking up",
+    "letting fall", "letting fall", "putting away", "blowing out", "blowing out", "lighting", "setting down", "taking up", "sharpening",
     "striking a spark"
 };
 #define NDOING          (sizeof doing / sizeof doing[0])
@@ -184,6 +184,9 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         break;
     case TE_IDLE:
         msg ("You aren't doing anything to stop.");
+        if (reach >= 5) {
+            reach_said (TE_IDLE, 0);            /* (Between two steps of the reach: they stop, part 19's) */
+        }
         break;
     case TE_CANT:
         msg ("There's no stopping part way up: you cling on, and climb.");
