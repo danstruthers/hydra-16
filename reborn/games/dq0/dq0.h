@@ -172,6 +172,7 @@ extern unsigned char strike;                    /* (main.c's) What the character
 
 #define LOOK_NEW    32                          /* (look's: only what's new since the command began) */
 #define FW_NEW      0xFFFF                      /* (felt_words': that, task.c's) */
+#define FW_TOUCH    0xFFFE                      /* (felt_words': what its hands find, in the dark, the look's: task.c's) */
 #define PICK_TELL   0x80                        /* (pick's obj |: "You see no door here", if there's none) */
 #define PICK_ANY    0x40                        /* (Any one: none asked) */
 unsigned char __fastcall__ pick (unsigned char obj, unsigned char orel);   /* The thing of kind obj (OB_*), lying

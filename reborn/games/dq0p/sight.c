@@ -21,9 +21,9 @@
 #define EYE         5
 
 static struct sight S;
+extern unsigned char here_known;                /* (dq0p.c's) */
 const struct sight* sight_rec = &S;             /* (A look one way's own, way.c's, made from it: the main RAM's) */
 unsigned char eye;                              /* (The character's sight, 0-9: dq0p.c's look sets it) */
-static unsigned char mx_[SEE_DOORS], my_[SEE_DOORS];     /* (The mouths' squares, as they're counted) */
 static unsigned char seq;
 
 static int __fastcall__ abs_ (int v)
@@ -49,6 +49,7 @@ static unsigned char __fastcall__ zone_index (unsigned char x, unsigned char y)
 /* A passage's square (i, j) of the chunk in the window, at a room's edge: a mouth, unless one's been counted
 ** beside it (a wide tunnel's three squares one mouth) */
 #pragma data-name (push, "SW2RODATA")           /* (The look's own, set as it begins: in the part, no main RAM) */
+static unsigned char mx_[SEE_DOORS] = { 0 }, my_[SEE_DOORS] = { 0 };     /* (The mouths' squares, as they're counted) */
 static unsigned char e_ = 0;                    /* (The next door[]: those seen, ndoors of them, then those remembered) */
 static unsigned char kn_ = 0;                   /* (The rel's KNOWN_REL, as it's those remembered) */
 static unsigned char mine_ = 0;                 /* (The door's bar's side the character's: its wall's, or its passage's) */
@@ -127,6 +128,25 @@ static signed char __fastcall__ fz (int dz)
     return dz > 127 ? 127 : dz < -127 ? -127 : dz;
 }
 
+/* What its hands find on side rel of it, in the dark (HOUSE.md's walking in the dark, 2026-11-02): 0 nothing within reach,
+** 1 a wall, 2 a shut door, 3 bars */
+#pragma static-locals (push, off)
+static unsigned char __fastcall__ touch (unsigned char rel)
+{
+    unsigned char* p;
+    struct portal* q;
+    unsigned char h = (ffc + rel) & 7;
+
+    if (!(p = at (S.stratum, S.x + head_x[h], S.y + head_y[h]))) {
+        return 1;
+    }
+    if (TILE (*p) == T_DOOR && (q = portal_at (cx_, cy_)) != 0 && !(q->state & PS_OPEN)) {
+        return q->state & PS_HIDDEN ? 1 : q->kind == PK_PORTCULLIS ? 3 : 2;
+    }
+    return !T_PASS (*p) && TILE (*p) != T_PIT;
+}
+#pragma static-locals (pop)
+
 /* Tile t as this pass goes: those it sees, then those it only remembers */
 static unsigned char __fastcall__ shown (unsigned char t)
 {
@@ -145,9 +165,35 @@ static void __fastcall__ door_add (unsigned char i, unsigned char j, const struc
     ++e_;
 }
 
+#pragma code-name (push, "SW6CODE")             /* (Part 6's since 2026-11-02: part 2's room, a dark look's touch) */
+#pragma rodata-name (push, "SW6RODATA")
+
+static int __fastcall__ abs6 (int v)
+{
+    return v < 0 ? -v : v;
+}
+
+static signed char __fastcall__ fz6 (int dz)
+{
+    return dz > 127 ? 127 : dz < -127 ? -127 : dz;
+}
+
+static unsigned char __fastcall__ zone_at6 (unsigned char x, unsigned char y)
+{
+    struct zone* z = C->zone;
+    unsigned char k;
+
+    for (k = 0; k < C->nzones; ++k, ++z) {
+        if (x >= z->x && x < z->x + z->w && y >= z->y && y < z->y + z->h) {
+            return k;
+        }
+    }
+    return 0xFF;
+}
+
 /* A room's, in the chunk in the window: its zones but z (the character's), seen now: where, how high, and how one
 ** gets there (steps in the room, a slope between, or a ledge) */
-static void __fastcall__ zones_seen (struct room* rp, unsigned char mine, unsigned char face, int myz, unsigned char lx,
+void __fastcall__ s_zones_seen (struct room* rp, unsigned char mine, unsigned char face, int myz, unsigned char lx,
     unsigned char ly)
 {
     unsigned char k, i, j, steps = 0, seen, mx, my, d, ni, nj;
@@ -187,18 +233,24 @@ static void __fastcall__ zones_seen (struct room* rp, unsigned char mine, unsign
                 for (d = 0; d < 4; ++d) {       /* (The four beside it, in the chunk) */
                     ni = i + dir_x[d];
                     nj = j + dir_y[d];
-                    if (ni < CW && nj < CW && zone_index (ni, nj) == mine &&
-                        (v = abs_ (C->elev[nj][ni] - C->elev[j][i])) > worst) {
+                    if (ni < CW && nj < CW && zone_at6 (ni, nj) == mine &&
+                        (v = abs6 (C->elev[nj][ni] - C->elev[j][i])) > worst) {
                         worst = v;
                     }
                 }
             }
         }
         S.zone[S.nzones].rel = REL8 (bearing ((int) mx - lx, (int) my - ly), face);
-        S.zone[S.nzones].dz = fz (dz);
+        S.zone[S.nzones].dz = fz6 (dz);
         S.zone[S.nzones++].how = worst <= STEP_MAX ? Z_SLOPE : steps ? Z_STEPS : Z_LEDGE;
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+void __fastcall__ zones_seen (struct room* rp, unsigned char mine, unsigned char face, int myz, unsigned char lx,
+    unsigned char ly);                          /* (Its stub: part 6's) */
 
 unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y, unsigned char face,
     unsigned char light, unsigned char first)
@@ -222,13 +274,6 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
     S.z = s->datum + myz;
     S.dark = !(*p & T_VIS);
     S.ceil = C_UNSEEN;
-    e_ = kn_ = 0;
-    fzz = myz;
-    fox = x - lx;
-    foy = y - ly;
-    flx = lx;
-    fly = ly;
-    ffc = face;
     if (arrive) {
         first = 0;                              /* (Come in: the first time in a room the senses don't remember, and
                                                 **   remembered from now on) */
@@ -279,6 +324,15 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
             }
             zones_seen (&rp, k, face, myz, lx, ly);
         }
+    }
+    e_ = kn_ = 0;                               /* (The part's own: after part 6's zones_seen, its image copied back) */
+    fzz = myz;
+    fox = x - lx;
+    foy = y - ly;
+    flx = lx;
+    fly = ly;
+    ffc = face;
+    if (r != 0xFF) {
         for (;;) {                              /* (Those it sees; then those it remembers, KNOWN_REL: named, the look
                                                 **   not telling them, the user's, 2026-11-02) */
             for (d = 0; d < 4; ++d) {           /* (Its doors seen) */
@@ -358,6 +412,14 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                 S.way[S.nways++].steps = TILE (*p);    /* (Its square's kind: steps, rubble) */
             }
         }
+    }
+    if (S.dark) {                               /* (In the dark, its ceiling's unseen: what its hands find instead, and
+                                                **   whether it has been on this square before, not forgotten: its walk's
+                                                **   squares felt after the look's, here_known, dq0p.c's) */
+        S.cmid = touch (0);
+        S.cmid += touch (6) << 2;
+        S.cmid += touch (2) << 4;
+        S.cwall = here_known;
     }
     S.first = first;
     memcpy (&S.nglows, &G, sizeof G);           /* (The lights far off: eyes.c's) */

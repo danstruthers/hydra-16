@@ -1421,6 +1421,12 @@ overburdened" if you are carrying too much."
 
 And: "Playtesting, I see that a barred door is not shown as such, just closed.  You also can't `unbar the door`."
 
+And: "When moving about in the dark, when you meet a wall, it tells you so, then says something like "It is dark; you
+feel your way. You are in a passage. It goes to your right and behind you, rising gently." Since it is dark, when you
+meet a wall, you don't really know which way the passage goes.  It might be better to just say "You feel a wall to your
+left, and nothing to your right" or some such.  What do you think?"  The lead proposed feeling your way telling only what
+the hands and feet could tell (HOUSE.md's walking and searching in the dark); the user: "That sounds great!"
+
 The lead's reading, built: what it sees now, or has seen and remembers, can be named and walked to (a door out of the
 light listed in "which door?", the look not telling it); what it has never perceived is neither listed nor found.
 

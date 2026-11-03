@@ -422,6 +422,7 @@ void s_kept (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+extern unsigned char here_known;                /* (dq0p.c's: come to a square it knew before this look: sight.c's) */
 void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned char face, unsigned char light,
     unsigned char sight, unsigned char dark)
 {
@@ -433,7 +434,11 @@ void __fastcall__ s_view (unsigned char sn, unsigned x, unsigned y, unsigned cha
     hub_map (0);
     k = HUB->pc_pos;                            /* (Its eyes by its body's position: crouched, kneeling, sitting three
                                                 **   feet, prone one, HOUSE.md's, slice 4.6's) */
+    j = HUB->look.first;
     own = at (sn, x, y) != 0;
+    if ((j & LF_ARRIVE) && own) {
+        here_known = (C->tile[cy_][cx_] & T_SEEN) != 0;
+    }
     z = (own ? C->elev[cy_][cx_] : 0) + (k ? (k == POS_PRONE ? 1 : 3) : EYE);
     run_d = 0;
     mark_rows (1);                              /* The last view's seen now unmarked (its rows' marks): this one's are

@@ -29,6 +29,7 @@ void sense_actor (void);                        /* (sense.c's: the hub's dsense 
 void snd_need (void);                           /* (sound.c's: the sound layer up to date) */
 
 static unsigned char sees;                      /* (The denizens seen changed: the look's reply's ch) */
+unsigned char here_known;                       /* (Its square known before this look: sight.c's, in the dark) */
 unsigned char v_way;                            /* (A look one way, the hub's LK_WAY: view.h's) */
 
 /* A look about for the character, from what the hub has of it (its square, its facing, its light, its senses; the

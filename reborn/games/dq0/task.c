@@ -401,9 +401,16 @@ void __fastcall__ o_beat_words (unsigned w)
 
     switch ((unsigned char) w) {
     case WB_QUIET:
-        msg ("You go on down the passage.");
+        hub_mem (SIGHT_BANK, &r, &SIGHT->dark, 1);
+        msg (r ? "You feel your way on." : "You go on down the passage.");
         break;
     case WB_TURN:
+        hub_mem (SIGHT_BANK, &sk, &SIGHT->dark, 1);
+        if (sk) {                               /* (In the dark: as its feet go, no passage's name, no bearing) */
+            r = w >> 8;
+            msg (r & 0x10 ? "The way bends." : r == WS_LEFT ? "The way turns left." : "The way turns right.");
+            break;
+        }
         if ((r = w >> 8) & 0x10) {
             hub_mem (0, &sk, &HUB->pc_skew, 1);
             r = (r + (sk << 1)) & 15;
@@ -492,6 +499,55 @@ static void new_words (void)
     }
 }
 
+/* In the dark, what its hands and feet can tell (the look's, every walk's end; the user's, 2026-11-02: HOUSE.md's walking
+** in the dark): "You feel a wall ahead and to your left; nothing to your right."  No name for the place, no way told,
+** unless it's been on this square before and not forgotten it ("This should be the kitchen.") */
+static void touch_words (void)
+{
+    static const char* const kind_w[4] = { "nothing", "a wall", "a door", "iron bars" };
+    static const char* const side_w[3] = { "ahead", "to your left", "to your right" };
+    static const unsigned char order_[4] = { 1, 2, 3, 0 };
+    struct sight* s = &sight_copy;
+    unsigned char c = s->cmid, i, k, n, m, said = 0;
+
+    strcat (lb, "It is dark. You feel ");
+    for (i = 0; i < 4; ++i) {
+        k = order_[i];
+        for (n = m = 0; m < 3; ++m) {
+            n += TOUCHED (c, m) == k;
+        }
+        if (!n) {
+            continue;
+        }
+        if (said++) {
+            strcat (lb, "; ");
+        }
+        strcat (lb, kind_w[k]);
+        for (m = 0; m < 3; ++m) {
+            if (TOUCHED (c, m) == k) {
+                strcat (lb, " ");
+                strcat (lb, side_w[m]);
+                if (--n) {
+                    strcat (lb, n == 1 ? " and" : ",");
+                }
+            }
+        }
+    }
+    strcat (lb, ".");
+    lbe = lb + strlen (lb);
+    if (s->cwall) {
+        if (s->where == W_ROOM) {
+            strcat (lb, " This should be the ");
+            lbe = lb + strlen (lb);
+            theme_named (TN_ROOM, s->kind);
+            strcat (lb, ".");
+        } else {
+            strcat (lb, " You've been along this passage.");
+        }
+        lbe = lb + strlen (lb);
+    }
+}
+
 void __fastcall__ o_felt_words (unsigned w)
 {
     static const char* const met[FA_PIT + 1] = {
@@ -506,6 +562,10 @@ void __fastcall__ o_felt_words (unsigned w)
 
     if (w == FW_NEW) {
         new_words ();
+        return;
+    }
+    if (w == FW_TOUCH) {
+        touch_words ();
         return;
     }
     switch ((unsigned char) w) {

@@ -1217,6 +1217,13 @@ searching in the dark): no walk turned toward an opening the character can't see
 anything faster said outright and dangerous; a search in the dark by touch, nearby; the search's forms.  The numbers
 are drafts, the user's as they are for now (2026-10-22).
 
+- **Feeling your way tells only what the hands and feet could tell** *(the user's, 2026-11-02: DECISIONS.md; as built, for
+  review)*: every look in the dark, and every dark walk's end: "It is dark. You feel a wall ahead and to your left;
+  nothing to your right."  Touch within arm's reach, ahead and to each side (a wall, a door, iron bars); "nothing" only
+  means nothing within reach, never a way.  Underfoot what its feet have felt ("The way rises."), as it walks.  No name
+  for the place, no ways told, no slope ahead: "The way turns left.", not "The passage turns left."; a straight stretch
+  quiet but for "You feel your way on."  Where it has been before and hasn't forgotten, memory adds: "This should be the
+  kitchen.", "You've been along this passage."  A blind character the same.
 - **In the dark** is where the character sees nothing by: its own square unseen (no light of its own, no room's own
   light, no lamp lying near lighting it), or blind (the referee's summary, C_BLINDED: the one place a blindness, however
   it comes, will take it).  (dq0w.c's dark.)
