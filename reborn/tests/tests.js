@@ -2737,8 +2737,8 @@ function dq0Timer(m) {
 // the look as they get there: at the turns pace the denizens given their turn a slice at a time through the time the
 // move takes, at the normal pace the move taking its own time, a step a second, then the senses' look)
 const DQ0_ANSWERS = [['turn left', 'You turn to face', 1790000], ['turn right', 'You turn to face', 1790000],
-  ['step forward', 'You'], ['inventory', 'You carry', 720000], ['walk to the door ahead to my left', 'You'], ['examine the door', 'A door', 720000],
-  ['look', 'You', 1790000, 1790000], ['go up', 'There\'s no way up or down here.', 720000]];
+  ['step forward', 'You'], ['inventory', 'You carry', 720000], ['walk to the door ahead to my left', 'You'], ['examine the door', 'A door', +(process.env.DQ0ANS_WAIT || 0) ? undefined : 720000],
+  ['look', 'You', 1790000, 1790000], ['go up', 'There\'s no way up or down here.', 720000], ['take the bones', 'You']];   // (A door examined out of reach is walked to, 2026-11-02: at wait 1 and 2 a rat stops the walk before it, the door still out of reach: its budget at wait 0; a walked-to take, its figure noted)
 function dq0AnswerTest(baud) {
   const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
   const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
