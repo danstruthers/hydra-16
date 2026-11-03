@@ -131,11 +131,11 @@ go:
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
             SWPART      41, 19              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
             SWPART      42, 24              ; What a closer look at a thing shows; its condition (things.c)
-            SWPART      43, 10              ; A walk in the dark set out on: its way felt, a thing stumbled over
+            SWPART      43, 7              ; A walk in the dark set out on: its way felt, a thing stumbled over
             SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
             SWPART      45, 17              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
-            SWPART      46, 7               ; A search's thing, for or on; what a search turns up (things.c)
-            SWPART      47, 13              ; What's on a thing or in it, searched (things.c)
+            SWPART      46, 25               ; A search's thing, for or on; what a search turns up (things.c)
+            SWPART      47, 10              ; What's on a thing or in it, searched (things.c)
             SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
                                             ;   (things.c: slice 4.1b's)
             SWPART      49, 23              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c; overlay
@@ -177,10 +177,14 @@ go:
             SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
             SWPART      80, 24              ; One path: a denizen's doors, the doors' keys (wport.c: Phase 3C's)
             SWPART      81, 2               ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
-            SWPART      82, 25              ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
+            SWPART      82, 25              ; A room searched whole (wroom.inc: the user's playtest, 2026-11-02)
+            SWPART      83, 25              ; Its tests at a stop (wroom.c)
+            SWPART      84, 25              ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
 
             SWFN        work, 48
             SWFN        worked, 48
+            SWFN        room_on, 82         ; (A room searched whole: wroom.inc)
+            SWFN        room_tests, 83
             SWFN        searched, 48        ; (A search's end: the main RAM's room, 2026-10-31)
             SWFN        outfit, 57
             SWFN        den_kit, 57
@@ -202,7 +206,7 @@ go:
             SWFN        den_legs, 51
             SWFN        den_other, 51
             SWFN        den_dig, 79         ; (A tunneller's dig: slice 4.11's)
-            SWFN        pc_dig, 82          ; (The character's dig's own: wdig.c)
+            SWFN        pc_dig, 84          ; (The character's dig's own: wdig.c)
             SWFN        den_more, 80        ; (One path: Phase 3C's)
             SWFN        door_key, 80
             SWFN        old_mint, 51

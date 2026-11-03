@@ -206,8 +206,9 @@ ovl_out:
             SWFN        place_go, 7
             SWFN        look_way, 17
             SWFN        search_go, 10
+            SWFN        search_said, 10
             SWFN        news, 11
-            SWFN        hide, 11
+            SWFN        hide, 10
             SWFN        hand_said, 11
             SWFN        limbs_cmd, 11
             SWFN        bg_words, 14

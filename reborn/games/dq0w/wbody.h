@@ -98,7 +98,7 @@ void __fastcall__ den_more (const struct msg* m);    /* (Part 80: wport.c) Body 
                                                 **   come along (I_CLIMB), a robbery (I_ROB), its door work (I_PORTAL:
                                                 **   Phase 3C's one path, the character's parts); and a lair's doors'
                                                 **   keys made (I_KIT's KT_LAIR: part 51's) */
-unsigned char __fastcall__ pc_dig (unsigned char w);    /* (Part 82: wdig.c) The character's dig's own */
+unsigned char __fastcall__ pc_dig (unsigned char w);    /* (Part 84: dq0w.c) The character's dig's own */
 void __fastcall__ den_dig (const struct msg* m);    /* (Part 79: wdig.c) A tunneller's dig (I_KIT's KT_DIG: slice
                                                 **   4.11's), a spell at a time */
 void __fastcall__ den_enter (const struct msg* m);  /* (Part 60) Come near (I_ENTER's): its body's from it, its

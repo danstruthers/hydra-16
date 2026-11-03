@@ -387,6 +387,7 @@ unsigned char __fastcall__ actor_seen (unsigned char b);        /* Part 8: an ev
 unsigned char __fastcall__ lie_words (unsigned char i);   /* Part 8: a thing's place in the room (its sight_copy's) */
 unsigned char reach_go (void);
 unsigned char search_go (void);                 /* (Part 10's) A search begun, by its form (search.c) */
+void __fastcall__ search_said (const struct msg* m);   /* (A room searched whole's, as it goes: an E_BEAT's WB_SEARCH) */
 unsigned char __fastcall__ place_go (const struct cmd* c);   /* Part 7: a place in the room walked to */                  /* Part 7: a command's thing out of reach walked over to first */
 void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the
                                                 **   light before times 256) */

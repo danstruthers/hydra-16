@@ -821,8 +821,10 @@ nobody tends is dark.  A light that's nobody's (a cave's glow, magic) stays as t
   one (HOUSE.md's traps, searching and hiding); a passing glance (P_NOTICE_SIGHT) has a smaller chance, as the
   character moves.  In the dark a search is by touch, of the squares within reach, seen or not (what's lying there
   felt plainly, what's hidden by the test, a little harder); and a search has its forms, light or dark: nearby, a wall,
-  the floor, for a thing (till it's found), on or in a thing (what's on it, its trap) (HOUSE.md's walking and searching
-  in the dark).  What's found is known (the change records keep a found exit or trap as what it is).  A denizen
+  the floor, for a thing (till it's found), on or in a thing (what's on it or in it, what's hidden in a heap) (HOUSE.md's
+  walking and searching in the dark).  "search the room" goes over the whole of it, a long task, stop by stop along the
+  walls and across the floor, each thing and heap in turn, told as it goes and kept as far as it went (HOUSE.md's a room
+  searched whole).  What's found is known (the change records keep a found exit or trap as what it is).  A denizen
   that hides is still to come.
 - **Seeing in the dark** goes by the referee's summary, whatever the ruleset calls it: **night vision** (the faintest
   light carries further: a torch's reach, or a glow's, multiplied), and **ultravision** (sight with no light at all,
@@ -861,7 +863,8 @@ or a shaft can be jumped down (jump down: a fall of its height).
   walking: you're digging"); a climb can't be stopped part way, and struck or hurt it's a test to keep the grip, a
   fall if it fails.  (dq0 -a, the tests': every question answered yes, unasked.)  A search is one too, a minute,
   "Searching about..." as it begins and what it finds told as it ends (cut short, only the squares nearest as far as
-  it went, each at the full chance); a walk's exertion is the referee's as it goes, and a climb's, a dig's and a
+  it went, each at the full chance); and "search the room", a long task of many stops, told as it goes (HOUSE.md's a room
+  searched whole); a walk's exertion is the referee's as it goes, and a climb's, a dig's and a
   battering's (strenuous work), and a fatigue level more asks ("You're tiring.  Keep walking?", "Keep digging?").
   The timed work (the user's, 2026-10-22: HOUSE.md's long tasks) is one too, whatever its length: a trap's mechanism
   made out, a trap disarmed, a lock picked (a door's, a chest's), a door or a chest forced, bars bent, a portcullis
