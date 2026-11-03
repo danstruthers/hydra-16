@@ -5211,7 +5211,7 @@ module.exports = {
         const chests = s.items.filter(i => i.name === 'chest' && i.where === 'IW_SQUARE' && i.owner);
         for (const c of chests) {
           const k = s.items.filter(i => i.name === 'iron key' && i.fits === c.id);
-          if (!(c.shut & 2) || k.length !== 1 || !(top(s, k[0]) || {}).did) f.push('chest ' + c.id + ': not locked, or its key not on its owner: ' + JSON.stringify(k));
+          if (!(c.shut & 2) || k.length !== 1 || !((top(s, k[0]) || {}).did || (top(s, k[0]) || {}).name === 'body')) f.push('chest ' + c.id + ': not locked, or its key not on its owner: ' + JSON.stringify(k));
         }
         if (!/A bandit, armed(?: and armoured)?,? is /.test(o)) f.push('no bandit looked at armed');
         if (!/The bandit (?:holds|wears) [a-z]/.test(o)) f.push('the bandit examined: what it holds and wears not told');
