@@ -5109,7 +5109,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0trade', outfit: true, near: ['denizens', 'money'], what: "Dingus Quest Zero's market and entertaining (2026-11-02: DENIZENS.md's trading, HOUSE.md's the market, for review), by the denizens' sway, the things changing hands and the words: a hand-written theme's bandits (seed 1, dq0kit's), one put beside the character, friendly, at each command (dq0Poke's); given 5 pennies without a \"to\" (\"give the bandit 5 pennies\": the one given it the line's first word, SW_GIVE, taken); what it would give for the flask of oil asked (SW_OFFER, half its worth friendly: 'would give you 1 penny'); the oil sold to it (SW_SELL: it takes the oil, FT_GOT, and hands over its pennies, FT_GAVE, by the character's own way with things, the world's wfetch.c; the character's flask gone, its pennies one more); its price asked back (SW_PRICE: 'asks'), bought back (SW_BUY: the character's penny taken, the oil handed over, the flask the character's again); haggled over (SW_HAGGLE, the book's Rhetoric in its tongue: agreed, or an offence); sung to (SW_ENTERTAIN: Singing, the referee's; pleased, unmoved, or friendly already)",
+      name: 'dq0trade', outfit: true, near: ['denizens', 'money'], what: "Dingus Quest Zero's market and entertaining (2026-11-02: DENIZENS.md's trading, HOUSE.md's the market, for review), by the denizens' sway, the things changing hands and the words: a hand-written theme's bandits (seed 1, dq0kit's), one put beside the character, friendly, at each command (dq0Poke's); given 2 pennies without a \"to\" (\"give the bandit 2 pennies\": the one given it the line's first word, SW_GIVE, taken); what it would give for the flask of oil asked (SW_OFFER, half its worth friendly: 'would give you 1 penny'); the oil sold to it (SW_SELL: it takes the oil, FT_GOT, and hands over its pennies, FT_GAVE, by the character's own way with things, the world's wfetch.c; the character's flask gone, its pennies one more); its price asked back (SW_PRICE: 'asks'), named Bob and bought back from it (SW_BUY, by the name given: the character's pennies taken, the oil handed over, the flask the character's again); haggled over (SW_HAGGLE, the book's Rhetoric in its tongue: agreed, or an offence); sung to (SW_ENTERTAIN: Singing, the referee's; pleased, unmoved, or friendly already)",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
@@ -5177,18 +5177,26 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0antidote', near: ['body'], what: "Dingus Quest Zero's remedies (2026-11-02: HOUSE.md's remedies, for review), both referees: the character with an antidote and a remedy (dq0 -k antidote,remedy), no poison nor sickness on it: each drunk ('You drink the antidote.': the things' IO_USE by its key, the referee's RS_TIME RT_TAKEN, its words told at once) does nothing ('It does nothing for you'), and is gone; the null referee the same",
-      init: 't_rc', cycles: 1500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 1 -c /ram/c.hm -T -k antidote,remedy',
-        'drink the antidote', 'drink the remedy', 'inventory', 'quit', 'dq0 -r null -p t -s 1 -T -k antidote', 'drink the antidote', 'quit', 'echo ']) },
-      expect: ['% echo '],
+      name: 'dq0antidote', near: ['body'], what: "Dingus Quest Zero's remedies (2026-11-02: HOUSE.md's remedies, for review), both referees: dq0venom's hostile cave adders (seed 1, the character tough), the character with an antidote and a remedy (dq0 -k), the antidote stowed; bitten, the venom in it (\"The bite burns: there's venom in it.\"), it drinks the antidote as it's told (dq0OnWords': \"You drink the antidote.\", the things' IO_USE by its key, the referee's RS_TIME RT_TAKEN, its words at once): the toxin's rate the better by its power, dosed by Physician (\"The remedy works\", or \"eases you\"), the antidote gone; the remedy drunk with no sickness on it does nothing (\"It does nothing for you.\"); and under the null referee an antidote with nothing to treat the same",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k antidote,remedy', 'stow the antidote', 'open the door', 'south', 'inventory', 'drink the remedy', 'quit',
+        'dq0 -r null -p t -s 1 -T -k antidote', 'drink the antidote', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'south', n: 1, words: "there's venom in it.", text: 'drink the antidote\r' }]);
+      },
+      expect: ['% echo $status'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], s = dq0Story(out);
-        if ((s.match(/You drink the antidote./g) || []).length !== 2) f.push('the antidote not drunk under both referees');
-        if (!/You drink the remedy./.test(s)) f.push('the remedy not drunk');
-        if ((s.match(/It does nothing for you/g) || []).length < 3) f.push('a remedy with nothing to treat not told doing nothing: ' + JSON.stringify(s.slice(s.indexOf('> drink the antidote'), s.indexOf('> drink the antidote') + 600)));
+        const T = dq0Turns(m), f = [], s = dq0Story(out), g = s.slice(0, s.indexOf('dq0 -r null')), n = s.slice(s.indexOf('dq0 -r null')), i = g.indexOf('You drink the antidote.');
+        if (!/there's venom in it\./.test(g)) f.push('no venom: the scene not set');
+        if (i < 0) f.push('the antidote not drunk');
+        if (i >= 0 && !/The remedy works|The remedy eases you/.test(g.slice(i, i + 600))) f.push('the antidote did nothing: ' + JSON.stringify(g.slice(i, i + 600)));
+        if (!/You drink the remedy\. It does nothing for you/.test(g)) f.push('the remedy, nothing to treat: ' + JSON.stringify(g.slice(g.indexOf('> drink the remedy'), g.indexOf('> drink the remedy') + 300)));
+        if (!/You drink the antidote\. It does nothing for you/.test(n)) f.push('the null referee: ' + JSON.stringify(n.slice(0, 400)));
         const inv = T.of('inventory');
-        if (!inv || !inv.after || dq0Carried(inv.after).some(i => i.name === 'antidote' || i.name === 'remedy')) f.push('the remedies still carried');
+        if (inv && inv.after && dq0Carried(inv.after).some(j => j.name === 'antidote')) f.push('the antidote still carried');
+        if (f.length) f.push(g.slice(g.indexOf('> open the door'), g.indexOf('> open the door') + 2500));
         return f;
       },
       sdcard: true
