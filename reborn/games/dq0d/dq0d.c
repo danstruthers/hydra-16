@@ -123,9 +123,10 @@ unsigned char __fastcall__ dig_way (unsigned char k);   /* Part 12 (the tunnelle
 unsigned char nearby (void);                    /* Part 13: the lairs near placed (the main RAM's room, 2026-11-01) */
 unsigned char __fastcall__ door_way (unsigned char k);  /* Part 14: a door worked (Phase 3C's one path, 2026-11-02) */
 unsigned char __fastcall__ take_way (unsigned char k);  /*   a thing taken up */
-void __fastcall__ feel (unsigned char k);       /* Part 15 (2026-11-02: the main RAM's room; the ways followed) */
-unsigned char __fastcall__ meets (unsigned char k, unsigned char was);
-unsigned char __fastcall__ way (unsigned char k);
+void __fastcall__ robs (unsigned char k);       /* Part 8 (its foe helpless: robbed, or left) */
+void __fastcall__ feel (unsigned char k);       /* Part 8 (2026-11-02: the main RAM's room, the ways'; with hungry: no copies
+                                                **   back and forth each decision, dq0dig's 6,700) */
+unsigned char __fastcall__ way (unsigned char k);   /* Part 15: a way followed (2026-11-02) */
 unsigned char __fastcall__ wfind (unsigned char k);     /* Part 16: a way found (2026-11-02) */
 static unsigned char aroute[NACTORS];           /* (Each one following a way found: way's, its field's number + 1) */
 static unsigned wlim;                           /* (step_for's lim, for way's) */
@@ -1747,10 +1748,46 @@ static unsigned char fought (void)
 static int ddx, ddy;                            /* (The character from the actor deciding, and how far) */
 static unsigned dist;
 
-/* Actor k's (the copy's) attitude moved by what it senses of the character (it senses it now).  Part 15's, with meets
-** (2026-11-02: the main RAM's room, the ways'; both asked only as it senses the character) */
-#pragma code-name (push, "SW15CODE")
-#pragma rodata-name (push, "SW15RODATA")
+/* Whether feel has anything to do for actor k (the copy; its kind K): the main RAM's cheap test, so a watcher's decision
+** copies in no part: come into or gone from its lair's bounds, or one that may see the character with an ally about */
+static unsigned char __fastcall__ feels (unsigned char k)
+{
+    struct actor* q = HUB->actor;
+    unsigned u;
+    unsigned char j;
+
+    hub_map (0);
+    u = apart (pcx - ahx[k], pcy - ahy[k]);
+    if ((K.flags & K_LAIR) && (u > 4) == intr[k]) {
+        return 1;
+    }
+    if (!seenfoe[k] && a.attitude > AT_HOSTILE && a.attitude < AT_ALLIED) {
+        for (j = NACTORS; j; --j, ++q) {
+            if (q->attitude == AT_ALLIED) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+/* Actor k's (the copy's) attitude moved by what it senses of the character (it senses it now).  Part 8's (2026-11-02:
+** the main RAM's room, the ways'; asked as feels has it) */
+#pragma code-name (push, "SW8CODE")
+#pragma rodata-name (push, "SW8RODATA")
+void __fastcall__ s_robs (unsigned char k)
+{
+    if (!(K_HELP (K) & H_ROBS) || dist <= 1) {
+        if (K_HELP (K) & H_ROBS) {
+            a.doing = DO_FLEE;                  /* (Off with what it takes, to its lair: the world's) */
+            rob_to (k);
+            act (I_ROB, k);
+        }
+        a.attitude = AT_UNFRIENDLY;
+        fled[k] = FLEE_T;
+    }
+}
+
 void __fastcall__ s_feel (unsigned char k)
 {
     struct actor* q = HUB->actor;
@@ -1804,10 +1841,8 @@ static unsigned char __fastcall__ keep_off (unsigned char k)
 }
 
 /* What actor k (the copy) does as it senses the character, by its attitude and its kind.  The step, 0xFD (darting
-** past it: dart's square), or 0xFF (none).  Part 15's (the main RAM's room, 2026-11-02) */
-#pragma code-name (push, "SW15CODE")
-#pragma rodata-name (push, "SW15RODATA")
-unsigned char __fastcall__ s_meets (unsigned char k, unsigned char was)
+** past it: dart's square), or 0xFF (none) */
+static unsigned char __fastcall__ meets (unsigned char k, unsigned char was)
 {
     unsigned char d = 0xFF, t = a.attitude;
 
@@ -1829,8 +1864,6 @@ unsigned char __fastcall__ s_meets (unsigned char k, unsigned char was)
     }
     return d;
 }
-#pragma code-name (pop)
-#pragma rodata-name (pop)
 
 /* The way actor k (the copy a, its kind K's) follows the character's scent where it doesn't sense it (a hunter by
 ** smell, K_NOSE: DUNGEON.md's traces): the character's trail, the world's journal of its passings (the hub's traces'
@@ -1961,7 +1994,9 @@ static unsigned char __fastcall__ decide (unsigned char k)
         lsy[k] = pcy;
         drawn[k] = DRAWN_N;
         upto[k] = (unsigned) (now >> 8) + UP_T; /* (Up: not back to sleep a while, part 9's) */
-        feel (k);
+        if (feels (k)) {
+            feel (k);
+        }
     }
     anear[k] = a.sn == pcs && dist <= 3;
     rng = K.flags & K_LAIR ? 2 : K.range;       /* (Its wandering's reach) */
@@ -1974,14 +2009,8 @@ static unsigned char __fastcall__ decide (unsigned char k)
                                                 **   killer strikes on (the referee finishes one senseless); a robber
                                                 **   comes up to it and robs it, then goes; one that only defended
                                                 **   itself goes, unfriendly after: kinds.txt's ways) */
-        if (sres[k] && !fled[k] && (!(K_HELP (K) & H_ROBS) || dist <= 1)) {
-            if (K_HELP (K) & H_ROBS) {
-                a.doing = DO_FLEE;              /* (Off with what it takes, to its lair: the world's) */
-                rob_to (k);
-                act (I_ROB, k);
-            }
-            a.attitude = AT_UNFRIENDLY;
-            fled[k] = FLEE_T;
+        if (sres[k] && !fled[k]) {
+            robs (k);                           /* (Part 8's, 2026-11-02: the main RAM's room) */
         }
     }
     if (fled[k]) {
@@ -2411,9 +2440,9 @@ unsigned char __fastcall__ s_dig_way (unsigned char k)
 ** agents' too).  A mark beyond the field's reach: the edge of it nearest the mark, a way on found from there.  A shut
 ** door on the way worked by door_way (wayj).  None to be had (walled off, or its squares not made): tried again ten
 ** seconds on, the greedy step meanwhile, and a tunneller's dig after (dig_way's) */
-#define RW_W            48                      /* A field's squares, each way */
+#define RW_W            32                      /* A field's squares, each way (2.4M to 4.2M cycles a field found; 48: 6.4M) */
 #define RW_N            (RW_W * RW_W)
-#define NFIELDS         2
+#define NFIELDS         4
 #define RQ_N            512                     /* The search's ring (two of its fronts at most: 4 * RW_W each) */
 struct rfield {
     unsigned char   sn, used;                   /* (Its stratum; used: a stamp, 0 none) */
@@ -2431,15 +2460,17 @@ struct rhead {
     unsigned char   stamp;
 };
 #define RHEAD           ((struct rhead*) 0x8000)
-#define RCELL(f)        ((unsigned char*) 0x8040 + (f) * RW_N)  /* A square's step toward the mark (0-7, dir_x's; 8 the
+#define RBASE           0x8080                  /* (The fields after the head) */
+#define RCELL(f)        ((unsigned char*) RBASE + (f) * RW_N)  /* A square's step toward the mark (0-7, dir_x's; 8 the
                                                 **   mark; | RC_STEPS); unreached, RC_OPEN | its corner (cornk's) |
                                                 **   RC_STEPS; RC_SOLID | its corner */
-#define RELEV           ((signed char*) 0x8040 + NFIELDS * RW_N)    /* (The search's: each square's floor) */
-#define RQUEUE          ((unsigned*) (0x8040 + (NFIELDS + 1) * RW_N))
+#define RELEV           ((signed char*) RBASE + NFIELDS * RW_N)    /* (The search's: each square's floor) */
+#define RQUEUE          ((unsigned*) (RBASE + (NFIELDS + 1) * RW_N))
 #define RC_STEPS        0x10
 #define RC_OPEN         0xC0
 #define RC_SOLID        0x80
-typedef char rhead_fits[sizeof (struct rhead) <= 0x40 && 0x40 + (NFIELDS + 1) * RW_N + 2 * RQ_N <= 0x2000 ? 1 : -1];
+typedef char rhead_fits[sizeof (struct rhead) <= RBASE - 0x8000 && RBASE - 0x8000 + (NFIELDS + 1) * RW_N + 2 * RQ_N <= 0x2000 ?
+    1 : -1];
 extern const unsigned char cornk[16];           /* (slant.s's: a diagonal's corner by its kind, 0 stood on, 1 not, 2 cut) */
 
 /* Actor k's (the copy a's) step on its way to refx, refy (step_for's: wlim its reach of home; S_TOWARD's): its own
@@ -2606,13 +2637,16 @@ static unsigned char __fastcall__ route (unsigned char k)
         rofs[j] = u;
     }
     hy_bank (rb - 1);
-    f = RHEAD->f[0].used > RHEAD->f[1].used ? 1 : 0;   /* (The older, the one its stamp's lower) */
-    if (RHEAD->f[f].used && RHEAD->act[k].f == f) {
-        f ^= 1;                                 /* (Not its own) */
+    for (f = 0, j = 1; j < NFIELDS; ++j) {     /* (The oldest, its stamp the lowest, not its own) */
+        if (RHEAD->act[k].f == f || (RHEAD->act[k].f != j && RHEAD->f[j].used < RHEAD->f[f].used)) {
+            f = j;
+        }
     }
     if (!++RHEAD->stamp) {
         RHEAD->stamp = 1;
-        RHEAD->f[0].used = RHEAD->f[1].used = 0;
+        for (j = 0; j < NFIELDS; ++j) {
+            RHEAD->f[j].used = 0;
+        }
     }
     r = &RHEAD->f[f];
     r->used = 0;                                /* (Unused till it's made) */

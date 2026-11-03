@@ -39,8 +39,7 @@ ovx:        .res        1
             SWPART      13, 5               ; The lairs near placed (2026-11-01: the main RAM's room; small, cheap to
                                             ;   swap in, each time round after a move)
             SWPART      14, 5               ; Doors worked (Phase 3C's one path, 2026-11-02)
-            SWPART      15, 5               ; The ways followed; what an actor does as it senses the character
-                                            ;   (meets, feel: the main RAM's room, 2026-11-02)
+            SWPART      15, 5               ; The ways followed (2026-11-02)
             SWPART      16, 6               ; A way found (2026-11-02)
             SWPART      17, 4               ; A body found on a record's rounds (2026-11-02)
 
@@ -85,8 +84,8 @@ ovx:        .res        1
             SWFN        dig_way, 12         ; (A tunneller's way dug: slice 4.11's)
             SWFN        door_way, 14        ; (A door worked: Phase 3C's one path)
             SWFN        take_way, 14        ; (A thing taken up: Phase 3C's one path)
-            SWFN        feel, 15            ; (The main RAM's room, 2026-11-02)
-            SWFN        meets, 15
+            SWFN        feel, 8             ; (The main RAM's room, 2026-11-02)
+            SWFN        robs, 8
             SWFN        way, 15             ; (A way followed: step_for's, 2026-11-02)
             SWFN        wfind, 16           ; (A way found)
             SWFN        slant, 11           ; (A denizen's diagonal way: slant.s, 2026-10-31, the main RAM's room)
