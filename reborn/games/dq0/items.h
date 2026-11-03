@@ -139,6 +139,9 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_MANKAR, KI_MANG,                         /* The Gargun's weapons (Combat 3's (G): Phase 4's peoples, 2026-10-29;
                                                 **   past the theme's, the own kinds' room full: struck with as the
                                                 **   best held, never named as the striker) */
+    KI_ANTIDOTE, KI_REMEDY,                     /* (The remedies, 2026-11-02: an antidote, a theriac against poisons
+                                                **   and venoms; a remedy, a physician's draught against a disease;
+                                                **   drunk, their keys the things' IO_USE's: HOUSE.md's remedies) */
     KI_COUNT };
 
 #define KIND_WORDS      ((const char*) (CATALOGUE + NKINDS))     /* (In the kinds' bank after them: the words of

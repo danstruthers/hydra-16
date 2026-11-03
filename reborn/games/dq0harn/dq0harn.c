@@ -214,9 +214,11 @@ static void __fastcall__ dig_of (struct req* r);
 /* The skill that knows a thing (rs.h's AP_*): weapons and armour Weaponcraft, metal Metalcraft, wood Timbercraft,
 ** hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food Cookery, stone
 ** Masonry, glass Glassworking, the rock where it lies Mining (part 2's, the main RAM's room, 2026-10-29) */
-static const unsigned char appraiser[NAP] = {
+static const unsigned char appraiser[NAP + 4] = {
     HARN_WPN, HARN_WPN, HARN_MET, HARN_TIM, HARN_HID, HARN_TEX, HARN_CER, HARN_JEW, HARN_LOR, HARN_COO, HARN_LOR,
-    HARN_MSN, HARN_GLA, HARN_MIN
+    HARN_MSN, HARN_GLA, HARN_MIN,
+    HARN_SNG, HARN_SNG, HARN_MUS, HARN_DAN      /* (Past the crafts, NAP + PF_*: a performance, entertaining one, its
+                                                **   skill said, unsaid Singing's (every one's, the book's automatic skill): 2026-11-02) */
 };
 
 /* RS_TEST's own tests, through one stub (the main RAM's room): a dig's, moving quietly's, an appraisal's (by the
@@ -228,7 +230,7 @@ void __fastcall__ s_dig_answer (struct req* r)
                                                 **   grade by its sheet, the world's the rest, slice 4.11's) */
         s_quiet_test (r);
     } else if (r->a == P_APPRAISE) {
-        r->grade = test_sk (&pc, appraiser[r->b < NAP ? r->b : 0], r->steps);
+        r->grade = test_sk (&pc, appraiser[r->b < NAP + 4 ? r->b : 0], r->steps);
     } else if (r->a != P_DIG && r->a != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
         if (!speaks (r->text)) {                /* (Words in a tongue it doesn't speak: nothing) */
             r->result = 2;

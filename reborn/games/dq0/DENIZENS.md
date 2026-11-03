@@ -175,6 +175,15 @@ done before its eyes to a foe of its (one of a faction hostile to it, sensing it
 worth's steps less one), a step each four, to friendly at most (dq0d's s_regard).  A freed prisoner's (no prisoners
 yet) is the hook's.
 
+**Trading and entertaining** *(2026-11-02; HOUSE.md's the market, entertaining and remedies, for review)*: "buy the
+rope from the dwarf", "sell my dagger", "how much for the lantern?", "what will you give for this?", "haggle for the
+rope", "sing to the bandit".  The UI finds the goods (the character's, or the trader's: the world's IO_GEAR's goods, the
+nearest named, or any, carrying them) and each side's pennies, and asks the denizens' task (SW_BUY, SW_SELL, SW_PRICE,
+SW_OFFER, SW_HAGGLE, SW_ENTERTAIN: dq0d's part 13): any folk denizen indifferent or better trades, its price from the
+goods' worth by its attitude, haggled by the book's Rhetoric in its tongue; the deal done by the one path (its own
+I_ROB intents, FE_GIFT the coins or the goods it takes, FE_GIVE its own handed over: the world's wfetch.c).  Entertained
+by the referee's performing skill, its attitude moved as words move it, as far as friendly.
+
 ### Allies
 
 An ally is still the **denizens' task's**: it moves, fights and acts on its own turn by its own nature, but its goal
@@ -202,6 +211,14 @@ from the start, is the character and its allies.
   beside it (FE_GIVE: into the character's hand or pack, else set down at its feet).  Each step told (E_TASK
   TE_FETCHED: "Grub picks up the key.", "Grub hands you the key.", "Grub can't carry the anvil.", "The dwarf has its
   hands full: it can't take the torch.").  Failing, it follows again.
+- **Errands at a door** *(2026-11-02, the one path)*: "ask the dwarf to open the door", "tell Grub to shut the door",
+  "ask the dwarf to unlock the door" (the parser's order words open, close, shut, unlock: OR_OPEN, OR_CLOSE, OR_UNLOCK).
+  The UI finds the door as the character's own command does (its square), and asks the ally (one with hands: a beast
+  "doesn't know how"); it walks to beside the door (the four ways), and posts the character's own intent, I_PORTAL (its
+  PA_OPEN, PA_CLOSE, PA_UNLOCK: its key if it carries one), the world's to carry out (wport.c, told E_DEN DE_OPENS ...);
+  then it follows again.  No way to it, it gives up and follows.
+- **A gift without "to"** *(2026-11-02)*: "give the bandit 5 pennies", "offer the orc my dagger": the one given it the
+  line's first word after the verb that isn't the thing's, a number or a little word (the UI's, errand.c).
 
 ### In the tasks
 
@@ -662,8 +679,10 @@ What the plans bring later, by the slice or phase that brings it:
   prone (a shooter crouched behind cover).
 - **Fetching and influence** (slice 4.8, built 2026-10-30: fetching, gifts and bribes, reputation, D10, a follower's
   distance, above): left, an ally asked to do other things ("ask the dwarf to open the door": it "doesn't know how"),
-  "give the bandit 5 pennies" (the two objects without "to": the parser's), a gift to one that isn't a person (an
-  altar), a faction's regard by a freed prisoner, a rescue or a piece of the puzzle, entertain and bargain.
+  a gift to one that isn't a person (an altar), a faction's regard by a freed prisoner, a rescue or a piece of the
+  puzzle, other errands (fetching built, doors built 2026-11-02: a lock picked, a door forced or barred for the
+  character, a thing put down or given to another); the market's left (HOUSE.md's: change, farthings and crowns, coins
+  by mint, a merchant kind).  ("give the bandit 5 pennies", entertaining and bargaining built 2026-11-02.)
 - **Tunnellers and builders** (slice 4.11, built in part 2026-11-01: tunnellers, above): left, the minds' other reasons
   to dig (a burrow from a lair, a faction's mine following a vein: rock.h's veins; a way round rubble is dug now), the
   records away from the character digging (only actors dig), poor rock coming down on a tunneller, the spoil as a thing,

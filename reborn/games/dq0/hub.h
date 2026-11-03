@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     36                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     37                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -67,7 +67,8 @@
                                                 **   the afflictions, pc_air ... pc_dose; 35, the time of day believed,
                                                 **   tb, BRG_SKY, rs.h's TIME_STEPS and timesense; 36, the
                                                 **   tunnellers, I_KIT's KT_DIG, DG_*, dig_t, DE_DIG, DE_DUG, AG_PICK,
-                                                **   AG_SPADE, DO_DIG) */
+                                                **   AG_SPADE, DO_DIG; 37, the market's: the sway's coin, its, ncoin
+                                                **   and nits, SW_BUY ... SW_ENTERTAIN, OR_OPEN ..., SR_WONT ...) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -1049,11 +1050,25 @@ enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIE
 ** an animal's by P_ANIMALS alone; words want a tongue in common), a request to an ally, a name given to one, a
 ** look at how it seems, a blow (a stand-in for the fights) */
 enum { SW_LOOK, SW_TALK, SW_PERSUADE, SW_DECEIVE, SW_THREATEN, SW_CALM, SW_BEFRIEND, SW_ATTACK, SW_ORDER, SW_NAME,
-       SW_GIVE };                               /* (SW_GIVE: a gift, slice 4.8's: the thing's worth and food in the
+       SW_GIVE,                                 /* (SW_GIVE: a gift, slice 4.8's: the thing's worth and food in the
                                                 **   request, the attitude moved by it; taken, the UI's to hand over) */
-enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH };   /* An ally's request (SW_ORDER's): follow the character,
-                                                **   wait where it is, go back to its own ways, fetch a thing */
-enum { SR_OK, SR_NONE, SR_FAR, SR_TONGUE, SR_BEAST, SR_MINDLESS, SR_AS_FAR, SR_NOT_ALLY, SR_CANT, SR_DOWN };
+       SW_BUY, SW_SELL, SW_PRICE, SW_OFFER, SW_HAGGLE,  /* (The market, 2026-11-02: a thing bought from one, sold to
+                                                **   one, its price asked, what it would give, haggled over (order 1:
+                                                **   the character's, sold); the goods the sway's item, its worth ix
+                                                **   (farthings, its condition's), its count iy; the coins, each side's
+                                                **   pennies, coin and its, their counts ncoin and nits; the reply's ix
+                                                **   the price, pennies) */
+       SW_ENTERTAIN };                          /* (One entertained: sung to, played or danced for, the referee's
+                                                **   performing skill by the order: PF_*) */
+enum { PF_ANY, PF_SING, PF_PLAY, PF_DANCE };    /* (SW_ENTERTAIN's order: the best of them, or the one said) */
+enum { OR_NONE, OR_FOLLOW, OR_WAIT, OR_HOME, OR_FETCH, OR_OPEN, OR_CLOSE, OR_UNLOCK };   /* An ally's request (SW_ORDER's):
+                                                **   follow the character, wait where it is, go back to its own ways,
+                                                **   fetch a thing; a door opened, shut, unlocked (its square ix, iy:
+                                                **   2026-11-02, the minds' I_PORTAL) */
+enum { SR_OK, SR_NONE, SR_FAR, SR_TONGUE, SR_BEAST, SR_MINDLESS, SR_AS_FAR, SR_NOT_ALLY, SR_CANT, SR_DOWN,
+       SR_WONT, SR_NO_GOODS, SR_POOR, SR_BROKE, SR_SPURNED };   /* (The market's, 2026-11-02: it won't trade with the
+                                                **   character, it has no such thing to sell, the character hasn't
+                                                **   the money, it hasn't, it takes offence at the haggling) */
                                                 /* A sway's result: done (a test's: grade, was, now), none such in
                                                 **   sight, too far (an animal's out of reach), no tongue in common,
                                                 **   an animal (words don't reach it), mindless, as far as that way
@@ -1073,7 +1088,10 @@ struct sway {
     unsigned        t;                          /*   the tenths it took the character */
     unsigned        item, ix, iy;               /* (The UI's: a thing to fetch, its item and where it lies; a gift's
                                                 **   worth in farthings, ix, and 1 if it's food, iy; slice 4.8's) */
-    unsigned char   actor;                      /* (The reply's: the actor it was, plus 1) */
+    unsigned char   actor;                      /* (The reply's: the actor it was, plus 1; the market's request: the
+                                                **   one the goods were found on, plus 1) */
+    unsigned        coin, its;                  /* (The market's: the character's pennies and the actor's, their */
+    unsigned char   ncoin, nits;                /*   counts: 2026-11-02) */
 };
 
 #define IQ_SIZE         16                      /* The UI's intents */

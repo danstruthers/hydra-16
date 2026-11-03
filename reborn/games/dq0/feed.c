@@ -25,6 +25,18 @@ static void __fastcall__ feed_do (unsigned char eat)
     unsigned w;
     unsigned char m = 0, p = 0, n, f = 0;
 
+    if (!strcmp (cmd.obj.word, "antidote") || !strcmp (cmd.obj.word, "remedy")) {   /* (A remedy taken, 2026-11-02:
+                                                **   HOUSE.md's remedies; the referee's to judge, RT_TAKEN) */
+        if (othings (IO_USE, cmd.obj.word, "", 0) != IR_OK) {
+            sayf ("\nYou have no %s.", cmd.obj.word);
+            return;
+        }
+        sayf ("\nYou drink the %s.", cmd.obj.word);
+        m = 0;
+        p = RT_TAKEN | (cmd.obj.word[0] == 'a' ? 1 : 2);
+        w = 50;
+        goto told;
+    }
     hub_map (0);
     w = eat ? HUB->pc_hunger : HUB->pc_thirst;
     if (w < (eat ? 120 : 60)) {
@@ -61,6 +73,7 @@ static void __fastcall__ feed_do (unsigned char eat)
         }
         w = p * 300;
     }
+told:
     hub_map (0);
     r = &HUB->slot[SLOT_UI];
     r->w1 = r->w2 = 0;

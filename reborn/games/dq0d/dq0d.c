@@ -2600,6 +2600,34 @@ unsigned char __fastcall__ s_ally (unsigned char k)
         return d;
     }
     a.doing = DO_FOLLOW;
+    if (aorder[k] >= OR_OPEN) {                 /* (A door's errand, 2026-11-02: walked to beside it, the four ways,
+                                                **   then its work, the character's code for every actor: the world's
+                                                **   I_PORTAL, wport.c's; following again) */
+        x = afx[k];
+        y = afy[k];
+        if ((a.x > x ? a.x - x : x - a.x) + (a.y > y ? a.y - y : y - a.y) != 1) {
+            refx = x;
+            refy = y;
+            d = step_for (k, 0xFFFF, S_TOWARD);
+            refx = pcx;
+            refy = pcy;
+            if (d < 4) {
+                return d;
+            }
+            aorder[k] = OR_FOLLOW;              /* (No way to it: given up) */
+            return 0xFE;
+        }
+        im.a = aorder[k] == OR_OPEN ? PA_OPEN : aorder[k] == OR_CLOSE ? PA_CLOSE : PA_UNLOCK;
+        im.b = PW_DOOR;
+        im.w1 = x;
+        im.w2 = y;
+        im.t = 0;
+        a.face = bearing (x - a.x, y - a.y);
+        act (I_PORTAL, k);
+        aorder[k] = OR_FOLLOW;
+        wt = 5;
+        return 0xFE;
+    }
     if (aorder[k] == OR_FETCH) {
         n = 1;
         hub_map (ITEM_BANK (i));
@@ -2609,6 +2637,7 @@ unsigned char __fastcall__ s_ally (unsigned char k)
             if (a.sn == pcs && dist <= 1) {
                 im.a = FE_GIVE;
                 im.t = i;
+                im.w1 = im.w2 = 0;              /* (Whole, into its hand first) */
                 act (I_ROB, k);
                 afetch[k] = 0;
                 aorder[k] = OR_FOLLOW;
@@ -2726,7 +2755,142 @@ void __fastcall__ s_regard (unsigned char f, unsigned char pts)
 ** interest, at steps by its attitude and its kind too; a critical success two steps, a success one, a critical failure
 ** an insult (a step back, the gift refused: grade G_CF), as far as friendly (a gift doesn't make an ally); taken (but
 ** refused), the world's to hand over (the UI's), and its faction's regard the more (reputation) */
+#pragma code-name (push, "SW13CODE")            /* (Part 13's since 2026-11-02: part 5's room, the market's beside it) */
+#pragma rodata-name (push, "SW13RODATA")
+#pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
 static const unsigned means[5] = { 4, 16, 48, 192, 960 };   /* (Farthings: a penny, 4d, 12d, 48d, 240d) */
+
+/* The referee's test of the character's words with actor k, purpose p (b its own: entertaining's, P_APPRAISE's past
+** the crafts, the performing skill), at steps st, in its tongue (t 1: none wanted): the grade, or 0x7F (no tongue in
+** common: SR_TONGUE) */
+static signed char __fastcall__ words_test (unsigned char k, unsigned char p, unsigned char b, signed char st,
+    unsigned char t)
+{
+    struct req* r;
+    signed char g;
+    unsigned char f;
+
+    hub_map (0);
+    f = HUB->actor[k].faction & (NFACT - 1);
+    r = DSLOT;
+    r->text[0] = 0;
+    if (!t) {
+        if (!ftongue[f][0]) {
+            return 0x7F;
+        }
+        strcpy (r->text, ftongue[f]);
+    }
+    r->kind = RS_TEST;
+    r->actor = 0;
+    r->a = p;
+    r->b = b;
+    r->steps = st;
+    r = hub_call (r, T_REFEREE);
+    g = r->result == 2 ? 0x7F : r->grade;
+    r->state = REQ_FREE;
+    return g;
+}
+
+/* ---- The market and entertaining (2026-11-02: DENIZENS.md's trading and entertaining; HOUSE.md's the market, for
+** review): actor k (the copy's, its kind's K; sw the UI's request, the goods found, the coins each side has) */
+
+/* Entertained (SW_ENTERTAIN: sung to, played or danced for, sw.order the skill said, PF_*): within earshot, by the
+** referee's performing skill (P_APPRAISE's past the crafts, NAP + the skill: the best of them unsaid), no tongue wanted,
+** at steps by its attitude and its kind's sway; a critical success two steps, a success one, a critical failure a step
+** back, as far as friendly (a song doesn't win an ally); a minute's work */
+static void __fastcall__ entertain (unsigned char k)
+{
+    signed char g;
+    unsigned char t = sw.was;
+
+    if (t >= AT_FRIENDLY) {
+        sw.result = SR_AS_FAR;
+        return;
+    }
+    g = sw.grade = words_test (k, P_APPRAISE, NAP + sw.order, (signed char) t - 3 + K.sway, 1);
+    sw.t = 600;
+    t = g == G_CS ? t + 2 : g == G_MS ? t + 1 : g == G_CF && t ? t - 1 : t;
+    hub_map (0);
+    HUB->actor[k].attitude = sw.now = t < AT_FRIENDLY ? t : AT_FRIENDLY;
+}
+
+/* A trade (SW_BUY, SW_SELL, SW_PRICE, SW_OFFER, SW_HAGGLE: sw.order 1, the character's thing sold): with one of its
+** mind (folk: not a beast, not the mindless), indifferent or better to the character; its price from the goods' worth
+** (sw.ix, farthings, its condition's: the UI's), by its attitude: it sells at five quarters of it indifferent, the
+** whole friendly, three quarters to an ally; it buys at two fifths, a half, three fifths (the book's: a seller "lucky
+** to receive half"); haggled, the book's Rhetoric in its tongue, at steps by its attitude, its kind's sway and its
+** mind (the cunning the harder), the price a quarter better at a critical success, a tenth at a success, as asked at a
+** failure, a critical failure an offence (a step back, no deal); rounded to the penny, a penny at least (sw.ix the
+** reply's).  A price asked within earshot; the deal within reach, the money there (the payer's pennies), then its
+** intents, the character's own way with things for every actor (the world's wfetch.c: the payer's coins or the goods
+** sold taken, FE_GIFT, kept; its own handed over, FE_GIVE) */
+static void __fastcall__ trade (unsigned char k)
+{
+    unsigned char t = sw.was, h = sw.kind, sell = sw.order & 1, q;
+    signed char g;
+    unsigned long p;
+    unsigned n;
+
+    if (K.mind == M_BEAST) {
+        sw.result = SR_BEAST;
+        return;
+    }
+    if (t < AT_INDIFFERENT) {
+        sw.result = SR_WONT;
+        return;
+    }
+    if (!sw.item) {
+        sw.result = SR_NO_GOODS;
+        return;
+    }
+    p = (unsigned long) sw.ix * (sell ? (t == AT_INDIFFERENT ? 40 : t == AT_FRIENDLY ? 50 : 60) :
+        (t == AT_INDIFFERENT ? 125 : t == AT_FRIENDLY ? 100 : 75));
+    sw.t = 20;
+    if (h == SW_HAGGLE) {
+        g = sw.grade = words_test (k, P_PERSUADE, 0, (signed char) t - 3 + K.sway + (K.mind == M_CUNNING ? -1 :
+            K.mind == M_LOW ? 1 : 0), 0);
+        if (g == 0x7F) {
+            sw.result = SR_TONGUE;
+            sw.grade = 0;
+            return;
+        }
+        sw.t = 300;
+        if (g == G_CF) {
+            sw.result = SR_SPURNED;
+            hub_map (0);
+            HUB->actor[k].attitude = sw.now = t - 1;
+            return;
+        }
+        q = g == G_CS ? 25 : g == G_MS ? 10 : 0;
+        p = p / 100 * (sell ? 100 + q : 100 - q);
+    }
+    n = (unsigned) ((p + 200) / 400);
+    sw.ix = n = n ? n : 1;
+    if (h == SW_PRICE || h == SW_OFFER) {
+        return;
+    }
+    if (dist > 1) {
+        sw.result = SR_FAR;
+        return;
+    }
+    if (sell ? sw.nits < n : sw.ncoin < n) {
+        sw.result = sell ? SR_BROKE : SR_POOR;
+        return;
+    }
+    im.a = FE_GIFT;                             /* (The payer's coins, or the goods sold: taken, kept) */
+    im.t = sell ? sw.item : sw.coin;
+    im.w1 = sell ? sw.iy >> 8 : n;
+    im.w2 = 1;
+    im.x[0] = im.x[1] = 0xFF;
+    post (I_ROB, k + 1);
+    im.a = FE_GIVE;                             /* (Its own handed over: the goods bought, or its coins) */
+    im.t = sell ? sw.its : sw.item;
+    im.w1 = sell ? n : sw.iy >> 8;
+    im.w2 = 1;
+    im.x[0] = im.x[1] = 0xFF;
+    post (I_ROB, k + 1);
+    settle ();
+}
 
 void __fastcall__ s_gift (unsigned char k)
 {
@@ -2737,6 +2901,18 @@ void __fastcall__ s_gift (unsigned char k)
 
     if (K.mind == M_MINDLESS) {
         sw.result = SR_MINDLESS;
+        return;
+    }
+    if (sw.kind > SW_GIVE) {                    /* (The market, entertaining: within earshot, 2026-11-02) */
+        if (sw.beast) {
+            sw.result = SR_BEAST;
+        } else if (dist > 12) {
+            sw.result = SR_FAR;
+        } else if (sw.kind == SW_ENTERTAIN) {
+            entertain (k);
+        } else {
+            trade (k);
+        }
         return;
     }
     if (dist > 1) {
@@ -2777,6 +2953,7 @@ void __fastcall__ s_gift (unsigned char k)
         im.a = FE_GIFT;                         /* (Taken: the world's to hand over, a count of a lot split off) */
         im.t = sw.item;
         im.w1 = sw.iy >> 8;
+        im.w2 = 0;
         im.x[0] = im.x[1] = 0xFF;
         post (I_ROB, k + 1);
         settle ();
@@ -2785,12 +2962,15 @@ void __fastcall__ s_gift (unsigned char k)
         }
         if (g >= 2) {
             hub_map (0);
-            s_regard (HUB->actor[k].faction, g - 1);
+            regard (HUB->actor[k].faction, g - 1);   /* (Part 5's, its stub: part 13's since 2026-11-02) */
         }
     }
     hub_map (0);
     HUB->actor[k].attitude = sw.now;
 }
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 
 #pragma code-name (pop)
@@ -2995,16 +3175,16 @@ static void __fastcall__ order (unsigned char k)
         sw.result = SR_NOT_ALLY;
         return;
     }
-    if (!sw.order || (sw.order == OR_FETCH && !sw.item)) {
+    if (!sw.order || (sw.order == OR_FETCH && !sw.item) || (sw.order >= OR_OPEN && (!sw.ix || q->body != BD_TWO))) {
         sw.result = SR_CANT;
         return;
     }
     sw.t = 20;
     if (sw.order == OR_FOLLOW) {
         akeep[k] = sw.ix < 8 ? sw.ix : 8;       /* (Its distance, if it's told one: slice 4.8's) */
-    } else if (sw.order == OR_FETCH) {
-        afetch[k] = sw.item;                    /* (A thing to fetch: the UI's, where it lay) */
-        afx[k] = sw.ix;
+    } else if (sw.order >= OR_FETCH) {
+        afetch[k] = sw.item;                    /* (A thing to fetch: the UI's, where it lay; a door's errand, its */
+        afx[k] = sw.ix;                         /*   square: 2026-11-02) */
         afy[k] = sw.iy;
     }
     if (sw.order == OR_HOME) {
@@ -3048,6 +3228,9 @@ void s_sway (void)
 
     hub_map (0);
     memcpy (&sw, &HUB->sway, sizeof sw);
+    if (sw.kind > SW_GIVE) {
+        n = sw.actor;                           /* (The market's: its actor found, plus 1, 2026-11-02) */
+    }
     sw.result = SR_OK;
     sw.grade = 0;
     sw.t = 0;
@@ -3066,10 +3249,13 @@ void s_sway (void)
             }
         }
         sw.result = n ? sw.result : SR_NONE;
-    } else if ((k = meant (sw.word)) == 0xFF) {
+    } else if ((k = n ? n - 1 : meant (sw.word)) == 0xFF) {   /* (The market's: the one the goods were found on) */
         sw.result = SR_NONE;
     } else {
         q = &HUB->actor[k];
+        if (n) {
+            dist = apart (q->x - pcx, q->y - pcy);
+        }
         strcpy (sw.name, q->name);
         sw.was = sw.now = q->attitude;
         kind_get (akind[k]);
@@ -3087,11 +3273,12 @@ void s_sway (void)
         case SW_ORDER:
             order (k);
             break;
-        case SW_GIVE:
-            gift (k);
-            break;
         default:
-            influence (k);
+            if (sw.kind >= SW_GIVE) {
+                gift (k);                       /* (A gift; the market, entertaining: part 13's, 2026-11-02) */
+            } else {
+                influence (k);
+            }
             break;
         }
         rouse (k, 1 | ROUSE_SET);               /* (It sees to what's changed at once) */

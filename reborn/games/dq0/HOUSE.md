@@ -2516,9 +2516,9 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
   "... holds."), "The sickness leaves you." at H6, "The sickness takes you." at H0.  Its dice the body's own (rshouse.h's
   way), so a fight's roll as they did whether a bite carries anything.  *Not yet*: corpses handled (no handling of a body
   but a search), the undead's touch but a ghoul's (the wight's drains), a lair's sickness spreading among its folk.
-- **A remedy** *(the hook, for review)*: an antidote taken makes the toxin's rate the better by its power (a theriac 2),
-  the lindworm's numbing venom only by a strong one (afflict.c's o_aff_cure, no command yet: the market brings the
-  antidotes, Treasure 4's potions, Khalmet's Theriac).
+- **A remedy** *(for review; built 2026-11-02: the market, entertaining and remedies, below)*: an antidote taken makes
+  the toxin's rate the better by its power (a theriac 2), the lindworm's numbing venom only by a strong one (afflict.c's
+  o_aff_cure, by remedy: "drink the antidote"); a remedy the disease's.
 - **The air** *(every ruleset's, rsair.h; its figures for review)*: blackdamp (stale air, too little in it to breathe:
   choke-damp, a mine's CO2), whitedamp (a fire's or a blast's smoke: carbon monoxide, poison that gives no warning),
   firedamp (marsh gas, in the coal and shale beds: it burns).  Strength 1 a little to 3 much.  Blackdamp felt at once:
@@ -2716,6 +2716,56 @@ These are the house's.
   looks once in a hundred seconds, as it isn't fighting or digging, going on with what it was doing; one it sees within
   four squares, idle, it goes to (its steps), and takes up beside it.  An ally takes nothing of its own accord.
 - **Two seconds** *(the house's)*: stooped, taken up, as the character's handling of a thing in reach.
+
+## The market, entertaining and remedies *(2026-11-02: the book's where it speaks, the house's else; drafted for the user to review)*
+
+The book (HarnWorld's prices): the listed prices are retail at the named source, "a mercantyler would buy items for as
+little as 10% of these prices and sell them for roughly 50%", "the seller, with a shrewd eye on the size of the buyer's
+purse, sets a price. Haggling follows and the final transaction can vary 25% or more"; a jeweller or a mercantyler buying
+a jewel, "lucky to receive half" (Treasure 5).  Rhetoric is the mercantyler's first skill (Character 17).  The rest is
+the house's.  *(Every number here is for review.)*  (dq0d.c's part 13: s_gift's trade and entertain; dq0w's things.c
+part 62, goods, and wfetch.c part 72; the UI's errand.c, part 15, in overlay 17's bank.)
+
+- **Who trades:** any denizen with a mind that isn't a beast (folk), indifferent to the character or better ("The
+  bandit won't trade with you." if it's wary or worse); no merchant kind yet (the peoples have none): every folk denizen
+  trades what it carries.
+- **What it sells:** what it carries but what it wears and what it holds itself (its own gear in use): its pouch's, its
+  pack's, what hangs at its belt (the world's goods, IO_GEAR's GR_GOODS, the nearest named or any).  What it buys:
+  anything the character carries.
+- **The price:** the thing's worth as a local takes it (the appraisal's: by its material, coins by their mints), times
+  the count, by its condition (its life left in tenths).  It sells at five quarters of that indifferent, the whole
+  friendly, three quarters to an ally; it buys at two fifths, a half, three fifths.  Rounded to the penny, a penny at
+  least.
+- **Haggling** ("haggle for the rope", "bargain over my dagger": selling if the character carries it, else buying):
+  the book's Rhetoric in the trader's tongue (none in common, no haggling), at steps by its attitude (hostile -3 ...
+  friendly +1), its kind's sway and its mind (the cunning one the harder, the low one the easier); a critical success
+  a quarter better, a success a tenth, a failure as asked, a critical failure an offence (a step back, no deal).  The
+  deal done at once if it's paid.  Half a minute's work.
+- **Asking** ("how much for the lantern", "what will you give for this"): within earshot (12 squares), no time but a
+  moment's.  **The deal** ("buy the rope from the dwarf", "sell my dagger"): within reach (a square).
+- **The money:** pennies only (the payer's one pile of them, at face), so a price is whole pennies; the character
+  without enough: "You haven't the money: the dwarf asks 12 pennies."; the trader: "The dwarf hasn't the money".
+  *Not yet* (DECISIONS.md's, the user's of 2026-10-28): paying with farthings and crowns and change given, the
+  lowest-worth coins first, the seller asking for the local or the dwarves' coin, "pay with Kanday pennies", the coins'
+  worth abroad in the trade itself (it's at face now).
+- **The exchange** (the one path): the trader's own intents, the character's way with things for every actor (the
+  world's wfetch.c): it takes the payer's coins or the goods sold (FE_GIFT, a count split off, kept in its things, not
+  held), and hands over its own (FE_GIVE, a count of a lot split off, from its pouch or its pack: into the character's
+  pack first), each told ("The dwarf takes the pennies.", "The dwarf hands you the rope.").
+- **Entertaining** ("entertain the dwarf", "sing to the bandit", "play for", "dance for"): within earshot, no tongue
+  wanted; the referee's performing skill (HarnMaster's Singing, unsaid: the book's automatic skill, everyone's;
+  Musician; Dancing), at steps by its attitude and its kind's sway; a critical success two steps, a success one, a
+  critical failure a step back (it's bored), as far as friendly (a song doesn't win an ally).  A minute.  Not a beast,
+  nor the mindless.  The null ruleset a flat test.
+- **Remedies** (the afflictions' cure, HOUSE.md's poison above): an **antidote** (a theriac: the house's 48d, a
+  vial's dose) against a toxin (a venom, a poison), its power 2; a **remedy** (a physician's draught: 12d) against a
+  disease, its power 1.  Drunk ("drink the antidote", "eat the remedy": the things' IO_USE by its key, used up), the
+  referee told (RS_TIME's RT_TAKEN): dosed by the taker's Physician (the book's: medicine combats an infection; the
+  house's: a critical success a point the more, a critical failure a point the less), the toxin's or the disease's
+  healing rate the better by its power (at H6 gone: "The remedy works"); nothing on it to treat, "It does nothing for
+  you."; the lindworm's numbing venom only by a strong one (power 2).  Given to another, a gift (the denizens have no
+  afflictions of their own yet).  Found: an apothecary's kit, a Khuzan elder's purse, a high priest's (outfits.txt);
+  for sale by whoever carries them.  The null ruleset: a poison's sickness or a disease's gone at once.
 
 ## Decided, not yet built
 

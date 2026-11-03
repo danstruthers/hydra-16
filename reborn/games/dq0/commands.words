@@ -42,6 +42,10 @@ fetch = OR_FETCH
 bring = OR_FETCH
 get = OR_FETCH
 retrieve = OR_FETCH
+open = OR_OPEN                              # (new, 2026-11-02: an ally's errands at a door, "ask the dwarf to
+close = OR_CLOSE                            #   open the door", its one path: the minds' I_PORTAL)
+shut = OR_CLOSE
+unlock = OR_UNLOCK
 
 [dirs]
 n = H_N

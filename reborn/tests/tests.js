@@ -5109,6 +5109,94 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0trade', outfit: true, near: ['denizens', 'money'], what: "Dingus Quest Zero's market and entertaining (2026-11-02: DENIZENS.md's trading, HOUSE.md's the market, for review), by the denizens' sway, the things changing hands and the words: a hand-written theme's bandits (seed 1, dq0kit's), one put beside the character, friendly, at each command (dq0Poke's); given 5 pennies without a \"to\" (\"give the bandit 5 pennies\": the one given it the line's first word, SW_GIVE, taken); what it would give for the flask of oil asked (SW_OFFER, half its worth friendly: 'would give you 1 penny'); the oil sold to it (SW_SELL: it takes the oil, FT_GOT, and hands over its pennies, FT_GAVE, by the character's own way with things, the world's wfetch.c; the character's flask gone, its pennies one more); its price asked back (SW_PRICE: 'asks'), bought back (SW_BUY: the character's penny taken, the oil handed over, the flask the character's again); haggled over (SW_HAGGLE, the book's Rhetoric in its tongue: agreed, or an offence); sung to (SW_ENTERTAIN: Singing, the referee's; pleased, unmoved, or friendly already)",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        'inventory', 'give the bandit 5 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'inventory', 'how much for the oil',
+        'buy the oil from the bandit', 'inventory', 'haggle for the oil', 'sing to the bandit', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, ['inventory', 'give the bandit 5 pennies', 'what will you give for the oil', 'sell the oil to the bandit', 'how much for the oil',
+          'buy the oil from the bandit', 'haggle for the oil', 'sing to the bandit'].map(line => ({ g: 1, line, n: 1, name: 'bandit', set: { attitude: 4, doing: 0 }, beside: 4 })));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const sw = (line, want, what) => { const t = T.of(line); if (!t || !dq0Rep(t, 'sway', want).length) f.push(what + ' (' + JSON.stringify(t && t.replies.filter(r => r.req === 'sway')) + ')'); return t; };
+        const oil = st => dq0Carried(st).filter(i => i.name === 'flask of oil').length;
+        const pennies = st => dq0Carried(st).filter(i => i.name === 'pennies').reduce((n, i) => n + i.qty, 0);
+        const i0 = T.of('inventory');
+        if (!i0 || !i0.after || !oil(i0.after)) return ['no flask of oil to trade at the start'];
+        const g = sw('give the bandit 5 pennies', { kind: 'SW_GIVE', result: 'SR_OK' }, 'the pennies not given without "to"');
+        if (g && !dq0Ev(g, 'E_TASK', { te: 'TE_FETCHED', ft: 'FT_GOT' }).length) f.push('the gift not taken (' + dq0Evs(g) + ')');
+        sw('what will you give for the oil', { kind: 'SW_OFFER', result: 'SR_OK' }, 'no offer for the oil');
+        if (!/The bandit would give you \d+ penn(y|ies) for your oil\./.test(s)) f.push('the offer not told');
+        const se = sw('sell the oil to the bandit', { kind: 'SW_SELL', result: 'SR_OK' }, 'the oil not sold');
+        const evs = t => T.filter(u => u.k >= t.k && u.k <= t.k + 1).flatMap(u => dq0Ev(u, 'E_TASK', { te: 'TE_FETCHED' })).map(e => e.ft);
+        if (se && (!evs(se).includes('FT_GOT') || !evs(se).includes('FT_GAVE'))) f.push('the sale\'s things not changing hands: ' + JSON.stringify(evs(se)));
+        const i1 = T.after(se, 'inventory');
+        if (!i1 || !i1.after || oil(i1.after) !== oil(i0.after) - 1) f.push('the oil still the character\'s after the sale');
+        if (i1 && i1.after && pennies(i1.after) <= pennies(i0.after) - 5) f.push('no pennies for the oil: ' + pennies(i1.after));
+        sw('how much for the oil', { kind: 'SW_PRICE', result: 'SR_OK' }, 'no price asked for the oil');
+        if (!/The bandit asks \d+ penn(y|ies) for the oil\./.test(s)) f.push('the price not told');
+        const b = sw('buy the oil from the bandit', { kind: 'SW_BUY', result: 'SR_OK' }, 'the oil not bought back');
+        if (b && (!evs(b).includes('FT_GOT') || !evs(b).includes('FT_GAVE'))) f.push('the purchase\'s things not changing hands: ' + JSON.stringify(evs(b)));
+        const i2 = T.after(b, 'inventory');
+        if (!i2 || !i2.after || oil(i2.after) !== oil(i0.after)) f.push('the oil not the character\'s again');
+        sw('haggle for the oil', { kind: 'SW_HAGGLE', result: r => r === 'SR_OK' || r === 'SR_SPURNED' }, 'not haggled over');
+        sw('sing to the bandit', { kind: 'SW_ENTERTAIN', order: 'PF_SING', result: r => r === 'SR_OK' || r === 'SR_AS_FAR' }, 'not sung to');
+        if (!/You sing for the bandit\.|The bandit is friendly already/.test(s)) f.push('the song not told');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0allydoor', outfit: true, near: ['denizens'], what: "Dingus Quest Zero's ally's errand at a door (2026-11-02: DENIZENS.md's allies, its errands by the one path; the parser's order words open, close, unlock): seed 1's bandits (dq0denportal's), the character opens the door ahead and shuts it again; a bandit put beyond it (dq0DoorScene's) and made the character's ally (dq0Poke's, the same line); \"ask the bandit to open the door\" (SW_ORDER, OR_OPEN, the door the character's own command finds: its square) and waited for: the ally opens it by the character's code for every actor (its mind's I_PORTAL, the world's wport.c: E_DEN DE_OPENS at the door's square, 'The bandit opens the door.')",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g',
+        'open the door', 'close the door', 'look', 'ask the bandit to open the door', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'look', n: 1, name: 'bandit', set: { attitude: 5, doing: 0 } }, { g: 1, line: 'ask the bandit to open the door', n: 1, name: 'bandit', set: { attitude: 5 } }]);
+        dq0DoorScene(m, 'look', 'bandit');
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), DE_OPENS = 27;
+        if (!m.door) return ['the scene not set: no bandit near, or no door ahead with a floor beyond it: ' + JSON.stringify(m.doorWhy)];
+        const a = T.of('ask the bandit to open the door');
+        if (!a || !dq0Rep(a, 'sway', { kind: 'SW_ORDER', order: 'OR_OPEN', result: 'SR_OK' }).length) f.push('the ally not asked to open the door (' + JSON.stringify(a && a.replies.filter(r => r.req === 'sway')) + ')');
+        const opens = T.filter(t => a && t.k >= a.k).flatMap(t => t.dens).filter(e => e.kind === 'E_DEN' && e.who === m.door.k + 1 && e.a === DE_OPENS);
+        if (!opens.length) f.push('the ally never opened the door (E_DEN DE_OPENS)');
+        for (const e of opens) if (e.w1 !== m.door.door[0] || e.w2 !== m.door.door[1]) f.push('a door opened not the one asked: ' + [e.w1, e.w2]);
+        if (!/The bandit opens the door\./.test(s)) f.push('its opening not seen: "The bandit opens the door."');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0antidote', near: ['body'], what: "Dingus Quest Zero's remedies (2026-11-02: HOUSE.md's remedies, for review): dq0venom's hostile cave adders (seed 1, the character tough), the character with an antidote (dq0 -k antidote); bitten, the venom in it (\"The bite burns: there's venom in it.\"), it drinks the antidote as it's told (dq0OnWords': \"You drink the antidote.\", the things' IO_USE by its key, the referee's RS_TIME RT_TAKEN): the toxin's rate the better by its power, dosed by Physician (\"The remedy works\", or \"eases you\"), the antidote gone; a remedy drunk with no sickness on it does nothing (\"It does nothing for you.\")",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k antidote,remedy", 'drink the remedy', 'open the door', 'south', 'drop the torch', 'south', 'wait', 'flee', 'flee', 'inventory', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'south', n: 2, words: "there's venom in it.", text: 'drink the antidote\r' }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        if (!/It does nothing for you\./.test(s)) f.push('the remedy drunk with no sickness not told doing nothing');
+        if (!/there's venom in it\./.test(s)) return f.concat(['no venom: the scene not set']);
+        if (!/You drink the antidote\./.test(s)) f.push('the antidote not drunk');
+        if (!/The remedy works|The remedy eases you/.test(s.slice(s.indexOf('You drink the antidote.')))) f.push('the antidote did nothing: ' + JSON.stringify(s.slice(s.indexOf('You drink the antidote.'), s.indexOf('You drink the antidote.') + 600)));
+        const inv = T.of('inventory');
+        if (inv && inv.after && dq0Carried(inv.after).some(i => i.name === 'antidote')) f.push('the antidote still carried');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0turnsame', near: ['time', 'fight'], meaning: true, what: 'Dingus Quest Zero at the turns pace the same game whatever the tasks\' timing (the turns pace: a game turns on its seed and its commands alone): dq0cmd\'s fight at seed 3 (-T, -R 30: three giant rats, a dagger thrown at one, then blows) played twice, the second time its commands typed late (its first some 6M cycles after the prompt, the rest 2M), every event of the world\'s and the denizens\' the same, in the same order, at the same game times; 2026-10-31: a throw\'s two intents (taken in hand, then thrown) let the world\'s clock and the denizens\' turn in between them as the tasks\' timing fell (ui_giving)',
       init: 't_rc', cycles: 1500e6,
       get machine() {
