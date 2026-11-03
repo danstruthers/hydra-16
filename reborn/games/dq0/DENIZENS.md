@@ -628,7 +628,7 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 
 ### Ways, positions, bodies found *(2026-11-02: the minds' leftovers; HOUSE.md's, for review)*
 
-- **Ways found** (dq0d.c's parts 15 and 16): every S_TOWARD step of the minds (step_for's: a hunter after its foe,
+- **Ways found** (dq0d.c's parts 16 and 17): every S_TOWARD step of the minds (step_for's: a hunter after its foe,
   one drawn on, an ally following, a hurt one home, one to its bed, its meal or its rounds, a thing seen) that finds
   no step nearer has a way found (a field over the squares about it and its mark, in a bank of the ways' own, each
   square's step toward the mark), and follows it a step at a time till it's there, the greedy step's dice as ever; a
@@ -642,7 +642,7 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   lets one fall against the character from its winch's side; a robber's kind picks a lock it has no key to before it
   forces it.  Told (E_DEN): DE_WINDS ("winds the portcullis's winch"), DE_HEAVES, DE_RAISES, DE_LOWERS, DE_BENDS,
   DE_BENT, DE_PICKING ("works at the lock"), DE_PICKS.
-- **Bodies found on the records' rounds** (part 17's rfound, wander's): a record on watch that comes on a body of its
+- **Bodies found on the records' rounds** (part 18's rfound, wander's): a record on watch that comes on a body of its
   faction's: the faction's attitude a step worse, its others about the body gathered to it, each less well disposed,
   a leader's loss known to them (D_LOST).
 

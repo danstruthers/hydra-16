@@ -39,9 +39,9 @@ ovx:        .res        1
             SWPART      13, 5               ; The lairs near placed (2026-11-01: the main RAM's room; small, cheap to
                                             ;   swap in, each time round after a move)
             SWPART      14, 5               ; Doors worked (Phase 3C's one path, 2026-11-02)
-            SWPART      15, 5               ; The ways followed (2026-11-02)
-            SWPART      16, 6               ; A way found (2026-11-02)
-            SWPART      17, 4               ; A body found on a record's rounds (2026-11-02)
+            SWPART      16, 5               ; The ways followed (2026-11-02)
+            SWPART      17, 6               ; A way found (2026-11-02)
+            SWPART      18, 4               ; A body found on a record's rounds (2026-11-02)
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -86,14 +86,14 @@ ovx:        .res        1
             SWFN        take_way, 14        ; (A thing taken up: Phase 3C's one path)
             SWFN        feel, 8             ; (The main RAM's room, 2026-11-02)
             SWFN        robs, 8
-            SWFN        way, 15             ; (A way followed: step_for's, 2026-11-02)
-            SWFN        wfind, 16           ; (A way found)
+            SWFN        way, 16             ; (A way followed: step_for's, 2026-11-02)
+            SWFN        wfind, 17           ; (A way found)
             SWFN        slant, 11           ; (A denizen's diagonal way: slant.s, 2026-10-31, the main RAM's room)
             SWFN        wander, 9
             SWFN        sched, 9
             SWFN        coarse, 10
             SWFN        found, 10           ; (A body found on the rounds: the day's)
-            SWFN        rfound, 17          ; (A body found on a record's rounds, 2026-11-02)
+            SWFN        rfound, 18          ; (A body found on a record's rounds, 2026-11-02)
             SWFN        hour, 3             ; (The hour the game began: the day's, its first)
             SWFN        told, 6             ; (The hook for a loss told: a body found on the rounds, the day's)
             SWFN        dismay, 6

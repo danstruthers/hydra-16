@@ -112,7 +112,7 @@ unsigned char __fastcall__ daily (unsigned char k);  /* Part 9 (the day's, 2026-
 unsigned char __fastcall__ wander (unsigned char lim);
 unsigned char __fastcall__ sched (unsigned char k, unsigned id);
 void __fastcall__ coarse (unsigned char k, unsigned lim);   /* Part 10 */
-void rfound (void);                             /* Part 17: a record's rounds finding a body (2026-11-02) */
+void rfound (void);                             /* Part 18: a record's rounds finding a body (2026-11-02) */
 void __fastcall__ told (unsigned char j);      /* Part 6's hook: a loss told (a body found, the day's) */
 unsigned char __fastcall__ found (unsigned char k);
 void hour (void);
@@ -126,12 +126,12 @@ unsigned char __fastcall__ take_way (unsigned char k);  /*   a thing taken up */
 void __fastcall__ robs (unsigned char k);       /* Part 8 (its foe helpless: robbed, or left) */
 void __fastcall__ feel (unsigned char k);       /* Part 8 (2026-11-02: the main RAM's room, the ways'; with hungry: no copies
                                                 **   back and forth each decision, dq0dig's 6,700) */
-unsigned char __fastcall__ way (unsigned char k);   /* Part 15: a way followed (2026-11-02) */
-unsigned char __fastcall__ wfind (unsigned char k);     /* Part 16: a way found (2026-11-02) */
+unsigned char __fastcall__ way (unsigned char k);   /* Part 16: a way followed (2026-11-02) */
+unsigned char __fastcall__ wfind (unsigned char k);     /* Part 17: a way found (2026-11-02) */
 static unsigned char aroute[NACTORS];           /* (Each one following a way found: way's, its field's number + 1) */
 static unsigned wlim;                           /* (step_for's lim, for way's) */
 static unsigned char wayj = 0xFF;               /* (A shut door on its way: the way to it, the four's; door_way's) */
-static unsigned char rb;                        /* (The ways' bank plus 1: 0 none yet, part 15's) */
+static unsigned char rb;                        /* (The ways' bank plus 1: 0 none yet, part 16's) */
 static unsigned char aloot[NACTORS];            /* (Each one's next look for a thing it wants: the clock's, NOW_T) */
 #define NOW_T           (((unsigned char*) &now)[1])    /* (The clock's 25.6-second ticks, a byte: now >> 8's) */
 static unsigned char door_by (void);            /* (Below) */
@@ -1379,7 +1379,7 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
     s = random (2) ? a.face >> 1 : random (4);
     wlim = lim;
     if (how == S_TOWARD && aroute[k] && (d = way (k)) != 0xFF) {
-        return d;                               /* (On a way found: its field's step, part 15's; the dice as ever) */
+        return d;                               /* (On a way found: its field's step, part 16's; the dice as ever) */
     }
     bf = how == S_TOWARD ? toward (a.x - refx, a.y - refy) : apart (a.x - refx, a.y - refy);
 
@@ -2474,11 +2474,11 @@ typedef char rhead_fits[sizeof (struct rhead) <= RBASE - 0x8000 && RBASE - 0x800
 extern const unsigned char cornk[16];           /* (slant.s's: a diagonal's corner by its kind, 0 stood on, 1 not, 2 cut) */
 
 /* Actor k's (the copy a's) step on its way to refx, refy (step_for's: wlim its reach of home; S_TOWARD's): its own
-** field's, if it's for that mark and reaches it; else (part 16's wfind) another's that does, or (k's high bit: no
+** field's, if it's for that mark and reaches it; else (part 17's wfind) another's that does, or (k's high bit: no
 ** greedy step nearer) one found, if it may have one now.  The step (0-7), 0xF8 (a shut door on it worked: door_way's
 ** I_PORTAL), or 0xFF (none: the greedy step's) */
-#pragma code-name (push, "SW15CODE")
-#pragma rodata-name (push, "SW15RODATA")
+#pragma code-name (push, "SW16CODE")
+#pragma rodata-name (push, "SW16RODATA")
 unsigned char __fastcall__ s_way (unsigned char k)
 {
     struct rfield* r;
@@ -2535,11 +2535,11 @@ unsigned char __fastcall__ s_way (unsigned char k)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* Part 16's: a field found for actor k (the copy a) to refx, refy on its stratum (route), and wfind, the way's square
+/* Part 17's: a field found for actor k (the copy a) to refx, refy on its stratum (route), and wfind, the way's square
 ** where it stands (way's: its own field no longer for its mark) */
-#pragma code-name (push, "SW16CODE")
-#pragma rodata-name (push, "SW16RODATA")
-#pragma bss-name (push, "SW16RODATA")          /* (A row of it read in, and the rows' offsets: the part's own, while it
+#pragma code-name (push, "SW17CODE")
+#pragma rodata-name (push, "SW17RODATA")
+#pragma bss-name (push, "SW17RODATA")          /* (A row of it read in, and the rows' offsets: the part's own, while it
                                                 **   runs) */
 static unsigned char rrow[RW_W];
 static signed char rerow[RW_W];
@@ -4982,11 +4982,11 @@ unsigned char __fastcall__ s_found (unsigned char k)
 ** it's no actor), each of its faction's records about the body (RF_R squares, out, not actors) roused and gathered to
 ** it, on a square of its own about it, each a step less well disposed to the character, staying there a while
 ** (RF_STAY), their day after; a leader's body (its rank), each known lost to them (D_LOST: their bonds to it gone as
-** they next reckon, part 6's), the finder's too.  Part 17's (part 10's room; asked only while its faction has a body not found: unf) */
+** they next reckon, part 6's), the finder's too.  Part 18's (part 10's room; asked only while its faction has a body not found: unf) */
 #define RF_R            24                      /* (The gathering's reach: an actor's, ACT_R) */
 #define RF_STAY         6000                    /* (Ten minutes there, at least) */
-#pragma code-name (push, "SW17CODE")
-#pragma rodata-name (push, "SW17RODATA")
+#pragma code-name (push, "SW18CODE")
+#pragma rodata-name (push, "SW18RODATA")
 static unsigned char __fastcall__ made10 (unsigned char sn, unsigned x, unsigned y)   /* (Part 9's made_at) */
 {
     struct stratum* s = &STRATUM (sn);
