@@ -44,7 +44,7 @@
 void __fastcall__ load_pc (struct req* r);      /* (Part 1's stubs: bank.s's) */
 void __fastcall__ save_pc (struct req* r);
 void __fastcall__ beasts (unsigned char back);
-void __fastcall__ dig_answer (struct req* r);   /* (Part 2's) */
+void __fastcall__ dig_answer (struct req* r);   /* (Part 3's) */
 void __fastcall__ dice_set (struct req* r);
 void __fastcall__ outfit_of (struct req* r);    /* (Overlay 1's: outfit.c, RS_OUTFIT) */
 signed char __fastcall__ test_sk (harn_char* c, unsigned char sk, signed char steps);    /* (Overlay 3's) */
@@ -181,8 +181,8 @@ void __fastcall__ kind_in (unsigned char k)
     setbank (b);
 }
 
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
 
 /* The tool to hand that suits the material best (rshouse.h's, s_dig_tool: its digger's number); the table part 2's
 ** alone (the main RAM's room, 2026-10-27) */
@@ -213,11 +213,21 @@ static const unsigned char appraiser[NAP + 4] = {
 static unsigned char __fastcall__ speaks (const char* t);
 void __fastcall__ s_dig_answer (struct req* r)
 {
+    unsigned char sk;
+
     if (r->a == P_STEALTH || r->actor) {       /* (Moving quietly; or a creature's own test, a tunneller's dig: its
                                                 **   grade by its sheet, the world's the rest, slice 4.11's) */
         s_quiet_test (r);
     } else if (r->a == P_APPRAISE) {
-        r->grade = test_sk (&pc, appraiser[r->b < NAP + 4 ? r->b : 0], r->steps);
+        sk = appraiser[r->b < NAP + 4 ? r->b : 0];
+        if (r->b < NAP) {                       /* (A thing judged, the first answer kept; a performance, a new die) */
+            r->w2 = pc.ml[sk];
+            JUDGE_IN (r->w1, pc.ml[sk])
+            r->grade = test_sk (&pc, sk, r->steps);
+            JUDGE_OUT
+        } else {
+            r->grade = test_sk (&pc, sk, r->steps);
+        }
     } else if (r->a != P_DIG && r->a != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
         if (!speaks (r->text)) {                /* (Words in a tongue it doesn't speak: nothing) */
             r->result = 2;
@@ -240,8 +250,13 @@ void __fastcall__ s_dig_answer (struct req* r)
 
 static void __fastcall__ dig_of (struct req* r)
 {
-    unsigned char m = r->b > MAT_SOIL ? MAT_STONE : r->b, t = s_dig_tool (m), k = digger[t].rate[m];
+    unsigned char m = r->b > MAT_SOIL ? MAT_STONE : r->b, t = s_dig_tool (m, r->text), k = digger[t].rate[m],
+        b = s_dig_tool (m, "");
 
+    if (r->text[0] && !t) {
+        k = 0;                                  /* (Named, and no digger) */
+    }
+    strcpy (r->text + DIG_BETTER, r->text[0] && digger[b].rate[m] > k ? digger[b].key : "");
     strcpy (r->text, digger[t].key);
     r->w2 = digger[t].wear[m];
     if (!k) {
@@ -634,8 +649,8 @@ void __fastcall__ s_beasts (unsigned char back)
 #pragma rodata-name (pop)
 
 /* Whether it speaks tongue t (a word of tongues, a space before it: part 2's, the main RAM's room, 2026-10-31) */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
 static unsigned char __fastcall__ speaks (const char* t)
 {
     char* p = tongues;
@@ -753,8 +768,8 @@ static signed char __fastcall__ side (unsigned char who, unsigned char p, signed
 /* Moving quietly's test (RS_TEST's P_STEALTH: slice 4.6's), by its own dice (rshouse.h's RS_HOUSE_QUIET's: the game's
 ** as they stand, mixed, and put back after), so the game's other tests roll as they did: the character's, or a
 ** creature's by its sheet (a hunter's stalk, the denizens'); part 2's, the main RAM's room */
-#pragma code-name (push, "SW2CODE")
-#pragma rodata-name (push, "SW2RODATA")
+#pragma code-name (push, "SW3CODE")
+#pragma rodata-name (push, "SW3RODATA")
 void __fastcall__ s_quiet_test (struct req* r)
 {
     QUIET_IN
@@ -817,7 +832,8 @@ static void __fastcall__ answer (struct req* r)
         if (r->actor || r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE || r->a == P_SWIM) {   /* (A creature's
                                                 **   by its sheet, any test (Phase 3C's: a door forced); judged by the tool to hand that
                                                 **   suits it best; moving quietly, by its own dice; by the craft that
-                                                **   knows the thing: part 2's) */
+                                                **   knows the thing: part 3's) */
+parted:
             dig_answer (r);
             break;
         }
@@ -837,9 +853,8 @@ static void __fastcall__ answer (struct req* r)
             break;
         }
         if ((r->a == P_PERSUADE || r->a == P_INTIMIDATE || r->a == P_DECEIVE) && r->text[0]) {   /* (Words in a
-                                                **   tongue: one it speaks, or nothing: part 2's) */
-            dig_answer (r);
-            break;
+                                                **   tongue: one it speaks, or nothing: part 3's) */
+            goto parted;
         }
         if (r->a <= P_NOTICE_SMELL) {           /* (By its state: its pace, its shock; overlay 1's, in a copy) */
             ps.go = HUB->pc_going;

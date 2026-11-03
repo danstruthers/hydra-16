@@ -200,6 +200,7 @@ ovl_out:
 
             SWPART      1, 4                ; hmchar's file read and written (harnfile.c), the creatures' sheets kept
             SWPART      2, 5                ; The names (harnname.c), the tool a dig takes, a test's dice fixed
+            SWPART      3, 4                ; A dig's tool, the tests' own (part 2's room, 2026-11-03)
 
             SWFN        load_pc, 1
             SWFN        save_pc, 1
@@ -209,7 +210,7 @@ ovl_out:
             SWFN        harn_sex_name, 2
             SWFN        harn_month_name, 2
             SWFN        harn_sunsign_name, 2
-            SWFN        dig_answer, 2
+            SWFN        dig_answer, 3
             SWFN        dice_set, 2
             SWFN        fixed, 2            ; (A test's dice hook, 2026-10-31: the main RAM's room)
 

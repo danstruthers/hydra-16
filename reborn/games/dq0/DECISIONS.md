@@ -1576,3 +1576,51 @@ fill your waterskin." all the same, and nothing told how full it was: so it seem
 load at all, asleep or awake: what rose in a long sleep was hunger's and thirst's fatigue levels (very hungry or very
 thirsty one, starving or parched two, wasting or dying four, not rested off), under a Condition line that named the load and
 not the want.  **Design:** HOUSE.md's a load borne, a new light, the kit's light, a chisel and a hammer; DUNGEON.md's status.
+
+### The round after HOUSE.md's check: the user's answers on rules (2026-11-03)
+
+The lead asked, after the four readers' check of HOUSE.md against the game: "The status line shows true minutes gone ("767 min"), and every game starts at 18:00, so you can work out the real hour even when the character shouldn't know it. What should it show?"
+
+The user (2026-11-03): "Hide the minutes"
+
+The lead: HOUSE.md says denizens move at a walk, but bandits, soldiers, kobolds and ghouls cover ground at twice your walking speed.
+
+The user (2026-11-03): "walk unless hurried, and closing in to attack should be hurried unless they are cautious."
+
+On a miss's stray, the book having both 50% (a mark engaged in melee, Combat 15) and 20% (a nearby target, Combat 17), the user (2026-11-03): follow the book: 50% if the mark is engaged, 20% otherwise.
+
+The lead: "`dig down with the knife` while carrying a pick uses the pick."
+
+The user (2026-11-03): "Suggest the better tool if one is available, but allow them to continue with the less effective tool."
+
+On a thing's value or make asked again at once, a new die each time (a chest's 25, 85, 45, 11 pennies in one minute), the user (2026-11-03): keep the first answer per thing, until the skill improves.
+
+The lead: "HOUSE.md says your footprints vary by footwear, but only the words change, not the prints' tread. What should happen?"
+
+The user (2026-11-03): "Build it (Recommended)": "Prints really differ by footwear. It's a small change."
+
+The lead: "Burrowers' claws dig shale, against the rule "only a pick will work for harder materials". They also dig a bare wall in soft rock when at work but not when chasing prey. What should the rule be?"
+
+The user (2026-11-03): "Soft rock only": "Shale is too hard for claws; the same soft-rock rule at work and in a chase."
+
+The lead: "HarnMaster has a rule for aimed blows, high or low, but no command says it, so it can't happen. What should be done?"
+
+The user (2026-11-03): "Leave unbuilt for now (Recommended)"
+
+The lead: "Which of these odd rules about water and money should I change? Any you leave unticked stay as they are, marked for review."
+
+The user (2026-11-03): "Still water, Stream current, Farthing goods, Haggling pump"
+
+The lead: "Which of these odd rules about dungeons should I change? Any you leave unticked stay as they are, marked for review."
+
+The user (2026-11-03): "Naming the rock, Dust and flee"
+
+(Left as they are, marked for review: a builder walling up a room the character dug into; carrying on renewing fuel and oil.)
+
+The lead: "HOUSE.md credits you with "each step about a named one", on dipping two torches, but it's not in your recorded words. It looks like my wording. Did you say it?"
+
+The user (2026-11-03): "Not mine, correct it (Recommended)"
+
+**Built:** the status line without the minutes (dq0 -m, the tests' and debugging's, puts them back).  A kind's step its walk (kinds.txt's numbers doubled: they were the jog's), hurried its jog (fleeing; coming at its foe, but a cautious one), every actor's by wbody.c.  A stray's chance by the book.  The tool named is the one that digs (the referee's P_DIG, both), a better told of once.  An appraisal's die a hash of the thing, the skill's mastery and the seed, no store; a door's and a wall's rock too.  The character's prints by its footwear.  Claws in rubble, earth and soil, no rock, one rule at work and at prey.  Filling from still water: the flux's risk as drunk there.  One chunk of a stream in eight six feet deep, by the seed.  A price under a penny in farthings; buying never under two thirds of a thing's worth, selling never over.  The first good spell names the rock.  A place of no age no dust, a century or two a skin.  "flee" with no foe it sees: "You see nothing to flee from.", no run, a foe near or not.  **Design:** HOUSE.md's their paces, a miss's stray, a tool named, appraising a thing, what the floor shows, a burrower's claws, the diseases, the water in the dungeon, the market, told as it's come to, the time of day believed.
+
+**Doubt, for the user:** with shale out, no rock in the game is soft enough for claws, and the maker's walls are stone or masonry: burrowers now dig rubble and nothing else.  A softer rock (chalk, marl, clay) would give "soft rock" something to mean.

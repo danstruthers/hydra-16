@@ -231,7 +231,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
             foe (named, 0));
         break;
     case TE_FREE:                               /* (None: b 0 not engaged, 1 nothing near to flee, 2 no way back) */
-        msg (named == 2 ? "There's no way back." : named ? "There's nothing to flee from." : "You aren't engaged.");
+        msg (named == 2 ? "There's no way back." : named ? "You see nothing to flee from." : "You aren't engaged.");
         break;
     case TE_NO_FOE:                             /* (b 1: in shock, in no state to fight on; 2, a missile's fight) */
         msg (named == 1 ? "You're in no state to fight." : named ? "No foe is left in your sights." :

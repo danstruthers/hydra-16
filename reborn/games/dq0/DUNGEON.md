@@ -426,7 +426,7 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   with the other's hole; the square a passage through it), told when seen ("A fresh tunnel opens ahead.  Spoil lies
   heaped by it.") and heard while it's dug ("a scraping in rock": the rock carrying a pick's knock).  And at their work
   (2026-11-02): a faction's miners dig its mine from their lair's home across to their region's vein and along it, a
-  burrower its lair's burrow, by the clock, near the character or away from it (away, coarse: the same change
+  burrower its lair's burrow (claws bite no rock, shale neither: the user's, 2026-11-03), by the clock, near the character or away from it (away, coarse: the same change
   records); poor rock comes down on a tunneller's spell gone badly; a faction's miners put up again a door broken down
   in their home's chunk (its PORTAL_STATE and PORTAL_HARM records), and wall up a way dug into a room there by others
   (the square T_WALL again, a change record).
@@ -1552,7 +1552,7 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   (the referee's, every one's by rswant.h: its news, its next ask), eating and drinking (the UI's feed.c: the things'
   IO_USE by the keys food and water), a waterskin filled (wwater.c).  Left: falls (a stream's drop told and heard), the sound layer's running water (its background's
   BG_WATER from the wet squares), running water washing the traces (wtrace.c's hook), the map's water, things soaked (a
-  scroll ruined), a stream's current carrying a swimmer, a minute's swim tested as it waits in deep water, treading water standing still (the denizens' wading and swimming, a beast that won't cross going
+  scroll ruined), a stream's current carrying a swimmer (one chunk of a stream in eight is deep enough to swim, four steps harder, 2026-11-03), a minute's swim tested as it waits in deep water, treading water standing still (the denizens' wading and swimming, a beast that won't cross going
   round, and their hunger and thirst built 2026-10-31: DENIZENS.md's their bodies; left, a denizen drowning); rain where the surface reaches (shafts, the open), washing scents and prints away; a standing order
   to eat and drink when needed.
 - **The time of day believed** (built 2026-10-31: the time of day believed, above; HOUSE.md's): the plan's shafts, windows and skylights to the

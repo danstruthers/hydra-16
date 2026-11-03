@@ -280,6 +280,7 @@ void __fastcall__ appraise (const struct ireq* q, signed char g, unsigned char e
                                                 **   (its value, its quality, both: ex's EX_*) */
 extern char dug_with[16];                       /* The tool a dig took: main.c's */
 extern char dig_with[16];                       /* The tool a dig's taken up, to name (then ""): main.c's */
+extern char dig_word[16];                       /* The thing named to dig with, as said: main.c's */
 void __fastcall__ climb_words (unsigned char how, unsigned char feet); /* Overlay 1: climbing's (a ledge's:
                                                                         **   CW_*) */
 enum { CW_RISES = 0x40, CW_FALLS };

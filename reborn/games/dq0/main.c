@@ -69,6 +69,7 @@ static unsigned char took;                      /*   and the fight it was in sto
 static unsigned place;                          /* Where this task is in the world's events */
 static int task_[NTASKS];                       /* Each task's number, as it was started (0: not) */
 static unsigned char test_start;
+static unsigned char clock_on;                  /* (dq0 -m: the minutes gone on the status line, for the tests and debugging) */
 static unsigned char rolls;                     /* (dq0 -R n: the dice's offset, the tests', 0-252) */
 static unsigned char small;                     /* (dq0 -C: the caches small, the tests') */
 static unsigned char gear;                      /* (dq0 -K: the kit as it was, no outfits drawn, the tests') */
@@ -893,7 +894,7 @@ static const char* const posw[] = { "", " PRONE", " CROUCHED", " KNEELING", " SI
 void status (void)
 {
     static char left[48], right[72];            /* (Its right side's longest: paused, a fight's words, the state, the
-                                                **   facing, the minutes) */
+                                                **   facing; dq0 -m, the minutes) */
     char n[6];
 
     strcpy (left, P.name[0] ? P.name : "Dingus Quest Zero");
@@ -907,8 +908,12 @@ void status (void)
         strcat (right, head_abbr[believed (HUB->pc_face)]);   /* (The way it believes it faces: slice 4.2's) */
         strcat (right, HUB->pc_lost ? "?  " : "  ");
     }
-    strcat (right, utoa ((unsigned) (now / 600), n, 10));    /* (The game's minutes gone, the user's: no seconds) */
-    strcat (right, " min");
+    if (clock_on) {                             /* (The game's minutes gone, no seconds: for the tests and debugging
+                                                **   alone, the user's, 2026-11-03: the player sees what the character
+                                                **   believes, not the true hour) */
+        strcat (right, utoa ((unsigned) (now / 600), n, 10));
+        strcat (right, " min");
+    }
     t_status (left, right);
 }
 
@@ -1275,7 +1280,7 @@ void __fastcall__ s_news (const struct msg* m)
         k = m->w1 >> 8;
         if (k == D_BEGUN || k == D_AGAIN) {
             dug_with[0] = 0;
-        } else if (k != D_PORTAL) {
+        } else if (k != D_PORTAL && k != D_BETTER) {
             dig_used (m->b | k << 8);               /* (And the rock it's into told: slice 4.10's; D_NO_TOOL's b what
                                                 **   it's into, why told by what it carries, 2026-11-02) */
         }
@@ -1734,8 +1739,11 @@ static void to_hand (void)
 /* The tool a dig's spell took (the referee's choice): worn by it, and named as it's first taken up (part 14's, s_news's
 ** alone, through its stub: the main RAM's room); bk an E_DIG's b, its how (D_*) times 256.  And the rock a spell's
 ** into (rock.h's RK_*: the b's high four bits, slice 4.10's), told as it's come to (its first spell, or the b's 8: a
-** new rock): how it looks and how it goes, its name too after a spell that went well (Mining's eye: D_GOOD) */
+** new rock): how it looks and how it goes, its name too after a spell that went well (Mining's eye: D_GOOD), and at
+** the first spell that goes well after any that didn't (the user's, 2026-11-03: dug_rock, the rock last named) */
 char dig_with[16];
+char dig_word[16];                              /* (The thing named to dig with, as said: resolve.c's; the world's dig_kind) */
+static unsigned char dug_rock;
 #pragma code-name (push, "SW14CODE")
 #pragma rodata-name (push, "SW14RODATA")
 void __fastcall__ s_dig_used (unsigned bk)
@@ -1757,7 +1765,10 @@ void __fastcall__ s_dig_used (unsigned bk)
         strcpy (dug_with, HUB->ireq.name);
         strcpy (dig_with, dug_with);
     }
-    if (i && bk >> 8 != D_THROUGH && (dig_with[0] || bk & 8)) {
+    if (i && bk >> 8 != D_THROUGH && (dig_with[0] || bk & 8 || (g && dug_rock != i))) {
+        if (g) {
+            dug_rock = i;
+        }
         for (r = rocks; --i; r += strlen (r) + 1) {    /* (Its name, then its looks) */
             r += strlen (r) + 1;
         }
@@ -2686,6 +2697,8 @@ void __fastcall__ s_args (int argc, char* argv[])
                                                 **   the diagonal, 2026-11-01; -V a great cavern in every region of a
                                                 **   natural stratum, -P every stairway down a long slope, -D every
                                                 **   built stratum's rooms at 45 degrees, 2026-11-02) */
+        } else if (!strcmp (argv[i], "-m")) {
+            clock_on = 1;                       /* (For the tests and debugging: the minutes gone on the status line) */
         } else if (!strcmp (argv[i], "-H")) {
             hard = 1;                           /* (Hard mode: D7's, no autosave to go back to; kept in its save) */
         } else if (!strcmp (argv[i], "-a")) {

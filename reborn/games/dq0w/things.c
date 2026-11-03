@@ -1293,6 +1293,11 @@ static unsigned char rs_hone (void)
         name_of (n, 1);
         return yes (SA_HONED, 0);
     }
+    if (iq.into[0] && (i = at_hand (iq.into)) != 0 && strcmp (kind_at (i)->tool, "whet")) {
+        return rs_no (n, SA_NO_STONE);          /* (Sharpened with something else named: that's no whetstone, the one
+                                                **   used or none: 2026-11-03) */
+    }
+    i = 0;
     if (!rec.wear) {
         return rs_no (n, SA_SHARP);
     }
@@ -3060,7 +3065,7 @@ static unsigned char __fastcall__ goods (unsigned did, unsigned char k, const ch
             continue;
         }
         fetch (&gr, i);
-        if ((i != j || !(gr.flags & (I_WORN | I_HELD)) || gr.kind == KI_PENNIES) && named (kind_of (gr.kind)->name, w)) {
+        if ((i != j || !(gr.flags & (I_WORN | I_HELD)) || gr.kind == KI_PENNIES || gr.kind == KI_FARTHINGS) && named (kind_of (gr.kind)->name, w)) {
             n = i;
         }
     }

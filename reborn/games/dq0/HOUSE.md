@@ -68,7 +68,11 @@ plays them as HarnMaster's referee does.
 - **Appraising a thing** uses the craft that knows it: weapons and armour Weaponcraft, metal Metalcraft, wood
   Timbercraft, hide Hideworking, cloth Textilecraft, pottery Ceramics, jewels Jewelcraft, books and bones Lore, food
   Cookery, stone Masonry, glass Glassworking.  (dq0harn.c's appraiser table.)  It's asked for by name, and tells only
-  what's asked: its value, its quality, or both (Looking at things, below).
+  what's asked: its value, its quality, or both (Looking at things, below).  **The first answer's kept** *(the user's,
+  2026-11-03)*: asked again of the same thing, a door or a wall's rock, the same die and the same words, till the skill
+  improves.  *(The house's way:)* nothing's stored: the dice for it are a hash of the thing (an item's own number, a door's
+  or a wall's square), the skill's mastery and the game's seed, the game's own dice put back after (rshouse.h's JUDGE_IN,
+  way.c's judge_dice), so its other tests roll as they did.  A performance (entertaining) is a new die each time.
 - **Words reach a creature only in a tongue the character speaks:** its own, common, and any its file's "language"
   lines give.  Persuading, intimidating and deceiving in another tongue does nothing (the reply's result 2).
   (dq0harn.c's speaks.)
@@ -217,6 +221,17 @@ hands, a denizen's as a shovel is (its agear's AG_SPADE).
   lies.  *(For review: told, not got out by the steps: its two hands are the player's to give up.)*  A pick to hand is the better tool and is taken.  A marginal failure with one makes nothing
   (half of its half a foot), so a poor miner's chisel soon comes to the question below.  The denizens' tools stay a
   pick and a shovel.
+- **A tool named** *(the user's, 2026-11-03: "Suggest the better tool if one is available, but allow them to continue with
+  the less effective tool.")*: "dig down with the knife" digs with the knife, a pick carried or not.  A better one to hand
+  for what it's into is told as the dig's begun, once, not each spell ("Your pick would do this better, but you set to it
+  with the knife as you said.").  *(The house's, for review:)* what's named no use on it, or no digger at all, no time
+  spent, the better told of ("Your knife won't dig stone. Your pick would.").  None named, the best to hand, as ever.  (The
+  referee's P_DIG, its text the name, both referees: rshouse.h's RS_HOUSE_DIG_TOOL; the world's part 84.)  **The kind**
+  (the user's: any tool named where a better's carried): the others swept 2026-11-03: a dig is the one task the game
+  chooses among tools by how well they do.  A blow strikes with what's named already (Fights).  Sharpening has the
+  whetstone alone, a lock its key or its lockpicks: another thing named is refused, not passed over for them ("You have
+  nothing to sharpen the knife with.", "Your knife won't do for a lock.").  A fire: a flame carried is still taken over a
+  tinderbox named (*for review*: the flame's no worse, and quicker).  Nothing yet pries or cuts (a crowbar's only a club).
 - **Told why** *(the house's, 2026-11-02, for review; the user's playtest, DECISIONS.md)*: a dig nothing it carries bites
   into is told at once, no spell spent, by what it can judge: its hands ("You need better tools: your hands make no
   mark on the stone."), a blade ("Your dagger only scratches at the masonry: this isn't getting anywhere."), a shovel the same,
@@ -265,7 +280,8 @@ The book's Mining is geology, prospecting and mineworking (Skills 16), but it gi
 - **Told as it's come to** (the UI's): the first spell of a dig in the rock, and a spell that comes into another rock
   (a shaft down through the beds), say how it looks ("You're into speckled grey rock."); a spell that went well (a
   Mining success) names it too ("You're into speckled grey rock: granite.").  Mining's eye is the test the spell
-  makes already; a failure tells only the looks.
+  makes already; a failure tells only the looks, and the first spell that goes well after it names the rock (the user's,
+  2026-11-03: it used to be told only on a first spell, so a first failure left the rock unnamed for good).
 - **Poor rock comes down** (shale: rotten, flaking): a spell of digging in it that fails critically brings part of the
   roof down into the hole, two feet of what's dug in the rock filled again ("The rotten rock splits, and part of the roof
   falls into the hole."; E_DIG's D_ROOF).  In a tunnel the roof falls on the digger (a shaft's sides fall into the
@@ -281,7 +297,8 @@ The book's Mining is geology, prospecting and mineworking (Skills 16), but it gi
   (dq0m/make.c's cstyle; dq0 -M, the tests', makes every built stratum mixed so).
 - **The rock looked at** ("examine the wall", "look at the wall": the wall ahead, within six squares): masonry ("The wall's masonry:
   dressed stone, set in mortar."), or the bare rock, how it looks ("The wall's the bare rock, buff."), and named after a
-  Mining test (the appraisal's AP_ROCK: "...: sandstone."), three seconds.  Too dark, nothing's made out.
+  Mining test (the appraisal's AP_ROCK: "...: sandstone."; the first answer kept for that wall, as any appraisal's),
+  three seconds.  Too dark, nothing's made out.
 - **Age's collapse and rubble**: an old stratum's passages partly fallen in, heaps of rubble a square and some beside
   it.  Six tries a chunk (the maker's own dice), each in a stratum two centuries old or more, a chance in 20 of its age
   in centuries (ten at most), twice that where the rock about is poor (shale at the chunk's middle); never by a room or
@@ -498,8 +515,9 @@ course, first aid and healing (Wounds over time); courage in a fight (Morale).
   "break off", a way or none: none, away from the foe engaging it (straight away, then half left or right, then
   aside, the first open; a passage's four ways alone).  "flee" ("escape", "run away") the same, facing the way
   it goes, then, free of them, a run on that way (none if the way's shut: the disengage enough); not engaged, a run
-  from the nearest foe within a dozen squares.  Neither engaged: told ("You aren't engaged.", "There's nothing to
-  flee from.").  "pass" a round given up, defending (engaged, a round of the fight's tiring: fighting on's).  A walk as it's engaged goes as a disengage does: its first
+  from the nearest foe it sees within a dozen squares.  Neither engaged: told ("You aren't engaged.", "You see nothing to
+  flee from.": the same words and no run whether a foe it can't see is near or none is, nothing given away; the words the
+  house's, the rule the user's, 2026-11-03).  "pass" a round given up, defending (engaged, a round of the fight's tiring: fighting on's).  A walk as it's engaged goes as a disengage does: its first
   square stopping it if it's still in the zone, then on.  As it fights, either takes the fight over, its round out
   first.  Prone, it gets up first, the move a round the later (the book's: Hands and limbs, below).  No foe's free blow (the book has none).  (dq0w.c's part
   26.)
@@ -629,10 +647,11 @@ book's; the house's below, each marked.
 - **What comes of it** (the missile attack table): wild (the shooter's fumble roll for its launcher: failed, let
   fall), a miss, a block (the shield or the weapon struck, no harm), a strike of n dice and the missile's impact at
   its range, the armour at the location off it.
-- **A miss's stray** *(2026-10-30)*: a miss (or a dodged one) at a mark with others beside it strikes one of them half
-  the time, one chosen at random (the book's: a missile shot at one engaged in melee, a Miss 50% striking a randomly
-  determined adjacent character: Combat 15; Combat 17's results give a nearby target 20%, not used: the game's half is for any mark), the character too, every shooter's and thrower's,
-  never the shooter itself.  *Its strike one die, no test, no defence (the referee's MS_STRAY, both referees: the
+- **A miss's stray** *(2026-10-30; the chances the user's, 2026-11-03: "follow the book")*: a miss (or a dodged one) at a
+  mark with others beside it strikes one of them, chosen at random, half the time if the mark's engaged (the book's: a
+  missile shot at one engaged in melee, Combat 15) and a fifth of the time if it isn't (the book's nearby target, Combat
+  17); *the mark engaged if it, or one beside it, is in a fight (the house's)*; the character too, every shooter's and
+  thrower's, never the shooter itself.  *Its strike one die, no test, no defence (the referee's MS_STRAY, both referees: the
   null's a hit; for review)*; told after the miss ("Your shot strikes the giant rat instead: ...", "Its spear strikes
   you instead ..."), the one struck the one hurt (its courage, its fall, its kin's dismay); the missile at its feet.
 - **Where it falls**: a hit or a block at the mark's feet; a miss on past it along the line, one to four squares,
@@ -693,7 +712,7 @@ and traces.
   the bar in both hands.", its time), as a named weapon was (names.c's); no hand free for it, refused, the things' words
   ("Your hands are full: stow something, or put it down."); that thing strikes, and no other (Fights' what strikes).  A part after "with"
   is what it's done with, not the door's ("hit the rat with the bar" no longer batters a door).  (resolve.c's tool_ok;
-  cmdmean.s.)  Not yet: a named tool chosen over a better one for a dig (it takes the one that suits the stuff best).
+  cmdmean.s.)  A lesser tool named for a dig is the one used, a better carried told of: Digging's a tool named.
 - **Which of several:** the closest by squares (and the lead, as yet, the closest); the largest and the smallest by
   a thing's size (how easily it's seen); the second as they lie from the character's left round to its right; any,
   the closest.  Several of a name and none said: the one the world's services choose, as ever (A thing of several,
@@ -1089,16 +1108,19 @@ and 2026-10-21: keen noses follow a scent far longer than an hour, a hound's esp
 - **What the floor shows**, by the maker's material where each square is: **earth** holds a print well (6; soft soil
   7) for three days; **rough stone** little (2, and a point for each three of dust), a scrape lasting an hour;
   **flags and paving** nothing of themselves, their **dust** every mark (3 and a point for each of dust; none, 1):
-  dust two deep or more keeps them three months, a skin a day.  The dust is the stratum's age's: 3, and a level more
-  at 3, 6 and 12 centuries (6 the most: "deep in dust").  **Swept** (a chunk that's a lair of a kind that keeps its
+  dust two deep or more keeps them three months, a skin a day.  The dust is the stratum's age's: a level for each of its
+  first two centuries ("a skin of dust"; the user's, 2026-11-03: a place of no age has little or no dust; none but a stratum
+  of none), 4 from three centuries, a level more at 6 and 12 (6 the most: "deep in dust").  **Swept** (a chunk that's a lair of a kind that keeps its
   floors swept, kinds.txt's t: the cultists and their priest, the dwarves but the miners, the soldiers and their captain, as
   their lair is placed): no dust at all ("swept
   clean"), and every hold a point less, the marks scattered.
 - **How clearly a trail shows**: the floor's hold, a third of its kind's tread, a point more for 4 passings, another for
   12 (the scents' rule too, below: hub.h's TR_MORE); less a point for each quarter of the print's life gone, none at its
   end; a tread of 0 (a bat, a shade) leaves no print.  Each kind's tread, marks, smell, scent and nose are kinds.txt's
-  (the character's own: its sweat's smell 3, its prints by what it wears on its feet, bare feet 2, sandals or shoes 3,
-  boots 4, hobnailed boots 5).
+  (the character's own: its sweat's smell 3, its prints by what it wears on its feet, the user's, 2026-11-03, "build it":
+  bare feet 2, sandals or shoes 3, knee boots 4, hobnailed boots 6, *the house's numbers, for review: a third of a tread
+  shows, so bare feet leave the fainter prints and hobnails the clearer (5 would show no clearer than boots)*; as it's
+  shod when they're read, not when they were made, as the words have it: wtrword.c's feet).
 - **Examine the floor** ("look at the ground"): sight alone, no test, 5 seconds, the floor where it stands and the
   squares two each way: its material, its dust, and "It's been trodden" if any trail there shows 4 or more.  In the
   dark it can't be done.
@@ -1782,8 +1804,8 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   after the last thing, each thing "Taken." between.  The next thing out of reach: the pack on first (never left behind at the feet), then
   the walk, and the rest of the line by the lump, untold, its time as ever (told once; the character doesn't shrug it off and on again in words).
   A count's later things went by the lump already.
-- **Two torches dipped** *(the same: the user's "each step about a named one"; for review; the dip itself: A torch
-  redipped, below)*: which one is chosen as the sequence begins (the most
+- **Two torches dipped** *(the same: the house's, each step about a named one (credited to the user till the user said on
+  2026-11-03 those weren't the user's words); for review; the dip itself: A torch redipped, below)*: which one is chosen as the sequence begins (the most
   room for more, as ever) and kept to its end: "the old torch"; another of its kind in play is "the new torch".  Two lit: "You blow out the old
   torch.", "You set the new torch down at your feet.", the flask, "You set to dipping the old torch.", the flask away, "You put away the old
   torch." (only if the pack's off for the flask: else it stays in its hand), "You take up the new torch."  The old one already spent: nothing to
@@ -1996,7 +2018,7 @@ ruleset's (the fatigue rested off the referee's).
   hour.", "You wait an hour and five minutes."; "You settle down to sleep for eight hours." ("to rest" when rest was
   said); a round's wait, or less than a minute, "Time passes." as before.  As it goes: "Keep waiting?", "Keep
   sleeping?"; stopped, "You stop waiting.", "You stop sleeping."; "stop sleeping" and "stop resting" name a sleep, "stop
-  waiting" a wait.  The status line's clock after, its minutes gone ("767 min").
+  waiting" a wait.
 - **Sleep and rest as built** *(the house's, for review)*: the same as a wait in the world but for their words and their
   kind (LT_SLEEP): the book's fatigue recovery for the time of it, a fatigue level each ten minutes of rest (Skills 6's
   Fatigue Recovery, the referee's already; a night's sleep, the book says, clears most or all of it: eight hours of it
@@ -2674,7 +2696,9 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
   four at most), from a region of its halls downhill to the lowest neighbour as long as there's one lower, ending in a
   lake, or sinking away where the next lower is rock.
   A chunk's water as it's grown: a cistern full, 5 to 8 feet over its floor's lowest; a cave's chambers in a
-  lake's region flooded, 4 to 11 feet; in a stream's region its passages running a foot deep and its chambers' hollows
+  lake's region flooded, 4 to 11 feet; in a stream's region its passages running a foot deep (*the house's, for review:*
+  one chunk in eight of it, by the seed, six feet deep, over a man's head, so the current can happen: the user's,
+  2026-11-03, that some streams run deep enough to swim) and its chambers' hollows
   pooled a foot or two; where there's only water under it, one chamber in three a puddle a foot deep in its hollow;
   but a chamber with a way between strata in it (a stair's, a ladder's landing) kept dry, the house's.
   A square under a still pool's surface is as deep as the surface is over its floor.
@@ -2727,8 +2751,17 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
   tests its courage, its fatigue in it: short of steady (or gone berserk), it breaks off and flees, as one broken does.
   The null ruleset's simple way: its rounds fought counted, a level each 30 (a step the worse in its tests, attacking
   or defending), 30 rested off each ten minutes since its last; a level more, its courage (the flat odds, its heart less
-  its levels) or it breaks off, any creature.  *The house's*: the denizens move at a walk (their paces to come), which
-  tires them a level a day and no more than their rest takes off, so only their fights are counted.
+  its levels) or it breaks off, any creature.  *The house's, for review*: a walk tires a denizen a level a day, no more
+  than its rest takes off, and its hurried jog isn't charged (a chase is short, and it would want a request a step), so
+  only its fights are counted.
+- **Their paces** (the user's, 2026-11-03: "walk unless hurried, and closing in to attack should be hurried unless they
+  are cautious"; every actor's, wbody.c's): a kind's walk is its step (kinds.txt's, tenths a square: 200 / its Move, as the
+  character's walk: a man or a bandit 20, a dwarf 22, a giant rat 12, a bat 6); hurried, its jog, half that, one level
+  louder (its step 2, not 1).  Hurried: one fleeing; one coming at its foe (hostile, drawn on or sensing it), but a
+  cautious one.  *Cautious, the house's reading, for review*: a hunter by smell (it stalks: its steps are quiet, at a
+  walk), a shy kind, one hurt, one whose heart is against it (the morale's steps as last reckoned, under 0).  One only coming
+  to threaten, or wary, walks.  *The house's too*: an ally more than three squares from the character hurries to keep up;
+  a dart past the character is its two squares at a jog; a wade's extra time is by its walk.
 - **Water** *(every ruleset's)*: each kind's way with it (kinds.txt's water): the deepest it wades, in feet (by its
   size: a rat 2, a kobold or a small orc 2, the other Gargun and the dwarves 3, men and the dead 4), whether it swims
   deeper (the bestiary's swimmers: the giant rat, the cave bear, the cave adder, the lindworm, the elf), keeps out of
@@ -2860,8 +2893,9 @@ number here is a draft for the user.
 - **How it's told** ("time", "what time is it"): doubt ten minutes or less, plainly to the quarter hour ("It's half past
   six in the evening."); 45 or less, "about" the hour, "you think"; two and a half hours or less, "some time around";
   more, the part of the day, "you'd guess, but you can't be sure"; six hours or more, no idea ("You've no idea how long
-  you slept: it could be morning.").  No hour on the status line (its clock is the game's minutes gone: Long waits,
-  above).
+  you slept: it could be morning.").  No hour on the status line, and no clock (the user's, 2026-11-03: "Hide the minutes":
+  it used to show the minutes gone, and a game starting at a known 18:00 gave away the true hour; players see what the
+  character believes).  The minutes stay for the tests and debugging: dq0 -m puts them back on the status line.
 - **Waits by it**: "sleep until dawn", "wait until morning" (midnight 0, dawn 6, morning 7, noon 12, afternoon 14,
   dusk and evening 18, nightfall 19, night 21) last till that hour **as it believes the time now**; what happens goes by
   the true clock.  "watch the sun" (the sky, the stars) is a wait of a quarter of an hour (the stars half an hour).
@@ -2952,8 +2986,9 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
   (wtrap.c's, the world's: the referee told with the bodies' time, at its next minute).  *Not yet*: a door's needle's
   contact poison (the doors' part has no room: overlay 2's), a chest's; a denizen's poisoned blade (the outfits'
   factions to say who uses them); food that's spoiled (the book's critical failure tasting it: food found, the market's).
-- **The diseases** *(for review)*: the flux (still water drunk where it stands: a pool, a puddle, a cistern; a stream's
-  running water and a well's clean; C5/H4, a day's incubation), rat-bite fever (a giant rat's bite that wounds: C5/H4,
+- **The diseases** *(for review)*: the flux (still water drunk where it stands: a pool, a puddle, a cistern; or from a
+  waterskin filled from it, the same risk at each drinking: the user's, 2026-11-03, the skin's water marked, and a skin
+  topped up with it foul all through, *the house's*; a stream's running water and a well's clean; C5/H4, a day's incubation), rat-bite fever (a giant rat's bite that wounds: C5/H4,
   two days), grave rot (a ghoul's bite or claws that wound, the bestiary's grave-wight's: C3/H4, seven hours).  Caught,
   nothing's told (the character doesn't know it's caught something) till its incubation's over: "Your belly gripes and
   cramps: you have the flux.", "A fever's on you, and the old bite throbs.", "A wound the ghoul gave you festers: a
@@ -3142,10 +3177,12 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   miner, the kobold, the brown orc).  A miner digs only with a pick, or with a shovel, a spade or a mattock, among its
   things (the world's agear, AG_PICK and AG_SPADE).  A dwarf miner always carries a pick, a brown orc sometimes does,
   and a kobold always has one at its belt (2026-11-02, outfits.txt's [role kobold]: the folk tales' mine-kobolds).
-- **A burrower's claws** *(the house's)*: two feet a spell in soft soil, one in hard-packed earth (two thirds of a
-  shovel's), nothing in masonry or flags; in the rock only the soft rock (shale), half a foot a spell, times the rock's
-  hardness (a foot a spell in shale, rounded as the character's is).  So a rat burrows through earth and shale,
-  never through sandstone or a dressed wall.
+- **A burrower's claws** (the user's, 2026-11-03, "Soft rock only": "Shale is too hard for claws; the same soft-rock rule
+  at work and in a chase"; the numbers *the house's*): two feet a spell in soft soil, one in hard-packed earth (two thirds
+  of a shovel's), rubble as soil; nothing in masonry, flags or any rock, shale too.  The one rule at its work and coming
+  at prey, a bare wall by its stuff.  The rock's softest is shale, and the maker's walls are stone or masonry, so as the
+  game stands claws bite rubble and nothing else: **for review**, whether a softer rock (chalk, marl, clay) should come
+  with the rock's kinds, for burrows to be dug in.
 - **The character's rules** *(every actor's: DUNGEON.md's digging)*: a spell of ten minutes at a time; the tool's rate
   on what it's into (rshouse.h's digger table, the character's); earth and rubble at the tool's rate, untested;
   anything harder a test each spell, its rate at a marginal success, twice at a critical, half at a marginal failure,
@@ -3178,8 +3215,7 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   along the vein (north or south by its lair's number) row by row, keeping to its middle (a diagonal step where the
   vein slants a square a row, across it where it slants more), 64 squares at most.  A burrower (ways d) digs its
   lair's burrow: from its home one of the four ways (by its lair's number), eight squares, as far as its claws bite
-  (rubble, earth, soil and the soft rock, shale; a room's bare stone wall where the rock's soft, never masonry; coming
-  at prey it digs no wall, as before: doubtful, the two might be one rule).  A kind that has its own work (a smith's forge) digs
+  (A burrower's claws, above: rubble, earth, soil, and no rock; the one rule coming at prey, settled by the user, 2026-11-03).  A kind that has its own work (a smith's forge) digs
   when there's a vein; one with none (a rat, a brown orc) half of them dig through their waking hours, the other half
   go about as before.  Nothing of the mine is kept but the dungeon itself: its way is worked out again each time
   (the squares dug already, the open ones and the doorways on its line walked through), and it digs the first square
@@ -3205,7 +3241,8 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   once as it's due.  Then it walls up a way dug into a room of its home's chunk by others (a passage a dig made, the
   character's or a tunneller's, a room's floor beside it, not of its own mine): from the floor beside it, an hour's
   work, the square a wall again ("The dwarf miner walls up the way.", heard: stones being laid).  One square, at the
-  room: the way behind it stays; its wall can be dug again (two feet).
+  room: the way behind it stays; its wall can be dug again (two feet).  *For review (left as it is, the user's, 2026-11-03):*
+  it can wall up a room the character dug into, with the character inside and no tool left.
 - **Not yet** *(the plan's)*: builders shoring a passage (timbering in the soft rock: nothing yet comes down on a
   passage, only on a dig's face, so it would change nothing), the materials as things (timber, a door's leaf, stone
   carried), the spoil as a thing (rubble beside the way: no such thing in the catalogue yet), harm from rock falling
@@ -3314,19 +3351,23 @@ part 62, goods, and wfetch.c part 72; the UI's errand.c, part 15, in overlay 17'
   anything the character carries.
 - **The price:** the thing's worth as a local takes it (the appraisal's: by its material, coins by their mints), times
   the count, by its condition (its life left in tenths).  It sells at five quarters of that indifferent, the whole
-  friendly, three quarters to an ally; it buys at two fifths, a half, three fifths.  Rounded to the penny, a penny at
-  least.
+  friendly, three quarters to an ally; it buys at two fifths, a half, three fifths.  Rounded to the penny (buying up,
+  selling down); **under a penny it's in farthings** (the user's, 2026-11-03: a farthing candle sells for a farthing), a
+  farthing at least.
 - **Haggling** ("haggle for the rope", "bargain over my dagger": selling if the character carries it, else buying):
   the book's Rhetoric in the trader's tongue (none in common, no haggling), at steps by its attitude (hostile -3 ...
   friendly +1), its kind's sway and its mind (the cunning one the harder, the low one the easier); a critical success
-  a quarter better, a success a tenth, a failure as asked, a critical failure an offence (a step back, no deal).  The
-  deal done at once if it's paid.  Half a minute's work.
+  a quarter better, a success a tenth, a failure as asked, a critical failure an offence (a step back, no deal).  **Buying
+  never comes below selling for the same thing, whatever the critical** (the user's, 2026-11-03): *the house's way, for
+  review:* no one buys under two thirds of its worth, nor sells over them, an ally's haggling being the only case that
+  reached them (56 and 75 hundredths).  The deal done at once if it's paid.  Half a minute's work.
 - **Asking** ("how much for the lantern", "what will you give for this"): within earshot (12 squares), no time but a
   moment's.  **The deal** ("buy the rope from the dwarf", "sell my dagger"): within reach (a square).
-- **The money:** pennies only (the payer's one pile of them, at face), so a price is whole pennies; the character
-  without enough: "You haven't the money: the dwarf asks 12 pennies."; the trader: "The dwarf hasn't the money".
-  *Not yet* (DECISIONS.md's, the user's of 2026-10-28): paying with farthings and crowns and change given, the
-  lowest-worth coins first, the seller asking for the local or the dwarves' coin, "pay with Kanday pennies", the coins'
+- **The money:** the payer's one pile of pennies, at face, for a price in pennies; of farthings for a price in farthings
+  (*the house's, for review:* a character with no farthings pays a whole penny, no change given; a trader with none can't
+  pay: no pump either way); the character without enough: "You haven't the money: the dwarf asks 12 pennies."; the
+  trader: "The dwarf hasn't the money".  *Not yet* (DECISIONS.md's, the user's of 2026-10-28): paying with crowns, a price
+  over a penny in farthings, change given, the lowest-worth coins first, the seller asking for the local or the dwarves' coin, "pay with Kanday pennies", the coins'
   worth abroad in the trade itself (it's at face now).
 - **The exchange** (the one path): the trader's own intents, the character's way with things for every actor (the
   world's wfetch.c): it takes the payer's coins or the goods sold (FE_GIFT, a count split off, kept in its things, not
@@ -3431,7 +3472,7 @@ weapon's version and Strength, a wrecked door, a slip out of a pit.
   and its gear: the things it carried out, its money among them, kept with the save (the world's kit.dat, written
   with every save: an outfit's list of them, what's worn and held, then what's in each) and made as its outfit in
   the new dungeon in place of one drawn.  *(The house's, for review:)* each thing made anew as an outfit's is (whole,
-  its light's fuel and its oil renewed, its coins the new region's; left behind, a key, its lock the old dungeon's,
+  its light's fuel and its oil renewed (*left as it is, the user's, 2026-11-03: still for review*), its coins the new region's; left behind, a key, its lock the old dungeon's,
   and the old theme's own things, its puzzle's pieces, with what's in them;
   its weapons the version its Strength wields freely, as a new character's); 64 things at most.  A game begun in the
   folder that isn't carried on empties kit.dat first.  Its ruleset the one dq0 -r names (harn if none).

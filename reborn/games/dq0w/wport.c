@@ -151,6 +151,14 @@ void __fastcall__ s_den_more (const struct msg* m)
         door_keys (m);
     } else if (m->kind == I_TAKE) {
         den_take (m);                           /* (A thing taken up by the take rule: part 72's) */
+    } else if (m->kind == I_RISE) {             /* (Its position, its mind's: lain down to sleep a moment's; up, the
+                                                **   Rise's round, wlimbs.c's den_legs: 2026-11-02) */
+        if (m->w1 != POS_STANDING) {
+            bd.pos = m->w1;
+            bd.ready += 10;
+        } else if (bd.pos) {
+            den_legs ();
+        }
     } else {
         den_portal (m);
     }

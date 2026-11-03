@@ -175,6 +175,7 @@ void s_den_intents (void)
     static struct msg m;
     static unsigned char t, was, d, any, eng, help;
     static unsigned x, y, c;
+    static unsigned char s, o;
     static unsigned char* p;
     static int z;
 
@@ -250,18 +251,30 @@ void s_den_intents (void)
                 bd.ready += 10;
                 break;
             }
+            o = (unsigned char) apart (bd.x - bpx, bd.y - bpy);
             if (!(m.w1 & STEP_COARSE)) {        /* (Its time: its step, uphill and steeply down more, on steps more) */
                 z = elev_at (bd.sn, bd.x, bd.y);
                 p = at (bd.sn, x, y);
                 z = C->elev[cy_][cx_] - z;
-                c = bd.step;
+                s = bd.step;                    /* (Its walk, or hurried its jog, and the louder for it (the user's,
+                                                **   2026-11-03, "walk unless hurried, and closing in to attack should
+                                                **   be hurried unless they are cautious"): fleeing; coming at its foe
+                                                **   but a cautious one (a stalker, a shy kind, hurt, its heart against
+                                                **   it); an ally fallen behind, the house's) */
+                if (bd.doing == DO_FLEE || (bd.doing == DO_COMING && bd.attitude == AT_HOSTILE && !(bd.timid & 1) &&
+                    !(bd.mood & (AM_STALKS | AM_HURT)) && bd.heart >= 0) ||
+                    (bd.doing == DO_FOLLOW && o > 3)) {
+                    s >>= 1;
+                    ++m.b;
+                }
+                c = s;
                 if (z > 0) {
-                    c += bd.step * z / 2;
+                    c += s * z / 2;
                 } else if (z < -1) {
-                    c += bd.step * (-z - 1) / 4;
+                    c += s * (-z - 1) / 4;
                 }
                 if (TILE (*p) == T_STEPS) {
-                    c += bd.step / 2;
+                    c += s / 2;
                 }
                 c += c * (bd.move & 3);         /* (Lame, twice its time; crawling, three times: slice
                                                 **   4.1b's) */
@@ -271,8 +284,7 @@ void s_den_intents (void)
                 }
                 bd.ready += c;
             }
-            if (!noinit && !help && bd.attitude <= AT_UNFRIENDLY && bd.sn == bps &&
-                apart (bd.x - bpx, bd.y - bpy) > 1 && apart (x - bpx, y - bpy) == 1) {
+            if (!noinit && !help && bd.attitude <= AT_UNFRIENDLY && bd.sn == bps && o > 1 && apart (x - bpx, y - bpy) == 1) {
                 eng = bk + 1;                   /* (An enemy come up beside the character: it engages it, the
                                                 **   engage initiative test's, once its body's put back) */
             }
@@ -294,9 +306,10 @@ void s_den_intents (void)
             den_trod (bearing ((int) (m.w1 - bd.x), (int) (m.w2 - bd.y)));
             bd.x = m.w1;
             bd.y = m.w2;
-            bd.ready += 2 * bd.step;
+            bd.ready += bd.step;                /* (Its two squares at a jog) */
             told_den (m.a, m.b);
             break;
+        case I_RISE:                            /* (Its position, its mind's: part 80's, part 14's room, 2026-11-03) */
         case I_CLIMB:                           /* (The rarer: an ally come along with the character; a robbery; */
         case I_ROB:                             /*   a door worked, the character's code, a thing taken, Phase 3C's: */
         case I_PORTAL:                          /*   part 80's) */
@@ -305,15 +318,6 @@ void s_den_intents (void)
             break;
         case I_WAIT:
             bd.ready += m.w1;
-            break;
-        case I_RISE:                            /* (Its position, its mind's: lain down to sleep a moment's; up,
-                                                **   the Rise's round, wlimbs.c's den_legs: 2026-11-02) */
-            if (m.w1 != POS_STANDING) {
-                bd.pos = m.w1;
-                bd.ready += 10;
-            } else if (bd.pos) {
-                den_legs ();
-            }
             break;
         case I_ROUSE:
             if (m.w2 || bd.ready > HUB->now + m.w1) {
