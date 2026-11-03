@@ -746,8 +746,11 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   it, its band times 256 (0 out of it, 1 a foot or two, 2 waist-deep, 3
                                                 **   out of its depth), | 0x8000 running; swimming, | 0x100 well, | 0x200
                                                 **   up again from under; gone under, | 0x100 drowned; its flames put out) */
-enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT };   /* (What stops a walk in the dark, met: the
-                                                **   world's ahead) */
+enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT, FA_TRAP };   /* (What stops a walk, met: the world's
+                                                **   ahead, in the dark, or a straight walk's end; FA_TRAP, one it knows
+                                                **   of, across's) */
+#define LEDGE_MET       120                     /* (E_LEDGE's w1, as a signed byte, past it: what a straight walk came
+                                                **   to, FA_* (2026-11-02); a ledge's feet at most it) */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
 enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD, K_HELD };    /* E_CLIMB's how: begun, on, slipped
                                                 **   back, fallen, up, down; jumped down (a ledge, a shaft); no hold

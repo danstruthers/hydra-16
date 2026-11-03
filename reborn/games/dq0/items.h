@@ -343,7 +343,7 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   the character carries, for a gift: IO_DESCRIBE's reply (its worth
                                                 **   in value, a unit's, the appraisal's; its qty, its craft), its item
                                                 **   in item; IR_NONE none */
-enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS };   /* (IO_LOOK's: a look at it; a closer look; its
+enum { LM_AT, LM_CLOSE, LM_COND, LM_WEIGHT, LM_LOCK, LM_TRAPS, LM_GO };   /* (IO_LOOK's: a look at it; a closer look; its
                                                 **   condition; its weight; its lock; gone over for traps) */
 #define IO_PUZZLE       (IO_BAR + 4)           /* A command of the theme's puzzle's (theme.h), judged by its rules
                                                 **   (the world's): to its verb (TR_*), name the thing (into the other:

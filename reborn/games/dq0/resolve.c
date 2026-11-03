@@ -494,6 +494,13 @@ unsigned char o_resolve (void)
         goto named;
     }
     nall = 0;
+    if ((unsigned char) (a - VB_MOVE_DIRECTION) < 2 && !cmd.obj.kind) {
+        if (cmd.how == HOW_ACROSS) {
+            cmd.obj.kind = OB_ROOM;             /* ("Cross the kitchen": the room it's in, its far side) */
+        } else if (cmd.obj.word[0]) {
+            cmd.dir = 0xFF;                     /* ("Go up to the pot", "go back to the pot": to it) */
+        }
+    }
     if (cmd.flags & CF_UNSAID) {                /* (Its thing unsaid: its verb's) */
         switch (cmd.dflt) {
         case DF_LAST:
@@ -538,7 +545,8 @@ unsigned char o_resolve (void)
             iall = 1;
             strcpy (cmd.obj.word, all[0]);
             cmd.obj.sel = SL_THE;               /* (Each by its name in turn: not all of a name at once) */
-        } else if (!find_thing (&cmd.obj, a == VB_ATTACK_OBJECT ? 2 : a == VB_THROW_OBJECT ? 1 : 3, 0, 0)) {
+        } else if (!find_thing (&cmd.obj, a == VB_ATTACK_OBJECT ? 2 : a == VB_THROW_OBJECT ? 1 : 3, 0,
+            (unsigned char) (a - VB_MOVE_DIRECTION) < 2 || a == VB_APPROACH_OBJECT)) {   /* (Gone to: which, asked) */
             return RV_DONE;
         }
     }

@@ -163,7 +163,7 @@ go:
             SWPART      66, 15              ; The missiles gathered (wshoot.c; overlay 15's, 2026-10-30)
             SWPART      67, 20              ; The character's shot, the denizens' shots and throws (wshoot.c)
             SWPART      68, 20              ; Where a missile falls, a miss's stray; a launcher loaded (wshoot.c)
-            SWPART      69, 12              ; A robbery (wfight.c's: part 67's room, overlay 12's, 2026-10-30)
+            SWPART      69, 5               ; A robbery (wfight.c's: part 67's room, overlay 12's, 2026-10-30)
             SWPART      70, 21              ; Wounds over time: the bodies' time told, a thing used up (wtend.c)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
@@ -275,7 +275,7 @@ go:
             SWFN        reach_to, 56
             SWFN        reach_done, 56
             SWFN        handy, 56
-            SWFN        tool_reach, 4
+            SWFN        tool_reach, 81
             SWFN        flame, 10
             SWFN        drop, 35
             SWFN        throw_at, 4

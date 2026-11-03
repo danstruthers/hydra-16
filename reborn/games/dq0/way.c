@@ -32,6 +32,7 @@
 #include "dq0.h"
 #include "hub.h"
 #include "level.h"
+#include "tell.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a part's, an overlay's) */
 
@@ -129,7 +130,15 @@ static unsigned char __fastcall__ judged_as (unsigned char ex)
     struct req* r;
     signed char g;
 
-    if (!cmd.obj.word[0] || things (IO_DESCRIBE, cmd.obj.word) != IR_OK) {
+    if (!cmd.obj.word[0]) {
+        return 0;
+    }
+    HUB->ireq.to = 1;                           /* (Out of reach: walked over to first) */
+    if ((g = things (IO_DESCRIBE, cmd.obj.word)) == IR_NOT_HERE) {
+        reach_go ();
+        return 1;
+    }
+    if (g != IR_OK) {
         return 0;
     }
     memcpy (&judged, &HUB->ireq, sizeof judged);
@@ -179,12 +188,60 @@ static unsigned char examine (void)
     return 0;
 }
 
+/* Gone to a thing, a denizen, a body: anything it sees, or remembers seeing in this room though it's out of the light
+** now (the user's, 2026-11-02: HOUSE.md's going places; main.c's move, VB_APPROACH_OBJECT its way here): the one found
+** (resolve.c's: asked which, of several, its square in cmd.obj), else the nearest of that name (the world's IO_LOOK,
+** LM_GO).  Walked to by the world's walk, stopping beside it (I_GOTO's a 2; a denizen, I_CLOSE's w1 1: up to it, as it
+** moves, no blow); refused only for what it hasn't seen */
+static void go_thing (void)
+{
+    unsigned x = cmd.obj.x, y = cmd.obj.y;
+    unsigned char k;
+    struct actor* a;
+
+    if (!cmd.obj.word[0]) {
+        tell (T_GO_WHICH_WAY);
+        return;
+    }
+    if (!x) {
+        HUB->ireq.to = LM_GO;
+        k = things (IO_LOOK, cmd.obj.word);
+        if (k == IR_OK) {
+            msg (tt ());                        /* (Within reach already: where it lies) */
+            return;
+        }
+        if (k != IR_NOT_HERE) {
+            sayf ("\nYou haven't seen a%s %s here.", strchr ("aeiou", *cmd.obj.word) ? "n" : "", cmd.obj.word);
+            return;
+        }
+        x = HUB->ireq.x;
+        y = HUB->ireq.y;
+    } else if (x - HUB->pc_x + 1 <= 2 && y - HUB->pc_y + 1 <= 2) {
+        sayf ("\nThe %s is beside you.", cmd.obj.word);
+        return;
+    } else {
+        for (k = 0, a = HUB->actor; k < NACTORS; ++k, ++a) {
+            if (a->state && a->x == x && a->y == y && a->sn == HUB->pc_stratum) {
+                intend_a = k + 1;
+                intend2 (I_CLOSE, 1, 0);
+                return;
+            }
+        }
+    }
+    intend_a = 2;
+    intend2 (I_GOTO, x, y);
+}
+
 unsigned char __fastcall__ s_look_way (unsigned char action)
 {
     unsigned char h, k;
 
     if (action == VB_EXAMINE_OBJECT) {
         return examine ();
+    }
+    if (action == VB_APPROACH_OBJECT) {
+        go_thing ();
+        return 0;
     }
     if (action == VB_NONE) {                    /* (A listen's or a sniff's end: what came of it) */
         if (lsn & 3) {

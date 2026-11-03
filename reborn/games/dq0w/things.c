@@ -88,7 +88,9 @@ void __fastcall__ listed (unsigned n);          /* Part 11 */
                                                 **   or to hand, within reach (afar else); in win) */
 #define HW_SEEN         2
 #define HW_ANY          3
-#define HW_HAND         4
+#define HW_HAND         4                       /* (HW_HAND and after: remembered in the room too, out of the light) */
+#define HW_KNOWN        6                       /* (Carried, or seen or remembered) */
+#define HW_GONE         7                       /* (Lying about, seen or remembered) */
 #define HW_IN           5
 
 #define NK      NKINDS                          /* (The catalogue's, and the theme's after them: theme.h) */
@@ -1140,14 +1142,16 @@ unsigned __fastcall__ s_pick (const char* name, unsigned char how)
         } else if (rec.where == IW_ITEM && rec.x == win) {
             continue;                           /* (In the one a count's put in already) */
         } else if (pw == IW_ACTOR) {
-            if (px || how == HW_SEEN) {
+            if (px || how == HW_SEEN || how == HW_GONE) {
                 continue;                       /* (Another's: a denizen's) */
             }
             r = d ? 1 + (d > 6 ? 6 : d) : rec.flags & I_HELD ? 0 : 1;
         } else {
             if (how == HW_CARRIED || d > 1 || ps != sn || (dx = px - x + 20) > 40 || (dy = py - y + 20) > 40 ||
-                (d && !(kind_of (pk)->keeps & KF_ON)) || !(t = at (sn, px, py)) || !(*t & T_VIS)) {
-                continue;                       /* (Lying about, or on a surface there, in sight; not in a thing) */
+                (d && !(kind_of (pk)->keeps & KF_ON)) || !(t = at (sn, px, py)) || (!(*t & T_VIS) &&
+                (how < HW_HAND || !(*t & T_SEEN) || !rec.id || room_of (sn, px, py) != room_of (sn, x, y)))) {
+                continue;                       /* (Lying about, or on a surface there, in sight, or remembered there
+                                                **   in the room it's in, as HW_HAND and those after it ask; not in a thing) */
             }
             dx = dx > 20 ? dx - 20 : 20 - dx;
             dy = dy > 20 ? dy - 20 : 20 - dy;
@@ -1212,6 +1216,8 @@ unsigned __fastcall__ s_at_hand (const char* name)
 /* A tool used, got out first (HOUSE.md's handy tools: its reach owed, part 10's; part 4's, its room): the first the
 ** character carries whose key (the catalogue's: the referee's to choose by) is one of keys ("pick\0shovel\0": each
 ** 0-ended, an empty one last: a dig begun, a lock's picking) */
+#pragma code-name (push, "SW81CODE")            /* (Part 81's since 2026-11-02: part 4's room) */
+#pragma rodata-name (push, "SW81RODATA")
 void __fastcall__ s_tool_reach (const char* keys)
 {
     const char* k;
@@ -1226,6 +1232,8 @@ void __fastcall__ s_tool_reach (const char* keys)
         }
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma static-locals (pop)
 #pragma code-name (pop)
@@ -1443,7 +1451,7 @@ unsigned char __fastcall__ s_moved (unsigned char op)
         }
         wsel = iq.sel;
     }
-    mode = op == IO_GET ? HW_SEEN : op == IO_DROP ? HW_CARRIED : op == IO_TAKE ? (win ? HW_IN : HW_HAND) : HW_HAND;
+    mode = op == IO_GET ? HW_GONE : op == IO_DROP ? HW_CARRIED : op == IO_TAKE ? (win ? HW_IN : HW_HAND) : HW_HAND;
     text_new ();
     for (;;) {
         wforce = 0;
@@ -2233,7 +2241,9 @@ unsigned char s_look_at (void)
     char b[6];
 
     text_new ();
-    if (!(n = pick (iq.name, HW_ANY))) {        /* (Carried, or seen: the one most to hand, of several) */
+    if (!(n = pick (iq.name, mode == LM_AT ? HW_ANY : mode == LM_GO ? HW_GONE : HW_KNOWN))) {    /* (Carried, or seen: the
+                                                **   one most to hand, of several; all but a plain look, remembered too,
+                                                **   walked to; gone to: lying about) */
         return IR_NONE;
     }
     ld = seen_d > 99 ? 99 : seen_d;
@@ -2252,12 +2262,16 @@ unsigned char s_look_at (void)
     mine = p->where == IW_ACTOR && !p->x;
     px = p->x;
     py = p->y;
-    if (ld > 1 && (mode == LM_WEIGHT || mode == LM_TRAPS)) {
-        hub_map (0);                            /* (Out of reach: walked over to first, where it lies, the UI's) */
+    if (ld > 1 && mode) {
+        hub_map (0);                            /* (Out of reach, all but a plain look: walked over to first, where it
+                                                **   lies, the UI's) */
         HUB->ireq.x = px;
         HUB->ireq.y = py;
         HUB->ireq.item = n;
         return IR_NOT_HERE;
+    }
+    if (mode == LM_GO) {
+        mode = LM_AT;                           /* (Gone to, within reach already: where it lies) */
     }
     make_own (n);                               /* (Its make its own: its lid, its lock, its fuel decided) */
     fetch (&rec, n);
@@ -2303,10 +2317,6 @@ off:
     put (".");
     if (k) {
         return IR_OK;                           /* (Something, too far off to make out) */
-    }
-    if (ld > NEAR_SQ && mode) {                 /* (Seen from afar: no closer look) */
-        put (" You'd have to go closer to make out more.");
-        return IR_OK;
     }
     tq = tbuf;                                  /* Its state, at a glance: the words gathered first (none, none said) */
     tqe = tbuf + sizeof tbuf - 1;
@@ -2385,11 +2395,22 @@ unsigned char __fastcall__ s_describe (const char* name)
 {
     const struct kind* k;
     struct ireq* r;
-    unsigned n = pick (name, HW_ANY);         /* (Carried, or seen: the one most to hand, of several) */
+    unsigned n = pick (name, iq.to ? HW_KNOWN : HW_ANY);    /* (Carried, or seen: the one most to hand, of several; an
+                                                **   appraisal's, remembered too; a name given's not) */
     unsigned char c = 100;
 
     if (!n) {
         return IR_NONE;
+    }
+    if (iq.to && seen_d > 1) {
+        hub_map (0);                            /* (An appraisal, out of reach: walked over to first, the UI's) */
+        HUB->ireq.item = n;
+        for (fetch (&rec, n); rec.where == IW_ITEM; fetch (&rec, rec.x)) {
+        }
+        hub_map (0);
+        HUB->ireq.x = rec.x;
+        HUB->ireq.y = rec.y;
+        return IR_NOT_HERE;
     }
     make_own (n);
     fetch (&rec, n);

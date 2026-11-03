@@ -114,7 +114,7 @@ void __fastcall__ map (const char* rules);      /* Part 3: the map of what it's 
 enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL, OB_WINDOW, OB_TRAP,
     OB_PORTC, OB_ROOM, OB_CORNER, OB_PILLAR, OB_CENTRE, OB_SIDE };  /* (OB_ROOM: the room, its ceiling: looked at closely; a corner, a
                                                 **   pillar: looked round, "look around the corner") */
-enum { HOW_ANY, HOW_TO, HOW_THROUGH };
+enum { HOW_ANY, HOW_TO, HOW_THROUGH, HOW_ACROSS };
 enum { PR_NONE, PR_IN, PR_ON, PR_FROM, PR_WITH, PR_AT, PR_TO };    /* (The other thing: in it, on it, from it, with
                                                 **   it, at it, to it) */
 #define GO_UP       8                           /* (A direction: up, down; else a heading, H_N ...) */

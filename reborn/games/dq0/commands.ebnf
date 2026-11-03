@@ -190,6 +190,8 @@
 <MOVE>       ::= "walk" | "go" | ( "make" | "find" ) "my" "way"   (* "make my way back to the Mausoleum": travel's,
                                                  slice 4.2; "return to", "travel to", "head back to": walk's aliases *)
 <TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of" | "into" | "onto" | "past" | "through"
+                 | "for" | "near" | "by" | "beside" | "next to" | "over to" | "up to" | "across to"   (* "head for the pot",
+                                                 "walk over to the chest" (going to anything, 2026-11-02) *)
 <ALONG>      ::= "up" | "down" | "along" | "across"   (* up or down a stairway or a ladder; along a passage *)
 <GET>        ::= "get" | "take" | "pick up" | "pick"
 <DROP>       ::= "drop" | "put down"

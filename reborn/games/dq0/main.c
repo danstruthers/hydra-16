@@ -2002,7 +2002,7 @@ void __fastcall__ s_command (char* l)
         return;
     }
     if ((cmd.obj.word[0] || cmd.n) && (cmd.action == VB_MOVE_TOWARD || cmd.action == VB_MOVE_DIRECTION) &&
-        cmd.dir == 0xFF && !cmd.obj.kind) {     /* (A word alone, or a number, that's no way: "foo", "1") */
+        cmd.dir == 0xFF && !cmd.obj.kind && !cmd.how) {     /* (A word alone, or a number, that's no way: "foo", "1") */
         sayf ("\nI don't know how to %s.", cmd.obj.word[0] ? cmd.obj.word : l);
         return;
     }
@@ -2058,7 +2058,7 @@ again:
         } else if (cmd.dir != 0xFF) {
             intend (I_GO, cmd.dir);
         } else {
-            tell (T_GO_WHICH_WAY);
+            look_way (VB_APPROACH_OBJECT);      /* (Anything else it has seen, or which way: way.c's) */
         }
         return;
     case VB_CLIMB:
@@ -2283,8 +2283,8 @@ static unsigned long seed;                      /* (Its seed: the clock's, as th
 static const char* file = "";                   /* (-c's: the character's file) */
 static const char* rules = "harn";              /* (The ruleset, if none's given: HarnMaster's) */
 
-#pragma code-name (push, "SW7CODE")
-#pragma rodata-name (push, "SW7RODATA")
+#pragma code-name (push, "SW13CODE")           /* (Part 13's since 2026-11-02: part 7's room) */
+#pragma rodata-name (push, "SW13RODATA")
 
 /* A command whose thing is out of reach (the things' IR_NOT_HERE, the puzzle's PZ_FAR: where it is in the hub's ireq,
 ** its words not said): walked over to it first (I_TAKE's walk alone), the command kept and carried out again as the
@@ -2318,6 +2318,11 @@ unsigned char s_reach_go (void)
     return r;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW7CODE")
+#pragma rodata-name (push, "SW7RODATA")
+
 /* A place in the room the character's in (HOUSE.md's going places), by its facing alone: the centre (the middle); a
 ** side, the far one (the other side, the far end, the wall ahead) unless it says which (near, left, right, the way it
 ** lies); a corner ("the far left corner"; unsaid, the nearest).  The square there walked to (I_GOTO, a 1: the nearest
@@ -2332,8 +2337,8 @@ unsigned char __fastcall__ s_place_go (const struct cmd* c)
 
     k = c->obj.kind;
     if (k == OB_ROOM) {                         /* ("The centre of the room": the place, not the room) */
-        k = strstr (w, "corner") ? OB_CORNER : strstr (w, "side") || strstr (w, "end") || strstr (w, "wall") ? OB_SIDE :
-            strstr (w, "cent") || strstr (w, "middle") ? OB_CENTRE : OB_ROOM;
+        k = strstr (w, "corner") ? OB_CORNER : strstr (w, "cent") || strstr (w, "middle") ? OB_CENTRE : OB_SIDE;   /* (Its
+                                                **   far side: "the far end of the room", "cross the room") */
     }
     if (k != OB_CENTRE && k != OB_SIDE && k != OB_CORNER && k != OB_WALL) {
         return 0;
@@ -2342,6 +2347,11 @@ unsigned char __fastcall__ s_place_go (const struct cmd* c)
     if (s->where != W_ROOM || s->dark) {
         if (k == OB_CORNER || k == OB_WALL) {
             return 0;                           /* (A passage's corner, a wall: as ever) */
+        }
+        if (s->dark) {
+            intend_a = pc_face;                 /* (A place it can't see: straight on) */
+            intend2 (I_GO, 0, 0);
+            return 1;
         }
         msg ("You aren't in a room.");
         return 1;
@@ -2385,8 +2395,8 @@ unsigned char __fastcall__ s_place_go (const struct cmd* c)
             b = (ra > 0 ? r1 - rc <= rc - r0 : rc - r0 <= r1 - rc) ? 1 : -1;
         }
     }
-    fc = a == 2 ? fc : !a ? (f0 + f1) / 2 : a * fa > 0 ? f1 : f0;
-    rc = b == 2 ? rc : !b ? (r0 + r1) / 2 : b * ra > 0 ? r1 : r0;
+    fc = a == 2 ? fc : !a ? f0 + (f1 - f0) / 2 : a * fa > 0 ? f1 : f0;   /* (Not (f0 + f1) / 2: the frame's squares near */
+    rc = b == 2 ? rc : !b ? r0 + (r1 - r0) / 2 : b * ra > 0 ? r1 : r0;   /*   $8000, a sum past 16 bits) */
     pm.w1 = fy ? rc : fc;
     pm.w2 = fy ? fc : rc;
     if (pm.w1 == px && pm.w2 == py) {
