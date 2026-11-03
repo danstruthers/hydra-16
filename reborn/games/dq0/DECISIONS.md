@@ -1449,14 +1449,14 @@ their records, not by words.  How the catalogue's actions become the world's int
 | FACE_DIRECTION | I_TURN | (its face, every intent's x[1]) |
 | CLIMB, JUMP | I_CLIMB (up, down; I_JUMP) | I_CLIMB (an ally come along) |
 | DIG | I_DIG (a way) | I_KIT's KT_DIG (a tunneller's spell) |
-| OPEN, CLOSE, UNLOCK, LOCK, FORCE, BREAK, BAR, RAISE, LOWER, BEND, DISARM, SEARCH, EXAMINE (a portal) | I_PORTAL (PA_*, which, its square) | I_PORTAL (a door: PA_OPEN ... PA_BREAK) |
+| OPEN, CLOSE, UNLOCK, LOCK, FORCE, BREAK, BAR, RAISE, LOWER, BEND, DISARM, SEARCH, EXAMINE (a portal) | I_PORTAL (PA_*, which, its square) | I_PORTAL (a door: PA_OPEN ... PA_BREAK, a lock picked by a robber's kind; a portcullis: PA_RAISE, PA_LOWER, PA_BEND: 2026-11-02) |
 | RETRIEVE_OBJECT (out of reach) | I_TAKE (its square, its record) | I_TAKE (its wants: the world takes the first in its reach); I_ROB's FE_TAKE (an ally's errand) |
 | ATTACK_OBJECT, ENGAGE | I_ATTACK (whom, the aim), I_CLOSE (walked up to first) | I_ATTACK |
 | THROW_OBJECT, SHOOT_OBJECT | I_ATTACK, AIM_SHOT | I_ATTACK, AIM_SHOT |
 | LOAD_OBJECT, GATHER_OBJECT | I_LOAD, I_GATHER | |
 | DISENGAGE, FLEE | I_DISENGAGE | (its steps away) |
 | WAIT, SLEEP | I_WAIT | I_WAIT |
-| STAND, SIT, LIE_DOWN, CROUCH | I_RISE | |
+| STAND, SIT, LIE_DOWN, CROUCH | I_RISE | I_RISE (lain down to sleep, up again: 2026-11-02) |
 | LIGHT_OBJECT, EXTINGUISH_OBJECT | I_LIGHT | |
 | OBSERVE_DIRECTION, TRACK, SMELL | I_LOOK, I_TRACE | |
 | STOP, META_QUIT | I_STOP, I_QUIT | |

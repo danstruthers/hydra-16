@@ -285,7 +285,8 @@ void s_den_intents (void)
             }
             break;
         case I_GOTO:                            /* (A dash past the character: a moment's) */
-            if ((((bd.move & 4) | bd.pos) && den_legs ()) || !open_sq (at (bd.sn, m.w1, m.w2)) ||
+            if (((m.w1 != bd.x || m.w2 != bd.y) && ((bd.move & 4) | bd.pos) && den_legs ()) ||
+                !open_sq (at (bd.sn, m.w1, m.w2)) ||   /* (One told where it stands, a snore, a shout: not got up for, 2026-11-02) */
                 apart (m.w1 - bd.x, m.w2 - bd.y) > 2 || taken (m.w1, m.w2)) {
                 bd.ready += 10;
                 break;
@@ -304,6 +305,15 @@ void s_den_intents (void)
             break;
         case I_WAIT:
             bd.ready += m.w1;
+            break;
+        case I_RISE:                            /* (Its position, its mind's: lain down to sleep a moment's; up,
+                                                **   the Rise's round, wlimbs.c's den_legs: 2026-11-02) */
+            if (m.w1 != POS_STANDING) {
+                bd.pos = m.w1;
+                bd.ready += 10;
+            } else if (bd.pos) {
+                den_legs ();
+            }
             break;
         case I_ROUSE:
             if (m.w2 || bd.ready > HUB->now + m.w1) {

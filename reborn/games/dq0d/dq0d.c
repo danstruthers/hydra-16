@@ -112,6 +112,7 @@ unsigned char __fastcall__ daily (unsigned char k);  /* Part 9 (the day's, 2026-
 unsigned char __fastcall__ wander (unsigned char lim);
 unsigned char __fastcall__ sched (unsigned char k, unsigned id);
 void __fastcall__ coarse (unsigned char k, unsigned lim);   /* Part 10 */
+void rfound (void);                             /* Part 19: a record's rounds finding a body (2026-11-02) */
 void __fastcall__ told (unsigned char j);      /* Part 6's hook: a loss told (a body found, the day's) */
 unsigned char __fastcall__ found (unsigned char k);
 void hour (void);
@@ -123,11 +124,24 @@ unsigned char __fastcall__ work_dig (unsigned char k);  /* Part 15 (their work's
 unsigned char nearby (void);                    /* Part 13: the lairs near placed (the main RAM's room, 2026-11-01) */
 unsigned char __fastcall__ door_way (unsigned char k);  /* Part 14: a door worked (Phase 3C's one path, 2026-11-02) */
 unsigned char __fastcall__ take_way (unsigned char k);  /*   a thing taken up */
+void __fastcall__ robs (unsigned char k);       /* Part 8 (its foe helpless: robbed, or left) */
+unsigned char __fastcall__ shies (unsigned char k);
+void __fastcall__ feel (unsigned char k);       /* Part 8 (2026-11-02: the main RAM's room, the ways'; with hungry: no copies
+                                                **   back and forth each decision, dq0dig's 6,700) */
+unsigned char __fastcall__ way (unsigned char k);   /* Part 17: a way followed (2026-11-02) */
+unsigned char __fastcall__ wfind (unsigned char k);     /* Part 18: a way found (2026-11-02) */
+static unsigned char aroute[NACTORS];           /* (Each one's way, way's: 1 following one found; 0 none; else none
+                                                **   looked for till the clock's NOW_T comes to it, WAY_HOLD: so a
+                                                **   stuck one copies in no part each decision) */
+#define WAY_HOLD(t)     ((unsigned char) (NOW_T + (t)) | 2)
+static unsigned wlim;                           /* (step_for's lim, for way's) */
+static unsigned char wayj = 0xFF;               /* (A shut door on its way: the way to it, the four's; door_way's) */
+static unsigned char rb;                        /* (The ways' bank plus 1: 0 none yet, part 17's) */
 static unsigned char aloot[NACTORS];            /* (Each one's next look for a thing it wants: the clock's, NOW_T) */
 #define NOW_T           (((unsigned char*) &now)[1])    /* (The clock's 25.6-second ticks, a byte: now >> 8's) */
 static unsigned char door_by (void);            /* (Below) */
 static unsigned char nonear;                    /* (None left near to place: nearby's, till the character moves) */
-extern unsigned char ovbank[6];
+extern unsigned char ovbank[7];
 static unsigned char __fastcall__ wades (unsigned char w, unsigned char sn, unsigned x, unsigned y);  /* (Below) */
 extern char _SWAP_START__[];
 
@@ -1369,6 +1383,10 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
 
     best = 0xFF;
     s = random (2) ? a.face >> 1 : random (4);
+    wlim = lim;
+    if (how == S_TOWARD && aroute[k] == 1 && (d = way (k)) != 0xFF) {
+        return d;                               /* (On a way found: its field's step, part 17's; the dice as ever) */
+    }
     bf = how == S_TOWARD ? toward (a.x - refx, a.y - refy) : apart (a.x - refx, a.y - refy);
 
     for (j = 0; j < 8; ++j) {
@@ -1400,7 +1418,9 @@ static unsigned char __fastcall__ step_for (unsigned char k, unsigned lim, unsig
         bf = f;
         best = d;
     }
-    return best;
+    return best == 0xFF && how == S_TOWARD && (aroute[k] < 2 || (signed char) (NOW_T - aroute[k]) >= 0) ? way (k | 0x80) :
+        best;    /* (No step nearer: a way found round, part
+                                                **   15's, 2026-11-02) */
 }
 #pragma static-locals (pop)
 
@@ -1735,8 +1755,59 @@ static unsigned char fought (void)
 static int ddx, ddy;                            /* (The character from the actor deciding, and how far) */
 static unsigned dist;
 
-/* Actor k's (the copy's) attitude moved by what it senses of the character (it senses it now) */
-static void __fastcall__ feel (unsigned char k)
+/* Whether feel has anything to do for actor k (the copy; its kind K): the main RAM's cheap test, so a watcher's decision
+** copies in no part: come into or gone from its lair's bounds, or one that may see the character with an ally about */
+static unsigned char __fastcall__ feels (unsigned char k)
+{
+    struct actor* q = HUB->actor;
+    unsigned u;
+    unsigned char j;
+
+    hub_map (0);
+    u = apart (pcx - ahx[k], pcy - ahy[k]);
+    if ((K.flags & K_LAIR) && (u > 4) == intr[k]) {
+        return 1;
+    }
+    if (!seenfoe[k] && a.attitude > AT_HOSTILE && a.attitude < AT_ALLIED) {
+        for (j = NACTORS; j; --j, ++q) {
+            if (q->attitude == AT_ALLIED) {
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+/* Actor k's (the copy's) attitude moved by what it senses of the character (it senses it now).  Part 8's (2026-11-02:
+** the main RAM's room, the ways'; asked as feels has it) */
+#pragma code-name (push, "SW8CODE")
+#pragma rodata-name (push, "SW8RODATA")
+/* Actor k (the copy), shy, the character too near (meets'): a step away; cornered beside it, past it (dart's square) */
+unsigned char __fastcall__ s_shies (unsigned char k)
+{
+    unsigned char d;
+
+    a.doing = DO_SHY;
+    if ((d = step_for (k, 2 * K.range, S_AWAY)) == 0xFF && dist == 1 && s_dart (k)) {
+        d = 0xFD;                               /* (Cornered: past the character) */
+    }
+    return d;
+}
+
+void __fastcall__ s_robs (unsigned char k)
+{
+    if (!(K_HELP (K) & H_ROBS) || dist <= 1) {
+        if (K_HELP (K) & H_ROBS) {
+            a.doing = DO_FLEE;                  /* (Off with what it takes, to its lair: the world's) */
+            rob_to (k);
+            act (I_ROB, k);
+        }
+        a.attitude = AT_UNFRIENDLY;
+        fled[k] = FLEE_T;
+    }
+}
+
+void __fastcall__ s_feel (unsigned char k)
 {
     struct actor* q = HUB->actor;
     unsigned char j;
@@ -1758,6 +1829,8 @@ static void __fastcall__ feel (unsigned char k)
         }
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Actor k (the copy) near an actor of a faction hostile to its own (its foe: the nearest, within 4 squares): kept off
 ** it, a step away while it's within 3.  The step, or 0xFF */
@@ -1800,10 +1873,7 @@ static unsigned char __fastcall__ meets (unsigned char k, unsigned char was)
             a.doing = DO_COMING;                /* (At it, or to threaten it) */
         }
     } else if ((K.flags & K_SHY) && t <= AT_INDIFFERENT && dist < (was == DO_SHY ? 7 : 5)) {
-        a.doing = DO_SHY;
-        if ((d = step_for (k, 2 * K.range, S_AWAY)) == 0xFF && dist == 1 && dart (k)) {
-            d = 0xFD;                           /* (Cornered: past the character) */
-        }
+        d = shies (k);                          /* (Part 8's, 2026-11-02: the main RAM's room) */
     } else if (t == AT_UNFRIENDLY && dist < 3) {
         a.doing = DO_SHY;                       /* (A few squares off, threatening) */
         d = step_for (k, 2 * K.range, S_AWAY);
@@ -1918,6 +1988,7 @@ static unsigned char __fastcall__ decide (unsigned char k)
     ag = HUB->agear[k];                         /* (Its things, the world's: a launcher, a shot, slice 4.7's) */
     stayed (k);
     wt = 0;
+    wayj = 0xFF;
     refx = pcx;
     refy = pcy;
     was = a.doing;
@@ -1939,7 +2010,9 @@ static unsigned char __fastcall__ decide (unsigned char k)
         lsy[k] = pcy;
         drawn[k] = DRAWN_N;
         upto[k] = (unsigned) (now >> 8) + UP_T; /* (Up: not back to sleep a while, part 9's) */
-        feel (k);
+        if (feels (k)) {
+            feel (k);
+        }
     }
     anear[k] = a.sn == pcs && dist <= 3;
     rng = K.flags & K_LAIR ? 2 : K.range;       /* (Its wandering's reach) */
@@ -1952,14 +2025,8 @@ static unsigned char __fastcall__ decide (unsigned char k)
                                                 **   killer strikes on (the referee finishes one senseless); a robber
                                                 **   comes up to it and robs it, then goes; one that only defended
                                                 **   itself goes, unfriendly after: kinds.txt's ways) */
-        if (sres[k] && !fled[k] && (!(K_HELP (K) & H_ROBS) || dist <= 1)) {
-            if (K_HELP (K) & H_ROBS) {
-                a.doing = DO_FLEE;              /* (Off with what it takes, to its lair: the world's) */
-                rob_to (k);
-                act (I_ROB, k);
-            }
-            a.attitude = AT_UNFRIENDLY;
-            fled[k] = FLEE_T;
+        if (sres[k] && !fled[k]) {
+            robs (k);                           /* (Part 8's, 2026-11-02: the main RAM's room) */
         }
     }
     if (fled[k]) {
@@ -2070,6 +2137,10 @@ static unsigned char __fastcall__ decide (unsigned char k)
         im.a = 0;
         im.b = d == 0xFA ? Z_MID | AIM_SHOT : Z_MID;
         act (I_ATTACK, k);
+    } else if (a.doing != DO_SLEEP && a.doing != DO_DOWN && HUB->actor[k].pos == POS_PRONE) {
+        im.w1 = POS_STANDING;                   /* (Lying, and up to something else that isn't a step nor a blow (they
+                                                **   get it up as theirs): up first, the world's Rise, 2026-11-02) */
+        act (I_RISE, k);
     }
     if (wt) {
         im.w1 = wt;
@@ -2114,7 +2185,7 @@ static unsigned char atry[NACTORS];             /* (Each one's tries at a door: 
 #pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
 unsigned char __fastcall__ s_door_way (unsigned char k)
 {
-    unsigned char j, st, n, what, mode, none = k & 0x80, s;
+    unsigned char j, st, n, what, mode, none = k & 0x80, s, pc;
     unsigned x, y, bx, by;
     unsigned char* p;
     struct portal* q;
@@ -2123,17 +2194,21 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
     k &= 7;
     mode = a.doing == DO_FLEE || a.doing == DO_SHY ? 2 : a.attitude == AT_HOSTILE ? (sres[k] || drawn[k] ? 1 : 0) :
         a.doing == DO_FOLLOW || a.doing == DO_COMING ? 1 : a.doing == DO_WATCH ? 2 : a.doing == DO_GUARD ? 3 : 0;
+    if (wayj < 4 && mode != 2) {
+        mode = 1;                               /* (A shut door on its way, way's: through it, 2026-11-02) */
+    }
     if (!mode || (mode == 1 && !none) || (mode != 1 && a.body != BD_TWO) || (mode == 2 && !sres[k])) {
         return 0xFF;
     }
     for (j = 0; j < 4; ++j) {
         x = a.x + dir_x[j];
         y = a.y + dir_y[j];
-        if (!(p = at (a.sn, x, y)) || TILE (*p) != T_DOOR || !(q = portal_at (cx_, cy_)) || q->kind != PK_DOOR ||
-            (q->state & (PS_HIDDEN | PS_WRECKED))) {
+        if (!(p = at (a.sn, x, y)) || TILE (*p) != T_DOOR || !(q = portal_at (cx_, cy_)) ||
+            (q->kind != PK_DOOR && q->kind != PK_PORTCULLIS) || (q->state & (PS_HIDDEN | PS_WRECKED))) {
             continue;
         }
         s = q->state;
+        pc = q->kind == PK_PORTCULLIS;          /* (A portcullis, 2026-11-02: raised, heaved, its bars bent, let fall) */
         bx = x + dir_x[j];
         by = y + dir_y[j];
         what = 0xFF;
@@ -2147,7 +2222,22 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
             }
             n = st >> 4;
             st = st >> 2 & 3;
-            if (a.body != BD_TWO) {             /* (No hands: a large hostile beast batters it, the house's) */
+            if (pc) {                           /* (Down: raised by its winch on its side, else heaved up from the
+                                                **   far side, two tries each a begun and a done; then, hostile, its
+                                                **   bars bent, two tries; then given up, round as its steps can) */
+                if (a.body != BD_TWO || st > 2) {
+                    return 0xFF;
+                }
+                if (st < 2 && n >= 4) {
+                    st = 2;
+                    n = 0;
+                }
+                if (st == 2 && (n >= 4 || a.attitude != AT_HOSTILE)) {
+                    return 0xFF;
+                }
+                what = st == 2 ? PA_BEND : PA_RAISE;
+                im.t = n++ & 1;
+            } else if (a.body != BD_TWO) {             /* (No hands: a large hostile beast batters it, the house's) */
                 if (a.attitude != AT_HOSTILE || KF_SIZE (K.form) < 5) {
                     return 0xFF;
                 }
@@ -2162,7 +2252,12 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
                 st = n = 0;
             } else if (!st && (s & PS_LOCKED)) {
                 what = PA_UNLOCK;               /* (Its key, if it has one: the world's) */
+                im.t = 0;
                 st = 1;
+            } else if (st == 1 && (s & PS_LOCKED) && (K_HELP (K) & H_ROBS) && n < 2) {
+                what = PA_UNLOCK;               /* (Picked, a robber's kind's: begun, then done, t 2 | 1, the world's
+                                                **   test by its sheet; 2026-11-02, the house's) */
+                im.t = 2 | n++;
             } else if (a.attitude != AT_HOSTILE) {
                 return 0xFF;                    /* (Locked or barred against it: no further, round, as it can) */
             }
@@ -2187,10 +2282,18 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
                 im.t = n++;
             }
             atry[k] = j | st << 2 | n << 4;
+            if (drawn[k] && drawn[k] < DRAWN_N) {
+                ++drawn[k];                     /* (Drawn on still: working its way through spends none of it, as
+                                                **   digging doesn't, 2026-11-02) */
+            }
         } else {                                /* (Shut against the character: it's beyond the door, sensed; or one
                                                 **   left open, the character's handling, found on its rounds) */
             if (!(s & PS_OPEN) || taken (k, x, y)) {
                 continue;
+            }
+            if (pc && (mode != 2 || q->bar != ((j + 2) & 3))) {
+                continue;                       /* (A portcullis let fall only from its winch's side, against the
+                                                **   character) */
             }
             if (mode == 2) {
                 dx = pcx - x;
@@ -2203,7 +2306,7 @@ unsigned char __fastcall__ s_door_way (unsigned char k)
             } else {
                 alert[k] = now + 600;           /* (Alert a while: still, looking about, a minute) */
             }
-            what = PA_CLOSE;
+            what = pc ? PA_LOWER : PA_CLOSE;
             im.t = 0;
         }
         im.a = what;
@@ -2598,6 +2701,336 @@ unsigned char __fastcall__ s_dig_way (unsigned char k)
     return 0xF9;
 }
 #pragma bss-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ---- Ways (2026-11-02: DENIZENS.md's way-finding; HOUSE.md's ways found, for review): an actor's way to a place its
+** steps can't reach greedily (round a corner, out of a dead end, through a door, along a patrol's rounds, back to the
+** character an ally lost): found once, a field over the squares about it and its mark (RW_W each way, in the chunks
+** made: never one made for it), each square's step toward the mark (a search outward from the mark, the four ways and
+** the diagonal ways past their corners, a rise or a fall a step can take; a shut door a way for hands, not a beast's),
+** kept in a bank of the ways' own (NFIELDS fields), shared by every actor bound for the same mark (the character: within four squares
+** of it) and followed a step at a time (way's: step_for's, so every S_TOWARD of the minds goes by it, the other
+** agents' too).  A mark beyond the field's reach: the edge of it nearest the mark, a way on found from there.  A shut
+** door on the way worked by door_way (wayj).  None to be had (walled off, or its squares not made): tried again ten
+** seconds on, the greedy step meanwhile, and a tunneller's dig after (dig_way's) */
+#define RW_W            32                      /* A field's squares, each way (2.4M to 4.2M cycles a field found; 48: 6.4M) */
+#define RW_N            (RW_W * RW_W)
+#define NFIELDS         4
+#define RQ_N            512                     /* The search's ring (two of its fronts at most: 4 * RW_W each) */
+struct rfield {
+    unsigned char   sn, used;                   /* (Its stratum; used: a stamp, 0 none) */
+    unsigned        tx, ty;                     /* Its mark */
+    unsigned        ox, oy;                     /* Its northwest square */
+};
+struct ract {
+    unsigned        did;                        /* (The actor it was for: its denizen's number) */
+    unsigned char   f;                          /* Its field, or 0xFF */
+    unsigned        next;                       /* (When it may have another found: the clock's low word) */
+};
+struct rhead {
+    struct rfield   f[NFIELDS];
+    struct ract     act[NACTORS];
+    unsigned char   stamp;
+};
+#define RHEAD           ((struct rhead*) 0x8000)
+#define RBASE           0x8080                  /* (The fields after the head) */
+#define RCELL(f)        ((unsigned char*) RBASE + (f) * RW_N)  /* A square's step toward the mark (0-7, dir_x's; 8 the
+                                                **   mark; | RC_STEPS); unreached, RC_OPEN | its corner (cornk's) |
+                                                **   RC_STEPS; RC_SOLID | its corner */
+#define RELEV           ((signed char*) RBASE + NFIELDS * RW_N)    /* (The search's: each square's floor) */
+#define RQUEUE          ((unsigned*) (RBASE + (NFIELDS + 1) * RW_N))
+#define RC_STEPS        0x10
+#define RC_OPEN         0xC0
+#define RC_SOLID        0x80
+typedef char rhead_fits[sizeof (struct rhead) <= RBASE - 0x8000 && RBASE - 0x8000 + (NFIELDS + 1) * RW_N + 2 * RQ_N <= 0x2000 ?
+    1 : -1];
+extern const unsigned char cornk[16];           /* (slant.s's: a diagonal's corner by its kind, 0 stood on, 1 not, 2 cut) */
+
+/* Actor k's (the copy a's) step on its way to refx, refy (step_for's: wlim its reach of home; S_TOWARD's): its own
+** field's, if it's for that mark and reaches it; else (part 18's wfind) another's that does, or (k's high bit: no
+** greedy step nearer) one found, if it may have one now.  The step (0-7), 0xF8 (a shut door on it worked: door_way's
+** I_PORTAL), or 0xFF (none: the greedy step's) */
+#pragma code-name (push, "SW17CODE")
+#pragma rodata-name (push, "SW17RODATA")
+unsigned char __fastcall__ s_way (unsigned char k)
+{
+    struct rfield* r;
+    unsigned char c = RC_SOLID, d, f;
+    unsigned x, y;
+    unsigned char* p;
+
+    d = k;
+    k &= 7;
+    aroute[k] = WAY_HOLD (1);                   /* (There, or on the field's edge: asked again in half a minute) */
+    if (apart (a.x - refx, a.y - refy) <= 1) {
+        return 0xFF;                            /* (There) */
+    }
+    if (rb) {
+        hy_bank (rb - 1);
+        if ((f = RHEAD->act[k].f) < NFIELDS && RHEAD->act[k].did == a.did) {
+            r = &RHEAD->f[f];
+            x = a.x - r->ox;
+            y = a.y - r->oy;
+            if (r->sn == a.sn && apart (r->tx - refx, r->ty - refy) <= (refx == pcx && refy == pcy ? 4 : 0) && x < RW_W &&
+                y < RW_W) {
+                c = RCELL (f)[y * RW_W + x];    /* (Its own: the step there) */
+            }
+        }
+        hub_map (0);
+    }
+    if ((c & RC_SOLID) && (c = wfind (d)) & RC_SOLID) {
+        aroute[k] = d & 0x80 ? WAY_HOLD (12) : 0;   /* (None reaches it: five minutes; only its mark changed: at
+                                                **   need, now) */
+        return 0xFF;
+    }
+    if ((d = c & 0x0F) > 7) {
+        return 0xFF;                            /* (At the mark, or the field's edge toward it: a new one from there) */
+    }
+    aroute[k] = 1;
+    x = a.x + dir_x[d];
+    y = a.y + dir_y[d];
+    if (apart (x - ahx[k], y - ahy[k]) > wlim || taken (k, x, y) || !wades (awater[k], a.sn, x, y)) {
+        return 0xFF;
+    }
+    if (d < 4 ? step_ok (a.sn, a.x, a.y, d) : cut_by (d) && slant (a.sn, a.x, a.y, DH (d))) {
+        return d;
+    }
+    if (d < 4 && (p = at (a.sn, x, y)) != 0 && TILE (*p) == T_DOOR) {
+        wayj = d;                               /* (A shut door on its way: worked, toward the square past it) */
+        x = refx;
+        y = refy;
+        refx = a.x + 2 * dir_x[d];
+        refy = a.y + 2 * dir_y[d];
+        d = door_way (k | 0x80);
+        refx = x;
+        refy = y;
+        if (d == 0xF8) {
+            return d;
+        }
+        aroute[k] = WAY_HOLD (12);              /* (A door it can't get past: given up, five minutes; its steps' own
+                                                **   way meanwhile, a day's or a tunneller's) */
+    }
+    return 0xFF;
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* Part 18's: a field found for actor k (the copy a) to refx, refy on its stratum (route), and wfind, the way's square
+** where it stands (way's: its own field no longer for its mark) */
+#pragma code-name (push, "SW18CODE")
+#pragma rodata-name (push, "SW18RODATA")
+#pragma bss-name (push, "SW18RODATA")          /* (A row of it read in, and the rows' offsets: the part's own, while it
+                                                **   runs) */
+static unsigned char rrow[RW_W];
+static signed char rerow[RW_W];
+static unsigned rofs[RW_W];
+#pragma bss-name (pop)
+static unsigned char __fastcall__ route (unsigned char k);
+
+/* Actor k's square's step toward refx, refy (k's high bit: one may be found): a field for that mark that reaches it
+** (its own, another's), else one found (route's: if it may have one now, ten seconds after the last); the field's
+** square (RCELL's), RC_SOLID none */
+unsigned char __fastcall__ s_wfind (unsigned char k)
+{
+    struct rfield* r;
+    unsigned char mk = k & 0x80, f, c = RC_SOLID;
+    unsigned x, y;
+    int b;
+
+    k &= 7;
+    if (!rb) {
+        if (!mk || (b = hy_banks_alloc (1)) < 0) {
+            return RC_SOLID;
+        }
+        rb = b + 1;
+        hy_bank (b);
+        memset (RHEAD, 0, sizeof (struct rhead));
+    }
+    hy_bank (rb - 1);
+    if (RHEAD->act[k].did != a.did) {
+        RHEAD->act[k].did = a.did;              /* (A new actor in its place: no way of its yet) */
+        RHEAD->act[k].f = 0xFF;
+        RHEAD->act[k].next = (unsigned) now;
+    }
+    for (f = 0, r = RHEAD->f; f < NFIELDS; ++f, ++r) {
+        x = a.x - r->ox;
+        y = a.y - r->oy;
+        if (r->used && r->sn == a.sn && apart (r->tx - refx, r->ty - refy) <= (refx == pcx && refy == pcy ? 4 : 0) &&
+            x < RW_W && y < RW_W &&
+            !((c = RCELL (f)[y * RW_W + x]) & RC_SOLID)) {
+            RHEAD->act[k].f = f;                /* (A field for that mark that reaches it) */
+            hub_map (0);
+            return c;
+        }
+    }
+    c = RC_SOLID;
+    if (mk && (int) (RHEAD->act[k].next - (unsigned) now) <= 0) {
+        RHEAD->act[k].next = (unsigned) now + 100;  /* (Another in ten seconds at most) */
+        f = route (k);
+        hy_bank (rb - 1);
+        r = &RHEAD->f[f];
+        c = RCELL (f)[(a.y - r->oy) * RW_W + (a.x - r->ox)];
+        if (c & RC_SOLID) {
+            RHEAD->act[k].next = (unsigned) now + 3000;    /* (None reaches it: not looked for again for five
+                                                **   minutes, the long tasks' turns its cost else) */
+        }
+    }
+    hub_map (0);
+    return c;
+}
+static const unsigned char rback[8] = { DIR_S, DIR_W, DIR_N, DIR_E, 6, 7, 4, 5 };   /* (The way back: the opposite) */
+
+static unsigned char __fastcall__ made16 (unsigned char sn, unsigned cx, unsigned cy)   /* (Part 13's made) */
+{
+    struct cslot* q = WREC->cslot;
+    unsigned char k;
+
+    hub_map (WORLD_BANK);
+    for (k = NCSLOTS; k && !(q->used && q->sn == sn && q->cx == cx && q->cy == cy); --k, ++q) {
+    }
+    hub_map (0);
+    return k != 0;
+}
+
+/* A field's first square, one way: the actor's and the mark's between them, near enough; else the actor near its edge */
+static unsigned __fastcall__ rorg (unsigned ax, unsigned tx)
+{
+    int d = (int) (tx - ax);
+
+    return d >= -(RW_W - 2) && d <= RW_W - 2 ? ax + d / 2 - (RW_W / 2 - 1) : d > 0 ? ax - 1 : ax - (RW_W - 2);
+}
+
+static unsigned char __fastcall__ route (unsigned char k)
+{
+    static struct stratum* s;
+    static struct rfield* r;
+    static struct portal* q;
+    static unsigned char* cl;
+    static unsigned char* p;
+    static unsigned char f, i, j, e, c, u8, v8, mk, hands, ux, uy, vx, vy, lim, ex, ey;
+    static unsigned ox, oy, x, y, u, v, ai, qh, qt;
+    static int tx, ty;
+    static signed char eu, dz;
+
+    s = &STRATUM (a.sn);
+    hands = a.body == BD_TWO;
+    for (j = 0, u = 0; j < RW_W; ++j, u += RW_W) {
+        rofs[j] = u;
+    }
+    hy_bank (rb - 1);
+    for (f = 0, j = 1; j < NFIELDS; ++j) {     /* (The oldest, its stamp the lowest, not its own) */
+        if (RHEAD->act[k].f == f || (RHEAD->act[k].f != j && RHEAD->f[j].used < RHEAD->f[f].used)) {
+            f = j;
+        }
+    }
+    if (!++RHEAD->stamp) {
+        RHEAD->stamp = 1;
+        for (j = 0; j < NFIELDS; ++j) {
+            RHEAD->f[j].used = 0;
+        }
+    }
+    r = &RHEAD->f[f];
+    r->used = 0;                                /* (Unused till it's made) */
+    for (j = 0; j < NACTORS; ++j) {
+        if (RHEAD->act[j].f == f) {
+            RHEAD->act[j].f = 0xFF;
+        }
+    }
+    ox = rorg (a.x, refx);
+    oy = rorg (a.y, refy);
+    cl = RCELL (f);
+    for (j = 0; j < RW_W; ++j) {                /* (Its squares read in, a row at a time: the chunk's bank, then the
+                                                **   ways') */
+        y = oy + j;
+        mk = 0;
+        for (i = 0; i < RW_W; ++i) {
+            x = ox + i;
+            c = RC_SOLID | 1;
+            rerow[i] = 0;
+            if (x - s->x0 < s->w && y - s->y0 < s->h) {
+                if (!i || !((x - s->x0) & (CW - 1))) {
+                    mk = made16 (a.sn, (x - s->x0) >> CW_BITS, (y - s->y0) >> CW_BITS);
+                }
+                if (mk && (p = at (a.sn, x, y)) != 0) {
+                    e = TILE (*p);
+                    rerow[i] = C->elev[cy_][cx_];
+                    c = (T_PASS (*p) ? RC_OPEN : RC_SOLID) | cornk[e] | (e == T_STEPS ? RC_STEPS : 0);
+                    if (e == T_DOOR && (q = portal_at (cx_, cy_)) != 0 && ((q->state & PS_HIDDEN) ||
+                        (!hands && !(q->state & (PS_OPEN | PS_WRECKED))))) {
+                        c = RC_SOLID | 1;       /* (Hidden, or shut against a beast) */
+                    }
+                }
+            }
+            rrow[i] = c;
+        }
+        hy_bank (rb - 1);
+        memcpy (cl + rofs[j], rrow, RW_W);
+        memcpy (RELEV + rofs[j], rerow, RW_W);
+    }
+    qh = qt = 0;                                /* (The mark, or the edges nearest it, first) */
+    tx = (int) (refx - ox);
+    ty = (int) (refy - oy);
+    ex = tx < 0 ? 0 : RW_W - 1;                 /* (The edges toward a mark beyond the field) */
+    ey = ty < 0 ? 0 : RW_W - 1;
+    for (v = 0, vy = 0; vy < RW_W; ++vy) {
+        for (vx = 0; vx < RW_W; ++vx, ++v) {
+            if ((unsigned) tx < RW_W && (unsigned) ty < RW_W ? vx == tx && vy == ty : (cl[v] & RC_OPEN) == RC_OPEN &&
+                ((unsigned) tx < RW_W || vx == ex) && ((unsigned) ty < RW_W || vy == ey)) {
+                cl[v] = 8 | (cl[v] & RC_STEPS);
+                RQUEUE[qt++] = vx | vy << 8;
+            }
+        }
+    }
+    ai = rofs[a.y - oy] + (a.x - ox);
+    while (qh != qt) {
+        u = RQUEUE[qh];
+        qh = (qh + 1) & (RQ_N - 1);
+        ux = (unsigned char) u;
+        uy = u >> 8;
+        u = rofs[uy] + ux;
+        if (u == ai) {
+            break;                              /* (The actor reached: no further) */
+        }
+        u8 = cl[u];
+        eu = RELEV[u];
+        for (e = 0; e < 8; ++e) {
+            vx = ux + dir_x[e];
+            vy = uy + dir_y[e];
+            if (vx >= RW_W || vy >= RW_W) {
+                continue;
+            }
+            v = rofs[vy] + vx;
+            if (((v8 = cl[v]) & RC_OPEN) != RC_OPEN) {
+                continue;                       /* (Reached already, or not to be stood on) */
+            }
+            if (e >= 4) {                       /* (A diagonal way: its corners neither stood on, one cut) */
+                c = cl[rofs[uy] + vx];
+                i = cl[v - vx + ux];
+                if (!(c & i & RC_SOLID) || !(c & 3) || !(i & 3) || !((c | i) & 2)) {
+                    continue;
+                }
+            }
+            lim = (u8 | v8) & RC_STEPS ? STAIR_MAX : STEP_MAX;
+            dz = RELEV[v] - eu;
+            if (dz > (signed char) lim || dz < -(signed char) lim) {
+                continue;
+            }
+            cl[v] = rback[e] | (v8 & RC_STEPS);
+            RQUEUE[qt] = vx | vy << 8;
+            qt = (qt + 1) & (RQ_N - 1);
+        }
+    }
+    r->sn = a.sn;
+    r->tx = refx;
+    r->ty = refy;
+    r->ox = ox;
+    r->oy = oy;
+    r->used = RHEAD->stamp;
+    RHEAD->act[k].f = f;
+    hub_map (0);
+    return f;
+}
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -3571,11 +4004,11 @@ static int __fastcall__ ovl_load (const char* dir)
 
     strcpy ((char*) b, dir);
     strcat ((char*) b, "/dq0d.ovl");
-    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (6)) < 0) {
+    if ((fd = open ((char*) b, O_RDONLY)) < 0 || (n = hy_banks_alloc (7)) < 0) {
         return -1;
     }
     ovbank[0] = n;                              /* (The rest after it: ovl_unpack's) */
-    n = ovl_unpack (fd | (6 << 8));
+    n = ovl_unpack (fd | (7 << 8));
     close (fd);
     return -n;
 }
@@ -5033,6 +5466,104 @@ unsigned char __fastcall__ s_found (unsigned char k)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+/* A record's rounds (2026-11-02: DENIZENS.md's daily life, HOUSE.md's a body found, for review): record D (out, not an
+** actor, on watch, come to its rounds' place: wander's) finding a body of its faction's (dead, not found yet: D_MET,
+** as an actor's rounds find one) within 4 squares on its stratum.  Found: its faction's attitude to the character a
+** step worse (the intruder suspected, as an actor's finding has it); the alarm raised (out of the character's hearing:
+** it's no actor), each of its faction's records about the body (RF_R squares, out, not actors) roused and gathered to
+** it, on a square of its own about it, each a step less well disposed to the character, staying there a while
+** (RF_STAY), their day after; a leader's body (its rank), each known lost to them (D_LOST: their bonds to it gone as
+** they next reckon, part 6's), the finder's too.  Part 19's (part 10's room; asked only while its faction has a body not found: unf) */
+#define RF_R            24                      /* (The gathering's reach: an actor's, ACT_R) */
+#define RF_STAY         6000                    /* (Ten minutes there, at least) */
+#pragma code-name (push, "SW19CODE")
+#pragma rodata-name (push, "SW19RODATA")
+static unsigned char __fastcall__ made10 (unsigned char sn, unsigned x, unsigned y)   /* (Part 9's made_at) */
+{
+    struct stratum* s = &STRATUM (sn);
+    struct cslot* q = WREC->cslot;
+    unsigned char k;
+
+    if (x - s->x0 >= s->w || y - s->y0 >= s->h) {
+        return 0;
+    }
+    hub_map (WORLD_BANK);
+    for (k = NCSLOTS; k && !(q->used && q->sn == sn && q->cx == (x - s->x0) >> CW_BITS && q->cy == (y - s->y0) >> CW_BITS);
+        --k, ++q) {
+    }
+    hub_map (0);
+    return k != 0;
+}
+
+void s_rfound (void)
+{
+    struct den* r = POP->den;
+    unsigned char i, j, lead, kd;
+    unsigned bx, by, x, y;
+
+    hy_bank (pb);
+    for (i = 0; i < hd.ndens; ++i, ++r) {
+        if ((r->flags & (D_DEAD | D_MET)) == (D_DEAD | D_MET) && r->fac == D.fac && r->sn == D.sn &&
+            apart (r->x - D.x, r->y - D.y) <= 4) {
+            break;
+        }
+    }
+    if (i == hd.ndens) {
+        hub_map (0);
+        return;
+    }
+    r->flags &= ~D_MET;
+    bx = r->x;
+    by = r->y;
+    lead = D_RANK (r->flags);
+    kd = r->kind;
+    hub_map (0);
+    --unf[D.fac & (NFACT - 1)];
+    if (!lead) {
+        kx_get (kd);
+        lead = X.rank;
+    }
+    if (hd.fatt[D.fac & (NFACT - 1)] > AT_HOSTILE) {
+        --hd.fatt[D.fac & (NFACT - 1)];
+    }
+    if (lead) {
+        D.flags |= D_LOST;
+    }
+    if (D.attitude > AT_HOSTILE && D.attitude < AT_ALLIED) {
+        --D.attitude;
+    }
+    for (i = 0; i < hd.ndens; ++i) {
+        hy_bank (pb);
+        r = &POP->den[i];
+        if (r->fac != D.fac || r->sn != D.sn || (r->flags & (D_OUT | D_ACTOR | D_DEAD)) != D_OUT || r->id == D.id ||
+            apart (r->x - bx, r->y - by) > RF_R) {
+            continue;
+        }
+        if (lead) {
+            r->flags |= D_LOST;
+        }
+        if (r->attitude > AT_HOSTILE && r->attitude < AT_ALLIED) {
+            --r->attitude;
+        }
+        r->ready = now + RF_STAY;
+        hub_map (0);
+        for (j = 0; j < 8; ++j) {               /* (A square about the body, its own) */
+            x = bx + head_x[(j + i) & 7];
+            y = by + head_y[(j + i) & 7];
+            if (made10 (D.sn, x, y) && open_sq (at (D.sn, x, y)) && !taken (0xFF, x, y) && !rec_on (D.sn, x, y)) {
+                hy_bank (pb);
+                r->x = x;
+                r->y = y;
+                r->face = bearing (bx - x, by - y) & 6;
+                break;
+            }
+        }
+    }
+    hub_map (0);
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* Square x, y of stratum sn in a chunk that's made already (wander's alone: part 9's since 2026-11-02, the main RAM's
 ** room) */
 static unsigned char __fastcall__ made_at (unsigned char sn, unsigned x, unsigned y)
@@ -5088,6 +5619,9 @@ unsigned char __fastcall__ s_wander (unsigned char lim)
         x = tx + head_x[(j + D.id) & 7];
         y = ty + head_y[(j + D.id) & 7];
     }
+    if (s == SC_WATCH && unf[D.fac & (NFACT - 1)]) {
+        rfound ();                              /* (A body of its faction's on its rounds: part 10's, 2026-11-02) */
+    }
     x = pcrest ? 10 * ROAM_T : ROAM_T;          /* (The character resting: ten times the while, the long durations'
                                                 **   coarser ticks) */
     D.ready = now + (s == SC_SLEEP || s == SC_MEAL || s >= SC_LEISURE ? (unsigned long) smins * 600 : x + random (x));
@@ -5137,7 +5671,7 @@ unsigned char __fastcall__ s_daily (unsigned char k)
         refx = atx[k];
         refy = aty[k];
         if (turns && !(*at (a.sn, a.x, a.y) & T_VIS)) {
-            for (j = 0; j < 4 && (d = step_for (k, 2 * K.range + 8, S_TOWARD)) != 0xFF; ++j) {
+            for (j = 0; j < 4 && (d = step_for (k, 2 * K.range + 8, S_TOWARD)) < 8; ++j) {
                 a.x += dir_x[d];                /* (Unseen: a few squares at once, of no time, as coarse's) */
                 a.y += dir_y[d];
                 a.face = DH (d);
@@ -5145,7 +5679,7 @@ unsigned char __fastcall__ s_daily (unsigned char k)
                 im.w2 = 1;
                 act (I_STEP, k);
             }
-            d = j ? 0xFE : 0xFF;
+            d = j || d == 0xF8 ? 0xFE : 0xFF;   /* (A door on its way worked: way's, 2026-11-02) */
             wt = pcrest ? 6000 + random (6000) : 60 + random (60);
         } else {
             d = step_for (k, 2 * K.range + 8, S_TOWARD);
@@ -5157,6 +5691,11 @@ unsigned char __fastcall__ s_daily (unsigned char k)
         }
         a.doing = s + DO_SLEEP - SC_SLEEP;      /* (No way nearer: there, as near as it gets; on watch, on to the
                                                 **   next room) */
+    }
+    hub_map (0);
+    if (s == SC_SLEEP && HUB->actor[k].pos == POS_STANDING) {
+        im.w1 = POS_PRONE;                      /* (At its bed: lain down to sleep, prone, the world's; 2026-11-02) */
+        act (I_RISE, k);
     }
     if (s == SC_WATCH && unf[a.faction & (NFACT - 1)] && found (k)) {
         d = DE_ALARM;                           /* (A body found: the alarm raised) */
