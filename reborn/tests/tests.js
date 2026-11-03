@@ -7746,33 +7746,133 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0packsteps', what: 'scenes', near: ['gear'],
-      init: 't_rc', cycles: 9000e6,
+      name: 'dq0packsteps', near: ['gear'], what: 'Dingus Quest Zero\'s reach told and timed a step at a time (the user\'s, 2026-11-02, DECISIONS.md\'s: a worn pack off, the thing got out, the pack back on, each its words and its time; "Applies to any tool use"; light a new torch; lighting by a fire-maker; a torch redipped; HOUSE.md\'s reach, for review), by the words in order and the clock: at seed 3 (dq0 -T) from the worn pack, from a sack in it (a level more), a look in, a search, a pack on the ground (no off, no on), a stop part way (the pack left off, told), both hands free (in a hand), hands full (at its feet); "light a new torch" (the old let fall, a spare by its steps, lit from the old where it lies) and no spare ("You have no other torch.", nothing dropped), "take a fresh torch", "hold another torch"; a pick from the pack (out, the dig, stopped, the pack left off told); a torch lit by the tinderbox from the worn pack and from the belt\'s pouch (no off, no on), its tries told, 20 less in the dark; empty, told at its step, then refused at once; "refresh the torch" lit with a spare (the preferred order), with a sword in the other hand (set down, taken up), "dip the torch" with no spare (blown out, by touch in the dark, the oil spilt or not, lit again by the fire-maker)',
+      init: 't_rc', cycles: 12000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sack', 'put the rations in the sack', 'stow the sack', 'take the rations from the sack', 'drop the rations',
         'look in the backpack', 'search the backpack', 'drop the pack', 'take the tinderbox from the backpack', 'drop the tinderbox', 'put on the pack',
-        'drop the torch', 'take the flask from the backpack', 'drop the flask', 'take the torch from the backpack', 'inventory', 'take the torch from the backpack', 'inventory', 'put on the pack', 'inventory', 'quit',
+        'drop the torch', 'take the flask from the backpack', 'drop the flask', 'take the torch from the backpack', 'inventory', 'put on the pack', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'light a new torch', 'inventory', 'light a new torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'take a fresh torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'hold another torch', 'inventory', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T', 'light a new torch', 'inventory', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick', 'stow the pick', 'dig down', 'inventory', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T', 'douse the torch', 'light the torch', 'douse the torch', 'light the torch', 'douse the torch', 'hang the tinderbox on the belt', 'take the tinderbox from the backpack', 'put the tinderbox in the pouch', 'light the torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick', 'dig down', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'douse the torch', 'light the torch', 'douse the torch', 'take the tinderbox from the backpack', 'put the tinderbox in the pouch', 'light the torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'douse the torch', 'light the torch', 'inventory', 'light the torch', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'wait 20 minutes', 'refresh the torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'wait 20 minutes', 'redip the torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'drop a fresh torch', 'wait 20 minutes', 'dip the torch', 'inventory', 'quit',
         'echo $status']) },
       start(m) {
-        dq0Poke(m, [{ g: 8, line: 'douse the torch', n: 1, fuel: { tinderbox: 0 } }]);
+        dq0Poke(m, [{ g: 7, line: 'douse the torch', n: 1, fuel: { tinderbox: 0 } }]);
         dq0OnWords(m, [{ g: 1, line: 'take the torch from the backpack', n: 1, words: 'You get out the torch', text: 'stop\r' },
-          { g: 5, line: 'light a new torch', n: 1, words: 'You let the torch fall', text: 'stop\r' }, { g: 6, line: 'dig down', n: 1, words: 'You dig', text: 'stop\r' }]);
+          { g: 5, line: 'dig down', n: 1, words: 'You dig', text: 'stop\r' }]);
       },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out);
-        f.push(s.slice(s.indexOf('Type help')).replace(/Dingus Quest Zero is starting.*?Type help for the commands\./g, '[start]'));
-        for (const t of T) f.push(t.line + ': ' + JSON.stringify(t.replies.filter(r => r.req === 'ireq' && r.kind !== 'IO_FIND' && r.kind !== 'IO_TOOLS').map(r => [r.kind, r.result, r.x, r.qty, r.item])) + ' dt ' + (t.at && t.after ? t.after.now - t.at.now : ''));
+        // (The answer to a line: its echo, then its words as far as the next line's echo: the nth such, from a game's start)
+        const games = []; for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) games.push(i);
+        const seg = (g, line, n = 1) => { const e = '> ' + line + ' > ' + line; let i = games[g - 1]; for (let k = 0; k < n && i >= 0; k++) i = s.indexOf(e, i + 1);
+          if (i < 0) { f.push('game ' + g + ': "' + line + '" not answered'); return ''; } const j = s.indexOf(' > ', i + e.length); return s.slice(i + e.length, j < 0 ? s.length : j); };
+        const order = (g, line, want, n) => inTurn(seg(g, line, n), want, f, 'game ' + g + ', ' + line + ': ');
+        const never = (g, line, w, n) => { if (seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ': told ' + w); };
+        const has = (g, line, w, n) => { if (!seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ': not told ' + w + ': ' + seg(g, line, n).slice(0, 400)); };
+        const gk = {}; T.forEach((t, k) => { if (/^dq0 /.test(t.line)) gk[Object.keys(gk).length + 1] = k; });
+        const dt = (g, line, tenths) => { const t = T.of(line, gk[g]); const d = t.at && t.after ? t.after.now - t.at.now : null; if (d !== tenths) f.push('game ' + g + ', ' + line + ': ' + d + ' tenths, not ' + tenths); };
+        const steps = 'You take off your backpack';
+        order(1, 'put the rations in the sack', ['You take off your backpack, and set it down at your feet.', 'You get out the rations.', 'You hold the sack open.', 'You put the rations in the sack.', 'You put your backpack back on.']);
+        dt(1, 'put the rations in the sack', 160);
+        order(1, 'stow the sack', [steps, 'You hold the backpack open.', 'You stow the sack in your backpack.', 'You put your backpack back on.']);
+        dt(1, 'stow the sack', 140);
+        order(1, 'take the rations from the sack', [steps, 'You reach into the backpack.', 'You get out the rations.', 'You take the rations in your right hand.', 'You put your backpack back on.']);
+        dt(1, 'take the rations from the sack', 150);
+        order(1, 'look in the backpack', [steps, 'You hold the backpack open.', 'In the backpack lie', 'You put your backpack back on.']);
+        dt(1, 'look in the backpack', 150);
+        order(1, 'search the backpack', [steps, 'You hold the backpack open.', 'You search the backpack', 'You put your backpack back on.']);
+        dt(1, 'search the backpack', 720);
+        order(1, 'take the tinderbox from the backpack', ['You get out the tinderbox.', 'You take the tinderbox from the backpack.']);
+        never(1, 'take the tinderbox from the backpack', steps);
+        dt(1, 'take the tinderbox from the backpack', 40);
+        order(1, 'take the flask from the backpack', ['You take off your backpack.', 'You get out the flask of oil.', 'You take the flask of oil in your right hand.', 'You put your backpack back on.']);
+        dt(1, 'take the flask from the backpack', 130);
+        // (Stopped part way: the pack off told, in a hand; "put on the pack" finishes it)
+        const st = s.slice(s.indexOf('> take the torch from the backpack'), s.indexOf('> inventory', s.indexOf('> take the torch from the backpack')));
+        if (!/Your backpack (is in your hand|lies at your feet)\./.test(st)) f.push('stopped part way, the pack off not told: ' + st.slice(0, 400));
+        has(1, 'inventory', 'a backpack, in your', 1);
+        has(1, 'put on the pack', 'You put on the backpack.', 2);
+        // (A new light)
+        order(2, 'light a new torch', ['You let the torch fall, still burning.', 'You take off your backpack, and set it down at your feet.', 'You get out the torch.', 'You light the torch.', 'You put your backpack back on.']);
+        never(2, 'light a new torch', 'tinderbox');
+        has(2, 'light a new torch', 'You have no other torch.', 2);
+        has(2, 'inventory', 'a sword, in your right hand', 2);
+        has(2, 'inventory', 'a torch (lit), in your left hand', 2);
+        has(3, 'inventory', 'a torch, in your right hand');
+        has(3, 'inventory', 'a torch (lit), in your left hand');
+        has(4, 'inventory', 'a torch, in your right hand');
+        // (A tool: a pick from the pack, the dig, stopped: the pack off told)
+        order(5, 'dig down', ['You take off your backpack, and set it down at your feet.', 'You reach into the backpack.', 'You get out the pick.', 'You dig with your pick']);
+        const ds = s.slice(s.indexOf('> stop', games[4]), s.indexOf('> inventory', games[4]));
+        inTurn(ds, ['You stop digging.', 'Your backpack lies at your feet.'], f, 'the dig stopped: ');
+        // (A fire-maker: from the worn pack, its tries in the dark at 20 less)
+        order(6, 'light the torch', [steps, 'You reach into the backpack.', 'You get out the tinderbox.', 'You strike a spark.', 'It catches.', 'You light the torch.', 'You put away the tinderbox.', 'You put your backpack back on.']);
+        const K = m.dq0.layout().K, tries = T.of('light the torch', gk[6]).replies.filter(r => /^slot/.test(r.req) && r.a === K.P_GROPE);
+        if (!tries.length || tries.some(r => r.steps !== -4)) f.push('the tries in the dark not at 20 less: ' + JSON.stringify(tries.map(r => r.steps)));
+        order(6, 'light the torch', ['You get out the tinderbox.', 'You strike a spark.', 'It catches.', 'You light the torch.', 'You put away the tinderbox.'], 2);
+        never(6, 'light the torch', steps, 2);
+        never(6, 'light the torch', 'You put your backpack back on.', 2);
+        // (Empty: told at its step, put away, on; then at once)
+        order(7, 'light the torch', [steps, 'You get out the tinderbox.', 'The tinderbox is empty.', 'You put away the tinderbox.', 'You put your backpack back on.']);
+        never(7, 'light the torch', 'You strike a spark.');
+        has(7, 'light the torch', 'The tinderbox is empty.', 2);
+        never(7, 'light the torch', steps, 2);
+        // (A torch redipped: the preferred order; a sword in the other hand; no spare)
+        const pref = ['You get out the torch.', 'You light the torch from the burning one.', 'You blow out the torch.', 'You set the torch down at your feet.', 'You get out the flask of oil.', 'You set to filling the torch.', 'You soak the torch in the flask of oil.', 'You put away the flask of oil.', 'You put away the torch.', 'You take up the torch.', 'You put your backpack back on.'];
+        order(8, 'refresh the torch', [steps, ...pref]);
+        has(8, 'inventory', 'a torch (lit), in your left hand');
+        order(9, 'redip the torch', ['You set the sword down at your feet.', steps, ...pref.slice(0, 9), 'You take up the sword.', 'You take up the torch.', 'You put your backpack back on.']);
+        has(9, 'inventory', 'a sword, in your right hand');
+        order(10, 'dip the torch', ['You go to blow out the torch: that will leave you in the dark.', steps, 'You get out the flask of oil.', 'You set to filling the torch.', 'You put away the flask of oil.', 'You get out the tinderbox.', 'You strike a spark.', 'You light the torch.', 'You put away the tinderbox.', 'You put your backpack back on.']);
+        if (!/You soak the torch|oil spills/.test(seg(10, 'dip the torch'))) f.push('dipped in the dark: neither soaked nor spilt');
+        has(10, 'inventory', 'a torch (lit)');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0packgrope', initiative: true, near: ['gear', 'fight'], what: 'Dingus Quest Zero\'s reach engaged (the user\'s, 2026-11-02: "Dropping your pack in a fight should be automatic (no grope test), but taking it in hand should be"; each step a grope, a round; HOUSE.md\'s reach): at seed 7 the ghoul engaging it (set steady), the pack taken off a test, dropped none, taken up from the ground a test, and from the worn pack each step a round its own test, the sequence over at a fumble, the world as it stands',
+      init: 't_rc', cycles: 3200e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait']) +
+        'take the rations from the backpack\rtake off the pack\rdrop the pack\rtake the pack\rquit\r' + dq0Typed(['echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'ghoul', set: { mood: 8 } }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const K = m.dq0.layout().K, w = T.of('wait'), late = T.filter(t => t.k >= w.k);
+        const seq = late.flatMap(t => t.replies).filter(r => (/^slot/.test(r.req) && r.kind === K.RS_TEST && r.a === K.P_GROPE) || (r.req === 'ireq' && /^IO_(STEP|TAKE|DOFF|DROP|GET)$/.test(r.kind)));
+        const k = kind => seq.findIndex(r => r.kind === kind);
+        const dr = k('IO_DROP'), gt = k('IO_GET'), off = k('IO_DOFF');
+        if (off < 0 || !/^slot/.test((seq[off - 1] || {}).req)) f.push('the pack taken in hand off the back not a grope: ' + JSON.stringify(seq[off - 1]));
+        if (dr < 0 || /^slot/.test((seq[dr - 1] || {}).req)) f.push('the pack dropped with a test, or not dropped: ' + JSON.stringify(seq[dr - 1]));
+        if (gt < 0 || !/^slot/.test((seq[gt - 1] || {}).req)) f.push('the pack taken up from the ground not a grope: ' + JSON.stringify(seq[gt - 1]));
+        const hw = (m.hearts || []).find(h => h.g === 1 && h.line === 'wait');
+        if (!hw || !hw.acts.some(a => a.name === 'ghoul' && a.mood === 8)) f.push('the ghoul not set steady');
+        if (!s.includes('Put down.')) f.push('the pack not put down');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0packasks', asks: true, near: ['gear'], what: 'Dingus Quest Zero\'s torch redipped with no spare and no other light: asked first, as it would leave it in the dark (HOUSE.md\'s a torch redipped; the user\'s, 2026-11-02): answered no, the torch still lit, nothing dipped',
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'drop a fresh torch', 'wait 20 minutes', 'dip the torch', 'no', 'inventory', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const s = dq0Story(out), f = [];
+        inTurn(s, ['> dip the torch', 'You go to blow out the torch: that will leave you in the dark.', 'Keep blowing out the torch?', 'You stop blowing out the torch.', '> inventory', 'a torch (lit)'], f);
         return f;
       },
       sdcard: true

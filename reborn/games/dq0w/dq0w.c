@@ -4952,14 +4952,14 @@ unsigned char __fastcall__ s_fight_on (unsigned char idle)
     hub_map (0);
     if (HUB->pc_task.kind == LT_FIGHT) {
         if (pc_cut) {
-            HUB->pc_task.foe = 0;               /* (Stopped, the player's or a command's: its round out, told as it
+            goto over;                          /* (Stopped, the player's or a command's: its round out, told as it
                                                 **   stopped) */
-            return 0;
         }
         if (HUB->pcsum.cond & C_STUNNED) {      /* (In shock, come round: in no state to fight, the referee's; the
                                                 **   fight over, told) */
             evb = 1;
             event (E_TASK, 0, TE_NO_FOE | LT_FIGHT << 8);
+over:
             HUB->pc_task.foe = 0;
             return 0;
         }

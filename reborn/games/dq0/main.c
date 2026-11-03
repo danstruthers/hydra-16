@@ -2400,6 +2400,10 @@ void s_step_go (void)
         }
         task_words (TE_BEGUN | (unsigned) k << 8, n | 0x80);
     }
+    if (HUB->ireq.y & 2) {
+        intend2 (I_WAIT, t, 1);                 /* (Engaged: the round's action, a blow no stop of it) */
+        return;
+    }
     intend2 (I_WAIT, t, (unsigned) k << 8 | n << 1 | 1);
     if (k == LT_BLOWDARK) {
         intend2 (I_ASK, TE_ASK_HEARD, 0);       /* (Asked: "no" stops it, the torch still lit) */
@@ -2969,8 +2973,8 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 
 /* A door worked by a denizen (E_DEN's a, DE_OPENS ...: Phase 3C's one path; a portcullis, a lock picked, 2026-11-02), its words into lb + 340: what it's seen
 ** doing (after its name), then what's heard (heard_what's: 19 letters at most).  Part 18 (noise_told's: 2026-11-02, overlay 3 full, these a rare few) */
-#pragma code-name (push, "SW19CODE")
-#pragma rodata-name (push, "SW19RODATA")
+#pragma code-name (push, "SW18CODE")
+#pragma rodata-name (push, "SW18RODATA")
 void __fastcall__ s_door_words (unsigned char a)
 {
     static const char* const said[DE_PICKS + 1 - DE_OPENS] = {

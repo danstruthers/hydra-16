@@ -781,6 +781,27 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
 #pragma rodata-name (push, "SW84RODATA")
 #pragma static-locals (push, off)
 
+/* A flame to hand (IO_LIGHT's, the catalogue's bank's light): a thing lit, carried or within reach, 1; or a fire-maker
+** carried (the catalogue's tool key, "tinder"), rs_tool, one not known empty first: 3, its steps the lighting's (part
+** 82's); 4, it's known empty; 0 none */
+unsigned rs_tool;
+unsigned char s_flame (void)
+{
+    unsigned i = 0;
+
+    rs_tool = 0;
+    while ((i = items (i, IN_SQUARE | IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {
+        if (ip->flags & I_LIT) {
+            if (on_pc (i) || in_reach (i)) {
+                return 1;
+            }
+        } else if ((!rs_tool || (item_at (rs_tool)->shut & IS_SPENT)) && !strcmp (kind_at (i)->tool, "tinder") && on_pc (i)) {
+            rs_tool = i;
+        }
+    }
+    return !rs_tool ? 0 : item_at (rs_tool)->shut & IS_SPENT ? 4 : 3;
+}
+
 /* A word to the UI (E_TASK's w: TE_*, | its kind times 256; b rs_what) */
 static void __fastcall__ rs_tell (unsigned w)
 {
@@ -985,7 +1006,8 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
             rs_ok = HUB->ireq.kind = IO_STEP;
         }
         if (rs_ok == IO_STEP) {
-            HUB->ireq.y = rs_k == LT_BLOWDARK;  /* (Its question put: the UI's) */
+            HUB->ireq.y = (rs_k == LT_BLOWDARK) | (rs_t == HUB->round ? 2 : 0);    /* (Its question put, the UI's; 2, engaged:
+                                                **   the round's action, no long task for a blow to stop) */
             HUB->ireq.x = rs_st == 3 ? 1 : rs_t;
             HUB->ireq.qty = rs_k;
             HUB->ireq.item = rs_what;
@@ -1021,7 +1043,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         wk.m.kind = I_WAIT;
         wk.m.a = 0;
         wk.m.w1 = rs_t;
-        wk.m.w2 = (unsigned) rs_k << 8 | rs_what << 1 | 1;
+        wk.m.w2 = rs_t == HUB->round ? 1 : (unsigned) rs_k << 8 | rs_what << 1 | 1;  /* (Engaged, the round's action) */
         intent_few (&wk.m);
         return 0;
     }
@@ -1105,25 +1127,6 @@ static void rclear10 (void)
     rsteps = rbody = 0;
 }
 
-/* A flame to hand (IO_LIGHT's, the catalogue's bank's light; part 10's, its room): a thing lit, carried or within
-** reach, 1; or a fire-maker carried (the catalogue's tool key, "tinder"), rs_tool, one not known empty first: 3, its
-** steps the lighting's (part 82's); 4, it's known empty; 0 none */
-unsigned rs_tool;
-unsigned char s_flame (void)
-{
-    static unsigned i;
-
-    for (i = rs_tool = 0; (i = items (i, IN_SQUARE | IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0; ) {
-        if (ip->flags & I_LIT) {
-            if (s_on_pc (i) || s_in_reach (i)) {
-                return 1;
-            }
-        } else if ((!rs_tool || (item_at (rs_tool)->shut & IS_SPENT)) && s_on_pc (i) && !strcmp (kind_at (i)->tool, "tinder")) {
-            rs_tool = i;
-        }
-    }
-    return !rs_tool ? 0 : item_at (rs_tool)->shut & IS_SPENT ? 4 : 3;
-}
 
 #pragma static-locals (pop)
 

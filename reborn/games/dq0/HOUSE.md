@@ -1686,7 +1686,10 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   (on the body, lying within reach) a round; each step above a round in place of its seconds (so a thing stowed in the
   worn pack in a fight three rounds: drop the pack first, at no time).  Each step its own test (the referee's P_GROPE);
   failed, "You fumble for the rope.", the round wasted, the step not done, and the sequence over: the world as it stands,
-  the pack off told, and the player chooses again (it isn't tried again by itself: the fight may have changed).
+  the pack off told, and the player chooses again (it isn't tried again by itself: the fight may have changed).  Engaged a
+  step is the round's action, no long task: a blow at it doesn't stop it, or nothing in a fight would ever get done (a
+  blow a round is what a fight is); a command typed waits for it.  *(For review: a wound's not stopping it either, as it
+  stands.)*
 - **A pack dropped in a fight is automatic, taking it in hand is a grope** (the user's, 2026-11-02; every kind worn on
   the back, KF_BACK): "drop the pack" no test and no time, as the book's discarding; taking it off the back into a hand
   ("take off the pack", a reach's first step), up from the ground ("take the pack", "hold the pack") and putting it on

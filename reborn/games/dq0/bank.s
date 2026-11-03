@@ -149,7 +149,7 @@ ovl_out:
             SWPART      1, 8                ; The start and the end (main.c): the task's arguments, the world
                                             ;   started, the game kept, the world stopped
             SWPART      2, 14               ; The commands (main.c: the map's bank, overlay 3 full at slice 4.2)
-            SWPART      3, 16               ; The map (look.c; overlay 14's bank till 2026-11-01)
+            SWPART      3, 18               ; The map (look.c; overlay 14's bank till 2026-11-01)
             SWPART      4, 9                ; The pace, the watchfulness, the state, small moves (pace.c)
             SWPART      5, 10               ; The names given (names.c)
             SWPART      6, 12               ; The names said (names.c)
@@ -158,14 +158,14 @@ ovl_out:
             SWPART      9, 13               ; The player's shortcuts (alias.c)
             SWPART      10, 1               ; A search, by its form (search.c)
             SWPART      11, 15              ; The rarer news, worded (main.c); the hands and limbs
-            SWPART      12, 15              ; Wounds over time: first aid, in shock, the body's news (tend.c)
+            SWPART      12, 18              ; Wounds over time: first aid, in shock, the body's news (tend.c)
             SWPART      13, 7               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
             SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
             SWPART      15, 17              ; An ally's errands, the character's gifts, the market (errand.c: slice 4.8's; 2026-11-02)
             SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
             SWPART      17, 14              ; Looking one way, a close look (way.c: part 6's till 2026-11-01)
             SWPART      18, 18              ; A denizen's door's words (2026-11-02: overlay 3's room)
-            SWPART      19, 12              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)
+            SWPART      19, 18              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)
 
             SWFN        errand, 15
             SWFN        begin, 1
