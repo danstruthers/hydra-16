@@ -120,7 +120,7 @@ unsigned char __fastcall__ reach_step (unsigned n, unsigned c);   /* (Thing n go
                                                 **   0 go on.  c RS_TOOL: n a tool, got out, put away after its use) */
 #define RS_TOOL         0xFFFF
 unsigned char __fastcall__ reach_do (unsigned w);   /* (Part 85's: RO_*, or an intent's tool's keys: s_reach_do's) */
-enum { RO_END, RO_ASK, RO_REPLY, RO_FUMBLED, RO_GO, RO_REDIP, RO_SPILL, RO_HONE };
+enum { RO_END, RO_ASK, RO_REPLY, RO_FUMBLED, RO_GO, RO_REDIP, RO_SPILL, RO_HONE, RO_NEWL };
 #define RS_GO           0xFFFB                  /* (reach_step's c: the step rs_do, rs_k, rs_what, rs_t, begun, the caller's) */
 #define RS_FIRE         0xFFFC                  /* (reach_step's c: n a fire-maker, a tool's steps and its tries; 2 empty) */
 #define RS_BACK         0xFFFE                  /* (reach_step's c: the pack back on, its own step) */

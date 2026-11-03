@@ -1075,7 +1075,7 @@ static unsigned char events (void)          /* (How many there were) */
                 }
                 if (m.w1 == V_FACING) {         /* (A turn's first words, as it's begun: out at once, its look
                                                 **   after, V_TURNED's) */
-                    sayf ("\nYou turn to face %s.", head_name[believed (HUB->pc_face)]);
+                    turned_says ();
                     t_flush ();
                     break;
                 }
@@ -2465,14 +2465,15 @@ unsigned char s_bandage_out (void)
 ** the step's first words; the pack left off, stopped part way; the world's own step's grope failed */
 void __fastcall__ s_reach_said (unsigned w, unsigned char named)
 {
-    static const char* const first[LT_DIPOLD - LT_PACKOFF + 1] = {
+    static const char* const first[LT_LETOLD - LT_PACKOFF + 1] = {
         "\nYou take off your %s.", "\nYou take off your %s, and set it down at your feet.", "\nYou reach into the %s.",
         "\nYou hold the %s open.", "\nYou get out the %s.", "\nYou put your %s back on.", "\nYou let the %s fall.",
         "\nYou let the %s fall, still burning.", "\nYou put away the %s.", "\nYou blow out the %s.",
         "\nYou go to blow out the %s: that will leave you in the dark.", "\nYou light the %s from the burning one.",
         "\nYou set the %s down at your feet.", "\nYou take up the %s.", "\nYou set to sharpening the %s.", "\nYou strike a spark.",
         "\nYou get out the new %s.", "\nYou put away the old %s.", "\nYou take up the new %s.", "\nYou set the new %s down at your feet.",
-        "\nYou blow out the old %s.", "\nYou light the new %s from the burning one.", "\nYou set to dipping the old %s."
+        "\nYou blow out the old %s.", "\nYou light the new %s from the burning one.", "\nYou set to dipping the old %s.",
+        "\nYou let the old %s fall."
     };
     char t[sizeof CATALOGUE[0].name];
 

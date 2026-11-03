@@ -337,7 +337,8 @@ void o_sheet (void)
     put (", Move ");
     putn (harn_move (&pc));
     put ("; load ");
-    putn (carried.cost / 10);                   /* (All of it, its free pounds told: D13's, skills.c's set_load) */
+    putn ((carried.cost + 5) / 10);             /* (All of it, rounded as the inventory's, its free pounds told: D13's,
+                                                **   skills.c's set_load) */
     put (" lb (");
     putn ((carried.cost - carried.wt) / 10);
     put (" free), encumbrance ");
@@ -441,7 +442,12 @@ signed char __fastcall__ o_noticing (const struct req* r)
 ** own: slower than a walk tires as a walk does; the time at each pace added up across moves (exertion toward the next
 ** level, 6000 a level: a sprint's 10 a tenth, a run's 5, a jog's 2, a walk's a 144th), and rest wears that off (1 a
 ** tenth) before it takes a level off.  Strenuous work (GA_WORK: HOUSE.md's tiring, a climb, a dig, a battering;
-** swimming to come) the book's for it, a level each five minutes (Skills 6; a swimmer's the same), as a jog's */
+** swimming to come) the book's for it, a level each five minutes (Skills 6; a swimmer's the same), as a jog's.  A
+** load (the user's, 2026-11-03: "if you are awake and standing with the burden, you should still get fatigued";
+** HOUSE.md's a load borne, for review: the book has no such rule, its encumbrance a penalty alone) tires while it's borne
+** by effort: heavily burdened or worse (encumbrance 3 on), any time spent moving or at work, and stood still on its feet
+** (GA_STOOD, the world's), a level each 120 / (encumbrance - 2) minutes, and no rest then; lying down, sitting, kneeling,
+** asleep or senseless (GA_REST) it bears nothing, and rests as ever */
 
 #define LEVEL   6000
 #define WORK    2                               /* (Strenuous work's exertion a tenth: a level each five minutes) */
@@ -450,12 +456,29 @@ void __fastcall__ o_spent (unsigned t)
 {
     static const unsigned char rate[NGAITS] = { 0, 0, 0, 2, 5, 10 };
     static unsigned walkt;                      /* (A walk's tenths, toward its next unit) */
-    unsigned char a = spent_at, k;
+    unsigned char a = spent_at, k, e = harn_get_ep (&pc);
     unsigned n;
 
+    e = e <= 2 || a == GA_REST ? 0 : e > 32 ? 30 : e - 2;
+    if (a == GA_STOOD) {
+        a = GA_REST;
+    }
     while (t) {                                 /* (A minute at a time: in 16 bits) */
         n = t > 600 ? 600 : t;
         t -= n;
+        if (e) {                                /* (A load borne: a unit each 12 / e tenths, 6000 a level) */
+            tired += n * e / 12;
+            while (tired >= LEVEL) {
+                tired -= LEVEL;
+                if (pc.fl < 99) {
+                    ++pc.fl;
+                }
+            }
+            if (a == GA_REST) {
+                rested = 0;
+                continue;
+            }
+        }
         if (a == GA_REST) {
 
             if (n <= tired) {
@@ -557,6 +580,12 @@ void o_state (void)
     }
     body_state ();                              /* (Tended, poisoned, its blood lost: heal.c's) */
     penalty (pc.fl, "a little tired", "tired", "exhausted", "fatigue ");
+    if (wantfl) {                               /* (Its want's levels not rested off, said: what the user took for its
+                                                **   load's, 2026-11-03: asleep, thirst and hunger tire it) */
+        put (" (");
+        putn (wantfl);
+        put (" of it hunger and thirst, not rested off)");
+    }
     penalty (harn_get_ep (&pc), "a little burdened", "heavily burdened", "overloaded", "encumbrance ");
     put ("; penalties: universal ");
     putn (harn_get_up (&pc));

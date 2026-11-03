@@ -2356,7 +2356,7 @@ function dq0Poke(m, pokes) {
                 if (!b || !b[o + L.iKind]) continue;
                 let n = '';
                 for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
-                if (n === kn) { b[o + L.iFlags] = b[o + L.iFlags] & ~(v.clear || 0) | (v.or || 0); if (v.hide !== undefined) b[o + L.iHide] = v.hide; break; }
+                if (n === kn) { b[o + L.iFlags] = b[o + L.iFlags] & ~(v.clear || 0) | (v.or || 0); if (v.hide !== undefined) b[o + L.iHide] = v.hide; if (v.size !== undefined) b[o + L.iSize] = v.size; break; }
               }
             }
             if (p.traps) {                      // (The cached chunks' hidden traps' hiding set, a scene's, 2026-11-02; and on its own
@@ -2796,7 +2796,7 @@ function dq0Timer(m) {
 // carried, a door examined and a step that can't be taken a fifth, 720,000.  (Not a step's or a walk's, their answer
 // the look as they get there: at the turns pace the denizens given their turn a slice at a time through the time the
 // move takes, at the normal pace the move taking its own time, a step a second, then the senses' look)
-const DQ0_ANSWERS = [['turn left', 'You turn to face', 1790000], ['turn right', 'You turn to face', 1790000],
+const DQ0_ANSWERS = [['turn left', 'You turn left', 1790000], ['turn right', 'You turn right', 1790000],
   ['step forward', 'You'], ['inventory', 'You carry', 720000], ['examine the torch', 'Your torch'], ['walk to the door ahead to my left', 'You'], ['examine the door', 'You head for|A door|Which door', 720000],
   ['look', 'You', 1790000, 1790000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You'], ['walk to the window', 'You'], ['take the bones', 'You go over to the bones.|You stop', 1400000], ['look', 'You']];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
 function dq0AnswerTest(baud) {
@@ -4164,12 +4164,12 @@ module.exports = {
         'dq0 -p t -s 374 -c /ram/c.hm -T', 'look', 'dig east', 'drop the knife', 'dig east', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k chisel -T', 'look', 'dig east', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'wait', 'dig east', 'look', 'dig east', 'quit',
-        'dq0 -p t -s 374 -c /ram/c.hm -k chisel,hammer -T', 'dig north', 'quit',
+        'dq0 -p t -s 374 -c /ram/c.hm -k chisel,hammer -T', 'drop the torch', 'hold the chisel', 'hold the hammer', 'dig north', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'dig east', 'quit',
         'mkdir /ram/g', "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -k pick -T -d /ram/g -R 7',
         'open the door', 'south', 'turn around', 'close the door', 'dig north', 'quit', 'echo $status']) },
       start(m) {
-        dq0OnWords(m, [{ g: 5, line: 'dig east', n: 1, words: 'anywhere', text: 'stop\r' }]);   // (Typed as it's told)
+        dq0OnWords(m, [{ g: 5, line: 'dig east', n: 1, words: 'anywhere', text: 'stop\r' }, { g: 4, line: 'dig north', n: 1, words: 'You dig with your chisel', text: 'stop\r' }]);   // (Typed as it's told; the chisel's first spell enough)
         const a = m.acia, read = a.read;
         let typed = '', g = 0;
         m.door = {};
@@ -4990,10 +4990,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0outfit', outfit: true, what: 'Dingus Quest Zero\'s starting outfits (games/dq0/outfits.txt, the world\'s draw: outfit.c, outdraw.c, outmake.c; DECISIONS.md\'s outfits, HOUSE.md\'s), by the things each character begins with (the store\'s records) and hmchar\'s files: the family\'s wealth rolled and kept (its "wealth" line, the book\'s by its class); the universal kit (clothes and footwear worn, a backpack and a belt worn, a pouch on the belt, a torch lit in hand, a tinderbox, three rations, a waterskin full, a knife in its sheath, a spare torch and a flask of oil), bought at the book\'s prices within the wealth (seed 5\'s hunter, a serf: sandals; its Spear a staff in hand, all it could pay for); seed 8\'s thief its lockpicks, paper and charcoal in its pouch (handy), its Club\'s club and its Dagger\'s dagger in the knife\'s place, in its sheath; a yeoman of the shortbows its unit\'s issue, free (a shortbow worn, a quiver of 12 to 24 arrows on the belt, a falchion in its scabbard, a dagger in its sheath, a buckler, a kurbul helm and a leather vest worn); a cleric of Peoni its temple\'s things, free (a robe, a ring, a staff, its letter, the universal kit) and 6 to 36 pennies; the null ruleset\'s the universal kit alone, with some money; the same character in the same game the same outfit; each thing its own (its number, its make)',
+      name: 'dq0outfit', outfit: true, what: 'Dingus Quest Zero\'s starting outfits (games/dq0/outfits.txt, the world\'s draw: outfit.c, outdraw.c, outmake.c; DECISIONS.md\'s outfits, HOUSE.md\'s), by the things each character begins with (the store\'s records) and hmchar\'s files: the family\'s wealth rolled and kept (its "wealth" line, the book\'s by its class); the universal kit (clothes and footwear worn, a backpack and a belt worn, a pouch on the belt, a torch lit in hand, a tinderbox, three rations, a waterskin full, a knife in its sheath, a spare torch and a flask of oil), bought at the book\'s prices within the wealth (seed 5\'s hunter, a serf: sandals; its Spear a staff in hand, all it could pay for); seed 10\'s thief (seed 8\'s till its lantern, 2026-11-03: its money no longer reaches a dagger) its lockpicks, paper and charcoal in its pouch (handy), its Club\'s club and its Dagger\'s dagger in the knife\'s place, in its sheath; a yeoman of the shortbows its unit\'s issue, free (a shortbow worn, a quiver of 12 to 24 arrows on the belt, a falchion in its scabbard, a dagger in its sheath, a buckler, a kurbul helm and a leather vest worn); a cleric of Peoni its temple\'s things, free (a robe, a ring, a staff, its letter, the universal kit) and 6 to 36 pennies; the null ruleset\'s the universal kit alone, with some money; the same character in the same game the same outfit; each thing its own (its number, its make)',
       init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cat /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'inventory', 'quit',
-        'hmchar -q -s 8 -u feudal -c thief -o /ram/t.hm', 'cat /ram/t.hm', 'dq0 -p t -s 3 -c /ram/t.hm -T', 'quit',
+        'hmchar -q -s 10 -u feudal -c thief -o /ram/t.hm', 'cat /ram/t.hm', 'dq0 -p t -s 3 -c /ram/t.hm -T', 'quit',
         'hmchar -q -s 11 -u feudal -c \'yeoman sb\' -o /ram/y.hm', 'dq0 -p t -s 3 -c /ram/y.hm -T', 'quit',
         'hmchar -q -s 12 -u feudal -c \'cleric (peoni)\' -o /ram/p.hm', 'dq0 -p t -s 3 -c /ram/p.hm -T', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -r null', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'quit', 'echo $status']) },
@@ -5011,8 +5011,15 @@ module.exports = {
         const kit = (s, what, foot) => {
           has(s, what, 'clothes', i => i.flags & I.WORN); has(s, what, foot, i => i.flags & I.WORN);
           const pack = has(s, what, 'backpack', i => i.flags & I.WORN), belt = has(s, what, 'belt', i => i.flags & I.WORN);
-          has(s, what, 'pouch', i => belt && i.x === belt.n); has(s, what, 'torch', i => (i.flags & (I.HELD | I.LIT)) === (I.HELD | I.LIT));
-          for (const n of ['tinderbox', 'flask of oil']) has(s, what, n, i => pack && i.x === pack.n);
+          has(s, what, 'pouch', i => belt && i.x === belt.n);
+          const lit = i => (i.flags & (I.HELD | I.LIT)) === (I.HELD | I.LIT), inPack = n => s ? dq0Carried(s).filter(i => i.name === n && pack && i.x === pack.n).length : 0;
+          if (s && dq0Carried(s).some(i => i.name === 'lantern' && lit(i))) {   // (Its light by its money, the user's, 2026-11-03: dq0startlight's)
+            if (inPack('flask of oil') !== 2) f.push(what + ': a lantern and ' + inPack('flask of oil') + ' flasks of oil, not two');
+          } else {
+            has(s, what, 'torch', lit);
+            if (inPack('torch') !== 2 || inPack('flask of oil') !== 1) f.push(what + ': a torch lit, ' + inPack('torch') + ' spare and ' + inPack('flask of oil') + ' flasks of oil');
+          }
+          has(s, what, 'tinderbox', i => pack && i.x === pack.n);
           has(s, what, 'rations', i => pack && i.x === pack.n && i.qty === 3);
           const skin = has(s, what, 'waterskin', i => belt && i.x === belt.n);
           has(s, what, 'water', i => skin && i.x === skin.n && i.qty === 4);
@@ -5027,6 +5034,7 @@ module.exports = {
         if (![40, 80, 160].includes(w5)) f.push('the hunter\'s file: no serf\'s wealth line (' + w5 + ')');
         const s1 = game('dq0 -p t -s 3 -c /ram/c.hm -T', 'the hunter');
         kit(s1, 'the hunter', 'sandals');
+
         const free = ['clothes', 'sandals', 'shoes', 'backpack', 'belt', 'pouch', 'water', 'pennies', 'letter'];
         const spent = s => dq0Carried(s).filter(i => !free.includes(i.name)).reduce((a, i) => a + price(i), 0);
         const money = s => dq0Carried(s).filter(i => i.name === 'pennies').reduce((a, i) => a + i.qty, 0);
@@ -5035,6 +5043,7 @@ module.exports = {
         // seed 8's thief: its tools and mapping things handy, its club and dagger
         const s2 = game('dq0 -p t -s 3 -c /ram/t.hm -T', 'the thief');
         kit(s2, 'the thief', 'sandals');
+
         const pouch = s2 && dq0Carried(s2).find(i => i.name === 'pouch');
         for (const n of ['lockpicks', 'paper', 'charcoal']) has(s2, 'the thief', n, i => pouch && i.x === pouch.n);
         has(s2, 'the thief', 'club'); has(s2, 'the thief', 'dagger', i => inside(s2, i) && inside(s2, i).name === 'sheath');
@@ -6171,7 +6180,7 @@ module.exports = {
         const a = out.indexOf('There\'s no way up or down here.'), b = out.indexOf('> quit', a), seg = a < 0 || b < 0 ? '' : out.slice(a, b);
         const top = (seg.match(/\x1b\[1;\d+H/g) || []).length, f = [];
         if (top > 4) f.push(top + ' moves up to the status line while nothing happened (a second at most each)');
-        const turned = out.indexOf('You turn to face'), looked = turned < 0 ? -1 : turned + out.slice(turned).search(/You (can see|are in)/);
+        const turned = out.indexOf('You turn '), looked = turned < 0 ? -1 : turned + out.slice(turned).search(/You (can see|are in)/);
         if (looked < turned || out.indexOf('You carry') > looked) f.push('what it carries told only after the turn\'s look');
         for (const s of seg.matchAll(/\x1b\[1;\d+H/g)) {      // (Hidden as it moved there: hidden last, here or before)
           const at = a + s.index;
@@ -6500,7 +6509,7 @@ module.exports = {
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         inTurn(o, ['> walk to the door behind me', 'You head for the door.', '> i', 'You carry a torch (lit), in your left hand; a backpack, worn (in it: 3 rations, a tinderbox, a basket, a heap of sand,',
-          'a sword, a torch, a flask of oil); a belt, worn (on it: a pouch (in it: 12 pennies), a dagger, a waterskin); a table, in both hands. In all, 60 lb.', '> drop table', 'Put down.',
+          'a sword, a torch, a flask of oil); a belt, worn (on it: a pouch (in it: 12 pennies), a dagger, a waterskin (empty)); a table, in both hands. In all, 60 lb.', '> drop table', 'Put down.',
           '> put the candle on the table', 'You put the candle on the table.', '> look', 'At your feet lies a table. On the table lies a candle.',
           '> take the candle from the table', 'You take the candle from the table. It\'s in your backpack.', '> wear cloak', 'You put on the cloak.',
           '> hold basket', 'You take the basket in your right hand.', '> put sand in basket', 'The basket won\'t keep the heap of sand: it would run out.',
@@ -6511,7 +6520,7 @@ module.exports = {
           'You stow the cloak in your backpack.', '> name my sword Linda', 'You name your sword Linda.', '> name the dagger as linda', 'That name is taken by your sword.',
           '> name the dagger Torch', 'That name is taken by a kind of thing (torch).', '> name the dagger kobold', 'That name is taken by a kind of creature (kobold).',
           '> name the dagger north', 'That name is taken: it\'s a word your commands need.', '> i', 'a candle, Linda, your sword, a torch, a flask of oil);',
-          'a waterskin, a quiver (in it: an arrow)). In all, 20 lb.', '> examine the moon', 'You see no moon here.', '> take off my coat', 'You aren\'t wearing any coat.',
+          'a waterskin (empty), a quiver (in it: an arrow)). In all, 20 lb.', '> examine the moon', 'You see no moon here.', '> take off my coat', 'You aren\'t wearing any coat.',
           '> foo', 'I don\'t know how to foo.', '> status', 'Pace: a walk (40 feet a round). Watching: nothing in particular. Condition: unhurt; a little burdened (encumbrance 1); penalties: universal 0, physical 1. Light: your torch (20 feet).',
           '> jog', 'Pace: a jog (80 feet a round). Watching: nothing in particular.', '> search for traps as I go',
           'Pace: a jog, held to a slow walk while you search as you go (20 feet a round). Watching: for traps and hidden doors as you go.', '> stop searching',
@@ -7938,7 +7947,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sack', 'put the rations in the sack', 'stow the sack', 'take the rations from the sack', 'drop the rations',
         'look in the backpack', 'search the backpack', 'drop the pack', 'take the tinderbox from the backpack', 'drop the tinderbox', 'put on the pack',
         'drop the torch', 'take the flask from the backpack', 'drop the flask', 'take the torch from the backpack', 'inventory', 'put on the pack', 'inventory', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'light a new torch', 'inventory', 'light a new torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'light a new torch', 'inventory', 'drop the sword', 'hold another torch', 'light a new torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'take a fresh torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'hold another torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k pick', 'dig down', 'inventory', 'quit',
@@ -7997,10 +8006,10 @@ module.exports = {
         has(1, 'inventory', 'a backpack, in your', 1);
         has(1, 'put on the pack', 'You put on the backpack.', 2);
         // (A new light)
-        order(2, 'light a new torch', ['You let the torch fall, still burning.', 'You take off your backpack, and set it down at your feet.', 'You get out the torch.', 'You light the torch.', 'You put your backpack back on.']);
+        order(2, 'light a new torch', ['You set the sword down at your feet.', 'You take off your backpack, and set it down at your feet.', 'You get out the new torch.', 'You light the new torch from the burning one.', 'You blow out the old torch.', 'You let the old torch fall.', 'You take up the sword.', 'You put your backpack back on.']);
         never(2, 'light a new torch', 'tinderbox');
         has(2, 'light a new torch', 'You have no other torch.', 2);
-        has(2, 'inventory', 'a sword, in your right hand', 2);
+        has(2, 'inventory', 'a sword, in your right hand');
         has(2, 'inventory', 'a torch (lit), in your left hand', 2);
         has(3, 'inventory', 'a torch, in your right hand');
         has(3, 'inventory', 'a torch (lit), in your left hand');
@@ -8233,7 +8242,7 @@ module.exports = {
         if (tests(e2).length !== 1 || tests(e3).length !== 1 || tests(e4).length !== 1) f.push('east again: not tested each time');
         if (!bear(e4, 'BRG_LOST')) f.push('the third time east: not lost, known (' + dq0Evs(e4) + ')');
         at(e4, 2, 1, 'the third time east, a critical failure');
-        inTurn(s, ['> turn left', 'You turn to face northeast.', '> face north', 'You turn to face north.',
+        inTurn(s, ['> turn left', 'You turn left, to face northeast.', '> face north', 'You turn to face north.',
           '> face northwest', 'You turn to face northwest.', '> f', 'You know this place: your bearings come back to you.',
           'You\'ve lost your bearings: you\'re no longer sure which way is north.', '> status', 'Facing: south, you think'], f, 'the words: ');
         inTurn(dq0StatusRows(out), ['facing SE', 'facing S?'], f, 'the status line: ');
@@ -8245,7 +8254,7 @@ module.exports = {
         const d = T.of('dq0 -p t -s 3 -c /ram/d.hm'), d1 = T.after(d, 'go through the door to the east'), d2 = T.after(d1, 'turn left');
         if (!d1.after || !d1.after.sum.northsense) f.push('the dwarf\'s summary not knowing north');
         if (tests(d1).length || !d1.after || d1.after.pc.skew) f.push('the dwarf tested, or astray (' + JSON.stringify(tests(d1)) + ')');
-        inTurn(s.slice(s.indexOf('-c /ram/d.hm')), ['> turn left', 'You turn to face north.'], f, 'the dwarf\'s words: ');
+        inTurn(s.slice(s.indexOf('-c /ram/d.hm')), ['> turn left', 'You turn left, to face north.'], f, 'the dwarf\'s words: ');
         // Fallen in
         const h = T.of('dq0 -p t -s 4 -c /ram/c.hm -t /ram/t.txt'), hd = T.of('dq0 -p t -s 4 -c /ram/d.hm -t /ram/t.txt');
         if (tests(h).length !== 1) f.push('come round below from a fall: the human not tested as it begins (' + JSON.stringify(tests(h)) + ')');
@@ -9465,6 +9474,145 @@ module.exports = {
           if (!g.length || (g[0] >> 4) !== 1 || sum !== 15) f.push('the pile\'s groups not kept (the first Cendra\'s, fifteen shares): ' + JSON.stringify(g));
           if (p.qty !== 12 || p.weight !== 1) f.push('the kit\'s pennies: ' + p.qty + ', weight ' + p.weight + ' (a dram each, 12)');
         }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0startkit', outfit: true, near: ['gear'], what: 'Dingus Quest Zero\'s starting light by the family\'s money and its vessels full (the user\'s, 2026-11-03, DECISIONS.md\'s: "Light source by available money", "If you have a waterskin, it should be full to start"; HOUSE.md\'s outfits, for review): a rich serf of 160 pennies a lantern lit in hand and two flasks of oil, no spare torch, its money the less; a serf of 80, a poor serf of 40 and a slave of 40 a torch lit, two spare and a flask; each a tinderbox; its money what\'s left of its wealth at the prices; a waterskin told "(full)" in the list, "full" on a closer look, "full already" to a fill at a well, no time; opened, its 4 pints of water; drunk from when thirsty; told a lantern\'s low words at its last ten minutes, as a torch\'s',
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 10 -u feudal -c thief -o /ram/a.hm', 'hmchar -q -s 2 -u feudal -c thief -o /ram/b.hm', 'hmchar -q -s 1 -u feudal -c thief -o /ram/c.hm', 'hmchar -q -s 3 -u feudal -c thief -o /ram/d.hm',
+        'dq0 -p t -s 3 -c /ram/a.hm -T', 'inventory', 'examine the waterskin', 'look into the well', 'fill the waterskin', 'open the waterskin', 'look in the waterskin', 'wait 55 minutes', 'wait', 'quit',
+        'dq0 -p t -s 3 -c /ram/b.hm -T', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'inventory', 'quit', 'dq0 -p t -s 3 -c /ram/d.hm -T', 'inventory', 'quit', 'echo $status']) },
+      start(m) { dq0Poke(m, [{ g: 1, line: 'wait 55 minutes', n: 1, fuel: { lantern: 65 } }]); },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const games = o.split(/% dq0 -p t -s 3 -c \/ram\/\w\.hm/).slice(1);
+        const inv = g => { const i = games[g].indexOf('You carry'); return i < 0 ? '' : games[g].slice(i, games[g].indexOf('In all', i)); };
+        const a = inv(0), b = inv(1), c = inv(2), d = inv(3);
+        if (!/a lantern \(lit\), in your left hand/.test(a) || !/two flasks of oil/.test(a) || /torch/.test(a)) f.push('160 pennies: not a lantern lit and two flasks, no torch: ' + a);
+        for (const [s, w] of [[b, 'a poor serf'], [c, 'a slave'], [d, 'a serf of 80 pennies']]) {
+          if (!/a torch \(lit\), in your left hand/.test(s) || !/two torches/.test(s) || !/a flask of oil/.test(s) || /lantern/.test(s)) f.push(w + ': not a torch lit, two spare and a flask: ' + s);
+        }
+        for (const [s, w] of [[a, '160 pennies'], [b, 'a poor serf'], [c, 'a slave'], [d, 'a serf of 80 pennies']]) {
+          if (!/a tinderbox/.test(s)) f.push(w + ': no tinderbox: ' + s);
+          if (!/a waterskin \(full\)/.test(s)) f.push(w + ': its waterskin not told full: ' + s);
+        }
+        const g = games[0];
+        if (!/It's stoppered\..*little worn, full\.|It's stoppered\..*, full\./.test(g)) f.push('a closer look at it not told full');
+        if (!g.includes('Your waterskin is full already.')) f.push('a fill of a full waterskin not refused');
+        if (!g.includes('revealing 4 pints of water')) f.push('opened, not its 4 pints of water');
+        if (!g.includes('Your lantern is burning low.')) f.push('a lantern at its last ten minutes not told');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0loadtire', outfit: true, near: ['body'], what: 'Dingus Quest Zero\'s load and tiring (the user\'s, 2026-11-03, DECISIONS.md\'s: "I seem to acquire fatigue if overburdened even when sleeping", "if you are awake and standing with the burden, you should still get fatigued"; HOUSE.md\'s a load borne, for review): overloaded (dq0 -k), 70 minutes standing tires it (status\'s fatigue), a level or more; lying down, sitting and asleep no more tired, its fatigue less, overloaded or not; a sleeper lies down by itself; heavily burdened standing no rest; hunger and thirst told by status, and their share of the fatigue, after a long sleep; a light load (the kit alone) standing rests as ever',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick,shovel,rope,sword,bones,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword', 'douse the torch', 'status', 'wait 70 minutes', 'status',
+        'lie down', 'wait 40 minutes', 'status', 'stand up', 'wait 70 minutes', 'status', 'sit', 'wait 40 minutes', 'status', 'stand up', 'wait 70 minutes', 'status', 'sleep 40 minutes', 'status', 'stand up', 'wait 70 minutes', 'status',
+        'drop the pack', 'drop the pick', 'drop the sword', 'drop the rope', 'drop the bones', 'drop the sword', 'drop the pick', 'drop the shovel', 'status', 'wait 15 minutes', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const st = [...o.matchAll(/Condition: (.*?)Facing:/g)].map(x => x[1]), fat = s => { const x = /fatigue (\d+)/.exec(s); return x ? +x[1] : 0; };
+        const F = st.map(fat);
+        this.notes = ['fatigue at each status: ' + F.join(', ')];
+        if (F.length !== 13) return ['status told ' + F.length + ' times: ' + o.slice(-800)];
+        if (F[0] !== 0) f.push('rested at first, fatigue ' + F[0]);
+        if (!(F[1] >= 1)) f.push('overloaded, 70 minutes standing: fatigue ' + F[1] + ', not tired by it');
+        if (!(F[2] < F[1])) f.push('lying down 40 minutes, overloaded: fatigue ' + F[2] + ' from ' + F[1] + ', not rested');
+        if (!(F[3] > F[2])) f.push('standing again half an hour: fatigue ' + F[3] + ' from ' + F[2]);
+        if (!(F[4] < F[3])) f.push('sitting 40 minutes, overloaded: fatigue ' + F[4] + ' from ' + F[3] + ', not rested');
+        if (!(F[5] > F[4])) f.push('standing again: fatigue ' + F[5] + ' from ' + F[4]);
+        if (!(F[6] < F[5])) f.push('asleep 40 minutes, overloaded: fatigue ' + F[6] + ' from ' + F[5] + ', not rested');
+        if (!/Position: lying down\./.test(st[6])) f.push('a sleeper not lying down: ' + st[6]);
+        if (!(F[7] > F[6])) f.push('awake and standing again: fatigue ' + F[7] + ' from ' + F[6]);
+        if (/burdened|overloaded/.test(st[8].replace(/a little burdened/, ''))) f.push('all let fall, still burdened: ' + st[8]);
+        if (!(F[9] < F[8])) f.push('all let fall, a quarter hour standing: fatigue ' + F[9] + ' from ' + F[8] + ', not rested');
+        if (!/of it hunger and thirst, not rested off/.test(st[12])) f.push('after long sleeps, the want\'s share not told: ' + st[12]);
+        if (!/Hunger and thirst: (hungry|very hungry|starving), (very thirsty|parched|dying of thirst)\./.test(st[12])) f.push('after long sleeps, hunger and thirst not told: ' + st[12]);
+        if (!/Hunger and thirst: not hungry, not thirsty\./.test(st[0])) f.push('at first, hunger and thirst not told: ' + st[0]);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0newlight', reach: true, near: ['gear'], what: 'Dingus Quest Zero\'s new light lit from the old one (the user\'s, 2026-11-03, DECISIONS.md\'s: "light the new torch from the old one before it is extinguished"; HOUSE.md\'s a new light, for review), by the words in order and the things: "light a new torch" with one burning and a sword in the other hand: the sword set down, the pack off, the new torch got out, lit from the burning one, the old blown out and let fall, the sword taken up, the pack back on; no tinderbox touched; the new one lit in hand, the old unlit at its feet, each step its time (over 6 seconds); with the old one spent, the tinderbox\'s steps as before; a lantern from a torch, by "light the lantern"; and "turn" (the user\'s: "I guess the turn info is OK keeping both"): by its way "You turn right, to face west.", left, half left, half right, around; a compass way as it was',
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'light a new torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'wait 61 minutes', 'light a new torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k lantern', 'light the lantern', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'turn r', 'turn left', 'turn half left', 'turn half right', 'turn around', 'face west', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        const games = o.split(/% dq0 -p t -s 3 -c \/ram\/c\.hm/).slice(1), T = dq0Turns(m);
+        if (games.length !== 4) return ['not four games: ' + games.length];
+        inTurn(games[0], ['You set the sword down at your feet.', 'You take off your backpack', 'You get out the new torch.', 'You light the new torch from the burning one.',
+          'You blow out the old torch.', 'You let the old torch fall.', 'You take up the sword.', 'You put your backpack back on.'], f, 'a new torch: ');
+        if (/tinderbox/.test(games[0].slice(0, games[0].indexOf('You carry')))) f.push('a new torch lit with one burning: the tinderbox touched');
+        const inv = games[0].slice(games[0].indexOf('You carry'));
+        if (!/a torch \(lit\), in your left hand/.test(inv) || !/a sword, in your right hand/.test(inv)) f.push('after it, not a torch lit and the sword each in its own hand: ' + inv.slice(0, 400));
+        const t0 = T.of('light a new torch'), secs = t0.at && t0.after ? t0.after.now - t0.at.now : 0;
+        if (!(secs >= 60)) f.push('a new torch\'s steps took ' + secs + ' tenths, not their time');
+        if (!/You let the torch fall\./.test(games[1]) || !/You strike a spark\./.test(games[1])) f.push('the old one spent: not let fall and the tinderbox\'s steps: ' + games[1].slice(-900));
+        if (!/You light the lantern\./.test(games[2]) || /strike a spark/.test(games[2])) f.push('a lantern not lit from the torch burning: ' + games[2].slice(-600));
+        inTurn(games[3], ['You turn right, to face north.', 'You turn left, to face west.', 'You turn half left, to face southwest.', 'You turn half right, to face west.', 'You turn around, to face east.', 'You turn to face west.'], f, 'turning: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0chiselhands', outfit: false, near: ['gear', 'map'], what: 'Dingus Quest Zero\'s hammer and chisel in each hand (the user\'s, 2026-11-03, DECISIONS.md\'s: "Yes, hammer and chisel in each hand"; HOUSE.md\'s digging): at seed 374, facing a wall, a chisel with the hammer only carried refused, told, no time; a light in hand said too; both held, the torch set down: at work, the torch lying lit; a shovel carried beside them not the tool got out',
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 374 -c /ram/c.hm -k chisel,hammer,shovel -T', 'dig north', 'drop the torch', 'dig north', 'hold the chisel', 'dig north', 'hold the hammer', 'dig north', 'inventory', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, ''), T = dq0Turns(m);
+        const digs = T.filter(t => t.line === 'dig north');
+        if (digs.length !== 4) return ['not four digs: ' + digs.length];
+        for (const d of digs.slice(0, 3)) {
+          dq0Need(f, d, 'E_DIG', { how: 'D_NO_TOOL' }, 'not both in hand, not refused');
+          if (dq0Ev(d, 'E_DIG', { how: 'D_BEGUN' }).length) f.push('a spell begun with the hammer not in hand');
+        }
+        if (!o.includes('that leaves no hand for your light: set it down first.')) f.push('a light in hand not said');
+        if (!/You need the chisel in one hand and the hammer in the other\. /.test(o)) f.push('no words of the hands');
+        if (!dq0Ev(digs[3], 'E_DIG', { how: h => h === 'D_BEGUN' || h === 'D_AGAIN' }).length) f.push('both in hand, no dig begun: ' + dq0Evs(digs[3]));
+        if (/get out the shovel/.test(o)) f.push('the shovel got out for a chisel\'s work');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0versions', near: ['gear'], what: 'Dingus Quest Zero\'s weapon versions by weight (D13\'s: the book\'s custom weapons, a light one a quarter lighter, a heavy one a quarter heavier; 2026-11-03, a light one\'s negated weight shifted unsigned made a Strength 5 character\'s sword about 4,098 pounds, unplayable): at seed 3 a warhammer (5 lb, 20 quarter pounds), hefted, and its load on the sheet: average 5 lb, made light (dq0Poke, its size) under 4, made heavy over 6, the sheet\'s load the same way, never thousands; the inventory\'s "In all" the sheet\'s load each time, a version counted, a thing put down off both',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -k warhammer',
+        'heft the warhammer', 'sheet', 'inventory', 'wait', 'drop the warhammer', 'take the warhammer', 'heft the warhammer', 'sheet', 'inventory', 'wait', 'drop the warhammer', 'take the warhammer', 'heft the warhammer', 'sheet', 'inventory', 'drop the warhammer', 'sheet', 'inventory', 'open the waterskin', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, item: { warhammer: { size: 1 } } }, { g: 1, line: 'wait', n: 2, item: { warhammer: { size: 2 } } }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = dq0Story(out);
+        const hefts = [...o.matchAll(/Your warhammer weighs about ([\d,]+) pounds?|Your warhammer weighs (under a pound|about a pound)/g)].map(x => +(x[1] || '1').replace(/,/g, ''));
+        const loads = [...o.matchAll(/load ([\d,]+) lb/g)].map(x => +x[1].replace(/,/g, ''));
+        this.notes = ['hefted ' + hefts.join(', ') + ' lb; the sheet\'s load ' + loads.join(', ') + ' lb'];
+        if (hefts.length !== 3) return ['not hefted three times: ' + hefts.join(', ') + ': ' + o.slice(-1500)];
+        if (hefts[0] !== 5) f.push('an average warhammer ' + hefts[0] + ' lb, not 5');
+        if (!(hefts[1] >= 3 && hefts[1] <= 4)) f.push('a light warhammer ' + hefts[1] + ' lb, not a quarter under 5');
+        if (!(hefts[2] >= 6 && hefts[2] <= 7)) f.push('a heavy warhammer ' + hefts[2] + ' lb, not a quarter over 5');
+        const alls = [...o.matchAll(/In all, ([\d,]+) lb/g)].map(x => +x[1].replace(/,/g, ''));   // (One path: the inventory's total the sheet's, a version and all, what's put down too)
+        if (alls.join() !== loads.join()) f.push('the inventory\'s totals ' + alls.join(', ') + ' lb, the sheet\'s load ' + loads.join(', '));
+        if (loads.length !== 4) return f.concat(['the sheet\'s load not told four times: ' + loads.join(', ')]);
+        if (!(loads[1] < loads[0] && loads[0] - loads[1] <= 2)) f.push('the sheet\'s load, light: ' + loads[1] + ' lb, average ' + loads[0]);
+        if (!(loads[2] > loads[0] && loads[2] - loads[0] <= 2)) f.push('the sheet\'s load, heavy: ' + loads[2] + ' lb, average ' + loads[0]);
         return f;
       },
       sdcard: true

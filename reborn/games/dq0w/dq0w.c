@@ -98,6 +98,7 @@ unsigned char __fastcall__ dark_end (unsigned char how);    /* Part 44 */
 unsigned char __fastcall__ bearings (unsigned w);   /* Part 52 */
 void __fastcall__ bearings_off (unsigned feet); /* (wbody.h's) */
 void tsense (void);                             /* Part 76 (wtime.c) */
+void rest_go (void);
 void __fastcall__ travel_go (const struct msg* m);  /* Part 55 */
 unsigned char travel_on (void);
 void way_out (void);                            /* Part 54 */
@@ -181,7 +182,7 @@ static unsigned char pshand;                    /* (The hand that holds what it 
 ** move says where it's going (bound_for) */
 static unsigned char late;                      /* (The turns pace's: the denizens' task slow to keep up) */
 
-static unsigned long free_at;                   /* (When it was last free of work: its rest from then, RS_EXERT's) */
+unsigned long free_at;                          /* (When it was last free of work: its rest from then, RS_EXERT's) */
 static unsigned went;                           /* (The last thing's time: a move's, as it's done) */
 
 unsigned pextra;                                /* (A move's time more: getting up first, part 50's; a thing's reach,
@@ -1251,7 +1252,7 @@ static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char f
 ** referee's, strenuous work, HOUSE.md's tiring; a fatigue level more asked of if the next is begun (arrive's: part
 ** 2's since 2026-11-01, the main RAM's room, the tunnellers') */
 static void climb_round_on (void);
-static void __fastcall__ spend (unsigned char a, unsigned long t);
+void __fastcall__ spend (unsigned char a, unsigned long t);
 void __fastcall__ s_climb_on (unsigned char how)
 {
     unsigned t = went;
@@ -1872,7 +1873,7 @@ unsigned char s_toward_middle (void)
 
 /* Time spent (RS_EXERT: the referee's fatigue, by the pace; GA_WORK, at strenuous work; GA_REST, standing still), t
 ** tenths: wres 1 if it tired the character a level more */
-static void __fastcall__ spend (unsigned char a, unsigned long t)
+void __fastcall__ spend (unsigned char a, unsigned long t)
 {
     do {                                        /* (A long rest's in pieces: RS_EXERT's w1 sixteen bits) */
         ww1 = t > LONG_T ? LONG_T : (unsigned) t;
@@ -3074,6 +3075,8 @@ static void __fastcall__ dig_no (unsigned w)
 }
 
 
+char dig_key[9];                                /* (The tool the referee chose, its key, the reach's to get out: the
+                                                **   tool it'll use, not the first of them: part 87's; "" none) */
 unsigned char __fastcall__ s_pc_dig (unsigned char w)
 {
     struct req* r;
@@ -3093,16 +3096,36 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
         r = hub_ask (SLOT_WORLD);
         n = r->result;
         r->state = REQ_FREE;
-        if (r->text[0] == 'c' && !n) {
+        st = 0;
+        strcpy (dig_key, r->text[0] == 'p' || r->text[0] == 's' || r->text[0] == 'c' ? r->text : "");
+        if (r->text[0] == 'c' && !n) {          /* (A chisel: a hammer in the other hand, the user's, 2026-11-03: "hammer
+                                                **   and chisel in each hand"; carried isn't enough) */
             n = HUB->pcsum.limbs & (LB_ARM_L | LB_ARM_R);
-            while (!n && (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0 && !(on_pc (i) && item_at (i)->kind == KI_HAMMER)) {
+            pt = 0;
+            while (!n && (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+                if (on_pc (i)) {
+                    hm = item_at (i)->flags & I_HELD;
+                    sn = item_at (i)->kind;
+                    if (sn == KI_HAMMER) {
+                        pt |= hm ? 3 : 1;
+                    } else if (sn == KI_CHISEL) {
+                        pt |= hm ? 4 : 0;
+                    } else if (hm && (item_at (i)->flags & I_LIT)) {
+                        pt |= 8;
+                    }
+                }
             }
-            n = n || !i;
+            if (!n && !(pt & 1)) {
+                n = 1;
+            } else if (!n && (pt & 6) != 6) {
+                n = 1;
+                st = pt & 8 ? DN_HANDS | DN_LIT : DN_HANDS;   /* (Carried, not in hand: told so, a light in hand too) */
+            }
         }
         hub_map (0);
         if (n) {
-            evb = dig.mat + 1;
-            dig_no (D_NO_TOOL << 8 | dig.mat + 1);
+            evb = (dig.mat + 1) | st;
+            dig_no (D_NO_TOOL << 8 | evb);
         }
         return n;
     }
@@ -5491,9 +5514,9 @@ static void __fastcall__ intent (struct msg* m)
         task_word (m);                          /* (The long task's: no rest begun) */
         return;
     }
-    if ((HUB->pcsum.cond & C_FATIGUED) && HUB->now > free_at) {
-        spend (GA_REST, HUB->now - free_at);    /* (Stood still since it was last free: rest, the referee's) */
-        hub_map (0);
+    if ((HUB->pcsum.cond & C_FATIGUED || (HUB->pcsum.load & 2)) && HUB->now > free_at) {
+        rest_go ();                             /* (Stood still since it was last free: rest, or a load's tiring, the
+                                                **   referee's: part 76's) */
     }
     free_at = HUB->now;
 #define MOVES   (1UL << I_GO | 1UL << I_CLIMB | 1UL << I_GOTO | 1UL << I_STEP | 1UL << I_TAKE | 1UL << I_CLOSE | \
@@ -5544,6 +5567,18 @@ static void __fastcall__ task_for (unsigned char kind, unsigned long t)
     HUB->pc_task.mins = t > LONG_T;
 }
 
+/* Stood still since it was last free (free_at: an intent's, and as the time it believes is seen to, part 76's): rest, or a
+** load's tiring on its feet, the referee's (HOUSE.md's a load borne: standing or crouched, GA_STOOD; lying, sitting,
+** kneeling, asleep or senseless, GA_REST) */
+void s_rest_go (void)
+{
+    if (HUB->now > free_at) {
+        spend (HUB->pc_pos & ~POS_CROUCHED ? GA_REST : GA_STOOD, HUB->now - free_at);
+        hub_map (0);
+        free_at = HUB->now;
+    }
+}
+
 void __fastcall__ s_intent_few (struct msg* m)
 {
     unsigned long t;
@@ -5560,6 +5595,10 @@ void __fastcall__ s_intent_few (struct msg* m)
         }
         pc_waited = 1;                          /* (Its eyes looked to as it ends: the senses') */
         burn_ask |= TS_ASK;                     /* (And the time it believes, as it begins and ends: part 76's) */
+        if ((m->a & WA_SLEEP) && (HUB->pc_pos == POS_STANDING || HUB->pc_pos == POS_CROUCHED)) {
+            HUB->pc_pos = POS_PRONE;            /* (A sleeper lies down, every actor's: its load borne no more, up by
+                                                **   the Rise as it goes on, the user's, 2026-11-03) */
+        }
         if (!m->w2 && t > HUB->round) {
             task_for (m->a & WA_SLEEP ? LT_SLEEP : LT_WAIT, t);  /* (A wait longer than a round, or a sleep: a long
                                                 **   task, in minutes past 100 of them) */

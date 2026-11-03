@@ -260,6 +260,7 @@ void __fastcall__ shot_words (unsigned w, unsigned char named);   /* Overlay 15:
 void __fastcall__ beat_words (unsigned w);
 void __fastcall__ felt_words (unsigned w);      /* (Overlay 7's) A walk in the dark's beat (task.c's) */
 unsigned __fastcall__ dnum (const char* s);     /* (main.c's) A number, a word's (atoi's) */
+void turned_says (void);                        /* (Overlay 1's) A turn's first words (task.c's, 2026-11-03) */
 void facing_words (void);                       /* (Overlay 7's) The way it believes it faces (task.c's: slice 4.2's) */
 void __fastcall__ fore_set (unsigned char on);  /* (Overlay 6's) The UI and the answer's tasks in the kernel's
                                                 **   foreground, or not (main.c's FS_*) */

@@ -130,6 +130,9 @@ enum { MAT_EARTH, MAT_STONE, MAT_MASONRY, MAT_FLAGS, MAT_SOIL };    /* (Earth ha
 enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
 #define GA_REST         0xFF
 #define GA_WORK         0xFE
+#define GA_STOOD        0xFD                    /* (RS_EXERT's a: standing still on its feet, awake: rest, but a load's borne:
+                                                **   HOUSE.md's a load borne, the user's, 2026-11-03; GA_REST lying, sitting,
+                                                **   kneeling, asleep, senseless) */
 
 /* ---- Conditions (bits): what the world must know of an actor's state */
 #define C_PRONE         0x0001

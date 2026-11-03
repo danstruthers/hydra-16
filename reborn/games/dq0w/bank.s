@@ -221,6 +221,7 @@ go:
             SWFN        bearings, 52
             SWFN        bearings_off, 52
             SWFN        tsense, 76
+            SWFN        rest_go, 53
             SWFN        sky_seen, 77
             SWFN        stopped, 40         ; (A trap on the way set off: the main RAM's room, 2026-10-31)
             SWFN        intent_few, 53

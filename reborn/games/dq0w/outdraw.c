@@ -214,7 +214,8 @@ static unsigned char __fastcall__ weight (const unsigned char* c)
         return 0;
     }
     kind_get (c[cw]);
-    return ost.tool && !ck && !(kk.form & KF_COUNT) && drawn (c[cw]) ? 0 : w;
+    return (ost.tool || c[cw] == KI_LANTERN) && !ck && !(kk.form & KF_COUNT) && drawn (c[cw]) ? 0 : w;   /* (A lantern
+                                                **   not bought twice: the kit's light, an occupation's) */
 }
 
 /* A line (at p: its length first) drawn as mode says (MD_*) */
