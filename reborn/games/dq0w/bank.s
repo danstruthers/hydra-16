@@ -164,12 +164,12 @@ go:
             SWPART      67, 20              ; The character's shot, the denizens' shots and throws (wshoot.c)
             SWPART      68, 20              ; Where a missile falls, a miss's stray; a launcher loaded (wshoot.c)
             SWPART      69, 5               ; A robbery (wfight.c's: part 67's room, overlay 5's, 2026-10-30; 12's room, 2026-11-02)
-            SWPART      70, 12              ; Wounds over time: the bodies' time told, a thing used up (wtend.c; overlay 21's room, slice 4.4)
+            SWPART      70, 22              ; Wounds over time: the bodies' time told, a thing used up (wtend.c; overlay 21's room, slice 4.4)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
             SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
             SWPART      74, 11              ; A waterskin filled (wwater.c: slice 4.9's)
-            SWPART      75, 22              ; The water's depth where the character stands (wwater.c)
+            SWPART      75, 4               ; The water's depth where the character stands (wwater.c)
             SWPART      76, 23              ; The time of day believed (wtime.c: 2026-10-31)
             SWPART      77, 23              ; The sky seen, the time believed's start (wtime.c)
             SWPART      78, 23              ; Up to a place in the room (dq0w.c's go_to, ways_near: part 9's till
@@ -231,7 +231,7 @@ go:
             SWFN        tripped, 43
             SWFN        ahead, 45
             SWFN        felt_stop, 45
-            SWFN        no_exit, 45
+            SWFN        no_exit, 33
             SWFN        unlit_at, 45
             SWFN        wstart, 3
             SWFN        toward_middle, 3
@@ -279,7 +279,7 @@ go:
             SWFN        reach_to, 56
             SWFN        reach_done, 56
             SWFN        handy, 56
-            SWFN        tool_reach, 4
+            SWFN        tool_reach, 72
             SWFN        flame, 10
             SWFN        drop, 35
             SWFN        throw_at, 4

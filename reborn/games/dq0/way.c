@@ -32,6 +32,7 @@
 #include "dq0.h"
 #include "hub.h"
 #include "level.h"
+#include "tell.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a part's, an overlay's) */
 
@@ -71,6 +72,13 @@ static void __fastcall__ inspect (unsigned char obj, unsigned char orel, unsigne
     signed char g = 0;
 
     if (pick (obj | PICK_TELL, orel) != 1) {
+        return;
+    }
+    if (tx - HUB->pc_x + 1 > 2 || ty - HUB->pc_y + 1 > 2) {
+        HUB->ireq.x = tx;                       /* (Out of reach, seen or remembered: walked over to first, then again) */
+        HUB->ireq.y = ty;
+        HUB->ireq.item = 0;
+        reach_go ();
         return;
     }
     if (REL_BEHIND (REL8 (g = bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y), HUB->pc_face))) {
@@ -129,7 +137,15 @@ static unsigned char __fastcall__ judged_as (unsigned char ex)
     struct req* r;
     signed char g;
 
-    if (!cmd.obj.word[0] || things (IO_DESCRIBE, cmd.obj.word) != IR_OK) {
+    if (!cmd.obj.word[0]) {
+        return 0;
+    }
+    HUB->ireq.to = 1;                           /* (Out of reach: walked over to first) */
+    if ((g = things (IO_DESCRIBE, cmd.obj.word)) == IR_NOT_HERE) {
+        reach_go ();
+        return 1;
+    }
+    if (g != IR_OK) {
         return 0;
     }
     memcpy (&judged, &HUB->ireq, sizeof judged);
@@ -179,12 +195,71 @@ static unsigned char examine (void)
     return 0;
 }
 
+/* Gone to a thing, a denizen, a body: anything it sees, or remembers seeing in this room though it's out of the light
+** now (the user's, 2026-11-02: HOUSE.md's going places; main.c's move, VB_APPROACH_OBJECT its way here): the one found
+** (resolve.c's: asked which, of several, its square in cmd.obj), else the nearest of that name (the world's IO_LOOK,
+** LM_GO).  Walked to by the world's walk, stopping beside it (I_TAKE's a 2, walked on as it gets nearer: through a door
+** it's seen through; a denizen, I_CLOSE's w1 1: up to it, as it moves, no blow); refused only for what it hasn't seen */
+#pragma code-name (push, "SW13CODE")           /* (Part 13's, called by its s_missiles: part 17's room) */
+#pragma rodata-name (push, "SW13RODATA")
+void go_thing (void)
+{
+    unsigned x = cmd.obj.x, y = cmd.obj.y;
+    unsigned char k;
+    struct actor* a;
+
+    if (!cmd.obj.word[0]) {
+        tell (T_GO_WHICH_WAY);
+        return;
+    }
+    if (!x) {
+        HUB->ireq.to = LM_GO;
+        k = things (IO_LOOK, cmd.obj.word);
+        if (k == IR_OK) {
+            msg (tt ());                        /* (Within reach already: where it lies) */
+            return;
+        }
+        if (k != IR_NOT_HERE) {
+            sayf ("\nYou haven't seen a%s %s here.", strchr ("aeiou", *cmd.obj.word) ? "n" : "", cmd.obj.word);
+            return;
+        }
+        x = HUB->ireq.x;
+        y = HUB->ireq.y;
+    } else if (x - HUB->pc_x + 1 <= 2 && y - HUB->pc_y + 1 <= 2) {
+        sayf ("\nThe %s is beside you.", cmd.obj.word);
+        return;
+    } else {
+        for (k = 0, a = HUB->actor; k < NACTORS; ++k, ++a) {
+            if (a->state && a->x == x && a->y == y && a->sn == HUB->pc_stratum) {
+                intend_a = k + 1;
+                intend2 (I_CLOSE, 1, 0);
+                return;
+            }
+        }
+    }
+    intend_a = 2;
+    intend2 (I_TAKE, x, y);
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 unsigned char __fastcall__ s_look_way (unsigned char action)
 {
     unsigned char h, k;
 
     if (action == VB_EXAMINE_OBJECT) {
         return examine ();
+    }
+    if (action == VB_LEAVE) {                   /* ("Leave", "exit", "leave the room": by the door or the passage's mouth
+                                                **   it means, which, asked; "exit north": that way) */
+        tx = 0;
+        k = cmd.obj.kind && cmd.obj.kind != OB_ROOM ? cmd.obj.kind : OB_ROOM;
+        if (cmd.dir > H_NW && pick (k | PICK_TELL, cmd.obj.lies) != 1) {
+            return 0;
+        }
+        intend_a = tx ? bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y) : cmd.dir;
+        intend2 (I_GO, tx, ty);
+        return 0;
     }
     if (action == VB_NONE) {                    /* (A listen's or a sniff's end: what came of it) */
         if (lsn & 3) {
@@ -299,7 +374,7 @@ void o_focus_words (void)
             }
             sayf (" You can't see past the %s%s %s: %s.", noun[k], !n ? "" : k == BN_PORTCULLIS ? "es" : "s",
                 rel_w[(b->rel + 1) & 3], k == BN_WINDOW ? (n ? "their shutters are closed" : "its shutters are closed") :
-                n ? "they're closed" : "it's closed");
+                n ? "they're closed" : b->kind & PS_BARRED_ ? "it's barred" : b->kind & PS_LOCKED_ ? "it's locked" : "it's closed");
             continue;
         }
         for (n = 0; i + 1 < W.nbeyond && twin (b); ++n, ++i, ++b) {

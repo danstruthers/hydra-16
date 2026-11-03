@@ -864,7 +864,8 @@ unsigned char reach;                            /* (1: walking over, the command
                                                 **   again as it's free; 2: carried out again; 0 again as a long task's
                                                 **   stopped, task.c's, or a line's command begun; 3: a thing's timed
                                                 **   work under way, words.c's, the command kept the same, 4: carried
-                                                **   out again, its end) */
+                                                **   out again, its end; 6: walking over for a command the world carries
+                                                **   out as it gets there: a thing taken, a blow) */
 static unsigned char placing;                   /* (A place in the room walked to: place_go's, its arrival not "over
                                                 **   to it") */
 unsigned char untarget;                         /* (The target let go at the next command: resolve.c's) */
@@ -1026,9 +1027,10 @@ static unsigned char events (void)          /* (How many there were) */
                 if ((m.w1 & 0xFF) == A_DOWN || (m.w1 & 0xFF) == A_UP) {
                     came (&m);                  /* (Come into a stratum: told and kept, part 6's) */
                 }
-                if ((m.w1 & 0xFF) == A_CROSSED) {
+                k = m.w1 & 0xFF;
+                if (k == A_CROSSED) {
                     tell (T_YOU_CROSS_THE);
-                } else if ((m.w1 & 0xFF) == A_WENT_TO && !placing && !(m.w1 & 0x200)) {   /* (0x200: stopped short) */
+                } else if (k == A_WENT_TO && !placing && !(m.w1 & 0x200)) {   /* (0x200: stopped short) */
                     tell (T_YOU_GO_OVER);
                 }
                 placing = 0;
@@ -1038,7 +1040,12 @@ static unsigned char events (void)          /* (How many there were) */
                                                 **   before once an answer, lbsaid.s's; a walk's, the room's words
                                                 **   once: "The ceiling is flat." not again across it) */
                 }
-                k = m.w1 & 0xFF;               /* (As a run or a sprint ends, briefly: the pace not held) */
+                if (reach) {
+                    look (LOOK_NEW);            /* (Walked over for a command: only what's new, its outcome after it,
+                                                **   the user's, 2026-11-02) */
+                    break;
+                }
+                                                /* (As a run or a sprint ends, briefly: the pace not held) */
                 look ((m.w1 >> 8 & 1) | ((k == A_WALKED || k == A_CROSSED || k == A_WENT_TO || k == A_STEPPED) &&
                     HUB->gait > GA_JOG && !(HUB->watch & (WA_TRAPS | WA_LISTEN | WA_MAP)) && !sight_get ()->dark ? 4 :
                     0));
@@ -1102,12 +1109,15 @@ static unsigned char events (void)          /* (How many there were) */
             }
             break;
         case E_NOWAY:                           /* (A way refused: told at once, the main RAM's) */
-            if (m.who == 0 && (m.w1 & 0xFF) == N_DEN) {
+            if (m.who != 0) {
+                break;
+            }
+            if ((m.w1 & 0xFF) == N_DEN) {
                 strcpy (lb, HUB->actor[(m.w1 >> 8) & 7].name);  /* (A denizen's: its name, for overlay 4) */
                 den_way ();
-            } else if (m.who == 0 && m.w1 == N_SHUT) {
+            } else if (m.w1 == N_SHUT) {
                 way_words ();                   /* (The theme's: its lock) */
-            } else if (m.who == 0) {
+            } else {
                 tell (m.w1 == N_NO_STAIRS ? T_THERE_S_NO : m.w1 == N_NO_DIG ? T_THERE_S_NOTHING : m.w1 == N_CLOSED ?
                     T_THE_PORTCULLIS_IS : m.w1 == N_DOOR ? T_DOOR_SHUT : T_YOU_CAN_T);
             }
@@ -1469,6 +1479,7 @@ static void __fastcall__ shot (unsigned char d, unsigned char s)
     }
 }
 
+void go_thing (void);                           /* (way.c's, this part's) */
 unsigned char s_missiles (void)
 {
     const struct cthing* t = &cmd.obj;
@@ -1476,6 +1487,12 @@ unsigned char s_missiles (void)
     unsigned char d, k;
 
     switch (cmd.action) {
+    case VB_MOVE_DIRECTION:                     /* (Gone to a thing: command's move, no stub of its own) */
+    case VB_MOVE_TOWARD:
+    case VB_ENTER:
+    case VB_APPROACH_OBJECT:
+        go_thing ();
+        return 1;
     case VB_THROW_OBJECT:
         if (!cmd.other.x || !cmd.obj.word[0] || !(d = mark (&cmd.other))) {
             return 0;                           /* (Not at a denizen: the world's throw, as before) */
@@ -1526,6 +1543,7 @@ unsigned char s_missiles (void)
     case VB_GATHER_OBJECT:                      /* ("gather the arrows": the world's, each walked over to) */
         w = cmd.obj.word;
         intend_a = strstr (w, "arrow") ? FM_ARROW : strstr (w, "bolt") ? FM_BOLT : strstr (w, "stone") ? FM_SHOT : 0;
+        reach = 6;                              /* (Walked to, each: its arrivals' words short) */
         intend2 (I_GATHER, 0, 0);
         return 1;
     }
@@ -1811,6 +1829,7 @@ void __fastcall__ s_take (const char* name)
     strcpy (taking, name);
     pending[0] = 0;
     if (r == IR_NOT_HERE) {
+        reach = 6;                              /* (Walked over for it: its arrival's words short, E_ARRIVE's) */
         m.kind = I_TAKE;
         m.w1 = HUB->ireq.x;
         m.w2 = HUB->ireq.y;
@@ -1883,12 +1902,14 @@ static unsigned char __fastcall__ chores (unsigned char action)
     case VB_OBSERVE_THROUGH:
     case VB_LISTEN:
     case VB_SMELL:
+    case VB_LEAVE:                              /*   the way out of a room, 2026-11-02; */
     case VB_TRACK:                              /*   the traces read, slice 4.1's: the floor looked at, a track) */
         look_way (action);
         break;
     case VB_OBSERVE_LOCALE:
     case VB_OBSERVE_AROUND:
     case VB_FIND_OBJECT:
+    case VB_WHERE:
         look (0);
         break;
     case VB_META_MAP:
@@ -2059,8 +2080,9 @@ void __fastcall__ s_command (char* l)
         return;
     }
     if ((cmd.obj.word[0] || cmd.n) && (cmd.action == VB_MOVE_TOWARD || cmd.action == VB_MOVE_DIRECTION) &&
-        cmd.dir == 0xFF && !cmd.obj.kind) {     /* (A word alone, or a number, that's no way: "foo", "1") */
-        sayf ("\nI don't know how to %s.", cmd.obj.word[0] ? cmd.obj.word : l);
+        cmd.dir == 0xFF && !cmd.obj.kind && !cmd.how && (cmd.flags & CF_NOVERB)) {   /* (A word alone, or a number, that's no
+                                                **   way: "foo", "1") */
+        unknown (0);
         return;
     }
     if (!d && !ok) {                            /* (Words the game knows, but not a command the grammar has) */
@@ -2115,7 +2137,8 @@ again:
         } else if (cmd.dir != 0xFF) {
             intend (I_GO, cmd.dir);
         } else {
-            tell (T_GO_WHICH_WAY);
+            missiles ();                        /* (Anything else it has seen, or which way: way.c's go_thing,
+                                                **   part 13's, the action a move: no stub of its own, the main RAM's) */
         }
         return;
     case VB_CLIMB:
@@ -2288,7 +2311,12 @@ portal:
         }
         if (d) {
             if (!hold_w[0] || hold_first ()) {  /* (Its thing in hand first, slice 4.1b's) */
-                intend (d & FT_CLOSE ? I_CLOSE : I_ATTACK, d & 0x0F);   /* (Out of reach: closed with first) */
+                if (d & FT_CLOSE) {
+                    reach = 6;                  /* (Closed with first, its arrival's words short) */
+                    intend (I_CLOSE, d & 0x0F);
+                    return;
+                }
+                intend (I_ATTACK, d);           /* (Beside it: d its number alone) */
             }
             return;
         }
@@ -2341,8 +2369,8 @@ static unsigned long seed;                      /* (Its seed: the clock's, as th
 static const char* file = "";                   /* (-c's: the character's file) */
 static const char* rules = "harn";              /* (The ruleset, if none's given: HarnMaster's) */
 
-#pragma code-name (push, "SW7CODE")
-#pragma rodata-name (push, "SW7RODATA")
+#pragma code-name (push, "SW13CODE")           /* (Part 13's since 2026-11-02: part 7's room) */
+#pragma rodata-name (push, "SW13RODATA")
 
 /* A command whose thing is out of reach (the things' IR_NOT_HERE, the puzzle's PZ_FAR: where it is in the hub's ireq,
 ** its words not said): walked over to it first (I_TAKE's walk alone), the command kept and carried out again as the
@@ -2376,6 +2404,11 @@ unsigned char s_reach_go (void)
     return r;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW7CODE")
+#pragma rodata-name (push, "SW7RODATA")
+
 /* A place in the room the character's in (HOUSE.md's going places), by its facing alone: the centre (the middle); a
 ** side, the far one (the other side, the far end, the wall ahead) unless it says which (near, left, right, the way it
 ** lies); a corner ("the far left corner"; unsaid, the nearest).  The square there walked to (I_GOTO, a 1: the nearest
@@ -2390,8 +2423,8 @@ unsigned char __fastcall__ s_place_go (const struct cmd* c)
 
     k = c->obj.kind;
     if (k == OB_ROOM) {                         /* ("The centre of the room": the place, not the room) */
-        k = strstr (w, "corner") ? OB_CORNER : strstr (w, "side") || strstr (w, "end") || strstr (w, "wall") ? OB_SIDE :
-            strstr (w, "cent") || strstr (w, "middle") ? OB_CENTRE : OB_ROOM;
+        k = strstr (w, "corner") ? OB_CORNER : strstr (w, "cent") || strstr (w, "middle") ? OB_CENTRE : OB_SIDE;   /* (Its
+                                                **   far side: "the far end of the room", "cross the room") */
     }
     if (k != OB_CENTRE && k != OB_SIDE && k != OB_CORNER && k != OB_WALL) {
         return 0;
@@ -2400,6 +2433,11 @@ unsigned char __fastcall__ s_place_go (const struct cmd* c)
     if (s->where != W_ROOM || s->dark) {
         if (k == OB_CORNER || k == OB_WALL) {
             return 0;                           /* (A passage's corner, a wall: as ever) */
+        }
+        if (s->dark) {
+            intend_a = pc_face;                 /* (A place it can't see: straight on) */
+            intend2 (I_GO, 0, 0);
+            return 1;
         }
         msg ("You aren't in a room.");
         return 1;
@@ -2443,8 +2481,8 @@ unsigned char __fastcall__ s_place_go (const struct cmd* c)
             b = (ra > 0 ? r1 - rc <= rc - r0 : rc - r0 <= r1 - rc) ? 1 : -1;
         }
     }
-    fc = a == 2 ? fc : !a ? (f0 + f1) / 2 : a * fa > 0 ? f1 : f0;
-    rc = b == 2 ? rc : !b ? (r0 + r1) / 2 : b * ra > 0 ? r1 : r0;
+    fc = a == 2 ? fc : !a ? f0 + (f1 - f0) / 2 : a * fa > 0 ? f1 : f0;   /* (Not (f0 + f1) / 2: the frame's squares near */
+    rc = b == 2 ? rc : !b ? r0 + (r1 - r0) / 2 : b * ra > 0 ? r1 : r0;   /*   $8000, a sum past 16 bits) */
     pm.w1 = fy ? rc : fc;
     pm.w2 = fy ? fc : rc;
     if (pm.w1 == px && pm.w2 == py) {

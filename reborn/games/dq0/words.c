@@ -121,8 +121,8 @@ static void __fastcall__ doors (unsigned char mouths)
             if ((S->door[i].rel & 7) == d && is (i, mouths)) {
                 if (!mouths) {
                     add (S->door[i].state == DOORWAY ? " (a doorway)" : S->door[i].state & PS_WRECKED ?
-                         " (broken down)" : S->door[i].state & PS_OPEN_ ? " (open)" :
-                         " (closed)");
+                         " (broken down)" : S->door[i].state & PS_OPEN_ ? " (open)" : S->door[i].state & PS_BARRED_ ?
+                         " (closed, barred)" : S->door[i].state & PS_LOCKED_ ? " (closed, locked)" : " (closed)");
                 }
                 if (S->door[i].dz >= 3 || S->door[i].dz <= -3) {
                     add (",");
@@ -157,7 +157,8 @@ static void portals (void)
             add (S->door[i].state & PS_WRECKED ? " (its bars forced apart)" : S->door[i].state & PS_OPEN_ ? " (raised)" :
                  " (down)");
         } else if (k == PK_WINDOW && (p & PP_SHUTTERS)) {
-            add (S->door[i].state & PS_OPEN_ ? " (its shutters open)" : " (its shutters closed)");
+            add (S->door[i].state & PS_OPEN_ ? " (its shutters open)" : S->door[i].state & PS_BARRED_ ?
+                 " (its shutters closed, barred)" : " (its shutters closed)");
         }
         height (S->door[i].dz);
         add (".");
@@ -339,10 +340,6 @@ static void room (void)
     unsigned char i;
     char* art;
 
-    if (S->dark) {
-        add ("It is dark. You can see nothing, but you feel the floor of a room about you.");
-        return;
-    }
     if (S->size >= S_VAST) {                    /* (A great cavern: where in it untold, its walls beyond the light or
                                                 **   not, slice 4.10's) */
         add (S->size == S_VAST ? "You are somewhere in a vast cavern, its walls beyond your light." :
@@ -420,7 +417,6 @@ static void passage (void)
     for (i = n = 0; i < S->ndoors; ++i) {     /* (The doors beside it, but behind it) */
         n += !REL_BEHIND (S->door[i].rel);
     }
-    add (S->dark ? "It is dark; you feel your way. " : "");
     add (S->nways <= 1 && n ? "The passage comes to a door; it goes back " : S->nways <= 1 ?
          "The passage ends here; it goes back " : S->nways == 2 ? "You are in a passage. It goes " :
          "The passage forks here. It goes ");
@@ -469,11 +465,22 @@ void o_words (void)
         }
         return;
     }
+    if (sight_close & 32) {
+        felt_words (FW_NEW);                    /* (A walk over for a command just done: only what's new: overlay 17's) */
+        return;
+    }
+    if (sight_close & 32) {
+        felt_words (FW_NEW);                    /* (A walk over for a command just done: only what's new: overlay 17's) */
+        return;
+    }
     if (sight_close & 8) {
         focus_words ();                         /* (A look one way's: what it sees that way, overlay 11's) */
         return;
     }
-    if (S->where == W_ROOM) {
+    if (S->dark) {
+        felt_words (FW_TOUCH);                  /* (In the dark, what its hands and feet can tell alone: overlay 17's,
+                                                **   HOUSE.md's walking in the dark, 2026-11-02) */
+    } else if (S->where == W_ROOM) {
         room ();
     } else {
         passage ();

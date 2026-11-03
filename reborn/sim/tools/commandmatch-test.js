@@ -39,7 +39,7 @@ const ok = block('cmd_ok').split(',').map(s => s.trim()).filter(Boolean).map(Num
 
 function sim65() {
   const bin = path.join(OUT, 'cmdtest.bin');
-  run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-O', '-I', OUT, '-I', HERE, '-o', bin,
+  run(tool('cl65'), ['--cpu', '65C02', '-t', 'sim65c02', '-O', '-D', 'CMD_NO_RESULTS', '-I', OUT, '-I', HERE, '-o', bin,
     path.join(HERE, 'cmdtest.c'), path.join(GAME, 'cmdmatch.s'), path.join(HERE, 'cmdmatch_c.s')], { cwd: OUT, stdio: ['ignore', 'pipe', 'pipe'] });   // (Its warnings: the test data's unused arrays)
   const out = run(tool('sim65'), ['--cpu', '65C02', '-x', '4000000000', bin], { cwd: OUT }).split(/\r?\n/);
   let init = 0, worlds = [], bad = 0;

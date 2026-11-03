@@ -760,6 +760,56 @@ climb's test to hold on).
   side"), the near side, the left or right side, a corner ("the far left corner"), a wall, a feature or a thing seen
   ("the door ahead to my left", the pillar, the body).  The way goes round what's in it through squares the
   character knows; one it doesn't know of is found as it's met.  The small moves stay for fine work.
+- **Straight walks** *(the user's, 2026-11-02: DECISIONS.md; as built, for review)*: every way word said alone
+  (forward, back, left, right, the eight of the compass: one rule for all, the user's) walks straight from a room's
+  floor along that heading until something stops it, and says what: "You come to the wall.", "You come to a closed
+  door.", a portcullis that's down, the edge of a pit, a trap it knows of, a ledge's words, a denizen in the way.  An
+  open door, a doorway or a passage's mouth straight ahead: on through it.  A shut door it has handled (opened or shut
+  before): opened as it goes, as a door was by a way word till then.  Refused without moving only with what stops it
+  directly in front ("The door is shut: open it first.", "You can't go that way." at a wall), turned to face it.  A
+  door off to the side is never walked to by a way word: `go through the door`, `go to the door`, `open the door`,
+  `leave` are the way to it.  `go through the door` at a shut door it hasn't handled walks up to it first, and
+  says so.  Passages keep their forks and bends; a journey's legs (the door they mean) keep their path.  A walk of a
+  square or two isn't "You cross the room."  In the dark it goes the same way, its hands telling what it meets.
+- **Going to anything** *(the user's, 2026-11-02; as built, for review)*: approach, go to, walk to, walk over to, head
+  for, move to, go near, go beside, and their kin, for a thing, a fixture, a denizen (up to it, no blow; the walk
+  follows it as it moves) or a body: anything it sees, or remembers seeing in the room it's in though that's out of
+  the light now (a thing it has looked at, on a square it knows).  Of several of the name, asked which ("the closest"
+  chooses).  It stops beside it (facing it) by the ordinary walk: its stops, engagement and traps as ever.  Within
+  reach already, told where it is.  "You haven't seen a pot here." only for what it hasn't.  A denizen's zone doesn't
+  stop a walk up to the one gone to (a close-in's); others' do.
+- **Crossing** *(the user's, 2026-11-02)*: "cross the room", "go across the hall", "cross the floor", "cross the
+  kitchen": the far side by its facing (the going places' far side); in the dark, straight on, as any place in a room
+  it can't see is.
+- **Leaving a room** *(2026-11-02, for review)*: "leave", "exit", "leave the room": by the door or the passage's mouth
+  it sees, the one ahead, or asked which ("Which exit: 1. the door ... 2. the passage ..."); "exit north": a way word.
+- **Inspecting walks over first** *(the user's, 2026-11-02; as built, for review)*: a closer look at a thing (examine,
+  check), any aspect of it (assess, judge, appraise, heft, its condition, its lock, its traps), looking in it and
+  searching it, out of reach: walked over to first, then done; things remembered in the room too, as is taking one up
+  or holding it.  A plain "look at" stays a look from where it stands, as far as it can see (too far to make out, its
+  size alone).  Out of the light, what's done beside a remembered thing goes by touch, no worse (a doubt: a close look
+  in the dark tells as much as in the light).
+- **What can be named** *(the user's, 2026-11-02; as built, for review)*: one rule for "which door?", go to, inspect and
+  the rest: what the character sees now, or has seen and remembers. Doors, windows, portcullises, passages' mouths and
+  the stairs and shafts of the room it's in, on squares it knows (the senses' record's KNOWN_REL, after those it sees;
+  in a passage, doors seen within five squares), things in this room it has looked at (the store's pick), and a denizen
+  only where it was last seen as a command was given, in this room.  It walks over and sees it properly as its light
+  reaches it.  What it has never perceived: "You haven't seen a door here."  The look still tells only what it sees.
+- **The way a thing lies** *(the user's, 2026-11-02; as built, for review)*: "the door on the left", "the door ahead",
+  "behind me on my right" mean what the look's words mean, by the facing at that moment: its bearing in the look's
+  eighths.  None exactly so, any on that side of the character (half the room; a door along the left wall far ahead is
+  "on the left"), of several the question or the one directly ahead; none on that side, "You haven't seen a door that
+  way."  "A door" is a door before a portcullis (the look's words), a portcullis only if it sees no door.
+- **A walk over for a command** *(the user's, 2026-11-02; as built, for review)*: take, hold, wear, put, light, examine
+  and the aspects, a blow's close-in, gathering: the walk's own words ("You go over to it."), what's new since the
+  command began (a thing just come into the light, a denizen new in sight), a beat, then the command's outcome.  No look
+  on arrival, no "at your feet" for what it came for.  Stopped short (engaged, a trap), why, and the command dropped.  A
+  plain "go to the pot" keeps its look.
+- **A door's state as it's plain** *(the user's, 2026-11-02; as built, for review)*: the look, "which door?" and a look
+  one way say "(closed, barred)" with the bar on the character's side, once it can see the door; a window's shutters
+  the same.  A bar on the far side, or a lock, isn't seen: told as an attempt finds it, and remembered ("(closed,
+  locked)": PP_FOUND, kept with the door's state).  "unbar the door", "unbolt", "lift the bar", "take the bar off",
+  "remove the bar": its bar lifted out, the door left shut; "It isn't barred." with none; the far side's refused.
 - **Out of reach, walked to first** (the user's, 2026-10-20): an action that needs its thing within reach (taking it
   up, holding it, wearing it, putting it in or on something, opening a chest; a blow) walks over to it first, a long
   task like any walk, then does it; a blow at a denizen out of reach closes with it first (the walk ends beside it,
@@ -1167,6 +1217,13 @@ searching in the dark): no walk turned toward an opening the character can't see
 anything faster said outright and dangerous; a search in the dark by touch, nearby; the search's forms.  The numbers
 are drafts, the user's as they are for now (2026-10-22).
 
+- **Feeling your way tells only what the hands and feet could tell** *(the user's, 2026-11-02: DECISIONS.md; as built, for
+  review)*: every look in the dark, and every dark walk's end: "It is dark. You feel a wall ahead and to your left;
+  nothing to your right."  Touch within arm's reach, ahead and to each side (a wall, a door, iron bars); "nothing" only
+  means nothing within reach, never a way.  Underfoot what its feet have felt ("The way rises."), as it walks.  No name
+  for the place, no ways told, no slope ahead: "The way turns left.", not "The passage turns left."; a straight stretch
+  quiet but for "You feel your way on."  Where it has been before and hasn't forgotten, memory adds: "This should be the
+  kitchen.", "You've been along this passage."  A blind character the same.
 - **In the dark** is where the character sees nothing by: its own square unseen (no light of its own, no room's own
   light, no lamp lying near lighting it), or blind (the referee's summary, C_BLINDED: the one place a blindness, however
   it comes, will take it).  (dq0w.c's dark.)

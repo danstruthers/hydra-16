@@ -59,9 +59,10 @@ static unsigned char cd[NASK] = { 0 };          /*   and whether it's a denizen 
 static unsigned char nc = 0;
 static char all[NASK][NAMELEN] = { { 0 } };     /* "take all": the things still to take up, */
 static unsigned char nall = 0, iall = 0;        /*   how many, the next */
-static char dens[SEE_DENS][12] = { { 0 } };     /* The denizens seen at the last command (a new one: the target let
-                                                **   go) */
+static struct sden dens[SEE_DENS] = { { 0 } };  /* The denizens last seen at a command (a new one: the target let go;
+                                                **   remembered: "go to the rat", gone from sight, where it was), */
 static unsigned char ndens = 0;
+static unsigned drx = 0, dry = 0;               /*   the room's (its first square; a passage's none) */
 
 /* Squares from the character to square (x, y) (the more of the two ways) */
 static unsigned char __fastcall__ apart (unsigned x, unsigned y)
@@ -424,6 +425,8 @@ unsigned char __fastcall__ o_answer (unsigned char chosen)
 unsigned char o_resolve (void)
 {
     struct sight* s = &sight_copy;
+    unsigned before[SEE_ITEMS + SEE_DENS];      /* (UIREC's before: on the C stack, the hub's bank in the window as it's
+                                                **   copied) */
     unsigned char k, n, a = cmd.action;
 
     if (cmd.flags & CF_ASKED) {
@@ -439,14 +442,25 @@ unsigned char o_resolve (void)
         target.word[0] = 0;
     }
     for (k = 0; k < s->ndens; ++k) {            /* (A denizen come into sight since: the target let go) */
-        for (n = 0; n < ndens && strcmp (dens[n], s->den[k].name); ++n) {
+        for (n = 0; n < ndens && strcmp (dens[n].name, s->den[k].name); ++n) {
         }
         if (n == ndens) {
             target.word[0] = 0;
         }
     }
-    for (ndens = 0; ndens < s->ndens; ++ndens) {
-        strcpy (dens[ndens], s->den[ndens].name);
+    for (k = 0; k < SEE_ITEMS; ++k) {           /* (What it sees as the command begins: a walk over for it tells only
+                                                **   what's new after it, way.c's) */
+        before[k] = k < s->nitems ? s->item[k].n : 0;
+    }
+    for (k = 0; k < SEE_DENS; ++k) {
+        before[SEE_ITEMS + k] = k < s->ndens ? *(unsigned*) s->den[k].name : 0;
+    }
+    hub_mem (UI_BANK, UIREC->before, before, sizeof before);
+    if ((n = s->ndens) != 0) {
+        ndens = n;
+        memcpy (dens, s->den, sizeof dens);
+        drx = s->rx;
+        dry = s->ry;
     }
     if (cmd.obj.sel == SL_IT && !cmd.obj.word[0] && !cmd.obj.kind) {   /* ("it": the last thing named) */
         if (!last.word[0] && !last.kind) {
@@ -494,6 +508,18 @@ unsigned char o_resolve (void)
         goto named;
     }
     nall = 0;
+    if (a == VB_UNEQUIP_OBJECT && !strcmp (cmd.obj.word, "bar")) {
+        cmd.action = a = VB_BAR_OBJECT;         /* ("Take the bar off", "remove the bar": unbarred, its lifting out) */
+        cmd.aux = PA_LIFT;
+        cmd.obj.kind = OB_DOOR;
+    }
+    if ((unsigned char) (a - VB_MOVE_DIRECTION) < 2 && !cmd.obj.kind) {
+        if (cmd.how == HOW_ACROSS) {
+            cmd.obj.kind = OB_ROOM;             /* ("Cross the kitchen": the room it's in, its far side) */
+        } else if (cmd.obj.word[0]) {
+            cmd.dir = 0xFF;                     /* ("Go up to the pot", "go back to the pot": to it) */
+        }
+    }
     if (cmd.flags & CF_UNSAID) {                /* (Its thing unsaid: its verb's) */
         switch (cmd.dflt) {
         case DF_LAST:
@@ -538,8 +564,20 @@ unsigned char o_resolve (void)
             iall = 1;
             strcpy (cmd.obj.word, all[0]);
             cmd.obj.sel = SL_THE;               /* (Each by its name in turn: not all of a name at once) */
-        } else if (!find_thing (&cmd.obj, a == VB_ATTACK_OBJECT ? 2 : a == VB_THROW_OBJECT ? 1 : 3, 0, 0)) {
+        } else if (!find_thing (&cmd.obj, a == VB_ATTACK_OBJECT ? 2 : a == VB_THROW_OBJECT ? 1 : 3, 0,
+            (unsigned char) (a - VB_MOVE_DIRECTION) < 2 || a == VB_APPROACH_OBJECT)) {   /* (Gone to: which, asked) */
             return RV_DONE;
+        }
+        if (!cmd.obj.x && !nc && ((unsigned char) (a - VB_MOVE_DIRECTION) < 2 || a == VB_APPROACH_OBJECT) &&
+            drx == s->rx && dry == s->ry && cmd.obj.word[0]) {
+            for (k = 0; k < ndens; ++k) {       /* (Gone from sight: where it was last seen, in this room, if not
+                                                **   beside it) */
+                if (has (dens[k].name, cmd.obj.word) && apart (dens[k].x, dens[k].y) > 1) {
+                    cmd.obj.x = dens[k].x;
+                    cmd.obj.y = dens[k].y;
+                    break;
+                }
+            }
         }
     }
     if (cmd.other.word[0] || cmd.other.sel) {   /* (The other: in it, from it, at it ...) */

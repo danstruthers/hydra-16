@@ -43,6 +43,12 @@ void __fastcall__ o_climb_words (unsigned char how, unsigned char feet)
     switch (how) {
     case CW_RISES:
     case CW_FALLS:
+        if (feet > LEDGE_MET) {                 /* (What a straight walk came to, E_LEDGE's: dq0w.c's across) */
+            static const char met[][24] = { "the wall", "a closed door", "a portcullis, down", "a drop", "a rise",
+                "the edge of a pit", "a trap you know of" };
+            sayf ("\nYou come to %s.", met[feet - LEDGE_MET - 1]);
+            return;
+        }
         sayf (how == CW_RISES ? "\nThe floor rises %u feet at a ledge ahead: climb it (u) to go on." :
               "\nThe floor falls %u feet at a ledge ahead: climb down it (d) to go on.", feet);
         return;

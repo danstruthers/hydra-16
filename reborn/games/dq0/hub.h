@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     38                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     39                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -69,7 +69,7 @@
                                                 **   tunnellers, I_KIT's KT_DIG, DG_*, dig_t, DE_DIG, DE_DUG, AG_PICK,
                                                 **   AG_SPADE, DO_DIG; 37, the market's: the sway's word2 its coins
                                                 **   (SW_COIN ...), SW_BUY ... SW_ENTERTAIN, OR_OPEN ..., SR_WONT ...;
-                                                **   38, a room searched whole: SF_ROOM, SF_TRAPS, WB_SEARCH, RSW_*, RC_*,
+                                                **   39, a room searched whole: SF_ROOM, SF_TRAPS, WB_SEARCH, RSW_*, RC_*,
                                                 **   IOS_*) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
@@ -779,8 +779,11 @@ enum { RC_PLAIN, RC_HEAP, RC_HOLDS, RC_BODY };  /* (What a thing is, to a search
 #define IOS_THING       0x200                   /* (IO_SEARCH's to, a room searched whole's, | SF_TOUCH: a thing's item, what
                                                 **   came of going through it, its things found; */
 #define IOS_FLOOR       0x100                   /*   the things hidden about square x, y) */
-enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT };   /* (What stops a walk in the dark, met: the
-                                                **   world's ahead) */
+enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT, FA_TRAP };   /* (What stops a walk, met: the world's
+                                                **   ahead, in the dark, or a straight walk's end; FA_TRAP, one it knows
+                                                **   of, across's) */
+#define LEDGE_MET       120                     /* (E_LEDGE's w1, as a signed byte, past it: what a straight walk came
+                                                **   to, FA_* (2026-11-02); a ledge's feet at most it) */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
 enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD, K_HELD, K_SLID };    /* E_CLIMB's how: begun, on, slipped
                                                 **   back, fallen, up, down; jumped down (a ledge, a shaft); no hold
@@ -1499,6 +1502,9 @@ struct uirec {
                                                 **   squares' layers) */
     char            things_text[400];           /* The things' words for the UI (what's carried: ireq's reply), and
                                                 **   the UI's to the things (dq0 -k's: the things more) */
+    unsigned        before[SEE_ITEMS + SEE_DENS];   /* What it saw as the command began (resolve.c's): the things' numbers,
+                                                **   the denizens' first letters; a walk over for it tells only what's
+                                                **   new (way.c's, 2026-11-02) */
     struct cmd      kept;                       /* A command whose thing was out of reach, kept while the character
                                                 **   walks over to it (the UI's reach_go) */
     struct tread    tread;                      /* The traces read (I_TRACE's reply: the world's), */

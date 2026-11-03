@@ -117,7 +117,7 @@ void __fastcall__ map (const char* rules);      /* Part 3: the map of what it's 
 enum { OB_NONE, OB_DOOR, OB_PASSAGE, OB_STAIRS, OB_LADDER, OB_SHAFT, OB_LEDGE, OB_WAY_OUT, OB_WALL, OB_WINDOW, OB_TRAP,
     OB_PORTC, OB_ROOM, OB_CORNER, OB_PILLAR, OB_CENTRE, OB_SIDE };  /* (OB_ROOM: the room, its ceiling: looked at closely; a corner, a
                                                 **   pillar: looked round, "look around the corner") */
-enum { HOW_ANY, HOW_TO, HOW_THROUGH };
+enum { HOW_ANY, HOW_TO, HOW_THROUGH, HOW_ACROSS };
 enum { PR_NONE, PR_IN, PR_ON, PR_FROM, PR_WITH, PR_AT, PR_TO };    /* (The other thing: in it, on it, from it, with
                                                 **   it, at it, to it) */
 #define GO_UP       8                           /* (A direction: up, down; else a heading, H_N ...) */
@@ -170,6 +170,9 @@ extern unsigned char strike;                    /* (main.c's) What the character
                                                 **   with each blow (I_ATTACK's, I_PORTAL's x[1]) */
 /* ---- choose.c (overlay 7): the thing meant, of those the character perceives; of several, which, asked */
 
+#define LOOK_NEW    32                          /* (look's: only what's new since the command began) */
+#define FW_NEW      0xFFFF                      /* (felt_words': that, task.c's) */
+#define FW_TOUCH    0xFFFE                      /* (felt_words': what its hands find, in the dark, the look's: task.c's) */
 #define PICK_TELL   0x80                        /* (pick's obj |: "You see no door here", if there's none) */
 #define PICK_ANY    0x40                        /* (Any one: none asked) */
 unsigned char __fastcall__ pick (unsigned char obj, unsigned char orel);   /* The thing of kind obj (OB_*), lying
@@ -349,7 +352,7 @@ extern unsigned long heard_at;                  /* (main.c's: when a sound was l
 
 void __fastcall__ setbank (unsigned char b);
 unsigned char getbank (void);
-extern unsigned char ovbank[17];
+extern unsigned char ovbank[18];
 unsigned char early (void);                     /* Part 12: before a command's things are looked for (in shock, refused:
                                                 **   2; first aid's, 1; else 0) */
 void tend (void);                               /* Part 12: first aid (VB_TEND) */
