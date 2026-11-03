@@ -64,7 +64,8 @@ void __fastcall__ s_kept_wait (unsigned char n)
         if (real ? (unsigned) (hy_ticks () - t1) > 10 * HY_TICK_HZ : (unsigned) (hy_ticks () - t0) > 30 * HY_TICK_HZ) {
             break;
         }
-        hub_sleep (1);
+        hub_sleep (4);                          /* (On the doorbell, its intents ringing it: not a tick's look each
+                                                **   time, the denizens' time to decide them: the start's, 2026-11-03) */
         if (DEN_INTENTS ()) {
             den_intents ();
         }

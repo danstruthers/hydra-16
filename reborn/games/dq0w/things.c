@@ -814,8 +814,8 @@ static void __fastcall__ rs_tell (unsigned w)
 static void rs_cut (void)
 {
     if (rs_pack) {
-        rs_what = item_kind (rs_pack) | (item_at (rs_pack)->where == IW_SQUARE ? 0x80 : 0);
-        rs_tell (TE_PACKED);
+        rs_what = item_kind (rs_pack);
+        rs_tell (item_at (rs_pack)->where == IW_SQUARE ? TE_PACKED | 1 << 8 : TE_PACKED);
     }
     rs_pack = 0;
     rs_after_on = rs_do = rs_paid = rs_live = rs_keep = rs_using = rs_redo = 0;
@@ -1784,7 +1784,8 @@ void s_chart_now (void)
     }
     i = map ? item_at (map)->id : 0;
     hub_map (0);
-    HUB->pc_chart = f ? CH_DRAW : pk << 1;
+    HUB->pc_chart = f ? CH_DRAW : pk ? CH_PACKED : 0;
+    HUB->pc_chartk = f ? 0 : pk;
     HUB->pc_map = i;
 }
 
@@ -5216,13 +5217,13 @@ void s_held_kinds (void)
     hub_map (0);
 }
 
-/* The hand that holds the thing that strikes (s, the hub's pc_strike: SK_THING | its kind), for the hub's pc_shand: the
+/* The hand that holds the thing that strikes (s, the hub's pc_strike: SK_OF its kind), for the hub's pc_shand: the
 ** main hand's, if it holds one of that kind, else the other's; 0 none (a part of it, or the best it holds: the
 ** referee's) */
 unsigned char __fastcall__ s_shand_of (unsigned char s)
 {
     s_held_kinds ();
-    return !(s & SK_THING) ? 0 : held_k[0] == (s & 0x7F) ? held_h[0] : held_k[1] == (s & 0x7F) ? held_h[1] : 0;
+    return !SK_IS_KIND (s) ? 0 : held_k[0] == SK_KIND (s) ? held_h[0] : held_k[1] == SK_KIND (s) ? held_h[1] : 0;
 }
 
 /* The character's hands as they are, but for thing n (n held: its own hand, hcur) */

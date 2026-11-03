@@ -356,8 +356,7 @@ unsigned char s_wield (void)
     USLOT.x[1] = (unsigned char) HUB->ireq.y;
     ask_b (RS_WIELD, 0, t)->state = REQ_FREE;
     if ((k = USLOT.result) != 0) {              /* (What's in its hands strikes: held already, nothing to take) */
-        strike = USLOT.x[k - 1] < KI_HIGH ? SK_THING | USLOT.x[k - 1] : SK_BEST;   /* (A belonging no striker: its
-                                                **   kind past seven bits, items.h's KI_HIGH) */
+        strike = SK_OF (USLOT.x[k - 1]);
         k = 1;
     } else if (USLOT.text[0]) {                 /* (Its hands empty, a better thing carried: asked about) */
         HUB->ireq.to = 0;

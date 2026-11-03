@@ -121,9 +121,9 @@ void __fastcall__ s_den_take (const struct msg* m)
         }
         bd.ready += 20;                         /* (Two seconds: stooped, taken up) */
         if (c == AP_WEAPON) {
-            if (i != bd.dropped || !bd.arm) {   /* (A weapon: in its hand as its own let fall is */
-                bd.dropped = i;                 /*   taken up again, part 60's den_took; that one, */
-                bd.arm = k | 0x80;              /*   as it is) */
+            if (i != (bd.dropped & ~DR_OWN) || !bd.arm) {   /* (A weapon: in its hand as its own let fall is */
+                bd.dropped = i | DR_OWN;        /*   taken up again, part 60's den_took; that one, */
+                bd.arm = k;                     /*   as it is) */
             }
             den_took ();
         } else {

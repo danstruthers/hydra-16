@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     42                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     43                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -466,7 +466,7 @@ enum {
 };
 #define AIM_SHOT        0x40                    /* (I_ATTACK's b, | the aim: a shot or a throw, not a blow (slice
                                                 **   4.7's: the world's missiles, the referee's RS_MISSILE), the
-                                                **   UI's with x[1] SK_THING | the launcher's kind or the thing
+                                                **   UI's with x[1] SK_OF the launcher's kind or the thing
                                                 **   thrown's; a denizen's, its mind's, with what it carries) */
 enum { SH_OK, SH_NONE, SH_SPENT, SH_RANGE, SH_LINE, SH_WAY, SH_GONE, SH_HANDS, SH_CANT };   /* (E_TASK TE_NO_SHOT's b:
                                                 **   why no shot: nothing to shoot with, no missile for it, out of
@@ -630,10 +630,14 @@ enum { NZ_WORK, NZ_BLOW };                      /* E_NOISE's b: work's (a dig's,
 enum { SK_BEST, SK_PUNCH, SK_KICK, SK_HEAD };   /* A blow struck with (the hub's pc_strike): the best it holds (the
                                                 **   best weapon in its hands, the referee's; else the fists: the UI's
                                                 **   with nothing named, its hands empty), a fist, a foot, the head */
-#define SK_THING        0x80                    /* (| a kind, the catalogue's: the thing named, or the one in its hands
-                                                **   the UI chose, and no other: a weapon of the referee's as itself,
-                                                **   anything else as the referee treats it; a soft thing one attempt,
-                                                **   no harm, the world's: HOUSE.md's fights and portals, 2026-10-22) */
+#define SK_OF(k)        ((unsigned char) ((k) + SK_HEAD))    /* (A kind, the catalogue's, as a striker: the thing named,
+                                                **   or the one in its hands the UI chose, and no other: a weapon of the
+                                                **   referee's as itself, anything else as the referee treats it; a
+                                                **   soft thing one attempt, no harm, the world's: HOUSE.md's fights and
+                                                **   portals, 2026-10-22.  Past the parts of it, so any kind fits,
+                                                **   2026-11-03: not a flag and seven bits) */
+#define SK_IS_KIND(s)   ((unsigned char) (s) > SK_HEAD)
+#define SK_KIND(s)      ((unsigned char) ((s) - SK_HEAD))
 #define SK_WITH         0x40                    /* (The long task's what, a battering's: its striker the thing named,
                                                 **   the hub's pc_strike's kind, not a part of it times 16) */
 #define FO_GONE         0xFF
@@ -712,9 +716,10 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
                                                 **   engaged, 1 nothing near to flee, 2 no way back open); a light
                                                 **   the character carries burning low, its last ten minutes (b its
                                                 **   kind; slice 4.1's: told, no question); a light gone out, its
-                                                **   fuel burnt (b its kind, | 0x80 one it sees lying there; its own,
-                                                **   its only light, its long task stopped hard with it, w's high
-                                                **   byte the task's kind: a climb's and a fight's go on); robbed as
+                                                **   fuel burnt (b its kind; w's high byte: TO_SEEN, one it sees lying
+                                                **   there, TO_ANOTHER, another of its name burning still; its own,
+                                                **   its only light, its long task stopped hard with it, | the task's
+                                                **   kind: a climb's and a fight's go on); robbed as
                                                 **   it lay helpless (I_ROB's: b the robber plus 1; told only if
                                                 **   something was taken); a timed work begun, a battering (HOUSE.md's
                                                 **   long tasks: its first words at once, its outcome as its time's
@@ -726,6 +731,8 @@ enum { TE_STOPPED, TE_HIT, TE_NEAR, TE_ASK_SEEN, TE_ASK_TIRED, TE_ON, TE_NOT, TE
 **   (the referee's: Drawing, by the first map drawn, slice 4.2's;
 **   told, no question) */
 #define TE_STILL        0x80
+#define TO_ANOTHER      0x80                    /* (TE_OUT's w's high byte: another of its name lit still, */
+#define TO_SEEN         0x40                    /*   one it sees lying there; the task's kind below them) */
 #define TE_QUIET        0x40
 enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS,     /* E_BEAT's: a quiet stretch
                                                 **   (HOUSE.md: every 30 feet), the way turns, a side passage, a door
@@ -1029,7 +1036,9 @@ struct actor {
 #define BM_NOT_UP       0x80                    /* (Its move's: down, a failed try to rise told: not again till it
                                                 **   rises, falls or is wounded, the world's wfight.c, 2026-11-02) */
     unsigned char   arm;                        /* Its weapon let fall, its kind (0 none), */
-    unsigned        dropped;                    /*   and where it lies (an item: to take up again) */
+    unsigned        dropped;                    /*   and where it lies (an item: to take up again; | DR_OWN, its own,
+                                                **   the outfits' gear, not a thing made as it fell) */
+#define DR_OWN          0x8000
     unsigned        x, y;                       /* (These, its doing and its name as struct sight's den: copied whole) */
     unsigned char   doing;                      /* What it's doing (DO_*: watching, coming, keeping off: it senses the
                                                 **   character) */
@@ -1266,7 +1275,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   pc_aim;                     /* Its aim (Z_*) */
     unsigned char   pc_stance;                  /* (The world's: the UI's request, WQ_SET) */
     unsigned char   pc_strike;                  /* What it strikes with (SK_*: the parser's, as it's told: the world's,
-                                                **   from the blow's intent, I_ATTACK's, I_PORTAL's x[1]; SK_THING | a
+                                                **   from the blow's intent, I_ATTACK's, I_PORTAL's x[1]; SK_OF a
                                                 **   kind, a thing; fighting back unbidden, what it holds: RS_WIELD's) */
     unsigned char   pc_shand;                   /*   and the hand that holds it (items.h's IH_*: the world's, the blow's
                                                 **   x[2] if it's said, else its hand that holds one of that kind, the
@@ -1351,6 +1360,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     volatile unsigned char ui_cmd;              /* The UI's: a line taken and its command in hand (its words not yet
                                                 **   all out): the senses' look gives way to it a while (dq0prompt:
                                                 **   the UI answering at once, the world's answers its) */
+    unsigned char   starting;                   /* The game's still starting (the UI's, till the world's first look):
+                                                **   nothing yet to hear, the sound's naps the longer: the start's
+                                                **   time, 2026-11-03 */
     volatile unsigned char ui_giving;           /* The UI's: a line's command being given, its intents not all sent
                                                 **   (from the line taken till its command's done: a throw's taking
                                                 **   in hand, then the throw).  At the turns pace the world gives no
@@ -1393,6 +1405,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** (s_light_now's): what it can draw with, and the map it carries (the senses draw on it, mapping as it goes; the
     ** maker shows its squares drawn) */
     unsigned char   pc_chart;                   /* CH_* */
+    unsigned char   pc_chartk;                  /* (CH_PACKED's: the kind they're in) */
     unsigned        pc_map;                     /*   and its map's item's id (the first map it carries; 0 none), */
     signed char     pc_drawn;                   /*   and how true it's drawing it, mapping as it goes on paper: the
                                                 **   referee's grade (rs.h's G_*: P_DRAW's, asked as it comes into a
@@ -1488,7 +1501,7 @@ enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind
                                                 **   by their keys: a sheet (paper, parchment) or its map, a pencil or
                                                 **   charcoal or a quill and ink, and a hand free; HOUSE.md's the map
                                                 **   kept) */
-#define CH_PACKED       0xFE                    /* (Or, not handy, what they're in: its kind times 2, the UI's to tell
+#define CH_PACKED       0x02                    /* (Or, not handy, in something: its kind pc_chartk, the UI's to tell
                                                 **   once, mapping as it goes: HOUSE.md's handy tools, 2026-10-26) */
 #define SN_SEEN         0x01                    /* (dsense's res: the character seen, */
 #define SN_HEARD        0x02                    /*   heard, */
@@ -1632,6 +1645,7 @@ struct wsave {
 **   own hub.pc_lamp world
 **   own hub.pc_fuel world                                      (Its light's minutes left: slice 4.1's)
 **   own hub.pc_left world
+**   own hub.pc_chartk world                                    (What the things to draw with are in)
 **   own hub.pc_chart world                                     (Its map making, by what it carries: slice 4.2's)
 **   own hub.pc_map world
 **   own hub.pc_drawn world
@@ -1707,6 +1721,7 @@ struct wsave {
 **   own hub.den_go world                                       (The denizens' turn: the turns pace's)
 **   own hub.dsense senses +denizens                            (An actor's senses: the denizens' request)
 **   own hub.ui_cmd ui                                          (A command in hand: the look and the minds give way)
+**   own hub.starting ui +world                                 (The game's start: the sound naps)
 **   own hub.ui_giving ui                                       (A command being given: the turns pace waits)
 **   own hub.vsaved world                                       (The region files' versions: the world's, as it
 **   own hub.vbase world                                        (begins and keeps a game)

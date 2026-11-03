@@ -25,12 +25,12 @@ struct material {
 };
 
 /* A kind of thing (the catalogue's: a stand-in for the theme's data), in rs.h's units */
-#define NKINDS          146                     /* (In a bank of their own, the hub's KIND_BANK: 146 x 37
-                                                **   bytes; a kind's number kept in seven bits in places, a thing struck
-                                                **   with's, a light's: rs.h's SK_THING, E_TASK's; so the kinds from 128
-                                                **   on, past the theme's (theme.h's KI_THEME, 120 to 127), are none of
-                                                **   those: belongings and valuables, never lit, never a striker, KI_HIGH
-                                                **   on: 2026-10-27, the denizens' belongings) */
+#define NKINDS          206                     /* (In a bank of their own, the hub's KIND_BANK: 206 x 37 bytes, their
+                                                **   words after them, the outfits' list at its top, outfit.h's: room
+                                                **   for no more; 2026-11-03, 150 of them used.  A kind's number a whole
+                                                **   byte everywhere (the striker's rs.h's SK_OF, a long task's what's top
+                                                **   bit the UI's what_hi, an actor's arm, a light's and a pack's
+                                                **   E_TASK): 252 at most by SK_OF, 255 by the records' byte) */
 struct kind {
     char            name[14];                   /* "torch", "backpack" ... */
     unsigned char   flags;                      /* K_* */
@@ -128,8 +128,7 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_CROWBAR, KI_BANDAGES, KI_LETTER, KI_RING, KI_GRAPPLE, KI_HAMMER, KI_HERBS, KI_VIAL,   /*   tools and
                                                 **   belongings */
     KI_OWN_END,                                 /* (The theme's eight next: theme.h's KI_THEME, 120) */
-    KI_HIGH = 128,                              /* (The kinds past the theme's, from 128: never lit nor struck with,
-                                                **   NKINDS's) */
+    KI_HIGH = 128,                              /* (The kinds past the theme's, from 128) */
     KI_FURS = KI_HIGH, KI_BLANKET, KI_CASK,     /* The denizens' belongings (2026-10-27: a bed's, a store's) */
     KI_CROWNS, KI_BROOCH, KI_NECKLACE, KI_PENDANT, KI_GOBLET, KI_GEM, KI_TALISMAN, KI_DICE,  /*   and valuables (a
                                                 **   jewel's or a plate's worth its kind's for silver: HOUSE.md's worth
@@ -143,6 +142,9 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_ANTIDOTE, KI_REMEDY,                     /* (The remedies, 2026-11-02: an antidote, a theriac against poisons
                                                 **   and venoms; a remedy, a physician's draught against a disease;
                                                 **   drunk, their keys the things' IO_USE's: HOUSE.md's remedies) */
+    KI_STONE_CHISEL, KI_WOOD_CHISEL, KI_MATTOCK, KI_SPADE,  /* (Tools, 2026-11-03: a stone chisel as a chisel is, a wood
+                                                **   chisel no use on stone, a mattock and a spade for earth: HOUSE.md's
+                                                **   digging) */
     KI_COUNT };
 
 #define KIND_WORDS      ((const char*) (CATALOGUE + NKINDS))     /* (In the kinds' bank after them: the words of

@@ -37,7 +37,7 @@ extern unsigned char hheld;                     /* (The character's hands that h
 #define conditions()    cond_of (&pc)           /* The character's */
 unsigned char __fastcall__ health_of (const harn_char* c); /* Its health (rs.h's H_*) */
 unsigned char __fastcall__ has (const char* key);   /* A tool to hand, by its key ("pick") */
-extern struct kind wk;                          /* A thing's kind, the catalogue's (the hub's pc_strike's, SK_THING;
+extern struct kind wk;                          /* A thing's kind, the catalogue's (the hub's pc_strike's, SK_OF;
                                                 **   RS_WIELD's, each held in turn), */
 void __fastcall__ kind_in (unsigned char k);    /*   copied in (from an overlay too: the window put back) */
 signed char __fastcall__ grade (unsigned char level);   /* A level of success (harn.h's) as rs.h's grade */
@@ -300,7 +300,7 @@ void __fastcall__ den_side (struct side* s, unsigned char k);  /* Its blow by th
                                                 **   and word its kind's own weapon's) */
 unsigned char __fastcall__ den_armour (unsigned char k, unsigned char loc, unsigned char aspect);  /* Its armour at
                                                 **   loc against an aspect, its pieces' (the last named in arm) */
-extern unsigned char pc_way;                    /* (The hub's pc_strike, as a request's answered: SK_*; SK_THING | a
+extern unsigned char pc_way;                    /* (The hub's pc_strike, as a request's answered: SK_*; SK_OF a
                                                 **   kind, its kind in wk) */
 extern unsigned char pc_hand;                   /* (The hub's pc_shand: the hand that holds it, items.h's IH_*) */
 

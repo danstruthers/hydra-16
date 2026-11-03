@@ -187,9 +187,12 @@ void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
         --feet;
         strcpy (lb + 180, feet == MAT_EARTH ? "hard-packed earth" : feet == MAT_MASONRY ? "masonry" : feet == MAT_FLAGS ?
             "flagstones" : feet == MAT_SOIL ? "earth" : "stone");
-        s = strstr (lb + 200, "shovel") ? "shovel" : strstr (lb + 200, "blade") ? "blade" : strstr (lb + 200, "dagger") ?
+        s = strstr (lb + 200, "shovel") ? "shovel" : strstr (lb + 200, "spade") ? "spade" : strstr (lb + 200, "mattock") ?
+            "mattock" : strstr (lb + 200, "blade") ? "blade" : strstr (lb + 200, "dagger") ?
             "dagger" : strstr (lb + 200, "knife") ? "knife" : "";
-        if (feet != MAT_EARTH && feet != MAT_SOIL && strstr (lb + 200, "chisel")) {
+        if (feet != MAT_EARTH && feet != MAT_SOIL && !strstr (lb + 200, "chisel") && strstr (lb + 200, "woodchi")) {
+            sayf ("\nYour wood chisel doesn't seem to be working on the %s.", lb + 180);
+        } else if (feet != MAT_EARTH && feet != MAT_SOIL && strstr (lb + 200, "chisel")) {
             msg (strstr (lb + 200, "hammer") ? "A chisel and a hammer take both hands." :
                 "You'd need a hammer to drive the chisel.");
         } else if (*s) {

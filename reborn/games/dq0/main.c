@@ -61,6 +61,7 @@ static unsigned char asked;                     /* (A sound's question put in th
 static unsigned bar_done;                       /* (The long task's part done as the bar was last drawn) */
 unsigned char busy = 1;                         /* The character's doing something: no command till it's free (nor
                                                 **   till the world's started, and says so: E_READY) */
+unsigned char nap = 40;                         /* (main's nap with nothing doing, ticks: o_dots's, a fiftieth once it's started) */
 unsigned char starting;                         /* The game's starting: its progress shown (dots: hub.c's waits,
                                                 **   main's loop), till the character's first ready */
 static unsigned char held;                      /* (A line typed as it's busy, held till it's free; */
@@ -404,7 +405,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    33                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    34                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -649,6 +650,7 @@ static void __fastcall__ start_world (unsigned long seed, const char* file, unsi
         t_end ();
         hy_exits ("dq0: no shared segment or semaphores");
     }
+    HUB->starting = 1;
     HUB->seed = seed;
     HUB->test_start = test_start;
     HUB->dice = rolls;
@@ -825,6 +827,7 @@ void __fastcall__ o_dots (unsigned char k)
         msg (k == 2 ? "The dungeon is being made ready ..." : "Nearly ready ...");
     } else if (k && !busy) {
         starting = 0;
+        nap = 4;
         blank ();
         tell (T_TYPE_HELP_FOR);
         return;
@@ -1436,7 +1439,7 @@ unsigned char s_hold_first (void)
 ** it": a missile's attack, the world's shot; at anything else its throw as before, s_command's: 0 back), a launcher
 ** loaded ("nock an arrow", "load the crossbow"; "draw the sword", a thing taken in hand), the missiles gathered
 ** ("gather the arrows").  A launcher named, or the one carried, taken in hand first if it isn't (hold_first's), sent
-** with the shot (I_ATTACK's x[1] SK_THING | its kind, b AIM_SHOT, fought on as a blow is: the world's) */
+** with the shot (I_ATTACK's x[1] SK_OF its kind, b AIM_SHOT, fought on as a blow is: the world's) */
 /* A launcher's kind whose name has w (the catalogue's: a sling, the bows, a crossbow), its name in hold_w; 0 none */
 static unsigned char __fastcall__ bow_named (const char* w, unsigned char k)
 {
@@ -1518,7 +1521,7 @@ unsigned char s_missiles (void)
         strcpy (hold_w, cmd.obj.word);
         shand = 0;
         if (hold_first ()) {
-            shot (d, SK_THING | k);
+            shot (d, SK_OF (k));
         }
         return 1;
     case VB_SHOOT_OBJECT:
@@ -1531,7 +1534,7 @@ unsigned char s_missiles (void)
             return 1;
         }
         if ((k = launcher (w)) != 0) {
-            shot (d, SK_THING | k);
+            shot (d, SK_OF (k));
         }
         return 1;
     case VB_LOAD_OBJECT:                        /* ("nock an arrow", "load the crossbow"; "draw the sword": in hand) */
@@ -2479,9 +2482,8 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
     if ((unsigned char) w != TE_PACKED) {
         what_hi = named & 0x80;
     }
-    hub_mem (KIND_BANK, t, CATALOGUE[(unsigned char) w == TE_PACKED ? named & 0x7F : named].name, sizeof t);   /* (A pack's top bit
-                                                **   where it lies) */
-    sayf ((unsigned char) w == TE_FUMBLE ? "\nYou fumble for your %s." : (unsigned char) w == TE_PACKED ? (named & 0x80 ?
+    hub_mem (KIND_BANK, t, CATALOGUE[named].name, sizeof t);
+    sayf ((unsigned char) w == TE_FUMBLE ? "\nYou fumble for your %s." : (unsigned char) w == TE_PACKED ? (w >> 8 ?     /* (w's high byte: where it lies) */
         " Your %s lies at your feet." : " Your %s is in your hand.") : first[(w >> 8) - LT_PACKOFF], t);
 }
 
@@ -2935,7 +2937,7 @@ int main (int argc, char* argv[])
         }
         t_done ();
         fore_sync ();                           /* (In the foreground or out, as a command's in hand or not) */
-        hub_nap (t_wrote && t_haskey () ? 0 : quick ? (--quick, 1) : 4);  /* (Keys that came as it said something,
+        hub_nap (t_wrote && t_haskey () ? 0 : quick ? (--quick, 1) : nap);  /* (Keys that came as it said something,
                                                 **   a line typed as an answer or a look went out: no nap, taken at
                                                 **   once, 2026-10-30.  A fiftieth of a second: the keys looked
                                                 **   for, the world's
@@ -2943,7 +2945,9 @@ int main (int argc, char* argv[])
                                                 **   some 9,000 cycles with its own, a quarter of the CPU at two
                                                 **   ticks while nothing happened; a hundredth just after a command,
                                                 **   its answer told the sooner; and woken at once by the world's
-                                                **   events, its doorbell rung with them) */
+                                                **   events, its doorbell rung with them; a fifth of a second as the
+                                                **   game starts, its look at the keys and the console's a quarter of
+                                                **   the CPU otherwise: the start's time, 2026-11-03) */
     }
     finish ();
     return 0;

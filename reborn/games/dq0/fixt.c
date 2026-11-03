@@ -226,7 +226,7 @@ void __fastcall__ o_fixt_words (const struct msg* m)
             kind == PK_PORTCULLIS ? "You attempt to batter the portcullis with the " :
             "You attempt to batter the door with the ");
         hub_mem (0, &out, &HUB->pc_strike, 1);
-        hub_mem (KIND_BANK, lb + strlen (lb), CATALOGUE[out & 0x7F].name, sizeof CATALOGUE[0].name);
+        hub_mem (KIND_BANK, lb + strlen (lb), CATALOGUE[SK_KIND (out)].name, sizeof CATALOGUE[0].name);
         strcat (lb, ", but it seems ineffectual.");
     } else if (out > PO_SOFT) {
         strcpy (lb, keyed[out - PO_KEYED]);

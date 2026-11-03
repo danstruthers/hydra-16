@@ -236,7 +236,7 @@ static unsigned char __fastcall__ has (const char* key)
 }
 
 /* What the character strikes with (the hub's pc_strike): its fists, a foot, the head (bare 1), the thing named
-** (SK_THING: its kind's name, the catalogue's), or the first thing it holds (the words the UI knows: RULESETS.md) */
+** (SK_OF: its kind's name, the catalogue's), or the first thing it holds (the words the UI knows: RULESETS.md) */
 static unsigned char bare;
 static char wname[sizeof ((struct kind*) 0)->name];
 
@@ -244,10 +244,10 @@ static const char* weapon (void)
 {
     unsigned char k, s = HUB->pc_strike;
 
-    if (s & SK_THING) {
+    if (SK_IS_KIND (s)) {
         bare = 0;
         hub_map (KIND_BANK);
-        memcpy (wname, CATALOGUE[s & 0x7F].name, sizeof wname);
+        memcpy (wname, CATALOGUE[SK_KIND (s)].name, sizeof wname);
         hub_map (0);
         return wname;
     }

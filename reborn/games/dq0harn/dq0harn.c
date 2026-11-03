@@ -16,7 +16,7 @@
 ** the status command's, the hub's pace and watchfulness); RS_WIELD (what the character would strike with, nothing
 ** named: of what it holds, else the best it carries, gear.c's); P_BEARING, the bearings underground (bearing.c's,
 ** overlay 3: its own dice).  A thing named that strikes (the hub's pc_strike,
-** SK_THING) its kind read from the hub's catalogue (kind_in: wk).  Its summary gives each pace's step, and the notice
+** SK_OF) its kind read from the hub's catalogue (kind_in: wk).  Its summary gives each pace's step, and the notice
 ** tests go by the character's pace and state.  The sheet's words and the harm are overlay 1's (sheet.c), the
 ** fights overlay 2's (fight.c): DIR/dq0harn.ovl, read into banks of its own as it starts.  Its slots: the hub's
 ** three (the world's, the UI's, and the denizens' task's: DSLOT, a short one), each rung for, answered in place, the
@@ -784,8 +784,8 @@ static void __fastcall__ answer (struct req* r)
         stance = HUB->pc_stance;
         pc_way = HUB->pc_strike;
         pc_hand = HUB->pc_shand;
-        if (pc_way & SK_THING) {
-            kind_in (pc_way & 0x7F);            /* (The thing named that strikes: its kind, for the overlay) */
+        if (SK_IS_KIND (pc_way)) {
+            kind_in (SK_KIND (pc_way));            /* (The thing named that strikes: its kind, for the overlay) */
         }
         gseed = HUB->seed;
         memcpy (rq, r, sizeof rq);

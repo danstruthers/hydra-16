@@ -53,7 +53,7 @@ function build({ dir, objdir, say = () => {} }) {
   for (const n of names) for (const w of n.split(' ')) if (w && dict.has(w) && !seen.has(w)) { seen.add(w); words.push(w); }
   const text = Buffer.from(words.map(w => w + ' ').join('') + '\0', 'latin1');
   const at = nkinds * KIND, kin = (at + text.length + 63) & ~63;   // (The kinds' part of the file, whole pieces: wfile.c's)
-  if (kin > 0x1580) throw new Error('dq0w.cat: the kinds\' words past the kinds\' bank (' + (at + text.length) + ' bytes)');
+  if (at + text.length > 0x1E3F || kin > 0x1E40) throw new Error('dq0w.cat: the kinds and their words into the outfits\' list (outfit.h\'s OF_N, ' + (at + text.length) + ' bytes)');
   if (text.length > 1024 - 200) throw new Error('dq0w.cat: the kinds\' words ' + text.length + ' bytes, past the parser\'s room less the theme\'s (hub.h\'s CQ_WORDS)');
   if (cat.length - at > 0x1900) throw new Error('dq0w.cat: the catalogue\'s bank\'s code ' + (cat.length - at) + ' bytes, into the outfits\' index (outfit.h\'s OF_INDEX)');
   if (cat.readUInt16LE(18)) throw new Error('dq0w.cat: the first kind\'s cap_weight not 0 (the kinds\' length goes there)');

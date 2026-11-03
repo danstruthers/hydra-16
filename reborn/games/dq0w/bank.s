@@ -129,7 +129,7 @@ go:
             SWPART      38, 16              ; A change record kept and made (store.c's store_put, change)
             SWPART      39, 12              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
-            SWPART      41, 19              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
+            SWPART      41, 11              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
             SWPART      42, 21              ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 7              ; A walk in the dark set out on: its way felt, a thing stumbled over
             SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
@@ -168,7 +168,7 @@ go:
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
             SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
-            SWPART      74, 11              ; A waterskin filled (wwater.c: slice 4.9's)
+            SWPART      74, 19              ; A waterskin filled (wwater.c: slice 4.9's)
             SWPART      75, 4               ; The water's depth where the character stands (wwater.c)
             SWPART      76, 23              ; The time of day believed (wtime.c: 2026-10-31)
             SWPART      77, 23              ; The sky seen, the time believed's start (wtime.c)

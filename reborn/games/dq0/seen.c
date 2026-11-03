@@ -266,12 +266,12 @@ void o_seen_words (void)
     }
     den_words ();                               /* (The denizens it sees: overlay 9's, dens.c) */
     hub_mem (0, &w, &HUB->watch, 1);
-    hub_mem (0, &c, &HUB->pc_chart, 1);
-    if (!(w & WA_MAP) || !(c & CH_PACKED)) {
+    hub_mem (0, &c, &HUB->pc_chartk, 1);
+    if (!(w & WA_MAP) || !c) {
         packed = 0;
     } else if (!packed) {
         packed = 1;
-        hub_mem (KIND_BANK, nm, CATALOGUE[c >> 1].name, sizeof nm);
+        hub_mem (KIND_BANK, nm, CATALOGUE[c].name, sizeof nm);
         add (" Your drawing things are in your ");
         add (nm);
         add (".");

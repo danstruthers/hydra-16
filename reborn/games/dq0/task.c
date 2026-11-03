@@ -54,14 +54,14 @@ static const char* __fastcall__ foe (unsigned char b, unsigned char cap)
     return fn;
 }
 
-/* A light's kind's name (E_TASK's b, TE_LOW's, TE_OUT's: the catalogue's, its kind | 0x80), in fn; and whether it's a
+/* A light's kind's name (E_TASK's b, TE_LOW's, TE_OUT's: the catalogue's), in fn; and whether it's a
 ** plural (K_PLURAL: candle stubs) */
 static unsigned char __fastcall__ lamp (unsigned char b)
 {
     unsigned char f;
 
-    hub_mem (KIND_BANK, fn, CATALOGUE[b & 0x7F].name, sizeof CATALOGUE[0].name);
-    hub_mem (KIND_BANK, &f, &CATALOGUE[b & 0x7F].flags, 1);
+    hub_mem (KIND_BANK, fn, CATALOGUE[b].name, sizeof CATALOGUE[0].name);
+    hub_mem (KIND_BANK, &f, &CATALOGUE[b].flags, 1);
     return f & K_PLURAL;
 }
 
@@ -141,8 +141,8 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     char t[20];                                 /* (On the C stack: a thing's name) */
 
     if (p == TE_OUT) {
-        one = k & 0x80;                         /* (Another of its name burning still: the world's) */
-        k &= 0x7F;
+        one = k;                                /* (Another of its name burning still; one it sees: the world's) */
+        k &= 0x3F;
     }
 
     if (p == TE_NOT || p == TE_ENGAGED || p == TE_OUT) {
@@ -248,13 +248,13 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         sayf ("\nYour %s %s burning low.", fn, p ? "are" : "is");
         break;
     case TE_OUT:                                /* (Its fuel burnt: its own, its only light, its task stopped with
-                                                **   it; or one it sees lying there, | 0x80) */
+                                                **   it; or one it sees lying there, TO_SEEN) */
         p = lamp (named);
-        if (!(named & 0x80) && !p && one) {     /* (Another of its name burning still, the world's: "One of
+        if (!(one & TO_SEEN) && !p && (one & TO_ANOTHER)) {     /* (Another of its name burning still, the world's: "One of
                                                 **   your torches", not "Your torch" twice) */
             sayf ("\nOne of your %s%s gutters and goes out", fn, strchr ("sxh", fn[strlen (fn) - 1]) ? "es" : "s");
         } else {
-            sayf ("\n%s %s gutter%s and go%s out", named & 0x80 ? "The" : "Your", fn, p ? "" : "s", p ? "" : "es");
+            sayf ("\n%s %s gutter%s and go%s out", one & TO_SEEN ? "The" : "Your", fn, p ? "" : "s", p ? "" : "es");
         }
         if (w >> 8 & 0x7F) {                    /* (Its long task stopped with it: k is the code here) */
             sayf (": you stop %s.", d);
@@ -647,7 +647,7 @@ void __fastcall__ o_felt_words (unsigned w)
             strcpy (lb, k == PK_PORTCULLIS ? "portcullis" : k == PK_DOOR ? "door" : "window");
         }
         hub_mem (0, &k, &HUB->pc_strike, 1);
-        hub_mem (KIND_BANK, lb + 32, CATALOGUE[k & 0x7F].name, sizeof CATALOGUE[0].name);
+        hub_mem (KIND_BANK, lb + 32, CATALOGUE[SK_KIND (k)].name, sizeof CATALOGUE[0].name);
         sayf ((unsigned char) w == WB_SWAT ? "\nYou swat at %s%s with the %s, but it seems ineffectual." :
             "\nYou set to battering %s%s with the %s.", *lb >= 'a' ? "the " : "", lb, lb + 32);
         return;

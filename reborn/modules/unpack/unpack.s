@@ -217,7 +217,10 @@ unlz:
 @token:
             lda         (src)
             sta         tok
-            jsr         src_next
+            inc         src                                 ; (src_next's, in line: a jsr and rts for each of a
+            bne         :+                                  ;   token's three bytes, a sixth of the time unpacking)
+            inc         src + 1
+:
             lsr                                             ; Its literals' length
             lsr
             lsr
@@ -241,10 +244,16 @@ unlz:
             bcs         @end
             lda         (src)                               ; The match: its offset back from dst
             sta         from
-            jsr         src_next
+            inc         src
+            bne         :+
+            inc         src + 1
+:
             lda         (src)
             sta         from + 1
-            jsr         src_next
+            inc         src
+            bne         :+
+            inc         src + 1
+:
             sec
             lda         dst
             sbc         from

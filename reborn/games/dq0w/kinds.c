@@ -175,7 +175,7 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "vial", K_CONTAINER | K_HAND, 2, 1, 1, 5, 0, 0, 1, "", MT_GLASS, AP_GLASS, 24, KF_LIQUID | KF_STOPPER },
     { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 },    /* (The theme's eight, the
                                                 **   UI's as it starts: KI_THEME's) */
-    /* (KI_HIGH on, 2026-10-27: the denizens' belongings and valuables, never lit nor struck with) */
+    /* (KI_HIGH on, 2026-10-27: the denizens' belongings and valuables; and what's come since) */
     { "furs", K_PLURAL, 40, 20, 8, 0, 0, 0, 4, "", MT_LEATHER, AP_HIDE, 120 },    /* (A lord's bed: a heap of them) */
     { "blanket", 0, 12, 6, 8, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 192 },
     { "cask", K_CONTAINER, 40, 40, 32, 200, 0, 0, 5, "", MT_WOOD, AP_WOOD, 48, KF_LIQUID | KF_STOPPER },   /* (Four
@@ -206,6 +206,14 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
                                                 **   physician's draught, 12d: the house's prices, HOUSE.md's remedies,
                                                 **   2026-11-02) */
     { "remedy", 0, 1, 1, 0, 0, 0, 0, 1, "remedy", MT_GLASS, AP_FOOD, 48 },
+    { "stone chisel", K_HAND, 2, 1, 0, 0, 0, 0, 1, "chisel", MT_STEEL, AP_METAL, 24 },    /* (As the chisel, the catalogue's
+                                                **   first: the user's, 2026-11-03, "Stone chisel versus wood chisel
+                                                **   might be a good distinction": HOUSE.md's digging) */
+    { "wood chisel", K_HAND, 2, 1, 0, 0, 0, 0, 1, "woodchi", MT_STEEL, AP_METAL, 16 },   /* (Its edge no use on stone: not
+                                                **   in the referee's diggers; the house's, 4d) */
+    { "mattock", K_HAND | K_TWO, 28, 6, 0, 0, 0, 0, 4, "mattock", MT_IRON, AP_METAL, 40, 0, KF_LONG },   /* (The house's: 10d,
+                                                **   a shovel's and a little more) */
+    { "spade", K_HAND | K_TWO, 16, 8, 0, 0, 0, 0, 4, "spade", MT_IRON, AP_METAL, 28, 0, KF_LONG },   /* (The house's: 7d) */
 };
 #pragma rodata-name (pop)
 
@@ -263,7 +271,8 @@ const unsigned char throws[KI_COUNT] = {
                                                 **   talisman, dice */
     2, 1, 1,                                    /* farthings, mankar, mang */
     2,                                          /* whetstone */
-    2, 2                                        /* antidote, remedy */
+    2, 2,                                       /* antidote, remedy */
+    2, 2, 1, 1                                  /* stone chisel, wood chisel, mattock, spade */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 

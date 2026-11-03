@@ -564,7 +564,8 @@ int main (int argc, char* argv[])
         k = tend ();
         hub_map (0);
         ++HUB->beat[T_SOUND];
-        hy_sleep_ticks (k);
+        hy_sleep_ticks (HUB->starting ? 50 : k);    /* (Nothing to hear as the game starts: a quarter second's nap, not
+                                                **   a twentieth's, some 6,000 cycles each: 2026-11-03, the start's time) */
     }
     silence ();
     snd_close ();

@@ -8,7 +8,7 @@
 ** stick; a hand, a foot, a head the book's unarmed rows, by Unarmed), the tools' the game's; the best it holds by its
 ** attack mastery (its skill's EML and the weapon's attack class), its fists if it holds none.  A punch is the better
 ** for gauntlets, a kick for hobnailed boots (a point of impact: the book's "enhanced", Skills 18; the game's
-** numbers).  A thing named (the hub's pc_strike, SK_THING: the user's, 2026-10-22, "A bar should just be treated as a
+** numbers).  A thing named (the hub's pc_strike, SK_OF: the user's, 2026-10-22, "A bar should just be treated as a
 ** club or stick, no?") strikes and no other: a weapon of the table's as itself (by its kind's key), anything else as
 ** the book treats a thing swung that isn't a melee weapon (Combat 8: a bow in melee a stick, a staff or a club), by its
 ** kind's data (rshouse.h's, the house's): a light thing the book's stick, a hefty one its club; nothing named, what it
@@ -339,7 +339,7 @@ unsigned char __fastcall__ o_den_armour (unsigned char k, unsigned char loc, uns
     return sum;
 }
 
-/* Its side of a fight: what it strikes with (pc_way's: SK_BEST, the best weapon it holds, else its fists; SK_THING,
+/* Its side of a fight: what it strikes with (pc_way's: SK_BEST, the best weapon it holds, else its fists; SK_OF,
 ** the thing named, its kind in wk, and no other, its words its name, a soft one its fists (the world never asks it);
 ** else that part of it), its block (the best of what it holds, its weapon or its shield; else a bare arm) and each
 ** thing that blocks (a round's defences, fight.c's: each blocks one foe a round), its dodge */
@@ -383,7 +383,7 @@ void __fastcall__ o_pc_side (struct side* s)
             s->aslot = k;
         }
     }
-    if ((pc_way & SK_THING) && (j = row_of ()) != SOFT) {     /* (The thing named: as itself, or as the book treats
+    if (SK_IS_KIND (pc_way) && (j = row_of ()) != SOFT) {     /* (The thing named: as itself, or as the book treats
                                                 **   it; its slot, if it's one the table knows, its counterstrike's) */
         named = 1;
         best = j;
@@ -472,7 +472,7 @@ unsigned char __fastcall__ o_fumbled (const struct side* s, unsigned char att)
         k = tflag[k];
         return (k & T_LEFT ? DH_LEFT : 0) | (k & T_RIGHT ? DH_RIGHT : 0);
     }
-    return att && (pc_way & SK_THING) ? pc_hand & IH_BOTH : 0;
+    return att && SK_IS_KIND (pc_way) ? pc_hand & IH_BOTH : 0;
 }
 
 /* The hand a wound at loc (an arm's) lets go of what it holds (side t's: DH_*; 0 none): the character's on that side

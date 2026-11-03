@@ -2384,6 +2384,7 @@ function dq0Poke(m, pokes) {
                 }
               }
             }
+            if (p.call) p.call(h, L, K, at, named);   // (A scene of its own, 2026-11-03)
             const k = p.name === undefined ? p.k : [...Array(L.nactors).keys()].find(j => named(j) === p.name);   // (By its name: the first)
             if (k === undefined) continue;
             for (const [f, v] of Object.entries(p.set || {})) if (f === 'x' || f === 'y') w16(at(k) + off(f), v); else h[at(k) + off(f)] = v;
@@ -4101,6 +4102,60 @@ module.exports = {
         return f;
       },
       sdcard: true
+    },
+    {
+      name: 'dq0highkinds', near: ['gear'], sdcard: true, what: "Dingus Quest Zero's kinds past 127 (the margins' pass, 2026-11-03: a kind's number a whole byte everywhere, 60 more in the catalogue's room, items.h's NKINDS; HOUSE.md's digging): a mang in hand, struck with (the hub's pc_strike SK_OF its kind, its name in the words), a mattock kept in a save and read back; a mang in a long task named by its kind; a mattock on a denizen's arm, let fall and taken up (the actor's arm, E_BEAT WB_PICKS); a wood chisel no use on stone, told so, a stone chisel with a hammer a chisel's dig, a spade and a mattock told as a shovel is",
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 26 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm', 'echo ml swd 60 >> /ram/c.hm',
+        'dq0 -p t -s 14 -c /ram/c.hm -d /ram/s -k mang,mattock', 'inventory', 'hit the door with the mang', 'quit', 'dq0 -d /ram/s', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k mang,whetstone', 'sharpen the mang', 'quit',
+        "dq0 -p t -s 374 -c /ram/c.hm -k 'wood chisel' -T", 'dig north', 'quit',
+        "dq0 -p t -s 374 -c /ram/c.hm -k 'stone chisel,hammer' -T", 'dig north', 'quit',
+        'dq0 -p t -s 374 -c /ram/c.hm -k spade -T', 'dig north', 'quit',
+        'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'mattock,gambeson,mail hauberk' -R 21", 'drop the mattock', 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk', 'defend block', 'wait', 'close the door', 'open the door', 'go south', 'go south', ...Array(15).fill('wait'), 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        dq0Poke(m, [{ g: 3, line: 'sharpen the mang', n: 1, wear: { mang: 200 } }]);
+        const a = m.acia, shown = a.shown;      // (A mattock on the arm of the bandit that strikes first, let fall where it stands: taken up, its next turn)
+        let tail = '', armed = false;
+        a.shown = (v, t) => {
+          shown(v, t);
+          tail = (tail + String.fromCharCode(v)).slice(-40);
+          if (armed || !tail.includes('strikes at you with its sword')) return;
+          const h = m.dq0.bank(0), { L, K } = m.dq0.layout(), per = Math.floor(0x2000 / L.itemSize), at = k => L.actor + k * L.actorSize;
+          for (let k = 0; k < L.nactors && !armed; k++) {
+            if (!h[at(k) + L.aState] || h[at(k) + L.aDoing] === undefined) continue;
+            if (Math.abs((h[at(k) + L.aX] | h[at(k) + L.aX + 1] << 8) - (h[L.pcX] | h[L.pcX + 1] << 8)) > 1 || Math.abs((h[at(k) + L.aY] | h[at(k) + L.aY + 1] << 8) - (h[L.pcY] | h[L.pcY + 1] << 8)) > 1) continue;
+            for (let i = 1; i < L.nitems && !armed; i++) {
+              const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+              if (!b || b[o + L.iKind] !== K.KI_MATTOCK) continue;
+              b[o + L.iWhere] = K.IW_SQUARE; b[o + L.iSn] = h[at(k) + L.aSn];
+              b[o + L.iX] = h[at(k) + L.aX]; b[o + L.iX + 1] = h[at(k) + L.aX + 1]; b[o + L.iY] = h[at(k) + L.aY]; b[o + L.iY + 1] = h[at(k) + L.aY + 1];
+              h[at(k) + L.aArm] = K.KI_MATTOCK; h[at(k) + L.aDropped] = i & 255; h[at(k) + L.aDropped + 1] = i >> 8;
+              armed = true;
+            }
+          }
+        };
+      },
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        if (!(K.KI_MATTOCK > 127 && K.KI_SPADE > 127 && K.KI_MANG > 127 && K.KI_WOOD_CHISEL > 127)) f.push('the kinds here not past 127');
+        const i0 = T.of('inventory');
+        if (!/mattock/.test(s.slice(s.indexOf('You carry')))) f.push('the mattock not carried');
+        const h0 = T.of('hit the door with the mang');
+        if (!h0.after || h0.after.pc.strike !== K.KI_MANG + 3) f.push('not struck with the mang: pc_strike ' + (h0.after && h0.after.pc.strike));
+        if (!/with the mang/.test(s)) f.push('its name not in the blow\'s words');
+        const kept = T.of('dq0 -d /ram/s'), i1 = T.after(kept, 'inventory');
+        if (!i1.at || !i1.at.items.some(i => i.name === 'mattock')) f.push('the mattock not back from the save');
+        if (!/You set to sharpening the mang/.test(s)) f.push('the long task on a mang not named by its kind');
+        if (!/Your wood chisel doesn't seem to be working on the /.test(s)) f.push('the wood chisel not told as no use');
+        if (!/Your spade only scratches at the /.test(s)) f.push('the spade not told as a shovel is');
+        const pick = T.flatMap(t => [...t.events, ...t.dens]).find(e => e.kind === 'E_BEAT' && e.beat === 'WB_PICKS' && e.b > 0);
+        if (!pick || pick.thing !== K.KI_MATTOCK) f.push('no mattock taken up from a denizen\'s arm: ' + JSON.stringify(pick));
+        if (!/snatches up its mattock/.test(s)) f.push('not told as the bandit snatches up its mattock');
+        return f;
+      }
     },
     {
       name: 'dq0nodig', outfit: true, meaning: true, near: ['map', 'gear'], what: "Dingus Quest Zero's digs told why (the user's playtest, 2026-11-02, DECISIONS.md; HOUSE.md's digging, for review), by poked scenes at seed 374's cell, a closed door to the east of the start (the character by a stairway, facing south).  A hidden door (its portal's state poked in the chunks' cache, PS_HIDDEN, as its first look's typed): the dig takes it for a wall.  With no tool that bites (a knife; then none): told at once, no time spent, by what it carries (E_DIG D_NO_TOOL; 'Your knife only scratches', 'You need better tools'), the door still hidden, no refusal saying there's nothing to dig.  A chisel alone: 'You'd need a hammer to drive the chisel.'  A pick: begun as a wall's two feet, and a spell or so on the facing's off, the door found (D_FOUND: 'strikes wood', its PORTAL_STATE record no longer hidden), seen in the look after.  A hammer and a chisel: the wall west of the start worked at slowly, a stone's half foot a spell (D_GOOD or D_POOR, or asked).  A door in sight: D_PORTAL 'That's a door'; a portcullis (seed 1's guardroom, dq0tunnel's) 'Those are iron bars'.  A door hidden by magic: a pick makes no mark, and after two spells with nothing to show it's asked, soft ('This isn't getting anywhere'), no door told",
@@ -7688,13 +7743,13 @@ module.exports = {
         for (const [t, w] of [[h1, 'named'], [h2, 'nothing named, the bar and the torch in hand']]) {
           const b = begun(t);
           if (!b || b.what !== (1 | 0x40)) f.push('the door hit with the bar (' + w + '): not battered with a thing (' + dq0Evs(t) + ')');
-          if (!t.after || t.after.pc.strike !== (0x80 | K.KI_BAR)) f.push('the door hit with the bar (' + w + '): pc_strike ' + (t.after && t.after.pc.strike));
+          if (!t.after || t.after.pc.strike !== K.KI_BAR + 3) f.push('the door hit with the bar (' + w + '): pc_strike ' + (t.after && t.after.pc.strike));
           dq0Never(f, t, 'E_TASK', { te: 'TE_ASK_SHORT' }, 'the bar\'s blows stopped short (' + w + ': no part of it strikes)');
           dq0Never(f, t, 'E_HARM', { hc: 'HC_STRUCK' }, 'the character hurt by the bar\'s blows (' + w + ')');
           if (!dq0Ev(t, 'E_PORTAL', { po: p => ['PO_BROKE_DOWN', 'PO_GIVING', 'PO_HOLDING', 'PO_NO_MARK'].includes(p) }).length) f.push('the bar\'s battering not ended (' + w + ': ' + dq0Evs(t) + ')');
         }
         const g2 = T.of('dq0 -p t -s 14 -c /ram/c.hm'), h3 = T.after(g2, 'hit the door');
-        if (!begun(h3) || begun(h3).what !== (1 | 0x40) || !h3.after || h3.after.pc.strike !== (0x80 | K.KI_TORCH)) f.push('the torch in hand, the door not battered with it (' + dq0Evs(h3) + ')');
+        if (!begun(h3) || begun(h3).what !== (1 | 0x40) || !h3.after || h3.after.pc.strike !== K.KI_TORCH + 3) f.push('the torch in hand, the door not battered with it (' + dq0Evs(h3) + ')');
         const r = T.of('batter the door with the rope'), k = T.after(r, 'kick the door');
         dq0Need(f, r, 'E_PORTAL', { po: 'PO_SOFT' }, 'the rope not one attempt, ineffectual');
         if (begun(r)) f.push('the rope\'s attempt a battering (' + dq0Evs(r) + ')');
@@ -7727,7 +7782,7 @@ module.exports = {
         const begun = t => dq0Ev(t, 'E_TASK', { te: 'TE_BEGUN', task: 'LT_BATTER' })[0];
         const g1 = T.of('dq0 -p t -s 14 -c /ram/c.hm -k pick'), h1 = T.after(g1, 'hit the door'), y = T.after(h1, 'yes');
         if (begun(h1)) f.push('battered before it was asked (' + dq0Evs(h1) + ')');
-        if (!begun(y) || begun(y).what !== (1 | 0x40) || !y.after || y.after.pc.strike !== (0x80 | K.KI_PICK)) f.push('yes: not battered with the pick (' + dq0Evs(y) + ')');
+        if (!begun(y) || begun(y).what !== (1 | 0x40) || !y.after || y.after.pc.strike !== K.KI_PICK + 3) f.push('yes: not battered with the pick (' + dq0Evs(y) + ')');
         const g2 = T.after(y, 'dq0 -p t -s 14 -c /ram/c.hm -k pick'), h2 = T.after(g2, 'hit the door'), n = T.after(h2, 'no');
         const h3 = T.after(n, 'hit the door'), l = T.after(h3, 'look');
         if (begun(h2)) f.push('battered before it was asked, again (' + dq0Evs(h2) + ')');
@@ -7789,7 +7844,7 @@ module.exports = {
         hand(lg, 'sword', H.L, 'left-handed: its main hand the left');
         const a = T.of('attack the rat with the sword in my left hand');
         if (!dq0Ev(a, 'E_FIGHT', { who: 0 }).length) f.push('the rat not struck at with the sword (' + dq0Evs(a) + ')');
-        if (!a.after || a.after.pc.strike !== (0x80 | K.KI_SWORD) || a.after.pc.shand !== H.L) f.push('the blow not the sword in its left hand: pc_strike ' + (a.after && a.after.pc.strike) + ', pc_shand ' + (a.after && a.after.pc.shand));
+        if (!a.after || a.after.pc.strike !== K.KI_SWORD + 3 || a.after.pc.shand !== H.L) f.push('the blow not the sword in its left hand: pc_strike ' + (a.after && a.after.pc.strike) + ', pc_shand ' + (a.after && a.after.pc.shand));
         inTurn(s, ['> i', 'You carry a torch (lit), in your left hand;', 'a sword, in your right hand.',
           '> swap hands', 'You change hands: the sword in your left, the torch in your right.',
           '> hold the sword in my right hand', 'Your right hand holds the torch.', '> drop the torch', 'Put down.',
@@ -8052,7 +8107,7 @@ module.exports = {
         const g = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -k paper,chalk');
         if (g.k < 0) return ['the game not played'];
         const mg = T.after(g, 'map as I go'), l1 = T.after(mg, 'look'), l2 = T.after(l1, 'look'), pu = T.after(l2, 'put the chalk in the pouch');
-        if (!mg.after || mg.after.pc.map || (mg.after.pc.chart & 1) || mg.after.pc.chart >> 1 !== K.KI_BACKPACK) f.push('mapping with the chalk in the worn pack: pc_chart ' + (mg.after && mg.after.pc.chart) + ', pc_map ' + (mg.after && mg.after.pc.map) + ' (not handy, in the backpack, no map begun wanted)');
+        if (!mg.after || mg.after.pc.map || (mg.after.pc.chart & 1) || !(mg.after.pc.chart & 2) || mg.after.pc.chartk !== K.KI_BACKPACK) f.push('mapping with the chalk in the worn pack: pc_chart ' + (mg.after && mg.after.pc.chart) + ', pc_map ' + (mg.after && mg.after.pc.map) + ' (not handy, in the backpack, no map begun wanted)');
         const told = (s.match(/Your drawing things are in your backpack\./g) || []).length;
         if (told !== 1) f.push('"Your drawing things are in your backpack." told ' + told + ' times, not once');
         inTurn(s, ['> look', 'Your drawing things are in your backpack.', '> look', '> put the chalk in the pouch'], f, 'told as it looks: ');

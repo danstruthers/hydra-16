@@ -2682,7 +2682,8 @@ void __fastcall__ s_start (const char* dir)
     hy_bank (ovbank[OVBANKS]);
     strcpy (TR_DIR, dir);                       /* (The traces' kinds' words, the lib folder's: wtrace.c's) */
     for (k = 0; hub_map (0), !HUB->quit && k != IO_BEGIN; ) {
-        hy_sem_wait (HUB->sem[T_WORLD], 4);
+        hy_sem_wait (HUB->sem[T_WORLD], 25);    /* (Woken by what's asked; the quit looked for an eighth of a second on,
+                                                **   not a fiftieth: the start's time, 2026-11-03) */
         hub_map (0);
         if (hub_posted (&HUB->ireq)) {
             k = HUB->ireq.kind;
@@ -2702,6 +2703,7 @@ void __fastcall__ s_start (const char* dir)
     arrive ();                                  /* (Its look the first: the things round it in the item store first, its
                                                 **   paging's) */
     event (E_READY, 0, 0);                      /* (The UI waits for it: its commands, the world started) */
+    HUB->starting = 0;
     last = hy_ticks ();
 }
 
@@ -3584,9 +3586,9 @@ void __fastcall__ s_door_work (unsigned char what)
     unsigned char p;
 
     hub_map (0);
-    if (what == PA_BREAK && ((p = HUB->pc_strike) & SK_THING)) {
+    if (what == PA_BREAK && SK_IS_KIND (p = HUB->pc_strike)) {
         hub_map (KIND_BANK);
-        barw_ = door_swing (CATALOGUE + (p & 0x7F)) == IM_SOFT;
+        barw_ = door_swing (CATALOGUE + SK_KIND (p)) == IM_SOFT;
         hub_map (0);
     }
     here ();
@@ -3639,7 +3641,7 @@ void __fastcall__ s_door_work (unsigned char what)
     worked (t);
     p = wk.pq.kind + 1;                         /* (Its words: a door's, a portcullis's, a window's) */
     if (wk.what == W_BLOW) {
-        begun (LT_BATTER, p | (HUB->pc_strike & SK_THING ? SK_WITH : HUB->pc_strike << 4));    /* (Battering: a long
+        begun (LT_BATTER, p | (SK_IS_KIND (HUB->pc_strike) ? SK_WITH : HUB->pc_strike << 4));    /* (Battering: a long
                                                 **   task, a blow at a time as it's free, its first words at once, the
                                                 **   user's: the striker's, a part of it or the thing named) */
     } else if (wk.task) {
@@ -4846,11 +4848,11 @@ static unsigned char __fastcall__ swatted (unsigned char k)
     unsigned char s;
 
     hub_map (0);
-    if (!((s = HUB->pc_strike) & SK_THING)) {
+    if (!SK_IS_KIND (s = HUB->pc_strike)) {
         return 0;
     }
     hub_map (KIND_BANK);
-    s = fight_swing (CATALOGUE + (s & 0x7F));
+    s = fight_swing (CATALOGUE + SK_KIND (s));
     hub_map (0);
     if (s != IM_SOFT) {
         return 0;
@@ -4861,7 +4863,7 @@ static unsigned char __fastcall__ swatted (unsigned char k)
 }
 
 /* What it fights back with unbidden (the user's, 2026-10-22: what's in its hands): the thing it holds the referee
-** would strike with (RS_WIELD: its main hand's first, slice 4.1b's), as a thing named is (SK_THING), but a soft one;
+** would strike with (RS_WIELD: its main hand's first, slice 4.1b's), as a thing named is (SK_OF), but a soft one;
 ** else the best it holds (SK_BEST: its fists, its hands empty); its hand the hub's pc_shand */
 static unsigned char in_hand (void)
 {
@@ -4883,13 +4885,11 @@ static unsigned char in_hand (void)
         return SK_BEST;
     }
     HUB->pc_shand = held_h[s - 1];
-    if ((s = held_k[s - 1]) >= KI_HIGH) {
-        return SK_BEST;                         /* (A belonging, a valuable: no striker, its kind past seven bits) */
-    }
+    s = held_k[s - 1];
     hub_map (KIND_BANK);
     n = fight_swing (CATALOGUE + s);
     hub_map (0);
-    return n == IM_SOFT ? SK_BEST : SK_THING | s;
+    return n == IM_SOFT ? SK_BEST : SK_OF (s);
 }
 
 #define AIM_NONE        0xFF                    /* (A close-in's aim: no blow, walked up to) */
@@ -6588,7 +6588,7 @@ void s_step_loud (void)
 ** filling has any work for it, nor the record any room (a minute's pass of the store, in assembly, and this part's
 ** swap: off every hot path).  In its last ten minutes it's burning low, told if it's the character's; at none it goes
 ** out (a candle burnt away, gone; a lantern dry, a torch burnt out, kept to be renewed), told if it's the
-** character's, or one it sees (E_TASK's TE_LOW, TE_OUT: b its kind, | 0x80 not the character's), the light layer
+** character's, or one it sees (E_TASK's TE_LOW, TE_OUT: b its kind, TO_SEEN not the character's), the light layer
 ** about one lying there out of date (E_LIGHT: the senses'); the character's light made again and looked about in (its
 ** only light gone, in the dark: its long task stopped hard, part 23's task_out); and the minutes left of the light it
 ** carries in the hub (pc_fuel: the status line's) */
@@ -6712,8 +6712,8 @@ void s_burns_now (void)
         hub_event (&lm);
         if (lm.a == HUB->pc_stratum && (sq = at (lm.a, lm.w1, lm.w2)) != 0 && (*sq & T_VIS)) {
             hub_map (0);
-            evb = q.kind | 0x80;                /* ("The torch gutters and goes out.": one it sees) */
-            event (E_TASK, 0, TE_OUT);
+            evb = q.kind;                       /* ("The torch gutters and goes out.": one it sees) */
+            event (E_TASK, 0, TE_OUT | (unsigned) TO_SEEN << 8);
             seen = 1;
         }
     }
@@ -6744,7 +6744,7 @@ void s_burns_now (void)
             memcpy (ln, CATALOGUE[out].name, sizeof ln);
             hub_map (0);
             HUB->pc_left[0] = 0;                /* (Its words too, the next time round) */
-            same = HUB->pc_light && !strncmp (HUB->pc_lamp, ln, sizeof ln) ? 0x80 : 0;   /* (Another of its name lit
+            same = HUB->pc_light && !strncmp (HUB->pc_lamp, ln, sizeof ln) ? TO_ANOTHER : 0;   /* (Another of its name lit
                                                 **   still: "One of your torches ...") */
         }
         see (0);                                /* (Looked about in the new light) */

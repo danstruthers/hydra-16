@@ -47,8 +47,9 @@ struct ofit {
     unsigned char   kind, qty, quality, place, in, flags, mat;
 };
 #define NOFIT           64
-#define OF_N            (*(unsigned char*) 0x993F)      /* (The list's count, then the list, in the kinds' bank) */
-#define OF_LIST         ((struct ofit*) 0x9940)
+#define OF_N            (*(unsigned char*) 0x9E3F)      /* (The list's count, then the list, at the top of the kinds'
+                                                **   bank, 2026-11-03: make.js holds the kinds and their words under it) */
+#define OF_LIST         ((struct ofit*) 0x9E40)
 
 /* The draw's state (things.c's, in the main RAM: parts 57 and 59 both read and write it) */
 struct ost {

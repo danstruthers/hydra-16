@@ -292,7 +292,7 @@ static unsigned char __fastcall__ shot_reach (unsigned char k, unsigned char z)
     unsigned tx, ty;
 
     hub_map (0);
-    if (!k || !a->state || (sn = a->sn) != HUB->pc_stratum || !IS_LAUNCHER (HUB->pc_strike & 0x7F)) {
+    if (!k || !a->state || (sn = a->sn) != HUB->pc_stratum || !IS_LAUNCHER (SK_KIND (HUB->pc_strike))) {
         return 0;
     }
     d = a->doing == DO_DOWN ? 1 : 2;
@@ -623,7 +623,7 @@ none:
     bd.ready = HUB->now;
 }
 
-/* The character's shot at actor k (part 15's pc_blow, pshoot's: the hub's pc_strike SK_THING | what it shoots with,
+/* The character's shot at actor k (part 15's pc_blow, pshoot's: the hub's pc_strike SK_OF what it shoots with,
 ** a launcher, or the thing it throws; its aim pc_aim): the shot, its missile, its time (a crossbow's load a round
 ** more, a missile not handy its reach); one carried not in hand taken up first (its round's, TE_READIED); not to be shot, told (E_TASK
 ** TE_NO_SHOT, b why: SH_*) and the fight given up */
@@ -651,7 +651,7 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
             return 0;
         }
         hub_map (0);
-        HUB->pc_strike = SK_THING | sl_kind;
+        HUB->pc_strike = SK_OF (sl_kind);
         k = 0xFF;
     }
     if (k == 0xFF) {                            /* (The foe it turns its missiles to: the nearest hostile it can shoot
@@ -676,7 +676,7 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
         }
         return (unsigned char) thr;
     }
-    tk = HUB->pc_strike & 0x7F;
+    tk = SK_KIND (HUB->pc_strike);
     sn = HUB->pc_stratum;
     BD_GET (k);
     tx = bd.x;
@@ -686,7 +686,7 @@ unsigned char __fastcall__ s_pc_shot (unsigned char k)
     } else if (IS_LAUNCHER (tk)) {
         why = !(ar = shot_op (SO_ARMS, 0, 0)) ? SH_NONE : !sm_item ? SH_SPENT : 0;
         hub_map (0);
-        HUB->pc_strike = SK_THING | sl_kind;    /* (What it shoots with: the referee's, the words') */
+        HUB->pc_strike = SK_OF (sl_kind);       /* (What it shoots with: the referee's, the words') */
         if (!why && ar < 2) {                 /* (Carried, not in hand: taken up, both hands but a sling's, if
                                                 **   they're free, its round's grope, the book's; its shot the next) */
             for (thr = 0; (thr = items (thr, IN_FLAGS | IN_ACTOR, I_HELD)) != 0 && ip->x; ) {

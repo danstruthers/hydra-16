@@ -48,7 +48,7 @@ const EXPRS = {
   pcLight: F('struct hub', 'pc_light'), pcLamp: F('struct hub', 'pc_lamp'), pcsum: F('struct hub', 'pcsum'),
   gait: F('struct hub', 'gait'), watch: F('struct hub', 'watch'), pcPos: F('struct hub', 'pc_pos'), pcGoing: F('struct hub', 'pc_going'),
   pcReady: F('struct hub', 'pc_ready'), hubNow: F('struct hub', 'now'),
-  pcChart: F('struct hub', 'pc_chart'), pcMap: F('struct hub', 'pc_map'),
+  pcChart: F('struct hub', 'pc_chart'), pcChartk: F('struct hub', 'pc_chartk'), pcMap: F('struct hub', 'pc_map'),
   pcStance: F('struct hub', 'pc_stance'), pcStrike: F('struct hub', 'pc_strike'), pcShand: F('struct hub', 'pc_shand'), pcSkew: F('struct hub', 'pc_skew'), pcLost: F('struct hub', 'pc_lost'), tbSkew: F('struct hub', 'tb.skew'), tbSkewHi: F('struct hub', 'tb.skew') + ' + 1', tbUnc: F('struct hub', 'tb.unc'), tbUncHi: F('struct hub', 'tb.unc') + ' + 1', tbSky: F('struct hub', 'tb.sky'), tbHour0: F('struct hub', 'tb.hour0'), tbHow: F('struct hub', 'tb.how'), tbHours: F('struct hub', 'tb.hours'), tbDue: F('struct hub', 'tb.due'), tbDue1: F('struct hub', 'tb.due') + ' + 1', tbDue2: F('struct hub', 'tb.due') + ' + 2', tbDue3: F('struct hub', 'tb.due') + ' + 3', tsense: F('struct hub', 'pcsum.timesense'), wayOpen: F('struct hub', 'way_open'), digTool: F('struct hub', 'dig_tool'),
   sCond: F('struct rs_summary', 'cond'), sHealth: F('struct rs_summary', 'health'), sLoad: F('struct rs_summary', 'load'),
   sSight: F('struct rs_summary', 'sight'), sStep: F('struct rs_summary', 'step'), sGstep: F('struct rs_summary', 'gstep'), ngaits: 'NGAITS',
@@ -56,7 +56,7 @@ const EXPRS = {
   actor: F('struct hub', 'actor'), actorSize: 'sizeof (struct actor)', nactors: 'NACTORS', diHead: F('struct hub', 'di_head'),
   diTail: F('struct hub', 'di_tail'), diAt: F('struct hub', 'di'), msgSize: 'sizeof (struct msg)', diSize: 'DI_SIZE',
   aState: F('struct actor', 'state'), aSn: F('struct actor', 'sn'), aFace: F('struct actor', 'face'), aPos: F('struct actor', 'pos'),
-  aX: F('struct actor', 'x'), aY: F('struct actor', 'y'), aDoing: F('struct actor', 'doing'), aName: F('struct actor', 'name'),
+  aX: F('struct actor', 'x'), aY: F('struct actor', 'y'), aDoing: F('struct actor', 'doing'), aName: F('struct actor', 'name'), aArm: F('struct actor', 'arm'), aDropped: F('struct actor', 'dropped'),
   aAttitude: F('struct actor', 'attitude'), aFaction: F('struct actor', 'faction'), aKind: F('struct actor', 'kind'), aDid: F('struct actor', 'did'),
   aReady: F('struct actor', 'ready'), denSeq: F('struct hub', 'den_seq'), agear: F('struct hub', 'agear'), digT: F('struct hub', 'dig_t'),
   themeBank: 'THEME_BANK', thName: F('struct theme', 'name'), thStratum: F('struct theme', 'stratum'), tstrata: 'TSTRATA',
@@ -222,7 +222,7 @@ function createRecorder() {
         else if (e.te === 'TE_NO_FOE') e.shock = !!e.b;                    //   its end, in shock or none left)
         else if (e.te === 'TE_BREAK') { e.by = (e.b & 0x3F) - 1; e.how = ['back', 'flight', 'run'][w >> 8]; delete e.task; }   // (A disengage's)
         else if (e.te === 'TE_FREE') e.none = ['engaged', 'near', 'way'][e.b];   // (None: not engaged, nothing near to flee, no way back)
-        else if (e.te === 'TE_LOW' || e.te === 'TE_OUT') { e.lamp = e.b & 0x7F; e.seen = !!(e.b & 0x80); }   // (A light's kind; one lying there seen)
+        else if (e.te === 'TE_LOW' || e.te === 'TE_OUT') { e.lamp = e.b; e.seen = !!(w >> 8 & 0x40); e.task = name('LT_NONE', w >> 8 & 0x3F); }   // (A light's kind; one lying there seen)
         else if (e.te === 'TE_ROBBED') e.by = e.b - 1;                     // (The robber: its entry)
         else if (e.te === 'TE_FETCHED') { e.by = (e.b & 15) - 1; e.ft = name('FT_TOOK', e.b >> 4); e.thing = w >> 8; delete e.task; }   // (An errand's, a gift's: slice 4.8's)
         else if (e.te === 'TE_BEGUN' || e.te === 'TE_ASK_SHORT') e.what = e.b;   // (A timed work's, a battering's: what it's done to)
@@ -252,7 +252,7 @@ function createRecorder() {
         skew: h[L.pcSkew], lost: h[L.pcLost], noise: h[L.pcNoise], mask: h[L.pcMask], bg: h[L.pcBg], airH: h[L.airH], airS: h[L.airS],
         task: { kind: name('LT_NONE', h[L.pcTask]), asking: h[L.pcTask + 1], len: w16(h, L.pcTask + 2), done: w16(h, L.pcTask + 4), foe: h[L.pcTask + L.ltFoe] - 1, mins: h[L.pcTask + L.ltMins] },
         ready: w16(h, L.pcReady) + w16(h, L.pcReady + 2) * 65536, now: w16(h, L.hubNow) + w16(h, L.hubNow + 2) * 65536,
-        chart: h[L.pcChart], map: w16(h, L.pcMap) },
+        chart: h[L.pcChart], chartk: h[L.pcChartk], map: w16(h, L.pcMap) },
       sum: { cond: w16(h, L.pcsum + L.sCond), health: h[L.pcsum + L.sHealth], load: h[L.pcsum + L.sLoad], sight: h[L.pcsum + L.sSight],
         step: h[L.pcsum + L.sStep], gstep: Array.from(h.subarray(L.pcsum + L.sGstep, L.pcsum + L.sGstep + L.ngaits)),
         limbs: h[L.pcsum + L.sLimbs], limp: h[L.pcsum + L.sLimp], northsense: h[L.pcsum + L.sNorth],

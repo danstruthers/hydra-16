@@ -144,7 +144,7 @@ void __fastcall__ s_drop_held (unsigned char h, unsigned char ring)
         p->y = y;
         p->flags &= ~(I_HELD | I_WORN);
         hub_map (0);
-        if (HUB->pc_strike == (SK_THING | k)) {
+        if (HUB->pc_strike == SK_OF (k)) {
             HUB->pc_strike = SK_BEST;           /* (What struck let go of: what's in its hands now strikes, the fight's
                                                 **   next blow) */
         }
@@ -349,9 +349,9 @@ void __fastcall__ s_den_strip (unsigned body)
 ** moved off), forgotten */
 unsigned char s_den_reach (void)
 {
-    struct item* p = item_at (bd.dropped);
+    struct item* p = item_at (bd.dropped & ~DR_OWN);
 
-    if (p->kind == (bd.arm & 0x7F) && p->where == IW_SQUARE && p->sn == bd.sn && (unsigned) (p->x - bd.x + 1) <= 2 &&
+    if (p->kind == bd.arm && p->where == IW_SQUARE && p->sn == bd.sn && (unsigned) (p->x - bd.x + 1) <= 2 &&
         (unsigned) (p->y - bd.y + 1) <= 2) {
         hub_map (0);
         return 1;
@@ -465,7 +465,7 @@ void s_den_equip (void)
         if ((unsigned char) (k - KI_SLING) <= KI_CROSSBOW - KI_SLING) {
             ag |= AG_SHOOTS;                    /* (A launcher: its mind's to shoot, slice 4.7's) */
         }
-        ag |= k == KI_PICK ? AG_PICK : k == KI_SHOVEL ? AG_SPADE : 0;  /* (A tunneller's tools: its mind's to dig,
+        ag |= k == KI_PICK ? AG_PICK : k == KI_SHOVEL || k == KI_SPADE || k == KI_MATTOCK ? AG_SPADE : 0;  /* (A tunneller's tools: its mind's to dig,
                                                 **   slice 4.11's) */
         if (weapon ()) {                        /* (A weapon held, or one it put up: wshoot.c's to_throw's count, its
                                                 **   things to throw, 2026-10-30) */
@@ -565,7 +565,7 @@ unsigned char __fastcall__ s_den_draw (unsigned char want)
     static unsigned char k, w;
 
     w = want;
-    if ((bd.arm & 0x80) || !kit_next (0)) {    /* (Its own let fall: it takes that up again, its turn: RS_REARM) */
+    if ((bd.arm && (bd.dropped & DR_OWN)) || !kit_next (0)) {    /* (Its own let fall: it takes that up again, its turn: RS_REARM) */
         return 0;
     }
     if (w) {
@@ -671,7 +671,7 @@ take:
 /* Its weapon on the floor (dword's kind: none of that name, nothing), beside it or where it stands (a d10: 1-6 the
 ** square that way, if it's open floor), kept as its (bd's arm, dropped), told (E_BEAT's WB_DROP, its kind, its b the
 ** body's: the denizens' ring, after the blow's words), the world to look about again.  A weapon of its own in its hand
-** (the outfits' gear) that thing (arm | 0x80), the referee told it's gone from its hand */
+** (the outfits' gear) that thing (dropped | DR_OWN), the referee told it's gone from its hand */
 void s_den_drop (void)
 {
     static const unsigned char way[6] = { H_N, H_NE, H_SE, H_S, H_SW, H_NW };
@@ -715,8 +715,8 @@ void s_den_drop (void)
         ip->owner = ip->hide = 0;
         ip->flags &= ~I_HELD;
         hub_map (0);
-        bd.dropped = i;
-        bd.arm = k | 0x80;
+        bd.dropped = i | DR_OWN;
+        bd.arm = k;
     } else if ((bd.dropped = lay_body (k, bd.sn, x, y)) != 0) {
         bd.arm = k;
     } else {
@@ -733,18 +733,18 @@ void s_den_drop (void)
 ** hand again, the referee told), told (WB_PICKS, its kind), the world to look about again */
 void s_den_took (void)
 {
-    unsigned char k = bd.arm;
+    unsigned char k = bd.arm, own = bd.dropped >> 8 & DR_OWN >> 8;
 
-    if (k & 0x80) {
-        filed (bd.dropped, 1);
+    if (own) {
+        filed (bd.dropped & ~DR_OWN, 1);
     } else {
         item_at (bd.dropped)->kind = 0;
         hub_map (0);
     }
-    limb_news (WB_PICKS | (unsigned) (k & 0x7F) << 8, bk + 1);
+    limb_news (WB_PICKS | (unsigned) k << 8, bk + 1);
     bd.arm = 0;
     den_saw = 1;
-    if (k & 0x80) {
+    if (own) {
         s_den_equip ();
     }
 }

@@ -20,7 +20,7 @@
 **     (carried, or lying within reach: the things' IO_FIND, as a fill's fuel and a door's bar are), else refused,
 **     the things' words ("You have no bar to hand."), never done with bare hands or another thing instead; a blow's
 **     taken in hand first, as a named weapon is (names.c's), and struck with that thing and no other (strike's
-**     SK_THING, its kind: the user's, 2026-10-22, HOUSE.md's fights and portals);
+**     SK_OF its kind: the user's, 2026-10-22, HOUSE.md's fights and portals);
 **   - a blow with nothing named, asked about first, its hands empty and a better thing carried (choose.c's: CF_ASKED,
 **     the command carried out as it's answered).
 ** A thing found has its square (struct cthing's x, y) and its name as its word.  Its own state (the last thing named,
@@ -373,10 +373,8 @@ static unsigned char tool_ok (void)
         }
     }
     if (a == VB_ATTACK_OBJECT || a == VB_BREAK_OBJECT) {
-        strike = (unsigned char) othings_x < KI_HIGH ? SK_THING | (unsigned char) othings_x : SK_BEST;  /* (That thing
-                                                **   strikes, and no other: its kind, IO_FIND's (one past seven bits,
-                                                **   items.h's KI_HIGH, the best held); in
-                                                **   hand first, once there's something to strike) */
+        strike = SK_OF (othings_x);             /* (That thing strikes, and no other: its kind, IO_FIND's; in hand first,
+                                                **   once there's something to strike) */
         strcpy (hold_w, cmd.other.word);
     }
     if (a != VB_FILL_OBJECT) {

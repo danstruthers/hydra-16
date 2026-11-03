@@ -187,7 +187,7 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** them in (hub.h's FF_*: the creature's courage tested if it was wounded and stands, RS_MORALE's: FF_FLEES, or
 ** AF_CAUTIOUS).  The character strikes with what the
 ** hub's pc_strike says (SK_*: the best it holds, a fist, a foot, the head: Unarmed's, the book's hand, foot and head;
-** SK_THING | a kind, that thing and no other, the catalogue's (items.h's struct kind, in the hub's CAT_BANK: the
+** SK_OF a kind, that thing and no other, the catalogue's (items.h's struct kind, in the hub's CAT_BANK: the
 ** referee's to read), a weapon of the ruleset's as itself, anything else as the ruleset treats a thing swung, by its
 ** kind's data, its words the kind's name; a soft one never asked of, the world's: rshouse.h's RS_HOUSE_SWING), in the
 ** hand the hub's pc_shand says (its hand's own: the off hand's penalty, one-handed, an arm hurt: slice 4.1b's).
