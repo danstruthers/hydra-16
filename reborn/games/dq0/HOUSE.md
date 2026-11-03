@@ -1293,16 +1293,67 @@ are drafts, the user's as they are for now (2026-10-22).
     it begins): the search lasts till it comes to it (3 seconds, and 3.2 more for each of its distance off, squared: at
     its feet 3 seconds, beside it 6.4, a corner 9.6, two squares off 16), "You find a dagger.", "Your hands find an
     iron key."; none, a minute, "You find no dagger here."  Cut short before it comes to it, not found.
-  - **"search the table", "search on the table", "search the chest"**: a thing within reach (in the light, out of reach,
-    walked over to first; in the dark, one within reach, felt: "You feel about you, but there's no table within
-    reach."): what's on it or in it ("On the table you find two chisels.", "Your hands find two chisels on the
-    table.", "There's nothing in the chest."; closed, not looked into: "It's closed: you go over the outside of it."),
-    then it gone over for traps, examine's check, one rule for it ("The chest shows no sign of a trap: you go over it
-    carefully, and find none.": things have no traps yet).  A minute.
+  - **"search the table", "search on the table", "search the chest", "search the straw", "search the body"**: a thing
+    within reach (in the light, out of reach, walked over to first; in the dark, one within reach, felt: "You feel about
+    you, but there's no table within reach."), a minute, for what's in it or under it, never traps unless they're asked
+    for (the user's playtest, 2026-11-02: "it says 'no sign of a trap', but I am not looking for traps, but for anything
+    hidden in the straw").  Worded as it begins by what it is (the catalogue's, no names): a heap, "You poke through the
+    straw..."; a container or a surface, "You search the chest..."; a body, "You go through the body..."; anything else,
+    "You look the dagger over...".  What came of it:
+    - **A heap** (a kind that's no container nor surface but has a size it hides, its cap_bulk: straw, sand, a blanket,
+      furs, potsherds, a cloak lying): what's hidden on its square is in it, each by the search's test at its
+      hiding's steps, **2 steps the easier** (all the search on it: *for review*): "You find an iron key in the straw.",
+      "You find nothing in the straw.", "Your hands find nothing in the straw."
+    - **A container or a surface**: "On the table you find two chisels.", "Your hands find two chisels on the table.",
+      "There's nothing in the chest."; closed, not looked into: "It's closed: you go over the outside of it."  A body:
+      what's worn beneath its clothes found (as before).
+    - **Anything else**: "You find nothing hidden about the dagger."
   - **"search the chest for traps"**: in the light, examine's check alone (ten seconds: Looking at things, above); in
-    the dark, the search on it by touch.  **"search the door"**, "search the door for traps": the door gone over for
+    the dark, the search on it by touch, and its trap's words after what it found (things have no traps yet: "The chest
+    shows no sign of a trap ...").  **"search the door"**, "search the door for traps": the door gone over for
     traps (the world's PA_CHECK, examine's).  **"search for traps", "search for hidden things"**: a search, as "search"
     is.
+  - **"search the room"** (the chamber, the hall, the cave, the cell, the vault): the whole of it: below.  In a passage, a
+    search about it, as "search" is.  "search" alone stays the quick minute about the character: a look round from where
+    it stands, for one who has no time for more (the user's words asked for the whole room's search under its own name).
+- **A room searched whole** *(the user's playtest, 2026-11-02: every number the house's, for review)*: a long task
+  (LT_SEARCH: its bar its whole time; stopped, asked and interrupted as any; "stop searching"), the character on each
+  square in its turn at a slow walk at most (as one searching as it goes: a hidden trap underfoot noticed at the search's
+  chance, else sprung, and the search stops there), so the denizens see it there; told as it goes, its finds told as
+  each is found.  (dq0w's wroom.inc, wroom.c; things.c's part 46; search.c's words.)
+  - **Its stops:** the floor cut into blocks of 3 squares by 3 from its northwest corner (the last of a row or a column
+    what's left), a stop each: the ring of blocks along the walls first, clockwise from the corner nearest it (so a wall
+    on its left hand, "You work along the wall to your left.", "You turn the corner, and work along the east wall."), then
+    the rings inside them ("You work back and forth over the floor in the middle of the room.").  A block it can't reach
+    any of (a cave's rock in the room's rectangle) isn't walked to; what's there is tested all the same.
+  - **At a stop, each thing lying in the block**, by its time: a heap poked through **20 seconds** ("You poke through
+    the straw.", then "You find a silver ring in the straw." or "You find nothing in the straw."); a body gone through
+    **30 seconds**; an open container **10 seconds** ("You go through the sack.", what's in it); anything else, a surface
+    or a closed container too, looked over **5 seconds** ("You look over the iron pot.", "It's closed: you go over the
+    outside of it.": its lid not lifted, not forced; a closer look, examine's, no appraisal: what it's made of, its wear, a
+    lock's make; what's on a surface).  Each told with what's in it, as its time's up.
+  - **Then the block itself, 10 seconds** (the search's own rate: a minute the 49 squares about it, a block's 9 a sixth of
+    that): its tests as its time's up: each hidden trap in the block's squares, each hidden door and door's trap in
+    the walls beside them, and each thing hidden there (a second chance at what's in a heap), by the referee's
+    P_SEARCH at the steps a search's are, told as found.  A hidden door found in a wall it's working along is a door from
+    then on.
+  - **By touch** (its square dark, or the character blind, as it comes to each stop): "You feel along the wall to your
+    left.", "You feel through the straw.", "Your hands find ..."; each thing's time twice, the block's **30 seconds**, the
+    tests 2 steps the harder, as a search by touch's.  Its pace the dark's, feeling its way.
+  - **Stopped part way, what's searched stays searched**: the stops done are kept (a change record on the wall square at
+    the room's northwest corner, the DUG kind's, its tile the count, its elev the corner it set out from: one record a
+    room, whatever its size; in the save with the rest), a stop not finished not counted.  "search the room" again goes
+    on from there ("You go on searching the room."), the same way round; all done, it says so at once, no time ("You've
+    been all over this room already: search about you, a wall, or a thing, for a closer look.").  What's been missed
+    there is missed: the other forms are for a second try.
+  - **A great cavern** (a room across the chunks, as much of it as it's seen vast) is refused kindly: "This cavern is too
+    vast to go over from end to end: search about you, or search for traps as you go."
+  - **Every actor's rule where it applies:** a denizen's search isn't asked for yet; the same stops would serve it, wk.who
+    its own.
+- **What the maker hides in heaps** (the same dungeon for the same seed but for these): one heap of straw in four of those
+  a room's former use left, by its square, no die, has one of the style's hidden kinds in it (hiding 1: found by a
+  search of it, or of the room).  A lair's beds were so already: a denizen's stash lies hidden at its bed, in its straw
+  (outfits.txt's @stash and @bed).
 
 ## Hands and limbs *(slice 4.1b, drafted 2026-10-22; reviewed by the user, 2026-10-23: they stand)*
 

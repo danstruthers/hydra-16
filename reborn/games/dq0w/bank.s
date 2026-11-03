@@ -25,7 +25,7 @@ SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
-OVBANKS     = 25                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
+OVBANKS     = 26                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
             .bss
 _ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
@@ -131,11 +131,11 @@ go:
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
             SWPART      41, 19              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
             SWPART      42, 24              ; What a closer look at a thing shows; its condition (things.c)
-            SWPART      43, 10              ; A walk in the dark set out on: its way felt, a thing stumbled over
+            SWPART      43, 7              ; A walk in the dark set out on: its way felt, a thing stumbled over
             SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
-            SWPART      45, 25              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
-            SWPART      46, 7               ; A search's thing, for or on; what a search turns up (things.c)
-            SWPART      47, 25               ; What's on a thing or in it, searched (things.c)
+            SWPART      45, 17              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
+            SWPART      46, 25               ; A search's thing, for or on; what a search turns up (things.c)
+            SWPART      47, 10              ; What's on a thing or in it, searched (things.c)
             SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
                                             ;   (things.c: slice 4.1b's)
             SWPART      49, 23              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c; overlay
@@ -150,7 +150,7 @@ go:
             SWPART      53, 16              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
             SWPART      54, 16              ; Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
             SWPART      55, 16              ; Travel to a place it knows (dq0w.c's: slice 4.2's)
-            SWPART      56, 25              ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
+            SWPART      56, 26              ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
             SWPART      57, 18              ; The outfits drawn: the character's, a denizen's (outfit.c, 2026-10-27)
             SWPART      58, 19              ; The outfits made (outmake.c)
             SWPART      59, 18              ; An outfit's section drawn (outdraw.c)
@@ -163,12 +163,12 @@ go:
             SWPART      66, 15              ; The missiles gathered (wshoot.c; overlay 15's, 2026-10-30)
             SWPART      67, 20              ; The character's shot, the denizens' shots and throws (wshoot.c)
             SWPART      68, 20              ; Where a missile falls, a miss's stray; a launcher loaded (wshoot.c)
-            SWPART      69, 25               ; A robbery (wfight.c's: part 67's room, overlay 5's, 2026-10-30; 12's room, 2026-11-02)
+            SWPART      69, 26               ; A robbery (wfight.c's: part 67's room, overlay 5's, 2026-10-30; 12's room, 2026-11-02)
             SWPART      70, 22              ; Wounds over time: the bodies' time told, a thing used up (wtend.c; overlay 21's room, slice 4.4)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
             SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
-            SWPART      74, 25              ; A waterskin filled (wwater.c: slice 4.9's)
+            SWPART      74, 26              ; A waterskin filled (wwater.c: slice 4.9's)
             SWPART      75, 4               ; The water's depth where the character stands (wwater.c)
             SWPART      76, 23              ; The time of day believed (wtime.c: 2026-10-31)
             SWPART      77, 23              ; The sky seen, the time believed's start (wtime.c)
@@ -177,13 +177,17 @@ go:
             SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
             SWPART      80, 24              ; One path: a denizen's doors, the doors' keys (wport.c: Phase 3C's)
             SWPART      81, 2               ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
-            SWPART      82, 25               ; The reach's steps (things.c's, 2026-11-02: HOUSE.md's reach)
-            SWPART      83, 25              ; Their other half
-            SWPART      84, 25               ; And the hand the pack goes in, a tool's use, the words
-            SWPART      85, 25              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
+            SWPART      82, 25              ; A room searched whole (wroom.inc: the user's playtest, 2026-11-02)
+            SWPART      83, 25              ; Its tests at a stop (wroom.c)
+            SWPART      84, 26              ; The reach's steps (things.c's, 2026-11-02: HOUSE.md's reach)
+            SWPART      85, 26              ; Their other half
+            SWPART      86, 26              ; And the hand the pack goes in, a tool's use, the words
+            SWPART      87, 26              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
 
             SWFN        work, 48
             SWFN        worked, 48
+            SWFN        room_on, 82         ; (A room searched whole: wroom.inc)
+            SWFN        room_tests, 83
             SWFN        searched, 37        ; (A search's end: the main RAM's room, 2026-10-31)
             SWFN        outfit, 57
             SWFN        den_kit, 57
@@ -278,13 +282,13 @@ go:
             SWFN        reach_from, 56      ; (The reach, 2026-10-26: HOUSE.md's)
             SWFN        reach_to, 56
             SWFN        reach_done, 56
-            SWFN        reach_step, 82      ; (The reach's steps, 2026-11-02)
-            SWFN        reach_do, 83
-            SWFN        rs_for, 84
-            SWFN        hub_attach, 85
+            SWFN        reach_step, 84      ; (The reach's steps, 2026-11-02)
+            SWFN        reach_do, 85
+            SWFN        rs_for, 86
+            SWFN        hub_attach, 87
             SWFN        handy, 56
             SWFN        tool_reach, 72
-            SWFN        flame, 84
+            SWFN        flame, 86
             SWFN        drop, 35
             SWFN        throw_at, 4
             SWFN        list, 11

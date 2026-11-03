@@ -103,6 +103,10 @@ unsigned char travel_on (void);
 void way_out (void);                            /* Part 54 */
 #define TRV_TOOL        0xFF                    /* (trav: no journey, a dig's tool to put away, travel_on's) */
 unsigned char trav;                             /* (A journey under way: part 54's, its next leg as the last is done) */
+unsigned char __fastcall__ room_on (unsigned char go);   /* Part 82 (wroom.inc): a room searched whole */
+unsigned char __fastcall__ room_tests (unsigned char touch);   /* Part 83 (wroom.c) */
+void __fastcall__ make_own (unsigned i);        /* (Part 13's) */
+unsigned char rs_said;                          /* (A room searched whole's: what came of a thing asked, things.c's) */
 unsigned char kowed;                            /* (A stratum's populations owed at a real pace, its number plus 1:
                                                 **   wkept.c's, its kept rooms lit as they're done, kept_late: the
                                                 **   lights' minute's) */
@@ -3364,6 +3368,9 @@ unsigned char srch_form;                        /* (Its form, SF_*, | SF_TOUCH, 
 #pragma rodata-name (push, "SW37RODATA")
 unsigned char s_searched (void)
 {
+    if (srch == 2) {
+        return room_on (0);                     /* (A room searched whole: part 82's, stop by stop) */
+    }
     srch = 0;
     here ();
     work (PA_SEARCH, NO_SQ, NO_SQ, srch_form);
@@ -3426,6 +3433,10 @@ void __fastcall__ s_door_work (unsigned char what)
     if (what == PA_SEARCH) {                    /* (A long task: a minute's, what it finds told as it ends; a search for
                                                 **   a thing, till it's found, I_PORTAL's w1: its form the UI's, by touch
                                                 **   in the dark) */
+        if (want_ == SF_ROOM) {
+            room_on (1);                        /* (The whole room: part 82's) */
+            return;
+        }
         srch_form = want_ | (dark () ? SF_TOUCH : 0);
         if ((srch_form & (7 | SF_TOUCH)) == (SF_WALL | SF_TOUCH) && (unsigned char) (ahead (srch_form >> 4) - FA_WALL) >
             FA_BARS - FA_WALL) {
@@ -3562,6 +3573,7 @@ void s_revealed (void)
 ** 0 once it's free */
 unsigned char s_work_done (void)
 {
+    struct msg m;                               /* (A trace's: on the C stack, the main RAM's room) */
     unsigned char w = lwork;
 
     lwork = 0;
@@ -3578,10 +3590,10 @@ unsigned char s_work_done (void)
     here ();
     HUB->pc_task.kind = LT_NONE;
     if (w == LW_TRACE) {
-        lw_m.w1 = lw_x;
-        lw_m.w2 = lw_y;
+        m.w1 = lw_x;
+        m.w2 = lw_y;
         tr_flush (0);
-        traced (&lw_m);                         /* (Its time spent already: the reading now) */
+        traced (&m);                            /* (Its time spent already: the reading now) */
         return 0;
     }
     work (w, lw_x, lw_y, lw_d);
@@ -3942,7 +3954,10 @@ void s_step_on (void)
         HUB->pc_x = x;
         HUB->pc_y = y;
         HUB->pc_face = h;
-        HUB->pc_task.done = ++pnext;
+        ++pnext;
+        if (!srch) {                            /* (A room searched whole's leg: its bar its whole time, stepping's) */
+            HUB->pc_task.done = pnext;
+        }
         if ((e = zone_step (ox, oy, x, y)) != 0) {    /* (HOUSE.md's engagement, part 24's) */
             if (e != 0xFF) {
                 evb = e;                        /* (Come into an enemy's zone, or a square on in one: stopped; a
@@ -4090,6 +4105,8 @@ void __fastcall__ s_path_ways (unsigned char tx, unsigned char ty)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+#include "wroom.inc"
+
 /* ==== Parts 43 and 44: the walk in the dark (the user's, 2026-10-22: HOUSE.md's walking in the dark), their own: its
 ** way gone over as it sets out, a thing stumbled over as it goes (43's), what it meets where it ends, felt, or at a
 ** faster pace blundered into (44's) */
@@ -4108,8 +4125,12 @@ static void __fastcall__ known (unsigned i)
     item_at (i)->flags |= I_KNOWN;
     hub_map (0);
 }
+#pragma bss-name (push, "SW43RODATA")            /* (What's in the way, wanted only as a walk's worked out: dark_way's alone; the
+                                                **   main RAM's room, 2026-11-02) */
 static unsigned bigx[NBIG], bigy[NBIG], bigi[NBIG];
-static unsigned char bigk[NBIG], bigb[NBIG], nbig, pheavy;
+static unsigned char bigk[NBIG], bigb[NBIG], nbig;
+#pragma bss-name (pop)
+static unsigned char pheavy;
 
 
 /* The walk worked out, in the dark (set_off's: feel_), its way gone over from where it sets out: the first thing on it
@@ -5609,7 +5630,6 @@ void __fastcall__ s_intent_more (struct msg* m)
             lwork = LW_TRACE;
             lw_x = m->w1;
             lw_y = m->w2;
-            lw_m.kind = I_TRACE;
             k = k == TRC_SMELL ? LT_SNIFF : LT_TRACK;   /* (Begun, as part 12's begun: its first words told) */
             task (k, went);
             HUB->pc_task.what = 0;

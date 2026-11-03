@@ -389,6 +389,7 @@ unsigned char bandage_out (void);               /* Part 19: a bandage got out, a
 void step_go (void);                            /* Part 19: a step of the reach begun by the world (IO_STEP's) */
 void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 19: the reach's words */
 unsigned char search_go (void);                 /* (Part 10's) A search begun, by its form (search.c) */
+void __fastcall__ search_said (const struct msg* m);   /* (A room searched whole's, as it goes: an E_BEAT's WB_SEARCH) */
 unsigned char __fastcall__ place_go (const struct cmd* c);   /* Part 7: a place in the room walked to */                  /* Part 7: a command's thing out of reach walked over to first */
 void __fastcall__ took_up (unsigned r);         /* Part 2: a thing taken up, or not, told (an E_TAKEN's: IR_*, the
                                                 **   light before times 256) */

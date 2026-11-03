@@ -53,12 +53,12 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "chest", K_CONTAINER, 120, 80, 60, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 80, SS | KF_LID },
     { "skull", 0, 4, 2, 0, 0, 0, 0, 3, "", MT_BONE, AP_BONE, 0 },
     { "broken sword", 0, 12, 2, 0, 0, 0, 0, 4, "blade", MT_IRON, AP_WEAPON, 40 },
-    { "cloak", K_WEAR, 8, 6, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 96 },
-    { "potsherds", K_PLURAL, 2, 1, 0, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 0 },
+    { "cloak", K_WEAR, 8, 6, 2, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 96 },
+    { "potsherds", K_PLURAL, 2, 1, 2, 0, 0, 0, 2, "", MT_CLAY, AP_POTTERY, 0 },
     { "sword", K_HAND | K_HANG, 12, 3, 0, 0, FM_SWORD, 0, 4, "blade", MT_IRON, AP_WEAPON, 600 },  /* (The book's
                                                 **   broadsword) */
     { "basket", K_CONTAINER, 4, 8, 16, 80, 0, 0, 3, "", MT_WOOD, AP_WOOD, 8, KF_SOLID },
-    { "heap of sand", 0, 8, 1, 0, 0, 0, 0, 2, "", MT_STONE, AP_POTTERY, 0, 0, KF_SMALL },
+    { "heap of sand", 0, 8, 1, 2, 0, 0, 0, 2, "", MT_STONE, AP_POTTERY, 0, 0, KF_SMALL },
     { "table", 0, 160, 60, 30, 400, 0, 0, 7, "", MT_WOOD, AP_WOOD, 144, KF_ON },
     { "chair", 0, 40, 20, 8, 120, 0, 0, 5, "", MT_WOOD, AP_WOOD, 48, KF_ON },
     { "quiver", K_CONTAINER | K_HANG, 2, 2, 4, 24, FM_ARROW, 0, 2, "", MT_LEATHER, AP_HIDE, 32, KF_SOLID },
@@ -88,7 +88,7 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
                                                 **   the back, taken in hand to fight) */
     { "iron pot", K_CONTAINER, 32, 8, 6, 48, 0, 0, 3, "", MT_IRON, AP_METAL, 40, SS | KF_LIQUID | KF_LID }, /* (A room's use's
                                                 **   leavings: the stock's, dq0m/uses.c) */
-    { "heap of straw", 0, 4, 8, 0, 0, 0, 0, 3, "", MT_OTHER, AP_WOOD, 0 },
+    { "heap of straw", 0, 4, 8, 8, 0, 0, 0, 3, "", MT_OTHER, AP_WOOD, 0 },
     { "candle stubs", K_LIGHT | K_HAND | K_PLURAL, 1, 1, 0, 0, 0, 1, 1, "", MT_TALLOW, AP_FOOD, 0 },  /* (A light
                                                 **   of a few minutes: slice 4.1's) */
     { "well", 0, 255, 255, 0, 0, 0, 0, 8, "", MT_STONE, AP_STONE, 0, KF_FIXED },   /* (Its stone curb: never taken
@@ -176,8 +176,8 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 }, { "", 0 },    /* (The theme's eight, the
                                                 **   UI's as it starts: KI_THEME's) */
     /* (KI_HIGH on, 2026-10-27: the denizens' belongings and valuables, never lit nor struck with) */
-    { "furs", K_PLURAL, 40, 20, 0, 0, 0, 0, 4, "", MT_LEATHER, AP_HIDE, 120 },    /* (A lord's bed: a heap of them) */
-    { "blanket", 0, 12, 6, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 192 },
+    { "furs", K_PLURAL, 40, 20, 8, 0, 0, 0, 4, "", MT_LEATHER, AP_HIDE, 120 },    /* (A lord's bed: a heap of them) */
+    { "blanket", 0, 12, 6, 8, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 192 },
     { "cask", K_CONTAINER, 40, 40, 32, 200, 0, 0, 5, "", MT_WOOD, AP_WOOD, 48, KF_LIQUID | KF_STOPPER },   /* (Four
                                                 **   gallons: a band's water) */
     { "crowns", K_PLURAL, 16, 0, 0, 0, 0, 0, 1, "", MT_GOLD, AP_METAL, 960, 0, KF_SMALL | KF_COUNT | KF_TENS },  /* (The

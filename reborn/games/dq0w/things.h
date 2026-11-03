@@ -71,7 +71,7 @@ void __fastcall__ keep (unsigned char back);    /* The store kept (items.dat), o
 extern unsigned ilim;                           /* (things.c's: the records used, at most) */
 extern unsigned ihigh;                          /* (things.c's: every record from it on free; raised as one's taken) */
 extern unsigned irs;                            /* (things.c's: a thing's own numbers, made) */
-#define OVBANKS         25                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
+#define OVBANKS         26                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
                                                 **   own: ipage.c's, ovbank[OVBANKS]; the ways across a room's,
                                                 **   dq0w.c's, ovbank[OVBANKS + 1]; the traces' store's, wtrace.c's,
                                                 **   ovbank[OVBANKS + 2] and [OVBANKS + 3]) */
@@ -114,17 +114,17 @@ unsigned __fastcall__ reach_done (unsigned char said);  /* (What's owed added, i
 #define RD_LONG         0x02                    /*   a long task's, not added: its length the more, the caller's) */
 extern unsigned rtime, roff, pextra;            /* (What's owed: its time, tenths; the pack taken off for it) */
 extern unsigned char rsteps, rbody;             /* (Its steps, a fight's rounds: its levels; one, on the body) */
-/* The reach's steps (part 82's, 2026-11-02, the user's: each its words, its time, its grope; HOUSE.md's) */
+/* The reach's steps (part 84's, 2026-11-02, the user's: each its words, its time, its grope; HOUSE.md's) */
 unsigned char __fastcall__ reach_step (unsigned n, unsigned c);   /* (Thing n got out, container c reached into: 1 if a
                                                 **   step's begun, the handling to wait, its caller's nothing done;
                                                 **   0 go on.  c RS_TOOL: n a tool, got out, put away after its use) */
 #define RS_TOOL         0xFFFF
-unsigned char __fastcall__ reach_do (unsigned w);   /* (Part 83's: RO_*, or an intent's tool's keys: s_reach_do's) */
+unsigned char __fastcall__ reach_do (unsigned w);   /* (Part 85's: RO_*, or an intent's tool's keys: s_reach_do's) */
 enum { RO_END, RO_ASK, RO_REPLY, RO_FUMBLED, RO_GO, RO_SEEN };
 #define RS_GO           0xFFFB                  /* (reach_step's c: the step rs_do, rs_k, rs_what, rs_t, begun, the caller's) */
 #define RS_FIRE         0xFFFC                  /* (reach_step's c: n a fire-maker, a tool's steps and its tries; 2 empty) */
 #define RS_BACK         0xFFFE                  /* (reach_step's c: the pack back on, its own step) */
-unsigned char __fastcall__ rs_for (unsigned n);  /* (Part 84's: the hand the pack goes in; or RF_*) */
+unsigned char __fastcall__ rs_for (unsigned n);  /* (Part 86's: the hand the pack goes in; or RF_*) */
 #define RF_DRAW         0xFFF0                  /* (A tool's next step set: 1; 0 on with its use) */
 #define RF_FIRE         0xFFF1                  /* (A fire-maker's: the same, its tries; 2 empty) */
 #define RF_TRIED        0xFFF2                  /* (A try's end: its roll, told) */
