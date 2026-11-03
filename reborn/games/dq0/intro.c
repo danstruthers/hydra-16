@@ -151,7 +151,6 @@ void __fastcall__ o_portal_words (unsigned char out)
 
 /* ---- Digging's words: how a spell of work went, and the feet to go */
 
-void to_hand (void);                            /* (Main.c's) */
 void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
 {
     const char* s;
@@ -180,10 +179,7 @@ void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
         return;
     case D_NO_TOOL:                             /* (Told why, for what it can judge: HOUSE.md's, 2026-11-02; feet what it's
                                                 **   into, MAT_* + 1) */
-        to_hand ();                             /* (What it carries: the tools' list, fresh) */
-        hub_map (UI_BANK);
-        strncpy (lb + 200, UIREC->things_text, 180);
-        hub_map (0);
+        hub_mem (UI_BANK, lb + 200, UIREC->things_text, 180);   /* (Not hub_map: an overlay runs in the window) */
         lb[380] = 0;
         --feet;
         strcpy (lb + 180, feet == MAT_EARTH ? "hard-packed earth" : feet == MAT_MASONRY ? "masonry" : feet == MAT_FLAGS ?

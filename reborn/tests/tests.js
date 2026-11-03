@@ -2269,9 +2269,16 @@ function dq0Vein(seed, x, y) {
 // evaluate), as the headers stand.  A test's scene poked through it (a door broken down, left open: dq0builder, dq0mine)
 let dq0PortalOff = null;
 function dq0Portal(m, sn, x, y) {
-  const S = stratumRec(m, sn), banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
-  const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51), w = hub === undefined ? null : banks[hub + WORLD_BANK_N];
-  if (!S || !w) return null;
+  const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b), h0 = m.dq0.bank(0);
+  // (This game's hub, not an earlier game's left in its banks: its bank the recorder's)
+  const hub = keys.find(k => banks[k] === h0 || (banks[k].buffer === h0.buffer && banks[k].byteOffset === h0.byteOffset)), w = hub === undefined ? null : banks[hub + WORLD_BANK_N];
+  if (!w) return null;
+  let S = null;
+  for (let i = 0; i < 8 && !S; i++) {
+    const r = w.subarray(i * 79, i * 79 + 79), u16 = k => r[k] | r[k + 1] << 8;
+    if (r[0] && r[1] === sn) S = { x0: u16(11), y0: u16(13) };
+  }
+  if (!S) return null;
   const [PORTAL, PSIZE, PSTATE, NPORT, PKIND] = dq0PortalOff || (dq0PortalOff = require('../sim/lib/hubown.js').evaluate([
     'offsetof (struct chunk, portal)', 'sizeof (struct portal)', 'offsetof (struct portal, state)', 'offsetof (struct chunk, nportals)',
     'offsetof (struct portal, kind)']));

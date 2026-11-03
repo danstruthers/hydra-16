@@ -74,7 +74,7 @@ unsigned char hard;                             /* (Hard mode: dq0 -H's, the sav
 const char* savedir;                            /* (dq0 -d: the save's folder; task.c's meta too) */
 unsigned char __fastcall__ things (unsigned char op, const char* name);   /* (way.c's too, part 6's) */
 void gear_look (void);                          /* (Part 11: a denizen's things made out) */
-void to_hand (void);
+static void to_hand (void);
 void __fastcall__ came (const struct msg* m);    /* (Part 6's: come into a stratum, told and kept) */
 void __fastcall__ news (const struct msg* m);    /* (Part 11's: the rarer news, worded; a thing hidden; the hands' and
                                                 **   limbs': slice 4.1b's) */
@@ -1690,7 +1690,7 @@ unsigned char __fastcall__ othings (unsigned char op, const char* name, const ch
 
 /* What's to hand, told the referee (the keys of the tools it carries: a skill used takes the tool that suits), and
 ** the load it carries (the things' weight, all told: the referee's encumbrance, in its summary) */
-void to_hand (void)
+static void to_hand (void)
 {
     things (IO_TOOLS, "");
     strcpy (HUB->slot[SLOT_UI].text, tt ());
@@ -1715,7 +1715,9 @@ void __fastcall__ s_dig_used (unsigned bk)
     unsigned char n = bk & 3, i = (unsigned char) bk >> 4, g = bk >> 8 == D_GOOD;
 
     if (bk >> 8 == D_NO_TOOL) {
-        return;                                 /* (Why told by what it carries: dig_words's) */
+        to_hand ();                             /* (What it carries, fresh, the tools' list: dig_words's why: an overlay
+                                                **   can't, the window its own) */
+        return;
     }
     HUB->ireq.to = HUB->dig_wear[n];
     things (IO_WEAR, HUB->dig_tool[n]);
