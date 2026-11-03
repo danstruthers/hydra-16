@@ -150,7 +150,7 @@ go:
             SWPART      53, 16              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
             SWPART      54, 16              ; Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
             SWPART      55, 16              ; Travel to a place it knows (dq0w.c's: slice 4.2's)
-            SWPART      56, 5               ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
+            SWPART      56, 11              ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
             SWPART      57, 18              ; The outfits drawn: the character's, a denizen's (outfit.c, 2026-10-27)
             SWPART      58, 19              ; The outfits made (outmake.c)
             SWPART      59, 18              ; An outfit's section drawn (outdraw.c)
