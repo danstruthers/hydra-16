@@ -664,17 +664,6 @@ unsigned char __fastcall__ s_felt_stop (unsigned char h)
     return k;
 }
 
-void __fastcall__ s_no_exit (unsigned char h)
-{
-    unsigned char k;
-
-    if ((h & 1) || !s_felt_stop (h)) {
-        k = s_ahead (h);                        /* (A shut door straight on along a passage: says so, 2026-11-02) */
-        hub_map (0);
-        no_way (k == FA_DOOR ? N_DOOR : k == FA_BARS ? N_CLOSED : N_NO_EXIT);
-    }
-}
-
 /* Square x, y of stratum sn dark to a denizen (wbody.c's: its kind with no darkvision feels its way there): not seen
 ** lit by the character, nor in a room's own light (the chunk in the window after) */
 unsigned char __fastcall__ s_unlit_at (unsigned char sn, unsigned x, unsigned y)
@@ -814,6 +803,17 @@ static unsigned __fastcall__ door_on (unsigned nx, unsigned ny)
     change (sn_, nx, ny, s | PS_OPEN, d, PORTAL_STATE);
     event (E_PORTAL, 0, PO_OPENED);
     return 2 * stept;
+}
+
+void __fastcall__ s_no_exit (unsigned char h)
+{
+    unsigned char k;
+
+    if ((h & 1) || !felt_stop (h)) {
+        k = ahead (h);                          /* (A shut door straight on along a passage: says so, 2026-11-02) */
+        hub_map (0);
+        no_way (k == FA_DOOR ? N_DOOR : k == FA_BARS ? N_CLOSED : N_NO_EXIT);
+    }
 }
 
 void __fastcall__ s_across (unsigned char h, unsigned char r)
