@@ -1521,3 +1521,34 @@ reach, handy tools and things used up; DUNGEON.md's reach.  A whetstone built, t
 The user (2026-11-02): "One other thing I notices is that tunnelling at the end of a passage doesn't seem to work if there is a hidden door there that hasn't been discovered.  `dig f` does work some times, but without the right tools, especially trying to do so through stone walls, seems like it needs a "doesn't seem to be working" type of response, or "You need better tools".  Maybe a chisel would work, but without a hammer, seems moot.  Stone chisel versus wood chisel might be a good distinction for future items."
 
 **Design:** HOUSE.md's digging (a chisel and a hammer, told why, what isn't there to dig, a hidden door); DUNGEON.md's still to come (the two chisels).
+
+### The kit: light by money, what starts full, a light from a light, hammer and chisel, turning's words (2026-11-03)
+
+The lead asked: "Should the starting light be a lantern for everyone, or go by family wealth?" (recommending comfortable
+families or better a lantern and two flasks of oil, the poorest more torches, a warning at about 10 minutes of light
+left). "Must the hammer be in your hand to use a chisel, or is carrying it enough?" "Should `turn r` say "You turn right,
+to face west"?" "Should a new torch be lit from the old one before the old one is dropped?" "Can tablets be read by touch
+in the dark?"
+
+The user (2026-11-03): "2. Light source by available money, 3. Yes, hammer and chisel in each hand, 4. I guess the turn info is OK keeping both,
+5. Of course, light the new torch from the old one before it is extinguished.  6. I wouldn't worry about reading tablets
+in the dark, especially if you are illiterate (as most fantasy world folk would be)."
+
+And: "If you have a waterskin, it should be full to start."
+
+Earlier (2026-11-02): "Wandering about in the dark is really difficult.  That is good, but it makes torches or lanterns
+very important.  Maybe starting with a lantern and extra flasks of oil for it would be better?"; "`light a new torch`
+should drop the old one and get a new one and light it."; "So lighting a new torch, blowing out the old one, re-dipping,
+putting it away, etc. should be the preferred way to "redip|refresh" your torch, if it is still lit and you have a spare."
+
+And (2026-11-03): "When running status, I would like to see my hunger and thirst state as well."
+
+And (2026-11-03): "Another thing, I seem to acquire fatigue if overburdened even when sleeping.  Probably not a good thing."
+
+And, on standing under a load, asked by the lead (2026-11-03): "Yes, if you are awake and standing with the burden, you should still get fatigued."
+
+**Found:** the outfit's waterskin was already full (four pints, stoppered, so not listed); "fill the waterskin" said "You
+fill your waterskin." all the same, and nothing told how full it was: so it seemed empty.  And no code charged fatigue by a
+load at all, asleep or awake: what rose in a long sleep was hunger's and thirst's fatigue levels (very hungry or very
+thirsty one, starving or parched two, wasting or dying four, not rested off), under a Condition line that named the load and
+not the want.  **Design:** HOUSE.md's a load borne, a new light, the kit's light, a chisel and a hammer; DUNGEON.md's status.

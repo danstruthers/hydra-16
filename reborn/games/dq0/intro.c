@@ -182,6 +182,11 @@ void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
         return;
     case D_NO_TOOL:                             /* (Told why, for what it can judge: HOUSE.md's, 2026-11-02; feet what it's
                                                 **   into, MAT_* + 1) */
+        if (feet & DN_HANDS) {                  /* (The user's, 2026-11-03: "hammer and chisel in each hand") */
+            msg (feet & DN_LIT ? "You need the chisel in one hand and the hammer in the other, and that leaves no hand for your light: set it down first." :
+                "You need the chisel in one hand and the hammer in the other.");
+            return;
+        }
         hub_mem (UI_BANK, lb + 200, UIREC->things_text, 180);   /* (Not hub_map: an overlay runs in the window) */
         lb[380] = 0;
         --feet;

@@ -114,6 +114,23 @@ plays them as HarnMaster's referee does.
   square up or down for 10 to 16 squares; in a mine a raise, two feet a square for 8 to 12 (a walk's steepest step).
   Walked, not climbed, by every actor, told as any incline is, the map's heights showing it.  (dq0m/caves.c's
   incline, overlay 8.)
+- **A load borne** *(the house's, 2026-11-03: the user's "if you are awake and standing with the burden, you should still
+  get fatigued", which settles standing; for review, what the book doesn't speak to: the numbers, lying, sitting, kneeling
+  and senseless)*: the book has no such rule (its encumbrance a penalty alone, Combat 2 and 6; its GM "may" assess fatigue for
+  prolonged activity, Skills 6; ten minutes' rest a level whatever's carried).  Heavily burdened or worse (encumbrance 3 or
+  more; "a little burdened", 1 or 2, is no tiring burden: about half of ten thieves tried began at 3 or 4, the rest under)
+  tires by a level each 120 / (encumbrance - 2) minutes: two hours at 3, an hour at 4, forty minutes at 5, 24 at 7, on top of what's being done: walking,
+  crawling, running, at work, fighting, and **awake on its feet standing or crouched**, when it also rests not at all.
+  **Asleep, lying down, sitting, kneeling or senseless it bears nothing**: no tiring by it, and it rests as ever,
+  overloaded or not (shrugging the pack off works too: the load's what's carried).  Reckoned as the time's spent (a walk's as
+  it goes, a wait or a sleep as it goes and as it ends, so "status" tells it true).  The null ruleset tires nothing; a
+  denizen's load isn't counted (Characters' free pounds, below), so it never tires by one, and its own tiring is by its
+  rounds fought, rested off by the clock whatever it's doing.  (sheet.c's o_spent, GA_STOOD; dq0w.c's rest_go.)
+- **A sleeper lies down** *(the house's, 2026-11-03, for review; as the denizens' sleepers do)*: "sleep" or "rest", standing
+  or crouched, leaves it prone (status: "Position: lying down."; the status line's PRONE), and it's up by the Rise as it goes
+  on.  Sitting or kneeling it sleeps as it is.
+- **Want's fatigue, told:** hunger's and thirst's levels aren't rested off, so a long sleep can end more tired than it
+  began; the Condition line says how much of it is theirs ("tired (fatigue 3 (2 of it hunger and thirst, not rested off))").
 - **Encumbrance** is the book's (the load over Endurance, rounded), told in words: none, a little burdened (1-2), heavily
   burdened (3-4), overloaded (5 or more), on what's carried past its free pounds by Strength (D13's: the character
   carries on, below).  (harn.c's harn_get_ep; skills.c's set_load; dq0harn.c's status.)
@@ -161,9 +178,12 @@ failure.  Feet a spell (kept in half-feet), and the wear a spell does the tool:
 referee's room, 2026-11-02; back as the kinds come.)
 
 - **A chisel and a hammer** *(the house's, 2026-11-02, for review)*: a chisel works stone, masonry and flags slowly,
-  a Mining test each spell as a pick's; it takes a hammer in the other hand (carried, the referee's table asks): none,
-  it's no tool ("You'd need a hammer to drive the chisel."); an arm useless, the same ("A chisel and a
-  hammer take both hands.").  A pick to hand is the better tool and is taken.  A marginal failure with one makes nothing
+  a Mining test each spell as a pick's; **it takes the hammer in the other hand, held, not carried** (the user's,
+  2026-11-03: "hammer and chisel in each hand"): no hammer, it's no tool ("You'd need a hammer to drive the chisel."); an arm
+  useless, the same ("A chisel and a hammer take both hands."); carried, not both in hand, told and no time spent ("You need
+  the chisel in one hand and the hammer in the other."; a light in hand too, "..., and that leaves no hand for your light: set
+  it down first."): the player holds them ("hold the chisel", "hold the hammer"), a lit torch set down lighting the work as it
+  lies.  *(For review: told, not got out by the steps: its two hands are the player's to give up.)*  A pick to hand is the better tool and is taken.  A marginal failure with one makes nothing
   (half of its half a foot), so a poor miner's chisel soon comes to the question below.  The denizens' tools stay a
   pick and a shovel.
 - **Told why** *(the house's, 2026-11-02, for review; the user's playtest, DECISIONS.md)*: a dig nothing it carries bites
@@ -993,7 +1013,8 @@ The lights (lights burning down, renewed; the kit's spare; the status line's lig
 - **Fuels:** a flask of oil holds a pint, a lantern's fill (six hours' burning; a torch's hour six times over); a pot
   of pitch four hours' (a torch renewed four times).  Neither is in the maker's stock yet: the kit's flask, and dq0
   -k's.
-- **The kit** (D5): a spare torch and a flask of oil in the pack, besides the torch lit in hand.
+- **The kit** (D5, and the user's, 2026-11-03: by the money): Outfits, below.  The null ruleset's and dq0 -K's as they were
+  (dq0 -K: a torch lit, a spare, a flask, its waterskin empty: the tests').
 - **Found lights have some life left:** part of each used before it was left, 2 to 13 sixteenths of a whole one (by the
   thing), a sixteenth less for each century of its stratum's age; a candle has always some left (wax keeps); a
   lantern's oil has dried, or a torch's pitch crumbled, when that leaves none.
@@ -1569,7 +1590,8 @@ the game (world.dat).  Every ruleset's but the test itself (the referee's).  Eac
   walk's drift.  Nothing moves the character while it's senseless yet (a robber takes things, it doesn't drag); if
   one comes, its being knocked out has done it already.  A climb, a window climbed through, stairs and ladders don't
   disorient.  (main's watch of the summary, harm_fx's, part 49's: part 52's bearings_off.)
-- **What goes by the belief:** the status line's facing, "You turn to face ...", "You face ... already.", the dark's
+- **What goes by the belief:** the status line's facing, "You turn to face ..." ("You turn right, to face west." said by its way:
+  the user's, 2026-11-03, all the turning words: half left and right, left, right, around), "You face ... already.", the dark's
   "You feel your way north." and "You run north into the dark.", "You search the north wall...", and every compass
   word typed: "go north", "turn east", "face north", "the door to the north", "north and to my left", "search the north
   wall", "look north" mean the north it believes in (the UI makes them the true ways it means, main.c's cq_cmd).  The
@@ -1774,12 +1796,18 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   for that.  One arm useless: refused first, "You need two good hands to dip the torch."  The torch not in hand is taken
   in hand first.  Interrupted part way the world stays true: oil moved only at the dip's end, a torch left unlit is unlit,
   what's down is down.
-- **A new light** *(2026-11-02: the user's words, DECISIONS.md's; drafted for review)*: "light a new torch", "light a fresh
-  torch", "light another torch", any light of that name: the old one in a hand let fall, free (the book's discarding: no
-  test, no time), told ("You let the torch fall, still burning.", lit, burning on where it lies by the lights' rules; "You
-  let the torch fall.", spent), then a spare got out by the reach's steps from wherever it is, into the hand (the one
-  that suits it, its other a shield or a weapon left as it is; a useless arm's never), then lit by the lighting's rule
-  and time, then the pack back on.  No spare (none carried or within reach that isn't in a hand, nor burning, nor spent):
+- **A new light** *(2026-11-02, 2026-11-03: the user's words, DECISIONS.md's; drafted for review)*: "light a new torch", "light a
+  fresh torch", "light another torch", any light of that name.  **The old one burning in a hand: lit from it before it's
+  put out** ("Of course, light the new torch from the old one before it is extinguished"), the redip's own steps: what's in
+  the other hand set down if the spare wants the hand ("You set the sword down at your feet.", no time, a shield or a weapon by
+  the dip's rule), the pack off and "You get out the new torch." by the reach's steps, "You light the new torch from the
+  burning one." (3 seconds), "You blow out the old torch." (a second), "You let the old torch fall." (free, the book's
+  discarding), what was set down taken up ("You take up the sword.", a second), the pack back on.  Engaged, each step a round
+  and a grope as ever; stopped part way the world stays true (two lit; the old one out and still in hand).  **The old one
+  spent, or none in hand**, as it was: the old let fall, told ("You let the torch fall."), then a spare got out by the
+  reach's steps from wherever it is, into the hand (the one that suits it; a useless arm's never), then lit by the
+  fire-maker's steps or from whatever flame is to hand (a lantern, a torch lying within reach: any lit thing lights any light,
+  a candle from a candle, a lantern from a torch, by "light the ..."), then the pack back on.  No spare (none carried or within reach that isn't in a hand, nor burning, nor spent):
   "You have no other torch.", nothing dropped.  No flame to light it with: told first, nothing dropped (the old one
   still lit is a flame for it, as it lies within reach).  Hands full with no old one: refused first, as a hold's.
   Interrupted part way: the old one where it fell, the pack as it stands.  **"New", "fresh", "another"** are a selector
@@ -2029,8 +2057,21 @@ outdraw.c, outmake.c), the referee's the makings (RS_OUTFIT: RULESETS.md).  The 
 character begins with), Combat 2-4 (weapons, armour), Character 27-29 (the units), Religion 9 (a new cleric's things),
 HarnWorld's price list.  What the house adds, every number the house's (and outfits.txt's every chance and weight):
 
-- **The order an outfit's bought in:** the universal kit (in the user's order: a torch lit in the off hand, a tinderbox,
-  three days' rations, a full waterskin, a knife in its sheath on the belt, a spare torch, a flask of oil; and free, the
+- **Its light by the family's money** *(the user's, 2026-11-03: "Light source by available money"; the thresholds the house's,
+  for review)*: a family of 80 pennies or more (Character 17's: average or rich in any class, all guilded and noble families)
+  a lantern lit in the off hand and two flasks of oil, some 20 pennies; less (a poor serf's or slave's 40, a poor
+  unguilded's 60; the null ruleset's 49) a torch lit, three spare and a flask of oil, some 3 pennies.  All within their money, the
+  rest for what comes after; every family can pay for the poor's light, so none starts in the dark.  An occupation's chance of a
+  lantern isn't drawn on top of the kit's.  Words as a light runs low: its last ten minutes, a lantern's and a torch's alike
+  (Light and traces).
+- **What starts full:** every vessel in an outfit starts with what it's for: a waterskin its four pints of water (a lair's cask
+  too, "full" in outfits.txt), a flask of oil a pint, a lantern a fill, a pot of pitch, a horn of ink, a tinderbox's lightings
+  (each by its burn: outmake.c, every actor's).  Not: a vial (the herbalists' to fill: nothing's made to go in one), what's found on
+  a skeleton in a lair (found empty, the outfit's meaning), dq0 -K's old kit.  **Told by its heft:** a vessel stoppered shows
+  no contents, so it says how full it is: "a waterskin (full)", "(empty)" in the list; "it's little worn, full." on a closer
+  look; "Your waterskin is full already." to a fill, no time.  Water's counted in pints ("4 pints of water").
+- **The order an outfit's bought in:** the universal kit (in the user's order: its light, as above, a tinderbox,
+  three days' rations, a full waterskin, a knife in its sheath on the belt; and free, the
   book's: clothes, sandals for a serf or a slave and shoes for the rest, a backpack, a belt and its pouch, a guilded or
   noble character's papers); the occupation's needs; its first weapon (its highest weapon skill's); a tenth of what's
   left kept as money (a mercantyler's fifth: merchants carry silver); its other weapons, three in all (Combat 2: a main

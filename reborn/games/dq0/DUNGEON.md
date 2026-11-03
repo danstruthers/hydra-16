@@ -678,7 +678,7 @@ character's own, or one it sees lying there: E_TASK's TE_LOW, TE_OUT, the UI's w
 again (E_LIGHT) and the look with it.  A candle burns away; a lantern's dry and a torch spent till they're renewed: a
 lantern filled from a flask of oil, a torch dipped in oil or pitch (IO_FILL: "fill the lantern", "dip the torch in
 the oil").  Left in the dark by it, the character stops its long task (a climb part way, a fight, go on).  The kit
-has a spare torch and a flask of oil (D5); the status line shows the minutes left of the light carried (the hub's
+has its light by the family's money (HOUSE.md's outfits: a lantern and two flasks, or a torch, three spare and a flask); the status line shows the minutes left of the light carried (the hub's
 pc_fuel, its words pc_left).
 
 **What closes, and looking in** (slice 4.1, the user's playtest, 2026-10-21: "look in the sack", "open the chest"): a
@@ -964,8 +964,10 @@ or a shaft can be jumped down (jump down: a fall of its height).
 - **status** says it all in a few lines (RS_DESCRIBE b 3: the pace's, the watchfulness's and the light's words
   rshouse.h's, every ruleset's alike; the condition's the referee's own): the pace chosen and what it's held to, its
   feet a round; the watchfulness; the condition (well or hurt, its wounds in brief, bleeding, shock or
-  senseless; its fatigue levels; its load's encumbrance; the penalties they make); and its light (what gives it, or
-  none: by feel).
+  senseless; its fatigue levels, and how much is hunger's and thirst's; its load's encumbrance; the penalties they make); its
+  light (what gives it, or none: by feel); then, every referee's alike, from the hub (overlay 19's o_facing_words): its hunger
+  and thirst in the game's words (the user's, 2026-11-03), a limb useless, a limp, its position if it isn't standing, the
+  water it's in; and the way it believes it faces.
 - **Small moves** ("move left one space", "step forward", "go north 20 feet", "back up two squares", "sidestep
   right"): a square at a time (5 feet: "a space", "a square" and "a step" each one, feet and yards made squares, at
   least one), by the character's facing (forward, back, left, right, between) or the compass; the distance by the
@@ -1194,7 +1196,7 @@ often the easier.  The numbers are HOUSE.md's (bearings underground).
   C_UNCONSCIOUS; a harm's time out, a fall's, a trap's; a trap's gas choked on, wtrap.c's; its own blow at a thing
   gone wrong, wblow.c's); a fall of ten feet or more shakes it (harm_fx's: the harder the further), a failure the
   walk's drift.  Nothing moves the character while it's senseless yet.
-- **What uses the belief.**  The status line, "You turn to face ...", "You face ... already.", the dark's "You feel
+- **What uses the belief.**  The status line, "You turn to face ..." ("turn r": "You turn right, to face west."; a compass way, or a turn to a door, as it was), "You face ... already.", the dark's "You feel
   your way north.", "You search the north wall...", and the parser's compass words: "north" means the north the
   character believes in (the parser's compass made as it believes it faces, the UI's cq_cmd making it the true way
   it means for the world).  The relative words (ahead, left, behind right ...) are always true, the body's own; so

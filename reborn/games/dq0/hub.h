@@ -667,6 +667,8 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8, V_TRACED = 16 };
                                                 **   V_FACING: a turn begun, its look to come, V_TURNED; V_LOOKED: a
                                                 **   look one way's, I_LOOK's: 8, look.c's look (8); V_TRACED: the
                                                 **   traces read, I_TRACE's, the UI bank's tread: look (16)) */
+#define DN_HANDS        0x40                    /* (D_NO_TOOL's: a chisel and a hammer carried, not both in hand; */
+#define DN_LIT          0x20                    /*   and a light in hand, to set down first) */
 enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN, D_ROOF, D_FOUND, D_PORTAL };  /* E_DIG's how (D_AGAIN: begun on
                                                 **   a hole dug part way before, the world's DUG record's; D_ROOF:
                                                 **   a spell gone badly in poor rock, the roof come down on the hole,
@@ -938,7 +940,7 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
        LT_HIDE, LT_TEND,                        /* (LT_TEND: first aid, a wound treated, the UI's timed work: slice
                                                 **   4.3's) */
        LT_PACKOFF, LT_PACKDOWN, LT_REACHIN, LT_OPENUP, LT_GETOUT, LT_PACKON, LT_LETFALL, LT_LETBURN, LT_PUTAWAY, LT_BLOWOUT, LT_BLOWDARK, LT_LIGHTFROM, LT_SETDOWN, LT_TAKEUP, LT_HONE,
-       LT_KINDLE, LT_GETNEW, LT_PUTOLD, LT_TAKENEW, LT_DOWNNEW, LT_BLOWOLD, LT_LIGHTNEW, LT_DIPOLD };   /* (The reach's
+       LT_KINDLE, LT_GETNEW, LT_PUTOLD, LT_TAKENEW, LT_DOWNNEW, LT_BLOWOLD, LT_LIGHTNEW, LT_DIPOLD, LT_LETOLD };   /* (The reach's
                                                 **   steps, each its own time, HOUSE.md's: a pack on the back taken off,
                                                 **   into a hand, or set at its feet; a container's level reached into,
                                                 **   held open, a thing got out; the pack put back on: things.c's part

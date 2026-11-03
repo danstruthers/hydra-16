@@ -337,7 +337,8 @@ void o_sheet (void)
     put (", Move ");
     putn (harn_move (&pc));
     put ("; load ");
-    putn (carried.cost / 10);                   /* (All of it, its free pounds told: D13's, skills.c's set_load) */
+    putn ((carried.cost + 5) / 10);             /* (All of it, rounded as the inventory's, its free pounds told: D13's,
+                                                **   skills.c's set_load) */
     put (" lb (");
     putn ((carried.cost - carried.wt) / 10);
     put (" free), encumbrance ");
@@ -445,7 +446,7 @@ signed char __fastcall__ o_noticing (const struct req* r)
 ** load (the user's, 2026-11-03: "if you are awake and standing with the burden, you should still get fatigued";
 ** HOUSE.md's a load borne, for review: the book has no such rule, its encumbrance a penalty alone) tires while it's borne
 ** by effort: heavily burdened or worse (encumbrance 3 on), any time spent moving or at work, and stood still on its feet
-** (GA_STOOD, the world's), a level each 60 / (encumbrance - 2) minutes, and no rest then; lying down, sitting, kneeling,
+** (GA_STOOD, the world's), a level each 120 / (encumbrance - 2) minutes, and no rest then; lying down, sitting, kneeling,
 ** asleep or senseless (GA_REST) it bears nothing, and rests as ever */
 
 #define LEVEL   6000
@@ -465,8 +466,8 @@ void __fastcall__ o_spent (unsigned t)
     while (t) {                                 /* (A minute at a time: in 16 bits) */
         n = t > 600 ? 600 : t;
         t -= n;
-        if (e) {                                /* (A load borne: a unit each 6 / e tenths, 6000 a level) */
-            tired += n * e / 6;
+        if (e) {                                /* (A load borne: a unit each 12 / e tenths, 6000 a level) */
+            tired += n * e / 12;
             while (tired >= LEVEL) {
                 tired -= LEVEL;
                 if (pc.fl < 99) {

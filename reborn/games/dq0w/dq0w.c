@@ -3073,6 +3073,8 @@ static void __fastcall__ dig_no (unsigned w)
 }
 
 
+char dig_key[9];                                /* (The tool the referee chose, its key, the reach's to get out: the
+                                                **   tool it'll use, not the first of them: part 87's; "" none) */
 unsigned char __fastcall__ s_pc_dig (unsigned char w)
 {
     struct req* r;
@@ -3092,16 +3094,36 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
         r = hub_ask (SLOT_WORLD);
         n = r->result;
         r->state = REQ_FREE;
-        if (r->text[0] == 'c' && !n) {
+        st = 0;
+        strcpy (dig_key, r->text[0] == 'p' || r->text[0] == 's' || r->text[0] == 'c' ? r->text : "");
+        if (r->text[0] == 'c' && !n) {          /* (A chisel: a hammer in the other hand, the user's, 2026-11-03: "hammer
+                                                **   and chisel in each hand"; carried isn't enough) */
             n = HUB->pcsum.limbs & (LB_ARM_L | LB_ARM_R);
-            while (!n && (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0 && !(on_pc (i) && item_at (i)->kind == KI_HAMMER)) {
+            pt = 0;
+            while (!n && (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+                if (on_pc (i)) {
+                    hm = item_at (i)->flags & I_HELD;
+                    sn = item_at (i)->kind;
+                    if (sn == KI_HAMMER) {
+                        pt |= hm ? 3 : 1;
+                    } else if (sn == KI_CHISEL) {
+                        pt |= hm ? 4 : 0;
+                    } else if (hm && (item_at (i)->flags & I_LIT)) {
+                        pt |= 8;
+                    }
+                }
             }
-            n = n || !i;
+            if (!n && !(pt & 1)) {
+                n = 1;
+            } else if (!n && (pt & 6) != 6) {
+                n = 1;
+                st = pt & 8 ? DN_HANDS | DN_LIT : DN_HANDS;   /* (Carried, not in hand: told so, a light in hand too) */
+            }
         }
         hub_map (0);
         if (n) {
-            evb = dig.mat + 1;
-            dig_no (D_NO_TOOL << 8 | dig.mat + 1);
+            evb = (dig.mat + 1) | st;
+            dig_no (D_NO_TOOL << 8 | evb);
         }
         return n;
     }

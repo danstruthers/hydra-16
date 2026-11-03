@@ -44,13 +44,16 @@ free: backpack@worn
 free: belt@worn
 free: pouch@belt
 free if guilded,noble: letter@pouch
-need: torch@off lit
+; (Its light by the family's money, the user's, 2026-11-03: "Light source by available money"; a family of 80 pennies
+; or more, a lantern lit and two flasks of oil; less, the poorest, a slave's 40 among them, a torch lit, three spare and a
+; flask of oil; HOUSE.md's)
+need if average,rich,guilded,noble not slave: lantern@off lit, flask of oil@pack 2
+need not average,rich,guilded,noble: torch@off lit, torch@pack 3, flask of oil@pack
+need if slave: torch@off lit, torch@pack 3, flask of oil@pack
 need: tinderbox@pack
 need: rations@pack 3
 need: waterskin@belt full
 need: sheath@belt, knife@in
-need: torch@pack
-need: flask of oil@pack
 
 ; ---- The weapons by the open weapon skills (Combat 2: a main weapon, a reserve and a shield; the weights the book's
 ; Treasure table's, narrowed to the catalogue's kinds), each with its carrier and its missiles (Combat 17: 12 to 24
