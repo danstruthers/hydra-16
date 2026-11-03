@@ -179,7 +179,7 @@ referee's room, 2026-11-02; back as the kinds come.)
 - **A hidden door** *(the house's, 2026-11-02, for review; the user's playtest)*: it's dug at as the wall it seems, by its
   wall's stuff and two feet told, with the same refusal if nothing bites: nothing about the dig shows it till the tool's
   at it.  As the tool comes through the facing (half a foot for a wooden door, a foot for an iron-bound one, two for
-  iron or stone) it's found, a find as a search's, the door still whole, its lock as it was ("Your pick strikes wood:
+  iron or stone) it's found, a find as a search's (handled from then on, as a search's find is marked), the door still whole, its lock as it was ("Your pick strikes wood:
   a door, behind the facing."); the dig stops there.  The chunk's change record the door's own state.  One hidden
   by magic turns any tool: no mark, no door told, and the question after two spells (found only by magical means, as
   a search's).  "examine the wall" takes it for a wall too.  (There's no other hidden thing in the walls: a secret panel
