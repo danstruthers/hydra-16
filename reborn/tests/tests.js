@@ -1642,8 +1642,8 @@ function cavernChunks(m, sn) {
 }
 
 // The character's square as each line is typed (dq0cavern's): t.where, a { line, sn, x, y } for each line typed in a
-// game, the hub's as it stands then (what the line before left)
-function dq0Where(t, m) {
+// game, the hub's as it stands then (what the line before left); on(line) called for each, if it's given
+function dq0Where(t, m, on) {
   const a = m.acia, read = a.read;
   let typed = '';
   t.where = [];
@@ -1654,6 +1654,7 @@ function dq0Where(t, m) {
         if (m.dq0 && m.dq0.games.length) {
           const { L } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
           t.where.push({ line: typed, sn: h[L.pcSn], x: u16(L.pcX), y: u16(L.pcY) });
+          if (on) on(typed);
         }
         typed = '';
       } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
@@ -3746,15 +3747,16 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0cavern', near: ['map'], what: 'Dingus Quest Zero\'s great caverns (slice 4.10\'s rest, 2026-11-02: DUNGEON.md\'s caverns across many chunks, HOUSE.md\'s great caverns; the maker\'s caves.c cavern, overlay 8), by the hub\'s cache and the words told: at seed 3 with every natural region a cavern (dq0 -V, the tests\'), down the stairway (dq0 -T) into the caves, the stairs\' foot in the cavern (its middle by the region\'s way): its parts in three or more of the cached chunks (world.h\'s R_CAVERN rooms), and where a part\'s floor is at a chunk\'s edge the next chunk\'s square open (its floor, a step\'s rise or fall at most) or a wall, never the bare rock (the parts grown from the seed alone, meeting: seed 3\'s at 8 squares or more); told "You are somewhere in a vast cavern, its walls beyond your light." as it comes in, and "You are in a vast cavern, by the light of your torch" with its walls in sight; "go north" and "go east" walk across it over the chunks\' edges (seed 3\'s 19,12 to 19,11, 19,11 to 20,11); the map drawn',
+      name: 'dq0cavern', near: ['map'], what: 'Dingus Quest Zero\'s great caverns (slice 4.10\'s rest, 2026-11-02: DUNGEON.md\'s caverns across many chunks, HOUSE.md\'s great caverns; the maker\'s caves.c cavern, overlay 8), by the hub\'s cache and the words told: at seed 3 with every natural region a cavern (dq0 -V, the tests\'), down the stairway (dq0 -T) into the caves, the stairs\' foot in the cavern (its middle by the region\'s way): its parts in three or more of the cached chunks (world.h\'s R_CAVERN rooms), and where a part\'s floor is at a chunk\'s edge the next chunk\'s square open (its floor, a step\'s rise or fall at most) or a wall, never the bare rock (the parts grown from the seed alone, meeting: seed 3\'s at 8 squares or more); told "You are somewhere in a vast cavern, its walls beyond your light." as it comes in, and "You are in a vast cavern, by the light of your torch" with its walls in sight; "go north" and "go east" walk across it over the chunks\' edges (seed 3\'s 19,12 to 19,11, 19,11 to 20,11); the map drawn; the same game again, walked the other way about: every part in both the same, square for square and floor for floor (made from the seed alone)',
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -V', 'd', 'look', 'map', 'go north', 'look', 'go east', 'look', 'map', 'quit', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/c.hm -T -V', 'd', 'look', 'map', 'go north', 'look', 'go east', 'look', 'map', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -V', 'd', 'go east', 'go north', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
-      start(m) { dq0Where(this, m); },
+      start(m) { this.snaps = []; dq0Where(this, m, l => { if (l === 'quit') this.snaps.push(cavernChunks(m, 1)); }); },
       check(m, out) {
         const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
-        const S = stratumRec(m, 1), ks = cavernChunks(m, 1), CAV = 0x10, open = t => t !== T_ROCK && t !== T_WALL && t !== T_WINDOW;
+        const S = stratumRec(m, 1), ks = this.snaps[0] || new Map(), CAV = 0x10, open = t => t !== T_ROCK && t !== T_WALL && t !== T_WINDOW;
         const parts = [...ks.values()].filter(c => c.rooms.some(r => r.flags & CAV));
         const floorOf = (c, x, y) => c.tile[y * 32 + x] === T_FLOOR && c.rooms.some(r => (r.flags & CAV) && x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h);
         if (parts.length < 3) f.push('a great cavern\'s parts in ' + parts.length + ' of the cached chunks of the stratum below, not 3 or more');
@@ -3773,6 +3775,14 @@ module.exports = {
           }
         }
         if (met < 8) f.push('the cavern\'s parts meet at only ' + met + ' squares of the chunks\' edges');
+        let same = 0;
+        for (const [at, c] of ks) {
+          const d = this.snaps[1] && this.snaps[1].get(at);
+          if (!d || !d.elev || !c.elev || !c.rooms.some(r => r.flags & CAV)) continue;
+          ++same;
+          if (c.tile.join() !== d.tile.join() || c.elev.join() !== d.elev.join()) f.push(at + ': its part not the same, made in another order');
+        }
+        if (same < 2) f.push('only ' + same + ' of the cavern\'s parts in both games');
         const at = l => s.indexOf('> ' + l + ' > ' + l);
         const seg = (l, n) => at(l) >= 0 ? s.slice(at(l), at(n) > at(l) ? at(n) : undefined) : '';
         if (!seg('d', 'look').includes('You are somewhere in a vast cavern, its walls beyond your light.')) f.push('not "somewhere in a vast cavern" as it comes in: ' + seg('d', 'look').slice(0, 300));
@@ -3838,6 +3848,54 @@ module.exports = {
         if (!corners || cut * 4 < corners * 3) f.push('of the top stratum\'s cached rooms\' box corners only ' + cut + ' of ' + corners + ' cut (three in four or more: those an opening\'s kept, not)');
         const i = s.indexOf('> go east > go east'), go = i < 0 ? '' : s.slice(i, s.indexOf('> map', i));
         if (!/You go through a doorway|You cross the room|passage|You are in/.test(go)) f.push('"go east" not out of its room: ' + go.slice(0, 300));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0incline', near: ['map'], what: 'Dingus Quest Zero\'s sloping tunnels (slice 4.10\'s rest, 2026-11-02: raises and inclines; HOUSE.md\'s moving and tiring; the maker\'s caves.c incline, overlay 8), by the chunks made and the words told: at seed 3 with every chunk that has room given one (dq0 -P, the tests\'; dry and unfallen, -W -U), down the stairway (dq0 -T) into the caves, the chunks\' sloping tunnels a straight way of 10 to 16 squares of passage, a foot a square, off a passage, a chamber of its own at its end (seed 3\'s 18,12: rising south), every step of them a walk\'s, the character set at its foot (the hub\'s square, the scene\'s) as "look" is typed; "go south" walks up it, told "The way rises." (two or more, a 4-foot rise at a time), its walk not stopped by a ledge, into the chamber ("cave"); "go north" walks back down it, told "The way falls away."',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -P -W -U', 'd', 'wait', 'look', 'go south', 'look', 'map', 'go north', 'look', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        this.runs = [];
+        let done = false;
+        const runs = () => {
+          const out = [], S = stratumRec(m, 1);
+          for (const c of cavernChunks(m, 1).values()) {
+            const t = (x, y) => x < 0 || y < 0 || x > 31 || y > 31 ? 0 : c.tile[y * 32 + x], e = (x, y) => c.elev[y * 32 + x];
+            for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) for (const [dx, dy] of [[1, 0], [0, 1], [-1, 0], [0, -1]]) {
+              if (t(x, y) !== T_CORR || t(x + dx, y + dy) !== T_CORR) continue;
+              const d = e(x + dx, y + dy) - e(x, y);
+              if (Math.abs(d) !== 1 || (t(x - dx, y - dy) === T_CORR && e(x, y) - e(x - dx, y - dy) === d)) continue;
+              let n = 1;
+              while (t(x + (n + 1) * dx, y + (n + 1) * dy) === T_CORR && e(x + (n + 1) * dx, y + (n + 1) * dy) - e(x + n * dx, y + n * dy) === d) n++;
+              if (n >= 9) out.push({ at: c.cx + ',' + c.cy, x: S.x0 + c.cx * 32 + x, y: S.y0 + c.cy * 32 + y, dx, dy, d, n });
+            }
+          }
+          return out;
+        };
+        dq0Where(this, m, l => {
+          if (l !== 'look' || done) return;
+          done = true;
+          this.runs = runs();
+          const r = this.runs.find(q => q.dy === 1 && q.d === 1);
+          if (!r) return;
+          const { L } = m.dq0.layout(), h = m.dq0.bank(0), w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; };
+          w16(L.pcX, r.x);
+          w16(L.pcY, r.y);
+        });
+      },
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
+        if (!this.runs.some(r => r.n >= 10 && r.n <= 16)) f.push('no sloping tunnel of 10 to 16 squares in the stratum\'s cached chunks: ' + JSON.stringify(this.runs));
+        const at = (l, from = 0) => s.indexOf('> ' + l + ' > ' + l, from), i = at('go south'), j = at('go north');
+        const up = i < 0 ? '' : s.slice(i, at('look', i)), down = j < 0 ? '' : s.slice(j, at('look', j));
+        if ((up.match(/The way rises\./g) || []).length < 2) f.push('"go south" not told "The way rises." twice or more: ' + up.slice(0, 400));
+        if (/ledge|falls away/.test(up)) f.push('"go south" not walked: ' + up.slice(0, 400));
+        if (!/cave/.test(s.slice(i, j))) f.push('"go south" not into its chamber: ' + s.slice(i, j).slice(0, 500));
+        if (!/The way falls away\./.test(down)) f.push('"go north" not told "The way falls away.": ' + down.slice(0, 400));
         return f;
       },
       sdcard: true

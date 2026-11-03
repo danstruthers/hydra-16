@@ -1495,6 +1495,11 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   "the far side" the part's), the look reaching into the neighbour's part (each part a room of its chunk's: the
   ways across a room are a chunk's), a lake or a chasm in one (the water's level the cavern's: dry now), a cavern in
   a region a way between strata comes into (none, so the strata's ways in are as they were).
+  **Raises and inclines** (built 2026-11-02: HOUSE.md's moving and tiring, long slopes between strata): a sloping
+  tunnel off a cave's passage, a raise in a mine, each to a small chamber on its own level (dq0m/caves.c's incline);
+  a long slope between strata; a walk's beats telling a rise or a fall of 4 feet ("The way rises."), its climb
+  strenuous work.  Left: a raise or a ramp joining two parts of a stratum (these are ways to a chamber of their own),
+  a long slope's own length walked square by square (taken at once, as a stairway is), the denizens tiring uphill.
 - **Tunnellers and builders** (slice 4.11, built in part 2026-11-01: changing the dungeon, above; DENIZENS.md's
   tunnellers): left, a burrow dug from a lair, a faction's mine following a vein, the denizens away from the character
   digging, poor rock on a tunneller, the spoil as a thing; builders (shoring, walling up a way, a door put up).
@@ -1516,14 +1521,8 @@ Designed, but in no slice of the plans yet (DECISIONS.md has the user's words fo
 
 - **Chunks made for the denizens** as they go where nobody has been, a stratum grown by their movements as well as the
   character's, and what they disturb there an event the disturbed act on.
-- **Mining up and slanting**: a raise through the ceiling to the stratum above, an incline.  **Raises and inclines
-  grown** (slice 4.10's; told 2026-11-02, none grown yet): a natural floor rises and falls with the rock's lie and its
-  unevenness, every actor's step the slower uphill, and a walk along a passage tells "The way rises." / "The way falls
-  away." once its floor's 4 feet or more above or below where the last beat was told (an incline; steps at once:
-  HOUSE.md's inclines); a long slope between strata walked (HOUSE.md's long slopes).  Left: ways grown to climb or
-  fall steadily within a stratum (a ramp, a sloping tunnel, a raise in a mine),
-  an incline's climb tiring as strenuous work (a long slope's does), the denizens taking the ways between strata,
-  the map's heights along a passage.
+- **Mining up and slanting**: a raise through the ceiling to the stratum above, an incline (dug: the grown ones,
+  below, built).
 - **Things hidden by other things or on someone**: under a body, a cloak, a fallen beam (seen once it's moved, freed
   by a strength test); in a container's secret part (a false
   bottom, a hollow heel).  **Holes** as containers: a hole dug in a floor, filled in, a concealed one, dug out again

@@ -516,10 +516,125 @@ static void diamonds (void)
     }
 }
 
+/* ---- A way that climbs within a stratum (slice 4.10's rest, 2026-11-02: HOUSE.md's inclines, for review): one chunk
+** in eight of a natural stratum's, or a mine's, with no way between strata in it (dq0 -P, the tests': every chunk that
+** has room), by its own numbers (none of the grower's dice): off a passage's square, a straight way through the rock:
+** a sloping tunnel, a foot a square up or down for 10 to 16 squares; in a mine a raise, two feet a square for 8 to 12;
+** the rock either side of it left whole; ending through a wall in a small chamber (5 squares by 4) on its own level, a
+** room of the chunk's with a rough ceiling.  Walked, not climbed: no step of it more than a walk's */
+#define INC_DX  (dir_x[W.d])
+#define INC_DY  (dir_y[W.d])
+
+/* Square (W.x, W.y) + a along the way + b across it, all rock for the way's or the chamber's room: 1 */
+static unsigned char __fastcall__ inc_rock (signed char a, signed char b)
+{
+    W.x0 = W.x + a * INC_DX + b * INC_DY;
+    W.y0 = W.y + a * INC_DY + b * INC_DX;
+    if ((unsigned char) (W.x0 - 2) > CW - 5 || (unsigned char) (W.y0 - 2) > CW - 5) {
+        return 0;
+    }
+    for (W.j = 0; W.j < L->nrooms; ++W.j) {
+        W.p = &L->room[W.j];
+        if (W.x0 + 1 >= W.p->x && W.x0 <= W.p->x + W.p->w && W.y0 + 1 >= W.p->y && W.y0 <= W.p->y + W.p->h) {
+            return 0;
+        }
+    }
+    return L->tile[W.y0][W.x0] == T_ROCK;
+}
+
+static void incline (void)
+{
+    W.s = &STRATUM (L->sn);
+    V.seed = (unsigned) W.s->seed ^ (unsigned) (W.s->seed >> 16) ^ 0x3C5D;
+    hub_get (0, &HUB->gear, &V.f, 1);
+    if ((!(V.f & GE_RAMP) && (E->nland || ch (L->cx + 0x77, L->cy ^ 0x1234) & 7)) || L->nrooms >= NROOMS ||
+        L->nzones >= NZONES) {
+        return;
+    }
+    for (V.gx = 0; V.gx < 48; ++V.gx) {         /* (Tries: a passage's square, a way off it) */
+        V.n = ch (L->cx + V.gx, L->cy + 0x4141);
+        W.x = 3 + V.n % (CW - 6);
+        W.y = 3 + ch (L->cx + V.gx, L->cy + 0x4242) % (CW - 6);
+        W.d = V.n >> 6;
+        if (L->tile[W.y][W.x] != T_CORR) {
+            continue;
+        }
+        W.c = cstyle == ST_NATURAL ? 10 + (V.n & 7) % 7 : 8 + (V.n & 7) % 5;   /* (Its length) */
+        for (W.i = 1; W.i <= W.c + 1 && inc_rock (W.i, 0) && inc_rock (W.i, 1) && inc_rock (W.i, -1); ++W.i) {
+        }
+        if (W.i <= W.c + 1) {
+            continue;
+        }
+        for (V.gy = W.c + 1; V.gy <= W.c + 6; ++V.gy) {     /* (The chamber's room, its wall round it) */
+            for (V.fx = 0; V.fx < 7 && inc_rock (V.gy, (signed char) V.fx - 3); ++V.fx) {
+            }
+            if (V.fx < 7) {
+                break;
+            }
+        }
+        if (V.gy <= W.c + 6) {
+            continue;
+        }
+        /* It: its floor from the square it leaves, up or down by the hash, its square at the wall a passage's */
+        W.a = L->elev[W.y][W.x];
+        W.b = (cstyle == ST_NATURAL ? 1 : 2) * (V.n & 8 ? 1 : -1);
+        if (W.a + W.b * W.c > 110 || W.a + W.b * W.c < -110) {
+            continue;
+        }
+        for (W.i = 1; W.i <= W.c + 1; ++W.i) {
+            inc_rock (W.i, 0);
+            L->tile[W.y0][W.x0] = T_CORR;
+            L->elev[W.y0][W.x0] = W.a + W.b * (W.i > W.c ? W.c : W.i);
+        }
+        W.a += W.b * W.c;
+        inc_rock (W.c + 2, -2);                 /* (The chamber's corners: its bounds) */
+        V.dx = W.x0;
+        V.dy = W.y0;
+        inc_rock (W.c + 5, 2);
+        W.x1 = W.x0;
+        W.y1 = W.y0;
+        W.x0 = V.dx < W.x1 ? V.dx : W.x1;
+        W.y0 = V.dy < W.y1 ? V.dy : W.y1;
+        W.x1 = V.dx < W.x1 ? W.x1 : V.dx;
+        W.y1 = V.dy < W.y1 ? W.y1 : V.dy;
+        W.p = &L->room[L->nrooms];
+        W.p->x = W.x0;
+        W.p->y = W.y0;
+        W.p->w = W.x1 - W.x0 + 1;
+        W.p->h = W.y1 - W.y0 + 1;
+        W.p->flags = 0;
+        W.p->kind = cstyle == ST_NATURAL ? U_CAVE : U_CHAMBER;
+        W.p->z0 = L->nzones;
+        W.p->nz = 1;
+        W.z = &L->zone[L->nzones++];
+        W.z->x = W.p->x;
+        W.z->y = W.p->y;
+        W.z->w = W.p->w;
+        W.z->h = W.p->h;
+        W.z->room = L->nrooms++;
+        W.z->z = W.a;
+        W.z->gx = W.z->gy = 0;
+        W.z->ceil = C_ROUGH;
+        W.z->cmid = 8 + (V.n & 7);
+        W.z->cwall = W.z->cmid - 1;
+        for (V.gy = W.y0 - 1; V.gy <= W.y1 + 1; ++V.gy) {
+            for (V.gx = W.x0 - 1; V.gx <= W.x1 + 1; ++V.gx) {
+                if (V.gx >= W.x0 && V.gx <= W.x1 && V.gy >= W.y0 && V.gy <= W.y1) {
+                    L->tile[V.gy][V.gx] = T_FLOOR;
+                    L->elev[V.gy][V.gx] = W.a;
+                } else if (L->tile[V.gy][V.gx] == T_ROCK) {
+                    L->tile[V.gy][V.gx] = T_WALL;
+                }
+            }
+        }
+        return;
+    }
+}
+
 /* The great cavern of chunk L's region (the cave grower's, overlay 3's: its stub, bank.s's): m 0, its part grown, 1 if
 ** it has one (the room and zone 0); m 1, as its walls are made, those at the chunk's edges beside the next chunk's
-** part (V as m 0 left it); m 2, a built chunk's rooms at 45 degrees, if its stratum's complex lies so (the built
-** grower's, overlay 1's) */
+** part (V as m 0 left it); m 2, a built chunk's rooms at 45 degrees, if its stratum's complex lies so, and a mine's
+** raise (the built grower's, overlay 1's); m 3, a cave's sloping tunnel */
 unsigned char __fastcall__ o_cavern (unsigned char m)
 {
     if (m == 2) {
@@ -527,6 +642,13 @@ unsigned char __fastcall__ o_cavern (unsigned char m)
         if ((V.f & GE_DIAMOND) || !(((const unsigned char*) &STRATUM (L->sn).seed)[3] % 5)) {
             diamonds ();                        /* (Its passages' strata, pass.c's leg's: a fifth, by the seed) */
         }
+        if (cstyle == ST_MINE) {
+            incline ();                         /* (A raise) */
+        }
+        return 0;
+    }
+    if (m == 3) {
+        incline ();                             /* (A sloping tunnel) */
         return 0;
     }
     if (!m) {
@@ -662,6 +784,7 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
             hollow (&L->room[i]);
         }
     }
+    cavern (3);                                 /* (A sloping tunnel, its floors laid: overlay 8's) */
     slants ();
     for (y = 0; y < CW; ++y) {
         for (x = 0; x < CW; ++x) {

@@ -103,8 +103,17 @@ plays them as HarnMaster's referee does.
   rises." or "The way falls away." once its floor's risen or fallen 4 feet or more since the last beat told (a turn, a
   doorway, a quiet stretch, a rise), steps at once.  Before, a step of 2 feet or more was told each time and a gentle
   incline never; now a sloping tunnel's told as it climbs, about every 20 feet at a foot a square, a rough floor's
-  ups and downs not.  Uphill is slower for every actor, as it was (half again a step's time a foot of rise); its
-  tiring is the pace's, not yet strenuous work.  (dq0w.c's beat.)
+  ups and downs not.  Uphill is slower for every actor, as it was (half again a step's time a foot of rise).  The
+  character's climb told is strenuous work too, half a step's time a foot, 4 feet at each telling (its walk's beat:
+  a rise under 4 feet costs no more than the walk); the denizens' walks tire them no more uphill than on the level
+  (the house's, the denizens' bodies, below: only their fights are counted).  (dq0w.c's beat.)
+- **Ways that climb, grown** *(the house's, 2026-11-02, slice 4.10's: for review)*: one chunk in eight of a natural
+  stratum's or a mine's, with no way between strata in it, by its own numbers (none of the grower's dice; dq0 -P, the
+  tests', every chunk that has room, hub.h's GE_RAMP): off a passage, a straight way through the rock to a small
+  chamber on its own level (5 squares by 4, a room of the chunk's): in natural rock a sloping tunnel, a foot a
+  square up or down for 10 to 16 squares; in a mine a raise, two feet a square for 8 to 12 (a walk's steepest step).
+  Walked, not climbed, by every actor, told as any incline is, the map's heights showing it.  (dq0m/caves.c's
+  incline, overlay 8.)
 - **Encumbrance** is the book's (the load over Endurance, rounded), told in words: none, a little burdened (1-2), heavily
   burdened (3-4), overloaded (5 or more).  (harn.c's harn_get_ep; dq0harn.c's status.)  See D13 below: free pounds
   by Strength are decided, not built.

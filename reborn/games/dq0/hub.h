@@ -1404,7 +1404,7 @@ enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind
 #define GE_CAVERN       0x20                    /* (dq0 -V, the tests': a great cavern in every region of a natural
                                                 **   stratum, its middle by the region's way between strata, the
                                                 **   maker's, slice 4.10's: caves.c's) */
-#define GE_RAMP         0x40                    /* (dq0 -P, the tests': every stairway down a long slope, any style's,
+#define GE_RAMP         0x40                    /* (dq0 -P, the tests': every stairway down a long slope, any style's, every chunk a sloping way,
                                                 **   the maker's, slice 4.10's: plan.c's links_down) */
 #define GE_DIAMOND      0x80                    /* (dq0 -D, the tests': every built stratum's rooms at 45 degrees, the
                                                 **   maker's, ways off the compass, step 3's rest: caves.c's diamonds) */

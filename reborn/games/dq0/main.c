@@ -401,7 +401,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    31                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    32                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -447,7 +447,10 @@ static void sheet (void)
                                                 **   their fatigue), 2026-10-31; 29, world.dat's time of day believed,
                                                 **   the hub's tb, 2026-10-31; 30, the diagonal ways' cut
                                                 **   corners (T_CUT) in the chunks and the change records; 31, the
-                                                **   tunnellers: DO_DIG among the doings, slice 4.11's) */
+                                                **   tunnellers: DO_DIG among the doings, slice 4.11's; 32: the same seed's
+                                                **   natural chunks not as they were, great caverns and sloping tunnels
+                                                **   in them, a dungeon's change records laid on what they were made
+                                                **   for, 2026-11-02) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;

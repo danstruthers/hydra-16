@@ -3705,6 +3705,10 @@ static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
         } else if ((unsigned char) (dz + 3) > 6 || t == T_STEPS) {     /* (Steps; or 4 feet or more risen or
                                                 **   fallen since the last beat: an incline, slice 4.10's) */
             b = dz > 0 ? WB_UP : WB_DOWN;
+            if (dz > 0) {
+                spend (GA_WORK, pst << 1);      /* (Its climb, 4 feet told at a time: half a step a foot strenuous
+                                                **   work, HOUSE.md's moving and tiring) */
+            }
         } else if (++pquiet >= 6) {
             b = WB_QUIET;
         }
