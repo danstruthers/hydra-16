@@ -1850,7 +1850,7 @@ void __fastcall__ s_take (const char* name)
     pending[0] = 0;
     if (r == IR_NOT_HERE) {
         reach = 6;                              /* (Walked over for it: its arrival's words short, E_ARRIVE's) */
-        walk_says (name);
+        walk_says (taking);                     /* (name may be pending, cleared) */
         m.kind = I_TAKE;
         m.w1 = HUB->ireq.x;
         m.w2 = HUB->ireq.y;
