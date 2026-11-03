@@ -389,7 +389,7 @@ static void load_pc (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    34                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    35                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -2720,7 +2720,9 @@ void __fastcall__ s_args (int argc, char* argv[])
         } else if (!strcmp (argv[i], "-N")) {
             nobear = 1;                         /* (For the tests: its bearings never tested, as if it knew north) */
         } else if (!strcmp (argv[i], "-J")) {
-            nosteps = 1;                        /* (For the tests: the reach in one lump, untold: their games as they were) */
+            nosteps |= PL_NOSTEPS;              /* (For the tests: the reach in one lump, untold: their games as they were) */
+        } else if (!strcmp (argv[i], "-F")) {
+            nosteps |= PL_NOFIT;                /* (For the tests: the outfit as it's drawn, all of it, unfitted to its strength) */
         } else if (!strcmp (argv[i], "-I")) {
             noinit = 1;                         /* (For the tests: no engage initiative test, no grope's) */
         } else if (!strcmp (argv[i], "-R") && i + 1 < argc) {

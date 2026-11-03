@@ -2160,10 +2160,10 @@ function dq0Turns(m) {
   const r = m.dq0 || { games: [], lines: [], final: () => null }, all = { events: [], dens: [], replies: [], snaps: [] };   // (None: sim/dl's)
   r.games.forEach((g, gi) => { for (const k of Object.keys(all)) for (const e of g[k]) all[k].push(Object.assign({ game: gi }, e)); });
   const fin = r.final(), of = (list, k) => list.filter(e => e.line === k + 1);
-  // (A dq0 line as the test wrote it: sim/test.js's -K, -N, -I and -a, RULES=NAME's -r NAME, and the dice's offset,
+  // (A dq0 line as the test wrote it: sim/test.js's -F, -K, -N, -I and -a, RULES=NAME's -r NAME, and the dice's offset,
   // -R N (DQ0_ROLLS's, or a test's own: not a game's command), taken off: each once, the last added first, as sim/test.js
   // adds them, so a test's own flag before them is kept (dq0travel's -N; a test's own -R last of its own, taken off)
-  const bare = l => !/^dq0( |$)/.test(l) ? l : [/ -R \d+$/, / -K$/, / -N$/, / -J$/, / -I$/, / -a$/, / -r \S+$/, / -R \d+$/].reduce((x, re) => x.replace(re, ''), l);
+  const bare = l => !/^dq0( |$)/.test(l) ? l : [/ -R \d+$/, / -F$/, / -K$/, / -N$/, / -J$/, / -I$/, / -a$/, / -r \S+$/, / -R \d+$/].reduce((x, re) => x.replace(re, ''), l);
   const T = r.lines.map(bare).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
     at: all.snaps.find(s => s.line === k + 1) || null }));
   T.forEach((t, k) => {
@@ -4736,6 +4736,7 @@ module.exports = {
               if (h) {
                 const { L } = m.dq0.layout();
                 m.wet.push({ line: typed, wet: h[L.pcWet], swim: h[L.pcSwim], breath: h[L.pcBreath] });
+                if (typed === 'wait 2 minutes') h[L.pcsum + L.sCond] |= 0x10;   // (rs.h's C_BLEEDING: its time told as it goes, a minute at a time)
               }
               typed = '';
             } else if (c >= 32) typed += String.fromCharCode(c);
@@ -4882,7 +4883,7 @@ module.exports = {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
         const want = ['Which do you mean: 1. the giant rat ahead to your left, on the right, 2. the giant rat ahead to your left, on the ' +
           'left, or 3. the giant rat ahead?', 'Your target: the giant rat.', 'Your target: the giant rat ahead to your left.',
-          'You take the dagger in your right hand.', 'You throw your dagger at the giant rat, and miss.', 'Put down.',
+          'You take the dagger in your right hand.', 'You throw your dagger hard at the giant rat, and miss.', 'Put down.',
           'Which do you mean: 1. the body ahead', 'the bones ahead to your right, or 3. the pick where you stand?', 'Taken.',
           'Which do you mean: 1. the body ahead', 'or 2. the pick where you stand?', 'Taken.', 'Your hands are full, and there\'s nowhere to put it.',
           'a pick, a torch, a flask of oil, bones', 'You carry none of those.', 'Your hands are full, and there\'s nowhere to put it.', 'Throw it at what?',
@@ -4996,7 +4997,7 @@ module.exports = {
       name: 'dq0outfit', outfit: true, what: 'Dingus Quest Zero\'s starting outfits (games/dq0/outfits.txt, the world\'s draw: outfit.c, outdraw.c, outmake.c; DECISIONS.md\'s outfits, HOUSE.md\'s), by the things each character begins with (the store\'s records) and hmchar\'s files: the family\'s wealth rolled and kept (its "wealth" line, the book\'s by its class); the universal kit (clothes and footwear worn, a backpack and a belt worn, a pouch on the belt, a torch lit in hand, a tinderbox, three rations, a waterskin full, a knife in its sheath, a spare torch and a flask of oil), bought at the book\'s prices within the wealth (seed 5\'s hunter, a serf: sandals; its Spear a staff in hand, all it could pay for); seed 10\'s thief (seed 8\'s till its lantern, 2026-11-03: its money no longer reaches a dagger) its lockpicks, paper and charcoal in its pouch (handy), its Club\'s club and its Dagger\'s dagger in the knife\'s place, in its sheath; a yeoman of the shortbows its unit\'s issue, free (a shortbow worn, a quiver of 12 to 24 arrows on the belt, a falchion in its scabbard, a dagger in its sheath, a buckler, a kurbul helm and a leather vest worn); a cleric of Peoni its temple\'s things, free (a robe, a ring, a staff, its letter, the universal kit) and 6 to 36 pennies; the null ruleset\'s the universal kit alone, with some money; the same character in the same game the same outfit; each thing its own (its number, its make)',
       init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cat /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'inventory', 'quit',
-        'hmchar -q -s 10 -u feudal -c thief -o /ram/t.hm', 'cat /ram/t.hm', 'dq0 -p t -s 3 -c /ram/t.hm -T', 'quit',
+        'hmchar -q -s 10 -u feudal -c thief -o /ram/t.hm', 'cat /ram/t.hm', 'echo att end 40 >> /ram/t.hm', 'dq0 -p t -s 3 -c /ram/t.hm -T', 'quit',
         'hmchar -q -s 11 -u feudal -c \'yeoman sb\' -o /ram/y.hm', 'dq0 -p t -s 3 -c /ram/y.hm -T', 'quit',
         'hmchar -q -s 12 -u feudal -c \'cleric (peoni)\' -o /ram/p.hm', 'dq0 -p t -s 3 -c /ram/p.hm -T', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -r null', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'quit', 'echo $status']) },
@@ -6268,11 +6269,11 @@ module.exports = {
       name: 'dq0glow', what: 'Dingus Quest Zero\'s lights seen far off and eyes adapting to the dark (DUNGEON.md: perception as layers; the user\'s, 2026-10-16: "if I am standing in the dark, I should be able to see other light sources from much further away"; eyes take minutes to the dark), by what the character perceives (the senses\' record: the lights far off, the eyes dazzled): at seed 7, a weak-eyed character (Eyesight 4: its look reaches 4 squares) in a dark hall 14 squares from the lit kitchen\'s open door (lit by its sconce\'s torch, the character\'s first: nobody keeps it lit, slice 4.1\'s), up a straight passage: holding its torch, no light far off (its eyes used to the torch\'s light); its torch put out: at once nothing far off (its eyes still used to the torch), after 2 minutes still nothing, after 3 minutes and 20 seconds a faint glow far off ahead, after 5 minutes a light (16 b / (4 + a): 19 squares, its eyes used to the dark; the eyes the senses\', a 16th of a light level each 1.9 s darker); its torch lit again, dazzled a moment, and the light lost (dq0dark\'s, in it)',
       init: 't_rc', cycles: 700e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/w.hm', 'echo att eye 4 >> /ram/w.hm',
-        'dq0 -p t -s 7 -c /ram/w.hm', 'light the torch in the sconce', 'face north', 'open the door behind me', 's', 'move south 4 squares', 'face north', 'look', 'douse the torch', 'look',
-        ...Array(12).fill('z'), 'look', ...Array(8).fill('z'), 'look', ...Array(10).fill('z'), 'look', 'light the torch', 'z', 'look', 'quit', 'echo $status']) },
+        'dq0 -p t -s 7 -c /ram/w.hm', 'light the torch in the sconce', 'face north', 'open the door behind me', 's', 'move south 4 squares', 'face north', 'look', 'douse the torch', 'where',
+        ...Array(12).fill('z'), 'where', ...Array(8).fill('z'), 'where', ...Array(10).fill('z'), 'where', 'light the torch', 'z', 'look', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
-        const T = dq0Turns(m), f = [], looks = T.filter(t => t.line === 'look'), x = T.of('douse the torch'), lt = T.of('light the torch');
+        const T = dq0Turns(m), f = [], looks = T.filter(t => t.line === 'look' || t.line === 'where'), x = T.of('douse the torch'), lt = T.of('light the torch');
         if (looks.length !== 6) return ['the looks not typed'];
         const glows = t => t.after && t.after.sight ? t.after.sight.glows : [{ how: '?' }], ahead = (t, how) => glows(t).some(g => g.rel === 0 && g.how === how);
         const at = ['holding the torch', 'at once in the dark', 'after 2 minutes'];
@@ -6928,7 +6929,7 @@ module.exports = {
     {
       name: 'dq0shield', outfit: true, asks: true, initiative: true, what: 'Dingus Quest Zero\'s denizens\' shields (the gear3 agent\'s, 2026-10-29; HOUSE.md\'s the denizens\' gear: a shield held blocks, for review), by the denizens\' events, the referee\'s replies and the words: dq0disarm\'s bandits with their own things (the outfits\'), the character (hmchar seed 23, Dodge 90, Sword 90) in a gambeson and a mail hauberk waiting for them: a bandit with its weapon in hand unslinging the shield on its back into its other hand, its round (the world\'s E_BEAT WB_READIES, its kind a shield\'s: "The bandit unslings its round shield."), then blocking the character\'s blow with it (RS_ATTACK\'s reply: the defence D_BLOCK, its c AF_SHIELD, O_BLOCKED: "it fends off the blow with its shield."); a shield\'s block only ever a block (AF_SHIELD with D_BLOCK alone), and by an actor that holds one.  The scene set (since the denizens\' day and leisure, 2026-10-31: bandits keep watches, and dice and drink at leisure): no day (the environment\'s dq0hour=128, rc\'s), every one about as before',
       init: 't_rc', cycles: 1200e6,
-      // (-R 3: the dice's offset that gives the game it was written for, since the dice by who asks,
+      // (-R 2: the dice's offset that gives the scene it was written for, 2026-11-03 (a lit torch let fall no time); since the dice by who asks,
       // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 90 >> /ram/c.hm',
         'echo ml swd 90 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
@@ -6965,7 +6966,7 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml bow 90 >> /ram/c.hm',
         'echo ml dge 90 >> /ram/c.hm', 'echo ml swd 90 >> /ram/c.hm',
         "dq0 -p t -s 5 -c /ram/c.hm -T -k 'gambeson,mail hauberk'", 'wear the gambeson', 'wear the mail hauberk', 'drop the arrows',
-        'gather the arrows', 'put the arrows in the quiver', 'd', 'drop the torch', 'shoot the rat', 'quit',
+        'gather the arrows', 'put the arrows in the quiver', 'd', 'drop the torch', 'hold the shortbow', 'shoot the rat', 'quit',
         'mkdir /ram/g', "echo 'faction | Wardens | sindwar | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
         "dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
         'defend block', ...Array(40).fill('wait'), 'quit', 'echo $status']) },
@@ -6980,7 +6981,7 @@ module.exports = {
         if (!(arrows(dr.after) < arrows(dr.at))) f.push('the arrows not put down (' + arrows(dr.at) + ', ' + arrows(dr.after) + ')');
         if (!(arrows(ga.after) > arrows(ga.at))) f.push('the arrows not gathered (' + arrows(ga.at) + ', ' + arrows(ga.after) + ')');
         if (!dq0Ev(sh, 'E_FIGHT', { who: 0 }).length) f.push('no shot at the rat told (' + dq0Evs(sh) + ')');
-        inTurn(o, ['You take up your shortbow.', 'You shoot at the giant rat with your shortbow'], f, 'the character\'s shot: ');
+        inTurn(o, ['You shoot at the giant rat with your shortbow'], f, 'the character\'s shot: ');
         if (!(arrows(sh.after) < arrows(d0.after))) f.push('no arrow the fewer (' + arrows(d0.after) + ' before, ' + arrows(sh.after) + ' after)');
         if (!/You gather up \d+ arrows?\./.test(o)) f.push('the gathering not told');
         const den = T.filter(u => u.k > g2.k).flatMap(u => u.dens).filter(e => e.kind === 'E_FIGHT' && e.who > 0);
@@ -7004,6 +7005,25 @@ module.exports = {
         'mkdir /ram/h', "echo 'faction | Wardens | sindwar | 0-0 | 96 | - | 0 | h | -' > /ram/h/theme.txt",
         "dq0 -p t -s 4 -c /ram/d.hm -T -d /ram/h -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'wear the gambeson', 'wear the mail hauberk',
         'drop the torch', 'drop the staff', 'autotarget at medium range', 'defend block', ...Array(3).fill('wait'), 'quit', 'echo $status']) },
+      start(m) {   // (A stray's scene: a second rat kept beside the first as each of game 1's rounds is typed, 2026-11-03)
+        const a = m.acia, read = a.read; let typed = '', g = 0;
+        a.read = (r, c) => {
+          if (r === 0 && a.rdrf) {
+            if (a.rx === 13) {
+              if (/^dq0 /.test(typed)) ++g;
+              const h = g === 1 && (typed === 'wait' || typed === 'shoot the rat') && m.dq0 && m.dq0.bank(0);
+              if (h) {
+                const { L } = m.dq0.layout(), at = q => L.actor + q * L.actorSize, u = o => h[o] | h[o + 1] << 8;
+                const name = q => { let n = ''; for (let i = 0; h[at(q) + L.aName + i] && i < 12; i++) n += String.fromCharCode(h[at(q) + L.aName + i]); return n; };
+                const rats = [...Array(L.nactors).keys()].filter(q => h[at(q) + L.aState] && name(q) === 'giant rat');
+                if (rats.length > 1) { const x = u(at(rats[0]) + L.aX) + 1, y = u(at(rats[0]) + L.aY); h[at(rats[1]) + L.aX] = x & 255; h[at(rats[1]) + L.aX + 1] = x >> 8; h[at(rats[1]) + L.aY] = y & 255; h[at(rats[1]) + L.aY + 1] = y >> 8; h[at(rats[1]) + L.aSn] = h[at(rats[0]) + L.aSn]; }
+              }
+              typed = '';
+            } else if (a.rx >= 32) typed += String.fromCharCode(a.rx);
+          }
+          return read.call(a, r, c);
+        };
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], o = dq0Story(out);
@@ -7141,11 +7161,11 @@ module.exports = {
     {
       name: 'dq0helpless', what: "Dingus Quest Zero's wounds and a foe that only defends itself (the user's adder playtest, 2026-10-21: \"For some reason the wounds just kept getting worse and worse\", and its bites worded stabs; DECISIONS.md's a helpless character): a theme's hostile cave adders (written by hand: a faction of them on the top stratum; seed 1, a room of them south of the start), the character tough (STR, STA and WIL 99: Endurance 99, its shock rolls holding long) and undefended (defend none, Dodge 5, Unarmed 5), its torch put down, walking in among them: each bite worded a bite, never a stab (a creature's own part: HOUSE.md's wounds), each wound's own level (M1 to G5, the book's: it was the running total past the record's twelve, S12 ... S37), more than twelve of them, every level of them in the universal penalty; its shock roll failed at last, senseless (\"Everything goes black.\", OUT on the status line); the adders then going, fleeing, with not another blow (one that only defends itself: kinds.txt's ways, the user's by its nature), one posted as it fell held (the referee's: no killer, RS_KILLER); come round in shock, in no state to fight, left be; its state's words the record's real injuries, the lesser hurts never named the worst (\"in shock: 11 injuries and lesser hurts, the worst a serious bite to ...\"), the same as the game's carried on (what dealt each injury kept with its sheet)",
       init: 't_rc', cycles: 1500e6,
-      // (-R 3: the dice's offset that gives the game it was written for, since the dice by who asks,
+      // (-R 2: the dice's offset that gives the scene it was written for, 2026-11-03 (a lit torch let fall no time); since the dice by who asks,
       // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
         'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 3', 'defend none', 'open the door', 'south', 'drop the torch', 'south', ...Array(24).fill('wait'), 'status', 'quit', 'dq0 -d /ram/g -R 3', 'status', 'quit', 'echo $status']) },
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 2', 'defend none', 'open the door', 'south', 'drop the torch', 'south', ...Array(24).fill('wait'), 'status', 'quit', 'dq0 -d /ram/g -R 2', 'status', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4, s = dq0Story(out);
@@ -8098,7 +8118,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0fit', asks: true, initiative: true, reach: true, bearings: true, outfit: true, near: ['gear'], what: 'Dingus Quest Zero\'s outfit fits the character\'s strength (the brief of 2026-11-03: "An outfit should fit the character\'s strength: leave out the heavy things first"; HOUSE.md\'s an outfit that fits): weak characters and a laden soldier start a little burdened at most, with their clothes, pack, belt, a lit light, a fire-maker, food and water; a whole inventory told past 400 letters (2026-11-03: it was cut off, its weight and all), with a strong one\'s long list',
+      name: 'dq0fit', fit: true, asks: true, initiative: true, reach: true, bearings: true, outfit: true, near: ['gear'], what: 'Dingus Quest Zero\'s outfit fits the character\'s strength (the brief of 2026-11-03: "An outfit should fit the character\'s strength: leave out the heavy things first"; HOUSE.md\'s an outfit that fits): weak characters and a laden soldier start a little burdened at most, with their clothes, pack, belt, a lit light, a fire-maker, food and water; a whole inventory told past 400 letters (2026-11-03: it was cut off, its weight and all), with a strong one\'s long list',
       init: 't_rc', cycles: 5000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin',
         'hmchar -q -s 102 -u feudal -c thief -o /ram/c.hm', 'dq0 -p t -s 102 -c /ram/c.hm -T -a', 'status', 'inventory', 'quit',
@@ -9714,14 +9734,14 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k pick,shovel,rope,sword,bones,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword', 'douse the torch', 'status', 'wait 70 minutes', 'status',
         'lie down', 'wait 40 minutes', 'status', 'stand up', 'wait 70 minutes', 'status', 'sit', 'wait 40 minutes', 'status', 'stand up', 'wait 70 minutes', 'status', 'sleep 40 minutes', 'status', 'stand up', 'wait 70 minutes', 'status',
-        'drop the pack', 'drop the pick', 'drop the sword', 'drop the rope', 'drop the bones', 'drop the sword', 'drop the pick', 'drop the shovel', 'status', 'wait 15 minutes', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'quit', 'echo $status']) },
+        'drop the pack', 'drop the pick', 'drop the sword', 'drop the rope', 'drop the bones', 'drop the sword', 'drop the pick', 'drop the shovel', 'status', 'wait 30 minutes', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
         const st = [...o.matchAll(/Condition: (.*?)Facing:/g)].map(x => x[1]), fat = s => { const x = /fatigue (\d+)/.exec(s); return x ? +x[1] : 0; };
         const F = st.map(fat);
         this.notes = ['fatigue at each status: ' + F.join(', ')];
-        if (F.length !== 13) return ['status told ' + F.length + ' times: ' + o.slice(-800)];
+        if (F.length !== 15) return ['status told ' + F.length + ' times: ' + o.slice(-800)];
         if (F[0] !== 0) f.push('rested at first, fatigue ' + F[0]);
         if (!(F[1] >= 1)) f.push('overloaded, 70 minutes standing: fatigue ' + F[1] + ', not tired by it');
         if (!(F[2] < F[1])) f.push('lying down 40 minutes, overloaded: fatigue ' + F[2] + ' from ' + F[1] + ', not rested');
@@ -9732,9 +9752,9 @@ module.exports = {
         if (!/Position: lying down\./.test(st[6])) f.push('a sleeper not lying down: ' + st[6]);
         if (!(F[7] > F[6])) f.push('awake and standing again: fatigue ' + F[7] + ' from ' + F[6]);
         if (/burdened|overloaded/.test(st[8].replace(/a little burdened/, ''))) f.push('all let fall, still burdened: ' + st[8]);
-        if (!(F[9] < F[8])) f.push('all let fall, a quarter hour standing: fatigue ' + F[9] + ' from ' + F[8] + ', not rested');
-        if (!/of it hunger and thirst, not rested off/.test(st[12])) f.push('after long sleeps, the want\'s share not told: ' + st[12]);
-        if (!/Hunger and thirst: (hungry|very hungry|starving), (very thirsty|parched|dying of thirst)\./.test(st[12])) f.push('after long sleeps, hunger and thirst not told: ' + st[12]);
+        if (!(F[9] < F[8])) f.push('all let fall, a half hour standing: fatigue ' + F[9] + ' from ' + F[8] + ', not rested');
+        if (!/of it hunger and thirst, not rested off/.test(st[st.length - 1])) f.push('after long sleeps, the want\'s share not told: ' + st[st.length - 1]);
+        if (!/Hunger and thirst: (hungry|very hungry|starving), (very thirsty|parched|dying of thirst)\./.test(st[st.length - 1])) f.push('after long sleeps, hunger and thirst not told: ' + st[st.length - 1]);
         if (!/Hunger and thirst: not hungry, not thirsty\./.test(st[0])) f.push('at first, hunger and thirst not told: ' + st[0]);
         return f;
       },

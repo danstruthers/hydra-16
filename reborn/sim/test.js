@@ -206,6 +206,17 @@ function kitOf(t) {
   } });
 }
 for (const t of tests) if (/^dq0/.test(t.name) && !t.outfit) kitOf(t);
+// And with -F (the outfit as it's drawn, unfitted to the character's strength: HOUSE.md's an outfit that fits, 2026-11-03: their
+// games as they were), but in the tests of it, those with fit: true (the soak plays it)
+function fitOf(t) {
+  const d = Object.getOwnPropertyDescriptor(t, 'machine');
+  Object.defineProperty(t, 'machine', { configurable: true, enumerable: true, get() {
+    const m = d ? (d.get ? d.get.call(this) : d.value) : {};
+    if (typeof m.input !== 'string') return m;
+    return Object.assign({}, m, { input: m.input.replace(/(\u0101dq0(?: [^\r]*)?)\r/g, '$1 -F\r') });
+  } });
+}
+for (const t of tests) if (/^dq0/.test(t.name) && !t.fit) fitOf(t);
 // DQ0_ROLLS=N: every dq0 line typed with -R N (the dice's own offset: the same dungeon, other rolls), to find again
 // the rolls a test was written for when the dice change (the dice by who asks, 2026-10-30); a test's own -R kept.
 // DQ0_ROLLS=A-B: each dq0 test once more for each N from A to B, named NAME@N (node sim/test.js dq0cmd@1 dq0cmd@2 ...)

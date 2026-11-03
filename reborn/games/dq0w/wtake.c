@@ -163,13 +163,23 @@ static void fit (void)
     register struct ofit* e;
     register const struct kind* k;
     static unsigned t, w, bd;
-    static unsigned char n, j, i, best;
+    static unsigned char n, j, i, best, more;
 
+    hub_map (0);
+    if (HUB->pc_lump & PL_NOFIT) {
+        return;                                 /* (dq0 -F's, the tests': as it's drawn) */
+    }
     hub_map (KIND_BANK);
     n = OF_N;
     for (;;) {
         best = 0xFF;
-        bd = 0;
+        bd = more = 0;
+        for (j = 0, e = OF_LIST; j < n; ++j, ++e) {
+            k = CATALOGUE + e->kind;
+            if (k->craft == AP_WEAPON && (k->flags & K_HAND) && !(k->form & KF_TENS)) {
+                ++more;                         /* (Its weapons: the last, the lightest, kept) */
+            }
+        }
         k = CATALOGUE + KI_PENNIES;             /* (Its money, to come, s_kit's: never left out) */
         t = LOT_WT (k->form, k->weight * (ost.budget >> 2));
         for (j = 0, e = OF_LIST; j < n; ++j, ++e) {
@@ -195,7 +205,7 @@ static void fit (void)
             }
             for (i = 0; i < sizeof keep && keep[i] != e->kind; ++i) {
             }
-            if (i < sizeof keep) {
+            if (i < sizeof keep || (more == 1 && k->craft == AP_WEAPON && (k->flags & K_HAND) && !(k->form & KF_TENS))) {
                 continue;
             }
             for (i = 0; i < n && OF_LIST[i].in != j + 1; ++i) {

@@ -658,7 +658,7 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 
 - **The minds** (dq0d.c's take_way, part 14, once in a hundred seconds at most, as it isn't fighting or digging):
   what it wants (TW_*), a folk denizen's (a beast takes nothing up: it hunts): a weapon, none to hand (its
-  agear's AG_ARMED off: its own let fall and gone, none of its own); food, hungry; coins and jewels, a robber
+  agear's AG_ARMED off: its own let fall and gone, none of its own); food (the catalogue's key, rations), hungry; coins of any kind and jewels, a robber
   (kinds.txt's ways r); an ally none (its errands its own).  Its intent the character's own, I_TAKE (a its wants), the world's to carry out, as it goes on
   with what it decided (its doing and its face kept: nothing else changes if there's nothing to take).
 - **The world** (wtake.c, part 81): the first thing lying within its reach it wants (a weapon held in a hand, not a lot

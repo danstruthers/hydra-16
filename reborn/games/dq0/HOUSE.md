@@ -2156,7 +2156,7 @@ HarnWorld's price list.  What the house adds, every number the house's (and outf
   what it starts with weighs at most what leaves it a little burdened (encumbrance 2: free pounds and just under two and a half
   times its Endurance, the referee's RS_OUTFIT, x[3]).  Past that the heaviest thing's left out, then the next, a lot's one at a time, till it fits:
   armour and weapons, a pick, a rope, spare torches, a flask.  Never its clothes and footwear, its pack, belt and what hangs from it, a container with something in
-  it, its lit light, its fire-maker, its food.  Not refunded: left at home.  A carried-on kit isn't touched.  (dq0w/outfit.c's fit.)
+  it, its lit light, its fire-maker, its food, its last weapon (the lightest it was drawn).  Not refunded: left at home.  A carried-on kit isn't touched.  (dq0w/outfit.c's fit.)
 - **Strictly within its money** (answer 1): a thing's price is what the appraiser would value it at, its kind's value
   times (2 plus its quality), over 6 (appraise.c's rule); a draw is among the choices it could pay for at the best make
   it might get, so the price paid never passes what's left; a poor character may go without some of the kit (the book's

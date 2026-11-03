@@ -643,7 +643,8 @@ game starts, the world's (dq0w/outfit.c, outdraw.c, outmake.c), from the referee
 occupation, the open skills by their mastery, the family's wealth, the culture, class, wealth and sex): the universal
 kit, the occupation's things, its weapons by its weapon skills (each in its carrier, with its missiles), its armour by
 its bent, its skills' tools, all bought at the book's prices with the family's wealth, strictly within it (a soldier's
-unit issue, a knight's lord's gift and a cleric's temple's things given), the money left in the pouch.  Each thing's
+unit issue, a knight's lord's gift and a cleric's temple's things given), the money left in the pouch; what it can't bear
+at encumbrance 2 left out, the heaviest first (HOUSE.md's an outfit that fits, 2026-11-03).  Each thing's
 made its own at once (its make the draw's, its own die: the world's dice untouched).  The same outfits file holds the
 denizens' gear, drawn by the same code (DENIZENS.md).  dq0 -K (the tests') begins with the kit as it was before.
 
@@ -934,6 +935,7 @@ or a shaft can be jumped down (jump down: a fall of its height).
 - **Feeling its way** (the user's, 2026-11-02: HOUSE.md's): the look in the dark, and a dark walk's end, only what the
   hands and feet can tell: "You feel a wall ahead and to your left; nothing to your right."  No name for the place, no
   ways, no slope ahead, unless it's been on the square before and hasn't forgotten it ("This should be the kitchen.").
+  A look or "look around" there goes on to feel around (the user's, 2026-11-03: HOUSE.md's looking in the dark).
 - **Fatigue** is the referee's (the book's movement fatigue: HOUSE.md's moving and tiring): walking (or slower) a
   fatigue level a day, jogging one each five minutes, running one each two, sprinting one each minute, the time at
   each pace added up across moves; standing still (waiting, the time between moves) is rest, a level gone each ten
@@ -1473,7 +1475,7 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   lock picked, a door forced for the character, a thing given to another).
 - **The command interpreter** (Phase 3C): every command, the player's or a denizen's mind's, one structure of
   abstract actions (VB_*), verbs as data with their defaults, affordances, selectors, a target that persists,
-  questions only when unclear; "alias" the command for text aliases ("alias x is dig down"), naming things and rooms
+  questions only when unclear; "alias" the command for text aliases ("alias dd is dig down"), naming things and rooms
   by name and call only (the command grammar's answer 15).
 - **History and themes** (Phase 3D): a region's history generated first (themegen), each stratum built from its layer
   of it (stratagen: built, ruined, reused; a temple over an older keep's ruin), the stocking and the denizens from it,

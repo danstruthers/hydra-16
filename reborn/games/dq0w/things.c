@@ -3469,10 +3469,10 @@ unsigned char __fastcall__ s_describe (const char* name)
     strcpy (r->name, k->name);
     r->item = rec.id;
     r->craft = k->craft;
-    r->to = !strcmp (k->tool, "food");          /* (Food: what's eaten, by its key, not the appraisal's craft, a candle's) */
     r->quality = rec.quality;
     r->mat = rec.mat;
-    r->plural = (k->flags & K_PLURAL) != 0;
+    r->plural = ((k->flags & K_PLURAL) != 0) | (strcmp (k->tool, "food") ? 0 : 2);   /* (2: food, what's eaten, by its key, not
+                                                **   the appraisal's craft, a candle's) */
     r->qty = rec.qty;
     r->dur = rec.dur;
     r->dur_max = rec.dur_max;
