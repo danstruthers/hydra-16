@@ -19,6 +19,8 @@ OVMAX       = 19                    ; dq0.cfg's overlays (the twelfth part 6's i
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
+SWFAST      = 1                     ; (The parts copied four pages a pass: a walk's first words spent half their time
+                                    ;   in the copies; 2026-11-03)
 
             .bss
 _ovbank:    .res        OVMAX       ; Overlay n's bank: _ovbank[n - 1] (main.c's ovl_load sets them)
@@ -140,6 +142,9 @@ ovl_out:
             OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
             OVFN        say_raw, 16         ; (A line as it is, the map's: term.c, the main RAM's room)
+            OVFN        t_status, 16        ; (The status line drawn: term.c, the main RAM's room, 2026-11-03)
+            OVFN        may_den, 15         ; (The thing named may be a denizen: sway.c, 2026-11-03)
+            OVFN        walk_ahead, 15      ; (A walk over told before the world's asked: sway.c, 2026-11-03)
             OVFN        dots, 6             ; (The game's start's progress: main.c's)
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)

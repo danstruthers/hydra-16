@@ -1314,6 +1314,25 @@ quicker); the game on the ROM disk (its reads some 4.5 times as quick: the start
 
 **Design:** DUNGEON.md, the game's start.
 
+### The catalogue's room (the margins' pass, 2026-11-03)
+
+The user (2026-11-02): "Stone chisel versus wood chisel might be a good distinction for future items."  Built: a kind's
+number a whole byte everywhere, room for 60 more (NKINDS 206), a stone chisel, a wood chisel, a mattock and a spade
+(HOUSE.md's digging, for review).
+
+**Design:** items.h's NKINDS, HOUSE.md's digging.
+
+### The answers' first letters (the margins' pass, 2026-11-03)
+
+The swings at the normal pace, found by a probe of each answer's tasks: (1) `examine` of any thing asked the denizens first
+whether it named one of them, and they're the background: a second and more when a mind was at work (now only when the
+word's first three letters are in an actor's name, or the player has named one); (2) a denizen's kit in hand in the world as
+Enter comes can't be left part way, up to 1.1M cycles (not cured: see the report's "what it would take"); (3) a walk to a
+place in the room told nothing till it got there, 13M cycles ("You set off across the room." now).  The rest is the parts'
+copies: the UI's now four pages a pass (SWFAST), the chooser's pass of the store direct, not by items ().
+
+**Design:** DUNGEON.md, the game's start; HOUSE.md's going to anything.
+
 ### The answers' times held (the kernel's foreground)
 
 The user (2026-10-30): the answer-time checks (D17's, dq0answer's and dq0prompt's) are the user's and never raised;

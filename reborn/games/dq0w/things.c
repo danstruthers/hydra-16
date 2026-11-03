@@ -1576,8 +1576,16 @@ unsigned char s_serve (void)
 
     rclear10 ();                                /* (No reach owed yet) */
     hub_map (0);
-    if (HUB->ireq.kind & IO_STEPS) {
-        reach_do (RO_ASK);                      /* (By the reach's steps, the UI's: part 86's) */
+    if (HUB->ireq.kind & IO_STEPS) {            /* (By the reach's steps, the UI's: part 86's RO_ASK, here, its copies
+                                                **   a tenth of a thing's answer, 2026-11-03) */
+        rs_ok = HUB->pc_lump & (PL_NOSTEPS | PL_TOLD) ? 8 : 1;   /* (8: asked by the steps, the lump's) */
+        HUB->ireq.kind &= ~IO_STEPS;
+        if (rs_after_on == 2) {
+            rs_after_on = 0;                    /* (A timed work's end, the torch lit again: its sequence on) */
+        } else if (!rs_live) {
+            rs_paid = rs_using = rs_redo = 0;
+            rs_pack = 0;
+        }
     }
     memcpy (&iq, &HUB->ireq, sizeof iq);
     iq.result = IR_OK;
@@ -1980,12 +1988,19 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
     sn = HUB->pc_stratum;
     x = HUB->pc_x;
     y = HUB->pc_y;
-    while ((i = items (i, IN_SQUARE | IN_ACTOR | IN_ITEM | IN_PORTAL, 0)) != 0) {
-        p = item_at (i);
+    p = 0;                                      /* (The store gone through here, not by items (): a kind passed over, or
+                                                **   a free record, some 70 cycles, not 1,400: a thing named answers the
+                                                **   sooner, the user's D17, 2026-11-03; p 0, its bank to be put back) */
+    for (i = 1; i < ihigh; ++i) {
+        if (!p || p == (const struct item*) 0x8000 + 0x2000 / sizeof (struct item)) {
+            p = item_at (i);
+        }
         pk = p->kind;
-        if (no[pk] || (p->flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN) {
+        ++p;
+        if (!pk || no[pk] || p[-1].where >= IW_DEN || (p[-1].flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN) {
             continue;
         }
+        p = 0;
         fetch (&rec, i);
         if (!is_named (name)) {
             no[pk] = *name != '#';
@@ -2001,6 +2016,7 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         pk = p->kind;
         px = p->x;
         py = p->y;
+        p = 0;
         if (ctop == rs_pack) {
             pw = IW_ACTOR;                      /* (Off for a handling, at its feet: part 85's) */
             px = 0;

@@ -157,8 +157,13 @@ failure.  Feet a spell (kept in half-feet), and the wear a spell does the tool:
 | shovel           | 3    | 1 1/2             | none  | none  | none    | none                    |
 | chisel, a hammer in the other hand | none | none | 1 | 1/2 | 1/2 | flags, stone, masonry 1 (the chisel) |
 
-(A spade's and a mattock's rows, a shovel's, were in the table with no such kinds in the catalogue: taken out for the
-referee's room, 2026-11-02; back as the kinds come.)
+A spade and a mattock dig as a shovel does (their rows the shovel's, 2026-11-03, back as the kinds came), each a tool of two
+hands, a denizen's as a shovel is (its agear's AG_SPADE).
+
+- **The chisels and the new tools' prices** *(the house's, 2026-11-03, for review; the book has no price for them)*: a stone
+  chisel is the chisel, as named (6d); a wood chisel (4d) is no use on stone, flags or masonry, not being in the diggers'
+  table: "Your wood chisel doesn't seem to be working on the masonry." (the user, DECISIONS.md); with a stone chisel or a
+  chisel to hand, that's the one taken.  A mattock 10d, 7 lb; a spade 7d, 4 lb.  None is in an outfit yet.
 
 - **A chisel and a hammer** *(the house's, 2026-11-02, for review)*: a chisel works stone, masonry and flags slowly,
   a Mining test each spell as a pick's; it takes a hammer in the other hand (carried, the referee's table asks): none,
@@ -806,7 +811,8 @@ climb's test to hold on).
   chooses).  It stops beside it (facing it) by the ordinary walk: its stops, engagement and traps as ever.  Within
   reach already, told where it is.  "You haven't seen a pot here." only for what it hasn't.  A denizen's zone doesn't
   stop a walk up to the one gone to (a close-in's); others' do.  Told as it starts ("You go over to the pot.", "You head
-  for the door.": the user's D17).  "Go to the pit", "go to the trap": the nearest trap it knows of in the chunk it's in,
+  for the door.", a place in the room "You set off across the room.": the user's D17; a thing to take that's in sight and
+  out of reach told before the world's asked, its answer the time).  "Go to the pit", "go to the trap": the nearest trap it knows of in the chunk it's in,
   whatever its kind ("You go over to the trap."; "It's beside you."; else "You haven't seen a trap here.").  "Go to the
   ledge": straight at the part of the room the look told, till its ledge stops it ("You haven't seen a ledge here." with
   none told).  A walk that has got as near as it can ends there, untold; only a walk that couldn't start is refused.

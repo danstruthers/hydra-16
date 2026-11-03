@@ -874,6 +874,7 @@ unsigned char reach;                            /* (5: a step of the reach under
                                                 **   work under way, words.c's, the command kept the same, 4: carried
                                                 **   out again, its end; 6: walking over for a command the world carries
                                                 **   out as it gets there: a thing taken, a blow) */
+unsigned char said_ahead;                       /* (A walk over told as the thing's asked for, walk_ahead's: not told again) */
 unsigned char placing;                          /* (A place in the room walked to: place_go's, or a walk told as it began,
                                                 **   walk_says': its arrival not "over to it") */
 unsigned char untarget;                         /* (The target let go at the next command: resolve.c's) */
@@ -1689,6 +1690,11 @@ unsigned char __fastcall__ things (unsigned char op, const char* name)
     q->kind = op;
     strncpy (q->name, name, sizeof q->name - 1);
     q->name[sizeof q->name - 1] = 0;
+    said_ahead = 0;
+    if (op == (IO_GET | IO_STEPS) && !q->sel) {
+        walk_ahead (name);                      /* (Seen out of reach: told now, the world's answer some 700,000 cycles
+                                                **   off, its parts' copies and its chooser: the user's D17, 2026-11-03) */
+    }
     hub_call (q, T_WORLD);                      /* (Asleep till the world rings with the reply) */
     q->state = REQ_FREE;
     if (q->kind == IO_STEP) {
@@ -2227,7 +2233,7 @@ portal:
         return;
     case VB_EXAMINE_OBJECT:                     /* (A thing looked at closely: judged, by the craft that knows it; a */
     case VB_EXAMINE_LOCALE:                     /*   portal, or its part if it's not there; else the room) */
-        if (cmd.obj.word[0] && !cmd.obj.kind && deal (SW_LOOK | SW_QUIET) != SR_NONE) {
+        if (!cmd.obj.kind && may_den () && deal (SW_LOOK | SW_QUIET) != SR_NONE) {
             gear_look ();                       /* (A denizen it sees: how it seems, then its things as the eyes
                                                 **   make them out from here, part 11's) */
             return;
@@ -2503,6 +2509,11 @@ void __fastcall__ s_walk_says (const char* name)
 {
     unsigned char k = cmd.obj.kind;
 
+    if (said_ahead) {
+        said_ahead = 0;                         /* (Told already, walk_ahead's) */
+        placing = 1;
+        return;
+    }
     if (!name) {
         name = cmd.obj.word;
     }
@@ -2632,6 +2643,8 @@ unsigned char __fastcall__ s_place_go (const struct cmd* c)
         msg ("You're there already.");
         return 1;
     }
+    msg ("You set off across the room.");       /* (Told at once, the user's D17: nothing till it got there, 13M cycles) */
+    t_flush ();
     pm.kind = I_GOTO;
     pm.who = 0;
     pm.a = 1;

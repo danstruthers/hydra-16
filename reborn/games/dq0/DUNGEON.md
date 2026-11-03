@@ -1392,8 +1392,19 @@ packed, not the game on the ROM disk (2026-10-31, DECISIONS.md).  Now: 208M cycl
   theme's story and the character's entrance; "Nearly ready" and a dot each second or so till the character's first
   ready (the denizens started, the world begun, the first look); then "Type help for the commands." with the first
   prompt, not before the look (main.c's o_dots, starting).
-- **The check**: dq0starttime, its budgets 229M (seed 1) and 318M (seed 123456789), its silence 36M at most, the
-  banks as ld65 made them.
+- **The margins' pass** (2026-11-03): each bank packed against its task's own main RAM as well (a match's offset reaches
+  below the window to the program's code and read-only data, unchanged by then: only its DATA changes before the overlays
+  are read, measured): 359K bytes to 325K, no code; the unpack library's token bytes in line; the UI's loop a fifth of a
+  second's nap as the game starts (its look at the keys and the console's had a quarter of the CPU), the sound a quarter
+  second's (the hub's starting), the world's waits on its doorbell.  Measured as a game's played (the outfits drawn: the
+  check's -K had left out some 8M): see dq0starttime's budgets in tests.js.  Lazy reading of the banks was measured and
+  not built: by the first prompt 120K of 359K packed bytes aren't touched, but dq0answer's dozen commands alone touch all
+  but 41K (some 13M cycles), each bank holding parts used at once and parts seldom used; a cold bank's first use would cost
+  1.5M cycles and more in a typed answer, against the user's D17.  What's left is the card: some 535K bytes at about 270
+  cycles each (164 clocking the bits in, as proven on the board).  What stands between this and ten seconds is that, and
+  the user's to choose: the game on the ROM disk (reads some 4.5 times as quick, DECISIONS.md's, not chosen on
+  2026-10-31), or on the Vera X's own card (its SPI in hardware).
+- **The check**: dq0starttime, its budgets in tests.js, its silence 36M at most, the banks as ld65 made them.
 
 ### The character carries on (slice 4.4, 2026-11-02)
 
@@ -1559,8 +1570,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   strenuous work.  Left: a raise or a ramp joining two parts of a stratum (these are ways to a chamber of their own),
   a long slope's own length walked square by square (taken at once, as a stairway is), the denizens tiring uphill.
 - **A mason's chisel and a wood chisel** (the user's, 2026-11-02, DECISIONS.md: "Stone chisel versus wood chisel might be a
-  good distinction for future items"): the catalogue's one chisel works stone (HOUSE.md's digging); a wood chisel its own
-  kind, for joinery, no use on stone.  The catalogue's full (NKINDS 144).
+  good distinction for future items"): built, 2026-11-03: a stone chisel, a wood chisel no use on stone (HOUSE.md's
+  digging).  The wood chisel's joinery is still to come.  The catalogue has room for 56 more (NKINDS 206, a kind's number a
+  whole byte everywhere: items.h).
 - **Tunnellers and builders** (slice 4.11, built 2026-11-01 and 2026-11-02: changing the dungeon, above; DENIZENS.md's
   tunnellers): left, builders shoring a passage, the spoil as a thing, a mine past its lair's chunk.
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical

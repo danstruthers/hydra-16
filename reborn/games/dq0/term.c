@@ -309,7 +309,10 @@ void t_end (void)
 ** while it's away from the line typed (the user: the cursor flickered, the line drawn whole each game second); nothing
 ** at all, the cursor left where it is, if nothing has */
 
-void __fastcall__ t_status (const char* left, const char* right)
+#pragma code-name (push, "OV16CODE")            /* (Overlay 16's, through its stub, 2026-11-03: the main RAM's room,
+                                                **   for the parts' quicker copies; nothing of the hub's in it) */
+#pragma rodata-name (push, "OV16RODATA")
+void __fastcall__ o_t_status (const char* left, const char* right)
 {
     unsigned char n = strlen (left), m = strlen (right), k, a, b;
 
@@ -336,6 +339,8 @@ void __fastcall__ t_status (const char* left, const char* right)
     outs ("0m");
     away = 1;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The story */
 

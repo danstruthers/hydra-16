@@ -390,6 +390,9 @@ unsigned char bandage_out (void);               /* Part 19: a bandage got out, a
 extern unsigned char nap, what_hi, take_more, nosteps;    /* (main.c's) */
 void step_go (void);                            /* Part 19: a step of the reach begun by the world (IO_STEP's) */
 void __fastcall__ reach_said (unsigned w, unsigned char named);   /* Part 19: the reach's words */
+unsigned char may_den (void);                   /* (sway.c's: the thing named may be a denizen: the denizens asked) */
+void __fastcall__ walk_ahead (const char* name);    /* (sway.c's: a thing to take seen out of reach: its walk told before the world's asked) */
+extern unsigned char said_ahead, placing;       /* (main.c's: its walk told already; a walk over's arrival short) */
 void __fastcall__ walk_says (const char* name);    /* (A walk over told as it begins, at once: "You go over to the pot."; 0: the command's thing) */
 unsigned char search_go (void);                 /* (Part 10's) A search begun, by its form (search.c) */
 void __fastcall__ search_said (const struct msg* m);   /* (A room searched whole's, as it goes: an E_BEAT's WB_SEARCH) */

@@ -163,3 +163,60 @@ void __fastcall__ o_sway_words (const struct sway* s)
         seeming ("It goes badly: it seems ", " now.");
     }
 }
+
+/* The thing named may be a denizen, by what's in the hub (the first three letters of the word in an actor's name, or one
+** the player has named: the denizens' own meant is the judge), so that they're asked: they're the background, and an
+** answer waiting on one of their minds' turns took a second and more (dq0answer's, 2026-11-03: "examine the torch") */
+unsigned char o_may_den (void)
+{
+    char w[4], nm[sizeof HUB->actor[0].name + 1];
+    unsigned char k;
+
+    if (!cmd.obj.word[0]) {
+        return 0;
+    }
+    if (names_n) {
+        return 1;
+    }
+    strncpy (w, cmd.obj.word, 3);
+    w[3] = 0;
+    nm[sizeof nm - 1] = 0;
+    for (k = 0; k < NACTORS; ++k) {
+        hub_mem (0, nm, HUB->actor[k].name, sizeof nm - 1);
+        if (nm[0] && strstr (nm, w)) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* A thing to take, by the name said, that the character sees lying about, none of that name in reach: its walk over told
+** now, before the world's asked, whose answer's the time (its parts' copies, its chooser through the store): the same
+** words, and the world's IR_NOT_HERE says none again (said_ahead, s_walk_says) */
+void __fastcall__ o_walk_ahead (const char* name)
+{
+    struct sight* s;
+    struct sitem* it;
+    unsigned char k, away = 0;
+    unsigned dx, dy;
+
+    if (*name == '#') {
+        return;
+    }
+    s = sight_get ();
+    for (k = s->nitems, it = s->item; k; --k, ++it) {
+        if (strstr (it->name, name)) {
+            dx = it->x - s->x + 1;
+            dy = it->y - s->y + 1;
+            if (dx <= 2 && dy <= 2) {
+                return;
+            }
+            away = 1;
+        }
+    }
+    if (away) {
+        walk_says (name);
+        placing = 0;
+        said_ahead = 1;
+    }
+}

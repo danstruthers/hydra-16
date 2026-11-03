@@ -2146,7 +2146,7 @@ function dq0Check(name, m) {
 // entry a step, the store's taking 24 in a part's swap; 1,800,000 since 2026-10-29: the sound layer's pulse, once a
 // denizens' turn after a step, and the denizens' senses' own part, slices 4.5 and 4.6); 1,900,000 since 2026-10-31
 // (1,863,195: the minds' steps looking at each square's chunk for its bad air, a swimmer's too, the giant rats')
-const TRACE_STEP = 1950000;   // (1910000 till 2026-11-02: its measure a few thousand either way by the tasks' timing; part 14's some 30 bytes more, digs told why)
+const TRACE_STEP = 1910000;   // (1950000 for a day, 2026-11-02, part 14's some 30 bytes more, digs told why; 1,901,748 since the margins' pass, 2026-11-03: its measure a few thousand either way by the tasks' timing)
 
 // What a dq0 test's lines did, by their meaning (Phase 3A: tests cut to meaning, not words): sim/lib/dq0meaning.js's
 // record (m.dq0, in every dq0 test: the world's events, the denizens', the requests' replies, the state each line
@@ -2798,7 +2798,7 @@ function dq0Timer(m) {
 // move takes, at the normal pace the move taking its own time, a step a second, then the senses' look)
 const DQ0_ANSWERS = [['turn left', 'You turn to face', 1790000], ['turn right', 'You turn to face', 1790000],
   ['step forward', 'You'], ['inventory', 'You carry', 720000], ['examine the torch', 'Your torch'], ['walk to the door ahead to my left', 'You'], ['examine the door', 'You head for|A door|Which door', 720000],
-  ['look', 'You', 1790000, 1790000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You'], ['walk to the window', 'You'], ['take the bones', 'You go over to the bones.', 1450000], ['look', 'You']];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
+  ['look', 'You', 1790000, 1790000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You'], ['walk to the window', 'You'], ['take the bones', 'You go over to the bones.', 1150000], ['look', 'You']];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
 function dq0AnswerTest(baud) {
   const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
   const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
@@ -5510,7 +5510,8 @@ module.exports = {
         if (rd(s2).smoke) f.push('its torch\'s smoke still smelt three hours on: ' + JSON.stringify(rd(s2)));
         const e = T.of('w'), sq = e.at && e.after ? Math.abs(e.after.pc.x - e.at.pc.x) + Math.abs(e.after.pc.y - e.at.pc.y) : 0;
         const per = sq ? (e.after.cyc - e.at.cyc) / sq : Infinity;
-        if (!(per <= TRACE_STEP)) f.push('a step\'s cost ' + Math.round(per) + ' cycles (' + sq + ' squares walked, budget ' + TRACE_STEP + ')');
+        this.notes = ['a step\'s cost ' + Math.round(per) + ' cycles (' + sq + ' squares walked, budget ' + TRACE_STEP + ')'];
+        if (!(per <= TRACE_STEP)) f.push(this.notes[0]);
         const k0 = T.of('dq0 -d /ram/kept'), kx = T.after(k0, 'examine the floor');
         if (!/tr0[0-9a-f]{4}\.da[t12]/.test(out)) f.push('no traces\' region file in the save folder');
         if (!rd(kx).trod) f.push('the game carried on, its walk\'s prints not read back from the save: ' + JSON.stringify(rd(kx)));
@@ -6002,7 +6003,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0starttime', near: ['time'], what: 'Dingus Quest Zero\'s start timed at the normal pace (the user\'s: a start of some seconds is fine with its progress shown; the start agent\'s figures, 2026-10-30: on the board, at 3.58 MHz, a minute and more, the SD card\'s reading two thirds of it), from Enter on the dq0 line to the first prompt: seed 1 (a stand-in\'s theme) and seed 123456789 (its own history made by themegen, as a game whose seed is the clock\'s), each within its budget; the progress shown all the way (no silence on the screen longer than about 10 s at 3.58 MHz); and the help\'s line said with the first prompt, after the first look; and each task\'s overlays in its banks as ld65 made them (read packed from the card and unpacked in place: the unpack library)',
+      name: 'dq0starttime', near: ['time'], outfit: true, what: 'Dingus Quest Zero\'s start timed at the normal pace (the user\'s: a start of some seconds is fine with its progress shown; the start agent\'s figures, 2026-10-30: on the board, at 3.58 MHz, a minute and more, the SD card\'s reading two thirds of it), from Enter on the dq0 line to the first prompt: seed 1 (a stand-in\'s theme) and seed 123456789 (its own history made by themegen, as a game whose seed is the clock\'s), each within its budget; the progress shown all the way (no silence on the screen longer than about 10 s at 3.58 MHz); and the help\'s line said with the first prompt, after the first look; and each task\'s overlays in its banks as ld65 made them (read packed from the card and unpacked in place: the unpack library)',
       init: 't_rc', cycles: 1500e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p n -s 1 -c /ram/c.hm', 'quit',
         'dq0 -p n -s 123456789 -c /ram/c.hm', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
@@ -6014,7 +6015,7 @@ module.exports = {
       // 36M cycles, 10 s at 3.58 MHz; 25M now, the longest (the UI's overlays read, before the screen's made).  The
       // help's line: after the first look's words, only the status line's and the prompt after it.  And every task's
       // overlays in their banks at the first prompt as ld65 made them (dq0OvlBanks))
-      starts: [{ seed: 1, max: 243e6 }, { seed: 123456789, max: 323e6 }], quiet: 36e6,    // (2026-11-03: dq0w's new overlay, and two kinds more, to load: 241.3M, 321.0M)
+      starts: [{ seed: 1, max: 225e6 }, { seed: 123456789, max: 305e6 }], quiet: 36e6,    // (2026-11-03: dq0w's new overlay, and two kinds more, to load: 241.3M, 321.0M, -K's; with the outfits, as a game's played, 249.7M and 332.7M; then the margins' pass, DUNGEON.md's: 219.7M, 298.8M)
       start(m) {
         const a = m.acia, read = a.read, shown = a.shown, self = this;
         let typed = '', g = null, tail = '', esc = 0, text = '';
