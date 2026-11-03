@@ -8284,7 +8284,7 @@ module.exports = {
         'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 1 -c /ram/c.hm -k sword -T -a -I -J -N -K', 'go through the door', 'turn around', 'close the door', 'open the door', 'quit',
         'dq0 -p t -s 1 -c /ram/c.hm -k sword -T -a -I -J -N -K', 'go through the door', 'turn around', 'kick the door', 'quit',
         'dq0 -p t -s 1 -c /ram/c.hm -T -a -I -J -N -K', 'go to the door', 'wait', 'go through the door', 'quit',
-        'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -a', 'look at the table', 'take the table', 'quit',
+        'hmchar -q -s 1 -o /ram/c.hm', 'dq0 -p t -s 1 -c /ram/c.hm -a', 'look at the sconce', 'take the sconce', 'quit',
         'hmchar -q -s 3 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -a', 'search the iron pot', 'sharpen the torch', 'inventory', 'drop the hammer', 'quit',
         'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -a', 's', 's', 'examine the wall', 'quit',
         'hmchar -q -s 3 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -a', 'examine the wall', 'examine the wall', 'examine the wall', 'quit',
@@ -8329,8 +8329,9 @@ module.exports = {
         has(4, 'go through the door', 'is in the way.');
         never(4, 'go through the door', 'You come to the wall');
         // (The words)
-        has(5, 'look at the table', 'The table is some 10 feet off.');
-        has(5, 'take the table', 'You go over to the table.');
+        has(5, 'look at the sconce', 'The sconce is some ');
+        never(5, 'look at the sconce', ' is is ');
+        inTurn(seg(5, 'take the sconce'), ['You go over to the sconce.', 'The sconce is fixed where it stands.'], f, 'a far thing fixed: walked to, then told: ');
         if (!(m.ahead > 0)) f.push('a far thing\'s walk not told before the world was asked (said_ahead never set)');
         never(6, 'search the iron pot', 'You hold the iron pot open.');
         has(6, 'search the iron pot', 'It\'s closed');
@@ -10055,14 +10056,14 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Vermin | rat | 7-7 | 30 | - | 1 | w | -' > /ram/g/theme.txt",
         'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k pick,shovel,rope,sword,bones,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword', 'douse the torch', 'status', 'wait 70 minutes', 'status',
         'lie down', 'wait 40 minutes', 'status', 'stand up', 'wait 70 minutes', 'status', 'sit', 'wait 40 minutes', 'status', 'stand up', 'wait 70 minutes', 'status', 'sleep 40 minutes', 'status', 'stand up', 'wait 70 minutes', 'status',
-        'drop the pack', 'drop the pick', 'drop the sword', 'drop the rope', 'drop the bones', 'drop the sword', 'drop the pick', 'drop the shovel', 'status', 'wait 40 minutes', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'quit', 'echo $status']) },
+        'drop the pack', 'drop the pick', 'drop the sword', 'drop the rope', 'drop the bones', 'drop the sword', 'drop the pick', 'drop the shovel', 'status', 'wait 40 minutes', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
         const st = [...o.matchAll(/Condition: (.*?)Facing:/g)].map(x => x[1]), fat = s => { const x = /fatigue (\d+)/.exec(s); return x ? +x[1] : 0; };
         const F = st.map(fat);
         this.notes = ['fatigue at each status: ' + F.join(', ')];
-        if (F.length !== 15) return ['status told ' + F.length + ' times: ' + o.slice(-800)];
+        if (F.length !== 13) return ['status told ' + F.length + ' times: ' + o.slice(-800)];
         if (F[0] !== 0) f.push('rested at first, fatigue ' + F[0]);
         if (!(F[1] >= 1)) f.push('overloaded, 70 minutes standing: fatigue ' + F[1] + ', not tired by it');
         if (!(F[2] < F[1])) f.push('lying down 40 minutes, overloaded: fatigue ' + F[2] + ' from ' + F[1] + ', not rested');
