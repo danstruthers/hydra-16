@@ -4723,7 +4723,7 @@ module.exports = {
       name: 'dq0swim', near: ['body'], what: 'Dingus Quest Zero\'s water (slice 4.9: DUNGEON.md\'s water, HOUSE.md\'s water: the plan\'s lakes, a chunk\'s water), by the words told and the hub: at seed 2 down the way down (the natural stratum below, a flooded chamber north of its landing, five feet deep), north into it: out of its depth, swimming (its depth in the hub\'s pc_wet, its squares a minute the referee\'s P_SWIM in pc_swim, its breath pc_breath), told "You\'re out of your depth: you swim.", its torch put out ("The water puts out your light."), its swimming told by the referee\'s grade ("You struggle to keep afloat."): in the dark then, the walk stopped',
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 2 -c /ram/c.hm -T', 'd', 'n', 'look', 'quit', 'echo $status']) },
+        'dq0 -p t -s 2 -c /ram/c.hm -T', 'd', 'n', 'look', 'wait 2 minutes', 'quit', 'echo $status']) },
       start(m) {   // (The character's water, as each line's typed: the hub's pc_wet, pc_swim, pc_breath)
         const a = m.acia, read = a.read;
         let typed = '';
@@ -4754,6 +4754,9 @@ module.exports = {
         if (!/You swim strongly\.|You struggle to keep afloat\./.test(ns)) f.push('its swimming not told (the referee\'s test)');
         const w = (m.wet || []).find(e => e.line === 'look');
         if (!w || (w.wet & 0x7F) < 5 || !w.swim || !w.breath) f.push('swimming not in the hub (pc_wet, pc_swim, pc_breath): ' + JSON.stringify(w));
+        // (Swimming is vigorous for hunger and thirst, whatever its pace: the bodies' time told so, a 2, wtend.c's; HOUSE.md's want, the check of 2026-11-03)
+        const K = m.dq0.layout().K, tm = dq0Turns(m).of('wait 2 minutes').replies.filter(r => /^slot/.test(r.req) && r.kind === K.RS_TIME);
+        if (!tm.length || !tm.every(r => r.a === 2)) f.push('a swimmer\'s time not told as vigorous: ' + JSON.stringify(tm.map(r => r.a)));
         this.notes = [JSON.stringify(m.wet)];
         if (f.length) this.notes.push(o.slice(Math.max(0, n - 300), n + 1500));
         return f;
@@ -5590,9 +5593,9 @@ module.exports = {
     },
     {
       name: 'dq0quiet', meaning: true, what: 'Dingus Quest Zero\'s moving quietly (slice 4.6, D15: Stealth tested as it starts, again as something changes; HOUSE.md\'s sound and stealth, for review), by the referee\'s replies and the hub\'s state: at seed 3 by the way down, a step at a walk as loud as its pace (the senses\' to reckon, the hub\'s pc_noise 0xFF, no Stealth test); creeping, its first step tested (the world\'s slot: RS_TEST, P_STEALTH), its loudness the grade\'s (a critical success 0, a marginal 1, a marginal failure 2, a critical 3), its next not tested again, the same loudness; crouched, tested again (its position changed); a walk again, the senses\' to reckon, no test',
-      init: 't_rc', cycles: 450e6,   // (400e6 till 2026-10-30: 399.4M at the morale's merge, over it with succession's parts)
+      init: 't_rc', cycles: 700e6,   // (400e6 till 2026-10-30: 399.4M at the morale's merge, over it with succession's parts; 2026-11-03, a creep again and a stair)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'step forward', 'creep',
-        'step back', 'step forward', 'crouch', 'step back', 'stand', 'walk', 'step forward', 'wait', 'quit', 'echo $status']) },
+        'step back', 'step forward', 'crouch', 'step back', 'stand', 'walk', 'step forward', 'wait', 'creep', 'step back', 'step forward', 'd', 'step forward', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], STEALTH = 4, RS_TEST = 4;
@@ -5609,6 +5612,10 @@ module.exports = {
         if (t3.length !== 1) f.push('the crouched creeping step: ' + t3.length + ' Stealth tests (its position changed)');
         else if (t3[0].steps !== 1) f.push('the crouched creeping step: its test ' + t3[0].steps + ' steps, not 1');
         if (nz(s4) !== 255 || tests(s4).length) f.push('a walk again: its noise ' + nz(s4) + ' (not the senses), ' + tests(s4).length + ' Stealth tests');
+        const c2 = T.of('creep', w.k), s5 = T.of('step back', c2.k), s6 = T.of('step forward', s5.k), dn = T.of('d', s6.k), s7 = T.of('step forward', dn.k);   // (HOUSE.md's D15: as it starts after a walk, and on a new stratum, the check of 2026-11-03)
+        if (tests(s5).length !== 1) f.push('creeping again after a walk: ' + tests(s5).length + ' Stealth tests, not 1');
+        if (tests(s6).length) f.push('the next creeping step tested again');
+        if (tests(dn).length + tests(s7).length < 1) f.push('creeping on a new stratum: not tested again');
         return f;
       },
       sdcard: true
@@ -7486,7 +7493,7 @@ module.exports = {
         "dq0 -p t -s 1 -c /ram/c.hm -k sword -T -R 1", 'wait', 'wait', 'wait', 'wait', 'wait', 'look', 'quit', 'echo $status']) },
       start(m) {
         dq0BodyPoke(m, [{ g: 2, line: 'wait', n: 1, name: 'ghoul', lv: 12, ex: 5990, at: 0 },
-          ...[2, 3, 4, 5].map(n => ({ g: 3, line: 'wait', n, name: 'giant rat', lv: 12, ex: 5990, at: 0 }))]);
+          ...[1, 2, 3, 4, 5].map(n => ({ g: 3, line: 'wait', n, name: 'giant rat', lv: 12, ex: 5990, at: 0 }))]);
         dq0Poke(m, [{ g: 3, line: 'wait', n: 1, name: 'giant rat', beside: 'face', engage: true, set: { attitude: 0 } }]);
       },
       expect: ['% echo $status'],
@@ -8018,9 +8025,11 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -a', 'light a new torch', 'light a new torch', 'light a new torch', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -a -k candle', 'examine the candle', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -a -k pick', 'dig down', 'quit',
+        'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 1 -c /ram/c.hm -k candle -T -a -I -J -N -K', 'wait', 'give the candle to the giant rat', 'quit',
+        'dq0 -p t -s 1 -c /ram/c.hm -k mankar -T -a -I -J -N -K', 'throw the mankar hard at the giant rat', 'quit',
         'echo $status']) },
       start(m) {
-        dq0Poke(m, [{ g: 4, line: 'go through the door', n: 1, name: 'giant rat', beside: 'face' }]);
+        dq0Poke(m, [{ g: 4, line: 'go through the door', n: 1, name: 'giant rat', beside: 'face' }, { g: 15, line: 'give the candle to the giant rat', n: 1, name: 'giant rat', beside: 'face' }]);
         dq0OnWords(m, [{ g: 14, line: 'dig down', n: 1, words: 'You dig', text: 'stop working\r' }]);
         // (walk_ahead's mark, sampled as the console's used: a far thing's walk told before the world's asked)
         const ad = parseInt(/^al ([0-9A-F]+) \._said_ahead$/m.exec(fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0', 'dq0.lbl'), 'latin1'))[1], 16), c = m.acia, w0 = c.write;
@@ -8080,6 +8089,10 @@ module.exports = {
         never(13, 'examine the candle', 'a quarter burnt down');
         // (Stop working: whatever the work)
         never(14, 'dig down', 'You aren\'t digging');
+        // (Food what's eaten: a candle's no gift for a beast, though the appraisal's craft takes it in)
+        has(15, 'give the candle to the giant rat', 'has no use for it');
+        // (A kind past 127 thrown at a denizen, hard: a throw at it, not at a thing; a named mankar's its own)
+        has(16, 'throw the mankar hard at the giant rat', 'You throw your mankar hard at the giant rat');
         return f;
       },
       sdcard: true
@@ -8104,6 +8117,24 @@ module.exports = {
         inv.forEach((t, i) => { for (const w of ['clothes', 'backpack', 'belt', 'tinderbox', 'rations', 'waterskin', '(lit)', 'In all,']) if (!t.includes(w)) f.push('inventory ' + (i + 1) + ': no ' + w + ': ' + t.slice(0, 500)); });
         if (inv[4] && inv[4].length <= 400) f.push('the long inventory only ' + inv[4].length + ' letters: not the case it means: ' + inv[4]);
         return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0robcoins', outfit: true, near: ['denizens', 'money'], what: "Dingus Quest Zero's robber takes coins of any kind (the check of HOUSE.md, 2026-11-03: its takes were pennies alone by the kind's number; crowns and farthings are the appraisal's metal; HOUSE.md's denizens taking things): a bandit, a robber by its kind, armed, put beside crowns the character's let fall: it takes them up by the take rule",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k crowns',
+        'drop the crowns', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'bandit', beside: 'face' }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), s = dq0Story(out);
+        const picks = T.flatMap(t => [...t.events, ...t.dens]).filter(e => e.kind === 'E_BEAT' && e.beat === 'WB_PICKS');
+        if (!picks.length) return ['the bandit never took the crowns up: ' + s.slice(s.indexOf('> drop the crowns'), s.indexOf('> drop the crowns') + 700)];
+        return /snatches up its crowns|crowns/.test(s.slice(s.indexOf('> wait'))) ? [] : ['not told of the crowns taken: ' + s.slice(s.indexOf('> wait'), s.indexOf('> wait') + 700)];
       },
       sdcard: true
     },
