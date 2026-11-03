@@ -122,10 +122,13 @@ enum { PT_READ, PT_DICE, PT_GAME, PT_TALK, PT_SING, PT_DRINK, PT_MEND, PT_WHITTL
 #define NEAR_SQ         2                       /* Squares: near enough to look a thing over closely (further, only
                                                 **   its look from afar) */
 enum { W_ROOM, W_PASSAGE };
-enum { S_PART, S_SMALL, S_MID, S_LARGE, S_LONG };
+enum { S_PART, S_SMALL, S_MID, S_LARGE, S_LONG, S_VAST, S_VASTW };    /* (A room as much as it's seen of it, its size;
+                                                **   a great cavern's part, vast: its walls beyond the light, or seen
+                                                **   (6 squares of them or more): slice 4.10's) */
 enum { Z_STEPS, Z_SLOPE, Z_LEDGE };
 enum { C_FLAT, C_BARREL, C_DOME, C_CATHEDRAL, C_SLOPED, C_ROUGH, C_UNSEEN };
-enum { O_STAIRS_UP, O_STAIRS_DOWN, O_LADDER_UP, O_LADDER_DOWN, O_WINDOW, O_SHAFT_UP, O_SHAFT_DOWN, O_WAY_OUT };
+enum { O_STAIRS_UP, O_STAIRS_DOWN, O_LADDER_UP, O_LADDER_DOWN, O_WINDOW, O_SHAFT_UP, O_SHAFT_DOWN, O_WAY_OUT,
+       O_RAMP_UP, O_RAMP_DOWN };                /* (A long slope between strata, walked: slice 4.10's, 2026-11-02) */
 enum { ST_BUILT, ST_NATURAL, ST_MINE, ST_MIXED };
 
 /* A look one way's own (HOUSE.md's looking one way: the hub's LK_WAY, the senses', in SIGHT_BANK after the record of

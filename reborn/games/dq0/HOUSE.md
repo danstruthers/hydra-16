@@ -99,6 +99,21 @@ plays them as HarnMaster's referee does.
   4.9).  The null ruleset tires nothing.  (dq0w.c's arrive, stop and s_batter_on; sheet.c's o_spent, WORK.)  Why:
   the book's rate; a run's (a level each two minutes) would leave one spell of digging five levels down, every
   physical test 25 the worse.
+- **An incline told** *(the house's, 2026-11-02, slice 4.10's: for review)*: a walk along a passage tells "The way
+  rises." or "The way falls away." once its floor's risen or fallen 4 feet or more since the last beat told (a turn, a
+  doorway, a quiet stretch, a rise), steps at once.  Before, a step of 2 feet or more was told each time and a gentle
+  incline never; now a sloping tunnel's told as it climbs, about every 20 feet at a foot a square, a rough floor's
+  ups and downs not.  Uphill is slower for every actor, as it was (half again a step's time a foot of rise).  The
+  character's climb told is strenuous work too, half a step's time a foot, 4 feet at each telling (its walk's beat:
+  a rise under 4 feet costs no more than the walk); the denizens' walks tire them no more uphill than on the level
+  (the house's, the denizens' bodies, below: only their fights are counted).  (dq0w.c's beat.)
+- **Ways that climb, grown** *(the house's, 2026-11-02, slice 4.10's: for review)*: one chunk in eight of a natural
+  stratum's or a mine's, with no way between strata in it, by its own numbers (none of the grower's dice; dq0 -P, the
+  tests', every chunk that has room, hub.h's GE_RAMP): off a passage, a straight way through the rock to a small
+  chamber on its own level (5 squares by 4, a room of the chunk's): in natural rock a sloping tunnel, a foot a
+  square up or down for 10 to 16 squares; in a mine a raise, two feet a square for 8 to 12 (a walk's steepest step).
+  Walked, not climbed, by every actor, told as any incline is, the map's heights showing it.  (dq0m/caves.c's
+  incline, overlay 8.)
 - **Encumbrance** is the book's (the load over Endurance, rounded), told in words: none, a little burdened (1-2), heavily
   burdened (3-4), overloaded (5 or more), on what's carried past its free pounds by Strength (D13's: the character
   carries on, below).  (harn.c's harn_get_ep; skills.c's set_load; dq0harn.c's status.)
@@ -2628,6 +2643,67 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
   dressed corner, masonry as its walls are; its rooms stay square to the compass.  The chunk's reach (built.c's
   connected) is tried before the cut, by the four.
 - **Its words**: as any diagonal passage's (a passage's heading, above: "The passage bends away northeast.").
+
+## Great caverns *(slice 4.10's rest, 2026-11-02: DUNGEON.md's caverns across many chunks; drafted for the user to review)*
+
+- **Where** *(the house's)*: a natural stratum's region (1,280 feet each way) holds a great cavern one time in three,
+  by its own numbers (a hash of the stratum's seed and the region's place: no die of the grower's, so the chunks
+  round it are as they were); none in a region a way between strata comes into (a stairway's foot, a ladder's), so
+  each stratum's way in stays a cave's chamber; none in a mixed stratum's natural part (its hewn chunks would cut it).
+  dq0 -V, the tests', gives every region of a natural stratum one, its middle as near the region's first way's square
+  as the region lets it (hub.h's GE_CAVERN).  (dq0m/caves.c's cavern, overlay 8.)
+- **Its shape** *(the house's)*: a box in its region, 10 squares or more off the region's edges (so no two meet), its
+  half-breadths 24 to 63 squares east and west and 20 to 55 north and south (240 to 630 feet across, 200 to 550
+  feet deep), cut down to the region; its floor an ellipse in the box, its edge wandering in and out by up to a
+  quarter of the way (a lattice of numbers 40 feet apart, evenly between), here and there a pillar of rock 10 feet
+  square well inside it (one lattice point in six); its floor a hollow 2 to 8 feet deep at its middle, nothing at its
+  edge, so a walk across it rises and falls gently; its roof rough stone 40 to 99 feet up at the middle, half that at
+  the walls.  Dry: no lake or pool in it yet.
+- **One room across the chunks** *(the house's)*: each chunk it touches grows its part of it from the seed and the
+  square alone (the walls at a chunk's edge too, beside the next chunk's part), so the parts meet at the edges and a
+  chunk made again is as it was; the part is a room of its own in its chunk (world.h's R_CAVERN), the chunk's other
+  chambers kept clear of it and its tunnels meeting in it.  Walking across it ("go north", "walk forward") goes on
+  over the chunks' edges to its far wall; a place in it ("go to the centre") is the part's, in the chunk the
+  character stands in (a cavern's own places are still to come).  The map draws it as it's seen, whole.
+- **Its words** *(the house's: HOUSE.md's where you are)*: "You are somewhere in a vast cavern, its walls beyond your
+  light." while fewer than six squares of its walls are in sight (a pillar or two doesn't count); "You are in a vast
+  cavern, by the light of your torch." once more are; where in it never told (the thirds have no meaning there), nor
+  its figures on a close look ("Its far side is lost in the dark."), nor where things lie in it; its roof told as any
+  ceiling, "Above, the dark hides the ceiling." while the light doesn't reach it.  (dq0p/sight.c's S_VAST, S_VASTW;
+  dq0/words.c's room.)
+
+## Long slopes between strata *(slice 4.10's rest, 2026-11-02: raises and inclines; drafted for the user to review)*
+
+- **Where** *(the house's)*: a stairway down from a natural stratum or a mine is a long slope instead one time in
+  three (a sloping tunnel worn or cut down to the stratum below), by its own numbers (a hash of the stratum's seed and
+  the way's square: no die of the plan's, so the strata are laid out as they were); a ladder stays a ladder.  dq0 -P,
+  the tests', makes every stairway down a long slope, any style (hub.h's GE_RAMP).  Its foot below is a long slope
+  up, on the same square, as a stairway's is.  (dq0m/plan.c's links_down; level.h's O_RAMP_DOWN, O_RAMP_UP.)
+- **Walked, not climbed** *(the house's)*: "d" and "u" take it as they take a stairway, from anywhere in its room;
+  it's four feet along for each foot of the drop between the strata (a grade of one in four), so it takes longer
+  than a stairway: down, eight tenths of a step's time a foot of the drop (a stairway half a step's); up, thirteen
+  tenths (a stairway one): the walk's squares at the pace, and uphill half again a step's time a foot of rise, as
+  any walk's (dq0w.c's cost).  Going up it is strenuous work for the time over a level walk's (half a step's time
+  a foot), tiring as a climb does (Moving and tiring, above); going down isn't.  (dq0w.c's s_climb.)
+- **Its words**: "a long slope leading down" (or up) where a stairway's would be; "You walk down the long slope."
+  and "You trudge up the long slope." as the stairway's "You go down the stairway, a long flight."; on the map its
+  square drawn as a stairway's.  An ally following comes along as it does on a stairway.
+
+## Rooms on the diagonal *(2026-11-02: step 3's rest of the user's three, ways off the compass; drafted for the user to review)*
+
+- **Which** *(the house's)*: the built strata whose passages run on the diagonal (a fifth of them, by the stratum's
+  seed: built passages on the diagonal, above) have their rooms' walls on the diagonal too, so the whole complex lies
+  at 45 degrees to the compass; dq0 -D, the tests', every built stratum's (hub.h's GE_DIAMOND).  A room under four
+  squares either way, and a room a way between strata comes out in, stays square.  (dq0m/caves.c's diamonds, overlay
+  8, called by built.c as the chunk's grown.)
+- **How** *(the house's)*: each room cut to the diamond its box holds: a square of its floor kept while its distances
+  from the box's middle, east-west and north-south, add to no more than half its longer side (in a square box a
+  diamond, its points at the walls' middles; in a long one, its four corners cut off on the slant); the squares cut
+  become its walls (masonry, as its others), a staircase of them along each slant.  A door's, a doorway's or a
+  window's square in its old walls is kept joined to the floor by the squares straight in from it (a short alcove),
+  its steps kept, so it's walked as it was; its things, traps and sconces are put on its floor as ever.  Its words and
+  its size are its box's (the thirds of "the far left corner" by the box; a diamond's own words are still to come).
+  The passages to it are the slanted strata's.
 
 ## Tunnellers *(slice 4.11, 2026-11-01: the book's where it speaks, the house's else; drafted for the user to review)*
 

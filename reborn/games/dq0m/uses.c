@@ -101,7 +101,7 @@ static unsigned char __fastcall__ way_in (const struct stratum* s)
 
     for (i = 0; i < s->nlinks; ++i) {
         k = s->link[i].kind;
-        if (k == O_WAY_OUT || k == O_STAIRS_UP || k == O_LADDER_UP || k == O_SHAFT_UP) {
+        if (k == O_WAY_OUT || k == O_STAIRS_UP || k == O_LADDER_UP || k == O_SHAFT_UP || k == O_RAMP_UP) {
             return i;
         }
     }
