@@ -1263,10 +1263,11 @@ struct hub {                                    /* Bank 0, at $8000 */
     ** task that works the place uses the true facing, the UI's words, the parser's compass and the map the believed */
     unsigned char   pc_skew;                    /* Eighths of a turn: its believed heading the true one plus this, & 7
                                                 **   (0 for one that knows north: the referee's summary's northsense) */
+    unsigned char   pc_lost;                    /*   and 1 if it knows it's lost its bearings ("facing NE?"): right after
+                                                **   pc_skew, task.c's o_facing_words reads the two at once */
     unsigned char   pc_sides;                   /* A dark walk's: what its hands found at its last step, left and right
                                                 **   (2 bits each, 0 nothing, 1 a wall, 2 a shut door) and its heading (bits
                                                 **   4-6): E_BEAT's WB_SIDES as they change (2026-11-02) */
-    unsigned char   pc_lost;                    /*   and 1 if it knows it's lost its bearings ("facing NE?") */
     /* The character's time of day believed (DUNGEON.md's the time of day believed; the user's, 2026-10-31: "Timekeeping
     ** should also be a fuzzy thing, unless there is some place where you can actually see outside"): the hour it
     ** believes it is against the true one (the world's clock and the hour the game began), the world's to keep from the
