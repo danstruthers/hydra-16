@@ -156,7 +156,7 @@ ovl_out:
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
             SWPART      8, 5                ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
-            SWPART      10, 11              ; A search, by its form (search.c)
+            SWPART      10, 17              ; A search, by its form (search.c)
             SWPART      11, 15              ; The rarer news, worded (main.c); the hands and limbs
             SWPART      12, 15              ; Wounds over time: first aid, in shock, the body's news (tend.c)
             SWPART      13, 1               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
@@ -204,8 +204,9 @@ ovl_out:
             SWFN        place_go, 7
             SWFN        look_way, 17
             SWFN        search_go, 10
+            SWFN        search_said, 10
             SWFN        news, 11
-            SWFN        hide, 11
+            SWFN        hide, 10
             SWFN        hand_said, 11
             SWFN        limbs_cmd, 11
             SWFN        bg_words, 14

@@ -1238,6 +1238,10 @@ void __fastcall__ s_news (const struct msg* m)
 
     switch (m->kind) {
     case E_BEAT:
+        if ((unsigned char) m->w1 == WB_SEARCH) {
+            search_said (m);                    /* (A room searched whole's: search.c's) */
+            break;
+        }
         limb_words (m);
         break;
     case E_BEARING:                             /* (Its bearings: lost, known, or set right, a room it knows; the sky
@@ -1302,7 +1306,9 @@ void __fastcall__ s_news (const struct msg* m)
 
 
 /* A thing hidden where the character stands (P_CONCEAL: the referee's test, the things' record), worded by how
-** well (its difficulty, in steps); part 11's, part 2's room */
+** well (its difficulty, in steps); part 10's, the search's (part 11's room, part 2's before it) */
+#pragma code-name (push, "SW10CODE")
+#pragma rodata-name (push, "SW10RODATA")
 void __fastcall__ s_hide (const char* w)
 {
     unsigned char d;
@@ -1322,6 +1328,8 @@ void __fastcall__ s_hide (const char* w)
         tell (T_YOU_CARRY_NONE);
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The hand said in the command's line (cl: "in my left hand", "in my right hand", "in both hands", "in my other hand",
 ** "in my off hand", "in my main hand"; slice 4.1b's), into shand (items.h's IH_*; IH_OTHER, the other one): a thing

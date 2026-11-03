@@ -2060,6 +2060,9 @@ const DQ0_REPEATS = [
     why: 'creatures down: each told once as it lies there (2026-11-02), so only two of a name in one answer, or one wounded between (dq0downonce holds it to that)' },
   { what: /^You turn to (?:something|the [a-z ]+)\.$/,
     why: 'a fight\'s turns to a foe, each told as it turns (fighting on: struck from another side again and again; in the dark "something": dq0scent\'s rats, their dice by who asks, 2026-10-30)' },
+  { what: /^(?:You (?:look over|poke through|go through|feel over|feel through) the .+|You find nothing in the .+|Your hands find nothing in the .+|There's nothing (?:in|on) the .+|It's closed: you go over the outside of it|(?:It's|They're) made of .+|You stop short: just ahead is a trap, .+)\.$/,
+    why: 'a room searched whole, each thing in it in turn (HOUSE.md\'s, 2026-11-02): two heaps of straw, two iron pots, told each as it\'s gone through' },
+  { what: /^You find (?:a trap|a door)[^.]*\.$/, why: 'a room searched whole\'s finds, each told as it\'s found: two plates, two doors' },
   { what: /^You hear /, why: 'a sound heard each time it\'s made (main.c\'s heard: half a minute apart the same way, five seconds any; a search\'s or a wait\'s minute hears several)' },
   { what: /^(The passage turns (left|right)|The passage bends away [a-z-]+|You go through a doorway|You go on down the passage|The way (rises|falls away))\.$/,
     why: 'a walk\'s beats as it goes (slice 4.0): a winding passage turns or bends the same way more than once (a bend\'s heading, 2026-11-01: the soak\'s seed 200), has more than one doorway, goes on quietly every 30 feet' },
@@ -2323,6 +2326,41 @@ function dq0Poke(m, pokes) {
                 let n = '';
                 for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
                 if (n === kn) { b[o + L.iFuel] = v & 255; b[o + L.iFuel + 1] = v >> 8 & 255; break; }
+              }
+            }
+            for (const [kn, v] of Object.entries(p.item || {})) {   // (A thing, by its kind's name: the first in the store, its flags and
+              const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);   //   its hiding set, a scene's, 2026-11-02)
+              for (let i = 0; cat && i < L.nitems; i++) {
+                const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+                if (!b || !b[o + L.iKind]) continue;
+                let n = '';
+                for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
+                if (n === kn) { b[o + L.iFlags] = b[o + L.iFlags] & ~(v.clear || 0) | (v.or || 0); if (v.hide !== undefined) b[o + L.iHide] = v.hide; break; }
+              }
+            }
+            if (p.traps) {                      // (The cached chunks' hidden traps' hiding set, a scene's, 2026-11-02; and on its own
+              const w = m.dq0.bank(WORLD_BANK_N);   //   chunk's room's stops (a room searched whole's, but its own) a plate of an alarm, hidden,
+                                                    //   and its doors made secret)
+              for (let c = 0; c < 24; c++) {
+                const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3));
+                if (!w[sl] || !b) continue;
+                const o = (c % 3) * 0xAA0;
+                if (p.traps.hide !== undefined) for (let i = 0; i < b[o + 2512] && i < 6; i++) if (b[o + 2513 + i * 7 + 4] & 0x20) b[o + 2513 + i * 7 + 5] = p.traps.hide;
+                const px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8, st = stratumRec(m, h[L.pcSn]), ox = px - (st ? st.x0 : 0), oy = py - (st ? st.y0 : 0);
+                if (p.traps.plates && w[sl + 1] === h[L.pcSn] && (w[sl + 2] | w[sl + 3] << 8) === ox >> 5 && (w[sl + 4] | w[sl + 5] << 8) === oy >> 5) {
+                  const lx = ox & 31, ly = oy & 31;
+                  for (let r = 0; r < b[o + 5]; r++) {
+                    const a = o + 8 + r * 8, rx = b[a], ry = b[a + 1], rw = b[a + 2], rh = b[a + 3];
+                    if (lx < rx || ly < ry || lx >= rx + rw || ly >= ry + rh) continue;
+                    for (let j = 0; j < rh; j += 3) for (let i = 0; i < rw; i += 3) {
+                      const n = b[o + 2512], q = o + 2513 + n * 7;
+                      if (n >= 6 || (lx - rx >> 0) - i >= 0 && lx - rx - i < 3 && ly - ry - j >= 0 && ly - ry - j < 3) continue;
+                      b[q] = rx + i + 1; b[q + 1] = ry + j + 1; b[q + 2] = K.TK_ALARM; b[q + 3] = K.TT_PLATE; b[q + 4] = 0x20; b[q + 5] = p.traps.hide || 0; b[q + 6] = 1;
+                      b[o + 2512] = n + 1;
+                    }
+                  }
+                  for (let i = 0; i < b[o + 218]; i++) b[o + 219 + i * 14 + 3] |= 0x20;
+                }
               }
             }
             const k = p.name === undefined ? p.k : [...Array(L.nactors).keys()].find(j => named(j) === p.name);   // (By its name: the first)
@@ -8057,7 +8095,8 @@ module.exports = {
         const g = s.slice(s.indexOf('> search'), s.indexOf('> quit'));
         inTurn(g, ['You feel about you in the dark...', 'Your hands find an iron pot', 'You feel about in the dark for the sack...', 'Your hands find no sack here.',
           'You feel over the floor about you in the dark...', 'Your hands find no wall within reach that way.', 'Your hands find an iron pot',
-          'It\'s closed: you go over the outside of it.', 'The iron pot shows no sign of a trap'], f, 'the dark search\'s words: ');
+          'It\'s closed: you go over the outside of it.'], f, 'the dark search\'s words: ');
+        if (g.includes('shows no sign of a trap')) f.push('a thing searched, no traps asked for, told of traps');
         const g2 = T.after(sp, 'dq0 -p t -s 7 -c /ram/c.hm'), tb = T.after(g2, 'search the table'), tt = T.after(tb, 'search the table for traps');
         const ew = T.after(tt, 'search the east wall'), nb = T.after(ew, 'search nearby'), sd = T.after(nb, 'search'), sf = T.after(sd, 'search for the pouch');
         if (!dq0Rep(tb, 'ireq', { kind: 'IO_SEEK', result: 'IR_NOT_HERE' }).length || !dq0Ev(tb, 'E_ARRIVE', { how: 'A_WENT_TO' }).length) f.push('the table out of reach not walked over to first (' + dq0Evs(tb) + ')');
@@ -8077,6 +8116,83 @@ module.exports = {
         inTurn(g3, ['You search the table...', 'There\'s nothing on the table.', 'The table shows no sign of a trap', 'You search the east wall...',
           'You search about you, within reach...', 'You feel about you in the dark...', 'You feel about in the dark for the pouch...',
           'Your hands find a pouch.'], f, 'the searches\' words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0roomsearch', meaning: true, near: ['senses'], what: 'Dingus Quest Zero\'s searching a thing, and searching a whole room (the user\'s playtest, 2026-11-02: "When searching a pile of straw, it says "no sign of a trap", but I am not looking for traps, but for anything hidden in the straw.  Also, I would like `search the room` to take time to search around the whole room, poking through piles of straw, taking a closer look at the items, etc., not just searching for hidden doors or traps.  It should report incrementally what you are doing as well."; HOUSE.md\'s the search\'s forms and a room searched whole), by the world\'s events, the clock and the words.  At seed 7 (Awareness 95, a heap of straw and an iron key to hand, the key hidden under the straw where it lies and made unknown, dq0Poke\'s): the straw searched, a minute, "You poke through the heap of straw...", the key found in it and no words of traps; searched again, "You find nothing in the straw."; the table, the dagger the same, no traps; then the hall searched whole: its stages in order, its words a line each (along the wall to its left, round the corners by the compass), each thing in turn (its look over, the straw poked through), the clock on as much as the stops\' and things\' times and a slow walk, the character on another square at each corner, a long task LT_SEARCH (its bar\'s done counting the clock, never the squares); stopped at the first corner ("You stop searching."), a second search goes on from there ("You go on searching the room."), the things before the stop not gone through again, to its end ("You\'ve been over the whole room."); a third says it\'s done, in no time; kept with the game (dq0 -d: quit, carried on, still done).  In the dark (the first room, its torch doused) by touch, a thing\'s time twice, the block\'s 30 seconds.  In the light, the same first room, its door\'s hidden dart trap, its hiding 0 (the chunk poked), tested as a stop comes to it.  With a ghoul (seed 7, dq0 -T) put beside it, engaging it, stopped hard.  In a passage, stopped at the door behind it, a search about it.  In a great cavern (dq0 -V), refused kindly, no time.  And in the hall again with hidden plates poked onto each stop\'s middle but its first, its doors made secret (dq0Poke\'s traps): each plate noticed underfoot at a search\'s chance and gone round, or sprung and the search stopped there; a secret door found as a stop comes to it, told as found',
+      init: 't_rc', cycles: 4500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml awa 95 >> /ram/c.hm', 'mkdir /ram/g',
+        "dq0 -p t -s 7 -c /ram/c.hm -d /ram/g -k 'heap of straw,iron key'", 'face north', 'open the door behind me', 's', 'drop the straw', 'hide the key', 'search the straw', 'search the straw',
+        'search the table', 'search the dagger', 'search the room', 'search the room', 'search the room', 'search the whole room', 'search this room', 'search the entire room', 'search the chamber', 'search the hall', 'quit', 'dq0 -d /ram/g', 'search the room', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm', 'douse the torch', 'search the room', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm', 'search the room', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm -T', 'search the room', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -V', 'd', 'search the room', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm', 'open the door behind me', 's', 'search the room', 'quit',
+        'dq0 -p t -s 7 -c /ram/c.hm', 'open the door behind me', 's', 'search the room', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'search the straw', n: 1, item: { 'iron key': { clear: 0x20, hide: 0 } } }, { g: 4, line: 'search the room', n: 1, traps: { hide: 0 } },
+          { g: 5, line: 'search the room', n: 1, name: 'ghoul', beside: 'face', engage: true }, { g: 8, line: 'search the room', n: 1, traps: { hide: 0, plates: true } }]);
+        dq0OnWords(m, [{ g: 1, line: 'search the room', n: 1, words: 'You turn the corner', text: 'stop\r' }, { g: 7, line: 's', n: 1, words: 'You go through a doorway', text: 'stop\r' }]);   // (Typed as it's told)
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), K = m.dq0.layout().K;
+        const took = t => t.at && t.after ? t.after.now - t.at.now : -1;
+        const said = (a, b) => { const i = s.indexOf(a), j = b ? s.indexOf(b, i + a.length) : -1; return i < 0 ? '' : s.slice(i, j < 0 ? undefined : j); };
+        const g1 = T.of("dq0 -p t -s 7 -c /ram/c.hm -d /ram/g -k 'heap of straw,iron key'");
+        const st1 = T.after(g1, 'search the straw'), st2 = T.after(st1, 'search the straw'), tb = T.after(st2, 'search the table'), dg = T.after(tb, 'search the dagger');
+        const r1 = T.after(dg, 'search the room'), r2 = T.after(r1, 'search the room'), r3 = T.after(r2, 'search the room');
+        const key = st => st && st.items.find(i => i.name === 'iron key' && i.where === 'IW_SQUARE');
+        if (!key(st1.at) || !(key(st1.at).flags & 0x08)) f.push('the key not hidden under the straw: ' + JSON.stringify(key(st1.at)));
+        if (took(st1) !== 600 || took(st2) !== 600) f.push('a heap\'s search not a minute: ' + took(st1) + ', ' + took(st2));
+        const k1 = key(st1.after);
+        if (!k1 || (k1.flags & 0x08) || !(k1.flags & 0x20)) f.push('the key in the straw not found and known: ' + JSON.stringify(k1));
+        const things = said('> search the straw', '> search the room');
+        if (/trap/.test(things)) f.push('a thing searched told of traps: ' + things.slice(0, 300));
+        inTurn(things, ['You poke through the heap of straw...', 'You find an iron key in the straw.', '> search the straw', 'You poke through the heap of straw...', 'You find nothing in the straw.',
+          '> search the table', 'You search the table...', 'There\'s nothing on the table.', '> search the dagger', 'You look the dagger over...', 'You find nothing hidden about the dagger.'], f, 'a thing searched: ');
+        // (The hall searched whole, stopped at its first corner, gone on with, done)
+        const ww = t => dq0Ev(t, 'E_BEAT', { beat: 'WB_SEARCH' });
+        const bar = T.after(r1, 'stop');
+        if (bar.k < 0 || bar.at.task && bar.at.task.kind !== 'LT_SEARCH') f.push('the search not a long task as it\'s stopped: ' + JSON.stringify(bar.at && bar.at.task));
+        inTurn(s.slice(s.indexOf('> search the room')), ['You set about searching the whole room.', 'You work along the wall to your left.', 'You turn the corner, and work along the',
+          'You stop searching.', '> search the room', 'You go on searching the room.', 'You work along the wall to your left.', 'You poke through the straw.', 'You look over the', 'You\'ve been over the whole room.',
+          '> search the room', 'You\'ve been all over this room already', '> quit'], f, 'the room\'s stages: ');
+        if (took(r1) + took(bar) < 100 || took(r2) < 300) f.push('the room\'s search no time: ' + took(r1) + ', ' + took(r2));
+        if (took(r2) > 3000) f.push('the room\'s search too long: ' + took(r2));
+        if (took(r3) !== 0) f.push('a room done, its search not told at once: ' + took(r3));
+        if (r2.at && r2.after && r2.at.pc.x === r2.after.pc.x && r2.at.pc.y === r2.after.pc.y) f.push('the search of the room walked nowhere');
+        const rs = T.of('search the room', r3.k + 1);
+        inTurn(s.slice(s.indexOf('> search the room', s.indexOf('dq0 -d /ram/g'))), ['You\'ve been all over this room already'], f, 'kept with the game: ');
+        if (took(rs) !== 0) f.push('kept with the game, its search not told at once: ' + took(rs));
+        // (In the dark, by touch)
+        const g2 = T.after(rs, 'dq0 -p t -s 7 -c /ram/c.hm'), d2 = T.after(g2, 'search the room');
+        const dw = s.slice(s.indexOf('> douse the torch'), s.indexOf('> quit', s.indexOf('> douse the torch')));
+        inTurn(dw, ['You set about feeling your way round the whole room.', 'You feel along the wall to your left.', 'You feel over the', 'You\'ve been over the whole room.'], f, 'by touch: ');
+        if (/You work along|You look over|You poke through/.test(dw)) f.push('words of sight in the dark');
+        // (In the light: a door's trap found as it comes to it)
+        const g3 = T.after(d2, 'dq0 -p t -s 7 -c /ram/c.hm'), l3 = T.after(g3, 'search the room');
+        const found = dq0Ev(l3, 'E_TRAP', { to: 'TO_FOUND' });
+        if (!l3.replies.some(e => e.req === 'slot0' && e.a === K.P_SEARCH && e.steps === 0)) f.push('the door\'s hidden trap not tested: ' + JSON.stringify(l3.replies.slice(0, 3)));
+        if (took(d2) < took(l3) + 300) f.push('by touch, not the longer: ' + took(d2) + ' against ' + took(l3));
+        if (found.length && !/You find a[^.]*trap[^]*You've been over the whole room/.test(s.slice(s.indexOf('> search the room', s.indexOf('> quit', s.indexOf('> douse the torch')))))) f.push('the trap\'s find not told before the search\'s end');
+        // (Hard, a ghoul)
+        const g4 = T.after(l3, 'dq0 -p t -s 7 -c /ram/c.hm -T'), h4 = T.after(g4, 'search the room');
+        if (!/You stop searching\./.test(s.slice(s.indexOf('-T -a'), s.indexOf('-T -V'))) && !dq0Ev(h4, 'E_TASK', {}).some(e => e.task === 'LT_SEARCH' && e.te !== 'TE_STOPPED')) f.push('the ghoul not stopping the search: ' + dq0Evs(h4));
+        // (A great cavern, refused; a passage, about it)
+        const g5 = T.after(h4, 'dq0 -p t -s 3 -c /ram/c.hm -T -V'), c5 = T.after(g5, 'search the room');
+        if (took(c5) !== 0 || !s.includes('This cavern is too vast to go over from end to end')) f.push('a great cavern not refused: ' + took(c5));
+        const g6 = T.after(c5, 'dq0 -p t -s 7 -c /ram/c.hm'), p6 = T.after(g6, 'search the room');
+        if (took(p6) !== 600 || ww(p6).length) f.push('a passage\'s not a search about it: ' + took(p6) + ', ' + dq0Evs(p6));
+        // (Traps underfoot: hidden plates about it, noticed as it comes to one and gone round, or set off, and it stops there)
+        const g7 = T.after(p6, 'dq0 -p t -s 7 -c /ram/c.hm'), u7 = T.after(g7, 'search the room'), tu = dq0Ev(u7, 'E_TRAP', {}), su = dq0Ev(u7, 'E_TRAP', { to: 'TO_SPRUNG' });
+        if (!tu.some(e => e.to === 'TO_NOTICED' || e.to === 'TO_SPRUNG')) f.push('no plate met underfoot: ' + dq0Evs(u7));
+        if (!dq0Ev(u7, 'E_PORTAL', { po: 'PO_FOUND' }).length) f.push('no hidden door found as a stop came to it: ' + dq0Evs(u7));
+        const uw = s.slice(s.lastIndexOf('> search the room'));
+        if (su.length ? !uw.includes('You stop searching.') : !uw.includes('You\'ve been over the whole room.')) f.push('after the plates: ' + uw.slice(0, 500));
         return f;
       },
       sdcard: true

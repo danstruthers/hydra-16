@@ -3853,8 +3853,9 @@ static const unsigned char d2_[7] = { 9, 4, 1, 0, 1, 4, 9 };   /* (A square's di
 #define SEARCH_R        3
 unsigned char __fastcall__ on_it (unsigned n, unsigned char touch);   /* (Part 47's) */
 
-/* The referee's search test of the thing in rec, its hiding the steps worse (2 more by touch): 1 if it's found */
-static unsigned char __fastcall__ turned_up (unsigned char touch)
+/* The referee's search test of the thing in rec, its hiding the steps worse (2 more by touch; ease the better, 2 for a
+** heap poked through, all the search on it): 1 if it's found */
+static unsigned char __fastcall__ turned_up (unsigned char touch, unsigned char ease)
 {
     struct req* r;
     signed char g;
@@ -3865,7 +3866,7 @@ static unsigned char __fastcall__ turned_up (unsigned char touch)
     r->actor = 0;
     r->a = P_SEARCH;
     r->b = HIDE_MECHANICAL;
-    r->steps = -(signed char) rec.hide - (touch ? 2 : 0);
+    r->steps = ease - (signed char) rec.hide - (touch ? 2 : 0);
     r = hub_ask (SLOT_UI);
     g = r->grade;
     r->state = REQ_FREE;
@@ -3876,29 +3877,30 @@ static unsigned char __fastcall__ turned_up (unsigned char touch)
 ** character sees (by touch, all of them), but what's hidden by magic: seek, the nearest named sname that it would find
 ** (in plain sight, or hidden and found by the referee's test, made now), sitem, sd2 its distance off squared; else each
 ** it finds (in the light, what's hidden alone, by the test; by touch, everything there, what's hidden by the test, the
-** rest felt plainly), made known and worded ("You turn up a dagger", "Your hands find a sack, and a chisel"): how many */
+** rest felt plainly), made known and worded ("You turn up a dagger", "Your hands find a sack, and a chisel"): how many.
+** A room searched whole's stop (IOS_FLOOR): about square x, y, what's hidden alone, seen or not */
 static unsigned char __fastcall__ scan (unsigned char seek, unsigned char r, unsigned char touch)
 {
     unsigned i = 0, x, y, dx, dy;
-    unsigned char sn, d, n = 0;
+    unsigned char sn, d, n = 0, b = iq.to >= IOS_FLOOR;
     unsigned char* t;
 
     hub_map (0);
     sn = HUB->pc_stratum;
-    x = HUB->pc_x;
-    y = HUB->pc_y;
+    x = b ? iq.x : HUB->pc_x;
+    y = b ? iq.y : HUB->pc_y;
     while ((i = items (i, IN_SQUARE, 0)) != 0) {
         fetch (&rec, i);
         if (rec.sn != sn || (rec.flags & I_MAGIC) || (dx = rec.x - x + SEARCH_R) > 2 * SEARCH_R ||
             (dy = rec.y - y + SEARCH_R) > 2 * SEARCH_R || (d = d2_[dx] + d2_[dy]) >= r ||
-            (!touch && (!(t = at (sn, rec.x, rec.y)) || !(*t & T_VIS))) ||
+            (!touch && !b && (!(t = at (sn, rec.x, rec.y)) || !(*t & T_VIS))) ||
             (seek ? d >= sd2 || !named (kind_of (rec.kind)->name, sname) :
-            !touch && (rec.flags & (I_HIDDEN | I_KNOWN)) != I_HIDDEN)) {
+            (!touch || b) && (rec.flags & (I_HIDDEN | I_KNOWN)) != I_HIDDEN)) {
             continue;
         }
         make_own (i);
         fetch (&rec, i);
-        if ((rec.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN && !turned_up (touch)) {
+        if ((rec.flags & (I_HIDDEN | I_KNOWN)) == I_HIDDEN && !turned_up (touch, 0)) {
             continue;                           /* (Hidden, and the search passes it by) */
         }
         if (seek) {
@@ -3913,6 +3915,25 @@ static unsigned char __fastcall__ scan (unsigned char seek, unsigned char r, uns
     }
     return n;
 }
+
+/* What the thing searched on is (the reply's craft: RC_*): the UI's words as it begins, hub_map (0) after */
+#pragma static-locals (push, off)
+static void sclass (void)
+{
+    const struct kind* k = kind_of (item_at (sitem)->kind);
+    unsigned char c = RC_PLAIN;
+
+    if (k->flags & K_CONTAINER) {
+        c = RC_HOLDS;
+    } else if (k->keeps & KF_ON) {
+        c = item_at (sitem)->kind == KI_BODY ? RC_BODY : RC_HOLDS;
+    } else if (k->cap_bulk) {
+        c = RC_HEAP;
+    }
+    hub_map (0);
+    HUB->ireq.craft = c;
+}
+#pragma static-locals (pop)
 
 /* A search's thing (IO_SEEK: the request's name, to its form, | SF_TOUCH by touch): on or in one (SF_ON), the one most
 ** to hand that it sees (in the dark, the nearest within reach it feels: its own square's or the eight round it's),
@@ -3931,6 +3952,7 @@ unsigned char s_seek (void)
     HUB->ireq.x = 0;
     if (f == SF_ON && !touch) {
         if ((sitem = pick (sname, HW_HAND)) != 0) {
+            sclass ();
             return IR_OK;                       /* (Carried, or within reach: a pack worn taken off to search it,
                                                 **   and put on again, within the search's minute, HOUSE.md's reach:
                                                 **   a search of a thing a minute's, no longer) */
@@ -3947,6 +3969,9 @@ unsigned char s_seek (void)
     scan (1, touch || f == SF_ON ? 3 : 19, touch);
     hub_map (0);
     if (f == SF_ON) {
+        if (sitem) {
+            sclass ();
+        }
         return sitem ? IR_OK : IR_NONE;
     }
     HUB->ireq.x = sitem ? 30 + 32 * sd2 : 0;
@@ -3956,21 +3981,31 @@ unsigned char s_seek (void)
 /* A search's end (IO_SEARCH: the request's to its reach, the world's, wtrap.c's: a square searched if its distance off,
 ** squared, is less): what it turns up, in the hub's text, by its form; the number found (or 1: words, found or not).
 ** About the character, nearby, on the floor: scan's.  For a thing: the one IO_SEEK found, if the search's reach came to
-** it ("You find a dagger.", "You find no dagger here."); on or in one, part 47's on_it; a wall's, none (the walls'
-** alone) */
+** it ("You find a dagger.", "You find no dagger here."); on or in one, part 47's on_it, a heap's poked; a wall's, none
+** (the walls' alone).  And a room searched whole's, by the request's to (IOS_*: the world's at a stop, wroom.inc's) */
+static unsigned char __fastcall__ poked (unsigned n, unsigned char touch);
 unsigned char s_search (void)
 {
     unsigned char f = srch_form & 7, touch = srch_form & SF_TOUCH, n;
 
     text_new ();
+    if (iq.to & IOS_THING) {
+        sitem = iq.item;
+        touch = iq.to & SF_TOUCH;
+        f = SF_ON;
+    } else if (iq.to & IOS_FLOOR) {
+        touch = iq.to & SF_TOUCH;
+        f = SF_FLOOR;
+    }
     if (f == SF_WALL) {
         return 0;
     }
     if (f == SF_ON) {
-        return sitem ? on_it (sitem, touch) : 0;
+        return !sitem ? 0 : kind_of (item_at (sitem)->kind)->cap_bulk && !(kind_of (item_at (sitem)->kind)->flags & K_CONTAINER) &&
+            !(kind_of (item_at (sitem)->kind)->keeps & KF_ON) ? poked (sitem, touch) : on_it (sitem, touch);
     }
     if (f != SF_FOR) {
-        if ((n = scan (0, iq.to, touch)) != 0) {
+        if ((n = scan (0, iq.to & IOS_FLOOR ? 3 : iq.to, touch)) != 0) {
             put (".");
         }
         return n;
@@ -3989,13 +4024,53 @@ unsigned char s_search (void)
     return 1;
 }
 
+/* A heap searched (the user's playtest, 2026-11-02: a kind that hides, its cap_bulk): what's hidden on its square, in
+** it, each by the search's test, 2 steps the easier (all the search on it: a draft); found, known: "You find a dagger in
+** the straw.", "You find nothing in the straw.": 1 (its words) */
+#pragma static-locals (push, off)
+static unsigned char __fastcall__ poked (unsigned n, unsigned char touch)
+{
+    const char* s;
+    unsigned i = 0, x, y;
+    unsigned char sn, m = 0;
+
+    make_own (n);
+    fetch (&rec, n);
+    memcpy (&lk, kind_of (rec.kind), sizeof lk);
+    s = strstr (lk.name, " of ");               /* ("heap of straw": the straw) */
+    s = s ? s + 4 : lk.name;
+    sn = rec.sn;
+    x = rec.x;
+    y = rec.y;
+    while (rec.where == IW_SQUARE && (i = items (i, IN_SQUARE, 0)) != 0) {
+        if (ip->sn != sn || ip->x != x || ip->y != y || (ip->flags & (I_HIDDEN | I_KNOWN | I_MAGIC)) != I_HIDDEN) {
+            continue;
+        }
+        make_own (i);
+        fetch (&rec, i);
+        if (!turned_up (touch, 2)) {
+            continue;
+        }
+        item_at (i)->flags = (rec.flags & ~I_HIDDEN) | I_KNOWN;
+        put (m++ ? ", and " : touch ? "Your hands find " : "You find ");
+        thing_words (&rec);
+    }
+    put (m ? " in the " : touch ? "Your hands find nothing in the " : "You find nothing in the ");
+    put (s);
+    put (".");
+    return 1;
+}
+#pragma static-locals (pop)
+
 #pragma static-locals (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
 /* ==== Part 47 (its own, 2026-10-22): what's on a thing, or in it, searched (part 46's search's SF_ON: thing n): its
-** things listed; closed, not looked into; then it gone over for traps (examine's, part 40's look_more: "The chest shows
-** no sign of a trap ..."), one rule for it; 1 (its words) */
+** things listed; closed, not looked into; a thing that holds nothing, nothing hidden about it.  No words of traps but
+** for a search said to be for them (by touch, SF_TRAPS: examine's, part 40's look_more: "The chest shows no sign of a
+** trap ..."; the user's playtest, 2026-11-02: "it says 'no sign of a trap', but I am not looking for traps").  A room
+** searched whole's look over a thing (IOS_THING), what a closer look shows besides (part 42's).  1 (its words) */
 #pragma code-name (push, "SW47CODE")
 #pragma rodata-name (push, "SW47RODATA")
 #pragma static-locals (push, on)
@@ -4018,7 +4093,7 @@ unsigned char __fastcall__ s_on_it (unsigned n, unsigned char touch)
     }
     on = (lk.keeps & KF_ON) != 0;
     if (rec.shut & IS_CLOSED) {
-        put (lpl ? "They're closed: you go over the outside of them. " : "It's closed: you go over the outside of it. ");
+        put (lpl ? "They're closed: you go over the outside of them." : "It's closed: you go over the outside of it.");
     } else if (items (0, IN_X | IN_ITEM, n)) {
         put (touch ? "Your hands find " : on ? "On the " : "In the ");
         if (!touch) {
@@ -4030,16 +4105,30 @@ unsigned char __fastcall__ s_on_it (unsigned n, unsigned char touch)
             put (on ? " on the " : " in the ");
             put (lk.name);
         }
-        put (". ");
-    } else {
+        put (".");
+    } else if (on || (lk.flags & (K_CONTAINER | K_BELT))) {
         put (on ? "There's nothing on the " : "There's nothing in the ");
         put (lk.name);
-        put (". ");
+        put (".");
+    } else if (!(iq.to & IOS_THING)) {
+        put (touch ? "Your hands find nothing hidden about the " : "You find nothing hidden about the ");
+        put (lk.name);
+        put (".");
     }
-    put ("The ");
-    put (lk.name);
     fetch (&rec, n);
-    look_more (n, LM_TRAPS);                    /* (Its trap: examine's check, part 40's) */
+    if (iq.to & IOS_THING) {
+        if (rec.mat != MT_OTHER) {
+            if ((lk.form & (KF_SMALL | KF_COUNT)) == (KF_SMALL | KF_COUNT)) {
+                rec.size = rec.thick = 0;       /* (A pile of coins: no measure, s_look_at's) */
+            }
+            tqe = tbuf + sizeof tbuf - 1;
+            closer (LM_CLOSE);                  /* (Its look over: what it's made of, its wear) */
+        }
+    } else if (srch_form & SF_TRAPS) {
+        put (" The ");
+        put (lk.name);
+        look_more (n, LM_TRAPS);                /* (Its trap, asked: examine's check, part 40's) */
+    }
     return 1;
 }
 
