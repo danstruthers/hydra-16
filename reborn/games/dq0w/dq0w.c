@@ -3516,7 +3516,6 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
 ** or rock ahead, within six squares: masonry, or the bare rock, its kind and whether a miner's eye knows it (the
 ** referee's P_APPRAISE, AP_ROCK: Mining), dig.rock's (WK_*, or its RK_* | WK_NAMED) for part 25's words (start_dig
 ** 0xFC: wall_words) */
-static unsigned char wall_rock;                 /* (The rock last looked at, | WK_NAMED) */
 static void wall_look (void)
 {
     unsigned char i, t = T_FLOOR, h = HUB->pc_face, k;
