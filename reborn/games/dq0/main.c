@@ -75,6 +75,7 @@ const char* savedir;                            /* (dq0 -d: the save's folder; t
 unsigned char __fastcall__ things (unsigned char op, const char* name);   /* (way.c's too, part 6's) */
 void gear_look (void);                          /* (Part 11: a denizen's things made out) */
 static void to_hand (void);
+void __fastcall__ came (const struct msg* m);    /* (Part 6's: come into a stratum, told and kept) */
 void __fastcall__ news (const struct msg* m);    /* (Part 11's: the rarer news, worded; a thing hidden; the hands' and
                                                 **   limbs': slice 4.1b's) */
 void __fastcall__ hide (const char* w);
@@ -400,7 +401,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    31                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    32                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -446,7 +447,10 @@ static void sheet (void)
                                                 **   their fatigue), 2026-10-31; 29, world.dat's time of day believed,
                                                 **   the hub's tb, 2026-10-31; 30, the diagonal ways' cut
                                                 **   corners (T_CUT) in the chunks and the change records; 31, the
-                                                **   tunnellers: DO_DIG among the doings, slice 4.11's) */
+                                                **   tunnellers: DO_DIG among the doings, slice 4.11's; 32: the same seed's
+                                                **   natural chunks not as they were, great caverns and sloping tunnels
+                                                **   in them, a dungeon's change records laid on what they were made
+                                                **   for, 2026-11-02) */
 static struct save {
     unsigned        magic;
     unsigned char   version, pace;
@@ -991,14 +995,7 @@ static unsigned char events (void)          /* (How many there were) */
         case E_ARRIVE:
             if (m.who == 0) {
                 if ((m.w1 & 0xFF) == A_DOWN || (m.w1 & 0xFF) == A_UP) {
-                    k = m.w1 >> 12;             /* (The link's kind: a ladder, or a stairway) */
-                    tell ((m.w1 & 0xFF) == A_DOWN ? (k == O_LADDER_DOWN ? T_YOU_CLIMB_DOWN :
-                        k == O_SHAFT_DOWN ? T_YOU_CLIMB_DOWN_2 : k & O_FELL ? T_PICK_YOURSELF_UP : T_YOU_GO_DOWN) :
-                        k == O_LADDER_UP ? T_YOU_CLIMB_THE : k == O_SHAFT_UP ? T_YOU_CLIMB_UP :
-                        T_YOU_CLIMB_THE_2);
-                    theme_named (TN_STRATUM, sight_get ()->sname);
-                    sayf (" You come into the %s.", tname);
-                    save_game ();               /* (Kept as it comes into a stratum) */
+                    came (&m);                  /* (Come into a stratum: told and kept, part 6's) */
                 }
                 if ((m.w1 & 0xFF) == A_CROSSED) {
                     tell (T_YOU_CROSS_THE);
@@ -1116,6 +1113,29 @@ static unsigned char events (void)          /* (How many there were) */
     }
     return n;
 }
+
+/* The character come down or up a way between strata (E_ARRIVE's A_DOWN, A_UP: the link's kind in w1's high four bits:
+** a ladder, a stairway, a shaft, a long slope, slice 4.10's), told, and the game kept (main's events' till 2026-11-02:
+** the main RAM's room; part 6's, its room) */
+#pragma code-name (push, "SW6CODE")
+#pragma rodata-name (push, "SW6RODATA")
+void __fastcall__ s_came (const struct msg* m)
+{
+    unsigned char k = m->w1 >> 12;
+
+    if (k == O_RAMP_DOWN || k == O_RAMP_UP) {
+        msg (k == O_RAMP_DOWN ? "You walk down the long slope." : "You trudge up the long slope.");
+    } else {
+        tell ((m->w1 & 0xFF) == A_DOWN ? (k == O_LADDER_DOWN ? T_YOU_CLIMB_DOWN :
+            k == O_SHAFT_DOWN ? T_YOU_CLIMB_DOWN_2 : k == O_FELL ? T_PICK_YOURSELF_UP : T_YOU_GO_DOWN) :
+            k == O_LADDER_UP ? T_YOU_CLIMB_THE : k == O_SHAFT_UP ? T_YOU_CLIMB_UP : T_YOU_CLIMB_THE_2);
+    }
+    theme_named (TN_STRATUM, sight_get ()->sname);
+    sayf (" You come into the %s.", tname);
+    save_game ();                               /* (Kept as it comes into a stratum) */
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ==== Part 11: the rarer news of the world's, worded (events()'s, the character's: a dig, a ledge, a climb, a harm, a
 ** portal worked; its own part, the main RAM's room: slice 4.1b's) */
@@ -2431,7 +2451,9 @@ void __fastcall__ s_args (int argc, char* argv[])
                                                 **   water grown in the chunks, the walks' as they were, slice 4.9's;
                                                 **   -M every built stratum mixed, slice 4.10's; -U no rubble, the
                                                 **   passages as they were made; -A every built stratum's passages on
-                                                **   the diagonal, 2026-11-01) */
+                                                **   the diagonal, 2026-11-01; -V a great cavern in every region of a
+                                                **   natural stratum, -P every stairway down a long slope, -D every
+                                                **   built stratum's rooms at 45 degrees, 2026-11-02) */
         } else if (!strcmp (argv[i], "-a")) {
             autogo = 1;                         /* (For the tests: a long task goes on at every soft question) */
         } else if (!strcmp (argv[i], "-N")) {

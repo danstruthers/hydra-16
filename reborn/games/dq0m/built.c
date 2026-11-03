@@ -255,7 +255,8 @@ static void __fastcall__ zones (unsigned char r)
 /* ---- Everything reached from everything, walking (a stack of squares) */
 
 #define SMAX    128
-static unsigned char sx[SMAX], sy[SMAX];
+unsigned char sx[SMAX], sy[SMAX];              /* (sx the caves' great cavern's room too, caves.c's: idle as a
+                                                **   cave's grown) */
 
 static unsigned char __fastcall__ can (unsigned char x, unsigned char y, unsigned char d)
 {
@@ -387,6 +388,7 @@ void __fastcall__ o_grow_built (struct chunk* c, const struct edges* e, unsigned
             break;
         }
     }
+    cavern (2);                                 /* (Its rooms at 45 degrees, if its complex lies so: caves.c's) */
     if (SP->slant) {
         slants ();                              /* (Its passages on the diagonal: their staircases cut, caves.c's) */
     }
@@ -395,7 +397,8 @@ void __fastcall__ o_grow_built (struct chunk* c, const struct edges* e, unsigned
         x = e->lx[i];
         y = e->ly[i];
         k = s->link[e->ln[i]].kind;
-        L->tile[y][x] = k == O_STAIRS_DOWN || k == O_LADDER_DOWN || k == O_SHAFT_DOWN ? T_DOWN : T_UP;
+        L->tile[y][x] = k == O_STAIRS_DOWN || k == O_LADDER_DOWN || k == O_SHAFT_DOWN || k == O_RAMP_DOWN ?
+            T_DOWN : T_UP;
         L->open[L->nopen].kind = k;
         L->open[L->nopen].x = x;
         L->open[L->nopen].y = y;

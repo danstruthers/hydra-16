@@ -164,7 +164,7 @@ static void __fastcall__ draught (unsigned char sn)
         if (k == O_WAY_OUT || k == O_SHAFT_UP || k == O_SHAFT_DOWN) {
             ++st;                               /* (Open to the air above, a shaft: the stronger) */
         }
-        if (k == O_WAY_OUT || k == O_STAIRS_UP || k == O_LADDER_UP || k == O_SHAFT_UP) {
+        if (k == O_WAY_OUT || k == O_STAIRS_UP || k == O_LADDER_UP || k == O_SHAFT_UP || k == O_RAMP_UP) {
             up = up == 0xFF ? i : up;
         } else if (dn == 0xFF) {
             dn = i;

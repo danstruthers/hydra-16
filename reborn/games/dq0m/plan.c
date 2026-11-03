@@ -372,6 +372,7 @@ void __fastcall__ o_links_down (unsigned char n)
         return;                                 /* (The deepest: the hub's slots all wanted, without a save folder for
                                                 **   those made way for, or the stratum's number a byte's) */
     }
+    hub_get (0, &HUB->gear, g, 1);             /* (dq0 -P's, the tests': every stairway down a long slope) */
     for (k = 1 + random (2); k && s->nlinks < NLINKS; --k) {
         for (tries = 0; tries < 30; ++tries) {
             l = &s->link[s->nlinks];
@@ -381,6 +382,12 @@ void __fastcall__ o_links_down (unsigned char n)
             l->y = s->y0 + INSET (o);
             if (rg (n, (l->x - s->x0) >> 8, (l->y - s->y0) >> 8)->kind == RG_HALLS) {
                 l->kind = random (10) < 7 ? O_STAIRS_DOWN : O_LADDER_DOWN;
+                if (l->kind == O_STAIRS_DOWN && ((g[0] & GE_RAMP) || ((s->style == ST_NATURAL || s->style == ST_MINE) &&
+                    (unsigned) (l->x * 7 + l->y * 13 + (unsigned) s->seed) % 3 == 0))) {
+                    l->kind = O_RAMP_DOWN;      /* (A natural stratum's or a mine's stairway a long slope one time in
+                                                **   three, by its square's own numbers: slice 4.10's, HOUSE.md's
+                                                **   long slopes) */
+                }
                 l->to = n + 1;
                 ++s->nlinks;
                 break;
