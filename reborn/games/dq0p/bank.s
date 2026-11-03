@@ -37,5 +37,6 @@ ovx:        .res        1
             SWFN        pulse, 5
             SWFN        sense_actor, 6
             SWFN        snd_mask, 6
+            SWFN        zones_seen, 6
             SWFN        num, 3              ; (An argument's number: the main RAM's room, 2026-11-01)
             SWFN        light_init, 3       ; (The light layer begun: the main RAM's room, 2026-11-01)

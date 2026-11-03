@@ -59,7 +59,7 @@ struct sight {
     unsigned char   up_rel, up_ft;              /* The floor here: the way it rises, and feet in ten (0: level) */
     unsigned char   ceil, cmid, cwall;          /* Its zone's ceiling (ceil C_UNSEEN: not seen) */
     unsigned char   ndoors;                     /* Doors, and passages' mouths (rel | MOUTH) */
-    struct { unsigned char rel; signed char dz; unsigned char state; unsigned x, y; unsigned char kind, parts; }
+    struct sdoor { unsigned char rel; signed char dz; unsigned char state; unsigned x, y; unsigned char kind, parts; }
         door[SEE_DOORS];                        /* (state: PS_OPEN ...; x, y its square; a portal's kind and
                                                 **   parts, world.h's PK_* and PP_*: a portcullis, a window, a slit;
                                                 **   but a door's or a portcullis's parts its features, PF_*, as
@@ -116,6 +116,14 @@ enum { PT_READ, PT_DICE, PT_GAME, PT_TALK, PT_SING, PT_DRINK, PT_MEND, PT_WHITTL
                                                 **   character) */
 #define SIGHT_HURRY     0x80
 #define MOUTH           0x08
+#define KNOWN_REL       0x40                    /* (A door's or an opening's rel: one it remembers, or seen further along a
+                                                **   passage: named, not told by the look: after ndoors and nopen, in
+                                                **   door[] and open[]: choose.c's, the user's, 2026-11-02) */
+#define TOUCHED(c, k)   (((c) >> (2 * (k))) & 3)    /* (In the dark, sight's cmid: what its hands find ahead, to its left, to
+                                                **   its right, k 0 1 2: 0 nothing, 1 a wall, 2 a shut door, 3 bars; cwall 1:
+                                                **   it has been on this square before: sight.c's) */
+#define PS_LOCKED_       0x02                    /* (A seen door's state: locked, as it's found; barred, its bar seen on the */
+#define PS_BARRED_       0x04                    /*   character's side, or found from the far side: sight.c's) */
 #define DOORWAY         0x83                    /* (A seen door's state: no door in it, a doorway, open; else its
                                                 **   portal's PS_OPEN and PS_WRECKED) */
 #define SD_DOUBLE       0x20                    /* (A seen door's parts: two leaves, world.h's PF_DOUBLE) */

@@ -201,7 +201,7 @@ void __fastcall__ o_fixt_words (const struct msg* m)
         "It gives way, and crashes open.", "It's giving, but it holds yet.", "It's marked, but it holds.",
         "Your blows make no mark on it.",
         "It's broken: it won't shut.", "You lift the bar out of its brackets, and set it down.",
-        "The bar's on the far side: you can't get at it from here.", "There's nothing there to lift out.",
+        "The bar's on the far side: you can't get at it from here.", "It isn't barred.",
         "The bars are set fast in the stone: bend them, or break them, first.",
         "The pane comes free of its frame, and you lift it out whole.", "You work the bent bars free, and lift them out.",
         "The bars break out of the stone with a clang.",

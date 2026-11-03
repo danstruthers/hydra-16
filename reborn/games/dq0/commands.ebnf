@@ -39,7 +39,7 @@
 (* ---- Observing (question 3: "look at" is a glance; question 4: "take a look" is a look) ---- *)
 <look>           ::= <LOOK> [ <look-target> ] | <LOOK> <object> "over" | <LOOK> "over" <object>   (* "look the torch over":
                                                  a look at it, 2026-10-22 *)
-<look-target>    ::= <direction> | <locale-ref> | [ <look-prep> ] <object>
+<look-target>    ::= <direction> | <locale-ref> | [ <look-prep> ] <thing>
 <locale-ref>     ::= "around" [ <here-ref> ] | "about" | "here" | "this place"
 <look-prep>      ::= "at" | "through" | "toward" | "towards" | "around" | "in" | "into" | "inside" | "under" | "behind" | "beside" | "near" | "to" | "on" | "for"   (* "look in the sack", "look on the table": into it, onto it *)
 <examine>        ::= <EXAMINE> [ [ "at" ] <thing> [ <for-traps> ] ] | <EXAMINE> <aspect> [ "of" <thing> ]   (* "check the
@@ -198,6 +198,8 @@
 <MOVE>       ::= "walk" | "go" | ( "make" | "find" ) "my" "way"   (* "make my way back to the Mausoleum": travel's,
                                                  slice 4.2; "return to", "travel to", "head back to": walk's aliases *)
 <TOWARD>     ::= "to" | "towards" | "toward" | "in the direction of" | "into" | "onto" | "past" | "through"
+                 | "for" | "near" | "by" | "beside" | "next to" | "over to"   (* "head for the pot",
+                                                 "walk over to the chest" (going to anything, 2026-11-02) *)
 <ALONG>      ::= "up" | "down" | "along" | "across"   (* up or down a stairway or a ladder; along a passage *)
 <GET>        ::= "get" | "take" | "pick up" | "pick"
 <DROP>       ::= "drop" | "put down"
@@ -253,7 +255,7 @@
 (* ---- Movement, climbing and digging (added 2026-10-19: the gaps the probes found) ---- *)
 <enter>          ::= "enter" [ <object> ]
 <leave>          ::= <LEAVE> [ <object> | <direction> ]
-<LEAVE>          ::= "exit"
+<LEAVE>          ::= "exit" | "go" "out"
 <climb>          ::= <CLIMB> [ <direction> ] [ <object> ] | <CLIMB> ( "over" | "onto" | "into" | "through" ) <object>
 <CLIMB>          ::= "climb"
 <dig>            ::= <DIG> [ <direction> | "for" <object> | <object> ] [ <USING> <object> ]   (* "dig down", "dig the wall",
@@ -335,7 +337,7 @@
 <bend>            ::= "bend" [ <thing> [ <USING> <object> ] ]    (* a window's bars bent *)
 <force>           ::= "force" [ <thing> [ <USING> <object> ] ]   (* a door forced *)
 <disarm>          ::= "disarm" [ <thing> [ <USING> <object> ] ]  (* a trap disarmed *)
-<rebar>           ::= "rebar" [ <thing> ]                     (* a door barred: "bar the door" (bar an alias) *)
+<rebar>           ::= ( "rebar" | "unbar" | "unbolt" ) [ <thing> ]   (* a door barred: "bar the door" (bar an alias); unbarred: its bar lifted out *)
 <hang>            ::= "hang" <object> [ ( "on" | "from" ) <object> ]   (* "hang the quiver on my belt" *)
 <combine>         ::= "combine" <object> [ "with" <object> ]   (* the theme's pieces put together: "combine the sunstone with the moonstone", "join the pieces" *)
 <deceive>         ::= "deceive" <object>                       (* a denizen swayed: deceived, threatened, calmed, befriended *)

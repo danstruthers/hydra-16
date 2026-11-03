@@ -21,9 +21,9 @@
 #define EYE         5
 
 static struct sight S;
+extern unsigned char here_known;                /* (dq0p.c's) */
 const struct sight* sight_rec = &S;             /* (A look one way's own, way.c's, made from it: the main RAM's) */
 unsigned char eye;                              /* (The character's sight, 0-9: dq0p.c's look sets it) */
-static unsigned char mx_[SEE_DOORS], my_[SEE_DOORS];     /* (The mouths' squares, as they're counted) */
 static unsigned char seq;
 
 static int __fastcall__ abs_ (int v)
@@ -48,6 +48,18 @@ static unsigned char __fastcall__ zone_index (unsigned char x, unsigned char y)
 
 /* A passage's square (i, j) of the chunk in the window, at a room's edge: a mouth, unless one's been counted
 ** beside it (a wide tunnel's three squares one mouth) */
+#pragma data-name (push, "SW2RODATA")           /* (The look's own, set as it begins: in the part, no main RAM) */
+static unsigned char mx_[SEE_DOORS] = { 0 }, my_[SEE_DOORS] = { 0 };     /* (The mouths' squares, as they're counted) */
+static unsigned char e_ = 0;                    /* (The next door[]: those seen, ndoors of them, then those remembered) */
+static unsigned char kn_ = 0;                   /* (The rel's KNOWN_REL, as it's those remembered) */
+static unsigned char some_ = 0;                 /* (A door or an opening only remembered, this look's first pass) */
+static unsigned char mine_ = 0;                 /* (The door's bar's side the character's: its wall's, or its passage's) */
+static int fzz = 0;                             /* (door_add's: its height, the chunk's first square in the frame, its */
+static unsigned fox = 0, foy = 0;               /*   square, its facing) */
+static unsigned char flx = 0, fly = 0, ffc = 0;
+static struct sdoor* dp = 0;                    /* (door[e_]) */
+#pragma data-name (pop)
+
 static unsigned char __fastcall__ mouth (unsigned char i, unsigned char j)
 {
     unsigned char k, d, f = 0;
@@ -60,24 +72,38 @@ static unsigned char __fastcall__ mouth (unsigned char i, unsigned char j)
     if (!f) {
         return 0;
     }
-    for (k = 0; k < S.ndoors; ++k) {
+    for (k = 0; k < e_; ++k) {
         if ((S.door[k].rel & MOUTH) && mx_[k] + 1 >= i && mx_[k] <= i + 1 && my_[k] + 1 >= j && my_[k] <= j + 1) {
             mx_[k] = i;                         /* (One mouth: its squares follow on) */
             my_[k] = j;
             return 0;
         }
     }
-    mx_[S.ndoors] = i;
-    my_[S.ndoors] = j;
+    mx_[e_] = i;
+    my_[e_] = j;
     return 1;
 }
 
 /* A seen door's portal (q: or NULL, a doorway): its kind and parts (a window's; a door's or a portcullis's, its
-** features, as they're seen from afar: two leaves ...) */
+** features, as they're seen from afar: two leaves ...), and shut, what's plain of it: its bar, on the side the character's
+** on (mine), or found from the far side; its lock, found (PP_FOUND: the world's, as it's tried) */
 static void __fastcall__ portal_seen (const struct portal* q)
 {
-    S.door[S.ndoors].kind = q ? q->kind : PK_DOOR;
-    S.door[S.ndoors].parts = !q ? 0 : q->kind == PK_WINDOW ? q->parts : q->feat;
+    dp = &S.door[e_];
+    dp->kind = PK_DOOR;
+    if (!q) {
+        dp->state = DOORWAY;
+        return;
+    }
+    if (q->state & (PS_OPEN | PS_WRECKED)) {
+        dp->state = q->state & (PS_OPEN | PS_WRECKED);
+    } else if (q->parts & PP_FOUND) {
+        dp->state = q->state & (PS_BARRED | PS_LOCKED);
+    } else if (mine_ && q->bar == mine_ - 1) {
+        dp->state = q->state & PS_BARRED;
+    }
+    dp->kind = q->kind;
+    dp->parts = q->kind == PK_WINDOW ? q->parts : q->feat;
 }
 
 /* The traps the character knows of (found, or never hidden: an open pit) on the squares of its chunk it sees now */
@@ -103,9 +129,76 @@ static signed char __fastcall__ fz (int dz)
     return dz > 127 ? 127 : dz < -127 ? -127 : dz;
 }
 
+/* What its hands find on side rel of it, in the dark (HOUSE.md's walking in the dark, 2026-11-02): 0 nothing within reach,
+** 1 a wall, 2 a shut door, 3 bars */
+#pragma static-locals (push, off)
+static unsigned char __fastcall__ touch (unsigned char rel)
+{
+    unsigned char* p;
+    struct portal* q;
+    unsigned char h = (ffc + rel) & 7;
+
+    if (!(p = at (S.stratum, S.x + head_x[h], S.y + head_y[h]))) {
+        return 1;
+    }
+    if (TILE (*p) == T_DOOR && (q = portal_at (cx_, cy_)) != 0 && !(q->state & PS_OPEN)) {
+        return q->state & PS_HIDDEN ? 1 : q->kind == PK_PORTCULLIS ? 3 : 2;
+    }
+    return !T_PASS (*p) && TILE (*p) != T_PIT;
+}
+#pragma static-locals (pop)
+
+/* Tile t as this pass goes: those it sees, then those it only remembers */
+static unsigned char __fastcall__ shown (unsigned char t)
+{
+    if (kn_) {
+        return (t & (T_VIS | T_SEEN)) == T_SEEN;
+    }
+    some_ |= t & T_SEEN;
+    return t & T_VIS;
+}
+
+/* The door[] e_ (and on to the next) filled in, of the chunk's square (i, j), q its portal: as it's seen or remembered
+** (flx, fly the character's square, ffc its facing, fox, foy the chunk's first in the frame, fzz its height) */
+static void __fastcall__ door_add (unsigned char i, unsigned char j, const struct portal* q)
+{
+    portal_seen (q);                            /* (A portcullis, a window, a slit: its kind and parts) */
+    dp->rel = REL8 (bearing ((int) i - flx, (int) j - fly), ffc) | kn_;
+    dp->x = fox + i;
+    dp->y = foy + j;
+    dp->dz = fz (C->elev[j][i] - fzz);
+    ++e_;
+}
+
+#pragma code-name (push, "SW6CODE")             /* (Part 6's since 2026-11-02: part 2's room, a dark look's touch) */
+#pragma rodata-name (push, "SW6RODATA")
+
+static int __fastcall__ abs6 (int v)
+{
+    return v < 0 ? -v : v;
+}
+
+static signed char __fastcall__ fz6 (int dz)
+{
+    return dz > 127 ? 127 : dz < -127 ? -127 : dz;
+}
+
+static unsigned char __fastcall__ zone_at6 (unsigned char x, unsigned char y)
+{
+    struct zone* z = C->zone;
+    unsigned char k;
+
+    for (k = 0; k < C->nzones; ++k, ++z) {
+        if (x >= z->x && x < z->x + z->w && y >= z->y && y < z->y + z->h) {
+            return k;
+        }
+    }
+    return 0xFF;
+}
+
 /* A room's, in the chunk in the window: its zones but z (the character's), seen now: where, how high, and how one
 ** gets there (steps in the room, a slope between, or a ledge) */
-static void __fastcall__ zones_seen (struct room* rp, unsigned char mine, unsigned char face, int myz, unsigned char lx,
+void __fastcall__ s_zones_seen (struct room* rp, unsigned char mine, unsigned char face, int myz, unsigned char lx,
     unsigned char ly)
 {
     unsigned char k, i, j, steps = 0, seen, mx, my, d, ni, nj;
@@ -145,18 +238,24 @@ static void __fastcall__ zones_seen (struct room* rp, unsigned char mine, unsign
                 for (d = 0; d < 4; ++d) {       /* (The four beside it, in the chunk) */
                     ni = i + dir_x[d];
                     nj = j + dir_y[d];
-                    if (ni < CW && nj < CW && zone_index (ni, nj) == mine &&
-                        (v = abs_ (C->elev[nj][ni] - C->elev[j][i])) > worst) {
+                    if (ni < CW && nj < CW && zone_at6 (ni, nj) == mine &&
+                        (v = abs6 (C->elev[nj][ni] - C->elev[j][i])) > worst) {
                         worst = v;
                     }
                 }
             }
         }
         S.zone[S.nzones].rel = REL8 (bearing ((int) mx - lx, (int) my - ly), face);
-        S.zone[S.nzones].dz = fz (dz);
+        S.zone[S.nzones].dz = fz6 (dz);
         S.zone[S.nzones++].how = worst <= STEP_MAX ? Z_SLOPE : steps ? Z_STEPS : Z_LEDGE;
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+void __fastcall__ zones_seen (struct room* rp, unsigned char mine, unsigned char face, int myz, unsigned char lx,
+    unsigned char ly);                          /* (Its stub: part 6's) */
 
 unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y, unsigned char face,
     unsigned char light, unsigned char first)
@@ -228,55 +327,90 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                 S.cmid = z->cmid;
                 S.cwall = z->cwall;
             }
-            zones_seen (&rp, k, face, myz, lx, ly);
+            if (rp.nz > 1) {
+                zones_seen (&rp, k, face, myz, lx, ly);
+            }
         }
-        for (d = 0; d < 4; ++d) {               /* (Its doors seen) */
-            for (k = 0; wall_tile (&rp, d, k) && S.ndoors < SEE_DOORS; ++k) {
-                if ((TILE (C->tile[wall_y][wall_x]) == T_DOOR || TILE (C->tile[wall_y][wall_x]) == T_WINDOW) &&
-                    (C->tile[wall_y][wall_x] & T_VIS) &&
-                    !((q = portal_at (wall_x, wall_y)) != 0 && (q->state & PS_HIDDEN))) {
-                    S.door[S.ndoors].rel = REL8 (bearing ((int) wall_x - lx, (int) wall_y - ly), face);
-                    S.door[S.ndoors].state = (q = portal_at (wall_x, wall_y)) != 0 ? q->state & (PS_OPEN | PS_WRECKED) : DOORWAY;
-                    portal_seen (q);                /* (A portcullis, a window, a slit: its kind and parts) */
-                    S.door[S.ndoors].x = x - lx + wall_x;
-                    S.door[S.ndoors].y = y - ly + wall_y;
-                    S.door[S.ndoors++].dz = fz (C->elev[wall_y][wall_x] - myz);
+    }
+    some_ = e_ = kn_ = 0;                       /* (The part's own: after part 6's zones_seen, its image copied back) */
+    fzz = myz;
+    fox = x - lx;
+    foy = y - ly;
+    flx = lx;
+    fly = ly;
+    ffc = face;
+    if (r != 0xFF) {
+        for (;;) {                              /* (Those it sees; then those it remembers, KNOWN_REL: named, the look
+                                                **   not telling them, the user's, 2026-11-02) */
+            for (d = 0; d < 4; ++d) {           /* (Its doors seen) */
+                for (k = 0; wall_tile (&rp, d, k) && e_ < SEE_DOORS; ++k) {
+                    i = C->tile[wall_y][wall_x];
+                    if ((TILE (i) == T_DOOR || TILE (i) == T_WINDOW) && shown (i) &&
+                        !((q = portal_at (wall_x, wall_y)) != 0 && (q->state & PS_HIDDEN))) {
+                        mine_ = ((d + 2) & 3) + 1;  /* (Its bar seen, on the room's side) */
+                        door_add (wall_x, wall_y, q);
+                        mine_ = 0;
+                    }
                 }
             }
-        }
-        for (j = rp.y ? rp.y - 1 : 0; j <= rp.y + rp.h && j < CW; ++j) {     /* (Its passages' mouths seen) */
-            for (i = rp.x ? rp.x - 1 : 0; i <= rp.x + rp.w && i < CW && S.ndoors < SEE_DOORS; ++i) {
-                if (TILE (C->tile[j][i]) == T_CORR && (C->tile[j][i] & T_VIS) && mouth (i, j)) {
-                    S.door[S.ndoors].rel = REL8 (bearing ((int) i - lx, (int) j - ly), face) | MOUTH;
-                    S.door[S.ndoors].state = PS_OPEN;
-                    S.door[S.ndoors].x = x - lx + i;
-                    S.door[S.ndoors].y = y - ly + j;
-                    S.door[S.ndoors++].dz = fz (C->elev[j][i] - myz);
+            for (j = rp.y ? rp.y - 1 : 0; j <= rp.y + rp.h && j < CW; ++j) {     /* (Its passages' mouths seen) */
+                for (i = rp.x ? rp.x - 1 : 0; i <= rp.x + rp.w && i < CW && e_ < SEE_DOORS; ++i) {
+                    d = C->tile[j][i];
+                    if (TILE (d) == T_CORR && shown (d) && mouth (i, j)) {
+                        door_add (i, j, 0);
+                        dp->rel |= MOUTH;
+                        dp->state = PS_OPEN;
+                    }
                 }
             }
-        }
-        for (k = 0; k < C->nopen && S.nopen < SEE_OPEN; ++k) {     /* (Its stairways, ladders, shafts) */
-            i = C->open[k].x;
-            j = C->open[k].y;
-            if (i >= rp.x && i < rp.x + rp.w && j >= rp.y && j < rp.y + rp.h && (C->tile[j][i] & T_VIS)) {
-                S.open[S.nopen].rel = i == lx && j == ly ? 0xFF : REL8 (bearing ((int) i - lx, (int) j - ly), face);
-                S.open[S.nopen].kind = C->open[k].kind;
-                S.open[S.nopen].x = x - lx + i;
-                S.open[S.nopen].y = y - ly + j;
-                S.open[S.nopen++].dz = fz (C->elev[j][i] - myz);
+            for (k = 0, r = S.nopen; k < C->nopen && r < SEE_OPEN; ++k) {     /* (Its stairways, ladders, shafts) */
+                i = C->open[k].x;
+                j = C->open[k].y;
+                d = C->tile[j][i];
+                if (i >= rp.x && i < rp.x + rp.w && j >= rp.y && j < rp.y + rp.h && shown (d)) {
+                    S.open[r].rel = i == lx && j == ly ? 0xFF : REL8 (bearing ((int) i - lx, (int) j - ly), face) | kn_;
+                    S.open[r].kind = C->open[k].kind;
+                    S.open[r].x = x - lx + i;
+                    S.open[r].y = y - ly + j;
+                    S.open[r++].dz = fz (C->elev[j][i] - myz);
+                }
             }
+            if (kn_) {
+                break;
+            }
+            S.ndoors = e_;
+            S.nopen = r;
+            if (!some_) {
+                break;                          /* (None to look for: the look the quicker) */
+            }
+            kn_ = KNOWN_REL;
         }
     } else {
         S.where = W_PASSAGE;
         for (d = 0; d < 4; ++d) {               /* (A door beside it, open or shut) */
             if ((p = at (sn, x + dir_x[d], y + dir_y[d])) != 0 && (TILE (*p) == T_DOOR || TILE (*p) == T_WINDOW) &&
                 S.ndoors < SEE_DOORS && !((q = portal_at (cx_, cy_)) != 0 && (q->state & PS_HIDDEN))) {
-                S.door[S.ndoors].rel = REL8 (H_OF (d), face);
-                S.door[S.ndoors].state = q ? q->state & (PS_OPEN | PS_WRECKED) : DOORWAY;
+                e_ = S.ndoors++;
+                mine_ = ((d + 2) & 3) + 1;
                 portal_seen (q);
-                S.door[S.ndoors].x = x + dir_x[d];
-                S.door[S.ndoors].y = y + dir_y[d];
-                S.door[S.ndoors++].dz = fz (C->elev[cy_][cx_] - myz);
+                mine_ = 0;
+                dp->rel = REL8 (H_OF (d), face);
+                dp->x = x + dir_x[d];
+                dp->y = y + dir_y[d];
+                dp->dz = fz (C->elev[cy_][cx_] - myz);
+            }
+        }
+        at (sn, x, y);                          /* (The doors further along it, seen or remembered: named, the look not
+                                                **   telling them; but as it goes along a walk, its looks the quicker) */
+        e_ = S.ndoors;
+        kn_ = KNOWN_REL;
+        for (j = cy_ > 5 ? cy_ - 5 : 0; (arrive || !(here_known & 0x80)) && j < (unsigned char) (cy_ + 6) && j < CW; ++j) {
+            for (i = cx_ > 5 ? cx_ - 5 : 0; i < (unsigned char) (cx_ + 6) && i < CW && e_ < SEE_DOORS; ++i) {
+                d = C->tile[j][i];
+                if ((TILE (d) == T_DOOR || TILE (d) == T_WINDOW) && (d & (T_VIS | T_SEEN)) &&
+                    abs_ ((int) i - cx_) + abs_ ((int) j - cy_) > 1 && !((q = portal_at (i, j)) != 0 && (q->state & PS_HIDDEN))) {
+                    door_add (i, j, q);
+                }
             }
         }
         for (d = 0; d < 8 && S.nways < 4; ++d) {    /* (The ways it goes on, felt in the dark too; a wide passage's
@@ -289,6 +423,15 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
             }
         }
     }
+    if (S.dark) {                               /* (In the dark, its ceiling's unseen: what its hands find instead, and
+                                                **   whether it has been on this square before, not forgotten: its walk's
+                                                **   squares felt after the look's, here_known, dq0p.c's) */
+        S.cmid = touch (0);
+        S.cmid += touch (6) << 2;
+        S.cmid += touch (2) << 4;
+        S.cwall = here_known & 1;
+    }
+    here_known = S.dark ? here_known & 1 : 1;   /* (Seen lit here: known, if its light goes out) */
     S.first = first;
     memcpy (&S.nglows, &G, sizeof G);           /* (The lights far off: eyes.c's) */
     traps_seen (sn, x, y, face);
