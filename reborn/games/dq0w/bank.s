@@ -111,14 +111,14 @@ go:
             SWPART      21, 6               ; The ways across a room worked out (dq0w.c's ways; overlay 5's till 2026-10-28)
             SWPART      22, 17              ; The strata's records out of the hub, back (sfile.c)
             SWPART      23, 11              ; The long task as it goes: a walk a square at a time (dq0w.c's)
-            SWPART      24, 10              ; Engagement, a blow's close-in, fighting on (dq0w.c's)
+            SWPART      24, 12              ; Engagement, a blow's close-in, fighting on (dq0w.c's)
             SWPART      25, 22              ; The engage initiative test, a grope's (dq0w.c's; overlay 6's till 2026-10-28,
                                             ;   13's till 2026-10-31); a dig begun (part 1's room)
-            SWPART      26, 9               ; Disengaging (dq0w.c's)
+            SWPART      26, 15               ; Disengaging (dq0w.c's)
             SWPART      27, 9               ; The lights burning down (dq0w.c's: slice 4.1's)
             SWPART      28, 9               ; The traces' store: the journal taken in, kept (wtrace.c)
             SWPART      29, 10              ; The traces read: the floor, a track, a smell (wtrace.c)
-            SWPART      30, 12              ; The traces' store's files: a chunk's records put out, read in (wtrfile.c)
+            SWPART      30, 10              ; The traces' store's files: a chunk's records put out, read in (wtrfile.c)
             SWPART      31, 11              ; The traces read, in words (wtrword.c)
             SWPART      32, 6               ; The way the character's scent goes, a hunter's (wtrscent.c)
             SWPART      33, 12              ; A walk across a room (dq0w.c's across: the main RAM's room)
@@ -127,15 +127,15 @@ go:
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
             SWPART      37, 13              ; The rest of the UI's intents carried out (dq0w.c's intent_more)
             SWPART      38, 16              ; A change record kept and made (store.c's store_put, change)
-            SWPART      39, 2              ; A thing looked at (things.c: 2026-10-22)
+            SWPART      39, 12              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
             SWPART      41, 11              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
             SWPART      42, 21              ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 7              ; A walk in the dark set out on: its way felt, a thing stumbled over
-            SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
-            SWPART      45, 22              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
+            SWPART      44, 9              ; A walk in the dark ended: what it met, felt or blundered into
+            SWPART      45, 5              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
             SWPART      46, 25               ; A search's thing, for or on; what a search turns up (things.c)
-            SWPART      47, 26              ; What's on a thing or in it, searched (things.c)
+            SWPART      47, 22              ; What's on a thing or in it, searched (things.c)
             SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
                                             ;   (things.c: slice 4.1b's)
             SWPART      49, 23              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c; overlay
@@ -176,11 +176,11 @@ go:
                                             ;   2026-10-31, its room the walk's)
             SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
             SWPART      80, 24              ; One path: a denizen's doors, the doors' keys (wport.c: Phase 3C's)
-            SWPART      81, 27              ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
+            SWPART      81, 2               ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
             SWPART      82, 25              ; A room searched whole (wroom.inc: the user's playtest, 2026-11-02)
             SWPART      83, 25              ; Its tests at a stop (wroom.c)
-            SWPART      84, 5              ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
-            SWPART      85, 10              ; The reach's steps (things.c's, 2026-11-02: HOUSE.md's reach)
+            SWPART      84, 10              ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
+            SWPART      85, 26              ; The reach's steps (things.c's, 2026-11-02: HOUSE.md's reach)
             SWPART      86, 26              ; Their other half
             SWPART      87, 26              ; And the hand the pack goes in, a tool's use, the words
             SWPART      88, 15              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
@@ -389,6 +389,7 @@ go:
             SWFN        tr_file, 30
             SWFN        traced, 29
             SWFN        tr_words, 31
+            SWFN        feet, 31            ; (Its footwear: its prints' tread, part 29's, 2026-11-03)
             SWFN        tr_scent, 32
             SWFN        across, 33
             SWFN        intent_more, 37

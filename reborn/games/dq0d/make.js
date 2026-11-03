@@ -167,8 +167,8 @@ function build({ dir, objdir, say = () => {} }) {
   fs.writeFileSync(path.join(objdir, '..', 'dq0d.dat'), out);
 
   // The kinds' traces (dq0tr.dat): each one's name, tread, smell, nose and size, its marks' words and its scent's (each
-  // 0-ended, "" none); the first the character's own (its marks booted feet, as its footwear doesn't say otherwise: the
-  // world's)
+  // 0-ended, "" none); the first the character's own (its marks and its tread by its footwear, the world's: these bare
+  // feet's tread, its smell and its nose its own)
   const tout = Buffer.alloc(TREC * (kinds.length + 1));
   const trace = (at, name, tread, smell, nose, size, marks, scent) => {
     tout.write(name, at, 'latin1');
@@ -176,7 +176,7 @@ function build({ dir, objdir, say = () => {} }) {
     if (marks !== '-') tout.write(marks, at + 16, 'latin1');
     if (scent !== '-') tout.write(scent, at + 40, 'latin1');
   };
-  trace(0, '', 4, 3, 2, 4, 'booted feet', 'a smell of sweat');
+  trace(0, '', 2, 3, 2, 4, 'bare feet', 'a smell of sweat');
   kinds.forEach((f, i) => trace(TREC * (i + 1), f[0], +f[22], +f[24], +f[26], +f[15], f[23], f[25]));
   fs.writeFileSync(path.join(objdir, '..', 'dq0tr.dat'), tout);
 

@@ -37,20 +37,21 @@ static const struct { char key[8]; unsigned char rate[5], wear[5]; } digger[] = 
 #endif
 
 /* The tool to hand that suits the material best (bare hands, digger's 0, if none does better; of two as good, the
-** one it wears less): its digger's number */
+** one it wears less), or the one named (name's key: the user's, 2026-11-03: a lesser tool named is used): its digger's
+** number (0 too if what's named is no digger) */
 #if defined (RS_HOUSE_DIG_TOOL) && !defined (RS_HOUSE_DIG_TOOL_DONE)
 #define RS_HOUSE_DIG_TOOL_DONE
-unsigned char __fastcall__ RS_HOUSE_DIG_TOOL (unsigned char m)
+unsigned char __fastcall__ RS_HOUSE_DIG_TOOL (unsigned char m, const char* name)
 {
-    unsigned char k, t, best = 0, r, br = digger[0].rate[m];
+    unsigned char k, t, best = 0, r, br = *name ? 0 : digger[0].rate[m];
 
     for (k = 0; k < NTOOLS; ++k) {
         for (t = 1; tools[k][0] && t < NDIGGERS; ++t) {
-            if (strcmp (tools[k], digger[t].key)) {
+            if (strcmp (tools[k], digger[t].key) || (*name && strcmp (name, digger[t].key))) {
                 continue;
             }
             r = digger[t].rate[m];
-            if (r > br || (r && r == br && digger[t].wear[m] < digger[best].wear[m])) {
+            if (r > br || (r && r == br && digger[t].wear[m] < digger[best].wear[m]) || *name) {
                 best = t;
                 br = r;
             }
@@ -202,6 +203,12 @@ extern unsigned long xs_seed;
 #define QUIET_MIX(t)    ((t) * 1103515245UL + 12345UL | 1)
 #define QUIET_IN        { unsigned long qt_ = xs_seed; xs_seed = QUIET_MIX (qt_);
 #define QUIET_OUT       xs_seed = qt_; }
+/* (An appraisal's die, the user's, 2026-11-03: "keep the first answer", per thing, till the skill improves: no store: the
+** dice for it a hash of the thing (w1, its key: the UI's and the world's), the skill's mastery and the game's seed; the
+** game's put back after) */
+#define JUDGE_IN(k, ml) { unsigned long qt_ = xs_seed; xs_seed = QUIET_MIX (QUIET_MIX ((unsigned long) (k) << 16 ^ \
+                            (unsigned long) (ml) << 8 ^ (unsigned) HUB->seed));
+#define JUDGE_OUT       xs_seed = qt_; }
 #endif
 
 /* ---- The dice by who asks (RS_HOUSE_DICE: every referee's main loop, 2026-10-30): each requester's dice its own stream,

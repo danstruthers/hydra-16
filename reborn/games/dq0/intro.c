@@ -151,6 +151,9 @@ void __fastcall__ o_portal_words (unsigned char out)
 
 /* ---- Digging's words: how a spell of work went, and the feet to go */
 
+#pragma code-name (push, "OV19CODE")            /* (Overlay 1's room, 2026-11-03) */
+#pragma rodata-name (push, "OV19RODATA")
+#pragma local-strings (push, on)
 static unsigned char dig_feet;                  /* (The feet to go last told) */
 void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
 {
@@ -180,8 +183,22 @@ void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
     case D_THROUGH:
         msg (feet ? "The last of the rock gives way beneath you: the shaft is through." : "You break through.");
         return;
+    case D_BETTER:                              /* (A lesser tool named: the named one used, the better told of, once a
+                                                **   dig; the user's, 2026-11-03) */
+        hub_mem (0, lb + 160, HUB->dig_better, 8);
+        sayf ("\nYour %s would do this better, but you set to it with the %s as you said.", lb + 160, dig_word);
+        return;
     case D_NO_TOOL:                             /* (Told why, for what it can judge: HOUSE.md's, 2026-11-02; feet what it's
                                                 **   into, MAT_* + 1) */
+        hub_mem (0, lb + 160, HUB->dig_better, 8);
+        hub_mem (0, lb + 170, HUB->dig_name, 8);
+        if (lb[170] && !(feet & DN_HANDS) && strcmp (lb + 170, "chisel")) {    /* (The thing named, no use on it: the user's, 2026-11-03) */
+            --feet;
+            sayf ("\nYour %s won't dig %s.%s%s%s", dig_word, feet == MAT_EARTH ? "hard-packed earth" : feet == MAT_MASONRY ?
+                "masonry" : feet == MAT_FLAGS ? "flagstones" : feet == MAT_SOIL ? "earth" : "stone",
+                lb[160] ? " Your " : "", lb + 160, lb[160] ? " would." : "");
+            return;
+        }
         if (feet & DN_HANDS) {                  /* (The user's, 2026-11-03: "hammer and chisel in each hand") */
             msg (feet & DN_LIT ? "You need the chisel in one hand and the hammer in the other, and that leaves no hand for your light: set it down first." :
                 "You need the chisel in one hand and the hammer in the other.");
@@ -226,3 +243,6 @@ void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
     }
     dig_feet = feet;
 }
+#pragma local-strings (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)

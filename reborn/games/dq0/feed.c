@@ -65,6 +65,8 @@ static void __fastcall__ feed_do (unsigned char eat)
         } else {
             while (p < n && othings (IO_USE, "water", "", 0) == IR_OK) {
                 ++p;
+                f |= othings_x ? 0x80 : 0;      /* (Filled from still water: the flux's risk, as drunk there,
+                                                **   2026-11-03) */
             }
             msg (p ? "You drink from your waterskin." : "You have nothing to drink.");
             if (!p) {

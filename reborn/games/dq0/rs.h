@@ -289,6 +289,9 @@ enum { BP_SKULL, BP_FACE, BP_NECK, BP_SHOULDER, BP_UPPER_ARM, BP_ELBOW, BP_FOREA
 ** tenths the actor's out for (knocked senseless), result 1 a fall stopped (a hold grabbed); its words in the text,
 ** a line (and RS_DESCRIBE b 2's: the last harm's) */
 enum { HC_FALL, HC_STRIKE, HC_FIRE, HC_STRUCK };
+#define DIG_BETTER      8                       /* (P_DIG's text: the tool named as it's asked, "" the best to hand; the
+                                                **   reply the tool taken; a query's, at this offset, a better one to
+                                                **   hand, "" none: the user's, 2026-11-03) */
 #define RS_DIG_QUERY    127                     /* (P_DIG's steps: only what would bite into it, the tool and its rate
                                                 **   asked, no test and no wear: told at once, a dig begun) */
 

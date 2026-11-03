@@ -29,6 +29,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <dice.h>
 #include "dq0.h"
 #include "hub.h"
 #include "level.h"
@@ -66,10 +67,28 @@ static void __fastcall__ turn_to (unsigned char h)
 ** wreq, WQ_EXAMINE: a doorway has none), in words (overlay 4), its aspects as ex asks (EX_*: 0 its plain features;
 ** its quality, judged by the craft that knows its material, the referee's test, P_APPRAISE: AP_WOOD, AP_METAL,
 ** AP_STONE; its lock, its condition, plain); a few seconds' looking (main.c's part 2's once, its room) */
+extern unsigned long xs_seed;
+static unsigned long judge_was;
+
+/* The words' dice for a thing judged (k its key, ml the skill's mastery, the game's seed): the same again, the same
+** words, till the skill improves (the user's, 2026-11-03: the referee's die the same way, rshouse.h's JUDGE_IN); the
+** UI's own to put back after (judge_was) */
+static void __fastcall__ judge_dice (unsigned k, unsigned ml)
+{
+    unsigned h = k * 40503U ^ ml * 257 ^ (unsigned) HUB->seed;
+
+    judge_was = xs_seed;
+    ((unsigned*) &xs_seed)[1] = h;
+    ((unsigned*) &xs_seed)[0] = (h * 25173U + 13849U) | 1;
+    random (2);
+    random (2);
+}
+
 static void __fastcall__ inspect (unsigned char obj, unsigned char orel, unsigned char ex)
 {
     struct req* r;
     signed char g = 0;
+    unsigned k = 0;
 
     if (pick (obj | PICK_TELL, orel) != 1) {
         return;
@@ -94,12 +113,17 @@ static void __fastcall__ inspect (unsigned char obj, unsigned char orel, unsigne
         return;
     }
     memcpy (&viewed, &HUB->pview, sizeof viewed);
-    if (ex & EX_QUALITY) {                      /* (Its quality judged: the appraiser's test) */
+    if (ex & EX_QUALITY) {                      /* (Its quality judged: the appraiser's test, the first answer kept, by
+                                                **   a hash of the door's square: the user's, 2026-11-03) */
+        HUB->slot[SLOT_UI].w1 = tx * 251 + ty;
         r = ask_b (RS_TEST, P_APPRAISE, viewed.mat == PM_STONE ? AP_STONE : viewed.mat == PM_IRON ? AP_METAL : AP_WOOD);
         g = r->grade;
+        k = r->w2;
         r->state = REQ_FREE;
     }
+    judge_dice (tx * 251 + ty, k);
     portal_look (&viewed, g, ex);
+    xs_seed = judge_was;
     msg (lb);
     if (!(ex & (EX_VALUE | EX_WEIGHT)) || (ex & EX_QUALITY)) {
         intend2 (I_WAIT, ex & (EX_LOCK | EX_COND) ? 20 : 50, 1);
@@ -149,10 +173,14 @@ static unsigned char __fastcall__ judged_as (unsigned char ex)
         return 0;
     }
     memcpy (&judged, &HUB->ireq, sizeof judged);
+    HUB->slot[SLOT_UI].w1 = judged.item;        /* (Its number: the first answer kept till the skill improves, the
+                                                **   user's, 2026-11-03; the referee's and the words' dice its hash) */
     r = ask_b (RS_TEST, P_APPRAISE, judged.craft);
     g = r->grade;
+    judge_dice (judged.item, r->w2);
     r->state = REQ_FREE;
     appraise (&judged, g, ex);
+    xs_seed = judge_was;
     msg (lb);
     return 1;
 }

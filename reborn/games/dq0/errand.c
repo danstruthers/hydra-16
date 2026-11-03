@@ -4,16 +4,18 @@
 ** (IO_FETCH): for "tell Grub to fetch the key", one seen lying about (its item and where it lies, the sway's item,
 ** ix, iy); for "give the bandit 5 pennies" ("give the pennies to the bandit", "offer the orc my dagger"), one the
 ** character carries (its item, its worth as a local takes it times the count, whether it's food), the one meant the
-** command's thing then, the gift its other; for "follow me at 3 squares", the distance (ix).  Swapped part 15's.
+** command's thing then, the gift its other; for "follow me at 3 squares", the distance (ix).  Swapped part 20's, the
+** market part 15's.
 */
 
+#include <stdlib.h>
 #include <string.h>
 #include "dq0.h"
 #include "hub.h"
 #include "actions.h"
 
-#pragma code-name ("SW15CODE")
-#pragma rodata-name ("SW15RODATA")
+#pragma code-name ("SW20CODE")
+#pragma rodata-name ("SW20RODATA")
 #pragma local-strings (on)
 
 /* ---- The market and entertaining (2026-11-02: DENIZENS.md's trading, HOUSE.md's the market, for review): the goods
@@ -21,8 +23,7 @@
 ** named, or any, that has them), each side's pennies, then the denizens asked (the sway: they decide, and the one
 ** traded with takes and hands over by the character's own way with things, the world's), its outcome worded here, the
 ** world telling the things changing hands (E_TASK's TE_FETCHED).  Its data the part's own (zeros as it's copied in) */
-#pragma bss-name (push, "SW15RODATA")
-static char gd[16], wh[16], nm[16], nl[16];
+unsigned char trade (void);                     /* (Part 15's stub) */
 
 /* A word of the line's: in lower case into w (15 at most); the line on past it */
 static const char* __fastcall__ word_at (const char* p, char* w)
@@ -41,16 +42,37 @@ static const char* __fastcall__ word_at (const char* p, char* w)
     return p;
 }
 
-#define S       (HUB->sway)
-static const char* const played[4] = { "entertain", "sing for", "play for", "dance for" };
+#pragma code-name (push, "SW15CODE")            /* (Part 15's, the market's; the rest part 20's: its room, 2026-11-03) */
+#pragma rodata-name (push, "SW15RODATA")
+#pragma bss-name (push, "SW15RODATA")
+static char gd[16], wh[16], nm[16], nl[16];
 
-static unsigned char trade (void)
+/* (A word of the line's: word_at's, in the part) */
+static const char* __fastcall__ word_at2 (const char* p, char* w)
 {
+    unsigned char n = 0;
+
+    while (*p == ' ') {
+        ++p;
+    }
+    for (; *p && *p != ' '; ++p) {
+        if (n < 15) {
+            w[n++] = *p >= 'A' && *p <= 'Z' ? *p + 'a' - 'A' : *p;
+        }
+    }
+    w[n] = 0;
+    return p;
+}
+
+#define S       (HUB->sway)
+unsigned char s_trade (void)
+{
+    static const char played[4][10] = { "entertain", "sing for", "play for", "dance for" };
     struct ireq* q = &HUB->ireq;
     unsigned char h = cmd.aux, sell, r, life, o;
-    unsigned it, w, qty, n, item, its = 0, nits = 0, c = 0, ni = 0;
+    unsigned it, w = 0xFFFF, qty, n, item, its = 0, nits = 0, c = 0, ni = 0, fc = 0, fi = 0, fn = 0, fm = 0;
     unsigned long v;
-    char t[16];
+    char t[16], pr[16], ps[6];
 
     strcpy (gd, cmd.obj.word);
     strcpy (wh, cmd.other.word);
@@ -58,7 +80,7 @@ static unsigned char trade (void)
     o = sell = 0;
     it = w = 0;
     if (h == SW_ENTERTAIN) {                    /* (The one entertained the thing said; the skill the verb said) */
-        word_at (cl, t);
+        word_at2 (cl, t);
         o = !strcmp (t, "sing") ? PF_SING : !strcmp (t, "play") ? PF_PLAY : !strcmp (t, "dance") ? PF_DANCE : PF_ANY;
         strcpy (wh, gd);
         r = 0;
@@ -123,6 +145,30 @@ static unsigned char trade (void)
         c = q->item;
         ni = q->qty;
     }
+    if (w < 16 && !sell) {                      /* (A price that may come under a penny, the character's farthings) */
+        q->to = 1;
+        q->sel = 0;
+        if (things (IO_FETCH, "farthings") == IR_OK) {
+            fc = q->item;
+            fn = q->qty ? q->qty : 1;
+        }
+    }
+    if (w < 16 && sell) {                       /* (Its farthings) */
+        q->to = 0x80;
+        q->x = 0;
+        strcpy (q->into, "farthings");
+        o = things (IO_GEAR, wh);
+        if (o == IR_NONE && wh[0]) {            /* (A name given is capitalised) */
+            wh[0] &= 0xDF;
+            o = things (IO_GEAR, wh);
+            wh[0] |= 0x20;
+        }
+        if (o == IR_OK) {
+            fi = q->item;
+            fm = q->qty ? q->qty : 1;
+        }
+        o = sell;
+    }
 ask:
     hub_map (0);
     memset (&S, 0, sizeof S);
@@ -137,13 +183,21 @@ ask:
     SW_NCOIN (&S) = ni;
     SW_ITS (&S) = its;
     SW_NITS (&S) = nits;
+    SW_FCOIN (&S) = fc;
+    SW_NFCOIN (&S) = fn;
+    SW_FITS (&S) = fi;
+    SW_NFITS (&S) = fm;
     hub_call (&S, T_DENIZENS);
     S.state = REQ_FREE;
     strcpy (nl, S.name[0] >= 'A' && S.name[0] <= 'Z' ? "" : "the ");    /* (Its name: "the dwarf", "Grub") */
     strcat (nl, S.name);
     strcpy (nm, nl);
     nm[0] &= 0xDF;                              /* ("The dwarf", "Grub" to start a sentence) */
-    n = S.ix;
+    n = S.ix & ~SW_FARTHINGS;
+    strcpy (pr, S.ix & SW_FARTHINGS ? (n == 1 ? "1 farthing" : n == 2 ? "2 farthings" : "3 farthings") : utoa (n, ps, 10));
+    if (!(S.ix & SW_FARTHINGS)) {
+        strcat (pr, n == 1 ? " penny" : " pennies");
+    }
     t[0] = 0;
     switch (S.result) {                         /* (Its words) */
     case SR_NONE:
@@ -156,9 +210,9 @@ ask:
                 "It's bored, and seems the less friendly." : "It isn't moved.");
             break;
         }
-        sayf ("\n%s%s%u penn%s for %s %s.", nm, h == SW_PRICE ? " asks " : h == SW_OFFER ? " would give you " :
+        sayf ("\n%s%s%s for %s %s.", nm, h == SW_PRICE ? " asks " : h == SW_OFFER ? " would give you " :
             h != SW_HAGGLE ? " agrees: " : S.grade == G_CS ? " gives way, and agrees: " : S.grade == G_MS ?
-            " gives a little, and agrees: " : " won't budge, but agrees: ", n, n == 1 ? "y" : "ies",
+            " gives a little, and agrees: " : " won't budge, but agrees: ", pr,
             h == SW_PRICE || !(S.iy & 1) ? "the" : "your", gd);
         break;
     case SR_FAR:
@@ -184,10 +238,10 @@ ask:
         sayf ("\n%s has no %s to sell.", nm, gd);
         break;
     case SR_POOR:
-        sayf ("\nYou haven't the money: %s asks %u penn%s.", nl, n, n == 1 ? "y" : "ies");
+        sayf ("\nYou haven't the money: %s asks %s.", nl, pr);
         break;
     case SR_BROKE:
-        sayf ("\n%s hasn't the money: it would give %u penn%s.", nm, n, n == 1 ? "y" : "ies");
+        sayf ("\n%s hasn't the money: it would give %s.", nm, pr);
         break;
     case SR_SPURNED:
         sayf ("\nYou haggle too hard: %s takes offence, and won't deal with you now.", nl);
@@ -202,6 +256,8 @@ ask:
     return 0;
 }
 #pragma bss-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (pop)
 
 /* "give the bandit 5 pennies", "offer the orc my dagger" (2026-11-02): no "to", the one given it the line's first word
 ** after the verb that isn't the thing's, a number or a little word */
@@ -230,7 +286,7 @@ unsigned char s_errand (void)
     char t[16];
 
     if (cmd.action == VB_TRADE) {
-        return trade ();                        /* (The market, entertaining: done here, 2026-11-02) */
+        return trade ();                        /* (The market, entertaining: part 15's, 2026-11-02) */
     }
     hub_map (0);
     HUB->sway.item = HUB->sway.ix = HUB->sway.iy = 0;

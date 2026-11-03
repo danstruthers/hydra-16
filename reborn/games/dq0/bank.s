@@ -90,7 +90,7 @@ ovl_out:
             OVFN        parts_in, 6
             OVFN        alias_said, 4
             OVFN        sway_words, 15
-            OVFN        dig_words, 1
+            OVFN        dig_words, 19
             OVFN        task_words, 3
             OVFN        beat_words, 16          ; (A walk's beats: task.c's, overlay 3's room, 2026-11-01)
             OVFN        stop_kind, 7
@@ -174,8 +174,10 @@ ovl_out:
             SWPART      17, 14              ; Looking one way, a close look (way.c: part 6's till 2026-11-01)
             SWPART      18, 18              ; A denizen's door's words (2026-11-02: overlay 3's room)
             SWPART      19, 15              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)
+            SWPART      20, 7               ; An ally's errands, gifts (errand.c: part 15's room, 2026-11-03)
 
-            SWFN        errand, 15
+            SWFN        errand, 20
+            SWFN        trade, 15
             SWFN        begin, 1
             SWFN        feed, 16            ; (Eating and drinking: feed.c, slice 4.9's)
             SWFN        size, 1

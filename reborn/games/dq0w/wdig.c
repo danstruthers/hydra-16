@@ -44,9 +44,10 @@ extern struct change rec;                       /* (store.c's) */
 static const unsigned char rk_hard[NRK] = RK_HARDNESS;
 static const unsigned char rk_quarters[4] = RK_QUARTERS;
 static const unsigned char pick[5] = RS_DIG_PICK, spade[5] = RS_DIG_SHOVEL;
-static const unsigned char claws[5] = { 2, 1, 0, 0, 4 };    /* (A burrower's claws, half-feet a spell (earth, stone,
+static const unsigned char claws[5] = { 2, 0, 0, 0, 4 };    /* (A burrower's claws, half-feet a spell (earth, stone,
                                                 **   masonry, flags, soil): two thirds of a shovel's in soil and
-                                                **   earth; the soft rock alone, half a foot: the house's) */
+                                                **   earth, the house's; no rock, shale too hard for them, the
+                                                **   user's, 2026-11-03: "Soft rock only") */
 
 static unsigned __fastcall__ apart (int ax, int ay)
 {
@@ -185,7 +186,7 @@ void __fastcall__ s_den_dig (const struct msg* m)
         rk = dig.rock;
         memcpy (&dig, &keep, sizeof dig);
     }
-    rate = (r1 & DG_CLAWS) && (mat != MAT_STONE || rk_hard[rk] == RH_SOFT) ? claws[mat] : 0;
+    rate = r1 & DG_CLAWS ? claws[mat] : 0;
     if ((r1 & DG_PICK) && pick[mat] > rate) {
         rate = pick[mat];
     }
