@@ -25,8 +25,10 @@
 static const struct { char key[8]; unsigned char rate[5], wear[5]; } digger[] = {   /* Earth, stone, masonry, flags,
                                                                                     **   soil */
     { "hands", { 0, 0, 0, 0, 1 }, { 0, 0, 0, 0, 0 } }, { "shovel", RS_DIG_SHOVEL, { 0, 0, 0, 0, 0 } },
-    { "spade", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } }, { "pick", RS_DIG_PICK, { 0, 1, 1, 1, 0 } },
-    { "mattock", { 3, 0, 0, 0, 6 }, { 0, 0, 0, 0, 0 } },
+    { "pick", RS_DIG_PICK, { 0, 1, 1, 1, 0 } },
+    { "chisel", { 0, 1, 1, 2, 0 }, { 0, 1, 1, 1, 0 } },   /* (Driven with a hammer, in both hands: the world's to
+                                                **   say, as a dig's begun, 2026-11-02.  A spade's and a mattock's rows, a shovel's rates,
+                                                **   as the catalogue has them: no such kinds yet, its room) */
     { "blade", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } }, { "dagger", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } },
     { "knife", { 1, 0, 0, 0, 2 }, { 40, 0, 0, 0, 40 } },
 };

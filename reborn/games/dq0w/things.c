@@ -325,7 +325,7 @@ unsigned char __fastcall__ s_on_pc (unsigned i)
     for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {         /* (Up to whoever has it) */
     }
     return j == rs_pack || (item_at (j)->where == IW_ACTOR && !item_at (j)->x);     /* (A pack off for a handling, at
-                                                **   its feet, its as ever: part 84's) */
+                                                **   its feet, its as ever: part 85's) */
 }
 
 /* Whether thing n can go in c (or on it: a surface; hung from it: a belt): 0, or the words why not (SA_*): the
@@ -437,7 +437,7 @@ void s_about (void)
         }
     }
     if (!pack) {
-        pack = rs_pack;                         /* (Off for this handling, part 84's: its pack still) */
+        pack = rs_pack;                         /* (Off for this handling, part 85's: its pack still) */
     }
 }
 
@@ -463,7 +463,7 @@ unsigned char __fastcall__ s_carry (unsigned n, unsigned char hand_first)
     h = hand_free (n);
     if ((!hand_first || !h) && pack && !fits (n, pack)) {
         if (reach_step (n, pack)) {
-            return 0;                           /* (A step of the reach first: part 84's) */
+            return 0;                           /* (A step of the reach first: part 85's) */
         }
         place (n, IW_ITEM, pack, 0);
         reach_to (pack);                        /* (Put away: its reach, HOUSE.md's: part 56's) */
@@ -547,7 +547,7 @@ void __fastcall__ s_reach_to (unsigned c)
         if (!(l = level_of (c))) {
             rbody = 1;
         } else if (rs_ok == 1 || rs_ok == 2) {
-            return;                             /* (Its levels the steps', part 84's) */
+            return;                             /* (Its levels the steps', part 85's) */
         } else if (l == 2) {
             if (roff != c) {                    /* (A pack on the back: off, reached into, on again, once) */
                 roff = c;
@@ -611,7 +611,7 @@ unsigned __fastcall__ s_reach_done (unsigned char said)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Parts 84, 85, 86 (2026-11-02, the user's: "when you have to take off your backpack to get something from it, it
+/* ==== Parts 85, 86, 87 (2026-11-02, the user's: "when you have to take off your backpack to get something from it, it
 ** should read "Taking off backpack", pause, "retrieving <item>", pause, then "putting your backpack back on".  Taking
 ** just as long as it might take when really doing it"; HOUSE.md's reach): a reach as a sequence of steps, each told as
 ** it begins, each its own time, each a grope engaged (a round; failed, the round wasted, the sequence over, the world
@@ -623,8 +623,8 @@ unsigned __fastcall__ s_reach_done (unsigned char said)
 ** the pack goes back on as the character's free (rs_after_on, lwork's: the world's own step).  An intent's
 ** tool the same by the world alone (reach_do with its keys: lw_m asked again).  The requests that don't ask for the
 ** steps (IO_STEPS: a blow's weapon, a denizen's) keep the lump, reach_done's */
-#pragma code-name (push, "SW84CODE")
-#pragma rodata-name (push, "SW84RODATA")
+#pragma code-name (push, "SW85CODE")
+#pragma rodata-name (push, "SW85RODATA")
 #pragma register-vars (push, on)
 
 unsigned rs_pack;                               /* (The pack off for this handling) */
@@ -642,6 +642,7 @@ unsigned char rs_after_on;                            /* (The pack to go back on
 unsigned char rs_live;                          /* (A step done, its handling asked again next) */
 unsigned char rs_using;                          /* (A fire-maker's: 1 out; 2 caught) */
 static unsigned char rs_do;                     /* (What the step's end does, RS_*) */
+#define rs_keys         iq.name                 /* (An intent's tool's keys, 20 bytes at most: the request's, none in hand as an intent's carried out) */
 #define rs_hand         last_sa                 /* (The pack's hand, 0 its feet: a handling's own byte, none as it's waited on) */
 #define rs_keep         lw_m.who                /* (The intent to ask again: its who, 0 as it came, the UI's) */
 enum { RS_OFF = 1, RS_IN, RS_ON, RS_DROP, RS_TRY, RS_OUT, RS_LIGHT, RS_STOW, RS_UP };
@@ -761,7 +762,7 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
         if (!d) {
             return 0;
         }
-        rs_tool = n;                            /* (A tool: got out, its tries if it's a fire-maker: part 86's) */
+        rs_tool = n;                            /* (A tool: got out, its tries if it's a fire-maker: part 87's) */
         if ((d = rs_for (d == (unsigned char) RS_FIRE ? RF_FIRE : RF_DRAW)) != 1) {
             return d;
         }
@@ -772,8 +773,8 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-#pragma code-name (push, "SW86CODE")
-#pragma rodata-name (push, "SW86RODATA")
+#pragma code-name (push, "SW87CODE")
+#pragma rodata-name (push, "SW87RODATA")
 #pragma static-locals (push, off)
 
 /* A flame to hand (IO_LIGHT's, the catalogue's bank's light): a thing lit, carried or within reach, 1; or a fire-maker
@@ -899,16 +900,16 @@ unsigned char __fastcall__ s_rs_for (unsigned n)
                 rs_paid = rs_using = 0;
                 rs_pack = 0;
             }
-            memcpy (yn, n == RF_PICKS ? "picks\0" : "pick\0shovel\0", 13);
+            memcpy (rs_keys, n == RF_PICKS ? "picks\0" : "pick\0shovel\0chisel\0", 20);
             hub_map (0);
             if (HUB->pc_lump) {
-                tool_reach (yn);                /* (dq0 -J's: its time owed the next spell) */
+                tool_reach (rs_keys);                /* (dq0 -J's: its time owed the next spell) */
                 reach_done (0);
                 return 0;
             }
             rs_ok = 2;
             rs_keep = 1;
-            f = tool_reach (yn);
+            f = tool_reach (rs_keys);
             rs_ok = 0;
             if (!f) {
                 rs_live = rs_keep = 0;
@@ -960,8 +961,8 @@ static void __fastcall__ name_of (unsigned n, unsigned char first);     /* (The 
 static unsigned char __fastcall__ no (unsigned char n);
 static unsigned char __fastcall__ yes (unsigned char n, unsigned char t);
 static unsigned char __fastcall__ hold (unsigned n);
-#pragma code-name (push, "SW85CODE")
-#pragma rodata-name (push, "SW85RODATA")
+#pragma code-name (push, "SW86CODE")
+#pragma rodata-name (push, "SW86RODATA")
 
 /* ---- A torch dipped (HOUSE.md's a torch redipped: the user's, 2026-11-02, "Fumbling about in the dark should be
 ** difficult ..."; part 27's fill, past its refusals, each ask; RO_REDIP, handled the torch): the next step of what comes
@@ -1545,7 +1546,7 @@ unsigned char s_serve (void)
     rclear10 ();                                /* (No reach owed yet) */
     hub_map (0);
     if (HUB->ireq.kind & IO_STEPS) {
-        reach_do (RO_ASK);                      /* (By the reach's steps, the UI's: part 85's) */
+        reach_do (RO_ASK);                      /* (By the reach's steps, the UI's: part 86's) */
     }
     memcpy (&iq, &HUB->ireq, sizeof iq);
     iq.result = IR_OK;
@@ -1593,7 +1594,7 @@ unsigned char s_serve (void)
         iq.result = fetch_find (iq.name);
         break;
     case IO_USE:                                /* (A thing used up by its key: a bandage, first aid's, part 70's; by the
-                                                **   steps, got out for its use, a tool's, part 84's: IR_NO a step first) */
+                                                **   steps, got out for its use, a tool's, part 85's: IR_NO a step first) */
         iq.result = rs_ok == 1 ? (tool_reach (iq.name) ? IR_NO : IR_OK) : rs_ok ? IR_OK : use_key (iq.name);
         break;
     case IO_WEAR:
@@ -1947,7 +1948,7 @@ unsigned __fastcall__ s_pick (const char* name, unsigned char how)
         px = p->x;
         py = p->y;
         if (ctop == rs_pack) {
-            pw = IW_ACTOR;                      /* (Off for a handling, at its feet: part 84's) */
+            pw = IW_ACTOR;                      /* (Off for a handling, at its feet: part 85's) */
             px = 0;
         }
         if (how == HW_IN) {
@@ -2310,7 +2311,7 @@ unsigned char __fastcall__ s_moved (unsigned char op)
         n = handled;
         kind = item_at (n)->kind;
         got += item_at (n)->qty;
-        rs_ok |= 4;                             /* (The rest by the lump, their levels paid: part 84's) */
+        rs_ok |= 4;                             /* (The rest by the lump, their levels paid: part 85's) */
         sa = last_sa;
         t += took;
         join (n);
@@ -2560,7 +2561,7 @@ unsigned char s_shut_work (void)
         reach_from (n);                         /* (Its reach, as it's begun: HOUSE.md's) */
     }
     fetch (&rec, n);
-    st = rec.where == IW_ITEM ? rec.x : 0;      /* (What it's in: reached into first, past the refusals: part 84's) */
+    st = rec.where == IW_ITEM ? rec.x : 0;      /* (What it's in: reached into first, past the refusals: part 85's) */
     k = kind_of (rec.kind);
     strcpy (nm, k->name);
     c = (k->keeps & KF_CLOSES) >> 5;
@@ -2664,7 +2665,7 @@ unsigned char s_shut_work (void)
     }
 done:
     if (!d && !lt && reach_step (0, st)) {
-        return IR_NO;                           /* (What it's in reached into first: part 84's) */
+        return IR_NO;                           /* (What it's in reached into first: part 85's) */
     }
     item_at (n)->shut = s;
     hub_map (0);
@@ -3990,7 +3991,7 @@ unsigned char s_fill (void)
         return IR_NO;
     }
     if (!(iq.to & IO_DONE)) {
-        if (takes & FU_PITCH) {                 /* (A torch dipped: what comes first, part 85's) */
+        if (takes & FU_PITCH) {                 /* (A torch dipped: what comes first, part 86's) */
             handled = n;
             if (reach_do (RO_REDIP) != IR_OK) {
                 return IR_NO;
@@ -4467,7 +4468,7 @@ static unsigned char __fastcall__ stow (unsigned n, unsigned char put)
         return no (r);
     }
     if (B (m2 (reach_step, n, c))) {
-        return IR_NO;                           /* (A step of the reach first: part 84's) */
+        return IR_NO;                           /* (A step of the reach first: part 85's) */
     }
     cf = KIND (c)->flags;
     r = KIND (c)->keeps;
@@ -4515,7 +4516,7 @@ static unsigned char take_from (void)
         return hold (n);
     }
     if (!(r = B (m2 (carry, n, 0)))) {
-        return rs_st ? IR_NO : no (SA_HANDS);   /* (A step of the reach first: part 84's) */
+        return rs_st ? IR_NO : no (SA_HANDS);   /* (A step of the reach first: part 85's) */
     }
     say (SA_TAKE);
     name_of (pack, 0);                          /* (carry's about's) */
@@ -4672,7 +4673,7 @@ spare:
             name_of (rs_tool, 0);               /* (Found empty as it's used: told, known from now on) */
             return no (SA_EMPTY);
         }
-        return IR_NO;                           /* (The fire-maker's steps first: part 84's) */
+        return IR_NO;                           /* (The fire-maker's steps first: part 85's) */
     }
     if (x && (m1 (reach_from, n), (r = hold (n)) != IR_OK)) {
         return r;                               /* (Out of the pack first, into a hand: its reach) */
@@ -5247,7 +5248,7 @@ unsigned char __fastcall__ s_hold_in (unsigned n, unsigned char want)
         return IR_NO;
     }
     if (reach_step (n, 0)) {
-        return IR_NO;                           /* (A step of the reach first: part 84's) */
+        return IR_NO;                           /* (A step of the reach first: part 85's) */
     }
     p = item_at (n);
     p->where = IW_ACTOR;

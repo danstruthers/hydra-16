@@ -153,7 +153,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
                                                 **   timed work stopped: its end dropped, words.c's) */
     }
     k = p;
-    if (k == TE_ASK_SHORT) {                    /* (A battering's: a bare part's blow that would hurt it stopped short
+    if (k == TE_ASK_SHORT && w >> 8 != LT_DIG) {  /* (A dig's nothing to show: its words its own, E_DIG's.  A battering's: a bare part's blow that would hurt it stopped short
                                                 **   of it, once a door; told, dq0 -a's too, then asked) */
         p = named >> 4 & 3;
         sayf ("\nYou %s ", p == SK_KICK ? "kick" : p == SK_HEAD ? "butt" : "punch");

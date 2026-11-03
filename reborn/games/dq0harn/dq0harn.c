@@ -250,6 +250,9 @@ static void __fastcall__ dig_of (struct req* r)
         r->w2 = 0;
         return;
     }
+    if (r->steps == RS_DIG_QUERY) {
+        return;
+    }
     r->grade = DIG_TESTED (m) ? test (&pc, r->a, r->steps) : G_MS;
     r->w1 = r->grade == G_CS ? 2 * k : r->grade == G_MS ? k : r->grade == G_MF ? k / 2 : 0;
 }

@@ -29,9 +29,9 @@ static unsigned char pend;                      /* A ring taken while it waited 
 #pragma rodata-name (push, "SW19RODATA")
 int s_find_banks (void)
 #else
-#ifdef HUB_ATTACH_SW3                           /* (The world's: part 87's, with hub_attach, its start-up's) */
-#pragma code-name (push, "SW87CODE")
-#pragma rodata-name (push, "SW87RODATA")
+#ifdef HUB_ATTACH_SW3                           /* (The world's: part 88's, with hub_attach, its start-up's) */
+#pragma code-name (push, "SW88CODE")
+#pragma rodata-name (push, "SW88RODATA")
 #endif
 static int find_banks (void)
 #endif
@@ -129,8 +129,8 @@ int __fastcall__ hub_create (unsigned char banks)
 
 #ifdef HUB_ATTACHED                             /* (The UI's room: what it never does left out, here and below) */
 #ifdef HUB_ATTACH_SW3
-#pragma code-name (push, "SW87CODE")            /* (The world's: its start-up's, the main RAM's room) */
-#pragma rodata-name (push, "SW87RODATA")
+#pragma code-name (push, "SW88CODE")            /* (The world's: its start-up's, the main RAM's room) */
+#pragma rodata-name (push, "SW88RODATA")
 int __fastcall__ s_hub_attach (unsigned char s, unsigned char me)
 #else
 int __fastcall__ hub_attach (unsigned char s, unsigned char me)

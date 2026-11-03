@@ -2143,7 +2143,7 @@ function dq0Check(name, m) {
 // entry a step, the store's taking 24 in a part's swap; 1,800,000 since 2026-10-29: the sound layer's pulse, once a
 // denizens' turn after a step, and the denizens' senses' own part, slices 4.5 and 4.6); 1,900,000 since 2026-10-31
 // (1,863,195: the minds' steps looking at each square's chunk for its bad air, a swimmer's too, the giant rats')
-const TRACE_STEP = 1910000;
+const TRACE_STEP = 1950000;   // (1910000 till 2026-11-02: its measure a few thousand either way by the tasks' timing; part 14's some 30 bytes more, digs told why)
 
 // What a dq0 test's lines did, by their meaning (Phase 3A: tests cut to meaning, not words): sim/lib/dq0meaning.js's
 // record (m.dq0, in every dq0 test: the world's events, the denizens', the requests' replies, the state each line
@@ -2273,9 +2273,16 @@ function dq0Vein(seed, x, y) {
 // evaluate), as the headers stand.  A test's scene poked through it (a door broken down, left open: dq0builder, dq0mine)
 let dq0PortalOff = null;
 function dq0Portal(m, sn, x, y) {
-  const S = stratumRec(m, sn), banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
-  const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51), w = hub === undefined ? null : banks[hub + WORLD_BANK_N];
-  if (!S || !w) return null;
+  const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b), h0 = m.dq0.bank(0);
+  // (This game's hub, not an earlier game's left in its banks: its bank the recorder's)
+  const hub = keys.find(k => banks[k] === h0 || (banks[k].buffer === h0.buffer && banks[k].byteOffset === h0.byteOffset)), w = hub === undefined ? null : banks[hub + WORLD_BANK_N];
+  if (!w) return null;
+  let S = null;
+  for (let i = 0; i < 8 && !S; i++) {
+    const r = w.subarray(i * 79, i * 79 + 79), u16 = k => r[k] | r[k + 1] << 8;
+    if (r[0] && r[1] === sn) S = { x0: u16(11), y0: u16(13) };
+  }
+  if (!S) return null;
   const [PORTAL, PSIZE, PSTATE, NPORT, PKIND] = dq0PortalOff || (dq0PortalOff = require('../sim/lib/hubown.js').evaluate([
     'offsetof (struct chunk, portal)', 'sizeof (struct portal)', 'offsetof (struct portal, state)', 'offsetof (struct chunk, nportals)',
     'offsetof (struct portal, kind)']));
@@ -4088,6 +4095,74 @@ module.exports = {
         const fin = T.of('quit').at, me = fin && fin.actors.find(a => a.k === m.tun.k);
         if (!me || (me.x === m.tun.beyond[0] && me.y === m.tun.beyond[1])) f.push('the dwarf never came on from beyond the door: ' + JSON.stringify(me));
         if (f.length) f.push(JSON.stringify(dens.filter(e => e.a).map(e => [e.a, e.w1, e.w2, e.t])) + ' ' + s.slice(s.indexOf('> close the door'), s.indexOf('> close the door') + 1500));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0nodig', outfit: true, meaning: true, near: ['map', 'gear'], what: "Dingus Quest Zero's digs told why (the user's playtest, 2026-11-02, DECISIONS.md; HOUSE.md's digging, for review), by poked scenes at seed 374's cell, a closed door to the east of the start (the character by a stairway, facing south).  A hidden door (its portal's state poked in the chunks' cache, PS_HIDDEN, as its first look's typed): the dig takes it for a wall.  With no tool that bites (a knife; then none): told at once, no time spent, by what it carries (E_DIG D_NO_TOOL; 'Your knife only scratches', 'You need better tools'), the door still hidden, no refusal saying there's nothing to dig.  A chisel alone: 'You'd need a hammer to drive the chisel.'  A pick: begun as a wall's two feet, and a spell or so on the facing's off, the door found (D_FOUND: 'strikes wood', its PORTAL_STATE record no longer hidden), seen in the look after.  A hammer and a chisel: the wall west of the start worked at slowly, a stone's half foot a spell (D_GOOD or D_POOR, or asked).  A door in sight: D_PORTAL 'That's a door'; a portcullis (seed 1's guardroom, dq0tunnel's) 'Those are iron bars'.  A door hidden by magic: a pick makes no mark, and after two spells with nothing to show it's asked, soft ('This isn't getting anywhere'), no door told",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 374 -c /ram/c.hm -T', 'look', 'dig east', 'drop the knife', 'dig east', 'quit',
+        'dq0 -p t -s 374 -c /ram/c.hm -k chisel -T', 'look', 'dig east', 'quit',
+        'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'wait', 'dig east', 'look', 'dig east', 'quit',
+        'dq0 -p t -s 374 -c /ram/c.hm -k chisel,hammer -T', 'dig north', 'quit',
+        'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'dig east', 'quit',
+        'mkdir /ram/g', "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -k pick -T -d /ram/g -R 7',
+        'open the door', 'south', 'turn around', 'close the door', 'dig north', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 5, line: 'dig east', n: 1, words: 'anywhere', text: 'stop\r' }]);   // (Typed as it's told)
+        const a = m.acia, read = a.read;
+        let typed = '', g = 0;
+        m.door = {};
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (/^dq0 /.test(typed)) ++g;
+              if (typed === 'look' && m.dq0 && !m.door[g]) {   // (The door east of the start hidden, by magic in the last game)
+                const { L } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
+                const x = u16(L.pcX) + 1, y = u16(L.pcY), p = dq0Portal(m, h[L.pcSn], x, y);
+                if (p) { p.b[p.state] = g === 5 ? 0x60 : 0x20; m.door[g] = { x, y, sn: h[L.pcSn] }; }
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), digs = T.filter(t => /^dig /.test(t.line));
+        if ([1, 2, 3, 5].some(g => !m.door[g])) return ['the scenes not set: ' + JSON.stringify(m.door)];
+        const looks = T.filter(t => t.line === 'look');
+        const [d1, d2, d3, d4, d5, d6, d7] = digs;   // (Knife, hands; chisel; pick, the door found, then a door in sight; chisel and hammer; magic)
+        const t0 = t => t.at && t.after ? t.after.now - t.at.now : -1;
+        dq0Need(f, d1, 'E_DIG', { how: 'D_NO_TOOL' }, 'a knife on the wall not refused');
+        dq0Need(f, d2, 'E_DIG', { how: 'D_NO_TOOL' }, 'bare hands on stone not refused');
+        dq0Need(f, d3, 'E_DIG', { how: 'D_NO_TOOL' }, 'a chisel with no hammer not refused');
+        for (const d of [d1, d2, d3]) {
+          dq0Never(f, d, 'E_NOWAY', {}, 'a refusal (nothing there to dig) telling the wall a door');
+          if (dq0Ev(d, 'E_DIG', { how: 'D_BEGUN' }).length) f.push('a spell begun with no tool that bites: ' + d.line);
+        }
+        if (!/Your knife only scratches at the/.test(s)) f.push('no knife\'s words');
+        if (!/You need better tools: your hands make no mark on the/.test(s)) f.push('no hands\' words');
+        if (!/You'd need a hammer to drive the chisel./.test(s)) f.push('no chisel\'s words');
+        dq0Need(f, d4, 'E_DIG', { how: 'D_BEGUN' }, 'the seeming wall not dug at');
+        dq0Need(f, d4, 'E_DIG', { how: 'D_FOUND' }, 'the hidden door not found by the pick');
+        if (!/Your pick strikes [a-z ,-]*: a door, behind the facing/.test(s)) f.push('no door found told');
+        const rec = T.of('quit', d5.k).at && T.of('quit', d5.k).at.changes.find(c => c.what === 'PORTAL_STATE' && c.x === m.door[3].x && c.y === m.door[3].y);
+        if (!rec || rec.tile & 0x20) f.push('the door still hidden after: ' + JSON.stringify(rec));
+        else if (!(rec.elev & 0x80)) f.push('the door found not marked handled as a search finds it (PP_KNOWN): ' + JSON.stringify(rec));
+        dq0Need(f, d5, 'E_DIG', { how: 'D_PORTAL' }, 'a door in sight not told so');
+        if (!/That's a door: open it/.test(s)) f.push('no door\'s words');
+        if (!dq0Ev(d6, 'E_DIG', { how: h => h === 'D_GOOD' || h === 'D_POOR' || h === 'D_SLIP' || h === 'D_THROUGH' }).length) f.push('a hammer and chisel not at work on the wall: ' + dq0Evs(d6));
+        if (dq0Ev(d7, 'E_DIG', { how: 'D_FOUND' }).length) f.push('a door hidden by magic found by digging');
+        if (!/This isn't getting anywhere/.test(s)) f.push('nothing told after two spells with nothing to show');
+        dq0Need(f, T.of('dig north', d7.k), 'E_DIG', { how: 'D_PORTAL' }, 'a portcullis not told so');
+        if (!/Those are iron bars/.test(s)) f.push("no bars' words");
+        dq0Need(f, d7, 'E_TASK', { te: 'TE_ASK_SHORT', task: 'LT_DIG' }, 'the hopeless dig not asked about');
+        if (f.length) f.push(JSON.stringify(dq0Ev(d7, 'E_TASK').map(e => e.te + ' ' + e.task)), s.slice(s.indexOf('-k pick'), s.indexOf('-k pick') + 2600));
         return f;
       },
       sdcard: true

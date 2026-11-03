@@ -164,7 +164,7 @@ go:
             SWPART      67, 20              ; The character's shot, the denizens' shots and throws (wshoot.c)
             SWPART      68, 20              ; Where a missile falls, a miss's stray; a launcher loaded (wshoot.c)
             SWPART      69, 26               ; A robbery (wfight.c's: part 67's room, overlay 5's, 2026-10-30; 12's room, 2026-11-02)
-            SWPART      70, 22              ; Wounds over time: the bodies' time told, a thing used up (wtend.c; overlay 21's room, slice 4.4)
+            SWPART      70, 25              ; Wounds over time: the bodies' time told, a thing used up (wtend.c; overlay 21's room, slice 4.4)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
             SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
             SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
@@ -179,10 +179,11 @@ go:
             SWPART      81, 2               ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
             SWPART      82, 25              ; A room searched whole (wroom.inc: the user's playtest, 2026-11-02)
             SWPART      83, 25              ; Its tests at a stop (wroom.c)
-            SWPART      84, 26              ; The reach's steps (things.c's, 2026-11-02: HOUSE.md's reach)
-            SWPART      85, 26              ; Their other half
-            SWPART      86, 26              ; And the hand the pack goes in, a tool's use, the words
-            SWPART      87, 26              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
+            SWPART      84, 22              ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
+            SWPART      85, 26              ; The reach's steps (things.c's, 2026-11-02: HOUSE.md's reach)
+            SWPART      86, 26              ; Their other half
+            SWPART      87, 26              ; And the hand the pack goes in, a tool's use, the words
+            SWPART      88, 26              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -209,6 +210,7 @@ go:
             SWFN        den_legs, 51
             SWFN        den_other, 51
             SWFN        den_dig, 79         ; (A tunneller's dig: slice 4.11's)
+            SWFN        pc_dig, 84          ; (The character's dig's own: wdig.c)
             SWFN        den_more, 80        ; (One path: Phase 3C's)
             SWFN        door_key, 80
             SWFN        old_mint, 51
@@ -282,13 +284,13 @@ go:
             SWFN        reach_from, 56      ; (The reach, 2026-10-26: HOUSE.md's)
             SWFN        reach_to, 56
             SWFN        reach_done, 56
-            SWFN        reach_step, 84      ; (The reach's steps, 2026-11-02)
-            SWFN        reach_do, 85
-            SWFN        rs_for, 86
-            SWFN        hub_attach, 87
+            SWFN        reach_step, 85      ; (The reach's steps, 2026-11-02)
+            SWFN        reach_do, 86
+            SWFN        rs_for, 87
+            SWFN        hub_attach, 88
             SWFN        handy, 56
             SWFN        tool_reach, 72
-            SWFN        flame, 86
+            SWFN        flame, 87
             SWFN        drop, 35
             SWFN        throw_at, 4
             SWFN        list, 11

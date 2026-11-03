@@ -1907,15 +1907,25 @@ dice 100:29
 ask TEST a=P_DIG b=MAT_MASONRY
 want w1=2 w2=1 text="pick"
 
-case a chisel or a mattock in masonry: neither bites (a pick's alone); a mattock in earth: a foot and a half (3), untested
+case a shovel in masonry: it doesn't bite (a pick's, a chisel's); in earth: a foot and a half (3), untested
 dice
-ask EQUIP a=2 text=" chisel4 mattock4"
+ask EQUIP a=2 text=" shovel4"
 dice
 ask TEST a=P_DIG b=MAT_MASONRY
 want result=1
 dice
 ask TEST a=P_DIG b=MAT_EARTH
-want grade=G_MS w1=3 w2=0 text="mattock"
+want grade=G_MS w1=3 w2=0 text="shovel"
+
+case a chisel in masonry, asked only (RS_DIG_QUERY: no dice, its hammer the world's to say): it bites; in soil it doesn't
+dice
+ask EQUIP a=2 text=" chisel4"
+dice
+ask TEST a=P_DIG b=MAT_MASONRY steps=127
+want result=0 text="chisel"
+dice
+ask TEST a=P_DIG b=MAT_SOIL
+want text="hands"
 
 case a blade: half a foot of hard-packed earth (1), a foot of soil (2), better than her hands, and it dulls
 dice

@@ -145,17 +145,45 @@ plays them as HarnMaster's referee does.
 The book has no digging rules.  A spell of work is ten minutes, with the tool to hand that suits the material best
 (bare hands if none does better; of two as good, the one it wears less).  Earth, soft soil or hard-packed, is dug at
 the tool's rate, no test: hard-packed earth half as far as soft soil, and never with bare hands ("you make no
-progress").  Anything harder (a floor's flags, masonry, stone) only a pick bites into, and each spell is a Mining
+progress").  Anything harder (a floor's flags, masonry, stone) only a pick bites into, or a chisel and a hammer, and each spell is a Mining
 test: the rate at a marginal success, twice at a critical, half at a marginal failure, nothing at a critical
 failure.  Feet a spell (kept in half-feet), and the wear a spell does the tool:
 
-| Tool             | Soil | Hard-packed earth | Flags | Stone | Masonry | Wear (each)            |
-|------------------|------|-------------------|-------|-------|---------|------------------------|
-| bare hands       | ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½    | -                 | -     | -     | -       | -                      |
-| a blade, a knife | 1    | ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½                 | -     | -     | -       | soil, earth 40 (it dulls) |
+| Tool             | Soil | Hard-packed earth | Flags | Stone | Masonry | Wear (each)             |
+|------------------|------|-------------------|-------|-------|---------|-------------------------|
+| bare hands       | 1/2  | none              | none  | none  | none    | none                    |
+| a blade, a knife | 1    | 1/2               | none  | none  | none    | soil, earth 40          |
 | pick             | 2    | 1                 | 3     | 2     | 1       | flags, stone, masonry 1 |
-| shovel, spade    | 3    | 1ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½                | -     | -     | -       | none                   |
-| mattock          | 3    | 1ÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂÃÂ½                | -     | -     | -       | none                   |
+| shovel           | 3    | 1 1/2             | none  | none  | none    | none                    |
+| chisel, a hammer in the other hand | none | none | 1 | 1/2 | 1/2 | flags, stone, masonry 1 (the chisel) |
+
+(A spade's and a mattock's rows, a shovel's, were in the table with no such kinds in the catalogue: taken out for the
+referee's room, 2026-11-02; back as the kinds come.)
+
+- **A chisel and a hammer** *(the house's, 2026-11-02, for review)*: a chisel works stone, masonry and flags slowly,
+  a Mining test each spell as a pick's; it takes a hammer in the other hand (carried, the referee's table asks): none,
+  it's no tool ("You'd need a hammer to drive the chisel."); an arm useless, the same ("A chisel and a
+  hammer take both hands.").  A pick to hand is the better tool and is taken.  A marginal failure with one makes nothing
+  (half of its half a foot), so a poor miner's chisel soon comes to the question below.  The denizens' tools stay a
+  pick and a shovel.
+- **Told why** *(the house's, 2026-11-02, for review; the user's playtest, DECISIONS.md)*: a dig nothing it carries bites
+  into is told at once, no spell spent, by what it can judge: its hands ("You need better tools: your hands make no
+  mark on the stone."), a blade ("Your dagger only scratches at the masonry: this isn't getting anywhere."), a shovel the same,
+  a chisel alone.  A try that's slow says so with its feet
+  to go, each spell, as ever.  **Two spells running with nothing to show** (a poor digger's failures): asked, soft ("This
+  isn't getting anywhere.  Keep at it?"), once a dig, as a long task's question; yes goes on.  (Each actor's rule stays the
+  character's; only the character is told words: a denizen gives up as before.)
+- **What isn't there to dig** *(the house's, 2026-11-02, for review)*: a door in sight ("That's a door: open it,
+  or break it down."), a window or a slit ("That's a window: there's no digging it."), a portcullis, a gate, a grate ("Those are
+  iron bars: they won't dig."), no time spent; open floor as before ("There's nothing there to dig ...").  A wall beside a door is a wall.
+- **A hidden door** *(the house's, 2026-11-02, for review; the user's playtest)*: it's dug at as the wall it seems, by its
+  wall's stuff and two feet told, with the same refusal if nothing bites: nothing about the dig shows it till the tool's
+  at it.  As the tool comes through the facing (half a foot for a wooden door, a foot for an iron-bound one, two for
+  iron or stone) it's found, a find as a search's (handled from then on, as a search's find is marked), the door still whole, its lock as it was ("Your pick strikes wood:
+  a door, behind the facing."); the dig stops there.  The chunk's change record the door's own state.  One hidden
+  by magic turns any tool: no mark, no door told, and the question after two spells (found only by magical means, as
+  a search's).  "examine the wall" takes it for a wall too.  (There's no other hidden thing in the walls: a secret panel
+  is a hidden door; portcullises and windows are never hidden.)
 
 Each spell is strenuous work: two fatigue levels at HarnMaster's rate (Moving and tiring, above), so a long dig wants
 rests between its spells.
