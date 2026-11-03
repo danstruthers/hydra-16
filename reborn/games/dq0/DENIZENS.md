@@ -589,7 +589,7 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   hear a scraping in rock ahead to your left."), its spells after (DE_DIGS: the denizens hear them, the player's not
   told again), the way through (DE_DUG at the square dug: seen as it was, "A fresh tunnel opens ahead.  Spoil lies
   heaped by it."; heard, "You hear rock falling ..."); the rock carrying a pick's knock where the air doesn't.
-- **At its work** (2026-11-02, slice 4.11's rest: dq0d.c's work_dig, part 12's, asked by the day's, part 9's target
+- **At its work** (2026-11-02, slice 4.11's rest: dq0d.c's work_dig, part 15's, asked by the day's, part 9's target
   and part 10's daily, as its work's hours come: never polled): a miner digs its faction's mine (from its lair's home
   across to its region's vein, rock.h's rock_vein, then along it), a burrower its lair's burrow (one of the four ways
   from its home, eight squares, as far as its claws bite); the way worked out each time from the dungeon as it is (no
