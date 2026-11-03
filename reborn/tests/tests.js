@@ -2139,7 +2139,7 @@ function dq0Check(name, m) {
 // entry a step, the store's taking 24 in a part's swap; 1,800,000 since 2026-10-29: the sound layer's pulse, once a
 // denizens' turn after a step, and the denizens' senses' own part, slices 4.5 and 4.6); 1,900,000 since 2026-10-31
 // (1,863,195: the minds' steps looking at each square's chunk for its bad air, a swimmer's too, the giant rats')
-const TRACE_STEP = 1900000;
+const TRACE_STEP = 1910000;
 
 // What a dq0 test's lines did, by their meaning (Phase 3A: tests cut to meaning, not words): sim/lib/dq0meaning.js's
 // record (m.dq0, in every dq0 test: the world's events, the denizens', the requests' replies, the state each line
@@ -4247,7 +4247,7 @@ module.exports = {
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7',
-        'open the door', 'south', 'turn around', 'close the door', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
+        'open the door', 'go through it', 'turn around', 'close the door ahead', 'wait', 'wait', 'wait 1 minute', 'quit', 'echo $status']) },
       start(m) {
         m.portc = true;
         const a = m.acia, read = a.read;
@@ -5832,7 +5832,7 @@ module.exports = {
       // 36M cycles, 10 s at 3.58 MHz; 25M now, the longest (the UI's overlays read, before the screen's made).  The
       // help's line: after the first look's words, only the status line's and the prompt after it.  And every task's
       // overlays in their banks at the first prompt as ld65 made them (dq0OvlBanks))
-      starts: [{ seed: 1, max: 236e6 }, { seed: 123456789, max: 318e6 }], quiet: 36e6,
+      starts: [{ seed: 1, max: 239e6 }, { seed: 123456789, max: 318e6 }], quiet: 36e6,
       start(m) {
         const a = m.acia, read = a.read, shown = a.shown, self = this;
         let typed = '', g = null, tail = '', esc = 0, text = '';

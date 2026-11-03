@@ -52,6 +52,7 @@ static unsigned char __fastcall__ zone_index (unsigned char x, unsigned char y)
 static unsigned char mx_[SEE_DOORS] = { 0 }, my_[SEE_DOORS] = { 0 };     /* (The mouths' squares, as they're counted) */
 static unsigned char e_ = 0;                    /* (The next door[]: those seen, ndoors of them, then those remembered) */
 static unsigned char kn_ = 0;                   /* (The rel's KNOWN_REL, as it's those remembered) */
+static unsigned char some_ = 0;                 /* (A door or an opening only remembered, this look's first pass) */
 static unsigned char mine_ = 0;                 /* (The door's bar's side the character's: its wall's, or its passage's) */
 static int fzz = 0;                             /* (door_add's: its height, the chunk's first square in the frame, its */
 static unsigned fox = 0, foy = 0;               /*   square, its facing) */
@@ -150,7 +151,11 @@ static unsigned char __fastcall__ touch (unsigned char rel)
 /* Tile t as this pass goes: those it sees, then those it only remembers */
 static unsigned char __fastcall__ shown (unsigned char t)
 {
-    return kn_ ? (t & (T_VIS | T_SEEN)) == T_SEEN : t & T_VIS;
+    if (kn_) {
+        return (t & (T_VIS | T_SEEN)) == T_SEEN;
+    }
+    some_ |= t & T_SEEN;
+    return t & T_VIS;
 }
 
 /* The door[] e_ (and on to the next) filled in, of the chunk's square (i, j), q its portal: as it's seen or remembered
@@ -327,7 +332,7 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
             }
         }
     }
-    e_ = kn_ = 0;                               /* (The part's own: after part 6's zones_seen, its image copied back) */
+    some_ = e_ = kn_ = 0;                       /* (The part's own: after part 6's zones_seen, its image copied back) */
     fzz = myz;
     fox = x - lx;
     foy = y - ly;
@@ -375,6 +380,9 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
             }
             S.ndoors = e_;
             S.nopen = r;
+            if (!some_) {
+                break;                          /* (None to look for: the look the quicker) */
+            }
             kn_ = KNOWN_REL;
         }
     } else {
