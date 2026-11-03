@@ -176,7 +176,7 @@ go:
                                             ;   2026-10-31, its room the walk's)
             SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
             SWPART      80, 24              ; One path: a denizen's doors, the doors' keys (wport.c: Phase 3C's)
-            SWPART      81, 12              ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
+            SWPART      81, 27              ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
             SWPART      82, 25              ; A room searched whole (wroom.inc: the user's playtest, 2026-11-02)
             SWPART      83, 25              ; Its tests at a stop (wroom.c)
             SWPART      84, 5              ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)

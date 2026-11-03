@@ -610,7 +610,7 @@ void __fastcall__ o_felt_words (unsigned w)
         k = (k + sk) & 7;
         if (b >> 4) {
             sayf ("\nYou %s %s into the dark.", gait[g], head_name[k]);
-        } else {
+        } else if (reach != 2) {                /* (Its command again, walked over first: told as the walk began) */
             sayf ("\nYou feel your way %s.", head_name[k]);
         }
         return;
