@@ -145,7 +145,12 @@ unsigned char __fastcall__ o_puzzle (struct cmd* c)
 
     if (v == VB_READ_OBJECT) {
         if (!c->obj.word[0]) {
-            msg ("Read what?");
+            msg (c->obj.kind ? "There's nothing written on it." : "Read what?");
+            return Q_TOLD;
+        }
+        hub_mem (SIGHT_BANK, &t, &SIGHT->dark, 1);
+        if (t) {
+            msg ("You can't see to read.");     /* (In the dark, or blind: none of it, of anything) */
             return Q_TOLD;
         }
         t = TR_READ;
@@ -170,6 +175,10 @@ unsigned char __fastcall__ o_puzzle (struct cmd* c)
             return Q_TOLD;
         }
         return Q_NONE;
+    }
+    if (t == TR_READ && c->obj.word[0] && othings (IO_LOOK, c->obj.word, "", LM_COND) == IR_NOT_HERE) {
+        reach_go ();                            /* (Out of reach: walked over to first, then again, as any inspecting) */
+        return Q_TOLD;
     }
     r = othings (IO_PUZZLE, c->obj.word, c->other.word, t);
     if (lb[0]) {

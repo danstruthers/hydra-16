@@ -777,7 +777,11 @@ climb's test to hold on).
   the light now (a thing it has looked at, on a square it knows).  Of several of the name, asked which ("the closest"
   chooses).  It stops beside it (facing it) by the ordinary walk: its stops, engagement and traps as ever.  Within
   reach already, told where it is.  "You haven't seen a pot here." only for what it hasn't.  A denizen's zone doesn't
-  stop a walk up to the one gone to (a close-in's); others' do.
+  stop a walk up to the one gone to (a close-in's); others' do.  Told as it starts ("You go over to the pot.", "You head
+  for the door.": the user's D17).  "Go to the pit", "go to the trap": the nearest trap it knows of in the chunk it's in,
+  whatever its kind ("You go over to the trap."; "It's beside you."; else "You haven't seen a trap here.").  "Go to the
+  ledge": straight at the part of the room the look told, till its ledge stops it ("You haven't seen a ledge here." with
+  none told).  A walk that has got as near as it can ends there, untold; only a walk that couldn't start is refused.
 - **Crossing** *(the user's, 2026-11-02)*: "cross the room", "go across the hall", "cross the floor", "cross the
   kitchen": the far side by its facing (the going places' far side); in the dark, straight on, as any place in a room
   it can't see is.
@@ -801,8 +805,8 @@ climb's test to hold on).
   "on the left"), of several the question or the one directly ahead; none on that side, "You haven't seen a door that
   way."  "A door" is a door before a portcullis (the look's words), a portcullis only if it sees no door.
 - **A walk over for a command** *(the user's, 2026-11-02; as built, for review)*: take, hold, wear, put, light, examine
-  and the aspects, a blow's close-in, gathering: the walk's own words ("You go over to it."), what's new since the
-  command began (a thing just come into the light, a denizen new in sight), a beat, then the command's outcome.  No look
+  read, and the aspects, a blow's close-in, gathering: the walk told as it starts, at once ("You go over to the pot.",
+  "You head for the door.": the user's D17, a command answers at once), what's new since the command began (a thing just come into the light, a denizen new in sight), a beat, then the command's outcome.  No look
   on arrival, no "at your feet" for what it came for.  Stopped short (engaged, a trap), why, and the command dropped.  A
   plain "go to the pot" keeps its look.
 - **A door's state as it's plain** *(the user's, 2026-11-02; as built, for review)*: the look, "which door?" and a look
@@ -1222,8 +1226,12 @@ are drafts, the user's as they are for now (2026-10-22).
   nothing to your right."  Touch within arm's reach, ahead and to each side (a wall, a door, iron bars); "nothing" only
   means nothing within reach, never a way.  Underfoot what its feet have felt ("The way rises."), as it walks.  No name
   for the place, no ways told, no slope ahead: "The way turns left.", not "The passage turns left."; a straight stretch
-  quiet but for "You feel your way on."  Where it has been before and hasn't forgotten, memory adds: "This should be the
-  kitchen.", "You've been along this passage."  A blind character the same.
+  quiet but for "You feel your way on.", but what changes either side as it goes (its hands on the wall as it walks, a
+  beat, WB_SIDES): "The wall to your left ends.", "A wall begins to your right.", "You feel a door to your left."  Where
+  it has been before and hasn't forgotten, memory adds: "This should be the kitchen.", "You've been along this
+  passage."  A blind character the same, "You can't see." for "It is dark."
+- **Nothing's read in the dark** *(2026-11-02; as built, for review)*: "You can't see to read.", in the dark or blind,
+  a tablet's cut letters too (for now), before any walk over.
 - **In the dark** is where the character sees nothing by: its own square unseen (no light of its own, no room's own
   light, no lamp lying near lighting it), or blind (the referee's summary, C_BLINDED: the one place a blindness, however
   it comes, will take it).  (dq0w.c's dark.)

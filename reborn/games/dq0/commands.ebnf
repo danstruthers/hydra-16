@@ -255,7 +255,7 @@
 (* ---- Movement, climbing and digging (added 2026-10-19: the gaps the probes found) ---- *)
 <enter>          ::= "enter" [ <object> ]
 <leave>          ::= <LEAVE> [ <object> | <direction> ]
-<LEAVE>          ::= "exit" | "go" "out"
+<LEAVE>          ::= "exit" | "go" "out" | "go" "outside"
 <climb>          ::= <CLIMB> [ <direction> ] [ <object> ] | <CLIMB> ( "over" | "onto" | "into" | "through" ) <object>
 <CLIMB>          ::= "climb"
 <dig>            ::= <DIG> [ <direction> | "for" <object> | <object> ] [ <USING> <object> ]   (* "dig down", "dig the wall",

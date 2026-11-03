@@ -337,6 +337,8 @@ enter the room	VB_ENTER	object=room	near=room	enter a place
 enter	VB_ENTER	-	-	enter with no place named
 exit north	VB_LEAVE	direction=N	-	exit by a direction
 leave	VB_LEAVE	-	-	leave, no place
+go outside	VB_LEAVE	-	-	leave in plain words
+go out	VB_LEAVE	-	-	leave in plain words
 leave the room	VB_LEAVE	object=room	near=room	leave a place
 climb the wall	VB_CLIMB	object=wall	near=wall	climb an object
 climb up the rope	VB_CLIMB	direction=U;object=rope	near=rope	climb a direction and an object

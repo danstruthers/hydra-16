@@ -78,7 +78,7 @@ const rules = [
   ['reborn/sim/tools/hydrapc.js', ['pc']],
   ['reborn/sim/tools/hysong.js', ['sound', 'word:hysong']],
   [/^reborn\/sim\/tools\/(numref|numfmt|numxcheck)\.js$/, ['numbers', 'basic', 'forth', 'hylang', 'c']],
-  [/^reborn\/sim\/tools\/(command\w*\.js|cmdmatch\/)/, ['dq0']],   // (the parser's tables: dq0c's, dq0w's make.js)
+  [/^reborn\/sim\/tools\/(command[\w-]*\.js|cmdmatch\/)/, ['dq0']],   // (the parser's tables: dq0c's, dq0w's make.js)
   [/^reborn\/sim\/tools\/(soak|sdwrite|nprof)\.js$/, ['none']],    // (the soaks: a tier's own; the card writer)
   ['reborn/sim/tiers.js', ['none']],                         // (The tiers' steps: --tier's, no test's)
   ['reborn/sim/dl/', ['dl']],                                 // (--dl's: every test then)

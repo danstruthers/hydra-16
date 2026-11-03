@@ -866,8 +866,8 @@ unsigned char reach;                            /* (1: walking over, the command
                                                 **   work under way, words.c's, the command kept the same, 4: carried
                                                 **   out again, its end; 6: walking over for a command the world carries
                                                 **   out as it gets there: a thing taken, a blow) */
-static unsigned char placing;                   /* (A place in the room walked to: place_go's, its arrival not "over
-                                                **   to it") */
+unsigned char placing;                          /* (A place in the room walked to: place_go's, or a walk told as it began,
+                                                **   walk_says': its arrival not "over to it") */
 unsigned char untarget;                         /* (The target let go at the next command: resolve.c's) */
 
 /* The heading the character believes h is (the hub's pc_skew: its bearings, the world's, slice 4.2's: the north it
@@ -1004,6 +1004,7 @@ static unsigned char events (void)          /* (How many there were) */
         case E_READY:
             if (m.who == 0) {
                 busy = 0;
+                placing = 0;                    /* (Its walk's over, whatever its legs, wherever stopped) */
                 asking = 0;                     /* (A fight's question, its fight over as it asked: let go) */
                 heard ();                       /* (What came before it, told before the prompt: a blow's words;
                                                 **   knocked senseless by one, busy again; dead of one, the
@@ -1033,7 +1034,6 @@ static unsigned char events (void)          /* (How many there were) */
                 } else if (k == A_WENT_TO && !placing && !(m.w1 & 0x200)) {   /* (0x200: stopped short) */
                     tell (T_YOU_GO_OVER);
                 }
-                placing = 0;
                 if (HUB->pc_task.kind == LT_TRAVEL) {
                     lb_salt = HUB->pc_x + HUB->pc_y;    /* (A journey's leg: its look's words said of where it's
                                                 **   come to, the place told whole, its things and denizens seen
@@ -1536,6 +1536,8 @@ unsigned char s_missiles (void)
         w = cmd.obj.word;
         intend_a = strstr (w, "arrow") ? FM_ARROW : strstr (w, "bolt") ? FM_BOLT : strstr (w, "stone") ? FM_SHOT : 0;
         reach = 6;                              /* (Walked to, each: its arrivals' words short) */
+        msg ("You go over to them.");
+        placing = 1;
         intend2 (I_GATHER, 0, 0);
         return 1;
     }
@@ -1822,6 +1824,7 @@ void __fastcall__ s_take (const char* name)
     pending[0] = 0;
     if (r == IR_NOT_HERE) {
         reach = 6;                              /* (Walked over for it: its arrival's words short, E_ARRIVE's) */
+        walk_says (name);
         m.kind = I_TAKE;
         m.w1 = HUB->ireq.x;
         m.w2 = HUB->ireq.y;
@@ -2122,6 +2125,7 @@ again:
                 (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_PASSAGE)) {
                 intend (I_GO, bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y));
             } else {
+                walk_says (0);                  /* (Told at once) */
                 intend2 (I_GOTO, tx, ty);
             }
         } else if (cmd.dir == GO_UP || cmd.dir == GO_DOWN) {
@@ -2305,6 +2309,7 @@ portal:
             if (!hold_w[0] || hold_first ()) {  /* (Its thing in hand first, slice 4.1b's) */
                 if (d & FT_CLOSE) {
                     reach = 6;                  /* (Closed with first, its arrival's words short) */
+                    walk_says (0);
                     intend (I_CLOSE, d & 0x0F);
                     return;
                 }
@@ -2369,6 +2374,26 @@ static const char* rules = "harn";              /* (The ruleset, if none's given
 ** character's free (HOUSE.md's out of reach, walked to first); 1 if so, or if it's the command again and the thing's
 ** out of reach still (told) */
 static struct msg pm;                           /* (reach_go's, place_go's) */
+
+/* A walk over told as it begins, at once (the user's D17, a command answers at once: 2026-11-02), by the thing's name, or
+** the command's thing (0); its arrival not "You go over to it." (placing, or a command's walk's reach, E_ARRIVE's) */
+void __fastcall__ s_walk_says (const char* name)
+{
+    unsigned char k = cmd.obj.kind;
+
+    if (!name) {
+        name = cmd.obj.word;
+    }
+    if (*name && !k) {
+        sayf ("\nYou go over to the %s.", name);
+    } else if (k == OB_DOOR || k == OB_WINDOW || k == OB_PORTC) {
+        sayf ("\nYou head for the %s.", k == OB_DOOR ? "door" : k == OB_WINDOW ? "window" : "portcullis");
+    } else {
+        msg ("You go over to it.");
+    }
+    placing = 1;
+}
+
 unsigned char s_reach_go (void)
 {
     unsigned b = hub_here ();
@@ -2379,6 +2404,8 @@ unsigned char s_reach_go (void)
     } else {
         hub_map (UI_BANK);
         memcpy (&UIREC->kept, &cmd, sizeof cmd);
+        hub_map (0);
+        s_walk_says (0);
         hub_map (0);
         pm.kind = I_TAKE;
         pm.who = 0;

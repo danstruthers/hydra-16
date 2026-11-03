@@ -164,10 +164,13 @@ unsigned char s_take_up (void)
             (HUB->pc_x != take_fx || HUB->pc_y != take_fy)) {
             take_fx = HUB->pc_x;
             take_fy = HUB->pc_y;
-            go_near = take_only & 2;            /* (Gone to: beside it, as near as it gets, and on as it gets nearer) */
+            go_near = take_only & 2 ? 3 : 0;    /* (Gone to: beside it, as near as it gets, and on as it gets nearer) */
             go_to (take_x, take_y);
+            r = go_near;
             go_near = 0;
-            return 2;
+            if (r != 0xFF) {
+                return 2;
+            }
         }
         take_n = 0;
         return 0;

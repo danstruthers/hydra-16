@@ -2311,6 +2311,10 @@ unsigned char s_look_at (void)
     if (!(n = pick (iq.name, mode == LM_AT ? HW_ANY : mode == LM_GO ? HW_GONE : HW_KNOWN))) {    /* (Carried, or seen: the
                                                 **   one most to hand, of several; all but a plain look, remembered too,
                                                 **   walked to; gone to: lying about) */
+        if (mode == LM_GO) {
+            closer (LM_GO);                     /* (A trap it knows of: part 42's room, its reply in ld) */
+            return ld;
+        }
         return IR_NONE;
     }
     ld = seen_d > 99 ? 99 : seen_d;
@@ -2686,10 +2690,61 @@ static void worn_words (void)
 /* What a closer look shows (mode LM_CLOSE: "It's made of wood; it's little worn, half burnt down. Its lock is a simple
 ** one."; a portal's part's measure, "It's made of glass, 2 by 3 feet, a quarter inch thick"); its condition alone
 ** (LM_COND: after its name, "... is battered, its edge dulled.") */
+/* Gone to a trap it knows of, the nearest in the chunk it's in ("go to the pit": the UI's resolve.c): where it is, as a
+** thing's out of reach (the walk beside it, as near as it gets): ld the reply, IR_NOT_HERE; beside it, IR_OK; IR_NONE none */
+#pragma bss-name (push, "SW42RODATA")
+static void spot_at (void)
+{
+    static unsigned ox, oy;
+    static unsigned char k, b, d, e, bx, by;
+    struct trap* t;
+
+    hub_map (0);
+    ox = HUB->pc_x;
+    oy = HUB->pc_y;
+    ld = IR_NONE;
+    if (*iq.name != 't' || !at (HUB->pc_stratum, ox, oy)) {
+        return;
+    }
+    ox -= cx_;
+    oy -= cy_;
+    b = 0xFF;
+    for (k = C->ntraps, t = C->trap; k; --k, ++t) {
+        if (!(t->state & TS_HIDDEN)) {
+            d = t->x > cx_ ? t->x - cx_ : cx_ - t->x;
+            e = t->y > cy_ ? t->y - cy_ : cy_ - t->y;
+            if (e > d) {
+                d = e;
+            }
+            if (d < b) {
+                b = d;
+                bx = t->x;
+                by = t->y;
+            }
+        }
+    }
+    hub_map (0);
+    if (b < 2) {
+        put ("It's beside you.");
+        ld = IR_OK;
+    } else if (b != 0xFF) {
+        HUB->ireq.x = ox + bx;
+        HUB->ireq.y = oy + by;
+        HUB->ireq.item = 0;
+        ld = IR_NOT_HERE;
+    }
+}
+#pragma bss-name (pop)
+
 void __fastcall__ s_closer (unsigned char mode)
 {
     unsigned char k;
     char b[6];
+
+    if (mode == LM_GO) {
+        spot_at ();
+        return;
+    }
 
     lnw = 0;
     if (mode == LM_COND) {

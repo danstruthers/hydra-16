@@ -2712,7 +2712,7 @@ function dq0Timer(m) {
           if (q) {
             if (q[2] === 'm') rev = q[1] === '7';
             if (q[2] === 'H' && /;1$/.test(q[1]) && q[1] !== '1;1' && /^\x1b\[K(\x1b\[\?25h)?> /.test(out.slice(i + q[0].length, i + q[0].length + 12)) &&
-              story.includes(c.want) && prompt < 0) prompt = idx.length;
+              (c.want instanceof RegExp ? c.want.test(story) : story.includes(c.want)) && prompt < 0) prompt = idx.length;
             i += q[0].length - 1;
             continue;
           }
@@ -2721,7 +2721,7 @@ function dq0Timer(m) {
         story += out[i];
         idx.push(i);
       }
-      const w = story.indexOf(c.want);
+      const w = c.want instanceof RegExp ? story.search(c.want) : story.indexOf(c.want);
       let last = prompt < 0 ? idx.length - 1 : prompt - 1;
       while (last > 0 && story[last] === ' ') last--;
       res.push({ line: c.line, first: w < 0 ? null : at[idx[w]] - e.t, whole: w < 0 || last < w ? null : at[idx[last]] - e.t });
@@ -2737,8 +2737,8 @@ function dq0Timer(m) {
 // the look as they get there: at the turns pace the denizens given their turn a slice at a time through the time the
 // move takes, at the normal pace the move taking its own time, a step a second, then the senses' look)
 const DQ0_ANSWERS = [['turn left', 'You turn to face', 1790000], ['turn right', 'You turn to face', 1790000],
-  ['step forward', 'You'], ['inventory', 'You carry', 720000], ['walk to the door ahead to my left', 'You'], ['examine the door', 'A door', +(process.env.DQ0ANS_WAIT || 0) ? undefined : 720000],
-  ['look', 'You', 1790000, 1790000], ['go up', 'There\'s no way up or down here.', 720000], ['take the bones', 'You']];   // (A door examined out of reach is walked to, 2026-11-02: at wait 1 and 2 a rat stops the walk before it, the door still out of reach: its budget at wait 0; a walked-to take, its figure noted)
+  ['step forward', 'You'], ['inventory', 'You carry', 720000], ['examine the torch', 'Your torch'], ['walk to the door ahead to my left', 'You'], ['examine the door', /You head for|A door/, 720000],
+  ['look', 'You', 1790000, 1790000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You'], ['walk to the window', 'You'], ['take the bones', 'You go over to the bones.', 720000]];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
 function dq0AnswerTest(baud) {
   const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
   const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
@@ -6265,8 +6265,8 @@ module.exports = {
           '> look closely', 'It is 10 feet by 10.', 'A barrel vault rises to 13 feet, 9 at the walls.', '> x room', 'It is 10 feet by 10.', '> turn around',
           'There is a door ahead to your left (closed).', '> examine the door ahead to my left', 'A door of iron-bound wood, 3 feet wide and 7 high, 3 inches thick.',
           '% dq0 -p t -s 5', '> x room You can see part of a hall, by the light of your torch. Its far side is lost in the dark.',
-          '% dq0 -p t -s 11 -c /ram/c.hm', 'You go over to it.', 'A door of wood, 3 feet wide and 8 high',
-          '% dq0 -p t -s 11 -c /ram/w.hm', 'You go over to it.', 'A door of wood, 3 feet wide and 8 high', '% echo $status'], f);
+          '% dq0 -p t -s 11 -c /ram/c.hm', 'You head for the door.', 'A door of wood, 3 feet wide and 8 high',
+          '% dq0 -p t -s 11 -c /ram/w.hm', 'You head for the door.', 'A door of wood, 3 feet wide and 8 high', '% echo $status'], f);
         const g = o.slice(o.indexOf('> look You are'), o.indexOf('> look closely'));
         if (/feet up|feet by/.test(g)) f.push('the glance gives figures: ' + g);
         if (/behind you/.test(g)) f.push('the glance tells what\'s behind: ' + g);
@@ -6316,7 +6316,7 @@ module.exports = {
       expect: ['% echo $status'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), f = [];
-        inTurn(o, ['> walk to the door behind me', 'You go over to it.', '> i', 'You carry a torch (lit), in your left hand; a backpack, worn (in it: 3 rations, a tinderbox, a basket, a heap of sand,',
+        inTurn(o, ['> walk to the door behind me', 'You head for the door.', '> i', 'You carry a torch (lit), in your left hand; a backpack, worn (in it: 3 rations, a tinderbox, a basket, a heap of sand,',
           'a sword, a torch, a flask of oil); a belt, worn (on it: a pouch (in it: 12 pennies), a dagger, a waterskin); a table, in both hands. In all, 60 lb.', '> drop table', 'Put down.',
           '> put the candle on the table', 'You put the candle on the table.', '> look', 'At your feet lies a table. On the table lies a candle.',
           '> take the candle from the table', 'You take the candle from the table. It\'s in your backpack.', '> wear cloak', 'You put on the cloak.',
@@ -9113,15 +9113,18 @@ module.exports = {
     },
     {
       name: 'dq0moving', meaning: true, near: ['map', 'parser'], what: 'Dingus Quest Zero\'s moving (the user\'s playtest, 2026-11-02: DECISIONS.md; HOUSE.md\'s straight walks, going to anything, crossing, inspecting walks over first), by the words told and the hub: at seed 8 a way word walks straight: north to the wall, told; south to a closed door, told; again, refused beside it; a door off to the side never walked to; a shut door it has handled opened as it goes, and on through; at seed 7 go to the centre (its sum near $8000), cross the room, go across the room, approach, walk to (no pace words), walk over to, head for, which asked of two pots, beside it not on it, "You haven\'t seen a rat here."; examine, assess out of reach walked over to, their words short; a plain look at from where it stands; things and doors remembered in the dark, named, walked to; leave, which asked; a walked-to take told short, no look, no "at your feet", and with hands and pack full refused as it gets there; a denizen gone up to with no blow, and where it was last seen (seed 2)',
-      init: 't_rc', cycles: 3000e6,
+      init: 't_rc', cycles: 5000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 8 -c /ram/c.hm', 'n', 's', 's', 'e', 'go through the door to the south', 'open', 'close', 'n', 's', 'quit',
-        'dq0 -p t -s 7 -c /ram/c.hm', 'go to the centre', 'cross the room', 'go across the room', 'leave', 'go to the rat', 'go to the far right corner', 'approach the pot', 'go to the far right corner', 'walk to the pot', 'go to the far right corner', 'head for the pot', '1',
+        'dq0 -p t -s 7 -c /ram/c.hm', 'go to the centre', 'cross the room', 'go across the room', 'leave', 'go outside', 'go out', 'go to the rat', 'go to the far right corner', 'approach the pot', 'go to the far right corner', 'walk to the pot', 'go to the far right corner', 'head for the pot', '1',
         'go to the far left corner', 'walk over to the sconce', 'go to the far left corner', 'examine the sconce', 'go to the far left corner', 'assess the sconce', 'drop the backpack', 'go to the far left corner', 'take the pot', 'go to the far right corner', 'take the pot', 'drop the pot',
         'douse the torch', 'go to the door', 'go to the far left corner', 'go to the sconce', 'quit',
         'dq0 -p t -s 2 -c /ram/c.hm', 'go to the closest rat', 'douse the torch', 'go to the window', 'go to the rat', 'quit',
         'dq0 -p t -s 15 -c /ram/c.hm', 'bar the door', 'look at the door ahead to my left', 'go to the door ahead to my left', 'unbar the door', 'unbolt the door', 'bar the door', 'take the bar off', 'lift the bar', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm', 'go through the door to the east', 'open', 'look', 'look at the door', 'quit', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/c.hm', 'go through the door to the east', 'open', 'look', 'look at the door', 'quit',
+        'dq0 -p t -s 16 -c /ram/c.hm -T', 'go to the pit', 'go to the ledge', 'face east', 'force', 'e', 'force', 'force', 'e', 'e', 'go west', 'go to the trap', 'go west', 'go to the pit', 'quit',
+        'dq0 -p t -s 517 -c /ram/c.hm', 'ne', 'e', 'go to the ledge', 'quit',
+        'dq0 -p t -s 2 -c /ram/c.hm -T', 'read the door', 'read the sconce', 'douse the torch', 'read the sconce', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], ans = dq0Answers(out), T = dq0Turns(m), g = {};
@@ -9141,20 +9144,22 @@ module.exports = {
         said('cross the room', 'You are');
         said('go across the room', ['You']);
         said('leave', 'Which exit:');
+        said('go outside', 'Which exit:');            // (A plain phrasing, the rules': 2026-11-02)
+        said('go out', 'Which exit:');
         said('go to the rat', 'You haven\'t seen a rat here.');
-        said('approach the pot', 'You go over to it.');
-        said('walk to the pot', 'You go over to it.', 'Pace:');
+        said('approach the pot', 'You go over to the pot.');
+        said('walk to the pot', 'You go over to the iron pot.', ['Pace:', 'You go over to it.']);
         said('head for the pot', 'Which do you mean');
         said('1', 'The iron pot is beside you.');
-        said('walk over to the sconce', 'You go over to it.');
-        said('examine the sconce', ['You go over to it.', 'The sconce is'], ['A barrel vault', 'by the light of', 'On the iron pot lies']);
-        said('assess the sconce', ['You go over to it.', 'You judge it'], ['A barrel vault', 'by the light of']);
-        said('take the pot', ['You go over to it.', 'Taken.'], ['A barrel vault', 'by the light of', 'at your feet', 'At your feet', 'lies an iron pot']);
-        said('take the pot', ['You go over to it.', 'Your hands are full, and your pack too.'], ['A barrel vault', 'by the light of', 'at your feet', 'At your feet', 'lies an iron pot']);
-        said('go to the door', 'You go over to it.');
-        said('go to the sconce', 'You go over to it.');
+        said('walk over to the sconce', 'You go over to the sconce.');
+        said('examine the sconce', ['You go over to the sconce.', 'The sconce is'], ['A barrel vault', 'by the light of', 'On the iron pot lies']);
+        said('assess the sconce', ['You go over to the sconce.', 'You judge it'], ['A barrel vault', 'by the light of']);
+        said('take the pot', ['You go over to the pot.', 'Taken.'], ['A barrel vault', 'by the light of', 'at your feet', 'At your feet', 'lies an iron pot']);
+        said('take the pot', ['You go over to the pot.', 'Your hands are full, and your pack too.'], ['A barrel vault', 'by the light of', 'at your feet', 'At your feet', 'lies an iron pot']);
+        said('go to the door', 'You head for the door.');
+        said('go to the sconce', 'You go over to the sconce.');
         said('go to the window', 'You haven\'t seen a window here.');
-        said('go to the rat', 'You go over to it.', 'You haven\'t seen');
+        said('go to the rat', 'You go over to the rat.', 'You haven\'t seen');
         said('bar the door', 'Which door: 1. the door ahead to your left (closed, barred)');    // (Its bar plain on this side, the look's words too: the user's)
         said('look at the door ahead to my left', 'it\'s barred');
         said('go to the door ahead to my left', 'There is a door ahead (closed, barred).');
@@ -9167,6 +9172,14 @@ module.exports = {
         said('open', 'It won\'t open: it\'s locked.');   // (A lock not seen till it's tried: then told)
         said('look', 'There is a door ahead (closed, locked).');
         said('look at the door', 'it\'s locked');
+        said('go to the pit', 'You haven\'t seen a trap here.');
+        said('go to the trap', 'It\'s beside you.');   // (The nearest it knows of: the door's blade, sprung)
+        said('go to the pit', 'You go over to the trap.', ['You go over to it.', 'You can\'t go that way.']);
+        said('go to the ledge', 'You haven\'t seen a ledge here.');
+        said('go to the ledge', 'at a ledge ahead');
+        said('read the door', 'There\'s nothing written on it.');
+        said('read the sconce', ['You go over to the sconce.', 'There\'s nothing written on the sconce.']);   // (Walked over to first, as any inspecting)
+        said('read the sconce', 'You can\'t see to read.', 'You go over');   // (In the dark, nothing's read: where it lies or not)
         const r = T.of('go to the closest rat');
         if (r.k < 0) f.push('no rat gone to');
         dq0Never(f, r, 'E_FIGHT', { who: 0, def: -1 }, 'a blow struck, going up to a rat');
@@ -9195,6 +9208,40 @@ module.exports = {
         if (!a('look north').includes('You peer ahead into the dark.')) f.push('look north not into the dark: ' + a('look north').slice(0, 120));
         const back = nth('look', 2);
         if (!felt.test(back) || !back.includes('This should be the kitchen.')) f.push('back in the kitchen: not remembered: ' + back.slice(0, 160));
+        if (!a('go through the door to the east').includes('The wall to your left ends.')) f.push('the walk\'s hands not told as the wall to its left ended (WB_SIDES): ' + a('go through the door to the east').slice(0, 200));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0blind', meaning: true, near: ['senses'], what: 'Dingus Quest Zero\'s blind character (HOUSE.md\'s in the dark: the referee\'s summary, C_BLINDED, held on by the test, as nothing in play sets it yet), its lit torch no help: at seed 2 "You can\'t see." and its hands in a look; the walks over told at once and felt, to a door and to a thing remembered; nothing read; the status "by feel"',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 2 -c /ram/c.hm -T', 'look', 'blinded', 'go to the door', 'look', 'go to the sack', 'read the sconce', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        const a = m.acia, rd = a.read;
+        let on = 0, typed = '';
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            if (a.rx === 13) { if (typed === 'blinded') on = 1; typed = ''; } else if (a.rx >= 32) typed += String.fromCharCode(a.rx);
+          }
+          const h = on && m.dq0 && m.dq0.bank(0);
+          if (h) { const { L } = m.dq0.layout(); h[L.pcsum + L.sCond + 1] |= 1; }   // (rs.h's C_BLINDED, its high byte)
+          return rd.call(a, r, t);
+        };
+      },
+      check(m, out) {
+        const f = [], ans = dq0Answers(out), x = (l, n) => (ans.filter(y => y.cmd === l)[n || 0] || { text: '' }).text;
+        const has = (l, n, w) => { if (!x(l, n).includes(w)) f.push(l + ': not "' + w + '": ' + x(l, n).slice(0, 200)); };
+        if (!x('look').includes('by the light of your torch')) f.push('not seeing to begin with: ' + x('look').slice(0, 120));
+        has('go to the door', 0, 'You head for the door.');
+        has('go to the door', 0, 'You feel your way');
+        has('look', 1, 'You can\'t see. You feel ');
+        if (/by the light|It is dark/.test(x('look', 1))) f.push('seen, or told of the dark, blind: ' + x('look', 1).slice(0, 160));
+        has('go to the sack', 0, 'You go over to the sack.');
+        has('go to the sack', 0, 'You feel your way');
+        has('read the sconce', 0, 'You can\'t see to read.');
+        if (!/by feel \[/.test(out)) f.push('the status line not "by feel" as it felt its way');
         return f;
       },
       sdcard: true
