@@ -149,8 +149,10 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     }
     d = doing_of (k, n);
     if (p <= TE_NEAR || p == TE_ENGAGED || (p == TE_OUT && k)) {
-        reach = 0;                              /* (A walk over to a thing stopped: its command dropped; a thing's
+        if (k != LT_FIGHT || reach < 5) {          /* (A fight begun as the character came free, its line's first step in hand: that stopped, not the step) */
+            reach = 0;                          /* (A walk over to a thing stopped: its command dropped; a thing's
                                                 **   timed work stopped: its end dropped, words.c's) */
+        }
     }
     k = p;
     if (k == TE_ASK_SHORT && w >> 8 != LT_DIG) {  /* (A dig's nothing to show: its words its own, E_DIG's.  A battering's: a bare part's blow that would hurt it stopped short
