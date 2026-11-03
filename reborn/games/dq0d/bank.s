@@ -39,6 +39,8 @@ ovx:        .res        1
             SWPART      13, 5               ; The lairs near placed (2026-11-01: the main RAM's room; small, cheap to
                                             ;   swap in, each time round after a move)
             SWPART      14, 5               ; Doors worked (Phase 3C's one path, 2026-11-02)
+            SWPART      15, 4               ; Gifts, the market, entertaining (2026-11-02: seldom called, apart from the busy parts)
+            SWPART      15, 4               ; Gifts, the market, entertaining (2026-11-02: seldom called, apart from the busy parts)
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -52,7 +54,7 @@ ovx:        .res        1
             SWFN        draw_on, 5
             SWFN        ally, 5             ; (Slice 4.8's: an ally's errands, one in the way, gifts, regard)
             SWFN        aside, 5
-            SWFN        gift, 13            ; (Part 13's since 2026-11-02: part 5's room, the market's beside it)
+            SWFN        gift, 15            ; (Part 15's since 2026-11-02: a part of its own, the market's beside it)
             SWFN        regard, 5
             SWFN        sway, 2
             SWFN        start, 4

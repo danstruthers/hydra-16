@@ -2755,8 +2755,9 @@ void __fastcall__ s_regard (unsigned char f, unsigned char pts)
 ** interest, at steps by its attitude and its kind too; a critical success two steps, a success one, a critical failure
 ** an insult (a step back, the gift refused: grade G_CF), as far as friendly (a gift doesn't make an ally); taken (but
 ** refused), the world's to hand over (the UI's), and its faction's regard the more (reputation) */
-#pragma code-name (push, "SW13CODE")            /* (Part 13's since 2026-11-02: part 5's room, the market's beside it) */
-#pragma rodata-name (push, "SW13RODATA")
+#pragma code-name (push, "SW15CODE")            /* (Part 15's since 2026-11-02: part 5's room, the market's beside it;
+                                                **   a part of its own, seldom called) */
+#pragma rodata-name (push, "SW15RODATA")
 #pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
 static const unsigned means[5] = { 4, 16, 48, 192, 960 };   /* (Farthings: a penny, 4d, 12d, 48d, 240d) */
 
@@ -2983,6 +2984,7 @@ void __fastcall__ s_gift (unsigned char k)
 
 /* Whether name n (an actor's, or a kind's) is meant by w (the parser's word, in lower case): the start of one of its
 ** words ("rat", "giant", "grub") */
+#pragma bss-name (push, "SW2RODATA")           /* (Its buffer the part's own: the main RAM's room, 2026-11-02) */
 static unsigned char __fastcall__ called (const char* n, const char* w)
 {
     static char b[12];
@@ -2999,6 +3001,7 @@ static unsigned char __fastcall__ called (const char* n, const char* w)
     }
     return 0;
 }
+#pragma bss-name (pop)
 
 /* The actor meant by w ("": any): the nearest of them on the character's stratum, on a square it sees or within four
 ** of it; its distance in dist.  The actor, or 0xFF */
