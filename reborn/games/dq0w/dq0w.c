@@ -5998,7 +5998,8 @@ unsigned char ui_first (void)
     static unsigned t0;
     static unsigned char sq;
 
-    if (!HUB->tpr || !HUB->ui_cmd) {
+    if ((HUB->pace & 3) == 3 || !HUB->ui_cmd) { /* (The real paces: its pace's, not tpr, 0 in a long wait as well,
+                                                **   2026-11-03: a line typed then its answer first too) */
         t0 = 0;
         return 0;
     }
