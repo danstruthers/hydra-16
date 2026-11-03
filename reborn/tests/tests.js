@@ -8546,7 +8546,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0rounds', near: ['denizens'], what: "Dingus Quest Zero's bodies found on the records' rounds (2026-11-02: the minds' leftovers; DENIZENS.md's ways, positions, bodies found, HOUSE.md's a body found on a record's rounds, for review; dq0d.c's part 17, rfound): dq0daily's garrison of men-at-arms and their captain (seed 2, their lair by the way down where the character starts), the character gone down the way (d: the garrison no actors after, their records going about their days, on watch walking their rounds); the scene set by pokes as the first wait's typed (dq0Rec's: the captain, or a soldier if it isn't placed, made dead at its lair's home, as killed there: its faction's body not found yet, dq0d's unf); waited for two hours, ten minutes at a time, the records read as each wait's typed: the body found by one of them on its rounds (its record's D_MET cleared), out of the character's hearing (no alarm told), its faction's attitude to the character a step worse (the head's fatt), the others of its faction about the body gathered to it (one on a square beside it), and, the captain's body, its loss known to them (their records' D_LOST)",
+      name: 'dq0rounds', near: ['denizens'], what: "Dingus Quest Zero's bodies found on the records' rounds (2026-11-02: the minds' leftovers; DENIZENS.md's ways, positions, bodies found, HOUSE.md's a body found on a record's rounds, for review; dq0d.c's part 17, rfound): dq0daily's garrison of men-at-arms and their captain (seed 2, their lair by the way down where the character starts), the character gone down the way (d: the garrison no actors after, their records going about their days, on watch walking their rounds); the scene set by pokes as the first wait's typed (dq0Rec's: a soldier of the placed lair, its rank poked a post's (D_RANK: a leader), made dead at its lair's home, as killed there: its faction's body not found yet, dq0d's unf; the lair's others put six squares from it, so a gathering's its own); waited for two hours, ten minutes at a time, the records read as each wait's typed: the body found by one of them on its rounds (its record's D_MET cleared), out of the character's hearing (no alarm told), its faction's attitude to the character a step worse (the head's fatt), every other of its lair gathered to it as it's found (each on a square beside it, none of them all there before), and, a leader's body, its loss known to them all (their records' D_LOST)",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/t',
         "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/t/theme.txt",
@@ -8563,16 +8563,17 @@ module.exports = {
               const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1');
               const ad = n => parseInt(new RegExp('^al ([0-9A-F]+) ._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]];
               const MANARMS = 28, all = [...Array(224).keys()].map(i => R.at(i)), out = all.filter(o => R.mem[o] && (R.mem[o + R.FLAGS] & 7) === 1);
-              if (typed === 'wait 1 minute' && !m.body) {   // (The captain, else a soldier, dead at its lair's home)
+              if (typed === 'wait 1 minute' && !m.body) {   // (A soldier with a post, dead at its lair's home, the rest away from it)
                 const g = out.filter(o => out.some(p => p !== o && R.mem[p + 25] === R.mem[o + 25] && u16(p + 21) === u16(o + 21)));
-                const o = g.find(o => R.mem[o] !== MANARMS) || g[0];
+                const o = g[0];
                 m.outs = out.length;
                 if (o) {
-                  R.mem[o + R.FLAGS] = 4 | 8;               // (D_DEAD, D_MET: killed as an actor)
+                  R.mem[o + R.FLAGS] = 4 | 8 | 1 << 5;      // (D_DEAD, D_MET: killed as an actor; D_RANK 1, a post)
+                  for (const p of g) if (p !== o) w16(p + 8, u16(p + 21) + 6);
                   w16(o + 8, u16(o + 21));
                   w16(o + 10, u16(o + 23));
                   ram[ad('unf') + (R.mem[o + 25] & 7)] = 1;
-                  m.body = { o, x: u16(o + 21), y: u16(o + 23), fac: R.mem[o + 25], lead: R.mem[o] !== MANARMS };
+                  m.body = { o, x: u16(o + 21), y: u16(o + 23), fac: R.mem[o + 25] };
                 }
               }
               if (m.body) {
@@ -8596,8 +8597,10 @@ module.exports = {
         if (i < 0) f.push('the body never found on the records\' rounds: ' + JSON.stringify(S));
         else {
           if (!(S[S.length - 1].fatt < S[0].fatt)) f.push('the garrison\'s attitude not a step worse as the body was found: ' + JSON.stringify(S.map(s => s.fatt)));
-          if (!S.slice(i).some(s => s.near)) f.push('none of its faction gathered to the body: ' + JSON.stringify(S));
-          if (m.body.lead && !S.slice(i).some(s => s.lost === s.n)) f.push('the captain\'s loss not known to its faction (D_LOST): ' + JSON.stringify(S));
+          if (!i || S.slice(0, i).some(s => s.near === s.n)) f.push('its faction all about the body before it was found: ' + JSON.stringify(S));
+          if (S[i].near !== S[i].n || !S[i].n) f.push('its faction not gathered to the body as it was found: ' + JSON.stringify(S));
+          if (S[i].lost !== S[i].n) f.push('the leader\'s loss not known to its faction (D_LOST): ' + JSON.stringify(S));
+          if (S[i - 1].lost) f.push('its loss known before it was found: ' + JSON.stringify(S));
         }
         if (T.flatMap(t => t.dens).some(e => e.kind === 'E_DEN' && e.de === 'DE_ALARM')) f.push('an alarm told: the records\' finding is out of the character\'s hearing');
         return f;
