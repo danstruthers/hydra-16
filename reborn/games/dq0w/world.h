@@ -167,7 +167,8 @@ enum { PM_WOOD, PM_IRONBOUND, PM_IRON, PM_STONE };
                                                 **   only a mark) */
 #define DUG             0xFA                    /* (And a hole dug part way, its square's: tile its half-feet dug,
                                                 **   elev the way, DIR_DOWN or the heading into the wall or the rock;
-                                                **   the world's to read, nothing in the chunk) */
+                                                **   the world's to read, nothing in the chunk; or, elev 16 and more, a
+                                                **   room searched whole so far, wroom.inc's, on its corner's wall square) */
 #define ROOM_LIT        0xF9                    /* (And a room's light, its sconce's, on its square: tile R_LIT or 0,
                                                 **   the room it's in its own light or not) */
 #define AIR_STATE       0xF8                    /* (And a chunk's air, its pocket's, on its middle square: tile its air

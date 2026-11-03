@@ -174,6 +174,10 @@ void __fastcall__ o_stock (const struct chunk* c, unsigned x0, unsigned y0)
                 }
             } else if (k) {                     /* (Else rotted away) */
                 put_down (k, c->sn, x0 + lx, y0 + ly, 1, h);
+                if (k == KI_STRAW && !((lx + ly) & 3)) {   /* (Something hidden in a heap of straw, one in four by its
+                                                **   square, no die: a search of it can pay, the user's, 2026-11-02) */
+                    put_down (SP->hide_kinds[d & 3], c->sn, x0 + lx, y0 + ly, 1, 1);
+                }
             }
         }
     }

@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     39                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     40                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -68,7 +68,9 @@
                                                 **   tb, BRG_SKY, rs.h's TIME_STEPS and timesense; 36, the
                                                 **   tunnellers, I_KIT's KT_DIG, DG_*, dig_t, DE_DIG, DE_DUG, AG_PICK,
                                                 **   AG_SPADE, DO_DIG; 37, the market's: the sway's word2 its coins
-                                                **   (SW_COIN ...), SW_BUY ... SW_ENTERTAIN, OR_OPEN ..., SR_WONT ...) */
+                                                **   (SW_COIN ...), SW_BUY ... SW_ENTERTAIN, OR_OPEN ..., SR_WONT ...;
+                                                **   39, a room searched whole: SF_ROOM, SF_TRAPS, WB_SEARCH, RSW_*, RC_*,
+                                                **   IOS_*) */
 #define HUB_BANKS       (1 + PLAN_BANKS + CACHE_BANKS + 1 + ITEM_BANKS + 6 + CHANGE_BANKS + 1 + 1)   /* Bank 0: the header, the
                                                 **   clock, the doorbells, the rings and the requests' slots; then the
                                                 **   plans' banks and the chunks' (world.h); the catalogue's, and the
@@ -759,10 +761,24 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   one leg; */
        WB_POSED,                                /*   its body's position changed as it said, the position times 256,
                                                 **   | 0x8000 there already: slice 4.6's); */
-       WB_WATER, WB_SWIM, WB_UNDER, WB_DOUSED };  /* (The water's, slice 4.9's, the character's: come into
+       WB_WATER, WB_SWIM, WB_UNDER, WB_DOUSED,  /* (The water's, slice 4.9's, the character's: come into
                                                 **   it, its band times 256 (0 out of it, 1 a foot or two, 2 waist-deep, 3
                                                 **   out of its depth), | 0x8000 running; swimming, | 0x100 well, | 0x200
                                                 **   up again from under; gone under, | 0x100 drowned; its flames put out) */
+       WB_SEARCH };                             /* (A room searched whole, as it goes, 2026-11-02: RSW_* times 256,
+                                                **   search.c's words: dq0w's wroom.inc) */
+enum { RSW_BEGUN, RSW_GOES_ON, RSW_ALREADY, RSW_WALL, RSW_CORNER, RSW_MIDDLE, RSW_ROUND, RSW_END, RSW_FLOOR, RSW_DONE,
+       RSW_THING };                             /* (WB_SEARCH's what: b 1 by touch; it begun, gone on with, done before;
+                                                **   along a wall, round a corner, the floor inside, a room of one stop;
+                                                **   a thing's time up, w2 its item, the UI to ask the things; the block's,
+                                                **   w2, x[0..1] its middle; it done; a thing begun, w2 its kind, RC_*
+                                                **   times 16 with it) */
+enum { RC_PLAIN, RC_HEAP, RC_HOLDS, RC_BODY };  /* (What a thing is, to a search: nothing in it, looked over; things hidden
+                                                **   in it, a kind that isn't a container or a surface with a size it
+                                                **   hides, its cap_bulk; a container; a body) */
+#define IOS_THING       0x200                   /* (IO_SEARCH's to, a room searched whole's, | SF_TOUCH: a thing's item, what
+                                                **   came of going through it, its things found; */
+#define IOS_FLOOR       0x100                   /*   the things hidden about square x, y) */
 enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT, FA_TRAP };   /* (What stops a walk, met: the world's
                                                 **   ahead, in the dark, or a straight walk's end; FA_TRAP, one it knows
                                                 **   of, across's) */
@@ -799,13 +815,14 @@ enum { WS_PACE, WS_STANCE, WS_PAUSE, WS_AUTO }; /* WQ_SET's what: the character'
 #define GA_CRAWL        0x40                    /* (And the way its legs go said: crawling, "crawl", prone or on one leg; */
 #define GA_HOP          0x20                    /*   hopping, "hop"; neither, the best it can: slice 4.1b's) */
 enum { PW_ANY, PW_DOOR, PW_WINDOW };            /* I_PORTAL's b: a door or a portcullis, a window or a slit */
-enum { SF_ABOUT, SF_NEAR, SF_WALL, SF_FLOOR, SF_FOR, SF_ON };   /* (PA_SEARCH's b, 2026-10-22: the search's form,
+enum { SF_ABOUT, SF_NEAR, SF_WALL, SF_FLOOR, SF_FOR, SF_ON, SF_ROOM };   /* (PA_SEARCH's b, 2026-10-22: the search's form,
                                                 **   HOUSE.md's searching: about it, as far as it sees; within reach, nearby; a
                                                 **   wall's, the heading it's on times 16; the floor nearby; for a
                                                 **   thing (the things' IO_SEEK's name, the time to find it I_PORTAL's
                                                 **   w1); on or in a thing (IO_SEEK's): the world's, | SF_TOUCH in the
                                                 **   dark, by touch) */
 #define SF_TOUCH        0x08
+#define SF_TRAPS        0x10                    /* (SF_ON's: for traps, said: a thing's traps told) */
 enum { PO_NONE, PO_OPENED, PO_CLOSED, PO_IS_OPEN, PO_IS_SHUT, PO_LOCKED, PO_BARRED, PO_UNBARRED, PO_PICKED,
        PO_NOT_PICKED, PO_NO_PICKS, PO_NO_LOCK, PO_FORCED, PO_HELD, PO_FOUND, PO_NOTHING,   /* E_PORTAL's (a door's, */
        PO_RAISED, PO_HEAVED, PO_LOWERED, PO_IS_UP, PO_IS_DOWN, PO_NO_WINCH, PO_TOO_HEAVY, PO_NOT_PORTC,   /* a

@@ -984,6 +984,21 @@ a critical failure the hurt (the lead's reading of the user's question; theirs t
 
 **Design:** HOUSE.md's portals (battering) and long tasks.
 
+### Searching a thing, and a whole room
+
+The user (2026-11-02, a playtest):
+
+"When searching a pile of straw, it says "no sign of a trap", but I am not looking for traps, but for anything hidden
+in the straw.  Also, I would like `search the room` to take time to search around the whole room, poking through piles
+of straw, taking a closer look at the items, etc., not just searching for hidden doors or traps.  It should report
+incrementally what you are doing as well."
+
+Built: a thing searched means what's in it or under it, no trap words unless they're asked for; a heap hides what's on
+its square; `search the room` a long task of stops along the walls and across the floor, each thing and heap in turn,
+told as it goes, kept as far as it went; bare `search` stays the quick minute.
+
+**Design:** HOUSE.md's the search's forms and a room searched whole; DUNGEON.md's searching.
+
 ### Walking and searching in the dark
 
 The user's playtest (2026-10-22): "when wandering around in the dark, you should not auto-adjust your movement
