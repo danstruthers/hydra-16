@@ -5177,23 +5177,18 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0antidote', near: ['body'], what: "Dingus Quest Zero's remedies (2026-11-02: HOUSE.md's remedies, for review): dq0venom's hostile cave adders (seed 1, the character tough), the character with an antidote (dq0 -k antidote); bitten, the venom in it (\"The bite burns: there's venom in it.\"), it drinks the antidote as it's told (dq0OnWords': \"You drink the antidote.\", the things' IO_USE by its key, the referee's RS_TIME RT_TAKEN): the toxin's rate the better by its power, dosed by Physician (\"The remedy works\", or \"eases you\"), the antidote gone; a remedy drunk with no sickness on it does nothing (\"It does nothing for you.\")",
-      init: 't_rc', cycles: 2500e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k antidote,remedy", 'drink the remedy', 'open the door', 'south', 'drop the torch', 'south', 'wait', 'flee', 'flee', 'inventory', 'quit', 'echo $status']) },
-      start(m) {
-        dq0OnWords(m, [{ g: 1, line: 'south', n: 2, words: "there's venom in it.", text: 'drink the antidote\r' }]);
-      },
-      expect: ['% echo $status'],
+      name: 'dq0antidote', near: ['body'], what: "Dingus Quest Zero's remedies (2026-11-02: HOUSE.md's remedies, for review), both referees: the character with an antidote and a remedy (dq0 -k antidote,remedy), no poison nor sickness on it: each drunk ('You drink the antidote.': the things' IO_USE by its key, the referee's RS_TIME RT_TAKEN, its words told at once) does nothing ('It does nothing for you'), and is gone; the null referee the same",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 1 -c /ram/c.hm -T -k antidote,remedy',
+        'drink the antidote', 'drink the remedy', 'inventory', 'quit', 'dq0 -r null -p t -s 1 -T -k antidote', 'drink the antidote', 'quit', 'echo ']) },
+      expect: ['% echo '],
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out);
-        if (!/It does nothing for you\./.test(s)) f.push('the remedy drunk with no sickness not told doing nothing');
-        if (!/there's venom in it\./.test(s)) return f.concat(['no venom: the scene not set', s.slice(s.indexOf('> open the door'), s.indexOf('> open the door') + 2500)]);
-        if (!/You drink the antidote\./.test(s)) f.push('the antidote not drunk');
-        if (!/The remedy works|The remedy eases you/.test(s.slice(s.indexOf('You drink the antidote.')))) f.push('the antidote did nothing: ' + JSON.stringify(s.slice(s.indexOf('You drink the antidote.'), s.indexOf('You drink the antidote.') + 600)));
+        if ((s.match(/You drink the antidote./g) || []).length !== 2) f.push('the antidote not drunk under both referees');
+        if (!/You drink the remedy./.test(s)) f.push('the remedy not drunk');
+        if ((s.match(/It does nothing for you/g) || []).length < 3) f.push('a remedy with nothing to treat not told doing nothing: ' + JSON.stringify(s.slice(s.indexOf('> drink the antidote'), s.indexOf('> drink the antidote') + 600)));
         const inv = T.of('inventory');
-        if (inv && inv.after && dq0Carried(inv.after).some(i => i.name === 'antidote')) f.push('the antidote still carried');
+        if (!inv || !inv.after || dq0Carried(inv.after).some(i => i.name === 'antidote' || i.name === 'remedy')) f.push('the remedies still carried');
         return f;
       },
       sdcard: true

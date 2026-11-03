@@ -27,7 +27,7 @@ static void __fastcall__ feed_do (unsigned char eat)
 
     if (!strcmp (cmd.obj.word, "antidote") || !strcmp (cmd.obj.word, "remedy")) {   /* (A remedy taken, 2026-11-02:
                                                 **   HOUSE.md's remedies; the referee's to judge, RT_TAKEN) */
-        if (othings (IO_USE, cmd.obj.word, "", 0) != IR_OK) {
+        if (othings (IO_USE, cmd.obj.word[0] == 'a' ? "cure" : "remedy", "", 0) != IR_OK) {   /* (Its key: a tool key's seven letters) */
             sayf ("\nYou have no %s.", cmd.obj.word);
             return;
         }
