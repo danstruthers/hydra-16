@@ -94,7 +94,7 @@ void __fastcall__ o_sway_words (const struct sway* s)
     case SR_NOT_ALLY:
         who (1);
         add (h == SW_NAME ? " isn't friendly enough to take a name from you." :
-             " isn't your ally, to take requests from you.");
+             " isn't your ally.");
         return;
     case SR_CANT:
         if (h == SW_GIVE) {
@@ -106,7 +106,7 @@ void __fastcall__ o_sway_words (const struct sway* s)
             who (1);
             add (" doesn't know how to do that.");
         } else {
-            add ("Ask it to do what? (follow me, wait, go home)");
+            add ("Ask it to do what? (follow me, wait, open the door, go home)");
         }
         return;
     }
