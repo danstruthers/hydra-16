@@ -3183,6 +3183,7 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   at prey, a bare wall by its stuff.  The rock's softest is shale, and the maker's walls are stone or masonry, so as the
   game stands claws bite rubble and nothing else: **for review**, whether a softer rock (chalk, marl, clay) should come
   with the rock's kinds, for burrows to be dug in.
+  No rock softer than shale is added (the user, 2026-11-03: "we are fine without generally allowing claws to dig rock"; clay or softer wouldn't stand unshored): a kind that tunnels through rock has it said on its sheet.
 - **The character's rules** *(every actor's: DUNGEON.md's digging)*: a spell of ten minutes at a time; the tool's rate
   on what it's into (rshouse.h's digger table, the character's); earth and rubble at the tool's rate, untested;
   anything harder a test each spell, its rate at a marginal success, twice at a critical, half at a marginal failure,
