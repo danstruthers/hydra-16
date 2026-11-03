@@ -15,7 +15,7 @@
             .include    "ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 17                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 18                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
@@ -164,7 +164,7 @@ ovl_out:
             SWPART      15, 17              ; An ally's errands, the character's gifts, the market (errand.c: slice 4.8's; 2026-11-02)
             SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
             SWPART      17, 14              ; Looking one way, a close look (way.c: part 6's till 2026-11-01)
-            SWPART      18, 17              ; A denizen's door's words (2026-11-02: overlay 3's room)
+            SWPART      18, 18              ; A denizen's door's words (2026-11-02: overlay 3's room)
 
             SWFN        errand, 15
             SWFN        begin, 1
