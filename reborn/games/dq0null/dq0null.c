@@ -744,8 +744,9 @@ static void __fastcall__ answer (struct req* r)
             break;
         }
         if (((r->a == P_SEARCH || r->a == P_DISARM) && r->b == HIDE_MAGICAL) ||
-            (r->a == P_PICKLOCK && !has ("picks"))) {
-            r->result = 1;                      /* (No magic; no lockpicks) */
+            (r->a == P_PICKLOCK && !r->actor && !has ("picks"))) {
+            r->result = 1;                      /* (No magic; no lockpicks: the character's, a robber's kind its own, as the
+                                                **   HarnMaster referee's, 2026-11-02) */
             break;
         }
         if ((r->a == P_PERSUADE || r->a == P_INTIMIDATE || r->a == P_DECEIVE) && r->text[0] && !speaks (r->text)) {
