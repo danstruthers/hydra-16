@@ -179,6 +179,7 @@ plays them as HarnMaster's referee does.
   senseless or in shock is a miss, not the Ignore table's tactical advantage: it can't take one.  (fight.c's
   attack.)  Why: the advantage is an action, and it has none.
 - **A window's sill is climbed through** with a Climbing test; a critical failure is a slip and a fall.  (wwin.c.)
+- **A shaft is climbed as a ledge is** (What shows the sky, below, 2026-11-03), a thing dropped where one goes down falls down it.
 - **A pit is climbed out of** as a ledge is, but a slip ends the climb (D13's: the character carries on, below).
   (wtrap.c, dq0w.c.)
 
@@ -2846,15 +2847,16 @@ number here is a draft for the user.
   - Noted, not built: thirst, tiredness, the denizens' routines learnt (the watch changing, meals), a chain of torches
     counted.
 - **The sky in sight** (an open way out within **two squares**: the top stratum's way out, opened, up its stairs, shows
-  **its light alone**; a far exit below the top, out into the open, **the sun or the stars**; later the plan's shafts
-  and skylights, where the rain's hook finds the surface reaches): its light narrows the belief to its part of the day
+  **its light alone**; a far exit below the top, out into the open, **the sun or the stars**; a window on the surface, a
+  skylight or a shaft open to the sky from the square under it or beside it: what shows the sky, below): its light narrows the belief to its part of the day
   (dawn 5-7, day 7-17, dusk 17-19, night 19-5: the house's even day); **the sun or the stars read by the north it
   believes in**: the time to **half an hour** (the stars an hour), **wrong by three hours each eighth its north is
   off**, unknown to it; its bearings known lost, the sun **high** (10-14) or **low** (morning or afternoon by what it
   believes), the stars night alone; **watched** (in its sight through a wait, or "watch the sun": **ten minutes**, the
   stars **twenty**), their way across the sky: the time to a quarter of an hour (the stars half an hour), and **north
   known** (its bearings set right), and kept so while it stays in sight.  Told as what's seen changes ("Daylight shows above: it's day.", "You see the sun in
-  the sky: it's four in the afternoon, you judge.").  Weather (overcast: its light alone) not yet.
+  the sky: it's four in the afternoon, you judge."; by a skylight or the rest, by what shows it: what shows the sky,
+  below).  Weather (overcast: its light alone) not yet.
 - **How it's told** ("time", "what time is it"): doubt ten minutes or less, plainly to the quarter hour ("It's half past
   six in the evening."); 45 or less, "about" the hour, "you think"; two and a half hours or less, "some time around";
   more, the part of the day, "you'd guess, but you can't be sure"; six hours or more, no idea ("You've no idea how long
@@ -2865,7 +2867,65 @@ number here is a draft for the user.
   the true clock.  "watch the sun" (the sky, the stars) is a wait of a quarter of an hour (the stars half an hour).
 - **When it's reckoned** (never polled: the lights' burning's look, part 27's): an hour on; every five minutes on a
   stratum the sky may be seen from; at once as a light changes, a wait begins or ends, it's knocked senseless or falls,
-  goes to another stratum, or the way out opens; a minute at a time while it's gone.
+  goes to another stratum, or the way out opens, or it comes by an opening that shows the sky; a minute at a time
+  while it's gone.
+
+## What shows the sky *(2026-11-03: the user's "All three together", DECISIONS.md's the time of day believed; the rest the house's, drafted for the user to review)*
+
+The user's (2026-10-31): the time's known where there's "some place where you can actually see outside through a window,
+skylight, vertical shaft, or the like"; (2026-11-03) all three, together.  Everything else in this section is the house's:
+every number and every word for review.  The maker places them by the seed alone (dq0m/sky.c, its own dice, after the
+plan's and the links': a chunk made again is byte-identical, dq0pure's); a test's scene, the environment's dq0sky (rc's), every room both and a shaft always.
+
+- **A skylight**: on the **top stratum** alone, in its hewn rooms (a natural cave's none, nor a mixed stratum's caves):
+  **one room in six**, over the middle of its floor.  No way up, too high and too small (u there: no way); nothing's
+  stocked under it.  On the map a **^**.  Its square's kept as a way up's is (T_UP, marked T_HOLE).
+- **A window on the surface**: the **top stratum**'s alone, **one room in six** of its hewn rooms, in a wall with solid rock
+  two squares deep behind it: a light well, up to the day.  Any of glass, shutters and bars, by its dice; 2 feet wide, 3
+  high.  **Which windows show the sky**: these, marked as they're told ("There is a glazed window ahead, looking on the
+  sky."; "It looks on the sky." to examine it; "Through the window ahead you see the sky, up a light well."), and
+  only with their shutters open.  **Every other window** (fixtures.c's, on every stratum: a passage running beside the
+  wall) **looks on what it did: a passage, the dark, and shows no sky.**  Not a way out: its bars can be bent and
+  its glass broken, as any window's, but the sill goes nowhere ("You can't get up onto the sill.").
+- **A shaft open to the sky**: **one game in two** the top stratum has one, on a square of its halls, in a chunk with no
+  other way between strata in it; **one in two of them goes on down**, and on from there the same, **three strata at most**, while
+  the stratum it's on has a way down of its own.  Its foot on a stratum below is there if the square lies inside that
+  stratum's bounds, off their edges and in its halls; if not, it's **choked** ("The shaft is choked with fallen rock
+  a little way down.").  So no stratum below is laid out any differently for it (its bounds aren't stretched
+  round it).  It's told as what it is ("a shaft open to the sky"; "a shaft in the floor" where it goes on down), the
+  map's < and >.  Two of a stratum's eight links are kept free for shafts dug.
+- **What's seen**: from the square **under it or beside it** (a square each way; a window's, the floor squares beside it),
+  the belief's set as at the way out (The time of day believed, above): **a window, a skylight, or a shaft on the top
+  stratum** the open sky (the sun or the stars read by the north it believes in; its bearings lost, high or low; watched
+  a while, the time and north both); **a shaft from below the top stratum** a patch too small and far to read: **its
+  light alone**, the part of the day.  At once as it comes by one, even on a walk (its looks every third square find it: part 17's sky_near; at the
+  turns pace, at the next minute's look).  Words by the hour and by what shows it ("Pale daylight falls from the shaft
+  above: it's day.", "Grey light comes in at the window: it's dawn, or near it.", "Fading light falls from the skylight
+  above: it's dusk.", "Stars show far up the shaft above: it's night.", "Stars show in the skylight above: it's nine at
+  night, you judge.", "The sun shows at the window: it's noon, you judge.").
+- **Daylight falling in** (Light and traces' levels): by the true clock, by day (7 to 17) each opening's a lamp of **reach 4** on the
+  square under it (9 there, 7, 5, 3, 1, as a torch), at dawn and dusk (5 to 7, 17 to 19) **reach 2**, by night **none**:
+  the light layer's, so every actor's sight goes by the same squares (a denizen's in its light, as the character is; a
+  window's with its shutters open).  The look says so ("You see a skylight in the roof ahead, daylight falling from
+  it."); and it's noticed from a little way off as any light is ("A light shows far off ahead.").  The emitters near the
+  character the world's list (the hub's tb.skx: four at most, made again as it comes into a chunk and at each
+  reckoning), the reach tb.sun, set at the day's parts' edges (wtime.c's).  Far off, in a chunk the cache hadn't made as the list was made: dark, till then.
+- **Climbing a shaft, any shaft** (Climbing and falling's rules, as DUNGEON.md always said they were; a dug one's only went by
+  time till now): a round at a time, a Climbing test each, its height the drop between the strata (a shaft to the surface
+  **20 feet**); a slip back, a fall from as high as it got (down: to its foot, the stratum below).  **Too high**: a shaft
+  open to the sky whose room's roof is more than **9 feet** up (a jump and a pull) can't be reached from the floor ("The
+  shaft's mouth is too high to reach."): no rope or ladder rule yet.  A dug shaft's foot is reached, as the digger left it.
+  Jumped down: a fall of its height, as any shaft's.
+- **A shaft as a way out** *(for review)*: only as the way out's own rule lets it: at the **top** of a shaft on the top
+  stratum, climbed, it's the game's end (E_LEFT, a way out's) **if the way out is open** (the theme's mission done);
+  else "An iron grating bars the top of the shaft: that's no way out." and no climb.  So the puzzle's never by-passed.
+- **A thing dropped down one** (any shaft's): a thing put down on the square where a shaft goes down falls to its foot, on the stratum
+  below ("It falls away down the shaft, and you hear it land far below."); a choked one, it lies where it's put.  The
+  denizens don't hear it yet.  A thing thrown down, or dropped by a denizen, not yet.
+- **Kin**: a shaft's **draught** is the air layer's as any shaft's (The draught, Sound, the air and moving quietly): the
+  stronger on a stratum with one; its **drip**: under a shaft open to the sky a little noise of water (the background's,
+  2). **Rain and weather**: not yet; their place is what's here (a square under or beside one of these is where rain would
+  reach, the same check; overcast its light alone); sounds from above, not yet.
 
 ## Poison, bad air and disease *(2026-10-31: the user's words, DECISIONS.md's; the book's where it speaks, drafted for the user to review)*
 
@@ -3382,7 +3442,7 @@ What the user has decided and no section's rule holds yet.  Most that's decided 
 yet*: the autosaves before danger (The character carries on); the character's morale as an option (D14: Morale); a
 standing order to eat and drink, and rain washing traces away (Water, hunger and thirst; Light and traces); a cornered
 rat fighting back (Fights' a helpless character); paying by the coin (The market); the mages' occupations (Characters);
-windows and shafts that show the sky (The time of day believed).  The powers (D11: spells, rituals, psionics: Phase 5)
+rain at what shows the sky (What shows the sky).  The powers (D11: spells, rituals, psionics: Phase 5)
 have no rules here yet.
 
 - **A theme's own tests name a purpose** (the user's, 2026-10-20), as the rest of the game's do, which each

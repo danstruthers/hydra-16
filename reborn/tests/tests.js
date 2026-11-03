@@ -1936,7 +1936,7 @@ function stratumRec(m, sn) {
     const r = w.subarray(i * 79, i * 79 + 79), u16 = k => r[k] | r[k + 1] << 8;
     if (!r[0] || r[1] !== sn) continue;
     const links = [];
-    for (let j = 0; j < Math.min(r[22], 8); j++) links.push({ kind: r[23 + j * 7], to: r[24 + j * 7], x: u16(25 + j * 7), y: u16(27 + j * 7) });
+    for (let j = 0; j < Math.min(r[22], 8); j++) links.push({ kind: r[23 + j * 7], to: r[24 + j * 7], x: u16(25 + j * 7), y: u16(27 + j * 7), dug: r[29 + j * 7] });
     return { x0: u16(11), y0: u16(13), w: u16(15), h: u16(17), links };
   }
   return null;
@@ -8880,6 +8880,78 @@ module.exports = {
         const kt = after('sleep 2 hours');
         if (!kt || kt.tsense !== 1 || kt.unc !== 0 || kt.skew !== 0) f.push('absolute timesense not kept through a sleep: ' + JSON.stringify(kt));
         if (!/time It's ten in the morning\.[^]*time It's ten in the morning\./.test(s)) f.push('the timesense character\'s time not told plainly: ' + times.join(' | '));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0sky', near: ['time', 'senses'], what: "Dingus Quest Zero's sky (2026-11-03, the user's \"All three together\": HOUSE.md's what shows the sky, for review): by the seed a shaft open to the sky in a stratum's links (seed 7's, choked below; seed 1 none), the rest by the environment's dq0sky (every top-stratum room a skylight and a window on the surface, a shaft beside the first way down, going on down): a skylight and a window told and on the map, the sun read from beside them, watched, the stars; daylight lighting the squares by day, none by night; a window's sky seen through it, its shutters shut not, never climbed through; a shaft too high to reach, barred at the top, climbed down by the ledge's rules to its foot on the stratum below, its light alone there; a thing dropped down it found at its foot; a shaft a way out only with the way out open",
+      init: 't_rc', cycles: 5000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 1 -c /ram/c.hm', 'quit', 'dq0 -p t -s 7 -c /ram/c.hm', 'look', 'd', 'quit',
+        'dq0sky=1', 'dq0hour=12',
+        'dq0 -p t -s 1 -c /ram/c.hm', 'look east', 'examine the window', 'climb through the window', 'douse the torch', 'look', 'map', 'wait 5 hours', 'wait 4 hours', 'look', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm', 'look southwest', 'open the window', 'look southwest', 'quit',
+        'dq0 -p t -s 2 -c /ram/c.hm -T', 'u', 'go to the shaft', 'u', 'drop the flask', 'd', 'look', 'u', 'quit',
+        'dq0 -p t -s 2 -c /ram/c.hm -T', 'go to the shaft', 'u',
+        'dq0hour=22', 'dq0 -p t -s 2 -c /ram/c.hm -T', 'go to the shaft', 'douse the torch', 'look', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        const roof = ft => () => {                       // (The roof of the character's chunk's rooms: a shaft's mouth in reach)
+          const h = m.dq0.bank(0), { L } = m.dq0.layout(), w = m.dq0.bank(WORLD_BANK_N), st = stratumRec(m, h[L.pcSn]);
+          const ox = (h[L.pcX] | h[L.pcX + 1] << 8) - st.x0, oy = (h[L.pcY] | h[L.pcY + 1] << 8) - st.y0;
+          const [ZONE, ZSIZE, CMID, NZ] = require('../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, zone)', 'sizeof (struct zone)', 'offsetof (struct zone, cmid)', 'offsetof (struct chunk, nzones)']);
+          for (let c = 0; c < 24; c++) {
+            const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3)), o = (c % 3) * 0xAA0;
+            if (w[sl] && b && w[sl + 1] === h[L.pcSn] && (w[sl + 2] | w[sl + 3] << 8) === ox >> 5 && (w[sl + 4] | w[sl + 5] << 8) === oy >> 5) {
+              for (let z = 0; z < b[o + NZ]; z++) b[o + ZONE + z * ZSIZE + CMID] = ft;
+            }
+          }
+        };
+        const rec = g => ({ g, line: 'quit', n: 1, call: () => { (m.sky = m.sky || {})[g] = [stratumRec(m, 0), stratumRec(m, 1)]; } });
+        const goto_head = () => {                        // (Seed 7: put on the head of the shaft, to go down it)
+          const h = m.dq0.bank(0), { L } = m.dq0.layout(), k = stratumRec(m, 0).links.find(l => l.kind === 6 && l.dug === 2);
+          if (k) { h[L.pcX] = k.x & 255; h[L.pcX + 1] = k.x >> 8; h[L.pcY] = k.y & 255; h[L.pcY + 1] = k.y >> 8; }
+        };
+        dq0Poke(m, [rec(1), rec(2), { g: 2, line: 'd', n: 1, call: goto_head }, { g: 3, line: 'look', n: 2, call: () => { const h = m.dq0.bank(0), [A,B] = require('../sim/lib/hubown.js').evaluate(['offsetof (struct hub, tb.nsky)', 'offsetof (struct hub, tb.sun)']); m.dbg = [h[A], h[B]]; } }, rec(5), { g: 5, line: 'u', n: 2, call: roof(8) }, { g: 6, line: 'u', n: 1, hub: { wayOpen: 1 }, call: roof(8) }]);
+      },
+      check(m, out) {
+        const f = [], G = dq0Story(out).split('enters the dungeon'), ok = (g, re, what) => { if (!re.test(G[g] || '')) f.push(what); };
+        const sk = m.sky || {}, sky = (r, kind) => r && r.links.find(l => l.kind === kind && l.dug === 2);
+        if (!sk[1] || sky(sk[1][0], 5)) f.push('seed 1 with a shaft: ' + JSON.stringify(sk[1]));
+        const up = sk[2] && sky(sk[2][0], 5), dn = sk[2] && sky(sk[2][0], 6);
+        if (!up || up.to !== 255 || !dn || dn.to !== 1 || dn.x !== up.x || dn.y !== up.y) f.push('seed 7 with no shaft going on down: ' + JSON.stringify(sk[2]));
+        ok(2, /> d > d The shaft is choked with fallen rock a little way down\./, "seed 7's shaft not choked below");
+        ok(3, /There is an empty window frame ahead, looking on the sky\./, 'the window on the surface not told');
+        ok(3, /You see a skylight in the roof ahead\./, 'the skylight not told');
+        ok(3, /The sun shows in the skylight above: it's noon, you judge\./, 'the sun not read at the skylight');
+        ok(3, /Through the window ahead you see the sky, up a light well\./, 'the sky not seen through the window');
+        ok(3, /It looks on the sky\./, 'the window not told on examining it');
+        ok(3, /You can't get up onto the sill\./, 'the window climbed through');
+        ok(3, /> look > look You are at the far end of a bedchamber\. /, 'daylight not lighting the room with the torch out');
+        ok(3, /\|\.\^\|/, 'the skylight not on the map');
+        ok(3, /You watch the sun a while at the window, its slow way across the sky: it's [a-z ]+, and you know which way north lies now\./, 'the sun not watched');
+        ok(3, /You watch the stars a while at the window as they wheel: it's [a-z ]+, and you know which way north lies now\./, 'the stars not watched');
+        if (!m.dbg || m.dbg[1] !== 0) f.push('the daylight not gone by night: ' + JSON.stringify(m.dbg));
+        ok(4, /a glazed window ahead to your right \(its shutters closed\), looking on the sky\./, 'the shuttered window not told');
+        ok(4, /You can't see past the window ahead: its shutters are closed\./, 'seen through its shutters');
+        ok(4, /You open the shutters\. /, 'the shutters not opened, plainly');
+        ok(4, /Through the window ahead to your left you see the sky, up a light well\./, 'the sky not seen with its shutters open');
+        ok(5, /The sun shows at the top of the shaft above: it's noon, you judge\./, 'the sun not read at the shaft');
+        ok(5, /> u > u The shaft's mouth is too high to reach\./, 'the high roof reached');
+        ok(5, /You stand under a shaft open to the sky, daylight falling from it\. You stand by a shaft in the floor\./, 'the shaft not told');
+        ok(5, /> u > u An iron grating bars the top of the shaft: that's no way out\./, 'the shaft a way out with the way out shut');
+        ok(5, /Put down\. It falls away down the shaft, and you hear it land far below\./, 'the flask not fallen');
+        ok(5, /You set to climbing: \d+ feet of it\./, 'the shaft not climbed by rounds');
+        ok(5, /You climb down the shaft\. You come into /, 'not come down the shaft');
+        ok(5, /You stand under a shaft open to the sky, daylight falling from it\. At your feet lies a flask of oil\./, 'the flask not at the foot, or the foot not told');
+        ok(5, /Pale daylight falls from far up the shaft above: it's day\./, 'the light alone not told from below');
+        if (/skylight/.test((G[5] || '').split('You come into ')[1] || '')) f.push('a skylight below the top stratum');
+        if (!sk[5] || !sky(sk[5][1], 5) || sky(sk[5][1], 5).to !== 0) f.push('the foot not a link on the stratum below: ' + JSON.stringify(sk[5]));
+        ok(6, /You set to climbing: 20 feet of it\.[^]*You have escaped\./, 'not out by the shaft with the way out open');
+        ok(7, /Stars show at the top of the shaft above: it's [a-z ]+, you judge\./, 'the stars not read at the shaft');
+        if (/daylight falling/.test(G[7] || '')) f.push('daylight by night, told');
+        ok(7, /> look > look It is dark\./, 'lit by night with the torch out');
         return f;
       },
       sdcard: true

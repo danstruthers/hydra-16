@@ -160,6 +160,9 @@ static void portals (void)
             add (S->door[i].state & PS_OPEN_ ? " (its shutters open)" : S->door[i].state & PS_BARRED_ ?
                  " (its shutters closed, barred)" : " (its shutters closed)");
         }
+        if (k == PK_WINDOW && (p & PP_SKY)) {
+            add (", looking on the sky");
+        }
         height (S->door[i].dz);
         add (".");
     }
@@ -319,10 +322,12 @@ static void ceiling (void)
 
 static void __fastcall__ opening (unsigned char i)
 {
-    unsigned char k = S->open[i].kind, rel = S->open[i].rel;
+    unsigned char k = S->open[i].kind, rel = S->open[i].rel, d = k & O_DAYLIT;
 
-    add (rel == 0xFF ? " You stand by " : " You see ");
-    add (k == O_WAY_OUT ? "the stairs up to the way out" : k == O_STAIRS_UP ? "a stairway leading up" :
+    k &= ~O_DAYLIT;
+    add (rel == 0xFF ? (k >= O_SKYLIGHT ? " You stand under " : " You stand by ") : " You see ");
+    add (k == O_SKYLIGHT ? "a skylight in the roof" : k == O_SKYSHAFT ? "a shaft open to the sky" :
+         k == O_WAY_OUT ? "the stairs up to the way out" : k == O_STAIRS_UP ? "a stairway leading up" :
          k == O_STAIRS_DOWN ? "a stairway leading down" : k == O_LADDER_UP ? "a ladder going up" :
          k == O_LADDER_DOWN ? "a ladder going down" : k == O_SHAFT_UP ? "a shaft in the ceiling" :
          k == O_SHAFT_DOWN ? "a shaft in the floor" : k == O_RAMP_UP ? "a long slope leading up" : k == O_RAMP_DOWN ?
@@ -332,12 +337,11 @@ static void __fastcall__ opening (unsigned char i)
         add (relname[rel & 7]);
         height (S->open[i].dz);
     }
-    add (".");
+    add (d ? ", daylight falling from it." : ".");
 }
 
 static void room (void)
 {
-    unsigned char i;
     char* art;
 
     if (S->size >= S_VAST) {                    /* (A great cavern: where in it untold, its walls beyond the light or
@@ -399,11 +403,6 @@ told:
     doors (0);
     doors (MOUTH);
     portals ();
-    for (i = 0; i < S->nopen; ++i) {
-        if (!REL_BEHIND (S->open[i].rel)) {
-            opening (i);
-        }
-    }
 }
 
 /* ---- A passage */
@@ -453,6 +452,8 @@ static void passage (void)
 /* What the character perceives, in words, into lb (from look.c's copy of the hub's record) */
 void o_words (void)
 {
+    unsigned char i;
+
     *(lbe = lb) = 0;
     lbn = 0;
     S = &sight_copy;
@@ -480,10 +481,18 @@ void o_words (void)
     if (S->dark) {
         felt_words (FW_TOUCH);                  /* (In the dark, what its hands and feet can tell alone: overlay 17's,
                                                 **   HOUSE.md's walking in the dark, 2026-11-02) */
-    } else if (S->where == W_ROOM) {
-        room ();
     } else {
-        passage ();
+        if (S->where == W_ROOM) {
+            room ();
+        } else {
+            passage ();
+        }
+        for (i = 0; i < S->nopen; ++i) {        /* (Its stairways, ladders, shafts: a passage's its own square's or
+                                                **   beside it) */
+            if (!REL_BEHIND (S->open[i].rel)) {
+                opening (i);
+            }
+        }
     }
     traps ();
     glows ();

@@ -30,6 +30,7 @@
 #define W_SPRING
 #include "workpart.h"
 
+extern unsigned char burn_ask;                  /* (things.h's) */
 unsigned char door_key (void);                  /* (Part 80's, wport.c: a key that fits it, the actor's) */
 
 void s_doors (void)
@@ -41,6 +42,10 @@ void s_doors (void)
     hub_map (0);
     st = wk.who ? bd.step : HUB->pcsum.step ? HUB->pcsum.step : 10;  /* (An actor's, its own: wport.c's) */
     mine = wk.pq.bar == ((wk.pd + 2) & 3);      /* (The character on its bar's side) */
+    if (wk.pq.parts & PP_SKY && wk.pq.kind == PK_WINDOW) {
+        burn_ask |= 2;                          /* (A window on the surface's shutters: the sky looked at, as it's
+                                                **   worked: part 76's, things.h's TS_ASK) */
+    }
     if (what == PA_BEND) {
         what = PA_FORCE;                        /* (Bent: forced) */
     }

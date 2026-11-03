@@ -64,6 +64,13 @@ unsigned char __fastcall__ st_out (unsigned char sn);   /* (Part 22's: sfile.c) 
 unsigned char __fastcall__ st_in (unsigned char sn);    /* (Part 22's) Read back into its slot: 1, or 0 none */
 unsigned char __fastcall__ stratum_in (unsigned char m);    /* (Part 3's: dq0w.c) Stratum m in its slot: 1, or 0
                                                 **   (not made yet) */
+unsigned char __fastcall__ sky_ask (unsigned w);    /* (Part 89's: dq0w.c) The daylight's emitters, a shaft's going, a thing let fall */
+#define SA_LIST         0x4000
+#define SA_GO           0x8000
+#define SA_UP           0x0100
+#define SA_JUMP         0x0200
+#define SA_END          0x2000
+#define SA_HERE         0x1000
 void it_near (void);                              /* The chunks round the character's in the store, as it comes into
                                                 **   one (dq0w.c's see, as it's moved) */
 void __fastcall__ start (const char* dir);      /* (Part 3's: dq0w.c) The world's start, once it's attached */
@@ -71,7 +78,7 @@ void __fastcall__ keep (unsigned char back);    /* The store kept (items.dat), o
 extern unsigned ilim;                           /* (things.c's: the records used, at most) */
 extern unsigned ihigh;                          /* (things.c's: every record from it on free; raised as one's taken) */
 extern unsigned irs;                            /* (things.c's: a thing's own numbers, made) */
-#define OVBANKS         26                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
+#define OVBANKS         27                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
                                                 **   own: ipage.c's, ovbank[OVBANKS]; the ways across a room's,
                                                 **   dq0w.c's, ovbank[OVBANKS + 1]; the traces' store's, wtrace.c's,
                                                 **   ovbank[OVBANKS + 2] and [OVBANKS + 3]) */

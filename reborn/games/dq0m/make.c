@@ -135,6 +135,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
             grow_built (c, &me, s->seed ^ ((unsigned long) cx << 16 | cy) * 40503UL);
         }
         fixtures (c);                           /* (Its materials, its windows, its traps ...) */
+        sky (c, 0);                             /* (Its skylights and windows on the surface: sky.c's) */
     }
     wet_chunk (c, &me);                          /* (Its water: slice 4.9's; then age's rubble, slice 4.10's) */
     air_pocket (c, &me);                         /* (Its air: 2026-10-31) */

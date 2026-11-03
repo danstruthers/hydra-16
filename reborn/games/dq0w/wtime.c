@@ -47,10 +47,12 @@ extern signed char wsteps;
 #define FELL            0xFFFF                  /* (T.gone: come round from a fall as the game begins) */
 #define T               (HUB->tb)
 
+#pragma bss-name (push, "SW76RODATA")           /* (Its own, wanted only as it runs: the main RAM's room) */
 static unsigned n;                              /* (The clock's minute now) */
+static int d;                                   /* (A drift's minutes, its way the referee's) */
+#pragma bss-name (pop)
 static unsigned m;                              /* (The true minute of the day, now) */
 static int lo, hi;                              /* (The sky's: the part of the day, minutes) */
-static int d;                                   /* (A drift's minutes, its way the referee's) */
 
 /* A minute's offset brought to -720 on, under 720 */
 static int __fastcall__ norm (int v)
@@ -208,13 +210,15 @@ void __fastcall__ s_sky_seen (unsigned char kind)
 {
     struct msg e;
     static const int edge[5] = { 1140, 300, 420, 1020, 1140 };   /* (The parts' edges: night, dawn, day, dusk) */
-    unsigned char p, night;
+    unsigned char p, night, src;
     signed char s;
 
     if (kind == SKY_BEGUN) {
         begun ();                               /* (A new game's first look) */
         return;
     }
+    src = kind & 0xF0;                          /* (What shows it, SKS_*, told with it) */
+    kind &= 15;
     p = m < 300 || m >= 1140 ? SKP_NIGHT : m < 420 ? SKP_DAWN : m < 1020 ? SKP_DAY : SKP_DUSK;
     night = p == SKP_NIGHT;
     lo = edge[night ? 0 : p];
@@ -247,7 +251,7 @@ void __fastcall__ s_sky_seen (unsigned char kind)
         T.told = p;
         e.kind = E_BEARING;
         e.who = 0;
-        e.b = p;
+        e.b = p | src;
         e.w1 = BRG_SKY;
         e.t = HUB->now;
         hub_event (&e);
@@ -288,9 +292,11 @@ static void begun (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* The sky in sight (SKY_*): a test's poke; else an open way out within SKY_NEAR squares on the character's stratum (the
-** top's up its stairs, its light alone; a far exit below the top, out into the open).  T.skysn the stratum, if it has
-** one (its looks the more often) */
+/* The sky in sight (SKY_*, and what shows it, SKS_*, times 16): a test's poke; else an open way out within SKY_NEAR squares
+** on the character's stratum (the top's up its stairs, its light alone; a far exit below the top, out into the open);
+** or a window on the surface, a skylight or a shaft open to the sky by it, or come by since the last reckoning (T.nigh:
+** the open sky, but a shaft's from below the top stratum, its light alone).  T.skysn the stratum, if it has one (its
+** looks the more often) */
 static unsigned char sky_here (void)
 {
     struct link* l;
@@ -306,6 +312,15 @@ static unsigned char sky_here (void)
             }
         }
     }
+    if (sn <= SKY_DEEP) {
+        it_near ();                             /* (By one now: part 17's sky_near, T.nigh) */
+    }
+    k = T.nigh;
+    T.nigh = 0;
+    if (k) {
+        T.skysn = sn;
+        s = (k == SKS_DEEP ? SKY_LIGHT : SKY_OPEN) | k << 4;
+    }
     return T.sky ? T.sky : s;
 }
 
@@ -320,11 +335,11 @@ void s_tsense (void)
     if (HUB->pcsum.cond & C_FATIGUED || (HUB->pcsum.load & 2)) {
         rest_go ();                             /* (A wait's or a sleep's rest told as it goes and as it ends) */
     }
-    n = (unsigned) (HUB->now / 600);
     if (!T.at) {
         sky_seen (SKY_BEGUN);
-        T.at = n + 1;
+        T.at = (unsigned) (HUB->now / 600) + 1;
     }
+    n = (unsigned) (HUB->now / 600);
     e = n + 1 - T.at;
     T.at = n + 1;
     m = (n + (T.hour0 & 0x80 ? TB_START : T.hour0) * 60) % 1440;
@@ -362,4 +377,13 @@ void s_tsense (void)
     }
     T.due = HUB->now + (s || T.skysn == HUB->pc_stratum ? 3000 : (60 - T.mins) * 600UL);   /* (The sky in sight,
                                                 **   or maybe: five minutes on, to see it watched) */
+    T.sun = m < 300 || m >= 1140 ? 0 : m < 420 || m >= 1020 ? 2 : 4;    /* (The daylight, the senses' lamps') */
+    if (HUB->pc_stratum <= SKY_DEEP) {
+        sky_ask (SA_LIST);                      /* (Its emitters near it: the chunks made since it last came into one) */
+    }
+    e = m < 300 ? 300 : m < 420 ? 420 : m < 1020 ? 1020 : m < 1140 ? 1140 : 1740;     /* (Looked at again by its next
+                                                **   change, on the strata the sky's near) */
+    if (HUB->pc_stratum <= SKY_DEEP && HUB->now + (e - m) * 600UL < T.due) {
+        T.due = HUB->now + (e - m) * 600UL;
+    }
 }

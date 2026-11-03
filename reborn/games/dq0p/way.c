@@ -130,6 +130,10 @@ void __fastcall__ s_way_seen (unsigned char sn, unsigned char face)
             b->kind = st;                       /* (Barred, locked, as it's plain: words) */
             continue;
         }
+        if (d.kind == PK_WINDOW && (d.parts & PP_SKY)) {
+            b->what = WB_SKY;                   /* (A window on the surface: the sky, up its light well) */
+            continue;
+        }
         ox = d.x;                               /* (Out of its room, or out of its passage that way) */
         oy = d.y;
         od = s->where != W_ROOM ? (face + d.rel) & 7 : oy < ry ? H_N : oy >= ry + s->rh ? H_S :

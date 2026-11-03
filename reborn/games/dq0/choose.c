@@ -101,7 +101,9 @@ static void __fastcall__ named (unsigned char k, unsigned char n)
             "window" : s->door[i].kind == PK_SLIT ? "arrow slit" : s->door[i].parts & SD_DOUBLE ? "double door" : "door";
     } else {
         r = s->open[i - s->ndoors].rel;
-        w = open[s->open[i - s->ndoors].kind & 7];
+        w = s->open[i - s->ndoors].kind & 8 ? (s->open[i - s->ndoors].kind & 15) == O_SKYLIGHT ? "skylight" :
+            (s->open[i - s->ndoors].kind & 15) == O_SKYSHAFT ? "shaft overhead" : open[s->open[i - s->ndoors].kind & 7] :
+            open[s->open[i - s->ndoors].kind & 7];
     }
     add (k && w == first ? "one" : w);           /* ("the door ..., the one ...") */
     first = k ? first : w;
@@ -198,7 +200,8 @@ again:
             k = s->open[i - s->ndoors].kind;
             if (!((obj == OB_STAIRS && (k == O_STAIRS_UP || k == O_STAIRS_DOWN || k == O_WAY_OUT)) ||
                 (obj == OB_LADDER && (k == O_LADDER_UP || k == O_LADDER_DOWN)) ||
-                (obj == OB_SHAFT && (k == O_SHAFT_UP || k == O_SHAFT_DOWN)) || (obj == OB_WAY_OUT && k == O_WAY_OUT))) {
+                (obj == OB_SHAFT && (k == O_SHAFT_UP || k == O_SHAFT_DOWN || (k & 15) >= O_SKYLIGHT)) ||
+                (obj == OB_WAY_OUT && k == O_WAY_OUT))) {
                 continue;
             }
             x = s->open[i - s->ndoors].x;

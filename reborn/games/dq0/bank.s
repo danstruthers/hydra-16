@@ -138,6 +138,7 @@ ovl_out:
             OVFN        focus_words, 13
             OVFN        felt_words, 17
             OVFN        facing_words, 19
+            OVFN        sky_words, 19       ; (The sky seen by a window, a skylight, a shaft: time.c, 16's room)
             OVFN        turned_says, 19     ; (A turn's first words: task.c's, the main RAM's room)
             OVFN        fore_set, 6         ; (The answer's tasks in the foreground: main.c's)
             OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)

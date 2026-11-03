@@ -842,7 +842,7 @@ nobody tends is dark.  A light that's nobody's (a cave's glow, magic) stays as t
 A square's time is the referee's (its summary's step: the pace's, below), more uphill, a little more steeply
 downhill, more on steps.  A step takes a rise or a drop of 2 feet, steps or stairs 4 (world.h's STEP_MAX, STAIR_MAX).
 The character takes the shortest way it can walk to where it's going (around a ledge, by the steps).  A rise or a drop
-too steep to walk, a window's sill, a shaft or a ladder: a climb, the referee's test (Climbing: feet of progress each
+too steep to walk, a window's sill, a shaft (2026-11-03: any shaft, a round at a time) or a ladder: a climb, the referee's test (Climbing: feet of progress each
 test, a test a round; a fall's impact by its height, the landing's floor: HOUSE.md's climbing and falling); a ledge
 or a shaft can be jumped down (jump down: a fall of its height).
 
@@ -1219,7 +1219,8 @@ numbers are HOUSE.md's (the time of day believed).
   it knew; a sleep or a black-out guessed as it wakes or comes round (the harder the longer; a critical failure, no
   idea); one with absolute timesense (the summary's timesense: hmchar's rare trait) never drifts.
 - **What narrows it**: its own light burning down (it sees its torch), its hunger since its meal; and the sky in sight
-  (an open way out near: the top's up its stairs its light alone, a far exit below the top the open sky): its light the
+  (an open way out near: the top's up its stairs its light alone, a far exit below the top the open sky; 2026-11-03,
+  a window on the surface, a skylight, a shaft open to the sky, below): its light the
   part of the day, the sun or the stars read by the north it believes in (so a wrong north reads a wrong hour), its
   bearings lost the sun high or low, watched a while the time and north both (E_BEARING BRG_SKY, told).
 - **Reckoned lazily**, never polled: at the lights' burning's look (part 27's), an hour on, five minutes where the sky
@@ -1228,6 +1229,16 @@ numbers are HOUSE.md's (the time of day believed).
 - **What uses it**: "time", "what time is it" (the UI's time.c, overlay 16: plainly when it knows, else as sure as it
   is), "sleep until dawn", "wait until morning" (the hour it means by what it believes; the true clock decides what
   happens), "watch the sun" (a wait in the sky's sight).  The light's minutes left stay true (it sees its torch).
+- **What shows the sky** (2026-11-03, the user's "All three together"; HOUSE.md's for the numbers): by the seed alone
+  (dq0m/sky.c, overlay 9: a stratum's shafts as its plan's grown, a chunk's the rest as it's made, on dice of their own), a
+  **skylight** in a top-stratum room (O_SKYLIGHT), a **window on the surface** in one (a portal's PP_SKY, its O_WINDOW on the
+  floor beside it; every other window still looks on a passage and shows no sky), and a **shaft open to the sky** (a
+  stratum's link, its dug LD_SKY: grown as any link, but no stratum's bounds go round it), the top stratum's going on
+  down through three at most.  From under or beside one the world (part 17's sky_near, part 76) sets the belief, its
+  words by what shows it.  By day and at dawn and dusk each is a **lamp** of the light layer, the world's list of those
+  near (the hub's tb.skx, part 89's) and its reach (tb.sun) the senses' to cast, for every actor alike.  A shaft's climbed
+  by the ledge's rules (s_climb, part 89's shaft_go), perhaps too high to reach; a way out only as the way out's rule lets it; a
+  thing dropped on its head falls to its foot.
 
 ### The map kept
 
@@ -1546,7 +1557,8 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   to eat and drink when needed.
 - **The time of day believed** (built 2026-10-31: the time of day believed, above; HOUSE.md's): left, the plan's
   shafts, windows and skylights to the surface (where the rain's hook will find the surface reaches) as more places the
-  sky is seen from, the weather (overcast: its light alone), thirst, tiredness and the denizens' routines learnt as
+  sky is seen from, built 2026-11-03: the time of day believed's what shows the sky, above; the weather (overcast: its
+  light alone), rain at them, thirst, tiredness and the denizens' routines learnt as
   clues, a chain of torches counted, the time on the status line.
 - **Rock and old places** (slice 4.10, built in part 2026-10-31: changing the dungeon's rock, above; HOUSE.md's rock's
   kinds and hardness): the rock's own kinds and hardness across the strata, a dig's rate by it, told as it's dug,

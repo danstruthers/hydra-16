@@ -1401,6 +1401,10 @@ dawn", "wait until morning", "watch the sun" go by it.
 
 **Design:** DUNGEON.md's the time of day believed; HOUSE.md's.
 
+Then (2026-11-03): the check of HOUSE.md found that the user had named windows, skylights and shafts for seeing the time,
+but only an open way out showed the sky.  Asked which goes first, the user: "All three together".  **Built:** HOUSE.md's
+what shows the sky.
+
 ### Poison, bad air and disease
 
 The user (2026-10-31): "What about poisoning, chemical exposure, and disease?"  Then: "Should also include poor air

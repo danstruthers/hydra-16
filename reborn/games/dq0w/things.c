@@ -2294,6 +2294,7 @@ static unsigned char __fastcall__ put_down_here (unsigned n)
     p->y = y;
     p->flags &= ~(I_HELD | I_WORN);
     dropped = n;
+    sky_ask (n);                                /* (On a shaft's head: it falls, part 17's) */
     return IR_OK;
 }
 

@@ -487,15 +487,11 @@ static unsigned char __fastcall__ plan_kind (unsigned char n, unsigned idx)
         hub_map (0);
         strcpy ((char*) piece, HUB->savedir);
         p = (char*) piece + strlen ((char*) piece);
+        *p++ = '/';
+        *p++ = 'p';
+        *p++ = 'l';
         if (n > 15) {
-            *p++ = '/';
-            *p++ = 'p';
-            *p++ = 'l';
             *p++ = hex[n >> 4];
-        } else {
-            *p++ = '/';
-            *p++ = 'p';
-            *p++ = 'l';
         }
         *p++ = hex[n & 15];
         strcpy (p, "0000.dat");
@@ -516,6 +512,9 @@ static unsigned char __fastcall__ plan_kind (unsigned char n, unsigned idx)
 ** had there (its ways all taken, but lspill puts it in the halls then; no room for its records), else 1 (made, or no
 ** halls found for it).  Its numbers the stratum's seed's, in turn */
 static unsigned char lf, ln, ll, lspill;
+#pragma bss-name (push, "SW1RODATA")
+static const struct link* lq;                   /* (Its own, wanted only as it runs) */
+#pragma bss-name (pop)
 
 static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, unsigned char j)
 {
@@ -528,10 +527,10 @@ static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, un
     L.sn = n;
     L.kind = k;
     L.link = 0xFF;
-    if ((K.flags & K_WAYS) && (u = j + (n == 0)) < s->nlinks) {
+    if ((K.flags & K_WAYS) && (u = j + (n == 0)) < s->nlinks && (lq = &s->link[u])->dug != LD_SKY) {   /* (No shaft open to the sky) */
         L.link = u;
-        L.cx = (s->link[u].x - s->x0) / CW;
-        L.cy = (s->link[u].y - s->y0) / CW;
+        L.cx = (lq->x - s->x0) / CW;
+        L.cy = (lq->y - s->y0) / CW;
     } else if ((K.flags & K_WAYS) && !lspill) {
         return 0;
     } else {

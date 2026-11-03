@@ -228,6 +228,45 @@ void __fastcall__ s_it_flush (unsigned char sn)
     hub_map (0);
 }
 
+/* The sky's opening within a square of the character (a window with shutters open, a skylight, a shaft open to the sky:
+** HOUSE.md's what shows the sky, 2026-11-03), kept till the reckoning, part 76's (the hub's tb.nigh, SKS_*), and asked for
+** at once if it isn't told: as it comes by one on a walk, its looks every third square at most */
+#pragma static-locals (push, on)
+static void sky_near (void)
+{
+    static struct opening* o;
+    static struct portal* q;
+    static unsigned char k, s, sn;
+
+    hub_map (0);
+    sn = HUB->pc_stratum;
+    s = 0;
+    if (sn <= SKY_DEEP && at (sn, HUB->pc_x, HUB->pc_y)) {
+        for (k = C->nopen, o = C->open; k; --k, ++o) {
+            if ((unsigned char) (o->x - cx_ + 1) <= 2 && (unsigned char) (o->y - cy_ + 1) <= 2) {
+                if (o->kind == O_WINDOW) {
+                    q = &C->portal[o->sill];
+                    if (!(q->parts & PP_SHUTTERS) || (q->state & (PS_OPEN | PS_WRECKED))) {
+                        s = SKS_WINDOW;
+                    }
+                } else if (o->kind == O_SKYLIGHT) {
+                    s = SKS_SKYLIGHT;
+                } else if (o->kind == O_SHAFT_UP && STRATUM (sn).link[o->link].dug == LD_SKY) {
+                    s = sn ? SKS_DEEP : SKS_SHAFT;
+                }
+            }
+        }
+    }
+    hub_map (0);
+    if (s) {
+        HUB->tb.nigh = s;
+        if (!HUB->tb.told) {
+            burn_ask |= TS_ASK;
+        }
+    }
+}
+#pragma static-locals (pop)
+
 /* The chunks round the character's (two each way, in its stratum) in the store, as it comes into a chunk (as it's
 ** moved: the chunk it was in last in the table's) */
 void s_it_near (void)
@@ -236,6 +275,7 @@ void s_it_near (void)
     unsigned w, h;
     signed char x, y;
 
+    sky_near ();
     pc_chunk ();
     own ();
     if (IPG->lsn == pcs + 1 && IPG->lcx == pcx && IPG->lcy == pcy) {
@@ -245,6 +285,7 @@ void s_it_near (void)
     IPG->lsn = pcs + 1;
     IPG->lcx = pcx;
     IPG->lcy = pcy;
+    sky_ask (SA_LIST);                          /* (The daylight's emitters near it: part 89's) */
     s = &STRATUM (pcs);
     w = (s->w + CW - 1) >> CW_BITS;
     h = (s->h + CW - 1) >> CW_BITS;

@@ -405,7 +405,7 @@ static void sheet (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    34                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    35                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -1265,8 +1265,8 @@ void __fastcall__ s_news (const struct msg* m)
         break;
     case E_BEARING:                             /* (Its bearings: lost, known, or set right, a room it knows; the sky
                                                 **   seen, the time it believes, time.c's) */
-        if (m->w1 == BRG_SKY) {
-            time_ui (TU_SKY | m->b << 8);
+        if ((unsigned char) m->w1 == BRG_SKY) {
+            time_ui (TU_SKY | (m->w1 >> 8 ? m->w1 & 0xFF00 : m->b << 8));   /* (A shaft's refusal's, its high byte) */
             break;
         }
         tell (m->w1 == BRG_LOST ? T_LOST_BEARINGS : T_BEARINGS_BACK);
