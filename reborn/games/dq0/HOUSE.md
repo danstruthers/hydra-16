@@ -1656,7 +1656,7 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   flask, the dip, by that light; put away after if the other's carried.  (2) *Still lit, a spare, no other light: the
   preferred order, chosen for the player*: off with the pack, "You get out the torch.", "You light the torch from the
   burning one." (3 seconds), "You blow out the torch." (a second), "You set the torch down at your feet." (the lit one: the
-  hands' rule), "You get out the flask of oil.", "You set to soaking the torch." (its time, the oil moved at its end),
+  hands' rule), "You get out the flask of oil.", "You set to filling the torch." (its time, the oil moved at its end: "You soak the torch in the flask of oil."),
   "You put away the flask of oil.", "You put away the torch." (the old one), "You take up the torch." (the lit one), the
   pack back on.  (3) *No spare, no other light*: "You go to blow out the torch: that will leave you in the dark.", asked
   ("Keep blowing out the torch?": no leaves it lit, as any soft stop); then the same by touch: the dip's end tested, the
@@ -1681,7 +1681,7 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   Interrupted part way: the old one where it fell, the pack as it stands.  **"New", "fresh", "another"** are a selector
   for any handling: the thing of that name not in a hand and not burning ("take a fresh torch", "hold another torch":
   into a hand, from wherever it is).  (commands.words' SL_NEW; the catalogue's bank's light, part 4's pick; part 82's
-  RS_FALL.)
+  RS_GO.)
 - **Engaged, a round a step, each a grope** (the book's grope, Combat 7, a turn; the user's, 2026-11-02): the readiest
   (on the body, lying within reach) a round; each step above a round in place of its seconds (so a thing stowed in the
   worn pack in a fight three rounds: drop the pack first, at no time).  Each step its own test (the referee's P_GROPE);
@@ -3153,7 +3153,8 @@ for its words (wtend.c), the UI's start and end (main.c).
 
 - **A whetstone, and "sharpen"** (the user's, 2026-11-02, DECISIONS.md's: "like sharpening your sword (if you have a
   whetstone)"): the routine's there (HOUSE.md's every use of a tool); it wants a kind (the catalogue's NKINDS 144 is full:
-  a kind's slot to free, or the kinds' 8K's table made larger, its words' bank's limit checked by dq0w/make.js), a verb
+  KI_COUNT 144; NKINDS 146 would fit, 37 bytes a kind and the kinds' words under make.js's 0x1580, with throws' and its
+  tables a row more, its price and where it's found in outfits.txt), a verb
   (commands.verbs, an action), and a rule: the book has no whetstone (hm-core's text: no such word), so the house's: a
   blade's wear (the wear a dig or a blow does it, a closer look's "dulled") made less by a long task, the routine's use.
 
