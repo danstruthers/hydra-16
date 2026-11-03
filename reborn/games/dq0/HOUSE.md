@@ -188,7 +188,8 @@ referee's room, 2026-11-02; back as the kinds come.)
   is a hidden door; portcullises and windows are never hidden.)
 
 Each spell is strenuous work: two fatigue levels at HarnMaster's rate (Moving and tiring, above), so a long dig wants
-rests between its spells.
+rests between its spells.  A wall is two feet through, a square of the rock five (corner to corner seven), a heap of
+rubble two, a shaft the drop to the stratum below.
 A natural cave's earthen floors are soft soil; a built, mined or mixed stratum's are trodden hard (dq0m/fixtures.c).
 A floor's flags are lifted, not cut (the user: a material of their own).  The user's, 2026-10-20: "a sword digs
 earth too, poorly, and dulls"; bare hands "should only work in soft soil.  Hard-packed soil or harder should result
@@ -618,7 +619,7 @@ book's; the house's below, each marked.
   last thing named; take the last thing named if it lies near, else the thing near, asking which of several, and
   saying so when there's none (the user's answer 8); attack the target; throw what's in its hand, at the target; light and douse what's in its hand; open, close, break ... what's in
   front; look and examine the place.  (resolve.c; main.c.)
-- **"Take all"** takes each thing it sees lying about, the nearest first (those in reach before those walked to),
+- **"Take all"** takes each thing it sees lying about, eight at most, the nearest first (those in reach before those walked to),
   in turn; one it can't take, or no longer sees, ends it.  (resolve.c's taken_next.)
 - **What it's done with** ("hit the door with the bar", "strike the rat using my sword", "dig down with the shovel",
   "light the torch with the tinderbox", "pick the lock of the chest with the lockpicks"; the user's playtest, 2026-10-22:
@@ -831,7 +832,7 @@ climb's test to hold on).
   eighths.  None exactly so, any on that side of the character (half the room; a door along the left wall far ahead is
   "on the left"), of several the question or the one directly ahead; none on that side, "You haven't seen a door that
   way."  "A door" is a door before a portcullis (the look's words), a portcullis only if it sees no door.
-- **A walk over for a command** *(the user's, 2026-11-02; as built, for review)*: take, hold, wear, put, light, examine
+- **A walk over for a command** *(the user's, 2026-11-02; as built, for review)*: take, hold, wear, put, light, examine,
   read, and the aspects, a blow's close-in, gathering: the walk told as it starts, at once ("You go over to the pot.",
   "You head for the door.": the user's D17, a command answers at once), what's new since the command began (a thing just come into the light, a denizen new in sight), a beat, then the command's outcome.  No look
   on arrival, no "at your feet" for what it came for.  Stopped short (engaged, a trap), why, and the command dropped.  A
