@@ -171,7 +171,7 @@ ovl_out:
             SWFN        size, 1
             SWFN        t_init, 1
             SWFN        finish, 1
-            SWFN        save_game, 13        ; (Part 13's: part 1's room, slice 4.4's)
+            SWFN        save_game, 3         ; (Part 3's: part 1's room, slice 4.4's)
             SWFN        command, 2
             SWFN        ready, 2
             SWFN        cq_post, 2

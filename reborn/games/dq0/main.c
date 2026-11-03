@@ -463,7 +463,7 @@ unsigned char plain;
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
-static char spath[56];                          /* (A path in the save's folder: save_path's, part 13's save_at's) */
+static char spath[56];                          /* (A path in the save's folder: save_path's, part 3's save_at's) */
 
 static char* __fastcall__ save_path (const char* name)
 {
@@ -498,9 +498,9 @@ static int load_save (void)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW13CODE")            /* (Part 13's: part 1's room, slice 4.4's; a cold part, the commands' path
-                                                **   not the longer for it, part 6's copied in at every look) */
-#pragma rodata-name (push, "SW13RODATA")
+#pragma code-name (push, "SW3CODE")             /* (Part 3's, the map's: part 1's room, slice 4.4's; none of the commands'
+                                                **   path the longer for it, part 13's copied in at every command) */
+#pragma rodata-name (push, "SW3RODATA")
 
 static char* __fastcall__ save_at (const char* name)
 {
