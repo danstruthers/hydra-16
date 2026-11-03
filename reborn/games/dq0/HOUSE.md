@@ -2325,12 +2325,12 @@ roll (SOUND.md's rule, D9: tuned by ear later), and tests Stealth where the book
   smelt it) and has lost it goes on towards where it last sensed it, a step at a time, for its next eight decisions
   (DRAWN_N: dq0d.c's draw_on), unless it senses it again, as far as it would follow a scent (one that
   keeps to its lair a step or two from it); a shy one keeps away as ever.  So a bandit that hears a door
-  opened comes to see.  Not yet: the way there found round walls (it goes straight, as a denizen does).
+  opened comes to see, by its way round walls and doors if it needs one (ways found, below).
 - **The background** *(every ruleset's, for review)*: water in a well or a cistern 2, the wind at a shaft or the way
   out 1 (2 in a draught of 2 or more; none in still air), each a level less every four squares off; a crowd about
   the character (three or more within three squares of it, awake: the character's alone, the denizens hear past
   their own) 1; the loudest of them where the hearer stands, taken off every sound's
-  loudness (gone at none).  Running water comes with slice 4.9.  Told as a listen ends: "You hear nothing but water
+  loudness (gone at none).  A stream's running water is no source yet.  Told as a listen ends: "You hear nothing but water
   trickling somewhere near.", or after what it heard, "Behind it all, the wind in a shaft near by."  Not yet: a
   fight's din (its blows heard by the denizens near: the fights' slice).
 - **Moving quietly** *(the book's Stealth, D15; the rest for review)*: creeping ("creep", "sneak", "sneak north",
@@ -2397,8 +2397,9 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
   best (Strength 15, Initiative 80, its mang 70).  The Khuzdul and the Sindarin a man's 11 with the species' modifiers;
   their trade's mastery the house's (a warrior's 65, a miner's 50, an elder's 70, a warden's 65); men-at-arms and a
   captain as the bandit and its lord.  Their weights by their build (a dwarf some 150 lb).
-- **Their senses and ways** (kinds.txt): the Gargun nocturnal (they keep to the dark), their night vision seeing as
-  far in the dark as by a light (the book's: no darkness penalty), the small orc's hearing and nose keen (a hunter by
+- **Their senses and ways** (kinds.txt): the Gargun nocturnal, a brown orc keeping watches (they keep to the dark),
+  their night vision seeing nearly as far in the dark as by a light (40 feet to 50; the book's: no darkness penalty),
+  the small orc's hearing and nose keen (a hunter by
   smell, following a trail); the dwarves', the elf's and the soldiers' sight a man's, by their own light (they keep
   their rooms lit, as the bandits do), the elf's the keener (Eyesight 2 more: 60 feet).  Their paces: a small orc's
   quick (Move 13), a dwarf's short-legged (11 tenths a square), an elf's light (9).
@@ -2427,10 +2428,10 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
   orc's finer, the book's: they make finer things), the cloth tunic the catalogue's clothes, a cowl a leather cap, a
   plate halfhelm an iron helm; the mankar and the mang their own weapons (Combat 3's (G): the catalogue's past the
   theme's, its own kinds' room full, so named in "strike with the mang" the best held is struck with); a white orc's
-  silver now and then (the book's: they treasure it above all); their nests' straw, a brown or red orc's stash at its
+  silver now and then (the book's: they treasure it above all); their nests' straw, a small, brown or red orc's stash at its
   bed; their lairs the bones of what they've eaten, their king's hoard.  The dwarves' fine (a warrior's mail, an
   axe or a warhammer, a shield; a miner's pick, hammer, chisel and lantern), their stores and their elder's hoard (the
-  dwarves' gold in it, crowns, not in their purses: the user's), a locked box at a warrior's or a miner's bed; an elf's
+  dwarves' gold in it, crowns, in a purse only by the purse's own chance: the user's), a locked box at a warrior's or a miner's bed; an elf's
   longknife and hartbow (Combat 3's (S)), its stores; the soldiers' a unit's issue, their stores and spare arms, their
   captain's strongbox.
 - **A leader's things in a theme's home** (all the themes', 2026-10-29: found building the hoard's test): popgen puts a
@@ -2441,7 +2442,7 @@ Azadmere, Evael and Gargun (where they live, their ways).  What the house adds, 
   else "armoured" as before.
 - **Left for later** (written down, not built): the black orcs' slaves (the book's hybrid colonies: brown and small
   orcs ruled, a faction within a faction), the red and black orcs' feuds within a tribe, a swarm and a civil war; the
-  white orcs' trade in silver and the dwarves' trade (the market); the Gargun cowed by a strength they see (an
+  white orcs' trade in silver and the dwarves' own trade (the market, below, has no merchant kind yet); the Gargun cowed by a strength they see (an
   attitude by the character's power: DENIZENS.md's more of the attitudes); the elves' barter (the user's answer 9
   gives them coins); a captor leading the character away (the soldiers'); the Gargun's sub-species' own tongues.
 
@@ -2455,7 +2456,7 @@ one may be (no standing updates: the 65C02's time).  *(Every number here is for 
 - **Who sways, who's swayed.**  Every intelligent creature sways the minds about it: a mind low, average or cunning
   (kinds.txt's); no beast, nothing mindless.  A beast isn't swayed by rank or words: it feels only a foe's might over
   its own and its fellows' falls (the book's situations); the mindless fear nothing (the referee's).  *(For review: a
-  pack's lead beast swaying its pack, the brief's choice, left out.)*
+  pack's lead beast swaying its pack left out.)*
 - **Influence** (points, 5 to a step): its rank's weight, the rank and file 2, a captain 5 (a band's head: a black orc,
   the soldiers' captain), a lord or a spiritual leader 10 (a chieftain, a king, a high priest, a dwarf elder, a shade
   over the dead: kinds.txt's new rank), and a sixteenth of its influence skill (the book's Oratory or Rhetoric, the
@@ -2467,12 +2468,12 @@ one may be (no standing updates: the 65C02's time).  *(Every number here is for 
   friend (its faction, or its kind not of a faction hostile to it) for it, a foe (a faction hostile to its own; the
   character to one hostile or unfriendly to it, not while it lies helpless) against it.  A friend's counts half to
   whole by how familiar one's own band is (its time served and contact, the bonds' measure below).  How each is doing:
-  wounded, half; berserk, twice (a test of ours came out so); fleeing, a friend's turned against one; fallen
+  wounded, half; berserk, twice; fleeing, a friend's turned against one; fallen
   (senseless or dead), its influence gone and the book's bad situation (ten worse, once, however many), desperate if
   none of one's friends is left standing about one (twenty).  A foe's weight is its influence and an eighth of its might
   over one's own (the game's power, the referee's: a fearsome foe the heavier), wounded half, fleeing or fallen none.
   The character's allies are its friends, swayed by it for them.
-- **Bonds upward:** each subordinate's to its band's head (the highest above its rank in its own lair: popgen's leader
+- **Bonds upward:** each subordinate's to its band's head (the nearest rank above its own in its lair: popgen's leader
   with its home) and to its faction's highest above that (in any lair, wherever it is: the records kept).  A bond is its
   leader's rank's weight by the time they've had together and their contact, half each: the time the lesser of its
   weeks served and the leader's own (a new leader's the less), whole at 128 weeks; the contact 0-255.  As the
@@ -2492,14 +2493,15 @@ one may be (no standing updates: the 65C02's time).  *(Every number here is for 
   Its friend's fall is the book's bad situation (above).  If the fallen was its leader (its band's head or its
   faction's), that leader's influence and its bond are removed for the test; dead, it's known lost from then (no bond to a dead
   leader after).  One that doesn't hear it (out of hearing, on another stratum, not an actor, senseless) keeps its bond
-  to the dead leader till it's told: a runner's word or a survivor's (dq0d.c's s_told, the hook: nothing calls it yet).
+  to the dead leader till it's told (dq0d.c's s_told, the hook): a leader's body found on the rounds does it (the
+  denizens' day, below); a runner's word or a survivor's, not yet.
 - **Succession** *(the user's, 2026-10-30, DECISIONS.md's; the rest for review)*: a leader's death leaves its post (a
   band's head, a faction's leader: any rank above the rank and file) to the most influential of those directly below
   it: if it was its faction's highest (none left as high), of its faction's next rank down, wherever they are (a king's,
   its captains); else of its own lair's (a band's head's, its band).  The next rank down from that if none's left;
   minds only.  Influence as the field's (rank and a sixteenth of the skill; a record not met yet, its rank alone: the
   ones about the character are known best); one fleeing or lying senseless only if none else is fit; ties by might (an
-  actor's power, and two for each of its arms, armour and mail), then the dice.  The successor takes the post's rank (its
+  actor's power, and two for its arms, four for armour, eight for mail), then the dice.  The successor takes the post's rank (its
   record's, beside its kind's) and its weight; its tenure begins then, so the bonds to it are a new leader's, but those
   of its own lair (its band) keep what they had with it; its own service counts whole (the house's: its record keeps the
   week it took the post, its tenure, in place of its service).  Those who know of the death (it's heard, or told) know of the
@@ -2511,7 +2513,8 @@ one may be (no standing updates: the 65C02's time).  *(Every number here is for 
   band, and so on down the chain (the coordinator's, 2026-10-30: the user's words' general form).  A band's head is the
   nearest rank above one in its lair (a new captain under a king who lives among them), its faction's leader the
   highest above that, wherever it is.
-- **The character's own morale** is the player's: never tested (D14).
+- **The character's own morale** is the player's: never tested.  (D14 makes it an option, like hard mode, off by
+  default, and magical or psionic fear always able to test it: neither built yet.)
 
 *(For review besides the numbers: the character's might is the referee's placeholder (10), so it frightens no one
 yet: as the creatures' it would be its size and its weapon's skill, weighing on every beast it fights; a fall seen but
@@ -2522,7 +2525,7 @@ has it.)*
 
 The book has an ally fetch nothing and says little of gifts: Rhetoric "in the target's best interest" is the easier
 (Skills 12, Rhetoric), the GM's to judge.  The rest is the house's.  *(Every number here is for review.)*
-(dq0d.c's part 5: s_ally, s_aside, s_gift, s_regard; dq0w/wfetch.c, part 72; things.c's fetch_find.)
+(dq0d.c's part 5: s_ally, s_aside, s_regard; part 16: s_gift; dq0w/wfetch.c, part 72; things.c's fetch_find.)
 
 - **Who fetches:** an ally, by its own turn: it walks to the thing, takes it up beside it, brings it back to where it
   last sensed the character and hands it over beside it.  Each a round's work (the world's I_ROB, as a robbery is).
@@ -2533,14 +2536,18 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
   at its feet.
 - **What can be fetched:** a thing the character sees lying about (or on or in an open thing lying there), on its
   stratum.  Not one in a thing closed, carried by the character or a denizen: told so, and the ally isn't asked.
+- **Errands at a door** *(2026-11-02)*: "tell Grub to shut the door", "ask the dwarf to open the door", "ask the dwarf
+  to unlock the door": an ally with hands walks to beside it, works it by the character's code (its key, if it carries
+  one: denizens and doors, below), and follows again; no way to it, it gives up and follows.  A beast doesn't know how.
+- **Following at a distance:** "tell Grub to follow me at 3 squares": it keeps that far behind (8 at most), not beside.
 - **Moving aside** (D10): a friendly one or an ally a walk stops short of moves a square off the way, at once, unless
   it was told to wait (guarding), is fighting, fleeing or senseless, or has nowhere to go.  The walk stays stopped: the
   player walks on.
 - **A gift's worth:** the thing's worth as a local takes it (the appraisal's: coins by their mints), times the count
   given.  Measured against the receiver's means by its kind's standing (kinds.txt's): none (beasts) a penny, tribal 4d,
   common folk 12d, people of standing 48d, lords 240d.  Under a quarter of its means a paltry gift, a step against; a
-  quarter none; a half one step for; its means two; twice three; four times or more four.  Food two steps more (all
-  beasts taken as hungry, till hunger comes: slice 4.9).
+  quarter none; a half one step for; its means two; twice three; four times or more four.  Food two steps more, and
+  two or four more again to the hungry and the very hungry (the denizens' bodies, below).
 - **The test:** Rhetoric (a beast's Animalcraft) at those steps and its attitude's (hostile -3 ... friendly +1, as
   words') and its kind's sway; no tongue wanted (a gift speaks for itself).  A critical success two steps, a success
   one, a failure none, as far as friendly (a gift doesn't win an ally: persuasion does); a critical failure an insult:
@@ -2558,7 +2565,8 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
   numbers: its other dice as they were): water under two regions in three (the regions a built stratum's wells and
   cisterns were in before: they're the plan's now); in a natural stratum a stream for each 16 regions (one at least,
   four at most), from a region of its halls downhill to the lowest neighbour as long as there's one lower, ending in a
-  lake.  A chunk's water as it's grown: a cistern full, 5 to 8 feet over its floor's lowest; a cave's chambers in a
+  lake, or sinking away where the next lower is rock.
+  A chunk's water as it's grown: a cistern full, 5 to 8 feet over its floor's lowest; a cave's chambers in a
   lake's region flooded, 4 to 11 feet; in a stream's region its passages running a foot deep and its chambers' hollows
   pooled a foot or two; where there's only water under it, one chamber in three a puddle a foot deep in its hollow;
   but a chamber with a way between strata in it (a stair's, a ladder's landing) kept dry, the house's.
@@ -2566,7 +2574,7 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
 - **Wading** *(every ruleset's)*: a foot or two of water makes each step half as long again; waist-deep (3 or 4
   feet), twice as long.  Told as the character comes into it, deeper, shallower and out ("You wade in up to your
   waist.").
-- **Swimming** *(the book's, Skills 10, where it speaks)*: water five feet deep or more is over the character's head
+- **Swimming** *(the book's, Skills 9, where it speaks)*: water five feet deep or more is over the character's head
   (the book's "deeper than their height": the house's five feet), and it swims.  The referee tests Swimming as it
   begins and each minute after (the book's once a minute; calm water, a stream's current four steps harder); its
   distance a minute the book's yards for the grade (critical success 9, marginal success 7, marginal failure 2) times
@@ -2594,6 +2602,9 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
 - **Drinking** *(every ruleset's)*: a pint takes six hours of thirst off; "drink" drinks as many pints as it wants
   (half a minute each), from the water where it stands (its fill) or a well within reach, else from its waterskin a
   pint at a time (four pints; "drink from the waterskin" from it whatever's about).  "fill my waterskin" in the water or by a well, a minute.  Not thirsty (under an hour), refused.
+- **Not yet** *(DUNGEON.md's still to come)*: the user's standing order to eat and drink when needed (DECISIONS.md's
+  hunger and thirst); running water and rain washing scents and prints away; a stream's current carrying a swimmer;
+  a swim's test as it treads water standing still; things soaked.
 - **The denizens** *(2026-10-31, every actor's body: below, the denizens' bodies)*.
 
 ## The denizens' bodies *(2026-10-31: the character's rules for every actor, the house's where it's cheaper; drafted for the user to review)*
@@ -2646,7 +2657,8 @@ The book gives the creatures' habits (the Bestiary: nocturnal, diurnal ...), a w
 Awareness at half (Skills 11); the rest is the house's.  DENIZENS.md's daily life has how it's built (dq0d.c's part 9).
 
 - **The hour** *(the house's)*: the game begins at dusk, six in the evening, its clock's hour from then; the
-  underground has no day the character sees, but its denizens keep one.  (The character can't tell the hour yet.)
+  underground has no day the character sees, but its denizens keep one.  (What hour the character thinks it is: the
+  time of day believed, below.)
 - **The days** *(the house's, by the bestiary's habits; kinds.txt's day, for review)*: diurnal, up 6-22; nocturnal, up
   16-8; crepuscular, up 4-10 and 16-22; the dead never asleep.  Each denizen up to half an hour later than its
   fellows (its number's), so a lair wakes one by one.
@@ -2683,7 +2695,7 @@ Awareness at half (Skills 11); the rest is the house's.  DENIZENS.md's daily lif
   Not the dice.
 - **Where** *(the house's)*: the social ones gather in a room of their lair's chunk that suits, the first it has of a
   hall, a guardroom, a barracks, quarters; else at its home.
-- **Less watchful** *(the book's half Awareness for one not paying attention, Skills 19's Legerdemain; the house's
+- **Less watchful** *(the book's half Awareness for one not paying attention, Skills 9's Legerdemain; the house's
   reading of it as the senses' layers)*: its sight and hearing halved; at its cups, quartered.
 - **In drink** *(the house's)*: one at its cups is in drink an hour after its last (the hub's AM_DRUNK): its blows two
   steps worse (10), and blows at it two steps easier, both referees' steps.
@@ -2736,7 +2748,7 @@ number here is a draft for the user.
   believes), the stars night alone; **watched** (in its sight through a wait, or "watch the sun": **ten minutes**, the
   stars **twenty**), their way across the sky: the time to a quarter of an hour (the stars half an hour), and **north
   known** (its bearings set right), and kept so while it stays in sight.  Told as what's seen changes ("Daylight shows above: it's day.", "You see the sun in
-  the sky: it's about four in the afternoon, you judge.").  Weather (overcast: its light alone) not yet.
+  the sky: it's four in the afternoon, you judge.").  Weather (overcast: its light alone) not yet.
 - **How it's told** ("time", "what time is it"): doubt ten minutes or less, plainly to the quarter hour ("It's half past
   six in the evening."); 45 or less, "about" the hour, "you think"; two and a half hours or less, "some time around";
   more, the part of the day, "you'd guess, but you can't be sure"; six hours or more, no idea ("You've no idea how long
@@ -2843,9 +2855,9 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
   half-feet: a square's five feet, 10), its two corners cut as it's through, so it's walked; a cut dug as rock.
 - **The believed compass an eighth off** *(the house's, as before)*: "north" a true diagonal: in a passage a way only
   where there's a diagonal way.
-- **Still to come** *(step 3's rest, the user's "queue up 1-3"; step 2 and the built passages below)*: a built
-  stratum's rooms, or one complex (a temple, a keep), laid at 45 degrees.  The tunnellers (slice 4.11) dig by the same
-  rules (Tunnellers, below; 2026-11-01).
+- **Built since** *(the user's "queue up 1-3")*: a passage's heading, built passages on the diagonal and rooms on the
+  diagonal, below.  The tunnellers (slice 4.11) dig by the same rules (Tunnellers, below; 2026-11-01).  *Not yet*: one
+  complex alone (a temple, a keep) at 45 degrees in a stratum otherwise square to the compass.
 
 ## A passage's heading *(2026-11-01: the user's words of 2026-10-31, DECISIONS.md's ways off the compass; step 2 of three, drafted for the user to review)*
 
@@ -3008,7 +3020,7 @@ through most soil; the Khuzdul and the Gargun dig their halls.  It gives no rate
   a shut door on its way to it opened as one following the character opens one (its key if it's locked; never
   forced).
   Within its home's chunk only, and only where that chunk's made; it stops at water, a pit, a portcullis let down
-  (the minds raise none yet), the chunk's edge.  None near: its work's room, as ever.
+  (its work raises none), the chunk's edge.  None near: its work's room, as ever.
 - **Away from the character** *(the house's, 2026-11-02)*: a denizen out of the character's reach (not an actor: its
   record moved coarsely) digs its work's spell all at once as it's due, untested (a marginal success's rate: no dice
   of its own), the hole kept and the way through made as an actor's are; it's never told (the character isn't near).
@@ -3040,7 +3052,8 @@ These are the house's.
 
 - **The character's rules, every actor's:** a denizen opens, shuts, bars and unbars a door, forces it (its Strength,
   its own sheet's, against the door as the character's is) and batters it (each blow the character's attack at a thing
-  the door ignores, by its own weapon or body, off the door's body), by the character's code; its time its own.
+  the door ignores, by its own weapon or body, off the door's body), by the character's code; its time its own.  The
+  code would let it set a bar and lock a door with its key too; no mind asks that yet.
 - **No trap sprung** *(the house's, for now)*: a denizen never sets off a door's trap as it opens it, as it never sets
   off one underfoot.  A faction knowing its own traps (and being caught by another's) is a planned item; till then
   none is.
@@ -3051,7 +3064,7 @@ These are the house's.
   the lock 1 ("a faint scratching"), picked 1 ("a lock clicking").  Other kinds pick none.
 - **Hands** *(the house's)*: only a denizen with hands (a two-legged body, kinds.txt's) opens, shuts, bars or unlocks
   a door.  A beast opens none; a large hostile beast (its size 5 or more: a bear) batters one that keeps it from its
-  prey.  So a rat or a wolf stops at a shut door, and a bear breaks it down.
+  prey.  So a rat or a snake stops at a shut door, and a bear breaks it down.
 - **How far it tries** *(the house's)*: its key first (if the door's locked), a robber's picking next, then, hostile,
   two forcings (ten seconds each), then a dozen blows; then it gives up and goes round as its steps can (its way found:
   DENIZENS.md's ways).  One not hostile (an ally, one going about its day) only opens and unlocks.  A hostile one
@@ -3099,8 +3112,8 @@ These are the house's.
   takes (on steps, a stair's), a shut door a way for hands (worked as it comes to it), not for a beast; and follows it
   a step at a time till it's there.  Four fields kept, shared by every actor bound for the same mark (the character: within four squares of it);
   another found ten seconds after the last at most; a mark further than the field reaches, its edge nearest the mark.
-  None to be had, the old greedy step, and a tunneller digs.  Water, bad air and a ledge's rise are the step's own
-  tests as it goes, not the field's.
+  None to be had, the old greedy step (none looked for again for five minutes), and a tunneller digs.  Water and bad
+  air are the step's own tests as it goes, not the field's.
 - **Lying down to sleep** *(the house's)*: a denizen asleep at its bed lies prone (a moment's), and gets up as it
   next acts (a step's or a blow's Rise, the referee's or the world's round, as one knocked down; else a Rise alone).
 - **A sleeper struck at** *(the book's Ignore, Combat 9; the null ruleset's two steps easier)*: a creature asleep
@@ -3255,10 +3268,6 @@ for its words (wtend.c), the UI's start and end (main.c).
 
 ## Decided, not yet built
 
-- **Mental maps** (DUNGEON.md: a map in the character's head that fades): slice 4.2's map (its bearings, by
-  Awareness or Mining, built: Bearings underground, above).
-- **Sniffing one way** (slice 4.0's looking one way: "sniff at the grating"): the trace layer's (slice 4.1: smells in
-  the deposit layer).  Today a sniff takes its 3 seconds and smells nothing out of the ordinary.
 - **A look one way's twice as far:** it reaches twice a glance's squares, but 31 at most (155 feet: the senses' grid,
   63 squares across), so a sight of 6 or more (a glance's 16 squares or more) looks one way less than twice as far.
 
@@ -3268,14 +3277,11 @@ for its words (wtend.c), the UI's start and end (main.c).
   once the maker gives faces a grade.  Today it's 10 feet a round at a marginal success and 20 at a critical,
   everywhere.
 
-- **Fighting on with missiles** (the user's, 2026-10-20; slice 4.7, with the missiles): a bow's arrows, a brace of
-  throwing daggers, the same way: shot or thrown at the target while it's in range, the next taken each time, the
-  next foe in range after it, till none is left, the missiles run out, or an enemy engages the character (then
-  fighting on in melee).  Today nothing thrown wounds.
 - **Auto-engaging at a range the player sets** (the user's, 2026-10-20, an enhancement): "autoengage with sword at
   close range", "autotarget with bow at medium range": a hostile coming within it begins fighting on (melee's
-  close range the engagement zone and a square more, closed in on; a missile weapon's the book's bands).  Today
-  only an enemy engaging the character, or one attacked, is fought.
+  close range the engagement zone and a square more, closed in on; a missile weapon's the book's bands).  Built in
+  part (the auto-target range, the missiles' section, above); today a hostile merely coming within it begins nothing,
+  and only an enemy engaging the character, or one attacked, is fought.
 
 ## Open
 
