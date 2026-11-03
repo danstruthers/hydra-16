@@ -39,10 +39,10 @@ ovx:        .res        1
             SWPART      13, 5               ; The lairs near placed (2026-11-01: the main RAM's room; small, cheap to
                                             ;   swap in, each time round after a move)
             SWPART      14, 5               ; Doors worked (Phase 3C's one path, 2026-11-02)
-            SWPART      15, 6               ; The ways followed; what an actor does as it senses the character
+            SWPART      15, 5               ; The ways followed; what an actor does as it senses the character
                                             ;   (meets, feel: the main RAM's room, 2026-11-02)
             SWPART      16, 6               ; A way found (2026-11-02)
-            SWPART      17, 6               ; A body found on a record's rounds (2026-11-02)
+            SWPART      17, 4               ; A body found on a record's rounds (2026-11-02)
 
             SWFN        populate, 1
             SWFN        place, 1

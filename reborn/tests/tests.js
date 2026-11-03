@@ -5242,7 +5242,8 @@ module.exports = {
       // 36M cycles, 10 s at 3.58 MHz; 25M now, the longest (the UI's overlays read, before the screen's made).  The
       // help's line: after the first look's words, only the status line's and the prompt after it.  And every task's
       // overlays in their banks at the first prompt as ld65 made them (dq0OvlBanks))
-      starts: [{ seed: 1, max: 229e6 }, { seed: 123456789, max: 318e6 }], quiet: 36e6,
+      // (2026-11-02, the minds' ways: seed 1's 229.5M, the denizens' overlays some 7K more read at the start; 231M)
+      starts: [{ seed: 1, max: 231e6 }, { seed: 123456789, max: 318e6 }], quiet: 36e6,
       start(m) {
         const a = m.acia, read = a.read, shown = a.shown, self = this;
         let typed = '', g = null, tail = '', esc = 0, text = '';

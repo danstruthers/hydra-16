@@ -2558,6 +2558,10 @@ unsigned char __fastcall__ s_wfind (unsigned char k)
         hy_bank (rb - 1);
         r = &RHEAD->f[f];
         c = RCELL (f)[(a.y - r->oy) * RW_W + (a.x - r->ox)];
+        if (c & RC_SOLID) {
+            RHEAD->act[k].next = (unsigned) now + 3000;    /* (None reaches it: not looked for again for five
+                                                **   minutes, the long tasks' turns its cost else) */
+        }
     }
     hub_map (0);
     return c;
