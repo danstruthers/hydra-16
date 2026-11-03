@@ -607,7 +607,10 @@ enum { DE_MOVED, DE_NOISE, DE_NOTICED, DE_LOST, DE_RALLY, DE_SNORE, DE_TALK, DE_
                                                 **   as a door's are, at its square) */
     DE_HANGS,                                   /* (A door broken down put up again by a builder: at the door's
                                                 **   square, slice 4.11's rest) */
-    DE_WALLS };                                 /* (A way dug into its home walled up by a builder: at its square) */
+    DE_WALLS,                                   /* (A way dug into its home walled up by a builder: at its square) */
+    DE_WINDS, DE_HEAVES, DE_RAISES, DE_LOWERS, DE_BENDS, DE_BENT, DE_PICKING, DE_PICKS };
+                                                /* (2026-11-02: a portcullis's winch wound, heaved at, raised, let
+                                                **   fall, its bars strained at, bent apart; a lock worked at, picked) */
                                                 /* E_DEN's what: a step, a
                                                 **   noise of its own (a squeak, a growl), the character sensed, lost
                                                 **   (its senses' own); a successor rallying its fellows at its post

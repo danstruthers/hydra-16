@@ -111,8 +111,9 @@ void s_doors (void)
                 door_state (wk.pq.state & ~PS_LOCKED);
                 break;
             }
-            if (wk.who) {
-                out = PO_NO_KEY;                /* (A denizen picks no lock: the house's, as yet) */
+            if (wk.who && !wk.link) {
+                out = PO_NO_KEY;                /* (A denizen picks a lock only if its kind can (a robber's: its mind's,
+                                                **   wport.c's wk.link), its tools its own: the house's, 2026-11-02) */
                 break;
             }
             g = test (P_PICKLOCK, wk.pq.lock, -(signed char) wk.pq.lock);
@@ -123,6 +124,10 @@ void s_doors (void)
             if (wk.plan) {                      /* (Begun, the means to hand (the referee's): a minute a try, the
                                                 **   test made again at its end, its outcome then; the lockpicks
                                                 **   got out first) */
+                if (wk.who) {
+                    timed (LT_PICK, 600);
+                    return;
+                }
                 tool_reach ("picks\0");
                 timed (LT_PICK, 600 + reach_done (2));  /* (Its reach its length's, RD_LONG) */
                 return;

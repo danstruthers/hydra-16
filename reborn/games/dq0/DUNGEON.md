@@ -1538,8 +1538,8 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   tunnellers): left, builders shoring a passage, the spoil as a thing, a mine past its lair's chunk.
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
-- **One path for every actor** (Phase 3C, begun 2026-11-02: below): left, a denizen working windows and
-  portcullises, picking a lock, an ally asked to open a door ("ask the dwarf to open the door"), a denizen eating the
+- **One path for every actor** (Phase 3C, begun 2026-11-02: below; a denizen's portcullises and a robber's lock
+  picking built 2026-11-02, DENIZENS.md's): left, a denizen working windows, an ally asked to open a door ("ask the dwarf to open the door"), a denizen eating the
   food it takes up, its lift by its size, the things' put down, given and thrown by the minds as the character's are.
 - **The character carries on** (slice 4.4, built 2026-11-02: above): left, the autosave before danger, the denizens'
   weapons' versions (the outfits' gear's), a thing's wear and fuel carried as they were.
