@@ -159,9 +159,9 @@ unsigned __fastcall__ o_time_ui (unsigned w)
 }
 
 /* The sky seen by a window on the surface, a skylight, a shaft (k, SKS_*; w, the time in words), a shaft's refusals
-** (p past SKP_STARS_WATCHED): overlay 19's, 16's room (HOUSE.md's what shows the sky) */
-#pragma code-name (push, "OV19CODE")
-#pragma rodata-name (push, "OV19RODATA")
+** (p past SKP_STARS_WATCHED): overlay 1's, 16's room (HOUSE.md's what shows the sky) */
+#pragma code-name (push, "OV1CODE")
+#pragma rodata-name (push, "OV1RODATA")
 void __fastcall__ o_sky_words (unsigned char p, unsigned char k, const char* w)
 {
     static const char* const sky2[] = {             /* (The same, shown by a window, a skylight, a shaft: the first of its
