@@ -310,12 +310,16 @@ static unsigned char sky_here (void)
 }
 
 /* The reckoning (part 27's, at its due or at once): the time it believes brought up to now, its next due */
+void rest_go (void);                            /* (Part 53's) */
 void s_tsense (void)
 {
     unsigned e;
     unsigned char s;
 
     hub_map (0);
+    if (HUB->pcsum.cond & C_FATIGUED || (HUB->pcsum.load & 2)) {
+        rest_go ();                             /* (A wait's or a sleep's rest told as it goes and as it ends) */
+    }
     n = (unsigned) (HUB->now / 600);
     if (!T.at) {
         sky_seen (SKY_BEGUN);

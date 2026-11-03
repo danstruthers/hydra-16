@@ -664,15 +664,71 @@ void __fastcall__ o_felt_words (unsigned w)
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "OV1CODE")             /* (Overlay 1's since 2026-11-02: overlay 7's room) */
-#pragma rodata-name (push, "OV1RODATA")
+#pragma code-name (push, "OV19CODE")            /* (Overlay 19's since 2026-11-03: overlay 1's room) */
+#pragma rodata-name (push, "OV19RODATA")
+
+/* A turn's first words (V_FACING's: the user's, 2026-11-03, "I guess the turn info is OK keeping both"): said by its way
+** as it faces ("turn r", the parser's own reply, CQ_REL | n), "You turn right, to face west."; by the compass, or another's
+** reason to turn, "You turn to face west." */
+void o_turned_says (void)
+{
+    static const char* const tw[8] = { "", "half right", "right", "well to the right", "around", "well to the left", "left",
+                                       "half left" };
+    unsigned char f, d, b[4];
+
+    hub_mem (0, &f, &HUB->pc_face, 1);
+    hub_mem (0, &d, &HUB->pc_skew, 1);
+    hub_mem (CMD_BANK, b, HUB_WINDOW + CQ_CMD, 4);   /* (Its action, its actor, its flags, its way: as it was said) */
+    f = (f + d) & 7;
+    d = b[3] & 7;
+    if (b[0] != VB_FACE_DIRECTION || b[3] == 0xFF || !(b[3] & CQ_REL) || !d) {
+        sayf ("\nYou turn to face %s.", head_name[f]);
+    } else {
+        sayf ("\nYou turn %s, to face %s.", tw[b[2] & CF_HALF ? (d == 2 ? 1 : d == 6 ? 7 : d) : d], head_name[f]);
+    }
+}
 
 /* The way the character believes it faces, said (the status command's, after the referee's words of its state: slice
-** 4.2's bearings, the north it believes in; unsure of it, said so) */
+** 4.2's bearings, the north it believes in; unsure of it, said so); and first, every referee's, what the hub has of its
+** body that the referee's Condition hasn't (the user's, 2026-11-03: "When running status, I would like to see my hunger and
+** thirst state as well"): its hunger and thirst, in the game's words for them; a limb useless, a limp; how it lies, sits or
+** crouches; the water it's in */
 void o_facing_words (void)
 {
-    unsigned char f, b[2];
+    static const char* const hw[5] = { "not hungry", "hungry", "very hungry", "starving", "wasting away with hunger" };
+    static const char* const tw[5] = { "not thirsty", "thirsty", "very thirsty", "parched", "dying of thirst" };
+    static const char* const pw[8] = { "", "lying down", "crouching", "kneeling", "sitting", "", "", "" };
+    static const char* const lw[4] = { "left arm", "right arm", "left leg", "right leg" };
+    unsigned char f, b[2], w;
 
+    hub_mem (0, &w, &HUB->pc_want, 1);
+    f = WANT_HUNGER (w);
+    w = WANT_THIRST (w);
+    sayf ("\nHunger and thirst: %s, %s.", hw[f > 4 ? 4 : f], tw[w > 4 ? 4 : w]);
+    hub_mem (0, b, &HUB->pcsum.limbs, 1);
+    hub_mem (0, b + 1, &HUB->pcsum.limp, 1);
+    for (f = 0; f < 4; ++f) {
+        if (b[0] & LB_ARM_L << f) {             /* (LB_ARM_L, LB_ARM_R, LB_LEG_L, LB_LEG_R: bits in order) */
+            sayf ("\nYour %s is useless.", lw[f]);
+        }
+    }
+    if (b[1]) {
+        sayf ("\nYou limp.");
+    }
+    hub_mem (0, &f, &HUB->pc_pos, 1);
+    if (pw[f & 7][0]) {
+        sayf ("\nPosition: %s.", pw[f & 7]);
+    }
+    hub_mem (0, &f, &HUB->pc_wet, 1);
+    hub_mem (0, b, &HUB->pc_swim, 1);
+    hub_mem (0, b + 1, &HUB->pc_under, 1);
+    if (b[1]) {
+        sayf ("\nWater: under it, holding your breath.");
+    } else if (b[0]) {
+        sayf ("\nWater: swimming.");
+    } else if (f & ~WET_RUNS) {
+        sayf ("\nWater: %u feet deep where you stand.", f & ~WET_RUNS);
+    }
     hub_mem (0, &f, &HUB->pc_face, 1);
     hub_mem (0, b, &HUB->pc_skew, 2);           /* (pc_skew and pc_lost) */
     sayf ("\nFacing: %s%s.", head_name[(f + b[0]) & 7], b[1] ? ", you think; you've lost your bearings" : "");

@@ -1071,7 +1071,7 @@ static unsigned char events (void)          /* (How many there were) */
                 }
                 if (m.w1 == V_FACING) {         /* (A turn's first words, as it's begun: out at once, its look
                                                 **   after, V_TURNED's) */
-                    sayf ("\nYou turn to face %s.", head_name[believed (HUB->pc_face)]);
+                    turned_says ();
                     t_flush ();
                     break;
                 }
