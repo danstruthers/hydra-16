@@ -17,7 +17,8 @@
 **   - the clues that narrow it: its own light burning down (it sees its torch: the minutes it's burned since its belief
 **     was set by it, to a twelfth), its hunger since its last meal (to a quarter);
 **   - the sky in sight (an open way out near it: the top stratum's up its stairs, its light alone; a far exit below
-**     the top, the open sky; or a test's poke, tb.sky): its light (dawn, day, dusk, night) narrows it; the sun or the
+**     the top, the open sky; a window on the surface, a skylight, a shaft open to the sky by it, HOUSE.md's what shows
+**     the sky, part 89's; or a test's poke, tb.sky): its light (dawn, day, dusk, night) narrows it; the sun or the
 **     stars read by the north it believes in set it (wrong by its bearings' error, unknown to it); its bearings lost,
 **     the sun high or low; watched a while (a wait in its sight: SKY_WATCH minutes, the stars STARS_WATCH), their way
 **     across the sky shows the time and north both (its bearings set right).
