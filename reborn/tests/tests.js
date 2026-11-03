@@ -8296,9 +8296,13 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -a -k pick', 'dig down', 'quit',
         'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 1 -c /ram/c.hm -k candle -T -a -I -J -N -K', 'wait', 'give the candle to the giant rat', 'quit',
         'dq0 -p t -s 1 -c /ram/c.hm -k mankar -T -a -I -J -N -K', 'throw the mankar hard at the giant rat', 'quit',
+        'hmchar -q -s 3 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -a -k lantern', 'fill the lantern', 'fill the lantern', 'fill the lantern', 'fill the lantern', 'fill the lantern', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -a', 'take the torch from the sconce', 'inventory', 'quit',
+        'echo att agl 3 >> /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -a', 'status', 'quit',
         'echo $status']) },
       start(m) {
-        dq0Poke(m, [{ g: 4, line: 'go through the door', n: 1, name: 'giant rat', beside: 'face' }, { g: 15, line: 'give the candle to the giant rat', n: 1, name: 'giant rat', beside: 'face' }]);
+        dq0Poke(m, [{ g: 4, line: 'go through the door', n: 1, name: 'giant rat', beside: 'face' }, { g: 15, line: 'give the candle to the giant rat', n: 1, name: 'giant rat', beside: 'face' },
+          ...[1, 2, 3, 4, 5].map(n => ({ g: 17, line: 'fill the lantern', n, fuel: { lantern: 10 } }))]);
         dq0OnWords(m, [{ g: 14, line: 'dig down', n: 1, words: 'You dig', text: 'stop working\r' }]);
         // (walk_ahead's mark, sampled as the console's used: a far thing's walk told before the world's asked)
         const ad = parseInt(/^al ([0-9A-F]+) \._said_ahead$/m.exec(fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0', 'dq0.lbl'), 'latin1'))[1], 16), c = m.acia, w0 = c.write;
@@ -8363,6 +8367,12 @@ module.exports = {
         has(15, 'give the candle to the giant rat', 'has no use for it');
         // (A kind past 127 thrown at a denizen, hard: a throw at it, not at a thing; a named mankar's its own)
         has(16, 'throw the mankar hard at the giant rat', 'You throw your mankar hard at the giant rat');
+        // (A fill in a lit room: nothing spilt, every time)
+        for (let n = 1; n <= 5; n++) { never(17, 'fill the lantern', 'hands slip', n); never(17, 'fill the lantern', 'oil spills', n); }
+        // (A sconce's cold torch part burnt, not whole: "nearly spent", its last sixteenth at this stratum's age)
+        has(18, 'inventory', 'a torch (nearly spent)');
+        // (A Move under 4 walks as Move 4: the status line's feet by the step it walks at)
+        has(19, 'status', 'a walk (10 feet a round)');
         return f;
       },
       sdcard: true
