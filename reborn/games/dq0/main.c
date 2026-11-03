@@ -1901,6 +1901,7 @@ static unsigned char __fastcall__ chores (unsigned char action)
     case VB_OBSERVE_LOCALE:
     case VB_OBSERVE_AROUND:
     case VB_FIND_OBJECT:
+    case VB_WHERE:
         look (0);
         break;
     case VB_META_MAP:

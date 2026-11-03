@@ -921,6 +921,9 @@ or a shaft can be jumped down (jump down: a fall of its height).
   after); a faster one blunders into it, the world's to judge by what's really there (the stumble the referee's, the
   book's stumble roll; a blow, a fall).  A denizen whose kind has no darkvision feels its way on a dark square too, at
   half its pace.
+- **Feeling its way** (the user's, 2026-11-02: HOUSE.md's): the look in the dark, and a dark walk's end, only what the
+  hands and feet can tell: "You feel a wall ahead and to your left; nothing to your right."  No name for the place, no
+  ways, no slope ahead, unless it's been on the square before and hasn't forgotten it ("This should be the kitchen.").
 - **Fatigue** is the referee's (the book's movement fatigue: HOUSE.md's moving and tiring): walking (or slower) a
   fatigue level a day, jogging one each five minutes, running one each two, sprinting one each minute, the time at
   each pace added up across moves; standing still (waiting, the time between moves) is rest, a level gone each ten

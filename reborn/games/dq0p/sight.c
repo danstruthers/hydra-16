@@ -322,7 +322,9 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                 S.cmid = z->cmid;
                 S.cwall = z->cwall;
             }
-            zones_seen (&rp, k, face, myz, lx, ly);
+            if (rp.nz > 1) {
+                zones_seen (&rp, k, face, myz, lx, ly);
+            }
         }
     }
     e_ = kn_ = 0;                               /* (The part's own: after part 6's zones_seen, its image copied back) */
@@ -391,10 +393,10 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
             }
         }
         at (sn, x, y);                          /* (The doors further along it, seen or remembered: named, the look not
-                                                **   telling them) */
+                                                **   telling them; but as it goes along a walk, its looks the quicker) */
         e_ = S.ndoors;
         kn_ = KNOWN_REL;
-        for (j = cy_ > 5 ? cy_ - 5 : 0; j < (unsigned char) (cy_ + 6) && j < CW; ++j) {
+        for (j = cy_ > 5 ? cy_ - 5 : 0; (arrive || !(here_known & 0x80)) && j < (unsigned char) (cy_ + 6) && j < CW; ++j) {
             for (i = cx_ > 5 ? cx_ - 5 : 0; i < (unsigned char) (cx_ + 6) && i < CW && e_ < SEE_DOORS; ++i) {
                 d = C->tile[j][i];
                 if ((TILE (d) == T_DOOR || TILE (d) == T_WINDOW) && (d & (T_VIS | T_SEEN)) &&
@@ -419,8 +421,9 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
         S.cmid = touch (0);
         S.cmid += touch (6) << 2;
         S.cmid += touch (2) << 4;
-        S.cwall = here_known;
+        S.cwall = here_known & 1;
     }
+    here_known = S.dark ? here_known & 1 : 1;   /* (Seen lit here: known, if its light goes out) */
     S.first = first;
     memcpy (&S.nglows, &G, sizeof G);           /* (The lights far off: eyes.c's) */
     traps_seen (sn, x, y, face);

@@ -620,6 +620,8 @@ void __fastcall__ no_exit (unsigned char h);
 #pragma code-name (push, "SW45CODE")
 #pragma rodata-name (push, "SW45RODATA")
 
+static void __fastcall__ see (unsigned char first);
+
 unsigned char __fastcall__ s_ahead (unsigned char h)
 {
     unsigned char* p = at (sn_, mx, my);
@@ -660,6 +662,7 @@ unsigned char __fastcall__ s_felt_stop (unsigned char h)
         HUB->pc_face = h;
         HUB->pc_ready = HUB->now;
         HUB->pc_going = IDLE;
+        see (0);                                /* (Its hands' words as it faces now) */
     }
     return k;
 }
