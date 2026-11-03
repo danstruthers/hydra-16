@@ -35,10 +35,12 @@ ovx:        .res        1
                                             ;   found on the rounds, a pastime let go (2026-10-31)
             SWPART      11, 1               ; The denizens near enlisted (2026-10-31: the main RAM's room; small, cheap
                                             ;   to swap in, not while the UI's command is in hand)
-            SWPART      12, 5               ; The tunnellers: a way dug (slice 4.11's, 2026-11-01)
+            SWPART      12, 5               ; The tunnellers: a way dug (slice 4.11's, 2026-11-01); their work's,
+                                            ;   the builders' (overlay 6's, 2026-11-02)
             SWPART      13, 5               ; The lairs near placed (2026-11-01: the main RAM's room; small, cheap to
                                             ;   swap in, each time round after a move)
             SWPART      14, 5               ; Doors worked (Phase 3C's one path, 2026-11-02)
+            SWPART      15, 6               ; The tunnellers' work: mines, burrows; the builders (2026-11-02)
             SWPART      16, 5               ; The ways followed (2026-11-02)
             SWPART      17, 6               ; A way found (2026-11-02)
             SWPART      18, 4               ; A body found on a record's rounds (2026-11-02)
@@ -82,6 +84,7 @@ ovx:        .res        1
             SWFN        enlist_near, 11     ; (The main RAM's room, 2026-10-31)
             SWFN        nearby, 13          ; (The main RAM's room, 2026-11-01: the tunnellers')
             SWFN        dig_way, 12         ; (A tunneller's way dug: slice 4.11's)
+            SWFN        work_dig, 15        ; (Its work: a mine, a burrow, a builder's, slice 4.11's rest)
             SWFN        door_way, 14        ; (A door worked: Phase 3C's one path)
             SWFN        take_way, 14        ; (A thing taken up: Phase 3C's one path)
             SWFN        feel, 8             ; (The main RAM's room, 2026-11-02)

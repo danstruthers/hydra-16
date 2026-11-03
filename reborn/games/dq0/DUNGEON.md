@@ -423,7 +423,12 @@ The dungeon isn't only what the growers made: those in it change it, and the cha
   character's rules (a spell at a time, the tool's rate, the rock's hardness: part 1 asked, its rock_kind; its own
   test by its sheet), the same change records (a DUG record while it's under way, the character's: either goes on
   with the other's hole; the square a passage through it), told when seen ("A fresh tunnel opens ahead.  Spoil lies
-  heaped by it.") and heard while it's dug ("a scraping in rock": the rock carrying a pick's knock).
+  heaped by it.") and heard while it's dug ("a scraping in rock": the rock carrying a pick's knock).  And at their work
+  (2026-11-02): a faction's miners dig its mine from their lair's home across to their region's vein and along it, a
+  burrower its lair's burrow, by the clock, near the character or away from it (away, coarse: the same change
+  records); poor rock comes down on a tunneller's spell gone badly; a faction's miners put up again a door broken down
+  in their home's chunk (its PORTAL_STATE and PORTAL_HARM records), and wall up a way dug into a room there by others
+  (the square T_WALL again, a change record).
 - **Breaking** (powder, a ram, magic; by accident, a ceiling an old stratum's age has weakened brought down) is still
   to come (below).
 
@@ -1500,9 +1505,8 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   a long slope between strata; a walk's beats telling a rise or a fall of 4 feet ("The way rises."), its climb
   strenuous work.  Left: a raise or a ramp joining two parts of a stratum (these are ways to a chamber of their own),
   a long slope's own length walked square by square (taken at once, as a stairway is), the denizens tiring uphill.
-- **Tunnellers and builders** (slice 4.11, built in part 2026-11-01: changing the dungeon, above; DENIZENS.md's
-  tunnellers): left, a burrow dug from a lair, a faction's mine following a vein, the denizens away from the character
-  digging, poor rock on a tunneller, the spoil as a thing; builders (shoring, walling up a way, a door put up).
+- **Tunnellers and builders** (slice 4.11, built 2026-11-01 and 2026-11-02: changing the dungeon, above; DENIZENS.md's
+  tunnellers): left, builders shoring a passage, the spoil as a thing, a mine past its lair's chunk.
 - **Powers** (Phase 5): wards and magical locks, things and doors hidden by magic found by magical means, magical
   light.
 - **One path for every actor** (Phase 3C, begun 2026-11-02: below; a denizen's portcullises and a robber's lock

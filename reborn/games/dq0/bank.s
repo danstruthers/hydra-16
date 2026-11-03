@@ -181,6 +181,7 @@ ovl_out:
             SWFN        took_up, 2
             SWFN        map, 3
             SWFN        lie_words, 8
+            SWFN        door_words, 6       ; (A denizen's door's words: overlay 3's room, 2026-11-02)
             SWFN        room_where, 8
             SWFN        den_seen, 8
             SWFN        actor_seen, 8

@@ -68,8 +68,8 @@ static void __fastcall__ told (unsigned char what, unsigned char loud, unsigned 
     unsigned char* p;
     unsigned e;
 
-    bev.w1 = what == DE_DUG ? dx : bd.x;
-    bev.w2 = what == DE_DUG ? dy : bd.y;
+    bev.w1 = what == DE_DUG || what >= DE_HANGS ? dx : bd.x;
+    bev.w2 = what == DE_DUG || what >= DE_HANGS ? dy : bd.y;
     e = apart (bd.x - bpx, bd.y - bpy) >> 2;
     bev.x[3] = e > 15 ? 15 : e;
     p = at (bd.sn, bev.w1, bev.w2);
@@ -97,25 +97,72 @@ static void __fastcall__ cut_corner (unsigned x, unsigned y)
     }
 }
 
-/* Body m->who's dig (I_KIT's KT_DIG): begun, back to it, a spell's feet reckoned and on, or through */
+/* A builder's work (I_KIT's KT_BUILD, slice 4.11's rest: HOUSE.md's builders, for review): at m's w1, w2, a door broken
+** down put up again, a spell's work (the house's: its frame stands, a new leaf hung in it, shut, its lock and bar
+** whole; the change records the portal's own, PORTAL_STATE, PORTAL_HARM), or a way dug walled up (the square a wall,
+** an hour's work); an actor's told (DE_HANGS: "The dwarf miner hangs a new door.", heard hammering; DE_WALLS: "The
+** dwarf miner walls up the way.", heard stones being laid), a record's not (the character's never near) */
+static void __fastcall__ build (const struct msg* m)
+{
+    struct portal* q;
+    unsigned x = m->w1, y = m->w2;
+    unsigned char pt, *p;
+
+    if ((p = at (bd.sn, x, y)) != 0 && TILE (*p) == T_CORR) {
+        change (bd.sn, x, y, T_WALL, C->elev[cy_][cx_], 0xFF);
+        if (m->who) {
+            bd.ready += 6 * (unsigned long) SPELL;
+            den_saw = 1;
+            told (DE_WALLS, 4, x, y);
+        }
+    } else if (p && (q = portal_at (cx_, cy_)) != 0 && (q->state & PS_WRECKED)) {
+        pt = q->parts;                          /* (Read while its chunk's in the window) */
+        change (bd.sn, x, y, 0, pt, PORTAL_STATE);
+        change (bd.sn, x, y, 0, 0, PORTAL_HARM);
+        if (m->who) {
+            bd.ready += SPELL;
+            den_saw = 1;                        /* (The world to look about again: the door shut) */
+            told (DE_HANGS, 4, x, y);
+        }
+    }
+}
+
+/* Body m->who's dig (I_KIT's KT_DIG): begun, back to it, a spell's feet reckoned and on, or through.  Who 0, a record's
+** (one away from the character, not an actor: the denizens' roam, at its lair's dig, slice 4.11's rest): a spell's
+** feet at once, coarse (w1 w2 its stand, x[2] its stratum, x[0] its tools), untested (a marginal success's rate, the
+** house's), untold (the character's never near: those near are actors); the hole kept and the way through made as an
+** actor's are */
 void __fastcall__ s_den_dig (const struct msg* m)
 {
-    unsigned char h, t, k, mat, rk, rate, r1, made, way, need, done;
+    unsigned char h, t, k, mat, rk, rate, r1, made, way, need, done, rd, roof = 0;
     signed char g;
-    unsigned now, ago, dx, dy;
+    unsigned now, ago = 0, dx, dy;
     unsigned char* p;
     struct req* r;
     int z;
     struct dig keep;                            /* (The character's dig, kept round part 1's rock) */
 
-    BD_GET ((m->who - 1) & 7);
     now = (unsigned) HUB->now;
-    if (!bd.state || (bd.doing == DO_DOWN && bd.ready > HUB->now)) {
-        return;                                 /* (Gone, or senseless: nothing) */
-    }
-    ago = now - HUB->dig_t[bk];
-    bd.ready = HUB->now;
     h = m->b & 7;
+    if ((rd = !m->who) != 0) {
+        bd.sn = m->x[2];                        /* (Body bd but a copy, a record's: none put back, I_TROD's way; w1
+                                                **   w2 its face, its stand the square before it) */
+        bd.x = m->w1 - head_x[h];
+        bd.y = m->w2 - head_y[h];
+        r1 = m->x[0];
+    } else {
+        BD_GET ((m->who - 1) & 7);
+        if (!bd.state || (bd.doing == DO_DOWN && bd.ready > HUB->now)) {
+            return;                             /* (Gone, or senseless: nothing) */
+        }
+        ago = now - HUB->dig_t[bk];
+        bd.ready = HUB->now;
+        r1 = m->x[2];                           /* (What it digs with: the best of them for what it's into) */
+    }
+    if ((m->a & KT_BUILD) == KT_BUILD) {
+        build (m);                              /* (A door put up again, a builder's) */
+        goto put;
+    }
     dx = bd.x + head_x[h];
     dy = bd.y + head_y[h];
     if ((k = room_of (bd.sn, bd.x, bd.y)) == 0xFF) {    /* (A wall's room: its side's, or the far side's) */
@@ -138,7 +185,6 @@ void __fastcall__ s_den_dig (const struct msg* m)
         rk = dig.rock;
         memcpy (&dig, &keep, sizeof dig);
     }
-    r1 = m->x[2];                               /* (What it digs with: the best of them for what it's into) */
     rate = (r1 & DG_CLAWS) && (mat != MAT_STONE || rk_hard[rk] == RH_SOFT) ? claws[mat] : 0;
     if ((r1 & DG_PICK) && pick[mat] > rate) {
         rate = pick[mat];
@@ -157,6 +203,9 @@ void __fastcall__ s_den_dig (const struct msg* m)
     way = (h & 1 ? 6 : 0) + (h >> 1);           /* (The character's dig's way, DUG's: DIR_N ... DIR_W, a diagonal 6
                                                 **   to 9) */
     need = t == T_WALL || t == T_RUBBLE ? 4 : h & 1 ? 14 : 10;
+    if (rd) {
+        goto spell;
+    }
     if (bd.doing != DO_DIG || bd.face != h) {
         bd.doing = DO_DIG;                      /* (Begun: a spell, its noise) */
         bd.face = h;
@@ -169,13 +218,14 @@ void __fastcall__ s_den_dig (const struct msg* m)
         bd.ready += SPELL - ago;                /* (Roused, and back to it: the spell's rest) */
         goto put;
     }
+spell:
     rec.sn = bd.sn;                             /* (A spell done: the hole as it was, the character's or another's) */
     rec.x = dx;
     rec.y = dy;
     rec.link = DUG;
     done = dig_kept (2) && rec.elev == way && rec.tile < need ? rec.tile : 0;
     g = G_MS;
-    if (DIG_TESTED (mat)) {
+    if (!rd && DIG_TESTED (mat)) {
         hub_map (0);
         r = &HUB->slot[SLOT_WORLD];             /* (The referee's: the actor's own test, by its sheet) */
         r->kind = RS_TEST;
@@ -192,6 +242,13 @@ void __fastcall__ s_den_dig (const struct msg* m)
         made = (unsigned char) (made * rk_quarters[rk_hard[rk & 0x7F]] + 3) >> 2;    /* (The rock's hardness: the rate in it,
                                                 **   every ruleset's) */
     }
+    if (g == G_CF && RK_POOR (rk & 0x7F) && done) {
+        done -= done > 4 ? 4 : done;            /* (Poor rock: the roof come down on a spell gone badly, two feet of the
+                                                **   hole filled again, as the character's; the rock showering the
+                                                **   tunneller, told: no harm, the referees keep the character's sheet
+                                                **   alone) */
+        roof = 1;
+    }
     done += made;
     hub_map (0);
     if (done < need) {
@@ -200,10 +257,13 @@ void __fastcall__ s_den_dig (const struct msg* m)
         rec.elev = way;
         store_put ();
         hub_map (0);
+        if (rd) {
+            goto put;
+        }
         HUB->dig_t[bk] = now;                   /* (On: another spell, its noise: heard by the denizens, the
                                                 **   player's told as it began) */
         bd.ready += SPELL;
-        told (DE_DIGS, DIG_LOUD, dx, dy);
+        told (roof ? DE_ROOF : DE_DIGS, roof ? DUG_LOUD : DIG_LOUD, dx, dy);
         goto put;
     }
     z = elev_at (bd.sn, bd.x, bd.y);            /* (Through: the square a passage at its floor's height) */
@@ -212,11 +272,17 @@ void __fastcall__ s_den_dig (const struct msg* m)
         cut_corner (dx, bd.y);                  /* (A diagonal: its corners cut, the way walked corner to corner) */
         cut_corner (bd.x, dy);
     }
+    if (rd) {
+        goto put;
+    }
     bd.doing = DO_ROAM;
     bd.ready += 10;
     den_saw = 1;                                /* (The world to look about again: the new way seen) */
     told (DE_DUG, DUG_LOUD | (rk & 0x80), dx, dy);
 put:
+    if (rd) {
+        return;                                 /* (A record's: no body to put back) */
+    }
     BD_PUT ();
     ++HUB->den_seq;
 }
