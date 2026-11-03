@@ -608,9 +608,12 @@ void __fastcall__ o_felt_words (unsigned w)
     case WB_FEEL:
         hub_mem (0, &sk, &HUB->pc_skew, 1);     /* (The way by the north it believes in: slice 4.2's) */
         k = (k + sk) & 7;
+        if (reach == 2) {                       /* (Its command again, walked over first: told as the walk began) */
+            return;
+        }
         if (b >> 4) {
             sayf ("\nYou %s %s into the dark.", gait[g], head_name[k]);
-        } else if (reach != 2) {                /* (Its command again, walked over first: told as the walk began) */
+        } else {
             sayf ("\nYou feel your way %s.", head_name[k]);
         }
         return;
