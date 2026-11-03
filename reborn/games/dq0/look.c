@@ -420,7 +420,7 @@ unsigned char __fastcall__ s_lie_words (unsigned char i)
     }
     dx = SC.item[i].x - SC.rx;
     dy = SC.item[i].y - SC.ry;
-    if ((SC.item[i].hid & 1) || SC.item[i].rel == 0xFF || SC.where != W_ROOM || SC.size == S_PART || SC.rw < 3 || SC.rh < 3 || dx >= SC.rw || dy >= SC.rh) {
+    if ((SC.item[i].hid & 1) || SC.item[i].rel == 0xFF || SC.where != W_ROOM || SC.size == S_PART || SC.size >= S_VAST || SC.rw < 3 || SC.rh < 3 || dx >= SC.rw || dy >= SC.rh) {
         return 0;
     }
     q = ((pc_face + 1) & 7) >> 1;

@@ -195,8 +195,12 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
         S.kind = rp.kind;
         S.lit = (rp.flags & R_LIT) != 0;
         whole = 1;
+        d = 0;                                  /* (A great cavern's walls seen: how many, to 6) */
         for (j = rp.y; j < (unsigned char) (rp.y + rp.h); ++j) {
             for (i = rp.x; i < (unsigned char) (rp.x + rp.w); ++i) {
+                if ((C->tile[j][i] & (T_VIS | 0x0F)) == (T_VIS | T_WALL)) {
+                    d += d < 6;
+                }
                 if ((C->tile[j][i] & (T_SEEN | 0x0F)) == T_FLOOR) {   /* (Its floor's: a cave's bounds take in rock) */
                     whole = 0;
                 }
@@ -207,8 +211,9 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
         S.rh = rp.h;
         S.rx = x - lx + rp.x;
         S.ry = y - ly + rp.y;
-        S.size = !whole ? S_PART : area <= 8 ? S_SMALL : area >= 30 ? S_LARGE : rp.w >= 3 * rp.h ||
-            rp.h >= 3 * rp.w ? S_LONG : S_MID;
+        S.size = rp.flags & R_CAVERN ? S_VAST + (d >= 6) : !whole ? S_PART : area <= 8 ? S_SMALL : area >= 30 ? S_LARGE :
+            rp.w >= 3 * rp.h || rp.h >= 3 * rp.w ? S_LONG : S_MID;     /* (A great cavern's part: vast, its walls
+                                                **   beyond the light or not, S_VASTW, slice 4.10's) */
         if ((k = zone_index (lx, ly)) != 0xFF) {
             z = &C->zone[k];
             if (z->gx) {

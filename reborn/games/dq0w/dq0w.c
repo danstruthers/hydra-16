@@ -795,7 +795,7 @@ static struct trap* __fastcall__ trap_at (unsigned char x, unsigned char y)
 void __fastcall__ s_across (unsigned char h, unsigned char r)
 {
     unsigned long t = 0;
-    unsigned char n = 0, st;
+    unsigned char n = 0, st, k, cav;
     signed char ledge = 0;
     unsigned char* p;
     struct trap* q;
@@ -808,7 +808,12 @@ void __fastcall__ s_across (unsigned char h, unsigned char r)
         p = at (sn_, mx, my);
         st = TILE (*p) == T_STEPS;
         z = C->elev[cy_][cx_];
-        if (room_of (sn_, nx, ny) != r || !(p = at (sn_, nx, ny)) || !T_PASS (*p)) {
+        cav = C->room[r].flags & R_CAVERN;
+        if ((k = room_of (sn_, nx, ny)) != r && k != 0xFF && cav && (C->room[k].flags & R_CAVERN)) {
+            r = k;                              /* (A great cavern's part in the next chunk: the one room, on
+                                                **   across it, slice 4.10's) */
+        }
+        if (k != r || !(p = at (sn_, nx, ny)) || !T_PASS (*p)) {
             if (lim_ == 250 && p && (TILE (*p) == T_CORR || TILE (*p) == T_DOOR) && step8 (sn_, mx, my, h)) {
                 hub_map (0);                    /* (A passage's mouth: on along it, to the next place; a diagonal
                                                 **   way's too) */
@@ -1557,7 +1562,8 @@ void __fastcall__ s_grow_below (unsigned char n)
         ly0 = y < ly0 ? y : ly0;
         lx1 = x > lx1 ? x : lx1;
         ly1 = y > ly1 ? y : ly1;
-        k->kind = l->kind == O_LADDER_DOWN ? O_LADDER_UP : l->kind == O_SHAFT_DOWN ? O_SHAFT_UP : O_STAIRS_UP;
+        k->kind = l->kind == O_LADDER_DOWN ? O_LADDER_UP : l->kind == O_SHAFT_DOWN ? O_SHAFT_UP : l->kind == O_RAMP_DOWN ?
+            O_RAMP_UP : O_STAIRS_UP;
         k->dug = l->dug;
         k->to = n;
         k->x = x;
@@ -1588,7 +1594,8 @@ static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
     ways (r, cx_, cy_);
     for (k = 0; k < C->nopen; ++k) {
         kind = C->open[k].kind;
-        if ((d == DIR_UP) != (kind == O_STAIRS_UP || kind == O_LADDER_UP || kind == O_WAY_OUT || kind == O_SHAFT_UP)) {
+        if ((d == DIR_UP) != (kind == O_STAIRS_UP || kind == O_LADDER_UP || kind == O_WAY_OUT || kind == O_SHAFT_UP ||
+            kind == O_RAMP_UP)) {
             continue;
         }
         if ((u = way (C->open[k].x, C->open[k].y)) < bt) {
@@ -1657,13 +1664,24 @@ void __fastcall__ s_climb (unsigned char d)
     move.dir = lk->kind;
     /* (The flight: the drop between the floors, a step's time a foot on a stairway, twice on a ladder) */
     feet = abs (STRATUM (sn_).datum - STRATUM (lk->to).datum);
+    if (lk->kind >= O_RAMP_UP) {                /* (A long slope, four feet along a foot of the drop, walked: eight
+                                                **   tenths of a step's time a foot down, thirteen up, the climb's
+                                                **   half a step a foot strenuous work: HOUSE.md's long slopes,
+                                                **   slice 4.10's) */
+        t += (unsigned long) (feet + 1) * stept * (d == DIR_UP ? 13 : 8) / 10;
+        if (d == DIR_UP) {
+            spend (GA_WORK, (unsigned) ((feet + 1) * stept) >> 1);
+            hub_map (0);
+        }
+    } else {
     t += (unsigned long) (feet + 1) * stept *
         (lk->kind == O_LADDER_DOWN || lk->kind == O_LADDER_UP ? 2 : lk->kind == O_SHAFT_DOWN ||
         lk->kind == O_SHAFT_UP ? 3 : 1) / (d == DIR_UP ? 1 : 2);
+    }
     if (jump && lk->kind == O_SHAFT_DOWN) {     /* (Jumped down the shaft: a fall to its foot, told as fallen) */
         event (E_CLIMB, 0, K_JUMPED << 8 | (feet > 255 ? 255 : feet));
         t = stept + fall (feet, HF_CLEAR);
-        move.dir |= O_FELL;
+        move.dir = O_FELL;
     }
     hub_map (0);
     busy (t);
@@ -3649,7 +3667,8 @@ static unsigned char __fastcall__ run_at (unsigned char i)
 /* A walk's beat as it comes onto square x, y heading h (in a passage: E_BEAT): it turns or bends (its runs', the
 ** user's: a staircase of steps one slant), goes through a doorway, rises or falls, or a quiet stretch (6 squares, 30
 ** feet); 1 if one's told */
-static signed char pz;
+static signed char pz;                          /* (The floor where the last beat was told, or the room's: a rise or a
+                                                **   fall counted from it, an incline's, slice 4.10's) */
 static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
 {
     unsigned char b = 0xFF, s = WS_AHEAD, t;
@@ -3660,7 +3679,6 @@ static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
     t = p ? TILE (*p) : T_CORR;
     z = elev_at (sn_, x, y);
     dz = z - pz;
-    pz = z;
     if (room_of (sn_, x, y) == 0xFF) {
         if (proom >= 2) {                       /* (A room crossed, as the walk leaves it, to a door or a passage:
                                                 **   told as it goes, the user's) */
@@ -3684,7 +3702,8 @@ static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
             }
         } else if (t == T_DOOR) {
             b = WB_DOOR;
-        } else if (dz >= 2 || dz <= -2 || t == T_STEPS) {
+        } else if ((unsigned char) (dz + 3) > 6 || t == T_STEPS) {     /* (Steps; or 4 feet or more risen or
+                                                **   fallen since the last beat: an incline, slice 4.10's) */
             b = dz > 0 ? WB_UP : WB_DOWN;
         } else if (++pquiet >= 6) {
             b = WB_QUIET;
@@ -3694,11 +3713,13 @@ static unsigned char __fastcall__ beat (unsigned x, unsigned y, unsigned char h)
     } else {
         pprev = 0;
         ++proom;
+        pz = z;
     }
     hub_map (0);
     if (b == 0xFF) {
         return 0;
     }
+    pz = z;
     pquiet = 0;
     event (E_BEAT, 0, b | s << 8);
     return 1;

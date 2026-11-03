@@ -60,7 +60,8 @@ static void __fastcall__ open_in (unsigned char x, unsigned char y)
 
 /* The way from (x, y) toward (tx, ty): along the farther, else the nearer, so long as it stays off the edges (or is
 ** the end); always nearer (the tunnel's last stretch straight on to its end) */
-static unsigned char tx, ty;
+#define tx  mx                                  /* (The tunnels' end: the chunk's middle, built.c's mx, my) */
+#define ty  my
 static unsigned char __fastcall__ toward (unsigned char x, unsigned char y)
 {
     unsigned char h = x < tx ? DIR_E : DIR_W, v = y < ty ? DIR_S : DIR_N, d;
@@ -250,6 +251,305 @@ static void __fastcall__ hollow (const struct room* p)
     }
 }
 
+/* ---- A great cavern (slice 4.10's rest, 2026-11-02: DUNGEON.md's caverns across many chunks, HOUSE.md's great
+** caverns, for review): a natural stratum's region (one in three, by its own numbers: a hash of the stratum's seed and
+** the region's place, none of the grower's dice; none where a way between strata comes into the region, so the strata's
+** ways in stay as they were, but dq0 -V, the tests', every region one, its middle as near its first way's square as the
+** region lets it) holds a cavern in a box of its own: its middle and its half-breadths (24 to 63 squares east and west,
+** 20 to 55 north and south; 10 squares or more off the region's edges, so no two meet), its floor where the ellipse's
+** reach (the squared distance, 64 at its edge) is under 44 and a wander (0-15, a lattice 8 squares apart, evenly
+** between) more; a pillar now and then (a lattice point's two by two squares, 4 off the wander's, one in six, well in);
+** its floor a hollow (2 to 8 feet at its middle, nothing at its edge, the tunnels in its reach too); its roof 40 to 99
+** feet up.  Each chunk it touches grows its part of the one room (struct room's R_CAVERN: the part's bounds) from the
+** seed and the square alone, so the parts meet at the edges, the walls too (a square at the edge beside the next
+** chunk's floor); the chunk's middle, where its tunnels meet, the part's square nearest its own */
+#pragma code-name (push, "OV8CODE")            /* (Overlay 8's, its own: 3 full) */
+#pragma rodata-name (push, "OV8RODATA")
+struct cav {
+    unsigned        seed;
+    int             x, y;                       /* Its middle, in the chunk's squares (off it as it may be) */
+    unsigned char   hw, hh, deep, roof;
+    unsigned char   nz[7][7];                   /* The wander's lattice, from 8 squares before the chunk's corner */
+    int             dx, dy;                     /* (cav_at's own) */
+    unsigned        ax, ay, r, px, py;
+    unsigned char   gx, gy, fx, fy, n, f;
+};
+struct cw {                                     /* (cavern's and cav_part's own) */
+    struct stratum* s;
+    struct link*    l;
+    struct room*    p;
+    struct zone*    z;
+    unsigned        ox, oy, ew, eh, lx, ly;
+    int             a, b;
+    unsigned char   rx, ry, i, j, x, y, c, x0, y0, x1, y1, d, best;
+};
+extern unsigned char sx[], sy[];                /* (built.c's stack: idle as a cave's grown, its room the cavern's) */
+#define V   (*(struct cav*) sx)
+#define W   (*(struct cw*) sy)
+
+static unsigned char __fastcall__ ch (unsigned a, unsigned b)
+{
+    unsigned h = a * 40503U + b * 2654U + V.seed;
+
+    h ^= h >> 7;
+    h *= 0x2F1B;
+    return (unsigned char) (h >> 8);
+}
+
+/* Chunk L's region's great cavern: 1 if it has one that reaches the chunk (or a square past its edges), V its
+** numbers */
+static unsigned char cv_find (void)
+{
+    W.s = &STRATUM (L->sn);
+    if (W.s->style != ST_NATURAL) {
+        return 0;
+    }
+    W.rx = L->cx >> 3;
+    W.ry = L->cy >> 3;
+    W.ox = (unsigned) W.rx << 8;
+    W.oy = (unsigned) W.ry << 8;
+    hub_get (0, &HUB->gear, &V.f, 1);
+    V.f &= GE_CAVERN;
+    V.seed = (unsigned) W.s->seed ^ (unsigned) (W.s->seed >> 16) ^ 0x3C5D;
+    W.lx = 0xFFFF;
+    for (W.i = W.s->nlinks, W.l = W.s->link; W.i; --W.i, ++W.l) {  /* (A way between strata into the region: a dug
+                                                **   one the records', none) */
+        if (!W.l->dug && (unsigned char) ((W.l->x - W.s->x0) >> 8) == W.rx &&
+            (unsigned char) ((W.l->y - W.s->y0) >> 8) == W.ry) {
+            if (!V.f) {
+                return 0;
+            }
+            if (W.lx == 0xFFFF) {
+                W.lx = W.l->x - W.s->x0;
+                W.ly = W.l->y - W.s->y0;
+            }
+        }
+    }
+    if (!V.f && ch (W.rx, W.ry) % 3) {
+        return 0;
+    }
+    W.ew = W.s->w - W.ox;
+    W.ew = W.ew > RW ? RW : W.ew;
+    W.eh = W.s->h - W.oy;
+    W.eh = W.eh > RW ? RW : W.eh;
+    if (W.ew < 60 || W.eh < 60) {
+        return 0;                               /* (No room for one) */
+    }
+    V.hw = 24 + ch (W.rx + 1, W.ry) % 40;
+    V.hh = 20 + ch (W.rx + 2, W.ry) % 36;
+    if (V.hw > (W.ew - 20) >> 1) {
+        V.hw = (W.ew - 20) >> 1;
+    }
+    if (V.hh > (W.eh - 20) >> 1) {
+        V.hh = (W.eh - 20) >> 1;
+    }
+    W.a = W.ox + 10 + V.hw;                     /* (Its middle's least, and how many past it) */
+    W.b = W.ew - 19 - 2 * V.hw;
+    W.a = W.lx == 0xFFFF ? W.a + ch (W.rx + 3, W.ry) % W.b : W.lx < W.a ? W.a : W.lx >= W.a + W.b ? W.a + W.b - 1 :
+        W.lx;
+    V.x = W.a - (int) ((unsigned) L->cx << CW_BITS);
+    W.a = W.oy + 10 + V.hh;
+    W.b = W.eh - 19 - 2 * V.hh;
+    W.a = W.lx == 0xFFFF ? W.a + ch (W.rx + 4, W.ry) % W.b : W.ly < W.a ? W.a : W.ly >= W.a + W.b ? W.a + W.b - 1 :
+        W.ly;
+    V.y = W.a - (int) ((unsigned) L->cy << CW_BITS);
+    if (V.x + V.hw < -1 || V.x - V.hw > CW || V.y + V.hh < -1 || V.y - V.hh > CW) {
+        return 0;                               /* (Not this chunk's) */
+    }
+    V.deep = 2 + ch (W.rx + 5, W.ry) % 7;
+    V.roof = 40 + ch (W.rx + 6, W.ry) % 60;
+    for (W.j = 0; W.j < 7; ++W.j) {
+        for (W.i = 0; W.i < 7; ++W.i) {
+            V.nz[W.j][W.i] = ch ((L->cx << 2) - 1 + W.i, ((L->cy << 2) - 1 + W.j) ^ 0x5A5A) & 15;
+        }
+    }
+    return 1;
+}
+
+/* Square (i, j) of the chunk (one past its edges too) in the cavern's reach: its reach (the ellipse's: 64 at its
+** edge, 127 past it), and 0x80 if it's the cavern's floor */
+static unsigned char __fastcall__ cav_at (signed char i, signed char j)
+{
+    V.dx = i - V.x;
+    V.dy = j - V.y;
+    V.dx = V.dx < 0 ? -V.dx : V.dx;
+    V.dy = V.dy < 0 ? -V.dy : V.dy;
+    if (V.dx > 2 * V.hw || V.dy > 2 * V.hh || (V.ax = ((unsigned) V.dx << 6) / V.hw) > 127 ||
+        (V.ay = ((unsigned) V.dy << 6) / V.hh) > 127 || (V.r = (V.ax * V.ax + V.ay * V.ay) >> 6) >= 64) {
+        return 127;
+    }
+    V.gx = i + 8;
+    V.gy = j + 8;
+    V.fx = V.gx & 7;
+    V.fy = V.gy & 7;
+    V.gx >>= 3;
+    V.gy >>= 3;
+    V.n = (unsigned) ((V.nz[V.gy][V.gx] * (8 - V.fx) + V.nz[V.gy][V.gx + 1] * V.fx) * (8 - V.fy) +
+        (V.nz[V.gy + 1][V.gx] * (8 - V.fx) + V.nz[V.gy + 1][V.gx + 1] * V.fx) * V.fy) >> 6;
+    V.px = ((unsigned) L->cx << CW_BITS) + i;
+    V.py = ((unsigned) L->cy << CW_BITS) + j;
+    if (V.r < 36 && (V.px & 6) == 4 && (V.py & 6) == 4 && ch (V.px >> 3, (V.py >> 3) ^ 0x2D2D) % 6 == 0) {
+        return V.r;                             /* (A pillar) */
+    }
+    return V.r < 44 + V.n ? V.r | 0x80 : V.r;
+}
+
+/* The cavern's part in chunk L: its floor, its hollow (the elevations under it, floor_at's to add), its room; the
+** chunk's middle (mx, my) its square nearest the chunk's */
+static void cav_part (void)
+{
+    W.x0 = W.y0 = W.best = 0xFF;
+    W.x1 = W.y1 = 0;
+    for (W.y = 0; W.y < CW; ++W.y) {
+        for (W.x = 0; W.x < CW; ++W.x) {
+            if (((W.c = cav_at (W.x, W.y)) & 0x7F) < 64) {
+                L->elev[W.y][W.x] = -(signed char) ((unsigned) V.deep * (64 - (W.c & 0x7F)) >> 6);
+                if (W.c & 0x80) {
+                    L->tile[W.y][W.x] = T_FLOOR;
+                    W.x0 = W.x < W.x0 ? W.x : W.x0;
+                    W.y0 = W.y < W.y0 ? W.y : W.y0;
+                    W.x1 = W.x > W.x1 ? W.x : W.x1;
+                    W.y1 = W.y > W.y1 ? W.y : W.y1;
+                    if ((W.d = (W.x > CW / 2 ? W.x - CW / 2 : CW / 2 - W.x) + (W.y > CW / 2 ? W.y - CW / 2 :
+                        CW / 2 - W.y)) < W.best) {
+                        W.best = W.d;
+                        mx = W.x;
+                        my = W.y;
+                    }
+                }
+            }
+        }
+    }
+    for (W.i = 0; W.i < E->nland && W.x0 != 0xFF; ++W.i) {    /* (A way between strata in its reach on its floor,
+                                                **   dq0 -V's: its stairs not left in a passage) */
+        W.x = E->lx[W.i];
+        W.y = E->ly[W.i];
+        if ((cav_at (W.x, W.y) & 0x7F) < 64) {
+            L->tile[W.y][W.x] = T_FLOOR;
+            W.x0 = W.x < W.x0 ? W.x : W.x0;
+            W.y0 = W.y < W.y0 ? W.y : W.y0;
+            W.x1 = W.x > W.x1 ? W.x : W.x1;
+            W.y1 = W.y > W.y1 ? W.y : W.y1;
+        }
+    }
+    if (W.x0 == 0xFF) {
+        return;
+    }
+    W.p = &L->room[L->nrooms];
+    W.p->x = W.x0;
+    W.p->y = W.y0;
+    W.p->w = W.x1 - W.x0 + 1;
+    W.p->h = W.y1 - W.y0 + 1;
+    W.p->flags = R_CAVERN;
+    W.p->kind = U_CAVE;
+    W.p->z0 = L->nzones;
+    W.p->nz = 1;
+    W.z = &L->zone[L->nzones++];
+    W.z->x = W.x0;
+    W.z->y = W.y0;
+    W.z->w = W.p->w;
+    W.z->h = W.p->h;
+    W.z->room = L->nrooms++;
+    W.z->gx = W.z->gy = 0;                      /* (Its floor, z, the grower's: floor_at's, overlay 3's) */
+    W.z->ceil = C_ROUGH;
+    W.z->cmid = V.roof;
+    W.z->cwall = V.roof >> 1;
+}
+
+
+/* ---- Rooms at 45 degrees (the user's "queue up 1-3", 2026-10-31: ways off the compass, step 3's rest; HOUSE.md's
+** rooms on the diagonal, for review): a built stratum whose passages are on the diagonal (a fifth of them, by the
+** stratum's seed: pass.c's leg) has its rooms' walls on the diagonal too, so the complex lies at 45 degrees to the
+** compass; dq0 -D, the tests', every built stratum's.  Each room four squares or more each way, not a link's, cut to
+** the diamond its box holds (twice a square's offset from the box's middle, east-west and north-south, adding to its
+** longer side, made even, at most: a diamond in a square box, a long room's corners cut), the squares cut its walls; a
+** door's, a mouth's or a window's square in its old walls kept joined to the floor by the squares straight in from
+** it, and a room's steps kept, so it's walked as it was.  No dice: the layout as it was grown */
+static unsigned char __fastcall__ cut (const struct room* p, unsigned char i, unsigned char j)
+{
+    W.a = 2 * (i - p->x) - (p->w - 1);
+    W.b = 2 * (j - p->y) - (p->h - 1);
+    W.y0 = (W.a < 0 ? -W.a : W.a) + (W.b < 0 ? -W.b : W.b);
+    return W.y0 > (unsigned char) ((p->w > p->h ? p->w : p->h) & 0xFE);
+}
+
+static void diamonds (void)
+{
+    for (W.c = 0, W.p = L->room; W.c < L->nrooms; ++W.c, ++W.p) {
+        if (W.p->w < 4 || W.p->h < 4) {
+            continue;
+        }
+        for (W.i = 0; W.i < E->nland && (E->lx[W.i] < W.p->x || E->lx[W.i] >= W.p->x + W.p->w ||
+            E->ly[W.i] < W.p->y || E->ly[W.i] >= W.p->y + W.p->h); ++W.i) {
+        }
+        if (W.i < E->nland) {
+            continue;                           /* (A link's room: as it was) */
+        }
+        for (W.y = W.p->y; W.y < W.p->y + W.p->h; ++W.y) {
+            for (W.x = W.p->x; W.x < W.p->x + W.p->w; ++W.x) {
+                if (TILE (L->tile[W.y][W.x]) == T_FLOOR && cut (W.p, W.x, W.y)) {
+                    L->tile[W.y][W.x] = T_WALL | T_MARK;    /* (Marked: cut, maybe kept) */
+                }
+            }
+        }
+        for (W.d = 0; W.d < 4; ++W.d) {         /* (Its old walls' openings, joined to the floor straight in) */
+            for (W.j = 0; W.j < (W.d & 1 ? W.p->h : W.p->w); ++W.j) {
+                W.x = W.d & 1 ? (W.d == DIR_E ? W.p->x + W.p->w - 1 : W.p->x) : W.p->x + W.j;
+                W.y = W.d & 1 ? W.p->y + W.j : (W.d == DIR_S ? W.p->y + W.p->h - 1 : W.p->y);
+                W.x0 = TILE (L->tile[W.y + dir_y[W.d]][W.x + dir_x[W.d]]);
+                if (W.x0 != T_DOOR && W.x0 != T_CORR && W.x0 != T_WINDOW && W.x0 != T_STEPS) {
+                    continue;
+                }
+                while ((unsigned char) (W.x - W.p->x) < W.p->w && (unsigned char) (W.y - W.p->y) < W.p->h &&
+                    (L->tile[W.y][W.x] & T_MARK)) {
+                    L->tile[W.y][W.x] = T_FLOOR;
+                    W.x -= dir_x[W.d];
+                    W.y -= dir_y[W.d];
+                }
+            }
+        }
+        for (W.y = W.p->y; W.y < W.p->y + W.p->h; ++W.y) {
+            for (W.x = W.p->x; W.x < W.p->x + W.p->w; ++W.x) {
+                L->tile[W.y][W.x] &= ~T_MARK;
+            }
+        }
+    }
+}
+
+/* The great cavern of chunk L's region (the cave grower's, overlay 3's: its stub, bank.s's): m 0, its part grown, 1 if
+** it has one (the room and zone 0); m 1, as its walls are made, those at the chunk's edges beside the next chunk's
+** part (V as m 0 left it); m 2, a built chunk's rooms at 45 degrees, if its stratum's complex lies so (the built
+** grower's, overlay 1's) */
+unsigned char __fastcall__ o_cavern (unsigned char m)
+{
+    if (m == 2) {
+        hub_get (0, &HUB->gear, &V.f, 1);
+        if ((V.f & GE_DIAMOND) || !(((const unsigned char*) &STRATUM (L->sn).seed)[3] % 5)) {
+            diamonds ();                        /* (Its passages' strata, pass.c's leg's: a fifth, by the seed) */
+        }
+        return 0;
+    }
+    if (!m) {
+        if (!cv_find ()) {
+            return 0;
+        }
+        cav_part ();
+        return 1 + L->nrooms;                   /* (1: none in the chunk, only beside it; 2: its part) */
+    }
+    for (W.y = 0; W.y < CW; ++W.y) {
+        for (W.x = 0; W.x < CW; W.x += W.y && W.y < CW - 1 ? CW - 1 : 1) {    /* (The edges' squares) */
+            for (W.i = 0; W.i < 9 && L->tile[W.y][W.x] == T_ROCK; ++W.i) {
+                if (cav_at (W.x - 1 + W.i % 3, W.y - 1 + W.i / 3) & 0x80) {
+                    L->tile[W.y][W.x] = T_WALL;
+                }
+            }
+        }
+    }
+    return 0;
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 #pragma code-name (push, "OV1CODE")            /* (Overlay 1's: 3's room, the air's) */
 #pragma rodata-name (push, "OV1RODATA")
 static const int o8[8] = { -CW, 1 - CW, 1, CW + 1, CW, CW - 1, -1, -CW - 1 };    /* (The eight ways, as offsets in
@@ -307,7 +607,7 @@ void slants (void);                             /* (Overlay 1's, its stub) */
 void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned long seed)
 {
     struct stratum* s = &STRATUM (c->sn);
-    unsigned char i, j, k, x, y, n;
+    unsigned char i, j, k, x, y, n, cv;
 
     L = c;
     E = e;
@@ -319,8 +619,10 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
     }
     mx = e->x0 + 1 + random (e->x1 > e->x0 + 2 ? e->x1 - e->x0 - 1 : 1);   /* (The middle: where the tunnels meet) */
     my = e->y0 + 1 + random (e->y1 > e->y0 + 2 ? e->y1 - e->y0 - 1 : 1);
-    tx = mx;
-    ty = my;
+    if ((cv = cavern (0)) > 1) {               /* (A great cavern's part: first, the chambers kept clear of it; the
+                                                **   middle in it) */
+        L->zone[0].z = floor_at (mx, my);
+    }
     for (i = 0; i < e->nland; ++i) {            /* (The links: each in a chamber, a tunnel to the middle) */
         chamber (e->lx[i], e->ly[i], 2 + random (2), 1 + random (2));
         tunnel (e->lx[i], e->ly[i], random (2));
@@ -351,13 +653,14 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
     /* The floors, the chambers' hollows, and the walls: the rock beside what's open */
     for (y = 0; y < CW; ++y) {
         for (x = 0; x < CW; ++x) {
-            if (L->tile[y][x] != T_ROCK) {
-                L->elev[y][x] = floor_at (x, y);
-            }
+            L->elev[y][x] = L->tile[y][x] != T_ROCK ? floor_at (x, y) + L->elev[y][x] : 0;   /* (A cavern's hollow
+                                                **   in it: cav_part's) */
         }
     }
     for (i = 0; i < L->nrooms; ++i) {
-        hollow (&L->room[i]);
+        if (!(L->room[i].flags & R_CAVERN)) {
+            hollow (&L->room[i]);
+        }
     }
     slants ();
     for (y = 0; y < CW; ++y) {
@@ -378,12 +681,16 @@ void __fastcall__ o_grow_caves (struct chunk* c, const struct edges* e, unsigned
             }
         }
     }
+    if (cv) {
+        cavern (1);                             /* (A great cavern's walls at the edges, beside the next chunk's part) */
+    }
     /* The links' squares: stairways and ladders, up and down */
     for (i = 0; i < e->nland && L->nopen < NOPEN; ++i) {
         x = e->lx[i];
         y = e->ly[i];
         k = s->link[e->ln[i]].kind;
-        L->tile[y][x] = k == O_STAIRS_DOWN || k == O_LADDER_DOWN || k == O_SHAFT_DOWN ? T_DOWN : T_UP;
+        L->tile[y][x] = k == O_STAIRS_DOWN || k == O_LADDER_DOWN || k == O_SHAFT_DOWN || k == O_RAMP_DOWN ?
+            T_DOWN : T_UP;
         L->open[L->nopen].kind = k;
         L->open[L->nopen].x = x;
         L->open[L->nopen].y = y;
@@ -411,19 +718,19 @@ static unsigned char tair = 0xFF;               /* (The environment's: 0x80 | ki
 
 void __fastcall__ o_air_pocket (struct chunk* c, const struct edges* e)
 {
-    static struct hy_regs r;
-    static char b[4];
+#define AR  (*(struct hy_regs*) sy)            /* (The built grower's stack's room, idle: built.c's) */
+#define b   ((char*) sy + sizeof (struct hy_regs))
     unsigned h = (c->cx * 57 + c->cy * 23 + c->sn * 101) ^ 0x2C6B, s;
     unsigned char k;
     struct room* p;
 
     if (tair == 0xFF) {
         tair = 0;
-        r.a = 0xFF;
-        r.r[0] = (unsigned) "dq0air";
-        r.r[1] = (unsigned) b;
-        r.r[2] = 3;
-        if (!hy_call (HY_ENV_GET, &r)) {
+        AR.a = 0xFF;
+        AR.r[0] = (unsigned) "dq0air";
+        AR.r[1] = (unsigned) b;
+        AR.r[2] = 3;
+        if (!hy_call (HY_ENV_GET, &AR)) {
             tair = 0x80 | (b[0] & 3) << 4 | (b[1] & 3);
         }
     }
@@ -454,6 +761,8 @@ void __fastcall__ o_air_pocket (struct chunk* c, const struct edges* e)
     c->ay = p->y + (p->h >> 1);
     c->ar = tair ? 100 : ((p->w > p->h ? p->w : p->h) >> 1) + 1;     /* (A test's: the whole chunk) */
 }
+#undef AR
+#undef b
 
 #pragma code-name (push, "OV6CODE")           /* (Overlay 6's: 3 full) */
 #pragma rodata-name (push, "OV6RODATA")
@@ -536,7 +845,7 @@ void __fastcall__ o_wet_chunk (struct chunk* c, const struct edges* e)
     for (r = 0; r < c->nrooms && w; ++r) {
         p = &c->room[r];
         k = wh (r);
-        d = p->kind == U_CISTERN ? 5 + (k & 3) : p->kind != U_CAVE ? 0 : w & RW_LAKE ? 4 + (k & 7) : w & RW_STREAM ?
+        d = p->kind == U_CISTERN ? 5 + (k & 3) : p->kind != U_CAVE || (p->flags & R_CAVERN) ? 0 : w & RW_LAKE ? 4 + (k & 7) : w & RW_STREAM ?
             1 + (k & 1) : k % 3 == 0;
         for (x = 0; x < e->nland && !(e->lx[x] >= p->x && e->lx[x] < p->x + p->w && e->ly[x] >= p->y &&
             e->ly[x] < p->y + p->h); ++x) {
