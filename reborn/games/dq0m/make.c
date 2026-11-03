@@ -149,6 +149,7 @@ unsigned char __fastcall__ make_chunk (unsigned char sn, unsigned cx, unsigned c
         hub_put (WORLD_BANK, &WREC->stock[k], &sk, sizeof sk - sizeof sk.e + sk.n * sizeof sk.e[0]);
         u = CS_FRESH;
     }
+    sky (c, 1);                                 /* (The squares by what shows the sky marked: sky.c's) */
     seen_over (c);
     hub_map (CACHE_BANK (k));
     memcpy (CHUNK_AT (k), c, sizeof *c);

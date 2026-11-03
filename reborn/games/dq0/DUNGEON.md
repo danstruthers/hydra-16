@@ -1555,10 +1555,9 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
   scroll ruined), a stream's current carrying a swimmer, a minute's swim tested as it waits in deep water, treading water standing still (the denizens' wading and swimming, a beast that won't cross going
   round, and their hunger and thirst built 2026-10-31: DENIZENS.md's their bodies; left, a denizen drowning); rain where the surface reaches (shafts, the open), washing scents and prints away; a standing order
   to eat and drink when needed.
-- **The time of day believed** (built 2026-10-31: the time of day believed, above; HOUSE.md's): left, the plan's
-  shafts, windows and skylights to the surface (where the rain's hook will find the surface reaches) as more places the
-  sky is seen from, built 2026-11-03: the time of day believed's what shows the sky, above; the weather (overcast: its
-  light alone), rain at them, thirst, tiredness and the denizens' routines learnt as
+- **The time of day believed** (built 2026-10-31: the time of day believed, above; HOUSE.md's): the plan's shafts, windows and skylights to the
+  surface as more places the sky is seen from built 2026-11-03 (what shows the sky, above; HOUSE.md's); left, the weather
+  (overcast: its light alone), rain at them, thirst, tiredness and the denizens' routines learnt as
   clues, a chain of torches counted, the time on the status line.
 - **Rock and old places** (slice 4.10, built in part 2026-10-31: changing the dungeon's rock, above; HOUSE.md's rock's
   kinds and hardness): the rock's own kinds and hardness across the strata, a dig's rate by it, told as it's dug,

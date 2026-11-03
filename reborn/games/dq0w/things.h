@@ -71,6 +71,8 @@ unsigned char __fastcall__ sky_ask (unsigned w);    /* (Part 89's: dq0w.c) The d
 #define SA_JUMP         0x0200
 #define SA_END          0x2000
 #define SA_HERE         0x1000
+#define SA_NEAR         0x0800
+#define SA_NOTE         0x0400
 void it_near (void);                              /* The chunks round the character's in the store, as it comes into
                                                 **   one (dq0w.c's see, as it's moved) */
 void __fastcall__ start (const char* dir);      /* (Part 3's: dq0w.c) The world's start, once it's attached */

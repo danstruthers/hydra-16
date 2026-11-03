@@ -378,9 +378,6 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                     S.open[r].rel = i == lx && j == ly ? 0xFF : REL8 (bearing ((int) i - lx, (int) j - ly), face) | kn_;
                     d = C->open[k].kind;                /* (A window on the surface: told as a window, the doors' pass;
                                                         **   a skylight, a shaft open to the sky, as they're lit now) */
-                    if (d == O_SHAFT_UP && s->link[C->open[k].link].dug == LD_SKY) {
-                        d = O_SKYSHAFT;
-                    }
                     S.open[r].kind = d >= O_SKYLIGHT && sun_ ? d | O_DAYLIT : d;
                     S.open[r].x = x - lx + i;
                     S.open[r].y = y - ly + j;
@@ -412,25 +409,6 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
                 dp->dz = fz (C->elev[cy_][cx_] - myz);
             }
         }
-        at (sn, x, y);                          /* (A way between strata on its square or beside it, if a room's record
-                                                **   wasn't made for it: 2026-11-03, a shaft's foot in a passage) */
-        for (k = 0; k < C->nopen && S.nopen < SEE_OPEN; ++k) {
-            i = C->open[k].x;
-            j = C->open[k].y;
-            if ((unsigned char) (i - cx_ + 1) <= 2 && (unsigned char) (j - cy_ + 1) <= 2 && C->open[k].kind != O_WINDOW) {
-                r = S.nopen++;
-                S.open[r].rel = i == cx_ && j == cy_ ? 0xFF : REL8 (bearing ((int) i - cx_, (int) j - cy_), face);
-                d = C->open[k].kind;
-                if (d == O_SHAFT_UP && s->link[C->open[k].link].dug == LD_SKY) {
-                    d = O_SKYSHAFT;
-                }
-                S.open[r].kind = d >= O_SKYLIGHT && sun_ ? d | O_DAYLIT : d;
-                S.open[r].x = x - cx_ + i;
-                S.open[r].y = y - cy_ + j;
-                S.open[r].dz = fz (C->elev[j][i] - myz);
-            }
-        }
-        r = 0xFF;
         at (sn, x, y);                          /* (The doors further along it, seen or remembered: named, the look not
                                                 **   telling them; but as it goes along a walk, its looks the quicker) */
         e_ = S.ndoors;

@@ -49,7 +49,7 @@ struct sk {
 };
 #define Y   (*(struct sk*) sy)
 
-/* The environment's dq0sky said */
+/* The environment's dq0sky said: 1 (a test's scene, all of them), 2 ("0": none at all), 0 not said */
 static unsigned char forced (void)
 {
     Y.ar.a = 0xFF;
@@ -57,7 +57,7 @@ static unsigned char forced (void)
     Y.ar.r[1] = (unsigned) Y.val;
     Y.ar.r[2] = 3;
     Y.ar.r[3] = 0;
-    return !hy_call (HY_ENV_GET, &Y.ar);
+    return hy_call (HY_ENV_GET, &Y.ar) ? 0 : Y.val[0] == '0' ? 2 : 1;
 }
 
 /* Its dice: a little generator, from Y.h */
@@ -80,10 +80,24 @@ static void __fastcall__ sky_link (unsigned char kind, unsigned char to)
     Y.l->dug = LD_SKY;
 }
 
+/* Y.x, Y.y's chunk has no other way between strata in it (a room's record, a chamber, its own) */
+static unsigned char lonely (void)
+{
+    for (Y.i = Y.s->nlinks, Y.l = Y.s->link; Y.i; --Y.i, ++Y.l) {
+        if (((Y.l->x - Y.s->x0) ^ (Y.x - Y.s->x0)) < CW && ((Y.l->y - Y.s->y0) ^ (Y.y - Y.s->y0)) < CW) {
+            return 0;
+        }
+    }
+    return 1;
+}
+
 static void __fastcall__ sky_links (unsigned char n)
 {
     Y.s = &STRATUM (n);
     Y.f = forced ();
+    if (Y.f == 2) {
+        return;
+    }
     Y.x = 0;
     Y.down = 0xFF;
     for (Y.i = 0, Y.l = Y.s->link; Y.i < Y.s->nlinks; ++Y.i, ++Y.l) {
@@ -106,6 +120,9 @@ static void __fastcall__ sky_links (unsigned char n)
                 Y.y = Y.l->y;
             }
         }
+        if (!Y.f && !lonely ()) {
+            return;
+        }
     } else if (Y.f) {
         if (Y.down != 0xFF) {
             Y.x = Y.s->link[Y.down].x + 1;
@@ -117,14 +134,8 @@ static void __fastcall__ sky_links (unsigned char n)
             Y.x = Y.s->x0 + INSET (Y.x);
             Y.y = 2 + (skd () * 3U) % (Y.s->h - 4);
             Y.y = Y.s->y0 + INSET (Y.y);
-            if (rg (n, (Y.x - Y.s->x0) >> 8, (Y.y - Y.s->y0) >> 8)->kind != RG_HALLS) {
+            if (rg (n, (Y.x - Y.s->x0) >> 8, (Y.y - Y.s->y0) >> 8)->kind != RG_HALLS || !lonely ()) {
                 Y.x = 0;
-                continue;
-            }
-            for (Y.i = Y.s->nlinks, Y.l = Y.s->link; Y.i; --Y.i, ++Y.l) {
-                if (((Y.l->x - Y.s->x0) ^ (Y.x - Y.s->x0)) < CW && ((Y.l->y - Y.s->y0) ^ (Y.y - Y.s->y0)) < CW) {
-                    Y.x = 0;                    /* (A chunk of its own) */
-                }
             }
         }
     }
@@ -196,10 +207,17 @@ static void window (void)
 
 static void sky_chunk (void)
 {
-    if (L->sn || cstyle == ST_NATURAL || !L->nrooms) {
+    if (L->sn > SKY_DEEP) {
         return;
     }
-    Y.f = forced ();
+    for (Y.i = L->nopen, Y.o = L->open; Y.i; --Y.i, ++Y.o) {
+        if (Y.o->kind == O_SHAFT_UP && STRATUM (L->sn).link[Y.o->link].dug == LD_SKY) {
+            Y.o->kind = O_SKYSHAFT;             /* (A shaft open to the sky, as it's told and looked for) */
+        }
+    }
+    if (L->sn || cstyle == ST_NATURAL || !L->nrooms || (Y.f = forced ()) == 2) {
+        return;
+    }
     Y.sd = (unsigned char) STRATUM (0).seed;
     for (Y.i = 0, Y.p = L->room; Y.i < L->nrooms; ++Y.i, ++Y.p) {
         if ((Y.f || wh (0x40 + Y.i) % 6 == 0) && L->nopen < NOPEN - 1) {
@@ -216,12 +234,39 @@ static void sky_chunk (void)
     }
 }
 
-/* What's asked: chunk c's (made, the chunk in the main RAM, its fixtures in it), or (c 0) stratum n's links */
+/* The squares under or beside what shows the sky marked T_HOLE (but a way up's: the map's mark's a skylight's), so the world
+** knows it's come by one at a glance (part 17's); after the chunk's stocked, nothing of the maker's reading its squares
+** bare */
+static void sky_mark (void)
+{
+    if (L->sn > SKY_DEEP) {
+        return;
+    }
+    for (Y.i = L->nopen, Y.o = L->open; Y.i; --Y.i, ++Y.o) {
+        if (Y.o->kind == O_SKYLIGHT || Y.o->kind == O_WINDOW || Y.o->kind == O_SKYSHAFT) {
+            for (Y.ly = Y.o->y - 1; Y.ly != (unsigned char) (Y.o->y + 2); ++Y.ly) {
+                for (Y.lx = Y.o->x - 1; Y.lx != (unsigned char) (Y.o->x + 2); ++Y.lx) {
+                    if (Y.lx < CW && Y.ly < CW && (t_kinds[TILE (L->tile[Y.ly][Y.lx])] & 1) &&
+                        TILE (L->tile[Y.ly][Y.lx]) != T_UP) {
+                        L->tile[Y.ly][Y.lx] |= T_HOLE;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* What's asked: chunk c's (made, the chunk in the main RAM, its fixtures in it: n 0; stocked, n 1), or (c 0) stratum n's
+** links */
 void __fastcall__ o_sky (struct chunk* c, unsigned char n)
 {
     if (c) {
         L = c;
-        sky_chunk ();
+        if (n) {
+            sky_mark ();
+        } else {
+            sky_chunk ();
+        }
     } else {
         sky_links (n);
     }

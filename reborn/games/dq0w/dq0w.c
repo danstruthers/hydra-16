@@ -1686,6 +1686,37 @@ static unsigned char __fastcall__ slot_for (unsigned char m)
 #define SHAFT_REACH     9                       /* (Feet: a roof's height a mouth in it's reached at, a jump and a pull) */
 #define SKY_SHAFT       20                      /* (Feet: a shaft from the top stratum to the surface) */
 
+/* The sky's opening within a square of the character (a window with shutters open, a skylight, a shaft open to the sky):
+** SKS_*, 0 none */
+static unsigned char sky_near (void)
+{
+    static struct opening* o;
+    static struct portal* q;
+    static unsigned char k, s, sn;
+
+    hub_map (0);
+    sn = HUB->pc_stratum;
+    s = 0;
+    if (sn <= SKY_DEEP && at (sn, HUB->pc_x, HUB->pc_y)) {
+        for (k = C->nopen, o = C->open; k; --k, ++o) {
+            if ((unsigned char) (o->x - cx_ + 1) <= 2 && (unsigned char) (o->y - cy_ + 1) <= 2) {
+                if (o->kind == O_WINDOW) {
+                    q = &C->portal[o->sill];
+                    if (!(q->parts & PP_SHUTTERS) || (q->state & (PS_OPEN | PS_WRECKED))) {
+                        s = SKS_WINDOW;
+                    }
+                } else if (o->kind == O_SKYLIGHT) {
+                    s = SKS_SKYLIGHT;
+                } else if (o->kind == O_SKYSHAFT) {
+                    s = sn ? SKS_DEEP : SKS_SHAFT;
+                }
+            }
+        }
+    }
+    hub_map (0);
+    return s;
+}
+
 /* The emitters of the daylight near the character, the hub's (tb.skx): the shafts open to the sky on its stratum (its
 ** links'), and on the top stratum the skylights and the windows on the surface, shutters open, in the four chunks
 ** nearest it the cache has (none made for them: the maker's order the look's) */
@@ -1857,6 +1888,10 @@ static unsigned char __fastcall__ shaft_end (unsigned char dir)
     lk = &STRATUM (sn_).link[cl.sh - 1];
     cl.sh = 0;
     hub_map (0);
+    if (dir == O_FELL) {
+        HUB->pc_task.kind = LT_NONE;            /* (Fallen: the climb over, it arrives below whatever struck it) */
+        pc_hit = 0;
+    }
     if (lk->to == 0xFF) {
         event (E_LEFT, 0, 0);
         return 0;
@@ -1882,7 +1917,7 @@ static unsigned char __fastcall__ way_here (unsigned w)
     for (k = C->nopen, o = C->open; k; --k, ++o) {
         m = o->kind;
         if (o->x == cx_ && o->y == cy_ && o->link != 0xFF && !(w & SA_UP) == !(m == O_STAIRS_UP || m == O_LADDER_UP ||
-            m == O_WAY_OUT || m == O_SHAFT_UP || m == O_RAMP_UP)) {
+            m == O_WAY_OUT || m == O_SHAFT_UP || m == O_SKYSHAFT || m == O_RAMP_UP)) {
             return o->link;
         }
     }
@@ -1895,6 +1930,19 @@ unsigned char __fastcall__ s_sky_ask (unsigned w)
 {
     if (w & SA_LIST) {
         sky_list ();
+        return 0;
+    }
+    if (w & SA_NEAR) {
+        return sky_near ();
+    }
+    if (w & SA_NOTE) {                          /* (Come by one, its square's mark, as it's looked at, part 17's: kept for
+                                                **   the reckoning, part 76's, and that at once if it isn't told) */
+        if ((w = sky_near ()) != 0) {
+            HUB->tb.nigh = w;
+            if (!HUB->tb.told) {
+                burn_ask |= TS_ASK;
+            }
+        }
         return 0;
     }
     if (w & SA_HERE) {
@@ -2004,7 +2052,7 @@ static unsigned char __fastcall__ link_here (unsigned char d, unsigned long* t)
     for (k = 0; k < C->nopen; ++k) {
         kind = C->open[k].kind;
         if (C->open[k].link == 0xFF || (d == DIR_UP) != (kind == O_STAIRS_UP || kind == O_LADDER_UP || kind == O_WAY_OUT ||
-            kind == O_SHAFT_UP || kind == O_RAMP_UP)) {
+            kind == O_SHAFT_UP || kind == O_SKYSHAFT || kind == O_RAMP_UP)) {
             continue;                           /* (A skylight, a window on the surface: no way anywhere) */
         }
         if ((u = way (C->open[k].x, C->open[k].y)) < bt) {

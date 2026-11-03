@@ -140,8 +140,8 @@ enum { O_STAIRS_UP, O_STAIRS_DOWN, O_LADDER_UP, O_LADDER_DOWN, O_WINDOW, O_SHAFT
        O_SKYLIGHT, O_SKYSHAFT };                /* (The sky's, 2026-11-03: HOUSE.md's what shows the sky: a skylight in a
                                                 **   room's roof, its square under it, no link; a chunk's O_WINDOW the
                                                 **   floor square beside a window on the surface, its sill the portal's
-                                                **   number in the chunk, no link; O_SKYSHAFT the senses' record's alone,
-                                                **   a shaft up open to the sky, a chunk's O_SHAFT_UP whose link's LD_SKY) */
+                                                **   number in the chunk, no link; O_SKYSHAFT a chunk's opening of a shaft
+                                                **   up open to the sky, its stratum's link's O_SHAFT_UP, LD_SKY: sky.c's) */
 #define O_DAYLIT        0x10                    /* (The senses' record's kind: a skylight's or such a shaft's, daylight
                                                 **   falling from it now) */
 enum { ST_BUILT, ST_NATURAL, ST_MINE, ST_MIXED };

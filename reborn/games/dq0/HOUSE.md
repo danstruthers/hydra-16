@@ -2875,7 +2875,7 @@ number here is a draft for the user.
 The user's (2026-10-31): the time's known where there's "some place where you can actually see outside through a window,
 skylight, vertical shaft, or the like"; (2026-11-03) all three, together.  Everything else in this section is the house's:
 every number and every word for review.  The maker places them by the seed alone (dq0m/sky.c, its own dice, after the
-plan's and the links': a chunk made again is byte-identical, dq0pure's); a test's scene, the environment's dq0sky (rc's), every room both and a shaft always.
+plan's and the links': a chunk made again is byte-identical, dq0pure's); a test's scene, the environment's dq0sky (rc's): "0" none at all (a test about other things, in the dark, say), anything else every room both and a shaft always.
 
 - **A skylight**: on the **top stratum** alone, in its hewn rooms (a natural cave's none, nor a mixed stratum's caves):
   **one room in six**, over the middle of its floor.  No way up, too high and too small (u there: no way); nothing's
@@ -2890,7 +2890,7 @@ plan's and the links': a chunk made again is byte-identical, dq0pure's); a test'
 - **A shaft open to the sky**: **one game in two** the top stratum has one, on a square of its halls, in a chunk with no
   other way between strata in it; **one in two of them goes on down**, and on from there the same, **three strata at most**, while
   the stratum it's on has a way down of its own.  Its foot on a stratum below is there if the square lies inside that
-  stratum's bounds, off their edges and in its halls; if not, it's **choked** ("The shaft is choked with fallen rock
+  stratum's bounds, off their edges, in its halls, in a chunk with no other way in it; if not, it's **choked** ("The shaft is choked with fallen rock
   a little way down.").  So no stratum below is laid out any differently for it (its bounds aren't stretched
   round it).  It's told as what it is ("a shaft open to the sky"; "a shaft in the floor" where it goes on down), the
   map's < and >.  Two of a stratum's eight links are kept free for shafts dug.
@@ -2898,8 +2898,8 @@ plan's and the links': a chunk made again is byte-identical, dq0pure's); a test'
   the belief's set as at the way out (The time of day believed, above): **a window, a skylight, or a shaft on the top
   stratum** the open sky (the sun or the stars read by the north it believes in; its bearings lost, high or low; watched
   a while, the time and north both); **a shaft from below the top stratum** a patch too small and far to read: **its
-  light alone**, the part of the day.  At once as it comes by one, even on a walk (its looks every third square find it: part 17's sky_near; at the
-  turns pace, at the next minute's look).  Words by the hour and by what shows it ("Pale daylight falls from the shaft
+  light alone**, the part of the day.  At once as it comes by one, even on a walk (its looks every third square find it, by the squares' mark, T_HOLE: part 17's, part 89's sky_near; at the
+  turns pace, at the next minute's look; on a way up's own square beside one, at the next reckoning).  Words by the hour and by what shows it ("Pale daylight falls from the shaft
   above: it's day.", "Grey light comes in at the window: it's dawn, or near it.", "Fading light falls from the skylight
   above: it's dusk.", "Stars show far up the shaft above: it's night.", "Stars show in the skylight above: it's nine at
   night, you judge.", "The sun shows at the window: it's noon, you judge.").

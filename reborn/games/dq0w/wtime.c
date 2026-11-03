@@ -312,10 +312,11 @@ static unsigned char sky_here (void)
             }
         }
     }
-    if (sn <= SKY_DEEP) {
-        it_near ();                             /* (By one now: part 17's sky_near, T.nigh) */
+    k = sn <= SKY_DEEP ? sky_ask (SA_NEAR) : 0;  /* (By one now: part 89's) */
+    hub_map (0);
+    if (!k) {
+        k = T.nigh;                             /* (Or come by one since) */
     }
-    k = T.nigh;
     T.nigh = 0;
     if (k) {
         T.skysn = sn;
