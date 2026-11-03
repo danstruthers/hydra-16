@@ -305,9 +305,9 @@ want result=0 grade=G_CS
 # The penalties (Skills 6): universal (the injuries' and the fatigue's levels) on every test, five a point on a
 # skill's EML, a point on an attribute; physical (and the encumbrance) on physical and combat skills and attributes
 
-case a load of 24 lb (EP 2): Climbing 35, Strength 50, Endurance 50, but Awareness 60 and Will 60
+case a load of 24 lb past her 14 free (EP 2): Climbing 35, Strength 50, Endurance 50, but Awareness 60 and Will 60
 dice
-ask EQUIP a=2 w1=96
+ask EQUIP a=2 w1=153
 want sum.load=1
 dice 100:35
 ask TEST a=P_CLIMB
@@ -384,7 +384,7 @@ want grade=G_MF
 
 case an M1 and a load of 24 lb (PP 3): Climbing 30, Awareness 55
 dice
-ask EQUIP a=2 w1=96
+ask EQUIP a=2 w1=153
 dice 100:30
 ask TEST a=P_CLIMB
 want grade=G_CS
@@ -682,47 +682,49 @@ want text~"Pace: a run, held to a walk while you listen (30 feet a round)"
 set gait=GA_WALK watch=0
 
 # ---- Encumbrance (Skills 6, Combat 2): the load over Endurance (12), rounded to the nearest; its words (HOUSE.md)
-# none, a little burdened (1-2), heavily burdened (3-4), overloaded (5 or more); the Move less it
+# none, a little burdened (1-2), heavily burdened (3-4), overloaded (5 or more); the Move less it.  The load the part
+# past her free pounds (D13, the user's: ten at Strength 10, doubling each four points; her Strength 12, 14.1 lb), so
+# each case's weight is what she carries past them (57 quarter pounds more told: 14.25 lb)
 
-case 5 lb: no encumbrance (0.4); 6 lb: EP 1 (0.5 rounds up), a little burdened, Move 11
+case 5 lb (past her 14 free: 19 carried): no encumbrance (0.4); 6 lb: EP 1 (0.5 rounds up), a little burdened, Move 11
 dice
-ask EQUIP a=2 w1=20
+ask EQUIP a=2 w1=77
 want sum.load=0 sum.step=16
 dice
-ask EQUIP a=2 w1=24
+ask EQUIP a=2 w1=81
 want sum.load=1 sum.step=18 sum.g0=54 sum.g1=36 sum.g3=9 sum.g4=4 sum.g5=3
 
 case 17 lb: EP 1 (1.4); 18 lb: EP 2 (1.5), Move 10
 dice
-ask EQUIP a=2 w1=68
+ask EQUIP a=2 w1=125
 want sum.load=1 sum.step=18
 dice
-ask EQUIP a=2 w1=72
+ask EQUIP a=2 w1=129
 want sum.load=1 sum.step=20 sum.g3=10 sum.g4=5 sum.g5=3
 
 case 29 lb: EP 2 (2.4); 30 lb: EP 3, heavily burdened, Move 9
 dice
-ask EQUIP a=2 w1=116
+ask EQUIP a=2 w1=173
 want sum.load=1 sum.step=20
 dice
-ask EQUIP a=2 w1=120
+ask EQUIP a=2 w1=177
 want sum.load=2 sum.step=22 sum.g3=11 sum.g4=5 sum.g5=3
 
 case 53 lb: EP 4 (4.4), Move 8; 54 lb: EP 5, overloaded, Move 7
 dice
-ask EQUIP a=2 w1=212
+ask EQUIP a=2 w1=269
 want sum.load=2 sum.step=25 sum.g3=12 sum.g4=6 sum.g5=4
 dice
-ask EQUIP a=2 w1=216
+ask EQUIP a=2 w1=273
 want sum.load=3 sum.step=28 sum.g0=84 sum.g1=56 sum.g3=14 sum.g4=7 sum.g5=4
 dice
 ask DESCRIBE
-want text~"Endurance 12, Move 7; load 54 lb, encumbrance 5; universal penalty 0, physical 5"
+want text~"Endurance 12, Move 7; load 68 lb (14 free), encumbrance 5; universal penalty 0, physical 5"
 
 # (The summary's steps are bytes: a Move under 4 walks as Move 4 does, 50 tenths a square)
 case 108 lb: EP 9, Move 3: a walk 50 tenths a square, the faster paces no slower
 dice
-ask EQUIP a=2 w1=432
+ask EQUIP a=2 w1=489
 want sum.load=3 sum.step=50 sum.g0=150 sum.g1=100 sum.g2=50 sum.g3=33 sum.g4=16 sum.g5=11
 dice
 ask EQUIP a=2 w1=0
@@ -733,12 +735,12 @@ att str 15
 att sta 15
 att wil 15
 end
-case Endurance 15: 30 lb an EP of 2 (a little burdened), 38 lb 3 (2.5 rounds up)
+case Endurance 15: 30 lb an EP of 2 (a little burdened), 38 lb 3 (2.5 rounds up); Strength 15, 23.8 lb free (54 lb, 62 lb carried)
 dice
-ask EQUIP a=2 w1=120
+ask EQUIP a=2 w1=216
 want sum.load=1
 dice
-ask EQUIP a=2 w1=152
+ask EQUIP a=2 w1=248
 want sum.load=2
 dice
 ask EQUIP a=2 w1=0
@@ -2804,3 +2806,136 @@ want result=0 grade=2
 dice
 ask DESCRIBE b=4
 want text~"Your head clears."
+
+# ---- Free pounds (D13, the user's: HOUSE.md's encumbrance): the first pounds carried free of it, ten at Strength 10,
+# doubling each four points (tenths: 100, 119, 141, 168 times two to the whole fours); the sheet tells the load whole
+# and the free part
+
+char
+att str 5
+end
+case Strength 5: 4.2 lb free (168 halved twice), 10 lb carried
+dice
+ask EQUIP a=2 w1=40
+dice
+ask DESCRIBE
+want text~"load 10 lb (4 free)"
+
+char
+att str 18
+end
+case Strength 18: 40 lb free, 50 lb carried
+dice
+ask EQUIP a=2 w1=200
+dice
+ask DESCRIBE
+want text~"load 50 lb (40 free)"
+
+char
+att str 25
+end
+case Strength 25: 134.4 lb free, 150 lb carried
+dice
+ask EQUIP a=2 w1=600
+dice
+ask DESCRIBE
+want text~"load 150 lb (134 free)"
+
+# ---- Skills by use (slice 4.4: HOUSE.md's skills by use; Skills 7, Combat 19): a test of an open skill marks it for a
+# development roll, success or failure alike; one of the book's [First Use] skills not opened yet is opened at its
+# opening level, told (the user's, 2026-10-23); one learnt by study isn't.  The marked ones' rolls as a night's rest
+# is had (eight hours of it, the house's): d100 and the skill base over the mastery, a point more (Skills 7), told
+
+char
+end
+case Swimming not open ([First Use]): her first swim opens it at its opening level (STA, DEX, AGL 12: SB 12, once it), 12 a marginal success; flagged for the world (C_NEWS) till its next RS_TIME tells it
+dice 100:12
+ask TEST a=P_SWIM
+want grade=G_MS
+dice
+ask EQUIP a=2 w1=0
+want sum.cond&C_NEWS=32768
+dice ...
+ask TIME w1=1 a=1
+want result=0 grade=2 sum.cond&C_NEWS=0
+dice
+ask DESCRIBE b=4
+want text~"You've begun to learn Swimming by doing it (12)."
+dice
+ask DESCRIBE
+want text~"Swimming 12"
+
+case Lore not open (learnt by study: a month's teaching): tried at its opening level, not opened
+dice 100:20
+ask TEST a=P_LORE
+dice
+ask DESCRIBE
+want text!"Lore"
+
+char
+end
+case Climbing 45 tested (61, a marginal failure: marked all the same), a night's rest: its roll 32 and its SB 14 (12, and Ulandus 2) over 45, improved to 46, told
+dice 100:61
+ask TEST a=P_CLIMB
+want grade=G_MF
+dice ...
+ask TIME w1=479
+want result=0
+dice 100:32 ...
+ask TIME w1=1
+want result=0 grade&2=2
+dice
+ask DESCRIBE b=4
+want text~"Your Climbing skill has improved (46)."
+dice
+ask DESCRIBE
+want text~"Climbing 46"
+
+case Climbing 46 tested again, a night's rest: 32 and 14 not over 46, no better; nothing marked after, a night more rolls nothing
+dice 100:30
+ask TEST a=P_CLIMB
+dice 100:32 ...
+ask TIME w1=480
+want result=0
+dice
+ask DESCRIBE b=4
+want text!"improved"
+dice
+ask TIME w1=480
+want result=0 dice=0
+
+# ---- A weapon's version (D13, the user's; the book's custom weapons, Combat 3: HOUSE.md's the character carries on):
+# light, average or heavy (RS_EQUIP's L or H after a weapon's quality); the heaviest wielded without penalty by
+# Strength (light at any, average from 6, heavy from 13), each version heavier two steps worse to strike and to block
+
+char
+end
+case an average sword (Strength 12 wields it freely): Sword 80, its class 15, 95; at a kobold, an 88 a marginal success, a hit
+set now=960000 stance=D_BLOCK
+dice
+ask NEW_ACTOR actor=1 w1=9 text="kobold"
+dice
+ask EQUIP a=2 text=">blade4"
+dice 100:88 100:96 ...
+ask ATTACK actor=0 other=1 a=Z_MID b=AS_BEST
+want result=O_HIT
+case a heavy sword (blade4H): a version heavier than her Strength's, two steps worse, 85: the 88 a marginal failure
+set now=961000
+dice
+ask EQUIP a=2 text=">blade4H"
+dice 100:88 100:96 ...
+ask ATTACK actor=0 other=1 a=Z_MID b=AS_BEST
+want result=O_MISS
+
+char
+att str 13
+end
+case Strength 13: the heavy sword wielded freely, 95, the 88 a hit
+set now=962000 stance=D_BLOCK
+dice
+ask NEW_ACTOR actor=1 w1=9 text="kobold"
+dice
+ask EQUIP a=2 text=">blade4H"
+dice 100:88 100:96 ...
+ask ATTACK actor=0 other=1 a=Z_MID b=AS_BEST
+want result=O_HIT

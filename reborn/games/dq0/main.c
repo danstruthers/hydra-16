@@ -70,7 +70,7 @@ static unsigned char small;                     /* (dq0 -C: the caches small, th
 static unsigned char gear;                      /* (dq0 -K: the kit as it was, no outfits drawn, the tests') */
 static const char* kit;                         /* (dq0 -k: things more, as the game starts: a tool, ...) */
 static const char* tfile;                       /* (dq0 -t: a theme written by hand) */
-static unsigned char made;                      /* (The theme to read: 0xFF the game's own, themegen's; theme.h) */
+unsigned char hard;                             /* (Hard mode: dq0 -H's, the save's pace's top bit) */
 const char* savedir;                            /* (dq0 -d: the save's folder; task.c's meta too) */
 unsigned char __fastcall__ things (unsigned char op, const char* name);   /* (way.c's too, part 6's) */
 void gear_look (void);                          /* (Part 11: a denizen's things made out) */
@@ -467,17 +467,19 @@ unsigned char plain;
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
+static char spath[56];                          /* (A path in the save's folder: save_path's, part 3's save_at's) */
+
 static char* __fastcall__ save_path (const char* name)
 {
-    static char p[56];
-
-    strcpy (p, savedir);
-    strcat (p, "/");
-    strcat (p, name);
-    return p;
+    strcpy (spath, savedir);
+    strcat (spath, "/");
+    strcat (spath, name);
+    return spath;
 }
 
-/* A game kept in the folder: its state read (0), or -1 (none) */
+/* A game kept in the folder: its state read (0); 1, one ended, its character alive (the theme's goal reached, or the
+** way out taken), to carry on into a new dungeon, its sheet the character's (D8's, slice 4.4's); or -1 (none, or one
+** ended in its death: a new game, a new character) */
 static int load_save (void)
 {
     int fd = open (save_path ("game.dat"), O_RDONLY), n;
@@ -487,7 +489,29 @@ static int load_save (void)
     }
     n = read (fd, &sv, sizeof sv);
     close (fd);
-    return n == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER && !sv.q.done ? 0 : -1;
+    if (n == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER) {
+        if (!sv.q.done) {
+            return 0;
+        }
+        if (sv.q.done != END_DIED) {
+            return 1;
+        }
+    }
+    return -1;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW3CODE")             /* (Part 3's, the map's: part 1's room, slice 4.4's; none of the commands'
+                                                **   path the longer for it, part 13's copied in at every command) */
+#pragma rodata-name (push, "SW3RODATA")
+
+static char* __fastcall__ save_at (const char* name)
+{
+    strcpy (spath, savedir);
+    strcat (spath, "/");
+    strcat (spath, name);
+    return spath;
 }
 
 /* The game kept: the referee's sheet, the maker's seen maps, the denizens' records, the world's (its change records,
@@ -502,7 +526,7 @@ void s_save_game (void)
     if (!savedir) {
         return;
     }
-    strcpy (HUB->slot[SLOT_UI].text, save_path ("pc.hm"));
+    strcpy (HUB->slot[SLOT_UI].text, save_at ("pc.hm"));
     r = referee (RS_SAVE, 0);
     r->state = REQ_FREE;
     q = &HUB->mreq[ASK_UI];                     /* (The maker's seen maps: asked, and waited for) */
@@ -521,18 +545,23 @@ void s_save_game (void)
     }
     sv.magic = SAVE_MAGIC;
     sv.version = SAVE_VER;
-    sv.pace = pace;
+    sv.pace = pace | hard << 7;                 /* (Hard mode, its top bit: slice 4.4's) */
     sv.seed = HUB->seed;
     sv.pc = P;
     sv.q = Q;
     sv.plain = plain;
-    if ((fd = open (save_path ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
+    if ((fd = open (save_at ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
         write (fd, &sv, sizeof sv);
         names_keep (fd, 0);                     /* (The names given: the theme bank's) */
         alias_keep (fd, 0);                     /* (The shortcuts: the theme bank's too) */
         close (fd);
     }
 }
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
 
 /* The save's names given (after its header) */
 static void __fastcall__ load_names (void)
@@ -598,7 +627,7 @@ static void __fastcall__ waited (void* q)
 static void world_words (void);
 static char gods[112];                          /* (The world's deities' names, read as the game starts: world_words') */
 
-static void __fastcall__ start_world (unsigned long seed, const char* file)
+static void __fastcall__ start_world (unsigned long seed, const char* file, unsigned char made)
 {
     struct req* r;
     unsigned char k;
@@ -2454,6 +2483,8 @@ void __fastcall__ s_args (int argc, char* argv[])
                                                 **   the diagonal, 2026-11-01; -V a great cavern in every region of a
                                                 **   natural stratum, -P every stairway down a long slope, -D every
                                                 **   built stratum's rooms at 45 degrees, 2026-11-02) */
+        } else if (!strcmp (argv[i], "-H")) {
+            hard = 1;                           /* (Hard mode: D7's, no autosave to go back to; kept in its save) */
         } else if (!strcmp (argv[i], "-a")) {
             autogo = 1;                         /* (For the tests: a long task goes on at every soft question) */
         } else if (!strcmp (argv[i], "-N")) {
@@ -2475,7 +2506,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             pace = argv[i][0] == 'r' ? PACE_RELAXED : argv[i][0] == 'm' ? PACE_MENACING :
                 argv[i][0] == 't' ? PACE_TURNS : PACE_NORMAL;
         } else {
-            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d dir] [-t theme] [-r rs] [-T..]");    /* (Not the tests' own: the room's) */
+            hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d dir] [-H] [-t theme] [-r rs] [-T..]");    /* (Not the tests' own: the room's) */
         }
     }
 }
@@ -2489,18 +2520,27 @@ void __fastcall__ s_args (int argc, char* argv[])
 /* The game begun: its arguments, a game kept carried on, the title, the character, the world started */
 void __fastcall__ s_begin (int argc, char* argv[])
 {
+    signed char n = -1;
+
     args (argc, argv);
-    if (savedir && !load_save ()) {             /* (A game kept there: carried on) */
+    if (savedir && !(n = load_save ())) {      /* (A game kept there: carried on) */
         resumed = 1;
         seed = sv.seed;
         Q = sv.q;
         plain = sv.plain;
+        hard = sv.pace >> 7;                    /* (Its hard mode its save's: slice 4.4's) */
         if (pace == 0xFF) {
-            pace = sv.pace;
+            pace = sv.pace & 0x7F;
         }
         file = save_path ("pc.hm");
     } else if (savedir) {
         mkdir (savedir, 0755);                  /* (A new game: its folder) */
+        if (n > 0) {
+            file = save_path ("pc.hm");         /* (Its character carried on, into a new dungeon: D8's; its kit, the
+                                                **   world's kit.dat, its outfit) */
+        } else if ((n = open (save_path ("kit.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
+            close (n);                          /* (Not carried on: no kit kept to take up, slice 4.4's) */
+        }
     }
     if (!resumed) {                             /* (Its ruleset's referee: a game carried on keeps its own) */
         strcpy (sv.referee, "dq0");             /* (strncpy, not strncat: the library's in the main RAM) */
@@ -2513,9 +2553,9 @@ void __fastcall__ s_begin (int argc, char* argv[])
     title ();
     t_flush ();                                 /* (Its words out now: the start's progress shown, 2026-10-30) */
     starting = 1;
-    made = history (seed);                      /* (The game's own theme, or a stand-in's: which) */
+    n = history (seed);                         /* (The game's own theme, or a stand-in's: which) */
     dots (2);                                   /* (Its tasks started: told, a dot as each's waited for) */
-    start_world (seed, file);                   /* (The character with it: its file, or the ruleset's generator) */
+    start_world (seed, file, n);                /* (The character with it: its file, or the ruleset's generator) */
     status ();
     story (resumed);                            /* (The theme's) */
     blank ();
@@ -2525,10 +2565,22 @@ void __fastcall__ s_begin (int argc, char* argv[])
     t_done ();
 }
 
-/* The game's end: kept (as it ends: the game's quit, not lost), the world stopped */
+/* The game's end: kept (as it ends: the game's quit, not lost), the world stopped.  An ending's, the character's sheet
+** told as it ends; a death's not kept (its last save, the autosave as it came into its stratum, left to go back to: D7's)
+** unless it's hard mode (dq0 -H: the save marked ended, the character gone; slice 4.4's) */
 void s_finish (void)
 {
-    save_game ();
+    struct req* r;
+
+    if (Q.done) {
+        r = referee (RS_DESCRIBE, 0);
+        say (r->text);
+        blank ();
+        r->state = REQ_FREE;
+    }
+    if (Q.done != END_DIED || hard) {
+        save_game ();
+    }
     stop_world ();
     t_end ();
 }
@@ -2745,7 +2797,7 @@ void s_when_free (void)
 /* A denizen's sound heard (heard's, its weighing the main code's: m its event, rel which way it is), told: in the
 ** sound's words, the sound task's if it's put them there; its long task paused at the first (part 14's: seldom, the
 ** main RAM's room) */
-void __fastcall__ door_words (unsigned char a);  /* (Below, part 6's: a denizen's door's words) */
+void __fastcall__ door_words (unsigned char a);  /* (Below, part 18's: a denizen's door's words) */
 void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 {
     static const char* n;
@@ -2803,9 +2855,9 @@ void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 }
 
 /* A door worked by a denizen (E_DEN's a, DE_OPENS ...: Phase 3C's one path; a portcullis, a lock picked, 2026-11-02), its words into lb + 340: what it's seen
-** doing (after its name), then what's heard (heard_what's: 19 letters at most).  Part 6's since 2026-11-02 (noise_told's; overlay 3 full, these a rare few) */
-#pragma code-name (push, "SW6CODE")
-#pragma rodata-name (push, "SW6RODATA")
+** doing (after its name), then what's heard (heard_what's: 19 letters at most).  Part 18 (noise_told's: 2026-11-02, overlay 3 full, these a rare few) */
+#pragma code-name (push, "SW18CODE")
+#pragma rodata-name (push, "SW18RODATA")
 void __fastcall__ s_door_words (unsigned char a)
 {
     static const char* const said[DE_PICKS + 1 - DE_OPENS] = {

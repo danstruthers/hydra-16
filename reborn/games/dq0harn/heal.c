@@ -292,7 +292,8 @@ static void __fastcall__ body_time (struct req* r)
     }
     if ((!r->actor || r->b) && pc.state != HARN_DEAD) {
         if (!r->a) {
-            rest_m = rest_m + m < rest_m ? 0xFFFF : rest_m + m;    /* (At rest: toward its healing rolls) */
+            rest_m = rest_m + m < rest_m ? 0xFFFF : rest_m + m;    /* (At rest: toward its healing rolls, */
+            develop (m);                        /*   and its skills' development rolls: slice 4.4's, skills.c) */
         }
         bleed (&pc, m);
         if (pc.state != HARN_DEAD) {
@@ -331,7 +332,9 @@ static void __fastcall__ body_time (struct req* r)
     r->w2 = out_t;
     r->b = health_of (&pc);
     r->result = pc.state == HARN_DEAD;
-    r->grade = (strlen (news) != n ? 2 : 0) | (pc.ninj > ninj ? 4 : 0) | ag;
+    r->grade = (strlen (news) != n || fresh ? 2 : 0) | (pc.ninj > ninj ? 4 : 0) | ag;   /* (A skill opened as it
+                                                **   was used, news since: told now, slice 4.4's) */
+    fresh = 0;
 }
 
 /* ---- First aid and treatment (RS_TREAT: Physician 2-3, the Treatment table): the character the healer, the patient

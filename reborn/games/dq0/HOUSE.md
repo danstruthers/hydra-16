@@ -115,8 +115,8 @@ plays them as HarnMaster's referee does.
   Walked, not climbed, by every actor, told as any incline is, the map's heights showing it.  (dq0m/caves.c's
   incline, overlay 8.)
 - **Encumbrance** is the book's (the load over Endurance, rounded), told in words: none, a little burdened (1-2), heavily
-  burdened (3-4), overloaded (5 or more).  (harn.c's harn_get_ep; dq0harn.c's status.)  See D13 below: free pounds
-  by Strength are decided, not built.
+  burdened (3-4), overloaded (5 or more), on what's carried past its free pounds by Strength (D13's: the character
+  carries on, below).  (harn.c's harn_get_ep; skills.c's set_load; dq0harn.c's status.)
 
 ## Climbing and falling
 
@@ -137,7 +137,8 @@ plays them as HarnMaster's referee does.
   senseless or in shock is a miss, not the Ignore table's tactical advantage: it can't take one.  (fight.c's
   attack.)  Why: the advantage is an action, and it has none.
 - **A window's sill is climbed through** with a Climbing test; a critical failure is a slip and a fall.  (wwin.c.)
-- **A pit is climbed out of** as a ledge is.  (wtrap.c, dq0w.c.)  See D13: a slip is to end the climb.
+- **A pit is climbed out of** as a ledge is, but a slip ends the climb (D13's: the character carries on, below).
+  (wtrap.c, dq0w.c.)
 
 ## Digging
 
@@ -705,6 +706,8 @@ requests; the house's rules above marked *(every ruleset's)* it plays as HarnMas
   steps worse), else it flees.  A blow at a thing does 6, less the thing's least resistance.  What strikes (Fights')
   the house's: a thing named strikes, its words its name, whatever it is (a soft one the house's single attempt);
   nothing named, the first thing in its hands; never a better thing carried asked about (none's better).
+- **No skills to open or develop** (slice 4.4): nothing marked, nothing rolled after a rest; its character carries on into
+  a new dungeon as HarnMaster's does (its file, its wounds).
 - **No fatigue, no bleeding, no shock, no senselessness, no encumbrance.**  Senses all 5 (hearing 7 listening as it
   goes); a square takes 4.5, 3, 1.5, 0.8, 0.4 and 0.3 seconds at a creep, a slow walk, a walk, a jog, a run and a
   sprint.
@@ -2915,16 +2918,95 @@ part 62, goods, and wfetch.c part 72; the UI's errand.c, part 15, in overlay 17'
   afflictions of their own yet).  Found: an apothecary's kit, a Khuzan elder's purse, a high priest's (outfits.txt);
   for sale by whoever carries them.  The null ruleset: a poison's sickness or a disease's gone at once.
 
-## Decided, not yet built
+## The character carries on *(slice 4.4, 2026-11-02: the book's where it speaks, the house's else; drafted for the user to review)*
 
-- **D13, Strength and weapons:** Strength doesn't add to impact; it sets how heavy a weapon can be wielded without
-  penalty; heavier versions hit harder, and strong characters are made with heavier weapons.  Today the weapons
-  have one weight each and Strength does nothing in a blow.
-- **D13, free pounds:** the first X pounds carried are free of encumbrance, X 10 at Strength 10 and doubling each 4
-  points (4 lb at 5, 14 at 12, 24 at 15, 40 at 18, 57 at 20, 134 at 25).  Today it's the book's: every pound counts.
-- **D13, a wrecked door, window or portcullis appraises by its state.**  Today appraisal doesn't see the damage.
-- **D13, the pit climb:** a slip climbing out of a pit ends the climb, and the player chooses what next.  Today a
-  slip slides 5 feet back and the climb goes on.
+The plan's slice 4.4 (referee: improvement rolls; UI: save; "skill improvement by use and rest"; a save that keeps the
+character) and the user's D7 and D8 (DECISIONS.md: death permanent, with autosaves before danger as a setting, off
+hard mode; the character carries on into a new dungeon with its skills, wounds and gear), and the user's of 2026-10-23
+([First Use] skills open on first use and are told).  The referee's (dq0harn/skills.c, overlay 7), the world's asking
+for its words (wtend.c), the UI's start and end (main.c).
+
+- **A skill used is marked for a development roll** (the book's Skills 7: a stressful use earns one, success or
+  failure alike: one learns as much from failing).  Used: any test of a skill the referee makes for the character (a
+  purpose's skill, test_sk's: climbing, searching, picking a lock, first aid ...); in a fight, the skill of the weapon
+  it strikes with, or of the one it fights with when it blocks or counters (the house's: a shield's block marks the
+  weapon's skill, not Shield, for now), and Dodge when it dodges; a missile's skill as it shoots or throws.  An
+  attribute's test (Strength, Will) marks nothing: the book develops skills.  A bit a skill (marks, kept in the save:
+  pc.hm's second "body" line, "body u", the marks in hex, then the rest toward the rolls).
+- **The rolls come after a night's rest** *(the house's)*: eight hours of rest since the last rolls (sleep, a wait,
+  standing still: the time the world tells the referee of, RS_TIME's at rest; every minute while it's hurt, else at the
+  clock's four-hour watches, so a rest is counted in those pieces), each marked skill one roll, the book's: d100 and its
+  skill base over its mastery, a point more, never past 100 and the base.  Then the marks are cleared; the rest past
+  the night isn't carried.  Told ("Your Climbing skill has improved (46).") as the referee's other news is, as it wakes
+  (held while it sleeps).  The rolls by their own dice (QUIET's: the game's other dice roll as they would).  Why rest:
+  the plan's "by use and rest"; the book's stress rolls are the GM's to grant at once and its practice rolls monthly,
+  and a night's sleep is a natural time between, out of the player's way.  Why one roll a skill: the book's, more only
+  for a hard time of it.
+- **Not yet:** the book's monthly practice (SMPs) and teachers (no study in the dungeon); its skill decline (optional:
+  not used).  Its limits on weapons (past 70 only by combat) and Initiative (only by combat) hold of themselves, all
+  the game's marks of them being a fight's.
+- **Every actor:** a denizen's sheet (fight.c's struct beast) has no skills of its own, its kind's figures the
+  bestiary's, so it neither marks nor develops; the hook (skill_used) is the character's sheet's.
+- **[First Use] skills open as they're first used** (the user's, 2026-10-23; the book's skill table: those with no
+  months of teaching, Religion's rituals excepted): opened at their opening level as the test is made (its figure the
+  same: a skill not opened was tried at its opening level already) and told, "You've begun to learn Swimming by doing it
+  (12)."  The skills the game tests that open so: Swimming (P_SWIM), Acrobatics (P_BALANCE), Physician (first aid),
+  Cookery (appraising food); and a weapon's skill the first time it's used in a fight (the book's, Combat 19).  Those
+  learnt by study stay unopened, tried at their opening level as before: Lockcraft, Lore, Tracking, Animalcraft,
+  Mining, appraising's crafts; Drawing the house's exception as before (the map kept).
+- **Told as soon as the world asks** *(the house's)*: a skill opened mid-test is news the referee holds (RS_DESCRIBE b
+  4's), flagged in the character's conditions (rs.h's C_NEWS) so the world asks for the time's news within the minute
+  (wtend.c), as it does for what time did to the body.
+- **Free pounds** (D13, the user's): the first pounds carried are free of encumbrance, ten at Strength 10, doubling each
+  four points (tenths of a pound: 100, 119, 141 and 168 at Strength 10 to 13, twice those each four more: 4 lb at 5,
+  14 at 12, 24 at 15, 40 at 18, 57 at 20, 134 at 25).  The book's encumbrance (the load over Endurance) is on the rest.
+  The sheet tells the whole load and the free part: "load 68 lb (14 free), encumbrance 5".  (skills.c's set_load.)
+  Every actor where it applies: a denizen's load isn't counted (its sheet has none), so it bears its things freely as
+  before.  The null ruleset has no encumbrance.
+- **A weapon's version, and Strength** (D13, the user's: Strength doesn't add to impact; it sets how heavy a weapon can
+  be wielded without penalty; heavier versions hit harder; strong characters are made with heavier weapons).  The
+  book's custom weapons (Combat 3): a weapon light (a quarter lighter), average, or heavy (a quarter heavier), its
+  item's own (items.h's WV_*, in its size; its weight the world's, so its load).  Its impacts by its version, the book's
+  table at Strength 9-12 for every Strength (the user's: Strength adds nothing): light 80%, average 100%, heavy 120%
+  of each aspect's, rounded *(the house's reading)*.  The heaviest version wielded without penalty *(the house's
+  numbers, for review)*: light at any Strength, average from 6, heavy from 13 (the book's table's row boundaries);
+  each version heavier two steps (10) worse to strike and to block with it.  The character made with its weapons the
+  heaviest its Strength wields freely: heavy at 13 or more, light at 5 or less (the referee's RS_OUTFIT x[2], the
+  world's kit).  Appraised: "It's a heavy one." (plain to the hand).  The referee told by RS_EQUIP's marks (L or H after
+  a weapon's quality).  Every actor: a denizen's weapon is average (the outfits' gear's versions to come), its Strength
+  its sheet's, rolled about its kind's (the book's less 7 and 2d6), so one under 6 is two steps the worse with it: one
+  kobold in six (its kind's 8), one in 36 of the kinds at 10, none of those at 11 or more.  A blow at a thing, a
+  missile, are as before.
+  (skills.c's heft, fight.c; things.c's tools, s_weight_of, s_kit.)
+- **A wrecked door, window or portcullis appraises by its state** (D13): its quality asked, "You judge it ruined, past
+  mending.", its make no matter now; a closer look and its condition tell it broken down as before.  (fixt.c's
+  o_portal_look.)
+- **A slip climbing out of a pit ends the climb** (D13): a marginal failure off its floor slides it back to the floor
+  ("You slip, and slide back down to the pit's floor: 10 feet to climb (climb up to try again)."), the climb over, the
+  player's to say what next; "climb up" (u) in a pit climbs out again, to where it fell in from (or the square it faces,
+  a game carried on since).  A critical failure is a fall, as before; a ledge's slip slides 5 feet back and goes on, as
+  before.  (dq0w.c's climb_round_on, pit_climb.)
+- **Death, and the autosave** (D7): the game is kept as the character comes into a stratum, and as it's quit (the
+  autosaves); a death is not kept: the last save stays, to go back to by starting the game again with its folder ("Your
+  last save is kept: start the game again with its folder to go back to it.").  **Hard mode** (dq0 -H, kept in the
+  save: the user's "turned off, it's hard mode"): a death ends the save, "Hard mode: there's no save to go back to.",
+  and the folder begins a new game, a new character.  *(For review: the autosaves are as they were, at a stratum and a
+  quit; "before danger" (a fight's start, a trap) is to come, each a save's time on the card.)*
+- **The ending** (death, the theme's goal reached, the way out taken): the theme's words, what's next (above, or "Your
+  character carries on: start the game again with this save's folder, and go on into a new dungeon."), the character's
+  sheet as it ends.
+- **Carrying on** (D8): the game begun again with the folder of one ended alive (the goal reached, or the way out
+  taken) begins a new dungeon (its seed -s's, or the clock's: a new history and theme) with the same character: its
+  sheet as it ended (its skills, its wounds as they are, healing on, its fatigue, its skills used since their rolls),
+  and its gear: the things it carried out, its money among them, kept with the save (the world's kit.dat, written
+  with every save: an outfit's list of them, what's worn and held, then what's in each) and made as its outfit in
+  the new dungeon in place of one drawn.  *(The house's, for review:)* each thing made anew as an outfit's is (whole,
+  its light's fuel and its oil renewed, its coins the new region's; left behind, a key, its lock the old dungeon's,
+  and the old theme's own things, its puzzle's pieces, with what's in them;
+  its weapons the version its Strength wields freely, as a new character's); 64 things at most.  A game begun in the
+  folder that isn't carried on empties kit.dat first.  Its ruleset the one dq0 -r names (harn if none).
+
+## Decided, not yet built
 
 - **Mental maps** (DUNGEON.md: a map in the character's head that fades): slice 4.2's map (its bearings, by
   Awareness or Mining, built: Bearings underground, above).
@@ -2950,19 +3032,6 @@ part 62, goods, and wfetch.c part 72; the UI's errand.c, part 15, in overlay 17'
 
 ## Open
 
-- **Skills opened as they're used** (slice 4.2's, the user's, 2026-10-23: [First Use] skills open at their OML on
-  first use and are told; those learnt by study don't open on the spot).  Today a skill not open is tested at its
-  opening level less its group's penalty and stays unopened (the user's, 2026-10-20), but Drawing, opened by the first
-  map drawn (the map kept).  The skills the game tests that a character may not have: on first use, Swimming
-  (P_SWIM), Acrobatics (P_BALANCE), Physician (P_FIRST_AID), Cookery (appraising food); by study, Lockcraft (2 months:
-  P_PICKLOCK, P_DISARM, P_ASSESS), Lore (1: P_LORE, appraising books and bones), Tracking (1: P_TRACK), Animalcraft
-  (1: P_ANIMALS), Mining (1: P_DIG), Drawing (1: P_DRAW, the house's exception), and appraising's crafts: Weaponcraft
-  (4), Metalcraft (2), Timbercraft (1), Hidework (1), Textilecraft (1), Ceramics (2), Jewelcraft (2), Masonry (1),
-  Glassworking (3).  Every other the game tests every character has.  Opening the first-use ones is a few bytes in the
-  referee's test (dq0harn.c's test_sk), but each test's asker would have to tell it: the user's to choose.
-- **Skills developed by use** (the book's development rolls): not in the game.  The hook would be easy: every skill
-  test passes through dq0harn.c's test_sk, where a success could mark the skill (a bit each), the book's roll
-  (harn.h's harn_develop) made for the marked ones when the game gives them (a rest, a day's end).
 - **Sight's detail by distance** (the user's, 2026-10-20): the light limits what's seen more than distance does,
   but within it the eyes set how much detail is made out (movement only, then a shape, humanoid or not, then the
   race), by the sight attribute, unless blind; modelled if it can be, perhaps later.  For now a look one way's

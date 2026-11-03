@@ -407,7 +407,6 @@ static int __fastcall__ kinds_load (const char* dir)
 {
     static char path[64];
     struct faction* f;
-    unsigned off;
     int fd, n;
 
     strcpy (path, dir);
@@ -415,10 +414,8 @@ static int __fastcall__ kinds_load (const char* dir)
     if ((fd = open (path, O_RDONLY)) < 0) {
         return -1;
     }
-    for (off = 0; off < 0x2000 && (n = read (fd, piece, sizeof piece)) > 0; off += n) {
-        hy_bank (kb);
-        memcpy ((char*) 0x8000 + off, piece, n);
-    }
+    hy_bank (kb);                               /* (Read straight into its bank: the start's time, slice 4.4's) */
+    read (fd, (void*) 0x8000, 0x2000);
     close (fd);
     strcpy (path, dir);                         /* (The kinds' noses, the character's smell: the traces' file) */
     strcat (path, "/dq0tr.dat");

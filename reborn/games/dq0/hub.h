@@ -766,10 +766,11 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
 enum { FA_NONE, FA_WALL, FA_DOOR, FA_BARS, FA_DROP, FA_RISE, FA_PIT };   /* (What stops a walk in the dark, met: the
                                                 **   world's ahead) */
 enum { WS_AHEAD, WS_LEFT, WS_RIGHT };           /* E_BEAT's side (or a turn's way) */
-enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD, K_HELD };    /* E_CLIMB's how: begun, on, slipped
+enum { K_BEGUN, K_ON, K_BACK, K_FELL, K_UP, K_DOWN, K_JUMPED, K_NOHOLD, K_HELD, K_SLID };    /* E_CLIMB's how: begun, on, slipped
                                                 **   back, fallen, up, down; jumped down (a ledge, a shaft); no hold
                                                 **   found yet (at its foot: nothing to slip back, nor to fall); its
-                                                **   grip kept, struck or hurt part way (HOUSE.md: holding on) */
+                                                **   grip kept, struck or hurt part way (HOUSE.md: holding on); slid back
+                                                **   to a pit's floor, the climb ended (D13's, slice 4.4's) */
 enum { PA_OPEN, PA_CLOSE, PA_UNLOCK, PA_FORCE, PA_SEARCH,     /* I_PORTAL's: what's done (a door's opened, ... */
        PA_RAISE, PA_LOWER, PA_BREAK, PA_THROUGH, PA_DISARM,    /*   a portcullis raised, a window's glass broken,
                                                 **   climbed through, a trap disarmed: one in reach, or the door's; */

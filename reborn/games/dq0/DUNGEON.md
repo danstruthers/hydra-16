@@ -1368,6 +1368,30 @@ packed, not the game on the ROM disk (2026-10-31, DECISIONS.md).  Now: 208M cycl
 - **The check**: dq0starttime, its budgets 229M (seed 1) and 318M (seed 123456789), its silence 36M at most, the
   banks as ld65 made them.
 
+### The character carries on (slice 4.4, 2026-11-02)
+
+The user's D7 and D8 (DECISIONS.md): death is permanent, with autosaves before danger a setting (off, hard mode); the
+character carries on into a new dungeon with its skills, wounds and gear.  And the plan's "skill improvement by use and
+rest".  Built (HOUSE.md's the character carries on has the numbers):
+
+- **Skills by use:** every skill the character uses (a test of it, its weapon in a fight, its dodge, a shot) is marked
+  for a development roll, success or failure alike (the book's); the marked ones are rolled after a night's rest, each
+  that rose told as it wakes ("Your Climbing skill has improved (46)."), the sheet showing the new figure.  A [First
+  Use] skill (Swimming, Acrobatics, Physician, Cookery; a weapon's in a fight) opens the first time it's used, told at
+  once ("You've begun to learn Swimming by doing it (12)."); one learnt by study doesn't.  The referee's alone
+  (dq0harn/skills.c): the marks and the rest toward the rolls kept with the sheet in the save (pc.hm).
+- **The ending:** the theme's words, then what's next, then the character's sheet as it ends.  Alive (the goal reached
+  or the way out taken), "Your character carries on": the game started again with the same folder (dq0 -d) begins a new
+  dungeon (a new seed: a new history and theme) with the same character, its sheet as it ended (its skills, its wounds
+  healing on), and the things it carried out (the world's kit.dat, kept with every save, made its outfit there).
+- **Death and the autosave:** the game is kept as the character comes into a stratum and as it's quit; a death isn't
+  kept, so the last save is there to go back to.  Hard mode (dq0 -H, kept in the save) keeps the death: the folder's
+  next game is a new one, a new character.  The autosave before danger (a fight's start) is to come.
+- **D13's rules:** the free pounds of encumbrance by Strength; a weapon's version (the book's light, average and heavy:
+  its impact and its weight by it), the heaviest wielded without penalty by Strength, a strong character made with
+  heavy weapons; a wrecked door, window or portcullis appraised by its state; a slip climbing out of a pit ending the
+  climb, the player's to say what next ("climb up" again).
+
 ## One path for every actor
 
 The user's (2026-11-02, DECISIONS.md's): every actor's action is one intent, the character's and a denizen's mind's
@@ -1514,8 +1538,8 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
 - **One path for every actor** (Phase 3C, begun 2026-11-02: below; a denizen's portcullises and a robber's lock
   picking built 2026-11-02, DENIZENS.md's): left, a denizen working windows, an ally asked to open a door ("ask the dwarf to open the door"), a denizen eating the
   food it takes up, its lift by its size, the things' put down, given and thrown by the minds as the character's are.
-- **The house rules decided, not yet built** (HOUSE.md): Strength and weapons, free pounds, a wrecked portal appraised
-  by its state, the pit climb (D13).
+- **The character carries on** (slice 4.4, built 2026-11-02: above): left, the autosave before danger, the denizens'
+  weapons' versions (the outfits' gear's), a thing's wear and fuel carried as they were.
 - **The market** (built in part 2026-11-02: HOUSE.md's the market, entertaining and remedies; DENIZENS.md's trading):
   buying, selling, a price asked, haggling, with any folk denizen, in pennies; remedies (antidotes, a physician's
   draught) for sale, in kits and purses, drunk.  Left, from the plan (DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a

@@ -362,6 +362,11 @@ unsigned __fastcall__ s_weight_of (unsigned i)
     const struct kind* k = kind_at (i);
     unsigned w = (unsigned) k->weight * (k->flags & K_PLURAL && !(k->form & KF_COUNT) ? 1 : item_at (i)->qty);  /* (A
                                                 **   lot counted, its count's: "drop two rations") */
+    unsigned char v;
+
+    if (k->craft == AP_WEAPON && (v = item_at (i)->size) != 0 && v <= WV_HEAVY) {
+        w += (v == WV_HEAVY ? w : -w) >> 2;     /* (A weapon's version: a quarter heavier, or lighter, D13's) */
+    }
 
     if (k->form & KF_TENS) {
         w = LOT_WT (k->form, w);                /* (A lot by the ten: the missiles', a tenth of a pound each; coins
@@ -659,6 +664,10 @@ static void tools (void)
                 strcat (t, k->tool);
                 m[0] = '0' + rec.quality;
                 strcat (t, m);
+                if (k->craft == AP_WEAPON && rec.size && rec.size <= WV_HEAVY) {
+                    m[0] = rec.size == WV_HEAVY ? 'H' : 'L';    /* (Its version: D13's, RS_EQUIP's) */
+                    strcat (t, m);
+                }
             }
         }
     }
@@ -2487,6 +2496,76 @@ unsigned char __fastcall__ s_describe (const char* name)
     return IR_OK;
 }
 
+#pragma bss-name (push, "SW40RODATA")           /* (Its own data, wanted only while it runs: not the main RAM's) */
+#pragma static-locals (push, on)
+/* The character's things as an outfit's list (outfit.h's struct ofit), its kit to carry on into a new dungeon (D8's,
+** slice 4.4's): kit.dat in the save folder, written with the game (wgame.c's, LM_KIT: part 40's, none of
+** the commands' path), read as a carried-on game's outfit (part 57's).  Each thing on it: what it wears and holds first
+** (worn, in its main hand, its other, both), then what's in each in turn, its container's entry before it (PL_IN;
+** KQ things that hold others at most); how many, its make, its material, lit; NOFIT at most; not a key (its lock the old dungeon's), nor the old
+** theme's own things (its kind's number another thing's in the next theme's: its puzzle's pieces) */
+#define KQ      12                              /* (The things it's listed that hold others, at most) */
+static struct item kr;
+static struct ofit ke;
+static unsigned kq[KQ];                         /* (Each one's number, */
+static unsigned char kqe[KQ], kn, kqn, kmh;     /*   its entry; the entries so far; how many of them; its main hand) */
+static int kfd;
+static char kp[56];
+
+/* Thing i (ip's record), in entry in less one (0: on the character), listed */
+static void __fastcall__ kit_put (unsigned i, unsigned char in)
+{
+    memcpy (&kr, ip, sizeof kr);
+    if (kn >= NOFIT || kr.kind == KI_KEY || (kr.kind >= KI_THEME && kr.kind < KI_THEME + NTKINDS)) {
+        return;
+    }
+    ke.kind = kr.kind;
+    ke.qty = kr.qty;
+    ke.quality = kr.quality;
+    ke.place = in ? PL_IN : !(kr.flags & I_HELD) ? PL_WORN : (kr.sn & IH_BOTH) == IH_BOTH ? PL_BOTH :
+        kr.sn & kmh ? PL_HAND : PL_OFF;
+    ke.in = in;
+    ke.flags = kr.flags & I_LIT ? TF_LIT : 0;
+    ke.mat = kr.mat;
+    write (kfd, &ke, sizeof ke);
+    hub_map (KIND_BANK);
+    if (kqn < KQ && (CATALOGUE[kr.kind].flags & (K_CONTAINER | K_BELT) || CATALOGUE[kr.kind].keeps & KF_ON)) {
+        kq[kqn] = i;
+        kqe[kqn++] = kn;
+    }
+    ++kn;
+}
+
+static void kit_keep (void)
+{
+    static unsigned i;
+    static unsigned char k;
+
+    hub_map (0);
+    if (!HUB->savedir[0]) {
+        return;
+    }
+    strcpy (kp, HUB->savedir);
+    strcat (kp, "/kit.dat");
+    if ((kfd = open (kp, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
+        return;
+    }
+    kmh = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
+    kn = kqn = 0;
+    for (i = 0; (i = items (i, IN_X | IN_ACTOR, 0)) != 0; ) {
+        kit_put (i, 0);
+    }
+    for (k = 0; k < kqn; ++k) {
+        for (i = 0; (i = items (i, IN_X | IN_ITEM, kq[k])) != 0; ) {
+            kit_put (i, kqe[k] + 1);
+        }
+    }
+    close (kfd);
+}
+
+#pragma static-locals (pop)
+#pragma bss-name (pop)
+
 /* Its weight, its lock, it gone over for traps (thing n, rec its record, lk its kind; its name said) */
 unsigned char __fastcall__ s_look_more (unsigned n, unsigned char mode)
 {
@@ -2494,6 +2573,10 @@ unsigned char __fastcall__ s_look_more (unsigned n, unsigned char mode)
     unsigned char sh = rec.shut, k;
     char b[6];
 
+    if (mode == LM_KIT) {
+        kit_keep ();                            /* (The character's things kept: the world's save, wgame.c's) */
+        return IR_OK;
+    }
     if (mode == LM_LOCK) {
         k = 1 + rec.quality / 3;
         put (!(sh & IS_LOCK) ? (lpl ? " have no lock." : " has no lock.") : sh & IS_BURST ?
@@ -4329,8 +4412,41 @@ void s_kit (void)
     char* more = tbuf;
 
     hub_map (0);
-    if (!(old = (HUB->gear & GE_OLD) || !outfit ())) {
+    k = HUB->gear & GE_OLD ? 0 : outfit ();
+    if (!(old = !k)) {
+        hub_map (KIND_BANK);                    /* (The money: in the pouch, silver pennies in lots of 250 at most (a
+                                                **   lot's count a byte, joined to 250), all of it, told together; its
+                                                **   odd farthings farthings, cut pennies: the user's, 2026-10-28,
+                                                **   "Please keep farthings": part 57's till slice 4.4, its room) */
+        for (i = ost.budget >> 2; i && (off = OF_N) < NOFIT; i -= box) {
+            box = i > 250 ? 250 : i;
+            memset (OF_LIST + off, 0, sizeof *OF_LIST);
+            OF_LIST[off].kind = KI_PENNIES;
+            OF_LIST[off].qty = box;
+            OF_LIST[off].quality = 4;
+            OF_LIST[off].place = PL_POUCH;
+            OF_N = off + 1;
+        }
+        if ((box = ost.budget & 3) != 0 && (off = OF_N) < NOFIT) {
+            memset (OF_LIST + off, 0, sizeof *OF_LIST);
+            OF_LIST[off].kind = KI_FARTHINGS;
+            OF_LIST[off].qty = box;
+            OF_LIST[off].quality = 4;
+            OF_LIST[off].place = PL_POUCH;
+            OF_N = off + 1;
+        }
+        box = 0;
+        hub_map (0);
         outmake (0);                            /* (Its outfit drawn: its things made) */
+        if (--k) {                              /* (Its weapons their version: the referee's, by its Strength, D13's;
+                                                **   the character's alone, on it) */
+            for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
+                kk = kind_at (i);
+                if (kk->craft == AP_WEAPON && (kk->flags & K_HAND) && on_pc (i)) {
+                    item_at (i)->size = k;
+                }
+            }
+        }
     }
 
     hub_map (UI_BANK);
