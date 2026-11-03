@@ -8447,14 +8447,14 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0carry', meaning: true, near: ['save'], what: 'Dingus Quest Zero\'s character carrying on (slice 4.4: D8, the character carries on into a new dungeon; HOUSE.md\'s the character carries on), by the world\'s events and the words told: the crypt (seed 3, dq0 -k: its puzzle\'s pieces to hand) escaped by its way out, the seal made and used (dq0theme\'s way): the ending\'s words say it carries on, and its sheet is told as the game ends; its sheet kept (pc.hm, a second "body" line: its skills used since their development rolls); then the game begun again with the same folder and no character file: a new dungeon (seed 259, the drowned temple: begun, not carried on), the same character in it (its name, its skills as they were)',
+      name: 'dq0carry', meaning: true, outfit: true, near: ['save'], what: 'Dingus Quest Zero\'s character carrying on (slice 4.4: D8, the character carries on into a new dungeon; HOUSE.md\'s the character carries on), by the world\'s events and the words told: the crypt (seed 3, dq0 -k: its puzzle\'s pieces and a pick to hand) escaped by its way out, the seal made and used (dq0theme\'s way): the ending\'s words say it carries on, and its sheet is told as the game ends; its sheet kept (pc.hm, a second "body" line: its skills used since their development rolls); then the game begun again with the same folder and no character file: a new dungeon (seed 259, the drowned temple: begun, not carried on), the same character in it (its name, its skills as they were), carrying what it carried out (the world\'s kit.dat, its outfit: a pick it brought, not the hatchet it put down, its outfit not drawn anew; not the old theme\'s seal)',
       init: 't_rc', cycles: 1600e6,
-      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q',
-        'combine the sunstone with the moonstone', 'use the seal on the way out', 'u', 'cat /ram/q/pc.hm', 'dq0 -p t -s 259 -d /ram/q', 'sheet', 'quit', 'echo $status']) },
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,pick -d /ram/q',
+        'drop the hatchet', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u', 'cat /ram/q/pc.hm', 'dq0 -p t -s 259 -d /ram/q', 'sheet', 'inventory', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], theme = t => t.after ? t.after.theme : '?';
-        const g1 = T.of('dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q'), g2 = T.of('dq0 -p t -s 259 -d /ram/q');
+        const g2 = T.of('dq0 -p t -s 259 -d /ram/q');
         const l = T.of('u');
         dq0Need(f, l, 'E_LEFT', {}, 'the way out not taken (escaped)');
         const end = out.slice(out.indexOf('> u'), out.indexOf('% cat /ram/q/pc.hm'));
@@ -8464,6 +8464,10 @@ module.exports = {
         const pc = out.slice(out.indexOf('% cat /ram/q/pc.hm'), out.indexOf('% dq0 -p t -s 259'));
         if (harn && !/\nbody u[0-9a-f]{26} \d+/.test(pc)) f.push('its skills used not kept with its sheet (pc.hm\'s second body line)');
         dq0Need(f, g2, 'E_ARRIVE', { how: 'A_START' }, 'the second game not begun anew (a new dungeon)');
+        const kit = dq0Carried(g2.after).map(i => i.name);
+        if (!kit.includes('pick') || !kit.includes('backpack')) f.push('its things not carried on: ' + kit.join(', '));
+        if (kit.includes('hatchet')) f.push('the hatchet it put down drawn anew, not its own things: ' + kit.join(', '));
+        if (kit.includes('king\'s seal') || kit.includes('full chalice')) f.push('the old theme\'s own thing carried on: ' + kit.join(', '));
         if (theme(g2) !== 'the Drowned Temple') f.push('the new dungeon not seed 259\'s: ' + theme(g2));
         const who = s => (/\n([^\n,]+), [^\n,]+, enters the dungeon\./.exec(s) || [])[1];
         const n1 = who(out.slice(out.indexOf('% dq0 -p t -s 3'))), n2 = who(out.slice(out.indexOf('% dq0 -p t -s 259')));

@@ -2776,7 +2776,9 @@ for its words (wtend.c), the UI's start and end (main.c).
   heaviest its Strength wields freely: heavy at 13 or more, light at 5 or less (the referee's RS_OUTFIT x[2], the
   world's kit).  Appraised: "It's a heavy one." (plain to the hand).  The referee told by RS_EQUIP's marks (L or H after
   a weapon's quality).  Every actor: a denizen's weapon is average (the outfits' gear's versions to come), its Strength
-  the sheet's (every folk kind's 8 or more today, so none the worse).  A blow at a thing, a missile, are as before.
+  its sheet's, rolled about its kind's (the book's less 7 and 2d6), so one under 6 is two steps the worse with it: one
+  kobold in six (its kind's 8), one in 36 of the kinds at 10, none of those at 11 or more.  A blow at a thing, a
+  missile, are as before.
   (skills.c's heft, fight.c; things.c's tools, s_weight_of, s_kit.)
 - **A wrecked door, window or portcullis appraises by its state** (D13): its quality asked, "You judge it ruined, past
   mending.", its make no matter now; a closer look and its condition tell it broken down as before.  (fixt.c's
@@ -2797,10 +2799,14 @@ for its words (wtend.c), the UI's start and end (main.c).
   sheet as it ends.
 - **Carrying on** (D8): the game begun again with the folder of one ended alive (the goal reached, or the way out
   taken) begins a new dungeon (its seed -s's, or the clock's: a new history and theme) with the same character: its
-  sheet as it ended (its skills, its wounds as they are, healing on, its fatigue, its skills used since their rolls).
-  *(The house's for now, for review:)* its kit and money drawn anew, as a new character's are, by its occupation and
-  its family's wealth (the outfits'): the things it carried out aren't carried over yet (the world's list of its things
-  into the outfits' list, outmake's, is the hook to come).  Its ruleset the one dq0 -r names (harn if none).
+  sheet as it ended (its skills, its wounds as they are, healing on, its fatigue, its skills used since their rolls),
+  and its gear: the things it carried out, its money among them, kept with the save (the world's kit.dat, written
+  with every save: an outfit's list of them, what's worn and held, then what's in each) and made as its outfit in
+  the new dungeon in place of one drawn.  *(The house's, for review:)* each thing made anew as an outfit's is (whole,
+  its light's fuel and its oil renewed, its coins the new region's; left behind, a key, its lock the old dungeon's,
+  and the old theme's own things, its puzzle's pieces, with what's in them;
+  its weapons the version its Strength wields freely, as a new character's); 64 things at most.  A game begun in the
+  folder that isn't carried on empties kit.dat first.  Its ruleset the one dq0 -r names (harn if none).
 
 ## Decided, not yet built
 

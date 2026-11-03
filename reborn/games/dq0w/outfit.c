@@ -198,6 +198,33 @@ void __fastcall__ s_den_kit (const struct msg* m)
     hub_map (0);
 }
 
+/* A carried-on game's kit (kit.dat in the save folder, the world's save's: wgame.c's kit_keep, slice 4.4's, D8's) in the
+** list in place of the one drawn: 1; or 0 (none there, or empty: a new game's, the UI's emptied it) */
+static unsigned char kit_read (void)
+{
+    char p[56];
+    int fd, n;
+
+    hub_map (0);
+    if (!HUB->savedir[0]) {
+        return 0;
+    }
+    strcpy (p, HUB->savedir);
+    strcat (p, "/kit.dat");
+    if ((fd = open (p, O_RDONLY)) < 0) {
+        return 0;
+    }
+    hub_map (KIND_BANK);
+    n = read (fd, OF_LIST, NOFIT * sizeof *OF_LIST);
+    close (fd);
+    if (n < (int) sizeof *OF_LIST) {
+        return 0;
+    }
+    hub_map (KIND_BANK);
+    OF_N = n / sizeof *OF_LIST;
+    return 1;
+}
+
 /* ---- The character's outfit: the referee asked (RS_OUTFIT, the UI's slot: the UI waits on the kit), drawn into the
 ** list; 0 if there's none (no file, a referee that hasn't one: the kit as it was) */
 unsigned char s_outfit (void)
@@ -282,5 +309,8 @@ unsigned char s_outfit (void)
     hub_map (0);
     HUB->slot[SLOT_UI].state = REQ_FREE;
     ost.budget += ost.kept;                     /* (The money: s_kit's, part 63's, the room of this one's image) */
+    if (kit_read ()) {
+        ost.budget = 0;                         /* (Its kit carried on: its own money in it, slice 4.4's) */
+    }
     return 1 + (wv < 3 ? wv : 0);               /* (Drawn; its weapons' version too, the kit's to make: s_kit's) */
 }

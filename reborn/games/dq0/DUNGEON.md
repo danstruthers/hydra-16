@@ -1376,8 +1376,7 @@ rest".  Built (HOUSE.md's the character carries on has the numbers):
 - **The ending:** the theme's words, then what's next, then the character's sheet as it ends.  Alive (the goal reached
   or the way out taken), "Your character carries on": the game started again with the same folder (dq0 -d) begins a new
   dungeon (a new seed: a new history and theme) with the same character, its sheet as it ended (its skills, its wounds
-  healing on).  Its kit is drawn anew by its occupation and its family's wealth for now (the house's, for review: the
-  things it carried out are to come with it, the world's list of its things made the outfits' list).
+  healing on), and the things it carried out (the world's kit.dat, kept with every save, made its outfit there).
 - **Death and the autosave:** the game is kept as the character comes into a stratum and as it's quit; a death isn't
   kept, so the last save is there to go back to.  Hard mode (dq0 -H, kept in the save) keeps the death: the folder's
   next game is a new one, a new character.  The autosave before danger (a fight's start) is to come.
@@ -1529,8 +1528,8 @@ What the plans bring later, by the slice or phase that brings it (the detailed p
 - **One path for every actor** (Phase 3C, begun 2026-11-02: below): left, a denizen working windows and
   portcullises, picking a lock, an ally asked to open a door ("ask the dwarf to open the door"), a denizen eating the
   food it takes up, its lift by its size, the things' put down, given and thrown by the minds as the character's are.
-- **The character carries on** (slice 4.4, built 2026-11-02: above): left, its things carried into the new dungeon
-  (drawn anew for now), the autosave before danger, the denizens' weapons' versions (the outfits' gear's).
+- **The character carries on** (slice 4.4, built 2026-11-02: above): left, the autosave before danger, the denizens'
+  weapons' versions (the outfits' gear's), a thing's wear and fuel carried as they were.
 - **The market** (when trading comes: DECISIONS.md's money, 2026-10-28): buying and selling at the book's prices (a
   mercantyler's 10% buying and 50% selling to the source, second-hand clothes 30-60% of new, haggling), the coins'
   metal value and their discount outside their own land in the trade itself (the appraisal tells it now), farthings

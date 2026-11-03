@@ -241,6 +241,8 @@ static int __fastcall__ world_dat (unsigned char out)
     strcat (p, "/world.dat");
     return out ? open (p, O_WRONLY | O_CREAT | O_TRUNC, 0644) : open (p, O_RDONLY);
 }
+unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);    /* (Part 40's: its LM_KIT, kit.dat) */
+
 
 /* The world's part of the game kept (WQ_SAVE's, after the change records) */
 void s_world_keep (void)
@@ -275,6 +277,7 @@ void s_world_keep (void)
     write (fd, WREC->strata, sizeof WREC->strata);
     hub_map (0);
     close (fd);
+    look_more (0, LM_KIT);                      /* (Its things, kit.dat: to carry on, part 40's, slice 4.4's) */
 }
 
 /* A game carried on: the world's part of its save read back (the clock, the character's place, state and bearings, the

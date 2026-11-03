@@ -463,7 +463,7 @@ unsigned char plain;
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
-static char spath[56];                          /* (A path in the save's folder: save_path's, part 6's save_at's) */
+static char spath[56];                          /* (A path in the save's folder: save_path's, part 13's save_at's) */
 
 static char* __fastcall__ save_path (const char* name)
 {
@@ -498,8 +498,9 @@ static int load_save (void)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW6CODE")             /* (Part 6's: part 1's room, slice 4.4's) */
-#pragma rodata-name (push, "SW6RODATA")
+#pragma code-name (push, "SW13CODE")            /* (Part 13's: part 1's room, slice 4.4's; a cold part, the commands' path
+                                                **   not the longer for it, part 6's copied in at every look) */
+#pragma rodata-name (push, "SW13RODATA")
 
 static char* __fastcall__ save_at (const char* name)
 {
@@ -2512,7 +2513,10 @@ void __fastcall__ s_begin (int argc, char* argv[])
     } else if (savedir) {
         mkdir (savedir, 0755);                  /* (A new game: its folder) */
         if (n > 0) {
-            file = save_path ("pc.hm");         /* (Its character carried on, into a new dungeon: D8's) */
+            file = save_path ("pc.hm");         /* (Its character carried on, into a new dungeon: D8's; its kit, the
+                                                **   world's kit.dat, its outfit) */
+        } else if ((n = open (save_path ("kit.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
+            close (n);                          /* (Not carried on: no kit kept to take up, slice 4.4's) */
         }
     }
     if (!resumed) {                             /* (Its ruleset's referee: a game carried on keeps its own) */

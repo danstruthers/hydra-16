@@ -2438,6 +2438,68 @@ unsigned char __fastcall__ s_describe (const char* name)
     return IR_OK;
 }
 
+/* The character's things as an outfit's list (outfit.h's struct ofit), its kit to carry on into a new dungeon (D8's,
+** slice 4.4's): kit.dat in the save folder, written with the game (wgame.c's, LM_KIT), read as a carried-on game's
+** outfit (part 57's).  Each thing on it: what it wears and holds first (worn, in its main hand, its other, both),
+** then what's in each, a level at a time, its container's entry before it (PL_IN); how many, its make, its material,
+** lit; NOFIT at most; not a key (its lock the old dungeon's), nor the old theme's own things */
+#pragma static-locals (push, off)               /* (Its list on the C stack, not the main RAM's BSS) */
+static void kit_keep (void)
+{
+    struct ofit e;
+    unsigned at[NOFIT], i, x;
+    unsigned char n = 0, lv, k, mh;
+    char p[56];
+    int fd;
+
+    hub_map (0);
+    if (!HUB->savedir[0]) {
+        return;
+    }
+    strcpy (p, HUB->savedir);
+    strcat (p, "/kit.dat");
+    if ((fd = open (p, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
+        return;
+    }
+    mh = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
+    for (lv = 0; lv < 4; ++lv) {
+        for (i = 0; n < NOFIT && (i = items (i, lv ? IN_ITEM : IN_ACTOR, 0)) != 0; ) {
+            x = ip->x;
+            for (k = 0; k < n && at[k] != i; ++k) {
+            }
+            if (k < n || ip->kind == KI_KEY || (ip->kind >= KI_THEME && ip->kind < KI_THEME + NTKINDS)) {
+                continue;                       /* (Listed already; a key; the old theme's own, its kind's number
+                                                **   another thing's in the next theme's: its puzzle's pieces) */
+            }
+            memset (&e, 0, sizeof e);
+            if (lv) {
+                for (k = 0; k < n && at[k] != x; ++k) {
+                }
+                if (k == n) {
+                    continue;                   /* (In a thing not on it, or not listed yet) */
+                }
+                e.place = PL_IN;
+                e.in = k + 1;
+            } else if (x) {
+                continue;                       /* (An actor's not the character) */
+            } else {
+                e.place = !(ip->flags & I_HELD) ? PL_WORN : (ip->sn & IH_BOTH) == IH_BOTH ? PL_BOTH :
+                    ip->sn & mh ? PL_HAND : PL_OFF;
+            }
+            e.kind = ip->kind;
+            e.qty = ip->qty;
+            e.quality = ip->quality;
+            e.mat = ip->mat;
+            e.flags = ip->flags & I_LIT ? TF_LIT : 0;
+            at[n++] = i;
+            write (fd, &e, sizeof e);
+            hub_map (0);
+        }
+    }
+    close (fd);
+}
+#pragma static-locals (pop)
+
 /* Its weight, its lock, it gone over for traps (thing n, rec its record, lk its kind; its name said) */
 unsigned char __fastcall__ s_look_more (unsigned n, unsigned char mode)
 {
@@ -2445,6 +2507,10 @@ unsigned char __fastcall__ s_look_more (unsigned n, unsigned char mode)
     unsigned char sh = rec.shut, k;
     char b[6];
 
+    if (mode == LM_KIT) {
+        kit_keep ();                            /* (The character's things kept: the world's save, wgame.c's) */
+        return IR_OK;
+    }
     if (mode == LM_LOCK) {
         k = 1 + rec.quality / 3;
         put (!(sh & IS_LOCK) ? (lpl ? " have no lock." : " has no lock.") : sh & IS_BURST ?
