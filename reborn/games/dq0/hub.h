@@ -662,7 +662,7 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8, V_TRACED = 16 };
                                                 **   V_FACING: a turn begun, its look to come, V_TURNED; V_LOOKED: a
                                                 **   look one way's, I_LOOK's: 8, look.c's look (8); V_TRACED: the
                                                 **   traces read, I_TRACE's, the UI bank's tread: look (16)) */
-enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN, D_ROOF };  /* E_DIG's how (D_AGAIN: begun on
+enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN, D_ROOF, D_FOUND, D_PORTAL };  /* E_DIG's how (D_AGAIN: begun on
                                                 **   a hole dug part way before, the world's DUG record's; D_ROOF:
                                                 **   a spell gone badly in poor rock, the roof come down on the hole,
                                                 **   two feet of it in the rock filled again: slice 4.10's) */

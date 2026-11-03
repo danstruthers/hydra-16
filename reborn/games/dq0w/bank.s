@@ -177,6 +177,7 @@ go:
             SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
             SWPART      80, 24              ; One path: a denizen's doors, the doors' keys (wport.c: Phase 3C's)
             SWPART      81, 2               ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
+            SWPART      82, 4               ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -201,6 +202,7 @@ go:
             SWFN        den_legs, 51
             SWFN        den_other, 51
             SWFN        den_dig, 79         ; (A tunneller's dig: slice 4.11's)
+            SWFN        pc_dig, 82          ; (The character's dig's own: wdig.c)
             SWFN        den_more, 80        ; (One path: Phase 3C's)
             SWFN        door_key, 80
             SWFN        old_mint, 51

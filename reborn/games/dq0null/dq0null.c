@@ -721,6 +721,9 @@ static void __fastcall__ answer (struct req* r)
                 r->w1 = r->w2 = 0;
                 break;
             }
+            if (r->steps == RS_DIG_QUERY) {
+                break;
+            }
             g = r->grade = DIG_TESTED (m) ? flat (r->steps) : G_MS;    /* (Earth: the tool's rate, untested) */
             r->w1 = g == G_CS ? 2 * k : g == G_MS ? k : g == G_MF ? k / 2 : 0;
             break;

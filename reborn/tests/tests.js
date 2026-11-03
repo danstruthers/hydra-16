@@ -4043,6 +4043,73 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0nodig', outfit: true, meaning: true, near: ['map', 'gear'], what: "Dingus Quest Zero's digs told why (the user's playtest, 2026-11-02, DECISIONS.md; HOUSE.md's digging, for review), by poked scenes at seed 374's cell, a closed door to the east of the start (the character by a stairway, facing south).  A hidden door (its portal's state poked in the chunks' cache, PS_HIDDEN, as its first look's typed): the dig takes it for a wall.  With no tool that bites (a knife; then none): told at once, no time spent, by what it carries (E_DIG D_NO_TOOL; 'Your knife only scratches', 'You need better tools'), the door still hidden, no refusal saying there's nothing to dig.  A chisel alone: 'You'd need a hammer to drive the chisel.'  A pick: begun as a wall's two feet, and a spell or so on the facing's off, the door found (D_FOUND: 'strikes wood', its PORTAL_STATE record no longer hidden), seen in the look after.  A hammer and a chisel: the wall west of the start worked at slowly, a stone's half foot a spell (D_GOOD or D_POOR, or asked).  A door in sight: D_PORTAL 'That's a door'; a portcullis (seed 1's guardroom, dq0tunnel's) 'Those are iron bars'.  A door hidden by magic: a pick makes no mark, and after two spells with nothing to show it's asked, soft ('This isn't getting anywhere'), no door told",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 374 -c /ram/c.hm -T', 'look', 'dig east', 'drop the knife', 'dig east', 'quit',
+        'dq0 -p t -s 374 -c /ram/c.hm -k chisel -T', 'look', 'dig east', 'quit',
+        'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'wait', 'dig east', 'look', 'dig east', 'quit',
+        'dq0 -p t -s 374 -c /ram/c.hm -k chisel,hammer -T', 'dig north', 'quit',
+        'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'dig east', 'quit',
+        'mkdir /ram/g', "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -k pick -T -d /ram/g -R 7',
+        'open the door', 'south', 'turn around', 'close the door', 'dig north', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 5, line: 'dig east', n: 1, words: 'anywhere', text: 'stop\r' }]);   // (Typed as it's told)
+        const a = m.acia, read = a.read;
+        let typed = '', g = 0;
+        m.door = {};
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              if (/^dq0 /.test(typed)) ++g;
+              if (typed === 'look' && m.dq0 && !m.door[g]) {   // (The door east of the start hidden, by magic in the last game)
+                const { L } = m.dq0.layout(), h = m.dq0.bank(0), u16 = o => h[o] | h[o + 1] << 8;
+                const x = u16(L.pcX) + 1, y = u16(L.pcY), p = dq0Portal(m, h[L.pcSn], x, y);
+                if (p) { p.b[p.state] = g === 5 ? 0x60 : 0x20; m.door[g] = { x, y, sn: h[L.pcSn] }; }
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), digs = T.filter(t => /^dig /.test(t.line));
+        if ([1, 2, 3, 5].some(g => !m.door[g])) return ['the scenes not set: ' + JSON.stringify(m.door)];
+        const looks = T.filter(t => t.line === 'look');
+        const [d1, d2, d3, d4, d5, d6, d7] = digs;   // (Knife, hands; chisel; pick, the door found, then a door in sight; chisel and hammer; magic)
+        const t0 = t => t.at && t.after ? t.after.now - t.at.now : -1;
+        dq0Need(f, d1, 'E_DIG', { how: 'D_NO_TOOL' }, 'a knife on the wall not refused');
+        dq0Need(f, d2, 'E_DIG', { how: 'D_NO_TOOL' }, 'bare hands on stone not refused');
+        dq0Need(f, d3, 'E_DIG', { how: 'D_NO_TOOL' }, 'a chisel with no hammer not refused');
+        for (const d of [d1, d2, d3]) {
+          dq0Never(f, d, 'E_NOWAY', {}, 'a refusal (nothing there to dig) telling the wall a door');
+          if (dq0Ev(d, 'E_DIG', { how: 'D_BEGUN' }).length) f.push('a spell begun with no tool that bites: ' + d.line);
+        }
+        if (!/Your knife only scratches at the/.test(s)) f.push('no knife\'s words');
+        if (!/You need better tools: your hands make no mark on the/.test(s)) f.push('no hands\' words');
+        if (!/You'd need a hammer to drive the chisel./.test(s)) f.push('no chisel\'s words');
+        dq0Need(f, d4, 'E_DIG', { how: 'D_BEGUN' }, 'the seeming wall not dug at');
+        dq0Need(f, d4, 'E_DIG', { how: 'D_FOUND' }, 'the hidden door not found by the pick');
+        if (!/Your pick strikes [a-z ,-]*: there's a door behind the facing/.test(s)) f.push('no door found told');
+        const rec = T.of('quit', d5.k).at && T.of('quit', d5.k).at.changes.find(c => c.what === 'PORTAL_STATE' && c.x === m.door[3].x && c.y === m.door[3].y);
+        if (!rec || rec.tile & 0x20) f.push('the door still hidden after: ' + JSON.stringify(rec));
+        dq0Need(f, d5, 'E_DIG', { how: 'D_PORTAL' }, 'a door in sight not told so');
+        if (!/That's a door: it wants opening/.test(s)) f.push('no door\'s words');
+        if (!dq0Ev(d6, 'E_DIG', { how: h => h === 'D_GOOD' || h === 'D_POOR' || h === 'D_SLIP' || h === 'D_THROUGH' }).length) f.push('a hammer and chisel not at work on the wall: ' + dq0Evs(d6));
+        if (dq0Ev(d7, 'E_DIG', { how: 'D_FOUND' }).length) f.push('a door hidden by magic found by digging');
+        if (!/This isn't getting anywhere/.test(s)) f.push('nothing told after two spells with nothing to show');
+        dq0Need(f, T.of('dig north', d7.k), 'E_DIG', { how: 'D_PORTAL' }, 'a portcullis not told so');
+        if (!/Those are iron bars/.test(s)) f.push('no bars' words');
+        dq0Need(f, d7, 'E_TASK', { te: 'TE_ASK_SHORT', task: 'LT_DIG' }, 'the hopeless dig not asked about');
+        if (f.length) f.push(JSON.stringify(dq0Ev(d7, 'E_TASK').map(e => e.te + ' ' + e.task)), s.slice(s.indexOf('-k pick'), s.indexOf('-k pick') + 2600));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0mine', outfit: true, meaning: true, near: ['denizens', 'map'], what: "Dingus Quest Zero's miners at their work (slice 4.11's rest, 2026-11-02: DENIZENS.md's tunnellers and builders, HOUSE.md's tunnellers, for review): a hand-written theme's dwarf miners (seed 374: their home south-west of the start, a copper seam crossing their chunk eight squares east of it, rock.h's; wary; a miner digs with the pick it carries, kinds.txt's ways m, outfits.txt's [role khuzmin]), the hour 8 in the morning (dq0hour: a diurnal miner's working hours, part 9's day), the character waiting in its cell six hours, out of their sight; the portcullis on their mine's way across raised (the scene set as the first long wait's typed: its state in the chunks' cache poked; a lowered one ends a mine's way, the minds raising none yet).  At its work (by the clock, part 9's SC_WORK: never polled) a miner digs its faction's mine (dq0d's work_dig, part 15's): from its lair's home across to its region's vein (rock.h's rock_vein: a seam of ore or quartz), then along it, the open squares and doorways on it walked through, its stand the square before its first wall, rock or rubble; a spell at a time, the world's (wdig.c, I_KIT's KT_DIG, by the character's rules: its pick's rate, its Strength test by its sheet), heard (E_DEN DE_DIG, 'a scraping in rock'), each square through a passage (DE_DUG) on the mine's line (the home's row between the home and the vein, or the vein's own squares at their row), none of them hostile",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=8',

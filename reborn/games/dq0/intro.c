@@ -171,13 +171,23 @@ void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
     case D_THROUGH:
         msg (feet ? "The last of the rock gives way beneath you: the shaft is through." : "You break through.");
         return;
-    case D_NO_TOOL:
-        msg (feet == MAT_EARTH + 1 ? "You claw at the hard-packed earth with your bare hands, but make no progress: it wants a spade or a pick, or a blade at least." :
-            "You have nothing that would bite into it: that wants a pick.");
+    case D_NO_TOOL:                             /* (Part 14's dig_used's, by what it carries, 2026-11-02) */
+        return;
+    case D_FOUND:                               /* (A hidden door dug to, its stuff, world.h's PM_*: HOUSE.md's) */
+        sayf ("\nYour %s strikes %s: there's a door behind the facing.", dug_with, feet == 0 ? "wood" :
+            feet == 1 ? "iron-bound oak" : feet == 2 ? "iron" : "dressed stone, hollow behind");
+        return;
+    case D_PORTAL:                              /* (A portal in sight's no thing to dig: its kind, world.h's PK_*;
+                                                **   0xFE, two spells with nothing to show, asked after it) */
+        msg (feet == 0xFE ? "This isn't getting anywhere." : feet == 0 || feet == 6 ? "That's a door: it wants opening or breaking down, not digging." :
+            feet == 1 || feet == 7 ? "That's a window: digging won't get you through it." :
+            "Those are iron bars: no tool here digs through them.");
         return;
     default:
         msg ("Beneath the shaft is only solid rock, with nothing under it to break into.");
         return;
     }
-    sayf (feet == 1 ? " (A foot to go.)" : " (%u feet to go.)", feet);
+    if (feet) {
+        sayf (feet == 1 ? " (A foot to go.)" : " (%u feet to go.)", feet);
+    }
 }

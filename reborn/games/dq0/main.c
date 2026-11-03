@@ -87,7 +87,7 @@ unsigned char hold_first (void);
 unsigned char errand (void);                    /* (Part 15's: an ally's errand, a gift, slice 4.8's) */
 unsigned char missiles (void);                  /* (Part 13's: the missiles, slice 4.7's) */
 void __fastcall__ dig_used (unsigned bk);        /* (Part 14's) */
-static char dug_with[16];                       /* (The tool a dig took, named) */
+char dug_with[16];                              /* (The tool a dig took, named) */
 unsigned char finds;                            /* (Things a search turned up, told as it ends: the hub's text;
                                                 **   search.c's too) */
 struct ireq judged;                             /* (A thing looked at closely: what it is, for the appraiser: way.c's,
@@ -1252,8 +1252,9 @@ void __fastcall__ s_news (const struct msg* m)
         k = m->w1 >> 8;
         if (k == D_BEGUN || k == D_AGAIN) {
             dug_with[0] = 0;
-        } else if (k != D_NO_TOOL) {
-            dig_used (m->b | k << 8);               /* (And the rock it's into told: slice 4.10's) */
+        } else if (k != D_PORTAL) {
+            dig_used (m->b | k << 8);               /* (And the rock it's into told: slice 4.10's; D_NO_TOOL's b what
+                                                **   it's into, why told by what it carries, 2026-11-02) */
         }
         if (k == D_ROOF) {                      /* (Poor rock come down on the hole: slice 4.10's) */
             msg ("The rotten rock splits, and part of the roof falls into the hole.");
@@ -1695,6 +1696,32 @@ void __fastcall__ s_dig_used (unsigned bk)
     const char* r;
     unsigned char n = bk & 3, i = (unsigned char) bk >> 4, g = bk >> 8 == D_GOOD;
 
+    if (bk >> 8 == D_NO_TOOL) {                 /* (Told why, for what it can judge: HOUSE.md's, 2026-11-02; bk what it's
+                                                **   into, MAT_* + 1) */
+        to_hand ();                             /* (What it carries: the tools' list, fresh) */
+        hub_map (UI_BANK);
+        strncpy (lb + 200, UIREC->things_text, 180);
+        hub_map (0);
+        lb[380] = 0;
+        n = (unsigned char) bk - 1;
+        r = n == MAT_EARTH ? "hard-packed earth" : n == MAT_MASONRY ? "masonry" : n == MAT_FLAGS ? "flagstones" :
+            n == MAT_SOIL ? "earth" : "stone";
+        strcpy (lb + 180, r);
+        r = strstr (lb + 200, "shovel") ? "shovel" : strstr (lb + 200, "blade") ? "blade" : strstr (lb + 200, "dagger") ?
+            "dagger" : strstr (lb + 200, "knife") ? "knife" : "";
+        if (n != MAT_EARTH && n != MAT_SOIL && strstr (lb + 200, "chisel")) {
+            msg (strstr (lb + 200, "hammer") ? "It takes both hands to drive a chisel with a hammer." :
+                "You'd need a hammer to drive the chisel.");
+        } else if (*r == 's') {
+            sayf ("\nYour shovel only skids off the %s: that wants a pick.", lb + 180);
+        } else if (*r) {
+            strcpy (lb + 200, r);
+            sayf ("\nYour %s only scratches at the %s: this isn't getting anywhere.", lb + 200, lb + 180);
+        } else {
+            sayf ("\nYou need better tools: your hands make no mark on the %s.", lb + 180);
+        }
+        return;
+    }
     HUB->ireq.to = HUB->dig_wear[n];
     things (IO_WEAR, HUB->dig_tool[n]);
     if (strcmp (dug_with, HUB->ireq.name)) {
