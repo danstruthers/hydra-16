@@ -8168,10 +8168,10 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0stairtrap', meaning: true, what: 'Dingus Quest Zero\'s walks to stairs and ladders checking their way for traps, as the other walks do (the user\'s, 2026-10-16), by the world\'s events: at seed 38 the character goes round to the kitchen\'s far door, clear of the covered pit hidden between it and the stairs up to the way out (not noticed in passing: the referee\'s, HarnMaster\'s at this seed), then up (u): the walk back to the stairs stops on the pit, which gives way under it (a fall, a climb out begun), the pit seen open; then the stairs again, the pit it knows of gone round, and the way out reached (shut fast), no second fall',
+      name: 'dq0stairtrap', meaning: true, what: 'Dingus Quest Zero\'s walks to stairs and ladders checking their way for traps, as the other walks do (the user\'s, 2026-10-16), by the world\'s events: at seed 38 the character goes round to the kitchen\'s far door, clear of the covered pit hidden between it and the stairs up to the way out (not noticed in passing: the referee\'s, HarnMaster\'s at this seed), then up (u): the walk back to the stairs stops on the pit, which gives way under it (a fall, a climb out begun, a slip ending it at its floor: D13\'s, slice 4.4\'s), the pit seen open; climbed out again (climb up: a slip again, then out); then the stairs again, the pit it knows of gone round, and the way out reached (shut fast), no second fall',
       init: 't_rc', cycles: 600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 38 -c /ram/c.hm', 'se', 'walk to the door east',
-        'u', 'u', 'quit', 'echo $status']) },
+        'u', 'climb up', 'climb up', 'u', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], w = T.of('walk to the door east'), u1 = T.of('u'), u2 = T.after(u1, 'u');
@@ -8181,6 +8181,9 @@ module.exports = {
         dq0Need(f, u1, 'E_TRAP', { tk: 'TK_COVERED', to: 'TO_SPRUNG' }, 'the covered pit didn\'t give way');
         dq0Need(f, u1, 'E_HARM', { hc: 'HC_FALL' }, 'no fall into the pit');
         dq0Need(f, u1, 'E_CLIMB', { how: 'K_BEGUN' }, 'no climb out begun');
+        dq0Need(f, u1, 'E_CLIMB', { how: 'K_SLID' }, 'the climb out not ended by its slip (D13\'s: slid back to the pit\'s floor)');
+        dq0Need(f, T.of('climb up'), 'E_CLIMB', { how: 'K_SLID' }, 'the first climb up not ended by its slip (the dice as they fall at seed 38)');
+        dq0Need(f, T.after(T.of('climb up'), 'climb up'), 'E_CLIMB', { how: 'K_UP' }, 'not climbed out of the pit again');
         if (!u1.after || !u1.after.sight || !u1.after.sight.traps.some(p => p.kind === 'TK_COVERED' && (p.state & 1))) f.push('the pit not seen open');
         dq0Need(f, u2, 'E_NOWAY', { why: 'N_SHUT' }, 'the way out not reached, the pit gone round');
         dq0Never(f, u2, 'E_TRAP', {}, 'the pit gave way again (not gone round)');
@@ -8432,6 +8435,69 @@ module.exports = {
         dq0Need(f, l, 'E_LEFT', {}, 'the way out not taken (escaped)');
         dq0Need(f, T.and(l), 'E_BYE', {}, 'the game not ended');
         dq0Need(f, T.of('dq0 -p t -c /ram/c.hm -d /ram/q'), 'E_ARRIVE', { how: 'A_START' }, 'the done save carried on, not a new game begun');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0carry', meaning: true, near: ['save'], what: 'Dingus Quest Zero\'s character carrying on (slice 4.4: D8, the character carries on into a new dungeon; HOUSE.md\'s the character carries on), by the world\'s events and the words told: the crypt (seed 3, dq0 -k: its puzzle\'s pieces to hand) escaped by its way out, the seal made and used (dq0theme\'s way): the ending\'s words say it carries on, and its sheet is told as the game ends; its sheet kept (pc.hm, a second "body" line: its skills used since their development rolls); then the game begun again with the same folder and no character file: a new dungeon (seed 259, the drowned temple: begun, not carried on), the same character in it (its name, its skills as they were)',
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q',
+        'combine the sunstone with the moonstone', 'use the seal on the way out', 'u', 'cat /ram/q/pc.hm', 'dq0 -p t -s 259 -d /ram/q', 'sheet', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], theme = t => t.after ? t.after.theme : '?';
+        const g1 = T.of('dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q'), g2 = T.of('dq0 -p t -s 259 -d /ram/q');
+        const l = T.of('u');
+        dq0Need(f, l, 'E_LEFT', {}, 'the way out not taken (escaped)');
+        const end = out.slice(out.indexOf('> u'), out.indexOf('% cat /ram/q/pc.hm'));
+        if (!/Your character carries on/.test(end)) f.push('the ending\'s words don\'t say it carries on');
+        const sk = /Skills \(EML\):[^\n]*/.exec(end);
+        if (!sk) f.push('its sheet not told as the game ends');
+        const pc = out.slice(out.indexOf('% cat /ram/q/pc.hm'), out.indexOf('% dq0 -p t -s 259'));
+        if (!/\nbody u[0-9a-f]{26} \d+/.test(pc)) f.push('its skills used not kept with its sheet (pc.hm\'s second body line)');
+        dq0Need(f, g2, 'E_ARRIVE', { how: 'A_START' }, 'the second game not begun anew (a new dungeon)');
+        if (theme(g2) !== 'the Drowned Temple') f.push('the new dungeon not seed 259\'s: ' + theme(g2));
+        const who = s => (/\n([^\n,]+), [^\n,]+, enters the dungeon\./.exec(s) || [])[1];
+        const n1 = who(out.slice(out.indexOf('% dq0 -p t -s 3'))), n2 = who(out.slice(out.indexOf('% dq0 -p t -s 259')));
+        if (!n1 || n1 !== n2) f.push('not the same character: ' + n1 + ', ' + n2);
+        const sk2 = /Skills \(EML\):[^\n]*/.exec(out.slice(out.indexOf('> sheet')));
+        if (!sk || !sk2 || sk[0] !== sk2[0]) f.push('its skills not carried on: ' + (sk && sk[0]) + ' / ' + (sk2 && sk2[0]));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0hard', meaning: true, near: ['save', 'body'], what: 'Dingus Quest Zero\'s death and its autosave (slice 4.4: D7, death permanent with autosaves before danger as a setting, off hard mode; HOUSE.md\'s the character carries on), by the world\'s events and the words told: a hunter (hmchar\'s, seed 5) given a grievous bleeding wound and its blood near spent (its file\'s lines added), begun by the stairway down (dq0 -T) and down it (kept as it comes into the stratum: the autosave), then a wait: dead of it, the ending\'s words saying its last save is kept, and the game begun again with the folder carried on from that save (resumed, not a new game); the same in hard mode (dq0 -H): no save to go back to, the game begun again a new one (its folder\'s save not taken up)',
+      init: 't_rc', cycles: 1600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cat /ram/c.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/c.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/d', 'd', 'wait 10 minutes', 'dq0 -p t -d /ram/d', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -H -d /ram/h', 'd', 'wait 10 minutes', 'dq0 -p t -s 3 -c /ram/c.hm -d /ram/h', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [];
+        const o1 = out.slice(out.indexOf('% dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/d'), out.indexOf('% dq0 -p t -d /ram/d'));
+        if (!/You are dead/.test(o1)) f.push('not dead of its wound');
+        if (!/Your last save is kept/.test(o1)) f.push('the ending\'s words don\'t say its last save is kept');
+        dq0Need(f, T.of('dq0 -p t -d /ram/d'), 'E_ARRIVE', { how: 'A_RESUMED' }, 'not carried on from its last save');
+        const o2 = out.slice(out.indexOf('% dq0 -p t -s 3 -c /ram/c.hm -T -H'), out.indexOf('% dq0 -p t -s 3 -c /ram/c.hm -d /ram/h'));
+        if (!/You are dead/.test(o2)) f.push('not dead of its wound in hard mode');
+        if (!/Hard mode: there's no save to go back to/.test(o2)) f.push('the ending\'s words don\'t say hard mode keeps no save');
+        dq0Need(f, T.of('dq0 -p t -s 3 -c /ram/c.hm -d /ram/h'), 'E_ARRIVE', { how: 'A_START' }, 'hard mode\'s death carried on from a save');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0heft', meaning: true, outfit: true, near: ['gear', 'fight'], what: 'Dingus Quest Zero\'s weapons\' versions by Strength (D13, the user\'s: Strength sets how heavy a weapon is wielded without penalty, heavier versions hit harder, strong characters made with heavier weapons; the book\'s custom weapons, Combat 3; HOUSE.md\'s the character carries on), by the words told and the referee\'s marks: a hunter (hmchar\'s, seed 5) made strong (Strength 16, its file\'s line added) begins with its weapons heavy (its knife appraised "a heavy one"; RS_EQUIP\'s marks an H after its quality), made weak (Strength 4) with them light ("a light one")',
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/w.hm', 'echo \'att str 16\' >> /ram/c.hm',
+        'echo \'att str 4\' >> /ram/w.hm', 'dq0 -p t -s 3 -c /ram/c.hm', 'inventory', 'appraise the knife', 'quit', 'dq0 -p t -s 3 -c /ram/w.hm', 'inventory', 'appraise the knife', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], a = out.indexOf('% dq0 -p t -s 3 -c /ram/c.hm'), b = out.indexOf('% dq0 -p t -s 3 -c /ram/w.hm');
+        if (!/It's a heavy one/.test(out.slice(a, b))) f.push('the strong character\'s knife not heavy');
+        if (!/It's a light one/.test(out.slice(b))) f.push('the weak character\'s knife not light');
         return f;
       },
       sdcard: true

@@ -147,6 +147,9 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
 
 /* An item */
 #define NITEMS          (ITEM_BANKS * (0x2000 / sizeof (struct item)))
+#define WV_LIGHT        1                       /* (A weapon's version, its item's size: light, a quarter lighter; */
+#define WV_HEAVY        2                       /*   heavy, a quarter heavier; 0 average: the book's custom weapons,
+                                                **   Combat 3; D13's, slice 4.4's) */
 struct item {
     unsigned char   kind;                       /* 0: a free record; else the catalogue's (1 on) */
     unsigned char   flags;                      /* I_* */
@@ -169,7 +172,8 @@ struct item {
     unsigned        dur, dur_max;               /* Its durability: the harm it can take before it breaks, what's
                                                 **   left (its most by its quality, its material, its weight) */
     unsigned char   size;                       /* Its measure, where it matters (a portal's part's: its portal's
-                                                **   opening, world.h's: feet, its width the low four bits; or 0) */
+                                                **   opening, world.h's: feet, its width the low four bits; or 0; a
+                                                **   weapon's version, WV_*) */
     unsigned char   thick;                      /*   and its thickness, in eighths of an inch (or 0) */
     unsigned        fuel;                       /* A light's burning left, minutes (0: burnt out; or not its own yet,
                                                 **   its life decided as it's made its own), the world's as it burns

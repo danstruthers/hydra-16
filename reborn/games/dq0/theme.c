@@ -110,6 +110,11 @@ void __fastcall__ o_ending (unsigned char how)
     blank ();
     words_at (T->end[how & 3]);
     blank ();
+    if (savedir) {                              /* (What's next: D7's, D8's, slice 4.4's) */
+        msg (how != END_DIED ? "Your character carries on: start the game again with this save's folder, and go on into a new dungeon." :
+            hard ? "Hard mode: there's no save to go back to." :
+            "Your last save is kept: start the game again with its folder to go back to it.");
+    }
     msg ("The game is over.");
     blank ();
 }

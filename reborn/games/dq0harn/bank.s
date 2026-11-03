@@ -149,7 +149,7 @@ ovl_out:
 
 ; The overlays' functions (dq0harn.h has them with their overlays)
             OVFN        sheet, 1
-            OVFN        outfit_of, 1
+            OVFN        outfit_of, 7        ; (Overlay 1's room, slice 4.4's)
             OVFN        brief, 1
             OVFN        state, 1
             OVFN        spent, 1
@@ -187,6 +187,11 @@ ovl_out:
             OVFN        tire, 7             ; (A creature's fatigue, 2026-10-31: tire.c)
             OVFN        worked, 7
             OVFN        want_fl, 7
+            OVFN        skill_used, 7       ; (Skills by use, the load's free pounds, slice 4.4's: skills.c)
+            OVFN        develop, 7
+            OVFN        set_load, 7
+            OVFN        equip, 7            ; (The main RAM's room, D13's)
+            OVFN        heft, 7             ; (A weapon's version, D13's: skills.c)
 
 ; ---- The swapped parts (../dq0/swap.inc: code run in the main RAM's top, dq0harn.cfg's SWAP, a part at a time,
 ; copied there from overlay 4's bank as it's called)

@@ -151,6 +151,9 @@ enum { GA_CREEP, GA_SLOW, GA_WALK, GA_JOG, GA_RUN, GA_SPRINT, NGAITS };
                                                 **   walk) or none (crawling, its arms enough); */
 #define C_STUCK         0x4000                  /*   not at all (no leg to stand on, nor arms enough to crawl) */
 #define C_MOVE          (C_LAME | C_CRAWLS | C_STUCK)
+#define C_NEWS          0x8000                  /* (The character's alone: the referee has words for it not told yet,
+                                                **   a skill opened by its use: the world's to ask for them, RS_TIME,
+                                                **   as it does for what time did, slice 4.4's) */
 
 /* ---- Health: how hurt an actor is, in words any ruleset can say */
 enum { H_FINE, H_HURT, H_BADLY, H_CRITICAL, H_DOWN, H_DEAD };

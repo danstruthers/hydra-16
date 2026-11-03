@@ -10,8 +10,8 @@
 ** RAM (the hub's not in the window while the overlay is), its words put into the reply's text.
 */
 
-#pragma code-name ("OV1CODE")
-#pragma rodata-name ("OV1RODATA")
+#pragma code-name ("OV7CODE")                   /* (Overlay 7's since slice 4.4: overlay 1's room) */
+#pragma rodata-name ("OV7RODATA")
 
 #include <string.h>
 #include <harn.h>
@@ -52,6 +52,9 @@ void __fastcall__ o_outfit_of (struct req* r)
         1u << (pc.att[HARN_SX] == HARN_F ? OT_FEMALE : OT_MALE);
     r->x[0] = v;
     r->x[1] = v >> 8;
+    k = HEFT_MAX (pc.att[HARN_STR]);
+    r->x[2] = k == 2 ? WV_HEAVY : k ? 0 : WV_LIGHT; /* (Its weapons' version, D13's: the heaviest its Strength wields
+                                                **   without penalty, a strong character's heavy) */
     r->result = 0;
     put (calling);                              /* (Its occupation, then its open skills, the highest first) */
     for (k = 0; k < HARN_NSKILLS; ++k) {

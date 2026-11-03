@@ -1075,6 +1075,40 @@ static void climb_round (void)
 #pragma code-name (push, "SW2CODE")
 #pragma rodata-name (push, "SW2RODATA")
 
+/* In a pit (its square's T_PIT: fallen in, a slip back to its floor): climbed out of again (its depth its record's),
+** to where it came from (a slip's: cl's), else the square it faces; 0 if it isn't in one (or faces no floor) */
+static unsigned char __fastcall__ pit_climb (unsigned char face)
+{
+    struct trap* q;
+    unsigned char* p;
+    unsigned char n;
+    unsigned x, y;
+
+    hub_map (0);
+    x = HUB->pc_x;
+    y = HUB->pc_y;
+    if (!(p = at (sn_, x, y)) || TILE (*p) != T_PIT) {
+        return 0;
+    }
+    for (n = C->ntraps, q = C->trap; n && (q->x != cx_ || q->y != cy_); --n, ++q) {
+    }
+    cl.need = n && q->power ? q->power : 10;
+    if (cl.up != 2) {
+        cl.x = x + head_x[face];
+        cl.y = y + head_y[face];
+        if (!(p = at (sn_, cl.x, cl.y)) || !T_PASS (*p)) {
+            return 0;
+        }
+    }
+    cl.up = 3;
+    cl.done = 0;
+    hub_map (0);
+    event (E_CLIMB, 0, K_BEGUN << 8 | cl.need);
+    task (LT_CLIMB, cl.need);
+    climb_round ();
+    return 1;
+}
+
 /* The ledge ahead of the character, up (or down): its climb begun (jump: jumped down it), or 0 (none) */
 static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char face, unsigned char jump)
 {
@@ -1164,6 +1198,14 @@ static void climb_round_on (void)
             HUB->pc_y = cl.y;
         }
         busy (t);
+        see (0);
+        return;
+    }
+    if (g == G_MF && cl.done && cl.up == 3) {   /* (A slip climbing out of a pit: the climb ends, back on its floor,
+                                                **   the player's to say what next: D13's, slice 4.4's) */
+        cl.up = 2;                              /* (Its top kept: climbed again, pit_climb's) */
+        cl.done = 0;
+        event (E_CLIMB, 0, K_SLID << 8 | (cl.need > 255 ? 255 : cl.need));
         see (0);
         return;
     }
@@ -1618,6 +1660,9 @@ void __fastcall__ s_climb (unsigned char d)
     face = HUB->pc_face;
     paced ();
     d &= ~I_JUMP;
+    if (d == DIR_UP && pit_climb (face)) {
+        return;                                 /* (In a pit: climbed out of, D13's) */
+    }
     if (d == DIR_UP && start_ledge (1, face, 0)) {
         return;                                 /* (A ledge just ahead, faced: climbed before the room's way up, as its
                                                 **   words say, u) */
@@ -3182,7 +3227,7 @@ void __fastcall__ s_worked (unsigned long t)
     HUB->pc_x = wk.fx;
     HUB->pc_y = wk.fy;
     if (wk.climb) {
-        cl.up = 1;
+        cl.up = 3;                              /* (A pit's: a slip ends it, D13's) */
         cl.need = wk.climb;
         cl.done = 0;
         cl.x = wk.fx;
@@ -4169,7 +4214,7 @@ unsigned char __fastcall__ s_dark_end (unsigned char how)
             out += struck (AS_POINT | Z_LOW << 5, 1 + feet / 10, feet / 5);
         }
         hub_map (0);
-        cl.up = 1;
+        cl.up = 3;                              /* (A pit's: a slip ends it, D13's) */
         cl.need = feet;
         cl.done = 0;
         cl.x = mx;

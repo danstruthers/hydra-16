@@ -773,7 +773,7 @@ static void __fastcall__ answer (struct req* r)
         r->w1 = 49 * 4;                         /* (Farthings, 2026-10-28) */
         r->w2 = (unsigned) HUB->seed | 1;
         r->a = 1;
-        r->x[0] = r->x[1] = 0;
+        r->x[0] = r->x[1] = r->x[2] = 0;       /* (x[2]: its weapons average, D13's) */
         *tp = 0;
         break;
     case RS_WIELD:                              /* (What it would strike with: the first it holds; its hands empty,

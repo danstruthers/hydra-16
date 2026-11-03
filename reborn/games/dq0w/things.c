@@ -362,6 +362,11 @@ unsigned __fastcall__ s_weight_of (unsigned i)
     const struct kind* k = kind_at (i);
     unsigned w = (unsigned) k->weight * (k->flags & K_PLURAL && !(k->form & KF_COUNT) ? 1 : item_at (i)->qty);  /* (A
                                                 **   lot counted, its count's: "drop two rations") */
+    unsigned char v;
+
+    if (k->craft == AP_WEAPON && (v = item_at (i)->size) != 0 && v <= WV_HEAVY) {
+        w += (v == WV_HEAVY ? w : -w) >> 2;     /* (A weapon's version: a quarter heavier, or lighter, D13's) */
+    }
 
     if (k->form & KF_TENS) {
         w = LOT_WT (k->form, w);                /* (A lot by the ten: the missiles', a tenth of a pound each; coins
@@ -659,6 +664,10 @@ static void tools (void)
                 strcat (t, k->tool);
                 m[0] = '0' + rec.quality;
                 strcat (t, m);
+                if (k->craft == AP_WEAPON && rec.size && rec.size <= WV_HEAVY) {
+                    m[0] = rec.size == WV_HEAVY ? 'H' : 'L';    /* (Its version: D13's, RS_EQUIP's) */
+                    strcat (t, m);
+                }
             }
         }
     }
@@ -4271,8 +4280,41 @@ void s_kit (void)
     char* more = tbuf;
 
     hub_map (0);
-    if (!(old = (HUB->gear & GE_OLD) || !outfit ())) {
+    k = HUB->gear & GE_OLD ? 0 : outfit ();
+    if (!(old = !k)) {
+        hub_map (KIND_BANK);                    /* (The money: in the pouch, silver pennies in lots of 250 at most (a
+                                                **   lot's count a byte, joined to 250), all of it, told together; its
+                                                **   odd farthings farthings, cut pennies: the user's, 2026-10-28,
+                                                **   "Please keep farthings": part 57's till slice 4.4, its room) */
+        for (i = ost.budget >> 2; i && (off = OF_N) < NOFIT; i -= box) {
+            box = i > 250 ? 250 : i;
+            memset (OF_LIST + off, 0, sizeof *OF_LIST);
+            OF_LIST[off].kind = KI_PENNIES;
+            OF_LIST[off].qty = box;
+            OF_LIST[off].quality = 4;
+            OF_LIST[off].place = PL_POUCH;
+            OF_N = off + 1;
+        }
+        if ((box = ost.budget & 3) != 0 && (off = OF_N) < NOFIT) {
+            memset (OF_LIST + off, 0, sizeof *OF_LIST);
+            OF_LIST[off].kind = KI_FARTHINGS;
+            OF_LIST[off].qty = box;
+            OF_LIST[off].quality = 4;
+            OF_LIST[off].place = PL_POUCH;
+            OF_N = off + 1;
+        }
+        box = 0;
+        hub_map (0);
         outmake (0);                            /* (Its outfit drawn: its things made) */
+        if (--k) {                              /* (Its weapons their version: the referee's, by its Strength, D13's;
+                                                **   the character's alone, on it) */
+            for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
+                kk = kind_at (i);
+                if (kk->craft == AP_WEAPON && (kk->flags & K_HAND) && on_pc (i)) {
+                    item_at (i)->size = k;
+                }
+            }
+        }
     }
 
     hub_map (UI_BANK);
