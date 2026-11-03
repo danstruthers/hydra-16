@@ -539,6 +539,30 @@ static void __fastcall__ worked (unsigned char action)
     intend2 (I_WAIT, t, k << 8 | (n & 0x7F) << 1 | 1);
 }
 
+/* What's carried told (the things' words, IO_LIST's: past lb's size in pieces, each ending at a word's end) */
+void o_list_say (void)
+{
+    unsigned off = 0, n;
+    char* e;
+
+    do {
+        hub_mem (UI_BANK, lb, UIREC->things_text + off, sizeof lb - 1);
+        lb[sizeof lb - 1] = 0;
+        n = strlen (lb);
+        e = 0;
+        if (n == sizeof lb - 1 && (e = strrchr (lb, ' ')) != 0) {
+            *e = 0;
+            n = e - lb;
+        }
+        if (off) {
+            say (lb);
+        } else {
+            msg (lb);
+        }
+        off += n;
+    } while (e);
+}
+
 /* The commands that want nothing but their action, past main.c's chores (its default's: part 2 has no room): 1 if
 ** it was one of them, carried out; each slice's own cases here, its work in its own part or overlay */
 unsigned char __fastcall__ o_more (unsigned char action)

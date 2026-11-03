@@ -397,6 +397,7 @@ extern unsigned char said_ahead, placing;       /* (main.c's: its walk told alre
 void __fastcall__ walk_says (const char* name);    /* (A walk over told as it begins, at once: "You go over to the pot."; 0: the command's thing) */
 unsigned char search_go (void);                 /* (Part 10's) A search begun, by its form (search.c) */
 void __fastcall__ sheet_map (unsigned char what);   /* (Part 3's) The sheet (0), or the map (1) */
+void list_say (void);                           /* (Overlay 16's) What's carried told, the things' words */
 unsigned char door_go (void);                   /* (Part 13's) A door meant, not workable from here, walked up to first */
 void __fastcall__ search_said (const struct msg* m);   /* (A room searched whole's, as it goes: an E_BEAT's WB_SEARCH) */
 unsigned char __fastcall__ place_go (const struct cmd* c);   /* Part 7: a place in the room walked to */                  /* Part 7: a command's thing out of reach walked over to first */

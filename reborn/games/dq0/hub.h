@@ -1533,7 +1533,8 @@ enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY };      /* The look's kinds: a look abo
 struct uirec {
     char            map[MAP_H][MAP_W + 1];      /* The map's rows (the maker's, as the UI asks: mapq; maplay their
                                                 **   squares' layers) */
-    char            things_text[400];           /* The things' words for the UI (what's carried: ireq's reply), and
+    char            things_text[800];           /* The things' words for the UI (what's carried: ireq's reply; said in pieces
+                                                **   of lb's size, list_say's: a soldier's kit runs past 400), and
                                                 **   the UI's to the things (dq0 -k's: the things more) */
     unsigned        before[SEE_ITEMS + SEE_DENS];   /* What it saw as the command began (resolve.c's): the things' numbers,
                                                 **   the denizens' first letters; a walk over for it tells only what's

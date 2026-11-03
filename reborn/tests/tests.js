@@ -4881,8 +4881,8 @@ module.exports = {
           'left, or 3. the giant rat ahead?', 'Your target: the giant rat.', 'Your target: the giant rat ahead to your left.',
           'You take the dagger in your right hand.', 'You throw your dagger at the giant rat, and miss.', 'Put down.',
           'Which do you mean: 1. the body ahead', 'the bones ahead to your right, or 3. the pick where you stand?', 'Taken.',
-          'Which do you mean: 1. the body ahead', 'or 2. the pick where you stand?', 'Taken.', 'Your hands are full, and your pack too.',
-          'a pick, a torch, a flask of oil, bones', 'You carry none of those.', 'Your hands are full, and your pack too.', 'Throw it at what?',
+          'Which do you mean: 1. the body ahead', 'or 2. the pick where you stand?', 'Taken.', 'Your hands are full, and there\'s nowhere to put it.',
+          'a pick, a torch, a flask of oil, bones', 'You carry none of those.', 'Your hands are full, and there\'s nowhere to put it.', 'Throw it at what?',
           'You finish the giant rat where it lies.', 'You have no target now.',
           'You have no target.', 'You turn to face north.', 'You come to the wall.', '% echo $status'];
         let at = 0;
@@ -7482,9 +7482,12 @@ module.exports = {
         "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
         'd', 'wait', 'look', 'quit',
         "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
-        'd', 'wait', 'look', 'quit', 'echo $status']) },
+        'd', 'wait', 'look', 'quit',
+        "dq0 -p t -s 1 -c /ram/c.hm -k sword -T -R 1", 'wait', 'wait', 'wait', 'wait', 'wait', 'look', 'quit', 'echo $status']) },
       start(m) {
-        dq0BodyPoke(m, [{ g: 2, line: 'wait', n: 1, name: 'ghoul', lv: 12, ex: 5990, at: 0 }]);
+        dq0BodyPoke(m, [{ g: 2, line: 'wait', n: 1, name: 'ghoul', lv: 12, ex: 5990, at: 0 },
+          ...[2, 3, 4, 5].map(n => ({ g: 3, line: 'wait', n, name: 'giant rat', lv: 12, ex: 5990, at: 0 }))]);
+        dq0Poke(m, [{ g: 3, line: 'wait', n: 1, name: 'giant rat', beside: 'face', engage: true, set: { attitude: 0 } }]);
       },
       expect: ['% echo $status'],
       check(m, out) {
@@ -7496,11 +7499,14 @@ module.exports = {
         else if (!last.at || last.lv * 6000 + last.ex < 200) f.push('game 1: the ghoul\'s rounds not charged: ' + JSON.stringify(b1));
         const fights1 = T.filter(t => t.game === 0).reduce((n, t) => n + t.dens.filter(e => e.kind === 'E_FIGHT' && e.out !== 'FO_BLED').length, 0);
         if (last && last.lv * 6000 + last.ex > 200 * fights1) f.push('game 1: the ghoul charged more than its rounds (' + fights1 + ' blows): ' + JSON.stringify(last));
-        // (Game 2: set a breath short of a level more, its next round tires it, and it breaks off)
+        // (Game 2: set a breath short of a level more, its next round tires it: a ghoul's no beast, its sheet two-legged, it fights on, 2026-11-03)
         const p = bodies.find(b => b.g === 2 && b.poked);
         if (!p) f.push('game 2: the ghoul\'s body not set (not an actor as the wait was typed)');
         const flee = T.filter(t => t.game === 1).flatMap(t => t.dens).filter(e => e.kind === 'E_FIGHT' && (e.ff & 0x10));
-        if (!flee.length) f.push('game 2: the tired ghoul didn\'t break off (no blow with FF_FLEES): ' + T.filter(t => t.game === 1).map(dq0Evs).join(' | ').slice(0, 1500));
+        if (flee.length) f.push('game 2: the tired ghoul broke off, as a beast does: ' + T.filter(t => t.game === 1).map(dq0Evs).join(' | ').slice(0, 1500));
+        // (Game 3: a beast, a giant rat, a breath short each round: short of steady, it breaks off)
+        const rflee = T.filter(t => t.game === 2).flatMap(t => t.dens).filter(e => e.kind === 'E_FIGHT' && (e.ff & 0x10));
+        if (!rflee.length) f.push('game 3: the tired rat didn\'t break off: ' + T.filter(t => t.game === 2).map(dq0Evs).join(' | ').slice(0, 1500));
         const b2 = gh(2), l2 = b2[b2.length - 1];
         if (p && (!l2 || l2.lv < 13)) f.push('game 2: the ghoul not a level more tired: ' + JSON.stringify(b2));
         this.notes = [JSON.stringify(bodies)];
@@ -7941,6 +7947,167 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0darklook', asks: true, initiative: true, reach: true, bearings: true, outfit: true, near: ['senses', 'gear'], what: 'Dingus Quest Zero\'s look in the dark (the user\'s, 2026-11-03, DECISIONS.md\'s: "if I say `look around` it should really fell around, looking for things in the environment (on the floor, the walls)"; asked, the same as feel around, in the light as they are, blind as dark, things on walls as well as the floor, and what it finds taken next): at seed 3 in a kitchen, its torch put out: a look and a look around each what its hands tell at once, then the search nearby, its minute, finding the pot and the well on the floor and the sconce on the wall; "look for the pot" by touch; taken next, the sconce\'s torch to a free hand, a second, no pack off (the user\'s, any thing from a fixture), the pack only with both hands full.  Blind in the light the same; in the light a look takes no time; in shock or busy, not here',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 3 -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -a', 'look', 'look around', 'put out the torch', 'look', 'look around', 'look for the pot', 'take the torch from the sconce', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -a', 'look', 'blinded', 'turn around', 'look', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -a -k sword', 'take the torch from the sconce', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -a', 'take the torch', 'inventory', 'quit',
+        'echo $status']) },
+      start(m) {
+        const a = m.acia, read = a.read;
+        let typed = '', on = 0;
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            if (a.rx === 13) { if (typed === 'blinded') on = 1; if (/^quit/.test(typed)) on = 0; typed = ''; } else if (a.rx >= 32) typed += String.fromCharCode(a.rx);
+            const h = on && m.dq0 && m.dq0.bank(0);
+            if (h) { const { L } = m.dq0.layout(); h[L.pcsum + L.sCond + 1] |= 1; }   // (rs.h's C_BLINDED, its high byte: held on, as dq0blind's)
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const games = []; for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) games.push(i);
+        const seg = (g, line, n = 1) => { const e = '> ' + line + ' > ' + line; let i = games[g - 1]; for (let k = 0; k < n && i >= 0; k++) i = s.indexOf(e, i + 1);
+          if (i < 0) { f.push('game ' + g + ': "' + line + '" not answered'); return ''; } const j = s.indexOf(' > ', i + e.length); return s.slice(i + e.length, j < 0 ? s.length : j); };
+        const has = (g, line, w, n) => { if (!seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ': not told ' + w + ': ' + seg(g, line, n).slice(0, 400)); };
+        const never = (g, line, w, n) => { if (seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ': told ' + w); };
+        const gk = {}; T.forEach((t, k) => { if (/^dq0 /.test(t.line)) gk[Object.keys(gk).length + 1] = k; });
+        const dt = (g, line, tenths, n = 1) => { let k = gk[g], t; for (let i = 0; i < n; i++) { t = T.of(line, k); k = t.k + 1; } const d = t.at && t.after ? t.after.now - t.at.now : null; if (d !== tenths) f.push('game ' + g + ', ' + line + ' (' + n + '): ' + d + ' tenths, not ' + tenths); };
+        // (In the light, as they were)
+        for (const l of ['look', 'look around']) { never(1, l, 'You feel about'); dt(1, l, 0); }
+        // (In the dark, feel around: the hands' words, then the search; floor and wall)
+        for (const [l, n] of [['look', 2], ['look around', 2]]) {
+          inTurn(seg(1, l, n), ['You feel a wall', 'You feel about you in the dark...', 'Your hands find', 'iron pot', 'well', 'sconce'], f, 'dark ' + l + ': ');
+          dt(1, l, 600, n);
+        }
+        has(1, 'look for the pot', 'You feel about in the dark for the pot');
+        // (Taken next: a free hand, the sconce's)
+        has(1, 'take the torch from the sconce', 'It\'s in your hand.');
+        never(1, 'take the torch from the sconce', 'backpack');
+        has(1, 'inventory', 'in your right hand');
+        // (Blind, in a lit room)
+        inTurn(seg(2, 'look', 2), ['You can\'t see.', 'You feel about you in the dark...', 'Your hands find'], f, 'blind: ');
+        // (Both hands full: the pack)
+        has(3, 'take the torch from the sconce', 'You take off your backpack');
+        has(3, 'take the torch from the sconce', 'in your backpack');
+        // (A plain take of the sconce's: the hand too)
+        never(4, 'take the torch', 'backpack');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0housefaults', asks: true, initiative: true, reach: true, bearings: true, outfit: true, near: ['gear', 'map'], what: 'Dingus Quest Zero\'s faults found by HOUSE.md\'s check (2026-11-03), each as it was shown: a journey ended at a shut door told, and nothing written into the chunk in the window (the hub writers\' check); a door round a bend walked up to first, closed, opened and struck; a denizen standing in the door meant said to be in the way, no walk to the wall; a far look\'s words ("is some 10 feet off"); a closed thing searched not held open; a shut door said by "examine the wall", one test of a rock; "sharpen the torch" refused, the torch still lit; "walk normally" and "walk quickly" said in the dark; "stop working" whatever the work; a dropped lit torch no time, and put out a second; a second new torch not the old one at its feet; a candle read by its own life; a mankar named strikes though a better weapon\'s held; thrown hard at a denizen',
+      init: 't_rc', cycles: 9000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -o /ram/c.hm',
+        'dq0 -p t -s 5 -c /ram/c.hm -a', 's', 's', 'go to the entrance', 'go to the entrance', 'quit',
+        'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 1 -c /ram/c.hm -k sword -T -a -I -J -N -K', 'go through the door', 'turn around', 'close the door', 'open the door', 'quit',
+        'dq0 -p t -s 1 -c /ram/c.hm -k sword -T -a -I -J -N -K', 'go through the door', 'turn around', 'kick the door', 'quit',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -a -I -J -N -K', 'go to the door', 'wait', 'go through the door', 'quit',
+        'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -a', 'look at the table', 'take the table', 'quit',
+        'hmchar -q -s 3 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -a', 'search the iron pot', 'sharpen the torch', 'inventory', 'drop the hammer', 'quit',
+        'hmchar -q -s 5 -o /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -a', 's', 's', 'examine the wall', 'quit',
+        'hmchar -q -s 3 -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -a', 'examine the wall', 'examine the wall', 'examine the wall', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -a', 'put out the torch', 'walk normally', 'status', 'walk quickly', 'status', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -a', 'drop the torch', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -a', 'put out the torch', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -a', 'light a new torch', 'light a new torch', 'light a new torch', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -a -k candle', 'examine the candle', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -a -k pick', 'dig down', 'quit',
+        'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 4, line: 'go through the door', n: 1, name: 'giant rat', beside: 'face' }]);
+        dq0OnWords(m, [{ g: 14, line: 'dig down', n: 1, words: 'You dig', text: 'stop working\r' }]);
+        // (walk_ahead's mark, sampled as the console's used: a far thing's walk told before the world's asked)
+        const ad = parseInt(/^al ([0-9A-F]+) \._said_ahead$/m.exec(fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0', 'dq0.lbl'), 'latin1'))[1], 16), c = m.acia, w0 = c.write;
+        m.ahead = 0;
+        c.write = function (r, v, t) { const h = m.dq0 && m.dq0.bank(0), u = h && m.taskRam[h[12]]; if (u && u[ad]) m.ahead++; return w0.call(c, r, v, t); };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const games = []; for (let i = s.indexOf('% dq0 '); i >= 0; i = s.indexOf('% dq0 ', i + 1)) games.push(i);
+        const seg = (g, line, n = 1) => { const e = '> ' + line + ' > ' + line; let i = games[g - 1]; for (let k = 0; k < n && i >= 0; k++) i = s.indexOf(e, i + 1);
+          if (i < 0) { f.push('game ' + g + ': "' + line + '" not answered'); return ''; } const j = s.indexOf(' > ', i + e.length); return s.slice(i + e.length, j < 0 ? s.length : j); };
+        const has = (g, line, w, n) => { if (!seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ': not told ' + w + ': ' + seg(g, line, n).slice(0, 400)); };
+        const never = (g, line, w, n) => { if (seg(g, line, n).includes(w)) f.push('game ' + g + ', ' + line + ': told ' + w); };
+        const gk = {}; T.forEach((t, k) => { if (/^dq0 /.test(t.line)) gk[Object.keys(gk).length + 1] = k; });
+        const dt = (g, line, tenths, n = 1) => { let k = gk[g], t; for (let i = 0; i < n; i++) { t = T.of(line, k); k = t.k + 1; } const d = t.at && t.after ? t.after.now - t.at.now : null; if (d !== tenths) f.push('game ' + g + ', ' + line + ' (' + n + '): ' + d + ' tenths, not ' + tenths); };
+        // (A journey's end at a shut door: told, every time)
+        has(1, 'go to the entrance', 'The door is shut: open it first.', 1);
+        has(1, 'go to the entrance', 'The door is shut: open it first.', 2);
+        // (A door round a bend)
+        has(2, 'close the door', 'You head for the door.');
+        has(2, 'close the door', 'You close the door.');
+        never(2, 'close the door', 'no door that way');
+        has(2, 'open the door', 'You open the door');
+        has(3, 'kick the door', 'You head for the door.');
+        never(3, 'kick the door', 'no door that way');
+        // (A denizen in the door meant)
+        has(4, 'go through the door', 'is in the way.');
+        never(4, 'go through the door', 'You come to the wall');
+        // (The words)
+        has(5, 'look at the table', 'The table is some 10 feet off.');
+        has(5, 'take the table', 'You go over to the table.');
+        if (!(m.ahead > 0)) f.push('a far thing\'s walk not told before the world was asked (said_ahead never set)');
+        never(6, 'search the iron pot', 'You hold the iron pot open.');
+        has(6, 'search the iron pot', 'It\'s closed');
+        dt(6, 'search the iron pot', 600);
+        has(6, 'sharpen the torch', 'can\'t be filled or sharpened');
+        has(6, 'inventory', 'a torch (lit)');
+        dt(6, 'drop the hammer', 1);
+        has(7, 'examine the wall', 'That\'s a door');
+        never(7, 'examine the wall', 'bare rock');
+        const w1 = seg(8, 'examine the wall', 1), w2 = seg(8, 'examine the wall', 2), w3 = seg(8, 'examine the wall', 3);
+        if (w1 !== w2 || w2 !== w3) f.push('the same wall looked at again answered otherwise: ' + [w1, w2, w3].join(' | '));
+        // (Paces said in the dark)
+        never(9, 'walk normally', 'held to a slow walk');
+        has(9, 'status', 'a walk', 1);
+        has(9, 'status', 'a walk', 2);
+        // (A light's change: its handling's time)
+        dt(10, 'drop the torch', 1);
+        dt(11, 'put out the torch', 10);
+        // (A new light: the two spares, then none, the old one at its feet not new)
+        has(12, 'light a new torch', 'You light the new torch from the burning one.', 1);
+        has(12, 'light a new torch', 'You light the new torch from the burning one.', 2);
+        has(12, 'light a new torch', 'You have no other torch.', 3);
+        // (A candle by its own life)
+        has(13, 'examine the candle', 'hardly burnt');
+        never(13, 'examine the candle', 'a quarter burnt down');
+        // (Stop working: whatever the work)
+        never(14, 'dig down', 'You aren\'t digging');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0fit', asks: true, initiative: true, reach: true, bearings: true, outfit: true, near: ['gear'], what: 'Dingus Quest Zero\'s outfit fits the character\'s strength (the brief of 2026-11-03: "An outfit should fit the character\'s strength: leave out the heavy things first"; HOUSE.md\'s an outfit that fits): weak characters and a laden soldier start a little burdened at most, with their clothes, pack, belt, a lit light, a fire-maker, food and water; a whole inventory told past 400 letters (2026-11-03: it was cut off, its weight and all), with a strong one\'s long list',
+      init: 't_rc', cycles: 5000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin',
+        'hmchar -q -s 102 -u feudal -c thief -o /ram/c.hm', 'dq0 -p t -s 102 -c /ram/c.hm -T -a', 'status', 'inventory', 'quit',
+        'hmchar -q -s 103 -u feudal -c thief -o /ram/c.hm', 'dq0 -p t -s 103 -c /ram/c.hm -T -a', 'status', 'inventory', 'quit',
+        'hmchar -q -s 102 -u feudal -c miner -o /ram/c.hm', 'dq0 -p t -s 102 -c /ram/c.hm -T -a', 'status', 'inventory', 'quit',
+        'hmchar -q -s 100 -u feudal -o /ram/c.hm', 'dq0 -p t -s 100 -c /ram/c.hm -T -a', 'status', 'inventory', 'quit',
+        'hmchar -q -s 100 -u feudal -o /ram/c.hm', "dq0 -p t -s 100 -c /ram/c.hm -T -a -k 'sack,rope,candle,chisel,shovel,pick,crowbar,chalk'", 'inventory', 'quit',
+        'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out);
+        const enc = [...s.matchAll(/Condition: (.*?)Hunger/g)].map(x => { const e = /encumbrance (\d+)/.exec(x[1]); return e ? +e[1] : 0; });
+        if (enc.length !== 4) f.push('status told ' + enc.length + ' times, not 4');
+        enc.forEach((e, i) => { if (e > 2) f.push('character ' + (i + 1) + ' starts at encumbrance ' + e); });
+        const inv = [...s.matchAll(/> inventory > inventory (.*?) > quit/g)].map(x => x[1]);
+        inv.forEach((t, i) => { for (const w of ['clothes', 'backpack', 'belt', 'tinderbox', 'rations', 'waterskin', '(lit)', 'In all,']) if (!t.includes(w)) f.push('inventory ' + (i + 1) + ': no ' + w + ': ' + t.slice(0, 500)); });
+        if (inv[4] && inv[4].length <= 400) f.push('the long inventory only ' + inv[4].length + ' letters: not the case it means: ' + inv[4]);
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0packsteps', reach: true, near: ['gear'], what: 'Dingus Quest Zero\'s reach told and timed a step at a time (the user\'s, 2026-11-02, DECISIONS.md\'s: a worn pack off, the thing got out, the pack back on, each its words and its time; "Applies to any tool use"; light a new torch; lighting by a fire-maker; a torch redipped; HOUSE.md\'s reach, for review), by the words in order and the clock: at seed 3 (dq0 -T) from the worn pack, from a sack in it (a level more), a look in, a search, a pack on the ground (no off, no on), a stop part way (the pack left off, told), both hands free (in a hand), hands full (at its feet); "light a new torch" (the old let fall, a spare by its steps, lit from the old where it lies) and no spare ("You have no other torch.", nothing dropped), "take a fresh torch", "hold another torch"; a pick from the pack (out, the dig, stopped, the pack left off told); a torch lit by the tinderbox from the worn pack and from the belt\'s pouch (no off, no on), its tries told, 20 less in the dark; empty, told at its step, then refused at once; "refresh the torch" lit with a spare (the preferred order), with a sword in the other hand (set down, taken up), "dip the torch" with no spare (blown out, by touch in the dark, the oil spilt or not, lit again by the fire-maker)',
       init: 't_rc', cycles: 12000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
@@ -8008,7 +8175,8 @@ module.exports = {
         // (A new light)
         order(2, 'light a new torch', ['You set the sword down at your feet.', 'You take off your backpack, and set it down at your feet.', 'You get out the new torch.', 'You light the new torch from the burning one.', 'You blow out the old torch.', 'You let the old torch fall.', 'You take up the sword.', 'You put your backpack back on.']);
         never(2, 'light a new torch', 'tinderbox');
-        has(2, 'light a new torch', 'You have no other torch.', 2);
+        has(2, 'light a new torch', 'You light the new torch from the burning one.', 2);   // (The one in its other hand, 2026-11-03)
+        never(2, 'light a new torch', 'You get out', 2);
         has(2, 'inventory', 'a sword, in your right hand');
         has(2, 'inventory', 'a torch (lit), in your left hand', 2);
         has(3, 'inventory', 'a torch, in your right hand');
@@ -9744,7 +9912,7 @@ module.exports = {
         said('examine the sconce', ['You go over to the sconce.', 'The sconce is'], ['A barrel vault', 'by the light of', 'On the iron pot lies']);
         said('assess the sconce', ['You go over to the sconce.', 'You judge it'], ['A barrel vault', 'by the light of']);
         said('take the pot', ['You go over to the pot.', 'Taken.'], ['A barrel vault', 'by the light of', 'at your feet', 'At your feet', 'lies an iron pot']);
-        said('take the pot', ['You go over to the pot.', 'Your hands are full, and your pack too.'], ['A barrel vault', 'by the light of', 'at your feet', 'At your feet', 'lies an iron pot']);
+        said('take the pot', ['You go over to the pot.', 'Your hands are full, and there\'s nowhere to put it.'], ['A barrel vault', 'by the light of', 'at your feet', 'At your feet', 'lies an iron pot']);
         said('go to the door', 'You head for the door.');
         said('go to the sconce', 'You go over to the sconce.');
         said('go to the window', 'You haven\'t seen a window here.');

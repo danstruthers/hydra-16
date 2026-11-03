@@ -12,6 +12,7 @@
 #include "../dq0/hub.h"
 #include "world.h"
 #include "things.h"
+#include "outfit.h"
 #include "wbody.h"
 
 #pragma local-strings (on)
@@ -86,11 +87,18 @@ unsigned char __fastcall__ s_take_rule (unsigned n)
 ** coins and jewels), by the take rule, held (its own: a weapon told the referee, its hand's), told (E_BEAT WB_PICKS:
 ** "The bandit snatches up its sword."); none, the nearest one lying within four squares told its mind (the hub's
 ** dig_t, TW_SEEN | its offsets: it goes to it, and asks again) */
+static void fit (void);
 void __fastcall__ s_den_take (const struct msg* m)
 {
     unsigned i, seen = 0;
-    unsigned char want = m->a, k, f, c, d, best = 5;
+    unsigned char want, k, f, c, d, best = 5;
     int dx, dy;
+
+    if (!m) {
+        fit ();                                 /* (The character's outfit's, s_outfit's: below) */
+        return;
+    }
+    want = m->a;
 
     for (i = 0; (i = items (i, IN_SQUARE, 0)) != 0; ) {
         if (ip->sn != bd.sn || (unsigned) ((dx = ip->x - bd.x) + 4) > 8 || (unsigned) ((dy = ip->y - bd.y) + 4) > 8 ||
@@ -143,3 +151,78 @@ void __fastcall__ s_den_take (const struct msg* m)
     }
 }
 
+
+/* An outfit fits the character's strength (HOUSE.md's an outfit that fits; ost.kept what it bears, quarter pounds): the list's
+** things left out, the heaviest first (a lot's one at a time: two spare torches), till it weighs that at most or nothing's left
+** to leave: never what it wears for clothes and shoes, its pack, its belt and what hangs from it (a waterskin, full), a
+** container with something in it, its light lit, its fire-maker, its food.  Not refunded: left at home */
+#pragma bss-name (push, "SW81RODATA")           /* (Its own data, wanted only while it runs: not the main RAM's) */
+static void fit (void)
+{
+    static const unsigned char keep[] = { KI_CLOTHES, KI_SANDALS, KI_SHOES, KI_TINDERBOX, KI_RATIONS };
+    register struct ofit* e;
+    register const struct kind* k;
+    static unsigned t, w, bd;
+    static unsigned char n, j, i, best;
+
+    hub_map (KIND_BANK);
+    n = OF_N;
+    for (;;) {
+        best = 0xFF;
+        bd = 0;
+        k = CATALOGUE + KI_PENNIES;             /* (Its money, to come, s_kit's: never left out) */
+        t = LOT_WT (k->form, k->weight * (ost.budget >> 2));
+        for (j = 0, e = OF_LIST; j < n; ++j, ++e) {
+            k = CATALOGUE + e->kind;
+            w = k->weight;
+            i = e->qty;
+            if (k->form & KF_TENS) {
+                w = LOT_WT (k->form, w * i);
+                i = 1;
+            } else if ((k->flags & K_PLURAL) && !(k->form & KF_COUNT)) {
+                i = 1;
+            }
+            t += w * i;
+            if (k->craft == AP_WEAPON) {
+                t += w >> 2;                    /* (At most: a strong character's heavy version, s_kit's) */
+            }
+            if (e->flags & TF_FULL) {
+                t += 20;                        /* (A waterskin's four pints, five pounds) */
+            }
+            if (w <= bd || (e->flags & TF_LIT) || ((k->flags & (K_CONTAINER | K_BELT)) && (e->place == PL_WORN ||
+                e->place == PL_BELT))) {
+                continue;
+            }
+            for (i = 0; i < sizeof keep && keep[i] != e->kind; ++i) {
+            }
+            if (i < sizeof keep) {
+                continue;
+            }
+            for (i = 0; i < n && OF_LIST[i].in != j + 1; ++i) {
+            }
+            if (i == n) {
+                bd = w;
+                best = j;
+            }
+        }
+        if (t <= ost.kept || best == 0xFF) {
+            break;
+        }
+        e = OF_LIST + best;
+        k = CATALOGUE + e->kind;
+        if (e->qty > 1 && !(k->form & KF_TENS) && (!(k->flags & K_PLURAL) || (k->form & KF_COUNT))) {
+            --e->qty;
+            continue;
+        }
+        --n;
+        memcpy (e, e + 1, (n - best) * sizeof *e);   /* (Upward, a byte at a time: the list's own) */
+        for (j = 0, e = OF_LIST; j < n; ++j, ++e) {
+            if (e->in > best + 1) {
+                --e->in;
+            }
+        }
+    }
+    OF_N = n;
+    hub_map (0);
+}
+#pragma bss-name (pop)

@@ -2331,7 +2331,7 @@ portal:
         return;
     case VB_META_INVENTORY:
         things (IO_LIST, "");
-        msg (tt ());
+        list_say ();
         if ((d = HUB->pcsum.load) != 0) {
             tell (T_BURDENED - 1 + d);          /* (Its load, as the referee has it: its encumbrance) */
         }
@@ -2563,7 +2563,7 @@ unsigned char s_reach_go (void)
     return r;
 }
 
-/* A door, a window, a portcullis or a passage's mouth meant (find's tx, ty) that the world's door work can't reach from
+/* A door, a window or a portcullis meant (find's tx, ty) that the world's door work can't reach from
 ** here: it works one beside the character by the four ways, and one on the walls of the room it stands in; one round a
 ** bend, diagonal to it, or down a passage beyond the room is walked up to first (I_GOTO: it ends before it), then the
 ** command again (the user's, 2026-10-20: "any action that needs its thing within reach walks over first"): 1 if so, or
@@ -2573,10 +2573,10 @@ unsigned char s_door_go (void)
     const struct sight* s = sight_get ();
     int dx = (int) tx - HUB->pc_x, dy = (int) ty - HUB->pc_y;
 
-    if (cmd.obj.kind != OB_DOOR && cmd.obj.kind != OB_WINDOW && cmd.obj.kind != OB_PORTC && cmd.obj.kind != OB_PASSAGE) {
+    if (cmd.obj.kind != OB_DOOR && cmd.obj.kind != OB_WINDOW && cmd.obj.kind != OB_PORTC) {
         return 0;
     }
-    if ((dx * dx + dy * dy) == 1 || (s->where == W_ROOM && tx + 1 >= s->rx && tx <= s->rx + s->rw && ty + 1 >= s->ry &&
+    if ((dx * dx + dy * dy) <= 1 || (s->where == W_ROOM && tx + 1 >= s->rx && tx <= s->rx + s->rw && ty + 1 >= s->ry &&
         ty <= s->ry + s->rh)) {
         return 0;
     }

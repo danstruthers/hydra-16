@@ -484,6 +484,8 @@ void __fastcall__ walk (unsigned char d);       /* (Part 9's, its stub: across's
 
 static void __fastcall__ no_way (unsigned why)
 {
+    hub_map (0);                                /* (A chunk may be in the window, its portal just read: a journey's leg's,
+                                                **   a step's: told to the hub's, not into the chunk) */
     event (E_NOWAY, 0, why);
     HUB->pc_ready = HUB->now;
     HUB->pc_going = IDLE;
@@ -2415,7 +2417,6 @@ static unsigned char leg (void)
         at (sn_, tex, tey);                     /* (A passage's door that way, shut: open it first, as a room's that
                                                 **   it hasn't handled, the walk's) */
         how = portal_at (cx_, cy_) && portal_at (cx_, cy_)->kind == PK_PORTCULLIS ? N_CLOSED : N_DOOR;
-        hub_map (0);                            /* (Its portal read: the chunk out of the window, the hub's to be told) */
         no_way (how);
         trav_end (0);
         return 0;

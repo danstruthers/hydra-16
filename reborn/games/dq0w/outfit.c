@@ -225,13 +225,15 @@ static unsigned char kit_read (void)
     return 1;
 }
 
+void __fastcall__ den_take (const struct msg* m);   /* (Part 81's: 0, the outfit fitted to its strength, wtake.c's fit) */
+
 /* ---- The character's outfit: the referee asked (RS_OUTFIT, the UI's slot: the UI waits on the kit), drawn into the
 ** list; 0 if there's none (no file, a referee that hasn't one: the kit as it was) */
 unsigned char s_outfit (void)
 {
     struct req* r;
     unsigned char occ = 0, k, first, okeep = 0, obent = 0, olen, wv;
-    unsigned off = 0, boff;
+    unsigned off = 0, boff, cap;
 
     if (!opened ()) {
         return 0;
@@ -248,6 +250,7 @@ unsigned char s_outfit (void)
     ost.budget = r->w1;
     ost.rs = r->w2 | 1;
     wv = r->x[2];                               /* (Its weapons' version, by its Strength: the referee's, D13's) */
+    cap = r->x[3] << 2;                         /* (What it bears, a little burdened at most: quarter pounds) */
     ost.tags = r->x[0] | r->x[1] << 8;
     ost.level = r->a;
     if (reply_line (0, "")) {                   /* (Its occupation's section: the culture's own first, NAME/c) */
@@ -311,6 +314,9 @@ unsigned char s_outfit (void)
     ost.budget += ost.kept;                     /* (The money: s_kit's, part 63's, the room of this one's image) */
     if (kit_read ()) {
         ost.budget = 0;                         /* (Its kit carried on: its own money in it, slice 4.4's) */
+    } else {
+        ost.kept = cap;                         /* (What it bears: part 81's, no stub of its own, the main RAM's room) */
+        den_take (0);
     }
     return 1 + (wv < 3 ? wv : 0);               /* (Drawn; its weapons' version too, the kit's to make: s_kit's) */
 }

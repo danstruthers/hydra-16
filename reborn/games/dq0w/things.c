@@ -3828,7 +3828,7 @@ static void words (void)
     if (tw.id && tw.fuel <= BURN_LOW && (tw.fuel || (twk->flags & K_LIGHT) || (unsigned char) (tw.kind - KI_OIL) <=
         KI_PITCH - KI_OIL) && burn_of (tw.kind)) {  /* (A light spent or low, a fuel empty: slice 4.1's; only a
                                                 **   light's or a fuel's spent, burn_of not asked of the rest) */
-        put (!(twk->flags & K_LIGHT) ? (tw.fuel ? "" : " (empty)") : tw.fuel ? " (burning low)" : " (spent)");
+        put (!(twk->flags & K_LIGHT) ? (tw.fuel ? "" : " (empty)") : !tw.fuel ? " (spent)" : tw.flags & I_LIT ? " (burning low)" : " (nearly spent)");
     }
     if (tw.wear >= 32) {                        /* (Its wear: a blade dulled, a tool worn) */
         put (!(twk->flags & K_BELT) && (twk->slots == FM_SWORD || twk->slots == FM_KNIFE) ? (tw.wear >= 128 ?
@@ -4832,7 +4832,7 @@ spare:
             return no (SA_NOT_LIT);
         }
         o_flags (n, 0, I_LIT);
-        return yes (SA_DOUSE, 0);
+        return yes (SA_DOUSE, 10);              /* (A second, as the redip's: main.c's after) */
     }
     if (r) {
         return no (SA_LIT);

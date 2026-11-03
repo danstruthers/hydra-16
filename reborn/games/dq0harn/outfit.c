@@ -55,6 +55,12 @@ void __fastcall__ o_outfit_of (struct req* r)
     k = HEFT_MAX (pc.att[HARN_STR]);
     r->x[2] = k == 2 ? WV_HEAVY : k ? 0 : WV_LIGHT; /* (Its weapons' version, D13's: the heaviest its Strength wields
                                                 **   without penalty, a strong character's heavy) */
+    set_load (4000);                            /* (What it bears at encumbrance 2, a little burdened at most, in pounds: its
+                                                **   free pounds, and the load, under two and a half times its Endurance:
+                                                **   the world's to leave the rest out, HOUSE.md's an outfit that fits) */
+    v = (carried.cost - carried.wt) / 10 + (5 * harn_end (&pc) - 1) / 2;
+    r->x[3] = v > 255 ? 255 : v;
+    set_load (0);
     r->result = 0;
     put (calling);                              /* (Its occupation, then its open skills, the highest first) */
     for (k = 0; k < HARN_NSKILLS; ++k) {

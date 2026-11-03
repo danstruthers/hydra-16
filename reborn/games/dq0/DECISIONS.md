@@ -1572,3 +1572,16 @@ fill your waterskin." all the same, and nothing told how full it was: so it seem
 load at all, asleep or awake: what rose in a long sleep was hunger's and thirst's fatigue levels (very hungry or very
 thirsty one, starving or parched two, wasting or dying four, not rested off), under a Condition line that named the load and
 not the want.  **Design:** HOUSE.md's a load borne, a new light, the kit's light, a chisel and a hammer; DUNGEON.md's status.
+
+### Looking in the dark; a thing taken from a fixture (2026-11-03)
+
+The user (2026-11-03): "When in the dark, if I say `look around` it should really fell around, looking for things in the environment (on the floor, the
+walls) to see if there is anything nearby to grab/use."  And: "`feel around` already works, so that is nice".
+
+The lead asked: "In the dark, what should `look around` and plain `look` do?"  The user chose: the same as feel around; in the light they stay as they
+are; check it finds things on walls as well as the floor, and that you can take what it finds next.  Blind counts as dark.
+
+The lead asked: "Should "take the torch from the sconce" with a hand free go in the hand?"  The user chose: to a free hand; the pack only if both hands are
+full.  Any thing taken from a fixture alike.
+
+**Design:** HOUSE.md's looking in the dark, taken from a fixture.  What the look told at once it tells still (the walls felt, a light seen far off), then the feel around: for review.

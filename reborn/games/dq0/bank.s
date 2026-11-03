@@ -108,6 +108,7 @@ ovl_out:
             OVFN        appraise, 1
             OVFN        tell, 14
             OVFN        words, 2
+            OVFN        list_say, 16        ; (What's carried told, in pieces: words.c, 2026-11-03)
             OVFN        more, 16            ; (The commands past main.c's chores: words.c's, overlay 2's room, 2026-11-01)
             OVFN        stir_words, 9
             OVFN        heard_words, 9
