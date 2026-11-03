@@ -954,6 +954,8 @@ static void __fastcall__ rubble (unsigned char poor)
     }
 }
 
+#define DEEP_STREAM     6
+
 void __fastcall__ o_wet_chunk (struct chunk* c, const struct edges* e)
 {
     unsigned char r, x, y, k, d, w = e->water;
@@ -997,7 +999,9 @@ void __fastcall__ o_wet_chunk (struct chunk* c, const struct edges* e)
     }
     if (w & RW_STREAM) {
         c->wany = 1;
-        c->wlev[NROOMS] = 1;
+        c->wlev[NROOMS] = (wh (70) ^ (unsigned char) STRATUM (L->sn).seed) & 7 ? 1 : DEEP_STREAM;   /* (A foot deep; a
+                                                **   stretch in eight, the chunk's, by the seed, over a man's head, the
+                                                **   current's: the user's, 2026-11-03) */
         c->wruns = 1 << NROOMS;
         for (y = 0; y < CW; ++y) {
             for (x = 0; x < CW; ++x) {

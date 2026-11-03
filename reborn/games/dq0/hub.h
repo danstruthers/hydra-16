@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     43                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     44                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -673,7 +673,7 @@ enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8, V_TRACED = 16 };
                                                 **   traces read, I_TRACE's, the UI bank's tread: look (16)) */
 #define DN_HANDS        0x40                    /* (D_NO_TOOL's: a chisel and a hammer carried, not both in hand; */
 #define DN_LIT          0x20                    /*   and a light in hand, to set down first) */
-enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN, D_ROOF, D_FOUND, D_PORTAL };  /* E_DIG's how (D_AGAIN: begun on
+enum { D_BEGUN, D_GOOD, D_POOR, D_SLIP, D_THROUGH, D_SOLID, D_NO_TOOL, D_AGAIN, D_ROOF, D_FOUND, D_PORTAL, D_BETTER };  /* E_DIG's how (D_AGAIN: begun on
                                                 **   a hole dug part way before, the world's DUG record's; D_ROOF:
                                                 **   a spell gone badly in poor rock, the roof come down on the hole,
                                                 **   two feet of it in the rock filled again: slice 4.10's) */
@@ -1029,7 +1029,7 @@ struct actor {
                                                 **   gone: I_LEAVE, or dead); 0 none */
     unsigned char   sn, face;
     unsigned long   ready;                      /* When it can act again */
-    unsigned char   step;                       /* Tenths of a second to go a square */
+    unsigned char   step;                       /* Tenths of a second to walk a square (a hurried step half that) */
     unsigned char   pos;                        /* Its body's position (POS_*: standing, prone ...) */
     unsigned char   gait;                       /* The pace it goes at (rs.h's GA_*: a walk, till their paces come) */
     unsigned char   move;                       /* How its legs move it (rs.h's C_MOVE bits, the referee's, down 12: 1
@@ -1099,7 +1099,8 @@ enum { FT_TOOK, FT_GAVE, FT_GONE, FT_HEAVY, FT_HANDS, FT_FEET, FT_GOT, FT_FAR };
 #define AM_STEADY       0x08                    /*   steady: its heart whole, its courage never tested (a scene's
                                                 **   setting, a test's: the fights' kin that stands, 2026-10-30); */
 #define AM_DRUNK        0x10                    /*   in drink, from its leisure's cups a while (its blows two steps
-                                                **   worse, struck at two easier: the world's, 2026-10-31) */
+                                                **   worse, struck at two easier: the world's, 2026-10-31); */
+#define AM_STALKS       0x20                    /*   a hunter by smell: it stalks what it comes at (at a walk: wbody.c's) */
 enum { BD_TWO, BD_FOUR, BD_SERPENT, BD_MANY, BD_WINGS, BD_NONE, NBODIES };
 enum { AT_HOSTILE, AT_UNFRIENDLY, AT_WARY, AT_INDIFFERENT, AT_FRIENDLY, AT_ALLIED };   /* An attitude, the worst
                                                 **   first (DENIZENS.md): attacks on sight; threatens, keeps off;
@@ -1157,6 +1158,11 @@ struct sway {
 #define SW_ITS(s)       (((unsigned*) (s)->word2)[1])   /*   character's pennies and the actor's, their counts: */
 #define SW_NCOIN(s)     ((s)->word2[4])                 /*   2026-11-02, the denizens' main RAM's room) */
 #define SW_NITS(s)      ((s)->word2[5])
+#define SW_FCOIN(s)     (((unsigned*) (s)->word2)[3])   /* (And their farthings, a price under a penny's: 2026-11-03) */
+#define SW_FITS(s)      (((unsigned*) (s)->word2)[4])
+#define SW_NFCOIN(s)    ((s)->word2[10])
+#define SW_NFITS(s)     ((s)->word2[11])
+#define SW_FARTHINGS    0x8000                  /* (sw.ix's reply: the price in farthings, not pennies) */
 
 #define IQ_SIZE         16                      /* The UI's intents */
 #define DI_SIZE         8                       /* The denizens' (their actors': hub.h's struct actor) */
@@ -1233,6 +1239,10 @@ struct hub {                                    /* Bank 0, at $8000 */
         unsigned char res;
         unsigned char a, b;
     }               wreq;
+    char            dig_name[8];                /* A dig's tool named (its key, "-" a thing that's no tool; "": the best
+                                                **   to hand), the world's from dig_kind as the dig begins, */
+    char            dig_better[8];              /*   a better one to hand than that (told once: 2026-11-03), */
+    unsigned char   dig_kind;                   /*   and the kind named, the UI's ("with the knife": 0 none) */
     char            dig_tool[4][8];             /* A dig's spells' tools, the referee's choices (their keys), in turn */
     unsigned char   dig_wear[4];                /*   and the wear each spell did (E_DIG's b, which: the world runs on */
                                                 /*   ahead of the UI's reading of its events, the turns pace) */
@@ -1453,6 +1463,8 @@ struct hub {                                    /* Bank 0, at $8000 */
     /* The water where the character is (slice 4.9: DUNGEON.md's water), the world's as it moves: how deep it is, its
     ** swimming (the referee's P_SWIM: its squares a minute), its breath held (the seconds it's been under, the most it
     ** can hold it: the referee's) */
+    unsigned char   pc_feet;                    /* What's on its feet (0 bare, 1 boots, 2 sandals, 3 shoes, 4 hobnails: its
+                                                **   prints, the world's, weighed with pc_clank as it next moves: 2026-11-03) */
     unsigned char   pc_wet;                     /* The water's depth where it stands, feet (0: dry), | WET_RUNS */
     unsigned char   pc_swim;                    /* Swimming: its squares a minute (0: not swimming) */
     unsigned char   pc_under, pc_breath;        /* Seconds under water, and the most it can hold its breath */
@@ -1663,6 +1675,9 @@ struct wsave {
 **   own hub.ireq world +ui                                     (The UI's requests of the things)
 **   own hub.stock world +senses                                (The senses' request: a chunk's things put down)
 **   own hub.pview world                                        (A portal looked at closely: the UI's wreq's)
+**   own hub.dig_name world
+**   own hub.dig_better world
+**   own hub.dig_kind ui
 **   own hub.dig_tool world
 **   own hub.dig_wear world
 **   own hub.dig_t world
@@ -1737,7 +1752,7 @@ struct wsave {
 **   own hub.pc_bg senses                                       (layer's; the stratum's draught, the air's)
 **   own hub.air_h senses
 **   own hub.air_s senses
-**   own hub.pc_clank world                                     (The character's armour, its creep's Stealth: the
+**   own hub.pc_clank world +ui                                     (The character's armour, its creep's Stealth: the
 **   own hub.pc_qp world                                        (world's, slice 4.6's)
 **   own hub.pc_qg world
 **   own hub.pc_qat world
@@ -1745,6 +1760,7 @@ struct wsave {
 **   own hub.pc_thirst referee +world                           (  keep with the game, world.dat: slice 4.9's)
 **   own hub.pc_want referee +world
 **   own hub.pc_meals referee +world
+**   own hub.pc_feet world
 **   own hub.pc_wet world
 **   own hub.pc_swim world
 **   own hub.pc_under world

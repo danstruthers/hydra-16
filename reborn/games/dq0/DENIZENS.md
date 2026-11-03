@@ -261,7 +261,8 @@ denizens' task is their minds.
   square, facing, when it's free, its step, its position, what it's doing) and its mind the denizens' (its name, its
   record, attitude, faction, foe, kind, its remains, timid), each written by its own.  The world carries out the
   intents in turn by the character's rules (dq0w/wbody.c): a square it can walk (no wall, no shut door), no one on it,
-  nor the character, nor where the character's move ends (the hub's pc_tx, pc_ty); its time its step's, more uphill,
+  nor the character, nor where the character's move ends (the hub's pc_tx, pc_ty); its time its step's (a walk; hurried,
+  its jog, half that, by what it's doing and its heart: the user's, 2026-11-03, HOUSE.md's their paces), more uphill,
   steeply down, on steps, as the character's.  It tells what the bodies do (E_DEN, the denizens' events), and bumps
   den_seq for the senses to look at them again (those the character sees in what it perceives).  A denizen doesn't
   set off a trap underfoot, nor a door's as it opens it.  A door it works by the character's parts (its doors, below).
@@ -585,7 +586,8 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 
 ### Tunnellers *(2026-11-01: slice 4.11; HOUSE.md's tunnellers, for review)*
 
-- **Who digs:** kinds.txt's ways d (a burrower, by its claws: the giant rat, the ghoul) and m (a miner, by the tools it
+- **Who digs:** kinds.txt's ways d (a burrower, by its claws, rubble, earth and soil, no rock, the same at work and at
+  prey: the user's, 2026-11-03; the giant rat, the ghoul) and m (a miner, by the tools it
   carries: the dwarf miner, the kobold, the brown orc; a pick, a shovel, a spade or a mattock among its things, the
   world's agear AG_PICK and AG_SPADE, as it tells the referee its things).
 - **The minds choose where** (dq0d.c's dig_way, part 12, at need: no polling): a hostile tunneller kept by rock, a
@@ -609,7 +611,7 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
 - **At its work** (2026-11-02, slice 4.11's rest: dq0d.c's work_dig, part 15's, asked by the day's, part 9's target
   and part 10's daily, as its work's hours come: never polled): a miner digs its faction's mine (from its lair's home
   across to its region's vein, rock.h's rock_vein, then along it), a burrower its lair's burrow (one of the four ways
-  from its home, eight squares, as far as its claws bite); the way worked out each time from the dungeon as it is (no
+  from its home, eight squares, as far as its claws bite: no rock); the way worked out each time from the dungeon as it is (no
   record of it kept: the open squares and doorways on it walked through, a door or a portcullis raised), the first
   wall, rock or rubble its face, dug
   from the square before it (its stand: an actor steps to it, a shut door on the way opened by the doors' own, part

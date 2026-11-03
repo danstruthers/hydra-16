@@ -359,6 +359,11 @@ static unsigned char tool_ok (void)
     if (k == sizeof tooled || !*w || cmd.obj.kind == OB_WAY_OUT) {
         return 1;                               /* (Not done with a thing; the way out's own, the puzzle's) */
     }
+    if ((a == VB_UNLOCK_OBJECT || a == VB_LOCK_OBJECT) && !strstr (w, "key") && !strstr (w, "pick")) {
+        sayf ("\nYour %s won't do for a lock.", w);   /* (A thing named is the one used, or none: a key or the lockpicks
+                                                **   aren't taken over it, 2026-11-03) */
+        return 0;
+    }
     k = w == cmd.obj.word ? cmd.obj.sel | cmd.obj.n << 4 : cmd.other.sel | cmd.other.n << 4;
     hub_mem (0, &HUB->ireq.sel, &k, 1);         /* (Which of several: the world's to choose) */
     if (othings (IO_FIND, w, "", 0) != IR_OK) {
@@ -376,6 +381,11 @@ static unsigned char tool_ok (void)
         strike = SK_OF (othings_x);             /* (That thing strikes, and no other: its kind, IO_FIND's; in hand first,
                                                 **   once there's something to strike) */
         strcpy (hold_w, cmd.other.word);
+    }
+    if (a == VB_DIG) {
+        strcpy (dig_word, cmd.other.word);      /* (That thing digs, the user's, 2026-11-03: a better one told of) */
+        k = othings_x;
+        hub_mem (0, &HUB->dig_kind, &k, 1);
     }
     if (a != VB_FILL_OBJECT) {
         cmd.other.word[0] = 0;                  /* (Checked: the action's own rules use what's to hand; a fill's fuel
@@ -473,6 +483,9 @@ unsigned char o_resolve (void)
     }
     if (cmd.other.sel == SL_IT && !cmd.other.word[0]) {
         memcpy (&cmd.other, &last, sizeof last);
+    }
+    if (cmd.action == VB_DIG) {
+        hub_mem (0, &HUB->dig_kind, "", 1);     /* (None named, the best to hand) */
     }
     if (cmd.prep == PR_WITH && !tool_ok ()) {   /* (What it's done with: to hand, else refused) */
         return RV_DONE;

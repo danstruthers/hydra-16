@@ -2810,6 +2810,7 @@ static signed char test_dig (void)
     r->a = P_DIG;
     r->b = dig.done < DIG_TOP ? dig.mat : MAT_STONE;     /* (Through the floor: the stratum's rock) */
     r->steps = 0;
+    strcpy (r->text, HUB->dig_name);            /* (The tool named, or "" the best to hand) */
     r = hub_ask (SLOT_WORLD);
     g = r->grade;
     made = r->result ? 0xFF : r->w1;
@@ -3087,17 +3088,29 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
 
     hub_map (0);
     if (!w) {
+        n = HUB->dig_kind;                      /* (The tool named, its key: a thing that's no tool the kind's name, a
+                                                **   digger of none; none named, "": the best to hand) */
+        HUB->dig_name[0] = 0;
+        if (n) {
+            hub_map (KIND_BANK);
+            strcpy (dig_key, CATALOGUE[n].tool);
+            hub_map (0);
+            strcpy (HUB->dig_name, dig_key[0] ? dig_key : "-");
+        }
         r = &HUB->slot[SLOT_WORLD];
         r->kind = RS_TEST;
         r->actor = 0;
         r->a = P_DIG;
         r->b = dig.mat;
         r->steps = RS_DIG_QUERY;
+        strcpy (r->text, HUB->dig_name);
         r = hub_ask (SLOT_WORLD);
         n = r->result;
         r->state = REQ_FREE;
         st = 0;
-        strcpy (dig_key, r->text[0] == 'p' || r->text[0] == 's' || r->text[0] == 'c' ? r->text : "");
+        strcpy (HUB->dig_better, r->text + DIG_BETTER);    /* (A better one to hand than the one named: told once, as
+                                                **   the dig's begun; the named one used, the user's, 2026-11-03) */
+        strcpy (dig_key, r->text[0] == 'p' || r->text[0] == 's' || r->text[0] == 'c' || r->text[0] == 'm' ? r->text : "");
         if (r->text[0] == 'c' && !n) {          /* (A chisel: a hammer in the other hand, the user's, 2026-11-03: "hammer
                                                 **   and chisel in each hand"; carried isn't enough) */
             n = HUB->pcsum.limbs & (LB_ARM_L | LB_ARM_R);
@@ -3126,6 +3139,8 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
         if (n) {
             evb = (dig.mat + 1) | st;
             dig_no (D_NO_TOOL << 8 | evb);
+        } else if (HUB->dig_better[0]) {
+            event (E_DIG, 0, D_BETTER << 8);
         }
         return n;
     }
@@ -3201,8 +3216,11 @@ static void wall_look (void)
         at (sn_, x, y);
         dig.rock = WK_MASONRY;
         if (C->mat[t == T_WALL && k != 0xFF ? k : NROOMS][MP_WALL] != MAT_MASONRY) {
+            ww1 = x ^ y;                        /* (The first answer kept for this wall, till the skill improves, as a
+                                                **   thing appraised: the user's, 2026-11-03) */
             dig.rock = rock_kind (HUB->seed, -3 - elev_at (sn_, mx, my) - STRATUM (sn_).datum, x, y) |
                 (G_OK (test_w (P_APPRAISE, AP_ROCK)) ? WK_NAMED : 0);
+            ww1 = 0;
         }
     }
     start_dig (0xFC);
@@ -5385,9 +5403,10 @@ static unsigned char near_foe12 (void)
         hub_map (0);
         a = &HUB->actor[k];
         if (!a->state || a->sn != HUB->pc_stratum || a->pos == POS_PRONE || (unsigned char) (a->doing - DO_DOWN) < 2 ||
-            a->attitude > AT_UNFRIENDLY) {
-            continue;
+            a->attitude > AT_UNFRIENDLY || !(*at (a->sn, a->x, a->y) & T_VIS)) {
+            continue;                           /* (One it can't see isn't fled from: nothing given away, 2026-11-03) */
         }
+        hub_map (0);
         dx = a->x > HUB->pc_x ? a->x - HUB->pc_x : HUB->pc_x - a->x;
         dy = a->y > HUB->pc_y ? a->y - HUB->pc_y : HUB->pc_y - a->y;
         d = dx > dy ? (dx > 12 ? 13 : (unsigned char) dx) : (dy > 12 ? 13 : (unsigned char) dy);
@@ -5711,7 +5730,10 @@ unsigned char __fastcall__ s_use_key (const char* key)
         kd = item_at (i)->kind;
         hub_map (KIND_BANK);
         if (!strcmp (CATALOGUE[kd].tool, key) && on_pc (i)) {
+            kd = item_at (i)->wear;             /* (Water's wear: from still water, the flux's, feed.c's) */
             s_use_up (i, 0);
+            hub_map (0);
+            HUB->ireq.x = kd;
             return IR_OK;
         }
     }
@@ -6583,7 +6605,12 @@ void s_step_loud (void)
     unsigned i;
 
     hub_map (0);
+    g = 0;
     for (i = 0, q = 0; HUB->pc_clank == 0xFF && (i = items (i, IN_X | IN_ACTOR, 0)) != 0; ) {
+        if (ip->flags & I_WORN) {               /* (What's on its feet, its prints': the hub's pc_feet) */
+            k = ip->kind;
+            g = k == KI_BOOTS ? 1 : k == KI_SANDALS ? 2 : k == KI_SHOES ? 3 : k == KI_HOBNAIL ? 4 : g;
+        }
         if ((ip->flags & I_WORN) && (unsigned char) (ip->mat - MT_IRON) < 3 && (k = ip->kind) != 0) {
             hub_map (KIND_BANK);
             q |= CATALOGUE[k].weight >= 24;     /* (Metal armour worn, six pounds of it: mail, plate) */
@@ -6593,6 +6620,7 @@ void s_step_loud (void)
     hub_map (0);
     if (HUB->pc_clank == 0xFF) {
         HUB->pc_clank = q;                      /* (Weighed once as what's worn changes: wlimbs.c's equip_now) */
+        HUB->pc_feet = g;
     }
     g = pace_;
     q = HUB->pc_qp;

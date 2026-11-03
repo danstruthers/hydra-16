@@ -18,7 +18,7 @@
 ** fight told as a blow's, FW_MISSILE), and the missile where it falls: a hit or a block at the target's feet, a miss
 ** on past it along the line (a square to four, short of what stops it), a wild one somewhere near; an arrow or a bolt
 ** broken by its chance (kinds.c's snaps, a bolt's the house's: lost), a thing thrown moved itself; known to the
-** character.  (A miss's stray at one beside its mark, the book's 20%, MS_STRAY: the referee's, the world's left for
+** character.  (A miss's stray at one beside its mark, the book's, MS_STRAY: the referee's, the world's left for
 ** the room.)  Its time a round (a bow's load and loose, a sling's; a crossbow's load a round more: the
 ** book's, Combat 8's missile attack options), the loading alone its half.
 **
@@ -793,16 +793,17 @@ static void __fastcall__ bd_get (unsigned char k)
     BD_GET (k);
 }
 
-/* A miss's stray (the book's, Combat 17's missile attack declaration: a missile shot at one engaged in melee, a miss
-** striking a randomly determined one beside it half the time; every shooter's and thrower's, at anyone, the character
-** too: 2026-10-30): the one struck chosen among those on the squares about the mark (s's tx, ty on sn: the character,
-** the actors; not the shooter, at sx, sy), struck (the referee's MS_STRAY, part 15's blow: a strike, no test; mshot's
+/* A miss's stray (the book's: Combat 15, a missile shot at one engaged in melee, a miss striking a randomly determined
+** one beside it half the time; Combat 17, a mark not engaged, a nearby one a fifth of the time; the user's, 2026-11-03:
+** "follow the book"; every shooter's and thrower's, at anyone, the character too: 2026-10-30): the one struck chosen among
+** those on the squares about the mark (s's tx, ty on sn: the character, the actors; not the shooter, at sx, sy), the mark
+** engaged if it or one beside it is in a fight (doing DO_FIGHT), struck (the referee's MS_STRAY, part 15's blow: a strike, no test; mshot's
 ** kind what it was shot with, s's thr the thing thrown, its band kept; bev's who the shooter, 0 the character, else the
 ** actor plus 1, wfight.c's den_blow's), told as a blow (FW_STRAY's words).  Who it struck (0xFE the character, else the
 ** actor's entry), or 0xFF none; body bd and bk as they were (the caller's) */
 static unsigned char __fastcall__ stray (const struct stray* s)
 {
-    unsigned char c[NACTORS + 1], n = 0, k, sh = 0, was = bk;
+    unsigned char c[NACTORS + 1], n = 0, k, sh = 0, was = bk, eng = 0;
     struct actor* a;
 
     hub_map (0);
@@ -813,15 +814,18 @@ static unsigned char __fastcall__ stray (const struct stray* s)
         if (a->state && a->sn == s->sn) {
             if (a->x == s->sx && a->y == s->sy) {
                 sh = k + 1;                     /* (The shooter: an actor) */
-            } else if (span68 ((int) (a->x - s->tx), (int) (a->y - s->ty)) == 1) {
-                c[n++] = k;
+            } else if (span68 ((int) (a->x - s->tx), (int) (a->y - s->ty)) <= 1) {
+                eng |= a->doing == DO_FIGHT;    /* (The mark, or one beside it, in a fight) */
+                if (a->x != s->tx || a->y != s->ty) {
+                    c[n++] = k;
+                }
             }
         }
     }
     if (!sh && n && c[0] == 0xFE) {
         c[0] = c[--n];                          /* (The character the shooter: not struck by its own) */
     }
-    if (!n || random (2)) {
+    if (!n || random (100) >= (eng ? 50 : 20)) {
         return 0xFF;
     }
     k = c[random (n)];

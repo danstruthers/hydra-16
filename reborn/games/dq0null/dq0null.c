@@ -713,8 +713,13 @@ static void __fastcall__ answer (struct req* r)
                                                 **   a tunneller's, its grade alone, by its own dice as moving
                                                 **   quietly's, the world's the rest: slice 4.11's) */
             m = r->b > MAT_SOIL ? MAT_STONE : r->b;
-            t = dig_tool (m);
+            t = dig_tool (m, r->text);
             k = digger[t].rate[m];
+            if (r->text[0] && !t) {
+                k = 0;                          /* (Named, and no digger) */
+            }
+            g = dig_tool (m, "");
+            strcpy (r->text + DIG_BETTER, r->text[0] && digger[(unsigned char) g].rate[m] > k ? digger[(unsigned char) g].key : "");
             strcpy (r->text, digger[t].key);
             r->w2 = digger[t].wear[m];
             if (!k) {
@@ -775,6 +780,14 @@ static void __fastcall__ answer (struct req* r)
             QUIET_IN                            /* (Moving quietly, by its own dice: the house's) */
             r->grade = flat (r->steps);
             QUIET_OUT
+            *tp = 0;
+            break;
+        }
+        if (r->a == P_APPRAISE && r->b < NAP) {  /* (A thing judged: the first answer kept, HarnMaster referee's) */
+            r->w2 = 0;
+            JUDGE_IN (r->w1, 0)
+            r->grade = flat (r->steps);
+            JUDGE_OUT
             *tp = 0;
             break;
         }

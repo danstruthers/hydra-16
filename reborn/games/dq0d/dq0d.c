@@ -158,7 +158,7 @@ struct dkind {
     unsigned char   range;                      /* Squares from its lair it goes */
     unsigned char   sight, dark;                /* Squares it sees the character by its light, and with none */
     unsigned char   hear;                       /* Squares it hears it moving */
-    unsigned char   step;                       /* Tenths of a second a square */
+    unsigned char   step;                       /* Tenths of a second to walk a square */
     unsigned char   faction;                    /* Its faction (factions.txt's, by number: 1 the first) */
     unsigned char   mind;                       /* M_* */
     signed char     sway;                       /* Steps for (or against) swaying it, besides its attitude and mind */
@@ -1231,6 +1231,7 @@ void __fastcall__ s_enlist (unsigned char i, unsigned char k)
     awater[k] = X.water;
     a.remains = K.flags & K_BONES ? KI_BONES : KI_BODY;
     a.timid = (K.flags & K_SHY) | (K_HELP (K) & H_KILLS ? RS_KILLER : 0);   /* (K_SHY the referee's 1) */
+    a.mood = K.flags & K_NOSE ? AM_STALKS : 0;  /* (A hunter by smell comes on stalking, at a walk: decide's stalk) */
     hub_map (0);
     memcpy (HUB->actor[k].name, a.name, sizeof a - offsetof (struct actor, name));
     im.x[0] = s->cond & C_UNCONSCIOUS ? DO_DOWN : esl ? DO_SLEEP : 0;   /* (Left senseless, and senseless still: it lies
@@ -2108,7 +2109,8 @@ static unsigned char __fastcall__ decide (unsigned char k)
     }
     if (d < 8 || d == 0xFB) {                   /* (A step, now and then a noise of its own; its kind with no
                                                 **   darkvision, feeling its way in the dark: the world's, STEP_FEELS;
-                                                **   the way the scent goes, the world's to find) */
+                                                **   the way the scent goes, the world's to find; hurried or at a walk,
+                                                **   by what it's doing and its heart, the world's: wbody.c's) */
         im.w1 = d == 0xFB ? STEP_SCENT : DH (d);
         im.w2 = K.dark ? 1 : 1 | STEP_FEELS;
         if (d == 0xFB) {
@@ -2399,7 +2401,7 @@ static unsigned char dsn;
 ** it, north or south by its lair's number, its middle followed row by row (a diagonal where it slants a square, across
 ** where it slants more), MINE_LEN squares at most, the open ones and doorways on it walked through.  A burrower
 ** (K_DIGS) its lair's burrow: from its home one of the four ways by its lair's number, BURROW squares, as far as its
-** claws bite (rubble, earth, soil, the soft rock's beds, a room's bare wall in them: never masonry).  Nothing of it
+** claws bite (rubble, earth, soil: no rock, the user's, 2026-11-03, as coming at prey).  Nothing of it
 ** kept: the way is worked out again from the dungeon as it is each time it's asked, its face the first square that's a
 ** wall, the rock or rubble, its stand the square before it; none where it comes to anything else (water, a pit, a
 ** portcullis let down, the chunk's edge) or runs out.  k: the actor, NACTORS a record (D, its kind's K); | 0x40, the
@@ -2414,7 +2416,6 @@ static unsigned char dsn;
 #pragma rodata-name (push, "SW15RODATA")
 #pragma data-name (push, "SW15RODATA")         /* (rock.h's statics in the part, used only within a call) */
 #pragma bss-name (push, "SW15RODATA")
-#define ROCK_BED
 #define ROCK_VEIN
 #define ROCK_LEAN
 #include "../dq0/rock.h"
@@ -2467,7 +2468,6 @@ unsigned char __fastcall__ s_work_dig (unsigned char k)
     unsigned char i, sn, g, t, n, h, x, y, nx, ny, nvx;
     signed char vs, dx, dy;
     unsigned sd;
-    int z;
     unsigned char* p;
     struct portal* q;
     struct room* rm;
@@ -2494,7 +2494,6 @@ unsigned char __fastcall__ s_work_dig (unsigned char k)
     r = &STRATUM (sn);
     x = (wox - r->x0) & (CW - 1);               /* (Its home in its chunk, the chunk's first square) */
     y = (why - r->y0) & (CW - 1);
-    z = -3 - r->datum;
     wox -= x;
     woy = why - y;
     g = K.styles & K_MINES && (t & AG_PICK) ? DG_PICK : K.styles & K_DIGS ? DG_CLAWS : 0;
@@ -2568,8 +2567,8 @@ unsigned char __fastcall__ s_work_dig (unsigned char k)
         if ((t = TILE (*p)) != T_WALL && t != T_ROCK && t != T_RUBBLE) {
             break;
         }
-        if (g == DG_CLAWS && t != T_RUBBLE) {   /* (Claws: earth, soil or the soft rock: a room's wall by its own
-                                                **   stuff, the room it's standing in, as the world's) */
+        if (g == DG_CLAWS && t != T_RUBBLE) {   /* (Claws: earth or soil: a room's wall by its own stuff, the room
+                                                **   it's standing in, as the world's) */
             g = NROOMS;
             if (t == T_WALL) {
                 for (t = 0, rm = C->room; t < C->nrooms; ++t, ++rm) {
@@ -2580,8 +2579,7 @@ unsigned char __fastcall__ s_work_dig (unsigned char k)
             }
             t = C->mat[0][(unsigned char) (g + g + g) + MP_WALL];
             g = DG_CLAWS;
-            if (t != MAT_EARTH && t != MAT_SOIL && (t != MAT_STONE || !RK_POOR (rock_bed (sd, z - elev_at (sn, wox + x,
-                woy + y), wox + nx, woy + ny)))) {
+            if (t != MAT_EARTH && t != MAT_SOIL) {
                 break;
             }
         }
@@ -2650,6 +2648,26 @@ stand:
 #pragma code-name (push, "SW12CODE")
 #pragma rodata-name (push, "SW12RODATA")
 #pragma bss-name (push, "SW12RODATA")          /* (Its locals in the part: the main RAM's room, 2026-11-02) */
+/* Whether a burrower's claws bite tile t just looked at (C the chunk's): the stuff of a chunk's rock, or of a room's wall (a
+** wall's room the first in the chunk with one of earth: the maker's walls are stone or masonry today): earth or soil,
+** no rock of any kind (rubble is its caller's) */
+static unsigned char __fastcall__ s_claws_bite (unsigned char t)
+{
+    unsigned char r, m;
+
+    if (t == T_WALL) {
+        for (r = 0; r < C->nrooms; ++r) {
+            m = C->mat[0][(unsigned char) (r + r + r) + MP_WALL];
+            if (m == MAT_EARTH || m == MAT_SOIL) {
+                return 1;
+            }
+        }
+        return 0;
+    }
+    m = C->mat[0][NROOMS * 3 + MP_WALL];
+    return m == MAT_EARTH || m == MAT_SOIL;
+}
+
 unsigned char __fastcall__ s_dig_way (unsigned char k)
 {
     unsigned char j, best = 0xFF, g, t, h;
@@ -2675,9 +2693,11 @@ unsigned char __fastcall__ s_dig_way (unsigned char k)
         ny = a.y + dir_y[j];
         if ((f = toward (nx - refx, ny - refy) + apart (nx - refx, ny - refy)) >= (DH (j) == h ? b0 : bf) || apart (nx - ahx[k], ny - ahy[k]) >
             2 * K.range + 8 || !(p = at (a.sn, nx, ny)) ||
-            ((t = TILE (*p)) != T_WALL && t != T_ROCK && t != T_RUBBLE) || (t == T_WALL && g == DG_CLAWS)) {
+            ((t = TILE (*p)) != T_WALL && t != T_ROCK && t != T_RUBBLE) || (t != T_RUBBLE && g == DG_CLAWS &&
+            !s_claws_bite (t))) {
             continue;                           /* (No nearer, too far from home, not a thing it digs: claws alone
-                                                **   never a wall, masonry or stone, the house's) */
+                                                **   rubble, earth and soil, the one rule at work and coming at prey,
+                                                **   the user's, 2026-11-03) */
         }
         bf = f;
         best = j;
@@ -3514,10 +3534,13 @@ static void __fastcall__ entertain (unsigned char k)
 ** whole friendly, three quarters to an ally; it buys at two fifths, a half, three fifths (the book's: a seller "lucky
 ** to receive half"); haggled, the book's Rhetoric in its tongue, at steps by its attitude, its kind's sway and its
 ** mind (the cunning the harder), the price a quarter better at a critical success, a tenth at a success, as asked at a
-** failure, a critical failure an offence (a step back, no deal); rounded to the penny, a penny at least (sw.ix the
-** reply's).  A price asked within earshot; the deal within reach, the money there (the payer's pennies), then its
-** intents, the character's own way with things for every actor (the world's wfetch.c: the payer's coins or the goods
-** sold taken, FE_GIFT, kept; its own handed over, FE_GIVE) */
+** failure, a critical failure an offence (a step back, no deal); never bought under, nor sold over, two thirds of its
+** worth (the user's, 2026-11-03: buying never below selling, whatever the critical); rounded to the penny (buying up,
+** selling down), under a penny in farthings, a farthing at least (the user's: SW_FARTHINGS on sw.ix the reply's).  A
+** price asked within earshot; the deal within reach, the money there (the payer's pennies; a price in farthings its
+** farthings, a character with none a whole penny, the trader none then no deal), then its intents, the character's own
+** way with things for every actor (the world's wfetch.c: the payer's coins or the goods sold taken, FE_GIFT, kept; its
+** own handed over, FE_GIVE) */
 static unsigned __fastcall__ pct (unsigned v, unsigned char q)   /* (v's q in a hundred, sixteen bits: no long
                                                 **   arithmetic, the main RAM's room) */
 {
@@ -3528,7 +3551,7 @@ static void __fastcall__ trade (unsigned char k)
 {
     unsigned char t = sw.was, h = sw.kind, sell = sw.order & 1, q;
     signed char g;
-    unsigned p, n;
+    unsigned p, n, w = sw.ix, c;
 
     if (K.mind == M_BEAST) {
         sw.result = SR_BEAST;
@@ -3563,8 +3586,17 @@ static void __fastcall__ trade (unsigned char k)
         q = g == G_CS ? 25 : g == G_MS ? 10 : 0;
         p = pct (p, sell ? 100 + q : 100 - q);
     }
-    n = (p + 2) >> 2;
-    sw.ix = n = n ? n : 1;
+    q = 66 + !sell;                             /* (No pump: bought at two thirds or more, sold at two thirds or less) */
+    n = pct (w, q);
+    p = sell ? (p > n ? n : p) : (p < n ? n : p);
+    p = p ? p : 1;                              /* (A farthing at least) */
+    n = p < 4 ? p : sell ? p >> 2 : (p + 3) >> 2;
+    c = p < 4;                                  /* (Under a penny: in farthings) */
+    if (c && !sell && !SW_NFCOIN (&sw)) {
+        c = 0;                                  /* (A character with no farthings: a whole penny, no change given) */
+        n = 1;
+    }
+    sw.ix = c ? n | SW_FARTHINGS : n;
     if (h == SW_PRICE || h == SW_OFFER) {
         return;
     }
@@ -3572,18 +3604,18 @@ static void __fastcall__ trade (unsigned char k)
         sw.result = SR_FAR;
         return;
     }
-    if (sell ? SW_NITS (&sw) < n : SW_NCOIN (&sw) < n) {
+    if (sell ? (c ? SW_NFITS (&sw) : SW_NITS (&sw)) < n : (c ? SW_NFCOIN (&sw) : SW_NCOIN (&sw)) < n) {
         sw.result = sell ? SR_BROKE : SR_POOR;
         return;
     }
     im.a = FE_GIFT;                             /* (The payer's coins, or the goods sold: taken, kept) */
-    im.t = sell ? sw.item : SW_COIN (&sw);
+    im.t = sell ? sw.item : c ? SW_FCOIN (&sw) : SW_COIN (&sw);
     im.w1 = sell ? sw.iy >> 8 : n;
     im.w2 = 1;
     im.x[0] = im.x[1] = 0xFF;
     post (I_ROB, k + 1);
     im.a = FE_GIVE;                             /* (Its own handed over: the goods bought, or its coins) */
-    im.t = sell ? SW_ITS (&sw) : sw.item;
+    im.t = sell ? (c ? SW_FITS (&sw) : SW_ITS (&sw)) : sw.item;
     im.w1 = sell ? n : sw.iy >> 8;
     im.w2 = 1;
     im.x[0] = im.x[1] = 0xFF;

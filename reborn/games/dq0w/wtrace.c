@@ -296,7 +296,7 @@ void __fastcall__ s_tr_flush (unsigned char keep)
 #define SR              6                       /* (A smell's reach one way, squares) */
 
 static struct tread R;
-static unsigned char how, way, ws, dust, fdust, hold, nf, smk, pnose;
+static unsigned char how, way, ws, dust, fdust, hold, nf, smk, pnose, ptread;
 static unsigned wx, wy, now, life;
 static unsigned char fk[NFOUND], fn[NFOUND], fh[NFOUND], fc[NFOUND];
 static unsigned fa[NFOUND];                     /* (Each kind found: whose, its passings, the last's way, how clearly
@@ -413,7 +413,7 @@ static void __fastcall__ found (unsigned x, unsigned y, unsigned char d)
         if (k >= TKN->n || (how == TRC_SMELL && !k)) {
             continue;                           /* (Its own sweat the character doesn't smell) */
         }
-        tr = TKN->tread[k];
+        tr = k ? TKN->tread[k] : ptread;        /* (The character's own: by what's on its feet, the user's, 2026-11-03) */
         sm = TKN->smell[k] + mo;
         if (how == TRC_SMELL) {
             sm = SCENT_LOG (sm, pnose) + 1;
@@ -498,6 +498,10 @@ static void sniff (void)
     hub_map (0);
 }
 
+/* (Its prints' tread by its footwear, the hub's pc_feet: bare feet 2, boots 4, sandals or shoes 3, hobnails 6: HOUSE.md's,
+** the user's, 2026-11-03) */
+static const unsigned char feet_tread[5] = { 2, 4, 3, 3, 6 };
+
 unsigned __fastcall__ s_traced (const struct msg* m)
 {
     static const unsigned took[3] = { 50, 600, 30 };   /* (TRC_*'s time: a look; a minute's study; a sniff) */
@@ -518,9 +522,11 @@ unsigned __fastcall__ s_traced (const struct msg* m)
     now = (unsigned) (HUB->now / TQ);
     pnose = HUB->pcsum.smell >> 2;              /* (The character's nose: a quarter of its smell sense, the
                                                 **   referee's) */
+    ptread = feet_tread[HUB->pc_feet];
     R.how = how;
     i = STRATUM (ws).age;
-    dust = 3 + (i >= 3) + (i >= 6) + (i >= 12); /* (A century's dust a lot, the more the older) */
+    dust = i < 3 ? i : 3 + 1 + (i >= 6) + (i >= 12);   /* (Its centuries': none of no age, a skin in one or two, the
+                                                **   user's, 2026-11-03; then the more the older) */
     floor_at (wx, wy);                          /* (Where it stands: its material, its dust) */
     R.dust = fdust;
     hub_map (SIGHT_BANK);

@@ -97,7 +97,7 @@ go:
             SWPART      9, 4                ; The walks (dq0w.c's go, go_to, step_to)
             SWPART      10, 5               ; The things: the requests answered, a thing handled (things.c)
             SWPART      11, 5               ; The things listed, searched for, described, hidden
-            SWPART      12, 15              ; A door's work begun (dq0w.c's door_work)
+            SWPART      12, 20              ; A door's work begun (dq0w.c's door_work)
             SWPART      13, 8               ; The item store's rarer work: begun, kept, the kit, a chunk's things;
                                             ;   the map making, by what the character carries (things.c: part 26's
                                             ;   till 2026-10-28, overlay 9's room)
@@ -114,7 +114,7 @@ go:
             SWPART      24, 12              ; Engagement, a blow's close-in, fighting on (dq0w.c's)
             SWPART      25, 22              ; The engage initiative test, a grope's (dq0w.c's; overlay 6's till 2026-10-28,
                                             ;   13's till 2026-10-31); a dig begun (part 1's room)
-            SWPART      26, 9               ; Disengaging (dq0w.c's)
+            SWPART      26, 15               ; Disengaging (dq0w.c's)
             SWPART      27, 9               ; The lights burning down (dq0w.c's: slice 4.1's)
             SWPART      28, 9               ; The traces' store: the journal taken in, kept (wtrace.c)
             SWPART      29, 10              ; The traces read: the floor, a track, a smell (wtrace.c)
@@ -132,10 +132,10 @@ go:
             SWPART      41, 11              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
             SWPART      42, 21              ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 7              ; A walk in the dark set out on: its way felt, a thing stumbled over
-            SWPART      44, 15              ; A walk in the dark ended: what it met, felt or blundered into
+            SWPART      44, 9              ; A walk in the dark ended: what it met, felt or blundered into
             SWPART      45, 5              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
             SWPART      46, 25               ; A search's thing, for or on; what a search turns up (things.c)
-            SWPART      47, 10              ; What's on a thing or in it, searched (things.c)
+            SWPART      47, 22              ; What's on a thing or in it, searched (things.c)
             SWPART      48, 15              ; The work done and what came of it (dq0w.c's work, worked); the hands
                                             ;   (things.c: slice 4.1b's)
             SWPART      49, 23              ; The limbs: what a hand lets go of, a harm's effects (wlimbs.c; overlay
@@ -162,7 +162,7 @@ go:
             SWPART      65, 20              ; The missiles: a shot, its line, where it falls (wshoot.c: slice 4.7's)
             SWPART      66, 26              ; The missiles gathered (wshoot.c; overlay 15's, 2026-10-30)
             SWPART      67, 20              ; The character's shot, the denizens' shots and throws (wshoot.c)
-            SWPART      68, 20              ; Where a missile falls, a miss's stray; a launcher loaded (wshoot.c)
+            SWPART      68, 15              ; Where a missile falls, a miss's stray; a launcher loaded (wshoot.c)
             SWPART      69, 26               ; A robbery (wfight.c's: part 67's room, overlay 5's, 2026-10-30; 12's room, 2026-11-02)
             SWPART      70, 25              ; Wounds over time: the bodies' time told, a thing used up (wtend.c; overlay 21's room, slice 4.4)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
@@ -179,7 +179,7 @@ go:
             SWPART      81, 2               ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
             SWPART      82, 25              ; A room searched whole (wroom.inc: the user's playtest, 2026-11-02)
             SWPART      83, 25              ; Its tests at a stop (wroom.c)
-            SWPART      84, 22              ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
+            SWPART      84, 10              ; The character's dig's own: told why, a hidden door, nothing to show (2026-11-02)
             SWPART      85, 26              ; The reach's steps (things.c's, 2026-11-02: HOUSE.md's reach)
             SWPART      86, 26              ; Their other half
             SWPART      87, 26              ; And the hand the pack goes in, a tool's use, the words

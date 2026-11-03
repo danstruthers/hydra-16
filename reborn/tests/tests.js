@@ -5853,6 +5853,228 @@ module.exports = {
       },
       sdcard: true
     },
+    // ---- (The rules' round, 2026-11-03)
+    {
+      name: 'dq0clock', near: ['screen'], what: "Dingus Quest Zero's status line and the hour (the user's, 2026-11-03, DECISIONS.md's the round after HOUSE.md's check: \"Hide the minutes\"; HOUSE.md's the time of day believed): no minutes gone on the status line, by the screen's rows as the clock goes; dq0 -m, the tests' and debugging's, puts them back",
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'wait 2 minutes', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -m', 'wait 2 minutes', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], at = out.indexOf('-T -m');
+        if (at < 0) return ['the second game not begun'];
+        const one = dq0StatusRows(out.slice(0, at)), two = dq0StatusRows(out.slice(at));
+        if (!/facing /.test(one)) f.push('no status line in the first game');
+        if (/\d+ min\b/.test(one)) f.push('the minutes gone on the status line: ' + (one.match(/.*\d+ min\b.*/) || [''])[0]);
+        if (!/\b\d+ min\b/.test(two)) f.push('dq0 -m: no minutes on the status line');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0denpace', outfit: true, meaning: true, near: ['denizens'], what: "Dingus Quest Zero's denizens' paces (the user's, 2026-11-03: \"walk unless hurried, and closing in to attack should be hurried unless they are cautious\": HOUSE.md's their paces), by the time between an actor's steps (its E_DEN DE_MOVEDs: the world's wbody.c, every actor's): a hand-written theme's hostile bandits (seed 1), a kind whose walk is 20 tenths a square: coming at the character, at its jog, 10; a theme's hostile giant rats (seed 3), a shy kind whose walk is 12, cautious: coming on at its walk, no quicker, for all it's hostile; both referees",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'wait 1 minute', 'wait 1 minute', 'quit',
+        "echo 'faction | Gnawers | rat | 0-0 | 30 | - | 0 | h | -' > /ram/h/theme.txt", 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/h', 'wait 1 minute', 'wait 1 minute', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [];
+        // (Its steps in a slice of the clock, ten seconds at the turns pace, an actor's most: the events' t the slice's)
+        const most = g => {
+          const by = {};
+          for (const t of T) for (const e of t.dens) if (e.game === g && e.kind === 'E_DEN' && e.de === 'DE_MOVED') { const k = e.who + '/' + e.t; by[k] = (by[k] || 0) + 1; }
+          return Math.max(0, ...Object.values(by));
+        };
+        const band = most(0), rats = most(1);
+        this.notes = [band + ' ' + rats];
+        if (band < 6 || band > 11) f.push('a hostile bandit not at its jog: ' + band + ' steps in ten seconds');
+        if (!rats || rats > 9) f.push('a shy hostile rat not at its walk: ' + rats + ' steps in ten seconds');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0toolnamed', meaning: true, near: ['gear'], what: "Dingus Quest Zero's tool named (the user's, 2026-11-03: \"Suggest the better tool if one is available, but allow them to continue with the less effective tool.\": HOUSE.md's digging's a tool named): at seed 1, a shovel and a knife carried, 'dig down with the knife': the better told of, once (E_DIG's D_BETTER, not each spell), the knife digs; none named, the shovel; at seed 374's masonry, a pick carried: the knife refused, told the pick would, no time; sharpening or a lock with the wrong thing named, refused, not passed over for the right one",
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -k shovel,knife', 'dig down with the knife', 'dig down', 'quit',
+        'dq0 -p t -s 374 -c /ram/c.hm -T -k pick,knife,whetstone', 'dig north with the knife', 'sharpen the knife with the torch', 'unlock the door with the knife', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'dig down with the knife', n: 1, words: 'You dig with your', text: 'stop\r' }, { g: 1, line: 'dig down', n: 1, words: 'You dig with your', text: 'stop\r' }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), kn = T.of('dig down with the knife');
+        const better = T.filter(t => dq0Ev(t, 'E_DIG', { how: 'D_BETTER' }).length);
+        if (better.length !== 1 || better[0].k !== kn.k) f.push('the better tool not told once, as the dig began: ' + better.map(t => t.line));
+        if (!/Your shovel would do this better, but you set to it with the knife as you said\./.test(s)) f.push('not told of the shovel');
+        if (!/You dig with your knife\./.test(s)) f.push('the knife not used');
+        if (!/You dig with your shovel\./.test(s)) f.push('none named, the shovel not taken');
+        if (!/Your knife won't dig masonry\. Your pick would\./.test(s)) f.push('the knife on masonry not refused, the pick told of');
+        const r = T.of('dig north with the knife');
+        if (r.after && r.at && r.after.now !== r.at.now) f.push('the refusal took time: ' + (r.after.now - r.at.now));
+        if (!/You have nothing to sharpen the knife with\./.test(s)) f.push('sharpening with a torch named not refused');
+        if (!/Your knife won't do for a lock\./.test(s)) f.push('a lock with a knife named not refused');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0judge', meaning: true, near: ['gear'], what: "Dingus Quest Zero's appraisals kept (the user's, 2026-11-03: the first answer per thing till the skill improves: HOUSE.md's appraising a thing): asked again, the same words, a thing's value, its make, the whole, a door's quality, no store: the die a hash of the thing, the skill's mastery and the seed; the skill raised (the character's file), another answer for one thing at least; the game's other dice not moved by asking",
+      init: 't_rc', cycles: 1800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/d.hm', 'echo ml wpn 50 >> /ram/c.hm', 'echo ml wpn 95 >> /ram/d.hm',
+        ...[['c', 'value the dagger', 'value the dagger', 'judge the dagger', 'judge the dagger', 'appraise the dagger', 'appraise the dagger', 'value the shield', 'value the shield', 'go to the door', 'judge the door', 'judge the door'],
+          ['d', 'value the dagger', 'judge the dagger', 'value the shield']].flatMap(([c, ...l]) => ['dq0 -p t -s 3 -c /ram/' + c + '.hm -T -k \'dagger,round shield\'', ...l, 'quit']), 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), said = l => [...s.matchAll(new RegExp('> ' + l + ' > ' + l + ' (.*?) (?=Something stirs|Nothing stirs|>)', 'g'))].map(x => x[1]);
+        for (const l of ['value the dagger', 'judge the dagger', 'appraise the dagger', 'value the shield', 'judge the door']) {
+          const a = said(l);
+          if (a.length < 2) f.push(l + ': not asked twice: ' + a.length);
+          else if (a[0] !== a[1]) f.push(l + ': another answer asked again: ' + a[0] + ' / ' + a[1]);
+        }
+        if (['value the dagger', 'judge the dagger', 'value the shield'].every(l => said(l)[2] === said(l)[0])) f.push('the skill raised, the same answer for all three: ' + said('value the dagger'));
+        this.notes = [JSON.stringify(said('value the dagger')), JSON.stringify(said('judge the dagger')), JSON.stringify(said('value the shield'))];
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0prints', outfit: true, near: ['senses'], what: "Dingus Quest Zero's prints by footwear (the user's, 2026-11-03, \"Build it\": HOUSE.md's the traces): the same walk at seed 3's flagged cell read back (the world's tread): barefoot its faintest and told bare feet, in sandals clearer, in hobnailed boots the clearest and told hobnailed boots; and a floor in a young stratum (the user's: a place of no age has little or no dust; seed 5's): a skin of dust",
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml trk 95 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take off the sandals', 'e', 'w', 'track', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'take off the sandals', 'wear the sandals', 'e', 'w', 'track', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k \'hobnail boots\'', 'take off the sandals', 'wear the hobnail boots', 'e', 'w', 'track', 'quit',
+        'dq0 -p t -s 5 -c /ram/c.hm -T', 'examine the floor', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], rd = t => (t.after && t.after.tread) || {}, tracks = T.filter(t => t.line === 'track'), own = t => (rd(t).trails || []).find(e => e.kind === 0);
+        if (tracks.length !== 3 || tracks.some(t => !own(t))) return ['its own prints not read back: ' + JSON.stringify(tracks.map(t => rd(t)))];
+        const [b, s, h] = tracks.map(own);
+        this.notes = [JSON.stringify([b, s, h])];
+        if (!/bare feet/.test(b.what)) f.push('barefoot: ' + b.what);
+        if (!/sandalled feet/.test(s.what)) f.push('in sandals: ' + s.what);
+        if (!/hobnailed boots/.test(h.what)) f.push('in hobnails: ' + h.what);
+        if (!(b.strength < s.strength && s.strength < h.strength)) f.push('the prints not clearer by footwear: ' + [b.strength, s.strength, h.strength]);
+        const fl = rd(T.of('examine the floor'));
+        if (fl.dust > 2 || !fl.dust || !/under a skin of dust/.test(fl.text || '')) f.push('no skin of dust in a place of no age: ' + JSON.stringify(fl));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0nofoe', meaning: true, near: ['fight'], what: "Dingus Quest Zero's flee with no foe it sees (the user's, 2026-11-03, HOUSE.md's disengaging): at seed 3 by the rats, wary and let be: 'You see nothing to flee from.'; the rats made unfriendly to it, near and unseen in the dark: the same words (E_TASK's TE_FREE, no TE_BREAK), no run, nothing given away",
+      init: 't_rc', cycles: 1200e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T', 'flee', 'douse the torch', 'flee', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'flee', n: 2, call: (h, L, K, at, named) => { m.near = 0; for (let k = 0; k < L.nactors; k++) if (named(k)) { h[at(k) + L.aAttitude] = 1; m.near++; } } }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        for (const t of T.filter(t => t.line === 'flee')) dq0Never(f, t, 'E_TASK', { te: 'TE_BREAK' }, 'it ran');
+        const n = (s.match(/You see nothing to flee from\./g) || []).length;
+        if (n !== 2) f.push('not told in both: ' + n);
+        if (!m.near) f.push('no one near to be unseen');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0stillskin', near: ['body'], what: "Dingus Quest Zero's waterskin from still water (the user's, 2026-11-03: the same flux risk as drinking there: HOUSE.md's the diseases): at seed 2 the skin part drunk and filled in the flooded chamber's still water: the water in it marked (the item's wear), the clean kit's not",
+      init: 't_rc', cycles: 2600e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Vermin | rat | 7-7 | 30 | - | 1 | w | -' > /ram/g/theme.txt",
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/g -a', 'wait 3 hours', 'drink from the waterskin', 'wait 3 hours', 'd', 'n', 'fill the waterskin', 's', 'wait 3 hours', 'drink from the waterskin', 'quit', 'echo $status']) },
+      start(m) {
+        const wearOf = (L) => { const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize), r = []; for (let i = 0; cat && i < L.nitems; i++) { const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize; if (!b || !b[o + L.iKind]) continue; let n = ''; for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]); if (n === 'water') r.push(b[o + L.iWear]); } return r; };
+        m.foul = [];
+        const at = when => (h, L) => m.foul.push({ when, wear: wearOf(L) });
+        dq0Poke(m, [{ g: 1, line: 'd', n: 1, call: at('before') }, { g: 1, line: 's', n: 1, call: at('filled') }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out);
+        if (!/You fill your waterskin\./.test(s)) f.push('the skin not filled');
+        const b = m.foul.find(e => e.when === 'before'), a = m.foul.find(e => e.when === 'filled');
+        this.notes = [JSON.stringify(m.foul)];
+        if (!b || b.wear.includes(1)) f.push('the kit\'s water marked foul: ' + JSON.stringify(b));
+        if (!a || !a.wear.includes(1)) f.push('the still water not marked: ' + JSON.stringify(a));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0stream', meaning: true, near: ['map'], what: "Dingus Quest Zero's streams (the user's, 2026-11-03: some run deep enough to swim, so a current can happen; HOUSE.md's the water in the dungeon): the maker's, by the seed alone: seed 17's stratum below has a stretch of stream six feet deep in the chunks cached, seed 2's a foot deep",
+      init: 't_rc', cycles: 1200e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 17 -c /ram/c.hm -T', 'd', 'quit', 'dq0 -p t -s 2 -c /ram/c.hm -T', 'd', 'quit', 'echo $status']) },
+      start(m) {
+        m.runs = [];
+        const scan = () => { const r = []; for (let c = 0; c < 24; c++) { const b = m.dq0.bank(5 + Math.floor(c / 3)); if (!b) continue; const o = (c % 3) * 0xAA0; if (b[o + 0xA8C] & 0x40) r.push(b[o + 0xA8B]); } m.runs.push(r); };
+        dq0Poke(m, [{ g: 1, line: 'quit', n: 1, call: scan }, { g: 2, line: 'quit', n: 1, call: scan }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [];
+        this.notes = [JSON.stringify(m.runs)];
+        if (!m.runs[0] || !m.runs[0].includes(6)) f.push('seed 17: no stretch six feet deep: ' + JSON.stringify(m.runs[0]));
+        if (!m.runs[1] || !m.runs[1].length || m.runs[1].some(d => d !== 1)) f.push('seed 2: its stream not a foot deep: ' + JSON.stringify(m.runs[1]));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0farthing', outfit: true, near: ['money', 'denizens'], what: "Dingus Quest Zero's prices under a penny and no money pump (the user's, 2026-11-03: \"Farthing goods\", \"Haggling pump\": HOUSE.md's the market): a hand-written theme's bandit (dq0trade's scene): chalk (a farthing's worth) offered for and priced in farthings, its farthing paid, a character with none a whole penny; and an ally, Rhetoric 95, haggled with both ways over and over: buying back never under what it paid, the character's purse never the fuller for it",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml rhe 95 >> /ram/c.hm', 'echo wealth 1600 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k chalk,chalk,farthings,farthings",
+        'inventory', 'name the bandit bob', 'give bob 40 pennies', 'give bob 1 farthings', 'what will you give for the chalk', 'sell the chalk to bob', 'how much for the chalk', 'buy the chalk from bob', 'sell the chalk to bob', 'drop the farthings', 'buy the chalk from bob', 'inventory',
+        ...Array(5).fill(['haggle over my rope', 'inventory', 'haggle for the rope', 'inventory']).flat(), 'quit', 'echo $status']) },
+      start(m) {
+        const lines = ['give bob 40 pennies', 'give bob 1 farthings', 'what will you give for the chalk', 'sell the chalk to bob', 'how much for the chalk', 'buy the chalk from bob', 'drop the farthings', 'haggle over my rope', 'haggle for the rope'];
+        const p = ['inventory', 'name the bandit bob'].map(line => ({ g: 1, line, n: 1, name: 'bandit', set: { attitude: 4, doing: 0 }, beside: 4 }));
+        for (const line of lines) for (let n = 1; n <= 5; n++) p.push({ g: 1, line, n, name: 'Bob', set: { attitude: line[0] === 'h' ? 5 : 4, doing: 0 }, beside: 4 });
+        dq0Poke(m, p);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const pennies = st => dq0Carried(st).filter(i => i.name === 'pennies').reduce((n, i) => n + i.qty, 0);
+        if (!/would give you 1 farthing for your chalk\./.test(s)) f.push('the chalk not offered for in farthings');
+        if (!/Bob asks 1 farthing for the chalk\./.test(s)) f.push('the chalk not priced in farthings');
+        if (!/agrees: 1 farthing for your chalk\./.test(s)) f.push('the chalk not sold for a farthing');
+        if (!/agrees: 1 farthing for the chalk\./.test(s)) f.push('the chalk not bought for a farthing');
+        if (!/agrees: 1 penny for the chalk\./.test(s)) f.push('no farthings, not a whole penny');
+        const sells = T.filter(t => t.line === 'haggle over my rope'), buys = T.filter(t => t.line === 'haggle for the rope'), got = /agrees: (\d+) penn/;
+        const start = T.of('haggle over my rope').at, end = T.of('quit').at;
+        this.notes = [(s.match(/agrees: \d+ penn[a-z]* for [a-z]+ rope/g) || []).join('; ')];
+        if (start && end && pennies(end) > pennies(start)) f.push('money made by haggling: ' + pennies(start) + ' then ' + pennies(end));
+        const sold = [...s.matchAll(/agrees: (\d+) penn[a-z]* for your rope/g)].map(x => +x[1]), bought = [...s.matchAll(/agrees: (\d+) penn[a-z]* for the rope/g)].map(x => +x[1]);
+        if (!sold.length || !bought.length) f.push('no trades both ways: ' + sold + ' / ' + bought);
+        else if (Math.min(...bought) < Math.max(...sold)) f.push('bought under what it sold for: ' + bought + ' / ' + sold);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0rockname', near: ['map'], what: "Dingus Quest Zero's rock named (the user's, 2026-11-03: \"Naming the rock\": HOUSE.md's told as it's come to): a middling miner (Mining 40, dq0 -R 2's dice) at seed 3 digs a shaft down: into the rock, a spell that fails tells only its looks, and the first good spell after it names it, though it's no first spell",
+      init: 't_rc', cycles: 1800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml min 40 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick -a -R 2', 'dig down', 'stop', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), told = [...s.matchAll(/You're into ([a-z -]+?) rock(: [a-z ]+)?\./g)];
+        this.notes = [told.map(x => x[0]).join(' ')];
+        if (told.length !== 2 || told[0][2] || !told[1][2] || told[0][1] !== told[1][1]) f.push('not its looks, then named at the first good spell: ' + told.map(x => x[0]).join(' '));
+        else if (!/rock: [a-z ]+\. The work goes well\./.test(s)) f.push('named but not with a spell that went well');
+        return f;
+      },
+      sdcard: true
+    },
+    // ---- (Its end)
     {
       name: 'dq0trade', outfit: true, near: ['denizens', 'money'], what: "Dingus Quest Zero's market and entertaining (2026-11-02: DENIZENS.md's trading, HOUSE.md's the market, for review), by the denizens' sway, the things changing hands and the words: a hand-written theme's bandits (seed 1, dq0kit's), one put beside the character, friendly, at each command (dq0Poke's); given 8 pennies without a \"to\" (\"give the bandit 8 pennies\": the one given it the line's first word, SW_GIVE, taken); what it would give for the flask of oil asked (SW_OFFER, half its worth friendly: 'would give you 1 penny'); the oil sold to it (SW_SELL: it takes the oil, FT_GOT, and hands over its pennies, FT_GAVE, by the character's own way with things, the world's wfetch.c; the character's flask gone, its pennies one more); its price asked back (SW_PRICE: 'asks'), named Bob and bought back from it (SW_BUY, by the name given: the character's pennies taken, the oil handed over, the flask the character's again); a rope sold it and haggled for (SW_HAGGLE, the book's Rhetoric in its tongue, Rhetoric 95: its price under the price asked, that price paid); sung to, indifferent (SW_ENTERTAIN: Singing, the referee's)",
       init: 't_rc', cycles: 2500e6,

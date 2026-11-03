@@ -55,22 +55,6 @@ static void __fastcall__ maker (const struct trail* t, unsigned char smell)
         ", by the look of them.");
 }
 
-/* What the character wears on its feet (its prints' words: shod's) */
-static unsigned char feet (void)
-{
-    static unsigned i;
-    static unsigned char f, k;
-
-    for (i = f = 0; (i = items (i, IN_ACTOR | IN_X, 0)) != 0; ) {
-        k = ip->kind;
-        if (ip->flags & I_WORN) {
-            f = k == KI_BOOTS ? 1 : k == KI_SANDALS ? 2 : k == KI_SHOES ? 3 : k == KI_HOBNAIL ? 4 : f;
-        }
-    }
-    hub_map (0);
-    return f;
-}
-
 /* The words of the traces read (the UI bank's tread: each trail's passings and age made TP_*, TA_*; a critical
 ** failure's misread; a scent by its strength, heavy at TR_HEAVY, else by its age), into its trtext; the UI told
 ** (E_VIEW V_TRACED): w back (the tenths the reading took) */
@@ -115,7 +99,8 @@ unsigned __fastcall__ s_tr_words (unsigned w)
         }
         if (!t->kind) {
             t->name[0] = 0;                     /* (The character's own: its footwear's marks) */
-            strcpy (t->what, shod[feet ()]);
+            hub_map (0);
+            strcpy (t->what, shod[HUB->pc_feet]);
         }
         for (d = TP_ONE; d < TP_MANY && t->n >= n_at[d]; ++d) {
         }
