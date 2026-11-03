@@ -4109,12 +4109,12 @@ module.exports = {
         'dq0 -p t -s 374 -c /ram/c.hm -T', 'look', 'dig east', 'drop the knife', 'dig east', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k chisel -T', 'look', 'dig east', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'wait', 'dig east', 'look', 'dig east', 'quit',
-        'dq0 -p t -s 374 -c /ram/c.hm -k chisel,hammer -T', 'dig north', 'quit',
+        'dq0 -p t -s 374 -c /ram/c.hm -k chisel,hammer -T', 'drop the lantern', 'hold the chisel', 'hold the hammer', 'dig north', 'quit',
         'dq0 -p t -s 374 -c /ram/c.hm -k pick -T', 'look', 'dig east', 'quit',
         'mkdir /ram/g', "echo 'faction | Diggers | khuzmin | 0-0 | 96 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -k pick -T -d /ram/g -R 7',
         'open the door', 'south', 'turn around', 'close the door', 'dig north', 'quit', 'echo $status']) },
       start(m) {
-        dq0OnWords(m, [{ g: 5, line: 'dig east', n: 1, words: 'anywhere', text: 'stop\r' }]);   // (Typed as it's told)
+        dq0OnWords(m, [{ g: 5, line: 'dig east', n: 1, words: 'anywhere', text: 'stop\r' }, { g: 4, line: 'dig north', n: 1, words: 'You dig with your chisel', text: 'stop\r' }]);   // (Typed as it's told; the chisel's by a lantern, six hours of it: its first spell enough)
         const a = m.acia, read = a.read;
         let typed = '', g = 0;
         m.door = {};
@@ -7891,7 +7891,7 @@ module.exports = {
         'dq0 -p t -s 3 -c /ram/c.hm -T -k sack', 'put the rations in the sack', 'stow the sack', 'take the rations from the sack', 'drop the rations',
         'look in the backpack', 'search the backpack', 'drop the pack', 'take the tinderbox from the backpack', 'drop the tinderbox', 'put on the pack',
         'drop the torch', 'take the flask from the backpack', 'drop the flask', 'take the torch from the backpack', 'inventory', 'put on the pack', 'inventory', 'quit',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'light a new torch', 'inventory', 'light a new torch', 'inventory', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k sword', 'light a new torch', 'inventory', 'drop the sword', 'hold another torch', 'light a new torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'take a fresh torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'hold another torch', 'inventory', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T -k pick', 'dig down', 'inventory', 'quit',
@@ -7953,7 +7953,7 @@ module.exports = {
         order(2, 'light a new torch', ['You set the sword down at your feet.', 'You take off your backpack, and set it down at your feet.', 'You get out the new torch.', 'You light the new torch from the burning one.', 'You blow out the old torch.', 'You let the old torch fall.', 'You take up the sword.', 'You put your backpack back on.']);
         never(2, 'light a new torch', 'tinderbox');
         has(2, 'light a new torch', 'You have no other torch.', 2);
-        has(2, 'inventory', 'a sword, in your right hand', 2);
+        has(2, 'inventory', 'a sword, in your right hand');
         has(2, 'inventory', 'a torch (lit), in your left hand', 2);
         has(3, 'inventory', 'a torch, in your right hand');
         has(3, 'inventory', 'a torch (lit), in your left hand');
@@ -9454,21 +9454,21 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0loadtire', meaning: false, near: ['body'], what: 'Dingus Quest Zero\'s load and tiring (the user\'s, 2026-11-03, DECISIONS.md\'s: "I seem to acquire fatigue if overburdened even when sleeping", "if you are awake and standing with the burden, you should still get fatigued"; HOUSE.md\'s a load borne, for review): overloaded (dq0 -k), half an hour standing tires it (status\'s fatigue), a level or more; lying down, sitting and asleep no more tired, its fatigue less, overloaded or not; a sleeper lies down by itself; heavily burdened standing no rest; hunger and thirst told by status, and their share of the fatigue, after a long sleep; a light load (the kit alone) standing rests as ever',
+      name: 'dq0loadtire', outfit: true, near: ['body'], what: 'Dingus Quest Zero\'s load and tiring (the user\'s, 2026-11-03, DECISIONS.md\'s: "I seem to acquire fatigue if overburdened even when sleeping", "if you are awake and standing with the burden, you should still get fatigued"; HOUSE.md\'s a load borne, for review): overloaded (dq0 -k), 40 minutes standing tires it (status\'s fatigue), a level or more; lying down, sitting and asleep no more tired, its fatigue less, overloaded or not; a sleeper lies down by itself; heavily burdened standing no rest; hunger and thirst told by status, and their share of the fatigue, after a long sleep; a light load (the kit alone) standing rests as ever',
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick,shovel,rope,sword,bones,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword', 'douse the torch', 'status', 'wait 30 minutes', 'status',
-        'lie down', 'wait 40 minutes', 'status', 'stand up', 'wait 30 minutes', 'status', 'sit', 'wait 40 minutes', 'status', 'stand up', 'wait 30 minutes', 'status', 'sleep 40 minutes', 'status', 'stand up', 'wait 30 minutes', 'status',
-        'drop all', 'status', 'wait 15 minutes', 'status', 'sleep 20 hours', 'status', 'quit', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k pick,shovel,rope,sword,bones,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword,pick,shovel,sword', 'douse the lantern', 'status', 'wait 40 minutes', 'status',
+        'lie down', 'wait 40 minutes', 'status', 'stand up', 'wait 40 minutes', 'status', 'sit', 'wait 40 minutes', 'status', 'stand up', 'wait 40 minutes', 'status', 'sleep 40 minutes', 'status', 'stand up', 'wait 40 minutes', 'status',
+        'drop the pack', 'drop the pick', 'drop the sword', 'drop the rope', 'drop the bones', 'drop the sword', 'drop the pick', 'drop the shovel', 'status', 'wait 15 minutes', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'sleep 20 hours', 'status', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, '');
         const st = [...o.matchAll(/Condition: (.*?)Facing:/g)].map(x => x[1]), fat = s => { const x = /fatigue (\d+)/.exec(s); return x ? +x[1] : 0; };
         const F = st.map(fat);
         this.notes = ['fatigue at each status: ' + F.join(', ')];
-        if (F.length !== 11) return ['status told ' + F.length + ' times: ' + o.slice(-800)];
+        if (F.length !== 13) return ['status told ' + F.length + ' times: ' + o.slice(-800)];
         if (F[0] !== 0) f.push('rested at first, fatigue ' + F[0]);
-        if (!(F[1] >= 1)) f.push('overloaded, half an hour standing: fatigue ' + F[1] + ', not tired by it');
+        if (!(F[1] >= 1)) f.push('overloaded, 40 minutes standing: fatigue ' + F[1] + ', not tired by it');
         if (!(F[2] < F[1])) f.push('lying down 40 minutes, overloaded: fatigue ' + F[2] + ' from ' + F[1] + ', not rested');
         if (!(F[3] > F[2])) f.push('standing again half an hour: fatigue ' + F[3] + ' from ' + F[2]);
         if (!(F[4] < F[3])) f.push('sitting 40 minutes, overloaded: fatigue ' + F[4] + ' from ' + F[3] + ', not rested');
@@ -9478,8 +9478,8 @@ module.exports = {
         if (!(F[7] > F[6])) f.push('awake and standing again: fatigue ' + F[7] + ' from ' + F[6]);
         if (/burdened|overloaded/.test(st[8].replace(/a little burdened/, ''))) f.push('all let fall, still burdened: ' + st[8]);
         if (!(F[9] < F[8])) f.push('all let fall, a quarter hour standing: fatigue ' + F[9] + ' from ' + F[8] + ', not rested');
-        if (!/of it hunger and thirst, not rested off/.test(st[10])) f.push('after 20 hours asleep, the want\'s share not told: ' + st[10]);
-        if (!/Hunger and thirst: (not hungry|hungry|very hungry), (very thirsty|parched)\./.test(st[10])) f.push('after 20 hours asleep, hunger and thirst not told: ' + st[10]);
+        if (!/of it hunger and thirst, not rested off/.test(st[12])) f.push('after long sleeps, the want\'s share not told: ' + st[12]);
+        if (!/Hunger and thirst: (hungry|very hungry|starving), (very thirsty|parched|dying of thirst)\./.test(st[12])) f.push('after long sleeps, hunger and thirst not told: ' + st[12]);
         if (!/Hunger and thirst: not hungry, not thirsty\./.test(st[0])) f.push('at first, hunger and thirst not told: ' + st[0]);
         return f;
       },

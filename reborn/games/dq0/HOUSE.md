@@ -1807,7 +1807,9 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   spent, or none in hand**, as it was: the old let fall, told ("You let the torch fall."), then a spare got out by the
   reach's steps from wherever it is, into the hand (the one that suits it; a useless arm's never), then lit by the
   fire-maker's steps or from whatever flame is to hand (a lantern, a torch lying within reach: any lit thing lights any light,
-  a candle from a candle, a lantern from a torch, by "light the ..."), then the pack back on.  No spare (none carried or within reach that isn't in a hand, nor burning, nor spent):
+  a candle from a candle, a lantern from a torch, by "light the ..."), then the pack back on.  The new one ends in the old one's
+  hand, what was set down back in its own.  An old one blown out at its feet is a spare like any other, so saying it again
+  lights that (for review).  A torch already in the other hand isn't "new": "light the torch" lights it.  No spare (none carried or within reach that isn't in a hand, nor burning, nor spent):
   "You have no other torch.", nothing dropped.  No flame to light it with: told first, nothing dropped (the old one
   still lit is a flame for it, as it lies within reach).  Hands full with no old one: refused first, as a hold's.
   Interrupted part way: the old one where it fell, the pack as it stands.  **"New", "fresh", "another"** are a selector
