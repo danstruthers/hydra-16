@@ -74,7 +74,7 @@ This runs, one step after another with one summary at the end:
     node sim/test.js --tier lead
 
 This runs the whole suite (dq0answer at DQ0ANS_WAIT=0 in it), RULES=null's meaning tests, the soaks
-(`soak.js -n 200` and `-n 100 -fight 0.8`), dq0answer at DQ0ANS_WAIT=1 and 2, and the parser's checks.
+(`soak.js -n 200`, `-n 40 -fight 0.8` and `-n 20 -life 3`), dq0answer at DQ0ANS_WAIT=1 and 2, and the parser's checks.
 
 ## Keeping it safe
 

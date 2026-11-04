@@ -2086,6 +2086,14 @@ const DQ0_REPEATS = [
     why: 'a battering\'s beat every fourth blow once its blows tell (the user\'s, 2026-10-22: told as it goes), twice or more in a dozen' },
   { what: /^Everything goes black\.$/, tests: /^dq0(?:finished|strike|helpless|venom|morale)$/,
     why: 'knocked senseless, come round in shock a round later, struck senseless again, all in one wait\'s answer (the UI waiting it out): two black-outs, each told (dq0strike\'s rats, fought with a bar, three; dq0morale\'s small orcs, a knife in the hand of each)' },
+  { what: /^Everything goes black again\.$/, tests: /^dq0soak-/,
+    why: 'as "Everything goes black." above, its second time and after, in a soak\'s fight' },
+  { what: /^The [a-z]+ [a-z ]+ to your [a-z ]+ is gone\.$/, tests: /^dq0soak-/,
+    why: 'the time between\'s healing: two wounds alike on one place, each told' },
+  { what: /^Enter takes /, tests: /^dq0soak-/,
+    why: 'the time between\'s question asked again, a soak\'s answers refused (its echo in the sentence: dq0acct\'s prompt no game\'s)' },
+  { what: /^You feel your way [a-z]+\.$/, tests: /^dq0soak-/,
+    why: 'a walk over to a thing in the dark, each leg of it told (the first stopped by what it felt)' },
   { what: /^You struggle, but can't get up\.$/,
     why: 'the character\'s own Rise tried each round and failed (the book\'s test for one seriously or grievously wounded, slice 4.1b\'s), each try told' },
   { what: /^(?:The passage (?:forks here|ends here; it goes back behind you|comes to a door; it goes back behind you)|You are in a passage|It goes .+)\.$/,
@@ -12461,6 +12469,43 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0hardon', near: ['save', 'body'], what: "Dingus Quest Zero's hard mode going on with the life (the fight soak's find, 2026-11-04: it was lost at a carry-on, a death in the next dungeon going back to a save): the crypt solved and left in hard mode (dq0 -H), the next dungeon begun without saying so: the record says so (LF_HARD), and the new dungeon's save (its pace's top bit), so its death is hard mode's",
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -H -d /ram/q', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u',
+        'dq0 -p t -d /ram/q', 'quit', 'echo =LIFE', 'xd /ram/q/life.dat', 'echo =GAME', 'xd /ram/q/d2/game.dat', 'echo =END', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = out.replace(/\r/g, ''), first = n => { const i = o.indexOf('% echo =' + n), r = /\n[0-9a-f]+ +((?:[0-9a-f]{2} ){4})/.exec(o.slice(i, i + 200)); return r ? r[1].trim().split(' ').map(x => parseInt(x, 16)) : []; };
+        if (!(first('LIFE')[3] & 8)) f.push('the record not hard mode\'s: ' + first('LIFE'));
+        if (!(first('GAME')[3] & 0x80)) f.push('the next dungeon\'s save not hard mode\'s: ' + first('GAME'));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      lostLines: true, asks: true, initiative: true, reach: true, outfit: true, bearings: true, fit: true, hours: true, name: 'dq0deadonce', near: ['fight', 'body'], what: "Dingus Quest Zero's death in a run of blows (the fight soak's finds, 2026-11-04; its seed 14's scene, the commands as it played them, as nothing simpler brought it about: re-baseline the commands if the dice shift): small orcs shooting at a character as it walks over to one with a blow in hand, the fatal shot among others of the round: 'You are dead.' and 'The game is over.' told once, no blow told after the end (they were, each ending again, as the round's blows were told out), no blow at the body once it's dead (the world's: it was struck on), and the game gone back to the shell (a look posted after the quit's round, the senses gone, hung the world: dq0w's looked).",
+      init: 't_rc', cycles: 1800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 14 -o /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g',
+        "echo 'faction | Diggers | khuzmin | 0-1 | 29 | - | 0 | h | -' > /ram/g/theme.txt", "echo 'faction | Tribe | arak | 0-1 | 17 | - | 0 | h | Diggers h' >> /ram/g/theme.txt",
+        "dq0 -p t -s 14 -c /ram/c.hm -T -d /ram/g -k 'club'", 'attack', 'wait', 'fight the orc', 'kick the orc', 'echo =END', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], T = dq0Turns(m), a = dq0Story(out), FF_D_DEAD = 8;
+        const over = (a.match(/The game is over\./g) || []).length, dead = (a.match(/You are dead\./g) || []).length;
+        if (over !== 1 || dead !== 1) f.push('the end told ' + over + ' times, the death ' + dead + ': ' + a.slice(-400));
+        const after = a.slice(a.indexOf('The game is over.'));
+        if (/ at you\b/.test(after)) f.push('a blow told after the end: ' + after.slice(0, 300));
+        const blows = T.filter(t => t.game === 0).flatMap(t => [...t.events, ...t.dens]).filter(e => e.kind === 'E_FIGHT' && e.def === 0 && e.ff !== undefined).sort((x, y) => x.t - y.t);
+        const k = blows.findIndex(e => e.ff & FF_D_DEAD);
+        if (k < 0) f.push('the scene not set: no fatal blow in ' + blows.length);
+        else if (k < blows.length - 1) f.push('blows at the character after it was dead: ' + (blows.length - k - 1));
+        this.notes = [blows.length + ' blows at it, the fatal the ' + (k + 1) + 'th'];
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0lifeend', outfit: true, near: ['save', 'body'], what: "Dingus Quest Zero's life's account (dq0end; the plan's section 1): the crypt solved and walked out of with a wound that's infected, a carry-on: the character dies between the dungeons, told, the life's account after it (solved), the game not begun, status 0; the record says it's over; the next start a new life, the old record kept in lives.dat; and hard mode's death recorded, the account told",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
@@ -14656,6 +14701,7 @@ module.exports = {
 
 module.exports.dq0Check = dq0Check;
 module.exports.sdcardOf = sdcardOf;                 // (sim/tools/soak.js's games: the SD card's in device 0)
+module.exports.dq0Rec = dq0Rec;                     // (And its scenes')
 
 // The tests that run a sample, or play a song of the SD card's: its image in SD device 0
 for (const t of module.exports.tests) if (t.sdcard) sdcardOf(t);

@@ -53,6 +53,7 @@ struct save {
                                                 **   folder not begun: dq0life runs it again if it's found so) */
 #define LF_OVER         0x02                    /* The life's over: dead, in hard mode's dungeon or between two; the next start's a new life */
 #define LF_ABROAD       0x04                    /*   dead between two dungeons (dq0acct's), of its wounds' rolls */
+#define LF_HARD         0x08                    /* Hard mode's life: its dungeon's save said so as it ended, the next's kept so (the UI's) */
 #define LD_DIED         0x01                    /* (A dungeon's: it died in it, hard mode's; its outcome still LO_SOLVED if it was, Q2's) */
 
 struct life_head {

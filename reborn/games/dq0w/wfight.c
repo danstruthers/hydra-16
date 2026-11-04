@@ -315,6 +315,10 @@ void s_bled (void)
 ** AIM_SHOT, part 65's (slice 4.7's) */
 void __fastcall__ s_den_blow (unsigned char def, unsigned char z)
 {
+    hub_map (0);
+    if (!def && ((unsigned char) HUB->pcsum.cond & C_DEAD)) {
+        return;                                 /* (The character dead of a blow this round: no more blows at its body) */
+    }
     if (z & AIM_SHOT) {
         pc_shot (PS_DEN);                       /* (Its shot or its throw: part 67's, 2026-10-30) */
         return;

@@ -3614,7 +3614,7 @@ weapon's version and Strength, a wrecked door, a slip out of a pit.
   autosaves); a death is not kept: the last save stays, to go back to by starting the game again with its folder ("Your
   last save is kept: start the game again with its folder to go back to it.").  **Hard mode** (dq0 -H, kept in the
   save: the user's "turned off, it's hard mode"): a death ends the save, "Hard mode: there's no save to go back to.",
-  and the folder begins a new game, a new character.  *(The user's, 2026-11-03: they stay as they are, at a stratum and a
+  and the folder begins a new game, a new character.  Said once, it goes on with the life, each next dungeon in hard mode too (the record's LF_HARD).  *(The user's, 2026-11-03: they stay as they are, at a stratum and a
   quit, with no save before danger and no pause as a fight starts, till a playtest shows the lost play hurts.)*
 - **The ending** (death, or out of the dungeon, solved or left): the theme's words, what's next (above, or "Your
   character carries on: start the game again with this save's folder, and go on into a new dungeon."), the character's
