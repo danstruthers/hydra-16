@@ -226,6 +226,7 @@ go:
             SWFN        bearings_off, 52
             SWFN        tsense, 76
             SWFN        sky_ask, 89         ; (The daylight's emitters, a shaft's going, a thing let fall: dq0w.c's)
+            SWFN        air_harm, 74
             SWFN        no_way, 53          ; (The main RAM's room, 2026-11-03)
             SWFN        den_way, 53
             SWFN        rest_go, 53

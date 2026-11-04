@@ -4998,10 +4998,10 @@ unsigned char __fastcall__ s_zone_step (unsigned ox, unsigned oy, unsigned x, un
 
     if (ox != x || oy != y) {
         if ((p = at (sn_, x, y)) != 0 && TILE (*p) == T_RUBBLE) {
-            pt0 += pst;                         /* (Rubble clambered over: twice the step's time, slice 4.10's) */
+            wade (pst | WADE_MORE);             /* (Rubble clambered over: twice the step's time, slice 4.10's) */
         }
         if (HUB->pc_wet || HUB->pc_air || (at (sn_, x, y) && (C->wany || C->air))) {
-            pt0 += wade (pst);                  /* (A walk's step into water, or in it: its time the more, swimming,
+            wade (pst);                         /* (A walk's step into water, or in it: its time the more, swimming,
                                                 **   part 73's, slice 4.9's) */
         }
     }
@@ -5063,7 +5063,10 @@ static unsigned char air_q (void)
     return AQ_STR (q) > r ? q - r : 0;
 }
 
-static void __fastcall__ air_harm (unsigned char a, unsigned char b, unsigned char c)
+void __fastcall__ air_harm (unsigned char a, unsigned char b, unsigned char c);
+#pragma code-name (push, "SW74CODE")            /* (Part 74's: part 73's room, 2026-11-03) */
+#pragma rodata-name (push, "SW74RODATA")
+void __fastcall__ s_air_harm (unsigned char a, unsigned char b, unsigned char c)
 {
     struct req* r;
 
@@ -5083,6 +5086,8 @@ static void __fastcall__ air_harm (unsigned char a, unsigned char b, unsigned ch
     event (E_HARM, 0, a | b << 8);
     harm_fx ();                                 /* (What it dropped, fallen: part 49's) */
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 static void air_here (void)
 {
@@ -5146,7 +5151,7 @@ static void air_here (void)
     }
 }
 
-unsigned __fastcall__ s_wade (unsigned step)
+static unsigned __fastcall__ wade_t (unsigned step)
 {
     struct req* r;
     unsigned i;
@@ -5205,6 +5210,18 @@ unsigned __fastcall__ s_wade (unsigned step)
     }
     i = 600 / HUB->pc_swim;
     return i > step ? i - step : 0;
+}
+
+/* A step's time the more (the water's as it goes on through it, wade_t; WADE_MORE, its own, rubble's): the walk's next
+** square the later and its end too, so a walk gets all the way, and a step's own time is spent (2026-11-03: dq0streamswim) */
+unsigned __fastcall__ s_wade (unsigned step)
+{
+    step = step & WADE_MORE ? step & ~WADE_MORE : wade_t (step);
+    hub_map (0);
+    pt0 += step;
+    HUB->pc_ready += step;
+    free_at += step;
+    return step;
 }
 
 #pragma code-name (pop)
