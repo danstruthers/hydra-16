@@ -73,8 +73,8 @@ unsigned char __fastcall__ o_qual_ok (const char* name, const char* w)
     for (b = --p; b > cl && b[-1] != ' '; --b) {
     }
     n = p - b;
-    if (n > 7 || !n) {
-        return 1;
+    if (n > 7 || n < 3 || *b == 't' || *b == 'y') {
+        return 1;                               /* ("the", "this", "your": none of them, the answer's time) */
     }
     q[0] = ' ';
     memcpy (q + 1, b, n);

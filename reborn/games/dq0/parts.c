@@ -215,7 +215,7 @@ unsigned char __fastcall__ o_parts_in (unsigned char op)
             lv[k] = v;                          /* (The verb before it, a later "rope"'s) */
             lvn[k] = ps[k] ? vn : 0;
         }
-        own = verb_of (k);
+        own = np > 1 ? verb_of (k) : 0;         /* (A line of one part: none wanted, its answer the sooner) */
         if (k && vn && among (pa[k], dets)) {   /* (A thing alone: the verb before it, "take the shield") */
             q_put (inl + v, vn);
             queue[qlen++] = ' ';

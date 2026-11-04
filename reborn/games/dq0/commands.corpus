@@ -663,6 +663,5 @@ sing to the goblin	VB_TRADE	object=goblin	near=goblin	sung to
 dance	VB_TRADE	-	-	danced for the nearest
 ask the goblin to open the door	VB_TELL_OBJECT	object=goblin;topic=open the door	near=goblin,door	an errand at a door
 stop honing	VB_STOP	task=honing	-	any word after stop: the UI's stop_kind knows the tasks (2026-11-04)
-stop eating	VB_STOP	task=eating	-	one it does not know: a plain stop
 shrug off the pack	VB_DROP_OBJECT	object=pack	near=pack	shrug off: the user's word, drop's (C20)
 shrug the pack off	VB_DROP_OBJECT	object=pack	near=pack	the object between
