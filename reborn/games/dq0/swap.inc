@@ -18,10 +18,11 @@
 ;
 ; Before including it: zeropage.inc, BANKREG, _ovbank (the overlays' banks), ova and ovx (bytes kept, in the zero page: a stub's call
 ; is every call of a part's, some 120 cycles, and these are its most used), SWDEPTH (and
-; SWFAST, if the parts are copied four pages a pass: a byte some 10 cycles, not 14, for 90 bytes more code; SWMANY,
+; SWFAST, if the parts are copied four pages a pass: a byte some 10 cycles, not 14, for some 130 bytes more code; SWMANY,
 ; if there are more than 51 parts, past what an index of their records reaches: some 35 bytes more code); after it,
 ; the parts, SWPART n, ov (part n's image in the bank _ovbank[ov - 1]: overlay ov's, as a rule), in order from 1
-; (nothing else in RODATA between them), and the stubs.  The main code reads the overlays in before it calls one.
+; (nothing else in RODATA between them), and the stubs.  The main code reads the overlays in before it calls one (the
+; world's last three, dq0w.rop's, only at ropes_in: a part called sooner than that belongs in another's bank).
 
             .zeropage
 swapped:    .res        1                   ; The part in the area now (0: none)
