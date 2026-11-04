@@ -823,13 +823,13 @@ world's answer follows.  The word is said before the world's asked, and holds wh
 - **A look one way**: "You peer ahead." at once, unless it turns first.
 - **Listen**: "You listen."  **A dig, the floor or the wall looked at**: "You look at the floor." ("You feel the floor.").  **A journey**:
   "You think back."  **Through a door**: "You head for the door."
-- **A wait, a rest, a sleep**: its own words at once ("You wait a minute."), not again as the world starts it.
+- **A wait, a rest, a sleep, as long as it says**: its own words at once ("You wait a minute."), not again as the world starts it.  A round's ("Time passes.") by the world, in time as it is.
 - **Told once a line**, not again as its command's asked again after a step of the reach.
 - **Short answers go out as they're said**: an answer's first words aren't held for the rest of the world's news
   ("You sit down." at 590,000 cycles, not 860,000).
 - **Left as they are, over the target**: a plain walk or step ("n", "go south", "go back": "You set off south." some 650,000 to
   1.4M, its way worked out first; a word before it would be said on every move, and "You set off" can't be said till the
-  way's known).
+  way's known); a door gone over for traps (about a million: the pace's words looked for first in "search"); a blow's walk over ("You go over to the giant rat.", 1.1M); "name the rat Bob" (2.6M: its names' parts first); "help" (a million: the card); "stop" with nothing to stop, the map, a pace set (to 780,000: the answer itself, no word that reads well).
 
 ## Characters *(hmchar: HarnMaster's character generator)*
 
