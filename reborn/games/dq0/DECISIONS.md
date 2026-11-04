@@ -1801,3 +1801,13 @@ The plan (F:/.claude/hydra-2/plans/between-dungeons.md, sections 1-7) put ten qu
 - Q10 What's in 1.0, what goes first? "1-6 first, 7-12 in 1.0": steps 1-6 before Phase 5; 7-12 in 1.0 with a one-link clue; the long thread in 1.0 only if there's time, else first in Dingus Quest.
 
 **So:** the steps 1-6 first, before Phase 5: leaving unsolved, solving without ending, the life record, time and healing, monthly practice, food and upkeep. A18's grating goes with step 1. Reading stays open until step 9.
+
+## The swapped parts, the study answered (2026-11-04)
+
+The study (F:/.claude/hydra-2/swapstudy/report.md) measured the copies at 12-15% of all cycles in play and 16% of a first letter. The user chose among the options as put:
+
+- A second swap area in the world, about 1,700 bytes? "No, keep the room".
+- Go ahead with: "Fix the fight soak", "Smaller stubs", "Two small speedups", "Move rare code out".
+- A first word on plain walks and steps? "No word, leave them".
+
+**So:** no true cache and no second area; 6-byte stubs, the record walk, SWFAST in dq0d, rare code out of hot parts; each landing apart from game work.
