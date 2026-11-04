@@ -91,7 +91,7 @@ void __fastcall__ bearings_off (unsigned feet); /* (Part 52: dq0w.c) The charact
 unsigned char den_reach (void);                 /* (Part 60: wlimbs.c) Body bd's weapon let fall, in its reach */
 void den_took (void);                           /* (Part 60) Taken up again, told */
 void __fastcall__ den_word (const char* t, unsigned char n);   /* (Part 51) Its weapon's word: line n of t */
-void den_drop (void);                           /* (Part 60) Its weapon on the floor, told */
+void __fastcall__ den_drop (unsigned char b);                           /* (Part 60) Its weapon on the floor, told */
 unsigned char den_legs (void);                  /* (Part 51) Its legs at a move's start: 1 no move */
 void __fastcall__ den_other (const struct msg* m);  /* (Part 60) A denizen's things made (I_KIT's) */
 void __fastcall__ den_more (const struct msg* m);    /* (Part 80: wport.c) Body bd's rarer intents (part 14's room):

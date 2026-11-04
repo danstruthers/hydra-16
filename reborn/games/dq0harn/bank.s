@@ -171,8 +171,10 @@ ovl_out:
             OVFN        rise_of, 5
             OVFN        hit_thing, 5
             OVFN        health_of, 5
-            OVFN        fumbled, 3
-            OVFN        wound_drops, 3
+            OVFN        fumbled, 5
+            OVFN        wq_of, 3            ; (A weapon's quality: the book's Weapon Damage, 2026-11-03)
+            OVFN        w_damage, 3
+            OVFN        wound_drops, 5
             OVFN        test_sk, 5
             OVFN        draw_test, 5
             OVFN        bearing_of, 5
@@ -216,6 +218,7 @@ ovl_out:
             SWFN        fixed, 2            ; (A test's dice hook, 2026-10-31: the main RAM's room)
             SWFN        stress, 3           ; (What a skill's used under, 2026-11-03)
             SWFN        pace_set, 3         ; (The main RAM's room for it)
+            SWFN        side, 3
 
 ; The dice by who asks (rshouse.h's RS_HOUSE_DICE: ../dq0/dice.inc), overlay 7's, through its stub (OVFN's, by hand)
             .export     _dice_to

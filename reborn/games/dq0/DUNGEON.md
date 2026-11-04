@@ -1213,7 +1213,7 @@ the hour quite arbitrary, drifting further from known as play goes on, unless th
 corrected whenever the sun can be seen and the direction is known, or by watching it a while (DECISIONS.md's).  The
 numbers are HOUSE.md's (the time of day believed).
 
-- **A true clock and a belief.**  The world's clock (the hub's now) and the hour the game began (dusk; a test's
+- **A true clock and a belief.**  The world's clock (the hub's now) and the hour the game began (by its seed; dq0 -E's dusk; a test's
   `dq0hour`: the denizens' days go by the same) are the truth; the character's time is the hub's tb, the world's (part
   76, wtime.c): its error in minutes against the true time (skew) and how far off it knows it may be (unc), kept with
   the game (world.dat), as its north is (the bearings, above).

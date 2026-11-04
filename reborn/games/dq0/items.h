@@ -142,6 +142,7 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_ANTIDOTE, KI_REMEDY,                     /* (The remedies, 2026-11-02: an antidote, a theriac against poisons
                                                 **   and venoms; a remedy, a physician's draught against a disease;
                                                 **   drunk, their keys the things' IO_USE's: HOUSE.md's remedies) */
+    KI_WRECK,                                   /* (A weapon broken, its pieces useless: HOUSE.md's, the book's Weapon Damage, 2026-11-03) */
     KI_STONE_CHISEL, KI_WOOD_CHISEL, KI_MATTOCK, KI_SPADE,  /* (Tools, 2026-11-03: a stone chisel as a chisel is, a wood
                                                 **   chisel no use on stone, a mattock and a spade for earth: HOUSE.md's
                                                 **   digging) */
@@ -320,6 +321,7 @@ enum { TH_HIT, TH_MISS, TH_SHORT };             /* (IO_THROW's: it hit the mark,
                                                 **   its pack told off and on already, the rest of the line by the lump) */
 #define PL_MORE         2
 #define PL_TOLD         4
+#define PL_DUSK         16                      /* (dq0 -E, the tests': the game begins at dusk, not at the seed's hour: their games as they were) */
 #define PL_NOFIT        8                       /* (dq0 -F, the tests': the outfit as it's drawn, unfitted to its strength) */
 #define IO_STEPS        0x40                    /* (A request's kind |: the UI goes by the reach's steps, a step's reply
                                                 **   IO_STEP's; HOUSE.md's, part 82's) */

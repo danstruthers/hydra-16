@@ -138,9 +138,9 @@ static void __fastcall__ equip_all (const char* keys)
         if (*keys >= '0' && *keys <= '9') {
             ++keys;
         }
-        if (*keys == 'L' || *keys == 'H') {
+        while (*keys >= 'A' && *keys <= 'Z') {
             if (j < NTOOLS) {
-                tqual[j] |= *keys == 'L' ? TQ_LIGHT : TQ_HEAVY;
+                tqual[j] |= *keys == 'L' ? TQ_LIGHT : *keys == 'H' ? TQ_HEAVY : *keys == 'D' ? TQ_DULL : *keys == 'E' ? TQ_DULLED : 0;
             }
             ++keys;
         }
@@ -213,7 +213,8 @@ static const unsigned char appraiser[NAP + 4] = {
 static unsigned char __fastcall__ speaks (const char* t);
 void __fastcall__ s_dig_answer (struct req* r)
 {
-    unsigned char sk;
+    unsigned char sk, m;
+    int e;
 
     if (r->a == P_STEALTH || r->actor) {       /* (Moving quietly; or a creature's own test, a tunneller's dig: its
                                                 **   grade by its sheet, the world's the rest, slice 4.11's) */
@@ -229,9 +230,15 @@ void __fastcall__ s_dig_answer (struct req* r)
             r->grade = test_sk (&pc, sk, r->steps);
         }
     } else if (r->a != P_DIG && r->a != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
-        if (!speaks (r->text)) {                /* (Words in a tongue it doesn't speak: nothing) */
+        if (!(sk = speaks (r->text))) {         /* (Words in a tongue it doesn't speak: nothing) */
             r->result = 2;
         } else {
+            m = r->a == P_DECEIVE ? HARN_NTR : HARN_RHE;
+            e = pc.ml[m] ? harn_eml (&pc, m) : harn_get_oml (&pc, m) + harn_eml (&pc, m);
+            e += STEP_PCT * (signed char) r->steps;
+            if (e > sk) {                       /* (Its EML never past its mastery of the tongue: the book's, Skills 11) */
+                r->steps -= (e - sk + STEP_PCT - 1) / STEP_PCT;
+            }
             r->grade = test (&pc, r->a, r->steps);
         }
     } else if (r->a == P_SWIM) {                /* (A minute's swimming, the book's, Skills 10: its squares, by the
@@ -451,6 +458,10 @@ static void status (void)
     if (s->hearing > 9) {
         s->hearing = 9;
     }
+    if (HUB->pc_task.kind == LT_SLEEP) {        /* (Asleep: at half, the UI's reach of a sound its hearing plus three: the
+                                                **   book's, the user's, 2026-11-03) */
+        s->hearing = s->hearing > 2 ? ((s->hearing + 3) >> 1) - 3 : 0;
+    }
     s->smell = sense (HARN_SML);
     s->darkvision = 0;                          /* (The species' sight in the dark: the book's, to come) */
     s->nightvision = 1;
@@ -650,7 +661,8 @@ void __fastcall__ s_beasts (unsigned char back)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* Whether it speaks tongue t (a word of tongues, a space before it: part 2's, the main RAM's room, 2026-10-31) */
+/* Whether it speaks tongue t (a word of tongues, a space before it, =its mastery after it if it isn't its own, its file's: part 2's,
+** the main RAM's room, 2026-10-31): 0, or its mastery in it (its own its Language's; 100 if it has none open) */
 #pragma code-name (push, "SW3CODE")
 #pragma rodata-name (push, "SW3RODATA")
 static unsigned char __fastcall__ speaks (const char* t)
@@ -659,8 +671,9 @@ static unsigned char __fastcall__ speaks (const char* t)
     unsigned char n = strlen (t);
 
     while ((p = strstr (p, t)) != 0) {
-        if (p[-1] == ' ' && (!p[n] || p[n] == ' ')) {
-            return 1;
+        if (p[-1] == ' ' && (!p[n] || p[n] == ' ' || p[n] == '=')) {
+            n = p[n] == '=' ? atoi (p + n + 1) : pc.ml[HARN_LAN];
+            return n ? n : 100;
         }
         ++p;
     }
@@ -784,7 +797,10 @@ static void sheets_in (void)
 
 /* One side of two actors' tests (RS_CONTEST): who's test of purpose p, at the steps: the character's here (one
 ** senseless, or in shock, tests nothing: a critical failure), a creature's by its sheet (overlay 2's, in a copy) */
-static signed char __fastcall__ side (unsigned char who, unsigned char p, signed char steps)
+signed char __fastcall__ side (unsigned char who, unsigned char p, signed char steps);
+#pragma code-name (push, "SW3CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
+#pragma rodata-name (push, "SW3RODATA")
+signed char __fastcall__ s_side (unsigned char who, unsigned char p, signed char steps)
 {
     struct req* q = (struct req*) rq;
 
@@ -799,6 +815,8 @@ static signed char __fastcall__ side (unsigned char who, unsigned char p, signed
     fight (q);
     return q->grade;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Moving quietly's test (RS_TEST's P_STEALTH: slice 4.6's), by its own dice (rshouse.h's RS_HOUSE_QUIET's: the game's
 ** as they stand, mixed, and put back after), so the game's other tests roll as they did: the character's, or a

@@ -482,7 +482,10 @@ static unsigned long walk_t;                    /* (walk's: the time it takes) *
 void __fastcall__ walk (unsigned char d);       /* (Part 9's, its stub: across's, part 33's) */
 
 
-static void __fastcall__ no_way (unsigned why)
+#pragma code-name (push, "SW53CODE")            /* (Part 53's: the main RAM's room, 2026-11-03) */
+#pragma rodata-name (push, "SW53RODATA")
+void __fastcall__ no_way (unsigned why);
+void __fastcall__ s_no_way (unsigned why)
 {
     hub_map (0);                                /* (A chunk may be in the window, its portal just read: a journey's leg's,
                                                 **   a step's: told to the hub's, not into the chunk) */
@@ -492,10 +495,13 @@ static void __fastcall__ no_way (unsigned why)
 }
 
 /* Stopped by a denizen in its way before it's gone a square (told: the actor's) */
-static void den_way (void)
+void den_way (void);
+void s_den_way (void)
 {
-    no_way (N_DEN | (unsigned) (blocked - 1) << 8);
+    s_no_way (N_DEN | (unsigned) (blocked - 1) << 8);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- Traps on the way (DUNGEON.md: traps; set off by the world's work, wtrap.c): a walk worked out stops at the
 ** first it would set off (a plate's, a wire's, on a room's floor), and goes round one the character knows of */
@@ -3452,18 +3458,15 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
                 }
             }
             if (!n && !(pt & 1)) {
-                n = 1;
-            } else if (!n && (pt & 6) != 6) {
-                n = 1;
-                st = pt & 8 ? DN_HANDS | DN_LIT : DN_HANDS;   /* (Carried, not in hand: told so, a light in hand too) */
+                n = 1;                          /* (No hammer: got out with it, its hands made free: the user's, 2026-11-03) */
             }
         }
         hub_map (0);
         if (n) {
             evb = (dig.mat + 1) | st;
             dig_no (D_NO_TOOL << 8 | evb);
-        } else if (HUB->dig_better[0]) {
-            event (E_DIG, 0, D_BETTER << 8);
+        } else if (HUB->dig_better[0] && !rs_live) {
+            event (E_DIG, 0, D_BETTER << 8);    /* (Once: not each time it's asked again, a tool's steps done) */
         }
         return n;
     }
@@ -5931,6 +5934,7 @@ void s_rest_go (void)
 {
     if (HUB->pc_task.kind == LT_SLEEP && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
         HUB->pc_task.kind = LT_NONE;            /* (Woken, its eyes open: what it sees now, what's come told) */
+        spend (GA_REST, 0);
         looked (0);
         if (HUB->look.ch) {
             view (V_STIR);
@@ -5969,6 +5973,8 @@ void __fastcall__ s_intent_few (struct msg* m)
                                                 **   or a sleep: a long task, in minutes past 100 of them; a rest awake) */
             if (HUB->pc_task.kind == LT_SLEEP) {
                 looked (0);                     /* (Its eyes shut: the senses' look sees nothing as it sleeps, HOUSE.md's) */
+                spend (GA_REST, 0);             /* (And its hearing at half: the referee's summary) */
+                hub_map (0);
             }
         }
         free_at = HUB->now;                     /* (Waiting: rest; engaged, a pass: part 26's) */

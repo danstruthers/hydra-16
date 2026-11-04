@@ -60,6 +60,8 @@ extern unsigned char tqual[NTOOLS];             /*   its quality (0-9) */
 #define TQ_LIGHT 0x10                           /* (tqual's high bits: a weapon's version, light; heavy; none average:
                                                 **   D13's, the book's custom weapons, Combat 3) */
 #define TQ_HEAVY 0x20
+#define TQ_DULLED 0x40                          /* (tqual's top bits: its edge dulled, a point less cutting harm; dull, */
+#define TQ_DULL  0x80                           /*   two: the house's, the user's, 2026-11-03) */
 #define TQ_HEFT(q)      ((q) & TQ_LIGHT ? 0 : (q) & TQ_HEAVY ? 2 : 1)
 #define T_HELD  0x01
 #define T_WORN  0x02
@@ -282,6 +284,9 @@ void __fastcall__ pc_wield (struct req* r);     /* RS_WIELD: what it would strik
                                                 **   its words put); its hands empty, the best it carries */
 unsigned char __fastcall__ fumbled (const struct side* s, unsigned char att);  /* The hands that let go of what side s
                                                 **   fumbled (its attack's, att 1; its block's), rs.h's DH_* */
+unsigned char __fastcall__ wq_of (const struct side* s, unsigned char att);  /* Its Weapon Quality, of what it strikes with
+                                                **   (att) or blocked with: 0 none */
+unsigned char w_damage (void);                  /* A block's Weapon Damage, A's and D's: 1 the attacker's broken, 2 the defender's */
 unsigned char __fastcall__ wound_drops (const struct side* t, unsigned char loc);  /* The hand an arm's wound at loc
                                                 **   lets go of what it holds (DH_*) */
 unsigned char __fastcall__ pc_armour (unsigned char loc, unsigned char aspect);    /* Its armour at loc against an

@@ -21,7 +21,7 @@
             .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
+SWDEPTH     = 12                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
@@ -185,6 +185,8 @@ go:
             SWPART      87, 26              ; And the hand the pack goes in, a tool's use, the words
             SWPART      88, 15              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
             SWPART      89, 27              ; A shaft's going, a thing let fall, the daylight's emitters (dq0w.c: 2026-11-03)
+            SWPART      90, 2               ; Hands made free, a tool in hand and back (things.c: 2026-11-03)
+            SWPART      91, 3               ; A denizen's weapon let fall, or broken (wlimbs.c: 2026-11-03)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -207,7 +209,8 @@ go:
             SWFN        den_reach, 51       ; (Part 60's room, 2026-10-30)
             SWFN        den_took, 60
             SWFN        den_word, 51
-            SWFN        den_drop, 60
+            SWFN        den_drop, 91
+            SWFN        den_equip, 60
             SWFN        den_legs, 51
             SWFN        den_other, 51
             SWFN        den_dig, 79         ; (A tunneller's dig: slice 4.11's)
@@ -223,6 +226,8 @@ go:
             SWFN        bearings_off, 52
             SWFN        tsense, 76
             SWFN        sky_ask, 89         ; (The daylight's emitters, a shaft's going, a thing let fall: dq0w.c's)
+            SWFN        no_way, 53          ; (The main RAM's room, 2026-11-03)
+            SWFN        den_way, 53
             SWFN        rest_go, 53
             SWFN        sky_seen, 77
             SWFN        stopped, 40         ; (A trap on the way set off: the main RAM's room, 2026-10-31)
@@ -290,6 +295,7 @@ go:
             SWFN        reach_step, 85      ; (The reach's steps, 2026-11-02)
             SWFN        reach_do, 86
             SWFN        rs_for, 87
+            SWFN        rs_more, 90
             SWFN        hub_attach, 88
             SWFN        handy, 56
             SWFN        tool_reach, 72

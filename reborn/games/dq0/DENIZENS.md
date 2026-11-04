@@ -179,7 +179,7 @@ yet) is the hook's.
 rope from the dwarf", "sell my dagger", "how much for the lantern?", "what will you give for this?", "haggle for the
 rope", "sing to the bandit".  The UI finds the goods (the character's, or the trader's: the world's IO_GEAR's goods, the
 nearest named, or any, carrying them) and each side's pennies, and asks the denizens' task (SW_BUY, SW_SELL, SW_PRICE,
-SW_OFFER, SW_HAGGLE, SW_ENTERTAIN: dq0d's part 16): any folk denizen indifferent or better trades, its price from the
+SW_OFFER, SW_HAGGLE, SW_ENTERTAIN: dq0d's part 16): any folk denizen friendly or better trades (the user's, 2026-11-03), its price from the
 goods' worth by its attitude, haggled by the book's Rhetoric in its tongue; the deal done by the one path (its own
 I_ROB intents, FE_GIFT the coins or the goods it takes, FE_GIVE its own handed over: the world's wfetch.c).  Entertained
 by the referee's performing skill, its attitude moved as words move it, as far as friendly.
@@ -313,7 +313,7 @@ denizens' task is their minds.
 ### Daily life *(2026-10-31: slice 4.5's leftover; HOUSE.md's the denizens' day, for review)*
 
 Each denizen keeps a day by its kind and the game's clock (dq0d.c's part 9): the hour of the day the clock's and the
-hour the game began at, dusk (the house's).
+hour the game began at, by its seed (the user's, 2026-11-03; dq0 -E's dusk, the tests').
 
 - **Its day** (kinds.txt's day, from the bestiary's habits): diurnal (up at six, asleep at ten at night: the cave
   basilisk, the cultists and their priest, the bandits' and the soldiers' leaders, the dwarf miners and elders),

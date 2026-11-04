@@ -3475,6 +3475,10 @@ void __fastcall__ s_regard (unsigned char f, unsigned char pts)
 #pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
 static const unsigned means[5] = { 4, 16, 48, 192, 960 };   /* (Farthings: a penny, 4d, 12d, 48d, 240d) */
 
+/* Actor k a leader of its people (kinds.txt's rank: an elder, a king, a captain, a warden): it knows common too, so each
+** people has someone to talk to (the house's, the user's, 2026-11-03).  The hub's header in the window after */
+static unsigned char __fastcall__ leads (unsigned char k);
+
 /* The referee's test of the character's words with actor k, purpose p (b its own: entertaining's, P_APPRAISE's past
 ** the crafts, the performing skill), at steps st, in its tongue (t 1: none wanted): the grade, or 0x7F (no tongue in
 ** common: SR_TONGUE) */
@@ -3493,7 +3497,7 @@ static signed char __fastcall__ words_test (unsigned char k, unsigned char p, un
         if (!ftongue[f][0]) {
             return 0x7F;
         }
-        strcpy (r->text, ftongue[f]);
+        strcpy (r->text, leads (k) ? "common" : ftongue[f]);
     }
     r->kind = RS_TEST;
     r->actor = 0;
@@ -3621,6 +3625,13 @@ static void __fastcall__ trade (unsigned char k)
     im.x[0] = im.x[1] = 0xFF;
     post (I_ROB, k + 1);
     settle ();
+}
+
+static unsigned char __fastcall__ leads (unsigned char k)
+{
+    kx_get (akind[k]);
+    kind_get (akind[k]);
+    return X.rank != RK_FILE || (K.key[0] == 's' && K.key[4] == 'w');   /* (A warden: sindwar, its kind) */
 }
 
 void __fastcall__ s_gift (unsigned char k)
@@ -3821,6 +3832,13 @@ void __fastcall__ s_harmed (unsigned char k)
     }
 }
 
+static unsigned char __fastcall__ leads2 (unsigned char k)
+{
+    kx_get (akind[k]);
+    kind_get (akind[k]);
+    return X.rank != RK_FILE || (K.key[0] == 's' && K.key[4] == 'w');   /* (A warden: sindwar, its kind) */
+}
+
 /* Words to sway actor k (sw's how): by its mind (nothing sways the mindless; an animal only by P_ANIMALS, within
 ** reach), in its faction's tongue (but a threat), a test of the referee's (P_PERSUADE, P_DECEIVE, P_INTIMIDATE,
 ** P_ANIMALS) at steps by its attitude, its kind and its mind; the attitude moved by the grade, as far as that way of
@@ -3868,7 +3886,7 @@ static void __fastcall__ influence (unsigned char k)
             sw.result = SR_TONGUE;
             return;
         }
-        strcpy (r->text, ftongue[HUB->actor[k].faction & (NFACT - 1)]);
+        strcpy (r->text, leads2 (k) ? "common" : ftongue[HUB->actor[k].faction & (NFACT - 1)]);
     }
     r->kind = RS_TEST;
     r->actor = 0;
@@ -5425,7 +5443,8 @@ static void __fastcall__ meal (unsigned char k)
 }
 
 /* The hour the game began at (hour0), as the day's first asked (sched's): the environment's dq0hour, a test's scene,
-** else dusk (the house's).  Part 3's (part 9's room, and 10's) */
+** else by the game's seed (the user's, 2026-11-03: "vary by game"), dq0 -E's dusk, the tests'.  Part 3's (part 9's room,
+** and 10's) */
 #pragma code-name (push, "SW3CODE")
 #pragma rodata-name (push, "SW3RODATA")
 void s_hour (void)
@@ -5435,7 +5454,7 @@ void s_hour (void)
     char* p;
 
     hset = 1;
-    hour0 = DAY_START;
+    hour0 = HUB->pc_lump & PL_DUSK ? DAY_START : (unsigned) HUB->seed % 24;
     r.a = 0xFF;
     r.r[0] = (unsigned) "dq0hour";
     r.r[1] = (unsigned) b;

@@ -51,7 +51,7 @@ void s_equip_now (void)
     static const char hmark[4] = "><>*";
     static char wb[12];
     static unsigned i;
-    static unsigned char kind, f, n, h, hh, mh;
+    static unsigned char kind, f, n, h, hh, mh, wr, sz;
     struct req* r;
 
     hub_map (0);
@@ -63,6 +63,8 @@ void s_equip_now (void)
         f = ip->flags;
         n = ip->quality;
         h = ip->sn & IH_BOTH;
+        wr = ip->wear;
+        sz = ip->size;
         if (!on_me ()) {
             continue;
         }
@@ -71,12 +73,18 @@ void s_equip_now (void)
         }
         hub_map (KIND_BANK);                     /* (Its key after its mark, its quality after it) */
         memcpy (wb + 1, CATALOGUE[kind].tool, sizeof CATALOGUE[0].tool);
+        kind = CATALOGUE[kind].craft;
         hub_map (0);
         if (wb[1] && strlen (r->text) < REQ_TEXT - sizeof wb) {
             wb[0] = f & I_HELD ? hmark[h] : f & I_WORN ? '+' : ' ';
             h = strlen (wb);
             wb[h] = '0' + n;
             wb[h + 1] = 0;
+            if (kind == AP_WEAPON) {            /* (Its version, its edge: as tools' in things.c, 2026-11-03) */
+                wb[h + 1] = sz == WV_HEAVY ? 'H' : sz ? 'L' : 'M';
+                wb[h + 2] = "NEEEDDDD"[wr >> 5];
+                wb[h + 3] = 0;
+            }
             strcat (r->text, wb);
         }
     }
@@ -113,13 +121,14 @@ void __fastcall__ s_drop_held (unsigned char h, unsigned char ring)
 {
     static const unsigned char way[6] = { H_N, H_NE, H_SE, H_S, H_SW, H_NW };
     static unsigned i, x, y;
-    static unsigned char k, d, n, sn, mh;
+    static unsigned char k, d, n, sn, mh, bk;
     unsigned char* q;
     struct item* p;
 
     hub_map (0);
     mh = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
     sn = HUB->pc_stratum;
+    bk = h & 0x80;                              /* (Broken: its pieces, not the thing, where it falls: the book's, 2026-11-03) */
     for (n = 0, i = 0; (i = items (i, IN_X | IN_ACTOR, 0)) != 0; ) {
         if (!(ip->flags & I_HELD) || !((ip->sn & IH_BOTH ? ip->sn & IH_BOTH : mh) & h)) {
             continue;
@@ -143,6 +152,9 @@ void __fastcall__ s_drop_held (unsigned char h, unsigned char ring)
         p->x = x;
         p->y = y;
         p->flags &= ~(I_HELD | I_WORN);
+        if (bk) {
+            p->kind = KI_WRECK;
+        }
         hub_map (0);
         if (HUB->pc_strike == SK_OF (k)) {
             HUB->pc_strike = SK_BEST;           /* (What struck let go of: what's in its hands now strikes, the fight's
@@ -151,7 +163,7 @@ void __fastcall__ s_drop_held (unsigned char h, unsigned char ring)
         lm.kind = E_BEAT;
         lm.who = 0;
         lm.b = 0;                               /* (The character's: else the actor's plus 1) */
-        lm.w1 = WB_DROP | (unsigned) k << 8;
+        lm.w1 = (bk ? WB_BROKE : WB_DROP) | (unsigned) k << 8;
         lm.t = HUB->now;
         if (ring) {
             hub_devent (&lm);
@@ -364,6 +376,79 @@ unsigned char s_den_reach (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+void den_equip (void);
+#pragma code-name (push, "SW91CODE")            /* (Part 91's: part 60's room, 2026-11-03) */
+#pragma rodata-name (push, "SW91RODATA")
+#pragma bss-name (push, "SW91RODATA")
+/* Its weapon on the floor (dword's kind: none of that name, nothing), beside it or where it stands (a d10: 1-6 the
+** square that way, if it's open floor), kept as its (bd's arm, dropped), told (E_BEAT's WB_DROP, its kind, its b the
+** body's: the denizens' ring, after the blow's words), the world to look about again.  A weapon of its own in its hand
+** (the outfits' gear) that thing (dropped | DR_OWN), the referee told it's gone from its hand */
+void __fastcall__ s_den_drop (unsigned char den_brk)   /* (Broken as it's let fall: 1 its weapon, 2 its shield) */
+{
+    static const unsigned char way[6] = { H_N, H_NE, H_SE, H_S, H_SW, H_NW };
+    unsigned char k, d;
+    unsigned x = bd.x, y = bd.y, i;
+    unsigned char* q;
+
+    for (i = 0; bd.did && (i = items (i, IN_DEN, 0)) != 0; ) {   /* (Its own weapon in hand; or broken, its shield) */
+        if ((ip->owner | ip->hide << 8) == bd.did && (ip->flags & I_HELD)) {
+            k = ip->kind;
+            hub_map (KIND_BANK);
+            if (CATALOGUE[k].craft == AP_WEAPON && (CATALOGUE[k].flags & (K_HAND | K_WEAR)) == (den_brk == 2 ? K_HAND | K_WEAR : K_HAND)) {
+                break;
+            }
+        }
+    }
+    hub_map (KIND_BANK);
+    for (k = 1; k < NKINDS && strcmp (CATALOGUE[k].name, dword); ++k) {
+    }
+    hub_map (0);
+    if (i) {
+        k = item_at (i)->kind;
+        hub_map (0);
+    } else if (k >= NKINDS) {
+        return;
+    }
+    if ((d = 1 + random (10)) <= 6) {           /* (dice (1, 10)'s) */
+        d = way[d - 1];
+        q = at (bd.sn, x + head_x[d], y + head_y[d]);
+        if (q && (TILE (*q) == T_FLOOR || TILE (*q) == T_CORR || TILE (*q) == T_STEPS)) {
+            x += head_x[d];
+            y += head_y[d];
+        }
+    }
+    if (i) {                                    /* (Its own: that thing on the floor, its chunk's things in the store) */
+        it_need (bd.sn, (x - STRATUM (bd.sn).x0) >> CW_BITS, (y - STRATUM (bd.sn).y0) >> CW_BITS);
+        ip = item_at (i);
+        ip->where = IW_SQUARE;
+        ip->sn = bd.sn;
+        ip->x = x;
+        ip->y = y;
+        ip->owner = ip->hide = 0;
+        ip->flags &= ~I_HELD;
+        if (den_brk) {
+            ip->kind = KI_WRECK;                /* (Its pieces where it fell: its kind no more bd.arm, not taken up again) */
+        }
+        hub_map (0);
+        bd.dropped = i | DR_OWN;
+        bd.arm = k;
+    } else if ((bd.dropped = lay_body (k, bd.sn, x, y)) != 0) {
+        bd.arm = k;
+    } else {
+        return;
+    }
+    limb_news ((den_brk ? WB_BROKE : WB_DROP) | (unsigned) k << 8, bk + 1);
+    den_saw = 1;
+    if (i) {
+        den_equip ();
+    }
+}
+
+#pragma bss-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* ==== Part 60: the denizens' things (the outfits' gear, 2026-10-27), and a weapon let fall and taken up again (part
 ** 51's once: its room) */
 #pragma code-name (push, "SW60CODE")
@@ -485,7 +570,8 @@ void s_den_equip (void)
         wb[0] = f & I_HELD ? hmark[h] : '+';
         k = strlen (wb);
         wb[k] = '0' + n;
-        wb[k + 1] = 0;
+        wb[k + 1] = ip->wear < 32 ? 0 : ip->wear >= 128 ? 'D' : 'E';   /* (Dulled, dull: the referee's, a blow's edge) */
+        wb[k + 2] = 0;
         hub_map (0);
         r = &HUB->slot[SLOT_WORLD];
         if (strlen (r->text) < REQ_TEXT - sizeof wb) {
@@ -667,67 +753,6 @@ take:
 }
 
 #pragma bss-name (pop)
-
-/* Its weapon on the floor (dword's kind: none of that name, nothing), beside it or where it stands (a d10: 1-6 the
-** square that way, if it's open floor), kept as its (bd's arm, dropped), told (E_BEAT's WB_DROP, its kind, its b the
-** body's: the denizens' ring, after the blow's words), the world to look about again.  A weapon of its own in its hand
-** (the outfits' gear) that thing (dropped | DR_OWN), the referee told it's gone from its hand */
-void s_den_drop (void)
-{
-    static const unsigned char way[6] = { H_N, H_NE, H_SE, H_S, H_SW, H_NW };
-    unsigned char k, d;
-    unsigned x = bd.x, y = bd.y, i;
-    unsigned char* q;
-
-    for (i = 0; (i = kit_next (i)) != 0; ) {   /* (Its own weapon in hand) */
-        if (ip->flags & I_HELD) {
-            dkind (ip->kind);
-            if (weapon ()) {
-                break;
-            }
-        }
-    }
-    hub_map (KIND_BANK);
-    for (k = 1; k < NKINDS && strcmp (CATALOGUE[k].name, dword); ++k) {
-    }
-    hub_map (0);
-    if (i) {
-        k = item_at (i)->kind;
-        hub_map (0);
-    } else if (k >= NKINDS) {
-        return;
-    }
-    if ((d = 1 + random (10)) <= 6) {           /* (dice (1, 10)'s) */
-        d = way[d - 1];
-        q = at (bd.sn, x + head_x[d], y + head_y[d]);
-        if (q && (TILE (*q) == T_FLOOR || TILE (*q) == T_CORR || TILE (*q) == T_STEPS)) {
-            x += head_x[d];
-            y += head_y[d];
-        }
-    }
-    if (i) {                                    /* (Its own: that thing on the floor, its chunk's things in the store) */
-        it_need (bd.sn, (x - STRATUM (bd.sn).x0) >> CW_BITS, (y - STRATUM (bd.sn).y0) >> CW_BITS);
-        ip = item_at (i);
-        ip->where = IW_SQUARE;
-        ip->sn = bd.sn;
-        ip->x = x;
-        ip->y = y;
-        ip->owner = ip->hide = 0;
-        ip->flags &= ~I_HELD;
-        hub_map (0);
-        bd.dropped = i | DR_OWN;
-        bd.arm = k;
-    } else if ((bd.dropped = lay_body (k, bd.sn, x, y)) != 0) {
-        bd.arm = k;
-    } else {
-        return;
-    }
-    limb_news (WB_DROP | (unsigned) k << 8, bk + 1);
-    den_saw = 1;
-    if (i) {
-        s_den_equip ();
-    }
-}
 
 /* Its weapon taken up again (its turn: the referee's O_REARM): gone from the floor (its record free; its own, in its
 ** hand again, the referee told), told (WB_PICKS, its kind), the world to look about again */

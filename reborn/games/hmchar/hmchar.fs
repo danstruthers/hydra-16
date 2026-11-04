@@ -425,6 +425,17 @@ variable ai
   s" -o" word= if ai @ 1+ arg 63 min dup to out-n out swap move  2 ai +! exit then
   usage ;
 : options ( -- ) 1 ai !  begin ai @ argc < while option repeat ;
+\ ---- A second language (C's: those the book's table gives one, Character 15; which by its
+\ culture and its name's first letter, the house's; at its skill base once, Skills 11; 2026-11-03)
+: occ? ( c-addr u -- f ) occname occ-n compare 0= ;
+: second? ( -- f )
+  s" Sage/Tutor" occ?  s" Scribe" occ? or  s" Innkeeper" occ? or
+  s" Litigant" occ? or  s" Mercantyler" occ? or  s" Herald" occ? or ;
+: tongue2 ( -- c-addr u )
+  harn-culture c@ 3 and 2* name c@ 1 and +
+  dup 5 = over 6 = or if drop s" gargun" exit then  7 = if s" kobold" exit then
+  name c@ 1 and if s" sindarin" else s" khuzdul" then ;
+
 \ ---- The family's wealth (Character 17, by its class: poor, average or rich; C's wealth, the house's odds): d100,
 \ a quarter poor, half average, a quarter rich, an outcast's or an unpopular child's ten less, a favourite's ten more; a
 \ slave's a serf's poor.  Rolled last of all; its file's "wealth" line (the game's outfit bought with it)
@@ -454,6 +465,7 @@ create wealth-t  40 , 40 , 40 ,  40 , 80 , 160 ,  60 , 120 , 240 ,  90 , 180 , 3
   line{ s" wealth" line+ wealth line+n line} drop
   ( absolute timesense, as C's: one in a hundred, rolled after all the rest; the house's, 2026-10-31 )
   d100 1 = dup if line{ s" timesense" line+ line} drop then
+  second? if line{ s" language " line+ tongue2 line+ s" =" line+ 19 harn-sb s>d <# #s #> line+ line} drop then
   swap close-file drop
   if ." Absolute timesense: you always know the hour." cr then
   ." Written to " out out-n type cr ;

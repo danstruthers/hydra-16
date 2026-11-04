@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     46                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     47                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -788,6 +788,7 @@ enum { WB_QUIET, WB_TURN, WB_SIDE, WB_DOOR, WB_OPENS, WB_UP, WB_DOWN, WB_CROSS, 
                                                 **   it, its band times 256 (0 out of it, 1 a foot or two, 2 waist-deep, 3
                                                 **   out of its depth), | 0x8000 running; swimming, | 0x100 well, | 0x200
                                                 **   up again from under; gone under, | 0x100 drowned; its flames put out) */
+       WB_BROKE,                                /* (A weapon or a shield broken, its kind times 256: every actor's, the book's) */
        WB_SEARCH };                             /* (A room searched whole, as it goes, 2026-11-02: RSW_* times 256,
                                                 **   search.c's words: dq0w's wroom.inc) */
 enum { RSW_BEGUN, RSW_GOES_ON, RSW_ALREADY, RSW_WALL, RSW_CORNER, RSW_MIDDLE, RSW_ROUND, RSW_END, RSW_FLOOR, RSW_DONE,
@@ -958,7 +959,8 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
        LT_HIDE, LT_TEND,                        /* (LT_TEND: first aid, a wound treated, the UI's timed work: slice
                                                 **   4.3's) */
        LT_PACKOFF, LT_PACKDOWN, LT_REACHIN, LT_OPENUP, LT_GETOUT, LT_PACKON, LT_LETFALL, LT_LETBURN, LT_PUTAWAY, LT_BLOWOUT, LT_BLOWDARK, LT_LIGHTFROM, LT_SETDOWN, LT_TAKEUP, LT_HONE,
-       LT_KINDLE, LT_GETNEW, LT_PUTOLD, LT_TAKENEW, LT_DOWNNEW, LT_BLOWOLD, LT_LIGHTNEW, LT_DIPOLD, LT_LETOLD };   /* (The reach's
+       LT_KINDLE, LT_GETNEW, LT_PUTOLD, LT_TAKENEW, LT_DOWNNEW, LT_BLOWOLD, LT_LIGHTNEW, LT_DIPOLD, LT_LETOLD,
+       LT_SHEATHE, LT_SLING, LT_SCONCE, LT_LAYLIT, LT_INPACK };   /* (The reach's
                                                 **   steps, each its own time, HOUSE.md's: a pack on the back taken off,
                                                 **   into a hand, or set at its feet; a container's level reached into,
                                                 **   held open, a thing got out; the pack put back on: things.c's part
@@ -1289,6 +1291,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   gait;                       /* rs.h's GA_* */
     unsigned char   watch;                      /* WA_* */
     unsigned char   pc_lump;                    /* (dq0 -J, the tests': the reach in one lump, no steps, things.c's part 85, PL_*) */
+    unsigned        rs_out[2], rs_home[2], rs_place;   /* (The tools a use got out, the world's, part 87's, each where it came from, 0 anywhere;
+                                                **   the place a thing's being put away in: A25's, 2026-11-03) */
+    unsigned char   rs_nout;
     unsigned char   pc_pos;                     /* POS_* */
     volatile unsigned char pc_going;            /* The pace it's going at plus 1 (0: not moving), | GOING_DARK: by
                                                 **   feel; not moving, GOING_BOLD, a pace said outright in the dark */
@@ -1736,6 +1741,10 @@ struct wsave {
 **   own hub.way_open world                                     (The puzzle's: the world's, by the theme's rules)
 **   own hub.sway denizens +ui
 **   own hub.gait world                                         (The character's state: the world's, WQ_SET)
+**   own hub.rs_out world                                       (The tools a use got out, part 87's, 90's: 2026-11-03)
+**   own hub.rs_home world
+**   own hub.rs_place world
+**   own hub.rs_nout world
 **   own hub.watch world
 **   own hub.pc_pos world                                       (Its body's position: the world's, as the referee says)
 **   own hub.pc_going world
