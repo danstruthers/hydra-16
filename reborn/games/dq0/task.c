@@ -768,12 +768,12 @@ unsigned char __fastcall__ o_stop_kind (const char* word)
                                            LT_FIGHT, LT_BATTER, LT_BATTER, LT_BATTER, LT_STUDY, LT_DISARM, LT_PICK,
                                            LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_TRACK, LT_SNIFF, LT_FILL,
                                            LT_FILL, LT_FILL, LT_HIDE, LT_TRAVEL, LT_TRAVEL, LT_TRAVEL, LT_TEND, LT_TEND, LT_TEND,
-                                           LT_PRISE, LT_PRISE, LT_FILL, LT_FILL };   /* ("working" none: whatever the work is) */
+                                           LT_PRISE, LT_PRISE, LT_HONE, LT_HONE };   /* ("working" none: whatever the work is) */
     unsigned char i;
 
     for (i = 0; i < sizeof kind_; ++i) {
         if (!strcmp (word, word_[i])) {
-            return kind_[i];
+            return kind_[i] == LT_FILL && HUB->pc_task.kind == LT_DIPOLD ? LT_DIPOLD : kind_[i];   /* (A dip's the old torch's own) */
         }
     }
     return LT_NONE;

@@ -205,6 +205,7 @@ const struct burn* __fastcall__ burn_of (unsigned char k);  /* How kind k burns 
                                                 **   fuel; the catalogue's bank left in the window */
 unsigned char fill (void);                      /* (Part 27, its room) The hub's ireq, IO_FILL's: a light renewed */
 /* The water, hunger and thirst (part 73's, wwater.c: slice 4.9's) */
+#define WADE_MORE       0x8000                  /* (wade's: the time given, not the water's, 2026-11-03) */
 unsigned __fastcall__ wade (unsigned step);     /* (Part 73's, dq0w.c's) The character come onto its square: the time
                                                 **   more its step takes (wading, swimming) */
 unsigned __fastcall__ water (unsigned char k);  /* (Part 74's, wwater.c's s_water: W_FILL a waterskin filled, the
