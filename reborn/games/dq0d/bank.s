@@ -21,10 +21,10 @@ _ovbank:    .res        7           ; The parts' images' banks (dq0d.cfg's OV1 .
 
             .include    "../dq0/swap.inc"
 
-            SWPART      1, 1                ; The populations, the placing
+            SWPART      1, 1                ; The populations, the records paged: what every call wants
             SWPART      2, 1                ; The character's ways with a denizen (the UI's sway), and harmed
-            SWPART      3, 2                ; The records paged
-            SWPART      4, 2                ; The regions round the character wanted, the records kept; the start
+            SWPART      3, 2                ; The placing (part 1's till 2026-11-04)
+            SWPART      4, 2                ; The records kept; the start
                                             ;   (the kinds read in, popgen loaded);
                                             ;   an actor made, retired, killed, an ally come along
             SWPART      5, 3                ; The senses' own: a hunter's stalk, a scent followed, one drawn on (slice 4.5's)
@@ -49,13 +49,16 @@ _ovbank:    .res        7           ; The parts' images' banks (dq0d.cfg's OV1 .
             SWPART      18, 7               ; A way found (2026-11-02)
             SWPART      19, 6               ; A body found on a record's rounds (2026-11-02)
             SWPART      20, 7               ; Hiding oneself (2026-11-04)
+            SWPART      21, 2               ; A region read in, one put out (part 3's till 2026-11-04)
 
             SWFN        populate, 1
-            SWFN        place, 1
+            SWFN        place, 3
             SWFN        keep, 4
-            SWFN        rec_new, 3
-            SWFN        reg_need, 3
-            SWFN        dneed, 4
+            SWFN        rec_new, 1
+            SWFN        reg_find, 1
+            SWFN        reg_load, 21
+            SWFN        make_room, 21
+            SWFN        dneed, 1
             SWFN        harmed, 2
             SWFN        stalks, 5
             SWFN        scent, 5

@@ -42,8 +42,8 @@
 **
 ** Its code that's seldom called is in swapped parts (../dq0/swap.inc: run in the main RAM's top, a part at a time,
 ** copied there from the overlays' file's banks, LIBDIR/dq0d.ovl, as it's called; bank.s's stubs): part 1, the
-** populations, the placing; part 2, the character's ways with a denizen, and harmed; part 3, the records paged; part
-** 4, the regions round the character wanted, the records kept, the task's start (the kinds read in, popgen loaded),
+** populations, the records paged; part 2, the character's ways with a denizen, and harmed; part 3, the placing; part
+** 4, the records kept, the task's start (the kinds read in, popgen loaded),
 ** and what its actors seldom do (one made an actor or no longer one, killed, an ally come along, a cornered one's
 ** dart); part 5, the senses' own (a hunter's stalk, a scent followed, one drawn on); part 6, morale (HOUSE.md's: the
 ** field about an actor and its bonds to its leaders, reckoned as it engages and as one near it falls; its kin
@@ -76,7 +76,8 @@ void __fastcall__ populate (unsigned char n);   /* Part 1 */
 void __fastcall__ place (unsigned char i);
 void __fastcall__ keep (unsigned char back);    /* Part 3 */
 unsigned char __fastcall__ rec_new (unsigned char lair);
-unsigned char __fastcall__ reg_need (unsigned char sn, unsigned char rx, unsigned char ry);
+unsigned char __fastcall__ s_reg_need (unsigned char sn, unsigned char rx, unsigned char ry);   /* (Part 1's own calls) */
+unsigned char __fastcall__ s_rec_new (unsigned char lair);
 void dneed (void);
 void __fastcall__ harmed (unsigned char k);     /* Part 2 */
 unsigned char __fastcall__ stalks (unsigned char k);
@@ -553,7 +554,7 @@ static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, un
     L.n = ln ? ln : K.nmin + random (K.nmax - K.nmin + 1);
     L.rx = (s->x0 + (L.cx << CW_BITS)) >> 8;
     L.ry = (s->y0 + (L.cy << CW_BITS)) >> 8;
-    if (!reg_need (n, L.rx, L.ry) || (t = rec_new (1)) == 0xFF) {
+    if (!s_reg_need (n, L.rx, L.ry) || (t = s_rec_new (1)) == 0xFF) {
         return 0;                               /* (Its region in the cache first: no room, no folder) */
     }
     L.id = ++hd.lids;
@@ -568,7 +569,7 @@ static unsigned char __fastcall__ lair_add (unsigned char n, unsigned char k, un
     D.contact = ll ? 200 : 64;                  /* (With its leader in its lair, often; else seldom: part 6's bonds) */
     rx = 8 + ((unsigned char) (L.id * 5 ^ L.id >> 1) & 127);  /* (The band's age, weeks: by its number, not the dice, so the
                                                 **   populations' dice are as they were) */
-    for (i = 0; i < L.n + (ll != 0) && (u = rec_new (0)) != 0xFF; ++i) {
+    for (i = 0; i < L.n + (ll != 0) && (u = s_rec_new (0)) != 0xFF; ++i) {
         if (i == L.n) {
             D.kind = ll;                        /* (Its leader, the last) */
         }
@@ -705,8 +706,8 @@ static void __fastcall__ post (unsigned char kind, unsigned char who);
 static void trodden (void);
 static void kitted (void);
 
-#pragma code-name (push, "SW1CODE")
-#pragma rodata-name (push, "SW1RODATA")
+#pragma code-name (push, "SW3CODE")             /* (Part 3's since 2026-11-04: part 1's half that isn't populate's) */
+#pragma rodata-name (push, "SW3RODATA")
 
 void __fastcall__ s_place (unsigned char i)
 {
@@ -4424,35 +4425,20 @@ int main (int argc, char* argv[])
     return 0;
 }
 
-/* ==== Part 3: the records paged (see its head), and kept */
-#pragma code-name (push, "SW3CODE")
-#pragma rodata-name (push, "SW3RODATA")
-
-#define VF_STATIC       static
-#include "../dq0/vfile.inc"
+/* ==== The records paged (see its head), what every call wants: part 1's, with populate that calls them most (part
+** 3's till 2026-11-04, the swap study's: parts 1 and 3 and 4 put each other out, a third of this task's copies, a
+** tenth of part 3's bytes run); a region not in the table, and one put out to make room, part 21's */
+#pragma code-name (push, "SW1CODE")
+#pragma rodata-name (push, "SW1RODATA")
 
 unsigned char rsn, rrx, rry;                    /* (A region: found, written, read) */
 static unsigned char ksn, krx, kry;             /* (The region at hand: not put out to make room for its own) */
 char vpth[56];
 static struct vfh vf;
 
-/* The region of the denizen in D (its square's; not placed, its lair's) into rsn, rrx, rry */
-static void den_region (void)
-{
-    if (D.flags & (D_OUT | D_ACTOR | D_DEAD)) {
-        rsn = D.sn;
-        rrx = D.x >> 8;
-        rry = D.y >> 8;
-    } else {
-        rsn = D.lsn;
-        rrx = D.lrx;
-        rry = D.lry;
-    }
-}
-
 /* Region rsn, rrx, rry's entry in the table, or 0xFF (a free one, rfree: 0xFF none) */
 unsigned char rfree;
-static unsigned char reg_find (void)
+unsigned char s_reg_find (void)
 {
     unsigned char k, f = 0xFF, rlim;
 
@@ -4468,6 +4454,88 @@ static unsigned char reg_find (void)
         }
     }
     return f;
+}
+
+unsigned char reg_find (void);                  /* (Its stub: part 21's) */
+unsigned char make_room (void);                 /* (Part 21's) */
+unsigned char __fastcall__ reg_load (unsigned char sn, unsigned char rx, unsigned char ry);
+
+/* A free record's place (lair 1: a lair's, else a denizen's), the first: its place (the records used up to it), or
+** 0xFF (none to be made: no folder) */
+unsigned char __fastcall__ s_rec_new (unsigned char lair)
+{
+    unsigned char i, n = lair ? NLAIRS : NDENS;
+
+    do {
+        for (i = 0; i < n; ++i) {
+            hy_bank (pb);
+            if (!(lair ? POP->lair[i].kind : POP->den[i].kind)) {
+                hub_map (0);
+                if (lair && i >= hd.nlairs) {
+                    hd.nlairs = i + 1;
+                } else if (!lair && i >= hd.ndens) {
+                    hd.ndens = i + 1;
+                }
+                return i;
+            }
+        }
+        hub_map (0);
+    } while (make_room ());
+    return 0xFF;
+}
+
+/* Region sn, rx, ry wanted: in the cache (its file's records read in, if it has one, and it's not in the cache yet;
+** an entry for it in the table, one put out for it if it must: part 21's), its stamp the newest: 1, or 0 (no room) */
+unsigned char __fastcall__ s_reg_need (unsigned char sn, unsigned char rx, unsigned char ry)
+{
+    unsigned char k;
+
+    rsn = sn;
+    rrx = rx;
+    rry = ry;
+    if ((k = s_reg_find ()) != 0xFF) {
+        hd.reg[k].stamp = ++hd.rstamp;
+        return 1;
+    }
+    return reg_load (sn, rx, ry);
+}
+
+/* The regions round the character's (one each way, on its stratum) wanted, as it comes into one */
+void s_dneed (void)
+{
+    unsigned char x, y, cx = pcx >> 8, cy = pcy >> 8, r;
+
+    hub_map (0);
+    r = !HUB->small;                            /* (dq0 -C: its own region alone) */
+    for (y = cy >= r ? cy - r : 0; y <= cy + r && y >= cy - r; ++y) {
+        for (x = cx >= r ? cx - r : 0; x <= cx + r && x >= cx - r; ++x) {
+            s_reg_need (pcs, x, y);
+        }
+    }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 21: a region not in the table, read in; one put out to make room (part 3's till 2026-11-04) */
+#pragma code-name (push, "SW21CODE")
+#pragma rodata-name (push, "SW21RODATA")
+
+#define VF_STATIC       static
+#include "../dq0/vfile.inc"
+
+/* The region of the denizen in D (its square's; not placed, its lair's) into rsn, rrx, rry */
+static void den_region (void)
+{
+    if (D.flags & (D_OUT | D_ACTOR | D_DEAD)) {
+        rsn = D.sn;
+        rrx = D.x >> 8;
+        rry = D.y >> 8;
+    } else {
+        rsn = D.lsn;
+        rrx = D.lrx;
+        rry = D.lry;
+    }
 }
 
 /* The table's entry for region rsn ... made (its stamp the newest) */
@@ -4529,7 +4597,7 @@ static unsigned char __fastcall__ reg_out (unsigned char k)
 /* (make_room's: the lair and the denizen at hand kept, the records put out read through L and D) */
 static struct lair sl;
 static struct den sd;
-static unsigned char make_room (void)
+unsigned char s_make_room (void)
 {
     unsigned char k, b = 0xFF, cx = pcx >> 8, cy = pcy >> 8, r;
     unsigned t;
@@ -4556,49 +4624,16 @@ static unsigned char make_room (void)
     return b;
 }
 
-/* A free record's place (lair 1: a lair's, else a denizen's), the first: its place (the records used up to it), or
-** 0xFF (none to be made: no folder) */
-unsigned char __fastcall__ s_rec_new (unsigned char lair)
-{
-    unsigned char i, n = lair ? NLAIRS : NDENS;
-
-    do {
-        for (i = 0; i < n; ++i) {
-            hy_bank (pb);
-            if (!(lair ? POP->lair[i].kind : POP->den[i].kind)) {
-                hub_map (0);
-                if (lair && i >= hd.nlairs) {
-                    hd.nlairs = i + 1;
-                } else if (!lair && i >= hd.ndens) {
-                    hd.ndens = i + 1;
-                }
-                return i;
-            }
-        }
-        hub_map (0);
-    } while (make_room ());
-    return 0xFF;
-}
-
-/* Region sn, rx, ry wanted: in the cache (its file's records read in, if it has one, and it's not in the cache yet;
-** an entry for it in the table, one put out for it if it must), its stamp the newest: 1, or 0 (no room) */
-unsigned char __fastcall__ s_reg_need (unsigned char sn, unsigned char rx, unsigned char ry)
+unsigned char __fastcall__ s_reg_load (unsigned char sn, unsigned char rx, unsigned char ry)
 {
     static unsigned char tag;
     unsigned char k, i;
     int fd;
 
-    rsn = sn;
-    rrx = rx;
-    rry = ry;
-    if ((k = reg_find ()) != 0xFF) {
-        hd.reg[k].stamp = ++hd.rstamp;
-        return 1;
-    }
     ksn = sn;
     krx = rx;
     kry = ry;
-    if (rfree == 0xFF && (!make_room () || (rsn = sn, rrx = rx, rry = ry, reg_find (), rfree == 0xFF))) {
+    if (rfree == 0xFF && (!s_make_room () || (rsn = sn, rrx = rx, rry = ry, reg_find (), rfree == 0xFF))) {
         return 0;
     }
     k = rfree;
@@ -4609,13 +4644,13 @@ unsigned char __fastcall__ s_reg_need (unsigned char sn, unsigned char rx, unsig
     if (vf_name (vpth, "dn", sn, rx, ry) && (fd = vf_open (vpth, 2, &vf)) >= 0) {
         while (read (fd, &tag, 1) == 1) {
             if (tag) {
-                if (read (fd, &D, sizeof D) != sizeof D || (i = s_rec_new (0)) == 0xFF) {
+                if (read (fd, &D, sizeof D) != sizeof D || (i = rec_new (0)) == 0xFF) {
                     break;
                 }
                 D.flags &= ~D_ACTOR;
                 den_put (i);
             } else {
-                if (read (fd, &L, sizeof L) != sizeof L || (i = s_rec_new (1)) == 0xFF) {
+                if (read (fd, &L, sizeof L) != sizeof L || (i = rec_new (1)) == 0xFF) {
                     break;
                 }
                 lair_put (i);
@@ -4676,20 +4711,6 @@ static void __fastcall__ reg_add4 (unsigned char k)
     hd.reg[k].rx = rrx;
     hd.reg[k].ry = rry;
     hd.reg[k].stamp = ++hd.rstamp;
-}
-
-/* The regions round the character's (one each way, on its stratum) wanted, as it comes into one */
-void s_dneed (void)
-{
-    unsigned char x, y, cx = pcx >> 8, cy = pcy >> 8, r;
-
-    hub_map (0);
-    r = !HUB->small;                            /* (dq0 -C: its own region alone) */
-    for (y = cy >= r ? cy - r : 0; y <= cy + r && y >= cy - r; ++y) {
-        for (x = cx >= r ? cx - r : 0; x <= cx + r && x >= cx - r; ++x) {
-            reg_need (pcs, x, y);
-        }
-    }
 }
 
 /* (Part 8's since 2026-10-31: part 4's room, then the main RAM's) The places kept lit (the hub's KEPT_AT) written to the
