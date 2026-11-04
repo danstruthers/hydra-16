@@ -464,10 +464,9 @@ static char* __fastcall__ save_path (const char* name)
     return spath;
 }
 
-/* The game's folder (dq0 -d) as it begins: LF_GOING, a game kept in its dungeon's folder, its state read; else (dq0life run) the
-** next dungeon or a new life begun, the seed its: LF_NEXT, the one kept ended, its character alive (the theme's goal reached, or
-** the way out taken), to carry on into a new dungeon, its sheet the character's (D8's, slice 4.4's); LF_NEW, none, or one ended
-** in its death: a new game, a new character.  No folder, LF_NEW */
+/* The game's folder (dq0 -d) as it begins: LF_GOING, a game kept in its dungeon's folder, its state read; else dq0life run (it
+** says what's next, dq0life.c's), the seed its: LF_NEXT, a dungeon past the first, its sheet the character's, to go on in (D8's,
+** slice 4.4's); LF_NEW, the first of a new life: a new game, a new character.  No folder, LF_NEW */
 static unsigned char __fastcall__ life (unsigned char given)
 {
     int fd;
@@ -476,8 +475,8 @@ static unsigned char __fastcall__ life (unsigned char given)
     if (savedir) {
         between (0);
         if ((fd = open (save_path ("game.dat"), O_RDONLY)) >= 0) {
-            if (read (fd, &sv, sizeof sv) == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER) {
-                n = !sv.q.done ? LF_GOING : sv.q.done != END_DIED ? LF_NEXT : LF_NEW;
+            if (read (fd, &sv, sizeof sv) == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER && !sv.q.done) {
+                n = LF_GOING;
             }
             close (fd);
         }
@@ -488,6 +487,9 @@ static unsigned char __fastcall__ life (unsigned char given)
             }
             between (0);
             seed = ((struct life_head*) lb)->dseed;
+            if (((struct life_head*) lb)->dungeon > 1) {
+                n = LF_NEXT;
+            }
         }
     }
     return n;

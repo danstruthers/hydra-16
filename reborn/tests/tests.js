@@ -12194,7 +12194,7 @@ module.exports = {
         'dq0 -p t -d /ram/b', 'look', 'inventory', 'appraise the sword', 'quit',
         'cmp /ram/a/life.dat /ram/b/life.dat', 'echo same $status', 'xd /ram/a/life.dat', 'ls /ram/a', 'ls /ram/a/d1', 'ls /ram/a/d2', 'cp /ram/a/life.dat /ram/l.dat',
         'dq0 -p t -d /ram/a', 'look', 'quit', 'cmp /ram/a/life.dat /ram/l.dat', 'echo kept $status',
-        'dq0life -d /ram/x -s 123456789', 'xd /ram/x/life.dat', 'cp /ram/a/d1/game.dat /ram/x/d1/game.dat', 'dq0life -d /ram/x', 'echo second', 'xd /ram/x/life.dat', 'echo $status']) },
+        'dq0life -d /ram/x -s 123456789', 'xd /ram/x/life.dat', 'cp /ram/a/d1/game.dat /ram/x/d1/game.dat', 'dq0life -d /ram/x', 'echo second', 'xd /ram/x/life.dat', 'cp /ram/x/life.dat /ram/y.dat', 'dq0life -d /ram/x', 'cmp /ram/x/life.dat /ram/y.dat', 'echo again $status', 'echo $status']) },
       expect: ['% echo $status'],
       start(m) {
         const sword = (i, h, L, g) => {                 // (The sword: its wear and life set, read back as the next dungeon's first looked at)
@@ -12269,6 +12269,9 @@ module.exports = {
         const x1 = xdBytes(out, 'xd /ram/x/life.dat');
         if (x1.length >= 544 && (u32(x1, 4) !== 123456789 || u32(x1, 8) !== 123456789)) f.push('a new life\'s seed: ' + u32(x1, 4) + ', ' + u32(x1, 8));
         const x2 = xdBytes(out.slice(out.indexOf('% echo second')), 'xd /ram/x/life.dat');
+        if (!/
+again\s*
+/.test(out.replace(/\r/g, ''))) f.push('a dungeon past the first with no game kept: its record not left as it is');
         if (x1.length !== 544 || x2.length !== 544) f.push('the record, run alone: ' + x1.length + ', ' + x2.length + ' bytes');
         if (x2.length >= 544 && (u16(x2, 12) !== 2 || u32(x2, 8) < 65536 || u32(x2, 8) === 123456789 || u32(x2, 4) !== 123456789)) f.push('a seed over 65,536, its second dungeon: ' + u32(x2, 8));
         return f;

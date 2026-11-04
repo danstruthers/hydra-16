@@ -8,7 +8,9 @@
 **   -d         the save's folder
 **   -s         dq0 -s's seed: the dungeon's (a new life's too); without it, a new life's the clock's, the next dungeon's the
 **              life's for it
-** The record there and its dungeon's game.dat, ended with the character alive: the next dungeon; else a new life (dq0's own rule).
+** By the record there and its dungeon's game.dat: one ended with the character alive, the next dungeon begun; a dungeon past the
+** first with no game (the character died in it before anything was kept: there's no save to go back to but its start), that
+** dungeon begun again, the record as it is; else (none, one of another version, one ended in its death) a new life.
 ** Its exit status 0, or 1 (its fault said).
 */
 
@@ -103,8 +105,9 @@ static void __fastcall__ dungeon_dir (unsigned n)
     utoa (n, dir + strlen (dir), 10);
 }
 
-/* The record read (L), and its dungeon's game (sv): 1, it ended with the character alive; else 0, a new life */
-static unsigned char carries_on (void)
+/* The record read (L), and its dungeon's game (sv): what's next (WH_*) */
+enum { WH_LIFE, WH_NEXT, WH_AGAIN };
+static unsigned char next_is (void)
 {
     int fd;
     unsigned char y = 0;
@@ -114,16 +117,16 @@ static unsigned char carries_on (void)
         close (fd);
     }
     if (!y) {
-        return 0;
+        return WH_LIFE;
     }
     dungeon_dir (L.h.dungeon);
-    y = 0;
-    if ((fd = open (in_ (dir, "game.dat"), O_RDONLY)) >= 0) {
-        y = read (fd, &sv, sizeof sv) == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER && sv.q.done &&
-            sv.q.done != END_DIED;
-        close (fd);
+    if ((fd = open (in_ (dir, "game.dat"), O_RDONLY)) < 0) {
+        return L.h.dungeon > 1 ? WH_AGAIN : WH_LIFE;
     }
-    return y;
+    y = read (fd, &sv, sizeof sv) == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER && sv.q.done &&
+        sv.q.done != END_DIED;
+    close (fd);
+    return y ? WH_NEXT : WH_LIFE;
 }
 
 /* The last dungeon's end recorded (its outcome, the whole days its clock came to: world.dat's), the date on to the day after it
@@ -169,7 +172,11 @@ int main (int argc, char* argv[])
         die ("the save's folder's name is too long");
     }
     mkdir (top, 0755);                          /* (It may be there already) */
-    if (carries_on ()) {
+    i = next_is ();
+    if (i == WH_AGAIN) {
+        return 0;                               /* (Its seed, its folder, its record as they are: dq0's to begin) */
+    }
+    if (i == WH_NEXT) {
         ended ();
     } else {                                    /* (A new life: no kit to take up, its outfit's drawn) */
         if (!given) {
