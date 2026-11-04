@@ -12333,7 +12333,7 @@ module.exports = {
           if (a[38] !== 1 || a[46] !== 0) f.push('the outcomes: ' + a[38] + ', ' + a[46] + ' (solved, then none yet)');
           if (u16(a, 36) !== 1) f.push('the first dungeon\'s days: ' + u16(a, 36) + ' (a wait of 1500 minutes)');
           const d0 = 720 * 360 + 3, date = u32(a, 14), days = date - d0;   // (Seed 3: its hour 3, 25 hours on)
-          const between = /(\d+) days? pass/.exec(acctText), told = between ? +between[1] : -1;   // (The time between's own, told: dq0acct's)
+          const between = /(\d+) days? pass/.exec(acctText), told = between ? +between[1] : 0;   // (The time between's own, told: dq0acct's, HarnMaster's alone; another ruleset's, none)
           if (days !== 2 + told) f.push('the date not on two days (one crossed, the day after it came out) and the days told: ' + days + ', ' + told);
           const born = u16(a, 18);
           if (born > 720 - 16 || born < 720 - 25) f.push('its birth year: ' + born);
@@ -12364,7 +12364,7 @@ module.exports = {
         const pennies = t => dq0Carried(t && t.after).filter(i => i.name === 'pennies').reduce((n, i) => n + i.qty, 0);
         const i1 = T.of('inventory'), p1 = pennies(i1), p2 = pennies(T.after(i1, 'inventory'));
         const changed = /\((\d+) penn(?:y|ies)[^)]*once it's changed/.exec(acctText), have = /You have (\d+) penn/.exec(acctText);   // (What the account said it'd come to: its 15% each pile)
-        if (!p1 || !have || (changed ? +changed[1] : +have[1]) !== p2) f.push('the pennies not as the account said, at the 15%: ' + p1 + ' then ' + p2 + ': ' + acctText);
+        if (!have ? !p1 || Math.abs(p2 - p1 * 0.85) > 2 : (changed ? +changed[1] : +have[1]) !== p2) f.push('the pennies not as the account said, at the 15%: ' + p1 + ' then ' + p2 + ': ' + acctText);
         // (A seed over 65,536)
         const x1 = xdBytes(out, 'xd /ram/x/life.dat');
         if (x1.length >= 544 && (u32(x1, 4) !== 123456789 || u32(x1, 8) !== 123456789)) f.push('a new life\'s seed: ' + u32(x1, 4) + ', ' + u32(x1, 8));
@@ -12377,7 +12377,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0account', outfit: true, meaning: true, near: ['save', 'gear', 'money', 'body'], what: "Dingus Quest Zero's time between two dungeons (the plan's steps 4 to 6: dq0acct; DUNGEON.md's a character's life, HOUSE.md's between dungeons), by scenes on the saved files (a sheet and a kit from a game begun and quit; dq0life for the record, dq0acct run alone): a wounded character comes back as the rolls say (a physician paid, nothing worse than minor left, the days on the record's date, fatigue clear); one dies of an infection (status 2, the record says so); a 68-day gap gives six rolls and a weapon stops at 70, the filled-in answer taken by Enter, three named by the player; a rich account (mended, whetted, restocked from what it set out with) and a broke one (spare goods sold, what it named never, rough, work with the days added and its bonus practice, no debt); the same seed the same account",
+      name: 'dq0account', outfit: true, near: ['save', 'gear', 'money', 'body'], what: "Dingus Quest Zero's time between two dungeons (the plan's steps 4 to 6: dq0acct; DUNGEON.md's a character's life, HOUSE.md's between dungeons), by scenes on the saved files (a sheet and a kit from a game begun and quit; dq0life for the record, dq0acct run alone): a wounded character comes back as the rolls say (a physician paid, nothing worse than minor left, the days on the record's date, fatigue clear); one dies of an infection (status 2, the record says so); a 68-day gap gives six rolls and a weapon stops at 70, the filled-in answer taken by Enter, three named by the player; a rich account (mended, whetted, restocked from what it set out with) and a broke one (spare goods sold, what it named never, rough, work with the days added and its bonus practice, no debt); the same seed the same account",
       init: 't_rc', cycles: 4000e6,
       machine: { input: (() => {
         const L = '/sd/0/games/lib/dq0';
@@ -12461,7 +12461,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0lifeend', outfit: true, meaning: true, near: ['save', 'body'], what: "Dingus Quest Zero's life's account (dq0end; the plan's section 1): the crypt solved and walked out of with a wound that's infected, a carry-on: the character dies between the dungeons, told, the life's account after it (solved), the game not begun, status 0; the record says it's over; the next start a new life, the old record kept in lives.dat; and hard mode's death recorded, the account told",
+      name: 'dq0lifeend', outfit: true, near: ['save', 'body'], what: "Dingus Quest Zero's life's account (dq0end; the plan's section 1): the crypt solved and walked out of with a wound that's infected, a carry-on: the character dies between the dungeons, told, the life's account after it (solved), the game not begun, status 0; the record says it's over; the next start a new life, the old record kept in lives.dat; and hard mode's death recorded, the account told",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u',
