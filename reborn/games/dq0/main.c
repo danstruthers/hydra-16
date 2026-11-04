@@ -1331,8 +1331,8 @@ void __fastcall__ s_news (const struct msg* m)
 ** character itself (HOUSE.md's hiding oneself: the world's I_RISE, POS_HIDE): behind or in a thing said, one within
 ** reach, walked over to first; in the shadows, a doorway, the world's to say.  And its words as they're told
 ** (pose_words', E_BEAT WB_POSED's HW_WORDS: w no string, its address past the RAM) */
-#pragma code-name (push, "SW10CODE")
-#pragma rodata-name (push, "SW10RODATA")
+#pragma code-name (push, "SW18CODE")
+#pragma rodata-name (push, "SW18RODATA")
 static const char hw_said[] =               /* (By HW_*, one after another: a table's strings would be the main RAM's) */
     "\nYou crouch behind the %s, out of sight.\0" "\nYou get down into the %s, out of sight.\0"
     "\nYou press yourself into the doorway, out of sight.\0" "\nYou crouch among the rubble, out of sight.\0"
@@ -1368,8 +1368,14 @@ void __fastcall__ s_hide (const char* w)
         }
         return;
     }
-    if (!*w) {
-        w = cmd.other.word;                     /* (Behind the table, in the straw) */
+    if (!*w || (!cmd.other.word[0] && (strstr (cl, " behind ") || strstr (cl, " in ") || strstr (cl, " under ") ||
+        strstr (cl, " among ") || strstr (cl, " beside ") || strstr (cl, " by ")))) {
+        if (*w) {
+            strcpy (cmd.other.word, w);         /* (Behind the table, in the straw: the parser's the thing, or the other; so
+                                                **   kept, walked over to it first) */
+            cmd.obj.word[0] = 0;
+        }
+        w = cmd.other.word;
         if (*w && !strstr ("shadow shadows dark darkness doorway door corner", w) && (HUB->ireq.to = LM_COND, d = things (IO_LOOK, w)) != IR_OK) {
             if (d != IR_NOT_HERE || !reach_go ()) {
                 tell (T_YOU_SEE_NONE);
@@ -2756,6 +2762,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             nosteps |= PL_NOFIT;                /* (For the tests: the outfit as it's drawn, all of it, unfitted to its strength) */
         } else if (!strcmp (argv[i], "-I")) {
             noinit = 1;                         /* (For the tests: no engage initiative test, no grope's) */
+            gear |= GE_NOLURK;
             nosteps |= PL_NOFACE;               /*   (nor a test on facing it, nor a weapon broken) */
         } else if (!strcmp (argv[i], "-R") && i + 1 < argc) {
             rolls = dnum (argv[++i]);           /* (For the tests: the dice's own offset, 0-252: the same dungeon, other

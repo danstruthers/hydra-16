@@ -144,7 +144,7 @@ void s_sense_actor (void)
         }
     }
     hub_map (0);
-    HUB->dsense.res = res | (lv ? SN_LIT : 0);
+    HUB->dsense.res = res;
     m = lit ? sight : dark;                     /* (Far beyond all of them: the coarse answer, no line cast) */
     reach >>= 1;
     if (reach > m) {

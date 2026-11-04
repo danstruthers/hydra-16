@@ -419,8 +419,8 @@ The book's Mining is geology, prospecting and mineworking (Skills 16), but it gi
   - **A blow from hiding** *(the book's Surprise and Ignore, Combat)*: at one that hasn't noticed it, no defence, as a sleeper's; "You strike from
     hiding."  Out of hiding as it's struck, either way; a blow at it, "The bandit has seen you!".
   - **The denizens hiding** *(for review)*: a hostile robber (kinds.txt's ways r) that's just sensed the character, not seen by it, three squares
-    off or more, no launcher of its own, lies in wait, by the same cover (its square lit or not, the senses'); no cover, it comes on as it
-    would.  Hidden, it holds still, left out of what the character sees and engaging no one, two minutes, then comes out; strikes at
+    off or more, no launcher of its own, lies in wait, by the same cover (its square dark, as its kind with no darkvision feels its way); no cover,
+    it comes on as it would.  Hidden, it holds still, left out of what the character sees and engaging no one, two minutes, then comes out; strikes at
     one beside it that it senses, the same no defence ("The bandit leaps out of hiding!").  The character's look at it the same test as anyone's, at
     its Stealth by its sheet, as the character sees its square ("You spot a bandit, hiding."); and a search finds it within sight (the
     referee's P_SEARCH at its cover's steps).  Not yet: other reasons to lurk, a denizen creeping on hidden, denizens looking for each

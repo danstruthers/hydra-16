@@ -3356,25 +3356,24 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
     }
     if (op == HM_AMBUSH) {                      /* (A robber, just come to sense it, no eye on it: under cover, or in the
                                                 **   dark, lies in wait, unseen; the world's to say if it can) */
-        if (!DO_UNAWARE (HUB->actor[k].doing) || a.attitude != AT_HOSTILE || dist < 3 || (HUB->agear[k] & AG_SHOOTS) ||
+        if ((HUB->gear & GE_NOLURK) || a.attitude != AT_HOSTILE || dist < 3 || (HUB->agear[k] & AG_SHOOTS) ||
             !(p = at (a.sn, a.x, a.y)) || (*p & T_VIS)) {
             return 0;
         }
-        senses (k);                             /* (Is it lit where it stands) */
         hub_map (0);
         im.w1 = POS_HIDE | HD_IN;
-        im.a = (HUB->dsense.res & SN_LIT) != 0;
         a.doing = DO_WATCH;                     /* (Tried once: no cover, it comes on as it would) */
-        alert[k] = now + LURK_T;
+        alert[k] = 0;                           /* (Its two minutes from its first turn hidden) */
         act (I_RISE, k);
         return 1;
     }
     /* Hidden: it strikes one beside it; gives it up after a while, or as it's no foe, or seen to; the character's
     ** look at it the same test as anyone's, as the character sees its square */
     if (!alert[k]) {
-        alert[k] = now + LURK_T;                /* (A game carried on: from now) */
+        alert[k] = now + LURK_T;
     }
     if (a.attitude != AT_HOSTILE || now > alert[k] || pcdead) {
+        alert[k] = 0;
         im.w1 = POS_HIDE | HD_OUT;
         act (I_RISE, k);
         return 0xFF;

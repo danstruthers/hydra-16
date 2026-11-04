@@ -155,7 +155,7 @@ void __fastcall__ s_den_more (const struct msg* m)
     } else if (m->kind == I_RISE) {             /* (Its position, its mind's: lain down to sleep a moment's; up, the
                                                 **   Rise's round, wlimbs.c's den_legs: 2026-11-02) */
         if (m->w1 & POS_HIDE) {
-            hid_op (HO_DEN | (m->w1 & 7) | (m->a ? 8 : 0));   /* (Hiding oneself: part 94's) */
+            hid_op (HO_DEN | (m->w1 & 7));     /* (Hiding oneself: part 94's) */
         } else if (m->w1 != POS_STANDING) {
             bd.pos = m->w1;
             bd.ready += 10;

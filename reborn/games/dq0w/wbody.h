@@ -24,8 +24,7 @@ extern unsigned char den_saw;                   /* A body fallen: the world to l
 #define BD_PUT()        (hub_map (0), memcpy (&HUB->actor[bk], &bd, offsetof (struct actor, name)))
 
 /* Hiding oneself (HOUSE.md's: dq0w.c's part 94, hid_op's op): the character's, begun (I_RISE's POS_HIDE, the UI's), its time
-** up, a stop at a walk's end, a search, a blow, ended (HO_END | HW_*: its words); a denizen's, body bd (HO_DEN | HD_*, | 8 its
-** square lit: its mind's) */
+** up, a stop at a walk's end, a search, a blow, ended (HO_END | HW_*: its words); a denizen's, body bd (HO_DEN | HD_*: its mind's) */
 #define HO_GO           0
 #define HO_DONE         1
 #define HO_MOVED        2

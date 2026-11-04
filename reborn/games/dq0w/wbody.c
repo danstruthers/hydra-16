@@ -289,7 +289,7 @@ void s_den_intents (void)
                 }
                 bd.ready += c;
             }
-            if (!noinit && !help && !HUB->pc_hid && bd.attitude <= AT_UNFRIENDLY && bd.sn == bps && o > 1 && apart (x - bpx, y - bpy) == 1) {
+            if (!noinit && !help && bd.attitude <= AT_UNFRIENDLY && bd.sn == bps && o > 1 && apart (x - bpx, y - bpy) == 1) {
                 eng = bk + 1;                   /* (An enemy come up beside the character: it engages it, the
                                                 **   engage initiative test's, once its body's put back) */
             }

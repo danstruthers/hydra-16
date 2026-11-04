@@ -5818,8 +5818,13 @@ module.exports = {
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g',
         "dq0 -p t -s 7 -c /ram/c.hm -T -d /ram/g -k 'heap of straw'", 'hide', 'drop the torch', 'hide', 'drop the straw', 'hide', 'status', 'look', 'hide', 'stand', 'take the torch', 'douse the torch', 'hide', 'look', 'listen', 'wait', 'i', 'search', 'creep', 'step forward', 'step back', 'walk', 'step forward', 'hide',
-        'stop hiding', 'hide', 'drop the dagger', 'hide', 'stand', 'hide', 'status', 'quit', 'dq0 -d /ram/g', 'status', 'quit', "dq0 -p t -s 7 -c /ram/c.hm -T -k cask", 'drop the torch', 'drop the cask', 'hide', 'creep', 'step forward', 'step forward', 'quit', 'echo $status']) },
+        'stop hiding', 'hide', 'drop the dagger', 'hide', 'stand', 'hide', 'status', 'quit', 'dq0 -d /ram/g', 'status', 'quit', "dq0 -p t -s 7 -c /ram/c.hm -T -k cask", 'drop the torch', 'drop the cask', 'hide', 'creep', 'step forward', 'step forward', 'hide behind the sofa', 'walk', 'hide behind the cask', 'status', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
+      start(m) {
+        // (The third game's scene its creeping: the giant rats' looks spent, none to find it)
+        const none = (h, L) => { for (let k = 0; k < L.nactors; k++) h[L.hlook + k] = 4; };
+        dq0Poke(m, [{ g: 3, line: 'creep', n: 1, call: none }, { g: 3, line: 'step forward', n: 1, call: none }, { g: 3, line: 'step forward', n: 2, call: none }]);
+      },
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out), hid = t => t && t.after ? t.after.pc.hid : -1, pos = t => t.after ? t.after.pc.pos : -1, now = t => t.after ? t.after.now : 0;
         const h0 = T.of('hide');
@@ -5864,6 +5869,9 @@ module.exports = {
         if (hid(c1) !== 3) f.push('crept to beside the cask: its hiding ' + hid(c1) + ', not 3');
         if (hid(c2) !== 0) f.push('crept out into the light: still hidden');
         if (!/There's no cover here/.test(s)) f.push('crept into the open: not told');
+        if (!/You see none of those here/.test(s)) f.push('a thing not there named: not told');
+        const c4 = T.after(c2, 'hide behind the cask');
+        if (hid(c4) !== 3) f.push('behind the cask, walked over to: its hiding ' + hid(c4) + ', not 3');
         return f;
       },
       sdcard: true
@@ -7894,6 +7902,7 @@ module.exports = {
           'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt', ...game('g', 21, 1), ...game('h', 48, 2), 'echo $status']);
       })() },
       start(m) {        // (Told as it falls, 2026-11-03: the lines typed no longer fall on it)
+        dq0Poke(m, [1, 2].map(g => ({ g, line: 'drop the backpack', n: 1, call: (h, L) => { h[L.gear] |= 2; } })));   // (GE_NOLURK: no robber lying in wait, HOUSE.md's hiding oneself: this scene's the bandits at it, 2026-11-04)
         dq0OnWords(m, Array.from({ length: 15 }, (_, i) => ({ g: 2, line: 'wait', n: i + 2, words: 'falls senseless.', text: 'talk to the bandit\r' })));
       },
       expect: ['% echo $status'],

@@ -5669,7 +5669,7 @@ unsigned char __fastcall__ s_engaged (unsigned char eng, unsigned char def)
     k = ((eng ? eng : def) - 1) & 7;
     hub_map (0);
     a = &HUB->actor[k];
-    if (noinit || (move.on && move.how == A_CLIMBING) || !a->state || a->sn != HUB->pc_stratum ||
+    if (noinit || HUB->pc_hid || (move.on && move.how == A_CLIMBING) || !a->state || a->sn != HUB->pc_stratum ||
         a->pos == POS_PRONE || (unsigned char) (a->doing - DO_DOWN) < 2 || (unsigned) (a->x - HUB->pc_x + 1) > 2 ||
         (unsigned) (a->y - HUB->pc_y + 1) > 2) {
         return 0;
@@ -7272,7 +7272,7 @@ void __fastcall__ s_hid_op (unsigned char op)
     if (op & HO_DEN) {                          /* (Body bd's, its mind's) */
         k = op & 7;
         if (k == HD_IN) {
-            if (bd.state == 1 && (c = cover_of (bd.sn, bd.x, bd.y, op & 8)) & 7) {
+            if (bd.state == 1 && (c = cover_of (bd.sn, bd.x, bd.y, !unlit_at (bd.sn, bd.x, bd.y))) & 7) {
                 bd.state = 1 | (1 + (c & 7)) << 1;
             }
             hub_map (0);

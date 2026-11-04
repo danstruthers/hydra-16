@@ -1526,6 +1526,8 @@ enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind
 #define AG_PICK         0x40                    /*   a pick among its things: a miner's to dig rock with; */
 #define AG_SPADE        0x80                    /*   a shovel, a spade or a mattock: earth and soil, slice 4.11's) */
 #define GE_OLD          0x01
+#define GE_NOLURK       0x02                    /* (dq0 -I, the tests': no robber lies in wait, HOUSE.md's hiding oneself; only
+                                                **   the soak and those with initiative: true play them) */
 #define GE_DRY          0x02                    /* (dq0 -W, the tests': no water in the chunks, the maker's, slice 4.9's) */
 #define GE_MIXED        0x04                    /* (dq0 -M, the tests': every built stratum mixed, part natural, the
                                                 **   maker's, slice 4.10's) */
@@ -1551,7 +1553,6 @@ enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind
 #define SN_HEARD        0x02                    /*   heard, */
 #define SN_SMELT        0x04                    /*   smelt: slice 4.1's, still air, within its nose's reach) */
 #define SN_LOOK         0x08                    /* (Hidden: it would see it, but for that: its look's test the mind's) */
-#define SN_LIT          0x10                    /* (The square the actor stands on lit: hiding there, its mind's) */
 #define WA_TRAPS        0x01                    /* Searching as it goes: traps underfoot, hidden doors beside */
 #define WA_LISTEN       0x02                    /* Listening as it goes */
 #define WA_MAP          0x04                    /* Mapping as it goes (the map's side the orientation's: its
@@ -1566,7 +1567,7 @@ enum { POS_STANDING, POS_PRONE, POS_CROUCHED, POS_KNEELING, POS_SITTING };   /* 
                                                 **   from the others; kneeling and sitting, prone in a fight) */
 #define POS_LOW(p)      ((p) == POS_PRONE || (p) >= POS_KNEELING)   /* (Prone in a fight: the house's) */
 #define POS_HIDE        0x40                    /* (I_RISE's w1, | one of HD_*: hiding oneself, HOUSE.md's, not a position:
-                                                **   every actor's by the one code; a denizen's a its square lit, the senses') */
+                                                **   every actor's by the one code) */
 enum { HD_IN, HD_OUT, HD_SPOT, HD_FOUND };      /* (Hidden; out of hiding; it's spotted by the character; it finds the
                                                 **   character hidden) */
 #define HW_WORDS        0xC000                  /* (E_BEAT WB_POSED's w, its high two bits both: the words of hiding, HW_* times 256) */
