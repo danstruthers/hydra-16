@@ -38,6 +38,7 @@
 #define W_SPRING
 #include "workpart.h"
 #include "body.h"
+void __fastcall__ drop_held (unsigned char h, unsigned char ring);   /* (Part 49's: wbody.h) */
 
 /* The next blow at the portal's part (its material mat, PM_* or 4 glass; its body), if the battering goes on: a dozen
 ** at most (BLOWS: the hub's pc_task done, those struck), four that make no mark at all given up (its harm as it
@@ -78,6 +79,11 @@ static unsigned char __fastcall__ batter (unsigned char mat, unsigned char body)
     wk.tt += r->w2;
     wk.hb = r->c > wk.hb ? r->c : wk.hb;
     wk.hw |= (r->w2 ? E_OUT : 0) | (r->result & 1 ? E_STOPPED : 0);
+    if (r->result & 8) {
+        drop_held (r->a | 0x80, 0);             /* (A weapon broken on something hard: the book's Weapon Damage) */
+        hub_map (0);
+        r = &HUB->slot[SLOT_WORLD];
+    }
     if (r->result & 4) {
         wk.ask = 1;                             /* (Stopped short: asked, the door warned at kept) */
         wk.qs = wk.sn + 1;

@@ -261,13 +261,13 @@ void __fastcall__ s_sky_seen (unsigned char kind)
 }
 
 /* The hour the game began (a new game's first look): the environment's dq0hour, as the denizens' (a test's scene),
-** else dusk; come round from a fall, a black-out's guess to make */
+** else by the game's seed, dq0 -E's dusk: as the denizens' too; come round from a fall, a black-out's guess to make */
 static void begun (void)
 {
     struct hy_regs r;
     char b[4];
     char* p;
-    unsigned char h = TB_START;
+    unsigned char h = HUB->pc_lump & PL_DUSK ? TB_START : (unsigned) HUB->seed % 24;
 
     r.a = 0xFF;
     r.r[0] = (unsigned) "dq0hour";
@@ -335,8 +335,9 @@ void s_tsense (void)
     unsigned char s;
 
     hub_map (0);
-    if (HUB->pcsum.cond & C_FATIGUED || (HUB->pcsum.load & 2)) {
-        rest_go ();                             /* (A wait's or a sleep's rest told as it goes and as it ends) */
+    if (HUB->pcsum.cond & C_FATIGUED || (HUB->pcsum.load & 2) || HUB->pc_task.kind == LT_SLEEP) {
+        rest_go ();                             /* (A wait's or a sleep's rest told as it goes and as it ends; a sleep's
+                                                **   end, its eyes open) */
     }
     if (!T.at) {
         sky_seen (SKY_BEGUN);

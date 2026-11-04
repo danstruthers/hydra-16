@@ -186,9 +186,9 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     for (cd = dh = i = 0, e = (const struct rs_effect*) r->x; i < RS_EFFECTS && e->kind; ++i, ++e) {
         if (e->kind == X_DROP) {
             if (e->target) {
-                cd = 1;                         /* (The creature's weapon let fall: part 51's) */
+                cd = 1 + e->x[1];               /* (The creature's weapon let fall: part 51's; broken, x[1]: 1 its weapon, 2 its shield) */
             } else {
-                dh |= e->x[0];                  /* (The character's hands' things let go of, fumbled: slice 4.1b's) */
+                dh |= e->x[0];                  /* (The character's hands' things let go of, fumbled: slice 4.1b's; | 0x80 broken) */
             }
         }
         if (e->kind == X_WOUND && e->target == me) {
@@ -270,7 +270,7 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         drop_held (dh, 1);                      /* (Told after the blow, in the denizens' ring) */
     }
     if (cd) {
-        den_drop ();                            /* (Its weapon on the floor, told: part 51's) */
+        den_drop (cd - 1);                            /* (Its weapon on the floor, told: part 51's) */
     }
     if (ff & (me == att ? FF_A_DEAD : FF_D_DEAD)) {
         died ();

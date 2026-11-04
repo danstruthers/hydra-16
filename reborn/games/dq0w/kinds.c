@@ -206,6 +206,7 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
                                                 **   physician's draught, 12d: the house's prices, HOUSE.md's remedies,
                                                 **   2026-11-02) */
     { "remedy", 0, 1, 1, 0, 0, 0, 0, 1, "remedy", MT_GLASS, AP_FOOD, 48 },
+    { "broken weapon", 0, 8, 12, 0, 0, 0, 0, 2, "", MT_LEATHER, AP_METAL, 1 },   /* (Its pieces: useless, soft to swing, a farthing's scrap) */
     { "stone chisel", K_HAND, 2, 1, 0, 0, 0, 0, 1, "chisel", MT_STEEL, AP_METAL, 24 },    /* (As the chisel, the catalogue's
                                                 **   first: the user's, 2026-11-03, "Stone chisel versus wood chisel
                                                 **   might be a good distinction": HOUSE.md's digging) */
@@ -272,6 +273,7 @@ const unsigned char throws[KI_COUNT] = {
     2, 1, 1,                                    /* farthings, mankar, mang */
     2,                                          /* whetstone */
     2, 2,                                       /* antidote, remedy */
+    0,                                          /* broken weapon */
     2, 2, 1, 1                                  /* stone chisel, wood chisel, mattock, spade */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];

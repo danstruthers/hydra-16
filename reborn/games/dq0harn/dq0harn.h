@@ -60,6 +60,8 @@ extern unsigned char tqual[NTOOLS];             /*   its quality (0-9) */
 #define TQ_LIGHT 0x10                           /* (tqual's high bits: a weapon's version, light; heavy; none average:
                                                 **   D13's, the book's custom weapons, Combat 3) */
 #define TQ_HEAVY 0x20
+#define TQ_DULLED 0x40                          /* (tqual's top bits: its edge dulled, a point less cutting harm; dull, */
+#define TQ_DULL  0x80                           /*   two: the house's, the user's, 2026-11-03) */
 #define TQ_HEFT(q)      ((q) & TQ_LIGHT ? 0 : (q) & TQ_HEAVY ? 2 : 1)
 #define T_HELD  0x01
 #define T_WORN  0x02
@@ -72,15 +74,18 @@ extern unsigned wealth;                         /* (The family's wealth, its fil
 extern char bkey[8];                            /* (RS_NEW_ACTOR's key, from the request's text) */
 
 /* skills.c (overlay 7): the character's skills as it goes (slice 4.4, HOUSE.md's skills by use), and its load */
-#define MARKS           ((HARN_MAXSKILLS + 7) / 8)
-extern unsigned char marks[MARKS];              /* (Its skills used since its last development rolls, a bit each) */
-extern unsigned dev_m;                          /* (Its rest toward them, minutes) */
+extern unsigned char stress_lv;                 /* (How much stress a skill's used under now, wounds apart: a foe near or
+                                                **   a fight, a trap's danger, the dark without a light, a point each:
+                                                **   set as a request's answered, HOUSE.md's) */
+void __fastcall__ skill_line (char* l, unsigned char rd);    /* Its growth's lines in its file (skills.c's) */
+extern unsigned char pc_might;                  /* (How fearsome it is: by its size and its best weapon skill, a creature's
+                                                **   reckoning, fight.c's new_beast; develop's, as it's read and rises) */
 extern unsigned char fresh;                     /* (Words for it in news not flagged yet: a skill opened; rs.h's
                                                 **   C_NEWS, cond_of's) */
 void __fastcall__ skill_used (unsigned char sk);    /* Skill sk used by the character (a test of it, its weapon in a
-                                                **   fight): a [First Use] one opened, told; an open one marked */
-void __fastcall__ develop (unsigned m);         /* m minutes of rest (RS_TIME's): a night's of it, the marked skills'
-                                                **   development rolls, each that rose told */
+                                                **   fight): a [First Use] one opened, told; an open one's growth */
+void __fastcall__ develop (unsigned m);         /* m minutes of rest (RS_TIME's): a night's of it, the rolls each
+                                                **   skill's earned, each that rose told */
 void __fastcall__ set_load (unsigned qp);       /* The load it carries (quarter pounds), its free pounds less
                                                 **   (D13's): its equipment as harn.h has it */
 void __fastcall__ equip (const char* key, unsigned char on);    /* A tool to hand (on), or not: its key (RS_EQUIP a
@@ -279,6 +284,10 @@ void __fastcall__ pc_wield (struct req* r);     /* RS_WIELD: what it would strik
                                                 **   its words put); its hands empty, the best it carries */
 unsigned char __fastcall__ fumbled (const struct side* s, unsigned char att);  /* The hands that let go of what side s
                                                 **   fumbled (its attack's, att 1; its block's), rs.h's DH_* */
+unsigned char __fastcall__ wq_of (const struct side* s, unsigned char att);  /* Its Weapon Quality, of what it strikes with
+                                                **   (att) or blocked with: 0 none */
+extern unsigned char nobreak;
+unsigned char w_damage (void);                  /* A block's Weapon Damage, A's and D's: 1 the attacker's broken, 2 the defender's */
 unsigned char __fastcall__ wound_drops (const struct side* t, unsigned char loc);  /* The hand an arm's wound at loc
                                                 **   lets go of what it holds (DH_*) */
 unsigned char __fastcall__ pc_armour (unsigned char loc, unsigned char aspect);    /* Its armour at loc against an

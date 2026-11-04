@@ -391,7 +391,7 @@ static void load_pc (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    36                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    37                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -1234,6 +1234,10 @@ static void __fastcall__ limb_words (const struct msg* m)
         return;
     }
     hub_mem (KIND_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
+    if (k == WB_BROKE - WB_DROP) {
+        sayf (m->b ? "\nThe %s's %s breaks!" : "\nYour %s breaks!", m->b ? HUB->actor[(m->b - 1) & 7].name : kn, kn);
+        return;
+    }
     k = (k == WB_RISEN - WB_DROP || k == WB_NOT_UP - WB_DROP) && m->w1 >> 8 ?
         (WB_NO_RUN - WB_DROP + 1) * 2 + k - (WB_RISEN - WB_DROP) : k * 2 + (m->b != 0);
     if (k < sizeof lwords / sizeof lwords[0] && (s = lwords[k]) != 0) {
@@ -2473,7 +2477,7 @@ unsigned char s_bandage_out (void)
 ** the step's first words; the pack left off, stopped part way; the world's own step's grope failed */
 void __fastcall__ s_reach_said (unsigned w, unsigned char named)
 {
-    static const char* const first[LT_LETOLD - LT_PACKOFF + 1] = {
+    static const char* const first[LT_INPACK - LT_PACKOFF + 1] = {
         "\nYou take off your %s.", "\nYou take off your %s, and set it down at your feet.", "\nYou reach into the %s.",
         "\nYou hold the %s open.", "\nYou get out the %s.", "\nYou put your %s back on.", "\nYou let the %s fall.",
         "\nYou let the %s fall, still burning.", "\nYou put away the %s.", "\nYou blow out the %s.",
@@ -2481,7 +2485,8 @@ void __fastcall__ s_reach_said (unsigned w, unsigned char named)
         "\nYou set the %s down at your feet.", "\nYou take up the %s.", "\nYou set to sharpening the %s.", "\nYou strike a spark.",
         "\nYou get out the new %s.", "\nYou put away the old %s.", "\nYou take up the new %s.", "\nYou set the new %s down at your feet.",
         "\nYou blow out the old %s.", "\nYou light the new %s from the burning one.", "\nYou set to dipping the old %s.",
-        "\nYou let the old %s fall."
+        "\nYou let the old %s fall.", "\nYou sheathe the %s.", "\nYou sling the %s.", "\nYou set the %s in the sconce.",
+        "\nYou lay the %s on the ground, still burning.", "\nYou put the %s in your pack."
     };
     char t[sizeof CATALOGUE[0].name];
 
@@ -2703,10 +2708,13 @@ void __fastcall__ s_args (int argc, char* argv[])
             nobear = 1;                         /* (For the tests: its bearings never tested, as if it knew north) */
         } else if (!strcmp (argv[i], "-J")) {
             nosteps |= PL_NOSTEPS;              /* (For the tests: the reach in one lump, untold: their games as they were) */
+        } else if (!strcmp (argv[i], "-E")) {
+            nosteps |= PL_DUSK;                 /* (For the tests: the game begins at dusk) */
         } else if (!strcmp (argv[i], "-F")) {
             nosteps |= PL_NOFIT;                /* (For the tests: the outfit as it's drawn, all of it, unfitted to its strength) */
         } else if (!strcmp (argv[i], "-I")) {
             noinit = 1;                         /* (For the tests: no engage initiative test, no grope's) */
+            nosteps |= PL_NOFACE;               /*   (nor a test on facing it, nor a weapon broken) */
         } else if (!strcmp (argv[i], "-R") && i + 1 < argc) {
             rolls = dnum (argv[++i]);           /* (For the tests: the dice's own offset, 0-252: the same dungeon, other
                                                 **   rolls) */

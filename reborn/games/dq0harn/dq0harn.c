@@ -138,9 +138,9 @@ static void __fastcall__ equip_all (const char* keys)
         if (*keys >= '0' && *keys <= '9') {
             ++keys;
         }
-        if (*keys == 'L' || *keys == 'H') {
+        while (*keys >= 'A' && *keys <= 'Z') {
             if (j < NTOOLS) {
-                tqual[j] |= *keys == 'L' ? TQ_LIGHT : TQ_HEAVY;
+                tqual[j] |= *keys == 'L' ? TQ_LIGHT : *keys == 'H' ? TQ_HEAVY : *keys == 'D' ? TQ_DULL : *keys == 'E' ? TQ_DULLED : 0;
             }
             ++keys;
         }
@@ -149,10 +149,11 @@ static void __fastcall__ equip_all (const char* keys)
 
 /* The load the character carries, its equipment as harn.h has it (skills.c's set_load: one entry, its encumbering
 ** part, past its free pounds, D13's), so its encumbrance (EP) is the book's on it; and its skills used since their
-** development rolls, its rest toward them, words not flagged yet (skills.c's: slice 4.4's) */
+** development rolls' stress, words not flagged yet (skills.c's: slice 4.4's) */
 harn_equip carried = { "load", "load", 0, 0xFF, 0 };
-unsigned char marks[MARKS];
-unsigned dev_m;
+unsigned char stress_lv;
+unsigned char nobreak;                          /* (dq0 -I's, the tests': no weapon broken) */
+unsigned char pc_might;
 unsigned char fresh;
 
 /* A tool equipped (Lockcraft's picks) */
@@ -213,7 +214,8 @@ static const unsigned char appraiser[NAP + 4] = {
 static unsigned char __fastcall__ speaks (const char* t);
 void __fastcall__ s_dig_answer (struct req* r)
 {
-    unsigned char sk;
+    unsigned char sk, m;
+    int e;
 
     if (r->a == P_STEALTH || r->actor) {       /* (Moving quietly; or a creature's own test, a tunneller's dig: its
                                                 **   grade by its sheet, the world's the rest, slice 4.11's) */
@@ -229,9 +231,15 @@ void __fastcall__ s_dig_answer (struct req* r)
             r->grade = test_sk (&pc, sk, r->steps);
         }
     } else if (r->a != P_DIG && r->a != P_SWIM) {   /* (Persuading, intimidating, deceiving: main.c's) */
-        if (!speaks (r->text)) {                /* (Words in a tongue it doesn't speak: nothing) */
+        if (!(sk = speaks (r->text))) {         /* (Words in a tongue it doesn't speak: nothing) */
             r->result = 2;
         } else {
+            m = r->a == P_DECEIVE ? HARN_NTR : HARN_RHE;
+            e = pc.ml[m] ? harn_eml (&pc, m) : harn_get_oml (&pc, m) + harn_eml (&pc, m);
+            e += STEP_PCT * (signed char) r->steps;
+            if (e > sk) {                       /* (Its EML never past its mastery of the tongue: the book's, Skills 11) */
+                r->steps -= (e - sk + STEP_PCT - 1) / STEP_PCT;
+            }
             r->grade = test (&pc, r->a, r->steps);
         }
     } else if (r->a == P_SWIM) {                /* (A minute's swimming, the book's, Skills 10: its squares, by the
@@ -451,12 +459,16 @@ static void status (void)
     if (s->hearing > 9) {
         s->hearing = 9;
     }
+    if (HUB->pc_task.kind == LT_SLEEP) {        /* (Asleep: at half, the UI's reach of a sound its hearing plus three: the
+                                                **   book's, the user's, 2026-11-03) */
+        s->hearing = s->hearing > 2 ? ((s->hearing + 3) >> 1) - 3 : 0;
+    }
     s->smell = sense (HARN_SML);
     s->darkvision = 0;                          /* (The species' sight in the dark: the book's, to come) */
     s->nightvision = 1;
     s->morale = pc.att[HARN_MOR];
     s->load = !ep ? 0 : ep <= 2 ? 1 : ep <= 4 ? 2 : 3;   /* (Its encumbrance: a little burdened, heavily, overloaded) */
-    s->power = 10;
+    s->power = pc_might;                        /* (As a creature's: skills.c's, the user's, 2026-11-03) */
     s->lead = pc.ml[HARN_ORA] > pc.ml[HARN_RHE] ? pc.ml[HARN_ORA] : pc.ml[HARN_RHE];   /* (Its influence: the
                                                 **   morale field's, HOUSE.md's) */
     s->northsense = pc.att[HARN_SP] == HARN_KHU;    /* (The species' trait: the Khuzdul live below, and always know
@@ -520,14 +532,15 @@ void __fastcall__ s_load_pc (struct req* r)
     r->b = watch;
     strncpy (path, r->text, sizeof path - 1);
     r->result = 1;
-    pv.hr = pd.hr = afffl = dev_m = 0;         /* (No venom, no sickness, no rest yet: its file's "body" line's; */
-    memset (marks, 0, MARKS);                  /*   no skills used yet, its second one's) */
+    pv.hr = pd.hr = afffl = 0;                 /* (No venom, no sickness, no rest yet: its file's "body" line's; */
+    body_line (path, 3);                       /*   no skills used yet, its "body u" lines') */
     rest_m = HUB->pcsum.timesense = 0;
     if ((fd = open (path, O_RDONLY)) < 0) {
         return;
     }
     r->result = harn_read (fd, &pc, own_line) < 0;
     close (fd);
+    develop (0);                                /* (Its might, by its skills) */
     hub_map (0);
     put (name);
     put ("\n");
@@ -565,8 +578,9 @@ void __fastcall__ s_save_pc (struct req* r)
     harn_write_line (fd, line);
     body_line (line, 0);                        /* (Its venom, its rest: heal.c's) */
     harn_write_line (fd, line);
-    body_line (line, 2);                        /* (Its skills used: slice 4.4's) */
-    harn_write_line (fd, line);
+    while (body_line (line, 2), line[0]) {      /* (Its skills' growth: slice 4.4's, 2026-11-03) */
+        harn_write_line (fd, line);
+    }
     strcpy (line, "dealt ");                    /* (What dealt each injury: its words') */
     for (g = 0; g < pc.ninj; ++g) {
         line[g + 6] = '0' | pc_by[g];
@@ -648,7 +662,8 @@ void __fastcall__ s_beasts (unsigned char back)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* Whether it speaks tongue t (a word of tongues, a space before it: part 2's, the main RAM's room, 2026-10-31) */
+/* Whether it speaks tongue t (a word of tongues, a space before it, =its mastery after it if it isn't its own, its file's: part 2's,
+** the main RAM's room, 2026-10-31): 0, or its mastery in it (its own its Language's; 100 if it has none open) */
 #pragma code-name (push, "SW3CODE")
 #pragma rodata-name (push, "SW3RODATA")
 static unsigned char __fastcall__ speaks (const char* t)
@@ -657,8 +672,9 @@ static unsigned char __fastcall__ speaks (const char* t)
     unsigned char n = strlen (t);
 
     while ((p = strstr (p, t)) != 0) {
-        if (p[-1] == ' ' && (!p[n] || p[n] == ' ')) {
-            return 1;
+        if (p[-1] == ' ' && (!p[n] || p[n] == ' ' || p[n] == '=')) {
+            n = p[n] == '=' ? atoi (p + n + 1) : pc.ml[HARN_LAN];
+            return n ? n : 100;
         }
         ++p;
     }
@@ -671,7 +687,12 @@ static unsigned char __fastcall__ speaks (const char* t)
 ** the words need copied for the overlay (the hub's not in the window while it is) */
 struct pstate ps;
 
-static void __fastcall__ pace_set (unsigned char a)
+void __fastcall__ pace_set (unsigned char a);
+void __fastcall__ stress (struct req* r);
+#pragma code-name (push, "SW3CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
+#pragma rodata-name (push, "SW3RODATA")
+
+void __fastcall__ s_pace_set (unsigned char a)
 {
     status ();                                  /* (Listening: its hearing) */
     ps.gait = HUB->gait;
@@ -685,6 +706,34 @@ static void __fastcall__ pace_set (unsigned char a)
     hub_map (0);
     state ();
 }
+
+/* What a skill's used under, for its growth (HOUSE.md's, the user's, 2026-11-03: "a use under stress"), the character's
+** test r or its treatment (the hub in the window): a point each for a hostile awake within 30 feet (a hard stop's reach),
+** a trap's danger (disarmed, or dodged), the dark without a light; wounds and shock skills.c's own */
+void __fastcall__ s_stress (struct req* r)
+{
+    struct actor* q = HUB->actor;
+    unsigned char k, n = r->kind == RS_TEST && (r->a == P_DISARM || r->a == P_DODGE_HAZARD);
+    unsigned dx, dy;
+
+    for (k = NACTORS; k; --k, ++q) {
+        dx = q->x > HUB->pc_x ? q->x - HUB->pc_x : HUB->pc_x - q->x;
+        dy = q->y > HUB->pc_y ? q->y - HUB->pc_y : HUB->pc_y - q->y;
+        if (q->state && q->attitude == AT_HOSTILE && q->sn == HUB->pc_stratum && q->doing != DO_SLEEP && dx <= 6 && dy <= 6) {
+            ++n;
+            break;
+        }
+    }
+    if (!HUB->pc_light) {
+        hub_map (SIGHT_BANK);
+        n += SIGHT->dark != 0;
+        hub_map (0);
+    }
+    stress_lv = n;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The dice fixed, for a test (RS_DICE: the referee's unit tests, tests/ram/t_rules): dice.h's hook, set by the
 ** first, rolls every die after it, the faces given first (then the generator's), and keeps what each was (its sides) */
@@ -749,7 +798,10 @@ static void sheets_in (void)
 
 /* One side of two actors' tests (RS_CONTEST): who's test of purpose p, at the steps: the character's here (one
 ** senseless, or in shock, tests nothing: a critical failure), a creature's by its sheet (overlay 2's, in a copy) */
-static signed char __fastcall__ side (unsigned char who, unsigned char p, signed char steps)
+signed char __fastcall__ side (unsigned char who, unsigned char p, signed char steps);
+#pragma code-name (push, "SW3CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
+#pragma rodata-name (push, "SW3RODATA")
+signed char __fastcall__ s_side (unsigned char who, unsigned char p, signed char steps)
 {
     struct req* q = (struct req*) rq;
 
@@ -764,6 +816,8 @@ static signed char __fastcall__ side (unsigned char who, unsigned char p, signed
     fight (q);
     return q->grade;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Moving quietly's test (RS_TEST's P_STEALTH: slice 4.6's), by its own dice (rshouse.h's RS_HOUSE_QUIET's: the game's
 ** as they stand, mixed, and put back after), so the game's other tests roll as they did: the character's, or a
@@ -788,6 +842,7 @@ static void __fastcall__ answer (struct req* r)
     tp = r->text;
     tend = r->text + tlim - 1;
     r->result = 0;
+    stress_lv = 0;                              /* (A skill's use here routine, but as it's found below: skills.c's) */
     switch (r->kind) {
     case RS_NEW_ACTOR:                          /* (The fights': overlay 2's, in a copy, as the harm's) */
         sheets_in ();
@@ -796,6 +851,7 @@ static void __fastcall__ answer (struct req* r)
     case RS_MORALE:
     case RS_WIELD:                              /* (What it would strike with: gear.c's, through fight's) */
         tnow = HUB->now;
+        nobreak = HUB->pc_lump & PL_NOFACE;
         stance = HUB->pc_stance;
         pc_way = HUB->pc_strike;
         pc_hand = HUB->pc_shand;
@@ -812,6 +868,9 @@ static void __fastcall__ answer (struct req* r)
     case RS_TIME:                               /*   copy, the part said copied for it; the harm overlay 1's, its */
     case RS_TREAT:                              /*   words a line) */
         tnow = HUB->now;
+        if (r->kind == RS_TREAT) {
+            stress (r);
+        }
         strncpy (tpart, r->text, sizeof tpart - 1);
         memcpy (rq, r, sizeof rq);
         memcpy (rq + offsetof (struct req, x) + WANT_X, &HUB->pc_hunger, 6);    /* (The hub's want: slice 4.9's) */
@@ -829,6 +888,9 @@ static void __fastcall__ answer (struct req* r)
         load_pc (r);
         break;
     case RS_TEST:
+        if (!r->actor && r->a > P_NOTICE_SMELL) {
+            stress (r);                         /* (A glance's, a sound's, a smell's routine: they're many) */
+        }
         if (r->actor || r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE || r->a == P_SWIM) {   /* (A creature's
                                                 **   by its sheet, any test (Phase 3C's: a door forced); judged by the tool to hand that
                                                 **   suits it best; moving quietly, by its own dice; by the craft that
@@ -921,6 +983,7 @@ parted:
         memcpy (r, rq, sizeof rq);
         break;
     case RS_CONTEST:                            /* (Each one's test, the actor's first: who did better) */
+        stress_lv = 1;                          /* (Two meeting: a foe near) */
         g = side (r->actor, r->a, r->steps);
         k = side (r->other, r->b, r->c);
         r->grade = g;

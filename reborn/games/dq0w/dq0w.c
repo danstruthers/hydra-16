@@ -98,7 +98,7 @@ unsigned char tripped (void);                   /* Part 43 */
 unsigned char __fastcall__ dark_end (unsigned char how);    /* Part 44 */
 unsigned char __fastcall__ bearings (unsigned w);   /* Part 52 */
 void __fastcall__ bearings_off (unsigned feet); /* (wbody.h's) */
-unsigned char arrive_a (void);                  /* Part 91 */
+unsigned char arrive_a (void);                  /* Part 93 */
 void arrive_b (void);
 void tsense (void);                             /* Part 76 (wtime.c) */
 void rest_go (void);
@@ -486,7 +486,10 @@ static unsigned long walk_t;                    /* (walk's: the time it takes) *
 void __fastcall__ walk (unsigned char d);       /* (Part 9's, its stub: across's, part 33's) */
 
 
-static void __fastcall__ no_way (unsigned why)
+#pragma code-name (push, "SW53CODE")            /* (Part 53's: the main RAM's room, 2026-11-03) */
+#pragma rodata-name (push, "SW53RODATA")
+void __fastcall__ no_way (unsigned why);
+void __fastcall__ s_no_way (unsigned why)
 {
     hub_map (0);                                /* (A chunk may be in the window, its portal just read: a journey's leg's,
                                                 **   a step's: told to the hub's, not into the chunk) */
@@ -496,10 +499,13 @@ static void __fastcall__ no_way (unsigned why)
 }
 
 /* Stopped by a denizen in its way before it's gone a square (told: the actor's) */
-static void den_way (void)
+void den_way (void);
+void s_den_way (void)
 {
-    no_way (N_DEN | (unsigned) (blocked - 1) << 8);
+    s_no_way (N_DEN | (unsigned) (blocked - 1) << 8);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- Traps on the way (DUNGEON.md: traps; set off by the world's work, wtrap.c): a walk worked out stops at the
 ** first it would set off (a plate's, a wire's, on a room's floor), and goes round one the character knows of */
@@ -2200,8 +2206,8 @@ static void turn (void);
 static unsigned char went_cut;                 /* (A walk over to a thing stopped short: halt's, its arrival
                                                 **   not "You go over to it.") */
 static unsigned char ar_first, ar_how, ar_bn, ar_dw;   /* (arrive's, through its parts' calls) */
-#pragma code-name (push, "SW91CODE")           /* (Part 91's since 2026-11-03: the main RAM's room, once a walk) */
-#pragma rodata-name (push, "SW91RODATA")
+#pragma code-name (push, "SW93CODE")           /* (Part 93's since 2026-11-03: the main RAM's room, once a walk) */
+#pragma rodata-name (push, "SW93RODATA")
 unsigned char s_arrive_a (void)
 {
     unsigned char how = move.how, dw = pon && pfeel;
@@ -2291,7 +2297,7 @@ void s_arrive_b (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* (Its look, its turn: here, between part 91's two, so a part they swap in stays there through them) */
+/* (Its look, its turn: here, between part 93's two, so a part they swap in stays there through them) */
 static void arrive (void)
 {
     if (arrive_a ()) {
@@ -3458,18 +3464,15 @@ unsigned char __fastcall__ s_pc_dig (unsigned char w)
                 }
             }
             if (!n && !(pt & 1)) {
-                n = 1;
-            } else if (!n && (pt & 6) != 6) {
-                n = 1;
-                st = pt & 8 ? DN_HANDS | DN_LIT : DN_HANDS;   /* (Carried, not in hand: told so, a light in hand too) */
+                n = 1;                          /* (No hammer: got out with it, its hands made free: the user's, 2026-11-03) */
             }
         }
         hub_map (0);
         if (n) {
             evb = (dig.mat + 1) | st;
             dig_no (D_NO_TOOL << 8 | evb);
-        } else if (HUB->dig_better[0]) {
-            event (E_DIG, 0, D_BETTER << 8);
+        } else if (HUB->dig_better[0] && !rs_live) {
+            event (E_DIG, 0, D_BETTER << 8);    /* (Once: not each time it's asked again, a tool's steps done) */
         }
         return n;
     }
@@ -4597,12 +4600,12 @@ void __fastcall__ s_task_word (const struct msg* m)
 ** but a climb, part way up, and a fight go on, the light's going told alone */
 void __fastcall__ s_task_out (unsigned char b)
 {
-    unsigned char k;
-
     hub_map (0);
-    k = HUB->pc_task.kind;
     evb = b;
-    if (!k || k == LT_CLIMB || k == LT_FIGHT) {
+    if (HUB->pc_task.kind == LT_SLEEP) {        /* (Its eyes shut: unseen, it sleeps on, HOUSE.md's) */
+        return;
+    }
+    if (!HUB->pc_task.kind || HUB->pc_task.kind == LT_CLIMB || HUB->pc_task.kind == LT_FIGHT) {
         event (E_TASK, 0, TE_OUT);
     } else {
         stop (TE_OUT);
@@ -5066,7 +5069,10 @@ static unsigned char air_q (void)
     return AQ_STR (q) > r ? q - r : 0;
 }
 
-static void __fastcall__ air_harm (unsigned char a, unsigned char b, unsigned char c)
+void __fastcall__ air_harm (unsigned char a, unsigned char b, unsigned char c);
+#pragma code-name (push, "SW74CODE")            /* (Part 74's: part 73's room, 2026-11-03) */
+#pragma rodata-name (push, "SW74RODATA")
+void __fastcall__ s_air_harm (unsigned char a, unsigned char b, unsigned char c)
 {
     struct req* r;
 
@@ -5086,6 +5092,8 @@ static void __fastcall__ air_harm (unsigned char a, unsigned char b, unsigned ch
     event (E_HARM, 0, a | b << 8);
     harm_fx ();                                 /* (What it dropped, fallen: part 49's) */
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 static void air_here (void)
 {
@@ -5106,8 +5114,15 @@ static void air_here (void)
     }
     k = AQ_KIND (q);
     s = AQ_STR (q);
+    hub_map (0);
     if (k == AQ_FIRE && (f & FLM_LIT ? s >= 2 : f && s == 3)) {
-        f |= FLM_BURST;
+        if (AQ_KIND (HUB->pc_air) == AQ_FIRE) {
+            f |= FLM_BURST;
+        } else {
+            q = AQ_FIRE << 4 | 1;               /* (Its first step into it, from air that's not: the flame's warning, the
+                                                **   thin firedamp's, a step before the burst: the user's, 2026-11-03,
+                                                **   "warn before bursting"; the next step in, unless it's back out) */
+        }
     } else if (f && k == AQ_BLACK && s == 3) {
         f |= FLM_OUT;
     }
@@ -5990,6 +6005,15 @@ static void __fastcall__ task_for (unsigned char kind, unsigned long t)
 ** kneeling, asleep or senseless, GA_REST) */
 void s_rest_go (void)
 {
+    if (HUB->pc_task.kind == LT_SLEEP && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
+        HUB->pc_task.kind = LT_NONE;            /* (Woken, its eyes open: what it sees now, what's come told) */
+        spend (GA_REST, 0);
+        looked (0);
+        if (HUB->look.ch) {
+            view (V_STIR);
+        }
+        hub_map (0);
+    }
     if (HUB->now > free_at) {
         spend (HUB->pc_pos & ~POS_CROUCHED ? GA_REST : GA_STOOD, HUB->now - free_at);
         hub_map (0);
@@ -6018,8 +6042,13 @@ void __fastcall__ s_intent_few (struct msg* m)
                                                 **   the Rise as it goes on, the user's, 2026-11-03) */
         }
         if (!m->w2 && t > HUB->round) {
-            task_for (m->a & WA_SLEEP ? LT_SLEEP : LT_WAIT, t);  /* (A wait longer than a round, or a sleep: a long
-                                                **   task, in minutes past 100 of them) */
+            task_for ((m->a & (WA_SLEEP | WA_REST)) == WA_SLEEP ? LT_SLEEP : LT_WAIT, t);  /* (A wait longer than a round,
+                                                **   or a sleep: a long task, in minutes past 100 of them; a rest awake) */
+            if (HUB->pc_task.kind == LT_SLEEP) {
+                looked (0);                     /* (Its eyes shut: the senses' look sees nothing as it sleeps, HOUSE.md's) */
+                spend (GA_REST, 0);             /* (And its hearing at half: the referee's summary) */
+                hub_map (0);
+            }
         }
         free_at = HUB->now;                     /* (Waiting: rest; engaged, a pass: part 26's) */
         passed (m);

@@ -192,7 +192,9 @@ unsigned char o_may_den (void)
 
 /* A walk over told as it begins, at once (the user's D17, a command answers at once: 2026-11-02), by the thing's name, or
 ** the command's thing (0); its arrival not "You go over to it." (placing, or a command's walk's reach, E_ARRIVE's).  (Here
-** since 2026-11-03, a walk's first words no part's swap: an overlay's call takes nothing) */
+** since 2026-11-03, a walk's first words no part's swap: an overlay's call takes nothing; overlay 17's, 15's room) */
+#pragma code-name (push, "OV17CODE")
+#pragma rodata-name (push, "OV17RODATA")
 void __fastcall__ o_walk_says (const char* name)
 {
     unsigned char k = cmd.obj.kind;
@@ -215,6 +217,8 @@ void __fastcall__ o_walk_says (const char* name)
     t_flush ();                                 /* (Out before the world's walk starts: the user's D17) */
     placing = 1;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* A thing to take, by the name said, that the character sees lying about, none of that name in reach: its walk over told
 ** now, before the world's asked, whose answer's the time (its parts' copies, its chooser through the store): the same
@@ -241,7 +245,7 @@ void __fastcall__ o_walk_ahead (const char* name)
         }
     }
     if (away) {
-        o_walk_says (name);
+        walk_says (name);
         placing = 0;
         said_ahead = 1;
     }

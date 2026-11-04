@@ -253,7 +253,7 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 ** field and c the bonds (points, signed: the referee's to ignore, the tests' to read), w1 the fallen's record (or the
 ** leader's lost), w2 its leaders' records reckoned (its band's head, its faction's times 256; 0xFF none) */
 enum { M_STEADY, M_CAUTIOUS, M_BROKEN, M_DESPERATE, M_BERSERK };
-enum { MR_NONE, MR_FELL, MR_LEADER, MR_TOLD };   /* (Why: a friend seen or heard to fall; its leader; told of its
+enum { MR_NONE, MR_FELL, MR_LEADER, MR_TOLD, MR_FACED };   /* (Why: a friend seen or heard to fall; its leader; told of its
                                                 **   leader's loss) */
 
 /* An effect of a reply: what happened to whom (up to RS_EFFECTS a reply) */

@@ -89,6 +89,11 @@ static const struct weapon {
     { "tower", "tower shield", HARN_SHD, 5, 25, { 3, -1, -1 }, 0xFF },
 };
 #define NWEAPONS        (sizeof weapons / sizeof weapons[0])
+
+/* Each one's Weapon Quality, the book's table's (Combat 3, in the table's order above): tested 3d6 against, on a block and on
+** something hard (Combat 12's Weapon Damage); the unarmed and the tools none (the house's: a tool isn't a blade to break) */
+static const unsigned char wqs[] = { 0, 0, 0, 11, 10, 10, 12, 12, 12, 12, 11, 11, 12, 9, 9, 10, 12, 11, 11, 9, 9, 11, 11, 11, 0, 0, 0, 0, 0,
+    9, 9, 9, 11, 13, 12, 13, 14, 14 };
 #define NUNARMED        3
 #define NSHIELDS        5
 #define SHIELD          (NWEAPONS - NSHIELDS)   /* (The first shield) */
@@ -251,7 +256,8 @@ unsigned char __fastcall__ o_pc_armour (unsigned char loc, unsigned char aspect)
 ** fall); never told (a beast, dq0 -K's), the bestiary's, as before */
 unsigned char dwr[NACTORS];                     /* (Each actor's weapon held: its row, 0 none, 0xFF untold; */
 unsigned char dsh[NACTORS];                     /*   its shield held: its row, 0 none; */
-unsigned char dpc[NACTORS][DPIECES];            /*   its pieces worn: each its entry plus 1, | DP_POOR, DP_FINE) */
+unsigned char dpc[NACTORS][DPIECES];            /*   its pieces worn: each its entry plus 1, | DP_POOR, DP_FINE; */
+static unsigned char dwq[NACTORS], dsq[NACTORS]; /*   its weapon's quality, | TQ_DULLED, TQ_DULL; its shield's) */
 char dtext[DTEXT_N];                            /* (Its marks, RS_EQUIP's text, copied: dq0harn.c's) */
 #define DP_POOR         0x20
 #define DP_FINE         0x40
@@ -267,6 +273,10 @@ void __fastcall__ o_den_equip (unsigned char k)
     memset (dpc[k], 0, DPIECES);
     while (*t) {
         m = *t++;
+        if (m == 'D' || m == 'E') {             /* (The weapon's before it: its edge, dull, dulled) */
+            dwq[k] |= m == 'D' ? TQ_DULL : TQ_DULLED;
+            continue;
+        }
         for (j = 0; *t && (*t < '0' || *t > '9'); ++t) {
             if (j < sizeof key - 1) {
                 key[j++] = *t;
@@ -286,10 +296,91 @@ void __fastcall__ o_den_equip (unsigned char k)
         }
         if (j < NWEAPONS && IS_SHIELD (j)) {
             dsh[k] = j;
+            dsq[k] = q;
         } else if (j < NWEAPONS && (m != '<' || !dwr[k])) {
             dwr[k] = j;
+            dwq[k] = q;
         }
     }
+}
+
+/* A blow's edge the worse for its wear (the house's, the user's, 2026-11-03: "Dull edges cut less"; q a thing's TQ_*): a dulled
+** one's cutting a point less, a dull one's two, none under nothing */
+static void __fastcall__ dull_edge (struct side* s, unsigned char q)
+{
+    signed char* e = &s->imp[HARN_EDGE];
+
+    if (q & (TQ_DULLED | TQ_DULL) && *e > 0) {
+        *e = *e > (q & TQ_DULL ? 2 : 1) ? *e - (q & TQ_DULL ? 2 : 1) : 0;
+    }
+}
+
+/* Side s's Weapon Quality, of what it strikes with (att) or blocked with: the book's for its weapon, by its quality (0-9, 5 the
+** average, the book's table's four either way, the house's reading: a master's +4, a crude one's -4); 0 none, a part of it or a thing
+** of no table's (and a creature's things untold) */
+unsigned char __fastcall__ o_wq_of (const struct side* s, unsigned char att)
+{
+    unsigned char j = 0, q = 5, k;
+
+    if (s->b) {
+        k = (s->who - 1) & 7;
+        if (s->part != 0xFF && (att || !(R->c & AF_SHIELD))) {
+            return 0;
+        }
+        if (dwr[k] == 0xFF) {
+            return 0;
+        }
+        if (!att && (R->c & AF_SHIELD)) {
+            j = dsh[k];
+            q = dsq[k];
+        } else {
+            j = dwr[k];
+            q = dwq[k];
+        }
+    } else {
+        k = att ? s->aslot : s->dslot;
+        if (k >= NTOOLS) {
+            return 0;
+        }
+        for (j = NUNARMED; j < NWEAPONS && strcmp (weapons[j].key, tools[k]); ++j) {
+        }
+        if (j == NWEAPONS) {
+            return 0;
+        }
+        q = tqual[k];
+    }
+    q &= 15;
+    q = q < 1 ? 1 : q > 9 ? 9 : q;
+    return wqs[j] ? wqs[j] + q - 5 : 0;
+}
+
+/* A block's Weapon Damage, weapon against weapon (the book's, Combat 12: the lower quality tested first, the attacker's at a tie, the
+** other only if that holds; three dice over it, destroyed; fight.c's sides A and D): by a die of its own, so the game's others roll as
+** they would.  1 the attacker's broken, 2 the defender's, 0 none */
+static unsigned ws;
+
+static unsigned char __fastcall__ over (unsigned char q)
+{
+    unsigned char k, n = 0;
+
+    for (k = 3; k; --k) {
+        ws = ws * 31421U + 6927U;
+        n += (unsigned char) ((ws >> 8) % 6 + 1);
+    }
+    return n > q;
+}
+
+unsigned char o_w_damage (void)
+{
+    unsigned char a = o_wq_of (&A, 1), d = o_wq_of (&D, 0);
+
+    if (!a || !d || nobreak) {
+        return 0;
+    }
+    if (d < a) {
+        return over (d) ? 2 : over (a) ? 1 : 0;
+    }
+    return over (a) ? 1 : over (d) ? 2 : 0;
 }
 
 /* Actor k's blow, its things told (fight.c's beast_side: s's aml its kind's own weapon's, s's word its word): the
@@ -321,6 +412,9 @@ void __fastcall__ o_den_side (struct side* s, unsigned char k)
     memcpy (s->imp, w->imp, sizeof s->imp);
     s->part = j ? 0xFF : w->part;
     strcpy (s->word, w->word);
+    if (j) {
+        dull_edge (s, dwq[k]);
+    }
 }
 
 /* Actor k's armour at loc against aspect, its pieces' (the last that guards named in arm: "" none) */
@@ -410,6 +504,9 @@ void __fastcall__ o_pc_side (struct side* s)
         s->nblk = 1;
     }
     memcpy (s->imp, w->imp, sizeof s->imp);
+    if (s->aslot < NTOOLS) {
+        dull_edge (s, tqual[s->aslot]);
+    }
     if (s->part != 0xFF) {                      /* (Gauntlets on a punch, hobnailed boots on a kick) */
         bit = 1u << w->part;
         s->imp[0] += worn (more);
@@ -457,6 +554,8 @@ void __fastcall__ o_pc_wield (struct req* q)
     put (key ? key : "");                       /* (Its words: "" none, the reply's text cleared) */
 }
 
+#pragma code-name (push, "OV5CODE")             /* (Overlay 5's: overlay 3's room, 2026-11-03) */
+#pragma rodata-name (push, "OV5RODATA")
 /* The hands that let go of what side s fumbled (the melee table's fumble: rs.h's DH_*, the referee's X_DROP's; 0 none):
 ** the character's attack's thing (its slot's hand; a thing named, the hub's pc_shand's) or its block's (att 0); a
 ** creature's weapon, held, in its right; a part of it (a fist, a bite) none */
@@ -483,6 +582,8 @@ unsigned char __fastcall__ o_wound_drops (const struct side* t, unsigned char lo
 
     return !t->b ? h : t->part == 0xFF && h == DH_RIGHT ? h : 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The character's defences in a round (the user's, 2026-10-20; HOUSE.md's): each thing that blocks blocks one foe a
 ** round (a shield one, a sword another), a bare arm's too, the dodge one; a counterstrike only on command (its stance,
@@ -547,12 +648,17 @@ unsigned char __fastcall__ o_pc_defence (struct side* d, unsigned char f, unsign
         d->bare = s == BARE_ARM;
     }
     d->dslot = uhow[s] == HARN_DODGE ? 0xFF : s;   /* (What it defends with: its fumble's, slice 4.1b's) */
-    if (uhow[s] == HARN_BLOCK && s < NTOOLS) {  /* (A block's words what blocked: "you fend it off with your
-                                                **   buckler", not the weapon it strikes with, 2026-10-29) */
-        for (k = NUNARMED; k < NWEAPONS && strcmp (weapons[k].key, tools[s]); ++k) {
-        }
-        if (k < NWEAPONS) {
-            strcpy (d->word, weapons[k].word);
+    if (uhow[s] == HARN_BLOCK) {                /* (A block's words what blocked: "you fend it off with your
+                                                **   buckler", not the weapon it strikes with, 2026-10-29; and the
+                                                **   skill it marks that thing's, a bare arm's Unarmed: the user's,
+                                                **   2026-11-03, "A block improves Shield") */
+        d->sk = HARN_UNA;
+        for (k = NUNARMED; s < NTOOLS && k < NWEAPONS; ++k) {
+            if (!strcmp (weapons[k].key, tools[s])) {
+                strcpy (d->word, weapons[k].word);
+                d->sk = weapons[k].sk;
+                break;
+            }
         }
     }
     return uhow[s];
@@ -571,6 +677,7 @@ static unsigned char __fastcall__ pc_shield (struct side* s)
             if (j < NWEAPONS && s->bml[k] > v) {
                 v = s->bml[k];
                 strcpy (s->word, weapons[j].word);
+                s->sk = HARN_SHD;
             }
         }
     }
@@ -583,7 +690,11 @@ static unsigned char __fastcall__ pc_shield (struct side* s)
 ** struck it hurt if the blow went wrong (rs.h's: the book's H2 on a bare part meeting something hard, the game's
 ** numbers), HC_STRUCK's harm (sheet.c's).  A part's blow the house's Unarmed test (HOUSE.md's battering, the user's,
 ** 2026-10-22): a marginal failure harms neither, a critical failure the part alone; a bare part's hurt stopped short
-** (RS_SHORT: none, result | 4).  (Fight.c's, its request q, the attacker's side s: here, overlay 2's room) */
+** (RS_SHORT: none, result | 4).  (Fight.c's, its request q, the attacker's side s: overlay 5's since 2026-11-03, the
+** room of overlays 2 and 3: pc_side and pc_armour through their stubs) */
+#pragma code-name ("OV5CODE")
+#pragma rodata-name ("OV5RODATA")
+
 void __fastcall__ o_hit_thing (struct req* q, struct side* s)
 {
     static unsigned char hq[offsetof (struct req, text)];   /* (The harm's request: but its text) */
@@ -597,7 +708,7 @@ void __fastcall__ o_hit_thing (struct req* q, struct side* s)
         s->part = 0xFF;                         /* (A creature's: its own weapon or body, never hurt by it, the
                                                 **   house's: fight.c's beast_side) */
     } else {
-        o_pc_side (s);
+        pc_side (s);
     }
     for (k = 0; k < 3; ++k) {
         if (s->imp[k] >= 0 && (v = s->imp[k] - res[k]) > top) {
@@ -613,9 +724,14 @@ void __fastcall__ o_hit_thing (struct req* q, struct side* s)
     q->c = 0;
     q->w2 = 0;
     q->result = s->part != 0xFF ? 2 : 0;
+    if (!q->actor && !nobreak && n && res[0] && res[1] >= 4 && (v = wq_of (s, 1)) != 0 && dice (3, 6) > v) {
+        q->a = fumbled (s, 1);                  /* (A weapon on something hard (a thing that stands up to blows, iron or
+                                                **   stone): the book's Weapon Damage, the dice over its quality: broken) */
+        q->result |= 8;
+    }
     put (s->word);
     if (s->part != 0xFF && lv == HARN_CF) {     /* (Gone wrong: the part hurt; a bare one stopped short of it, asked) */
-        a = s->part == HARN_FOOT ? o_pc_armour (SOLE, 0) : o_pc_armour (s->part, HARN_BLUNT);
+        a = s->part == HARN_FOOT ? pc_armour (SOLE, 0) : pc_armour (s->part, HARN_BLUNT);
         v = dice (2, 6) + res[0] / 2 - a;
         if (v > 0 && pull && !a) {
             q->result |= 4;
@@ -634,3 +750,5 @@ void __fastcall__ o_hit_thing (struct req* q, struct side* s)
     }
 #undef h
 }
+#pragma code-name ("OV3CODE")                   /* (The file's strings, gathered at its end, overlay 3's) */
+#pragma rodata-name ("OV3RODATA")

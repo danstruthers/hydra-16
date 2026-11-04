@@ -1,11 +1,12 @@
 /*
 ** skills.c - (dq0harn, overlay 7) the character's skills as it goes (slice 4.4: HOUSE.md's skills by use, the book's
 ** Skills 7 and Combat 19), and its load.  A skill used (a test of it, test_sk's; its weapon in a fight, a block, a
-** dodge, a shot: gear.c's, missile.c's) is marked for a development roll, success or failure alike (the book's: one
-** learns as much from failing); one of the book's [First Use] skills not opened yet is opened at its opening level the
-** first time it's used, and told (the user's, 2026-10-23: those learnt by study aren't).  The marked ones' rolls are
-** made as a night's rest is had (eight hours of it, the house's), each that rose told: news, RS_DESCRIBE b 4's, as it
-** wakes.  The load: its free pounds (D13, the user's: ten at Strength 10, doubling each four points) not counted in
+** dodge, a shot: gear.c's, missile.c's) earns development rolls, success or failure alike (the book's: one learns as
+** much from failing): a use under stress one, a very dangerous one two (the book's Skills 7, its stress rolls), and five
+** routine uses one (the user's, 2026-11-03: "Stress, or 5 routine uses": HOUSE.md's); one of the book's [First Use]
+** skills not opened yet is opened at its opening level the first time it's used, and told (the user's, 2026-10-23:
+** those learnt by study aren't).  The rolls earned are made as a night's rest is had (eight hours of it, the house's),
+** each that rose told: news, RS_DESCRIBE b 4's, as it wakes.  The load: its free pounds (D13, the user's: ten at Strength 10, doubling each four points) not counted in
 ** the book's encumbrance.
 */
 
@@ -25,6 +26,25 @@
 #include "../dq0/rshouse.h"
 
 #define NIGHT           480                     /* (A night's rest, minutes: the book's night's sleep, Skills 6) */
+
+/* Each skill's growth (a byte a skill, kept past the bodies in their bank, fb, none of it in the main RAM): its routine
+** uses toward a roll (the low three bits, 0-4), the rolls it's earned (the high four, at most ROLLS: the house's, the
+** book's two or three) */
+#define GROW            ((unsigned char*) 0x8000 + BBODIES)
+#define ROLLS           3
+#define ROUTINE         5
+static unsigned dev_m;                          /* (Its rest toward the rolls, minutes) */
+static unsigned char gv;
+
+static void __fastcall__ grow_in (unsigned char sk)
+{
+    bread (fb, GROW + sk, &gv, 1);
+}
+
+static void __fastcall__ grow_out (unsigned char sk)
+{
+    bwrite (fb, GROW + sk, &gv, 1);
+}
 
 /* Words onto news (heal.c's nput, this overlay's own) */
 static void __fastcall__ say (const char* s)
@@ -50,10 +70,12 @@ static void __fastcall__ say_skill (const char* a, unsigned char sk, const char*
 }
 
 /* Skill sk used by the character: opened, if it's a [First Use] one (the book's: no months of teaching; Religion's
-** rituals never), and told; marked, if it's open */
+** rituals never), and told; if it's open, its growth: under stress (stress_lv, what the request's about, and wounded or
+** in shock) a roll earned, under two at once a very dangerous use's two; else a routine use counted, the fifth a roll */
 void __fastcall__ o_skill_used (unsigned char sk)
 {
     const harn_skill* s;
+    unsigned char n;
 
     if (sk >= HARN_MAXSKILLS) {
         return;                                 /* (An attribute's test) */
@@ -66,16 +88,37 @@ void __fastcall__ o_skill_used (unsigned char sk)
         say_skill (" You've begun to learn ", sk, " by doing it (");
         fresh = 1;                              /* (Told as soon as the world asks: cond_of's C_NEWS) */
     }
-    marks[sk >> 3] |= 1 << (sk & 7);
+    n = stress_lv + (pc.ninj != 0 || pc.state == HARN_SHOCK);
+    grow_in (sk);
+    if (!n) {
+        if ((gv & 7) < ROUTINE - 1) {
+            ++gv;
+        } else {
+            gv &= 0xF0;
+            n = 1;
+        }
+    } else if (n > 2) {
+        n = 2;
+    }
+    n += gv >> 4;
+    gv = (gv & 7) | (n > ROLLS ? ROLLS : n) << 4;
+    grow_out (sk);
 }
 
-/* m minutes of rest (RS_TIME's, at rest: a wait, a sleep, standing still): a night's of it since the last, each marked
-** skill's development roll (the book's: d100 and its skill base over its mastery, a point more; not past 100 and its
-** base), by their own dice, each that rose told; the marks cleared */
+/* m minutes of rest (RS_TIME's, at rest: a wait, a sleep, standing still): a night's of it since the last, each skill's
+** development rolls earned (the book's: d100 and its skill base over its mastery, a point more; not past 100 and its
+** base), by their own dice, each that rose told; those rolls spent, its routine uses kept */
 void __fastcall__ o_develop (unsigned m)
 {
-    unsigned char sk, ml, sb;
+    unsigned char sk, ml, sb, n;
 
+    pc_might = 0;
+    for (sk = HARN_AXE; sk <= HARN_WHP; ++sk) {
+        if (pc.ml[sk] > pc_might) {             /* (Its best weapon skill: a man's size, 4, as pc_side's has it) */
+            pc_might = pc.ml[sk];
+        }
+    }
+    pc_might = 3 * 4 * 4 + pc_might / 10;
     dev_m = dev_m + m < dev_m ? 0xFFFF : dev_m + m;
     if (dev_m < NIGHT) {
         return;
@@ -83,16 +126,74 @@ void __fastcall__ o_develop (unsigned m)
     dev_m = 0;
     QUIET_IN
     for (sk = 0; sk < HARN_MAXSKILLS; ++sk) {
-        if ((marks[sk >> 3] & 1 << (sk & 7)) && (ml = pc.ml[sk]) != 0) {
-            sb = harn_get_sb (&pc, sk);
-            if (ml < 100 + sb && d100 () + sb > ml) {
-                pc.ml[sk] = ml + 1;
-                say_skill (" Your ", sk, " skill has improved (");
+        grow_in (sk);
+        if (gv > 15) {
+            for (n = gv >> 4; n; --n) {
+                if ((ml = pc.ml[sk]) != 0) {
+                    sb = harn_get_sb (&pc, sk);
+                    if (ml < 100 + sb && d100 () + sb > ml) {
+                        pc.ml[sk] = ml + 1;
+                        say_skill (" Your ", sk, " skill has improved (");
+                    }
+                }
             }
+
+            gv &= 7;
+            grow_out (sk);
         }
     }
     QUIET_OUT
-    memset (marks, 0, MARKS);
+}
+
+/* Its growth in the character's file, its "body u" lines (afflict.c's o_body_line's): rd 3 cleared, its rest none (a
+** file about to be read); rd 1 a line read, l its words after "body ": "u", its rest toward the rolls, a space, then
+** each skill's number and growth, two hex digits each; rd 2 the next line made in l (l[0] 0: no more) */
+static const char hexd[] = "0123456789abcdef";
+static unsigned char lsk;                       /* (The next skill to write; 0xFF no more) */
+
+static unsigned char __fastcall__ hexv (const char* p)
+{
+    return (p[0] <= '9' ? p[0] - '0' : p[0] - 'a' + 10) << 4 | (p[1] <= '9' ? p[1] - '0' : p[1] - 'a' + 10);
+}
+
+void __fastcall__ o_skill_line (char* l, unsigned char rd)
+{
+    unsigned char k, n;
+
+    if (rd == 3) {
+        dev_m = gv = 0;
+        for (k = 0; k < HARN_MAXSKILLS; ++k) {
+            grow_out (k);
+        }
+    } else if (rd == 1) {
+        dev_m = atoi (l + 1);
+        if ((l = strchr (l, ' ')) != 0) {
+            for (++l; *l > ' '; l += 4) {
+                gv = hexv (l + 2);
+                grow_out (hexv (l));
+            }
+        }
+    } else if (lsk == 0xFF) {
+        lsk = 0;
+        l[0] = 0;
+    } else {
+        strcpy (l, "body u");
+        utoa (dev_m, l + 6, 10);
+        strcat (l, " ");
+        l += strlen (l);
+        for (n = 0, k = lsk; k < HARN_MAXSKILLS && n < 8; ++k) {
+            grow_in (k);
+            if (gv) {
+                *l++ = hexd[k >> 4];
+                *l++ = hexd[k & 15];
+                *l++ = hexd[gv >> 4];
+                *l++ = hexd[gv & 15];
+                ++n;
+            }
+        }
+        *l = 0;
+        lsk = k < HARN_MAXSKILLS ? k : 0xFF;
+    }
 }
 
 /* A tool to hand (on), or not: its key (RS_EQUIP a 1, 0: dtext's copy, the hub not in the window here) */

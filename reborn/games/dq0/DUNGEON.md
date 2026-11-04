@@ -451,7 +451,7 @@ carries, wherever, sent again as anything is taken up or put down), so nothing i
 world says what the work is on (digging: soil, earth, stone, masonry, flags), and a skill used takes out the tool that
 suits the work best: by its rate on that material, and of two as good the one the work wears less (a blade digs earth or soil
 faster than bare hands, and is dulled by it).  The reply names the tool and the wear the work did it; the item records its
-wear (a blade dug with is dulled, then dull: worded in what's carried).  A tool that can't do the work isn't used for
+wear (a blade dug with is dulled, then dull: worded in what's carried, and cutting less in a blow: HOUSE.md's what strikes, RS_EQUIP's D and E marks).  A tool that can't do the work isn't used for
 it (a sword won't dig stone).  The tool's named as it's first taken up ("You dig with your pick").  A game can begin
 with a thing in hand (dq0 -k TOOL: dq0 -k shovel digs an earth floor till the rock under it stops it; only a pick
 lifts flags or cuts rock).
@@ -707,7 +707,7 @@ alike together ("two sacks"), and those on one square in one sentence.
 **Reach, and things used up** (2026-10-26, the user's: "Handy would be readily available, so in a backpack that is
 being worn is not as readily available as one in a belt pouch"; HOUSE.md's reach, handy tools and things used up):
 how readily a thing comes to hand is where it is, one rule for every taking out, putting away, look in, search and
-tool's use, every actor's (the character's, a robber's rifling it): in hand at once; on the body (worn, hung from a
+tool's use, every actor's (the character's, a robber's rifling it; a tool since 2026-11-03 truly in hand, its hands made free first by steps of their own, and left there if it's stopped: HOUSE.md's every use of a tool, readying with busy hands, things.c's part 90): in hand at once; on the body (worn, hung from a
 belt, in what's open to the hand: a pouch, a quiver) or lying within reach a quick draw; each container's level more
 (held, set down, in another); a pack worn on the back (its kind's, KF_BACK) taken off and put on again; engaged, a
 round a step (the book's grope); dropping, or a pack shrugged off, no time.  A reach is a sequence of timed steps
@@ -1213,7 +1213,7 @@ the hour quite arbitrary, drifting further from known as play goes on, unless th
 corrected whenever the sun can be seen and the direction is known, or by watching it a while (DECISIONS.md's).  The
 numbers are HOUSE.md's (the time of day believed).
 
-- **A true clock and a belief.**  The world's clock (the hub's now) and the hour the game began (dusk; a test's
+- **A true clock and a belief.**  The world's clock (the hub's now) and the hour the game began (by its seed; dq0 -E's dusk; a test's
   `dq0hour`: the denizens' days go by the same) are the truth; the character's time is the hub's tb, the world's (part
   76, wtime.c): its error in minutes against the true time (skew) and how far off it knows it may be (unc), kept with
   the game (world.dat), as its north is (the bearings, above).
@@ -1428,7 +1428,7 @@ character carries on into a new dungeon with its skills, wounds and gear.  And t
 rest".  Built (HOUSE.md's the character carries on has the numbers):
 
 - **Skills by use:** every skill the character uses (a test of it, its weapon in a fight, its dodge, a shot) is marked
-  for a development roll, success or failure alike (the book's); the marked ones are rolled after a night's rest, each
+  for development rolls, success or failure alike (the book's): under stress a roll, five routine uses a roll (the user's, 2026-11-03: HOUSE.md's); those are rolled after a night's rest, each
   that rose told as it wakes ("Your Climbing skill has improved (46)."), the sheet showing the new figure.  A [First
   Use] skill (Swimming, Acrobatics, Physician, Cookery; a weapon's in a fight) opens the first time it's used, told at
   once ("You've begun to learn Swimming by doing it (12)."); one learnt by study doesn't.  The referee's alone

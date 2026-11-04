@@ -184,7 +184,7 @@ void __fastcall__ o_effect (unsigned char target, unsigned char kind, unsigned c
 {
     struct rs_effect* e = (struct rs_effect*) R->x + nfx;
 
-    if (kind == X_DROP && target) {
+    if (kind == X_DROP && target && aspect != 2) {
         bs.state |= BS_DISARMED;                /* (A creature's weapon let fall: its fists till it takes it up again,
                                                 **   the world's RS_REARM; slice 4.1b's) */
     }
@@ -427,6 +427,11 @@ static void attack (void)
             o_strike (&A, &D, 2, 0, HARN_FOREARM, line[0], AF_STOPPED);
         } else if (A.part != 0xFF && !D.bare) { /* (A claw or a bite against a weapon: struck by it) */
             o_strike (&D, &A, 2, 0, A.part, line[1], AF_STOPPED_D);
+        } else if ((n = w_damage ()) != 0) {    /* (Weapon against weapon: broken, gear.c's: an X_DROP with its x[1],
+                                                **   1 a weapon, 2 a creature's shield, the world's to word and to make its
+                                                **   pieces) */
+            o_effect (n == 1 ? A.who : D.who, X_DROP, 0, 0, fumbled (n == 1 ? &A : &D, n == 1) | 0x80,
+                n == 2 && D.b && (R->c & AF_SHIELD) ? 2 : 1);
         }
         break;
     case HARN_R_AH:
@@ -633,6 +638,7 @@ void __fastcall__ o_fight (struct req* r)
     prones = r->w2;
     R = r;
     nfx = 0;
+    stress_lv = 1;                              /* (A fight: a foe near) */
     switch (r->kind) {
     case RS_NEW_ACTOR:
         new_beast ();
@@ -693,11 +699,14 @@ void __fastcall__ o_fight (struct req* r)
         heft (&A);                              /* (Their weapons' versions: D13's) */
         heft (&D);
         attack ();
-        if (r->result != 0xFF) {                /* (The character's skill used in it, marked for its development
-                                                **   roll, opened its first time, the book's, Combat 19: its weapon,
-                                                **   striking or blocking, or its dodge; skills.c's, slice 4.4's) */
-            skill_used (!r->actor ? A.sk : r->b == D_DODGE ? HARN_DGE : r->b != D_NONE ? D.sk : 0xFF);
+        if (r->result != 0xFF && !r->actor) {   /* (The character's skill used in it, for its development rolls,
+                                                **   opened its first time, the book's, Combat 19: its weapon striking;
+                                                **   skills.c's, slice 4.4's) */
+            skill_used (A.sk);
         }
+    }
+    if (r->result != 0xFF && r->actor && !r->other) {   /* (Or the thing that blocked, its dodge: at it, a shot too) */
+        skill_used (r->b == D_DODGE ? HARN_DGE : r->b != D_NONE ? D.sk : 0xFF);
     }
     tup = 0;
     if (r->result != 0xFF && !(r->w2 & MS_STRAY)) {

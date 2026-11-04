@@ -22,7 +22,7 @@ const BANK = 0x2000, MIN = 4, MAXOFF = 0xFFFF, WINDOW = 0x8000, LOAD = 0x0800, H
 // LZ4's block (the library's form) of data, at the window's start: greedy, with a look one byte ahead for a longer match;
 // its last sequence's literals end it (no match after them).  dict: { at, bytes }, what's in the main RAM below the window
 // for a match to reach, or none
-function compress(data, dict) {
+function compress(data, dict, optimal) {
   const n = data.length, out = [], heads = new Map(), end = WINDOW + n, all = Buffer.alloc(end), prev = new Int32Array(end).fill(-1);
   const dend = dict ? dict.at + dict.bytes.length : 0;
   data.copy(all, WINDOW);
@@ -56,6 +56,35 @@ function compress(data, dict) {
       if (ml >= 15) ext(ml - 15);
     }
   };
+  if (optimal) {                                        // (The fewest bytes: each place's longest match found going forward, then the
+    const lens = new Int32Array(n + 1), offs = new Int32Array(n + 1), cost = new Int32Array(n + 2), take = new Int32Array(n + 1);   // cheapest way from each to the end going back, a literal a byte, a match three and its length's)
+    for (let k = 0; k < n; k++) {
+      const m = best(k);
+      insert(WINDOW + k);
+      lens[k] = m.len;
+      offs[k] = m.off;
+    }
+    const mcost = l => 3 + (l - MIN >= 15 ? 1 + Math.floor((l - MIN - 15) / 255) : 0);
+    for (let k = n - 1; k >= 0; k--) {
+      let c = 1 + cost[k + 1], t = 0;
+      for (let l = lens[k]; l >= MIN; l--) {
+        const v = mcost(l) + cost[k + l];
+        if (v < c) { c = v; t = l; }
+      }
+      cost[k] = c;
+      take[k] = t;
+    }
+    let k = 0, from = 0;
+    while (k < n) {
+      if (take[k]) {
+        emit(from, k, { len: take[k], off: offs[k] });
+        k += take[k];
+        from = k;
+      } else k++;
+    }
+    emit(from, n, null);
+    return Buffer.from(out);
+  }
   let i = 0, lit = 0;
   while (i < n) {
     const m = best(i);
@@ -136,7 +165,8 @@ function pack(objdir, name) {
     let e = BANK;
     while (e > 0 && b[e - 1] === 0xFF) e--;
     const body = b.subarray(0, e);
-    let p = e ? compress(body, dict) : Buffer.alloc(0);
+    let p = e ? compress(body, dict, true) : Buffer.alloc(0);
+    if (e && !unpackInPlace(p, e, dict)) p = compress(body, dict);   // (The fewest bytes can't unpack in place: the plain way's)
     if (p.length >= e || !unpackInPlace(p, e, dict)) p = null;     // (Stored: it doesn't pack smaller, or can't in place)
     const head = Buffer.alloc(4);
     head.writeUInt16LE(e, 0);

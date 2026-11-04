@@ -2128,16 +2128,18 @@ static unsigned char __fastcall__ decide (unsigned char k)
         im.a = DE_MOVED;
         im.b = 2;
         act (I_GOTO, k);
-    } else if (d >= 0xFA && d <= 0xFC && d != 0xFB) {   /* (A round's blow, or a shot: outnumbering it, later) */
-        if (was != DO_FIGHT && K.mind >= M_LOW) {
-            heart (k);                          /* (A mind's heart as it engages: the field about it, its bonds; part
-                                                **   6's.  A beast's is reckoned as one near it falls: it feels only a
-                                                **   foe's might, and its fellows' falls) */
+    } else if (d == 0xFA || d == 0xFC) {        /* (A round's blow, or a shot: outnumbering it, later) */
+        if (was != DO_FIGHT) {
+            heart (k);                          /* (Its heart as it engages: the field about it, its bonds; a beast's a
+                                                **   foe's might and its fellows' falls; part 6's.  Its courage tested on
+                                                **   it, the user's, 2026-11-03: broken, no blow) */
         }
-        a.doing = DO_FIGHT;
-        im.a = 0;
-        im.b = d == 0xFA ? Z_MID | AIM_SHOT : Z_MID;
-        act (I_ATTACK, k);
+        if (!fled[k]) {
+            a.doing = DO_FIGHT;
+            im.a = 0;
+            im.b = d == 0xFA ? Z_MID | AIM_SHOT : Z_MID;
+            act (I_ATTACK, k);
+        }
     } else if (a.doing != DO_SLEEP && a.doing != DO_DOWN && HUB->actor[k].pos == POS_PRONE) {
         im.w1 = POS_STANDING;                   /* (Lying, and up to something else that isn't a step nor a blow (they
                                                 **   get it up as theirs): up first, the world's Rise, 2026-11-02) */
@@ -3473,6 +3475,10 @@ void __fastcall__ s_regard (unsigned char f, unsigned char pts)
 #pragma static-locals (push, off)               /* (On the C stack: the main RAM's none) */
 static const unsigned means[5] = { 4, 16, 48, 192, 960 };   /* (Farthings: a penny, 4d, 12d, 48d, 240d) */
 
+/* Actor k a leader of its people (kinds.txt's rank: an elder, a king, a captain, a warden): it knows common too, so each
+** people has someone to talk to (the house's, the user's, 2026-11-03).  The hub's header in the window after */
+static unsigned char __fastcall__ leads (unsigned char k);
+
 /* The referee's test of the character's words with actor k, purpose p (b its own: entertaining's, P_APPRAISE's past
 ** the crafts, the performing skill), at steps st, in its tongue (t 1: none wanted): the grade, or 0x7F (no tongue in
 ** common: SR_TONGUE) */
@@ -3491,7 +3497,7 @@ static signed char __fastcall__ words_test (unsigned char k, unsigned char p, un
         if (!ftongue[f][0]) {
             return 0x7F;
         }
-        strcpy (r->text, ftongue[f]);
+        strcpy (r->text, leads (k) ? "common" : ftongue[f]);
     }
     r->kind = RS_TEST;
     r->actor = 0;
@@ -3528,10 +3534,10 @@ static void __fastcall__ entertain (unsigned char k)
 }
 
 /* A trade (SW_BUY, SW_SELL, SW_PRICE, SW_OFFER, SW_HAGGLE: sw.order 1, the character's thing sold): with one of its
-** mind (folk: not a beast, not the mindless), indifferent or better to the character; its price from the goods' worth
-** (sw.ix, farthings, its condition's: the UI's), by its attitude: it sells at five quarters of it indifferent, the
-** whole friendly, three quarters to an ally; it buys at two fifths, a half, three fifths (the book's: a seller "lucky
-** to receive half"); haggled, the book's Rhetoric in its tongue, at steps by its attitude, its kind's sway and its
+** mind (folk: not a beast, not the mindless), friendly or better to the character (the user's, 2026-11-03: "Friendly
+** folk only": indifferent ones refuse); its price from the goods' worth (sw.ix, farthings, its condition's: the UI's),
+** by its attitude: it sells at the whole of it friendly, three quarters to an ally; it buys at a half, three fifths
+** (the book's: a seller "lucky to receive half"); haggled, the book's Rhetoric in its tongue, at steps by its attitude, its kind's sway and its
 ** mind (the cunning the harder), the price a quarter better at a critical success, a tenth at a success, as asked at a
 ** failure, a critical failure an offence (a step back, no deal); never bought under, nor sold over, two thirds of its
 ** worth (the user's, 2026-11-03: buying never below selling, whatever the critical); rounded to the penny (buying up,
@@ -3556,7 +3562,7 @@ static void __fastcall__ trade (unsigned char k)
         sw.result = SR_BEAST;
         return;
     }
-    if (t < AT_INDIFFERENT) {
+    if (t < AT_FRIENDLY) {
         sw.result = SR_WONT;
         return;
     }
@@ -3564,8 +3570,7 @@ static void __fastcall__ trade (unsigned char k)
         sw.result = SR_NO_GOODS;
         return;
     }
-    p = pct (sw.ix, sell ? (t == AT_INDIFFERENT ? 40 : t == AT_FRIENDLY ? 50 : 60) :
-        (t == AT_INDIFFERENT ? 125 : t == AT_FRIENDLY ? 100 : 75));   /* (Farthings) */
+    p = pct (sw.ix, sell ? (t == AT_FRIENDLY ? 50 : 60) : (t == AT_FRIENDLY ? 100 : 75));   /* (Farthings) */
     sw.t = 20;
     if (h == SW_HAGGLE) {
         g = sw.grade = words_test (k, P_PERSUADE, 0, (signed char) t - 3 + K.sway + (K.mind == M_CUNNING ? -1 :
@@ -3620,6 +3625,13 @@ static void __fastcall__ trade (unsigned char k)
     im.x[0] = im.x[1] = 0xFF;
     post (I_ROB, k + 1);
     settle ();
+}
+
+static unsigned char __fastcall__ leads (unsigned char k)
+{
+    kx_get (akind[k]);
+    kind_get (akind[k]);
+    return X.rank != RK_FILE || (K.key[0] == 's' && K.key[4] == 'w');   /* (A warden: sindwar, its kind) */
 }
 
 void __fastcall__ s_gift (unsigned char k)
@@ -3820,6 +3832,13 @@ void __fastcall__ s_harmed (unsigned char k)
     }
 }
 
+static unsigned char __fastcall__ leads2 (unsigned char k)
+{
+    kx_get (akind[k]);
+    kind_get (akind[k]);
+    return X.rank != RK_FILE || (K.key[0] == 's' && K.key[4] == 'w');   /* (A warden: sindwar, its kind) */
+}
+
 /* Words to sway actor k (sw's how): by its mind (nothing sways the mindless; an animal only by P_ANIMALS, within
 ** reach), in its faction's tongue (but a threat), a test of the referee's (P_PERSUADE, P_DECEIVE, P_INTIMIDATE,
 ** P_ANIMALS) at steps by its attitude, its kind and its mind; the attitude moved by the grade, as far as that way of
@@ -3867,7 +3886,7 @@ static void __fastcall__ influence (unsigned char k)
             sw.result = SR_TONGUE;
             return;
         }
-        strcpy (r->text, ftongue[HUB->actor[k].faction & (NFACT - 1)]);
+        strcpy (r->text, leads2 (k) ? "common" : ftongue[HUB->actor[k].faction & (NFACT - 1)]);
     }
     r->kind = RS_TEST;
     r->actor = 0;
@@ -4886,7 +4905,7 @@ static void hearts (void)
 ** (or shaken, a shy kind), it flees; berserk, so its fellows see it */
 static void __fastcall__ courage (unsigned char why)
 {
-    rq.steps = reckon () / 5;
+    HUB->actor[rj].heart = rq.steps = reckon () / 5;
     if (tp.mood & AM_STEADY) {
         return;                                 /* (Steady: untested) */
     }
@@ -4955,13 +4974,21 @@ void __fastcall__ s_dismay (unsigned char k)
 
 
 /* Actor k's heart as it engages (decide's: the field about it and its bonds, its steps the world's blow carries to the
-** referee, its courage tested with them as it's wounded); K its own after */
+** referee, its courage tested with them as it's wounded, and now, as it first faces the character, the user's, 2026-11-03:
+** a weak band can break before a blow; none of it for the mindless); K its own after */
 void __fastcall__ s_heart (unsigned char k)
 {
+    if (K.mind == M_MINDLESS || (K.mind < M_LOW && (HUB->pc_lump & PL_NOFACE))) {
+        return;
+    }
     rj = k;
     rfallen = rgone = 0xFF;
     ranks ();
-    HUB->actor[k].heart = reckon () / 5;
+    if (HUB->pc_lump & PL_NOFACE) {             /* (dq0 -I's, the tests': their heart, no test) */
+        HUB->actor[k].heart = reckon () / 5;
+        return;
+    }
+    courage (MR_FACED);
 }
 
 /* Record l (0xFF none) if it's dead, else 0xFF */
@@ -5420,7 +5447,8 @@ static void __fastcall__ meal (unsigned char k)
 }
 
 /* The hour the game began at (hour0), as the day's first asked (sched's): the environment's dq0hour, a test's scene,
-** else dusk (the house's).  Part 3's (part 9's room, and 10's) */
+** else by the game's seed (the user's, 2026-11-03: "vary by game"), dq0 -E's dusk, the tests'.  Part 3's (part 9's room,
+** and 10's) */
 #pragma code-name (push, "SW3CODE")
 #pragma rodata-name (push, "SW3RODATA")
 void s_hour (void)
@@ -5430,7 +5458,7 @@ void s_hour (void)
     char* p;
 
     hset = 1;
-    hour0 = DAY_START;
+    hour0 = HUB->pc_lump & PL_DUSK ? DAY_START : (unsigned) HUB->seed % 24;
     r.a = 0xFF;
     r.r[0] = (unsigned) "dq0hour";
     r.r[1] = (unsigned) b;

@@ -668,12 +668,12 @@ unsigned char rs_what;                          /* (The step's thing's kind) */
 unsigned char rs_paid;                          /* (The levels reached into so far) */
 unsigned char rs_after_on;                            /* (The pack to go back on as it's free: 1; 2 past a timed work's end) */
 unsigned char rs_live;                          /* (A step done, its handling asked again next) */
-unsigned char rs_using;                          /* (A fire-maker's: 1 out; 2 caught) */
+unsigned char rs_using;                          /* (A tool's: 1 out; 2 caught, a fire-maker's; | 4 in hand before it, nothing to put away) */
 static unsigned char rs_do;                     /* (What the step's end does, RS_*) */
 #define rs_keys         iq.name                 /* (An intent's tool's keys, 20 bytes at most: the request's, none in hand as an intent's carried out) */
 #define rs_hand         last_sa                 /* (The pack's hand, 0 its feet: a handling's own byte, none as it's waited on) */
 #define rs_keep         lw_m.who                /* (The intent to ask again: its who, 0 as it came, the UI's) */
-enum { RS_OFF = 1, RS_IN, RS_ON, RS_DROP, RS_TRY, RS_OUT, RS_LIGHT, RS_STOW, RS_UP };
+enum { RS_OFF = 1, RS_IN, RS_ON, RS_DROP, RS_TRY, RS_OUT, RS_LIGHT, RS_STOW, RS_UP, RS_HAND, RS_BACKIN, RS_PLACE, RS_SLING };
 #define rs_old          lw_x                    /* (A redip's: the torch, to put away) */
 #define rs_down         lw_y                    /* (Things it set down: taken up again after) */
 #define rs_down2        far_x
@@ -751,6 +751,12 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
         if (d == (unsigned char) RS_GO) {
             return rs_begin ();
         }
+        if (d != (unsigned char) RS_BACK) {     /* (Its hands made free for it first: part 87's) */
+            rs_tool = n;
+            if (rs_more (0)) {
+                return 1;
+            }
+        }
     }
     rs_c = 0;
     rs_want = 0xFF;
@@ -761,10 +767,11 @@ unsigned char __fastcall__ s_reach_step (unsigned n, unsigned c)
     nd = rs_walk (c);
     rs_t = 50;
     if (d == (unsigned char) RS_BACK) {
-        if (rs_using) {                          /* (The fire-maker put away first) */
+        if (rs_using) {                         /* (The tool put away first, where it came from) */
             rs_using = 0;
             rs_after_on = 1;
-            rs_do = RS_IN;
+            rs_c = rs_tool;
+            rs_do = RS_BACKIN;
             rs_k = LT_PUTAWAY;
             rs_what = item_kind (rs_tool);
             rs_t = 20;
@@ -842,10 +849,20 @@ static void __fastcall__ rs_tell (unsigned w)
 /* The sequence over, part way: the pack left off told */
 static void rs_cut (void)
 {
+    unsigned char i;
+
     if (rs_pack) {
         rs_what = item_kind (rs_pack);
         rs_tell (item_at (rs_pack)->where == IW_SQUARE ? TE_PACKED | 1 << 8 : TE_PACKED);
     }
+    hub_map (0);
+    for (i = HUB->rs_nout; i; --i) {            /* (The tools out stay out, in hand, the world true: the user's, 2026-11-03) */
+        hub_map (0);
+        rs_what = item_kind (HUB->rs_out[i - 1]);
+        rs_tell (TE_PACKED);
+    }
+    hub_map (0);
+    HUB->rs_nout = 0;
     rs_pack = 0;
     rs_after_on = rs_do = rs_paid = rs_live = rs_keep = rs_using = rs_redo = 0;
 }
@@ -859,16 +876,18 @@ static unsigned char __fastcall__ rs_draw (unsigned char fire)
 {
     fetch (&rec, rs_tool);
     if (!rs_using) {
-        rs_using = 1;
-        if (!(rec.flags & I_HELD)) {
-            rs_do = RS_IN;
-            rs_k = LT_GETOUT;
-            rs_what = rec.kind;
-            rs_t = 10;
-            return 1;
-        }
+        rs_using = rec.flags & I_HELD ? 5 : 1;
     }
-    if (!fire || rs_using == 2) {
+    if (!(rec.flags & I_HELD) && (hand_free (rs_tool) & ~HF_FIXT)) {   /* (No hand to be had, an arm's: used as it is) */
+        fetch (&rec, rs_tool);
+        rs_c = rs_tool;
+        rs_do = RS_HAND;
+        rs_k = LT_GETOUT;
+        rs_what = rec.kind;
+        rs_t = 10;
+        return 1;
+    }
+    if (!fire || (rs_using & 3) == 2) {
         return 0;
     }
     make_own (rs_tool);
@@ -905,7 +924,7 @@ static void rs_tried (void)
 {
     rs_roll ();
     if (rs_what) {
-        rs_using = 2;
+        rs_using = (rs_using & 4) | 2;
         --item_at (rs_tool)->fuel;
     }
     rs_tell (TE_KINDLED);
@@ -928,6 +947,8 @@ unsigned char __fastcall__ s_rs_for (unsigned n)
             if (!rs_live) {
                 rs_paid = rs_using = 0;
                 rs_pack = 0;
+                hub_map (0);
+                HUB->rs_nout = 0;
             }
             memcpy (rs_keys, n == RF_PICKS ? "picks\0\0" : dig_key, 9);
             hub_map (0);
@@ -940,9 +961,15 @@ unsigned char __fastcall__ s_rs_for (unsigned n)
             rs_keep = 1;
             f = tool_reach (rs_keys);
             rs_ok = 0;
+            if (!f && !strcmp (rs_keys, "chisel")) {   /* (And its hammer in the other hand: the user's, 2026-11-03) */
+                memcpy (rs_keys, "hammer\0", 8);
+                rs_ok = 2;
+                f = tool_reach (rs_keys);
+                rs_ok = 0;
+            }
             if (!f) {
                 rs_live = rs_keep = 0;
-                if (rs_using && (item_at (rs_tool)->flags & I_HELD)) {
+                if (rs_using & 4) {
                     rs_using = 0;
                 }
                 if (rs_pack || rs_using) {
@@ -990,6 +1017,229 @@ static void __fastcall__ name_of (unsigned n, unsigned char first);     /* (The 
 static unsigned char __fastcall__ no (unsigned char n);
 static unsigned char __fastcall__ yes (unsigned char n, unsigned char t);
 static unsigned char __fastcall__ hold (unsigned n);
+#pragma code-name (push, "SW90CODE")
+#pragma rodata-name (push, "SW90RODATA")
+#pragma static-locals (push, off)
+/* ---- Hands made free (the user's, 2026-11-03: "If your hands are busy and your want to ready tools or other things, it should
+** probably put the other things away first (in their appropriate place) then take the tools in hand.  A torch would be placed in a
+** nearby empty sconce or laid on the ground, a sword put in its scabbard, etc."; HOUSE.md's): the next thing in the way of rs_tool in
+** hand (a chisel, both hands for it and its hammer), its step begun: 1; or 0, its hand free, or none to be had.  What goes where is
+** the house's: a flame in hand into an empty sconce within reach, else laid on the ground lit; what's kept worn, slung (a shield); a
+** carrier its family's on the body; else the pack, by the steps of the reach; else set down */
+static unsigned char s_room (void)
+{
+    unsigned i = 0, c = 0, o;
+    const struct kind* k;
+    unsigned char d, t, n = 20;
+
+
+    if (item_at (rs_tool)->flags & I_HELD) {
+        return 0;
+    }
+    if (hand_free (rs_tool) & ~HF_FIXT) {
+        if (strcmp (kind_at (rs_tool)->tool, "chisel")) {
+            return 0;
+        }
+    } else {
+        hub_map (0);
+        if (HUB->pcsum.limbs & (LB_ARM_L | LB_ARM_R)) {
+            return 0;                           /* (An arm useless: the hand's refusal, or used as it is) */
+        }
+    }
+    while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
+        if ((ip->flags & I_HELD) && (rs_ok != 1 || i != handled)) {   /* (Not the thing it's for: the torch to light) */
+            break;
+        }
+    }
+    if (!i) {
+        return 0;
+    }
+    o = i;
+    fetch (&rec, o);
+    k = kind_of (rec.kind);
+    if ((rec.flags & I_LIT) && !(k->flags & K_HANG)) {
+        for (i = 0; (i = items (i, IN_SQUARE, 0)) != 0; ) {
+            if (ip->kind == KI_SCONCE && in_reach (i)) {
+                cat_map ();
+                if (!o_fits (o, i)) {
+                    c = i;
+                    break;
+                }
+            }
+        }
+        d = c ? RS_PLACE : RS_DROP;
+        t = c ? LT_SCONCE : LT_LAYLIT;
+    } else if (k->flags & K_WEAR) {
+        d = RS_SLING;
+        t = LT_SLING;
+        n = 50;
+    } else {
+        for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
+            k = kind_of (ip->kind);
+            if ((k->flags & K_HANG) && k->slots && i != o && on_pc (i)) {
+                cat_map ();
+                if (!o_fits (o, i)) {
+                    c = i;
+                    break;
+                }
+            }
+        }
+        if (c) {
+            d = RS_PLACE;
+            t = LT_SHEATHE;
+        } else {
+            about ();
+            cat_map ();
+            if (pack && !o_fits (o, pack)) {
+                if (reach_step (o, pack)) {
+                    return 1;                   /* (The pack off first, its level) */
+                }
+                d = RS_STOW;
+                t = LT_INPACK;
+            } else {
+                d = RS_DROP;
+                t = LT_SETDOWN;
+                n = 10;
+            }
+        }
+    }
+    rs_what = item_kind (o);
+    hub_map (0);
+    HUB->rs_place = c;
+    rs_c = o;
+    rs_hand = 0;
+    rs_do = d;
+    rs_k = t;
+    rs_t = n;
+    reach_step (0, RS_GO);
+    return 1;
+}
+
+/* A step's end of these (rs_do, rs_c): the tool in hand, kept to go back; the tool back where it came from, or the pack; put in its
+** place; slung */
+static void s_did (void)
+{
+    unsigned n = rs_c, c;
+    unsigned char h, d = rs_do;
+
+    fetch (&rec, n);
+    if (d == RS_HAND) {
+        if (!(h = hand_free (n) & ~HF_FIXT)) {
+            return;
+        }
+        fetch (&rec, n);
+        hub_map (0);
+        if (HUB->rs_nout < 2) {
+            HUB->rs_home[HUB->rs_nout] = rec.where == IW_ITEM ? rec.x : 0;
+            HUB->rs_out[HUB->rs_nout++] = n;
+        }
+        rec.where = IW_ACTOR;
+        rec.x = 0;
+        rec.sn = h;
+        rec.flags = (rec.flags & ~(I_WORN | I_HIDDEN | I_TENDED)) | I_KNOWN | I_HELD;
+    } else if (d == RS_BACKIN) {
+        hub_map (0);
+        c = 0;
+        if (HUB->rs_nout) {
+            c = HUB->rs_home[--HUB->rs_nout];
+            if (HUB->rs_nout) {
+                rs_tool = HUB->rs_out[HUB->rs_nout - 1];
+                rs_using = 1;                   /* (Its fellow next: a hammer and a chisel) */
+            }
+        }
+        if (!c) {
+            c = rs_pack;
+        }
+        if (!c) {
+            about ();
+            c = pack;
+        }
+        cat_map ();
+        if (!c || !(rec.flags & I_HELD) || o_fits (n, c)) {
+            return;                             /* (No place for it: it stays in its hand) */
+        }
+        fetch (&rec, n);
+        rec.where = IW_ITEM;
+        rec.x = c;
+        rec.flags &= ~(I_WORN | I_HELD);
+    } else if (d == RS_PLACE) {
+        hub_map (0);
+        c = HUB->rs_place;
+        rec.where = IW_ITEM;
+        rec.x = c;
+        rec.flags &= ~(I_WORN | I_HELD);
+    } else {
+        rec.where = IW_ACTOR;
+        rec.x = 0;
+        rec.sn = 0;
+        rec.flags = (rec.flags & ~I_HELD) | I_WORN;
+    }
+    store (&rec, n);
+    if (d == RS_PLACE) {
+        sconce_lights (1);
+    }
+}
+
+/* A thing sharpened with a whetstone (the user's, 2026-11-02, "like sharpening your sword (if you have a whetstone)"; the
+** book has none: the house's; a tool's use, part 84's; handled the thing): a metal weapon, the whetstone carried, wear on
+** it: its steps (IR_NO); begun, 0xFE (a minute's timed work); done (IO_DONE), half its wear gone, told */
+static unsigned char __fastcall__ rs_no2 (unsigned n, unsigned char sa)
+{
+    cat_map ();
+    name_of (n, 1);
+    return no (sa);
+}
+
+static unsigned char rs_hone (void)
+{
+    unsigned n = handled, i = 0;
+
+    fetch (&rec, n);
+    if (kind_at (n)->craft != AP_WEAPON || !(rec.mat == MT_IRON || rec.mat == MT_STEEL || rec.mat == MT_BRONZE)) {
+        return rs_no2 (n, SA_NO_FILL);
+    }
+    if (iq.to & IO_DONE) {
+        rec.wear >>= 1;
+        store (&rec, n);
+        equip_now ();                           /* (The referee told: its edge's its blow's) */
+        cat_map ();
+        name_of (n, 1);
+        return yes (SA_HONED, 0);
+    }
+    if (iq.into[0] && (i = at_hand (iq.into)) != 0 && strcmp (kind_at (i)->tool, "whet")) {
+        return rs_no2 (n, SA_NO_STONE);         /* (Sharpened with something else named: that's no whetstone, the one
+                                                **   used or none: 2026-11-03) */
+    }
+    i = 0;
+    if (!rec.wear) {
+        return rs_no2 (n, SA_SHARP);
+    }
+    while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
+        if (!strcmp (kind_at (i)->tool, "whet") && on_pc (i)) {
+            if (reach_step (i, RS_TOOL)) {
+                return IR_NO;
+            }
+            handled = n;                        /* (What's sharpened, the tool's search over) */
+            return 0xFE;
+        }
+    }
+    return rs_no2 (n, SA_NO_STONE);
+}
+unsigned char __fastcall__ s_rs_more (unsigned char w)
+{
+    if (w == 2) {
+        return rs_hone ();
+    }
+    if (w) {
+        s_did ();
+        return 0;
+    }
+    return s_room ();
+}
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 #pragma code-name (push, "SW86CODE")
 #pragma rodata-name (push, "SW86RODATA")
 
@@ -1040,7 +1290,7 @@ static unsigned __fastcall__ rs_held (unsigned n)
     unsigned i = 0;
 
     while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
-        if ((ip->flags & I_HELD) && i != n) {
+        if ((ip->flags & I_HELD) && i != n && !(rs_using && i == rs_tool)) {   /* (The tool out for it, its fuel, not set down) */
             return i;
         }
     }
@@ -1185,6 +1435,10 @@ static void rs_did (void)
     unsigned n = rs_do == RS_ON ? rs_pack : rs_c;
 
     den_saw = 1;                                /* (What lies about changed: the senses' look of it, the things taken all from) */
+    if (rs_do >= RS_HAND) {
+        rs_more (1);
+        return;
+    }
     if (rs_do == RS_OFF) {
         rs_pack = rs_c;
     }
@@ -1297,43 +1551,6 @@ static unsigned char rs_spill (void)
     return 1;
 }
 
-/* A thing sharpened with a whetstone (the user's, 2026-11-02, "like sharpening your sword (if you have a whetstone)"; the
-** book has none: the house's; a tool's use, part 84's; handled the thing): a metal weapon, the whetstone carried, wear on
-** it: its steps (IR_NO); begun, 0xFE (a minute's timed work); done (IO_DONE), half its wear gone, told */
-static unsigned char rs_hone (void)
-{
-    unsigned n = handled, i = 0;
-
-    fetch (&rec, n);
-    if (kind_at (n)->craft != AP_WEAPON || !(rec.mat == MT_IRON || rec.mat == MT_STEEL || rec.mat == MT_BRONZE)) {
-        return rs_no (n, SA_NO_FILL);
-    }
-    if (iq.to & IO_DONE) {
-        rec.wear >>= 1;
-        store (&rec, n);
-        cat_map ();
-        name_of (n, 1);
-        return yes (SA_HONED, 0);
-    }
-    if (iq.into[0] && (i = at_hand (iq.into)) != 0 && strcmp (kind_at (i)->tool, "whet")) {
-        return rs_no (n, SA_NO_STONE);          /* (Sharpened with something else named: that's no whetstone, the one
-                                                **   used or none: 2026-11-03) */
-    }
-    i = 0;
-    if (!rec.wear) {
-        return rs_no (n, SA_SHARP);
-    }
-    while ((i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0) {
-        if (!strcmp (kind_at (i)->tool, "whet") && on_pc (i)) {
-            if (reach_step (i, RS_TOOL)) {
-                return IR_NO;
-            }
-            handled = n;                        /* (What's sharpened, the tool's search over) */
-            return 0xFE;
-        }
-    }
-    return rs_no (n, SA_NO_STONE);
-}
 #pragma static-locals (pop)
 
 /* What the reach's steps want of this part, by w: RO_*, or an intent's tool's keys.  RO_ASK a request by the steps taken
@@ -1355,6 +1572,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         } else if (!rs_live) {
             rs_paid = rs_using = rs_redo = 0;
             rs_pack = 0;
+            HUB->rs_nout = 0;
         }
         return 0;
     case RO_REDIP:
@@ -1364,7 +1582,7 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
     case RO_SPILL:
         return rs_ok == 1 ? rs_spill () : 0;
     case RO_HONE:
-        w = rs_hone ();
+        w = rs_more (2);
         hub_map (0);
         HUB->ireq.x = HUB->ireq.qty = 0;
         if ((unsigned char) w != 0xFE) {
@@ -1377,8 +1595,8 @@ unsigned char __fastcall__ s_reach_do (unsigned w)
         HUB->ireq.item = w;
         return IR_OK;
     case RO_REPLY:
-        if (rs_using && (item_at (rs_tool)->flags & I_HELD)) {
-            rs_using = 0;                        /* (In hand: none to put away) */
+        if (rs_using & 4) {
+            rs_using = 0;                        /* (In hand before: none to put away) */
         }
         hub_map (0);
         if (!rs_st && (rs_pack || rs_using) && iq.result != IR_OK) {
@@ -1517,12 +1735,12 @@ back:
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 90 (part 10's till 2026-11-03: every call a handling makes out to another part comes back here, and part 10
+/* ==== Part 92 (part 10's till 2026-11-03: every call a handling makes out to another part comes back here, and part 10
 ** all its 3,600 bytes each time: the user's D17): a request of the things served */
-#pragma code-name (push, "SW90CODE")
-#pragma rodata-name (push, "SW90RODATA")
+#pragma code-name (push, "SW92CODE")
+#pragma rodata-name (push, "SW92RODATA")
 
-/* (Part 90's own: none owed, serve's) */
+/* (Part 92's own: none owed, serve's) */
 static void rclear10 (void)
 {
     rtime = roff = 0;
@@ -1543,13 +1761,13 @@ static void rclear10 (void)
 void s_tools (void)
 {
     static const char hmark[4] = " <>*";
-    char m[2];
+    char m[4];
     const struct kind* k;
     unsigned i = 0;
     char* t;
     unsigned char mh, hh = 0;
 
-    m[1] = 0;
+    m[1] = m[3] = 0;
     hub_map (0);
     mh = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
 
@@ -1570,11 +1788,12 @@ void s_tools (void)
                 strcat (t, m);
                 strcat (t, k->tool);
                 m[0] = '0' + rec.quality;
-                strcat (t, m);
-                if (k->craft == AP_WEAPON && rec.size && rec.size <= WV_HEAVY) {
-                    m[0] = rec.size == WV_HEAVY ? 'H' : 'L';    /* (Its version: D13's, RS_EQUIP's) */
-                    strcat (t, m);
+                if (k->craft == AP_WEAPON) {
+                    m[1] = rec.size == WV_HEAVY ? 'H' : rec.size ? 'L' : 'M';    /* (Its version: D13's, RS_EQUIP's) */
+                    m[2] = "NEEEDDDD"[rec.wear >> 5];   /* (Its edge: dulled, dull: 2026-11-03) */
                 }
+                strcat (t, m);
+                m[1] = 0;
             }
         }
     }
@@ -1584,17 +1803,11 @@ void s_tools (void)
     HUB->ireq.y = hh;
 }
 
-#pragma code-name (push, "SW90CODE")
-#pragma rodata-name (push, "SW90RODATA")
+#pragma code-name (push, "SW92CODE")
+#pragma rodata-name (push, "SW92RODATA")
 
 /* What's in the character's hands (IO_HANDS: a blow with nothing named, the UI's), their kinds in the request's x, its
 ** main hand's (or a thing's in both), and y, its other's (0 none: held_kinds') */
-static void hands_held (void)
-{
-    held_kinds ();
-    HUB->ireq.x = held_k[0];
-    HUB->ireq.y = held_k[1];
-}
 
 /* The character's light: the brightest lit thing it carries (in a hand, worn, hung from its belt: one stowed is
 ** put out), into the hub, named (its minutes left the lights' burning's: part 27's); and its map making with it */
@@ -1720,7 +1933,7 @@ unsigned char s_serve (void)
         list ();
         break;
     case IO_HANDS:
-        hands_held ();
+        bar_hand ();                            /* (Part 4's: part 10's room) */
         break;
     case IO_GEAR:                               /* (A denizen's things made out: part 61's) */
         iq.result = gear_words ();
@@ -2318,9 +2531,18 @@ unsigned __fastcall__ s_shut_in (unsigned n)
 ** the request's x) and IR_NO (nothing about it changed); or (iq's to 1) it set in the door's brackets, a portal's part
 ** again on iq's square, the bar's side (the world's barred the door): part 35's, the catalogue's bank's room (its
 ** o_handle's through its stub) */
+#pragma code-name (push, "SW4CODE")             /* (Part 4's since 2026-11-03: part 35's room) */
+#pragma rodata-name (push, "SW4RODATA")
 unsigned char s_bar_hand (void)
 {
     unsigned n, best;
+
+    if (iq.kind == IO_HANDS) {                  /* (And what's in its hands, IO_HANDS's, below) */
+        held_kinds ();
+        HUB->ireq.x = held_k[0];
+        HUB->ireq.y = held_k[1];
+        return 0;
+    }
 
     for (best = 0, n = 1; n < NITEMS; ++n) {
         fetch (&rec, n);
@@ -2341,6 +2563,8 @@ unsigned char s_bar_hand (void)
     store (&rec, best);
     return IR_OK;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Put down where the character stands (n: carried; what's in it with it): not from a thing that's closed (its words
 ** why, IR_NO) */
@@ -2461,6 +2685,7 @@ static void take_keep (void)
     take_cnt = iq.count;
 }
 
+#define STRIP_T         100
 unsigned char __fastcall__ s_moved (unsigned char op)
 {
     static unsigned want, got, t, c;
@@ -2522,6 +2747,10 @@ unsigned char __fastcall__ s_moved (unsigned char op)
         rs_ok |= 4;                             /* (The rest by the lump, their levels paid: part 85's) */
         sa = last_sa;
         t += took;
+        if (win && op == IO_TAKE && (item_at (win)->kind == KI_BODY || item_at (win)->kind == KI_BONES) &&
+            (kind_of (kind)->flags & K_WEAR)) {
+            t += STRIP_T;                       /* (Stripped from a body: twice a doff's 5 seconds, the user's, 2026-11-03) */
+        }
         join (n);
         ++times;
         if (op == IO_STOW || op == IO_PUT) {
@@ -5553,6 +5782,12 @@ unsigned char __fastcall__ s_hold_in (unsigned n, unsigned char want)
         return IR_NO;
     }
     if (!(h = hand_for (n, want))) {
+        if (hwhy == HW_FULL || hwhy == HW_TWO) {
+            rs_tool = n;
+            if ((rs_ok == 1 || rs_ok == 2) && rs_more (0)) {
+                return IR_NO;                   /* (Its hands made free first, a step at a time: A25's, part 87's) */
+            }
+        }
         why_not ();
         return IR_NO;
     }

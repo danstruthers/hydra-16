@@ -436,33 +436,15 @@ unsigned char __fastcall__ o_aff_cure (unsigned char power)
 
 /* The save's line of the body (the character's file's "body": its venom, its rest toward its healing in minutes, its
 ** disease, its breath, "body 3 14 0 25 1200 0 0 0 0 0 0"), into l (rd 0); or read back from l (rd 1: after "body ").
-** And its skills used since their last development rolls (skills.c's marks, two hex digits a byte) and its rest
-** toward them (minutes), a second "body" line, "body u..." (slice 4.4's): made (rd 2), or read (rd 1, its u) */
-static const char hexd[] = "0123456789abcdef";
-
+** And its skills' growth, "body u..." lines (skills.c's: rd 2 the next made, rd 3 cleared, rd 1 its u read) */
 void __fastcall__ o_body_line (char* l, unsigned char rd)
 {
     char b[8];
     unsigned v[11];
-    unsigned char k, c;
+    unsigned char k;
 
-    if (rd == 2) {
-        strcpy (l, "body u");
-        for (k = 0; k < MARKS; ++k) {
-            l[6 + 2 * k] = hexd[marks[k] >> 4];
-            l[7 + 2 * k] = hexd[marks[k] & 15];
-        }
-        l[6 + 2 * MARKS] = ' ';
-        utoa (dev_m, l + 7 + 2 * MARKS, 10);
-        return;
-    }
-    if (rd == 1 && *l == 'u') {
-        ++l;
-        memset (marks, 0, MARKS);
-        for (k = 0; k < 2 * MARKS && (c = l[k]) >= '0'; ++k) {
-            marks[k >> 1] |= (c <= '9' ? c - '0' : c - 'a' + 10) << (k & 1 ? 0 : 4);
-        }
-        dev_m = atoi (l + k);
+    if (rd >= 2 || (rd && *l == 'u')) {
+        skill_line (l, rd);
         return;
     }
     if (!rd) {

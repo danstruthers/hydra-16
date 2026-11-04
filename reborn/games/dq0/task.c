@@ -952,7 +952,7 @@ void __fastcall__ o_wait_go (unsigned char action)
         if (!m) {
             m = strstr (cl, "short") ? 30 : 480;
         }
-        a = WA_SLEEP;
+        a = rest_ ? WA_SLEEP | WA_REST : WA_SLEEP;
     }
     if (m > 100) {
         a |= WA_MIN;

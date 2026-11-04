@@ -192,16 +192,11 @@ void __fastcall__ o_dig_words (unsigned char how, unsigned char feet)
                                                 **   into, MAT_* + 1) */
         hub_mem (0, lb + 160, HUB->dig_better, 8);
         hub_mem (0, lb + 170, HUB->dig_name, 8);
-        if (lb[170] && !(feet & DN_HANDS) && strcmp (lb + 170, "chisel")) {    /* (The thing named, no use on it: the user's, 2026-11-03) */
+        if (lb[170] && strcmp (lb + 170, "chisel")) {    /* (The thing named, no use on it: the user's, 2026-11-03) */
             --feet;
             sayf ("\nYour %s won't dig %s.%s%s%s", dig_word, feet == MAT_EARTH ? "hard-packed earth" : feet == MAT_MASONRY ?
                 "masonry" : feet == MAT_FLAGS ? "flagstones" : feet == MAT_SOIL ? "earth" : "stone",
                 lb[160] ? " Your " : "", lb + 160, lb[160] ? " would." : "");
-            return;
-        }
-        if (feet & DN_HANDS) {                  /* (The user's, 2026-11-03: "hammer and chisel in each hand") */
-            msg (feet & DN_LIT ? "You need the chisel in one hand and the hammer in the other, and that leaves no hand for your light: set it down first." :
-                "You need the chisel in one hand and the hammer in the other.");
             return;
         }
         hub_mem (UI_BANK, lb + 200, UIREC->things_text, 180);   /* (Not hub_map: an overlay runs in the window) */

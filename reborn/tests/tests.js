@@ -2173,7 +2173,7 @@ function dq0Turns(m) {
   // (A dq0 line as the test wrote it: sim/test.js's -F, -K, -N, -I and -a, RULES=NAME's -r NAME, and the dice's offset,
   // -R N (DQ0_ROLLS's, or a test's own: not a game's command), taken off: each once, the last added first, as sim/test.js
   // adds them, so a test's own flag before them is kept (dq0travel's -N; a test's own -R last of its own, taken off)
-  const bare = l => !/^dq0( |$)/.test(l) ? l : [/ -R \d+$/, / -F$/, / -K$/, / -N$/, / -J$/, / -I$/, / -a$/, / -r \S+$/, / -R \d+$/].reduce((x, re) => x.replace(re, ''), l);
+  const bare = l => !/^dq0( |$)/.test(l) ? l : [/ -R \d+$/, / -E$/, / -F$/, / -K$/, / -N$/, / -J$/, / -I$/, / -a$/, / -r \S+$/, / -R \d+$/].reduce((x, re) => x.replace(re, ''), l);
   const T = r.lines.map(bare).map((line, k) => ({ k, line, events: of(all.events, k), dens: of(all.dens, k), replies: of(all.replies, k),
     at: all.snaps.find(s => s.line === k + 1) || null }));
   T.forEach((t, k) => {
@@ -2366,7 +2366,7 @@ function dq0Poke(m, pokes) {
                 if (!b || !b[o + L.iKind]) continue;
                 let n = '';
                 for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
-                if (n === kn) { b[o + L.iFlags] = b[o + L.iFlags] & ~(v.clear || 0) | (v.or || 0); if (v.hide !== undefined) b[o + L.iHide] = v.hide; if (v.size !== undefined) b[o + L.iSize] = v.size; break; }
+                if (n === kn) { b[o + L.iFlags] = b[o + L.iFlags] & ~(v.clear || 0) | (v.or || 0); if (v.hide !== undefined) b[o + L.iHide] = v.hide; if (v.size !== undefined) b[o + L.iSize] = v.size; if (v.quality !== undefined) b[o + L.iQuality] = v.quality; break; }
               }
             }
             if (p.traps) {                      // (The cached chunks' hidden traps' hiding set, a scene's, 2026-11-02; and on its own
@@ -2517,6 +2517,30 @@ function dq0BodyPoke(m, pokes) {
             m.bodies.push({ g, line: typed, name: n, den, lv: mem[q], wfl: mem[q + 1], ex: mem[q + 2] | mem[q + 3] << 8,
               at: (mem[q + 4] | mem[q + 5] << 8 | mem[q + 6] << 16 | mem[q + 7] << 24) >>> 0, poked });
           }
+        }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+}
+
+// Each skill's growth in the referee's bank (skills.c's: past the bodies, fb; 2026-11-03), at each line's Enter (m.grow: { g, line,
+// n, sk(k): its rolls earned, its routine uses }), after any pokes it's given
+function dq0Grow(m) {
+  const a = m.acia, read = a.read;
+  let typed = '', g = 0, seen = {};
+  m.grow = [];
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^dq0 /.test(typed)) { ++g; seen = {}; }
+        seen[typed] = (seen[typed] || 0) + 1;
+        const h = m.dq0 && m.dq0.bank(0);
+        if (h && g) {
+          const B = dq0Body(m), v = Array.from(B.mem.subarray(0x800, 0x800 + 100));
+          m.grow.push({ g, line: typed, n: seen[typed], rolls: k => v[k] >> 4, uses: k => v[k] & 7 });
         }
         typed = '';
       } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
@@ -5220,7 +5244,7 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
         'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'mkdir /ram/h',
         'cp /ram/g/theme.txt /ram/h/theme.txt', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
-        'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'drop the backpack', 'drop the torch', 'defend dodge', 'attack', 'attack', 'look at the body',
+        'defend dodge', 'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'drop the backpack', 'drop the torch', 'attack', 'attack', 'look at the body',
         'take the leather vest from the body', 'quit', 'dq0 -d /ram/g', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm'", 'quit',
         'echo $status']) },
       start(m) {   // (The scene set, 2026-10-30: as the first attack's typed, the bandits wary (hub.h's AT_WARY), the one down
@@ -6352,6 +6376,332 @@ module.exports = {
         this.notes = [told.map(x => x[0]).join(' ')];
         if (told.length !== 2 || told[0][2] || !told[1][2] || told[0][1] !== told[1][1]) f.push('not its looks, then named at the first good spell: ' + told.map(x => x[0]).join(' '));
         else if (!/rock: [a-z ]+\. The work goes well\./.test(s)) f.push('named but not with a spell that went well');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0whotrades', outfit: true, near: ['money', 'denizens'], what: "Dingus Quest Zero's who trades (the user's, 2026-11-03: \"Friendly folk only\": HOUSE.md's the market): a hand-written theme's bandit (dq0trade's scene): indifferent, its price, its offer, a sale and a purchase all refused in words (SR_WONT: 'won't trade with you'), nothing changing hands; friendly, the same asked goes through; an antidote carried by the same rule",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo wealth 6000 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k rope,antidote',
+        'inventory', 'how much for the rope', 'what will you give for the rope', 'sell the rope to the bandit', 'sell the antidote to the bandit', 'inventory', 'look', 'what will you give for the rope', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, ['inventory', 'how much for the rope', 'what will you give for the rope', 'sell the rope to the bandit', 'sell the antidote to the bandit'].map(line => ({ g: 1, line, n: 1, name: 'bandit', set: { attitude: 3, doing: 0 }, beside: 4 }))
+          .concat([{ g: 1, line: 'what will you give for the rope', n: 2, name: 'bandit', set: { attitude: 4, doing: 0 }, beside: 4 }]));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const wont = T.filter(t => /^(how much|what will|sell)/.test(t.line)).map(t => t.replies.filter(r => r.req === 'sway').map(r => r.result).join());
+        this.notes = [wont.join(' ')];
+        if (wont.slice(0, 4).join() !== 'SR_WONT,SR_WONT,SR_WONT,SR_WONT') f.push('indifferent, not refused every way: ' + wont.join(' '));
+        if ((s.match(/The bandit won't trade with you\./g) || []).length !== 4) f.push('its refusal not told each time');
+        const inv = T.filter(t => t.line === 'inventory');
+        if (inv.length < 2 || !dq0Carried(inv[1].after).some(i => i.name === 'rope') || !dq0Carried(inv[1].after).some(i => i.name === 'antidote')) f.push('things gone though it refused');
+        if (wont[4] !== 'SR_OK') f.push('friendly, no offer for the rope: ' + wont[4]);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0growth', outfit: true, near: ['body', 'save'], what: "Dingus Quest Zero's skills' growth (the user's, 2026-11-03: \"Stress, or 5 routine uses\", HOUSE.md's a skill's growth), by the referee's own record of it (skills.c's, m.grow): hiding a thing, lit, nobody near: a routine use counted, the fifth a roll, the count back to none; a hostile awake beside it: a roll for one use; wounded (its file's injury) with one beside it: a very dangerous use, two; rolls held to three; in the dark without a light a roll; eight hours' sleep spends the rolls, told if one rose, the routine count kept; and it's kept in its file ('body u' lines) and read back as the game's carried on",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml stl 20 >> /ram/c.hm', 'echo ml wpn 20 >> /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/q', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k chalk,knife,candle,rope,brick',
+        'look', ...Array(5).fill(['hide the chalk', 'take the chalk']).flat(), 'appraise the knife', 'look', 'appraise the knife', 'appraise the knife', 'appraise the knife', 'wait', 'sleep for 8 hours', 'wait', 'quit', 'cat /ram/g/pc.hm', 'echo inj 14 1 2 2 0 0 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -a -k chalk', 'look', 'hide the chalk', 'take the chalk', 'put out the torch', 'look', 'hide the chalk', 'take the chalk', 'quit', 'echo $status']) },
+      start(m) {
+        const p = [0, 1, 2].map(k => ({ g: 1, line: 'look', n: 1, k, set: { attitude: 4, doing: 0 } }));
+        for (const n of [1, 2, 3, 4]) p.push({ g: 1, line: 'appraise the knife', n, k: 0, set: { attitude: 0, doing: 1 }, beside: 4 });
+        for (const k of [0, 1, 2]) p.push({ g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } });
+        dq0Poke(m, p);
+        dq0Grow(m);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], STL = 7, THR = 88, at = (line, n, g) => m.grow.find(x => x.g === (g || 1) && x.line === line && x.n === n), show = () => m.grow.map(g => g.g + g.line.slice(0, 4) + g.n + ':' + g.rolls(STL) + '/' + g.uses(STL)).join(' ');
+        this.notes = [show()];
+        const need = (t, r, u, what) => { if (!t || t.rolls(STL) !== r || t.uses(STL) !== u) f.push(what + ': ' + show()); };
+        need(at('take the chalk', 4), 0, 4, 'four routine uses not counted, no roll');
+        need(at('take the chalk', 5), 1, 0, 'the fifth not a roll, its count back to none');
+        const th = at('look', 2), w1 = at('wait', 1), w2 = at('quit', 1);   // (Its rest told the referee a moment after it wakes: the quit's)
+        this.notes.push('Weaponcraft ' + th.rolls(THR) + '/' + th.uses(THR) + ', ' + w1.rolls(THR) + '/' + w1.uses(THR) + ', ' + w2.rolls(THR));
+        if (!th || th.rolls(THR) !== 1 || th.uses(THR)) f.push('a foe beside it not a stress roll: ' + th.rolls(THR) + '/' + th.uses(THR));
+        if (!w1 || w1.rolls(THR) !== 3) f.push('rolls not held at three: ' + w1.rolls(THR));
+        if (!w2 || w2.rolls(THR) || w2.rolls(STL)) f.push('a night\'s sleep not spending the rolls');
+        need(at('look', 1, 2), 0, 0, 'its growth not carried with its file');
+        need(at('put out the torch', 1, 2), 1, 0, 'wounded, a use not a roll');
+        need(at('quit', 1, 2), 3, 0, 'wounded in the dark, a very dangerous use not two rolls');
+        if (!/\nbody u\d+ /.test(out.slice(out.indexOf('% cat /ram/g/pc.hm')))) f.push('its growth not in its file');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0shieldskill', outfit: true, asks: true, near: ['fight'], what: "Dingus Quest Zero's block improves the thing that blocked (the user's, 2026-11-03: \"A block improves Shield\"): dq0shield's bandit set on the character, sword and round shield held, its stance a block: the block by the shield earns Shield its rolls and Sword none of it; struck at, its own blow, Sword",
+      init: 't_rc', cycles: 1200e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml shd 90 >> /ram/c.hm',
+        'echo ml swd 20 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,round shield,gambeson,mail hauberk'", 'drop the backpack', 'hold the sword', 'hold the round shield', 'wear the gambeson', 'wear the mail hauberk',
+        'defend block', ...Array(30).fill('wait'), 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4 }));
+        dq0Grow(m);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], SHD = 42, SWD = 45, end = m.grow[m.grow.length - 1], s = dq0Story(out);
+        this.notes = ['Shield ' + end.rolls(SHD) + ', Sword ' + end.rolls(SWD)];
+        if (!/fend[^.]*(shield)/.test(s)) f.push('no block with the shield in its scene');
+        else if (!end.rolls(SHD)) f.push('a shield\'s block earned Shield nothing');
+        if (end.rolls(SWD) && !/You (strike|hit|counter)/.test(s)) f.push('Sword earned rolls with no use of the sword');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0sleepsenses', outfit: true, asks: true, near: ['senses', 'time'], what: "Dingus Quest Zero's sleeping senses (the user's, 2026-11-03: \"half awareness asleep\": HOUSE.md's sleep and rest): a hostile bandit put in the character's sight as it sleeps: asleep it sees nothing, so nothing stops or asks; and as it wakes what's there is told; at rest (awake), the same bandit in sight stops it or asks, a rest lying down all the same; the senses' look blind as it sleeps (the bandit not among what it sees), its eyes open after",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt",
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'look', 'close the door', 'sleep for an hour', 'look', 'rest for an hour', 'look', 'quit', 'echo $status']) },
+      start(m) {
+        // (Each bandit friendly and away from the sleeper; as the rest's begun one comes into sight)
+        const away = line => [0, 1, 2].map(k => ({ g: 1, line, n: 1, k, set: { attitude: 4, doing: 0 } }));
+        dq0Poke(m, [...away('look'), ...away('close the door'), ...away('sleep for an hour'),
+          { g: 1, line: 'look', n: 2, k: 0, call: (h, L) => { h[L.actor + L.aSn] = h[L.pcSn] + 1; h[L.denSeq] = h[L.denSeq] + 1 & 255; } }]);   // (Out of its sight before the rest, so it's new)
+        // (As it's told it's settled down: a friendly bandit put beside it, a denizen come into sight)
+        const near = () => {
+          const h = m.dq0.bank(0), { L } = m.dq0.layout(), o = L.actor, R = dq0Rec(m), r = R.at(h[o + L.aName + 12]), w = (q, v) => { h[q] = v & 255; h[q + 1] = v >> 8 & 255; };
+          const x = (h[L.pcX] | h[L.pcX + 1] << 8) + 1, y = h[L.pcY] | h[L.pcY + 1] << 8;
+          w(o + L.aX, x); w(o + L.aY, y); h[o + L.aSn] = h[L.pcSn]; R.mem[r + R.X] = x & 255; R.mem[r + R.X + 1] = x >> 8; R.mem[r + R.Y] = y & 255; R.mem[r + R.Y + 1] = y >> 8; R.mem[r + R.SN] = h[L.pcSn];
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        };
+        dq0OnWords(m, [{ g: 1, line: 'sleep for an hour', n: 1, words: 'You settle down to sleep', call: near }, { g: 1, line: 'rest for an hour', n: 1, words: 'You settle down to rest', call: near }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), a = s.indexOf('> sleep for an hour'), b = s.indexOf('> rest for an hour');
+        const sleep = s.slice(a, b), rest = s.slice(b);
+        this.notes = [JSON.stringify(sleep.slice(0, 300)), JSON.stringify(rest.slice(0, 300))];
+        if (/Keep sleeping\?/.test(sleep)) f.push('asleep, a denizen seen: asked');
+        if (!/A bandit[^.]*\./.test(sleep)) f.push('woken, what\'s beside it not told: ' + JSON.stringify(sleep.slice(0, 500)));
+        if (!/Keep (resting|waiting)\?/.test(rest)) f.push('at rest, awake, a denizen seen not asked: ' + JSON.stringify(rest.slice(0, 500)));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0faced', initiative: true, near: ['fight', 'denizens'], what: "Dingus Quest Zero's courage on facing the character (the user's, 2026-11-03: \"Also on first facing you\", \"Reckon it properly\": HOUSE.md's morale): a mighty character (Sword 100) and a giant rat, then a band: each as it first engages tests its courage (RS_MORALE, MR_FACED) with the character's might weighed against it: the steps against a beast by its size and the character's weapon skill, none against a thing as mighty; a band that breaks flees with no blow struck",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 100 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Vermin | rat | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'look', ...Array(14).fill('wait'), 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: [0, 2, 4, 6][k] })));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), C = require('../sim/lib/dq0meaning.js').constants().names, f = [], MR_FACED = 4;
+        const seen = new Set(), tests = T.flatMap(t => dq0Rep(t, 'dslot', { kind: C.RS_MORALE })).filter(r => r.a === MR_FACED).filter(r => { const k = JSON.stringify(r); return !seen.has(k) && seen.add(k); });
+        this.notes = [tests.map(r => r.actor + ':' + r.steps + ':' + r.result).join(' ')];
+        if (!tests.length) f.push('no test of courage as it first engaged (MR_FACED)');
+        if (tests.some(r => (r.b << 24 >> 24) >= 0)) f.push('the character\'s might not weighing on a rat: ' + tests.map(r => r.b));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0strip', outfit: true, near: ['gear', 'denizens'], what: "Dingus Quest Zero's armour off a body (the user's, 2026-11-03: \"Twice taking-off time\": HOUSE.md's dead, its things on its body): dq0kit's bandit killed and looked at; a leather vest (worn) off its body takes ten seconds more than a thing not worn off it, a belt's pouch",
+      init: 't_rc', cycles: 1800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
+        'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
+        'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'drop the backpack', 'drop the torch', 'defend dodge', 'attack', 'attack', 'look at the body',
+        'take the leather vest from the body', 'take the belt from the body', 'quit', 'echo $status']) },
+      start(m) {
+        // (The scene set, 2026-10-30: as the first attack's typed, the bandits wary (hub.h's AT_WARY), the one down
+        // finished, the other no longer fighting on: its body's vest taken as the test means; since the denizens throw (a
+        // bandit's spear in hand, its knife kept) the dice had the other knock the character senseless first)
+        dq0Poke(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'attack', n: 1, k, set: { attitude: 2 } })));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out);
+        const tk = T.of('take the leather vest from the body');
+        if (!tk || !tk.after || !dq0Carried(tk.after).some(i => i.name === 'leather vest')) return ['the vest not taken from the body (the scene?): ' + o.slice(-600)];
+        const t0 = tk.at.now, t1 = tk.after.now;
+        this.notes = ['vest ' + (t1 - t0)];
+        if (t1 - t0 < 100) f.push('the vest off a body in under ten seconds: ' + (t1 - t0));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0dampwarn', near: ['body'], what: "Dingus Quest Zero's firedamp's warning (the user's, 2026-11-03: \"Warn before bursting\": HOUSE.md's firedamp's burst): dq0air's strong firedamp (dq0air=32), a torch lit, walking in step by step: the first step in the pale blue cap on the flame, no burst; the next step the burst; and backing out after the warning, none",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm',
+        'dq0air=32', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'open the door', 'south', 'south', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), cap = s.indexOf('a pale blue cap trembling over it'), burst = s.indexOf('The air ignites with a roar');
+        this.notes = ['cap at ' + cap + ', burst at ' + burst];
+        if (cap < 0) f.push('no warning on its flame: ' + JSON.stringify(s.slice(-700)));
+        if (burst < 0) f.push('no burst on after the warning: ' + JSON.stringify(s.slice(-700)));
+        else if (cap > burst) f.push('the burst before the warning');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0busyhands', reach: true, outfit: true, near: ['gear'], what: "Dingus Quest Zero's readying with busy hands (the user's, 2026-11-03: \"it should probably put the other things away first (in their appropriate place) then take the tools in hand\": HOUSE.md's every use of a tool, A24, A25, A26): a sword and a shield in hand, a pick to dig with: the sword into its scabbard, the shield slung, each told as a step, the pick got out (truly in hand, both), used; stopped as it digs, the pick stays in hand, told, and a later use finds it there, not got out again; a hammer and chisel: both got out with no telling to hold them; a lit torch in hand and a tool wanted: laid on the ground still lit, the look says so, taken up lit; a tinderbox with both hands full: a free hand made first; 'hold the rope' with hands full: the same",
+      init: 't_rc', cycles: 3500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml min 40 >> /ram/c.hm', 'dq0sky=0', 'dq0hour=128',
+        "dq0 -p t -s 374 -c /ram/c.hm -T -k 'scabbard,pick,hammer,chisel,sword,round shield'", 'hang the scabbard on the belt', 'drop 3 rations', 'drop the flask', 'drop three candles', 'drop the sack', 'drop the whetstone', 'put the chisel in the backpack', 'put the hammer in the backpack', 'put the pick in the backpack',
+        'drop the round shield', 'drop the sword', 'drop the torch', 'take the sword', 'take the round shield', 'hold the sword', 'inventory', 'dig north', 'stop', 'inventory', 'dig north', 'stop', 'inventory', 'put on the backpack', 'put the pick in the backpack', 'take the sword', 'hold the round shield', 'inventory',
+        'dig north with the chisel', 'stop', 'inventory', 'put on the backpack', 'put the hammer in the backpack', 'put the chisel in the backpack', 'hold the sword', 'take the torch', 'hold the rope', 'look', 'inventory', 'drop the rope', 'take the torch', 'put out the torch', 'light the torch', 'inventory', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'dig north', n: 1, words: 'You dig', text: 'stop\r' }, { g: 1, line: 'dig north', n: 2, words: 'You dig', text: 'stop\r' }, { g: 1, line: 'dig north with the chisel', n: 1, words: 'You dig', text: 'stop\r' }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' ').replace(/ # /g, ' ');
+        this.notes = [s.slice(s.indexOf('> hold the sword')).slice(0, 1200), s.slice(-1200)];
+        const after = (w, re, what) => { const i = s.indexOf(w); if (i < 0 || !re.test(s.slice(i))) f.push(what + ': ' + s.slice(i, i + 500)); };
+        after('> dig north', /^> dig north( > dig north)? You sheathe the sword\. You sling the round shield\. You take off your backpack, and set it down at your feet\. You reach into the backpack\. You get out the pick\./, 'not its hands freed, each told, then the pick got out');
+        after('> stop', /You stop digging\. Your backpack lies at your feet\. Your pick is in your hand\./, 'stopped: not told in hand');
+        const inv = s.indexOf('You stop digging'), i2 = s.indexOf('> inventory', inv);
+        if (!/a pick, in both hands/.test(s.slice(i2, i2 + 400))) f.push('stopped: the pick not truly in its hands');
+        const d2 = s.indexOf('> dig north', i2), e2 = s.indexOf('> stop', d2);
+        if (/You get out the pick/.test(s.slice(d2, e2))) f.push('a later use got the pick out again');
+        const c0 = s.indexOf('> dig north with the chisel'), c1 = s.indexOf('> stop', c0);
+        if (!/You get out the chisel\..*You get out the hammer\./.test(s.slice(c0, c1))) f.push('hammer and chisel not both got out: ' + s.slice(c0, c0 + 600));
+        if ((s.slice(c0, c1).match(/Your pick would do this better/g) || []).length !== 1) f.push('the better tool not told once');
+        if (!/a hammer, in your left hand; a chisel, in your right hand/.test(s.slice(c1, c1 + 500))) f.push('stopped: hammer and chisel not in hand');
+        after('> hold the rope', /You lay the torch on the ground, still burning\./, 'a lit torch not laid down');
+        after('> look', /At your feet lie a lit torch/, 'the torch laid not told lit');
+        const l0 = s.indexOf('> light the torch');
+        if (!/You get out the tinderbox\./.test(s.slice(l0)) || !/It catches\./.test(s.slice(l0))) f.push('no tinderbox\'s steps');
+        if (!/You sheathe the sword\./.test(s.slice(l0))) f.push('striking a light: no hand freed first: ' + s.slice(l0, l0 + 600));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0dulled', outfit: true, near: ['fight', 'gear'], what: "Dingus Quest Zero's worn blades (the user's, 2026-11-03: \"both: dull edges cut less, and weapons can break by the book\": HOUSE.md's what strikes, a whetstone): a sword's edge impact as a blow's struck, by the referee's side of the fight: keen 5; worn dull (wear 200, 'its edge dull') 3; a whetstone used in the fight, its wear halved (dulled) 4; sharpened again, keen 5, the rat at it all the while",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 95 >> /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Vermin | rat | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k sword,whetstone', 'put the whetstone in the backpack', 'drop the torch', 'hold the sword', 'look', 'attack the giant rat', 'wait',
+        'drop the sword', 'take the sword', 'attack the giant rat', 'wait', 'sharpen the sword', 'attack the giant rat', 'wait', 'sharpen the sword', 'sharpen the sword', 'sharpen the sword', 'attack the giant rat', 'wait', 'quit', 'echo $status']) },
+      start(m) {
+        const ch = n => [0, 1, 2, 3].map(k => ({ g: 1, line: 'attack the giant rat', n, k, set: { attitude: 0, doing: 1 }, beside: 4 }));
+        dq0Poke(m, [...ch(1), { g: 1, line: 'drop the sword', n: 1, wear: { sword: 200 } }, ...ch(2), ...ch(3), ...ch(4)]);
+        const a = m.acia, read = a.read;
+        let typed = '';
+        m.edges = [];
+        a.read = (r, t) => {
+          if (r === 0 && a.rdrf) {
+            const c = a.rx;
+            if (c === 13) {
+              const h = m.dq0 && m.dq0.bank(0);
+              if (h) {
+                const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1'), at = parseInt(/^al ([0-9A-F]+) \._A$/m.exec(lbl)[1], 16), ram = m.taskRam[h[12 + 3]];
+                const at2 = parseInt(/^al ([0-9A-F]+) \._D$/m.exec(lbl)[1], 16), s = ram[at + 2] ? at2 : at;   // (Whichever side's the character's: who, 0)
+                m.edges.push({ line: typed, edge: ram[s + 11] << 24 >> 24 });
+              }
+              typed = '';
+            } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+          }
+          return read(r, t);
+        };
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), e = m.edges.filter(x => x.line === 'wait').map(x => x.edge);
+        this.notes = ['the edge after each blow: ' + e.join(', ')];
+        if (e[0] !== 5) f.push('a keen sword\'s edge not 5: ' + e);
+        if (e[1] !== 3) f.push('a dull sword\'s edge not 3: ' + e);
+        if (e[2] !== 4) f.push('sharpened once (dulled), its edge not 4: ' + e);
+        if (e[3] !== 5) f.push('sharpened till keen, its edge not 5: ' + e);
+        if (!/You put a fresh edge on the sword\./.test(s)) f.push('its sharpening not told');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0broke', outfit: true, asks: true, initiative: true, near: ['fight', 'gear'], what: "Dingus Quest Zero's weapons broken by the book (the user's, 2026-11-03; HOUSE.md's what strikes: Combat 12's Weapon Damage, 3d6 over its Weapon Quality, on a Block), every actor's: dq0shield's bandit set on the character, sword in hand, its stance a block: a block, weapon against weapon, breaks one of them: told, its pieces a 'broken weapon' on the floor, none of it in hand after; the character's next blow by its fists, or the bandit's",
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'hold the sword', 'wear the gambeson', 'wear the mail hauberk', 'defend block', ...Array(30).fill('wait'), 'inventory', 'look', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4 }));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\s+/g, ' '), broke = /(Your|The bandit's) ([a-z ]+) breaks!/.exec(s);
+        this.notes = [broke ? broke[0] : 'none broke', s.slice(s.lastIndexOf('> inventory')).slice(0, 500)];
+        if (!broke) return ['no weapon broke in thirty rounds of blocks'];
+        const last = s.slice(s.lastIndexOf('> inventory'));
+        if (broke[1] === 'Your' && new RegExp('a ' + broke[2] + ', in your').test(last)) f.push('its pieces still in hand as a ' + broke[2]);
+        const T = dq0Turns(m), st = T.of('look').after;
+        if (!st || !st.items.some(i => i.name === 'broken weapon')) f.push('no pieces where it fell: ' + (st ? st.items.filter(i => i.where === 'IW_SQUARE').map(i => i.name).join(', ') : ''));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0gamehour', hours: true, near: ['time'], what: "Dingus Quest Zero's hour by the game (the user's, 2026-11-03: \"vary by game\": HOUSE.md's the hour): seeds 5 and 14 walked into, the world's and the denizens' hour each the seed modulo 24, not dusk; dq0 -E dusk, 18; the environment's dq0hour above both",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 5 -c /ram/c.hm -T', 'inventory', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -T', 'inventory', 'quit', 'dq0 -p t -s 14 -c /ram/c.hm -T -E', 'inventory', 'quit', 'dq0hour=3', 'dq0 -p t -s 14 -c /ram/c.hm -T', 'inventory', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], w = T.filter(t => t.line === 'inventory').map(t => t.after && t.after.pc && t.after.pc.tb && t.after.pc.tb.hour0);
+        this.notes = ['hours ' + w.join(', ')];
+        if (w.join() !== '5,14,18,3') f.push('not the seeds\' hours, dusk, the environment\'s: ' + w.join());
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0tongue2', outfit: true, near: ['denizens'], what: "Dingus Quest Zero's tongues (the user's, 2026-11-03: \"Book, plus leaders\": HOUSE.md's words reach a creature): a hunter with Rhetoric 95: a dwarf out of its reach (SR_TONGUE), its elder not, who knows common too; with a file's language khuzdul=10, the dwarf reached, the skill through it capped at its mastery (its test's steps down to 10); and hmchar's Scribe has a language line, a hunter none",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml rhe 95 >> /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'dq0hour=128', "echo 'faction | Hold | khuzwar | 0-0 | 96 | khuzeld | 0 | w | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt',
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 7', 'open the door', 'south', 'wait', 'persuade the dwarf', 'quit', 'cp /ram/c.hm /ram/d.hm', 'echo language khuzdul=10 >> /ram/d.hm', 'dq0 -p t -s 1 -c /ram/d.hm -T -d /ram/h -R 7', 'open the door', 'south', 'wait', 'persuade the dwarf', 'quit',
+        'mkdir /ram/e', "echo 'faction | Hold | khuzeld | 0-0 | 96 | - | 0 | w | -' > /ram/e/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/e -R 7', 'open the door', 'south', 'wait', 'persuade the dwarf elder', 'quit',
+        'hmchar -q -s 5 -u feudal -c scribe -o /ram/s.hm', 'cat /ram/s.hm', 'grep language /ram/c.hm', 'echo $status']) },
+      start(m) {
+        const put = (g, line) => [{ g, line, n: 1, name: line.slice(13), set: { attitude: 3, doing: 0 }, beside: 4 }];
+        dq0Poke(m, [...put(1, 'persuade the dwarf'), ...put(2, 'persuade the dwarf'), ...put(3, 'persuade the dwarf elder')]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], C = require('../sim/lib/dq0meaning.js').constants().names;
+        const sw = (t, want, what) => { if (!t || !dq0Rep(t, 'sway', want).length) f.push(what + ' (' + JSON.stringify(t && t.replies.filter(r => r.req === 'sway')) + ')'); };
+        const d = T.filter(t => t.line === 'persuade the dwarf');
+        sw(d[0], { result: 'SR_TONGUE' }, 'the dwarf reached with no khuzdul');
+        sw(T.of('persuade the dwarf elder'), { result: 'SR_OK' }, 'its elder not reached in common');
+        sw(d[1], { result: 'SR_OK' }, 'the dwarf not reached in khuzdul');
+        const test = d[1] && dq0Rep(d[1], 'dslot', { kind: C.RS_TEST })[0];
+        this.notes = [JSON.stringify(test && { steps: test.steps })];
+        const sc = out.slice(out.indexOf('cat /ram/s.hm'));
+        if (!/\nlanguage (khuzdul|sindarin)=\d+/.test(sc)) f.push('a feudal Scribe with no language line: ' + sc.slice(0, 600));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0hardblow', initiative: true, near: ['fight', 'gear'], what: "Dingus Quest Zero's weapon broken on something hard (the user's, 2026-11-03; HOUSE.md's what strikes: Combat 12's Weapon Damage): a crude sword (quality 0, the book's table's four under its 12) battering a lowered portcullis (iron): three dice over its quality and it breaks, told, its pieces let fall, no more of it in hand; and a door of wood, no such test",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 514 -c /ram/c.hm -k sword', 'drop the sword', 'take the sword', 'lower portcullis', 'hit the portcullis with the sword', 'inventory', 'look', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 1, line: 'drop the sword', n: 1, item: { sword: { quality: 0 } } }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out).replace(/\s+/g, ' '), i = s.lastIndexOf('> inventory'), inv = s.slice(i, s.indexOf('> look', i));
+        this.notes = [s.slice(s.indexOf('> hit the portcullis'), s.indexOf('> hit the portcullis') + 400)];
+        if (!/Your sword breaks!/.test(s)) f.push('the crude sword not broken on the iron');
+        if (/a sword/.test(inv)) f.push('the sword still carried: ' + inv);
+        if (!/broken weapon/.test(s.slice(i))) f.push('no pieces where it fell');
         return f;
       },
       sdcard: true
@@ -9820,9 +10170,11 @@ module.exports = {
         else if (nb.some(r => !r) || ob.some((r, i) => r.steps <= nb[i].steps || r.c <= nb[i].c)) f.push('the old band not the steadier than the new: ' + [...ob, ...nb].filter(Boolean).map(say).join(' '));
         // (An ally heartened; a fearsome foe weighing)
         const ad = at(gd, 1, MR_LEADER), aa = fa.find(r => r.actor === 2);
-        if (!ad || !aa || ad.b <= aa.b) f.push('the ally not heartened by the character: ' + [ad, aa].filter(Boolean).map(say).join(' '));
-        const fe = at(ge, 0, MR_LEADER), ff = fa.find(r => r.actor === 1);
-        if (!fe || !ff || fe.b >= ff.b - 3) f.push('the fearsome foe beside the band not weighing on it: ' + [fe, ff].filter(Boolean).map(say).join(' '));
+        const sb = v => v << 24 >> 24;      // (The field's points, signed: the character's might counts against it now, 2026-11-03)
+        if (!ad || !aa || sb(ad.b) <= sb(aa.b)) f.push('the ally not heartened by the character: ' + [ad, aa].filter(Boolean).map(say).join(' '));
+        const fe = tests(ge).find(r => r.a === MR_LEADER && r.actor !== 2), ff = fe && fa.find(r => r.actor === fe.actor) || fa[0];   // (Whichever of the band's still there: since their test on facing it, one may have fled, 2026-11-03)
+        const near = tests(ge).filter(r => r.a === MR_LEADER && r.actor !== 2 && fa.some(q => q.actor === r.actor && sb(r.b) < sb(q.b) - 3));
+        if (!near.length) f.push('the fearsome foe beside the band not weighing on it: ' + [fe, ff].filter(Boolean).map(say).join(' '));
         return f;
       },
       sdcard: true
@@ -10678,23 +11030,24 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0chiselhands', outfit: false, near: ['gear', 'map'], what: 'Dingus Quest Zero\'s hammer and chisel in each hand (the user\'s, 2026-11-03, DECISIONS.md\'s: "Yes, hammer and chisel in each hand"; HOUSE.md\'s digging): at seed 374, facing a wall, a chisel with the hammer only carried refused, told, no time; a light in hand said too; both held, the torch set down: at work, the torch lying lit; a shovel carried beside them not the tool got out',
-      init: 't_rc', cycles: 4000e6,
+      name: 'dq0chiselhands', outfit: false, reach: true, near: ['gear', 'map'], what: 'Dingus Quest Zero\'s hammer and chisel in each hand (the user\'s, 2026-11-03, DECISIONS.md\'s: "Yes, hammer and chisel in each hand", and A25: "it should probably put the other things away first (in their appropriate place) then take the tools in hand"; HOUSE.md\'s digging, readying with busy hands): at seed 374, facing a wall, a lit torch in hand, the hammer and chisel in the pack: "dig north" lays the torch down lit, gets out both, digs by its light; a shovel carried beside them not the tool got out; no hammer, refused as ever',
+      init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
-        'dq0 -p t -s 374 -c /ram/c.hm -k chisel,hammer,shovel -T', 'dig north', 'drop the torch', 'dig north', 'hold the chisel', 'dig north', 'hold the hammer', 'dig north', 'inventory', 'quit', 'echo $status']) },
+        'dq0 -p t -s 374 -c /ram/c.hm -k chisel,hammer,shovel -T', 'dig north', 'stop', 'inventory', 'look', 'quit', 'dq0 -p t -s 374 -c /ram/c.hm -k chisel -T', 'dig north', 'quit', 'echo $status']) },
+      start(m) {
+        dq0OnWords(m, [{ g: 1, line: 'dig north', n: 1, words: 'You dig', text: 'stop\r' }]);
+      },
       expect: ['% echo $status'],
       check(m, out) {
-        const f = [], o = dq0Story(out).replace(/\[[.#]{10}\] /g, ''), T = dq0Turns(m);
-        const digs = T.filter(t => t.line === 'dig north');
-        if (digs.length !== 4) return ['not four digs: ' + digs.length];
-        for (const d of digs.slice(0, 3)) {
-          dq0Need(f, d, 'E_DIG', { how: 'D_NO_TOOL' }, 'not both in hand, not refused');
-          if (dq0Ev(d, 'E_DIG', { how: 'D_BEGUN' }).length) f.push('a spell begun with the hammer not in hand');
-        }
-        if (!o.includes('that leaves no hand for your light: set it down first.')) f.push('a light in hand not said');
-        if (!/You need the chisel in one hand and the hammer in the other\. /.test(o)) f.push('no words of the hands');
-        if (!dq0Ev(digs[3], 'E_DIG', { how: h => h === 'D_BEGUN' || h === 'D_AGAIN' }).length) f.push('both in hand, no dig begun: ' + dq0Evs(digs[3]));
+        const f = [], o = dq0Story(out).replace(/\[?[#.]{2,}\]? ?/g, ' ').replace(/\s+/g, ' '), T = dq0Turns(m);
+        this.notes = [o.slice(o.indexOf('> dig north')).slice(0, 900)];
+        if (!/You lay the torch on the ground, still burning\./.test(o)) f.push('the torch in hand not laid down lit');
+        if (!/You get out the hammer\./.test(o)) f.push('the hammer not got out');   // (dq0 -k's chisel in hand already)
         if (/get out the shovel/.test(o)) f.push('the shovel got out for a chisel\'s work');
+        if (!/(a hammer, in your [a-z]+ hand; a chisel, in your [a-z]+ hand|a chisel, in your [a-z]+ hand; a hammer, in your [a-z]+ hand)/.test(o)) f.push('stopped, not both in hand');
+        if (!/At your feet lies? a lit torch/.test(o)) f.push('the torch not told lying lit');
+        const digs = T.filter(t => t.line === 'dig north');
+        if (!digs[1] || !dq0Ev(digs[1], 'E_DIG', { how: 'D_NO_TOOL' }).length) f.push('no hammer, not refused');
         return f;
       },
       sdcard: true
@@ -11101,7 +11454,7 @@ module.exports = {
         const harn = !process.env.RULES || process.env.RULES === 'harn', sk = /Skills \(EML\):[^\n]*/.exec(end);   // (HarnMaster's sheet: the null ruleset's has no skills)
         if (harn && !sk) f.push('its sheet not told as the game ends');
         const pc = out.slice(out.indexOf('% cat /ram/q/pc.hm'), out.indexOf('% dq0 -p t -s 259'));
-        if (harn && !/\nbody u[0-9a-f]{26} \d+/.test(pc)) f.push('its skills used not kept with its sheet (pc.hm\'s second body line)');
+        if (harn && !/\nbody u\d+ /.test(pc)) f.push('its skills used not kept with its sheet (pc.hm\'s second body line)');
         dq0Need(f, g2, 'E_ARRIVE', { how: 'A_START' }, 'the second game not begun anew (a new dungeon)');
         const kit = dq0Carried(g2.after).map(i => i.name);
         if (!kit.includes('pick') || !kit.includes('backpack')) f.push('its things not carried on: ' + kit.join(', '));

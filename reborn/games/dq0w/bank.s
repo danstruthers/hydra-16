@@ -21,7 +21,7 @@
             .include    "../dq0/ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
+SWDEPTH     = 12                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
@@ -125,14 +125,14 @@ go:
             SWPART      34, 24              ; The rooms' lights by their sconces (wkept.c)
             SWPART      35, 13              ; Things moved by the count, a lot split, joined (things.c: slice 4.1's)
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
-            SWPART      37, 13              ; The rest of the UI's intents carried out (dq0w.c's intent_more)
+            SWPART      37, 2              ; The rest of the UI's intents carried out (dq0w.c's intent_more)
             SWPART      38, 26              ; A change record kept and made (store.c's store_put, change)
             SWPART      39, 14              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
             SWPART      41, 11              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
             SWPART      42, 21              ; What a closer look at a thing shows; its condition (things.c)
             SWPART      43, 7              ; A walk in the dark set out on: its way felt, a thing stumbled over
-            SWPART      44, 2              ; A walk in the dark ended: what it met, felt or blundered into
+            SWPART      44, 9              ; A walk in the dark ended: what it met, felt or blundered into
             SWPART      45, 5              ; What's ahead in the dark, felt (dq0w.c's ahead, felt_stop, no_exit)
             SWPART      46, 25               ; A search's thing, for or on; what a search turns up (things.c)
             SWPART      47, 22              ; What's on a thing or in it, searched (things.c)
@@ -150,7 +150,7 @@ go:
             SWPART      53, 26              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
             SWPART      54, 16              ; Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
             SWPART      55, 2              ; Travel to a place it knows (dq0w.c's: slice 4.2's)
-            SWPART      56, 9               ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
+            SWPART      56, 17               ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
             SWPART      57, 18              ; The outfits drawn: the character's, a denizen's (outfit.c, 2026-10-27)
             SWPART      58, 19              ; The outfits made (outmake.c)
             SWPART      59, 18              ; An outfit's section drawn (outdraw.c)
@@ -185,8 +185,10 @@ go:
             SWPART      87, 26              ; And the hand the pack goes in, a tool's use, the words
             SWPART      88, 15              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
             SWPART      89, 27              ; A shaft's going, a thing let fall, the daylight's emitters (dq0w.c: 2026-11-03)
-            SWPART      90, 5               ; A request of the things served (things.c: part 10's till 2026-11-03)
-            SWPART      91, 3               ; An arrival (dq0w.c: the main RAM's till 2026-11-03)
+            SWPART      90, 13              ; Hands made free, a tool in hand and back (things.c: 2026-11-03)
+            SWPART      91, 3               ; A denizen's weapon let fall, or broken (wlimbs.c: 2026-11-03)
+            SWPART      92, 5               ; A request of the things served (things.c: part 10's till 2026-11-03)
+            SWPART      93, 19              ; An arrival (dq0w.c: the main RAM's till 2026-11-03)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -209,7 +211,8 @@ go:
             SWFN        den_reach, 51       ; (Part 60's room, 2026-10-30)
             SWFN        den_took, 60
             SWFN        den_word, 51
-            SWFN        den_drop, 60
+            SWFN        den_drop, 91
+            SWFN        den_equip, 60
             SWFN        den_legs, 51
             SWFN        den_other, 51
             SWFN        den_dig, 79         ; (A tunneller's dig: slice 4.11's)
@@ -225,6 +228,9 @@ go:
             SWFN        bearings_off, 52
             SWFN        tsense, 76
             SWFN        sky_ask, 89         ; (The daylight's emitters, a shaft's going, a thing let fall: dq0w.c's)
+            SWFN        air_harm, 74
+            SWFN        no_way, 53          ; (The main RAM's room, 2026-11-03)
+            SWFN        den_way, 53
             SWFN        rest_go, 53
             SWFN        sky_seen, 77
             SWFN        stopped, 40         ; (A trap on the way set off: the main RAM's room, 2026-10-31)
@@ -264,13 +270,13 @@ go:
             SWFN        go, 9
             SWFN        go_to, 78           ; (Part 9's till 2026-10-31: its room the walk's)
             SWFN        walk, 9             ; (A walk along a passage: across's, part 33's; 2026-10-31, the main RAM's room)
-            SWFN        serve, 90
+            SWFN        serve, 92
             SWFN        tools, 10
-            SWFN        arrive_a, 91
-            SWFN        arrive_b, 91
+            SWFN        arrive_a, 93
+            SWFN        arrive_b, 93
             SWFN        named, 10
             SWFN        on_pc, 10
-            SWFN        light_now, 90
+            SWFN        light_now, 92
             SWFN        chart_now, 13
             SWFN        at_hand, 4
             SWFN        carried_named, 4
@@ -280,7 +286,7 @@ go:
             SWFN        shut_work, 36
             SWFN        take_rest, 35
             SWFN        shut_in, 35
-            SWFN        bar_hand, 35
+            SWFN        bar_hand, 4
             SWFN        in_reach, 10
             SWFN        weight_in, 10
             SWFN        weight_of, 10
@@ -294,6 +300,7 @@ go:
             SWFN        reach_step, 85      ; (The reach's steps, 2026-11-02)
             SWFN        reach_do, 86
             SWFN        rs_for, 87
+            SWFN        rs_more, 90
             SWFN        hub_attach, 88
             SWFN        handy, 56
             SWFN        tool_reach, 72
