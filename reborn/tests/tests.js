@@ -8220,7 +8220,7 @@ module.exports = {
       init: 't_rc', cycles: 2600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 20 >> /ram/c.hm',
         "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
-        'd', 'wait', 'look', 'quit',
+        'd', 'wait', 'quit',
         "dq0 -p t -s 7 -c /ram/c.hm -k 'sword,gambeson,mail hauberk' -T -R 1", 'turn around', 'turn around', 'wear the gambeson', 'wear the mail hauberk', 'drop 2 rations',
         'd', 'wait', 'look', 'quit',
         "dq0 -p t -s 1 -c /ram/c.hm -k sword -T -R 1", 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
