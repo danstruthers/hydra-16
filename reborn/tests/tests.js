@@ -9541,6 +9541,94 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0ownseen', meaning: true, near: ['gear'], what: "Dingus Quest Zero's things made their own as they're seen (make_own, the world's owned; 2026-11-04: its loop the main RAM's, part 13 copied only for a thing not yet its own, the swap study's: a thing's number, its quality, its make come as they did): at the turns pace, what a look sees has a number; a look again changes no thing's record and takes no new number (none made twice, none of the store's dice spent); things out of sight have none; one it sees with no number (the scene's: its number cleared) has one when the world next looks about, the next number, the others untouched, and only once",
+      init: 't_rc', cycles: 400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T', 'look', 'look', 'turn left', 'turn left', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {                                  // (A thing it sees made not its own yet, as the turn's typed: the world looks about after it)
+        dq0Poke(m, [{ g: 1, line: 'turn left', n: 1, call: () => {
+          const { L, K } = m.dq0.layout(), per = Math.floor(0x2000 / L.itemSize), cat = m.dq0.bank(L.catBank);
+          for (let i = 0; i < L.nitems; i++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+            if (b[o + L.iKind] && b[o + L.iWhere] === K.IW_SQUARE && (b[o + L.iId] | b[o + L.iId + 1] << 8)) {
+              let name = ''; for (let c = b[o + L.iKind] * L.kindSize; cat[c]; c++) name += String.fromCharCode(cat[c]);
+              if (name === 'bones' || name === 'potsherds' || name === 'arrows' || name === 'pennies') { m.dq0Cleared = i; b[o + L.iId] = b[o + L.iId + 1] = 0; return; }
+            }
+          }
+        } }]);
+      },
+      check(m) {
+        const T = dq0Turns(m), f = [], rec = i => [i.n, i.kind, i.id, i.quality, i.mat, i.dur, i.durMax, i.where, i.x, i.y].join();
+        const look = n => { let t = T.of('look'); for (let k = 1; k < n; k++) t = T.after(t, 'look'); return t.after; };
+        const tl = T.of('turn left'), a = look(1), c = tl.after, d = T.after(tl, 'turn left').after, z = m.dq0Cleared;
+        if (!a || !c || !d) return ['no state'];
+        const others0 = s => lying(s).filter(i => i.n !== z).map(rec).join(';');
+        const seen = a.sight.items, top = s => Math.max(...s.items.map(i => i.id)), lying = s => s.items.filter(i => i.where === 'IW_SQUARE');
+        if (!seen.length) f.push('nothing seen on the first look: the scene is gone');
+        for (const s of seen) if (!a.items.some(i => i.name === s.name && i.id)) f.push('seen, but no number: ' + s.name);
+        if (others0(a) !== others0(look(2))) f.push('a look again changed the things lying about');
+        const rest = s => Math.max(...s.items.filter(i => i.n !== z).map(i => i.id));   // (Its number cleared as the turn's typed: look(2) is that moment's)
+        if (rest(a) !== rest(look(2))) f.push('a look again took a new number: ' + rest(a) + ' to ' + rest(look(2)));
+        const ids = a.items.filter(i => i.id).map(i => i.id);
+        if (new Set(ids).size !== ids.length) f.push('two things with one number: ' + ids.join());
+        if (!lying(a).some(i => !i.id)) f.push('no thing out of sight without a number: the scene is gone');
+        if (z === undefined) f.push('no thing to clear: the scene is gone');
+        else {
+          const th = (s, n) => s.items.find(i => i.n === n);
+          const was = th(a, z), got = th(c, z);
+          if (!seen.some(s => s.name === was.name)) f.push('the thing cleared not among those seen: ' + was.name + ' of ' + JSON.stringify(seen.map(s => s.name)));
+          else if (!got || !got.id || got.id !== top(a) + 1) f.push('a thing seen with no number not made its own at the next look: ' + JSON.stringify(got) + ' top ' + top(a));
+          const others = s => lying(s).filter(i => i.n !== z).map(rec).join(';');
+          if (others(a) !== others(c)) f.push('another thing changed by that look');
+          if (lying(c).map(rec).join(';') !== lying(d).map(rec).join(';') || top(c) !== top(d)) f.push('made its own twice');
+        }
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0passes', near: ['time', 'gear'], what: "Dingus Quest Zero's minute's lighter passes at a real pace (2026-11-04: seen to in the world's main loop, part 27 not copied for them, the swap study's; the same work as when they were part 27's): at the normal pace, idle, not in a long wait: a torch burning in a sconce, its last minute poked, goes out at the minute's look and the sconce's own pass after it takes its room's light away (BA_SCONCES); the character's own torch burns a minute down for each minute gone; a wait's end asks the time it believes (TS_ASK): it's reckoned by then (its next due ahead of the clock, its minute this one)",
+      init: 't_rc', cycles: 2400e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p n -s 535 -c /ram/c.hm -T -T -T', 'light the torch in the sconce', 'wait 5 seconds',
+        '\u0100'.repeat(160) + 'look', 'wait 1 minute', String.fromCharCode(0x100).repeat(8) + 'inventory', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {                                  // (Its last minute, as the wait's typed: the sconce's own torch, the one lit in it)
+        dq0Poke(m, [{ g: 1, line: 'wait 5 seconds', n: 1, call: () => {
+          const { L } = m.dq0.layout(), per = Math.floor(0x2000 / L.itemSize), cat = m.dq0.bank(L.catBank), name = k => { let s = ''; for (let c = k * L.kindSize; cat[c]; c++) s += String.fromCharCode(cat[c]); return s; };
+          const rec = i => { const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize; return { b, o }; };
+          for (let i = 0; i < L.nitems; i++) {
+            const { b, o } = rec(i);
+            if (!b[o + L.iKind] || name(b[o + L.iKind]) !== 'torch' || !(b[o + L.iFlags] & 1) || !b[o + L.iWhere]) continue;
+            const c = b[o + L.iX] | b[o + L.iY] << 8;
+            const r = c < L.nitems && rec(c);
+            if (b[o + L.iWhere] === m.dq0.layout().K.IW_ITEM && r && name(r.b[r.o + L.iKind]) === 'sconce') { b[o + L.iFuel] = 1; b[o + L.iFuel + 1] = 0; }
+          }
+        } }]);
+      },
+      check(m, out) {
+        const T = dq0Turns(m), f = [], LIT = 1;
+        const lit = T.of('light the torch in the sconce').after, idle = T.of('look'), after = idle.at, end = T.of('inventory').at;
+        if (!lit || !after || !end) return ['no state'];
+        const sconces = s => s.items.filter(i => i.name === 'sconce');
+        const torchIn = (s, c) => s.items.find(i => i.where === 'IW_ITEM' && i.x === c.n) || null;
+        const near = sconces(lit).sort((a, b) => Math.max(Math.abs(a.x - lit.pc.x), Math.abs(a.y - lit.pc.y)) - Math.max(Math.abs(b.x - lit.pc.x), Math.abs(b.y - lit.pc.y)))[0];
+        const roomLit = (s, c) => { const r = s.changes.filter(x => x.what === 'ROOM_LIT' && x.sn === c.sn && x.x === c.x && x.y === c.y); return r.length ? r[r.length - 1].tile : -1; };
+        if (!near || !torchIn(lit, near) || !(torchIn(lit, near).flags & LIT) || roomLit(lit, near) !== 2) f.push('the sconce not lit, its room not lit by it: the scene is gone');
+        const t = near && torchIn(after, near);
+        if (t && (t.flags & LIT)) f.push('the sconce\'s torch still lit after its last minute: ' + JSON.stringify(t));
+        if (near && roomLit(after, near) !== 0) f.push('the sconce out, its room\'s light kept (the sconces\' pass, BA_SCONCES, not run): ' + roomLit(after, near));
+        const mine = s => s.items.find(i => i.name === 'torch' && i.where === 'IW_ACTOR' && !i.x && (i.flags & LIT));
+        const m0 = mine(lit), m1 = mine(after);
+        if (!m0 || !m1 || !(m1.fuel < m0.fuel)) f.push('its own torch not burnt down in the minute gone: ' + JSON.stringify([m0 && m0.fuel, m1 && m1.fuel]));
+        if (!(end.pc.tb.due > end.now)) f.push('the time it believes not reckoned after the wait (its next due not ahead of the clock): ' + end.pc.tb.due + ' at ' + end.now);
+        const m2 = mine(end);
+        if (m1 && m2 && !(m2.fuel < m1.fuel)) f.push('its own torch not burnt down through the wait: ' + m1.fuel + ' to ' + m2.fuel);
+        if (!(end.pc.tb.at * 600 > end.now - 600)) f.push('the time it believes not brought up to the wait: ' + end.pc.tb.at + ' at ' + end.now);
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0kept', meaning: true, what: "Dingus Quest Zero's lights kept (DUNGEON.md: light kept; the user's, 2026-10-16: \"why would all of the torches in the wall sconces be lit if no one is there to light them?\"): the kobold warren's Dung Tunnels (a mine, dq0 -T -T -T: four strata grown, the character on the second) at seed 527, the kobolds' keeping (their lair's chunk and their range, the denizens' places kept, KEPT_AT) lighting the room the character comes in to: lit by its sconce (\"On the wall to your right is a sconce, a lit torch in it.\"), the torch lit and tended (I_TENDED), the room's light kept (ROOM_LIT); the torch taken from it (a step nearer first), the room dark, a torch put back, the room's light as that torch is; at seed 535, a storeroom away from the kobolds dark, its sconce's torch cold, \"a torch in it\", lit there (light the torch in the sconce: the room lit by it, not tended), put out (dark again), lit again, kept in the save (-d) and carried on lit; every sconce in the item store at each lit and tended if and only if a keeping whose keepers live reaches it, each of those rooms' light kept; and the same seed again the same sconces, the same torches, the same places kept (a chunk always stocked the same: the world waits for a stratum's populations)",
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
