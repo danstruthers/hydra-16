@@ -1466,7 +1466,8 @@ anything of the game's (it has the CPU and its own RAM; what passes between dung
   on at each carry-on by the days the clock crossed from its start's hour, and one more, the day after it came out at the soonest.
 - **The end:** game.dat's outcome byte (struct save's, LO_*: the ends' to set), read by dq0life as the next dungeon begins, so a
   game ended and not yet carried on has its record as it was.
-- **The room:** two dungeons measured on the card (HOUSE.md's carrying on).
+- **The room:** two dungeons hardly played, one a stand-in's and one with its own theme: 156K of the card (df, 14,996K free to 14,840K);
+  a save's folder grows by that kind of figure a dungeon, more as it's played.  The test card has 15M free; a real one, far more.
 
 ## One path for every actor
 

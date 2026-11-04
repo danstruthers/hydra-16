@@ -3603,7 +3603,7 @@ weapon's version and Strength, a wrecked door, a slip out of a pit.
   of it by its seed; the character is then 16 to 25, by its seed, the year it was born kept in the record (the book leaves the year to
   the GM, Character 3); its age on a date is that and its sheet's birthday.  Nothing reads the age yet (the book's aging begins far
   later).  The next dungeon begins the day after the last ended at the soonest; what passes between them is the plan's step 4.  Its hour
-  is its seed's, as ever.  Each dungeon's folder (the user's Q3) is kept, some *ROOM* on the card each.
+  is its seed's, as ever.  Each dungeon's folder (the user's Q3) is kept: two dungeons hardly played came to 156K of the card's free room (df; 44K each by du), so a long life is nothing on any real card.
   *The user's, 2026-11-03 (A8): a random time between dungeons, with healing, gear's maintenance at a cost, and skills by the book past 30 days: the plan for the game between dungeons (Decided, not yet built, below).  The rule stands till then.*
 
 ## Decided, not yet built
