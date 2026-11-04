@@ -1910,7 +1910,7 @@ function builtChunks(m, sn) {
 // records, 8 of 79 bytes, then the slots, 8 bytes each: used, sn, cx, cy, stamp), each slot used holding a chunk of sn
 // read from its cache bank (world.h's CACHE_BANK: 5 + k / 3, CHUNK_AT: (k % 3) * 0xAA0), its 2,707 bytes (struct
 // chunk's), by its place: { 'cx,cy': bytes }; the hub's banks the shared ones from its bank 0's (its magic "DQ") on
-const CHUNK_BYTES = 2707, WORLD_BANK_N = 21, CSLOT_AT = 8 * 79;
+const CHUNK_BYTES = 2707, CHUNK_KEPT = 2556, WORLD_BANK_N = 21, CSLOT_AT = 8 * 79;
 function liveChunks(m, sn) {
   const banks = m.sharedBanks(), keys = Object.keys(banks).map(Number).sort((a, b) => a - b);
   const hub = keys.find(k => banks[k][0] === 0x44 && banks[k][1] === 0x51), out = {};
@@ -1984,6 +1984,7 @@ function chunkDiff(a, b) {
   const d = { portal: 0, trap: 0, square: 0, opening: 0, other: [] };
   for (let i = 0; i < CHUNK_BYTES; i++) {
     let x = a[i], y = b[i];
+    if (i >= CHUNK_KEPT && i < CHUNK_KEPT + 9) continue;      // (The world's memory of it, the maker's none)
     if (i >= 443 && i < 1467) { x &= 0x2F; y &= 0x2F; }
     if (i >= 8 && i < 56 && (i - 8) % 8 === 4) { x &= ~1; y &= ~1; }
     if (x === y) continue;
@@ -7473,6 +7474,45 @@ module.exports = {
         if (a.length !== 1 || a[0] !== 0) f.push('thrown at the rat plainly, not no steps: ' + JSON.stringify(a));
         if (b.length !== 1 || b[0] !== -2) f.push('thrown hard at the rat, not two steps worse: ' + JSON.stringify(b));
         inTurn(o, ['You throw your sword at the giant rat', 'You throw your sword hard at the giant rat'], f, 'the rat: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0doorfar', near: ['map', 'parser'], what: "Dingus Quest Zero's door beyond the room's walls walked over to (HOUSE.md's out of reach, walked to first: \"close the door\", \"hit the door\", \"kick the door\" not beside it by the four ways, nor on the walls of the room it stands in: dq0's door_go; 2026-11-03, the check of the document), by the words and the hub: at seed 3 out through the cell's doorway into the passage (the rats held off, the scene's), the doors on the cell's wall asked about, one chosen: \"You head for the door.\", walked to beside it, then the command: the open door closed, the closed one battered with the torch, and kicked",
+      init: 't_rc', cycles: 1400e6,
+      machine: { input: (() => {
+        const g = d => ['dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/' + d, 'step west', 's'];
+        return dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'mkdir /ram/i', ...['g', 'h', 'i'].map(d => 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/' + d + '/theme.txt'),
+          ...g('g'), 'close the door', '2', 'look', 'quit', ...g('h'), 'hit the door', '1', 'stop', 'quit', ...g('i'), 'kick the door', '1', 'stop', 'quit', 'echo $status']);
+      })() },
+      start(m) {
+        const away = (h, L, K, at) => {
+          const R = dq0Rec(m), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16, due = now + 6000; let n = 0;
+          for (let k = 0; k < L.nactors; k++) if (h[at(k) + L.aName] && h[at(k) + L.aState]) {
+            const o = R.at(h[at(k) + L.aName + 12]), x = 32719 + n++, y = 32721;
+            h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8; h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
+            h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_FRIENDLY; h[at(k) + L.aDoing] = K.DO_ROAM;
+            for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = due >>> (8 * i) & 255;
+          }
+        };
+        dq0Poke(m, [1, 2, 3].flatMap(g => [{ g, line: 'step west', n: 1, call: away }, { g, line: 's', n: 1, call: away }, { g, line: g === 1 ? '2' : '1', n: 1, call: away }]));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out), G = o.split('% dq0 ').slice(1);
+        if (G.length !== 3) return ['not three games: ' + G.length];
+        const ans = T.filter(t => t.line === '2' || t.line === '1'), want = [['close the door', 32723, 'PO_CLOSED', /You close the door\./], ['hit the door', 32720, 'TE_BEGUN', /You set to battering the door with the torch\./], ['kick the door', 32720, 'TE_BEGUN', /You set to kicking the door\./]];
+        if (ans.length !== 3) return ['the doors not chosen: ' + ans.length];
+        want.forEach(([l, x, ev, re], i) => {
+          const a = ans[i];
+          if (!/Which door: 1\. the door ahead to your right \(closed\), or 2\. the one behind you to your right \(open\)\?/.test(G[i])) f.push(l + ': not asked which');
+          if (!/You head for the door\./.test(G[i])) f.push(l + ': not told it heads for the door');
+          if (!a.at || a.at.pc.x !== 32722 || a.at.pc.y !== 32724) f.push(l + ': not from the passage, off its wall');
+          if (!a.after || a.after.pc.x !== x || a.after.pc.y !== 32724) f.push(l + ': not walked to beside it: ' + (a.after && [a.after.pc.x, a.after.pc.y]));
+          if (!re.test(G[i])) f.push(l + ': the command not done there');
+          if (!a.events.some(e => e.po === ev || e.te === ev)) f.push(l + ': no ' + ev);
+        });
         return f;
       },
       sdcard: true
