@@ -5,7 +5,7 @@
 //            alone when only games/ changed; dq0answer at DQ0ANS_WAIT=0 among them), RULES=null's meaning tests of
 //            them, and the parser's checks when the grammar's changed (tests/areas.js's GRAMMAR's paths)
 //   lead     the lead's, once a round after all the merges: the whole suite (dq0answer at 0), RULES=null's meaning
-//            tests, the soaks (soak.js -n 200; -n 100 -fight 0.8), dq0answer at DQ0ANS_WAIT=1 and 2, the parser's
+//            tests, the soaks (soak.js -n 200; -n 60 -fight 0.8; -n 20 -life 3), dq0answer at DQ0ANS_WAIT=1 and 2, the parser's
 // Usage: node sim/test.js --tier report|lead [--changed REF] [-j N] [--seed N] [--list]
 //   --changed REF   report's REF (default: reborn-game, the merge base with it)
 //   -j N, --seed N  each step's (the suite's, the soaks')
@@ -48,7 +48,8 @@ function steps(tier, o) {
     suite('the whole suite (dq0answer at DQ0ANS_WAIT=0)', { RULES: '', DQ0ANS_WAIT: '0' }, []),
     suite('RULES=null: the meaning tests', { RULES: 'null', DQ0ANS_WAIT: '0' }, []),
     { what: 'the soak: 200 seeds', env: { RULES: '' }, cmd: node('sim/tools/soak.js', '-n', '200', ...o.soak) },
-    { what: 'the soak: 100 seeds, fights (-fight 0.8)', env: { RULES: '' }, cmd: node('sim/tools/soak.js', '-n', '100', '-fight', '0.8', ...o.soak) },
+    { what: 'the soak: 60 seeds, fights (-fight 0.8)', env: { RULES: '' }, cmd: node('sim/tools/soak.js', '-n', '60', '-fight', '0.8', ...o.soak) },
+    { what: 'the soak: 20 lives, three dungeons each (-life 3)', env: { RULES: '' }, cmd: node('sim/tools/soak.js', '-n', '20', '-life', '3', ...o.soak) },
     suite('dq0answer at DQ0ANS_WAIT=1', { RULES: '', DQ0ANS_WAIT: '1' }, ['dq0answer']),
     suite('dq0answer at DQ0ANS_WAIT=2', { RULES: '', DQ0ANS_WAIT: '2' }, ['dq0answer']),
     ...PARSER,

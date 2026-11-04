@@ -1439,7 +1439,7 @@ rest".  Built (HOUSE.md's the character carries on has the numbers):
   healing on), and the things it carried out (the world's kit.dat, kept with every save, made its outfit there, each as it was).
 - **Death and the autosave:** the game is kept as the character comes into a stratum and as it's quit; a death isn't
   kept, so the last save is there to go back to.  Hard mode (dq0 -H, kept in the save) keeps the death: the folder's
-  next game is a new one, a new character.  No autosave before danger (the user's, 2026-11-03: DECISIONS.md's HOUSE.md's review), till a playtest shows the lost play hurts.
+  next game is a new one, a new character; said once, it goes on with the life, each next dungeon's too (LF_HARD, the record's).  No autosave before danger (the user's, 2026-11-03: DECISIONS.md's HOUSE.md's review), till a playtest shows the lost play hurts.
 - **D13's rules:** the free pounds of encumbrance by Strength; a weapon's version (the book's light, average and heavy:
   its impact and its weight by it), the heaviest wielded without penalty by Strength, a strong character made with
   heavy weapons; a wrecked door, window or portcullis appraised by its state; a slip climbing out of a pit ending the

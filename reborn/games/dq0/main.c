@@ -493,6 +493,7 @@ static unsigned char __fastcall__ life (unsigned char given)
             seed = ((struct life_head*) lb)->dseed;
             if (((struct life_head*) lb)->dungeon > 1) {
                 n = LF_NEXT;
+                hard |= ((struct life_head*) lb)->flags >> 3 & 1;   /* (LF_HARD's: carried on in hard mode, life.h's) */
             }
         }
     }
@@ -960,7 +961,7 @@ static void heard (void)
     unsigned dx, dy;
     unsigned char rel;
 
-    while (hub_dnext (&dplace, &m)) {
+    while (!quit && hub_dnext (&dplace, &m)) {   /* (Dead of a blow: the end told once, the rest of its round's untold) */
         if (m.kind == E_FIGHT) {                /* (The character's, one at it; or a stray's, between two actors) */
             blow (&m);
             continue;

@@ -211,6 +211,9 @@ static void ended (void)
         L.d[n - 1].days = (unsigned) (t / TENTHS_DAY);
         L.d[n - 1].outcome = sv.outcome;
     }
+    if (sv.pace >> 7) {
+        L.h.flags |= LF_HARD;                   /* (Hard mode goes on with the life, the fight soak's: dq0 -H said once) */
+    }
     L.h.date += (t + ((unsigned) L.h.dseed % 24) * 36000UL) / TENTHS_DAY + 1;
     L.h.dungeon = n + 1;
 }
