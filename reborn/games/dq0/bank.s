@@ -149,7 +149,7 @@ ovl_out:
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
             OVFN        say_raw, 16         ; (A line as it is, the map's: term.c, the main RAM's room)
             OVFN        t_status, 16        ; (The status line drawn: term.c, the main RAM's room, 2026-11-03)
-            OVFN        may_den, 10         ; (The thing named may be a denizen: sway.c, 2026-11-03)
+            OVFN        may_den, 16         ; (The thing named may be a denizen: sway.c, 2026-11-03)
             OVFN        walk_ahead, 15      ; (A walk over told before the world's asked: sway.c, 2026-11-03)
             OVFN        dots, 3            ; (The game's start's progress: main.c's)
 
@@ -178,7 +178,7 @@ ovl_out:
             SWPART      18, 18              ; A denizen's door's words (2026-11-02: overlay 3's room)
             SWPART      19, 15              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)
             SWPART      20, 7               ; An ally's errands, gifts (errand.c: part 15's room, 2026-11-03)
-            SWPART      21, 17              ; The record of a life, as a game begins (main.c: 2026-11-04)
+            SWPART      21, 8               ; The record of a life, as a game begins (main.c: 2026-11-04)
             SWPART      22, 10              ;   and its dungeon's folder found
 
             SWFN        errand, 20

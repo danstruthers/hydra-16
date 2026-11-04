@@ -167,11 +167,11 @@ void __fastcall__ o_sway_words (const struct sway* s)
 /* The thing named may be a denizen, by what's in the hub (the first three letters of the word in an actor's name, or one
 ** the player has named: the denizens' own meant is the judge), so that they're asked: they're the background, and an
 ** answer waiting on one of their minds' turns took a second and more (dq0answer's, 2026-11-03: "examine the torch") */
-#pragma code-name (push, "OV10CODE")            /* (Overlay 10's since 2026-11-04, overlay 17's room) */
+#pragma code-name (push, "OV16CODE")            /* (Overlay 16's since 2026-11-04, overlay 17's room) */
 unsigned char o_may_den (void)
 {
-    char w[4], nm[sizeof HUB->actor[0].name + 1];
-    unsigned char k;
+    char nm[sizeof HUB->actor[0].name + 1];     /* (On the C stack: hub_mem's, with the hub in the window) */
+    static unsigned char k, c;
 
     if (!cmd.obj.word[0]) {
         return 0;
@@ -179,16 +179,17 @@ unsigned char o_may_den (void)
     if (names_n) {
         return 1;
     }
-    strncpy (w, cmd.obj.word, 3);
-    w[3] = 0;
+    c = cmd.obj.word[3];
+    cmd.obj.word[3] = 0;                        /* (Its first three letters, a moment) */
     nm[sizeof nm - 1] = 0;
     for (k = 0; k < NACTORS; ++k) {
         hub_mem (0, nm, HUB->actor[k].name, sizeof nm - 1);
-        if (nm[0] && strstr (nm, w)) {
-            return 1;
+        if (nm[0] && strstr (nm, cmd.obj.word)) {
+            break;
         }
     }
-    return 0;
+    cmd.obj.word[3] = c;
+    return k < NACTORS;
 }
 #pragma code-name (pop)
 
