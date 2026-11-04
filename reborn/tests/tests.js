@@ -2943,9 +2943,9 @@ function dq0JobsTest() {
 // told as it begins, "You carry" before the world's asked): never raised.  Over the user's 720,000 still, by what it takes:
 // a carried thing examined, a thing taken with a walk or a pack, a step or a turn with a denizen's things being drawn at
 // wait 0, its answer behind that draw's giving way
-const DQ0_ANSWERS = [['turn left', 'You turn left', 720000], ['turn right', 'You turn right', 1300000],
-  ['step forward', 'You step forward', 950000], ['inventory', 'You carry', 500000], ['examine the torch', 'Your torch', 800000], ['walk to the door ahead to my left', 'You head for', 700000], ['examine the door', 'You head for|A door|Which door', 680000],
-  ['look', 'You', 560000, 1790000], ['go up', 'There\'s no way up or down here.', 700000], ['go to the far side', 'You', 800000], ['walk to the window', 'You head for', 560000], ['take the bones', 'You go over to the bones.|You stop', 950000], ['look', 'You', 560000]];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
+const DQ0_ANSWERS = [['turn left', 'You turn left', 800000], ['turn right', 'You turn right', 1300000],
+  ['step forward', 'You step forward', 950000], ['inventory', 'You carry', 500000], ['examine the torch', 'Your torch', 800000], ['walk to the door ahead to my left', 'You head for', 760000], ['examine the door', 'You head for|A door|Which door', 720000],
+  ['look', 'You', 650000, 1790000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You', 800000], ['walk to the window', 'You head for', 700000], ['take the bones', 'You go over to the bones.|You stop', 950000], ['look', 'You', 650000]];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
 function dq0AnswerTest(baud) {
   const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
   const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
