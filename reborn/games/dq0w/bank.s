@@ -156,7 +156,7 @@ go:
             SWPART      59, 18              ; An outfit's section drawn (outdraw.c)
             SWPART      60, 19              ; The denizens' things; a weapon let fall, taken up (wlimbs.c, 2026-10-27)
             SWPART      61, 18              ; What's in a thing (things.c's s_inside: part 36's room, 2026-10-27)
-            SWPART      62, 17              ; A denizen's things made out (things.c's s_gear_words, 2026-10-27)
+            SWPART      62, 2               ; A denizen's things made out (things.c's s_gear_words, 2026-10-27)
             SWPART      63, 12              ; The character's kit (things.c's, part 13's till 2026-10-28; overlay 21's, 2026-10-29)
             SWPART      64, 21              ; The coins' mints (things.c's, 2026-10-28; overlay 21's, 2026-10-29)
             SWPART      65, 20              ; The missiles: a shot, its line, where it falls (wshoot.c: slice 4.7's)

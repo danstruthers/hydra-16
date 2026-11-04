@@ -84,6 +84,39 @@ static unsigned char near_out (void)
     return !HUB->pc_stratum && STRATUM (0).link[0].x - HUB->pc_x + 2 <= 4 && STRATUM (0).link[0].y - HUB->pc_y + 2 <= 4;
 }
 
+/* Rule r done: kept, and its effect: the way out opened, the mission's, whichever it is (E_LEFT as it goes up) */
+static void __fastcall__ rule_done (unsigned char r)
+{
+    unsigned char k;
+
+    done_ |= 1 << r;
+    hub_map (THEME_BANK);
+    k = THEME->rule[r].effect;
+    hub_map (0);
+    if (k) {
+        HUB->way_open = 1;
+        burn_ask |= TS_ASK;                     /* (The sky through it: the time it believes, part 76's) */
+    }
+}
+
+/* Thing of the theme's kind k come into the character's hands (the item store's place: part 10's): its take rule, the first
+** time, done and told (E_LEFT's EL_RULE on: the UI's words).  The artifact's: it's found what it came for (Q2) */
+static void __fastcall__ took (unsigned char k)
+{
+    struct msg m;
+    unsigned char r = rule (TR_TAKE, k, 0xFF);
+
+    hub_map (0);
+    if (r != 0xFF && !(done_ & 1 << r)) {
+        rule_done (r);
+        m.kind = E_LEFT;
+        m.who = m.a = m.b = 0;
+        m.w1 = EL_RULE + r;
+        m.t = HUB->now;
+        hub_event (&m);
+    }
+}
+
 /* The hub's ireq, IO_PUZZLE's, answered (but its state, the caller's): its verb's rule for the things named looked
 ** for, by their kinds, and done (its result PZ_*, x the rule); 1 if what lies about has changed (a thing put) */
 unsigned char s_puzzle (void)
@@ -128,14 +161,7 @@ unsigned char s_puzzle (void)
         }
     }
     if (res == PZ_DONE) {
-        done_ |= 1 << r;
-        hub_map (THEME_BANK);
-        k = THEME->rule[r].effect;
-        hub_map (0);
-        if (k == TE_OPEN) {
-            HUB->way_open = 1;                  /* (The way out opened: the mission's, E_LEFT as it goes up) */
-            burn_ask |= TS_ASK;                 /* (The sky through it: the time it believes, part 76's) */
-        }
+        rule_done (r);
     }
     hub_map (0);
     HUB->ireq.result = res;
@@ -229,6 +255,10 @@ unsigned char s_take_up (void)
 /* I_TAKE's walk begun (its intent: the square the thing lies on, its item) */
 void __fastcall__ s_take_go (const struct msg* m)
 {
+    if ((unsigned) m < NTKINDS) {
+        took ((unsigned char) m);               /* (things.h's: its one stub) */
+        return;
+    }
     take_only = m->a;
     take_n = m->t ? (unsigned) m->t : 1;        /* (Walked over to alone: its square's, perhaps no thing's) */
     take_x = m->w1;

@@ -1987,10 +1987,6 @@ static unsigned char __fastcall__ shaft_go (unsigned w)
                     r = SKP_TOO_HIGH;
                 }
             }
-            hub_map (0);
-            if (!r && lk->to == 0xFF && !HUB->way_open) {
-                r = SKP_GRATE;
-            }
         } else if (!shaft_foot (lk)) {
             r = SKP_CHOKED;
         }
@@ -2040,7 +2036,7 @@ static unsigned char __fastcall__ shaft_end (unsigned char dir)
         pc_hit = 0;
     }
     if (lk->to == 0xFF) {
-        event (E_LEFT, 0, 0);
+        event (E_LEFT, 0, EL_SKY);              /* (Out by a shaft to the sky: solved or not, the UI's) */
         return 0;
     }
     move.on = 1;
@@ -2268,10 +2264,10 @@ void __fastcall__ s_climb (unsigned char d)
     }
     hub_map (0);
     lk = &STRATUM (sn_).link[l];
-    if (lk->kind == O_WAY_OUT) {                /* (The way out: shut, till the theme's mission opens it; a far exit,
-                                                **   one below the top, the goal's, open: theme.h's G_THROUGH) */
+    if (lk->kind == O_WAY_OUT) {                /* (The way out: shut, unless its theme's way in stands open, till the theme's
+                                                **   mission opens it; another, below the top, open: theme.h's exit_sn) */
         if (HUB->way_open || sn_) {
-            event (E_LEFT, 0, 0);
+            event (E_LEFT, 0, EL_WAY);
         } else {
             no_way (N_SHUT);
         }
@@ -3115,7 +3111,10 @@ void s_begin (void)
     move.sn = 0;
     move.x = STRATUM (0).link[0].x;
     move.y = STRATUM (0).link[0].y;
+    hub_map (THEME_BANK);
+    k = THEME->mission & TM_OPEN;
     hub_map (0);
+    HUB->way_open = k;                          /* (The way in open behind it, if its theme says: Q1's) */
     if (HUB->test_start && STRATUM (0).nlinks > 1) {  /* (dq0 -T: at the first way down, for the tests) */
         move.x = STRATUM (0).link[1].x;
         move.y = STRATUM (0).link[1].y;
