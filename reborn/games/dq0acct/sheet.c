@@ -97,6 +97,7 @@ unsigned char o_sheet_read (void)
     int fd;
     unsigned char ok;
 
+    ownn = 0;
     if ((fd = open (sheet_path (), O_RDONLY)) < 0) {
         return 0;
     }

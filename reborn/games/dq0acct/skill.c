@@ -238,13 +238,12 @@ void o_work (void)
     n = work_days * 4 / 25;
     trade_read ();
     if (n && ntrade) {
-        ns = 0;
+        ns = ntrade > 3 ? 3 : ntrade;           /* (Its first three: its trade's own) */
+        for (k = 0; k < ns; ++k) {
+            was_ml[k] = pc.ml[trade[k]];
+        }
         for (k = 0; k < n; ++k) {
-            sk = trade[k % ntrade];
-            if (k < ntrade && k < 3) {
-                was_ml[k] = pc.ml[sk];
-                ns = k + 1;
-            }
+            sk = trade[k % ns];
             if (pc.ml[sk] < MASTER_ML) {
                 harn_develop (&pc, sk);
             }
@@ -370,7 +369,7 @@ static void wounds_say (void)
         say ("The ");
         say (sev_word[sev_of (w->il)]);
         say (" ");
-        say (wound_word[w->by && w->by <= BY_VENOM ? 3 + w->by : w->aspect & 3][w->sev > 3 ? 2 : w->sev ? w->sev - 1 : 0]);
+        say (wound_word[w->by && w->by <= BY_VENOM ? 3 + w->by : w->aspect & 3][(w->aspect & 3) != HARN_BLUNT || w->by ? 0 : w->sev > 3 ? 2 : w->sev ? w->sev - 1 : 0]);
         say (" to your ");
         say_place (w->loc);
         if (k == pc.ninj) {

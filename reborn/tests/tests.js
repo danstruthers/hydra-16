@@ -2254,7 +2254,9 @@ function dq0MapLayers(s) {
 const passings = n => Array(n).fill(['douse the torch', 'wait 5 minutes', 'light the torch']).flat();
 
 // A dq0 test's lines typed, each at its prompt (rc's "% ", the game's "> ")
-const dq0Typed = lines => lines.map(l => '\u0101' + l + '\r').join('');
+const dq0TypedAsk = lines => lines.map(l => '\u0101' + l + '\r').join('');
+// (A game with a save's folder: the rc variable dq0auto, so the time between two dungeons, dq0acct's, waits for nothing; dq0TypedAsk has it wait)
+const dq0Typed = lines => dq0TypedAsk(lines.some(l => /^dq0 .*-d /.test(l)) ? ['dq0auto=1', ...lines] : lines);
 
 // Dingus Quest Zero's morale's own (dq0morale): at each line's Enter (the CR as the ACIA has it, the game still as it
 // stands), the pokes made (each { g: the game, 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, k:

@@ -15,7 +15,7 @@
             .include    "ovunpack.inc"    ; (The overlays read and unpacked: ovl_unpack)
 
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
-OVMAX       = 19                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
+OVMAX       = 20                    ; dq0.cfg's overlays (the twelfth part 6's image, then seen.c; the
                                     ;   thirteenth part 9's; the fourteenth part 3's, the map: slice 4.2's)
 DEPTH       = 16                    ; Overlay calls in calls, at most
 SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
@@ -178,8 +178,8 @@ ovl_out:
             SWPART      18, 18              ; A denizen's door's words (2026-11-02: overlay 3's room)
             SWPART      19, 15              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)
             SWPART      20, 7               ; An ally's errands, gifts (errand.c: part 15's room, 2026-11-03)
-            SWPART      21, 8               ; The record of a life, as a game begins (main.c: 2026-11-04)
-            SWPART      22, 10              ;   and its dungeon's folder found
+            SWPART      21, 20              ; The record of a life, as a game begins (main.c: 2026-11-04)
+            SWPART      22, 20              ;   and its dungeon's folder found
 
             SWFN        errand, 20
             SWFN        trade, 15

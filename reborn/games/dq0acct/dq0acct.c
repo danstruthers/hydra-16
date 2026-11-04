@@ -189,7 +189,7 @@ void __fastcall__ ask (char* b, unsigned char n)
     word_out ();
     out_flush ();
     b[0] = 0;
-    if (!askit) {
+    if (askit) {
         write (1, " > ", 3);
         if ((k = read (0, b, n - 1)) > 0) {
             b[k] = 0;
@@ -288,14 +288,14 @@ static unsigned char __fastcall__ in_hand (const struct kitrec* r)
     return r->o.place == PL_HAND || r->o.place == PL_OFF || r->o.place == PL_BOTH;
 }
 
-/* Spare: never what's named, its armour, what's worn, what's in its hand, what's used up (it'd buy it back), a key, nor what holds
-** anything; its weapon if none's in its hand */
+/* Spare: never what's named, its armour, what's worn, what's in its hand, what's used up (it'd buy it back), a key, what it lights
+** its light with, nor what holds anything; its weapon if none's in its hand */
 static unsigned char __fastcall__ spare (unsigned char i)
 {
     const struct kitrec* r = &K[i];
     const struct kind* k = &CAT[r->o.kind];
 
-    return !gone[i] && !is_coin (r) && !used_up (r->o.kind) && r->o.kind != KI_WATER && r->o.kind != KI_KEY && k->value &&
+    return !gone[i] && !is_coin (r) && !used_up (r->o.kind) && r->o.kind != KI_WATER && r->o.kind != KI_KEY && r->o.kind != KI_TINDERBOX && k->value &&
         r->o.place != PL_WORN && !in_hand (r) && k->craft != AP_ARMOUR && !is_named (r->id) && i != kept_blade && !holds (i);
 }
 
@@ -987,13 +987,13 @@ static void last_lines (void)
 
     say ("You have ");
     coins_say (0);
-    for (k = 0; k < kn; ++k) {
-        any |= !gone[k] && is_coin (&K[k]);
+    for (k = 0; k < kn; ++k) {                  /* (Told if it comes to anything: a pile of three or fewer pays nothing) */
+        any |= !gone[k] && is_coin (&K[k]) && K[k].o.qty > 3;
     }
     if (any) {
-        say (", ");
+        say (" (");
         coins_say (1);
-        say (" once it's changed for the next place's coin");
+        say (" once it's changed for the next place's coin)");
     }
     say (". It is ");
     say_date (d);
@@ -1006,6 +1006,7 @@ static void dead_lines (void)
 {
     unsigned long d = L.h.date + passed;
 
+    say ("\n");
     say_days ();
     say (". ");
     first_lines ();
@@ -1025,6 +1026,8 @@ static unsigned char __fastcall__ lull (void)
 
     return r <= 50 ? die (7) : r <= 80 ? 14 + random (8) : r <= 95 ? 30 + random (31) : 90 + random (91);
 }
+
+static struct hy_regs regs;
 
 int main (int argc, char* argv[])
 {
@@ -1048,11 +1051,12 @@ int main (int argc, char* argv[])
         fail ("no record of the life");
     }
     close (fd);
-    if ((fd = open ("/env/dq0auto", O_RDONLY)) >= 0) {
-        close (fd);
-    } else {
-        askit = 1;
-    }
+    regs.a = 0xFF;                              /* (The rc variable dq0auto, the tests': ENV_GET itself, getenv's room) */
+    regs.r[0] = (unsigned) "dq0auto";
+    regs.r[1] = (unsigned) path;
+    regs.r[2] = 8;
+    regs.r[3] = 0;
+    askit = hy_call (HY_ENV_GET, &regs) != 0;
     console_width ();
     if ((b = hy_banks_alloc (4)) < 0) {
         fail ("no banks");
@@ -1143,6 +1147,7 @@ int main (int argc, char* argv[])
     pc.state = HARN_CONSCIOUS;
     cash_lay ();
     /* It's told */
+    say ("\n");
     say_days ();
     say (". ");
     first_lines ();

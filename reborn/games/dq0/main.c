@@ -539,7 +539,7 @@ void s_save_game (void)
 {
     struct req* r;
     struct mreq* q;
-    int fd, k0, n;
+    int fd;
 
     if (!savedir) {
         return;
@@ -572,16 +572,6 @@ void s_save_game (void)
         write (fd, &sv, sizeof sv);
         names_keep (fd, 0);                     /* (The names given: the theme bank's) */
         alias_keep (fd, 0);                     /* (The shortcuts: the theme bank's too) */
-        close (fd);
-    }
-    if ((fd = open (save_at ("../kit0.dat"), O_RDONLY)) >= 0) {
-        close (fd);                             /* (What the life set out with kept already: dq0acct's to restock by) */
-    } else if ((fd = open (save_at ("../kit.dat"), O_RDONLY)) >= 0) {
-        k0 = open (save_at ("../kit0.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644);
-        while (k0 >= 0 && (n = read (fd, lb, 256)) > 0) {
-            write (k0, lb, n);
-        }
-        close (k0);
         close (fd);
     }
 }

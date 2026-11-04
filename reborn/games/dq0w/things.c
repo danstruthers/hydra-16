@@ -3921,20 +3921,15 @@ static void __fastcall__ kit_put (unsigned i, unsigned char in)
     ++kn;
 }
 
-static void kit_keep (void)
+static void kit_file (void)
 {
     static unsigned i;
     static unsigned char k;
 
+    if (kfd < 0) {
+        return;
+    }
     hub_map (0);
-    if (!HUB->savedir[0]) {
-        return;
-    }
-    strcpy (kp, HUB->savedir);
-    strcat (kp, "/../kit.dat");                 /* (The save's, above the dungeon's folder: life.h's) */
-    if ((kfd = open (kp, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
-        return;
-    }
     kmh = HUB->pcsum.limbs & LB_LEFT ? IH_LEFT : IH_RIGHT;
     kn = kqn = 0;
     for (i = 0; (i = items (i, IN_X | IN_ACTOR, 0)) != 0; ) {
@@ -3946,6 +3941,26 @@ static void kit_keep (void)
         }
     }
     close (kfd);
+}
+
+/* kit.dat; and kit0.dat if it's not there, the first kept of a life: what it set out with, dq0acct's to restock by (a new life's removed it) */
+static void kit_keep (void)
+{
+    hub_map (0);
+    if (!HUB->savedir[0]) {
+        return;
+    }
+    strcpy (kp, HUB->savedir);
+    strcat (kp, "/../kit.dat");                 /* (The save's, above the dungeon's folder: life.h's) */
+    kfd = open (kp, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    kit_file ();
+    strcpy (strchr (kp, 0) - 4, "0.dat");
+    if ((kfd = open (kp, O_RDONLY)) >= 0) {
+        close (kfd);
+    } else {
+        kfd = open (kp, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        kit_file ();
+    }
 }
 
 #pragma static-locals (pop)
