@@ -25,7 +25,7 @@ SWDEPTH     = 12                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
-OVBANKS     = 27                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
+OVBANKS     = 28                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
             .bss
 _ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
@@ -127,7 +127,7 @@ go:
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
             SWPART      37, 2              ; The rest of the UI's intents carried out (dq0w.c's intent_more)
             SWPART      38, 26              ; A change record kept and made (store.c's store_put, change)
-            SWPART      39, 14              ; A thing looked at (things.c: 2026-10-22)
+            SWPART      39, 28              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
             SWPART      41, 11              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
             SWPART      42, 21              ; What a closer look at a thing shows; its condition (things.c)
@@ -189,6 +189,7 @@ go:
             SWPART      91, 3               ; A denizen's weapon let fall, or broken (wlimbs.c: 2026-11-03)
             SWPART      92, 5               ; A request of the things served (things.c: part 10's till 2026-11-03)
             SWPART      93, 19              ; An arrival (dq0w.c: the main RAM's till 2026-11-03)
+            SWPART      94, 28              ; Hiding oneself (dq0w.c: 2026-11-04)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -274,6 +275,7 @@ go:
             SWFN        step_to, 47
             SWFN        arrive_a, 93
             SWFN        arrive_b, 93
+            SWFN        hid_op, 94
             SWFN        named, 10
             SWFN        on_pc, 10
             SWFN        light_now, 92

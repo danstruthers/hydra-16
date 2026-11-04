@@ -5814,6 +5814,110 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0hide', meaning: true, near: ['senses'], what: 'Dingus Quest Zero\'s hiding oneself (A12: HOUSE.md\'s hiding oneself; the book\'s Stealth, Skills 9), the character\'s side, by the hub and its words: with a light on it, refused, no time; a lit torch laid down, no cover, refused; in the dark, begun with its words at once, the time its ten seconds, hidden then and crouched, said by "status", its first words before it\'s done; a look, a listen, a wait, an inventory don\'t end it; a creep keeps it, a walk ends it; a thing handled ends it; standing up ends it; "stop hiding" ends it; a hide stopped as it\'s begun isn\'t hidden; a cask, a heap of straw named and walked to, behind it in the light, its steps the cover\'s; lit afterwards ends it; kept with the game',
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g',
+        "dq0 -p t -s 7 -c /ram/c.hm -T -d /ram/g -k 'heap of straw'", 'hide', 'drop the torch', 'hide', 'drop the straw', 'hide', 'status', 'look', 'hide', 'stand', 'take the torch', 'douse the torch', 'hide', 'look', 'listen', 'wait', 'i', 'search', 'creep', 'step forward', 'step back', 'walk', 'step forward', 'hide',
+        'stop hiding', 'hide', 'drop the dagger', 'hide', 'stand', 'hide', 'status', 'quit', 'dq0 -d /ram/g', 'status', 'quit', "dq0 -p t -s 7 -c /ram/c.hm -T -k cask", 'drop the torch', 'drop the cask', 'hide', 'creep', 'step forward', 'step forward', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), hid = t => t && t.after ? t.after.pc.hid : -1, pos = t => t.after ? t.after.pc.pos : -1, now = t => t.after ? t.after.now : 0;
+        const h0 = T.of('hide');
+        if (hid(h0) !== 0) f.push('hidden with a light on it');
+        if (!/Not with a light on you/.test(s)) f.push('with a light: not told why');
+        const h1 = T.after(T.of('drop the torch'), 'hide');
+        if (hid(h1) !== 0) f.push('hidden on a lit square, no cover');
+        if (!/nothing here to hide behind/.test(s)) f.push('no cover, lit: not told why');
+        const h2 = T.after(T.of('drop the straw'), 'hide');
+        if (hid(h2) !== 3) f.push('in a heap, lit: its hiding ' + hid(h2) + ', not 3 (2 steps)');
+        if (!/You set to hiding/.test(s)) f.push('its first words not told');
+        if (!/You get down into the straw, out of sight/.test(s)) f.push('in the heap: not told');
+        if (pos(h2) !== 2) f.push('hidden, not crouched: ' + pos(h2));
+        if (!/You are hidden/.test(s)) f.push('status: not told it\'s hidden');
+        if (hid(T.after(h2, 'look')) !== 3) f.push('a look ended it');
+        if (!/You're hidden already/.test(s)) f.push('hidden already: not told');
+        const st = T.after(h2, 'stand');
+        if (hid(st) !== 0) f.push('standing up: still hidden');
+        const dk = T.after(st, 'douse the torch'), h3 = T.after(dk, 'hide');
+        if (hid(h3) !== 5) f.push('in the heap in the dark: its hiding ' + hid(h3) + ', not 5 (2 + 2 steps)');
+        for (const l of ['look', 'listen', 'wait', 'i', 'search']) if (hid(T.after(h3, l)) !== 5) f.push('"' + l + '" ended it');
+        const cr = T.after(T.after(h3, 'creep'), 'step forward');
+        if (hid(cr) !== 3) f.push('crept on in the dark: its hiding ' + hid(cr) + ', not 3');
+        const wk = T.after(T.after(cr, 'walk'), 'step forward');
+        if (hid(wk) !== 0) f.push('a walk: still hidden');
+        const h4 = T.after(wk, 'hide'), sp = T.after(h4, 'stop hiding');
+        if (hid(h4) !== 3) f.push('in the dark alone: its hiding ' + hid(h4) + ', not 3');
+        if (!/You keep still in the dark, out of sight/.test(s)) f.push('in the dark: not told');
+        if (hid(sp) !== 0) f.push('stop hiding: still hidden');
+        const h5 = T.after(sp, 'hide'), dr = T.after(h5, 'drop the dagger');
+        if (hid(h5) === 0) f.push('hide 5: not hidden');
+        if (hid(dr) !== 0) f.push('a thing handled: still hidden');
+        if (!/You come out of hiding/.test(s)) f.push('out of hiding: not told');
+        const h6 = T.after(dr, 'hide');
+        if (hid(h6) === 0) f.push('hide 6: not hidden');
+        const h7 = T.after(T.after(h6, 'stand'), 'hide'), g3 = T.after(T.after(h7, 'status'), 'status');
+        if (!hid(h7) || hid(g3) !== hid(h7)) f.push('kept with the game: hidden ' + hid(h7) + ', then ' + hid(g3));
+        const h8 = T.after(T.of('drop the cask'), 'hide');
+        if (hid(h8) !== 3) f.push('behind a cask, lit: its hiding ' + hid(h8) + ', not 3');
+        if (!/You crouch behind the cask, out of sight/.test(s)) f.push('behind the cask: not told');
+        const c1 = T.after(T.after(h8, 'creep'), 'step forward'), c2 = T.after(c1, 'step forward');
+        if (hid(c1) !== 3) f.push('crept to beside the cask: its hiding ' + hid(c1) + ', not 3');
+        if (hid(c2) !== 0) f.push('crept out into the light: still hidden');
+        if (!/There's no cover here/.test(s)) f.push('crept into the open: not told');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0hidelook', near: ['senses', 'denizens'], what: 'Dingus Quest Zero\'s hiding oneself, the denizens\' looks (A12: HOUSE.md\'s; the book\'s Stealth, its EML by the distance and the cover, any failure detection, a marginal failure the observer\'s Awareness), by the denizens\' slot\'s replies and the hub: a lair of hostile bandits (dq0kit\'s theme) about, the character hidden in a doorway-less dark behind a cask, one bandit put in its line three squares off: its look tests the character\'s Stealth (the denizens\' slot, actor 0, P_STEALTH) at the cover\'s steps, near harder; good at it (Stealth 95): not found, the bandit doesn\'t come at it or engage it; bad at it (Stealth 5): found, told ("has seen you"), the character no longer hidden; a blow from hiding at a bandit unaware (RS_ATTACK\'s w2 RS_ASLEEP, the book\'s Ignore), out of hiding, told; a watched character can\'t hide (the bandit\'s watching it); a denizen hidden isn\'t among those seen, and it leaps out with a blow from hiding as the character stands beside it (its w2 RS_ASLEEP; told)',
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'cp /ram/c.hm /ram/d.hm', 'echo ml stl 95 >> /ram/c.hm', 'echo ml stl 5 >> /ram/d.hm', 'mkdir /ram/g', 'mkdir /ram/h', 'mkdir /ram/i', 'mkdir /ram/j',
+        'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt', 'cp /ram/g/theme.txt /ram/i/theme.txt', 'cp /ram/g/theme.txt /ram/j/theme.txt',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'cask'", 'drop the cask', 'drop the torch', 'hide', 'wait 1 minute', 'wait 1 minute', 'status', 'quit',
+        "dq0 -p t -s 1 -c /ram/d.hm -T -d /ram/h -k 'cask'", 'drop the cask', 'drop the torch', 'hide', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'status', 'quit',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/i -k 'cask,sword'", 'drop the cask', 'drop the torch', 'hold the sword', 'hide', 'attack', 'status', 'quit',
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/j", 'look', 'wait 1 minute', 'look', 'status', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        // (A bandit put where the scene wants it, a square or three off the way the character faces, unaware; its doing poked)
+        const put = (d, dist, extra = {}) => (h, L, K, at, named) => {
+          const k = [...Array(L.nactors).keys()].find(j => h[at(j) + L.aState] && named(j) === 'bandit');
+          if (k === undefined) return;
+          const w16 = (o, v) => { h[o] = v & 255; h[o + 1] = v >> 8 & 255; }, u16 = o => h[o] | h[o + 1] << 8, DX = [0, 1, 1, 1, 0, -1, -1, -1], DY = [-1, -1, 0, 1, 1, 1, 0, -1];
+          const fc = h[L.pcFace] & 7;
+          w16(at(k) + L.aX, u16(L.pcX) + DX[fc] * dist);
+          w16(at(k) + L.aY, u16(L.pcY) + DY[fc] * dist);
+          h[at(k) + L.aDoing] = extra.doing || 0;
+          h[L.hlook + k] = 0;                  // (A fresh look)
+          if (extra.attitude !== undefined) h[at(k) + L.aAttitude] = extra.attitude;
+          if (extra.state) h[at(k) + L.aState] = extra.state;
+        };
+        dq0Poke(m, [{ g: 1, line: 'wait 1 minute', n: 1, call: put(0, 2) }, ...[1, 2, 3, 4, 5, 6].map(n => ({ g: 2, line: 'wait', n, call: put(0, n & 1 ? 1 : 2) })), ...[0, 1, 2, 3, 4, 5].map(k => ({ g: 3, line: 'drop the cask', n: 1, k, set: { attitude: 2 } })), { g: 3, line: 'attack', n: 1, call: put(0, 1, { attitude: 0 }) }, { g: 4, line: 'wait 1 minute', n: 1, call: put(0, 1, { state: 3 }) }]);
+      },
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), STEALTH = 4, RS_TEST = 4, RS_ATTACK = 7;
+        const hid = t => t && t.after ? t.after.pc.hid : -1, gs = T.filter(t => /^dq0 -p t/.test(t.line));
+        const from = n => gs[n] ? gs[n].k : 0, tests = (a, b) => T.filter(t => t.k >= a && t.k < b).flatMap(t => dq0Rep(t, 'dslot', { kind: RS_TEST, a: STEALTH, actor: 0 }));
+        const t0 = tests(from(0), from(1)), t1 = tests(from(1), from(2));
+        if (!t0.length) f.push('Stealth 95: its look tested no Stealth');
+        if (t0.length > 3) f.push('Stealth 95: ' + t0.length + ' tests, not one a nearness');
+        if (hid(T.of('status', from(0))) === 0) f.push('Stealth 95: found');
+        if (!t1.length) f.push('Stealth 5: its look tested no Stealth');
+        if (hid(T.of('status', from(1))) !== 0) f.push('Stealth 5: not found');
+        if (!/has seen you/.test(s)) f.push('found: not told');
+        const at = T.of('attack', from(2));
+        if (hid(at) !== 0) f.push('a blow from hiding: still hidden');
+        if (!dq0Rep(at, 'slot0', { kind: RS_ATTACK, w2: v => v & 0x80 }).length) f.push('a blow from hiding: not the book\'s Ignore (RS_ASLEEP)');
+        if (!/You strike from hiding/.test(s)) f.push('a blow from hiding: not told');
+        const lk = T.of('look', from(3)), l2 = T.after(lk, 'look');
+        const wt = T.after(lk, 'wait 1 minute');
+        if (!dq0Rep(wt, 'slot0', { kind: RS_ATTACK, w2: v => v & 0x80 }).length) f.push('a blow from hiding at the character: not the book\'s Ignore (RS_ASLEEP)');
+        if (!/leaps out of hiding/.test(s)) f.push('one hidden beside it: no blow from hiding told');
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0stay', meaning: true, what: 'Dingus Quest Zero\'s scents strengthened by passing and by staying (the user\'s, 2026-10-22: "repeated passage or occupancy should enhance prior smells"; HOUSE.md\'s light and traces, DUNGEON.md\'s a stay counts as passings), by the world\'s reply (the UI bank\'s tread), its words and the traces\' journal: at seed 3 the giant rats\' lair by the way down where the character starts, its keepers\' scent journalled where they live as it\'s placed (each rat a passing at its home square, with the most stays: the denizens\' ring), sniffed at once and heavy ("A musky smell hangs heavy here: giant rats, by the smell of it.": its strength 6, TR_HEAVY); the rats standing about as the character waits 50 minutes a step off, their stays journalled where each stood (I_TROD\'s TS_STAY, a TQ each); and the character\'s own stay there, its torch lit: once it\'s stepped back (and looked for tracks: the journal taken in as its torch burns, the store\'s smoke a torch\'s) and put its torch out, its smoke still smelt three hours on (faint), where a passing\'s is gone by then (dq0traces)',
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml awa 80 >> /ram/c.hm',

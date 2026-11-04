@@ -119,6 +119,11 @@ void hour (void);
 void enlist_near (void);                        /* Part 11 (the main RAM's room, 2026-10-31) */
 unsigned char __fastcall__ plan (unsigned char k);   /* Part 9's: an actor's day and its place (leisure's, 2026-10-31) */
 void __fastcall__ roused (unsigned char k, unsigned char was);   /* Part 10's: a pastime let go */
+unsigned char __fastcall__ hid_mind (unsigned char k);   /* Part 20: hiding oneself (HM_*: HOUSE.md's) */
+#define HM_LOOK         0x00                    /* (hid_mind's k |: senses', a look at the character hidden: is it sensed; */
+#define HM_LURK         0x40                    /*   decide's, one hidden, what it does; */
+#define HM_AMBUSH       0x80                    /*   one sensing the character, whether it lies in wait instead) */
+#define LURK_T          1200                    /* (Tenths: how long it lies in wait, two minutes) */
 unsigned char __fastcall__ dig_way (unsigned char k);   /* Part 12 (the tunnellers', slice 4.11's) */
 unsigned char __fastcall__ work_dig (unsigned char k);  /* Part 15 (their work's digs, the builders', slice 4.11's rest) */
 unsigned char nearby (void);                    /* Part 13: the lairs near placed (the main RAM's room, 2026-11-01) */
@@ -927,6 +932,7 @@ unsigned char __fastcall__ shoots (unsigned char k, unsigned char ag);   /* (Par
 static unsigned char shat[NACTORS];             /* (Where the character was as each last shot, or meant to: AG_NOSHOT's
                                                 **   worth while it's there still, slice 4.7's) */
 static unsigned wt;                             /* (The wait an actor's decided on, tenths) */
+static unsigned char dnow;                      /* (What it's decided on: roused's) */
 static unsigned dsx, dsy;                       /* (The square a cornered one darts to) */
 
 /* ---- The referee, asked in this task's own slot (DSLOT, in the hub's header): the request (rq, in the main RAM:
@@ -1350,6 +1356,9 @@ static unsigned char __fastcall__ senses (unsigned char k)
     HUB->dsense.state = REQ_FREE;
     if (!loud) {
         slk[k] = HUB->dsense.slack;
+        if (HUB->pc_hid) {
+            return hid_mind (k);                /* (The character hidden: its look tested, part 20's) */
+        }
     }
     return (HUB->dsense.res & (SN_SEEN | SN_HEARD | SN_SMELT)) != 0;
 }
@@ -2029,7 +2038,9 @@ static unsigned char __fastcall__ decide (unsigned char k)
             robs (k);                           /* (Part 8's, 2026-11-02: the main RAM's room) */
         }
     }
-    if (fled[k]) {
+    if (a.state > 1) {
+        d = hid_mind (k | HM_LURK);             /* (Hidden: still, or a blow from hiding, or out: part 20's) */
+    } else if (fled[k]) {
         --fled[k];
         a.doing = DO_FLEE;                      /* (Fleeing: away; cornered beside the character, it fights, unless
                                                 **   it's helpless) */
@@ -2044,6 +2055,9 @@ static unsigned char __fastcall__ decide (unsigned char k)
                                                 **   only of one with a launcher, the part's copy the dearer) */
     } else if ((d = keep_off (k)) != 0xFF) {
         a.doing = sres[k] ? DO_WATCH : DO_ROAM;
+    } else if (sres[k] && DO_UNAWARE (was) && (K_HELP (K) & H_ROBS) && hid_mind (k | HM_AMBUSH)) {
+        d = 0xFE;                               /* (A robber that's heard it coming lies in wait: part 20's) */
+        wt = 10;
     } else if (a.attitude == AT_ALLIED) {
         d = ally (k);
     } else if (sres[k]) {
@@ -2103,8 +2117,9 @@ static unsigned char __fastcall__ decide (unsigned char k)
     } else if (!stalk[k]) {
         stalk[k] = stalks (k);
     }
-    if (was >= DO_LEISURE && ((unsigned char) (a.doing - DO_WATCH) < DO_DOWN - DO_WATCH || d == 0xFC || d == 0xFA)) {
-        roused (k, was);                        /* (Its pastime let go as it rises to act, told: part 10's) */
+    if (was >= DO_LEISURE) {
+        dnow = d;
+        roused (k, was);                        /* (Its pastime let go if it rises to act, told: part 10's) */
     }
     if (d < 8 || d == 0xFB) {                   /* (A step, now and then a noise of its own; its kind with no
                                                 **   darkvision, feeling its way in the dark: the world's, STEP_FEELS;
@@ -3279,6 +3294,117 @@ unsigned char __fastcall__ s_stalks (unsigned char k)
     return (signed char) rq.grade > 0 ? 1 : rq.grade == G_MF ? 2 : 3;
 }
 
+/* ---- Hiding oneself (A12, 2026-11-04: HOUSE.md's hiding oneself; the book's Stealth, Skills 9), a look at one hidden
+** by every actor's one test, part 20's.  A test of the hider's Stealth (the referee's, on the minds' own dice, a
+** creature's by its sheet) at its cover's steps and how near the looker is; a success
+** hides it; a critical failure's found; a marginal failure tests the looker's Awareness (the book's) */
+#pragma code-name (push, "SW20CODE")
+#pragma rodata-name (push, "SW20RODATA")
+#pragma static-locals (push, off)
+
+static unsigned char __fastcall__ h_found (unsigned char hider, unsigned char looker, unsigned char hid, unsigned char lv)
+{
+    rq.a = P_STEALTH;
+    rq.b = 0;
+    rq.steps = (signed char) (hid - 1 + 4 - 2 * lv);    /* (Its cover's steps; far off 2 easier, near 2 harder, beside it 4) */
+    ask (RS_TEST, hider, RS_ASKER);             /* (Each look its own die) */
+    if (rq.grade != G_MF) {
+        return rq.grade == G_CF;
+    }
+    rq.a = P_NOTICE_SIGHT;
+    rq.steps = 0;
+    ask (RS_TEST, looker, looker ? RS_ASKER : 0);
+    return G_OK (rq.grade);
+}
+
+/* How near: 4 beside it, 3 within three squares, 2 within seven, 1 further */
+static unsigned char __fastcall__ h_near (unsigned d)
+{
+    return d <= 1 ? 4 : d <= 3 ? 3 : d <= 7 ? 2 : 1;
+}
+
+unsigned char __fastcall__ s_hid_mind (unsigned char k)
+{
+    unsigned char op = k & 0xC0, res, lv, g;
+    unsigned char* p;
+
+    k &= 7;
+    hub_map (0);
+    if (op == HM_LOOK) {                        /* (The senses' answer in hand, the character hidden: sensed, or not) */
+        res = HUB->dsense.res;
+        if (a.attitude == AT_ALLIED) {
+            return (res & (SN_LOOK | SN_SEEN | SN_HEARD | SN_SMELT)) != 0;      /* (An ally knows where it is) */
+        }
+        if (!(res & SN_LOOK)) {
+            HUB->hlook[k] = 0;                  /* (Out of its sight: a fresh look, next) */
+        } else if ((lv = h_near (dist)) > HUB->hlook[k]) {
+            HUB->hlook[k] = lv;                 /* (Once each nearer: not every step of its) */
+            g = HUB->pc_hid + (DO_UNAWARE (HUB->actor[k].doing) ? 2 : 0);    /* (About its business, 2 easier) */
+            if (h_found (0, k + 1, g, lv)) {
+                im.w1 = POS_HIDE | HD_FOUND;
+                act (I_RISE, k);
+                return 1;
+            }
+            hub_map (0);
+        }
+        if (res & SN_HEARD) {                   /* (Heard: drawn to the place; not found) */
+            lsx[k] = pcx;
+            lsy[k] = pcy;
+            drawn[k] = DRAWN_N;
+        }
+        return (res & SN_SMELT) != 0;           /* (A nose isn't fooled) */
+    }
+    if (op == HM_AMBUSH) {                      /* (A robber, just come to sense it, no eye on it: under cover, or in the
+                                                **   dark, lies in wait, unseen; the world's to say if it can) */
+        if (!DO_UNAWARE (HUB->actor[k].doing) || a.attitude != AT_HOSTILE || dist < 3 || (HUB->agear[k] & AG_SHOOTS) ||
+            !(p = at (a.sn, a.x, a.y)) || (*p & T_VIS)) {
+            return 0;
+        }
+        senses (k);                             /* (Is it lit where it stands) */
+        hub_map (0);
+        im.w1 = POS_HIDE | HD_IN;
+        im.a = (HUB->dsense.res & SN_LIT) != 0;
+        a.doing = DO_WATCH;                     /* (Tried once: no cover, it comes on as it would) */
+        alert[k] = now + LURK_T;
+        act (I_RISE, k);
+        return 1;
+    }
+    /* Hidden: it strikes one beside it; gives it up after a while, or as it's no foe, or seen to; the character's
+    ** look at it the same test as anyone's, as the character sees its square */
+    if (!alert[k]) {
+        alert[k] = now + LURK_T;                /* (A game carried on: from now) */
+    }
+    if (a.attitude != AT_HOSTILE || now > alert[k] || pcdead) {
+        im.w1 = POS_HIDE | HD_OUT;
+        act (I_RISE, k);
+        return 0xFF;
+    }
+    if (sres[k] && dist == 1) {
+        a.face = bearing (ddx, ddy);
+        return 0xFC;                            /* (A blow from hiding: the world's, the book's Ignore) */
+    }
+    p = at (a.sn, a.x, a.y);
+    if (p && (*p & T_VIS)) {
+        hub_map (0);
+        if ((lv = h_near (dist)) > HUB->hlook[k]) {
+            HUB->hlook[k] = lv;
+            if (h_found (k + 1, 0, ST_HID (a.state), lv)) {
+                im.w1 = POS_HIDE | HD_SPOT;
+                act (I_RISE, k);
+                return 0xFF;
+            }
+        }
+    } else {
+        hub_map (0);
+        HUB->hlook[k] = 0;
+    }
+    wt = 10;
+    return 0xFE;
+}
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
 /* Actor k (the copy a), hostile, drawn on to where it last sensed the character (decide's: heard it, seen it, smelt
 ** it, and lost it), a while (DRAWN_N decisions): its step that way, or 0xFF (there, or no way nearer) */
 unsigned char __fastcall__ s_draw_on (unsigned char k)
@@ -4012,6 +4138,12 @@ void s_sway (void)
         kind_get (akind[k]);
         sw.beast = K.mind == M_BEAST;
         sw.actor = k + 1;
+        if (sw.kind != SW_LOOK && HUB->pc_hid) {
+            im.w1 = POS_HIDE | HD_FOUND;        /* (Words to one: it knows where it is, HOUSE.md's hiding oneself) */
+            im.x[0] = q->doing;
+            im.x[1] = q->face;
+            post (I_RISE, k + 1);
+        }
         switch (q->doing == DO_DOWN && sw.kind ? 0xFF : sw.kind) {
         case 0xFF:
             sw.result = SR_DOWN;                /* (Senseless: it hears nothing, it takes no request, till it comes
@@ -4074,6 +4206,7 @@ int __fastcall__ s_start (const char* dir)
     unsigned char f, k;
     int fd;
 
+    rseed (HUB->seed ^ 0x2B7E1516UL ^ (unsigned long) HUB->dice << 16);          /* (The minds' dice, their own: grow's) */
     if (kinds_load (dir)) {
         return -1;
     }
@@ -4137,7 +4270,7 @@ static unsigned char __fastcall__ num (const char* s)
 int main (int argc, char* argv[])
 {
     static unsigned lpx, lpy;
-    static unsigned char lpl, lpn;
+    static unsigned char lpl, lpn, ln;
     static unsigned long done_at;
     static unsigned char gone, g, act;
     unsigned char* p;
@@ -4149,7 +4282,6 @@ int main (int argc, char* argv[])
     }
     kb = b;
     pb = b + 1;
-    rseed (HUB->seed ^ 0x2B7E1516UL ^ (unsigned long) HUB->dice << 16);          /* (The minds' dice, their own: grow's) */
     if (start (argv[3])) {
         return 1;
     }
@@ -4218,14 +4350,15 @@ int main (int argc, char* argv[])
                 pcstay = TR_MORE ((unsigned char) (nowq - pcq + 1));
             }
         }
-        if (act && (pcx != lpx || pcy != lpy || (pclit | pcstay << 1 | (HUB->pc_going != 0) << 3 | (HUB->pc_task.kind == LT_SLEEP) << 4) != lpl ||
+        ln = pclit | pcstay << 1 | (HUB->pc_going != 0) << 3 | (HUB->pc_task.kind == LT_SLEEP) << 4 | (HUB->pc_hid != 0) << 5;
+        if (act && (pcx != lpx || pcy != lpy || ln != lpl ||
             (HUB->pc_going && HUB->pc_noise != lpn))) {   /* (Moving or not, and how loud: what the senses hear of
                                                 **   it, asleep the quieter, slice 4.5's; not its being busy, a turn's, a word's: its
                                                 **   senses' answer the same, the senses not asked again) */
             lpx = pcx;                          /* (The character changed: each actor senses it again; its stay's
                                                 **   scent too) */
             lpy = pcy;
-            lpl = pclit | pcstay << 1 | (HUB->pc_going != 0) << 3 | (HUB->pc_task.kind == LT_SLEEP) << 4;
+            lpl = ln;
             lpn = HUB->pc_noise;
             if (!++sense_gen) {
                 sense_gen = 1;
@@ -5795,6 +5928,9 @@ unsigned char __fastcall__ s_daily (unsigned char k)
 ** (the UI's; heard, nothing), as a rally's */
 void __fastcall__ s_roused (unsigned char k, unsigned char was)
 {
+    if ((unsigned char) (a.doing - DO_WATCH) >= DO_DOWN - DO_WATCH && dnow != 0xFC && dnow != 0xFA) {
+        return;
+    }
     im.x[0] = im.x[1] = 0xFF;
     im.w1 = a.x;
     im.w2 = a.y;

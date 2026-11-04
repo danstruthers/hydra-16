@@ -740,6 +740,10 @@ void o_facing_words (void)
     if (pw[f & 7][0]) {
         sayf ("\nPosition: %s.", pw[f & 7]);
     }
+    hub_mem (0, &f, &HUB->pc_hid, 1);
+    if (f) {
+        say ("\nYou are hidden.");
+    }
     hub_mem (0, &f, &HUB->pc_wet, 1);
     hub_mem (0, b, &HUB->pc_swim, 1);
     hub_mem (0, b + 1, &HUB->pc_under, 1);

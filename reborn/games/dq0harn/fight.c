@@ -332,8 +332,8 @@ static unsigned char defence (void)
 {
     unsigned char k = (D.who - 1) & 7;
 
-    if (D.c->state != HARN_CONSCIOUS || (!D.who && pc_out > tnow) || (D.who && (prones & RS_ASLEEP))) {
-        return HARN_IGNORE;                     /* (Senseless, in shock, or asleep: the book's Ignore) */
+    if (D.c->state != HARN_CONSCIOUS || (!D.who && pc_out > tnow) || (prones & RS_ASLEEP)) {
+        return HARN_IGNORE;                     /* (Senseless, in shock, asleep, or not seeing it coming: the book's Ignore) */
     }
     if (D.who) {
         if (D.dslot && D.dml >= D.aml && D.dml >= D.dodge && tnow >= dbt[k]) {
@@ -584,7 +584,7 @@ static void tested (void)
     const struct bkind* b = unpack (R->actor);
 
     R->grade = cr.state != HARN_CONSCIOUS ? G_CF : grade (harn_test ((R->a == P_INITIATIVE ? b->ini :
-        5 * cr.att[R->a == P_STEALTH ? HARN_AGL : R->a == P_DIG ? HARN_STR : HARN_DEX]) - 5 * harn_get_pp (&cr) +
+        5 * cr.att[R->a == P_STEALTH ? HARN_AGL : R->a == P_NOTICE_SIGHT ? HARN_EYE : R->a == P_DIG ? HARN_STR : HARN_DEX]) - 5 * harn_get_pp (&cr) +
         STEP_PCT * (signed char) R->steps));
 }
 

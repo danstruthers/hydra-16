@@ -391,7 +391,7 @@ static void load_pc (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    37                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    38                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -1327,15 +1327,56 @@ void __fastcall__ s_news (const struct msg* m)
 
 
 /* A thing hidden where the character stands (P_CONCEAL: the referee's test, the things' record), worded by how
-** well (its difficulty, in steps); part 10's, the search's (part 11's room, part 2's before it) */
+** well (its difficulty, in steps); part 10's, the search's (part 11's room, part 2's before it).  No thing said, the
+** character itself (HOUSE.md's hiding oneself: the world's I_RISE, POS_HIDE): behind or in a thing said, one within
+** reach, walked over to first; in the shadows, a doorway, the world's to say.  And its words as they're told
+** (pose_words', E_BEAT WB_POSED's HW_WORDS: w no string, its address past the RAM) */
 #pragma code-name (push, "SW10CODE")
 #pragma rodata-name (push, "SW10RODATA")
+static const char hw_said[] =               /* (By HW_*, one after another: a table's strings would be the main RAM's) */
+    "\nYou crouch behind the %s, out of sight.\0" "\nYou get down into the %s, out of sight.\0"
+    "\nYou press yourself into the doorway, out of sight.\0" "\nYou crouch among the rubble, out of sight.\0"
+    "\nYou keep still in the dark, out of sight.\0" "\nYou come out of hiding.\0"
+    "\nThere's no cover here: you're hiding no longer.\0" "\n%s has seen you!\0" "\nYou spot %s, hiding.\0"
+    "\n%s leaps out of hiding!\0" "\nYou strike from hiding.\0" "\nYou're hidden already.\0"
+    "\nNot with a light on you: it gives you away.\0" "\n%s is watching you: you can't hide from it now.\0"
+    "\nThere's nothing here to hide behind, and the light's too good.";
 void __fastcall__ s_hide (const char* w)
 {
-    unsigned char d;
+    unsigned char d, n;
+    char t[16], tn[20];
+    const char* s;
 
+    if ((unsigned) w >= HW_WORDS) {
+        d = (unsigned) w >> 8 & 0x3F;
+        for (s = hw_said, n = d; n; --n) {
+            s += strlen (s) + 1;
+        }
+        hub_mem (0, &n, &HUB->pc_hw, 1);
+        if (d <= HW_HEAP) {
+            hub_mem (KIND_BANK, t, CATALOGUE[n].name, sizeof CATALOGUE[0].name);
+            t[sizeof CATALOGUE[0].name] = 0;
+            sayf (s, strstr (t, " of ") ? strstr (t, " of ") + 4 : t);
+        } else if (d == HW_FOUND || d == HW_SPOT || d == HW_LEAP || d == HW_SEEN) {
+            hub_mem (0, t, HUB->actor[(n - 1) & 7].name, 12);
+            t[12] = 0;
+            strcpy (tn, t[0] >= 'A' && t[0] <= 'Z' ? "" : d == HW_SPOT ? "a " : "The ");
+            strcat (tn, t);
+            sayf (s, tn);
+        } else {
+            sayf (s, "");
+        }
+        return;
+    }
     if (!*w) {
-        tell (T_HIDE_WHAT_HIDING);
+        w = cmd.other.word;                     /* (Behind the table, in the straw) */
+        if (*w && !strstr ("shadow shadows dark darkness doorway door corner", w) && (HUB->ireq.to = LM_COND, d = things (IO_LOOK, w)) != IR_OK) {
+            if (d != IR_NOT_HERE || !reach_go ()) {
+                tell (T_YOU_SEE_NONE);
+            }
+            return;
+        }
+        intend2 (I_RISE, POS_HIDE | HD_IN, 0);
     } else if ((HUB->ireq.to = reach == 4 ? IO_DONE : 0, d = things (IO_HIDE | IO_STEPS, w)) == IR_NO) {
         return;                                 /* (A step of the reach first: part 19's) */
     } else if (d == IR_OK) {
@@ -2309,7 +2350,7 @@ portal:
             tell (T_YOU_CARRY_NONE);
         }
         return;
-    case VB_HIDE:                               /* (P_CONCEAL: a thing; oneself comes with the denizens) */
+    case VB_HIDE:                               /* (P_CONCEAL: a thing; else oneself: HOUSE.md's) */
         hide (cmd.obj.word);
         return;
     case VB_SWAP_HANDS:                         /* (The hands' and limbs': part 11's, slice 4.1b's; */
@@ -3124,6 +3165,11 @@ void __fastcall__ s_pose_words (unsigned w)
     static const char pdo[5][10] = { "", "lie down", "crouch", "kneel", "sit down" };
     static const char pis[5][10] = { "", "lying", "crouching", "kneeling", "sitting" };
     unsigned char k = (w >> 8) & 7;
+
+    if ((w & HW_WORDS) == HW_WORDS) {
+        hide ((const char*) w);                 /* (Hiding oneself's: part 10's) */
+        return;
+    }
 
     sayf (w & 0x8000 ? "\nYou are %s already." : "\nYou %s.", w & 0x8000 ? pis[k] : pdo[k]);
 }

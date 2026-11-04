@@ -749,3 +749,11 @@ Designed, but in no slice of the plans yet (DECISIONS.md has the user's words fo
   and **bargain** beside persuading, deceiving and threatening; an attitude moved by the character's strength as the
   denizen sees it (rs.h's power, 0-100: the strong feared, the weak despised or pitied), by a rescue, or by a piece of
   the puzzle shown or taken; limits a guard's duty or a hunter's hunger sets on words.
+
+## Hiding *(2026-11-04: A12; HOUSE.md's Hiding oneself)*
+
+The character hidden, a denizen's senses answer SN_LOOK for what they'd have seen (dq0p/sense.c), and its mind tests the look (dq0d's part 20, hid_mind's HM_LOOK:
+the hider's Stealth at its cover's steps and how near the looker is, once a nearness, the hub's hlook; a marginal failure its Awareness); found, it posts I_RISE
+with POS_HIDE | HD_FOUND (the world's part 94 ends the hiding and tells it).  Heard, it's drawn to the place; smelt, it's known.
+A robber (ways r) hears the character coming, unseen: it lies in wait (HM_AMBUSH: I_RISE POS_HIDE | HD_IN, the world's to say if there's cover; the actor's state says
+how well, ST_HID), held by HM_LURK till the character's beside it, it's spotted, or two minutes pass.  Its blow from hiding is the book's Ignore (the world's blow, RS_ASLEEP).
