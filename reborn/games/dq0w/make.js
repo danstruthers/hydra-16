@@ -56,9 +56,15 @@ function build({ dir, objdir, say = () => {} }) {
   if (at + text.length > 0x1E3F || kin > 0x1E40) throw new Error('dq0w.cat: the kinds and their words into the outfits\' list (outfit.h\'s OF_N, ' + (at + text.length) + ' bytes)');
   if (text.length > 1024 - 200) throw new Error('dq0w.cat: the kinds\' words ' + text.length + ' bytes, past the parser\'s room less the theme\'s (hub.h\'s CQ_WORDS)');
   if (cat.length - at > 0x1900) throw new Error('dq0w.cat: the catalogue\'s bank\'s code ' + (cat.length - at) + ' bytes, into the outfits\' index (outfit.h\'s OF_INDEX)');
+  // (The world's deities' names in the last two kinds' records, none yet (items.h's GODS_AT), a 0 first, so a name that's empty: dq0d's
+  // make's, made first, spaces between, 0-ended; the UI's for the parser, so no file of their own to open as it starts, an
+  // open on the card some 700,000 cycles, 2026-11-04)
+  const gods = Buffer.from('\0' + fs.readFileSync(path.join(objdir, '..', 'dq0g.txt'), 'latin1') + '\0', 'latin1');
+  if (gods.length > 2 * KIND || names[nkinds - 1] || names[nkinds - 2]) throw new Error('dq0w.cat: the deities\' ' + gods.length + ' bytes, or the last two kinds taken (items.h\'s GODS_AT)');
   if (cat.readUInt16LE(18)) throw new Error('dq0w.cat: the first kind\'s cap_weight not 0 (the kinds\' length goes there)');
   const file = Buffer.concat([cat.subarray(0, at), text, Buffer.alloc(kin - at - text.length), cat.subarray(at)]);
   file.writeUInt16LE(kin, 18);                          // (The kinds' length, in the first's (none's) cap_weight: wfile.c's)
+  gods.copy(file, (nkinds - 2) * KIND);
   fs.writeFileSync(f, file);
   // The outfits
   const o = outfits.compile({ src: path.join(games, 'dq0', 'outfits.txt'), names, out: path.join(objdir, '..', 'dq0o.dat'),

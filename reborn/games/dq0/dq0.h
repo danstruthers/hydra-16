@@ -377,7 +377,8 @@ extern unsigned char news_due;                  /* (main.c's: the body's news he
 
 unsigned char __fastcall__ args (int argc, char* argv[]);    /* Part 7 (main.c): the game's arguments read (begin's): 1, -s said */
 enum { LF_GOING, LF_NEXT, LF_NEW };             /* (A game in the save's folder: going on, one ended, none: main.c's life) */
-void __fastcall__ between (unsigned char how);  /* Part 19 (main.c): the save's folder's dungeon found (0); dq0life's arguments made (1, 2 the seed said) */
+void __fastcall__ between (unsigned char given);    /* Part 21 (main.c): dq0life's arguments made (given: the seed said) */
+void life_dir (void);                           /* Part 22 (main.c): the save's folder's dungeon found, by the record */
 void __fastcall__ begin (int argc, char* argv[]);   /* Part 1 (main.c): the arguments, the world started, the game
                                                 **   begun */
 void finish (void);                             /* Part 1: the game kept, the world stopped */

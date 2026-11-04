@@ -473,7 +473,7 @@ static unsigned char __fastcall__ life (unsigned char given)
     unsigned char n = LF_NEW;
 
     if (savedir) {
-        between (0);
+        life_dir ();
         if ((fd = open (save_path ("game.dat"), O_RDONLY)) >= 0) {
             if (read (fd, &sv, sizeof sv) == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER && !sv.q.done) {
                 n = LF_GOING;
@@ -481,11 +481,11 @@ static unsigned char __fastcall__ life (unsigned char given)
             close (fd);
         }
         if (n) {
-            between (1 | given << 1);           /* (dq0life: it begins the next dungeon, or a new life) */
+            between (given);                    /* (dq0life: it begins the next dungeon, or a new life) */
             if (hub_join (hub_run (lb + 300, lb))) {
                 hy_exits ("dq0: dq0life failed");
             }
-            between (0);
+            life_dir ();
             seed = ((struct life_head*) lb)->dseed;
             if (((struct life_head*) lb)->dungeon > 1) {
                 n = LF_NEXT;
@@ -639,7 +639,6 @@ static void __fastcall__ waited (void* q)
 }
 
 static void world_words (void);
-static char gods[112];                          /* (The world's deities' names, read as the game starts: world_words') */
 
 static void __fastcall__ start_world (unsigned long seed, const char* file, unsigned char made)
 {
@@ -649,13 +648,6 @@ static void __fastcall__ start_world (unsigned long seed, const char* file, unsi
     int w;
     char* l;
 
-    strcat (libdir, "/dq0g.txt");               /* (Read before any of the game's tasks is begun: the time it takes
-                                                **   theirs alike) */
-    w = open (libdir, O_RDONLY);
-    libdir[strlen (libdir) - 9] = 0;
-    k = read (w, gods, sizeof gods - 1);
-    gods[k < sizeof gods ? k : 0] = 0;
-    close (w);
     if (hub_create (HUB_BANKS)) {
         t_end ();
         hy_exits ("dq0: no shared segment or semaphores");
@@ -736,28 +728,38 @@ static void __fastcall__ start_world (unsigned long seed, const char* file, unsi
 /* The command parser told the world's words: the catalogue's kinds' names (the theme's with them), so a word of its
 ** grammar's is a thing's name too where one's called by it ("drop the pick", "wear the knee boots"; the game's own
 ** things, "door", "room", it knows); no names given yet; and the world's deities' names, "call on Imma"
-** (libdir/dq0g.txt: the denizens' data's, deities.txt's, spaces between) */
-static void world_words (void)
-{
-    static char nm[sizeof CATALOGUE[0].name + 1];
-    static unsigned n;
-    unsigned char i, k;
+** (in the kinds' bank: items.h's GODS_AT, deities.txt's, spaces between) */
+static char nm[sizeof CATALOGUE[0].name + 1];
+static unsigned n;
+static const char* wfrom;
 
-    for (n = 0; ; ) {                           /* (The catalogue's words, each once, the build's: dq0w/make.js's, in
-                                                **   the kinds' bank after them; "kite shield", "tower shield": the
-                                                **   parser's lists are words, its room CQ_WORDS) */
+/* Words from the kinds' bank (wfrom there), up to their 0, into the parser's (each part's copy through nm, in the main RAM) */
+static void words_in (void)
+{
+    unsigned char k;
+
+    do {
         hub_map (KIND_BANK);
-        memcpy (nm, KIND_WORDS + n, sizeof nm - 1);
+        memcpy (nm, wfrom, sizeof nm - 1);
         hub_map (CMD_BANK);
         for (k = 0; k < sizeof nm - 1 && nm[k]; ++k) {
         }
         memcpy (HUB_WINDOW + n, nm, k);
         n += k;                                 /* (The last piece's too, 2026-11-04: the theme's went over it, "take the
                                                 **   grapple" not understood) */
-        if (k < sizeof nm - 1) {
-            break;
-        }
-    }
+        wfrom += k;
+    } while (k == sizeof nm - 1);
+}
+
+static void world_words (void)
+{
+    unsigned char i, k;
+
+    n = 0;
+    wfrom = KIND_WORDS;
+    words_in ();                                /* (The catalogue's words, each once, the build's: dq0w/make.js's, in
+                                                **   the kinds' bank after them; "kite shield", "tower shield": the
+                                                **   parser's lists are words, its room CQ_WORDS) */
     for (i = KI_THEME; i < KI_THEME + NTKINDS; ++i) {   /* (Then the theme's kinds') */
         hub_map (KIND_BANK);
         memcpy (nm, CATALOGUE[i].name, sizeof CATALOGUE[0].name);
@@ -770,10 +772,8 @@ static void world_words (void)
     }
     HUB_WINDOW[n++] = 0;                        /* (Then the names given: none) */
     HUB_WINDOW[n++] = 0;
-    if (n + (k = strlen (gods)) < CQ_WORDS) {   /* (Then the deities') */
-        memcpy (HUB_WINDOW + n, gods, k);
-        n += k;
-    }
+    wfrom = GODS_AT;                            /* (Then the deities') */
+    words_in ();
     HUB_WINDOW[n] = 0;
     hub_map (0);
     HUB->cq.kind = CQ_WORLD;
@@ -2495,18 +2495,13 @@ static const char* rules = "harn";              /* (The ruleset, if none's given
 #pragma rodata-name (push, "SW19RODATA")
 #pragma local-strings (push, on)
 
+#pragma code-name (push, "SW22CODE")            /* (Part 22's: seldom, overlay 15 full) */
+#pragma rodata-name (push, "SW22RODATA")
 #pragma static-locals (push, on)
-#pragma bss-name (push, "SW19RODATA")           /* (Wanted only while it runs: not the main RAM's) */
-
-static char* ap;
-static void __fastcall__ arg (const char* s)
-{
-    strcpy (ap, s);
-    ap += strlen (ap) + 1;
-}
+#pragma bss-name (push, "SW22RODATA")           /* (Wanted only while it runs: not the main RAM's) */
 
 /* The save's folder's dungeon, by the record of the life (life.h's: its head left in lb): its folder in spath (sdl), or d1 */
-static void life_dir (void)
+void s_life_dir (void)
 {
     static int fd;
     static unsigned n;
@@ -2516,7 +2511,7 @@ static void life_dir (void)
     sdl = strlen (spath);
     strcpy (spath + sdl, "/" LIFE_FILE);
     if ((fd = open (spath, O_RDONLY)) >= 0) {
-        if (read (fd, lb, sizeof (struct life_head)) == sizeof (struct life_head) && ((struct life_head*) lb)->magic == LIFE_MAGIC) {
+        if (read (fd, lb, sizeof (struct life_head)) == sizeof (struct life_head)) {     /* (Not one of its: dq0life's to find) */
             n = ((struct life_head*) lb)->dungeon;
         }
         close (fd);
@@ -2527,18 +2522,30 @@ static void life_dir (void)
     spath[sdl] = '/';
 }
 
-/* The save's folder (life's, part 1's): how 0, the record's dungeon found; else dq0life's path (lb + 300) and arguments (lb): its
-** folder; how 2, the seed said (dq0 -s), else the clock's its own */
-void __fastcall__ s_between (unsigned char how)
+#pragma bss-name (pop)
+#pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+#pragma code-name (push, "SW21CODE")            /* (Part 21's: seldom, overlay 15 full) */
+#pragma rodata-name (push, "SW21RODATA")
+#pragma static-locals (push, on)
+#pragma bss-name (push, "SW21RODATA")           /* (Wanted only while it runs: not the main RAM's) */
+
+static char* ap;
+static void __fastcall__ arg (const char* s)
 {
-    if (!how) {
-        life_dir ();
-        return;
-    }
+    strcpy (ap, s);
+    ap += strlen (ap) + 1;
+}
+
+/* dq0life's path (lb + 300) and arguments (lb), life's, part 1's: its folder; given, the seed said (dq0 -s), else the clock's its own */
+void __fastcall__ s_between (unsigned char given)
+{
     ap = lb;
     arg ("-d");
     arg (savedir);
-    if (how & 2) {
+    if (given) {
         arg ("-s");
         ultoa (seed, ap, 10);
         arg (ap);
@@ -2550,6 +2557,8 @@ void __fastcall__ s_between (unsigned char how)
 
 #pragma bss-name (pop)
 #pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* A step of the reach begun by the world (the reply's IO_STEP, HOUSE.md's reach, the user's, 2026-11-02: each its words, its
 ** time, its grope): its first words, its long task (I_WAIT's kind, its bar, its stop), the command kept and asked

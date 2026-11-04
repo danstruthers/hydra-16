@@ -8,7 +8,7 @@
 // kind (the world's traces' store, dq0w/wtrace.c's struct tkind), the first the character's own.  And the world's lore
 // (lore.h): peoples.txt made obj/games/dq0f.dat, deities.txt obj/games/dq0g.dat, 64 bytes a
 // record (struct people, struct deity), the first none (its first byte the records' count), their words after; and
-// the deities' names, spaces between, obj/games/dq0g.txt (the UI's: the commands' words for them).
+// the deities' names, spaces between, obj/games/dq0g.txt (for dq0w's make: in the kinds' bank, the UI's, the commands' words).
 'use strict';
 const fs = require('fs');
 const path = require('path');
