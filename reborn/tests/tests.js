@@ -2090,6 +2090,8 @@ const DQ0_REPEATS = [
     why: 'as "Everything goes black." above, its second time and after, in a soak\'s fight' },
   { what: /^The [a-z]+ [a-z ]+ to your [a-z ]+ is gone\.$/, tests: /^dq0soak-/,
     why: 'the time between\'s healing: two wounds alike on one place, each told' },
+  { what: /^(?:Quicker, you strike at .+|Something coils itself up again\.)$/, tests: /^dq0soak-/,
+    why: 'a fight\'s long answer, a soak\'s: the same blow come out the same way two rounds of it, an adder out of sight coiling up twice' },
   { what: /^Enter takes /, tests: /^dq0soak-/,
     why: 'the time between\'s question asked again, a soak\'s answers refused (its echo in the sentence: dq0acct\'s prompt no game\'s)' },
   { what: /^You feel your way [a-z]+\.$/, tests: /^dq0soak-/,
