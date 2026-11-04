@@ -6116,6 +6116,49 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0streamswim', near: ['map', 'body'], what: "Dingus Quest Zero's deep stream swum in play (the user's, 2026-11-03: some run deep enough to swim; HOUSE.md's the water in the dungeon, swimming; dq0stream's the maker's alone), by the hub and the words: seed 17's stream six feet deep along a passage on the cave's north side, the rats there held off (dq0Poke's): north from the landing into it, out of its depth (\"You're out of your depth: you swim.\"), its torch out, its swim told by the referee's grade, the hub's pc_wet six feet, pc_swim its squares a minute; along it east and back west, each a swimmer's square, longer than a walked one, still swimming; south out of it (\"You wade out of the water.\"), dry",
+      init: 't_rc', cycles: 800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 17 -c /ram/c.hm -T', 'd', 'look', 'n', 'step east', 'step west', 'step west', 'step south', 'step south', 'quit', 'echo $status']) },
+      start(m) {
+        m.wet = [];
+        const off = (h, L, K) => {
+          const at = k => L.actor + k * L.actorSize, R = dq0Rec(m), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16, due = now + 3000;
+          let n = 0;
+          for (let k = 0; k < L.nactors; k++) if (h[at(k) + L.aName] && h[at(k) + L.aState]) {
+            const o = R.at(h[at(k) + L.aName + 12]), x = 32706 + (n & 3), y = 32784 + (n++ >> 2);
+            h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8;
+            h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
+            h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_FRIENDLY;
+            h[at(k) + L.aDoing] = K.DO_ROAM;
+            for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = due >>> (8 * i) & 255;
+          }
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        };
+        const seen = line => (h, L) => m.wet.push({ line, wet: h[L.pcWet], swim: h[L.pcSwim], breath: h[L.pcBreath] });
+        dq0Poke(m, [{ g: 1, line: 'look', n: 1, call: off }, { g: 1, line: 'n', n: 1, call: off }, { g: 1, line: 'step east', n: 1, call: seen('n') }, { g: 1, line: 'step west', n: 1, call: seen('east') },
+          { g: 1, line: 'step west', n: 2, call: seen('west') }, { g: 1, line: 'step south', n: 1, call: seen('west 2') }, { g: 1, line: 'step south', n: 2, call: seen('south') }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out), w = l => (m.wet || []).find(e => e.line === l) || {}, t = (l, n) => T.of(l, n === 2 ? T.of(l).k + 1 : 0);
+        inTurn(o, ["You're out of your depth: you swim.", 'The water puts out your light.'], f, 'into the stream: ');
+        if (!/You swim strongly\.|You struggle to keep afloat\./.test(o)) f.push('its swimming not told (the referee\'s test)');
+        for (const l of ['n', 'east', 'west', 'west 2']) if ((w(l).wet & 0x7F) !== 6 || !w(l).swim) f.push('not swimming six feet down after ' + l + ': ' + JSON.stringify(w(l)));
+        const e = t('step east'), we = t('step west'), wt = t('step west', 2), so = t('step south'), so2 = t('step south', 2);
+        for (const [u, dx, l] of [[e, 1, 'east'], [we, -1, 'west'], [wt, -1, 'west again']]) {
+          if (!u.after || u.after.pc.x - u.at.pc.x !== dx || u.after.pc.y !== u.at.pc.y) f.push('a stroke ' + l + ' not its square along the stream');
+        }
+        if (!so.after || so.after.pc.y !== so.at.pc.y + 1) f.push('south out of the stream not gone');
+        if (!/You wade out of the water\./.test(o)) f.push('coming out not told');
+        if (w('south').wet & 0x7F) f.push('dry floor, still wet: ' + JSON.stringify(w('south')));
+        if (so2.after && e.after && !(e.after.now - e.at.now > so2.after.now - so2.at.now)) f.push('a swimmer\'s square no longer than a walked one: ' + (e.after.now - e.at.now) + ' tenths, ' + (so2.after.now - so2.at.now));
+        this.notes = [JSON.stringify(m.wet)];
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0farthing', outfit: true, near: ['money', 'denizens'], what: "Dingus Quest Zero's prices under a penny and no money pump (the user's, 2026-11-03: \"Farthing goods\", \"Haggling pump\": HOUSE.md's the market): a hand-written theme's bandit (dq0trade's scene): chalk (a farthing's worth) offered for and priced in farthings, its farthing paid, a character with none a whole penny; and an ally, Rhetoric 95, haggled with both ways over and over: buying back never under what it paid, the character's purse never the fuller for it",
       init: 't_rc', cycles: 3000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml rhe 95 >> /ram/c.hm', 'echo wealth 1600 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
@@ -7270,6 +7313,59 @@ module.exports = {
         if (blocks.some(r => r.b !== 1 || r.actor !== 0)) f.push('AF_SHIELD not a denizen\'s block: ' + JSON.stringify(blocks));
         const sw = ready && names.get(ready.thing);
         inTurn(o, ['The bandit unslings its ' + sw + '.', 'it fends off the blow with its ' + sw], f, 'the shield\'s words: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0stray', near: ['fight'], what: "Dingus Quest Zero's miss's stray at its two chances (2026-11-03, the user's \"follow the book\": HOUSE.md's a miss's stray: half the time if the mark's engaged, a fifth if it isn't), by the words: at seed 3 the hand-written theme's giant rats, the room's far end, two held where they are as each shot's typed (dq0Poke's: the mark the closer, a second beside it, their wounds taken off, due later than the shot): shot at by a poor shot many times, no rat in a fight, and again in a second game with the one beside the mark fighting (its doing DO_FIGHT, all the rule asks): of the misses, about a fifth strike the one beside it in the first, about half in the second; its words each time \"Your shot strikes ... instead\"",
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: (() => {
+        const game = d => ["dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/" + d + " -k 'sling,sling stones'", 'drop the torch', ...Array(60).fill('shoot the closest rat'), 'quit'];
+        return dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml bow 15 >> /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+          'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt', ...game('g'), ...game('h'), 'echo $status']);
+      })() },
+      start(m) {
+        const set = fight => (h, L, K) => {
+          const at = k => L.actor + k * L.actorSize, R = dq0Rec(m), S = dq0Sheet(m), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16, due = now + 6000;
+          const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);
+          for (let i = 0; i < L.nitems; i++) {   // (Stones enough, its sling in its hand, as it shoots: a fumble lets it fall)
+            const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize, s = b && b[o + L.iKind] ? String.fromCharCode(...cat.subarray(b[o + L.iKind] * L.kindSize, b[o + L.iKind] * L.kindSize + 11)) : '';
+            if (s === 'sling stone') b[o + L.iQty] = 20;
+            if (s === 'sling\0\0\0\0\0\0') {
+              if (b[o + L.iFlags] & DQ0_I.HELD) m.sling = b.slice(o, o + L.itemSize);
+              else if (m.sling) b.set(m.sling, o);
+            }
+          }
+          let n = 0;
+          for (let k = 0; k < L.nactors; k++) {
+            if (!h[at(k) + L.aName] || !h[at(k) + L.aState]) continue;
+            const o = R.at(h[at(k) + L.aName + 12]), q = S.at(h[at(k) + L.aName + 12]), [x, y] = [[32720, 32721], [32719, 32721], [32719, 32722], [32720, 32722]][n++ & 3];
+            h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8;
+            h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
+            h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_WARY;
+            h[at(k) + L.aDoing] = fight && n === 2 ? K.DO_FIGHT : K.DO_DOWN;
+            h[at(k) + L.aPos] = K.POS_PRONE;
+            h[at(k) + L.aReady] = due & 255; h[at(k) + L.aReady + 1] = due >> 8 & 255; h[at(k) + L.aReady + 2] = due >> 16 & 255; h[at(k) + L.aReady + 3] = 0;
+            S.mem[q + S.STATE] = 1; S.mem[q + 8] = 0; S.mem[q + 9] = 0;   // (Senseless, its wounds off: state, bloodloss, ninj)
+            for (let i = 0; i < 4; i++) S.mem[q + S.OUT + i] = (due >>> (8 * i)) & 255;
+          }
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        };
+        const pokes = [];
+        for (const [g, fight] of [[1, false], [2, true]]) for (let n = 1; n <= 60; n++) pokes.push({ g, line: 'shoot the closest rat', n, call: set(fight) });
+        dq0Poke(m, pokes);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = dq0Story(out), f = [], gs = o.split('% dq0 -p t').slice(1), cnt = s => [(s.match(/Your shot strikes [a-z ]+ instead/g) || []).length, (s.match(/shoot at [a-z ]+, and miss|shoot at [a-z ]+; it dodges/g) || []).length];
+        if (gs.length !== 2) return ['not two games'];
+        const [s1, m1] = cnt(gs[0]), [s2, m2] = cnt(gs[1]);
+        this.notes = ['not engaged: ' + s1 + ' strays of ' + m1 + ' misses; engaged: ' + s2 + ' of ' + m2];
+        if (m1 < 30 || m2 < 30) f.push('too few misses to tell: ' + m1 + ', ' + m2);
+        if (s1 < 0.08 * m1 || s1 > 0.35 * m1) f.push('not engaged, not about a fifth of the misses astray: ' + s1 + ' of ' + m1);
+        if (s2 < 0.33 * m2 || s2 > 0.67 * m2) f.push('engaged, not about half of the misses astray: ' + s2 + ' of ' + m2);
+        if (s1 / m1 >= s2 / m2) f.push('no more astray with the mark engaged: ' + s1 + ' of ' + m1 + ', ' + s2 + ' of ' + m2);
         return f;
       },
       sdcard: true
