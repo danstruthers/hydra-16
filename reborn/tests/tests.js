@@ -5779,7 +5779,7 @@ module.exports = {
       name: 'dq0vast', meaning: true, what: 'Dingus Quest Zero\'s plans past PLAN_MAX regions (move 2.8: no fixed size of a stratum\'s plan), by what the character perceives and the maker\'s map: dq0 -T -T -T -T (the stratum below the top 27 regions each way, 729 of them, its plan paged to the save folder by the maker, plSS0000.dat, its pages of 42 regions in a bank of its own) and -C (16 of those pages, made way for as it grows) and -d: down the stairway, the stratum below grown, mapped; quit and carried on (its plan grown again, the same): seen the same, the map the same',
       init: 't_rc', cycles: 3600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -T -T -T -C -d /ram/kept', 'd',
-        'map', 'quit', 'ls /ram/kept', 'dq0 -C -d /ram/kept', 'map', 'quit', 'echo $status']) },
+        'map', 'quit', 'ls /ram/kept/d1', 'dq0 -C -d /ram/kept', 'map', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], d = T.of('d'), c = T.of('dq0 -C -d /ram/kept'), m1 = T.of('map'), m2 = T.after(c, 'map');
@@ -5789,7 +5789,7 @@ module.exports = {
           f.push('the vast stratum not seen the same carried on: ' + dq0View(c.after) + ', first ' + dq0View(d.after));
         if (!m1.after || !m2.after || !m1.after.map.some(r => r.trim()) || m1.after.map.join('\n') !== m2.after.map.join('\n')) f.push('the map not the same carried on');
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' ');
-        if (!/pl10000\.dat/.test(o.slice(o.indexOf('% ls /ram/kept')))) f.push('no plan paged to the save folder (pl10000.dat)');
+        if (!/pl10000\.dat/.test(o.slice(o.indexOf('% ls /ram/kept/d1')))) f.push('no plan paged to the save folder (pl10000.dat)');
         return f;
       },
       sdcard: true
@@ -5798,8 +5798,8 @@ module.exports = {
       name: 'dq0soak', meaning: true, what: 'Dingus Quest Zero\'s stores paged to the save folder (move 2.8, DUNGEON.md: no fixed size; the user, 2026-10-16: "It should be as big as it needs to be, given there is enough disk space to hold it"), eviction and write-back, a soak, by what the character perceives (the senses\' record) and the stores\' records: dq0 -C (the caches small: the chunks\' twelve slots, a change page, 24 of the item store\'s records, two of the denizens\' regions, two of the strata\'s slots, two seen maps) and -T -T -T (three strata grown below the top, the character on the second): the dagger put down by the stairway there, up (the strata\'s slots made way in: the top\'s record read back into a slot), the rations put down by the stairway on the top, down and up again and again, every cache made way in each time (the chunks made again from their seeds, the change records, the things and the denizens read back from their files, the seen maps too): each stratum seen each time as it was first (the dagger, the rations where they were put down), the giant rats by the stairway seen; the map; the folder\'s region files (rg, it, dn, sm, st); quit and carried on: where it was, seen the same, the map as it was, up again, the rations there; then the game\'s game.dat gone and a new game begun in the folder (seed 5): the old game\'s region files of its stratum below gone, none of its things lying about (dq0page\'s and dq0strata\'s, these together)',
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -T -T -C -d /ram/kept',
-        'drop the dagger', 'u', 'drop the rations', 'd', 'u', 'd', 'u', 'd', 'map', 'quit', 'ls /ram/kept', 'dq0 -C -d /ram/kept', 'map', 'u', 'quit',
-        'rm /ram/kept/game.dat', 'dq0 -p t -s 5 -c /ram/c.hm -T -C -d /ram/kept', 'quit', 'ls /ram/kept', 'echo $status']) },
+        'drop the dagger', 'u', 'drop the rations', 'd', 'u', 'd', 'u', 'd', 'map', 'quit', 'ls /ram/kept/d1', 'dq0 -C -d /ram/kept', 'map', 'u', 'quit',
+        'rm /ram/kept/d1/game.dat', 'dq0 -p t -s 5 -c /ram/c.hm -T -C -d /ram/kept', 'quit', 'ls /ram/kept/d1', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], at = (s, n) => s && dq0Here(s).some(i => i.name === n);
@@ -5823,7 +5823,7 @@ module.exports = {
         if (!mp.after || !mp2.after || !mp.after.map.some(r => r.trim()) || mp.after.map.join('\n') !== mp2.after.map.join('\n')) f.push('the map not as it was, carried on');
         if (!u2.after || dq0View(u2.after) !== view[0]) f.push('the top not as it was, up again once carried on (the rations)');
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' ');
-        const ls1 = o.slice(o.indexOf('% ls /ram/kept'), o.indexOf('% dq0 -C')), ls2 = o.slice(o.lastIndexOf('% ls /ram/kept'), o.indexOf('% echo $status'));
+        const ls1 = o.slice(o.indexOf('% ls /ram/kept/d1'), o.indexOf('% dq0 -C')), ls2 = o.slice(o.lastIndexOf('% ls /ram/kept/d1'), o.indexOf('% echo $status'));
         for (const p of ['rg', 'it', 'dn', 'sm', 'st']) if (!new RegExp(p + '[0-9a-f]{5,6}\\.da').test(ls1)) f.push('no ' + p + '... region files');
         if (/rg1\w{4}\.da/.test(ls2)) f.push('the old game\'s region files left in the folder for the new game (its stratum below\'s)');
         const g = T.of('dq0 -p t -s 5 -c /ram/c.hm -T -C -d /ram/kept');
@@ -5878,7 +5878,7 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml trk 80 >> /ram/c.hm', 'echo ml awa 80 >> /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'examine the floor', 'e', 'w', 'examine the floor', 'track', 'wait 5 minutes', 'track', 'sniff',
         'douse the torch', 'sniff', 'wait 3 hours', 'sniff', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept', 'e', 'w', 'quit',
-        'ls /ram/kept', 'dq0 -d /ram/kept', 'examine the floor', 'quit',
+        'ls /ram/kept/d1', 'dq0 -d /ram/kept', 'examine the floor', 'quit',
         'mkdir /ram/g', "echo 'faction | Cult | cultist | 0-0 | 90 | priest | 0 | i | -' > /ram/g/theme.txt", 'dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/g',
         'examine the floor', 'track', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -10009,8 +10009,8 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k crowns',
         'drop the crowns', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit',
-        'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k farthings', 'drop the farthings', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit',
-        'mkdir /ram/i', 'cp /ram/g/theme.txt /ram/i/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/i -k crowns,farthings', 'i', 'wait', 'wait', 'i', 'quit', 'echo $status']) },
+        'mkdir /ram/h', 'cp /ram/g/d1/theme.txt /ram/h/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k farthings', 'drop the farthings', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit',
+        'mkdir /ram/i', 'cp /ram/g/d1/theme.txt /ram/i/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/i -k crowns,farthings', 'i', 'wait', 'wait', 'i', 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'bandit', beside: 'face' }, { g: 2, line: 'wait', n: 1, name: 'bandit', beside: 'face' },
           { g: 3, line: 'wait', n: 1, name: 'bandit', beside: 'face', engage: true }, { g: 3, line: 'wait', n: 1, call: () => dq0PcShock(m, 3000) }]);
@@ -10838,7 +10838,7 @@ module.exports = {
           ...['b', 'c'].map(d => "echo 'faction | Tribe | arak garking | 0-1 | 30 | khanu | 0 | w | -' > /ram/" + d + '/theme.txt'),
           "echo 'faction | Tribe | arak | 0-1 | 20 | garking | 0 | w | Beasts h' > /ram/e/theme.txt", "echo 'faction | Beasts | bear | 1-1 | 1 | - | 1 | w | -' >> /ram/e/theme.txt",
           ...game('h'), 'attack the small orc', 'wait', 'wait', 'attack the orc king', 'wait', 'attack the orc king', 'wait', 'd', 'wait', 'attack the small orc', 'wait', 'wait', 'quit',
-          ...game('p'), 'wait', 'wait', 'quit',
+          ...game('p'), 'wait', 'wait', 'quit', 'rm -r /ram/h',   // (The RAM disk's room: its six folders, each with its dungeon's)
           ...['b', 'c'].flatMap(d => [...game(d), 'attack the black orc', 'wait', 'attack the black orc', 'quit']),
           ...['d', 'e'].flatMap(d => [...game(d), 'attack the orc king', 'quit']), 'echo $status']);
       })() },
@@ -11064,7 +11064,7 @@ module.exports = {
         "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt",
         'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s', ...Array(8).fill('wait 30 minutes'), 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'douse the torch', 'wait 10 minutes', 'look', 'wait 6 hours 30 minutes', 'look', 'wait 2 hours', 'look', 'quit',
-        'mkdir /ram/t', 'cp /ram/s/theme.txt /ram/t/theme.txt', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/t', 'wait 1 minute', ...Array(4).fill('wait 30 minutes'), 'quit', 'echo $status']) },
+        'mkdir /ram/t', 'cp /ram/s/d1/theme.txt /ram/t/theme.txt', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/t', 'wait 1 minute', ...Array(4).fill('wait 30 minutes'), 'quit', 'echo $status']) },
       start(m) {
         dq0Hour(m, [{ g: 2, line: 'd', n: 1, hour: 10 }]);   // (The rats' game at 10 o'clock: asleep by day)
         const a = m.acia, read = a.read;                      // (The rats' records as each look's typed: dq0Rec's)
@@ -11231,7 +11231,7 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/s',
         "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt",
         'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s', ...Array(7).fill('wait 30 minutes'), 'wait 1 minute', 'attack the soldier', 'quit',
-        'mkdir /ram/u', 'cp /ram/s/theme.txt /ram/u/theme.txt', 'dq0hour=13', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/u', ...Array(3).fill('wait 30 minutes'), 'quit', 'echo $status']) },
+        'mkdir /ram/u', 'cp /ram/s/d1/theme.txt /ram/u/theme.txt', 'dq0hour=13', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/u', ...Array(3).fill('wait 30 minutes'), 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, []);                                       // (The actors' moods and doings at each line's Enter: m.hearts)
         const a = m.acia, read = a.read;                      // (One at leisure put beside the character as the first wait
@@ -12400,11 +12400,11 @@ module.exports = {
       name: 'dq0history', what: 'Dingus Quest Zero\'s own theme (theme.h): a game whose seed is past the stand-ins\' (65,536 and on, as a clock\'s is) has its region\'s history and its theme made as it begins (themegen, run by the UI before the world: "The place\'s history is being made"), into its save\'s folder (theme.txt, theme.dat), its story told the theme\'s word for word (its name, then its story: the region, its eras, who has it now, the goal), the top stratum named by it; quit and carried on (dq0 -d), the same theme read back from the folder, not made again',
       init: 't_rc', cycles: 1500e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 70001 -c /ram/c.hm -d /ram/h', 'map', 'quit',
-        'ls /ram/h', 'cat /ram/h/theme.txt', 'dq0 -d /ram/h', 'quit', 'echo done'].map(l => '\u0101' + l + '\r').join('') },
+        'ls /ram/h/d1', 'cat /ram/h/d1/theme.txt', 'dq0 -d /ram/h', 'quit', 'echo done'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['The place\'s history is being made', 'Under the ', 'theme.dat', 'theme.txt', 'takes up where they left off.', '% echo done\ndone\n'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), f = [], dq0 = DQ0_MAKE();
-        const text = saidTheme(out, 'cat /ram/h/theme.txt');
+        const text = saidTheme(out, 'cat /ram/h/d1/theme.txt');
         let r;
         try { r = dq0.compile(text, 'theme.txt', DQ0_BEASTS(), 1); } catch (e) { return ['its theme.txt isn\'t a theme: ' + e.message]; }
         const words = s => s.replace(/\s+/g, ' ').trim(), name = (text.match(/^theme +\| (.*)/m) || [])[1] || '?';
@@ -12518,10 +12518,10 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'echo \'theme    | the Pit of Echoes\' > /ram/t.txt', 'echo \'region   | the Grey Fells | hills | granite | springs | cold\' >> /ram/t.txt',
         'echo \'stratum  | the Upper Pit | bx | keep\' >> /ram/t.txt', 'echo \'stratum  | the Echoing Deep | n\' >> /ram/t.txt',
-        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/y', 'quit', 'cat /ram/y/theme.txt', 'echo done']) },
+        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/y', 'quit', 'cat /ram/y/d1/theme.txt', 'echo done']) },
       expect: ['% echo done\ndone\n'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], text = saidTheme(out, 'cat /ram/y/theme.txt'), keyed = k => text.split('\n').filter(l => l.startsWith(k.padEnd(9) + '|'));
+        const T = dq0Turns(m), f = [], text = saidTheme(out, 'cat /ram/y/d1/theme.txt'), keyed = k => text.split('\n').filter(l => l.startsWith(k.padEnd(9) + '|'));
         try { DQ0_MAKE().compile(text, 'theme.txt', DQ0_BEASTS(), 1); } catch (e) { f.push('its theme.txt isn\'t a theme: ' + e.message); }
         const want = { theme: ['theme    | the Pit of Echoes'], region: ['region   | the Grey Fells | hills | granite | springs | cold'],
           stratum: ['stratum  | the Upper Pit | bx | keep', 'stratum  | the Echoing Deep | n'] };
