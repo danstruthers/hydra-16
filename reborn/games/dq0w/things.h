@@ -64,15 +64,14 @@ unsigned char __fastcall__ st_out (unsigned char sn);   /* (Part 22's: sfile.c) 
 unsigned char __fastcall__ st_in (unsigned char sn);    /* (Part 22's) Read back into its slot: 1, or 0 none */
 unsigned char __fastcall__ stratum_in (unsigned char m);    /* (Part 3's: dq0w.c) Stratum m in its slot: 1, or 0
                                                 **   (not made yet) */
+void sky_note (void);                           /* (Part 76's: dq0w.c) The sky's opening by the character noted for the reckoning; */
+void sky_list (void);                           /*   the daylight's emitters near it made again */
 unsigned char __fastcall__ sky_ask (unsigned w);    /* (Part 89's: dq0w.c) The daylight's emitters, a shaft's going, a thing let fall */
-#define SA_LIST         0x4000
 #define SA_GO           0x8000
 #define SA_UP           0x0100
 #define SA_JUMP         0x0200
 #define SA_END          0x2000
 #define SA_HERE         0x1000
-#define SA_NEAR         0x0800
-#define SA_NOTE         0x0400
 void it_near (void);                              /* The chunks round the character's in the store, as it comes into
                                                 **   one (dq0w.c's see, as it's moved) */
 unsigned char rope (void);                      /* (Part 96's: wrope.c: IO_HIDE's, IO_ROPE) */

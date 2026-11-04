@@ -1819,9 +1819,15 @@ static unsigned char __fastcall__ slot_for (unsigned char m)
 #define SHAFT_REACH     9                       /* (Feet: a roof's height a mouth in it's reached at, a jump and a pull) */
 #define SKY_SHAFT       20                      /* (Feet: a shaft from the top stratum to the surface) */
 
+/* (Part 76's since 2026-11-04, the swap study's: the time of day's reckoning asks these twice each time, and part 89 and
+** part 76 put each other out for it: the world's dearest pair) */
+#pragma code-name (push, "SW76CODE")
+#pragma rodata-name (push, "SW76RODATA")
+#pragma bss-name (push, "SW76RODATA")
+
 /* The sky's opening within a square of the character (a window with shutters open, a skylight, a shaft open to the sky):
 ** SKS_*, 0 none */
-static unsigned char sky_near (void)
+unsigned char s_sky_near (void)
 {
     static struct opening* o;
     static struct portal* q;
@@ -1853,7 +1859,7 @@ static unsigned char sky_near (void)
 /* The emitters of the daylight near the character, the hub's (tb.skx): the shafts open to the sky on its stratum (its
 ** links'), and on the top stratum the skylights and the windows on the surface, shutters open, in the four chunks
 ** nearest it the cache has (none made for them: the maker's order the look's) */
-static void sky_list (void)
+void s_sky_list (void)
 {
     static struct stratum* s;
     static struct link* l;
@@ -1908,6 +1914,23 @@ static void sky_list (void)
         HUB->tb.sky_[n] = ly[n];
     }
 }
+
+/* Come by one, its square's mark, as it's looked at (part 17's): kept for the reckoning, and that at once if it isn't told */
+void s_sky_note (void)
+{
+    unsigned char w;
+
+    if ((w = s_sky_near ()) != 0) {
+        HUB->tb.nigh = w;
+        if (!HUB->tb.told) {
+            burn_ask |= TS_ASK;
+        }
+    }
+}
+
+#pragma bss-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* A shaft open to the sky's down its foot: the stratum below in its slot (grown now, if it isn't yet), and a link there
 ** on its square, the maker's sky_links', or none: choked.  A dug one's always there */
@@ -2067,27 +2090,9 @@ static unsigned char __fastcall__ way_here (unsigned w)
     return 0xFF;
 }
 
-/* (Its stub's, the one: SA_HERE a way on its own square; SA_LIST the daylight's emitters made again; SA_GO a shaft's going; SA_END a climb's end; else
-** thing w let fall) */
+/* (Its stub's, the one: SA_HERE a way on its own square; SA_GO a shaft's going; SA_END a climb's end; else thing w let fall) */
 unsigned char __fastcall__ s_sky_ask (unsigned w)
 {
-    if (w & SA_LIST) {
-        sky_list ();
-        return 0;
-    }
-    if (w & SA_NEAR) {
-        return sky_near ();
-    }
-    if (w & SA_NOTE) {                          /* (Come by one, its square's mark, as it's looked at, part 17's: kept for
-                                                **   the reckoning, part 76's, and that at once if it isn't told) */
-        if ((w = sky_near ()) != 0) {
-            HUB->tb.nigh = w;
-            if (!HUB->tb.told) {
-                burn_ask |= TS_ASK;
-            }
-        }
-        return 0;
-    }
     if (w & SA_HERE) {
         return way_here (w);
     }
@@ -6823,9 +6828,24 @@ int main (int argc, char* argv[])
             hub_map (0);
         }
         if (HUB->round && (burn_ask || HUB->now >= burn_due) && !uf) {
-            burns_now ();                       /* (The lights burnt down, a game minute's: part 27's; once the game's
+            if (burn_ask & BA_SCONCES) {        /* (A minute in two passes: the sconces' on their own, a part's swap and
+                                                **   its passes of the store, a command coming between; part 27 not
+                                                **   copied for it, 2026-11-04) */
+                burn_ask &= ~BA_SCONCES;
+                sconce_lights (0xFF);
+            } else if (burn_ask == TS_ASK && HUB->now < burn_due) {
+                HUB->tb.due = 0;                /* (The time it believes alone, if the burning's look isn't due: no
+                                                **   light looked at, its next look as it was, so nothing else moves
+                                                **   for it; a command in hand, its answer first, at the next look) */
+                burn_ask = 0;
+                if (!HUB->tpr || !HUB->ui_cmd) {
+                    tsense ();                  /* (At the real paces; the turns pace's by its clock alone) */
+                }
+            } else {
+                burns_now ();                   /* (The lights burnt down, a game minute's: part 27's; once the game's
                                                 **   begun, WQ_START's, its clock a game carried on's; a command's
                                                 **   answer first, some 200,000 cycles of the world's) */
+            }
             hub_map (0);
         }
         if (!((unsigned char) HUB->pcsum.cond & C_UNCONSCIOUS)) {
@@ -7644,22 +7664,7 @@ void s_burns_now (void)
     char ln[14];
 
     hub_map (0);
-    if (asked & BA_SCONCES) {                   /* (A minute in two passes: the sconces' on their own, a part's swap and
-                                                **   its passes of the store, a command coming between) */
-        burn_ask = asked & ~BA_SCONCES;
-        sconce_lights (0xFF);
-        return;
-    }
     burn_ask = 0;
-    if (asked == TS_ASK && HUB->now < burn_due) {
-        HUB->tb.due = 0;                        /* (The time it believes alone, if the burning's look isn't due: no
-                                                **   light looked at, its next look as it was, so nothing else moves
-                                                **   for it; a command in hand, its answer first, at the next look) */
-        if (!HUB->tpr || !HUB->ui_cmd) {
-            tsense ();                          /* (At the real paces; the turns pace's by its clock alone) */
-        }
-        return;
-    }
     if (!burn_on) {
         burn_on = 1;                            /* (The first: a minute from now, the game begun or carried on) */
         burn_at = HUB->now;

@@ -196,7 +196,12 @@ go:
             SWPART      96, 29              ; Rope and grapples: tied off, let down (wrope.c: 2026-11-04)
             SWPART      97, 29              ; Climbing, a round at a time, a rope's help (dq0w.c: part 2's till 2026-11-04)
             SWPART      98, 30              ; A rope untied, looked at (wrope2.c)
+            SWPART      99, 27              ; The time believed drifting: an hour's test, a waking (wtime.c: part 76's till 2026-11-04)
+            SWPART      100, 9              ; A light renewed (things.c: part 27's till 2026-11-04)
 
+            SWFN        time_kept, 99
+            SWFN        sky_note, 76
+            SWFN        sky_list, 76
             SWFN        work, 48
             SWFN        worked, 48
             SWFN        room_on, 82         ; (A room searched whole: wroom.inc)
@@ -285,8 +290,6 @@ go:
             SWFN        arrive_a, 93
             SWFN        arrive_b, 93
             SWFN        hid_op, 94
-            SWFN        named, 10
-            SWFN        on_pc, 10
             SWFN        light_now, 92
             SWFN        chart_now, 13
             SWFN        at_hand, 4
@@ -322,7 +325,6 @@ go:
             SWFN        list, 11
             SWFN        wear, 40
             SWFN        make_own, 13
-            SWFN        seen_owned, 13
             SWFN        search, 46
             SWFN        seek, 46
             SWFN        on_it, 47
@@ -406,7 +408,7 @@ go:
             SWFN        pc_asked, 16
             SWFN        burns_now, 27
             SWFN        task_out, 23
-            SWFN        fill, 27
+            SWFN        fill, 100
             SWFN        tr_flush, 28
             SWFN        tr_file, 30
             SWFN        traced, 29

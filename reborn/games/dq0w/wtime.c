@@ -51,10 +51,16 @@ extern signed char wsteps;
 
 #pragma bss-name (push, "SW76RODATA")           /* (Its own, wanted only as it runs: the main RAM's room) */
 static unsigned n;                              /* (The clock's minute now) */
-static int d;                                   /* (A drift's minutes, its way the referee's) */
 #pragma bss-name (pop)
 static unsigned m;                              /* (The true minute of the day, now) */
 static int lo, hi;                              /* (The sky's: the part of the day, minutes) */
+
+/* ---- Part 99 (2026-11-04, the swap study's: part 76's room, an hour's test or a waking, seldom): the belief drifting */
+#pragma code-name (push, "SW99CODE")
+#pragma rodata-name (push, "SW99RODATA")
+#pragma bss-name (push, "SW99RODATA")
+static int d;                                   /* (A drift's minutes, its way the referee's) */
+#pragma bss-name (pop)
 
 /* A minute's offset brought to -720 on, under 720 */
 static int __fastcall__ norm (int v)
@@ -114,7 +120,7 @@ static void hours (void)
 ** black-out's ten the harder (it can't tell how long it lay there): a critical success near enough, doubting an eighth
 ** of it; a marginal success off by a sixth, doubting a quarter; a marginal failure a third, and half; a critical
 ** failure two thirds, and no idea at all */
-static void woke (void)
+static void __fastcall__ woke (unsigned n)
 {
     unsigned len = T.gone == FELL ? 60 : n - T.gone, u;   /* (Come round from a fall as the game begins: an hour out,
                                                 **   the house's) */
@@ -133,6 +139,21 @@ static void woke (void)
     }
     T.gone = 0;
 }
+
+/* The clock's minute now, n: woken, or the hours awake (its stub's) */
+void __fastcall__ s_time_kept (unsigned n)
+{
+    if (T.gone) {
+        woke (n);
+    } else {
+        hours ();
+    }
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+void __fastcall__ time_kept (unsigned n);       /* (Part 99's) */
 
 /* A clue's belief (its skew s, its doubt u), taken if it's surer than the one it has */
 static void __fastcall__ clue (int s, unsigned u)
@@ -294,6 +315,9 @@ static void begun (void)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
+unsigned char s_sky_near (void);                /* (dq0w.c's, this part's) */
+void s_sky_list (void);
+
 /* The sky in sight (SKY_*, and what shows it, SKS_*, times 16): a test's poke; else an open way out within SKY_NEAR squares
 ** on the character's stratum (the top's up its stairs, its light alone; a far exit below the top, out into the open);
 ** or a window on the surface, a skylight or a shaft open to the sky by it, or come by since the last reckoning (T.nigh:
@@ -314,7 +338,7 @@ static unsigned char sky_here (void)
             }
         }
     }
-    k = sn <= SKY_DEEP ? sky_ask (SA_NEAR) : 0;  /* (By one now: part 89's) */
+    k = sn <= SKY_DEEP ? s_sky_near () : 0;      /* (By one now: dq0w.c's, this part's) */
     hub_map (0);
     if (!k) {
         k = T.nigh;                             /* (Or come by one since) */
@@ -360,10 +384,12 @@ void s_tsense (void)
         T.due = HUB->now + 600;                 /* (Looked at a minute on, the burning's next: to see it wake) */
         return;
     } else if (T.gone) {
-        woke ();
+        time_kept (n);
     } else {
         T.mins += e;
-        hours ();
+        if (T.mins >= 60) {
+            time_kept (n);
+        }
     }
     clues ();
     s = sky_here ();
@@ -383,7 +409,7 @@ void s_tsense (void)
                                                 **   or maybe: five minutes on, to see it watched) */
     T.sun = m < 300 || m >= 1140 ? 0 : m < 420 || m >= 1020 ? 2 : 4;    /* (The daylight, the senses' lamps') */
     if (HUB->pc_stratum <= SKY_DEEP) {
-        sky_ask (SA_LIST);                      /* (Its emitters near it: the chunks made since it last came into one) */
+        s_sky_list ();                          /* (Its emitters near it: the chunks made since it last came into one) */
     }
     e = m < 300 ? 300 : m < 420 ? 420 : m < 1020 ? 1020 : m < 1140 ? 1140 : 1740;     /* (Looked at again by its next
                                                 **   change, on the strata the sky's near) */

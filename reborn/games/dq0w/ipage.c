@@ -243,7 +243,7 @@ void s_it_near (void)
         hub_map (0);                            /* (The sky's opening come by, by its square's mark: part 89's, 2026-11-03;
                                                 **   in a chunk it's in already, none made for it: the look's order) */
         if (pcs <= SKY_DEEP && at (pcs, HUB->pc_x, HUB->pc_y) && (C->tile[cy_][cx_] & T_HOLE)) {
-            sky_ask (SA_NOTE);
+            sky_note ();
         }
         hub_map (0);
         return;
@@ -262,7 +262,7 @@ void s_it_near (void)
             }
         }
     }
-    sky_ask (SA_LIST);                          /* (The daylight's emitters near it: part 89's; last, this part's own data
+    sky_list ();                          /* (The daylight's emitters near it: part 89's; last, this part's own data
                                                 **   as it was, copied back) */
     hub_map (0);
 }

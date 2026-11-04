@@ -60,7 +60,6 @@ unsigned char seek (void);
 void __fastcall__ thing_words (const struct item* q);   /* (Part 11's) */
 unsigned char __fastcall__ hide (const char* name);
 void __fastcall__ make_own (unsigned i);         /* Part 13 */
-void seen_owned (void);
 void kit (void);                                /* Part 63 (part 13's till 2026-10-28) */
 void theme_kinds (void);
 unsigned __fastcall__ pick (const char* name, unsigned char how);    /* Part 4 (its room): a thing of several */
@@ -219,14 +218,18 @@ unsigned char things_req (void)
 ** there are any) */
 void owned (void)
 {
-    unsigned char n;
+    unsigned char k, n;
+    unsigned i;
+    const struct item* p;
 
-    hub_map (SIGHT_BANK);
-    n = SIGHT->nitems;
-    hub_map (0);
-    if (n) {
-        seen_owned ();
+    for (k = 0; hub_map (SIGHT_BANK), n = SIGHT->nitems, k < n; ++k) {
+        i = SIGHT->item[k].n;
+        p = item_at (i);
+        if (!p->id && p->kind) {
+            make_own (i);                       /* (Part 13's copied only for one not yet its own) */
+        }
     }
+    hub_map (0);
 }
 
 /* ---- The hub's text (things_text, the UI bank's): the words put after what's there (tlist.s's put, in assembly: an
@@ -289,12 +292,9 @@ static unsigned char last_sa;                   /* (The words the catalogue's co
 static unsigned cont;                           /* (What a thing was put in or on last: stow's) */
 static void __fastcall__ say (unsigned char n);   /* (The catalogue's bank's: its words, SA_*) */
 
-/* ==== Part 10: the requests answered, a thing handled (and what the catalogue's bank's code calls on: its stubs) */
-#pragma code-name (push, "SW10CODE")
-#pragma rodata-name (push, "SW10RODATA")
-
 /* A name said: a word of the kind's ("key" an iron key; "sword" a broken one too), or its start; or that word made
-** plural ("sacks", "torches": "drop two sacks"; the catalogue's bank's code's through its stub) */
+** plural ("sacks", "torches": "drop two sacks"; the catalogue's bank's code's; the main RAM's since 2026-11-04,
+** the swap study's: part 10 copied thousands of times for it and on_pc) */
 static unsigned char __fastcall__ word_of (const char* k, const char* w, unsigned char n)
 {
     for (;;) {
@@ -308,7 +308,7 @@ static unsigned char __fastcall__ word_of (const char* k, const char* w, unsigne
     }
 }
 
-unsigned char __fastcall__ s_named (const char* k, const char* w)
+unsigned char __fastcall__ named (const char* k, const char* w)
 {
     unsigned char n = strlen (w);
 
@@ -316,6 +316,21 @@ unsigned char __fastcall__ s_named (const char* k, const char* w)
         (w[n - 2] == 'e' && word_of (k, w, n - 2))));
 }
 
+
+/* The character's (on it, or in what it carries) */
+unsigned char __fastcall__ on_pc (unsigned i)
+{
+    unsigned j;
+
+    for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {         /* (Up to whoever has it) */
+    }
+    return j == rs_pack || (item_at (j)->where == IW_ACTOR && !item_at (j)->x);     /* (A pack off for a handling, at
+                                                **   its feet, its as ever: part 85's) */
+}
+
+/* ==== Part 10: the requests answered, a thing handled (and what the catalogue's bank's code calls on: its stubs) */
+#pragma code-name (push, "SW10CODE")
+#pragma rodata-name (push, "SW10RODATA")
 
 /* Where a thing lies about: on a square, or on a surface that is (a table's): the record on the square (its own, or
 ** the surface's, copied), or 0 */
@@ -331,17 +346,6 @@ static const struct item* __fastcall__ lying (const struct item* q)
     }
     fetch (&s, q->x);
     return s.where == IW_SQUARE && (kind_of (s.kind)->keeps & KF_ON) ? &s : 0;
-}
-
-/* The character's (on it, or in what it carries) */
-unsigned char __fastcall__ s_on_pc (unsigned i)
-{
-    unsigned j;
-
-    for (j = i; item_at (j)->where == IW_ITEM; j = item_at (j)->x) {         /* (Up to whoever has it) */
-    }
-    return j == rs_pack || (item_at (j)->where == IW_ACTOR && !item_at (j)->x);     /* (A pack off for a handling, at
-                                                **   its feet, its as ever: part 85's) */
 }
 
 /* Whether thing n can go in c (or on it: a surface; hung from it: a belt): 0, or the words why not (SA_*): the
@@ -1809,7 +1813,7 @@ void s_tools (void)
             hh |= rec.sn & IH_BOTH ? rec.sn & IH_BOTH : mh;     /* (Its hands that hold something, any thing) */
         }
         k = kind_of (rec.kind);                 /* (Copied: the hub's text is in another bank) */
-        if (k->tool[0] && s_on_pc (i)) {
+        if (k->tool[0] && on_pc (i)) {
             hub_map (UI_BANK);
             t = UIREC->things_text;
             if (strlen (t) < sizeof UIREC->things_text - 11) {
@@ -4518,8 +4522,9 @@ void __fastcall__ s_listed (unsigned n)
 #pragma rodata-name (pop)
 
 /* ==== Part 27 (dq0w.c's, the lights burning; its room): a light renewed */
-#pragma code-name (push, "SW27CODE")
-#pragma rodata-name (push, "SW27RODATA")
+#pragma code-name (push, "SW100CODE")            /* (Part 100's since 2026-11-04, the swap study's: part 27's half, seldom run,
+                                                **   that every minute's look copied) */
+#pragma rodata-name (push, "SW100RODATA")
 
 static void __fastcall__ put3 (const char* a, const char* b, const char* c)
 {
@@ -4749,20 +4754,6 @@ void __fastcall__ s_make_own (unsigned i)
         }
     }
     memcpy (item_at (i), &q, sizeof q);
-}
-
-/* The things a look saw (the senses' record's, in the order they're in it), each made its own (as the senses did as
-** they saw them: the things' numbers, rnd's, the same) */
-void s_seen_owned (void)
-{
-    unsigned char k, n;
-    unsigned i;
-
-    for (k = 0; hub_map (SIGHT_BANK), n = SIGHT->nitems, k < n; ++k) {
-        i = SIGHT->item[k].n;
-        s_make_own (i);
-    }
-    hub_map (0);
 }
 
 /* A free record taken, its thing put down (where, sn, x, y, qty: the rest none, not yet its own): its number, or 0
