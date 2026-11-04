@@ -2,16 +2,19 @@
 ** dq0life.c - Dingus Quest Zero between its dungeons (DUNGEON.md's a character's life): run by the game (main.c's s_life) as
 ** it starts with a save's folder and no dungeon going on in it, before anything of the game's.  It keeps the record of the
 ** life (../dq0/life.h; the program's in lib/dq0): a life begun, or the last dungeon's end recorded and the next one begun: its seed, its date, its
-** folder.  What passes between dungeons will go here (the plan's steps 4 to 6): it's a program of its own, in no task's way.
+** folder.  What passes between dungeons is dq0acct's, the program beside it (the plan's steps 4 to 6), run from here; the life's
+** account, as it ends, dq0end's.  It's a program of its own, in no task's way, and small: every new life with a folder reads it.
 **
-** dq0life -d folder [-s seed]
+** dq0life -d folder [-s seed] [-l libdir]
 **   -d         the save's folder
 **   -s         dq0 -s's seed: the dungeon's (a new life's too); without it, a new life's the clock's, the next dungeon's the
 **              life's for it
-** By the record there and its dungeon's game.dat: one ended with the character alive, the next dungeon begun; a dungeon past the
-** first with no game (the character died in it before anything was kept: there's no save to go back to but its start), that
-** dungeon begun again, the record as it is; else (none, one of another version, one ended in its death) a new life.
-** Its exit status 0, or 1 (its fault said).
+**   -l         the game's lib folder: dq0acct's (none, the time between isn't told)
+** By the record there and its dungeon's game.dat: one ended with the character alive, the next dungeon begun (its time between,
+** dq0acct's); a dungeon past the first with no game (the character died in it before anything was kept: there's no save to go back
+** to but its start), that dungeon begun again, the record as it is; else (none, one of another version, one ended in its death, one
+** whose life's over) a new life, a life that's over kept in lives.dat first.
+** Its exit status 0; 2 the character dead between the dungeons (told; the game's not to begin); or 1 (its fault said).
 */
 
 #include <fcntl.h>
@@ -116,7 +119,7 @@ static unsigned char next_is (void)
         y = read (fd, &L, sizeof L) == sizeof L && L.h.magic == LIFE_MAGIC && L.h.version == LIFE_VER;
         close (fd);
     }
-    if (!y) {
+    if (!y || (L.h.flags & LF_OVER)) {
         return WH_LIFE;
     }
     dungeon_dir (L.h.dungeon);
@@ -129,8 +132,68 @@ static unsigned char next_is (void)
     return y ? WH_NEXT : WH_LIFE;
 }
 
+static void record_write (void)
+{
+    int fd;
+
+    if ((fd = open (in_ (top, LIFE_FILE), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0 || write (fd, &L, sizeof L) != sizeof L) {
+        die ("can't write the record of the life");
+    }
+    close (fd);
+}
+
+/* A program in the lib folder run on this folder (the system's SPAWN itself, as hub_run does: hy_spawn's argv wants the heap), waited for:
+** its status, or -1 */
+static int __fastcall__ run (const char* lib, const char* name, unsigned char with_lib)
+{
+    static char p[64], a[96];
+    static struct hy_regs r;
+    char* q = a;
+
+    strcpy (p, lib);
+    strcat (p, name);
+    strcpy (q, "-d");
+    q += 3;
+    strcpy (q, top);
+    q += strlen (q) + 1;
+    if (with_lib) {
+        strcpy (q, "-l");
+        q += 3;
+        strcpy (q, lib);
+        q += strlen (q) + 1;
+    }
+    *q = 0;
+    r.a = 0;                                    /* (Its fds: this one's 0, 1 and 2) */
+    r.r[0] = (unsigned) p;
+    r.r[1] = (unsigned) a;
+    if (hy_call (HY_SPAWN, &r)) {
+        return -1;
+    }
+    r.r[0] = 0;
+    return hy_call (HY_WAIT, &r) ? -1 : r.x;
+}
+
+/* The time between: dq0acct run on the record as it's been written, the record read again: its date on, or the life over */
+static void __fastcall__ between (const char* lib)
+{
+    int t, fd;
+
+    t = run (lib, "/dq0acct", 1);
+    if (t != 0 && t != 2) {
+        die ("the time between failed");
+    }
+    if ((fd = open (in_ (top, LIFE_FILE), O_RDONLY)) >= 0) {
+        read (fd, &L, sizeof L);
+        close (fd);
+    }
+    if (t == 2) {                               /* (Dead of it: the life's account, dq0end's) */
+        run (lib, "/dq0end", 0);
+        exit (2);
+    }
+}
+
 /* The last dungeon's end recorded (its outcome, the whole days its clock came to: world.dat's), the date on to the day after it
-** came out (by its seed's hour, as the denizens' s_hour has it), at the soonest: the plan's step 4 adds what passes after */
+** came out (by its seed's hour, as the denizens' s_hour has it), at the soonest: dq0acct's adds what passes after */
 static void ended (void)
 {
     unsigned n = L.h.dungeon;
@@ -156,6 +219,7 @@ int main (int argc, char* argv[])
 {
     unsigned long seed = 0;
     unsigned char i, given = 0;
+    const char* lib = 0;
     int fd;
 
     for (i = 1; i < argc; ++i) {
@@ -164,8 +228,10 @@ int main (int argc, char* argv[])
         } else if (!strcmp (argv[i], "-s") && i + 1 < argc) {
             given = 1;
             seed = num (argv[++i]);
+        } else if (!strcmp (argv[i], "-l") && i + 1 < argc) {
+            lib = argv[++i];
         } else {
-            die ("usage: dq0life -d folder [-s seed]");
+            die ("usage: dq0life -d folder [-s seed] [-l libdir]");
         }
     }
     if (!top || strlen (top) > TOP_MAX) {
@@ -173,12 +239,27 @@ int main (int argc, char* argv[])
     }
     mkdir (top, 0755);                          /* (It may be there already) */
     i = next_is ();
-    if (i == WH_AGAIN) {
+    if (i == WH_AGAIN && !(L.h.flags & LF_BETWEEN)) {
         return 0;                               /* (Its seed, its folder, its record as they are: dq0's to begin) */
     }
-    if (i == WH_NEXT) {
-        ended ();
+    if (i == WH_NEXT || i == WH_AGAIN) {
+        if (i == WH_NEXT) {
+            ended ();
+            L.h.flags |= LF_BETWEEN;
+            record_write ();
+        }
+        /* (The time between, HarnMaster's alone: a game of another ruleset's goes on, as it did) */
+        if (lib && !strcmp (sv.referee, "dq0harn")) {
+            between (lib);
+        }
+        L.h.flags &= ~LF_BETWEEN;
     } else {                                    /* (A new life: no kit to take up, its outfit's drawn) */
+        if (L.h.magic == LIFE_MAGIC && L.h.version == LIFE_VER && (L.h.flags & LF_OVER) &&
+            (fd = open (in_ (top, LIVES_FILE), O_WRONLY | O_CREAT | O_APPEND, 0644)) >= 0) {
+            write (fd, &L, sizeof L);           /* (The life that's over: kept) */
+            close (fd);
+        }
+        remove (in_ (top, "kit0.dat"));
         if (!given) {
             seed = hy_time () ^ hy_ticks ();
         }
@@ -200,9 +281,6 @@ int main (int argc, char* argv[])
     dungeon_dir (L.h.dungeon);
     mkdir (dir, 0755);
     theme_in ();
-    if ((fd = open (in_ (top, LIFE_FILE), O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0 || write (fd, &L, sizeof L) != sizeof L) {
-        die ("can't write the record of the life");
-    }
-    close (fd);
+    record_write ();
     return 0;
 }

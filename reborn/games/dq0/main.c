@@ -482,7 +482,11 @@ static unsigned char __fastcall__ life (unsigned char given)
         }
         if (n) {
             between (given);                    /* (dq0life: it begins the next dungeon, or a new life) */
-            if (hub_join (hub_run (lb + 300, lb))) {
+            fd = hub_join (hub_run (lb + 300, lb));
+            if (fd == 2) {
+                hy_exits (0);                   /* (Dead between the dungeons, by the rolls: told, the game's not to begin) */
+            }
+            if (fd) {
                 hy_exits ("dq0: dq0life failed");
             }
             life_dir ();
@@ -535,7 +539,7 @@ void s_save_game (void)
 {
     struct req* r;
     struct mreq* q;
-    int fd;
+    int fd, k0, n;
 
     if (!savedir) {
         return;
@@ -568,6 +572,16 @@ void s_save_game (void)
         write (fd, &sv, sizeof sv);
         names_keep (fd, 0);                     /* (The names given: the theme bank's) */
         alias_keep (fd, 0);                     /* (The shortcuts: the theme bank's too) */
+        close (fd);
+    }
+    if ((fd = open (save_at ("../kit0.dat"), O_RDONLY)) >= 0) {
+        close (fd);                             /* (What the life set out with kept already: dq0acct's to restock by) */
+    } else if ((fd = open (save_at ("../kit.dat"), O_RDONLY)) >= 0) {
+        k0 = open (save_at ("../kit0.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        while (k0 >= 0 && (n = read (fd, lb, 256)) > 0) {
+            write (k0, lb, n);
+        }
+        close (k0);
         close (fd);
     }
 }
@@ -2539,20 +2553,29 @@ static void __fastcall__ arg (const char* s)
     ap += strlen (ap) + 1;
 }
 
-/* dq0life's path (lb + 300) and arguments (lb), life's, part 1's: its folder; given, the seed said (dq0 -s), else the clock's its own */
+/* dq0life's path (lb + 300) and arguments (lb), life's, part 1's: its folder, the game's lib folder; given, the seed said (dq0 -s), else the
+** clock's its own.  Given 2, as it ends in a death (s_finish's): dq0end's, hard mode's -h: the life's account */
 void __fastcall__ s_between (unsigned char given)
 {
     ap = lb;
     arg ("-d");
     arg (savedir);
-    if (given) {
+    if (given == 2) {
+        if (hard) {
+            arg ("-h");
+        }
+    } else {
+        arg ("-l");
+        arg (libdir);
+    }
+    if (given == 1) {
         arg ("-s");
         ultoa (seed, ap, 10);
         arg (ap);
     }
     *ap = 0;
     strcpy (lb + 300, libdir);
-    strcat (lb + 300, "/dq0life");
+    strcat (lb + 300, given == 2 ? "/dq0end" : "/dq0life");
 }
 
 #pragma bss-name (pop)
@@ -2946,6 +2969,10 @@ void s_finish (void)
     }
     stop_world ();
     t_end ();
+    if (Q.done == END_DIED && savedir) {        /* (The life's account: dq0end's; hard mode's, its end recorded) */
+        between (2);
+        hub_join (hub_run (lb + 300, lb));
+    }
 }
 
 #pragma code-name (pop)

@@ -47,10 +47,16 @@ struct save {
     unsigned char   plain;                      /* (The map in plain letters: the player's, dq0.h's) */
 };
 
+#define LF_BETWEEN      0x01                    /* (The record's flags: the time between yet to be told, dq0acct's, the next dungeon's seed and
+                                                **   folder not begun: dq0life runs it again if it's found so) */
+#define LF_OVER         0x02                    /* The life's over: dead, in hard mode's dungeon or between two; the next start's a new life */
+#define LF_ABROAD       0x04                    /*   dead between two dungeons (dq0acct's), of its wounds' rolls */
+#define LD_DIED         0x01                    /* (A dungeon's: it died in it, hard mode's; its outcome still LO_SOLVED if it was, Q2's) */
+
 struct life_head {
     unsigned        magic;
     unsigned char   version;
-    unsigned char   flags;                      /* (None yet) */
+    unsigned char   flags;                      /* LF_* */
     unsigned long   seed;                       /* The life's: dungeon n's comes from it and n (dq0life's) */
     unsigned long   dseed;                      /* This dungeon's (its record's too: the UI reads only the head) */
     unsigned        dungeon;                    /* Which it's in: 1 on, its folder d1 ... */
@@ -66,14 +72,17 @@ struct life_head {
 struct life_dungeon {
     unsigned long   seed;                       /* Its seed */
     unsigned        days;                       /* The whole days it took, by the game's clock: set as the next begins */
-    unsigned char   outcome;                    /* LO_*: set as the next begins */
-    unsigned char   spare;
+    unsigned char   outcome;                    /* LO_*: set as the next begins, or (hard mode) as it dies in it */
+    unsigned char   flags;                      /* LD_* */
 };
 
 struct life {
     struct life_head    h;
     struct life_dungeon d[LIFE_DUNGEONS];       /* (Dungeon n's: d[n - 1]) */
 };
+
+#define LIVES_FILE      "lives.dat"             /* (The lives over in this folder, each record as it ended, one after another: dq0life's, as a
+                                                **   new life overwrites life.dat) */
 
 /* The calendar (the book's, Character 3: twelve months of 30 days; harn.h's month names, 1 Nuzyael ... 12 Morgat): a date's a
 ** count of days, so what passes between dungeons need only add to it */
