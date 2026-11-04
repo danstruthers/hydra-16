@@ -222,7 +222,6 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
     if (!st && !n) {
         return 0;                               /* (None of its words: the command's) */
     }
-    cq_cmd (l);                                 /* (The direction the command parser's) */
     switch (cmd.action) {                       /* (A command of another kind, said with a manner: the command's,
                                                 **   the pace as it was: "open the chest carefully", "close the door
                                                 **   quietly", "run away" a flight) */
@@ -247,7 +246,9 @@ unsigned char __fastcall__ s_pace_cmd (const char* l)
         cmd.action == VB_APPROACH_OBJECT) && (cmd.dir != 0xFF || cmd.obj.kind || cmd.how);   /* ("walk to the pot") */
     st = st && (!k || n || g != HUB->gait || wa != HUB->watch);    /* (Said, unless it goes on as it was) */
     mw = HUB->pc_map;
-    wset (WS_PACE, g == 0xFF ? g : g | said, wa);   /* (The world's, set: its request) */
+    if (g != 0xFF || wa != HUB->watch) {
+        wset (WS_PACE, g == 0xFF ? g : g | said, wa);   /* (The world's, set: its request; none to set, a step's, none) */
+    }
     if (st) {
         described (1);
     }

@@ -260,7 +260,7 @@ void __fastcall__ shot_words (unsigned w, unsigned char named);   /* Overlay 15:
 void __fastcall__ beat_words (unsigned w);
 void __fastcall__ felt_words (unsigned w);      /* (Overlay 7's) A walk in the dark's beat (task.c's) */
 unsigned __fastcall__ dnum (const char* s);     /* (main.c's) A number, a word's (atoi's) */
-void turned_says (void);                        /* (Overlay 1's) A turn's first words (task.c's, 2026-11-03) */
+void __fastcall__ turned_says (unsigned char go);                        /* (Overlay 1's) A turn's first words (task.c's, 2026-11-03) */
 void facing_words (void);                       /* (Overlay 7's) The way it believes it faces (task.c's: slice 4.2's) */
 void __fastcall__ fore_set (unsigned char on);  /* (Overlay 6's) The UI and the answer's tasks in the kernel's
                                                 **   foreground, or not (main.c's FS_*) */
@@ -402,7 +402,7 @@ void __fastcall__ blow (const struct msg* m);    /* (Overlay 6's, blows.c: an E_
 void __fastcall__ walk_says (const char* name);    /* (A walk over told as it begins, at once: "You go over to the pot."; 0: the command's thing) */
 unsigned char search_go (void);                 /* (Part 10's) A search begun, by its form (search.c) */
 void __fastcall__ sheet_map (unsigned char what);   /* (Part 3's) The sheet (0), or the map (1) */
-void list_say (void);                           /* (Overlay 16's) What's carried told, the things' words */
+void __fastcall__ list_say (unsigned char first);                           /* (Overlay 16's) What's carried told, the things' words */
 unsigned char door_go (void);                   /* (Part 13's) A door meant, not workable from here, walked up to first */
 void __fastcall__ search_said (const struct msg* m);   /* (A room searched whole's, as it goes: an E_BEAT's WB_SEARCH) */
 unsigned char __fastcall__ place_go (const struct cmd* c);   /* Part 7: a place in the room walked to */                  /* Part 7: a command's thing out of reach walked over to first */

@@ -38,6 +38,7 @@
 #include "dq0.h"
 #include "tell.h"
 #include "hub.h"
+#include "../dq0w/hub0.h"
 #include "rs.h"
 #include "level.h"
 
@@ -599,7 +600,7 @@ void __fastcall__ hub_mem (unsigned char bank, void* to, const void* from, unsig
 {
     unsigned b = hub_here ();
 
-    hub_map (bank);
+    (hub_map) (bank);
     memcpy (to, from, n);
     hub_back (b);
 }
@@ -1069,9 +1070,9 @@ static unsigned char events (void)          /* (How many there were) */
                     }
                     break;
                 }
-                if (m.w1 == V_FACING) {         /* (A turn's first words, as it's begun: out at once, its look
-                                                **   after, V_TURNED's) */
-                    turned_says ();
+                if ((m.w1 & ~1) == V_FACING) {  /* (A turn's first words, as it's begun: out at once, its look
+                                                **   after, V_TURNED's; a step's or a walk's, V_SETOFF's: b its way) */
+                    turned_says (m.b);
                     t_flush ();
                     break;
                 }
@@ -1783,6 +1784,7 @@ void __fastcall__ s_dig_used (unsigned bk)
 ** look about in the new light; else the time it took (t tenths), quietly */
 static void __fastcall__ after (unsigned char was, unsigned t, unsigned char op)
 {
+    t_flush ();                                 /* (Its words out before the world's asked again: the user's D17) */
     to_hand ();
     if (op == IO_LIGHT || op == IO_DOUSE || HUB->pc_light != was) {
         intend_a = op == IO_LIGHT || HUB->pc_light > was;
@@ -2333,8 +2335,9 @@ portal:
         }
         return;
     case VB_META_INVENTORY:
+        list_say (1);
         things (IO_LIST, "");
-        list_say ();
+        list_say (0);
         if ((d = HUB->pcsum.load) != 0) {
             tell (T_BURDENED - 1 + d);          /* (Its load, as the referee has it: its encumbrance) */
         }
@@ -2914,7 +2917,7 @@ int main (int argc, char* argv[])
                                                 **   command's only part 2, the commands') */
             k = (alias_wait || alias_said (l)) && alias_line (l) ? NL_DONE :    /* (The shortcuts': alias.c's) */
                 f & NI_LINE ? names_line (l) : NL_NONE;     /* (A name given or forgotten: the names') */
-            if (k == NL_NONE && pacing (l) > (HUB->gait == GA_WALK && !paced) && pace_cmd (l)) {
+            if (k == NL_NONE && pacing (l) > (HUB->gait == GA_WALK && !paced) && (cq_cmd (l), pace_cmd (l))) {
                 k = NL_DONE;                    /* (The pace's, the state's, a small move's: pace.c's; "walk to the
                                                 **   door", walking plainly: nothing to change, three parts' swaps and a
                                                 **   word with the world spared, the user's D17) */

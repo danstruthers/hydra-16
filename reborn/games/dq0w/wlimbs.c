@@ -18,6 +18,7 @@
 #include <dice.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "world.h"
 #include "things.h"
 #include "wbody.h"
@@ -286,8 +287,16 @@ void __fastcall__ s_den_other (const struct msg* m)
     if (HUB->gear & GE_OLD) {
         return;                                 /* (dq0 -K's, the tests': none of theirs) */
     }
-    if (m->a & KT_LAIR) {
-        den_more (m);                           /* (Its lair's locked doors' keys, its first denizen's: part 80's) */
+    if (ui_first ()) {
+        kit_off |= 2;                           /* (A command come: its answer first, this intent left in the ring: all
+                                                **   of it a million cycles and more, the card's reads in it, on whichever
+                                                **   answer it fell, the user's D17, 2026-11-03: wbody.c's) */
+        return;
+    }
+    if ((m->a & KT_LAIR) && !(kit_off & 1)) {
+        kit_off = 1;
+        den_more (m);                           /* (Its lair's locked doors' keys, its first denizen's: part 80's; once,
+                                                **   the kit drawn again if a command comes between: kit_off) */
     }
     if (has_role (m)) {
         ost.did = m->t;
@@ -296,8 +305,14 @@ void __fastcall__ s_den_other (const struct msg* m)
         ost.hsn = m->x[2];
         ost.fac = m->b;
         it_need (ost.hsn, (ost.hx - STRATUM (ost.hsn).x0) >> CW_BITS, (ost.hy - STRATUM (ost.hsn).y0) >> CW_BITS);
+        ost.kit = 0;
         den_kit (m);
+        if (ost.kit == 2) {
+            kit_off |= 2;                       /* (Given way to a command: its intent left in the ring, wbody.c's) */
+            return;
+        }
     }
+    kit_off = 0;
 }
 
 /* The mint of the people of the oldest era of the lair's stratum (its first layer's: the theme's era and its mint of

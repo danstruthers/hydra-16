@@ -673,14 +673,25 @@ void __fastcall__ o_felt_words (unsigned w)
 /* A turn's first words (V_FACING's: the user's, 2026-11-03, "I guess the turn info is OK keeping both"): said by its way
 ** as it faces ("turn r", the parser's own reply, CQ_REL | n), "You turn right, to face west."; by the compass, or another's
 ** reason to turn, "You turn to face west." */
-void o_turned_says (void)
+void __fastcall__ o_turned_says (unsigned char go)
 {
     static const char* const tw[8] = { "", "half right", "right", "well to the right", "around", "well to the left", "left",
                                        "half left" };
+    static const char* const st[8] = { "forward", "ahead to your right", "to your right", "back to your right", "back",
+                                       "back to your left", "to your left", "ahead to your left" };
     unsigned char f, d, b[4];
 
     hub_mem (0, &f, &HUB->pc_face, 1);
     hub_mem (0, &d, &HUB->pc_skew, 1);
+    if (go) {                                   /* (A way set out on, V_SETOFF's: 8 a step, by the way it faces; a walk, by
+                                                **   the north it believes in) */
+        if (go & 8) {
+            sayf ("\nYou step %s.", st[(go - f) & 7]);
+        } else {
+            sayf ("\nYou set off %s.", head_name[(go + d) & 7]);
+        }
+        return;
+    }
     hub_mem (CMD_BANK, b, HUB_WINDOW + CQ_CMD, 4);   /* (Its action, its actor, its flags, its way: as it was said) */
     f = (f + d) & 7;
     d = b[3] & 7;

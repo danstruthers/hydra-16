@@ -545,11 +545,16 @@ static void __fastcall__ worked (unsigned char action)
 }
 
 /* What's carried told (the things' words, IO_LIST's: past lb's size in pieces, each ending at a word's end) */
-void o_list_say (void)
+void __fastcall__ o_list_say (unsigned char first)
 {
-    unsigned off = 0, n;
+    unsigned off = 9, n;                        /* (Past "You carry": told before the world's asked, the user's D17) */
     char* e;
 
+    if (first) {
+        msg ("You carry");
+        t_flush ();
+        return;
+    }
     do {
         hub_mem (UI_BANK, lb, UIREC->things_text + off, sizeof lb - 1);
         lb[sizeof lb - 1] = 0;
@@ -559,11 +564,7 @@ void o_list_say (void)
             *e = 0;
             n = e - lb;
         }
-        if (off) {
-            say (lb);
-        } else {
-            msg (lb);
-        }
+        say (lb);
         off += n;
     } while (e);
 }

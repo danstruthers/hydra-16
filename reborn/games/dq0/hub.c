@@ -66,7 +66,7 @@ void __fastcall__ hub_map (unsigned char bank)
     *(volatile unsigned char*) 0 = hub_x[bank];
 }
 
-#ifdef HUB_ZERO
+#if defined (HUB_ZERO) || !defined (HUB_ATTACHED)
 void hub0 (void)                                /* (hub_map (0), two bytes less at each call: hub0.h's, the world's room) */
 {
     hub_map (0);

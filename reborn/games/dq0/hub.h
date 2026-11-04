@@ -675,7 +675,7 @@ enum { A_WALKED, A_DOWN, A_UP, A_START, A_DIGGING, A_CROSSED, A_CLIMBING, A_CLIM
 enum { N_NO_EXIT, N_SHUT, N_NO_STAIRS, N_NO_DIG, N_CLOSED, N_DEN, N_DOOR };    /* E_NOWAY's why: no way that way, the way out
                                                 **   shut, no stairs, nothing to dig there, the portcullis that way
                                                 **   down, a denizen in the way (the actor times 256) */
-enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_LOOKED = 8, V_TRACED = 16 };   /* E_VIEW's why (V_STIR: a
+enum { V_TURNED, V_LIT, V_DARK, V_STIR, V_FACING, V_SETOFF, V_LOOKED = 8, V_TRACED = 16 };   /* E_VIEW's why (V_STIR: a
                                                 **   denizen come into sight, gone from it, or doing something else;
                                                 **   V_FACING: a turn begun, its look to come, V_TURNED; V_LOOKED: a
                                                 **   look one way's, I_LOOK's: 8, look.c's look (8); V_TRACED: the

@@ -18,6 +18,7 @@
 #include <unistd.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "world.h"
 #include "things.h"
 #include "trace.h"
@@ -149,6 +150,7 @@ static unsigned char opened (void)
 ** personal things (KT_PURSE, as it's first met: its kind's [purse KEY], else its standing's, m's x[0], [standing N]),
 ** every line given, each on its own die (its stratum's seed, its number and the section's: the same things each
 ** time), and made (part 58's: filed with its lair's home square, IW_DEN; its belongings in its lair's home room) */
+unsigned char ui_first (void);                  /* (dq0w.c's) */
 void __fastcall__ s_den_kit (const struct msg* m)
 {
     static const char pre[3] = { '#', '&', '%' };
@@ -171,6 +173,7 @@ void __fastcall__ s_den_kit (const struct msg* m)
         ost.by0 = ost.hy;
         ost.bw = ost.bh = 1;
     }
+    ost.kit = 1;
     ost.level = 1;
     ost.omint = 0xFF;                           /* (Its stratum's grave goods' coins' mint, not looked for yet; their
                                                 **   age, five a century: part 59's) */
@@ -190,7 +193,13 @@ void __fastcall__ s_den_kit (const struct msg* m)
             off = find (b);
         }
         draw_at (off, MD_ALL);
+        hub_map (0);
+        if (ost.kit == 2 || ui_first ()) {
+            ost.kit = 2;                        /* (A command come: all drawn again after its answer) */
+            return;
+        }
     }
+    ost.kit = 0;
     hub_map (KIND_BANK);
     if (OF_N) {
         outmake (1);

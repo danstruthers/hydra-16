@@ -69,6 +69,7 @@ unsigned __fastcall__ seen_named (const char* name);
 unsigned char __fastcall__ moved (unsigned char op);
 unsigned char shut_work (void);
 unsigned char inside (void);                    /* Part 36 */
+void tools (void);                              /* Part 10 */
 unsigned __fastcall__ look_pick (void);         /* Part 4 */
 void __fastcall__ look_on (unsigned n);         /* Part 39 */
 unsigned char __fastcall__ describe (const char* name);    /* Part 40 */
@@ -196,6 +197,9 @@ unsigned char things_req (void)
         wear (tbuf, HUB->ireq.to);
     } else if (k == IO_LIST) {
         list ();
+    } else if (k == IO_TOOLS) {
+        tools ();                               /* (Part 10's alone, as every thing handled tells the referee what's to
+                                                **   hand) */
     } else if (k == IO_LOOK) {
         look_on (look_pick ());                 /* (A thing looked at: part 4's chooser, then part 39's words, with no
                                                 **   part 10 to come back to, four swaps less before its first letter:
@@ -262,7 +266,10 @@ static unsigned __fastcall__ item_kind (unsigned i)
 unsigned char wsel;
 unsigned wnot, win, wforce;
 unsigned handled;                               /* (The thing a request handled last: a count's, as each is moved) */
+unsigned hand_n;                                /* (The thing serve's at_hand found, for the handling's own: s_at_hand's) */
+unsigned char hand_sel;                         /*   (and the selector it was asked with) */
 unsigned csum;                                  /* (pick's: how many of those it chose from, all told) */
+unsigned char chart_late;
 unsigned chart_w[5];                            /* (The map making's things, part 26's, handy, by their keys) */
 unsigned rtime, roff;                           /* (The reach owed, part 10's: its time, the pack taken off for it, */
 unsigned char rsteps, rbody;                    /*   its steps; the main RAM's, part 35's too) */
@@ -606,13 +613,28 @@ static void rclear (void)
     rsteps = rbody = 0;
 }
 
+/* (Part 90's near_one, a copy: part 56's own) */
+static unsigned char near56 (void)
+{
+    const struct actor* a;
+    unsigned char k;
+
+    hub_map (0);
+    for (k = NACTORS, a = HUB->actor; k; --k, ++a) {
+        if (a->state && a->sn == HUB->pc_stratum && a->x - HUB->pc_x + 1 <= 2 && a->y - HUB->pc_y + 1 <= 2) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 unsigned __fastcall__ s_reach_done (unsigned char said)
 {
     static unsigned char s;
     static unsigned t;
 
     hub_map (0);
-    if ((s = rsteps + rbody) != 0 && zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
+    if ((s = rsteps + rbody) != 0 && near56 () && zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
         hub_map (0);
         rtime = s * HUB->round;
     }
@@ -1510,7 +1532,12 @@ back:
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* (Part 10's own: none owed, serve's) */
+/* ==== Part 90 (part 10's till 2026-11-03: every call a handling makes out to another part comes back here, and part 10
+** all its 3,600 bytes each time: the user's D17): a request of the things served */
+#pragma code-name (push, "SW90CODE")
+#pragma rodata-name (push, "SW90RODATA")
+
+/* (Part 90's own: none owed, serve's) */
 static void rclear10 (void)
 {
     rtime = roff = 0;
@@ -1519,6 +1546,8 @@ static void rclear10 (void)
 
 
 #pragma static-locals (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The tools: the keys of all the character carries (anywhere on it: a skill used, the one that suits takes
 ** itself out), into the hub's things_text, each after its mark (held: < in the left hand, > the right, * both; + worn;
@@ -1526,7 +1555,7 @@ static void rclear10 (void)
 ** carries, worn or not, in quarter pounds: the referee's encumbrance) in the request's x, the hands that hold
 ** something (DH_*, slice 4.1b's) in y; and one used, worn (the
 ** referee's choice, by its key), its name back in the request (bare hands: "hands") */
-static void tools (void)
+void s_tools (void)
 {
     static const char hmark[4] = " <>*";
     char m[2];
@@ -1570,6 +1599,9 @@ static void tools (void)
     HUB->ireq.y = hh;
 }
 
+#pragma code-name (push, "SW90CODE")
+#pragma rodata-name (push, "SW90RODATA")
+
 /* What's in the character's hands (IO_HANDS: a blow with nothing named, the UI's), their kinds in the request's x, its
 ** main hand's (or a thing's in both), and y, its other's (0 none: held_kinds') */
 static void hands_held (void)
@@ -1585,13 +1617,16 @@ void s_light_now (void)
 {
     char lamp[14];
     const struct kind* k;
-    unsigned i = 0;
+    const struct item* p;
+    unsigned i = 0, j;
     unsigned char best = 0;
 
     lamp[0] = 0;
     while ((i = items (i, IN_FLAGS | IN_ACTOR | IN_ITEM | IN_PORTAL, I_LIT)) != 0) {
         fetch (&rec, i);
-        if (s_on_pc (i)) {
+        for (j = i; (p = item_at (j))->where == IW_ITEM; j = p->x) {    /* (Up to whoever has it: part 10's on_pc, no swap) */
+        }
+        if (j == rs_pack || (p->where == IW_ACTOR && !p->x)) {
             k = kind_of (rec.kind);
             if (k->light > best) {
                 best = k->light;
@@ -1602,7 +1637,29 @@ void s_light_now (void)
     hub_map (0);
     HUB->pc_light = best;
     strcpy (HUB->pc_lamp, lamp);
-    chart_now ();
+    if (HUB->tpr) {
+        chart_late |= 1;                        /* (Its map making: the main loop's at the real paces, a command's answer
+                                                **   first, some 230,000 cycles through what it carries each thing
+                                                **   handled) */
+    } else {
+        chart_now ();
+    }
+}
+
+/* Anyone beside the character, in its zone or not (zone_step's first look, its part's swaps spared: a thing handled, no one
+** near, has no grope to ask: part 90's and part 56's) (the hub's header in the window after) */
+unsigned char near_one (void)
+{
+    const struct actor* a;
+    unsigned char k;
+
+    hub_map (0);
+    for (k = NACTORS, a = HUB->actor; k; --k, ++a) {
+        if (a->state && a->sn == HUB->pc_stratum && a->x - HUB->pc_x + 1 <= 2 && a->y - HUB->pc_y + 1 <= 2) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 /* ---- A request (the hub's ireq), answered (but for its state, the caller's: done once it's looked again): 1 if
@@ -1691,9 +1748,6 @@ unsigned char s_serve (void)
     case IO_LIST:
         list ();
         break;
-    case IO_TOOLS:
-        tools ();
-        break;
     case IO_HANDS:
         hands_held ();
         break;
@@ -1740,8 +1794,8 @@ unsigned char s_serve (void)
     default:                                    /* (A thing handled: IO_HOLD ...) */
         afar = 0;
         k = iq.kind;
-        if (!noinit && k >= IO_HOLD && k <= IO_DOFF && (n = at_hand (iq.name)) != 0 &&
-            (k <= IO_TAKE || (kind_at (n)->form & KF_BACK)) && fumbled (item_kind (n))) {
+        if (!noinit && k >= IO_HOLD && k <= IO_DOFF && (n = at_hand (iq.name), hand_n = n, hand_sel = wsel, n) != 0 &&
+            (k <= IO_TAKE || (kind_at (n)->form & KF_BACK)) && near_one () && fumbled (item_kind (n))) {
             hub_map (0);                        /* (Held, stowed, put or taken out engaged, a grope failed: the round
                                                 **   wasted, nothing done, its words) */
             took = HUB->round;
@@ -1771,7 +1825,12 @@ unsigned char s_serve (void)
         changed |= iq.result == IR_OK;
     }
     if (iq.result == IR_OK && (iq.kind == IO_GET || (iq.kind >= IO_HOLD && iq.kind <= IO_DOUSE))) {
-        sconce_lights (1);                      /* (A sconce's torch taken, put in, lit, put out: its room's light) */
+        hub_map (0);
+        if (HUB->tpr) {
+            chart_late |= 2;                    /* (The main loop's at the real paces: its answer first) */
+        } else {
+            sconce_lights (1);                  /* (A sconce's torch taken, put in, lit, put out: its room's light) */
+        }
     }
     k = iq.kind == IO_SHUT || iq.kind == IO_FILL;   /* (A timed work begun, or a lid's: its reach its time's) */
     if (iq.result == IR_OK && iq.kind != IO_KIT && iq.kind != IO_HIDE &&
@@ -1787,6 +1846,7 @@ unsigned char s_serve (void)
         }
     }
     rclear10 ();
+    hand_n = 0;
     hub_map (0);
     HUB->ireq.result = iq.result;
     if (rs_ok && reach_do (RO_REPLY)) {         /* (The reach's steps: part 83's, a step begun the reply's) */
@@ -1795,6 +1855,8 @@ unsigned char s_serve (void)
     return changed && iq.kind != IO_KIT;
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -2052,6 +2114,7 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
 
     afar = 0;
     csum = 0;
+    hand_n = 0;
     if (wforce && !wnot) {
         return wforce;                          /* (A count's next, chosen already: a lot's part split off) */
     }
@@ -2176,6 +2239,12 @@ unsigned __fastcall__ s_seen_named (const char* name)
 unsigned __fastcall__ s_at_hand (const char* name)
 {
     afar = 0;
+    if (hand_n && wsel == hand_sel && !wnot && !win && !wforce && !strcmp (name, iq.name)) {
+        name = (const char*) hand_n;            /* (What serve asked, just now, the same thing asked again as the handling
+                                                **   begins: no second pass of the store, the user's D17) */
+        hand_n = 0;
+        return (unsigned) name;
+    }
     return *name ? s_pick (name, HW_HAND) : 0;
 }
 

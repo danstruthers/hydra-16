@@ -2829,6 +2829,80 @@ function dq0AnswerTest(baud) {
   };
 }
 
+// dq0answerjobs: the world's periodic work made to fall on an answer, whatever the phase (the user's D17: a build's
+// inventory had its first letter at 889,825 cycles, the traces' journal taken in just as it was typed; which answer it
+// falls on moves with any change to the code).  At the normal pace, seed 3: what's carried asked again and again, each
+// time the job poked due a set time before its Enter (0, 100,000, 250,000 and 450,000 cycles): the lights' minute (the
+// world's burn_due, 0), the traces' journal (tr_n full, held empty till then so there's a journal to take in), and both;
+// then twenty more at waits that move the phase.  Each within its budget, and each job shown to have run (its stub called:
+// given way to, not lost)
+function dq0JobsTest() {
+  const BEFORE = [0, 100000, 250000, 450000], LINE = 'inventory', WANT = 'You carry', MAX = 720000;
+  const each = ['burn', 'trace', 'both'].flatMap(j => BEFORE.map(d => ({ j, d })));
+  const pre = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo b115200 >/dev/serctl', 'dq0 -p n -s 3 -c /ram/c.hm -T', 'look'];
+  const free = 20, gaps = [1, 2, 3, 1, 4, 2];
+  const lines = [...pre, ...each.map(() => LINE), ...Array(free).fill(LINE), 'quit', 'echo $status'];
+  const input = lines.map((l, i) => {
+    const k = i - pre.length;
+    const w = k < 0 || i >= pre.length + each.length + free ? 0 : k < each.length ? 3 : gaps[k % gaps.length];
+    return 'ā' + 'Ā'.repeat(w) + l + '\r';
+  }).join('');
+  return {
+    name: 'dq0answerjobs', what: 'Dingus Quest Zero\'s periodic work giving way to a command (the user\'s D17, a command\'s first letter within 720,000 cycles): the lights\' minute and the traces\' journal made due a set time before an Enter, each answer within its budget and each job run after it; and what\'s carried asked at waits that move the phase',
+    meaning: true, outfit: true,
+    init: 't_rc', cycles: 900e6,
+    machine: { input },
+    expect: ['% echo $status'],
+    start(m) {
+      this.timer = dq0Timer(m);
+      const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0w', 'dq0w.lbl'), 'latin1');
+      const at = n => parseInt(new RegExp('^al ([0-9A-F]+) \\.' + n + '$', 'm').exec(lbl)[1], 16);
+      const due = at('_burn_due'), trn = at('_tr_n'), burn = at('_burns_now'), flush = at('_tr_flush');
+      const a = m.acia, cpu = m.cpu, step = cpu.step.bind(cpu), ran = this.ran = { burn: 0, trace: 0, burnWant: 0, traceWant: 0 };
+      let qlen = -1, k = -1, fire = 0, job = null, world = -1, held = 0;
+      cpu.step = v => {
+        if (a.rxQueue.length !== qlen) {
+          qlen = a.rxQueue.length;
+          if (a.rxQueue.length && a.rxQueue.slice(0, LINE.length).join('') === LINE && k + 1 < each.length && a.rxDelay >= 1000000) {
+            job = each[++k];                    // (The wait before the line begun: its Enter a character's time a letter after it)
+            fire = cpu.cyc + a.rxDelay + (LINE.length + 1) * 20000 - job.d;
+            if (world < 0) world = m.dq0.bank(0)[12 + 1];
+          }
+        }
+        if (world >= 0) {
+          const r = m.taskRam[world];
+          if (fire && cpu.cyc >= fire) {
+            if (job.j !== 'trace') { r[due] = r[due + 1] = r[due + 2] = r[due + 3] = 0; ran.burnWant++; }
+            if (job.j !== 'burn') { r[trn] = 24; ran.traceWant++; }
+            fire = 0;
+          } else if (fire && job.j !== 'burn' && cpu.cyc - held > 400000) {
+            held = cpu.cyc;
+            r[trn] = 0;                         // (Its journal filling till then)
+          }
+          if (m.T === world) {
+            if (cpu.PC === burn) ran.burn++;
+            else if (cpu.PC === flush) ran.trace++;
+          }
+        }
+        return step(v);
+      };
+    },
+    check() {
+      const f = [], notes = this.notes = [], R = this.ran;
+      this.timer(lines, lines.slice(pre.length, pre.length + each.length + free).map(l => ({ line: l, want: WANT }))).forEach((r, i) => {
+        const j = each[i], name = j ? j.j + ' ' + j.d + ' before' : 'free ' + (i - each.length);
+        notes.push(name + ': first letter ' + r.first);
+        if (!(r.first !== null && r.first <= MAX)) f.push(name + ': its first letter ' + r.first + ' cycles from Enter (budget ' + MAX + ')');
+      });
+      notes.push('the jobs made due: lights ' + R.burnWant + ', traces ' + R.traceWant + '; run: lights ' + R.burn + ', traces ' + R.trace);
+      if (R.burn < R.burnWant) f.push('the lights\' minute made due ' + R.burnWant + ' times, run ' + R.burn);
+      if (R.trace < R.traceWant) f.push('the traces\' journal made due ' + R.traceWant + ' times, taken in ' + R.trace);
+      return f;
+    },
+    sdcard: true
+  };
+}
+
 module.exports = {
   IRQ_OFF_MAX,
   tests: [
@@ -6439,6 +6513,7 @@ module.exports = {
       sdcard: true
     },
     dq0AnswerTest(115200),
+    dq0JobsTest(),
     // (dq0answer96, the same at 9,600 baud: its times noted, no budget of its own (the user's targets, D17, are 115,200's):
     // only with DQ0ANS96=1, to measure)
     ...(process.env.DQ0ANS96 ? [dq0AnswerTest(9600)] : []),

@@ -98,6 +98,7 @@ unsigned char tripped (void);                   /* Part 43 */
 unsigned char __fastcall__ dark_end (unsigned char how);    /* Part 44 */
 unsigned char __fastcall__ bearings (unsigned w);   /* Part 52 */
 void __fastcall__ bearings_off (unsigned feet); /* (wbody.h's) */
+void arrive (void);                             /* Part 91 */
 void tsense (void);                             /* Part 76 (wtime.c) */
 void rest_go (void);
 void __fastcall__ travel_go (const struct msg* m);  /* Part 55 */
@@ -117,6 +118,7 @@ struct work wk;
 extern char _SWAP_START__[];
 unsigned char den_done;                         /* (wbody.h's) */
 unsigned char den_saw;
+unsigned char kit_off;
 unsigned char noinit;                           /* (dq0 -I: no engage initiative test, nor a grope's; the UI's
                                                 **   WQ_START, wgame.c's) */
 unsigned char nobear;                           /* (dq0 -N: the character's bearings never tested, as one that knows
@@ -718,7 +720,12 @@ static void things (void)
 {
     stocks ();
     if (HUB->ireq.kind == IO_PUZZLE ? puzzle () : things_req ()) {
-        see (0);                                /* (The puzzle's the world's rules: wgame.c) */
+        if (HUB->tpr) {
+            den_saw = 1;                        /* (Looked about as the main loop comes round, the reply first: "Put down."
+                                                **   waited 1,400,000 cycles on a torch's new light, the user's D17) */
+        } else {
+            see (0);                            /* (The puzzle's the world's rules: wgame.c) */
+        }
     }
     hub_reply (&HUB->ireq);
 }
@@ -753,6 +760,7 @@ static unsigned char __fastcall__ looked (unsigned char first)
         it_near ();
     }
     HUB->look.first = first;
+    den_saw = 0;
     if ((HUB->look.wn || (first & LF_ARRIVE) || !HUB->pc_drawn) && (HUB->watch & WA_MAP) && (HUB->pc_chart & CH_DRAW) &&
         HUB->pc_map) {
         draw_test ();                           /* (Mapping as it goes on paper: a way walked, a room come into, or
@@ -2217,7 +2225,9 @@ static void turn (void);
 
 static unsigned char went_cut;                 /* (A walk over to a thing stopped short: halt's, its arrival
                                                 **   not "You go over to it.") */
-static void arrive (void)
+#pragma code-name (push, "SW91CODE")           /* (Part 91's since 2026-11-03: the main RAM's room, once a walk) */
+#pragma rodata-name (push, "SW91RODATA")
+void s_arrive (void)
 {
     unsigned char first, how = move.how, dw = pon && pfeel, bn;
 
@@ -2302,6 +2312,8 @@ static void arrive (void)
     hub_map (0);
     HUB->pc_going = IDLE;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ==== Part 52: the character's bearings underground (slice 4.2's: DUNGEON.md's bearings underground, HOUSE.md's; the
 ** user's, 2026-10-16 and 23).  Its true facing the world's, which every task that works the place goes by; the north it
@@ -5859,6 +5871,17 @@ static unsigned char pc_waited;
 
 /* An intent carried out, the UI's: a step, a walk, a climb (each answered at once: the main RAM's); a turn, a wait
 ** and the quit part 53's (intent_few: slice 4.2's, the main RAM's room); the rest part 37's (intent_more) */
+/* A way set out on, a plain step's or a walk's (the heading, | 8 a step, | 16 a walk: E_VIEW V_SETOFF's b), told as it begins: its first
+** words at once, its look as it gets there (the user's D17: a step's first letter was its look's, a second on; only one
+** that's under way, what stops it at once its own words) */
+static void __fastcall__ set_out (unsigned char h)
+{
+    if (move.on) {
+        evb = h;
+        view (V_SETOFF);
+    }
+}
+
 static void __fastcall__ intent (struct msg* m)
 {
     if (m->kind == I_STOP || m->kind == I_GO_ON || m->kind == I_ASK) {
@@ -5881,6 +5904,9 @@ static void __fastcall__ intent (struct msg* m)
         tgx = m->w1;
         tgy = m->w2;
         go (m->a & 7);
+        if (!tgx) {
+            set_out ((m->a & 7) | 16);
+        }
         break;
     case I_CLIMB:
         climb (m->a);
@@ -5892,6 +5918,7 @@ static void __fastcall__ intent (struct msg* m)
         break;
     case I_STEP:
         step_to (m->w1 & 7, m->w2, (m->w1 & STEP_KEEP) != 0);
+        set_out ((m->w1 & 7) | 8);
         break;
     case I_WAIT:
     case I_TURN:
@@ -6423,6 +6450,15 @@ int main (int argc, char* argv[])
                                                 **   world's own periodic work waits for it, a quarter second at most:
                                                 **   ui_first's) */
         stocks ();                              /* (The chunks the maker stocked: their things put down, marked so) */
+        if (chart_late && !uf) {
+            if (chart_late & 2) {
+                sconce_lights (1);              /* (A sconce's light, a thing handled: wkept.c's) */
+            }
+            if (chart_late & 1) {
+                chart_now ();                   /* (The map making's things, as what it carries has changed: part 13's) */
+            }
+            chart_late = 0;
+        }
         if (tr_n >= TR_FLUSH && !uf) {
             tr_flush (TF_SOME);                 /* (The passings journalled taken into the traces' store: part 28's,
                                                 **   giving way as a command comes; 160,000 cycles of the world's and a
@@ -6441,7 +6477,7 @@ int main (int argc, char* argv[])
         }
         clock_run ();
         stepping ();                            /* (The long task as the clock goes: a walk a square at a time) */
-        if (den_saw && !move.on) {
+        if (den_saw && !move.on && !uf) {
             den_saw = 0;                        /* (A body fallen: looked at again, the things too) */
             see (0);
         }
@@ -7143,8 +7179,14 @@ void s_burns_now (void)
                                                 **   in hand, its answer first) */
             }
         }
-        burn_ask |= BA_SCONCES;                 /* (The rooms' lights by their sconces, a minute's: one burnt out, its
-                                                **   keepers gone: wkept.c's; next time round) */
+        hub_map (0);
+        if (HUB->tpr) {
+            burn_ask |= BA_SCONCES;             /* (The rooms' lights by their sconces, a minute's: one burnt out, its
+                                                **   keepers gone: wkept.c's; next time round at the real paces, not in
+                                                **   a long wait) */
+        } else {
+            sconce_lights (0xFF);
+        }
     }
     if (out || seen) {
         if (out) {
@@ -7182,9 +7224,13 @@ void s_burns_now (void)
                                                 **   part 70's, slice 4.3's; nothing to tell, no part swapped in) */
     }
     hub_map (0);
-    if ((asked || HUB->now >= HUB->tb.due) && (!HUB->tpr || !HUB->ui_cmd)) {
-        tsense ();                              /* (The time of day it believes brought up to now, at its due or at
+    if (asked || HUB->now >= HUB->tb.due) {
+        if (HUB->tpr) {
+            burn_ask |= TS_ASK;                 /* (A pass of its own at the real paces: the next time round) */
+        } else {
+            tsense ();                          /* (The time of day it believes brought up to now, at its due or at
                                                 **   once: a light's change, a wait, a black-out ... part 76's) */
+        }
     }
 }
 

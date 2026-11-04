@@ -200,6 +200,10 @@ void s_den_intents (void)
                                                 **   denizen's things made: part 60's) */
             if (m.kind == I_KIT) {
                 den_other (&m);
+                if (kit_off & 2) {
+                    kit_off &= 1;
+                    break;                      /* (The rest after the UI's command's answer, this one again) */
+                }
             } else {
                 bd.kind = m.kind == I_SWEPT ? TK_SWEPT : m.x[1];    /* (Body bd but a copy: none put back) */
                 bd.sn = m.x[2];

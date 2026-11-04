@@ -57,6 +57,9 @@ struct ost {
     unsigned        budget, kept;               /* The money left to spend, and kept */
     unsigned        tags;                       /* The character's tags (rs.h's OT_*) */
     unsigned        rs;                         /* The draw's die */
+    unsigned char   kit;                        /* A denizen's draw (I_KIT's): 1; given way to a command coming, 2, drawn again as
+                                                **   it's answered (the same dice, nothing made yet: a kit's a million cycles,
+                                                **   the card's reads in it, the user's D17, 2026-11-03); else 0 */
     unsigned char   level;                      /* Its wealth: 0 poor, 1 average, 2 rich */
     unsigned char   freeall;                    /* Every line given (the universal kit, a temple's) */
     unsigned char   tool;                       /* A skill's tools drawn (one it has already not drawn again) */

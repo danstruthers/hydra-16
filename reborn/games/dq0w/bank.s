@@ -150,7 +150,7 @@ go:
             SWPART      53, 26              ; A turn, a wait, the quit (dq0w.c's intent_few: slice 4.2's)
             SWPART      54, 16              ; Travel: the way out, as a leg's worked out (dq0w.c's: slice 4.2's)
             SWPART      55, 2              ; Travel to a place it knows (dq0w.c's: slice 4.2's)
-            SWPART      56, 17              ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
+            SWPART      56, 9               ; The reach: how readily a thing comes to hand (things.c's, 2026-10-26)
             SWPART      57, 18              ; The outfits drawn: the character's, a denizen's (outfit.c, 2026-10-27)
             SWPART      58, 19              ; The outfits made (outmake.c)
             SWPART      59, 18              ; An outfit's section drawn (outdraw.c)
@@ -185,6 +185,8 @@ go:
             SWPART      87, 26              ; And the hand the pack goes in, a tool's use, the words
             SWPART      88, 15              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
             SWPART      89, 27              ; A shaft's going, a thing let fall, the daylight's emitters (dq0w.c: 2026-11-03)
+            SWPART      90, 5               ; A request of the things served (things.c: part 10's till 2026-11-03)
+            SWPART      91, 3               ; An arrival (dq0w.c: the main RAM's till 2026-11-03)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -263,10 +265,12 @@ go:
             SWFN        go_to, 78           ; (Part 9's till 2026-10-31: its room the walk's)
             SWFN        step_to, 9
             SWFN        walk, 9             ; (A walk along a passage: across's, part 33's; 2026-10-31, the main RAM's room)
-            SWFN        serve, 10
+            SWFN        serve, 90
+            SWFN        tools, 10
+            SWFN        arrive, 91
             SWFN        named, 10
             SWFN        on_pc, 10
-            SWFN        light_now, 10
+            SWFN        light_now, 90
             SWFN        chart_now, 13
             SWFN        at_hand, 4
             SWFN        carried_named, 4
