@@ -195,6 +195,7 @@ unsigned char o_may_den (void)
 ** since 2026-11-03, a walk's first words no part's swap: an overlay's call takes nothing; overlay 17's, 15's room) */
 #pragma code-name (push, "OV17CODE")
 #pragma rodata-name (push, "OV17RODATA")
+#pragma local-strings (push, on)
 void __fastcall__ o_walk_says (const char* name)
 {
     unsigned char k = cmd.obj.kind;
@@ -217,6 +218,7 @@ void __fastcall__ o_walk_says (const char* name)
     t_flush ();                                 /* (Out before the world's walk starts: the user's D17) */
     placing = 1;
 }
+#pragma local-strings (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
