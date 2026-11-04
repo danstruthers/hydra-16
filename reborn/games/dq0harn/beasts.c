@@ -1,11 +1,23 @@
 /*
 ** beasts.c - (overlay 5's read-only data, the referee's) the bestiary: each kind's sheet to be, by its key (the
-** denizens' kinds', kinds.txt's): the first six a stand-in of the game's own (their numbers the game's); the rest the
-** HarnWorld Bestiary's averages for the like creature (each entry's page given), or for folk HarnMaster's for men
-** (about 10 to 12, their skills by their trade), the peoples' by the book's (2026-10-29: Phase 4's peoples, the
-** user's answer 11).  Moved out of overlay 2 for the peoples' room (fight.c reads an entry with bread, its copy in the
-** main RAM: dq0harn.h's struct bkind).  The order is the sheets' (a sheet keeps its entry's number: new ones only at
-** the end).
+** denizens' kinds', kinds.txt's): the HarnWorld Bestiary's averages for the like creature (each entry's page given),
+** or for folk HarnMaster's for men (about 10 to 12, their skills by their trade), the peoples' by the book's
+** (2026-10-29: Phase 4's peoples, the user's answer 11).  Moved out of overlay 2 for the peoples' room (fight.c reads
+** an entry with bread, its copy in the main RAM: dq0harn.h's struct bkind).  The order is the sheets' (a sheet keeps
+** its entry's number: new ones only at the end).
+**
+** The first six (2026-11-04, the user's answer A9: "the book's figures now"), a beast's Dexterity its Agility where
+** the book gives none (as the bat's and the adder's), its natural weapons in the book's order (its most used first):
+** - The giant rat: the book has only the rat (Rodents 2, p83), whole; its weight (12 lb: the book gives none) the
+**   house's, it being "giant".  For review.
+** - The cave spider: the book has no spider; its nearest kin, a small venomous biter, the adder's (Snakes 3, p88), and
+**   its venom (afflict.c's).  For review.
+** - The ghoul: the male grave-wight's (Grave-Wights 3, p48).
+** - The skeleton: the book has no skeleton; its nearest kin the gulmorvrus, the wight's sheet (Morvrin 5, p78: a man's,
+**   its will gone), its weight its bones' (40 lb, the house's) and its weapon held at that mastery.  For review.
+** - The cave bear: the black bear's (Bears 2, p13).
+** - The kobold: the book has no kobold; its nearest kin the small orc (HarnMaster 3.5's Gargun 4), its usual weapon's
+**   mastery with its spear (folk: its hide only if its things are never told, dq0 -K's).  For review.
 **
 ** The peoples' (the book's numbers, in the game's units):
 ** - The Gargun (HarnMaster 3.5's Gargun 4-8): the five sub-species' attributes, Initiative, Dodge, natural armour
@@ -28,18 +40,19 @@
 #include "dq0harn.h"
 
 const struct bkind bestiary[NBEASTS] = {
-    { "rat", { 5, 8, 10, 14, 6 }, 3, 2, 30, 50, { 1, 1, 0, 1 }, BF_QUAD,
-      { { "bite", 45, 2, HARN_POINT, HARN_FACE }, { "" } } },
-    { "spider", { 6, 9, 12, 15, 8 }, 4, 3, 40, 55, { 2, 3, 1, 0 }, 0,
-      { { "bite", 50, 3, HARN_POINT, HARN_FACE }, { "" } } },
-    { "ghoul", { 13, 14, 11, 11, 12 }, 35, 4, 70, 40, { 1, 1, 1, 0 }, BF_BIPED,
-      { { "claws", 55, 4, HARN_EDGE, HARN_HAND }, { "bite", 45, 4, HARN_POINT, HARN_FACE } } },
-    { "skel", { 10, 10, 10, 10, 10 }, 10, 4, 90, 35, { 0, 4, 6, 2 }, BF_MINDLESS | BF_BIPED,
-      { { "sword", 50, 4, HARN_EDGE, 0xFF }, { "" } } },
-    { "bear", { 22, 18, 8, 10, 12 }, 150, 5, 60, 30, { 4, 3, 2, 3 }, BF_QUAD,
-      { { "claws", 65, 6, HARN_EDGE, HARN_HAND }, { "bite", 55, 7, HARN_POINT, HARN_FACE } } },
-    { "kobold", { 8, 10, 12, 13, 9 }, 15, 3, 40, 55, { 2, 2, 1, 1 }, BF_BIPED | BF_FOLK,
-      { { "spear", 45, 5, HARN_POINT, 0xFF }, { "" } } },
+    { "rat", { 3, 8, 18, 18, 9 }, 3, 2, 60, 90, { 2, 1, 1, 2 }, BF_QUAD,            /* (Rodents 2, p83) */
+      { { "bite", 75, 1, HARN_POINT, HARN_FACE }, { "" } } },
+    { "spider", { 4, 10, 12, 12, 8 }, 1, 2, 45, 60, { 1, 1, 0, 1 }, 0,              /* (Snakes 3, p88, its kin) */
+      { { "bite", 55, 3, HARN_POINT, HARN_FACE }, { "" } } },
+    { "ghoul", { 20, 15, 13, 13, 16 }, 40, 4, 60, 65, { 6, 4, 3, 5 }, BF_BIPED,     /* (Grave-Wights 3, p48) */
+      { { "bite", 48, 7, HARN_POINT, HARN_FACE }, { "claws", 60, 7, HARN_EDGE, HARN_HAND } } },
+    { "skel", { 12, 12, 6, 10, 1 }, 10, 4, 60, 35, { 1, 1, 1, 0 }, BF_MINDLESS | BF_BIPED,   /* (Morvrin 5, p78, its
+                                                                                    **   kin) */
+      { { "sword", 55, 5, HARN_EDGE, 0xFF }, { "" } } },
+    { "bear", { 16, 13, 13, 13, 13 }, 65, 5, 65, 65, { 5, 2, 2, 4 }, BF_QUAD,       /* (Bears 2, p13) */
+      { { "bite", 52, 4, HARN_POINT, HARN_FACE }, { "claws", 65, 4, HARN_EDGE, HARN_HAND } } },
+    { "kobold", { 10, 10, 11, 11, 10 }, 18, 3, 50, 55, { 4, 3, 1, 3 }, BF_BIPED | BF_FOLK,   /* (Gargun 4, its kin) */
+      { { "spear", 60, 7, HARN_POINT, 0xFF }, { "" } } },
     { "bat", { 3, 8, 10, 10, 8 }, 1, 1, 45, 50, { 1, 1, 0, 1 }, 0,                  /* (Bats 1, p10) */
       { { "bite", 45, 1, HARN_POINT, HARN_FACE }, { "" } } },
     { "adder", { 4, 10, 12, 12, 8 }, 1, 2, 45, 60, { 1, 1, 0, 1 }, 0,               /* (Snakes 3, p88) */

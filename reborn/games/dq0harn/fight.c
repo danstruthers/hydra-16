@@ -5,9 +5,8 @@
 ** copy of it in the main RAM (the hub's not in the window while the overlay is), its words put into its text.
 **
 ** A creature's sheet comes from its kind's key (the denizens' kinds', kinds.txt's) in the referee's bestiary: the
-** first six a stand-in of the game's own (their numbers the game's); the rest the HarnWorld Bestiary's averages for
-** the like creature (each entry's page given), or for folk HarnMaster's for men (about 10 to 12, their skills by
-** their trade).  Each attribute varied as the book suggests (less 7, and 2d6: at least 1, at most twice), by a die
+** HarnWorld Bestiary's averages for the like creature (each entry's page given; where it has none, its nearest kin's),
+** or for folk HarnMaster's for men (about 10 to 12, their skills by their trade).  Each attribute varied as the book suggests (less 7, and 2d6: at least 1, at most twice), by a die
 ** of its own (the game's seed and the record's number: the same creature each time, and no die of the referee's
 ** spent on it); its sheet kept in the referee's bank (dq0harn.c's sheet_get), its injuries, its state, its
 ** bloodloss, the time it's senseless till.

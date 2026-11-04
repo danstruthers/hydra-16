@@ -730,8 +730,8 @@ round's), its missile the loaded one ("nock an arrow", "load the crossbow") or t
 extreme none for a launcher underground); a clear line (what passes, above; one standing in it stops the shot unless
 the mark is as far beyond again); the mark behind cover beside a slit or a window; aware of the shot or not; the
 referee asked, the shot told as a blow is (a fight's words), fought on as a fight is (a long task); the missile then
-lying where it falls (at the mark's feet, past it on a miss, near it gone wild), broken by its chance, a thing thrown
-moved itself.  "gather the arrows" walks over to each one it knows of in sight within twelve squares and takes it up
+lying where it falls (at the mark's feet, past it on a miss, near it gone wild), broken by its chance, or gone wild lost
+beyond finding one time in two (HOUSE.md's), a thing thrown moved itself.  "gather the arrows" walks over to each one it knows of in sight within twelve squares and takes it up
 into its quiver.
 
 An item is **found** through the character's senses, as everything else is: only on a square it sees now, lit;

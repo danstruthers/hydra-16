@@ -424,15 +424,19 @@ tasks); hands, limbs and getting up (Hands and limbs); a weapon's version and St
 denizen's gear, its blow and its shield (Outfits' the denizens' gear); its tiring (The denizens' bodies); a wound's
 course, first aid and healing (Wounds over time); courage in a fight (Morale).
 
-- **The creatures' sheets come from the referee's bestiary** (fight.c's, by the kinds' keys): the first six (the
-  giant rat, the cave spider, the ghoul, the skeleton, the cave bear, the kobold) a stand-in of the game's own; the
-  rest the HarnWorld Bestiary's averages for the like creature (the page each came from beside it), and for folk the
+- **The creatures' sheets come from the referee's bestiary** (beasts.c's, by the kinds' keys): the HarnWorld Bestiary's
+  averages for the like creature (the page each came from beside it), and for folk the
   book's for men (attributes about 10 to 12, skills by their trade), the peoples' by the book's own (The peoples, below); each attribute varied as the book suggests: less
   7, and 2d6, at least 1 and at most twice its own; by a die of its own, the same creature each time.  Why: the game's
-  own world (G3), its creatures modelled on the book's (the user: "for denizens, read the harnmaster bestiary"); the
-  first six keep their numbers till the tests are cut to meaning (the ghoul is the book's grave-wight, the cave bear
-  its black bear: Bestiary pp48, 13).
-  The first six's figures: *the user's, 2026-11-03: to build* (A9: the book's figures now, the fight tests re-baselined).
+  own world (G3), its creatures modelled on the book's (the user: "for denizens, read the harnmaster bestiary").
+  **The first six** (the user's A9, 2026-11-03: "the book's figures now"; built 2026-11-04), a beast's Dexterity its Agility where the
+  book gives none (as the bat's and the adder's), its natural weapons in the book's order, the first the one it uses most, each one's pace
+  (kinds.txt's step) by the book's Move: the ghoul the book's male grave-wight (p48: its grave rot's C4 the book's too), the cave bear
+  its black bear (p13: its bite first, its claws the better).  *Where the book has no such creature, its nearest kin's figures (for review)*: the giant rat
+  the book's rat, whole (p83: it has no giant one; its weight, 12 lb, the house's, the book giving none); the cave spider the adder's
+  (p88: it has no spiders; a small venomous biter, and the adder's venom with it: Wounds over time); the skeleton the gulmorvrus's, as the wight's
+  sheet is (p78; it has no skeletons; its bones' 40 lb the house's, and a man's sword at that mastery: its old hide against edges and points gone with its stand-in, no rule of the book's saying
+  bones turn a blade); the kobold the small orc's (Gargun 4; it has no kobolds; its spear at the small orc's mastery, folk as before, so no hide but what it wears).
 - **What strikes** *(every ruleset's: which thing; the ruleset's: what it does)* (the user's playtest, 2026-10-22: "I
   cannot `hit the door with bar` if I have a `bar` in hand.  It still says I am battering it with my bare hands";
   "A bar should just be treated as a club or stick, no?"; "I think it should try and use whatever you request, but if
@@ -668,7 +672,9 @@ book's; the house's below, each marked.
   null's a hit; for review)*; told after the miss ("Your shot strikes the giant rat instead: ...", "Its spear strikes
   you instead ..."), the one struck the one hurt (its courage, its fall, its kin's dismay); the missile at its feet.
 - **Where it falls**: a hit or a block at the mark's feet; a miss on past it along the line, one to four squares,
-  short of what stops it; a wild one somewhere within two squares; known to the character.  *An arrow breaks one time
+  short of what stops it; a wild one somewhere within two squares; known to the character.  *A launcher's missile gone wild is lost one time in two, beyond finding (the user's "wild misses
+  should possibly be lost", DECISIONS.md: how often the house's, for review); what's left of it then breaks by its chance as any other; a thing thrown by hand is never
+  lost: too big to go missing near by.*  *An arrow breaks one time
   in four (kinds.c's snaps, the user's "arrows can break"), a bolt one in seven (the house's: shorter, thicker), a
   stone never; a thing thrown never.*  *(For review.)*  One of a lot thrown (a taburi of a handful) goes alone.
   "gather the arrows" walks over to each missile it knows of within twelve squares, seen, the nearest first, and
@@ -1963,7 +1969,7 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   number.)*
 - **Missiles' use** (slice 4.7's: Missiles, above): a lot's one used up (s_use_up by none: its qty), and what breaks as
   it's used, its chance in a hundred, the catalogue's (kinds.c's snaps: arrows 25); their taking up again, Missiles' (the user's,
-  DECISIONS.md).  A wild miss isn't lost as yet: it lands within two squares, to be taken up as any other (the user's "wild misses (critical failures) should possible be lost" isn't built).
+  DECISIONS.md).  A wild miss may be lost: Missiles' where it falls.
 
 ## Travel to a place it knows *(slice 4.2's travel: drafted 2026-10-26 for the user to review)*
 
@@ -2149,7 +2155,7 @@ table, the healing roll, the infection's and the shock's rolls); what the house 
   roll failed (the referee had dropped it), its only defence none and striking nothing, till its watch's roll brings
   it out.  *The house's*: a creature's shock never kills it (H0 held at H1).  Not yet: the minds' way with one in
   shock (it stands, or lies, doing nothing).
-- **Venom, the bestiary's** (HarnWorld Bestiary 1, Snakes 2-3: an infection's course): the cave adder's bite (the heath
+- **Venom, the bestiary's** (HarnWorld Bestiary 1, Snakes 2-3: an infection's course): the cave adder's bite, and the cave spider's, its kin's *(the house's, for review: the creatures' sheets)* (the heath
   adder's H3, a roll each hour at rest, a B1 bleeder at the bite, an ache, an M1, at each place it spreads to, healing
   at H6 once the venom's gone), the basilisk's (Dragons 13: H2, ten minutes), the lindworm's (Dragons 14: H3, ten
   minutes, each place it reaches numb, a limb useless, the chest or the belly reached its breath stopped).  Delivered
@@ -2808,7 +2814,7 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
   only its fights are counted.
 - **Their paces** (the user's, 2026-11-03: "walk unless hurried, and closing in to attack should be hurried unless they
   are cautious"; every actor's, wbody.c's): a kind's walk is its step (kinds.txt's, tenths a square: 200 / its Move, as the
-  character's walk: a man or a bandit 20, a dwarf 22, a giant rat 12, a bat 6); hurried, its jog, half that, one level
+  character's walk: a man or a bandit 20, a dwarf 22, a giant rat 11, a bat 6, a cave bear 7, a ghoul 29); hurried, its jog, half that, one level
   louder (its step 2, not 1).  Hurried: one fleeing; one coming at its foe (hostile, drawn on or sensing it), but a
   cautious one.  *Cautious, the house's reading, for review*: a hunter by smell (it stalks: its steps are quiet, at a
   walk), a shy kind, one hurt, one whose heart is against it (the morale's steps as last reckoned, under 0).  One only coming
@@ -3042,7 +3048,7 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
 - **The diseases** *(for review)*: the flux (still water drunk where it stands: a pool, a puddle, a cistern; or from a
   waterskin filled from it, the same risk at each drinking: the user's, 2026-11-03, the skin's water marked, and a skin
   topped up with it foul all through, *the house's*; a stream's running water and a well's clean; C5/H4, a day's incubation), rat-bite fever (a giant rat's bite that wounds: C5/H4,
-  two days), grave rot (a ghoul's bite or claws that wound, the bestiary's grave-wight's: C3/H4, seven hours).  Caught,
+  two days), grave rot (a ghoul's bite or claws that wound, the bestiary's grave-wight's: C4/H4, seven hours).  Caught,
   nothing's told (the character doesn't know it's caught something) till its incubation's over: "Your belly gripes and
   cramps: you have the flux.", "A fever's on you, and the old bite throbs.", "A wound the ghoul gave you festers: a
   fever's on you." (a hard stop of a long task); then its daily roll ("The fever burns higher.", "... eases a little.",
@@ -3552,7 +3558,6 @@ have no rules here yet.
 **The user's review, 2026-11-03: to build** (DECISIONS.md's HOUSE.md's review, their words).  Each rule stands as it is till it's
 built, then its line here goes:
 
-- **The creatures' sheets** (A9): the book's figures for the first six, now.
 - **Hiding a thing** (A12): hiding oneself, queued next.
 - **A tool's use takes its reach first, Climbing a shaft** (A16): rope rules queued: tying off, climbing aided, a grapple thrown up.
 - **Keys that fit** (A17): a found key fits a door or a chest nearby.

@@ -73,9 +73,10 @@ static const struct vkind {
                                                 **   tasting it, Skills; never deadly, the house's) */
     { "flux", 4, 1440, V_SICK, 3, 5, 24 },      /* (Foul water's: the bloody flux, the house's C5/H4) */
     { "rat", 4, 1440, V_SICK, 2, 5, 48 },       /* (A giant rat's bite: rat-bite fever, the house's C5/H4) */
-    { "ghoul", 4, 1440, V_SICK, 4, 3, 7 },      /* (Grave rot, the grave-wight's: H4, its wound festering, the
+    { "ghoul", 4, 1440, V_SICK, 4, 4, 7 },      /* (Grave rot, the grave-wight's: H4, C4, its wound festering, the
                                                 **   universal penalty 20, 2d6 hours' incubation (7), the bestiary's;
-                                                **   its claws' and its teeth's when they draw blood; C3 the house's) */
+                                                **   its claws' and its teeth's when they draw blood) */
+    { "spider", 3, 60, V_ACHE | V_BLEED },      /* (A cave spider's bite, 2026-11-04: its kin the adder's, the house's) */
 };
 #define NVENOMS         (sizeof venoms / sizeof venoms[0])
 enum { VK_DART = 3, VK_CONTACT, VK_FOOD, VK_FLUX };

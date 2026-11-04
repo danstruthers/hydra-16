@@ -2366,7 +2366,7 @@ function dq0Poke(m, pokes) {
                 if (!b || !b[o + L.iKind]) continue;
                 let n = '';
                 for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
-                if (n === kn) { b[o + L.iFlags] = b[o + L.iFlags] & ~(v.clear || 0) | (v.or || 0); if (v.hide !== undefined) b[o + L.iHide] = v.hide; if (v.size !== undefined) b[o + L.iSize] = v.size; if (v.quality !== undefined) b[o + L.iQuality] = v.quality; break; }
+                if (n === kn) { b[o + L.iFlags] = b[o + L.iFlags] & ~(v.clear || 0) | (v.or || 0); if (v.hide !== undefined) b[o + L.iHide] = v.hide; if (v.size !== undefined) b[o + L.iSize] = v.size; if (v.quality !== undefined) b[o + L.iQuality] = v.quality; if (v.qty !== undefined) b[o + L.iQty] = v.qty; break; }
               }
             }
             if (p.traps) {                      // (The cached chunks' hidden traps' hiding set, a scene's, 2026-11-02; and on its own
@@ -8121,6 +8121,35 @@ module.exports = {
         const den = T.filter(u => u.k > g2.k).flatMap(u => u.dens).filter(e => e.kind === 'E_FIGHT' && e.who > 0);
         if (!den.length) f.push('no elf\'s blow or shot (E_FIGHT)');
         inTurn(o, ['The elf unslings its hartbow.', 'The elf shoots at you with its hartbow'], f, 'the elf\'s shot: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0wildlost', near: ['fight'], what: "Dingus Quest Zero's wild miss lost (2026-11-04: C18, the user's \"wild misses should possibly be lost\", HOUSE.md's where it falls; how often the house's, one time in two), by the fights told and the item store: a tough character with no skill at the sling (5), hostile cave adders set beside it, shooting on; sling stones never break, so a stone is gone from the store only by a shot gone wild (E_FIGHT O_FUMBLE): none lost in a turn without one, and of the wild ones some lost and some lying near",
+      init: 't_rc', cycles: 3000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml slg 5 >> /ram/c.hm',
+        'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sling,sling stones'", 'drop the torch', 'hold the sling', 'wait', ...Array(30).fill(['shoot the adder', 'take the sling', 'hold the sling']).flat(), 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) { dq0Poke(m, [{ g: 1, line: 'drop the torch', n: 1, item: { 'sling stones': { qty: 200 } } }, { g: 1, line: 'wait', n: 1, k: 0, beside: 4, engage: true }]); },
+      check(m, out) {
+        const T = dq0Turns(m), f = [];
+        if (process.env.DQ0SHOW) { console.log(dq0Story(out)); for (const t of T) console.log(dq0Evs(t)); }
+        const stones = s => s.items.filter(i => i.name === 'sling stones').reduce((a, i) => a + i.qty, 0);
+        const shots = T.filter(t => t.line === 'shoot the adder');
+        let wild = 0, lost = 0, fired = 0;
+        for (const t of shots) {
+          const w = dq0Ev(t, 'E_FIGHT', { who: 0 }).filter(e => e.out === 'O_FUMBLE').length, l = stones(t.at) - stones(t.after);
+          fired += dq0Ev(t, 'E_FIGHT', { who: 0 }).length;
+          wild += w;
+          lost += l;
+          if (l > w) f.push('a stone gone with no shot gone wild (' + l + ' lost, ' + w + ' wild: ' + dq0Evs(t) + ')');
+        }
+        if (wild < 2) f.push('too few wild shots to tell: ' + wild + ' of ' + fired);
+        if (!lost) f.push('no wild stone lost, of ' + wild);
+        if (lost >= wild) f.push('every wild stone lost: ' + lost + ' of ' + wild);
+        this.notes = [fired + ' shots, ' + wild + ' wild, ' + lost + ' lost'];
         return f;
       },
       sdcard: true

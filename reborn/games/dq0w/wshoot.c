@@ -848,8 +848,10 @@ static unsigned char __fastcall__ stray (const struct stray* s)
 
 /* Where a missile falls (part 65's fire, out the blow's O_*), shot from sx, sy at the target's tx, ty on sn: a hit or a
 ** block at the target's feet, a miss on past it along the line (a square to four, short of what stops it), a wild one
-** near the target; an arrow or a bolt broken by its chance (snaps; a bolt's the house's 15), lost; a thing thrown (thr,
-** its item) moved itself, a launcher's missile (kind mk) put down; known to the character */
+** near the target; an arrow or a bolt broken by its chance (snaps; a bolt's the house's 15), lost; a launcher's missile
+** gone wild lost one time in two besides (the user's "wild misses should possibly be lost"; how often the house's); a
+** thing thrown (thr, its item) moved itself, never lost, a launcher's missile (kind mk) put down; known to the
+** character */
 void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned tx, unsigned ty, unsigned char out,
     unsigned char mk, unsigned thr)
 {
@@ -895,6 +897,7 @@ void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned 
         --p->qty;                               /* (One of a lot thrown, a taburi of a handful: one laid where it
                                                 **   falls, below, 2026-10-30) */
         thr = 0;
+        out = O_MISS;                           /* (Thrown: never lost, wild or not) */
     }
     if (thr) {
         p->where = IW_SQUARE;                   /* (The thing itself, out of its hands: where it falls, anyone's;
@@ -904,6 +907,9 @@ void __fastcall__ s_mfall (unsigned char sn, unsigned sx, unsigned sy, unsigned 
     } else {
         cat_map ();
         c = mk == KI_BOLTS ? 15 : mk == snaps[0].kind ? snaps[0].chance : 0;   /* (A bolt's, the house's 15) */
+        if (out == O_FUMBLE) {
+            c = 50 + c / 2;                     /* (Wild: lost one time in two, else broken by its chance) */
+        }
         hub_map (0);
         if (random (100) < c || !(thr = lay_body (mk, sn, x, y))) {
             return;                             /* (Broken: lost) */
