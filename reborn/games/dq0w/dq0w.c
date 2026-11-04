@@ -768,10 +768,12 @@ static unsigned char __fastcall__ looked (unsigned char first)
                                                 **   the first look, drawn: how true, part 7's) */
     }
     hub_post (&HUB->look, T_SENSES);
-    while (!hub_wait_t (&HUB->look, 4)) {      /* (Asleep meanwhile, a request rung waking it: the senses' stock,
-                                                **   the UI's things; else four ticks, the clock on from the ticks
-                                                **   gone: a tick's, a fifth of the CPU a look took from it) */
+    while (!hub_wait_t (&HUB->look, HUB->starting ? 40 : 4)) {      /* (Asleep meanwhile, a request rung waking it: the
+                                                **   senses' stock, the UI's things; else four ticks, the clock on from
+                                                **   the ticks gone: a tick's, a fifth of the CPU a look took from it; as
+                                                **   the game starts, no clock to keep: 2M cycles of the start's) */
         waiting ();
+        hub_map (0);
     }
     HUB->look.state = REQ_FREE;
     HUB->look.wn = 0;
