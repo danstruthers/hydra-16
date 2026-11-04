@@ -1774,3 +1774,20 @@ The user (2026-11-03): "Vary by game": "Each game's seed picks an hour, so the s
 The user (2026-11-03): all thirteen accepted, "until a playtest says otherwise".
 
 **So:** settled as they stood: A4, A5, A13, A21, A22, A23.  To build: A1, A2, A3, A6, A7, A9, A10, A11, A12, A14, A15, A16, A17, A19, A24, A25, A26, A27.  To plan: the game between dungeons, with what takes a character to a dungeon in the first place (A8, A18), and clues, scripts and scholars (A20); the rules stand till then, and reading stays open.  **Design:** HOUSE.md's guide at its head (what's accepted, what's carved out, what a *for review* mark means from now on), each rule named there, and its Decided, not yet built.
+
+## The game between dungeons, the plan answered (2026-11-04)
+
+The plan (F:/.claude/hydra-2/plans/between-dungeons.md, sections 1-7) put ten questions; the user chose among the options as put:
+
+- Q1 Can every dungeon be left? "Every dungeon": out by a sky shaft if it has one and by the way in, unless the reason says it's shut; a shut dungeon always has another way out to find.
+- Q2 Does solving end the dungeon at once? "No, walk out": told it's done, then walk out with what was found; dying on the way out still counts as solved in the life's account.
+- Q3 Can a character go back to a dungeon it left? "Not yet, keep it": not in the first version; each dungeon's folder kept so it can be added.
+- Q4 Who chooses the month's practice skills? "Filled-in question": one question with the answer filled in (most used, then occupation's): Enter takes it, or name your three.
+- Q5 Can a character die off-stage, of an infection? "As the roll falls": the book's roll stands; a character can die in the account. (NOT the recommended long fever.)
+- Q6 When the money runs out? "No debts": sell spare goods, live rough, work at half wages (days added), go on with what it has.
+- Q7 In the first version, should selling, mending and restocking just happen? "Just happen": in that order, valuables last, what you named never, until the town's menu gives the choice.
+- Q8 The town? "A menu"; a walked town left for Dingus Quest itself.
+- Q9 Should an illiterate really be unable to read in the dungeon? "Yes, no puzzle needs it": from step 9; a writing is a hint; the theme checker proves each puzzle solvable unread; carry or copy.
+- Q10 What's in 1.0, what goes first? "1-6 first, 7-12 in 1.0": steps 1-6 before Phase 5; 7-12 in 1.0 with a one-link clue; the long thread in 1.0 only if there's time, else first in Dingus Quest.
+
+**So:** the steps 1-6 first, before Phase 5: leaving unsolved, solving without ending, the life record, time and healing, monthly practice, food and upkeep. A18's grating goes with step 1. Reading stays open until step 9.
