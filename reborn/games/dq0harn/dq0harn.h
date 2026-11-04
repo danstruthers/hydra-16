@@ -76,6 +76,8 @@ extern unsigned char stress_lv;                 /* (How much stress a skill's us
                                                 **   a fight, a trap's danger, the dark without a light, a point each:
                                                 **   set as a request's answered, HOUSE.md's) */
 void __fastcall__ skill_line (char* l, unsigned char rd);    /* Its growth's lines in its file (skills.c's) */
+extern unsigned char pc_might;                  /* (How fearsome it is: by its size and its best weapon skill, a creature's
+                                                **   reckoning, fight.c's new_beast; develop's, as it's read and rises) */
 extern unsigned char fresh;                     /* (Words for it in news not flagged yet: a skill opened; rs.h's
                                                 **   C_NEWS, cond_of's) */
 void __fastcall__ skill_used (unsigned char sk);    /* Skill sk used by the character (a test of it, its weapon in a

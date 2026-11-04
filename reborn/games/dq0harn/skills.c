@@ -112,6 +112,13 @@ void __fastcall__ o_develop (unsigned m)
 {
     unsigned char sk, ml, sb, n;
 
+    pc_might = 0;
+    for (sk = HARN_AXE; sk <= HARN_WHP; ++sk) {
+        if (pc.ml[sk] > pc_might) {             /* (Its best weapon skill: a man's size, 4, as pc_side's has it) */
+            pc_might = pc.ml[sk];
+        }
+    }
+    pc_might = 3 * 4 * 4 + pc_might / 10;
     dev_m = dev_m + m < dev_m ? 0xFFFF : dev_m + m;
     if (dev_m < NIGHT) {
         return;

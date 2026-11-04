@@ -334,8 +334,9 @@ void s_tsense (void)
     unsigned char s;
 
     hub_map (0);
-    if (HUB->pcsum.cond & C_FATIGUED || (HUB->pcsum.load & 2)) {
-        rest_go ();                             /* (A wait's or a sleep's rest told as it goes and as it ends) */
+    if (HUB->pcsum.cond & C_FATIGUED || (HUB->pcsum.load & 2) || HUB->pc_task.kind == LT_SLEEP) {
+        rest_go ();                             /* (A wait's or a sleep's rest told as it goes and as it ends; a sleep's
+                                                **   end, its eyes open) */
     }
     if (!T.at) {
         sky_seen (SKY_BEGUN);

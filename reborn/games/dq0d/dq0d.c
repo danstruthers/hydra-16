@@ -2128,16 +2128,18 @@ static unsigned char __fastcall__ decide (unsigned char k)
         im.a = DE_MOVED;
         im.b = 2;
         act (I_GOTO, k);
-    } else if (d >= 0xFA && d <= 0xFC && d != 0xFB) {   /* (A round's blow, or a shot: outnumbering it, later) */
-        if (was != DO_FIGHT && K.mind >= M_LOW) {
-            heart (k);                          /* (A mind's heart as it engages: the field about it, its bonds; part
-                                                **   6's.  A beast's is reckoned as one near it falls: it feels only a
-                                                **   foe's might, and its fellows' falls) */
+    } else if (d == 0xFA || d == 0xFC) {        /* (A round's blow, or a shot: outnumbering it, later) */
+        if (was != DO_FIGHT) {
+            heart (k);                          /* (Its heart as it engages: the field about it, its bonds; a beast's a
+                                                **   foe's might and its fellows' falls; part 6's.  Its courage tested on
+                                                **   it, the user's, 2026-11-03: broken, no blow) */
         }
-        a.doing = DO_FIGHT;
-        im.a = 0;
-        im.b = d == 0xFA ? Z_MID | AIM_SHOT : Z_MID;
-        act (I_ATTACK, k);
+        if (!fled[k]) {
+            a.doing = DO_FIGHT;
+            im.a = 0;
+            im.b = d == 0xFA ? Z_MID | AIM_SHOT : Z_MID;
+            act (I_ATTACK, k);
+        }
     } else if (a.doing != DO_SLEEP && a.doing != DO_DOWN && HUB->actor[k].pos == POS_PRONE) {
         im.w1 = POS_STANDING;                   /* (Lying, and up to something else that isn't a step nor a blow (they
                                                 **   get it up as theirs): up first, the world's Rise, 2026-11-02) */
@@ -4885,7 +4887,7 @@ static void hearts (void)
 ** (or shaken, a shy kind), it flees; berserk, so its fellows see it */
 static void __fastcall__ courage (unsigned char why)
 {
-    rq.steps = reckon () / 5;
+    HUB->actor[rj].heart = rq.steps = reckon () / 5;
     if (tp.mood & AM_STEADY) {
         return;                                 /* (Steady: untested) */
     }
@@ -4954,13 +4956,17 @@ void __fastcall__ s_dismay (unsigned char k)
 
 
 /* Actor k's heart as it engages (decide's: the field about it and its bonds, its steps the world's blow carries to the
-** referee, its courage tested with them as it's wounded); K its own after */
+** referee, its courage tested with them as it's wounded, and now, as it first faces the character, the user's, 2026-11-03:
+** a weak band can break before a blow; none of it for the mindless); K its own after */
 void __fastcall__ s_heart (unsigned char k)
 {
+    if (K.mind == M_MINDLESS) {
+        return;
+    }
     rj = k;
     rfallen = rgone = 0xFF;
     ranks ();
-    HUB->actor[k].heart = reckon () / 5;
+    courage (MR_FACED);
 }
 
 /* Record l (0xFF none) if it's dead, else 0xFF */

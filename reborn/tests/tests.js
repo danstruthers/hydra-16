@@ -2730,8 +2730,11 @@ function dq0OnWords(m, list) {
     if (!armed) return;
     story = norm(story + (v < 0x20 ? ' ' : String.fromCharCode(v))).slice(-200);
     if (story.includes(norm(armed.words))) {
-      a.rxQueue.unshift(...armed.text);
-      a.promptFrom = -1;
+      if (armed.call) armed.call();             // (A scene's own: as it's told, 2026-11-03)
+      else {
+        a.rxQueue.unshift(...armed.text);
+        a.promptFrom = -1;
+      }
       armed = null;
     }
   };
@@ -6201,6 +6204,97 @@ module.exports = {
       },
       sdcard: true
     },
+    {
+      name: 'dq0asleep', outfit: true, asks: true, near: ['senses', 'time'], what: "Dingus Quest Zero's sleeping senses (the user's, 2026-11-03: \"half awareness asleep\": HOUSE.md's sleep and rest): a hostile bandit put in the character's sight as it sleeps: asleep it sees nothing, so nothing stops or asks; and as it wakes what's there is told; at rest (awake), the same bandit in sight stops it or asks, a rest lying down all the same; the senses' look blind as it sleeps (the bandit not among what it sees), its eyes open after",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt",
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'look', 'close the door', 'sleep for an hour', 'look', 'rest for an hour', 'look', 'quit', 'echo $status']) },
+      start(m) {
+        // (Each bandit friendly and away from the sleeper; as the rest's begun one comes into sight)
+        const away = line => [0, 1, 2].map(k => ({ g: 1, line, n: 1, k, set: { attitude: 4, doing: 0 } }));
+        dq0Poke(m, [...away('look'), ...away('close the door'), ...away('sleep for an hour')]);
+        // (As it's told it's settled down: a friendly bandit put beside it, a denizen come into sight)
+        const near = () => {
+          const h = m.dq0.bank(0), { L } = m.dq0.layout(), o = L.actor, R = dq0Rec(m), r = R.at(h[o + L.aName + 12]), w = (q, v) => { h[q] = v & 255; h[q + 1] = v >> 8 & 255; };
+          const x = (h[L.pcX] | h[L.pcX + 1] << 8) + 1, y = h[L.pcY] | h[L.pcY + 1] << 8;
+          w(o + L.aX, x); w(o + L.aY, y); h[o + L.aSn] = h[L.pcSn]; R.mem[r + R.X] = x & 255; R.mem[r + R.X + 1] = x >> 8; R.mem[r + R.Y] = y & 255; R.mem[r + R.Y + 1] = y >> 8; R.mem[r + R.SN] = h[L.pcSn];
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        };
+        dq0OnWords(m, [{ g: 1, line: 'sleep for an hour', n: 1, words: 'You settle down to sleep', call: near }, { g: 1, line: 'rest for an hour', n: 1, words: 'You settle down to rest', call: near }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out), a = s.indexOf('> sleep for an hour'), b = s.indexOf('> rest for an hour');
+        const sleep = s.slice(a, b), rest = s.slice(b);
+        this.notes = [JSON.stringify(sleep.slice(0, 300)), JSON.stringify(rest.slice(0, 300))];
+        if (/Keep sleeping\?/.test(sleep)) f.push('asleep, a denizen seen: asked');
+        if (!/A bandit[^.]*\./.test(sleep)) f.push('woken, what\'s beside it not told: ' + JSON.stringify(sleep.slice(0, 500)));
+        if (!/Keep (resting|waiting)\?/.test(rest)) f.push('at rest, awake, a denizen seen not asked: ' + JSON.stringify(rest.slice(0, 500)));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0faced', near: ['fight', 'denizens'], what: "Dingus Quest Zero's courage on facing the character (the user's, 2026-11-03: \"Also on first facing you\", \"Reckon it properly\": HOUSE.md's morale): a mighty character (Sword 100) and a giant rat, then a band: each as it first engages tests its courage (RS_MORALE, MR_FACED) with the character's might weighed against it: the steps against a beast by its size and the character's weapon skill, none against a thing as mighty; a band that breaks flees with no blow struck",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 100 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Vermin | rat | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'look', ...Array(14).fill('wait'), 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: [0, 2, 4, 6][k] })));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), C = require('../sim/lib/dq0meaning.js').constants().names, f = [], MR_FACED = 4;
+        const seen = new Set(), tests = T.flatMap(t => dq0Rep(t, 'dslot', { kind: C.RS_MORALE })).filter(r => r.a === MR_FACED).filter(r => { const k = JSON.stringify(r); return !seen.has(k) && seen.add(k); });
+        this.notes = [tests.map(r => r.actor + ':' + r.steps + ':' + r.result).join(' ')];
+        if (!tests.length) f.push('no test of courage as it first engaged (MR_FACED)');
+        if (tests.some(r => r.steps >= 0)) f.push('the character\'s might not weighing on a rat: ' + tests.map(r => r.steps));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0strip', outfit: true, near: ['gear', 'denizens'], what: "Dingus Quest Zero's armour off a body (the user's, 2026-11-03: \"Twice taking-off time\": HOUSE.md's dead, its things on its body): dq0kit's bandit killed and looked at; a leather vest (worn) off its body takes ten seconds more than a thing not worn off it, a belt's pouch",
+      init: 't_rc', cycles: 1800e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'dq0sky=0', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 95 >> /ram/c.hm',
+        'echo ml swd 95 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,mail hauberk,great helm'", 'drop the staff',
+        'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'drop the backpack', 'drop the torch', 'defend dodge', 'attack', 'attack', 'look at the body',
+        'take the leather vest from the body', 'take the belt from the body', 'quit', 'echo $status']) },
+      start(m) {
+        // (The scene set, 2026-10-30: as the first attack's typed, the bandits wary (hub.h's AT_WARY), the one down
+        // finished, the other no longer fighting on: its body's vest taken as the test means; since the denizens throw (a
+        // bandit's spear in hand, its knife kept) the dice had the other knock the character senseless first)
+        dq0Poke(m, [0, 1, 2, 3].map(k => ({ g: 1, line: 'attack', n: 1, k, set: { attitude: 2 } })));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], o = dq0Story(out);
+        const tk = T.of('take the leather vest from the body');
+        if (!tk || !tk.after || !dq0Carried(tk.after).some(i => i.name === 'leather vest')) return ['the vest not taken from the body (the scene?): ' + o.slice(-600)];
+        const t0 = tk.at.now, t1 = tk.after.now;
+        this.notes = ['vest ' + (t1 - t0)];
+        if (t1 - t0 < 100) f.push('the vest off a body in under ten seconds: ' + (t1 - t0));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0dampwarn', near: ['body'], what: "Dingus Quest Zero's firedamp's warning (the user's, 2026-11-03: \"Warn before bursting\": HOUSE.md's firedamp's burst): dq0air's strong firedamp (dq0air=32), a torch lit, walking in step by step: the first step in the pale blue cap on the flame, no burst; the next step the burst; and backing out after the warning, none",
+      init: 't_rc', cycles: 1500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm',
+        'dq0air=32', 'dq0 -p t -s 1 -c /ram/c.hm -T', 'open the door', 'south', 'south', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], s = dq0Story(out), cap = s.indexOf('a pale blue cap trembling over it'), burst = s.indexOf('The air ignites with a roar');
+        this.notes = ['cap at ' + cap + ', burst at ' + burst];
+        if (cap < 0) f.push('no warning on its flame: ' + JSON.stringify(s.slice(-700)));
+        if (burst < 0) f.push('no burst on after the warning: ' + JSON.stringify(s.slice(-700)));
+        else if (cap > burst) f.push('the burst before the warning');
+        return f;
+      },
+      sdcard: true
+    },
     // ---- (Its end)
     {
       name: 'dq0trade', outfit: true, near: ['denizens', 'money'], what: "Dingus Quest Zero's market and entertaining (2026-11-02: DENIZENS.md's trading, HOUSE.md's the market, for review), by the denizens' sway, the things changing hands and the words: a hand-written theme's bandits (seed 1, dq0kit's), one put beside the character, friendly, at each command (dq0Poke's); given 8 pennies without a \"to\" (\"give the bandit 8 pennies\": the one given it the line's first word, SW_GIVE, taken); what it would give for the flask of oil asked (SW_OFFER, half its worth friendly: 'would give you 1 penny'); the oil sold to it (SW_SELL: it takes the oil, FT_GOT, and hands over its pennies, FT_GAVE, by the character's own way with things, the world's wfetch.c; the character's flask gone, its pennies one more); its price asked back (SW_PRICE: 'asks'), named Bob and bought back from it (SW_BUY, by the name given: the character's pennies taken, the oil handed over, the flask the character's again); a rope sold it and haggled for (SW_HAGGLE, the book's Rhetoric in its tongue, Rhetoric 95: its price under the price asked, that price paid); sung to, indifferent (SW_ENTERTAIN: Singing, the referee's)",
@@ -9369,9 +9463,10 @@ module.exports = {
         else if (nb.some(r => !r) || ob.some((r, i) => r.steps <= nb[i].steps || r.c <= nb[i].c)) f.push('the old band not the steadier than the new: ' + [...ob, ...nb].filter(Boolean).map(say).join(' '));
         // (An ally heartened; a fearsome foe weighing)
         const ad = at(gd, 1, MR_LEADER), aa = fa.find(r => r.actor === 2);
-        if (!ad || !aa || ad.b <= aa.b) f.push('the ally not heartened by the character: ' + [ad, aa].filter(Boolean).map(say).join(' '));
+        const sb = v => v << 24 >> 24;      // (The field's points, signed: the character's might counts against it now, 2026-11-03)
+        if (!ad || !aa || sb(ad.b) <= sb(aa.b)) f.push('the ally not heartened by the character: ' + [ad, aa].filter(Boolean).map(say).join(' '));
         const fe = at(ge, 0, MR_LEADER), ff = fa.find(r => r.actor === 1);
-        if (!fe || !ff || fe.b >= ff.b - 3) f.push('the fearsome foe beside the band not weighing on it: ' + [fe, ff].filter(Boolean).map(say).join(' '));
+        if (!fe || !ff || sb(fe.b) >= sb(ff.b) - 3) f.push('the fearsome foe beside the band not weighing on it: ' + [fe, ff].filter(Boolean).map(say).join(' '));
         return f;
       },
       sdcard: true

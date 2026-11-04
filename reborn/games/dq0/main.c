@@ -3057,6 +3057,19 @@ void __fastcall__ door_words (unsigned char a);  /* (Below, part 19's: a denizen
 void __fastcall__ s_noise_told (const struct msg* m, unsigned char rel)
 {
     static const char* n;
+    unsigned dx, dy;
+
+    if (HUB->pc_task.kind == LT_SLEEP) {        /* (Asleep: it hears at half, the book's, the user's, 2026-11-03; heard's
+                                                **   reckoning over, twice as far, here for the main RAM's room) */
+        dx = m->w1 - HUB->pc_x;
+        dy = m->w2 - HUB->pc_y;
+        dx = (int) dx < 0 ? -dx : dx;
+        dy = (int) dy < 0 ? -dy : dy;
+        dx = (dx > dy ? dx : dy) + 4 * (m->x[3] & 15) + 2 * (m->x[3] >> 4);
+        if (dx * 4 > (m->b > HUB->pc_mask ? m->b - HUB->pc_mask : 0) * (HUB->pcsum.hearing + 3)) {
+            return;
+        }
+    }
 
     hub_map (DEN_BANK);                         /* (Its sound's words: the sound task's, if it's put them there) */
     memcpy (heard_what, SND_AT + (m->x[1] % SND_KINDS * 2 + (m->a == DE_NOISE)) * SND_REC, sizeof heard_what);

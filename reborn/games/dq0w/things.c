@@ -2248,6 +2248,8 @@ unsigned __fastcall__ s_shut_in (unsigned n)
 ** the request's x) and IR_NO (nothing about it changed); or (iq's to 1) it set in the door's brackets, a portal's part
 ** again on iq's square, the bar's side (the world's barred the door): part 35's, the catalogue's bank's room (its
 ** o_handle's through its stub) */
+#pragma code-name (push, "SW4CODE")             /* (Part 4's since 2026-11-03: part 35's room) */
+#pragma rodata-name (push, "SW4RODATA")
 unsigned char s_bar_hand (void)
 {
     unsigned n, best;
@@ -2271,6 +2273,8 @@ unsigned char s_bar_hand (void)
     store (&rec, best);
     return IR_OK;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Put down where the character stands (n: carried; what's in it with it): not from a thing that's closed (its words
 ** why, IR_NO) */
@@ -2391,6 +2395,7 @@ static void take_keep (void)
     take_cnt = iq.count;
 }
 
+#define STRIP_T         100
 unsigned char __fastcall__ s_moved (unsigned char op)
 {
     static unsigned want, got, t, c;
@@ -2452,6 +2457,10 @@ unsigned char __fastcall__ s_moved (unsigned char op)
         rs_ok |= 4;                             /* (The rest by the lump, their levels paid: part 85's) */
         sa = last_sa;
         t += took;
+        if (win && op == IO_TAKE && (item_at (win)->kind == KI_BODY || item_at (win)->kind == KI_BONES) &&
+            (kind_of (kind)->flags & K_WEAR)) {
+            t += STRIP_T;                       /* (Stripped from a body: twice a doff's 5 seconds, the user's, 2026-11-03) */
+        }
         join (n);
         ++times;
         if (op == IO_STOW || op == IO_PUT) {

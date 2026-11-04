@@ -489,7 +489,9 @@ enum { SH_OK, SH_NONE, SH_SPENT, SH_RANGE, SH_LINE, SH_WAY, SH_GONE, SH_HANDS, S
 ** whenever it was free; 0: if it was later); I_DONE (who 0): w1 the turn it's done (the hub's den_go: the turns
 ** pace's, the world going on once it's in), t the clock then */
 #define WA_MIN          1                       /* (I_WAIT's a, E_TIME's b: w1 in minutes, a long duration's) */
-#define WA_SLEEP        2                       /* (I_WAIT's a, E_TIME's b: asleep, LT_SLEEP's) */
+#define WA_SLEEP        2                       /* (I_WAIT's a, E_TIME's b: asleep, LT_SLEEP's; */
+#define WA_REST         4                       /*   with it, a rest: its words a sleep's, lying down, but awake, LT_WAIT's:
+                                                **   the user's, 2026-11-03) */
 #define LONG_T          60000U                  /* (The tenths a duration's sixteen bits are given at most: past
                                                 **   them, 100 minutes, it's in minutes, to 65,535 of them, some 45
                                                 **   days: I_WAIT's WA_MIN, the long task's mins) */

@@ -276,7 +276,7 @@ go:
             SWFN        shut_work, 36
             SWFN        take_rest, 35
             SWFN        shut_in, 35
-            SWFN        bar_hand, 35
+            SWFN        bar_hand, 4
             SWFN        in_reach, 10
             SWFN        weight_in, 10
             SWFN        weight_of, 10

@@ -152,6 +152,7 @@ static void __fastcall__ equip_all (const char* keys)
 ** development rolls' stress, words not flagged yet (skills.c's: slice 4.4's) */
 harn_equip carried = { "load", "load", 0, 0xFF, 0 };
 unsigned char stress_lv;
+unsigned char pc_might;
 unsigned char fresh;
 
 /* A tool equipped (Lockcraft's picks) */
@@ -455,7 +456,7 @@ static void status (void)
     s->nightvision = 1;
     s->morale = pc.att[HARN_MOR];
     s->load = !ep ? 0 : ep <= 2 ? 1 : ep <= 4 ? 2 : 3;   /* (Its encumbrance: a little burdened, heavily, overloaded) */
-    s->power = 10;
+    s->power = pc_might;                        /* (As a creature's: skills.c's, the user's, 2026-11-03) */
     s->lead = pc.ml[HARN_ORA] > pc.ml[HARN_RHE] ? pc.ml[HARN_ORA] : pc.ml[HARN_RHE];   /* (Its influence: the
                                                 **   morale field's, HOUSE.md's) */
     s->northsense = pc.att[HARN_SP] == HARN_KHU;    /* (The species' trait: the Khuzdul live below, and always know
@@ -527,6 +528,7 @@ void __fastcall__ s_load_pc (struct req* r)
     }
     r->result = harn_read (fd, &pc, own_line) < 0;
     close (fd);
+    develop (0);                                /* (Its might, by its skills) */
     hub_map (0);
     put (name);
     put ("\n");

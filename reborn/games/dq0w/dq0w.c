@@ -5100,8 +5100,15 @@ static void air_here (void)
     }
     k = AQ_KIND (q);
     s = AQ_STR (q);
+    hub_map (0);
     if (k == AQ_FIRE && (f & FLM_LIT ? s >= 2 : f && s == 3)) {
-        f |= FLM_BURST;
+        if (AQ_KIND (HUB->pc_air) == AQ_FIRE) {
+            f |= FLM_BURST;
+        } else {
+            q = AQ_FIRE << 4 | 1;               /* (Its first step into it, from air that's not: the flame's warning, the
+                                                **   thin firedamp's, a step before the burst: the user's, 2026-11-03,
+                                                **   "warn before bursting"; the next step in, unless it's back out) */
+        }
     } else if (f && k == AQ_BLACK && s == 3) {
         f |= FLM_OUT;
     }
@@ -5922,6 +5929,14 @@ static void __fastcall__ task_for (unsigned char kind, unsigned long t)
 ** kneeling, asleep or senseless, GA_REST) */
 void s_rest_go (void)
 {
+    if (HUB->pc_task.kind == LT_SLEEP && HUB->now >= HUB->pc_ready && !HUB->pc_task.asking) {
+        HUB->pc_task.kind = LT_NONE;            /* (Woken, its eyes open: what it sees now, what's come told) */
+        looked (0);
+        if (HUB->look.ch) {
+            view (V_STIR);
+        }
+        hub_map (0);
+    }
     if (HUB->now > free_at) {
         spend (HUB->pc_pos & ~POS_CROUCHED ? GA_REST : GA_STOOD, HUB->now - free_at);
         hub_map (0);
@@ -5950,8 +5965,11 @@ void __fastcall__ s_intent_few (struct msg* m)
                                                 **   the Rise as it goes on, the user's, 2026-11-03) */
         }
         if (!m->w2 && t > HUB->round) {
-            task_for (m->a & WA_SLEEP ? LT_SLEEP : LT_WAIT, t);  /* (A wait longer than a round, or a sleep: a long
-                                                **   task, in minutes past 100 of them) */
+            task_for ((m->a & (WA_SLEEP | WA_REST)) == WA_SLEEP ? LT_SLEEP : LT_WAIT, t);  /* (A wait longer than a round,
+                                                **   or a sleep: a long task, in minutes past 100 of them; a rest awake) */
+            if (HUB->pc_task.kind == LT_SLEEP) {
+                looked (0);                     /* (Its eyes shut: the senses' look sees nothing as it sleeps, HOUSE.md's) */
+            }
         }
         free_at = HUB->now;                     /* (Waiting: rest; engaged, a pass: part 26's) */
         passed (m);
