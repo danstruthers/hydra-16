@@ -198,6 +198,7 @@ go:
             SWPART      98, 30              ; A rope untied, looked at (wrope2.c)
             SWPART      99, 27              ; The time believed drifting: an hour's test, a waking (wtime.c: part 76's till 2026-11-04)
             SWPART      100, 9              ; A light renewed (things.c: part 27's till 2026-11-04)
+            SWPART      101, 24              ; A thing hidden, the hands swapped (things.c: parts 13's and 48's till 2026-11-04)
 
             SWFN        time_kept, 99
             SWFN        sky_note, 76
@@ -212,7 +213,8 @@ go:
             SWFN        outmake, 58
             SWFN        draw_at, 59
             SWFN        hold_in, 48
-            SWFN        swap, 48
+            SWFN        swap, 101
+            SWFN        hands_now, 48
             SWFN        hand_free, 48
             SWFN        held_kinds, 48
             SWFN        shand_of, 48
@@ -339,7 +341,7 @@ go:
             SWFN        gear_words, 62
             SWFN        listed, 11
             SWFN        many, 35
-            SWFN        hide, 13
+            SWFN        hide, 101
             SWFN        door_work, 12
             SWFN        batter_on, 12
             SWFN        revealed, 41

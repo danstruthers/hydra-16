@@ -4867,6 +4867,8 @@ unsigned __fastcall__ s_lay_body (unsigned char kind, unsigned char sn, unsigned
 ** at a critical success, 6 a marginal one, 2 a marginal failure; at a critical failure 0, a floor's dust and corners
 ** only); known to the character, who hid it */
 unsigned char __fastcall__ drop (const char* name);
+#pragma code-name (push, "SW101CODE")
+#pragma rodata-name (push, "SW101RODATA")
 unsigned char __fastcall__ s_hide (const char* name)
 {
     struct req* r;
@@ -4913,6 +4915,8 @@ unsigned char __fastcall__ s_hide (const char* name)
     HUB->ireq.qty = d;
     return IR_OK;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -5773,7 +5777,7 @@ unsigned char __fastcall__ s_shand_of (unsigned char s)
 }
 
 /* The character's hands as they are, but for thing n (n held: its own hand, hcur) */
-static void __fastcall__ hands_now (unsigned n)
+void __fastcall__ s_hands_now (unsigned n)
 {
     unsigned i = 0;
     unsigned char l, h;
@@ -5842,7 +5846,7 @@ unsigned char __fastcall__ s_hand_free (unsigned n)
     const struct item* p = item_at (n);
     unsigned char f = p->where == IW_ITEM && (kind_at (p->x)->keeps & KF_FIXED) ? HF_FIXT : 0;
 
-    hands_now (n);
+    s_hands_now (n);
     return hand_for (n, 0) | f;
 }
 
@@ -5897,7 +5901,7 @@ unsigned char __fastcall__ s_hold_in (unsigned n, unsigned char want)
     register struct item* p;
     unsigned char h;
 
-    hands_now (n);
+    s_hands_now (n);
     if (hcur && (!want || want == hcur || (want == IH_OTHER && hcur == IH_BOTH))) {
         put ("You hold the ");              /* (Held already: in that hand, or none said) */
         put (xn);
@@ -5940,6 +5944,9 @@ unsigned char __fastcall__ s_hold_in (unsigned n, unsigned char want)
 /* What's in the character's hands changed over, left to right and right to left (IO_SWAP's: "swap hands"), its words
 ** into the hub's text, its time in the request's x: IR_OK, or IR_NO (nothing held, a thing in both hands, a hand to go
 ** into useless) */
+void __fastcall__ hands_now (unsigned n);       /* (Its stub: part 48's) */
+#pragma code-name (push, "SW101CODE")
+#pragma rodata-name (push, "SW101RODATA")
 unsigned char s_swap (void)
 {
     unsigned i = 0, l = 0, r = 0;
@@ -5993,6 +6000,8 @@ unsigned char s_swap (void)
     HUB->ireq.x = 10;
     return IR_OK;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)

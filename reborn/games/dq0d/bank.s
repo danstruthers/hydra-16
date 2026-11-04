@@ -50,6 +50,8 @@ _ovbank:    .res        7           ; The parts' images' banks (dq0d.cfg's OV1 .
             SWPART      19, 6               ; A body found on a record's rounds (2026-11-02)
             SWPART      20, 7               ; Hiding oneself (2026-11-04)
             SWPART      21, 2               ; A region read in, one put out (part 3's till 2026-11-04)
+            SWPART      22, 4              ; Their bodies' rarer: a lair's home room, a robber's way, a dart, rest, depth, what they've eaten, one first met (part 8's till 2026-11-04)
+            SWPART      23, 2              ; The task's start (the kinds read in, popgen loaded: part 4's till 2026-11-04)
 
             SWFN        populate, 1
             SWFN        place, 3
@@ -68,24 +70,24 @@ _ovbank:    .res        7           ; The parts' images' banks (dq0d.cfg's OV1 .
             SWFN        gift, 16            ; (Part 16's since 2026-11-02: a part of its own, the market's beside it)
             SWFN        regard, 5
             SWFN        sway, 2
-            SWFN        start, 4
+            SWFN        start, 23
             SWFN        enlist, 4
             SWFN        retire, 4
             SWFN        killed, 4
             SWFN        shoots, 2           ; (A shot at the character: slice 4.7's)
             SWFN        along, 4
-            SWFN        dart, 8
+            SWFN        dart, 22
             SWFN        hungry, 8
             SWFN        want_fl, 8
-            SWFN        fed, 8
-            SWFN        depth, 8
-            SWFN        rests, 8
+            SWFN        fed, 22
+            SWFN        depth, 22
+            SWFN        rests, 22
             SWFN        fends, 8
-            SWFN        home_room, 8
-            SWFN        rob_to, 8
+            SWFN        home_room, 22
+            SWFN        rob_to, 22
             SWFN        met, 8
             SWFN        name_of, 8
-            SWFN        kept_file, 8
+            SWFN        kept_file, 22
             SWFN        daily, 10           ; (The day's, 2026-10-31: an actor's, its plan kept)
             SWFN        plan, 9             ; (An actor's day and its place, as it changes: leisure's)
             SWFN        roused, 10          ; (A pastime let go as one rises to act)
@@ -96,7 +98,7 @@ _ovbank:    .res        7           ; The parts' images' banks (dq0d.cfg's OV1 .
             SWFN        work_dig, 15        ; (Its work: a mine, a burrow, a builder's, slice 4.11's rest)
             SWFN        door_way, 14        ; (A door worked: Phase 3C's one path)
             SWFN        take_way, 14        ; (A thing taken up: Phase 3C's one path)
-            SWFN        feel, 8             ; (The main RAM's room, 2026-11-02)
+            SWFN        feel, 22             ; (The main RAM's room, 2026-11-02)
             SWFN        robs, 8
             SWFN        shies, 8
             SWFN        way, 17             ; (A way followed: step_for's, 2026-11-02)
@@ -105,7 +107,7 @@ _ovbank:    .res        7           ; The parts' images' banks (dq0d.cfg's OV1 .
             SWFN        wander, 9
             SWFN        sched, 9
             SWFN        coarse, 10
-            SWFN        found, 10           ; (A body found on the rounds: the day's)
+            SWFN        found, 19           ; (A body found on the rounds: the day's)
             SWFN        rfound, 19          ; (A body found on a record's rounds, 2026-11-02)
             SWFN        hour, 3             ; (The hour the game began: the day's, its first)
             SWFN        told, 6             ; (The hook for a loss told: a body found on the rounds, the day's)

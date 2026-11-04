@@ -384,6 +384,8 @@ static void __fastcall__ kx_get (unsigned char k)
 ** (its home's, kinds.txt's: of the first of them the chunk has, one by the dice), else any; the chunk in the window */
 #pragma code-name (push, "SW8CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
 #pragma rodata-name (push, "SW8RODATA")
+#pragma code-name (push, "SW22CODE")
+#pragma rodata-name (push, "SW22RODATA")
 unsigned char __fastcall__ s_home_room (unsigned char k, unsigned char sn, unsigned ox, unsigned oy)
 {
     unsigned char u, r, n, j;
@@ -404,11 +406,15 @@ unsigned char __fastcall__ s_home_room (unsigned char k, unsigned char sn, unsig
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (push, "SW4CODE")
 #pragma rodata-name (push, "SW4RODATA")
 
 /* The kinds read in (dir/dq0d.dat): 0, or -1 (part 4's: the start's) */
+#pragma code-name (push, "SW23CODE")
+#pragma rodata-name (push, "SW23RODATA")
 static int __fastcall__ kinds_load (const char* dir)
 {
     static char path[64];
@@ -439,6 +445,8 @@ static int __fastcall__ kinds_load (const char* dir)
     hub_map (0);
     return 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -1022,6 +1030,8 @@ static void settle (void)
 ** lying there (HOUSE.md's the robbers' takings, 2026-10-27); K its own again after */
 #pragma code-name (push, "SW8CODE")             /* (Part 8's since 2026-10-31: the main RAM's room) */
 #pragma rodata-name (push, "SW8RODATA")
+#pragma code-name (push, "SW22CODE")
+#pragma rodata-name (push, "SW22RODATA")
 void __fastcall__ s_rob_to (unsigned char k)
 {
     unsigned char i, f = K.faction;
@@ -1045,6 +1055,8 @@ void __fastcall__ s_rob_to (unsigned char k)
     }
     kind_get (akind[k]);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -1472,12 +1484,16 @@ void __fastcall__ s_coarse (unsigned char k, unsigned lim)
 
 /* Actor a (the copy), shy and cornered beside the character: it darts past it, to the square beyond (open, no one
 ** on it, no deeper water than it wades: dsx, dsy), a moment's dash; 1 if it can */
+#pragma code-name (push, "SW22CODE")
+#pragma rodata-name (push, "SW22RODATA")
 unsigned char __fastcall__ s_dart (unsigned char k)
 {
     dsx = pcx + (pcx - a.x);
     dsy = pcy + (pcy - a.y);
     return open_sq (at (a.sn, dsx, dsy)) && wades (awater[k], a.sn, dsx, dsy) && !taken (k, dsx, dsy);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Actor k (the copy a, its kind K's) hungry or thirsty (wh, wd: its record's want now, decide's): it drinks standing
 ** in water, or at its lair (folk: their lair's water); eats at its lair (folk: their larder; and their meals, a slot in the
@@ -1536,6 +1552,8 @@ unsigned char __fastcall__ s_fends (unsigned char lim)
 
 /* Actor k (the copy a) hurt, nothing after it (decide's): home to its lair (its home square), there to rest a minute at
 ** a time (wt).  The step, or 0xFE */
+#pragma code-name (push, "SW22CODE")
+#pragma rodata-name (push, "SW22RODATA")
 unsigned char __fastcall__ s_rests (unsigned char k)
 {
     unsigned char d = 0xFE;
@@ -1548,9 +1566,13 @@ unsigned char __fastcall__ s_rests (unsigned char k)
     }
     return d;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The water's depth on the square at () found (C, cx_, cy_; under water: deep_at's), feet: a still pool's surface over
 ** its floor, or a stream's depth where it runs (the chunk's, the maker's: as the world's s_water_at has it) */
+#pragma code-name (push, "SW22CODE")
+#pragma rodata-name (push, "SW22RODATA")
 unsigned char s_depth (void)
 {
     unsigned char r, n;
@@ -1572,6 +1594,8 @@ unsigned char s_depth (void)
     e = C->elev[cy_][cx_];
     return l > e ? l - e : 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* Record D (its kind K's) made actor k: its want the actor's (aate, adrank), and its want's fatigue levels back (the
 ** referee's, RS_NEW_ACTOR's c: HarnMaster's, the character's rswant.h's): none hungry or thirsty, then 1, 2 and 4 for
@@ -1591,6 +1615,8 @@ unsigned char __fastcall__ s_want_fl (unsigned char k)
 
 /* Food given actor k (a gift: s_gift's): ate 0, the steps more it's welcome by its hunger (hungry 2, very hungry 4);
 ** ate 1, it's eaten it */
+#pragma code-name (push, "SW22CODE")
+#pragma rodata-name (push, "SW22RODATA")
 signed char __fastcall__ s_fed (unsigned char k, unsigned char ate)
 {
     unsigned char h;
@@ -1601,6 +1627,8 @@ signed char __fastcall__ s_fed (unsigned char k, unsigned char ate)
     }
     return h >= W_VERY ? 4 : h >= W_HUNGRY ? 2 : 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -1793,7 +1821,7 @@ unsigned char __fastcall__ s_shies (unsigned char k)
     unsigned char d;
 
     a.doing = DO_SHY;
-    if ((d = step_for (k, 2 * K.range, S_AWAY)) == 0xFF && dist == 1 && s_dart (k)) {
+    if ((d = step_for (k, 2 * K.range, S_AWAY)) == 0xFF && dist == 1 && dart (k)) {
         d = 0xFD;                               /* (Cornered: past the character) */
     }
     return d;
@@ -1812,6 +1840,8 @@ void __fastcall__ s_robs (unsigned char k)
     }
 }
 
+#pragma code-name (push, "SW22CODE")
+#pragma rodata-name (push, "SW22RODATA")
 void __fastcall__ s_feel (unsigned char k)
 {
     struct actor* q = HUB->actor;
@@ -1834,6 +1864,8 @@ void __fastcall__ s_feel (unsigned char k)
         }
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -4234,6 +4266,8 @@ static int __fastcall__ ovl_load (const char* dir)
 
 /* The task begun, its banks had: the kinds read in (dir's), the theme's denizens, the records new or the game's
 ** kept ones read back: 0, or -1 */
+#pragma code-name (push, "SW23CODE")
+#pragma rodata-name (push, "SW23RODATA")
 int __fastcall__ s_start (const char* dir)
 {
     struct bank_fn* h;
@@ -4286,6 +4320,8 @@ int __fastcall__ s_start (const char* dir)
     }
     return 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -4717,6 +4753,8 @@ static void __fastcall__ reg_add4 (unsigned char k)
 ** save's dens.dat, after the records' bank (fd), a piece at a time through the main RAM; or read back (back: nothing
 ** there, none) */
 #pragma code-name (push, "SW8CODE")
+#pragma code-name (push, "SW22CODE")
+#pragma rodata-name (push, "SW22RODATA")
 void __fastcall__ s_kept_file (int fd, unsigned char back)
 {
     unsigned off, n;
@@ -4736,6 +4774,8 @@ void __fastcall__ s_kept_file (int fd, unsigned char back)
     }
     hub_map (0);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 #pragma code-name (pop)
 
 /* ---- The records kept (back: read again), the save folder's dens.dat: the bank a piece at a time, through the
@@ -5667,6 +5707,8 @@ void s_hour (void)
 ** lost, its courage tested).  K its own after.  Part 10's (asked only while its faction has a body not found: unf) */
 #pragma code-name (push, "SW10CODE")
 #pragma rodata-name (push, "SW10RODATA")
+#pragma code-name (push, "SW19CODE")
+#pragma rodata-name (push, "SW19RODATA")
 unsigned char __fastcall__ s_found (unsigned char k)
 {
     struct den* r = POP->den;
@@ -5709,6 +5751,8 @@ unsigned char __fastcall__ s_found (unsigned char k)
     hub_map (0);
     return 0;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
