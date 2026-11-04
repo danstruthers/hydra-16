@@ -2046,6 +2046,7 @@ function inTurn(o, want, f, name = '') {
 // with its reason; and the hub's live chunks (dq0Doubled) with no two portals or traps on one square (a door made
 // twice, its trap twice: the look told it twice).  sim/test.js's dq0 check, in every dq0 test (HUBOWN=0 too)
 const DQ0_REPEATS = [
+  { what: /^(Put down\.|You fumble for the sword\.|You see none of those here\.|You carry none of those\.|Taken\.)/, tests: /^dq0engage$/, why: 'its lines typed ahead, one answer' },
   { what: /^The [a-z ]+ (unslings|draws) its [a-z ]+\.$/,
     why: 'several of a kind readying their weapons in one answer, each one\'s told (slice 4.7\'s: three elves unslinging their hartbows)' },
   { what: /^\(\d+ feet to go\.\)/, why: 'a dig\'s spells, each told as it ends (dig down: many spells to an answer)' },
@@ -11130,7 +11131,7 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'go to the far side', 'quit',
         'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'attack the ghoul', 'quit',
-        'dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait']) +
+        'cp /ram/c.hm /ram/e.hm', 'echo att dex 1 >> /ram/e.hm', 'dq0 -p t -s 7 -c /ram/e.hm -k \'sword,gambeson,mail hauberk\' -T', 'wear the gambeson', 'wear the mail hauberk', 'd', 'wait']) +
         'drop the sword\rtake the sword\rtake the sword\rtake the sword\rhold the sword\r' + dq0Typed(['quit',
         'echo ml ini 80 >> /ram/c.hm', 'dq0 -p t -s 7 -c /ram/c.hm -k sword -T', 'd', 'wait', 'quit',
         'hmchar -q -s 5 -u feudal -c hunter -o /ram/d.hm', 'dq0 -p t -s 21 -c /ram/d.hm -T', 'attack the rat', 'quit',
@@ -11173,8 +11174,8 @@ module.exports = {
         said(a, 'Quicker, the ghoul');
         // (The gropes as it fights the ghoul: the commands typed ahead, each taking the fight over in turn (their turns
         // one, the last line's); the drop no test; a take a grope, fumbled ("You fumble for the sword.": the sword where
-        // it lay, not taken), and the sword held at last)
-        const h = T.of('hold the sword'), w0 = T.of('wait', T.of('dq0 -p t -s 7 -c /ram/c.hm -k \'sword,gambeson,mail hauberk\' -T', a.k).k);
+        // it lay, not taken): its own clumsy character's)
+        const h = T.of('hold the sword'), w0 = T.of('wait', T.of('dq0 -p t -s 7 -c /ram/e.hm -k \'sword,gambeson,mail hauberk\' -T', a.k).k);   // (2026-11-04: its own clumsy character, Dexterity 1: the typed-ahead lines meet the fight's rounds as its timing has it, so a good one's take fumbled or not by the build; the sword taken after a fumble no more this test's: dq0packgrope's a grope's)
         const run = T.filter(t => t.k >= w0.k && t.k <= h.k), reps = run.flatMap(t => t.replies);
         if (h.k < 0 || w0.k < 0) return [...f, 'the gropes not typed'];
         const seq = reps.filter(r => (r.req === 'slot0' && r.kind === C.RS_TEST && r.a === C.P_GROPE) || (r.req === 'ireq' && /^IO_(DROP|GET|HOLD)$/.test(r.kind)));
@@ -11186,15 +11187,14 @@ module.exports = {
         if (seq.some((r, i) => r.req === 'ireq' && r.result === 'IR_FUMBLED' && !(i > 0 && seq[i - 1].req === 'slot0' && seq[i - 1].grade <= 0))) f.push('a fumble not a grope failed');
         if (!/You fumble for the sword\./.test(dq0Story(out))) f.push('not "You fumble for the sword."');
         if (run.flatMap(t => t.events).filter(e => e.kind === 'E_TASK' && e.te === 'TE_STOPPED' && e.task === 'LT_FIGHT').length < 2) f.push('the commands typed ahead not taking the fight over');
-        const hs = dq0Thing(h.after, 'sword');
-        if (!seq.some(r => r.kind === 'IO_GET' && r.result === 'IR_OK') || !(dq0Carried(h.after).some(i => i.name === 'sword') || /Your sword falls from your hand\./.test(dq0Story(out)))) f.push('the sword not taken up at last: ' + (hs && hs.where));   // (Or taken up, and a blow's fumble let it fall again in the hold's own turn)
-        // (Since slice 4.1b the ghoul, its knee broken by the torch, falls and fails its Rise (the book's test, seriously
+
+                // (Since slice 4.1b the ghoul, its knee broken by the torch, falls and fails its Rise (the book's test, seriously
         // wounded) as the commands go on: down, it engages no one, the take after the fumble and the hold no gropes; up, the
         // hold a grope, unless the take just before it, a grope, put the sword in hand already: nothing left for the hold to
         // do, 2026-10-31, the commands typed ahead meeting the fight's rounds as its timing has it)
         const hi = seq.findIndex(r => r.kind === 'IO_HOLD'), down = /The ghoul struggles, but can't get up\./.test(dq0Story(out));
-        const inhand = hi >= 2 && seq[hi - 1].kind === 'IO_GET' && seq[hi - 1].result === 'IR_OK' && seq[hi - 2].req === 'slot0';
-        if (!down && !inhand && (hi < 1 || seq[hi - 1].req !== 'slot0')) f.push('the hold not a grope, the ghoul up: ' + JSON.stringify(seq));
+        const inhand = hi < 0 || seq[hi].result !== 'IR_OK' || seq.slice(0, hi).some(r => r.kind === 'IO_GET' && r.result === 'IR_OK');   // (2026-11-04: a hold that did nothing, or the sword got before it: no grope to look for)
+        if (!down && !inhand && seq[hi - 1].req !== 'slot0') f.push('the hold not a grope, the ghoul up: ' + JSON.stringify(seq));
         // (A quick character the ghoul comes up to: the character the quicker, its blow first)
         const w = T.filter(t => t.line === 'wait'), q = w[1], qg = q && actor(q, 'ghoul'), qc = q ? contests(q) : [];
         if (w.length !== 4 || !qg) return [...f, 'the waits not typed, or no ghoul'];
