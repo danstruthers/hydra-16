@@ -95,7 +95,7 @@
 theme    | the Crypt of the Dead King
 mission  | both
 story    | Aldric, last of the kings under the hill, was laid in his crypt with his crown and his seal, and the hill
-           shut after him.  The door at the top of the stair answers only to his seal, though the Black Crypts have a way out of their own; and they say that whoever
+           shut after him.  The door at the top of the stair answers only to his seal, though the Crypts have a way of their own; and they say that whoever
            sets his crown upon his throne below will rule his house of the dead after him.
 stratum  | Upper Halls | b | halls
 stratum  | Old Cellars | bn | cellars
