@@ -2264,7 +2264,9 @@ again:
             } else if ((cmd.how == HOW_THROUGH || cmd.action == VB_ENTER) &&
                 (cmd.obj.kind == OB_DOOR || cmd.obj.kind == OB_PASSAGE)) {
                 if (!door_go ()) {
-                    walk_says (0);              /* (Its first words at once) */
+                    if (!reach) {
+                        walk_says (0);          /* (Its first words at once; walked up to first, told as that began) */
+                    }
                     intend (I_GO, bearing ((int) tx - HUB->pc_x, (int) ty - HUB->pc_y));
                 }
             } else {
