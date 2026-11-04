@@ -4594,12 +4594,12 @@ void __fastcall__ s_task_word (const struct msg* m)
 ** but a climb, part way up, and a fight go on, the light's going told alone */
 void __fastcall__ s_task_out (unsigned char b)
 {
-    unsigned char k;
-
     hub_map (0);
-    k = HUB->pc_task.kind;
     evb = b;
-    if (!k || k == LT_CLIMB || k == LT_FIGHT) {
+    if (HUB->pc_task.kind == LT_SLEEP) {        /* (Its eyes shut: unseen, it sleeps on, HOUSE.md's) */
+        return;
+    }
+    if (!HUB->pc_task.kind || HUB->pc_task.kind == LT_CLIMB || HUB->pc_task.kind == LT_FIGHT) {
         event (E_TASK, 0, TE_OUT);
     } else {
         stop (TE_OUT);

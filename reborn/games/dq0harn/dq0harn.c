@@ -152,6 +152,7 @@ static void __fastcall__ equip_all (const char* keys)
 ** development rolls' stress, words not flagged yet (skills.c's: slice 4.4's) */
 harn_equip carried = { "load", "load", 0, 0xFF, 0 };
 unsigned char stress_lv;
+unsigned char nobreak;                          /* (dq0 -I's, the tests': no weapon broken) */
 unsigned char pc_might;
 unsigned char fresh;
 
@@ -850,6 +851,7 @@ static void __fastcall__ answer (struct req* r)
     case RS_MORALE:
     case RS_WIELD:                              /* (What it would strike with: gear.c's, through fight's) */
         tnow = HUB->now;
+        nobreak = HUB->pc_lump & PL_NOFACE;
         stance = HUB->pc_stance;
         pc_way = HUB->pc_strike;
         pc_hand = HUB->pc_shand;

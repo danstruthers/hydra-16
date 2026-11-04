@@ -286,6 +286,7 @@ unsigned char __fastcall__ fumbled (const struct side* s, unsigned char att);  /
                                                 **   fumbled (its attack's, att 1; its block's), rs.h's DH_* */
 unsigned char __fastcall__ wq_of (const struct side* s, unsigned char att);  /* Its Weapon Quality, of what it strikes with
                                                 **   (att) or blocked with: 0 none */
+extern unsigned char nobreak;
 unsigned char w_damage (void);                  /* A block's Weapon Damage, A's and D's: 1 the attacker's broken, 2 the defender's */
 unsigned char __fastcall__ wound_drops (const struct side* t, unsigned char loc);  /* The hand an arm's wound at loc
                                                 **   lets go of what it holds (DH_*) */

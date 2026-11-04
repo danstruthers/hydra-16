@@ -2750,6 +2750,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             nosteps |= PL_NOFIT;                /* (For the tests: the outfit as it's drawn, all of it, unfitted to its strength) */
         } else if (!strcmp (argv[i], "-I")) {
             noinit = 1;                         /* (For the tests: no engage initiative test, no grope's) */
+            nosteps |= PL_NOFACE;               /*   (nor a test on facing it, nor a weapon broken) */
         } else if (!strcmp (argv[i], "-R") && i + 1 < argc) {
             rolls = dnum (argv[++i]);           /* (For the tests: the dice's own offset, 0-252: the same dungeon, other
                                                 **   rolls) */

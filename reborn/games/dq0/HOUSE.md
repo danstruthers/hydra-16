@@ -2053,7 +2053,7 @@ ruleset's (the fatigue rested off the referee's).
 - **Sleep and rest as built** *(the house's, but for the senses, the book's and the user's, 2026-11-03: A6)*: the same as a wait in the world but for
   their words and their lying down: the book's fatigue recovery for the time of it, a fatigue level each ten minutes of rest (Skills 6's
   Fatigue Recovery, the referee's already; a night's sleep, the book says, clears most or all of it: eight hours of it
-  does), the wait broken off as any long task is (hard: a wound, a blow, its light gone out; soft, asked: a sound heard).
+  does), the wait broken off as any long task is (hard: a wound, a blow; soft, asked: a sound heard; its light going out no stop of a sleep, a rest's yes).
   **Asleep (LT_SLEEP) the character sees nothing and hears at half** (Skills 11's Awareness at half; the denizens' own the same: The denizens' day,
   below): the senses' look is blind as it sleeps, so nothing comes into sight, no hostile within 30 feet stops it till it's heard or a blow lands;
   its hearing in the summary at half (the UI's reach of a sound its hearing plus three: that halved); its eyes open as it wakes, what's there told.
@@ -2690,7 +2690,7 @@ one may be (no standing updates: the 65C02's time).  *(Every number here is for 
   The null ruleset's stays 10.
 - **A test on first facing it** *(the user's, 2026-11-03: A14; new, for review: its worth once played)*: besides a wound and a fellow's fall, one more test of
   courage as a creature comes to strike or shoot at the character not already fighting it (a beast's too; not the mindless; once each time it
-  engages), its heart the steps: broken, or shaken if it's a shy kind, it flees with no blow struck; so a weak band can break before a blow.  (RS_MORALE's MR_FACED.)
+  engages), its heart the steps: broken, or shaken if it's a shy kind, it flees with no blow struck; so a weak band can break before a blow.  (RS_MORALE's MR_FACED.  dq0 -I, the tests' with no engage initiative test, has none of it, nor a weapon broken: their games as they were; the soak plays them.)
 
 *(A fall seen but not heard isn't known apart; morale tests not before every action as the book has it: the user's, 2026-11-03, these and no more.)*
 

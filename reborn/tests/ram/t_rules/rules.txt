@@ -2884,10 +2884,18 @@ want text!"Lore"
 
 char
 end
-case Climbing 45 tested (61, a marginal failure: marked all the same), a night's rest: its roll 32 and its SB 14 (12, and Ulandus 2) over 45, improved to 46, told
+case Climbing 45 tested five times, routine (61, a marginal failure: counted all the same), a night's rest: its one roll 32 and its SB 14 (12, and Ulandus 2) over 45, improved to 46, told
 dice 100:61
 ask TEST a=P_CLIMB
 want grade=G_MF
+dice 100:61
+ask TEST a=P_CLIMB
+dice 100:61
+ask TEST a=P_CLIMB
+dice 100:61
+ask TEST a=P_CLIMB
+dice 100:61
+ask TEST a=P_CLIMB
 dice ...
 ask TIME w1=479
 want result=0
@@ -2901,7 +2909,15 @@ dice
 ask DESCRIBE
 want text~"Climbing 46"
 
-case Climbing 46 tested again, a night's rest: 32 and 14 not over 46, no better; nothing marked after, a night more rolls nothing
+case Climbing 46 tested five times again, a night's rest: 32 and 14 not over 46, no better; no rolls earned after, a night more rolls nothing
+dice 100:30
+ask TEST a=P_CLIMB
+dice 100:30
+ask TEST a=P_CLIMB
+dice 100:30
+ask TEST a=P_CLIMB
+dice 100:30
+ask TEST a=P_CLIMB
 dice 100:30
 ask TEST a=P_CLIMB
 dice 100:32 ...

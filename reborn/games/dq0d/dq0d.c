@@ -4978,12 +4978,16 @@ void __fastcall__ s_dismay (unsigned char k)
 ** a weak band can break before a blow; none of it for the mindless); K its own after */
 void __fastcall__ s_heart (unsigned char k)
 {
-    if (K.mind == M_MINDLESS) {
+    if (K.mind == M_MINDLESS || (K.mind < M_LOW && (HUB->pc_lump & PL_NOFACE))) {
         return;
     }
     rj = k;
     rfallen = rgone = 0xFF;
     ranks ();
+    if (HUB->pc_lump & PL_NOFACE) {             /* (dq0 -I's, the tests': their heart, no test) */
+        HUB->actor[k].heart = reckon () / 5;
+        return;
+    }
     courage (MR_FACED);
 }
 

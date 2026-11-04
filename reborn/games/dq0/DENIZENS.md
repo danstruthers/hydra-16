@@ -464,6 +464,8 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   what's held and worn, and how well made: RS_EQUIP's marks).  Each blow is told (E_FIGHT in the denizens' queue, its
   words in a ring in their bank: the referee's for the wounds and the armour, the UI's for the rest), heard by the
   others (they turn to it) and played (the sound task's *hit, *swish).
+- **As it first comes to strike or shoot at the character,** not fighting it already, it tests its courage (MR_FACED, a beast's as well, not the mindless: broken, no blow: the user's, 2026-11-03;
+  HOUSE.md's morale), the character's might, by its size and its best weapon skill as a creature's is, weighing on it.
 - **After:** a denizen wounded tests its morale (RS_MORALE: HOUSE.md's fights), its heart its steps (below): broken (or
   a shy one cautious) it flees a minute; cautious, it holds back a round.  As one falls its kin among the actors (its
   kind and, since 2026-10-29, its faction) that hear it test their courage (HOUSE.md's morale, since 2026-10-30, in
@@ -526,7 +528,7 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   beast, dq0 -K), the bestiary's as before; the null referee ignores them.
 - **Drawn as it strikes:** its hands empty of a weapon, its first blow draws the best on its belt instead, its round
   (WB_DRAWS); its weapon in one hand and a shield slung on its back, the next unslings the shield into its other hand
-  (WB_READIES, 2026-10-29).  A weapon let fall is its own (the same record, on the floor and back in its hand).
+  (WB_READIES, 2026-10-29).  A weapon let fall is its own (the same record, on the floor and back in its hand); one broken on a block (the book's Weapon Damage, HOUSE.md's what strikes: X_DROP's x[1]), or its shield, falls as a broken weapon, no thing to take up, its fists after.
 - **Its shield** *(2026-10-29; HOUSE.md's the denizens' gear, for review)*: held, it blocks with it when that's the
   best of its defences, once a round (the referee's: fight.c's defence, gear.c's den_side; the null referee's two
   steps), told "it fends off the blow with its buckler" (rs.h's AF_SHIELD, the fight ring's FW_SHIELD).

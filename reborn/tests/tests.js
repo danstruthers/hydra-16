@@ -6349,7 +6349,7 @@ module.exports = {
         const need = (t, r, u, what) => { if (!t || t.rolls(STL) !== r || t.uses(STL) !== u) f.push(what + ': ' + show()); };
         need(at('take the chalk', 4), 0, 4, 'four routine uses not counted, no roll');
         need(at('take the chalk', 5), 1, 0, 'the fifth not a roll, its count back to none');
-        const th = at('look', 2), w1 = at('wait', 1), w2 = at('wait', 2);
+        const th = at('look', 2), w1 = at('wait', 1), w2 = at('quit', 1);   // (Its rest told the referee a moment after it wakes: the quit's)
         this.notes.push('Weaponcraft ' + th.rolls(THR) + '/' + th.uses(THR) + ', ' + w1.rolls(THR) + '/' + w1.uses(THR) + ', ' + w2.rolls(THR));
         if (!th || th.rolls(THR) !== 1 || th.uses(THR)) f.push('a foe beside it not a stress roll: ' + th.rolls(THR) + '/' + th.uses(THR));
         if (!w1 || w1.rolls(THR) !== 3) f.push('rolls not held at three: ' + w1.rolls(THR));
@@ -6385,7 +6385,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0asleep', outfit: true, asks: true, near: ['senses', 'time'], what: "Dingus Quest Zero's sleeping senses (the user's, 2026-11-03: \"half awareness asleep\": HOUSE.md's sleep and rest): a hostile bandit put in the character's sight as it sleeps: asleep it sees nothing, so nothing stops or asks; and as it wakes what's there is told; at rest (awake), the same bandit in sight stops it or asks, a rest lying down all the same; the senses' look blind as it sleeps (the bandit not among what it sees), its eyes open after",
+      name: 'dq0sleepsenses', outfit: true, asks: true, near: ['senses', 'time'], what: "Dingus Quest Zero's sleeping senses (the user's, 2026-11-03: \"half awareness asleep\": HOUSE.md's sleep and rest): a hostile bandit put in the character's sight as it sleeps: asleep it sees nothing, so nothing stops or asks; and as it wakes what's there is told; at rest (awake), the same bandit in sight stops it or asks, a rest lying down all the same; the senses' look blind as it sleeps (the bandit not among what it sees), its eyes open after",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128', "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt",
         'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'look', 'close the door', 'sleep for an hour', 'look', 'rest for an hour', 'look', 'quit', 'echo $status']) },
@@ -6416,7 +6416,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0faced', near: ['fight', 'denizens'], what: "Dingus Quest Zero's courage on facing the character (the user's, 2026-11-03: \"Also on first facing you\", \"Reckon it properly\": HOUSE.md's morale): a mighty character (Sword 100) and a giant rat, then a band: each as it first engages tests its courage (RS_MORALE, MR_FACED) with the character's might weighed against it: the steps against a beast by its size and the character's weapon skill, none against a thing as mighty; a band that breaks flees with no blow struck",
+      name: 'dq0faced', initiative: true, near: ['fight', 'denizens'], what: "Dingus Quest Zero's courage on facing the character (the user's, 2026-11-03: \"Also on first facing you\", \"Reckon it properly\": HOUSE.md's morale): a mighty character (Sword 100) and a giant rat, then a band: each as it first engages tests its courage (RS_MORALE, MR_FACED) with the character's might weighed against it: the steps against a beast by its size and the character's weapon skill, none against a thing as mighty; a band that breaks flees with no blow struck",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 100 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Vermin | rat | 0-0 | 30 | - | 0 | h | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'look', ...Array(14).fill('wait'), 'quit', 'echo $status']) },
@@ -6552,7 +6552,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0broke', outfit: true, asks: true, near: ['fight', 'gear'], what: "Dingus Quest Zero's weapons broken by the book (the user's, 2026-11-03; HOUSE.md's what strikes: Combat 12's Weapon Damage, 3d6 over its Weapon Quality, on a Block), every actor's: dq0shield's bandit set on the character, sword in hand, its stance a block: a block, weapon against weapon, breaks one of them: told, its pieces a 'broken weapon' on the floor, none of it in hand after; the character's next blow by its fists, or the bandit's",
+      name: 'dq0broke', outfit: true, asks: true, initiative: true, near: ['fight', 'gear'], what: "Dingus Quest Zero's weapons broken by the book (the user's, 2026-11-03; HOUSE.md's what strikes: Combat 12's Weapon Damage, 3d6 over its Weapon Quality, on a Block), every actor's: dq0shield's bandit set on the character, sword in hand, its stance a block: a block, weapon against weapon, breaks one of them: told, its pieces a 'broken weapon' on the floor, none of it in hand after; the character's next blow by its fists, or the bandit's",
       init: 't_rc', cycles: 2000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml swd 80 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
         "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,gambeson,mail hauberk'", 'drop the backpack', 'hold the sword', 'wear the gambeson', 'wear the mail hauberk', 'defend block', ...Array(30).fill('wait'), 'inventory', 'look', 'quit', 'echo $status']) },
@@ -6613,7 +6613,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0hardblow', near: ['fight', 'gear'], what: "Dingus Quest Zero's weapon broken on something hard (the user's, 2026-11-03; HOUSE.md's what strikes: Combat 12's Weapon Damage): a crude sword (quality 0, the book's table's four under its 12) battering a lowered portcullis (iron): three dice over its quality and it breaks, told, its pieces let fall, no more of it in hand; and a door of wood, no such test",
+      name: 'dq0hardblow', initiative: true, near: ['fight', 'gear'], what: "Dingus Quest Zero's weapon broken on something hard (the user's, 2026-11-03; HOUSE.md's what strikes: Combat 12's Weapon Damage): a crude sword (quality 0, the book's table's four under its 12) battering a lowered portcullis (iron): three dice over its quality and it breaks, told, its pieces let fall, no more of it in hand; and a door of wood, no such test",
       init: 't_rc', cycles: 1500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 514 -c /ram/c.hm -k sword', 'drop the sword', 'take the sword', 'lower portcullis', 'hit the portcullis with the sword', 'inventory', 'look', 'quit', 'echo $status']) },
       start(m) {
