@@ -5219,6 +5219,19 @@ module.exports = {
         'wear the mail hauberk', 'wear the great helm', 'hold the sword', 'examine the bandit', 'assess the bandit', 'drop the backpack', 'drop the torch', 'attack',
         'attack', 'look at the body', 'search the body', 'quit', "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k 'sword,mail hauberk,great helm'", 'quit',
         'echo $status']) },
+      start(m) {   // (The scene set, 2026-11-03, as dq0kit's: as the first attack's typed, the bandits wary: the one down finished, the rest no longer
+        // fighting on, the dice had it dead before it looked; and at the look a thing on the body beneath its clothes, I_HIDDEN and not known, a purse's
+        // chance one bandit in seven, so the look and the search are run)
+        const beneath = (h, L) => {
+          const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize), rec = i => [m.dq0.bank(L.item0 + Math.floor(i / per)), (i % per) * L.itemSize];
+          const named = i => { const [b, o] = rec(i); let n = ''; for (let j = 0; b && b[o + L.iKind] && j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]); return n; };
+          for (let i = 0; i < L.nitems; i++) if (named(i) === 'body') for (let j = 0; j < L.nitems; j++) {
+            const [b, o] = rec(j);
+            if (named(j) === 'leather vest' && b[o + L.iWhere] === m.dq0.layout().K.IW_ITEM && (b[o + L.iX] | b[o + L.iX + 1] << 8) === i) b[o + L.iFlags] = b[o + L.iFlags] & ~0x20 | DQ0_I.HIDDEN;
+          }
+        };
+        dq0Poke(m, [...[0, 1, 2, 3, 4, 5].map(k => ({ g: 1, line: 'attack', n: 1, k, set: { attitude: 2 } })), { g: 1, line: 'look at the body', n: 1, call: beneath }]);
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], o = dq0Story(out), I = DQ0_I;
@@ -5233,18 +5246,24 @@ module.exports = {
         const met = s.actors.filter(a => a.name === 'bandit' && a.did).map(a => a.did);
         const purse = d => s.items.some(i => i.name === 'pennies' && i.where === 'IW_ITEM' && (top(s, i) || {}).did === d);
         if (!met.length || !met.some(purse)) f.push('no bandit met with pennies in its pouch: ' + JSON.stringify(met));
-        const chests = s.items.filter(i => i.name === 'chest' && i.where === 'IW_SQUARE' && i.owner);
+        // (Each box and its key as the game begins, every bandit alive: the key in a pouch of one bandit's alone, 2026-11-03)
+        const chests = s1.items.filter(i => i.name === 'chest' && i.where === 'IW_SQUARE' && i.owner);
+        if (!chests.length) f.push('no box at a bed');
+        const holders = new Set();
         for (const c of chests) {
-          const k = s.items.filter(i => i.name === 'iron key' && i.fits === c.id);
-          if (!(c.shut & 2) || k.length !== 1 || !((top(s, k[0]) || {}).did || (top(s, k[0]) || {}).name === 'body')) f.push('chest ' + c.id + ': not locked, or its key not on its owner: ' + JSON.stringify(k));
+          const k = s1.items.filter(i => i.name === 'iron key' && i.fits === c.id), held = k.length ? s1.items.find(i => i.n === k[0].x) : null, d = k.length ? (top(s1, k[0]) || {}).did : 0;
+          if (!(c.shut & 2) || k.length !== 1 || k[0].where !== 'IW_ITEM' || (held || {}).name !== 'pouch' || !d) f.push('chest ' + c.id + ': not locked, or its key not in one pouch of a bandit: ' + JSON.stringify(k));
+          else if (holders.has(d)) f.push('chest ' + c.id + ': a second key on bandit ' + d);
+          holders.add(d);
         }
         if (!/A bandit, armed(?: and armoured)?,? is /.test(o)) f.push('no bandit looked at armed');
         if (!/The bandit (?:holds|wears) [a-z]/.test(o)) f.push('the bandit examined: what it holds and wears not told');
         if (!/The bandit (?:holds|wears) (?:an? )?(?:crude|poor|plain|sound|good|fine|master's) /.test(o)) f.push('the bandit assessed: no make told');
-        const lk = T.of('look at the body', g1.k), sr = T.of('search the body', g1.k), sb = lk.at;
-        const body = sb && sb.items.find(i => i.name === 'body');
+        const lk = T.of('look at the body', g1.k), sr = T.of('search the body', g1.k), sb = lk.after;
+        const body = sb && sb.items.find(i => i.name === 'body' && sb.items.some(j => j.where === 'IW_ITEM' && j.x === i.n && j.name === 'clothes'));
         const hid = body ? sb.items.filter(i => i.where === 'IW_ITEM' && i.x === body.n && (i.flags & I.HIDDEN) && !(i.flags & 0x20)) : [];
-        if (hid.length) {
+        if (!hid.length) f.push('nothing worn beneath its clothes on the body: the scene not set');
+        else {
           const w = o.slice(o.indexOf('> look at the body'), o.indexOf('> search the body')), w2 = o.slice(o.indexOf('> search the body'));
           if (new RegExp('On it lie[^.]*\\b' + hid[0].name + '\\b').test(w)) f.push('a thing worn beneath its clothes told at a look: ' + hid[0].name);
           if (!w2.slice(0, 600).includes(hid[0].name)) f.push('a thing worn beneath its clothes not found by searching: ' + hid[0].name);
