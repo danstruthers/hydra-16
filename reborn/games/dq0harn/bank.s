@@ -169,7 +169,7 @@ ovl_out:
             OVFN        limbs_of, 5
             OVFN        cond_of, 5
             OVFN        rise_of, 5
-            OVFN        hit_thing, 3
+            OVFN        hit_thing, 5
             OVFN        health_of, 5
             OVFN        fumbled, 3
             OVFN        wound_drops, 3
@@ -189,6 +189,7 @@ ovl_out:
             OVFN        want_fl, 7
             OVFN        skill_used, 7       ; (Skills by use, the load's free pounds, slice 4.4's: skills.c)
             OVFN        develop, 7
+            OVFN        skill_line, 7       ; (Its growth's lines in its file: 2026-11-03)
             OVFN        set_load, 7
             OVFN        equip, 7            ; (The main RAM's room, D13's)
             OVFN        heft, 7             ; (A weapon's version, D13's: skills.c)
@@ -213,6 +214,8 @@ ovl_out:
             SWFN        dig_answer, 3
             SWFN        dice_set, 2
             SWFN        fixed, 2            ; (A test's dice hook, 2026-10-31: the main RAM's room)
+            SWFN        stress, 3           ; (What a skill's used under, 2026-11-03)
+            SWFN        pace_set, 3         ; (The main RAM's room for it)
 
 ; The dice by who asks (rshouse.h's RS_HOUSE_DICE: ../dq0/dice.inc), overlay 7's, through its stub (OVFN's, by hand)
             .export     _dice_to

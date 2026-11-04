@@ -3528,10 +3528,10 @@ static void __fastcall__ entertain (unsigned char k)
 }
 
 /* A trade (SW_BUY, SW_SELL, SW_PRICE, SW_OFFER, SW_HAGGLE: sw.order 1, the character's thing sold): with one of its
-** mind (folk: not a beast, not the mindless), indifferent or better to the character; its price from the goods' worth
-** (sw.ix, farthings, its condition's: the UI's), by its attitude: it sells at five quarters of it indifferent, the
-** whole friendly, three quarters to an ally; it buys at two fifths, a half, three fifths (the book's: a seller "lucky
-** to receive half"); haggled, the book's Rhetoric in its tongue, at steps by its attitude, its kind's sway and its
+** mind (folk: not a beast, not the mindless), friendly or better to the character (the user's, 2026-11-03: "Friendly
+** folk only": indifferent ones refuse); its price from the goods' worth (sw.ix, farthings, its condition's: the UI's),
+** by its attitude: it sells at the whole of it friendly, three quarters to an ally; it buys at a half, three fifths
+** (the book's: a seller "lucky to receive half"); haggled, the book's Rhetoric in its tongue, at steps by its attitude, its kind's sway and its
 ** mind (the cunning the harder), the price a quarter better at a critical success, a tenth at a success, as asked at a
 ** failure, a critical failure an offence (a step back, no deal); never bought under, nor sold over, two thirds of its
 ** worth (the user's, 2026-11-03: buying never below selling, whatever the critical); rounded to the penny (buying up,
@@ -3556,7 +3556,7 @@ static void __fastcall__ trade (unsigned char k)
         sw.result = SR_BEAST;
         return;
     }
-    if (t < AT_INDIFFERENT) {
+    if (t < AT_FRIENDLY) {
         sw.result = SR_WONT;
         return;
     }
@@ -3564,8 +3564,7 @@ static void __fastcall__ trade (unsigned char k)
         sw.result = SR_NO_GOODS;
         return;
     }
-    p = pct (sw.ix, sell ? (t == AT_INDIFFERENT ? 40 : t == AT_FRIENDLY ? 50 : 60) :
-        (t == AT_INDIFFERENT ? 125 : t == AT_FRIENDLY ? 100 : 75));   /* (Farthings) */
+    p = pct (sw.ix, sell ? (t == AT_FRIENDLY ? 50 : 60) : (t == AT_FRIENDLY ? 100 : 75));   /* (Farthings) */
     sw.t = 20;
     if (h == SW_HAGGLE) {
         g = sw.grade = words_test (k, P_PERSUADE, 0, (signed char) t - 3 + K.sway + (K.mind == M_CUNNING ? -1 :

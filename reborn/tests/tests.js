@@ -2481,6 +2481,30 @@ function dq0BodyPoke(m, pokes) {
   };
 }
 
+// Each skill's growth in the referee's bank (skills.c's: past the bodies, fb; 2026-11-03), at each line's Enter (m.grow: { g, line,
+// n, sk(k): its rolls earned, its routine uses }), after any pokes it's given
+function dq0Grow(m) {
+  const a = m.acia, read = a.read;
+  let typed = '', g = 0, seen = {};
+  m.grow = [];
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) {
+        if (/^dq0 /.test(typed)) { ++g; seen = {}; }
+        seen[typed] = (seen[typed] || 0) + 1;
+        const h = m.dq0 && m.dq0.bank(0);
+        if (h && g) {
+          const B = dq0Body(m), v = Array.from(B.mem.subarray(0x800, 0x800 + 100));
+          m.grow.push({ g, line: typed, n: seen[typed], rolls: k => v[k] >> 4, uses: k => v[k] & 7 });
+        }
+        typed = '';
+      } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+}
+
 // The day's hour poked (a test's own setting up: the denizens' hour0, dq0d.c's part 9, the hour of the day the game's
 // clock began at; 0x80, no day, every one about as before the day, 2026-10-31): at a line's Enter, each { g: the game,
 // 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, hour }.  A game's whole (from its start):
@@ -6093,6 +6117,86 @@ module.exports = {
         this.notes = [told.map(x => x[0]).join(' ')];
         if (told.length !== 2 || told[0][2] || !told[1][2] || told[0][1] !== told[1][1]) f.push('not its looks, then named at the first good spell: ' + told.map(x => x[0]).join(' '));
         else if (!/rock: [a-z ]+\. The work goes well\./.test(s)) f.push('named but not with a spell that went well');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0whotrades', outfit: true, near: ['money', 'denizens'], what: "Dingus Quest Zero's who trades (the user's, 2026-11-03: \"Friendly folk only\": HOUSE.md's the market): a hand-written theme's bandit (dq0trade's scene): indifferent, its price, its offer, a sale and a purchase all refused in words (SR_WONT: 'won't trade with you'), nothing changing hands; friendly, the same asked goes through; an antidote carried by the same rule",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo wealth 6000 >> /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k rope,antidote',
+        'inventory', 'how much for the rope', 'what will you give for the rope', 'sell the rope to the bandit', 'sell the antidote to the bandit', 'inventory', 'look', 'what will you give for the rope', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, ['inventory', 'how much for the rope', 'what will you give for the rope', 'sell the rope to the bandit', 'sell the antidote to the bandit'].map(line => ({ g: 1, line, n: 1, name: 'bandit', set: { attitude: 3, doing: 0 }, beside: 4 }))
+          .concat([{ g: 1, line: 'what will you give for the rope', n: 2, name: 'bandit', set: { attitude: 4, doing: 0 }, beside: 4 }]));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], s = dq0Story(out);
+        const wont = T.filter(t => /^(how much|what will|sell)/.test(t.line)).map(t => t.replies.filter(r => r.req === 'sway').map(r => r.result).join());
+        this.notes = [wont.join(' ')];
+        if (wont.slice(0, 4).join() !== 'SR_WONT,SR_WONT,SR_WONT,SR_WONT') f.push('indifferent, not refused every way: ' + wont.join(' '));
+        if ((s.match(/The bandit won't trade with you\./g) || []).length !== 4) f.push('its refusal not told each time');
+        const inv = T.filter(t => t.line === 'inventory');
+        if (inv.length < 2 || !dq0Carried(inv[1].after).some(i => i.name === 'rope') || !dq0Carried(inv[1].after).some(i => i.name === 'antidote')) f.push('things gone though it refused');
+        if (wont[4] !== 'SR_OK') f.push('friendly, no offer for the rope: ' + wont[4]);
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0growth', outfit: true, near: ['body', 'save'], what: "Dingus Quest Zero's skills' growth (the user's, 2026-11-03: \"Stress, or 5 routine uses\", HOUSE.md's a skill's growth), by the referee's own record of it (skills.c's, m.grow): hiding a thing, lit, nobody near: a routine use counted, the fifth a roll, the count back to none; a hostile awake beside it: a roll for one use; wounded (its file's injury) with one beside it: a very dangerous use, two; rolls held to three; in the dark without a light a roll; eight hours' sleep spends the rolls, told if one rose, the routine count kept; and it's kept in its file ('body u' lines) and read back as the game's carried on",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml stl 20 >> /ram/c.hm', 'echo ml wpn 20 >> /ram/c.hm', 'mkdir /ram/g', 'mkdir /ram/q', 'dq0hour=128',
+        "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k chalk,knife,candle,rope,brick',
+        'look', ...Array(5).fill(['hide the chalk', 'take the chalk']).flat(), 'appraise the knife', 'look', 'appraise the knife', 'appraise the knife', 'appraise the knife', 'wait', 'sleep for 8 hours', 'wait', 'quit', 'cat /ram/g/pc.hm', 'echo inj 14 1 2 2 0 0 >> /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -a -k chalk', 'look', 'hide the chalk', 'take the chalk', 'put out the torch', 'look', 'hide the chalk', 'take the chalk', 'quit', 'echo $status']) },
+      start(m) {
+        const p = [0, 1, 2].map(k => ({ g: 1, line: 'look', n: 1, k, set: { attitude: 4, doing: 0 } }));
+        for (const n of [1, 2, 3, 4]) p.push({ g: 1, line: 'appraise the knife', n, k: 0, set: { attitude: 0, doing: 1 }, beside: 4 });
+        for (const k of [0, 1, 2]) p.push({ g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } });
+        dq0Poke(m, p);
+        dq0Grow(m);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], STL = 7, THR = 88, at = (line, n, g) => m.grow.find(x => x.g === (g || 1) && x.line === line && x.n === n), show = () => m.grow.map(g => g.g + g.line.slice(0, 4) + g.n + ':' + g.rolls(STL) + '/' + g.uses(STL)).join(' ');
+        this.notes = [show()];
+        const need = (t, r, u, what) => { if (!t || t.rolls(STL) !== r || t.uses(STL) !== u) f.push(what + ': ' + show()); };
+        need(at('take the chalk', 4), 0, 4, 'four routine uses not counted, no roll');
+        need(at('take the chalk', 5), 1, 0, 'the fifth not a roll, its count back to none');
+        const th = at('look', 2), w1 = at('wait', 1), w2 = at('wait', 2);
+        this.notes.push('Weaponcraft ' + th.rolls(THR) + '/' + th.uses(THR) + ', ' + w1.rolls(THR) + '/' + w1.uses(THR) + ', ' + w2.rolls(THR));
+        if (!th || th.rolls(THR) !== 1 || th.uses(THR)) f.push('a foe beside it not a stress roll: ' + th.rolls(THR) + '/' + th.uses(THR));
+        if (!w1 || w1.rolls(THR) !== 3) f.push('rolls not held at three: ' + w1.rolls(THR));
+        if (!w2 || w2.rolls(THR) || w2.rolls(STL)) f.push('a night\'s sleep not spending the rolls');
+        need(at('look', 1, 2), 0, 0, 'its growth not carried with its file');
+        need(at('put out the torch', 1, 2), 1, 0, 'wounded, a use not a roll');
+        need(at('quit', 1, 2), 3, 0, 'wounded in the dark, a very dangerous use not two rolls');
+        if (!/\nbody u\d+ /.test(out.slice(out.indexOf('% cat /ram/g/pc.hm')))) f.push('its growth not in its file');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0shieldskill', outfit: true, asks: true, near: ['fight'], what: "Dingus Quest Zero's block improves the thing that blocked (the user's, 2026-11-03: \"A block improves Shield\"): dq0shield's bandit set on the character, sword and round shield held, its stance a block: the block by the shield earns Shield its rolls and Sword none of it; struck at, its own blow, Sword",
+      init: 't_rc', cycles: 1200e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml shd 90 >> /ram/c.hm',
+        'echo ml swd 20 >> /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', "echo 'faction | Brigands | bandit | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
+        "dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k 'sword,round shield,gambeson,mail hauberk'", 'drop the backpack', 'hold the sword', 'hold the round shield', 'wear the gambeson', 'wear the mail hauberk',
+        'defend block', ...Array(30).fill('wait'), 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [0, 1, 2].map(k => k ? { g: 1, line: 'wait', n: 1, k, set: { attitude: 4, doing: 0 } } : { g: 1, line: 'wait', n: 1, k, set: { attitude: 0, doing: 0 }, beside: 4 }));
+        dq0Grow(m);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], SHD = 42, SWD = 45, end = m.grow[m.grow.length - 1], s = dq0Story(out);
+        this.notes = ['Shield ' + end.rolls(SHD) + ', Sword ' + end.rolls(SWD)];
+        if (!/fend[^.]*(shield)/.test(s)) f.push('no block with the shield in its scene');
+        else if (!end.rolls(SHD)) f.push('a shield\'s block earned Shield nothing');
+        if (end.rolls(SWD) && !/You (strike|hit|counter)/.test(s)) f.push('Sword earned rolls with no use of the sword');
         return f;
       },
       sdcard: true
@@ -10542,7 +10646,7 @@ module.exports = {
         const harn = !process.env.RULES || process.env.RULES === 'harn', sk = /Skills \(EML\):[^\n]*/.exec(end);   // (HarnMaster's sheet: the null ruleset's has no skills)
         if (harn && !sk) f.push('its sheet not told as the game ends');
         const pc = out.slice(out.indexOf('% cat /ram/q/pc.hm'), out.indexOf('% dq0 -p t -s 259'));
-        if (harn && !/\nbody u[0-9a-f]{26} \d+/.test(pc)) f.push('its skills used not kept with its sheet (pc.hm\'s second body line)');
+        if (harn && !/\nbody u\d+ /.test(pc)) f.push('its skills used not kept with its sheet (pc.hm\'s second body line)');
         dq0Need(f, g2, 'E_ARRIVE', { how: 'A_START' }, 'the second game not begun anew (a new dungeon)');
         const kit = dq0Carried(g2.after).map(i => i.name);
         if (!kit.includes('pick') || !kit.includes('backpack')) f.push('its things not carried on: ' + kit.join(', '));

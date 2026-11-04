@@ -149,10 +149,9 @@ static void __fastcall__ equip_all (const char* keys)
 
 /* The load the character carries, its equipment as harn.h has it (skills.c's set_load: one entry, its encumbering
 ** part, past its free pounds, D13's), so its encumbrance (EP) is the book's on it; and its skills used since their
-** development rolls, its rest toward them, words not flagged yet (skills.c's: slice 4.4's) */
+** development rolls' stress, words not flagged yet (skills.c's: slice 4.4's) */
 harn_equip carried = { "load", "load", 0, 0xFF, 0 };
-unsigned char marks[MARKS];
-unsigned dev_m;
+unsigned char stress_lv;
 unsigned char fresh;
 
 /* A tool equipped (Lockcraft's picks) */
@@ -520,8 +519,8 @@ void __fastcall__ s_load_pc (struct req* r)
     r->b = watch;
     strncpy (path, r->text, sizeof path - 1);
     r->result = 1;
-    pv.hr = pd.hr = afffl = dev_m = 0;         /* (No venom, no sickness, no rest yet: its file's "body" line's; */
-    memset (marks, 0, MARKS);                  /*   no skills used yet, its second one's) */
+    pv.hr = pd.hr = afffl = 0;                 /* (No venom, no sickness, no rest yet: its file's "body" line's; */
+    body_line (path, 3);                       /*   no skills used yet, its "body u" lines') */
     rest_m = HUB->pcsum.timesense = 0;
     if ((fd = open (path, O_RDONLY)) < 0) {
         return;
@@ -565,8 +564,9 @@ void __fastcall__ s_save_pc (struct req* r)
     harn_write_line (fd, line);
     body_line (line, 0);                        /* (Its venom, its rest: heal.c's) */
     harn_write_line (fd, line);
-    body_line (line, 2);                        /* (Its skills used: slice 4.4's) */
-    harn_write_line (fd, line);
+    while (body_line (line, 2), line[0]) {      /* (Its skills' growth: slice 4.4's, 2026-11-03) */
+        harn_write_line (fd, line);
+    }
     strcpy (line, "dealt ");                    /* (What dealt each injury: its words') */
     for (g = 0; g < pc.ninj; ++g) {
         line[g + 6] = '0' | pc_by[g];
@@ -671,7 +671,12 @@ static unsigned char __fastcall__ speaks (const char* t)
 ** the words need copied for the overlay (the hub's not in the window while it is) */
 struct pstate ps;
 
-static void __fastcall__ pace_set (unsigned char a)
+void __fastcall__ pace_set (unsigned char a);
+void __fastcall__ stress (struct req* r);
+#pragma code-name (push, "SW3CODE")             /* (Part 3's: the main RAM's room, 2026-11-03) */
+#pragma rodata-name (push, "SW3RODATA")
+
+void __fastcall__ s_pace_set (unsigned char a)
 {
     status ();                                  /* (Listening: its hearing) */
     ps.gait = HUB->gait;
@@ -685,6 +690,34 @@ static void __fastcall__ pace_set (unsigned char a)
     hub_map (0);
     state ();
 }
+
+/* What a skill's used under, for its growth (HOUSE.md's, the user's, 2026-11-03: "a use under stress"), the character's
+** test r or its treatment (the hub in the window): a point each for a hostile awake within 30 feet (a hard stop's reach),
+** a trap's danger (disarmed, or dodged), the dark without a light; wounds and shock skills.c's own */
+void __fastcall__ s_stress (struct req* r)
+{
+    struct actor* q = HUB->actor;
+    unsigned char k, n = r->kind == RS_TEST && (r->a == P_DISARM || r->a == P_DODGE_HAZARD);
+    unsigned dx, dy;
+
+    for (k = NACTORS; k; --k, ++q) {
+        dx = q->x > HUB->pc_x ? q->x - HUB->pc_x : HUB->pc_x - q->x;
+        dy = q->y > HUB->pc_y ? q->y - HUB->pc_y : HUB->pc_y - q->y;
+        if (q->state && q->attitude == AT_HOSTILE && q->sn == HUB->pc_stratum && q->doing != DO_SLEEP && dx <= 6 && dy <= 6) {
+            ++n;
+            break;
+        }
+    }
+    if (!HUB->pc_light) {
+        hub_map (SIGHT_BANK);
+        n += SIGHT->dark != 0;
+        hub_map (0);
+    }
+    stress_lv = n;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* ---- The dice fixed, for a test (RS_DICE: the referee's unit tests, tests/ram/t_rules): dice.h's hook, set by the
 ** first, rolls every die after it, the faces given first (then the generator's), and keeps what each was (its sides) */
@@ -788,6 +821,7 @@ static void __fastcall__ answer (struct req* r)
     tp = r->text;
     tend = r->text + tlim - 1;
     r->result = 0;
+    stress_lv = 0;                              /* (A skill's use here routine, but as it's found below: skills.c's) */
     switch (r->kind) {
     case RS_NEW_ACTOR:                          /* (The fights': overlay 2's, in a copy, as the harm's) */
         sheets_in ();
@@ -812,6 +846,9 @@ static void __fastcall__ answer (struct req* r)
     case RS_TIME:                               /*   copy, the part said copied for it; the harm overlay 1's, its */
     case RS_TREAT:                              /*   words a line) */
         tnow = HUB->now;
+        if (r->kind == RS_TREAT) {
+            stress (r);
+        }
         strncpy (tpart, r->text, sizeof tpart - 1);
         memcpy (rq, r, sizeof rq);
         memcpy (rq + offsetof (struct req, x) + WANT_X, &HUB->pc_hunger, 6);    /* (The hub's want: slice 4.9's) */
@@ -829,6 +866,9 @@ static void __fastcall__ answer (struct req* r)
         load_pc (r);
         break;
     case RS_TEST:
+        if (!r->actor && r->a > P_NOTICE_SMELL) {
+            stress (r);                         /* (A glance's, a sound's, a smell's routine: they're many) */
+        }
         if (r->actor || r->a == P_DIG || r->a == P_STEALTH || r->a == P_APPRAISE || r->a == P_SWIM) {   /* (A creature's
                                                 **   by its sheet, any test (Phase 3C's: a door forced); judged by the tool to hand that
                                                 **   suits it best; moving quietly, by its own dice; by the craft that
@@ -921,6 +961,7 @@ parted:
         memcpy (r, rq, sizeof rq);
         break;
     case RS_CONTEST:                            /* (Each one's test, the actor's first: who did better) */
+        stress_lv = 1;                          /* (Two meeting: a foe near) */
         g = side (r->actor, r->a, r->steps);
         k = side (r->other, r->b, r->c);
         r->grade = g;

@@ -72,15 +72,16 @@ extern unsigned wealth;                         /* (The family's wealth, its fil
 extern char bkey[8];                            /* (RS_NEW_ACTOR's key, from the request's text) */
 
 /* skills.c (overlay 7): the character's skills as it goes (slice 4.4, HOUSE.md's skills by use), and its load */
-#define MARKS           ((HARN_MAXSKILLS + 7) / 8)
-extern unsigned char marks[MARKS];              /* (Its skills used since its last development rolls, a bit each) */
-extern unsigned dev_m;                          /* (Its rest toward them, minutes) */
+extern unsigned char stress_lv;                 /* (How much stress a skill's used under now, wounds apart: a foe near or
+                                                **   a fight, a trap's danger, the dark without a light, a point each:
+                                                **   set as a request's answered, HOUSE.md's) */
+void __fastcall__ skill_line (char* l, unsigned char rd);    /* Its growth's lines in its file (skills.c's) */
 extern unsigned char fresh;                     /* (Words for it in news not flagged yet: a skill opened; rs.h's
                                                 **   C_NEWS, cond_of's) */
 void __fastcall__ skill_used (unsigned char sk);    /* Skill sk used by the character (a test of it, its weapon in a
-                                                **   fight): a [First Use] one opened, told; an open one marked */
-void __fastcall__ develop (unsigned m);         /* m minutes of rest (RS_TIME's): a night's of it, the marked skills'
-                                                **   development rolls, each that rose told */
+                                                **   fight): a [First Use] one opened, told; an open one's growth */
+void __fastcall__ develop (unsigned m);         /* m minutes of rest (RS_TIME's): a night's of it, the rolls each
+                                                **   skill's earned, each that rose told */
 void __fastcall__ set_load (unsigned qp);       /* The load it carries (quarter pounds), its free pounds less
                                                 **   (D13's): its equipment as harn.h has it */
 void __fastcall__ equip (const char* key, unsigned char on);    /* A tool to hand (on), or not: its key (RS_EQUIP a

@@ -633,6 +633,7 @@ void __fastcall__ o_fight (struct req* r)
     prones = r->w2;
     R = r;
     nfx = 0;
+    stress_lv = 1;                              /* (A fight: a foe near) */
     switch (r->kind) {
     case RS_NEW_ACTOR:
         new_beast ();
@@ -693,11 +694,14 @@ void __fastcall__ o_fight (struct req* r)
         heft (&A);                              /* (Their weapons' versions: D13's) */
         heft (&D);
         attack ();
-        if (r->result != 0xFF) {                /* (The character's skill used in it, marked for its development
-                                                **   roll, opened its first time, the book's, Combat 19: its weapon,
-                                                **   striking or blocking, or its dodge; skills.c's, slice 4.4's) */
-            skill_used (!r->actor ? A.sk : r->b == D_DODGE ? HARN_DGE : r->b != D_NONE ? D.sk : 0xFF);
+        if (r->result != 0xFF && !r->actor) {   /* (The character's skill used in it, for its development rolls,
+                                                **   opened its first time, the book's, Combat 19: its weapon striking;
+                                                **   skills.c's, slice 4.4's) */
+            skill_used (A.sk);
         }
+    }
+    if (r->result != 0xFF && r->actor && !r->other) {   /* (Or the thing that blocked, its dodge: at it, a shot too) */
+        skill_used (r->b == D_DODGE ? HARN_DGE : r->b != D_NONE ? D.sk : 0xFF);
     }
     tup = 0;
     if (r->result != 0xFF && !(r->w2 & MS_STRAY)) {

@@ -547,12 +547,17 @@ unsigned char __fastcall__ o_pc_defence (struct side* d, unsigned char f, unsign
         d->bare = s == BARE_ARM;
     }
     d->dslot = uhow[s] == HARN_DODGE ? 0xFF : s;   /* (What it defends with: its fumble's, slice 4.1b's) */
-    if (uhow[s] == HARN_BLOCK && s < NTOOLS) {  /* (A block's words what blocked: "you fend it off with your
-                                                **   buckler", not the weapon it strikes with, 2026-10-29) */
-        for (k = NUNARMED; k < NWEAPONS && strcmp (weapons[k].key, tools[s]); ++k) {
-        }
-        if (k < NWEAPONS) {
-            strcpy (d->word, weapons[k].word);
+    if (uhow[s] == HARN_BLOCK) {                /* (A block's words what blocked: "you fend it off with your
+                                                **   buckler", not the weapon it strikes with, 2026-10-29; and the
+                                                **   skill it marks that thing's, a bare arm's Unarmed: the user's,
+                                                **   2026-11-03, "A block improves Shield") */
+        d->sk = HARN_UNA;
+        for (k = NUNARMED; s < NTOOLS && k < NWEAPONS; ++k) {
+            if (!strcmp (weapons[k].key, tools[s])) {
+                strcpy (d->word, weapons[k].word);
+                d->sk = weapons[k].sk;
+                break;
+            }
         }
     }
     return uhow[s];
@@ -571,6 +576,7 @@ static unsigned char __fastcall__ pc_shield (struct side* s)
             if (j < NWEAPONS && s->bml[k] > v) {
                 v = s->bml[k];
                 strcpy (s->word, weapons[j].word);
+                s->sk = HARN_SHD;
             }
         }
     }
@@ -583,7 +589,11 @@ static unsigned char __fastcall__ pc_shield (struct side* s)
 ** struck it hurt if the blow went wrong (rs.h's: the book's H2 on a bare part meeting something hard, the game's
 ** numbers), HC_STRUCK's harm (sheet.c's).  A part's blow the house's Unarmed test (HOUSE.md's battering, the user's,
 ** 2026-10-22): a marginal failure harms neither, a critical failure the part alone; a bare part's hurt stopped short
-** (RS_SHORT: none, result | 4).  (Fight.c's, its request q, the attacker's side s: here, overlay 2's room) */
+** (RS_SHORT: none, result | 4).  (Fight.c's, its request q, the attacker's side s: overlay 5's since 2026-11-03, the
+** room of overlays 2 and 3: pc_side and pc_armour through their stubs) */
+#pragma code-name ("OV5CODE")
+#pragma rodata-name ("OV5RODATA")
+
 void __fastcall__ o_hit_thing (struct req* q, struct side* s)
 {
     static unsigned char hq[offsetof (struct req, text)];   /* (The harm's request: but its text) */
@@ -597,7 +607,7 @@ void __fastcall__ o_hit_thing (struct req* q, struct side* s)
         s->part = 0xFF;                         /* (A creature's: its own weapon or body, never hurt by it, the
                                                 **   house's: fight.c's beast_side) */
     } else {
-        o_pc_side (s);
+        pc_side (s);
     }
     for (k = 0; k < 3; ++k) {
         if (s->imp[k] >= 0 && (v = s->imp[k] - res[k]) > top) {
@@ -615,7 +625,7 @@ void __fastcall__ o_hit_thing (struct req* q, struct side* s)
     q->result = s->part != 0xFF ? 2 : 0;
     put (s->word);
     if (s->part != 0xFF && lv == HARN_CF) {     /* (Gone wrong: the part hurt; a bare one stopped short of it, asked) */
-        a = s->part == HARN_FOOT ? o_pc_armour (SOLE, 0) : o_pc_armour (s->part, HARN_BLUNT);
+        a = s->part == HARN_FOOT ? pc_armour (SOLE, 0) : pc_armour (s->part, HARN_BLUNT);
         v = dice (2, 6) + res[0] / 2 - a;
         if (v > 0 && pull && !a) {
             q->result |= 4;
