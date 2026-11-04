@@ -1,7 +1,7 @@
 /*
 ** dq0life.c - Dingus Quest Zero between its dungeons (DUNGEON.md's a character's life): run by the game (main.c's s_life) as
 ** it starts with a save's folder and no dungeon going on in it, before anything of the game's.  It keeps the record of the
-** life (../dq0/life.h): a life begun, or the last dungeon's end recorded and the next one begun: its seed, its date, its
+** life (../dq0/life.h; the program's in lib/dq0): a life begun, or the last dungeon's end recorded and the next one begun: its seed, its date, its
 ** folder.  What passes between dungeons will go here (the plan's steps 4 to 6): it's a program of its own, in no task's way.
 **
 ** dq0life -d folder [-s seed]

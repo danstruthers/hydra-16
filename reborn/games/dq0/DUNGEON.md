@@ -1448,7 +1448,7 @@ rest".  Built (HOUSE.md's the character carries on has the numbers):
 ### A character's life (the plan for the game between dungeons, step 3, 2026-11-04)
 
 The plan's section 5, HOUSE.md's carrying on for its numbers.  **life.h** has the file formats; **games/dq0life** is a small program
-of its own, on the card beside the game: the game runs it as it starts with a save's folder and no dungeon going on in it, before
+of its own, in the game's lib folder (lib/dq0/dq0life, 5K): the game runs it as it starts with a save's folder and no dungeon going on in it, before
 anything of the game's (it has the CPU and its own RAM; what passes between dungeons will go there, the plan's steps 4 to 6).
 
 - **The save's folder** (dq0 -d): at its top the record (life.dat), the sheet (pc.hm), what's carried (kit.dat); each dungeon in its
@@ -1465,6 +1465,12 @@ anything of the game's (it has the CPU and its own RAM; what passes between dung
   on at each carry-on by the days the clock crossed from its start's hour, and one more, the day after it came out at the soonest.
 - **The end:** game.dat's outcome byte (struct save's, LO_*: the ends' to set), read by dq0life as the next dungeon begins, so a
   game ended and not yet carried on has its record as it was.
+- **A dungeon past the first with no game kept** (the character died in it before anything was kept) is begun again, the record as it
+  is, not a new life.  A record that can't be read, a game of another version or one ended in hard mode's death: a new life.
+- **The start's time** (dq0starttime, no save's folder: dq0life isn't run): paid for by a file less to open for the UI (the deities' names
+  in the last two kinds' records, the kinds' bank's, items.h's GODS_AT) and one less for the denizens (the noses at dq0d.dat's end, not
+  dq0tr.dat read).  dq0life is in lib/dq0 because the card's layout tells: in games/ it moved the directories 16 blocks and the
+  kernel's cache held them worse, a million cycles a game.
 - **The room:** two dungeons hardly played, one a stand-in's and one with its own theme: 156K of the card (df, 14,996K free to 14,840K);
   a save's folder grows by that kind of figure a dungeon, more as it's played.  The test card has 15M free; a real one, far more.
 

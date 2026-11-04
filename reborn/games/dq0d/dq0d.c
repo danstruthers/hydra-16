@@ -302,7 +302,7 @@ struct pop {
 typedef char pop_fits[sizeof (struct pop) <= 0x2000 ? 1 : -1];
 
 static unsigned char kb, pb;                    /* Its banks: the kinds', the records' */
-static unsigned char knose[SND_KINDS];          /* Each kind's nose (kinds.txt's, dq0tr.dat's: the traces'), and the
+static unsigned char knose[SND_KINDS];          /* Each kind's nose (kinds.txt's, dq0d.dat's end: the traces'), and the
                                                 **   character's smell (its sweat's: the scent a hunter follows) */
 static unsigned char pcsmell = 3;
 static unsigned char nkinds;
@@ -420,18 +420,13 @@ static int __fastcall__ kinds_load (const char* dir)
         return -1;
     }
     hy_bank (kb);                               /* (Read straight into its bank: the start's time, slice 4.4's) */
-    read (fd, (void*) 0x8000, 0x2000);
+    n = read (fd, (void*) 0x8000, 0x2000);
     close (fd);
-    strcpy (path, dir);                         /* (The kinds' noses, the character's smell: the traces' file) */
-    strcat (path, "/dq0tr.dat");
-    if ((fd = open (path, O_RDONLY)) >= 0) {
-        for (n = 0; n < SND_KINDS && read (fd, piece, 64) == 64; ++n) {
-            knose[n] = piece[14];
-            pcsmell = n ? pcsmell : piece[13];
-        }
-        close (fd);
-    }
-    hy_bank (kb);                               /* (The first record's the counts; the factions after the kinds) */
+    hy_bank (kb);                               /* (The kinds' noses, the character's smell, at its end: make.js's, the
+                                                **   traces' file not opened for them, the start's time, 2026-11-04) */
+    memcpy (knose, (char*) 0x8000 + n - (SND_KINDS + 1), SND_KINDS);
+    pcsmell = *((char*) 0x8000 + n - 1);
+                                                /* (The first record's the counts; the factions after the kinds) */
     nkinds = KINDS[0].flags;
     nfacts = KINDS[0].styles < NFACT ? KINDS[0].styles : NFACT;
     for (n = 0; n < nfacts; ++n) {

@@ -12192,7 +12192,7 @@ module.exports = {
         'dq0 -p t -d /ram/b', 'look', 'inventory', 'appraise the sword', 'quit',
         'cmp /ram/a/life.dat /ram/b/life.dat', 'echo same $status', 'xd /ram/a/life.dat', 'ls /ram/a', 'ls /ram/a/d1', 'ls /ram/a/d2', 'cp /ram/a/life.dat /ram/l.dat',
         'dq0 -p t -d /ram/a', 'look', 'quit', 'cmp /ram/a/life.dat /ram/l.dat', 'echo kept $status',
-        'dq0life -d /ram/x -s 123456789', 'xd /ram/x/life.dat', 'cp /ram/a/d1/game.dat /ram/x/d1/game.dat', 'dq0life -d /ram/x', 'echo second', 'xd /ram/x/life.dat', 'cp /ram/x/life.dat /ram/y.dat', 'dq0life -d /ram/x', 'cmp /ram/x/life.dat /ram/y.dat', 'echo again $status', 'echo $status']) },
+        '/sd/0/games/lib/dq0/dq0life -d /ram/x -s 123456789', 'xd /ram/x/life.dat', 'cp /ram/a/d1/game.dat /ram/x/d1/game.dat', '/sd/0/games/lib/dq0/dq0life -d /ram/x', 'echo second', 'xd /ram/x/life.dat', 'cp /ram/x/life.dat /ram/y.dat', '/sd/0/games/lib/dq0/dq0life -d /ram/x', 'cmp /ram/x/life.dat /ram/y.dat', 'echo again $status', 'echo $status']) },
       expect: ['% echo $status'],
       start(m) {
         const sword = (i, h, L, g) => {                 // (The sword: its wear and life set, read back as the next dungeon's first looked at)

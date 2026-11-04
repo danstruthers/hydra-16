@@ -164,7 +164,6 @@ function build({ dir, objdir, say = () => {} }) {
     out[at + 10] = f[35] === '-' ? 0 : [...f[35]].reduce((a, c) => a | 1 << PASTIMES.indexOf(c), 0);   // (Its pastimes: a bit
                                                 //   each, level.h's PT_*, 2026-10-31)
   });
-  fs.writeFileSync(path.join(objdir, '..', 'dq0d.dat'), out);
 
   // The kinds' traces (dq0tr.dat): each one's name, tread, smell, nose and size, its marks' words and its scent's (each
   // 0-ended, "" none); the first the character's own (its marks and its tread by its footwear, the world's: these bare
@@ -179,6 +178,12 @@ function build({ dir, objdir, say = () => {} }) {
   trace(0, '', 2, 3, 2, 4, 'bare feet', 'a smell of sweat');
   kinds.forEach((f, i) => trace(TREC * (i + 1), f[0], +f[22], +f[24], +f[26], +f[15], f[23], f[25]));
   fs.writeFileSync(path.join(objdir, '..', 'dq0tr.dat'), tout);
+  // (The noses by kind, the character's first, then its smell, at dq0d.dat's end, SND_KINDS + 1 bytes (hub.h's): what the denizens want of the
+  // traces' file, without its open and its reads as the game starts, 2026-11-04)
+  const noses = Buffer.alloc(SND_KINDS + 1);
+  for (let n = 0; n < SND_KINDS && TREC * n < tout.length; n++) noses[n] = tout[TREC * n + 14];
+  noses[SND_KINDS] = tout[13];
+  fs.writeFileSync(path.join(objdir, '..', 'dq0d.dat'), Buffer.concat([out, noses]));
 
   // The deities (dq0g.dat), first: the peoples name them
   const ds = blocks(path.join(dir, 'deities.txt'), 'deity'), dnames = ds.map(d => d.f.deity[0]);

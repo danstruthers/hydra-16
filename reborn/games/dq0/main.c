@@ -464,7 +464,7 @@ static char* __fastcall__ save_path (const char* name)
     return spath;
 }
 
-/* The game's folder (dq0 -d) as it begins: LF_GOING, a game kept in its dungeon's folder, its state read; else dq0life run (it
+/* The game's folder (dq0 -d) as it begins: LF_GOING, a game kept in its dungeon's folder, its state read; else lib/dq0/dq0life run (it
 ** says what's next, dq0life.c's), the seed its: LF_NEXT, a dungeon past the first, its sheet the character's, to go on in (D8's,
 ** slice 4.4's); LF_NEW, the first of a new life: a new game, a new character.  No folder, LF_NEW */
 static unsigned char __fastcall__ life (unsigned char given)
@@ -2551,7 +2551,7 @@ void __fastcall__ s_between (unsigned char given)
         arg (ap);
     }
     *ap = 0;
-    strcpy (lb + 300, gamedir);
+    strcpy (lb + 300, libdir);
     strcat (lb + 300, "/dq0life");
 }
 
