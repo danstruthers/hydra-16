@@ -62,6 +62,8 @@ get         thing=VB_RETRIEVE_OBJECT unsaid=near aux=IO_GET
 drop        thing=VB_DROP_OBJECT unsaid=last aux=IO_DROP
 put         thing=VB_PUT_OBJECT unsaid=last aux=IO_PUT
 hang        thing=VB_HANG_OBJECT unsaid=last aux=IO_PUT
+tie         thing=VB_TIE_OBJECT unsaid=last                                      # (new, 2026-11-04: a rope tied off, let down;
+untie       thing=VB_UNTIE_OBJECT unsaid=last                                    #   untied; a sack's tie)
 don         thing=VB_EQUIP_OBJECT unsaid=last aux=IO_DON
 wield       thing=VB_EQUIP_OBJECT unsaid=last aux=IO_HOLD
 hold        thing=VB_HOLD_OBJECT unsaid=last aux=IO_HOLD
@@ -303,6 +305,12 @@ place = put
 set = put
 lay = put
 hang = hang
+tie = tie
+fasten = tie
+let down = tie
+let = tie
+untie = untie
+unfasten = untie
 sheathe = hang
 get = get
 take = get

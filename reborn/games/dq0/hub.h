@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     47                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     48                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -591,7 +591,9 @@ enum { SKP_NONE, SKP_DAWN, SKP_DAY, SKP_DUSK, SKP_NIGHT, SKP_SUN, SKP_STARS, SKP
                                                 **   lost; the sun or the stars watched a while, their way across the
                                                 **   sky: the time, and north, known; b's high four bits, SKS_*, what
                                                 **   showed it */
-    SKP_TOO_HIGH, SKP_GRATE, SKP_CHOKED, SKP_LET_FALL };    /* (And, w1's high byte, b none, a shaft's refusals, the
+    SKP_TOO_HIGH, SKP_GRATE, SKP_CHOKED, SKP_LET_FALL, SKP_ROPE,
+    SKP_GAVE = 0x10, SKP_NO_ROPE = 0x20 };      /* (Past the phases' four bits: a rope's, 2026-11-04, a phase of none with
+                                                **   a way shown: time.c's) */    /* (And, w1's high byte, b none, a shaft's refusals, the
                                                 **   time.c words' room: its mouth too high to reach, barred at the top,
                                                 **   choked below; a thing let fall down it) */
 #define SKY_LAMPS       4
@@ -956,7 +958,7 @@ enum { LT_NONE, LT_WALK, LT_CLIMB, LT_DIG, LT_SEARCH, LT_WAIT, LT_SLEEP, LT_TALK
        LT_TRAVEL,                               /*   a journey to a place named, a leg at a time (I_TRAVEL's: each leg
                                                 **   a walk, slice 4.2's); */
        LT_STUDY, LT_DISARM, LT_PICK, LT_FORCE, LT_HEAVE, LT_BEND, LT_WIND, LT_PRISE, LT_TRACK, LT_SNIFF, LT_FILL,
-       LT_HIDE, LT_TEND,                        /* (LT_TEND: first aid, a wound treated, the UI's timed work: slice
+       LT_HIDE, LT_TIE, LT_TEND,                /* (LT_TIE: a rope tied off and let down, 2026-11-04; LT_TEND: first aid, a wound treated, the UI's timed work: slice
                                                 **   4.3's) */
        LT_PACKOFF, LT_PACKDOWN, LT_REACHIN, LT_OPENUP, LT_GETOUT, LT_PACKON, LT_LETFALL, LT_LETBURN, LT_PUTAWAY, LT_BLOWOUT, LT_BLOWDARK, LT_LIGHTFROM, LT_SETDOWN, LT_TAKEUP, LT_HONE,
        LT_KINDLE, LT_GETNEW, LT_PUTOLD, LT_TAKENEW, LT_DOWNNEW, LT_BLOWOLD, LT_LIGHTNEW, LT_DIPOLD, LT_LETOLD,
@@ -1294,6 +1296,10 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned        rs_out[2], rs_home[2], rs_place;   /* (The tools a use got out, the world's, part 87's, each where it came from, 0 anywhere;
                                                 **   the place a thing's being put away in: A25's, 2026-11-03) */
     unsigned char   rs_nout;
+    unsigned char   ropes;                      /* (Ropes in place in the dungeon, the world's: 0, none looked for as a climb starts:
+                                                **   wrope.c's, kept with the game) */
+    unsigned char   rlo, rhi;                   /* (The climb's rope's help: the feet above the foot it runs between; rhi 0, none:
+                                                **   dq0w.c's part 97) */
     unsigned char   pc_pos;                     /* POS_* */
     volatile unsigned char pc_going;            /* The pace it's going at plus 1 (0: not moving), | GOING_DARK: by
                                                 **   feel; not moving, GOING_BOLD, a pace said outright in the dark */
@@ -1616,6 +1622,7 @@ struct wsave {
     unsigned char   skew, lost;                 /* the character's bearings (the hub's pc_skew, pc_lost: slice 4.2's); */
     unsigned        hunger, thirst;             /* its hunger and thirst, the meals left of its ration (slice 4.9's); */
     unsigned char   meals;
+    unsigned char   ropes;                      /* the ropes in place (the hub's ropes); */
     struct tbelief  tb;                         /* the time of day it believes (the hub's tb: 2026-10-31) */
 };
 
@@ -1745,6 +1752,9 @@ struct wsave {
 **   own hub.rs_home world
 **   own hub.rs_place world
 **   own hub.rs_nout world
+**   own hub.ropes world
+**   own hub.rlo world
+**   own hub.rhi world
 **   own hub.watch world
 **   own hub.pc_pos world                                       (Its body's position: the world's, as the referee says)
 **   own hub.pc_going world

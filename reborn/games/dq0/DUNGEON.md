@@ -1472,6 +1472,12 @@ into the world's intents; a mind posts the intents itself (DECISIONS.md's table,
   TW_*: DENIZENS.md's things taken), an ally's errand takes by the rule too, and a weapon taken is in its hand as its
   own let fall is taken up again (wlimbs.c's den_took: the referee told).
 
+## Rope in place, keys found (2026-11-04: the user's A16, A17)
+
+A rope tied off or a grapple thrown up is two things of the item store, a "tied rope" on the top's square (the rope's own record, its kind changed: fixed where it stands, so nobody takes it up) and a "hanging rope" at the foot, each saying what it goes down, the way to its other end, how high its hold is and where its end hangs, kept with its chunk's things and in the save (no chunk's change: nothing of the chunk differs, the way a thing lying there changes nothing).  HOUSE.md's rope and grapples has the rules.  A chunk's maker gives a shaft's top on a built stratum an iron ring, on a mine's a stout post; so a rope has something to tie to where it's wanted first.
+
+A found key (the stock's) fits a lock in its own chunk: the maker chooses as it lists the chunk's things, with no dice and no other chunk made, its next locked door or the next chest in its list; a key with no lock there isn't put down.  So "the same chunk always the same" (dq0pure) holds, a chunk's lock is never one made for the key, and a key's door is never far.  HOUSE.md's keys that fit.
+
 ## Still to come
 
 What the plans bring later, by the slice or phase that brings it (the detailed plan's and the game plan's):

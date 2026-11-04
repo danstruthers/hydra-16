@@ -215,6 +215,13 @@ const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, t
     { "mattock", K_HAND | K_TWO, 28, 6, 0, 0, 0, 0, 4, "mattock", MT_IRON, AP_METAL, 40, 0, KF_LONG },   /* (The house's: 10d,
                                                 **   a shovel's and a little more) */
     { "spade", K_HAND | K_TWO, 16, 8, 0, 0, 0, 0, 4, "spade", MT_IRON, AP_METAL, 28, 0, KF_LONG },   /* (The house's: 7d) */
+    { "iron spike", K_HAND, 2, 1, 0, 0, 0, 0, 1, "spike", MT_IRON, AP_METAL, 8 },   /* (Rope and grapples, 2026-11-04: the book's climbing gear,
+                                                **   Treasure's list: a spike, driven; a ring, a post the maker's; a rope in place, a thing tied there) */
+    { "driven spike", 0, 2, 1, 0, 0, 0, 0, 1, "", MT_IRON, AP_METAL, 0, KF_FIXED },
+    { "iron ring", 0, 8, 1, 0, 0, 0, 0, 2, "", MT_IRON, AP_METAL, 0, KF_FIXED },
+    { "stout post", 0, 160, 20, 0, 0, 0, 0, 5, "", MT_WOOD, AP_WOOD, 0, KF_FIXED },
+    { "tied rope", 0, 40, 8, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 48, KF_FIXED },
+    { "hanging rope", 0, 0, 0, 0, 0, 0, 0, 4, "", MT_CLOTH, AP_CLOTH, 0, KF_FIXED },
 };
 #pragma rodata-name (pop)
 
@@ -274,7 +281,8 @@ const unsigned char throws[KI_COUNT] = {
     2,                                          /* whetstone */
     2, 2,                                       /* antidote, remedy */
     0,                                          /* broken weapon */
-    2, 2, 1, 1                                  /* stone chisel, wood chisel, mattock, spade */
+    2, 2, 1, 1,                                 /* stone chisel, wood chisel, mattock, spade */
+    2, 0, 0, 0, 0, 0                            /* iron spike; a spike driven, a ring, a post, a rope in place */
 };
 typedef char throws_fit[sizeof throws == KI_COUNT ? 1 : -1];
 

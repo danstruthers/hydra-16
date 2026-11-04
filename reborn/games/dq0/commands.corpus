@@ -570,6 +570,13 @@ open	VB_OPEN_OBJECT	-	-	open alone: what is in front
 disarm the trap	VB_DISARM_OBJECT	object=trap	near=trap	disarm
 disable the trap	VB_DISARM_OBJECT	object=trap	near=trap	disable an alias of disarm
 bar the door	VB_BAR_OBJECT	object=door	near=door	bar an alias of rebar
+tie the rope to the ring	VB_TIE_OBJECT	object=rope;support=ring	near=rope,ring	a rope tied off (2026-11-04)
+tie off the rope	VB_TIE_OBJECT	object=rope	near=rope	tied to what holds
+let down the rope	VB_TIE_OBJECT	object=rope	near=rope	let down
+let the rope down	VB_TIE_OBJECT	object=rope	near=rope	let down, its word after
+tie the grapple to the rope	VB_TIE_OBJECT	object=grapple;support=rope	near=grapple,rope	one thing
+untie the rope	VB_UNTIE_OBJECT	object=rope	near=rope	untied
+untie the sack	VB_UNTIE_OBJECT	object=sack	near=sack	a tie's
 hang the quiver on my belt	VB_HANG_OBJECT	object=quiver;support=belt	near=quiver,belt	hang
 sheathe the sword	VB_HANG_OBJECT	object=sword	near=sword	sheathe an alias of hang
 combine the sunstone with the moonstone	VB_COMBINE_OBJECT	object=sunstone;other=moonstone	near=sunstone,moonstone	combine

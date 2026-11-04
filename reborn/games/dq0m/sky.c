@@ -258,11 +258,81 @@ static void sky_mark (void)
 
 /* What's asked: chunk c's (made, the chunk in the main RAM, its fixtures in it: n 0; stocked, n 1), or (c 0) stratum n's
 ** links */
+/* Its things' list (stock.c's sk, the chunk's first time) gone over, no dice (nothing else moves for them; the same chunk always the
+** same): a found key fits a lock in its own chunk, so it needs no other chunk made (the user's A17, "fit something nearby"; HOUSE.md's
+** keys that fit): each in turn the chunk's next locked door (its number the door's, DOOR_KEY: a door's own key, wport.c's), else the
+** next chest in the list (locked to fit it as it's put down, KEY_BOX: moved before it); no lock in the chunk, no key put down.  And
+** what a rope's tied to, at the top of a shaft going down (HOUSE.md's rope and grapples): a built stratum's an iron ring, a mine's a
+** stout post */
+static void list_over (void)
+{
+    struct sthing t;
+    struct sthing* e;
+    const struct portal* p;
+    unsigned id, x0, y0;
+    unsigned char j, m, b, k;
+
+    x0 = STRATUM (L->sn).x0 + ((unsigned) L->cx << CW_BITS);
+    y0 = STRATUM (L->sn).y0 + ((unsigned) L->cy << CW_BITS);
+    m = b = 0;
+    for (j = 0; j < sk.n; ++j) {
+        e = &sk.e[j];
+        if (e->kind != KI_KEY) {
+            continue;
+        }
+        for (; m < L->nportals; ++m) {
+            p = &L->portal[m];
+            if (p->kind == PK_DOOR && (p->state & (PS_LOCKED | PS_WARDED)) == PS_LOCKED && p->lock) {
+                break;
+            }
+        }
+        if (m < L->nportals) {
+            id = DOOR_KEY (L->sn, x0 + p->x, y0 + p->y);
+            e->make = id;
+            e->size = id >> 8;
+            ++m;
+            continue;
+        }
+        for (; b < sk.n && sk.e[b].kind != KI_CHEST; ++b) {
+        }
+        if (b < sk.n) {
+            if (b > j) {                        /* (The chest first, as the world puts them down) */
+                t = *e;
+                *e = sk.e[b];
+                sk.e[b] = t;
+                sk.e[b].make = KEY_BOX;
+                sk.e[b].size = 0;
+                j = b;
+            } else {
+                e->make = KEY_BOX;
+                e->size = 0;
+            }
+            ++b;
+            continue;
+        }
+        --sk.n;                                 /* (None: the rest moved up) */
+        for (k = j; k < sk.n; ++k) {
+            sk.e[k] = sk.e[k + 1];
+        }
+        --j;
+    }
+    k = STRATUM (L->sn).style;
+    if (k == ST_BUILT || k == ST_MINE) {
+        for (j = 0; j < L->nopen; ++j) {
+            if (L->open[j].kind == O_SHAFT_DOWN) {
+                put_down (k == ST_MINE ? KI_POST : KI_MOOR, L->sn, x0 + L->open[j].x, y0 + L->open[j].y, 1, ST_SHOWN);
+            }
+        }
+    }
+}
+
 void __fastcall__ o_sky (struct chunk* c, unsigned char n)
 {
     if (c) {
         L = c;
-        if (n) {
+        if (n == 2) {
+            list_over ();
+        } else if (n) {
             sky_mark ();
         } else {
             sky_chunk ();

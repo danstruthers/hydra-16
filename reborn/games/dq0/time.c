@@ -137,9 +137,9 @@ unsigned __fastcall__ o_time_ui (unsigned w)
         k = p >> 4;
         p &= 15;
         say ("\n");
-        if (p > SKP_STARS_WATCHED) {
-            sky_words (p, 0, cw);
-        } else if (p >= SKP_DAWN) {
+        if (p > SKP_STARS_WATCHED || !p) {
+            sky_words (p, k, cw);               /* (A shaft's refusal, a rope's: SKP_GAVE ..., a phase of none) */
+        } else {
             if (p == SKP_LOW) {
                 strcpy (cw, part[day_believed (&t) / 180]);
             } else {
@@ -181,8 +181,16 @@ void __fastcall__ o_sky_words (unsigned char p, unsigned char k, const char* w)
     };
     static const char* const shafts[] = {           /* (SKP_TOO_HIGH on) */
         "The shaft's mouth is too high to reach.", "An iron grating bars the top of the shaft: that's no way out.",
-        "The shaft is choked with fallen rock a little way down.", "It falls away down the shaft, and you hear it land far below."
+        "The shaft is choked with fallen rock a little way down.", "It falls away down the shaft, and you hear it land far below.",
+        "You take hold of the rope.", "You put your weight on the rope: the grapple tears loose and comes clattering down.",
+        "The rope's end hangs out of reach."
     };
+    if (!p) {
+        if (!k) {
+            return;
+        }
+        p = SKP_ROPE + k;
+    }
     if (p > SKP_STARS_WATCHED) {
         say (shafts[p - SKP_TOO_HIGH]);
     } else {

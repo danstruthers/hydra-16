@@ -196,6 +196,15 @@ plays them as HarnMaster's referee does.
 - **A shaft is climbed as a ledge is** (What shows the sky, below, 2026-11-03), a thing dropped where one goes down falls down it.
 - **A pit is climbed out of** as a ledge is, but a slip ends the climb (D13's: the character carries on, below).
   (wtrap.c, dq0w.c.)
+- **Rope and grapples** (the user's A16, "Queue rope rules"; the book gives the help alone, Skills 8's "good climbing gear", 10 to 20 points of EML; all the rest *(new, for review)*; wrope.c, wrope2.c, wrope3.c, dq0w.c's part 97):
+  - **A rope is 50 feet.**  It reaches what it reaches.  It's tied, thrown and got ready as a tool is, by the hands routine (its reach's steps, hands made free).
+  - **Tied off and let down** ("tie the rope", "tie the rope to the ring", "let down the rope", "let the rope down"), half a minute's long task, with a drop to let it down: a shaft on the character's own square, or a ledge or a pit beside it (the way it faces first).  With no drop: "There's no drop here to let a rope down."; a rope tied to nothing's no use, and none's left so.
+  - **What holds:** a thing on its square or beside it that's fixed where it stands (an iron ring, a stout post, a driven spike, an altar, a well: the maker's rings at a built stratum's shafts going down, its posts at a mine's) or that weighs 30 lb or more (a chest, a table); not a sconce.  Named, "That won't hold a rope." if it doesn't.  Else its grapple, set over the edge; else an iron spike driven in, with a hammer: a minute's long task, loud (7), and it stays driven for good.  Tied to a thing on another square, 5 feet of the rope are gone to reach the edge.
+  - **Climbing aided:** on the rope's length a Climbing test is 3 steps the better (15 points, the book's middle), up or down, a shaft's, a ledge's, a pit's, by anyone's climb: the rest as climbing is (a slip, a fall, holds).  Past its end the climb goes on unaided.  From below it's taken only if its end hangs within 9 feet of the floor ("The rope's end hangs out of reach.").  A rope down a shaft or a ledge lets "d" and "u" go by it as they come; "climb the rope" at its top, with no way up there, goes down it.
+  - **A grapple thrown up** ("throw the grapple up", "throw the rope up"; a grapple not tied on is tied on as it's thrown; "tie the grapple to the rope" beforehand a round's), a round's, at a shaft on its own square (one open to the sky: its mouth over the roof, higher than 9 feet), a ledge above beside it, a pit's edge from inside: the book's Throwing test at its missile bands, twice as hard straight up (a short band 5 feet, medium 10, long 20, extreme 40; 20 less a band; 40 feet at most).  Caught: told, with a clang.  Failed: "clatters back down".  A marginal success one time in four will give as a climber's weight comes on it, nobody falling: the lot at the climber's feet.  Each throw's noise is heard by the denizens as work's is (4 caught; 5 fallen back).
+  - **A shaft's grating stands** (A18): a rope up a shaft to the sky reaches its mouth, and "An iron grating bars the top of the shaft" as before: it's no way past.
+  - **Untied** ("untie the rope"), at its top, a round's: drawn up and coiled at the character's feet (what's tied to it with it: "take the rope"; what it was tied to as it is, a spike staying driven).  From below, a knot's out of reach; a grapple can be shaken loose, a Throwing test a round.  Carried, "untie the rope" takes its grapple off, at its feet.
+  - **Left in place** it's two things lying there, "tied rope" at its top and "hanging rope" at its foot, seen and looked at (what it's tied to, how far it goes, its end), fixed where they stand so nothing takes them up, kept with the item store as anything lying there is, chunk by chunk and in the save.  Anyone's climb uses it.  **The minds climb nowhere else than with the character** (an ally coming along, up or down: as it comes along by anything): none crosses a roped ledge on its own, and none unties or cuts one.  *Not yet:* two ropes tied together; a rope cut.
 
 ## Digging
 
@@ -1951,7 +1960,7 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   before.
 - **A tool's use takes its reach first** (handy tools): Every use of a tool, above; by the reach alone, a thing thrown, a
   thing opened or closed, a blow's weapon taken in hand first (its hold).  By the catalogue's tool keys, the first
-  carried (part 4's tool_reach).  A rope's use has none yet: nothing uses a rope.  Rope rules (tying off, climbing aided, a grapple thrown up): *the user's, 2026-11-03: to build* (A16).
+  carried (part 4's tool_reach).  A rope's the same: readied by the hands routine, then tied or thrown (Rope and grapples, under Climbing and falling).
 - **Handy** is in hand or on the body (the reach's rule: in nothing that isn't open to the hand); mapping as it goes
   wants its things handy (the map kept, above).
 - **Things used up, one way for every kind, by its data** (the catalogue's burns, as a light's fuel: the item's fuel its
@@ -2321,7 +2330,7 @@ the item store, drawn by the same code from outfits.txt.  What the house adds:
   seconds ("You unlock the chest with its key."; "lock the chest" locks it again); another key doesn't fit ("Your key
   doesn't fit its lock."), and a lock without its key is picked or forced as before.  A box's key is in its owner's
   pouch, a hoard's on its leader.  The rule is every making's: a key made
-  after a box locks it (dq0 -k's "chest,iron key", the tests').  The maker's keys fit nothing yet: a found key to fit a door or a chest nearby is *the user's, 2026-11-03: to build* (A17).  A door's keys:
+  after a box locks it (dq0 -k's "chest,iron key", the tests').  **A found key** (the user's A17, "fit something nearby"; *(new, for review)* how): one the maker lays in a chunk fits a lock in that same chunk, so nothing past it need be made and the same chunk's always the same (no dice: dq0m/sky.c's list_over, as its things are listed): the chunk's next locked door that has a mechanical lock (that door's own number, a door's key's), else the next chest in its list, locked to fit it; with no lock in the chunk, **no key's put down**: none made a lock for it.  A locked door whose lair's key is on a denizen has two keys.  A key an outfit gives with no box (a locksmith's stock) fits nothing still.  A door's keys:
   Denizens and doors, below.
 - **The shared stores** (each lair's, with its first denizen's: outfits.txt's [lair KEY]): a larder (a sack or a basket
   of 2 to 12 days' rations), the bandits' water (a cask, full, one time in two; their lord's always), spare arms (a sack
@@ -3000,7 +3009,7 @@ plan's and the links': a chunk made again is byte-identical, dq0pure's); a test'
   time till now): a round at a time, a Climbing test each, its height the drop between the strata (a shaft to the surface
   **20 feet**); a slip back, a fall from as high as it got (down: to its foot, the stratum below).  **Too high**: a shaft
   open to the sky whose room's roof is more than **9 feet** up (a jump and a pull) can't be reached from the floor ("The
-  shaft's mouth is too high to reach."): no rope or ladder rule yet (A16: Decided, not yet built, below).  A dug shaft's foot is reached, as the digger left it.
+  shaft's mouth is too high to reach."), but by a rope hanging there, its end in reach (Rope and grapples, under Climbing and falling; a ladder, no rule yet).  A dug shaft's foot is reached, as the digger left it.
   Jumped down: a fall of its height, as any shaft's.
 - **A shaft as a way out**: only as the way out's own rule lets it: at the **top** of a shaft on the top
   stratum, climbed, it's the game's end (E_LEFT, a way out's) **if the way out is open** (the theme's mission done);
@@ -3554,8 +3563,6 @@ built, then its line here goes:
 
 - **The creatures' sheets** (A9): the book's figures for the first six, now.
 - **Hiding a thing** (A12): hiding oneself, queued next.
-- **A tool's use takes its reach first, Climbing a shaft** (A16): rope rules queued: tying off, climbing aided, a grapple thrown up.
-- **Keys that fit** (A17): a found key fits a door or a chest nearby.
 
 **The game between dungeons** (the user's, 2026-11-03: A8, A18, A20; to plan, the plan outside the repository): what takes a character
 to a dungeon in the first place; a random time between dungeons, with healing auto-rolled, weapons and gear maintained at a cost, food

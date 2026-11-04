@@ -25,7 +25,7 @@ SWDEPTH     = 12                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
-OVBANKS     = 27                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
+OVBANKS     = 29                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
             .bss
 _ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
@@ -166,7 +166,7 @@ go:
             SWPART      69, 26               ; A robbery (wfight.c's: part 67's room, overlay 5's, 2026-10-30; 12's room, 2026-11-02)
             SWPART      70, 25              ; Wounds over time: the bodies' time told, a thing used up (wtend.c; overlay 21's room, slice 4.4)
             SWPART      71, 21              ; A stratum's kept rooms lit as its populations are done late (wkept.c)
-            SWPART      72, 8               ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
+            SWPART      72, 29              ; An ally's errands, the character's gifts (wfetch.c: slice 4.8's, 2026-10-30)
             SWPART      73, 1               ; The water: wading, swimming (dq0w.c's: slice 4.9's); the air (2026-10-31)
             SWPART      74, 19              ; A waterskin filled (wwater.c: slice 4.9's)
             SWPART      75, 4               ; The water's depth where the character stands (wwater.c)
@@ -189,6 +189,12 @@ go:
             SWPART      91, 3               ; A denizen's weapon let fall, or broken (wlimbs.c: 2026-11-03)
             SWPART      92, 5               ; A request of the things served (things.c: part 10's till 2026-11-03)
             SWPART      93, 19              ; An arrival (dq0w.c: the main RAM's till 2026-11-03)
+            SWPART      94, 28              ; (Agent hide's numbers: placeholders here)
+            SWPART      95, 28
+            SWPART      96, 28              ; Rope and grapples: tied off, let down, thrown up, untied (wrope.c: 2026-11-04)
+            SWPART      97, 29              ; Climbing, a round at a time, a rope's help (dq0w.c: part 2's till 2026-11-04)
+            SWPART      98, 29              ; A rope untied, looked at (wrope2.c)
+            SWPART      99, 28              ; A drop found, a rope put in place, a grapple thrown up (wrope3.c)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -240,7 +246,10 @@ go:
             SWFN        start_dig, 25
             SWFN        dig_on, 1
             SWFN        climb, 2
-            SWFN        climb_on, 2
+            SWFN        climb_on, 97
+            SWFN        rope, 96            ; (Rope and grapples: wrope.c)
+            SWFN        rope2, 98
+            SWFN        rope3, 99
             SWFN        fall, 2
             SWFN        dark_way, 43
             SWFN        dark_end, 44
@@ -408,3 +417,9 @@ go:
             SWFN        draw_test, 7
             SWFN        store_put, 38
             SWFN        change, 38
+
+; (Parts 94, 95: agent hide's numbers, placeholders here till the merge)
+            .segment    "SW94CODE"
+            .byte       0
+            .segment    "SW95CODE"
+            .byte       0

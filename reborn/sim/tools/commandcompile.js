@@ -958,6 +958,18 @@ function phraseSem(spec, env, ctx) {
       if (p.stop) return p.stop;
       return r === 'hang' ? act('VB_HANG_OBJECT', { object: o.value, support: p.value }) : act('VB_COMBINE_OBJECT', { object: o.value, other: p.value });
     }
+    case 'tie': {                               // (A rope tied off, let down: 2026-11-04)
+      const o = objOf(0);
+      if (o.stop) return o.stop;
+      const p = direct[1] ? objOf(1) : { value: undefined };
+      if (p.stop) return p.stop;
+      return act('VB_TIE_OBJECT', { object: o.value, support: p.value });
+    }
+    case 'untie': {
+      const o = objOf(0);
+      if (o.stop) return o.stop;
+      return act('VB_UNTIE_OBJECT', { object: o.value });
+    }
     case 'deceive': return onTarget('VB_DECEIVE');
     case 'threaten': return onTarget('VB_THREATEN');
     case 'calm': return onTarget('VB_CALM');

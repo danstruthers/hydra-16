@@ -75,12 +75,15 @@ unsigned char __fastcall__ sky_ask (unsigned w);    /* (Part 89's: dq0w.c) The d
 #define SA_NOTE         0x0400
 void it_near (void);                              /* The chunks round the character's in the store, as it comes into
                                                 **   one (dq0w.c's see, as it's moved) */
+unsigned char rope (void);                      /* (Part 96's: wrope.c: IO_HIDE's, IO_ROPE) */
+unsigned char __fastcall__ rope2 (unsigned w);  /* (Part 98's: wrope2.c) */
+unsigned char __fastcall__ rope3 (unsigned w);  /* (Part 99's: wrope3.c) */
 void __fastcall__ start (const char* dir);      /* (Part 3's: dq0w.c) The world's start, once it's attached */
 void __fastcall__ keep (unsigned char back);    /* The store kept (items.dat), or read back */
 extern unsigned ilim;                           /* (things.c's: the records used, at most) */
 extern unsigned ihigh;                          /* (things.c's: every record from it on free; raised as one's taken) */
 extern unsigned irs;                            /* (things.c's: a thing's own numbers, made) */
-#define OVBANKS         27                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
+#define OVBANKS         29                      /* (dq0w.cfg's OV1 ...: the parts' images; and four more, the world's
                                                 **   own: ipage.c's, ovbank[OVBANKS]; the ways across a room's,
                                                 **   dq0w.c's, ovbank[OVBANKS + 1]; the traces' store's, wtrace.c's,
                                                 **   ovbank[OVBANKS + 2] and [OVBANKS + 3]) */

@@ -277,7 +277,7 @@ unsigned char rsteps, rbody;                    /*   its steps; the main RAM's, 
 /* The request, copied (serve's), and what its handling shares (the hands, the pack, the belt: about's; the last put
 ** down; how far the thing named is, seen_named's; out of reach, at_hand's; the things in a container, bulk_in's; the
 ** time it took) */
-static struct ireq iq;
+struct ireq iq;
 static unsigned pack, belt, dropped, seen_d, took;
 static unsigned char afar, nin;
 static unsigned far_n, far_x, far_y;            /* (The thing at_hand found out of reach, and where it lies) */
@@ -3595,6 +3595,9 @@ void __fastcall__ s_look_on (unsigned n)
 
     r = look_at (n);
     hub_map (0);
+    if (HUB->ropes) {
+        rope2 (RA_LOOK | n);                    /* (A rope in place: what it's tied to, how far it goes: part 98's) */
+    }
     if (rsteps | rbody) {
         n = reach_done (RD_SAID);               /* (Nothing owed after it) */
         hub_map (0);
@@ -4710,7 +4713,7 @@ void __fastcall__ s_stock_down (unsigned char k)
 {
     struct sthing e;
     struct item* p;
-    unsigned x0, y0, i, prev = 0;
+    unsigned x0, y0, i, prev = 0, box = 0;
     unsigned char sn, n, j, m, w;
 
     hub_map (WORLD_BANK);
@@ -4738,7 +4741,19 @@ void __fastcall__ s_stock_down (unsigned char k)
         if (e.hide == ST_LIT) {                 /* (A kept room's sconce's torch: the room lit by it, store.c's) */
             p->flags = I_LIT | I_TENDED;
         }
-        if (e.make && e.make < 16) {            /* (Coins of an era of old, the maker's: their mint, whole, part 63's
+        if (e.kind == KI_CHEST) {
+            box = i;                            /* (The maker's found key's chest: below) */
+        }
+        if (e.kind == KI_KEY) {                 /* (A found key: the lock near it the maker chose, its door's number, or
+                                                **   the chest before it in the list locked to fit it, HOUSE.md's keys
+                                                **   that fit, A17) */
+            if (e.size) {
+                p->size = e.make;
+                p->thick = e.size;
+            } else if (box) {
+                kit_lock (box, i);
+            }
+        } else if (e.make && e.make < 16) {     /* (Coins of an era of old, the maker's: their mint, whole, part 63's
                                                 **   piles, 2026-10-28; a portal's part's make its material's above) */
             p->size = e.make << 4 | 15;
         } else if (e.make) {                    /* (A portal's part's make: the portal's) */
@@ -4776,6 +4791,9 @@ unsigned char __fastcall__ s_hide (const char* name)
     unsigned char d;
     unsigned n;
 
+    if (iq.to & IO_ROPE) {                      /* (A rope's work, its shape this one's: part 96's) */
+        return rope ();
+    }
     if (!(iq.to & IO_DONE)) {                   /* (Begun: a minute's work, a timed work, HOUSE.md's long tasks: hidden,
                                                 **   the test made, at its end, IO_DONE, the UI's) */
         if (!(n = carried_named (name))) {

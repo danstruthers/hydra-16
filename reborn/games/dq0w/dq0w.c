@@ -68,7 +68,6 @@ extern unsigned char pshoot, gath;              /* (The character's fight a miss
 void __fastcall__ start_dig (unsigned char d);  /* Part 1 */
 void dig_on (void);
 void __fastcall__ climb (unsigned char d);      /* Part 2 */
-void __fastcall__ climb_on (unsigned char how);
 unsigned __fastcall__ fall (unsigned feet, unsigned char how);
 void begin (void);                              /* Part 3 */
 void __fastcall__ grow_below (unsigned char n);
@@ -1150,6 +1149,12 @@ static struct {
     unsigned        x, y;                       /* The square at its top (up) or its foot (down) */
     unsigned char   sh;                         /* (A shaft's: its link and one, the climb's end another stratum) */
 } cl;
+unsigned char __fastcall__ climb_on (unsigned w);   /* (Part 97's: a round, or what's asked of a climb's rope, CG_*) */
+#define CG_AID          0x8000
+#define CG_HERE         0x4000
+#define CG_DOWN         0x2000
+#define CG_FACE         0x1000
+#define climb_go(w)     climb_on (w)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -1230,6 +1235,9 @@ static unsigned char __fastcall__ pit_climb (unsigned char face)
     cl.up = 3;
     cl.done = 0;
     hub_map (0);
+    if (HUB->ropes) {
+        climb_go (CG_HERE);
+    }
     event (E_CLIMB, 0, K_BEGUN << 8 | cl.need);
     task (LT_CLIMB, cl.need);
     climb_round ();
@@ -1267,10 +1275,127 @@ static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char f
         see (0);
         return 1;
     }
+    if (HUB->ropes) {
+        climb_go (CG_HERE);
+    }
     event (E_CLIMB, 0, K_BEGUN << 8 | (cl.need > 255 ? 255 : cl.need));
     task (LT_CLIMB, cl.need);
     climb_round ();
     return 1;
+}
+
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 97 (2026-11-04: part 2's till then, its room; overlay 28's): climbing, a round at a time; a rope's help (the
+** user's A16: HOUSE.md's rope and grapples; wrope.c's the rest) */
+#pragma code-name (push, "SW97CODE")
+#pragma rodata-name (push, "SW97RODATA")
+
+#define ROPE_AID        3                       /* (Steps better on a rope: the book's good climbing gear, 10 to 20
+                                                **   points, Skills 8, its middle) */
+#define ROPE_REACH      9                       /* (Feet: its end in reach from the floor, SHAFT_REACH's) */
+
+/* A rope in place on square x, y of the character's stratum: its record's number, ip it; or 0 */
+static unsigned __fastcall__ rope_on (unsigned x, unsigned y)
+{
+    unsigned i = 0;
+
+    while ((i = items (i, IN_SQUARE | IN_X, x)) != 0) {
+        if (ip->y == y && ip->sn == sn_ && (ip->kind == KI_TIED || ip->kind == KI_HUNG)) {
+            return i;
+        }
+    }
+    return 0;
+}
+
+/* The climb's rope, on square x, y, its help set (HUB->rlo, HUB->rhi): 1; its end out of reach of the floor, its grapple giving as
+** the weight comes on it (all told, rope and grapple coming down), none: 0 */
+static unsigned char __fastcall__ rope_ready (unsigned x, unsigned y)
+{
+    unsigned i = rope_on (x, y);
+    unsigned char s = 0, r = 0, e, h;
+
+    if (i) {
+        e = ip->owner;
+        h = ip->fuel >> 8;
+        if (ip->fuel & RK_SLIP) {
+            rope2 (RA_LOOSE | i);
+            s = SKP_GAVE;
+        } else if (ip->kind == KI_HUNG && e > ROPE_REACH) {
+            s = SKP_NO_ROPE;
+        } else {
+            r = 1;
+        }
+    }
+    hub_map (0);
+    HUB->rhi = 0;
+    if (r) {
+        HUB->rlo = e;
+        HUB->rhi = h;
+    }
+    if (s) {
+        event (E_BEARING, 0, BRG_SKY | (unsigned) s << 8);
+    }
+    return r;
+}
+
+/* (Asked by the stub of a round's, s_climb_on's: CG_AID | a link: the rope at that shaft's square; CG_HERE: at the character's own, its
+** words; CG_DOWN: one tied within reach, "climb the rope" at its top, no way up; CG_FACE | a way, DIR_UP, DIR_DOWN: a rope on its own
+** square that goes that way, over a ledge or a pit: its heading plus 1, 0 none; into a pit climbed down, begun: 0xFF) */
+static unsigned char __fastcall__ climb_go_ (unsigned w)
+{
+    unsigned i;
+    unsigned char k, h, how, tied;
+
+    if (w & CG_AID) {
+        return rope_ready (STRATUM (sn_).link[(unsigned char) w].x, STRATUM (sn_).link[(unsigned char) w].y);
+    }
+    if (w & CG_HERE) {
+        if (rope_ready (mx, my)) {
+            event (E_BEARING, 0, BRG_SKY | (unsigned) SKP_ROPE << 8);
+        }
+        return 0;
+    }
+    if (w & CG_DOWN) {
+        for (k = 0; k < 9; ++k) {
+            i = rope_on (k ? mx + head_x[k - 1] : mx, k ? my + head_y[k - 1] : my);
+            if (i && ip->kind == KI_TIED) {
+                h = 1;
+                break;
+            }
+            h = 0;
+        }
+        hub_map (0);
+        return h;
+    }
+    if (!(i = rope_on (mx, my))) {
+        hub_map (0);
+        return 0;
+    }
+    how = ip->fuel & RK_HOW;
+    h = ip->fuel >> 4 & 7;
+    tied = ip->kind == KI_TIED;
+    k = ip->fuel >> 8;
+    hub_map (0);
+    if ((how != RK_LEDGE && how != RK_PIT) || tied != ((unsigned char) w == DIR_DOWN)) {
+        return 0;
+    }
+    if (tied && how == RK_PIT) {                /* (Into the pit, down the rope) */
+        cl.up = 0;
+        cl.need = k;
+        cl.done = 0;
+        cl.x = mx + head_x[h];
+        cl.y = my + head_y[h];
+        HUB->pc_face = h;
+        rope_ready (mx, my);
+        event (E_BEARING, 0, BRG_SKY | (unsigned) SKP_ROPE << 8);
+        event (E_CLIMB, 0, K_BEGUN << 8 | k);
+        task (LT_CLIMB, k);
+        climb_round ();
+        return 0xFF;
+    }
+    return h + 1;
 }
 
 /* A spell of digging done (part 1's dig_on), a round of climbing (climb_round's): its test, then its time the
@@ -1278,10 +1403,13 @@ static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char f
 ** 2's since 2026-11-01, the main RAM's room, the tunnellers') */
 static void climb_round_on (void);
 void __fastcall__ spend (unsigned char a, unsigned long t);
-void __fastcall__ s_climb_on (unsigned char how)
+unsigned char __fastcall__ s_climb_on (unsigned how)
 {
     unsigned t = went;
 
+    if (how >= CG_FACE) {
+        return climb_go_ (how);
+    }
     if (how == A_DIGGING) {
         dig_on ();
     } else {
@@ -1291,6 +1419,7 @@ void __fastcall__ s_climb_on (unsigned char how)
     if (!pc_tired) {                            /* (A dig's own question first: nothing to show) */
         pc_tired = wres && move.on ? TE_ASK_TIRED : 0;
     }
+    return 0;
 }
 
 /* A round of climbing done: its test, and on, back, fallen, or there */
@@ -1300,6 +1429,11 @@ static void climb_round_on (void)
     unsigned t;
 
     sn_ = HUB->pc_stratum;
+    t = cl.up ? cl.done : cl.need - cl.done;    /* (On the rope's length, as high as it's got: the book's good climbing
+                                                **   gear, Skills 8) */
+    if (HUB->rhi && t >= HUB->rlo && t <= HUB->rhi) {
+        wsteps = ROPE_AID;                      /* (A step's 5 points: Skills 8's 10 to 20, its middle) */
+    }
     g = test_w (P_CLIMB, 0);
     hub_map (0);
     if (cl_hold) {                              /* (Struck or hurt part way: a test to keep its grip, HOUSE.md's) */
@@ -1322,6 +1456,7 @@ static void climb_round_on (void)
             return;
         }
         hub_map (0);
+        HUB->rhi = 0;
         if (!cl.up) {
             if (cl.sh) {
                 sky_ask (SA_END | O_FELL);      /* (Down a shaft: at its foot, the stratum below, part 89's) */
@@ -1338,7 +1473,7 @@ static void climb_round_on (void)
     if (g == G_MF && cl.done && cl.up == 3) {   /* (A slip climbing out of a pit: the climb ends, back on its floor,
                                                 **   the player's to say what next: D13's, slice 4.4's) */
         cl.up = 2;                              /* (Its top kept: climbed again, pit_climb's) */
-        cl.done = 0;
+        cl.done = HUB->rhi = 0;
         event (E_CLIMB, 0, K_SLID << 8 | (cl.need > 255 ? 255 : cl.need));
         see (0);
         return;
@@ -1351,6 +1486,7 @@ static void climb_round_on (void)
         climb_round ();
         return;
     }
+    HUB->rhi = 0;
     if (cl.sh) {                                /* (A shaft climbed: the stratum at its end, or out of it, the way out's) */
         if (sky_ask (SA_END)) {
             busy (stept);
@@ -1833,12 +1969,20 @@ static void __fastcall__ let_fall (unsigned n)
 static unsigned char __fastcall__ shaft_go (unsigned w)
 {
     struct link* lk = &STRATUM (sn_).link[(unsigned char) w];
-    unsigned char r = 0, up = (w & SA_UP) != 0, z;
+    unsigned char r = 0, up = (w & SA_UP) != 0, z, a = 0, high = 0;
 
+    if (!(w & SA_JUMP) && HUB->ropes) {
+        a = climb_go (CG_AID | (unsigned char) w);   /* (A rope there, part 97's, its end in reach) */
+    }
     if (lk->dug == LD_SKY) {
         if (up) {
             if ((z = room_of (sn_, mx, my)) == 0xFF || C->zone[C->room[z].z0].cmid > SHAFT_REACH) {
-                r = SKP_TOO_HIGH;
+                hub_map (0);
+                if (a) {
+                    high = HUB->rhi;            /* (Up the rope to its mouth first: A16's) */
+                } else {
+                    r = SKP_TOO_HIGH;
+                }
             }
             hub_map (0);
             if (!r && lk->to == 0xFF && !HUB->way_open) {
@@ -1864,8 +2008,14 @@ static unsigned char __fastcall__ shaft_go (unsigned w)
     hub_map (0);
     cl.up = up;
     cl.need = lk->to == 0xFF ? SKY_SHAFT : abs (STRATUM (sn_).datum - STRATUM (lk->to).datum);
+    if (high && high != cl.need) {
+        cl.need += high;                        /* (A grapple in its mouth, over the roof: up to it first) */
+    }
     cl.done = 0;
     cl.sh = (unsigned char) w + 1;
+    if (a) {
+        event (E_BEARING, 0, BRG_SKY | (unsigned) SKP_ROPE << 8);
+    }
     event (E_CLIMB, 0, K_BEGUN << 8 | (cl.need > 255 ? 255 : cl.need));
     task (LT_CLIMB, cl.need);
     climb_round ();
@@ -2076,7 +2226,20 @@ void __fastcall__ s_climb (unsigned char d)
     face = HUB->pc_face;
     paced ();
     d &= ~I_JUMP;
-    cl.sh = 0;
+    hub_map (0);
+    cl.sh = HUB->rhi = 0;
+    if (HUB->ropes) {                           /* (A rope here that goes this way, over a ledge or a pit: that way) */
+        if ((l = climb_go (CG_FACE | d)) == 0xFF) {
+            return;
+        }
+        if (l && !jump) {
+            face = HUB->pc_face = l - 1;
+            if (d == DIR_DOWN) {
+                start_ledge (0, face, 0);
+                return;
+            }
+        }
+    }
     if (d == DIR_UP && pit_climb (face)) {
         return;                                 /* (In a pit: climbed out of, D13's) */
     }
@@ -2087,6 +2250,10 @@ void __fastcall__ s_climb (unsigned char d)
     l = link_here (d, &t);
     if (l == 0xFF || t == 0xFFFFFFFFUL) {
         if (!start_ledge (d == DIR_UP, face, jump)) { /* (No way up or down here: a ledge ahead, climbed) */
+            if (d == DIR_UP && HUB->ropes && climb_go (CG_DOWN)) {
+                s_climb (DIR_DOWN);             /* ("Climb the rope" at its top: no way up here, so down it) */
+                return;
+            }
             hub_map (0);
             no_way (N_NO_STAIRS);
         }
@@ -2443,6 +2610,11 @@ void __fastcall__ s_bearings_off (unsigned feet)
 {
     static unsigned char k;
 
+    if (feet == BO_OUT) {                       /* (Main's: knocked senseless, fallen) */
+        pc_down = 1;
+        hub_map (0);
+        HUB->pc_pos = POS_PRONE;
+    }
     burn_ask |= TS_ASK;                         /* (The time it believes looked at: a black-out, part 76's) */
     hub_map (0);
     if (!feet) {
@@ -5961,14 +6133,6 @@ static void __fastcall__ intent (struct msg* m)
         go (m->a & 7);
         set_out ((m->a & 7) | 16);
         break;
-    case I_CLIMB:
-        climb (m->a);
-        break;
-    case I_GOTO:
-        go_near = m->a;
-        go_to (m->w1, m->w2);
-        go_near = 0;
-        break;
     case I_STEP:
         step_to (m->w1 & 7, m->w2, (m->w1 & STEP_KEEP) != 0);
         set_out ((m->w1 & 7) | 8);
@@ -6212,6 +6376,14 @@ void __fastcall__ s_intent_more (struct msg* m)
 
     memcpy (&lw_m, m, sizeof lw_m);             /* (Kept: a tool's reach first, things.c's part 83) */
     switch (m->kind) {
+    case I_CLIMB:                               /* (Here since 2026-11-04: the main RAM's room) */
+        climb (m->a);
+        break;
+    case I_GOTO:
+        go_near = m->a;
+        go_to (m->w1, m->w2);
+        go_near = 0;
+        break;
     case I_DIG:
         start_dig (m->a);
         break;
@@ -6624,11 +6796,9 @@ int main (int argc, char* argv[])
         if (!((unsigned char) HUB->pcsum.cond & C_UNCONSCIOUS)) {
             pc_down = 0;
         } else if (!pc_down) {
-            pc_down = 1;
             bearings_off (BO_OUT);              /* (Knocked senseless: its bearings astray as it comes round, part
                                                 **   52's) */
-            hub_map (0);
-            HUB->pc_pos = POS_PRONE;            /* (And fallen: up again as it comes round, the book's Rise, as every
+            /* (And fallen: up again as it comes round, the book's Rise, as every
                                                 **   actor's, 2026-10-29) */
         }
         ++HUB->beat[T_WORLD];

@@ -146,7 +146,24 @@ enum { KI_NONE, KI_TORCH, KI_BACKPACK, KI_BELT, KI_POUCH, KI_DAGGER, KI_WATERSKI
     KI_STONE_CHISEL, KI_WOOD_CHISEL, KI_MATTOCK, KI_SPADE,  /* (Tools, 2026-11-03: a stone chisel as a chisel is, a wood
                                                 **   chisel no use on stone, a mattock and a spade for earth: HOUSE.md's
                                                 **   digging) */
+    KI_SPIKE, KI_DRIVEN, KI_MOOR, KI_POST, KI_TIED, KI_HUNG,  /* (Rope and grapples, 2026-11-04, the user's A16: HOUSE.md's: an
+                                                **   iron spike, the same driven in for good; a ring in the wall, a
+                                                **   post, fixed where they stand, a rope's to tie to; a rope in place,
+                                                **   its top's and its foot's: dq0w/wrope.c) */
     KI_COUNT };
+#define ROPE_FEET       50                      /* (A coil's length: the house's) */
+#define IO_ROPE         0x20                    /* (IO_HIDE's to: a rope's work, RP_* in its low bits: wrope.c's) */
+#define RP_OP           0x03
+enum { RP_TIE, RP_UNTIE, RP_THROW };
+enum { RK_SHAFT = 1, RK_LEDGE, RK_PIT, RK_SKY };    /* (A rope in place's fuel, the low four bits: what it goes down) */
+#define RK_HOW          0x0F
+#define RK_SLIP         0x80                    /* (Its grapple's to give as a climber's weight comes on it) */
+#define RA_LOOK         0x4000                  /* (The rope stub's: wrope.c's s_rope) */
+#define RA_LOOSE        0x8000
+#define RA_JOIN         0x4000                  /* (rope3's: wrope3.c's s_rope3) */
+#define RA_GONE         0x8000
+#define RA_SCAN         0x2000
+#define RA_HANG         0x1000
 
 #define KIND_WORDS      ((const char*) (CATALOGUE + NKINDS))     /* (In the kinds' bank after them: the words of
                                                 **   their names, each once, a space after each, a 0 after all: the
@@ -416,6 +433,7 @@ struct sthing {
     unsigned char   make;                       /* A portal's part's: its material (MT_*) times 16, and its quality */
     unsigned char   size;                       /*   and its size (its portal's opening, a bar's its width) */
 };
+#define KEY_BOX         0xFF                    /* (A key's make, the maker's: fits the chest last before it in the list) */
 #define ST_SHOWN        0xFF
 #define ST_PORTAL       0xFE
 #define ST_IN           0xFD                    /* (In the thing listed before it, on it: a sconce's torch, cold; */

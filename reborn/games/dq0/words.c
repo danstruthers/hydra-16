@@ -604,6 +604,14 @@ unsigned char __fastcall__ o_more (unsigned char action)
             intend2 (I_WAIT, 30, 1);            /* (A look's three seconds) */
         }
         break;
+    case VB_TIE_OBJECT:                         /* (A rope's: the things', wrope.c's, IO_HIDE's shape; a sack's tie, as it's */
+    case VB_UNTIE_OBJECT:                       /*   opened or closed) */
+        if (strstr (cmd.obj.word, "rope") || strstr (cmd.obj.word, "grapple") || !cmd.obj.word[0]) {
+            worked (othings (IO_HIDE | IO_STEPS, cmd.obj.word, cmd.other.word,
+                d | IO_ROPE | (action == VB_UNTIE_OBJECT ? RP_UNTIE : cmd.aux)));
+            break;
+        }
+        cmd.aux = action == VB_UNTIE_OBJECT ? PA_OPEN : PA_CLOSE;
     case VB_OPEN_OBJECT:                        /* (A thing that closes, worked: "open the chest", "untie the */
     case VB_CLOSE_OBJECT:                       /*   sack", "pick the chest's lock", "force the chest", the */
     case VB_UNLOCK_OBJECT:                      /*   user's; the world's IO_SHUT, a lid, a tie, a stopper, a */

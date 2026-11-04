@@ -391,7 +391,7 @@ static void load_pc (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    37                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    38                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -738,7 +738,7 @@ static void world_words (void)
     static unsigned n;
     unsigned char i, k;
 
-    for (n = 0; ; n += k) {                     /* (The catalogue's words, each once, the build's: dq0w/make.js's, in
+    for (n = 0; ; ) {                           /* (The catalogue's words, each once, the build's: dq0w/make.js's, in
                                                 **   the kinds' bank after them; "kite shield", "tower shield": the
                                                 **   parser's lists are words, its room CQ_WORDS) */
         hub_map (KIND_BANK);
@@ -747,6 +747,8 @@ static void world_words (void)
         for (k = 0; k < sizeof nm - 1 && nm[k]; ++k) {
         }
         memcpy (HUB_WINDOW + n, nm, k);
+        n += k;                                 /* (The last piece's too, 2026-11-04: the theme's went over it, "take the
+                                                **   grapple" not understood) */
         if (k < sizeof nm - 1) {
             break;
         }
@@ -1510,6 +1512,12 @@ unsigned char s_missiles (void)
         go_thing ();
         return 1;
     case VB_THROW_OBJECT:
+        if ((strstr (cmd.obj.word, "grapple") || strstr (cmd.obj.word, "rope")) && (cmd.dir == GO_UP || !cmd.other.x)) {
+            cmd.action = VB_TIE_OBJECT;         /* (A grapple thrown up, its rope on it: wrope.c's) */
+            cmd.aux = RP_THROW;
+            more (VB_TIE_OBJECT);
+            return 1;
+        }
         if (cmd.other.x && cmd.obj.word[0] && (d = mark (&cmd.other)) != 0) {
             if (things (IO_FIND, cmd.obj.word) != IR_OK) {
                 msg (tt ());

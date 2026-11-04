@@ -5314,6 +5314,190 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0rope', reach: true, near: ['map', 'gear'], what: "Dingus Quest Zero's rope and grapples (the user's A16, 2026-11-03: \"Queue rope rules\"; HOUSE.md's rope and grapples, for review), by the words, the item store and the referee's tests, each rule a scene: no drop, refused; a drop made beside the character by a poke (a ledge fifteen feet down), a rope got out by the hands routine (its steps told), a spike driven with a hammer (a minute's long task, its noise 7, the spike there for good), let down: a tied rope at its top, a hanging rope at its foot, seen; climbing down it by its help (every Climbing test on the rope 3 steps the better, the book's), at the foot the knot out of reach, climbing back up by it, untied: coiled at its feet, the hanging rope gone, the spike still driven, not taken, the rope taken; a thing that won't hold named, a chest that will, a pit's drop climbed into and out of by the rope; the second game every room a shaft (dq0sky=1): a mouth too high to reach, a grapple thrown up (a Throwing test at its band, the noise heard, told), the rope seen and looked at (a grapple's, how far), the grating (A18) barring the top as before, the grapple shaken loose from below, coiled at its feet, thrown again, its way out opened: climbed out by it; a grapple giving under the climber's weight (its record's RK_SLIP set: a marginal success's, one in four), its rope at its feet, the mouth too high again; the third game a rope let down a shaft from an iron ring (the maker's), the game saved and carried on: the rope still there, at its top and its foot, used to go down, still aided; a sack's tie, closed and opened",
+      init: 't_rc', cycles: 4500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml thr 95 >> /ram/c.hm', 'echo ml cli 40 >> /ram/c.hm', 'dq0sky=0', 'dq0hour=128',
+        "dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,iron spike,hammer'", 'tie the rope', 'look', 'tie the rope', 'look', 'look at the tied rope', 'd', 'look', 'untie the rope', 'u', 'untie the rope', 'look', 'take the driven spike', 'take the rope', 'inventory', 'quit',
+        "dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,chest,sack'", 'drop the sack', 'tie the rope to the sack', 'tie the sack', 'untie the sack', 'drop the chest', 'wait', 'tie the rope to the chest', 'd', 'look', 'u', 'quit',
+        'dq0sky=1', 'dq0hour=12', "dq0 -p t -s 2 -c /ram/c.hm -T -k 'rope,grapple'", 'go to the shaft', 'u', 'throw the grapple up', 'throw the grapple up', 'look', 'examine the hanging rope', 'u', 'untie the rope', 'untie the rope', 'untie the rope', 'look', 'take the rope', 'throw the rope up', 'throw the rope up', 'u',
+        "dq0 -p t -s 2 -c /ram/c.hm -T -k 'rope,grapple'", 'go to the shaft', 'throw the grapple up', 'throw the grapple up', 'u', 'look', 'u', 'quit',
+        "dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s -k 'rope'", 'go to the shaft', 'tie the rope', 'quit', 'dq0 -d /ram/s', 'look', 'd', 'look', 'quit', 'echo $status']) },
+      expect: ['% echo $status'], sdcard: true,
+      start(m) {
+        const drop = (ft, pit) => () => {                 // (A floor square beside the character made a drop, or a pit)
+          const h = m.dq0.bank(0), { L } = m.dq0.layout(), w = m.dq0.bank(WORLD_BANK_N), st = stratumRec(m, h[L.pcSn]);
+          const ox = (h[L.pcX] | h[L.pcX + 1] << 8) - st.x0, oy = (h[L.pcY] | h[L.pcY + 1] << 8) - st.y0;
+          const [TILE, ELEV] = require('../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, tile)', 'offsetof (struct chunk, elev)']);
+          for (let c = 0; c < 24; c++) {
+            const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3)), o = (c % 3) * 0xAA0;
+            if (!w[sl] || !b || w[sl + 1] !== h[L.pcSn] || (w[sl + 2] | w[sl + 3] << 8) !== ox >> 5 || (w[sl + 4] | w[sl + 5] << 8) !== oy >> 5) continue;
+            for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+              const x = (ox & 31) + dx, y = (oy & 31) + dy;
+              if (x < 0 || y < 0 || x > 31 || y > 31 || (b[o + TILE + y * 32 + x] & 15) !== 1) continue;
+              if (pit) b[o + TILE + y * 32 + x] = b[o + TILE + y * 32 + x] & 0xF0 | 9;
+              else b[o + ELEV + y * 32 + x] = (b[o + ELEV + y * 32 + x] - ft) & 255;
+              m.dropAt = [st.x0 + x + (ox & ~31), st.y0 + y + (oy & ~31)];
+              return;
+            }
+          }
+        };
+        dq0Poke(m, [{ g: 1, line: 'tie the rope', n: 2, call: drop(15) }, { g: 2, line: 'tie the rope to the chest', n: 1, call: drop(0, 1) },
+          { g: 3, line: 'look', n: 1, fuel: { 'hanging rope': 0x0B04 } }, { g: 3, line: 'u', n: 3, hub: { wayOpen: 1 }, fuel: { 'hanging rope': 0x0B04 } }, { g: 4, line: 'u', n: 1, fuel: { 'hanging rope': 0x0B84 } }]);
+      },
+      check(m, out) {
+        const T = dq0Turns(m), f = [], K = m.dq0.layout().K, o = dq0Story(out);
+        const say = (t, re, what) => { if (!re.test(o)) f.push('no words: ' + what); };
+        const g1 = T.of("dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,iron spike,hammer'");
+        const climbs = t => t.replies.filter(r => /^slot/.test(r.req) && r.a === K.P_CLIMB).map(r => r.steps);
+        // A rope, tied off
+        say(0, /tie the rope There's no drop here to let a rope down\./, 'no drop');
+        const t1 = T.of('tie the rope', g1.k), t2 = T.of('tie the rope', t1.k + 1), d1 = T.of('d', g1.k), n1 = T.after(d1, 'look');
+        say(0, /You get out the hammer\./, 'the hammer got out, the hands routine');
+        say(0, /You set to tying the rope\./, 'its first words');
+        say(0, /You tie the rope to the driven spike and let it down over the edge: it reaches the foot\./, 'tied to a spike, let down');
+        const look = T.after(t2, 'look');
+        const at = (s, nm) => s ? s.items.filter(i => i.name === nm && i.where === 'IW_SQUARE') : [];
+        if (!T.filter(t => t.k >= t2.k && t.k <= look.k).some(t => dq0Ev(t, 'E_NOISE', { a: 7 }).length)) f.push('the spike\'s driving not heard');
+        if (at(look.at, 'tied rope').length !== 1 || at(look.at, 'hanging rope').length !== 1 || at(look.at, 'driven spike').length !== 1) f.push('a rope in place not its two records and a spike: ' + JSON.stringify((look.at || { items: [] }).items.filter(i => /rope|spike/.test(i.name))));
+        if (!/feet of the climb/.test(o)) f.push('the rope looked at: how far it goes not told');
+        // Climbed, aided
+        const dn = climbs(d1);
+        if (!dn.length || dn.some(s => s !== 3)) f.push('the climb down not 3 steps the better: ' + dn);
+        if (!/You take hold of the rope\./.test(o)) f.push('no hold of the rope told');
+        const foot = n1.at;
+        if (!foot || !m.dropAt || foot.pc.x === d1.at.pc.x && foot.pc.y === d1.at.pc.y) f.push('not at the foot');
+        say(0, /The knot's far above you, out of reach\./, 'the knot from below');
+        const u1 = T.after(n1, 'u');
+        if (climbs(u1).some(s => s !== 3) || !climbs(u1).length) f.push('the climb up not aided: ' + climbs(u1));
+        const un = T.after(u1, 'untie the rope');
+        say(0, /You untie the rope, draw it up and coil it at your feet\./, 'untied');
+        const lk2 = T.after(un, 'look');
+        if (at(lk2.at, 'hanging rope').length || at(lk2.at, 'tied rope').length || !dq0Named(dq0Here(lk2.at), 'rope').length) f.push('the rope not back, coiled at its feet: ' + JSON.stringify((lk2.at || { items: [] }).items.filter(i => /rope/.test(i.name))));
+        say(0, /driven spike is fixed where it stands/, 'the spike taken');
+        const tk = T.after(lk2, 'take the rope'), inv = T.after(tk, 'inventory');
+        if (!dq0Named(dq0Carried(inv.at), 'rope').length) f.push('the rope not taken up');
+        // What holds; a pit
+        say(0, /tie the rope to the sack .{0,80}That won't hold a rope\./, 'a sack as an anchor');
+        if (!/You tie the rope to the chest and let it down over the edge/.test(o)) f.push('tied to the chest, a pit\'s edge');
+        const g2 = T.of("dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,chest,sack'");
+        const d2 = T.of('d', g2.k), u2 = T.after(d2, 'u');
+        if (!climbs(d2).length || climbs(d2).some(s => s !== 3)) f.push('down into the pit not aided: ' + climbs(d2));
+        if (!climbs(u2).length) f.push('out of the pit not climbed');
+        if (u2.at && !(u2.at.pc.x === m.dropAt[0] && u2.at.pc.y === m.dropAt[1])) f.push('not in the pit: ' + JSON.stringify([u2.at.pc.x, u2.at.pc.y, m.dropAt]));
+        // A grapple thrown up
+        say(0, /The shaft's mouth is too high to reach\./, 'the mouth too high');
+        const g3 = T.of("dq0 -p t -s 2 -c /ram/c.hm -T -k 'rope,grapple'");
+        const th = T.of('throw the grapple up', g3.k);
+        const P = th.replies.filter(r => /^slot/.test(r.req) && r.a === K.P_THROW);
+        if (!P.length || P[0].steps !== -4) f.push('its test not Throwing at its band: ' + JSON.stringify(P.map(r => [r.a, r.steps])));
+        if (!dq0Ev(th, 'E_NOISE', {}).length) f.push('a throw not heard');
+        say(0, /The grapple flies up and catches, with a clang\./, 'caught');
+        say(0, /It's tied to the grapple, in the mouth of the shaft above: \d+ feet of the climb\./, 'the rope looked at');
+        say(0, /An iron grating bars the top of the shaft: that's no way out\./, 'the grating');
+        say(0, /You shake the rope, and the grapple comes loose and clatters down\./, 'shaken loose');
+        say(0, /You take hold of the rope\. You set to climbing: \d+ feet of it\./, 'up the rope');
+        if (!T.filter(t => t.k >= th.k).some(t => dq0Ev(t, 'E_LEFT', {}).length)) f.push('not climbed out by the rope, the way out open');
+        // Its grapple giving
+        say(0, /You put your weight on the rope: the grapple tears loose and comes clattering down\. The shaft's mouth is too high to reach\./, 'the grapple giving');
+        // Kept
+        const g5 = T.of("dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s -k 'rope'");
+        const c5 = T.of('dq0 -d /ram/s', g5.k), d5 = T.of('d', c5.k);
+        if (!/You tie the rope to the iron ring and let it down the shaft/.test(o)) f.push('not tied to the maker\'s ring');
+        if (!at(d5.at, 'tied rope').length) f.push('the rope not there carried on');
+        if (!climbs(d5).length || climbs(d5).some(s => s !== 3)) f.push('the rope, carried on, no help: ' + climbs(d5));
+        const lk5 = T.after(d5, 'look');
+        if (!at(lk5.at, 'hanging rope').length) f.push('its foot not there, carried on');
+        if (/understand that/.test(o)) f.push('a line not understood');
+        return f;
+      },
+    },
+    {
+      name: 'dq0foundkey', near: ['map', 'gear'], what: "Dingus Quest Zero's found keys (the user's A17: \"fit something nearby\"; HOUSE.md's keys that fit, for review): by the item store and the chunks: in three seeds' first chunks a key the maker put down is numbered for a door in its own chunk, that door locked, mechanical; none has no lock; the same game the same number; the key given the character (a poke), put beside its door: \"You unlock it with its key.\", no Picklock test asked",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0hour=128', 'dq0sky=0',
+        'dq0 -p t -s 2 -c /ram/c.hm -T', 'look', 'wait', 'wait', 'unlock the door ahead', 'quit', 'dq0 -p t -s 5 -c /ram/c.hm -T', 'quit', 'dq0 -p t -s 6 -c /ram/c.hm -T', 'quit', 'dq0 -p t -s 2 -c /ram/c.hm -T', 'quit', 'echo $status']) },
+      expect: ['% echo $status'], sdcard: true,
+      start(m) {
+        const doors = () => {                             // (Every cached chunk's doors: their squares, states)
+          const h = m.dq0.bank(0), { L } = m.dq0.layout(), w = m.dq0.bank(WORLD_BANK_N), r = [];
+          const [PORTAL, PSIZE, NPORT, KIND, STATE, LOCK] = require('../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, portal)', 'sizeof (struct portal)', 'offsetof (struct chunk, nportals)', 'offsetof (struct portal, kind)', 'offsetof (struct portal, state)', 'offsetof (struct portal, lock)']);
+          const st = stratumRec(m, h[L.pcSn]);
+          for (let c = 0; c < 24; c++) {
+            const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3)), o = (c % 3) * 0xAA0;
+            if (!w[sl] || !b || w[sl + 1] !== h[L.pcSn]) continue;
+            const cx = w[sl + 2] | w[sl + 3] << 8, cy = w[sl + 4] | w[sl + 5] << 8;
+            for (let i = 0; i < b[o + NPORT]; i++) {
+              const q = o + PORTAL + i * PSIZE;
+              r.push({ x: st.x0 + (cx << 5) + b[q], y: st.y0 + (cy << 5) + b[q + 1], kind: b[q + KIND], state: b[q + STATE], lock: b[q + LOCK] });
+            }
+          }
+          return { st, r };
+        };
+        const id = (sn, x, y) => 0x8000 | ((x * 37 + y * 101 + sn * 4099) & 0x7FFF);
+        const keys = () => {
+          const { L } = m.dq0.layout(), cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize), out = [];
+          for (let i = 0; cat && i < L.nitems; i++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+            if (!b || !b[o + L.iKind]) continue;
+            let n = '';
+            for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
+            if (n === 'iron key' && b[o + 2] === 0) out.push({ x: b[o + 4] | b[o + 5] << 8, y: b[o + 6] | b[o + 7] << 8, fits: b[o + L.iSize] | b[o + L.iSize + 1] << 8 });
+          }
+          return out;
+        };
+        m.found = {};
+        const note = g => () => {
+          const { st, r } = doors(), ks = keys(), h = m.dq0.bank(0), { L } = m.dq0.layout();
+          m.found[g] = ks.map(k => {
+            const d = r.find(q => id(h[L.pcSn], q.x, q.y) === k.fits);
+            return { key: k, door: d, same: d ? (d.x - st.x0 >> 5) === (k.x - st.x0 >> 5) && (d.y - st.y0 >> 5) === (k.y - st.y0 >> 5) : false };
+          });
+        };
+        const put = (x, y) => { const h = m.dq0.bank(0), { L } = m.dq0.layout(); h[L.pcX] = x & 255; h[L.pcX + 1] = x >> 8; h[L.pcY] = y & 255; h[L.pcY + 1] = y >> 8; };
+        dq0Poke(m, [{ g: 1, line: 'look', n: 1, call: note(1) },
+          { g: 1, line: 'wait', n: 1, call: () => {       // (It's found: in the character's hands, as if picked up; a search and a take are their own tests')
+            const { L } = m.dq0.layout(), cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize), k = m.found[1][0];
+            for (let i = 0; cat && k && i < L.nitems; i++) {
+              const b = m.dq0.bank(L.item0 + Math.floor(i / per)), o = (i % per) * L.itemSize;
+              if (!b || !b[o + L.iKind] || b[o + L.iWhere] !== 0 || (b[o + L.iX] | b[o + L.iX + 1] << 8) !== k.key.x || (b[o + L.iSize] | b[o + L.iThick] << 8) !== k.key.fits) continue;
+              b[o + L.iWhere] = 1;
+              b[o + L.iX] = b[o + L.iX + 1] = 0;
+              b[o + L.iFlags] = b[o + L.iFlags] & ~8 | 0x20;
+            }
+          } },
+          { g: 1, line: 'wait', n: 2, call: () => {     // (Beside its door, on a floor: a look, then it faced)
+            const k = m.found[1][0], h = m.dq0.bank(0), { L } = m.dq0.layout(), w = m.dq0.bank(WORLD_BANK_N), st = stratumRec(m, h[L.pcSn]);
+            const [TILE] = require('../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, tile)']);
+            if (!k || !k.door) return;
+            const ox = k.door.x - st.x0, oy = k.door.y - st.y0;
+            for (let c = 0; c < 24; c++) {
+              const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3)), o = (c % 3) * 0xAA0;
+              if (!w[sl] || !b || w[sl + 1] !== h[L.pcSn] || (w[sl + 2] | w[sl + 3] << 8) !== ox >> 5 || (w[sl + 4] | w[sl + 5] << 8) !== oy >> 5) continue;
+              for (const [dx, dy, face] of [[0, -1, 4], [1, 0, 6], [0, 1, 0], [-1, 0, 2]]) {
+                const t = b[o + TILE + ((oy & 31) + dy) * 32 + (ox & 31) + dx] & 15;
+                if (t === 1 || t === 4) { put(k.door.x + dx, k.door.y + dy); h[L.pcFace] = face; m.doorAt = [dx, dy, face, ox & 31, oy & 31, t]; return; }
+              }
+            }
+          } },
+          { g: 2, line: 'quit', n: 1, call: note(2) }, { g: 3, line: 'quit', n: 1, call: note(3) }, { g: 4, line: 'quit', n: 1, call: note(4) }]);
+      },
+      check(m, out) {
+        const f = [], o = dq0Story(out);
+        let n = 0;
+        for (const g of [1, 2, 3, 4]) for (const e of m.found[g] || []) {
+          ++n;
+          if (!e.door || !e.same) f.push('game ' + g + ': a found key fits no door in its chunk: ' + JSON.stringify(e));
+          else if (!(e.door.state & 2) || !e.door.lock) f.push('game ' + g + ': its door not locked: ' + JSON.stringify(e));
+        }
+        if (!n) f.push('no found key in the games');
+        if (JSON.stringify(m.found[1].map(e => e.key)) !== JSON.stringify(m.found[4].map(e => e.key))) f.push('the same game, other keys');
+        const T = dq0Turns(m), K = m.dq0.layout().K, g1 = T.of('dq0 -p t -s 2 -c /ram/c.hm -T'), u = T.of('unlock the door ahead', g1.k);
+        if (!/You unlock it with its key./.test(o) && !/You unlock the door with its key/.test(o)) f.push('its door not unlocked by it: ' + o.slice(o.indexOf('> unlock'), o.indexOf('> unlock') + 200));
+        if (u.replies.some(r => /^slot/.test(r.req) && r.a === K.P_PICKLOCK)) f.push('a Picklock test asked');
+        return f;
+      },
+    },
+    {
       name: 'dq0keys', what: 'Dingus Quest Zero\'s keys that fit (the user\'s answer 10: "A key opens its own lock, no test"; HOUSE.md\'s keys that fit, the outfits\' phase 2): a key made after a chest locks it and fits it alone (dq0 -k\'s "chest,iron key": every making\'s rule, the denizens\' boxes\' too): the chest put down locked, opened with its key with no test, a few seconds ("You unlock the chest with its key."), closed and locked again with it ("You lock the chest with its key."); its key put down, no picks: nothing to pick it with; a chest whose key was put down and another key kept ("chest,iron key,iron key"): "Your key doesn\'t fit its lock.", the chest locked still',
       init: 't_rc', cycles: 900e6, outfit: true,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', "dq0 -p t -s 3 -c /ram/c.hm -T -k 'chest,iron key'",

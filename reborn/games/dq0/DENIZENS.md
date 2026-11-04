@@ -692,6 +692,10 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   faction's: the faction's attitude a step worse, its others about the body gathered to it, each less well disposed,
   a leader's loss known to them (D_LOST).
 
+## A rope in place (2026-11-04: HOUSE.md's rope and grapples)
+
+A denizen's mind climbs only with the character: an ally coming along, up or down a way between strata, by I_CLIMB, whatever way that was, a rope's as any; none goes up or down one on its own, none crosses a ledge by one (the region's ways keep to its steps), and none unties or cuts one, or takes it up: its kind's fixed where it stands, the take rule's.  Its grapple's clang, and a spike's driving, are E_NOISE, heard as work's noise is.
+
 ## Still to come
 
 - **Their bodies' rest** (2026-10-31's leftovers, HOUSE.md's the denizens' bodies): a swim tiring a denizen, a denizen

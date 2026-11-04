@@ -22,7 +22,7 @@ static const char* const doing[] = {           /* (By LT_*) */
     "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering",
     "fighting", "travelling", "studying the mechanism", "disarming the trap", "picking the lock", "forcing", "heaving at",
     "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
-    "hiding", "tending the wound", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
+    "hiding", "tying the rope", "tending the wound", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
     "letting fall", "letting fall", "putting away", "blowing out", "blowing out", "lighting", "setting down", "taking up", "sharpening",
     "striking a spark", "getting out", "putting away", "taking up", "setting down", "blowing out", "lighting", "dipping"
 };
