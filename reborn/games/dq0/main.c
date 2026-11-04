@@ -804,8 +804,8 @@ static void stop_world (void)
 ** the player, and its tasks take their turns as they did (fore_sync's; overlay 6's) */
 #define FS_CMD      1
 #define FS_UI       2
-#pragma code-name (push, "OV18CODE")            /* (Overlay 18's and 3's since 2026-11-04, overlay 17's room) */
-#pragma rodata-name (push, "OV18RODATA")
+#pragma code-name (push, "OV13CODE")            /* (Overlay 13's and 3's since 2026-11-04, overlay 17's room) */
+#pragma rodata-name (push, "OV13RODATA")
 void __fastcall__ o_fore_set (unsigned char on)
 {
     static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_SENSES, T_REFEREE };
@@ -1468,6 +1468,8 @@ void s_hand_said (void)
 ** ...": not struck with another instead) */
 /* A denizen's things as the eyes make them out from here (the world's IO_GEAR: examined, or assessed, cmd's aux),
 ** after how it seems (deal's): HOUSE.md's three levels, the user's, 2026-10-27 */
+#pragma code-name (push, "SW3CODE")             /* (Part 3's since 2026-11-04, overlay 15's room) */
+#pragma rodata-name (push, "SW3RODATA")
 void s_gear_look (void)
 {
     HUB->ireq.to = (cmd.aux ? 2 : 1) | sight_get ()->eye << 4;
@@ -1475,6 +1477,8 @@ void s_gear_look (void)
         msg (tt ());
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 unsigned char s_hold_first (void)
 {
@@ -3084,8 +3088,8 @@ int main (int argc, char* argv[])
 ** part 2's room, 2026-10-29; part 12's, overlay 3 full, 2026-10-31) */
 #pragma code-name (pop)
 #pragma rodata-name (pop)
-#pragma code-name (push, "SW12CODE")
-#pragma rodata-name (push, "SW12RODATA")
+#pragma code-name (push, "SW14CODE")            /* (Part 14's since 2026-11-04, overlay 15's room) */
+#pragma rodata-name (push, "SW14RODATA")
 void s_when_free (void)
 {
     if (rebar) {                                /* (A door barred: its bar set in its brackets, on the square the

@@ -2865,7 +2865,7 @@ function dq0Timer(m) {
       const w = c.want.split('|').map(x => story.indexOf(x)).filter(x => x >= 0).reduce((a, b) => a < 0 || b < a ? b : a, -1);   // (Words the answer may begin with, | between)
       let last = prompt < 0 ? idx.length - 1 : prompt - 1;
       while (last > 0 && story[last] === ' ') last--;
-      res.push({ line: c.line, first: w < 0 ? null : at[idx[w]] - e.t, whole: w < 0 || last < w ? null : at[idx[last]] - e.t, story, letter: k => at[idx[k]] - e.t, lastAt: last });
+      res.push({ line: c.line, first: w < 0 ? null : at[idx[w]] - e.t, whole: w < 0 || last < w ? null : at[idx[last]] - e.t });
     }
     return res;
   };
@@ -2954,11 +2954,11 @@ function dq0JobsTest() {
 // a carried thing examined, a thing taken with a walk or a pack, a step or a turn with a denizen's things being drawn at
 // wait 0, its answer behind that draw's giving way
 const DQ0_ANSWERS = [['turn left', 'You turn left', 800000], ['turn right', 'You turn right', 1300000],
-  ['step forward', 'You step forward', 1400000], ['inventory', 'You carry', 500000], ['examine the torch', 'You look for the torch', 1500000], ['walk to the door ahead to my left', 'You head for', 760000], ['examine the door', 'You head for|A door|Which door', 720000],
-  ['open the door', 'You try the door|You turn|Which door', 1500000], ['close the door', 'You reach for the door|You turn|Which door', 1500000], ['listen', 'You listen', 1500000], ['bar the door', 'You look at the door|You turn|Which door', 1500000],
-  ['look', 'You', 650000, 1790000], ['look ahead', 'You peer ahead|You turn', 1500000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You', 800000], ['walk to the window', 'You head for', 700000], ['take the bones', 'You look for the bones|You go over to the bones.|You stop', 950000], ['look', 'You', 650000],
-  ['take the sack from the backpack', 'You reach for the sack', 1500000], ['put the whetstone in the sack', 'You reach for the whetstone', 1500000], ['take the whetstone from the sack', 'You reach for the whetstone', 1500000],
-  ['drop the sack', 'You reach for the sack', 1500000], ['take the sack', 'You reach for the sack', 1500000], ['assess the sack', 'You look at the sack|You look for the sack', 1500000], ['sit', 'You sit down', 1500000], ['stand', 'You get to your feet', 1500000], ['wait 1 minute', 'You wait a minute', 1500000], ['dig down', 'You look at the floor', 1500000], ['stop', 'You', 1500000]];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
+  ['step forward', 'You step forward', 1400000], ['inventory', 'You carry', 500000], ['examine the torch', 'You look for the torch', 620000], ['walk to the door ahead to my left', 'You head for', 760000], ['examine the door', 'You head for|A door|Which door', 720000],
+  ['open the door', 'You try the door|You turn|Which door', 600000], ['close the door', 'You reach for the door|You turn|Which door', 650000], ['listen', 'You listen', 720000], ['bar the door', 'You look at the door|You turn|Which door', 600000],
+  ['look', 'You', 650000, 1790000], ['look ahead', 'You peer ahead|You turn', 450000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You', 800000], ['walk to the window', 'You head for', 700000], ['take the bones', 'You look for the bones|You go over to the bones.|You stop', 500000], ['look', 'You', 650000],
+  ['take the sack from the backpack', 'You reach for the sack', 650000], ['put the whetstone in the sack', 'You reach for the whetstone', 720000], ['take the whetstone from the sack', 'You reach for the whetstone', 720000],
+  ['drop the sack', 'You reach for the sack', 560000], ['take the sack', 'You reach for the sack|You look for the sack', 520000], ['assess the sack', 'You look at the sack|You look for the sack', 530000], ['sit', 'You sit down', 720000], ['stand', 'You get to your feet', 680000], ['wait 1 minute', 'You wait a minute', 720000], ['dig down', 'You look at the floor', 530000], ['stop', 'You', 720000]];   // (The first words as they begin, 2026-11-04: dq0firstword's; budgets over what's measured at waits 0, 1 and 2, both paces)   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
 function dq0AnswerTest(baud) {
   const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
   const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
@@ -7498,7 +7498,6 @@ module.exports = {
     // (dq0answer96, the same at 9,600 baud: its times noted, no budget of its own (the user's targets, D17, are 115,200's):
     // only with DQ0ANS96=1, to measure)
     ...(process.env.DQ0ANS96 ? [dq0AnswerTest(9600)] : []),
-    ...(process.env.DQ0PROBE_JS ? [require(process.env.DQ0PROBE_JS)({ dq0Timer, dq0Poke, dq0Rec, dq0OnWords, dq0PcShock, dq0BodyPoke, dq0Portal, dq0PortalAt, dq0Body, dq0DoorScene })] : []),
     {
       name: 'dq0looks', what: 'Dingus Quest Zero\'s looks the same as they were (the look quickened, reborn-game-look: its grid kept and moved, its marks put only where they reach, the store gone through once): eight games at the turns pace (seeds 3, 5, 7, 12, 4, 517: turns, steps, walks, a walk\'s chosen door, a stairway down, a torch put out and lit again, one put down and taken up, a portcullis lowered and raised, a window broken (punched bare-handed, as the old code\'s run struck it: the torch in hand would strike it now, the user\'s, 2026-10-22) and climbed through, a weak-eyed character; each dungeon dry, dq0 -W: the looks before the water, slice 4.9\'s), every reply the senses give (a look\'s, the denizens\' senses\') with the same request, the same record of what the character perceives and the same squares seen and visible in every live chunk as tests/dq0/looks.ref, the old code\'s (DQ0LOOKS=write: written afresh from this run)',
       init: 't_rc', cycles: 3000e6,

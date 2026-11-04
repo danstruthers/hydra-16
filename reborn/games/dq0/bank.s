@@ -144,7 +144,7 @@ ovl_out:
             OVFN        facing_words, 19
             OVFN        sky_words, 1        ; (The sky seen by a window, a skylight, a shaft: time.c, 16's room)
             OVFN        turned_says, 19     ; (A turn's first words: task.c's, the main RAM's room)
-            OVFN        fore_set, 18        ; (The answer's tasks in the foreground: main.c's)
+            OVFN        fore_set, 13        ; (The answer's tasks in the foreground: main.c's)
             OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
             OVFN        say_raw, 16         ; (A line as it is, the map's: term.c, the main RAM's room)
@@ -233,12 +233,12 @@ ovl_out:
             SWFN        limbs_cmd, 11
             SWFN        bg_words, 14
             SWFN        pose_words, 12
-            SWFN        when_free, 12
+            SWFN        when_free, 14
             SWFN        noise_told, 14
             SWFN        dig_used, 14
             SWFN        hold_first, 11
             SWFN        missiles, 13        ; (The missiles: slice 4.7's)
-            SWFN        gear_look, 11
+            SWFN        gear_look, 3
             SWFN        early, 12
             SWFN        tend, 12
             SWFN        body_words, 12

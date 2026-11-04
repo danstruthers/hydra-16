@@ -815,9 +815,9 @@ world's answer follows.  The word is said before the world's asked, and holds wh
   words are its first), or if it's asked which door.
 - **A thing handled** (hold, stow, put, take from, wear, take off, light, put out, drop, fill, sharpen, hide, tie, untie,
   open or close a thing, throw): "You reach for the sack."  A thing to take from the floor, "You reach for" only if it's seen in reach; seen only
-  out of reach, its walk ("You go over to the bones."); not seen now, "You look for the bones." (then its walk, if it's remembered, or "You see none of those here.").
+  out of reach, its walk ("You go over to the bones."); not seen now, "You look for the bones." (then its walk, if it's remembered, or "You see none of those here."; in the dark, none).
 - **A thing looked at closely or asked of** (examine, assess, heft, its lock, its traps, look in it): "You look at the sack." if it's
-  seen; else "You look for the sack." ("You feel for ..." in the dark).
+  seen; else "You look for the sack."  In the dark, none: the answer's its first words.
 - **A denizen swayed, a gift, a trade** (talk, calm, threaten, name, give, buy, sell ...: the denizens' task's to answer): "You look for the rat." ("You feel for ...").
 - **Read, combine**: "You reach for the sack."
 - **A look one way**: "You peer ahead." at once, unless it turns first.

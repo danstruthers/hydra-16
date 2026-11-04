@@ -294,16 +294,12 @@ void __fastcall__ o_walk_ahead (const char* name)
     struct sight* s = sight_get ();
     struct sitem* it;
     const char* v = "reach for";
-    const char* a;
-    const char* f;
     unsigned char k, away = 0, op = walk_op & ~IO_STEPS;
     static const char ops[] = { IO_GET, IO_DROP, IO_FILL, IO_HIDE, IO_SHUT, IO_THROW, IO_DESCRIBE, IO_INSIDE, 0 };
 
     if (worded) {                               /* (Told once a line: not again as its command's asked again after a step) */
         return;
     }
-    a = s->dark ? "feel" : "look at";
-    f = s->dark ? "feel for" : "look for";
     {                                           /* (A thing handled, by its name) */
         if (*name == '#' || !*name || (!strchr (ops, op) && (op < IO_HOLD || op > IO_DOUSE))) {
             return;
@@ -313,8 +309,13 @@ void __fastcall__ o_walk_ahead (const char* name)
                 away |= it->x - s->x + 1 > 2 || it->y - s->y + 1 > 2 ? 1 : 2;
             }
         }
-        if (op == IO_DESCRIBE || op == IO_INSIDE) {   /* (Looked at, asked of it: its quality, its weight ...; way.c's) */
-            v = cmd.obj.kind || away ? a : f;
+        if (op == IO_DESCRIBE || op == IO_INSIDE || (!away && op == IO_GET)) {   /* (Looked at, asked of it: its quality,
+                                                **   its weight ...; way.c's; to take, not seen now: none in reach, or
+                                                **   remembered out of sight.  In the dark, the answer's own) */
+            if (s->dark) {
+                return;
+            }
+            v = cmd.obj.kind || away ? "look at" : "look for";
         } else if (away == 1) {                 /* (Out of reach only: walked to, if it's to be taken) */
             if (op == IO_GET && !(cmd.obj.sel | cmd.obj.n)) {
                 walk_says (name);
@@ -322,8 +323,6 @@ void __fastcall__ o_walk_ahead (const char* name)
                 said_ahead = 1;
             }
             return;
-        } else if (!away && op == IO_GET) {     /* (Not seen now: none in reach, or remembered out of sight) */
-            v = f;
         }
     }
     sayf ("\nYou %s the %s.", v, name);
