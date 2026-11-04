@@ -826,6 +826,10 @@ signed char __fastcall__ s_side (unsigned char who, unsigned char p, signed char
 #pragma rodata-name (push, "SW3RODATA")
 void __fastcall__ s_quiet_test (struct req* r)
 {
+    if (r->other == RS_ASKER) {
+        r->grade = side (r->actor, r->a, r->steps);
+        return;
+    }
     QUIET_IN
     r->grade = side (r->actor, r->a, r->steps);  /* (The character's, or a creature's by its sheet: a tunneller's
                                                 **   dig too, slice 4.11's) */

@@ -34,6 +34,7 @@
 #include "world.h"
 #include "work.h"
 #include "things.h"
+#include "wbody.h"
 #include "outfit.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
@@ -1923,6 +1924,9 @@ unsigned char s_serve (void)
         }
     }
     memcpy (&iq, &HUB->ireq, sizeof iq);
+    if (HUB->pc_hid) {
+        hid_op (HO_THING);                      /* (A thing handled: out of hiding, part 94's) */
+    }
     iq.result = IR_OK;
     wsel = iq.sel;                              /* (Which of several: the chooser's, part 4's pick) */
     wnot = win = wforce = 0;

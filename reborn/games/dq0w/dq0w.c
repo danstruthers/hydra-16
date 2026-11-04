@@ -100,6 +100,7 @@ unsigned char __fastcall__ dark_end (unsigned char how);    /* Part 44 */
 unsigned char __fastcall__ bearings (unsigned w);   /* Part 52 */
 void __fastcall__ bearings_off (unsigned feet); /* (wbody.h's) */
 unsigned char arrive_a (void);                  /* Part 93 */
+void __fastcall__ hid_op (unsigned char op);    /* Part 94: hiding oneself (wbody.h's HO_*) */
 void arrive_b (void);
 void tsense (void);                             /* Part 76 (wtime.c) */
 void rest_go (void);
@@ -2428,6 +2429,9 @@ void s_arrive_b (void)
 {
     unsigned char first = ar_first, how = ar_how, bn = ar_bn, dw = ar_dw;
 
+    if (HUB->pc_hid) {
+        hid_op (HO_MOVED);                      /* (Crept on, hidden: cover here, or the dark, or out of hiding) */
+    }
     sn_ = HUB->pc_stratum;
     if (searching && (unsigned char) (how - A_DOWN) > A_UP - A_DOWN && how != A_STOPPED) {   /* (Not up or down) */
         barw_ = 1;                              /* (Quietly: the search's link; what it finds seen) */
@@ -4084,6 +4088,7 @@ unsigned char s_searched (void)
     work (PA_SEARCH, NO_SQ, NO_SQ, srch_form);
     wk.tt = 0;                                  /* (Its minute spent already, the long task's) */
     worked (0);
+    hid_op (HO_SEARCH);                         /* (One hidden, found by it: part 94's) */
     return lwork ? work_done () : 0;            /* (A pack off to search it: back on, the reach's) */
 }
 #pragma code-name (pop)
@@ -4100,6 +4105,7 @@ unsigned char searched (void);
 ** light filled) the UI's (I_WAIT's kind) */
 unsigned char lwork;                            /* (What's to be done at its end: PA_*, LW_TRACE, LW_REACH; 0 none) */
 #define LW_TRACE        0xFF
+#define LW_HIDE         0xFD                    /* (Hiding oneself: part 94's) */
 static unsigned char lw_d;                      /* (Its portal's way from the character, its square: NO_SQ, about it; */
 unsigned lw_x, lw_y;                            /*   a trace's I_TRACE w1 and w2; things.c's rs_old, rs_down) */
 struct msg lw_m;                                /* (A trace's; an intent kept through the reach's steps, things.c's) */
@@ -4298,6 +4304,10 @@ unsigned char s_work_done (void)
     }
     here ();
     HUB->pc_task.kind = LT_NONE;
+    if (w == LW_HIDE) {
+        hid_op (HO_DONE);                       /* (Hidden: part 94's) */
+        return 0;
+    }
     if (w == LW_TRACE) {
         m.w1 = lw_x;
         m.w2 = lw_y;
@@ -4735,7 +4745,8 @@ void __fastcall__ s_task_word (const struct msg* m)
     }
     if (!k) {
         if (!m->w1) {
-            event (E_TASK, 0, TE_IDLE);         /* (The player's stop, nothing to stop; a command's, nothing said) */
+            hid_op (m->a | HO_STOP);            /* (The player's stop, nothing to stop; a command's, nothing said:
+                                                **   "stop hiding", out of it: part 94's) */
         }
     } else if (m->a && m->a != k && (m->a != LT_WALK || k != LT_TRAVEL)) {
         evb = m->a;                             /* (The one named: its b; "stop walking", a journey's leg too) */
@@ -5127,7 +5138,7 @@ static unsigned char __fastcall__ engager (unsigned x, unsigned y)
     for (k = 0; k < NACTORS; ++k) {
         hub_map (0);
         a = &HUB->actor[k];
-        if (!a->state || a->sn != HUB->pc_stratum || a->pos == POS_PRONE || a->doing == DO_DOWN ||
+        if (!a->state || a->sn != HUB->pc_stratum || a->pos == POS_PRONE || a->doing == DO_DOWN || a->state > 1 || HUB->pc_hid ||
             DO_UNAWARE (a->doing) || a->attitude > AT_UNFRIENDLY) {
             continue;                           /* (Not one that hasn't noticed the character: roaming, its mind's
                                                 **   doing as it doesn't sense it, DENIZENS.md's; every actor's) */
@@ -5613,7 +5624,7 @@ static unsigned char fight_foe (void)
         hub_map (0);
         a = &HUB->actor[k];
         b = 1 << k;
-        if (a->state && a->sn == HUB->pc_stratum && a->attitude == AT_HOSTILE && a->pos != POS_PRONE &&
+        if (a->state == 1 && a->sn == HUB->pc_stratum && a->attitude == AT_HOSTILE && a->pos != POS_PRONE &&
             a->doing != DO_ROAM && a->doing < DO_FLEE) {
             ax = a->x;
             ay = a->y;
@@ -5830,7 +5841,7 @@ unsigned char __fastcall__ s_engaged (unsigned char eng, unsigned char def)
     k = ((eng ? eng : def) - 1) & 7;
     hub_map (0);
     a = &HUB->actor[k];
-    if (noinit || (move.on && move.how == A_CLIMBING) || !a->state || a->sn != HUB->pc_stratum ||
+    if (noinit || HUB->pc_hid || (move.on && move.how == A_CLIMBING) || !a->state || a->sn != HUB->pc_stratum ||
         a->pos == POS_PRONE || (unsigned char) (a->doing - DO_DOWN) < 2 || (unsigned) (a->x - HUB->pc_x + 1) > 2 ||
         (unsigned) (a->y - HUB->pc_y + 1) > 2) {
         return 0;
@@ -6111,7 +6122,7 @@ static void __fastcall__ set_out (unsigned char h)
 
 static void __fastcall__ intent (struct msg* m)
 {
-    if (m->kind == I_STOP || m->kind == I_GO_ON || m->kind == I_ASK) {
+    if ((unsigned char) (m->kind - I_STOP) < 3) {   /* (I_STOP, I_GO_ON, I_ASK) */
         task_word (m);                          /* (The long task's: no rest begun) */
         return;
     }
@@ -6196,6 +6207,9 @@ void __fastcall__ s_intent_few (struct msg* m)
         busy (t);
         if (m->w2 >> 8) {                       /* (A timed work of the UI's, the things': its long task, its end
                                                 **   the UI's as the character's free, not stopped) */
+            if (HUB->pc_hid) {
+                hid_op (HO_END | HW_OUT);
+            }
             task (m->w2 >> 8, m->w1);
             HUB->pc_task.what = 0x80 | (m->w2 >> 1 & 0x7F);
             break;
@@ -6378,6 +6392,11 @@ void __fastcall__ s_intent_more (struct msg* m)
     unsigned char k, d;
 
     memcpy (&lw_m, m, sizeof lw_m);             /* (Kept: a tool's reach first, things.c's part 83) */
+    if (HUB->pc_hid && m->kind != I_ATTACK && m->kind != I_CLOSE && m->kind != I_LOOK && m->kind != I_TRACE &&
+        m->kind != I_RISE && !(m->kind == I_PORTAL && (m->a == PA_CHECK || m->a == PA_SEARCH))) {
+        hid_op (HO_END | HW_OUT);               /* (Doing a thing: out of hiding, HOUSE.md's; a look, a blow, a position,
+                                                **   a walk its own) */
+    }
     switch (m->kind) {
     case I_GOTO:                                /* (Here since 2026-11-04: the main RAM's room) */
         go_near = m->a;
@@ -6427,7 +6446,11 @@ void __fastcall__ s_intent_more (struct msg* m)
     case I_GATHER:
         gath_op (GO_GATHER, m->a);
         break;
-    case I_RISE:                                /* (Getting up, or down: part 50's) */
+    case I_RISE:                                /* (Getting up, or down: part 50's; hiding oneself: part 94's) */
+        if (m->w1 & POS_HIDE) {
+            hid_op (HO_GO);                     /* (Hiding oneself: part 94's) */
+            break;
+        }
         legs (0x80 | m->w1);
         break;
     case I_TRAVEL:                              /* (A journey to a place named: part 54's) */
@@ -7168,6 +7191,9 @@ unsigned char s_limbs_go (void)
 void __fastcall__ s_pose_pc (unsigned char pos)
 {
     hub_map (0);
+    if (HUB->pc_hid && pos == POS_STANDING) {
+        hid_op (HO_END | HW_OUT);               /* (Up: out of hiding) */
+    }
     if (pos == POS_STANDING || (HUB->pc_pos == POS_PRONE && pos != POS_PRONE)) {
         if (s_rise_pc (1) && pos != POS_STANDING) {
             hub_map (0);
@@ -7283,6 +7309,9 @@ void s_step_loud (void)
     }
     g = pace_;
     q = HUB->pc_qp;
+    if (HUB->pc_hid && g != GA_CREEP) {
+        hid_op (HO_END | HW_OUT);               /* (Moving at any pace but a creep: out of hiding) */
+    }
     if (g == GA_CREEP) {
         l = HUB->pc_stratum << 3 | HUB->pc_pos; /* (Its position and its stratum, D15's: a stair tested anew) */
         if (q != l || !HUB->pc_qg || (unsigned) HUB->now - HUB->pc_qat >= QUIET_T) {
@@ -7303,6 +7332,233 @@ void s_step_loud (void)
     HUB->pc_noise = l + HUB->pc_clank;          /* (Mail's chink, plate's clank: wlimbs.c's equip_now's) */
 }
 
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 94: hiding oneself (A12, 2026-11-04: HOUSE.md's hiding oneself; the book's Stealth, Skills 9: it presumes
+** reasonable cover, or poor light; it can't be tried in the sight of one watching).  Every actor's by this code: where
+** it can hide (cover_of), hidden, out again; the looks at one hidden are the denizens' (dq0d's part 20), the character's
+** own at a denizen too, the senses leaving it out of what it sees (dq0p's dens.c) */
+#pragma code-name (push, "SW94CODE")
+#pragma rodata-name (push, "SW94RODATA")
+#pragma static-locals (push, off)
+#define HIDE_T          100                     /* (Tenths: ten seconds to get out of sight) */
+#define COVER_BULK      40                      /* (A thing big enough to hide behind: pints.  A cask, a table, a chest; */
+#define HEAP_BULK       8                       /*   a heap to get into: straw, furs) */
+
+static void __fastcall__ h_said (unsigned char w)
+{
+    event (E_BEAT, 0, WB_POSED | HW_WORDS | (unsigned) w << 8);
+}
+
+/* The cover on square x, y (a thing big enough on it or beside it, a heap on it, a doorway it stands in, rubble beside
+** it), and the dark (lit, 0: its square unlit): its steps, the low three bits, 0 none: neither; what it is (HW_*)
+** times 8, the thing's kind in the hub's pc_hw */
+static unsigned char __fastcall__ cover_of (unsigned char sn, unsigned x, unsigned y, unsigned char lit)
+{
+    unsigned i = 0;
+    unsigned char how = HW_SHADOW, s = 0, j, b, c, f, kp;
+    unsigned dx, dy;
+    unsigned char* p;
+
+    while ((i = items (i, IN_SQUARE, 0)) != 0) {
+        if (ip->sn != sn || (ip->flags & I_HIDDEN) || (dx = ip->x - x + 1) > 2 || (dy = ip->y - y + 1) > 2) {
+            continue;
+        }
+        j = ip->kind;
+        hub_map (KIND_BANK);
+        b = CATALOGUE[j].bulk;
+        c = CATALOGUE[j].cap_bulk;
+        f = CATALOGUE[j].flags;
+        kp = CATALOGUE[j].keeps;
+        hub_map (0);
+        if (b >= COVER_BULK) {
+            how = HW_BEHIND;
+            HUB->pc_hw = j;
+            s = 2;
+            break;
+        }
+        if (dx == 1 && dy == 1 && b >= HEAP_BULK && c && !(f & K_CONTAINER) && !(kp & KF_ON)) {
+            how = HW_HEAP;
+            HUB->pc_hw = j;
+            s = 2;
+            break;
+        }
+    }
+    if (!s) {
+        p = at (sn, x, y);
+        if (p && TILE (*p) == T_DOOR) {
+            how = HW_DOORWAY;
+            s = 1;
+        }
+        for (j = 0; !s && j < 8; ++j) {
+            p = at (sn, x + head_x[j], y + head_y[j]);
+            if (p && TILE (*p) == T_RUBBLE) {
+                how = HW_RUBBLE;
+                s = 1;
+            }
+        }
+    }
+    hub_map (0);
+    if (!lit) {
+        s += 2;
+    }
+    return s | how << 3;
+}
+
+static unsigned char h_here (void)
+{
+    unsigned char d;
+
+    hub_map (SIGHT_BANK);
+    d = SIGHT->dark;
+    hub_map (0);
+    return cover_of (HUB->pc_stratum, HUB->pc_x, HUB->pc_y, !d);
+}
+
+void __fastcall__ s_hid_op (unsigned char op)
+{
+    unsigned char k, c;
+    struct actor* q;
+    unsigned char* p;
+
+    hub_map (0);
+    if (op & HO_STOP) {
+        if ((op & 0x7F) == LT_HIDE && HUB->pc_hid) {
+            op = HO_END | HW_OUT;
+        } else {
+            event (E_TASK, 0, TE_IDLE);
+            return;
+        }
+    }
+    if (op == HO_THING) {
+        k = HUB->ireq.kind;
+        if (k != IO_GET && k != IO_DROP && k != IO_SHUT && k != IO_FILL && k != IO_HIDE && k != IO_COMBINE && k != IO_THROW &&
+            (k < IO_HOLD || k > IO_DOUSE)) {
+            return;
+        }
+        op = HO_END | HW_OUT;
+    }
+    if (op & HO_DEN) {                          /* (Body bd's, its mind's) */
+        k = op & 7;
+        if (k == HD_IN) {
+            if (bd.state == 1 && (c = cover_of (bd.sn, bd.x, bd.y, !unlit_at (bd.sn, bd.x, bd.y))) & 7) {
+                bd.state = 1 | (1 + (c & 7)) << 1;
+            }
+            hub_map (0);
+            bd.ready += HIDE_T;
+            return;
+        }
+        if (k == HD_FOUND) {
+            if (HUB->pc_hid) {
+                HUB->pc_hw = bk + 1;
+                pc_hit = 1;                     /* (Its long task stopped, hard) */
+                op = HO_END | HW_FOUND;
+            }
+        } else {
+            bd.state = 1;
+            if (k == HD_SPOT) {
+                HUB->pc_hw = bk + 1;
+                h_said (HW_SPOT);
+            }
+            return;
+        }
+    }
+    if (op & HO_END) {
+        if (HUB->pc_hid) {
+            HUB->pc_hid = 0;
+            h_said (op & 0x1F);
+        }
+        return;
+    }
+    switch (op) {
+    case HO_GO:
+        c = HW_ALREADY;
+        if (!HUB->pc_hid) {
+            c = HW_LIGHT;
+            if (!HUB->pc_light) {
+                c = HW_BARE;
+                for (k = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {   /* (The book: not in the sight of one watching) */
+                    hub_map (0);
+                    if (q->state && q->sn == HUB->pc_stratum && !DO_UNAWARE (q->doing) && q->doing != DO_DOWN &&
+                        q->attitude < AT_ALLIED && (p = at (q->sn, q->x, q->y)) != 0 && (*p & T_VIS)) {
+                        hub_map (0);
+                        HUB->pc_hw = k + 1;
+                        c = HW_SEEN;
+                        break;
+                    }
+                }
+                hub_map (0);
+                if (c == HW_BARE && (h_here () & 7)) {
+                    busy (HIDE_T);              /* (Begun, as part 12's begun: its first words told) */
+                    lwork = LW_HIDE;
+                    task (LT_HIDE, went);
+                    HUB->pc_task.what = 0;
+                    pc_cut = 0;
+                    evb = 0;
+                    event (E_TASK, 0, TE_BEGUN | LT_HIDE << 8);
+                    return;
+                }
+            }
+        }
+        h_said (c);
+        hub_map (0);
+        HUB->pc_ready = HUB->now;
+        return;
+    case HO_DONE:
+        if (HUB->pc_light || !((c = h_here ()) & 7)) {
+            h_said (HUB->pc_light ? HW_LIGHT : HW_BARE);
+            return;
+        }
+        HUB->pc_hid = 1 + (c & 7);
+        if (HUB->pc_pos == POS_STANDING) {
+            HUB->pc_pos = POS_CROUCHED;
+        }
+        memset (HUB->hlook, 0, NACTORS);
+        h_said (c >> 3);
+        return;
+    case HO_MOVED:
+        if (!((c = h_here ()) & 7)) {
+            HUB->pc_hid = 0;
+            h_said (HW_OPEN);
+        } else {
+            HUB->pc_hid = 1 + (c & 7);
+        }
+        return;
+    case HO_SEARCH:                             /* (A hidden denizen seen to, the search's Awareness at its cover's steps) */
+        for (k = 0, q = HUB->actor; k < NACTORS; ++k, ++q) {
+            hub_map (0);
+            if (q->state > 1 && q->sn == HUB->pc_stratum && (p = at (q->sn, q->x, q->y)) != 0 && (*p & T_VIS)) {
+                hub_map (0);
+                wsteps = 1 - ST_HID (q->state);
+                if (G_OK (test_w (P_SEARCH, 0))) {
+                    hub_map (0);
+                    q->state = 1;
+                    ++HUB->den_seq;
+                    HUB->pc_hw = k + 1;
+                    h_said (HW_SPOT);
+                }
+            }
+        }
+        hub_map (0);
+        return;
+    case HO_BLOW:                               /* (bd struck, from hiding or at one hiding) */
+        if (bd.state > 1) {
+            bd.state = 1;
+            HUB->pc_hw = bk + 1;
+            h_said (HW_LEAP);
+        }
+        /* (fall through) */
+    case HO_BLOWN:
+        if (HUB->pc_hid) {
+            HUB->pc_hid = 0;
+            HUB->pc_hw = bk + 1;
+            h_said (op == HO_BLOW ? HW_FOUND : HW_STRIKE);
+        }
+        return;
+    }
+}
+#pragma static-locals (pop)
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 

@@ -776,7 +776,7 @@ static void __fastcall__ answer (struct req* r)
         if (r->a <= P_NOTICE_SMELL) {           /* (By its going and watchfulness: the house's) */
             r->steps += house_notice (r, HUB->pc_going, HUB->watch);
         }
-        if (r->a == P_STEALTH || r->a == P_DIG) {
+        if ((r->a == P_STEALTH || r->a == P_DIG) && r->other != RS_ASKER) {
             QUIET_IN                            /* (Moving quietly, by its own dice: the house's) */
             r->grade = flat (r->steps);
             QUIET_OUT

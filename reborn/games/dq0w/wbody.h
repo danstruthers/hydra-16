@@ -23,6 +23,20 @@ extern unsigned char den_saw;                   /* A body fallen: the world to l
                          bpy = HUB->pc_y, bps = HUB->pc_stratum)
 #define BD_PUT()        (hub_map (0), memcpy (&HUB->actor[bk], &bd, offsetof (struct actor, name)))
 
+/* Hiding oneself (HOUSE.md's: dq0w.c's part 94, hid_op's op): the character's, begun (I_RISE's POS_HIDE, the UI's), its time
+** up, a stop at a walk's end, a search, a blow, ended (HO_END | HW_*: its words); a denizen's, body bd (HO_DEN | HD_*: its mind's) */
+#define HO_GO           0
+#define HO_DONE         1
+#define HO_MOVED        2
+#define HO_SEARCH       3
+#define HO_BLOW         4                       /* (Body bd in a blow, the attacker if att is its entry plus 1) */
+#define HO_BLOWN        5                       /*   (the same, bd the defender) */
+#define HO_THING        6                       /* (A thing handled, the hub's ireq: if it's a doing) */
+#define HO_END          0x20
+#define HO_STOP         0x80                    /* (A stop with no long task: | the kind it names) */
+#define HO_DEN          0x40
+void __fastcall__ hid_op (unsigned char op);
+
 /* A blow's missile (wfight.c's: RS_MISSILE's, set before part 15's shot_blow by wshoot.c's, 0 after): what it's shot
 ** with or the thing thrown, its range's band, MS_* (rs.h's; its range none, 2026-10-30: no referee's) */
 struct mshot {

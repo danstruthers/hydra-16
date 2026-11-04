@@ -77,7 +77,7 @@ void it_near (void);                              /* The chunks round the charac
                                                 **   one (dq0w.c's see, as it's moved) */
 unsigned char rope (void);                      /* (Part 96's: wrope.c: IO_HIDE's, IO_ROPE) */
 unsigned char __fastcall__ rope2 (unsigned w);  /* (Part 98's: wrope2.c) */
-unsigned char __fastcall__ rope3 (unsigned w);  /* (Part 99's: wrope3.c) */
+unsigned char __fastcall__ rope3 (unsigned w);  /* (Part 95's: wrope3.c) */
 void __fastcall__ start (const char* dir);      /* (Part 3's: dq0w.c) The world's start, once it's attached */
 void __fastcall__ keep (unsigned char back);    /* The store kept (items.dat), or read back */
 extern unsigned ilim;                           /* (things.c's: the records used, at most) */

@@ -1,11 +1,11 @@
 /*
-** wrope3.c - (dq0w) rope and grapples (wrope.c's the rest, HOUSE.md's), swapped part 99's: the drop a rope goes down or a
+** wrope3.c - (dq0w) rope and grapples (wrope.c's the rest, HOUSE.md's), swapped part 95's: the drop a rope goes down or a
 ** grapple's thrown up, a rope put in place by the R_*'s (wrope.h's), a grapple tied on, thrown up.
 */
 
 #pragma local-strings (on)
-#pragma code-name ("SW99CODE")
-#pragma rodata-name ("SW99RODATA")
+#pragma code-name ("SW95CODE")
+#pragma rodata-name ("SW95RODATA")
 
 #define RP_THROWN
 #include "wrope.h"
@@ -35,7 +35,7 @@ static unsigned char rp_pit (void)
 /* The drop down from where the character stands (up: the height above it), the R_*'s: a shaft on its own square (the top of
 ** one going down; going up, one open to the sky its hold at the roof, no top on any stratum); in a pit, up, its edge; a
 ** ledge, or down a pit, beside it, the four ways, the way it faces first.  1, or 0 none */
-#pragma bss-name (push, "SW99RODATA")
+#pragma bss-name (push, "SW95RODATA")
 #pragma static-locals (push, on)
 static unsigned char __fastcall__ rp_scan (unsigned char up)
 {

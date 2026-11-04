@@ -26,7 +26,7 @@
 #include "theme.h"
 
 #define HUB_MAGIC       0x5144                  /* "DQ" */
-#define HUB_VERSION     48                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
+#define HUB_VERSION     49                     /* (2: the command parser's role and request, dq0c; 3: its meaning;
                                                 **   4: the catalogue's kinds in rs.h's units, 37 bytes; 5: the
                                                 **   parser's command, struct cmd, and P_THROW's ability; 6: the
                                                 **   character's long task, pc_task, I_STOP, E_TASK; 7: I_CLOSE,
@@ -1038,10 +1038,13 @@ enum { SLOT_WORLD, SLOT_UI, NSLOTS };
 ** going on once it's in: the same game whatever the tasks' timing */
 #define NACTORS         8
 #define TURN_SLICE      100
+#define ST_HID(s)       ((s) >> 1)              /* (An actor's state's hiding: 0 not hidden; else 1 + its cover's steps) */
 struct actor {
     /* Its body (the world's) */
     volatile unsigned char state;               /* 1: a body in the dungeon (from the denizens' I_ENTER till it's
-                                                **   gone: I_LEAVE, or dead); 0 none */
+                                                **   gone: I_LEAVE, or dead); 0 none; | its hiding times 2 (ST_HID:
+                                                **   HOUSE.md's hiding oneself, as the character's pc_hid; the senses
+                                                **   leave one not 1 out of what the character sees) */
     unsigned char   sn, face;
     unsigned long   ready;                      /* When it can act again */
     unsigned char   step;                       /* Tenths of a second to walk a square (a hurried step half that) */
@@ -1477,6 +1480,14 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   tested in (0xFF none yet), */
     signed char     pc_qg;                      /*   the grade, */
     unsigned        pc_qat;                     /*   when (tenths, sixteen bits) */
+    unsigned char   pc_hid;                     /* Hidden (the world's: HOUSE.md's hiding oneself, the actor's hid the
+                                                **   same): 0 not; else 1 + its cover's steps */
+    unsigned char   pc_hw;                      /* (The words of it, E_BEAT WB_POSED's HW_*: the thing it's behind, its
+                                                **   kind; who found it, who was spotted, the actor plus 1) */
+    unsigned char   nolurk;                     /* (dq0 -I, the tests', the world's: no robber lies in wait, HOUSE.md's hiding
+                                                **   oneself; only the soak and those with initiative: true play them) */
+    unsigned char   hlook[NACTORS];             /* (Each actor's last look at the one hidden, the denizens': how near it
+                                                **   was, 1 far ... 4 beside it; 0 none yet: a look nearer tested anew) */
     unsigned char   pc_auto;                    /* The auto-target range (the world's, WQ_SET's WS_AUTO, the player's
                                                 **   "autotarget at medium range"): a missile weapon's bands, 1 short
                                                 **   ... 4 extreme, 0 off; fighting on with missiles turns to a hostile
@@ -1547,6 +1558,7 @@ enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind
 #define SN_SEEN         0x01                    /* (dsense's res: the character seen, */
 #define SN_HEARD        0x02                    /*   heard, */
 #define SN_SMELT        0x04                    /*   smelt: slice 4.1's, still air, within its nose's reach) */
+#define SN_LOOK         0x08                    /* (Hidden: it would see it, but for that: its look's test the mind's) */
 #define WA_TRAPS        0x01                    /* Searching as it goes: traps underfoot, hidden doors beside */
 #define WA_LISTEN       0x02                    /* Listening as it goes */
 #define WA_MAP          0x04                    /* Mapping as it goes (the map's side the orientation's: its
@@ -1560,6 +1572,14 @@ enum { POS_STANDING, POS_PRONE, POS_CROUCHED, POS_KNEELING, POS_SITTING };   /* 
                                                 **   sitting the player's, slice 4.6's: a low walk crouched, up first
                                                 **   from the others; kneeling and sitting, prone in a fight) */
 #define POS_LOW(p)      ((p) == POS_PRONE || (p) >= POS_KNEELING)   /* (Prone in a fight: the house's) */
+#define POS_HIDE        0x40                    /* (I_RISE's w1, | one of HD_*: hiding oneself, HOUSE.md's, not a position:
+                                                **   every actor's by the one code) */
+enum { HD_IN, HD_OUT, HD_SPOT, HD_FOUND };      /* (Hidden; out of hiding; it's spotted by the character; it finds the
+                                                **   character hidden) */
+#define HW_WORDS        0xC000                  /* (E_BEAT WB_POSED's w, its high two bits both: the words of hiding, HW_* times 256) */
+enum { HW_BEHIND, HW_HEAP, HW_DOORWAY, HW_RUBBLE, HW_SHADOW, HW_OUT, HW_OPEN, HW_FOUND, HW_SPOT, HW_LEAP, HW_STRIKE, HW_ALREADY,
+    HW_LIGHT, HW_SEEN, HW_BARE };               /* (The hub's pc_hw says of what: HW_BEHIND, HW_HEAP its kind; HW_FOUND, HW_SPOT, HW_LEAP,
+                                                **   HW_SEEN the actor plus 1) */
 
 enum { LK_LOOK, LK_DENS, LK_EYES, LK_WAY };      /* The look's kinds: a look about; the denizens seen looked at again;
                                                 **   the eyes only, as time's gone (the lights seen far off: a wait's);
@@ -1612,6 +1632,7 @@ struct wrec {
 struct wsave {
     unsigned        magic;
     unsigned char   version;                    /* (2: the bearings, slice 4.2's; 4: the time believed, tb) */
+    unsigned char   hid;                        /* Hidden (the hub's pc_hid) */
     unsigned char   sn, face, pos;              /* The character's place (its stratum, its facing, its body's
                                                 **   position), */
     unsigned        x, y;                       /*   its square, */
@@ -1791,6 +1812,10 @@ struct wsave {
 **   own hub.pc_clank world                                     (The character's armour, its creep's Stealth: the
 **   own hub.pc_qp world                                        (world's, slice 4.6's)
 **   own hub.pc_qg world
+**   own hub.pc_hid world                                       (Hiding oneself: 2026-11-04)
+**   own hub.pc_hw world
+**   own hub.nolurk world
+**   own hub.hlook denizens +world                              (Its looks the minds', cleared as it hides)
 **   own hub.pc_qat world
 **   own hub.pc_hunger referee +world                           (Hunger and thirst, the referee's, the world's to
 **   own hub.pc_thirst referee +world                           (  keep with the game, world.dat: slice 4.9's)

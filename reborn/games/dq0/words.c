@@ -606,7 +606,7 @@ unsigned char __fastcall__ o_more (unsigned char action)
         break;
     case VB_TIE_OBJECT:                         /* (A rope's: the things', wrope.c's, IO_HIDE's shape; a sack's tie, as it's */
     case VB_UNTIE_OBJECT:                       /*   opened or closed) */
-        if (strstr (cmd.obj.word, "rope") || strstr (cmd.obj.word, "grapple") || !cmd.obj.word[0]) {
+        if (sky_words (0xFF, 0, cmd.obj.word)) {
             worked (othings (IO_HIDE | IO_STEPS, cmd.obj.word, cmd.other.word,
                 d | IO_ROPE | (action == VB_UNTIE_OBJECT ? RP_UNTIE : cmd.aux)));
             break;

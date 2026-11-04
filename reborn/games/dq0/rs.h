@@ -57,9 +57,8 @@ enum {
                                                 **   a spell of work makes, its result 1 if nothing it has can dig that */
     P_APPRAISE,                                 /* A thing judged (b: the craft that knows it, AP_*): its make, its
                                                 **   worth; the grade how near the judgement comes */
-    P_CONCEAL,                                  /* Concealment: a thing hidden, or oneself (in shadows ...): the
-                                                **   grade sets a thing's difficulty to find, or a person's against
-                                                **   a search */
+    P_CONCEAL,                                  /* Concealment: a thing hidden (oneself is P_STEALTH's: HOUSE.md's hiding oneself): the
+                                                **   grade sets a thing's difficulty to find */
     P_ASSESS,                                   /* A mechanism made out (a trap's, before it's disarmed: never
                                                 **   deadly, however it goes) */
     P_DECEIVE,                                  /* Guile: a creature talked round by a tale, a bluff (the persuading
@@ -209,6 +208,9 @@ enum { D_AUTO, D_BLOCK, D_DODGE, D_COUNTER, D_NONE };
 #define RS_PRONE_D      0x04                    /*   the defender) */
 #define RS_KILLER       0x08                    /* (RS_ATTACK's w2: the attacker a killer, the character senseless finished
                                                 **   where it lies; else the blow held: the minds', by its nature) */
+#define RS_ASKER        0xFE                    /* (RS_TEST's other, moving quietly's and a creature's: by the asker's own
+                                                **   dice, moved on: not moving quietly's, the same till the game's move:
+                                                **   a look at one hidden, each look its own, HOUSE.md's hiding oneself) */
 #define RS_ASLEEP       0x80                    /* (RS_ATTACK's w2: the defender, a creature, asleep: it ignores the
                                                 **   blow, the book's Ignore (Combat 9: one unaware); 2026-11-02) */
 #define RS_REARM        0x20                    /* (RS_ATTACK's w2: the attacker, its weapon let fall, takes it up again,

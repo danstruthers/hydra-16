@@ -730,8 +730,8 @@ round's), its missile the loaded one ("nock an arrow", "load the crossbow") or t
 extreme none for a launcher underground); a clear line (what passes, above; one standing in it stops the shot unless
 the mark is as far beyond again); the mark behind cover beside a slit or a window; aware of the shot or not; the
 referee asked, the shot told as a blow is (a fight's words), fought on as a fight is (a long task); the missile then
-lying where it falls (at the mark's feet, past it on a miss, near it gone wild), broken by its chance, a thing thrown
-moved itself.  "gather the arrows" walks over to each one it knows of in sight within twelve squares and takes it up
+lying where it falls (at the mark's feet, past it on a miss, near it gone wild), broken by its chance, or gone wild lost
+beyond finding one time in two (HOUSE.md's), a thing thrown moved itself.  "gather the arrows" walks over to each one it knows of in sight within twelve squares and takes it up
 into its quiver.
 
 An item is **found** through the character's senses, as everything else is: only on a square it sees now, lit;
@@ -743,10 +743,11 @@ UI words them.
 
 **Concealment**: a thing concealed on purpose carries its difficulty in steps (the item record's hide), set as it's
 hidden: by the place (a floor's dust and corners) and the concealer's test of the hiding skill.  The skill is
-**Concealment**: one skill for hiding a thing and for hiding oneself, rs.h's P_CONCEAL, which a ruleset's referee
-maps to its own (HarnMaster has no skill of that name: its Stealth).  The character hides a thing where it stands
-(hide, conceal, stash X), and knows where it hid it; a search finds a thing by a test whose steps are its
-difficulty's.
+**Concealment**: one skill for hiding a thing and for hiding oneself, which a ruleset's referee maps to its own
+(HarnMaster has no skill of that name: its Stealth): rs.h's P_CONCEAL for a thing, P_STEALTH for oneself.  The
+character hides a thing where it stands (hide, conceal, stash X), and knows where it hid it; a search finds a thing by a
+test whose steps are its difficulty's.  Hiding oneself (hide; hide behind X): HOUSE.md's Hiding oneself, every actor's (the
+hub's pc_hid, an actor's state's ST_HID): a look at one hidden by the senses' SN_LOOK and the looker's mind's test.
 
 **No two things alike**: each item has its own number, never another's; its quality (0 crude ... 9 a master's, most
 middling); its material (a kind's as a rule, but a blade of steel if it's well made, of bronze if crudely), whose
@@ -1621,8 +1622,7 @@ Designed, but in no slice of the plans yet (DECISIONS.md has the user's words fo
 - **Things hidden by other things or on someone**: under a body, a cloak, a fallen beam (seen once it's moved, freed
   by a strength test); in a container's secret part (a false
   bottom, a hollow heel).  **Holes** as containers: a hole dug in a floor, filled in, a concealed one, dug out again
-  to get at what's in it.  **Hiding oneself** by Concealment, and a hidden denizen found by a contest of its
-  Concealment against the searcher's Awareness.
+  to get at what's in it.
 - **Drawbridges, gates, grates and hatches** grown (their kinds are in the records); a portcullis's winch elsewhere;
   a blow at a thing struck with the weapon in hand.
 - **More traps**: a flooding chamber, a ceiling brought down, a rune or a glyph; the denizens knowing their own

@@ -16,7 +16,9 @@
 ** air, slice 4.5's): within a third of its nose's keenness in still air (squares: a hound's three), downwind the
 ** further, upwind the less or not at all (by the draught's strength: sound.c's snd_wind), the way the air goes (the
 ** sound layer's, no shut door on it; past it, a line the air passes).  A far one (beyond all of them) is answered
-** coarsely, no line cast: how far it may go with the answer standing (slack).
+** coarsely, no line cast: how far it may go with the answer standing (slack).  The character hidden (the hub's
+** pc_hid: HOUSE.md's hiding oneself): still, no sound of it; in sight's reach, SN_LOOK, not seen: its mind's to test the
+** look (dq0d's part 20); smelt all the same.
 */
 
 #include <stddef.h>
@@ -51,6 +53,7 @@ static unsigned __fastcall__ apart (int dx, int dy)
     return dx > dy ? dx : dy;
 }
 
+#define PC_HID          0x80                    /* (pos's: the character hidden) */
 void s_sense_actor (void)
 {
     static unsigned char k, sight, dark, hear, eyes, nose, pcs, own, lv, lit, res, m, ex, noise, c, pos;
@@ -72,7 +75,7 @@ void s_sense_actor (void)
     pcx = HUB->pc_x;
     pcy = HUB->pc_y;
     own = HUB->pc_light;
-    pos = HUB->pc_pos;
+    pos = HUB->pc_pos | (HUB->pc_hid ? PC_HID : 0);
     res = 0;
     HUB->dsense.cost = 0xFF;
     if (sact.sn != pcs || k >= NACTORS) {
@@ -84,7 +87,7 @@ void s_sense_actor (void)
         c = (HUB->pc_going & 0x3F) - 1;         /* (Busy: its steps as loud as the world says, or by its pace, a walk
                                                 **   2, a jog 3, a run 4, a sprint 5, its armour a level more; the
                                                 **   rest as a walk; asleep, softly: HOUSE.md's) */
-        noise = !HUB->pc_going ? (HUB->pc_task.kind == LT_SLEEP ? 1 : 2) : HUB->pc_noise != 0xFF ? HUB->pc_noise :
+        noise = !HUB->pc_going ? (HUB->pc_task.kind == LT_SLEEP ? 1 : pos & PC_HID ? 0 : 2) : HUB->pc_noise != 0xFF ? HUB->pc_noise :
             (c > GA_WALK ? c : GA_WALK) + HUB->pc_clank;
     }
     snd_need ();                                /* (The sound layer, for the character where it is: sound.c's) */
@@ -124,14 +127,15 @@ void s_sense_actor (void)
     if (!lit && (ex = (e->a >> 4) - lv) < 16) {
         m = m * 4 / (4 + ex);                   /* (Darkvision the less, its eyes used to more light) */
     }
-    if (pos && !own) {
-        m = pos == POS_PRONE ? m >> 1 : m - (m >> 2);   /* (Low, no light of its own: the less seen) */
+    if ((pos & ~PC_HID) && !own) {
+        m = (pos & ~PC_HID) == POS_PRONE ? m >> 1 : m - (m >> 2);   /* (Low, no light of its own: the less seen) */
     }
     w = 2 + w < 0 ? 0 : 2 + w;                  /* (The air: its smell carried downwind, held back upwind) */
     nose = nose * w / 2;
-    if (!res && dist <= m && clear_line (sact.sn, sact.x, sact.y, -dx, -dy, dist, 1)) {
-        res = SN_SEEN;
-    } else if (!res && dist <= nose) {
+    if ((!res || (pos & PC_HID)) && dist <= m && clear_line (sact.sn, sact.x, sact.y, -dx, -dy, dist, 1)) {
+        res |= pos & PC_HID ? SN_LOOK : SN_SEEN;
+    }
+    if (!(res & ~SN_LOOK) && dist <= nose) {
         c = snd_cost (sact.x, sact.y);          /* (Smelt along the way the air goes: no shut door on it; past the
                                                 **   sound layer, a line the air passes) */
         if (c != SND_NONE ? !(c & SND_AIR) && SND_COST (c) <= nose :

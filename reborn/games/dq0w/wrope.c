@@ -6,7 +6,7 @@
 ** the foot, so it's seen and used from there; on a shaft open to the sky (no top on any stratum) the rope itself a KI_HUNG
 ** at the foot.  Each one's fuel RK_* | the way to its other end's square times 16 | RK_SLIP | the feet of its hold above the
 ** foot times 256, its owner the feet of its end above the foot, its hide the kind it's tied to.  A drop found, the rope
-** put in place, a grapple thrown up: wrope3.c, part 99's.  Untied, and looked at: wrope2.c, part 98's.  The climb itself:
+** put in place, a grapple thrown up: wrope3.c, part 95's.  Untied, and looked at: wrope2.c, part 98's.  The climb itself:
 ** dq0w.c's part 97.
 **
 ** All of it swapped part 96's (../dq0/swap.inc: dq0w.cfg's SW96), through things.c's s_hide: a request of the things,

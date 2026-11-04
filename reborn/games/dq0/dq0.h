@@ -298,7 +298,7 @@ struct fight;
 void __fastcall__ feed (unsigned char eat);     /* (Part 16's, feed.c: "eat", "drink", slice 4.9's) */
 void __fastcall__ water_words (unsigned w);     /* Overlay 4 (water.c): the water's news, worded
                                                 **   (an E_BEAT's w1, WB_WATER ... WB_DOUSED: slice 4.9's) */
-void __fastcall__ sky_words (unsigned char p, unsigned char k, const char* w);   /* Overlay 19 (time.c) */
+unsigned char __fastcall__ sky_words (unsigned char p, unsigned char k, const char* w);   /* Overlay 1 (time.c); p 0xFF: w a rope's or a grapple's word, or none: 1; 0xFE: a grapple or a rope thrown up, carried out: 1 */
 unsigned __fastcall__ time_ui (unsigned w);     /* Overlay 16 (time.c): the time of day believed, worded (w TU_TELL,
                                                 **   "time"; TU_SKY | its phase times 256, the sky seen; TU_UNTIL, a
                                                 **   wait's minutes "until dawn", "watch the sun", 0 none said) */
