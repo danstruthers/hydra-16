@@ -208,30 +208,40 @@ void __fastcall__ s_den_kit (const struct msg* m)
     hub_map (0);
 }
 
-/* A carried-on game's kit (kit.dat in the save folder, the world's save's: wgame.c's kit_keep, slice 4.4's, D8's) in the
-** list in place of the one drawn: 1; or 0 (none there, or empty: a new game's, the UI's emptied it) */
+/* A carried-on game's kit (kit.dat above the dungeon's folder, the world's save's: things.c's kit_keep, slice 4.4's, D8's), in the
+** list in place of the one drawn, its coins the new region's at the money-changer's cut, and the file left open at its start
+** (ost's kept: part 63 lays each thing's state on it, once made): 1; or 0 (none there, or empty: a new game's, dq0life's emptied it) */
+static struct kitrec kr;
 static unsigned char kit_read (void)
 {
     char p[56];
-    int fd, n;
+    int fd;
+    unsigned char n;
 
     hub_map (0);
     if (!HUB->savedir[0]) {
         return 0;
     }
     strcpy (p, HUB->savedir);
-    strcat (p, "/kit.dat");
+    strcat (p, "/../kit.dat");
     if ((fd = open (p, O_RDONLY)) < 0) {
         return 0;
     }
-    hub_map (KIND_BANK);
-    n = read (fd, OF_LIST, NOFIT * sizeof *OF_LIST);
-    close (fd);
-    if (n < (int) sizeof *OF_LIST) {
+    for (n = 0; n < NOFIT && read (fd, &kr, sizeof kr) == sizeof kr; ++n) {
+        hub_map (KIND_BANK);
+        if ((CATALOGUE[kr.o.kind].form & (KF_SMALL | KF_COUNT)) == (KF_SMALL | KF_COUNT)) {
+            kr.o.qty -= ((unsigned) kr.o.qty * MONEY_CUT + 50) / 100;
+        }
+        memcpy (OF_LIST + n, &kr, sizeof (struct ofit));
+    }
+    if (!n) {
+        close (fd);
         return 0;
     }
     hub_map (KIND_BANK);
-    OF_N = n / sizeof *OF_LIST;
+    OF_N = n;
+    lseek (fd, 0, SEEK_SET);
+    ost.kept = fd;
     return 1;
 }
 
@@ -324,9 +334,9 @@ unsigned char s_outfit (void)
     ost.budget += ost.kept;                     /* (The money: s_kit's, part 63's, the room of this one's image) */
     if (kit_read ()) {
         ost.budget = 0;                         /* (Its kit carried on: its own money in it, slice 4.4's) */
-    } else {
-        ost.kept = cap;                         /* (What it bears: part 81's, no stub of its own, the main RAM's room) */
-        den_fetch (0);
+        return OF_CARRIED;
     }
+    ost.kept = cap;                             /* (What it bears: part 81's, no stub of its own, the main RAM's room) */
+    den_fetch (0);
     return 1 + (wv < 3 ? wv : 0);               /* (Drawn; its weapons' version too, the kit's to make: s_kit's) */
 }

@@ -206,10 +206,7 @@ extern unsigned char untarget;                  /* (main.c's: the target let go 
 /* ---- theme.c (overlay 5): the theme's words and its puzzle (theme.h), from its copy in the overlay's bank */
 
 #define TCOPY       ((struct theme*) 0x9000)    /* (The theme, in overlay 5's bank: main.c reads it in) */
-struct quest {                                  /* The game's theme and its end (kept in the save) */
-    unsigned char   theme;                      /* The theme's number (the save's: the one it began with) */
-    unsigned char   done;                       /* The game's ending (theme.h's END_*: 0 not yet) */
-};
+#include "life.h"                               /* (Its struct quest) */
 extern struct quest Q;                          /* (main.c's) */
 extern char tname[32];                          /* A theme's name for something (theme_named's) */
 enum { TN_THEME, TN_STRATUM, TN_ROOM, TN_LIGHT };
@@ -375,7 +372,9 @@ extern unsigned char news_due;                  /* (main.c's: the body's news he
 
 /* ---- The swapped parts (bank.s's stubs: swap.inc), run in the main RAM's top (dq0.cfg's SWAP), a part at a time */
 
-void __fastcall__ args (int argc, char* argv[]);    /* Part 7 (main.c): the game's arguments read (begin's) */
+unsigned char __fastcall__ args (int argc, char* argv[]);    /* Part 7 (main.c): the game's arguments read (begin's): 1, -s said */
+enum { LF_GOING, LF_NEXT, LF_NEW };             /* (A game in the save's folder: going on, one ended, none: main.c's life) */
+void __fastcall__ between (unsigned char how);  /* Part 19 (main.c): the save's folder's dungeon found (0); dq0life's arguments made (1, 2 the seed said) */
 void __fastcall__ begin (int argc, char* argv[]);   /* Part 1 (main.c): the arguments, the world started, the game
                                                 **   begun */
 void finish (void);                             /* Part 1: the game kept, the world stopped */

@@ -5753,7 +5753,7 @@ module.exports = {
       // some 10% over it)
       init: 't_rc', cycles: 940e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept', 'drop the dagger',
-        'd', 'quit', 'ls /ram/kept', 'dq0 -d /ram/kept', 'quit', 'echo $status']) },
+        'd', 'quit', 'ls /ram/kept/d1', 'dq0 -d /ram/kept', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], dr = T.of('drop the dagger'), d = T.of('d'), q = T.and(T.of('quit')), c = T.of('dq0 -d /ram/kept');
@@ -5761,7 +5761,7 @@ module.exports = {
         dq0Need(f, d, 'E_ARRIVE', { how: 'A_DOWN' }, 'not down the stairway');
         dq0Need(f, q, 'E_BYE', {}, 'the game not ended');
         if (!dq0Rep(q, 'wreq', { kind: 'WQ_SAVE' }).length) f.push('the game not kept as it ended (the world\'s WQ_SAVE)');
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), ls = o.slice(o.indexOf('% ls /ram/kept'), o.indexOf('% dq0 -d'));
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), ls = o.slice(o.indexOf('% ls /ram/kept/d1'), o.indexOf('% dq0 -d'));
         for (const n of ['changes.dat', 'dens.dat', 'game.dat', 'items.dat', 'seen.dat']) if (!ls.includes(n)) f.push('no ' + n + ' in the save folder');
         dq0Need(f, c, 'E_ARRIVE', { how: 'A_RESUMED' }, 'the game not carried on');
         const a = d.after, b = c.after;
@@ -12180,6 +12180,97 @@ module.exports = {
         if (!n1 || n1 !== n2) f.push('not the same character: ' + n1 + ', ' + n2);
         const sk2 = /Skills \(EML\):[^\n]*/.exec(out.slice(out.indexOf('> sheet')));
         if (harn && (!sk || !sk2 || sk[0] !== sk2[0])) f.push('its skills not carried on: ' + (sk && sk[0]) + ' / ' + (sk2 && sk2[0]));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0life', outfit: true, meaning: true, near: ['save', 'gear', 'money'], what: "Dingus Quest Zero's record of a life (the plan for the game between dungeons, its step 3: life.h, dq0life; DUNGEON.md's a character's life, HOUSE.md's carrying on), by the files and the world's things: the crypt (seed 3) solved and walked out of after a long wait, in two folders: then each folder's next dungeon (no -s), the two the same dungeon, their records the same to the byte (the same seed and commands make the same life): the head's life seed, its dungeon 2, its date on past the days the first took, the first dungeon's seed, outcome and days; its second dungeon's seed under 65,536 (a stand-in's). Each dungeon's own folder, the sheet, the things and the record in the top one. Quit and begun again, the same dungeon going on, the record as it was. 'Made new' stops: a dulled blade stays dull, its life and its version as they were; a torch's fuel as it was; the pennies changed at the money-changer's 15%. A seed over 65,536 goes on over it; and dq0life's date and age figures",
+      init: 't_rc', cycles: 6000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,sword -d /ram/a', 'look', 'wait 1500 minutes', 'combine the sunstone with the moonstone', 'inventory', 'use the seal on the way out', 'u',
+        'dq0 -p t -d /ram/a', 'look', 'inventory', 'appraise the sword', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,sword -d /ram/b', 'look', 'wait 1500 minutes', 'combine the sunstone with the moonstone', 'inventory', 'use the seal on the way out', 'u',
+        'dq0 -p t -d /ram/b', 'look', 'inventory', 'appraise the sword', 'quit',
+        'cmp /ram/a/life.dat /ram/b/life.dat', 'echo same $status', 'xd /ram/a/life.dat', 'ls /ram/a', 'ls /ram/a/d1', 'ls /ram/a/d2', 'cp /ram/a/life.dat /ram/l.dat',
+        'dq0 -p t -d /ram/a', 'look', 'quit', 'cmp /ram/a/life.dat /ram/l.dat', 'echo kept $status',
+        'dq0life -d /ram/x -s 123456789', 'xd /ram/x/life.dat', 'cp /ram/a/d1/game.dat /ram/x/d1/game.dat', 'dq0life -d /ram/x', 'echo second', 'xd /ram/x/life.dat', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        const sword = (i, h, L, g) => {                 // (The sword: its wear and life set, read back as the next dungeon's first looked at)
+          const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize), r = {};
+          for (let k = 0; cat && k < L.nitems; k++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(k / per)), o = (k % per) * L.itemSize;
+            if (!b || !b[o + L.iKind]) continue;
+            let n = '';
+            for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
+            if (n === 'sword' && !r.sword) {
+              if (i) { b[o + L.iWear] = 200; b[o + L.iDur] = 7; b[o + L.iDur + 1] = 0; b[o + L.iSize] = 2; }
+              r.sword = { wear: b[o + L.iWear], dur: b[o + L.iDur] | b[o + L.iDur + 1] << 8, durMax: b[o + L.iDurMax] | b[o + L.iDurMax + 1] << 8, size: b[o + L.iSize] };
+            }
+            if (n === 'torch' && !r.torch) {
+              if (i) { b[o + L.iFuel] = 33; b[o + L.iFuel + 1] = 0; }
+              r.torch = b[o + L.iFuel] | b[o + L.iFuel + 1] << 8;
+            }
+          }
+          m.lifeSeen.push({ g, ...r });
+        };
+        m.lifeSeen = [];
+        dq0Poke(m, [1, 3].flatMap(g => [{ g, line: 'look', n: 1, fuel: { torch: 3000 } }, { g, line: 'use the seal on the way out', n: 1, call: (h, L) => sword(1, h, L, g) }]).concat(
+          [2, 4].map(g => ({ g, line: 'look', n: 1, call: (h, L) => sword(0, h, L, g) }))));
+      },
+      check(m, out) {
+        const T = dq0Turns(m), f = [], g2 = T.of('dq0 -p t -d /ram/a'), g2b = T.of('dq0 -p t -d /ram/b');
+        const u32 = (b, o) => b.readUInt32LE(o), u16 = (b, o) => b.readUInt16LE(o);
+        const a = xdBytes(out, 'xd /ram/a/life.dat');
+        if (a.length !== 544) f.push('the record not 544 bytes: ' + a.length);
+        if (!/\nsame\s*\n/.test(out.replace(/\r/g, ''))) f.push('the same seed and commands, the records not the same');
+        if (!/\nkept\s*\n/.test(out.replace(/\r/g, ''))) f.push('quit and begun again, the record changed');
+        if (a.length >= 544) {
+          if (u16(a, 0) !== 0x464C || a[2] !== 1) f.push('the record\'s head: ' + a.slice(0, 4).toString('hex'));
+          if (u32(a, 4) !== 3) f.push('the life\'s seed not 3: ' + u32(a, 4));
+          if (u16(a, 12) !== 2) f.push('not its second dungeon: ' + u16(a, 12));
+          const ds = u32(a, 8);
+          if (ds >= 65536 || ds === 3) f.push('the second dungeon\'s seed: ' + ds);
+          if (u32(a, 32) !== 3 || u32(a, 40) !== ds) f.push('the dungeons\' seeds: ' + u32(a, 32) + ', ' + u32(a, 40));
+          if (a[38] !== 1 || a[46] !== 0) f.push('the outcomes: ' + a[38] + ', ' + a[46] + ' (solved, then none yet)');
+          if (u16(a, 36) !== 1) f.push('the first dungeon\'s days: ' + u16(a, 36) + ' (a wait of 1500 minutes)');
+          const d0 = 720 * 360 + 3, date = u32(a, 14), days = date - d0;   // (Seed 3: its hour 3, 25 hours on)
+          if (days !== 2) f.push('the date not on two days (one crossed, the day after it came out): ' + days);
+          const born = u16(a, 18);
+          if (born > 720 - 16 || born < 720 - 25) f.push('its birth year: ' + born);
+        }
+        // (The folders)
+        const ls = c => { const o = out.replace(/\r/g, ''), i = o.indexOf('% ' + c + '\n'); return i < 0 ? [] : o.slice(i + c.length + 3, o.indexOf('\n% ', i + 1)).split(/\s+/); };
+        const top = ls('ls /ram/a'), d1 = ls('ls /ram/a/d1'), d2 = ls('ls /ram/a/d2');
+        for (const n of ['life.dat', 'pc.hm', 'kit.dat', 'd1', 'd2']) if (!top.includes(n) && !top.includes(n + '/')) f.push('the top folder has no ' + n + ': ' + top);
+        if (top.includes('game.dat')) f.push('a game.dat in the top folder');
+        for (const [w, l] of [['d1', d1], ['d2', d2]]) for (const n of ['game.dat', 'world.dat', 'items.dat']) if (!l.includes(n)) f.push(w + ' has no ' + n + ': ' + l);
+        // (The same dungeon, the second)
+        dq0Need(f, g2, 'E_ARRIVE', { how: 'A_START' }, 'the second game not a new dungeon');
+        const th = t => t.after ? t.after.theme : '?';
+        if (th(g2) !== th(g2b)) f.push('the same life, two second dungeons: ' + th(g2) + ', ' + th(g2b));
+        const look2 = g => dq0View(T.after(g, 'look').after);
+        if (!look2(g2) || look2(g2) !== look2(g2b)) f.push('the same life, the second dungeons not seen the same: ' + look2(g2) + ' / ' + look2(g2b));
+        dq0Need(f, T.after(g2, 'dq0 -p t -d /ram/a'), 'E_ARRIVE', { how: 'A_RESUMED' }, 'begun again, its second dungeon not going on');
+        // (Made new stops)
+        const seen = m.lifeSeen, was = seen.find(s => s.g === 1), now = seen.find(s => s.g === 2);
+        if (!was || !now || !now.sword) f.push('the sword not seen: ' + JSON.stringify(seen));
+        else {
+          if (now.sword.wear !== 200) f.push('a dulled blade not dull in the next dungeon: wear ' + now.sword.wear);
+          if (now.sword.dur !== 7 || now.sword.durMax !== was.sword.durMax) f.push('its life made new: ' + JSON.stringify(now.sword));
+          if (now.sword.size !== 2) f.push('its version not as it was: ' + now.sword.size);
+          if (!(now.torch <= 33)) f.push('a torch\'s fuel renewed: ' + now.torch);
+        }
+        const pennies = t => dq0Carried(t && t.after).filter(i => i.name === 'pennies').reduce((n, i) => n + i.qty, 0);
+        const i1 = T.of('inventory'), p1 = pennies(i1), p2 = pennies(T.after(i1, 'inventory'));
+        if (!p1 || Math.abs(p2 - p1 * 0.85) > 2) f.push('the pennies not changed at 15%: ' + p1 + ' then ' + p2);
+        // (A seed over 65,536)
+        const x1 = xdBytes(out, 'xd /ram/x/life.dat');
+        if (x1.length >= 544 && (u32(x1, 4) !== 123456789 || u32(x1, 8) !== 123456789)) f.push('a new life\'s seed: ' + u32(x1, 4) + ', ' + u32(x1, 8));
+        const x2 = xdBytes(out.slice(out.indexOf('% echo second')), 'xd /ram/x/life.dat');
+        if (x1.length !== 544 || x2.length !== 544) f.push('the record, run alone: ' + x1.length + ', ' + x2.length + ' bytes');
+        if (x2.length >= 544 && (u16(x2, 12) !== 2 || u32(x2, 8) < 65536 || u32(x2, 8) === 123456789 || u32(x2, 4) !== 123456789)) f.push('a seed over 65,536, its second dungeon: ' + u32(x2, 8));
         return f;
       },
       sdcard: true

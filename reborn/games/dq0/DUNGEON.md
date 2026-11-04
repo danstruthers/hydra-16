@@ -1437,7 +1437,7 @@ rest".  Built (HOUSE.md's the character carries on has the numbers):
 - **The ending:** the theme's words, then what's next, then the character's sheet as it ends.  Alive (the goal reached
   or the way out taken), "Your character carries on": the game started again with the same folder (dq0 -d) begins a new
   dungeon (a new seed: a new history and theme) with the same character, its sheet as it ended (its skills, its wounds
-  healing on), and the things it carried out (the world's kit.dat, kept with every save, made its outfit there).
+  healing on), and the things it carried out (the world's kit.dat, kept with every save, made its outfit there, each as it was).
 - **Death and the autosave:** the game is kept as the character comes into a stratum and as it's quit; a death isn't
   kept, so the last save is there to go back to.  Hard mode (dq0 -H, kept in the save) keeps the death: the folder's
   next game is a new one, a new character.  No autosave before danger (the user's, 2026-11-03: DECISIONS.md's HOUSE.md's review), till a playtest shows the lost play hurts.
@@ -1445,6 +1445,28 @@ rest".  Built (HOUSE.md's the character carries on has the numbers):
   its impact and its weight by it), the heaviest wielded without penalty by Strength, a strong character made with
   heavy weapons; a wrecked door, window or portcullis appraised by its state; a slip climbing out of a pit ending the
   climb, the player's to say what next ("climb up" again).
+
+### A character's life (the plan for the game between dungeons, step 3, 2026-11-04)
+
+The plan's section 5, HOUSE.md's carrying on for its numbers.  **life.h** has the file formats; **games/dq0life** is a small program
+of its own, on the card beside the game: the game runs it as it starts with a save's folder and no dungeon going on in it, before
+anything of the game's (it has the CPU and its own RAM; what passes between dungeons will go there, the plan's steps 4 to 6).
+
+- **The save's folder** (dq0 -d): at its top the record (life.dat), the sheet (pc.hm), what's carried (kit.dat); each dungeon in its
+  own folder inside it, d1, d2 ... (game.dat, world.dat, its theme, its change records ...: the hub's savedir, so the tasks are none
+  the wiser but for kit.dat, "../kit.dat" from there).  All of them kept (the user's Q3: no going back yet, but the folder's kept).  A
+  theme written by hand left at the top (theme.txt) goes into the new dungeon's folder.
+- **The record** (life.dat, 544 bytes): the life's seed, this dungeon's seed and number, the date it began, the year the character was
+  born, reputation (nothing moves it yet), the offsets of the clues and the thread (none yet); and for each of 64 dungeons its seed, its
+  whole days by its clock, and how it ended (LO_*).  The UI reads the head as a game starts, and no more: nothing of it in main RAM.
+- **The life has one seed:** dungeon 1's is the life's (-s, or the clock's), dungeon n's made from that and n, so the same seed and
+  commands make the same life.  A seed under 65,536 goes on with seeds under it (the stand-in themes'), one over goes on over it.  -s
+  on a carry-on still chooses the dungeon's seed (the tests keep their games), and the record says so.
+- **The date:** the game's clock starts afresh in each dungeon; the record's date is a count of days (twelve months of 30, the book's),
+  on at each carry-on by the days the clock crossed from its start's hour, and one more, the day after it came out at the soonest.
+- **The end:** game.dat's outcome byte (struct save's, LO_*: the ends' to set), read by dq0life as the next dungeon begins, so a
+  game ended and not yet carried on has its record as it was.
+- **The room:** two dungeons measured on the card (HOUSE.md's carrying on).
 
 ## One path for every actor
 

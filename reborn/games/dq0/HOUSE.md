@@ -3593,12 +3593,17 @@ weapon's version and Strength, a wrecked door, a slip out of a pit.
   taken) begins a new dungeon (its seed -s's, or the clock's: a new history and theme) with the same character: its
   sheet as it ended (its skills, its wounds as they are, healing on, its fatigue, its skills used since their rolls),
   and its gear: the things it carried out, its money among them, kept with the save (the world's kit.dat, written
-  with every save: an outfit's list of them, what's worn and held, then what's in each) and made as its outfit in
-  the new dungeon in place of one drawn.  *(The house's:)* each thing made anew as an outfit's is (whole,
-  its light's fuel and its oil renewed (*asked, and left as it is, the user's, 2026-11-03*), its coins the new region's; left behind, a key, its lock the old dungeon's,
-  and the old theme's own things, its puzzle's pieces, with what's in them;
-  its weapons the version its Strength wields freely, as a new character's); 64 things at most.  A game begun in the
-  folder that isn't carried on empties kit.dat first.  Its ruleset the one dq0 -r names (harn if none).
+  with every save: what's worn and held, then what's in each) and made as its outfit in the new dungeon in place of one
+  drawn.  **Each thing as it was** (the plan's step 3, 2026-11-04: "made new" stops): its life and wear (a dulled blade stays dull), its
+  fuel, its version, what's shut.  *(New, for review:)* **coins change at the money-changer's 15%** (each pile, rounded to the nearest, so
+  a pile of three or fewer pays nothing; all the new region's then).  Left behind, a key, its lock the old dungeon's,
+  and the old theme's own things, its puzzle's pieces, with what's in them; 64 things at most.  A new life empties kit.dat first.
+  Its ruleset the one dq0 -r names (harn if none).
+- **A life's record** *(new, for review: the plan's step 3; DUNGEON.md's a character's life; life.h)*: a life begins in the year 720, on a day
+  of it by its seed; the character is then 16 to 25, by its seed, the year it was born kept in the record (the book leaves the year to
+  the GM, Character 3); its age on a date is that and its sheet's birthday.  Nothing reads the age yet (the book's aging begins far
+  later).  The next dungeon begins the day after the last ended at the soonest; what passes between them is the plan's step 4.  Its hour
+  is its seed's, as ever.  Each dungeon's folder (the user's Q3) is kept, some *ROOM* on the card each.
   *The user's, 2026-11-03 (A8): a random time between dungeons, with healing, gear's maintenance at a cost, and skills by the book past 30 days: the plan for the game between dungeons (Decided, not yet built, below).  The rule stands till then.*
 
 ## Decided, not yet built

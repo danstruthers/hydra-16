@@ -217,6 +217,7 @@ ovl_out:
             SWFN        room_named, 6
             SWFN        history, 7
             SWFN        args, 7
+            SWFN        between, 19         ; (dq0life run, as a game begins: part 1's bank's room, 2026-11-04)
             SWFN        reach_go, 13
             SWFN        step_go, 19
             SWFN        tool_out, 19

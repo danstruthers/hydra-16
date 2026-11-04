@@ -46,6 +46,23 @@ enum { PL_NONE, PL_WORN, PL_HAND, PL_OFF, PL_BOTH, PL_BELT, PL_POUCH, PL_PACK, P
 struct ofit {
     unsigned char   kind, qty, quality, place, in, flags, mat;
 };
+/* A thing carried, as kit.dat keeps it (the save's folder's, part 40's: one after another, 22 bytes each, NOFIT at most): an
+** outfit's entry, then struct item's own fields, wear to shut as they lie there.  A carried-on game makes each from its entry (part
+** 57's: coins at the money-changer's cut), then lays its wear, its life, its version and its fuel on it as it was (part 63's: no
+** new life, no new fuel, no new edge; dur_max 0, a thing not made its own yet; coins none, their mints the old region's).  The plan's step 3 */
+struct kitrec {
+    struct ofit     o;
+    unsigned char   wear, hide;
+    unsigned        id;
+    unsigned char   quality, mat;
+    unsigned        dur, dur_max;
+    unsigned char   size, thick;
+    unsigned        fuel;
+    unsigned char   shut;
+};
+#define KIT_ITEM        (sizeof (struct kitrec) - sizeof (struct ofit))
+#define KIT_STATE       9                       /* (Its dur to its shut, laid on the thing) */
+#define MONEY_CUT       15                      /* (A money-changer's, in hundredths: the game's, s_mix_worth's: HOUSE.md's) */
 #define NOFIT           64
 #define OF_N            (*(unsigned char*) 0x9E3F)      /* (The list's count, then the list, at the top of the kinds'
                                                 **   bank, 2026-11-03: make.js holds the kinds and their words under it) */
@@ -86,7 +103,9 @@ enum { MD_ALL, MD_NEED, MD_CHANCE, MD_HEAD };   /* (A section's lines drawn: all
 
 unsigned char outfit (void);                    /* (Part 57) The character's outfit drawn (the referee asked): its
                                                 **   things in the list, 0 none (the kit as it was); else 1 and its
-                                                **   weapons' version (WV_*: a strong character's heavy, D13's) */
+                                                **   weapons' version (WV_*: a strong character's heavy, D13's); or
+                                                **   OF_CARRIED, its kit carried on (kit.dat open, ost's kept, for part 58) */
+#define OF_CARRIED      4
 unsigned char __fastcall__ draw_at (unsigned off, unsigned char mode);   /* (Part 59) The outfits' section at off
                                                 **   read, its head kept (ost), drawn as mode says if its flags are
                                                 **   ost.want's: 1 drawn, 0 not (none there, not wanted) */

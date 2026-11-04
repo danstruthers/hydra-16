@@ -2,7 +2,8 @@
 ** main.c - Dingus Quest Zero: the UI's task, its start and its loop.
 **
 ** dq0 [-s seed] [-p pace] [-c file] [-d folder] [-t theme] [-k things] [-r rules] [-T [-T]]: -d keeps the game in a
-** folder (on any card), and carries on the game kept there if there is one; without it nothing's kept. the seed makes
+** folder (on any card), and carries on the game kept there if there is one; without it nothing's kept (the folder: life.h's,
+** the record of the character's life, its sheet and its things, each dungeon in a folder of its own). the seed makes
 ** the same game each time (the dice: dice.h's rseed), and its region's history and theme (themegen's: theme.h), but
 ** a seed under 65,536 a stand-in theme's (the tests'); -t a theme written by hand, the history made to fit it; the
 ** pace is r, n, m (relaxed, normal, menacing: asked at the start if it isn't given) or t (turns: the world moves only as
@@ -41,6 +42,7 @@
 #include "../dq0w/hub0.h"
 #include "rs.h"
 #include "level.h"
+#include "life.h"
 
 #pragma local-strings (on)                      /* (A function's strings beside it: a swapped part's in it) */
 
@@ -247,6 +249,10 @@ void __fastcall__ consctl (const char* what)
 ** seed's, or themegen can't be run, or it failed).  (Part 7's, part 1 full: its arguments in lb, nothing the game's
 ** yet; its own spawn, hub_run being part 1's) */
 static unsigned char resumed;
+static unsigned long seed;
+static char spath[56];                          /* (A path in the dungeon's folder, itself sdl bytes of it, with -d: dq0life's,
+                                                **   s_life's; save_path's, part 14's save_at's, part 19's; "../" the save's) */
+static unsigned char sdl;
 unsigned char __fastcall__ s_history (unsigned long seed)
 {
     struct hy_regs r;
@@ -265,7 +271,11 @@ unsigned char __fastcall__ s_history (unsigned long seed)
     strcpy (p += 3, "-s");
     ultoa (seed, p += 3, 10);
     strcpy (p += strlen (p) + 1, "-o");
-    strcpy (p += 3, savedir ? savedir : "/ram/dq0");
+    if (savedir) {                              /* (The dungeon's folder: a path in it there, cut for now) */
+        spath[sdl] = 0;
+    }
+    strcpy (p += 3, savedir ? spath : "/ram/dq0");
+    spath[sdl] = '/';
     strcpy (p += strlen (p) + 1, "-l");
     strcpy (p += 3, libdir);
     p += strlen (p) + 1;
@@ -390,8 +400,7 @@ static void load_pc (void)
 ** (dq0p's), the referee's pc.hm, the world's change records (changes.dat and the regions' rg*.dat: world.h's) and
 ** the maker's seen.dat */
 
-#define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    40                          /* (2: the items' records with their size, the portals' make; 3, the
+/* SAVE_VER, life.h's: (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -440,54 +449,48 @@ static void load_pc (void)
                                                 **   tunnellers: DO_DIG among the doings, slice 4.11's; 32: the same seed's
                                                 **   natural chunks not as they were, great caverns and sloping tunnels
                                                 **   in them, a dungeon's change records laid on what they were made
-                                                **   for, 2026-11-02; 38, the body line's venom numbers, the cave spider's among them, 2026-11-04) */
-static struct save {
-    unsigned        magic;
-    unsigned char   version, pace;
-    unsigned long   seed;
-    char            referee[12];                /* The ruleset's referee (dq0 -r NAME's: dq0NAME) */
-    struct pc       pc;
-    struct quest    q;                          /* (Its theme, its puzzle, and its ending: a game done isn't carried
-                                                **   on, but a new one begun) */
-    unsigned char   plain;                      /* (The map in plain letters: the player's, dq0.h's) */
-} sv;
+                                                **   for, 2026-11-02; 38, the body line's venom numbers, the cave spider's among them, 2026-11-04; 41, the outcome (life.h's), the sheet's copy
+                                                **   gone; each dungeon in its own folder, life.dat; kit.dat each thing as it is) */
+static struct save sv;
 static unsigned char resumed;
 unsigned char plain;
 
 #pragma code-name (push, "SW1CODE")
 #pragma rodata-name (push, "SW1RODATA")
 
-static char spath[56];                          /* (A path in the save's folder: save_path's, part 3's save_at's) */
-
 static char* __fastcall__ save_path (const char* name)
 {
-    strcpy (spath, savedir);
-    strcat (spath, "/");
-    strcat (spath, name);
+    strcpy (spath + sdl + 1, name);
     return spath;
 }
 
-/* A game kept in the folder: its state read (0); 1, one ended, its character alive (the theme's goal reached, or the
-** way out taken), to carry on into a new dungeon, its sheet the character's (D8's, slice 4.4's); or -1 (none, or one
-** ended in its death: a new game, a new character) */
-static int load_save (void)
+/* The game's folder (dq0 -d) as it begins: LF_GOING, a game kept in its dungeon's folder, its state read; else (dq0life run) the
+** next dungeon or a new life begun, the seed its: LF_NEXT, the one kept ended, its character alive (the theme's goal reached, or
+** the way out taken), to carry on into a new dungeon, its sheet the character's (D8's, slice 4.4's); LF_NEW, none, or one ended
+** in its death: a new game, a new character.  No folder, LF_NEW */
+static unsigned char __fastcall__ life (unsigned char given)
 {
-    int fd = open (save_path ("game.dat"), O_RDONLY), n;
+    int fd;
+    unsigned char n = LF_NEW;
 
-    if (fd < 0) {
-        return -1;
-    }
-    n = read (fd, &sv, sizeof sv);
-    close (fd);
-    if (n == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER) {
-        if (!sv.q.done) {
-            return 0;
+    if (savedir) {
+        between (0);
+        if ((fd = open (save_path ("game.dat"), O_RDONLY)) >= 0) {
+            if (read (fd, &sv, sizeof sv) == sizeof sv && sv.magic == SAVE_MAGIC && sv.version == SAVE_VER) {
+                n = !sv.q.done ? LF_GOING : sv.q.done != END_DIED ? LF_NEXT : LF_NEW;
+            }
+            close (fd);
         }
-        if (sv.q.done != END_DIED) {
-            return 1;
+        if (n) {
+            between (1 | given << 1);           /* (dq0life: it begins the next dungeon, or a new life) */
+            if (hub_join (hub_run (lb + 300, lb))) {
+                hy_exits ("dq0: dq0life failed");
+            }
+            between (0);
+            seed = ((struct life_head*) lb)->dseed;
         }
     }
-    return -1;
+    return n;
 }
 
 #pragma code-name (pop)
@@ -519,9 +522,7 @@ void __fastcall__ s_sheet_map (unsigned char what)
 
 static char* __fastcall__ save_at (const char* name)
 {
-    strcpy (spath, savedir);
-    strcat (spath, "/");
-    strcat (spath, name);
+    strcpy (spath + sdl + 1, name);
     return spath;
 }
 
@@ -537,7 +538,7 @@ void s_save_game (void)
     if (!savedir) {
         return;
     }
-    strcpy (HUB->slot[SLOT_UI].text, save_at ("pc.hm"));
+    strcpy (HUB->slot[SLOT_UI].text, save_at ("../pc.hm"));
     r = referee (RS_SAVE, 0);
     r->state = REQ_FREE;
     q = &HUB->mreq[ASK_UI];                     /* (The maker's seen maps: asked, and waited for) */
@@ -558,7 +559,7 @@ void s_save_game (void)
     sv.version = SAVE_VER;
     sv.pace = pace | hard << 7;                 /* (Hard mode, its top bit: slice 4.4's) */
     sv.seed = HUB->seed;
-    sv.pc = P;
+    sv.outcome = Q.done == END_DIED ? LO_DIED : LO_SOLVED;     /* (Till the ends' own: a way out's locked till it's solved) */
     sv.q = Q;
     sv.plain = plain;
     if ((fd = open (save_at ("game.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
@@ -681,8 +682,10 @@ static void __fastcall__ start_world (unsigned long seed, const char* file, unsi
     character (file, seed, l ? l + 1 : "");     /* (The character: its file, or the generator's) */
     r->state = REQ_FREE;
     load_pc ();                                 /* (Its senses the referee's, before the world looks through them) */
-    if (savedir) {
-        strncpy (HUB->savedir, savedir, sizeof HUB->savedir - 1);
+    if (savedir) {                              /* (The dungeon's folder) */
+        spath[sdl] = 0;
+        strncpy (HUB->savedir, spath, sizeof HUB->savedir - 1);
+        spath[sdl] = '/';
     }
     if (resumed) {                              /* (Carried on: where it was, and when, the strata as they were: the
                                                 **   world's, its world.dat) */
@@ -2501,6 +2504,62 @@ static const char* rules = "harn";              /* (The ruleset, if none's given
 #pragma rodata-name (push, "SW19RODATA")
 #pragma local-strings (push, on)
 
+#pragma static-locals (push, on)
+#pragma bss-name (push, "SW19RODATA")           /* (Wanted only while it runs: not the main RAM's) */
+
+static char* ap;
+static void __fastcall__ arg (const char* s)
+{
+    strcpy (ap, s);
+    ap += strlen (ap) + 1;
+}
+
+/* The save's folder's dungeon, by the record of the life (life.h's: its head left in lb): its folder in spath (sdl), or d1 */
+static void life_dir (void)
+{
+    static int fd;
+    static unsigned n;
+
+    n = 1;
+    strcpy (spath, savedir);
+    sdl = strlen (spath);
+    strcpy (spath + sdl, "/" LIFE_FILE);
+    if ((fd = open (spath, O_RDONLY)) >= 0) {
+        if (read (fd, lb, sizeof (struct life_head)) == sizeof (struct life_head) && ((struct life_head*) lb)->magic == LIFE_MAGIC) {
+            n = ((struct life_head*) lb)->dungeon;
+        }
+        close (fd);
+    }
+    strcpy (spath + sdl, "/d");
+    ultoa (n, spath + sdl + 2, 10);
+    sdl += strlen (spath + sdl);
+    spath[sdl] = '/';
+}
+
+/* The save's folder (life's, part 1's): how 0, the record's dungeon found; else dq0life's path (lb + 300) and arguments (lb): its
+** folder; how 2, the seed said (dq0 -s), else the clock's its own */
+void __fastcall__ s_between (unsigned char how)
+{
+    if (!how) {
+        life_dir ();
+        return;
+    }
+    ap = lb;
+    arg ("-d");
+    arg (savedir);
+    if (how & 2) {
+        arg ("-s");
+        ultoa (seed, ap, 10);
+        arg (ap);
+    }
+    *ap = 0;
+    strcpy (lb + 300, gamedir);
+    strcat (lb + 300, "/dq0life");
+}
+
+#pragma bss-name (pop)
+#pragma static-locals (pop)
+
 /* A step of the reach begun by the world (the reply's IO_STEP, HOUSE.md's reach, the user's, 2026-11-02: each its words, its
 ** time, its grope): its first words, its long task (I_WAIT's kind, its bar, its stop), the command kept and asked
 ** again as it's up (reach 5: the world's done the step's change at its end, lwork's); qty 0, a grope failed,
@@ -2753,15 +2812,16 @@ unsigned char __fastcall__ s_place_go (const struct cmd* c)
     return 1;
 }
 
-void __fastcall__ s_args (int argc, char* argv[])
+unsigned char __fastcall__ s_args (int argc, char* argv[])
 {
-    unsigned char i;
+    unsigned char i, given = 0;
     char* l;
 
     seed = hy_time () ^ hy_ticks ();            /* (The clock's, unless -s says: here, part 7's, not main's: the main
                                                 **   RAM's room) */
     for (i = 1; i < argc; ++i) {
         if (!strcmp (argv[i], "-s") && i + 1 < argc) {
+            given = 1;
             for (seed = 0, l = argv[++i]; *l >= '0' && *l <= '9'; ++l) {
                 seed = seed * 10 + *l - '0';
             }
@@ -2817,6 +2877,7 @@ void __fastcall__ s_args (int argc, char* argv[])
             hy_exits ("usage: dq0 [-s seed] [-p r|n|m|t] [-c file] [-d dir] [-H] [-t theme] [-r rs] [-T..]");    /* (Not the tests' own: the room's) */
         }
     }
+    return given;
 }
 
 #pragma code-name (pop)
@@ -2828,10 +2889,9 @@ void __fastcall__ s_args (int argc, char* argv[])
 /* The game begun: its arguments, a game kept carried on, the title, the character, the world started */
 void __fastcall__ s_begin (int argc, char* argv[])
 {
-    signed char n = -1;
+    unsigned char n = life (args (argc, argv));
 
-    args (argc, argv);
-    if (savedir && !(n = load_save ())) {      /* (A game kept there: carried on) */
+    if (n == LF_GOING) {                        /* (A game kept there: carried on) */
         resumed = 1;
         seed = sv.seed;
         Q = sv.q;
@@ -2840,15 +2900,10 @@ void __fastcall__ s_begin (int argc, char* argv[])
         if (pace == 0xFF) {
             pace = sv.pace & 0x7F;
         }
-        file = save_path ("pc.hm");
-    } else if (savedir) {
-        mkdir (savedir, 0755);                  /* (A new game: its folder) */
-        if (n > 0) {
-            file = save_path ("pc.hm");         /* (Its character carried on, into a new dungeon: D8's; its kit, the
+        file = save_path ("../pc.hm");
+    } else if (n == LF_NEXT) {
+        file = save_path ("../pc.hm");          /* (Its character carried on, into a new dungeon: D8's; its kit, the
                                                 **   world's kit.dat, its outfit) */
-        } else if ((n = open (save_path ("kit.dat"), O_WRONLY | O_CREAT | O_TRUNC, 0644)) >= 0) {
-            close (n);                          /* (Not carried on: no kit kept to take up, slice 4.4's) */
-        }
     }
     if (!resumed) {                             /* (Its ruleset's referee: a game carried on keeps its own) */
         strcpy (sv.referee, "dq0");             /* (strncpy, not strncat: the library's in the main RAM) */

@@ -61,6 +61,7 @@ games/hmchar        ../obj/games/hmchar.hyx
 games/lib/hmchar/hmocc.bp ../obj/bank/hmocc.bp ;   its bank program (the occupation), its exports for
 games/lib/hmchar/hmchar.exp ../obj/games/hmchar.exp ;   it, and the occupations (the book's)
 games/lib/hmchar/occupations.txt ../games/hmchar/occupations.txt
+games/dq0life       ../obj/games/dq0life.hyx    ; dq0life, the record of a life (life.dat): between its dungeons, run as a game begins
 games/themegen      ../obj/games/themegen.hyx   ; themegen, a region's history and its theme made (the game's, as a new
 games/lib/dq0/themegen.dat ../obj/games/themegen.dat ;   game begins: its words, its goal kinds, the bestiary),
 games/lib/dq0/themegen.exp ../obj/games/themegen.exp ;   its exports and its bank programs (the history, the
