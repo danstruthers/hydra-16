@@ -7518,6 +7518,108 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0stopwords', near: ['parser'], what: "Dingus Quest Zero's stop words other than \"stop working\" (HOUSE.md's stopping: the work named; 2026-11-03: the grammar had none of dipping, sharpening, freeing, and sharpening's was filling's kind), typed as each task's told (dq0OnWords): at the normal pace (a task's time for the words to be typed in), at seed 12 the window's pane being worked free: \"stop digging\" refused, naming what it's at, \"stop freeing\" stops it, the pane still in its frame; a blunted sword being sharpened (dq0Poke's wear): \"stop dipping\" refused, \"stop sharpening\" stops it, no fresh edge told; a torch being dipped: \"stop dipping\" stops it, no soaking told",
+      init: 't_rc', cycles: 1300e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p n -s 12 -c /ram/c.hm', 'go through the door to the north', 'lift the pane', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -k sword,whetstone', 'sharpen the sword', 'quit',
+        'dq0 -p n -s 3 -c /ram/c.hm -T', 'drop a fresh torch', 'wait 20 minutes', 'dip the torch', 'quit', 'echo $status']) },
+      start(m) {
+        dq0Poke(m, [{ g: 2, line: 'sharpen the sword', n: 1, wear: { sword: 200 } }]);
+        dq0OnWords(m, [{ g: 1, line: 'lift the pane', n: 1, words: 'You set to working the pane free.', text: 'stop digging\rstop freeing\r' },
+          { g: 2, line: 'sharpen the sword', n: 1, words: 'You set to sharpening', text: 'stop dipping\rstop sharpening\r' },
+          { g: 3, line: 'dip the torch', n: 1, words: 'You set to filling', text: 'stop dipping\r' }]);
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = dq0Story(out), G = o.split('% dq0 ').slice(1), f = [];
+        if (G.length !== 3) return ['not three games: ' + G.length];
+        if (!/You aren't digging: you're working the pane free\./.test(G[0])) f.push('the pane: a stop naming another not refused');
+        if (/I don't understand/.test(G[0] + G[1] + G[2])) f.push('a stop word not understood');
+        if (/The pane comes free/.test(G[0])) f.push('the pane: not stopped');
+        if (!/You aren't filling: you're sharpening the sword\./.test(G[1])) f.push('sharpening: a stop naming another not refused');
+        if (/You put a fresh edge/.test(G[1])) f.push('sharpening: not stopped');
+        if (/You aren't filling|You aren't doing anything/.test(G[2])) f.push('dipping: refused');
+        if (/You soak the torch/.test(G[2])) f.push('dipping: not stopped');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0namedblow', near: ['fight', 'gear'], what: "Dingus Quest Zero's blow with a weapon named, a better one held (HOUSE.md's the Gargun's gear, the margins' pass of 2026-11-03: the mankar and the mang kinds of their own; till then \"strike with the mang\" struck with the best held), by the words: at seed 3 a giant rat set beside the character, wary, its sword in one hand, a mang then a mankar in the other, each named: its blow worded that one, not the sword; and with none named, the best it holds",
+      init: 't_rc', cycles: 900e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml swd 90 >> /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt',
+        "dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -k 'sword,mang,mankar'", 'drop the torch', 'hold the sword', 'hold the mang', 'i', 'strike the rat with the mang', 'stow the mang', 'hold the mankar', 'i', 'strike the rat with the mankar', 'strike the rat', 'quit', 'echo $status']) },
+      start(m) {
+        const held = (h, L, K, at) => {
+          const R = dq0Rec(m), S = dq0Sheet(m), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16, due = now + 3000; let n = 0;
+          const px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8;
+          for (let k = 0; k < L.nactors; k++) if (h[at(k) + L.aName] && h[at(k) + L.aState]) {
+            const o = R.at(h[at(k) + L.aName + 12]), q = S.at(h[at(k) + L.aName + 12]), x = n ? 32719 + n : px - 1, y = n ? 32721 : py;
+            ++n;
+            h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8; h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
+            h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_WARY; h[at(k) + L.aDoing] = K.DO_WATCH;
+            h[at(k) + L.aPos] = K.POS_STANDING;
+            for (let i = 0; i < 4; i++) h[at(k) + L.aReady + i] = due >>> (8 * i) & 255;
+            S.mem[q + S.STATE] = 0; S.mem[q + 8] = 0; S.mem[q + 9] = 0;
+          }
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        };
+        dq0Poke(m, ['hold the sword', 'strike the rat with the mang', 'stow the mang', 'strike the rat with the mankar', 'strike the rat'].map(line => ({ g: 1, line, n: 1, call: held })));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const o = dq0Story(out), f = [];
+        const part = (a, b) => o.slice(o.indexOf('> ' + a), b ? o.indexOf('> ' + b, o.indexOf('> ' + a)) : undefined);
+        const m1 = part('strike the rat with the mang', 'stow the mang'), m2 = part('strike the rat with the mankar', 'strike the rat >'), m3 = o.slice(o.lastIndexOf('> strike the rat '));
+        if (!/You strike at (?:the giant rat|something) with your mang/.test(m1)) f.push('the mang named, not struck with: ' + m1.slice(0, 300));
+        if (/with your sword/.test(m1.split('> ')[1] || '')) f.push('the sword struck with, the mang named');
+        if (!/You strike at (?:the giant rat|something) with your mankar/.test(m2)) f.push('the mankar named, not struck with: ' + m2.slice(0, 300));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0denfood', near: ['denizens'], what: "Dingus Quest Zero's hungry denizen taking food (HOUSE.md's denizens taking things: what it wants, a hungry one food; dq0hungry has hunger's hunting), by the world's beats: dq0daily's garrison (seed 2, soldiers: folk, no robbers), one set beside rations the character's let fall, friendly and idle (dq0Poke's): fed lately, it leaves them; made hungry (the minds' aate, dq0hungry's way), it takes them up (E_BEAT WB_PICKS, by the take rule)",
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: (() => {
+        const game = d => ['dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/' + d, 'drop the rations', ...Array(5).fill('wait 1 minute'), 'quit'];
+        return dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0hour=128', 'mkdir /ram/g', 'mkdir /ram/h', "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/g/theme.txt", 'cp /ram/g/theme.txt /ram/h/theme.txt', ...game('g'), ...game('h'), 'echo $status']);
+      })() },
+      start(m) {
+        const set = hungry => (h, L, K, at, named) => {
+          const lbl = fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0d', 'dq0d.lbl'), 'latin1'), ad = n => parseInt(new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(lbl)[1], 16), ram = m.taskRam[h[12 + 2]], px = h[L.pcX] | h[L.pcX + 1] << 8, py = h[L.pcY] | h[L.pcY + 1] << 8, nowU = h[L.now + 2] | h[L.now + 3] << 8, R = dq0Rec(m);
+          let n = 0;
+          for (let k = 0; k < L.nactors; k++) if (h[at(k) + L.aName] && h[at(k) + L.aState]) {
+            if (!n++) {
+              const x = px + 1, y = py, o = R.at(h[at(k) + L.aName + 12]);
+              h[at(k) + L.aX] = R.mem[o + R.X] = x & 255; h[at(k) + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8; h[at(k) + L.aY] = R.mem[o + R.Y] = y & 255; h[at(k) + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8;
+              h[at(k) + L.aSn] = h[L.pcSn];
+              h[at(k) + L.aAttitude] = R.mem[o + R.ATTITUDE] = K.AT_FRIENDLY; h[at(k) + L.aDoing] = K.DO_ROAM;
+              ram[ad('aate') + k] = hungry ? (nowU - 20) & 255 : nowU & 255;
+              ram[ad('aloot') + k] = 0;
+            } else {
+              h[at(k) + L.aAttitude] = K.AT_FRIENDLY; h[at(k) + L.aFaction] = 7;
+            }
+          }
+          h[L.denSeq] = h[L.denSeq] + 1 & 255;
+        };
+        dq0Poke(m, [1, 2].flatMap(g => [1, 2, 3, 4, 5].map(n => ({ g, line: 'wait 1 minute', n, call: n === 1 ? set(g === 2) : () => {} }))));
+      },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const T = dq0Turns(m), f = [], picks = g => T.flatMap(t => [...t.events, ...t.dens]).filter(e => e.game === g && e.kind === 'E_BEAT' && e.beat === 'WB_PICKS');
+        const rations = (m.dq0.games[0] && T.of('drop the rations').after) ? T.of('drop the rations').after.items.find(i => i.name === 'rations') : null;
+        if (!rations) return ['no rations'];
+        const p0 = picks(0).filter(e => e.thing === rations.kind), p1 = picks(1).filter(e => e.thing === rations.kind);
+        this.notes = [p0.length + ' taken fed, ' + p1.length + ' hungry'];
+        if (p0.length) f.push('taken up, fed lately: ' + JSON.stringify(p0));
+        if (!p1.length) f.push('not taken up, hungry: ' + JSON.stringify(picks(1)) + dq0Story(out).split('% dq0 ')[2].slice(-900));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0missile', outfit: true, asks: true, near: ['fight'], what: 'Dingus Quest Zero\'s missiles (slice 4.7, 2026-10-29: DUNGEON.md\'s missiles, HOUSE.md\'s, for review; the referee\'s RS_MISSILE, HarnMaster\'s Combat 15-17), by the words, the fights told and the item store: the character (hmchar seed 23, its Bow 90: its outfit a shortbow slung, a quiver of arrows at its belt) in a gambeson and a mail hauberk (Dodge 90), its arrows put down and gathered up again ("You gather up 22 arrows."), put back in the quiver; down seed 5\'s ladder by the giant rats, its torch put down, "shoot the rat": its shortbow taken up first (its round\'s, "You take up your shortbow."), then shot (E_FIGHT, "You shoot at the giant rat with your shortbow"), an arrow the fewer; then with the hand-written theme\'s elves (sindwar, hartbows slung: seed 4), waited for: an elf unslinging its hartbow and shooting at the character from further off than beside it (E_FIGHT by it; "The elf shoots at you with its hartbow")',
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 23 -u feudal -c hunter -o /ram/c.hm', 'echo ml bow 90 >> /ram/c.hm',

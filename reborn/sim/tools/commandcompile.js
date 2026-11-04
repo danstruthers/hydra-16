@@ -119,7 +119,8 @@ const NUMWORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7,
 const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth'];
 const TASKS = ['digging', 'crawling', 'waiting', 'searching', 'climbing', 'sleeping', 'resting', 'working', 'pretending', 'walking',
   'going', 'moving', 'battering', 'breaking', 'smashing', 'fighting', 'kicking', 'punching', 'butting', 'studying', 'disarming',
-  'picking', 'forcing', 'heaving', 'bending', 'winding', 'tracking', 'sniffing', 'filling', 'soaking', 'hiding'];   // (The timed
+  'picking', 'forcing', 'heaving', 'bending', 'winding', 'tracking', 'sniffing', 'filling', 'soaking', 'hiding', 'dipping', 'sharpening',
+  'honing', 'freeing', 'prising', 'travelling', 'returning', 'heading', 'tending', 'treating', 'bandaging', 'attacking'];   // (The timed
                                     // work's too, HOUSE.md's long tasks: the user's, 2026-10-22)
 // Words no object may be: the player is "me", never "you" (question 14).
 const NOT_OBJECT = new Set(['you', 'character', 'yourself']);
