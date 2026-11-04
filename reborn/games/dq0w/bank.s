@@ -25,7 +25,7 @@ SWDEPTH     = 12                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
-OVBANKS     = 30                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
+OVBANKS     = 31                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
             .bss
 _ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
@@ -174,7 +174,7 @@ go:
             SWPART      77, 12              ; The sky seen, the time believed's start (wtime.c)
             SWPART      78, 27             ; Up to a place in the room (dq0w.c's go_to, ways_near: part 9's till
                                             ;   2026-10-31, its room the walk's)
-            SWPART      79, 24              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
+            SWPART      79, 31              ; A tunneller's dig (wdig.c: slice 4.11's, 2026-11-01)
             SWPART      80, 24              ; One path: a denizen's doors, the doors' keys (wport.c: Phase 3C's)
             SWPART      81, 28               ; One path: the take rule, a denizen's take (wtake.c: Phase 3C's)
             SWPART      82, 25              ; A room searched whole (wroom.inc: the user's playtest, 2026-11-02)
@@ -186,7 +186,7 @@ go:
             SWPART      88, 16              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
             SWPART      89, 27              ; A shaft's going, a thing let fall, the daylight's emitters (dq0w.c: 2026-11-03)
             SWPART      90, 13              ; Hands made free, a tool in hand and back (things.c: 2026-11-03)
-            SWPART      91, 3               ; A denizen's weapon let fall, or broken (wlimbs.c: 2026-11-03)
+            SWPART      91, 30              ; A denizen's weapon let fall, or broken (wlimbs.c: 2026-11-03)
             SWPART      92, 5               ; A request of the things served (things.c: part 10's till 2026-11-03)
             SWPART      93, 19              ; An arrival (dq0w.c: the main RAM's till 2026-11-03)
             SWPART      94, 14              ; Hiding oneself (dq0w.c: 2026-11-04)

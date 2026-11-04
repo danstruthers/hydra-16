@@ -3951,8 +3951,8 @@ static void kit_keep (void)
 #pragma bss-name (pop)
 
 /* Its weight, its lock, it gone over for traps (thing n, rec its record, lk its kind; its name said) */
-/* The last two overlays read in (dq0w.rop, ld65's, as they are: climbing, part 97; rope and grapples, parts 95, 96, 98), as a climb, a
-** dig or a rope first wants them: none of a game's start's time, the card's, for what most games come to late or never (dq0starttime,
+/* The last three overlays read in (dq0w.rop, ld65's, as they are: climbing, part 97; rope and grapples, parts 95, 96, 98; a denizen's weapon let fall, part 91; a tunneller's dig, part 79), as a climb, a
+** dig, a rope, a dropped weapon or a tunneller first wants them: none of a game's start's time, the card's, for what most games come to late or never (dq0starttime,
 ** 2026-11-04); carried on with a rope in place, at once.  Once (the hub's rope_in), its time then, some 3M cycles */
 #pragma static-locals (push, off)
 static void ropes_in (void)
@@ -3966,7 +3966,7 @@ static void ropes_in (void)
         strcpy (p, HUB->ldir);
         strcat (p, "/dq0w.rop");
         if ((fd = open (p, O_RDONLY)) >= 0) {
-            for (k = OVBANKS - 2; k < OVBANKS; ++k) {
+            for (k = OVBANKS - 3; k < OVBANKS; ++k) {
                 hy_bank (ovbank[k]);
                 read (fd, (void*) 0x8000, 0x2000);
             }

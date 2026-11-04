@@ -985,9 +985,9 @@ void __fastcall__ o_wait_go (unsigned char action)
     } else {
         m *= 600;
     }
-    if (!busy) {
-        o_time_said (m, a);                     /* (Told at once, the world's E_TIME to come saying nothing: the user's,
-                                                **   2026-11-04) */
+    if (!busy && m) {
+        o_time_said (m, a);                     /* (As long as it says: told at once, the world's E_TIME to come saying
+                                                **   nothing, the user's, 2026-11-04; a round's in time as it is) */
         t_flush ();
         time_told = 1;
     }

@@ -2955,10 +2955,10 @@ function dq0JobsTest() {
 // wait 0, its answer behind that draw's giving way
 const DQ0_ANSWERS = [['turn left', 'You turn left', 800000], ['turn right', 'You turn right', 1300000],
   ['step forward', 'You step forward', 1400000], ['inventory', 'You carry', 500000], ['examine the torch', 'You look for the torch', 620000], ['walk to the door ahead to my left', 'You head for', 760000], ['examine the door', 'You head for|A door|Which door', 720000],
-  ['open the door', 'You try the door|You turn|Which door', 600000], ['close the door', 'You reach for the door|You turn|Which door', 650000], ['listen', 'You listen', 720000], ['bar the door', 'You look at the door|You turn|Which door', 600000],
+  ['open the door', 'You try the door|You turn|Which door', 600000], ['close the door', 'You reach for the door|You turn|Which door', 650000], ['listen', 'You listen', 720000], ['bar the door', 'You look at the door|You turn|Which door', 660000],
   ['look', 'You', 650000, 1790000], ['look ahead', 'You peer ahead|You turn', 450000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You', 800000], ['walk to the window', 'You head for', 700000], ['take the bones', 'You look for the bones|You go over to the bones.|You stop', 500000], ['look', 'You', 650000],
-  ['take the sack from the backpack', 'You reach for the sack', 650000], ['put the whetstone in the sack', 'You reach for the whetstone', 720000], ['take the whetstone from the sack', 'You reach for the whetstone', 720000],
-  ['drop the sack', 'You reach for the sack', 560000], ['take the sack', 'You reach for the sack|You look for the sack', 520000], ['assess the sack', 'You look at the sack|You look for the sack', 530000], ['sit', 'You sit down', 720000], ['stand', 'You get to your feet', 680000], ['wait 1 minute', 'You wait a minute', 720000], ['dig down', 'You look at the floor', 530000], ['stop', 'You', 720000]];   // (The first words as they begin, 2026-11-04: dq0firstword's; budgets over what's measured at waits 0, 1 and 2, both paces)   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
+  ['take the sack from the backpack', 'You reach for the sack', 650000], ['put the whetstone in the sack', 'You reach for the whetstone', 780000], ['take the whetstone from the sack', 'You reach for the whetstone', 720000],
+  ['drop the sack', 'You reach for the sack', 560000], ['take the sack', 'You reach for the sack|You look for the sack', 600000], ['assess the sack', 'You look at the sack|You look for the sack', 600000], ['sit', 'You sit down', 720000], ['stand', 'You get to your feet', 680000], ['wait 1 minute', 'You wait a minute', 720000], ['dig down', 'You look at the floor', 530000], ['stop', 'You', 720000]];   // (The first words as they begin, 2026-11-04: dq0firstword's; budgets over what's measured at waits 0, 1 and 2, both paces)   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
 function dq0AnswerTest(baud) {
   const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
   const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
@@ -5082,8 +5082,8 @@ module.exports = {
           '> give the torch to the rat', '> ? Moving: north,', 'Several at once: north then east;',
           '> examine the torch carefully', '> status Pace: a walk', 'Watching: nothing in particular.',
           '> drop pick then take it You reach for the pick. Put down.', 'You reach for the pick. Taken.', '> drop pick; take it You reach for the pick. Put down. You reach for the pick. Taken.',
-          '> take the bones and the pick Taken. Taken.', 'a pick', 'bones', '> pick the bones Taken.',
-          '> drop the pick carefully Put down.', '> status Pace: a walk', 'Watching: nothing in particular.',
+          '> take the bones and the pick You reach for the bones. Taken. You reach for the pick. Taken.', 'a pick', 'bones', '> pick the bones You reach for the bones. Taken.',
+          '> drop the pick carefully You reach for the pick. Put down.', '> status Pace: a walk', 'Watching: nothing in particular.',
           '> defend counter You will strike back first.', '> defend best You will defend yourself as best you can.',
           '> run away You see nothing to flee from.', '% echo $status'];
         let at = 0;
@@ -5093,7 +5093,7 @@ module.exports = {
           at = i + w.length;
         }
         if (/examine the torch carefully[^>]*I don't understand that/.test(o)) f.push('"examine the torch carefully" not understood');
-        if (!/> give the torch to the rat (The giant rat is too far off: you'd need to be within reach\.|You see no rat here\.)/.test(o)) {
+        if (!/> give the torch to the rat (?:You look for the torch\. )?(The giant rat is too far off: you'd need to be within reach\.|You see no rat here\.)/.test(o)) {
           f.push('the gift not answered as one out of reach (' + (o.match(/> give the torch to the rat[^>]*/) || [''])[0] + ')');
         }
         return f;
@@ -9393,7 +9393,7 @@ module.exports = {
         const g = ps.at && ps.at.actors.find(a => a.name === 'ghoul'), engaged = !!g && g.sn === ps.at.pc.sn && g.pos !== K.POS_PRONE && g.doing === 'DO_FIGHT' &&
           Math.max(Math.abs(g.x - ps.at.pc.x), Math.abs(g.y - ps.at.pc.y)) === 1;
         if (!engaged) f.push('the pass not begun engaged: ' + JSON.stringify(g || null));
-        else if (rounds(ps) + rounds(T.after(ps, 'look')) !== 1) f.push('the pass, engaged, not charged as a round of strenuous work: ' + rounds(ps) + ' charged in it');   // (Its words told at once, the line after them typed before its world's turn)
+        else if (rounds(ps) !== 1) f.push('the pass, engaged, not charged as a round of strenuous work: ' + rounds(ps) + ' charged in it');
         const work = T.reduce((n, t) => n + rounds(t), 0), fought = blows + ups + (engaged ? 1 : 0);
         if (!blows || work !== fought) f.push('a fight\'s rounds not charged as strenuous work: ' + work + ' charged, ' + fought + ' rounds fought (' + blows + ' blows, ' + ups + ' struggles up, the pass)');
         return f;

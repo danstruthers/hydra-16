@@ -292,6 +292,7 @@ static unsigned char __fastcall__ has_role (const struct msg* m)
 void __fastcall__ s_den_other (const struct msg* m)
 {
     if (m->a & KT_DIG) {
+        look_more (0, LM_ROPES);                /* (Part 79 read in, the first time: things.c's) */
         den_dig (m);                            /* (Not things: a tunneller's dig, part 79's, slice 4.11's) */
         return;
     }
