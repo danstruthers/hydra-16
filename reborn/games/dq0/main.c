@@ -1198,7 +1198,10 @@ void __fastcall__ s_came (const struct msg* m)
 /* The limbs' news (an E_BEAT's, WB_DROP on: slice 4.1b's), every actor's (b whose: 0 the character, else the actor
 ** plus 1; w1's high byte a kind, or for WB_RISEN and WB_NOT_UP 1 if on its feet already, or no leg to stand on),
 ** worded: by WB_*, the character's words, then another's (a kind named %s, the actor before it) */
-static void __fastcall__ limb_words (const struct msg* m)
+#pragma code-name (push, "SW23CODE")             /* (Part 23's since 2026-11-04, the swap study's: three in five of part 11's
+                                                **   bytes, one news in fifteen) */
+#pragma rodata-name (push, "SW23RODATA")
+void __fastcall__ s_limb_words (const struct msg* m)
 {
     static const char* const lwords[] = {
         "\nYour %s falls from your hand.", "\nThe %s drops its %s.",
@@ -1264,6 +1267,9 @@ static void __fastcall__ limb_words (const struct msg* m)
         sayf (s, m->b ? HUB->actor[(m->b - 1) & 7].name : kn, kn);
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+void __fastcall__ limb_words (const struct msg* m);
 
 void __fastcall__ s_news (const struct msg* m)
 {
@@ -1439,6 +1445,8 @@ unsigned char __fastcall__ s_hide (const char* w)
 ** taken, put, held or worn so made a hold of it, into that hand ("take the torch in my right hand", "put the dagger in
 ** my other hand"); and the way and the count the parser made of its words no more (dq0c's meaning takes "left" for a
 ** way, "both" for a count: "attack the rat with the dagger in my left hand" no rat to its left) */
+#pragma code-name (push, "SW23CODE")
+#pragma rodata-name (push, "SW23RODATA")
 void s_hand_said (void)
 {
     static const char* const said[6] = { "left hand", "right hand", "both hands", "other hand", "off hand",
@@ -1470,6 +1478,8 @@ void s_hand_said (void)
         cmd.other.sel = 0;
     }
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* A blow's thing taken in hand first (resolve.c's hold_w: its target found, the blow to be sent), into the hand said,
 ** if one was (shand): its words ("You take the bar in both hands."), the referee told what's to hand now (RS_EQUIP: its
@@ -1730,7 +1740,7 @@ static void __fastcall__ sent (struct msg* m)
 }
 
 /* A portal (or a trap) worked: what's done (PA_*), to what (the parser's thing: a door, a window, or either) */
-static void __fastcall__ work (unsigned char what, unsigned char obj)
+void __fastcall__ s_work (unsigned char what, unsigned char obj)
 {
     static struct msg m;
 
@@ -1746,7 +1756,7 @@ static void __fastcall__ work (unsigned char what, unsigned char obj)
     sent (&m);
 }
 
-static void __fastcall__ intend (unsigned char kind, unsigned char a)
+void __fastcall__ s_intend (unsigned char kind, unsigned char a)
 {
     static struct msg m;
 
@@ -1765,6 +1775,15 @@ static void __fastcall__ intend (unsigned char kind, unsigned char a)
 
 #pragma code-name (pop)
 #pragma rodata-name (pop)
+
+/* (Part 2's own calls of them straight; part 24's through their stubs) */
+void __fastcall__ work (unsigned char what, unsigned char obj);
+void __fastcall__ intend (unsigned char kind, unsigned char a);
+void __fastcall__ lift (const char* name);      /* (Part 24's: the commands' rarer, part 2's till 2026-11-04, the swap study's) */
+unsigned char __fastcall__ deal (unsigned char how);
+unsigned char __fastcall__ rarer (unsigned char action);
+#define work    s_work
+#define intend  s_intend
 
 /* The character's state, or the game's, set: the world's (its request, WQ_SET, waited for: the window put back) */
 void __fastcall__ wset (unsigned char what, unsigned char x, unsigned char y)
@@ -1911,7 +1930,11 @@ static void __fastcall__ handle (unsigned char op, const char* x, const char* y,
 /* A portal's part, fixed in it (a door's bar, a window's pane or its bars: IR_FIXED, its square in the request's x,
 ** y): the portal at it or beside it faced, and the part lifted out (the maker's: a bar only from its side), then taken
 ** up (E_PORTAL's) */
-static void __fastcall__ lift (const char* name)
+#undef work
+#undef intend
+#pragma code-name (push, "SW24CODE")
+#pragma rodata-name (push, "SW24RODATA")
+void __fastcall__ s_lift (const char* name)
 {
     struct sight* s = sight_get ();
     unsigned char i, d;
@@ -1931,6 +1954,10 @@ static void __fastcall__ lift (const char* name)
     }
     tell (T_YOU_SEE_NONE);
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+#define work    s_work
+#define intend  s_intend
 
 /* A thing taken up, or not (r: IR_*, and the light carried before times 256): told, and its time (the world's
 ** E_TAKEN's too, a thing it walked over to and took up: a portal's part, or one fixed where it stands, seen to as the
@@ -1998,7 +2025,9 @@ unsigned char news_due;                         /* (The body's news held as it s
 #define SW_QUIET    0x80
 #define dealt       (*(struct sway*) (lb + sizeof lb - sizeof (struct sway)))  /* (Its copy at lb's end: the
                                                 **   words, a line or two, go at its start) */
-static unsigned char __fastcall__ deal (unsigned char how)
+#pragma code-name (push, "SW24CODE")
+#pragma rodata-name (push, "SW24RODATA")
+unsigned char __fastcall__ s_deal (unsigned char how)
 {
     struct sway* s = &HUB->sway;
 
@@ -2019,6 +2048,8 @@ static unsigned char __fastcall__ deal (unsigned char how)
     }
     return dealt.result;
 }
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* The commands that want nothing but their action: 1 if it was one of them, carried out */
 static unsigned char __fastcall__ chores (unsigned char action)
@@ -2078,7 +2109,8 @@ static unsigned char __fastcall__ chores (unsigned char action)
         quit = 1;
         break;
     default:
-        return more (action);                   /* (The rest: overlay 2's, slice 4.1's on: the light's, the traces') */
+        return more (action) || rarer (action);  /* (The rest: overlay 2's, slice 4.1's on: the light's, the traces';
+                                                **   part 24's, the rarer) */
     }
     return 1;
 }
@@ -2368,15 +2400,6 @@ portal:
             goto portal;
         }
         return;
-    case VB_DIG:
-        d = cmd.dir;
-        if (d != GO_DOWN && d > H_NW) {
-            tell (T_DIG_WHICH_WAY);
-            return;
-        }
-        walk_says ((const char*) W_DIG);
-        intend (I_DIG, d == GO_DOWN ? DIR_DOWN : d + 8);    /* (A heading, 8 on: the world's, a diagonal too) */
-        return;
     case VB_RETRIEVE_OBJECT:
         if (cmd.prep == PR_FROM) {
             handle (IO_TAKE, cmd.obj.word, cmd.other.word, 0);
@@ -2460,13 +2483,44 @@ portal:
         }
         msg (lb);
         return;
+    default:                                    /* (The rest that want nothing but their action; and those the game
+                                                **   doesn't do yet: its verb, as typed) */
+        if (!chores (cmd.action)) {
+            unknown (1);
+        }
+        return;
+    }
+}
+#pragma code-name (pop)
+#pragma rodata-name (pop)
+
+/* ==== Part 24: the commands seen to less often (part 2's till 2026-11-04, the swap study's: part 2 is half this task's
+** copies, a stay in it runs a tenth of it) */
+#undef work
+#undef intend
+#pragma code-name (push, "SW24CODE")
+#pragma rodata-name (push, "SW24RODATA")
+unsigned char __fastcall__ s_rarer (unsigned char action)
+{
+    unsigned char d;
+
+    switch (action) {
+    case VB_DIG:
+        d = cmd.dir;
+        if (d != GO_DOWN && d > H_NW) {
+            tell (T_DIG_WHICH_WAY);
+            break;
+        }
+        walk_says ((const char*) W_DIG);
+        intend (I_DIG, d == GO_DOWN ? DIR_DOWN : d + 8);    /* (A heading, 8 on: the world's, a diagonal too) */
+        break;
     case VB_JUMP:
         if (cmd.dir == GO_DOWN) {
             intend (I_CLIMB, DIR_DOWN | I_JUMP);    /* (Down a ledge, or a shaft: a fall) */
         } else {
             tell (T_YOU_JUMP_AND);
         }
-        return;
+        break;
     case VB_TELL_OBJECT:                        /* (A denizen swayed, an ally asked, a name given: the denizens' */
     case VB_PERSUADE:                           /*   sway the verb's, SW_*) */
     case VB_DECEIVE:
@@ -2482,25 +2536,24 @@ portal:
     case VB_NAME_OBJECT:
     case VB_NAME_PLACE:
         if (errand ()) {                        /* (A thing to fetch found first, a gift's: part 15's, slice 4.8's) */
-            deal (cmd.aux);
+            s_deal (cmd.aux);
         }
-        return;
+        break;
     case VB_TRADE:                              /* (The market, entertaining: part 15's whole, 2026-11-02) */
     case VB_GIVE_OBJECT:
         if (errand ()) {
-            deal (SW_GIVE);
+            s_deal (SW_GIVE);
         }
-        return;
-    default:                                    /* (The rest that want nothing but their action; and those the game
-                                                **   doesn't do yet: its verb, as typed) */
-        if (!chores (cmd.action)) {
-            unknown (1);
-        }
-        return;
+        break;
+    default:
+        return 0;
     }
+    return 1;
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
+#define work    s_work
+#define intend  s_intend
 
 /* The game's arguments (s_begin's: part 7's, part 1 full; the defaults' words in the main RAM) */
 static unsigned long seed;                      /* (Its seed: the clock's, as the task starts, but for -s's) */

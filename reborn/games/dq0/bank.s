@@ -182,6 +182,8 @@ ovl_out:
             SWPART      20, 7               ; An ally's errands, gifts (errand.c: part 15's room, 2026-11-03)
             SWPART      21, 20              ; The record of a life, as a game begins (main.c: 2026-11-04)
             SWPART      22, 20              ;   and its dungeon's folder found
+            SWPART      23, 15              ; The limbs' news worded, a hand said (main.c: part 11's till 2026-11-04)
+            SWPART      24, 14              ; The commands seen to less often (main.c: part 2's till 2026-11-04)
 
             SWFN        errand, 20
             SWFN        trade, 15
@@ -235,7 +237,13 @@ ovl_out:
             SWFN        search_said, 10
             SWFN        news, 11
             SWFN        hide, 18
-            SWFN        hand_said, 11
+            SWFN        hand_said, 23
+            SWFN        limb_words, 23
+            SWFN        lift, 24
+            SWFN        deal, 24
+            SWFN        rarer, 24
+            SWFN        work, 2
+            SWFN        intend, 2
             SWFN        limbs_cmd, 11
             SWFN        bg_words, 14
             SWFN        pose_words, 12
