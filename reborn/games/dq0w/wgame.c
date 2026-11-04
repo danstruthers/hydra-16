@@ -355,7 +355,7 @@ void s_pc_asked (void)
         HUB->round = x;
         HUB->pace = HUB->wreq.y;
         HUB->tpr = tprs[HUB->wreq.y & 3];
-        noinit = (HUB->wreq.y & WY_NO_INIT) != 0;   /* (dq0 -I: the tests') */
+        HUB->nolurk = noinit = (HUB->wreq.y & WY_NO_INIT) != 0;   /* (dq0 -I: the tests') */
         nobear = (HUB->wreq.y & WY_NO_BEAR) != 0;   /* (dq0 -N: the tests') */
         HUB->gait = HUB->wreq.a;
         HUB->watch = HUB->wreq.b;

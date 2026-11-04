@@ -7902,7 +7902,7 @@ module.exports = {
           'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt', ...game('g', 21, 1), ...game('h', 48, 2), 'echo $status']);
       })() },
       start(m) {        // (Told as it falls, 2026-11-03: the lines typed no longer fall on it)
-        dq0Poke(m, [1, 2].map(g => ({ g, line: 'drop the backpack', n: 1, call: (h, L) => { h[L.gear] |= 2; } })));   // (GE_NOLURK: no robber lying in wait, HOUSE.md's hiding oneself: this scene's the bandits at it, 2026-11-04)
+        dq0Poke(m, [1, 2].map(g => ({ g, line: 'drop the backpack', n: 1, call: (h, L) => { h[L.nolurk] = 1; } })));   // (No robber lying in wait, HOUSE.md's hiding oneself: this scene's the bandits at it, 2026-11-04)
         dq0OnWords(m, Array.from({ length: 15 }, (_, i) => ({ g: 2, line: 'wait', n: i + 2, words: 'falls senseless.', text: 'talk to the bandit\r' })));
       },
       expect: ['% echo $status'],

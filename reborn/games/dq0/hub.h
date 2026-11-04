@@ -1478,6 +1478,8 @@ struct hub {                                    /* Bank 0, at $8000 */
                                                 **   same): 0 not; else 1 + its cover's steps */
     unsigned char   pc_hw;                      /* (The words of it, E_BEAT WB_POSED's HW_*: the thing it's behind, its
                                                 **   kind; who found it, who was spotted, the actor plus 1) */
+    unsigned char   nolurk;                     /* (dq0 -I, the tests', the world's: no robber lies in wait, HOUSE.md's hiding
+                                                **   oneself; only the soak and those with initiative: true play them) */
     unsigned char   hlook[NACTORS];             /* (Each actor's last look at the one hidden, the denizens': how near it
                                                 **   was, 1 far ... 4 beside it; 0 none yet: a look nearer tested anew) */
     unsigned char   pc_auto;                    /* The auto-target range (the world's, WQ_SET's WS_AUTO, the player's
@@ -1526,8 +1528,6 @@ enum { BG_NONE, BG_WATER, BG_WIND, BG_CROWD };  /* (The hub's pc_bg: water, wind
 #define AG_PICK         0x40                    /*   a pick among its things: a miner's to dig rock with; */
 #define AG_SPADE        0x80                    /*   a shovel, a spade or a mattock: earth and soil, slice 4.11's) */
 #define GE_OLD          0x01
-#define GE_NOLURK       0x02                    /* (dq0 -I, the tests': no robber lies in wait, HOUSE.md's hiding oneself; only
-                                                **   the soak and those with initiative: true play them) */
 #define GE_DRY          0x02                    /* (dq0 -W, the tests': no water in the chunks, the maker's, slice 4.9's) */
 #define GE_MIXED        0x04                    /* (dq0 -M, the tests': every built stratum mixed, part natural, the
                                                 **   maker's, slice 4.10's) */
@@ -1804,6 +1804,7 @@ struct wsave {
 **   own hub.pc_qg world
 **   own hub.pc_hid world                                       (Hiding oneself: 2026-11-04)
 **   own hub.pc_hw world
+**   own hub.nolurk world
 **   own hub.hlook denizens +world                              (Its looks the minds', cleared as it hides)
 **   own hub.pc_qat world
 **   own hub.pc_hunger referee +world                           (Hunger and thirst, the referee's, the world's to

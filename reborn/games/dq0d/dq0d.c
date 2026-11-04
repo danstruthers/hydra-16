@@ -3356,7 +3356,7 @@ unsigned char __fastcall__ s_hid_mind (unsigned char k)
     }
     if (op == HM_AMBUSH) {                      /* (A robber, just come to sense it, no eye on it: under cover, or in the
                                                 **   dark, lies in wait, unseen; the world's to say if it can) */
-        if ((HUB->gear & GE_NOLURK) || a.attitude != AT_HOSTILE || dist < 3 || (HUB->agear[k] & AG_SHOOTS) ||
+        if (HUB->nolurk || a.attitude != AT_HOSTILE || dist < 3 || (HUB->agear[k] & AG_SHOOTS) ||
             !(p = at (a.sn, a.x, a.y)) || (*p & T_VIS)) {
             return 0;
         }
