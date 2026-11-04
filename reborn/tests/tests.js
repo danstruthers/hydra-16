@@ -6387,7 +6387,7 @@ module.exports = {
         const last = s.slice(s.lastIndexOf('> inventory'));
         if (broke[1] === 'Your' && new RegExp('a ' + broke[2] + ', in your').test(last)) f.push('its pieces still in hand as a ' + broke[2]);
         const T = dq0Turns(m), st = T.of('look').after;
-        if (!st || !st.items.some(i => i.name === 'broken weapon')) f.push('no pieces where it fell');
+        if (!st || !st.items.some(i => i.name === 'broken weapon')) f.push('no pieces where it fell: ' + (st ? st.items.filter(i => i.where === 'IW_SQUARE').map(i => i.name).join(', ') : ''));
         return f;
       },
       sdcard: true

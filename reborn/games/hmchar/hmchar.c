@@ -414,7 +414,7 @@ int main (int argc, char* argv[])
 {
     static char path[64], line[48];
     const char* out = 0;
-    unsigned char i, sp = 0xFF;
+    unsigned char i, j, sp = 0xFF;
     struct bank_fn *occ, *cul;
     char* e;
     int fd;
@@ -511,11 +511,11 @@ int main (int argc, char* argv[])
                                                 **   house's, 2026-10-31: Dingus Quest Zero's time of day believed) */
         harn_write_line (fd, "timesense");
     }
-    for (i = 0; i < 6; ++i) {                   /* (Those the book's table gives a 2nd Language, Character 15: which one
+    for (j = 0; j < 6; ++j) {                   /* (Those the book's table gives a 2nd Language, Character 15: which one
                                                 **   the house's, by its region and the game's peoples' tongues; at the book's
                                                 **   mastery for an alien family's, its skill base once, Skills 11; rolled after
                                                 **   the rest: the user's, 2026-11-03) */
-        if (!strcmp (occname, second[i])) {
+        if (!strcmp (occname, second[j])) {
             strcpy (line, "language ");
             strcat (line, tongue2[(h.culture & 3) * 2 + (name[0] & 1)]);
             strcat (line, "=");

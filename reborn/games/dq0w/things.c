@@ -1033,7 +1033,7 @@ static unsigned char s_room (void)
         }
     }
     while ((i = items (i, IN_X | IN_ACTOR, 0)) != 0) {
-        if ((ip->flags & I_HELD) && i != handled) {   /* (Not the thing it's for: the torch to light) */
+        if ((ip->flags & I_HELD) && (rs_ok != 1 || i != handled)) {   /* (Not the thing it's for: the torch to light) */
             break;
         }
     }

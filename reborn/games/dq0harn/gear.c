@@ -724,7 +724,7 @@ void __fastcall__ o_hit_thing (struct req* q, struct side* s)
     q->c = 0;
     q->w2 = 0;
     q->result = s->part != 0xFF ? 2 : 0;
-    if (!q->actor && n && res[0] >= 5 && (v = wq_of (s, 1)) != 0 && dice (3, 6) > v) {
+    if (!q->actor && n && res[0] && res[1] >= 4 && (v = wq_of (s, 1)) != 0 && dice (3, 6) > v) {
         q->a = fumbled (s, 1);                  /* (A weapon on something hard (a thing that stands up to blows, iron or
                                                 **   stone): the book's Weapon Damage, the dice over its quality: broken) */
         q->result |= 8;
