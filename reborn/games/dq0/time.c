@@ -162,7 +162,7 @@ unsigned __fastcall__ o_time_ui (unsigned w)
 ** (p past SKP_STARS_WATCHED): overlay 1's, 16's room (HOUSE.md's what shows the sky) */
 #pragma code-name (push, "OV1CODE")
 #pragma rodata-name (push, "OV1RODATA")
-unsigned char __fastcall__ o_sky_words (unsigned char p, unsigned char k, const char* w)
+void __fastcall__ o_sky_words (unsigned char p, unsigned char k, const char* w)
 {
     static const char* const sky2[] = {             /* (The same, shown by a window, a skylight, a shaft: the first of its
                                                     **   %s's, the place's words, HOUSE.md's what shows the sky) */
@@ -185,22 +185,9 @@ unsigned char __fastcall__ o_sky_words (unsigned char p, unsigned char k, const 
         "You take hold of the rope.", "You put your weight on the rope: the grapple tears loose and comes clattering down.",
         "The rope's end hangs out of reach."
     };
-    if (p == 0xFE) {                            /* (A grapple or a rope thrown up, at no mark: its work, carried out: 1.  Part 13's room) */
-        w = cmd.obj.word;
-        if (!*w || (cmd.dir != GO_UP && cmd.other.x) || !sky_words (0xFF, 0, w)) {
-            return 0;
-        }
-        cmd.action = VB_TIE_OBJECT;
-        cmd.aux = RP_THROW;
-        more (VB_TIE_OBJECT);
-        return 1;
-    }
-    if (p == 0xFF) {                            /* (A thing's word: a rope's work?  Overlay 16's room) */
-        return strstr (w, "rope") || strstr (w, "grapple") || !*w;
-    }
     if (!p) {
         if (!k) {
-            return 0;
+            return;
         }
         p = SKP_ROPE + k;
     }
@@ -209,7 +196,6 @@ unsigned char __fastcall__ o_sky_words (unsigned char p, unsigned char k, const 
     } else {
         sayf (sky2[p - SKP_DAWN], p <= SKP_DUSK ? fall[k - 1] : where[k - 1], w);
     }
-    return 0;
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)

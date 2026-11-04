@@ -52,8 +52,8 @@ static unsigned __fastcall__ apart (int ax, int ay)
 }
 
 /* A key that fits the door the work's on (wk's sn, px, py) carried by the work's actor (wk.who: the character, on it
-** or in what it carries; else body bd's own, IW_DEN): 1, or 0 */
-unsigned char s_door_key (void)
+** or in what it carries; else body bd's own, IW_DEN): its number, or 0 */
+unsigned s_door_key (void)
 {
     unsigned i, id = DOOR_KEY (wk.sn, wk.px, wk.py);
     unsigned char r = 0;
@@ -69,7 +69,7 @@ unsigned char s_door_key (void)
         }
     }
     hub_map (0);
-    return r;
+    return r ? i : 0;
 }
 
 /* What body bd did at the door, by its outcome (PO_NONE ... PO_HELD): its DE_* (less DE_OPENS), | how loud times 16;
@@ -146,8 +146,12 @@ void __fastcall__ s_den_more (const struct msg* m)
         hub_map (0);
     } else if (m->kind == I_ROB) {
         hub_map (0);
-        bd.ready += HUB->round;
-        den_rob (m);
+        if (m->a >= FE_DROP) {
+            den_take (m);                       /* (The things' rest, by the character's rules, their own time: part 81's) */
+        } else {
+            bd.ready += HUB->round;
+            den_rob (m);
+        }
     } else if (m->kind == I_KIT) {
         door_keys (m);
     } else if (m->kind == I_TAKE) {

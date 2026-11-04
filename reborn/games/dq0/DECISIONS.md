@@ -1499,7 +1499,7 @@ their records, not by words.  How the catalogue's actions become the world's int
 | LIGHT_OBJECT, EXTINGUISH_OBJECT | I_LIGHT | |
 | OBSERVE_DIRECTION, TRACK, SMELL | I_LOOK, I_TRACE | |
 | STOP, META_QUIT | I_STOP, I_QUIT | |
-| the rest (things handled, words, the meta) | the things' requests (IO_*), the sway (SW_*), the UI's own | I_ROB (a robbery, an errand) |
+| the rest (things handled, words, the meta) | the things' requests (IO_*), the sway (SW_*), the UI's own | I_ROB (a robbery, an errand; FE_DROP, FE_PASS, FE_THROW, 2026-11-04: by the character's let fall, its hands, its throw) |
 
 Built (branch reborn-game-onepath) in the brief's order: first what the denizens lacked, the doors (opened, shut,
 a bar lifted and set, unlocked and locked with their keys, forced, battered: the character's parts, wdoor.c and

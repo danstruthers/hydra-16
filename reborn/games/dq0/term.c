@@ -543,7 +543,7 @@ static void enter (void)
             alias_expand ();                    /* (A shortcut's word first: its line, the rest after it) */
         }
     }
-    if (!parts_in ()) {
+    if (!parts_in (PO_LINE)) {
         if (inn) {
             strcpy (inl, last);                 /* (The line as it was typed, left there) */
         }

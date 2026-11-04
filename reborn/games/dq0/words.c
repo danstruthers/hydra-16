@@ -18,6 +18,7 @@
 ** while the rest is worked out; and added at lb's end as it's kept (lbe), not looked for each time.
 */
 
+unsigned char __fastcall__ hide (const char* w);   /* (Part 18's: main.c's) */
 #pragma code-name ("OV2CODE")
 #pragma rodata-name ("OV2RODATA")
 
@@ -606,7 +607,7 @@ unsigned char __fastcall__ o_more (unsigned char action)
         break;
     case VB_TIE_OBJECT:                         /* (A rope's: the things', wrope.c's, IO_HIDE's shape; a sack's tie, as it's */
     case VB_UNTIE_OBJECT:                       /*   opened or closed) */
-        if (sky_words (0xFF, 0, cmd.obj.word)) {
+        if (hide (HD_ROPE)) {
             worked (othings (IO_HIDE | IO_STEPS, cmd.obj.word, cmd.other.word,
                 d | IO_ROPE | (action == VB_UNTIE_OBJECT ? RP_UNTIE : cmd.aux)));
             break;

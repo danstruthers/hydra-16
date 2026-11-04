@@ -125,7 +125,7 @@ static unsigned char __fastcall__ gather (const char* w, unsigned char what)
     nc = 0;
     if (what & 1) {
         for (i = 0; i < s->nitems; ++i) {
-            if (!(s->item[i].hid & 1) && has (s->item[i].name, w)) {    /* (Not one it hid: it knows where those are,
+            if (!(s->item[i].hid & 1) && has (s->item[i].name, w) && qual_ok (s->item[i].name, w)) {    /* (Not one it hid: it knows where those are,
                                                 **   but they're out of sight) */
                 add (s->item[i].name, s->item[i].x, s->item[i].y, s->item[i].hid >> 4, 0);
             }
@@ -133,7 +133,7 @@ static unsigned char __fastcall__ gather (const char* w, unsigned char what)
     }
     if (what & 2) {
         for (i = 0; i < s->ndens; ++i) {
-            if (*w ? has (s->den[i].name, w) : s->den[i].doing != DO_DOWN) {
+            if (*w ? has (s->den[i].name, w) && qual_ok (s->den[i].name, w) : s->den[i].doing != DO_DOWN) {
                 add (s->den[i].name, s->den[i].x, s->den[i].y, 5, s->den[i].doing == DO_DOWN ? 3 : 1);
             }
         }

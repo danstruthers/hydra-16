@@ -141,8 +141,9 @@ unsigned char __fastcall__ rs_for (unsigned n);  /* (Part 86's: the hand the pac
 #define RF_FIRE         0xFFF1                  /* (A fire-maker's: the same, its tries; 2 empty) */
 #define RF_TRIED        0xFFF2                  /* (A try's end: its roll, told) */
 #define RF_CUT          0xFFF3                  /* (The sequence over part way: the pack off told) */
-#define RF_PICKS        0xFFF4                  /* (An intent's tool got out first: lockpicks; a digger's) */
+#define RF_PICKS        0xFFF4                  /* (An intent's tool got out first: lockpicks; a digger's; the door's key, wk's) */
 #define RF_DIGGERS      0xFFF5
+#define RF_DOORKEY      0xFFF7
 #define RF_ROLL         0xFFF6                  /* (The dark's test of the hands, its grade's good: 1; in the light 1) */
 void rs_did2 (void);                            /* (Part 75's: a step's end, part 86's rs_did's RS_HAND on) */
 unsigned char __fastcall__ rs_more (unsigned char w);  /* (Part 90's: 0 hands made free for rs_tool, 1 a step's begun; 1 a

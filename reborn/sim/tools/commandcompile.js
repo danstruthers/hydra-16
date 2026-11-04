@@ -117,10 +117,6 @@ const ADJ = new Set(['right', 'far', 'wooden', 'iron', 'large', 'small', 'closed
                                                 // which of several by its state, "the lit torch")
 const NUMWORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
 const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth'];
-const TASKS = ['digging', 'crawling', 'waiting', 'searching', 'climbing', 'sleeping', 'resting', 'working', 'pretending', 'walking',
-  'going', 'moving', 'battering', 'breaking', 'smashing', 'fighting', 'kicking', 'punching', 'butting', 'studying', 'disarming',
-  'picking', 'forcing', 'heaving', 'bending', 'winding', 'tracking', 'sniffing', 'filling', 'soaking', 'hiding', 'dipping', 'sharpening', 'freeing'];   // (The timed
-                                    // work's too, HOUSE.md's long tasks: the user's, 2026-10-22)
 // Words no object may be: the player is "me", never "you" (question 14).
 const NOT_OBJECT = new Set(['you', 'character', 'yourself']);
 const SPELL_STOP = new Set(['at', 'toward', 'towards', 'to', 'spell', 'the', 'a', 'an', 'my', 'this', 'that', 'these', 'those']);
@@ -159,7 +155,7 @@ function openOK(name, tk, env) {
     case 'number': return /^\d+$/.test(v) || numWord(v) !== undefined;
     case 'ordinal': return ORDINALS.includes(v);
     case 'adj': return ADJ.has(v);
-    case 'task-name': return TASKS.includes(v);
+    case 'task-name': return true;                // (Any word: "stop honing"; the UI's stop_kind knows the tasks', any other a plain stop: their list out of the index, 2026-11-04)
     case 'spell-word': return !SPELL_STOP.has(v) && !INVOCATION_WORDS.includes(v);   // "learn divination" is an invocation
     case 'pretense-word': return !env.reserved.has(v);
     case 'deity-name': return env.deities.has(v);
@@ -1287,7 +1283,7 @@ function checkCorpus(compiler, corpusFile, log) {
 }
 
 // The open names' word lists, for the 65C02 matcher's index table (commandtables.js's lexicon)
-const LEXICON = { adj: [...ADJ], tasks: TASKS, ordinals: ORDINALS, numbers: Object.keys(NUMWORDS), spellStop: [...SPELL_STOP],
+const LEXICON = { adj: [...ADJ], ordinals: ORDINALS, numbers: Object.keys(NUMWORDS), spellStop: [...SPELL_STOP],
   invocations: INVOCATION_WORDS, notObject: [...NOT_OBJECT] };
 
 module.exports = { Compiler, loadRules, buildContext, tokenize, DEFAULT_WORLD, checkCorpus, matchRule, countRule, DEFAULT_ALIASES, DEFAULT_ANYWHERE, segmentAliases, LEXICON };

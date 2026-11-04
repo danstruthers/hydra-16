@@ -4202,8 +4202,9 @@ void __fastcall__ s_door_work (unsigned char what)
                                                 **   task, a blow at a time as it's free, its first words at once, the
                                                 **   user's: the striker's, a part of it or the thing named) */
     } else if (wk.task) {
-        if (wk.task == LT_PICK && rs_for (RF_PICKS)) {
-            return;                             /* (The lockpicks got out first, the world's steps: lw_m again) */
+        if ((wk.task == LT_PICK || wk.task == LT_KEY) && rs_for (wk.task == LT_KEY ? RF_DOORKEY : RF_PICKS)) {
+            return;                             /* (The lockpicks, the door's key, got out first, the world's steps: lw_m
+                                                **   again) */
         }
         lwork = what;                           /* (The timed work: done as its time's up, work_done) */
         lw_x = px_;
@@ -6158,7 +6159,6 @@ static void __fastcall__ intent (struct msg* m)
         break;
     case I_WAIT:
     case I_TURN:
-    case I_QUIT:
         intent_few (m);                         /* (Part 53's) */
         break;
     default:
@@ -6247,9 +6247,6 @@ void __fastcall__ s_intent_few (struct msg* m)
         view (V_FACING);                        /* (Its first words told at once, the look after: V_TURNED's) */
         see (0);
         view (V_TURNED);
-        break;
-    case I_QUIT:
-        HUB->quit = 1;
         break;
     }
 }
@@ -6403,12 +6400,17 @@ void __fastcall__ s_intent_more (struct msg* m)
                                                 **   a walk its own) */
     }
     switch (m->kind) {
+    case I_QUIT:
+        hub_map (0);
+        HUB->quit = 1;
+        break;
     case I_GOTO:                                /* (Here since 2026-11-04: the main RAM's room) */
         go_near = m->a;
         go_to (m->w1, m->w2);
         go_near = 0;
         break;
     case I_DIG:
+        look_more (0, LM_ROPES);                /* (The dig's own part read in, the first time: things.c's) */
         start_dig (m->a);
         break;
     case I_TAKE:
@@ -6459,6 +6461,7 @@ void __fastcall__ s_intent_more (struct msg* m)
         legs (0x80 | m->w1);
         break;
     case I_TRAVEL:                              /* (A journey to a place named: part 54's) */
+        look_more (0, LM_ROPES);                /* (Its part read in, the first time: things.c's) */
         travel_go (m);
         break;
     case I_TRACE:

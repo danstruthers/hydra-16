@@ -45,6 +45,9 @@ static void __fastcall__ feed_do (unsigned char eat)
     }
     if (eat) {
         if (!HUB->pc_meals) {
+            if (tool_out (1)) {
+                return;                         /* (Got out first: the command again as it's up; 2026-11-04) */
+            }
             if (othings (IO_USE, "food", "", 0) != IR_OK) {
                 msg ("You have nothing to eat.");
                 return;
@@ -63,6 +66,9 @@ static void __fastcall__ feed_do (unsigned char eat)
                                                 **   the referee's flux, 2026-10-31) */
             msg ("You drink your fill.");
         } else {
+            if (tool_out (2)) {
+                return;
+            }
             while (p < n && othings (IO_USE, "water", "", 0) == IR_OK) {
                 ++p;
                 f |= othings_x ? 0x80 : 0;      /* (Filled from still water: the flux's risk, as drunk there,

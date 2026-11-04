@@ -196,7 +196,7 @@ plays them as HarnMaster's referee does.
 - **A shaft is climbed as a ledge is** (What shows the sky, below, 2026-11-03), a thing dropped where one goes down falls down it.
 - **A pit is climbed out of** as a ledge is, but a slip ends the climb (D13's: the character carries on, below).
   (wtrap.c, dq0w.c.)
-- **Rope and grapples** (the user's A16, "Queue rope rules"; the book gives the help alone, Skills 8's "good climbing gear", 10 to 20 points of EML; all the rest *(new, for review)*; wrope.c, wrope2.c, wrope3.c, dq0w.c's part 97; those parts' overlays a file of their own, dq0w.rop, read as a climb, a dig or a rope first wants them, some 3M cycles once, none of the start's):
+- **Rope and grapples** (the user's A16, "Queue rope rules"; the book gives the help alone, Skills 8's "good climbing gear", 10 to 20 points of EML; all the rest *(new, for review)*; wrope.c, wrope2.c, wrope3.c, dq0w.c's part 97; those parts' overlays a file of their own, dq0w.rop, read as a climb, a dig or a rope first wants them, some 3M cycles once (a dig's own part too, 84, and a journey's, 55), none of the start's):
   - **A rope is 50 feet.**  It reaches what it reaches.  It's tied, thrown and got ready as a tool is, by the hands routine (its reach's steps, hands made free).
   - **Tied off and let down** ("tie the rope", "tie the rope to the ring", "let down the rope", "let the rope down"), half a minute's long task, with a drop to let it down: a shaft on the character's own square, or a ledge or a pit beside it (the way it faces first).  With no drop: "There's no drop here to let a rope down."; a rope tied to nothing's no use, and none's left so.
   - **What holds:** a thing on its square or beside it that's fixed where it stands (an iron ring, a stout post, a driven spike, an altar, a well: the maker's rings at a built stratum's shafts going down, its posts at a mine's) or that weighs 30 lb or more (a chest, a table); not a sconce.  Named, "That won't hold a rope." if it doesn't.  Else its grapple, set over the edge; else an iron spike driven in, with a hammer: a minute's long task, loud (7), and it stays driven for good.  Tied to a thing on another square, 5 feet of the rope are gone to reach the edge.
@@ -1881,6 +1881,8 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   it changes anything; the reply's IO_STEP, the UI's first words and wait, the command asked again as it's up: main.c's
   reach 5, part 19's step_go.)  The time out of a fight is the house's seconds: the book gives a grope no time but in
   combat, a turn.
+- **Lists** *(2026-11-04: new, for review; the words the player may use, none of the book's)*: "take the rope and the torch", "drop the sack, the knife and the rope", each in turn, as lines typed one after another, each by its own steps.  After "and" or a comma a part that begins with "the", "my" ... is a thing: the verb before it's put to it.  One with no such word ("take rope and torch") is a command if it's one ("take the sack and look"); no verb in it, a thing again.  What's said after the last goes for all that want it: "put the rope and the torch in the sack", "give the rope and the knife to the dwarf", "throw the knife and the rock at the rat"; "take and drop the pick", a verb alone with the next one's thing (take, get, drop, open, close, hold, stow, wear, light).  A failure doesn't end the list ("You see none of those here.", then the next).  **Stopped, the rest of its line goes with it**: "stop" typed, taken at once, not after the rest; the long task stopped by a blow, a hostile near, or asked about ("Keep walking?"): what's on the same line (with "then" too) is let go, lines typed since are kept.  So the rest of a line never answers a question meant for the player.  Nothing within quotes is split.  At most eight parts a line.
+- **A kind's word said before a name** *(2026-11-04: new, for review)*: the parser keeps a thing's last word alone ("black orc": "orc"), so the character went at a small orc for "attack the black orc".  Now the word said just before the name, among those that make one kind another (black, brown, red, white, small, great, cave, giant, dwarf, kobold, iron, brass, broken), must be in the name of what it sees: "attack the black orc" with only small orcs there, "There's nothing like that here to fight."; a word that isn't one of them ("the sleeping rat") is passed over.  Of what it sees, not of what it carries (the world's chooser has the last word alone, as yet: "drop the iron key" drops the first key), nor of the words to a denizen ("talk to the black orc" is any orc).
 - **A run of handlings on one line** *(the soak's first play, 2026-11-03; for review)*: "take all" takes its pack off once and puts it on once,
   after the last thing, each thing "Taken." between.  The next thing out of reach: the pack on first (never left behind at the feet), then
   the walk, and the rest of the line by the lump, untold, its time as ever (told once; the character doesn't shrug it off and on again in words).
@@ -1907,9 +1909,8 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   **Stopped at any point the world stays true** (the user's, 2026-11-03, A26): the pack off told, **the tool out stays in the hand, told** ("Your pick is in your hand."), and a later use
   finds it there: not got out, and not put away after it, as anything held before.
   As built: a dig's pick or shovel (the first spell's), lockpicks for a door or a chest, a chest's own key, a flask for a light filled or a torch dipped, a bandage for first aid, a fire-maker below, a whetstone.
-  Not by it yet: a door's key (no reach at all as yet: door_key finds it, three seconds), the drawing things (handy or not:
-  no drawing from a pack, the map kept's rule), a blow's weapon named from the pack, a load from the pack and a robber's
-  rifling (the lump, untold, reach_done's); eating and drinking have no reach yet.
+  And *(2026-11-04, the sweep, for review)*: a door's key, the one that fits, a timed work of three seconds ("You set to turning a key.", "You lock it with its key."; a denizen's its own, no reach); rations for a meal and a waterskin for a drink (eating and drinking: a ration begun no reach, a well or the water it stands in none); a blow's weapon named from the pack ("attack the rat with the pick": the same steps, a round each engaged, then the blow).
+  Not by it, and why: **a load** ("nock an arrow" from the pack, no quiver: its bow's in the hands that would reach, and readying with busy hands would put the bow away; nothing's left to put away after, the arrow's on the string: the lump, untold, its time as the steps'); **the drawing things** (handy or not: no drawing from a pack, the map kept's rule); **a robber's rifling** (the character helpless: the lump).
 - **Readying with busy hands** *(the user's, 2026-11-03, A25: "If your hands are busy and your want to ready tools or other things, it should probably put the other
   things away first (in their appropriate place) then take the tools in hand."; what goes where the house's, new, for review)*: any tool's use, and "hold the X", with no hand for it, puts away what's held, a thing at
   a time, each told and each stopping as a step does: **a light burning in the hand** (not a lantern's, that hangs) into an empty sconce within reach, "You set the torch in the sconce."; else laid at its feet still lit, "You lay the torch on the ground, still burning."
@@ -1935,8 +1936,8 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   once, no steps, the next time; another tinderbox carried tried first.  The fire-maker takes a hand, its hands made free for it first as any tool's (the user's, 2026-11-03, A24).
 - **"take off the pack" leaves it off** (in both hands, by its bulk: either holding something, refused) till "put on the
   pack" (five seconds each, as any worn thing's).  "the pack" names the backpack (the chooser's: a name of one word's end, four
-  letters or more: "pack", "skin" a waterskin, 2026-10-26); "drop the pack" lets it fall ("shrug off", the user's
-  word, isn't accepted as yet: not in the grammar).
+  letters or more: "pack", "skin" a waterskin, 2026-10-26); "drop the pack" lets it fall, and "shrug off the pack", "shrug the pack off", the user's
+  word (2026-11-04).
 - **Dropping takes no time** (the book's: discarded freely, no grope), a lit one too: a thing in hand let fall, a pack on the back
   shrugged off; a light's change (a lit torch dropped, put out, taken up lit) its handling's own time, the look in the new
   light with it (not a step's, as it was: I_LIGHT's w1; lit, three steps as before); a thing in a pack or a pouch got out first (its reach); worn armour taken off first (a doff's five
@@ -3397,6 +3398,15 @@ These are the house's.
 - **Heard** *(the house's)*: a door opened 2, shut 3, slammed 5, a key turned 1, a bar lifted or set 3, forcing and a
   battering's blows 7, a door broken down 8.
 
+## Denizens handling things *(2026-11-04: Phase 3C's one path, the rest; new, for review: when each does it the house's, how the character's rules)*
+
+- **It eats what it holds:** hungry, with food in hand: one less of the lot, five minutes (a meal's, as the character's); it's fed.
+- **It hands food to a fellow:** not hungry, holding food, a hungry one of its faction beside it, with a hand free: two seconds; the fellow eats it at its next look.
+- **It lets fall:** fleeing, broken: what it holds that's no weapon nor light, at no time, where it stands, as the character's let fall (a shaft's head takes it).  Wanting a weapon, its hands full of other things: puts one down first.
+- **It throws:** an ally with a thing it fetched, no way nearer the character, in its sight: by the character's own throw (the catalogue's reach, the four bands, Throwing by its sheet), two seconds; lands by the character's feet, or short of it.  Only that as yet: a mark but the character, and a rock picked up (no loose stones in the dungeon), to come.
+- **Seen, or not told:** what a denizen does with things is told only if its square's in sight.
+- **Not by these:** an ally told to drop a thing, or to give it to another: no words for it as yet.
+
 ## Denizens taking things *(2026-11-02: Phase 3C's one path; drafted for the user to review)*
 
 - **The take rule, every actor's:** a thing lying on the taker's square or beside it (or on what lies there), not a
@@ -3407,7 +3417,7 @@ These are the house's.
   by size (a larger beast lifting more) is planned, not built (DUNGEON.md's still to come).
 - **What it wants** *(the house's)*: only folk take things up (a beast hunts, and takes nothing); one with no weapon
   to hand takes up one lying near (a sword, an axe, a club: the catalogue's weapons held in a hand); a hungry one food
-  (taken, not yet eaten; what's eaten, by the catalogue's key "food", not the appraisal's craft, that takes in a candle); a robber (kinds.txt's ways r) coins of any kind and jewels; nothing lying at its own home (its lair's own things, a robber's takings put down there).  It
+  (eaten at its next look: Denizens handling things, above; what's eaten, by the catalogue's key "food", not the appraisal's craft, that takes in a candle); a robber (kinds.txt's ways r) coins of any kind and jewels; nothing lying at its own home (its lair's own things, a robber's takings put down there).  It
   looks once in a hundred seconds, as it isn't fighting or digging, going on with what it was doing; one it sees within
   four squares, idle, it goes to (its steps), and takes up beside it.  An ally takes nothing of its own accord.
 - **Two seconds** *(the house's)*: stooped, taken up, as the character's handling of a thing in reach.

@@ -671,6 +671,14 @@ the black orcs' slaves and the tribes' feuds, the Gargun cowed by strength, the 
   lair's own, a robber's takings put down there).  None in its reach, the nearest it sees within four squares told its
   mind (the hub's dig_t, TW_SEEN | its offsets): idle, it steps toward it and asks again beside it.
 
+### Things handled *(2026-11-04: Phase 3C's one path, the rest; HOUSE.md's denizens handling things, for review)*
+
+- **Eaten** (its take's I_TAKE, TW_FOOD, wtake.c): hungry with food in hand, it eats it (a lot one less; five minutes, as the character's meal; "The soldier eats its rations."), its mind told (the hub's dig_t, TW_ATE; fed, and an I_TAKE of no wants clears it).
+- **Handed over** (I_ROB FE_PASS, its mind's take_way: not hungry, a hungry fellow of its faction beside it): the food it holds, if any, into the fellow's hands if it has one free (the take rule's hands), two seconds; "The soldier hands its rations to its fellow."  The fellow eats it as its own next look comes.
+- **Let fall** (I_ROB FE_DROP): one broken and fleeing lets go of what it holds that's no weapon nor light, no time, where it stands (a shaft's head takes it, as the character's), "The bandit drops its rations."; and one wanting a weapon, its hands full, puts down what's in them to take it up.
+- **Thrown** (I_ROB FE_THROW, an ally's errand): the thing it fetched, no way nearer the character, and in the character's sight: thrown over by the character's own throw (the catalogue's reach, the bands, the referee's Throwing by its sheet), "The dwarf throws you its rope." (it lies at the character's feet, or by a band's end "it falls short").  A throw at the character as a blow has been one code since slice 4.7.
+- **Seen**: told only if its square's in the character's sight (these, and the things it takes up).
+
 ### Ways, positions, bodies found *(2026-11-02: the minds' leftovers; HOUSE.md's, for review)*
 
 - **Ways found** (dq0d.c's parts 17 and 18): every S_TOWARD step of the minds (step_for's: a hunter after its foe,

@@ -87,6 +87,7 @@ ovl_out:
             OVFN        title, 1
             OVFN        help, 1
             OVFN        unknown, 1
+            OVFN        qual_ok, 1
             OVFN        parts_in, 6
             OVFN        alias_said, 4
             OVFN        sway_words, 15
@@ -123,7 +124,7 @@ ovl_out:
             OVFN        taken_next, 11
             OVFN        throw_words, 10
             OVFN        fixt_words, 4
-            OVFN        shot_words, 15      ; (The missiles' words: shots.c, slice 4.7's, overlay 15)
+            OVFN        shot_words, 1       ; (The missiles' words: shots.c, slice 4.7's, overlay 15)
             OVFN        trap_words, 10
             OVFN        trap_name, 10
             OVFN        den_way, 4
@@ -143,14 +144,14 @@ ovl_out:
             OVFN        facing_words, 19
             OVFN        sky_words, 1        ; (The sky seen by a window, a skylight, a shaft: time.c, 16's room)
             OVFN        turned_says, 19     ; (A turn's first words: task.c's, the main RAM's room)
-            OVFN        fore_set, 6         ; (The answer's tasks in the foreground: main.c's)
+            OVFN        fore_set, 17        ; (The answer's tasks in the foreground: main.c's)
             OVFN        water_words, 4      ; (The water's news, hunger's and thirst's: water.c, slice 4.9's)
             OVFN        time_ui, 16         ; (The time of day believed, worded: time.c, 2026-10-31)
             OVFN        say_raw, 16         ; (A line as it is, the map's: term.c, the main RAM's room)
             OVFN        t_status, 16        ; (The status line drawn: term.c, the main RAM's room, 2026-11-03)
             OVFN        may_den, 15         ; (The thing named may be a denizen: sway.c, 2026-11-03)
             OVFN        walk_ahead, 15      ; (A walk over told before the world's asked: sway.c, 2026-11-03)
-            OVFN        dots, 6             ; (The game's start's progress: main.c's)
+            OVFN        dots, 17            ; (The game's start's progress: main.c's)
 
 ; ---- The swapped parts (swap.inc; dq0.cfg's SWn: each in the main RAM's area as it's called)
 
@@ -164,15 +165,15 @@ ovl_out:
             SWPART      5, 10               ; The names given (names.c)
             SWPART      6, 12               ; The names said (names.c)
             SWPART      7, 8                ; The game's arguments, its own theme made (main.c)
-            SWPART      8, 18                ; Where in its room the character is, and the things (look.c)
+            SWPART      8, 3                 ; Where in its room the character is, and the things (look.c)
             SWPART      9, 13               ; The player's shortcuts (alias.c)
             SWPART      10, 18              ; A search, by its form (search.c)
             SWPART      11, 15              ; The rarer news, worded (main.c); the hands and limbs
             SWPART      12, 16              ; Wounds over time: first aid, in shock, the body's news (tend.c)
             SWPART      13, 5               ; The missiles: a shot, a throw at a denizen, a launcher loaded (main.c)
-            SWPART      14, 3               ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
+            SWPART      14, 18              ; The body's positions and the background, worded (main.c: slices 4.5, 4.6)
             SWPART      15, 17              ; An ally's errands, the character's gifts, the market (errand.c: slice 4.8's; 2026-11-02)
-            SWPART      16, 6               ; Eating and drinking (feed.c: slice 4.9's)
+            SWPART      16, 19              ; Eating and drinking (feed.c: slice 4.9's)
             SWPART      17, 14              ; Looking one way, a close look (way.c: part 6's till 2026-11-01)
             SWPART      18, 18              ; A denizen's door's words (2026-11-02: overlay 3's room)
             SWPART      19, 15              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)
@@ -218,7 +219,7 @@ ovl_out:
             SWFN        args, 7
             SWFN        reach_go, 13
             SWFN        step_go, 19
-            SWFN        bandage_out, 19
+            SWFN        tool_out, 19
             SWFN        find_banks, 19
             SWFN        reach_said, 19
             SWFN        door_go, 13         ; (A door round a bend walked up to first: main.c, 2026-11-03)

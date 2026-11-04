@@ -235,7 +235,7 @@ static unsigned char kit_read (void)
     return 1;
 }
 
-void __fastcall__ den_take (const struct msg* m);   /* (Part 81's: 0, the outfit fitted to its strength, wtake.c's fit) */
+void __fastcall__ den_fetch (const struct msg* m);   /* (Part 72's: 0, the outfit fitted to its strength, wtake.c's fit) */
 
 /* ---- The character's outfit: the referee asked (RS_OUTFIT, the UI's slot: the UI waits on the kit), drawn into the
 ** list; 0 if there's none (no file, a referee that hasn't one: the kit as it was) */
@@ -326,7 +326,7 @@ unsigned char s_outfit (void)
         ost.budget = 0;                         /* (Its kit carried on: its own money in it, slice 4.4's) */
     } else {
         ost.kept = cap;                         /* (What it bears: part 81's, no stub of its own, the main RAM's room) */
-        den_take (0);
+        den_fetch (0);
     }
     return 1 + (wv < 3 ? wv : 0);               /* (Drawn; its weapons' version too, the kit's to make: s_kit's) */
 }

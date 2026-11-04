@@ -22,7 +22,7 @@ static const char* const doing[] = {           /* (By LT_*) */
     "doing anything", "walking", "climbing", "digging", "searching", "waiting", "sleeping", "talking", "battering",
     "fighting", "travelling", "studying the mechanism", "disarming the trap", "picking the lock", "forcing", "heaving at",
     "bending the bars", "winding the winch", "working the pane free", "tracking", "sniffing the air", "filling",
-    "hiding", "tying the rope", "tending the wound", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
+    "hiding", "tying the rope", "tending the wound", "turning a key", "taking off", "taking off", "reaching into", "holding open", "getting out", "putting on",
     "letting fall", "letting fall", "putting away", "blowing out", "blowing out", "lighting", "setting down", "taking up", "sharpening",
     "striking a spark", "getting out", "putting away", "taking up", "setting down", "blowing out", "lighting", "dipping"
 };
@@ -150,6 +150,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     }
     d = doing_of (k, n);
     if (p <= TE_NEAR || p == TE_ENGAGED || (p == TE_OUT && k)) {
+        parts_in (PO_STOP);                     /* (The rest of its line with it: parts.c's lists, 2026-11-04) */
         if (k != LT_FIGHT || reach < 5) {          /* (A fight begun as the character came free, its line's first step in hand: that stopped, not the step) */
             reach = 0;                          /* (A walk over to a thing stopped: its command dropped; a thing's
                                                 **   timed work stopped: its end dropped, words.c's) */
@@ -163,8 +164,11 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         sayf ("%s with your bare %s, but stop short of hurting yourself.", noun (named),
               p == SK_KICK ? "feet" : p == SK_HEAD ? "head" : "hands");
     }
-    if (autogo && (k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT || k == TE_ASK_SHORT)) {
-        return 2;
+    if (k == TE_ASK_SEEN || k == TE_ASK_TIRED || k == TE_ASK_HEARD || k == TE_ASK_HURT || k == TE_ASK_SHORT) {
+        if (autogo) {
+            return 2;
+        }
+        parts_in (PO_STOP);                     /* (Asked: the rest of a list isn't its answer, and goes as a stop's does) */
     }
     switch (k) {
     case TE_BODY:                               /* (What time did to its body: the referee's words, part 12's; 8 dead
@@ -192,7 +196,7 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
         }
         break;
     case TE_CANT:
-        msg ("There's no stopping part way up: you cling on, and climb.");
+        msg ("There's no stopping part way up: you cling on and climb.");
         break;
     case TE_ENGAGED:                            /* (HOUSE.md's engagement: "The giant rat engages you: you stop
                                                 **   walking."; engaged already, "You're engaged with the giant rat.") */
@@ -243,7 +247,11 @@ unsigned char __fastcall__ o_task_words (unsigned w, unsigned char named)
     case TE_READIED:
         shot_words (w, named);
         break;
-    case TE_LOW:                                /* (A light it carries in its last ten minutes: slice 4.1's) */
+    case TE_LOW:                                /* (A light it carries in its last ten minutes: slice 4.1's; not in its sleep) */
+        hub_mem (0, &p, &HUB->pc_task.kind, 1);
+        if (p == LT_SLEEP) {
+            break;
+        }
         p = lamp (named);
         sayf ("\nYour %s %s burning low.", fn, p ? "are" : "is");
         break;

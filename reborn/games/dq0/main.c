@@ -65,7 +65,7 @@ unsigned char busy = 1;                         /* The character's doing somethi
 unsigned char nap = 40;                         /* (main's nap with nothing doing, ticks: o_dots's, a fiftieth once it's started) */
 unsigned char starting;                         /* The game's starting: its progress shown (dots: hub.c's waits,
                                                 **   main's loop), till the character's first ready */
-static unsigned char held;                      /* (A line typed as it's busy, held till it's free; */
+unsigned char held;                             /* (A line typed as it's busy, held till it's free; */
 static unsigned char took;                      /*   and the fight it was in stopped for it, once) */
 static unsigned place;                          /* Where this task is in the world's events */
 static int task_[NTASKS];                       /* Each task's number, as it was started (0: not) */
@@ -84,13 +84,13 @@ static void to_hand (void);
 void __fastcall__ came (const struct msg* m);    /* (Part 6's: come into a stratum, told and kept) */
 void __fastcall__ news (const struct msg* m);    /* (Part 11's: the rarer news, worded; a thing hidden; the hands' and
                                                 **   limbs': slice 4.1b's) */
-void __fastcall__ hide (const char* w);
 void hand_said (void);
 void limbs_cmd (void);
 void __fastcall__ pose_words (unsigned w);      /* (Part 14's: the body's position, worded) */
 void __fastcall__ noise_told (const struct msg* m, unsigned char rel);  /* (Part 14's: a denizen's sound, told) */
 unsigned char hold_first (void);
 unsigned char errand (void);                    /* (Part 15's: an ally's errand, a gift, slice 4.8's) */
+unsigned char __fastcall__ hide (const char* w);   /* (Part 18's) */
 unsigned char missiles (void);                  /* (Part 13's: the missiles, slice 4.7's) */
 void __fastcall__ dig_used (unsigned bk);        /* (Part 14's) */
 char dug_with[16];                              /* (The tool a dig took, named) */
@@ -391,7 +391,7 @@ static void load_pc (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    39                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    40                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -804,8 +804,8 @@ static void stop_world (void)
 ** the player, and its tasks take their turns as they did (fore_sync's; overlay 6's) */
 #define FS_CMD      1
 #define FS_UI       2
-#pragma code-name (push, "OV6CODE")
-#pragma rodata-name (push, "OV6RODATA")
+#pragma code-name (push, "OV17CODE")
+#pragma rodata-name (push, "OV17RODATA")
 void __fastcall__ o_fore_set (unsigned char on)
 {
     static const unsigned char fg[] = { T_WORLD, T_COMMANDS, T_SENSES, T_REFEREE };
@@ -1236,6 +1236,12 @@ static void __fastcall__ limb_words (const struct msg* m)
         return;
     }
     hub_mem (KIND_BANK, kn, CATALOGUE[m->w1 >> 8].name, sizeof kn);
+    if (k >= WB_EATS - WB_DROP) {
+        sayf (k == WB_EATS - WB_DROP ? "\nThe %s eats its %s." : k == WB_HANDS - WB_DROP ? "\nThe %s hands its %s to its fellow." :
+            k == WB_THREW - WB_DROP ? "\nThe %s throws you its %s." : "\nThe %s throws you its %s; it falls short.",
+            HUB->actor[(m->b - 1) & 7].name, kn);
+        return;
+    }
     if (k == WB_BROKE - WB_DROP) {
         sayf (m->b ? "\nThe %s's %s breaks!" : "\nYour %s breaks!", m->b ? HUB->actor[(m->b - 1) & 7].name : kn, kn);
         return;
@@ -1343,12 +1349,27 @@ static const char hw_said[] =               /* (By HW_*, one after another: a ta
     "\n%s leaps out of hiding!\0" "\nYou strike from hiding.\0" "\nYou're hidden already.\0"
     "\nNot with a light on you: it gives you away.\0" "\n%s is watching you: you can't hide from it now.\0"
     "\nThere's nothing here to hide behind, and the light's too good.";
-void __fastcall__ s_hide (const char* w)
+unsigned char __fastcall__ s_hide (const char* w)
 {
     unsigned char d, n;
     char t[16], tn[20];
     const char* s;
 
+    if ((unsigned) w <= (unsigned) HD_UP) {     /* (A rope's or a grapple's word; thrown up, at no mark: wrope.c's work, words.c's) */
+        n = (unsigned) w;
+        w = cmd.obj.word;
+        d = strstr (w, "rope") || strstr (w, "grapple") || !*w;
+        if (n == (unsigned) HD_ROPE) {
+            return d;
+        }
+        if (!*w || !d || (cmd.dir != GO_UP && cmd.other.x)) {
+            return 0;
+        }
+        cmd.action = VB_TIE_OBJECT;
+        cmd.aux = RP_THROW;
+        more (VB_TIE_OBJECT);
+        return 1;
+    }
     if ((unsigned) w >= HW_WORDS) {
         d = (unsigned) w >> 8 & 0x3F;
         for (s = hw_said, n = d; n; --n) {
@@ -1368,7 +1389,7 @@ void __fastcall__ s_hide (const char* w)
         } else {
             sayf (s, "");
         }
-        return;
+        return 0;
     }
     if (!*w || (!cmd.other.word[0] && (strstr (cl, " behind ") || strstr (cl, " in ") || strstr (cl, " under ") ||
         strstr (cl, " among ") || strstr (cl, " beside ") || strstr (cl, " by ")))) {
@@ -1382,16 +1403,16 @@ void __fastcall__ s_hide (const char* w)
             if (d != IR_NOT_HERE || !reach_go ()) {
                 tell (T_YOU_SEE_NONE);
             }
-            return;
+            return 0;
         }
         intend2 (I_RISE, POS_HIDE | HD_IN, 0);
     } else if ((HUB->ireq.to = reach == 4 ? IO_DONE : 0, d = things (IO_HIDE | IO_STEPS, w)) == IR_NO) {
-        return;                                 /* (A step of the reach first: part 19's) */
+        return 0;                                 /* (A step of the reach first: part 19's) */
     } else if (d == IR_OK) {
         if (reach != 4) {
             more (VB_HIDE);                     /* (Begun: a minute's work, a timed work, the things' IO_DONE at its
                                                 **   end, words.c's) */
-            return;
+            return 0;
         }
         d = HUB->ireq.qty;
         tell (d >= 10 ? T_HID_CUNNINGLY : d >= 4 ? T_HID_WELL : T_HID_POORLY);
@@ -1402,6 +1423,7 @@ void __fastcall__ s_hide (const char* w)
     } else {
         tell (T_YOU_CARRY_NONE);
     }
+    return 0;
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -1464,7 +1486,11 @@ unsigned char s_hold_first (void)
 
     HUB->ireq.into[0] = 0;
     HUB->ireq.to = shand;
-    r = things (IO_HOLD, hold_w);
+    r = things (IO_HOLD | IO_STEPS, hold_w);
+    if (HUB->ireq.kind == IO_STEP) {
+        return 0;                               /* (A step of the reach first, HOUSE.md's: the blow asked again after it, hold_w
+                                                **   still said; 2026-11-04) */
+    }
     t = HUB->ireq.x;
     hold_w[0] = 0;
     if (r == IR_OK) {
@@ -1559,7 +1585,7 @@ unsigned char s_missiles (void)
         go_thing ();
         return 1;
     case VB_THROW_OBJECT:
-        if (sky_words (0xFE, 0, 0)) {
+        if (hide (HD_UP)) {
             return 1;                           /* (A grapple thrown up, its rope on it: wrope.c's) */
         }
         if (cmd.other.x && cmd.obj.word[0] && (d = mark (&cmd.other)) != 0) {
@@ -2170,6 +2196,9 @@ void __fastcall__ s_command (char* l)
     d = choose (&cmd);                          /* (A choice asked for: this line's, the command again; a fixture's, */
     d |= answer (d);                            /*   or a thing's) */
     tx = 0;
+    if (!d && parts_in (PO_AGAIN)) {
+        return;                                 /* (A list's later part, a thing alone: "take rope and torch") */
+    }
     if (!d && (unsigned char) (cmd.action - VB_MOVE_DIRECTION) < 2 && cmd.how && cmd.how != HOW_ACROSS &&
         (!cmd.obj.kind || cmd.obj.kind == OB_ROOM || cmd.obj.kind == OB_WAY_OUT) && travel_go (l)) {
         return;                                 /* (A place it knows gone to, "go back to the Mausoleum": part 4's) */
@@ -2518,11 +2547,13 @@ void s_step_go (void)
     }
 }
 
-/* A bandage got out for its use (first aid's, tend.c's: a tool's steps, the things'): 1 if a step's begun first, the
-** command asked again as it's up */
-unsigned char s_bandage_out (void)
+/* A thing got out for its use (a bandage, first aid's, tend.c's; a meal, a drink, feed.c's: a tool's steps, the things'):
+** 1 if a step's begun first, the command asked again as it's up */
+unsigned char __fastcall__ s_tool_out (unsigned char which)
 {
-    return things (IO_USE | IO_STEPS, "bandage") != IR_OK;
+    static const char* const keys[3] = { "bandage", "food", "water" };   /* (Here: a caller's part isn't in, this one copied over it) */
+
+    return things (IO_USE | IO_STEPS, keys[which]) != IR_OK;
 }
 
 /* The reach's words (task.c's: w an E_TASK's, TE_BEGUN with a step's kind; TE_PACKED, TE_FUMBLE; named its thing's kind):
@@ -2932,6 +2963,10 @@ int main (int argc, char* argv[])
             hub_map (0);
             HUB->ui_giving = 0;
             hub_ring (T_WORLD);
+        }
+        if (held & 2) {
+            held = 0;                           /* (That line let go, parts.c's: its parse with it) */
+            cq_drop ();
         }
         if ((l = (char*) t_next ()) != 0 && (!busy || !held)) {
             cq_post (l);                        /* (The command parser at work on it meanwhile) */
