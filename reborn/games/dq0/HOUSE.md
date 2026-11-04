@@ -923,6 +923,11 @@ climb's test to hold on).
   "You head for the door.": the user's D17, a command answers at once), what's new since the command began (a thing just come into the light, a denizen new in sight), a beat, then the command's outcome.  No look
   on arrival, no "at your feet" for what it came for.  Stopped short (engaged, a trap), why, and the command dropped.  A
   plain "go to the pot" keeps its look.
+- **A step or a walk by a way, told as it begins** *(2026-11-03, for the user's D17, a command's first letter within a
+  fifth of a second; as built, for review)*: "step forward", "step back", "step left", "back up" say so at once ("You step
+  forward.", "You step back.", "You step to your left."; the small moves by a count too), "go north", "walk west", "go
+  through the door" ("You set off north."), once the world has it under way; its look as it gets there, as ever.  What
+  can't be begun says only why ("You can't go that way.").  Before, a step's first letter was its look's, a second on.
 - **A door's state as it's plain** *(the user's, 2026-11-02; as built, for review)*: the look, "which door?" and a look
   one way say "(closed, barred)" with the bar on the character's side, once it can see the door; a window's shutters
   the same.  A bar on the far side, or a lock, isn't seen: told as an attempt finds it, and remembered ("(closed,

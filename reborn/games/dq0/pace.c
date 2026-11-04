@@ -307,10 +307,7 @@ unsigned char __fastcall__ s_travel_go (const char* l)
     char k[16];
     unsigned char e, o = cmd.obj.kind, back, n, best = 0;
 
-    if ((o && o != OB_WAY_OUT && o != OB_ROOM) || cmd.how == HOW_ACROSS) {
-        return 0;                               /* (A thing it sees: walked to, as it was; across the room it's in) */
-    }
-    strncpy (b, l, INMAX);
+    strncpy (b, l, INMAX);                      /* (Not a thing it sees, nor across the room it's in: s_command's) */
     split ();
     back = any ("back\0return\0travel\0way\0returning\0") != 0;
     memset (&m, 0, sizeof m);

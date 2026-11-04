@@ -21,6 +21,7 @@
 #include <string.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "../dq0/rock.h"
 #include "world.h"
 #include "work.h"

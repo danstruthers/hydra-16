@@ -6,6 +6,7 @@
 #include <string.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "world.h"
 #include "things.h"
 #include "trace.h"

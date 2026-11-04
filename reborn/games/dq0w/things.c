@@ -613,28 +613,13 @@ static void rclear (void)
     rsteps = rbody = 0;
 }
 
-/* (Part 90's near_one, a copy: part 56's own) */
-static unsigned char near56 (void)
-{
-    const struct actor* a;
-    unsigned char k;
-
-    hub_map (0);
-    for (k = NACTORS, a = HUB->actor; k; --k, ++a) {
-        if (a->state && a->sn == HUB->pc_stratum && a->x - HUB->pc_x + 1 <= 2 && a->y - HUB->pc_y + 1 <= 2) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 unsigned __fastcall__ s_reach_done (unsigned char said)
 {
     static unsigned char s;
     static unsigned t;
 
     hub_map (0);
-    if ((s = rsteps + rbody) != 0 && near56 () && zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
+    if ((s = rsteps + rbody) != 0 && near_one () && zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
         hub_map (0);
         rtime = s * HUB->round;
     }
@@ -736,7 +721,7 @@ static unsigned char rs_begin (void)
     }
     rs_live = s;
     hub_map (0);
-    if (zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
+    if (near_one () && zone_step (HUB->pc_x, HUB->pc_y, HUB->pc_x, HUB->pc_y)) {
         hub_map (0);
         rs_t = HUB->round;
     }
@@ -1646,21 +1631,7 @@ void s_light_now (void)
     }
 }
 
-/* Anyone beside the character, in its zone or not (zone_step's first look, its part's swaps spared: a thing handled, no one
-** near, has no grope to ask: part 90's and part 56's) (the hub's header in the window after) */
-unsigned char near_one (void)
-{
-    const struct actor* a;
-    unsigned char k;
 
-    hub_map (0);
-    for (k = NACTORS, a = HUB->actor; k; --k, ++a) {
-        if (a->state && a->sn == HUB->pc_stratum && a->x - HUB->pc_x + 1 <= 2 && a->y - HUB->pc_y + 1 <= 2) {
-            return 1;
-        }
-    }
-    return 0;
-}
 
 /* ---- A request (the hub's ireq), answered (but for its state, the caller's: done once it's looked again): 1 if
 ** what lies about has changed */
@@ -1795,7 +1766,7 @@ unsigned char s_serve (void)
         afar = 0;
         k = iq.kind;
         if (!noinit && k >= IO_HOLD && k <= IO_DOFF && (n = at_hand (iq.name), hand_n = n, hand_sel = wsel, n) != 0 &&
-            (k <= IO_TAKE || (kind_at (n)->form & KF_BACK)) && near_one () && fumbled (item_kind (n))) {
+            (k <= IO_TAKE || (kind_at (n)->form & KF_BACK)) && fumbled (item_kind (n))) {
             hub_map (0);                        /* (Held, stowed, put or taken out engaged, a grope failed: the round
                                                 **   wasted, nothing done, its words) */
             took = HUB->round;
@@ -2090,6 +2061,7 @@ static unsigned char __fastcall__ chain (unsigned i)
 ** win already (a count's put there).  Its number, or 0 (HW_HAND's: one seen but out of reach, afar, far_n where it
 ** is); seen_d how far off, in squares; csum how many there were to choose from, all told (a lot its count) */
 #define NCAND           8
+static unsigned char look_q;                    /* (A look's asking: s_look_pick's) */
 static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigned char* no);
 #pragma static-locals (push, off)
 unsigned __fastcall__ s_pick (const char* name, unsigned char how)
@@ -2204,7 +2176,13 @@ static unsigned __fastcall__ pick_ (const char* name, unsigned char how, unsigne
         }
         c[j].n = i;
         c[j].r = r;
+        if (!r && look_q && !s) {
+            break;                              /* (A look at what's in its hand: none's more to hand, nor a look's count
+                                                **   to make of them: the rest of the store not gone through, the user's
+                                                **   D17, 2026-11-03) */
+        }
     }
+    look_q = 0;
     j = s == SL_NTH ? wsel >> 4 : s == SL_OTHER && !wnot ? 2 : 1;
     if (!j || j > m) {
         return 0;
@@ -2256,6 +2234,7 @@ unsigned __fastcall__ s_look_pick (void)
     memcpy (&iq, &HUB->ireq, sizeof iq);
     wsel = iq.sel;
     wnot = win = wforce = 0;
+    look_q = 1;
     return s_pick (iq.name, iq.to == LM_AT ? HW_ANY : iq.to == LM_GO ? HW_GONE : HW_KNOWN);
 }
 

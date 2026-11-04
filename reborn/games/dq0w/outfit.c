@@ -179,8 +179,14 @@ void __fastcall__ s_den_kit (const struct msg* m)
                                                 **   age, five a century: part 59's) */
     k = STRATUM (ost.hsn).age;
     ost.age = k > 50 ? 250 : 5 * k;
-    for (k = 0; k < 3; ++k) {
-        if (!(m->a & 1 << k)) {
+    for (k = 0; k < 4; ++k) {
+        hub_map (0);
+        if (ost.kit == 2 || ui_first ()) {
+            ost.kit = 2;                        /* (A command come: all drawn again after its answer: before a section's
+                                                **   read from the card, and before anything's made) */
+            return;
+        }
+        if (k == 3 || !(m->a & 1 << k)) {
             continue;
         }
         ost.rs = ((unsigned) STRATUM (ost.hsn).seed ^ ost.did * 40503U ^ k * 0x3B1DU) | 1;
@@ -193,11 +199,6 @@ void __fastcall__ s_den_kit (const struct msg* m)
             off = find (b);
         }
         draw_at (off, MD_ALL);
-        hub_map (0);
-        if (ost.kit == 2 || ui_first ()) {
-            ost.kit = 2;                        /* (A command come: all drawn again after its answer) */
-            return;
-        }
     }
     ost.kit = 0;
     hub_map (KIND_BANK);

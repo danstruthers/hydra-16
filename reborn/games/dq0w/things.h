@@ -216,6 +216,7 @@ unsigned char __fastcall__ water_at (unsigned char well);  /* (Part 75's, wwater
 void burns_now (void);                          /* (Part 27: dq0w.c) The lights burnt down by the minutes gone */
 extern unsigned long burn_due;                  /*   (when the next minute's due: the main loop's) */
 void chart_now (void);                          /* (Part 13) */
+unsigned char near_one (void);                  /* (dq0w.c's: anyone beside the character: zone_step's parts spared) */
 extern unsigned char chart_late;                /* (things.c's: the map making's state to make again: the main loop's) */
 extern unsigned char burn_ask;                  /*   (or at once: a light's change; | TS_ASK, the time's */
 #define TS_ASK          2                       /*   alone: a wait begun or ended, a black-out ..., part 76's; */

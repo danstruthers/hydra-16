@@ -2790,46 +2790,7 @@ function dq0Timer(m) {
   };
 }
 
-// dq0answer's commands: at seed 3 (-T: by the way down), the turns pace, then the normal pace; each a line, the words
-// its answer begins with, and at 115,200 baud its budgets (the user's targets, D17), its first letter's and its
-// whole's, from Enter: a turn's first words (as it begins, V_FACING) and a look's under half a second, 1.79M; what's
-// carried, a door examined and a step that can't be taken a fifth, 720,000.  (Not a step's or a walk's, their answer
-// the look as they get there: at the turns pace the denizens given their turn a slice at a time through the time the
-// move takes, at the normal pace the move taking its own time, a step a second, then the senses' look)
-const DQ0_ANSWERS = [['turn left', 'You turn left', 1790000], ['turn right', 'You turn right', 1790000],
-  ['step forward', 'You'], ['inventory', 'You carry', 720000], ['examine the torch', 'Your torch'], ['walk to the door ahead to my left', 'You'], ['examine the door', 'You head for|A door|Which door', 720000],
-  ['look', 'You', 1790000, 1790000], ['go up', 'There\'s no way up or down here.', 720000], ['go to the far side', 'You'], ['walk to the window', 'You'], ['take the bones', 'You go over to the bones.|You stop', 1400000], ['look', 'You']];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
-function dq0AnswerTest(baud) {
-  const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
-  const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
-  const lines = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...(baud === 115200 ? ['echo b115200 >/dev/serctl'] : []),
-    ...games.flatMap(g => [g, ...DQ0_ANSWERS.map(c => c[0]), 'quit']), 'echo $status'];
-  return {
-    name: baud === 115200 ? 'dq0answer' : 'dq0answer96', what: 'Dingus Quest Zero\'s answers timed at ' + baud + ' baud (the user\'s D17: the responsiveness targets at 115,200; a command answered in a fifth of a second, 720,000 cycles, a look in half, 1.79M): from Enter to the answer\'s first letter, and to its last, for a turn left and right at seed 3, a step, what the character carries, a door examined, a look, a step that can\'t be taken and a walk, at the turns pace and the normal pace',
-    meaning: true, outfit: true,                  // (The game as it's played: its outfit drawn, 2026-10-27)
-    init: 't_rc', cycles: 1500e6,
-    machine: { input: lines.map((l, i) => '\u0101' + '\u0100'.repeat(wait * (i + 1) % 3) + l + '\r').join('') },
-    expect: ['% echo $status'],
-    start(m) { this.timer = dq0Timer(m); },
-    check(m, out) {
-      const f = [], notes = this.notes = [], li = lines.indexOf(games[1]);
-      const over = (r, name, what, v, max) => {
-        if (baud === 115200 && max && !(v !== null && v <= max)) f.push(name + ' ' + r.line + ': ' + what + ' ' + v + ' cycles from Enter (budget ' + max + ')');
-      };
-      const pace = (from, to, name) => this.timer(lines.slice(0, to).map((l, i) => i < from ? '' : l), DQ0_ANSWERS.map(c => ({ line: c[0], want: c[1] }))).forEach((r, k) => {
-        notes.push(name + ' ' + r.line + ': first letter ' + r.first + ', whole ' + r.whole);
-        over(r, name, 'its first letter', r.first, DQ0_ANSWERS[k][2]);
-        over(r, name, 'its whole', r.whole, DQ0_ANSWERS[k][3]);
-      });
-      pace(0, li, 'turns');
-      pace(li, lines.length, 'normal');
-      return f;
-    },
-    sdcard: true
-  };
-}
-
-// dq0answerjobs: the world's periodic work made to fall on an answer, whatever the phase (the user's D17: a build's
+// dq0jobs: the world's periodic work made to fall on an answer, whatever the phase (the user's D17: a build's
 // inventory had its first letter at 889,825 cycles, the traces' journal taken in just as it was typed; which answer it
 // falls on moves with any change to the code).  At the normal pace, seed 3: what's carried asked again and again, each
 // time the job poked due a set time before its Enter (0, 100,000, 250,000 and 450,000 cycles): the lights' minute (the
@@ -2848,7 +2809,7 @@ function dq0JobsTest() {
     return 'ā' + 'Ā'.repeat(w) + l + '\r';
   }).join('');
   return {
-    name: 'dq0answerjobs', what: 'Dingus Quest Zero\'s periodic work giving way to a command (the user\'s D17, a command\'s first letter within 720,000 cycles): the lights\' minute and the traces\' journal made due a set time before an Enter, each answer within its budget and each job run after it; and what\'s carried asked at waits that move the phase',
+    name: 'dq0jobs', what: 'Dingus Quest Zero\'s periodic work giving way to a command (the user\'s D17, a command\'s first letter within 720,000 cycles): the lights\' minute and the traces\' journal made due a set time before an Enter, each answer within its budget and each job run after it; and what\'s carried asked at waits that move the phase',
     meaning: true, outfit: true,
     init: 't_rc', cycles: 900e6,
     machine: { input },
@@ -2897,6 +2858,47 @@ function dq0JobsTest() {
       notes.push('the jobs made due: lights ' + R.burnWant + ', traces ' + R.traceWant + '; run: lights ' + R.burn + ', traces ' + R.trace);
       if (R.burn < R.burnWant) f.push('the lights\' minute made due ' + R.burnWant + ' times, run ' + R.burn);
       if (R.trace < R.traceWant) f.push('the traces\' journal made due ' + R.traceWant + ' times, taken in ' + R.trace);
+      return f;
+    },
+    sdcard: true
+  };
+}
+
+// dq0answer's commands: at seed 3 (-T: by the way down), the turns pace, then the normal pace; each a line, the words
+// its answer begins with, and at 115,200 baud its budgets (the user's targets, D17: a command's first letter a fifth of a
+// second, 720,000 cycles; a look's first and its whole under half a second, 1.79M), its first letter's and its whole's,
+// from Enter.  Each brought down as it was cured, to just over what's measured at waits 0, 1 and 2, both paces (2026-11-03:
+// the table in the report, the world's periodic work given way to a command, a walk's first words no parts' swaps, a step's
+// told as it begins, "You carry" before the world's asked): never raised.  Over the user's 720,000 still, by what it takes:
+// a carried thing examined, a thing taken with a walk or a pack, a step or a turn with a denizen's things being drawn at
+// wait 0, its answer behind that draw's giving way
+const DQ0_ANSWERS = [['turn left', 'You turn left', 720000], ['turn right', 'You turn right', 1000000],
+  ['step forward', 'You step forward', 950000], ['inventory', 'You carry', 500000], ['examine the torch', 'Your torch', 800000], ['walk to the door ahead to my left', 'You head for', 700000], ['examine the door', 'You head for|A door|Which door', 680000],
+  ['look', 'You', 560000, 1790000], ['go up', 'There\'s no way up or down here.', 700000], ['go to the far side', 'You', 800000], ['walk to the window', 'You head for', 560000], ['take the bones', 'You go over to the bones.|You stop', 950000], ['look', 'You', 560000]];   // (A walk over told as it begins, 2026-11-02: a door examined, beside it or out of reach; a thing walked to and taken)
+function dq0AnswerTest(baud) {
+  const wait = +(process.env.DQ0ANS_WAIT || 0);   // (Each line typed after 0-2 waits of 2M cycles: the timing moved, for an average)
+  const games = ['dq0 -p t -s 3 -c /ram/c.hm -T', 'dq0 -p n -s 3 -c /ram/c.hm -T'];
+  const lines = ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', ...(baud === 115200 ? ['echo b115200 >/dev/serctl'] : []),
+    ...games.flatMap(g => [g, ...DQ0_ANSWERS.map(c => c[0]), 'quit']), 'echo $status'];
+  return {
+    name: baud === 115200 ? 'dq0answer' : 'dq0answer96', what: 'Dingus Quest Zero\'s answers timed at ' + baud + ' baud (the user\'s D17: the responsiveness targets at 115,200; a command answered in a fifth of a second, 720,000 cycles, a look in half, 1.79M): from Enter to the answer\'s first letter, and to its last, for a turn left and right at seed 3, a step, what the character carries, a door examined, a look, a step that can\'t be taken and a walk, at the turns pace and the normal pace',
+    meaning: true, outfit: true,                  // (The game as it's played: its outfit drawn, 2026-10-27)
+    init: 't_rc', cycles: 1500e6,
+    machine: { input: lines.map((l, i) => '\u0101' + '\u0100'.repeat(wait * (i + 1) % 3) + l + '\r').join('') },
+    expect: ['% echo $status'],
+    start(m) { this.timer = dq0Timer(m); },
+    check(m, out) {
+      const f = [], notes = this.notes = [], li = lines.indexOf(games[1]);
+      const over = (r, name, what, v, max) => {
+        if (baud === 115200 && max && !(v !== null && v <= max)) f.push(name + ' ' + r.line + ': ' + what + ' ' + v + ' cycles from Enter (budget ' + max + ')');
+      };
+      const pace = (from, to, name) => this.timer(lines.slice(0, to).map((l, i) => i < from ? '' : l), DQ0_ANSWERS.map(c => ({ line: c[0], want: c[1] }))).forEach((r, k) => {
+        notes.push(name + ' ' + r.line + ': first letter ' + r.first + ', whole ' + r.whole);
+        over(r, name, 'its first letter', r.first, DQ0_ANSWERS[k][2]);
+        over(r, name, 'its whole', r.whole, DQ0_ANSWERS[k][3]);
+      });
+      pace(0, li, 'turns');
+      pace(li, lines.length, 'normal');
       return f;
     },
     sdcard: true
@@ -6513,7 +6515,7 @@ module.exports = {
       sdcard: true
     },
     dq0AnswerTest(115200),
-    dq0JobsTest(),
+    { name: 'dq0jobs', ...dq0JobsTest() },
     // (dq0answer96, the same at 9,600 baud: its times noted, no budget of its own (the user's targets, D17, are 115,200's):
     // only with DQ0ANS96=1, to measure)
     ...(process.env.DQ0ANS96 ? [dq0AnswerTest(9600)] : []),

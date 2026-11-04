@@ -67,9 +67,12 @@ void __fastcall__ hub_map (unsigned char bank)
 }
 
 #if defined (HUB_ZERO) || !defined (HUB_ATTACHED)
-void hub0 (void)                                /* (hub_map (0), two bytes less at each call: hub0.h's, the world's room) */
+void hub0 (void)                                /* (hub_map (0), two bytes less at each call and a little quicker: hub0.h's,
+                                                **   the world's room) */
 {
-    hub_map (0);
+    cur = 0;
+    *(volatile unsigned char*) 0xFFF1 = hub_u[0];
+    *(volatile unsigned char*) 0 = hub_x[0];
 }
 #endif
 

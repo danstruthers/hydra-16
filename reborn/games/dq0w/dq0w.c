@@ -98,7 +98,8 @@ unsigned char tripped (void);                   /* Part 43 */
 unsigned char __fastcall__ dark_end (unsigned char how);    /* Part 44 */
 unsigned char __fastcall__ bearings (unsigned w);   /* Part 52 */
 void __fastcall__ bearings_off (unsigned feet); /* (wbody.h's) */
-void arrive (void);                             /* Part 91 */
+unsigned char arrive_a (void);                  /* Part 91 */
+void arrive_b (void);
 void tsense (void);                             /* Part 76 (wtime.c) */
 void rest_go (void);
 void __fastcall__ travel_go (const struct msg* m);  /* Part 55 */
@@ -1591,35 +1592,6 @@ set_out:
     bound_for (mx, my);
 }
 
-/* A small move (I_STEP: DUNGEON.md's): n squares on heading h (the UI's: by the words, else by the pace), its facing
-** kept if keep (backing up, a step aside); in a room straight
-** across its floor (across's rules: its edge, a ledge, a denizen or a trap stops it), in a passage along it (go's,
-** walk's: a fork, a door or a denizen stops it) */
-void __fastcall__ s_step_to (unsigned char h, unsigned char n, unsigned char keep)
-{
-    unsigned char r;
-
-    dens_where ();
-    here ();
-    paced ();
-    npath = 0;
-    lim_ = n;
-    move.on = 0;
-    if ((r = room_of (sn_, mx, my)) != 0xFF) {
-        across (h, r);
-    } else {
-        s_go (h);                               /* (Its own part's) */
-    }
-    lim_ = 250;
-    hub_map (0);
-    if (move.on && (move.how == A_CROSSED || move.how == A_WALKED || move.how == A_STEPPED)) {
-        move.how = A_STEPPED;
-        if (keep) {
-            move.face = HUB->pc_face;
-        }
-    }
-}
-
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
@@ -2225,16 +2197,17 @@ static void turn (void);
 
 static unsigned char went_cut;                 /* (A walk over to a thing stopped short: halt's, its arrival
                                                 **   not "You go over to it.") */
+static unsigned char ar_first, ar_how, ar_bn, ar_dw;   /* (arrive's, through its parts' calls) */
 #pragma code-name (push, "SW91CODE")           /* (Part 91's since 2026-11-03: the main RAM's room, once a walk) */
 #pragma rodata-name (push, "SW91RODATA")
-void s_arrive (void)
+unsigned char s_arrive_a (void)
 {
-    unsigned char first, how = move.how, dw = pon && pfeel, bn;
+    unsigned char how = move.how, dw = pon && pfeel;
 
     move.on = 0;
     if (how == A_DIGGING || how == A_CLIMBING) {
         climb_on (how);                         /* (A spell of digging done, a round of climbing: part 2's) */
-        return;
+        return 1;
     }
     spend (pace_, went > pspent ? went - pspent : 0);    /* (As it begins, or carries on: none; a walk's, what's
                                                 **   left of it) */
@@ -2277,14 +2250,15 @@ void s_arrive (void)
         how = dark_end (how);                   /* (In the dark: what it met told, or blundered into, part 44's; a room
                                                 **   crossed told as a move alone, unseen) */
     }
-    first = looked (LF_ARRIVE);                 /* (What it sees: the denizens there, at the turns pace, given their
-                                                **   turn first, the chunks round it made, so it sees them as it gets
-                                                **   there; the first time in a room, the senses' memory's) */
-    bn = bearings (move.how | first << 8);      /* (Its bearings, by the way it came: part 52's, told after it) */
-    if (!HUB->tpr && !HUB->paused && !HUB->hold) {
-        turn ();
-    }
-    dens_seen ();
+    ar_how = how;
+    ar_dw = dw;
+    return 0;
+}
+
+void s_arrive_b (void)
+{
+    unsigned char first = ar_first, how = ar_how, bn = ar_bn, dw = ar_dw;
+
     sn_ = HUB->pc_stratum;
     if (searching && (unsigned char) (how - A_DOWN) > A_UP - A_DOWN && how != A_STOPPED) {   /* (Not up or down) */
         barw_ = 1;                              /* (Quietly: the search's link; what it finds seen) */
@@ -2314,6 +2288,23 @@ void s_arrive (void)
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
+
+/* (Its look, its turn: here, between part 91's two, so a part they swap in stays there through them) */
+static void arrive (void)
+{
+    if (arrive_a ()) {
+        return;
+    }
+    ar_first = looked (LF_ARRIVE);              /* (What it sees: the denizens there, at the turns pace, given their
+                                                **   turn first, the chunks round it made, so it sees them as it gets
+                                                **   there; the first time in a room, the senses' memory's) */
+    ar_bn = bearings (move.how | ar_first << 8);    /* (Its bearings, by the way it came: part 52's, told after it) */
+    if (!HUB->tpr && !HUB->paused && !HUB->hold) {
+        turn ();
+    }
+    dens_seen ();
+    arrive_b ();
+}
 
 /* ==== Part 52: the character's bearings underground (slice 4.2's: DUNGEON.md's bearings underground, HOUSE.md's; the
 ** user's, 2026-10-16 and 23).  Its true facing the world's, which every task that works the place goes by; the north it
@@ -5689,7 +5680,7 @@ unsigned char __fastcall__ s_engaged (unsigned char eng, unsigned char def)
 ** up, drawn or put away while the character's engaged (part 24's zone) is a test of its hands (the referee's
 ** P_GROPE); 1 if it failed, its words in the hub's text ("You fumble for the sword.": the round wasted, the caller's),
 ** 0 if it went, or the character isn't engaged (dq0 -I: never tested); the hub in the window after */
-unsigned char __fastcall__ s_fumbled (unsigned char k)
+unsigned char __fastcall__ s_fumble_try (unsigned char k)
 {
     char w[16];
     struct req* r;
@@ -5871,14 +5862,51 @@ static unsigned char pc_waited;
 
 /* An intent carried out, the UI's: a step, a walk, a climb (each answered at once: the main RAM's); a turn, a wait
 ** and the quit part 53's (intent_few: slice 4.2's, the main RAM's room); the rest part 37's (intent_more) */
+/* A small move (I_STEP: DUNGEON.md's; the main RAM's since 2026-11-03: part 9's copies, in and out, spared its first words): n squares on heading h (the UI's: by the words, else by the pace), its facing
+** kept if keep (backing up, a step aside); in a room straight
+** across its floor (across's rules: its edge, a ledge, a denizen or a trap stops it), in a passage along it (go's,
+** walk's: a fork, a door or a denizen stops it) */
+void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep)
+{
+    unsigned char r;
+
+    dens_where ();
+    here ();
+    paced ();
+    npath = 0;
+    lim_ = n;
+    move.on = 0;
+    if ((r = room_of (sn_, mx, my)) != 0xFF) {
+        across (h, r);
+    } else {
+        go (h);
+    }
+    lim_ = 250;
+    hub_map (0);
+    if (move.on && (move.how == A_CROSSED || move.how == A_WALKED || move.how == A_STEPPED)) {
+        move.how = A_STEPPED;
+        if (keep) {
+            move.face = HUB->pc_face;
+        }
+    }
+}
+
+
 /* A way set out on, a plain step's or a walk's (the heading, | 8 a step, | 16 a walk: E_VIEW V_SETOFF's b), told as it begins: its first
 ** words at once, its look as it gets there (the user's D17: a step's first letter was its look's, a second on; only one
 ** that's under way, what stops it at once its own words) */
+static unsigned go_eq;                          /* (turn's, turns_run's: the events the denizens have had their turn at) */
 static void __fastcall__ set_out (unsigned char h)
 {
     if (move.on) {
-        evb = h;
+        hub_map (0);
+        h = (h & 0x7F) | (HUB->eq_head == go_eq ? 0x80 : 0);
+        evb = h & 0x7F;
         view (V_SETOFF);
+        if (h & 0x80) {
+            hub_map (0);
+            go_eq = HUB->eq_head;               /* (Its words alone: no turn of the denizens' for them, turns_run's) */
+        }
     }
 }
 
@@ -5904,9 +5932,7 @@ static void __fastcall__ intent (struct msg* m)
         tgx = m->w1;
         tgy = m->w2;
         go (m->a & 7);
-        if (!tgx) {
-            set_out ((m->a & 7) | 16);
-        }
+        set_out ((m->a & 7) | 16);
         break;
     case I_CLIMB:
         climb (m->a);
@@ -6244,7 +6270,6 @@ void __fastcall__ s_intent_more (struct msg* m)
 ** on or gave them a turn */
 #define TURN_WAIT       (30 * HY_TICK_HZ)       /* (The longest a turn's waited for: a stuck task's, not a slow one's) */
 
-static unsigned go_eq;
 
 #define BEHIND          (den_done != HUB->den_go)
 
@@ -6408,6 +6433,30 @@ static int __fastcall__ ovl_load (const char* dir)
 
 
 int trfd = -1;                                  /* (The traces' kinds' words, kept open: wtrword.c's, trace.h) */
+
+/* Anyone beside the character, in its zone or not (zone_step's first look, its part's swaps spared: a thing handled, no
+** one near, has no grope to ask, every handling's own, three parts' copies: the user's D17, 2026-11-03) (the hub's header
+** in the window after) */
+unsigned char near_one (void)
+{
+    const struct actor* a;
+    unsigned char k;
+
+    hub_map (0);
+    for (k = NACTORS, a = HUB->actor; k; --k, ++a) {
+        if (a->state && a->sn == HUB->pc_stratum && a->x - HUB->pc_x + 1 <= 2 && a->y - HUB->pc_y + 1 <= 2) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* A grope (part 25's fumble_try): none with no one beside it */
+unsigned char __fastcall__ fumble_try (unsigned char k);
+unsigned char __fastcall__ fumbled (unsigned char k)
+{
+    return near_one () && fumble_try (k);
+}
 
 /* A command in hand at the real paces (the hub's ui_cmd, the UI's: Enter to its answer's news): 1, the denizens'
 ** intents wait (they'd copy parts in, and draw outfits, a quarter second and more of the world's time in the

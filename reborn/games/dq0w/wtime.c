@@ -29,6 +29,7 @@
 #include <stddef.h>
 #include <hydra.h>
 #include "../dq0/hub.h"
+#include "hub0.h"
 #include "../dq0/rs.h"
 #include "world.h"
 #include "things.h"

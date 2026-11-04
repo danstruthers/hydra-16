@@ -242,11 +242,13 @@ void __fastcall__ s_map (const char* rules)
     char* r = line + LINE - MAP_W - 1;          /* (A row's letters at the line's end, coloured into its start) */
 
     make_panel (rules);
-    hub_call (&HUB->mapq, T_MAKER);             /* (The maker draws it into the UI bank) */
-    slants ();                                  /* (A passage's slant drawn as one: 2026-11-01) */
     blank ();
     sayf ("The map (you face %s%s; heights in tens of feet against yours):", head_name[(HUB->pc_face + HUB->pc_skew) & 7],
         HUB->pc_lost ? ", or so you think" : "");
+    t_flush ();                                 /* (Its first words at once, the maker's drawing some ten million cycles:
+                                                **   the user's D17) */
+    hub_call (&HUB->mapq, T_MAKER);             /* (The maker draws it into the UI bank) */
+    slants ();                                  /* (A passage's slant drawn as one: 2026-11-01) */
     cq = HUB->pcsum.northsense ? 0 : HUB->pc_lost ? '?' : 'N';   /* (Turned: the compass, its N where the north it
                                                 **   believes in lies, as the map's turned: a quarter for every two
                                                 **   eighths it faces round) */

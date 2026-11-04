@@ -263,11 +263,11 @@ go:
             SWFN        traps, 8
             SWFN        go, 9
             SWFN        go_to, 78           ; (Part 9's till 2026-10-31: its room the walk's)
-            SWFN        step_to, 9
             SWFN        walk, 9             ; (A walk along a passage: across's, part 33's; 2026-10-31, the main RAM's room)
             SWFN        serve, 90
             SWFN        tools, 10
-            SWFN        arrive, 91
+            SWFN        arrive_a, 91
+            SWFN        arrive_b, 91
             SWFN        named, 10
             SWFN        on_pc, 10
             SWFN        light_now, 90
@@ -359,7 +359,7 @@ go:
             SWFN        kept_wait, 34
             SWFN        kept_late, 71
             SWFN        engaged, 25
-            SWFN        fumbled, 25
+            SWFN        fumble_try, 25
             SWFN        den_first, 14
             SWFN        it_flush, 17
             SWFN        st_out, 22
