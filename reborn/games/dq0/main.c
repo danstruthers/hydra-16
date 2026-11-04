@@ -2967,6 +2967,7 @@ int main (int argc, char* argv[])
         }
         if (stirs && !inn && !HUB->ui_cmd) {
             stirs = 0;
+            t_flush ();                         /* (Its answer out, not waiting on these words) */
             stir ();                            /* (A stir held while the line was typed and answered: told now, its
                                                 **   answer begun, ui_cmd's) */
         }
