@@ -22,12 +22,14 @@ SWDEPTH     = 16                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: a walk's first words spent half their time
                                     ;   in the copies; 2026-11-03)
 
+            .zeropage
+ova:        .res        1           ; (.A and .X kept through a stub)
+ovx:        .res        1
+
             .bss
 _ovbank:    .res        OVMAX       ; Overlay n's bank: _ovbank[n - 1] (main.c's ovl_load sets them)
 ovstk:      .res        DEPTH       ; The banks the overlay calls found, to put back
 ovsp:       .res        1
-ova:        .res        1           ; (.A and .X kept through a stub)
-ovx:        .res        1
 
             .code
 

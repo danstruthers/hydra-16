@@ -11,10 +11,12 @@
 BANKREG     = $00                   ; The task's RAM bank register (written: the bank at $8000; read: that bank)
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 
-            .bss
-_ovbank:    .res        7           ; The parts' images' banks (dq0d.cfg's OV1 ... OV7)
+            .zeropage
 ova:        .res        1           ; (.A and .X kept through a stub)
 ovx:        .res        1
+
+            .bss
+_ovbank:    .res        7           ; The parts' images' banks (dq0d.cfg's OV1 ... OV7)
 
             .include    "../dq0/swap.inc"
 

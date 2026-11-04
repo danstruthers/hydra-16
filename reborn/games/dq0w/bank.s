@@ -27,12 +27,14 @@ SWFAST      = 1                     ; (The parts copied four pages a pass: an an
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
 OVBANKS     = 31                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
+            .zeropage
+ova:        .res        1           ; (.A and .X kept through a stub)
+ovx:        .res        1
+
             .bss
 _ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
                                     ;   world's own banks (its paging's tables: ipage.c's; the ways across a room;
                                     ;   the traces' store, two: wtrace.c's)
-ova:        .res        1           ; (.A and .X kept through a stub)
-ovx:        .res        1
 fn:         .res        2           ; (m0 ...: the function called,
 keepa:      .res        1           ;   .A and .X kept,
 keepx:      .res        1

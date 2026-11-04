@@ -10,21 +10,32 @@
 ; (push and pop round some of a file's functions; and #pragma local-strings (on), so that a function's strings go
 ; with it); its data and BSS stay in MAIN.  Its functions called from outside it are named s_name, each with a stub
 ; here, SWFN name, n: the part that called it (if a part did) kept on a little stack, part n copied in (unless it's
-; there), s_name called, the caller's part copied back (unless it's still there).  So a part can call the main
+; there), s_name called, the caller's part copied back (unless it's still there), all of it sw_call's, a stub only
+; its call and the two numbers (6 bytes; 2026-11-04, the swap study's: a stub's 11 before).  So a part can call the main
 ; code, the overlays and other parts (each call that swaps costs the copies: a part's bytes, about 14 cycles each);
 ; but nothing outside part n (the main code, an overlay, another part) may call one of its functions or read its
 ; data but through a stub (build.js checks it, in the compiler's output).
 ;
-; Before including it: zeropage.inc, BANKREG, _ovbank (the overlays' banks), ova and ovx (bytes kept), SWDEPTH (and
+; Before including it: zeropage.inc, BANKREG, _ovbank (the overlays' banks), ova and ovx (bytes kept, in the zero page: a stub's call
+; is every call of a part's, some 120 cycles, and these are its most used), SWDEPTH (and
 ; SWFAST, if the parts are copied four pages a pass: a byte some 10 cycles, not 14, for 90 bytes more code; SWMANY,
 ; if there are more than 51 parts, past what an index of their records reaches: some 35 bytes more code); after it,
 ; the parts, SWPART n, ov (part n's image in the bank _ovbank[ov - 1]: overlay ov's, as a rule), in order from 1
 ; (nothing else in RODATA between them), and the stubs.  The main code reads the overlays in before it calls one.
 
-            .bss
-swapped:   .res        1                   ; The part in the area now (0: none)
-swstk:      .res        SWDEPTH             ; The parts the calls found, to put back
+            .zeropage
+swapped:    .res        1                   ; The part in the area now (0: none)
 swsp:       .res        1
+swip:       .res        2                   ; (Where a stub's numbers are: sw_call's)
+
+            .segment    "ONCE"              ; (The BSS is cleared as a task's loaded; the zero page isn't)
+swinit:     stz         swapped
+            stz         swsp
+            rts
+            .constructor swinit
+
+            .bss
+swstk:      .res        SWDEPTH             ; The parts the calls found, to put back
 .ifdef SWMANY
 swrec:      .res        5                   ; (The part's record, swload's: SWMANY's)
 .define     SWREC(k)    swrec + k
@@ -168,12 +179,28 @@ swload:
             sta         BANKREG
             rts
 
-; Part .Y in the area, the part there kept, if it's called this (a part's function not yet returned: it's to go on
-; when this one's done; but the main code's call keeps none: the part last there stays till another's wanted).
-; Keeps .A, .X
-sw_in:
+; A stub's whole work.  Jsr'd by it: the stub's numbers (the part, the function) read from where it was called, its
+; caller's return left on the stack for the function's rts to come back through sw_back.  Part n in the area, the part
+; there kept, if it's called this (a part's function not yet returned: it's to go on when this one's done; but the
+; main code's call keeps none: the part last there stays till another's wanted); the function called, .A and .X (its
+; arguments) as they came; then the part kept in the area again (if there was one, and it's gone), .A, .X (its value;
+; and sreg, a long's) as it left them.
+sw_call:
             sta         ova
             stx         ovx
+            pla                             ; (The stub's jsr: the numbers follow it)
+            sta         swip
+            pla
+            sta         swip + 1
+            ldy         #2
+            lda         (swip),y
+            sta         @go + 1
+            iny
+            lda         (swip),y
+            sta         @go + 2
+            ldy         #1
+            lda         (swip),y
+            tay
             lda         #0
             ldx         swsp
             beq         @keep
@@ -185,11 +212,8 @@ sw_in:
             jsr         swload
 @in:        lda         ova
             ldx         ovx
-            rts
-
-; The part the last sw_in kept, in the area again (if there was one, and it's gone).  Keeps .A, .X (a function's
-; value; and sreg, a long's)
-sw_out:
+@go:        jsr         $FFFF
+sw_back:
             sta         ova
             stx         ovx
             dec         swsp
@@ -222,10 +246,9 @@ sw_out:
             .export     .ident(.concat("_", .string(name)))
             .import     .ident(.concat("_s_", .string(name)))
 .ident(.concat("_", .string(name))):
-            ldy         #n
-            jsr         sw_in
-            jsr         .ident(.concat("_s_", .string(name)))
-            jmp         sw_out
+            jsr         sw_call
+            .byte       n
+            .word       .ident(.concat("_s_", .string(name)))
 .endmacro
 
             .import     __SWAP_START__

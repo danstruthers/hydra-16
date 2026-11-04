@@ -18,12 +18,14 @@ OVMAX       = 8                     ; dq0harn.cfg's overlays (the 4th and 5th th
 SWDEPTH     = 8                     ; Swapped parts' calls in calls, at most
 DEPTH       = 16                    ; Overlay calls in calls, at most
 
+            .zeropage
+ova:        .res        1           ; (.A and .X kept through a stub)
+ovx:        .res        1
+
             .bss
 _ovbank:    .res        OVMAX       ; Overlay n's bank: _ovbank[n - 1] (dq0harn.c's ovl_load sets them)
 ovstk:      .res        DEPTH       ; The banks the overlay calls found, to put back
 ovsp:       .res        1
-ova:        .res        1           ; (.A and .X kept through a stub)
-ovx:        .res        1
 
             .code
 
