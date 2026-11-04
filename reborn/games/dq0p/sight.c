@@ -331,7 +331,7 @@ unsigned char __fastcall__ s_perceive (unsigned char sn, unsigned x, unsigned y,
             }
             d = 0;                              /* (Daylight falling in, a skylight or a shaft open to the sky of its room's:
                                                 **   the ceiling seen by it, 2026-11-04) */
-            for (i = 0; sun_ && i < C->nopen; ++i) {
+            for (i = 0; sun_ && !S.lit && !S.dark && i < C->nopen; ++i) {
                 if (C->open[i].kind >= O_SKYLIGHT && C->open[i].x >= rp.x && C->open[i].x < rp.x + rp.w &&
                     C->open[i].y >= rp.y && C->open[i].y < rp.y + rp.h) {
                     d = 1;

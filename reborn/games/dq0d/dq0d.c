@@ -2371,9 +2371,11 @@ unsigned char __fastcall__ s_take_way (unsigned char k)
     if (!(want & TW_FOOD)) {                    /* (Not hungry, a hungry fellow of its faction beside it: the food it holds
                                                 **   handed over, if it holds any, the world's) */
         for (d = 0; d < NACTORS; ++d) {
+            if ((unsigned char) (NOW_U - aate[d]) < W_HUNGRY) {
+                continue;                       /* (First: this looked at once in a hundred seconds, a long wait's time) */
+            }
             x = (unsigned) &HUB->actor[d];
-            if (d != k && q->state && q->faction == a.faction && q->sn == a.sn && apart (q->x - a.x, q->y - a.y) <= 1 &&
-                (unsigned char) (NOW_U - aate[d]) >= W_HUNGRY) {
+            if (d != k && q->state && q->faction == a.faction && q->sn == a.sn && apart (q->x - a.x, q->y - a.y) <= 1) {
                 im.a = FE_PASS;
                 im.b = d + 1;
                 im.x[0] = im.x[1] = 0xFF;
