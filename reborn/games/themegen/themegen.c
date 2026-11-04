@@ -249,7 +249,7 @@ const char* __fastcall__ name_of (unsigned char tongue, unsigned char form, unsi
 unsigned char given[GROUPS];
 static const char* const groups[GROUPS] = {
     " theme mission start story ", " region seed mint ", " people era ", " stratum layer ", " rooms uses light ",
-    " denizens faction ", " goal kind piece rule lock opened ending "
+    " denizens faction ", " goal kind piece rule lock opened ending wayin wayout "
 };
 
 static unsigned char __fastcall__ group_of (const char* key)

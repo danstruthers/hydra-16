@@ -5326,7 +5326,7 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml thr 95 >> /ram/c.hm', 'echo ml cli 40 >> /ram/c.hm', 'dq0sky=0', 'dq0hour=128',
         "dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,iron spike,hammer'", 'tie the rope', 'look', 'tie the rope', 'look', 'look at the tied rope', 'd', 'look', 'untie the rope', 'u', 'untie the rope', 'look', 'take the driven spike', 'take the rope', 'inventory', 'quit',
         "dq0 -p t -s 5 -c /ram/c.hm -T -k 'rope,chest,sack'", 'drop the sack', 'tie the rope to the sack', 'tie the sack', 'untie the sack', 'drop the chest', 'wait', 'tie the rope to the chest', 'd', 'look', 'u', 'quit',
-        'dq0sky=1', 'dq0hour=12', "dq0 -p t -s 2 -c /ram/c.hm -T -k 'rope,grapple'", 'go to the shaft', 'u', 'throw the grapple up', 'throw the grapple up', 'look', 'examine the hanging rope', 'u', 'untie the rope', 'untie the rope', 'untie the rope', 'look', 'take the rope', 'throw the rope up', 'throw the rope up', 'u',
+        'dq0sky=1', 'dq0hour=12', "dq0 -p t -s 2 -c /ram/c.hm -T -k 'rope,grapple'", 'go to the shaft', 'u', 'throw the grapple up', 'throw the grapple up', 'look', 'examine the hanging rope', 'untie the rope', 'untie the rope', 'untie the rope', 'look', 'take the rope', 'throw the rope up', 'throw the rope up', 'u',
         "dq0 -p t -s 2 -c /ram/c.hm -T -k 'rope,grapple'", 'go to the shaft', 'throw the grapple up', 'throw the grapple up', 'u', 'look', 'u', 'quit',
         "dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s -k 'rope'", 'go to the shaft', 'tie the rope', 'quit', 'dq0 -d /ram/s', 'look', 'd', 'look', 'u', 'quit', 'echo $status']) },
       expect: ['% echo $status'], sdcard: true,
@@ -5350,7 +5350,7 @@ module.exports = {
         };
         const K_HUNG = (cat, L) => { for (let k = 1; k < 206; k++) { let n = ''; for (let j = 0; j < 14 && cat[k * L.kindSize + j]; j++) n += String.fromCharCode(cat[k * L.kindSize + j]); if (n === 'hanging rope') return k; } return -1; };
         dq0Poke(m, [{ g: 1, line: 'tie the rope', n: 2, call: drop(15) }, { g: 2, line: 'tie the rope to the chest', n: 1, call: drop(0, 1) },
-          { g: 3, line: 'look', n: 1, fuel: { 'hanging rope': 0x0B04 } }, { g: 3, line: 'u', n: 3, hub: { wayOpen: 1 }, fuel: { 'hanging rope': 0x0B04 } }, { g: 4, line: 'u', n: 1, fuel: { 'hanging rope': 0x0B84 } },
+          { g: 3, line: 'look', n: 1, fuel: { 'hanging rope': 0x0B04 } }, { g: 3, line: 'u', n: 2, fuel: { 'hanging rope': 0x0B04 } }, { g: 4, line: 'u', n: 1, fuel: { 'hanging rope': 0x0B84 } },
           { g: 6, line: 'u', n: 1, call: () => {          // (Its end twenty feet up: a shorter rope's, out of reach from the floor)
             const { L } = m.dq0.layout(), cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);
             for (let i = 0; cat && i < L.nitems; i++) {
@@ -5408,10 +5408,9 @@ module.exports = {
         if (!dq0Ev(th, 'E_NOISE', {}).length) f.push('a throw not heard');
         say(0, /The grapple flies up and catches, with a clang\./, 'caught');
         say(0, /It's tied to the grapple, in the mouth of the shaft above: \d+ feet of the climb\./, 'the rope looked at');
-        say(0, /An iron grating bars the top of the shaft: that's no way out\./, 'the grating');
         say(0, /You shake the rope, and the grapple comes loose and clatters down\./, 'shaken loose');
         say(0, /You take hold of the rope\. You set to climbing: \d+ feet of it\./, 'up the rope');
-        if (!T.filter(t => t.k >= th.k).some(t => dq0Ev(t, 'E_LEFT', {}).length)) f.push('not climbed out by the rope, the way out open');
+        if (!T.filter(t => t.k >= th.k).some(t => dq0Ev(t, 'E_LEFT', {}).length)) f.push('not climbed out by the rope');
         // Its grapple giving
         say(0, /You put your weight on the rope: the grapple tears loose and comes clattering down\. The shaft's mouth is too high to reach\./, 'the grapple giving');
         // Kept
@@ -10992,7 +10991,7 @@ module.exports = {
         'dq0sky=1', 'dq0hour=12',
         'dq0 -p t -s 1 -c /ram/c.hm', 'look east', 'examine the window', 'climb through the window', 'douse the torch', 'look', 'map', 'wait 5 hours', 'wait 4 hours', 'look', 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm', 'look southwest', 'open the window', 'look southwest', 'quit',
-        'dq0 -p t -s 2 -c /ram/c.hm -T', 'u', 'go to the shaft', 'u', 'drop the flask', 'd', 'look', 'u', 'quit',
+        'dq0 -p t -s 2 -c /ram/c.hm -T', 'u', 'go to the shaft', 'drop the flask', 'd', 'look', 'u', 'quit',
         'dq0 -p t -s 2 -c /ram/c.hm -T', 'go to the shaft', 'u',
         'dq0hour=22', 'dq0 -p t -s 2 -c /ram/c.hm -T', 'go to the shaft', 'douse the torch', 'look', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -11013,7 +11012,7 @@ module.exports = {
           const h = m.dq0.bank(0), { L } = m.dq0.layout(), k = stratumRec(m, 0).links.find(l => l.kind === 6 && l.dug === 2);
           if (k) { h[L.pcX] = k.x & 255; h[L.pcX + 1] = k.x >> 8; h[L.pcY] = k.y & 255; h[L.pcY + 1] = k.y >> 8; }
         };
-        dq0Poke(m, [rec(1), rec(2), { g: 2, line: 'd', n: 1, call: goto_head }, { g: 3, line: 'look', n: 2, call: () => { const h = m.dq0.bank(0), [A,B] = require('../sim/lib/hubown.js').evaluate(['offsetof (struct hub, tb.nsky)', 'offsetof (struct hub, tb.sun)']); m.dbg = [h[A], h[B]]; } }, rec(5), { g: 5, line: 'u', n: 2, call: roof(8) }, { g: 6, line: 'u', n: 1, hub: { wayOpen: 1 }, call: roof(8) }]);
+        dq0Poke(m, [rec(1), rec(2), { g: 2, line: 'd', n: 1, call: goto_head }, { g: 3, line: 'look', n: 2, call: () => { const h = m.dq0.bank(0), [A,B] = require('../sim/lib/hubown.js').evaluate(['offsetof (struct hub, tb.nsky)', 'offsetof (struct hub, tb.sun)']); m.dbg = [h[A], h[B]]; } }, rec(5), { g: 6, line: 'u', n: 1, call: roof(8) }]);
       },
       check(m, out) {
         const f = [], G = dq0Story(out).split('enters the dungeon'), ok = (g, re, what) => { if (!re.test(G[g] || '')) f.push(what); };
@@ -11040,7 +11039,6 @@ module.exports = {
         ok(5, /The sun shows at the top of the shaft above: it's noon, you judge\./, 'the sun not read at the shaft');
         ok(5, /> u > u The shaft's mouth is too high to reach\./, 'the high roof reached');
         ok(5, /You stand under a shaft open to the sky, daylight falling from it\. You stand by a shaft in the floor\./, 'the shaft not told');
-        ok(5, /> u > u An iron grating bars the top of the shaft: that's no way out\./, 'the shaft a way out with the way out shut');
         ok(5, /Put down\. It falls away down the shaft, and you hear it land far below\./, 'the flask not fallen');
         ok(5, /You set to climbing: \d+ feet of it\./, 'the shaft not climbed by rounds');
         ok(5, /You climb down the shaft\. You come into /, 'not come down the shaft');
@@ -11048,7 +11046,7 @@ module.exports = {
         ok(5, /Pale daylight falls from far up the shaft above: it's day\./, 'the light alone not told from below');
         if (/skylight/.test((G[5] || '').split('You come into ')[1] || '')) f.push('a skylight below the top stratum');
         if (!sk[5] || !sky(sk[5][1], 5) || sky(sk[5][1], 5).to !== 0) f.push('the foot not a link on the stratum below: ' + JSON.stringify(sk[5]));
-        ok(6, /You set to climbing: 20 feet of it\.[^]*You have escaped\./, 'not out by the shaft with the way out open');
+        ok(6, /You set to climbing: 20 feet of it\.[^]*You climb out into the light of day with Aldric's door still shut/, 'not out by the shaft, unsolved, as it goes up');
         ok(7, /Stars show at the top of the shaft above: it's [a-z ]+, you judge\./, 'the stars not read at the shaft');
         if (/daylight falling/.test(G[7] || '')) f.push('daylight by night, told');
         ok(7, /> look > look It is dark\./, 'lit by night with the torch out');
@@ -12223,7 +12221,7 @@ module.exports = {
       name: 'dq0pieces', meaning: true, what: 'Dingus Quest Zero\'s puzzle\'s pieces placed with the plan (theme.h: each one\'s stratum from the seed, its chunk in the stratum\'s halls as its plan is grown, put down as the chunk is made, by the maker\'s stock), by what the character perceives and the things\' records and replies: the crypt\'s stone tablet on the top stratum (dq0 -T -T: the character begins on it), seen at its feet, taken and read (the parser\'s read: a piece of the puzzle found to hand), a dagger not (nothing written on it); then the crown and the throne (dq0 -k), the throne put down and not taken up again (fixed where it stands: refused), the crown put on it: the place ruled, the game ended (the theme\'s ending; its words, the theme\'s data)',
       init: 't_rc', cycles: 800e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -T', 'take the tablet', 'read the tablet',
-        'read the dagger', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k crown,throne', 'drop the throne', 'take the throne', 'put the crown on the throne', 'echo $status']) },
+        'read the dagger', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -k crown,throne', 'drop the throne', 'take the throne', 'put the crown on the throne', 'u', 'echo $status']) },
       expect: ['% echo $status'],
       check(m) {
         const T = dq0Turns(m), f = [], rep = (l, kind, result, what) => { if (!dq0Rep(T.of(l), 'ireq', { kind, result }).length) f.push(what + ' (' + JSON.stringify(T.of(l).replies.filter(r => r.req === 'ireq').map(r => r.kind + ' ' + r.result)) + ')'); };
@@ -12238,7 +12236,10 @@ module.exports = {
         rep('take the throne', 'IO_GET', 'IR_NO', 'the throne taken up again (not fixed where it stands)');
         const p = T.of('put the crown on the throne');
         rep('put the crown on the throne', 'IO_PUT', 'IR_OK', 'the crown not put on the throne');
-        dq0Need(f, p, 'E_BYE', {}, 'the game not ended, the place ruled');
+        if (dq0Ev(p, 'E_BYE', {}).length) f.push('the game ended as the place is ruled, not walked out of');
+        if (!p.after || !p.after.wayOpen) f.push('the way out not opened, the place ruled');
+        dq0Need(f, T.after(p, 'u'), 'E_LEFT', {}, 'not out, the place ruled');
+        dq0Need(f, T.and(T.after(p, 'u')), 'E_BYE', {}, 'the game not ended, walked out of');
         return f;
       },
       sdcard: true
@@ -12285,13 +12286,13 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0themec', what: 'Dingus Quest Zero\'s theme compiler (games/themec): the stand-in themes (the card\'s lib/dq0/themes) compiled on the Hydra into the same records as make.js makes them at build time (dq0t.dat\'s, but for their count), byte for byte; and the theme checker refusing a theme whose way out can\'t be opened (no rule opens it) and whose faction can\'t live where it\'s said to (kobolds on a built stratum), said why',
+      name: 'dq0themec', what: 'Dingus Quest Zero\'s theme compiler (games/themec): the stand-in themes (the card\'s lib/dq0/themes) compiled on the Hydra into the same records as make.js makes them at build time (dq0t.dat\'s, but for their count), byte for byte; and the theme checker refusing a theme whose way out can\'t be opened (no rule opens it), that has no way out to be had unsolved and no words for it, and whose faction can\'t live where it\'s said to (kobolds on a built stratum), said why',
       init: 't_rc', cycles: 900e6,
       machine: { input: ['bind -a /sd/0/games /bin', ...['1crypt', '2temple', '3warren'].flatMap(n => ['themec -o /ram/' + n + '.dat /sd/0/games/lib/dq0/themes/' + n + '.txt',
         'xd /ram/' + n + '.dat']), 'echo \'theme    | the Bad Place\' >/ram/bad.txt', 'echo \'mission  | escape\' >>/ram/bad.txt',
         'echo \'stratum  | Top | b | halls\' >>/ram/bad.txt', 'echo \'faction  | kobolds | kobold | 0-0 | 9 | - | 0 | u | -\' >>/ram/bad.txt',
         'themec /ram/bad.txt', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
-      expect: ['the Crypt of the Dead King: ', 'the Drowned Temple: ', 'the Kobold Warren: ', 'the theme checker: the way out can\'t be opened',
+      expect: ['the Crypt of the Dead King: ', 'the Drowned Temple: ', 'the Kobold Warren: ', 'the theme checker: no rule that opens the way out can be done', 'the theme checker: no way out: neither wayin nor wayout', 'the theme checker: no ending for leaving',
         'the theme checker: kobolds: none of its kinds lives in its strata', '% echo $status\n1\n'],
       check(m, out) {
         const f = [], dq0 = DQ0_MAKE(), beasts = DQ0_BEASTS();
@@ -12382,8 +12383,8 @@ module.exports = {
       init: 't_rc', cycles: 2200e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 70000 -c /ram/c.hm -T -T', 'quit',
-        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\'', 'read the journal', 'u', 'use the cup on the way out', 'u',
-        'dq0 -p t -s 70007 -c /ram/c.hm -T -T -k \'silver bell,old scroll\'', 'read the scroll', 'put the bell on the idol',
+        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\'', 'read the journal', 'u',
+        'dq0 -p t -s 70007 -c /ram/c.hm -T -T -k \'silver bell,old scroll\'', 'read the scroll', 'put the bell on the idol', 'quit',
         'dq0 -p t -s 70012 -c /ram/c.hm -k \'shackle key,chained woman\'', 'drop the woman', 'put the key on the woman', 'u',
         'dq0 -p t -s 70008 -c /ram/c.hm -T -T -T', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -12395,10 +12396,8 @@ module.exports = {
         const g2 = T.of('dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup,journal\'');
         if (!has(g2, 'jade cup') || !has(g2, 'journal')) f.push('the cup and the journal not to hand (dq0 -k)');
         if (!dq0Rep(T.after(g2, 'read the journal'), 'ireq', { kind: 'IO_FIND', result: 'IR_OK' }).length) f.push('the journal not read (a piece found to hand)');
-        dq0Need(f, T.after(g2, 'u'), 'E_NOWAY', { why: 'N_SHUT' }, 'the way out not shut');
-        const u = T.after(g2, 'use the cup on the way out');
-        if (!u.after || !u.after.wayOpen || (u.at && u.at.wayOpen)) f.push('the way out not opened by the cup');
-        const l = T.after(u, 'u');
+        if (!g2.after || !g2.after.wayOpen) f.push('the artifact\'s way in not open behind it');
+        const l = T.after(g2, 'u');
         dq0Need(f, l, 'E_LEFT', {}, 'the way out not taken (escaped)');
         dq0Need(f, T.and(l), 'E_BYE', {}, 'the artifact\'s game not ended');
         const g3 = T.of('dq0 -p t -s 70007 -c /ram/c.hm -T -T -k \'silver bell,old scroll\'');
@@ -12406,7 +12405,8 @@ module.exports = {
         if (!dq0Rep(T.after(g3, 'read the scroll'), 'ireq', { kind: 'IO_FIND', result: 'IR_OK' }).length) f.push('the old scroll not read (a piece found to hand)');
         const p = T.after(g3, 'put the bell on the idol');
         if (!dq0Rep(p, 'ireq', { kind: 'IO_PUT', result: 'IR_OK' }).length) f.push('the bell not laid on the idol');
-        dq0Need(f, T.and(p), 'E_BYE', {}, 'the curse not broken (the game not ended, ruled)');
+        if (!p.after || !p.after.wayOpen || (p.at && p.at.wayOpen)) f.push('the way out not opened, the curse broken');
+        if (dq0Ev(p, 'E_BYE', {}).length) f.push('the game ended as the curse is broken, not walked out of');
         const g4 = T.of('dq0 -p t -s 70012 -c /ram/c.hm -k \'shackle key,chained woman\''), k = T.after(g4, 'put the key on the woman');
         if (!k.after || !k.after.wayOpen || (k.at && k.at.wayOpen)) f.push('the prisoner\'s way out not opened by the key');
         const l4 = T.after(k, 'u');
@@ -12420,6 +12420,92 @@ module.exports = {
         return f;
       },
       sdcard: true
+    },
+    {
+      name: 'dq0ends', meaning: true, near: ['theme', 'save'], what: "Dingus Quest Zero's three ends (the between-dungeons plan's steps 1 and 2, the user's Q1 \"Every dungeon\" and Q2 \"No, walk out\"; HOUSE.md's how a dungeon ends), each goal kind and each way out a scene, by the world's events, the words told and game.dat's outcome (xd: Q.done, Q.solved, the save's last bytes but plain): a sky shaft climbed unsolved (the crypt, seed 2, its roof poked in reach, no grating): left, its own words, then a carry-on into a new dungeon; an artifact's way in open: up it once told what that does, again left; the artifact itself to hand (dq0 -k): told it's done, walked out solved at the first asking, in its words; the thing taken up in play told once; the evil's way out shut, the curse broken told and the game going on, kept through a quit and walked out (ruled); the prisoner's way out shut, its other way out on the seed's stratum (dq0 -T -T -T, put by a poke at the foot of that stair) left unsolved; a through goal (a hand-written theme: the checker's way out its far exit) out by its far exit solved, with no asking; and a hard-mode death after solving still solved, in its words",
+      init: 't_rc', cycles: 5000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0sky=1', 'dq0hour=12',
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/a', 'go to the shaft', 'u', 'xd /ram/a/game.dat', 'dq0 -p t -s 259 -d /ram/a', 'quit', 'rm -r /ram/a',
+        'dq0 -p t -s 70000 -c /ram/c.hm -d /ram/b', 'examine the way out', 'u', 'look', 'u', 'xd /ram/b/game.dat', 'rm -r /ram/b',
+        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup\' -d /ram/c', 'look', 'u', 'xd /ram/c/game.dat', 'rm -r /ram/c', 'cp /ram/c.hm /ram/s.hm', 'echo ml awa 99 >> /ram/s.hm',
+        'dq0 -p t -s 70000 -c /ram/s.hm -T -T', 'search', 'search', 'search', 'search', 'take the cup', 'drop the cup', 'take the cup', 'quit',
+        'dq0 -p t -s 70007 -c /ram/c.hm -k \'silver bell,bone idol\' -d /ram/e', 'drop the idol', 'u', 'examine the way out', 'put the bell on the idol', 'quit', 'dq0 -p t -d /ram/e', 'u', 'xd /ram/e/game.dat', 'rm -r /ram/e',
+        'dq0 -p t -s 70012 -c /ram/c.hm -T -T -T -d /ram/f', 'look', 'u', 'examine the way out', 'u', 'xd /ram/f/game.dat', 'rm -r /ram/f',
+        'echo \'theme    | the Long Road\' > /ram/t.txt', 'echo \'mission  | escape\' >> /ram/t.txt', 'echo \'stratum  | the Upper Road | b | halls\' >> /ram/t.txt', 'echo \'stratum  | the Lower Road | n\' >> /ram/t.txt',
+        'echo \'goal     | through | the Far Door | 1 | -\' >> /ram/t.txt', 'echo \'lock     | It has fallen in.\' >> /ram/t.txt',
+        'echo \'ending   | escaped | You come up through the Far Door.\' >> /ram/t.txt', 'echo \'ending   | left | You climb out, the road untried.\' >> /ram/t.txt', 'echo \'ending   | died | The road keeps you.\' >> /ram/t.txt',
+        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -T -T -T -d /ram/g', 'look', 'u', 'xd /ram/g/game.dat', 'rm -r /ram/g',
+        'cp /ram/c.hm /ram/w.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/w.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/w.hm',
+        'dq0 -p t -s 3 -c /ram/w.hm -H -k crown,throne -d /ram/h', 'drop the throne', 'put the crown on the throne', 'wait 10 minutes', 'xd /ram/h/game.dat', 'echo $status']) },
+      expect: ['% echo $status'], sdcard: true,
+      start(m) {
+        const roof = ft => () => {                       // (The roof of the character's chunk's rooms: a shaft's mouth in reach)
+          const h = m.dq0.bank(0), { L } = m.dq0.layout(), w = m.dq0.bank(WORLD_BANK_N), st = stratumRec(m, h[L.pcSn]);
+          const ox = (h[L.pcX] | h[L.pcX + 1] << 8) - st.x0, oy = (h[L.pcY] | h[L.pcY + 1] << 8) - st.y0;
+          const [ZONE, ZSIZE, CMID, NZ] = require('../sim/lib/hubown.js').evaluate(['offsetof (struct chunk, zone)', 'sizeof (struct zone)', 'offsetof (struct zone, cmid)', 'offsetof (struct chunk, nzones)']);
+          for (let c = 0; c < 24; c++) {
+            const sl = CSLOT_AT + c * 8, b = m.dq0.bank(5 + Math.floor(c / 3)), o = (c % 3) * 0xAA0;
+            if (w[sl] && b && w[sl + 1] === h[L.pcSn] && (w[sl + 2] | w[sl + 3] << 8) === ox >> 5 && (w[sl + 4] | w[sl + 5] << 8) === oy >> 5) {
+              for (let z = 0; z < b[o + NZ]; z++) b[o + ZONE + z * ZSIZE + CMID] = ft;
+            }
+          }
+        };
+        const toExit = () => {                           // (At the foot of the stair out on the character's stratum)
+          const h = m.dq0.bank(0), { L } = m.dq0.layout(), k = stratumRec(m, h[L.pcSn]).links.find(l => l.kind === O_WAY_OUT && l.to === O_NOWHERE);
+          (m.exits = m.exits || []).push(k ? h[L.pcSn] : -1);
+          if (k) { h[L.pcX] = k.x & 255; h[L.pcX + 1] = k.x >> 8; h[L.pcY] = k.y & 255; h[L.pcY + 1] = k.y >> 8; }
+        };
+        dq0Poke(m, [{ g: 1, line: 'u', n: 1, call: roof(8) }, { g: 8, line: 'look', n: 1, call: toExit }, { g: 9, line: 'look', n: 1, call: toExit }]);
+      },
+      check(m, out) {
+        const T = dq0Turns(m), f = [], st = dq0Story(out), G = st.split('enters the dungeon'), ok = (g, re, what) => { if (!re.test(G[g] || '')) f.push(what + ' (game ' + g + ')'); };
+        const no = (g, re, what) => { if (re.test(G[g] || '')) f.push(what + ' (game ' + g + ')'); };
+        const q = cmd => { const b = xdBytes(out, cmd); return b.length ? [b[57], b[58]] : []; };   // (game.dat: its head 20 bytes, struct pc 36, then Q: theme, done, solved)
+        const eq = (a, b, what) => { if (JSON.stringify(a) !== JSON.stringify(b)) f.push(what + ': done, solved ' + JSON.stringify(a)); };
+        const ESCAPED = 1, RULED = 2, DIED = 3, LEFT = 4;
+        // A sky shaft, unsolved, then a carry-on
+        ok(1, /You set to climbing: 20 feet of it\.[^]*You climb out into the light of day with Aldric's door still shut/, 'out by the shaft not left, in its words');
+        ok(1, /Your character carries on/, 'left, not said to carry on');
+        no(1, /You have escaped|grating/, 'the old words of a shaft');
+        eq(q('xd /ram/a/game.dat'), [LEFT, 0], 'left by the shaft');
+        dq0Need(f, T.of('dq0 -p t -s 259 -d /ram/a'), 'E_ARRIVE', { how: 'A_START' }, 'no new dungeon after leaving');
+        const g2 = T.of('dq0 -p t -s 259 -d /ram/a');
+        if (!g2.after || g2.after.theme !== 'the Drowned Temple') f.push('the carry-on not in its new theme: ' + (g2.after && g2.after.theme));
+        // The artifact's way in: open, asked once
+        ok(3, /The way up stands open: go up to leave\./, 'the way in not told open');
+        ok(3, /That's the way out, and what you came for undone\. Go up again to leave it so\./, 'not told what going up would do');
+        ok(3, /with empty hands/, 'its left words not told');
+        no(3, /in your hands/, 'its solved words told, left');
+        eq(q('xd /ram/b/game.dat'), [LEFT, 0], 'left by the way in');
+        // The artifact to hand: told, out solved with no asking
+        ok(4, /So this is the Cup of [A-Za-z]+, where they said it would be\.[^]*That's what you came to do\. Now to get out alive\./, 'the artifact to hand not told done');
+        no(4, /That's the way out, and/, 'asked, solved');
+        ok(4, /You climb out into the daylight with the Cup of [A-Za-z]+ in your hands\./, 'its solved words not told');
+        eq(q('xd /ram/c/game.dat'), [ESCAPED, ESCAPED], 'solved by the artifact');
+        // The artifact taken up in play: told once
+        if ((G[5] || '').split("That's what you came to do").length !== 2) f.push('the artifact taken up in play not told once: ' + ((G[5] || '').split("That's what you came to do").length - 1));
+        // The evil: shut, then told, kept, walked out
+        ok(6, /The way out is shut fast\. The curse holds it till the curse is broken; if there's another way up, it's somewhere below\./, 'the curse\'s lock not told');
+        dq0Need(f, T.after(T.of('dq0 -p t -s 70007 -c /ram/c.hm -k \'silver bell,bone idol\' -d /ram/e'), 'u'), 'E_NOWAY', { why: 'N_SHUT' }, 'the curse\'s way out not shut');
+        ok(6, /You lay the Bell of [A-Za-z]+ upon the idol of [A-Za-z]+\.[^]*That's what you came to do\./, 'the curse broken not told done');
+        ok(6, /You climb out into the daylight, and behind you the dead of [^.]* sleep at last\./, 'its ruled words not told, kept through a quit');
+        eq(q('xd /ram/e/game.dat'), [RULED, RULED], 'solved by the curse broken');
+        // The prisoner's other way out, unsolved
+        ok(7, /A stair climbs to the open air: go up to leave\./, 'the other way out not told, examined');
+        ok(7, /That's the way out, and what you came for undone/, 'asked at the other way out');
+        ok(7, /You climb out into the daylight alone\./, 'its left words not told');
+        eq(q('xd /ram/f/game.dat'), [LEFT, 0], 'left by the other way out');
+        // A through goal's far exit: solved by going out
+        ok(8, /You come up through the Far Door\./, 'the far exit not solved');
+        no(8, /That's the way out, and/, 'asked at the far exit');
+        eq(q('xd /ram/g/game.dat'), [ESCAPED, ESCAPED], 'solved by the far exit');
+        if (JSON.stringify(m.exits) !== '[1,1]') f.push('the stairs out not on the strata looked at: ' + JSON.stringify(m.exits));
+        // Died, solved
+        ok(9, /You did what you came to do, and you won't be climbing out to tell of it\./, 'a death after solving not worded so');
+        no(9, /The crypt keeps you/, 'its plain death\'s words told');
+        eq(q('xd /ram/h/game.dat'), [DIED, RULED], 'died, solved');
+        return f;
+      }
     },
     {
       name: 'dq0handtheme', meaning: true, what: 'Dingus Quest Zero\'s hand-written theme (dq0 -t FILE: games/dq0/themes/1crypt.txt\'s format, its history\'s groups): a theme giving its name, its region and its two strata, made into a game\'s own by themegen (its seed\'s history filling the rest: the head\'s mission and story made, line by line; the eras, the inhabitants, the goal and its puzzle), written into the save\'s folder and compiled (theme.txt, theme.dat), even at a small seed (5: a stand-in\'s, but for -t); the game in it: the theme\'s name, its top stratum the one given',

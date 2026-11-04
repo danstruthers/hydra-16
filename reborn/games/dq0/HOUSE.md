@@ -202,7 +202,7 @@ plays them as HarnMaster's referee does.
   - **What holds:** a thing on its square or beside it that's fixed where it stands (an iron ring, a stout post, a driven spike, an altar, a well: the maker's rings at a built stratum's shafts going down, its posts at a mine's) or that weighs 30 lb or more (a chest, a table); not a sconce.  Named, "That won't hold a rope." if it doesn't.  Else its grapple, set over the edge; else an iron spike driven in, with a hammer: a minute's long task, loud (7), and it stays driven for good.  Tied to a thing on another square, 5 feet of the rope are gone to reach the edge.
   - **Climbing aided:** on the rope's length a Climbing test is 3 steps the better (15 points, the book's middle), up or down, a shaft's, a ledge's, a pit's, by anyone's climb: the rest as climbing is (a slip, a fall, holds).  Past its end the climb goes on unaided.  From below it's taken only if its end hangs within 9 feet of the floor ("The rope's end hangs out of reach.").  A rope down a shaft or a ledge lets "d" and "u" go by it as they come; "climb the rope" at its top, with no way up there, goes down it.
   - **A grapple thrown up** ("throw the grapple up", "throw the rope up"; a grapple not tied on is tied on as it's thrown; "tie the grapple to the rope" beforehand a round's), a round's, at a shaft on its own square (one open to the sky: its mouth over the roof, higher than 9 feet), a ledge above beside it, a pit's edge from inside: the book's Throwing test at its missile bands, twice as hard straight up (a short band 5 feet, medium 10, long 20, extreme 40; 20 less a band; 40 feet at most).  Caught: told, with a clang.  Failed: "clatters back down".  A marginal success one time in four will give as a climber's weight comes on it, nobody falling: the lot at the climber's feet.  Each throw's noise is heard by the denizens as work's is (4 caught; 5 fallen back).
-  - **A shaft's grating stands** (A18): a rope up a shaft to the sky reaches its mouth, and "An iron grating bars the top of the shaft" as before: it's no way past.
+  - **Up a shaft to the sky by a rope** reaches its mouth, and out: left, or solved if it's solved (How a dungeon ends, below; the grating of A18 gone with Q1, 2026-11-04).
   - **Untied** ("untie the rope"), at its top, a round's: drawn up and coiled at the character's feet (what's tied to it with it: "take the rope"; what it was tied to as it is, a spike staying driven).  From below, a knot's out of reach; a grapple can be shaken loose, a Throwing test a round.  Carried, "untie the rope" takes its grapple off, at its feet.
   - **Left in place** it's two things lying there, "tied rope" at its top and "hanging rope" at its foot, seen and looked at (what it's tied to, how far it goes, its end), fixed where they stand so nothing takes them up, kept with the item store as anything lying there is, chunk by chunk and in the save.  Anyone's climb uses it.  **The minds climb nowhere else than with the character** (an ally coming along, up or down: as it comes along by anything): none crosses a roped ledge on its own, and none unties or cuts one.  *Not yet:* two ropes tied together; a rope cut; a heavy thing it's tied to carried off later leaving it as it was; a hold other than a grapple giving.  A climber's own gear: an outfit's Climbing skill's grapple comes with two spikes and a hammer (Outfits).
 
@@ -893,10 +893,14 @@ requests; the house's rules above marked *(every ruleset's)* it plays as HarnMas
   (themegen: HISTORY.md); a seed under it, a stand-in theme's, by its second byte.  (main.c's s_begin.)  Why: the
   clock's seeds are all past it, so every game has a region of its own; the tests' small seeds keep the themes
   they were written against.
-- **A far exit is open** from the start: a way out below the top stratum (the through goal's) lets the character up
-  it to the daylight, the game won (escaped); the way in, above, has fallen in (no rule opens it).  Another goal's way
-  out, the top stratum's, is shut till its theme's mission opens it (a rule's effect, theme.h's TE_OPEN), then taken the
-  same.  (dq0w.c's s_climb.)  Why: winning through is the goal; the way in shut is what makes it one.
+- **How a dungeon ends** (the user's Q1 "Every dungeon", Q2 "No, walk out", 2026-11-04: between-dungeons plan, steps 1 and 2; the rest *(new, for review)*).  Three ends, and the words never say you win or lose:
+  - **Solved:** a rule with an effect done (theme.h's TE_OPEN, TE_RULE; a take rule's, or a far exit gone out by).  Told at once: the rule's words, then "That's what you came to do.  Now to get out alive.", and the game goes on: the way out opens if it was shut, and what's about is still about.  It's kept whatever follows (Q.solved, in the save).  Out of the dungeon by any way, the theme's solved ending (escaped, or ruled if the place was ruled).
+  - **Left:** out by any way, unsolved.  Its own words (the theme's `ending | left`), no loss, and the character carries on.  Walking up a stair out, the first time in a game, asks: "That's the way out, and what you came for undone.  Go up again to leave it so."  A shaft to the sky doesn't ask: twenty feet of climbing says it's meant.
+  - **Died:** as ever (D7).  Solved first, it still counts solved (Q.solved stays), and says so in place of the theme's words: "You did what you came to do, and you won't be climbing out to tell of it."  A death isn't kept but in hard mode, so only there does a save hold this one.
+  - **The way in:** a theme's reason says if it's shut (`wayin | open` it stands open: the artifact's goal, which came to find a thing and has no reason for a door to shut).  **A shut dungeon has another way out to find** (`wayout | N`: a stair to the daylight, open from the start, on stratum N, as far from that stratum's way in as it's found, the same as a through goal's far exit, which is one).  Themegen's evil and prisoner goals put it on a stratum below the top by the seed's own number, none of its dice.  The stand-ins' are the crypt's Black Crypts, the temple's third, the warren's fourth.  (dq0m/plan.c's links; theme.c's gone.)
+  - **The theme checker proves it** (themec's and make.js's, every theme): `wayin` or `wayout` (or a through goal), so a character with nothing but its legs has a way out, and an `ending | left`.  A sky shaft isn't counted: it's by dice, its mouth may be out of reach, and its climb may fail.  What it proves is that the stair is made; that its stratum can be walked to is the plan's own guarantee (its strata all linked, its links in its halls).
+  - **Each goal's solving:** an artifact's, taking it up (`rule | take | X | open | words`: the thing come into the character's hands by any taking, the world's); the evil's, the relic laid on the altar; a prisoner's, the shackles opened; a through goal's, going out by its far exit.  A stand-in's rule of `open` or `rule`, the same.  Why: the user's "walk out with what was found, past what's still about".
+  - *What's still doubtful, for your review:* the artifact's old door with its wards is gone from its goal (a shut-door kind would be one more block in goals.txt); a freed prisoner doesn't yet walk (she stays a fixture, "I'll come behind you"); a dropped artifact stays solved; the thing itself is still left at the door on a carry-on (the theme's own things: steps 7 and 10); and a curse broken doesn't still its dead (the words say they're slow to learn it).
 - **A stratum's age is its history's:** its oldest layer's era's, the centuries since it ended and one more (a
   stand-in's, the world's dice: 1-40 centuries, 1-20 the top's).  (dq0m/plan.c, from the record's sage.)  Why: what's
   rotted, what's flagged and what's earth follow the history.
@@ -908,8 +912,7 @@ requests; the house's rules above marked *(every ruleset's)* it plays as HarnMas
   in three for a conquest, a flood or a curse, one in four for an abandoning; a later people's own part (a reuse:
   a third to two thirds of the way from the way in to the stratum's far side, by its seed) isn't.  Why: a ruin's a
   ruin in places, and those who came after mended what they took.
-- **The evil's goal won where it's done:** the relic laid on the curse's altar ends the game, the curse broken (the
-  ruled ending's words); its dead aren't stilled first.  Why: the denizens' answer to it is still to come.  *(Kept for now: the user's, 2026-11-03.)*
+- **The evil's goal solved where it's done:** the relic laid on the curse's altar breaks the curse (How a dungeon ends, above); its dead aren't stilled, and are still to be got past.  Why: the denizens' answer to it is still to come.  *(The user's Q2, 2026-11-04, in place of ending the game there.)*
 - **A faction's others are the theme's own:** themegen writes how a faction stands with the factions the region has
   (the bestiary's factions.txt lists them all), and only a game of its own writes faction lines in the save folder
   (theme.txt: popgen's), a stand-in's game none.  Why: popgen reads every name it's given, and the stand-ins' games
@@ -3054,10 +3057,8 @@ plan's and the links': a chunk made again is byte-identical, dq0pure's); a test'
   open to the sky whose room's roof is more than **9 feet** up (a jump and a pull) can't be reached from the floor ("The
   shaft's mouth is too high to reach."), but by a rope hanging there, its end in reach (Rope and grapples, under Climbing and falling; a ladder, no rule yet).  A dug shaft's foot is reached, as the digger left it.
   Jumped down: a fall of its height, as any shaft's.
-- **A shaft as a way out**: only as the way out's own rule lets it: at the **top** of a shaft on the top
-  stratum, climbed, it's the game's end (E_LEFT, a way out's) **if the way out is open** (the theme's mission done);
-  else "An iron grating bars the top of the shaft: that's no way out." and no climb.  So the puzzle's never by-passed.
-  *The user's, 2026-11-03 (A18): "It is not about winning or losing.  It is about solving a puzzle."  Climbing out unsolved is "not a loss, just a disappointment": for the plan for the game between dungeons (Decided, not yet built, below).  The rule stands till then.*
+- **A shaft as a way out**: at the **top** of a shaft on the top stratum, climbed, the character's out (E_LEFT, EL_SKY): left, or solved if it's solved (How a dungeon ends, above).
+  *The user's, 2026-11-03 (A18): "It is not about winning or losing.  It is about solving a puzzle."  Climbing out unsolved is "not a loss, just a disappointment"; Q1, 2026-11-04, took the grating off.*
 - **A thing dropped down one** (any shaft's): a thing put down on the square where a shaft goes down falls to its foot, on the stratum
   below ("It falls away down the shaft, and you hear it land far below."); a choked one, it lies where it's put.  The
   denizens don't hear it yet.  A thing thrown down, or dropped by a denizen, not yet.
@@ -3586,11 +3587,10 @@ weapon's version and Strength, a wrecked door, a slip out of a pit.
   save: the user's "turned off, it's hard mode"): a death ends the save, "Hard mode: there's no save to go back to.",
   and the folder begins a new game, a new character.  *(The user's, 2026-11-03: they stay as they are, at a stratum and a
   quit, with no save before danger and no pause as a fight starts, till a playtest shows the lost play hurts.)*
-- **The ending** (death, the theme's goal reached, the way out taken): the theme's words, what's next (above, or "Your
+- **The ending** (death, or out of the dungeon, solved or left): the theme's words, what's next (above, or "Your
   character carries on: start the game again with this save's folder, and go on into a new dungeon."), the character's
   sheet as it ends.
-- **Carrying on** (D8): the game begun again with the folder of one ended alive (the goal reached, or the way out
-  taken) begins a new dungeon (its seed -s's, or the clock's: a new history and theme) with the same character: its
+- **Carrying on** (D8): the game begun again with the folder of one ended alive (solved or left: How a dungeon ends) begins a new dungeon (its seed -s's, or the clock's: a new history and theme) with the same character: its
   sheet as it ended (its skills, its wounds as they are, healing on, its fatigue, its skills used since their rolls),
   and its gear: the things it carried out, its money among them, kept with the save (the world's kit.dat, written
   with every save: an outfit's list of them, what's worn and held, then what's in each) and made as its outfit in
@@ -3614,7 +3614,7 @@ have no rules here yet.
 built, then its line here goes:
 
 
-**The game between dungeons** (the user's, 2026-11-03: A8, A18, A20; to plan, the plan outside the repository): what takes a character
+**The game between dungeons** (the user's, 2026-11-03: A8, A18, A20; the plan's first two steps built: How a dungeon ends, above; the plan outside the repository): what takes a character
 to a dungeon in the first place; a random time between dungeons, with healing auto-rolled, weapons and gear maintained at a cost, food
 and housing paid for, and skills by the book past 30 days; clues taken to a library or a scholar, languages and scripts known, scribes
 and scholars as characters.

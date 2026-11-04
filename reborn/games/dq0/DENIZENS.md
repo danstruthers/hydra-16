@@ -65,8 +65,8 @@ factions written down, no layers (nothing of theirs in the save folder: their de
   gone); put X on (or in) Y (an offering on an altar, a crown on a throne); use X on the way out (open the way out
   with X).  The world judges a command of the puzzle's by the rules (the UI's request, IO_PUZZLE: the things found to
   hand by the item store, IO_FIND, the rule for their kinds, done: IO_COMBINE, IO_PUT), keeps it done (a bit each in
-  its world.dat), and does its effect: none more, the way out opened (the hub's way_open: the world lets the
-  character up it, and it's gone: E_LEFT), or the place ruled (the UI's to end the game); the UI tells its words
+  its world.dat), and does its effect: none more, or the dungeon solved and the way out opened (the hub's way_open: the world lets the
+  character up it, and it's gone: E_LEFT; a place ruled the same, its ending the ruled one's); the UI tells its words
   (DUNGEON.md, who keeps what: the game's own rules).
 - **The endings:** escaped (up the way out, opened), ruled (a rule's), or dead (a fatal wound); the theme's words, the
   game over, and the save marked done (dq0 -d on it again begins a new game).

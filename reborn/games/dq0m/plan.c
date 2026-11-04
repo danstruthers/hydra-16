@@ -341,9 +341,10 @@ void __fastcall__ o_links_down (unsigned char n)
     unsigned o, x, y, d, best;
     struct link* l;
 
-    hub_get (THEME_BANK, &THEME->goal, g, 2);   /* (A far exit's stratum, the goal's: a way out there, open, as far
-                                                **   from the way in as it's found, a stair up to the daylight) */
-    if (g[0] == G_THROUGH && g[1] == n && s->nlinks < NLINKS) {
+    hub_get (THEME_BANK, &THEME->exit_sn, g, 1);    /* (Another way out's stratum, a through goal's far exit's or a shut
+                                                **   dungeon's other way out (Q1): a way out there, open, as far from
+                                                **   the way in as it's found, a stair up to the daylight) */
+    if (g[0] == n && n && s->nlinks < NLINKS) {
         l = &s->link[s->nlinks];
         for (best = tries = 0; tries < 30; ++tries) {
             o = 2 + random (s->w - 4);

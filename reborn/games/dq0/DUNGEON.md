@@ -189,7 +189,7 @@ written made the save's: its last step), then game.dat.  A game carried on (dq0 
 back by each (WQ_START, the hub's resume, the world's).  Only a save of the game's own version (main.c's SAVE_VER) is
 carried on: an older one isn't read, and a new game begins in its folder.
 
-Death is permanent: a game ended (dead, escaped, ruled) is marked done in its save, and dq0 -d on its folder begins
+Death is permanent: a game ended (dead, solved, left: the save's Q.done, END_*; Q.solved kept apart, for one dead on its way out) is marked done in its save, and dq0 -d on its folder begins
 a new game there.  (A death in a fight doesn't mark it yet: main.c's blow ends the game without the theme's ending,
 so the save is carried on.)
 
@@ -1434,8 +1434,7 @@ rest".  Built (HOUSE.md's the character carries on has the numbers):
   Use] skill (Swimming, Acrobatics, Physician, Cookery; a weapon's in a fight) opens the first time it's used, told at
   once ("You've begun to learn Swimming by doing it (12)."); one learnt by study doesn't.  The referee's alone
   (dq0harn/skills.c): the marks and the rest toward the rolls kept with the sheet in the save (pc.hm).
-- **The ending:** the theme's words, then what's next, then the character's sheet as it ends.  Alive (the goal reached
-  or the way out taken), "Your character carries on": the game started again with the same folder (dq0 -d) begins a new
+- **The ending:** the theme's words, then what's next, then the character's sheet as it ends.  Solving a dungeon doesn't end it: told, it's still to walk out (HOUSE.md's how a dungeon ends).  Every dungeon can be left: by a shaft to the sky, by the way in if its reason leaves it open, or by the other way out a shut one always has, its theme's `wayin` or `wayout`, which the theme checker proves.  Alive (solved or left), "Your character carries on": the game started again with the same folder (dq0 -d) begins a new
   dungeon (a new seed: a new history and theme) with the same character, its sheet as it ended (its skills, its wounds
   healing on), and the things it carried out (the world's kit.dat, kept with every save, made its outfit there).
 - **Death and the autosave:** the game is kept as the character comes into a stratum and as it's quit; a death isn't

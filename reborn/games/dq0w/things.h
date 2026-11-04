@@ -101,7 +101,9 @@ unsigned __fastcall__ lay_body (unsigned char kind, unsigned char sn, unsigned x
                                                 **   remains put down where it fell (KI_BODY, KI_BONES) */
 unsigned char puzzle (void);                    /* (Part 16: wgame.c) The hub's ireq, IO_PUZZLE's, answered (but its
                                                 **   state): 1 if what lies about has changed */
-void __fastcall__ take_go (const struct msg* m);    /* (Part 16) I_TAKE's walk begun */
+void __fastcall__ take_go (const struct msg* m);    /* (Part 16) I_TAKE's walk begun; or, m under NTKINDS (its one stub, the
+                                                **   main RAM's room), that theme's kind come into the character's hands:
+                                                **   its take rule, if it has one */
 unsigned char take_up (void);                   /* (Part 16) Its thing taken up, the walk done: 0 not (E_READY to
                                                 **   tell), 1 taken (the UI's to go on), 2 walking on to it */
 extern unsigned take_n;                         /* (I_TAKE's thing, its item: 0 none) */

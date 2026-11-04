@@ -113,7 +113,7 @@ lets the character up any way out below the top stratum as it comes to it.
 
 ### The theme checker
 
-make.js's check and themec's (the same rules): every goal reachable (each rule's things to be had: a piece put down
+make.js's check and themec's (the same rules): a way out to be had by the legs alone and words for leaving (wayin, or wayout, or a through goal; `ending | left`: HOUSE.md's how a dungeon ends); every goal reachable (each rule's things to be had: a piece put down
 somewhere, or a thing a rule makes from things to be had, carried if it's to be carried; the mission's ending a rule
 can bring about, or a far exit), every faction placed (each one's kinds able to live somewhere in its strata, its
 lair among them, its leader in its lair's stratum; a piece's and the goal's guardians where they lie).  themegen

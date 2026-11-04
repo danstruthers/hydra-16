@@ -115,7 +115,7 @@ static unsigned char pc_gait, pc_watch;         /* (The character's file's pace 
 struct pc P;
 struct quest Q;                                 /* The theme's puzzle, as it stands (theme.c's; the save's) */
 char tname[32];
-static volatile unsigned char quit;
+volatile unsigned char quit;
 
 static void interrupted (int sig)
 {
@@ -391,7 +391,7 @@ static void load_pc (void)
 ** the maker's seen.dat */
 
 #define SAVE_MAGIC  0x5144                      /* "DQ" */
-#define SAVE_VER    40                          /* (2: the items' records with their size, the portals' make; 3, the
+#define SAVE_VER    41                          /* (2: the items' records with their size, the portals' make; 3, the
                                                 **   theme and its puzzle; 4, the denizens' attitudes, the factions',
                                                 **   the names given; 5, the creatures' sheets; 6, the names the
                                                 **   character's given, after the strata's: names.c's; 7, the change
@@ -467,8 +467,8 @@ static char* __fastcall__ save_path (const char* name)
     return spath;
 }
 
-/* A game kept in the folder: its state read (0); 1, one ended, its character alive (the theme's goal reached, or the
-** way out taken), to carry on into a new dungeon, its sheet the character's (D8's, slice 4.4's); or -1 (none, or one
+/* A game kept in the folder: its state read (0); 1, one ended, its character alive (out of the dungeon, solved or
+** left), to carry on into a new dungeon, its sheet the character's (D8's, slice 4.4's); or -1 (none, or one
 ** ended in its death: a new game, a new character) */
 static int load_save (void)
 {
@@ -925,14 +925,6 @@ void status (void)
     t_status (left, right);
 }
 
-/* The game's end (theme.h's END_*): its words, the theme's; the save marked so (a game done isn't carried on) */
-void __fastcall__ end (unsigned char how)
-{
-    ending (how);
-    Q.done = how;
-    quit = 1;
-}
-
 /* ---- The world's events, worded */
 
 /* ---- The denizens' events (DENIZENS.md: events), as the character hears them: by its hearing (the referee's, 0-9),
@@ -1021,7 +1013,7 @@ static unsigned char events (void)          /* (How many there were) */
                     look_way (VB_NONE);         /* (A listen's or a sniff's end: way.c's) */
                 }
                 if (news_due && (task_words (TE_BODY, 0) & 8)) {
-                    end (END_DIED);             /* (Its body's news held as it slept: told as it wakes, slice 4.3's) */
+                    ending (END_DIED);             /* (Its body's news held as it slept: told as it wakes, slice 4.3's) */
                 }
                 if (!quit) {
                     t_prompt (!busy);
@@ -1094,7 +1086,7 @@ static unsigned char events (void)          /* (How many there were) */
                     t_prompt (1);               /* (Its answer's prompt: the character still busy) */
                 }
                 if (k & 8) {
-                    end (END_DIED);             /* (Dead of its wounds, its venom: TE_BODY's, slice 4.3's) */
+                    ending (END_DIED);             /* (Dead of its wounds, its venom: TE_BODY's, slice 4.3's) */
                 }
                 if (k & 4) {
                     busy = 1;                   /* (Fighting on begun by the world: busy till it's done, E_READY; a
@@ -1151,9 +1143,9 @@ static unsigned char events (void)          /* (How many there were) */
                 took_up (m.w1 | m.w2 << 8);
             }
             break;
-        case E_LEFT:                            /* (Up the way out, open: the theme's mission's) */
+        case E_LEFT:                            /* (Out of the dungeon, solved or not; a take rule done: theme.c's) */
             if (m.who == 0) {
-                end (END_ESCAPED);
+                ending ((unsigned char) m.w1);
             }
             break;
         }
@@ -1307,7 +1299,7 @@ void __fastcall__ s_news (const struct msg* m)
         r->state = REQ_FREE;
         harm_words (m->w1, HUB->pcsum.cond);
         if (HUB->pcsum.cond & C_DEAD) {
-            end (END_DIED);                     /* (The game's end) */
+            ending (END_DIED);                     /* (The game's end) */
         }
         break;
     case E_PORTAL:
@@ -2231,9 +2223,6 @@ again:
     if ((d = puzzle (&cmd)) != Q_NONE) {        /* (The theme's puzzle's: theme.c) */
         if (d >= Q_DONE) {
             intend2 (I_WAIT, 50, 1);            /* (Its time: the way out opened the world's already) */
-        }
-        if (d == Q_RULED) {
-            end (END_RULED);
         }
         return;
     }
