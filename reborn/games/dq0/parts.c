@@ -229,9 +229,13 @@ unsigned char __fastcall__ o_parts_in (unsigned char op)
         }
         q_put (inl + pa[k], pn[k]);
         /* (What's wanted of the list's next parts: "put the rope and the torch in the sack"; "take and drop the pick") */
-        for (j = k + 1; j < np && ps[j]; ++j) {
-        }
         t = 0;
+        if (np > 1) {
+            for (j = k + 1; j < np && ps[j]; ++j) {
+            }
+        } else {
+            j = k + 1;
+        }
         if (--j > k) {
             if (pn[k] == own && among (pa[k], chain) && (t = verb_of (k + 1)) != 0) {
                 tln = pn[k + 1] > t ? pn[k + 1] - t - 1 : 0;
@@ -269,7 +273,7 @@ static unsigned char __fastcall__ parts_op (unsigned char op)
         let_go ();
         return 0;
     }
-    if (!lnp || qlen < qafter || !(cmd.flags & (CF_NOVERB | CF_STRANGE)) || cmd.dir != 0xFF) {
+    if (!(cmd.flags & (CF_NOVERB | CF_STRANGE)) || !lnp || qlen < qafter || cmd.dir != 0xFF) {
         return 0;
     }
     d = qlen - qafter;                          /* (Its parts still to come, counted: which this is) */
