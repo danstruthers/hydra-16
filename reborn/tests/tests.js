@@ -2414,6 +2414,13 @@ function dq0Poke(m, pokes) {
               h[at(k) + L.aDoing] = K.DO_DOWN;
               h[at(k) + L.aPos] = K.POS_PRONE;
             }
+            if (p.lame) {                       // (Prone, seriously wounded and Agility 1, as the referee has it: its Rise an Agility test failed, 2026-11-03)
+              const S = dq0Sheet(m), o = S.at(h[at(k) + L.aName + 12]);
+              S.mem[o + 4] = 1;                 // (struct beast's att[3])
+              S.mem[o + 9] = 1;                 // (Its ninj, its inj[0] at 10: a location, an aspect, HARN_SERIOUS, its level 2)
+              S.mem.set([0, 0, 2, 2, 0, 0], o + 10);
+              h[at(k) + L.aPos] = K.POS_PRONE;
+            }
             if (p.rec) {
               const R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]);
               if (p.rec.or) R.mem[o + R.FLAGS] |= p.rec.or;
@@ -2457,6 +2464,18 @@ function dq0Sheet(m) {
   const sb = dq0SheetSb || (dq0SheetSb = parseInt(/^al ([0-9A-F]+) ._sb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][sb]) || new Uint8Array(0x2000);
   return { mem, at: n => 32 * n, STATE: 7, OUT: 28 };
 }
+// The character senseless for the tenths given and come round in shock (a scene's, the referee's pc and pc_out: harn.h's struct harn_char,
+// dq0harn's own): its shock rolls the book's dice, in shock or not as they fall (2026-11-03)
+function dq0PcShock(m, tenths) {
+  const h = m.dq0.bank(0), { L } = m.dq0.layout(), ram = m.taskRam[h[12 + 3]], root = path.join(__dirname, '..');
+  const lbl = fs.readFileSync(path.join(root, 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1'), ad = n => parseInt(new RegExp('^al ([0-9A-F]+) \\._' + n + '$', 'm').exec(lbl)[1], 16);
+  const H = fs.readFileSync(path.join(root, 'sdk', 'c', 'include', 'harn.h'), 'latin1'), def = n => +new RegExp('#define\\s+' + n + '\\s+(\\d+)').exec(H)[1];
+  const STATE = 2 * 24 + 10 + def('HARN_MEDMAX') + 2 * def('HARN_PSYMAX') + 1 + def('HARN_MAXSKILLS') + 3, now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16 | h[L.now + 3] << 24, till = (now + tenths) >>> 0;
+  ram[ad('pc') + STATE] = 2;                    // (HARN_SHOCK)
+  ram[ad('pc') + STATE + 1] = 5;                // (Its shockhr, as the library's)
+  for (let i = 0; i < 4; i++) ram[ad('pc_out') + i] = till >>> (8 * i) & 255;
+}
+
 // At each line's Enter, each actor's body (m.bodies: { g, line, name, den, lv: its levels, wfl, ex, at }) after the pokes made then
 // (each { g: the game, 1 on, line, n: its nth time typed in it, name: the actor's, lv: its levels, ex, at: its body's set })
 function dq0BodyPoke(m, pokes) {
@@ -2604,10 +2623,10 @@ function dq0CarveStairs(m, p) {
 
 // A line typed as the game's words come, not at a cycle (a test's own: what a player reacting to them types, whatever
 // the code's speed): each { g: the game, 1 on, by the dq0 lines typed, line, n: its nth time typed in it, 1 on, words,
-// text }: after that line's Enter, the first time the story shows the words (the escapes left out, spaces and line
-// ends as one), the text typed next, before the input still to come (its waits for a prompt from then on).  One its
-// words never came for let go as its game ends (the screen's scrolling whole again, the game's t_away: ESC [ r) or
-// another begins: never typed into the next (2026-10-31)
+// text, or call: a function run then }: after that line's Enter, the first time the story shows the words (the escapes
+// left out, spaces and line ends as one), the text typed next, before the input still to come (its waits for a prompt
+// from then on).  One its words never came for let go as its game ends (the screen's scrolling whole again, the game's
+// t_away: ESC [ r) or another begins: never typed into the next (2026-10-31)
 // The scene-setter shared by the door tests (Phase 3C's): on the typed line `on` (its first), the actor named `who`
 // put on the square beyond the door the character faces (the door beside it), hostile, drawn on to the character's
 // square (the minds' drawn and last-sensed square), its record moved with it; m.door = { k, door, beyond, pc, tile,
@@ -2721,8 +2740,11 @@ function dq0OnWords(m, list) {
     if (!armed) return;
     story = norm(story + (v < 0x20 ? ' ' : String.fromCharCode(v))).slice(-200);
     if (story.includes(norm(armed.words))) {
-      a.rxQueue.unshift(...armed.text);
-      a.promptFrom = -1;
+      if (armed.call) armed.call();             // (A scene's own at those words, not a line typed, 2026-11-03)
+      else {
+        a.rxQueue.unshift(...armed.text);
+        a.promptFrom = -1;
+      }
       armed = null;
     }
   };
@@ -6252,20 +6274,23 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0downonce', near: ['fight'], what: "Dingus Quest Zero's creature down, its failed tries to rise told once (2026-11-02, the lead's, a fault found in dq0antidote's scene: \"The cave adder writhes, but can't right itself.\" four times in one answer): dq0venom's hostile cave adders (seed 1, the character tough), the character walking in among them and waiting beside them; a creature that fails its Rise (the referee's O_RISE, its round spent as ever) told at its first failure (E_BEAT WB_NOT_UP), not again till something changes: it rises, falls again or is wounded",
+      name: 'dq0downonce', near: ['fight'], what: "Dingus Quest Zero's creature down, its failed tries to rise told once (2026-11-02, the lead's, a fault found in dq0antidote's scene: \"The cave adder writhes, but can't right itself.\" four times in one answer): dq0venom's hostile cave adders (seed 1, the character tough), two set on the character where it stands, fighting it, waiting beside them, prone, hurt and Agility 1 (the scene's, 2026-11-03, dq0Poke's lame: a Rise is tested only of one hurt); a creature that fails its Rise (the referee's O_RISE, its round spent as ever) told at its first failure (E_BEAT WB_NOT_UP), not again till something changes: it rises, falls again or is wounded",
       init: 't_rc', cycles: 2500e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k antidote,remedy -R 5', 'stow the antidote', 'open the door', 'south', 'drop the torch', 'south', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k antidote,remedy', 'stow the antidote', 'drop the torch', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
-      start(m) {        // (The scene set, 2026-11-03: an adder down as the fight goes on, the dice shifted)
-        dq0Poke(m, [1, 2, 3, 4, 5, 6, 7].map(n => ({ g: 1, line: 'wait', n, name: 'cave adder', set: { pos: 1 } })));
+      start(m) {        // (The scene set, 2026-11-03: their way to it and a fallen one's hurt the dice's no longer)
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, k: 1, beside: 6, engage: true }, { g: 1, line: 'wait', n: 1, k: 0, beside: 4, engage: true }, { g: 1, line: 'wait', n: 1, k: 0, lame: true }, { g: 1, line: 'wait', n: 1, k: 1, lame: true }]);
       },
       check(m, out) {
         const T = dq0Turns(m), f = [], s = dq0Story(out), told = {};
         let tries = 0;
         for (const t of T) for (const e of t.events.concat(t.dens).sort((a, b) => a.t - b.t)) {
-          if (e.kind === 'E_FIGHT') told[e.def] = 0;   // (A blow at it: its wound changes it)
+          if (e.kind === 'E_FIGHT') {
+            told[e.def] = 0;                  // (A blow at it: its wound changes it)
+            if (e.out === 'O_RISE') told[e.who] = 0;    // (Risen, in a fight: the referee's own, no beat's)
+          }
           if (e.kind !== 'E_BEAT' || !e.b) continue;
           if (e.beat === 'WB_RISEN' || e.beat === 'WB_FALLEN') told[e.b] = 0;
           if (e.beat === 'WB_NOT_UP') {
@@ -6275,7 +6300,9 @@ module.exports = {
           }
         }
         if (!tries || !/writhes, but can't right itself\./.test(s)) f.push('no adder failed to rise: the scene not set');
-        this.notes = [tries + ' failed rises told'];
+        const K = m.dq0.layout().K, spent = T.flatMap(t => t.replies).filter(r => r.kind === K.RS_ATTACK && r.result === K.O_RISE && r.a).length;   // (Each a round spent)
+        if (spent <= tries) f.push('no failed rise left untold: ' + spent + ' failed, ' + tries + ' told');
+        this.notes = [spent + ' rises failed, ' + tries + ' told'];
         return f;
       },
       sdcard: true
@@ -7452,13 +7479,16 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0helpless', what: "Dingus Quest Zero's wounds and a foe that only defends itself (the user's adder playtest, 2026-10-21: \"For some reason the wounds just kept getting worse and worse\", and its bites worded stabs; DECISIONS.md's a helpless character): a theme's hostile cave adders (written by hand: a faction of them on the top stratum; seed 1, a room of them south of the start), the character tough (STR, STA and WIL 99: Endurance 99, its shock rolls holding long) and undefended (defend none, Dodge 5, Unarmed 5), its torch put down, walking in among them: each bite worded a bite, never a stab (a creature's own part: HOUSE.md's wounds), each wound's own level (M1 to G5, the book's: it was the running total past the record's twelve, S12 ... S37), more than twelve of them, every level of them in the universal penalty; its shock roll failed at last, senseless (\"Everything goes black.\", OUT on the status line); the adders then going, fleeing, with not another blow (one that only defends itself: kinds.txt's ways, the user's by its nature), one posted as it fell held (the referee's: no killer, RS_KILLER); come round in shock, in no state to fight, left be; its state's words the record's real injuries, the lesser hurts never named the worst (\"in shock: 11 injuries and lesser hurts, the worst a serious bite to ...\"), the same as the game's carried on (what dealt each injury kept with its sheet)",
+      name: 'dq0helpless', what: "Dingus Quest Zero's wounds and a foe that only defends itself (the user's adder playtest, 2026-10-21: \"For some reason the wounds just kept getting worse and worse\", and its bites worded stabs; DECISIONS.md's a helpless character): a theme's hostile cave adders (written by hand: a faction of them on the top stratum; seed 1), the character tough (STR, STA and WIL 99: Endurance 99, its shock rolls holding long) and undefended (defend none, Dodge 5, Unarmed 5), its torch put down, two of them set on it where it stands (the scene's, dq0Poke's): each bite worded a bite, never a stab (a creature's own part: HOUSE.md's wounds), each wound's own level (M1 to G5, the book's: it was the running total past the record's twelve, S12 ... S37), more than twelve of them, every level of them in the universal penalty; its shock roll failed at last, senseless (\"Everything goes black.\", OUT on the status line); the adders then going, fleeing, with not another blow (one that only defends itself: kinds.txt's ways, the user's by its nature), one posted as it fell held (the referee's: no killer, RS_KILLER); come round in shock, in no state to fight, left be; its state's words the record's real injuries, the lesser hurts never named the worst (\"in shock: 11 injuries and lesser hurts, the worst a serious bite to ...\"), the same as the game's carried on (what dealt each injury kept with its sheet)",
       init: 't_rc', cycles: 1500e6,
-      // (-R 2: the dice's offset that gives a game of this kind, since the denizens' paces, 2026-11-03: the same dungeon,
-      // other rolls)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml dge 5 >> /ram/c.hm', 'echo ml una 5 >> /ram/c.hm',
         'echo att str 99 >> /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Serpents | adder | 0-0 | 96 | - | 0 | h | -' > /ram/g/theme.txt",
-        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -R 2', 'defend none', 'open the door', 'south', 'drop the torch', 'south', ...Array(24).fill('wait'), 'status', 'quit', 'dq0 -d /ram/g -R 2', 'status', 'quit', 'echo $status']) },
+        'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g', 'defend none', 'drop the torch', ...Array(24).fill('wait'), 'status', 'quit', 'dq0 -d /ram/g', 'status', 'quit', 'echo $status']) },
+      start(m) {        // (The scene set, 2026-11-03: two adders set on it where it stands, fighting it: their way to it the dice's; and as it falls senseless,
+                        // out a minute and in shock after, not as the shock rolls happen to fall)
+        dq0Poke(m, [{ g: 1, line: 'wait', n: 1, k: 0, beside: 4, engage: true }, { g: 1, line: 'wait', n: 1, k: 1, beside: 6, engage: true }]);
+        dq0OnWords(m, [1, 2, 3, 4, 5, 6, 7, 8].map(n => ({ g: 1, line: 'wait', n, words: 'Everything goes black.', call: () => dq0PcShock(m, 600) })));
+      },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], FF_A_DOWN = 1, FF_D_DOWN = 4, s = dq0Story(out);
@@ -9327,7 +9357,7 @@ module.exports = {
           ...['b', 'd', 'k'].map(d => 'mkdir /ram/' + d), 'echo ' + head + ' > /ram/b/theme.txt', 'echo ' + head + ' > /ram/d/theme.txt',
           "echo 'faction | Tribe | arak | 0-1 | 20 | garking | 0 | w | -' > /ram/k/theme.txt",
           ...game('b'), ...Array(5).fill(['attack the black orc', 'wait']).flat(), 'quit',
-          ...game('d').map(l => /^dq0/.test(l) ? l + ' -R 2' : l), 'attack the black orc', 'wait', 'attack the black orc', 'douse the torch', ...Array(4).fill(['attack the black orc', 'wait']).flat(), 'quit',
+          ...game('d'), 'attack the black orc', 'wait', 'attack the black orc', 'douse the torch', ...Array(4).fill(['attack the black orc', 'wait']).flat(), 'quit',
           ...game('k'), 'attack the orc king', 'wait', 'attack the orc king', 'wait', 'quit', 'echo $status']);
       })() },
       start(m) {
