@@ -335,6 +335,10 @@ static void world_back (void)
         HUB->pc_thirst = w.thirst;
         HUB->pc_meals = w.meals;
         HUB->ropes = w.ropes;
+        if (w.ropes) {
+            look_more (0, LM_ROPES);            /* (Its parts read in, to climb it: things.c's) */
+            hub_map (0);
+        }
         memcpy (&HUB->tb, &w.tb, sizeof w.tb); /* (The time of day it believes: part 76's) */
         done_ = w.done;
         hub_map (WORLD_BANK);

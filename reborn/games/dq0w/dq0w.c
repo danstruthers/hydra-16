@@ -112,6 +112,7 @@ unsigned char trav;                             /* (A journey under way: part 54
 unsigned char __fastcall__ room_on (unsigned char go);   /* Part 82 (wroom.inc): a room searched whole */
 unsigned char __fastcall__ room_tests (unsigned char touch);   /* Part 83 (wroom.c) */
 void __fastcall__ make_own (unsigned i);        /* (Part 13's) */
+unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);    /* (Part 40's) */
 unsigned char rs_said;                          /* (A room searched whole's: what came of a thing asked, things.c's) */
 unsigned char kowed;                            /* (A stratum's populations owed at a real pace, its number plus 1:
                                                 **   wkept.c's, its kept rooms lit as they're done, kept_late: the
@@ -1288,7 +1289,7 @@ static unsigned char __fastcall__ start_ledge (unsigned char up, unsigned char f
 #pragma code-name (pop)
 #pragma rodata-name (pop)
 
-/* ==== Part 97 (2026-11-04: part 2's till then, its room; overlay 28's): climbing, a round at a time; a rope's help (the
+/* ==== Part 97 (2026-11-04: part 2's till then, its room; overlay 29's, in dq0w.rop, read as it's first wanted: things.c's ropes_in): climbing, a round at a time; a rope's help (the
 ** user's A16: HOUSE.md's rope and grapples; wrope.c's the rest) */
 #pragma code-name (push, "SW97CODE")
 #pragma rodata-name (push, "SW97RODATA")
@@ -2376,6 +2377,9 @@ unsigned char s_arrive_a (void)
 
     move.on = 0;
     if (how == A_DIGGING || how == A_CLIMBING) {
+        if (!HUB->rope_in) {
+            look_more (0, LM_ROPES);            /* (Climbing's part read in, the first time: things.c's) */
+        }
         climb_on (how);                         /* (A spell of digging done, a round of climbing: part 2's) */
         return 1;
     }
@@ -3168,6 +3172,7 @@ unsigned char __fastcall__ s_wstart (char** argv)
         return 1;
     }
     memset (&HUB->pc_task, 0, sizeof HUB->pc_task);     /* (No long task yet) */
+    HUB->ldir = argv[3];                        /* (Its lib folder: rope and climbing's file, read late, things.c's) */
     s_start (argv[3]);                          /* (The things asked as the game starts, the dungeon begun) */
     return 0;
 }

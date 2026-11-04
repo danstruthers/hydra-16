@@ -1301,6 +1301,9 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   rs_nout;
     unsigned char   ropes;                      /* (Ropes in place in the dungeon, the world's: 0, none looked for as a climb starts:
                                                 **   wrope.c's, kept with the game) */
+    unsigned char   rope_in;                    /* (The last two overlays read from their file, dq0w.rop: the world's, as a climb, a dig
+                                                **   or a rope's first wanted them: wrope.c's, the start's time, 2026-11-04) */
+    const char*     ldir;                       /* (The game's lib folder, the world's argument: its own memory) */
     unsigned char   rlo, rhi;                   /* (The climb's rope's help: the feet above the foot it runs between; rhi 0, none:
                                                 **   dq0w.c's part 97) */
     unsigned char   pc_pos;                     /* POS_* */
@@ -1774,6 +1777,8 @@ struct wsave {
 **   own hub.rs_place world
 **   own hub.rs_nout world
 **   own hub.ropes world
+**   own hub.rope_in world
+**   own hub.ldir world
 **   own hub.rlo world
 **   own hub.rhi world
 **   own hub.watch world

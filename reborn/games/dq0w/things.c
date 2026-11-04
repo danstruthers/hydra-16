@@ -3910,12 +3910,43 @@ static void kit_keep (void)
 #pragma bss-name (pop)
 
 /* Its weight, its lock, it gone over for traps (thing n, rec its record, lk its kind; its name said) */
+/* The last two overlays read in (dq0w.rop, ld65's, as they are: climbing, part 97; rope and grapples, parts 95, 96, 98), as a climb, a
+** dig or a rope first wants them: none of a game's start's time, the card's, for what most games come to late or never (dq0starttime,
+** 2026-11-04); carried on with a rope in place, at once.  Once (the hub's rope_in), its time then, some 3M cycles */
+#pragma static-locals (push, off)
+static void ropes_in (void)
+{
+    char p[40];
+    int fd;
+    unsigned char k;
+
+    hub_map (0);
+    if (!HUB->rope_in) {
+        strcpy (p, HUB->ldir);
+        strcat (p, "/dq0w.rop");
+        if ((fd = open (p, O_RDONLY)) >= 0) {
+            for (k = OVBANKS - 2; k < OVBANKS; ++k) {
+                hy_bank (ovbank[k]);
+                read (fd, (void*) 0x8000, 0x2000);
+            }
+            close (fd);
+        }
+        hub_map (0);
+        HUB->rope_in = 1;
+    }
+}
+#pragma static-locals (pop)
+
 unsigned char __fastcall__ s_look_more (unsigned n, unsigned char mode)
 {
     unsigned w;
     unsigned char sh = rec.shut, k;
     char b[6];
 
+    if (mode == LM_ROPES) {
+        ropes_in ();
+        return IR_OK;
+    }
     if (mode == LM_KIT) {
         kit_keep ();                            /* (The character's things kept: the world's save, wgame.c's) */
         return IR_OK;
@@ -4796,6 +4827,7 @@ unsigned char __fastcall__ s_hide (const char* name)
     unsigned n;
 
     if (iq.to & IO_ROPE) {                      /* (A rope's work, its shape this one's: part 96's) */
+        look_more (0, LM_ROPES);
         return rope ();
     }
     if (!(iq.to & IO_DONE)) {                   /* (Begun: a minute's work, a timed work, HOUSE.md's long tasks: hidden,

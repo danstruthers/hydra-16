@@ -25,7 +25,7 @@ SWDEPTH     = 12                    ; Swapped parts' calls in calls, at most
 SWFAST      = 1                     ; (The parts copied four pages a pass: an answer's part, the list's, the climb's, the
                                     ;   quicker; 2026-10-30)
 SWMANY      = 1                     ; (More than 51 parts: 52 on, slice 4.2's)
-OVBANKS     = 29                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
+OVBANKS     = 30                    ; The overlays (dq0w.cfg's OV1 ...): things.h's OVBANKS (make.js checks the three agree)
 
             .bss
 _ovbank:    .res        OVBANKS + 4 ; The parts' images' banks (dq0w.cfg's OV1 ...: things.h's OVBANKS), and the
@@ -193,7 +193,7 @@ go:
             SWPART      95, 29              ; A drop found, a rope put in place, a grapple thrown up (wrope3.c)
             SWPART      96, 29              ; Rope and grapples: tied off, let down (wrope.c: 2026-11-04)
             SWPART      97, 29              ; Climbing, a round at a time, a rope's help (dq0w.c: part 2's till 2026-11-04)
-            SWPART      98, 28              ; A rope untied, looked at (wrope2.c)
+            SWPART      98, 30              ; A rope untied, looked at (wrope2.c)
 
             SWFN        work, 48
             SWFN        worked, 48
