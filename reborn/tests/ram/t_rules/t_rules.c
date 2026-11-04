@@ -23,7 +23,7 @@
 **   want FIELD=V ...           the reply: grade result a b c w1 w2, eN.kind eN.band eN.loc eN.aspect eN.cond (its
 **                              effect N), dice (how many it rolled), sum.FIELD (the hub's summary after it: cond
 **                              health step gN (gstep[N]) sight hearing smell load northsense limbs limp mapmind
-**                              mapfade),
+**                              mapfade), new.FIELD (an RS_NEW_ACTOR's reply's: the creature's own, by the same names),
 **                              status="..." (the hub's pcstatus), text="..." (all of it), text~"..." (it has it),
 **                              text!"..." (it hasn't), text=@ (the words of the request before it); FIELD&MASK=V;
 **                              a value a number
@@ -542,6 +542,13 @@ static long __fastcall__ field (const char* f, unsigned char* ok)
             return e->x[0];
         } else if (!strcmp (f, "aspect")) {
             return e->x[1];
+        }
+    } else if (!strncmp (f, "new.", 4)) {             /* (RS_NEW_ACTOR's reply: the creature's own summary, its x) */
+        f += 4;
+        for (k = 1; k < sizeof sf / sizeof sf[0] && strcmp (f, sf[k]); ++k) {
+        }
+        if (k < sizeof sf / sizeof sf[0]) {
+            return ((const unsigned char*) rep.x)[so[k]];
         }
     } else if (!strncmp (f, "sum.", 4)) {
         f += 4;

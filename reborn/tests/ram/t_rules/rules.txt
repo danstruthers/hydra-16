@@ -2965,3 +2965,34 @@ ask EQUIP a=2 text=">blade4H"
 dice 100:88 100:96 ...
 ask ATTACK actor=0 other=1 a=Z_MID b=AS_BEST
 want result=O_HIT
+
+# ---- The first six's sheets (2026-11-04, the user's A9: "the book's figures now": HOUSE.md's the creatures' sheets,
+# beasts.c's): each one's Initiative (its morale in the summary) and its size and first weapon's skill (its power, three
+# times its size squared and a tenth of its skill): the book's rat, male grave-wight and black bear, its kin's for the rest
+
+char
+end
+case a giant rat: Initiative 60, size 2, its bite 75 (the book's rat)
+dice
+ask NEW_ACTOR actor=1 w1=30 text="rat"
+want result=0 new.morale=60 new.power=19
+case a cave spider: Initiative 45, size 2, its bite 55 (its kin the adder's)
+dice
+ask NEW_ACTOR actor=1 w1=31 text="spider"
+want result=0 new.morale=45 new.power=17
+case a ghoul: Initiative 60, size 4, its bite 48 (the male grave-wight's)
+dice
+ask NEW_ACTOR actor=1 w1=32 text="ghoul"
+want result=0 new.morale=60 new.power=52
+case a skeleton: Initiative 60, size 4, its sword 55 (its kin the gulmorvrus's)
+dice
+ask NEW_ACTOR actor=1 w1=33 text="skel"
+want result=0 new.morale=60 new.power=53
+case a cave bear: Initiative 65, size 5, its bite 52 (the black bear's)
+dice
+ask NEW_ACTOR actor=1 w1=34 text="bear"
+want result=0 new.morale=65 new.power=80
+case a kobold: Initiative 50, size 3, its spear 60 (its kin the small orc's)
+dice
+ask NEW_ACTOR actor=1 w1=35 text="kobold"
+want result=0 new.morale=50 new.power=33

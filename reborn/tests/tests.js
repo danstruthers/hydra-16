@@ -5535,7 +5535,7 @@ module.exports = {
     },
     {
       name: 'dq0rules', what: 'Dingus Quest Zero\'s referee\'s unit tests (Phase 3A: tests/ram/t_rules, its cases in rules.txt beside it): the HarnMaster referee (dq0harn) asked rs.h\'s requests by a program playing the world\'s part, its dice fixed (RS_DICE: dice.h\'s hook), each answer held to the book\'s rules and HOUSE.md\'s, and the dice each rolled to the book\'s: the tests\' grades at their edges (critical and marginal, the 5-95 clamp, the penalty each skill takes), noticing by pace and state, falls by height and ground (a landing on the feet, a hold grabbed), injuries by impact, aspect, location and armour (Combat 13-14), the kill, amputation, shock and stumble rolls, senselessness and coming round, bleeding, encumbrance by load, fatigue by exertion and rest, digging and appraising, the bearings underground (P_BEARING: Awareness, or Mining if higher, by the bends and the dark; one of the Khuzdul never tested; its own dice, the others rolling as they did)',
-      init: 't_rc', cycles: 1300e6,
+      init: 't_rc', cycles: 1500e6,
       pc: { files: () => ({ 't_rules.hyx': fs.readFileSync(path.join(__dirname, '..', 'obj', 'tests', 't_rules.hyx')),
         'rules.txt': fs.readFileSync(path.join(__dirname, 'ram', 't_rules', 'rules.txt')) }) },
       machine: { input: '\u0101cp /pc/t_rules.hyx /ram/t_rules.hyx; cp /pc/rules.txt /ram/rules.txt\r\u0101/ram/t_rules.hyx /ram/rules.txt\r' },
@@ -8124,6 +8124,21 @@ module.exports = {
         const den = T.filter(u => u.k > g2.k).flatMap(u => u.dens).filter(e => e.kind === 'E_FIGHT' && e.who > 0);
         if (!den.length) f.push('no elf\'s blow or shot (E_FIGHT)');
         inTurn(o, ['The elf unslings its hartbow.', 'The elf shoots at you with its hartbow'], f, 'the elf\'s shot: ');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0spiderbite', near: ['fight', 'body'], what: "Dingus Quest Zero's cave spider's venom (2026-11-04, A9: the book has no spider, its figures its nearest kin's, the adder's, and its venom with them, HOUSE.md's the creatures' sheets, for review), by the words: a tough character undefended, a hostile cave spider set beside it on the stratum below; a bite that wounds carries the venom, told as the adder's is",
+      init: 't_rc', cycles: 2000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo att sta 99 >> /ram/c.hm', 'echo att wil 99 >> /ram/c.hm', 'mkdir /ram/g', "echo 'faction | Crawlers | spider | 1-1 | 3 | - | 0 | h | -' > /ram/g/theme.txt",
+        'dq0 -p t -s 1001 -c /ram/c.hm -T -d /ram/g', 'defend none', 'd', 'wait', 'wait', 'wait', 'wait', 'quit', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) { dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'cave spider', beside: 4, engage: true }]); },
+      check(m, out) {
+        const o = dq0Story(out), f = [];
+        if (!/The cave spider bites at you/.test(o)) f.push('no bite: the scene not set');
+        if (!/The bite burns: there's venom in it\./.test(o)) f.push('no venom in its bite');
         return f;
       },
       sdcard: true
