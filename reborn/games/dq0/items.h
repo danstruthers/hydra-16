@@ -165,6 +165,9 @@ enum { RK_SHAFT = 1, RK_LEDGE, RK_PIT, RK_SKY };    /* (A rope in place's fuel, 
 #define RA_SCAN         0x2000
 #define RA_HANG         0x1000
 
+#define GODS_AT         ((const char*) (CATALOGUE + NKINDS - 2) + 1)    /* (The world's deities' names, 0-ended, spaces between,
+                                                **   in the last two kinds' records, none (a first 0, their empty name):
+                                                **   dq0w/make.js's, for the UI's words for the parser, 2026-11-04) */
 #define KIND_WORDS      ((const char*) (CATALOGUE + NKINDS))     /* (In the kinds' bank after them: the words of
                                                 **   their names, each once, a space after each, a 0 after all: the
                                                 **   build's, dq0w/make.js's, for the command parser) */

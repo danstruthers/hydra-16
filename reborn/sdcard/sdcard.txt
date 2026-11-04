@@ -50,7 +50,6 @@ games/lib/dq0/dq0tr.dat ../obj/games/dq0tr.dat ;   the kinds' traces (their mark
 games/lib/dq0/dq0d.exp ../obj/games/dq0d.exp ;   its exports, for its bank program: popgen, its
 games/lib/dq0/popgen.bp ../obj/bank/popgen.bp ;   populations from a theme's inhabitants
 games/lib/dq0/dq0g.dat ../obj/games/dq0g.dat ;   the world's deities, and its peoples (lore.h)
-games/lib/dq0/dq0g.txt ../obj/games/dq0g.txt
 games/lib/dq0/dq0f.dat ../obj/games/dq0f.dat
 games/lib/dq0/inhabit.txt ../games/dq0d/inhabit.txt ;   a theme file's inhabitants, by hand
 games/lib/dq0/dq0s  ../obj/games/dq0s.hyx
@@ -75,6 +74,7 @@ games/lib/dq0/bestiary.dat ../obj/games/bestiary.dat
 games/lib/dq0/themes/1crypt.txt ../games/dq0/themes/1crypt.txt
 games/lib/dq0/themes/2temple.txt ../games/dq0/themes/2temple.txt
 games/lib/dq0/themes/3warren.txt ../games/dq0/themes/3warren.txt
+games/lib/dq0/dq0life ../obj/games/dq0life.hyx ; dq0life, the record of a life (life.dat): between its dungeons, run as a game begins
 songs/test.zsm      songs/test.zsm              ; Songs (play /sd/0/songs/test.zsm): the old system's test song
 songs/vera.mml      songs/vera.mml              ;   (os_rom/songs/test.mml), and a score for both chips (the PSG's
                                                 ;   with a Vera X); scom.zsm stays in the ROM (/rom/songs)

@@ -178,6 +178,8 @@ ovl_out:
             SWPART      18, 18              ; A denizen's door's words (2026-11-02: overlay 3's room)
             SWPART      19, 15              ; The reach's steps (main.c: 2026-11-02, HOUSE.md's reach)
             SWPART      20, 7               ; An ally's errands, gifts (errand.c: part 15's room, 2026-11-03)
+            SWPART      21, 17              ; The record of a life, as a game begins (main.c: 2026-11-04)
+            SWPART      22, 10              ;   and its dungeon's folder found
 
             SWFN        errand, 20
             SWFN        trade, 15
@@ -217,6 +219,8 @@ ovl_out:
             SWFN        room_named, 6
             SWFN        history, 7
             SWFN        args, 7
+            SWFN        between, 21         ; (The record of a life, as a game begins: part 1's bank's room, 2026-11-04)
+            SWFN        life_dir, 22
             SWFN        reach_go, 13
             SWFN        step_go, 19
             SWFN        tool_out, 19

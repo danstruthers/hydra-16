@@ -3890,7 +3890,7 @@ unsigned char __fastcall__ s_describe (const char* name)
 ** theme's own things (its kind's number another thing's in the next theme's: its puzzle's pieces) */
 #define KQ      12                              /* (The things it's listed that hold others, at most) */
 static struct item kr;
-static struct ofit ke;
+static struct kitrec ke;
 static unsigned kq[KQ];                         /* (Each one's number, */
 static unsigned char kqe[KQ], kn, kqn, kmh;     /*   its entry; the entries so far; how many of them; its main hand) */
 static int kfd;
@@ -3903,14 +3903,15 @@ static void __fastcall__ kit_put (unsigned i, unsigned char in)
     if (kn >= NOFIT || kr.kind == KI_KEY || (kr.kind >= KI_THEME && kr.kind < KI_THEME + NTKINDS)) {
         return;
     }
-    ke.kind = kr.kind;
-    ke.qty = kr.qty;
-    ke.quality = kr.quality;
-    ke.place = in ? PL_IN : !(kr.flags & I_HELD) ? PL_WORN : (kr.sn & IH_BOTH) == IH_BOTH ? PL_BOTH :
+    ke.o.kind = kr.kind;
+    ke.o.qty = kr.qty;
+    ke.o.quality = kr.quality;
+    ke.o.place = in ? PL_IN : !(kr.flags & I_HELD) ? PL_WORN : (kr.sn & IH_BOTH) == IH_BOTH ? PL_BOTH :
         kr.sn & kmh ? PL_HAND : PL_OFF;
-    ke.in = in;
-    ke.flags = kr.flags & I_LIT ? TF_LIT : 0;
-    ke.mat = kr.mat;
+    ke.o.in = in;
+    ke.o.flags = kr.flags & I_LIT ? TF_LIT : 0;
+    ke.o.mat = kr.mat;
+    memcpy (&ke.wear, &kr.wear, KIT_ITEM);      /* (Each thing as it is: the plan's step 3) */
     write (kfd, &ke, sizeof ke);
     hub_map (KIND_BANK);
     if (kqn < KQ && (CATALOGUE[kr.kind].flags & (K_CONTAINER | K_BELT) || CATALOGUE[kr.kind].keeps & KF_ON)) {
@@ -3930,7 +3931,7 @@ static void kit_keep (void)
         return;
     }
     strcpy (kp, HUB->savedir);
-    strcat (kp, "/kit.dat");
+    strcat (kp, "/../kit.dat");                 /* (The save's, above the dungeon's folder: life.h's) */
     if ((kfd = open (kp, O_WRONLY | O_CREAT | O_TRUNC, 0644)) < 0) {
         return;
     }
@@ -6122,7 +6123,20 @@ void s_kit (void)
         box = 0;
         hub_map (0);
         outmake (0);                            /* (Its outfit drawn: its things made) */
-        if (--k) {                              /* (Its weapons their version: the referee's, by its Strength, D13's;
+        if (k == OF_CARRIED) {                  /* (Its kit carried on: each thing as it was, its wear, its life, its version,
+                                                **   its fuel, outfit.h's kitrec: it's the first made in the store, in the
+                                                **   file's order, what wasn't made passed over; coins as they're changed) */
+            for (i = 1; read (ost.kept, tbuf, sizeof (struct kitrec)) == sizeof (struct kitrec); ) {
+                if (item_at (i)->kind == ((struct kitrec*) tbuf)->o.kind) {
+                    if (((struct kitrec*) tbuf)->dur_max && !(kind_at (i)->form & KF_SMALL)) {
+                        item_at (i)->wear = ((struct kitrec*) tbuf)->wear;
+                        memcpy (&item_at (i)->dur, &((struct kitrec*) tbuf)->dur, KIT_STATE);
+                    }
+                    ++i;
+                }
+            }
+            close (ost.kept);
+        } else if (--k) {                       /* (Its weapons their version: the referee's, by its Strength, D13's;
                                                 **   the character's alone, on it) */
             for (i = 0; (i = items (i, IN_ACTOR | IN_ITEM, 0)) != 0; ) {
                 kk = kind_at (i);

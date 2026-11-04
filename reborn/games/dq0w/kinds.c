@@ -22,7 +22,7 @@
 ** surface KF_ON) and what closes it (a lid, a tie, a stopper: KF_LID, KF_TIE, KF_STOPPER), its own form (0 a thing
 ** whole; KF_COUNT a lot, counted: its weight one's; KF_TENS its weight by the ten, a coin's, KF_SMALL too, by the 64:
 ** drams) */
-typedef char kinds_fit[KI_OWN_END <= KI_THEME && KI_COUNT <= NKINDS ? 1 : -1];   /* (The theme's after the catalogue's
+typedef char kinds_fit[KI_OWN_END <= KI_THEME && KI_COUNT <= NKINDS - 2 ? 1 : -1];   /* (The theme's after the catalogue's
                                                 **   own, the high kinds after the theme's) */
 #pragma rodata-name (push, "KINDATA")           /* (The kinds in a bank of their own: the hub's KIND_BANK) */
 const struct kind kinds[NKINDS] = {          /* (Its last NTKINDS the theme's, theme.h: the UI's, as it starts) */

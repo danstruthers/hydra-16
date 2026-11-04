@@ -1221,7 +1221,7 @@ struct hub {                                    /* Bank 0, at $8000 */
     unsigned char   test_start;                 /* (dq0 -T: the character begins at a way down, for the tests; 2,
                                                 **   -T twice: by the theme's first piece on the top stratum) */
     unsigned char   resume;                     /* A game carried on from its save (the world restores, not begins) */
-    char            savedir[39];                /* The save's folder (dq0 -d), or "" (none) */
+    char            savedir[39];                /* The dungeon's folder in the save's (dq0 -d: life.h's), or "" (none) */
     unsigned char   dice;                       /* (dq0 -R n, the tests': the dice's own offset, the game's seed's the
                                                 **   same: every task's streams mixed with it, the dungeon not) */
     unsigned long   seed;

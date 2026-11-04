@@ -5756,7 +5756,7 @@ module.exports = {
       // some 10% over it)
       init: 't_rc', cycles: 940e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept', 'drop the dagger',
-        'd', 'quit', 'ls /ram/kept', 'dq0 -d /ram/kept', 'quit', 'echo $status']) },
+        'd', 'quit', 'ls /ram/kept/d1', 'dq0 -d /ram/kept', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], dr = T.of('drop the dagger'), d = T.of('d'), q = T.and(T.of('quit')), c = T.of('dq0 -d /ram/kept');
@@ -5764,7 +5764,7 @@ module.exports = {
         dq0Need(f, d, 'E_ARRIVE', { how: 'A_DOWN' }, 'not down the stairway');
         dq0Need(f, q, 'E_BYE', {}, 'the game not ended');
         if (!dq0Rep(q, 'wreq', { kind: 'WQ_SAVE' }).length) f.push('the game not kept as it ended (the world\'s WQ_SAVE)');
-        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), ls = o.slice(o.indexOf('% ls /ram/kept'), o.indexOf('% dq0 -d'));
+        const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' '), ls = o.slice(o.indexOf('% ls /ram/kept/d1'), o.indexOf('% dq0 -d'));
         for (const n of ['changes.dat', 'dens.dat', 'game.dat', 'items.dat', 'seen.dat']) if (!ls.includes(n)) f.push('no ' + n + ' in the save folder');
         dq0Need(f, c, 'E_ARRIVE', { how: 'A_RESUMED' }, 'the game not carried on');
         const a = d.after, b = c.after;
@@ -5782,7 +5782,7 @@ module.exports = {
       name: 'dq0vast', meaning: true, what: 'Dingus Quest Zero\'s plans past PLAN_MAX regions (move 2.8: no fixed size of a stratum\'s plan), by what the character perceives and the maker\'s map: dq0 -T -T -T -T (the stratum below the top 27 regions each way, 729 of them, its plan paged to the save folder by the maker, plSS0000.dat, its pages of 42 regions in a bank of its own) and -C (16 of those pages, made way for as it grows) and -d: down the stairway, the stratum below grown, mapped; quit and carried on (its plan grown again, the same): seen the same, the map the same',
       init: 't_rc', cycles: 3600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -T -T -T -C -d /ram/kept', 'd',
-        'map', 'quit', 'ls /ram/kept', 'dq0 -C -d /ram/kept', 'map', 'quit', 'echo $status']) },
+        'map', 'quit', 'ls /ram/kept/d1', 'dq0 -C -d /ram/kept', 'map', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], d = T.of('d'), c = T.of('dq0 -C -d /ram/kept'), m1 = T.of('map'), m2 = T.after(c, 'map');
@@ -5792,7 +5792,7 @@ module.exports = {
           f.push('the vast stratum not seen the same carried on: ' + dq0View(c.after) + ', first ' + dq0View(d.after));
         if (!m1.after || !m2.after || !m1.after.map.some(r => r.trim()) || m1.after.map.join('\n') !== m2.after.map.join('\n')) f.push('the map not the same carried on');
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' ');
-        if (!/pl10000\.dat/.test(o.slice(o.indexOf('% ls /ram/kept')))) f.push('no plan paged to the save folder (pl10000.dat)');
+        if (!/pl10000\.dat/.test(o.slice(o.indexOf('% ls /ram/kept/d1')))) f.push('no plan paged to the save folder (pl10000.dat)');
         return f;
       },
       sdcard: true
@@ -5801,8 +5801,8 @@ module.exports = {
       name: 'dq0soak', meaning: true, what: 'Dingus Quest Zero\'s stores paged to the save folder (move 2.8, DUNGEON.md: no fixed size; the user, 2026-10-16: "It should be as big as it needs to be, given there is enough disk space to hold it"), eviction and write-back, a soak, by what the character perceives (the senses\' record) and the stores\' records: dq0 -C (the caches small: the chunks\' twelve slots, a change page, 24 of the item store\'s records, two of the denizens\' regions, two of the strata\'s slots, two seen maps) and -T -T -T (three strata grown below the top, the character on the second): the dagger put down by the stairway there, up (the strata\'s slots made way in: the top\'s record read back into a slot), the rations put down by the stairway on the top, down and up again and again, every cache made way in each time (the chunks made again from their seeds, the change records, the things and the denizens read back from their files, the seen maps too): each stratum seen each time as it was first (the dagger, the rations where they were put down), the giant rats by the stairway seen; the map; the folder\'s region files (rg, it, dn, sm, st); quit and carried on: where it was, seen the same, the map as it was, up again, the rations there; then the game\'s game.dat gone and a new game begun in the folder (seed 5): the old game\'s region files of its stratum below gone, none of its things lying about (dq0page\'s and dq0strata\'s, these together)',
       init: 't_rc', cycles: 2400e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 3 -c /ram/c.hm -T -T -T -C -d /ram/kept',
-        'drop the dagger', 'u', 'drop the rations', 'd', 'u', 'd', 'u', 'd', 'map', 'quit', 'ls /ram/kept', 'dq0 -C -d /ram/kept', 'map', 'u', 'quit',
-        'rm /ram/kept/game.dat', 'dq0 -p t -s 5 -c /ram/c.hm -T -C -d /ram/kept', 'quit', 'ls /ram/kept', 'echo $status']) },
+        'drop the dagger', 'u', 'drop the rations', 'd', 'u', 'd', 'u', 'd', 'map', 'quit', 'ls /ram/kept/d1', 'dq0 -C -d /ram/kept', 'map', 'u', 'quit',
+        'rm /ram/kept/d1/game.dat', 'dq0 -p t -s 5 -c /ram/c.hm -T -C -d /ram/kept', 'quit', 'ls /ram/kept/d1', 'echo $status']) },
       expect: ['% echo $status'],
       check(m, out) {
         const T = dq0Turns(m), f = [], at = (s, n) => s && dq0Here(s).some(i => i.name === n);
@@ -5826,7 +5826,7 @@ module.exports = {
         if (!mp.after || !mp2.after || !mp.after.map.some(r => r.trim()) || mp.after.map.join('\n') !== mp2.after.map.join('\n')) f.push('the map not as it was, carried on');
         if (!u2.after || dq0View(u2.after) !== view[0]) f.push('the top not as it was, up again once carried on (the rations)');
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\s+/g, ' ');
-        const ls1 = o.slice(o.indexOf('% ls /ram/kept'), o.indexOf('% dq0 -C')), ls2 = o.slice(o.lastIndexOf('% ls /ram/kept'), o.indexOf('% echo $status'));
+        const ls1 = o.slice(o.indexOf('% ls /ram/kept/d1'), o.indexOf('% dq0 -C')), ls2 = o.slice(o.lastIndexOf('% ls /ram/kept/d1'), o.indexOf('% echo $status'));
         for (const p of ['rg', 'it', 'dn', 'sm', 'st']) if (!new RegExp(p + '[0-9a-f]{5,6}\\.da').test(ls1)) f.push('no ' + p + '... region files');
         if (/rg1\w{4}\.da/.test(ls2)) f.push('the old game\'s region files left in the folder for the new game (its stratum below\'s)');
         const g = T.of('dq0 -p t -s 5 -c /ram/c.hm -T -C -d /ram/kept');
@@ -5881,7 +5881,7 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'echo ml trk 80 >> /ram/c.hm', 'echo ml awa 80 >> /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'examine the floor', 'e', 'w', 'examine the floor', 'track', 'wait 5 minutes', 'track', 'sniff',
         'douse the torch', 'sniff', 'wait 3 hours', 'sniff', 'quit', 'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/kept', 'e', 'w', 'quit',
-        'ls /ram/kept', 'dq0 -d /ram/kept', 'examine the floor', 'quit',
+        'ls /ram/kept/d1', 'dq0 -d /ram/kept', 'examine the floor', 'quit',
         'mkdir /ram/g', "echo 'faction | Cult | cultist | 0-0 | 90 | priest | 0 | i | -' > /ram/g/theme.txt", 'dq0 -p t -s 4 -c /ram/c.hm -T -d /ram/g',
         'examine the floor', 'track', 'quit', 'echo $status']) },
       expect: ['% echo $status'],
@@ -10085,8 +10085,8 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'dq0hour=128',
         "echo 'faction | Brigands | bandit | 0-0 | 30 | - | 0 | w | -' > /ram/g/theme.txt", 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/g -k crowns',
         'drop the crowns', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit',
-        'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k farthings', 'drop the farthings', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit',
-        'mkdir /ram/i', 'cp /ram/g/theme.txt /ram/i/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/i -k crowns,farthings', 'i', 'wait', 'wait', 'i', 'quit', 'echo $status']) },
+        'mkdir /ram/h', 'cp /ram/g/d1/theme.txt /ram/h/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/h -k farthings', 'drop the farthings', 'wait', 'wait', 'wait', 'wait', 'wait', 'wait', 'quit',
+        'mkdir /ram/i', 'cp /ram/g/d1/theme.txt /ram/i/theme.txt', 'dq0 -p t -s 1 -c /ram/c.hm -T -d /ram/i -k crowns,farthings', 'i', 'wait', 'wait', 'i', 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, [{ g: 1, line: 'wait', n: 1, name: 'bandit', beside: 'face' }, { g: 2, line: 'wait', n: 1, name: 'bandit', beside: 'face' },
           { g: 3, line: 'wait', n: 1, name: 'bandit', beside: 'face', engage: true }, { g: 3, line: 'wait', n: 1, call: () => dq0PcShock(m, 3000) }]);
@@ -10914,7 +10914,7 @@ module.exports = {
           ...['b', 'c'].map(d => "echo 'faction | Tribe | arak garking | 0-1 | 30 | khanu | 0 | w | -' > /ram/" + d + '/theme.txt'),
           "echo 'faction | Tribe | arak | 0-1 | 20 | garking | 0 | w | Beasts h' > /ram/e/theme.txt", "echo 'faction | Beasts | bear | 1-1 | 1 | - | 1 | w | -' >> /ram/e/theme.txt",
           ...game('h'), 'attack the small orc', 'wait', 'wait', 'attack the orc king', 'wait', 'attack the orc king', 'wait', 'd', 'wait', 'attack the small orc', 'wait', 'wait', 'quit',
-          ...game('p'), 'wait', 'wait', 'quit',
+          ...game('p'), 'wait', 'wait', 'quit', 'rm -r /ram/h',   // (The RAM disk's room: its six folders, each with its dungeon's)
           ...['b', 'c'].flatMap(d => [...game(d), 'attack the black orc', 'wait', 'attack the black orc', 'quit']),
           ...['d', 'e'].flatMap(d => [...game(d), 'attack the orc king', 'quit']), 'echo $status']);
       })() },
@@ -11139,7 +11139,7 @@ module.exports = {
         "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt",
         'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s', ...Array(8).fill('wait 30 minutes'), 'quit',
         'dq0 -p t -s 3 -c /ram/c.hm -T', 'd', 'douse the torch', 'wait 10 minutes', 'look', 'wait 6 hours 30 minutes', 'look', 'wait 2 hours', 'look', 'quit',
-        'mkdir /ram/t', 'cp /ram/s/theme.txt /ram/t/theme.txt', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/t', 'wait 1 minute', ...Array(4).fill('wait 30 minutes'), 'quit', 'echo $status']) },
+        'mkdir /ram/t', 'cp /ram/s/d1/theme.txt /ram/t/theme.txt', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/t', 'wait 1 minute', ...Array(4).fill('wait 30 minutes'), 'quit', 'echo $status']) },
       start(m) {
         dq0Hour(m, [{ g: 2, line: 'd', n: 1, hour: 10 }]);   // (The rats' game at 10 o'clock: asleep by day)
         const a = m.acia, read = a.read;                      // (The rats' records as each look's typed: dq0Rec's)
@@ -11306,7 +11306,7 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/s',
         "echo 'faction | Guard | manarms | 0-0 | 12 | captain | 0 | u | -' > /ram/s/theme.txt",
         'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/s', ...Array(7).fill('wait 30 minutes'), 'wait 1 minute', 'attack the soldier', 'quit',
-        'mkdir /ram/u', 'cp /ram/s/theme.txt /ram/u/theme.txt', 'dq0hour=13', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/u', ...Array(3).fill('wait 30 minutes'), 'quit', 'echo $status']) },
+        'mkdir /ram/u', 'cp /ram/s/d1/theme.txt /ram/u/theme.txt', 'dq0hour=13', 'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/u', ...Array(3).fill('wait 30 minutes'), 'quit', 'echo $status']) },
       start(m) {
         dq0Poke(m, []);                                       // (The actors' moods and doings at each line's Enter: m.hearts)
         const a = m.acia, read = a.read;                      // (One at leisure put beside the character as the first wait
@@ -12260,6 +12260,98 @@ module.exports = {
       sdcard: true
     },
     {
+      name: 'dq0life', outfit: true, meaning: true, near: ['save', 'gear', 'money'], what: "Dingus Quest Zero's record of a life (the plan for the game between dungeons, its step 3: life.h, dq0life; DUNGEON.md's a character's life, HOUSE.md's carrying on), by the files and the world's things: the crypt (seed 3) solved and walked out of after a long wait, in two folders: then each folder's next dungeon (no -s), the two the same dungeon, their records the same to the byte (the same seed and commands make the same life): the head's life seed, its dungeon 2, its date on past the days the first took, the first dungeon's seed, outcome and days; its second dungeon's seed under 65,536 (a stand-in's). Each dungeon's own folder, the sheet, the things and the record in the top one. Quit and begun again, the same dungeon going on, the record as it was. 'Made new' stops: a dulled blade stays dull, its life and its version as they were; a torch's fuel as it was; the pennies changed at the money-changer's 15%. A seed over 65,536 goes on over it; and dq0life's date and age figures",
+      init: 't_rc', cycles: 6000e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,sword -d /ram/a', 'look', 'wait 1500 minutes', 'combine the sunstone with the moonstone', 'inventory', 'use the seal on the way out', 'u',
+        'dq0 -p t -d /ram/a', 'look', 'inventory', 'appraise the sword', 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,sword -d /ram/b', 'look', 'wait 1500 minutes', 'combine the sunstone with the moonstone', 'inventory', 'use the seal on the way out', 'u',
+        'dq0 -p t -d /ram/b', 'look', 'inventory', 'appraise the sword', 'quit',
+        'cmp /ram/a/life.dat /ram/b/life.dat', 'echo same $status', 'xd /ram/a/life.dat', 'ls /ram/a', 'ls /ram/a/d1', 'ls /ram/a/d2', 'cp /ram/a/life.dat /ram/l.dat',
+        'dq0 -p t -d /ram/a', 'look', 'quit', 'cmp /ram/a/life.dat /ram/l.dat', 'echo kept $status',
+        '/sd/0/games/lib/dq0/dq0life -d /ram/x -s 123456789', 'xd /ram/x/life.dat', 'cp /ram/a/d1/game.dat /ram/x/d1/game.dat', '/sd/0/games/lib/dq0/dq0life -d /ram/x', 'echo second', 'xd /ram/x/life.dat', 'cp /ram/x/life.dat /ram/y.dat', '/sd/0/games/lib/dq0/dq0life -d /ram/x', 'cmp /ram/x/life.dat /ram/y.dat', 'echo again $status', 'echo $status']) },
+      expect: ['% echo $status'],
+      start(m) {
+        const sword = (i, h, L, g) => {                 // (The sword: its wear and life set, read back as the next dungeon's first looked at)
+          const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize), r = {};
+          for (let k = 0; cat && k < L.nitems; k++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(k / per)), o = (k % per) * L.itemSize;
+            if (!b || !b[o + L.iKind]) continue;
+            let n = '';
+            for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
+            if (n === 'sword' && !r.sword) {
+              if (i) { b[o + L.iWear] = 200; b[o + L.iDur] = 7; b[o + L.iDur + 1] = 0; b[o + L.iSize] = 2; }
+              r.sword = { wear: b[o + L.iWear], dur: b[o + L.iDur] | b[o + L.iDur + 1] << 8, durMax: b[o + L.iDurMax] | b[o + L.iDurMax + 1] << 8, size: b[o + L.iSize] };
+            }
+            if (n === 'torch' && !r.torch) {
+              if (i) { b[o + L.iFuel] = 33; b[o + L.iFuel + 1] = 0; }
+              r.torch = b[o + L.iFuel] | b[o + L.iFuel + 1] << 8;
+            }
+          }
+          m.lifeSeen.push({ g, ...r });
+        };
+        m.lifeSeen = [];
+        dq0Poke(m, [1, 3].flatMap(g => [{ g, line: 'look', n: 1, fuel: { torch: 3000 } }, { g, line: 'use the seal on the way out', n: 1, call: (h, L) => sword(1, h, L, g) }]).concat(
+          [2, 4].map(g => ({ g, line: 'look', n: 1, call: (h, L) => sword(0, h, L, g) }))));
+      },
+      check(m, out) {
+        const T = dq0Turns(m), f = [], g2 = T.of('dq0 -p t -d /ram/a'), g2b = T.of('dq0 -p t -d /ram/b');
+        const u32 = (b, o) => b.readUInt32LE(o), u16 = (b, o) => b.readUInt16LE(o);
+        const a = xdBytes(out, 'xd /ram/a/life.dat');
+        if (a.length !== 544) f.push('the record not 544 bytes: ' + a.length);
+        if (!/\nsame\s*\n/.test(out.replace(/\r/g, ''))) f.push('the same seed and commands, the records not the same');
+        if (!/\nkept\s*\n/.test(out.replace(/\r/g, ''))) f.push('quit and begun again, the record changed');
+        if (a.length >= 544) {
+          if (u16(a, 0) !== 0x464C || a[2] !== 1) f.push('the record\'s head: ' + a.slice(0, 4).toString('hex'));
+          if (u32(a, 4) !== 3) f.push('the life\'s seed not 3: ' + u32(a, 4));
+          if (u16(a, 12) !== 2) f.push('not its second dungeon: ' + u16(a, 12));
+          const ds = u32(a, 8);
+          if (ds >= 65536 || ds === 3) f.push('the second dungeon\'s seed: ' + ds);
+          if (u32(a, 32) !== 3 || u32(a, 40) !== ds) f.push('the dungeons\' seeds: ' + u32(a, 32) + ', ' + u32(a, 40));
+          if (a[38] !== 1 || a[46] !== 0) f.push('the outcomes: ' + a[38] + ', ' + a[46] + ' (solved, then none yet)');
+          if (u16(a, 36) !== 1) f.push('the first dungeon\'s days: ' + u16(a, 36) + ' (a wait of 1500 minutes)');
+          const d0 = 720 * 360 + 3, date = u32(a, 14), days = date - d0;   // (Seed 3: its hour 3, 25 hours on)
+          if (days !== 2) f.push('the date not on two days (one crossed, the day after it came out): ' + days);
+          const born = u16(a, 18);
+          if (born > 720 - 16 || born < 720 - 25) f.push('its birth year: ' + born);
+        }
+        // (The folders)
+        const ls = c => { const o = out.replace(/\r/g, ''), i = o.indexOf('% ' + c + '\n'); return i < 0 ? [] : o.slice(i + c.length + 3, o.indexOf('\n% ', i + 1)).split(/\s+/); };
+        const top = ls('ls /ram/a'), d1 = ls('ls /ram/a/d1'), d2 = ls('ls /ram/a/d2');
+        for (const n of ['life.dat', 'pc.hm', 'kit.dat', 'd1', 'd2']) if (!top.includes(n) && !top.includes(n + '/')) f.push('the top folder has no ' + n + ': ' + top);
+        if (top.includes('game.dat')) f.push('a game.dat in the top folder');
+        for (const [w, l] of [['d1', d1], ['d2', d2]]) for (const n of ['game.dat', 'world.dat', 'items.dat']) if (!l.includes(n)) f.push(w + ' has no ' + n + ': ' + l);
+        // (The same dungeon, the second)
+        dq0Need(f, g2, 'E_ARRIVE', { how: 'A_START' }, 'the second game not a new dungeon');
+        const th = t => t.after ? t.after.theme : '?';
+        if (th(g2) !== th(g2b)) f.push('the same life, two second dungeons: ' + th(g2) + ', ' + th(g2b));
+        const look2 = g => dq0View(T.after(g, 'look').after);
+        if (!look2(g2) || look2(g2) !== look2(g2b)) f.push('the same life, the second dungeons not seen the same: ' + look2(g2) + ' / ' + look2(g2b));
+        dq0Need(f, T.after(g2, 'dq0 -p t -d /ram/a'), 'E_ARRIVE', { how: 'A_RESUMED' }, 'begun again, its second dungeon not going on');
+        // (Made new stops)
+        const seen = m.lifeSeen, was = seen.find(s => s.g === 1), now = seen.find(s => s.g === 2);
+        if (!was || !now || !now.sword) f.push('the sword not seen: ' + JSON.stringify(seen));
+        else {
+          if (now.sword.wear !== 200) f.push('a dulled blade not dull in the next dungeon: wear ' + now.sword.wear);
+          if (now.sword.dur !== 7 || now.sword.durMax !== was.sword.durMax) f.push('its life made new: ' + JSON.stringify(now.sword));
+          if (now.sword.size !== 2) f.push('its version not as it was: ' + now.sword.size);
+          if (!(now.torch <= 33)) f.push('a torch\'s fuel renewed: ' + now.torch);
+        }
+        const pennies = t => dq0Carried(t && t.after).filter(i => i.name === 'pennies').reduce((n, i) => n + i.qty, 0);
+        const i1 = T.of('inventory'), p1 = pennies(i1), p2 = pennies(T.after(i1, 'inventory'));
+        if (!p1 || Math.abs(p2 - p1 * 0.85) > 2) f.push('the pennies not changed at 15%: ' + p1 + ' then ' + p2);
+        // (A seed over 65,536)
+        const x1 = xdBytes(out, 'xd /ram/x/life.dat');
+        if (x1.length >= 544 && (u32(x1, 4) !== 123456789 || u32(x1, 8) !== 123456789)) f.push('a new life\'s seed: ' + u32(x1, 4) + ', ' + u32(x1, 8));
+        const x2 = xdBytes(out.slice(out.indexOf('% echo second')), 'xd /ram/x/life.dat');
+        if (!/\nagain\s*\n/.test(out.replace(/\r/g, ''))) f.push('a dungeon past the first with no game kept: its record not left as it is');
+        if (x1.length !== 544 || x2.length !== 544) f.push('the record, run alone: ' + x1.length + ', ' + x2.length + ' bytes');
+        if (x2.length >= 544 && (u16(x2, 12) !== 2 || u32(x2, 8) < 65536 || u32(x2, 8) === 123456789 || u32(x2, 4) !== 123456789)) f.push('a seed over 65,536, its second dungeon: ' + u32(x2, 8));
+        return f;
+      },
+      sdcard: true
+    },
+    {
       name: 'dq0hard', near: ['save', 'body'], what: 'Dingus Quest Zero\'s death and its autosave (slice 4.4: D7, death permanent with autosaves before danger as a setting, off hard mode; HOUSE.md\'s the character carries on), by the world\'s events and the words told: a hunter (hmchar\'s, seed 5) given a grievous bleeding wound and its blood near spent (its file\'s lines added), begun by the stairway down (dq0 -T) and down it (kept as it comes into the stratum: the autosave), then a wait: dead of it, the ending\'s words saying its last save is kept, and the game begun again with the folder carried on from that save (resumed, not a new game); the same in hard mode (dq0 -H): no save to go back to, the game begun again a new one (its folder\'s save not taken up)',
       init: 't_rc', cycles: 1600e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'cat /ram/c.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/c.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/c.hm',
@@ -12387,11 +12479,11 @@ module.exports = {
       name: 'dq0history', what: 'Dingus Quest Zero\'s own theme (theme.h): a game whose seed is past the stand-ins\' (65,536 and on, as a clock\'s is) has its region\'s history and its theme made as it begins (themegen, run by the UI before the world: "The place\'s history is being made"), into its save\'s folder (theme.txt, theme.dat), its story told the theme\'s word for word (its name, then its story: the region, its eras, who has it now, the goal), the top stratum named by it; quit and carried on (dq0 -d), the same theme read back from the folder, not made again',
       init: 't_rc', cycles: 1500e6,
       machine: { input: ['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0 -p t -s 70001 -c /ram/c.hm -d /ram/h', 'map', 'quit',
-        'ls /ram/h', 'cat /ram/h/theme.txt', 'dq0 -d /ram/h', 'quit', 'echo done'].map(l => '\u0101' + l + '\r').join('') },
+        'ls /ram/h/d1', 'cat /ram/h/d1/theme.txt', 'dq0 -d /ram/h', 'quit', 'echo done'].map(l => '\u0101' + l + '\r').join('') },
       expect: ['The place\'s history is being made', 'Under the ', 'theme.dat', 'theme.txt', 'takes up where they left off.', '% echo done\ndone\n'],
       check(m, out) {
         const o = out.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, ' ').replace(/\r/g, ''), f = [], dq0 = DQ0_MAKE();
-        const text = saidTheme(out, 'cat /ram/h/theme.txt');
+        const text = saidTheme(out, 'cat /ram/h/d1/theme.txt');
         let r;
         try { r = dq0.compile(text, 'theme.txt', DQ0_BEASTS(), 1); } catch (e) { return ['its theme.txt isn\'t a theme: ' + e.message]; }
         const words = s => s.replace(/\s+/g, ' ').trim(), name = (text.match(/^theme +\| (.*)/m) || [])[1] || '?';
@@ -12502,18 +12594,18 @@ module.exports = {
       name: 'dq0ends', near: ['theme', 'save'], what: "Dingus Quest Zero's three ends (the between-dungeons plan's steps 1 and 2, the user's Q1 \"Every dungeon\" and Q2 \"No, walk out\"; HOUSE.md's how a dungeon ends), each goal kind and each way out a scene, by the world's events, the words told and game.dat's outcome (xd: Q.done, Q.solved, the save's last bytes but plain): a sky shaft climbed unsolved (the crypt, seed 2, its roof poked in reach, no grating): left, its own words, then a carry-on into a new dungeon; an artifact's way in open: up it once told what that does, again left; the artifact itself to hand (dq0 -k): told it's done, walked out solved at the first asking, in its words; the thing taken up in play told once; the evil's way out shut, the curse broken told and the game going on, kept through a quit and walked out (ruled); the prisoner's way out shut, its other way out on the seed's stratum (dq0 -T -T -T, put by a poke at the foot of that stair) left unsolved; a through goal (a hand-written theme: the checker's way out its far exit) out by its far exit solved, with no asking; and a hard-mode death after solving still solved, in its words",
       init: 't_rc', cycles: 5000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'dq0sky=1', 'dq0hour=12',
-        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/a', 'go to the shaft', 'u', 'xd /ram/a/game.dat', 'dq0 -p t -s 259 -d /ram/a', 'quit', 'rm -r /ram/a',
-        'dq0 -p t -s 70000 -c /ram/c.hm -d /ram/b', 'examine the way out', 'u', 'look', 'u', 'xd /ram/b/game.dat', 'rm -r /ram/b',
-        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup\' -d /ram/c', 'look', 'u', 'xd /ram/c/game.dat', 'rm -r /ram/c', 'cp /ram/c.hm /ram/s.hm', 'echo ml awa 99 >> /ram/s.hm',
+        'dq0 -p t -s 2 -c /ram/c.hm -T -d /ram/a', 'go to the shaft', 'u', 'xd /ram/a/d1/game.dat', 'dq0 -p t -s 259 -d /ram/a', 'quit', 'rm -r /ram/a',
+        'dq0 -p t -s 70000 -c /ram/c.hm -d /ram/b', 'examine the way out', 'u', 'look', 'u', 'xd /ram/b/d1/game.dat', 'rm -r /ram/b',
+        'dq0 -p t -s 70000 -c /ram/c.hm -k \'jade cup\' -d /ram/c', 'look', 'u', 'xd /ram/c/d1/game.dat', 'rm -r /ram/c', 'cp /ram/c.hm /ram/s.hm', 'echo ml awa 99 >> /ram/s.hm',
         'dq0 -p t -s 70000 -c /ram/s.hm -T -T', 'search', 'search', 'search', 'search', 'take the cup', 'drop the cup', 'take the cup', 'quit',
-        'dq0 -p t -s 70007 -c /ram/c.hm -k \'silver bell,bone idol\' -d /ram/e', 'drop the idol', 'u', 'examine the way out', 'put the bell on the idol', 'quit', 'dq0 -p t -d /ram/e', 'u', 'xd /ram/e/game.dat', 'rm -r /ram/e',
-        'dq0 -p t -s 70012 -c /ram/c.hm -T -T -T -d /ram/f', 'look', 'u', 'examine the way out', 'u', 'xd /ram/f/game.dat', 'rm -r /ram/f',
+        'dq0 -p t -s 70007 -c /ram/c.hm -k \'silver bell,bone idol\' -d /ram/e', 'drop the idol', 'u', 'examine the way out', 'put the bell on the idol', 'quit', 'dq0 -p t -d /ram/e', 'u', 'xd /ram/e/d1/game.dat', 'rm -r /ram/e',
+        'dq0 -p t -s 70012 -c /ram/c.hm -T -T -T -d /ram/f', 'look', 'u', 'examine the way out', 'u', 'xd /ram/f/d1/game.dat', 'rm -r /ram/f',
         'echo \'theme    | the Long Road\' > /ram/t.txt', 'echo \'mission  | escape\' >> /ram/t.txt', 'echo \'stratum  | the Upper Road | b | halls\' >> /ram/t.txt', 'echo \'stratum  | the Lower Road | n\' >> /ram/t.txt',
         'echo \'goal     | through | the Far Door | 1 | -\' >> /ram/t.txt', 'echo \'lock     | It has fallen in.\' >> /ram/t.txt',
         'echo \'ending   | escaped | You come up through the Far Door.\' >> /ram/t.txt', 'echo \'ending   | left | You climb out, the road untried.\' >> /ram/t.txt', 'echo \'ending   | died | The road keeps you.\' >> /ram/t.txt',
-        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -T -T -T -d /ram/g', 'look', 'u', 'xd /ram/g/game.dat', 'rm -r /ram/g',
+        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -T -T -T -d /ram/g', 'look', 'u', 'xd /ram/g/d1/game.dat', 'rm -r /ram/g',
         'cp /ram/c.hm /ram/w.hm', 'echo \'inj 8 0 3 4 0 1\' >> /ram/w.hm', 'echo \'vol 0 9 0 0 0\' >> /ram/w.hm',
-        'dq0 -p t -s 3 -c /ram/w.hm -H -k crown,throne -d /ram/h', 'drop the throne', 'put the crown on the throne', 'wait 10 minutes', 'xd /ram/h/game.dat', 'echo $status']) },
+        'dq0 -p t -s 3 -c /ram/w.hm -H -k crown,throne -d /ram/h', 'drop the throne', 'put the crown on the throne', 'wait 10 minutes', 'xd /ram/h/d1/game.dat', 'echo $status']) },
       expect: ['% echo $status'], sdcard: true,
       start(m) {
         const roof = ft => () => {                       // (The roof of the character's chunk's rooms: a shaft's mouth in reach)
@@ -12537,14 +12629,18 @@ module.exports = {
       check(m, out) {
         const T = dq0Turns(m), f = [], st = dq0Story(out), G = st.split('enters the dungeon'), ok = (g, re, what) => { if (!re.test(G[g] || '')) f.push(what + ' (game ' + g + ')'); };
         const no = (g, re, what) => { if (re.test(G[g] || '')) f.push(what + ' (game ' + g + ')'); };
-        const q = cmd => { const b = xdBytes(out, cmd); return b.length ? [b[57], b[58]] : []; };   // (game.dat: its head 20 bytes, struct pc 36, then Q: theme, done, solved)
+        const q = cmd => {                   // (game.dat: its head 20 bytes, the outcome, then Q: theme, done, solved)
+          const b = xdBytes(out, cmd);
+          if (b.length && b[20] !== (b[23] ? 1 : b[22] === LEFT ? 2 : b[22] ? 3 : 0)) f.push(cmd + ': its outcome ' + b[20] + ', done ' + b[22] + ', solved ' + b[23]);
+          return b.length ? [b[22], b[23]] : [];
+        };
         const eq = (a, b, what) => { if (JSON.stringify(a) !== JSON.stringify(b)) f.push(what + ': done, solved ' + JSON.stringify(a)); };
         const ESCAPED = 1, RULED = 2, DIED = 3, LEFT = 4;
         // A sky shaft, unsolved, then a carry-on
         ok(1, /You set to climbing: 20 feet of it\.[^]*You climb out into the light of day with Aldric's door still shut/, 'out by the shaft not left, in its words');
         ok(1, /Your character carries on/, 'left, not said to carry on');
         no(1, /You have escaped|grating/, 'the old words of a shaft');
-        eq(q('xd /ram/a/game.dat'), [LEFT, 0], 'left by the shaft');
+        eq(q('xd /ram/a/d1/game.dat'), [LEFT, 0], 'left by the shaft');
         dq0Need(f, T.of('dq0 -p t -s 259 -d /ram/a'), 'E_ARRIVE', { how: 'A_START' }, 'no new dungeon after leaving');
         const g2 = T.of('dq0 -p t -s 259 -d /ram/a');
         if (!g2.after || g2.after.theme !== 'the Drowned Temple') f.push('the carry-on not in its new theme: ' + (g2.after && g2.after.theme));
@@ -12553,12 +12649,12 @@ module.exports = {
         ok(3, /That's the way out, and what you came for undone\. Go up again to leave it so\./, 'not told what going up would do');
         ok(3, /with empty hands/, 'its left words not told');
         no(3, /in your hands/, 'its solved words told, left');
-        eq(q('xd /ram/b/game.dat'), [LEFT, 0], 'left by the way in');
+        eq(q('xd /ram/b/d1/game.dat'), [LEFT, 0], 'left by the way in');
         // The artifact to hand: told, out solved with no asking
         ok(4, /So this is the Cup of [A-Za-z]+, where they said it would be\.[^]*That's what you came to do\. Now to get out alive\./, 'the artifact to hand not told done');
         no(4, /That's the way out, and/, 'asked, solved');
         ok(4, /You climb out into the daylight with the Cup of [A-Za-z]+ in your hands\./, 'its solved words not told');
-        eq(q('xd /ram/c/game.dat'), [ESCAPED, ESCAPED], 'solved by the artifact');
+        eq(q('xd /ram/c/d1/game.dat'), [ESCAPED, ESCAPED], 'solved by the artifact');
         // The artifact taken up in play: told once
         if ((G[5] || '').split("That's what you came to do").length !== 2) f.push('the artifact taken up in play not told once: ' + ((G[5] || '').split("That's what you came to do").length - 1));
         // The evil: shut, then told, kept, walked out
@@ -12566,21 +12662,21 @@ module.exports = {
         dq0Need(f, T.after(T.of('dq0 -p t -s 70007 -c /ram/c.hm -k \'silver bell,bone idol\' -d /ram/e'), 'u'), 'E_NOWAY', { why: 'N_SHUT' }, 'the curse\'s way out not shut');
         ok(6, /You lay the Bell of [A-Za-z]+ upon the idol of [A-Za-z]+\.[^]*That's what you came to do\./, 'the curse broken not told done');
         ok(6, /You climb out into the daylight, and behind you the dead of [^.]* sleep at last\./, 'its ruled words not told, kept through a quit');
-        eq(q('xd /ram/e/game.dat'), [RULED, RULED], 'solved by the curse broken');
+        eq(q('xd /ram/e/d1/game.dat'), [RULED, RULED], 'solved by the curse broken');
         // The prisoner's other way out, unsolved
         ok(7, /A stair climbs to the open air: go up to leave\./, 'the other way out not told, examined');
         ok(7, /That's the way out, and what you came for undone/, 'asked at the other way out');
         ok(7, /You climb out into the daylight alone\./, 'its left words not told');
-        eq(q('xd /ram/f/game.dat'), [LEFT, 0], 'left by the other way out');
+        eq(q('xd /ram/f/d1/game.dat'), [LEFT, 0], 'left by the other way out');
         // A through goal's far exit: solved by going out
         ok(8, /You come up through the Far Door\./, 'the far exit not solved');
         no(8, /That's the way out, and/, 'asked at the far exit');
-        eq(q('xd /ram/g/game.dat'), [ESCAPED, ESCAPED], 'solved by the far exit');
+        eq(q('xd /ram/g/d1/game.dat'), [ESCAPED, ESCAPED], 'solved by the far exit');
         if (JSON.stringify(m.exits) !== '[1,1]') f.push('the stairs out not on the strata looked at: ' + JSON.stringify(m.exits));
         // Died, solved
         ok(9, /You did what you came to do, and you won't be climbing out to tell of it\./, 'a death after solving not worded so');
         no(9, /The crypt keeps you/, 'its plain death\'s words told');
-        eq(q('xd /ram/h/game.dat'), [DIED, RULED], 'died, solved');
+        eq(q('xd /ram/h/d1/game.dat'), [DIED, RULED], 'died, solved');
         return f;
       }
     },
@@ -12590,10 +12686,10 @@ module.exports = {
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'echo \'theme    | the Pit of Echoes\' > /ram/t.txt', 'echo \'region   | the Grey Fells | hills | granite | springs | cold\' >> /ram/t.txt',
         'echo \'stratum  | the Upper Pit | bx | keep\' >> /ram/t.txt', 'echo \'stratum  | the Echoing Deep | n\' >> /ram/t.txt',
-        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/y', 'quit', 'cat /ram/y/theme.txt', 'echo done']) },
+        'dq0 -p t -s 5 -c /ram/c.hm -t /ram/t.txt -d /ram/y', 'quit', 'cat /ram/y/d1/theme.txt', 'echo done']) },
       expect: ['% echo done\ndone\n'],
       check(m, out) {
-        const T = dq0Turns(m), f = [], text = saidTheme(out, 'cat /ram/y/theme.txt'), keyed = k => text.split('\n').filter(l => l.startsWith(k.padEnd(9) + '|'));
+        const T = dq0Turns(m), f = [], text = saidTheme(out, 'cat /ram/y/d1/theme.txt'), keyed = k => text.split('\n').filter(l => l.startsWith(k.padEnd(9) + '|'));
         try { DQ0_MAKE().compile(text, 'theme.txt', DQ0_BEASTS(), 1); } catch (e) { f.push('its theme.txt isn\'t a theme: ' + e.message); }
         const want = { theme: ['theme    | the Pit of Echoes'], region: ['region   | the Grey Fells | hills | granite | springs | cold'],
           stratum: ['stratum  | the Upper Pit | bx | keep', 'stratum  | the Echoing Deep | n'] };
