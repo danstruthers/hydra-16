@@ -2407,6 +2407,13 @@ function dq0Poke(m, pokes) {
               }
               h[L.denSeq] = h[L.denSeq] + 1 & 255;
             }
+            if (p.senseless) {                  // (Senseless, for the tenths given, as the referee has it and the world: down, prone, 2026-11-03)
+              const S = dq0Sheet(m), o = S.at(h[at(k) + L.aName + 12]), now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16 | h[L.now + 3] << 24, till = (now + p.senseless) >>> 0, rd = L.actor + k * L.actorSize + L.aReady;
+              S.mem[o + S.STATE] = S.mem[o + S.STATE] & ~3 | 1;
+              for (let i = 0; i < 4; i++) S.mem[o + S.OUT + i] = h[rd + i] = till >>> (8 * i) & 255;
+              h[at(k) + L.aDoing] = K.DO_DOWN;
+              h[at(k) + L.aPos] = K.POS_PRONE;
+            }
             if (p.rec) {
               const R = dq0Rec(m), o = R.at(h[at(k) + L.aName + 12]);
               if (p.rec.or) R.mem[o + R.FLAGS] |= p.rec.or;
@@ -2441,6 +2448,14 @@ function dq0Body(m) {
   const h = m.dq0.bank(0), t = h[12 + 3], lbl = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1');
   const fb = dq0BodyFb || (dq0BodyFb = parseInt(/^al ([0-9A-F]+) \._fb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][fb]) || new Uint8Array(0x2000);
   return { mem, at: n => 8 * n };
+}
+// The creatures' sheets in the referee's bank (dq0harn's sb: dq0harn.h's struct beast, 32 bytes by the sheet's number): { mem, at(n) }, its
+// state at 7, its out (senseless till then, the clock's tenths, 4 bytes) at 28.  (A scene's: one senseless as the referee has it)
+let dq0SheetSb = 0;
+function dq0Sheet(m) {
+  const h = m.dq0.bank(0), t = h[12 + 3], lbl = () => fs.readFileSync(path.join(__dirname, '..', 'obj', 'games', 'dq0harn', 'dq0harn.lbl'), 'latin1');
+  const sb = dq0SheetSb || (dq0SheetSb = parseInt(/^al ([0-9A-F]+) ._sb$/m.exec(lbl())[1], 16)), mem = m.taskBankMem(t, m.taskRam[t][sb]) || new Uint8Array(0x2000);
+  return { mem, at: n => 32 * n, STATE: 7, OUT: 28 };
 }
 // At each line's Enter, each actor's body (m.bodies: { g, line, name, den, lv: its levels, wfl, ex, at }) after the pokes made then
 // (each { g: the game, 1 on, line, n: its nth time typed in it, name: the actor's, lv: its levels, ex, at: its body's set })
@@ -4883,7 +4898,9 @@ module.exports = {
           'look around the corner', 'n', 'quit', 'echo $status'].map(l => '\u0101' + l + '\r').join('') },
       start(m) {        // (The scene set, 2026-11-03: the rats wary from here on, the things' words the test's, not a fight)
         const wary = (h, L) => { for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aName]) h[L.actor + k * L.actorSize + L.aAttitude] = 2; };
-        dq0Poke(m, ['drop pick', 'examine the torch', 'take', 'the bones', 'the closest', 'take all', 'i', 'drop', 'take it', 'throw the dagger'].map(line => ({ g: 1, line, n: 1, call: wary })).concat([{ g: 1, line: 'take', n: 2, call: wary }]));
+        dq0Poke(m, ['drop pick', 'examine the torch', 'take', 'the bones', 'the closest', 'take all', 'i', 'drop', 'take it', 'throw the dagger'].map(line => ({ g: 1, line, n: 1, call: wary })).concat([{ g: 1, line: 'take', n: 2, call: wary },
+          // (Its bare attack: a rat senseless beside it, as the fight would leave one: the dice no longer do)
+          { g: 1, line: 'attack', n: 1, call: wary }, { g: 1, line: 'attack', n: 1, name: 'giant rat', beside: 'face', senseless: 600 }]));
       },
       expect: ['% echo $status'],
       // (Its words checked with the screen's codes and the lines' wrapping taken out, each in its turn)
@@ -4895,7 +4912,7 @@ module.exports = {
           'Which do you mean: 1. the body ahead', 'the bones ahead to your right, or 3. the pick where you stand?', 'Taken.',
           'Which do you mean: 1. the body ahead', 'or 2. the pick where you stand?', 'Taken.', 'Your hands are full, and there\'s nowhere to put it.',
           'a pick, a torch, a flask of oil, bones', 'You carry none of those.', 'Your hands are full, and there\'s nowhere to put it.', 'Throw it at what?',
-          "It's out of reach: go up to it first.", 'You have no target now.',
+          'You finish the giant rat where it lies.', 'You have no target now.',
           'You have no target.', 'You turn to face north.', 'You come to the wall.', '% echo $status'];
         let at = 0;
         for (const w of want) {
@@ -5543,38 +5560,46 @@ module.exports = {
       },
       sdcard: true
     },    {
-      name: 'dq0scent', what: 'Dingus Quest Zero\'s denizens following a scent (slice 4.1, DENIZENS.md\'s a scent followed; the user\'s, 2026-10-21: keen noses follow a scent far longer than an hour), by their bodies: at seed 3 with the hand-written theme\'s hostile giant rats (a keen nose, 7: K_NOSE), the first of them fought off by the way down, the character gone out of the room in the dark, through its doorway and round the corner into the passage west, and still there five minutes: the rats come after it along the squares it walked, round the corner (the world\'s journal of its squares, its store\'s older trail: from the room none of them can see it in the dark, nor go straight at it through the wall), two of them on its trail within four squares of it at the end (before the traces, they went back to the room and their lair) (since slice 4.1b, the kit\'s torch in its off hand, the worse for it, a blow at its arm letting it fall: Club 60 in its file so the rats are fought off as they were, the torch put out where it lies, "douse the lit torch") (since 2026-10-29 its first move a step south, not a walk: the rat beside it not noticed it yet, an unaware denizen engaging no one, the walk went on past where it stopped)',
+      name: 'dq0scent', what: 'Dingus Quest Zero\'s denizens following a scent (slice 4.1, DENIZENS.md\'s a scent followed; the user\'s, 2026-10-21: keen noses follow a scent far longer than an hour), by their bodies: at seed 3 with the hand-written theme\'s hostile giant rats (a keen nose, 7: K_NOSE), the scene set (2026-11-03: the dice no longer fall on one; dq0Poke\'s): the rats held in the room, beside the squares the character walks, as it goes out through the doorway and round the corner along the passage west, there its torch put out, still there five minutes: the rats let go come after it through the doorway along the squares it walked (the world\'s journal of its squares, its store\'s older trail: from the room none of them can see it in the dark, nor go straight at it through the wall), two of them on the passage within four squares of it before the end (before the traces, they went back to the room and their lair); and the same walk with the rats held at the room\'s far end, none beside a square of its trail: there they stay, five minutes on (their noses its trail\'s, no sound or sight of it fetching them) (Club 60 in its file: its fights with them not the end of it)',
       init: 't_rc', cycles: 2500e6,
-      // (-R 22: the dice's offset that gives the game it was written for, since the dice by who asks,
-      // 2026-10-30: the same dungeon, other rolls)
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', 'mkdir /ram/g', 'cp /sd/0/games/lib/dq0/inhabit.txt /ram/g/theme.txt', 'echo ml clu 60 >> /ram/c.hm',
-        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g -R 22', 'turn left', 'step forward', 'douse the lit torch', 'go through the door to the south', 'go west', 'go west', 'wait 1 minute',
-        'wait 1 minute', 'wait 1 minute', 'wait 1 minute', 'wait 1 minute', 'quit', 'echo $status']) },
+        'mkdir /ram/h', 'cp /ram/g/theme.txt /ram/h/theme.txt',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g', 'step west', 's', 'go west', 'go west', 'douse the lit torch', ...Array(5).fill('wait 1 minute'), 'quit',
+        'dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/h', 'step west', 's', 'go west', 'go west', 'douse the lit torch', ...Array(5).fill('wait 1 minute'), 'quit', 'echo $status']) },
       expect: ['% echo $status'],
-      start(m) {      // (The scene set, 2026-11-03: the rats held a while, till it's round the corner, then on its trail)
+      start(m) {      // (The scene set, 2026-11-03: the rats put in the room and held, till it's round the corner, then on its trail)
         const hold = (h, L) => { const now = h[L.now] | h[L.now + 1] << 8 | h[L.now + 2] << 16, t = now + 900; for (let k = 0; k < L.nactors; k++) { const o = L.actor + k * L.actorSize + L.aReady; if (h[L.actor + k * L.actorSize + L.aName]) { h[o] = t & 255; h[o + 1] = t >> 8 & 255; h[o + 2] = t >> 16 & 255; h[o + 3] = 0; } } };
-        dq0Poke(m, ['turn left', 'step forward', 'douse the lit torch', 'go through the door to the south'].map(line => ({ g: 1, line, n: 1, call: hold }))
-          .concat([{ g: 1, line: 'go west', n: 1, call: hold }, { g: 1, line: 'go west', n: 2, call: hold }]));
+        const room = sq => (h, L) => { const R = dq0Rec(m); let n = 0; for (let k = 0; k < L.nactors; k++) if (h[L.actor + k * L.actorSize + L.aName]) { const a = L.actor + k * L.actorSize, o = R.at(h[a + L.aName + 12]), [x, y] = sq[n++ & 3]; h[a + L.aX] = R.mem[o + R.X] = x & 255; h[a + L.aX + 1] = R.mem[o + R.X + 1] = x >> 8; h[a + L.aY] = R.mem[o + R.Y] = y & 255; h[a + L.aY + 1] = R.mem[o + R.Y + 1] = y >> 8; } h[L.denSeq] = h[L.denSeq] + 1 & 255; hold(h, L); };
+        const held = g => [{ g, line: 'douse the lit torch', n: 1, call: hold }, { g, line: 's', n: 1, call: hold }, { g, line: 'go west', n: 1, call: hold }, { g, line: 'go west', n: 2, call: hold }];
+        dq0Poke(m, [{ g: 1, line: 'step west', n: 1, call: room([[32722, 32721], [32722, 32722], [32721, 32721], [32721, 32722]]) }, ...held(1),     // (Beside its trail)
+          { g: 2, line: 'step west', n: 1, call: room([[32719, 32721], [32720, 32721], [32719, 32722], [32720, 32722]]) }, ...held(2)]);              // (Not)
       },
       check(m) {
         const T = dq0Turns(m), f = [];
-        const h0 = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g'), w = T.filter(t => t.k > h0.k && t.line === 'wait 1 minute'), end = w.length ? w[w.length - 1].after : null;
-        const trail = new Set(T.filter(t => t.k > h0.k && t.k < (w[0] || {}).k && t.after && t.at).flatMap(t => [t.at.pc.x + ',' + t.at.pc.y, t.after.pc.x + ',' + t.after.pc.y]));
+        const h0 = T.of('dq0 -p t -s 3 -c /ram/c.hm -T -d /ram/g'), waits = T.filter(t => t.k > h0.k && t.line === 'wait 1 minute'), w = waits.slice(0, 5), w1 = waits.slice(5), end = w.length ? w[w.length - 1].after : null;
         if (!end) return f.concat(['the hostile rats\' game not played']);
+        // (The passage it walked, west along its row from the doorway, to the corner and round it: the map's, seed 3's)
+        const walked = a => a.y === 32724 && a.x >= 32715 && a.x <= 32723;
         const nearAt = e => e.actors.filter(a => a.state && a.name === 'giant rat' && a.attitude === 'AT_HOSTILE' && a.doing !== 'DO_DOWN' &&
-          Math.max(Math.abs(a.x - e.pc.x), Math.abs(a.y - e.pc.y)) <= 4 && a.y === e.pc.y && a.x > e.pc.x && a.x < 32722);
+          Math.max(Math.abs(a.x - e.pc.x), Math.abs(a.y - e.pc.y)) <= 4 && walked(a));
         const near = w.map(t => t.at ? nearAt(t.at) : []).concat([nearAt(end)]).reduce((b, n) => n.length > b.length ? n : b, []);   // (As they come up; a fight may scatter them after)
         if (end.pc.light) f.push('the character not in the dark');
         // (Slices 4.5 and 4.6: the rats on its scent stalk it, their Stealth tested, the denizens' slot's, their steps
         // the quieter; every sound's way from the character to a rat no shorter than the line, round the corner longer)
-        const g = m.dq0.games[m.dq0.games.length - 1] || { replies: [], dens: [] }, rs = g.replies.filter(r => r.req === 'dsense' && r.cost !== 255);
+        const g = m.dq0.games[0] || { replies: [], dens: [] }, rs = g.replies.filter(r => r.req === 'dsense' && r.cost !== 255);
         if (!g.replies.some(r => r.req === 'dslot' && r.kind === 4 && r.a === 4 && r.actor)) f.push("no rat's Stealth tested, stalking");
         if (!g.dens.some(e => e.kind === 'E_DEN' && e.de === 'DE_MOVED' && e.b === 0)) f.push("no rat's step silent, stalking");
         const short = rs.filter(r => r.cost < Math.max(Math.abs(r.x - r.pc.x), Math.abs(r.y - r.pc.y)));
         if (short.length) f.push("a sound's way shorter than the line: " + JSON.stringify(short[0]));
         if (!rs.some(r => r.cost > Math.max(Math.abs(r.x - r.pc.x), Math.abs(r.y - r.pc.y)))) f.push('no sound round the corner, the long way');
-        if (near.length < 2 && !w.some(t => t.dens.some(e => e.kind === 'E_FIGHT'))) f.push('the rats not come after it along the passage: the character at ' + end.pc.x + ',' + end.pc.y + ', the rats ' +
-          JSON.stringify(end.actors.map(a => [a.x, a.y, a.doing])) + ' (its squares walked ' + [...trail].join(' ') + ')');
+        if (near.length < 2) f.push('the rats not come after it along the passage: the character at ' + end.pc.x + ',' + end.pc.y + ', the rats ' + JSON.stringify(end.actors.map(a => [a.x, a.y, a.doing])));
+        if (!w.some(t => t.at && t.at.actors.concat(t.after ? t.after.actors : []).some(a => a.name === 'giant rat' && a.doing === 'DO_COMING' && walked(a)))) f.push('no rat coming on along the passage (DO_COMING): ' + JSON.stringify(end.actors.map(a => [a.x, a.y, a.doing])));
+        // (Held where no square of its trail's beside them: still in the room, its trail their way out)
+        if (w1.length !== 5 || !w1.every(t => t.after)) f.push('the second game not played');
+        else {
+          const out = w1.flatMap(t => t.after.actors).filter(a => a.name === 'giant rat' && (a.y > 32722 || a.x > 32721));
+          if (out.length) f.push('rats with no trail beside them come out all the same: ' + JSON.stringify(out.map(a => [a.x, a.y, a.doing])));
+        }
         return f;
       },
       sdcard: true
