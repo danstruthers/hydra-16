@@ -145,8 +145,9 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
     pa = me == att ? bd.pos : HUB->pc_pos;     /* (Their bodies' positions, the world's: prone, the easier struck) */
     pd = me == att ? HUB->pc_pos : bd.pos;
     r->w2 = bd.timid | (POS_LOW (pa) ? RS_PRONE_A : 0) | (POS_LOW (pd) ? RS_PRONE_D : 0) | (ra ? RS_REARM : 0) |
-        (me != att && bd.doing == DO_SLEEP ? RS_ASLEEP : 0);   /* (A sleeper struck at: no defence, the book's
-                                                **   Ignore, 2026-11-02) */
+        ((me != att ? bd.doing == DO_SLEEP || (HUB->pc_hid && DO_UNAWARE (bd.doing)) : bd.state > 1) ? RS_ASLEEP : 0);
+                                                /* (A sleeper struck at: no defence, the book's Ignore, 2026-11-02; and
+                                                **   one that hasn't seen a blow from hiding coming, 2026-11-04) */
     if (mshot.kind) {                           /* (A missile's, shot or thrown: wshoot.c's, slice 4.7's) */
         if (mshot.flags & MS_HARD) {
             r->steps -= 2;
@@ -155,6 +156,10 @@ static unsigned char __fastcall__ blow (unsigned char att, unsigned char def, un
         r->b = mshot.band;
         r->w2 = (r->w2 | RS_MISSILE | mshot.flags) & (mshot.flags & MS_STRAY ? ~RS_PRONE_A : 0xFFFF);  /* (A stray's
                                                 **   strike no shooter's: nobody gets up for it) */
+    }
+    if (HUB->pc_hid || bd.state > 1) {
+        hid_op (me == att ? HO_BLOW : HO_BLOWN);   /* (Out of hiding: part 94's) */
+        hub_map (0);
     }
     r = hub_ask (SLOT_WORLD);
     if ((out = r->result) == 0xFF) {

@@ -22,7 +22,7 @@ says otherwise"; but those the review's decisions settle, whose rule says what t
 does: Words reach a creature, Their tongues and Characters' second language (A1); Who trades (A2); A skill used is marked (A3, A7)
 and The rolls come after a night's rest (A3); Healing, the book's (A4); Death, and the autosave (A5); Sleep and rest as built (A6);
 Carrying on (A8); The creatures' sheets (A9); What strikes and A whetstone (A10); Morale's closing note (A11, A14); A purpose names
-one skill and Hiding a thing (A12); No trap sprung (A13); Dead, its things on its body (A15); A tool's use takes its reach first and
+one skill and Hiding oneself (A12); No trap sprung (A13); Dead, its things on its body (A15); A tool's use takes its reach first and
 Climbing a shaft (A16); Keys that fit (A17); A shaft as a way out (A18); Firedamp's burst (A19); Nothing's read in the dark (A20); The
 evil's goal won where it's done (A21); An eighth off (A22); The places (A23); Lighting by a fire-maker (A24); A chisel and a hammer
 (A25); Every use of a tool (A26); The hour (A27).  So an older *for review*, or "drafted for the user to review", is only a rule's
@@ -57,7 +57,7 @@ plays them as HarnMaster's referee does.
 ## Tests
 
 - **A purpose names one skill.**  The game asks for a purpose, never a skill (rs.h's P_*); the referee picks the
-  skill a GM would call for: sight, sound, smell and searching Awareness; stealth and hiding a thing Stealth (hiding oneself too, when it's built: A12, Hiding a thing, below);
+  skill a GM would call for: sight, sound, smell and searching Awareness; stealth, hiding a thing and hiding oneself Stealth (Hiding oneself, below);
   climbing Climbing; jumping Jumping; swimming Swimming; balance Acrobatics; forcing and lifting Strength (an
   attribute times 5); picking a lock, disarming and making out a mechanism Lockcraft; enduring Condition; resisting
   poison Endurance times 5; resisting the mind Will times 5; dodging a hazard Dodge; first aid Physician; lore Lore;
@@ -388,7 +388,43 @@ The book's Mining is geology, prospecting and mineworking (Skills 16), but it gi
   failure 0 (a floor's dust and corners only).  Told: 10 or more cunningly, 4 or more well, less after a fashion.  The
   character knows where it hid it.  A minute's timed work (the long tasks'), the thing put down and the test made at
   its end.  (things.c's s_hide; main.c's hide.)
-  Only a thing can be hidden as yet: hiding oneself is *the user's, 2026-11-03: to build* (A12: queued next, the denizens' senses needing a new check).
+- **Hiding oneself** *(the user's, A12, "queue it next"; the book's Stealth, Skills 9, where it says; the rest new, for review)*: every
+  actor's by the one code (dq0w.c's part 94, dq0d's part 20, dq0p's sense.c and dens.c).
+  - **The command**: "hide" with no thing said; "hide behind the table", "hide in the straw": one within reach, walked over to first; "hide in
+    the shadows", "in the doorway": the same as "hide", the world finding what's there.  "hide the dagger" still hides a thing.
+  - **Where** *(the book: it presumes reasonable cover or poor light)*: a thing big enough (40 pints or more: a cask, a table, a chest, a
+    body, a well) on its square or beside it, 2 steps; a heap of 8 pints or more on its square (straw, furs), 2; a doorway it stands in, or
+    rubble beside it, 1; its square unlit, 2 more.  Neither cover nor the dark: refused, no time ("There's nothing here to hide behind, and the
+    light's too good.").  *The house's: the figures.*
+  - **Refused** *(the book: only where an observer wouldn't see it anyway)*: with a light on it ("Not with a light on you: it gives you away.");
+    with a denizen not an ally that's noticed it, on a square it sees ("The bandit is watching you: you can't hide from it now."); no time.
+  - **Its time** *(the house's)*: ten seconds, a timed work, its words at once ("You set to hiding."), stopped as the others are, not
+    hidden then.  At its end it's hidden, told by what ("You crouch behind the cask, out of sight."), crouched if it was standing;
+    "status" says so.  Kept with the game (world.dat).
+  - **A look at it** *(the book's test; how often the house's)*: a denizen that would see it but for that (within its sight, a line clear: the
+    senses' SN_LOOK) tests the hider's Stealth, once for each of how near it's come (over seven squares, 2 steps easier; four to seven, none;
+    two or three, 2 harder; beside it, 4 harder), and again as it comes back into sight.  Easier by its cover's steps; 2 easier if the looker is
+    about its own business, unaware.  A success, not seen.  A critical failure, found.  A marginal failure, the looker's Awareness tested
+    (the book's; a creature's its Eyesight times 5, as its Stealth is its Agility: *the house's*): a success, found.  "The bandit has seen
+    you!": its long task stopped, hard.  The tests on the denizens' own stream of dice (the character's and the world's rolls as they were).
+  - **What it can't hide from** *(the house's)*: a nose: smelt, as anyone is (Smelt on the air), it's known, and a hostile one comes and strikes.
+    An ally always knows where it is.  Heard (creeping, by its grade; still, not at all: its noise 0; asleep, as loud as before), a hostile one
+    is drawn to the place (A noise drawing them), looks as it comes, but doesn't know it's there till it sees it.  No hostile engages it (their
+    zones aren't for one they haven't found).
+  - **What ends it** *(the house's)*: moving at any pace but a creep (a creep keeps it, by the moving quietly test: a stop in the open, lit
+    with no cover, ends it, "There's no cover here: you're hiding no longer."); standing up; "stop hiding"; doing a thing (a thing taken, put,
+    held, worn, lit; a door worked; a dig, a climb; first aid and the other timed works).  "You come out of hiding."  Words to a denizen tell it
+    where it is ("The bandit has seen you!").  Looks (a look in the dark, a feel about it), examining, a search about it, listening,
+    sniffing, reading the floor, waiting, sleeping, turning, a lower position, the inventory and the rest of the free commands don't end it.
+  - **A blow from hiding** *(the book's Surprise and Ignore, Combat)*: at one that hasn't noticed it, no defence, as a sleeper's; "You strike from
+    hiding."  Out of hiding as it's struck, either way; a blow at it, "The bandit has seen you!".
+  - **The denizens hiding** *(for review)*: a hostile robber (kinds.txt's ways r) that's just sensed the character, not seen by it, three squares
+    off or more, no launcher of its own, lies in wait, by the same cover (its square dark, as its kind with no darkvision feels its way); no cover,
+    it comes on as it would.  Hidden, it holds still, left out of what the character sees and engaging no one, two minutes, then comes out; strikes at
+    one beside it that it senses, the same no defence ("The bandit leaps out of hiding!").  The character's look at it the same test as anyone's, at
+    its Stealth by its sheet, as the character sees its square ("You spot a bandit, hiding."); and a search finds it within sight (the
+    referee's P_SEARCH at its cover's steps).  Not yet: other reasons to lurk, a denizen creeping on hidden, denizens looking for each
+    other hidden (their factions' fights know where they are).
 - **Disarming:** first the mechanism is made out (Lockcraft, half its power in steps worse: never deadly, however
   it goes), then disarmed (Lockcraft, half its power worse, two better if it's a keen one known well); magic only
   by magical means; a pit not at all.  Each a minute's timed work (the long tasks'), its test at its end; one set by
@@ -424,15 +460,19 @@ tasks); hands, limbs and getting up (Hands and limbs); a weapon's version and St
 denizen's gear, its blow and its shield (Outfits' the denizens' gear); its tiring (The denizens' bodies); a wound's
 course, first aid and healing (Wounds over time); courage in a fight (Morale).
 
-- **The creatures' sheets come from the referee's bestiary** (fight.c's, by the kinds' keys): the first six (the
-  giant rat, the cave spider, the ghoul, the skeleton, the cave bear, the kobold) a stand-in of the game's own; the
-  rest the HarnWorld Bestiary's averages for the like creature (the page each came from beside it), and for folk the
+- **The creatures' sheets come from the referee's bestiary** (beasts.c's, by the kinds' keys): the HarnWorld Bestiary's
+  averages for the like creature (the page each came from beside it), and for folk the
   book's for men (attributes about 10 to 12, skills by their trade), the peoples' by the book's own (The peoples, below); each attribute varied as the book suggests: less
   7, and 2d6, at least 1 and at most twice its own; by a die of its own, the same creature each time.  Why: the game's
-  own world (G3), its creatures modelled on the book's (the user: "for denizens, read the harnmaster bestiary"); the
-  first six keep their numbers till the tests are cut to meaning (the ghoul is the book's grave-wight, the cave bear
-  its black bear: Bestiary pp48, 13).
-  The first six's figures: *the user's, 2026-11-03: to build* (A9: the book's figures now, the fight tests re-baselined).
+  own world (G3), its creatures modelled on the book's (the user: "for denizens, read the harnmaster bestiary").
+  **The first six** (the user's A9, 2026-11-03: "the book's figures now"; built 2026-11-04), a beast's Dexterity its Agility where the
+  book gives none (as the bat's and the adder's), its natural weapons in the book's order, the first the one it uses most, each one's pace
+  (kinds.txt's step) by the book's Move: the ghoul the book's male grave-wight (p48: its grave rot's C4 the book's too), the cave bear
+  its black bear (p13: its bite first, its claws the better).  *Where the book has no such creature, its nearest kin's figures (for review)*: the giant rat
+  the book's rat, whole (p83: it has no giant one; its weight, 12 lb, the house's, the book giving none); the cave spider the adder's
+  (p88: it has no spiders; a small venomous biter, and the adder's venom with it: Wounds over time); the skeleton the gulmorvrus's, as the wight's
+  sheet is (p78; it has no skeletons; its bones' 40 lb the house's, and a man's sword at that mastery: its old hide against edges and points gone with its stand-in, no rule of the book's saying
+  bones turn a blade); the kobold the small orc's (Gargun 4; it has no kobolds; its spear at the small orc's mastery, folk as before, so no hide but what it wears).
 - **What strikes** *(every ruleset's: which thing; the ruleset's: what it does)* (the user's playtest, 2026-10-22: "I
   cannot `hit the door with bar` if I have a `bar` in hand.  It still says I am battering it with my bare hands";
   "A bar should just be treated as a club or stick, no?"; "I think it should try and use whatever you request, but if
@@ -668,7 +708,9 @@ book's; the house's below, each marked.
   null's a hit; for review)*; told after the miss ("Your shot strikes the giant rat instead: ...", "Its spear strikes
   you instead ..."), the one struck the one hurt (its courage, its fall, its kin's dismay); the missile at its feet.
 - **Where it falls**: a hit or a block at the mark's feet; a miss on past it along the line, one to four squares,
-  short of what stops it; a wild one somewhere within two squares; known to the character.  *An arrow breaks one time
+  short of what stops it; a wild one somewhere within two squares; known to the character.  *A launcher's missile gone wild is lost one time in two, beyond finding (the user's "wild misses
+  should possibly be lost", DECISIONS.md: how often the house's, for review); what's left of it then breaks by its chance as any other; a thing thrown by hand is never
+  lost: too big to go missing near by.*  *An arrow breaks one time
   in four (kinds.c's snaps, the user's "arrows can break"), a bolt one in seven (the house's: shorter, thicker), a
   stone never; a thing thrown never.*  *(For review.)*  One of a lot thrown (a taburi of a handful) goes alone.
   "gather the arrows" walks over to each missile it knows of within twelve squares, seen, the nearest first, and
@@ -1964,7 +2006,7 @@ P_GROPE, Skills 21).  What the house adds, every number the house's:
   number.)*
 - **Missiles' use** (slice 4.7's: Missiles, above): a lot's one used up (s_use_up by none: its qty), and what breaks as
   it's used, its chance in a hundred, the catalogue's (kinds.c's snaps: arrows 25); their taking up again, Missiles' (the user's,
-  DECISIONS.md).  A wild miss isn't lost as yet: it lands within two squares, to be taken up as any other (the user's "wild misses (critical failures) should possible be lost" isn't built).
+  DECISIONS.md).  A wild miss may be lost: Missiles' where it falls.
 
 ## Travel to a place it knows *(slice 4.2's travel: drafted 2026-10-26 for the user to review)*
 
@@ -2150,7 +2192,7 @@ table, the healing roll, the infection's and the shock's rolls); what the house 
   roll failed (the referee had dropped it), its only defence none and striking nothing, till its watch's roll brings
   it out.  *The house's*: a creature's shock never kills it (H0 held at H1).  Not yet: the minds' way with one in
   shock (it stands, or lies, doing nothing).
-- **Venom, the bestiary's** (HarnWorld Bestiary 1, Snakes 2-3: an infection's course): the cave adder's bite (the heath
+- **Venom, the bestiary's** (HarnWorld Bestiary 1, Snakes 2-3: an infection's course): the cave adder's bite, and the cave spider's, its kin's *(the house's, for review: the creatures' sheets)* (the heath
   adder's H3, a roll each hour at rest, a B1 bleeder at the bite, an ache, an M1, at each place it spreads to, healing
   at H6 once the venom's gone), the basilisk's (Dragons 13: H2, ten minutes), the lindworm's (Dragons 14: H3, ten
   minutes, each place it reaches numb, a limb useless, the chest or the belly reached its breath stopped).  Delivered
@@ -2809,7 +2851,7 @@ The book has an ally fetch nothing and says little of gifts: Rhetoric "in the ta
   only its fights are counted.
 - **Their paces** (the user's, 2026-11-03: "walk unless hurried, and closing in to attack should be hurried unless they
   are cautious"; every actor's, wbody.c's): a kind's walk is its step (kinds.txt's, tenths a square: 200 / its Move, as the
-  character's walk: a man or a bandit 20, a dwarf 22, a giant rat 12, a bat 6); hurried, its jog, half that, one level
+  character's walk: a man or a bandit 20, a dwarf 22, a giant rat 11, a bat 6, a cave bear 7, a ghoul 29); hurried, its jog, half that, one level
   louder (its step 2, not 1).  Hurried: one fleeing; one coming at its foe (hostile, drawn on or sensing it), but a
   cautious one.  *Cautious, the house's reading, for review*: a hunter by smell (it stalks: its steps are quiet, at a
   walk), a shy kind, one hurt, one whose heart is against it (the morale's steps as last reckoned, under 0).  One only coming
@@ -3043,7 +3085,7 @@ incubation, a universal penalty of 20 till healed).  What the house adds, every 
 - **The diseases** *(for review)*: the flux (still water drunk where it stands: a pool, a puddle, a cistern; or from a
   waterskin filled from it, the same risk at each drinking: the user's, 2026-11-03, the skin's water marked, and a skin
   topped up with it foul all through, *the house's*; a stream's running water and a well's clean; C5/H4, a day's incubation), rat-bite fever (a giant rat's bite that wounds: C5/H4,
-  two days), grave rot (a ghoul's bite or claws that wound, the bestiary's grave-wight's: C3/H4, seven hours).  Caught,
+  two days), grave rot (a ghoul's bite or claws that wound, the bestiary's grave-wight's: C4/H4, seven hours).  Caught,
   nothing's told (the character doesn't know it's caught something) till its incubation's over: "Your belly gripes and
   cramps: you have the flux.", "A fever's on you, and the old bite throbs.", "A wound the ghoul gave you festers: a
   fever's on you." (a hard stop of a long task); then its daily roll ("The fever burns higher.", "... eases a little.",
@@ -3562,8 +3604,6 @@ have no rules here yet.
 **The user's review, 2026-11-03: to build** (DECISIONS.md's HOUSE.md's review, their words).  Each rule stands as it is till it's
 built, then its line here goes:
 
-- **The creatures' sheets** (A9): the book's figures for the first six, now.
-- **Hiding a thing** (A12): hiding oneself, queued next.
 - **A tool's use takes its reach first, Climbing a shaft** (A16): rope rules queued: tying off, climbing aided, a grapple thrown up.
 - **Keys that fit** (A17): a found key fits a door or a chest nearby.
 

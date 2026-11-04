@@ -1930,6 +1930,9 @@ unsigned char s_serve (void)
         }
     }
     memcpy (&iq, &HUB->ireq, sizeof iq);
+    if (HUB->pc_hid) {
+        hid_op (HO_THING);                      /* (A thing handled: out of hiding, part 94's) */
+    }
     iq.result = IR_OK;
     wsel = iq.sel;                              /* (Which of several: the chooser's, part 4's pick) */
     wnot = win = wforce = 0;

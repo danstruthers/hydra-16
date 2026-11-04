@@ -33,7 +33,7 @@ ovx:        .res        1
                                             ;   the records by it, an actor's plan
             SWPART      10, 5               ; The actors' day kept (their plan, part 9's), their coarse moves, a body
                                             ;   found on the rounds, a pastime let go (2026-10-31)
-            SWPART      11, 1               ; The denizens near enlisted (2026-10-31: the main RAM's room; small, cheap
+            SWPART      11, 7               ; The denizens near enlisted (2026-10-31: the main RAM's room; small, cheap
                                             ;   to swap in, not while the UI's command is in hand)
             SWPART      12, 5               ; The tunnellers: a way dug (slice 4.11's, 2026-11-01); their work's,
                                             ;   the builders' (overlay 6's, 2026-11-02)
@@ -45,6 +45,7 @@ ovx:        .res        1
             SWPART      17, 5               ; The ways followed (2026-11-02)
             SWPART      18, 7               ; A way found (2026-11-02)
             SWPART      19, 6               ; A body found on a record's rounds (2026-11-02)
+            SWPART      20, 7               ; Hiding oneself (2026-11-04)
 
             SWFN        populate, 1
             SWFN        place, 1
@@ -82,6 +83,7 @@ ovx:        .res        1
             SWFN        daily, 10           ; (The day's, 2026-10-31: an actor's, its plan kept)
             SWFN        plan, 9             ; (An actor's day and its place, as it changes: leisure's)
             SWFN        roused, 10          ; (A pastime let go as one rises to act)
+            SWFN        hid_mind, 20        ; (Hiding oneself)
             SWFN        enlist_near, 11     ; (The main RAM's room, 2026-10-31)
             SWFN        nearby, 13          ; (The main RAM's room, 2026-11-01: the tunnellers')
             SWFN        dig_way, 12         ; (A tunneller's way dug: slice 4.11's)

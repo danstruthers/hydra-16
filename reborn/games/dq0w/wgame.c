@@ -280,6 +280,7 @@ void s_world_keep (void)
     w.sn = HUB->pc_stratum;
     w.face = HUB->pc_face;
     w.pos = HUB->pc_pos;
+    w.hid = HUB->pc_hid;
     w.x = HUB->pc_x;
     w.y = HUB->pc_y;
     w.gait = HUB->gait;
@@ -323,6 +324,7 @@ static void world_back (void)
         HUB->pc_y = w.y;
         HUB->pc_face = w.face;
         HUB->pc_pos = w.pos;
+        HUB->pc_hid = w.hid;
         HUB->gait = w.gait;
         HUB->watch = w.watch;
         HUB->way_open = w.open;
@@ -353,7 +355,7 @@ void s_pc_asked (void)
         HUB->round = x;
         HUB->pace = HUB->wreq.y;
         HUB->tpr = tprs[HUB->wreq.y & 3];
-        noinit = (HUB->wreq.y & WY_NO_INIT) != 0;   /* (dq0 -I: the tests') */
+        HUB->nolurk = noinit = (HUB->wreq.y & WY_NO_INIT) != 0;   /* (dq0 -I: the tests') */
         nobear = (HUB->wreq.y & WY_NO_BEAR) != 0;   /* (dq0 -N: the tests') */
         HUB->gait = HUB->wreq.a;
         HUB->watch = HUB->wreq.b;

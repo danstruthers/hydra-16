@@ -127,7 +127,7 @@ go:
             SWPART      36, 13              ; What closes worked, a tool's wear, a thing described (things.c)
             SWPART      37, 2              ; The rest of the UI's intents carried out (dq0w.c's intent_more)
             SWPART      38, 26              ; A change record kept and made (store.c's store_put, change)
-            SWPART      39, 14              ; A thing looked at (things.c: 2026-10-22)
+            SWPART      39, 28              ; A thing looked at (things.c: 2026-10-22)
             SWPART      40, 1               ; Its weight, its lock, traps; a thing described (things.c)
             SWPART      41, 11              ; An opening told with what it shows beyond (dq0w.c's revealed; overlay 19's, 2026-10-30: part 72's room)
             SWPART      42, 21              ; What a closer look at a thing shows; its condition (things.c)
@@ -183,12 +183,13 @@ go:
             SWPART      85, 16              ; The reach's steps (things.c's, 2026-11-02: HOUSE.md's reach)
             SWPART      86, 26              ; Their other half
             SWPART      87, 26              ; And the hand the pack goes in, a tool's use, the words
-            SWPART      88, 15              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
+            SWPART      88, 16              ; The hub attached (hub.c's: the start-up's, 2026-11-02)
             SWPART      89, 27              ; A shaft's going, a thing let fall, the daylight's emitters (dq0w.c: 2026-11-03)
             SWPART      90, 13              ; Hands made free, a tool in hand and back (things.c: 2026-11-03)
             SWPART      91, 3               ; A denizen's weapon let fall, or broken (wlimbs.c: 2026-11-03)
             SWPART      92, 5               ; A request of the things served (things.c: part 10's till 2026-11-03)
             SWPART      93, 19              ; An arrival (dq0w.c: the main RAM's till 2026-11-03)
+            SWPART      94, 14              ; Hiding oneself (dq0w.c: 2026-11-04)
 
             SWFN        work, 48
             SWFN        worked, 48
@@ -274,6 +275,7 @@ go:
             SWFN        step_to, 47
             SWFN        arrive_a, 93
             SWFN        arrive_b, 93
+            SWFN        hid_op, 94
             SWFN        named, 10
             SWFN        on_pc, 10
             SWFN        light_now, 92

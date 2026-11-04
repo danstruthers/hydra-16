@@ -35,7 +35,7 @@ static const char* const said[T_COUNT] = {
     "Put down what?",
     "Put down.",
     "You carry none of those.",
-    "Hide what? (Hiding yourself, in the shadows, comes when there's someone to hide from.)",
+    "",
     "You hide it cunningly: it would take a sharp eye to find it.",
     "You hide it well enough.",
     "You hide it, after a fashion: a careful search would turn it up.",
