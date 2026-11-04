@@ -2580,7 +2580,7 @@ void __fastcall__ s_between (unsigned char given)
     }
     *ap = 0;
     strcpy (lb + 300, libdir);
-    strcat (lb + 300, given == 2 ? "/dq0end" : "/dq0life");
+    strcat (lb + 300, given == 2 ? "/../acct/dq0end" : "/dq0life");
 }
 
 #pragma bss-name (pop)

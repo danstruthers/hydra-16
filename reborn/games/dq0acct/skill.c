@@ -269,7 +269,6 @@ void o_work (void)
 
 void o_practice (void)
 {
-#define a ans
     unsigned char mon = passed / 30, k, sk, was_ml[3], tries = 0;
     unsigned r;
 
@@ -287,11 +286,11 @@ void o_practice (void)
     }
     say ("Enter takes them, or name your three");
     for (;;) {
-        ask (a, sizeof ans);
-        if (!a[0] || ++tries > 5) {
+        ask (ans, sizeof ans);
+        if (!ans[0] || ++tries > 5) {
             break;
         }
-        if (choose_said (a)) {
+        if (choose_said (ans)) {
             choose_filled ();
             break;
         }

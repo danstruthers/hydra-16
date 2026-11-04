@@ -1449,7 +1449,7 @@ rest".  Built (HOUSE.md's the character carries on has the numbers):
 
 The plan's section 5, HOUSE.md's carrying on for its numbers.  **life.h** has the file formats; **games/dq0life** is a small program
 of its own, in the game's lib folder (lib/dq0/dq0life, 5K): the game runs it as it starts with a save's folder and no dungeon going on in it, before
-anything of the game's (it has the CPU and its own RAM; what passes between dungeons will go there, the plan's steps 4 to 6).
+anything of the game's (it has the CPU and its own RAM; what passes between dungeons is its neighbour dq0acct's, below).
 
 - **The save's folder** (dq0 -d): at its top the record (life.dat), the sheet (pc.hm), what's carried (kit.dat); each dungeon in its
   own folder inside it, d1, d2 ... (game.dat, world.dat, its theme, its change records ...: the hub's savedir, so the tasks are none
@@ -1467,6 +1467,17 @@ anything of the game's (it has the CPU and its own RAM; what passes between dung
   game ended and not yet carried on has its record as it was.
 - **A dungeon past the first with no game kept** (the character died in it before anything was kept) is begun again, the record as it
   is, not a new life.  A record that can't be read, a game of another version or one ended in hard mode's death: a new life.
+- **The time between two dungeons** (the plan's steps 4 to 6; HOUSE.md's between dungeons for the rules and numbers): **games/dq0acct**, a program beside dq0life (lib/acct/dq0acct, 25K, and its
+  three overlays, dq0acct.ovl, 22K: a folder of their own, last on the card, the start's time told: in lib/dq0 they cost dq0starttime 2.5M cycles), run by dq0life at a carry-on alone, for HarnMaster's games, so a new life's start reads none of it (the -d carry-on's cost: some 50K of the card, some 13M cycles at the
+  card's 270 a byte, against a start of over 200M).  It reads the sheet, kit.dat, kit0.dat and the kinds (dq0w.cat), and works by the life's seed and the dungeon's number alone: the same seed and answers, the same account.  Its
+  healing is the referee's own: games/dq0harn's **course.h** (a toxin's and a disease's course: afflict.c's, moved) and **watch.h** (a watch of the clock: heal.c's), and the library's harnheal.c, each included by both.
+  It writes pc.hm, kit.dat and the record's date; LF_BETWEEN in the record says it's yet to run (a reset between: it runs again).  It tells it in a dozen lines, asks its one question, and waits for Enter, as the game clears the screen as it starts (the rc variable dq0auto, the tests': no waiting; the tests' dq0Typed sets it for any game with a folder, dq0TypedAsk not).
+- **kit0.dat** (top of the save's folder): what the life set out with, written by the world once, its first save of a life (a new life removes it): what's restocked to.
+- **The life's account** (**games/dq0end**, lib/acct/dq0end, 5K): the dungeons, the days, what was done, told as the character dies: by the UI as a game ends in a death, by dq0life if it died between two dungeons.  **What the record holds as it dies:**
+  - *Hard mode's death in a dungeon:* the dungeon's days, outcome LO_DIED, or LO_SOLVED if it had solved it (Q2's "died, solved": LD_DIED in the dungeon's flags), the date of its death, LF_OVER.
+  - *A death with a save to go back to (not hard mode):* nothing: the record's as it was, the dungeon not ended, since it goes back to its last save; "died, solved" can't happen there.  The account's told as the life so far.
+  - *A death between two dungeons, either mode:* the dungeon before keeps its outcome (solved or left), LF_OVER and LF_ABROAD, the date of its death, the dungeon count back on the last one.  There's no save to go back to in either mode (its last save's the one marked ended, and the dice would fall the same).
+  - The next start in the folder is a new life; a record marked over is appended to **lives.dat** first, so it isn't lost.
 - **The start's time** (dq0starttime, no save's folder: dq0life isn't run): paid for by a file less to open for the UI (the deities' names
   in the last two kinds' records, the kinds' bank's, items.h's GODS_AT) and one less for the denizens (the noses at dq0d.dat's end, not
   dq0tr.dat read).  dq0life is in lib/dq0 because the card's layout tells: in games/ it moved the directories 16 blocks and the

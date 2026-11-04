@@ -7,6 +7,8 @@
 **     life.dat         this record
 **     pc.hm            the character's sheet (the harn library's: harn_read)
 **     kit.dat          what it carries (../dq0w/outfit.h's struct kitrec, one after another)
+**     kit0.dat         the same, what the life set out with (the world's, as a life begins): dq0acct restocks to it
+**     lives.dat        the lives over in this folder: each one's record as it ended
 **     d1, d2 ...       each dungeon's own folder (game.dat, world.dat, theme.txt, the change records ...), all of them
 **                      kept; the hub's savedir, in the game, is the dungeon's
 **

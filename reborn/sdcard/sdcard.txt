@@ -75,9 +75,6 @@ games/lib/dq0/themes/1crypt.txt ../games/dq0/themes/1crypt.txt
 games/lib/dq0/themes/2temple.txt ../games/dq0/themes/2temple.txt
 games/lib/dq0/themes/3warren.txt ../games/dq0/themes/3warren.txt
 games/lib/dq0/dq0life ../obj/games/dq0life.hyx ; dq0life, the record of a life (life.dat): between its dungeons, run as a game begins
-games/lib/dq0/dq0acct ../obj/games/dq0acct.hyx ; dq0acct, the time between two dungeons told (dq0life's, HarnMaster's)
-games/lib/dq0/dq0acct.ovl ../obj/games/dq0acct.hyx.ovl
-games/lib/dq0/dq0end ../obj/games/dq0end.hyx ; dq0end, the life's account as it dies
 songs/test.zsm      songs/test.zsm              ; Songs (play /sd/0/songs/test.zsm): the old system's test song
 songs/vera.mml      songs/vera.mml              ;   (os_rom/songs/test.mml), and a score for both chips (the PSG's
                                                 ;   with a Vera X); scom.zsm stays in the ROM (/rom/songs)
@@ -107,3 +104,6 @@ bench/hl/chars.hl   bench/hl/chars.hl
 bench/hl/digits.hl  bench/hl/digits.hl
 games/hmchar.hl     ../games/hmchar/hmchar.hl ; hmchar in hylang (games/hmchar: /rom/lib/hylang/harn.hl's)
 games/hmchar.fs     ../games/hmchar/hmchar.fs ;   and in HyForth (/rom/lib/forth/harn.fs's)
+games/lib/acct/dq0acct ../obj/games/dq0acct.hyx ; dq0acct, the time between two dungeons told (dq0life's, HarnMaster's)
+games/lib/acct/dq0acct.ovl ../obj/games/dq0acct.hyx.ovl
+games/lib/acct/dq0end ../obj/games/dq0end.hyx ; dq0end, the life's account as it dies

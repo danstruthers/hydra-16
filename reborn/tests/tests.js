@@ -2256,6 +2256,24 @@ const passings = n => Array(n).fill(['douse the torch', 'wait 5 minutes', 'light
 // A dq0 test's lines typed, each at its prompt (rc's "% ", the game's "> ")
 const dq0TypedAsk = lines => lines.map(l => '\u0101' + l + '\r').join('');
 // (A game with a save's folder: the rc variable dq0auto, so the time between two dungeons, dq0acct's, waits for nothing; dq0TypedAsk has it wait)
+// (LINETIME=1: each line typed's cycles, Enter to the next prompt: a carry-on's start, the board's cost: told on stdout)
+function dq0LineTime(m) {
+  if (!process.env.LINETIME) return;
+  const a = m.acia, read = a.read, shown = a.shown;
+  let typed = '', t0 = 0, line = '', tail = '';
+  a.read = (r, t) => {
+    if (r === 0 && a.rdrf) {
+      const c = a.rx;
+      if (c === 13) { line = typed; t0 = m.cpu.cyc; typed = ''; tail = ''; } else if (c >= 32 && c < 127) typed += String.fromCharCode(c);
+    }
+    return read(r, t);
+  };
+  a.shown = (v, t) => {
+    shown(v, t);
+    tail = (tail + String.fromCharCode(v)).slice(-2);
+    if (t0 && (tail === '> ' || tail === '% ')) { console.log('LINETIME ' + ((m.cpu.cyc - t0) / 1e6).toFixed(1) + 'M ' + line); t0 = 0; }
+  };
+}
 const dq0Typed = lines => dq0TypedAsk(lines.some(l => /^dq0 .*-d /.test(l)) ? ['dq0auto=1', ...lines] : lines);
 
 // Dingus Quest Zero's morale's own (dq0morale): at each line's Enter (the CR as the ACIA has it, the game still as it
@@ -12262,7 +12280,7 @@ module.exports = {
       sdcard: true
     },
     {
-      name: 'dq0life', outfit: true, meaning: true, near: ['save', 'gear', 'money'], what: "Dingus Quest Zero's record of a life (the plan for the game between dungeons, its step 3: life.h, dq0life; DUNGEON.md's a character's life, HOUSE.md's carrying on), by the files and the world's things: the crypt (seed 3) solved and walked out of after a long wait, in two folders: then each folder's next dungeon (no -s), the two the same dungeon, their records the same to the byte (the same seed and commands make the same life): the head's life seed, its dungeon 2, its date on past the days the first took, the first dungeon's seed, outcome and days; its second dungeon's seed under 65,536 (a stand-in's). Each dungeon's own folder, the sheet, the things and the record in the top one. Quit and begun again, the same dungeon going on, the record as it was. 'Made new' stops: a dulled blade stays dull, its life and its version as they were; a torch's fuel as it was; the pennies changed at the money-changer's 15%. A seed over 65,536 goes on over it; and dq0life's date and age figures",
+      name: 'dq0life', outfit: true, meaning: true, near: ['save', 'gear', 'money'], what: "Dingus Quest Zero's record of a life (the plan for the game between dungeons, its step 3: life.h, dq0life; DUNGEON.md's a character's life, HOUSE.md's carrying on), by the files and the world's things: the crypt (seed 3) solved and walked out of after a long wait, in two folders: then each folder's next dungeon (no -s), the two the same dungeon, their records the same to the byte (the same seed and commands make the same life): the head's life seed, its dungeon 2, its date on past the days the first took, the first dungeon's seed, outcome and days; its second dungeon's seed under 65,536 (a stand-in's). Each dungeon's own folder, the sheet, the things and the record in the top one. Quit and begun again, the same dungeon going on, the record as it was. 'Made new' stops: a dulled blade stays dull and its life as it was unless the account (dq0acct, dq0auto's: its days on the date) says it's paid for, its version as it was; a torch's fuel as it was; the pennies what the account said, the money-changer's 15% taken. A seed over 65,536 goes on over it; and dq0life's date and age figures",
       init: 't_rc', cycles: 6000e6,
       machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
         'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone,sword -d /ram/a', 'look', 'wait 1500 minutes', 'combine the sunstone with the moonstone', 'inventory', 'use the seal on the way out', 'u',
@@ -12293,6 +12311,7 @@ module.exports = {
           m.lifeSeen.push({ g, ...r });
         };
         m.lifeSeen = [];
+        dq0LineTime(m);
         dq0Poke(m, [1, 3].flatMap(g => [{ g, line: 'look', n: 1, fuel: { torch: 3000 } }, { g, line: 'use the seal on the way out', n: 1, call: (h, L) => sword(1, h, L, g) }]).concat(
           [2, 4].map(g => ({ g, line: 'look', n: 1, call: (h, L) => sword(0, h, L, g) }))));
       },
@@ -12300,6 +12319,7 @@ module.exports = {
         const T = dq0Turns(m), f = [], g2 = T.of('dq0 -p t -d /ram/a'), g2b = T.of('dq0 -p t -d /ram/b');
         const u32 = (b, o) => b.readUInt32LE(o), u16 = (b, o) => b.readUInt16LE(o);
         const a = xdBytes(out, 'xd /ram/a/life.dat');
+        const ao = out.indexOf('% dq0 -p t -d /ram/a'), acctText = out.slice(ao, out.indexOf('Enter to go on', ao)).replace(/\s+/g, ' ');
         if (a.length !== 544) f.push('the record not 544 bytes: ' + a.length);
         if (!/\nsame\s*\n/.test(out.replace(/\r/g, ''))) f.push('the same seed and commands, the records not the same');
         if (!/\nkept\s*\n/.test(out.replace(/\r/g, ''))) f.push('quit and begun again, the record changed');
@@ -12313,7 +12333,8 @@ module.exports = {
           if (a[38] !== 1 || a[46] !== 0) f.push('the outcomes: ' + a[38] + ', ' + a[46] + ' (solved, then none yet)');
           if (u16(a, 36) !== 1) f.push('the first dungeon\'s days: ' + u16(a, 36) + ' (a wait of 1500 minutes)');
           const d0 = 720 * 360 + 3, date = u32(a, 14), days = date - d0;   // (Seed 3: its hour 3, 25 hours on)
-          if (days !== 2) f.push('the date not on two days (one crossed, the day after it came out): ' + days);
+          const between = /(\d+) days? pass/.exec(acctText), told = between ? +between[1] : -1;   // (The time between's own, told: dq0acct's)
+          if (days !== 2 + told) f.push('the date not on two days (one crossed, the day after it came out) and the days told: ' + days + ', ' + told);
           const born = u16(a, 18);
           if (born > 720 - 16 || born < 720 - 25) f.push('its birth year: ' + born);
         }
@@ -12334,14 +12355,16 @@ module.exports = {
         const seen = m.lifeSeen, was = seen.find(s => s.g === 1), now = seen.find(s => s.g === 2);
         if (!was || !now || !now.sword) f.push('the sword not seen: ' + JSON.stringify(seen));
         else {
-          if (now.sword.wear !== 200) f.push('a dulled blade not dull in the next dungeon: wear ' + now.sword.wear);
-          if (now.sword.dur !== 7 || now.sword.durMax !== was.sword.durMax) f.push('its life made new: ' + JSON.stringify(now.sword));
+          const mended = /your [^.(]*sword[^.(]* mended/.test(acctText), whetted = /your [^.(]*sword[^.(]* whetted/.test(acctText);   // (Paid for, as told; else as it was)
+          if (now.sword.wear !== (mended || whetted ? 0 : 200)) f.push('a dulled blade not dull in the next dungeon, or not whetted as told: wear ' + now.sword.wear + ': ' + acctText);
+          if (now.sword.dur !== (mended ? was.sword.durMax : 7) || now.sword.durMax !== was.sword.durMax) f.push('its life made new, or not mended as told: ' + JSON.stringify(now.sword));
           if (now.sword.size !== 2) f.push('its version not as it was: ' + now.sword.size);
           if (!(now.torch <= 33)) f.push('a torch\'s fuel renewed: ' + now.torch);
         }
         const pennies = t => dq0Carried(t && t.after).filter(i => i.name === 'pennies').reduce((n, i) => n + i.qty, 0);
         const i1 = T.of('inventory'), p1 = pennies(i1), p2 = pennies(T.after(i1, 'inventory'));
-        if (!p1 || Math.abs(p2 - p1 * 0.85) > 2) f.push('the pennies not changed at 15%: ' + p1 + ' then ' + p2);
+        const changed = /\((\d+) penn(?:y|ies)[^)]*once it's changed/.exec(acctText), have = /You have (\d+) penn/.exec(acctText);   // (What the account said it'd come to: its 15% each pile)
+        if (!p1 || !have || (changed ? +changed[1] : +have[1]) !== p2) f.push('the pennies not as the account said, at the 15%: ' + p1 + ' then ' + p2 + ': ' + acctText);
         // (A seed over 65,536)
         const x1 = xdBytes(out, 'xd /ram/x/life.dat');
         if (x1.length >= 544 && (u32(x1, 4) !== 123456789 || u32(x1, 8) !== 123456789)) f.push('a new life\'s seed: ' + u32(x1, 4) + ', ' + u32(x1, 8));
@@ -12349,6 +12372,117 @@ module.exports = {
         if (!/\nagain\s*\n/.test(out.replace(/\r/g, ''))) f.push('a dungeon past the first with no game kept: its record not left as it is');
         if (x1.length !== 544 || x2.length !== 544) f.push('the record, run alone: ' + x1.length + ', ' + x2.length + ' bytes');
         if (x2.length >= 544 && (u16(x2, 12) !== 2 || u32(x2, 8) < 65536 || u32(x2, 8) === 123456789 || u32(x2, 4) !== 123456789)) f.push('a seed over 65,536, its second dungeon: ' + u32(x2, 8));
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0account', outfit: true, meaning: true, near: ['save', 'gear', 'money', 'body'], what: "Dingus Quest Zero's time between two dungeons (the plan's steps 4 to 6: dq0acct; DUNGEON.md's a character's life, HOUSE.md's between dungeons), by scenes on the saved files (a sheet and a kit from a game begun and quit; dq0life for the record, dq0acct run alone): a wounded character comes back as the rolls say (a physician paid, nothing worse than minor left, the days on the record's date, fatigue clear); one dies of an infection (status 2, the record says so); a 68-day gap gives six rolls and a weapon stops at 70, the filled-in answer taken by Enter, three named by the player; a rich account (mended, whetted, restocked from what it set out with) and a broke one (spare goods sold, what it named never, rough, work with the days added and its bonus practice, no debt); the same seed the same account",
+      init: 't_rc', cycles: 4000e6,
+      machine: { input: (() => {
+        const L = '/sd/0/games/lib/dq0';
+        const begin = (d, seed, from) => [L + '/dq0life -d /ram/' + d + ' -s ' + seed, 'cp /ram/' + from + '/kit.dat /ram/' + d + '/kit.dat', 'cp /ram/' + from + '/kit0.dat /ram/' + d + '/kit0.dat', 'cp /ram/' + from + '/pc.hm /ram/' + d + '/pc.hm'];
+        const acct = d => '/sd/0/games/lib/acct/dq0acct -d /ram/' + d + ' -l ' + L;
+        const add = (d, ...l) => l.map(x => "echo '" + x + "' >> /ram/" + d + '/pc.hm');
+        return dq0TypedAsk(['bind -a /sd/0/games /bin', 'dq0auto=1', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm', "echo 'wealth 3000' >> /ram/c.hm", "echo 'ml swd 69' >> /ram/c.hm",
+          'dq0 -p t -s 3 -c /ram/c.hm -k sword -d /ram/a', 'drop the flask of oil', 'quit',
+          'hmchar -q -s 5 -u feudal -c hunter -o /ram/p.hm', 'dq0 -p t -s 3 -c /ram/p.hm -d /ram/p', 'name the rope Bob', 'quit',
+          'echo =WOUND', ...begin('w', 100003, 'a'), ...add('w', 'inj 6 1 3 5 0 0', 'inj 13 2 2 3 0 0', 'dealt 00'), acct('w'), 'echo st $status', 'cat /ram/w/pc.hm', 'xd /ram/w/life.dat',
+          'echo =WOUND2', ...begin('v', 100003, 'a'), ...add('v', 'inj 6 1 3 5 0 0', 'inj 13 2 2 3 0 0', 'dealt 00'), acct('v'), 'cmp /ram/v/pc.hm /ram/w/pc.hm', 'echo same $status',
+          'echo =DIES', ...begin('d', 100001, 'a'), ...add('d', 'inj 6 1 3 5 1 2', 'dealt 0'), acct('d'), 'echo st $status', 'xd /ram/d/life.dat',
+          'echo =RICH', ...begin('r', 100077, 'a'), acct('r'), 'echo st $status', 'xd /ram/r/kit.dat',
+          'echo =BROKE', ...begin('b', 100021, 'p'), 'mkdir /ram/b/d0', 'cp /ram/p/d1/game.dat /ram/b/d0/game.dat', acct('b'), 'echo st $status',
+          'echo =ASK', 'dq0auto=()', ...begin('q', 100077, 'a'), acct('q'), '', '', 'cat /ram/q/pc.hm',
+          'echo =NAMED', ...begin('n', 100077, 'a'), acct('n'), 'swimming', 'sword', '', 'cat /ram/n/pc.hm', 'echo =END', 'echo $status']);
+      })() },
+      expect: ['% echo $status'],
+      start(m) {                                        // (The sword the rich scene has mended: half its life gone, dulled)
+        dq0LineTime(m);
+        dq0Poke(m, [{ g: 1, line: 'drop the flask of oil', n: 1, call: (h, L) => {
+          const cat = m.dq0.bank(L.catBank), per = Math.floor(0x2000 / L.itemSize);
+          for (let k = 0; cat && k < L.nitems; k++) {
+            const b = m.dq0.bank(L.item0 + Math.floor(k / per)), o = (k % per) * L.itemSize;
+            if (!b || !b[o + L.iKind]) continue;
+            let n = '';
+            for (let j = 0; j < 14 && cat[b[o + L.iKind] * L.kindSize + j]; j++) n += String.fromCharCode(cat[b[o + L.iKind] * L.kindSize + j]);
+            if (n === 'sword') { const d = b[o + L.iDurMax] | b[o + L.iDurMax + 1] << 8; b[o + L.iWear] = 200; b[o + L.iDur] = (d >> 1) & 255; b[o + L.iDur + 1] = d >> 9; break; }
+          }
+        } }]);
+      },
+      check(m, out) {
+        const f = [], o = out.replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
+        const text = n => sect(n).replace(/\s+/g, ' '), days = n => { const r = /(\d+) days? pass/.exec(text(n)); return r ? +r[1] : -1; };
+        const u32 = (b, a) => b.readUInt32LE(a);
+        const need = (n, re, w) => { if (!re.test(text(n))) f.push(w + ': ' + text(n).slice(0, 700)); };
+        // A wounded character
+        need('WOUND', /A physician sees to your left forearm and left knee \(12d\)/, 'no physician (a grievous wound 9d, a serious 3d)');
+        need('WOUND', /The grievous cut to your left forearm/, 'the wound not told');
+        const w = sect('WOUND'), inj = [...w.matchAll(/\ninj (\d+) (\d+) (\d+) (\d+) (\d+) (\d+)/g)];
+        for (const j of inj) if (+j[4] > 1) f.push('a wound worse than minor left: ' + j[0]);
+        if (!/\nvol 0 /.test(w)) f.push('its fatigue not clear');
+        if (!/\npace \d \d 0\n/.test(w)) f.push('its exertion not clear: ' + w.slice(0, 200));
+        if (!/\nst\s*\n/.test(w)) f.push('its status not 0: ' + text('WOUND').slice(0, 800));
+        const wr = xdBytes(sect('WOUND'), 'xd /ram/w/life.dat');
+        if (wr.length >= 544 && days('WOUND') > 0) {
+          const d0 = 720 * 360 + 100003 % 360;
+          if (u32(wr, 14) !== d0 + days('WOUND')) f.push('the date not on by the days: ' + u32(wr, 14) + ', ' + d0 + ', ' + days('WOUND'));
+          if (wr[3] & 1) f.push('the record left as between');
+        } else f.push('the record: ' + wr.length + ' bytes, days ' + days('WOUND'));
+        if (!/\nsame\s*\n/.test(sect('WOUND2'))) f.push('the same seed, not the same sheet after');
+        // One dies of it
+        need('DIES', /The infection kills you\. You die on \d+ \w+ \d+, at \d+\./, 'not told as it died');
+        if (!/st 2/.test(sect('DIES'))) f.push('its status not 2: ' + text('DIES').slice(0, 300));
+        const dr = xdBytes(sect('DIES'), 'xd /ram/d/life.dat');
+        if (dr.length < 544 || (dr[3] & 6) !== 6) f.push('the record not over: flags ' + dr[3]);
+        // The rich: what it dropped bought again, no selling
+        need('RICH', /You buy a flask of oil/, 'what it dropped (of what it set out with) not restocked');
+        if (/You sell/.test(text('RICH'))) f.push('the rich sold things: ' + text('RICH').slice(0, 400));
+        need('RICH', /You have your [^.(]*sword[^.(]* mended/, 'the sword not mended');
+        const kit = xdBytes(sect('RICH'), 'xd /ram/r/kit.dat');
+        let sw = null;
+        for (let i = 0; i + 22 <= kit.length; i += 22) if (kit[i] === 25) sw = { wear: kit[i + 7], dur: kit[i + 13] | kit[i + 14] << 8, max: kit[i + 15] | kit[i + 16] << 8 };
+        if (!sw || sw.wear !== 0 || !sw.max || sw.dur !== sw.max) f.push('the sword in the kit not made whole: ' + JSON.stringify(sw));
+        // The broke: spare goods, never the named
+        need('BROKE', /You sell /, 'nothing sold');
+        need('BROKE', /you work as a Hunter\/Trapper, your keep found, for half a master's wage \(/, 'no work');
+        need('BROKE', /The work teaches you:/, 'no bonus practice');
+        if (/You sell[^.]*rope/.test(text('BROKE'))) f.push('what it named sold: ' + text('BROKE').slice(0, 500));
+        if (/ -\d/.test(text('BROKE'))) f.push('a debt: ' + text('BROKE').slice(0, 500));
+        // Practice
+        need('ASK', /In the spare hours you could practise [A-Z]/, 'no question');
+        need('ASK', /You practise for 2 months \(6 rolls\): /, 'not six rolls for 68 days');
+        if (days('ASK') !== 68) f.push('not the 68 days: ' + days('ASK'));
+        need('NAMED', /You can't practise swimming/, 'a skill not open taken');
+        need('NAMED', /Sword 69 to 70[,.]/, 'Sword named: ' + text('NAMED').slice(-500));
+        if (!/\nml swd 70\n/.test(sect('NAMED'))) f.push('a weapon past 70 by practice, or not there: ' + (/\nml swd \d+/.exec(sect('NAMED')) || [])[0]);
+        if (/you (win|lose)|you've (won|lost)/i.test(o)) f.push('words of winning or losing');
+        return f;
+      },
+      sdcard: true
+    },
+    {
+      name: 'dq0lifeend', outfit: true, meaning: true, near: ['save', 'body'], what: "Dingus Quest Zero's life's account (dq0end; the plan's section 1): the crypt solved and walked out of with a wound that's infected, a carry-on: the character dies between the dungeons, told, the life's account after it (solved), the game not begun, status 0; the record says it's over; the next start a new life, the old record kept in lives.dat; and hard mode's death recorded, the account told",
+      init: 't_rc', cycles: 2500e6,
+      machine: { input: dq0Typed(['bind -a /sd/0/games /bin', 'hmchar -q -s 5 -u feudal -c hunter -o /ram/c.hm',
+        'dq0 -p t -s 3 -c /ram/c.hm -k sunstone,moonstone -d /ram/q', 'combine the sunstone with the moonstone', 'use the seal on the way out', 'u',
+        "echo 'inj 6 1 3 5 1 2' >> /ram/q/pc.hm", "echo 'dealt 0' >> /ram/q/pc.hm", 'echo =OFF', 'dq0 -p t -d /ram/q', 'echo st $status', 'xd /ram/q/life.dat', 'echo =NEW',
+        'dq0 -p t -s 3 -c /ram/c.hm -d /ram/q', 'quit', 'ls /ram/q', 'xd /ram/q/life.dat', 'wc /ram/q/lives.dat', 'echo =END', 'echo $status']) },
+      expect: ['% echo $status'],
+      check(m, out) {
+        const f = [], o = out.replace(/\r/g, ''), sect = n => { const i = o.indexOf('% echo =' + n), j = o.indexOf('% echo =', i + 3); return i < 0 ? '' : o.slice(i, j < 0 ? o.length : j); };
+        const off = sect('OFF'), tx = off.replace(/\s+/g, ' ');
+        if (!/The infection kills you\./.test(tx)) f.push('not told as it died: ' + tx.slice(0, 500));
+        if (!/The life of Tordan, Hunter\/Trapper, born in the year \d+:/.test(tx)) f.push('no life\'s account: ' + tx.slice(0, 500));
+        if (!/: solved, \d+ days?/.test(tx)) f.push('the dungeon not told as solved: ' + tx.slice(0, 500));
+        if (!/Dead between dungeons, on /.test(tx)) f.push('its end not told: ' + tx.slice(0, 500));
+        if (/The dungeon is being made ready|enters the dungeon/.test(tx)) f.push('the game begun all the same');
+        if (!/st\s*\n/.test(off)) f.push('dq0\'s status not 0');
+        const a = xdBytes(off, 'xd /ram/q/life.dat');
+        if (a.length < 544 || (a[3] & 6) !== 6 || a[38] !== 1) f.push('the record: flags ' + a[3] + ', outcome ' + a[38]);
+        const n = sect('NEW'), b = xdBytes(n, 'xd /ram/q/life.dat');
+        if (b.length < 544 || b[3] !== 0 || b.readUInt16LE(12) !== 1) f.push('not a new life: ' + b.slice(0, 16).toString('hex'));
+        if (!/lives\.dat/.test(n)) f.push('the life that was not kept in lives.dat');
+        if (!/544/.test(n)) f.push('lives.dat not one record: ' + n.slice(-200));
         return f;
       },
       sdcard: true
@@ -12369,6 +12503,8 @@ module.exports = {
         const o2 = out.slice(out.indexOf('% dq0 -p t -s 3 -c /ram/c.hm -T -H'), out.indexOf('% dq0 -p t -s 3 -c /ram/c.hm -d /ram/h'));
         if (!/You are dead/.test(o2)) f.push('not dead of its wound in hard mode');
         if (!/Hard mode: there's no save to go back to/.test(o2)) f.push('the ending\'s words don\'t say hard mode keeps no save');
+        if (!/The life of [^:]*:[^]*died in it, \d+ days?[^]*Dead, on /.test(o2)) f.push('hard mode\'s death: no life\'s account: ' + o2.slice(-500));
+        if (!/The life so far of [^]*It goes on from your last save/.test(o1)) f.push('a death with a save: no life so far: ' + o1.slice(-500));
         dq0Need(f, T.of('dq0 -p t -s 3 -c /ram/c.hm -d /ram/h'), 'E_ARRIVE', { how: 'A_START' }, 'hard mode\'s death carried on from a save');
         return f;
       },

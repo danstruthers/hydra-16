@@ -1785,6 +1785,8 @@ Built for the kind, every command over the 720,000: words that hold whatever com
 
 ## The game between dungeons, the plan answered (2026-11-04)
 
+(Steps 4 to 6 built: HOUSE.md's between dungeons, for review.)
+
 The plan (F:/.claude/hydra-2/plans/between-dungeons.md, sections 1-7) put ten questions; the user chose among the options as put:
 
 - Q1 Can every dungeon be left? "Every dungeon": out by a sky shaft if it has one and by the way in, unless the reason says it's shut; a shut dungeon always has another way out to find.

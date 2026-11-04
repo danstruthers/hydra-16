@@ -1,7 +1,7 @@
 /*
 ** dq0acct.c - Dingus Quest Zero's account of the time between two dungeons (the plan for the game between dungeons, its steps 4
-** to 6; DUNGEON.md's a character's life; HOUSE.md's between dungeons): a program beside dq0life, in the game's lib folder, that
-** dq0life runs as a dungeon's been ended alive and before the next begins.  Before any of the game's tasks: none of the game's
+** to 6; DUNGEON.md's a character's life; HOUSE.md's between dungeons): a program beside dq0life, in lib/acct (with its overlays:
+** the start's time tells where a new file goes, DUNGEON.md's), that dq0life runs as a dungeon's been ended alive and before the next begins.  Before any of the game's tasks: none of the game's
 ** main RAM, the CPU its own.  It's HarnMaster's (run for dq0harn's games alone), on the saved files: the sheet (pc.hm), what's
 ** carried (kit.dat), what the life set out with (kit0.dat), the record (life.dat).  A program apart from dq0life so a new life's
 ** start reads none of it.
@@ -1063,7 +1063,7 @@ int main (int argc, char* argv[])
     }
     b_cat = b;
     strcpy (path, lib);
-    strcat (path, "/dq0acct.ovl");
+    strcat (path, "/../acct/dq0acct.ovl");
     if ((fd = open (path, O_RDONLY)) < 0) {
         fail ("no overlays");
     }

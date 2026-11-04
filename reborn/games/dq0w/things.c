@@ -6101,18 +6101,20 @@ static const unsigned char kit_list[NKIT][4] = {
     { KI_DAGGER, 4, 1, 0 }, { KI_WATERSKIN, 4, 1, 0 }
 };
 
+unsigned char __fastcall__ look_more (unsigned n, unsigned char mode);    /* (Part 40's: LM_KIT's kit_keep) */
 void s_kit (void)
 {
     unsigned made[NKIT];
     const unsigned char* e;
     const struct kind* kk;
     unsigned i, box = 0;
-    unsigned char k, off, old;
+    unsigned char k, off, old, carried;
     char* c;
     char* more = tbuf;
 
     hub_map (0);
     k = HUB->gear & GE_OLD ? 0 : outfit ();
+    carried = k == OF_CARRIED;
     if (!(old = !k)) {
         hub_map (KIND_BANK);                    /* (The money: in the pouch, silver pennies in lots of 250 at most (a
                                                 **   lot's count a byte, joined to 250), all of it, told together; its
@@ -6204,6 +6206,11 @@ void s_kit (void)
     for (k = 0; old && k < sizeof spare; ++k) { /* (The pack's spare torch and flask of oil, D5's, after the things
                                                 **   more: theirs made as they were) */
         item_new (spare[k], IW_ITEM, made[1], 1);
+    }
+    hub_map (0);
+    if (!carried && HUB->savedir[0]) {          /* (A life begun, a folder: what it sets out with kept now, kit0.dat, before anything's used: kit_keep's) */
+        look_more (0, LM_KIT);
+        hub_map (0);
     }
 }
 

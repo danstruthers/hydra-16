@@ -178,7 +178,7 @@ static void __fastcall__ between (const char* lib)
 {
     int t, fd;
 
-    t = run (lib, "/dq0acct", 1);
+    t = run (lib, "/../acct/dq0acct", 1);
     if (t != 0 && t != 2) {
         die ("the time between failed");
     }
@@ -187,7 +187,7 @@ static void __fastcall__ between (const char* lib)
         close (fd);
     }
     if (t == 2) {                               /* (Dead of it: the life's account, dq0end's) */
-        run (lib, "/dq0end", 0);
+        run (lib, "/../acct/dq0end", 0);
         exit (2);
     }
 }
