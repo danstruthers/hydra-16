@@ -229,7 +229,6 @@ go:
             SWFN        tsense, 76
             SWFN        sky_ask, 89         ; (The daylight's emitters, a shaft's going, a thing let fall: dq0w.c's)
             SWFN        air_harm, 74
-            SWFN        no_way, 53          ; (The main RAM's room, 2026-11-03)
             SWFN        den_way, 53
             SWFN        rest_go, 53
             SWFN        sky_seen, 77
@@ -272,6 +271,7 @@ go:
             SWFN        walk, 9             ; (A walk along a passage: across's, part 33's; 2026-10-31, the main RAM's room)
             SWFN        serve, 92
             SWFN        tools, 10
+            SWFN        step_to, 47
             SWFN        arrive_a, 93
             SWFN        arrive_b, 93
             SWFN        named, 10

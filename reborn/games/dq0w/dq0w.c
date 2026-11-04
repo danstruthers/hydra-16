@@ -84,6 +84,8 @@ void __fastcall__ task_word (const struct msg* m);
 void __fastcall__ path_ways (unsigned char tx, unsigned char ty);
 void __fastcall__ close_go (const struct msg* m);
 unsigned char close_on (void);
+unsigned char __fastcall__ near_sq (unsigned x, unsigned y);
+unsigned char __fastcall__ quiet_sq (unsigned x, unsigned y);
 unsigned char __fastcall__ zone_step (unsigned ox, unsigned oy, unsigned x, unsigned y);
 void __fastcall__ fight_go (const struct msg* m);
 unsigned char __fastcall__ fight_on (unsigned char idle);
@@ -489,20 +491,12 @@ void __fastcall__ walk (unsigned char d);       /* (Part 9's, its stub: across's
 #pragma code-name (push, "SW53CODE")            /* (Part 53's: the main RAM's room, 2026-11-03) */
 #pragma rodata-name (push, "SW53RODATA")
 void __fastcall__ no_way (unsigned why);
-void __fastcall__ s_no_way (unsigned why)
-{
-    hub_map (0);                                /* (A chunk may be in the window, its portal just read: a journey's leg's,
-                                                **   a step's: told to the hub's, not into the chunk) */
-    event (E_NOWAY, 0, why);
-    HUB->pc_ready = HUB->now;
-    HUB->pc_going = IDLE;
-}
 
 /* Stopped by a denizen in its way before it's gone a square (told: the actor's) */
 void den_way (void);
 void s_den_way (void)
 {
-    s_no_way (N_DEN | (unsigned) (blocked - 1) << 8);
+    no_way (N_DEN | (unsigned) (blocked - 1) << 8);
 }
 #pragma code-name (pop)
 #pragma rodata-name (pop)
@@ -4501,7 +4495,8 @@ void s_step_on (void)
         if (!srch) {                            /* (A room searched whole's leg: its bar its whole time, stepping's) */
             HUB->pc_task.done = pnext;
         }
-        if ((e = zone_step (ox, oy, x, y)) != 0) {    /* (HOUSE.md's engagement, part 24's) */
+        if ((e = quiet_sq (x, y) ? 0 : zone_step (ox, oy, x, y)) != 0) {    /* (HOUSE.md's engagement, part 24's; no one
+                                                **   near, nothing underfoot, its swaps spared, a square's) */
             if (e != 0xFF) {
                 evb = e;                        /* (Come into an enemy's zone, or a square on in one: stopped; a
                                                 **   hostile one fought, part 24's fighting on) */
@@ -5891,11 +5886,13 @@ static unsigned char pc_waited;
 
 /* An intent carried out, the UI's: a step, a walk, a climb (each answered at once: the main RAM's); a turn, a wait
 ** and the quit part 53's (intent_few: slice 4.2's, the main RAM's room); the rest part 37's (intent_more) */
-/* A small move (I_STEP: DUNGEON.md's; the main RAM's since 2026-11-03: part 9's copies, in and out, spared its first words): n squares on heading h (the UI's: by the words, else by the pace), its facing
+#pragma code-name (push, "SW47CODE")
+#pragma rodata-name (push, "SW47RODATA")
+/* A small move (I_STEP: DUNGEON.md's; part 47's since 2026-11-03, a small part's copies for part 9's): n squares on heading h (the UI's: by the words, else by the pace), its facing
 ** kept if keep (backing up, a step aside); in a room straight
 ** across its floor (across's rules: its edge, a ledge, a denizen or a trap stops it), in a passage along it (go's,
 ** walk's: a fork, a door or a denizen stops it) */
-void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep)
+void __fastcall__ s_step_to (unsigned char h, unsigned char n, unsigned char keep)
 {
     unsigned char r;
 
@@ -5919,7 +5916,8 @@ void __fastcall__ step_to (unsigned char h, unsigned char n, unsigned char keep)
         }
     }
 }
-
+#pragma code-name (pop)
+#pragma rodata-name (pop)
 
 /* A way set out on, a plain step's or a walk's (the heading, | 8 a step, | 16 a walk: E_VIEW V_SETOFF's b), told as it begins: its first
 ** words at once, its look as it gets there (the user's D17: a step's first letter was its look's, a second on; only one
@@ -6477,21 +6475,51 @@ static int __fastcall__ ovl_load (const char* dir)
 
 int trfd = -1;                                  /* (The traces' kinds' words, kept open: wtrword.c's, trace.h) */
 
+/* (The main RAM's again, 2026-11-03: every refusal's words, two parts' copies spared before them) */
+void __fastcall__ no_way (unsigned why)
+{
+    hub_map (0);                                /* (A chunk may be in the window, its portal just read: a journey's leg's,
+                                                **   a step's: told to the hub's, not into the chunk) */
+    event (E_NOWAY, 0, why);
+    HUB->pc_ready = HUB->now;
+    HUB->pc_going = IDLE;
+}
+
 /* Anyone beside the character, in its zone or not (zone_step's first look, its part's swaps spared: a thing handled, no
 ** one near, has no grope to ask, every handling's own, three parts' copies: the user's D17, 2026-11-03) (the hub's header
 ** in the window after) */
-unsigned char near_one (void)
+unsigned char __fastcall__ near_sq (unsigned x, unsigned y)
 {
     const struct actor* a;
     unsigned char k;
 
     hub_map (0);
     for (k = NACTORS, a = HUB->actor; k; --k, ++a) {
-        if (a->state && a->sn == HUB->pc_stratum && a->x - HUB->pc_x + 1 <= 2 && a->y - HUB->pc_y + 1 <= 2) {
+        if (a->state && a->sn == HUB->pc_stratum && a->x - x + 1 <= 2 && a->y - y + 1 <= 2) {
             return 1;
         }
     }
     return 0;
+}
+
+unsigned char near_one (void)
+{
+    hub_map (0);
+    return near_sq (HUB->pc_x, HUB->pc_y);
+}
+
+/* Square x, y stepped onto with nothing for zone_step to do (part 24's and back, a walk's every square): no one beside it,
+** on no close-in nor in the dark, neither rubble nor water there (the hub's header in the window after) */
+unsigned char __fastcall__ quiet_sq (unsigned x, unsigned y)
+{
+    unsigned char k, *p;
+
+    if (near_sq (x, y) || pfeel || pfoe || HUB->pc_wet || HUB->pc_air) {
+        return 0;
+    }
+    k = (p = at (sn_, x, y)) != 0 && TILE (*p) != T_RUBBLE && !C->wany && !C->air;
+    hub_map (0);
+    return k;
 }
 
 /* A grope (part 25's fumble_try): none with no one beside it */

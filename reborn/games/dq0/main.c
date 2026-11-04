@@ -1060,8 +1060,8 @@ static unsigned char events (void)          /* (How many there were) */
         case E_VIEW:
             if (m.who == 0) {
                 if (m.w1 == V_STIR) {
-                    if ((t_next () || inn) && HUB->tpr) {
-                        stirs = 1;              /* (A line typed, at the real paces: told after its answer, main's,
+                    if ((t_next () || inn || HUB->ui_cmd) && HUB->tpr) {
+                        stirs = 1;              /* (A line typed or its answer owed, at the real paces: told after its answer, main's,
                                                 **   the background's news not in its way, 2026-10-30; or one being
                                                 **   typed: told as it's entered and answered, or let go, its echo
                                                 **   and its Enter not behind the stir's words) */
